@@ -456,6 +456,38 @@ body:             |
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; CHECK-NEXT:   $sgpr4_sgpr5 = S_OR_SAVEEXEC_B64 -1, implicit-def $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr40, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
   ; CHECK-NEXT:   frame-setup CFI_INSTRUCTION offset $vgpr40, 0

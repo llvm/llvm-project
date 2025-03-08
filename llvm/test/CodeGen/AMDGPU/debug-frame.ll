@@ -208,13 +208,11 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX900-NEXT:    .cfi_undefined 60
 ; GFX900-NEXT:    .cfi_undefined 61
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX900-NEXT:    s_mov_b32 s4, s33
+; GFX900-NEXT:    s_mov_b32 s40, s33
+; GFX900-NEXT:    .cfi_register 65, 72
 ; GFX900-NEXT:    s_mov_b32 s33, s32
-; GFX900-NEXT:    v_mov_b32_e32 v0, s4
-; GFX900-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:448 ; 4-byte Folded Spill
-; GFX900-NEXT:    .cfi_offset 65, 28672
 ; GFX900-NEXT:    .cfi_def_cfa_register 65
-; GFX900-NEXT:    s_addk_i32 s32, 0x7200
+; GFX900-NEXT:    s_addk_i32 s32, 0x7100
 ; GFX900-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
 ; GFX900-NEXT:    .cfi_llvm_vector_offset 2600, 32, 17, 64, 28416
 ; GFX900-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Spill
@@ -557,12 +555,10 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX900-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:436 ; 4-byte Folded Reload
 ; GFX900-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Reload
 ; GFX900-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Reload
-; GFX900-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:448 ; 4-byte Folded Reload
 ; GFX900-NEXT:    s_mov_b32 s32, s33
-; GFX900-NEXT:    s_waitcnt vmcnt(0)
-; GFX900-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX900-NEXT:    .cfi_def_cfa_register 64
-; GFX900-NEXT:    s_mov_b32 s33, s4
+; GFX900-NEXT:    s_mov_b32 s33, s40
+; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-V2A-DIS-LABEL: callee_need_to_spill_fp_to_memory:
@@ -742,13 +738,11 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 60
 ; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 61
 ; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s4, s33
+; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s40, s33
+; GFX90A-V2A-DIS-NEXT:    .cfi_register 65, 72
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s33, s32
-; GFX90A-V2A-DIS-NEXT:    v_mov_b32_e32 v0, s4
-; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:448 ; 4-byte Folded Spill
-; GFX90A-V2A-DIS-NEXT:    .cfi_offset 65, 28672
 ; GFX90A-V2A-DIS-NEXT:    .cfi_def_cfa_register 65
-; GFX90A-V2A-DIS-NEXT:    s_addk_i32 s32, 0x7200
+; GFX90A-V2A-DIS-NEXT:    s_addk_i32 s32, 0x7100
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
 ; GFX90A-V2A-DIS-NEXT:    .cfi_llvm_vector_offset 2600, 32, 17, 64, 28416
 ; GFX90A-V2A-DIS-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Spill
@@ -1091,12 +1085,10 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-DIS-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:436 ; 4-byte Folded Reload
 ; GFX90A-V2A-DIS-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Reload
 ; GFX90A-V2A-DIS-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Reload
-; GFX90A-V2A-DIS-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:448 ; 4-byte Folded Reload
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s32, s33
-; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-V2A-DIS-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX90A-V2A-DIS-NEXT:    .cfi_def_cfa_register 64
-; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s33, s4
+; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s33, s40
+; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-V2A-DIS-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX90A-V2A-EN-LABEL: callee_need_to_spill_fp_to_memory:
@@ -1308,13 +1300,11 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-EN-NEXT:    .cfi_undefined 60
 ; GFX90A-V2A-EN-NEXT:    .cfi_undefined 61
 ; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX90A-V2A-EN-NEXT:    s_mov_b32 s4, s33
+; GFX90A-V2A-EN-NEXT:    s_mov_b32 s40, s33
+; GFX90A-V2A-EN-NEXT:    .cfi_register 65, 72
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s33, s32
-; GFX90A-V2A-EN-NEXT:    v_mov_b32_e32 v0, s4
-; GFX90A-V2A-EN-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:320 ; 4-byte Folded Spill
-; GFX90A-V2A-EN-NEXT:    .cfi_offset 65, 20480
 ; GFX90A-V2A-EN-NEXT:    .cfi_def_cfa_register 65
-; GFX90A-V2A-EN-NEXT:    s_addk_i32 s32, 0x5200
+; GFX90A-V2A-EN-NEXT:    s_addk_i32 s32, 0x5100
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a0, v40 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    .cfi_llvm_vector_register_mask 2600, 3072, 32, 17, 64
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_write_b32 a1, v41 ; Reload Reuse
@@ -1625,7 +1615,6 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-EN-NEXT:    buffer_load_dword v106, off, s[0:3], s33 offset:308 ; 4-byte Folded Reload
 ; GFX90A-V2A-EN-NEXT:    buffer_load_dword v105, off, s[0:3], s33 offset:312 ; 4-byte Folded Reload
 ; GFX90A-V2A-EN-NEXT:    buffer_load_dword v104, off, s[0:3], s33 offset:316 ; 4-byte Folded Reload
-; GFX90A-V2A-EN-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:320 ; 4-byte Folded Reload
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v95, a31 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v94, a30 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v93, a29 ; Reload Reuse
@@ -1659,10 +1648,9 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v41, a1 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    v_accvgpr_read_b32 v40, a0 ; Reload Reuse
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s32, s33
-; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0)
-; GFX90A-V2A-EN-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX90A-V2A-EN-NEXT:    .cfi_def_cfa_register 64
-; GFX90A-V2A-EN-NEXT:    s_mov_b32 s33, s4
+; GFX90A-V2A-EN-NEXT:    s_mov_b32 s33, s40
+; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-V2A-EN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; WAVE32-LABEL: callee_need_to_spill_fp_to_memory:
@@ -1842,13 +1830,11 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; WAVE32-NEXT:    .cfi_undefined 60
 ; WAVE32-NEXT:    .cfi_undefined 61
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; WAVE32-NEXT:    s_mov_b32 s4, s33
+; WAVE32-NEXT:    s_mov_b32 s40, s33
+; WAVE32-NEXT:    .cfi_register 65, 72
 ; WAVE32-NEXT:    s_mov_b32 s33, s32
-; WAVE32-NEXT:    v_mov_b32_e32 v0, s4
-; WAVE32-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:448 ; 4-byte Folded Spill
-; WAVE32-NEXT:    .cfi_offset 65, 14336
 ; WAVE32-NEXT:    .cfi_def_cfa_register 65
-; WAVE32-NEXT:    s_addk_i32 s32, 0x3900
+; WAVE32-NEXT:    s_addk_i32 s32, 0x3880
 ; WAVE32-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    .cfi_llvm_vector_offset 1576, 32, 1, 32, 14208
 ; WAVE32-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Spill
@@ -2143,7 +2129,7 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; WAVE32-NEXT:    buffer_load_dword v139, off, s[0:3], s33 offset:240
 ; WAVE32-NEXT:    buffer_load_dword v138, off, s[0:3], s33 offset:244
 ; WAVE32-NEXT:    buffer_load_dword v137, off, s[0:3], s33 offset:248
-; WAVE32-NEXT:    s_clause 0x31
+; WAVE32-NEXT:    s_clause 0x30
 ; WAVE32-NEXT:    buffer_load_dword v136, off, s[0:3], s33 offset:252
 ; WAVE32-NEXT:    buffer_load_dword v127, off, s[0:3], s33 offset:256
 ; WAVE32-NEXT:    buffer_load_dword v126, off, s[0:3], s33 offset:260
@@ -2193,12 +2179,11 @@ define void @callee_need_to_spill_fp_to_memory() #1 {
 ; WAVE32-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:436
 ; WAVE32-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:440
 ; WAVE32-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444
-; WAVE32-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:448
 ; WAVE32-NEXT:    s_mov_b32 s32, s33
-; WAVE32-NEXT:    s_waitcnt vmcnt(0)
-; WAVE32-NEXT:    v_readfirstlane_b32 s4, v0
 ; WAVE32-NEXT:    .cfi_def_cfa_register 64
-; WAVE32-NEXT:    s_mov_b32 s33, s4
+; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
+; WAVE32-NEXT:    s_mov_b32 s33, s40
+; WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-NEXT:    s_setpc_b64 s[30:31]
   call void asm sideeffect "; clobber nonpreserved SGPRs",
     "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
@@ -2419,6 +2404,38 @@ define hidden void @func_call_clobber() #0 {
 ; GFX900-NEXT:    .cfi_undefined 59
 ; GFX900-NEXT:    .cfi_undefined 60
 ; GFX900-NEXT:    .cfi_undefined 61
+; GFX900-NEXT:    .cfi_undefined 72
+; GFX900-NEXT:    .cfi_undefined 73
+; GFX900-NEXT:    .cfi_undefined 74
+; GFX900-NEXT:    .cfi_undefined 75
+; GFX900-NEXT:    .cfi_undefined 76
+; GFX900-NEXT:    .cfi_undefined 77
+; GFX900-NEXT:    .cfi_undefined 78
+; GFX900-NEXT:    .cfi_undefined 79
+; GFX900-NEXT:    .cfi_undefined 88
+; GFX900-NEXT:    .cfi_undefined 89
+; GFX900-NEXT:    .cfi_undefined 90
+; GFX900-NEXT:    .cfi_undefined 91
+; GFX900-NEXT:    .cfi_undefined 92
+; GFX900-NEXT:    .cfi_undefined 93
+; GFX900-NEXT:    .cfi_undefined 94
+; GFX900-NEXT:    .cfi_undefined 95
+; GFX900-NEXT:    .cfi_undefined 1096
+; GFX900-NEXT:    .cfi_undefined 1097
+; GFX900-NEXT:    .cfi_undefined 1098
+; GFX900-NEXT:    .cfi_undefined 1099
+; GFX900-NEXT:    .cfi_undefined 1100
+; GFX900-NEXT:    .cfi_undefined 1101
+; GFX900-NEXT:    .cfi_undefined 1102
+; GFX900-NEXT:    .cfi_undefined 1103
+; GFX900-NEXT:    .cfi_undefined 1112
+; GFX900-NEXT:    .cfi_undefined 1113
+; GFX900-NEXT:    .cfi_undefined 1114
+; GFX900-NEXT:    .cfi_undefined 1115
+; GFX900-NEXT:    .cfi_undefined 1116
+; GFX900-NEXT:    .cfi_undefined 1117
+; GFX900-NEXT:    .cfi_undefined 1118
+; GFX900-NEXT:    .cfi_undefined 1119
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    s_mov_b32 s16, s33
 ; GFX900-NEXT:    s_mov_b32 s33, s32
@@ -2661,6 +2678,38 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 59
 ; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 60
 ; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 61
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 72
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 73
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 74
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 75
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 76
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 77
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 78
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 79
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 88
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 89
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 90
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 91
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 92
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 93
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 94
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 95
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1096
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1097
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1098
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1099
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1100
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1101
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1102
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1103
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1112
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1113
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1114
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1115
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1116
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1117
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1118
+; GFX90A-V2A-DIS-NEXT:    .cfi_undefined 1119
 ; GFX90A-V2A-DIS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s16, s33
 ; GFX90A-V2A-DIS-NEXT:    s_mov_b32 s33, s32
@@ -2903,6 +2952,38 @@ define hidden void @func_call_clobber() #0 {
 ; GFX90A-V2A-EN-NEXT:    .cfi_undefined 59
 ; GFX90A-V2A-EN-NEXT:    .cfi_undefined 60
 ; GFX90A-V2A-EN-NEXT:    .cfi_undefined 61
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 72
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 73
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 74
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 75
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 76
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 77
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 78
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 79
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 88
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 89
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 90
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 91
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 92
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 93
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 94
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 95
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1096
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1097
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1098
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1099
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1100
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1101
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1102
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1103
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1112
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1113
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1114
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1115
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1116
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1117
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1118
+; GFX90A-V2A-EN-NEXT:    .cfi_undefined 1119
 ; GFX90A-V2A-EN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s16, s33
 ; GFX90A-V2A-EN-NEXT:    s_mov_b32 s33, s32
@@ -3113,6 +3194,38 @@ define hidden void @func_call_clobber() #0 {
 ; WAVE32-NEXT:    .cfi_undefined 59
 ; WAVE32-NEXT:    .cfi_undefined 60
 ; WAVE32-NEXT:    .cfi_undefined 61
+; WAVE32-NEXT:    .cfi_undefined 72
+; WAVE32-NEXT:    .cfi_undefined 73
+; WAVE32-NEXT:    .cfi_undefined 74
+; WAVE32-NEXT:    .cfi_undefined 75
+; WAVE32-NEXT:    .cfi_undefined 76
+; WAVE32-NEXT:    .cfi_undefined 77
+; WAVE32-NEXT:    .cfi_undefined 78
+; WAVE32-NEXT:    .cfi_undefined 79
+; WAVE32-NEXT:    .cfi_undefined 88
+; WAVE32-NEXT:    .cfi_undefined 89
+; WAVE32-NEXT:    .cfi_undefined 90
+; WAVE32-NEXT:    .cfi_undefined 91
+; WAVE32-NEXT:    .cfi_undefined 92
+; WAVE32-NEXT:    .cfi_undefined 93
+; WAVE32-NEXT:    .cfi_undefined 94
+; WAVE32-NEXT:    .cfi_undefined 95
+; WAVE32-NEXT:    .cfi_undefined 1096
+; WAVE32-NEXT:    .cfi_undefined 1097
+; WAVE32-NEXT:    .cfi_undefined 1098
+; WAVE32-NEXT:    .cfi_undefined 1099
+; WAVE32-NEXT:    .cfi_undefined 1100
+; WAVE32-NEXT:    .cfi_undefined 1101
+; WAVE32-NEXT:    .cfi_undefined 1102
+; WAVE32-NEXT:    .cfi_undefined 1103
+; WAVE32-NEXT:    .cfi_undefined 1112
+; WAVE32-NEXT:    .cfi_undefined 1113
+; WAVE32-NEXT:    .cfi_undefined 1114
+; WAVE32-NEXT:    .cfi_undefined 1115
+; WAVE32-NEXT:    .cfi_undefined 1116
+; WAVE32-NEXT:    .cfi_undefined 1117
+; WAVE32-NEXT:    .cfi_undefined 1118
+; WAVE32-NEXT:    .cfi_undefined 1119
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; WAVE32-NEXT:    s_mov_b32 s16, s33
 ; WAVE32-NEXT:    s_mov_b32 s33, s32

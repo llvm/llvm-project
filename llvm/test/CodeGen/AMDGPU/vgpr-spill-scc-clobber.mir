@@ -492,6 +492,38 @@ body:             |
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; MUBUF-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; MUBUF-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; MUBUF-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec
@@ -546,6 +578,38 @@ body:             |
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX9-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX9-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX9-FLATSCR-NEXT:   $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
@@ -601,6 +665,38 @@ body:             |
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX10-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX10-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX10-FLATSCR-NEXT:   $vgpr1 = V_ADD_U32_e64 $sgpr32, 8200, 0, implicit $exec
@@ -655,6 +751,38 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; VMEM-GFX8-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec
@@ -737,6 +865,38 @@ body:             |
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; MUBUF-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; MUBUF-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; MUBUF-NEXT:   $vgpr2 = V_MOV_B32_e32 8200, implicit $exec
@@ -793,6 +953,38 @@ body:             |
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX9-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX9-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr2, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX9-FLATSCR-NEXT:   $vgpr2 = V_MOV_B32_e32 $sgpr32, implicit $exec
@@ -849,6 +1041,38 @@ body:             |
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX10-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX10-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr2, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX10-FLATSCR-NEXT:   $vgpr2 = V_ADD_U32_e64 $sgpr32, 8200, 0, implicit $exec
@@ -904,6 +1128,38 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; VMEM-GFX8-NEXT:   $vgpr2 = V_MOV_B32_e32 8200, implicit $exec
@@ -988,6 +1244,38 @@ body:             |
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; MUBUF-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; MUBUF-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; MUBUF-NEXT:   $vgpr3 = V_MOV_B32_e32 8200, implicit $exec
@@ -1046,6 +1334,38 @@ body:             |
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX9-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX9-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX9-FLATSCR-NEXT:   $vgpr3 = V_MOV_B32_e32 $sgpr32, implicit $exec
@@ -1103,6 +1423,38 @@ body:             |
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX10-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX10-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX10-FLATSCR-NEXT:   $vgpr3 = V_ADD_U32_e64 $sgpr32, 8200, 0, implicit $exec
@@ -1159,6 +1511,38 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; VMEM-GFX8-NEXT:   $vgpr3 = V_MOV_B32_e32 8200, implicit $exec
@@ -1241,6 +1625,38 @@ body:             |
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; MUBUF-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; MUBUF-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; MUBUF-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec
@@ -1294,6 +1710,38 @@ body:             |
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX9-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX9-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX9-FLATSCR-NEXT:   $vgpr1 = V_MOV_B32_e32 $sgpr32, implicit $exec
@@ -1348,6 +1796,38 @@ body:             |
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX10-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX10-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX10-FLATSCR-NEXT:   $vgpr1 = V_ADD_U32_e64 $sgpr32, 8200, 0, implicit $exec
@@ -1401,6 +1881,38 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; VMEM-GFX8-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec
@@ -1481,6 +1993,38 @@ body:             |
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; MUBUF-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; MUBUF-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; MUBUF-NEXT:   $vgpr2 = V_MOV_B32_e32 8200, implicit $exec
@@ -1535,6 +2079,38 @@ body:             |
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX9-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX9-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr2, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX9-FLATSCR-NEXT:   $vgpr2 = V_MOV_B32_e32 $sgpr32, implicit $exec
@@ -1589,6 +2165,38 @@ body:             |
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX10-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX10-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr2, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX10-FLATSCR-NEXT:   $vgpr2 = V_ADD_U32_e64 $sgpr32, 8200, 0, implicit $exec
@@ -1642,6 +2250,38 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr2, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; VMEM-GFX8-NEXT:   $vgpr2 = V_MOV_B32_e32 8200, implicit $exec
@@ -1723,6 +2363,38 @@ body:             |
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; MUBUF-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; MUBUF-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; MUBUF-NEXT:   $vgpr3 = V_MOV_B32_e32 8200, implicit $exec
@@ -1778,6 +2450,38 @@ body:             |
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX9-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX9-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX9-FLATSCR-NEXT:   $vgpr3 = V_MOV_B32_e32 $sgpr32, implicit $exec
@@ -1832,6 +2536,38 @@ body:             |
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX10-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX10-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr3, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX10-FLATSCR-NEXT:   $vgpr3 = V_ADD_U32_e64 $sgpr32, 8200, 0, implicit $exec
@@ -1885,6 +2621,38 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; VMEM-GFX8-NEXT:   $vgpr3 = V_MOV_B32_e32 8200, implicit $exec
@@ -1967,6 +2735,38 @@ body:             |
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; MUBUF-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; MUBUF-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec
   ; MUBUF-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
@@ -2017,6 +2817,38 @@ body:             |
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX9-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX9-FLATSCR-NEXT:   $sgpr4 = S_ADDC_U32 $sgpr32, 8200, implicit-def $scc, implicit $scc
   ; GFX9-FLATSCR-NEXT:   S_BITCMP1_B32 $sgpr4, 0, implicit-def $scc
@@ -2070,6 +2902,38 @@ body:             |
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX10-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX10-FLATSCR-NEXT:   $sgpr4 = S_ADDC_U32 $sgpr32, 8200, implicit-def $scc, implicit $scc
   ; GFX10-FLATSCR-NEXT:   S_BITCMP1_B32 $sgpr4, 0, implicit-def $scc
@@ -2123,6 +2987,38 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec
   ; VMEM-GFX8-NEXT:   $vgpr0 = BUFFER_LOAD_DWORD_OFFEN killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (load (s32) from %stack.1, addrspace 5)
@@ -2203,6 +3099,38 @@ body:             |
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; MUBUF-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; MUBUF-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; MUBUF-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; MUBUF-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec
@@ -2257,6 +3185,38 @@ body:             |
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX9-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX9-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX9-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX9-FLATSCR-NEXT:   $sgpr4 = S_ADDC_U32 $sgpr32, 8200, implicit-def $scc, implicit $scc
@@ -2314,6 +3274,38 @@ body:             |
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; GFX10-FLATSCR-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; GFX10-FLATSCR-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; GFX10-FLATSCR-NEXT:   SCRATCH_STORE_DWORD_SADDR killed $vgpr1, $sgpr32, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into %stack.2, addrspace 5)
   ; GFX10-FLATSCR-NEXT:   $sgpr4 = S_ADDC_U32 $sgpr32, 8200, implicit-def $scc, implicit $scc
@@ -2371,6 +3363,38 @@ body:             |
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr27
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr28
   ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr29
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr40
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr41
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr42
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr43
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr44
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr45
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr46
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr47
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr56
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr57
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr58
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr59
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr60
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr61
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr62
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr63
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr72
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr73
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr74
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr75
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr76
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr77
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr78
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr79
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr88
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr89
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr90
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr91
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr92
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr93
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr94
+  ; VMEM-GFX8-NEXT:   frame-setup CFI_INSTRUCTION undefined $sgpr95
   ; VMEM-GFX8-NEXT:   S_CMP_EQ_U32 0, 0, implicit-def $scc
   ; VMEM-GFX8-NEXT:   BUFFER_STORE_DWORD_OFFSET killed $vgpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32) into %stack.2, addrspace 5)
   ; VMEM-GFX8-NEXT:   $vgpr1 = V_MOV_B32_e32 8200, implicit $exec

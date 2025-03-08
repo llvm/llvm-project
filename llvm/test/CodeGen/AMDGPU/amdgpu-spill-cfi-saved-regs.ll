@@ -446,17 +446,16 @@ define void @callee_need_to_spill_fp_exec_to_memory() #2 {
 ; WAVE64-NEXT:    .cfi_undefined 60
 ; WAVE64-NEXT:    .cfi_undefined 61
 ; WAVE64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; WAVE64-NEXT:    s_mov_b32 s4, s33
+; WAVE64-NEXT:    s_mov_b32 s40, s33
+; WAVE64-NEXT:    .cfi_register 65, 72
 ; WAVE64-NEXT:    s_mov_b32 s33, s32
-; WAVE64-NEXT:    s_xor_saveexec_b64 s[6:7], -1
+; WAVE64-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; WAVE64-NEXT:    buffer_store_dword v39, off, s[0:3], s33 offset:192 ; 4-byte Folded Spill
 ; WAVE64-NEXT:    .cfi_offset 2599, 12288
-; WAVE64-NEXT:    s_mov_b64 exec, s[6:7]
+; WAVE64-NEXT:    s_mov_b64 exec, s[4:5]
 ; WAVE64-NEXT:    v_writelane_b32 v39, exec_lo, 32
 ; WAVE64-NEXT:    v_writelane_b32 v39, exec_hi, 33
 ; WAVE64-NEXT:    .cfi_llvm_vector_registers 17, 2599, 32, 32, 2599, 33, 32
-; WAVE64-NEXT:    v_writelane_b32 v39, s4, 34
-; WAVE64-NEXT:    .cfi_llvm_vector_registers 65, 2599, 34, 32
 ; WAVE64-NEXT:    .cfi_def_cfa_register 65
 ; WAVE64-NEXT:    s_addk_i32 s32, 0x3200
 ; WAVE64-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:188 ; 4-byte Folded Spill
@@ -706,12 +705,11 @@ define void @callee_need_to_spill_fp_exec_to_memory() #2 {
 ; WAVE64-NEXT:    v_readlane_b32 s35, v39, 1
 ; WAVE64-NEXT:    v_readlane_b32 s34, v39, 0
 ; WAVE64-NEXT:    s_mov_b32 s32, s33
-; WAVE64-NEXT:    v_readlane_b32 s4, v39, 34
-; WAVE64-NEXT:    s_xor_saveexec_b64 s[6:7], -1
+; WAVE64-NEXT:    s_xor_saveexec_b64 s[4:5], -1
 ; WAVE64-NEXT:    buffer_load_dword v39, off, s[0:3], s33 offset:192 ; 4-byte Folded Reload
-; WAVE64-NEXT:    s_mov_b64 exec, s[6:7]
+; WAVE64-NEXT:    s_mov_b64 exec, s[4:5]
 ; WAVE64-NEXT:    .cfi_def_cfa_register 64
-; WAVE64-NEXT:    s_mov_b32 s33, s4
+; WAVE64-NEXT:    s_mov_b32 s33, s40
 ; WAVE64-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE64-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -830,21 +828,19 @@ define void @callee_need_to_spill_fp_exec_to_memory() #2 {
 ; WAVE32-NEXT:    .cfi_undefined 60
 ; WAVE32-NEXT:    .cfi_undefined 61
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; WAVE32-NEXT:    s_mov_b32 s4, s33
+; WAVE32-NEXT:    s_mov_b32 s40, s33
+; WAVE32-NEXT:    .cfi_register 65, 72
 ; WAVE32-NEXT:    s_mov_b32 s33, s32
-; WAVE32-NEXT:    s_xor_saveexec_b32 s5, -1
+; WAVE32-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-NEXT:    buffer_store_dword v39, off, s[0:3], s33 offset:192 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    .cfi_offset 1575, 6144
 ; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
-; WAVE32-NEXT:    s_mov_b32 exec_lo, s5
+; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-NEXT:    v_mov_b32_e32 v0, exec_lo
 ; WAVE32-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:196 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    .cfi_offset 1, 6272
-; WAVE32-NEXT:    v_mov_b32_e32 v0, s4
-; WAVE32-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:200 ; 4-byte Folded Spill
-; WAVE32-NEXT:    .cfi_offset 65, 6400
 ; WAVE32-NEXT:    .cfi_def_cfa_register 65
-; WAVE32-NEXT:    s_addk_i32 s32, 0x1a00
+; WAVE32-NEXT:    s_addk_i32 s32, 0x1980
 ; WAVE32-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:188 ; 4-byte Folded Spill
 ; WAVE32-NEXT:    .cfi_llvm_vector_offset 1576, 32, 1, 32, 6016
 ; WAVE32-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:184 ; 4-byte Folded Spill
@@ -1011,7 +1007,7 @@ define void @callee_need_to_spill_fp_exec_to_memory() #2 {
 ; WAVE32-NEXT:    ;;#ASMSTART
 ; WAVE32-NEXT:    ; clobber all VGPRs except v39
 ; WAVE32-NEXT:    ;;#ASMEND
-; WAVE32-NEXT:    s_clause 0x30
+; WAVE32-NEXT:    s_clause 0x2f
 ; WAVE32-NEXT:    buffer_load_dword v127, off, s[0:3], s33
 ; WAVE32-NEXT:    buffer_load_dword v126, off, s[0:3], s33 offset:4
 ; WAVE32-NEXT:    buffer_load_dword v125, off, s[0:3], s33 offset:8
@@ -1060,7 +1056,6 @@ define void @callee_need_to_spill_fp_exec_to_memory() #2 {
 ; WAVE32-NEXT:    buffer_load_dword v42, off, s[0:3], s33 offset:180
 ; WAVE32-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:184
 ; WAVE32-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:188
-; WAVE32-NEXT:    buffer_load_dword v0, off, s[0:3], s33 offset:200
 ; WAVE32-NEXT:    v_readlane_b32 s97, v39, 31
 ; WAVE32-NEXT:    v_readlane_b32 s96, v39, 30
 ; WAVE32-NEXT:    v_readlane_b32 s87, v39, 29
@@ -1094,14 +1089,12 @@ define void @callee_need_to_spill_fp_exec_to_memory() #2 {
 ; WAVE32-NEXT:    v_readlane_b32 s35, v39, 1
 ; WAVE32-NEXT:    v_readlane_b32 s34, v39, 0
 ; WAVE32-NEXT:    s_mov_b32 s32, s33
-; WAVE32-NEXT:    s_waitcnt vmcnt(0)
-; WAVE32-NEXT:    v_readfirstlane_b32 s4, v0
-; WAVE32-NEXT:    s_xor_saveexec_b32 s5, -1
+; WAVE32-NEXT:    s_xor_saveexec_b32 s4, -1
 ; WAVE32-NEXT:    buffer_load_dword v39, off, s[0:3], s33 offset:192 ; 4-byte Folded Reload
 ; WAVE32-NEXT:    s_waitcnt_depctr 0xffe3
-; WAVE32-NEXT:    s_mov_b32 exec_lo, s5
+; WAVE32-NEXT:    s_mov_b32 exec_lo, s4
 ; WAVE32-NEXT:    .cfi_def_cfa_register 64
-; WAVE32-NEXT:    s_mov_b32 s33, s4
+; WAVE32-NEXT:    s_mov_b32 s33, s40
 ; WAVE32-NEXT:    s_waitcnt vmcnt(0)
 ; WAVE32-NEXT:    s_setpc_b64 s[30:31]
   call void asm sideeffect "; clobber nonpreserved and 32 CSR SGPRs",
