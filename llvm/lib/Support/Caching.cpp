@@ -90,9 +90,9 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
             ModuleName(ModuleName), Task(Task) {}
 
       Error commit() override {
-        if (Committed)
-          return Error::success();
-        Committed = true;
+        Error E = CachedFileStream::commit();
+        if (E)
+          return E;
 
         // Make sure the stream is closed before committing it.
         OS.reset();
@@ -118,7 +118,7 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
         // AddBuffer a copy of the bytes we wrote in that case. We do this
         // instead of just using the existing file, because the pruner might
         // delete the file before we get a chance to use it.
-        Error E = TempFile.keep(ObjectPathName);
+        E = TempFile.keep(ObjectPathName);
         E = handleErrors(std::move(E), [&](const ECError &E) -> Error {
           std::error_code EC = E.convertToErrorCode();
           if (EC != errc::permission_denied)
@@ -142,18 +142,6 @@ Expected<FileCache> llvm::localCache(const Twine &CacheNameRef,
 
         AddBuffer(Task, ModuleName, std::move(*MBOrErr));
         return Error::success();
-      }
-
-      ~CacheStream() {
-        // In Debug builds, try to track down places where commit() was not
-        // called before destruction.
-        assert(Committed);
-        // In Release builds, fall back to the previous behaviour of committing
-        // during destruction and reporting errors with report_fatal_error.
-        if (Committed)
-          return;
-        if (Error Err = commit())
-          report_fatal_error(Twine(toString(std::move(Err))));
       }
     };
 

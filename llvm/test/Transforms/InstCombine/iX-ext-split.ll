@@ -89,6 +89,31 @@ entry:
   ret void
 }
 
+; (non)ext split from i64 to i128
+define void @i128_ext_split_store_i64(i64 %x, ptr %out)  {
+; CHECK-LABEL: define void @i128_ext_split_store_i64(
+; CHECK-SAME: i64 [[X:%.*]], ptr [[OUT:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[LO:%.*]] = zext i64 [[X]] to i128
+; CHECK-NEXT:    [[SIGN:%.*]] = ashr i64 [[X]], 63
+; CHECK-NEXT:    [[WIDEN:%.*]] = zext i64 [[SIGN]] to i128
+; CHECK-NEXT:    [[HI:%.*]] = shl nuw i128 [[WIDEN]], 64
+; CHECK-NEXT:    [[RES:%.*]] = or disjoint i128 [[HI]], [[LO]]
+; CHECK-NEXT:    store i128 [[RES]], ptr [[OUT]], align 16
+; CHECK-NEXT:    ret void
+;
+entry:
+  %lo = zext i64 %x to i128
+
+  %sign = ashr i64 %x, 63
+  %widen = zext i64 %sign to i128
+  %hi = shl nuw i128 %widen, 64
+
+  %res = or disjoint i128 %hi, %lo
+  store i128 %res, ptr %out, align 16
+  ret void
+}
+
 ; negative test - wrong constant value
 define i128 @i128_ext_split_neg1(i32 %x) {
 ; CHECK-LABEL: define i128 @i128_ext_split_neg1(

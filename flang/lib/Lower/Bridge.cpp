@@ -4353,8 +4353,6 @@ private:
   void genForallPointerAssignment(
       mlir::Location loc, const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
-    if (Fortran::evaluate::IsProcedureDesignator(assign.rhs))
-      TODO(loc, "procedure pointer assignment inside FORALL");
     std::optional<Fortran::evaluate::DynamicType> lhsType =
         assign.lhs.GetType();
     // Polymorphic pointer assignment is delegated to the runtime, and
@@ -4383,7 +4381,6 @@ private:
     Fortran::lower::StatementContext lhsContext;
     hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
         loc, *this, assign.lhs, localSymbols, lhsContext);
-
     auto lhsYieldOp = builder->create<hlfir::YieldOp>(loc, lhs);
     Fortran::lower::genCleanUpInRegionIfAny(
         loc, *builder, lhsYieldOp.getCleanup(), lhsContext);
@@ -4391,6 +4388,23 @@ private:
     // Lower RHS in its own region.
     builder->createBlock(&regionAssignOp.getRhsRegion());
     Fortran::lower::StatementContext rhsContext;
+    mlir::Value rhs =
+        genForallPointerAssignmentRhs(loc, lhs, assign, rhsContext);
+    auto rhsYieldOp = builder->create<hlfir::YieldOp>(loc, rhs);
+    Fortran::lower::genCleanUpInRegionIfAny(
+        loc, *builder, rhsYieldOp.getCleanup(), rhsContext);
+
+    builder->setInsertionPointAfter(regionAssignOp);
+  }
+
+  mlir::Value
+  genForallPointerAssignmentRhs(mlir::Location loc, mlir::Value lhs,
+                                const Fortran::evaluate::Assignment &assign,
+                                Fortran::lower::StatementContext &rhsContext) {
+    if (Fortran::evaluate::IsProcedureDesignator(assign.rhs))
+      return fir::getBase(Fortran::lower::convertExprToAddress(
+          loc, *this, assign.rhs, localSymbols, rhsContext));
+    // Data target.
     hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
         loc, *this, assign.rhs, localSymbols, rhsContext);
     // Create pointer descriptor value from the RHS.
@@ -4398,12 +4412,7 @@ private:
       rhs = hlfir::Entity{builder->create<fir::LoadOp>(loc, rhs)};
     auto lhsBoxType =
         llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(lhs.getType()));
-    mlir::Value newBox = hlfir::genVariableBox(loc, *builder, rhs, lhsBoxType);
-    auto rhsYieldOp = builder->create<hlfir::YieldOp>(loc, newBox);
-    Fortran::lower::genCleanUpInRegionIfAny(
-        loc, *builder, rhsYieldOp.getCleanup(), rhsContext);
-
-    builder->setInsertionPointAfter(regionAssignOp);
+    return hlfir::genVariableBox(loc, *builder, rhs, lhsBoxType);
   }
 
   // Create the 2 x newRank array with the bounds to be passed to the runtime as
