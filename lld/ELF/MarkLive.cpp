@@ -80,11 +80,11 @@ private:
   // identifiers, so we just store a SmallVector instead of a multimap.
   DenseMap<StringRef, SmallVector<InputSectionBase *, 0>> cNamedSections;
 
-  // The most proximate reason that something is live. If something doesn't have
-  // a recorded reason, it is either dead, intrinsically live, or an
-  // unreferenced symbol in a live section. (These cases are trivially
-  // detectable and need not be stored.)
-  DenseMap<LiveReason, LiveReason> whyLive;
+  // The most proximate reason that something is live. A nullopt means
+  // "intrinsically live". If something doesn't have a recorded reason, it is
+  // either dead or an unreferenced symbol in a live section. (These cases are
+  // trivially detectable and need not be stored.)
+  DenseMap<LiveReason, std::optional<LiveReason>> whyLive;
 };
 } // namespace
 
@@ -157,7 +157,7 @@ void MarkLive<ELFT, TrackWhyLive>::resolveReloc(InputSectionBase &sec,
     if (!ss->isWeak()) {
       cast<SharedFile>(ss->file)->isNeeded = true;
       if (TrackWhyLive)
-        whyLive.try_emplace(&sym, *reason);
+        whyLive.try_emplace(&sym, reason);
     }
   }
 
@@ -236,15 +236,15 @@ void MarkLive<ELFT, TrackWhyLive>::enqueue(InputSectionBase *sec,
     return;
   sec->partition = sec->partition ? 1 : partition;
 
-  if (TrackWhyLive && reason) {
+  if (TrackWhyLive) {
     if (sym) {
       // If a specific symbol is referenced, that makes it alive. It may in turn
       // make its section alive.
-      whyLive.try_emplace(sym, *reason);
+      whyLive.try_emplace(sym, reason);
       whyLive.try_emplace(sec, sym);
     } else {
       // Otherwise, the reference generically makes the section live.
-      whyLive.try_emplace(sec, *reason);
+      whyLive.try_emplace(sec, reason);
     }
   }
 
@@ -264,11 +264,20 @@ void MarkLive<ELFT, TrackWhyLive>::printWhyLive(Symbol *s) const {
   }
 
   auto msg = Msg(ctx);
-  msg << "live symbol: " << toStr(ctx, *s);
 
-  LiveReason cur = s;
+  const auto printSymbol = [&](Symbol *s) {
+    if (s->isLocal())
+      msg << s->file << ":(" << toStr(ctx, *s) << ')';
+    else
+      msg << toStr(ctx, *s);
+  };
+
+  msg << "live symbol: ";
+  printSymbol(s);
+
+  std::optional<LiveReason> cur = s;
   while (true) {
-    auto it = whyLive.find(cur);
+    auto it = whyLive.find(*cur);
     // If there is a specific reason this object is live...
     if (it != whyLive.end()) {
       cur = it->second;
@@ -276,9 +285,9 @@ void MarkLive<ELFT, TrackWhyLive>::printWhyLive(Symbol *s) const {
       // This object is live, but it has no tracked reason. It is either
       // intrinsically live or an unreferenced symbol in a live section. Return
       // in the first case.
-      if (!std::holds_alternative<Symbol *>(cur))
+      if (!std::holds_alternative<Symbol *>(*cur))
         return;
-      auto *d = dyn_cast<Defined>(std::get<Symbol *>(cur));
+      auto *d = dyn_cast<Defined>(std::get<Symbol *>(*cur));
       if (!d)
         return;
       auto *reason = dyn_cast_or_null<InputSectionBase>(d->section);
@@ -286,15 +295,14 @@ void MarkLive<ELFT, TrackWhyLive>::printWhyLive(Symbol *s) const {
         return;
       cur = LiveReason{reason};
     }
+    if (!cur)
+      break;
 
     msg << "\n>>> kept live by ";
-    if (std::holds_alternative<Symbol *>(cur)) {
-      auto *s = std::get<Symbol *>(cur);
-      msg << toStr(ctx, *s);
-    } else {
-      auto *s = std::get<InputSectionBase *>(cur);
-      msg << toStr(ctx, s);
-    }
+    if (std::holds_alternative<Symbol *>(*cur))
+      printSymbol(std::get<Symbol *>(*cur));
+    else
+      msg << toStr(ctx, std::get<InputSectionBase *>(*cur));
   }
 }
 
@@ -403,12 +411,19 @@ void MarkLive<ELFT, TrackWhyLive>::run() {
   mark();
 
   if (TrackWhyLive) {
-    for (Symbol *sym : ctx.symtab->getSymbols()) {
+    const auto handleSym = [&](Symbol *sym) {
       if (llvm::any_of(ctx.arg.whyLive, [sym](const llvm::GlobPattern &pat) {
             return pat.match(sym->getName());
           }))
         printWhyLive(sym);
-    }
+    };
+
+    for (Symbol *sym : ctx.symtab->getSymbols())
+      handleSym(sym);
+    for (ELFFileBase *file : ctx.objectFiles)
+      for (Symbol *sym : file->getSymbols())
+        if (sym->isLocal())
+          handleSym(sym);
   }
 }
 
