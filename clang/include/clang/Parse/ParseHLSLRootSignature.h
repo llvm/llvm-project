@@ -66,15 +66,16 @@ private:
 
   /// Parses as many optional parameters as possible in any order
   bool ParseOptionalParams(
-      llvm::SmallDenseMap<TokenKind, llvm::hlsl::rootsig::ParamType> &RefMap, TokenKind Context);
+      llvm::SmallDenseMap<TokenKind, llvm::hlsl::rootsig::ParamType> &RefMap,
+      TokenKind Context);
 
   /// Use NumericLiteralParser to convert CurToken.NumSpelling into a unsigned
   /// 32-bit integer
   bool HandleUIntLiteral(uint32_t &X);
   bool ParseRegister(llvm::hlsl::rootsig::Register *Reg, TokenKind Context);
   bool ParseUInt(uint32_t *X, TokenKind Context);
-  bool
-  ParseDescriptorRangeOffset(llvm::hlsl::rootsig::DescriptorRangeOffset *X, TokenKind Context);
+  bool ParseDescriptorRangeOffset(llvm::hlsl::rootsig::DescriptorRangeOffset *X,
+                                  TokenKind Context);
 
   /// Method for parsing any type of the ENUM defined token kinds (from
   /// HLSLRootSignatureTokenKinds.def)
@@ -90,7 +91,8 @@ private:
 
   /// Helper methods that define the mappings and invoke ParseEnum for
   /// different enum types
-  bool ParseShaderVisibility(llvm::hlsl::rootsig::ShaderVisibility *Enum, TokenKind Context);
+  bool ParseShaderVisibility(llvm::hlsl::rootsig::ShaderVisibility *Enum,
+                             TokenKind Context);
 
   /// A wrapper method around ParseEnum that will parse an 'or' chain of
   /// enums, with AllowZero = true
@@ -101,7 +103,8 @@ private:
   /// Helper methods that define the mappings and invoke ParseFlags for
   /// different enum types
   bool
-  ParseDescriptorRangeFlags(llvm::hlsl::rootsig::DescriptorRangeFlags *Enum, TokenKind Context);
+  ParseDescriptorRangeFlags(llvm::hlsl::rootsig::DescriptorRangeFlags *Enum,
+                            TokenKind Context);
 
   /// Invoke the Lexer to consume a token and update CurToken with the result
   void ConsumeNextToken() { CurToken = Lexer.ConsumeToken(); }

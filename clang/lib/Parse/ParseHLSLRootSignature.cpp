@@ -53,7 +53,8 @@ bool RootSignatureParser::Parse() {
   while (!ParseRootElement()) {
     if (Lexer.EndOfBuffer())
       return false;
-    if (ConsumeExpectedToken(TokenKind::pu_comma, diag::err_expected_either, TokenKind::end_of_stream))
+    if (ConsumeExpectedToken(TokenKind::pu_comma, diag::err_expected_either,
+                             TokenKind::end_of_stream))
       return true;
   }
 
@@ -61,7 +62,9 @@ bool RootSignatureParser::Parse() {
 }
 
 bool RootSignatureParser::ParseRootElement() {
-  if (ConsumeExpectedToken(TokenKind::kw_DescriptorTable, diag::err_hlsl_expected_param, /*Context=*/TokenKind::kw_RootSignature))
+  if (ConsumeExpectedToken(TokenKind::kw_DescriptorTable,
+                           diag::err_hlsl_expected_param,
+                           /*Context=*/TokenKind::kw_RootSignature))
     return true;
 
   // Dispatch onto the correct parse method
@@ -77,7 +80,8 @@ bool RootSignatureParser::ParseRootElement() {
 bool RootSignatureParser::ParseDescriptorTable() {
   DescriptorTable Table;
 
-  if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after, CurToken.Kind))
+  if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           CurToken.Kind))
     return true;
 
   // Empty case:
@@ -108,7 +112,8 @@ bool RootSignatureParser::ParseDescriptorTable() {
     Table.NumClauses++;
   } while (TryConsumeExpectedToken(TokenKind::pu_comma));
 
-  if (ConsumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after, CurToken.Kind))
+  if (ConsumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
+                           CurToken.Kind))
     return true;
 
   Elements.push_back(Table);
@@ -144,7 +149,8 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
   // Store context of clause token type we are parsing
   TokenKind Context = CurToken.Kind;
 
-  if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after, CurToken.Kind))
+  if (ConsumeExpectedToken(TokenKind::pu_l_paren, diag::err_expected_after,
+                           CurToken.Kind))
     return true;
 
   // Consume mandatory Register paramater
@@ -161,7 +167,8 @@ bool RootSignatureParser::ParseDescriptorTableClause() {
   if (ParseOptionalParams({RefMap}, Context))
     return true;
 
-  if (ConsumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after, CurToken.Kind))
+  if (ConsumeExpectedToken(TokenKind::pu_r_paren, diag::err_expected_after,
+                           CurToken.Kind))
     return true;
 
   Elements.push_back(Clause);
@@ -173,22 +180,24 @@ template <class... Ts> struct ParseMethods : Ts... { using Ts::operator()...; };
 template <class... Ts> ParseMethods(Ts...) -> ParseMethods<Ts...>;
 
 bool RootSignatureParser::ParseParam(ParamType Ref, TokenKind Context) {
-  if (ConsumeExpectedToken(TokenKind::pu_equal, diag::err_expected_after, CurToken.Kind))
+  if (ConsumeExpectedToken(TokenKind::pu_equal, diag::err_expected_after,
+                           CurToken.Kind))
     return true;
 
   bool Error;
-  std::visit(
-      ParseMethods{
-          [&](uint32_t *X) { Error = ParseUInt(X, Context); },
-          [&](DescriptorRangeOffset *X) {
-            Error = ParseDescriptorRangeOffset(X, Context);
-          },
-          [&](ShaderVisibility *Enum) { Error = ParseShaderVisibility(Enum, Context); },
-          [&](DescriptorRangeFlags *Flags) {
-            Error = ParseDescriptorRangeFlags(Flags, Context);
-          },
-      },
-      Ref);
+  std::visit(ParseMethods{
+                 [&](uint32_t *X) { Error = ParseUInt(X, Context); },
+                 [&](DescriptorRangeOffset *X) {
+                   Error = ParseDescriptorRangeOffset(X, Context);
+                 },
+                 [&](ShaderVisibility *Enum) {
+                   Error = ParseShaderVisibility(Enum, Context);
+                 },
+                 [&](DescriptorRangeFlags *Flags) {
+                   Error = ParseDescriptorRangeFlags(Flags, Context);
+                 },
+             },
+             Ref);
 
   return Error;
 }
@@ -203,7 +212,8 @@ bool RootSignatureParser::ParseOptionalParams(
   llvm::SmallDenseSet<TokenKind> Seen;
 
   while (TryConsumeExpectedToken(TokenKind::pu_comma)) {
-    if (ConsumeExpectedToken(ParamKeywords, diag::err_hlsl_expected_param, Context))
+    if (ConsumeExpectedToken(ParamKeywords, diag::err_hlsl_expected_param,
+                             Context))
       return true;
 
     TokenKind ParamKind = CurToken.Kind;
@@ -247,8 +257,7 @@ bool RootSignatureParser::HandleUIntLiteral(uint32_t &X) {
 bool RootSignatureParser::ParseRegister(Register *Register, TokenKind Context) {
   if (ConsumeExpectedToken(
           {TokenKind::bReg, TokenKind::tReg, TokenKind::uReg, TokenKind::sReg},
-          diag::err_hlsl_expected_param,
-          Context))
+          diag::err_hlsl_expected_param, Context))
     return true;
 
   switch (CurToken.Kind) {
@@ -277,7 +286,8 @@ bool RootSignatureParser::ParseRegister(Register *Register, TokenKind Context) {
 bool RootSignatureParser::ParseUInt(uint32_t *X, TokenKind Context) {
   // Treat a postively signed integer as though it is unsigned to match DXC
   TryConsumeExpectedToken(TokenKind::pu_plus);
-  if (ConsumeExpectedToken(TokenKind::int_literal, diag::err_hlsl_expected_value, Context))
+  if (ConsumeExpectedToken(TokenKind::int_literal,
+                           diag::err_hlsl_expected_value, Context))
     return true;
 
   if (HandleUIntLiteral(*X))
@@ -286,12 +296,11 @@ bool RootSignatureParser::ParseUInt(uint32_t *X, TokenKind Context) {
   return false;
 }
 
-bool RootSignatureParser::ParseDescriptorRangeOffset(DescriptorRangeOffset *X, TokenKind Context) {
+bool RootSignatureParser::ParseDescriptorRangeOffset(DescriptorRangeOffset *X,
+                                                     TokenKind Context) {
   if (ConsumeExpectedToken(
           {TokenKind::int_literal, TokenKind::en_DescriptorRangeOffsetAppend},
-          diag::err_hlsl_expected_value,
-          Context
-        ))
+          diag::err_hlsl_expected_value, Context))
     return true;
 
   // Edge case for the offset enum -> static value
@@ -309,7 +318,8 @@ bool RootSignatureParser::ParseDescriptorRangeOffset(DescriptorRangeOffset *X, T
 
 template <bool AllowZero, typename EnumType>
 bool RootSignatureParser::ParseEnum(
-    llvm::SmallDenseMap<TokenKind, EnumType> &EnumMap, EnumType *Enum, TokenKind Context) {
+    llvm::SmallDenseMap<TokenKind, EnumType> &EnumMap, EnumType *Enum,
+    TokenKind Context) {
   SmallVector<TokenKind> EnumToks;
   if (AllowZero)
     EnumToks.push_back(TokenKind::int_literal); //  '0' is a valid flag value
@@ -344,7 +354,8 @@ bool RootSignatureParser::ParseEnum(
   llvm_unreachable("Switch for an expected token was not provided");
 }
 
-bool RootSignatureParser::ParseShaderVisibility(ShaderVisibility *Enum, TokenKind Context) {
+bool RootSignatureParser::ParseShaderVisibility(ShaderVisibility *Enum,
+                                                TokenKind Context) {
   // Define the possible flag kinds
   llvm::SmallDenseMap<TokenKind, ShaderVisibility> EnumMap = {
 #define SHADER_VISIBILITY_ENUM(NAME, LIT)                                      \
@@ -357,7 +368,8 @@ bool RootSignatureParser::ParseShaderVisibility(ShaderVisibility *Enum, TokenKin
 
 template <typename FlagType>
 bool RootSignatureParser::ParseFlags(
-    llvm::SmallDenseMap<TokenKind, FlagType> &FlagMap, FlagType *Flags, TokenKind Context) {
+    llvm::SmallDenseMap<TokenKind, FlagType> &FlagMap, FlagType *Flags,
+    TokenKind Context) {
   // Override the default value to 0 so that we can correctly 'or' the values
   *Flags = FlagType(0);
 
@@ -372,8 +384,8 @@ bool RootSignatureParser::ParseFlags(
   return false;
 }
 
-bool RootSignatureParser::ParseDescriptorRangeFlags(
-    DescriptorRangeFlags *Flags, TokenKind Context) {
+bool RootSignatureParser::ParseDescriptorRangeFlags(DescriptorRangeFlags *Flags,
+                                                    TokenKind Context) {
   // Define the possible flag kinds
   llvm::SmallDenseMap<TokenKind, DescriptorRangeFlags> FlagMap = {
 #define DESCRIPTOR_RANGE_FLAG_ENUM(NAME, LIT, ON)                              \
@@ -425,7 +437,8 @@ bool RootSignatureParser::ConsumeExpectedToken(ArrayRef<TokenKind> AnyExpected,
   case diag::err_hlsl_expected_value:
     DB << FormatTokenKinds(AnyExpected) << FormatTokenKinds({Context});
     break;
-  default: break;
+  default:
+    break;
   }
   return true;
 }
