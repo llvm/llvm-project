@@ -21,19 +21,23 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 /// Construct a helper for the given descriptor value.
-MemRefDescriptor::MemRefDescriptor(Value descriptor)
-    : StructBuilder(descriptor) {
-  assert(value != nullptr && "value cannot be null");
-  indexType = cast<LLVM::LLVMStructType>(value.getType())
-                  .getBody()[kOffsetPosInMemRefDescriptor];
+MemRefDescriptor::MemRefDescriptor(ValueRange elements) : elements(elements) {
+  indexType = elements[kOffsetPosInMemRefDescriptor].getType();
 }
 
 /// Builds IR creating an `undef` value of the descriptor type.
 MemRefDescriptor MemRefDescriptor::poison(OpBuilder &builder, Location loc,
-                                          Type descriptorType) {
-
-  Value descriptor = builder.create<LLVM::PoisonOp>(loc, descriptorType);
-  return MemRefDescriptor(descriptor);
+                                          TypeRange descriptorTypes) {
+  DenseMap<Type, Value> poisonValues;
+  SmallVector<Value> elements;
+  for (Type t : descriptorTypes) {
+    auto it = poisonValues.find(t);
+    if (it == poisonValues.end()) {
+      poisonValues[t] = builder.create<LLVM::PoisonOp>(loc, t);
+    }
+    elements.push_back(poisonValues[t]);
+  }
+  return MemRefDescriptor(elements);
 }
 
 /// Builds IR creating a MemRef descriptor that represents `type` and
@@ -57,10 +61,11 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
   assert(!llvm::any_of(strides, ShapedType::isDynamic) &&
          "expected static strides");
 
-  auto convertedType = typeConverter.convertType(type);
-  assert(convertedType && "unexpected failure in memref type conversion");
+  SmallVector<Type> convertedTypes;
+  LogicalResult status = typeConverter.convertType(type, convertedTypes);
+  assert(succeeded(status) && "unexpected failure in memref type conversion");
 
-  auto descr = MemRefDescriptor::poison(builder, loc, convertedType);
+  auto descr = MemRefDescriptor::poison(builder, loc, convertedTypes);
   descr.setAllocatedPtr(builder, loc, memory);
   descr.setAlignedPtr(builder, loc, alignedMemory);
   descr.setConstantOffset(builder, loc, offset);
@@ -73,26 +78,74 @@ MemRefDescriptor MemRefDescriptor::fromStaticShape(
   return descr;
 }
 
+static Value extractStructElement(OpBuilder &builder, Location loc,
+                                  Value packed, ArrayRef<int64_t> idx) {
+  return builder.create<LLVM::ExtractValueOp>(loc, packed, idx);
+}
+
+static Value insertStructElement(OpBuilder &builder, Location loc, Value packed,
+                                 Value val, ArrayRef<int64_t> idx) {
+  return builder.create<LLVM::InsertValueOp>(loc, packed, val, idx);
+}
+MemRefDescriptor MemRefDescriptor::fromPackedStruct(OpBuilder &builder,
+                                                    Location loc,
+                                                    Value packed) {
+  auto llvmStruct = cast<LLVM::LLVMStructType>(packed.getType());
+  auto llvmArray = cast<LLVM::LLVMArrayType>(llvmStruct.getBody()[2]);
+  int64_t rank = llvmArray.getNumElements();
+  SmallVector<Value> elements;
+  elements.push_back(extractStructElement(builder, loc, packed, 0));
+  elements.push_back(extractStructElement(builder, loc, packed, 1));
+  elements.push_back(extractStructElement(builder, loc, packed, 2));
+  for (int i = 0; i < rank; ++i)
+    elements.push_back(extractStructElement(builder, loc, packed, {3, i}));
+  for (int i = 0; i < rank; ++i)
+    elements.push_back(extractStructElement(builder, loc, packed, {4, i}));
+  return MemRefDescriptor(elements);
+}
+
+Value MemRefDescriptor::packStruct(OpBuilder &builder, Location loc) {
+  auto llvmArray = LLVM::LLVMArrayType::get(builder.getContext(),
+                                            elements[3].getType(), getRank());
+  SmallVector<Type> fields;
+  fields.push_back(elements[0].getType());
+  fields.push_back(elements[1].getType());
+  fields.push_back(elements[2].getType());
+  fields.push_back(llvmArray);
+  fields.push_back(llvmArray);
+  Value desc = builder.create<LLVM::UndefOp>(
+      loc, LLVM::LLVMStructType::getLiteral(builder.getContext(), fields));
+  desc = insertStructElement(builder, loc, desc, elements[0], 0);
+  desc = insertStructElement(builder, loc, desc, elements[1], 1);
+  desc = insertStructElement(builder, loc, desc, elements[2], 2);
+  for (int i = 0; i < getRank(); ++i)
+    desc = insertStructElement(builder, loc, desc, elements[3 + i], {3, i});
+  for (int i = 0; i < getRank(); ++i)
+    desc = insertStructElement(builder, loc, desc, elements[3 + getRank() + i],
+                               {4, i});
+  return desc;
+}
+
 /// Builds IR extracting the allocated pointer from the descriptor.
 Value MemRefDescriptor::allocatedPtr(OpBuilder &builder, Location loc) {
-  return extractPtr(builder, loc, kAllocatedPtrPosInMemRefDescriptor);
+  return elements[kAllocatedPtrPosInMemRefDescriptor];
 }
 
 /// Builds IR inserting the allocated pointer into the descriptor.
 void MemRefDescriptor::setAllocatedPtr(OpBuilder &builder, Location loc,
                                        Value ptr) {
-  setPtr(builder, loc, kAllocatedPtrPosInMemRefDescriptor, ptr);
+  elements[kAllocatedPtrPosInMemRefDescriptor] = ptr;
 }
 
 /// Builds IR extracting the aligned pointer from the descriptor.
 Value MemRefDescriptor::alignedPtr(OpBuilder &builder, Location loc) {
-  return extractPtr(builder, loc, kAlignedPtrPosInMemRefDescriptor);
+  return elements[kAlignedPtrPosInMemRefDescriptor];
 }
 
 /// Builds IR inserting the aligned pointer into the descriptor.
 void MemRefDescriptor::setAlignedPtr(OpBuilder &builder, Location loc,
                                      Value ptr) {
-  setPtr(builder, loc, kAlignedPtrPosInMemRefDescriptor, ptr);
+  elements[kAlignedPtrPosInMemRefDescriptor] = ptr;
 }
 
 // Creates a constant Op producing a value of `resultType` from an index-typed
@@ -105,28 +158,25 @@ static Value createIndexAttrConstant(OpBuilder &builder, Location loc,
 
 /// Builds IR extracting the offset from the descriptor.
 Value MemRefDescriptor::offset(OpBuilder &builder, Location loc) {
-  return builder.create<LLVM::ExtractValueOp>(loc, value,
-                                              kOffsetPosInMemRefDescriptor);
+  return elements[kOffsetPosInMemRefDescriptor];
 }
 
 /// Builds IR inserting the offset into the descriptor.
 void MemRefDescriptor::setOffset(OpBuilder &builder, Location loc,
                                  Value offset) {
-  value = builder.create<LLVM::InsertValueOp>(loc, value, offset,
-                                              kOffsetPosInMemRefDescriptor);
+  elements[kOffsetPosInMemRefDescriptor] = offset;
 }
 
 /// Builds IR inserting the offset into the descriptor.
 void MemRefDescriptor::setConstantOffset(OpBuilder &builder, Location loc,
                                          uint64_t offset) {
-  setOffset(builder, loc,
-            createIndexAttrConstant(builder, loc, indexType, offset));
+  elements[kOffsetPosInMemRefDescriptor] =
+      createIndexAttrConstant(builder, loc, indexType, offset);
 }
 
 /// Builds IR extracting the pos-th size from the descriptor.
 Value MemRefDescriptor::size(OpBuilder &builder, Location loc, unsigned pos) {
-  return builder.create<LLVM::ExtractValueOp>(
-      loc, value, ArrayRef<int64_t>({kSizePosInMemRefDescriptor, pos}));
+  return elements[kSizePosInMemRefDescriptor + pos];
 }
 
 Value MemRefDescriptor::size(OpBuilder &builder, Location loc, Value pos,
@@ -137,8 +187,14 @@ Value MemRefDescriptor::size(OpBuilder &builder, Location loc, Value pos,
 
   // Copy size values to stack-allocated memory.
   auto one = createIndexAttrConstant(builder, loc, indexType, 1);
-  auto sizes = builder.create<LLVM::ExtractValueOp>(
-      loc, value, llvm::ArrayRef<int64_t>({kSizePosInMemRefDescriptor}));
+  SmallVector<Type> structElems(rank, indexType);
+  Value sizes = builder.create<LLVM::UndefOp>(
+      loc, LLVM::LLVMStructType::getLiteral(builder.getContext(), structElems));
+  ValueRange sizeVals =
+      ValueRange(elements).slice(kSizePosInMemRefDescriptor, rank);
+  for (auto it : llvm::enumerate(sizeVals))
+    sizes =
+        builder.create<LLVM::InsertValueOp>(loc, sizes, it.value(), it.index());
   auto sizesPtr = builder.create<LLVM::AllocaOp>(loc, ptrTy, arrayTy, one,
                                                  /*alignment=*/0);
   builder.create<LLVM::StoreOp>(loc, sizes, sizesPtr);
@@ -152,40 +208,35 @@ Value MemRefDescriptor::size(OpBuilder &builder, Location loc, Value pos,
 /// Builds IR inserting the pos-th size into the descriptor
 void MemRefDescriptor::setSize(OpBuilder &builder, Location loc, unsigned pos,
                                Value size) {
-  value = builder.create<LLVM::InsertValueOp>(
-      loc, value, size, ArrayRef<int64_t>({kSizePosInMemRefDescriptor, pos}));
+  elements[kSizePosInMemRefDescriptor] = size;
 }
 
 void MemRefDescriptor::setConstantSize(OpBuilder &builder, Location loc,
                                        unsigned pos, uint64_t size) {
-  setSize(builder, loc, pos,
-          createIndexAttrConstant(builder, loc, indexType, size));
+  elements[kSizePosInMemRefDescriptor] =
+      createIndexAttrConstant(builder, loc, indexType, size);
 }
 
 /// Builds IR extracting the pos-th stride from the descriptor.
 Value MemRefDescriptor::stride(OpBuilder &builder, Location loc, unsigned pos) {
-  return builder.create<LLVM::ExtractValueOp>(
-      loc, value, ArrayRef<int64_t>({kStridePosInMemRefDescriptor, pos}));
+  return elements[kSizePosInMemRefDescriptor + getRank() + pos];
 }
 
 /// Builds IR inserting the pos-th stride into the descriptor
 void MemRefDescriptor::setStride(OpBuilder &builder, Location loc, unsigned pos,
                                  Value stride) {
-  value = builder.create<LLVM::InsertValueOp>(
-      loc, value, stride,
-      ArrayRef<int64_t>({kStridePosInMemRefDescriptor, pos}));
+  elements[kSizePosInMemRefDescriptor + getRank() + pos] = stride;
 }
 
 void MemRefDescriptor::setConstantStride(OpBuilder &builder, Location loc,
                                          unsigned pos, uint64_t stride) {
-  setStride(builder, loc, pos,
-            createIndexAttrConstant(builder, loc, indexType, stride));
+  elements[kSizePosInMemRefDescriptor + getRank() + pos] =
+      createIndexAttrConstant(builder, loc, indexType, stride);
 }
 
 LLVM::LLVMPointerType MemRefDescriptor::getElementPtrType() {
   return cast<LLVM::LLVMPointerType>(
-      cast<LLVM::LLVMStructType>(value.getType())
-          .getBody()[kAlignedPtrPosInMemRefDescriptor]);
+      elements[kAlignedPtrPosInMemRefDescriptor].getType());
 }
 
 Value MemRefDescriptor::bufferPtr(OpBuilder &builder, Location loc,
@@ -212,57 +263,14 @@ Value MemRefDescriptor::bufferPtr(OpBuilder &builder, Location loc,
   return ptr;
 }
 
-/// Creates a MemRef descriptor structure from a list of individual values
-/// composing that descriptor, in the following order:
-/// - allocated pointer;
-/// - aligned pointer;
-/// - offset;
-/// - <rank> sizes;
-/// - <rank> strides;
-/// where <rank> is the MemRef rank as provided in `type`.
-Value MemRefDescriptor::pack(OpBuilder &builder, Location loc,
-                             const LLVMTypeConverter &converter,
-                             MemRefType type, ValueRange values) {
-  Type llvmType = converter.convertType(type);
-  auto d = MemRefDescriptor::poison(builder, loc, llvmType);
-
-  d.setAllocatedPtr(builder, loc, values[kAllocatedPtrPosInMemRefDescriptor]);
-  d.setAlignedPtr(builder, loc, values[kAlignedPtrPosInMemRefDescriptor]);
-  d.setOffset(builder, loc, values[kOffsetPosInMemRefDescriptor]);
-
-  int64_t rank = type.getRank();
-  for (unsigned i = 0; i < rank; ++i) {
-    d.setSize(builder, loc, i, values[kSizePosInMemRefDescriptor + i]);
-    d.setStride(builder, loc, i, values[kSizePosInMemRefDescriptor + rank + i]);
-  }
-
-  return d;
-}
-
-/// Builds IR extracting individual elements of a MemRef descriptor structure
-/// and returning them as `results` list.
-void MemRefDescriptor::unpack(OpBuilder &builder, Location loc, Value packed,
-                              MemRefType type,
-                              SmallVectorImpl<Value> &results) {
-  int64_t rank = type.getRank();
-  results.reserve(results.size() + getNumUnpackedValues(type));
-
-  MemRefDescriptor d(packed);
-  results.push_back(d.allocatedPtr(builder, loc));
-  results.push_back(d.alignedPtr(builder, loc));
-  results.push_back(d.offset(builder, loc));
-  for (int64_t i = 0; i < rank; ++i)
-    results.push_back(d.size(builder, loc, i));
-  for (int64_t i = 0; i < rank; ++i)
-    results.push_back(d.stride(builder, loc, i));
-}
-
 /// Returns the number of non-aggregate values that would be produced by
 /// `unpack`.
 unsigned MemRefDescriptor::getNumUnpackedValues(MemRefType type) {
   // Two pointers, offset, <rank> sizes, <rank> strides.
   return 3 + 2 * type.getRank();
 }
+
+int64_t MemRefDescriptor::getRank() { return (elements.size() - 3) / 2; }
 
 //===----------------------------------------------------------------------===//
 // MemRefDescriptorView implementation.
@@ -296,57 +304,61 @@ Value MemRefDescriptorView::stride(unsigned pos) {
 //===----------------------------------------------------------------------===//
 
 /// Construct a helper for the given descriptor value.
-UnrankedMemRefDescriptor::UnrankedMemRefDescriptor(Value descriptor)
-    : StructBuilder(descriptor) {}
+UnrankedMemRefDescriptor::UnrankedMemRefDescriptor(ValueRange elements)
+    : elements(elements) {}
 
 /// Builds IR creating an `undef` value of the descriptor type.
-UnrankedMemRefDescriptor UnrankedMemRefDescriptor::poison(OpBuilder &builder,
-                                                          Location loc,
-                                                          Type descriptorType) {
-  Value descriptor = builder.create<LLVM::PoisonOp>(loc, descriptorType);
-  return UnrankedMemRefDescriptor(descriptor);
+UnrankedMemRefDescriptor
+UnrankedMemRefDescriptor::poison(OpBuilder &builder, Location loc,
+                                 TypeRange descriptorTypes) {
+  DenseMap<Type, Value> poisonValues;
+  SmallVector<Value> elements;
+  for (Type t : descriptorTypes) {
+    auto it = poisonValues.find(t);
+    if (it == poisonValues.end()) {
+      poisonValues[t] = builder.create<LLVM::PoisonOp>(loc, t);
+    }
+    elements.push_back(poisonValues[t]);
+  }
+  return UnrankedMemRefDescriptor(elements);
 }
+
+/// Builds IR extracting individual elements of a MemRef descriptor structure
+/// and returning them as `results` list.
+UnrankedMemRefDescriptor
+UnrankedMemRefDescriptor::fromPackedStruct(OpBuilder &builder, Location loc,
+                                           Value packed) {
+  SmallVector<Value> elements;
+  elements.push_back(extractStructElement(builder, loc, packed, 0));
+  elements.push_back(extractStructElement(builder, loc, packed, 1));
+  return UnrankedMemRefDescriptor(elements);
+}
+
+Value UnrankedMemRefDescriptor::packStruct(OpBuilder &builder, Location loc) {
+  SmallVector<Type> fields;
+  fields.push_back(elements[0].getType());
+  fields.push_back(elements[1].getType());
+  Value desc = builder.create<LLVM::UndefOp>(
+      loc, LLVM::LLVMStructType::getLiteral(builder.getContext(), fields));
+  desc = insertStructElement(builder, loc, desc, elements[0], 0);
+  desc = insertStructElement(builder, loc, desc, elements[1], 1);
+  return desc;
+}
+
 Value UnrankedMemRefDescriptor::rank(OpBuilder &builder, Location loc) const {
-  return extractPtr(builder, loc, kRankInUnrankedMemRefDescriptor);
+  return elements[kRankInUnrankedMemRefDescriptor];
 }
 void UnrankedMemRefDescriptor::setRank(OpBuilder &builder, Location loc,
                                        Value v) {
-  setPtr(builder, loc, kRankInUnrankedMemRefDescriptor, v);
+  elements[kRankInUnrankedMemRefDescriptor] = v;
 }
 Value UnrankedMemRefDescriptor::memRefDescPtr(OpBuilder &builder,
                                               Location loc) const {
-  return extractPtr(builder, loc, kPtrInUnrankedMemRefDescriptor);
+  return elements[kPtrInUnrankedMemRefDescriptor];
 }
 void UnrankedMemRefDescriptor::setMemRefDescPtr(OpBuilder &builder,
                                                 Location loc, Value v) {
-  setPtr(builder, loc, kPtrInUnrankedMemRefDescriptor, v);
-}
-
-/// Builds IR populating an unranked MemRef descriptor structure from a list
-/// of individual constituent values in the following order:
-/// - rank of the memref;
-/// - pointer to the memref descriptor.
-Value UnrankedMemRefDescriptor::pack(OpBuilder &builder, Location loc,
-                                     const LLVMTypeConverter &converter,
-                                     UnrankedMemRefType type,
-                                     ValueRange values) {
-  Type llvmType = converter.convertType(type);
-  auto d = UnrankedMemRefDescriptor::poison(builder, loc, llvmType);
-
-  d.setRank(builder, loc, values[kRankInUnrankedMemRefDescriptor]);
-  d.setMemRefDescPtr(builder, loc, values[kPtrInUnrankedMemRefDescriptor]);
-  return d;
-}
-
-/// Builds IR extracting individual elements that compose an unranked memref
-/// descriptor and returns them as `results` list.
-void UnrankedMemRefDescriptor::unpack(OpBuilder &builder, Location loc,
-                                      Value packed,
-                                      SmallVectorImpl<Value> &results) {
-  UnrankedMemRefDescriptor d(packed);
-  results.reserve(results.size() + 2);
-  results.push_back(d.rank(builder, loc));
-  results.push_back(d.memRefDescPtr(builder, loc));
+  elements[kPtrInUnrankedMemRefDescriptor] = v;
 }
 
 void UnrankedMemRefDescriptor::computeSizes(

@@ -805,9 +805,9 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   if (allocOp.getAsyncToken()) {
     // Async alloc: make dependent ops use the same stream.
-    rewriter.replaceOp(allocOp, {memRefDescriptor, stream});
+    //rewriter.replaceOp(allocOp, {memRefDescriptor, stream});
   } else {
-    rewriter.replaceOp(allocOp, {memRefDescriptor});
+    //rewriter.replaceOp(allocOp, {memRefDescriptor});
   }
 
   return success();

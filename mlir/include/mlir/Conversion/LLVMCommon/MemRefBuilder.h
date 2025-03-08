@@ -30,13 +30,13 @@ class LLVMPointerType;
 /// Helper class to produce LLVM dialect operations extracting or inserting
 /// elements of a MemRef descriptor. Wraps a Value pointing to the descriptor.
 /// The Value may be null, in which case none of the operations are valid.
-class MemRefDescriptor : public StructBuilder {
+class MemRefDescriptor {
 public:
   /// Construct a helper for the given descriptor value.
-  explicit MemRefDescriptor(Value descriptor);
+  explicit MemRefDescriptor(ValueRange elements);
   /// Builds IR creating a `poison` value of the descriptor type.
   static MemRefDescriptor poison(OpBuilder &builder, Location loc,
-                                 Type descriptorType);
+                                 TypeRange descriptorTypes);
   /// Builds IR creating a MemRef descriptor that represents `type` and
   /// populates it with static shape and stride information extracted from the
   /// type.
@@ -48,6 +48,11 @@ public:
   fromStaticShape(OpBuilder &builder, Location loc,
                   const LLVMTypeConverter &typeConverter, MemRefType type,
                   Value memory, Value alignedMemory);
+
+  /// Builds IR extracting individual elements of a MemRef descriptor structure
+  /// and returning them as `results` list.
+  static MemRefDescriptor fromPackedStruct(OpBuilder &builder, Location loc,
+                                           Value packed);
 
   /// Builds IR extracting the allocated pointer from the descriptor.
   Value allocatedPtr(OpBuilder &builder, Location loc);
@@ -98,6 +103,8 @@ public:
   Value bufferPtr(OpBuilder &builder, Location loc,
                   const LLVMTypeConverter &converter, MemRefType type);
 
+  int64_t getRank();
+
   /// Builds IR populating a MemRef descriptor structure from a list of
   /// individual values composing that descriptor, in the following order:
   /// - allocated pointer;
@@ -106,20 +113,21 @@ public:
   /// - <rank> sizes;
   /// - <rank> strides;
   /// where <rank> is the MemRef rank as provided in `type`.
-  static Value pack(OpBuilder &builder, Location loc,
-                    const LLVMTypeConverter &converter, MemRefType type,
-                    ValueRange values);
-
-  /// Builds IR extracting individual elements of a MemRef descriptor structure
-  /// and returning them as `results` list.
-  static void unpack(OpBuilder &builder, Location loc, Value packed,
-                     MemRefType type, SmallVectorImpl<Value> &results);
+  Value packStruct(OpBuilder &builder, Location loc);
 
   /// Returns the number of non-aggregate values that would be produced by
   /// `unpack`.
   static unsigned getNumUnpackedValues(MemRefType type);
 
+  ValueRange getElements() { return elements; }
+
+  /*implicit*/ operator ValueRange() { return elements; }
+
 private:
+  SmallVector<Value> elements;
+  // Value allocatedPtrVal, alignedPtrVal, offsetVal;
+  // SmallVector<Value> sizeVals, strideVals;
+
   // Cached index type.
   Type indexType;
 };
@@ -155,13 +163,18 @@ private:
   ValueRange elements;
 };
 
-class UnrankedMemRefDescriptor : public StructBuilder {
+class UnrankedMemRefDescriptor {
 public:
   /// Construct a helper for the given descriptor value.
-  explicit UnrankedMemRefDescriptor(Value descriptor);
+  explicit UnrankedMemRefDescriptor(ValueRange elements);
   /// Builds IR creating an `undef` value of the descriptor type.
   static UnrankedMemRefDescriptor poison(OpBuilder &builder, Location loc,
-                                         Type descriptorType);
+                                         TypeRange descriptorType);
+
+  /// Builds IR extracting individual elements of a MemRef descriptor structure
+  /// and returning them as `results` list.
+  static UnrankedMemRefDescriptor fromPackedStruct(OpBuilder &builder,
+                                                   Location loc, Value packed);
 
   /// Builds IR extracting the rank from the descriptor
   Value rank(OpBuilder &builder, Location loc) const;
@@ -176,14 +189,7 @@ public:
   /// of individual constituent values in the following order:
   /// - rank of the memref;
   /// - pointer to the memref descriptor.
-  static Value pack(OpBuilder &builder, Location loc,
-                    const LLVMTypeConverter &converter, UnrankedMemRefType type,
-                    ValueRange values);
-
-  /// Builds IR extracting individual elements that compose an unranked memref
-  /// descriptor and returns them as `results` list.
-  static void unpack(OpBuilder &builder, Location loc, Value packed,
-                     SmallVectorImpl<Value> &results);
+  Value packStruct(OpBuilder &builder, Location loc);
 
   /// Returns the number of non-aggregate values that would be produced by
   /// `unpack`.
@@ -269,6 +275,13 @@ public:
   static void setStride(OpBuilder &builder, Location loc,
                         const LLVMTypeConverter &typeConverter,
                         Value strideBasePtr, Value index, Value stride);
+
+  ValueRange getElements() { return elements; }
+
+  /*implicit*/ operator ValueRange() { return elements; }
+
+private:
+  SmallVector<Value> elements;
 };
 
 } // namespace mlir

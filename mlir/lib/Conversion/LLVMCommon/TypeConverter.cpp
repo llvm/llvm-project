@@ -50,68 +50,6 @@ static bool isBarePointer(ValueRange values) {
          isa<LLVM::LLVMPointerType>(values.front().getType());
 }
 
-/// Pack SSA values into an unranked memref descriptor struct.
-static Value packUnrankedMemRefDesc(OpBuilder &builder,
-                                    UnrankedMemRefType resultType,
-                                    ValueRange inputs, Location loc,
-                                    const LLVMTypeConverter &converter) {
-  // Note: Bare pointers are not supported for unranked memrefs because a
-  // memref descriptor cannot be built just from a bare pointer.
-  if (TypeRange(inputs) != converter.getUnrankedMemRefDescriptorFields())
-    return Value();
-  return UnrankedMemRefDescriptor::pack(builder, loc, converter, resultType,
-                                        inputs);
-}
-
-/// Pack SSA values into a ranked memref descriptor struct.
-static Value packRankedMemRefDesc(OpBuilder &builder, MemRefType resultType,
-                                  ValueRange inputs, Location loc,
-                                  const LLVMTypeConverter &converter) {
-  assert(resultType && "expected non-null result type");
-  if (isBarePointer(inputs))
-    return MemRefDescriptor::fromStaticShape(builder, loc, converter,
-                                             resultType, inputs[0]);
-  if (TypeRange(inputs) ==
-      converter.getMemRefDescriptorFields(resultType,
-                                          /*unpackAggregates=*/true))
-    return MemRefDescriptor::pack(builder, loc, converter, resultType, inputs);
-  // The inputs are neither a bare pointer nor an unpacked memref descriptor.
-  // This materialization function cannot be used.
-  return Value();
-}
-
-/// MemRef descriptor elements -> UnrankedMemRefType
-static Value unrankedMemRefMaterialization(OpBuilder &builder,
-                                           UnrankedMemRefType resultType,
-                                           ValueRange inputs, Location loc,
-                                           const LLVMTypeConverter &converter) {
-  // A source materialization must return a value of type
-  // `resultType`, so insert a cast from the memref descriptor type
-  // (!llvm.struct) to the original memref type.
-  Value packed =
-      packUnrankedMemRefDesc(builder, resultType, inputs, loc, converter);
-  if (!packed)
-    return Value();
-  return builder.create<UnrealizedConversionCastOp>(loc, resultType, packed)
-      .getResult(0);
-}
-
-/// MemRef descriptor elements -> MemRefType
-static Value rankedMemRefMaterialization(OpBuilder &builder,
-                                         MemRefType resultType,
-                                         ValueRange inputs, Location loc,
-                                         const LLVMTypeConverter &converter) {
-  // A source materialization must return a value of type `resultType`,
-  // so insert a cast from the memref descriptor type (!llvm.struct) to the
-  // original memref type.
-  Value packed =
-      packRankedMemRefDesc(builder, resultType, inputs, loc, converter);
-  if (!packed)
-    return Value();
-  return builder.create<UnrealizedConversionCastOp>(loc, resultType, packed)
-      .getResult(0);
-}
-
 /// Create an LLVMTypeConverter using custom LowerToLLVMOptions.
 LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
                                      const LowerToLLVMOptions &options,
@@ -126,9 +64,22 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
   addConversion([&](FunctionType type) { return convertFunctionType(type); });
   addConversion([&](IndexType type) { return convertIndexType(type); });
   addConversion([&](IntegerType type) { return convertIntegerType(type); });
-  addConversion([&](MemRefType type) { return convertMemRefType(type); });
   addConversion(
-      [&](UnrankedMemRefType type) { return convertUnrankedMemRefType(type); });
+      [&](MemRefType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        LogicalResult status = convertMemRefType(type, result);
+        if (failed(status))
+          return std::nullopt;
+        return success();
+      });
+  addConversion(
+      [&](UnrankedMemRefType type,
+          SmallVectorImpl<Type> &result) -> std::optional<LogicalResult> {
+        LogicalResult status = convertUnrankedMemRefType(type, result);
+        if (failed(status))
+          return std::nullopt;
+        return success();
+      });
   addConversion([&](VectorType type) -> std::optional<Type> {
     FailureOr<Type> llvmType = convertVectorType(type);
     if (failed(llvmType))
@@ -228,42 +179,26 @@ LLVMTypeConverter::LLVMTypeConverter(MLIRContext *ctx,
     return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
         .getResult(0);
   });
-  addTargetMaterialization([&](OpBuilder &builder, Type resultType,
-                               ValueRange inputs, Location loc) {
-    return builder.create<UnrealizedConversionCastOp>(loc, resultType, inputs)
-        .getResult(0);
+  addTargetMaterialization([&](OpBuilder &builder, TypeRange resultTypes,
+                               ValueRange inputs,
+                               Location loc) -> SmallVector<Value> {
+    auto castOp =
+        builder.create<UnrealizedConversionCastOp>(loc, resultTypes, inputs);
+    return llvm::map_to_vector(castOp.getResults(),
+                               [](OpResult r) -> Value { return r; });
   });
 
-  // Source materializations convert from the new block argument types
-  // (multiple SSA values that make up a memref descriptor) back to the
-  // original block argument type.
-  addSourceMaterialization([&](OpBuilder &builder,
-                               UnrankedMemRefType resultType, ValueRange inputs,
-                               Location loc) {
-    return unrankedMemRefMaterialization(builder, resultType, inputs, loc,
-                                         *this);
-  });
   addSourceMaterialization([&](OpBuilder &builder, MemRefType resultType,
                                ValueRange inputs, Location loc) {
-    return rankedMemRefMaterialization(builder, resultType, inputs, loc, *this);
-  });
-
-  // Bare pointer -> Packed MemRef descriptor
-  addTargetMaterialization([&](OpBuilder &builder, Type resultType,
-                               ValueRange inputs, Location loc,
-                               Type originalType) -> Value {
-    // The original MemRef type is required to build a MemRef descriptor
-    // because the sizes/strides of the MemRef cannot be inferred from just the
-    // bare pointer.
-    if (!originalType)
-      return Value();
-    if (resultType != convertType(originalType))
-      return Value();
-    if (auto memrefType = dyn_cast<MemRefType>(originalType))
-      return packRankedMemRefDesc(builder, memrefType, inputs, loc, *this);
-    if (auto unrankedMemrefType = dyn_cast<UnrankedMemRefType>(originalType))
-      return packUnrankedMemRefDesc(builder, unrankedMemrefType, inputs, loc,
-                                    *this);
+    if (isBarePointer(inputs)) {
+      MemRefDescriptor desc = MemRefDescriptor::fromStaticShape(
+          builder, loc, *this, resultType, inputs[0]);
+      return builder
+          .create<UnrealizedConversionCastOp>(loc, resultType,
+                                              desc.getElements())
+          .getResult(0);
+    }
+    // Default materialization creates unrealized_conversion_cast.
     return Value();
   });
 
@@ -533,14 +468,18 @@ LLVMTypeConverter::getMemRefDescriptorSize(MemRefType type,
 
 /// Converts MemRefType to LLVMType. A MemRefType is converted to a struct that
 /// packs the descriptor fields as defined by `getMemRefDescriptorFields`.
-Type LLVMTypeConverter::convertMemRefType(MemRefType type) const {
-  // When converting a MemRefType to a struct with descriptor fields, do not
-  // unpack the `sizes` and `strides` arrays.
-  SmallVector<Type, 5> types =
-      getMemRefDescriptorFields(type, /*unpackAggregates=*/false);
-  if (types.empty())
-    return {};
-  return LLVM::LLVMStructType::getLiteral(&getContext(), types);
+LogicalResult LLVMTypeConverter::convertMemRefType(
+    MemRefType type, SmallVectorImpl<Type> &result, bool packed) const {
+  SmallVector<Type, 5> fields =
+      getMemRefDescriptorFields(type, /*unpackAggregates=*/!packed);
+  if (fields.empty())
+    return failure();
+  if (packed) {
+    result.push_back(LLVM::LLVMStructType::getLiteral(&getContext(), fields));
+  } else {
+    llvm::append_range(result, fields);
+  }
+  return success();
 }
 
 /// Convert an unranked memref type into a list of non-aggregate LLVM IR types
@@ -563,12 +502,17 @@ unsigned LLVMTypeConverter::getUnrankedMemRefDescriptorSize(
          llvm::divideCeil(getPointerBitwidth(space), 8);
 }
 
-Type LLVMTypeConverter::convertUnrankedMemRefType(
-    UnrankedMemRefType type) const {
+LogicalResult LLVMTypeConverter::convertUnrankedMemRefType(
+    UnrankedMemRefType type, SmallVectorImpl<Type> &result, bool packed) const {
   if (!convertType(type.getElementType()))
-    return {};
-  return LLVM::LLVMStructType::getLiteral(&getContext(),
-                                          getUnrankedMemRefDescriptorFields());
+    return failure();
+  if (packed) {
+    result.push_back(LLVM::LLVMStructType::getLiteral(
+        &getContext(), getUnrankedMemRefDescriptorFields()));
+  } else {
+    llvm::append_range(result, getUnrankedMemRefDescriptorFields());
+  }
+  return success();
 }
 
 FailureOr<unsigned>
@@ -674,12 +618,15 @@ Type LLVMTypeConverter::convertCallingConventionType(
 void LLVMTypeConverter::promoteBarePtrsToDescriptors(
     ConversionPatternRewriter &rewriter, Location loc, ArrayRef<Type> stdTypes,
     SmallVectorImpl<Value> &values) const {
-  assert(stdTypes.size() == values.size() &&
-         "The number of types and values doesn't match");
-  for (unsigned i = 0, end = values.size(); i < end; ++i)
-    if (auto memrefTy = dyn_cast<MemRefType>(stdTypes[i]))
-      values[i] = MemRefDescriptor::fromStaticShape(rewriter, loc, *this,
-                                                    memrefTy, values[i]);
+  /*
+    assert(stdTypes.size() == values.size() &&
+           "The number of types and values doesn't match");
+    for (unsigned i = 0, end = values.size(); i < end; ++i)
+      if (auto memrefTy = dyn_cast<MemRefType>(stdTypes[i]))
+        values[i] = MemRefDescriptor::fromStaticShape(rewriter, loc, *this,
+                                                      memrefTy, values[i]);
+  */
+  llvm_unreachable("not implemented");
 }
 
 /// Convert a non-empty list of types of values produced by an operation into an
@@ -745,6 +692,7 @@ SmallVector<Value, 4>
 LLVMTypeConverter::promoteOperands(Location loc, ValueRange opOperands,
                                    ValueRange operands, OpBuilder &builder,
                                    bool useBarePtrCallConv) const {
+  // TODO: This function should take a SmallVector<ValueRange> operands
   SmallVector<Value, 4> promotedOperands;
   promotedOperands.reserve(operands.size());
   useBarePtrCallConv |= options.useBarePtrCallConv;
@@ -763,13 +711,15 @@ LLVMTypeConverter::promoteOperands(Location loc, ValueRange opOperands,
       }
     } else {
       if (isa<UnrankedMemRefType>(operand.getType())) {
-        UnrankedMemRefDescriptor::unpack(builder, loc, llvmOperand,
-                                         promotedOperands);
+        // UnrankedMemRefDescriptor::unpack(builder, loc, llvmOperand,
+        //                                  promotedOperands);
+        llvm_unreachable("TODO: implement");
         continue;
       }
       if (auto memrefType = dyn_cast<MemRefType>(operand.getType())) {
-        MemRefDescriptor::unpack(builder, loc, llvmOperand, memrefType,
-                                 promotedOperands);
+        // MemRefDescriptor::unpack(builder, loc, llvmOperand, memrefType,
+        //                          promotedOperands);
+        llvm_unreachable("TODO: implement");
         continue;
       }
     }

@@ -91,6 +91,17 @@ public:
   Type convertCallingConventionType(Type type,
                                     bool useBarePointerCallConv = false) const;
 
+  /// Convert a memref type into an LLVM type that captures the relevant data.
+  LogicalResult convertMemRefType(MemRefType type,
+                                  SmallVectorImpl<Type> &result,
+                                  bool packed = false) const;
+
+  /// Convert an unranked memref type to an LLVM type that captures the
+  /// runtime rank and a pointer to the static ranked memref desc
+  LogicalResult convertUnrankedMemRefType(UnrankedMemRefType type,
+                                          SmallVectorImpl<Type> &result,
+                                          bool packed = false) const;
+
   /// Promote the bare pointers in 'values' that resulted from memrefs to
   /// descriptors. 'stdTypes' holds the types of 'values' before the conversion
   /// to the LLVM-IR dialect (i.e., MemRefType, or any other builtin type).
@@ -244,13 +255,6 @@ private:
   /// `complex<f32>` to `!llvm<"{ float, float }">`, and `complex<f64>` to
   /// `!llvm<"{ double, double }">`. `complex<bf16>` is not supported.
   Type convertComplexType(ComplexType type) const;
-
-  /// Convert a memref type into an LLVM type that captures the relevant data.
-  Type convertMemRefType(MemRefType type) const;
-
-  /// Convert an unranked memref type to an LLVM type that captures the
-  /// runtime rank and a pointer to the static ranked memref desc
-  Type convertUnrankedMemRefType(UnrankedMemRefType type) const;
 
   /// Convert a memref type to a bare pointer to the memref element type.
   Type convertMemRefToBarePtr(BaseMemRefType type) const;

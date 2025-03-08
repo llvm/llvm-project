@@ -195,6 +195,6 @@ LogicalResult AllocLikeOpLLVMLowering::matchAndRewrite(
       loc, memRefType, allocatedPtr, alignedPtr, sizes, strides, rewriter);
 
   // Return the final value of the descriptor.
-  rewriter.replaceOp(op, {memRefDescriptor});
+  rewriter.replaceOpWithMultiple(op, {memRefDescriptor});
   return success();
 }

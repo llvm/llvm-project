@@ -140,15 +140,18 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   for (auto [index, argType] : llvm::enumerate(type.getInputs())) {
     Value arg = wrapperFuncOp.getArgument(index + argOffset);
     if (auto memrefType = dyn_cast<MemRefType>(argType)) {
-      Value loaded = rewriter.create<LLVM::LoadOp>(
-          loc, typeConverter.convertType(memrefType), arg);
-      MemRefDescriptor::unpack(rewriter, loc, loaded, memrefType, args);
+      // TODO: Need to load !llvm.struct here and then unpack it.
+      //Value loaded = rewriter.create<LLVM::LoadOp>(
+      //    loc, typeConverter.convertType(memrefType), arg);
+      //MemRefDescriptor::unpack(rewriter, loc, loaded, memrefType, args);
+      llvm_unreachable("TODO: implement");
       continue;
     }
     if (isa<UnrankedMemRefType>(argType)) {
-      Value loaded = rewriter.create<LLVM::LoadOp>(
-          loc, typeConverter.convertType(argType), arg);
-      UnrankedMemRefDescriptor::unpack(rewriter, loc, loaded, args);
+      //Value loaded = rewriter.create<LLVM::LoadOp>(
+      //    loc, typeConverter.convertType(argType), arg);
+      //UnrankedMemRefDescriptor::unpack(rewriter, loc, loaded, args);
+      llvm_unreachable("TODO: implement");
       continue;
     }
 
@@ -231,6 +234,8 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
       numToDrop = memRefType
                       ? MemRefDescriptor::getNumUnpackedValues(memRefType)
                       : UnrankedMemRefDescriptor::getNumUnpackedValues();
+      llvm_unreachable("TODO: implemement");
+      /**
       Value packed =
           memRefType
               ? MemRefDescriptor::pack(builder, loc, typeConverter, memRefType,
@@ -238,7 +243,8 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
               : UnrankedMemRefDescriptor::pack(
                     builder, loc, typeConverter, unrankedMemRefType,
                     wrapperArgsRange.take_front(numToDrop));
-
+      */
+     Value packed;
       auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
       Value one = builder.create<LLVM::ConstantOp>(
           loc, typeConverter.convertType(builder.getIndexType()),
