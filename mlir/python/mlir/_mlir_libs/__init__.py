@@ -155,6 +155,13 @@ def _site_initialize():
             self.append_dialect_registry(get_dialect_registry())
             for hook in post_init_hooks:
                 hook(self)
+            if disable_multithreading and thread_pool is not None:
+                raise ValueError(
+                    "Context constructor has given thread_pool argument, "
+                    "but disable_multithreading flag is True. "
+                    "Please, set thread_pool argument to None or "
+                    "set disable_multithreading flag to False."
+                )
             if not disable_multithreading:
                 if thread_pool is None:
                     self.enable_multithreading(True)
