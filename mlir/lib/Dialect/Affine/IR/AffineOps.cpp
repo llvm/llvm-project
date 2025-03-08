@@ -2314,6 +2314,10 @@ struct AffineForEmptyLoopFolder : public OpRewritePattern<AffineForOp> {
     for (unsigned i = 0, e = yieldOp->getNumOperands(); i < e; ++i) {
       Value val = yieldOp.getOperand(i);
       auto *iterArgIt = llvm::find(iterArgs, val);
+      // TODO: It should be possible to perform a replacement by computing the
+      // last value of the IV based on the bounds and the step.
+      if (val == forOp.getInductionVar())
+        return failure();
       if (iterArgIt == iterArgs.end()) {
         // `val` is defined outside of the loop.
         assert(forOp.isDefinedOutsideOfLoop(val) &&
