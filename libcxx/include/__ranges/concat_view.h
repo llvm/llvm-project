@@ -381,7 +381,7 @@ public:
     requires __concat_is_bidirectional<_Const, _Views...>
   {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        !__it_.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
+        !__it_.valueless_by_exception(), "Trying to decrement a valueless iterator of concat_view.");
     size_t __active_index = __it_.index();
     __apply_at_index<variant_size_v<decltype(__it_)>>(__active_index, [&](auto __index_constant) {
       constexpr size_t __i = __index_constant.value;
