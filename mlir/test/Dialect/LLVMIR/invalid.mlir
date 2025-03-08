@@ -1764,3 +1764,10 @@ llvm.mlir.alias external @y5 : i32 {
   llvm.return %0 : !llvm.ptr<4>
 }
 
+// -----
+
+module {
+  // expected-error@+2 {{invalid kind of attribute specified}}
+  // expected-error@+1 {{failed to parse ModuleFlagAttr parameter 'value' which is to be a `IntegerAttr`}}
+  llvm.module_flags [#llvm.mlir.module_flag<1 : i64, "wchar_size", "yolo">]
+}

@@ -2183,4 +2183,36 @@ def LLVM_LinkerOptionsOp
   let hasVerifier = 1;
 }
 
+//===--------------------------------------------------------------------===//
+// ModuleFlagsOp
+//===--------------------------------------------------------------------===//
+
+def LLVM_ModuleFlagsOp
+    : LLVM_Op<"module_flags"> {
+  let summary = "Information about module properties";
+  let description = [{
+    Represents the equivalent in MLIR for LLVM's `llvm.module.flags` metadata,
+    which requires a list of metadata triplets. Each triplet entry is described
+    by a `ModuleFlagAttr`.
+
+    Example:
+    ```mlir
+    llvm.module.flags [
+      #llvm.mlir.module_flag<1 : i64, "wchar_size", 4 : i32>,
+      #llvm.mlir.module_flag<8 : i64, "PIC Level", 2 : i32>
+    ]
+    ```
+  }];
+  let arguments  = (ins ArrayAttr:$flags);
+  let assemblyFormat = [{
+    $flags attr-dict
+  }];
+
+  let llvmBuilder = [{
+    convertModuleFlagsOp($flags, builder, moduleTranslation);
+  }];
+
+  let hasVerifier = 1;
+}
+
 #endif // LLVMIR_OPS

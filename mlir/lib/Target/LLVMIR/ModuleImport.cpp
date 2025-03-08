@@ -517,6 +517,45 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
   debugIntrinsics.insert(intrinsic);
 }
 
+LogicalResult ModuleImport::convertModuleFlagsMetadata() {
+  SmallVector<llvm::Module::ModuleFlagEntry, 4> llvmModuleFlags;
+  for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
+    if (named.getName() != LLVMDialect::getModuleFlags())
+      continue;
+    llvmModule->getModuleFlagsMetadata(llvmModuleFlags);
+    break; // there can only be one module flags.
+  }
+
+  SmallVector<Attribute, 4> moduleFlags;
+  for (const auto [behavior, key, val] : llvmModuleFlags) {
+    // Currently only supports most common: int constant values.
+    auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(val);
+    if (!constInt) {
+      return emitWarning(mlirModule.getLoc())
+             << "unsupported module flag value: "
+             << diagMD(val, llvmModule.get())
+             << ", only constant integer currently supported";
+    }
+    auto valAttr = builder.getIntegerAttr(
+        IntegerType::get(context, constInt->getType()->getIntegerBitWidth()),
+        constInt->getValue());
+
+    ModFlagBehaviorAttr behaviorAttr = ModFlagBehaviorAttr::get(
+        builder.getContext(), (ModFlagBehavior)behavior);
+
+    moduleFlags.push_back(
+        ModuleFlagAttr::get(builder.getContext(), behaviorAttr,
+                            builder.getStringAttr(key->getString()), valAttr));
+  }
+
+  if (!moduleFlags.empty()) {
+    builder.create<LLVM::ModuleFlagsOp>(mlirModule.getLoc(),
+                                        builder.getArrayAttr(moduleFlags));
+  }
+
+  return success();
+}
+
 LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
   for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
     if (named.getName() != "llvm.linker.options")
@@ -595,6 +634,8 @@ LogicalResult ModuleImport::convertMetadata() {
     }
   }
   if (failed(convertLinkerOptionsMetadata()))
+    return failure();
+  if (failed(convertModuleFlagsMetadata()))
     return failure();
   if (failed(convertIdentMetadata()))
     return failure();

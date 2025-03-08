@@ -270,6 +270,19 @@ static void convertLinkerOptionsOp(ArrayAttr options,
   linkerMDNode->addOperand(listMDNode);
 }
 
+static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
+                                 LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
+  for (Attribute attr : flags) {
+    auto flag = cast<ModuleFlagAttr>(attr);
+    auto intVal = dyn_cast<IntegerAttr>(flag.getValue());
+    assert(intVal && "expected integer attribute");
+    llvmModule->addModuleFlag(
+        (llvm::Module::ModFlagBehavior)flag.getBehavior().getValue(),
+        flag.getKey().getValue(), (uint32_t)intVal.getUInt());
+  }
+}
+
 static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
