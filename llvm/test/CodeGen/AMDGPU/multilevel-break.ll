@@ -120,7 +120,7 @@ define amdgpu_kernel void @multi_if_break_loop(i32 %arg) #0 {
 ; OPT-NEXT:    br label [[BB1:%.*]]
 ; OPT:       bb1:
 ; OPT-NEXT:    [[PHI_BROKEN:%.*]] = phi i64 [ [[TMP4:%.*]], [[FLOW4:%.*]] ], [ 0, [[BB:%.*]] ]
-; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ undef, [[BB]] ], [ [[TMP2:%.*]], [[FLOW4]] ]
+; OPT-NEXT:    [[LSR_IV:%.*]] = phi i32 [ poison, [[BB]] ], [ [[TMP2:%.*]], [[FLOW4]] ]
 ; OPT-NEXT:    [[LSR_IV_NEXT:%.*]] = add i32 [[LSR_IV]], 1
 ; OPT-NEXT:    [[CMP0:%.*]] = icmp slt i32 [[LSR_IV_NEXT]], 0
 ; OPT-NEXT:    [[LOAD0:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
@@ -227,7 +227,7 @@ bb:
   br label %bb1
 
 bb1:
-  %lsr.iv = phi i32 [ undef, %bb ], [ %lsr.iv.next, %case0 ], [ %lsr.iv.next, %case1 ]
+  %lsr.iv = phi i32 [ poison, %bb ], [ %lsr.iv.next, %case0 ], [ %lsr.iv.next, %case1 ]
   %lsr.iv.next = add i32 %lsr.iv, 1
   %cmp0 = icmp slt i32 %lsr.iv.next, 0
   %load0 = load volatile i32, ptr addrspace(1) undef, align 4
