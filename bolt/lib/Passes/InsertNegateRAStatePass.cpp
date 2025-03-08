@@ -78,7 +78,7 @@ void InsertNegateRAState::runOnFunction(BinaryFunction &BF) {
       } else {
         FirstIter = false;
       }
-      PrevInst = Inst;
+      PrevInst = *It;
     }
     PrevBB = *BB;
   }
