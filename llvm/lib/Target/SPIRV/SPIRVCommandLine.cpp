@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVCommandLine.h"
+#include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "llvm/ADT/StringRef.h"
 #include <algorithm>
 #include <map>
@@ -90,7 +91,9 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_KHR_non_semantic_info",
          SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
         {"SPV_INTEL_long_composites",
-         SPIRV::Extension::Extension::SPV_INTEL_long_composites}};
+         SPIRV::Extension::Extension::SPV_INTEL_long_composites},
+        {"SPV_INTEL_fp_fast_math_mode",
+            SPIRV::Extension::Extension::SPV_INTEL_fp_fast_math_mode}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
                                   llvm::StringRef ArgValue,

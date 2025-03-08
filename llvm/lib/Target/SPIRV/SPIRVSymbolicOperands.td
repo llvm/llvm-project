@@ -511,6 +511,7 @@ defm FunctionFloatControlINTEL : CapabilityOperand<5821, 0, 0, [SPV_INTEL_float_
 defm LongCompositesINTEL : CapabilityOperand<6089, 0, 0, [SPV_INTEL_long_composites], []>;
 defm BindlessImagesINTEL : CapabilityOperand<6528, 0, 0, [SPV_INTEL_bindless_images], []>;
 defm MemoryAccessAliasingINTEL : CapabilityOperand<5910, 0, 0, [SPV_INTEL_memory_access_aliasing], []>;
+defm FPFastMathModeINTEL : CapabilityOperand<5837, 0, 0, [SPV_INTEL_fp_fast_math_mode], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1050,6 +1051,8 @@ defm NotInf : FPFastMathModeOperand<0x2, [Kernel]>;
 defm NSZ : FPFastMathModeOperand<0x4, [Kernel]>;
 defm AllowRecip : FPFastMathModeOperand<0x8, [Kernel]>;
 defm Fast : FPFastMathModeOperand<0x10, [Kernel]>;
+defm AllowContract : FPFastMathModeOperand<0x10000, [FPFastMathModeINTEL]>;
+defm AllowReassoc : FPFastMathModeOperand<0x20000, [FPFastMathModeINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define FPRoundingMode enum values and at the same time

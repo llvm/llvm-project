@@ -1877,7 +1877,9 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
   }
 }
 
-static unsigned getFastMathFlags(const MachineInstr &I) {
+static unsigned getFastMathFlags(const MachineInstr &I,
+                                 const SPIRVSubtarget &ST,
+                                 SPIRV::RequirementHandler &Reqs) {
   unsigned Flags = SPIRV::FPFastMathMode::None;
   if (I.getFlag(MachineInstr::MIFlag::FmNoNans))
     Flags |= SPIRV::FPFastMathMode::NotNaN;
@@ -1887,8 +1889,21 @@ static unsigned getFastMathFlags(const MachineInstr &I) {
     Flags |= SPIRV::FPFastMathMode::NSZ;
   if (I.getFlag(MachineInstr::MIFlag::FmArcp))
     Flags |= SPIRV::FPFastMathMode::AllowRecip;
-  if (I.getFlag(MachineInstr::MIFlag::FmReassoc))
-    Flags |= SPIRV::FPFastMathMode::Fast;
+  if (I.getFlag(MachineInstr::MIFlag::FmReassoc)) {
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_fp_fast_math_mode)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_fast_math_mode);
+      Reqs.addCapability(SPIRV::Capability::FPFastMathModeINTEL);
+      Flags |= SPIRV::FPFastMathMode::AllowReassoc;
+    } else
+      Flags |= SPIRV::FPFastMathMode::Fast;
+  }
+  if (I.getFlag(MachineInstr::MIFlag::FmContract))
+    if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_fp_fast_math_mode)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_fp_fast_math_mode);
+      Reqs.addCapability(SPIRV::Capability::FPFastMathModeINTEL);
+      Flags |= SPIRV::FPFastMathMode::AllowContract;
+    }
+
   return Flags;
 }
 
@@ -1912,7 +1927,7 @@ static void handleMIFlagDecoration(MachineInstr &I, const SPIRVSubtarget &ST,
   }
   if (!TII.canUseFastMathFlags(I))
     return;
-  unsigned FMFlags = getFastMathFlags(I);
+  unsigned FMFlags = getFastMathFlags(I, ST, Reqs);
   if (FMFlags == SPIRV::FPFastMathMode::None)
     return;
   Register DstReg = I.getOperand(0).getReg();
