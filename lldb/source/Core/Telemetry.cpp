@@ -77,7 +77,6 @@ void CommandInfo::serialize(Serializer &serializer) const {
     serializer.write("error_data", error_data.value());
 }
 
-  
 std::atomic<uint64_t> CommandInfo::g_command_id_seed = 0;
 uint64_t CommandInfo::GetNextId() { return g_command_id_seed.fetch_add(1); }
 
@@ -136,7 +135,6 @@ public:
     static std::unique_ptr<NoOpTelemetryManager> g_ins =
         std::make_unique<NoOpTelemetryManager>();
     return g_ins.get();
-
   }
 };
 

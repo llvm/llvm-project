@@ -89,7 +89,6 @@ struct LLDBBaseTelemetryInfo : public llvm::telemetry::TelemetryInfo {
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 
-
 /// Describes an exit status.
 struct ExitDescription {
   int exit_code;
@@ -101,6 +100,8 @@ struct TargetInfo : public LLDBBaseTelemetryInfo {
 
   /// The same as the executable-module's UUID.
   UUID target_uuid;
+  /// PID of the process owned by this target.
+  lldb::pid_t pid;
   std::string arch_name;
 
   /// If true, this entry was emitted at the beginning of an event (eg., before
@@ -123,7 +124,7 @@ struct TargetInfo : public LLDBBaseTelemetryInfo {
   }
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
-  
+
 struct CommandInfo : public LLDBBaseTelemetryInfo {
   /// If the command is/can be associated with a target entry this field
   /// contains that target's UUID. <EMPTY> otherwise.

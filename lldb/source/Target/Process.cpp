@@ -1065,18 +1065,24 @@ const char *Process::GetExitDescription() {
 bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Use a mutex to protect setting the exit status.
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
-  Debugger *debugger = &(GetTarget().GetDebugger());
-  telemetry::ScopedDispatcher<telemetry::TargetInfo> helper(debugger);
-  // Save the Module UUID since the Module might be gone by end of scope.
-  UUID target_uuid = GetTarget().GetExecutableModule()->GetUUID();
+  telemetry::ScopedDispatcher<telemetry::TargetInfo> helper;
 
+  // Check if there is (still) a valid target and get the debugger from it.
+  TargetSP target_sp(Debugger::FindTargetWithProcessID(m_pid));
+  if (target_sp)
+    helper.SetDebugger(&(target_sp->GetDebugger()));
+
+  // TODO: Find the executable-module's UUID somehow. (Maybe save the UUID in
+  // Target?) We might not have a valid executable-mod anymore.
   helper.DispatchNow([&](telemetry::TargetInfo *info) {
-    info->target_uuid = target_uuid;
+    // info->target_uuid = target_uuid;
+    info->pid = m_pid;
     info->is_start_entry = true;
   });
 
   helper.DispatchOnExit([&](telemetry::TargetInfo *info) {
-    info->target_uuid = target_uuid;
+    // info->target_uuid = target_uuid;
+    info->pid = m_pid;
     info->exit_desc = {status, exit_string.str()};
   });
 

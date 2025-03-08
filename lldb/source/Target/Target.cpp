@@ -1565,9 +1565,13 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
   ClearModules(false);
 
   if (executable_sp) {
+    lldb::pid_t pid;
+    if (ProcessSP proc = GetProcessSP())
+      pid = proc->GetID();
     helper.DispatchNow([&](telemetry::TargetInfo *info) {
       info->exec_mod = executable_sp;
       info->target_uuid = executable_sp->GetUUID();
+      info->pid = pid;
       info->arch_name = executable_sp->GetArchitecture().GetArchitectureName();
       info->is_start_entry = true;
     });
@@ -1575,6 +1579,7 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
     helper.DispatchOnExit([&](telemetry::TargetInfo *info) {
       info->exec_mod = executable_sp;
       info->target_uuid = executable_sp->GetUUID();
+      info->pid = pid;
     });
 
     ElapsedTime elapsed(m_stats.GetCreateTime());
