@@ -10,6 +10,7 @@ void basic_correct() {
   auto ns5 = adoptNS([ns3 copyWithValue:3]);
   auto ns6 = retainPtr([ns3 next]);
   CFMutableArrayRef cf1 = adoptCF(CFArrayCreateMutable(kCFAllocatorDefault, 10));
+  auto cf2 = adoptCF(SecTaskCreateFromSelf(kCFAllocatorDefault));
 }
 
 CFMutableArrayRef provide_cf();
@@ -23,6 +24,15 @@ void basic_wrong() {
   // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
   RetainPtr<CFMutableArrayRef> cf2 = adoptCF(provide_cf());
   // expected-warning@-1{{Incorrect use of adoptCF. The argument is +0 and results in an use-after-free [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+  RetainPtr<CFTypeRef> cf3 = SecTaskCreateFromSelf(kCFAllocatorDefault);
+  // expected-warning@-1{{Incorrect use of RetainPtr constructor. The argument is +1 and results in a memory leak [alpha.webkit.RetainPtrCtorAdoptChecker]}}
+}
+
+RetainPtr<CVPixelBufferRef> cf_out_argument() {
+  auto surface = adoptCF(IOSurfaceCreate(nullptr));
+  CVPixelBufferRef rawBuffer = nullptr;
+  auto status = CVPixelBufferCreateWithIOSurface(kCFAllocatorDefault, surface.get(), nullptr, &rawBuffer);
+  return adoptCF(rawBuffer);
 }
 
 RetainPtr<SomeObj> return_nullptr() {
@@ -44,8 +54,11 @@ void cast_retainptr() {
   RetainPtr<CFArrayRef> v = static_cast<CFArrayRef>(baz);
 }
 
+SomeObj* allocSomeObj();
+
 void adopt_retainptr() {
   RetainPtr<NSObject> foo = adoptNS([[SomeObj alloc] init]);
+  auto bar = adoptNS([allocSomeObj() init]);
 }
 
 RetainPtr<CFArrayRef> return_arg(CFArrayRef arg) {

@@ -33,6 +33,7 @@ private:
   BugType Bug;
   mutable BugReporter *BR;
   mutable std::unique_ptr<RetainSummaryManager> Summaries;
+  mutable llvm::DenseSet<const ValueDecl *> CreateOrCopyOutArguments;
   mutable RetainTypeChecker RTC;
 
 public:
@@ -88,9 +89,6 @@ public:
         Checker->visitConstructExpr(CE, DeclWithIssue);
         return true;
       }
-
-      llvm::SetVector<const CXXRecordDecl *> Decls;
-      llvm::DenseSet<const CXXRecordDecl *> CRTPs;
     };
 
     LocalVisitor visitor(this);
@@ -120,20 +118,51 @@ public:
     if (!F)
       return;
 
-    if (!isAdoptFn(F) || !CE->getNumArgs())
+    if (!isAdoptFn(F) || !CE->getNumArgs()) {
+      rememberOutArguments(CE, F);
       return;
+    }
 
     auto *Arg = CE->getArg(0)->IgnoreParenCasts();
     auto Result = isOwned(Arg);
     auto Name = safeGetName(F);
     if (Result == IsOwnedResult::Unknown)
-      reportUnknown(Name, CE, DeclWithIssue);
-    else if (Result == IsOwnedResult::NotOwned) {
-      if (RTC.isARCEnabled() && isAdoptNS(F)) {
-        if (!isAllocInit(Arg))
-          reportUseAfterFree(Name, CE, DeclWithIssue, "when ARC is disabled");
-      } else
+      Result = IsOwnedResult::NotOwned;
+    if (Result == IsOwnedResult::NotOwned && !isAllocInit(Arg) && !isCreateOrCopy(Arg)) {
+      if (auto *DRE = dyn_cast<DeclRefExpr>(Arg)) {
+        if (CreateOrCopyOutArguments.contains(DRE->getDecl()))
+          return;
+      }
+      if (RTC.isARCEnabled() && isAdoptNS(F))
+        reportUseAfterFree(Name, CE, DeclWithIssue, "when ARC is disabled");
+      else
         reportUseAfterFree(Name, CE, DeclWithIssue);
+    }
+  }
+  
+  void rememberOutArguments(const CallExpr *CE, const FunctionDecl *Callee) const {
+    auto CalleeName = Callee->getName();
+    if (!CalleeName.contains("Create") && !CalleeName.contains("Copy"))
+      return;
+
+    unsigned ArgCount = CE->getNumArgs();
+    for (unsigned ArgIndex = 0; ArgIndex < ArgCount; ++ArgIndex) {
+      auto *Arg = CE->getArg(ArgIndex)->IgnoreParenCasts();
+      auto *Unary = dyn_cast<UnaryOperator>(Arg);
+      if (!Unary)
+        continue;
+      if (Unary->getOpcode() != UO_AddrOf)
+        continue;
+      auto *SubExpr = Unary->getSubExpr();
+      if (!SubExpr)
+        continue;
+      auto *DRE = dyn_cast<DeclRefExpr>(SubExpr->IgnoreParenCasts());
+      if (!DRE)
+        continue;
+      auto *Decl = DRE->getDecl();
+      if (!Decl)
+        continue;
+      CreateOrCopyOutArguments.insert(Decl);
     }
   }
 
@@ -161,11 +190,13 @@ public:
     auto *Arg = CE->getArg(0)->IgnoreParenCasts();
     auto Result = isOwned(Arg);
     if (Result == IsOwnedResult::Unknown)
-      reportUnknown(Name, CE, DeclWithIssue);
-    else if (Result == IsOwnedResult::Owned)
+      Result = IsOwnedResult::NotOwned;
+    if (Result == IsOwnedResult::Owned)
       reportLeak(Name, CE, DeclWithIssue);
     else if (RTC.isARCEnabled() && isAllocInit(Arg))
       reportLeak(Name, CE, DeclWithIssue, "when ARC is disabled");
+    else if (isCreateOrCopy(Arg))
+      reportLeak(Name, CE, DeclWithIssue);
   }
 
   bool isAllocInit(const Expr *E) const {
@@ -184,11 +215,27 @@ public:
     auto *Receiver = ObjCMsgExpr->getInstanceReceiver()->IgnoreParenCasts();
     if (!Receiver)
       return false;
-    auto *InnerObjCMsgExpr = dyn_cast<ObjCMessageExpr>(Receiver);
-    if (!InnerObjCMsgExpr)
+    if (auto *InnerObjCMsgExpr = dyn_cast<ObjCMessageExpr>(Receiver)) {
+      auto InnerSelector = InnerObjCMsgExpr->getSelector();
+      return InnerSelector.getNameForSlot(0) == "alloc";
+    } else if (auto *CE = dyn_cast<CallExpr>(Receiver)) {
+      if (auto *Callee = CE->getDirectCallee()) {
+        auto CalleeName = Callee->getName();
+        return CalleeName.starts_with("alloc");
+      }
+    }
+    return false;
+  }
+
+  bool isCreateOrCopy(const Expr *E) const {
+    auto *CE = dyn_cast<CallExpr>(E);
+    if (!CE)
       return false;
-    auto InnerSelector = InnerObjCMsgExpr->getSelector();
-    return InnerSelector.getNameForSlot(0) == "alloc";
+    auto *Callee = CE->getDirectCallee();
+    if (!Callee)
+      return false;
+    auto CalleeName = Callee->getName();
+    return CalleeName.contains("Create") || CalleeName.contains("Copy");
   }
 
   enum class IsOwnedResult { Unknown, Skip, Owned, NotOwned };
