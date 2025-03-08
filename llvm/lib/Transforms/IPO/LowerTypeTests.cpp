@@ -1699,9 +1699,9 @@ void LowerTypeTestsModule::buildBitSetsFromFunctionsNative(
 
       if (IsExported) {
         if (IsJumpTableCanonical)
-          ExportSummary->cfiFunctionDefs().insert(std::string(F->getName()));
+          ExportSummary->cfiFunctionDefs().emplace(F->getName());
         else
-          ExportSummary->cfiFunctionDecls().insert(std::string(F->getName()));
+          ExportSummary->cfiFunctionDecls().emplace(F->getName());
       }
 
       if (!IsJumpTableCanonical) {
