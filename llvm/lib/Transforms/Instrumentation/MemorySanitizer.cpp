@@ -3129,6 +3129,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// fine).
   ///
   /// Caller guarantees that this intrinsic does not access memory.
+  ///
+  /// TODO: "horizontal"/"pairwise" intrinsics are often incorrectly matched by
+  ///       by this handler.
   [[maybe_unused]] bool
   maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I,
                                   unsigned int trailingFlags) {
@@ -4871,6 +4874,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setOrigin(&I, getCleanOrigin());
       break;
 
+    // TODO: handling max/min similarly to AND/OR may be more precise
+    // Floating-Point Maximum/Minimum Pairwise
+    case Intrinsic::aarch64_neon_fmaxp:
+    case Intrinsic::aarch64_neon_fminp:
+    // Floating-Point Maximum/Minimum Number Pairwise
+    case Intrinsic::aarch64_neon_fmaxnmp:
+    case Intrinsic::aarch64_neon_fminnmp:
+    // Signed/Unsigned Maximum/Minimum Pairwise
+    case Intrinsic::aarch64_neon_smaxp:
+    case Intrinsic::aarch64_neon_sminp:
+    case Intrinsic::aarch64_neon_umaxp:
+    case Intrinsic::aarch64_neon_uminp:
     // Add Pairwise
     case Intrinsic::aarch64_neon_addp:
     // Floating-point Add Pairwise
