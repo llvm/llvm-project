@@ -9,6 +9,7 @@
 #include <__config>
 #include <__utility/unreachable.h>
 #include <filesystem>
+#include <memory>
 #include <system_error>
 
 #include "format_string.h"
