@@ -32,6 +32,10 @@
 
 #include "llvm/Support/VersionTuple.h"
 
+#if defined(_AIX)
+struct ld_xinfo;
+#endif
+
 namespace lldb_private {
 namespace process_gdb_remote {
 
@@ -196,6 +200,9 @@ public:
   Status GetMemoryRegionInfo(lldb::addr_t addr, MemoryRegionInfo &range_info);
 
   std::optional<uint32_t> GetWatchpointSlotCount();
+#if defined(_AIX)
+  Status GetLDXINFO(struct ld_xinfo *info_ptr);
+#endif
 
   std::optional<bool> GetWatchpointReportedAfter();
 
