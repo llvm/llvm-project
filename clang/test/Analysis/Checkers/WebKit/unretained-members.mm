@@ -11,9 +11,11 @@ namespace members {
 
     [[clang::suppress]]
     SomeObj* a_suppressed = nullptr;
+// No warning.
 
   protected:
     RetainPtr<SomeObj> b;
+// No warning.
 
   public:
     SomeObj* c = nullptr;
@@ -37,6 +39,7 @@ namespace members {
   struct [[clang::suppress]] FooSuppressed {
   private:
     SomeObj* a = nullptr;
+// No warning.
   };
 
 }

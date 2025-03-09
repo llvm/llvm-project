@@ -3489,7 +3489,7 @@ See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebK
 
 alpha.webkit.NoUnretainedMemberChecker
 """"""""""""""""""""""""""""""""""""""""
-Raw pointers and references to a NS or CF object can't be used as class members or ivars. Only RetainPtr is allowed.
+Raw pointers and references to a NS or CF object can't be used as class members or ivars. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled. Only RetainPtr is allowed for NS types when ARC is disabled.
 
 .. code-block:: cpp
 
