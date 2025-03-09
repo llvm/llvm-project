@@ -336,7 +336,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator(__iterator<!_Const> __i)
     requires _Const && (convertible_to<iterator_t<_Views>, iterator_t<const _Views>> && ...)
-      : __it_([&__src = __i.it_]<size_t... _Indices>(size_t __idx, index_sequence<_Indices...>) -> __base_iter {
+      : __it_([&__src = __i.__it_]<size_t... _Indices>(size_t __idx, index_sequence<_Indices...>) -> __base_iter {
           _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
               !__src.valueless_by_exception(), "Trying to convert from a valueless iterator of concat_view.");
           using __src_lref          = decltype((__src));
@@ -345,7 +345,7 @@ public:
             return __base_iter(in_place_index<_Indices>, std::__unchecked_get<_Indices>(std::move(__src_var)));
           }...};
           return __vtable[__idx](__src);
-        }(__i.index(), make_index_sequence<variant_size_v<__base_iter>>{})),
+        }(__i.__it_.index(), make_index_sequence<variant_size_v<__base_iter>>{})),
         __parent_(__i.parent_) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {
