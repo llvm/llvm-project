@@ -1040,3 +1040,36 @@ func.func @do_not_fold_int_div_division_by_0() -> tensor<1x24x2xi32> {
   %16 = tosa.int_div %4, %1 : (tensor<1x24x2xi32>, tensor<1x24x2xi32>) -> tensor<1x24x2xi32>
   return %16 : tensor<1x24x2xi32>
 }
+
+// -----
+
+// CHECK-LABEL: @fold_reduce_prod_is_mul
+func.func @fold_reduce_prod_is_mul() -> tensor<1xi32> {
+  // CHECK-DAG: %[[VAL_0:.*]] = "tosa.const"() <{values = dense<77> : tensor<1xi32>}> : () -> tensor<1xi32>
+  // CHECK: return %[[VAL_0]] : tensor<1xi32>
+  %0 = "tosa.const"() <{values = dense<[1, 77]> : tensor<2xi32>}> : () -> tensor<2xi32>
+  %1 = "tosa.reduce_product"(%0) <{axis = 0 : i32}> : (tensor<2xi32>) -> tensor<1xi32>
+  return %1 : tensor<1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_reduce_prod_rank_2
+func.func @no_fold_reduce_prod_rank_2() -> tensor<1x1xi32> {
+  // check that reduce_product folding does not happen for input with rank > 1
+  // CHECK: tosa.reduce_product
+  %0 = "tosa.const"() <{values = dense<[[1, 77]]> : tensor<1x2xi32>}> : () -> tensor<1x2xi32>
+  %1 = "tosa.reduce_product"(%0) <{axis = 1 : i32}> : (tensor<1x2xi32>) -> tensor<1x1xi32>
+  return %1 : tensor<1x1xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @no_fold_reduce_prod_dim_3
+func.func @no_fold_reduce_prod_dim_3() -> tensor<1xi32> {
+  // check that reduce_product folding does not happen for input with dim[0] != 2
+  // CHECK: tosa.reduce_product
+  %0 = "tosa.const"() <{values = dense<[1, 77, 1]> : tensor<3xi32>}> : () -> tensor<3xi32>
+  %1 = "tosa.reduce_product"(%0) <{axis = 0 : i32}> : (tensor<3xi32>) -> tensor<1xi32>
+  return %1 : tensor<1xi32>
+}
