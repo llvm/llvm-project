@@ -347,9 +347,7 @@ template <> struct bind_helper<const MachineInstr *> {
   static bool bind(const MachineRegisterInfo &MRI, const MachineInstr *&MI,
                    Register Reg) {
     MI = MRI.getVRegDef(Reg);
-    if (MI)
-      return true;
-    return false;
+    return MI;
   }
   static bool bind(const MachineRegisterInfo &MRI, const MachineInstr *&MI,
                    const MachineInstr *Inst) {
@@ -463,8 +461,6 @@ struct BinaryOp_match {
             !(Commutable && (L.match(MRI, TmpMI->getOperand(2).getReg()) &&
                              R.match(MRI, TmpMI->getOperand(1).getReg()))))
           return false;
-        if (Flags == MachineInstr::NoFlags)
-          return true;
         return (TmpMI->getFlags() & Flags) == Flags;
       }
     }
