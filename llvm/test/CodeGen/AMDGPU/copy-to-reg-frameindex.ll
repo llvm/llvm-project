@@ -23,15 +23,15 @@ entry:
   br label %loop
 
 loop:
-  %promotealloca = phi <16 x i32> [ undef, %entry ], [ %0, %loop ]
+  %promotealloca = phi <16 x i32> [ poison, %entry ], [ %insert, %loop ]
   %inc = phi i32 [ 0, %entry ], [ %inc.i, %loop ]
-  %0 = insertelement <16 x i32> %promotealloca, i32 %inc, i32 %inc
+  %insert = insertelement <16 x i32> %promotealloca, i32 %inc, i32 %inc
   %inc.i = add i32 %inc, %B
   %cnd = icmp uge i32 %inc.i, 16
   br i1 %cnd, label %done, label %loop
 
 done:
-  %1 = extractelement <16 x i32> %0, i32 0
-  store i32 %1, ptr addrspace(1) %out, align 4
+  %extract.0 = extractelement <16 x i32> %insert, i32 0
+  store i32 %extract.0, ptr addrspace(1) %out, align 4
   ret void
 }

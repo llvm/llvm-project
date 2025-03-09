@@ -349,17 +349,19 @@ static Value createPrivateMemRef(AffineForOp forOp,
 
   // Compute MemRefRegion for 'srcStoreOpInst' at depth 'dstLoopDepth'.
   MemRefRegion region(srcStoreOp->getLoc());
-  bool validRegion = succeeded(region.compute(srcStoreOp, dstLoopDepth));
+  bool validRegion = succeeded(
+      region.compute(srcStoreOp, dstLoopDepth, /*sliceState=*/nullptr,
+                     /*addMemRefDimBounds=*/true, /*dropLocalVars=*/false));
+
   (void)validRegion;
   assert(validRegion && "unexpected memref region failure");
   SmallVector<int64_t, 4> newShape;
-  std::vector<SmallVector<int64_t, 4>> lbs;
-  SmallVector<int64_t, 8> lbDivisors;
+  SmallVector<AffineMap, 4> lbs;
   lbs.reserve(rank);
   // Query 'region' for 'newShape' and lower bounds of MemRefRegion accessed
   // by 'srcStoreOpInst' at depth 'dstLoopDepth'.
   std::optional<int64_t> numElements =
-      region.getConstantBoundingSizeAndShape(&newShape, &lbs, &lbDivisors);
+      region.getConstantBoundingSizeAndShape(&newShape, &lbs);
   assert(numElements && "non-constant number of elts in local buffer");
 
   const FlatAffineValueConstraints *cst = region.getConstraints();
@@ -367,22 +369,21 @@ static Value createPrivateMemRef(AffineForOp forOp,
   // on; this would correspond to loop IVs surrounding the level at which the
   // slice is being materialized.
   SmallVector<Value, 8> outerIVs;
-  cst->getValues(rank, cst->getNumVars(), &outerIVs);
+  cst->getValues(rank, cst->getNumDimAndSymbolVars(), &outerIVs);
 
   // Build 'rank' AffineExprs from MemRefRegion 'lbs'
   SmallVector<AffineExpr, 4> offsets;
   offsets.reserve(rank);
-  for (unsigned d = 0; d < rank; ++d) {
-    assert(lbs[d].size() == cst->getNumCols() - rank && "incorrect bound size");
 
-    AffineExpr offset = top.getAffineConstantExpr(0);
-    for (unsigned j = 0, e = cst->getNumCols() - rank - 1; j < e; j++) {
-      offset = offset + lbs[d][j] * top.getAffineDimExpr(j);
-    }
-    assert(lbDivisors[d] > 0);
-    offset =
-        (offset + lbs[d][cst->getNumCols() - 1 - rank]).floorDiv(lbDivisors[d]);
-    offsets.push_back(offset);
+  // Outer IVs are considered symbols during memref region computation. Replace
+  // them uniformly with dims so that valid IR is guaranteed.
+  SmallVector<AffineExpr> replacements;
+  for (unsigned j = 0, e = lbs[0].getNumSymbols(); j < e; ++j)
+    replacements.push_back(mlir::getAffineDimExpr(j, forOp.getContext()));
+  for (unsigned d = 0; d < rank; ++d) {
+    assert(lbs[d].getNumResults() == 1 &&
+           "invalid private memref bound calculation");
+    offsets.push_back(lbs[d].getResult(0).replaceSymbols(replacements));
   }
 
   // Create 'newMemRefType' using 'newShape' from MemRefRegion accessed

@@ -527,9 +527,8 @@ void RuntimePointerChecking::groupChecks(
     // iteration order within an equivalence class member is only dependent on
     // the order in which unions and insertions are performed on the
     // equivalence class, the iteration order is deterministic.
-    for (auto MI = DepCands.member_begin(LeaderI), ME = DepCands.member_end();
-         MI != ME; ++MI) {
-      auto PointerI = PositionMap.find(MI->getPointer());
+    for (const auto &MI : DepCands.members(LeaderI)) {
+      auto PointerI = PositionMap.find(MI.getPointer());
       assert(PointerI != PositionMap.end() &&
              "pointer in equivalence class not found in PositionMap");
       for (unsigned Pointer : PointerI->second) {
@@ -1362,8 +1361,10 @@ void AccessAnalysis::processMemAccesses() {
 
     bool SetHasWrite = false;
 
-    // Map of pointers to last access encountered.
-    typedef DenseMap<const Value*, MemAccessInfo> UnderlyingObjToAccessMap;
+    // Map of (pointer to underlying objects, accessed address space) to last
+    // access encountered.
+    typedef DenseMap<std::pair<const Value *, unsigned>, MemAccessInfo>
+        UnderlyingObjToAccessMap;
     UnderlyingObjToAccessMap ObjToLastAccess;
 
     // Set of access to check after all writes have been processed.
@@ -1443,8 +1444,10 @@ void AccessAnalysis::processMemAccesses() {
                     UnderlyingObj->getType()->getPointerAddressSpace()))
               continue;
 
-            auto [It, Inserted] =
-                ObjToLastAccess.try_emplace(UnderlyingObj, Access);
+            auto [It, Inserted] = ObjToLastAccess.try_emplace(
+                {UnderlyingObj,
+                 cast<PointerType>(Ptr->getType())->getAddressSpace()},
+                Access);
             if (!Inserted) {
               DepCands.unionSets(Access, It->second);
               It->second = Access;

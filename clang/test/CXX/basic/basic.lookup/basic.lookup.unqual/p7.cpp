@@ -33,5 +33,6 @@ namespace test1 {
 // specifiers.
 namespace test2 {
   template <class T> struct bar {};
+  // expected-note@-1 {{template parameter is declared here}}
   template <class T> struct foo : bar<foo> {}; // expected-error {{use of class template 'foo' requires template arguments}} expected-note {{template is declared here}}
 }

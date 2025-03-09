@@ -16,8 +16,8 @@
 #endif
 
 #if !__GLIBC_PREREQ(2, 27)
-#  define copy_file_range(a, b, c, d, e)                                       \
-    (ssize_t) syscall(__NR_copy_file_range, a, b, c, d, e)
+#  define copy_file_range(a, b, c, d, e, f)                                    \
+    (ssize_t) syscall(__NR_copy_file_range, a, b, c, d, e, f)
 #endif
 
 int main(void) {
