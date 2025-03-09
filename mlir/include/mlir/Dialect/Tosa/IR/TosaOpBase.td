@@ -178,13 +178,13 @@ def Tosa_AvgPool2dOpQuantInfoBuilder : OpBuilder<
                                   input, kernel, stride, pad, acc_type);
   }]>;
 
-// This builder is called on single-parameter unary operators that have a scale
+// This builder is called on single-parameter negate operators that have a scale
 // relationship between their input and output, expressed by the
 // UnaryOpQuantizationAttr.
-def Tosa_UnaryOpQuantInfoBuilder : OpBuilder<
+def Tosa_NegateOpQuantInfoBuilder : OpBuilder<
   (ins "Type":$outputType, "Value":$input),
   [{
-    buildUnaryOpWithQuantInfo($_builder, $_state, outputType, input);
+    buildNegateOpWithQuantInfo($_builder, $_state, outputType, input);
   }]>;
 
 // These builders are called on the TOSA pad operator that needs to create its
