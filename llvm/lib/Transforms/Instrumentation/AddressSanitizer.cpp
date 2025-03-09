@@ -119,6 +119,9 @@ static const uint64_t kNetBSDKasan_ShadowOffset64 = 0xdfff900000000000;
 static const uint64_t kPS_ShadowOffset64 = 1ULL << 40;
 static const uint64_t kWindowsShadowOffset32 = 3ULL << 28;
 static const uint64_t kEmscriptenShadowOffset = 0;
+static const uint64_t kAIXShadowOffset32 = 0x40000000;
+// 64-BIT AIX is not yet ready.
+static const uint64_t kAIXShadowOffset64 = 0x0a01000000000000ULL;
 
 // The shadow memory space is dynamically allocated.
 static const uint64_t kWindowsShadowOffset64 = kDynamicShadowSentinel;
@@ -127,6 +130,8 @@ static const size_t kMinStackMallocSize = 1 << 6;   // 64B
 static const size_t kMaxStackMallocSize = 1 << 16;  // 64K
 static const uintptr_t kCurrentStackFrameMagic = 0x41B58AB3;
 static const uintptr_t kRetiredStackFrameMagic = 0x45E0360E;
+
+static const uint32_t kAIXHighBits = 6;
 
 const char kAsanModuleCtorName[] = "asan.module_ctor";
 const char kAsanModuleDtorName[] = "asan.module_dtor";
@@ -463,11 +468,14 @@ namespace {
 
 /// This struct defines the shadow mapping using the rule:
 ///   shadow = (mem >> Scale) ADD-or-OR Offset.
+/// However, on 64-bit AIX, we use HighBits to reduce the mapped address space:
+///   shadow = ((mem << HighBits) >> (HighBits + Scale)) + Offset
 /// If InGlobal is true, then
 ///   extern char __asan_shadow[];
 ///   shadow = (mem >> Scale) + &__asan_shadow
 struct ShadowMapping {
   int Scale;
+  int HighBits;
   uint64_t Offset;
   bool OrShadowOffset;
   bool InGlobal;
@@ -487,6 +495,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   bool IsLinux = TargetTriple.isOSLinux();
   bool IsPPC64 = TargetTriple.getArch() == Triple::ppc64 ||
                  TargetTriple.getArch() == Triple::ppc64le;
+  bool IsAIX = TargetTriple.isOSAIX();
   bool IsSystemZ = TargetTriple.getArch() == Triple::systemz;
   bool IsX86_64 = TargetTriple.getArch() == Triple::x86_64;
   bool IsMIPSN32ABI = TargetTriple.isABIN32();
@@ -526,6 +535,8 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
       Mapping.Offset = kWindowsShadowOffset32;
     else if (IsEmscripten)
       Mapping.Offset = kEmscriptenShadowOffset;
+    else if (IsAIX)
+      Mapping.Offset = kAIXShadowOffset32;  
     else
       Mapping.Offset = kDefaultShadowOffset32;
   } else {  // LongSize == 64
@@ -533,7 +544,9 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
     // space is always available.
     if (IsFuchsia)
       Mapping.Offset = 0;
-    else if (IsPPC64)
+    else if (IsAIX)
+      Mapping.Offset = kAIXShadowOffset64;
+    else if (IsPPC64 && !IsAIX)
       Mapping.Offset = kPPC64_ShadowOffset64;
     else if (IsSystemZ)
       Mapping.Offset = kSystemZ_ShadowOffset64;
@@ -592,12 +605,15 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
   // SystemZ, we could OR the constant in a single instruction, but it's more
   // efficient to load it once and use indexed addressing.
   Mapping.OrShadowOffset = !IsAArch64 && !IsPPC64 && !IsSystemZ && !IsPS &&
-                           !IsRISCV64 && !IsLoongArch64 &&
+                           !IsRISCV64 && !IsLoongArch64 && !IsAIX &&
                            !(Mapping.Offset & (Mapping.Offset - 1)) &&
                            Mapping.Offset != kDynamicShadowSentinel;
   bool IsAndroidWithIfuncSupport =
       IsAndroid && !TargetTriple.isAndroidVersionLT(21);
   Mapping.InGlobal = ClWithIfunc && IsAndroidWithIfuncSupport && IsArmOrThumb;
+
+  if (IsAIX && LongSize == 64)
+    Mapping.HighBits = kAIXHighBits;
 
   return Mapping;
 }
@@ -1326,7 +1342,11 @@ static bool isUnsupportedAMDGPUAddrspace(Value *Addr) {
 
 Value *AddressSanitizer::memToShadow(Value *Shadow, IRBuilder<> &IRB) {
   // Shadow >> scale
-  Shadow = IRB.CreateLShr(Shadow, Mapping.Scale);
+  if (TargetTriple.isOSAIX() && TargetTriple.getArch() == Triple::ppc64)
+    Shadow = IRB.CreateLShr(IRB.CreateShl(Shadow, Mapping.HighBits),
+                            Mapping.Scale + Mapping.HighBits);
+  else
+    Shadow = IRB.CreateLShr(Shadow, Mapping.Scale);
   if (Mapping.Offset == 0) return Shadow;
   // (Shadow >> scale) | offset
   Value *ShadowBase;
