@@ -855,7 +855,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
-  if (Subtarget->hasPrefetch())
+  if (Subtarget->hasPrefetch() && Subtarget->hasSafeSmemPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
   if (Subtarget->hasIEEEMinMax()) {
