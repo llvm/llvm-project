@@ -111,7 +111,7 @@ void ProgressEventThreadFunction(DAP &dap) {
 // them prevent multiple threads from writing simultaneously so no locking
 // is required.
 static void EventThreadFunction(DAP &dap) {
-  llvm::set_thread_name(dap.name + ".event_handler");
+  llvm::set_thread_name(dap.client_name + ".event_handler");
   lldb::SBEvent event;
   lldb::SBListener listener = dap.debugger.GetListener();
   dap.broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
