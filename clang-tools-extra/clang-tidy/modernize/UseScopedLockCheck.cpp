@@ -281,8 +281,10 @@ void UseScopedLockCheck::emitDiag(
     const llvm::SmallVector<llvm::SmallVector<const VarDecl *>> &LockGroups,
     const ast_matchers::MatchFinder::MatchResult &Result) {
   for (const llvm::SmallVector<const VarDecl *> &Group : LockGroups) {
-    if (Group.size() == 1 && WarnOnSingleLocks) {
-      emitDiag(Group[0], Result);
+    if (Group.size() == 1) {
+      if (WarnOnSingleLocks) {
+        emitDiag(Group[0], Result);
+      }
     } else {
       diag(Group[0]->getBeginLoc(),
            "use single 'std::scoped_lock' instead of multiple "
