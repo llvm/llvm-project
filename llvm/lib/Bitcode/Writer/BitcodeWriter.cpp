@@ -5065,35 +5065,28 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
   }
 
   SmallVector<StringRef, 4> Functions;
-  for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
-    auto Defs = Index.cfiFunctionDefs().forGuid(GUID);
-    Functions.insert(Functions.end(), Defs.begin(), Defs.end());
-  }
-  if (!Functions.empty()) {
+  auto EmitCfiFunctions = [&](const CfiFunctionIndex &CfiIndex,
+                              bitc::GlobalValueSummarySymtabCodes Code) {
+    if (CfiIndex.empty())
+      return;
+    for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
+      auto Defs = CfiIndex.forGuid(GUID);
+      Functions.insert(Functions.end(), Defs.begin(), Defs.end());
+    }
+    if (Functions.empty())
+      return;
     llvm::sort(Functions);
     for (const auto &S : Functions) {
       NameVals.push_back(StrtabBuilder.add(S));
       NameVals.push_back(S.size());
     }
-    Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DEFS, NameVals);
+    Stream.EmitRecord(Code, NameVals);
     NameVals.clear();
     Functions.clear();
-  }
+  };
 
-  for (GlobalValue::GUID GUID : DefOrUseGUIDs) {
-    auto Decls = Index.cfiFunctionDecls().forGuid(GUID);
-    Functions.insert(Functions.end(), Decls.begin(), Decls.end());
-  }
-  if (!Functions.empty()) {
-    llvm::sort(Functions);
-    for (const auto &S : Functions) {
-      NameVals.push_back(StrtabBuilder.add(S));
-      NameVals.push_back(S.size());
-    }
-    Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DECLS, NameVals);
-    NameVals.clear();
-    Functions.clear();
-  }
+  EmitCfiFunctions(Index.cfiFunctionDefs(), bitc::FS_CFI_FUNCTION_DEFS);
+  EmitCfiFunctions(Index.cfiFunctionDecls(), bitc::FS_CFI_FUNCTION_DECLS);
 
   // Walk the GUIDs that were referenced, and write the
   // corresponding type id records.

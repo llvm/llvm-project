@@ -1352,6 +1352,8 @@ public:
       return 0;
     return I->second.count(S);
   }
+
+  bool empty() const { return Index.empty(); }
 };
 
 /// 160 bits SHA1
