@@ -549,15 +549,14 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
        idx++) {
     ValueObjectSP dict_entry = reserved_dict->GetChildAtIndex(idx);
 
-    DataExtractor data;
-    data.SetAddressByteSize(dict_entry->GetProcessSP()->GetAddressByteSize());
     auto data_or_err = dict_entry->GetData();
     if (!data_or_err)
       return ThreadSP();
+    data_or_err->SetAddressByteSize(dict_entry->GetProcessSP()->GetAddressByteSize());
 
     lldb::offset_t data_offset = 0;
-    auto dict_entry_key = data.GetAddress(&data_offset);
-    auto dict_entry_value = data.GetAddress(&data_offset);
+    auto dict_entry_key = data_or_err->GetAddress(&data_offset);
+    auto dict_entry_value = data_or_err->GetAddress(&data_offset);
 
     auto key_nsstring = objc_object_from_address(dict_entry_key, "key");
     StreamString key_summary;

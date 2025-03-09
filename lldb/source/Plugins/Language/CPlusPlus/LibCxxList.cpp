@@ -273,13 +273,11 @@ ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
 
   // we need to copy current_sp into a new object otherwise we will end up with
   // all items named __value_
-  DataExtractor data;
-  Status error;
-  current_sp->GetData(data, error);
-  if (error.Fail())
+  auto data_or_err = current_sp->GetData();
+  if (!data_or_err)
     return nullptr;
 
-  return CreateValueObjectFromData(llvm::formatv("[{0}]", idx).str(), data,
+  return CreateValueObjectFromData(llvm::formatv("[{0}]", idx).str(), *data_or_err,
                                    m_backend.GetExecutionContextRef(),
                                    m_element_type);
 }
@@ -394,15 +392,13 @@ lldb::ValueObjectSP ListFrontEnd::GetChildAtIndex(uint32_t idx) {
 
   // we need to copy current_sp into a new object otherwise we will end up with
   // all items named __value_
-  DataExtractor data;
-  Status error;
-  current_sp->GetData(data, error);
-  if (error.Fail())
+  auto data_or_err = current_sp->GetData();
+  if (!data_or_err)
     return lldb::ValueObjectSP();
 
   StreamString name;
   name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-  return CreateValueObjectFromData(name.GetString(), data,
+  return CreateValueObjectFromData(name.GetString(), *data_or_err,
                                    m_backend.GetExecutionContextRef(),
                                    m_element_type);
 }
