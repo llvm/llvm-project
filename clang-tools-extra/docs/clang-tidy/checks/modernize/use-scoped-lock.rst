@@ -58,7 +58,7 @@ Limitations
 -----------
 
 The check will not emit warnings if ``std::lock_guard`` is used implicitly via
-``using``, ``typedef`` or as ``template`` parameter:
+``template`` parameter:
 
 .. code-block:: c++
 
@@ -68,10 +68,8 @@ The check will not emit warnings if ``std::lock_guard`` is used implicitly via
     Lock<std::mutex> L(M); // no warning
   }
 
-  void UsingLock() {
-    using Lock = std::lock_guard<std::mutex>;
-    std::mutex M;
-    Lock L(M); // no warning
+  void instantiate() {
+    TemplatedLock<std::lock_guard>();
   }
 
 

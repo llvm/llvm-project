@@ -336,19 +336,64 @@ void PositiveUsingDeclTemplate() {
   // CHECK-FIXES: typedef std::scoped_lock<std::mutex> LockDefFunT;
 }
 
-void NegativeUsingTypedefs() {
+void PositiveInUsingTypedefs() {
   std::mutex m;
 
   {
     Lock<std::mutex> l(m);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
+    // CHECK-FIXES: std::scoped_lock l(m);
   }
 
   {
     LockM l(m);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
+    // CHECK-FIXES: std::scoped_lock l(m);
   }
 
   {
     LockDef l(m);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
+    // CHECK-FIXES: std::scoped_lock l(m);
+  }
+
+  {
+    std::lock(m, m);
+    Lock<std::mutex> l1(m, std::adopt_lock);
+    LockM l2(m, std::adopt_lock);
+    LockDef l3(m), l4(m);
+    // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-3]]:11: note: additional 'std::lock_guard' declared here
+    // CHECK-MESSAGES: :[[@LINE-3]]:13: note: additional 'std::lock_guard' declared here
+    // CHECK-MESSAGES: :[[@LINE-4]]:20: note: additional 'std::lock_guard' declared here
+    int a = 0;
+    LockDef l5(m);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
+    // CHECK-FIXES: std::scoped_lock l5(m);
+  }
+}
+
+template <typename Mutex>
+void PositiveInUsingTypedefsTemplated() {
+  Mutex m;
+
+  {
+    Lock<Mutex> l(m);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
+  }
+
+  {
+    std::lock(m, m);
+    Lock<Mutex> l1(m, std::adopt_lock);
+    LockM l2(m, std::adopt_lock);
+    LockDef l3(m), l4(m);
+    // CHECK-MESSAGES: :[[@LINE-3]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-3]]:11: note: additional 'std::lock_guard' declared here
+    // CHECK-MESSAGES: :[[@LINE-3]]:13: note: additional 'std::lock_guard' declared here
+    // CHECK-MESSAGES: :[[@LINE-4]]:20: note: additional 'std::lock_guard' declared here
+    int a = 0;
+    LockDef l5(m);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
   }
 }
 
