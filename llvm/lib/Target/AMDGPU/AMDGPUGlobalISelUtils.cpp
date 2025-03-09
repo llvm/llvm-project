@@ -120,7 +120,7 @@ static LLT getReadAnyLaneSplitTy(LLT Ty) {
   }
 
   // Large scalars and 64-bit pointers
-  return LLT::scalar(32);
+  return LLT::integer(32);
 }
 
 static Register buildReadAnyLane(MachineIRBuilder &B, Register VgprSrc,
@@ -131,9 +131,17 @@ static void unmergeReadAnyLane(MachineIRBuilder &B,
                                LLT UnmergeTy, Register VgprSrc,
                                const RegisterBankInfo &RBI) {
   const RegisterBank *VgprRB = &RBI.getRegBank(AMDGPU::VGPRRegBankID);
-  auto Unmerge = B.buildUnmerge({VgprRB, UnmergeTy}, VgprSrc);
+  LLT Ty = B.getMRI()->getType(VgprSrc);
+  if (Ty.getScalarType().isFloat()) {
+    VgprSrc = B.buildBitcast({VgprRB, Ty.changeToInteger()}, VgprSrc).getReg(0);
+  }
+  auto Unmerge = B.buildUnmerge({VgprRB, UnmergeTy.changeToInteger()}, VgprSrc);
   for (unsigned i = 0; i < Unmerge->getNumOperands() - 1; ++i) {
-    SgprDstParts.push_back(buildReadAnyLane(B, Unmerge.getReg(i), RBI));
+    Register Op = Unmerge.getReg(i);
+    if (UnmergeTy.getScalarType().isFloat()) {
+      Op = B.buildBitcast({VgprRB, UnmergeTy}, Op).getReg(0);
+    }
+    SgprDstParts.push_back(buildReadAnyLane(B, Op, RBI));
   }
 }
 
@@ -148,6 +156,11 @@ static Register buildReadAnyLane(MachineIRBuilder &B, Register VgprSrc,
 
   SmallVector<Register, 8> SgprDstParts;
   unmergeReadAnyLane(B, SgprDstParts, getReadAnyLaneSplitTy(Ty), VgprSrc, RBI);
+
+  if (Ty.getScalarType().isFloat()) {
+    auto Merge = B.buildMergeLikeInstr({SgprRB, Ty.changeToInteger()}, SgprDstParts);
+    return B.buildBitcast({SgprRB, Ty}, Merge).getReg(0);
+  }
 
   return B.buildMergeLikeInstr({SgprRB, Ty}, SgprDstParts).getReg(0);
 }

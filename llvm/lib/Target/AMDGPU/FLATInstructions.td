@@ -1553,7 +1553,6 @@ def : FlatLoadPat <FLAT_LOAD_USHORT, extloadi16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, zextloadi16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_SSHORT, atomic_load_sext_16_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_DWORDX3, load_flat, v3i32>;
 
 foreach p = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in
 let True16Predicate = p in {
@@ -1590,7 +1589,10 @@ def : FlatStorePat <FLAT_STORE_DWORDX2, store_flat, vt>;
 def : FlatLoadPat <FLAT_LOAD_DWORDX2, load_flat, vt>;
 }
 
-def : FlatStorePat <FLAT_STORE_DWORDX3, store_flat, v3i32>;
+foreach vt = Reg96Types.types in {
+def : FlatLoadPat <FLAT_LOAD_DWORDX3, load_flat, vt>;
+def : FlatStorePat <FLAT_STORE_DWORDX3, store_flat, vt>;
+}
 
 foreach vt = VReg_128.RegTypes in {
 def : FlatLoadPat <FLAT_LOAD_DWORDX4, load_flat, vt>;

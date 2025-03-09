@@ -14,12 +14,12 @@ body: |
     ; CHECK-LABEL: name: reg_sequence_ss_vreg
     ; CHECK: liveins: $sgpr0, $sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr(s64) = REG_SEQUENCE [[COPY]](s32), %subreg.sub0, [[COPY1]](s32), %subreg.sub1
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s64) = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr(i64) = REG_SEQUENCE [[COPY]](i32), %subreg.sub0, [[COPY1]](i32), %subreg.sub1
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i64) = REG_SEQUENCE %0(i32), %subreg.sub0, %1(i32), %subreg.sub1
 ...
 
 ---
@@ -34,8 +34,8 @@ body: |
     ; CHECK-LABEL: name: reg_sequence_ss_physreg
     ; CHECK: liveins: $sgpr0, $sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr(s64) = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr1, %subreg.sub1
-    %0:_(s64) = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr1, %subreg.sub1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr(i64) = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr1, %subreg.sub1
+    %0:_(i64) = REG_SEQUENCE $sgpr0, %subreg.sub0, $sgpr1, %subreg.sub1
 ...
 
 ---
@@ -50,12 +50,12 @@ body: |
     ; CHECK-LABEL: name: reg_sequence_sv_vreg
     ; CHECK: liveins: $sgpr0, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(s64) = REG_SEQUENCE [[COPY]](s32), %subreg.sub0, [[COPY1]](s32), %subreg.sub1
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $vgpr0
-    %2:_(s64) = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(i64) = REG_SEQUENCE [[COPY]](i32), %subreg.sub0, [[COPY1]](i32), %subreg.sub1
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(i64) = REG_SEQUENCE %0(i32), %subreg.sub0, %1(i32), %subreg.sub1
 ...
 
 ---
@@ -70,8 +70,8 @@ body: |
     ; CHECK-LABEL: name: reg_sequence_sv_physreg
     ; CHECK: liveins: $sgpr0, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(s64) = REG_SEQUENCE $sgpr0, %subreg.sub0, $vgpr0, %subreg.sub1
-    %0:_(s64) = REG_SEQUENCE $sgpr0, %subreg.sub0, $vgpr0, %subreg.sub1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(i64) = REG_SEQUENCE $sgpr0, %subreg.sub0, $vgpr0, %subreg.sub1
+    %0:_(i64) = REG_SEQUENCE $sgpr0, %subreg.sub0, $vgpr0, %subreg.sub1
 ...
 
 ---
@@ -86,12 +86,12 @@ body: |
     ; CHECK-LABEL: name: reg_sequence_vs_vreg
     ; CHECK: liveins: $vgpr0, $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(s64) = REG_SEQUENCE [[COPY]](s32), %subreg.sub0, [[COPY1]](s32), %subreg.sub1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $sgpr0
-    %2:_(s64) = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(i64) = REG_SEQUENCE [[COPY]](i32), %subreg.sub0, [[COPY1]](i32), %subreg.sub1
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $sgpr0
+    %2:_(i64) = REG_SEQUENCE %0(i32), %subreg.sub0, %1(i32), %subreg.sub1
 ...
 
 ---
@@ -106,8 +106,8 @@ body: |
     ; CHECK-LABEL: name: reg_sequence_vs_physreg
     ; CHECK: liveins: $vgpr0, $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(s64) = REG_SEQUENCE $vgpr0, %subreg.sub0, $sgpr0, %subreg.sub1
-    %0:_(s64) = REG_SEQUENCE $vgpr0, %subreg.sub0, $sgpr0, %subreg.sub1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(i64) = REG_SEQUENCE $vgpr0, %subreg.sub0, $sgpr0, %subreg.sub1
+    %0:_(i64) = REG_SEQUENCE $vgpr0, %subreg.sub0, $sgpr0, %subreg.sub1
 ...
 
 ---
@@ -122,12 +122,12 @@ body: |
     ; CHECK-LABEL: name: reg_sequence_vv_vreg
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(s64) = REG_SEQUENCE [[COPY]](s32), %subreg.sub0, [[COPY1]](s32), %subreg.sub1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = REG_SEQUENCE %0, %subreg.sub0, %1, %subreg.sub1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(i64) = REG_SEQUENCE [[COPY]](i32), %subreg.sub0, [[COPY1]](i32), %subreg.sub1
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i64) = REG_SEQUENCE %0(i32), %subreg.sub0, %1(i32), %subreg.sub1
 ...
 
 ---
@@ -142,7 +142,6 @@ body: |
     ; CHECK-LABEL: name: reg_sequence_vv_physreg
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(s64) = REG_SEQUENCE $vgpr0, %subreg.sub0, $vgpr1, %subreg.sub1
-    %0:_(s64) = REG_SEQUENCE $vgpr0, %subreg.sub0, $vgpr1, %subreg.sub1
+    ; CHECK-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vgpr(i64) = REG_SEQUENCE $vgpr0, %subreg.sub0, $vgpr1, %subreg.sub1
+    %0:_(i64) = REG_SEQUENCE $vgpr0, %subreg.sub0, $vgpr1, %subreg.sub1
 ...
-

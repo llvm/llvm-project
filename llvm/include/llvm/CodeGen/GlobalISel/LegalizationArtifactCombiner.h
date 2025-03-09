@@ -27,6 +27,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "legalizer"
@@ -44,6 +45,7 @@ class LegalizationArtifactCombiner {
     case TargetOpcode::G_SEXT:
     case TargetOpcode::G_ZEXT:
     case TargetOpcode::G_ANYEXT:
+    case TargetOpcode::G_BITCAST:
       return true;
     default:
       return false;
@@ -507,6 +509,53 @@ public:
         markInstAndDefDead(MI, CastMI, DeadInsts);
         return true;
       }
+    } else if (CastOpc == TargetOpcode::G_BITCAST) {
+
+      //  %1:_(<2 x i32>) = G_BITCAST %0(<2 x f32>)
+      //  %2:_(i16), %3:_(i16), %4:_(i16), %5:_(i16) = G_UNMERGE_VALUES %1
+      //  =>
+      //  %6:_(f32), %7:_(f32) = G_UNMERGE_VALUES %0
+      //  %8:_(i32) = G_BITCAST %6
+      //  %2:_(i16), %3:_(i16) = G_UNMERGE_VALUES %8
+      //  %9:_(i32) = G_BITCAST %7
+      //  %4:_(i16), %5:_(i16) = G_UNMERGE_VALUES %9
+
+      if (CastSrcTy.isScalar() || SrcTy.isScalar() || DestTy.isVector() || DestTy == SrcTy.getScalarType())
+        return false;
+
+      const unsigned NewNumDefs1 = CastSrcTy.getNumElements();
+      const unsigned NewNumDefs2 = NumDefs / NewNumDefs1;
+
+      if (NewNumDefs2 <= 1)
+        return false;
+
+      SmallVector<Register, 8> NewUnmergeRegs(NewNumDefs1);
+      for (unsigned Idx = 0; Idx < NewNumDefs1; ++Idx)
+        NewUnmergeRegs[Idx] = MRI.createGenericVirtualRegister(CastSrcTy.getElementType());
+
+      Builder.setInstr(MI);
+      auto NewUnmerge = Builder.buildUnmerge(NewUnmergeRegs, CastSrcReg);
+
+
+      SmallVector<Register, 8> DstRegs(NumDefs);
+      for (unsigned Idx = 0; Idx < NumDefs; ++Idx)
+          DstRegs[Idx] = MI.getOperand(Idx).getReg();
+
+
+      auto* It = DstRegs.begin();
+      
+      for (auto& Def : NewUnmerge->all_defs()) {
+        auto Bitcast = Builder.buildBitcast(SrcTy.getElementType(), Def);
+        auto* Begin = It;
+        It += NewNumDefs2;
+        ArrayRef Regs(Begin, It);
+        Builder.buildUnmerge(Regs, Bitcast);
+      }
+      
+      UpdatedDefs.append(NewUnmergeRegs.begin(), NewUnmergeRegs.end());
+      UpdatedDefs.append(DstRegs.begin(), DstRegs.end());
+      markInstAndDefDead(MI, CastMI, DeadInsts);
+      return true;
     }
 
     // TODO: support combines with other casts as well
@@ -1165,8 +1214,9 @@ public:
              ++j, ++DefIdx)
           DstRegs.push_back(MI.getReg(DefIdx));
 
-        if (ConvertOp) {
-          LLT MergeDstTy = MRI.getType(SrcDef->getOperand(0).getReg());
+        LLT MergeDstTy = MRI.getType(SrcDef->getOperand(0).getReg());
+        
+        if (ConvertOp && DestTy != MergeDstTy) {
 
           // This is a vector that is being split and casted. Extract to the
           // element type, and do the conversion on the scalars (or smaller
@@ -1187,6 +1237,7 @@ public:
           // %7(<2 x s16>), %7(<2 x s16>) = G_UNMERGE_VALUES %9
 
           Register TmpReg = MRI.createGenericVirtualRegister(MergeEltTy);
+          assert(MRI.getType(TmpReg) != MRI.getType(MergeI->getOperand(Idx + 1).getReg()));
           Builder.buildInstr(ConvertOp, {TmpReg},
                              {MergeI->getOperand(Idx + 1).getReg()});
           Builder.buildUnmerge(DstRegs, TmpReg);
@@ -1232,7 +1283,7 @@ public:
           ConvertOp = TargetOpcode::G_BITCAST;
       }
 
-      if (ConvertOp) {
+      if (ConvertOp && DestTy != MergeSrcTy) {
         Builder.setInstr(MI);
 
         for (unsigned Idx = 0; Idx < NumDefs; ++Idx) {
@@ -1240,6 +1291,7 @@ public:
           Register MergeSrc = MergeI->getOperand(Idx + 1).getReg();
 
           if (!MRI.use_empty(DefReg)) {
+            assert(MRI.getType(DefReg) != MRI.getType(MergeSrc));
             Builder.buildInstr(ConvertOp, {DefReg}, {MergeSrc});
             UpdatedDefs.push_back(DefReg);
           }
@@ -1398,6 +1450,7 @@ public:
         case TargetOpcode::G_EXTRACT:
         case TargetOpcode::G_TRUNC:
         case TargetOpcode::G_BUILD_VECTOR:
+        case TargetOpcode::G_BITCAST:
           // Adding Use to ArtifactList.
           WrapperObserver.changedInstr(Use);
           break;
@@ -1425,6 +1478,7 @@ private:
   static Register getArtifactSrcReg(const MachineInstr &MI) {
     switch (MI.getOpcode()) {
     case TargetOpcode::COPY:
+    case TargetOpcode::G_BITCAST:
     case TargetOpcode::G_TRUNC:
     case TargetOpcode::G_ZEXT:
     case TargetOpcode::G_ANYEXT:

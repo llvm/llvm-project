@@ -12,8 +12,8 @@ body: |
     ; GCN-LABEL: name: implicit_def_s32_sgpr
     ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: S_ENDPGM 0, implicit [[DEF]]
-    %0:sgpr(s32) = G_IMPLICIT_DEF
-    S_ENDPGM 0, implicit %0
+    %0:sgpr(i32) = G_IMPLICIT_DEF
+    S_ENDPGM 0, implicit %0(i32)
 ...
 ---
 
@@ -26,8 +26,8 @@ body: |
     ; GCN-LABEL: name: implicit_def_s32_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: S_ENDPGM 0, implicit [[DEF]]
-    %0:vgpr(s32) = G_IMPLICIT_DEF
-    S_ENDPGM 0, implicit %0
+    %0:vgpr(i32) = G_IMPLICIT_DEF
+    S_ENDPGM 0, implicit %0(i32)
 ...
 
 ---
@@ -41,8 +41,8 @@ body: |
     ; GCN-LABEL: name: implicit_def_s64_sgpr
     ; GCN: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
     ; GCN-NEXT: S_ENDPGM 0, implicit [[DEF]]
-    %0:sgpr(s64) = G_IMPLICIT_DEF
-    S_ENDPGM 0, implicit %0
+    %0:sgpr(i64) = G_IMPLICIT_DEF
+    S_ENDPGM 0, implicit %0(i64)
 ...
 
 ---
@@ -56,8 +56,8 @@ body: |
     ; GCN-LABEL: name: implicit_def_s64_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GCN-NEXT: S_ENDPGM 0, implicit [[DEF]]
-    %0:vgpr(s64) = G_IMPLICIT_DEF
-    S_ENDPGM 0, implicit %0
+    %0:vgpr(i64) = G_IMPLICIT_DEF
+    S_ENDPGM 0, implicit %0(i64)
 ...
 
 ---
@@ -71,7 +71,7 @@ body: |
     ; GCN: [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
     ; GCN-NEXT: S_ENDPGM 0, implicit [[DEF]]
     %0:sgpr(p0) = G_IMPLICIT_DEF
-    S_ENDPGM 0, implicit %0
+    S_ENDPGM 0, implicit %0(p0)
 ...
 
 ---
@@ -85,7 +85,7 @@ body: |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GCN-NEXT: S_ENDPGM 0, implicit [[DEF]]
     %0:vgpr(p0) = G_IMPLICIT_DEF
-    S_ENDPGM 0, implicit %0
+    S_ENDPGM 0, implicit %0(p0)
 ...
 
 ---
@@ -99,10 +99,10 @@ body: |
     ; GCN-LABEL: name: implicit_def_p1_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GCN-NEXT: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32), addrspace 1)
     %0:vgpr(p1) = G_IMPLICIT_DEF
-    %1:vgpr(s32) = G_CONSTANT i32 4
-    G_STORE %1, %0 :: (store (s32), addrspace 1)
+    %1:vgpr(i32) = G_CONSTANT i32 4
+    G_STORE %1(i32), %0(p1) :: (store (i32), addrspace 1)
 ...
 
 ---
@@ -117,10 +117,10 @@ body: |
     ; GCN: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
     ; GCN-NEXT: $m0 = S_MOV_B32 -1
-    ; GCN-NEXT: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GCN-NEXT: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32), addrspace 1)
     %0:vgpr(p3) = G_IMPLICIT_DEF
-    %1:vgpr(s32) = G_CONSTANT i32 4
-    G_STORE %1, %0 :: (store (s32), addrspace 1)
+    %1:vgpr(i32) = G_CONSTANT i32 4
+    G_STORE %1(i32), %0(p3) :: (store (i32), addrspace 1)
 ...
 
 ---
@@ -134,10 +134,10 @@ body: |
     ; GCN-LABEL: name: implicit_def_p4_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vreg_64 = IMPLICIT_DEF
     ; GCN-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 4, implicit $exec
-    ; GCN-NEXT: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; GCN-NEXT: FLAT_STORE_DWORD [[DEF]], [[V_MOV_B32_e32_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32), addrspace 1)
     %0:vgpr(p4) = G_IMPLICIT_DEF
-    %1:vgpr(s32) = G_CONSTANT i32 4
-    G_STORE %1, %0 :: (store (s32), addrspace 1)
+    %1:vgpr(i32) = G_CONSTANT i32 4
+    G_STORE %1(i32), %0(p4) :: (store (i32), addrspace 1)
 ...
 
 ---
@@ -151,8 +151,8 @@ body: |
     ; GCN-LABEL: name: implicit_def_s1_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: S_ENDPGM 0, implicit [[DEF]]
-    %0:vgpr(s1) = G_IMPLICIT_DEF
-    S_ENDPGM 0, implicit %0
+    %0:vgpr(i1) = G_IMPLICIT_DEF
+    S_ENDPGM 0, implicit %0(i1)
 ...
 
 ---
@@ -166,8 +166,8 @@ body: |
     ; GCN-LABEL: name: implicit_def_s1_sgpr
     ; GCN: [[DEF:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
     ; GCN-NEXT: S_ENDPGM 0, implicit [[DEF]]
-    %0:sgpr(s1) = G_IMPLICIT_DEF
-    S_ENDPGM 0, implicit %0
+    %0:sgpr(i1) = G_IMPLICIT_DEF
+    S_ENDPGM 0, implicit %0(i1)
 ...
 
 ---
@@ -181,8 +181,8 @@ body: |
     ; GCN-LABEL: name: implicit_def_s1_vcc
     ; GCN: [[DEF:%[0-9]+]]:sreg_64_xexec = IMPLICIT_DEF
     ; GCN-NEXT: S_ENDPGM 0, implicit [[DEF]]
-    %0:vcc(s1) = G_IMPLICIT_DEF
-    S_ENDPGM 0, implicit %0
+    %0:vcc(i1) = G_IMPLICIT_DEF
+    S_ENDPGM 0, implicit %0(i1)
 ...
 
 ---
@@ -196,8 +196,8 @@ body: |
     ; GCN-LABEL: name: implicit_def_s1024_sgpr
     ; GCN: [[DEF:%[0-9]+]]:sgpr_1024 = IMPLICIT_DEF
     ; GCN-NEXT: S_ENDPGM 0, implicit [[DEF]]
-    %0:sgpr(s1024) = G_IMPLICIT_DEF
-    S_ENDPGM 0, implicit %0
+    %0:sgpr(i1024) = G_IMPLICIT_DEF
+    S_ENDPGM 0, implicit %0(i1024)
 ...
 ---
 
@@ -210,6 +210,6 @@ body: |
     ; GCN-LABEL: name: implicit_def_s1024_vgpr
     ; GCN: [[DEF:%[0-9]+]]:vreg_1024 = IMPLICIT_DEF
     ; GCN-NEXT: S_ENDPGM 0, implicit [[DEF]]
-    %0:vgpr(s1024) = G_IMPLICIT_DEF
-    S_ENDPGM 0, implicit %0
+    %0:vgpr(i1024) = G_IMPLICIT_DEF
+    S_ENDPGM 0, implicit %0(i1024)
 ...

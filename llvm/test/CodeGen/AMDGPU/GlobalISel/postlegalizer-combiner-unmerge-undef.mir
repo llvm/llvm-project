@@ -13,9 +13,9 @@ body: |
     %ptr1:_(p1) = COPY $vgpr0_vgpr1
     %ptr2:_(p1) = COPY $vgpr2_vgpr3
     %ptr3:_(p1) = COPY $vgpr4_vgpr5
-    %vec:_(<3 x s32>) = G_IMPLICIT_DEF
-    %p1:_(s32), %p2:_(s32), %p3:_(s32) = G_UNMERGE_VALUES %vec
-    G_STORE %p1:_(s32), %ptr1:_(p1) :: (store (s32), addrspace 1, align 4)
-    G_STORE %p2:_(s32), %ptr2:_(p1) :: (store (s32), addrspace 1, align 4)
-    G_STORE %p3:_(s32), %ptr3:_(p1) :: (store (s32), addrspace 1, align 4)
+    %vec:_(<3 x i32>) = G_IMPLICIT_DEF
+    %p1:_(i32), %p2:_(i32), %p3:_(i32) = G_UNMERGE_VALUES %vec(<3 x i32>)
+    G_STORE %p1(i32), %ptr1(p1) :: (store (i32), addrspace 1)
+    G_STORE %p2(i32), %ptr2(p1) :: (store (i32), addrspace 1)
+    G_STORE %p3(i32), %ptr3(p1) :: (store (i32), addrspace 1)
 ...

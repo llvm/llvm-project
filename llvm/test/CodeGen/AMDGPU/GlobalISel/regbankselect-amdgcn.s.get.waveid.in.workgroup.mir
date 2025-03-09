@@ -9,6 +9,6 @@ legalized: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: s_get_waveid_in_workgroup
-    ; CHECK: [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.get.waveid.in.workgroup)
-    %0:_(s32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.get.waveid.in.workgroup)
+    ; CHECK: [[INT:%[0-9]+]]:sgpr(i32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.get.waveid.in.workgroup)
+    %0:_(i32) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.get.waveid.in.workgroup)
 ...

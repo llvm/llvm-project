@@ -13,10 +13,10 @@ define void @fence_loads(ptr %ptr) {
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1
   ; CHECK-NEXT:   ATOMIC_FENCE 5, 1, mmra !0
-  ; CHECK-NEXT:   [[FLAT_LOAD_UBYTE:%[0-9]+]]:vgpr_32 = FLAT_LOAD_UBYTE [[REG_SEQUENCE]], 0, 0, implicit $exec, implicit $flat_scr, mmra !1 :: (load acquire (s8) from %ir.ptr, align 4)
+  ; CHECK-NEXT:   [[FLAT_LOAD_UBYTE:%[0-9]+]]:vgpr_32 = FLAT_LOAD_UBYTE [[REG_SEQUENCE]], 0, 0, implicit $exec, implicit $flat_scr, mmra !1 :: (load acquire (i8) from %ir.ptr, align 4)
   ; CHECK-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; CHECK-NEXT:   FLAT_STORE_BYTE [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr, mmra !2 :: (store release (s8) into %ir.ptr, align 4)
+  ; CHECK-NEXT:   FLAT_STORE_BYTE [[REG_SEQUENCE]], [[COPY2]], 0, 0, implicit $exec, implicit $flat_scr, mmra !2 :: (store release (i8) into %ir.ptr, align 4)
   ; CHECK-NEXT:   SI_RETURN
   fence release,                                        !mmra !0
   %ld = load atomic i8, ptr %ptr acquire, align 4,      !mmra !2

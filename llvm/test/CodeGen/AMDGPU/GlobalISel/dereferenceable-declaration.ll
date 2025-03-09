@@ -14,18 +14,18 @@ define i64 @load_deref_declaration_only() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x i32>)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p0) = G_ASSERT_ALIGN [[MV]], 8
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (s64) from %ir.call)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (i64) from %ir.call)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[LOAD]](i64)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %call = call ptr @declared_with_ret_deref()
   %load = load i64, ptr %call, align 8
@@ -38,18 +38,18 @@ define i64 @load_deref_unknown_decl() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @unknown_decl
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x i32>)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @unknown_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p0) = G_ASSERT_ALIGN [[MV]], 8
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (load (s64) from %ir.call)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (load (i64) from %ir.call)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[LOAD]](i64)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %call = call ptr @unknown_decl()
   %load = load i64, ptr %call, align 8
@@ -62,18 +62,18 @@ define i64 @load_deref_callsite_only() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @unknown_decl
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x i32>)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @unknown_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p0) = G_ASSERT_ALIGN [[MV]], 8
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (s64) from %ir.call)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (i64) from %ir.call)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[LOAD]](i64)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %call = call dereferenceable(8) ptr @unknown_decl()
   %load = load i64, ptr %call, align 8
@@ -87,30 +87,30 @@ define i64 @load_deref_maxmimum_callsite_declaration_only() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x i32>)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p0) = G_ASSERT_ALIGN [[MV]], 8
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (s64) from %ir.call0)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (i64) from %ir.call0)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref4
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY3]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY3]](<4 x i32>)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV1]](p0), @declared_with_ret_deref4, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY4]](i32), [[COPY5]](i32)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN1:%[0-9]+]]:_(p0) = G_ASSERT_ALIGN [[MV1]], 8
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[ASSERT_ALIGN1]](p0) :: (dereferenceable load (s64) from %ir.call1)
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD1]]
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ADD]](s64)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(i64) = G_LOAD [[ASSERT_ALIGN1]](p0) :: (dereferenceable load (i64) from %ir.call1)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i64) = G_ADD [[LOAD]], [[LOAD1]]
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[ADD]](i64)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %call0 = call dereferenceable(4) ptr @declared_with_ret_deref()
   %load0 = load i64, ptr %call0, align 8
@@ -126,18 +126,18 @@ define i64 @load_deref_or_null_declaration_only() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref_or_null
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x i32>)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref_or_null, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p0) = G_ASSERT_ALIGN [[MV]], 8
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (s64) from %ir.call)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (i64) from %ir.call)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[LOAD]](i64)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %call = call nonnull ptr @declared_with_ret_deref_or_null()
   %load = load i64, ptr %call, align 8
@@ -150,18 +150,18 @@ define i64 @load_deref_or_null_nonnull_decl() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @nonnull_decl
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x i32>)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @nonnull_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p0) = G_ASSERT_ALIGN [[MV]], 8
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (load (s64) from %ir.call)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (load (i64) from %ir.call)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[LOAD]](i64)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %call = call ptr @nonnull_decl()
   %load = load i64, ptr %call, align 8
@@ -174,18 +174,18 @@ define i64 @load_deref_or_null_callsite_only() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @nonnull_decl
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x i32>)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @nonnull_decl, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p0) = G_ASSERT_ALIGN [[MV]], 8
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (s64) from %ir.call)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[LOAD]](s64)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (i64) from %ir.call)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[LOAD]](i64)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %call = call dereferenceable_or_null(8) ptr @nonnull_decl()
   %load = load i64, ptr %call, align 8
@@ -199,30 +199,30 @@ define i64 @load_deref_or_null_maxmimum_callsite_declaration_only() {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref_or_null
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY]](<4 x i32>)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @declared_with_ret_deref_or_null, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY1]](i32), [[COPY2]](i32)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN:%[0-9]+]]:_(p0) = G_ASSERT_ALIGN [[MV]], 8
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (s64) from %ir.call0)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[ASSERT_ALIGN]](p0) :: (dereferenceable load (i64) from %ir.call0)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @declared_with_ret_deref_or_null4
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY3]](<4 x s32>)
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<4 x i32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+  ; CHECK-NEXT:   $sgpr0_sgpr1_sgpr2_sgpr3 = COPY [[COPY3]](<4 x i32>)
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV1]](p0), @declared_with_ret_deref_or_null4, csr_amdgpu, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit-def $vgpr0, implicit-def $vgpr1
-  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY4]](s32), [[COPY5]](s32)
+  ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY4]](i32), [[COPY5]](i32)
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[ASSERT_ALIGN1:%[0-9]+]]:_(p0) = G_ASSERT_ALIGN [[MV1]], 8
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[ASSERT_ALIGN1]](p0) :: (dereferenceable load (s64) from %ir.call1)
-  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(s64) = G_ADD [[LOAD]], [[LOAD1]]
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ADD]](s64)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(i64) = G_LOAD [[ASSERT_ALIGN1]](p0) :: (dereferenceable load (i64) from %ir.call1)
+  ; CHECK-NEXT:   [[ADD:%[0-9]+]]:_(i64) = G_ADD [[LOAD]], [[LOAD1]]
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[ADD]](i64)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %call0 = call dereferenceable_or_null(4) nonnull ptr @declared_with_ret_deref_or_null()
   %load0 = load i64, ptr %call0, align 8

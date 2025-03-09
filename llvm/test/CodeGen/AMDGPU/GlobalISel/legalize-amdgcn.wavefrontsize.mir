@@ -9,11 +9,12 @@ body: |
   bb.0:
 
     ; WAVE64-LABEL: name: test_wavefrontsize
-    ; WAVE64: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-    ; WAVE64-NEXT: $vgpr0 = COPY [[C]](s32)
+    ; WAVE64: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 64
+    ; WAVE64-NEXT: $vgpr0 = COPY [[C]](i32)
+    ;
     ; WAVE32-LABEL: name: test_wavefrontsize
-    ; WAVE32: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 32
-    ; WAVE32-NEXT: $vgpr0 = COPY [[C]](s32)
-    %0:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.wavefrontsize)
-    $vgpr0 = COPY %0
+    ; WAVE32: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 32
+    ; WAVE32-NEXT: $vgpr0 = COPY [[C]](i32)
+    %0:_(i32) = G_INTRINSIC intrinsic(@llvm.amdgcn.wavefrontsize)
+    $vgpr0 = COPY %0(i32)
 ...

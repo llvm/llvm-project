@@ -16,8 +16,11 @@ body: |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
+
     G_BR %bb.1
 
   bb.1:
+
 
 ...

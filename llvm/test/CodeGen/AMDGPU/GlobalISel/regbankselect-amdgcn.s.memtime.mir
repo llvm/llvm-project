@@ -9,6 +9,6 @@ legalized: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: memtime
-    ; CHECK: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.memtime)
-    %0:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.memtime)
+    ; CHECK: [[INT:%[0-9]+]]:sgpr(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.memtime)
+    %0:_(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.memtime)
 ...

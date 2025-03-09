@@ -13,13 +13,13 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[COPY]](p1) :: (load (s64), addrspace 1)
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s64) = G_SEXT_INREG [[LOAD]], 8
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT_INREG]](s64)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i64) = G_LOAD [[COPY]](p1) :: (load (i64), addrspace 1)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i64) = G_SEXT_INREG [[LOAD]], 8
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT_INREG]](i64)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s64) = G_LOAD %0 :: (load (s64), align 8, addrspace 1)
-    %2:_(s64) = G_SEXT_INREG %1, 8
-    $vgpr0_vgpr1 = COPY %2
+    %1:_(i64) = G_LOAD %0(p1) :: (load (i64), addrspace 1)
+    %2:_(i64) = G_SEXT_INREG %1, 8
+    $vgpr0_vgpr1 = COPY %2(i64)
 ...
 
 # Legal to fold into sextload
@@ -34,12 +34,12 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), align 4, addrspace 1)
-    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p1) :: (load (i8), align 4, addrspace 1)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s32), align 4, addrspace 1)
-    %2:_(s32) = G_SEXT_INREG %1, 8
-    $vgpr0 = COPY %2
+    %1:_(i32) = G_LOAD %0(p1) :: (load (i32), addrspace 1)
+    %2:_(i32) = G_SEXT_INREG %1, 8
+    $vgpr0 = COPY %2(i32)
 ...
 
 ---
@@ -53,13 +53,13 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 7
-    ; CHECK-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p1) :: (load (i32), addrspace 1)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i32) = G_SEXT_INREG [[LOAD]], 7
+    ; CHECK-NEXT: $vgpr0 = COPY [[SEXT_INREG]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s32), align 4, addrspace 1)
-    %2:_(s32) = G_SEXT_INREG %1, 7
-    $vgpr0 = COPY %2
+    %1:_(i32) = G_LOAD %0(p1) :: (load (i32), addrspace 1)
+    %2:_(i32) = G_SEXT_INREG %1, 7
+    $vgpr0 = COPY %2(i32)
 ...
 
 ---
@@ -73,13 +73,13 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p1) :: (load (s32), addrspace 1)
-    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(s32) = G_SEXT_INREG [[LOAD]], 9
-    ; CHECK-NEXT: $vgpr0 = COPY [[SEXT_INREG]](s32)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p1) :: (load (i32), addrspace 1)
+    ; CHECK-NEXT: [[SEXT_INREG:%[0-9]+]]:_(i32) = G_SEXT_INREG [[LOAD]], 9
+    ; CHECK-NEXT: $vgpr0 = COPY [[SEXT_INREG]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s32), align 4, addrspace 1)
-    %2:_(s32) = G_SEXT_INREG %1, 9
-    $vgpr0 = COPY %2
+    %1:_(i32) = G_LOAD %0(p1) :: (load (i32), addrspace 1)
+    %2:_(i32) = G_SEXT_INREG %1, 9
+    $vgpr0 = COPY %2(i32)
 ...
 
 # Legal to fold into sextload
@@ -94,12 +94,12 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), align 4, addrspace 1)
-    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p1) :: (load (i16), align 4, addrspace 1)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s32), align 4, addrspace 1)
-    %2:_(s32) = G_SEXT_INREG %1, 16
-    $vgpr0 = COPY %2
+    %1:_(i32) = G_LOAD %0(p1) :: (load (i32), addrspace 1)
+    %2:_(i32) = G_SEXT_INREG %1, 16
+    $vgpr0 = COPY %2(i32)
 ...
 
 ---
@@ -113,12 +113,12 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s8), addrspace 1)
-    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p1) :: (load (i8), addrspace 1)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s8), align 1, addrspace 1)
-    %2:_(s32) = G_SEXT_INREG %1, 8
-    $vgpr0 = COPY %2
+    %1:_(i32) = G_LOAD %0(p1) :: (load (i8), addrspace 1)
+    %2:_(i32) = G_SEXT_INREG %1, 8
+    $vgpr0 = COPY %2(i32)
 ...
 
 ---
@@ -132,12 +132,12 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (volatile load (s8), addrspace 1)
-    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p1) :: (volatile load (i8), addrspace 1)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (volatile load (s8), align 1, addrspace 1)
-    %2:_(s32) = G_SEXT_INREG %1, 8
-    $vgpr0 = COPY %2
+    %1:_(i32) = G_LOAD %0(p1) :: (volatile load (i8), addrspace 1)
+    %2:_(i32) = G_SEXT_INREG %1, 8
+    $vgpr0 = COPY %2(i32)
 ...
 
 ---
@@ -151,12 +151,12 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (load (s16), addrspace 1)
-    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p1) :: (load (i16), addrspace 1)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (load (s16), align 2, addrspace 1)
-    %2:_(s32) = G_SEXT_INREG %1, 16
-    $vgpr0 = COPY %2
+    %1:_(i32) = G_LOAD %0(p1) :: (load (i16), addrspace 1)
+    %2:_(i32) = G_SEXT_INREG %1, 16
+    $vgpr0 = COPY %2(i32)
 ...
 
 ---
@@ -170,10 +170,10 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p1) :: (volatile load (s16), addrspace 1)
-    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p1) :: (volatile load (i16), addrspace 1)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](i32)
     %0:_(p1) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_LOAD %0 :: (volatile load (s16), align 2, addrspace 1)
-    %2:_(s32) = G_SEXT_INREG %1, 16
-    $vgpr0 = COPY %2
+    %1:_(i32) = G_LOAD %0(p1) :: (volatile load (i16), addrspace 1)
+    %2:_(i32) = G_SEXT_INREG %1, 16
+    $vgpr0 = COPY %2(i32)
 ...

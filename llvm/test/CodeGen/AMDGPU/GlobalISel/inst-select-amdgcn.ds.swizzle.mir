@@ -18,9 +18,9 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[DS_SWIZZLE_B32_:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[COPY]], 0, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[DS_SWIZZLE_B32_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.swizzle), %0, 0
-    S_ENDPGM 0, implicit %1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.swizzle), %0(i32), 0
+    S_ENDPGM 0, implicit %1(i32)
 
 ...
 
@@ -41,8 +41,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[DS_SWIZZLE_B32_:%[0-9]+]]:vgpr_32 = DS_SWIZZLE_B32 [[COPY]], 65535, 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[DS_SWIZZLE_B32_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.swizzle), %0, 65535
-    S_ENDPGM 0, implicit %1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.swizzle), %0(i32), 65535
+    S_ENDPGM 0, implicit %1(i32)
 
 ...

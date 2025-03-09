@@ -9,21 +9,21 @@ body: |
     ; CHECK-LABEL: name: test_select_s32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[SELECT]](s32)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i1), [[C1]], [[C2]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[SELECT]](i32)
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %3:_(i32) = G_CONSTANT i32 1
+    %4:_(i32) = G_CONSTANT i32 2
+    %5:_(i32) = G_SELECT %2(i1), %3, %4
+    $vgpr0 = COPY %5(i32)
 
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s32) = G_CONSTANT i32 1
-    %4:_(s32) = G_CONSTANT i32 2
-    %5:_(s32) = G_SELECT %2, %3, %4
-    $vgpr0 = COPY %5
 
 ...
 
@@ -35,21 +35,21 @@ body: |
     ; CHECK-LABEL: name: test_select_s64
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](s64)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[C1]], [[C2]]
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](i64)
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %3:_(i64) = G_CONSTANT i64 1
+    %4:_(i64) = G_CONSTANT i64 2
+    %5:_(i64) = G_SELECT %2(i1), %3, %4
+    $vgpr0_vgpr1 = COPY %5(i64)
 
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s64) = G_CONSTANT i64 1
-    %4:_(s64) = G_CONSTANT i64 2
-    %5:_(s64) = G_SELECT %2, %3, %4
-    $vgpr0_vgpr1 = COPY %5
 
 ...
 
@@ -61,22 +61,22 @@ body: |
     ; CHECK-LABEL: name: test_select_s48
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 1
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 2
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](s64)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i64) = G_CONSTANT i64 1
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 2
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[C1]], [[C2]]
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](i64)
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %3:_(i48) = G_CONSTANT i48 1
+    %4:_(i48) = G_CONSTANT i48 2
+    %5:_(i48) = G_SELECT %2(i1), %3, %4
+    %6:_(i64) = G_ANYEXT %5(i48)
+    $vgpr0_vgpr1 = COPY %6(i64)
 
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s48) = G_CONSTANT i48 1
-    %4:_(s48) = G_CONSTANT i48 2
-    %5:_(s48) = G_SELECT %2, %3, %4
-    %6:_(s64) = G_ANYEXT %5
-    $vgpr0_vgpr1 = COPY %6
 
 ...
 
@@ -88,23 +88,23 @@ body: |
     ; CHECK-LABEL: name: test_select_s16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 2
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
-    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i16) = G_CONSTANT i16 1
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i16) = G_CONSTANT i16 2
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[C1]], [[C2]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT]](i16)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %3:_(i16) = G_CONSTANT i16 1
+    %4:_(i16) = G_CONSTANT i16 2
+    %5:_(i16) = G_SELECT %2(i1), %3, %4
+    %6:_(i32) = G_ANYEXT %5(i16)
+    $vgpr0 = COPY %6(i32)
 
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s16) = G_CONSTANT i16 1
-    %4:_(s16) = G_CONSTANT i16 2
-    %5:_(s16) = G_SELECT %2, %3, %4
-    %6:_(s32) = G_ANYEXT %5
-    $vgpr0 = COPY %6
 
 ...
 
@@ -116,23 +116,23 @@ body: |
     ; CHECK-LABEL: name: test_select_s8
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 2
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
-    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i16) = G_CONSTANT i16 1
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i16) = G_CONSTANT i16 2
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[C1]], [[C2]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT]](i16)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %3:_(i8) = G_CONSTANT i8 1
+    %4:_(i8) = G_CONSTANT i8 2
+    %5:_(i8) = G_SELECT %2(i1), %3, %4
+    %6:_(i32) = G_ANYEXT %5(i8)
+    $vgpr0 = COPY %6(i32)
 
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s8) = G_CONSTANT i8 1
-    %4:_(s8) = G_CONSTANT i8 2
-    %5:_(s8) = G_SELECT %2, %3, %4
-    %6:_(s32) = G_ANYEXT %5
-    $vgpr0 = COPY %6
 
 ...
 
@@ -144,23 +144,23 @@ body: |
     ; CHECK-LABEL: name: test_select_s7
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s16) = G_CONSTANT i16 2
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[C1]], [[C2]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
-    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i16) = G_CONSTANT i16 1
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i16) = G_CONSTANT i16 2
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[C1]], [[C2]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT]](i16)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](i32)
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %3:_(i7) = G_CONSTANT i7 1
+    %4:_(i7) = G_CONSTANT i7 2
+    %5:_(i7) = G_SELECT %2(i1), %3, %4
+    %6:_(i32) = G_ANYEXT %5(i7)
+    $vgpr0 = COPY %6(i32)
 
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s7) = G_CONSTANT i7 1
-    %4:_(s7) = G_CONSTANT i7 2
-    %5:_(s7) = G_SELECT %2, %3, %4
-    %6:_(s32) = G_ANYEXT %5
-    $vgpr0 = COPY %6
 
 ...
 
@@ -172,28 +172,28 @@ body: |
     ; CHECK-LABEL: name: test_select_s96
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5, $vgpr6
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s96) = COPY $vgpr3_vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY2]](s32), [[C]]
-    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[COPY]](s96), 0
-    ; CHECK-NEXT: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY]](s96), 64
-    ; CHECK-NEXT: [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[COPY1]](s96), 0
-    ; CHECK-NEXT: [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[COPY1]](s96), 64
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[EXTRACT]], [[EXTRACT2]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[EXTRACT1]], [[EXTRACT3]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SELECT]](s64)
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UV]](s32), [[UV1]](s32), [[SELECT1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[MV]](s96)
-    %0:_(s96) = COPY $vgpr0_vgpr1_vgpr2
-    %1:_(s96) = COPY $vgpr3_vgpr4_vgpr5
-    %2:_(s32) = COPY $vgpr6
-    %3:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i96) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i96) = COPY $vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr6
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY2]](i32), [[C]]
+    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(i64) = G_EXTRACT [[COPY]](i96), 0
+    ; CHECK-NEXT: [[EXTRACT1:%[0-9]+]]:_(i32) = G_EXTRACT [[COPY]](i96), 64
+    ; CHECK-NEXT: [[EXTRACT2:%[0-9]+]]:_(i64) = G_EXTRACT [[COPY1]](i96), 0
+    ; CHECK-NEXT: [[EXTRACT3:%[0-9]+]]:_(i32) = G_EXTRACT [[COPY1]](i96), 64
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[EXTRACT]], [[EXTRACT2]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i1), [[EXTRACT1]], [[EXTRACT3]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[SELECT]](i64)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[UV]](i32), [[UV1]](i32), [[SELECT1]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[MV]](i96)
+    %0:_(i96) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(i96) = COPY $vgpr3_vgpr4_vgpr5
+    %2:_(i32) = COPY $vgpr6
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(ne), %2(i32), %3
+    %5:_(i96) = G_SELECT %4(i1), %0, %1
+    $vgpr0_vgpr1_vgpr2 = COPY %5(i96)
 
-    %4:_(s1) = G_ICMP intpred(ne), %2, %3
-    %5:_(s96) = G_SELECT %4, %0, %1
-    $vgpr0_vgpr1_vgpr2 = COPY %5
 
 ...
 
@@ -206,24 +206,24 @@ body: |
     ; CHECK-LABEL: name: test_select_s128
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr8
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY2]](s32), [[C]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](s128)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](s128)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT]](s64), [[SELECT1]](s64)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](s128)
-    %0:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(s128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:_(s32) = COPY $vgpr8
-    %3:_(s32) = G_CONSTANT i32 0
-    %4:_(s1) = G_ICMP intpred(ne), %2, %3
-    %5:_(s128) = G_SELECT %4, %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr8
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY2]](i32), [[C]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY]](i128)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i64), [[UV3:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY1]](i128)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[UV]], [[UV2]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[SELECT]](i64), [[SELECT1]](i64)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[MV]](i128)
+    %0:_(i128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(i128) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %2:_(i32) = COPY $vgpr8
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(ne), %2(i32), %3
+    %5:_(i128) = G_SELECT %4(i1), %0, %1
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5(i128)
 
 ...
 
@@ -236,34 +236,34 @@ body: |
     ; CHECK-LABEL: name: test_select_v2s8
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr1_vgpr2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr3_vgpr4
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[UV2]](s32)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[UV1]](s32)
-    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[UV3]](s32)
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC2]], [[TRUNC3]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT1]](s16)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = G_CONSTANT i32 0
-    %2:_(<2 x s32>) = COPY $vgpr1_vgpr2
-    %3:_(<2 x s32>) = COPY $vgpr3_vgpr4
-    %4:_(<2 x s8>) = G_TRUNC %2
-    %5:_(<2 x s8>) = G_TRUNC %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr3_vgpr4
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[C]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<2 x i32>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY2]](<2 x i32>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[UV]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[UV2]](i32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(i16) = G_TRUNC [[UV1]](i32)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(i16) = G_TRUNC [[UV3]](i32)
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[TRUNC2]], [[TRUNC3]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT]](i16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT1]](i16)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[ANYEXT]](i32), [[ANYEXT1]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x i32>)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = G_CONSTANT i32 0
+    %2:_(<2 x i32>) = COPY $vgpr1_vgpr2
+    %3:_(<2 x i32>) = COPY $vgpr3_vgpr4
+    %4:_(<2 x i8>) = G_TRUNC %2(<2 x i32>)
+    %5:_(<2 x i8>) = G_TRUNC %3(<2 x i32>)
+    %6:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %7:_(<2 x i8>) = G_SELECT %6(i1), %4, %5
+    %8:_(<2 x i32>) = G_ANYEXT %7(<2 x i8>)
+    $vgpr0_vgpr1 = COPY %8(<2 x i32>)
 
-    %6:_(s1) = G_ICMP intpred(ne), %0, %1
-    %7:_(<2 x s8>) = G_SELECT %6, %4, %5
-    %8:_(<2 x s32>) = G_ANYEXT %7
-    $vgpr0_vgpr1 = COPY %8
 
 ...
 
@@ -276,38 +276,38 @@ body: |
     ; CHECK-LABEL: name: test_select_v3s8
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr4_vgpr5_vgpr6
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
-    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<3 x s32>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[UV3]](s32)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[UV1]](s32)
-    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[UV4]](s32)
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC2]], [[TRUNC3]]
-    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[UV2]](s32)
-    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[UV5]](s32)
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC4]], [[TRUNC5]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT1]](s16)
-    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT2]](s16)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = G_CONSTANT i32 0
-    %2:_(<3 x s32>) = COPY $vgpr1_vgpr2_vgpr3
-    %3:_(<3 x s32>) = COPY $vgpr4_vgpr5_vgpr6
-    %4:_(<3 x s8>) = G_TRUNC %2
-    %5:_(<3 x s8>) = G_TRUNC %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr4_vgpr5_vgpr6
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[C]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<3 x i32>)
+    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY2]](<3 x i32>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[UV]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[UV3]](i32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(i16) = G_TRUNC [[UV1]](i32)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(i16) = G_TRUNC [[UV4]](i32)
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[TRUNC2]], [[TRUNC3]]
+    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(i16) = G_TRUNC [[UV2]](i32)
+    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(i16) = G_TRUNC [[UV5]](i32)
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[TRUNC4]], [[TRUNC5]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT]](i16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT1]](i16)
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT2]](i16)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x i32>) = G_BUILD_VECTOR [[ANYEXT]](i32), [[ANYEXT1]](i32), [[ANYEXT2]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x i32>)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = G_CONSTANT i32 0
+    %2:_(<3 x i32>) = COPY $vgpr1_vgpr2_vgpr3
+    %3:_(<3 x i32>) = COPY $vgpr4_vgpr5_vgpr6
+    %4:_(<3 x i8>) = G_TRUNC %2(<3 x i32>)
+    %5:_(<3 x i8>) = G_TRUNC %3(<3 x i32>)
+    %6:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %7:_(<3 x i8>) = G_SELECT %6(i1), %4, %5
+    %8:_(<3 x i32>) = G_ANYEXT %7(<3 x i8>)
+    $vgpr0_vgpr1_vgpr2 = COPY %8(<3 x i32>)
 
-    %6:_(s1) = G_ICMP intpred(ne), %0, %1
-    %7:_(<3 x s8>) = G_SELECT %6, %4, %5
-    %8:_(<3 x s32>) = G_ANYEXT %7
-    $vgpr0_vgpr1_vgpr2 = COPY %8
 
 ...
 
@@ -320,42 +320,42 @@ body: |
     ; CHECK-LABEL: name: test_select_v4s8
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<4 x s32>)
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<4 x s32>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[UV4]](s32)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[UV1]](s32)
-    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[UV5]](s32)
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC2]], [[TRUNC3]]
-    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[UV2]](s32)
-    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[UV6]](s32)
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC4]], [[TRUNC5]]
-    ; CHECK-NEXT: [[TRUNC6:%[0-9]+]]:_(s16) = G_TRUNC [[UV3]](s32)
-    ; CHECK-NEXT: [[TRUNC7:%[0-9]+]]:_(s16) = G_TRUNC [[UV7]](s32)
-    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC6]], [[TRUNC7]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT1]](s16)
-    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT2]](s16)
-    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT3]](s16)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32), [[ANYEXT3]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<4 x s32>)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = G_CONSTANT i32 0
-    %2:_(<4 x s32>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %3:_(<4 x s32>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
-    %4:_(<4 x s8>) = G_TRUNC %2
-    %5:_(<4 x s8>) = G_TRUNC %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x i32>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[C]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<4 x i32>)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32), [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY2]](<4 x i32>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[UV]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[UV4]](i32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(i16) = G_TRUNC [[UV1]](i32)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(i16) = G_TRUNC [[UV5]](i32)
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[TRUNC2]], [[TRUNC3]]
+    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(i16) = G_TRUNC [[UV2]](i32)
+    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(i16) = G_TRUNC [[UV6]](i32)
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[TRUNC4]], [[TRUNC5]]
+    ; CHECK-NEXT: [[TRUNC6:%[0-9]+]]:_(i16) = G_TRUNC [[UV3]](i32)
+    ; CHECK-NEXT: [[TRUNC7:%[0-9]+]]:_(i16) = G_TRUNC [[UV7]](i32)
+    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[TRUNC6]], [[TRUNC7]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT]](i16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT1]](i16)
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT2]](i16)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT3]](i16)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[ANYEXT]](i32), [[ANYEXT1]](i32), [[ANYEXT2]](i32), [[ANYEXT3]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<4 x i32>)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = G_CONSTANT i32 0
+    %2:_(<4 x i32>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    %3:_(<4 x i32>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %4:_(<4 x i8>) = G_TRUNC %2(<4 x i32>)
+    %5:_(<4 x i8>) = G_TRUNC %3(<4 x i32>)
+    %6:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %7:_(<4 x i8>) = G_SELECT %6(i1), %4, %5
+    %8:_(<4 x i32>) = G_ANYEXT %7(<4 x i8>)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %8(<4 x i32>)
 
-    %6:_(s1) = G_ICMP intpred(ne), %0, %1
-    %7:_(<4 x s8>) = G_SELECT %6, %4, %5
-    %8:_(<4 x s32>) = G_ANYEXT %7
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %8
 
 ...
 
@@ -367,21 +367,21 @@ body: |
     ; CHECK-LABEL: name: test_select_v2s16
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY2]](s32), [[C]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x s16>) = G_SELECT [[ICMP]](s1), [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[SELECT]](<2 x s16>)
-    %0:_(<2 x s16>) = COPY $vgpr0
-    %1:_(<2 x s16>) = COPY $vgpr1
-    %2:_(s32) = COPY $vgpr2
-    %3:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY2]](i32), [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x i16>) = G_SELECT [[ICMP]](i1), [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[SELECT]](<2 x i16>)
+    %0:_(<2 x i16>) = COPY $vgpr0
+    %1:_(<2 x i16>) = COPY $vgpr1
+    %2:_(i32) = COPY $vgpr2
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(ne), %2(i32), %3
+    %5:_(<2 x i16>) = G_SELECT %4(i1), %0, %1
+    $vgpr0 = COPY %5(<2 x i16>)
 
-    %4:_(s1) = G_ICMP intpred(ne), %2, %3
-    %5:_(<2 x s16>) = G_SELECT %4, %0, %1
-    $vgpr0 = COPY %5
 
 ...
 
@@ -393,47 +393,47 @@ body: |
     ; CHECK-LABEL: name: test_select_v3s16
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5, $vgpr6
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr3_vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr6
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY2]](s32), [[C]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s16>), [[UV1:%[0-9]+]]:_(<2 x s16>), [[UV2:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[UV]](<2 x s16>), [[UV1]](<2 x s16>)
-    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(<2 x s16>), [[UV4:%[0-9]+]]:_(<2 x s16>), [[UV5:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY1]](<6 x s16>)
-    ; CHECK-NEXT: [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x s16>) = G_CONCAT_VECTORS [[UV3]](<2 x s16>), [[UV4]](<2 x s16>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<4 x s16>) = G_SELECT [[ICMP]](s1), [[CONCAT_VECTORS]], [[CONCAT_VECTORS1]]
-    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[SELECT]](<4 x s16>)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV7]](<2 x s16>)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[UV8:%[0-9]+]]:_(<2 x s16>), [[UV9:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
-    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV8]](<2 x s16>)
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST1]], [[C1]](s32)
-    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV9]](<2 x s16>)
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST]], [[C2]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[BITCAST1]], [[C2]]
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C1]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND]], [[SHL]]
-    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[BITCAST2]], [[C2]]
-    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND2]], [[C1]](s32)
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[LSHR]], [[SHL1]]
-    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; CHECK-NEXT: [[CONCAT_VECTORS2:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[UV6]](<2 x s16>), [[BITCAST3]](<2 x s16>), [[BITCAST4]](<2 x s16>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS2]](<6 x s16>)
-    %0:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
-    %1:_(<6 x s16>) = COPY $vgpr3_vgpr4_vgpr5
-    %2:_(s32) = COPY $vgpr6
-    %3:_(s32) = G_CONSTANT i32 0
-    %4:_(s1) = G_ICMP intpred(ne), %2, %3
-    %5:_(<3 x s16>), %6:_(<3 x s16>) = G_UNMERGE_VALUES %0
-    %7:_(<3 x s16>), %8:_(<3 x s16>) = G_UNMERGE_VALUES %1
-    %9:_(<3 x s16>) = G_SELECT %4, %5, %7
-    %10:_(<3 x s16>) = G_IMPLICIT_DEF
-    %11:_(<6 x s16>) = G_CONCAT_VECTORS %9, %10
-    $vgpr0_vgpr1_vgpr2 = COPY %11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<6 x i16>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<6 x i16>) = COPY $vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr6
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY2]](i32), [[C]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x i16>), [[UV1:%[0-9]+]]:_(<2 x i16>), [[UV2:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[COPY]](<6 x i16>)
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x i16>) = G_CONCAT_VECTORS [[UV]](<2 x i16>), [[UV1]](<2 x i16>)
+    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(<2 x i16>), [[UV4:%[0-9]+]]:_(<2 x i16>), [[UV5:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[COPY1]](<6 x i16>)
+    ; CHECK-NEXT: [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x i16>) = G_CONCAT_VECTORS [[UV3]](<2 x i16>), [[UV4]](<2 x i16>)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<4 x i16>) = G_SELECT [[ICMP]](i1), [[CONCAT_VECTORS]], [[CONCAT_VECTORS1]]
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(<2 x i16>), [[UV7:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[SELECT]](<4 x i16>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV7]](<2 x i16>)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x i16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[UV8:%[0-9]+]]:_(<2 x i16>), [[UV9:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[DEF]](<4 x i16>)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[UV8]](<2 x i16>)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST1]], [[C1]](i32)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(i32) = G_BITCAST [[UV9]](<2 x i16>)
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[BITCAST]], [[C2]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[BITCAST1]], [[C2]]
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[AND1]], [[C1]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[AND]], [[SHL]]
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR]](i32)
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(i32) = G_AND [[BITCAST2]], [[C2]]
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[AND2]], [[C1]](i32)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[LSHR]], [[SHL1]]
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR1]](i32)
+    ; CHECK-NEXT: [[CONCAT_VECTORS2:%[0-9]+]]:_(<6 x i16>) = G_CONCAT_VECTORS [[UV6]](<2 x i16>), [[BITCAST3]](<2 x i16>), [[BITCAST4]](<2 x i16>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS2]](<6 x i16>)
+    %0:_(<6 x i16>) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(<6 x i16>) = COPY $vgpr3_vgpr4_vgpr5
+    %2:_(i32) = COPY $vgpr6
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(ne), %2(i32), %3
+    %5:_(<3 x i16>), %6:_(<3 x i16>) = G_UNMERGE_VALUES %0(<6 x i16>)
+    %7:_(<3 x i16>), %8:_(<3 x i16>) = G_UNMERGE_VALUES %1(<6 x i16>)
+    %9:_(<3 x i16>) = G_SELECT %4(i1), %5, %7
+    %10:_(<3 x i16>) = G_IMPLICIT_DEF
+    %11:_(<6 x i16>) = G_CONCAT_VECTORS %9(<3 x i16>), %10(<3 x i16>)
+    $vgpr0_vgpr1_vgpr2 = COPY %11(<6 x i16>)
 
 ...
 
@@ -445,21 +445,21 @@ body: |
     ; CHECK-LABEL: name: test_select_v4s16
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr1_vgpr2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr3_vgpr4
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<4 x s16>) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](<4 x s16>)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(<4 x s16>) = COPY $vgpr1_vgpr2
-    %2:_(<4 x s16>) = COPY $vgpr3_vgpr4
-    %4:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i16>) = COPY $vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x i16>) = COPY $vgpr3_vgpr4
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<4 x i16>) = G_SELECT [[ICMP]](i1), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](<4 x i16>)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(<4 x i16>) = COPY $vgpr1_vgpr2
+    %2:_(<4 x i16>) = COPY $vgpr3_vgpr4
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %3
+    %5:_(<4 x i16>) = G_SELECT %4(i1), %1, %2
+    $vgpr0_vgpr1 = COPY %5(<4 x i16>)
 
-    %5:_(s1) = G_ICMP intpred(ne), %0, %4
-    %6:_(<4 x s16>) = G_SELECT %5, %1, %2
-    $vgpr0_vgpr1 = COPY %6
 
 ...
 
@@ -471,21 +471,21 @@ body: |
     ; CHECK-LABEL: name: test_select_v2s32
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr1_vgpr2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr3_vgpr4
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](<2 x s32>)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(<2 x s32>) = COPY $vgpr1_vgpr2
-    %2:_(<2 x s32>) = COPY $vgpr3_vgpr4
-    %4:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr3_vgpr4
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x i32>) = G_SELECT [[ICMP]](i1), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](<2 x i32>)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(<2 x i32>) = COPY $vgpr1_vgpr2
+    %2:_(<2 x i32>) = COPY $vgpr3_vgpr4
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %3
+    %5:_(<2 x i32>) = G_SELECT %4(i1), %1, %2
+    $vgpr0_vgpr1 = COPY %5(<2 x i32>)
 
-    %5:_(s1) = G_ICMP intpred(ne), %0, %4
-    %6:_(<2 x s32>) = G_SELECT %5, %1, %2
-    $vgpr0_vgpr1 = COPY %6
 
 ...
 
@@ -497,26 +497,26 @@ body: |
     ; CHECK-LABEL: name: test_select_v3s32
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr4_vgpr5_vgpr6
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
-    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<3 x s32>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[UV]], [[UV3]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV4]]
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[UV2]], [[UV5]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32), [[SELECT2]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
-    %2:_(<3 x s32>) = COPY $vgpr1_vgpr2_vgpr3
-    %3:_(<3 x s32>) = COPY $vgpr4_vgpr5_vgpr6
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr4_vgpr5_vgpr6
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<3 x i32>)
+    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY2]](<3 x i32>)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i1), [[UV]], [[UV3]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i1), [[UV1]], [[UV4]]
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i1), [[UV2]], [[UV5]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x i32>) = G_BUILD_VECTOR [[SELECT]](i32), [[SELECT1]](i32), [[SELECT2]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x i32>)
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(<3 x i32>) = COPY $vgpr1_vgpr2_vgpr3
+    %3:_(<3 x i32>) = COPY $vgpr4_vgpr5_vgpr6
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(<3 x i32>) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1_vgpr2 = COPY %5(<3 x i32>)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(<3 x s32>) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1_vgpr2 = COPY %5
 
 ...
 
@@ -528,25 +528,25 @@ body: |
     ; CHECK-LABEL: name: test_select_v4s32
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x s32>), [[UV1:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY1]](<4 x s32>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x s32>), [[UV3:%[0-9]+]]:_(<2 x s32>) = G_UNMERGE_VALUES [[COPY2]](<4 x s32>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(<2 x s32>) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x s32>) = G_CONCAT_VECTORS [[SELECT]](<2 x s32>), [[SELECT1]](<2 x s32>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<4 x s32>)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
-    %2:_(<4 x s32>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %3:_(<4 x s32>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x i32>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x i32>), [[UV1:%[0-9]+]]:_(<2 x i32>) = G_UNMERGE_VALUES [[COPY1]](<4 x i32>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x i32>), [[UV3:%[0-9]+]]:_(<2 x i32>) = G_UNMERGE_VALUES [[COPY2]](<4 x i32>)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x i32>) = G_SELECT [[ICMP]](i1), [[UV]], [[UV2]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(<2 x i32>) = G_SELECT [[ICMP]](i1), [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x i32>) = G_CONCAT_VECTORS [[SELECT]](<2 x i32>), [[SELECT1]](<2 x i32>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<4 x i32>)
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(<4 x i32>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    %3:_(<4 x i32>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(<4 x i32>) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5(<4 x i32>)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(<4 x s32>) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5
 
 ...
 
@@ -558,25 +558,25 @@ body: |
     ; CHECK-LABEL: name: test_select_v2s64
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY2]](<2 x s64>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SELECT]](s64), [[SELECT1]](s64)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
-    %2:_(<2 x s64>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
-    %3:_(<2 x s64>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY1]](<2 x i64>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i64), [[UV3:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY2]](<2 x i64>)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[UV]], [[UV2]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[SELECT]](i64), [[SELECT1]](i64)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x i64>)
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
+    %2:_(<2 x i64>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
+    %3:_(<2 x i64>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(<2 x i64>) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5(<2 x i64>)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(<2 x s64>) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5
 
 ...
 
@@ -588,21 +588,21 @@ body: |
     ; CHECK-LABEL: name: test_select_p0
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $vgpr1_vgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p0) = COPY $vgpr3_vgpr4
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](p0)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(p0) = COPY $vgpr1_vgpr2
     %3:_(p0) = COPY $vgpr3_vgpr4
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(p0) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1 = COPY %5(p0)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(p0) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1 = COPY %5
 
 ...
 
@@ -614,21 +614,21 @@ body: |
     ; CHECK-LABEL: name: test_select_p1
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p1) = COPY $vgpr1_vgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p1) = COPY $vgpr3_vgpr4
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p1) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p1) = G_SELECT [[ICMP]](i1), [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](p1)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(p1) = COPY $vgpr1_vgpr2
     %3:_(p1) = COPY $vgpr3_vgpr4
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(p1) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1 = COPY %5(p1)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(p1) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1 = COPY %5
 
 ...
 
@@ -640,21 +640,21 @@ body: |
     ; CHECK-LABEL: name: test_select_p2
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p2) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p2) = COPY $vgpr2
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p2) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p2) = G_SELECT [[ICMP]](i1), [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: $vgpr0 = COPY [[SELECT]](p2)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(p2) = COPY $vgpr1
     %3:_(p2) = COPY $vgpr2
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(p2) = G_SELECT %4(i1), %2, %3
+    $vgpr0 = COPY %5(p2)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(p2) = G_SELECT %4, %2, %3
-    $vgpr0 = COPY %5
 
 ...
 
@@ -666,21 +666,21 @@ body: |
     ; CHECK-LABEL: name: test_select_p3
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p3) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p3) = COPY $vgpr2
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p3) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p3) = G_SELECT [[ICMP]](i1), [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: $vgpr0 = COPY [[SELECT]](p3)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(p3) = COPY $vgpr1
     %3:_(p3) = COPY $vgpr2
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(p3) = G_SELECT %4(i1), %2, %3
+    $vgpr0 = COPY %5(p3)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(p3) = G_SELECT %4, %2, %3
-    $vgpr0 = COPY %5
 
 ...
 
@@ -692,21 +692,21 @@ body: |
     ; CHECK-LABEL: name: test_select_p4
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p4) = COPY $vgpr1_vgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p4) = COPY $vgpr3_vgpr4
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p4) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p4) = G_SELECT [[ICMP]](i1), [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](p4)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(p4) = COPY $vgpr1_vgpr2
     %3:_(p4) = COPY $vgpr3_vgpr4
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(p4) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1 = COPY %5(p4)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(p4) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1 = COPY %5
 
 ...
 
@@ -719,20 +719,20 @@ body: |
     ; CHECK-LABEL: name: test_select_p5
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p5) = COPY $vgpr1
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p5) = COPY $vgpr2
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p5) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p5) = G_SELECT [[ICMP]](i1), [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: $vgpr0 = COPY [[SELECT]](p5)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(p5) = COPY $vgpr1
     %3:_(p5) = COPY $vgpr2
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(p5) = G_SELECT %4, %2, %3
-    $vgpr0 = COPY %5
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(p5) = G_SELECT %4(i1), %2, %3
+    $vgpr0 = COPY %5(p5)
 
 ...
 
@@ -745,20 +745,20 @@ body: |
     ; CHECK-LABEL: name: test_select_p999
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p999) = COPY $vgpr1_vgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(p999) = COPY $vgpr3_vgpr4
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p999) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p999) = G_SELECT [[ICMP]](i1), [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](p999)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(p999) = COPY $vgpr1_vgpr2
     %3:_(p999) = COPY $vgpr3_vgpr4
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(p999) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1 = COPY %5
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(p999) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1 = COPY %5(p999)
 
 ...
 
@@ -772,20 +772,20 @@ body: |
     ; CHECK-LABEL: name: test_select_v2p3
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2, $vgpr3_vgpr4
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr1_vgpr2
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr3_vgpr4
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x p3>) = G_SELECT [[ICMP]](s1), [[COPY1]], [[COPY2]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[C]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x p3>) = G_SELECT [[ICMP]](i1), [[COPY1]], [[COPY2]]
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SELECT]](<2 x p3>)
-    %0:_(s32) = COPY $vgpr0
+    %0:_(i32) = COPY $vgpr0
     %1:_(<2 x p3>) = COPY $vgpr1_vgpr2
     %2:_(<2 x p3>) = COPY $vgpr3_vgpr4
-    %4:_(s32) = G_CONSTANT i32 0
-    %5:_(s1) = G_ICMP intpred(ne), %0, %4
-    %6:_(<2 x p3>) = G_SELECT %5, %1, %2
-    $vgpr0_vgpr1 = COPY %6
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %3
+    %5:_(<2 x p3>) = G_SELECT %4(i1), %1, %2
+    $vgpr0_vgpr1 = COPY %5(<2 x p3>)
 
 ...
 
@@ -798,26 +798,26 @@ body: |
     ; CHECK-LABEL: name: test_select_v3p3
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x p3>) = COPY $vgpr1_vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x p3>) = COPY $vgpr4_vgpr5_vgpr6
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(p3), [[UV1:%[0-9]+]]:_(p3), [[UV2:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY1]](<3 x p3>)
     ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(p3), [[UV4:%[0-9]+]]:_(p3), [[UV5:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY2]](<3 x p3>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p3) = G_SELECT [[ICMP]](s1), [[UV]], [[UV3]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p3) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV4]]
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(p3) = G_SELECT [[ICMP]](s1), [[UV2]], [[UV5]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p3) = G_SELECT [[ICMP]](i1), [[UV]], [[UV3]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p3) = G_SELECT [[ICMP]](i1), [[UV1]], [[UV4]]
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(p3) = G_SELECT [[ICMP]](i1), [[UV2]], [[UV5]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x p3>) = G_BUILD_VECTOR [[SELECT]](p3), [[SELECT1]](p3), [[SELECT2]](p3)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x p3>)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(<3 x p3>) = COPY $vgpr1_vgpr2_vgpr3
     %3:_(<3 x p3>) = COPY $vgpr4_vgpr5_vgpr6
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(<3 x p3>) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1_vgpr2 = COPY %5(<3 x p3>)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(<3 x p3>) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1_vgpr2 = COPY %5
 
 ...
 
@@ -830,25 +830,25 @@ body: |
     ; CHECK-LABEL: name: test_select_v4p3
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x p3>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x p3>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x p3>), [[UV1:%[0-9]+]]:_(<2 x p3>) = G_UNMERGE_VALUES [[COPY1]](<4 x p3>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x p3>), [[UV3:%[0-9]+]]:_(<2 x p3>) = G_UNMERGE_VALUES [[COPY2]](<4 x p3>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x p3>) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(<2 x p3>) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x p3>) = G_SELECT [[ICMP]](i1), [[UV]], [[UV2]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(<2 x p3>) = G_SELECT [[ICMP]](i1), [[UV1]], [[UV3]]
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x p3>) = G_CONCAT_VECTORS [[SELECT]](<2 x p3>), [[SELECT1]](<2 x p3>)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<4 x p3>)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(<4 x p3>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
     %3:_(<4 x p3>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(<4 x p3>) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5(<4 x p3>)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(<4 x p3>) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5
 
 ...
 
@@ -861,25 +861,25 @@ body: |
     ; CHECK-LABEL: name: test_select_v4p5
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x p5>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x p5>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(<2 x p5>), [[UV1:%[0-9]+]]:_(<2 x p5>) = G_UNMERGE_VALUES [[COPY1]](<4 x p5>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(<2 x p5>), [[UV3:%[0-9]+]]:_(<2 x p5>) = G_UNMERGE_VALUES [[COPY2]](<4 x p5>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x p5>) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(<2 x p5>) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<2 x p5>) = G_SELECT [[ICMP]](i1), [[UV]], [[UV2]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(<2 x p5>) = G_SELECT [[ICMP]](i1), [[UV1]], [[UV3]]
     ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x p5>) = G_CONCAT_VECTORS [[SELECT]](<2 x p5>), [[SELECT1]](<2 x p5>)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[CONCAT_VECTORS]](<4 x p5>)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(<4 x p5>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
     %3:_(<4 x p5>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(<4 x p5>) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5(<4 x p5>)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(<4 x p5>) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5
 
 ...
 
@@ -892,25 +892,25 @@ body: |
     ; CHECK-LABEL: name: test_select_v2p0
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2_vgpr3_vgpr4, $vgpr5_vgpr6_vgpr7_vgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x p0>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x p0>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(p0), [[UV1:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY1]](<2 x p0>)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(p0), [[UV3:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY2]](<2 x p0>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV]], [[UV2]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV1]], [[UV3]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[SELECT]](p0), [[SELECT1]](p0)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x p0>)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(<2 x p0>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4
     %3:_(<2 x p0>) = COPY $vgpr5_vgpr6_vgpr7_vgpr8
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(<2 x p0>) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5(<2 x p0>)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(<2 x p0>) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5
 
 ...
 
@@ -923,27 +923,27 @@ body: |
     ; CHECK-LABEL: name: test_select_v4p0
     ; CHECK: liveins: $vgpr0, $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8, $vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x p0>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x p0>) = COPY $vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(p0), [[UV1:%[0-9]+]]:_(p0), [[UV2:%[0-9]+]]:_(p0), [[UV3:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY1]](<4 x p0>)
     ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(p0), [[UV5:%[0-9]+]]:_(p0), [[UV6:%[0-9]+]]:_(p0), [[UV7:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY2]](<4 x p0>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV]], [[UV4]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV5]]
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV2]], [[UV6]]
-    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV3]], [[UV7]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV]], [[UV4]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV1]], [[UV5]]
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV2]], [[UV6]]
+    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV3]], [[UV7]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x p0>) = G_BUILD_VECTOR [[SELECT]](p0), [[SELECT1]](p0), [[SELECT2]](p0), [[SELECT3]](p0)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<4 x p0>)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(<4 x p0>) = COPY $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8
     %3:_(<4 x p0>) = COPY $vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(<4 x p0>) = G_SELECT %4(i1), %2, %3
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %5(<4 x p0>)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(<4 x p0>) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %5
 
 ...
 
@@ -956,38 +956,38 @@ body: |
     ; CHECK-LABEL: name: test_select_v2s96
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x s96>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<2 x s96>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s96), [[UV1:%[0-9]+]]:_(s96) = G_UNMERGE_VALUES [[DEF]](<2 x s96>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s96), [[UV3:%[0-9]+]]:_(s96) = G_UNMERGE_VALUES [[DEF1]](<2 x s96>)
-    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(s64) = G_EXTRACT [[UV]](s96), 0
-    ; CHECK-NEXT: [[EXTRACT1:%[0-9]+]]:_(s32) = G_EXTRACT [[UV]](s96), 64
-    ; CHECK-NEXT: [[EXTRACT2:%[0-9]+]]:_(s64) = G_EXTRACT [[UV2]](s96), 0
-    ; CHECK-NEXT: [[EXTRACT3:%[0-9]+]]:_(s32) = G_EXTRACT [[UV2]](s96), 64
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[EXTRACT]], [[EXTRACT2]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[EXTRACT1]], [[EXTRACT3]]
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SELECT]](s64)
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UV4]](s32), [[UV5]](s32), [[SELECT1]](s32)
-    ; CHECK-NEXT: [[EXTRACT4:%[0-9]+]]:_(s64) = G_EXTRACT [[UV1]](s96), 0
-    ; CHECK-NEXT: [[EXTRACT5:%[0-9]+]]:_(s32) = G_EXTRACT [[UV1]](s96), 64
-    ; CHECK-NEXT: [[EXTRACT6:%[0-9]+]]:_(s64) = G_EXTRACT [[UV3]](s96), 0
-    ; CHECK-NEXT: [[EXTRACT7:%[0-9]+]]:_(s32) = G_EXTRACT [[UV3]](s96), 64
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[EXTRACT4]], [[EXTRACT6]]
-    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[EXTRACT5]], [[EXTRACT7]]
-    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[SELECT2]](s64)
-    ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(s96) = G_MERGE_VALUES [[UV6]](s32), [[UV7]](s32), [[SELECT3]](s32)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s96>) = G_BUILD_VECTOR [[MV]](s96), [[MV1]](s96)
-    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x s96>)
-    %0:_(<2 x s96>) = G_IMPLICIT_DEF
-    %1:_(<2 x s96>) = G_IMPLICIT_DEF
-    %2:_(s32) = COPY $vgpr0
-    %3:_(s32) = G_CONSTANT i32 0
-    %4:_(s1) = G_ICMP intpred(ne), %2, %3
-    %5:_(<2 x s96>) = G_SELECT %4, %0, %1
-    S_NOP 0, implicit %5
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<2 x i96>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<2 x i96>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[C]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i96), [[UV1:%[0-9]+]]:_(i96) = G_UNMERGE_VALUES [[DEF]](<2 x i96>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i96), [[UV3:%[0-9]+]]:_(i96) = G_UNMERGE_VALUES [[DEF1]](<2 x i96>)
+    ; CHECK-NEXT: [[EXTRACT:%[0-9]+]]:_(i64) = G_EXTRACT [[UV]](i96), 0
+    ; CHECK-NEXT: [[EXTRACT1:%[0-9]+]]:_(i32) = G_EXTRACT [[UV]](i96), 64
+    ; CHECK-NEXT: [[EXTRACT2:%[0-9]+]]:_(i64) = G_EXTRACT [[UV2]](i96), 0
+    ; CHECK-NEXT: [[EXTRACT3:%[0-9]+]]:_(i32) = G_EXTRACT [[UV2]](i96), 64
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[EXTRACT]], [[EXTRACT2]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i1), [[EXTRACT1]], [[EXTRACT3]]
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[SELECT]](i64)
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[UV4]](i32), [[UV5]](i32), [[SELECT1]](i32)
+    ; CHECK-NEXT: [[EXTRACT4:%[0-9]+]]:_(i64) = G_EXTRACT [[UV1]](i96), 0
+    ; CHECK-NEXT: [[EXTRACT5:%[0-9]+]]:_(i32) = G_EXTRACT [[UV1]](i96), 64
+    ; CHECK-NEXT: [[EXTRACT6:%[0-9]+]]:_(i64) = G_EXTRACT [[UV3]](i96), 0
+    ; CHECK-NEXT: [[EXTRACT7:%[0-9]+]]:_(i32) = G_EXTRACT [[UV3]](i96), 64
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[EXTRACT4]], [[EXTRACT6]]
+    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i1), [[EXTRACT5]], [[EXTRACT7]]
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[SELECT2]](i64)
+    ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(i96) = G_MERGE_VALUES [[UV6]](i32), [[UV7]](i32), [[SELECT3]](i32)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i96>) = G_BUILD_VECTOR [[MV]](i96), [[MV1]](i96)
+    ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<2 x i96>)
+    %0:_(<2 x i96>) = G_IMPLICIT_DEF
+    %1:_(<2 x i96>) = G_IMPLICIT_DEF
+    %2:_(i32) = COPY $vgpr0
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(ne), %2(i32), %3
+    %5:_(<2 x i96>) = G_SELECT %4(i1), %0, %1
+    S_NOP 0, implicit %5(<2 x i96>)
 
 ...
 
@@ -1001,31 +1001,31 @@ body: |
     ; CHECK-LABEL: name: test_select_v8p0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<8 x p0>) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<8 x p0>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[C]](s32), [[COPY]]
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[C]](i32), [[COPY]]
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(p0), [[UV1:%[0-9]+]]:_(p0), [[UV2:%[0-9]+]]:_(p0), [[UV3:%[0-9]+]]:_(p0), [[UV4:%[0-9]+]]:_(p0), [[UV5:%[0-9]+]]:_(p0), [[UV6:%[0-9]+]]:_(p0), [[UV7:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[DEF]](<8 x p0>)
     ; CHECK-NEXT: [[UV8:%[0-9]+]]:_(p0), [[UV9:%[0-9]+]]:_(p0), [[UV10:%[0-9]+]]:_(p0), [[UV11:%[0-9]+]]:_(p0), [[UV12:%[0-9]+]]:_(p0), [[UV13:%[0-9]+]]:_(p0), [[UV14:%[0-9]+]]:_(p0), [[UV15:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[DEF1]](<8 x p0>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV]], [[UV8]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV1]], [[UV9]]
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV2]], [[UV10]]
-    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV3]], [[UV11]]
-    ; CHECK-NEXT: [[SELECT4:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV4]], [[UV12]]
-    ; CHECK-NEXT: [[SELECT5:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV5]], [[UV13]]
-    ; CHECK-NEXT: [[SELECT6:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV6]], [[UV14]]
-    ; CHECK-NEXT: [[SELECT7:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV7]], [[UV15]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV]], [[UV8]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV1]], [[UV9]]
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV2]], [[UV10]]
+    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV3]], [[UV11]]
+    ; CHECK-NEXT: [[SELECT4:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV4]], [[UV12]]
+    ; CHECK-NEXT: [[SELECT5:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV5]], [[UV13]]
+    ; CHECK-NEXT: [[SELECT6:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV6]], [[UV14]]
+    ; CHECK-NEXT: [[SELECT7:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV7]], [[UV15]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<8 x p0>) = G_BUILD_VECTOR [[SELECT]](p0), [[SELECT1]](p0), [[SELECT2]](p0), [[SELECT3]](p0), [[SELECT4]](p0), [[SELECT5]](p0), [[SELECT6]](p0), [[SELECT7]](p0)
     ; CHECK-NEXT: S_NOP 0, implicit [[BUILD_VECTOR]](<8 x p0>)
-    %0:_(s32) = G_CONSTANT i32 0
-    %1:_(s32) = COPY $vgpr0
+    %0:_(i32) = G_CONSTANT i32 0
+    %1:_(i32) = COPY $vgpr0
     %2:_(<8 x p0>) = G_IMPLICIT_DEF
     %3:_(<8 x p0>) = G_IMPLICIT_DEF
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %5:_(<8 x p0>) = G_SELECT %4(i1), %2, %3
+    S_NOP 0, implicit %5(<8 x p0>)
 
-    %4:_(s1) = G_ICMP intpred(ne), %0, %1
-    %5:_(<8 x p0>) = G_SELECT %4, %2, %3
-    S_NOP 0, implicit %5
 ...
 ---
 name: test_select_v2s128
@@ -1036,32 +1036,32 @@ body: |
     ; CHECK-LABEL: name: test_select_v2s128
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s128>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr16
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY2]](s32), [[C]]
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s128), [[UV1:%[0-9]+]]:_(s128) = G_UNMERGE_VALUES [[COPY]](<2 x s128>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s128), [[UV3:%[0-9]+]]:_(s128) = G_UNMERGE_VALUES [[COPY1]](<2 x s128>)
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[UV]](s128)
-    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s64), [[UV7:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[UV2]](s128)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[UV4]], [[UV6]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[UV5]], [[UV7]]
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT]](s64), [[SELECT1]](s64)
-    ; CHECK-NEXT: [[UV8:%[0-9]+]]:_(s64), [[UV9:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[UV1]](s128)
-    ; CHECK-NEXT: [[UV10:%[0-9]+]]:_(s64), [[UV11:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[UV3]](s128)
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[UV8]], [[UV10]]
-    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[UV9]], [[UV11]]
-    ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(s128) = G_MERGE_VALUES [[SELECT2]](s64), [[SELECT3]](s64)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s128>) = G_BUILD_VECTOR [[MV]](s128), [[MV1]](s128)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<2 x s128>)
-    %0:_(<2 x s128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 ,
-    %1:_(<2 x s128>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
-    %2:_(s32) = COPY $vgpr16
-    %3:_(s32) = G_CONSTANT i32 0
-    %4:_(s1) = G_ICMP intpred(ne), %2, %3
-    %5:_(<2 x s128>) = G_SELECT %4, %0, %1
-    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %5
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i128>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr16
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY2]](i32), [[C]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i128), [[UV1:%[0-9]+]]:_(i128) = G_UNMERGE_VALUES [[COPY]](<2 x i128>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i128), [[UV3:%[0-9]+]]:_(i128) = G_UNMERGE_VALUES [[COPY1]](<2 x i128>)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(i64), [[UV5:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[UV]](i128)
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(i64), [[UV7:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[UV2]](i128)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[UV4]], [[UV6]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[UV5]], [[UV7]]
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[SELECT]](i64), [[SELECT1]](i64)
+    ; CHECK-NEXT: [[UV8:%[0-9]+]]:_(i64), [[UV9:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[UV1]](i128)
+    ; CHECK-NEXT: [[UV10:%[0-9]+]]:_(i64), [[UV11:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[UV3]](i128)
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[UV8]], [[UV10]]
+    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[UV9]], [[UV11]]
+    ; CHECK-NEXT: [[MV1:%[0-9]+]]:_(i128) = G_MERGE_VALUES [[SELECT2]](i64), [[SELECT3]](i64)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i128>) = G_BUILD_VECTOR [[MV]](i128), [[MV1]](i128)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY [[BUILD_VECTOR]](<2 x i128>)
+    %0:_(<2 x i128>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    %1:_(<2 x i128>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+    %2:_(i32) = COPY $vgpr16
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(ne), %2(i32), %3
+    %5:_(<2 x i128>) = G_SELECT %4(i1), %0, %1
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7 = COPY %5(<2 x i128>)
 
 ...
 
@@ -1073,28 +1073,28 @@ body: |
     ; CHECK-LABEL: name: test_vselect_v2s32
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr6_vgpr7
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV2]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV3]]
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
-    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY3]](<2 x s32>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[UV4]], [[UV6]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[UV5]], [[UV7]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    %2:_(<2 x s32>) = COPY $vgpr4_vgpr5
-    %3:_(<2 x s32>) = COPY $vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr6_vgpr7
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<2 x i32>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<2 x i32>)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV]](i32), [[UV2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV1]](i32), [[UV3]]
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY2]](<2 x i32>)
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY3]](<2 x i32>)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i1), [[UV4]], [[UV6]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i32) = G_SELECT [[ICMP1]](i1), [[UV5]], [[UV7]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[SELECT]](i32), [[SELECT1]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x i32>)
+    %0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    %2:_(<2 x i32>) = COPY $vgpr4_vgpr5
+    %3:_(<2 x i32>) = COPY $vgpr6_vgpr7
+    %4:_(<2 x i1>) = G_ICMP intpred(ne), %0(<2 x i32>), %1
+    %5:_(<2 x i32>) = G_SELECT %4(<2 x i1>), %2, %3
+    $vgpr0_vgpr1 = COPY %5(<2 x i32>)
 
-    %4:_(<2 x s1>) = G_ICMP intpred(ne), %0, %1
-    %5:_(<2 x s32>) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1 = COPY %5
 
 ...
 
@@ -1106,28 +1106,28 @@ body: |
     ; CHECK-LABEL: name: test_vselect_v3s32
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr6_vgpr7_vgpr8
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
-    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV3]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV4]]
-    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV2]](s32), [[UV5]]
-    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
-    ; CHECK-NEXT: [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<3 x s32>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[UV6]], [[UV9]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[UV7]], [[UV10]]
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[UV8]], [[UV11]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32), [[SELECT2]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
-    %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    %1:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
-    %2:_(<3 x s32>) = COPY $vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<3 x i32>)
+    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<3 x i32>)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV]](i32), [[UV3]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV1]](i32), [[UV4]]
+    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV2]](i32), [[UV5]]
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32), [[UV8:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<3 x i32>)
+    ; CHECK-NEXT: [[UV9:%[0-9]+]]:_(i32), [[UV10:%[0-9]+]]:_(i32), [[UV11:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY2]](<3 x i32>)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i1), [[UV6]], [[UV9]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i32) = G_SELECT [[ICMP1]](i1), [[UV7]], [[UV10]]
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(i32) = G_SELECT [[ICMP2]](i1), [[UV8]], [[UV11]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x i32>) = G_BUILD_VECTOR [[SELECT]](i32), [[SELECT1]](i32), [[SELECT2]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x i32>)
+    %0:_(<3 x i32>) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(<3 x i32>) = COPY $vgpr3_vgpr4_vgpr5
+    %2:_(<3 x i32>) = COPY $vgpr6_vgpr7_vgpr8
+    %3:_(<3 x i1>) = G_ICMP intpred(ne), %0(<3 x i32>), %1
+    %4:_(<3 x i32>) = G_SELECT %3(<3 x i1>), %1, %2
+    $vgpr0_vgpr1_vgpr2 = COPY %4(<3 x i32>)
 
-    %3:_(<3 x s1>) = G_ICMP intpred(ne), %0, %1
-    %4:_(<3 x s32>) = G_SELECT %3, %1, %2
-    $vgpr0_vgpr1_vgpr2 = COPY %4
 
 ...
 
@@ -1139,30 +1139,30 @@ body: |
     ; CHECK-LABEL: name: test_vselect_v4s32
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<4 x s32>)
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV4]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV5]]
-    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV2]](s32), [[UV6]]
-    ; CHECK-NEXT: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV3]](s32), [[UV7]]
-    ; CHECK-NEXT: [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<4 x s32>)
-    ; CHECK-NEXT: [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<4 x s32>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[UV8]], [[UV12]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s1), [[UV9]], [[UV13]]
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s32) = G_SELECT [[ICMP2]](s1), [[UV10]], [[UV14]]
-    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(s32) = G_SELECT [[ICMP3]](s1), [[UV11]], [[UV15]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s32>) = G_BUILD_VECTOR [[SELECT]](s32), [[SELECT1]](s32), [[SELECT2]](s32), [[SELECT3]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<4 x s32>)
-    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(<4 x s32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:_(<4 x s32>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x i32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x i32>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<4 x i32>)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32), [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<4 x i32>)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV]](i32), [[UV4]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV1]](i32), [[UV5]]
+    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV2]](i32), [[UV6]]
+    ; CHECK-NEXT: [[ICMP3:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV3]](i32), [[UV7]]
+    ; CHECK-NEXT: [[UV8:%[0-9]+]]:_(i32), [[UV9:%[0-9]+]]:_(i32), [[UV10:%[0-9]+]]:_(i32), [[UV11:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<4 x i32>)
+    ; CHECK-NEXT: [[UV12:%[0-9]+]]:_(i32), [[UV13:%[0-9]+]]:_(i32), [[UV14:%[0-9]+]]:_(i32), [[UV15:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY2]](<4 x i32>)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i1), [[UV8]], [[UV12]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i32) = G_SELECT [[ICMP1]](i1), [[UV9]], [[UV13]]
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(i32) = G_SELECT [[ICMP2]](i1), [[UV10]], [[UV14]]
+    ; CHECK-NEXT: [[SELECT3:%[0-9]+]]:_(i32) = G_SELECT [[ICMP3]](i1), [[UV11]], [[UV15]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i32>) = G_BUILD_VECTOR [[SELECT]](i32), [[SELECT1]](i32), [[SELECT2]](i32), [[SELECT3]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<4 x i32>)
+    %0:_(<4 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<4 x i32>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %2:_(<4 x i32>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    %3:_(<4 x i1>) = G_ICMP intpred(ne), %0(<4 x i32>), %1
+    %4:_(<4 x i32>) = G_SELECT %3(<4 x i1>), %1, %2
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %4(<4 x i32>)
 
-    %3:_(<4 x s1>) = G_ICMP intpred(ne), %0, %1
-    %4:_(<4 x s32>) = G_SELECT %3, %1, %2
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %4
 
 ...
 
@@ -1174,26 +1174,26 @@ body: |
     ; CHECK-LABEL: name: test_vselect_v2s64
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s64), [[UV2]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s64), [[UV3]]
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s64), [[UV7:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY2]](<2 x s64>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[ICMP]](s1), [[UV4]], [[UV6]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s64) = G_SELECT [[ICMP1]](s1), [[UV5]], [[UV7]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[SELECT]](s64), [[SELECT1]](s64)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
-    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:_(<2 x s64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY]](<2 x i64>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i64), [[UV3:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY1]](<2 x i64>)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV]](i64), [[UV2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV1]](i64), [[UV3]]
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(i64), [[UV5:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY1]](<2 x i64>)
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(i64), [[UV7:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY2]](<2 x i64>)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i1), [[UV4]], [[UV6]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i64) = G_SELECT [[ICMP1]](i1), [[UV5]], [[UV7]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i64>) = G_BUILD_VECTOR [[SELECT]](i64), [[SELECT1]](i64)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x i64>)
+    %0:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<2 x i64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %2:_(<2 x i64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    %3:_(<2 x i1>) = G_ICMP intpred(ne), %0(<2 x i64>), %1
+    %4:_(<2 x i64>) = G_SELECT %3(<2 x i1>), %1, %2
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %4(<2 x i64>)
 
-    %3:_(<2 x s1>) = G_ICMP intpred(ne), %0, %1
-    %4:_(<2 x s64>) = G_SELECT %3, %1, %2
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %4
 
 ...
 
@@ -1205,28 +1205,28 @@ body: |
     ; CHECK-LABEL: name: test_vselect_v2p3
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr2_vgpr3
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr4_vgpr5
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x p3>) = COPY $vgpr6_vgpr7
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV2]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV3]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<2 x i32>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<2 x i32>)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV]](i32), [[UV2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV1]](i32), [[UV3]]
     ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(p3), [[UV5:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY2]](<2 x p3>)
     ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(p3), [[UV7:%[0-9]+]]:_(p3) = G_UNMERGE_VALUES [[COPY3]](<2 x p3>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p3) = G_SELECT [[ICMP]](s1), [[UV4]], [[UV6]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p3) = G_SELECT [[ICMP1]](s1), [[UV5]], [[UV7]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p3) = G_SELECT [[ICMP]](i1), [[UV4]], [[UV6]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p3) = G_SELECT [[ICMP1]](i1), [[UV5]], [[UV7]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p3>) = G_BUILD_VECTOR [[SELECT]](p3), [[SELECT1]](p3)
     ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x p3>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
+    %0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x i32>) = COPY $vgpr2_vgpr3
     %2:_(<2 x p3>) = COPY $vgpr4_vgpr5
     %3:_(<2 x p3>) = COPY $vgpr6_vgpr7
+    %4:_(<2 x i1>) = G_ICMP intpred(ne), %0(<2 x i32>), %1
+    %5:_(<2 x p3>) = G_SELECT %4(<2 x i1>), %2, %3
+    $vgpr0_vgpr1 = COPY %5(<2 x p3>)
 
-    %4:_(<2 x s1>) = G_ICMP intpred(ne), %0, %1
-    %5:_(<2 x p3>) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1 = COPY %5
 
 ...
 
@@ -1239,28 +1239,28 @@ body: |
     ; CHECK-LABEL: name: test_vselect_v2p0
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11, $vgpr12_vgpr13_vgpr14_vgpr15
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x p0>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
     ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x p0>) = COPY $vgpr12_vgpr13_vgpr14_vgpr15
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s64), [[UV2]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s64), [[UV3]]
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i64), [[UV1:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY]](<2 x i64>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i64), [[UV3:%[0-9]+]]:_(i64) = G_UNMERGE_VALUES [[COPY1]](<2 x i64>)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV]](i64), [[UV2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV1]](i64), [[UV3]]
     ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(p0), [[UV5:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY2]](<2 x p0>)
     ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(p0), [[UV7:%[0-9]+]]:_(p0) = G_UNMERGE_VALUES [[COPY3]](<2 x p0>)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](s1), [[UV4]], [[UV6]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP1]](s1), [[UV5]], [[UV7]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(p0) = G_SELECT [[ICMP]](i1), [[UV4]], [[UV6]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(p0) = G_SELECT [[ICMP1]](i1), [[UV5]], [[UV7]]
     ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x p0>) = G_BUILD_VECTOR [[SELECT]](p0), [[SELECT1]](p0)
     ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x p0>)
-    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %0:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<2 x i64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
     %2:_(<2 x p0>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
     %3:_(<2 x p0>) = COPY $vgpr12_vgpr13_vgpr14_vgpr15
+    %4:_(<2 x i1>) = G_ICMP intpred(ne), %0(<2 x i64>), %1
+    %5:_(<2 x p0>) = G_SELECT %4(<2 x i1>), %2, %3
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5(<2 x p0>)
 
-    %4:_(<2 x s1>) = G_ICMP intpred(ne), %0, %1
-    %5:_(<2 x p0>) = G_SELECT %4, %2, %3
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %5
 
 ...
 
@@ -1272,41 +1272,41 @@ body: |
     ; CHECK-LABEL: name: test_vselect_v3s8
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8, $vgpr9_vgpr10_vgpr11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr6_vgpr7_vgpr8
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr9_vgpr10_vgpr11
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
-    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV3]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV4]]
-    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV2]](s32), [[UV5]]
-    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<3 x s32>)
-    ; CHECK-NEXT: [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY3]](<3 x s32>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV6]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[UV9]](s32)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC]], [[TRUNC1]]
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[UV7]](s32)
-    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[UV10]](s32)
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[ICMP1]](s1), [[TRUNC2]], [[TRUNC3]]
-    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[UV8]](s32)
-    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[UV11]](s32)
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s16) = G_SELECT [[ICMP2]](s1), [[TRUNC4]], [[TRUNC5]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT1]](s16)
-    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT2]](s16)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
-    %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    %1:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
-    %2:_(<3 x s32>) = COPY $vgpr6_vgpr7_vgpr8
-    %3:_(<3 x s32>) = COPY $vgpr9_vgpr10_vgpr11
-    %4:_(<3 x s1>) = G_ICMP intpred(ne), %0, %1
-    %5:_(<3 x s8>) = G_TRUNC %2
-    %6:_(<3 x s8>) = G_TRUNC %3
-    %7:_(<3 x s8>) = G_SELECT %4, %5, %6
-    %8:_(<3 x s32>) = G_ANYEXT %7
-    $vgpr0_vgpr1_vgpr2 = COPY %8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<3 x i32>)
+    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<3 x i32>)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV]](i32), [[UV3]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV1]](i32), [[UV4]]
+    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV2]](i32), [[UV5]]
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32), [[UV8:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY2]](<3 x i32>)
+    ; CHECK-NEXT: [[UV9:%[0-9]+]]:_(i32), [[UV10:%[0-9]+]]:_(i32), [[UV11:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY3]](<3 x i32>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[UV6]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[UV9]](i32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[TRUNC]], [[TRUNC1]]
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(i16) = G_TRUNC [[UV7]](i32)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(i16) = G_TRUNC [[UV10]](i32)
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i16) = G_SELECT [[ICMP1]](i1), [[TRUNC2]], [[TRUNC3]]
+    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(i16) = G_TRUNC [[UV8]](i32)
+    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(i16) = G_TRUNC [[UV11]](i32)
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(i16) = G_SELECT [[ICMP2]](i1), [[TRUNC4]], [[TRUNC5]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT]](i16)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT1]](i16)
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT2]](i16)
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x i32>) = G_BUILD_VECTOR [[ANYEXT]](i32), [[ANYEXT1]](i32), [[ANYEXT2]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x i32>)
+    %0:_(<3 x i32>) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(<3 x i32>) = COPY $vgpr3_vgpr4_vgpr5
+    %2:_(<3 x i32>) = COPY $vgpr6_vgpr7_vgpr8
+    %3:_(<3 x i32>) = COPY $vgpr9_vgpr10_vgpr11
+    %4:_(<3 x i1>) = G_ICMP intpred(ne), %0(<3 x i32>), %1
+    %5:_(<3 x i8>) = G_TRUNC %2(<3 x i32>)
+    %6:_(<3 x i8>) = G_TRUNC %3(<3 x i32>)
+    %7:_(<3 x i8>) = G_SELECT %4(<3 x i1>), %5, %6
+    %8:_(<3 x i32>) = G_ANYEXT %7(<3 x i8>)
+    $vgpr0_vgpr1_vgpr2 = COPY %8(<3 x i32>)
 
 ...
 
@@ -1318,66 +1318,66 @@ body: |
     ; CHECK-LABEL: name: test_vselect_v3s16
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8, $vgpr9_vgpr10_vgpr11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr3_vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr6_vgpr7_vgpr8
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr9_vgpr10_vgpr11
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<3 x s32>)
-    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY3]](<3 x s32>)
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV3]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV4]]
-    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV2]](s32), [[UV5]]
-    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(<2 x s16>), [[UV7:%[0-9]+]]:_(<2 x s16>), [[UV8:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY]](<6 x s16>)
-    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(s32) = G_BITCAST [[UV6]](<2 x s16>)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST]](s32)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST]], [[C]](s32)
-    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
-    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(s32) = G_BITCAST [[UV7]](<2 x s16>)
-    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST1]](s32)
-    ; CHECK-NEXT: [[UV9:%[0-9]+]]:_(<2 x s16>), [[UV10:%[0-9]+]]:_(<2 x s16>), [[UV11:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[COPY1]](<6 x s16>)
-    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(s32) = G_BITCAST [[UV9]](<2 x s16>)
-    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST2]](s32)
-    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST2]], [[C]](s32)
-    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
-    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(s32) = G_BITCAST [[UV10]](<2 x s16>)
-    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(s16) = G_TRUNC [[BITCAST3]](s32)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC]], [[TRUNC3]]
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[ICMP1]](s1), [[TRUNC1]], [[TRUNC4]]
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s16) = G_SELECT [[ICMP2]](s1), [[TRUNC2]], [[TRUNC5]]
-    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[UV12:%[0-9]+]]:_(<2 x s16>), [[UV13:%[0-9]+]]:_(<2 x s16>) = G_UNMERGE_VALUES [[DEF]](<4 x s16>)
-    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:_(s32) = G_BITCAST [[UV12]](<2 x s16>)
-    ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[BITCAST4]], [[C]](s32)
-    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:_(s32) = G_BITCAST [[UV13]](<2 x s16>)
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[SELECT]](s16)
-    ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[SELECT1]](s16)
-    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT1]], [[C]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT]], [[SHL]]
-    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR]](s32)
-    ; CHECK-NEXT: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[SELECT2]](s16)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[BITCAST4]], [[C1]]
-    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[AND]], [[C]](s32)
-    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(s32) = G_OR [[ZEXT2]], [[SHL1]]
-    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR1]](s32)
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[BITCAST5]], [[C1]]
-    ; CHECK-NEXT: [[SHL2:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[C]](s32)
-    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(s32) = G_OR [[LSHR2]], [[SHL2]]
-    ; CHECK-NEXT: [[BITCAST8:%[0-9]+]]:_(<2 x s16>) = G_BITCAST [[OR2]](s32)
-    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x s16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x s16>), [[BITCAST7]](<2 x s16>), [[BITCAST8]](<2 x s16>)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x s16>)
-    %0:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
-    %1:_(<6 x s16>) = COPY $vgpr3_vgpr4_vgpr5
-    %2:_(<3 x s32>) = COPY $vgpr6_vgpr7_vgpr8
-    %3:_(<3 x s32>) = COPY $vgpr9_vgpr10_vgpr11
-    %4:_(<3 x s1>) = G_ICMP intpred(ne), %2, %3
-    %5:_(<3 x s16>), %6:_(<3 x s16>) = G_UNMERGE_VALUES %0
-    %7:_(<3 x s16>), %8:_(<3 x s16>) = G_UNMERGE_VALUES %1
-    %9:_(<3 x s16>) = G_SELECT %4, %5, %7
-    %10:_(<3 x s16>) = G_IMPLICIT_DEF
-    %11:_(<6 x s16>) = G_CONCAT_VECTORS %9, %10
-    $vgpr0_vgpr1_vgpr2 = COPY %11
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<6 x i16>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<6 x i16>) = COPY $vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY2]](<3 x i32>)
+    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY3]](<3 x i32>)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV]](i32), [[UV3]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV1]](i32), [[UV4]]
+    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV2]](i32), [[UV5]]
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(<2 x i16>), [[UV7:%[0-9]+]]:_(<2 x i16>), [[UV8:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[COPY]](<6 x i16>)
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(i32) = G_BITCAST [[UV6]](<2 x i16>)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[BITCAST]](i32)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST]], [[C]](i32)
+    ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(i16) = G_TRUNC [[LSHR]](i32)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[UV7]](<2 x i16>)
+    ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(i16) = G_TRUNC [[BITCAST1]](i32)
+    ; CHECK-NEXT: [[UV9:%[0-9]+]]:_(<2 x i16>), [[UV10:%[0-9]+]]:_(<2 x i16>), [[UV11:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[COPY1]](<6 x i16>)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(i32) = G_BITCAST [[UV9]](<2 x i16>)
+    ; CHECK-NEXT: [[TRUNC3:%[0-9]+]]:_(i16) = G_TRUNC [[BITCAST2]](i32)
+    ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST2]], [[C]](i32)
+    ; CHECK-NEXT: [[TRUNC4:%[0-9]+]]:_(i16) = G_TRUNC [[LSHR1]](i32)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i32) = G_BITCAST [[UV10]](<2 x i16>)
+    ; CHECK-NEXT: [[TRUNC5:%[0-9]+]]:_(i16) = G_TRUNC [[BITCAST3]](i32)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[TRUNC]], [[TRUNC3]]
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i16) = G_SELECT [[ICMP1]](i1), [[TRUNC1]], [[TRUNC4]]
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(i16) = G_SELECT [[ICMP2]](i1), [[TRUNC2]], [[TRUNC5]]
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(<4 x i16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[UV12:%[0-9]+]]:_(<2 x i16>), [[UV13:%[0-9]+]]:_(<2 x i16>) = G_UNMERGE_VALUES [[DEF]](<4 x i16>)
+    ; CHECK-NEXT: [[BITCAST4:%[0-9]+]]:_(i32) = G_BITCAST [[UV12]](<2 x i16>)
+    ; CHECK-NEXT: [[LSHR2:%[0-9]+]]:_(i32) = G_LSHR [[BITCAST4]], [[C]](i32)
+    ; CHECK-NEXT: [[BITCAST5:%[0-9]+]]:_(i32) = G_BITCAST [[UV13]](<2 x i16>)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i32) = G_ZEXT [[SELECT]](i16)
+    ; CHECK-NEXT: [[ZEXT1:%[0-9]+]]:_(i32) = G_ZEXT [[SELECT1]](i16)
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(i32) = G_SHL [[ZEXT1]], [[C]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[ZEXT]], [[SHL]]
+    ; CHECK-NEXT: [[BITCAST6:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR]](i32)
+    ; CHECK-NEXT: [[ZEXT2:%[0-9]+]]:_(i32) = G_ZEXT [[SELECT2]](i16)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[BITCAST4]], [[C1]]
+    ; CHECK-NEXT: [[SHL1:%[0-9]+]]:_(i32) = G_SHL [[AND]], [[C]](i32)
+    ; CHECK-NEXT: [[OR1:%[0-9]+]]:_(i32) = G_OR [[ZEXT2]], [[SHL1]]
+    ; CHECK-NEXT: [[BITCAST7:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR1]](i32)
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[BITCAST5]], [[C1]]
+    ; CHECK-NEXT: [[SHL2:%[0-9]+]]:_(i32) = G_SHL [[AND1]], [[C]](i32)
+    ; CHECK-NEXT: [[OR2:%[0-9]+]]:_(i32) = G_OR [[LSHR2]], [[SHL2]]
+    ; CHECK-NEXT: [[BITCAST8:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[OR2]](i32)
+    ; CHECK-NEXT: [[CONCAT_VECTORS:%[0-9]+]]:_(<6 x i16>) = G_CONCAT_VECTORS [[BITCAST6]](<2 x i16>), [[BITCAST7]](<2 x i16>), [[BITCAST8]](<2 x i16>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[CONCAT_VECTORS]](<6 x i16>)
+    %0:_(<6 x i16>) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(<6 x i16>) = COPY $vgpr3_vgpr4_vgpr5
+    %2:_(<3 x i32>) = COPY $vgpr6_vgpr7_vgpr8
+    %3:_(<3 x i32>) = COPY $vgpr9_vgpr10_vgpr11
+    %4:_(<3 x i1>) = G_ICMP intpred(ne), %2(<3 x i32>), %3
+    %5:_(<3 x i16>), %6:_(<3 x i16>) = G_UNMERGE_VALUES %0(<6 x i16>)
+    %7:_(<3 x i16>), %8:_(<3 x i16>) = G_UNMERGE_VALUES %1(<6 x i16>)
+    %9:_(<3 x i16>) = G_SELECT %4(<3 x i1>), %5, %7
+    %10:_(<3 x i16>) = G_IMPLICIT_DEF
+    %11:_(<6 x i16>) = G_CONCAT_VECTORS %9(<3 x i16>), %10(<3 x i16>)
+    $vgpr0_vgpr1_vgpr2 = COPY %11(<6 x i16>)
 ...
 
 ---
@@ -1389,30 +1389,30 @@ body: |
     ; CHECK-LABEL: name: test_select_s1
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[C]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY1]](s32), [[C]]
-    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY2]](s32), [[C]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP1]](s1)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP2]](s1)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT2]], [[C1]]
-    ; CHECK-NEXT: $vgpr0 = COPY [[AND]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s32) = COPY $vgpr2
-    %3:_(s32) = G_CONSTANT i32 0
-    %4:_(s1) = G_ICMP intpred(ne), %0, %3
-    %5:_(s1) = G_ICMP intpred(ne), %1, %3
-    %6:_(s1) = G_ICMP intpred(ne), %2, %3
-    %7:_(s1) = G_SELECT %4, %5, %6
-    %8:_(s32) = G_ZEXT %7
-    $vgpr0 = COPY %8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[C]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY1]](i32), [[C]]
+    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY2]](i32), [[C]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP1]](i1)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP2]](i1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT]](i16)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[ANYEXT2]], [[C1]]
+    ; CHECK-NEXT: $vgpr0 = COPY [[AND]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i32) = COPY $vgpr2
+    %3:_(i32) = G_CONSTANT i32 0
+    %4:_(i1) = G_ICMP intpred(ne), %0(i32), %3
+    %5:_(i1) = G_ICMP intpred(ne), %1(i32), %3
+    %6:_(i1) = G_ICMP intpred(ne), %2(i32), %3
+    %7:_(i1) = G_SELECT %4(i1), %5, %6
+    %8:_(i32) = G_ZEXT %7(i1)
+    $vgpr0 = COPY %8(i32)
 
 ...
 
@@ -1425,45 +1425,45 @@ body: |
     ; CHECK-LABEL: name: test_select_v2s1
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr6_vgpr7
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY3]](<2 x s32>)
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV2]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV3]]
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<2 x s32>)
-    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY3]](<2 x s32>)
-    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV4]](s32), [[UV6]]
-    ; CHECK-NEXT: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV5]](s32), [[UV7]]
-    ; CHECK-NEXT: [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<2 x s32>)
-    ; CHECK-NEXT: [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY3]](<2 x s32>)
-    ; CHECK-NEXT: [[ICMP4:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV8]](s32), [[UV10]]
-    ; CHECK-NEXT: [[ICMP5:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV9]](s32), [[UV11]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP2]](s1)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP4]](s1)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP3]](s1)
-    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP5]](s1)
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[ICMP1]](s1), [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK-NEXT: [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
-    ; CHECK-NEXT: [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT1]](s16)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT4]], [[C]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT5]], [[C]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[AND1]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x s32>)
-    %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    %1:_(<2 x s32>) = COPY $vgpr2_vgpr3
-    %2:_(<2 x s32>) = COPY $vgpr4_vgpr5
-    %3:_(<2 x s32>) = COPY $vgpr6_vgpr7
-    %4:_(<2 x s1>) = G_ICMP intpred(ne), %0, %3
-    %5:_(<2 x s1>) = G_ICMP intpred(ne), %1, %3
-    %6:_(<2 x s1>) = G_ICMP intpred(ne), %2, %3
-    %7:_(<2 x s1>) = G_SELECT %4, %5, %6
-    %8:_(<2 x s32>) = G_ZEXT %7
-    $vgpr0_vgpr1 = COPY %8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<2 x i32>) = COPY $vgpr6_vgpr7
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<2 x i32>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY3]](<2 x i32>)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV]](i32), [[UV2]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV1]](i32), [[UV3]]
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<2 x i32>)
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY3]](<2 x i32>)
+    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV4]](i32), [[UV6]]
+    ; CHECK-NEXT: [[ICMP3:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV5]](i32), [[UV7]]
+    ; CHECK-NEXT: [[UV8:%[0-9]+]]:_(i32), [[UV9:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY2]](<2 x i32>)
+    ; CHECK-NEXT: [[UV10:%[0-9]+]]:_(i32), [[UV11:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY3]](<2 x i32>)
+    ; CHECK-NEXT: [[ICMP4:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV8]](i32), [[UV10]]
+    ; CHECK-NEXT: [[ICMP5:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV9]](i32), [[UV11]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP2]](i1)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP4]](i1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP3]](i1)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP5]](i1)
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i16) = G_SELECT [[ICMP1]](i1), [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[ANYEXT4:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT]](i16)
+    ; CHECK-NEXT: [[ANYEXT5:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT1]](i16)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[ANYEXT4]], [[C]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[ANYEXT5]], [[C]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[AND]](i32), [[AND1]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BUILD_VECTOR]](<2 x i32>)
+    %0:_(<2 x i32>) = COPY $vgpr0_vgpr1
+    %1:_(<2 x i32>) = COPY $vgpr2_vgpr3
+    %2:_(<2 x i32>) = COPY $vgpr4_vgpr5
+    %3:_(<2 x i32>) = COPY $vgpr6_vgpr7
+    %4:_(<2 x i1>) = G_ICMP intpred(ne), %0(<2 x i32>), %3
+    %5:_(<2 x i1>) = G_ICMP intpred(ne), %1(<2 x i32>), %3
+    %6:_(<2 x i1>) = G_ICMP intpred(ne), %2(<2 x i32>), %3
+    %7:_(<2 x i1>) = G_SELECT %4(<2 x i1>), %5, %6
+    %8:_(<2 x i32>) = G_ZEXT %7(<2 x i1>)
+    $vgpr0_vgpr1 = COPY %8(<2 x i32>)
 
 ...
 
@@ -1476,52 +1476,52 @@ body: |
     ; CHECK-LABEL: name: test_select_v3s1
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5, $vgpr6_vgpr7_vgpr8, $vgpr9_vgpr10_vgpr11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr6_vgpr7_vgpr8
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr9_vgpr10_vgpr11
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<3 x s32>)
-    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY3]](<3 x s32>)
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV]](s32), [[UV3]]
-    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV1]](s32), [[UV4]]
-    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV2]](s32), [[UV5]]
-    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY1]](<3 x s32>)
-    ; CHECK-NEXT: [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY3]](<3 x s32>)
-    ; CHECK-NEXT: [[ICMP3:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV6]](s32), [[UV9]]
-    ; CHECK-NEXT: [[ICMP4:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV7]](s32), [[UV10]]
-    ; CHECK-NEXT: [[ICMP5:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV8]](s32), [[UV11]]
-    ; CHECK-NEXT: [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY2]](<3 x s32>)
-    ; CHECK-NEXT: [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY3]](<3 x s32>)
-    ; CHECK-NEXT: [[ICMP6:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV12]](s32), [[UV15]]
-    ; CHECK-NEXT: [[ICMP7:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV13]](s32), [[UV16]]
-    ; CHECK-NEXT: [[ICMP8:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[UV14]](s32), [[UV17]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP3]](s1)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP6]](s1)
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[ANYEXT]], [[ANYEXT1]]
-    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP4]](s1)
-    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP7]](s1)
-    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(s16) = G_SELECT [[ICMP1]](s1), [[ANYEXT2]], [[ANYEXT3]]
-    ; CHECK-NEXT: [[ANYEXT4:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP5]](s1)
-    ; CHECK-NEXT: [[ANYEXT5:%[0-9]+]]:_(s16) = G_ANYEXT [[ICMP8]](s1)
-    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(s16) = G_SELECT [[ICMP2]](s1), [[ANYEXT4]], [[ANYEXT5]]
-    ; CHECK-NEXT: [[ANYEXT6:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
-    ; CHECK-NEXT: [[ANYEXT7:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT1]](s16)
-    ; CHECK-NEXT: [[ANYEXT8:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT2]](s16)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT6]], [[C]]
-    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT7]], [[C]]
-    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[ANYEXT8]], [[C]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[AND]](s32), [[AND1]](s32), [[AND2]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x s32>)
-    %0:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
-    %1:_(<3 x s32>) = COPY $vgpr3_vgpr4_vgpr5
-    %2:_(<3 x s32>) = COPY $vgpr6_vgpr7_vgpr8
-    %3:_(<3 x s32>) = COPY $vgpr9_vgpr10_vgpr11
-    %4:_(<3 x s1>) = G_ICMP intpred(ne), %0, %3
-    %5:_(<3 x s1>) = G_ICMP intpred(ne), %1, %3
-    %6:_(<3 x s1>) = G_ICMP intpred(ne), %2, %3
-    %7:_(<3 x s1>) = G_SELECT %4, %5, %6
-    %8:_(<3 x s32>) = G_ZEXT %7
-    $vgpr0_vgpr1_vgpr2 = COPY %8
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr3_vgpr4_vgpr5
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr6_vgpr7_vgpr8
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(<3 x i32>) = COPY $vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<3 x i32>)
+    ; CHECK-NEXT: [[UV3:%[0-9]+]]:_(i32), [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY3]](<3 x i32>)
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV]](i32), [[UV3]]
+    ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV1]](i32), [[UV4]]
+    ; CHECK-NEXT: [[ICMP2:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV2]](i32), [[UV5]]
+    ; CHECK-NEXT: [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32), [[UV8:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY1]](<3 x i32>)
+    ; CHECK-NEXT: [[UV9:%[0-9]+]]:_(i32), [[UV10:%[0-9]+]]:_(i32), [[UV11:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY3]](<3 x i32>)
+    ; CHECK-NEXT: [[ICMP3:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV6]](i32), [[UV9]]
+    ; CHECK-NEXT: [[ICMP4:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV7]](i32), [[UV10]]
+    ; CHECK-NEXT: [[ICMP5:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV8]](i32), [[UV11]]
+    ; CHECK-NEXT: [[UV12:%[0-9]+]]:_(i32), [[UV13:%[0-9]+]]:_(i32), [[UV14:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY2]](<3 x i32>)
+    ; CHECK-NEXT: [[UV15:%[0-9]+]]:_(i32), [[UV16:%[0-9]+]]:_(i32), [[UV17:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY3]](<3 x i32>)
+    ; CHECK-NEXT: [[ICMP6:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV12]](i32), [[UV15]]
+    ; CHECK-NEXT: [[ICMP7:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV13]](i32), [[UV16]]
+    ; CHECK-NEXT: [[ICMP8:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[UV14]](i32), [[UV17]]
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP3]](i1)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP6]](i1)
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(i16) = G_SELECT [[ICMP]](i1), [[ANYEXT]], [[ANYEXT1]]
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP4]](i1)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP7]](i1)
+    ; CHECK-NEXT: [[SELECT1:%[0-9]+]]:_(i16) = G_SELECT [[ICMP1]](i1), [[ANYEXT2]], [[ANYEXT3]]
+    ; CHECK-NEXT: [[ANYEXT4:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP5]](i1)
+    ; CHECK-NEXT: [[ANYEXT5:%[0-9]+]]:_(i16) = G_ANYEXT [[ICMP8]](i1)
+    ; CHECK-NEXT: [[SELECT2:%[0-9]+]]:_(i16) = G_SELECT [[ICMP2]](i1), [[ANYEXT4]], [[ANYEXT5]]
+    ; CHECK-NEXT: [[ANYEXT6:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT]](i16)
+    ; CHECK-NEXT: [[ANYEXT7:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT1]](i16)
+    ; CHECK-NEXT: [[ANYEXT8:%[0-9]+]]:_(i32) = G_ANYEXT [[SELECT2]](i16)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[ANYEXT6]], [[C]]
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(i32) = G_AND [[ANYEXT7]], [[C]]
+    ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(i32) = G_AND [[ANYEXT8]], [[C]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x i32>) = G_BUILD_VECTOR [[AND]](i32), [[AND1]](i32), [[AND2]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2 = COPY [[BUILD_VECTOR]](<3 x i32>)
+    %0:_(<3 x i32>) = COPY $vgpr0_vgpr1_vgpr2
+    %1:_(<3 x i32>) = COPY $vgpr3_vgpr4_vgpr5
+    %2:_(<3 x i32>) = COPY $vgpr6_vgpr7_vgpr8
+    %3:_(<3 x i32>) = COPY $vgpr9_vgpr10_vgpr11
+    %4:_(<3 x i1>) = G_ICMP intpred(ne), %0(<3 x i32>), %3
+    %5:_(<3 x i1>) = G_ICMP intpred(ne), %1(<3 x i32>), %3
+    %6:_(<3 x i1>) = G_ICMP intpred(ne), %2(<3 x i32>), %3
+    %7:_(<3 x i1>) = G_SELECT %4(<3 x i1>), %5, %6
+    %8:_(<3 x i32>) = G_ZEXT %7(<3 x i1>)
+    $vgpr0_vgpr1_vgpr2 = COPY %8(<3 x i32>)
 
 ...

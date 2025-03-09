@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -20,9 +21,11 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 
 #define DEBUG_TYPE "call-lowering"
@@ -409,12 +412,12 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     // Sometimes pointers are passed zero extended.
     LLT OrigTy = MRI.getType(OrigRegs[0]);
     if (OrigTy.isPointer()) {
-      LLT IntPtrTy = LLT::scalar(OrigTy.getSizeInBits());
+      LLT IntPtrTy = LLT::integer(OrigTy.getSizeInBits());
       B.buildIntToPtr(OrigRegs[0], B.buildTrunc(IntPtrTy, SrcReg));
       return;
     }
 
-    B.buildTrunc(OrigRegs[0], SrcReg);
+    B.buildTruncLike(OrigRegs[0], SrcReg);
     return;
   }
 
@@ -423,11 +426,22 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     LLT OrigTy = MRI.getType(OrigRegs[0]);
 
     unsigned SrcSize = PartLLT.getSizeInBits().getFixedValue() * Regs.size();
-    if (SrcSize == OrigTy.getSizeInBits())
-      B.buildMergeValues(OrigRegs[0], Regs);
-    else {
-      auto Widened = B.buildMergeLikeInstr(LLT::scalar(SrcSize), Regs);
-      B.buildTrunc(OrigRegs[0], Widened);
+    if (SrcSize == OrigTy.getSizeInBits()) {
+      if (OrigTy.isFloat() && !PartLLT.isFloat()) {
+        auto Merge = B.buildMergeValues(OrigTy.changeToInteger(), Regs);
+        B.buildBitcast(OrigRegs[0], Merge);
+      } else if (!OrigTy.isFloat() && PartLLT.isFloat()) {
+        SmallVector<Register> CastRegs(Regs.size());
+        for (auto&& [Idx, Reg]: enumerate(Regs))
+          CastRegs[Idx] = B.buildBitcast(PartLLT.changeToInteger(), Reg).getReg(0);
+        
+        B.buildMergeValues(OrigRegs[0], CastRegs);
+      } else {
+        B.buildMergeValues(OrigRegs[0], Regs);
+      }
+    } else {
+      auto Widened = B.buildMergeLikeInstr(LLT::integer(SrcSize), Regs);
+      B.buildTruncLike(OrigRegs[0], Widened);
     }
 
     return;
@@ -492,19 +506,25 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
     SmallVector<Register, 8> EltMerges;
     int PartsPerElt =
         divideCeil(DstEltTy.getSizeInBits(), PartLLT.getSizeInBits());
-    LLT ExtendedPartTy = LLT::scalar(PartLLT.getSizeInBits() * PartsPerElt);
+    LLT ExtendedPartTy = LLT::integer(PartLLT.getSizeInBits() * PartsPerElt);
 
     for (int I = 0, NumElts = LLTy.getNumElements(); I != NumElts; ++I) {
       auto Merge =
           B.buildMergeLikeInstr(ExtendedPartTy, Regs.take_front(PartsPerElt));
       if (ExtendedPartTy.getSizeInBits() > RealDstEltTy.getSizeInBits())
-        Merge = B.buildTrunc(RealDstEltTy, Merge);
+        Merge = B.buildTruncLike(RealDstEltTy, Merge);
       // Fix the type in case this is really a vector of pointers.
-      MRI.setType(Merge.getReg(0), RealDstEltTy);
-      EltMerges.push_back(Merge.getReg(0));
+      Register MergeReg = Merge.getReg(0);
+
+      if (RealDstEltTy.isPointer()) {
+        MRI.setType(MergeReg, RealDstEltTy);
+      } else if (RealDstEltTy.isFloat() &&
+                 !MRI.getType(MergeReg).getScalarType().isFloat()) {
+        MergeReg = B.buildBitcast(RealDstEltTy, MergeReg).getReg(0);
+      }
+      EltMerges.push_back(MergeReg);
       Regs = Regs.drop_front(PartsPerElt);
     }
-
     B.buildBuildVector(OrigRegs[0], EltMerges);
   } else {
     // Vector was split, and elements promoted to a wider type.
@@ -532,9 +552,12 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
       SmallVector<Register, 0> BVRegs;
       BVRegs.reserve(Regs.size() * EltPerReg);
       for (Register R : Regs) {
-        auto Unmerge = B.buildUnmerge(OriginalEltTy, R);
-        for (unsigned K = 0; K < EltPerReg; ++K)
-          BVRegs.push_back(B.buildAnyExt(PartLLT, Unmerge.getReg(K)).getReg(0));
+        auto Unmerge = B.buildUnmerge(OriginalEltTy.changeToInteger(), R);
+        for (unsigned K = 0; K < EltPerReg; ++K) {
+          Register BVreg;
+          BVreg = B.buildAnyExt(PartLLT, Unmerge.getReg(K)).getReg(0);
+          BVRegs.push_back(BVreg);
+        }
       }
 
       // We may have some more elements in BVRegs, e.g. if we have 2 s32 pieces
@@ -545,7 +568,8 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
       }
       BuildVec = B.buildBuildVector(BVType, BVRegs).getReg(0);
     }
-    B.buildTrunc(OrigRegs[0], BuildVec);
+
+    B.buildTruncLike(OrigRegs[0], BuildVec);
   }
 }
 
@@ -565,6 +589,8 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   if (PartTy.isVector() == SrcTy.isVector() &&
       PartTy.getScalarSizeInBits() > SrcTy.getScalarSizeInBits()) {
     assert(DstRegs.size() == 1);
+    if (PartTy.getScalarType().isFloat() && SrcTy.getScalarType().isFloat())
+      ExtendOp = TargetOpcode::G_FPEXT;
     B.buildInstr(ExtendOp, {DstRegs[0]}, {SrcReg});
     return;
   }
@@ -573,8 +599,18 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
       TypeSize::isKnownGT(PartSize, SrcTy.getElementType().getSizeInBits())) {
     // Vector was scalarized, and the elements extended.
     auto UnmergeToEltTy = B.buildUnmerge(SrcTy.getElementType(), SrcReg);
-    for (int i = 0, e = DstRegs.size(); i != e; ++i)
-      B.buildAnyExt(DstRegs[i], UnmergeToEltTy.getReg(i));
+    for (int i = 0, e = DstRegs.size(); i != e; ++i) {
+      Register Unmerge = UnmergeToEltTy.getReg(i);
+      if (SrcTy.isFloatVector() && PartTy.isFloat()) {
+        B.buildFPExt(DstRegs[i], Unmerge);
+        continue;
+      }
+
+      if (SrcTy.isFloatVector() && !PartTy.isFloat())
+        Unmerge = B.buildBitcast(SrcTy.getElementType().changeToInteger(), Unmerge).getReg(0);
+
+      B.buildAnyExt(DstRegs[i], Unmerge);
+    }
     return;
   }
 
@@ -590,6 +626,9 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
 
   LLT GCDTy = getGCDType(SrcTy, PartTy);
   if (GCDTy == PartTy) {
+    if (SrcTy.getScalarType().isFloat() && !PartTy.getScalarType().isFloat())
+      SrcReg = B.buildBitcast(SrcTy.changeToInteger(), SrcReg).getReg(0);
+
     // If this already evenly divisible, we can create a simple unmerge.
     B.buildUnmerge(DstRegs, SrcReg);
     return;
@@ -599,8 +638,11 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
       SrcTy.getScalarSizeInBits() > PartTy.getSizeInBits()) {
     LLT ExtTy =
         LLT::vector(SrcTy.getElementCount(),
-                    LLT::scalar(PartTy.getScalarSizeInBits() * DstRegs.size() /
-                                SrcTy.getNumElements()));
+                    LLT::integer(PartTy.getScalarSizeInBits() * DstRegs.size() /
+                                 SrcTy.getNumElements()));
+    if (SrcTy.isFloatVector())
+      SrcReg = B.buildBitcast(SrcTy.changeToInteger(), SrcReg).getReg(0);
+    
     auto Ext = B.buildAnyExt(ExtTy, SrcReg);
     B.buildUnmerge(DstRegs, Ext);
     return;
@@ -626,7 +668,7 @@ static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
     // For scalars, it's common to be able to use a simple extension.
     if (SrcTy.isScalar() && DstTy.isScalar()) {
       CoveringSize = alignTo(SrcSize, DstSize);
-      LLT CoverTy = LLT::scalar(CoveringSize);
+      LLT CoverTy = LLT::integer(CoveringSize);
       UnmergeSrc = B.buildInstr(ExtendOp, {CoverTy}, {SrcReg}).getReg(0);
     } else {
       // Widen to the common type.
@@ -822,8 +864,9 @@ bool CallLowering::handleAssignments(ValueHandler &Handler,
     if (!Handler.isIncomingArgumentHandler() && OrigTy != ValTy &&
         VA.getLocInfo() != CCValAssign::Indirect) {
       assert(Args[i].OrigRegs.size() == 1);
+      unsigned ExtendOp = extendOpFromFlags(Args[i].Flags[0]);
       buildCopyToRegs(MIRBuilder, Args[i].Regs, Args[i].OrigRegs[0], OrigTy,
-                      ValTy, extendOpFromFlags(Args[i].Flags[0]));
+                      ValTy, ExtendOp);
     }
 
     bool IndirectParameterPassingHandled = false;

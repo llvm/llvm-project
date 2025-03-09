@@ -618,19 +618,19 @@ define <4 x half> @test_v4f16_sub_mul(<4 x half> %x, <4 x half> %y, <4 x half> %
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-DENORM-NEXT:    v_pk_mul_f16 v0, v0, v2
 ; GFX11-DENORM-NEXT:    v_pk_mul_f16 v1, v1, v3
-; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
-; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v3, 16, v5
+; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v2, 16, v5
+; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v3, 16, v4
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
 ; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
 ; GFX11-DENORM-NEXT:    v_sub_f16_e32 v0, v0, v4
 ; GFX11-DENORM-NEXT:    v_sub_f16_e32 v1, v1, v5
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-DENORM-NEXT:    v_sub_f16_e32 v2, v6, v2
-; GFX11-DENORM-NEXT:    v_sub_f16_e32 v3, v7, v3
+; GFX11-DENORM-NEXT:    v_sub_f16_e32 v3, v6, v3
+; GFX11-DENORM-NEXT:    v_sub_f16_e32 v2, v7, v2
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-DENORM-NEXT:    v_pack_b32_f16 v0, v0, v2
-; GFX11-DENORM-NEXT:    v_pack_b32_f16 v1, v1, v3
+; GFX11-DENORM-NEXT:    v_pack_b32_f16 v0, v0, v3
+; GFX11-DENORM-NEXT:    v_pack_b32_f16 v1, v1, v2
 ; GFX11-DENORM-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %a = fmul <4 x half> %x, %y
@@ -717,19 +717,19 @@ define <4 x half> @test_v4f16_sub_mul_rhs(<4 x half> %x, <4 x half> %y, <4 x hal
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-DENORM-NEXT:    v_pk_mul_f16 v0, v0, v2
 ; GFX11-DENORM-NEXT:    v_pk_mul_f16 v1, v1, v3
-; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
-; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v3, 16, v5
+; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v2, 16, v5
+; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v3, 16, v4
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v6, 16, v0
 ; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v7, 16, v1
 ; GFX11-DENORM-NEXT:    v_sub_f16_e32 v0, v4, v0
 ; GFX11-DENORM-NEXT:    v_sub_f16_e32 v1, v5, v1
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX11-DENORM-NEXT:    v_sub_f16_e32 v2, v2, v6
-; GFX11-DENORM-NEXT:    v_sub_f16_e32 v3, v3, v7
+; GFX11-DENORM-NEXT:    v_sub_f16_e32 v3, v3, v6
+; GFX11-DENORM-NEXT:    v_sub_f16_e32 v2, v2, v7
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GFX11-DENORM-NEXT:    v_pack_b32_f16 v0, v0, v2
-; GFX11-DENORM-NEXT:    v_pack_b32_f16 v1, v1, v3
+; GFX11-DENORM-NEXT:    v_pack_b32_f16 v0, v0, v3
+; GFX11-DENORM-NEXT:    v_pack_b32_f16 v1, v1, v2
 ; GFX11-DENORM-NEXT:    s_setpc_b64 s[30:31]
 .entry:
   %a = fmul <4 x half> %x, %y

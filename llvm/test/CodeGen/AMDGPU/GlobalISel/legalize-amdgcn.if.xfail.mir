@@ -2,7 +2,7 @@
 
 # Make sure there's no crash if there is somehow no successor block.
 
-# ERR: remark: <unknown>:0:0: unable to legalize instruction: %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(s1) (in function: brcond_si_if_no_succ_block)
+# ERR: remark: <unknown>:0:0: unable to legalize instruction: %3:_(i1), %4:_(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2:_(i1) (in function: brcond_si_if_no_succ_block)
 
 ---
 name: brcond_si_if_no_succ_block
@@ -13,9 +13,9 @@ body:             |
   bb.1:
     successors: %bb.1
     liveins: $vgpr0, $vgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i1) = G_ICMP intpred(ne), %0, %1
+    %3:_(i1), %4:_(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
     G_BRCOND %3, %bb.1
 ...

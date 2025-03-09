@@ -16,22 +16,29 @@ body: |
     ; SI-LABEL: name: test_rsq_clamp_flags_ieee_on_f32
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; SI-NEXT: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), [[COPY]](s32)
-    ; SI-NEXT: $vgpr0 = COPY [[INT]](s32)
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[COPY]](i32)
+    ; SI-NEXT: [[INT:%[0-9]+]]:_(f32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), [[BITCAST]](f32)
+    ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[INT]](f32)
+    ; SI-NEXT: $vgpr0 = COPY [[BITCAST1]](i32)
+    ;
     ; VI-LABEL: name: test_rsq_clamp_flags_ieee_on_f32
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; VI-NEXT: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x47EFFFFFE0000000
-    ; VI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMINNUM_IEEE [[INT]], [[C]]
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC7EFFFFFE0000000
-    ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[C1]]
-    ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %0
-    $vgpr0 = COPY %1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[COPY]](i32)
+    ; VI-NEXT: [[INT:%[0-9]+]]:_(f32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[BITCAST]](f32)
+    ; VI-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float 0x47EFFFFFE0000000
+    ; VI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(f32) = nnan ninf nsz G_FMINNUM_IEEE [[INT]], [[C]]
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(f32) = G_FCONSTANT float 0xC7EFFFFFE0000000
+    ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(f32) = nnan ninf nsz G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[C1]]
+    ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[FMAXNUM_IEEE]](f32)
+    ; VI-NEXT: $vgpr0 = COPY [[BITCAST1]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(f32) = G_BITCAST %0(i32)
+    %2:_(f32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %1(f32)
+    %3:_(i32) = G_BITCAST %2(f32)
+    $vgpr0 = COPY %3(i32)
 ...
 
 ---
@@ -48,20 +55,27 @@ body: |
     ; SI-LABEL: name: test_rsq_clamp_flags_ieee_off_f32
     ; SI: liveins: $vgpr0
     ; SI-NEXT: {{  $}}
-    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; SI-NEXT: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), [[COPY]](s32)
-    ; SI-NEXT: $vgpr0 = COPY [[INT]](s32)
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; SI-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[COPY]](i32)
+    ; SI-NEXT: [[INT:%[0-9]+]]:_(f32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), [[BITCAST]](f32)
+    ; SI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[INT]](f32)
+    ; SI-NEXT: $vgpr0 = COPY [[BITCAST1]](i32)
+    ;
     ; VI-LABEL: name: test_rsq_clamp_flags_ieee_off_f32
     ; VI: liveins: $vgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; VI-NEXT: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
-    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x47EFFFFFE0000000
-    ; VI-NEXT: [[FMINNUM:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMINNUM [[INT]], [[C]]
-    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC7EFFFFFE0000000
-    ; VI-NEXT: [[FMAXNUM:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMAXNUM [[FMINNUM]], [[C1]]
-    ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %0
-    $vgpr0 = COPY %1
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; VI-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST [[COPY]](i32)
+    ; VI-NEXT: [[INT:%[0-9]+]]:_(f32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[BITCAST]](f32)
+    ; VI-NEXT: [[C:%[0-9]+]]:_(f32) = G_FCONSTANT float 0x47EFFFFFE0000000
+    ; VI-NEXT: [[FMINNUM:%[0-9]+]]:_(f32) = nnan ninf nsz G_FMINNUM [[INT]], [[C]]
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(f32) = G_FCONSTANT float 0xC7EFFFFFE0000000
+    ; VI-NEXT: [[FMAXNUM:%[0-9]+]]:_(f32) = nnan ninf nsz G_FMAXNUM [[FMINNUM]], [[C1]]
+    ; VI-NEXT: [[BITCAST1:%[0-9]+]]:_(i32) = G_BITCAST [[FMAXNUM]](f32)
+    ; VI-NEXT: $vgpr0 = COPY [[BITCAST1]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(f32) = G_BITCAST %0(i32)
+    %2:_(f32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %1(f32)
+    %3:_(i32) = G_BITCAST %2(f32)
+    $vgpr0 = COPY %3(i32)
 ...
