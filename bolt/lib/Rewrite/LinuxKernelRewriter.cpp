@@ -351,6 +351,33 @@ public:
     if (Error E = detectLinuxKernelVersion())
       return E;
 
+    auto ShouldIgnore = [this](const BinaryFunction &Function) {
+      std::optional<StringRef> SectionName = Function.getOriginSectionName();
+      if (!SectionName || *SectionName != ".text")
+        return true;
+
+      uint64_t Address = Function.getAddress();
+
+      if (BC.isX86()) {
+        BinaryData *BDStart = BC.getBinaryDataByName("irq_entries_start");
+        if (BDStart && BDStart->containsAddress(Address))
+          return true;
+
+        if (BC.isInRange("__static_call_text_start", "__static_call_text_end",
+                         Address))
+          return true;
+      }
+
+      if (BC.isInRange("__noinstr_text_start", "__noinstr_text_end", Address))
+        return true;
+
+      return false;
+    };
+
+    for (BinaryFunction *Function : BC.getAllBinaryFunctions())
+      if (ShouldIgnore(*Function))
+        Function->setIgnored();
+
     processLKSections();
 
     if (Error E = processSMPLocks())
