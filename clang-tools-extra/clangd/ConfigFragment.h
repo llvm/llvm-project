@@ -170,6 +170,14 @@ struct Fragment {
     /// - Ancestors: search all parent directories (the default)
     /// - std::nullopt: do not use a compilation database, just default flags.
     std::optional<Located<std::string>> CompilationDatabase;
+
+    /// Controls whether Clangd should use its own built-in system headers (like
+    /// stddef.h), or use the system headers from the query driver. Use the
+    /// option value 'Clangd' (default) to indicate Clangd's headers, and use
+    /// 'QueryDriver' to indicate QueryDriver's headers. `Clangd` is the
+    /// fallback if no query driver is supplied or if the query driver regex
+    /// string fails to match the compiler used in the CDB.
+    std::optional<Located<std::string>> BuiltinHeaders;
   };
   CompileFlagsBlock CompileFlags;
 
