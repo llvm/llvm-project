@@ -1982,92 +1982,71 @@ class ATOMIC_SHARED_CHK <dag ops, dag frag>
 class ATOMIC_GENERIC_CHK <dag ops, dag frag>
  : PatFrag<ops, frag, AS_match.generic>;
 
-multiclass F_ATOMIC_2_imp<ValueType ptrT, NVPTXRegClass ptrclass,
+multiclass F_ATOMIC_2<
   ValueType regT, NVPTXRegClass regclass,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
-  Operand IMMType, SDNode IMM, list<Predicate> Pred> {
+  Operand IMMType, SDNode IMM, list<Predicate> Pred = []> {
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
-    def reg : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, regclass:$b),
-      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;"),
-      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b)))]>,
+    def r : NVPTXInst<(outs regclass:$dst), (ins ADDR:$addr, regclass:$b),
+      "atom" # SpaceStr # OpcStr # TypeStr # " \t$dst, [$addr], $b;",
+      [(set (regT regclass:$dst), (IntOp addr:$addr, (regT regclass:$b)))]>,
     Requires<Pred>;
-    def imm : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, IMMType:$b),
-      !strconcat("atom", SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b;", ""),
-      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), IMM:$b))]>,
-    Requires<!if(!or(!eq(TypeStr, ".f16"), !eq(TypeStr, ".bf16")), [Predicate<"false">], Pred)>;
+    if !not(!or(!eq(TypeStr, ".f16"), !eq(TypeStr, ".bf16"))) then
+      def i : NVPTXInst<(outs regclass:$dst), (ins ADDR:$addr, IMMType:$b),
+        "atom" # SpaceStr # OpcStr # TypeStr # " \t$dst, [$addr], $b;",
+        [(set (regT regclass:$dst), (IntOp addr:$addr, IMM:$b))]>,
+      Requires<Pred>;
   }
-}
-multiclass F_ATOMIC_2<ValueType regT, NVPTXRegClass regclass, string SpaceStr, string TypeStr,
-  string OpcStr, PatFrag IntOp, Operand IMMType, SDNode IMM,
-  list<Predicate> Pred = []> {
-  defm p32 : F_ATOMIC_2_imp<i32, Int32Regs, regT, regclass, SpaceStr, TypeStr, OpcStr,
-    IntOp, IMMType, IMM, Pred>;
-  defm p64 : F_ATOMIC_2_imp<i64, Int64Regs, regT, regclass, SpaceStr, TypeStr, OpcStr,
-    IntOp, IMMType, IMM, Pred>;
 }
 
 // has 2 operands, neg the second one
-multiclass F_ATOMIC_2_NEG_imp<ValueType ptrT, NVPTXRegClass ptrclass,
+multiclass F_ATOMIC_2_NEG<
   ValueType regT, NVPTXRegClass regclass,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
-  list<Predicate> Pred> {
+  list<Predicate> Pred = []> {
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
-    def reg : NVPTXInst<(outs regclass:$dst), (ins ptrclass:$addr, regclass:$b),
+    def reg : NVPTXInst<(outs regclass:$dst), (ins ADDR:$addr, regclass:$b),
       !strconcat(
         "{{ \n\t",
         ".reg \t.s", TypeStr, " temp; \n\t",
         "neg.s", TypeStr, " \ttemp, $b; \n\t",
         "atom", SpaceStr, OpcStr, ".u", TypeStr, " \t$dst, [$addr], temp; \n\t",
         "}}"),
-      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b)))]>,
+      [(set (regT regclass:$dst), (IntOp addr:$addr, (regT regclass:$b)))]>,
     Requires<Pred>;
   }
-}
-multiclass F_ATOMIC_2_NEG<ValueType regT, NVPTXRegClass regclass, string SpaceStr,
-  string TypeStr, string OpcStr, PatFrag IntOp, list<Predicate> Pred = []> {
- defm p32: F_ATOMIC_2_NEG_imp<i32, Int32Regs, regT, regclass, SpaceStr, TypeStr, OpcStr,
-   IntOp, Pred> ;
- defm p64: F_ATOMIC_2_NEG_imp<i64, Int64Regs, regT, regclass, SpaceStr, TypeStr, OpcStr,
-   IntOp, Pred> ;
 }
 
 // has 3 operands
-multiclass F_ATOMIC_3_imp<ValueType ptrT, NVPTXRegClass ptrclass,
+multiclass F_ATOMIC_3<
   ValueType regT, NVPTXRegClass regclass, string SemStr,
   string SpaceStr, string TypeStr, string OpcStr, PatFrag IntOp,
-  Operand IMMType, list<Predicate> Pred> {
+  Operand IMMType, list<Predicate> Pred = []> {
   let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
-    def reg : NVPTXInst<(outs regclass:$dst),
-      (ins ptrclass:$addr, regclass:$b, regclass:$c),
-      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
-      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), (regT regclass:$c)))]>,
+    def rr : NVPTXInst<(outs regclass:$dst),
+      (ins ADDR:$addr, regclass:$b, regclass:$c),
+      "atom" # SemStr # SpaceStr # OpcStr # TypeStr # " \t$dst, [$addr], $b, $c;",
+      [(set (regT regclass:$dst), (IntOp addr:$addr, regT:$b, regT:$c))]>,
     Requires<Pred>;
 
-    def imm1 : NVPTXInst<(outs regclass:$dst),
-      (ins ptrclass:$addr, IMMType:$b, regclass:$c),
-      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
-      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, (regT regclass:$c)))]>,
+    def ir : NVPTXInst<(outs regclass:$dst),
+      (ins ADDR:$addr, IMMType:$b, regclass:$c),
+      "atom" # SemStr # SpaceStr # OpcStr # TypeStr # " \t$dst, [$addr], $b, $c;",
+      [(set (regT regclass:$dst), (IntOp addr:$addr, imm:$b, regT:$c))]>,
     Requires<Pred>;
 
-    def imm2 : NVPTXInst<(outs regclass:$dst),
-      (ins ptrclass:$addr, regclass:$b, IMMType:$c),
-      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;", ""),
-      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), (regT regclass:$b), imm:$c))]>,
+    def ri : NVPTXInst<(outs regclass:$dst),
+      (ins ADDR:$addr, regclass:$b, IMMType:$c),
+      "atom" # SemStr # SpaceStr # OpcStr # TypeStr # " \t$dst, [$addr], $b, $c;",
+      [(set (regT regclass:$dst), (IntOp addr:$addr, regT:$b, imm:$c))]>,
     Requires<Pred>;
 
-    def imm3 : NVPTXInst<(outs regclass:$dst),
-      (ins ptrclass:$addr, IMMType:$b, IMMType:$c),
-      !strconcat("atom", SemStr, SpaceStr, OpcStr, TypeStr, " \t$dst, [$addr], $b, $c;"),
-      [(set (regT regclass:$dst), (IntOp (ptrT ptrclass:$addr), imm:$b, imm:$c))]>,
+    def ii : NVPTXInst<(outs regclass:$dst),
+      (ins ADDR:$addr, IMMType:$b, IMMType:$c),
+      "atom" # SemStr # SpaceStr # OpcStr # TypeStr # " \t$dst, [$addr], $b, $c;",
+      [(set (regT regclass:$dst), (IntOp addr:$addr, imm:$b, imm:$c))]>,
     Requires<Pred>;
   }
-}
-multiclass F_ATOMIC_3<ValueType regT, NVPTXRegClass regclass, string SemStr, string SpaceStr,
-  string TypeStr, string OpcStr, PatFrag IntOp, Operand IMMType, list<Predicate> Pred = []> {
-  defm p32 : F_ATOMIC_3_imp<i32, Int32Regs, regT, regclass, SemStr, SpaceStr, TypeStr,
-    OpcStr, IntOp, IMMType, Pred>;
-  defm p64 : F_ATOMIC_3_imp<i64, Int64Regs, regT, regclass, SemStr, SpaceStr, TypeStr,
-    OpcStr, IntOp, IMMType, Pred>;
 }
 
 // atom_add
@@ -2540,27 +2519,15 @@ multiclass ATOM2P_impl<string AsmStr,  Intrinsic Intr,
                        list<Predicate> Preds> {
   let AddedComplexity = 1 in {
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                      (ins Int16Regs:$src, regclass:$b),
-                      (Intr i16:$src, regT:$b)>;
-    def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                      (ins Int32Regs:$src, regclass:$b),
-                      (Intr i32:$src, regT:$b)>;
-    def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                      (ins Int64Regs:$src, regclass:$b),
-                      (Intr i64:$src, regT:$b)>;
+                      (ins ADDR:$src, regclass:$b),
+                      (Intr addr:$src, regT:$b)>;
   }
   // tablegen can't infer argument types from Intrinsic (though it can
   // from Instruction) so we have to enforce specific type on
   // immediates via explicit cast to ImmTy.
   def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                    (ins Int16Regs:$src, ImmType:$b),
-                    (Intr i16:$src, (ImmTy Imm:$b))>;
-  def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                    (ins Int32Regs:$src, ImmType:$b),
-                    (Intr i32:$src, (ImmTy Imm:$b))>;
-  def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                    (ins Int64Regs:$src, ImmType:$b),
-                    (Intr i64:$src, (ImmTy Imm:$b))>;
+                    (ins ADDR:$src, ImmType:$b),
+                    (Intr addr:$src, (ImmTy Imm:$b))>;
 }
 
 multiclass ATOM3P_impl<string AsmStr,  Intrinsic Intr,
@@ -2570,32 +2537,20 @@ multiclass ATOM3P_impl<string AsmStr,  Intrinsic Intr,
   // Variants for register/immediate permutations of $b and $c
   let AddedComplexity = 2 in {
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                      (ins Int32Regs:$src, regclass:$b, regclass:$c),
-                      (Intr i32:$src, regT:$b, regT:$c)>;
-    def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                      (ins Int64Regs:$src, regclass:$b, regclass:$c),
-                      (Intr i64:$src, regT:$b, regT:$c)>;
+                      (ins ADDR:$src, regclass:$b, regclass:$c),
+                      (Intr addr:$src, regT:$b, regT:$c)>;
   }
   let AddedComplexity = 1 in {
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                      (ins Int32Regs:$src, ImmType:$b, regclass:$c),
-                      (Intr i32:$src, (ImmTy Imm:$b), regT:$c)>;
+                      (ins ADDR:$src, ImmType:$b, regclass:$c),
+                      (Intr addr:$src, (ImmTy Imm:$b), regT:$c)>;
     def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                      (ins Int64Regs:$src, ImmType:$b, regclass:$c),
-                      (Intr i64:$src, (ImmTy Imm:$b), regT:$c)>;
-    def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                      (ins Int32Regs:$src, regclass:$b, ImmType:$c),
-                      (Intr i32:$src, regT:$b, (ImmTy Imm:$c))>;
-    def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                      (ins Int64Regs:$src, regclass:$b, ImmType:$c),
-                      (Intr i64:$src, regT:$b, (ImmTy Imm:$c))>;
+                      (ins ADDR:$src, regclass:$b, ImmType:$c),
+                      (Intr addr:$src, regT:$b, (ImmTy Imm:$c))>;
   }
   def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                    (ins Int32Regs:$src, ImmType:$b, ImmType:$c),
-                    (Intr i32:$src, (ImmTy Imm:$b), (ImmTy Imm:$c))>;
-  def : ATOM23_impl<AsmStr, regT, regclass, Preds,
-                    (ins Int64Regs:$src, ImmType:$b, ImmType:$c),
-                    (Intr i64:$src, (ImmTy Imm:$b), (ImmTy Imm:$c))>;
+                    (ins ADDR:$src, ImmType:$b, ImmType:$c),
+                    (Intr addr:$src, (ImmTy Imm:$b), (ImmTy Imm:$c))>;
 }
 
 // Constructs intrinsic name and instruction asm strings.
