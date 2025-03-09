@@ -2410,6 +2410,12 @@ def note_var_fixit_add_initialization : Note<
 def note_uninit_fixit_remove_cond : Note<
   "remove the %select{'%1' if its condition|condition if it}0 "
   "is always %select{false|true}2">;
+def warn_implicit_block_var_alloc : Warning<
+  "variable %q0 will be initialized in a heap allocation">,
+  InGroup<DiagGroup<"implicit-block-var-alloc">>, DefaultIgnore;
+def note_because_captured_by_block : Note<
+  "because it is captured by a block used in its own initializer">;
+
 def err_init_incomplete_type : Error<"initialization of incomplete type %0">;
 def err_list_init_in_parens : Error<
   "cannot initialize %select{non-class|reference}0 type %1 with a "
