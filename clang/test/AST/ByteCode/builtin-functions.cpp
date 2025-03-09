@@ -1352,6 +1352,21 @@ namespace Memcmp {
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 7) == -1);
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 6) == -1);
   static_assert(__builtin_wmemcmp(L"abab\0banana", L"abab\0canada", 5) == 0);
+
+#if __cplusplus >= 202002L
+  constexpr bool f() {
+    char *c = new char[12];
+    c[0] = 'b';
+
+    char n = 'a';
+    bool b = __builtin_memcmp(c, &n, 1) == 0;
+
+    delete[] c;
+    return !b;
+  }
+  static_assert(f());
+#endif
+
 }
 
 namespace Memchr {
