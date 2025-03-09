@@ -104,4 +104,11 @@ module m
       localhp = hasPtr(z%a)
     end subroutine
   end function
+  pure subroutine test2(hpd, hhpd)
+    use used
+    type(hasHiddenPtr), intent(in out) :: hpd, hhpd[*]
+    hpd = hhpd ! ok
+    !ERROR: A pure subprogram may not copy the value of 'hhpd' because it is coindexed and has the POINTER potential subobject component '%a%p'
+    hpd = hhpd[1]
+  end subroutine
 end module
