@@ -1025,6 +1025,8 @@ public:
   virtual void emitWinCFIEndProlog(SMLoc Loc = SMLoc());
   virtual void emitWinCFIBeginEpilogue(SMLoc Loc = SMLoc());
   virtual void emitWinCFIEndEpilogue(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIUnwindV2Start(SMLoc Loc = SMLoc());
+  virtual void emitWinCFIUnwindVersion(uint8_t Version, SMLoc Loc = SMLoc());
   virtual void emitWinEHHandler(const MCSymbol *Sym, bool Unwind, bool Except,
                                 SMLoc Loc = SMLoc());
   virtual void emitWinEHHandlerData(SMLoc Loc = SMLoc());
