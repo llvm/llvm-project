@@ -601,8 +601,31 @@ public:
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get",
-        [](PyType &type, int64_t value) {
-          MlirAttribute attr = mlirIntegerAttrGet(type, value);
+        [](PyType &type, py::int_ value) {
+          apint_interop_t interop;
+          if (mlirTypeIsAIndex(type))
+            interop.numbits = 64;
+          else
+            interop.numbits = mlirIntegerTypeGetWidth((MlirType)type);
+
+          py::object to_bytes = value.attr("to_bytes");
+          int numbytes = (interop.numbits + 7) / 8;
+          bool Signed = mlirTypeIsAIndex(type) || mlirIntegerTypeIsSigned(type);
+          py::bytes bytes_obj =
+              to_bytes(numbytes, "little", py::arg("signed") = Signed);
+          const char *data = bytes_obj.data();
+
+          if (interop.numbits <= 64) {
+            memcpy((char *)&(interop.data.VAL), data, numbytes);
+          } else {
+            int numdoublewords = (interop.numbits + 63) / 64;
+            interop.data.pVAL =
+                (uint64_t *)malloc(numdoublewords, sizeof(uint64_t));
+            memcpy((char *)interop.data.pVAL, data, numbytes);
+          }
+          MlirAttribute attr = mlirIntegerAttrFromInterop(type, &interop);
+          if (interop.numbits <= 64)
+            free(interop.data.pVAL);
           return PyIntegerAttribute(type.getContext(), attr);
         },
         nb::arg("type"), nb::arg("value"),
@@ -620,11 +643,48 @@ public:
 private:
   static int64_t toPyInt(PyIntegerAttribute &self) {
     MlirType type = mlirAttributeGetType(self);
-    if (mlirTypeIsAIndex(type) || mlirIntegerTypeIsSignless(type))
-      return mlirIntegerAttrGetValueInt(self);
-    if (mlirIntegerTypeIsSigned(type))
-      return mlirIntegerAttrGetValueSInt(self);
-    return mlirIntegerAttrGetValueUInt(self);
+    apint_interop_t interop;
+    if (mlirTypeIsAIndex(type))
+      interop.numbits = 64;
+    else
+      interop.numbits = mlirIntegerTypeGetWidth((MlirType)type);
+    if (interop.numbits > 64) {
+      size_t required_doublewords = (interop.numbits + 63) / 64;
+      interop.data.pVAL =
+          (uint64_t *)malloc(required_doublewords, sizeof(uint64_t));
+    }
+    mlirIntegerAttrGetValueInterop(self, &interop);
+
+    // Need to sign extend the last byte for conversion to py::bytes
+    bool Signed = mlirTypeIsAIndex(type) || mlirIntegerTypeIsSigned(type);
+    if (Signed) {
+      size_t last_doubleword = (interop.numbits - 1) / 64;
+      size_t last_bit = interop.numbits - 1 - (64 * last_doubleword);
+      uint64_t sext_mask = -1 << last_bit;
+
+      if (interop.numbits > 64) {
+        if ((interop.data.pVAL[last_doubleword] >> last_bit) & 1) {
+          interop.data.pVAL[last_doubleword] |= sext_mask;
+        }
+      } else {
+        if ((interop.data.VAL >> last_bit) & 1) {
+          interop.data.VAL |= sext_mask;
+        }
+      }
+    }
+
+    py::int_ int_obj;
+    py::object from_bytes = int_obj.attr("from_bytes");
+    size_t numbytes = (interop.numbits + 7) / 8;
+    py::bytes bytes_obj;
+    if (interop.numbits > 64) {
+      bytes_obj = py::bytes((const char *)interop.data.pVAL, numbytes);
+      free(interop.data.pVAL);
+    } else {
+      bytes_obj = py::bytes((const char *)&interop.data.VAL, numbytes);
+    }
+    int_obj = from_bytes(bytes_obj, "little", py::arg("signed") = Signed);
+    return int_obj;
   }
 };
 
