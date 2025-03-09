@@ -103,6 +103,7 @@ add_llvm_component_library(LLVMAnalysis
   MemoryProfileInfo.cpp
   MemorySSA.cpp
   MemorySSAUpdater.cpp
+  MitigationAnalysis.cpp
   ModelUnderTrainingRunner.cpp
   ModuleDebugInfoPrinter.cpp
   ModuleSummaryAnalysis.cpp

@@ -26,6 +26,7 @@
 #include "CodeGenPGO.h"
 #include "ConstantEmitter.h"
 #include "CoverageMappingGen.h"
+#include "MitigationTagging.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTLambda.h"
@@ -2490,6 +2491,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
   if ((!D || !D->hasAttr<NoUwtableAttr>()) && CodeGenOpts.UnwindTables)
     B.addUWTableAttr(llvm::UWTableKind(CodeGenOpts.UnwindTables));
 
+  AttachMitigationMetadataToFunction(*F, MitigationKey::STACK_CLASH_PROTECTION,
+                                     CodeGenOpts.StackClashProtector);
   if (CodeGenOpts.StackClashProtector)
     B.addAttribute("probe-stack", "inline-asm");
 
@@ -2511,6 +2514,25 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addAttribute(llvm::Attribute::StackProtectStrong);
   else if (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq))
     B.addAttribute(llvm::Attribute::StackProtectReq);
+
+  bool noStackProtectionAttr = D && D->hasAttr<NoStackProtectorAttr>();
+  AttachMitigationMetadataToFunction(
+      *F, MitigationKey::STACK_PROTECTOR,
+      !noStackProtectionAttr &&
+          (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn) ||
+           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPStrong) ||
+           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq)));
+
+  AttachMitigationMetadataToFunction(
+      *F, MitigationKey::STACK_PROTECTOR_STRONG,
+      !noStackProtectionAttr &&
+          (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPStrong) ||
+           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq)));
+
+  AttachMitigationMetadataToFunction(
+      *F, MitigationKey::STACK_PROTECTOR_ALL,
+      !noStackProtectionAttr &&
+          isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq));
 
   if (!D) {
     // Non-entry HLSL functions must always be inlined.
