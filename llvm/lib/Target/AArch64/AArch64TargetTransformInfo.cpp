@@ -884,12 +884,11 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     const auto LegalisationCost = getTypeLegalizationCost(RetTy);
     if (OpInfoZ.isUniform()) {
-      // FIXME: The costs could be lower if the codegen is better.
       static const CostTblEntry FshlTbl[] = {
-          {Intrinsic::fshl, MVT::v4i32, 3}, // ushr + shl + orr
-          {Intrinsic::fshl, MVT::v2i64, 3}, {Intrinsic::fshl, MVT::v16i8, 4},
-          {Intrinsic::fshl, MVT::v8i16, 4}, {Intrinsic::fshl, MVT::v2i32, 3},
-          {Intrinsic::fshl, MVT::v8i8, 4},  {Intrinsic::fshl, MVT::v4i16, 4}};
+          {Intrinsic::fshl, MVT::v4i32, 2}, // shl + usra
+          {Intrinsic::fshl, MVT::v2i64, 2}, {Intrinsic::fshl, MVT::v16i8, 2},
+          {Intrinsic::fshl, MVT::v8i16, 2}, {Intrinsic::fshl, MVT::v2i32, 2},
+          {Intrinsic::fshl, MVT::v8i8, 2},  {Intrinsic::fshl, MVT::v4i16, 2}};
       // Costs for both fshl & fshr are the same, so just pass Intrinsic::fshl
       // to avoid having to duplicate the costs.
       const auto *Entry =
@@ -3017,20 +3016,24 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_TO_SINT, MVT::nxv2i32, MVT::nxv2f64, 1},
       {ISD::FP_TO_SINT, MVT::nxv2i16, MVT::nxv2f64, 1},
       {ISD::FP_TO_SINT, MVT::nxv2i8, MVT::nxv2f64, 1},
+      {ISD::FP_TO_SINT, MVT::nxv2i1, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i64, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i32, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i16, MVT::nxv2f64, 1},
       {ISD::FP_TO_UINT, MVT::nxv2i8, MVT::nxv2f64, 1},
+      {ISD::FP_TO_UINT, MVT::nxv2i1, MVT::nxv2f64, 1},
 
       // Complex, from nxv4f32.
       {ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f32, 4},
       {ISD::FP_TO_SINT, MVT::nxv4i32, MVT::nxv4f32, 1},
       {ISD::FP_TO_SINT, MVT::nxv4i16, MVT::nxv4f32, 1},
       {ISD::FP_TO_SINT, MVT::nxv4i8, MVT::nxv4f32, 1},
+      {ISD::FP_TO_SINT, MVT::nxv4i1, MVT::nxv4f32, 1},
       {ISD::FP_TO_UINT, MVT::nxv4i64, MVT::nxv4f32, 4},
       {ISD::FP_TO_UINT, MVT::nxv4i32, MVT::nxv4f32, 1},
       {ISD::FP_TO_UINT, MVT::nxv4i16, MVT::nxv4f32, 1},
       {ISD::FP_TO_UINT, MVT::nxv4i8, MVT::nxv4f32, 1},
+      {ISD::FP_TO_UINT, MVT::nxv4i1, MVT::nxv4f32, 1},
 
       // Complex, from nxv8f64. Illegal -> illegal conversions not required.
       {ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f64, 7},
@@ -3057,10 +3060,12 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::FP_TO_SINT, MVT::nxv8i32, MVT::nxv8f16, 4},
       {ISD::FP_TO_SINT, MVT::nxv8i16, MVT::nxv8f16, 1},
       {ISD::FP_TO_SINT, MVT::nxv8i8, MVT::nxv8f16, 1},
+      {ISD::FP_TO_SINT, MVT::nxv8i1, MVT::nxv8f16, 1},
       {ISD::FP_TO_UINT, MVT::nxv8i64, MVT::nxv8f16, 10},
       {ISD::FP_TO_UINT, MVT::nxv8i32, MVT::nxv8f16, 4},
       {ISD::FP_TO_UINT, MVT::nxv8i16, MVT::nxv8f16, 1},
       {ISD::FP_TO_UINT, MVT::nxv8i8, MVT::nxv8f16, 1},
+      {ISD::FP_TO_UINT, MVT::nxv8i1, MVT::nxv8f16, 1},
 
       // Complex, from nxv4f16.
       {ISD::FP_TO_SINT, MVT::nxv4i64, MVT::nxv4f16, 4},
@@ -5265,7 +5270,7 @@ AArch64TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // Scale represents reg2 * scale, thus account for 1 if
     // it is not equal to 0 or 1.
     return AM.Scale != 0 && AM.Scale != 1;
-  return -1;
+  return InstructionCost::getInvalid();
 }
 
 bool AArch64TTIImpl::shouldTreatInstructionLikeSelect(const Instruction *I) {

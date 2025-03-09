@@ -243,19 +243,16 @@ class MapInfoFinalizationPass
   /// where necessary, although it does not seem strictly required.
   unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
                                      mlir::Operation *target) {
+    using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
                               mlir::omp::TargetUpdateOp>(target))
       return mapTypeFlag;
 
-    llvm::omp::OpenMPOffloadMappingFlags Always =
-        llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
-    llvm::omp::OpenMPOffloadMappingFlags Implicit =
-        llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
-
-    return llvm::to_underlying(
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO | Always | Implicit);
+    mapFlags flags = mapFlags::OMP_MAP_TO |
+                     (mapFlags(mapTypeFlag) &
+                      (mapFlags::OMP_MAP_IMPLICIT | mapFlags::OMP_MAP_CLOSE |
+                       mapFlags::OMP_MAP_ALWAYS));
+    return llvm::to_underlying(flags);
   }
 
   /// Check if the mapOp is present in the HasDeviceAddr clause on

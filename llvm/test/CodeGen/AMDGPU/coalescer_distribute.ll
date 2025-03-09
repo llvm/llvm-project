@@ -15,7 +15,7 @@ bb6:
   br label %bb8
 
 bb8:
-  %tmp9 = phi i64 [ %tmp7, %bb6 ], [ undef, %bb2 ]
+  %tmp9 = phi i64 [ %tmp7, %bb6 ], [ poison, %bb2 ]
   %tmp10 = icmp eq i32 %tmp, 0
   br i1 %tmp10, label %bb11, label %bb23
 
@@ -26,16 +26,16 @@ bb17:
   br label %bb20
 
 bb20:
-  %tmp21 = phi i64 [ undef, %bb17 ], [ %tmp9, %bb11 ]
+  %tmp21 = phi i64 [ poison, %bb17 ], [ %tmp9, %bb11 ]
   %tmp22 = trunc i64 %tmp21 to i32
   br label %bb23
 
 bb23:
-  %tmp24 = phi i32 [ %tmp22, %bb20 ], [ undef, %bb8 ], [ undef, %bb ]
+  %tmp24 = phi i32 [ %tmp22, %bb20 ], [ poison, %bb8 ], [ poison, %bb ]
   br label %bb25
 
 bb25:
-  %tmp26 = phi i32 [ %tmp24, %bb23 ], [ undef, %bb25 ]
+  %tmp26 = phi i32 [ %tmp24, %bb23 ], [ poison, %bb25 ]
   br i1 %c3, label %bb25, label %bb30
 
 bb30:

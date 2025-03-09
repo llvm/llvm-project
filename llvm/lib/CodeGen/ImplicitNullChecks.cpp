@@ -195,7 +195,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
   /// to be used. \p PrevInsts is the set of instruction seen since
   /// the explicit null check on \p PointerReg.
   SuitabilityResult isSuitableMemoryOp(const MachineInstr &MI,
-                                       unsigned PointerReg,
+                                       Register PointerReg,
                                        ArrayRef<MachineInstr *> PrevInsts);
 
   /// Returns true if \p DependenceMI can clobber the liveIns in NullSucc block
@@ -317,7 +317,7 @@ bool ImplicitNullChecks::runOnMachineFunction(MachineFunction &MF) {
 
 // Return true if any register aliasing \p Reg is live-in into \p MBB.
 static bool AnyAliasLiveIn(const TargetRegisterInfo *TRI,
-                           MachineBasicBlock *MBB, unsigned Reg) {
+                           MachineBasicBlock *MBB, Register Reg) {
   for (MCRegAliasIterator AR(Reg, TRI, /*IncludeSelf*/ true); AR.isValid();
        ++AR)
     if (MBB->isLiveIn(*AR))
@@ -362,7 +362,7 @@ ImplicitNullChecks::areMemoryOpsAliased(const MachineInstr &MI,
 
 ImplicitNullChecks::SuitabilityResult
 ImplicitNullChecks::isSuitableMemoryOp(const MachineInstr &MI,
-                                       unsigned PointerReg,
+                                       Register PointerReg,
                                        ArrayRef<MachineInstr *> PrevInsts) {
   // Implementation restriction for faulting_op insertion
   // TODO: This could be relaxed if we find a test case which warrants it.
@@ -706,14 +706,11 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
 /// faults.  The FAULTING instruction is inserted at the end of MBB.
 MachineInstr *ImplicitNullChecks::insertFaultingInstr(
     MachineInstr *MI, MachineBasicBlock *MBB, MachineBasicBlock *HandlerMBB) {
-  const unsigned NoRegister = 0; // Guaranteed to be the NoRegister value for
-                                 // all targets.
-
   DebugLoc DL;
   unsigned NumDefs = MI->getDesc().getNumDefs();
   assert(NumDefs <= 1 && "other cases unhandled!");
 
-  unsigned DefReg = NoRegister;
+  Register DefReg;
   if (NumDefs != 0) {
     DefReg = MI->getOperand(0).getReg();
     assert(NumDefs == 1 && "expected exactly one def!");
