@@ -2906,7 +2906,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         OMPX_QueueSize("LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE", 512),
         OMPX_DefaultTeamsPerCU("LIBOMPTARGET_AMDGPU_TEAMS_PER_CU", 4),
         OMPX_GenericSpmdTeamsPerCU(
-            "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_TEAMS_PER_CU", 0),
+            "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_TEAMS_PER_CU", 6),
         OMPX_BigJumpLoopTeamsPerCU(
             "LIBOMPTARGET_AMDGPU_BIG_JUMP_LOOP_TEAMS_PER_CU", 0),
         OMPX_BigJumpLoopMaxTotalTeams(
