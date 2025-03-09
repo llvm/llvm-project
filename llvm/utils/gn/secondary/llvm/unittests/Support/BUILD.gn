@@ -22,7 +22,6 @@ unittest("SupportTests") {
     "CRCTest.cpp",
     "CSKYAttributeParserTest.cpp",
     "CachePruningTest.cpp",
-    "Caching.cpp",
     "Casting.cpp",
     "CheckedArithmeticTest.cpp",
     "Chrono.cpp",
