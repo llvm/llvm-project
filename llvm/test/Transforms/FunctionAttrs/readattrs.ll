@@ -376,8 +376,9 @@ declare void @escape_readonly_ptr(ptr %addr, ptr readonly %ptr)
 ; is marked as readnone/only. However, the functions can write the pointer into
 ; %addr, causing the store to write to %escaped_then_written.
 define void @unsound_readnone(ptr %ignored, ptr %escaped_then_written) {
+; FNATTRS: Function Attrs: memory(readwrite, errnomem: write)
 ; FNATTRS-LABEL: define {{[^@]+}}@unsound_readnone
-; FNATTRS-SAME: (ptr readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; FNATTRS-SAME: (ptr readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) #[[ATTR14:[0-9]+]] {
 ; FNATTRS-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; FNATTRS-NEXT:    call void @escape_readnone_ptr(ptr [[ADDR]], ptr [[ESCAPED_THEN_WRITTEN]])
 ; FNATTRS-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -408,8 +409,9 @@ define void @unsound_readnone(ptr %ignored, ptr %escaped_then_written) {
 }
 
 define void @unsound_readonly(ptr %ignored, ptr %escaped_then_written) {
+; FNATTRS: Function Attrs: memory(readwrite, errnomem: write)
 ; FNATTRS-LABEL: define {{[^@]+}}@unsound_readonly
-; FNATTRS-SAME: (ptr readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) {
+; FNATTRS-SAME: (ptr readnone captures(none) [[IGNORED:%.*]], ptr [[ESCAPED_THEN_WRITTEN:%.*]]) #[[ATTR14]] {
 ; FNATTRS-NEXT:    [[ADDR:%.*]] = alloca ptr, align 8
 ; FNATTRS-NEXT:    call void @escape_readonly_ptr(ptr [[ADDR]], ptr [[ESCAPED_THEN_WRITTEN]])
 ; FNATTRS-NEXT:    [[ADDR_LD:%.*]] = load ptr, ptr [[ADDR]], align 8
@@ -570,7 +572,7 @@ define void @fptr_test2c(ptr %p, ptr %f) {
 define void @alloca_recphi() {
 ; FNATTRS: Function Attrs: nofree norecurse nosync nounwind memory(none)
 ; FNATTRS-LABEL: define {{[^@]+}}@alloca_recphi
-; FNATTRS-SAME: () #[[ATTR14:[0-9]+]] {
+; FNATTRS-SAME: () #[[ATTR15:[0-9]+]] {
 ; FNATTRS-NEXT:  entry:
 ; FNATTRS-NEXT:    [[A:%.*]] = alloca [8 x i32], align 4
 ; FNATTRS-NEXT:    [[A_END:%.*]] = getelementptr i32, ptr [[A]], i64 8
@@ -723,7 +725,7 @@ define void @op_bundle_readonly_unknown(ptr %p) {
 define i32 @writable_readonly(ptr writable dereferenceable(4) %p) {
 ; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; FNATTRS-LABEL: define {{[^@]+}}@writable_readonly
-; FNATTRS-SAME: (ptr readonly captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR15:[0-9]+]] {
+; FNATTRS-SAME: (ptr readonly captures(none) dereferenceable(4) [[P:%.*]]) #[[ATTR16:[0-9]+]] {
 ; FNATTRS-NEXT:    [[V:%.*]] = load i32, ptr [[P]], align 4
 ; FNATTRS-NEXT:    ret i32 [[V]]
 ;
