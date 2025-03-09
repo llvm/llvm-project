@@ -546,6 +546,10 @@ Error RewriteInstance::discoverStorage() {
         if (Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
           BC->IsLinuxKernel = true;
         break;
+      case llvm::Triple::aarch64:
+        if (Phdr.p_vaddr >= BinaryContext::KernelStartAArch64)
+          BC->IsLinuxKernel = true;
+        break;
       default:;
       }
       break;
@@ -5700,8 +5704,18 @@ void RewriteInstance::rewriteFile() {
     OS.pwrite(reinterpret_cast<char *>(Function->getImageAddress()),
               Function->getImageSize(), Function->getFileOffset());
 
+    bool ShouldWriteNops = true;
+
+    // For AArch64, Linux kernel alternative instruction replacement sequences
+    // are not in a seperate section as for X86, but reside in gaps between
+    // functions.
+    // Avoid overwriting them by skipping writing nops here.
+    if (BC->IsLinuxKernel && BC->isAArch64() && !BC->HasRelocations)
+      ShouldWriteNops = false;
+
     // Write nops at the end of the function.
-    if (Function->getMaxSize() != std::numeric_limits<uint64_t>::max()) {
+    if (ShouldWriteNops &&
+        Function->getMaxSize() != std::numeric_limits<uint64_t>::max()) {
       uint64_t Pos = OS.tell();
       OS.seek(Function->getFileOffset() + Function->getImageSize());
       BC->MAB->writeNopData(

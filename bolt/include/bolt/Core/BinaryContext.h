@@ -613,6 +613,9 @@ public:
   /// Addresses reserved for kernel on x86_64 start at this location.
   static constexpr uint64_t KernelStartX86_64 = 0xFFFF'FFFF'8000'0000;
 
+  /// Addresses reserved for kernel on aarch64 start at this location.
+  static constexpr uint64_t KernelStartAArch64 = 0xFFFF'0000'0000'0000;
+
   /// Map address to a constant island owner (constant data in code section)
   std::map<uint64_t, BinaryFunction *> AddressToConstantIslandMap;
 
