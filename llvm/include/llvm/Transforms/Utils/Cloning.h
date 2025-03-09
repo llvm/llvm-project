@@ -230,20 +230,6 @@ void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
                                const char *NameSuffix = "",
                                ClonedCodeInfo *CodeInfo = nullptr);
 
-/// Collect debug information such as types, compile units, and other
-/// subprograms that are reachable from \p F and can be considered global for
-/// the purposes of cloning (and hence not needing to be cloned).
-///
-/// What debug information should be processed depends on \p Changes: when
-/// cloning into the same module we process \p F's subprogram and instructions;
-/// when into a cloned module, neither of those.
-///
-/// Returns DISubprogram of the cloned function when cloning into the same
-/// module or nullptr otherwise.
-DISubprogram *CollectDebugInfoForCloning(const Function &F,
-                                         CloneFunctionChangeType Changes,
-                                         DebugInfoFinder &DIFinder);
-
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.
 class InlineFunctionInfo {
