@@ -6,7 +6,7 @@ define i1 @infer_nuw(i8 range(i8 0, 2) %A, i8 range(i8 0, 2) %B) {
 ; CHECK-LABEL: define i1 @infer_nuw(
 ; CHECK-SAME: i8 range(i8 0, 2) [[A:%.*]], i8 range(i8 0, 2) [[B:%.*]]) {
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[B]], [[A]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[XOR]] to i1
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[XOR]] to i1
 ; CHECK-NEXT:    [[RESULT:%.*]] = xor i1 [[TRUNC]], true
 ; CHECK-NEXT:    ret i1 [[RESULT]]
 ;
@@ -21,7 +21,7 @@ define i4 @infer_nsw(i8 %A) {
 ; CHECK-LABEL: define range(i4 -4, 4) i4 @infer_nsw(
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:    [[ASHR:%.*]] = ashr i8 [[A]], 5
-; CHECK-NEXT:    [[B:%.*]] = trunc i8 [[ASHR]] to i4
+; CHECK-NEXT:    [[B:%.*]] = trunc nsw i8 [[ASHR]] to i4
 ; CHECK-NEXT:    ret i4 [[B]]
 ;
   %ashr = ashr i8 %A, 5
@@ -34,7 +34,7 @@ define i8 @infer_nuw_nsw(i16 range(i16 -5, -3) %A, i16 range(i16 -5, -3) %B) {
 ; CHECK-LABEL: define range(i8 0, 8) i8 @infer_nuw_nsw(
 ; CHECK-SAME: i16 range(i16 -5, -3) [[A:%.*]], i16 range(i16 -5, -3) [[B:%.*]]) {
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[B]], [[A]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i16 [[XOR]] to i8
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i16 [[XOR]] to i8
 ; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[TRUNC]], 1
 ; CHECK-NEXT:    ret i8 [[XOR2]]
 ;
@@ -59,7 +59,7 @@ define i1 @rust_issue_122734(i8 range(i8 0, 3) %A, i8 range(i8 0, 3) %B) {
 ; CHECK-NEXT:    ret i1 [[PHI]]
 ; CHECK:       [[IFFALSE]]:
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A]], [[B]]
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[XOR]] to i1
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[XOR]] to i1
 ; CHECK-NEXT:    [[XOR2]] = xor i1 [[TRUNC]], true
 ; CHECK-NEXT:    br label %[[IFTRUE]]
 ;
