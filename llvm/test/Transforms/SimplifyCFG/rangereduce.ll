@@ -305,3 +305,142 @@ three:
   ret i32 99783
 }
 
+define i8 @pr67842(i32 %0) {
+; CHECK-LABEL: @pr67842(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0:%.*]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 255
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i8 [[SWITCH_IDX_CAST]], -1
+; CHECK-NEXT:    ret i8 [[SWITCH_OFFSET]]
+;
+start:
+  switch i32 %0, label %bb2 [
+  i32 0, label %bb5
+  i32 1, label %bb4
+  i32 255, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %start, %bb1, %bb4
+  %.0 = phi i8 [ -1, %bb1 ], [ 1, %bb4 ], [ 0, %start ]
+  ret i8 %.0
+}
+
+define i8 @reduce_masked_common_high_bits(i32 %0) {
+; CHECK-LABEL: @reduce_masked_common_high_bits(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[TMP0:%.*]], -127
+; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], 127
+; CHECK-NEXT:    [[SWITCH_IDX_CAST:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i8 [[SWITCH_IDX_CAST]], -1
+; CHECK-NEXT:    ret i8 [[SWITCH_OFFSET]]
+;
+start:
+  switch i32 %0, label %bb2 [
+  i32 128, label %bb5
+  i32 129, label %bb4
+  i32 255, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %start, %bb1, %bb4
+  %.0 = phi i8 [ -1, %bb1 ], [ 1, %bb4 ], [ 0, %start ]
+  ret i8 %.0
+}
+
+define i8 @reduce_masked_common_high_bits_fail(i32 %0) {
+; CHECK-LABEL: @reduce_masked_common_high_bits_fail(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[BB2:%.*]] [
+; CHECK-NEXT:    i32 128, label [[BB5:%.*]]
+; CHECK-NEXT:    i32 129, label [[BB4:%.*]]
+; CHECK-NEXT:    i32 511, label [[BB1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[DOT0:%.*]] = phi i8 [ -1, [[BB1]] ], [ 1, [[BB4]] ], [ 0, [[START:%.*]] ]
+; CHECK-NEXT:    ret i8 [[DOT0]]
+;
+start:
+  switch i32 %0, label %bb2 [
+  i32 128, label %bb5
+  i32 129, label %bb4
+  i32 511, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  unreachable
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %start, %bb1, %bb4
+  %.0 = phi i8 [ -1, %bb1 ], [ 1, %bb4 ], [ 0, %start ]
+  ret i8 %.0
+}
+
+; Optimization shouldn't trigger; The default block is reachable.
+define i8 @reduce_masked_default_reachable(i32 %0) {
+; CHECK-LABEL: @reduce_masked_default_reachable(
+; CHECK-NEXT:  start:
+; CHECK-NEXT:    switch i32 [[TMP0:%.*]], label [[COMMON_RET:%.*]] [
+; CHECK-NEXT:    i32 0, label [[BB5:%.*]]
+; CHECK-NEXT:    i32 1, label [[BB4:%.*]]
+; CHECK-NEXT:    i32 255, label [[BB1:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       common.ret:
+; CHECK-NEXT:    [[COMMON_RET_OP:%.*]] = phi i8 [ [[DOT0:%.*]], [[BB5]] ], [ 24, [[START:%.*]] ]
+; CHECK-NEXT:    ret i8 [[COMMON_RET_OP]]
+; CHECK:       bb4:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb1:
+; CHECK-NEXT:    br label [[BB5]]
+; CHECK:       bb5:
+; CHECK-NEXT:    [[DOT0]] = phi i8 [ -1, [[BB1]] ], [ 1, [[BB4]] ], [ 0, [[START]] ]
+; CHECK-NEXT:    br label [[COMMON_RET]]
+;
+start:
+  switch i32 %0, label %bb2 [
+  i32 0, label %bb5
+  i32 1, label %bb4
+  i32 255, label %bb1
+  ]
+
+bb2:                                              ; preds = %start
+  ret i8 24
+
+bb4:                                              ; preds = %start
+  br label %bb5
+
+bb1:                                              ; preds = %start
+  br label %bb5
+
+bb5:                                              ; preds = %start, %bb1, %bb4
+  %.0 = phi i8 [ -1, %bb1 ], [ 1, %bb4 ], [ 0, %start ]
+  ret i8 %.0
+}
