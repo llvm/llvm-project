@@ -11,6 +11,7 @@
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
 #include "RunInTerminal.h"
+#include "Transport.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
@@ -325,8 +326,9 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
                         &dap_sessions]() {
       llvm::set_thread_name(client_name + ".runloop");
-      DAP dap = DAP(client_name, program_path, log, io, io, default_repl_mode,
-                    pre_init_commands);
+      Transport transport{client_name, log, io, io};
+      DAP dap = DAP(program_path, log, default_repl_mode, pre_init_commands,
+                    client_name, transport);
 
       if (auto Err = dap.ConfigureIO()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -565,8 +567,10 @@ int main(int argc, char *argv[]) {
   lldb::IOObjectSP output = std::make_shared<NativeFile>(
       stdout_fd, File::eOpenOptionWriteOnly, false);
 
-  DAP dap = DAP("stdin/stdout", program_path, log.get(), std::move(input),
-                std::move(output), default_repl_mode, pre_init_commands);
+  std::string client_name = "stdin/stdout";
+  Transport transport{client_name, log.get(), input, output};
+  DAP dap = DAP(program_path, log.get(), default_repl_mode, pre_init_commands,
+                client_name, transport);
 
   // stdout/stderr redirection to the IDE's console
   if (auto Err = dap.ConfigureIO(stdout, stderr)) {

@@ -7,16 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "Transport.h"
+#include "DAPLog.h"
 #include "Protocol.h"
-#include "c++/v1/__system_error/error_code.h"
 #include "lldb/Utility/IOObject.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string>
-#include <system_error>
 #include <utility>
 
 using namespace llvm;
@@ -28,18 +28,11 @@ using namespace lldb_dap::protocol;
 static Expected<std::string> ReadFull(IOObjectSP &descriptor, size_t length) {
   if (!descriptor || !descriptor->IsValid())
     return createStringError("transport input is closed");
-
   std::string data;
   data.resize(length);
-
   auto status = descriptor->Read(data.data(), length);
   if (status.Fail())
     return status.takeError();
-
-  // If we got back zero then we have reached EOF.
-  if (length == 0)
-    return createStringError(Transport::kEOF, "end-of-file");
-
   return data.substr(0, length);
 }
 
@@ -48,99 +41,101 @@ static Expected<std::string> ReadUntil(IOObjectSP &descriptor,
   std::string buffer;
   buffer.reserve(delimiter.size() + 1);
   while (!llvm::StringRef(buffer).ends_with(delimiter)) {
-    auto next = ReadFull(descriptor, 1);
+    Expected<std::string> next =
+        ReadFull(descriptor, buffer.empty() ? delimiter.size() : 1);
     if (auto Err = next.takeError())
       return std::move(Err);
+    // '' is returned on EOF.
+    if (next->empty())
+      return buffer;
     buffer += *next;
   }
   return buffer.substr(0, buffer.size() - delimiter.size());
 }
 
-static Error ReadExpected(IOObjectSP &descriptor, StringRef want) {
-  auto got = ReadFull(descriptor, want.size());
-  if (auto Err = got.takeError())
-    return Err;
-  if (*got != want) {
-    return createStringError("want %s, got %s", want.str().c_str(),
-                             got->c_str());
-  }
-  return Error::success();
-}
+/// DAP message format
+/// ```
+/// Content-Length: (?<length>\d+)\r\n\r\n(?<content>.{\k<length>})
+/// ```
+static const StringLiteral kHeaderContentLength = "Content-Length: ";
+static const StringLiteral kHeaderSeparator = "\r\n\r\n";
 
 namespace lldb_dap {
 
-const std::error_code Transport::kEOF =
-    std::error_code(0x1001, std::generic_category());
-
-Transport::Transport(StringRef client_name, IOObjectSP input, IOObjectSP output)
-    : m_client_name(client_name), m_input(std::move(input)),
+Transport::Transport(StringRef client_name, std::ofstream *log,
+                     IOObjectSP input, IOObjectSP output)
+    : m_client_name(client_name), m_log(log), m_input(std::move(input)),
       m_output(std::move(output)) {}
 
-Expected<protocol::Message> Transport::Read(std::ofstream *log) {
-  // If we don't find the expected header we have reached EOF.
-  if (auto Err = ReadExpected(m_input, "Content-Length: "))
-    return std::move(Err);
+std::optional<Message> Transport::Read() {
+  Expected<std::string> message_header =
+      ReadFull(m_input, kHeaderContentLength.size());
+  if (!message_header) {
+    DAP_LOG_ERROR(m_log, message_header.takeError(), "({1}) read failed: {0}",
+                  m_client_name);
+    return std::nullopt;
+  }
 
-  auto rawLength = ReadUntil(m_input, "\r\n\r\n");
-  if (auto Err = rawLength.takeError())
-    return std::move(Err);
+  // '' returned on EOF.
+  if (message_header->empty())
+    return std::nullopt;
+  if (*message_header != kHeaderContentLength) {
+    DAP_LOG(m_log, "({0}) read failed: expected '{1}' and got '{2}'",
+            m_client_name, kHeaderContentLength, *message_header);
+    return std::nullopt;
+  }
+
+  Expected<std::string> raw_length = ReadUntil(m_input, kHeaderSeparator);
+  if (!raw_length) {
+    DAP_LOG_ERROR(m_log, raw_length.takeError(), "({1}) read failed: {0}",
+                  m_client_name);
+    return std::nullopt;
+  }
 
   size_t length;
-  if (!to_integer(*rawLength, length))
-    return createStringError("invalid content length %s", rawLength->c_str());
-
-  auto rawJSON = ReadFull(m_input, length);
-  if (auto Err = rawJSON.takeError())
-    return std::move(Err);
-  if (rawJSON->length() != length)
-    return createStringError(
-        "malformed request, expected %ld bytes, got %ld bytes", length,
-        rawJSON->length());
-
-  if (log) {
-    auto now = std::chrono::duration<double>(
-        std::chrono::system_clock::now().time_since_epoch());
-    *log << formatv("{0:f9} <-- ({1}) {2}\n", now.count(), m_client_name,
-                    *rawJSON)
-                .str();
+  if (!to_integer(*raw_length, length)) {
+    DAP_LOG(m_log, "({0}) read failed: invalid content length {1}",
+            m_client_name, *raw_length);
+    return std::nullopt;
   }
 
-  auto JSON = json::parse(*rawJSON);
-  if (auto Err = JSON.takeError()) {
-    return createStringError("malformed JSON %s\n%s", rawJSON->c_str(),
-                             llvm::toString(std::move(Err)).c_str());
+  Expected<std::string> raw_json = ReadFull(m_input, length);
+  if (!raw_json) {
+    DAP_LOG_ERROR(m_log, raw_json.takeError(), "({1}) read failed: {0}",
+                  m_client_name);
+    return std::nullopt;
+  }
+  if (raw_json->length() != length) {
+    DAP_LOG(m_log, "({0}) read failed: expected {1} bytes and got {2} bytes",
+            m_client_name, length, raw_json->length());
+    return std::nullopt;
   }
 
-  protocol::Message M;
-  llvm::json::Path::Root Root;
-  if (!fromJSON(*JSON, M, Root)) {
-    std::string error;
-    raw_string_ostream OS(error);
-    Root.printErrorContext(*JSON, OS);
-    return createStringError("malformed request: %s", error.c_str());
+  DAP_LOG(m_log, "<-- ({0}) {1}", m_client_name, *raw_json);
+
+  llvm::Expected<Message> message = json::parse<Message>(*raw_json);
+  if (!message) {
+    DAP_LOG_ERROR(m_log, message.takeError(), "({1}) read failed: {0}",
+                  m_client_name);
+    return std::nullopt;
   }
-  return std::move(M);
+
+  return std::move(*message);
 }
 
-lldb_private::Status Transport::Write(std::ofstream *log,
-                                      const protocol::Message &M) {
+Error Transport::Write(const Message &message) {
   if (!m_output || !m_output->IsValid())
-    return Status("transport output is closed");
+    return createStringError("transport output is closed");
 
-  std::string JSON = formatv("{0}", toJSON(M)).str();
+  std::string json = formatv("{0}", toJSON(message)).str();
 
-  if (log) {
-    auto now = std::chrono::duration<double>(
-        std::chrono::system_clock::now().time_since_epoch());
-    *log << formatv("{0:f9} --> ({1}) {2}\n", now.count(), m_client_name, JSON)
-                .str();
-  }
+  DAP_LOG(m_log, "--> ({0}) {1}", m_client_name, json);
 
   std::string Output;
   raw_string_ostream OS(Output);
-  OS << "Content-Length: " << JSON.length() << "\r\n\r\n" << JSON;
+  OS << kHeaderContentLength << json.length() << kHeaderSeparator << json;
   size_t num_bytes = Output.size();
-  return m_output->Write(Output.data(), num_bytes);
+  return m_output->Write(Output.data(), num_bytes).takeError();
 }
 
 } // end namespace lldb_dap

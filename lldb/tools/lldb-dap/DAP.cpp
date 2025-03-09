@@ -64,12 +64,12 @@ const char DEV_NULL[] = "/dev/null";
 
 namespace lldb_dap {
 
-DAP::DAP(llvm::StringRef client_name, llvm::StringRef path, std::ofstream *log,
-         lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
-         std::vector<std::string> pre_init_commands)
-    : client_name(client_name), debug_adapter_path(path), log(log),
-      transport(client_name, std::move(input), std::move(output)),
-      broadcaster("lldb-dap"), exception_breakpoints(),
+DAP::DAP(llvm::StringRef path, std::ofstream *log,
+         const ReplMode default_repl_mode,
+         const std::vector<std::string> &pre_init_commands,
+         llvm::StringRef client_name, Transport &transport)
+    : debug_adapter_path(path), log(log), client_name(client_name),
+      transport(transport), broadcaster("lldb-dap"), exception_breakpoints(),
       pre_init_commands(std::move(pre_init_commands)),
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
@@ -79,7 +79,7 @@ DAP::DAP(llvm::StringRef client_name, llvm::StringRef path, std::ofstream *log,
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(repl_mode) {}
+      reverse_request_seq(0), repl_mode(default_repl_mode) {}
 
 DAP::~DAP() = default;
 
@@ -227,22 +227,17 @@ void DAP::StopEventHandlers() {
 void DAP::SendJSON(const llvm::json::Value &json) {
   // FIXME: Instead of parsing the output message from JSON, pass the `Message`
   // as parameter to `SendJSON`.
-  protocol::Message M;
+  protocol::Message message;
   llvm::json::Path::Root root;
-  if (!protocol::fromJSON(json, M, root)) {
-    if (log) {
-      std::string error;
-      llvm::raw_string_ostream OS(error);
-      root.printErrorContext(json, OS);
-      *log << "encoding failure: " << error << "\n";
-    }
+  if (!fromJSON(json, message, root)) {
+    DAP_LOG_ERROR(log, root.getError(), "({1}) encoding failed: {0}",
+                  client_name);
     return;
   }
-  auto status = transport.Write(log, M);
-  if (status.Fail() && log)
-    *log << llvm::formatv("failed to send {0}: {1}\n", llvm::json::Value(M),
-                          status.AsCString())
-                .str();
+  auto err = transport.Write(message);
+  if (err) {
+    DAP_LOG_ERROR(log, std::move(err), "({1}) write failed: {0}", client_name);
+  }
 }
 
 // "OutputEvent": {
@@ -775,13 +770,9 @@ llvm::Error DAP::Loop() {
     StopEventHandlers();
   });
   while (!disconnecting) {
-    auto next = transport.Read(log);
-    if (auto Err = next.takeError()) {
-      // On EOF, simply break out of the loop.
-      std::error_code ec = llvm::errorToErrorCode(std::move(Err));
-      if (ec == Transport::kEOF)
-        break;
-      return llvm::errorCodeToError(ec);
+    std::optional<protocol::Message> next = transport.Read();
+    if (!next) {
+      break;
     }
 
     if (!HandleObject(*next)) {

@@ -15,11 +15,11 @@
 #define LLDB_TOOLS_LLDB_DAP_TRANSPORT_H
 
 #include "Protocol.h"
-#include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <fstream>
+#include <optional>
 
 namespace lldb_dap {
 
@@ -27,24 +27,25 @@ namespace lldb_dap {
 /// with the client.
 class Transport {
 public:
-  Transport(llvm::StringRef client_name, lldb::IOObjectSP input,
-            lldb::IOObjectSP output);
+  Transport(llvm::StringRef client_name, std::ofstream *log,
+            lldb::IOObjectSP input, lldb::IOObjectSP output);
   ~Transport() = default;
 
+  /// Transport is not copyable.
+  /// @{
   Transport(const Transport &rhs) = delete;
   void operator=(const Transport &rhs) = delete;
-
-  /// Error code returned this if EOF is encountered.
-  static const std::error_code kEOF;
+  /// @}
 
   /// Writes a Debug Adater Protocol message to the output stream.
-  lldb_private::Status Write(std::ofstream *log, const protocol::Message &M);
+  llvm::Error Write(const protocol::Message &M);
 
   /// Reads the next Debug Adater Protocol message from the input stream.
-  llvm::Expected<protocol::Message> Read(std::ofstream *log);
+  std::optional<protocol::Message> Read();
 
 private:
   llvm::StringRef m_client_name;
+  std::ofstream *m_log;
   lldb::IOObjectSP m_input;
   lldb::IOObjectSP m_output;
 };
