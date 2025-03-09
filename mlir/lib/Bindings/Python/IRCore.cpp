@@ -2943,6 +2943,9 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("callee"), nb::arg("frames"),
           nb::arg("context").none() = nb::none(),
           kContextGetCallSiteLocationDocstring)
+      .def("is_a_callsite", mlirLocationIsACallSite)
+      .def_prop_ro("callee", mlirLocationCallSiteGetCallee)
+      .def_prop_ro("caller", mlirLocationCallSiteGetCaller)
       .def_static(
           "file",
           [](std::string filename, int line, int col,
@@ -2967,6 +2970,16 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("filename"), nb::arg("start_line"), nb::arg("start_col"),
           nb::arg("end_line"), nb::arg("end_col"),
           nb::arg("context").none() = nb::none(), kContextGetFileRangeDocstring)
+      .def("is_a_file", mlirLocationIsAFileLineColRange)
+      .def_prop_ro("filename",
+                   [](MlirLocation loc) {
+                     return mlirIdentifierStr(
+                         mlirLocationFileLineColRangeGetFilename(loc));
+                   })
+      .def_prop_ro("start_line", mlirLocationFileLineColRangeGetStartLine)
+      .def_prop_ro("start_col", mlirLocationFileLineColRangeGetStartColumn)
+      .def_prop_ro("end_line", mlirLocationFileLineColRangeGetEndLine)
+      .def_prop_ro("end_col", mlirLocationFileLineColRangeGetEndColumn)
       .def_static(
           "fused",
           [](const std::vector<PyLocation> &pyLocations,
@@ -2984,6 +2997,16 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("locations"), nb::arg("metadata").none() = nb::none(),
           nb::arg("context").none() = nb::none(),
           kContextGetFusedLocationDocstring)
+      .def("is_a_fused", mlirLocationIsAFused)
+      .def_prop_ro("locations",
+                   [](MlirLocation loc) {
+                     unsigned numLocations =
+                         mlirLocationFusedGetNumLocations(loc);
+                     std::vector<MlirLocation> locations(numLocations);
+                     if (numLocations)
+                       mlirLocationFusedGetLocations(loc, locations.data());
+                     return locations;
+                   })
       .def_static(
           "name",
           [](std::string name, std::optional<PyLocation> childLoc,
@@ -2998,6 +3021,12 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("name"), nb::arg("childLoc").none() = nb::none(),
           nb::arg("context").none() = nb::none(),
           kContextGetNameLocationDocString)
+      .def("is_a_name", mlirLocationIsAName)
+      .def_prop_ro("name_str",
+                   [](MlirLocation loc) {
+                     return mlirIdentifierStr(mlirLocationNameGetName(loc));
+                   })
+      .def_prop_ro("child_loc", mlirLocationNameGetChildLoc)
       .def_static(
           "from_attr",
           [](PyAttribute &attribute, DefaultingPyMlirContext context) {
@@ -3148,9 +3177,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                      auto &concreteOperation = self.getOperation();
                      concreteOperation.checkValid();
                      MlirOperation operation = concreteOperation.get();
-                     MlirStringRef name =
-                         mlirIdentifierStr(mlirOperationGetName(operation));
-                     return nb::str(name.data, name.length);
+                     return mlirIdentifierStr(mlirOperationGetName(operation));
                    })
       .def_prop_ro("operands",
                    [](PyOperationBase &self) {
@@ -3738,8 +3765,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def_prop_ro(
           "name",
           [](PyNamedAttribute &self) {
-            return nb::str(mlirIdentifierStr(self.namedAttr.name).data,
-                           mlirIdentifierStr(self.namedAttr.name).length);
+            return mlirIdentifierStr(self.namedAttr.name);
           },
           "The name of the NamedAttribute binding")
       .def_prop_ro(
@@ -3972,7 +3998,16 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("with"), nb::arg("exceptions"),
           kValueReplaceAllUsesExceptDocstring)
       .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
-           [](PyValue &self) { return self.maybeDownCast(); });
+           [](PyValue &self) { return self.maybeDownCast(); })
+      .def_prop_ro(
+          "location",
+          [](MlirValue self) {
+            return PyLocation(
+                PyMlirContext::forContext(mlirValueGetContext(self)),
+                mlirValueGetLocation(self));
+          },
+          "Returns the source location the value");
+
   PyBlockArgument::bind(m);
   PyOpResult::bind(m);
   PyOpOperand::bind(m);
