@@ -16,10 +16,9 @@
 #pragma clang diagnostic ignored "-Whlsl-dxc-compatability"
 #endif
 
-
-#include "hlsl/hlsl_detail.h"
-#include "hlsl/hlsl_basic_types.h"
 #include "hlsl/hlsl_alias_intrinsics.h"
+#include "hlsl/hlsl_basic_types.h"
+#include "hlsl/hlsl_detail.h"
 #include "hlsl/hlsl_intrinsics.h"
 
 #if defined(__clang__)

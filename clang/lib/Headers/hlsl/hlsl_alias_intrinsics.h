@@ -2123,7 +2123,6 @@ template <typename T, int Sz>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
 vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, vector<T, Sz>);
 
-
 /// \fn vector<T,Sz> select(vector<bool,Sz> Conds, T TrueVal,
 ///                         vector<T,Sz> FalseVals)
 /// \brief ternary operator for vectors. All vectors must be the same size.
