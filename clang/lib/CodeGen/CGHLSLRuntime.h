@@ -134,6 +134,8 @@ public:
     BufferResBinding(HLSLResourceBindingAttr *Attr);
   };
 
+  static const unsigned BufferRowSizeInBytes = 16U;
+
 protected:
   CodeGenModule &CGM;
 
@@ -146,7 +148,7 @@ public:
 
   llvm::Type *
   convertHLSLSpecificType(const Type *T,
-                          SmallVector<unsigned> *Packoffsets = nullptr);
+                          SmallVector<int32_t> *Packoffsets = nullptr);
 
   void annotateHLSLResource(const VarDecl *D, llvm::GlobalVariable *GV);
   void generateGlobalCtorDtorCalls();

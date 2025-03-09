@@ -1961,6 +1961,18 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
     SemaRef.getCurLexicalContext()->addDecl(DefaultCBuffer);
     createHostLayoutStructForBuffer(SemaRef, DefaultCBuffer);
 
+    // Set HasValidPackoffset if any of the decls has a register(c#) annotation;
+    for (const Decl *VD : DefaultCBufferDecls) {
+      if (const HLSLResourceBindingAttr *RBA =
+              VD->getAttr<HLSLResourceBindingAttr>()) {
+        if (RBA->getRegisterType() ==
+            HLSLResourceBindingAttr::RegisterType::C) {
+          DefaultCBuffer->setHasValidPackoffset(true);
+          break;
+        }
+      }
+    }
+
     DeclGroupRef DG(DefaultCBuffer);
     SemaRef.Consumer.HandleTopLevelDecl(DG);
   }
