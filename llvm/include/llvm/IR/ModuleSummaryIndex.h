@@ -1311,66 +1311,17 @@ public:
     GlobalValue::GUID operator*() const { return this->wrapped()->first; }
   };
 
-  // Iterates merged values of the DenseMap.
-  class SymbolIterator
-      : public iterator_facade_base<SymbolIterator, std::forward_iterator_tag,
-                                    std::string> {
-    using base = SymbolIterator::iterator_facade_base;
-
-    IndexIterator Outer;
-    IndexIterator OuterEnd;
-    NestedIterator Inner;
-
-  public:
-    SymbolIterator() = default;
-    SymbolIterator(IndexIterator Outer, IndexIterator OuterEnd)
-        : Outer(Outer), OuterEnd(OuterEnd),
-          Inner(Outer != OuterEnd ? Outer->second.begin() : NestedIterator{}) {}
-    SymbolIterator(SymbolIterator &R) = default;
-
-    const std::string &operator*() const { return *Inner; }
-
-    SymbolIterator &operator++() {
-      // `DenseMap` never contains empty sets. So:
-      // 1. `Outer` points to non-empty set, if `Outer` != `OuterEnd`.
-      // 2. `Inner` always is valid and dereferenceable, if `Outer` !=
-      // `OuterEnd`.
-      assert(Outer != OuterEnd);
-      assert(!Outer->second.empty());
-      ++Inner;
-      if (Inner == Outer->second.end()) {
-        ++Outer;
-        Inner = Outer != OuterEnd ? Outer->second.begin() : NestedIterator{};
-      }
-      return *this;
-    }
-
-    SymbolIterator &operator=(const SymbolIterator &R) {
-      if (this != &R) {
-        Outer = R.Outer;
-        OuterEnd = R.OuterEnd;
-        Inner = R.Inner;
-      }
-      return *this;
-    }
-
-    bool operator==(const SymbolIterator &R) const {
-      return Outer == R.Outer && Inner == R.Inner;
-    }
-  };
-
   CfiFunctionIndex() = default;
   template <typename It> CfiFunctionIndex(It B, It E) {
     for (; B != E; ++B)
       emplace(*B);
   }
 
-  SymbolIterator begin() const {
-    return SymbolIterator(Index.begin(), Index.end());
-  }
-
-  SymbolIterator end() const {
-    return SymbolIterator(Index.end(), Index.end());
+  std::vector<StringRef> symbols() const {
+    std::vector<StringRef> Symbols;
+    for (auto &[GUID, Syms] : Index)
+      Symbols.insert(Symbols.end(), Syms.begin(), Syms.end());
+    return Symbols;
   }
 
   GUIDIterator guid_begin() const { return GUIDIterator(Index.begin()); }

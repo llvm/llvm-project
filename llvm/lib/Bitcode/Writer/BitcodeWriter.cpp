@@ -5070,7 +5070,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     Functions.insert(Functions.end(), Defs.begin(), Defs.end());
   }
   if (!Functions.empty()) {
-    std::sort(Functions.begin(), Functions.end());
+    llvm::sort(Functions);
     for (const auto &S : Functions) {
       NameVals.push_back(StrtabBuilder.add(S));
       NameVals.push_back(S.size());
@@ -5085,7 +5085,7 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     Functions.insert(Functions.end(), Decls.begin(), Decls.end());
   }
   if (!Functions.empty()) {
-    std::sort(Functions.begin(), Functions.end());
+    llvm::sort(Functions);
     for (const auto &S : Functions) {
       NameVals.push_back(StrtabBuilder.add(S));
       NameVals.push_back(S.size());
