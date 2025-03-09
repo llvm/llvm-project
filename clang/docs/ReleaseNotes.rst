@@ -419,6 +419,10 @@ Improvements to Clang's diagnostics
 - ``-Winitializer-overrides`` and ``-Wreorder-init-list`` are now grouped under
   the ``-Wc99-designator`` diagnostic group, as they also are about the
   behavior of the C99 feature as it was introduced into C++20. Fixes #GH47037
+  
+- Explanatory note is printed when ``assert`` fails during evaluation of a
+  constant expression. Prior to this, the error inaccurately implied that assert
+  could not be used at all in a constant expression (#GH130458)
 
 Improvements to Clang's time-trace
 ----------------------------------
