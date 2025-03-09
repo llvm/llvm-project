@@ -11,7 +11,8 @@
 
 #include "hdr/types/FILE.h"
 
-#if !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE) && !defined(LIBC_TARGET_OS_IS_BAREMETAL)
+#if !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE) &&                               \
+    !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 #include "src/__support/File/file.h"
 #endif
 
@@ -19,8 +20,8 @@
 #include "src/stdio/getc.h"
 #include "src/stdio/ungetc.h"
 #elif defined(LIBC_TARGET_OS_IS_BAREMETAL)
-#include "src/stdio/getchar.h"
 #include "hdr/stdio_macros.h" // for EOF.
+#include "src/stdio/getchar.h"
 #endif
 
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
