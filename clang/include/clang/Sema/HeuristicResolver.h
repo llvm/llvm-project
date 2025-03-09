@@ -81,6 +81,10 @@ public:
   // could look up the name appearing on the RHS.
   const QualType getPointeeType(QualType T) const;
 
+  // Heuristically resolve a possibly-dependent type `T` to a TagDecl
+  // in which a member's name can be looked up.
+  TagDecl *resolveTypeToTagDecl(QualType T) const;
+
 private:
   ASTContext &Ctx;
 };
