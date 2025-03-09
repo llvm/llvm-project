@@ -7770,7 +7770,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     } else if (D.isDecompositionDeclarator()) {
       NewVD = DecompositionDecl::Create(
           Context, DC, D.getBeginLoc(), D.getIdentifierLoc(), R, TInfo, SC,
-          Bindings, D.getContext() == DeclaratorContext::Condition);
+          Bindings, /*IsDecisionVariable=*/D.getContext() ==
+                        DeclaratorContext::Condition);
     } else
       NewVD = VarDecl::Create(Context, DC, D.getBeginLoc(),
                               D.getIdentifierLoc(), II, R, TInfo, SC);

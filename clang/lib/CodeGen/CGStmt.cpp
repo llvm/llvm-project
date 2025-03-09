@@ -1110,6 +1110,11 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   // execution of the loop body.
   llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
 
+  if (auto *DD =
+          dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable());
+      DD && DD->isDecisionVariable())
+    EmitDecompositionVarInit(*DD);
+
   // while(1) is common, avoid extra exit blocks.  Be sure
   // to correctly handle break/continue though.
   llvm::ConstantInt *C = dyn_cast<llvm::ConstantInt>(BoolCondVal);
@@ -1343,6 +1348,12 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     // C99 6.8.5p2/p4: The first substatement is executed if the expression
     // compares unequal to 0.  The condition must be a scalar type.
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+
+    if (auto *DD =
+            dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable());
+        DD && DD->isDecisionVariable())
+      EmitDecompositionVarInit(*DD);
+
     llvm::MDNode *Weights =
         createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody()));
     if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
@@ -2240,6 +2251,11 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
       if (S.getConditionVariable())
         EmitDecl(*S.getConditionVariable());
 
+      if (auto *DD =
+              dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable());
+          DD && DD->isDecisionVariable())
+        EmitDecompositionVarInit(*DD);
+
       // At this point, we are no longer "within" a switch instance, so
       // we can temporarily enforce this to ensure that any embedded case
       // statements are not emitted.
@@ -2270,6 +2286,11 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   if (S.getConditionVariable())
     EmitDecl(*S.getConditionVariable());
   llvm::Value *CondV = EmitScalarExpr(S.getCond());
+
+  if (auto *DD =
+          dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable());
+      DD && DD->isDecisionVariable())
+    EmitDecompositionVarInit(*DD);
 
   // Create basic block to hold stuff that comes after switch
   // statement. We also need to create a default block now so that

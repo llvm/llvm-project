@@ -4290,6 +4290,10 @@ public:
                                             std::move(Bindings));
   }
 
+  /// The decision variable of a condition that is a structured binding
+  /// declaration is specified in [dcl.struct.bind]p4:
+  ///   If a structured binding declaration appears as a condition, the decision
+  ///   variable of the condition is e.
   bool isDecisionVariable() const { return IsDecisionVariable; }
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
