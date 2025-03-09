@@ -168,6 +168,16 @@ add_header_macro(
     .llvm-libc-types.stdfix-types
 )
 
+
+add_header_macro(
+  sysexits
+  ../libc/include/sysexits.yaml
+  sysexits.h
+  DEPENDS
+    .llvm-libc-macros.sysexits_macros
+)
+
+
 # TODO: This should be conditional on POSIX networking being included.
 file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/arpa)
 

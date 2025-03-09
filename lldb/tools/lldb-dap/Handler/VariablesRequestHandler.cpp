@@ -93,13 +93,13 @@ void VariablesRequestHandler::operator()(
   llvm::json::Array variables;
   const auto *arguments = request.getObject("arguments");
   const auto variablesReference =
-      GetUnsigned(arguments, "variablesReference", 0);
-  const int64_t start = GetSigned(arguments, "start", 0);
-  const int64_t count = GetSigned(arguments, "count", 0);
+      GetInteger<uint64_t>(arguments, "variablesReference").value_or(0);
+  const auto start = GetInteger<int64_t>(arguments, "start").value_or(0);
+  const auto count = GetInteger<int64_t>(arguments, "count").value_or(0);
   bool hex = false;
   const auto *format = arguments->getObject("format");
   if (format)
-    hex = GetBoolean(format, "hex", false);
+    hex = GetBoolean(format, "hex").value_or(false);
 
   if (lldb::SBValueList *top_scope =
           dap.variables.GetTopLevelScope(variablesReference)) {
@@ -162,6 +162,29 @@ void VariablesRequestHandler::operator()(
       if (!variable.IsValid())
         break;
       variable_name_counts[GetNonNullVariableName(variable)]++;
+    }
+
+    // Show return value if there is any ( in the local top frame )
+    if (variablesReference == VARREF_LOCALS) {
+      auto process = dap.target.GetProcess();
+      auto selected_thread = process.GetSelectedThread();
+      lldb::SBValue stop_return_value = selected_thread.GetStopReturnValue();
+
+      if (stop_return_value.IsValid() &&
+          (selected_thread.GetSelectedFrame().GetFrameID() == 0)) {
+        auto renamed_return_value = stop_return_value.Clone("(Return Value)");
+        int64_t return_var_ref = 0;
+
+        if (stop_return_value.MightHaveChildren() ||
+            stop_return_value.IsSynthetic()) {
+          return_var_ref = dap.variables.InsertVariable(stop_return_value,
+                                                        /*is_permanent=*/false);
+        }
+        variables.emplace_back(
+            CreateVariable(renamed_return_value, return_var_ref, hex,
+                           dap.enable_auto_variable_summaries,
+                           dap.enable_synthetic_child_debugging, false));
+      }
     }
 
     // Now we construct the result with unique display variable names

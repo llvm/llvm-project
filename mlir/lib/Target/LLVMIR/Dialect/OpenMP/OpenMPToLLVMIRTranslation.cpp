@@ -1452,6 +1452,12 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
 
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
+  unsigned int allocaAS =
+      moduleTranslation.getLLVMModule()->getDataLayout().getAllocaAddrSpace();
+  unsigned int defaultAS = moduleTranslation.getLLVMModule()
+                               ->getDataLayout()
+                               .getProgramAddressSpace();
+
   for (auto [privDecl, mlirPrivVar, blockArg] :
        llvm::zip_equal(privateDecls, mlirPrivateVars, privateBlockArgs)) {
     llvm::Type *llvmAllocType =
@@ -1459,6 +1465,10 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
     builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
     llvm::Value *llvmPrivateVar = builder.CreateAlloca(
         llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
+    if (allocaAS != defaultAS)
+      llvmPrivateVar = builder.CreateAddrSpaceCast(llvmPrivateVar,
+                                                   builder.getPtrTy(defaultAS));
+
     llvmPrivateVars.push_back(llvmPrivateVar);
   }
 

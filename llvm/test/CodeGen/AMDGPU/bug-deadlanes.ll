@@ -18,7 +18,7 @@ define dllexport amdgpu_ps void @_amdgpu_ps_main(i32 %descTable2) #0 {
 
 bb1750:                                           ; preds = %bb1897, %.entry
   %__llpc_global_proxy_r3.12.vec.extract2358295 = phi i32 [ 0, %.entry ], [ %__llpc_global_proxy_r3.12.vec.extract2358, %bb1897 ]
-  %__llpc_global_proxy_r13.20293 = phi <4 x i32> [ undef, %.entry ], [ %__llpc_global_proxy_r13.22, %bb1897 ]
+  %__llpc_global_proxy_r13.20293 = phi <4 x i32> [ poison, %.entry ], [ %__llpc_global_proxy_r13.22, %bb1897 ]
   %__llpc_global_proxy_r10.19291 = phi <4 x i32> [ poison, %.entry ], [ %i1914, %bb1897 ]
   %i1751 = call float @llvm.amdgcn.struct.buffer.load.format.f32(<4 x i32> %i1746, i32 poison, i32 0, i32 0, i32 0)
   %i1754 = shufflevector <4 x i32> %__llpc_global_proxy_r10.19291, <4 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 7>

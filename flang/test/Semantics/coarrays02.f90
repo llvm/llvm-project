@@ -6,7 +6,7 @@ end
 program main
   use iso_fortran_env
   !ERROR: Coarray 'namedconst' may not be a named constant
-  !ERROR: Local coarray must have the SAVE attribute
+  !ERROR: Local coarray must have the SAVE or ALLOCATABLE attribute
   integer, parameter :: namedConst = 123
   codimension namedConst[*]
   !ERROR: Coarray 'coarr1' may not be in COMMON block '//'
@@ -22,7 +22,7 @@ end
 function func1()
   !ERROR: Function result may not be a coarray
   integer :: func1[*]
-  !ERROR: Local coarray must have the SAVE attribute
+  !ERROR: Local coarray must have the SAVE or ALLOCATABLE attribute
   integer :: local[*]
   integer, save :: saved[*] ! ok
   integer :: inited[*] = 1 ! ok
@@ -45,6 +45,6 @@ function func2()
   type(t), pointer :: ptr
   !ERROR: Coarray 'coarr' may not have a coarray potential component '%comp'
   type(t), save :: coarr[*]
-  !ERROR: Local variable 'local' without the SAVE attribute may not have a coarray potential subobject component '%comp'
+  !ERROR: Local variable 'local' without the SAVE or ALLOCATABLE attribute may not have a coarray potential subobject component '%comp'
   type(t) :: local
 end

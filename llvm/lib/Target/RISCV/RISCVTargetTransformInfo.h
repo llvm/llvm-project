@@ -349,15 +349,8 @@ public:
     if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty)))
       return false;
 
-    // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
-    // expanded.
-    // TODO: Promote f16/bf16 fmin/fmax reductions
-    if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
-      return false;
-
     switch (RdxDesc.getRecurrenceKind()) {
     case RecurKind::Add:
-    case RecurKind::FAdd:
     case RecurKind::And:
     case RecurKind::Or:
     case RecurKind::Xor:
@@ -365,11 +358,17 @@ public:
     case RecurKind::SMax:
     case RecurKind::UMin:
     case RecurKind::UMax:
+    case RecurKind::IAnyOf:
     case RecurKind::FMin:
     case RecurKind::FMax:
-    case RecurKind::FMulAdd:
-    case RecurKind::IAnyOf:
+      return true;
     case RecurKind::FAnyOf:
+    case RecurKind::FAdd:
+    case RecurKind::FMulAdd:
+      // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
+      // expanded.
+      if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
+        return false;
       return true;
     default:
       return false;

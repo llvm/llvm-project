@@ -10429,7 +10429,8 @@ getMorePartialOrderingConstrained(Sema &S, FunctionDecl *Fn1, FunctionDecl *Fn2,
 /// candidate is a better candidate than the second (C++ 13.3.3p1).
 bool clang::isBetterOverloadCandidate(
     Sema &S, const OverloadCandidate &Cand1, const OverloadCandidate &Cand2,
-    SourceLocation Loc, OverloadCandidateSet::CandidateSetKind Kind) {
+    SourceLocation Loc, OverloadCandidateSet::CandidateSetKind Kind,
+    bool PartialOverloading) {
   // Define viable functions to be better candidates than non-viable
   // functions.
   if (!Cand2.Viable)
@@ -10666,7 +10667,7 @@ bool clang::isBetterOverloadCandidate(
                         : QualType{},
             Obj2Context ? QualType(Obj2Context->getTypeForDecl(), 0)
                         : QualType{},
-            Cand1.isReversed() ^ Cand2.isReversed())) {
+            Cand1.isReversed() ^ Cand2.isReversed(), PartialOverloading)) {
       return BetterTemplate == Cand1.Function->getPrimaryTemplate();
     }
   }

@@ -315,7 +315,7 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
       // Phi node's operands may have not been visited at this point. We create
       // an empty VPInstruction that we will fix once the whole plain CFG has
       // been built.
-      NewR = new VPWidenPHIRecipe(Phi, nullptr, Phi->getDebugLoc());
+      NewR = new VPWidenPHIRecipe(Phi, nullptr, Phi->getDebugLoc(), "vec.phi");
       VPBB->appendRecipe(NewR);
       if (isHeaderBB(Phi->getParent(), LI->getLoopFor(Phi->getParent()))) {
         // Header phis need to be fixed after the VPBB for the latch has been
@@ -496,9 +496,4 @@ void VPlanHCFGBuilder::buildHierarchicalCFG() {
   // Build Top Region enclosing the plain CFG.
   buildPlainCFG();
   LLVM_DEBUG(Plan.setName("HCFGBuilder: Plain CFG\n"); dbgs() << Plan);
-
-  // Compute plain CFG dom tree for VPLInfo.
-  VPDomTree.recalculate(Plan);
-  LLVM_DEBUG(dbgs() << "Dominator Tree after building the plain CFG.\n";
-             VPDomTree.print(dbgs()));
 }

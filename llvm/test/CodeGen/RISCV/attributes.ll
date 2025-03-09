@@ -84,6 +84,7 @@
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqccmp %s -o - | FileCheck --check-prefix=RV32XQCCMP %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcia %s -o - | FileCheck --check-prefix=RV32XQCIA %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqciac %s -o - | FileCheck --check-prefix=RV32XQCIAC %s
+; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcibm %s -o - | FileCheck --check-prefix=RV32XQCIBM %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicli %s -o - | FileCheck --check-prefix=RV32XQCICLI %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcicm %s -o - | FileCheck --check-prefix=RV32XQCICM %s
 ; RUN: llc -mtriple=riscv32 -mattr=+experimental-xqcics %s -o - | FileCheck --check-prefix=RV32XQCICS %s
@@ -160,6 +161,7 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+zmmul %s -o - | FileCheck --check-prefixes=CHECK,RV64MZMMUL %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a,no-trailing-seq-cst-fence --riscv-abi-attributes %s -o - | FileCheck --check-prefixes=CHECK,RV64A,A6C %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a --riscv-abi-attributes %s -o - | FileCheck --check-prefixes=CHECK,RV64A,A6S %s
+; RUN: llc -mtriple=riscv64 -mattr=+a,experimental-zalasr --riscv-abi-attributes %s -o - | FileCheck --check-prefixes=CHECK,RV64ZALASRA,A7 %s
 ; RUN: llc -mtriple=riscv64 -mattr=+b %s -o - | FileCheck --check-prefixes=CHECK,RV64B %s
 ; RUN: llc -mtriple=riscv64 -mattr=+f %s -o - | FileCheck --check-prefixes=CHECK,RV64F %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d %s -o - | FileCheck --check-prefixes=CHECK,RV64D %s
@@ -404,6 +406,7 @@
 ; RV32XQCCMP: .attribute 5, "rv32i2p1_zca1p0_xqccmp0p1"
 ; RV32XQCIA: .attribute 5, "rv32i2p1_xqcia0p4"
 ; RV32XQCIAC: .attribute 5, "rv32i2p1_zca1p0_xqciac0p3"
+; RV32XQCIBM: .attribute 5, "rv32i2p1_zca1p0_xqcibm0p4"
 ; RV32XQCICLI: .attribute 5, "rv32i2p1_xqcicli0p2"
 ; RV32XQCICM: .attribute 5, "rv32i2p1_zca1p0_xqcicm0p2"
 ; RV32XQCICS: .attribute 5, "rv32i2p1_xqcics0p2"
@@ -608,6 +611,7 @@
 ; RV64ZVFBFWMA: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin1p0_zve32f1p0_zve32x1p0_zvfbfmin1p0_zvfbfwma1p0_zvl32b1p0"
 ; RV64ZACAS: .attribute 5, "rv64i2p1_zaamo1p0_zacas1p0"
 ; RV64ZALASR: .attribute 5, "rv64i2p1_zalasr0p1"
+; RV64ZALASRA: .attribute 5, "rv64i2p1_a2p1_zaamo1p0_zalasr0p1_zalrsc1p0"
 ; RV64ZICFILP: .attribute 5, "rv64i2p1_zicfilp1p0_zicsr2p0"
 ; RV64ZABHA: .attribute 5, "rv64i2p1_zaamo1p0_zabha1p0"
 ; RV64ZVBC32E: .attribute 5, "rv64i2p1_zicsr2p0_zvbc32e0p7_zve32x1p0_zvl32b1p0"
@@ -645,4 +649,5 @@ define i8 @atomic_load_i8_seq_cst(ptr %a) nounwind {
   ret i8 %1
 ; A6S: .attribute 14, 2
 ; A6C: .attribute 14, 1
+; A7: .attribute 14, 3
 }

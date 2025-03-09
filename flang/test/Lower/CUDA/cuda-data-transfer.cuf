@@ -393,4 +393,13 @@ end subroutine
 ! CHECK: %[[ALLOC_TMP:.*]] = fir.allocmem !fir.array<10xi32> {bindc_name = ".tmp", uniq_name = ""}
 ! CHECK: %[[TMP:.*]]:2 = hlfir.declare %[[ALLOC_TMP]](%{{.*}}) {uniq_name = ".tmp"} : (!fir.heap<!fir.array<10xi32>>, !fir.shape<1>) -> (!fir.heap<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>)
 ! CHECK: cuf.data_transfer %[[ADEV_DECL]]#1 to %[[TMP]]#0 {transfer_kind = #cuf.cuda_transfer<device_host>} : !fir.ref<!fir.array<10xi32>>, !fir.heap<!fir.array<10xi32>>
+! CHECK: hlfir.assign 
+
+subroutine sub20()
+  integer, managed :: a(10)
+  a = a + 2 ! ok. No data transfer. Assignment on the host.
+end subroutine
+
+! CHECK-LABEL: func.func @_QPsub20()
+! CHECK-NOT: cuf.data_transfer
 ! CHECK: hlfir.assign

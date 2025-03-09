@@ -44,6 +44,7 @@ def LLVM_Dialect : Dialect {
     static StringRef getNoUndefAttrName() { return "llvm.noundef"; }
     static StringRef getDereferenceableAttrName() { return "llvm.dereferenceable"; }
     static StringRef getDereferenceableOrNullAttrName() { return "llvm.dereferenceable_or_null"; }
+    static StringRef getElementTypeAttrName() { return "llvm.elementtype"; }
     static StringRef getInAllocaAttrName() { return "llvm.inalloca"; }
     static StringRef getInRegAttrName() { return "llvm.inreg"; }
     static StringRef getNestAttrName() { return "llvm.nest"; }

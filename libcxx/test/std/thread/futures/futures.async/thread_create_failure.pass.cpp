@@ -17,9 +17,10 @@
 // There is no way to limit the number of threads on windows
 // UNSUPPORTED: windows
 
-// AIX and macOS seem to limit the number of processes, not threads via RLIMIT_NPROC
+// AIX, FreeBSD, and macOS seem to limit the number of processes, not threads via RLIMIT_NPROC
 // XFAIL: target={{.+}}-aix{{.*}}
 // XFAIL: target={{.+}}-apple-{{.*}}
+// XFAIL: freebsd
 
 // This test makes sure that we fail gracefully in care the thread creation fails. This is only reliably possible on
 // systems that allow limiting the number of threads that can be created. See https://llvm.org/PR125428 for more details

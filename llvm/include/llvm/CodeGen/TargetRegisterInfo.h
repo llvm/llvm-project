@@ -593,7 +593,7 @@ public:
 
   /// Returns true if PhysReg cannot be written to in inline asm statements.
   virtual bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
-                                      unsigned PhysReg) const {
+                                      MCRegister PhysReg) const {
     return false;
   }
 

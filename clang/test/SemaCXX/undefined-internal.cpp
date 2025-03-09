@@ -209,9 +209,11 @@ namespace OverloadUse {
     t<f>(&n, &n); // expected-note {{used here}}
 #if __cplusplus < 201103L
     // expected-warning@-3 {{non-type template argument referring to function 'f' with internal linkage}}
-    // expected-note@-4 {{while substituting explicitly-specified template arguments}}
-    // expected-warning@-4 {{non-type template argument referring to function 'f' with internal linkage}}
+    // expected-note@-7 {{template parameter is declared here}}
     // expected-note@-5 {{while substituting explicitly-specified template arguments}}
+    // expected-warning@-5 {{non-type template argument referring to function 'f' with internal linkage}}
+    // expected-note@-9 {{template parameter is declared here}}
+    // expected-note@-7 {{while substituting explicitly-specified template arguments}}
 #endif
   }
 }

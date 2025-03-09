@@ -360,10 +360,6 @@ void AVRAsmBackend::adjustFixupValue(const MCFixup &Fixup,
   case FK_Data_4:
   case FK_Data_8:
     break;
-
-  case FK_GPRel_4:
-    llvm_unreachable("don't know how to adjust this fixup");
-    break;
   }
 }
 

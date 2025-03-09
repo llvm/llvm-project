@@ -71,7 +71,7 @@ bb:                                               ; preds = %.a
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %.2.0.in = xor i1 %.2.0.in.in, true
   %.2.0 = zext i1 %.2.0.in to i32
   %i11 = add i32 %.2, %.2.0
@@ -151,7 +151,7 @@ bb:                                               ; preds = %.a
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %.2.0.in = xor i1 %.2.0.in.in, true
   %.2.0 = zext i1 %.2.0.in to i32
   %i11 = sub i32 %.2, %.2.0
@@ -234,7 +234,7 @@ bb:                                               ; preds = %.a
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = or i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32
@@ -318,7 +318,7 @@ bb:                                               ; preds = %.a
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = or i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32
@@ -397,7 +397,7 @@ bb:                                               ; preds = %.a
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = and i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32
@@ -476,7 +476,7 @@ bb:                                               ; preds = %.a
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = and i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32

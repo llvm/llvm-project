@@ -994,6 +994,20 @@ define float @ssa_copy(float %0) {
   ret float %2
 }
 
+; CHECK-LABEL:  llvm.func @ptrmask
+define ptr @ptrmask(ptr %0, i64 %1) {
+  ; CHECK: %{{.*}} = llvm.intr.ptrmask %{{.*}} : (!llvm.ptr, i64) -> !llvm.ptr
+  %3 = call ptr @llvm.ptrmask.p0.i64(ptr %0, i64 %1)
+  ret ptr %3
+}
+
+; CHECK-LABEL:  llvm.func @vector_ptrmask
+define <8 x ptr> @vector_ptrmask(<8 x ptr> %0, <8 x i64> %1) {
+  ; CHECK: %{{.*}} = llvm.intr.ptrmask %{{.*}} : (!llvm.vec<8 x ptr>, vector<8xi64>) -> !llvm.vec<8 x ptr>
+  %3 = call <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr> %0, <8 x i64> %1)
+  ret <8 x ptr> %3
+}
+
 ; CHECK-LABEL: experimental_constrained_fptrunc
 define void @experimental_constrained_fptrunc(double %s, <4 x double> %v) {
   ; CHECK: llvm.intr.experimental.constrained.fptrunc %{{.*}} towardzero ignore : f64 to f32
@@ -1247,6 +1261,8 @@ declare ptr @llvm.strip.invariant.group.p0(ptr nocapture)
 
 declare void @llvm.assume(i1)
 declare float @llvm.ssa.copy.f32(float returned)
+declare ptr @llvm.ptrmask.p0.i64(ptr, i64)
+declare <8 x ptr> @llvm.ptrmask.v8p0.v8i64(<8 x ptr>, <8 x i64>)
 declare <vscale x 4 x float> @llvm.vector.insert.nxv4f32.v4f32(<vscale x 4 x float>, <4 x float>, i64)
 declare <4 x float> @llvm.vector.extract.v4f32.nxv4f32(<vscale x 4 x float>, i64)
 declare <4 x half> @llvm.experimental.constrained.fptrunc.v4f16.v4f64(<4 x double>, metadata, metadata)

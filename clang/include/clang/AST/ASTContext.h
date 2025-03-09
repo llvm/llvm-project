@@ -723,7 +723,7 @@ public:
   // (However they are still accessible via TranslationUnitDecl->decls())
   //
   // Changing the scope clears the parent cache, which is expensive to rebuild.
-  std::vector<Decl *> getTraversalScope() const { return TraversalScope; }
+  ArrayRef<Decl *> getTraversalScope() const { return TraversalScope; }
   void setTraversalScope(const std::vector<Decl *> &);
 
   /// Forwards to get node parents from the ParentMapContext. New callers should

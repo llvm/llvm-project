@@ -93,6 +93,9 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.strings.bcmp
     libc.src.strings.bcopy
     libc.src.strings.bzero
+    libc.src.strings.ffs
+    libc.src.strings.ffsl
+    libc.src.strings.ffsll
     libc.src.strings.index
     libc.src.strings.rindex
     libc.src.strings.strcasecmp

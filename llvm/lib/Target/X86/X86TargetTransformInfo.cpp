@@ -7057,7 +7057,7 @@ InstructionCost X86TTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
     // Scale represents reg2 * scale, thus account for 1
     // as soon as we use a second register.
     return AM.Scale != 0;
-  return -1;
+  return InstructionCost::getInvalid();
 }
 
 InstructionCost X86TTIImpl::getBranchMispredictPenalty() const {

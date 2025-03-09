@@ -187,7 +187,6 @@ protected:
 
   const fir::FIRToLLVMPassOptions &options;
 
-  using ConvertToLLVMPattern::match;
   using ConvertToLLVMPattern::matchAndRewrite;
 };
 
@@ -206,20 +205,6 @@ public:
                                 options, benefit) {}
 
   /// Wrappers around the RewritePattern methods that pass the derived op type.
-  void rewrite(mlir::Operation *op, mlir::ArrayRef<mlir::Value> operands,
-               mlir::ConversionPatternRewriter &rewriter) const final {
-    rewrite(mlir::cast<SourceOp>(op),
-            OpAdaptor(operands, mlir::cast<SourceOp>(op)), rewriter);
-  }
-  void rewrite(mlir::Operation *op, mlir::ArrayRef<mlir::ValueRange> operands,
-               mlir::ConversionPatternRewriter &rewriter) const final {
-    auto sourceOp = llvm::cast<SourceOp>(op);
-    rewrite(llvm::cast<SourceOp>(op), OneToNOpAdaptor(operands, sourceOp),
-            rewriter);
-  }
-  llvm::LogicalResult match(mlir::Operation *op) const final {
-    return match(mlir::cast<SourceOp>(op));
-  }
   llvm::LogicalResult
   matchAndRewrite(mlir::Operation *op, mlir::ArrayRef<mlir::Value> operands,
                   mlir::ConversionPatternRewriter &rewriter) const final {
@@ -235,28 +220,12 @@ public:
     return matchAndRewrite(sourceOp, OneToNOpAdaptor(operands, sourceOp),
                            rewriter);
   }
-  /// Rewrite and Match methods that operate on the SourceOp type. These must be
+  /// Methods that operate on the SourceOp type. These must be
   /// overridden by the derived pattern class.
-  virtual llvm::LogicalResult match(SourceOp op) const {
-    llvm_unreachable("must override match or matchAndRewrite");
-  }
-  virtual void rewrite(SourceOp op, OpAdaptor adaptor,
-                       mlir::ConversionPatternRewriter &rewriter) const {
-    llvm_unreachable("must override rewrite or matchAndRewrite");
-  }
-  virtual void rewrite(SourceOp op, OneToNOpAdaptor adaptor,
-                       mlir::ConversionPatternRewriter &rewriter) const {
-    llvm::SmallVector<mlir::Value> oneToOneOperands =
-        getOneToOneAdaptorOperands(adaptor.getOperands());
-    rewrite(op, OpAdaptor(oneToOneOperands, adaptor), rewriter);
-  }
   virtual llvm::LogicalResult
   matchAndRewrite(SourceOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const {
-    if (mlir::failed(match(op)))
-      return mlir::failure();
-    rewrite(op, adaptor, rewriter);
-    return mlir::success();
+    llvm_unreachable("matchAndRewrite is not implemented");
   }
   virtual llvm::LogicalResult
   matchAndRewrite(SourceOp op, OneToNOpAdaptor adaptor,
@@ -268,7 +237,6 @@ public:
 
 private:
   using ConvertFIRToLLVMPattern::matchAndRewrite;
-  using ConvertToLLVMPattern::match;
 };
 
 /// FIR conversion pattern template

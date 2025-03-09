@@ -341,6 +341,19 @@ static DecodeStatus decodeUImmOperandGE(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
+template <unsigned Width, unsigned LowerBound>
+static DecodeStatus decodeUImmPlus1OperandGE(MCInst &Inst, uint32_t Imm,
+                                             int64_t Address,
+                                             const MCDisassembler *Decoder) {
+  assert(isUInt<Width>(Imm) && "Invalid immediate");
+
+  if ((Imm + 1) < LowerBound)
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm + 1));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
                                               int64_t Address,
                                               const MCDisassembler *Decoder) {
@@ -369,6 +382,15 @@ decodeUImmLog2XLenNonZeroOperand(MCInst &Inst, uint32_t Imm, int64_t Address,
   if (Imm == 0)
     return MCDisassembler::Fail;
   return decodeUImmLog2XLenOperand(Inst, Imm, Address, Decoder);
+}
+
+template <unsigned N>
+static DecodeStatus decodeUImmPlus1Operand(MCInst &Inst, uint32_t Imm,
+                                           int64_t Address,
+                                           const MCDisassembler *Decoder) {
+  assert(isUInt<N>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm + 1));
+  return MCDisassembler::Success;
 }
 
 template <unsigned N>
@@ -629,11 +651,11 @@ static constexpr FeatureBitset XRivosFeatureGroup = {
 
 static constexpr FeatureBitset XqciFeatureGroup = {
     RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
-    RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
-    RISCV::FeatureVendorXqcics,  RISCV::FeatureVendorXqcicsr,
-    RISCV::FeatureVendorXqciint, RISCV::FeatureVendorXqcilia,
-    RISCV::FeatureVendorXqcilo,  RISCV::FeatureVendorXqcilsm,
-    RISCV::FeatureVendorXqcisls,
+    RISCV::FeatureVendorXqcibm,  RISCV::FeatureVendorXqcicli,
+    RISCV::FeatureVendorXqcicm,  RISCV::FeatureVendorXqcics,
+    RISCV::FeatureVendorXqcicsr, RISCV::FeatureVendorXqciint,
+    RISCV::FeatureVendorXqcilia, RISCV::FeatureVendorXqcilo,
+    RISCV::FeatureVendorXqcilsm, RISCV::FeatureVendorXqcisls,
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {

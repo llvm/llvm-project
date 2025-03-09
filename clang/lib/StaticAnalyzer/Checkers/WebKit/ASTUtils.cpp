@@ -43,6 +43,10 @@ bool tryToFindPtrOrigin(
         break;
       }
     }
+    if (auto *TempExpr = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
+      if (isSafePtrType(TempExpr->getTypeAsWritten()))
+        return callback(TempExpr, true);
+    }
     if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
       if (auto *RF = POE->getResultExpr()) {
         E = RF;
@@ -140,8 +144,13 @@ bool tryToFindPtrOrigin(
 bool isASafeCallArg(const Expr *E) {
   assert(E);
   if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
-    if (auto *D = dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
+    auto *FoundDecl = Ref->getFoundDecl();
+    if (auto *D = dyn_cast_or_null<VarDecl>(FoundDecl)) {
       if (isa<ParmVarDecl>(D) || D->isLocalVarDecl())
+        return true;
+    } else if (auto *BD = dyn_cast_or_null<BindingDecl>(FoundDecl)) {
+      VarDecl *VD = BD->getHoldingVar();
+      if (VD && (isa<ParmVarDecl>(VD) || VD->isLocalVarDecl()))
         return true;
     }
   }

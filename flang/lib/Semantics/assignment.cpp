@@ -98,6 +98,10 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
       if (!IsCUDADeviceContext(&progUnit) && deviceConstructDepth_ == 0) {
         if (Fortran::evaluate::HasCUDADeviceAttrs(lhs) &&
             Fortran::evaluate::HasCUDAImplicitTransfer(rhs)) {
+          if (GetNbOfCUDAManagedOrUnifiedSymbols(lhs) == 1 &&
+              GetNbOfCUDAManagedOrUnifiedSymbols(rhs) == 1 &&
+              GetNbOfCUDADeviceSymbols(rhs) == 1)
+            return; // This is a special case handled on the host.
           context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
         }
       }

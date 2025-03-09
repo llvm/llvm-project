@@ -456,6 +456,10 @@ mlirOpPrintingFlagsEnableDebugInfo(MlirOpPrintingFlags flags, bool enable,
 MLIR_CAPI_EXPORTED void
 mlirOpPrintingFlagsPrintGenericOpForm(MlirOpPrintingFlags flags);
 
+/// Print the name and location, if NamedLoc, as a prefix to the SSA ID.
+MLIR_CAPI_EXPORTED void
+mlirOpPrintingFlagsPrintNameLocAsPrefix(MlirOpPrintingFlags flags);
+
 /// Use local scope when printing the operation. This allows for using the
 /// printer in a more localized and thread-safe setting, but may not
 /// necessarily be identical to what the IR will look like when dumping

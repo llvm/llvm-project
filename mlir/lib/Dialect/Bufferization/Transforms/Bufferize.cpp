@@ -26,7 +26,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_ONESHOTBUFFERIZE
+#define GEN_PASS_DEF_ONESHOTBUFFERIZEPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -63,11 +63,9 @@ parseHeuristicOption(const std::string &s) {
 }
 
 struct OneShotBufferizePass
-    : public bufferization::impl::OneShotBufferizeBase<OneShotBufferizePass> {
-  OneShotBufferizePass() = default;
-
-  explicit OneShotBufferizePass(const OneShotBufferizationOptions &options)
-      : options(options) {}
+    : public bufferization::impl::OneShotBufferizePassBase<
+          OneShotBufferizePass> {
+  using Base::Base;
 
   void getDependentDialects(DialectRegistry &registry) const override {
     registry
@@ -210,15 +208,6 @@ private:
   std::optional<OneShotBufferizationOptions> options;
 };
 } // namespace
-
-std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass() {
-  return std::make_unique<OneShotBufferizePass>();
-}
-
-std::unique_ptr<Pass> mlir::bufferization::createOneShotBufferizePass(
-    const OneShotBufferizationOptions &options) {
-  return std::make_unique<OneShotBufferizePass>(options);
-}
 
 //===----------------------------------------------------------------------===//
 // BufferizableOpInterface-based Bufferization

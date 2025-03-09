@@ -657,7 +657,7 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
        {"rv64i_xqcisls0p2", "rv64i_xqcia0p4", "rv64i_xqciac0p3",
         "rv64i_xqcicsr0p2", "rv64i_xqcilsm0p2", "rv64i_xqcicm0p2",
         "rv64i_xqcics0p2", "rv64i_xqcicli0p2", "rv64i_xqciint0p2",
-        "rv64i_xqcilo0p2", "rv64i_xqcilia0p2"}) {
+        "rv64i_xqcilo0p2", "rv64i_xqcilia0p2", "rv64i_xqcibm0p4"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
@@ -1127,6 +1127,7 @@ Experimental extensions
     xqccmp               0.1
     xqcia                0.4
     xqciac               0.3
+    xqcibm               0.4
     xqcicli              0.2
     xqcicm               0.2
     xqcics               0.2

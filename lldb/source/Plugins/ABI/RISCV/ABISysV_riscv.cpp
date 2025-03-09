@@ -621,7 +621,8 @@ ABISysV_riscv::GetReturnValueObjectSimple(Thread &thread,
   value.SetCompilerType(compiler_type);
 
   const uint32_t type_flags = compiler_type.GetTypeInfo();
-  const size_t byte_size = compiler_type.GetByteSize(&thread).value_or(0);
+  const size_t byte_size =
+      llvm::expectedToOptional(compiler_type.GetByteSize(&thread)).value_or(0);
   const ArchSpec arch = thread.GetProcess()->GetTarget().GetArchitecture();
   const llvm::Triple::ArchType machine = arch.GetMachine();
 

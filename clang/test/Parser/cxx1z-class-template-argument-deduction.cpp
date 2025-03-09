@@ -11,7 +11,7 @@ A(int) -> A<int>;
 // Make sure we still correctly parse cases where a template can appear without arguments.
 namespace template_template_arg {
   template<template<typename> typename> struct X {};
-  template<typename> struct Y {};
+  template<typename> struct Y {}; // expected-note 2{{template parameter is declared here}}
 
   X<A> xa;
   Y<A> ya; // expected-error {{requires template arguments}}
@@ -36,10 +36,10 @@ namespace template_template_arg {
 
 namespace template_template_arg_pack {
   template<template<typename> typename...> struct XP {};
-  template<typename...> struct YP {};
+  template<typename...> struct YP {}; // expected-note 2{{template parameter is declared here}}
 
   struct Z { template<typename T> struct Q {}; }; // expected-note 2{{here}}
-  
+
   template<typename T> using ZId = Z;
 
   template<typename ...Ts> struct A {
@@ -116,7 +116,7 @@ namespace stmt {
 }
 
 namespace expr {
-  template<typename T> struct U {};
+  template<typename T> struct U {}; // expected-note {{template parameter is declared here}}
   void j() {
     (void)typeid(A); // expected-error{{requires template arguments; argument deduction not allowed here}}
     (void)sizeof(A); // expected-error{{requires template arguments; argument deduction not allowed here}}
@@ -217,7 +217,7 @@ namespace typename_specifier {
 }
 
 namespace parenthesized {
-  template<typename T> struct X { X(T); };                    
+  template<typename T> struct X { X(T); };
   auto n = (X([]{}));
 }
 

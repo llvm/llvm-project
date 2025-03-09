@@ -35,15 +35,22 @@ bool InputStream::read_full(std::ofstream *log, size_t length,
   if (status.Fail())
     return false;
 
-  text += data;
+  text += data.substr(0, length);
   return true;
 }
 
 bool InputStream::read_line(std::ofstream *log, std::string &line) {
   line.clear();
   while (true) {
-    if (!read_full(log, 1, line))
+    std::string next;
+    if (!read_full(log, 1, next))
       return false;
+
+    // If EOF is encoutnered, '' is returned, break out of this loop.
+    if (next.empty())
+      return false;
+
+    line += next;
 
     if (llvm::StringRef(line).ends_with("\r\n"))
       break;
@@ -60,6 +67,7 @@ bool InputStream::read_expected(std::ofstream *log, llvm::StringRef expected) {
     if (log)
       *log << "Warning: Expected '" << expected.str() << "', got '" << result
            << "\n";
+    return false;
   }
   return true;
 }

@@ -40,7 +40,7 @@ RUN cmake -B ./build -G Ninja ./llvm \
 RUN ninja -C ./build stage2-clang-bolt stage2-install-distribution && ninja -C ./build install-distribution
 
 FROM base as ci-container
-    
+
 COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 
 # Need to install curl for hendrikmuhs/ccache-action
@@ -49,7 +49,7 @@ COPY --from=stage1-toolchain $LLVM_SYSROOT $LLVM_SYSROOT
 # Need git for SPIRV-Tools tests.
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    binutils \ 
+    binutils \
     cmake \
     curl \
     git \
@@ -59,7 +59,6 @@ RUN apt-get update && \
     perl-modules \
     python3-psutil \
     sudo \
-
     # These are needed by the premerge pipeline. Pip is used to install
     # dependent python packages and ccache is used for build caching. File and
     # tzdata are used for tests.

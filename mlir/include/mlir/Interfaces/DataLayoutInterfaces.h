@@ -78,6 +78,10 @@ Attribute getDefaultEndianness(DataLayoutEntryInterface entry);
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry);
 
+/// Default handler for mangling mode request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultManglingMode(DataLayoutEntryInterface entry);
+
 /// Default handler for program memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultProgramMemorySpace(DataLayoutEntryInterface entry);
@@ -230,6 +234,9 @@ public:
   /// Returns the memory space used for AllocaOps.
   Attribute getAllocaMemorySpace() const;
 
+  /// Returns the mangling mode.
+  Attribute getManglingMode() const;
+
   /// Returns the memory space used for program memory operations.
   Attribute getProgramMemorySpace() const;
 
@@ -276,6 +283,8 @@ private:
 
   /// Cache for the endianness.
   mutable std::optional<Attribute> endianness;
+  /// Cache for the mangling mode.
+  mutable std::optional<Attribute> manglingMode;
   /// Cache for alloca, global, and program memory spaces.
   mutable std::optional<Attribute> allocaMemorySpace;
   mutable std::optional<Attribute> programMemorySpace;

@@ -243,20 +243,15 @@ class MapInfoFinalizationPass
   /// where necessary, although it does not seem strictly required.
   unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
                                      mlir::Operation *target) {
+    using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
                               mlir::omp::TargetUpdateOp>(target))
       return mapTypeFlag;
 
-    bool hasImplicitMap =
-        (llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
-         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT) ==
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
-
-    return llvm::to_underlying(
-        hasImplicitMap
-            ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT
-            : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+    mapFlags flags = mapFlags::OMP_MAP_TO |
+                     (mapFlags(mapTypeFlag) &
+                      (mapFlags::OMP_MAP_IMPLICIT | mapFlags::OMP_MAP_CLOSE));
+    return llvm::to_underlying(flags);
   }
 
   mlir::omp::MapInfoOp genDescriptorMemberMaps(mlir::omp::MapInfoOp op,

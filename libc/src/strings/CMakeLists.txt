@@ -55,6 +55,36 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  ffs
+  SRCS
+    ffs.cpp
+  HDRS
+    ffs.h
+  DEPENDS
+    libc.src.__support.math_extras
+)
+
+add_entrypoint_object(
+  ffsl
+  SRCS
+    ffsl.cpp
+  HDRS
+    ffsl.h
+  DEPENDS
+    libc.src.__support.math_extras
+)
+
+add_entrypoint_object(
+  ffsll
+  SRCS
+    ffsll.cpp
+  HDRS
+    ffsll.h
+  DEPENDS
+    libc.src.__support.math_extras
+)
+
+add_entrypoint_object(
   index
   SRCS
     index.cpp

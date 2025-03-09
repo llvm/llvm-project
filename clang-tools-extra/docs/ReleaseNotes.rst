@@ -58,6 +58,9 @@ Semantic Highlighting
 Compile flags
 ^^^^^^^^^^^^^
 
+- Added `BuiltinHeaders` config key which controls whether clangd's built-in
+  headers are used or ones extracted from the driver.
+
 Hover
 ^^^^^
 
@@ -112,7 +115,7 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unchecked-optional-access>` fixing false
   positives from smart pointer accessors repeated in checking ``has_value``
   and accessing ``value``. The option `IgnoreSmartPointerDereference` should
-  no longer be needed and will be removed. Also fixing false positive from 
+  no longer be needed and will be removed. Also fixing false positive from
   const reference accessors to objects containing optional member.
 
 - Improved :doc:`bugprone-unsafe-functions
@@ -122,11 +125,24 @@ Changes in existing checks
 - Improved :doc:`misc-const-correctness
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
-  checking.
+  checking and fixing false positives when modifying variant by ``operator[]``
+  with template in parameters.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
   examples and fixing some macro related false positives.
+  
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
+  warnings logic for ``nullptr`` in ``std::find``.
+
+  - Improved :doc:`misc-unused-using-decls
+  <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
+  on ``operator""`` with template parameters.
+
+- Improved :doc:`misc-use-internal-linkage
+  <clang-tidy/checks/misc/use-internal-linkage>` check by fix false positives
+  for function or variable in header file which contains macro expansion.
 
 - Improved :doc:`modernize-use-starts-ends-with
   <clang-tidy/checks/modernize/use-starts-ends-with>` check by adding more

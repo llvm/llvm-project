@@ -400,8 +400,9 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
     // A given point might be forked due to shape conditions are not met.
     for (MIRef I : InsertPoints) {
       // Make sure we insert ldtilecfg after the last shape def in MBB.
-      if (ShapeBBs.count(I.MBB) && I < ShapeBBs[I.MBB].back())
-        I = ShapeBBs[I.MBB].back();
+      auto It = ShapeBBs.find(I.MBB);
+      if (It != ShapeBBs.end() && I < It->second.back())
+        I = It->second.back();
       // There're chances the MBB is sunk more than once. Record it to avoid
       // multi insert.
       if (VisitedOrInserted.insert(I).second) {
