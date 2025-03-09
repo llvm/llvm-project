@@ -222,15 +222,26 @@ public:
              StringRef GroupDescription) {
     sys::SmartScopedLock<true> L(timerLock());
 
-    std::pair<TimerGroup*, Name2TimerMap> &GroupEntry = Map[GroupName];
-
-    if (!GroupEntry.first)
-      GroupEntry.first = new TimerGroup(GroupName, GroupDescription);
-
+    std::pair<TimerGroup *, Name2TimerMap> &GroupEntry =
+        getGroupEntry(GroupName, GroupDescription);
     Timer &T = GroupEntry.second[Name];
     if (!T.isInitialized())
       T.init(Name, Description, *GroupEntry.first);
     return T;
+  }
+
+  TimerGroup &getTimerGroup(StringRef GroupName, StringRef GroupDescription) {
+    return *getGroupEntry(GroupName, GroupDescription).first;
+  }
+
+private:
+  std::pair<TimerGroup *, Name2TimerMap> &
+  getGroupEntry(StringRef GroupName, StringRef GroupDescription) {
+    std::pair<TimerGroup *, Name2TimerMap> &GroupEntry = Map[GroupName];
+    if (!GroupEntry.first)
+      GroupEntry.first = new TimerGroup(GroupName, GroupDescription);
+
+    return GroupEntry;
   }
 };
 
@@ -239,10 +250,23 @@ public:
 NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef Description,
                                    StringRef GroupName,
                                    StringRef GroupDescription, bool Enabled)
-    : TimeRegion(!Enabled
-                     ? nullptr
-                     : &namedGroupedTimers().get(Name, Description, GroupName,
-                                                 GroupDescription)) {}
+    : TimeRegion(!Enabled ? nullptr
+                          : &getNamedGroupTimer(Name, Description, GroupName,
+                                                GroupDescription)) {}
+
+Timer &NamedRegionTimer::getNamedGroupTimer(StringRef Name,
+                                            StringRef Description,
+                                            StringRef GroupName,
+                                            StringRef GroupDescription) {
+  return namedGroupedTimers().get(Name, Description, GroupName,
+                                  GroupDescription);
+}
+
+TimerGroup &
+NamedRegionTimer::getNamedGroupTimerGroup(StringRef GroupName,
+                                          StringRef GroupDescription) {
+  return namedGroupedTimers().getTimerGroup(GroupName, GroupDescription);
+}
 
 //===----------------------------------------------------------------------===//
 //   TimerGroup Implementation
