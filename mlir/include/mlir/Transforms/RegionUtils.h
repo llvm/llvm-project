@@ -15,6 +15,7 @@
 #include "llvm/ADT/SetVector.h"
 
 namespace mlir {
+class DominanceInfo;
 class RewriterBase;
 
 /// Check if all values in the provided range are defined above the `limit`
@@ -68,6 +69,16 @@ SmallVector<Value> makeRegionIsolatedFromAbove(
     RewriterBase &rewriter, Region &region,
     llvm::function_ref<bool(Operation *)> cloneOperationIntoRegion =
         [](Operation *) { return false; });
+
+/// Move SSA values used within an operation before an insertion point,
+/// so that the operation itself (or its replacement) can be moved to
+/// the insertion point. Current support is only for movement of
+/// dependencies of `op` before `insertionPoint` in the same basic block.
+LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
+                                        Operation *insertionPoint,
+                                        DominanceInfo &dominance);
+LogicalResult moveOperationDependencies(RewriterBase &rewriter, Operation *op,
+                                        Operation *insertionPoint);
 
 /// Run a set of structural simplifications over the given regions. This
 /// includes transformations like unreachable block elimination, dead argument
