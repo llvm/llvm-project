@@ -9,8 +9,9 @@
 #ifndef LLVM_LIBC_SRC_SCHED_SCHED_GETPARAM_H
 #define LLVM_LIBC_SRC_SCHED_SCHED_GETPARAM_H
 
-#include "src/__support/macros/config.h"
-#include <sched.h>
+#include "hdr/types/pid_t.h"
+#include "hdr/types/struct_sched_param.h"
+#include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 
 namespace LIBC_NAMESPACE_DECL {
 
