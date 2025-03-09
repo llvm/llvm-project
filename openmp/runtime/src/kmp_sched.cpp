@@ -542,6 +542,10 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
   nth = th->th.th_team_nproc;
   team = th->th.th_team;
   KMP_DEBUG_ASSERT(th->th.th_teams_microtask); // we are in the teams construct
+  // skip optional serialized teams to prevent this being called after
+  // __kmp_serialized_parallel from using the wrong teams information
+  while (team->t.t_serialized)
+    team = team->t.t_parent;
   nteams = th->th.th_teams_size.nteams;
   team_id = team->t.t_master_tid;
   KMP_DEBUG_ASSERT(nteams == (kmp_uint32)team->t.t_parent->t.t_nproc);
