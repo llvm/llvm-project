@@ -41,6 +41,12 @@ void Negative() {
   {
     std::lock_guard<std::mutex> l(m, std::adopt_lock);
   }
+
+  { 
+    std::lock_guard<std::mutex> l3(m);
+    int a = 0;
+    std::lock_guard<std::mutex> l4(m, std::adopt_lock);
+  }
 }
 
 void PositiveInsideArg(std::mutex &m1, std::mutex &m2, std::mutex &m3) {
