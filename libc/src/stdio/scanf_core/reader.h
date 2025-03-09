@@ -11,13 +11,16 @@
 
 #include "hdr/types/FILE.h"
 
-#ifndef LIBC_COPT_STDIO_USE_SYSTEM_FILE
+#if !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE) && !defined(LIBC_TARGET_OS_IS_BAREMETAL)
 #include "src/__support/File/file.h"
 #endif
 
 #if defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "src/stdio/getc.h"
 #include "src/stdio/ungetc.h"
+#elif defined(LIBC_TARGET_OS_IS_BAREMETAL)
+#include "src/stdio/getchar.h"
+#include "hdr/stdio_macros.h" // for EOF.
 #endif
 
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
@@ -46,6 +49,28 @@ LIBC_INLINE int getc(void *f) {
 LIBC_INLINE void ungetc(int c, void *f) {
   LIBC_NAMESPACE::ungetc(c, reinterpret_cast<::FILE *>(f));
 }
+
+#elif defined(LIBC_TARGET_OS_IS_BAREMETAL)
+// The baremetal build does not currently support file operations, but it does
+// declare pointers to the stanard FILE streams. The user just needs to declare
+// "FILE *stdin;" somwhere. That is not much to ask since a user already has to
+// define cookie structures for stdio.
+extern "C" FILE *stdin;
+
+LIBC_INLINE int getc(void *f) {
+  if (f == stdin) {
+    int c = getchar();
+    if (EOF == c)
+      c = '\0';
+
+    return c;
+  }
+
+  return '\0';
+}
+
+// Baremetal does not currently provide an ungetc(), so the Reader will need to
+// handle that for now.
 
 #elif !defined(LIBC_COPT_STDIO_USE_SYSTEM_FILE)
 
@@ -89,6 +114,10 @@ class Reader {
   ReadBuffer *rb;
   void *input_stream = nullptr;
   size_t cur_chars_read = 0;
+#if defined(LIBC_TARGET_OS_IS_BAREMETAL)
+  // Baremetal does not provide an ungetc(), so track that ourselves for now.
+  int unget_char = EOF;
+#endif
 
 public:
   // TODO: Set buff_len with a proper constant
@@ -107,6 +136,13 @@ public:
       ++(rb->buff_cur);
       return output;
     }
+#if defined(LIBC_TARGET_OS_IS_BAREMETAL)
+    if (EOF != unget_char) {
+      char output = (char)unget_char;
+      unget_char = EOF;
+      return output;
+    }
+#endif
     // This should reset the buffer if applicable.
     return static_cast<char>(reader_internal::getc(input_stream));
   }
@@ -123,7 +159,11 @@ public:
       --(rb->buff_cur);
       return;
     }
+#if defined(LIBC_TARGET_OS_IS_BAREMETAL)
+    unget_char = c;
+#else
     reader_internal::ungetc(static_cast<int>(c), input_stream);
+#endif
   }
 
   LIBC_INLINE size_t chars_read() { return cur_chars_read; }

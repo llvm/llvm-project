@@ -16,6 +16,10 @@ if(LIBC_TARGET_OS_IS_GPU)
     libc.src.stdio.ungetc
     libc.src.stdio.ferror
   )
+elseif(LIBC_TARGET_OS_IS_BAREMETAL)
+  list(APPEND file_deps
+    libc.src.stdio.getchar
+  )
 elseif(LLVM_LIBC_FULL_BUILD)
   list(APPEND file_deps
     libc.src.__support.File.file
@@ -53,13 +57,6 @@ add_header_library(
     libc.src.__support.CPP.bitset
     libc.src.__support.CPP.string_view
 )
-
-if(NOT(TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD AND
-  (NOT LIBC_TARGET_OS_IS_GPU))
-  # Not all platforms have a file implementation. If file is unvailable, and a
-  # full build is requested, then we must skip all file based scanf sections.
-  return()
-endif()
 
 add_object_library(
   scanf_main
@@ -116,6 +113,13 @@ add_object_library(
     ${file_deps}
   ${use_system_file}
 )
+
+if(NOT(TARGET libc.src.__support.File.file) AND LLVM_LIBC_FULL_BUILD AND
+  (NOT LIBC_TARGET_OS_IS_GPU))
+  # Not all platforms have a file implementation. If file is unvailable, and a
+  # full build is requested, then we must skip all file based scanf sections.
+  return()
+endif()
 
 #TODO: condense the file-related code as possible.
 add_header_library(
