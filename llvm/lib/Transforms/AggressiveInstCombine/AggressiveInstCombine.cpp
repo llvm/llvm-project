@@ -1144,14 +1144,7 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
     return true;
   }
 
-  // Handle constant string case
-  StringRef Str;
-  Value *Base = Call->getArgOperand(0);
-  if (!getConstantStringInfo(Base, Str, /*TrimAtNul=*/false))
-    return false;
-  
-  // ... rest of the existing constant string handling ...
-  // ... existing code ...
+  return false;
 }
 
 static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
