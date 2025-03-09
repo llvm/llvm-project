@@ -11,6 +11,7 @@
 #include <memory>
 
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/SandboxIR/Context.h"
@@ -24,6 +25,7 @@ class SandboxVectorizerPass : public PassInfoMixin<SandboxVectorizerPass> {
   TargetTransformInfo *TTI = nullptr;
   AAResults *AA = nullptr;
   ScalarEvolution *SE = nullptr;
+  OptimizationRemarkEmitter *ORE = nullptr;
   // NOTE: We define the Context as a pass-scope object instead of local object
   // in runOnFunction() because the passes defined in the pass-manager need
   // access to it for registering/deregistering callbacks during construction
