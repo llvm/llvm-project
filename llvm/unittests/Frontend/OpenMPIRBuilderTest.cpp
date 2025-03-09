@@ -198,6 +198,78 @@ static omp::ScheduleKind getSchedKind(omp::OMPScheduleType SchedType) {
   }
 }
 
+/// Look for all instructions that may have written the value at \p Ptr when
+/// executing \p StartFrom. In other words, computes the reaching defintions
+/// without relying MemorySSA in a naive way.
+static void
+followBackwardsLookForWrites(Value *Ptr, BasicBlock *BB,
+                             BasicBlock::reverse_iterator StartFrom,
+                             DenseSet<BasicBlock *> &Visited,
+                             SmallVectorImpl<Instruction *> &WriteAccs) {
+  for (Instruction &I : make_range(StartFrom, BB->rend())) {
+    if (!I.mayHaveSideEffects())
+      continue;
+    if (isa<LoadInst>(I))
+      continue;
+
+    if (auto *SI = dyn_cast<StoreInst>(&I)) {
+      if (SI->getPointerOperand() == Ptr) {
+        WriteAccs.push_back(SI);
+        return;
+      }
+      continue;
+    } else if (auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(&I)) {
+      if (CmpXchg->getPointerOperand() == Ptr) {
+        WriteAccs.push_back(CmpXchg);
+        return;
+      }
+    } else if (auto *ARMW = dyn_cast<AtomicRMWInst>(&I)) {
+      if (ARMW->getPointerOperand() == Ptr) {
+        WriteAccs.push_back(ARMW);
+        return;
+      }
+    }
+
+    // TODO: Consider other instructions that may write to \p Ptr.
+  }
+
+  // If there is no instruction in \p BB writing to \p Ptr, look further into \p
+  // BB's predecessors.
+  Visited.insert(BB);
+  for (BasicBlock *Pred : predecessors(BB)) {
+    if (Visited.contains(Pred))
+      continue;
+
+    followBackwardsLookForWrites(Ptr, Pred, Pred->rbegin(), Visited, WriteAccs);
+  }
+};
+
+/// Compute which instruction has written the value at \p Ptr when executing \p
+/// BeforeInst. Assumes that there is just a single such instruction.
+static Instruction *getUniquePreviousStore(Value *Ptr,
+                                           Instruction *BeforeInst) {
+  DenseSet<BasicBlock *> Visited;
+  SmallVector<Instruction *, 1> WriteAccs;
+  followBackwardsLookForWrites(Ptr, BeforeInst->getParent(),
+                               BeforeInst->getReverseIterator(), Visited,
+                               WriteAccs);
+  if (WriteAccs.size() == 1)
+    return WriteAccs.front();
+  return nullptr;
+}
+
+/// Compute which instruction has written the value at \p Ptr when execution of
+/// \p FromBB ended. Assumes that there is just a single such instruction.
+static Instruction *getUniquePreviousStore(Value *Ptr, BasicBlock *FromBB) {
+  DenseSet<BasicBlock *> Visited;
+  SmallVector<Instruction *, 1> WriteAccs;
+  followBackwardsLookForWrites(Ptr, FromBB, FromBB->rbegin(), Visited,
+                               WriteAccs);
+  if (WriteAccs.size() == 1)
+    return WriteAccs.front();
+  return nullptr;
+}
+
 class OpenMPIRBuilderTest : public testing::Test {
 protected:
   void SetUp() override {
@@ -3790,27 +3862,56 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicReadFlt) {
   OpenMPIRBuilder::AtomicOpValue X = {XVal, Float32, false, false};
   OpenMPIRBuilder::AtomicOpValue V = {VVal, Float32, false, false};
 
-  Builder.restoreIP(OMPBuilder.createAtomicRead(Loc, X, V, AO));
-
-  IntegerType *IntCastTy =
-      IntegerType::get(M->getContext(), Float32->getScalarSizeInBits());
-
-  LoadInst *AtomicLoad = cast<LoadInst>(VVal->getNextNode());
-  EXPECT_TRUE(AtomicLoad->isAtomic());
-  EXPECT_EQ(AtomicLoad->getPointerOperand(), XVal);
-
-  BitCastInst *CastToFlt = cast<BitCastInst>(AtomicLoad->getNextNode());
-  EXPECT_EQ(CastToFlt->getSrcTy(), IntCastTy);
-  EXPECT_EQ(CastToFlt->getDestTy(), Float32);
-  EXPECT_EQ(CastToFlt->getOperand(0), AtomicLoad);
-
-  StoreInst *StoreofAtomic = cast<StoreInst>(CastToFlt->getNextNode());
-  EXPECT_EQ(StoreofAtomic->getValueOperand(), CastToFlt);
-  EXPECT_EQ(StoreofAtomic->getPointerOperand(), VVal);
+  ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterReadIP,
+                       OMPBuilder.createAtomicRead(Loc, X, V, AO));
+  Builder.restoreIP(AfterReadIP);
 
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  {
+    // clang-format off
+    // %AtomicVar = alloca float, align 4
+    // %AtomicRead = alloca float, align 4
+    // %.atomic.load = load atomic float, ptr %AtomicVar monotonic, align 4, !dbg !5
+    // store float %.atomic.load, ptr %AtomicRead, align 4, !dbg !5
+    // clang-format on
+
+    // Follow use-def and load-store chains to discover instructions
+    StoreInst *Store = cast<StoreInst>(getUniquePreviousStore(VVal, BB));
+    LoadInst *AtomicLoad = cast<LoadInst>(Store->getValueOperand());
+    AllocaInst *Atomicvar = cast<AllocaInst>(AtomicLoad->getPointerOperand());
+
+    // %AtomicVar = alloca float, align 4
+    EXPECT_EQ(Atomicvar->getParent(), BB);
+    EXPECT_FALSE(Atomicvar->isArrayAllocation());
+    EXPECT_EQ(Atomicvar->getAddressSpace(), 0);
+    EXPECT_EQ(Atomicvar->getAlign(), 4);
+    EXPECT_TRUE(Atomicvar->getAllocatedType()->isFloatTy());
+
+    // %AtomicRead = alloca float, align 4
+    EXPECT_EQ(VVal->getParent(), BB);
+    EXPECT_FALSE(VVal->isArrayAllocation());
+    EXPECT_EQ(VVal->getAddressSpace(), 0);
+    EXPECT_EQ(VVal->getAlign(), 4);
+    EXPECT_TRUE(VVal->getAllocatedType()->isFloatTy());
+
+    // %.atomic.load = load atomic float, ptr %AtomicVar monotonic, align 4,
+    // !dbg !5
+    EXPECT_EQ(AtomicLoad->getParent(), BB);
+    EXPECT_FALSE(AtomicLoad->isVolatile());
+    EXPECT_EQ(AtomicLoad->getAlign(), 4);
+    EXPECT_EQ(AtomicLoad->getOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(AtomicLoad->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(AtomicLoad->getPointerOperand(), Atomicvar);
+
+    // store float %.atomic.load, ptr %AtomicRead, align 4, !dbg !5
+    EXPECT_EQ(Store->getParent(), BB);
+    EXPECT_TRUE(Store->isSimple());
+    EXPECT_EQ(Store->getValueOperand(), AtomicLoad);
+    EXPECT_EQ(Store->getPointerOperand(), VVal);
+  }
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicReadInt) {
@@ -3832,7 +3933,9 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicReadInt) {
 
   BasicBlock *EntryBB = BB;
 
-  Builder.restoreIP(OMPBuilder.createAtomicRead(Loc, X, V, AO));
+  ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterReadIP,
+                       OMPBuilder.createAtomicRead(Loc, X, V, AO));
+  Builder.restoreIP(AfterReadIP);
   LoadInst *AtomicLoad = nullptr;
   StoreInst *StoreofAtomic = nullptr;
 
@@ -3874,25 +3977,73 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteFlt) {
   Type *Float32 = Type::getFloatTy(Ctx);
   AllocaInst *XVal = Builder.CreateAlloca(Float32);
   XVal->setName("AtomicVar");
+  OpenMPIRBuilder::InsertPointTy AllocaIP(XVal->getParent(),
+                                          XVal->getIterator());
   OpenMPIRBuilder::AtomicOpValue X = {XVal, Float32, false, false};
   AtomicOrdering AO = AtomicOrdering::Monotonic;
   Constant *ValToWrite = ConstantFP::get(Float32, 1.0);
 
-  Builder.restoreIP(OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO));
-
-  IntegerType *IntCastTy =
-      IntegerType::get(M->getContext(), Float32->getScalarSizeInBits());
-
-  Value *ExprCast = Builder.CreateBitCast(ValToWrite, IntCastTy);
-
-  StoreInst *StoreofAtomic = cast<StoreInst>(XVal->getNextNode());
-  EXPECT_EQ(StoreofAtomic->getValueOperand(), ExprCast);
-  EXPECT_EQ(StoreofAtomic->getPointerOperand(), XVal);
-  EXPECT_TRUE(StoreofAtomic->isAtomic());
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterWriteIP,
+      OMPBuilder.createAtomicWrite(Loc, AllocaIP, X, ValToWrite, AO));
+  Builder.restoreIP(AfterWriteIP);
 
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  {
+    // %AtomicVar.atomic.val = alloca float, align 4
+    // %AtomicVar = alloca float, align 4
+    // store float 1.000000e+00, ptr %AtomicVar.atomic.val, align 4
+    // %.atomic.val = load float, ptr %AtomicVar.atomic.val, align 4
+    // store atomic float %.atomic.val, ptr %AtomicVar monotonic, align 4
+
+    // Follow use-def and load-store chains to discover instructions
+    StoreInst *Store1 = cast<StoreInst>(getUniquePreviousStore(XVal, BB));
+    LoadInst *AtomicVal = cast<LoadInst>(Store1->getValueOperand());
+    AllocaInst *AtomicvarAtomicVal =
+        cast<AllocaInst>(AtomicVal->getPointerOperand());
+    StoreInst *Store2 =
+        cast<StoreInst>(getUniquePreviousStore(AtomicvarAtomicVal, AtomicVal));
+
+    // %AtomicVar.atomic.val = alloca float, align 4
+    EXPECT_EQ(AtomicvarAtomicVal->getParent(), BB);
+    EXPECT_FALSE(AtomicvarAtomicVal->isArrayAllocation());
+    EXPECT_EQ(AtomicvarAtomicVal->getAddressSpace(), 0);
+    EXPECT_EQ(AtomicvarAtomicVal->getAlign(), 4);
+    EXPECT_TRUE(AtomicvarAtomicVal->getAllocatedType()->isFloatTy());
+
+    // %AtomicVar = alloca float, align 4
+    EXPECT_EQ(XVal->getParent(), BB);
+    EXPECT_FALSE(XVal->isArrayAllocation());
+    EXPECT_EQ(XVal->getAddressSpace(), 0);
+    EXPECT_EQ(XVal->getAlign(), 4);
+    EXPECT_TRUE(XVal->getAllocatedType()->isFloatTy());
+
+    // store float 1.000000e+00, ptr %AtomicVar.atomic.val, align 4
+    EXPECT_EQ(Store2->getParent(), BB);
+    EXPECT_TRUE(Store2->isSimple());
+    EXPECT_FLOAT_EQ(cast<ConstantFP>(Store2->getValueOperand())
+                        ->getValueAPF()
+                        .convertToFloat(),
+                    1.0f);
+    EXPECT_EQ(Store2->getPointerOperand(), AtomicvarAtomicVal);
+
+    // %.atomic.val = load float, ptr %AtomicVar.atomic.val, align 4
+    EXPECT_EQ(AtomicVal->getParent(), BB);
+    EXPECT_TRUE(AtomicVal->isSimple());
+    EXPECT_EQ(AtomicVal->getPointerOperand(), AtomicvarAtomicVal);
+
+    // store atomic float %.atomic.val, ptr %AtomicVar monotonic, align 4
+    EXPECT_EQ(Store1->getParent(), BB);
+    EXPECT_FALSE(Store1->isVolatile());
+    EXPECT_EQ(Store1->getAlign(), 4);
+    EXPECT_EQ(Store1->getOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(Store1->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(Store1->getValueOperand(), AtomicVal);
+    EXPECT_EQ(Store1->getPointerOperand(), XVal);
+  }
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteInt) {
@@ -3907,32 +4058,76 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicWriteInt) {
   IntegerType *Int32 = Type::getInt32Ty(Ctx);
   AllocaInst *XVal = Builder.CreateAlloca(Int32);
   XVal->setName("AtomicVar");
+  OpenMPIRBuilder::InsertPointTy AllocaIP(XVal->getParent(),
+                                          XVal->getIterator());
   OpenMPIRBuilder::AtomicOpValue X = {XVal, Int32, false, false};
   AtomicOrdering AO = AtomicOrdering::Monotonic;
   ConstantInt *ValToWrite = ConstantInt::get(Type::getInt32Ty(Ctx), 1U);
 
   BasicBlock *EntryBB = BB;
 
-  Builder.restoreIP(OMPBuilder.createAtomicWrite(Loc, X, ValToWrite, AO));
-
-  StoreInst *StoreofAtomic = nullptr;
-
-  for (Instruction &Cur : *EntryBB) {
-    if (isa<StoreInst>(Cur)) {
-      StoreofAtomic = cast<StoreInst>(&Cur);
-      if (StoreofAtomic->getPointerOperand() == XVal)
-        continue;
-      StoreofAtomic = nullptr;
-    }
-  }
-
-  EXPECT_NE(StoreofAtomic, nullptr);
-  EXPECT_TRUE(StoreofAtomic->isAtomic());
-  EXPECT_EQ(StoreofAtomic->getValueOperand(), ValToWrite);
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterWriteIP,
+      OMPBuilder.createAtomicWrite(Loc, AllocaIP, X, ValToWrite, AO));
+  Builder.restoreIP(AfterWriteIP);
 
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  {
+    // %AtomicVar.atomic.val = alloca i32, align 4
+    // %AtomicVar = alloca i32, align 4
+    // store i32 1, ptr %AtomicVar.atomic.val, align 4
+    // %.atomic.val = load i32, ptr %AtomicVar.atomic.val, align 4
+    // store atomic i32 %.atomic.val, ptr %AtomicVar monotonic, align 4
+
+    // Follow use-def and load-store chains to discover instructions
+    StoreInst *Store1 = cast<StoreInst>(getUniquePreviousStore(XVal, EntryBB));
+    LoadInst *AtomicVal = cast<LoadInst>(Store1->getValueOperand());
+    AllocaInst *AtomicvarAtomicVal =
+        cast<AllocaInst>(AtomicVal->getPointerOperand());
+    StoreInst *Store2 =
+        cast<StoreInst>(getUniquePreviousStore(AtomicvarAtomicVal, AtomicVal));
+
+    // %AtomicVar.atomic.val = alloca i32, align 4
+    EXPECT_EQ(AtomicvarAtomicVal->getParent(), EntryBB);
+    EXPECT_FALSE(AtomicvarAtomicVal->isArrayAllocation());
+    EXPECT_EQ(AtomicvarAtomicVal->getAddressSpace(), 0);
+    EXPECT_EQ(AtomicvarAtomicVal->getAlign(), 4);
+    Type *AtomicvarAtomicValTy = AtomicvarAtomicVal->getAllocatedType();
+    EXPECT_TRUE(AtomicvarAtomicValTy->isIntegerTy());
+    EXPECT_EQ(AtomicvarAtomicValTy->getIntegerBitWidth(), 32);
+
+    // %AtomicVar = alloca i32, align 4
+    EXPECT_EQ(XVal->getParent(), EntryBB);
+    EXPECT_FALSE(XVal->isArrayAllocation());
+    EXPECT_EQ(XVal->getAddressSpace(), 0);
+    EXPECT_EQ(XVal->getAlign(), 4);
+    Type *XValTy = XVal->getAllocatedType();
+    EXPECT_TRUE(XValTy->isIntegerTy());
+    EXPECT_EQ(XValTy->getIntegerBitWidth(), 32);
+
+    // store i32 1, ptr %AtomicVar.atomic.val, align 4
+    EXPECT_EQ(Store2->getParent(), EntryBB);
+    EXPECT_TRUE(Store2->isSimple());
+    EXPECT_EQ(cast<ConstantInt>(Store2->getValueOperand())->getZExtValue(), 1);
+    EXPECT_EQ(Store2->getPointerOperand(), AtomicvarAtomicVal);
+
+    // %.atomic.val = load i32, ptr %AtomicVar.atomic.val, align 4
+    EXPECT_EQ(AtomicVal->getParent(), EntryBB);
+    EXPECT_TRUE(AtomicVal->isSimple());
+    EXPECT_EQ(AtomicVal->getPointerOperand(), AtomicvarAtomicVal);
+
+    // store atomic i32 %.atomic.val, ptr %AtomicVar monotonic, align 4
+    EXPECT_EQ(Store1->getParent(), EntryBB);
+    EXPECT_FALSE(Store1->isVolatile());
+    EXPECT_EQ(Store1->getAlign(), 4);
+    EXPECT_EQ(Store1->getOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(Store1->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(Store1->getValueOperand(), AtomicVal);
+    EXPECT_EQ(Store1->getPointerOperand(), XVal);
+  }
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdate) {
@@ -3946,7 +4141,8 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdate) {
   IntegerType *Int32 = Type::getInt32Ty(M->getContext());
   AllocaInst *XVal = Builder.CreateAlloca(Int32);
   XVal->setName("AtomicVar");
-  Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 0U), XVal);
+  ConstantInt *ExpectedVal = ConstantInt::get(Type::getInt32Ty(Ctx), 0U);
+  Builder.CreateStore(ExpectedVal, XVal);
   OpenMPIRBuilder::AtomicOpValue X = {XVal, Int32, false, false};
   AtomicOrdering AO = AtomicOrdering::Monotonic;
   ConstantInt *ConstVal = ConstantInt::get(Type::getInt32Ty(Ctx), 1U);
@@ -3968,41 +4164,173 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdate) {
                                                      AO, RMWOp, UpdateOp,
                                                      IsXLHSInRHSPart));
   Builder.restoreIP(AfterIP);
-  BasicBlock *ContBB = EntryBB->getSingleSuccessor();
-  BranchInst *ContTI = dyn_cast<BranchInst>(ContBB->getTerminator());
-  EXPECT_NE(ContTI, nullptr);
-  BasicBlock *EndBB = ContTI->getSuccessor(0);
-  EXPECT_TRUE(ContTI->isConditional());
-  EXPECT_EQ(ContTI->getSuccessor(1), ContBB);
-  EXPECT_NE(EndBB, nullptr);
-
-  PHINode *Phi = dyn_cast<PHINode>(&ContBB->front());
-  EXPECT_NE(Phi, nullptr);
-  EXPECT_EQ(Phi->getNumIncomingValues(), 2U);
-  EXPECT_EQ(Phi->getIncomingBlock(0), EntryBB);
-  EXPECT_EQ(Phi->getIncomingBlock(1), ContBB);
-
-  EXPECT_EQ(Sub->getNumUses(), 1U);
-  StoreInst *St = dyn_cast<StoreInst>(Sub->user_back());
-  AllocaInst *UpdateTemp = dyn_cast<AllocaInst>(St->getPointerOperand());
-
-  ExtractValueInst *ExVI1 =
-      dyn_cast<ExtractValueInst>(Phi->getIncomingValueForBlock(ContBB));
-  EXPECT_NE(ExVI1, nullptr);
-  AtomicCmpXchgInst *CmpExchg =
-      dyn_cast<AtomicCmpXchgInst>(ExVI1->getAggregateOperand());
-  EXPECT_NE(CmpExchg, nullptr);
-  EXPECT_EQ(CmpExchg->getPointerOperand(), XVal);
-  EXPECT_EQ(CmpExchg->getCompareOperand(), Phi);
-  EXPECT_EQ(CmpExchg->getSuccessOrdering(), AtomicOrdering::Monotonic);
-
-  LoadInst *Ld = dyn_cast<LoadInst>(CmpExchg->getNewValOperand());
-  EXPECT_NE(Ld, nullptr);
-  EXPECT_EQ(UpdateTemp, Ld->getPointerOperand());
+  auto ExitBB = Builder.GetInsertBlock();
 
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  {
+    // clang-format off
+    //   %AtomicVar.atomic.expected.ptr = alloca i32, align 4
+    //   %AtomicVar.atomic.desired.ptr = alloca i32, align 4
+    //   %AtomicVar = alloca i32, align 4
+    //   store i32 0, ptr %AtomicVar, align 4
+    //   %.atomic.load = load atomic i32, ptr %AtomicVar monotonic, align 4
+    //   store i32 %.atomic.load, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   br label %.atomic.retry
+    //
+    // .atomic.retry:                                    ; preds = %.atomic.retry, %1
+    //   %AtomicVar.atomic.orig = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %2 = sub i32 1, %AtomicVar.atomic.orig
+    //   store i32 %2, ptr %AtomicVar.atomic.desired.ptr, align 4
+    //   %.cmpxchg.expected = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %.cmpxchg.desired = load i32, ptr %AtomicVar.atomic.desired.ptr, align 4
+    //   %.cmpxchg.pair = cmpxchg weak ptr %AtomicVar, i32 %.cmpxchg.expected, i32 %.cmpxchg.desired monotonic monotonic, align 4
+    //   %.cmpxchg.prev = extractvalue { i32, i1 } %.cmpxchg.pair, 0
+    //   store i32 %.cmpxchg.prev, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
+    //   br i1 %.cmpxchg.success, label %.atomic.done, label %.atomic.retry
+    //
+    // .atomic.done:                                     ; preds = %.atomic.retry
+    //   ret void
+    // clang-format on
+
+    // Discover control flow graph
+    BranchInst *Branch1 = cast<BranchInst>(EntryBB->getTerminator());
+    BasicBlock *AtomicRetry = cast<BasicBlock>(EntryBB->getUniqueSuccessor());
+    BranchInst *Branch2 = cast<BranchInst>(AtomicRetry->getTerminator());
+    ReturnInst *Return = cast<ReturnInst>(ExitBB->getTerminator());
+
+    // Follow use-def chains to discover instructions
+    ExtractValueInst *CmpxchgSuccess =
+        cast<ExtractValueInst>(Branch2->getOperand(0));
+    AtomicCmpXchgInst *CmpxchgPair =
+        cast<AtomicCmpXchgInst>(CmpxchgSuccess->getOperand(0));
+    LoadInst *CmpxchgDesired = cast<LoadInst>(CmpxchgPair->getNewValOperand());
+    AllocaInst *AtomicvarAtomicDesiredPtr =
+        cast<AllocaInst>(CmpxchgDesired->getPointerOperand());
+    LoadInst *CmpxchgExpected =
+        cast<LoadInst>(CmpxchgPair->getCompareOperand());
+    AllocaInst *AtomicvarAtomicExpectedPtr =
+        cast<AllocaInst>(CmpxchgExpected->getPointerOperand());
+    StoreInst *Store1 = cast<StoreInst>(
+        getUniquePreviousStore(AtomicvarAtomicDesiredPtr, CmpxchgDesired));
+    BinaryOperator *BO = cast<BinaryOperator>(Store1->getValueOperand());
+    LoadInst *AtomicvarAtomicOrig = cast<LoadInst>(BO->getOperand(1));
+    StoreInst *Store2 = cast<StoreInst>(
+        getUniquePreviousStore(AtomicvarAtomicExpectedPtr, CmpxchgExpected));
+    LoadInst *AtomicLoad = cast<LoadInst>(Store2->getValueOperand());
+    StoreInst *Store3 =
+        cast<StoreInst>(getUniquePreviousStore(XVal, AtomicLoad));
+
+    // %AtomicVar.atomic.expected.ptr = alloca i32, align 4
+    EXPECT_EQ(AtomicvarAtomicExpectedPtr->getParent(), EntryBB);
+    EXPECT_FALSE(AtomicvarAtomicExpectedPtr->isArrayAllocation());
+    EXPECT_EQ(AtomicvarAtomicExpectedPtr->getAddressSpace(), 0);
+    EXPECT_EQ(AtomicvarAtomicExpectedPtr->getAlign(), 4);
+    Type *AtomicvarAtomicExpectedPtrTy =
+        AtomicvarAtomicExpectedPtr->getAllocatedType();
+    EXPECT_TRUE(AtomicvarAtomicExpectedPtrTy->isIntegerTy());
+    EXPECT_EQ(AtomicvarAtomicExpectedPtrTy->getIntegerBitWidth(), 32);
+
+    // %AtomicVar.atomic.desired.ptr = alloca i32, align 4
+    EXPECT_EQ(AtomicvarAtomicDesiredPtr->getParent(), EntryBB);
+    EXPECT_FALSE(AtomicvarAtomicDesiredPtr->isArrayAllocation());
+    EXPECT_EQ(AtomicvarAtomicDesiredPtr->getAddressSpace(), 0);
+    EXPECT_EQ(AtomicvarAtomicDesiredPtr->getAlign(), 4);
+    Type *AtomicvarAtomicDesiredPtrTy =
+        AtomicvarAtomicDesiredPtr->getAllocatedType();
+    EXPECT_TRUE(AtomicvarAtomicDesiredPtrTy->isIntegerTy());
+    EXPECT_EQ(AtomicvarAtomicDesiredPtrTy->getIntegerBitWidth(), 32);
+
+    // %AtomicVar = alloca i32, align 4
+    EXPECT_EQ(XVal->getParent(), EntryBB);
+    EXPECT_FALSE(XVal->isArrayAllocation());
+    EXPECT_EQ(XVal->getAddressSpace(), 0);
+    EXPECT_EQ(XVal->getAlign(), 4);
+    Type *XValTy = XVal->getAllocatedType();
+    EXPECT_TRUE(XValTy->isIntegerTy());
+    EXPECT_EQ(XValTy->getIntegerBitWidth(), 32);
+
+    // store i32 0, ptr %AtomicVar, align 4
+    EXPECT_EQ(Store3->getParent(), EntryBB);
+    EXPECT_TRUE(Store3->isSimple());
+    EXPECT_EQ(cast<ConstantInt>(Store3->getValueOperand())->getZExtValue(), 0);
+    EXPECT_EQ(Store3->getPointerOperand(), XVal);
+
+    // %.atomic.load = load atomic i32, ptr %AtomicVar monotonic, align 4
+    EXPECT_EQ(AtomicLoad->getParent(), EntryBB);
+    EXPECT_FALSE(AtomicLoad->isVolatile());
+    EXPECT_EQ(AtomicLoad->getAlign(), 4);
+    EXPECT_EQ(AtomicLoad->getOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(AtomicLoad->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(AtomicLoad->getPointerOperand(), XVal);
+
+    // store i32 %.atomic.load, ptr %AtomicVar.atomic.expected.ptr, align 4
+    EXPECT_EQ(Store2->getParent(), EntryBB);
+    EXPECT_TRUE(Store2->isSimple());
+    EXPECT_EQ(Store2->getValueOperand(), AtomicLoad);
+    EXPECT_EQ(Store2->getPointerOperand(), AtomicvarAtomicExpectedPtr);
+
+    // br label %.atomic.retry
+    EXPECT_EQ(Branch1->getParent(), EntryBB);
+    EXPECT_TRUE(Branch1->isUnconditional());
+
+    // %AtomicVar.atomic.orig = load i32, ptr %AtomicVar.atomic.expected.ptr,
+    // align 4
+    EXPECT_EQ(AtomicvarAtomicOrig->getParent(), AtomicRetry);
+    EXPECT_TRUE(AtomicvarAtomicOrig->isSimple());
+    EXPECT_EQ(AtomicvarAtomicOrig->getPointerOperand(),
+              AtomicvarAtomicExpectedPtr);
+
+    // %2 = sub i32 1, %AtomicVar.atomic.orig
+    EXPECT_EQ(BO->getParent(), AtomicRetry);
+    EXPECT_EQ(cast<ConstantInt>(BO->getOperand(0))->getZExtValue(), 1);
+    EXPECT_EQ(BO->getOperand(1), AtomicvarAtomicOrig);
+
+    // store i32 %2, ptr %AtomicVar.atomic.desired.ptr, align 4
+    EXPECT_EQ(Store1->getParent(), AtomicRetry);
+    EXPECT_TRUE(Store1->isSimple());
+    EXPECT_EQ(Store1->getValueOperand(), BO);
+    EXPECT_EQ(Store1->getPointerOperand(), AtomicvarAtomicDesiredPtr);
+
+    // %.cmpxchg.expected = load i32, ptr %AtomicVar.atomic.expected.ptr, align
+    // 4
+    EXPECT_EQ(CmpxchgExpected->getParent(), AtomicRetry);
+    EXPECT_TRUE(CmpxchgExpected->isSimple());
+    EXPECT_EQ(CmpxchgExpected->getPointerOperand(), AtomicvarAtomicExpectedPtr);
+
+    // %.cmpxchg.desired = load i32, ptr %AtomicVar.atomic.desired.ptr, align 4
+    EXPECT_EQ(CmpxchgDesired->getParent(), AtomicRetry);
+    EXPECT_TRUE(CmpxchgDesired->isSimple());
+    EXPECT_EQ(CmpxchgDesired->getPointerOperand(), AtomicvarAtomicDesiredPtr);
+
+    // %.cmpxchg.pair = cmpxchg weak ptr %AtomicVar, i32 %.cmpxchg.expected, i32
+    // %.cmpxchg.desired monotonic monotonic, align 4
+    EXPECT_EQ(CmpxchgPair->getParent(), AtomicRetry);
+    EXPECT_FALSE(CmpxchgPair->isVolatile());
+    EXPECT_TRUE(CmpxchgPair->isWeak());
+    EXPECT_EQ(CmpxchgPair->getSuccessOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair->getFailureOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(CmpxchgPair->getAlign(), 4);
+    EXPECT_EQ(CmpxchgPair->getPointerOperand(), XVal);
+    EXPECT_EQ(CmpxchgPair->getCompareOperand(), CmpxchgExpected);
+    EXPECT_EQ(CmpxchgPair->getNewValOperand(), CmpxchgDesired);
+
+    // %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
+    EXPECT_EQ(CmpxchgSuccess->getParent(), AtomicRetry);
+    EXPECT_EQ(CmpxchgSuccess->getOperand(0), CmpxchgPair);
+
+    // br i1 %.cmpxchg.success, label %.atomic.done, label %.atomic.retry
+    EXPECT_EQ(Branch2->getParent(), AtomicRetry);
+    EXPECT_TRUE(Branch2->isConditional());
+    EXPECT_EQ(Branch2->getOperand(0), CmpxchgSuccess);
+
+    // ret void
+    EXPECT_EQ(Return->getParent(), ExitBB);
+  }
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateFloat) {
@@ -4016,7 +4344,8 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateFloat) {
   Type *FloatTy = Type::getFloatTy(M->getContext());
   AllocaInst *XVal = Builder.CreateAlloca(FloatTy);
   XVal->setName("AtomicVar");
-  Builder.CreateStore(ConstantFP::get(Type::getFloatTy(Ctx), 0.0), XVal);
+  Constant *ExpectedVal = ConstantFP::get(Type::getFloatTy(Ctx), 0.0);
+  Builder.CreateStore(ExpectedVal, XVal);
   OpenMPIRBuilder::AtomicOpValue X = {XVal, FloatTy, false, false};
   AtomicOrdering AO = AtomicOrdering::Monotonic;
   Constant *ConstVal = ConstantFP::get(Type::getFloatTy(Ctx), 1.0);
@@ -4038,40 +4367,171 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateFloat) {
                                                      AO, RMWOp, UpdateOp,
                                                      IsXLHSInRHSPart));
   Builder.restoreIP(AfterIP);
-  BasicBlock *ContBB = EntryBB->getSingleSuccessor();
-  BranchInst *ContTI = dyn_cast<BranchInst>(ContBB->getTerminator());
-  EXPECT_NE(ContTI, nullptr);
-  BasicBlock *EndBB = ContTI->getSuccessor(0);
-  EXPECT_TRUE(ContTI->isConditional());
-  EXPECT_EQ(ContTI->getSuccessor(1), ContBB);
-  EXPECT_NE(EndBB, nullptr);
+  BasicBlock *ExitBB = Builder.GetInsertBlock();
 
-  PHINode *Phi = dyn_cast<PHINode>(&ContBB->front());
-  EXPECT_NE(Phi, nullptr);
-  EXPECT_EQ(Phi->getNumIncomingValues(), 2U);
-  EXPECT_EQ(Phi->getIncomingBlock(0), EntryBB);
-  EXPECT_EQ(Phi->getIncomingBlock(1), ContBB);
-
-  EXPECT_EQ(Sub->getNumUses(), 1U);
-  StoreInst *St = dyn_cast<StoreInst>(Sub->user_back());
-  AllocaInst *UpdateTemp = dyn_cast<AllocaInst>(St->getPointerOperand());
-
-  ExtractValueInst *ExVI1 =
-      dyn_cast<ExtractValueInst>(Phi->getIncomingValueForBlock(ContBB));
-  EXPECT_NE(ExVI1, nullptr);
-  AtomicCmpXchgInst *CmpExchg =
-      dyn_cast<AtomicCmpXchgInst>(ExVI1->getAggregateOperand());
-  EXPECT_NE(CmpExchg, nullptr);
-  EXPECT_EQ(CmpExchg->getPointerOperand(), XVal);
-  EXPECT_EQ(CmpExchg->getCompareOperand(), Phi);
-  EXPECT_EQ(CmpExchg->getSuccessOrdering(), AtomicOrdering::Monotonic);
-
-  LoadInst *Ld = dyn_cast<LoadInst>(CmpExchg->getNewValOperand());
-  EXPECT_NE(Ld, nullptr);
-  EXPECT_EQ(UpdateTemp, Ld->getPointerOperand());
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  {
+    // clang-format off
+    //   %AtomicVar.atomic.expected.ptr = alloca float, align 4
+    //   %AtomicVar.atomic.desired.ptr = alloca float, align 4
+    //   %AtomicVar = alloca float, align 4
+    //   store float 0.000000e+00, ptr %AtomicVar, align 4
+    //   %.atomic.load = load atomic float, ptr %AtomicVar monotonic, align 4
+    //   store float %.atomic.load, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   br label %.atomic.retry
+    //
+    // .atomic.retry:                                    ; preds = %.atomic.retry, %1
+    //   %AtomicVar.atomic.orig = load float, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %2 = fsub float 1.000000e+00, %AtomicVar.atomic.orig
+    //   store float %2, ptr %AtomicVar.atomic.desired.ptr, align 4
+    //   %.cmpxchg.expected = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %.cmpxchg.desired = load i32, ptr %AtomicVar.atomic.desired.ptr, align 4
+    //   %.cmpxchg.pair = cmpxchg weak ptr %AtomicVar, i32 %.cmpxchg.expected, i32 %.cmpxchg.desired monotonic monotonic, align 4
+    //   %.cmpxchg.prev = extractvalue { i32, i1 } %.cmpxchg.pair, 0
+    //   store i32 %.cmpxchg.prev, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
+    //   br i1 %.cmpxchg.success, label %.atomic.done, label %.atomic.retry
+    //
+    // .atomic.done:                                     ; preds = %.atomic.retry
+    //   ret void
+    // clang-format on
+
+    // Discover control flow graph
+    BranchInst *Branch1 = cast<BranchInst>(EntryBB->getTerminator());
+    BasicBlock *AtomicRetry = cast<BasicBlock>(EntryBB->getUniqueSuccessor());
+    BranchInst *Branch2 = cast<BranchInst>(AtomicRetry->getTerminator());
+    ReturnInst *Return = cast<ReturnInst>(ExitBB->getTerminator());
+
+    // Follow use-def chains to discover instructions
+    ExtractValueInst *CmpxchgSuccess =
+        cast<ExtractValueInst>(Branch2->getOperand(0));
+    AtomicCmpXchgInst *CmpxchgPair =
+        cast<AtomicCmpXchgInst>(CmpxchgSuccess->getOperand(0));
+    LoadInst *CmpxchgDesired = cast<LoadInst>(CmpxchgPair->getNewValOperand());
+    AllocaInst *AtomicvarAtomicDesiredPtr =
+        cast<AllocaInst>(CmpxchgDesired->getPointerOperand());
+    LoadInst *CmpxchgExpected =
+        cast<LoadInst>(CmpxchgPair->getCompareOperand());
+    AllocaInst *AtomicvarAtomicExpectedPtr =
+        cast<AllocaInst>(CmpxchgExpected->getPointerOperand());
+    StoreInst *Store1 = cast<StoreInst>(
+        getUniquePreviousStore(AtomicvarAtomicDesiredPtr, CmpxchgDesired));
+    BinaryOperator *BO = cast<BinaryOperator>(Store1->getValueOperand());
+    LoadInst *AtomicvarAtomicOrig = cast<LoadInst>(BO->getOperand(1));
+    StoreInst *Store2 = cast<StoreInst>(
+        getUniquePreviousStore(AtomicvarAtomicExpectedPtr, CmpxchgExpected));
+    LoadInst *AtomicLoad = cast<LoadInst>(Store2->getValueOperand());
+    StoreInst *Store3 =
+        cast<StoreInst>(getUniquePreviousStore(XVal, AtomicLoad));
+
+    // %AtomicVar.atomic.expected.ptr = alloca float, align 4
+    EXPECT_EQ(AtomicvarAtomicExpectedPtr->getParent(), EntryBB);
+    EXPECT_FALSE(AtomicvarAtomicExpectedPtr->isArrayAllocation());
+    EXPECT_EQ(AtomicvarAtomicExpectedPtr->getAddressSpace(), 0);
+    EXPECT_EQ(AtomicvarAtomicExpectedPtr->getAlign(), 4);
+    EXPECT_TRUE(AtomicvarAtomicExpectedPtr->getAllocatedType()->isFloatTy());
+
+    // %AtomicVar.atomic.desired.ptr = alloca float, align 4
+    EXPECT_EQ(AtomicvarAtomicDesiredPtr->getParent(), EntryBB);
+    EXPECT_FALSE(AtomicvarAtomicDesiredPtr->isArrayAllocation());
+    EXPECT_EQ(AtomicvarAtomicDesiredPtr->getAddressSpace(), 0);
+    EXPECT_EQ(AtomicvarAtomicDesiredPtr->getAlign(), 4);
+    EXPECT_TRUE(AtomicvarAtomicDesiredPtr->getAllocatedType()->isFloatTy());
+
+    // %AtomicVar = alloca float, align 4
+    EXPECT_EQ(XVal->getParent(), EntryBB);
+    EXPECT_FALSE(XVal->isArrayAllocation());
+    EXPECT_EQ(XVal->getAddressSpace(), 0);
+    EXPECT_EQ(XVal->getAlign(), 4);
+    EXPECT_TRUE(XVal->getAllocatedType()->isFloatTy());
+
+    // store float 0.000000e+00, ptr %AtomicVar, align 4
+    EXPECT_EQ(Store3->getParent(), EntryBB);
+    EXPECT_TRUE(Store3->isSimple());
+    EXPECT_FLOAT_EQ(cast<ConstantFP>(Store3->getValueOperand())
+                        ->getValueAPF()
+                        .convertToFloat(),
+                    0.0f);
+    EXPECT_EQ(Store3->getPointerOperand(), XVal);
+
+    // %.atomic.load = load atomic float, ptr %AtomicVar monotonic, align 4
+    EXPECT_EQ(AtomicLoad->getParent(), EntryBB);
+    EXPECT_FALSE(AtomicLoad->isVolatile());
+    EXPECT_EQ(AtomicLoad->getAlign(), 4);
+    EXPECT_EQ(AtomicLoad->getOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(AtomicLoad->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(AtomicLoad->getPointerOperand(), XVal);
+
+    // store float %.atomic.load, ptr %AtomicVar.atomic.expected.ptr, align 4
+    EXPECT_EQ(Store2->getParent(), EntryBB);
+    EXPECT_TRUE(Store2->isSimple());
+    EXPECT_EQ(Store2->getValueOperand(), AtomicLoad);
+    EXPECT_EQ(Store2->getPointerOperand(), AtomicvarAtomicExpectedPtr);
+
+    // br label %.atomic.retry
+    EXPECT_EQ(Branch1->getParent(), EntryBB);
+    EXPECT_TRUE(Branch1->isUnconditional());
+
+    // %AtomicVar.atomic.orig = load float, ptr
+    // %AtomicVar.atomic.expected.ptr, align 4
+    EXPECT_EQ(AtomicvarAtomicOrig->getParent(), AtomicRetry);
+    EXPECT_TRUE(AtomicvarAtomicOrig->isSimple());
+    EXPECT_EQ(AtomicvarAtomicOrig->getPointerOperand(),
+              AtomicvarAtomicExpectedPtr);
+
+    // %2 = fsub float 1.000000e+00, %AtomicVar.atomic.orig
+    EXPECT_EQ(BO->getParent(), AtomicRetry);
+    EXPECT_FLOAT_EQ(
+        cast<ConstantFP>(BO->getOperand(0))->getValueAPF().convertToFloat(),
+        1.0f);
+    EXPECT_EQ(BO->getOperand(1), AtomicvarAtomicOrig);
+
+    // store float %2, ptr %AtomicVar.atomic.desired.ptr, align 4
+    EXPECT_EQ(Store1->getParent(), AtomicRetry);
+    EXPECT_TRUE(Store1->isSimple());
+    EXPECT_EQ(Store1->getValueOperand(), BO);
+    EXPECT_EQ(Store1->getPointerOperand(), AtomicvarAtomicDesiredPtr);
+
+    // %.cmpxchg.expected = load i32, ptr %AtomicVar.atomic.expected.ptr,
+    // align 4
+    EXPECT_EQ(CmpxchgExpected->getParent(), AtomicRetry);
+    EXPECT_TRUE(CmpxchgExpected->isSimple());
+    EXPECT_EQ(CmpxchgExpected->getPointerOperand(), AtomicvarAtomicExpectedPtr);
+
+    // %.cmpxchg.desired = load i32, ptr %AtomicVar.atomic.desired.ptr, align
+    // 4
+    EXPECT_EQ(CmpxchgDesired->getParent(), AtomicRetry);
+    EXPECT_TRUE(CmpxchgDesired->isSimple());
+    EXPECT_EQ(CmpxchgDesired->getPointerOperand(), AtomicvarAtomicDesiredPtr);
+
+    // %.cmpxchg.pair = cmpxchg weak ptr %AtomicVar, i32 %.cmpxchg.expected,
+    // i32 %.cmpxchg.desired monotonic monotonic, align 4
+    EXPECT_EQ(CmpxchgPair->getParent(), AtomicRetry);
+    EXPECT_FALSE(CmpxchgPair->isVolatile());
+    EXPECT_TRUE(CmpxchgPair->isWeak());
+    EXPECT_EQ(CmpxchgPair->getSuccessOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair->getFailureOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(CmpxchgPair->getAlign(), 4);
+    EXPECT_EQ(CmpxchgPair->getPointerOperand(), XVal);
+    EXPECT_EQ(CmpxchgPair->getCompareOperand(), CmpxchgExpected);
+    EXPECT_EQ(CmpxchgPair->getNewValOperand(), CmpxchgDesired);
+
+    // %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
+    EXPECT_EQ(CmpxchgSuccess->getParent(), AtomicRetry);
+    EXPECT_EQ(CmpxchgSuccess->getOperand(0), CmpxchgPair);
+
+    // br i1 %.cmpxchg.success, label %.atomic.done, label %.atomic.retry
+    EXPECT_EQ(Branch2->getParent(), AtomicRetry);
+    EXPECT_TRUE(Branch2->isConditional());
+    EXPECT_EQ(Branch2->getOperand(0), CmpxchgSuccess);
+
+    // ret void
+    EXPECT_EQ(Return->getParent(), ExitBB);
+  }
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateIntr) {
@@ -4085,7 +4545,8 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateIntr) {
   Type *IntTy = Type::getInt32Ty(M->getContext());
   AllocaInst *XVal = Builder.CreateAlloca(IntTy);
   XVal->setName("AtomicVar");
-  Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 0), XVal);
+  ConstantInt *ExpectedVal = ConstantInt::get(Type::getInt32Ty(Ctx), 0);
+  Builder.CreateStore(ExpectedVal, XVal);
   OpenMPIRBuilder::AtomicOpValue X = {XVal, IntTy, false, false};
   AtomicOrdering AO = AtomicOrdering::Monotonic;
   Constant *ConstVal = ConstantInt::get(Type::getInt32Ty(Ctx), 1);
@@ -4107,41 +4568,174 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicUpdateIntr) {
                                                      AO, RMWOp, UpdateOp,
                                                      IsXLHSInRHSPart));
   Builder.restoreIP(AfterIP);
-  BasicBlock *ContBB = EntryBB->getSingleSuccessor();
-  BranchInst *ContTI = dyn_cast<BranchInst>(ContBB->getTerminator());
-  EXPECT_NE(ContTI, nullptr);
-  BasicBlock *EndBB = ContTI->getSuccessor(0);
-  EXPECT_TRUE(ContTI->isConditional());
-  EXPECT_EQ(ContTI->getSuccessor(1), ContBB);
-  EXPECT_NE(EndBB, nullptr);
-
-  PHINode *Phi = dyn_cast<PHINode>(&ContBB->front());
-  EXPECT_NE(Phi, nullptr);
-  EXPECT_EQ(Phi->getNumIncomingValues(), 2U);
-  EXPECT_EQ(Phi->getIncomingBlock(0), EntryBB);
-  EXPECT_EQ(Phi->getIncomingBlock(1), ContBB);
-
-  EXPECT_EQ(Sub->getNumUses(), 1U);
-  StoreInst *St = dyn_cast<StoreInst>(Sub->user_back());
-  AllocaInst *UpdateTemp = dyn_cast<AllocaInst>(St->getPointerOperand());
-
-  ExtractValueInst *ExVI1 =
-      dyn_cast<ExtractValueInst>(Phi->getIncomingValueForBlock(ContBB));
-  EXPECT_NE(ExVI1, nullptr);
-  AtomicCmpXchgInst *CmpExchg =
-      dyn_cast<AtomicCmpXchgInst>(ExVI1->getAggregateOperand());
-  EXPECT_NE(CmpExchg, nullptr);
-  EXPECT_EQ(CmpExchg->getPointerOperand(), XVal);
-  EXPECT_EQ(CmpExchg->getCompareOperand(), Phi);
-  EXPECT_EQ(CmpExchg->getSuccessOrdering(), AtomicOrdering::Monotonic);
-
-  LoadInst *Ld = dyn_cast<LoadInst>(CmpExchg->getNewValOperand());
-  EXPECT_NE(Ld, nullptr);
-  EXPECT_EQ(UpdateTemp, Ld->getPointerOperand());
+  BasicBlock *ExitBB = Builder.GetInsertBlock();
 
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  {
+    // clang-format off
+    //   %AtomicVar.atomic.expected.ptr = alloca i32, align 4
+    //   %AtomicVar.atomic.desired.ptr = alloca i32, align 4
+    //   %AtomicVar = alloca i32, align 4
+    //   store i32 0, ptr %AtomicVar, align 4
+    //   %.atomic.load = load atomic i32, ptr %AtomicVar monotonic, align 4
+    //   store i32 %.atomic.load, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   br label %.atomic.retry
+    //
+    // .atomic.retry:                                    ; preds = %.atomic.retry, %1
+    //   %AtomicVar.atomic.orig = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %2 = sub i32 1, %AtomicVar.atomic.orig
+    //   store i32 %2, ptr %AtomicVar.atomic.desired.ptr, align 4
+    //   %.cmpxchg.expected = load i32, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %.cmpxchg.desired = load i32, ptr %AtomicVar.atomic.desired.ptr, align 4
+    //   %.cmpxchg.pair = cmpxchg weak ptr %AtomicVar, i32 %.cmpxchg.expected, i32 %.cmpxchg.desired monotonic monotonic, align 4
+    //   %.cmpxchg.prev = extractvalue { i32, i1 } %.cmpxchg.pair, 0
+    //   store i32 %.cmpxchg.prev, ptr %AtomicVar.atomic.expected.ptr, align 4
+    //   %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
+    //   br i1 %.cmpxchg.success, label %.atomic.done, label %.atomic.retry
+    //
+    // .atomic.done:                                     ; preds = %.atomic.retry
+    //   ret void
+    // clang-format on
+
+    // Discover control flow graph
+    BranchInst *Branch1 = cast<BranchInst>(EntryBB->getTerminator());
+    BasicBlock *AtomicRetry = cast<BasicBlock>(EntryBB->getUniqueSuccessor());
+    BranchInst *Branch2 = cast<BranchInst>(AtomicRetry->getTerminator());
+    ReturnInst *Return = cast<ReturnInst>(ExitBB->getTerminator());
+
+    // Follow use-def chains to discover instructions
+    ExtractValueInst *CmpxchgSuccess =
+        cast<ExtractValueInst>(Branch2->getOperand(0));
+    AtomicCmpXchgInst *CmpxchgPair =
+        cast<AtomicCmpXchgInst>(CmpxchgSuccess->getOperand(0));
+    LoadInst *CmpxchgDesired = cast<LoadInst>(CmpxchgPair->getNewValOperand());
+    AllocaInst *AtomicvarAtomicDesiredPtr =
+        cast<AllocaInst>(CmpxchgDesired->getPointerOperand());
+    LoadInst *CmpxchgExpected =
+        cast<LoadInst>(CmpxchgPair->getCompareOperand());
+    AllocaInst *AtomicvarAtomicExpectedPtr =
+        cast<AllocaInst>(CmpxchgExpected->getPointerOperand());
+    StoreInst *Store1 = cast<StoreInst>(
+        getUniquePreviousStore(AtomicvarAtomicDesiredPtr, CmpxchgDesired));
+    BinaryOperator *BO = cast<BinaryOperator>(Store1->getValueOperand());
+    LoadInst *AtomicvarAtomicOrig = cast<LoadInst>(BO->getOperand(1));
+    StoreInst *Store2 = cast<StoreInst>(
+        getUniquePreviousStore(AtomicvarAtomicExpectedPtr, CmpxchgExpected));
+    LoadInst *AtomicLoad = cast<LoadInst>(Store2->getValueOperand());
+    StoreInst *Store3 =
+        cast<StoreInst>(getUniquePreviousStore(XVal, AtomicLoad));
+
+    // %AtomicVar.atomic.expected.ptr = alloca i32, align 4
+    EXPECT_EQ(AtomicvarAtomicExpectedPtr->getParent(), EntryBB);
+    EXPECT_FALSE(AtomicvarAtomicExpectedPtr->isArrayAllocation());
+    EXPECT_EQ(AtomicvarAtomicExpectedPtr->getAddressSpace(), 0);
+    EXPECT_EQ(AtomicvarAtomicExpectedPtr->getAlign(), 4);
+    Type *AtomicvarAtomicExpectedPtrTy =
+        AtomicvarAtomicExpectedPtr->getAllocatedType();
+    EXPECT_TRUE(AtomicvarAtomicExpectedPtrTy->isIntegerTy());
+    EXPECT_EQ(AtomicvarAtomicExpectedPtrTy->getIntegerBitWidth(), 32);
+
+    // %AtomicVar.atomic.desired.ptr = alloca i32, align 4
+    EXPECT_EQ(AtomicvarAtomicDesiredPtr->getParent(), EntryBB);
+    EXPECT_FALSE(AtomicvarAtomicDesiredPtr->isArrayAllocation());
+    EXPECT_EQ(AtomicvarAtomicDesiredPtr->getAddressSpace(), 0);
+    EXPECT_EQ(AtomicvarAtomicDesiredPtr->getAlign(), 4);
+    Type *AtomicvarAtomicDesiredPtrTy =
+        AtomicvarAtomicDesiredPtr->getAllocatedType();
+    EXPECT_TRUE(AtomicvarAtomicDesiredPtrTy->isIntegerTy());
+    EXPECT_EQ(AtomicvarAtomicDesiredPtrTy->getIntegerBitWidth(), 32);
+
+    // %AtomicVar = alloca i32, align 4
+    EXPECT_EQ(XVal->getParent(), EntryBB);
+    EXPECT_FALSE(XVal->isArrayAllocation());
+    EXPECT_EQ(XVal->getAddressSpace(), 0);
+    EXPECT_EQ(XVal->getAlign(), 4);
+    Type *XValTy = XVal->getAllocatedType();
+    EXPECT_TRUE(XValTy->isIntegerTy());
+    EXPECT_EQ(XValTy->getIntegerBitWidth(), 32);
+
+    // store i32 0, ptr %AtomicVar, align 4
+    EXPECT_EQ(Store3->getParent(), EntryBB);
+    EXPECT_TRUE(Store3->isSimple());
+    EXPECT_EQ(cast<ConstantInt>(Store3->getValueOperand())->getZExtValue(), 0);
+    EXPECT_EQ(Store3->getPointerOperand(), XVal);
+
+    // %.atomic.load = load atomic i32, ptr %AtomicVar monotonic, align 4
+    EXPECT_EQ(AtomicLoad->getParent(), EntryBB);
+    EXPECT_FALSE(AtomicLoad->isVolatile());
+    EXPECT_EQ(AtomicLoad->getAlign(), 4);
+    EXPECT_EQ(AtomicLoad->getOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(AtomicLoad->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(AtomicLoad->getPointerOperand(), XVal);
+
+    // store i32 %.atomic.load, ptr %AtomicVar.atomic.expected.ptr, align 4
+    EXPECT_EQ(Store2->getParent(), EntryBB);
+    EXPECT_TRUE(Store2->isSimple());
+    EXPECT_EQ(Store2->getValueOperand(), AtomicLoad);
+    EXPECT_EQ(Store2->getPointerOperand(), AtomicvarAtomicExpectedPtr);
+
+    // br label %.atomic.retry
+    EXPECT_EQ(Branch1->getParent(), EntryBB);
+    EXPECT_TRUE(Branch1->isUnconditional());
+
+    // %AtomicVar.atomic.orig = load i32, ptr
+    // %AtomicVar.atomic.expected.ptr, align 4
+    EXPECT_EQ(AtomicvarAtomicOrig->getParent(), AtomicRetry);
+    EXPECT_TRUE(AtomicvarAtomicOrig->isSimple());
+    EXPECT_EQ(AtomicvarAtomicOrig->getPointerOperand(),
+              AtomicvarAtomicExpectedPtr);
+
+    // %2 = sub i32 1, %AtomicVar.atomic.orig
+    EXPECT_EQ(BO->getParent(), AtomicRetry);
+    EXPECT_EQ(cast<ConstantInt>(BO->getOperand(0))->getZExtValue(), 1);
+    EXPECT_EQ(BO->getOperand(1), AtomicvarAtomicOrig);
+
+    // store i32 %2, ptr %AtomicVar.atomic.desired.ptr, align 4
+    EXPECT_EQ(Store1->getParent(), AtomicRetry);
+    EXPECT_TRUE(Store1->isSimple());
+    EXPECT_EQ(Store1->getValueOperand(), BO);
+    EXPECT_EQ(Store1->getPointerOperand(), AtomicvarAtomicDesiredPtr);
+
+    // %.cmpxchg.expected = load i32, ptr %AtomicVar.atomic.expected.ptr,
+    // align 4
+    EXPECT_EQ(CmpxchgExpected->getParent(), AtomicRetry);
+    EXPECT_TRUE(CmpxchgExpected->isSimple());
+    EXPECT_EQ(CmpxchgExpected->getPointerOperand(), AtomicvarAtomicExpectedPtr);
+
+    // %.cmpxchg.desired = load i32, ptr %AtomicVar.atomic.desired.ptr,
+    // align 4
+    EXPECT_EQ(CmpxchgDesired->getParent(), AtomicRetry);
+    EXPECT_TRUE(CmpxchgDesired->isSimple());
+    EXPECT_EQ(CmpxchgDesired->getPointerOperand(), AtomicvarAtomicDesiredPtr);
+
+    // %.cmpxchg.pair = cmpxchg weak ptr %AtomicVar, i32 %.cmpxchg.expected,
+    // i32 %.cmpxchg.desired monotonic monotonic, align 4
+    EXPECT_EQ(CmpxchgPair->getParent(), AtomicRetry);
+    EXPECT_FALSE(CmpxchgPair->isVolatile());
+    EXPECT_TRUE(CmpxchgPair->isWeak());
+    EXPECT_EQ(CmpxchgPair->getSuccessOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair->getFailureOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(CmpxchgPair->getAlign(), 4);
+    EXPECT_EQ(CmpxchgPair->getPointerOperand(), XVal);
+    EXPECT_EQ(CmpxchgPair->getCompareOperand(), CmpxchgExpected);
+    EXPECT_EQ(CmpxchgPair->getNewValOperand(), CmpxchgDesired);
+
+    // %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
+    EXPECT_EQ(CmpxchgSuccess->getParent(), AtomicRetry);
+    EXPECT_EQ(CmpxchgSuccess->getOperand(0), CmpxchgPair);
+
+    // br i1 %.cmpxchg.success, label %.atomic.done, label %.atomic.retry
+    EXPECT_EQ(Branch2->getParent(), AtomicRetry);
+    EXPECT_TRUE(Branch2->isConditional());
+    EXPECT_EQ(Branch2->getOperand(0), CmpxchgSuccess);
+
+    // ret void
+    EXPECT_EQ(Return->getParent(), ExitBB);
+  }
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicCapture) {
@@ -4207,9 +4801,10 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompare) {
   LLVMContext &Ctx = M->getContext();
   IntegerType *Int32 = Type::getInt32Ty(Ctx);
   AllocaInst *XVal = Builder.CreateAlloca(Int32);
+  IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
+                                    F->getEntryBlock().getFirstInsertionPt());
   XVal->setName("x");
-  StoreInst *Init =
-      Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 0U), XVal);
+  Builder.CreateStore(ConstantInt::get(Type::getInt32Ty(Ctx), 0U), XVal);
 
   OpenMPIRBuilder::AtomicOpValue XSigned = {XVal, Int32, true, false};
   OpenMPIRBuilder::AtomicOpValue XUnsigned = {XVal, Int32, false, false};
@@ -4222,38 +4817,116 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompare) {
   OMPAtomicCompareOp OpMax = OMPAtomicCompareOp::MAX;
   OMPAtomicCompareOp OpEQ = OMPAtomicCompareOp::EQ;
 
-  Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      Builder, XSigned, V, R, Expr, nullptr, AO, OpMax, true, false, false));
-  Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      Builder, XUnsigned, V, R, Expr, nullptr, AO, OpMax, false, false, false));
-  Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      Builder, XSigned, V, R, Expr, D, AO, OpEQ, true, false, false));
+  BasicBlock *BB1 = splitBB(Builder, true);
+  Builder.SetInsertPoint(BB1, BB1->begin());
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP1,
+      OMPBuilder.createAtomicCompare(Builder, AllocaIP, XSigned, V, R, Expr,
+                                     nullptr, AO, OpMax, true, false, false));
+  Builder.restoreIP(AfterIP1);
+
+  BasicBlock *BB2 = splitBB(Builder, true);
+  Builder.SetInsertPoint(BB2, BB2->begin());
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP2,
+      OMPBuilder.createAtomicCompare(Builder, AllocaIP, XUnsigned, V, R, Expr,
+                                     nullptr, AO, OpMax, false, false, false));
+  Builder.restoreIP(AfterIP2);
+
+  BasicBlock *BB3 = splitBB(Builder, true);
+  Builder.SetInsertPoint(BB3, BB3->begin());
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP3,
+      OMPBuilder.createAtomicCompare(Builder, AllocaIP, XSigned, V, R, Expr, D,
+                                     AO, OpEQ, true, false, false));
+  Builder.restoreIP(AfterIP3);
 
   BasicBlock *EntryBB = BB;
-  EXPECT_EQ(EntryBB->getParent()->size(), 1U);
-  EXPECT_EQ(EntryBB->size(), 5U);
-
-  AtomicRMWInst *ARWM1 = dyn_cast<AtomicRMWInst>(Init->getNextNode());
-  EXPECT_NE(ARWM1, nullptr);
-  EXPECT_EQ(ARWM1->getPointerOperand(), XVal);
-  EXPECT_EQ(ARWM1->getValOperand(), Expr);
-  EXPECT_EQ(ARWM1->getOperation(), AtomicRMWInst::Min);
-
-  AtomicRMWInst *ARWM2 = dyn_cast<AtomicRMWInst>(ARWM1->getNextNode());
-  EXPECT_NE(ARWM2, nullptr);
-  EXPECT_EQ(ARWM2->getPointerOperand(), XVal);
-  EXPECT_EQ(ARWM2->getValOperand(), Expr);
-  EXPECT_EQ(ARWM2->getOperation(), AtomicRMWInst::UMax);
-
-  AtomicCmpXchgInst *AXCHG = dyn_cast<AtomicCmpXchgInst>(ARWM2->getNextNode());
-  EXPECT_NE(AXCHG, nullptr);
-  EXPECT_EQ(AXCHG->getPointerOperand(), XVal);
-  EXPECT_EQ(AXCHG->getCompareOperand(), Expr);
-  EXPECT_EQ(AXCHG->getNewValOperand(), D);
+  EXPECT_EQ(EntryBB->getParent()->size(), 4U);
+  EXPECT_EQ(EntryBB->size(), 6U);
 
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  {
+    // Follow use-def and load-store chains to discover instructions
+    AtomicRMWInst *AtomicRMW =
+        cast<AtomicRMWInst>(getUniquePreviousStore(XVal, BB1));
+
+    // %3 = atomicrmw min ptr %x, i32 1 monotonic, align 4
+    EXPECT_EQ(AtomicRMW->getParent(), BB1);
+    EXPECT_EQ(AtomicRMW->getOperation(), AtomicRMWInst::Min);
+    EXPECT_FALSE(AtomicRMW->isVolatile());
+    EXPECT_EQ(AtomicRMW->getOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(AtomicRMW->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(AtomicRMW->getAlign(), 4);
+    EXPECT_EQ(AtomicRMW->getPointerOperand(), XVal);
+    EXPECT_EQ(cast<ConstantInt>(AtomicRMW->getValOperand())->getZExtValue(), 1);
+  }
+
+  {
+    // clang-format off
+    // store i32 1, ptr %x.atomic.expected.ptr, align 4
+    // store i32 1, ptr %x.atomic.desired.ptr, align 4
+    // %.cmpxchg.expected = load i32, ptr %x.atomic.expected.ptr, align 4
+    // %.cmpxchg.desired = load i32, ptr %x.atomic.desired.ptr, align 4
+    // %.cmpxchg.pair = cmpxchg ptr %x, i32 %.cmpxchg.expected, i32 %.cmpxchg.desired monotonic monotonic, align 4
+    // %.cmpxchg.prev = extractvalue { i32, i1 } %.cmpxchg.pair, 0
+    // store i32 %.cmpxchg.prev, ptr %x.atomic.expected.ptr1, align 4
+    // %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
+    // clang-format on
+
+    // Follow use-def and load-store chains to discover instructions
+    AtomicCmpXchgInst *CmpxchgPair =
+        cast<AtomicCmpXchgInst>(getUniquePreviousStore(XVal, BB3));
+    LoadInst *CmpxchgDesired = cast<LoadInst>(CmpxchgPair->getNewValOperand());
+    AllocaInst *XAtomicDesiredPtr =
+        cast<AllocaInst>(CmpxchgDesired->getPointerOperand());
+    LoadInst *CmpxchgExpected =
+        cast<LoadInst>(CmpxchgPair->getCompareOperand());
+    AllocaInst *XAtomicExpectedPtr =
+        cast<AllocaInst>(CmpxchgExpected->getPointerOperand());
+    StoreInst *Store1 = cast<StoreInst>(
+        getUniquePreviousStore(XAtomicDesiredPtr, CmpxchgDesired));
+    StoreInst *Store2 = cast<StoreInst>(
+        getUniquePreviousStore(XAtomicExpectedPtr, CmpxchgExpected));
+
+    // store i32 1, ptr %x.atomic.expected.ptr, align 4
+    EXPECT_EQ(Store2->getParent(), BB3);
+    EXPECT_TRUE(Store2->isSimple());
+    EXPECT_EQ(cast<ConstantInt>(Store2->getValueOperand())->getZExtValue(), 1);
+    EXPECT_EQ(Store2->getPointerOperand(), XAtomicExpectedPtr);
+
+    // store i32 1, ptr %x.atomic.desired.ptr, align 4
+    EXPECT_EQ(Store1->getParent(), BB3);
+    EXPECT_TRUE(Store1->isSimple());
+    EXPECT_EQ(cast<ConstantInt>(Store1->getValueOperand())->getZExtValue(), 1);
+    EXPECT_EQ(Store1->getPointerOperand(), XAtomicDesiredPtr);
+
+    // %.cmpxchg.expected = load i32, ptr %x.atomic.expected.ptr, align 4
+    EXPECT_EQ(CmpxchgExpected->getParent(), BB3);
+    EXPECT_TRUE(CmpxchgExpected->isSimple());
+    EXPECT_EQ(CmpxchgExpected->getPointerOperand(), XAtomicExpectedPtr);
+
+    // %.cmpxchg.desired = load i32, ptr %x.atomic.desired.ptr, align 4
+    EXPECT_EQ(CmpxchgDesired->getParent(), BB3);
+    EXPECT_TRUE(CmpxchgDesired->isSimple());
+    EXPECT_EQ(CmpxchgDesired->getPointerOperand(), XAtomicDesiredPtr);
+
+    // %.cmpxchg.pair = cmpxchg ptr %x, i32 %.cmpxchg.expected, i32
+    // %.cmpxchg.desired monotonic monotonic, align 4
+    EXPECT_EQ(CmpxchgPair->getParent(), BB3);
+    EXPECT_FALSE(CmpxchgPair->isVolatile());
+    EXPECT_FALSE(CmpxchgPair->isWeak());
+    EXPECT_EQ(CmpxchgPair->getSuccessOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair->getFailureOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(CmpxchgPair->getAlign(), 4);
+    EXPECT_EQ(CmpxchgPair->getPointerOperand(), XVal);
+    EXPECT_EQ(CmpxchgPair->getCompareOperand(), CmpxchgExpected);
+    EXPECT_EQ(CmpxchgPair->getNewValOperand(), CmpxchgDesired);
+  }
 }
 
 TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareCapture) {
@@ -4261,8 +4934,6 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareCapture) {
   OMPBuilder.initialize();
   F->setName("func");
   IRBuilder<> Builder(BB);
-
-  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
 
   LLVMContext &Ctx = M->getContext();
   IntegerType *Int32 = Type::getInt32Ty(Ctx);
@@ -4288,223 +4959,329 @@ TEST_F(OpenMPIRBuilderTest, OMPAtomicCompareCapture) {
   OMPAtomicCompareOp OpMax = OMPAtomicCompareOp::MAX;
   OMPAtomicCompareOp OpEQ = OMPAtomicCompareOp::EQ;
 
+  IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
+                                    F->getEntryBlock().getFirstInsertionPt());
+  OpenMPIRBuilder::LocationDescription Loc({Builder.saveIP(), DL});
+
   // { cond-update-stmt v = x; }
-  Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      Builder, X, V, NoR, Expr, D, AO, OpEQ, /* IsXBinopExpr */ true,
-      /* IsPostfixUpdate */ false,
-      /* IsFailOnly */ false));
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP1,
+      OMPBuilder.createAtomicCompare(Builder, AllocaIP, X, V, NoR, Expr, D, AO,
+                                     OpEQ, /* IsXBinopExpr */ true,
+                                     /* IsPostfixUpdate */ false,
+                                     /* IsFailOnly */ false));
+  Builder.restoreIP(AfterIP1);
+
   // { v = x; cond-update-stmt }
-  Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      Builder, X, V, NoR, Expr, D, AO, OpEQ, /* IsXBinopExpr */ true,
-      /* IsPostfixUpdate */ true,
-      /* IsFailOnly */ false));
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP2,
+      OMPBuilder.createAtomicCompare(Builder, AllocaIP, X, V, NoR, Expr, D, AO,
+                                     OpEQ, /* IsXBinopExpr */ true,
+                                     /* IsPostfixUpdate */ true,
+                                     /* IsFailOnly */ false));
+  Builder.restoreIP(AfterIP2);
+
   // if(x == e) { x = d; } else { v = x; }
-  Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      Builder, X, V, NoR, Expr, D, AO, OpEQ, /* IsXBinopExpr */ true,
-      /* IsPostfixUpdate */ false,
-      /* IsFailOnly */ true));
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP3,
+      OMPBuilder.createAtomicCompare(Builder, AllocaIP, X, V, NoR, Expr, D, AO,
+                                     OpEQ, /* IsXBinopExpr */ true,
+                                     /* IsPostfixUpdate */ false,
+                                     /* IsFailOnly */ true));
+  Builder.restoreIP(AfterIP3);
+
   // { r = x == e; if(r) { x = d; } }
-  Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      Builder, X, NoV, R, Expr, D, AO, OpEQ, /* IsXBinopExpr */ true,
-      /* IsPostfixUpdate */ false,
-      /* IsFailOnly */ false));
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP4,
+      OMPBuilder.createAtomicCompare(Builder, AllocaIP, X, NoV, R, Expr, D, AO,
+                                     OpEQ, /* IsXBinopExpr */ true,
+                                     /* IsPostfixUpdate */ false,
+                                     /* IsFailOnly */ false));
+  Builder.restoreIP(AfterIP4);
+
   // { r = x == e; if(r) { x = d; } else { v = x; } }
-  Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      Builder, X, V, R, Expr, D, AO, OpEQ, /* IsXBinopExpr */ true,
-      /* IsPostfixUpdate */ false,
-      /* IsFailOnly */ true));
+  ASSERT_EXPECTED_INIT(
+      OpenMPIRBuilder::InsertPointTy, AfterIP5,
+      OMPBuilder.createAtomicCompare(Builder, AllocaIP, X, V, R, Expr, D, AO,
+                                     OpEQ, /* IsXBinopExpr */ true,
+                                     /* IsPostfixUpdate */ false,
+                                     /* IsFailOnly */ true));
+  Builder.restoreIP(AfterIP5);
 
   // { v = x; cond-update-stmt }
-  Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      Builder, X, V, NoR, Expr, nullptr, AO, OpMax, /* IsXBinopExpr */ true,
-      /* IsPostfixUpdate */ true,
-      /* IsFailOnly */ false));
+  ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP6,
+                       OMPBuilder.createAtomicCompare(
+                           Builder, AllocaIP, X, V, NoR, Expr, nullptr, AO,
+                           OpMax, /* IsXBinopExpr */ true,
+                           /* IsPostfixUpdate */ true,
+                           /* IsFailOnly */ false));
+  Builder.restoreIP(AfterIP6);
+
   // { cond-update-stmt v = x; }
-  Builder.restoreIP(OMPBuilder.createAtomicCompare(
-      Builder, X, V, NoR, Expr, nullptr, AO, OpMax, /* IsXBinopExpr */ false,
-      /* IsPostfixUpdate */ false,
-      /* IsFailOnly */ false));
-
-  BasicBlock *EntryBB = BB;
-  EXPECT_EQ(EntryBB->getParent()->size(), 5U);
-  BasicBlock *Cont1 = dyn_cast<BasicBlock>(EntryBB->getNextNode());
-  EXPECT_NE(Cont1, nullptr);
-  BasicBlock *Exit1 = dyn_cast<BasicBlock>(Cont1->getNextNode());
-  EXPECT_NE(Exit1, nullptr);
-  BasicBlock *Cont2 = dyn_cast<BasicBlock>(Exit1->getNextNode());
-  EXPECT_NE(Cont2, nullptr);
-  BasicBlock *Exit2 = dyn_cast<BasicBlock>(Cont2->getNextNode());
-  EXPECT_NE(Exit2, nullptr);
-
-  AtomicCmpXchgInst *CmpXchg1 =
-      dyn_cast<AtomicCmpXchgInst>(Init->getNextNode());
-  EXPECT_NE(CmpXchg1, nullptr);
-  EXPECT_EQ(CmpXchg1->getPointerOperand(), XVal);
-  EXPECT_EQ(CmpXchg1->getCompareOperand(), Expr);
-  EXPECT_EQ(CmpXchg1->getNewValOperand(), D);
-  ExtractValueInst *ExtVal1 =
-      dyn_cast<ExtractValueInst>(CmpXchg1->getNextNode());
-  EXPECT_NE(ExtVal1, nullptr);
-  EXPECT_EQ(ExtVal1->getAggregateOperand(), CmpXchg1);
-  EXPECT_EQ(ExtVal1->getIndices(), ArrayRef<unsigned int>(0U));
-  ExtractValueInst *ExtVal2 =
-      dyn_cast<ExtractValueInst>(ExtVal1->getNextNode());
-  EXPECT_NE(ExtVal2, nullptr);
-  EXPECT_EQ(ExtVal2->getAggregateOperand(), CmpXchg1);
-  EXPECT_EQ(ExtVal2->getIndices(), ArrayRef<unsigned int>(1U));
-  SelectInst *Sel1 = dyn_cast<SelectInst>(ExtVal2->getNextNode());
-  EXPECT_NE(Sel1, nullptr);
-  EXPECT_EQ(Sel1->getCondition(), ExtVal2);
-  EXPECT_EQ(Sel1->getTrueValue(), Expr);
-  EXPECT_EQ(Sel1->getFalseValue(), ExtVal1);
-  StoreInst *Store1 = dyn_cast<StoreInst>(Sel1->getNextNode());
-  EXPECT_NE(Store1, nullptr);
-  EXPECT_EQ(Store1->getPointerOperand(), VVal);
-  EXPECT_EQ(Store1->getValueOperand(), Sel1);
-
-  AtomicCmpXchgInst *CmpXchg2 =
-      dyn_cast<AtomicCmpXchgInst>(Store1->getNextNode());
-  EXPECT_NE(CmpXchg2, nullptr);
-  EXPECT_EQ(CmpXchg2->getPointerOperand(), XVal);
-  EXPECT_EQ(CmpXchg2->getCompareOperand(), Expr);
-  EXPECT_EQ(CmpXchg2->getNewValOperand(), D);
-  ExtractValueInst *ExtVal3 =
-      dyn_cast<ExtractValueInst>(CmpXchg2->getNextNode());
-  EXPECT_NE(ExtVal3, nullptr);
-  EXPECT_EQ(ExtVal3->getAggregateOperand(), CmpXchg2);
-  EXPECT_EQ(ExtVal3->getIndices(), ArrayRef<unsigned int>(0U));
-  StoreInst *Store2 = dyn_cast<StoreInst>(ExtVal3->getNextNode());
-  EXPECT_NE(Store2, nullptr);
-  EXPECT_EQ(Store2->getPointerOperand(), VVal);
-  EXPECT_EQ(Store2->getValueOperand(), ExtVal3);
-
-  AtomicCmpXchgInst *CmpXchg3 =
-      dyn_cast<AtomicCmpXchgInst>(Store2->getNextNode());
-  EXPECT_NE(CmpXchg3, nullptr);
-  EXPECT_EQ(CmpXchg3->getPointerOperand(), XVal);
-  EXPECT_EQ(CmpXchg3->getCompareOperand(), Expr);
-  EXPECT_EQ(CmpXchg3->getNewValOperand(), D);
-  ExtractValueInst *ExtVal4 =
-      dyn_cast<ExtractValueInst>(CmpXchg3->getNextNode());
-  EXPECT_NE(ExtVal4, nullptr);
-  EXPECT_EQ(ExtVal4->getAggregateOperand(), CmpXchg3);
-  EXPECT_EQ(ExtVal4->getIndices(), ArrayRef<unsigned int>(0U));
-  ExtractValueInst *ExtVal5 =
-      dyn_cast<ExtractValueInst>(ExtVal4->getNextNode());
-  EXPECT_NE(ExtVal5, nullptr);
-  EXPECT_EQ(ExtVal5->getAggregateOperand(), CmpXchg3);
-  EXPECT_EQ(ExtVal5->getIndices(), ArrayRef<unsigned int>(1U));
-  BranchInst *Br1 = dyn_cast<BranchInst>(ExtVal5->getNextNode());
-  EXPECT_NE(Br1, nullptr);
-  EXPECT_EQ(Br1->isConditional(), true);
-  EXPECT_EQ(Br1->getCondition(), ExtVal5);
-  EXPECT_EQ(Br1->getSuccessor(0), Exit1);
-  EXPECT_EQ(Br1->getSuccessor(1), Cont1);
-
-  StoreInst *Store3 = dyn_cast<StoreInst>(&Cont1->front());
-  EXPECT_NE(Store3, nullptr);
-  EXPECT_EQ(Store3->getPointerOperand(), VVal);
-  EXPECT_EQ(Store3->getValueOperand(), ExtVal4);
-  BranchInst *Br2 = dyn_cast<BranchInst>(Store3->getNextNode());
-  EXPECT_NE(Br2, nullptr);
-  EXPECT_EQ(Br2->isUnconditional(), true);
-  EXPECT_EQ(Br2->getSuccessor(0), Exit1);
-
-  AtomicCmpXchgInst *CmpXchg4 = dyn_cast<AtomicCmpXchgInst>(&Exit1->front());
-  EXPECT_NE(CmpXchg4, nullptr);
-  EXPECT_EQ(CmpXchg4->getPointerOperand(), XVal);
-  EXPECT_EQ(CmpXchg4->getCompareOperand(), Expr);
-  EXPECT_EQ(CmpXchg4->getNewValOperand(), D);
-  ExtractValueInst *ExtVal6 =
-      dyn_cast<ExtractValueInst>(CmpXchg4->getNextNode());
-  EXPECT_NE(ExtVal6, nullptr);
-  EXPECT_EQ(ExtVal6->getAggregateOperand(), CmpXchg4);
-  EXPECT_EQ(ExtVal6->getIndices(), ArrayRef<unsigned int>(1U));
-  ZExtInst *ZExt1 = dyn_cast<ZExtInst>(ExtVal6->getNextNode());
-  EXPECT_NE(ZExt1, nullptr);
-  EXPECT_EQ(ZExt1->getDestTy(), Int32);
-  StoreInst *Store4 = dyn_cast<StoreInst>(ZExt1->getNextNode());
-  EXPECT_NE(Store4, nullptr);
-  EXPECT_EQ(Store4->getPointerOperand(), RVal);
-  EXPECT_EQ(Store4->getValueOperand(), ZExt1);
-
-  AtomicCmpXchgInst *CmpXchg5 =
-      dyn_cast<AtomicCmpXchgInst>(Store4->getNextNode());
-  EXPECT_NE(CmpXchg5, nullptr);
-  EXPECT_EQ(CmpXchg5->getPointerOperand(), XVal);
-  EXPECT_EQ(CmpXchg5->getCompareOperand(), Expr);
-  EXPECT_EQ(CmpXchg5->getNewValOperand(), D);
-  ExtractValueInst *ExtVal7 =
-      dyn_cast<ExtractValueInst>(CmpXchg5->getNextNode());
-  EXPECT_NE(ExtVal7, nullptr);
-  EXPECT_EQ(ExtVal7->getAggregateOperand(), CmpXchg5);
-  EXPECT_EQ(ExtVal7->getIndices(), ArrayRef<unsigned int>(0U));
-  ExtractValueInst *ExtVal8 =
-      dyn_cast<ExtractValueInst>(ExtVal7->getNextNode());
-  EXPECT_NE(ExtVal8, nullptr);
-  EXPECT_EQ(ExtVal8->getAggregateOperand(), CmpXchg5);
-  EXPECT_EQ(ExtVal8->getIndices(), ArrayRef<unsigned int>(1U));
-  BranchInst *Br3 = dyn_cast<BranchInst>(ExtVal8->getNextNode());
-  EXPECT_NE(Br3, nullptr);
-  EXPECT_EQ(Br3->isConditional(), true);
-  EXPECT_EQ(Br3->getCondition(), ExtVal8);
-  EXPECT_EQ(Br3->getSuccessor(0), Exit2);
-  EXPECT_EQ(Br3->getSuccessor(1), Cont2);
-
-  StoreInst *Store5 = dyn_cast<StoreInst>(&Cont2->front());
-  EXPECT_NE(Store5, nullptr);
-  EXPECT_EQ(Store5->getPointerOperand(), VVal);
-  EXPECT_EQ(Store5->getValueOperand(), ExtVal7);
-  BranchInst *Br4 = dyn_cast<BranchInst>(Store5->getNextNode());
-  EXPECT_NE(Br4, nullptr);
-  EXPECT_EQ(Br4->isUnconditional(), true);
-  EXPECT_EQ(Br4->getSuccessor(0), Exit2);
-
-  ExtractValueInst *ExtVal9 = dyn_cast<ExtractValueInst>(&Exit2->front());
-  EXPECT_NE(ExtVal9, nullptr);
-  EXPECT_EQ(ExtVal9->getAggregateOperand(), CmpXchg5);
-  EXPECT_EQ(ExtVal9->getIndices(), ArrayRef<unsigned int>(1U));
-  ZExtInst *ZExt2 = dyn_cast<ZExtInst>(ExtVal9->getNextNode());
-  EXPECT_NE(ZExt2, nullptr);
-  EXPECT_EQ(ZExt2->getDestTy(), Int32);
-  StoreInst *Store6 = dyn_cast<StoreInst>(ZExt2->getNextNode());
-  EXPECT_NE(Store6, nullptr);
-  EXPECT_EQ(Store6->getPointerOperand(), RVal);
-  EXPECT_EQ(Store6->getValueOperand(), ZExt2);
-
-  AtomicRMWInst *ARWM1 = dyn_cast<AtomicRMWInst>(Store6->getNextNode());
-  EXPECT_NE(ARWM1, nullptr);
-  EXPECT_EQ(ARWM1->getPointerOperand(), XVal);
-  EXPECT_EQ(ARWM1->getValOperand(), Expr);
-  EXPECT_EQ(ARWM1->getOperation(), AtomicRMWInst::Min);
-  StoreInst *Store7 = dyn_cast<StoreInst>(ARWM1->getNextNode());
-  EXPECT_NE(Store7, nullptr);
-  EXPECT_EQ(Store7->getPointerOperand(), VVal);
-  EXPECT_EQ(Store7->getValueOperand(), ARWM1);
-
-  AtomicRMWInst *ARWM2 = dyn_cast<AtomicRMWInst>(Store7->getNextNode());
-  EXPECT_NE(ARWM2, nullptr);
-  EXPECT_EQ(ARWM2->getPointerOperand(), XVal);
-  EXPECT_EQ(ARWM2->getValOperand(), Expr);
-  EXPECT_EQ(ARWM2->getOperation(), AtomicRMWInst::Max);
-  CmpInst *Cmp1 = dyn_cast<CmpInst>(ARWM2->getNextNode());
-  EXPECT_NE(Cmp1, nullptr);
-  EXPECT_EQ(Cmp1->getPredicate(), CmpInst::ICMP_SGT);
-  EXPECT_EQ(Cmp1->getOperand(0), ARWM2);
-  EXPECT_EQ(Cmp1->getOperand(1), Expr);
-  SelectInst *Sel2 = dyn_cast<SelectInst>(Cmp1->getNextNode());
-  EXPECT_NE(Sel2, nullptr);
-  EXPECT_EQ(Sel2->getCondition(), Cmp1);
-  EXPECT_EQ(Sel2->getTrueValue(), Expr);
-  EXPECT_EQ(Sel2->getFalseValue(), ARWM2);
-  StoreInst *Store8 = dyn_cast<StoreInst>(Sel2->getNextNode());
-  EXPECT_NE(Store8, nullptr);
-  EXPECT_EQ(Store8->getPointerOperand(), VVal);
-  EXPECT_EQ(Store8->getValueOperand(), Sel2);
+  ASSERT_EXPECTED_INIT(OpenMPIRBuilder::InsertPointTy, AfterIP7,
+                       OMPBuilder.createAtomicCompare(
+                           Builder, AllocaIP, X, V, NoR, Expr, nullptr, AO,
+                           OpMax, /* IsXBinopExpr */ false,
+                           /* IsPostfixUpdate */ false,
+                           /* IsFailOnly */ false));
+  Builder.restoreIP(AfterIP7);
 
   Builder.CreateRetVoid();
   OMPBuilder.finalize();
   EXPECT_FALSE(verifyModule(*M, &errs()));
+
+  BasicBlock *EntryBB = BB;
+  {
+    // clang-format off
+    // %x.atomic.expected.ptr = alloca i32, align 4
+    // %x.atomic.desired.ptr = alloca i32, align 4
+    // %x.atomic.expected.ptr1 = alloca i32, align 4
+    // %x.atomic.expected.ptr2 = alloca i32, align 4
+    // %x.atomic.desired.ptr3 = alloca i32, align 4
+    // %x.atomic.expected.ptr4 = alloca i32, align 4
+    // %x.atomic.expected.ptr11 = alloca i32, align 4
+    // %x.atomic.desired.ptr12 = alloca i32, align 4
+    // %x.atomic.expected.ptr13 = alloca i32, align 4
+    // %x.atomic.expected.ptr20 = alloca i32, align 4
+    // %x.atomic.desired.ptr21 = alloca i32, align 4
+    // %x.atomic.expected.ptr22 = alloca i32, align 4
+    // %x.atomic.expected.ptr28 = alloca i32, align 4
+    // %x.atomic.desired.ptr29 = alloca i32, align 4
+    // %x.atomic.expected.ptr30 = alloca i32, align 4
+    // %x = alloca i32, align 4
+    // %v = alloca i32, align 4
+    // %r = alloca i32, align 4
+    // store i32 0, ptr %x, align 4
+    // store i32 1, ptr %x.atomic.expected.ptr, align 4
+    // store i32 1, ptr %x.atomic.desired.ptr, align 4
+    // %.cmpxchg.expected = load i32, ptr %x.atomic.expected.ptr, align 4
+    // %.cmpxchg.desired = load i32, ptr %x.atomic.desired.ptr, align 4
+    // %.cmpxchg.pair = cmpxchg ptr %x, i32 %.cmpxchg.expected, i32 %.cmpxchg.desired monotonic monotonic, align 4
+    // %.cmpxchg.prev = extractvalue { i32, i1 } %.cmpxchg.pair, 0
+    // store i32 %.cmpxchg.prev, ptr %x.atomic.expected.ptr1, align 4
+    // %.cmpxchg.success = extractvalue { i32, i1 } %.cmpxchg.pair, 1
+    // %x.capture.actual = load i32, ptr %x.atomic.expected.ptr1, align 4
+    // %x.capture.captured = select i1 %.cmpxchg.success, i32 1, i32 %x.capture.actual
+    // store i32 %x.capture.captured, ptr %v, align 4
+    // store i32 1, ptr %x.atomic.expected.ptr2, align 4
+    // store i32 1, ptr %x.atomic.desired.ptr3, align 4
+    // %.cmpxchg.expected5 = load i32, ptr %x.atomic.expected.ptr2, align 4
+    // %.cmpxchg.desired6 = load i32, ptr %x.atomic.desired.ptr3, align 4
+    // %.cmpxchg.pair7 = cmpxchg ptr %x, i32 %.cmpxchg.expected5, i32 %.cmpxchg.desired6 monotonic monotonic, align 4
+    // %.cmpxchg.prev8 = extractvalue { i32, i1 } %.cmpxchg.pair7, 0
+    // store i32 %.cmpxchg.prev8, ptr %x.atomic.expected.ptr4, align 4
+    // %.cmpxchg.success9 = extractvalue { i32, i1 } %.cmpxchg.pair7, 1
+    // %x.capture.actual10 = load i32, ptr %x.atomic.expected.ptr4, align 4
+    // store i32 %x.capture.actual10, ptr %v, align 4
+    // store i32 1, ptr %x.atomic.expected.ptr11, align 4
+    // store i32 1, ptr %x.atomic.desired.ptr12, align 4
+    // %.cmpxchg.expected14 = load i32, ptr %x.atomic.expected.ptr11, align 4
+    // %.cmpxchg.desired15 = load i32, ptr %x.atomic.desired.ptr12, align 4
+    // %.cmpxchg.pair16 = cmpxchg ptr %x, i32 %.cmpxchg.expected14, i32 %.cmpxchg.desired15 monotonic monotonic, align 4
+    // %.cmpxchg.prev17 = extractvalue { i32, i1 } %.cmpxchg.pair16, 0
+    // store i32 %.cmpxchg.prev17, ptr %x.atomic.expected.ptr13, align 4
+    // %.cmpxchg.success18 = extractvalue { i32, i1 } %.cmpxchg.pair16, 1
+    // %x.capture.actual19 = load i32, ptr %x.atomic.expected.ptr13, align 4
+    // clang-format on
+
+    // Follow use-def and load-store chains to discover instructions
+    AtomicCmpXchgInst *CmpxchgPair16 =
+        cast<AtomicCmpXchgInst>(getUniquePreviousStore(XVal, EntryBB));
+    LoadInst *CmpxchgDesired15 =
+        cast<LoadInst>(CmpxchgPair16->getNewValOperand());
+    AllocaInst *XAtomicDesiredPtr12 =
+        cast<AllocaInst>(CmpxchgDesired15->getPointerOperand());
+    LoadInst *CmpxchgExpected14 =
+        cast<LoadInst>(CmpxchgPair16->getCompareOperand());
+    AllocaInst *XAtomicExpectedPtr11 =
+        cast<AllocaInst>(CmpxchgExpected14->getPointerOperand());
+    StoreInst *Store1 = cast<StoreInst>(
+        getUniquePreviousStore(XAtomicDesiredPtr12, CmpxchgDesired15));
+    StoreInst *Store2 = cast<StoreInst>(
+        getUniquePreviousStore(XAtomicExpectedPtr11, CmpxchgExpected14));
+    StoreInst *Store3 = cast<StoreInst>(getUniquePreviousStore(VVal, EntryBB));
+    LoadInst *XCaptureActual10 = cast<LoadInst>(Store3->getValueOperand());
+    AllocaInst *XAtomicExpectedPtr4 =
+        cast<AllocaInst>(XCaptureActual10->getPointerOperand());
+    StoreInst *Store4 = cast<StoreInst>(
+        getUniquePreviousStore(XAtomicExpectedPtr4, XCaptureActual10));
+    ExtractValueInst *CmpxchgPrev8 =
+        cast<ExtractValueInst>(Store4->getValueOperand());
+    AtomicCmpXchgInst *CmpxchgPair7 =
+        cast<AtomicCmpXchgInst>(CmpxchgPrev8->getOperand(0));
+    LoadInst *CmpxchgDesired6 =
+        cast<LoadInst>(CmpxchgPair7->getNewValOperand());
+    AllocaInst *XAtomicDesiredPtr3 =
+        cast<AllocaInst>(CmpxchgDesired6->getPointerOperand());
+    LoadInst *CmpxchgExpected5 =
+        cast<LoadInst>(CmpxchgPair7->getCompareOperand());
+    AllocaInst *XAtomicExpectedPtr2 =
+        cast<AllocaInst>(CmpxchgExpected5->getPointerOperand());
+    StoreInst *Store5 = cast<StoreInst>(
+        getUniquePreviousStore(XAtomicDesiredPtr3, CmpxchgDesired6));
+    StoreInst *Store6 = cast<StoreInst>(
+        getUniquePreviousStore(XAtomicExpectedPtr2, CmpxchgExpected5));
+
+    // %x.atomic.expected.ptr2 = alloca i32, align 4
+    EXPECT_EQ(XAtomicExpectedPtr2->getParent(), EntryBB);
+    EXPECT_FALSE(XAtomicExpectedPtr2->isArrayAllocation());
+    EXPECT_EQ(XAtomicExpectedPtr2->getAddressSpace(), 0);
+    EXPECT_EQ(XAtomicExpectedPtr2->getAlign(), 4);
+    Type *XAtomicExpectedPtr2Ty = XAtomicExpectedPtr2->getAllocatedType();
+    EXPECT_TRUE(XAtomicExpectedPtr2Ty->isIntegerTy());
+    EXPECT_EQ(XAtomicExpectedPtr2Ty->getIntegerBitWidth(), 32);
+
+    // %x.atomic.desired.ptr3 = alloca i32, align 4
+    EXPECT_EQ(XAtomicDesiredPtr3->getParent(), EntryBB);
+    EXPECT_FALSE(XAtomicDesiredPtr3->isArrayAllocation());
+    EXPECT_EQ(XAtomicDesiredPtr3->getAddressSpace(), 0);
+    EXPECT_EQ(XAtomicDesiredPtr3->getAlign(), 4);
+    Type *XAtomicDesiredPtr3Ty = XAtomicDesiredPtr3->getAllocatedType();
+    EXPECT_TRUE(XAtomicDesiredPtr3Ty->isIntegerTy());
+    EXPECT_EQ(XAtomicDesiredPtr3Ty->getIntegerBitWidth(), 32);
+
+    // %x.atomic.expected.ptr4 = alloca i32, align 4
+    EXPECT_EQ(XAtomicExpectedPtr4->getParent(), EntryBB);
+    EXPECT_FALSE(XAtomicExpectedPtr4->isArrayAllocation());
+    EXPECT_EQ(XAtomicExpectedPtr4->getAddressSpace(), 0);
+    EXPECT_EQ(XAtomicExpectedPtr4->getAlign(), 4);
+    Type *XAtomicExpectedPtr4Ty = XAtomicExpectedPtr4->getAllocatedType();
+    EXPECT_TRUE(XAtomicExpectedPtr4Ty->isIntegerTy());
+    EXPECT_EQ(XAtomicExpectedPtr4Ty->getIntegerBitWidth(), 32);
+
+    // %x.atomic.expected.ptr11 = alloca i32, align 4
+    EXPECT_EQ(XAtomicExpectedPtr11->getParent(), EntryBB);
+    EXPECT_FALSE(XAtomicExpectedPtr11->isArrayAllocation());
+    EXPECT_EQ(XAtomicExpectedPtr11->getAddressSpace(), 0);
+    EXPECT_EQ(XAtomicExpectedPtr11->getAlign(), 4);
+    Type *XAtomicExpectedPtr11Ty = XAtomicExpectedPtr11->getAllocatedType();
+    EXPECT_TRUE(XAtomicExpectedPtr11Ty->isIntegerTy());
+    EXPECT_EQ(XAtomicExpectedPtr11Ty->getIntegerBitWidth(), 32);
+
+    // %x.atomic.desired.ptr12 = alloca i32, align 4
+    EXPECT_EQ(XAtomicDesiredPtr12->getParent(), EntryBB);
+    EXPECT_FALSE(XAtomicDesiredPtr12->isArrayAllocation());
+    EXPECT_EQ(XAtomicDesiredPtr12->getAddressSpace(), 0);
+    EXPECT_EQ(XAtomicDesiredPtr12->getAlign(), 4);
+    Type *XAtomicDesiredPtr12Ty = XAtomicDesiredPtr12->getAllocatedType();
+    EXPECT_TRUE(XAtomicDesiredPtr12Ty->isIntegerTy());
+    EXPECT_EQ(XAtomicDesiredPtr12Ty->getIntegerBitWidth(), 32);
+
+    // %x = alloca i32, align 4
+    EXPECT_EQ(XVal->getParent(), EntryBB);
+    EXPECT_FALSE(XVal->isArrayAllocation());
+    EXPECT_EQ(XVal->getAddressSpace(), 0);
+    EXPECT_EQ(XVal->getAlign(), 4);
+    Type *XValTy = XVal->getAllocatedType();
+    EXPECT_TRUE(XValTy->isIntegerTy());
+    EXPECT_EQ(XValTy->getIntegerBitWidth(), 32);
+
+    // %v = alloca i32, align 4
+    EXPECT_EQ(VVal->getParent(), EntryBB);
+    EXPECT_FALSE(VVal->isArrayAllocation());
+    EXPECT_EQ(VVal->getAddressSpace(), 0);
+    EXPECT_EQ(VVal->getAlign(), 4);
+    Type *VValTy = VVal->getAllocatedType();
+    EXPECT_TRUE(VValTy->isIntegerTy());
+    EXPECT_EQ(VValTy->getIntegerBitWidth(), 32);
+
+    // store i32 0, ptr %x, align 4
+    EXPECT_EQ(Init->getParent(), EntryBB);
+    EXPECT_TRUE(Init->isSimple());
+    EXPECT_EQ(cast<ConstantInt>(Init->getOperand(0))->getZExtValue(), 0);
+    EXPECT_EQ(Init->getOperand(1), XVal);
+
+    // store i32 1, ptr %x.atomic.expected.ptr2, align 4
+    EXPECT_EQ(Store6->getParent(), EntryBB);
+    EXPECT_TRUE(Store6->isSimple());
+    EXPECT_EQ(cast<ConstantInt>(Store6->getValueOperand())->getZExtValue(), 1);
+    EXPECT_EQ(Store6->getPointerOperand(), XAtomicExpectedPtr2);
+
+    // store i32 1, ptr %x.atomic.desired.ptr3, align 4
+    EXPECT_EQ(Store5->getParent(), EntryBB);
+    EXPECT_TRUE(Store5->isSimple());
+    EXPECT_EQ(cast<ConstantInt>(Store5->getValueOperand())->getZExtValue(), 1);
+    EXPECT_EQ(Store5->getPointerOperand(), XAtomicDesiredPtr3);
+
+    // %.cmpxchg.expected5 = load i32, ptr %x.atomic.expected.ptr2, align 4
+    EXPECT_EQ(CmpxchgExpected5->getParent(), EntryBB);
+    EXPECT_TRUE(CmpxchgExpected5->isSimple());
+    EXPECT_EQ(CmpxchgExpected5->getPointerOperand(), XAtomicExpectedPtr2);
+
+    // %.cmpxchg.desired6 = load i32, ptr %x.atomic.desired.ptr3, align 4
+    EXPECT_EQ(CmpxchgDesired6->getParent(), EntryBB);
+    EXPECT_TRUE(CmpxchgDesired6->isSimple());
+    EXPECT_EQ(CmpxchgDesired6->getPointerOperand(), XAtomicDesiredPtr3);
+
+    // %.cmpxchg.pair7 = cmpxchg ptr %x, i32 %.cmpxchg.expected5, i32
+    // %.cmpxchg.desired6 monotonic monotonic, align 4
+    EXPECT_EQ(CmpxchgPair7->getParent(), EntryBB);
+    EXPECT_FALSE(CmpxchgPair7->isVolatile());
+    EXPECT_FALSE(CmpxchgPair7->isWeak());
+    EXPECT_EQ(CmpxchgPair7->getSuccessOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair7->getFailureOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair7->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(CmpxchgPair7->getAlign(), 4);
+    EXPECT_EQ(CmpxchgPair7->getPointerOperand(), XVal);
+    EXPECT_EQ(CmpxchgPair7->getCompareOperand(), CmpxchgExpected5);
+    EXPECT_EQ(CmpxchgPair7->getNewValOperand(), CmpxchgDesired6);
+
+    // %.cmpxchg.prev8 = extractvalue { i32, i1 } %.cmpxchg.pair7, 0
+    EXPECT_EQ(CmpxchgPrev8->getParent(), EntryBB);
+    EXPECT_EQ(CmpxchgPrev8->getOperand(0), CmpxchgPair7);
+
+    // store i32 %.cmpxchg.prev8, ptr %x.atomic.expected.ptr4, align 4
+    EXPECT_EQ(Store4->getParent(), EntryBB);
+    EXPECT_TRUE(Store4->isSimple());
+    EXPECT_EQ(Store4->getValueOperand(), CmpxchgPrev8);
+    EXPECT_EQ(Store4->getPointerOperand(), XAtomicExpectedPtr4);
+
+    // %x.capture.actual10 = load i32, ptr %x.atomic.expected.ptr4, align 4
+    EXPECT_EQ(XCaptureActual10->getParent(), EntryBB);
+    EXPECT_TRUE(XCaptureActual10->isSimple());
+    EXPECT_EQ(XCaptureActual10->getPointerOperand(), XAtomicExpectedPtr4);
+
+    // store i32 %x.capture.actual10, ptr %v, align 4
+    EXPECT_EQ(Store3->getParent(), EntryBB);
+    EXPECT_TRUE(Store3->isSimple());
+    EXPECT_EQ(Store3->getValueOperand(), XCaptureActual10);
+    EXPECT_EQ(Store3->getPointerOperand(), VVal);
+
+    // store i32 1, ptr %x.atomic.expected.ptr11, align 4
+    EXPECT_EQ(Store2->getParent(), EntryBB);
+    EXPECT_TRUE(Store2->isSimple());
+    EXPECT_EQ(cast<ConstantInt>(Store2->getValueOperand())->getZExtValue(), 1);
+    EXPECT_EQ(Store2->getPointerOperand(), XAtomicExpectedPtr11);
+
+    // store i32 1, ptr %x.atomic.desired.ptr12, align 4
+    EXPECT_EQ(Store1->getParent(), EntryBB);
+    EXPECT_TRUE(Store1->isSimple());
+    EXPECT_EQ(cast<ConstantInt>(Store1->getValueOperand())->getZExtValue(), 1);
+    EXPECT_EQ(Store1->getPointerOperand(), XAtomicDesiredPtr12);
+
+    // %.cmpxchg.expected14 = load i32, ptr %x.atomic.expected.ptr11, align 4
+    EXPECT_EQ(CmpxchgExpected14->getParent(), EntryBB);
+    EXPECT_TRUE(CmpxchgExpected14->isSimple());
+    EXPECT_EQ(CmpxchgExpected14->getPointerOperand(), XAtomicExpectedPtr11);
+
+    // %.cmpxchg.desired15 = load i32, ptr %x.atomic.desired.ptr12, align 4
+    EXPECT_EQ(CmpxchgDesired15->getParent(), EntryBB);
+    EXPECT_TRUE(CmpxchgDesired15->isSimple());
+    EXPECT_EQ(CmpxchgDesired15->getPointerOperand(), XAtomicDesiredPtr12);
+
+    // %.cmpxchg.pair16 = cmpxchg ptr %x, i32 %.cmpxchg.expected14, i32
+    // %.cmpxchg.desired15 monotonic monotonic, align 4
+    EXPECT_EQ(CmpxchgPair16->getParent(), EntryBB);
+    EXPECT_FALSE(CmpxchgPair16->isVolatile());
+    EXPECT_FALSE(CmpxchgPair16->isWeak());
+    EXPECT_EQ(CmpxchgPair16->getSuccessOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair16->getFailureOrdering(), AtomicOrdering::Monotonic);
+    EXPECT_EQ(CmpxchgPair16->getSyncScopeID(), SyncScope::System);
+    EXPECT_EQ(CmpxchgPair16->getAlign(), 4);
+    EXPECT_EQ(CmpxchgPair16->getPointerOperand(), XVal);
+    EXPECT_EQ(CmpxchgPair16->getCompareOperand(), CmpxchgExpected14);
+    EXPECT_EQ(CmpxchgPair16->getNewValOperand(), CmpxchgDesired15);
+  }
 }
 
 TEST_F(OpenMPIRBuilderTest, CreateTeams) {
