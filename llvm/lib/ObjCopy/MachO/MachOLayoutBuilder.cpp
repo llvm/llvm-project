@@ -118,7 +118,8 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
   uint64_t Offset = IsObjectFile ? (HeaderSize + O.Header.SizeOfCmds) : 0;
   // If we are emitting an encryptable binary, our load commands must have a
   // separate (non-encrypted) page to themselves.
-  bool FirstSectExtraEncryptableOffset = O.EncryptionInfoCommandIndex.has_value();
+  bool FirstSectExtraEncryptableOffset =
+      O.EncryptionInfoCommandIndex.has_value();
   for (LoadCommand &LC : O.LoadCommands) {
     auto &MLC = LC.MachOLoadCommand;
     StringRef Segname;
@@ -173,7 +174,7 @@ uint64_t MachOLayoutBuilder::layoutSegments() {
           Sec->Offset = 0;
         } else {
           if (FirstSectExtraEncryptableOffset) {
-            SectOffset =  alignToPowerOf2(SectOffset, PageSize);
+            SectOffset = alignToPowerOf2(SectOffset, PageSize);
             FirstSectExtraEncryptableOffset = false;
           }
           Sec->Offset = SegOffset + SectOffset;
