@@ -33,6 +33,14 @@ public:
       llvm_unreachable("NYI: PPC double-double format for long double");
     llvm_unreachable("Unsupported format for long double");
   }
+
+  bool isSized(mlir::Type ty) {
+    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType,
+                  cir::IntType>(ty))
+      return true;
+    assert(0 && "Unimplemented size for type");
+    return false;
+  }
 };
 
 } // namespace clang::CIRGen

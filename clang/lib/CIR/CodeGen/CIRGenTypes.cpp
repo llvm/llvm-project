@@ -202,6 +202,18 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     break;
   }
 
+  case Type::ConstantArray: {
+    const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
+    mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
+
+    // FIXME: In LLVM, "lower arrays of undefined struct type to arrays of
+    // i8 just to have a concrete type". Not sure this makes sense in CIR yet.
+    assert(builder.isSized(elemTy) && "not implemented");
+    resultType = cir::ArrayType::get(builder.getContext(), elemTy,
+                                     arrTy->getSize().getZExtValue());
+    break;
+  }
+
   case Type::FunctionNoProto:
   case Type::FunctionProto:
     resultType = convertFunctionTypeInternal(type);
