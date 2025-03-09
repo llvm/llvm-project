@@ -48,6 +48,90 @@ define i32 @test() nounwind {
   ret i32 0
 }
 
+define void @select_memset(i32 %arg.0, i64 %arg.1, ptr %arg.2) {
+; RV32I-FPELIM-LABEL: select_memset:
+; RV32I-FPELIM:       # %bb.0: # %entry
+; RV32I-FPELIM-NEXT:    addi sp, sp, -16
+; RV32I-FPELIM-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-FPELIM-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-FPELIM-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-FPELIM-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-FPELIM-NEXT:    .cfi_offset ra, -4
+; RV32I-FPELIM-NEXT:    .cfi_offset s0, -8
+; RV32I-FPELIM-NEXT:    .cfi_offset s1, -12
+; RV32I-FPELIM-NEXT:    mv s0, a1
+; RV32I-FPELIM-NEXT:    mv s1, a0
+; RV32I-FPELIM-NEXT:    li a2, 13
+; RV32I-FPELIM-NEXT:    mv a0, a3
+; RV32I-FPELIM-NEXT:    li a1, 0
+; RV32I-FPELIM-NEXT:    call memset
+; RV32I-FPELIM-NEXT:    beqz s1, .LBB1_2
+; RV32I-FPELIM-NEXT:  # %bb.1: # %entry
+; RV32I-FPELIM-NEXT:    li s0, 1
+; RV32I-FPELIM-NEXT:    li s1, 1
+; RV32I-FPELIM-NEXT:  .LBB1_2: # %entry
+; RV32I-FPELIM-NEXT:    beqz s1, .LBB1_4
+; RV32I-FPELIM-NEXT:  # %bb.3: # %if.then
+; RV32I-FPELIM-NEXT:    sb s0, 0(zero)
+; RV32I-FPELIM-NEXT:  .LBB1_4: # %if.end
+; RV32I-FPELIM-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-FPELIM-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-FPELIM-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-FPELIM-NEXT:    addi sp, sp, 16
+; RV32I-FPELIM-NEXT:    ret
+;
+; RV32I-WITHFP-LABEL: select_memset:
+; RV32I-WITHFP:       # %bb.0: # %entry
+; RV32I-WITHFP-NEXT:    addi sp, sp, -16
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa_offset 16
+; RV32I-WITHFP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32I-WITHFP-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
+; RV32I-WITHFP-NEXT:    sw s1, 4(sp) # 4-byte Folded Spill
+; RV32I-WITHFP-NEXT:    sw s2, 0(sp) # 4-byte Folded Spill
+; RV32I-WITHFP-NEXT:    .cfi_offset ra, -4
+; RV32I-WITHFP-NEXT:    .cfi_offset s0, -8
+; RV32I-WITHFP-NEXT:    .cfi_offset s1, -12
+; RV32I-WITHFP-NEXT:    .cfi_offset s2, -16
+; RV32I-WITHFP-NEXT:    addi s0, sp, 16
+; RV32I-WITHFP-NEXT:    .cfi_def_cfa s0, 0
+; RV32I-WITHFP-NEXT:    mv s1, a1
+; RV32I-WITHFP-NEXT:    mv s2, a0
+; RV32I-WITHFP-NEXT:    li a2, 13
+; RV32I-WITHFP-NEXT:    mv a0, a3
+; RV32I-WITHFP-NEXT:    li a1, 0
+; RV32I-WITHFP-NEXT:    call memset
+; RV32I-WITHFP-NEXT:    beqz s2, .LBB1_2
+; RV32I-WITHFP-NEXT:  # %bb.1: # %entry
+; RV32I-WITHFP-NEXT:    li s1, 1
+; RV32I-WITHFP-NEXT:    li s2, 1
+; RV32I-WITHFP-NEXT:  .LBB1_2: # %entry
+; RV32I-WITHFP-NEXT:    beqz s2, .LBB1_4
+; RV32I-WITHFP-NEXT:  # %bb.3: # %if.then
+; RV32I-WITHFP-NEXT:    sb s1, 0(zero)
+; RV32I-WITHFP-NEXT:  .LBB1_4: # %if.end
+; RV32I-WITHFP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s1, 4(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    lw s2, 0(sp) # 4-byte Folded Reload
+; RV32I-WITHFP-NEXT:    addi sp, sp, 16
+; RV32I-WITHFP-NEXT:    ret
+entry:
+  %icmp.0 = icmp eq i32 %arg.0, 0
+  %sele.0 = select i1 %icmp.0, i64 %arg.1, i64 1
+  %trun.0 = trunc i64 %sele.0 to i8
+  call void @llvm.memset.p0.i64(ptr %arg.2, i8 0, i64 13, i1 false)
+  %sele.1 = select i1 %icmp.0, i32 %arg.0, i32 1
+  %icmp.1 = icmp eq i32 %sele.1, 0
+  br i1 %icmp.1, label %if.end, label %if.then
+
+if.then:
+  store i8 %trun.0, ptr null, align 1
+  br label %if.end
+
+if.end:
+  ret void
+}
+
 declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1)
 
 declare void @test1(ptr)
