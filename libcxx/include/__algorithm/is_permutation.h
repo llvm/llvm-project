@@ -83,31 +83,31 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation_impl(
     _Proj1&& __proj1,
     _Proj2&& __proj2) {
   using _D1 = __iter_diff_t<_Iter1>;
+  using _Ref1 = typename iterator_traits<_Iter1>::reference;
+  using _Ref2 = typename iterator_traits<_Iter2>::reference;
+  __identity __ident;
 
   for (auto __i = __first1; __i != __last1; ++__i) {
     //  Have we already counted the number of *__i in [f1, l1)?
-    auto __match = std::find_if(__first1, __i, [&](typename iterator_traits<_Iter1>::reference __x) -> bool {
+    auto __match = std::find_if(__first1, __i, [&](_Ref1 __x) -> bool {
       return std::__invoke(__pred, std::__invoke(__proj1, __x), std::__invoke(__proj1, *__i));
     });
 
     if (__match == __i) {
       // Count number of *__i in [f2, l2)
-      __identity __ident1;
-      auto __predicate1 = [&](typename iterator_traits<_Iter2>::reference __x) -> bool {
+      auto __predicate2 = [&](_Ref2 __x) -> bool {
         return std::__invoke(__pred, std::__invoke(__proj1, *__i), std::__invoke(__proj2, __x));
       };
-      _D1 __c2 = std::__count_if<_AlgPolicy>(__first2, __last2, __predicate1, __ident1);
+      _D1 __c2 = std::__count_if<_AlgPolicy>(__first2, __last2, __predicate2, __ident);
       if (__c2 == 0)
         return false;
 
       // Count number of *__i in [__i, l1) (we can start with 1)
-      __identity __ident2;
-      auto __predicate2 = [&](typename iterator_traits<_Iter1>::reference __x) -> bool {
+      auto __predicate1 = [&](_Ref1 __x) -> bool {
         return std::__invoke(__pred, std::__invoke(__proj1, *__i), std::__invoke(__proj1, __x));
       };
       auto __start = _IterOps<_AlgPolicy>::next(__i);
-      _D1 __c1     = std::__count_if<_AlgPolicy>(__start, __last1, __predicate2, __ident2);
-      __c1 += 1;
+      _D1 __c1     = 1 + std::__count_if<_AlgPolicy>(__start, __last1, __predicate1, __ident);
       if (__c1 != __c2)
         return false;
     }
