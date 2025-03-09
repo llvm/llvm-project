@@ -111,7 +111,7 @@ void BugDriver::EmitProgressBitcode(const Module &M, const std::string &ID,
   outs() << " " << getPassesString(PassesToRun) << "\n";
 }
 
-cl::opt<bool> SilencePasses(
+static cl::opt<bool> SilencePasses(
     "silence-passes",
     cl::desc("Suppress output of running passes (both stdout and stderr)"));
 

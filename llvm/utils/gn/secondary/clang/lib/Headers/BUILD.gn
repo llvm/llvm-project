@@ -221,6 +221,7 @@ copy("Headers") {
     "hexagon_protos.h",
     "hexagon_types.h",
     "hlsl.h",
+    "hlsl/hlsl_alias_intrinsics.h",
     "hlsl/hlsl_basic_types.h",
     "hlsl/hlsl_detail.h",
     "hlsl/hlsl_intrinsics.h",

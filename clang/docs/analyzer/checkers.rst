@@ -118,19 +118,6 @@ core.NullDereference (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""
 Check for dereferences of null pointers.
 
-This checker specifically does
-not report null pointer dereferences for x86 and x86-64 targets when the
-address space is 256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS
-segment). See `X86/X86-64 Language Extensions
-<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
-for reference.
-
-The ``SuppressAddressSpaces`` option suppresses
-warnings for null dereferences of all pointers with address spaces. You can
-disable this behavior with the option
-``-analyzer-config core.NullDereference:SuppressAddressSpaces=false``.
-*Defaults to true*.
-
 .. code-block:: objc
 
  // C
@@ -169,6 +156,19 @@ disable this behavior with the option
    MyClass *obj = 0;
    obj->x = 1; // warn
  }
+
+Null pointer dereferences of pointers with address spaces are not always defined
+as error. Specifically on x86/x86-64 target if the pointer address space is
+256 (x86 GS Segment), 257 (x86 FS Segment), or 258 (x86 SS Segment), a null
+dereference is not defined as error. See `X86/X86-64 Language Extensions
+<https://clang.llvm.org/docs/LanguageExtensions.html#memory-references-to-specified-segments>`__
+for reference.
+	
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but null dereferences from other address spaces are reported.
 
 .. _core-StackAddressEscape:
 
@@ -2918,6 +2918,41 @@ Check for assignment of a fixed address to a pointer.
    int *p;
    p = (int *) 0x10000; // warn
  }
+
+.. _alpha-core-FixedAddressDereference:
+
+alpha.core.FixedAddressDereference (C, C++, ObjC)
+"""""""""""""""""""""""""""""""""""""""""""""""""
+Check for dereferences of fixed addresses.
+
+A pointer contains a fixed address if it was set to a hard-coded value or it
+becomes otherwise obvious that at that point it can have only a single specific
+value.
+
+.. code-block:: c
+
+ void test1() {
+   int *p = (int *)0x020;
+   int x = p[0]; // warn
+ }
+
+ void test2(int *p) {
+   if (p == (int *)-1)
+     *p = 0; // warn
+ }
+
+ void test3() {
+   int (*p_function)(char, char);
+   p_function = (int (*)(char, char))0x04080;
+   int x = (*p_function)('x', 'y'); // NO warning yet at functon pointer calls
+ }
+
+If the analyzer option ``suppress-dereferences-from-any-address-space`` is set
+to true (the default value), then this checker never reports dereference of
+pointers with a specified address space. If the option is set to false, then
+reports from the specific x86 address spaces 256, 257 and 258 are still
+suppressed, but fixed address dereferences from other address spaces are
+reported.
 
 .. _alpha-core-PointerArithm:
 

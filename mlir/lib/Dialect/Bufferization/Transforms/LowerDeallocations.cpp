@@ -23,7 +23,7 @@
 
 namespace mlir {
 namespace bufferization {
-#define GEN_PASS_DEF_LOWERDEALLOCATIONS
+#define GEN_PASS_DEF_LOWERDEALLOCATIONSPASS
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
 } // namespace bufferization
 } // namespace mlir
@@ -379,7 +379,7 @@ private:
 
 namespace {
 struct LowerDeallocationsPass
-    : public bufferization::impl::LowerDeallocationsBase<
+    : public bufferization::impl::LowerDeallocationsPassBase<
           LowerDeallocationsPass> {
   void runOnOperation() override {
     if (!isa<ModuleOp, FunctionOpInterface>(getOperation())) {
@@ -545,8 +545,4 @@ void mlir::bufferization::populateBufferizationDeallocLoweringPattern(
     const bufferization::DeallocHelperMap &deallocHelperFuncMap) {
   patterns.add<DeallocOpConversion>(patterns.getContext(),
                                     deallocHelperFuncMap);
-}
-
-std::unique_ptr<Pass> mlir::bufferization::createLowerDeallocationsPass() {
-  return std::make_unique<LowerDeallocationsPass>();
 }

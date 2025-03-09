@@ -43,6 +43,19 @@ public:
       : EPC(ES.getExecutorProcessControl()), H(H), Allow(std::move(Allow)),
         AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
 
+  /// Create an EPCDynamicLibrarySearchGenerator that resolves all symbols
+  /// matching the Allow predicate to null. This can be used to emulate linker
+  /// options like -weak-l / -weak_library where the library is missing at
+  /// runtime. (Note: here we're explicitly returning null for these symbols,
+  /// rather than returning no value at all for them, which is the usual
+  /// "missing symbol" behavior in ORC. This distinction shouldn't matter for
+  /// most use-cases).
+  EPCDynamicLibrarySearchGenerator(
+      ExecutionSession &ES, SymbolPredicate Allow,
+      AddAbsoluteSymbolsFn AddAbsoluteSymbols = nullptr)
+      : EPC(ES.getExecutorProcessControl()), Allow(std::move(Allow)),
+        AddAbsoluteSymbols(std::move(AddAbsoluteSymbols)) {}
+
   /// Permanently loads the library at the given path and, on success, returns
   /// an EPCDynamicLibrarySearchGenerator that will search it for symbol
   /// definitions in the library. On failure returns the reason the library
@@ -66,8 +79,10 @@ public:
                       const SymbolLookupSet &Symbols) override;
 
 private:
+  Error addAbsolutes(JITDylib &JD, SymbolMap Symbols);
+
   ExecutorProcessControl &EPC;
-  tpctypes::DylibHandle H;
+  std::optional<tpctypes::DylibHandle> H;
   SymbolPredicate Allow;
   AddAbsoluteSymbolsFn AddAbsoluteSymbols;
 };
