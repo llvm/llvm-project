@@ -406,7 +406,7 @@ void InitializeRequestHandler::operator()(
   // The debug adapter supports restarting a frame.
   body.try_emplace("supportsRestartFrame", false);
   // The debug adapter supports the gotoTargetsRequest.
-  body.try_emplace("supportsGotoTargetsRequest", false);
+  body.try_emplace("supportsGotoTargetsRequest", true);
   // The debug adapter supports the stepInTargetsRequest.
   body.try_emplace("supportsStepInTargetsRequest", true);
   // The debug adapter supports the completions request.

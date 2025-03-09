@@ -113,6 +113,20 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
+class GoToRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "goto"; }
+  void operator()(const llvm::json::Object &request) const override;
+};
+
+class GoToTargetsRequestHandler : public RequestHandler {
+public:
+  using RequestHandler::RequestHandler;
+  static llvm::StringLiteral getCommand() { return "gotoTargets"; }
+  void operator()(const llvm::json::Object &request) const override;
+};
+
 class InitializeRequestHandler : public RequestHandler {
 public:
   using RequestHandler::RequestHandler;
