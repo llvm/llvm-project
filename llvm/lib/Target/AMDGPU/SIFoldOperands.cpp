@@ -1819,11 +1819,13 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
   if (!ClampSrc || !MRI->hasOneNonDBGUser(ClampSrc->getReg()))
     return false;
 
-  MachineInstr *Def = MRI->getVRegDef(ClampSrc->getReg());
-  MachineInstr *OrigDef = Def;
   // Look through COPY. COPY only observed with True16.
-  if (Def->isCopy() && Def->getOperand(1).getReg().isVirtual())
-    Def = MRI->getVRegDef(Def->getOperand(1).getReg());
+  MachineOperand *DefSrc = lookUpCopyChain(*TII, *MRI, ClampSrc->getReg());
+  MachineInstr *Def = nullptr;
+  if (DefSrc && DefSrc->isReg() && !DefSrc->isImm())
+    Def = MRI->getVRegDef(DefSrc->getReg());
+  else
+    Def = MRI->getVRegDef(ClampSrc->getReg());
 
   // The type of clamp must be compatible.
   if (TII->getClampMask(*Def) != TII->getClampMask(MI))
@@ -1841,7 +1843,7 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
   // Clamp is applied after omod, so it is OK if omod is set.
   DefClamp->setImm(1);
 
-  Register DefReg = OrigDef->getOperand(0).getReg();
+  Register DefReg = Def->getOperand(0).getReg();
   Register MIDstReg = MI.getOperand(0).getReg();
   if (TRI->isSGPRReg(*MRI, DefReg)) {
     // Pseudo scalar instructions have a SGPR for dst and clamp is a v_max*
