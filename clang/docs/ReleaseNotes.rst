@@ -235,11 +235,11 @@ Bug Fixes to C++ Support
 - The initialization kind of elements of structured bindings
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
+- Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
-- Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
