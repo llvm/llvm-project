@@ -546,6 +546,10 @@ Error RewriteInstance::discoverStorage() {
         if (Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
           BC->IsLinuxKernel = true;
         break;
+      case llvm::Triple::aarch64:
+        if (Phdr.p_vaddr >= BinaryContext::KernelStartAArch64)
+          BC->IsLinuxKernel = true;
+        break;
       default:;
       }
       break;
@@ -811,6 +815,9 @@ void RewriteInstance::discoverFileObjects() {
     return Section.isAllocatable();
   };
   auto checkSymbolInSection = [this](const SymbolInfo &S) {
+    if (BC->IsLinuxKernel)
+      return true;
+
     // Sometimes, we encounter symbols with addresses outside their section. If
     // such symbols happen to fall into another section, they can interfere with
     // disassembly. Notably, this occurs with AArch64 marker symbols ($d and $t)
@@ -1040,12 +1047,11 @@ void RewriteInstance::discoverFileObjects() {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: considering symbol " << UniqueName
                       << " for function\n");
 
-    if (SymbolAddress == Section->getAddress() + Section->getSize()) {
+    if (SymbolAddress >= Section->getAddress() + Section->getSize()) {
       assert(SymbolSize == 0 &&
-             "unexpect non-zero sized symbol at end of section");
+             "unexpect non-zero sized symbol outside section");
       LLVM_DEBUG(
-          dbgs()
-          << "BOLT-DEBUG: rejecting as symbol points to end of its section\n");
+          dbgs() << "BOLT-DEBUG: rejecting as symbol is outside its section\n");
       registerName(SymbolSize);
       continue;
     }
@@ -5700,8 +5706,18 @@ void RewriteInstance::rewriteFile() {
     OS.pwrite(reinterpret_cast<char *>(Function->getImageAddress()),
               Function->getImageSize(), Function->getFileOffset());
 
+    bool ShouldWriteNops = true;
+
+    // For AArch64, Linux kernel alternative instruction replacement sequences
+    // are not in a seperate section as for X86, but reside in gaps between
+    // functions.
+    // Avoid overwriting them by skipping writing nops here.
+    if (BC->IsLinuxKernel && BC->isAArch64() && !BC->HasRelocations)
+      ShouldWriteNops = false;
+
     // Write nops at the end of the function.
-    if (Function->getMaxSize() != std::numeric_limits<uint64_t>::max()) {
+    if (ShouldWriteNops &&
+        Function->getMaxSize() != std::numeric_limits<uint64_t>::max()) {
       uint64_t Pos = OS.tell();
       OS.seek(Function->getFileOffset() + Function->getImageSize());
       BC->MAB->writeNopData(

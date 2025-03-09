@@ -1101,6 +1101,13 @@ Error LinuxKernelRewriter::readExceptionTable(StringRef SectionName) {
     ExceptionTableEntrySize = 12;
     break;
 
+  case llvm::Triple::aarch64:
+    if (LinuxKernelVersion >= LKVersion(5, 16))
+      ExceptionTableEntrySize = 12;
+    else
+      ExceptionTableEntrySize = 8;
+    break;
+
   default:
     llvm_unreachable("Unsupported architecture");
   }
@@ -1414,7 +1421,7 @@ Error LinuxKernelRewriter::rewriteBugTable() {
 ///     ...
 ///     u8  instrlen;
 ///     u8  replacementlen;
-///	    ...
+///     ...
 ///   } __packed;
 ///
 /// Note that the structure is packed and field names may not be exactly the
@@ -1442,6 +1449,10 @@ Error LinuxKernelRewriter::readAltInstructions() {
       AltInstrEntrySize = 13;
       AltInstrEntryInstrlenOffset = 10;
     }
+    break;
+  case llvm::Triple::aarch64:
+    AltInstrEntrySize = 12;
+    AltInstrEntryInstrlenOffset = 10;
     break;
   default:
     llvm_unreachable("Unsupported architecture");
@@ -1768,6 +1779,8 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
         if (LongJumpLabels)
           return Size == 5;
         return Size == 2 || Size == 5;
+      case llvm::Triple::aarch64:
+        return Size == 4;
       default:
         return false;
       }
@@ -1864,6 +1877,12 @@ Error LinuxKernelRewriter::rewriteStaticKeysJumpTable() {
           if (Size == 2)
             ++NumShort;
           else if (Size == 5)
+            ++NumLong;
+          else
+            llvm_unreachable("Wrong size for static keys jump instruction.");
+          break;
+        case llvm::Triple::aarch64:
+          if (Size == 4)
             ++NumLong;
           else
             llvm_unreachable("Wrong size for static keys jump instruction.");
@@ -1969,6 +1988,12 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
       if (Size == 2)
         ++NumShort;
       else if (Size == 5)
+        ++NumLong;
+      else
+        llvm_unreachable("Unexpected size for static keys jump instruction.");
+      break;
+    case llvm::Triple::aarch64:
+      if (Size == 4)
         ++NumLong;
       else
         llvm_unreachable("Unexpected size for static keys jump instruction.");
