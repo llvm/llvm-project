@@ -48,7 +48,8 @@ llvm::SmallVector<const VarDecl *> getLockGuardsFromDecl(const DeclStmt *DS) {
 
   for (const Decl *Decl : DS->decls()) {
     if (const auto *VD = dyn_cast<VarDecl>(Decl)) {
-      const QualType Type = VD->getType().getCanonicalType();
+      const QualType Type =
+          VD->getType().getUnqualifiedType().getCanonicalType();
       if (isLockGuard(Type)) {
         LockGuards.push_back(VD);
       }
@@ -105,19 +106,16 @@ getTemplateLockGuardTypeLoc(const TypeSourceInfo *SourceInfo) {
   return ElaboratedLoc.getNamedTypeLoc().getAs<TemplateSpecializationTypeLoc>();
 }
 
-// Find the exact source range of the 'lock_guard<...>' token
-SourceRange getLockGuardTemplateRange(const TypeSourceInfo *SourceInfo) {
-  const TemplateSpecializationTypeLoc TemplateLoc =
-      getTemplateLockGuardTypeLoc(SourceInfo);
-  if (!TemplateLoc)
-    return {};
-
-  return SourceRange(TemplateLoc.getTemplateNameLoc(),
-                     TemplateLoc.getRAngleLoc());
-}
-
 // Find the exact source range of the 'lock_guard' token
 SourceRange getLockGuardRange(const TypeSourceInfo *SourceInfo) {
+  const TypeLoc LockGuardTypeLoc = SourceInfo->getTypeLoc();
+
+  return SourceRange(LockGuardTypeLoc.getBeginLoc(),
+                     LockGuardTypeLoc.getEndLoc());
+}
+
+// Find the exact source range of the 'lock_guard' name token
+SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
   const TemplateSpecializationTypeLoc TemplateLoc =
       getTemplateLockGuardTypeLoc(SourceInfo);
   if (!TemplateLoc)
@@ -144,11 +142,16 @@ void UseScopedLockCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 }
 
 void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
-  auto LockGuardClassDecl =
-      namedDecl(anyOf(classTemplateDecl(), classTemplateSpecializationDecl()),
-                hasName("lock_guard"), isInStdNamespace());
-  auto LockGuardType = qualType(hasDeclaration(LockGuardClassDecl));
-  auto LockVarDecl = varDecl(hasType(LockGuardType));
+  const auto LockGuardClassDecl =
+      namedDecl(hasName("lock_guard"), isInStdNamespace());
+
+  const auto LockGuardType = qualType(anyOf(
+      hasUnqualifiedDesugaredType(
+          recordType(hasDeclaration(LockGuardClassDecl))),
+      elaboratedType(namesType(hasUnqualifiedDesugaredType(
+          templateSpecializationType(hasDeclaration(LockGuardClassDecl)))))));
+
+  const auto LockVarDecl = varDecl(hasType(LockGuardType));
 
   if (WarnOnSingleLocks) {
     // Match CompoundStmt with only one 'std::lock_guard'
@@ -231,7 +234,7 @@ void UseScopedLockCheck::emitDiag(const VarDecl *LockGuard,
   auto Diag = diag(LockGuard->getBeginLoc(), UseScopedLockMessage);
 
   const SourceRange LockGuardTypeRange =
-      getLockGuardTemplateRange(LockGuard->getTypeSourceInfo());
+      getLockGuardRange(LockGuard->getTypeSourceInfo());
 
   if (LockGuardTypeRange.isInvalid()) {
     return;
@@ -245,7 +248,8 @@ void UseScopedLockCheck::emitDiag(const VarDecl *LockGuard,
   }
 
   if (CtorCall->getNumArgs() == 1) {
-    Diag << FixItHint::CreateReplacement(LockGuardTypeRange, "scoped_lock");
+    Diag << FixItHint::CreateReplacement(LockGuardTypeRange,
+                                         "std::scoped_lock");
     return;
   }
 
@@ -262,7 +266,7 @@ void UseScopedLockCheck::emitDiag(const VarDecl *LockGuard,
         CharSourceRange::getTokenRange(AdoptLockArg->getSourceRange()),
         *Result.SourceManager, Result.Context->getLangOpts());
 
-    Diag << FixItHint::CreateReplacement(LockGuardTypeRange, "scoped_lock")
+    Diag << FixItHint::CreateReplacement(LockGuardTypeRange, "std::scoped_lock")
          << FixItHint::CreateReplacement(
                 SourceRange(MutexArg->getBeginLoc(), AdoptLockArg->getEndLoc()),
                 (llvm::Twine(AdoptLockSourceText) + ", " + MutexSourceText)
@@ -300,7 +304,8 @@ void UseScopedLockCheck::emitDiag(
   if (const auto ElaboratedTL = TL.getAs<ElaboratedTypeLoc>()) {
     auto Diag = diag(ElaboratedTL.getBeginLoc(), UseScopedLockMessage);
 
-    const SourceRange LockGuardRange = getLockGuardRange(LockGuardSourceInfo);
+    const SourceRange LockGuardRange =
+        getLockGuardNameRange(LockGuardSourceInfo);
     if (LockGuardRange.isInvalid()) {
       return;
     }
