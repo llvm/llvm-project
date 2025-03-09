@@ -25,7 +25,6 @@
 #include <__compare/synth_three_way.h>
 #include <__concepts/swappable.h>
 #include <__config>
-#include <__cstddef/byte.h>
 #include <__cstddef/ptrdiff_t.h>
 #include <__flat_map/sorted_unique.h>
 #include <__flat_set/ra_iterator.h>
@@ -799,7 +798,7 @@ flat_set(sorted_unique_t, _InputIterator, _InputIterator, _Compare = _Compare())
 
 template <ranges::input_range _Range,
           class _Compare   = less<ranges::range_value_t<_Range>>,
-          class _Allocator = allocator<byte>,
+          class _Allocator = allocator<ranges::range_value_t<_Range>>,
           class            = __enable_if_t<!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value>>
 flat_set(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator()) -> flat_set<
     ranges::range_value_t<_Range>,
