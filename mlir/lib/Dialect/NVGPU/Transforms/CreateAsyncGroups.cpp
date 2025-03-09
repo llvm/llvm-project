@@ -265,7 +265,7 @@ void nvgpu::createAsyncGroups(RewriterBase &rewriter, Operation *op,
     }
 
     // Create the group and wait for it right after.
-    rewriter.create<nvgpu::DeviceAsyncCreateGroupOp>(op->getLoc(), nvgpu::DeviceAsyncTokenType::get(op->getContext()), tokens);
+    rewriter.create<nvgpu::DeviceAsyncCreateGroupOp>(op->getLoc(), tokens);
     rewriter.create<nvgpu::DeviceAsyncWaitOp>(op->getLoc(), nullptr);
     // Clean up old stores.
     for (Operation *writeOp : group)

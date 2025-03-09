@@ -216,15 +216,13 @@ def NVGPU_DeviceAsyncCopyOp : NVGPU_Op<"device_async_copy", [
     // copy 2.
     %cp2 = nvgpu.device_async_copy %C[%c0], %D[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
     // group 1 contains copy 1 and copy 2.
-    %token1 = nvgpu.device_async_create_group %cp1, %cp2
+    nvgpu.device_async_create_group %cp1, %cp2
     // copy 3.
     %cp3 = nvgpu.device_async_copy %E[%c0], %F[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
     // group 2 contains copy 3.
-    %token2 = nvgpu.device_async_create_group %cp3
-    // after the wait copy 1 and copy 2 are complete.
-    nvgpu.device_async_wait %token1
-    // after the wait copy 3 is complete.
-    nvgpu.device_async_wait %token2
+    nvgpu.device_async_create_group %cp3
+    // after the wait copy 1, copy 2 and copy 3 are complete.
+    nvgpu.device_async_wait
     ```
 
     Example:
@@ -255,9 +253,7 @@ def NVGPU_DeviceAsyncCreateGroupOp : NVGPU_Op<"device_async_create_group", []> {
     The `nvgpu.device_async_create_group` op creates a group of memory accesses
     containing all the pending `device_async_copy` operations associated with
     argument tokens. Each token can only be part of one group.
-
-    It returns a token that can be use to wait until the group fully completes.
-
+ 
     This is meant to be used with `nvgpu.device_async_wait` to synchronize copies
     as explained in those ops descriptions.
 
@@ -266,10 +262,10 @@ def NVGPU_DeviceAsyncCreateGroupOp : NVGPU_Op<"device_async_create_group", []> {
     Example:
 
     ```mlir
-    %0 = nvgpu.device_async_create_group
-  ```
+    %cp = nvgpu.device_async_copy %E[%c0], %F[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
+    nvgpu.device_async_create_group %cp
+    ```
   }];
-  let results = (outs NVGPU_DeviceAsyncToken:$asyncToken);
   let arguments = (ins Variadic<NVGPU_DeviceAsyncToken>:$inputTokens);
   let assemblyFormat = [{
     $inputTokens attr-dict
@@ -291,7 +287,17 @@ def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
     Example:
 
     ```mlir
-    nvgpu.device_async_wait %0
+    // copy 1.
+    %cp1 = nvgpu.device_async_copy %A[%c0], %B[%c0], 4 :memref<16xf32> to memref<16xf32, 3>
+    nvgpu.device_async_create_group %cp1
+    // copy 2.
+    %cp2 = nvgpu.device_async_copy %C[%c0], %D[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
+    nvgpu.device_async_create_group %cp2
+    // copy 3.
+    %cp3 = nvgpu.device_async_copy %E[%c0], %F[%c0], 4 : memref<16xf32> to memref<16xf32, 3>
+    nvgpu.device_async_create_group %cp3
+    // after the wait copy 1 and copy 2 are complete.
+    nvgpu.device_async_wait {numGroups = 1 : i32}
     ```
   }];
   let arguments = (ins OptionalAttr<I32Attr>:$numGroups);
