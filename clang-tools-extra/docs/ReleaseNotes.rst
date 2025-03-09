@@ -58,8 +58,8 @@ Semantic Highlighting
 Compile flags
 ^^^^^^^^^^^^^
 
-- Added `BuiltinHeaders` config key which controls if system includes are
-  extracted from clangd or solely from the query driver.
+- Added `BuiltinHeaders` config key which controls whether clangd's built-in
+  headers are used or ones extracted from the driver.
 
 Hover
 ^^^^^
