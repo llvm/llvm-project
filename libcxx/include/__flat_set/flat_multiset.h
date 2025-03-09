@@ -682,6 +682,12 @@ private:
     return std::make_pair(__iter(__key_first), __iter(__key_last));
   }
 
+  _LIBCPP_HIDE_FROM_ABI void __reserve(size_t __size) {
+    if constexpr (requires { __keys_.reserve(__size); }) {
+      __keys_.reserve(__size);
+    }
+  }
+
   template <class _Key2, class _Compare2, class _KeyContainer2, class _Predicate>
   friend typename flat_multiset<_Key2, _Compare2, _KeyContainer2>::size_type
   erase_if(flat_multiset<_Key2, _Compare2, _KeyContainer2>&, _Predicate);
@@ -750,16 +756,16 @@ flat_multiset(_InputIterator, _InputIterator, _Compare = _Compare())
 template <class _InputIterator, class _Compare = less<__iter_value_type<_InputIterator>>>
   requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator<_Compare>::value)
 flat_multiset(sorted_equivalent_t, _InputIterator, _InputIterator, _Compare = _Compare())
-    -> flat_multiset<__iter_value_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare>;
+    -> flat_multiset<__iter_value_type<_InputIterator>, _Compare>;
 
 template <ranges::input_range _Range,
-          class _Compare   = less<__iter_value_type<_Range>>,
-          class _Allocator = allocator<byte>,
+          class _Compare   = less<ranges::range_value_t<_Range>>,
+          class _Allocator = allocator<ranges::range_value_t<_Range>>,
           class            = __enable_if_t<!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value>>
 flat_multiset(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator()) -> flat_multiset<
     ranges::range_value_t<_Range>,
     _Compare,
-    vector<ranges::range_value_t<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>>;
+    vector<ranges::range_value_t<_Range>, __allocator_traits_rebind_t<_Allocator, ranges::range_value_t<_Range>>>>;
 
 template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator<_Allocator>::value>>
 flat_multiset(from_range_t, _Range&&, _Allocator) -> flat_multiset<
