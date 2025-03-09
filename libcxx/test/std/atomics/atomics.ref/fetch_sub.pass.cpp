@@ -105,6 +105,8 @@ int main(int, char**) {
   TestFetchSub<double>()();
 
   TestEachPointerType<TestFetchSub>()();
+  TestDoesNotHaveFetchSub<void*>()();
+  TestDoesNotHaveFetchSub<void const*>()();
 
   TestDoesNotHaveFetchSub<bool>()();
   TestDoesNotHaveFetchSub<UserAtomicType>()();
