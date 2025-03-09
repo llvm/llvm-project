@@ -162,21 +162,6 @@ template <> struct MappingTraits<memprof::CallSiteInfo> {
   }
 };
 
-// Add sequence traits for SmallVector<CallSiteInfo>
-template <unsigned N>
-struct SequenceTraits<SmallVector<memprof::CallSiteInfo, N>> {
-  static size_t size(IO &IO, SmallVector<memprof::CallSiteInfo, N> &Seq) {
-    return Seq.size();
-  }
-
-  static memprof::CallSiteInfo &
-  element(IO &IO, SmallVector<memprof::CallSiteInfo, N> &Seq, size_t Index) {
-    if (Index >= Seq.size())
-      Seq.resize(Index + 1);
-    return Seq[Index];
-  }
-};
-
 template <> struct MappingTraits<memprof::GUIDMemProfRecordPair> {
   static void mapping(IO &Io, memprof::GUIDMemProfRecordPair &Pair) {
     Io.mapRequired("GUID", Pair.GUID);
