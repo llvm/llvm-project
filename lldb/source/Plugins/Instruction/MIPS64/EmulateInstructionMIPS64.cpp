@@ -67,7 +67,7 @@ EmulateInstructionMIPS64::EmulateInstructionMIPS64(
   std::string Status;
   llvm::Triple triple = arch.GetTriple();
   const llvm::Target *target =
-      llvm::TargetRegistry::lookupTarget(triple.getTriple(), Status);
+      llvm::TargetRegistry::lookupTarget(triple, Status);
 
 /*
  * If we fail to get the target then we haven't registered it. The
@@ -84,7 +84,7 @@ EmulateInstructionMIPS64::EmulateInstructionMIPS64(
     LLVMInitializeMipsAsmPrinter();
     LLVMInitializeMipsTargetMC();
     LLVMInitializeMipsDisassembler();
-    target = llvm::TargetRegistry::lookupTarget(triple.getTriple(), Status);
+    target = llvm::TargetRegistry::lookupTarget(triple, Status);
   }
 #endif
 

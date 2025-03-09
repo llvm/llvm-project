@@ -131,7 +131,7 @@ void ExecutionEngine::registerSymbols(
 void ExecutionEngine::setupTargetTripleAndDataLayout(Module *llvmModule,
                                                      llvm::TargetMachine *tm) {
   llvmModule->setDataLayout(tm->createDataLayout());
-  llvmModule->setTargetTriple(tm->getTargetTriple().getTriple());
+  llvmModule->setTargetTriple(tm->getTargetTriple());
 }
 
 static std::string makePackedFunctionName(StringRef name) {
@@ -328,7 +328,7 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
     // COFF format binaries (Windows) need special handling to deal with
     // exported symbol visibility.
     // cf llvm/lib/ExecutionEngine/Orc/LLJIT.cpp LLJIT::createObjectLinkingLayer
-    llvm::Triple targetTriple(llvm::Twine(llvmModule->getTargetTriple()));
+    const llvm::Triple &targetTriple = llvmModule->getTargetTriple();
     if (targetTriple.isOSBinFormatCOFF()) {
       objectLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
       objectLayer->setAutoClaimResponsibilityForObjectSymbols(true);
