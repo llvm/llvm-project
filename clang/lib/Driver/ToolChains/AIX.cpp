@@ -244,7 +244,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (sanitizer) {
     if (Sanitize.needsSharedRt()) {
-      ToolChain.getDriver().Diag(diag::err_drv_unsupported_shared_sanitizer_aix) << sanitizer;
+      ToolChain.getDriver().Diag(diag::err_drv_unsupported_shared_sanitizer_aix)
+          << sanitizer;
       return;
     }
     NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
@@ -263,9 +264,9 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // import file to make these undefined symbols be resolved at runtime.
   if (Args.hasArg(options::OPT_shared) &&
       ToolChain.getSanitizerArgs(Args).needsAsanRt()) {
-    CmdArgs.push_back(
-        Args.MakeArgString(Twine("-bI:") + ToolChain.getCompilerRTPath() +
-                           "/asan.link_with_main_exec.txt"));
+    CmdArgs.push_back(Args.MakeArgString(Twine("-bI:") +
+                                         ToolChain.getCompilerRTPath() +
+                                         "/asan.link_with_main_exec.txt"));
     if (ToolChain.getSanitizerArgs(Args).linkCXXRuntimes())
       CmdArgs.push_back(
           Args.MakeArgString(Twine("-bI:") + ToolChain.getCompilerRTPath() +
