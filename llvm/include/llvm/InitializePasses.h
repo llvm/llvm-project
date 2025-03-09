@@ -282,7 +282,7 @@ void initializeScavengerTestPass(PassRegistry &);
 void initializeScopedNoAliasAAWrapperPassPass(PassRegistry &);
 void initializeSeparateConstOffsetFromGEPLegacyPassPass(PassRegistry &);
 void initializeShadowStackGCLoweringPass(PassRegistry &);
-void initializeShrinkWrapPass(PassRegistry &);
+void initializeShrinkWrapLegacyPass(PassRegistry &);
 void initializeSingleLoopExtractorPass(PassRegistry &);
 void initializeSinkingLegacyPassPass(PassRegistry &);
 void initializeSjLjEHPreparePass(PassRegistry &);
