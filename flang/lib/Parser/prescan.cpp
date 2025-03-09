@@ -1432,6 +1432,21 @@ Prescanner::IsFixedFormCompilerDirectiveLine(const char *start) const {
     }
     *sp++ = ToLowerCaseLetter(*p);
   }
+  // A fixed form OpenMP conditional compilation sentinel must satisfy the
+  // following criteria, for initial lines:
+  // - Columns 3 through 5 must have only white space or numbers.
+  // - Column 6 must be space or zero.
+  if (column == 3 && sentinel[0] == '$') {
+    const char *q{p};
+    for (int col{3}; col < 6; ++col, ++q) {
+      if (!IsSpaceOrTab(q) && !IsDecimalDigit(*q)) {
+        return std::nullopt;
+      }
+    }
+    if (*q != ' ' && *q != '0') {
+      return std::nullopt;
+    }
+  }
   if (column == 6) {
     if (*p == '0') {
       ++p;

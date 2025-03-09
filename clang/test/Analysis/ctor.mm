@@ -145,24 +145,24 @@ namespace PODUninitialized {
 
     NonPOD() {}
     NonPOD(const NonPOD &Other)
-      : x(Other.x), y(Other.y) // expected-warning {{undefined}}
+      : x(Other.x), y(Other.y) // expected-warning {{uninitialized}}
     {
     }
     NonPOD(NonPOD &&Other)
-    : x(Other.x), y(Other.y) // expected-warning {{undefined}}
+    : x(Other.x), y(Other.y) // expected-warning {{uninitialized}}
     {
     }
 
     NonPOD &operator=(const NonPOD &Other)
     {
       x = Other.x;
-      y = Other.y; // expected-warning {{undefined}}
+      y = Other.y; // expected-warning {{uninitialized}}
       return *this;
     }
     NonPOD &operator=(NonPOD &&Other)
     {
       x = Other.x;
-      y = Other.y; // expected-warning {{undefined}}
+      y = Other.y; // expected-warning {{uninitialized}}
       return *this;
     }
   };
@@ -175,23 +175,23 @@ namespace PODUninitialized {
 
       Inner() {}
       Inner(const Inner &Other)
-        : x(Other.x), y(Other.y) // expected-warning {{undefined}}
+        : x(Other.x), y(Other.y) // expected-warning {{uninitialized}}
       {
       }
       Inner(Inner &&Other)
-      : x(Other.x), y(Other.y) // expected-warning {{undefined}}
+      : x(Other.x), y(Other.y) // expected-warning {{uninitialized}}
       {
       }
 
       Inner &operator=(const Inner &Other)
       {
-        x = Other.x; // expected-warning {{undefined}}
+        x = Other.x; // expected-warning {{uninitialized}}
         y = Other.y;
         return *this;
       }
       Inner &operator=(Inner &&Other)
       {
-        x = Other.x; // expected-warning {{undefined}}
+        x = Other.x; // expected-warning {{uninitialized}}
         y = Other.y;
         return *this;
       }

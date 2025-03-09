@@ -29,7 +29,7 @@ on:
 jobs:
   release-documentation:
     name: Build and Upload Release Documentation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       upload: ${{ inputs.upload && !contains(inputs.release-version, 'rc') }}
     steps:
@@ -37,7 +37,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Setup Python env
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 # v5.4.0
         with:
           cache: 'pip'
           cache-dependency-path: './llvm/docs/requirements.txt'
@@ -59,7 +59,7 @@ jobs:
           ./llvm/utils/release/build-docs.sh -release "${{ inputs.release-version }}" -no-doxygen
 
       - name: Create Release Notes Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@65c4c4a1ddee5b72f698fdd19549f0f0fb45cf08 # 4.6.0
         with:
           name: release-notes
           path: docs-build/html-export/

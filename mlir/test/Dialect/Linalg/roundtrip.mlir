@@ -277,22 +277,34 @@ func.func @generic_region(%arg0: memref<?x?xvector<3x4xi4>, strided<[?, 1], offs
 
 // -----
 
-
+#accessA = affine_map<(batch, m, n, k) -> (batch, m, k)>
+#accessB = affine_map<(batch, m, n, k) -> (batch, k, n)>
+#accessC = affine_map<(batch, m, n, k) -> (batch, m, n)>
 func.func @named_ops(%a3: memref<?x?x?xf32>, %b3: memref<?x?x?xf32>, %c3: memref<?x?x?xf32>,
                 %ta3: tensor<?x?x?xf32>, %tb3: tensor<?x?x?xf32>, %tc3: tensor<?x?x?xf32>)
-  -> (tensor<?x?x?xf32>)
+  -> (tensor<?x?x?xf32>, tensor<?x?x?xf32>)
 {
   linalg.batch_matmul ins(%a3, %b3: memref<?x?x?xf32>, memref<?x?x?xf32>)
                      outs(%c3: memref<?x?x?xf32>)
+  linalg.contract
+      indexing_maps = [#accessA, #accessB, #accessC]
+      ins(%a3, %b3: memref<?x?x?xf32>, memref<?x?x?xf32>)
+      outs(%c3: memref<?x?x?xf32>)
   %res1 = linalg.batch_matmul
                       ins(%ta3, %tb3: tensor<?x?x?xf32>, tensor<?x?x?xf32>)
                      outs(%tc3: tensor<?x?x?xf32>)
                   -> tensor<?x?x?xf32>
-  return %res1 : tensor<?x?x?xf32>
+  %res2 = linalg.contract
+      indexing_maps = [#accessA, #accessB, #accessC]
+      ins(%ta3, %tb3: tensor<?x?x?xf32>, tensor<?x?x?xf32>)
+      outs(%tc3: tensor<?x?x?xf32>) -> tensor<?x?x?xf32>
+  return %res1, %res2 : tensor<?x?x?xf32>, tensor<?x?x?xf32>
 }
 // CHECK-LABEL: func @named_ops
 //       CHECK:   linalg.batch_matmul
+//       CHECK:   linalg.contract
 //       CHECK:   linalg.batch_matmul
+//       CHECK:   linalg.contract
 
 // -----
 

@@ -33,6 +33,9 @@ class IdentifierInfo;
 class OpenACCClause;
 
 class SemaOpenACC : public SemaBase {
+public:
+  using DeclGroupPtrTy = OpaquePtr<DeclGroupRef>;
+
 private:
   struct ComputeConstructInfo {
     /// Which type of compute construct we are inside of, which we can use to
@@ -157,6 +160,18 @@ private:
 
   /// Helper function for checking the 'for' and 'range for' stmts.
   void ForStmtBeginHelper(SourceLocation ForLoc, ForStmtBeginChecker &C);
+
+  // The 'declare' construct requires only a single reference among ALL declare
+  // directives in a context. We store existing references to check. Because the
+  // rules prevent referencing the same variable from multiple declaration
+  // contexts, we can just store the declaration and location of the reference.
+  llvm::DenseMap<const clang::DeclaratorDecl *, SourceLocation>
+      DeclareVarReferences;
+  // The 'routine' construct disallows magic-statics in a function referred to
+  // by a 'routine' directive.  So record any of these that we see so we can
+  // check them later.
+  llvm::SmallDenseMap<const clang::FunctionDecl *, SourceLocation>
+      MagicStaticLocs;
 
 public:
   ComputeConstructInfo &getActiveComputeConstructInfo() {
@@ -411,6 +426,8 @@ public:
               ClauseKind == OpenACCClauseKind::Reduction ||
               ClauseKind == OpenACCClauseKind::Host ||
               ClauseKind == OpenACCClauseKind::Device ||
+              ClauseKind == OpenACCClauseKind::DeviceResident ||
+              ClauseKind == OpenACCClauseKind::Link ||
               (ClauseKind == OpenACCClauseKind::Self &&
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -427,23 +444,10 @@ public:
     }
 
     bool isReadOnly() const {
-      assert((ClauseKind == OpenACCClauseKind::CopyIn ||
-              ClauseKind == OpenACCClauseKind::PCopyIn ||
-              ClauseKind == OpenACCClauseKind::PresentOrCopyIn) &&
-             "Only copyin accepts 'readonly:' tag");
       return std::get<VarListDetails>(Details).IsReadOnly;
     }
 
-    bool isZero() const {
-      assert((ClauseKind == OpenACCClauseKind::CopyOut ||
-              ClauseKind == OpenACCClauseKind::PCopyOut ||
-              ClauseKind == OpenACCClauseKind::PresentOrCopyOut ||
-              ClauseKind == OpenACCClauseKind::Create ||
-              ClauseKind == OpenACCClauseKind::PCreate ||
-              ClauseKind == OpenACCClauseKind::PresentOrCreate) &&
-             "Only copyout/create accepts 'zero' tag");
-      return std::get<VarListDetails>(Details).IsZero;
-    }
+    bool isZero() const { return std::get<VarListDetails>(Details).IsZero; }
 
     bool isForce() const {
       assert(ClauseKind == OpenACCClauseKind::Collapse &&
@@ -557,6 +561,8 @@ public:
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Host ||
               ClauseKind == OpenACCClauseKind::Device ||
+              ClauseKind == OpenACCClauseKind::DeviceResident ||
+              ClauseKind == OpenACCClauseKind::Link ||
               (ClauseKind == OpenACCClauseKind::Self &&
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -600,6 +606,8 @@ public:
               ClauseKind == OpenACCClauseKind::DevicePtr ||
               ClauseKind == OpenACCClauseKind::Host ||
               ClauseKind == OpenACCClauseKind::Device ||
+              ClauseKind == OpenACCClauseKind::DeviceResident ||
+              ClauseKind == OpenACCClauseKind::Link ||
               (ClauseKind == OpenACCClauseKind::Self &&
                DirKind == OpenACCDirectiveKind::Update) ||
               ClauseKind == OpenACCClauseKind::FirstPrivate) &&
@@ -690,32 +698,56 @@ public:
   /// parsing has consumed the 'annot_pragma_openacc_end' token. This DOES
   /// happen before any associated declarations or statements have been parsed.
   /// This function is only called when we are parsing a 'Decl' context.
-  bool ActOnStartDeclDirective(OpenACCDirectiveKind K, SourceLocation StartLoc);
+  bool ActOnStartDeclDirective(OpenACCDirectiveKind K, SourceLocation StartLoc,
+                               ArrayRef<const OpenACCClause *> Clauses);
   /// Called when we encounter an associated statement for our construct, this
   /// should check legality of the statement as it appertains to this Construct.
   StmtResult ActOnAssociatedStmt(SourceLocation DirectiveLoc,
                                  OpenACCDirectiveKind K,
+                                 OpenACCAtomicKind AtKind,
                                  ArrayRef<const OpenACCClause *> Clauses,
                                  StmtResult AssocStmt);
 
+  StmtResult ActOnAssociatedStmt(SourceLocation DirectiveLoc,
+                                 OpenACCDirectiveKind K,
+                                 ArrayRef<const OpenACCClause *> Clauses,
+                                 StmtResult AssocStmt) {
+    return ActOnAssociatedStmt(DirectiveLoc, K, OpenACCAtomicKind::None,
+                               Clauses, AssocStmt);
+  }
+  /// Called to check the form of the `atomic` construct which has some fairly
+  /// sizable restrictions.
+  StmtResult CheckAtomicAssociatedStmt(SourceLocation AtomicDirLoc,
+                                       OpenACCAtomicKind AtKind,
+                                       StmtResult AssocStmt);
+
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
+  /// DirLoc: Location of the actual directive keyword.
   /// LParenLoc: Location of the left paren, if it exists (not on all
   /// constructs).
   /// MiscLoc: First misc location, if necessary (not all constructs).
   /// Exprs: List of expressions on the construct itself, if necessary (not all
   /// constructs).
+  /// FuncRef: used only for Routine, this is the function being referenced.
+  /// AK: The atomic kind of the directive, if necessary (atomic only)
   /// RParenLoc: Location of the right paren, if it exists (not on all
   /// constructs).
+  /// EndLoc: The last source location of the driective.
+  /// Clauses: The list of clauses for the directive, if present.
+  /// AssocStmt: The associated statement for this construct, if necessary.
   StmtResult ActOnEndStmtDirective(
       OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
       SourceLocation LParenLoc, SourceLocation MiscLoc, ArrayRef<Expr *> Exprs,
-      SourceLocation RParenLoc, SourceLocation EndLoc,
+      OpenACCAtomicKind AK, SourceLocation RParenLoc, SourceLocation EndLoc,
       ArrayRef<OpenACCClause *> Clauses, StmtResult AssocStmt);
 
   /// Called after the directive has been completely parsed, including the
   /// declaration group or associated statement.
-  DeclGroupRef ActOnEndDeclDirective();
+  DeclGroupRef ActOnEndDeclDirective(
+      OpenACCDirectiveKind K, SourceLocation StartLoc, SourceLocation DirLoc,
+      SourceLocation LParenLoc, Expr *FuncRef, SourceLocation RParenLoc,
+      SourceLocation EndLoc, ArrayRef<OpenACCClause *> Clauses);
 
   /// Called when encountering an 'int-expr' for OpenACC, and manages
   /// conversions and diagnostics to 'int'.
@@ -724,7 +756,23 @@ public:
 
   /// Called when encountering a 'var' for OpenACC, ensures it is actually a
   /// declaration reference to a variable of the correct type.
-  ExprResult ActOnVar(OpenACCClauseKind CK, Expr *VarExpr);
+  ExprResult ActOnVar(OpenACCDirectiveKind DK, OpenACCClauseKind CK,
+                      Expr *VarExpr);
+  /// Helper function called by ActonVar that is used to check a 'cache' var.
+  ExprResult ActOnCacheVar(Expr *VarExpr);
+  /// Function called when a variable declarator is created, which lets us
+  /// impelment the 'routine' 'function static variables' restriction.
+  void ActOnVariableDeclarator(VarDecl *VD);
+
+  // Called after 'ActOnVar' specifically for a 'link' clause, which has to do
+  // some minor additional checks.
+  llvm::SmallVector<Expr *> CheckLinkClauseVarList(ArrayRef<Expr *> VarExpr);
+
+  // Checking for the arguments specific to the declare-clause that need to be
+  // checked during both phases of template translation.
+  bool CheckDeclareClause(SemaOpenACC::OpenACCParsedClause &Clause);
+
+  ExprResult ActOnRoutineName(Expr *RoutineName);
 
   /// Called while semantically analyzing the reduction clause, ensuring the var
   /// is the correct kind of reference.

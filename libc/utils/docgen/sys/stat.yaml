@@ -42,7 +42,7 @@ macros:
     in-latest-posix: ''
   S_IXGRP:
     in-latest-posix: ''
-  
+
   S_IRWXO:
     in-latest-posix: ''
   S_IROTH:

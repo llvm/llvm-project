@@ -576,15 +576,16 @@ public:
   /// Implements the bound 'print' method and helps with others.
   void print(std::optional<int64_t> largeElementsLimit, bool enableDebugInfo,
              bool prettyDebugInfo, bool printGenericOpForm, bool useLocalScope,
-             bool assumeVerified, nanobind::object fileObject, bool binary,
-             bool skipRegions);
+             bool useNameLocAsPrefix, bool assumeVerified,
+             nanobind::object fileObject, bool binary, bool skipRegions);
   void print(PyAsmState &state, nanobind::object fileObject, bool binary);
 
   nanobind::object getAsm(bool binary,
                           std::optional<int64_t> largeElementsLimit,
                           bool enableDebugInfo, bool prettyDebugInfo,
                           bool printGenericOpForm, bool useLocalScope,
-                          bool assumeVerified, bool skipRegions);
+                          bool useNameLocAsPrefix, bool assumeVerified,
+                          bool skipRegions);
 
   // Implement the bound 'writeBytecode' method.
   void writeBytecode(const nanobind::object &fileObject,
@@ -685,8 +686,8 @@ public:
 
   /// Creates an operation. See corresponding python docstring.
   static nanobind::object
-  create(const std::string &name, std::optional<std::vector<PyType *>> results,
-         std::optional<std::vector<PyValue *>> operands,
+  create(std::string_view name, std::optional<std::vector<PyType *>> results,
+         llvm::ArrayRef<MlirValue> operands,
          std::optional<nanobind::dict> attributes,
          std::optional<std::vector<PyBlock *>> successors, int regions,
          DefaultingPyLocation location, const nanobind::object &ip,
@@ -705,8 +706,9 @@ public:
   /// Clones this operation.
   nanobind::object clone(const nanobind::object &ip);
 
-private:
   PyOperation(PyMlirContextRef contextRef, MlirOperation operation);
+
+private:
   static PyOperationRef createInstance(PyMlirContextRef contextRef,
                                        MlirOperation operation,
                                        nanobind::object parentKeepAlive);
@@ -739,12 +741,16 @@ public:
 
   nanobind::object getOperationObject() { return operationObject; }
 
-  static nanobind::object buildGeneric(
-      const nanobind::object &cls, std::optional<nanobind::list> resultTypeList,
-      nanobind::list operandList, std::optional<nanobind::dict> attributes,
-      std::optional<std::vector<PyBlock *>> successors,
-      std::optional<int> regions, DefaultingPyLocation location,
-      const nanobind::object &maybeIp);
+  static nanobind::object
+  buildGeneric(std::string_view name, std::tuple<int, bool> opRegionSpec,
+               nanobind::object operandSegmentSpecObj,
+               nanobind::object resultSegmentSpecObj,
+               std::optional<nanobind::list> resultTypeList,
+               nanobind::list operandList,
+               std::optional<nanobind::dict> attributes,
+               std::optional<std::vector<PyBlock *>> successors,
+               std::optional<int> regions, DefaultingPyLocation location,
+               const nanobind::object &maybeIp);
 
   /// Construct an instance of a class deriving from OpView, bypassing its
   /// `__init__` method. The derived class will typically define a constructor

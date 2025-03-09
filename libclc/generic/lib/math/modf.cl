@@ -21,8 +21,8 @@
  */
 
 #include <clc/clc.h>
+#include <clc/math/clc_modf.h>
 
-#include "math.h"
-
-#define __CLC_BODY <modf.inc>
+#define FUNCTION modf
+#define __CLC_BODY <clc/math/unary_def_with_ptr.inc>
 #include <clc/math/gentype.inc>

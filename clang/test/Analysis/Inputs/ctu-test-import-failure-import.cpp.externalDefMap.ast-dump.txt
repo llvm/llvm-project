@@ -1,0 +1,5 @@
+47:c:@N@std@S@allocator_traits@F@allocator_traits# ctu-test-import-failure-import.cpp.ast
+29:c:@N@CommandLine@RootCommands ctu-test-import-failure-import.cpp.ast
+55:c:@N@std@N@__cxx11@ST>3#T#T#T@basic_string@F@_M_assign# ctu-test-import-failure-import.cpp.ast
+97:c:@S@CommandLineOptionDefinition@F@CommandLineOptionDefinition#&1$@S@CommandLineOptionDefinition# ctu-test-import-failure-import.cpp.ast
+29:c:@N@CommandLine@RootExamples ctu-test-import-failure-import.cpp.ast

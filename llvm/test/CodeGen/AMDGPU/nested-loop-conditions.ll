@@ -7,7 +7,7 @@
 ; the condition that appears to have no uses until the loop is
 ; completely processed.
 
-define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) nocapture %arg) #0 {
+define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captures(none) %arg) #0 {
 ; GCN-LABEL: reduced_nested_loop_conditions:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x9
@@ -47,7 +47,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) nocap
 ; GCN-NEXT:  .LBB0_7: ; %DummyReturnBlock
 ; GCN-NEXT:    s_endpgm
 ; IR-LABEL: define amdgpu_kernel void @reduced_nested_loop_conditions(
-; IR-SAME: ptr addrspace(3) nocapture [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
+; IR-SAME: ptr addrspace(3) captures(none) [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
 ; IR-NEXT:  [[BB:.*]]:
 ; IR-NEXT:    [[MY_TMP:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x() #[[ATTR4:[0-9]+]]
 ; IR-NEXT:    [[MY_TMP1:%.*]] = getelementptr inbounds i64, ptr addrspace(3) [[ARG]], i32 [[MY_TMP]]
@@ -74,7 +74,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) nocap
 ; IR-NEXT:    br i1 [[TMP3]], label %[[BB23:.*]], label %[[BB5]]
 ; IR:       [[FLOW]]:
 ; IR-NEXT:    [[TMP4:%.*]] = phi i1 [ [[MY_TMP22:%.*]], %[[BB4]] ], [ true, %[[BB5]] ]
-; IR-NEXT:    [[TMP5]] = phi i32 [ [[MY_TMP21:%.*]], %[[BB4]] ], [ undef, %[[BB5]] ]
+; IR-NEXT:    [[TMP5]] = phi i32 [ [[MY_TMP21:%.*]], %[[BB4]] ], [ poison, %[[BB5]] ]
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP2]])
 ; IR-NEXT:    [[TMP6]] = call i64 @llvm.amdgcn.if.break.i64(i1 [[TMP4]], i64 [[PHI_BROKEN]])
 ; IR-NEXT:    br label %[[BB10]]
@@ -118,7 +118,7 @@ bb9:                                              ; preds = %bb20, %bb9
   br i1 false, label %bb3, label %bb9
 
 bb10:                                             ; preds = %bb5, %bb4
-  %my.tmp11 = phi i32 [ %my.tmp21, %bb4 ], [ undef, %bb5 ]
+  %my.tmp11 = phi i32 [ %my.tmp21, %bb4 ], [ poison, %bb5 ]
   %my.tmp12 = phi i1 [ %my.tmp22, %bb4 ], [ true, %bb5 ]
   br i1 %my.tmp12, label %bb23, label %bb5
 
@@ -144,7 +144,7 @@ bb23:                                             ; preds = %bb10
 
 ; Earlier version of above, before a run of the structurizer.
 
-define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) nocapture %arg) #0 {
+define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) captures(none) %arg) #0 {
 ; GCN-LABEL: nested_loop_conditions:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
@@ -190,7 +190,7 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) nocapture %ar
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_endpgm
 ; IR-LABEL: define amdgpu_kernel void @nested_loop_conditions(
-; IR-SAME: ptr addrspace(1) nocapture [[ARG:%.*]]) #[[ATTR0]] {
+; IR-SAME: ptr addrspace(1) captures(none) [[ARG:%.*]]) #[[ATTR0]] {
 ; IR-NEXT:  [[BB:.*]]:
 ; IR-NEXT:    [[MY_TMP1134:%.*]] = load volatile i32, ptr addrspace(1) undef, align 4
 ; IR-NEXT:    [[MY_TMP1235:%.*]] = icmp slt i32 [[MY_TMP1134]], 9

@@ -9,6 +9,7 @@
 #include "DiagnosticNames.h"
 #include "clang/Basic/AllDiagnostics.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringTable.h"
 
 using namespace clang;
 using namespace diagtool;
@@ -68,7 +69,7 @@ static const GroupRecord OptionTable[] = {
 };
 
 llvm::StringRef GroupRecord::getName() const {
-  return StringRef(DiagGroupNames + NameOffset + 1, DiagGroupNames[NameOffset]);
+  return DiagGroupNames[NameOffset];
 }
 
 GroupRecord::subgroup_iterator GroupRecord::subgroup_begin() const {

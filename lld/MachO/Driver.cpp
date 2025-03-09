@@ -1806,6 +1806,7 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   config->keepICFStabs = args.hasArg(OPT_keep_icf_stabs);
   config->dedupStrings =
       args.hasFlag(OPT_deduplicate_strings, OPT_no_deduplicate_strings, true);
+  config->dedupSymbolStrings = !args.hasArg(OPT_no_deduplicate_symbol_strings);
   config->deadStripDuplicates = args.hasArg(OPT_dead_strip_duplicates);
   config->warnDylibInstallName = args.hasFlag(
       OPT_warn_dylib_install_name, OPT_no_warn_dylib_install_name, false);

@@ -17,7 +17,6 @@ static_library("Checkers") {
     "AnalysisOrderChecker.cpp",
     "AnalyzerStatsChecker.cpp",
     "ArrayBoundChecker.cpp",
-    "ArrayBoundCheckerV2.cpp",
     "BasicObjCFoundationChecks.cpp",
     "BitwiseShiftChecker.cpp",
     "BlockInCriticalSectionChecker.cpp",

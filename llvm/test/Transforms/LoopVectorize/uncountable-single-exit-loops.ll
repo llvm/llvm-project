@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -p loop-vectorize -debug-only=loop-vectorize -S %s 2>&1 | FileCheck %s
+; RUN: opt -p loop-vectorize -debug-only=loop-vectorize --disable-output -S %s 2>&1 | FileCheck %s
 
 
 ; CHECK-LABEL: LV: Checking a loop in 'latch_exit_cannot_compute_btc_due_to_step'

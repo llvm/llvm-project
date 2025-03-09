@@ -318,8 +318,8 @@ void addStringMetadataToLoop(Loop *TheLoop, const char *MDString,
 /// Returns a loop's estimated trip count based on branch weight metadata.
 /// In addition if \p EstimatedLoopInvocationWeight is not null it is
 /// initialized with weight of loop's latch leading to the exit.
-/// Returns 0 when the count is estimated to be 0, or std::nullopt when a
-/// meaningful estimate can not be made.
+/// Returns a valid positive trip count, saturated at UINT_MAX, or std::nullopt
+/// when a meaningful estimate cannot be made.
 std::optional<unsigned>
 getLoopEstimatedTripCount(Loop *L,
                           unsigned *EstimatedLoopInvocationWeight = nullptr);
@@ -365,6 +365,8 @@ constexpr Intrinsic::ID getReductionIntrinsicID(RecurKind RK);
 
 /// Returns the arithmetic instruction opcode used when expanding a reduction.
 unsigned getArithmeticReductionInstruction(Intrinsic::ID RdxID);
+/// Returns the reduction intrinsic id corresponding to the binary operation.
+Intrinsic::ID getReductionForBinop(Instruction::BinaryOps Opc);
 
 /// Returns the min/max intrinsic used when expanding a min/max reduction.
 Intrinsic::ID getMinMaxReductionIntrinsicOp(Intrinsic::ID RdxID);

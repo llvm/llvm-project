@@ -79,9 +79,6 @@
 //
 // Check that LoongArch passes the correct linker emulation.
 //
-// RUN: %clang --target=loongarch32-freebsd -### %s %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=CHECK-LA32-LD %s
-// CHECK-LA32-LD: ld{{.*}}" {{.*}} "-m" "elf32loongarch"
 // RUN: %clang --target=loongarch64-freebsd -### %s %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-LA64-LD %s
 // CHECK-LA64-LD: ld{{.*}}" {{.*}} "-m" "elf64loongarch"

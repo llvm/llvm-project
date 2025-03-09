@@ -221,7 +221,7 @@ resolver_entry:
 define i32 @caller4() #8 {
 ; CHECK-LABEL: define i32 @caller4(
 ; CHECK-SAME: ) local_unnamed_addr #[[ATTR7:[0-9]+]] {
-; CHECK:    [[CALL:%.*]] = tail call i32 @test_non_fmv_caller()
+; CHECK:    [[CALL:%.*]] = tail call i32 @test_non_fmv_caller._Maes()
 ;
 entry:
   %call = tail call i32 @test_non_fmv_caller()

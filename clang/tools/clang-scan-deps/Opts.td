@@ -29,6 +29,8 @@ defm compilation_database : Eq<"compilation-database", "Compilation database">;
 defm module_name : Eq<"module-name", "the module of which the dependencies are to be computed">;
 defm dependency_target : Eq<"dependency-target", "The names of dependency targets for the dependency file">;
 
+defm tu_buffer_path: Eq<"tu-buffer-path", "The path to the translation unit for depscan. Not compatible with -module-name">;
+
 def deprecated_driver_command : F<"deprecated-driver-command", "use a single driver command to build the tu (deprecated)">;
 
 defm resource_dir_recipe : Eq<"resource-dir-recipe", "How to produce missing '-resource-dir' argument">;

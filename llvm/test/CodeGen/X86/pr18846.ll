@@ -13,12 +13,12 @@ target triple = "x86_64-unknown-unknown"
 ;CHECK-NOT:   vmovups {{.*#+}} 32-byte Folded Reload
 
 ; Function Attrs: uwtable
-define void @_Z16opt_kernel_cachePfS_S_() #0 {
+define void @_Z16opt_kernel_cachePfS_S_(i1 %arg) #0 {
 entry:
   br label %for.body29
 
 for.body29:                                       ; preds = %for.body29, %entry
-  br i1 undef, label %for.body29, label %for.body65
+  br i1 %arg, label %for.body29, label %for.body65
 
 for.body65:                                       ; preds = %for.body29
   %0 = load float, ptr undef, align 4, !tbaa !1

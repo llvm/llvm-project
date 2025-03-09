@@ -206,7 +206,7 @@ getTypeNumBytes(const SPIRVConversionOptions &options, Type type) {
     int64_t offset;
     SmallVector<int64_t, 4> strides;
     if (!memRefType.hasStaticShape() ||
-        failed(getStridesAndOffset(memRefType, strides, offset)))
+        failed(memRefType.getStridesAndOffset(strides, offset)))
       return std::nullopt;
 
     // To get the size of the memref object in memory, the total size is the
@@ -1225,7 +1225,7 @@ Value mlir::spirv::getVulkanElementPtr(const SPIRVTypeConverter &typeConverter,
 
   int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(baseType, strides, offset)) ||
+  if (failed(baseType.getStridesAndOffset(strides, offset)) ||
       llvm::is_contained(strides, ShapedType::kDynamic) ||
       ShapedType::isDynamic(offset)) {
     return nullptr;
@@ -1256,7 +1256,7 @@ Value mlir::spirv::getOpenCLElementPtr(const SPIRVTypeConverter &typeConverter,
 
   int64_t offset;
   SmallVector<int64_t, 4> strides;
-  if (failed(getStridesAndOffset(baseType, strides, offset)) ||
+  if (failed(baseType.getStridesAndOffset(strides, offset)) ||
       llvm::is_contained(strides, ShapedType::kDynamic) ||
       ShapedType::isDynamic(offset)) {
     return nullptr;

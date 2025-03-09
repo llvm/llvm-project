@@ -50,6 +50,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRangeList.h"
@@ -164,16 +165,16 @@ static cl::opt<bool>
     OptimizeMemorySSA("dse-optimize-memoryssa", cl::init(true), cl::Hidden,
                       cl::desc("Allow DSE to optimize memory accesses."));
 
-// TODO: turn on and remove this flag.
+// TODO: remove this flag.
 static cl::opt<bool> EnableInitializesImprovement(
-    "enable-dse-initializes-attr-improvement", cl::init(false), cl::Hidden,
+    "enable-dse-initializes-attr-improvement", cl::init(true), cl::Hidden,
     cl::desc("Enable the initializes attr improvement in DSE"));
 
 //===----------------------------------------------------------------------===//
 // Helper functions
 //===----------------------------------------------------------------------===//
 using OverlapIntervalsTy = std::map<int64_t, int64_t>;
-using InstOverlapIntervalsTy = DenseMap<Instruction *, OverlapIntervalsTy>;
+using InstOverlapIntervalsTy = MapVector<Instruction *, OverlapIntervalsTy>;
 
 /// Returns true if the end of this instruction can be safely shortened in
 /// length.
@@ -553,7 +554,7 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
 
     // Fragments overlap: insert a new dbg.assign for this dead part.
     auto *NewAssign = static_cast<decltype(Assign)>(Assign->clone());
-    NewAssign->insertAfter(Assign);
+    NewAssign->insertAfter(Assign->getIterator());
     NewAssign->setAssignId(GetDeadLink());
     if (NewFragment)
       SetDeadFragExpr(NewAssign, *NewFragment);
@@ -561,6 +562,43 @@ static void shortenAssignment(Instruction *Inst, Value *OriginalDest,
   };
   for_each(Linked, InsertAssignForOverlap);
   for_each(LinkedDVRAssigns, InsertAssignForOverlap);
+}
+
+/// Update the attributes given that a memory access is updated (the
+/// dereferenced pointer could be moved forward when shortening a
+/// mem intrinsic).
+static void adjustArgAttributes(AnyMemIntrinsic *Intrinsic, unsigned ArgNo,
+                                uint64_t PtrOffset) {
+  // Remember old attributes.
+  AttributeSet OldAttrs = Intrinsic->getParamAttributes(ArgNo);
+
+  // Find attributes that should be kept, and remove the rest.
+  AttributeMask AttrsToRemove;
+  for (auto &Attr : OldAttrs) {
+    if (Attr.hasKindAsEnum()) {
+      switch (Attr.getKindAsEnum()) {
+      default:
+        break;
+      case Attribute::Alignment:
+        // Only keep alignment if PtrOffset satisfy the alignment.
+        if (isAligned(Attr.getAlignment().valueOrOne(), PtrOffset))
+          continue;
+        break;
+      case Attribute::Dereferenceable:
+      case Attribute::DereferenceableOrNull:
+        // We could reduce the size of these attributes according to
+        // PtrOffset. But we simply drop these for now.
+        break;
+      case Attribute::NonNull:
+      case Attribute::NoUndef:
+        continue;
+      }
+    }
+    AttrsToRemove.addAttribute(Attr);
+  }
+
+  // Remove the attributes that should be dropped.
+  Intrinsic->removeParamAttrs(ArgNo, AttrsToRemove);
 }
 
 static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
@@ -644,6 +682,7 @@ static bool tryToShorten(Instruction *DeadI, int64_t &DeadStart,
         DeadI->getIterator());
     NewDestGEP->setDebugLoc(DeadIntrinsic->getDebugLoc());
     DeadIntrinsic->setDest(NewDestGEP);
+    adjustArgAttributes(DeadIntrinsic, 0, ToRemoveSize);
   }
 
   // Update attached dbg.assign intrinsics. Assume 8-bit byte.
@@ -1161,7 +1200,7 @@ struct DSEState {
       if (!isInvisibleToCallerOnUnwind(V)) {
         I.first->second = false;
       } else if (isNoAliasCall(V)) {
-        I.first->second = !PointerMayBeCaptured(V, true, false);
+        I.first->second = !PointerMayBeCaptured(V, /*ReturnCaptures=*/true);
       }
     }
     return I.first->second;
@@ -1180,7 +1219,7 @@ struct DSEState {
       // with the killing MemoryDef. But we refrain from doing so for now to
       // limit compile-time and this does not cause any changes to the number
       // of stores removed on a large test set in practice.
-      I.first->second = PointerMayBeCaptured(V, false, true);
+      I.first->second = PointerMayBeCaptured(V, /*ReturnCaptures=*/false);
     return !I.first->second;
   }
 
@@ -2210,7 +2249,9 @@ struct DSEState {
 
       Instruction *UpperInst = UpperDef->getMemoryInst();
       auto IsRedundantStore = [&]() {
-        if (DefInst->isIdenticalTo(UpperInst))
+        // We don't care about differences in call attributes here.
+        if (DefInst->isIdenticalToWhenDefined(UpperInst,
+                                              /*IntersectAttrs=*/true))
           return true;
         if (auto *MemSetI = dyn_cast<MemSetInst>(UpperInst)) {
           if (auto *SI = dyn_cast<StoreInst>(DefInst)) {
@@ -2281,7 +2322,9 @@ DSEState::getInitializesArgMemLoc(const Instruction *I) {
   for (unsigned Idx = 0, Count = CB->arg_size(); Idx < Count; ++Idx) {
     ConstantRangeList Inits;
     Attribute InitializesAttr = CB->getParamAttr(Idx, Attribute::Initializes);
-    if (InitializesAttr.isValid())
+    // initializes on byval arguments refers to the callee copy, not the
+    // original memory the caller passed in.
+    if (InitializesAttr.isValid() && !CB->isByValArgument(Idx))
       Inits = InitializesAttr.getValueAsConstantRangeList();
 
     Value *CurArg = CB->getArgOperand(Idx);

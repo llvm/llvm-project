@@ -1158,8 +1158,9 @@ static bool findRedundantFlagInstr(MachineInstr &CmpInstr,
 
 bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
                                   unsigned Opc, bool AllowSP, Register &NewSrc,
-                                  bool &isKill, MachineOperand &ImplicitOp,
-                                  LiveVariables *LV, LiveIntervals *LIS) const {
+                                  unsigned &NewSrcSubReg, bool &isKill,
+                                  MachineOperand &ImplicitOp, LiveVariables *LV,
+                                  LiveIntervals *LIS) const {
   MachineFunction &MF = *MI.getParent()->getParent();
   const TargetRegisterClass *RC;
   if (AllowSP) {
@@ -1168,12 +1169,16 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     RC = Opc != X86::LEA32r ? &X86::GR64_NOSPRegClass : &X86::GR32_NOSPRegClass;
   }
   Register SrcReg = Src.getReg();
+  unsigned SubReg = Src.getSubReg();
   isKill = MI.killsRegister(SrcReg, /*TRI=*/nullptr);
+
+  NewSrcSubReg = X86::NoSubRegister;
 
   // For both LEA64 and LEA32 the register already has essentially the right
   // type (32-bit or 64-bit) we may just need to forbid SP.
   if (Opc != X86::LEA64_32r) {
     NewSrc = SrcReg;
+    NewSrcSubReg = SubReg;
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
 
     if (NewSrc.isVirtual() && !MF.getRegInfo().constrainRegClass(NewSrc, RC))
@@ -1189,16 +1194,18 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     ImplicitOp.setImplicit();
 
     NewSrc = getX86SubSuperRegister(SrcReg, 64);
+    assert(!SubReg && "no superregister for source");
     assert(NewSrc.isValid() && "Invalid Operand");
     assert(!Src.isUndef() && "Undef op doesn't need optimization");
   } else {
     // Virtual register of the wrong class, we have to create a temporary 64-bit
     // vreg to feed into the LEA.
     NewSrc = MF.getRegInfo().createVirtualRegister(RC);
+    NewSrcSubReg = X86::NoSubRegister;
     MachineInstr *Copy =
         BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), get(TargetOpcode::COPY))
             .addReg(NewSrc, RegState::Define | RegState::Undef, X86::sub_32bit)
-            .addReg(SrcReg, getKillRegState(isKill));
+            .addReg(SrcReg, getKillRegState(isKill), SubReg);
 
     // Which is obviously going to be dead after we're done with it.
     isKill = true;
@@ -1258,7 +1265,9 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   MachineBasicBlock::iterator MBBI = MI.getIterator();
   Register Dest = MI.getOperand(0).getReg();
   Register Src = MI.getOperand(1).getReg();
+  unsigned SrcSubReg = MI.getOperand(1).getSubReg();
   Register Src2;
+  unsigned Src2SubReg;
   bool IsDead = MI.getOperand(0).isDead();
   bool IsKill = MI.getOperand(1).isKill();
   unsigned SubReg = Is8BitOp ? X86::sub_8bit : X86::sub_16bit;
@@ -1268,7 +1277,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   MachineInstr *InsMI =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), get(TargetOpcode::COPY))
           .addReg(InRegLEA, RegState::Define, SubReg)
-          .addReg(Src, getKillRegState(IsKill));
+          .addReg(Src, getKillRegState(IsKill), SrcSubReg);
   MachineInstr *ImpDef2 = nullptr;
   MachineInstr *InsMI2 = nullptr;
 
@@ -1306,12 +1315,14 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
   case X86::ADD16rr:
   case X86::ADD16rr_DB: {
     Src2 = MI.getOperand(2).getReg();
+    Src2SubReg = MI.getOperand(2).getSubReg();
     bool IsKill2 = MI.getOperand(2).isKill();
     assert(!MI.getOperand(2).isUndef() && "Undef op doesn't need optimization");
     if (Src == Src2) {
       // ADD8rr/ADD16rr killed %reg1028, %reg1028
       // just a single insert_subreg.
-      addRegReg(MIB, InRegLEA, true, InRegLEA, false);
+      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA, false,
+                X86::NoSubRegister);
     } else {
       if (Subtarget.is64Bit())
         InRegLEA2 = RegInfo.createVirtualRegister(&X86::GR64_NOSPRegClass);
@@ -1323,8 +1334,9 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
                         InRegLEA2);
       InsMI2 = BuildMI(MBB, &*MIB, MI.getDebugLoc(), get(TargetOpcode::COPY))
                    .addReg(InRegLEA2, RegState::Define, SubReg)
-                   .addReg(Src2, getKillRegState(IsKill2));
-      addRegReg(MIB, InRegLEA, true, InRegLEA2, true);
+                   .addReg(Src2, getKillRegState(IsKill2), Src2SubReg);
+      addRegReg(MIB, InRegLEA, true, X86::NoSubRegister, InRegLEA2, true,
+                X86::NoSubRegister);
     }
     if (LV && IsKill2 && InsMI2)
       LV->replaceKillInstruction(Src2, MI, *InsMI2);
@@ -1428,6 +1440,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
   MachineInstr *NewMI = nullptr;
   Register SrcReg, SrcReg2;
+  unsigned SrcSubReg, SrcSubReg2;
   bool Is64Bit = Subtarget.is64Bit();
 
   bool Is8BitOp = false;
@@ -1467,17 +1480,18 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     // LEA can't handle ESP.
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
-    MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
-                                  .add(Dest)
-                                  .addReg(0)
-                                  .addImm(1LL << ShAmt)
-                                  .addReg(SrcReg, getKillRegState(isKill))
-                                  .addImm(0)
-                                  .addReg(0);
+    MachineInstrBuilder MIB =
+        BuildMI(MF, MI.getDebugLoc(), get(Opc))
+            .add(Dest)
+            .addReg(0)
+            .addImm(1LL << ShAmt)
+            .addReg(SrcReg, getKillRegState(isKill), SrcSubReg)
+            .addImm(0)
+            .addReg(0);
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
     NewMI = MIB;
@@ -1505,8 +1519,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
                        : (Is64Bit ? X86::LEA64_32r : X86::LEA32r);
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
@@ -1531,8 +1545,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/false, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
     MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
@@ -1569,8 +1583,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     const MachineOperand &Src2 = MI.getOperand(2);
     bool isKill2;
     MachineOperand ImplicitOp2 = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src2, Opc, /*AllowSP=*/false, SrcReg2, isKill2,
-                        ImplicitOp2, LV, LIS))
+    if (!classifyLEAReg(MI, Src2, Opc, /*AllowSP=*/false, SrcReg2, SrcSubReg2,
+                        isKill2, ImplicitOp2, LV, LIS))
       return nullptr;
 
     bool isKill;
@@ -1580,9 +1594,10 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       // the first call inserted a COPY from Src2 and marked it as killed.
       isKill = isKill2;
       SrcReg = SrcReg2;
+      SrcSubReg = SrcSubReg2;
     } else {
-      if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, isKill,
-                          ImplicitOp, LV, LIS))
+      if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
+                          isKill, ImplicitOp, LV, LIS))
         return nullptr;
     }
 
@@ -1592,7 +1607,8 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     if (ImplicitOp2.getReg() != 0)
       MIB.add(ImplicitOp2);
 
-    NewMI = addRegReg(MIB, SrcReg, isKill, SrcReg2, isKill2);
+    NewMI =
+        addRegReg(MIB, SrcReg, isKill, SrcSubReg, SrcReg2, isKill2, SrcSubReg2);
 
     // Add kills if classifyLEAReg created a new register.
     if (LV) {
@@ -1625,13 +1641,14 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
-    MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
-                                  .add(Dest)
-                                  .addReg(SrcReg, getKillRegState(isKill));
+    MachineInstrBuilder MIB =
+        BuildMI(MF, MI.getDebugLoc(), get(Opc))
+            .add(Dest)
+            .addReg(SrcReg, getKillRegState(isKill), SrcSubReg);
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
 
@@ -1665,13 +1682,14 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
 
     bool isKill;
     MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
-    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, isKill,
-                        ImplicitOp, LV, LIS))
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/true, SrcReg, SrcSubReg,
+                        isKill, ImplicitOp, LV, LIS))
       return nullptr;
 
-    MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
-                                  .add(Dest)
-                                  .addReg(SrcReg, getKillRegState(isKill));
+    MachineInstrBuilder MIB =
+        BuildMI(MF, MI.getDebugLoc(), get(Opc))
+            .add(Dest)
+            .addReg(SrcReg, getKillRegState(isKill), SrcSubReg);
     if (ImplicitOp.getReg() != 0)
       MIB.add(ImplicitOp);
 
@@ -4291,8 +4309,8 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
 
 void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator MI,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc,
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
                                bool RenamableDest, bool RenamableSrc) const {
   // First deal with the normal symmetric copies.
   bool HasAVX = Subtarget.hasAVX();
@@ -4784,7 +4802,8 @@ void X86InstrInfo::loadStoreTileReg(MachineBasicBlock &MBB,
 void X86InstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg) const {
+    const TargetRegisterInfo *TRI, Register VReg,
+    MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
@@ -4800,15 +4819,14 @@ void X86InstrInfo::storeRegToStackSlot(
     loadStoreTileReg(MBB, MI, Opc, SrcReg, FrameIdx, isKill);
   else
     addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc)), FrameIdx)
-        .addReg(SrcReg, getKillRegState(isKill));
+        .addReg(SrcReg, getKillRegState(isKill))
+        .setMIFlag(Flags);
 }
 
-void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
-                                        MachineBasicBlock::iterator MI,
-                                        Register DestReg, int FrameIdx,
-                                        const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI,
-                                        Register VReg) const {
+void X86InstrInfo::loadRegFromStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register DestReg,
+    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
+    Register VReg, MachineInstr::MIFlag Flags) const {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   assert(MFI.getObjectSize(FrameIdx) >= TRI->getSpillSize(*RC) &&
@@ -4822,8 +4840,8 @@ void X86InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
   if (isAMXOpcode(Opc))
     loadStoreTileReg(MBB, MI, Opc, DestReg, FrameIdx);
   else
-    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg),
-                      FrameIdx);
+    addFrameReference(BuildMI(MBB, MI, DebugLoc(), get(Opc), DestReg), FrameIdx)
+        .setMIFlag(Flags);
 }
 
 bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
@@ -5221,42 +5239,43 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag,
 }
 
 /// Check whether the use can be converted to remove a comparison against zero.
-static X86::CondCode isUseDefConvertible(const MachineInstr &MI) {
+/// Returns the EFLAGS condition and the operand that we are comparing against zero.
+static std::pair<X86::CondCode, unsigned> isUseDefConvertible(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default:
-    return X86::COND_INVALID;
+    return std::make_pair(X86::COND_INVALID, ~0U);
   CASE_ND(NEG8r)
   CASE_ND(NEG16r)
   CASE_ND(NEG32r)
   CASE_ND(NEG64r)
-    return X86::COND_AE;
+    return std::make_pair(X86::COND_AE, 1U);
   case X86::LZCNT16rr:
   case X86::LZCNT32rr:
   case X86::LZCNT64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
   case X86::POPCNT16rr:
   case X86::POPCNT32rr:
   case X86::POPCNT64rr:
-    return X86::COND_E;
+    return std::make_pair(X86::COND_E, 1U);
   case X86::TZCNT16rr:
   case X86::TZCNT32rr:
   case X86::TZCNT64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
   case X86::BSF16rr:
   case X86::BSF32rr:
   case X86::BSF64rr:
   case X86::BSR16rr:
   case X86::BSR32rr:
   case X86::BSR64rr:
-    return X86::COND_E;
+    return std::make_pair(X86::COND_E, 2U);
   case X86::BLSI32rr:
   case X86::BLSI64rr:
-    return X86::COND_AE;
+    return std::make_pair(X86::COND_AE, 1U);
   case X86::BLSR32rr:
   case X86::BLSR64rr:
   case X86::BLSMSK32rr:
   case X86::BLSMSK64rr:
-    return X86::COND_B;
+    return std::make_pair(X86::COND_B, 1U);
     // TODO: TBM instructions.
   }
 }
@@ -5337,6 +5356,7 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   bool ClearsOverflowFlag = false;
   bool ShouldUpdateCC = false;
   bool IsSwapped = false;
+  unsigned OpNo = 0;
   X86::CondCode NewCC = X86::COND_INVALID;
   int64_t ImmDelta = 0;
 
@@ -5392,9 +5412,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         //      ...                 // EFLAGS not changed
         //      testl %eax, %eax    // <-- can be removed
         if (IsCmpZero) {
-          NewCC = isUseDefConvertible(Inst);
-          if (NewCC != X86::COND_INVALID && Inst.getOperand(1).isReg() &&
-              Inst.getOperand(1).getReg() == SrcReg) {
+          std::tie(NewCC, OpNo) = isUseDefConvertible(Inst);
+          if (NewCC != X86::COND_INVALID && Inst.getOperand(OpNo).isReg() &&
+              Inst.getOperand(OpNo).getReg() == SrcReg) {
             ShouldUpdateCC = true;
             MI = &Inst;
             break;

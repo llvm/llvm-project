@@ -7,12 +7,14 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReportRetriever.h"
+#include "Utility.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Target/InstrumentationRuntimeStopInfo.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/ValueObject/ValueObject.h"
 
 using namespace lldb;
@@ -82,6 +84,14 @@ ReportRetriever::RetrieveReportData(const ProcessSP process_sp) {
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
+  if (auto m = GetPreferredAsanModule(process_sp->GetTarget())) {
+    LLDB_LOGF(GetLog(LLDBLog::Expressions), "Using preferred ASAN module: %s",
+              m->GetFileSpec().GetFilename().AsCString(""));
+    SymbolContextList sc_list;
+    sc_list.Append(SymbolContext(std::move(m)));
+    options.SetPreferredSymbolContexts(std::move(sc_list));
+  }
+
   ValueObjectSP return_value_sp;
   ExecutionContext exe_ctx;
   frame_sp->CalculateExecutionContext(exe_ctx);
@@ -98,10 +108,15 @@ ReportRetriever::RetrieveReportData(const ProcessSP process_sp) {
     return StructuredData::ObjectSP();
   }
 
+  LLDB_LOGF(GetLog(LLDBLog::Expressions),
+            "Successfully ran ASAN report retriever utility expression");
+
   int present = return_value_sp->GetValueForExpressionPath(".present")
                     ->GetValueAsUnsigned(0);
   if (present != 1)
     return StructuredData::ObjectSP();
+
+  LLDB_LOGF(GetLog(LLDBLog::Expressions), "Retrieving report.1");
 
   addr_t pc =
       return_value_sp->GetValueForExpressionPath(".pc")->GetValueAsUnsigned(0);
@@ -127,6 +142,8 @@ ReportRetriever::RetrieveReportData(const ProcessSP process_sp) {
   auto dict = std::make_shared<StructuredData::Dictionary>();
   if (!dict)
     return StructuredData::ObjectSP();
+
+  LLDB_LOGF(GetLog(LLDBLog::Expressions), "Retrieving report.2");
 
   dict->AddStringItem("instrumentation_class", "AddressSanitizer");
   dict->AddStringItem("stop_type", "fatal_error");
@@ -210,8 +227,8 @@ bool ReportRetriever::NotifyBreakpointHit(ProcessSP process_sp,
         InstrumentationRuntimeStopInfo::CreateStopReasonWithInstrumentationData(
             *thread_sp, description, report));
 
-  if (StreamFileSP stream_sp = StreamFileSP(
-          process_sp->GetTarget().GetDebugger().GetOutputStreamSP()))
+  if (StreamSP stream_sp =
+          process_sp->GetTarget().GetDebugger().GetAsyncOutputStream())
     stream_sp->Printf("AddressSanitizer report breakpoint hit. Use 'thread "
                       "info -s' to get extended information about the "
                       "report.\n");

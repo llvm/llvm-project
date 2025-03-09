@@ -34,6 +34,37 @@ MarkedJTDataRegions("mark-data-regions", cl::init(true),
   cl::desc("Mark code section jump table data regions."),
   cl::Hidden);
 
+const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+    {MCSymbolRefExpr::VK_X86_ABS8, "ABS8"},
+    {MCSymbolRefExpr::VK_DTPOFF, "DTPOFF"},
+    {MCSymbolRefExpr::VK_DTPREL, "DTPREL"},
+    {MCSymbolRefExpr::VK_GOT, "GOT"},
+    {MCSymbolRefExpr::VK_GOTENT, "GOTENT"},
+    {MCSymbolRefExpr::VK_GOTNTPOFF, "GOTNTPOFF"},
+    {MCSymbolRefExpr::VK_GOTOFF, "GOTOFF"},
+    {MCSymbolRefExpr::VK_GOTPCREL, "GOTPCREL"},
+    {MCSymbolRefExpr::VK_GOTPCREL_NORELAX, "GOTPCREL_NORELAX"},
+    {MCSymbolRefExpr::VK_GOTREL, "GOTREL"},
+    {MCSymbolRefExpr::VK_GOTTPOFF, "GOTTPOFF"},
+    {MCSymbolRefExpr::VK_INDNTPOFF, "INDNTPOFF"},
+    {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
+    {MCSymbolRefExpr::VK_NTPOFF, "NTPOFF"},
+    {MCSymbolRefExpr::VK_PCREL, "PCREL"},
+    {MCSymbolRefExpr::VK_PLT, "PLT"},
+    {MCSymbolRefExpr::VK_X86_PLTOFF, "PLTOFF"},
+    {MCSymbolRefExpr::VK_SECREL, "SECREL32"},
+    {MCSymbolRefExpr::VK_SIZE, "SIZE"},
+    {MCSymbolRefExpr::VK_TLSCALL, "tlscall"},
+    {MCSymbolRefExpr::VK_TLSDESC, "tlsdesc"},
+    {MCSymbolRefExpr::VK_TLSGD, "TLSGD"},
+    {MCSymbolRefExpr::VK_TLSLD, "TLSLD"},
+    {MCSymbolRefExpr::VK_TLSLDM, "TLSLDM"},
+    {MCSymbolRefExpr::VK_TLVP, "TLVP"},
+    {MCSymbolRefExpr::VK_TLVPPAGE, "TLVPPAGE"},
+    {MCSymbolRefExpr::VK_TLVPPAGEOFF, "TLVPPAGEOFF"},
+    {MCSymbolRefExpr::VK_TPOFF, "TPOFF"},
+};
+
 void X86MCAsmInfoDarwin::anchor() { }
 
 X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
@@ -69,6 +100,8 @@ X86MCAsmInfoDarwin::X86MCAsmInfoDarwin(const Triple &T) {
   // (actually, must, since otherwise the non-extern relocations we produce
   // overwhelm ld64's tiny little mind and it fails).
   DwarfFDESymbolsUseAbsDiff = true;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 X86_64MCAsmInfoDarwin::X86_64MCAsmInfoDarwin(const Triple &Triple)
@@ -96,6 +129,8 @@ X86ELFMCAsmInfo::X86ELFMCAsmInfo(const Triple &T) {
 
   // Exceptions handling
   ExceptionsType = ExceptionHandling::DwarfCFI;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 const MCExpr *
@@ -129,6 +164,8 @@ X86MCAsmInfoMicrosoft::X86MCAsmInfoMicrosoft(const Triple &Triple) {
   AssemblerDialect = X86AsmSyntax;
 
   AllowAtInName = true;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 void X86MCAsmInfoMicrosoftMASM::anchor() { }
@@ -147,7 +184,7 @@ X86MCAsmInfoMicrosoftMASM::X86MCAsmInfoMicrosoftMASM(const Triple &Triple)
 void X86MCAsmInfoGNUCOFF::anchor() { }
 
 X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
-  assert((Triple.isOSWindows() || Triple.isUEFI()) &&
+  assert(Triple.isOSWindowsOrUEFI() &&
          "Windows and UEFI are the only supported COFF targets");
   if (Triple.getArch() == Triple::x86_64) {
     PrivateGlobalPrefix = ".L";
@@ -162,4 +199,6 @@ X86MCAsmInfoGNUCOFF::X86MCAsmInfoGNUCOFF(const Triple &Triple) {
   AssemblerDialect = X86AsmSyntax;
 
   AllowAtInName = true;
+
+  initializeVariantKinds(variantKindDescs);
 }

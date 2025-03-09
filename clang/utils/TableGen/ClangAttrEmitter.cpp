@@ -108,6 +108,14 @@ GetFlattenedSpellings(const Record &Attr) {
       Ret.emplace_back("CXX11", Name, "clang", false, *Spelling);
       if (Spelling->getValueAsBit("AllowInC"))
         Ret.emplace_back("C23", Name, "clang", false, *Spelling);
+    } else if (Variety == "ClangGCC") {
+      Ret.emplace_back("GNU", Name, "", false, *Spelling);
+      Ret.emplace_back("CXX11", Name, "clang", false, *Spelling);
+      Ret.emplace_back("CXX11", Name, "gnu", false, *Spelling);
+      if (Spelling->getValueAsBit("AllowInC")) {
+        Ret.emplace_back("C23", Name, "clang", false, *Spelling);
+        Ret.emplace_back("C23", Name, "gnu", false, *Spelling);
+      }
     } else {
       Ret.push_back(FlattenedSpelling(*Spelling));
     }
@@ -3043,10 +3051,6 @@ static void emitAttributes(const RecordKeeper &Records, raw_ostream &OS,
            << (R.getValueAsBit("InheritEvenIfAlreadyPresent") ? "true"
                                                               : "false");
       }
-      if (R.getValueAsBit("DeferDeserialization")) {
-        OS << ", "
-           << "/*DeferDeserialization=*/true";
-      }
       OS << ")\n";
 
       for (auto const &ai : Args) {
@@ -3745,6 +3749,36 @@ void EmitClangRegularKeywordAttributeInfo(const RecordKeeper &Records,
          << (HasArgs ? "true" : "false") << ", )\n";
     }
   OS << "#undef KEYWORD_ATTRIBUTE\n";
+}
+
+void EmitCXX11AttributeInfo(const RecordKeeper &Records, raw_ostream &OS) {
+  OS << "#if defined(CXX11_ATTR_ARGS_INFO)\n";
+  for (auto *R : Records.getAllDerivedDefinitions("Attr")) {
+    for (const FlattenedSpelling &SI : GetFlattenedSpellings(*R)) {
+      if (SI.variety() == "CXX11" && SI.nameSpace().empty()) {
+        unsigned RequiredArgs = 0;
+        unsigned OptionalArgs = 0;
+        for (const auto *Arg : R->getValueAsListOfDefs("Args")) {
+          if (Arg->getValueAsBit("Fake"))
+            continue;
+
+          if (Arg->getValueAsBit("Optional"))
+            OptionalArgs++;
+          else
+            RequiredArgs++;
+        }
+        OS << ".Case(\"" << SI.getSpellingRecord().getValueAsString("Name")
+           << "\","
+           << "AttributeCommonInfo::AttrArgsInfo::"
+           << (RequiredArgs   ? "Required"
+               : OptionalArgs ? "Optional"
+                              : "None")
+           << ")"
+           << "\n";
+      }
+    }
+  }
+  OS << "#endif // CXX11_ATTR_ARGS_INFO\n";
 }
 
 // Emits the list of spellings for attributes.

@@ -183,7 +183,7 @@ public:
   bool CanLowerReturn(CallingConv::ID CallConv, MachineFunction &MF,
                       bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
-                      LLVMContext &Context) const override;
+                      LLVMContext &Context, const Type *RetTy) const override;
   SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool IsVarArg,
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
@@ -281,6 +281,7 @@ public:
                               Align &PrefAlign) const override;
 
   bool isFPImmVLDILegal(const APFloat &Imm, EVT VT) const;
+  LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
@@ -336,6 +337,7 @@ private:
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerBITREVERSE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
 
   bool isFPImmLegal(const APFloat &Imm, EVT VT,
                     bool ForCodeSize) const override;
