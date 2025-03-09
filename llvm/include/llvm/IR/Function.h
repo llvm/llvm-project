@@ -571,7 +571,7 @@ public:
   bool onlyWritesMemory() const;
   void setOnlyWritesMemory();
 
-  /// Determine if the call can access memmory only using pointers based
+  /// Determine if the call can access memory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const;
   void setOnlyAccessesArgMemory();
@@ -581,10 +581,19 @@ public:
   bool onlyAccessesInaccessibleMemory() const;
   void setOnlyAccessesInaccessibleMemory();
 
+  /// Determine if the call can access only errno memory.
+  bool onlyAccessesErrnoMemory() const;
+  void setOnlyAccessesErrnoMemory();
+
   /// Determine if the function may only access memory that is
   ///  either inaccessible from the IR or pointed to by its arguments.
   bool onlyAccessesInaccessibleMemOrArgMem() const;
   void setOnlyAccessesInaccessibleMemOrArgMem();
+
+  /// Determine if the function may only access memory that is
+  ///  either pointed to by its arguments or errno memory.
+  bool onlyAccessesArgMemOrErrnoMem() const;
+  void setOnlyAccessesArgMemOrErrnoMem(ModRefInfo ArgMR);
 
   /// Determine if the function cannot return.
   bool doesNotReturn() const {
