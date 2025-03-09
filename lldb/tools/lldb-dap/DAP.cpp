@@ -76,7 +76,7 @@ DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(repl_mode) {}
+      reverse_request_seq(0), repl_mode(repl_mode), goto_id_map() {}
 
 DAP::~DAP() = default;
 
@@ -898,6 +898,27 @@ lldb::SBError DAP::WaitForProcessToStop(uint32_t seconds) {
                                  seconds);
   return error;
 }
+
+std::optional<lldb::SBLineEntry> Gotos::GetLineEntry(uint64_t id) const {
+  const auto iter = line_entries.find(id);
+  if (iter != line_entries.end())
+    return iter->second;
+
+  return std::nullopt;
+}
+
+uint64_t Gotos::InsertLineEntry(lldb::SBLineEntry line_entry) {
+  const auto spec_id = this->NewSpecId();
+  line_entries.insert(std::make_pair(spec_id, line_entry));
+  return spec_id;
+}
+
+void Gotos::Clear() {
+  new_id = 0UL;
+  line_entries.clear();
+}
+
+uint64_t Gotos::NewSpecId() { return new_id++; }
 
 void Variables::Clear() {
   locals.Clear();
