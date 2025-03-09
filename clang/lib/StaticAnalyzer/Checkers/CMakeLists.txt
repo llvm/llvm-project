@@ -8,6 +8,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   AnalysisOrderChecker.cpp
   AnalyzerStatsChecker.cpp
   ArrayBoundChecker.cpp
+  AssumeModeling.cpp
   BasicObjCFoundationChecks.cpp
   BitwiseShiftChecker.cpp
   BlockInCriticalSectionChecker.cpp
