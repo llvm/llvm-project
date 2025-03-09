@@ -14,6 +14,7 @@
 #define LLVM_ANALYSIS_INLINECOST_H
 
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/Analysis/InlineModelFeatureMaps.h"
 #include "llvm/IR/PassManager.h"
@@ -31,6 +32,9 @@ class Function;
 class ProfileSummaryInfo;
 class TargetTransformInfo;
 class TargetLibraryInfo;
+class Value;
+
+using EphValuesCacheT = MapVector<Function *, SmallPtrSet<const Value *, 32>>;
 
 namespace InlineConstants {
 // Various thresholds used by inline cost analysis.
@@ -273,14 +277,13 @@ int getCallsiteCost(const TargetTransformInfo &TTI, const CallBase &Call,
 ///
 /// Also note that calling this function *dynamically* computes the cost of
 /// inlining the callsite. It is an expensive, heavyweight call.
-InlineCost
-getInlineCost(CallBase &Call, const InlineParams &Params,
-              TargetTransformInfo &CalleeTTI,
-              function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
-              function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
-              function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
-              ProfileSummaryInfo *PSI = nullptr,
-              OptimizationRemarkEmitter *ORE = nullptr);
+InlineCost getInlineCost(
+    CallBase &Call, const InlineParams &Params, TargetTransformInfo &CalleeTTI,
+    function_ref<AssumptionCache &(Function &)> GetAssumptionCache,
+    function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
+    function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
+    ProfileSummaryInfo *PSI = nullptr, OptimizationRemarkEmitter *ORE = nullptr,
+    EphValuesCacheT *EphValuesCache = nullptr);
 
 /// Get an InlineCost with the callee explicitly specified.
 /// This allows you to calculate the cost of inlining a function via a
@@ -294,7 +297,8 @@ getInlineCost(CallBase &Call, Function *Callee, const InlineParams &Params,
               function_ref<const TargetLibraryInfo &(Function &)> GetTLI,
               function_ref<BlockFrequencyInfo &(Function &)> GetBFI = nullptr,
               ProfileSummaryInfo *PSI = nullptr,
-              OptimizationRemarkEmitter *ORE = nullptr);
+              OptimizationRemarkEmitter *ORE = nullptr,
+              EphValuesCacheT *EphValuesCache = nullptr);
 
 /// Returns InlineResult::success() if the call site should be always inlined
 /// because of user directives, and the inlining is viable. Returns

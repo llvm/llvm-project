@@ -133,7 +133,8 @@ void DefaultInlineAdvice::recordInliningImpl() {
 }
 
 std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
-    CallBase &CB, FunctionAnalysisManager &FAM, const InlineParams &Params) {
+    CallBase &CB, FunctionAnalysisManager &FAM, const InlineParams &Params,
+    EphValuesCacheT *EphValuesCache = nullptr) {
   Function &Caller = *CB.getCaller();
   ProfileSummaryInfo *PSI =
       FAM.getResult<ModuleAnalysisManagerFunctionProxy>(Caller)
@@ -158,7 +159,8 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
         Callee.getContext().getDiagHandlerPtr()->isMissedOptRemarkEnabled(
             DEBUG_TYPE);
     return getInlineCost(CB, Params, CalleeTTI, GetAssumptionCache, GetTLI,
-                         GetBFI, PSI, RemarksEnabled ? &ORE : nullptr);
+                         GetBFI, PSI, RemarksEnabled ? &ORE : nullptr,
+                         EphValuesCache);
   };
   return llvm::shouldInline(
       CB, CalleeTTI, GetInlineCost, ORE,
@@ -167,7 +169,7 @@ std::optional<llvm::InlineCost> static getDefaultInlineAdvice(
 
 std::unique_ptr<InlineAdvice>
 DefaultInlineAdvisor::getAdviceImpl(CallBase &CB) {
-  auto OIC = getDefaultInlineAdvice(CB, FAM, Params);
+  auto OIC = getDefaultInlineAdvice(CB, FAM, Params, &EphValuesCache);
   return std::make_unique<DefaultInlineAdvice>(
       this, CB, OIC,
       FAM.getResult<OptimizationRemarkEmitterAnalysis>(*CB.getCaller()));
