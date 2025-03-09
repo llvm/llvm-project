@@ -784,9 +784,7 @@ llvm::Expected<DataExtractor> ValueObject::GetData() {
       data.SetByteOrder(m_data.GetByteOrder());
       return data;
     } else {
-      return llvm::createStringError(
-          "GetData failed: %s",
-          error.AsCString());
+      return llvm::createStringError("GetData failed: %s", error.AsCString());
     }
   }
   data.SetAddressByteSize(m_data.GetAddressByteSize());
