@@ -48,6 +48,7 @@ public:
   std::vector<const NamedDecl *>
   lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
                       llvm::function_ref<bool(const NamedDecl *ND)> Filter);
+  TagDecl *resolveTypeToTagDecl(QualType T);
 
 private:
   ASTContext &Ctx;
@@ -72,11 +73,6 @@ private:
   // `E`.
   QualType resolveExprToType(const Expr *E);
   std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E);
-
-  // Helper function for HeuristicResolver::resolveDependentMember()
-  // which takes a possibly-dependent type `T` and heuristically
-  // resolves it to a TagDecl in which we can try name lookup.
-  TagDecl *resolveTypeToTagDecl(QualType T);
 
   // Helper function for simplifying a type.
   // `Type` is the type to simplify.
@@ -552,6 +548,9 @@ std::vector<const NamedDecl *> HeuristicResolver::lookupDependentName(
 }
 const QualType HeuristicResolver::getPointeeType(QualType T) const {
   return HeuristicResolverImpl(Ctx).getPointeeType(T);
+}
+TagDecl *HeuristicResolver::resolveTypeToTagDecl(QualType T) const {
+  return HeuristicResolverImpl(Ctx).resolveTypeToTagDecl(T);
 }
 
 } // namespace clang
