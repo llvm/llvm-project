@@ -1208,8 +1208,8 @@ bool lldb_private::formatters::ObjCSELSummaryProvider(
     auto data_or_err = valobj.GetData();
     if (!data_or_err)
       return false;
-    valobj_sp =
-        ValueObject::CreateValueObjectFromData("text", *data_or_err, exe_ctx, charstar);
+    valobj_sp = ValueObject::CreateValueObjectFromData("text", *data_or_err,
+                                                       exe_ctx, charstar);
   }
 
   if (!valobj_sp)

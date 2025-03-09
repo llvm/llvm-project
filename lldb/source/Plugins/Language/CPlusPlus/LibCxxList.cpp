@@ -277,9 +277,9 @@ ValueObjectSP ForwardListFrontEnd::GetChildAtIndex(uint32_t idx) {
   if (!data_or_err)
     return nullptr;
 
-  return CreateValueObjectFromData(llvm::formatv("[{0}]", idx).str(), *data_or_err,
-                                   m_backend.GetExecutionContextRef(),
-                                   m_element_type);
+  return CreateValueObjectFromData(
+      llvm::formatv("[{0}]", idx).str(), *data_or_err,
+      m_backend.GetExecutionContextRef(), m_element_type);
 }
 
 lldb::ChildCacheState ForwardListFrontEnd::Update() {

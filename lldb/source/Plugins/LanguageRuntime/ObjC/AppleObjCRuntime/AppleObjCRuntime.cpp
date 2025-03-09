@@ -552,7 +552,8 @@ ThreadSP AppleObjCRuntime::GetBacktraceThreadFromException(
     auto data_or_err = dict_entry->GetData();
     if (!data_or_err)
       return ThreadSP();
-    data_or_err->SetAddressByteSize(dict_entry->GetProcessSP()->GetAddressByteSize());
+    data_or_err->SetAddressByteSize(
+        dict_entry->GetProcessSP()->GetAddressByteSize());
 
     lldb::offset_t data_offset = 0;
     auto dict_entry_key = data_or_err->GetAddress(&data_offset);
