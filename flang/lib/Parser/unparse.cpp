@@ -2095,7 +2095,7 @@ public:
   }
   void Unparse(const OmpDirectiveSpecification &x) {
     using ArgList = std::list<parser::OmpArgument>;
-    Walk(std::get<llvm::omp::Directive>(x.t));
+    Walk(std::get<OmpDirectiveName>(x.t));
     if (auto &args{std::get<std::optional<ArgList>>(x.t)}) {
       Put("(");
       Walk(*args);
@@ -2699,28 +2699,24 @@ public:
   void Unparse(const OmpDeclareTargetWithList &x) {
     Put("("), Walk(x.v), Put(")");
   }
-  void Unparse(const OmpReductionInitializerProc &x) {
+  void Unparse(const OmpInitializerProc &x) {
     Walk(std::get<ProcedureDesignator>(x.t));
     Put("(");
     Walk(std::get<std::list<ActualArgSpec>>(x.t));
     Put(")");
   }
-  void Unparse(const OmpReductionInitializerExpr &x) {
+  void Unparse(const OmpInitializerExpr &x) {
     Word("OMP_PRIV = ");
     Walk(x.v);
   }
-  void Unparse(const OmpReductionInitializerClause &x) {
-    Word(" INITIALIZER(");
-    Walk(x.u);
-    Put(")");
-  }
+  void Unparse(const OmpInitializerClause &x) { Walk(x.u); }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
     Word("!$OMP DECLARE REDUCTION ");
     Put("(");
     Walk(std::get<common::Indirection<OmpReductionSpecifier>>(x.t));
     Put(")");
-    Walk(std::get<std::optional<OmpReductionInitializerClause>>(x.t));
+    Walk(std::get<std::optional<OmpClauseList>>(x.t));
     Put("\n");
     EndOpenMP();
   }

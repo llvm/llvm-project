@@ -190,9 +190,9 @@ public:
 //
 // BIT_UNFILTERED is used as the init value for a filter position.  It is used
 // only for filter processings.
-typedef enum {
-  BIT_TRUE,      // '1'
+typedef enum : uint8_t {
   BIT_FALSE,     // '0'
+  BIT_TRUE,      // '1'
   BIT_UNSET,     // '?'
   BIT_UNFILTERED // unfiltered
 } bit_value_t;
@@ -249,7 +249,7 @@ static const BitsInit &getBitsField(const Record &def, StringRef str) {
         Bits.push_back(BI->getBit(Idx));
       }
     } else if (const BitInit *BI = dyn_cast<BitInit>(SI.Value)) {
-      Bits.push_back(const_cast<BitInit *>(BI));
+      Bits.push_back(BI);
     } else {
       for (unsigned Idx = 0U; Idx < SI.BitWidth; ++Idx)
         Bits.push_back(UnsetInit::get(def.getRecords()));
@@ -306,8 +306,7 @@ class FilterChooser;
 /// version and return the Opcode since the two have the same Asm format string.
 class Filter {
 protected:
-  const FilterChooser
-      *Owner;        // points to the FilterChooser who owns this filter
+  const FilterChooser &Owner; // FilterChooser who owns this filter
   unsigned StartBit; // the starting bit position
   unsigned NumBits;  // number of bits to filter
   bool Mixed;        // a mixed region contains both set and unset bits
@@ -329,7 +328,8 @@ protected:
 
 public:
   Filter(Filter &&f);
-  Filter(FilterChooser &owner, unsigned startBit, unsigned numBits, bool mixed);
+  Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits,
+         bool mixed);
 
   ~Filter() = default;
 
@@ -589,22 +589,22 @@ Filter::Filter(Filter &&f)
       FilterChooserMap(std::move(f.FilterChooserMap)),
       NumFiltered(f.NumFiltered), LastOpcFiltered(f.LastOpcFiltered) {}
 
-Filter::Filter(FilterChooser &owner, unsigned startBit, unsigned numBits,
+Filter::Filter(const FilterChooser &owner, unsigned startBit, unsigned numBits,
                bool mixed)
-    : Owner(&owner), StartBit(startBit), NumBits(numBits), Mixed(mixed) {
-  assert(StartBit + NumBits - 1 < Owner->BitWidth);
+    : Owner(owner), StartBit(startBit), NumBits(numBits), Mixed(mixed) {
+  assert(StartBit + NumBits - 1 < Owner.BitWidth);
 
   NumFiltered = 0;
   LastOpcFiltered = {0, 0};
 
-  for (const auto &OpcPair : Owner->Opcodes) {
+  for (const auto &OpcPair : Owner.Opcodes) {
     insn_t Insn;
 
     // Populates the insn given the uid.
-    Owner->insnWithID(Insn, OpcPair.EncodingID);
+    Owner.insnWithID(Insn, OpcPair.EncodingID);
 
     // Scans the segment for possibly well-specified encoding bits.
-    auto [Ok, Field] = Owner->fieldFromInsn(Insn, StartBit, NumBits);
+    auto [Ok, Field] = Owner.fieldFromInsn(Insn, StartBit, NumBits);
 
     if (Ok) {
       // The encoding bits are well-known.  Lets add the uid of the
@@ -631,7 +631,7 @@ Filter::Filter(FilterChooser &owner, unsigned startBit, unsigned numBits,
 // match the remaining undecoded encoding bits against the singleton.
 void Filter::recurse() {
   // Starts by inheriting our parent filter chooser's filter bit values.
-  std::vector<bit_value_t> BitValueArray(Owner->FilterBitValues);
+  std::vector<bit_value_t> BitValueArray(Owner.FilterBitValues);
 
   if (!VariableInstructions.empty()) {
     // Conservatively marks each segment position as BIT_UNSET.
@@ -642,9 +642,9 @@ void Filter::recurse() {
     // group of instructions whose segment values are variable.
     FilterChooserMap.try_emplace(
         NO_FIXED_SEGMENTS_SENTINEL,
-        std::make_unique<FilterChooser>(Owner->AllInstructions,
-                                        VariableInstructions, Owner->Operands,
-                                        BitValueArray, *Owner));
+        std::make_unique<FilterChooser>(Owner.AllInstructions,
+                                        VariableInstructions, Owner.Operands,
+                                        BitValueArray, Owner));
   }
 
   // No need to recurse for a singleton filtered instruction.
@@ -667,10 +667,10 @@ void Filter::recurse() {
 
     // Delegates to an inferior filter chooser for further processing on this
     // category of instructions.
-    FilterChooserMap.try_emplace(Inst.first,
-                                 std::make_unique<FilterChooser>(
-                                     Owner->AllInstructions, Inst.second,
-                                     Owner->Operands, BitValueArray, *Owner));
+    FilterChooserMap.try_emplace(
+        Inst.first,
+        std::make_unique<FilterChooser>(Owner.AllInstructions, Inst.second,
+                                        Owner.Operands, BitValueArray, Owner));
   }
 }
 
@@ -688,7 +688,7 @@ static void resolveTableFixups(DecoderTable &Table, const FixupList &Fixups,
     uint32_t Delta = DestIdx - FixupIdx - 3;
     // Our NumToSkip entries are 24-bits. Make sure our table isn't too
     // big.
-    assert(Delta < (1u << 24));
+    assert(isUInt<24>(Delta));
     Table[FixupIdx] = (uint8_t)Delta;
     Table[FixupIdx + 1] = (uint8_t)(Delta >> 8);
     Table[FixupIdx + 2] = (uint8_t)(Delta >> 16);
@@ -698,7 +698,7 @@ static void resolveTableFixups(DecoderTable &Table, const FixupList &Fixups,
 // Emit table entries to decode instructions given a segment or segments
 // of bits.
 void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
-  assert((NumBits < (1u << 8)) && "NumBits overflowed uint8 table entry!");
+  assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
   TableInfo.Table.push_back(MCD::OPC_ExtractField);
 
   SmallString<16> SBytes;
@@ -753,8 +753,7 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
     // two as to account for the width of the NumToSkip field itself.
     if (PrevFilter) {
       uint32_t NumToSkip = Table.size() - PrevFilter - 3;
-      assert(NumToSkip < (1u << 24) &&
-             "disassembler decoding table too large!");
+      assert(isUInt<24>(NumToSkip) && "disassembler decoding table too large!");
       Table[PrevFilter] = (uint8_t)NumToSkip;
       Table[PrevFilter + 1] = (uint8_t)(NumToSkip >> 8);
       Table[PrevFilter + 2] = (uint8_t)(NumToSkip >> 16);
@@ -808,19 +807,15 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
   Indent += 2;
 
   // Emit ULEB128 encoded value to OS, returning the number of bytes emitted.
-  auto emitULEB128 = [](DecoderTable::const_iterator I,
+  auto emitULEB128 = [](DecoderTable::const_iterator &I,
                         formatted_raw_ostream &OS) {
-    unsigned Len = 0;
-    while (*I >= 128) {
+    while (*I >= 128)
       OS << (unsigned)*I++ << ", ";
-      Len++;
-    }
     OS << (unsigned)*I++ << ", ";
-    return Len + 1;
   };
 
   // Emit 24-bit numtoskip value to OS, returning the NumToSkip value.
-  auto emitNumToSkip = [](DecoderTable::const_iterator I,
+  auto emitNumToSkip = [](DecoderTable::const_iterator &I,
                           formatted_raw_ostream &OS) {
     uint8_t Byte = *I++;
     uint32_t NumToSkip = Byte;
@@ -857,7 +852,7 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       unsigned Start = decodeULEB128(Table.data() + Pos + 1, nullptr,
                                      Table.data() + Table.size(), &ErrMsg);
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       unsigned Len = *I++;
       OS << Len << ",  // Inst{";
@@ -870,11 +865,10 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       ++I;
       OS << Indent << "MCD::OPC_FilterValue, ";
       // The filter value is ULEB128 encoded.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
@@ -882,27 +876,25 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       ++I;
       OS << Indent << "MCD::OPC_CheckField, ";
       // ULEB128 encoded start value.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
       // 8-bit length.
       unsigned Len = *I++;
       OS << Len << ", ";
       // ULEB128 encoded field value.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
     case MCD::OPC_CheckPredicate: {
       ++I;
       OS << Indent << "MCD::OPC_CheckPredicate, ";
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
       OS << "// Skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
       break;
     }
@@ -917,10 +909,10 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
       assert(ErrMsg == nullptr && "ULEB128 value too large!");
 
       OS << Indent << "MCD::OPC_" << (IsTry ? "Try" : "") << "Decode, ";
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       // Decoder index.
-      I += emitULEB128(I, OS);
+      emitULEB128(I, OS);
 
       auto EncI = OpcodeToEncodingID.find(Opc);
       assert(EncI != OpcodeToEncodingID.end() && "no encoding entry");
@@ -935,7 +927,6 @@ void DecoderEmitter::emitTable(formatted_raw_ostream &OS, DecoderTable &Table,
 
       // 24-bit numtoskip value.
       uint32_t NumToSkip = emitNumToSkip(I, OS);
-      I += 3;
 
       OS << "// Opcode: " << NumberedEncodings[EncodingID]
          << ", skip to: " << ((I - Table.begin()) + NumToSkip) << "\n";
@@ -1454,7 +1445,7 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   // Check any additional encoding fields needed.
   for (unsigned I = Size; I != 0; --I) {
     unsigned NumBits = EndBits[I - 1] - StartBits[I - 1] + 1;
-    assert((NumBits < (1u << 8)) && "NumBits overflowed uint8 table entry!");
+    assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
     TableInfo.Table.push_back(MCD::OPC_CheckField);
     uint8_t Buffer[16], *P;
     encodeULEB128(StartBits[I - 1], Buffer);
@@ -1612,16 +1603,14 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   // (MIXED) ------ . ----> (MIXED)
   // (FILTERED)---- . ----> (FILTERED)
 
-  std::vector<bitAttr_t> bitAttrs;
+  std::vector<bitAttr_t> bitAttrs(BitWidth, ATTR_NONE);
 
   // FILTERED bit positions provide no entropy and are not worthy of pursuing.
   // Filter::recurse() set either BIT_TRUE or BIT_FALSE for each position.
   for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
     if (FilterBitValues[BitIndex] == BIT_TRUE ||
         FilterBitValues[BitIndex] == BIT_FALSE)
-      bitAttrs.push_back(ATTR_FILTERED);
-    else
-      bitAttrs.push_back(ATTR_NONE);
+      bitAttrs[BitIndex] = ATTR_FILTERED;
 
   for (const auto &OpcPair : Opcodes) {
     insn_t insn;

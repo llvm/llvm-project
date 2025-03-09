@@ -180,6 +180,8 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
 
   case Decl::OpenACCDeclare:
     return CGM.EmitOpenACCDeclare(cast<OpenACCDeclareDecl>(&D), this);
+  case Decl::OpenACCRoutine:
+    return CGM.EmitOpenACCRoutine(cast<OpenACCRoutineDecl>(&D), this);
 
   case Decl::Typedef:      // typedef int X;
   case Decl::TypeAlias: {  // using X = int; [C++0x]
@@ -2848,6 +2850,11 @@ void CodeGenModule::EmitOMPDeclareMapper(const OMPDeclareMapperDecl *D,
 }
 
 void CodeGenModule::EmitOpenACCDeclare(const OpenACCDeclareDecl *D,
+                                       CodeGenFunction *CGF) {
+  // This is a no-op, we cna just ignore these declarations.
+}
+
+void CodeGenModule::EmitOpenACCRoutine(const OpenACCRoutineDecl *D,
                                        CodeGenFunction *CGF) {
   // This is a no-op, we cna just ignore these declarations.
 }

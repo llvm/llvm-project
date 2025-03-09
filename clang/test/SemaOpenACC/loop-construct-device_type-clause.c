@@ -55,8 +55,7 @@ void uses() {
   for(int i = 0; i < 5; ++i);
 #pragma acc loop device_type(*) worker
   for(int i = 0; i < 5; ++i);
-  // expected-error@+2{{OpenACC clause 'nohost' may not follow a 'device_type' clause in a 'loop' construct}}
-  // expected-note@+1{{previous clause is here}}
+  // expected-error@+1{{OpenACC 'nohost' clause is not valid on 'loop' directive}}
 #pragma acc loop device_type(*) nohost
   for(int i = 0; i < 5; ++i);
   // expected-error@+1{{OpenACC 'default' clause is not valid on 'loop' directive}}

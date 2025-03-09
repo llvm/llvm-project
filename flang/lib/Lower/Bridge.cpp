@@ -3150,10 +3150,9 @@ private:
               loc, 1); // Use index type directly
 
         // Ensure lb, ub, and step are of index type using fir.convert
-        mlir::Type indexType = builder->getIndexType();
-        lb = builder->create<fir::ConvertOp>(loc, indexType, lb);
-        ub = builder->create<fir::ConvertOp>(loc, indexType, ub);
-        step = builder->create<fir::ConvertOp>(loc, indexType, step);
+        lb = builder->create<fir::ConvertOp>(loc, idxTy, lb);
+        ub = builder->create<fir::ConvertOp>(loc, idxTy, ub);
+        step = builder->create<fir::ConvertOp>(loc, idxTy, step);
 
         lbs.push_back(lb);
         ubs.push_back(ub);
@@ -3163,10 +3162,6 @@ private:
 
         // Handle induction variable
         mlir::Value ivValue = getSymbolAddress(*name.symbol);
-        std::size_t ivTypeSize = name.symbol->size();
-        if (ivTypeSize == 0)
-          llvm::report_fatal_error("unexpected induction variable size");
-        mlir::Type ivTy = builder->getIntegerType(ivTypeSize * 8);
 
         if (!ivValue) {
           // DO CONCURRENT induction variables are not mapped yet since they are
@@ -3174,7 +3169,7 @@ private:
           mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
           builder->setInsertionPointToStart(builder->getAllocaBlock());
           ivValue = builder->createTemporaryAlloc(
-              loc, ivTy, toStringRef(name.symbol->name()));
+              loc, idxTy, toStringRef(name.symbol->name()));
           builder->restoreInsertionPoint(insPt);
         }
 
@@ -3186,7 +3181,7 @@ private:
         // Bind the symbol to the declared variable
         bindSymbol(*name.symbol, ivValue);
         ivValues.push_back(ivValue);
-        ivTypes.push_back(ivTy);
+        ivTypes.push_back(idxTy);
         ivLocs.push_back(loc);
       }
     } else {
@@ -4358,8 +4353,6 @@ private:
   void genForallPointerAssignment(
       mlir::Location loc, const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::Assignment::BoundsSpec &lbExprs) {
-    if (Fortran::evaluate::IsProcedureDesignator(assign.rhs))
-      TODO(loc, "procedure pointer assignment inside FORALL");
     std::optional<Fortran::evaluate::DynamicType> lhsType =
         assign.lhs.GetType();
     // Polymorphic pointer assignment is delegated to the runtime, and
@@ -4388,7 +4381,6 @@ private:
     Fortran::lower::StatementContext lhsContext;
     hlfir::Entity lhs = Fortran::lower::convertExprToHLFIR(
         loc, *this, assign.lhs, localSymbols, lhsContext);
-
     auto lhsYieldOp = builder->create<hlfir::YieldOp>(loc, lhs);
     Fortran::lower::genCleanUpInRegionIfAny(
         loc, *builder, lhsYieldOp.getCleanup(), lhsContext);
@@ -4396,6 +4388,23 @@ private:
     // Lower RHS in its own region.
     builder->createBlock(&regionAssignOp.getRhsRegion());
     Fortran::lower::StatementContext rhsContext;
+    mlir::Value rhs =
+        genForallPointerAssignmentRhs(loc, lhs, assign, rhsContext);
+    auto rhsYieldOp = builder->create<hlfir::YieldOp>(loc, rhs);
+    Fortran::lower::genCleanUpInRegionIfAny(
+        loc, *builder, rhsYieldOp.getCleanup(), rhsContext);
+
+    builder->setInsertionPointAfter(regionAssignOp);
+  }
+
+  mlir::Value
+  genForallPointerAssignmentRhs(mlir::Location loc, mlir::Value lhs,
+                                const Fortran::evaluate::Assignment &assign,
+                                Fortran::lower::StatementContext &rhsContext) {
+    if (Fortran::evaluate::IsProcedureDesignator(assign.rhs))
+      return fir::getBase(Fortran::lower::convertExprToAddress(
+          loc, *this, assign.rhs, localSymbols, rhsContext));
+    // Data target.
     hlfir::Entity rhs = Fortran::lower::convertExprToHLFIR(
         loc, *this, assign.rhs, localSymbols, rhsContext);
     // Create pointer descriptor value from the RHS.
@@ -4403,12 +4412,7 @@ private:
       rhs = hlfir::Entity{builder->create<fir::LoadOp>(loc, rhs)};
     auto lhsBoxType =
         llvm::cast<fir::BaseBoxType>(fir::unwrapRefType(lhs.getType()));
-    mlir::Value newBox = hlfir::genVariableBox(loc, *builder, rhs, lhsBoxType);
-    auto rhsYieldOp = builder->create<hlfir::YieldOp>(loc, newBox);
-    Fortran::lower::genCleanUpInRegionIfAny(
-        loc, *builder, rhsYieldOp.getCleanup(), rhsContext);
-
-    builder->setInsertionPointAfter(regionAssignOp);
+    return hlfir::genVariableBox(loc, *builder, rhs, lhsBoxType);
   }
 
   // Create the 2 x newRank array with the bounds to be passed to the runtime as
@@ -4694,7 +4698,7 @@ private:
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
-    bool isInDeviceContext = Fortran::lower::isCudaDeviceContext(builder);
+    bool isInDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
 
     bool isCUDATransfer =
         IsCUDADataTransfer(assign.lhs, assign.rhs) && !isInDeviceContext;

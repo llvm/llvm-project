@@ -31,7 +31,19 @@ MakeArgv(const llvm::ArrayRef<std::string> &strs) {
   return argv;
 }
 
-// Both attach and launch take a either a sourcePath or sourceMap
+static uint32_t SetLaunchFlag(uint32_t flags, const llvm::json::Object *obj,
+                              llvm::StringRef key, lldb::LaunchFlags mask) {
+  if (const auto opt_value = GetBoolean(obj, key)) {
+    if (*opt_value)
+      flags |= mask;
+    else
+      flags &= ~mask;
+  }
+
+  return flags;
+}
+
+// Both attach and launch take either a sourcePath or a sourceMap
 // argument (or neither), from which we need to set the target.source-map.
 void RequestHandler::SetSourceMapFromArguments(
     const llvm::json::Object &arguments) const {
@@ -173,18 +185,20 @@ RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
 
   auto flags = launch_info.GetLaunchFlags();
 
-  if (GetBoolean(arguments, "disableASLR").value_or(true))
-    flags |= lldb::eLaunchFlagDisableASLR;
-  if (GetBoolean(arguments, "disableSTDIO").value_or(false))
-    flags |= lldb::eLaunchFlagDisableSTDIO;
-  if (GetBoolean(arguments, "shellExpandArguments").value_or(false))
-    flags |= lldb::eLaunchFlagShellExpandArguments;
+  flags = SetLaunchFlag(flags, arguments, "disableASLR",
+                        lldb::eLaunchFlagDisableASLR);
+  flags = SetLaunchFlag(flags, arguments, "disableSTDIO",
+                        lldb::eLaunchFlagDisableSTDIO);
+  flags = SetLaunchFlag(flags, arguments, "shellExpandArguments",
+                        lldb::eLaunchFlagShellExpandArguments);
+
   const bool detachOnError =
       GetBoolean(arguments, "detachOnError").value_or(false);
   launch_info.SetDetachOnError(detachOnError);
   launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
                              lldb::eLaunchFlagStopAtEntry);
-  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
+  const auto timeout_seconds =
+      GetInteger<uint64_t>(arguments, "timeout").value_or(30);
 
   if (GetBoolean(arguments, "runInTerminal").value_or(false)) {
     if (llvm::Error err = RunInTerminal(dap, request, timeout_seconds))
