@@ -114,6 +114,14 @@ void mlirContextSetThreadPool(MlirContext context,
   unwrap(context)->setThreadPool(*unwrap(threadPool));
 }
 
+unsigned mlirContextGetNumThreads(MlirContext context) {
+  return unwrap(context)->getNumThreads();
+}
+
+MlirLlvmThreadPool mlirContextGetThreadPool(MlirContext context) {
+  return wrap(&unwrap(context)->getThreadPool());
+}
+
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//
