@@ -218,24 +218,23 @@ Bang operators
 TableGen provides "bang operators" that have a wide variety of uses:
 
 .. productionlist::
-   BangOperator: one of
-               : !add         !and         !cast        !con         !dag
-               : !div         !empty       !eq          !exists      !filter
-               : !find        !foldl       !foreach     !ge          !getdagarg
-               : !getdagname  !getdagop    !gt          !head        !if
-               : !initialized !interleave  !isa         !le          !listconcat
-               : !listflatten !listremove  !listsplat   !logtwo      !lt
-               : !mul         !ne          !not         !or          !range
-               : !repr        !setdagarg   !setdagname  !setdagop    !shl
-               : !size        !sra         !srl         !strconcat   !sub
-               : !subst       !substr      !tail        !tolower     !toupper
-               : !xor
+   BangOperator:  "!add"         | "!and"         | "!cast"        | "!con"         | "!dag"
+               :| "!div"         | "!empty"       | "!eq"          | "!exists"      | "!filter"
+               :| "!find"        | "!foldl"       | "!foreach"     | "!ge"          | "!getdagarg"
+               :| "!getdagname"  | "!getdagop"    | "!gt"          | "!head"        | "!if"
+               :| "!initialized" | "!interleave"  | "!isa"         | "!le"          | "!listconcat"
+               :| "!listflatten" | "!listremove"  | "!listsplat"   | "!logtwo"      | "!lt"
+               :| "!mul"         | "!ne"          | "!not"         | "!or"          | "!range"
+               :| "!repr"        | "!setdagarg"   | "!setdagname"  | "!setdagop"    | "!shl"
+               :| "!size"        | "!sra"         | "!srl"         | "!strconcat"   | "!sub"
+               :| "!subst"       | "!substr"      | "!tail"        | "!tolower"     | "!toupper"
+               :| "!xor"
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
 
 .. productionlist::
-   CondOperator: !cond
+   CondOperator: "!cond"
 
 See `Appendix A: Bang Operators`_ for a description of each bang operator.
 
