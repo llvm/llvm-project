@@ -808,6 +808,9 @@ public:
   bool isLegalMaskedScatter(Type *DataType, Align Alignment) const;
   /// Return true if the target supports masked gather.
   bool isLegalMaskedGather(Type *DataType, Align Alignment) const;
+  /// Return true if the target supports vectorization of histograms.
+  bool isLegalForHistogramVectorization(const LoadInst *LI,
+                                        const StoreInst *SI) const;
   /// Return true if the target forces scalarizing of llvm.masked.gather
   /// intrinsics.
   bool forceScalarizeMaskedGather(VectorType *Type, Align Alignment) const;
@@ -2019,6 +2022,8 @@ public:
                                     ElementCount NumElements) const = 0;
   virtual bool isLegalMaskedScatter(Type *DataType, Align Alignment) = 0;
   virtual bool isLegalMaskedGather(Type *DataType, Align Alignment) = 0;
+  virtual bool isLegalForHistogramVectorization(const LoadInst *LI,
+                                                const StoreInst *SI) = 0;
   virtual bool forceScalarizeMaskedGather(VectorType *DataType,
                                           Align Alignment) = 0;
   virtual bool forceScalarizeMaskedScatter(VectorType *DataType,
@@ -2578,6 +2583,10 @@ public:
   }
   bool isLegalMaskedGather(Type *DataType, Align Alignment) override {
     return Impl.isLegalMaskedGather(DataType, Alignment);
+  }
+  bool isLegalForHistogramVectorization(const LoadInst *LI,
+                                        const StoreInst *SI) override {
+    return Impl.isLegalForHistogramVectorization(LI, SI);
   }
   bool forceScalarizeMaskedGather(VectorType *DataType,
                                   Align Alignment) override {
