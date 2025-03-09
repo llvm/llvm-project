@@ -5350,26 +5350,9 @@ AddRecordMembersCompletionResults(Sema &SemaRef, ResultBuilder &Results,
 // instantiation/specialization yet, e.g. dependent code.
 static RecordDecl *getAsRecordDecl(QualType BaseType,
                                    HeuristicResolver &Resolver) {
-  BaseType = BaseType.getNonReferenceType();
-  if (auto *RD = BaseType->getAsRecordDecl()) {
-    if (const auto *CTSD =
-            llvm::dyn_cast<ClassTemplateSpecializationDecl>(RD)) {
-      // Template might not be instantiated yet, fall back to primary template
-      // in such cases.
-      if (CTSD->getTemplateSpecializationKind() == TSK_Undeclared)
-        RD = CTSD->getSpecializedTemplate()->getTemplatedDecl();
-    }
-    return RD;
-  }
-
-  if (const auto *TST = BaseType->getAs<TemplateSpecializationType>()) {
-    if (const auto *TD = dyn_cast_or_null<ClassTemplateDecl>(
-            TST->getTemplateName().getAsTemplateDecl())) {
-      return TD->getTemplatedDecl();
-    }
-  }
-
-  return nullptr;
+  BaseType = Resolver.simplifyType(BaseType, nullptr, /*UnwrapPointer=*/false);
+  return dyn_cast_if_present<RecordDecl>(
+      Resolver.resolveTypeToTagDecl(BaseType));
 }
 
 namespace {
