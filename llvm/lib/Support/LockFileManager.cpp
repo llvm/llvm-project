@@ -157,42 +157,35 @@ public:
 
 } // end anonymous namespace
 
-LockFileManager::LockFileManager(StringRef FileName)
-{
-  this->FileName = FileName;
-  if (std::error_code EC = sys::fs::make_absolute(this->FileName)) {
-    std::string S("failed to obtain absolute path for ");
-    S.append(std::string(this->FileName));
-    setError(EC, S);
-    return;
-  }
-  LockFileName = this->FileName;
+LockFileManager::LockFileManager(StringRef FileName) : FileName(FileName) {}
+
+Expected<bool> LockFileManager::tryLock() {
+  SmallString<128> AbsoluteFileName(FileName);
+  if (std::error_code EC = sys::fs::make_absolute(AbsoluteFileName))
+    return createStringError("failed to obtain absolute path for " +
+                             AbsoluteFileName);
+  LockFileName = AbsoluteFileName;
   LockFileName += ".lock";
 
   // If the lock file already exists, don't bother to try to create our own
   // lock file; it won't work anyway. Just figure out who owns this lock file.
   if ((Owner = readLockFile(LockFileName)))
-    return;
+    return false;
 
   // Create a lock file that is unique to this instance.
   UniqueLockFileName = LockFileName;
   UniqueLockFileName += "-%%%%%%%%";
   int UniqueLockFileID;
   if (std::error_code EC = sys::fs::createUniqueFile(
-          UniqueLockFileName, UniqueLockFileID, UniqueLockFileName)) {
-    std::string S("failed to create unique file ");
-    S.append(std::string(UniqueLockFileName));
-    setError(EC, S);
-    return;
-  }
+          UniqueLockFileName, UniqueLockFileID, UniqueLockFileName))
+    return createStringError("failed to create unique file " +
+                             UniqueLockFileName);
 
   // Write our process ID to our unique lock file.
   {
     SmallString<256> HostID;
-    if (auto EC = getHostID(HostID)) {
-      setError(EC, "failed to get host id");
-      return;
-    }
+    if (auto EC = getHostID(HostID))
+      return createStringError(EC, "failed to get host id");
 
     raw_fd_ostream Out(UniqueLockFileID, /*shouldClose=*/true);
     Out << HostID << ' ' << sys::Process::getProcessId();
@@ -201,13 +194,12 @@ LockFileManager::LockFileManager(StringRef FileName)
     if (Out.has_error()) {
       // We failed to write out PID, so report the error, remove the
       // unique lock file, and fail.
-      std::string S("failed to write to ");
-      S.append(std::string(UniqueLockFileName));
-      setError(Out.error(), S);
+      Error Err = createStringError(Out.error(),
+                                    "failed to write to " + UniqueLockFileName);
       sys::fs::remove(UniqueLockFileName);
       // Don't call report_fatal_error.
       Out.clear_error();
-      return;
+      return std::move(Err);
     }
   }
 
@@ -221,23 +213,19 @@ LockFileManager::LockFileManager(StringRef FileName)
         sys::fs::create_link(UniqueLockFileName, LockFileName);
     if (!EC) {
       RemoveUniqueFile.lockAcquired();
-      return;
+      return true;
     }
 
-    if (EC != errc::file_exists) {
-      std::string S("failed to create link ");
-      raw_string_ostream OSS(S);
-      OSS << LockFileName.str() << " to " << UniqueLockFileName.str();
-      setError(EC, S);
-      return;
-    }
+    if (EC != errc::file_exists)
+      return createStringError(EC, "failed to create link " + LockFileName +
+                                       " to " + UniqueLockFileName);
 
     // Someone else managed to create the lock file first. Read the process ID
     // from the lock file.
     if ((Owner = readLockFile(LockFileName))) {
       // Wipe out our unique lock file (it's useless now)
       sys::fs::remove(UniqueLockFileName);
-      return;
+      return false;
     }
 
     if (!sys::fs::exists(LockFileName)) {
@@ -248,39 +236,14 @@ LockFileManager::LockFileManager(StringRef FileName)
 
     // There is a lock file that nobody owns; try to clean it up and get
     // ownership.
-    if ((EC = sys::fs::remove(LockFileName))) {
-      std::string S("failed to remove lockfile ");
-      S.append(std::string(UniqueLockFileName));
-      setError(EC, S);
-      return;
-    }
+    if ((EC = sys::fs::remove(LockFileName)))
+      return createStringError(EC, "failed to remove lockfile " +
+                                       UniqueLockFileName);
   }
-}
-
-LockFileManager::LockFileState LockFileManager::getState() const {
-  if (Owner)
-    return LFS_Shared;
-
-  if (ErrorCode)
-    return LFS_Error;
-
-  return LFS_Owned;
-}
-
-std::string LockFileManager::getErrorMessage() const {
-  if (ErrorCode) {
-    std::string Str(ErrorDiagMsg);
-    std::string ErrCodeMsg = ErrorCode.message();
-    raw_string_ostream OSS(Str);
-    if (!ErrCodeMsg.empty())
-      OSS << ": " << ErrCodeMsg;
-    return Str;
-  }
-  return "";
 }
 
 LockFileManager::~LockFileManager() {
-  if (getState() != LFS_Owned)
+  if (Owner)
     return;
 
   // Since we own the lock, remove the lock file and our own unique lock file.
@@ -293,7 +256,7 @@ LockFileManager::~LockFileManager() {
 
 LockFileManager::WaitForUnlockResult
 LockFileManager::waitForUnlock(const unsigned MaxSeconds) {
-  if (getState() != LFS_Shared)
+  if (!Owner)
     return Res_Success;
 
   // Since we don't yet have an event-based method to wait for the lock file,
