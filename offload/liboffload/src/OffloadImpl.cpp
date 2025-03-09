@@ -19,27 +19,6 @@
 
 #include <mutex>
 
-using namespace llvm;
-using namespace llvm::omp::target::plugin;
-
-// Handle type definitions. Ideally these would be 1:1 with the plugins
-struct ol_device_handle_t_ {
-  int DeviceNum;
-  GenericDeviceTy &Device;
-  ol_platform_handle_t Platform;
-};
-
-struct ol_platform_handle_t_ {
-  std::unique_ptr<GenericPluginTy> Plugin;
-  std::vector<ol_device_handle_t_> Devices;
-};
-
-using PlatformVecT = SmallVector<ol_platform_handle_t_, 4>;
-PlatformVecT &Platforms() {
-  static PlatformVecT Platforms;
-  return Platforms;
-}
-
 // TODO: Some plugins expect to be linked into libomptarget which defines these
 // symbols to implement ompt callbacks. The least invasive workaround here is to
 // define them in libLLVMOffload as false/null so they are never used. In future
@@ -55,6 +34,78 @@ ompt_function_lookup_t lookupCallbackByName = nullptr;
 } // namespace llvm::omp::target
 #endif
 
+using namespace llvm::omp::target;
+using namespace llvm::omp::target::plugin;
+
+// Handle type definitions. Ideally these would be 1:1 with the plugins, but
+// we add some additional data here for now to avoid churn in the plugin
+// interface.
+struct ol_device_impl_t {
+  ol_device_impl_t(int DeviceNum, GenericDeviceTy *Device,
+                   ol_platform_handle_t Platform)
+      : DeviceNum(DeviceNum), Device(Device), Platform(Platform) {}
+  int DeviceNum;
+  GenericDeviceTy *Device;
+  ol_platform_handle_t Platform;
+};
+
+struct ol_platform_impl_t {
+  ol_platform_impl_t(std::unique_ptr<GenericPluginTy> Plugin,
+                     std::vector<ol_device_impl_t> Devices)
+      : Plugin(std::move(Plugin)), Devices(Devices) {}
+  std::unique_ptr<GenericPluginTy> Plugin;
+  std::vector<ol_device_impl_t> Devices;
+};
+
+struct ol_queue_impl_t {
+  ol_queue_impl_t(__tgt_async_info *AsyncInfo, ol_device_handle_t Device)
+      : AsyncInfo(AsyncInfo), Device(Device) {}
+  __tgt_async_info *AsyncInfo;
+  ol_device_handle_t Device;
+};
+
+struct ol_event_impl_t {
+  ol_event_impl_t(void *EventInfo, ol_queue_handle_t Queue)
+      : EventInfo(EventInfo), Queue(Queue) {}
+  ~ol_event_impl_t() { (void)Queue->Device->Device->destroyEvent(EventInfo); }
+  void *EventInfo;
+  ol_queue_handle_t Queue;
+};
+
+struct ol_program_impl_t {
+  ol_program_impl_t(plugin::DeviceImageTy *Image,
+                    std::unique_ptr<llvm::MemoryBuffer> ImageData,
+                    const __tgt_device_image &DeviceImage)
+      : Image(Image), ImageData(std::move(ImageData)),
+        DeviceImage(DeviceImage) {}
+  plugin::DeviceImageTy *Image;
+  std::unique_ptr<llvm::MemoryBuffer> ImageData;
+  __tgt_device_image DeviceImage;
+};
+
+struct ol_kernel_impl_t {
+  GenericKernelTy *KernelImpl;
+};
+
+namespace llvm {
+namespace offload {
+
+using PlatformVecT = SmallVector<ol_platform_impl_t, 4>;
+PlatformVecT &Platforms() {
+  static PlatformVecT Platforms;
+  return Platforms;
+}
+
+ol_device_handle_t HostDevice() {
+  static ol_device_impl_t HostDeviceImpl{-1, nullptr, nullptr};
+  return &HostDeviceImpl;
+}
+
+template <typename HandleT> ol_impl_result_t olDestroy(HandleT Handle) {
+  delete Handle;
+  return OL_SUCCESS;
+}
+
 // Every plugin exports this method to create an instance of the plugin type.
 #define PLUGIN_TARGET(Name) extern "C" GenericPluginTy *createPlugin_##Name();
 #include "Shared/Targets.def"
@@ -63,7 +114,7 @@ void initPlugins() {
   // Attempt to create an instance of each supported plugin.
 #define PLUGIN_TARGET(Name)                                                    \
   do {                                                                         \
-    Platforms().emplace_back(ol_platform_handle_t_{                            \
+    Platforms().emplace_back(ol_platform_impl_t{                               \
         std::unique_ptr<GenericPluginTy>(createPlugin_##Name()), {}});         \
   } while (false);
 #include "Shared/Targets.def"
@@ -76,13 +127,15 @@ void initPlugins() {
     for (auto DevNum = 0; DevNum < Platform.Plugin->number_of_devices();
          DevNum++) {
       if (Platform.Plugin->init_device(DevNum) == OFFLOAD_SUCCESS) {
-        Platform.Devices.emplace_back(ol_device_handle_t_{
-            DevNum, Platform.Plugin->getDevice(DevNum), &Platform});
+        Platform.Devices.emplace_back(ol_device_impl_t{
+            DevNum, &Platform.Plugin->getDevice(DevNum), &Platform});
       }
     }
   }
 
   offloadConfig().TracingEnabled = std::getenv("OFFLOAD_TRACE");
+  offloadConfig().ValidationEnabled =
+      !std::getenv("OFFLOAD_DISABLE_VALIDATION");
 }
 
 // TODO: We can properly reference count here and manage the resources in a more
@@ -175,9 +228,8 @@ ol_impl_result_t olGetDeviceCount_impl(ol_platform_handle_t Platform,
 ol_impl_result_t olGetDevice_impl(ol_platform_handle_t Platform,
                                   uint32_t NumEntries,
                                   ol_device_handle_t *Devices) {
-  if (NumEntries > Platform->Devices.size()) {
+  if (NumEntries > Platform->Devices.size())
     return OL_ERRC_INVALID_SIZE;
-  }
 
   for (uint32_t DeviceIndex = 0; DeviceIndex < NumEntries; DeviceIndex++) {
     Devices[DeviceIndex] = &(Platform->Devices[DeviceIndex]);
@@ -194,7 +246,7 @@ ol_impl_result_t olGetDeviceInfoImplDetail(ol_device_handle_t Device,
   ReturnHelper ReturnValue(PropSize, PropValue, PropSizeRet);
 
   InfoQueueTy DevInfo;
-  if (auto Err = Device->Device.obtainInfoImpl(DevInfo))
+  if (auto Err = Device->Device->obtainInfoImpl(DevInfo))
     return OL_ERRC_OUT_OF_RESOURCES;
 
   // Find the info if it exists under any of the given names
@@ -245,3 +297,235 @@ ol_impl_result_t olGetDeviceInfoSize_impl(ol_device_handle_t Device,
                                           size_t *PropSizeRet) {
   return olGetDeviceInfoImplDetail(Device, PropName, 0, nullptr, PropSizeRet);
 }
+
+ol_impl_result_t olGetHostDevice_impl(ol_device_handle_t *Device) {
+  *Device = HostDevice();
+  return OL_SUCCESS;
+}
+
+TargetAllocTy convertOlToPluginAllocTy(ol_alloc_type_t Type) {
+  switch (Type) {
+  case OL_ALLOC_TYPE_DEVICE:
+    return TARGET_ALLOC_DEVICE;
+  case OL_ALLOC_TYPE_HOST:
+    return TARGET_ALLOC_HOST;
+  case OL_ALLOC_TYPE_SHARED:
+  default:
+    return TARGET_ALLOC_SHARED;
+  }
+}
+
+ol_impl_result_t olMemAlloc_impl(ol_device_handle_t Device,
+                                 ol_alloc_type_t Type, size_t Size,
+                                 void **AllocationOut) {
+  auto Alloc =
+      Device->Device->dataAlloc(Size, nullptr, convertOlToPluginAllocTy(Type));
+  if (!Alloc)
+    return {OL_ERRC_OUT_OF_RESOURCES,
+            formatv("Could not create allocation on device {0}", Device).str()};
+
+  *AllocationOut = *Alloc;
+  return OL_SUCCESS;
+}
+
+ol_impl_result_t olMemFree_impl(ol_device_handle_t Device, ol_alloc_type_t Type,
+                                void *Address) {
+  auto Res =
+      Device->Device->dataDelete(Address, convertOlToPluginAllocTy(Type));
+  if (Res)
+    return {OL_ERRC_OUT_OF_RESOURCES, "Could not free allocation"};
+
+  return OL_SUCCESS;
+}
+
+ol_impl_result_t olCreateQueue_impl(ol_device_handle_t Device,
+                                    ol_queue_handle_t *Queue) {
+  auto CreatedQueue = std::make_unique<ol_queue_impl_t>(nullptr, Device);
+  auto Err = Device->Device->initAsyncInfo(&(CreatedQueue->AsyncInfo));
+  if (Err)
+    return {OL_ERRC_UNKNOWN, "Could not initialize stream resource"};
+
+  *Queue = CreatedQueue.release();
+  return OL_SUCCESS;
+}
+
+ol_impl_result_t olDestroyQueue_impl(ol_queue_handle_t Queue) {
+  return olDestroy(Queue);
+}
+
+ol_impl_result_t olWaitQueue_impl(ol_queue_handle_t Queue) {
+  // Host plugin doesn't have a queue set so it's not safe to call synchronize
+  // on it, but we have nothing to synchronize in that situation anyway.
+  if (Queue->AsyncInfo->Queue) {
+    auto Err = Queue->Device->Device->synchronize(Queue->AsyncInfo);
+    if (Err)
+      return {OL_ERRC_INVALID_QUEUE, "The queue failed to synchronize"};
+  }
+
+  // Recreate the stream resource so the queue can be reused
+  // TODO: Would be easier for the synchronization to (optionally) not release
+  // it to begin with.
+  auto Res = Queue->Device->Device->initAsyncInfo(&Queue->AsyncInfo);
+  if (Res)
+    return {OL_ERRC_UNKNOWN, "Could not reinitialize the stream resource"};
+
+  return OL_SUCCESS;
+}
+
+ol_impl_result_t olWaitEvent_impl(ol_event_handle_t Event) {
+  auto Res = Event->Queue->Device->Device->syncEvent(Event->EventInfo);
+  if (Res)
+    return {OL_ERRC_INVALID_EVENT, "The event failed to synchronize"};
+
+  return OL_SUCCESS;
+}
+
+ol_impl_result_t olDestroyEvent_impl(ol_event_handle_t Event) {
+  return olDestroy(Event);
+}
+
+ol_event_handle_t makeEvent(ol_queue_handle_t Queue) {
+  auto EventImpl = std::make_unique<ol_event_impl_t>(nullptr, Queue);
+  auto Res = Queue->Device->Device->createEvent(&EventImpl->EventInfo);
+  if (Res)
+    return nullptr;
+
+  Res = Queue->Device->Device->recordEvent(EventImpl->EventInfo,
+                                           Queue->AsyncInfo);
+  if (Res)
+    return nullptr;
+
+  return EventImpl.release();
+}
+
+ol_impl_result_t olEnqueueMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
+                                      ol_device_handle_t DstDevice,
+                                      void *SrcPtr,
+                                      ol_device_handle_t SrcDevice, size_t Size,
+                                      ol_event_handle_t *EventOut) {
+  if (DstDevice == HostDevice() && SrcDevice == HostDevice()) {
+    // TODO: We could actually handle this with a plain memcpy but we currently
+    // have no way of synchronizing this with the queue
+    return {OL_ERRC_INVALID_ARGUMENT,
+            "One of DstDevice and SrcDevice must be a non-host device"};
+  }
+
+  if (DstDevice == HostDevice()) {
+    auto Res =
+        SrcDevice->Device->dataRetrieve(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
+    if (Res)
+      return {OL_ERRC_UNKNOWN, "The data retrieve operation failed"};
+  } else if (SrcDevice == HostDevice()) {
+    auto Res =
+        DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, Queue->AsyncInfo);
+    if (Res)
+      return {OL_ERRC_UNKNOWN, "The data submit operation failed"};
+  } else {
+    auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
+                                               DstPtr, Size, Queue->AsyncInfo);
+    if (Res)
+      return {OL_ERRC_UNKNOWN, "The data exchange operation failed"};
+  }
+
+  if (EventOut)
+    *EventOut = makeEvent(Queue);
+
+  return OL_SUCCESS;
+}
+
+ol_impl_result_t olCreateProgram_impl(ol_device_handle_t Device,
+                                      const void *ProgData, size_t ProgDataSize,
+                                      ol_program_handle_t *Program) {
+  // Make a copy of the program binary in case it is released by the caller.
+  auto ImageData = MemoryBuffer::getMemBufferCopy(
+      StringRef(reinterpret_cast<const char *>(ProgData), ProgDataSize));
+
+  auto DeviceImage = __tgt_device_image{
+      const_cast<char *>(ImageData->getBuffer().data()),
+      const_cast<char *>(ImageData->getBuffer().data()) + ProgDataSize, nullptr,
+      nullptr};
+
+  ol_program_handle_t Prog =
+      new ol_program_impl_t(nullptr, std::move(ImageData), DeviceImage);
+
+  auto Res =
+      Device->Device->loadBinary(Device->Device->Plugin, &Prog->DeviceImage);
+  if (!Res) {
+    delete Prog;
+    return OL_ERRC_INVALID_VALUE;
+  }
+
+  Prog->Image = *Res;
+  // Prog->ImageData = std::move(ImageData);
+  *Program = Prog;
+
+  return OL_SUCCESS;
+}
+
+ol_impl_result_t olDestroyProgram_impl(ol_program_handle_t Program) {
+  return olDestroy(Program);
+}
+
+ol_impl_result_t olCreateKernel_impl(ol_program_handle_t Program,
+                                     const char *KernelName,
+                                     ol_kernel_handle_t *Kernel) {
+
+  auto &Device = Program->Image->getDevice();
+  auto KernelImpl = Device.constructKernel(KernelName);
+  if (!KernelImpl)
+    return OL_ERRC_INVALID_KERNEL_NAME;
+
+  auto Err = KernelImpl->init(Device, *Program->Image);
+  if (Err)
+    return {OL_ERRC_UNKNOWN, "Could not initialize the kernel"};
+
+  ol_kernel_handle_t CreatedKernel = new ol_kernel_impl_t();
+  CreatedKernel->KernelImpl = &*KernelImpl;
+  *Kernel = CreatedKernel;
+
+  return OL_SUCCESS;
+}
+
+ol_impl_result_t olDestroyKernel_impl(ol_kernel_handle_t Kernel) {
+  return olDestroy(Kernel);
+}
+
+ol_impl_result_t
+olEnqueueKernelLaunch_impl(ol_queue_handle_t Queue, ol_kernel_handle_t Kernel,
+                           const void *ArgumentsData, size_t ArgumentsSize,
+                           const ol_kernel_launch_size_args_t *LaunchSizeArgs,
+                           ol_event_handle_t *EventOut) {
+  auto *DeviceImpl = Queue->Device->Device;
+
+  AsyncInfoWrapperTy AsyncInfoWrapper(*DeviceImpl, Queue->AsyncInfo);
+
+  KernelArgsTy LaunchArgs{};
+  LaunchArgs.NumTeams[0] = LaunchSizeArgs->NumGroupsX;
+  LaunchArgs.NumTeams[1] = LaunchSizeArgs->NumGroupsY;
+  LaunchArgs.NumTeams[2] = LaunchSizeArgs->NumGroupsZ;
+  LaunchArgs.ThreadLimit[0] = LaunchSizeArgs->GroupSizeX;
+  LaunchArgs.ThreadLimit[1] = LaunchSizeArgs->GroupSizeY;
+  LaunchArgs.ThreadLimit[2] = LaunchSizeArgs->GroupSizeZ;
+
+  KernelLaunchParamsTy Params;
+  Params.Data = const_cast<void *>(ArgumentsData);
+  Params.Size = ArgumentsSize;
+  LaunchArgs.ArgPtrs = reinterpret_cast<void **>(&Params);
+  // Don't do anything with pointer indirection; use arg data as-is
+  LaunchArgs.Flags.IsCUDA = true;
+
+  auto Err = Kernel->KernelImpl->launch(*DeviceImpl, LaunchArgs.ArgPtrs,
+                                        nullptr, LaunchArgs, AsyncInfoWrapper);
+
+  AsyncInfoWrapper.finalize(Err);
+  if (Err)
+    return {OL_ERRC_UNKNOWN, "Could not finalize the AsyncInfoWrapper"};
+
+  if (EventOut)
+    *EventOut = makeEvent(Queue);
+
+  return OL_SUCCESS;
+}
+
+} // namespace offload
+} // namespace llvm

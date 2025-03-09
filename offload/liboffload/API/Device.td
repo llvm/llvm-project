@@ -12,7 +12,7 @@
 
 def : Enum {
   let name = "ol_device_type_t";
-  let desc = "Supported device types";
+  let desc = "Supported device types.";
   let etors =[
     Etor<"DEFAULT", "The default device type as preferred by the runtime">,
     Etor<"ALL", "Devices of all types">,
@@ -23,7 +23,7 @@ def : Enum {
 
 def : Enum {
   let name = "ol_device_info_t";
-  let desc = "Supported device info";
+  let desc = "Supported device info.";
   let is_typed = 1;
   let etors =[
     TaggedEtor<"TYPE", "ol_device_type_t", "type of the device">,
@@ -36,7 +36,7 @@ def : Enum {
 
 def : Function {
   let name = "olGetDeviceCount";
-  let desc = "Retrieves the number of available devices within a platform";
+  let desc = "Retrieves the number of available devices within a platform.";
   let params = [
     Param<"ol_platform_handle_t", "Platform", "handle of the platform instance", PARAM_IN>,
     Param<"uint32_t*", "NumDevices", "pointer to the number of devices.", PARAM_OUT>
@@ -46,7 +46,7 @@ def : Function {
 
 def : Function {
   let name = "olGetDevice";
-  let desc = "Retrieves devices within a platform";
+  let desc = "Retrieves devices within a platform.";
   let details = [
     "Multiple calls to this function will return identical device handles, in the same order.",
   ];
@@ -66,7 +66,7 @@ def : Function {
 
 def : Function {
   let name = "olGetDeviceInfo";
-  let desc = "Queries the given property of the device";
+  let desc = "Queries the given property of the device.";
   let details = [];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
@@ -90,7 +90,7 @@ def : Function {
 
 def : Function {
   let name = "olGetDeviceInfoSize";
-  let desc = "Returns the storage size of the given device query";
+  let desc = "Returns the storage size of the given device query.";
   let details = [];
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device instance", PARAM_IN>,
@@ -103,4 +103,16 @@ def : Function {
     ]>,
     Return<"OL_ERRC_INVALID_DEVICE">
   ];
+}
+
+def : Function {
+  let name = "olGetHostDevice";
+  let desc = "Return the special host device used to represent the host in memory transfer operations.";
+  let details = [
+    "The host device does not support queues"
+  ];
+  let params = [
+    Param<"ol_device_handle_t*", "Device", "Output pointer for the device">
+  ]; // TODO: Take a platform?
+  let returns = [];
 }
