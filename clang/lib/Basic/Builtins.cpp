@@ -137,12 +137,13 @@ bool Builtin::Context::isBuiltinFunc(llvm::StringRef FuncName) {
   return false;
 }
 
-static bool isSymbolAvailableInC89(const llvm::StringTable& Strings, const Builtin::Info & BuiltinInfo) {
+static bool isSymbolAvailableInC89(const llvm::StringTable &Strings,
+                                   const Builtin::Info &BuiltinInfo) {
 
   auto NameStr = Strings[BuiltinInfo.Offsets.Name];
 
   // FIXME: add other C89 symbols here
-  if(NameStr == "log") {
+  if (NameStr == "log") {
     return true;
   }
 
@@ -166,8 +167,7 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
     return false;
   }
   /* MathBuiltins Unsupported */
-  if (LangOpts.NoMathBuiltin &&
-      BuiltinInfo.Header.ID == HeaderDesc::MATH_H)
+  if (LangOpts.NoMathBuiltin && BuiltinInfo.Header.ID == HeaderDesc::MATH_H)
     return false;
   /* GnuMode Unsupported */
   if (!LangOpts.GNUMode && (BuiltinInfo.Langs & GNU_LANG))
