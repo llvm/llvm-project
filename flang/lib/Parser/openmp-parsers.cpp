@@ -996,10 +996,33 @@ TYPE_PARSER(sourced(construct<OmpErrorDirective>(
 
 // --- Parsers for directives and constructs --------------------------
 
-TYPE_PARSER(sourced(construct<OmpDirectiveSpecification>( //
-    sourced(OmpDirectiveNameParser{}),
-    maybe(parenthesized(nonemptyList(Parser<OmpArgument>{}))),
-    maybe(Parser<OmpClauseList>{}))))
+OmpDirectiveSpecification static makeFlushFromOldSyntax1(Verbatim &&text,
+    std::optional<OmpClauseList> &&clauses,
+    std::optional<std::list<OmpArgument>> &&args,
+    OmpDirectiveSpecification::Flags &&flags) {
+  return OmpDirectiveSpecification{OmpDirectiveName(text), std::move(args),
+      std::move(clauses), std::move(flags)};
+}
+
+TYPE_PARSER(sourced(
+    // Parse the old syntax: FLUSH [clauses] [(objects)]
+    construct<OmpDirectiveSpecification>(
+        // Force this old-syntax parser to fail for FLUSH followed by '('.
+        // Otherwise it could succeed on the new syntax but have one of
+        // lists absent in the parsed result.
+        // E.g. for FLUSH(x) SEQ_CST it would find no clauses following
+        // the directive name, parse the argument list "(x)" and stop.
+        applyFunction<OmpDirectiveSpecification>(makeFlushFromOldSyntax1,
+            verbatim("FLUSH"_tok) / !lookAhead("("_tok),
+            maybe(Parser<OmpClauseList>{}),
+            maybe(parenthesized(nonemptyList(Parser<OmpArgument>{}))),
+            pure(OmpDirectiveSpecification::Flags::DeprecatedSyntax))) ||
+    // Parse the standard syntax: directive [(arguments)] [clauses]
+    construct<OmpDirectiveSpecification>( //
+        sourced(OmpDirectiveNameParser{}),
+        maybe(parenthesized(nonemptyList(Parser<OmpArgument>{}))),
+        maybe(Parser<OmpClauseList>{}),
+        pure(OmpDirectiveSpecification::Flags::None))))
 
 TYPE_PARSER(sourced(construct<OmpNothingDirective>("NOTHING" >> ok)))
 
