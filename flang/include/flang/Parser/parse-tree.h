@@ -4865,13 +4865,6 @@ struct OmpLoopDirective {
   CharBlock source;
 };
 
-// 2.14.1 construct-type-clause -> PARALLEL | SECTIONS | DO | TASKGROUP
-struct OmpCancelType {
-  ENUM_CLASS(Type, Parallel, Sections, Do, Taskgroup)
-  WRAPPER_CLASS_BOILERPLATE(OmpCancelType, Type);
-  CharBlock source;
-};
-
 // 2.14.2 cancellation-point -> CANCELLATION POINT construct-type-clause
 struct OpenMPCancellationPointConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPCancellationPointConstruct);

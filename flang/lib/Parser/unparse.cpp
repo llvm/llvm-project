@@ -3033,7 +3033,6 @@ public:
       OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
-  WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Ordering) // OMP ordering
   WALK_NESTED_ENUM(OmpOrderModifier, Value) // OMP order-modifier
   WALK_NESTED_ENUM(OmpPrescriptiveness, Value) // OMP prescriptiveness

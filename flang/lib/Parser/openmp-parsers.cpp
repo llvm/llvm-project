@@ -1127,13 +1127,6 @@ TYPE_PARSER(sourced(construct<OmpLoopDirective>(first(
 TYPE_PARSER(sourced(construct<OmpBeginLoopDirective>(
     sourced(Parser<OmpLoopDirective>{}), Parser<OmpClauseList>{})))
 
-// 2.14.1 construct-type-clause -> PARALLEL | SECTIONS | DO | TASKGROUP
-TYPE_PARSER(sourced(construct<OmpCancelType>(
-    first("PARALLEL" >> pure(OmpCancelType::Type::Parallel),
-        "SECTIONS" >> pure(OmpCancelType::Type::Sections),
-        "DO" >> pure(OmpCancelType::Type::Do),
-        "TASKGROUP" >> pure(OmpCancelType::Type::Taskgroup)))))
-
 // 2.14.2 Cancellation Point construct
 TYPE_PARSER(sourced(construct<OpenMPCancellationPointConstruct>(
     verbatim("CANCELLATION POINT"_tok), Parser<OmpClauseList>{})))

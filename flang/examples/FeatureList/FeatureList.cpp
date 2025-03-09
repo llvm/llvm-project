@@ -456,8 +456,6 @@ public:
   READ_FEATURE(OmpBeginLoopDirective)
   READ_FEATURE(OmpBeginSectionsDirective)
   READ_FEATURE(OmpBlockDirective)
-  READ_FEATURE(OmpCancelType)
-  READ_FEATURE(OmpCancelType::Type)
   READ_FEATURE(OmpClause)
   READ_FEATURE(OmpClauseList)
   READ_FEATURE(OmpCriticalDirective)

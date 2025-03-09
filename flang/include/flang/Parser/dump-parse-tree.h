@@ -540,8 +540,6 @@ public:
         "llvm::omp::Directive = ", llvm::omp::getOpenMPDirectiveName(x))
         .str();
   }
-  NODE(parser, OmpCancelType)
-  NODE_ENUM(OmpCancelType, Type)
   NODE(parser, OmpClause)
 #define GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
 #include "llvm/Frontend/OpenMP/OMP.inc"
