@@ -235,6 +235,20 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
+class GoToRequestHandler : public LegacyRequestHandler {
+public:
+  using LegacyRequestHandler::LegacyRequestHandler;
+  static llvm::StringLiteral getCommand() { return "goto"; }
+  void operator()(const llvm::json::Object &request) const override;
+};
+
+class GoToTargetsRequestHandler : public LegacyRequestHandler {
+public:
+  using LegacyRequestHandler::LegacyRequestHandler;
+  static llvm::StringLiteral getCommand() { return "gotoTargets"; }
+  void operator()(const llvm::json::Object &request) const override;
+};
+
 class InitializeRequestHandler : public LegacyRequestHandler {
 public:
   using LegacyRequestHandler::LegacyRequestHandler;

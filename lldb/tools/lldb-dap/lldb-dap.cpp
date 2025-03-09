@@ -127,6 +127,8 @@ static void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<EvaluateRequestHandler>();
   dap.RegisterRequest<ExceptionInfoRequestHandler>();
   dap.RegisterRequest<InitializeRequestHandler>();
+  dap.RegisterRequest<GoToRequestHandler>();
+  dap.RegisterRequest<GoToTargetsRequestHandler>();
   dap.RegisterRequest<LaunchRequestHandler>();
   dap.RegisterRequest<LocationsRequestHandler>();
   dap.RegisterRequest<NextRequestHandler>();
