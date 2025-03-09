@@ -15,6 +15,7 @@
 
 #include "mlir/ExecutionEngine/RunnerUtils.h"
 #include <chrono>
+#include <unordered_map>
 
 // NOLINTBEGIN(*-identifier-naming)
 
@@ -325,6 +326,55 @@ extern "C" int64_t verifyMemRefC64(int64_t rank, void *actualPtr,
   UnrankedMemRefType<impl::complex64> actualDesc = {rank, actualPtr};
   UnrankedMemRefType<impl::complex64> expectedDesc = {rank, expectedPtr};
   return _mlir_ciface_verifyMemRefC64(&actualDesc, &expectedDesc);
+}
+
+//===----------------------------------------------------------------------===//
+// Memory Leak Sanitizer
+//===----------------------------------------------------------------------===//
+
+/// Helper class that keeps track of memory allocations.
+class AllocationManager {
+public:
+  /// Upon destruction, print error messages for all outstanding allocations.
+  ~AllocationManager() {
+    for (auto it = allocs.begin(); it != allocs.end(); it++) {
+      fprintf(stderr, "%s\n", it->second.c_str());
+    }
+  }
+
+  /// Notify that a memory allocation has occurred.
+  void notifyAlloc(void *ptr, void *msg) {
+    allocs[ptr] = std::string(reinterpret_cast<char *>(msg));
+  }
+
+  /// Notify that a memory deallocation has occurred.
+  void notifyDealloc(void *ptr, void *msg) {
+    auto it = allocs.find(ptr);
+    if (it == allocs.end()) {
+      fprintf(stderr, "%s\n", static_cast<char *>(msg));
+    } else {
+      allocs.erase(it);
+    }
+  }
+
+private:
+  std::unordered_map<void *, std::string> allocs;
+};
+
+AllocationManager allocManager;
+
+extern "C" void
+_mlir_ciface_notifyMemrefAllocated(UnrankedMemRefType<void> *M,
+                                   UnrankedMemRefType<int8_t> *msg) {
+  DynamicMemRefType<int8_t> msgMemref(*msg);
+  allocManager.notifyAlloc(M, msgMemref.data);
+}
+
+extern "C" void
+_mlir_ciface_notifyMemrefDeallocated(UnrankedMemRefType<void> *M,
+                                     UnrankedMemRefType<int8_t> *msg) {
+  DynamicMemRefType<int8_t> msgMemref(*msg);
+  allocManager.notifyDealloc(M, msgMemref.data);
 }
 
 // NOLINTEND(*-identifier-naming)
