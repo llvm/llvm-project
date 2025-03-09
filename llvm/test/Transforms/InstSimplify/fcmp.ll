@@ -19,7 +19,12 @@ define i1 @poison2(float %x) {
 
 define i1 @pr130408(x86_fp80 %x) {
 ; CHECK-LABEL: @pr130408(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[BITS:%.*]] = bitcast x86_fp80 [[X:%.*]] to i80
+; CHECK-NEXT:    [[MASKED:%.*]] = and i80 [[BITS]], -604444463063240877801473
+; CHECK-NEXT:    [[OR:%.*]] = or i80 [[MASKED]], 302194561415509874573312
+; CHECK-NEXT:    [[FP:%.*]] = bitcast i80 [[OR]] to x86_fp80
+; CHECK-NEXT:    [[RES:%.*]] = fcmp uno x86_fp80 [[FP]], 0xK00000000000000000000
+; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %bits = bitcast x86_fp80 %x to i80
   %masked = and i80 %bits, -604444463063240877801473
