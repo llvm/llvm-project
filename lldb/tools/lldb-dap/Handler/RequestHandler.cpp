@@ -54,7 +54,7 @@ void RequestHandler::SetSourceMapFromArguments(
   std::string sourceMapCommand;
   llvm::raw_string_ostream strm(sourceMapCommand);
   strm << "settings set target.source-map ";
-  const auto sourcePath = GetString(arguments, "sourcePath");
+  const auto sourcePath = GetString(arguments, "sourcePath").value_or("");
 
   // sourceMap is the new, more general form of sourcePath and overrides it.
   constexpr llvm::StringRef sourceMapKey = "sourceMap";
@@ -169,7 +169,7 @@ RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
 
   // Grab the current working directory if there is one and set it in the
   // launch info.
-  const auto cwd = GetString(arguments, "cwd");
+  const auto cwd = GetString(arguments, "cwd").value_or("");
   if (!cwd.empty())
     launch_info.SetWorkingDirectory(cwd.data());
 
