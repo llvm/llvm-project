@@ -28,17 +28,25 @@
 
 using namespace llvm;
 
-static cl::opt<TargetTransformInfo::TargetCostKind> CostKind(
+enum OutputCostKind {
+  RecipThroughput,
+  Latency,
+  CodeSize,
+  SizeAndLatency,
+  All,
+};
+
+static cl::opt<OutputCostKind> CostKind(
     "cost-kind", cl::desc("Target cost kind"),
-    cl::init(TargetTransformInfo::TCK_RecipThroughput),
-    cl::values(clEnumValN(TargetTransformInfo::TCK_RecipThroughput,
-                          "throughput", "Reciprocal throughput"),
-               clEnumValN(TargetTransformInfo::TCK_Latency,
-                          "latency", "Instruction latency"),
-               clEnumValN(TargetTransformInfo::TCK_CodeSize,
-                          "code-size", "Code size"),
-               clEnumValN(TargetTransformInfo::TCK_SizeAndLatency,
-                          "size-latency", "Code size and latency")));
+    cl::init(OutputCostKind::RecipThroughput),
+    cl::values(clEnumValN(OutputCostKind::RecipThroughput, "throughput",
+                          "Reciprocal throughput"),
+               clEnumValN(OutputCostKind::Latency, "latency",
+                          "Instruction latency"),
+               clEnumValN(OutputCostKind::CodeSize, "code-size", "Code size"),
+               clEnumValN(OutputCostKind::SizeAndLatency, "size-latency",
+                          "Code size and latency"),
+               clEnumValN(OutputCostKind::All, "all", "Print all cost kinds")));
 
 enum class IntrinsicCostStrategy {
   InstructionCost,
@@ -86,15 +94,30 @@ PreservedAnalyses CostModelPrinterPass::run(Function &F,
   OS << "Printing analysis 'Cost Model Analysis' for function '" << F.getName() << "':\n";
   for (BasicBlock &B : F) {
     for (Instruction &Inst : B) {
-      // TODO: Use a pass parameter instead of cl::opt CostKind to determine
-      // which cost kind to print.
-      InstructionCost Cost = getCost(Inst, CostKind, TTI, TLI);
-      if (auto CostVal = Cost.getValue())
-        OS << "Cost Model: Found an estimated cost of " << *CostVal;
-      else
-        OS << "Cost Model: Invalid cost";
-
-      OS << " for instruction: " << Inst << "\n";
+      OS << "Cost Model: ";
+      if (CostKind == OutputCostKind::All) {
+        OS << "Found costs of ";
+        InstructionCost RThru =
+            getCost(Inst, TTI::TCK_RecipThroughput, TTI, TLI);
+        InstructionCost CodeSize = getCost(Inst, TTI::TCK_CodeSize, TTI, TLI);
+        InstructionCost Lat = getCost(Inst, TTI::TCK_Latency, TTI, TLI);
+        InstructionCost SizeLat =
+            getCost(Inst, TTI::TCK_SizeAndLatency, TTI, TLI);
+        if (RThru == CodeSize && RThru == Lat && RThru == SizeLat)
+          OS << RThru;
+        else
+          OS << "RThru:" << RThru << " CodeSize:" << CodeSize << " Lat:" << Lat
+             << " SizeLat:" << SizeLat;
+        OS << " for: " << Inst << "\n";
+      } else {
+        InstructionCost Cost =
+            getCost(Inst, (TTI::TargetCostKind)(unsigned)CostKind, TTI, TLI);
+        if (auto CostVal = Cost.getValue())
+          OS << "Found an estimated cost of " << *CostVal;
+        else
+          OS << "Invalid cost";
+        OS << " for instruction: " << Inst << "\n";
+      }
     }
   }
   return PreservedAnalyses::all();
