@@ -12,6 +12,10 @@
 #include "__llvm-libc-common.h"
 #include "llvm-libc-macros/time-macros.h"
 
+#ifdef __STDC_WANT_LIB_EXT1__
+#include <errno.h> // errno_t
+#endif
+
 %%public_api()
 
 #endif // LLVM_LIBC_TIME_H
