@@ -58,6 +58,10 @@ void getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
                                bool IsKasan, uint64_t *ShadowBase,
                                int *MappingScale, bool *OrShadowOffset);
 
+/// Remove memory attributes that are incompatible with the instrumentation
+/// added by AddressSanitizer. See more details in the implementation.
+void removeFnAttributes(Function &F);
+
 } // namespace llvm
 
 #endif
