@@ -316,7 +316,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
     ModuleStats module_stat;
     module_stat.symtab_parse_time = module->GetSymtabParseTime().get().count();
     module_stat.symtab_index_time = module->GetSymtabIndexTime().get().count();
-    Symtab *symtab = module->GetSymtab();
+    Symtab *symtab = module->GetSymtab(/*can_create=*/false);
     if (symtab) {
       module_stat.symtab_loaded_from_cache = symtab->GetWasLoadedFromCache();
       if (module_stat.symtab_loaded_from_cache)
@@ -325,7 +325,7 @@ llvm::json::Value DebuggerStats::ReportStatistics(
       if (module_stat.symtab_saved_to_cache)
         ++symtabs_saved;
     }
-    SymbolFile *sym_file = module->GetSymbolFile();
+    SymbolFile *sym_file = module->GetSymbolFile(/*can_create=*/false);
     if (sym_file) {
       if (!summary_only) {
         if (sym_file->GetObjectFile() != module->GetObjectFile())
