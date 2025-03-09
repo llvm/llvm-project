@@ -536,7 +536,7 @@ static ShadowMapping getShadowMapping(const Triple &TargetTriple, int LongSize,
     else if (IsEmscripten)
       Mapping.Offset = kEmscriptenShadowOffset;
     else if (IsAIX)
-      Mapping.Offset = kAIXShadowOffset32;  
+      Mapping.Offset = kAIXShadowOffset32;
     else
       Mapping.Offset = kDefaultShadowOffset32;
   } else {  // LongSize == 64
