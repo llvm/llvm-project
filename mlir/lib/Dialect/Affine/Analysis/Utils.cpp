@@ -252,6 +252,7 @@ bool MemRefDependenceGraph::init() {
   // Create graph nodes.
   DenseMap<Operation *, unsigned> forToNodeMap;
   for (Operation &op : block) {
+    auto localEffectsOp = dyn_cast<LocalEffectsOpInterface>(op);
     if (auto forOp = dyn_cast<AffineForOp>(op)) {
       Node *node = addNodeToMDG(&op, *this, memrefAccesses);
       if (!node)
@@ -277,27 +278,23 @@ bool MemRefDependenceGraph::init() {
       Node *node = addNodeToMDG(&op, *this, memrefAccesses);
       if (!node)
         return false;
-    } else if (!isMemoryEffectFree(&op) &&
-               (op.getNumRegions() == 0 || isa<RegionBranchOpInterface>(op))) {
-      // Create graph node for top-level op unless it is known to be
-      // memory-effect free. This covers all unknown/unregistered ops,
-      // non-affine ops with memory effects, and region-holding ops with a
-      // well-defined control flow. During the fusion validity checks, edges
-      // to/from these ops get looked at.
+    } else if (isMemoryEffectFree(&op)) {
+      // Do not create nodes for memory-effect free ops w/o uses.
+      ;
+    } else if (localEffectsOp && localEffectsOp.hasLocalEffects()) {
+      // Create graph node for top-level op which are known to have only local
+      // effects.
       Node *node = addNodeToMDG(&op, *this, memrefAccesses);
       if (!node)
         return false;
-    } else if (op.getNumRegions() != 0 && !isa<RegionBranchOpInterface>(op)) {
-      // Return false if non-handled/unknown region-holding ops are found. We
-      // won't know what such ops do or what its regions mean; for e.g., it may
-      // not be an imperative op.
-      LLVM_DEBUG(llvm::dbgs()
-                 << "MDG init failed; unknown region-holding op found!\n");
+    } else {
+      // Return false if non-handled/unknown ops are found. We won't know what
+      // such ops do or what its regions mean; for e.g., it may not be an
+      // imperative op.
+      LLVM_DEBUG(llvm::dbgs() << "MDG init failed; unknown operator found:\n"
+                              << op << "\n");
       return false;
     }
-    // We aren't creating nodes for memory-effect free ops either with no
-    // regions (unless it has results being used) or those with branch op
-    // interface.
   }
 
   LLVM_DEBUG(llvm::dbgs() << "Created " << nodes.size() << " nodes\n");
