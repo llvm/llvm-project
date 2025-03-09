@@ -16,6 +16,8 @@ namespace xegpu {
 
 /// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
 void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
+/// Appends patterns for distributing XeGPU ops to work items into `patterns`.
+void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
 
 } // namespace xegpu
 } // namespace mlir
