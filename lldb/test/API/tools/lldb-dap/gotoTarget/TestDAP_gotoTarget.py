@@ -8,7 +8,6 @@ import os
 
 
 class TestDAP_gotoTarget(lldbdap_testcase.DAPTestCaseBase):
-
     def test_default(self):
         """
         Tests the jump to cursor of a simple program. No arguments,
