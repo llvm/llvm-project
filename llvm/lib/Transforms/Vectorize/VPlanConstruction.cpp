@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements transforms for initial VPlan construction
+/// This file implements transforms for initial VPlan construction.
 ///
 //===----------------------------------------------------------------------===//
 
