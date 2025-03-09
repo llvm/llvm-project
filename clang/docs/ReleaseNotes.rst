@@ -394,6 +394,9 @@ AST Matchers
 
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 
+- Fixed `isStaticStorageClass` not matching the definition if the definition was
+  not marked `static` as well.
+
 clang-format
 ------------
 
