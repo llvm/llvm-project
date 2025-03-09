@@ -2518,6 +2518,59 @@ StringRef CGDebugInfo::getVTableName(const CXXRecordDecl *RD) {
   return internString("_vptr$", RD->getNameAsString());
 }
 
+// Emit symbol for the debugger that points to the vtable address for
+// the given class. The symbol is named as '_vtable$'.
+// The debugger does not need to know any details about the contents of the
+// vtable as it can work this out using its knowledge of the ABI and the
+// existing information in the DWARF. The type is assumed to be 'void *'.
+void CGDebugInfo::emitVTableSymbol(llvm::GlobalVariable *VTable,
+                                   const CXXRecordDecl *RD) {
+  ASTContext &Context = CGM.getContext();
+  SmallString<64> Buffer;
+  Twine SymbolName = internString("_vtable$");
+  StringRef SymbolNameRef = SymbolName.toStringRef(Buffer);
+  DeclContext *DC = static_cast<DeclContext *>(const_cast<CXXRecordDecl *>(RD));
+  SourceLocation Loc;
+  QualType VoidPtr = Context.getPointerType(Context.VoidTy);
+
+  // We deal with two different contexts:
+  // - The type for the variable, which is part of the class that has the
+  //   vtable, is placed in the context of the DICompositeType metadata.
+  // - The DIGlobalVariable for the vtable is put in the DICompileUnitScope.
+
+  // The created non-member should be mark as 'artificial'. It will be
+  // placed it inside the scope of the C++ class/structure.
+  llvm::DIScope *DContext = getContextDescriptor(cast<Decl>(DC), TheCU);
+  auto *Ctxt = cast<llvm::DICompositeType>(DContext);
+  llvm::DIFile *Unit = getOrCreateFile(Loc);
+  llvm::DIType *VTy = getOrCreateType(VoidPtr, Unit);
+  llvm::DINode::DIFlags Flags = getAccessFlag(AccessSpecifier::AS_private, RD);
+  auto Tag = CGM.getCodeGenOpts().DwarfVersion >= 5
+                 ? llvm::dwarf::DW_TAG_variable
+                 : llvm::dwarf::DW_TAG_member;
+  llvm::DIDerivedType *OldDT = DBuilder.createStaticMemberType(
+      Ctxt, SymbolNameRef, Unit, /*LineNumber=*/0, VTy, Flags,
+      /*Val=*/nullptr, Tag);
+  llvm::DIDerivedType *DT =
+      static_cast<llvm::DIDerivedType *>(DBuilder.createArtificialType(OldDT));
+
+  // Use the same vtable pointer to global alignment for the symbol.
+  LangAS AS = CGM.GetGlobalVarAddressSpace(nullptr);
+  unsigned PAlign = CGM.getItaniumVTableContext().isRelativeLayout()
+                        ? 32
+                        : CGM.getTarget().getPointerAlign(AS);
+
+  // The global variable is in the CU scope, and links back to the type it's
+  // "within" via the declaration field.
+  llvm::DIGlobalVariableExpression *GVE =
+      DBuilder.createGlobalVariableExpression(
+          TheCU, SymbolNameRef, VTable->getName(), Unit, /*LineNo=*/0,
+          getOrCreateType(VoidPtr, Unit), VTable->hasLocalLinkage(),
+          /*isDefined=*/true, nullptr, DT, /*TemplateParameters=*/nullptr,
+          PAlign);
+  VTable->addDebugInfo(GVE);
+}
+
 StringRef CGDebugInfo::getDynamicInitializerName(const VarDecl *VD,
                                                  DynamicInitKind StubKind,
                                                  llvm::Function *InitFn) {
