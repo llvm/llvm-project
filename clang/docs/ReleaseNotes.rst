@@ -394,6 +394,8 @@ AST Matchers
 
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 
+Add `matchesString` for `StringLiteral` which matches literals on given `RegExp`.
+
 clang-format
 ------------
 
