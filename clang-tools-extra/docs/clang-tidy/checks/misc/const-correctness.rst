@@ -110,6 +110,13 @@ Options
     // No warning
     int const& ref = i;
 
+.. option:: AnalyzePointers
+
+  Enable or disable the analysis of pointers variables, like
+  ``int *ptr = &i;``. For specific checks, see options 
+  `WarnPointersAsValues` and `WarnPointersAsPointers`.
+  Default is `true`.
+
 .. option:: WarnPointersAsValues
 
   This option enables the suggestion for ``const`` of the pointer itself.
@@ -124,6 +131,22 @@ Options
     const int * pointer_variable = &value;
     // No warning
     const int *const pointer_variable = &value;
+
+.. option:: WarnPointersAsPointers
+
+  This option enables the suggestion for ``const`` of the value pointing.
+  Default is `true`.
+
+  Requires 'AnalyzePointers' to be 'true'.
+
+  .. code-block:: c++
+
+    int value = 42;
+
+    // No warning
+    const int *const pointer_variable = &value;
+    // Warning
+    int *const pointer_variable = &value;
 
 .. option:: TransformValues
 
@@ -199,6 +222,27 @@ Options
     // The following pointer may not become a 'int *const'.
     int *changing_pointee = &value;
     changing_pointee = &result;
+
+.. option:: TransformPointersAsPointers
+
+  Provides fixit-hints for pointers if the value it pointing to is not changed.
+  Default is `false`.
+
+  Requires 'WarnPointersAsPointers' to be 'true'.
+
+  .. code-block:: c++
+
+    int value = 42;
+
+    // Before
+    int * pointer_variable = &value;
+    // After
+    const int * pointer_variable = &value;
+
+    // Before
+    int * a[] = {&value, &value};
+    // After
+    const int * a[] = {&value, &value};
 
 .. option:: AllowedTypes
 

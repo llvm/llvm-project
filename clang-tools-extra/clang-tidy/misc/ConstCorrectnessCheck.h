@@ -40,11 +40,14 @@ private:
 
   const bool AnalyzeValues;
   const bool AnalyzeReferences;
+  const bool AnalyzePointers;
   const bool WarnPointersAsValues;
+  const bool WarnPointersAsPointers;
 
   const bool TransformValues;
   const bool TransformReferences;
   const bool TransformPointersAsValues;
+  const bool TransformPointersAsPointers;
   const std::vector<StringRef> AllowedTypes;
 };
 
