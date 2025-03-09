@@ -292,6 +292,7 @@ public:
 
   TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
                                                     bool IsZeroCmp) const;
+  bool preferAlternateOpcodeVectorization() const { return false; }
   bool prefersVectorizedAddressing() const;
   bool supportsEfficientVectorElementLoadStore() const;
   bool enableInterleavedAccessVectorization();
