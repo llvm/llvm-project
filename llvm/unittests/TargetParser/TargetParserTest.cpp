@@ -507,17 +507,17 @@ INSTANTIATE_TEST_SUITE_P(
                                    "8-M.Mainline"),
         ARMCPUTestParams<uint64_t>(
             "cortex-m55", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
-            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP |
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVEFP | ARM::AEK_FP |
                 ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16,
             "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>(
             "cortex-m85", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
-            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP |
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVEFP | ARM::AEK_FP |
                 ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16 | ARM::AEK_PACBTI,
             "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>(
             "cortex-m52", "armv8.1-m.main", "fp-armv8-fullfp16-d16",
-            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_SIMD | ARM::AEK_FP |
+            ARM::AEK_HWDIVTHUMB | ARM::AEK_DSP | ARM::AEK_MVEFP | ARM::AEK_FP |
                 ARM::AEK_RAS | ARM::AEK_LOB | ARM::AEK_FP16 | ARM::AEK_PACBTI,
             "8.1-M.Mainline"),
         ARMCPUTestParams<uint64_t>("iwmmxt", "iwmmxt", "none", ARM::AEK_NONE,
