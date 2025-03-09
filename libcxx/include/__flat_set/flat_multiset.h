@@ -31,7 +31,7 @@
 #include <__cstddef/ptrdiff_t.h>
 #include <__flat_map/key_value_iterator.h>
 #include <__flat_map/sorted_equivalent.h>
-#include <__flat_map/utils.h>
+#include <__flat_set/ra_iterator.h>
 #include <__functional/invoke.h>
 #include <__functional/is_transparent.h>
 #include <__functional/operations.h>
@@ -60,13 +60,13 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/maybe_const.h>
+#include <__utility/as_const.h>
 #include <__utility/exception_guard.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 #include <__utility/scope_guard.h>
 #include <__vector/vector.h>
 #include <initializer_list>
-#include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -97,7 +97,7 @@ public:
   using const_reference        = const value_type&;
   using size_type              = typename _KeyContainer::size_type;
   using difference_type        = typename _KeyContainer::difference_type;
-  using iterator               = typename _KeyContainer::const_iterator;
+  using iterator               = __ra_iterator<flat_multiset, typename _KeyContainer::const_iterator>;
   using const_iterator         = iterator;
   using reverse_iterator       = std::reverse_iterator<iterator>;
   using const_reverse_iterator = std::reverse_iterator<const_iterator>;
@@ -331,10 +331,10 @@ public:
   }
 
   // iterators
-  _LIBCPP_HIDE_FROM_ABI iterator begin() noexcept { return __keys_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept { return __keys_.begin(); }
-  _LIBCPP_HIDE_FROM_ABI iterator end() noexcept { return __keys_.end(); }
-  _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept { return __keys_.end(); }
+  _LIBCPP_HIDE_FROM_ABI iterator begin() noexcept { return iterator(std::as_const(__keys_).begin()); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator begin() const noexcept { return const_iterator(__keys_.begin()); }
+  _LIBCPP_HIDE_FROM_ABI iterator end() noexcept { return iterator(std::as_const(__keys_).end()); }
+  _LIBCPP_HIDE_FROM_ABI const_iterator end() const noexcept { return const_iterator(__keys_.end()); }
 
   _LIBCPP_HIDE_FROM_ABI reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
   _LIBCPP_HIDE_FROM_ABI const_reverse_iterator rbegin() const noexcept { return const_reverse_iterator(end()); }
@@ -353,18 +353,24 @@ public:
 
   // [flat.multiset.modifiers], modifiers
   template <class... _Args>
-    requires is_constructible_v<value_type, _Args...>  
-     _LIBCPP_HIDE_FROM_ABI iterator emplace(_Args&&... __args) {
-    auto __key_it    = ranges::upper_bound(__containers_.keys, __pair.first, __compare_);
-    auto __mapped_it = __corresponding_mapped_it(*this, __key_it);
-
-    return __flat_map_utils::__emplace_exact_pos(
-        *this, std::move(__key_it), std::move(__mapped_it), std::move(__pair.first), std::move(__pair.second));
+    requires is_constructible_v<value_type, _Args...>
+  _LIBCPP_HIDE_FROM_ABI iterator emplace(_Args&&... __args) {
+    if constexpr (sizeof...(__args) == 1 && (is_same_v<remove_cvref_t<_Args>, _Key> && ...)) {
+      return __try_emplace(std::forward<_Args>(__args)...);
+    } else {
+      return __try_emplace(_Key(std::forward<_Args>(__args)...));
+    }
   }
 
   template <class... _Args>
-    requires is_constructible_v<value_type, _Args...>  
+    requires is_constructible_v<value_type, _Args...>
   _LIBCPP_HIDE_FROM_ABI iterator emplace_hint(const_iterator __hint, _Args&&... __args) {
+    if constexpr (sizeof...(__args) == 1 && (is_same_v<remove_cvref_t<_Args>, _Key> && ...)) {
+      return __emplace_hint(std::move(__hint), std::forward<_Args>(__args)...);
+    } else {
+      return __emplace_hint(std::move(__hint), _Key(std::forward<_Args>(__args)...));
+    }
+    /*
     std::pair<key_type, mapped_type> __pair(std::forward<_Args>(__args)...);
 
     auto __prev_larger  = __hint != cbegin() && __compare_(__pair.first, (__hint - 1)->first);
@@ -402,6 +408,7 @@ public:
     }
     return __flat_map_utils::__emplace_exact_pos(
         *this, __key_iter, __mapped_iter, std::move(__pair.first), std::move(__pair.second));
+        */
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator insert(const value_type& __x) { return emplace(__x); }
@@ -458,13 +465,16 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void replace(container_type&& __keys) {
     _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(ranges::is_sorted(__keys, __compare_), "Key container is not sorted");
-    auto __guard         = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
-    __keys_   = std::move(__keys);
+    auto __guard = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
+    __keys_      = std::move(__keys);
     __guard.__complete();
   }
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(iterator __position) {
-    return __erase(__position.__key_iter_, __position.__mapped_iter_);
+    auto __on_failure = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
+    auto __key_iter   = __keys_.erase(__position.__base());
+    __on_failure.__complete();
+    return iterator(__key_iter);
   }
 
   // iterator and const_iterator are the same type
@@ -478,7 +488,7 @@ public:
   }
 
   template <class _Kp>
-    requires(__is_compare_transparent && !is_convertible_v<_Kp &&, iterator> &&
+    requires(__is_transparent_v<_Compare> && !is_convertible_v<_Kp &&, iterator> &&
              !is_convertible_v<_Kp &&, const_iterator>)
   _LIBCPP_HIDE_FROM_ABI size_type erase(_Kp&& __x) {
     auto [__first, __last] = equal_range(__x);
@@ -489,32 +499,25 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __first, const_iterator __last) {
     auto __on_failure = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
-    auto __key_it     = __containers_.keys.erase(__first.__key_iter_, __last.__key_iter_);
-    auto __mapped_it  = __containers_.values.erase(__first.__mapped_iter_, __last.__mapped_iter_);
+    auto __key_it     = __keys_.erase(__first.__base(), __last.__base());
     __on_failure.__complete();
-    return iterator(std::move(__key_it), std::move(__mapped_it));
+    return iterator(std::move(__key_it));
   }
 
   _LIBCPP_HIDE_FROM_ABI void swap(flat_multiset& __y) noexcept {
     // warning: The spec has unconditional noexcept, which means that
     // if any of the following functions throw an exception,
     // std::terminate will be called
+    // This is discussed in P2767, which hasn't been voted on yet.
     ranges::swap(__compare_, __y.__compare_);
-    ranges::swap(__containers_.keys, __y.__containers_.keys);
-    ranges::swap(__containers_.values, __y.__containers_.values);
+    ranges::swap(__keys_, __y.__keys_);
   }
 
-  _LIBCPP_HIDE_FROM_ABI void clear() noexcept {
-    __containers_.keys.clear();
-    __containers_.values.clear();
-  }
+  _LIBCPP_HIDE_FROM_ABI void clear() noexcept { __keys_.clear(); }
 
   // observers
   _LIBCPP_HIDE_FROM_ABI key_compare key_comp() const { return __compare_; }
-  _LIBCPP_HIDE_FROM_ABI value_compare value_comp() const { return value_compare(__compare_); }
-
-  _LIBCPP_HIDE_FROM_ABI const key_container_type& keys() const noexcept { return __containers_.keys; }
-  _LIBCPP_HIDE_FROM_ABI const mapped_container_type& values() const noexcept { return __containers_.values; }
+  _LIBCPP_HIDE_FROM_ABI value_compare value_comp() const { return __compare_; }
 
   // map operations
   _LIBCPP_HIDE_FROM_ABI iterator find(const key_type& __x) { return __find_impl(*this, __x); }
@@ -522,13 +525,13 @@ public:
   _LIBCPP_HIDE_FROM_ABI const_iterator find(const key_type& __x) const { return __find_impl(*this, __x); }
 
   template <class _Kp>
-    requires __is_compare_transparent
+    requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI iterator find(const _Kp& __x) {
     return __find_impl(*this, __x);
   }
 
   template <class _Kp>
-    requires __is_compare_transparent
+    requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI const_iterator find(const _Kp& __x) const {
     return __find_impl(*this, __x);
   }
@@ -539,7 +542,7 @@ public:
   }
 
   template <class _Kp>
-    requires __is_compare_transparent
+    requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI size_type count(const _Kp& __x) const {
     auto [__first, __last] = equal_range(__x);
     return __last - __first;
@@ -548,45 +551,49 @@ public:
   _LIBCPP_HIDE_FROM_ABI bool contains(const key_type& __x) const { return find(__x) != end(); }
 
   template <class _Kp>
-    requires __is_compare_transparent
+    requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI bool contains(const _Kp& __x) const {
     return find(__x) != end();
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __x) { return __lower_bound<iterator>(*this, __x); }
+  _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const key_type& __x) {
+    return iterator(ranges::lower_bound(std::as_const(__keys_), __x, __compare_));
+  }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const key_type& __x) const {
-    return __lower_bound<const_iterator>(*this, __x);
+    return const_iterator(ranges::lower_bound(__keys_, __x, __compare_));
   }
 
   template <class _Kp>
-    requires __is_compare_transparent
+    requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI iterator lower_bound(const _Kp& __x) {
-    return __lower_bound<iterator>(*this, __x);
+    return iterator(ranges::lower_bound(std::as_const(__keys_), __x, __compare_));
   }
 
   template <class _Kp>
-    requires __is_compare_transparent
+    requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI const_iterator lower_bound(const _Kp& __x) const {
-    return __lower_bound<const_iterator>(*this, __x);
+    return const_iterator(ranges::lower_bound(__keys_, __x, __compare_));
   }
 
-  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __x) { return __upper_bound<iterator>(*this, __x); }
+  _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const key_type& __x) {
+    return iterator(ranges::upper_bound(std::as_const(__keys_), __x, __compare_));
+  }
 
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const key_type& __x) const {
-    return __upper_bound<const_iterator>(*this, __x);
+    return const_iterator(ranges::upper_bound(__keys_, __x, __compare_));
   }
 
   template <class _Kp>
-    requires __is_compare_transparent
+    requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI iterator upper_bound(const _Kp& __x) {
-    return __upper_bound<iterator>(*this, __x);
+    return iterator(ranges::upper_bound(std::as_const(__keys_), __x, __compare_));
   }
 
   template <class _Kp>
-    requires __is_compare_transparent
+    requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI const_iterator upper_bound(const _Kp& __x) const {
-    return __upper_bound<const_iterator>(*this, __x);
+    return const_iterator(ranges::upper_bound(__keys_, __x, __compare_));
   }
 
   _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const key_type& __x) {
@@ -598,12 +605,12 @@ public:
   }
 
   template <class _Kp>
-    requires __is_compare_transparent
+    requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, iterator> equal_range(const _Kp& __x) {
     return __equal_range_impl(*this, __x);
   }
   template <class _Kp>
-    requires __is_compare_transparent
+    requires __is_transparent_v<_Compare>
   _LIBCPP_HIDE_FROM_ABI pair<const_iterator, const_iterator> equal_range(const _Kp& __x) const {
     return __equal_range_impl(*this, __x);
   }
@@ -620,25 +627,40 @@ public:
   friend _LIBCPP_HIDE_FROM_ABI void swap(flat_multiset& __x, flat_multiset& __y) noexcept { __x.swap(__y); }
 
 private:
-  template <bool _WasSorted, class _InputIterator, class _Sentinel>
-  _LIBCPP_HIDE_FROM_ABI void __append_sort_merge(_InputIterator __first, _Sentinel __last) {
-    auto __on_failure     = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
-    size_t __num_appended = __flat_map_utils::__append(*this, std::move(__first), std::move(__last));
-    if (__num_appended != 0) {
-      auto __zv                  = ranges::views::zip(__containers_.keys, __containers_.values);
-      auto __append_start_offset = __containers_.keys.size() - __num_appended;
-      auto __end                 = __zv.end();
-      auto __compare_key         = [this](const auto& __p1, const auto& __p2) {
-        return __compare_(std::get<0>(__p1), std::get<0>(__p2));
-      };
-      if constexpr (!_WasSorted) {
-        ranges::sort(__zv.begin() + __append_start_offset, __end, __compare_key);
-      } else {
-        _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(
-            __is_sorted(__containers_.keys | ranges::views::drop(__append_start_offset)),
-            "Key container is not sorted");
+  // todo: share with flat_set
+  template <class _InputIterator>
+  _LIBCPP_HIDE_FROM_ABI void __append(_InputIterator __first, _InputIterator __last) {
+    __keys_.insert(__keys_.end(), std::move(__first), std::move(__last));
+  }
+
+  template <class _Range>
+  _LIBCPP_HIDE_FROM_ABI void __append(_Range&& __rng) {
+    if constexpr (requires { __keys_.insert_range(__keys_.end(), std::forward<_Range>(__rng)); }) {
+      // C++23 Sequence Container should have insert_range member function
+      // Note that not all Sequence Containers provide append_range.
+      __keys_.insert_range(__keys_.end(), std::forward<_Range>(__rng));
+    } else if constexpr (ranges::common_range<_Range>) {
+      __keys_.insert(__keys_.end(), ranges::begin(__rng), ranges::end(__rng));
+    } else {
+      for (auto&& __x : __rng) {
+        __keys_.insert(__keys_.end(), std::forward<decltype(__x)>(__x));
       }
-      ranges::inplace_merge(__zv.begin(), __zv.begin() + __append_start_offset, __end, __compare_key);
+    }
+  }
+
+  template <bool _WasSorted, class... _Args>
+  _LIBCPP_HIDE_FROM_ABI void __append_sort_merge(_Args&&... __args) {
+    auto __on_failure    = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
+    size_type __old_size = size();
+    __append(std::forward<_Args>(__args)...);
+    if (size() != __old_size) {
+      if constexpr (!_WasSorted) {
+        ranges::sort(__keys_.begin() + __old_size, __keys_.end(), __compare_);
+      } else {
+        _LIBCPP_ASSERT_SEMANTIC_REQUIREMENT(__is_sorted_and_unique(__keys_ | ranges::views::drop(__old_size)),
+                                            "Either the key container is not sorted or it contains duplicates");
+      }
+      ranges::inplace_merge(__keys_.begin(), __keys_.begin() + __old_size, __keys_.end(), __compare_);
     }
     __on_failure.__complete();
   }
@@ -655,51 +677,14 @@ private:
 
   template <class _Self, class _Kp>
   _LIBCPP_HIDE_FROM_ABI static auto __equal_range_impl(_Self&& __self, const _Kp& __key) {
-    auto [__key_first, __key_last] = ranges::equal_range(__self.__containers_.keys, __key, __self.__compare_);
-
-    using __iterator_type = ranges::iterator_t<decltype(__self)>;
-    return std::make_pair(__iterator_type(__key_first, __corresponding_mapped_it(__self, __key_first)),
-                          __iterator_type(__key_last, __corresponding_mapped_it(__self, __key_last)));
+    using __iter                   = _If<is_const_v<__libcpp_remove_reference_t<_Self>>, const_iterator, iterator>;
+    auto [__key_first, __key_last] = ranges::equal_range(__self.__keys_, __key, __self.__compare_);
+    return std::make_pair(__iter(__key_first), __iter(__key_last));
   }
 
-  template <class _Res, class _Self, class _Kp>
-  _LIBCPP_HIDE_FROM_ABI static _Res __lower_bound(_Self&& __self, _Kp& __x) {
-    auto __key_iter    = ranges::lower_bound(__self.__containers_.keys, __x, __self.__compare_);
-    auto __mapped_iter = __corresponding_mapped_it(__self, __key_iter);
-    return _Res(std::move(__key_iter), std::move(__mapped_iter));
-  }
-
-  template <class _Res, class _Self, class _Kp>
-  _LIBCPP_HIDE_FROM_ABI static _Res __upper_bound(_Self&& __self, _Kp& __x) {
-    auto __key_iter    = ranges::upper_bound(__self.__containers_.keys, __x, __self.__compare_);
-    auto __mapped_iter = __corresponding_mapped_it(__self, __key_iter);
-    return _Res(std::move(__key_iter), std::move(__mapped_iter));
-  }
-
-  _LIBCPP_HIDE_FROM_ABI void __reserve(size_t __size) {
-    if constexpr (requires { __containers_.keys.reserve(__size); }) {
-      __containers_.keys.reserve(__size);
-    }
-
-    if constexpr (requires { __containers_.values.reserve(__size); }) {
-      __containers_.values.reserve(__size);
-    }
-  }
-
-  template <class _KIter, class _MIter>
-  _LIBCPP_HIDE_FROM_ABI iterator __erase(_KIter __key_iter_to_remove, _MIter __mapped_iter_to_remove) {
-    auto __on_failure  = std::__make_exception_guard([&]() noexcept { clear() /* noexcept */; });
-    auto __key_iter    = __containers_.keys.erase(__key_iter_to_remove);
-    auto __mapped_iter = __containers_.values.erase(__mapped_iter_to_remove);
-    __on_failure.__complete();
-    return iterator(std::move(__key_iter), std::move(__mapped_iter));
-  }
-
-  template <class _Key2, class _Tp2, class _Compare2, class _KeyContainer2, class _MappedContainer2, class _Predicate>
-  friend typename flat_multiset<_Key2, _Tp2, _Compare2, _KeyContainer2, _MappedContainer2>::size_type
-  erase_if(flat_multiset<_Key2, _Tp2, _Compare2, _KeyContainer2, _MappedContainer2>&, _Predicate);
-
-  friend __flat_map_utils;
+  template <class _Key2, class _Compare2, class _KeyContainer2, class _Predicate>
+  friend typename flat_multiset<_Key2, _Compare2, _KeyContainer2>::size_type
+  erase_if(flat_multiset<_Key2, _Compare2, _KeyContainer2>&, _Predicate);
 
   _KeyContainer __keys_;
   _LIBCPP_NO_UNIQUE_ADDRESS key_compare __compare_;
@@ -713,141 +698,97 @@ private:
   };
 };
 
-template <class _KeyContainer, class _MappedContainer, class _Compare = less<typename _KeyContainer::value_type>>
+template <class _KeyContainer, class _Compare = less<typename _KeyContainer::value_type>>
   requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
-           !__is_allocator<_MappedContainer>::value &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
-flat_multiset(_KeyContainer, _MappedContainer, _Compare = _Compare())
-    -> flat_multiset<typename _KeyContainer::value_type,
-                     typename _MappedContainer::value_type,
-                     _Compare,
-                     _KeyContainer,
-                     _MappedContainer>;
+flat_multiset(_KeyContainer, _Compare = _Compare())
+    -> flat_multiset<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
-template <class _KeyContainer, class _MappedContainer, class _Allocator>
-  requires(uses_allocator_v<_KeyContainer, _Allocator> && uses_allocator_v<_MappedContainer, _Allocator> &&
-           !__is_allocator<_KeyContainer>::value && !__is_allocator<_MappedContainer>::value)
-flat_multiset(_KeyContainer, _MappedContainer, _Allocator)
-    -> flat_multiset<typename _KeyContainer::value_type,
-                     typename _MappedContainer::value_type,
-                     less<typename _KeyContainer::value_type>,
-                     _KeyContainer,
-                     _MappedContainer>;
+template <class _KeyContainer, class _Allocator>
+  requires(uses_allocator_v<_KeyContainer, _Allocator> && !__is_allocator<_KeyContainer>::value)
+flat_multiset(_KeyContainer, _Allocator)
+    -> flat_multiset<typename _KeyContainer::value_type, less<typename _KeyContainer::value_type>, _KeyContainer>;
 
-template <class _KeyContainer, class _MappedContainer, class _Compare, class _Allocator>
+template <class _KeyContainer, class _Compare, class _Allocator>
   requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
-           !__is_allocator<_MappedContainer>::value && uses_allocator_v<_KeyContainer, _Allocator> &&
-           uses_allocator_v<_MappedContainer, _Allocator> &&
+           uses_allocator_v<_KeyContainer, _Allocator> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
-flat_multiset(_KeyContainer, _MappedContainer, _Compare, _Allocator)
-    -> flat_multiset<typename _KeyContainer::value_type,
-                     typename _MappedContainer::value_type,
-                     _Compare,
-                     _KeyContainer,
-                     _MappedContainer>;
+flat_multiset(_KeyContainer, _Compare, _Allocator)
+    -> flat_multiset<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
-template <class _KeyContainer, class _MappedContainer, class _Compare = less<typename _KeyContainer::value_type>>
+template <class _KeyContainer, class _Compare = less<typename _KeyContainer::value_type>>
   requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
-           !__is_allocator<_MappedContainer>::value &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
-flat_multiset(sorted_equivalent_t, _KeyContainer, _MappedContainer, _Compare = _Compare())
-    -> flat_multiset<typename _KeyContainer::value_type,
-                     typename _MappedContainer::value_type,
-                     _Compare,
-                     _KeyContainer,
-                     _MappedContainer>;
+flat_multiset(sorted_equivalent_t, _KeyContainer, _Compare = _Compare())
+    -> flat_multiset<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
-template <class _KeyContainer, class _MappedContainer, class _Allocator>
-  requires(uses_allocator_v<_KeyContainer, _Allocator> && uses_allocator_v<_MappedContainer, _Allocator> &&
-           !__is_allocator<_KeyContainer>::value && !__is_allocator<_MappedContainer>::value)
-flat_multiset(sorted_equivalent_t, _KeyContainer, _MappedContainer, _Allocator)
-    -> flat_multiset<typename _KeyContainer::value_type,
-                     typename _MappedContainer::value_type,
-                     less<typename _KeyContainer::value_type>,
-                     _KeyContainer,
-                     _MappedContainer>;
+template <class _KeyContainer, class _Allocator>
+  requires(uses_allocator_v<_KeyContainer, _Allocator> && !__is_allocator<_KeyContainer>::value)
+flat_multiset(sorted_equivalent_t, _KeyContainer, _Allocator)
+    -> flat_multiset<typename _KeyContainer::value_type, less<typename _KeyContainer::value_type>, _KeyContainer>;
 
-template <class _KeyContainer, class _MappedContainer, class _Compare, class _Allocator>
+template <class _KeyContainer, class _Compare, class _Allocator>
   requires(!__is_allocator<_Compare>::value && !__is_allocator<_KeyContainer>::value &&
-           !__is_allocator<_MappedContainer>::value && uses_allocator_v<_KeyContainer, _Allocator> &&
-           uses_allocator_v<_MappedContainer, _Allocator> &&
+           uses_allocator_v<_KeyContainer, _Allocator> &&
            is_invocable_v<const _Compare&,
                           const typename _KeyContainer::value_type&,
                           const typename _KeyContainer::value_type&>)
-flat_multiset(sorted_equivalent_t, _KeyContainer, _MappedContainer, _Compare, _Allocator)
-    -> flat_multiset<typename _KeyContainer::value_type,
-                     typename _MappedContainer::value_type,
-                     _Compare,
-                     _KeyContainer,
-                     _MappedContainer>;
+flat_multiset(sorted_equivalent_t, _KeyContainer, _Compare, _Allocator)
+    -> flat_multiset<typename _KeyContainer::value_type, _Compare, _KeyContainer>;
 
-template <class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
+template <class _InputIterator, class _Compare = less<__iter_value_type<_InputIterator>>>
   requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator<_Compare>::value)
 flat_multiset(_InputIterator, _InputIterator, _Compare = _Compare())
-    -> flat_multiset<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare>;
+    -> flat_multiset<__iter_value_type<_InputIterator>, _Compare>;
 
-template <class _InputIterator, class _Compare = less<__iter_key_type<_InputIterator>>>
+template <class _InputIterator, class _Compare = less<__iter_value_type<_InputIterator>>>
   requires(__has_input_iterator_category<_InputIterator>::value && !__is_allocator<_Compare>::value)
 flat_multiset(sorted_equivalent_t, _InputIterator, _InputIterator, _Compare = _Compare())
-    -> flat_multiset<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare>;
+    -> flat_multiset<__iter_value_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Compare>;
 
 template <ranges::input_range _Range,
-          class _Compare   = less<__range_key_type<_Range>>,
+          class _Compare   = less<__iter_value_type<_Range>>,
           class _Allocator = allocator<byte>,
           class            = __enable_if_t<!__is_allocator<_Compare>::value && __is_allocator<_Allocator>::value>>
 flat_multiset(from_range_t, _Range&&, _Compare = _Compare(), _Allocator = _Allocator()) -> flat_multiset<
-    __range_key_type<_Range>,
-    __range_mapped_type<_Range>,
+    ranges::range_value_t<_Range>,
     _Compare,
-    vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
-    vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
+    vector<ranges::range_value_t<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>>;
 
 template <ranges::input_range _Range, class _Allocator, class = __enable_if_t<__is_allocator<_Allocator>::value>>
 flat_multiset(from_range_t, _Range&&, _Allocator) -> flat_multiset<
-    __range_key_type<_Range>,
-    __range_mapped_type<_Range>,
-    less<__range_key_type<_Range>>,
-    vector<__range_key_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_key_type<_Range>>>,
-    vector<__range_mapped_type<_Range>, __allocator_traits_rebind_t<_Allocator, __range_mapped_type<_Range>>>>;
+    ranges::range_value_t<_Range>,
+    less<ranges::range_value_t<_Range>>,
+    vector<ranges::range_value_t<_Range>, __allocator_traits_rebind_t<_Allocator, ranges::range_value_t<_Range>>>>;
 
-template <class _Key, class _Tp, class _Compare = less<_Key>>
+template <class _Key, class _Compare = less<_Key>>
   requires(!__is_allocator<_Compare>::value)
-flat_multiset(initializer_list<pair<_Key, _Tp>>, _Compare = _Compare()) -> flat_multiset<_Key, _Tp, _Compare>;
+flat_multiset(initializer_list<_Key>, _Compare = _Compare()) -> flat_multiset<_Key, _Compare>;
 
-template <class _Key, class _Tp, class _Compare = less<_Key>>
+template <class _Key, class _Compare = less<_Key>>
   requires(!__is_allocator<_Compare>::value)
-flat_multiset(sorted_equivalent_t, initializer_list<pair<_Key, _Tp>>, _Compare = _Compare())
-    -> flat_multiset<_Key, _Tp, _Compare>;
+flat_multiset(sorted_equivalent_t, initializer_list<_Key>, _Compare = _Compare()) -> flat_multiset<_Key, _Compare>;
 
-template <class _Key, class _Tp, class _Compare, class _KeyContainer, class _MappedContainer, class _Allocator>
-struct uses_allocator<flat_multiset<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>, _Allocator>
-    : bool_constant<uses_allocator_v<_KeyContainer, _Allocator> && uses_allocator_v<_MappedContainer, _Allocator>> {};
+template <class _Key, class _Compare, class _KeyContainer, class _Allocator>
+struct uses_allocator<flat_multiset<_Key, _Compare, _KeyContainer>, _Allocator>
+    : bool_constant<uses_allocator_v<_KeyContainer, _Allocator> > {};
 
-template <class _Key, class _Tp, class _Compare, class _KeyContainer, class _MappedContainer, class _Predicate>
-_LIBCPP_HIDE_FROM_ABI typename flat_multiset<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>::size_type
-erase_if(flat_multiset<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>& __flat_multiset, _Predicate __pred) {
-  auto __zv     = ranges::views::zip(__flat_multiset.__containers_.keys, __flat_multiset.__containers_.values);
-  auto __first  = __zv.begin();
-  auto __last   = __zv.end();
-  auto __guard  = std::__make_exception_guard([&] { __flat_multiset.clear(); });
-  auto __it     = std::remove_if(__first, __last, [&](auto&& __zipped) -> bool {
-    using _Ref = typename flat_multiset<_Key, _Tp, _Compare, _KeyContainer, _MappedContainer>::const_reference;
-    return __pred(_Ref(std::get<0>(__zipped), std::get<1>(__zipped)));
-  });
-  auto __res    = __last - __it;
-  auto __offset = __it - __first;
-
-  const auto __erase_container = [&](auto& __cont) { __cont.erase(__cont.begin() + __offset, __cont.end()); };
-
-  __erase_container(__flat_multiset.__containers_.keys);
-  __erase_container(__flat_multiset.__containers_.values);
-
+template <class _Key, class _Compare, class _KeyContainer, class _Predicate>
+_LIBCPP_HIDE_FROM_ABI typename flat_multiset<_Key, _Compare, _KeyContainer>::size_type
+erase_if(flat_multiset<_Key, _Compare, _KeyContainer>& __flat_multiset, _Predicate __pred) {
+  auto __guard = std::__make_exception_guard([&] { __flat_multiset.clear(); });
+  auto __it =
+      std::remove_if(__flat_multiset.__keys_.begin(), __flat_multiset.__keys_.end(), [&](const auto& __e) -> bool {
+        return static_cast<bool>(__pred(__e));
+      });
+  auto __res = __flat_multiset.__keys_.end() - __it;
+  __flat_multiset.__keys_.erase(__it, __flat_multiset.__keys_.end());
   __guard.__complete();
   return __res;
 }
