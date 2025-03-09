@@ -42,6 +42,8 @@ class ProfileReaderBase;
 /// optimizations) and rewriting. It also has the logic to coordinate such
 /// events.
 class RewriteInstance {
+  friend class MetadataRewriter;
+
 public:
   // This constructor has complex initialization that can fail during
   // construction. Constructors can’t return errors, so clients must test \p Err
