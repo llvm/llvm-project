@@ -61,8 +61,12 @@ class VPValue {
   SmallVector<VPUser *, 1> Users;
 
 protected:
-  // Hold the underlying Value, if any, attached to this VPValue.
-  Value *UnderlyingVal;
+  union {
+    // Hold the underlying Value, if any, attached to this non-symbolic VPValue.
+    Value *UnderlyingVal;
+    // Hold the type of this VPValue, if it is symbolic.
+    Type *Ty;
+  };
 
   /// Pointer to the VPDef that defines this VPValue. If it is nullptr, the
   /// VPValue is not defined by any recipe modeled in VPlan.
@@ -70,8 +74,9 @@ protected:
 
   VPValue(const unsigned char SC, Value *UV = nullptr, VPDef *Def = nullptr);
 
-  /// Create a live-in VPValue.
-  VPValue(Value *UV = nullptr) : VPValue(VPValueSC, UV, nullptr) {}
+  /// Create a live-in IR VPValue.
+  VPValue(Value *UV) : VPValue(VPValueSC, UV, nullptr) {}
+  VPValue(Type *Ty) : SubclassID(VPSymbolicValueSC), Ty(Ty), Def(nullptr) {}
   /// Create a VPValue for a \p Def which is a subclass of VPValue.
   VPValue(VPDef *Def, Value *UV = nullptr) : VPValue(VPVRecipeSC, UV, Def) {}
   /// Create a VPValue for a \p Def which defines multiple values.
@@ -86,14 +91,18 @@ protected:
 
 public:
   /// Return the underlying Value attached to this VPValue.
-  Value *getUnderlyingValue() const { return UnderlyingVal; }
+  Value *getUnderlyingValue() const {
+    return SubclassID == VPSymbolicValueSC ? nullptr : UnderlyingVal;
+  }
 
   /// An enumeration for keeping track of the concrete subclass of VPValue that
   /// are actually instantiated.
   enum {
-    VPValueSC, /// A generic VPValue, like live-in values or defined by a recipe
-               /// that defines multiple values.
-    VPVRecipeSC /// A VPValue sub-class that is a VPRecipeBase.
+    VPValueSC, /// A generic non-symbolic VPValue, like live-in IR values or
+               /// defined by a recipe that defines multiple values.
+    VPSymbolicValueSC, /// A generic VPValue, like live-in values or defined by
+                       /// a recipe that defines multiple values.
+    VPVRecipeSC        /// A VPValue sub-class that is a VPRecipeBase.
   };
 
   VPValue(const VPValue &) = delete;
@@ -171,6 +180,10 @@ public:
 
   /// Returns true if this VPValue is a live-in, i.e. defined outside the VPlan.
   bool isLiveIn() const { return !hasDefiningRecipe(); }
+
+  bool isSymbolic() const { return SubclassID == VPSymbolicValueSC; }
+
+  Type *getType() const;
 
   /// Returns the underlying IR value, if this VPValue is defined outside the
   /// scope of VPlan. Returns nullptr if the VPValue is defined by a VPDef

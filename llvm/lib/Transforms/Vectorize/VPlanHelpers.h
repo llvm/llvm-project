@@ -379,8 +379,8 @@ struct VPCostContext {
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
                 Type *CanIVTy, LoopVectorizationCostModel &CM,
                 TargetTransformInfo::TargetCostKind CostKind)
-      : TTI(TTI), TLI(TLI), Types(CanIVTy), LLVMCtx(CanIVTy->getContext()),
-        CM(CM), CostKind(CostKind) {}
+      : TTI(TTI), TLI(TLI), Types(CanIVTy->getContext()),
+        LLVMCtx(CanIVTy->getContext()), CM(CM), CostKind(CostKind) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.

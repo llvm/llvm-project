@@ -222,7 +222,7 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    Loop *CurrentParentLoop, Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
       CurrentParentLoop(CurrentParentLoop), LVer(nullptr),
-      TypeAnalysis(CanonicalIVTy), VPDT(*Plan) {}
+      TypeAnalysis(CanonicalIVTy->getContext()), VPDT(*Plan) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -850,7 +850,8 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 }
 #endif
 
-VPlan::VPlan(Loop *L) {
+VPlan::VPlan(Loop *L, Type *InductionTy)
+    : VectorTripCount(InductionTy), VF(InductionTy), VFxUF(InductionTy) {
   setEntry(createVPIRBasicBlock(L->getLoopPreheader()));
   ScalarHeader = createVPIRBasicBlock(L->getHeader());
 
@@ -861,7 +862,7 @@ VPlan::VPlan(Loop *L) {
 }
 
 VPlan::~VPlan() {
-  VPValue DummyValue;
+  VPValue DummyValue((Type *)nullptr);
 
   for (auto *VPB : CreatedBlocks) {
     if (auto *VPBB = dyn_cast<VPBasicBlock>(VPB)) {
@@ -891,10 +892,10 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
     auto *TCMO = Builder.CreateSub(TripCountV, ConstantInt::get(TCTy, 1),
                                    "trip.count.minus.1");
-    BackedgeTakenCount->setUnderlyingValue(TCMO);
+    BackedgeTakenCount->replaceAllUsesWith(getOrAddLiveIn(TCMO));
   }
 
-  VectorTripCount.setUnderlyingValue(VectorTripCountV);
+  VectorTripCount.replaceAllUsesWith(getOrAddLiveIn(VectorTripCountV));
 
   IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
   // FIXME: Model VF * UF computation completely in VPlan.
@@ -903,12 +904,13 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   unsigned UF = getUF();
   if (VF.getNumUsers()) {
     Value *RuntimeVF = getRuntimeVF(Builder, TCTy, State.VF);
-    VF.setUnderlyingValue(RuntimeVF);
-    VFxUF.setUnderlyingValue(
+    VF.replaceAllUsesWith(getOrAddLiveIn(RuntimeVF));
+    VFxUF.replaceAllUsesWith(getOrAddLiveIn(
         UF > 1 ? Builder.CreateMul(RuntimeVF, ConstantInt::get(TCTy, UF))
-               : RuntimeVF);
+               : RuntimeVF));
   } else {
-    VFxUF.setUnderlyingValue(createStepForVF(Builder, TCTy, State.VF, UF));
+    VFxUF.replaceAllUsesWith(
+        getOrAddLiveIn(createStepForVF(Builder, TCTy, State.VF, UF)));
   }
 }
 
@@ -1175,7 +1177,8 @@ VPlan *VPlan::duplicate() {
         return VPIRBB && VPIRBB->getIRBasicBlock() == ScalarHeaderIRBB;
       }));
   // Create VPlan, clone live-ins and remap operands in the cloned blocks.
-  auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader);
+  auto *NewPlan = new VPlan(cast<VPBasicBlock>(NewEntry), NewScalarHeader,
+                            getCanonicalIV()->getScalarType());
   DenseMap<VPValue *, VPValue *> Old2NewVPValues;
   for (VPValue *OldLiveIn : getLiveIns()) {
     Old2NewVPValues[OldLiveIn] =
@@ -1185,7 +1188,7 @@ VPlan *VPlan::duplicate() {
   Old2NewVPValues[&VF] = &NewPlan->VF;
   Old2NewVPValues[&VFxUF] = &NewPlan->VFxUF;
   if (BackedgeTakenCount) {
-    NewPlan->BackedgeTakenCount = new VPValue();
+    NewPlan->BackedgeTakenCount = new VPValue((Type *)nullptr);
     Old2NewVPValues[BackedgeTakenCount] = NewPlan->BackedgeTakenCount;
   }
   assert(TripCount && "trip count must be set");
@@ -1369,6 +1372,11 @@ static bool isDefinedInsideLoopRegions(const VPValue *VPV) {
   const VPRecipeBase *DefR = VPV->getDefiningRecipe();
   return DefR && (!DefR->getParent()->getPlan()->getVectorLoopRegion() ||
                   DefR->getParent()->getEnclosingLoopRegion());
+}
+
+Type *VPValue::getType() const {
+  assert(isLiveIn());
+  return SubclassID == VPSymbolicValueSC ? Ty : getUnderlyingValue()->getType();
 }
 
 bool VPValue::isDefinedOutsideLoopRegions() const {

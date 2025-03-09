@@ -39,10 +39,6 @@ class Type;
 /// of the previously inferred types.
 class VPTypeAnalysis {
   DenseMap<const VPValue *, Type *> CachedTypes;
-  /// Type of the canonical induction variable. Used for all VPValues without
-  /// any underlying IR value (like the vector trip count or the backedge-taken
-  /// count).
-  Type *CanonicalIVTy;
   LLVMContext &Ctx;
 
   Type *inferScalarTypeForRecipe(const VPBlendRecipe *R);
@@ -55,8 +51,7 @@ class VPTypeAnalysis {
   Type *inferScalarTypeForRecipe(const VPReplicateRecipe *R);
 
 public:
-  VPTypeAnalysis(Type *CanonicalIVTy)
-      : CanonicalIVTy(CanonicalIVTy), Ctx(CanonicalIVTy->getContext()) {}
+  VPTypeAnalysis(LLVMContext &Ctx) : Ctx(Ctx) {}
 
   /// Infer the type of \p V. Returns the scalar type of \p V.
   Type *inferScalarType(const VPValue *V);

@@ -4478,7 +4478,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
                                 const TargetTransformInfo &TTI) {
   assert(VF.isVector() && "Checking a scalar VF?");
-  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType()->getContext());
   DenseSet<VPRecipeBase *> EphemeralRecipes;
   collectEphemeralRecipesForVPlan(Plan, EphemeralRecipes);
   // Set of already visited types.
@@ -9083,7 +9083,7 @@ static VPInstruction *addResumePhiRecipeForInduction(
 /// \p IVEndValues.
 static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
                                 DenseMap<VPValue *, VPValue *> &IVEndValues) {
-  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
+  VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType()->getContext());
   auto *ScalarPH = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getSinglePredecessor());
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
@@ -9326,7 +9326,8 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  auto Plan = std::make_unique<VPlan>(OrigLoop);
+  auto Plan =
+      std::make_unique<VPlan>(OrigLoop, Legal->getWidestInductionType());
   // Build hierarchical CFG.
   // Convert to VPlan-transform and consoliate all transforms for VPlan
   // creation.
@@ -9632,7 +9633,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
 
   // Create new empty VPlan
-  auto Plan = std::make_unique<VPlan>(OrigLoop);
+  auto Plan =
+      std::make_unique<VPlan>(OrigLoop, Legal->getWidestInductionType());
   // Build hierarchical CFG
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
   HCFGBuilder.buildHierarchicalCFG();
