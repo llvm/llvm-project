@@ -783,6 +783,8 @@ static Error verifyNoteSection(StringRef Name, endianness Endianness,
 // system. The only priority is that keeps/copies overrule removes.
 static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                         ElfType OutputElfType, Object &Obj) {
+  Obj.isVerboseEnabled = Config.Verbose;
+  Obj.SymbolTable->isVerboseFlag = Config.Verbose;
   if (Config.OutputArch) {
     Obj.Machine = Config.OutputArch->EMachine;
     Obj.OSABI = Config.OutputArch->OSABI;
