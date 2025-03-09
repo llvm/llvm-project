@@ -16,3 +16,15 @@ define i1 @poison2(float %x) {
   %v = fcmp ueq float %x, poison
   ret i1 %v
 }
+
+define i1 @pr130408(x86_fp80 %x) {
+; CHECK-LABEL: @pr130408(
+; CHECK-NEXT:    ret i1 true
+;
+  %bits = bitcast x86_fp80 %x to i80
+  %masked = and i80 %bits, -604444463063240877801473
+  %or = or i80 %masked, 302194561415509874573312
+  %fp = bitcast i80 %or to x86_fp80
+  %res = fcmp uno x86_fp80 %fp, 0xK00000000000000000000
+  ret i1 %res
+}
