@@ -50,6 +50,13 @@ def note_replace_abs_function : Note<"use function '%0' instead">;
 def warn_pointer_abs : Warning<
   "taking the absolute value of %select{pointer|function|array}0 type %1 is suspicious">,
   InGroup<AbsoluteValue>;
+  
+// Lambda capture diagnostics
+
+def err_invalid_lambda_capture_initializer_type : Error<
+    "invalid initializer type for lambda capture">;
+def err_expected_identifier_for_lambda_capture : Error<
+    "expected identifier for lambda capture">;
 
 def warn_max_unsigned_zero : Warning<
   "taking the max of "
