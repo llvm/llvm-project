@@ -2199,6 +2199,20 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "acosf16",
+    additional_deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
+        ":inv_trigf_utils",
+    ],
+)
+
+libc_math_function(
     name = "acoshf",
     additional_deps = [
         ":__support_fputil_fma",
@@ -2222,6 +2236,20 @@ libc_math_function(
         ":__support_fputil_sqrt",
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
+        ":inv_trigf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "asinf16",
+    additional_deps = [
+        ":__support_fputil_cast",
+        ":__support_fputil_fma",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_sqrt",
+        ":__support_macros_optimization",
         ":inv_trigf_utils",
     ],
 )
@@ -4242,7 +4270,6 @@ libc_function(
     hdrs = ["src/string/strcpy.h"],
     deps = [
         ":__support_common",
-        ":memcpy",
         ":string_memory_utils",
         ":string_utils",
     ],

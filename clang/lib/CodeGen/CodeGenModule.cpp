@@ -7300,6 +7300,13 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     getHLSLRuntime().addBuffer(cast<HLSLBufferDecl>(D));
     break;
 
+  case Decl::OpenACCDeclare:
+    EmitOpenACCDeclare(cast<OpenACCDeclareDecl>(D));
+    break;
+  case Decl::OpenACCRoutine:
+    EmitOpenACCRoutine(cast<OpenACCRoutineDecl>(D));
+    break;
+
   default:
     // Make sure we handled everything we should, every other kind is a
     // non-top-level decl.  FIXME: Would be nice to have an isTopLevelDeclKind

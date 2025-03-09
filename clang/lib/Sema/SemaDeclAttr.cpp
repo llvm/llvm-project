@@ -1191,7 +1191,8 @@ static void handleTestTypestateAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
 
 static void handleExtVectorTypeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // Remember this typedef decl, we will need it later for diagnostics.
-  S.ExtVectorDecls.push_back(cast<TypedefNameDecl>(D));
+  if (isa<TypedefNameDecl>(D))
+    S.ExtVectorDecls.push_back(cast<TypedefNameDecl>(D));
 }
 
 static void handlePackedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
