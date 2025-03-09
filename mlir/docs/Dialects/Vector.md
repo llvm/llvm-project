@@ -257,6 +257,96 @@ expressing `vector`s in the IR directly and simple pattern-rewrites.
 [EDSC](https://github.com/llvm/llvm-project/blob/main/mlir/docs/EDSC.md)s
 provide a simple way of driving such a notional language directly in C++.
 
+### Taxonomy for "Read"/"Write" Operations
+
+Below is a list of vector dialect operations that move values from an abstract
+**source** to an abstract **destination**, i.e. "read"/"write" operations:
+
+* `vector.load`, `vector.store`, `vector.transfer_read`,
+  `vector.transfer_write`, `vector.gather`, `vector.scatter`,
+  `vector.compressstore`, `vector.expandload`, `vector.maskedload`,
+  `vector.maskedstore`, `vector.extract`, `vector.insert`,
+  `vector.scalable_extract`, `vector.scalable_insert`,
+  `vector.extract_strided_slice`, `vector.insert_strided_slice`.
+
+#### Current Naming in Vector Dialect
+| **Vector Dialect Op**          | **Operand Names**        | **Operand Types**             | **Result Name**  | **Result Type**      |
+|--------------------------------|--------------------------|-------------------------------|------------------|----------------------|
+| `vector.load`                  | `base`                   | `memref`                      | `result`         | `vector`             |
+| `vector.store`                 | `valueToStore`, `base`   | `vector`, `memref`            | -                | -                    |
+| `vector.transfer_read`         | `source`                 | `memref` / `tensor`           | `vector`         | `vector`             |
+| `vector.transfer_write`        | `vector`, `source`       | `vector`, `memref`/ `tensor`  | `result`         | `vector`             |
+| `vector.gather`                | `base`                   | `memref`                      | `result`         | `vector`             |
+| `vector.scatter`               | `valueToStore`, `base`   | `vector`, `memref`            | -                | -                    |
+| `vector.expandload`            | `base`                   | `memref`                      | `result`         | `vector`             |
+| `vector.compressstore`         | `valueToStore`,`base`    | `vector`, `memref`            | -                | -                    |
+| `vector.maskedload`            | `base`                   | `memref`                      | `result`         | `vector`             |
+| `vector.maskedstore`           | `valueToStore`, `base`   | `vector`, `memref`            | -                | -                    |
+| `vector.extract`               | `vector`                 | `vector`                      | `result`         | `scalar` / `vector`  |
+| `vector.insert`                | `source`, `dest`         | `scalar` / `vector`, `vector` | `result`         | `vector`             |
+| `vector.scalable_extract`      | `source`                 | `vector`                      | `res`            | `scalar` / `vector`  |
+| `vector.scalable_insert`       | `source`, `dest`         | `scalar` / `vector`, `vector` | `res`            | `vector`             |
+| `vector.extract_strided_slice` | `vector`                 | `vector`                      | (missing name)   | `vector`             |
+| `vector.insert_strided_slice`  | `source`, `dest`         | `vector`                      | `res`            | `vector`             |
+
+Note that "read" operations take one operand ("from"), whereas "write"
+operations require two ("value-to-store" and "to").
+
+### Observations
+Each "read" operation has a "from" argument, while each "write" operation has a
+"to" and a "value-to-store" operand. However, the naming conventions are
+**inconsistent**, making it difficult to extract common patterns or determine
+operand roles. Here are some inconsistencies:
+
+- `getBase()` in `vector.load` refers to the **"from"** operand (source).
+- `getBase()` in `vector.store` refers to the **"to"** operand (destination).
+- `vector.transfer_read` and `vector.transfer_write` use `getSource()`, which:
+  - **Conflicts** with the `vector.load` / `vector.store` naming pattern.
+  - **Does not clearly indicate** whether the operand represents a **source**
+    or **destination**.
+- `vector.insert` defines `getSource()` and `getDest()`, making the distinction
+  between "to" and "from" operands **clear**. However, its sibling operation,
+  `vector.extract`, only defines `getVector()`, making it unclear whether it
+  represents a **source** or **destination**.
+- `vector.store` uses `getValueToStore()`, whereas
+  `vector.insert_strided_slice` does not.
+
+There is **no consistent way** to identify:
+- `"from"` (read operand)
+- `"to"` (write operand)
+- `"value-to-store"` (written value)
+
+### Indexed vs. Non-Indexed Taxonomy
+A more consistent way to classify "to", "from", and "value-to-store" arguments
+is by determining whether an operand is _indexed_ or _non-indexed_.
+
+#### **Example: `vector.transfer_read` and `vector.transfer_write`**
+```mlir
+                      Indexed Operand
+                             |
+%res = vector.transfer_read %A[%expr1, %expr2, %expr3, %expr4]
+  { permutation_map : (d0,d1,d2,d3) -> (d2,0,d0) } :
+  memref<?x?x?x?xf32>, vector<3x4x5xf32>
+                         \
+                 Non-Indexed Result
+
+      Non-Indexed Operand      Indexed Operand
+                      \       /
+vector.transfer_write %4, %arg1[%c3, %c3]
+  {permutation_map = (d0, d1)->(d0, d1)}
+    : vector<1x1x4x3xf32>, memref<?x?xvector<4x3xf32>>
+```
+
+Using the "indexed" vs. "non-indexed" classification, we can systematically
+differentiate between "to", "from" and "value-to-store" arguments across
+operations:
+* "to" is always _indexed_ for "write" operations, "value-to-store" is
+  _non-indexed_,
+* "from" is always _indexed_ for "read" operations.
+
+In addition, for "read" operations, we can view the "result" as a non-indexed
+argument.
+
 ## Bikeshed Naming Discussion
 
 There are arguments against naming an n-D level of abstraction `vector` because
