@@ -146,6 +146,10 @@ Modified Compiler Flags
   the behavior of ``-mtp`` in gcc. This changes the default behavior for ARM targets that provide the ``TPIDRURO`` register as this will be used instead of a call to the ``__aeabi_read_tp``.
   Programs that use ``__aeabi_read_tp`` but do not use the ``TPIDRURO`` register must use ``-mtp=soft``. Fixes #123864
 
+- The ``-Og`` optimization flag now sets ``-fextend-variable-liveness``, a new
+  compiler flag which trades a small amount of optimization in exchange for
+  improved variable visibility.
+
 Removed Compiler Flags
 -------------------------
 
