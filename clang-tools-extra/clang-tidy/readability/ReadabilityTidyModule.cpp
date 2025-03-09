@@ -60,6 +60,7 @@
 #include "UniqueptrDeleteReleaseCheck.h"
 #include "UppercaseLiteralSuffixCheck.h"
 #include "UseAnyOfAllOfCheck.h"
+#include "UseSpanFirstLastCheck.h"
 #include "UseStdMinMaxCheck.h"
 
 namespace clang::tidy {
@@ -170,6 +171,8 @@ public:
         "readability-uppercase-literal-suffix");
     CheckFactories.registerCheck<UseAnyOfAllOfCheck>(
         "readability-use-anyofallof");
+    CheckFactories.registerCheck<UseSpanFirstLastCheck>(
+        "readability-use-span-first-last");
     CheckFactories.registerCheck<UseStdMinMaxCheck>(
         "readability-use-std-min-max");
   }
