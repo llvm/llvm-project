@@ -5252,7 +5252,10 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[0] = getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI);
       OpdsMapping[2] = getVGPROpMapping(MI.getOperand(2).getReg(), MRI, *TRI);
       break;
-    case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
+    case Intrinsic::amdgcn_ds_bvh_stack_rtn:
+    case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
+    case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
+    case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn: {
       OpdsMapping[0] =
           getVGPROpMapping(MI.getOperand(0).getReg(), MRI, *TRI); // %vdst
       OpdsMapping[1] =
