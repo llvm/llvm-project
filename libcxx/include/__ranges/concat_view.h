@@ -53,6 +53,7 @@
 #include <__utility/move.h>
 #include <tuple>
 #include <variant>
+#include <iostream>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -346,7 +347,7 @@ public:
           }...};
           return __vtable[__idx](__src);
         }(__i.__it_.index(), make_index_sequence<variant_size_v<__base_iter>>{})),
-        __parent_(__i.parent_) {}
+        __parent_(__i.__parent_) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr decltype(auto) operator*() const {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
