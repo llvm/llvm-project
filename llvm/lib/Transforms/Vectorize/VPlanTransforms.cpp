@@ -737,67 +737,76 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
   return IsWideIVInc() ? WideIV : nullptr;
 }
 
+/// Attempts to optimize the induction variable exit values for users in the
+/// exit block coming from the latch in the original scalar loop.
+static VPValue *
+optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
+                               VPBlockBase *PredVPBB, VPValue *Op,
+                               DenseMap<VPValue *, VPValue *> &EndValues) {
+  using namespace VPlanPatternMatch;
+
+  VPValue *Incoming;
+  if (!match(Op, m_VPInstruction<VPInstruction::ExtractFromEnd>(
+                     m_VPValue(Incoming), m_SpecificInt(1))))
+    return nullptr;
+
+  auto *WideIV = getOptimizableIVOf(Incoming);
+  if (!WideIV)
+    return nullptr;
+
+  VPValue *EndValue = EndValues.lookup(WideIV);
+  assert(EndValue && "end value must have been pre-computed");
+
+  // `getOptimizableIVOf()` always returns the pre-incremented IV, so if it
+  // changed it means the exit is using the incremented value, so we don't
+  // need to subtract the step.
+  if (Incoming != WideIV)
+    return EndValue;
+
+  // Otherwise, subtract the step from the EndValue.
+  VPBuilder B(cast<VPBasicBlock>(PredVPBB)->getTerminator());
+  VPValue *Step = WideIV->getStepValue();
+  Type *ScalarTy = TypeInfo.inferScalarType(WideIV);
+  if (ScalarTy->isIntegerTy())
+    return B.createNaryOp(Instruction::Sub, {EndValue, Step}, {}, "ind.escape");
+  if (ScalarTy->isPointerTy()) {
+    auto *Zero = Plan.getOrAddLiveIn(
+        ConstantInt::get(Step->getLiveInIRValue()->getType(), 0));
+    return B.createPtrAdd(EndValue,
+                          B.createNaryOp(Instruction::Sub, {Zero, Step}), {},
+                          "ind.escape");
+  }
+  if (ScalarTy->isFloatingPointTy()) {
+    const auto &ID = WideIV->getInductionDescriptor();
+    return B.createNaryOp(
+        ID.getInductionBinOp()->getOpcode() == Instruction::FAdd
+            ? Instruction::FSub
+            : Instruction::FAdd,
+        {EndValue, Step}, {ID.getInductionBinOp()->getFastMathFlags()});
+  }
+  llvm_unreachable("all possible induction types must be handled");
+  return nullptr;
+}
+
 void VPlanTransforms::optimizeInductionExitUsers(
     VPlan &Plan, DenseMap<VPValue *, VPValue *> &EndValues) {
-  using namespace VPlanPatternMatch;
-  SmallVector<VPIRBasicBlock *> ExitVPBBs(Plan.getExitBlocks());
-  if (ExitVPBBs.size() != 1)
-    return;
-
-  VPIRBasicBlock *ExitVPBB = ExitVPBBs[0];
-  VPBlockBase *PredVPBB = ExitVPBB->getSinglePredecessor();
-  if (!PredVPBB)
-    return;
-  assert(PredVPBB == Plan.getMiddleBlock() &&
-         "predecessor must be the middle block");
-
+  VPBlockBase *MiddleVPBB = Plan.getMiddleBlock();
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
-  VPBuilder B(Plan.getMiddleBlock()->getTerminator());
-  for (VPRecipeBase &R : *ExitVPBB) {
-    auto *ExitIRI = cast<VPIRInstruction>(&R);
-    if (!isa<PHINode>(ExitIRI->getInstruction()))
-      break;
+  for (VPIRBasicBlock *ExitVPBB : Plan.getExitBlocks()) {
+    for (VPRecipeBase &R : *ExitVPBB) {
+      auto *ExitIRI = cast<VPIRInstruction>(&R);
+      if (!isa<PHINode>(ExitIRI->getInstruction()))
+        break;
 
-    VPValue *Incoming;
-    if (!match(ExitIRI->getOperand(0),
-               m_VPInstruction<VPInstruction::ExtractFromEnd>(
-                   m_VPValue(Incoming), m_SpecificInt(1))))
-      continue;
-
-    auto *WideIV = getOptimizableIVOf(Incoming);
-    if (!WideIV)
-      continue;
-    VPValue *EndValue = EndValues.lookup(WideIV);
-    assert(EndValue && "end value must have been pre-computed");
-
-    if (Incoming != WideIV) {
-      ExitIRI->setOperand(0, EndValue);
-      continue;
+      for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
+        if (PredVPBB == MiddleVPBB)
+          if (VPValue *Escape = optimizeLatchExitInductionUser(
+                  Plan, TypeInfo, PredVPBB, ExitIRI->getOperand(Idx),
+                  EndValues))
+            ExitIRI->setOperand(Idx, Escape);
+        // TODO: Optimize early exit induction users in follow-on patch.
+      }
     }
-
-    VPValue *Escape = nullptr;
-    VPValue *Step = WideIV->getStepValue();
-    Type *ScalarTy = TypeInfo.inferScalarType(WideIV);
-    if (ScalarTy->isIntegerTy()) {
-      Escape =
-          B.createNaryOp(Instruction::Sub, {EndValue, Step}, {}, "ind.escape");
-    } else if (ScalarTy->isPointerTy()) {
-      auto *Zero = Plan.getOrAddLiveIn(
-          ConstantInt::get(Step->getLiveInIRValue()->getType(), 0));
-      Escape = B.createPtrAdd(EndValue,
-                              B.createNaryOp(Instruction::Sub, {Zero, Step}),
-                              {}, "ind.escape");
-    } else if (ScalarTy->isFloatingPointTy()) {
-      const auto &ID = WideIV->getInductionDescriptor();
-      Escape = B.createNaryOp(
-          ID.getInductionBinOp()->getOpcode() == Instruction::FAdd
-              ? Instruction::FSub
-              : Instruction::FAdd,
-          {EndValue, Step}, {ID.getInductionBinOp()->getFastMathFlags()});
-    } else {
-      llvm_unreachable("all possible induction types must be handled");
-    }
-    ExitIRI->setOperand(0, Escape);
   }
 }
 
