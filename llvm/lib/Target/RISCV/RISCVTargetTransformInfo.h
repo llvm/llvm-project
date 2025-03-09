@@ -63,6 +63,12 @@ class RISCVTTIImpl : public BasicTTIImplBase<RISCVTTIImpl> {
   /// type.
   InstructionCost getConstantPoolLoadCost(Type *Ty,
                                           TTI::TargetCostKind CostKind);
+
+  /// If this shuffle can be lowered as a masked slide pair (at worst),
+  /// return a cost for it.
+  InstructionCost getSlideCost(FixedVectorType *Tp, ArrayRef<int> Mask,
+                               TTI::TargetCostKind CostKind);
+
 public:
   explicit RISCVTTIImpl(const RISCVTargetMachine *TM, const Function &F)
       : BaseT(TM, F.getDataLayout()), ST(TM->getSubtargetImpl(F)),
@@ -343,15 +349,8 @@ public:
     if (!TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty)))
       return false;
 
-    // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
-    // expanded.
-    // TODO: Promote f16/bf16 fmin/fmax reductions
-    if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
-      return false;
-
     switch (RdxDesc.getRecurrenceKind()) {
     case RecurKind::Add:
-    case RecurKind::FAdd:
     case RecurKind::And:
     case RecurKind::Or:
     case RecurKind::Xor:
@@ -359,11 +358,17 @@ public:
     case RecurKind::SMax:
     case RecurKind::UMin:
     case RecurKind::UMax:
+    case RecurKind::IAnyOf:
     case RecurKind::FMin:
     case RecurKind::FMax:
-    case RecurKind::FMulAdd:
-    case RecurKind::IAnyOf:
+      return true;
     case RecurKind::FAnyOf:
+    case RecurKind::FAdd:
+    case RecurKind::FMulAdd:
+      // We can't promote f16/bf16 fadd reductions and scalable vectors can't be
+      // expanded.
+      if (Ty->isBFloatTy() || (Ty->isHalfTy() && !ST->hasVInstructionsF16()))
+        return false;
       return true;
     default:
       return false;

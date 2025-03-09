@@ -179,13 +179,22 @@ TEST_F(ContextTest, Dump) {
   (void)Subctx;
   __llvm_ctx_profile_release_context(&Root);
 
-  struct Writer {
+  class TestProfileWriter : public ProfileWriter {
+  public:
     ContextRoot *const Root;
     const size_t Entries;
-    bool State = false;
-    Writer(ContextRoot *Root, size_t Entries) : Root(Root), Entries(Entries) {}
 
-    bool write(const ContextNode &Node) {
+    int EnteredSectionCount = 0;
+    int ExitedSectionCount = 0;
+
+    bool State = false;
+
+    TestProfileWriter(ContextRoot *Root, size_t Entries)
+        : Root(Root), Entries(Entries) {}
+
+    void writeContextual(const ContextNode &Node) override {
+      EXPECT_EQ(EnteredSectionCount, 1);
+      EXPECT_EQ(ExitedSectionCount, 0);
       EXPECT_FALSE(Root->Taken.TryLock());
       EXPECT_EQ(Node.guid(), 1U);
       EXPECT_EQ(Node.counters()[0], Entries);
@@ -202,22 +211,25 @@ TEST_F(ContextTest, Dump) {
       EXPECT_EQ(SN.callsites_size(), 1U);
       EXPECT_EQ(SN.subContexts()[0], nullptr);
       State = true;
-      return true;
+    }
+    void startContextSection() override { ++EnteredSectionCount; }
+    void endContextSection() override {
+      EXPECT_EQ(EnteredSectionCount, 1);
+      ++ExitedSectionCount;
     }
   };
-  Writer W(&Root, 1);
+
+  TestProfileWriter W(&Root, 1);
   EXPECT_FALSE(W.State);
-  __llvm_ctx_profile_fetch(&W, [](void *W, const ContextNode &Node) -> bool {
-    return reinterpret_cast<Writer *>(W)->write(Node);
-  });
+  __llvm_ctx_profile_fetch(W);
   EXPECT_TRUE(W.State);
 
   // this resets all counters but not the internal structure.
   __llvm_ctx_profile_start_collection();
-  Writer W2(&Root, 0);
+  TestProfileWriter W2(&Root, 0);
   EXPECT_FALSE(W2.State);
-  __llvm_ctx_profile_fetch(&W2, [](void *W, const ContextNode &Node) -> bool {
-    return reinterpret_cast<Writer *>(W)->write(Node);
-  });
+  __llvm_ctx_profile_fetch(W2);
   EXPECT_TRUE(W2.State);
+  EXPECT_EQ(W2.EnteredSectionCount, 1);
+  EXPECT_EQ(W2.ExitedSectionCount, 1);
 }

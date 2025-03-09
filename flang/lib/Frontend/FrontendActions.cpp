@@ -1389,10 +1389,10 @@ void CodeGenAction::executeAction() {
   // given on the command-line).
   llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 
-  const std::string &theTriple = targetMachine.getTargetTriple().str();
+  const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 
   if (llvmModule->getTargetTriple() != theTriple) {
-    diags.Report(clang::diag::warn_fe_override_module) << theTriple;
+    diags.Report(clang::diag::warn_fe_override_module) << theTriple.str();
   }
 
   // Always set the triple and data layout, to make sure they match and are set.

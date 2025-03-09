@@ -26,7 +26,7 @@ if.true:
   br label %endif
 
 endif:
-  %v = phi i32 [ %val, %if.true ], [ undef, %entry ]
+  %v = phi i32 [ %val, %if.true ], [ poison, %entry ]
   ret i32 %v
 }
 
@@ -49,7 +49,7 @@ entry:
   br i1 %c, label %if.true, label %endif
 
 endif:
-  %v = phi i32 [ %val, %if.true ], [ undef, %entry ]
+  %v = phi i32 [ %val, %if.true ], [ poison, %entry ]
   ret i32 %v
 
 if.true:
@@ -82,7 +82,7 @@ if.true:
   br label %endif
 
 endif:
-  %v = phi i32 [ %val, %if.true ], [ undef, %entry ]
+  %v = phi i32 [ %val, %if.true ], [ poison, %entry ]
   ret i32 %v
 }
 
@@ -114,7 +114,7 @@ if.true:
   br label %endif
 
 endif:
-  %v = phi i32 [ %val, %if.true ], [ undef, %entry ]
+  %v = phi i32 [ %val, %if.true ], [ poison, %entry ]
   ret i32 %v
 }
 

@@ -217,3 +217,53 @@ int test_negative_offset_with_unsigned_idx(void) {
   unsigned idx = 2u;
   return p[idx]; // expected-warning {{Out of bound access to memory preceding}}
 }
+
+struct three_words { int c[3]; };
+struct seven_words { int c[7]; };
+void partially_in_bounds(void) {
+  struct seven_words c;
+  struct three_words a, *p = (struct three_words *)&c;
+  p[0] = a; // no-warning
+  p[1] = a; // no-warning
+  p[2] = a; // should warn
+  // FIXME: This is an overflow, but currently security.ArrayBound only checks
+  // that the _beginning_ of the accessed element is within bounds.
+}
+
+void vla(int a) {
+  if (a == 5) {
+    int x[a];
+    x[4] = 4; // no-warning
+    x[5] = 5; // expected-warning{{Out of bound access}}
+  }
+}
+
+void sizeof_vla(int a) {
+  // FIXME: VLA modeling is not good enough to cover this case.
+  if (a == 5) {
+    char x[a];
+    int y[sizeof(x)];
+    y[4] = 4; // no-warning
+    y[5] = 5; // should be {{Out of bounds access}}
+  }
+}
+
+void sizeof_vla_2(int a) {
+  // FIXME: VLA modeling is not good enough to cover this case.
+  if (a == 5) {
+    char x[a];
+    int y[sizeof(x) / sizeof(char)];
+    y[4] = 4; // no-warning
+    y[5] = 5; // should be {{Out of bounds access}}
+  }
+}
+
+void sizeof_vla_3(int a) {
+  // FIXME: VLA modeling is not good enough to cover this case.
+  if (a == 5) {
+    char x[a];
+    int y[sizeof(*&*&*&x)];
+    y[4] = 4; // no-warning
+    y[5] = 5; // should be {{Out of bounds access}}
+  }
+}

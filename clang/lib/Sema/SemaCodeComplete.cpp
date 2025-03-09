@@ -6229,8 +6229,8 @@ static void mergeCandidatesWithResults(
   // Sort the overload candidate set by placing the best overloads first.
   llvm::stable_sort(CandidateSet, [&](const OverloadCandidate &X,
                                       const OverloadCandidate &Y) {
-    return isBetterOverloadCandidate(SemaRef, X, Y, Loc,
-                                     CandidateSet.getKind());
+    return isBetterOverloadCandidate(SemaRef, X, Y, Loc, CandidateSet.getKind(),
+                                     /*PartialOverloading=*/true);
   });
 
   // Add the remaining viable overload candidates as code-completion results.

@@ -1610,7 +1610,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %Flow, %bb
-  %lsr.iv = phi i32 [ undef, %bb ], [ %tmp2, %Flow ]
+  %lsr.iv = phi i32 [ poison, %bb ], [ %tmp2, %Flow ]
   %lsr.iv.next = add i32 %lsr.iv, 1
   %cmp0 = icmp slt i32 %lsr.iv.next, 0
   br i1 %cmp0, label %bb4, label %Flow
@@ -1621,7 +1621,7 @@ bb4:                                              ; preds = %bb1
   br label %Flow
 
 Flow:                                             ; preds = %bb4, %bb1
-  %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
+  %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ poison, %bb1 ]
   %tmp3 = phi i1 [ %cmp1, %bb4 ], [ true, %bb1 ]
   br i1 %tmp3, label %bb1, label %bb9
 

@@ -185,13 +185,11 @@ public:
                                        StringRef OptionName,
                                        StringRef ExpectedValueDesc) const;
 
-  using CheckerRef = CheckerBase *;
   using CheckerTag = const void *;
-  using CheckerDtor = CheckerFn<void ()>;
 
-//===----------------------------------------------------------------------===//
-// Checker registration.
-//===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
+  // Checker registration.
+  //===--------------------------------------------------------------------===//
 
   /// Used to register checkers.
   /// All arguments are automatically passed through to the checker
@@ -200,25 +198,25 @@ public:
   /// \returns a pointer to the checker object.
   template <typename CHECKER, typename... AT>
   CHECKER *registerChecker(AT &&... Args) {
-    CheckerTag tag = getTag<CHECKER>();
-    CheckerRef &ref = CheckerTags[tag];
-    assert(!ref && "Checker already registered, use getChecker!");
+    CheckerTag Tag = getTag<CHECKER>();
+    std::unique_ptr<CheckerBase> &Ref = CheckerTags[Tag];
+    assert(!Ref && "Checker already registered, use getChecker!");
 
-    CHECKER *checker = new CHECKER(std::forward<AT>(Args)...);
-    checker->Name = CurrentCheckerName;
-    CheckerDtors.push_back(CheckerDtor(checker, destruct<CHECKER>));
-    CHECKER::_register(checker, *this);
-    ref = checker;
-    return checker;
+    std::unique_ptr<CHECKER> Checker =
+        std::make_unique<CHECKER>(std::forward<AT>(Args)...);
+    Checker->Name = CurrentCheckerName;
+    CHECKER::_register(Checker.get(), *this);
+    Ref = std::move(Checker);
+    return static_cast<CHECKER *>(Ref.get());
   }
 
   template <typename CHECKER>
   CHECKER *getChecker() {
-    CheckerTag tag = getTag<CHECKER>();
-    assert(CheckerTags.count(tag) != 0 &&
-           "Requested checker is not registered! Maybe you should add it as a "
-           "dependency in Checkers.td?");
-    return static_cast<CHECKER *>(CheckerTags[tag]);
+    CheckerTag Tag = getTag<CHECKER>();
+    std::unique_ptr<CheckerBase> &Ref = CheckerTags[Tag];
+    assert(Ref && "Requested checker is not registered! Maybe you should add it"
+                  " as a dependency in Checkers.td?");
+    return static_cast<CHECKER *>(Ref.get());
   }
 
   template <typename CHECKER> bool isRegisteredChecker() {
@@ -462,9 +460,9 @@ public:
                                     unsigned int Space = 0,
                                     bool IsDot = false) const;
 
-  //===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
   // Internal registration functions for AST traversing.
-  //===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
 
   // Functions used by the registration mechanism, checkers should not touch
   // these directly.
@@ -478,9 +476,9 @@ public:
 
   void _registerForBody(CheckDeclFunc checkfn);
 
-//===----------------------------------------------------------------------===//
-// Internal registration functions for path-sensitive checking.
-//===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
+  // Internal registration functions for path-sensitive checking.
+  //===--------------------------------------------------------------------===//
 
   using CheckStmtFunc = CheckerFn<void (const Stmt *, CheckerContext &)>;
 
@@ -582,9 +580,9 @@ public:
 
   void _registerForEndOfTranslationUnit(CheckEndOfTranslationUnit checkfn);
 
-//===----------------------------------------------------------------------===//
-// Internal registration functions for events.
-//===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
+  // Internal registration functions for events.
+  //===--------------------------------------------------------------------===//
 
   using EventTag = void *;
   using CheckEventFunc = CheckerFn<void (const void *event)>;
@@ -611,20 +609,15 @@ public:
       Checker(&event);
   }
 
-//===----------------------------------------------------------------------===//
-// Implementation details.
-//===----------------------------------------------------------------------===//
+  //===--------------------------------------------------------------------===//
+  // Implementation details.
+  //===--------------------------------------------------------------------===//
 
 private:
-  template <typename CHECKER>
-  static void destruct(void *obj) { delete static_cast<CHECKER *>(obj); }
-
   template <typename T>
   static void *getTag() { static int tag; return &tag; }
 
-  llvm::DenseMap<CheckerTag, CheckerRef> CheckerTags;
-
-  std::vector<CheckerDtor> CheckerDtors;
+  llvm::DenseMap<CheckerTag, std::unique_ptr<CheckerBase>> CheckerTags;
 
   struct DeclCheckerInfo {
     CheckDeclFunc CheckFn;

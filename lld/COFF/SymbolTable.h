@@ -174,10 +174,14 @@ public:
   // Used for /alternatename.
   std::map<StringRef, StringRef> alternateNames;
 
+  // Used for /aligncomm.
+  std::map<std::string, int> alignComm;
+
   void fixupExports();
   void assignExportOrdinals();
   void parseModuleDefs(StringRef path);
   void parseAlternateName(StringRef);
+  void parseAligncomm(StringRef);
 
   // Iterates symbols in non-determinstic hash table order.
   template <typename T> void forEachSymbol(T callback) {

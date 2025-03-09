@@ -1,6 +1,6 @@
-// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="generate-dma=false fast-mem-space=0 skip-non-unit-stride-loops" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="fast-mem-space=0 skip-non-unit-stride-loops" | FileCheck %s
 // Small buffer size to trigger fine copies.
-// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="generate-dma=false fast-mem-space=0 fast-mem-capacity=1" | FileCheck --check-prefix=CHECK-SMALL %s
+// RUN: mlir-opt %s -split-input-file -affine-data-copy-generate="fast-mem-space=0 fast-mem-capacity=1" | FileCheck --check-prefix=CHECK-SMALL %s
 
 // Test affine data copy with a memref filter. We use a test pass that invokes
 // affine data copy utility on the input loop nest.
@@ -351,6 +351,83 @@ func.func @arbitrary_memory_space() {
         affine.store %3, %alloc[%0, %2] : memref<256x8xi8, #spirv.storage_class<StorageBuffer>>
       }
     }
+  }
+  return
+}
+
+// CHECK-LABEL: zero_ranked
+func.func @zero_ranked(%3:memref<480xi1>) {
+  %false = arith.constant false
+  %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  affine.store %false, %4[] : memref<i1>
+  %5 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  memref.copy %4, %5 : memref<i1> to memref<i1>
+  affine.for %arg0 = 0 to 480 {
+    %11 = affine.load %3[%arg0] : memref<480xi1>
+    %12 = affine.load %5[] : memref<i1>
+    %13 = arith.cmpi slt, %11, %12 : i1
+    %14 = arith.select %13, %11, %12 : i1
+    affine.store %14, %5[] : memref<i1>
+  }
+  return
+}
+
+// CHECK-LABEL: func @scalar_memref_copy_without_dma
+func.func @scalar_memref_copy_without_dma() {
+    %false = arith.constant false
+    %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+    affine.store %false, %4[] : memref<i1>
+
+    // CHECK: %[[FALSE:.*]] = arith.constant false
+    // CHECK: %[[MEMREF:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+    // CHECK: affine.store %[[FALSE]], %[[MEMREF]][] : memref<i1>
+    return
+}
+
+// CHECK-LABEL: func @scalar_memref_copy_in_loop
+func.func @scalar_memref_copy_in_loop(%3:memref<480xi1>) {
+  %false = arith.constant false
+  %4 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  affine.store %false, %4[] : memref<i1>
+  %5 = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  memref.copy %4, %5 : memref<i1> to memref<i1>
+  affine.for %arg0 = 0 to 480 {
+    %11 = affine.load %3[%arg0] : memref<480xi1>
+    %12 = affine.load %5[] : memref<i1>
+    %13 = arith.cmpi slt, %11, %12 : i1
+    %14 = arith.select %13, %11, %12 : i1
+    affine.store %14, %5[] : memref<i1>
+  }
+
+  // CHECK: %[[FALSE:.*]] = arith.constant false
+  // CHECK: %[[MEMREF:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  // CHECK: affine.store %[[FALSE]], %[[MEMREF]][] : memref<i1>
+  // CHECK: %[[TARGET:.*]] = memref.alloc() {alignment = 128 : i64} : memref<i1>
+  // CHECK: memref.copy %alloc, %[[TARGET]] : memref<i1> to memref<i1>
+  // CHECK: %[[FAST_MEMREF:.*]] = memref.alloc() : memref<480xi1>
+  // CHECK: affine.for %{{.*}} = 0 to 480 {
+  // CHECK:   %{{.*}} = affine.load %arg0[%{{.*}}] : memref<480xi1>
+  // CHECK:   affine.store %{{.*}}, %[[FAST_MEMREF]][%{{.*}}] : memref<480xi1>
+  // CHECK: }
+  // CHECK: affine.for %arg1 = 0 to 480 {
+  // CHECK:   %[[L0:.*]] = affine.load %[[FAST_MEMREF]][%arg1] : memref<480xi1>
+  // CHECK:   %[[L1:.*]] = affine.load %[[TARGET]][] : memref<i1>
+  // CHECK:   %[[CMPI:.*]] = arith.cmpi slt, %[[L0]], %[[L1]] : i1
+  // CHECK:   %[[SELECT:.*]] = arith.select %[[CMPI]], %[[L0]], %[[L1]] : i1
+  // CHECK:   affine.store %[[SELECT]], %[[TARGET]][] : memref<i1>
+  // CHECK: }
+  // CHECK: memref.dealloc %[[FAST_MEMREF]] : memref<480xi1>
+  return
+}
+
+// CHECK-LABEL: func @memref_def_inside
+func.func @memref_def_inside(%arg0: index) {
+  %0 = llvm.mlir.constant(1.000000e+00 : f32) : f32
+  // No copy generation can happen at this depth given the definition inside.
+  affine.for %arg1 = 0 to 29 {
+    %alloc_7 = memref.alloc() : memref<1xf32>
+    // CHECK: affine.store {{.*}} : memref<1xf32>
+    affine.store %0, %alloc_7[0] : memref<1xf32>
   }
   return
 }

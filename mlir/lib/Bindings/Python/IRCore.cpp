@@ -1291,8 +1291,9 @@ void PyOperation::checkValid() const {
 void PyOperationBase::print(std::optional<int64_t> largeElementsLimit,
                             bool enableDebugInfo, bool prettyDebugInfo,
                             bool printGenericOpForm, bool useLocalScope,
-                            bool assumeVerified, nb::object fileObject,
-                            bool binary, bool skipRegions) {
+                            bool useNameLocAsPrefix, bool assumeVerified,
+                            nb::object fileObject, bool binary,
+                            bool skipRegions) {
   PyOperation &operation = getOperation();
   operation.checkValid();
   if (fileObject.is_none())
@@ -1314,6 +1315,8 @@ void PyOperationBase::print(std::optional<int64_t> largeElementsLimit,
     mlirOpPrintingFlagsAssumeVerified(flags);
   if (skipRegions)
     mlirOpPrintingFlagsSkipRegions(flags);
+  if (useNameLocAsPrefix)
+    mlirOpPrintingFlagsPrintNameLocAsPrefix(flags);
 
   PyFileAccumulator accum(fileObject, binary);
   mlirOperationPrintWithFlags(operation, flags, accum.getCallback(),
@@ -1390,7 +1393,8 @@ nb::object PyOperationBase::getAsm(bool binary,
                                    std::optional<int64_t> largeElementsLimit,
                                    bool enableDebugInfo, bool prettyDebugInfo,
                                    bool printGenericOpForm, bool useLocalScope,
-                                   bool assumeVerified, bool skipRegions) {
+                                   bool useNameLocAsPrefix, bool assumeVerified,
+                                   bool skipRegions) {
   nb::object fileObject;
   if (binary) {
     fileObject = nb::module_::import_("io").attr("BytesIO")();
@@ -1402,6 +1406,7 @@ nb::object PyOperationBase::getAsm(bool binary,
         /*prettyDebugInfo=*/prettyDebugInfo,
         /*printGenericOpForm=*/printGenericOpForm,
         /*useLocalScope=*/useLocalScope,
+        /*useNameLocAsPrefix=*/useNameLocAsPrefix,
         /*assumeVerified=*/assumeVerified,
         /*fileObject=*/fileObject,
         /*binary=*/binary,
@@ -3195,6 +3200,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                                /*prettyDebugInfo=*/false,
                                /*printGenericOpForm=*/false,
                                /*useLocalScope=*/false,
+                               /*useNameLocAsPrefix=*/false,
                                /*assumeVerified=*/false,
                                /*skipRegions=*/false);
           },
@@ -3206,7 +3212,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
            nb::arg("binary") = false, kOperationPrintStateDocstring)
       .def("print",
            nb::overload_cast<std::optional<int64_t>, bool, bool, bool, bool,
-                             bool, nb::object, bool, bool>(
+                             bool, bool, nb::object, bool, bool>(
                &PyOperationBase::print),
            // Careful: Lots of arguments must match up with print method.
            nb::arg("large_elements_limit").none() = nb::none(),
@@ -3214,6 +3220,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
            nb::arg("pretty_debug_info") = false,
            nb::arg("print_generic_op_form") = false,
            nb::arg("use_local_scope") = false,
+           nb::arg("use_name_loc_as_prefix") = false,
            nb::arg("assume_verified") = false,
            nb::arg("file").none() = nb::none(), nb::arg("binary") = false,
            nb::arg("skip_regions") = false, kOperationPrintDocstring)
@@ -3228,6 +3235,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
            nb::arg("pretty_debug_info") = false,
            nb::arg("print_generic_op_form") = false,
            nb::arg("use_local_scope") = false,
+           nb::arg("use_name_loc_as_prefix") = false,
            nb::arg("assume_verified") = false, nb::arg("skip_regions") = false,
            kOperationGetAsmDocstring)
       .def("verify", &PyOperationBase::verify,

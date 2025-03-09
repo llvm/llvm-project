@@ -137,11 +137,11 @@ private:
   unsigned X86MaterializeInt(const ConstantInt *CI, MVT VT);
   unsigned X86MaterializeFP(const ConstantFP *CFP, MVT VT);
   unsigned X86MaterializeGV(const GlobalValue *GV, MVT VT);
-  unsigned fastMaterializeConstant(const Constant *C) override;
+  Register fastMaterializeConstant(const Constant *C) override;
 
-  unsigned fastMaterializeAlloca(const AllocaInst *C) override;
+  Register fastMaterializeAlloca(const AllocaInst *C) override;
 
-  unsigned fastMaterializeFloatZero(const ConstantFP *CF) override;
+  Register fastMaterializeFloatZero(const ConstantFP *CF) override;
 
   /// isScalarFPTypeInSSEReg - Return true if the specified scalar FP type is
   /// computed in an SSE register, not on the X87 floating point stack.
@@ -3778,7 +3778,7 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
   CodeModel::Model CM = TM.getCodeModel();
   if (CM != CodeModel::Small && CM != CodeModel::Medium &&
       CM != CodeModel::Large)
-    return 0;
+    return Register();
 
   // Get opcode and regclass of the output for the given load instruction.
   unsigned Opc = 0;
@@ -3787,7 +3787,8 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
   bool HasAVX = Subtarget->hasAVX();
   bool HasAVX512 = Subtarget->hasAVX512();
   switch (VT.SimpleTy) {
-  default: return 0;
+  default:
+    return Register();
   case MVT::f32:
     Opc = HasAVX512 ? X86::VMOVSSZrm_alt
           : HasAVX  ? X86::VMOVSSrm_alt
@@ -3802,7 +3803,7 @@ unsigned X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
     break;
   case MVT::f80:
     // No f80 support yet.
-    return 0;
+    return Register();
   }
 
   // MachineConstantPool wants an explicit alignment.
@@ -3883,12 +3884,12 @@ unsigned X86FastISel::X86MaterializeGV(const GlobalValue *GV, MVT VT) {
   return 0;
 }
 
-unsigned X86FastISel::fastMaterializeConstant(const Constant *C) {
+Register X86FastISel::fastMaterializeConstant(const Constant *C) {
   EVT CEVT = TLI.getValueType(DL, C->getType(), true);
 
   // Only handle simple types.
   if (!CEVT.isSimple())
-    return 0;
+    return Register();
   MVT VT = CEVT.getSimpleVT();
 
   if (const auto *CI = dyn_cast<ConstantInt>(C))
@@ -3923,10 +3924,10 @@ unsigned X86FastISel::fastMaterializeConstant(const Constant *C) {
     }
   }
 
-  return 0;
+  return Register();
 }
 
-unsigned X86FastISel::fastMaterializeAlloca(const AllocaInst *C) {
+Register X86FastISel::fastMaterializeAlloca(const AllocaInst *C) {
   // Fail on dynamic allocas. At this point, getRegForValue has already
   // checked its CSE maps, so if we're here trying to handle a dynamic
   // alloca, we're not going to succeed. X86SelectAddress has a
@@ -3935,12 +3936,12 @@ unsigned X86FastISel::fastMaterializeAlloca(const AllocaInst *C) {
   // in order to avoid recursion between getRegForValue,
   // X86SelectAddrss, and targetMaterializeAlloca.
   if (!FuncInfo.StaticAllocaMap.count(C))
-    return 0;
+    return Register();
   assert(C->isStaticAlloca() && "dynamic alloca in the static alloca map?");
 
   X86AddressMode AM;
   if (!X86SelectAddress(C, AM))
-    return 0;
+    return Register();
   unsigned Opc =
       TLI.getPointerTy(DL) == MVT::i32
           ? (Subtarget->isTarget64BitILP32() ? X86::LEA64_32r : X86::LEA32r)
@@ -3952,10 +3953,10 @@ unsigned X86FastISel::fastMaterializeAlloca(const AllocaInst *C) {
   return ResultReg;
 }
 
-unsigned X86FastISel::fastMaterializeFloatZero(const ConstantFP *CF) {
+Register X86FastISel::fastMaterializeFloatZero(const ConstantFP *CF) {
   MVT VT;
   if (!isTypeLegal(CF->getType(), VT))
-    return 0;
+    return Register();
 
   // Get opcode and regclass for the given zero.
   bool HasSSE1 = Subtarget->hasSSE1();
@@ -3979,14 +3980,13 @@ unsigned X86FastISel::fastMaterializeFloatZero(const ConstantFP *CF) {
     break;
   case MVT::f80:
     // No f80 support yet.
-    return 0;
+    return Register();
   }
 
   Register ResultReg = createResultReg(TLI.getRegClassFor(VT));
   BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg);
   return ResultReg;
 }
-
 
 bool X86FastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                                       const LoadInst *LI) {

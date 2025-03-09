@@ -998,3 +998,11 @@ void member_pointer_const(Value &x, PointerToConstMemberFunction m) {
   // CHECK-MESSAGES:[[@LINE-1]]:3: warning: variable 'member_pointer_tmp' of type 'Value &' can be declared 'const'
   (member_pointer_tmp.*m)();
 }
+
+namespace gh127776_false_positive {
+template <class T> struct vector { T &operator[](int t); };
+template <typename T> void f() {
+  vector<int> x;
+  x[T{}] = 3;
+}
+} // namespace gh127776_false_positive

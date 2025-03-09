@@ -73,11 +73,12 @@ define i32 @bar(i32 %t) !guid !1 {
 !1 = !{i64 5678}
 
 ;--- profile.yaml
-- Guid: 1234
-  Counters: [10, 4]
-  Callsites:  -
-                - Guid: 5678
-                  Counters: [4,3]
-              - 
-                - Guid: 5678
-                  Counters: [6,6]
+Contexts:
+  - Guid: 1234
+    Counters: [10, 4]
+    Callsites:  -
+                  - Guid: 5678
+                    Counters: [4,3]
+                - 
+                  - Guid: 5678
+                    Counters: [6,6]

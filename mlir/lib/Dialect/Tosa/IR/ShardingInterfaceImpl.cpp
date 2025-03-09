@@ -55,6 +55,8 @@ struct MatMulOpSharding
     SmallVector<AffineMap> maps;
     maps.push_back(AffineMap::getMultiDimMapWithTargets(4, {0, 1, 3}, ctx));
     maps.push_back(AffineMap::getMultiDimMapWithTargets(4, {0, 3, 2}, ctx));
+    maps.push_back(AffineMap::get(0, 0, {}, ctx));
+    maps.push_back(AffineMap::get(0, 0, {}, ctx));
     maps.push_back(AffineMap::getMultiDimMapWithTargets(4, {0, 1, 2}, ctx));
     return maps;
   }

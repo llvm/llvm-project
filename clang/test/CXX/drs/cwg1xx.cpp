@@ -26,18 +26,22 @@ namespace cwg100 { // cwg100: 2.7
   // cxx98-14-error@#cwg100-a {{non-type template argument does not refer to any declaration}}
   //   cxx98-14-note@#cwg100-A {{template parameter is declared here}}
   // since-cxx17-error@#cwg100-a {{pointer to string literal is not allowed in a template argument}}
+  //   since-cxx17-note@#cwg100-A {{template parameter is declared here}}
   B<"bar"> b; // #cwg100-b
   // cxx98-14-error@#cwg100-b {{non-type template argument does not refer to any declaration}}
   //   cxx98-14-note@#cwg100-B {{template parameter is declared here}}
   // since-cxx17-error@#cwg100-b {{reference to string literal is not allowed in a template argument}}
+  //   since-cxx17-note@#cwg100-B {{template parameter is declared here}}
   C<"baz"> c; // #cwg100-c
   // cxx98-14-error@#cwg100-c {{non-type template argument does not refer to any declaration}}
   //   cxx98-14-note@#cwg100-C {{template parameter is declared here}}
   // since-cxx17-error@#cwg100-c {{pointer to subobject of string literal is not allowed in a template argument}}
+  //   since-cxx17-note@#cwg100-C {{template parameter is declared here}}
   D<*"quux"> d; // #cwg100-d
   // cxx98-14-error@#cwg100-d {{non-type template argument does not refer to any declaration}}
   //   cxx98-14-note@#cwg100-D {{template parameter is declared here}}
   // since-cxx17-error@#cwg100-d {{reference to subobject of string literal is not allowed in a template argument}}
+  //   since-cxx17-note@#cwg100-D {{template parameter is declared here}}
 } // namespace cwg100
 
 namespace cwg101 { // cwg101: 3.5
@@ -152,15 +156,17 @@ namespace cwg112 { // cwg112: 3.1
   volatile T a2[1] = {};
   const Arr a3 = {}; // #cwg112-a3
   volatile Arr a4 = {};
-  template<const volatile T*> struct X {};
+  template<const volatile T*> struct X {}; // #cwg112-X
   // FIXME: Test this somehow in C++11 and on.
   X<a1> x1;
   // cxx98-error@-1 {{non-type template argument referring to object 'a1' with internal linkage is a C++11 extension}}
   //   cxx98-note@#cwg112-a1 {{non-type template argument refers to object here}}
+  //   cxx98-note@#cwg112-X {{template parameter is declared here}}
   X<a2> x2;
   X<a3> x3;
   // cxx98-error@-1 {{non-type template argument referring to object 'a3' with internal linkage is a C++11 extension}}
   //   cxx98-note@#cwg112-a3 {{non-type template argument refers to object here}}
+  //   cxx98-note@#cwg112-X {{template parameter is declared here}}
   X<a4> x4;
 } // namespace cwg112
 
@@ -634,7 +640,7 @@ namespace example3 {
 struct Base {
 private:
   static const int i = 10; // #cwg138-ex3-Base-i
-  
+
 public:
   struct Data;
   // Elaborated type specifier is not the sole constituent of declaration,
@@ -648,7 +654,7 @@ public:
   };
 };
 struct Data {
-  void f() {  
+  void f() {
     int i2 = Base::i;
     // expected-error@-1 {{'i' is a private member of 'cwg138::example3::Base'}}
     //   expected-note@#cwg138-ex3-Base-i {{declared private here}}
@@ -1309,8 +1315,8 @@ namespace cwg184 { // cwg184: 2.7
 
   template<template<typename TT> class T> void A<T>::f() { // #cwg184-T
     T<> t;
-    // expected-error@-1 {{too few template arguments for template template parameter 'T'}}
-    //   expected-note@#cwg184-T {{template is declared here}}
+    // expected-error@-1 {{missing template argument for template parameter}}
+    //   expected-note@#cwg184-T {{template parameter is declared here}}
   }
 
   template<template<typename TT = char> class T> void A<T>::g() {

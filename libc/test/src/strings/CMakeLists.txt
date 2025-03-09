@@ -13,6 +13,36 @@ add_libc_test(
 )
 
 add_libc_test(
+  ffs_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    ffs_test.cpp
+  DEPENDS
+    libc.src.strings.ffs
+)
+
+add_libc_test(
+  ffsl_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    ffsl_test.cpp
+  DEPENDS
+    libc.src.strings.ffsl
+)
+
+add_libc_test(
+  ffsll_test
+  SUITE
+    libc-strings-tests
+  SRCS
+    ffsll_test.cpp
+  DEPENDS
+    libc.src.strings.ffsll
+)
+
+add_libc_test(
   index_test
   SUITE
     libc-strings-tests

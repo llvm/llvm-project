@@ -79,7 +79,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
 
   if (TargetTriple.getTriple().empty()) {
     TargetTriple.setTriple(DefaultTriple);
-    M->setTargetTriple(DefaultTriple);
+    M->setTargetTriple(TargetTriple);
   }
   const Target *TheTarget =
       TargetRegistry::lookupTarget(DefaultMArch, TargetTriple, ErrMsg);
@@ -118,7 +118,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   }
   M->setDataLayout(MaybeDL.get());
 
-  TargetLibraryInfoImpl TLII(Triple(M->getTargetTriple()));
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
   std::unique_ptr<MachineModuleInfoWrapperPass> MMIWP(
@@ -148,9 +148,9 @@ SPIRVTranslateModule(Module *M, std::string &SpirvObj, std::string &ErrMsg,
                      const std::vector<std::string> &Opts) {
   // optional: Opts[0] is a string representation of Triple,
   // take Module triple otherwise
-  Triple TargetTriple(Opts.empty() || Opts[0].empty()
-                          ? M->getTargetTriple()
-                          : Triple::normalize(Opts[0]));
+  Triple TargetTriple = Opts.empty() || Opts[0].empty()
+                            ? M->getTargetTriple()
+                            : Triple(Triple::normalize(Opts[0]));
   // optional: Opts[1] is a string representation of CodeGenOptLevel,
   // no optimization otherwise
   llvm::CodeGenOptLevel OLevel = CodeGenOptLevel::None;

@@ -148,6 +148,7 @@ public:
     case Extension::none:
       return {};
     };
+    llvm_unreachable("bad Extension type");
   }
 
   // Debug utilites.

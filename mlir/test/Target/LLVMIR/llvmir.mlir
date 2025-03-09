@@ -1859,6 +1859,14 @@ llvm.func @foo() {
 
 // -----
 
+// CHECK: @llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
+llvm.mlir.global_ctors {ctors = [], priorities = []}
+
+// CHECK: @llvm.global_dtors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
+llvm.mlir.global_dtors {dtors = [], priorities = []}
+
+// -----
+
 // CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }]
 llvm.mlir.global_dtors { dtors = [@foo], priorities = [0 : i32]}
 
@@ -2360,6 +2368,18 @@ llvm.func @readwrite_func() attributes {
 // -----
 
 //
+// target-features attribute.
+//
+
+// CHECK-LABEL: @tf
+// CHECK-SAME: #[[TargetFeat:.*]]
+llvm.func @tf(!llvm.ptr) attributes {target_features = #llvm.target_features<["+fix-cortex-a53-835769", "+fp-armv8", "+neon", "+outline-atomics", "+v8a"]>}
+
+// CHECK: attributes #[[TargetFeat]] = { "target-features"="+fix-cortex-a53-835769,+fp-armv8,+neon,+outline-atomics,+v8a" }
+
+// -----
+
+//
 // arm_streaming attribute.
 //
 
@@ -2443,6 +2463,18 @@ llvm.func @preserves_za_func() attributes {arm_preserves_za} {
   llvm.return
 }
 // CHECK: #[[ATTR]] = { "aarch64_preserves_za" }
+
+// -----
+
+//
+// frame pointer attribute.
+//
+
+// CHECK-LABEL: @t
+// CHECK-SAME: #[[FP:.*]]
+llvm.func @t(!llvm.ptr) attributes {frame_pointer = #llvm.framePointerKind<"non-leaf">}
+
+// CHECK: attributes #[[FP]] = { "frame-pointer"="non-leaf" }
 
 // -----
 

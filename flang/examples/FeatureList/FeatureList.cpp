@@ -514,7 +514,7 @@ public:
   READ_FEATURE(OmpReductionClause)
   READ_FEATURE(OmpInReductionClause)
   READ_FEATURE(OmpReductionCombiner)
-  READ_FEATURE(OmpReductionInitializerClause)
+  READ_FEATURE(OmpInitializerClause)
   READ_FEATURE(OmpReductionIdentifier)
   READ_FEATURE(OmpAllocateClause)
   READ_FEATURE(OmpAllocateClause::Modifier)

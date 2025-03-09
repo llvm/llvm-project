@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
@@ -133,6 +134,12 @@ static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
 class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
+
+  std::unique_ptr<MCSymbolizer>
+  createTargetSymbolizer(BinaryFunction &Function,
+                         bool CreateNewSymbols) const override {
+    return std::make_unique<AArch64MCSymbolizer>(Function, CreateNewSymbols);
+  }
 
   MCPhysReg getStackPointer() const override { return AArch64::SP; }
   MCPhysReg getFramePointer() const override { return AArch64::FP; }
@@ -278,13 +285,23 @@ public:
     return Inst.getOpcode() == AArch64::ADDXri;
   }
 
-  void getADRReg(const MCInst &Inst, MCPhysReg &RegName) const override {
+  MCPhysReg getADRReg(const MCInst &Inst) const {
     assert((isADR(Inst) || isADRP(Inst)) && "Not an ADR instruction");
     assert(MCPlus::getNumPrimeOperands(Inst) != 0 &&
            "No operands for ADR instruction");
     assert(Inst.getOperand(0).isReg() &&
            "Unexpected operand in ADR instruction");
-    RegName = Inst.getOperand(0).getReg();
+    return Inst.getOperand(0).getReg();
+  }
+
+  InstructionListType undoAdrpAddRelaxation(const MCInst &ADRInst,
+                                            MCContext *Ctx) const override {
+    assert(isADR(ADRInst) && "ADR instruction expected");
+
+    const MCPhysReg Reg = getADRReg(ADRInst);
+    const MCSymbol *Target = getTargetSymbol(ADRInst);
+    const uint64_t Addend = getTargetAddend(ADRInst);
+    return materializeAddress(Target, Ctx, Reg, Addend);
   }
 
   bool isTB(const MCInst &Inst) const {

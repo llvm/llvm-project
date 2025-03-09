@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/Module.h"
@@ -1289,6 +1290,53 @@ struct TypeIdSummary {
   std::map<uint64_t, WholeProgramDevirtResolution> WPDRes;
 };
 
+class CfiFunctionIndex {
+  std::set<std::string, std::less<>> Index;
+
+public:
+  class GUIDIterator
+      : public iterator_adaptor_base<
+            GUIDIterator, std::set<std::string, std::less<>>::const_iterator,
+            std::forward_iterator_tag, GlobalValue::GUID> {
+    using base = iterator_adaptor_base<
+        GUIDIterator, std::set<std::string, std::less<>>::const_iterator,
+        std::forward_iterator_tag, GlobalValue::GUID>;
+
+  public:
+    GUIDIterator() = default;
+    explicit GUIDIterator(std::set<std::string, std::less<>>::const_iterator I)
+        : base(std::move(I)) {}
+
+    GlobalValue::GUID operator*() const {
+      return GlobalValue::getGUID(
+          GlobalValue::dropLLVMManglingEscape(*this->wrapped()));
+    }
+  };
+
+  CfiFunctionIndex() = default;
+  template <typename It> CfiFunctionIndex(It B, It E) : Index(B, E) {}
+
+  std::set<std::string, std::less<>>::const_iterator begin() const {
+    return Index.begin();
+  }
+
+  std::set<std::string, std::less<>>::const_iterator end() const {
+    return Index.end();
+  }
+
+  GUIDIterator guid_begin() const { return GUIDIterator(Index.begin()); }
+  GUIDIterator guid_end() const { return GUIDIterator(Index.end()); }
+  iterator_range<GUIDIterator> guids() const {
+    return make_range(guid_begin(), guid_end());
+  }
+
+  template <typename... Args> void emplace(Args &&...A) {
+    Index.emplace(std::forward<Args>(A)...);
+  }
+
+  size_t count(StringRef S) const { return Index.count(S); }
+};
+
 /// 160 bits SHA1
 using ModuleHash = std::array<uint32_t, 5>;
 
@@ -1418,8 +1466,8 @@ private:
   /// True if some of the FunctionSummary contains a ParamAccess.
   bool HasParamAccess = false;
 
-  std::set<std::string, std::less<>> CfiFunctionDefs;
-  std::set<std::string, std::less<>> CfiFunctionDecls;
+  CfiFunctionIndex CfiFunctionDefs;
+  CfiFunctionIndex CfiFunctionDecls;
 
   // Used in cases where we want to record the name of a global, but
   // don't have the string owned elsewhere (e.g. the Strtab on a module).
@@ -1667,19 +1715,11 @@ public:
     return I == OidGuidMap.end() ? 0 : I->second;
   }
 
-  std::set<std::string, std::less<>> &cfiFunctionDefs() {
-    return CfiFunctionDefs;
-  }
-  const std::set<std::string, std::less<>> &cfiFunctionDefs() const {
-    return CfiFunctionDefs;
-  }
+  CfiFunctionIndex &cfiFunctionDefs() { return CfiFunctionDefs; }
+  const CfiFunctionIndex &cfiFunctionDefs() const { return CfiFunctionDefs; }
 
-  std::set<std::string, std::less<>> &cfiFunctionDecls() {
-    return CfiFunctionDecls;
-  }
-  const std::set<std::string, std::less<>> &cfiFunctionDecls() const {
-    return CfiFunctionDecls;
-  }
+  CfiFunctionIndex &cfiFunctionDecls() { return CfiFunctionDecls; }
+  const CfiFunctionIndex &cfiFunctionDecls() const { return CfiFunctionDecls; }
 
   /// Add a global value summary for a value.
   void addGlobalValueSummary(const GlobalValue &GV,

@@ -119,7 +119,7 @@ class SiFiveP400VSM3CCycles<string mx> {
 
 def SiFiveP400Model : SchedMachineModel {
   let IssueWidth = 3;         // 3 micro-ops are dispatched per cycle.
-  let MicroOpBufferSize = 56; // Max micro-ops that can be buffered.
+  let MicroOpBufferSize = 96; // Max micro-ops that can be buffered.
   let LoadLatency = 4;        // Cycles for loads to access the cache.
   let MispredictPenalty = 9;  // Extra cycles for a mispredicted branch.
   let UnsupportedFeatures = [HasStdExtZbkb, HasStdExtZbkc, HasStdExtZbkx,

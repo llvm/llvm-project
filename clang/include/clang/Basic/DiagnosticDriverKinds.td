@@ -563,6 +563,11 @@ def err_test_module_file_extension_format : Error<
 def err_drv_module_output_with_multiple_arch : Error<
   "option '-fmodule-output' cannot be used with multiple arch options">;
 
+def err_drv_reduced_module_output_overrided : Warning<
+  "the implicit output of reduced BMI may be overrided by the output file specified by '--precompile'. "
+  "please consider use '-fmodule-output=' to specify the output file for reduced BMI explicitly">,
+  InGroup<DiagGroup<"reduced-bmi-output-overrided">>;
+
 def warn_drv_delayed_template_parsing_after_cxx20 : Warning<
   "-fdelayed-template-parsing is deprecated after C++20">,
   InGroup<DiagGroup<"delayed-template-parsing-in-cxx20">>;

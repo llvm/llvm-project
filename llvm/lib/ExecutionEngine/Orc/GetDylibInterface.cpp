@@ -11,6 +11,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/MachOUniversal.h"
+#include "llvm/Object/TapiUniversal.h"
 
 #define DEBUG_TYPE "orc"
 
