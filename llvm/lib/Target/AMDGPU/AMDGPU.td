@@ -1094,6 +1094,12 @@ def FeaturePrngInst : SubtargetFeature<"prng-inst",
   "Has v_prng_b32 instruction"
 >;
 
+def FeaturePointSampleAccel : SubtargetFeature<"point-sample-accel",
+  "HasPointSampleAccel",
+  "true",
+  "Has point sample acceleration feature"
+>;
+
 //===------------------------------------------------------------===//
 // Subtarget Features (options and debugging)
 //===------------------------------------------------------------===//
@@ -1782,20 +1788,23 @@ def FeatureISAVersion11_5_0 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_1 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
      Feature1_5xVGPRs,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_2 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
     [FeatureSALUFloatInsts,
      FeatureDPPSrc1SGPR,
-     FeatureRequiredExportPriority])>;
+     FeatureRequiredExportPriority,
+     FeaturePointSampleAccel])>;
 
 def FeatureISAVersion11_5_3 : FeatureSet<
   !listconcat(FeatureISAVersion11_Common.Features,
