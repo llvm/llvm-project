@@ -8,8 +8,7 @@ module m
   use iso_c_binding
 
 contains
-  integer function target_has_device_addr()
-    integer :: errors
+  subroutine target_has_device_addr()
     integer, target :: x
     integer, pointer :: first_scalar_device_addr
     type(c_ptr) :: cptr_scalar1
@@ -17,7 +16,6 @@ contains
     integer :: res1, res2
 
     nullify (first_scalar_device_addr)
-    errors = 0
     x = 10
 
     !$omp target enter data map(to: x)
@@ -33,19 +31,15 @@ contains
       res1 = first_scalar_device_addr
       res2 = x
     !$omp end target
-    target_has_device_addr = errors
     print *, "res1", res1, "res2", res2
-  end function
+  end subroutine
 end module
 
 
 program p
   use m
-  integer :: errors
 
-  errors = target_has_device_addr()
-  print *, "errors=", errors
+  call target_has_device_addr()
 end
 
 !CHECK: res1 11 res2 11
-!CHECK: errors= 0
