@@ -4071,12 +4071,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     ShadowArgs.append(1, SrcShadowPtr);
     ShadowArgs.append(1, Mask);
 
-    CallInst *CI;
+    CallInst *CI =
+        IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
     // The AVX masked load intrinsics do not have integer variants. We use the
     // floating-point variants, and assume that the intrinsic will happily copy
     // the shadows even if they are interpreted as "invalid" floating-point
     // values (NaN etc.).
-    CI = IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(), ShadowArgs);
     setShadow(&I, IRB.CreateBitCast(CI, getShadowTy(&I)));
 
     if (!MS.TrackOrigins)
