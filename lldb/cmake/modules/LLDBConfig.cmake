@@ -57,7 +57,7 @@ add_optional_dependency(LLDB_ENABLE_CURSES "Enable curses support in LLDB" Curse
 add_optional_dependency(LLDB_ENABLE_LZMA "Enable LZMA compression support in LLDB" LibLZMA LIBLZMA_FOUND)
 add_optional_dependency(LLDB_ENABLE_LUA "Enable Lua scripting support in LLDB" LuaAndSwig LUAANDSWIG_FOUND)
 add_optional_dependency(LLDB_ENABLE_PYTHON "Enable Python scripting support in LLDB" PythonAndSwig PYTHONANDSWIG_FOUND)
-add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION)
+add_optional_dependency(LLDB_ENABLE_LIBXML2 "Enable Libxml 2 support in LLDB" LibXml2 LIBXML2_FOUND VERSION 2.8)
 add_optional_dependency(LLDB_ENABLE_FBSDVMCORE "Enable libfbsdvmcore support in LLDB" FBSDVMCore FBSDVMCore_FOUND QUIET)
 
 option(LLDB_USE_ENTITLEMENTS "When codesigning, use entitlements if available" ON)
