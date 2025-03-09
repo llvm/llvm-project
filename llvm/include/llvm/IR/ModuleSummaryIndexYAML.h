@@ -349,11 +349,11 @@ template <> struct MappingTraits<ModuleSummaryIndex> {
     if (io.outputting()) {
       std::vector<StringRef> CfiFunctionDefs(index.CfiFunctionDefs.begin(),
                                              index.CfiFunctionDefs.end());
-      std::sort(CfiFunctionDefs.begin(), CfiFunctionDefs.end());
+      llvm::sort(CfiFunctionDefs);
       io.mapOptional("CfiFunctionDefs", CfiFunctionDefs);
       std::vector<StringRef> CfiFunctionDecls(index.CfiFunctionDecls.begin(),
                                               index.CfiFunctionDecls.end());
-      std::sort(CfiFunctionDecls.begin(), CfiFunctionDecls.end());
+      llvm::sort(CfiFunctionDecls);
       io.mapOptional("CfiFunctionDecls", CfiFunctionDecls);
     } else {
       std::vector<std::string> CfiFunctionDefs;
