@@ -1545,7 +1545,8 @@ private:
   bool isClassLayoutKnownStatically(const ObjCInterfaceDecl *ID) {
     // Test a class by checking its superclasses up to
     // its base class if it has one.
-    for (; ID; ID = ID->getSuperClass()) {
+    assert(ID != nullptr && "Passed a null class to check layout");
+    for (; ID != nullptr; ID = ID->getSuperClass()) {
       // The layout of base class NSObject
       // is guaranteed to be statically known
       if (ID->getIdentifier()->getName() == "NSObject")
@@ -1556,7 +1557,9 @@ private:
       if (!ID->getImplementation())
         return false;
     }
-    return false;
+
+    // We know the layout of all the intermediate classes and superclasses.
+    return true;
   }
 
 public:
@@ -3439,8 +3442,9 @@ void CGObjCMac::GenerateClass(const ObjCImplementationDecl *ID) {
   else if ((hasMRCWeak = hasMRCWeakIvars(CGM, ID)))
     Flags |= FragileABI_Class_HasMRCWeakIvars;
 
-  CharUnits Size =
-      CGM.getContext().getASTObjCImplementationLayout(ID).getSize();
+  CharUnits Size = CGM.getContext()
+                       .getASTObjCInterfaceLayout(ID->getClassInterface())
+                       .getSize();
 
   // FIXME: Set CXX-structors flag.
   if (ID->getClassInterface()->getVisibility() == HiddenVisibility)
@@ -6330,7 +6334,7 @@ void CGObjCNonFragileABIMac::GetClassSizeInfo(const ObjCImplementationDecl *OID,
                                               uint32_t &InstanceStart,
                                               uint32_t &InstanceSize) {
   const ASTRecordLayout &RL =
-      CGM.getContext().getASTObjCImplementationLayout(OID);
+      CGM.getContext().getASTObjCInterfaceLayout(OID->getClassInterface());
 
   // InstanceSize is really instance end.
   InstanceSize = RL.getDataSize().getQuantity();

@@ -1,5 +1,8 @@
 // RUN: mlir-opt %s --transform-interpreter --split-input-file | FileCheck %s
 
+// TODO: Review the usage of `in_bounds` and remove where not affecting the
+// generated output.
+
 ///  CHECK: #[[$MAP:.*]] = affine_map<(d0, d1, d2, d3) -> (d1, 0, d3)>
 
 ///----------------------------------------------------------------------------------------
@@ -106,8 +109,8 @@ func.func @xfer_write_minor_identity_transposed_map_masked(
 ///         (neither a minor identity nor transposed minor identity map)
 /// OUT 1: vector.broadcast + vector.transfer_write
 ///         (transposed minor identity)
-/// OUT 2: vector.transfer_write -> vector.broadcast + vector.transpose + vector.transfer_write
-///         (minor identity)
+/// OUT 2: vector.transfer_write -> vector.broadcast + vector.transpose
+///        + vector.transfer_write (minor identity)
 ///----------------------------------------------------------------------------------------
 
 // CHECK-LABEL:   func.func @xfer_write_non_minor_identity(
@@ -233,16 +236,16 @@ func.func @xfer_write_non_minor_identity_masked_scalable(
 // CHECK-LABEL: func @xfer_write_non_minor_identity_masked_2
 //  CHECK-SAME:   %[[DEST:.*]]: tensor<?x?x?x?xf32>
 //  CHECK-SAME:   %[[VEC:.*]]: vector<14x8x16xf32>
-//  CHECK-SAME:   %[[DIM:.*]]: index, %[[IDX:.*]]: index) -> tensor<?x?x?x?xf32>
+//  CHECK-SAME:   %[[MASK:.*]]: vector<14x8x16xi1>
+//  CHECK-SAME:   %[[DIM:.*]]: index
 //   CHECK-NOT:   vector.broadcast
-//       CHECK:   vector.mask %0 { vector.transfer_write %[[VEC]], %[[DEST]]{{.*}} : vector<14x8x16xf32>, tensor<?x?x?x?xf32> } : vector<14x8x16xi1> -> tensor<?x?x?x?xf32>
+//       CHECK:   vector.mask %[[MASK]] { vector.transfer_write %[[VEC]], %[[DEST]]{{.*}} : vector<14x8x16xf32>, tensor<?x?x?x?xf32> } : vector<14x8x16xi1> -> tensor<?x?x?x?xf32>
 func.func @xfer_write_non_minor_identity_masked_2(
     %dest : tensor<?x?x?x?xf32>,
     %vec : vector<14x8x16xf32>,
-    %dim : index,
+    %mask:  vector<14x8x16xi1>,
     %idx: index) -> tensor<?x?x?x?xf32> {
 
-  %mask = vector.create_mask %dim, %dim, %dim : vector<14x8x16xi1>
   %res = vector.mask %mask {
     vector.transfer_write %vec, %dest[%idx, %idx, %idx, %idx] {
       in_bounds = [false, false, true],
@@ -259,29 +262,27 @@ func.func @xfer_write_non_minor_identity_masked_2(
 ///
 /// IN: vector.transfer_read
 ///     (_transposed_ minor identity permutation map, with 0 or more broadcast dims)
-/// OUT: vector.transpose + vector.transfer_write
+/// OUT: vector.transfer_read + vector.broadcast + vector.transpose
 ///     (minor identity permutation map with 0 or more leading broadcast dims)
 ///----------------------------------------------------------------------------------------
 /// TODO: Inner broadcast dim - see also the block at the bottom of this file
 
-// CHECK-LABEL:   func.func @xfer_read_minor_identity_tranposed_with_mask
+// CHECK-LABEL:   func.func @xfer_read_minor_identity_transposed_with_mask
 // CHECK-SAME:      %[[MEM:.*]]: memref<?x?xf32>,
-// CHECK-SAME:      %[[DIM_1:.*]]: index, %[[DIM_2:.*]]: index, %[[IDX:.*]]: index) -> vector<8x4x2xf32> {
+// CHECK-SAME:      %[[MASK:.*]]: vector<2x4xi1>
+// CHECK-SAME:      %[[IDX:.*]]: index
 // CHECK:           %[[PASS_THROUGH:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[MASK:.*]] = vector.create_mask %[[DIM_2]], %[[DIM_1]] : vector<2x4xi1>
 // CHECK:           %[[T_READ:.*]] = vector.transfer_read %[[MEM]]{{\[}}%[[IDX]], %[[IDX]]], %[[PASS_THROUGH]], %[[MASK]] {in_bounds = [true, true]} : memref<?x?xf32>, vector<2x4xf32>
 // CHECK:           %[[BCAST:.*]] = vector.broadcast %[[T_READ]] : vector<2x4xf32> to vector<8x2x4xf32>
 // CHECK:           %[[TRANSPOSE:.*]] = vector.transpose %[[BCAST]], [0, 2, 1] : vector<8x2x4xf32> to vector<8x4x2xf32>
 // CHECK:           return %[[TRANSPOSE]] : vector<8x4x2xf32>
-func.func @xfer_read_minor_identity_tranposed_with_mask(
+func.func @xfer_read_minor_identity_transposed_with_mask(
     %mem: memref<?x?xf32>,
-    %dim_1: index,
-    %dim_2: index,
+    %mask: vector<2x4xi1>,
     %idx: index) -> (vector<8x4x2xf32>) {
 
   %pad = arith.constant 0.000000e+00 : f32
 
-  %mask = vector.create_mask %dim_2, %dim_1 : vector<2x4xi1>
   %res = vector.transfer_read %mem[%idx, %idx], %pad, %mask {
     in_bounds = [true, true, true],
     permutation_map = affine_map<(d0, d1) -> (0, d1, d0)>
@@ -290,24 +291,22 @@ func.func @xfer_read_minor_identity_tranposed_with_mask(
   return %res : vector<8x4x2xf32>
 }
 
-// CHECK-LABEL:   func.func @xfer_read_minor_identity_tranposed_with_mask_scalable(
+// CHECK-LABEL:   func.func @xfer_read_minor_identity_transposed_with_mask_scalable(
 // CHECK-SAME:      %[[MEM:.*]]: memref<?x?xf32>,
-// CHECK-SAME:      %[[DIM_1:.*]]: index, %[[DIM_2:.*]]: index, %[[IDX:.*]]: index) -> vector<8x[4]x2xf32> {
+// CHECK-SAME:      %[[MASK:.*]]: vector<2x[4]xi1>
+// CHECK-SAME:      %[[IDX:.*]]: index
 // CHECK:           %[[PAD:.*]] = arith.constant 0.000000e+00 : f32
-// CHECK:           %[[MASK:.*]] = vector.create_mask %[[DIM_2]], %[[DIM_1]] : vector<2x[4]xi1>
 // CHECK:           %[[T_READ:.*]] = vector.transfer_read %[[MEM]]{{\[}}%[[IDX]], %[[IDX]]], %[[PAD]], %[[MASK]] {in_bounds = [true, true]} : memref<?x?xf32>, vector<2x[4]xf32>
 // CHECK:           %[[BCAST:.*]] = vector.broadcast %[[T_READ]] : vector<2x[4]xf32> to vector<8x2x[4]xf32>
 // CHECK:           %[[TRANSPOSE:.*]] = vector.transpose %[[BCAST]], [0, 2, 1] : vector<8x2x[4]xf32> to vector<8x[4]x2xf32>
 // CHECK:           return %[[TRANSPOSE]] : vector<8x[4]x2xf32>
-func.func @xfer_read_minor_identity_tranposed_with_mask_scalable(
+func.func @xfer_read_minor_identity_transposed_with_mask_scalable(
     %mem: memref<?x?xf32>,
-    %dim_1: index,
-    %dim_2: index,
+    %mask: vector<2x[4]xi1>,
     %idx: index) -> (vector<8x[4]x2xf32>) {
 
   %pad = arith.constant 0.000000e+00 : f32
 
-  %mask = vector.create_mask %dim_2, %dim_1 : vector<2x[4]xi1>
   %res = vector.transfer_read %mem[%idx, %idx], %pad, %mask {
     in_bounds = [true, true, true],
     permutation_map = affine_map<(d0, d1) -> (0, d1, d0)>
@@ -319,24 +318,26 @@ func.func @xfer_read_minor_identity_tranposed_with_mask_scalable(
 // Masked version is not supported
 
 // CHECK-LABEL: func @xfer_read_minor_identity_transposed_masked(
-//  CHECK-SAME:   %[[DEST:.*]]: tensor<?x1xf32>,
-//  CHECK-SAME:   %[[MASK:.*]]: vector<4x1xi1>
+//  CHECK-SAME:   %[[DEST:.*]]: tensor<?x?xf32>,
+//  CHECK-SAME:   %[[MASK:.*]]: vector<2x4xi1>
+//  CHECK-SAME:   %[[IDX:.*]]: index
 //   CHECK-NOT:   vector.transpose
-//       CHECK:   vector.mask %[[MASK]] { vector.transfer_read %[[DEST]]{{.*}}: tensor<?x1xf32>, vector<1x4x4xf32> } : vector<4x1xi1> -> vector<1x4x4xf32>
+//       CHECK:   vector.mask %[[MASK]] { vector.transfer_read %[[DEST]]{{.*}}: tensor<?x?xf32>, vector<8x4x2xf32> } : vector<2x4xi1> -> vector<8x4x2xf32>
 func.func @xfer_read_minor_identity_transposed_masked(
-    %dest: tensor<?x1xf32>,
-    %mask : vector<4x1xi1>,
-    %idx: index) {
+    %dest: tensor<?x?xf32>,
+    %mask: vector<2x4xi1>,
+    %idx: index) -> (vector<8x4x2xf32>) {
 
   %pad = arith.constant 0.000000e+00 : f32
-  %3 = vector.mask %mask {
-    vector.transfer_read %dest[%idx, %idx], %pad {
-      permutation_map = affine_map<(d0, d1) -> (d1, 0, d0)>
-    } : tensor<?x1xf32>, vector<1x4x4xf32>
-  } : vector<4x1xi1> -> vector<1x4x4xf32>
 
-  "test.some_use"(%3) : (vector<1x4x4xf32>) -> ()
-  return
+  %res = vector.mask %mask {
+    vector.transfer_read %dest[%idx, %idx], %pad {
+    in_bounds = [true, true, true],
+    permutation_map = affine_map<(d0, d1) -> (0, d1, d0)>
+    } : tensor<?x?xf32>, vector<8x4x2xf32>
+  } : vector<2x4xi1> -> vector<8x4x2xf32>
+
+  return %res : vector<8x4x2xf32>
 }
 
 // CHECK-LABEL:  func.func @xfer_read_minor_identity_transposed_masked_scalable(
@@ -346,7 +347,7 @@ func.func @xfer_read_minor_identity_transposed_masked(
 //       CHECK:    %[[T_READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[DEST]]{{.*}} : tensor<?x?xf32>, vector<8x[4]x2xf32> } : vector<2x[4]xi1> -> vector<8x[4]x2xf32>
 func.func @xfer_read_minor_identity_transposed_masked_scalable(
   %dest: tensor<?x?xf32>,
-  %mask : vector<2x[4]xi1>,
+  %mask: vector<2x[4]xi1>,
   %idx: index) -> vector<8x[4]x2xf32> {
 
   %pad = arith.constant 0.000000e+00 : f32
@@ -362,9 +363,30 @@ func.func @xfer_read_minor_identity_transposed_masked_scalable(
 }
 
 ///----------------------------------------------------------------------------------------
-/// vector.transfer_read
+/// [Pattern: TransferOpReduceRank]
+///
+/// IN: vector.transfer_read (minor identity map + broadcast)
+/// OUT: vector.transfer_read + vector.broadcast
 ///----------------------------------------------------------------------------------------
-/// TODO: Review and categorize
+
+// CHECK-LABEL:   func.func @xfer_read_minor_identitiy_bcast_dims
+//  CHECK-SAME:     %[[MEM:.*]]: memref<?x?x?x?xf32>, %[[IDX:.*]]: index) -> vector<8x4x2x3xf32> {
+//       CHECK:     %[[T_READ:.*]] = vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]]{{.*}} permutation_map = #[[$MAP]]} : memref<?x?x?x?xf32>, vector<4x2x3xf32>
+//       CHECK:     %[[BC:.*]] = vector.broadcast %[[T_READ]] : vector<4x2x3xf32> to vector<8x4x2x3xf32>
+//       CHECK:     return %[[BC]] : vector<8x4x2x3xf32>
+func.func @xfer_read_minor_identitiy_bcast_dims(
+    %mem: memref<?x?x?x?xf32>,
+    %idx: index) -> vector<8x4x2x3xf32> {
+
+  %pad = arith.constant 0.000000e+00 : f32
+
+  %res = vector.transfer_read %mem[%idx, %idx, %idx, %idx], %pad {
+    in_bounds = [true, true, true, true],
+    permutation_map = affine_map<(d0, d1, d2, d3) -> (0, d1, 0, d3)>
+  } : memref<?x?x?x?xf32>, vector<8x4x2x3xf32>
+
+  return %res : vector<8x4x2x3xf32>
+}
 
 // CHECK-LABEL:   func.func @xfer_read_minor_identitiy_bcast_dims_scalable
 //  CHECK-SAME:     %[[MEM:.*]]: memref<?x?x?x?xf32>, %[[IDX:.*]]: index) -> vector<8x[4]x2x3xf32> {
@@ -372,7 +394,8 @@ func.func @xfer_read_minor_identity_transposed_masked_scalable(
 //       CHECK:     %[[BC:.*]] = vector.broadcast %[[T_READ]] : vector<[4]x2x3xf32> to vector<8x[4]x2x3xf32>
 //       CHECK:     return %[[BC]] : vector<8x[4]x2x3xf32>
 func.func @xfer_read_minor_identitiy_bcast_dims_scalable(
-    %mem: memref<?x?x?x?xf32>, %idx: index) -> vector<8x[4]x2x3xf32> {
+    %mem: memref<?x?x?x?xf32>,
+    %idx: index) -> vector<8x[4]x2x3xf32> {
 
   %pad = arith.constant 0.000000e+00 : f32
 
@@ -384,32 +407,80 @@ func.func @xfer_read_minor_identitiy_bcast_dims_scalable(
   return %res : vector<8x[4]x2x3xf32>
 }
 
+// CHECK-LABEL:   func.func @xfer_read_minor_identitiy_bcast_dims_with_mask
+//  CHECK-SAME:     %[[MEM:.*]]: memref<?x?x?x?xf32>
+//  CHECK-SAME:     %[[MASK:.*]]: vector<4x3xi1>
+//  CHECK-SAME:     %[[IDX:.*]]: index) -> vector<8x4x2x3xf32>
+//       CHECK:     %[[PASS_THROUGH:.*]] = arith.constant 0.000000e+00 : f32
+//       CHECK:     %[[T_READ:.*]] = vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]], %[[PASS_THROUGH]], %[[MASK]]{{.*}} permutation_map = #[[$MAP]]} : memref<?x?x?x?xf32>, vector<4x2x3xf32>
+//       CHECK:     %[[BC:.*]] = vector.broadcast %[[T_READ]] : vector<4x2x3xf32> to vector<8x4x2x3xf32>
+//       CHECK:     return %[[BC]] : vector<8x4x2x3xf32>
+func.func @xfer_read_minor_identitiy_bcast_dims_with_mask(
+    %mem: memref<?x?x?x?xf32>,
+    %mask: vector<4x3xi1>,
+    %idx: index) -> vector<8x4x2x3xf32> {
+
+  %pad = arith.constant 0.000000e+00 : f32
+
+  %res = vector.transfer_read %mem[%idx, %idx, %idx, %idx], %pad, %mask {
+    in_bounds = [true, true, true, true],
+    permutation_map = affine_map<(d0, d1, d2, d3) -> (0, d1, 0, d3)>
+  } : memref<?x?x?x?xf32>, vector<8x4x2x3xf32>
+
+  return %res : vector<8x4x2x3xf32>
+}
+
+// CHECK-LABEL:   func.func @xfer_read_minor_identitiy_bcast_dims_with_mask_scalable
+//  CHECK-SAME:     %[[MEM:.*]]: memref<?x?x?x?xf32>
+//  CHECK-SAME:     %[[MASK:.*]]: vector<[4]x3xi1>
+//  CHECK-SAME:     %[[IDX:.*]]: index) -> vector<8x[4]x2x3xf32>
+//       CHECK:     %[[PASS_THROUGH:.*]] = arith.constant 0.000000e+00 : f32
+//       CHECK:     %[[T_READ:.*]] = vector.transfer_read %[[MEM]][%[[IDX]], %[[IDX]], %[[IDX]], %[[IDX]]], %[[PASS_THROUGH]], %[[MASK]]{{.*}} permutation_map = #[[$MAP]]} : memref<?x?x?x?xf32>, vector<[4]x2x3xf32>
+//       CHECK:     %[[BC:.*]] = vector.broadcast %[[T_READ]] : vector<[4]x2x3xf32> to vector<8x[4]x2x3xf32>
+//       CHECK:     return %[[BC]] : vector<8x[4]x2x3xf32>
+func.func @xfer_read_minor_identitiy_bcast_dims_with_mask_scalable(
+    %mem: memref<?x?x?x?xf32>,
+    %mask: vector<[4]x3xi1>,
+    %idx: index) -> vector<8x[4]x2x3xf32> {
+
+  %pad = arith.constant 0.000000e+00 : f32
+
+  %res = vector.transfer_read %mem[%idx, %idx, %idx, %idx], %pad, %mask {
+    in_bounds = [true, true, true, true],
+    permutation_map = affine_map<(d0, d1, d2, d3) -> (0, d1, 0, d3)>
+  } : memref<?x?x?x?xf32>, vector<8x[4]x2x3xf32>
+
+  return %res : vector<8x[4]x2x3xf32>
+}
+
 // Masked version is not supported
 
 // CHECK-LABEL:   func.func @xfer_read_minor_identitiy_bcast_dims_masked
 //  CHECK-SAME:     %[[MEM:.*]]: memref<?x?x?x?xf32>,
-//  CHECK-SAME:     %[[DIM:.*]]: index,
-//  CHECK-SAME:     %[[IDX:.*]]: index) -> vector<8x[4]x2x3xf32> {
+//  CHECK-SAME:     %[[MASK:.*]]: vector<4x3xi1>
+//  CHECK-SAME:     %[[IDX:.*]]: index) -> vector<8x4x2x3xf32> {
 //   CHECK-NOT:     vector.broadcast
-//       CHECK:     %[[MASK:.*]] = vector.mask %0 { vector.transfer_read %[[MEM]]{{.*}} : memref<?x?x?x?xf32>, vector<8x[4]x2x3xf32> } : vector<[4]x3xi1> -> vector<8x[4]x2x3xf32>
+//       CHECK:     vector.mask %[[MASK]] { vector.transfer_read %[[MEM]]{{.*}} : memref<?x?x?x?xf32>, vector<8x4x2x3xf32> } : vector<4x3xi1> -> vector<8x4x2x3xf32>
 func.func @xfer_read_minor_identitiy_bcast_dims_masked(
     %mem: memref<?x?x?x?xf32>,
-    %dim: index,
-    %idx: index) -> vector<8x[4]x2x3xf32> {
+    %mask: vector<4x3xi1>,
+    %idx: index) -> vector<8x4x2x3xf32> {
 
   %pad = arith.constant 0.000000e+00 : f32
-  %mask = vector.create_mask %dim, %dim: vector<[4]x3xi1>
 
   %res = vector.mask %mask {
     vector.transfer_read %mem[%idx, %idx, %idx, %idx], %pad {
       in_bounds = [true, true, true, true],
       permutation_map = affine_map<(d0, d1, d2, d3) -> (0, d1, 0, d3)>
-    } : memref<?x?x?x?xf32>, vector<8x[4]x2x3xf32>
-  } : vector<[4]x3xi1> -> vector<8x[4]x2x3xf32>
+    } : memref<?x?x?x?xf32>, vector<8x4x2x3xf32>
+  } : vector<4x3xi1> -> vector<8x4x2x3xf32>
 
-  return %res : vector<8x[4]x2x3xf32>
+  return %res : vector<8x4x2x3xf32>
 }
 
+///----------------------------------------------------------------------------------------
+//  TD sequence
+///----------------------------------------------------------------------------------------
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%module_op: !transform.any_op {transform.readonly}) {
     %f = transform.structured.match ops{["func.func"]} in %module_op

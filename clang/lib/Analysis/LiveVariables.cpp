@@ -664,18 +664,18 @@ void LiveVariables::dumpExprLiveness(const SourceManager &M) {
 }
 
 void LiveVariablesImpl::dumpExprLiveness(const SourceManager &M) {
-  auto ByBeginLoc = [&M](const Expr *L, const Expr *R) {
-    return M.isBeforeInTranslationUnit(L->getBeginLoc(), R->getBeginLoc());
+  const ASTContext &Ctx = analysisContext.getASTContext();
+  auto ByIDs = [&Ctx](const Expr *L, const Expr *R) {
+    return L->getID(Ctx) < R->getID(Ctx);
   };
 
   // Don't iterate over blockEndsToLiveness directly because it's not sorted.
   for (const CFGBlock *B : *analysisContext.getCFG()) {
-
     llvm::errs() << "\n[ B" << B->getBlockID()
                  << " (live expressions at block exit) ]\n";
     std::vector<const Expr *> LiveExprs;
     llvm::append_range(LiveExprs, blocksEndToLiveness[B].liveExprs);
-    llvm::sort(LiveExprs, ByBeginLoc);
+    llvm::sort(LiveExprs, ByIDs);
     for (const Expr *E : LiveExprs) {
       llvm::errs() << "\n";
       E->dump();

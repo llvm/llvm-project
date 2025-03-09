@@ -151,6 +151,20 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  strftime_l
+  SRCS
+    strftime_l.cpp
+  HDRS
+    strftime_l.h
+  DEPENDS
+    libc.hdr.types.locale_t
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_tm
+    libc.src.stdio.printf_core.writer
+    libc.src.time.strftime_core.strftime_main
+)
+
+add_entrypoint_object(
   time
   SRCS
     time.cpp

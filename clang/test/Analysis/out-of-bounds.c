@@ -188,30 +188,82 @@ int test_cast_to_unsigned(signed char x) {
   if (x >= 0)
     return x;
   // FIXME: Here the analyzer ignores the signed -> unsigned cast, and manages to
-  // load a negative value from an unsigned variable. This causes an underflow
-  // report, which is an ugly false positive.
+  // load a negative value from an unsigned variable.
   // The underlying issue is tracked by Github ticket #39492.
   clang_analyzer_value(y); // expected-warning {{8s:{ [-128, -1] } }}
-  return table[y]; // expected-warning {{Out of bound access to memory preceding}}
+  // However, a hack in the ArrayBound checker suppresses the false positive
+  // underflow report that would be generated here.
+  return table[y]; // no-warning
 }
 
 int test_cast_to_unsigned_overflow(signed char x) {
   unsigned char y = x;
   if (x >= 0)
     return x;
-  // A variant of 'test_cast_to_unsigned' where the correct behavior would be
-  // an overflow report (because the negative values are cast to `unsigned
-  // char` values that are too large).
-  // FIXME: See comment in 'test_cast_to_unsigned'.
+  // FIXME: As in 'test_cast_to_unsigned', the analyzer thinks that this
+  // unsigned variable contains a negative value.
   clang_analyzer_value(y); // expected-warning {{8s:{ [-128, -1] } }}
-  return small_table[y]; // expected-warning {{Out of bound access to memory preceding}}
+  // FIXME: The following subscript expression should produce an overflow
+  // report (because negative signed char corresponds to unsigned char >= 128);
+  // but the hack in ArrayBound just silences reports and cannot "restore" the
+  // real execution paths.
+  return small_table[y]; // no-warning
 }
 
 int test_negative_offset_with_unsigned_idx(void) {
   // An example where the subscript operator uses an unsigned index, but the
-  // underflow report is still justified. (We should try to keep this if we
-  // silence false positives like the one in 'test_cast_to_unsigned'.)
+  // underflow report is still justified.
   int *p = table - 10;
   unsigned idx = 2u;
   return p[idx]; // expected-warning {{Out of bound access to memory preceding}}
+}
+
+struct three_words { int c[3]; };
+struct seven_words { int c[7]; };
+void partially_in_bounds(void) {
+  struct seven_words c;
+  struct three_words a, *p = (struct three_words *)&c;
+  p[0] = a; // no-warning
+  p[1] = a; // no-warning
+  p[2] = a; // should warn
+  // FIXME: This is an overflow, but currently security.ArrayBound only checks
+  // that the _beginning_ of the accessed element is within bounds.
+}
+
+void vla(int a) {
+  if (a == 5) {
+    int x[a];
+    x[4] = 4; // no-warning
+    x[5] = 5; // expected-warning{{Out of bound access}}
+  }
+}
+
+void sizeof_vla(int a) {
+  // FIXME: VLA modeling is not good enough to cover this case.
+  if (a == 5) {
+    char x[a];
+    int y[sizeof(x)];
+    y[4] = 4; // no-warning
+    y[5] = 5; // should be {{Out of bounds access}}
+  }
+}
+
+void sizeof_vla_2(int a) {
+  // FIXME: VLA modeling is not good enough to cover this case.
+  if (a == 5) {
+    char x[a];
+    int y[sizeof(x) / sizeof(char)];
+    y[4] = 4; // no-warning
+    y[5] = 5; // should be {{Out of bounds access}}
+  }
+}
+
+void sizeof_vla_3(int a) {
+  // FIXME: VLA modeling is not good enough to cover this case.
+  if (a == 5) {
+    char x[a];
+    int y[sizeof(*&*&*&x)];
+    y[4] = 4; // no-warning
+    y[5] = 5; // should be {{Out of bounds access}}
+  }
 }

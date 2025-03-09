@@ -13,5 +13,5 @@ add_llvm_example(external-hello-world
 
 target_link_libraries(external-hello-world
   PRIVATE
-    flang_rt.runtime
+    flang_rt.runtime.default
   )

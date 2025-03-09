@@ -133,6 +133,10 @@ program main
   !$cuf kernel do <<< 1, 2 >>>
   do concurrent (j=1:10)
   end do
+  !ERROR: !$CUF KERNEL DO (2) must be followed by a DO CONCURRENT construct with at least 2 indices
+  !$cuf kernel do(2) <<< 1, 2 >>>
+  do concurrent (j=1:10)
+  end do
   !$cuf kernel do <<< 1, 2 >>>
   do 1 j=1,10
 1 continue ! ok

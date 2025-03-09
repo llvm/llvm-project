@@ -626,6 +626,8 @@ namespace ThreeWayCmp {
   constexpr int k = (1 <=> 1, 0); // both-warning {{comparison result unused}}
   static_assert(k== 0, "");
 
+  static_assert(__builtin_nanf("") <=> __builtin_nanf("") == -127, "");
+
   /// Pointers.
   constexpr int a[] = {1,2,3};
   constexpr int b[] = {1,2,3};
@@ -895,7 +897,7 @@ namespace VirtDtor {
 }
 
 namespace TemporaryInNTTP {
-  template<auto n> struct B { /* ... */ };
+  template<auto n> struct B { /* ... */ }; // both-note {{template parameter is declared here}}
   struct J1 {
     J1 *self=this;
   };

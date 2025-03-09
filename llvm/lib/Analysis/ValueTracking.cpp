@@ -1984,7 +1984,7 @@ static void computeKnownBitsFromOperator(const Operator *I,
         const ConstantRange Range = getVScaleRange(II->getFunction(), BitWidth);
         uint64_t SEW = RISCVVType::decodeVSEW(
             cast<ConstantInt>(II->getArgOperand(HasAVL))->getZExtValue());
-        RISCVII::VLMUL VLMUL = static_cast<RISCVII::VLMUL>(
+        RISCVVType::VLMUL VLMUL = static_cast<RISCVVType::VLMUL>(
             cast<ConstantInt>(II->getArgOperand(1 + HasAVL))->getZExtValue());
         uint64_t MaxVLEN =
             Range.getUnsignedMax().getZExtValue() * RISCV::RVVBitsPerBlock;
@@ -3987,6 +3987,31 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
   if (auto *U = dyn_cast<Operator>(V)) {
     switch (Operator::getOpcode(V)) {
     default: break;
+    case Instruction::BitCast: {
+      Value *Src = U->getOperand(0);
+      Type *SrcTy = Src->getType();
+
+      // Skip if the source type is not an integer or integer vector type
+      // This ensures we only process integer-like types
+      if (!SrcTy->isIntOrIntVectorTy())
+        break;
+
+      unsigned SrcBits = SrcTy->getScalarSizeInBits();
+
+      // Bitcast 'large element' scalar/vector to 'small element' vector.
+      if ((SrcBits % TyBits) != 0)
+        break;
+
+      // Only proceed if the destination type is a fixed-size vector
+      if (isa<FixedVectorType>(Ty)) {
+        // Fast case - sign splat can be simply split across the small elements.
+        // This works for both vector and scalar sources
+        Tmp = ComputeNumSignBits(Src, Depth + 1, Q);
+        if (Tmp == SrcBits)
+          return TyBits;
+      }
+      break;
+    }
     case Instruction::SExt:
       Tmp = TyBits - U->getOperand(0)->getType()->getScalarSizeInBits();
       return ComputeNumSignBits(U->getOperand(0), DemandedElts, Depth + 1, Q) +
@@ -7824,6 +7849,8 @@ static bool isGuaranteedNotToBeUndefOrPoison(
       unsigned Num = PN->getNumIncomingValues();
       bool IsWellDefined = true;
       for (unsigned i = 0; i < Num; ++i) {
+        if (PN == PN->getIncomingValue(i))
+          continue;
         auto *TI = PN->getIncomingBlock(i)->getTerminator();
         if (!isGuaranteedNotToBeUndefOrPoison(PN->getIncomingValue(i), AC, TI,
                                               DT, Depth + 1, Kind)) {
@@ -8175,14 +8202,6 @@ static bool handleGuaranteedWellDefinedOps(const Instruction *I,
   return false;
 }
 
-void llvm::getGuaranteedWellDefinedOps(
-    const Instruction *I, SmallVectorImpl<const Value *> &Operands) {
-  handleGuaranteedWellDefinedOps(I, [&](const Value *V) {
-    Operands.push_back(V);
-    return false;
-  });
-}
-
 /// Enumerates all operands of \p I that are guaranteed to not be poison.
 template <typename CallableT>
 static bool handleGuaranteedNonPoisonOps(const Instruction *I,
@@ -8199,14 +8218,6 @@ static bool handleGuaranteedNonPoisonOps(const Instruction *I,
   default:
     return false;
   }
-}
-
-void llvm::getGuaranteedNonPoisonOps(const Instruction *I,
-                                     SmallVectorImpl<const Value *> &Operands) {
-  handleGuaranteedNonPoisonOps(I, [&](const Value *V) {
-    Operands.push_back(V);
-    return false;
-  });
 }
 
 bool llvm::mustTriggerUB(const Instruction *I,
