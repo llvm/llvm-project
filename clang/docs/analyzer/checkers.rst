@@ -3489,7 +3489,7 @@ See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebK
 
 alpha.webkit.UnretainedLambdaCapturesChecker
 """"""""""""""""""""""""""""""""""""""""""""
-Raw pointers and references to unretained types can't be captured in lambdas. Only RetainPtr is allowed.
+Raw pointers and references to NS or CF types can't be captured in lambdas. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled, and only RetainPtr is allowed for NS types when ARC is disabled.
 
 .. code-block:: cpp
 
