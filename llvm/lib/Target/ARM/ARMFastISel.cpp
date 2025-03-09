@@ -83,15 +83,12 @@ using namespace llvm;
 namespace {
 
   // All possible address modes, plus some.
-  class Address {
-  public:
-    using BaseKind = enum {
+  struct Address {
+    enum {
       RegBase,
       FrameIndexBase
-    };
+    } BaseType = RegBase;
 
-  private:
-    BaseKind Kind = RegBase;
     union {
       unsigned Reg;
       int FI;
@@ -99,39 +96,10 @@ namespace {
 
     int Offset = 0;
 
-  public:
     // Innocuous defaults for our address.
     Address() {
       Base.Reg = 0;
     }
-
-    void setKind(BaseKind K) { Kind = K; }
-    BaseKind getKind() const { return Kind; }
-    bool isRegBase() const { return Kind == RegBase; }
-    bool isFIBase() const { return Kind == FrameIndexBase; }
-
-    void setReg(Register Reg) {
-      assert(isRegBase() && "Invalid base register access!");
-      Base.Reg = Reg.id();
-    }
-
-    Register getReg() const {
-      assert(isRegBase() && "Invalid base register access!");
-      return Base.Reg;
-    }
-
-    void setFI(int FI) {
-      assert(isFIBase() && "Invalid base frame index  access!");
-      Base.FI = FI;
-    }
-
-    int getFI() const {
-      assert(isFIBase() && "Invalid base frame index access!");
-      return Base.FI;
-    }
-
-    void setOffset(int O) { Offset = O; }
-    int getOffset() { return Offset; }
   };
 
 class ARMFastISel final : public FastISel {
@@ -770,7 +738,7 @@ bool ARMFastISel::ARMComputeAddress(const Value *Obj, Address &Addr) {
       break;
     case Instruction::GetElementPtr: {
       Address SavedAddr = Addr;
-      int TmpOffset = Addr.getOffset();
+      int TmpOffset = Addr.Offset;
 
       // Iterate through the GEP folding the constants into offsets where
       // we can.
@@ -806,7 +774,7 @@ bool ARMFastISel::ARMComputeAddress(const Value *Obj, Address &Addr) {
       }
 
       // Try to grab the base operand now.
-      Addr.setOffset(TmpOffset);
+      Addr.Offset = TmpOffset;
       if (ARMComputeAddress(U->getOperand(0), Addr)) return true;
 
       // We failed, restore everything and try the other options.
@@ -820,8 +788,8 @@ bool ARMFastISel::ARMComputeAddress(const Value *Obj, Address &Addr) {
       DenseMap<const AllocaInst*, int>::iterator SI =
         FuncInfo.StaticAllocaMap.find(AI);
       if (SI != FuncInfo.StaticAllocaMap.end()) {
-        Addr.setKind(Address::FrameIndexBase);
-        Addr.setFI(SI->second);
+        Addr.BaseType = Address::FrameIndexBase;
+        Addr.Base.FI = SI->second;
         return true;
       }
       break;
@@ -829,8 +797,8 @@ bool ARMFastISel::ARMComputeAddress(const Value *Obj, Address &Addr) {
   }
 
   // Try to get this in a register if nothing else has worked.
-  if (!Addr.getReg()) Addr.setReg(getRegForValue(Obj));
-  return Addr.getReg();
+  if (Addr.Base.Reg == 0) Addr.Base.Reg = getRegForValue(Obj);
+  return Addr.Base.Reg != 0;
 }
 
 void ARMFastISel::ARMSimplifyAddress(Address &Addr, MVT VT, bool useAM3) {
@@ -843,45 +811,45 @@ void ARMFastISel::ARMSimplifyAddress(Address &Addr, MVT VT, bool useAM3) {
     case MVT::i32:
       if (!useAM3) {
         // Integer loads/stores handle 12-bit offsets.
-        needsLowering = ((Addr.getOffset() & 0xfff) != Addr.getOffset());
+        needsLowering = ((Addr.Offset & 0xfff) != Addr.Offset);
         // Handle negative offsets.
         if (needsLowering && isThumb2)
-          needsLowering = !(Subtarget->hasV6T2Ops() && Addr.getOffset() < 0 &&
-                            Addr.getOffset() > -256);
+          needsLowering = !(Subtarget->hasV6T2Ops() && Addr.Offset < 0 &&
+                            Addr.Offset > -256);
       } else {
         // ARM halfword load/stores and signed byte loads use +/-imm8 offsets.
-        needsLowering = (Addr.getOffset() > 255 || Addr.getOffset() < -255);
+        needsLowering = (Addr.Offset > 255 || Addr.Offset < -255);
       }
       break;
     case MVT::f32:
     case MVT::f64:
       // Floating point operands handle 8-bit offsets.
-      needsLowering = ((Addr.getOffset() & 0xff) != Addr.getOffset());
+      needsLowering = ((Addr.Offset & 0xff) != Addr.Offset);
       break;
   }
 
   // If this is a stack pointer and the offset needs to be simplified then
   // put the alloca address into a register, set the base type back to
   // register and continue. This should almost never happen.
-  if (needsLowering && Addr.isFIBase()) {
+  if (needsLowering && Addr.BaseType == Address::FrameIndexBase) {
     const TargetRegisterClass *RC = isThumb2 ? &ARM::tGPRRegClass
                                              : &ARM::GPRRegClass;
     Register ResultReg = createResultReg(RC);
     unsigned Opc = isThumb2 ? ARM::t2ADDri : ARM::ADDri;
     AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                             TII.get(Opc), ResultReg)
-                            .addFrameIndex(Addr.getFI())
+                            .addFrameIndex(Addr.Base.FI)
                             .addImm(0));
-    Addr.setKind(Address::RegBase);
-    Addr.setReg(ResultReg);
+    Addr.Base.Reg = ResultReg;
+    Addr.BaseType = Address::RegBase;
   }
 
   // Since the offset is too large for the load/store instruction
   // get the reg+offset into a register.
   if (needsLowering) {
-    Addr.setReg(fastEmit_ri_(MVT::i32, ISD::ADD, Addr.getReg(),
-                                 Addr.getOffset(), MVT::i32));
-    Addr.setOffset(0);
+    Addr.Base.Reg = fastEmit_ri_(MVT::i32, ISD::ADD, Addr.Base.Reg,
+                                 Addr.Offset, MVT::i32);
+    Addr.Offset = 0;
   }
 }
 
@@ -892,12 +860,12 @@ void ARMFastISel::AddLoadStoreOperands(MVT VT, Address &Addr,
   // addrmode5 output depends on the selection dag addressing dividing the
   // offset by 4 that it then later multiplies. Do this here as well.
   if (VT.SimpleTy == MVT::f32 || VT.SimpleTy == MVT::f64)
-    Addr.setOffset(Addr.getOffset() / 4);
+    Addr.Offset /= 4;
 
   // Frame base works a bit differently. Handle it separately.
-  if (Addr.isFIBase()) {
-    int FI = Addr.getFI();
-    int Offset = Addr.getOffset();
+  if (Addr.BaseType == Address::FrameIndexBase) {
+    int FI = Addr.Base.FI;
+    int Offset = Addr.Offset;
     MachineMemOperand *MMO = FuncInfo.MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*FuncInfo.MF, FI, Offset), Flags,
         MFI.getObjectSize(FI), MFI.getObjectAlign(FI));
@@ -907,25 +875,25 @@ void ARMFastISel::AddLoadStoreOperands(MVT VT, Address &Addr,
     // ARM halfword load/stores and signed byte loads need an additional
     // operand.
     if (useAM3) {
-      int Imm = (Addr.getOffset() < 0) ? (0x100 | -Addr.getOffset()) : Addr.getOffset();
+      int Imm = (Addr.Offset < 0) ? (0x100 | -Addr.Offset) : Addr.Offset;
       MIB.addReg(0);
       MIB.addImm(Imm);
     } else {
-      MIB.addImm(Addr.getOffset());
+      MIB.addImm(Addr.Offset);
     }
     MIB.addMemOperand(MMO);
   } else {
     // Now add the rest of the operands.
-    MIB.addReg(Addr.getReg());
+    MIB.addReg(Addr.Base.Reg);
 
     // ARM halfword load/stores and signed byte loads need an additional
     // operand.
     if (useAM3) {
-      int Imm = (Addr.getOffset() < 0) ? (0x100 | -Addr.getOffset()) : Addr.getOffset();
+      int Imm = (Addr.Offset < 0) ? (0x100 | -Addr.Offset) : Addr.Offset;
       MIB.addReg(0);
       MIB.addImm(Imm);
     } else {
-      MIB.addImm(Addr.getOffset());
+      MIB.addImm(Addr.Offset);
     }
   }
   AddOptionalDefs(MIB);
@@ -944,7 +912,7 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
     case MVT::i1:
     case MVT::i8:
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.Offset < 0 && Addr.Offset > -256 && Subtarget->hasV6T2Ops())
           Opc = isZExt ? ARM::t2LDRBi8 : ARM::t2LDRSBi8;
         else
           Opc = isZExt ? ARM::t2LDRBi12 : ARM::t2LDRSBi12;
@@ -964,7 +932,7 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
         return false;
 
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.Offset < 0 && Addr.Offset > -256 && Subtarget->hasV6T2Ops())
           Opc = isZExt ? ARM::t2LDRHi8 : ARM::t2LDRSHi8;
         else
           Opc = isZExt ? ARM::t2LDRHi12 : ARM::t2LDRSHi12;
@@ -980,7 +948,7 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
         return false;
 
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.Offset < 0 && Addr.Offset > -256 && Subtarget->hasV6T2Ops())
           Opc = ARM::t2LDRi8;
         else
           Opc = ARM::t2LDRi12;
@@ -1093,7 +1061,7 @@ bool ARMFastISel::ARMEmitStore(MVT VT, Register SrcReg, Address &Addr,
     }
     case MVT::i8:
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.Offset < 0 && Addr.Offset > -256 && Subtarget->hasV6T2Ops())
           StrOpc = ARM::t2STRBi8;
         else
           StrOpc = ARM::t2STRBi12;
@@ -1107,7 +1075,7 @@ bool ARMFastISel::ARMEmitStore(MVT VT, Register SrcReg, Address &Addr,
         return false;
 
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.Offset < 0 && Addr.Offset > -256 && Subtarget->hasV6T2Ops())
           StrOpc = ARM::t2STRHi8;
         else
           StrOpc = ARM::t2STRHi12;
@@ -1122,7 +1090,7 @@ bool ARMFastISel::ARMEmitStore(MVT VT, Register SrcReg, Address &Addr,
         return false;
 
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.Offset < 0 && Addr.Offset > -256 && Subtarget->hasV6T2Ops())
           StrOpc = ARM::t2STRi8;
         else
           StrOpc = ARM::t2STRi12;
@@ -2063,9 +2031,9 @@ bool ARMFastISel::ProcessCallArgs(SmallVectorImpl<Value*> &Args,
         continue;
 
       Address Addr;
-      Addr.setKind(Address::RegBase);
-      Addr.setReg(ARM::SP);
-      Addr.setOffset(VA.getLocMemOffset());
+      Addr.BaseType = Address::RegBase;
+      Addr.Base.Reg = ARM::SP;
+      Addr.Offset = VA.getLocMemOffset();
 
       bool EmitRet = ARMEmitStore(ArgVT, Arg, Addr); (void)EmitRet;
       assert(EmitRet && "Could not emit a store for argument!");
@@ -2538,8 +2506,8 @@ bool ARMFastISel::ARMTryEmitSmallMemCpy(Address Dest, Address Src, uint64_t Len,
 
     unsigned Size = VT.getSizeInBits()/8;
     Len -= Size;
-    Dest.setOffset(Dest.getOffset() + Size);
-    Src.setOffset(Src.getOffset() + Size);
+    Dest.Offset += Size;
+    Src.Offset += Size;
   }
 
   return true;
