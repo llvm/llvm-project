@@ -1761,11 +1761,28 @@ void OmpVisitor::ProcessReductionSpecifier(
   // Creating a new scope in case the combiner expression (or clauses) use
   // reerved identifiers, like "omp_in". This is a temporary solution until
   // we deal with these in a more thorough way.
-  PushScope(Scope::Kind::OtherConstruct, nullptr);
-  Walk(std::get<parser::OmpTypeNameList>(spec.t));
-  Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
-  Walk(clauses);
-  PopScope();
+  auto &typeList{std::get<parser::OmpTypeNameList>(spec.t)};
+  for (auto &t : typeList.v) {
+    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    BeginDeclTypeSpec();
+    // We need to walk t.u because Walk(t) does it's own BeginDeclTypeSpec.
+    Walk(t.u);
+
+    const DeclTypeSpec *typeSpec{GetDeclTypeSpec()};
+    assert(typeSpec && "We should have a type here");
+    const parser::CharBlock ompVarNames[]{
+        {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}};
+
+    for (auto &nm : ompVarNames) {
+      ObjectEntityDetails details{};
+      details.set_type(*typeSpec);
+      MakeSymbol(nm, Attrs{}, std::move(details));
+    }
+    EndDeclTypeSpec();
+    Walk(std::get<std::optional<parser::OmpReductionCombiner>>(spec.t));
+    Walk(clauses);
+    PopScope();
+  }
 }
 
 bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
