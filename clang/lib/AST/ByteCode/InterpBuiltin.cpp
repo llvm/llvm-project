@@ -2059,6 +2059,9 @@ static bool interp__builtin_memchr(InterpState &S, CodePtr OpPC,
 
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call, uint32_t BuiltinID) {
+  if (!S.getASTContext().BuiltinInfo.isConstantEvaluated(BuiltinID))
+    return false;
+
   const InterpFrame *Frame = S.Current;
 
   std::optional<PrimType> ReturnT = S.getContext().classify(Call);
