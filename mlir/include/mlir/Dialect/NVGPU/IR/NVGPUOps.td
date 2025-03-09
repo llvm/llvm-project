@@ -294,10 +294,9 @@ def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
     nvgpu.device_async_wait %0
     ```
   }];
-  let arguments = (ins NVGPU_DeviceAsyncToken:$asyncDependencies,
-                       OptionalAttr<I32Attr>:$numGroups);
+  let arguments = (ins OptionalAttr<I32Attr>:$numGroups);
   let assemblyFormat = [{
-    $asyncDependencies attr-dict
+    attr-dict
   }];
 }
 
