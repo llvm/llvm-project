@@ -142,7 +142,7 @@ static bool isSymbolAvailableInC89(const llvm::StringTable &Strings,
 
   auto NameStr = Strings[BuiltinInfo.Offsets.Name];
 
-  if (NameStr.starts_with("__builtin_") || NameStr.starts_with("__arm")) {
+  if (NameStr.starts_with("__builtin_")) {
     return true;
   }
 
@@ -167,7 +167,8 @@ static bool builtinIsSupported(const llvm::StringTable &Strings,
   if (!LangOpts.Coroutines && (BuiltinInfo.Langs & COR_LANG))
     return false;
   bool isC89 = /*C89*/ LangOpts.LangStd == LangStandard::lang_c89;
-  if (isC89 && !isSymbolAvailableInC89(Strings, BuiltinInfo)) {
+  if (isC89 && BuiltinInfo.Header.ID != BuiltinInfo.Header.NO_HEADER &&
+      !isSymbolAvailableInC89(Strings, BuiltinInfo)) {
     return false;
   }
   /* MathBuiltins Unsupported */
