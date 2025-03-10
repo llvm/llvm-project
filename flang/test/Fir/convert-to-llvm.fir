@@ -2575,13 +2575,11 @@ func.func @coordinate_box_complex(%arg0: !fir.box<complex<f128>>) {
 // 2. BOX TYPE (objects wrapped in `fir.box`)
 // Derived type - basic case (1 index)
 func.func @coordinate_box_derived_1(%arg0: !fir.box<!fir.type<derived_1{field_1:i32, field_2:i32}>>) {
-  %idx = fir.field_index field_2, !fir.type<derived_1{field_1:i32, field_2:i32}>
-  %q = fir.coordinate_of %arg0, %idx : (!fir.box<!fir.type<derived_1{field_1:i32, field_2:i32}>>, !fir.field) -> !fir.ref<i32>
+  %q = fir.coordinate_of %arg0, field_2 : (!fir.box<!fir.type<derived_1{field_1:i32, field_2:i32}>>) -> !fir.ref<i32>
   return
 }
 // CHECK-LABEL: llvm.func @coordinate_box_derived_1
 // CHECK-SAME: %[[BOX:.*]]: !llvm.ptr)
-// CHECK:    %[[COORDINATE:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:    %[[DERIVED_ADDR:.*]] = llvm.getelementptr %[[BOX]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i64>)>
 // CHECK:    %[[DERIVED_VAL:.*]] = llvm.load %[[DERIVED_ADDR]] : !llvm.ptr -> !llvm.ptr
 // CHECK:    %[[SUBOBJECT_ADDR:.*]] = llvm.getelementptr %[[DERIVED_VAL]][0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"derived_1", (i32, i32)>
@@ -2589,16 +2587,12 @@ func.func @coordinate_box_derived_1(%arg0: !fir.box<!fir.type<derived_1{field_1:
 
 // Derived type - basic case (2 indices)
 func.func @coordinate_box_derived_2(%arg0: !fir.box<!fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) {
-  %idx0 = fir.field_index field_1, !fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>
-  %idx1 = fir.field_index inner2, !fir.type<another_derived{inner1:i32, inner2:f32}>
-  %q = fir.coordinate_of %arg0, %idx0, %idx1 : (!fir.box<!fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>>, !fir.field, !fir.field) -> !fir.ref<i32>
+  %q = fir.coordinate_of %arg0, field_1, inner2 : (!fir.box<!fir.type<derived_2{field_1:!fir.type<another_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) -> !fir.ref<i32>
   return
 }
 
 // CHECK-LABEL: llvm.func @coordinate_box_derived_2
 // CHECK-SAME: (%[[BOX:.*]]: !llvm.ptr)
-// CHECK-NEXT:    %[[C0_0:.*]] = llvm.mlir.constant(0 : i32) : i32
-// CHECK-NEXT:    %[[C1:.*]] = llvm.mlir.constant(1 : i32) : i32
 // CHECK:         %[[DERIVED_ADDR:.*]] = llvm.getelementptr %[[BOX]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(ptr, i{{.*}}, i{{.*}}32, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr, array<1 x i64>)>
 // CHECK-NEXT:    %[[DERIVED_VAL:.*]] = llvm.load %[[DERIVED_ADDR]] : !llvm.ptr -> !llvm.ptr
 // CHECK-NEXT:    %[[ANOTHER_DERIVED_ADDR:.*]] = llvm.getelementptr %[[DERIVED_VAL]][0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"derived_2", (struct<"another_derived", (i32, f32)>, i32)>
@@ -2683,8 +2677,7 @@ func.func @coordinate_box_array_2d(%arg0: !fir.box<!fir.array<10 x 10 x f32>>, %
 
 // 4. BOX TYPE - `fir.derived` inside `fir.array`
 func.func @coordinate_box_derived_inside_array(%arg0: !fir.box<!fir.array<10 x !fir.type<derived_3{field_1:f32, field_2:f32}>>>, %arg1 : index) {
-   %idx0 = fir.field_index field_2, !fir.type<derived_3{field_1:f32, field_2:f32}>
-   %q = fir.coordinate_of %arg0, %arg1, %idx0 : (!fir.box<!fir.array<10 x !fir.type<derived_3{field_1:f32, field_2:f32}>>>, index, !fir.field) -> !fir.ref<f32>
+   %q = fir.coordinate_of %arg0, %arg1, field_2 : (!fir.box<!fir.array<10 x !fir.type<derived_3{field_1:f32, field_2:f32}>>>, index) -> !fir.ref<f32>
    return
 }
 // CHECK-LABEL:   llvm.func @coordinate_box_derived_inside_array(
@@ -2761,8 +2754,7 @@ func.func @coordinate_array_known_size_2d_get_array(%arg0: !fir.ref<!fir.array<1
 
 // 5.2. `fir.derived`
 func.func @coordinate_ref_derived(%arg0: !fir.ref<!fir.type<dervied_4{field_1:i32, field_2:i32}>>) {
-  %idx = fir.field_index field_2, !fir.type<dervied_4{field_1:i32, field_2:i32}>
-  %q = fir.coordinate_of %arg0, %idx : (!fir.ref<!fir.type<dervied_4{field_1:i32, field_2:i32}>>, !fir.field) -> !fir.ref<i32>
+  %q = fir.coordinate_of %arg0, field_2 : (!fir.ref<!fir.type<dervied_4{field_1:i32, field_2:i32}>>) -> !fir.ref<i32>
   return
 }
 // CHECK-LABEL:   llvm.func @coordinate_ref_derived(
@@ -2774,9 +2766,7 @@ func.func @coordinate_ref_derived(%arg0: !fir.ref<!fir.type<dervied_4{field_1:i3
 // -----
 
 func.func @coordinate_ref_derived_nested(%arg0: !fir.ref<!fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) {
-  %idx0 = fir.field_index field_1, !fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>
-  %idx1 = fir.field_index inner2, !fir.type<nested_derived{inner1:i32, inner2:f32}>
-  %q = fir.coordinate_of %arg0, %idx0, %idx1 : (!fir.ref<!fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>>, !fir.field, !fir.field) -> !fir.ref<i32>
+  %q = fir.coordinate_of %arg0, field_1, inner2 : (!fir.ref<!fir.type<derived_5{field_1:!fir.type<nested_derived{inner1:i32, inner2:f32}>, field_2:i32}>>) -> !fir.ref<i32>
   return
 }
 // CHECK-LABEL:   llvm.func @coordinate_ref_derived_nested(
@@ -2788,15 +2778,15 @@ func.func @coordinate_ref_derived_nested(%arg0: !fir.ref<!fir.type<derived_5{fie
 // -----
 
 // 5.3 `fir.char`
-func.func @test_coordinate_of_char(%arr : !fir.ref<!fir.char<10, 2>>) {
+func.func @test_coordinate_of_char(%arr : !fir.ref<!fir.char<2, 10>>) {
   %1 = arith.constant 10 : i32
-  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10, 2>>, i32) -> !fir.ref<!fir.char<10>>
+  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<2, 10>>, i32) -> !fir.ref<!fir.char<2>>
   return
 }
 // CHECK-LABEL:   llvm.func @test_coordinate_of_char(
 // CHECK-SAME:    %[[VAL_0:.*]]: !llvm.ptr) {
 // CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(10 : i32) : i32
-// CHECK:           %[[VAL_2:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}%[[VAL_1]]] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.array<2 x i80>
+// CHECK:           %[[VAL_2:.*]] = llvm.getelementptr %[[VAL_0]]{{\[}}0, %[[VAL_1]]] : (!llvm.ptr, i32) -> !llvm.ptr, !llvm.array<10 x i16>
 // CHECK:           llvm.return
 // CHECK:         }
 

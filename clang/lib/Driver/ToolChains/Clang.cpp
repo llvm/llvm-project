@@ -762,7 +762,8 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     else {
       CmdArgs.push_back("-fprofile-continuous");
       // Platforms that require a bias variable:
-      if (T.isOSBinFormatELF() || T.isOSAIX()) {
+      if (T.isOSBinFormatELF() || T.isOSAIX() ||
+          T.isKnownWindowsMSVCEnvironment()) {
         CmdArgs.push_back("-mllvm");
         CmdArgs.push_back("-runtime-counter-relocation");
       }
@@ -4249,10 +4250,18 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
 
     if (Args.hasArg(options::OPT_fmodule_output_EQ))
       Args.AddLastArg(CmdArgs, options::OPT_fmodule_output_EQ);
-    else
+    else {
+      if (Args.hasArg(options::OPT__precompile) &&
+          (!Args.hasArg(options::OPT_o) ||
+           Args.getLastArg(options::OPT_o)->getValue() ==
+               getCXX20NamedModuleOutputPath(Args, Input.getBaseInput()))) {
+        D.Diag(diag::err_drv_reduced_module_output_overrided);
+      }
+
       CmdArgs.push_back(Args.MakeArgString(
           "-fmodule-output=" +
           getCXX20NamedModuleOutputPath(Args, Input.getBaseInput())));
+    }
   }
 
   // Noop if we see '-fmodules-reduced-bmi' with other translation
@@ -5996,6 +6005,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fprotect-parens");
 
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs, JA);
+
+  Args.addOptInFlag(CmdArgs, options::OPT_fatomic_remote_memory,
+                    options::OPT_fno_atomic_remote_memory);
+  Args.addOptInFlag(CmdArgs, options::OPT_fatomic_fine_grained_memory,
+                    options::OPT_fno_atomic_fine_grained_memory);
+  Args.addOptInFlag(CmdArgs, options::OPT_fatomic_ignore_denormal_mode,
+                    options::OPT_fno_atomic_ignore_denormal_mode);
 
   if (Arg *A = Args.getLastArg(options::OPT_fextend_args_EQ)) {
     const llvm::Triple::ArchType Arch = TC.getArch();

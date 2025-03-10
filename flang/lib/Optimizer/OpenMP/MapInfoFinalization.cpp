@@ -243,20 +243,15 @@ class MapInfoFinalizationPass
   /// where necessary, although it does not seem strictly required.
   unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
                                      mlir::Operation *target) {
+    using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
                               mlir::omp::TargetUpdateOp>(target))
       return mapTypeFlag;
 
-    bool hasImplicitMap =
-        (llvm::omp::OpenMPOffloadMappingFlags(mapTypeFlag) &
-         llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT) ==
-        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
-
-    return llvm::to_underlying(
-        hasImplicitMap
-            ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
-                  llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT
-            : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO);
+    mapFlags flags = mapFlags::OMP_MAP_TO |
+                     (mapFlags(mapTypeFlag) &
+                      (mapFlags::OMP_MAP_IMPLICIT | mapFlags::OMP_MAP_CLOSE));
+    return llvm::to_underlying(flags);
   }
 
   mlir::omp::MapInfoOp genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
@@ -579,7 +574,7 @@ class MapInfoFinalizationPass
           if (!shouldMapField)
             continue;
 
-          int64_t fieldIdx = recordType.getFieldIndex(field);
+          int32_t fieldIdx = recordType.getFieldIndex(field);
           bool alreadyMapped = [&]() {
             if (op.getMembersIndexAttr())
               for (auto indexList : op.getMembersIndexAttr()) {
@@ -597,12 +592,11 @@ class MapInfoFinalizationPass
             continue;
 
           builder.setInsertionPoint(op);
-          mlir::Value fieldIdxVal = builder.createIntegerConstant(
-              op.getLoc(), mlir::IndexType::get(builder.getContext()),
-              fieldIdx);
+          fir::IntOrValue idxConst =
+              mlir::IntegerAttr::get(builder.getI32Type(), fieldIdx);
           auto fieldCoord = builder.create<fir::CoordinateOp>(
               op.getLoc(), builder.getRefType(memTy), op.getVarPtr(),
-              fieldIdxVal);
+              llvm::SmallVector<fir::IntOrValue, 1>{idxConst});
           fir::factory::AddrAndBoundsInfo info =
               fir::factory::getDataOperandBaseAddr(
                   builder, fieldCoord, /*isOptional=*/false, op.getLoc());

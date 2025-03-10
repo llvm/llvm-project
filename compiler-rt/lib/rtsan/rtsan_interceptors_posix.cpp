@@ -285,6 +285,33 @@ INTERCEPTOR(int, unlinkat, int fd, const char *pathname, int flag) {
   return REAL(unlinkat)(fd, pathname, flag);
 }
 
+INTERCEPTOR(int, truncate, const char *pathname, off_t length) {
+  __rtsan_notify_intercepted_call("truncate");
+  return REAL(truncate)(pathname, length);
+}
+
+INTERCEPTOR(int, ftruncate, int fd, off_t length) {
+  __rtsan_notify_intercepted_call("ftruncate");
+  return REAL(ftruncate)(fd, length);
+}
+
+#if SANITIZER_LINUX && !SANITIZER_MUSL
+INTERCEPTOR(int, truncate64, const char *pathname, off64_t length) {
+  __rtsan_notify_intercepted_call("truncate64");
+  return REAL(truncate64)(pathname, length);
+}
+
+INTERCEPTOR(int, ftruncate64, int fd, off64_t length) {
+  __rtsan_notify_intercepted_call("ftruncate64");
+  return REAL(ftruncate64)(fd, length);
+}
+#define RTSAN_MAYBE_INTERCEPT_TRUNCATE64 INTERCEPT_FUNCTION(truncate64)
+#define RTSAN_MAYBE_INTERCEPT_FTRUNCATE64 INTERCEPT_FUNCTION(ftruncate64)
+#else
+#define RTSAN_MAYBE_INTERCEPT_TRUNCATE64
+#define RTSAN_MAYBE_INTERCEPT_FTRUNCATE64
+#endif
+
 // Streams
 
 INTERCEPTOR(FILE *, fopen, const char *path, const char *mode) {
@@ -1437,6 +1464,10 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_READLINKAT;
   INTERCEPT_FUNCTION(unlink);
   INTERCEPT_FUNCTION(unlinkat);
+  INTERCEPT_FUNCTION(truncate);
+  INTERCEPT_FUNCTION(ftruncate);
+  RTSAN_MAYBE_INTERCEPT_TRUNCATE64;
+  RTSAN_MAYBE_INTERCEPT_FTRUNCATE64;
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
   RTSAN_MAYBE_INTERCEPT_FREOPEN64;

@@ -78,8 +78,10 @@ static std::optional<DynamicTypeWithLength> AnalyzeTypeSpec(
             const semantics::CharacterTypeSpec &cts{
                 typeSpec->characterTypeSpec()};
             const semantics::ParamValue &len{cts.length()};
-            // N.B. CHARACTER(LEN=*) is allowed in type-specs in ALLOCATE() &
-            // type guards, but not in array constructors.
+            if (len.isAssumed() || len.isDeferred()) {
+              context.messages().Say(
+                  "A length specifier of '*' or ':' may not appear in the type of an array constructor"_err_en_US);
+            }
             DynamicTypeWithLength type{DynamicType{kind, len}};
             if (auto lenExpr{type.LEN()}) {
               type.length = Fold(context,
@@ -2165,7 +2167,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
           result.Add(*symbol, Fold(std::move(*value)));
           continue;
         }
-        if (IsNullPointer(*value)) {
+        if (IsNullPointer(&*value)) {
           if (IsAllocatable(*symbol)) {
             if (IsBareNullPointer(&*value)) {
               // NULL() with no arguments allowed by 7.5.10 para 6 for
@@ -2173,7 +2175,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(
               result.Add(*symbol, Expr<SomeType>{NullPointer{}});
               continue;
             }
-            if (IsNullObjectPointer(*value)) {
+            if (IsNullObjectPointer(&*value)) {
               AttachDeclaration(
                   Warn(common::LanguageFeature::
                            NullMoldAllocatableComponentValue,
@@ -2198,8 +2200,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(
                 *symbol);
             continue;
           }
+        } else if (IsNullAllocatable(&*value) && IsAllocatable(*symbol)) {
+          result.Add(*symbol, Expr<SomeType>{NullPointer{}});
+          continue;
         } else if (const Symbol * pointer{FindPointerComponent(*symbol)};
-                   pointer && pureContext) { // C1594(4)
+            pointer && pureContext) { // C1594(4)
           if (const Symbol *
               visible{semantics::FindExternallyVisibleObject(
                   *value, *pureContext)}) {
@@ -2520,10 +2525,13 @@ static bool CheckCompatibleArgument(bool isElemental,
   return common::visit(
       common::visitors{
           [&](const characteristics::DummyDataObject &x) {
-            if (x.attrs.test(characteristics::DummyDataObject::Attr::Pointer) &&
+            if ((x.attrs.test(
+                     characteristics::DummyDataObject::Attr::Pointer) ||
+                    x.attrs.test(
+                        characteristics::DummyDataObject::Attr::Allocatable)) &&
                 IsBareNullPointer(expr)) {
               // NULL() without MOLD= is compatible with any dummy data pointer
-              // but cannot be allowed to lead to ambiguity.
+              // or allocatable, but cannot be allowed to lead to ambiguity.
               return true;
             } else if (!isElemental && actual.Rank() != x.type.Rank() &&
                 !x.type.attrs().test(
@@ -3289,7 +3297,7 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
             dyType && dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
           const Symbol *lastWhole0{UnwrapWholeSymbolOrComponentDataRef(lhs)};
           const Symbol *lastWhole{
-              lastWhole0 ? &lastWhole0->GetUltimate() : nullptr};
+              lastWhole0 ? &ResolveAssociations(*lastWhole0) : nullptr};
           if (!lastWhole || !IsAllocatable(*lastWhole)) {
             Say("Left-hand side of assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
           } else if (evaluate::IsCoarray(*lastWhole)) {
@@ -3875,7 +3883,7 @@ MaybeExpr ExpressionAnalyzer::ExprOrVariable(
   }
   if (result) {
     if constexpr (std::is_same_v<PARSED, parser::Expr>) {
-      if (!isNullPointerOk_ && IsNullPointer(*result)) {
+      if (!isNullPointerOk_ && IsNullPointerOrAllocatable(&*result)) {
         Say(source,
             "NULL() may not be used as an expression in this context"_err_en_US);
       }
@@ -4394,15 +4402,11 @@ bool ArgumentAnalyzer::CheckAssignmentConformance() {
 
 bool ArgumentAnalyzer::CheckForNullPointer(const char *where) {
   for (const std::optional<ActualArgument> &arg : actuals_) {
-    if (arg) {
-      if (const Expr<SomeType> *expr{arg->UnwrapExpr()}) {
-        if (IsNullPointer(*expr)) {
-          context_.Say(
-              source_, "A NULL() pointer is not allowed %s"_err_en_US, where);
-          fatalErrors_ = true;
-          return false;
-        }
-      }
+    if (arg && IsNullPointerOrAllocatable(arg->UnwrapExpr())) {
+      context_.Say(
+          source_, "A NULL() pointer is not allowed %s"_err_en_US, where);
+      fatalErrors_ = true;
+      return false;
     }
   }
   return true;
