@@ -4311,9 +4311,9 @@ static SDValue isUpperSubvectorUndef(SDValue V, const SDLoc &DL,
 
 // Helper to check if we can access all the constituent subvectors without any
 // extract ops.
-static bool isFreeToSplitVector(SDNode *N, SelectionDAG &DAG) {
+static bool isFreeToSplitVector(SDValue V, SelectionDAG &DAG) {
   SmallVector<SDValue> Ops;
-  return collectConcatOps(N, Ops, DAG);
+  return collectConcatOps(V.getNode(), Ops, DAG);
 }
 
 static std::pair<SDValue, SDValue> splitVector(SDValue Op, SelectionDAG &DAG,
@@ -18324,10 +18324,10 @@ SDValue X86TargetLowering::LowerVSELECT(SDValue Op, SelectionDAG &DAG) const {
   // TODO: Add Load splitting to isFreeToSplitVector ?
   if (EltSize < 32 && VT.is256BitVector() && !Subtarget.hasAVX2() &&
       !Subtarget.hasXOP()) {
-    bool FreeCond = isFreeToSplitVector(Cond.getNode(), DAG);
-    bool FreeLHS = isFreeToSplitVector(LHS.getNode(), DAG) ||
+    bool FreeCond = isFreeToSplitVector(Cond, DAG);
+    bool FreeLHS = isFreeToSplitVector(LHS, DAG) ||
                    (ISD::isNormalLoad(LHS.getNode()) && LHS.hasOneUse());
-    bool FreeRHS = isFreeToSplitVector(RHS.getNode(), DAG) ||
+    bool FreeRHS = isFreeToSplitVector(RHS, DAG) ||
                    (ISD::isNormalLoad(RHS.getNode()) && RHS.hasOneUse());
     if (FreeCond && (FreeLHS || FreeRHS))
       return splitVectorOp(Op, DAG, dl);
@@ -20958,7 +20958,7 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   // Prefer to lower v4i64 -> v4i32 as a shuffle unless we can cheaply
   // split this for packing.
   if (SrcVT == MVT::v4i64 && DstVT == MVT::v4i32 &&
-      !isFreeToSplitVector(In.getNode(), DAG) &&
+      !isFreeToSplitVector(In, DAG) &&
       (!Subtarget.hasAVX() || DAG.ComputeNumSignBits(In) != 64))
     return SDValue();
 
@@ -21228,7 +21228,7 @@ SDValue X86TargetLowering::LowerTRUNCATE(SDValue Op, SelectionDAG &DAG) const {
 
   // Attempt to truncate with PACKUS/PACKSS even on AVX512 if we'd have to
   // concat from subvectors to use VPTRUNC etc.
-  if (!Subtarget.hasAVX512() || isFreeToSplitVector(In.getNode(), DAG))
+  if (!Subtarget.hasAVX512() || isFreeToSplitVector(In, DAG))
     if (SDValue SignPack = LowerTruncateVecPackWithSignBits(
             VT, In, DL, Subtarget, DAG, Op->getFlags()))
       return SignPack;
@@ -25311,7 +25311,7 @@ static SDValue LowerStore(SDValue Op, const X86Subtarget &Subtarget,
   if (StoreVT.is256BitVector() ||
       ((StoreVT == MVT::v32i16 || StoreVT == MVT::v64i8) &&
        !Subtarget.hasBWI())) {
-    if (StoredVal.hasOneUse() && isFreeToSplitVector(StoredVal.getNode(), DAG))
+    if (StoredVal.hasOneUse() && isFreeToSplitVector(StoredVal, DAG))
       return splitVectorStore(St, DAG);
     return SDValue();
   }
@@ -46930,8 +46930,7 @@ static SDValue narrowVectorSelect(SDNode *N, SelectionDAG &DAG, const SDLoc &DL,
   SDValue TVal = N->getOperand(1);
   SDValue FVal = N->getOperand(2);
   if (!TVal.hasOneUse() || !FVal.hasOneUse() ||
-      !isFreeToSplitVector(TVal.getNode(), DAG) ||
-      !isFreeToSplitVector(FVal.getNode(), DAG))
+      !isFreeToSplitVector(TVal, DAG) || !isFreeToSplitVector(FVal, DAG))
     return SDValue();
 
   auto makeBlend = [Opcode](SelectionDAG &DAG, const SDLoc &DL,
@@ -58710,7 +58709,7 @@ static SDValue narrowExtractedVectorSelect(SDNode *Ext, const SDLoc &DL,
                                            SelectionDAG &DAG) {
   SDValue Sel = Ext->getOperand(0);
   if (Sel.getOpcode() != ISD::VSELECT ||
-      !isFreeToSplitVector(Sel.getOperand(0).getNode(), DAG))
+      !isFreeToSplitVector(Sel.getOperand(0), DAG))
     return SDValue();
 
   // Note: We assume simple value types because this should only be called with
