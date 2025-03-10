@@ -1922,8 +1922,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::ProgressCount:
     if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
-      Debugger &debugger = target->GetDebugger();
-      if (auto progress = debugger.GetCurrentProgressReport()) {
+      if (auto progress = target->GetDebugger().GetCurrentProgressReport()) {
         if (progress->total != UINT64_MAX) {
           s.Format("[{0}/{1}]", progress->completed, progress->total);
           return true;
@@ -1934,8 +1933,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::ProgressMessage:
     if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
-      Debugger &debugger = target->GetDebugger();
-      if (auto progress = debugger.GetCurrentProgressReport()) {
+      if (auto progress = target->GetDebugger().GetCurrentProgressReport()) {
         s.PutCString(progress->message);
         return true;
       }

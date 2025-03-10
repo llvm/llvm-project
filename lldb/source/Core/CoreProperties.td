@@ -179,7 +179,7 @@ let Definition = "debugger" in {
   def StatuslineFormat: Property<"statusline-format", "FormatEntity">,
     Global,
     DefaultStringValue<"${ansi.bg.blue}${ansi.fg.black}{${target.file.basename}}{ | ${line.file.basename}:${line.number}:${line.column}}{ | ${thread.stop-reason}}{ | {${progress.count} }${progress.message}}">,
-    Desc<"List of statusline format entities.">;
+    Desc<"The default statusline format string.">;
   def UseSourceCache: Property<"use-source-cache", "Boolean">,
     Global,
     DefaultTrue,

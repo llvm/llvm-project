@@ -71,7 +71,11 @@ void Statusline::Disable() {
 }
 
 void Statusline::Draw(std::string str) {
-  static constexpr const size_t g_ellipsis = 3;
+  lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
+  if (!stream_sp)
+    return;
+
+  static constexpr const size_t g_ellipsis_len = 3;
 
   UpdateTerminalProperties();
 
@@ -79,38 +83,38 @@ void Statusline::Draw(std::string str) {
 
   size_t column_width = ColumnWidth(str);
 
-  if (column_width + g_ellipsis >= m_terminal_width) {
+  if (column_width + g_ellipsis_len >= m_terminal_width) {
     // FIXME: If there are hidden characters (e.g. UTF-8, ANSI escape
     // characters), this will strip the string more than necessary. Ideally we
     // want to strip until column_width == m_terminal_width.
     str = str.substr(0, m_terminal_width);
-    str.replace(m_terminal_width - g_ellipsis, g_ellipsis, "...");
+    str.replace(m_terminal_width - g_ellipsis_len, g_ellipsis_len, "...");
     column_width = ColumnWidth(str);
   }
 
-  if (lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP()) {
-    LockedStreamFile locked_stream = stream_sp->Lock();
-    locked_stream << ANSI_SAVE_CURSOR;
-    locked_stream.Printf(ANSI_TO_START_OF_ROW,
-                         static_cast<unsigned>(m_terminal_height));
-    locked_stream << ANSI_CLEAR_LINE;
-    locked_stream << str;
-    if (column_width < m_terminal_width)
-      locked_stream << std::string(m_terminal_width - column_width, ' ');
-    locked_stream << ANSI_NORMAL;
-    locked_stream << ANSI_RESTORE_CURSOR;
-  }
+  LockedStreamFile locked_stream = stream_sp->Lock();
+  locked_stream << ANSI_SAVE_CURSOR;
+  locked_stream.Printf(ANSI_TO_START_OF_ROW,
+                       static_cast<unsigned>(m_terminal_height));
+  locked_stream << ANSI_CLEAR_LINE;
+  locked_stream << str;
+  if (column_width < m_terminal_width)
+    locked_stream << std::string(m_terminal_width - column_width, ' ');
+  locked_stream << ANSI_NORMAL;
+  locked_stream << ANSI_RESTORE_CURSOR;
 }
 
 void Statusline::Reset() {
-  if (lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP()) {
-    LockedStreamFile locked_stream = stream_sp->Lock();
-    locked_stream << ANSI_SAVE_CURSOR;
-    locked_stream.Printf(ANSI_TO_START_OF_ROW,
-                         static_cast<unsigned>(m_terminal_height));
-    locked_stream << ANSI_CLEAR_LINE;
-    locked_stream << ANSI_RESTORE_CURSOR;
-  }
+  lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
+  if (!stream_sp)
+    return;
+
+  LockedStreamFile locked_stream = stream_sp->Lock();
+  locked_stream << ANSI_SAVE_CURSOR;
+  locked_stream.Printf(ANSI_TO_START_OF_ROW,
+                       static_cast<unsigned>(m_terminal_height));
+  locked_stream << ANSI_CLEAR_LINE;
+  locked_stream << ANSI_RESTORE_CURSOR;
 }
 
 void Statusline::UpdateTerminalProperties() {

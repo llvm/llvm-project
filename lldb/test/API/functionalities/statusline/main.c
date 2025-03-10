@@ -1,7 +1,5 @@
-int bar(int b) { return b * b; }
-
 int foo(int f) {
-  int b = bar(f); // Break here
+  int b = f * f; // Break here
   return b;
 }
 

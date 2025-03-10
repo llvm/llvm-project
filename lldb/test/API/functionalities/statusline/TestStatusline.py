@@ -36,13 +36,13 @@ class TestStatusline(PExpectTest):
             "set set show-statusline true",
             [
                 "\x1b[0;{}r".format(terminal_height - 1),
-                "a.out | main.c:4:15 | breakpoint 1.1                        ",
+                "a.out | main.c:2:11 | breakpoint 1.1                        ",
             ],
         )
 
         # Change the terminal dimensions and make sure it's reflected immediately.
         self.child.setwinsize(terminal_height, 20)
-        self.child.expect(re.escape("a.out | main.c:4:..."))
+        self.child.expect(re.escape("a.out | main.c:2:..."))
         self.child.setwinsize(terminal_height, terminal_width)
 
         # Change the format.
