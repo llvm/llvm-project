@@ -3,7 +3,6 @@
 
 ## This test was added to capture a case where MachineCopyPropagation risks
 ## leaving a no-op register move (add, x0, reg).
-## FIXME: No-op register move is left behind after machine-cp.
 
 ---
 name: ham
@@ -22,7 +21,6 @@ body: |
   ; CHECK-NEXT:   liveins: $x10
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $x11 = ADDI $x0, 0
-  ; CHECK-NEXT:   renamable $x10 = ADD $x0, killed renamable $x10
   ; CHECK-NEXT:   BEQ renamable $x10, $x0, %bb.4
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
