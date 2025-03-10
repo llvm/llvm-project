@@ -1052,6 +1052,8 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     }
   }
 
+  bool MayRecoverInbounds = AccumulativeByteOffset >= 0 && GEP->isInBounds();
+
   // Remove the constant offset in each sequential index. The resultant GEP
   // computes the variadic base.
   // Notice that we don't remove struct field indices here. If LowerGEP is
@@ -1079,6 +1081,8 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
         // and the old index if they are not used.
         RecursivelyDeleteTriviallyDeadInstructions(UserChainTail);
         RecursivelyDeleteTriviallyDeadInstructions(OldIdx);
+        MayRecoverInbounds =
+            MayRecoverInbounds && computeKnownBits(NewIdx, *DL).isNonNegative();
       }
     }
   }
@@ -1100,11 +1104,15 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // address with silently-wrapping two's complement arithmetic".
   // Therefore, the final code will be a semantically equivalent.
   //
-  // TODO(jingyue): do some range analysis to keep as many inbounds as
-  // possible. GEPs with inbounds are more friendly to alias analysis.
-  // TODO(gep_nowrap): Preserve nuw at least.
-  GEPNoWrapFlags NewGEPFlags = GEPNoWrapFlags::none();
-  GEP->setNoWrapFlags(GEPNoWrapFlags::none());
+  // If the initial GEP was inbounds and all variable indices and the
+  // accumulated offsets are non-negative, they can be added in any order and
+  // the intermediate results are in bounds. So, we can preserve the inbounds
+  // flag for both GEPs. GEPs with inbounds are more friendly to alias analysis.
+  //
+  // TODO(gep_nowrap): Preserve nuw?
+  GEPNoWrapFlags NewGEPFlags =
+      MayRecoverInbounds ? GEPNoWrapFlags::inBounds() : GEPNoWrapFlags::none();
+  GEP->setNoWrapFlags(NewGEPFlags);
 
   // Lowers a GEP to either GEPs with a single index or arithmetic operations.
   if (LowerGEP) {
