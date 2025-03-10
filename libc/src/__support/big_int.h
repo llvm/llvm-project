@@ -285,7 +285,7 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
       return 0;
     if (i >= int(N))
       return is_neg ? cpp::numeric_limits<word>::max() : 0;
-    return array[static_cast<size_t>(i)];
+    return array[static_cast<unsigned>(i)];
   };
   const size_t index_offset = offset / WORD_BITS;
   const size_t bit_offset = offset % WORD_BITS;
@@ -296,7 +296,7 @@ LIBC_INLINE constexpr cpp::array<word, N> shift(cpp::array<word, N> array,
   for (size_t index = 0; index < N; ++index) {
     const word part1 = safe_get_at(index + index_offset);
     const word part2 = safe_get_at(index + index_offset + 1);
-    word &dst = out[static_cast<size_t>(at(index))];
+    word &dst = out[static_cast<unsigned>(at(index))];
     if (bit_offset == 0)
       dst = part1; // no crosstalk between parts.
     else if constexpr (direction == LEFT)
