@@ -84,7 +84,8 @@ private:
   std::string CacheDirectoryPath;
 };
 
-/// This type defines the callback to add a pre-existing file (e.g. in a cache).
+/// This type defines the callback to add a pre-existing file (e.g. in a cache
+/// or created by a backend compilation run as a separate process).
 ///
 /// Buffer callbacks must be thread safe.
 using AddBufferFn = std::function<void(unsigned Task, const Twine &ModuleName,
