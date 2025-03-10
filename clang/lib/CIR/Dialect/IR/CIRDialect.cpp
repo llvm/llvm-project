@@ -166,6 +166,9 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     return success();
   }
 
+  if (mlir::isa<cir::ArrayType>(opType))
+    return success();
+
   assert(isa<TypedAttr>(attrType) && "What else could we be looking at here?");
   return op->emitOpError("global with type ")
          << cast<TypedAttr>(attrType).getType() << " not yet supported";
