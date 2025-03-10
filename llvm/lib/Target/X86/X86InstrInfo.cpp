@@ -4854,6 +4854,10 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case X86::CMP32ri:
   case X86::CMP16ri:
   case X86::CMP8ri:
+  case X86::CCMP64ri32:
+  case X86::CCMP32ri:
+  case X86::CCMP16ri:
+  case X86::CCMP8ri:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = 0;
     if (MI.getOperand(1).isImm()) {
@@ -4950,6 +4954,18 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
       return true;
     }
     return false;
+  }
+  case X86::CCMP64ri32:
+  case X86::CCMP32ri:
+  case X86::CCMP16ri:
+  case X86::CCMP8ri: {
+    // The CCMP instruction should not be optimized if the scc/dfv in it is not
+    // same as the one in previous CCMP instruction.
+    if ((FlagI.getOpcode() != OI.getOpcode()) ||
+        (OI.getOperand(2).getImm() != FlagI.getOperand(2).getImm()) ||
+        (OI.getOperand(3).getImm() != FlagI.getOperand(3).getImm()))
+      return false;
+    [[fallthrough]];
   }
   case X86::CMP64ri32:
   case X86::CMP32ri:
