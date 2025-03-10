@@ -13,12 +13,12 @@
 ; CHECK: OpFunction
 ; CHECK: %[[#FooVar:]] = OpVariable
 ; CHECK: %[[#Casted1:]] = OpBitcast %[[#PtrChar]] %[[#FooVar]]
-; CHECK: OpLifetimeStart %[[#Casted1]], 72
+; CHECK: OpLifetimeStart %[[#Casted1]] 72
 ; CHECK: OpCopyMemorySized
 ; CHECK: OpBitcast
 ; CHECK: OpInBoundsPtrAccessChain
 ; CHECK: %[[#Casted2:]] = OpBitcast %[[#PtrChar]] %[[#FooVar]]
-; CHECK: OpLifetimeStop %[[#Casted2]], 72
+; CHECK: OpLifetimeStop %[[#Casted2]] 72
 define spir_func void @foo(ptr noundef byval(%tprange) align 8 %_arg_UserRange) {
   %RoundedRangeKernel = alloca %tprange, align 8
   call void @llvm.lifetime.start.p0(i64 72, ptr nonnull %RoundedRangeKernel)
@@ -30,11 +30,11 @@ define spir_func void @foo(ptr noundef byval(%tprange) align 8 %_arg_UserRange) 
 
 ; CHECK: OpFunction
 ; CHECK: %[[#BarVar:]] = OpVariable
-; CHECK: OpLifetimeStart %[[#BarVar]], 0
+; CHECK: OpLifetimeStart %[[#BarVar]] 0
 ; CHECK: OpCopyMemorySized
 ; CHECK: OpBitcast
 ; CHECK: OpInBoundsPtrAccessChain
-; CHECK: OpLifetimeStop %[[#BarVar]], 0
+; CHECK: OpLifetimeStop %[[#BarVar]] 0
 define spir_func void @bar(ptr noundef byval(%tprange) align 8 %_arg_UserRange) {
   %RoundedRangeKernel = alloca %tprange, align 8
   call void @llvm.lifetime.start.p0(i64 -1, ptr nonnull %RoundedRangeKernel)
@@ -46,10 +46,10 @@ define spir_func void @bar(ptr noundef byval(%tprange) align 8 %_arg_UserRange) 
 
 ; CHECK: OpFunction
 ; CHECK: %[[#TestVar:]] = OpVariable
-; CHECK: OpLifetimeStart %[[#TestVar]], 1
+; CHECK: OpLifetimeStart %[[#TestVar]] 1
 ; CHECK: OpCopyMemorySized
 ; CHECK: OpInBoundsPtrAccessChain
-; CHECK: OpLifetimeStop %[[#TestVar]], 1
+; CHECK: OpLifetimeStop %[[#TestVar]] 1
 define spir_func void @test(ptr noundef align 8 %_arg) {
   %var = alloca i8, align 8
   call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %var)
