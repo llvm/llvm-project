@@ -1324,6 +1324,8 @@ public:
     return Index.end();
   }
 
+  std::vector<StringRef> symbols() const { return {begin(), end()}; }
+
   GUIDIterator guid_begin() const { return GUIDIterator(Index.begin()); }
   GUIDIterator guid_end() const { return GUIDIterator(Index.end()); }
   iterator_range<GUIDIterator> guids() const {
