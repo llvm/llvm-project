@@ -170,7 +170,7 @@ int llvm::compileModuleWithNewPM(
     return 0;
   }
 
-  if (MIR->parseMachineFunctions(*M, MAM))
+  if (MIR && MIR->parseMachineFunctions(*M, MAM))
     return 1;
 
   // Before executing passes, print the final values of the LLVM options.
