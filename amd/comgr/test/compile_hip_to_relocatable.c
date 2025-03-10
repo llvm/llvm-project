@@ -46,9 +46,10 @@ int main(int argc, char *argv[]) {
   amd_comgr_data_set_t DataSetIn, DataSetReloc, DataSetExec;
   amd_comgr_action_info_t DataAction;
   amd_comgr_status_t Status;
-  const char *CodeGenOptions[] = {"-fno-slp-vectorize"};
-  size_t CodeGenOptionsCount =
-      sizeof(CodeGenOptions) / sizeof(CodeGenOptions[0]);
+  const char *CompileOptions[] = {"-fno-slp-vectorize", "-nogpulib",
+    "-nogpuinc"};
+  size_t CompileOptionsCount =
+    sizeof(CompileOptions) / sizeof(CompileOptions[0]);
 
   SizeSource = setBuf(TEST_OBJ_DIR "/source1.hip", &BufSource);
 
@@ -76,8 +77,8 @@ int main(int argc, char *argv[]) {
                                               "amdgcn-amd-amdhsa--gfx906");
   checkError(Status, "amd_comgr_action_info_set_isa_name");
 
-  Status = amd_comgr_action_info_set_option_list(DataAction, CodeGenOptions,
-                                                 CodeGenOptionsCount);
+  Status = amd_comgr_action_info_set_option_list(DataAction, CompileOptions,
+                                                 CompileOptionsCount);
   checkError(Status, "amd_comgr_action_info_set_option_list");
 
   Status = amd_comgr_do_action(AMD_COMGR_ACTION_COMPILE_SOURCE_TO_RELOCATABLE,

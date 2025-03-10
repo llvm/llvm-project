@@ -47,6 +47,9 @@ int main(int Argc, char *Argv[]) {
       DataSetReloc, DataSetExec;
   amd_comgr_action_info_t ActionInfo;
   amd_comgr_status_t Status;
+  const char *CompileOptions[] = {"-nogpulib", "-nogpuinc"};
+  size_t CompileOptionsCount =
+    sizeof(CompileOptions) / sizeof(CompileOptions[0]);
 
   SizeSource = setBuf(TEST_OBJ_DIR "/source1.hip", &BufSource);
 
@@ -69,6 +72,9 @@ int main(int Argc, char *Argv[]) {
   Status = amd_comgr_action_info_set_isa_name(ActionInfo,
                                               "amdgcn-amd-amdhsa--gfx906");
   checkError(Status, "amd_comgr_action_info_set_isa_name");
+  Status = amd_comgr_action_info_set_option_list(ActionInfo, CompileOptions,
+                                                 CompileOptionsCount);
+  checkError(Status, "amd_comgr_action_info_set_option_list");
 
   Status = amd_comgr_create_data_set(&DataSetBc);
   checkError(Status, "amd_comgr_create_data_set");
