@@ -3149,14 +3149,13 @@ let TargetPrefix = "aarch64" in {
           llvm_nxv16i8_ty],
           [ImmArg<ArgIndex<0>>, IntrInaccessibleMemOnly, IntrHasSideEffects]>;
 
-  def int_aarch64_sme_fp8_fmop4a_za16_1x1 : SME_FP8_OuterProduct_Intrinsic_Single_Single;
-  def int_aarch64_sme_fp8_fmop4a_za32_1x1 : SME_FP8_OuterProduct_Intrinsic_Single_Single;
-  def int_aarch64_sme_fp8_fmop4a_za16_1x2 : SME_FP8_OuterProduct_Intrinsic_Single_Multi;
-  def int_aarch64_sme_fp8_fmop4a_za32_1x2 : SME_FP8_OuterProduct_Intrinsic_Single_Multi;
-  def int_aarch64_sme_fp8_fmop4a_za16_2x1 : SME_FP8_OuterProduct_Intrinsic_Single_Multi;
-  def int_aarch64_sme_fp8_fmop4a_za32_2x1 : SME_FP8_OuterProduct_Intrinsic_Single_Multi;
-  def int_aarch64_sme_fp8_fmop4a_za16_2x2 : SME_FP8_OuterProduct_Intrinsic_Multi_Multi;
-  def int_aarch64_sme_fp8_fmop4a_za32_2x2 : SME_FP8_OuterProduct_Intrinsic_Multi_Multi;
+  // 16 and 32 bit multi-vector floating point 8 Quarter Tile Quarter Product
+  foreach za = ["za16", "za32"] in {
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_1x1" : SME_FP8_OuterProduct_Intrinsic_Single_Single;
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_1x2" : SME_FP8_OuterProduct_Intrinsic_Single_Multi;
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_2x1" : SME_FP8_OuterProduct_Intrinsic_Single_Multi;
+    def int_aarch64_sme_fp8_fmop4a_ # za # "_2x2" : SME_FP8_OuterProduct_Intrinsic_Multi_Multi;
+  }
 
   class SME_AddVectorToTile_Intrinsic
       : DefaultAttrsIntrinsic<[],
