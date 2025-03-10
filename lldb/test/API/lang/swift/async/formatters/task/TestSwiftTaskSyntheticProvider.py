@@ -22,7 +22,7 @@ class TestCase(TestBase):
                 "address = 0x",
                 "id = 2",
                 "kind = 0",
-                "enqueuePriority = 21",
+                "enqueuePriority = .medium",
                 "isChildTask = false",
                 "isFuture = true",
                 "isGroupChildTask = false",

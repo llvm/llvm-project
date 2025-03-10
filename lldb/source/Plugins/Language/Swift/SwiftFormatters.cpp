@@ -810,6 +810,9 @@ public:
     // TypeMangling for "Swift.UInt64"
     CompilerType uint64_type =
         m_ts->GetTypeFromMangledTypename(ConstString("$ss6UInt64VD"));
+    // TypeMangling for "Swift.TaskPriority"
+    CompilerType priority_type =
+        m_ts->GetTypeFromMangledTypename(ConstString("$sScPD"));
 
 #define RETURN_CHILD(FIELD, NAME, TYPE)                                        \
   if (!FIELD) {                                                                \
@@ -842,7 +845,7 @@ public:
     case 2:
       RETURN_CHILD(m_kind_sp, kind, uint32_type);
     case 3:
-      RETURN_CHILD(m_enqueue_priority_sp, enqueuePriority, uint32_type);
+      RETURN_CHILD(m_enqueue_priority_sp, enqueuePriority, priority_type);
     case 4:
       RETURN_CHILD(m_is_child_task_sp, isChildTask, bool_type);
     case 5:
