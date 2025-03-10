@@ -243,13 +243,21 @@ static StoreInst *findSafeStoreForStoreStrongContraction(LoadInst *Load,
 
     // Ok, now we know we have not seen a store yet.
 
-    // If Inst is a retain, we don't care about it as it doesn't prevent moving
-    // the load to the store.
-    //
-    // TODO: This is one area where the optimization could be made more
-    // aggressive.
-    if (IsRetain(Class))
-      continue;
+    // If Inst is a retain, we can be more aggressive by checking if:
+    // 1. The retain is on an unrelated object (different RC identity root)
+    // 2. The retain's argument doesn't alias with our load location
+    // In these cases, we can safely move past the retain.
+    if (IsRetain(Class)) {
+      Value *RetainArg = GetArgRCIdentityRoot(Inst);
+      Value *LoadRoot = GetRCIdentityRoot(Load);
+      if (RetainArg != LoadRoot && !AA->alias(MemoryLocation::get(Load), 
+          MemoryLocation::getBeforeOrAfter(RetainArg))) {
+        continue;
+      }
+      // If the retain is on the same object or we can't prove no aliasing,
+      // be conservative and bail out
+      return nullptr;
+    }
 
     // See if Inst can write to our load location, if it can not, just ignore
     // the instruction.
