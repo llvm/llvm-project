@@ -5386,6 +5386,23 @@ LangAS CodeGenModule::GetGlobalVarAddressSpace(const VarDecl *D) {
     if (OpenMPRuntime->hasAllocateAttributeForGlobalVar(D, AS))
       return AS;
   }
+
+  if (LangOpts.HLSL) {
+    if (D == nullptr)
+      return LangAS::hlsl_private;
+
+    // Except resources (Uniform, UniformConstant) & instanglble (handles)
+    if (D->getType()->isHLSLResourceType() ||
+        D->getType()->isHLSLIntangibleType())
+      return D->getType().getAddressSpace();
+
+    if (D->getStorageClass() != SC_Static)
+      return D->getType().getAddressSpace();
+
+    LangAS AS = D->getType().getAddressSpace();
+    return AS == LangAS::Default ? LangAS::hlsl_private : AS;
+  }
+
   return getTargetCodeGenInfo().getGlobalVarAddressSpace(*this, D);
 }
 
