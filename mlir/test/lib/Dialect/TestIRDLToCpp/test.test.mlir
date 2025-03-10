@@ -1,5 +1,5 @@
-// RUN: mlir-opt %s
+// RUN: mlir-opt %s | FileCheck %s
 module {
-  // CHECK-LABEL: %[[v0:[^ ]*]] = "test_irdl_to_cpp.bar"() : () -> !test_irdl_to_cpp.foo
+  // CHECK: %[[v0:[^ ]*]] = "test_irdl_to_cpp.bar"() : () -> !test_irdl_to_cpp.foo
   %0 = "test_irdl_to_cpp.bar"() : () -> !test_irdl_to_cpp.foo
 }

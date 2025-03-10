@@ -35,8 +35,7 @@
 
 namespace test {
 using namespace mlir;
-struct CloneOpConversion
-    : public OpConversionPattern<test_irdl_to_cpp::BeefOp> {
+struct TestOpConversion : public OpConversionPattern<test_irdl_to_cpp::BeefOp> {
   using OpConversionPattern<test_irdl_to_cpp::BeefOp>::OpConversionPattern;
 
   LogicalResult

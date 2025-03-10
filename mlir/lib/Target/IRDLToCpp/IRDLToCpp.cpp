@@ -455,7 +455,6 @@ static LogicalResult verify(irdl::DialectOp dialect) {
 
     for (auto results : operation.getOps<irdl::ResultsOp>()) {
       for (auto operand : results.getOperands()) {
-        llvm::errs() << "HELP";
         if (!llvm::isa<irdl::AnyOp>(operand.getDefiningOp())) {
           return results.emitError(
               "IRDL C++ translation only supports irdl.any "

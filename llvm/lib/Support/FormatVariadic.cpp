@@ -82,7 +82,6 @@ static std::optional<ReplacementItem> parseReplacementItem(StringRef Spec) {
   }
   RepString = RepString.trim();
   if (!RepString.empty()) {
-    llvm::errs() << "content is: " << RepString << "\n";
     assert(0 && "Unexpected characters found in replacement string!");
     return std::nullopt;
   }
