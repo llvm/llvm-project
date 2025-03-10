@@ -504,7 +504,7 @@ public:
     seed(q);
   }
   TEST_CONSTEXPR_CXX14 void seed(result_type s = default_seed) {
-    seed(std::integral_constant < bool, m == 0 > (), std::integral_constant < bool, c == 0 > (), s);
+    seed(std::integral_constant< bool, m == 0 >(), std::integral_constant< bool, c == 0 >(), s);
   }
   template < class Sseq,
              typename std::enable_if<detail::is_seed_sequence<Sseq, linear_congruential_engine>::value, int>::type = 0>
