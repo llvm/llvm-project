@@ -1572,6 +1572,8 @@ public:
   SDValue getMaskedHistogram(SDVTList VTs, EVT MemVT, const SDLoc &dl,
                              ArrayRef<SDValue> Ops, MachineMemOperand *MMO,
                              ISD::MemIndexType IndexType);
+  SDValue getLoadFFVP(EVT VT, const SDLoc &dl, SDValue Chain, SDValue Ptr,
+                      SDValue Mask, SDValue EVL, MachineMemOperand *MMO);
 
   SDValue getGetFPEnv(SDValue Chain, const SDLoc &dl, SDValue Ptr, EVT MemVT,
                       MachineMemOperand *MMO);
