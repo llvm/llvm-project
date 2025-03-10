@@ -3951,6 +3951,8 @@ add_entrypoint_object(
   HDRS
     ../acoshf16.h
   DEPENDS
+    .common_constants
+    .explogxf
     libc.hdr.errno_macros
     libc.hdr.fenv_macros
     libc.src.__support.FPUtil.cast
