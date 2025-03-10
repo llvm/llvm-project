@@ -224,6 +224,9 @@ public:
   bool simplifyDemandedLaneMaskArg(InstCombiner &IC, IntrinsicInst &II,
                                    unsigned LaneAgIdx) const;
 
+  Instruction *hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
+                                                IntrinsicInst &II) const;
+
   std::optional<Instruction *> instCombineIntrinsic(InstCombiner &IC,
                                                     IntrinsicInst &II) const;
 
