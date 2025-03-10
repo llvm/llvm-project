@@ -1098,6 +1098,8 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
   if (!Plan.getVectorLoopRegion())
     return false;
 
+  if (!Plan.getTripCount()->isLiveIn())
+    return false;
   auto *TC = dyn_cast_if_present<ConstantInt>(
       Plan.getTripCount()->getUnderlyingValue());
   if (!TC || !BestVF.isFixed())
@@ -1124,8 +1126,8 @@ static bool optimizeVectorInductionWidthForTCAndVFUF(VPlan &Plan,
     auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
 
     // Currently only handle canonical IVs as it is trivial to replace the start
-    // and stop values, and we only perform the optimisation when the IV is only
-    // used by the comparison controlling loop control-flow.
+    // and stop values, and we currently only perform the optimization when the
+    // IV has a single use.
     if (!WideIV || !WideIV->isCanonical() ||
         WideIV->hasMoreThanOneUniqueUser() ||
         NewIVTy == WideIV->getScalarType())
