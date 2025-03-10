@@ -4158,6 +4158,10 @@ static void handleLifetimeCaptureByAttr(Sema &S, Decl *D,
     D->addAttr(CaptureByAttr);
 }
 
+static void handleLifetimeBoundIfAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  D->addAttr(LifetimeBoundIfAttr::Create(S.Context, AL.getArgAsExpr(0)));
+}
+
 void Sema::LazyProcessLifetimeCaptureByParams(FunctionDecl *FD) {
   bool HasImplicitThisParam = isInstanceMethod(FD);
   SmallVector<LifetimeCaptureByAttr *, 1> Attrs;
@@ -7060,6 +7064,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_LifetimeCaptureBy:
     handleLifetimeCaptureByAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_LifetimeBoundIf:
+    handleLifetimeBoundIfAttr(S, D, AL);
     break;
   case ParsedAttr::AT_CalledOnce:
     handleCalledOnceAttr(S, D, AL);
