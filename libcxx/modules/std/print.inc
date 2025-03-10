@@ -16,6 +16,7 @@ export namespace std {
   using std::vprint_nonunicode;
 #  if _LIBCPP_HAS_UNICODE
   using std::vprint_unicode;
+  using std::vprint_unicode_buffered;
 #  endif // _LIBCPP_HAS_UNICODE
 #endif   // _LIBCPP_STD_VER >= 23
 } // namespace std
