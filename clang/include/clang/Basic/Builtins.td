@@ -5037,64 +5037,22 @@ def ArithmeticFence : LangBuiltin<"ALL_LANGUAGES"> {
   let Prototype = "void(...)";
 }
 
-class SNUWTemplate :
-  Template<["int",      "long int",  "long long int"],
-           ["_nuw",     "l_nuw",     "ll_nuw"]>;
-
-class SNSWTemplate :
-  Template<["int",      "long int",  "long long int"],
-           ["_nsw",     "l_nsw",     "ll_nsw"]>;
-
-class SNXWTemplate :
-  Template<["int",      "long int",  "long long int"],
-           ["_nuw_nsw", "l_nuw_nsw", "ll_nuw_nsw"]>;
-
-def SAddNUW : Builtin, SNUWTemplate {
-  let Spellings = ["__builtin_sadd"];
-  let Attributes = [NoThrow];
-  let Prototype = "T(T const, T const)";
+def AddNUW : Builtin {
+  let Spellings = ["__builtin_add_nuw"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void(...)";
 }
 
-def SAddNSW : Builtin, SNSWTemplate {
-  let Spellings = ["__builtin_sadd"];
-  let Attributes = [NoThrow];
-  let Prototype = "T(T const, T const)";
+def AddNSW : Builtin {
+  let Spellings = ["__builtin_add_nsw"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void(...)";
 }
 
-def SAddNXW : Builtin, SNXWTemplate {
-  let Spellings = ["__builtin_sadd"];
-  let Attributes = [NoThrow];
-  let Prototype = "T(T const, T const)";
-}
-
-class UNUWTemplate :
-  Template<["unsigned int", "unsigned long int", "unsigned long long int"],
-           ["_nuw",         "l_nuw",             "ll_nuw"]>;
-
-class UNSWTemplate :
-  Template<["unsigned int", "unsigned long int", "unsigned long long int"],
-           ["_nsw",         "l_nsw",             "ll_nsw"]>;
-
-class UNXWTemplate :
-  Template<["unsigned int", "unsigned long int", "unsigned long long int"],
-           ["_nuw_nsw",     "l_nuw_nsw",         "ll_nuw_nsw"]>;
-
-def UAddNUW : Builtin, UNUWTemplate {
-  let Spellings = ["__builtin_uadd"];
-  let Attributes = [NoThrow];
-  let Prototype = "T(T const, T const)";
-}
-
-def UAddNSW : Builtin, UNSWTemplate {
-  let Spellings = ["__builtin_uadd"];
-  let Attributes = [NoThrow];
-  let Prototype = "T(T const, T const)";
-}
-
-def UAddNXW : Builtin, UNXWTemplate {
-  let Spellings = ["__builtin_uadd"];
-  let Attributes = [NoThrow];
-  let Prototype = "T(T const, T const)";
+def AddNW : Builtin {
+  let Spellings = ["__builtin_add_nuw_nsw"];
+  let Attributes = [CustomTypeChecking, NoThrow];
+  let Prototype = "void(...)";
 }
 
 def CountedByRef : Builtin {

@@ -2105,6 +2105,34 @@ static bool BuiltinCountZeroBitsGeneric(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+static bool BuiltinAddNoWrap(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 2))
+    return true;
+  ExprResult OrigArg0 = TheCall->getArg(0);
+  ExprResult OrigArg1 = TheCall->getArg(1);
+  ExprResult Arg0 = OrigArg0;
+  ExprResult Arg1 = OrigArg1;
+
+  QualType Res = S.UsualArithmeticConversions(Arg0, Arg1, TheCall->getExprLoc(),
+                                              Sema::ACK_Arithmetic);
+  if (Arg0.isInvalid() || Arg1.isInvalid())
+    return true;
+
+  if (Res.isNull() || !Res->isIntegralType(S.Context)) {
+    Expr *E0 = OrigArg0.get();
+    Expr *E1 = OrigArg1.get();
+    auto BadArg = !E0->getType()->isIntegralType(S.Context) ? E0 : E1;
+    return S.Diag(BadArg->getBeginLoc(), diag::err_builtin_add_nxw_invalid_arg)
+           << (BadArg == E0 ? 1 : 2) << BadArg->getType()
+           << BadArg->getSourceRange();
+  }
+
+  TheCall->setArg(0, Arg0.get());
+  TheCall->setArg(1, Arg1.get());
+  TheCall->setType(Res);
+  return false;
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -2973,6 +3001,12 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   }
   case Builtin::BI__builtin_counted_by_ref:
     if (BuiltinCountedByRef(TheCall))
+      return ExprError();
+    break;
+  case Builtin::BI__builtin_add_nuw:
+  case Builtin::BI__builtin_add_nsw:
+  case Builtin::BI__builtin_add_nuw_nsw:
+    if (BuiltinAddNoWrap(*this, TheCall))
       return ExprError();
     break;
   }
