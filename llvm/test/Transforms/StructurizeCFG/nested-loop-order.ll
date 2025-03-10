@@ -45,7 +45,7 @@ define void @main(ptr addrspace(1) %out) {
 ; CHECK-NEXT:    [[TMP10]] = phi i1 [ false, %[[IF29]] ], [ true, %[[ENDIF]] ]
 ; CHECK-NEXT:    br label %[[FLOW]]
 ; CHECK:       [[FLOW2]]:
-; CHECK-NEXT:    br i1 [[TMP6]], label %[[ENDIF28]], label %[[FLOW3]]
+; CHECK-NEXT:    br i1 false, label %[[ENDIF28]], label %[[FLOW3]]
 ; CHECK:       [[ENDIF28]]:
 ; CHECK-NEXT:    [[TMP35]] = fadd float [[TEMP8_0_PH]], 1.000000e+00
 ; CHECK-NEXT:    [[TMP36]] = icmp sgt i32 [[TMP20]], 2

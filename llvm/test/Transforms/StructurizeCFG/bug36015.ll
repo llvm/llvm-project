@@ -28,7 +28,7 @@ define void @bug36015(i32 %cmp0, i32 %count) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = phi i1 [ false, %[[IF]] ], [ true, %[[LOOP_INNER]] ]
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[FLOW1:.*]], label %[[LOOP_INNER]]
 ; CHECK:       [[FLOW1]]:
-; CHECK-NEXT:    br i1 [[TMP2]], label %[[ELSE:.*]], label %[[FLOW2]]
+; CHECK-NEXT:    br i1 false, label %[[ELSE:.*]], label %[[FLOW2]]
 ; CHECK:       [[ELSE]]:
 ; CHECK-NEXT:    [[CTR_ELSE:%.*]] = add i32 [[CTR_LOOP_INNER]], 1
 ; CHECK-NEXT:    call void @foo(i32 3)
