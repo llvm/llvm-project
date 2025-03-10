@@ -30,6 +30,7 @@
 #include "Views/ResourcePressureView.h"
 #include "Views/RetireControlUnitStatistics.h"
 #include "Views/SchedulerStatistics.h"
+#include "Views/SchedulingInfoView.h"
 #include "Views/SummaryView.h"
 #include "Views/TimelineView.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -234,6 +235,10 @@ static cl::opt<bool> PrintInstructionInfoView(
     "instruction-info",
     cl::desc("Print the instruction info view (enabled by default)"),
     cl::cat(ViewOptions), cl::init(true));
+
+static cl::opt<bool> PrintSchedulingInfoView(
+    "scheduling-info", cl::desc("Print the instruction scheduling info view"),
+    cl::cat(ViewOptions), cl::init(false));
 
 static cl::opt<bool> EnableAllStats("all-stats",
                                     cl::desc("Print all hardware statistics"),
@@ -676,14 +681,22 @@ int main(int argc, char **argv) {
             std::make_unique<mca::InstructionView>(*STI, *IP, Insts));
       }
 
-      // Create the views for this pipeline, execute, and emit a report.
-      if (PrintInstructionInfoView) {
-        Printer.addView(std::make_unique<mca::InstructionInfoView>(
-            *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-            ShowBarriers, *IM, InstToInstruments));
+      // Create the views for instruction's scheduling info dump.
+      if (PrintSchedulingInfoView) {
+        Printer.addView(std::make_unique<mca::SchedulingInfoView>(
+            *STI, *MCII, CE, Insts, *IP, LoweredSequence, *IM,
+            InstToInstruments));
+      } else {
+        // Create the views for this pipeline, execute, and emit a report.
+        if (PrintInstructionInfoView) {
+          Printer.addView(std::make_unique<mca::InstructionInfoView>(
+              *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
+              ShowBarriers, *IM, InstToInstruments));
+        }
+
+        Printer.addView(
+            std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
       }
-      Printer.addView(
-          std::make_unique<mca::ResourcePressureView>(*STI, *IP, Insts));
 
       if (!runPipeline(*P))
         return 1;
@@ -754,10 +767,17 @@ int main(int argc, char **argv) {
           *STI, *IP, Insts, S.getNumIterations()));
     }
 
-    if (PrintInstructionInfoView)
-      Printer.addView(std::make_unique<mca::InstructionInfoView>(
-          *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-          ShowBarriers, *IM, InstToInstruments));
+    if (PrintSchedulingInfoView) {
+      Printer.addView(std::make_unique<mca::SchedulingInfoView>(
+          *STI, *MCII, CE, Insts, *IP, LoweredSequence, *IM,
+          InstToInstruments));
+      PrintResourcePressureView = false;
+    } else {
+      if (PrintInstructionInfoView)
+        Printer.addView(std::make_unique<mca::InstructionInfoView>(
+            *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
+            ShowBarriers, *IM, InstToInstruments));
+    }
 
     // Fetch custom Views that are to be placed after the InstructionInfoView.
     // Refer to the comment paired with the CB->getStartViews(*IP, Insts); line
