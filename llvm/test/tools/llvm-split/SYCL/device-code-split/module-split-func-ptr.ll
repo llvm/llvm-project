@@ -14,7 +14,7 @@
 ;
 ; CHECK-IR1: @FuncTable = weak global ptr @func
 ; CHECK-IR1: define {{.*}} i32 @func
-; CHECK-IR1: define weak_odr dso_local spir_kernel void @kernel1
+; CHECK-IR1: define weak_odr dso_local spir_kernel void @kernelB
 
 @FuncTable = weak global ptr @func, align 8
 
