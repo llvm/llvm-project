@@ -174,15 +174,15 @@ option specifies "``-``", then the output will also be sent to standard output.
 
   Enable scheduling info view. This view reports scheduling information defined
   in LLVM target description in the form:
-  uOps | Latency | Bypass Latency | Throughput | LLVM OpcodeName | Resources
-  units | assembly instruction and its comment (// or /* */) if defined.
+  ``<uOps> <Latency> <Bypass Latency> <Throughput> <LLVM Opcode Name> <Resources
+  units> <instruction and comment (// or /* */) if defined>``
   It allows to compare scheduling info with architecture documents and fix them
   in target description by fixing InstrRW for the reported LLVM opcode.
   Scheduling information can be defined in the same order in each instruction
   comments to check easily reported and reference scheduling information.
   Suggested information in comment:
   ``// <architecture instruction form> \\ <scheduling documentation title> \\
-     <uOps>, <Latency>, <Bypass Latency>, <Throughput>, <Resources units>``
+  <uOps>, <Latency>, <Bypass Latency>, <Throughput>, <Resources units>``
 
 .. option:: -retire-stats
 
