@@ -18,7 +18,10 @@
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Locale.h"
+#include <algorithm>
+#include <cstdint>
 
 #define ESCAPE "\x1b"
 #define ANSI_NORMAL ESCAPE "[0m"
@@ -70,27 +73,51 @@ void Statusline::Disable() {
   SetScrollWindow(m_terminal_height);
 }
 
+std::string Statusline::TrimAndPad(std::string str, size_t max_width) {
+  size_t column_width = ColumnWidth(str);
+
+  // Trim the string.
+  if (column_width > max_width) {
+    size_t min_width_idx = max_width;
+    size_t min_width = column_width;
+
+    // Use a StringRef for more efficient slicing in the loop below.
+    llvm::StringRef str_ref = str;
+
+    // Keep extending the string to find the minimum column width to make sure
+    // we include as many ANSI escape characters or Unicode code units as
+    // possible. This is far from the most efficient way to do this, but it's
+    // means our stripping code doesn't need to be ANSI and Unicode aware and
+    // should be relatively cold code path.
+    for (size_t i = column_width; i < str.length(); ++i) {
+      size_t stripped_width = ColumnWidth(str_ref.take_front(i));
+      if (stripped_width <= column_width) {
+        min_width = stripped_width;
+        min_width_idx = i;
+      }
+    }
+
+    str = str.substr(0, min_width_idx);
+    column_width = min_width;
+  }
+
+  // Pad the string.
+  if (column_width < max_width)
+    str.append(max_width - column_width, ' ');
+
+  return str;
+}
+
 void Statusline::Draw(std::string str) {
   lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
   if (!stream_sp)
     return;
 
-  static constexpr const size_t g_ellipsis_len = 3;
-
   UpdateTerminalProperties();
 
   m_last_str = str;
 
-  size_t column_width = ColumnWidth(str);
-
-  if (column_width + g_ellipsis_len >= m_terminal_width) {
-    // FIXME: If there are hidden characters (e.g. UTF-8, ANSI escape
-    // characters), this will strip the string more than necessary. Ideally we
-    // want to strip until column_width == m_terminal_width.
-    str = str.substr(0, m_terminal_width);
-    str.replace(m_terminal_width - g_ellipsis_len, g_ellipsis_len, "...");
-    column_width = ColumnWidth(str);
-  }
+  str = TrimAndPad(str, m_terminal_width);
 
   LockedStreamFile locked_stream = stream_sp->Lock();
   locked_stream << ANSI_SAVE_CURSOR;
@@ -98,8 +125,6 @@ void Statusline::Draw(std::string str) {
                        static_cast<unsigned>(m_terminal_height));
   locked_stream << ANSI_CLEAR_LINE;
   locked_stream << str;
-  if (column_width < m_terminal_width)
-    locked_stream << std::string(m_terminal_width - column_width, ' ');
   locked_stream << ANSI_NORMAL;
   locked_stream << ANSI_RESTORE_CURSOR;
 }

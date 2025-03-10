@@ -41,8 +41,8 @@ class TestStatusline(PExpectTest):
         )
 
         # Change the terminal dimensions and make sure it's reflected immediately.
-        self.child.setwinsize(terminal_height, 20)
-        self.child.expect(re.escape("a.out | main.c:2:..."))
+        self.child.setwinsize(terminal_height, 25)
+        self.child.expect(re.escape("a.out | main.c:2:11 | bre"))
         self.child.setwinsize(terminal_height, terminal_width)
 
         # Change the format.

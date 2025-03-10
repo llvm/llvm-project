@@ -12,6 +12,7 @@
 #include "lldb/lldb-forward.h"
 #include "llvm/ADT/StringRef.h"
 #include <csignal>
+#include <cstdint>
 #include <string>
 
 namespace lldb_private {
@@ -32,6 +33,10 @@ public:
 
   /// Inform the statusline that the terminal dimensions have changed.
   void TerminalSizeChanged();
+
+protected:
+  /// Pad and trim the given string to fit to the given width.
+  static std::string TrimAndPad(std::string str, size_t width);
 
 private:
   /// Draw the statusline with the given text.
