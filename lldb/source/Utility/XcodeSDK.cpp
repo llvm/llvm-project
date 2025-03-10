@@ -142,6 +142,8 @@ XcodeSDK::Type XcodeSDK::GetType() const {
 
 llvm::StringRef XcodeSDK::GetString() const { return m_name; }
 
+const FileSpec &XcodeSDK::GetSysroot() const { return m_sysroot; }
+
 bool XcodeSDK::Info::operator<(const Info &other) const {
   return std::tie(type, version, internal) <
          std::tie(other.type, other.version, other.internal);
@@ -153,6 +155,10 @@ bool XcodeSDK::Info::operator==(const Info &other) const {
 }
 
 void XcodeSDK::Merge(const XcodeSDK &other) {
+  auto add_internal_sdk_suffix = [](llvm::StringRef sdk) {
+    return (sdk.substr(0, sdk.size() - 3) + "Internal.sdk").str();
+  };
+
   // The "bigger" SDK always wins.
   auto l = Parse();
   auto r = other.Parse();
@@ -160,10 +166,13 @@ void XcodeSDK::Merge(const XcodeSDK &other) {
     *this = other;
   else {
     // The Internal flag always wins.
-    if (llvm::StringRef(m_name).ends_with(".sdk"))
-      if (!l.internal && r.internal)
-        m_name =
-            m_name.substr(0, m_name.size() - 3) + std::string("Internal.sdk");
+    if (!l.internal && r.internal) {
+      if (llvm::StringRef(m_name).ends_with(".sdk"))
+        m_name = add_internal_sdk_suffix(m_name);
+
+      if (m_sysroot.GetFileNameExtension() == ".sdk")
+        m_sysroot.SetFilename(add_internal_sdk_suffix(m_sysroot.GetFilename()));
+    }
   }
 }
 

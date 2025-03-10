@@ -95,9 +95,9 @@ struct InlineDescriptor {
   /// Flag indicating if the field is the active member of a union.
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsActive : 1;
-  /// Flat indicating if this field is in a union (even if nested).
-  unsigned InUnion : 1;
+  /// Flag indicating if this field is in a union (even if nested).
   LLVM_PREFERRED_TYPE(bool)
+  unsigned InUnion : 1;
   /// Flag indicating if the field is mutable (if in a record).
   LLVM_PREFERRED_TYPE(bool)
   unsigned IsFieldMutable : 1;
@@ -200,7 +200,7 @@ public:
              bool IsTemporary, bool IsMutable);
 
   /// Allocates a dummy descriptor.
-  Descriptor(const DeclTy &D);
+  Descriptor(const DeclTy &D, MetadataSize MD = std::nullopt);
 
   /// Make this descriptor a dummy descriptor.
   void makeDummy() { IsDummy = true; }
@@ -263,7 +263,7 @@ public:
   bool isUnknownSizeArray() const { return Size == UnknownSizeMark; }
 
   /// Checks if the descriptor is of a primitive.
-  bool isPrimitive() const { return !IsArray && !ElemRecord; }
+  bool isPrimitive() const { return !IsArray && !ElemRecord && !IsDummy; }
 
   /// Checks if the descriptor is of an array.
   bool isArray() const { return IsArray; }

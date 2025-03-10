@@ -159,6 +159,7 @@ bool CheckLiteralType(InterpState &S, CodePtr OpPC, const Type *T);
 bool InvalidShuffleVectorIndex(InterpState &S, CodePtr OpPC, uint32_t Index);
 bool CheckBitCast(InterpState &S, CodePtr OpPC, bool HasIndeterminateBits,
                   bool TargetIsUCharOrByte);
+bool CheckBCPResult(InterpState &S, const Pointer &Ptr);
 
 template <typename T>
 static bool handleOverflow(InterpState &S, CodePtr OpPC, const T &SrcValue) {
@@ -1006,6 +1007,14 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   }
 }
 
+static inline bool IsOpaqueConstantCall(const CallExpr *E) {
+  unsigned Builtin = E->getBuiltinCallee();
+  return (Builtin == Builtin::BI__builtin___CFStringMakeConstantString ||
+          Builtin == Builtin::BI__builtin___NSStringMakeConstantString ||
+          Builtin == Builtin::BI__builtin_ptrauth_sign_constant ||
+          Builtin == Builtin::BI__builtin_function_start);
+}
+
 template <>
 inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
   using BoolT = PrimConv<PT_Bool>::T;
@@ -1066,9 +1075,18 @@ inline bool CmpHelperEQ<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
     if (P.isZero())
       continue;
     if (BothNonNull && P.pointsToLiteral()) {
-      const SourceInfo &Loc = S.Current->getSource(OpPC);
-      S.FFDiag(Loc, diag::note_constexpr_literal_comparison);
-      return false;
+      const Expr *E = P.getDeclDesc()->asExpr();
+      if (isa<StringLiteral>(E)) {
+        const SourceInfo &Loc = S.Current->getSource(OpPC);
+        S.FFDiag(Loc, diag::note_constexpr_literal_comparison);
+        return false;
+      } else if (const auto *CE = dyn_cast<CallExpr>(E);
+                 CE && IsOpaqueConstantCall(CE)) {
+        const SourceInfo &Loc = S.Current->getSource(OpPC);
+        S.FFDiag(Loc, diag::note_constexpr_opaque_call_comparison)
+            << P.toDiagnosticString(S.getASTContext());
+        return false;
+      }
     }
   }
 
@@ -2414,9 +2432,12 @@ inline bool This(InterpState &S, CodePtr OpPC) {
   // Ensure the This pointer has been cast to the correct base.
   if (!This.isDummy()) {
     assert(isa<CXXMethodDecl>(S.Current->getFunction()->getDecl()));
-    assert(This.getRecord());
+    [[maybe_unused]] const Record *R = This.getRecord();
+    if (!R)
+      R = This.narrow().getRecord();
+    assert(R);
     assert(
-        This.getRecord()->getDecl() ==
+        R->getDecl() ==
         cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())->getParent());
   }
 
@@ -2759,8 +2780,29 @@ inline bool Unsupported(InterpState &S, CodePtr OpPC) {
   return false;
 }
 
+inline bool StartSpeculation(InterpState &S, CodePtr OpPC) {
+  ++S.SpeculationDepth;
+  if (S.SpeculationDepth != 1)
+    return true;
+
+  assert(S.PrevDiags == nullptr);
+  S.PrevDiags = S.getEvalStatus().Diag;
+  S.getEvalStatus().Diag = nullptr;
+  return true;
+}
+inline bool EndSpeculation(InterpState &S, CodePtr OpPC) {
+  assert(S.SpeculationDepth != 0);
+  --S.SpeculationDepth;
+  if (S.SpeculationDepth == 0) {
+    S.getEvalStatus().Diag = S.PrevDiags;
+    S.PrevDiags = nullptr;
+  }
+  return true;
+}
+
 /// Do nothing and just abort execution.
 inline bool Error(InterpState &S, CodePtr OpPC) { return false; }
+
 inline bool SideEffect(InterpState &S, CodePtr OpPC) {
   return S.noteSideEffect();
 }

@@ -218,15 +218,15 @@ unsigned MipsELFObjectWriter::getRelocType(MCContext &Ctx,
   }
 
   switch (Kind) {
-  case FK_DTPRel_4:
+  case Mips::fixup_Mips_DTPREL32:
     return ELF::R_MIPS_TLS_DTPREL32;
-  case FK_DTPRel_8:
+  case Mips::fixup_Mips_DTPREL64:
     return ELF::R_MIPS_TLS_DTPREL64;
-  case FK_TPRel_4:
+  case Mips::fixup_Mips_TPREL32:
     return ELF::R_MIPS_TLS_TPREL32;
-  case FK_TPRel_8:
+  case Mips::fixup_Mips_TPREL64:
     return ELF::R_MIPS_TLS_TPREL64;
-  case FK_GPRel_4:
+  case Mips::fixup_Mips_GPREL32:
     return setRTypes(ELF::R_MIPS_GPREL32,
                      is64Bit() ? ELF::R_MIPS_64 : ELF::R_MIPS_NONE,
                      ELF::R_MIPS_NONE);

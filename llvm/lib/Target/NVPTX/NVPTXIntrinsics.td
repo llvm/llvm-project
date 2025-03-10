@@ -800,6 +800,17 @@ class APPLYPRIORITY_L2_INTRS<string addr> :
 def APPLYPRIORITY_L2_EVICT_NORMAL        : APPLYPRIORITY_L2_INTRS<"">;
 def APPLYPRIORITY_GLOBAL_L2_EVICT_NORMAL : APPLYPRIORITY_L2_INTRS<"global">;
 
+//Discard Intrinsics
+class DISCARD_L2_INTRS<string Addr> :
+          NVPTXInst<(outs), (ins Int64Regs:$addr),
+          StrJoin<".", ["discard", Addr , "L2"]>.ret # " [$addr], 128;",
+          [(!cast<Intrinsic>(StrJoin<"_", ["int_nvvm_discard", Addr , "L2"]>.ret)
+          i64:$addr, (i64 128))]>,
+          Requires<[hasPTX<74>, hasSM<80>]>;
+
+def DISCARD_L2        : DISCARD_L2_INTRS<"">;
+def DISCARD_GLOBAL_L2 : DISCARD_L2_INTRS<"global">;
+
 //-----------------------------------
 // MBarrier Functions
 //-----------------------------------

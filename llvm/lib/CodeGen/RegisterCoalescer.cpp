@@ -478,6 +478,7 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
   }
 
   const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
 
   if (Dst.isPhysical()) {
     // Eliminate DstSub on a physreg.
@@ -490,15 +491,14 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
 
     // Eliminate SrcSub by picking a corresponding Dst superregister.
     if (SrcSub) {
-      Dst = TRI.getMatchingSuperReg(Dst, SrcSub, MRI.getRegClass(Src));
+      Dst = TRI.getMatchingSuperReg(Dst, SrcSub, SrcRC);
       if (!Dst)
         return false;
-    } else if (!MRI.getRegClass(Src)->contains(Dst)) {
+    } else if (!SrcRC->contains(Dst)) {
       return false;
     }
   } else {
     // Both registers are virtual.
-    const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
     const TargetRegisterClass *DstRC = MRI.getRegClass(Dst);
 
     // Both registers have subreg indices.
@@ -2311,7 +2311,7 @@ bool RegisterCoalescer::joinReservedPhysReg(CoalescerPair &CP) {
     // We must also check for overlaps with regmask clobbers.
     BitVector RegMaskUsable;
     if (LIS->checkRegMaskInterference(RHS, RegMaskUsable) &&
-        !RegMaskUsable.test(DstReg)) {
+        !RegMaskUsable.test(DstReg.id())) {
       LLVM_DEBUG(dbgs() << "\t\tRegMask interference\n");
       return false;
     }

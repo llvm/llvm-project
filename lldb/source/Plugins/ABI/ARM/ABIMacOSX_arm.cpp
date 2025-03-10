@@ -1447,7 +1447,8 @@ bool ABIMacOSX_arm::GetArgumentValues(Thread &thread, ValueList &values) const {
     if (compiler_type) {
       bool is_signed = false;
       size_t bit_width = 0;
-      std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+      std::optional<uint64_t> bit_size =
+          llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
       if (!bit_size)
         return false;
       if (compiler_type.IsIntegerOrEnumerationType(is_signed))
@@ -1553,7 +1554,8 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
 
   const RegisterInfo *r0_reg_info = reg_ctx->GetRegisterInfoByName("r0", 0);
   if (compiler_type.IsIntegerOrEnumerationType(is_signed)) {
-    std::optional<uint64_t> bit_width = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_width =
+        llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
     if (!bit_width)
       return return_valobj_sp;
 
@@ -1574,7 +1576,7 @@ ValueObjectSP ABIMacOSX_arm::GetReturnValueObjectImpl(
               reg_ctx->GetRegisterInfoByName("r3", 0);
           if (r1_reg_info && r2_reg_info && r3_reg_info) {
             std::optional<uint64_t> byte_size =
-                compiler_type.GetByteSize(&thread);
+                llvm::expectedToOptional(compiler_type.GetByteSize(&thread));
             if (!byte_size)
               return return_valobj_sp;
             ProcessSP process_sp(thread.GetProcess());

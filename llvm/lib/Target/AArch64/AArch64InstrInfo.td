@@ -10564,7 +10564,7 @@ let Predicates = [HasLSFE] in {
   defm LDFMAXNML  : AtomicFPLoad<0b01, 0b110, "ldfmaxnml">;
   defm LDFMINNMA  : AtomicFPLoad<0b10, 0b111, "ldfminnma">;
   defm LDFMINNMAL : AtomicFPLoad<0b11, 0b111, "ldfminnmal">;
-  defm LDFMINMN   : AtomicFPLoad<0b00, 0b111, "ldfminnm">;
+  defm LDFMINNM   : AtomicFPLoad<0b00, 0b111, "ldfminnm">;
   defm LDFMINNML  : AtomicFPLoad<0b01, 0b111, "ldfminnml">;
   // BFloat16
   def LDBFADDA    : BaseAtomicFPLoad<FPR16, 0b00, 0b10, 0b000, "ldbfadda">;

@@ -13,8 +13,8 @@
 ;; }
 
 ; CHECK: %0 = alloca %struct.two, align 4, !DIAssignID ![[ID1:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[AGGR:[0-9]+]], !DIExpression(), ![[ID1]], ptr %0, !DIExpression(),
-; CHECK-NEXT: #dbg_assign(i1 undef, ![[A:[0-9]+]], !DIExpression(), ![[ID1]], ptr %0, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[AGGR:[0-9]+]], !DIExpression(), ![[ID1]], ptr %0, !DIExpression(),
+; CHECK-NEXT: #dbg_assign(i1 poison, ![[A:[0-9]+]], !DIExpression(), ![[ID1]], ptr %0, !DIExpression(),
 ; CHECK-NEXT: #dbg_declare(ptr %0, ![[B:[0-9]+]], !DIExpression(DW_OP_plus_uconst, 4),
 
 ; CHECK: store i64 %call, ptr %0, align 4,{{.*}}, !DIAssignID ![[ID2:[0-9]+]]

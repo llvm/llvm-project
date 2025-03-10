@@ -876,7 +876,7 @@ def Wa_COMMA : CommaJoined<["-"], "Wa,">,
   MetaVarName<"<arg>">;
 def warning_suppression_mappings_EQ : Joined<["--"],
   "warning-suppression-mappings=">, Group<Diag_Group>,
-  HelpText<"File containing diagnostic suppresion mappings. See user manual "
+  HelpText<"File containing diagnostic suppression mappings. See user manual "
   "for file format.">, Visibility<[ClangOption, CC1Option]>;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option, FlangOption]>;
@@ -941,7 +941,7 @@ def Xarch__
   target matches the specified architecture. This can be used with the target
   CPU, triple architecture, or offloading host and device. It is most useful
   for separating behavior undesirable on one of the targets when combining many
-  compilation jobs, as is commong with offloading. For example, -Xarch_x86_64,
+  compilation jobs, as is common with offloading. For example, -Xarch_x86_64,
   -Xarch_gfx90a, and -Xarch_device are all valid selectors. -Xarch_device will
   forward the argument to the offloading device while -Xarch_host will target
   the host system, which can be used to suppress incompatible GPU arguments.}]>,
@@ -1678,7 +1678,7 @@ def fsample_profile_use_profi : Flag<["-"], "fsample-profile-use-profi">,
     HelpText<"Use profi to infer block and edge counts">,
     DocBrief<[{Infer block and edge counts. If the profiles have errors or missing
                blocks caused by sampling, profile inference (profi) can convert
-               basic block counts to branch probabilites to fix them by extended
+               basic block counts to branch probabilities to fix them by extended
                and re-engineered classic MCMF (min-cost max-flow) approach.}]>;
 def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">, Group<f_Group>;
 def fno_auto_profile : Flag<["-"], "fno-auto-profile">, Group<f_Group>,
@@ -4729,7 +4729,7 @@ def mexecute_only : Flag<["-"], "mexecute-only">, Group<m_arm_Features_Group>,
 def mno_execute_only : Flag<["-"], "mno-execute-only">, Group<m_arm_Features_Group>,
   HelpText<"Allow generation of data access to code sections (ARM only)">;
 let Flags = [TargetSpecific] in {
-def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,tpidrurw,tpidruro,tpidrprw,el0,el1,el2,el3,tpidr_el0,tpidr_el1,tpidr_el2,tpidr_el3,tpidrro_el0">,
+def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,tpidrurw,tpidruro,tpidrprw,el0,el1,el2,el3,tpidr_el0,tpidr_el1,tpidr_el2,tpidr_el3,tpidrro_el0,auto">,
   HelpText<"Thread pointer access method. "
            "For AArch32: 'soft' uses a function call, or 'tpidrurw', 'tpidruro' or 'tpidrprw' use the three CP15 registers. 'cp15' is an alias for 'tpidruro'. "
            "For AArch64: 'tpidr_el0', 'tpidr_el1', 'tpidr_el2', 'tpidr_el3' or 'tpidrro_el0' use the five system registers. 'elN' is an alias for 'tpidr_elN'.">;
@@ -6777,8 +6777,16 @@ defm backtrace : BooleanFFlag<"backtrace">, Group<gfortran_Group>;
 defm bounds_check : BooleanFFlag<"bounds-check">, Group<gfortran_Group>;
 defm check_array_temporaries : BooleanFFlag<"check-array-temporaries">, Group<gfortran_Group>;
 defm cray_pointer : BooleanFFlag<"cray-pointer">, Group<gfortran_Group>;
-defm d_lines_as_code : BooleanFFlag<"d-lines-as-code">, Group<gfortran_Group>;
-defm d_lines_as_comments : BooleanFFlag<"d-lines-as-comments">, Group<gfortran_Group>;
+defm d_lines_as_code : BooleanFFlag<"d-lines-as-code">,
+                       HelpText<"Treat fixed form lines with 'd' or 'D' in the "
+                                "first column as blank.">,
+                       Group<f_Group>,
+                       Visibility<[FlangOption, FC1Option]>;
+defm d_lines_as_comments : BooleanFFlag<"d-lines-as-comments">,
+                           HelpText<"Treat fixed form lines with 'd' or 'D' in "
+                                    "the first column as comments.">,
+                           Group<f_Group>,
+                           Visibility<[FlangOption, FC1Option]>;
 defm dollar_ok : BooleanFFlag<"dollar-ok">, Group<gfortran_Group>;
 defm dump_fortran_optimized : BooleanFFlag<"dump-fortran-optimized">, Group<gfortran_Group>;
 defm dump_fortran_original : BooleanFFlag<"dump-fortran-original">, Group<gfortran_Group>;
@@ -9077,6 +9085,7 @@ def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   HelpText<"Embed PDB in shader container (ignored)">;
 def spirv : DXCFlag<"spirv">,
   HelpText<"Generate SPIR-V code">;
+def metal : DXCFlag<"metal">, HelpText<"Generate Metal library">;
 def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
   HelpText<"Specify the target environment">,
   Values<"vulkan1.2, vulkan1.3">;

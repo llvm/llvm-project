@@ -278,12 +278,12 @@ namespace PR31514 {
 namespace an_alias_template_is_not_a_class_template {
   template<typename T> using Foo = int; // expected-note 3{{here}}
   Foo x; // expected-error {{use of alias template 'Foo' requires template arguments}}
-  Foo<> y; // expected-error {{too few template arguments for alias template 'Foo'}}
+  Foo<> y; // expected-error {{missing template argument for template parameter}}
   int z = Foo(); // expected-error {{use of alias template 'Foo' requires template arguments}}
 
   template<template<typename> class Bar> void f() { // expected-note 3{{here}}
     Bar x; // expected-error {{use of template template parameter 'Bar' requires template arguments}}
-    Bar<> y; // expected-error {{too few template arguments for template template parameter 'Bar'}}
+    Bar<> y; // expected-error {{missing template argument for template parameter}}
     int z = Bar(); // expected-error {{use of template template parameter 'Bar' requires template arguments}}
   }
 }
@@ -304,11 +304,12 @@ namespace resolved_nttp {
   using TB = int (*)(int (*)[1], int (*)[2], int (*)[3]);
 
   template <typename T, int ...M> struct C {
-    template <T... N> using Fn = T(int(*...A)[N]);
+    template <T... N> // expected-note 3{{template parameter is declared here}}
+      using Fn = T(int(*...A)[N]);
     Fn<1, M..., 4> *p; // expected-error-re 3{{evaluates to {{[234]}}, which cannot be narrowed to type 'bool'}}
   };
   using TC = decltype(C<int, 2, 3>::p);
   using TC = int (*)(int (*)[1], int (*)[2], int (*)[3], int (*)[4]);
 
-  using TC2 = decltype(C<bool, 2, 3>::p); // expected-note {{instantiation of}}
+  using TC2 = decltype(C<bool, 2, 3>::p); // expected-note 3{{instantiation of}}
 }

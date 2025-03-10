@@ -224,6 +224,10 @@ private:
   /// Save a value for subsequent runs.
   void generateSaveEntity(hlfir::SaveEntity savedEntity,
                           bool willUseSavedEntityInSameRun);
+  /// Save a variable address instead of its value.
+  void saveNonVectorSubscriptedAddress(hlfir::SaveEntity savedEntity);
+  /// Save a LHS variable address instead of its value, handling the cases
+  /// where the LHS is vector subscripted.
   void saveLeftHandSide(hlfir::SaveEntity savedEntity,
                         hlfir::RegionAssignOp regionAssignOp);
 
@@ -444,7 +448,16 @@ convertToMoldType(mlir::Location loc, fir::FirOpBuilder &builder,
 
 void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   mlir::Location loc = regionAssignOp.getLoc();
-  std::optional<hlfir::LoopNest> elementalLoopNest;
+  if (regionAssignOp.isPointerAssignment()) {
+    auto [lhsValue, oldLhsYield] =
+        generateYieldedEntity(regionAssignOp.getLhsRegion());
+    auto [rhsValue, oldRhsYield] =
+        generateYieldedEntity(regionAssignOp.getRhsRegion());
+    builder.createStoreWithConvert(loc, rhsValue, lhsValue);
+    generateCleanupIfAny(oldLhsYield);
+    generateCleanupIfAny(oldRhsYield);
+    return;
+  }
   auto [rhsValue, oldRhsYield] =
       generateYieldedEntity(regionAssignOp.getRhsRegion());
   hlfir::Entity rhsEntity{rhsValue};
@@ -1075,6 +1088,12 @@ getAssignIfLeftHandSideRegion(mlir::Region &region) {
   return nullptr;
 }
 
+static bool isPointerAssignmentRHS(mlir::Region &region) {
+  auto assign = mlir::dyn_cast<hlfir::RegionAssignOp>(region.getParentOp());
+  return assign && assign.isPointerAssignment() &&
+         (&assign.getRhsRegion() == &region);
+}
+
 bool OrderedAssignmentRewriter::currentLoopNestIterationNumberCanBeComputed(
     llvm::SmallVectorImpl<fir::DoLoopOp> &loopNest) {
   if (constructStack.empty())
@@ -1138,6 +1157,11 @@ void OrderedAssignmentRewriter::generateSaveEntity(
     assert(!willUseSavedEntityInSameRun &&
            "lhs cannot be used in the loop nest where it is saved");
     return saveLeftHandSide(savedEntity, regionAssignOp);
+  }
+  if (isPointerAssignmentRHS(region)) {
+    assert(!willUseSavedEntityInSameRun &&
+           "rhs cannot be used in the loop nest where it is saved");
+    return saveNonVectorSubscriptedAddress(savedEntity);
   }
 
   mlir::Location loc = region.getParentOp()->getLoc();
@@ -1230,14 +1254,58 @@ static bool rhsIsArray(hlfir::RegionAssignOp regionAssignOp) {
   return yieldOp && hlfir::Entity{yieldOp.getEntity()}.isArray();
 }
 
+static bool isVectorSubscripted(mlir::Region &region) {
+  return llvm::isa<hlfir::ElementalAddrOp>(region.back().back());
+}
+
+void OrderedAssignmentRewriter::saveNonVectorSubscriptedAddress(
+    hlfir::SaveEntity savedEntity) {
+  mlir::Region &region = *savedEntity.yieldRegion;
+  mlir::Location loc = region.getParentOp()->getLoc();
+  assert(!isVectorSubscripted(region) &&
+         "expected variable without vector subscripts");
+  ValueAndCleanUp varAndCleanup = generateYieldedEntity(region);
+  hlfir::Entity var{varAndCleanup.first};
+  fir::factory::TemporaryStorage *temp = nullptr;
+  // If the address dominates the constructs, its SSA value can simply be
+  // tracked and there is no need to save the address in memory.  Otherwise,
+  // the addresses are stored at each iteration in memory with a descriptor
+  // stack.
+  if (constructStack.empty() ||
+      dominanceInfo.properlyDominates(var, constructStack[0]))
+    doBeforeLoopNest(
+        [&] { temp = insertSavedEntity(region, fir::factory::SSARegister{}); });
+  else
+    doBeforeLoopNest([&] {
+      if (var.isMutableBox() || var.isProcedure() || var.isProcedurePointer())
+        // Store single C pointer to entity.
+        temp = insertSavedEntity(
+            region, fir::factory::AnyAddressStack{loc, builder, var.getType()});
+      else
+        // Store the base address and dynamic shape/length/type information
+        // as descriptor.
+        temp = insertSavedEntity(region, fir::factory::AnyVariableStack{
+                                             loc, builder, var.getType()});
+    });
+  temp->pushValue(loc, builder, var);
+  generateCleanupIfAny(varAndCleanup.second);
+}
+
 void OrderedAssignmentRewriter::saveLeftHandSide(
     hlfir::SaveEntity savedEntity, hlfir::RegionAssignOp regionAssignOp) {
   mlir::Region &region = *savedEntity.yieldRegion;
+  if (!isVectorSubscripted(region)) {
+    saveNonVectorSubscriptedAddress(savedEntity);
+    return;
+  }
+  // Save vector subscripted LHS address.
   mlir::Location loc = region.getParentOp()->getLoc();
   LhsValueAndCleanUp loweredLhs = generateYieldedLHS(loc, region);
-  fir::factory::TemporaryStorage *temp = nullptr;
+  // loweredLhs.vectorSubscriptLoopNest is empty inside a WHERE because the
+  // WHERE loops are already indexing the vector subscripted designator.
   if (loweredLhs.vectorSubscriptLoopNest)
     constructStack.push_back(loweredLhs.vectorSubscriptLoopNest->outerOp);
+  fir::factory::TemporaryStorage *temp = nullptr;
   if (loweredLhs.vectorSubscriptLoopNest && !rhsIsArray(regionAssignOp)) {
     // Vector subscripted entity for which the shape must also be saved on top
     // of the element addresses (e.g. the shape may change in each forall
@@ -1264,22 +1332,15 @@ void OrderedAssignmentRewriter::saveLeftHandSide(
     vectorTmp.pushShape(loc, builder, shape);
     builder.restoreInsertionPoint(insertionPoint);
   } else {
-    // Otherwise, only save the LHS address.
-    // If the LHS address dominates the constructs, its SSA value can
-    // simply be tracked and there is no need to save the address in memory.
-    // Otherwise, the addresses are stored at each iteration in memory with
-    // a descriptor stack.
-    if (constructStack.empty() ||
-        dominanceInfo.properlyDominates(loweredLhs.lhs, constructStack[0]))
-      doBeforeLoopNest([&] {
-        temp = insertSavedEntity(region, fir::factory::SSARegister{});
-      });
-    else
-      doBeforeLoopNest([&] {
-        temp = insertSavedEntity(
-            region, fir::factory::AnyVariableStack{loc, builder,
-                                                   loweredLhs.lhs.getType()});
-      });
+    // Only saving the scalar elements addresses. These addresses computation
+    // depend on the inner loop indices generated for the vector subscripts
+    // (no need to wast time checking dominance) and can only be save in a
+    // variable stack so far.
+    doBeforeLoopNest([&] {
+      temp = insertSavedEntity(
+          region, fir::factory::AnyVariableStack{loc, builder,
+                                                 loweredLhs.lhs.getType()});
+    });
   }
   temp->pushValue(loc, builder, loweredLhs.lhs);
   generateCleanupIfAny(loweredLhs.elementalCleanup);
