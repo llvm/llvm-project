@@ -2189,12 +2189,14 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
   uint64_t VTableIndex = CGM.getItaniumVTableContext().getMethodVTableIndex(GD);
   llvm::Value *VFunc, *VTableSlotPtr = nullptr;
   auto &Schema = CGM.getCodeGenOpts().PointerAuth.CXXVirtualFunctionPointers;
+
+  llvm::Type *ComponentTy = CGM.getVTables().getVTableComponentType();
+  uint64_t ByteOffset =
+      VTableIndex * CGM.getDataLayout().getTypeSizeInBits(ComponentTy) / 8;
+
   if (!Schema && CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
-    VFunc = CGF.EmitVTableTypeCheckedLoad(
-        MethodDecl->getParent(), VTable, PtrTy,
-        VTableIndex *
-            CGM.getContext().getTargetInfo().getPointerWidth(LangAS::Default) /
-            8);
+    VFunc = CGF.EmitVTableTypeCheckedLoad(MethodDecl->getParent(), VTable,
+                                          PtrTy, ByteOffset);
   } else {
     CGF.EmitTypeMetadataCodeForVCall(MethodDecl->getParent(), VTable, Loc);
 
@@ -2202,7 +2204,7 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
     if (CGM.getItaniumVTableContext().isRelativeLayout()) {
       VFuncLoad = CGF.Builder.CreateCall(
           CGM.getIntrinsic(llvm::Intrinsic::load_relative, {CGM.Int32Ty}),
-          {VTable, llvm::ConstantInt::get(CGM.Int32Ty, 4 * VTableIndex)});
+          {VTable, llvm::ConstantInt::get(CGM.Int32Ty, ByteOffset)});
     } else {
       VTableSlotPtr = CGF.Builder.CreateConstInBoundsGEP1_64(
           PtrTy, VTable, VTableIndex, "vfn");

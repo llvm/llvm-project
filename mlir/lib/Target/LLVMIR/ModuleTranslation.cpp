@@ -1258,16 +1258,35 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     auto dtorOp = dyn_cast<GlobalDtorsOp>(op);
     if (!ctorOp && !dtorOp)
       continue;
-    auto range = ctorOp ? llvm::zip(ctorOp.getCtors(), ctorOp.getPriorities())
-                        : llvm::zip(dtorOp.getDtors(), dtorOp.getPriorities());
-    auto appendGlobalFn =
-        ctorOp ? llvm::appendToGlobalCtors : llvm::appendToGlobalDtors;
-    for (auto symbolAndPriority : range) {
-      llvm::Function *f = lookupFunction(
-          cast<FlatSymbolRefAttr>(std::get<0>(symbolAndPriority)).getValue());
-      appendGlobalFn(*llvmModule, f,
-                     cast<IntegerAttr>(std::get<1>(symbolAndPriority)).getInt(),
-                     /*Data=*/nullptr);
+
+    // The empty / zero initialized version of llvm.global_(c|d)tors cannot be
+    // handled by appendGlobalFn logic below, which just ignores empty (c|d)tor
+    // lists. Make sure it gets emitted.
+    if ((ctorOp && ctorOp.getCtors().empty()) ||
+        (dtorOp && dtorOp.getDtors().empty())) {
+      llvm::IRBuilder<llvm::TargetFolder> builder(
+          llvmModule->getContext(),
+          llvm::TargetFolder(llvmModule->getDataLayout()));
+      llvm::Type *eltTy = llvm::StructType::get(
+          builder.getInt32Ty(), builder.getPtrTy(), builder.getPtrTy());
+      llvm::ArrayType *at = llvm::ArrayType::get(eltTy, 0);
+      llvm::Constant *zeroInit = llvm::Constant::getNullValue(at);
+      (void)new llvm::GlobalVariable(
+          *llvmModule, zeroInit->getType(), false,
+          llvm::GlobalValue::AppendingLinkage, zeroInit,
+          ctorOp ? "llvm.global_ctors" : "llvm.global_dtors");
+    } else {
+      auto range = ctorOp
+                       ? llvm::zip(ctorOp.getCtors(), ctorOp.getPriorities())
+                       : llvm::zip(dtorOp.getDtors(), dtorOp.getPriorities());
+      auto appendGlobalFn =
+          ctorOp ? llvm::appendToGlobalCtors : llvm::appendToGlobalDtors;
+      for (const auto &[sym, prio] : range) {
+        llvm::Function *f =
+            lookupFunction(cast<FlatSymbolRefAttr>(sym).getValue());
+        appendGlobalFn(*llvmModule, f, cast<IntegerAttr>(prio).getInt(),
+                       /*Data=*/nullptr);
+      }
     }
   }
 

@@ -206,7 +206,7 @@ struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
     }
 
     auto denseAttr = DenseElementsAttr::get(
-        RankedTensorType::get({}, elementTy), constantAttr);
+        RankedTensorType::get({1}, elementTy), constantAttr);
     auto constantVal = rewriter.create<tosa::ConstOp>(
         op.getLoc(), denseAttr.getType(), denseAttr);
 

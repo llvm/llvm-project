@@ -23079,8 +23079,9 @@ static SDValue isNVCastToHalfWidthElements(SDValue V) {
     return SDValue();
 
   SDValue Op = V.getOperand(0);
-  if (V.getValueType().getVectorElementCount() !=
-      Op.getValueType().getVectorElementCount() * 2)
+  if (!Op.getValueType().isVector() ||
+      V.getValueType().getVectorElementCount() !=
+          Op.getValueType().getVectorElementCount() * 2)
     return SDValue();
 
   return Op;

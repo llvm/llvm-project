@@ -1111,14 +1111,7 @@ public:
     return R;
   }
 
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPWidenSC;
-  }
-
-  static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPRecipeBase>(U);
-    return R && classof(R);
-  }
+  VP_CLASSOF_IMPL(VPDef::VPWidenSC)
 
   /// Produce a widened instruction using the opcode and operands of the recipe,
   /// processing State.VF elements.

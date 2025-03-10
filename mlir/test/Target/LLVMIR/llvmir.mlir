@@ -1859,6 +1859,14 @@ llvm.func @foo() {
 
 // -----
 
+// CHECK: @llvm.global_ctors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
+llvm.mlir.global_ctors {ctors = [], priorities = []}
+
+// CHECK: @llvm.global_dtors = appending global [0 x { i32, ptr, ptr }] zeroinitializer
+llvm.mlir.global_dtors {dtors = [], priorities = []}
+
+// -----
+
 // CHECK: @llvm.global_dtors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @foo, ptr null }]
 llvm.mlir.global_dtors { dtors = [@foo], priorities = [0 : i32]}
 

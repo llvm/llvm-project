@@ -58,6 +58,7 @@
 #include "VPRecipeBuilder.h"
 #include "VPlan.h"
 #include "VPlanAnalysis.h"
+#include "VPlanCFG.h"
 #include "VPlanHCFGBuilder.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
@@ -6672,7 +6673,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
     // Certain instructions can be cheaper to vectorize if they have a constant
     // second vector operand. One example of this are shifts on x86.
     Value *Op2 = I->getOperand(1);
-    if (!isa<Constant>(Op2) && PSE.getSE()->isSCEVable(Op2->getType()) &&
+    if (!isa<Constant>(Op2) && TheLoop->isLoopInvariant(Op2) &&
+        PSE.getSE()->isSCEVable(Op2->getType()) &&
         isa<SCEVConstant>(PSE.getSCEV(Op2))) {
       Op2 = cast<SCEVConstant>(PSE.getSCEV(Op2))->getValue();
     }

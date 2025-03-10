@@ -3863,6 +3863,200 @@ TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessorWithModInBetween) {
   )cc");
 }
 
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObject) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+      
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      const A& getA() const { return a; }
+    
+      A a;
+    };
+
+    void target(B& b) {
+      if (b.getA().get().has_value()) {
+        b.getA().get().value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(
+    UncheckedOptionalAccessTest,
+    ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithoutValueCheck) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+      
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      const A& getA() const { return a; }
+    
+      A a;
+    };
+
+    void target(B& b) {
+      b.getA().get().value(); // [[unsafe]]
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefToOptionalSavedAsTemporaryVariable) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+      
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      const A& getA() const { return a; }
+    
+      A a;
+    };
+
+    void target(B& b) {
+      const auto& opt = b.getA().get();
+      if (opt.has_value()) {
+        opt.value();
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefAccessorToOptionalViaAccessorToHoldingObjectByValue) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+      
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      const A copyA() const { return a; }
+    
+      A a;
+    };
+
+    void target(B& b) {
+      if (b.copyA().get().has_value()) {
+        b.copyA().get().value(); // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest,
+       ConstRefAccessorToOptionalViaNonConstRefAccessorToHoldingObject) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+      
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      A& getA() { return a; }
+    
+      A a;
+    };
+
+    void target(B& b) {
+      if (b.getA().get().has_value()) {
+        b.getA().get().value(); // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(
+    UncheckedOptionalAccessTest,
+    ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithModAfterCheck) {
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      const $ns::$optional<int>& get() const { return x; }
+
+      $ns::$optional<int> x;
+    };
+
+    struct B {
+      const A& getA() const { return a; }
+
+      A& getA() { return a; }
+
+      void clear() { a = A{}; }
+
+      A a;
+    };
+
+    void target(B& b) {
+      // changing field A via non-const getter after const getter check
+      if (b.getA().get().has_value()) {
+        b.getA() = A{};
+        b.getA().get().value(); // [[unsafe]]
+      }
+
+      // calling non-const method which might change field A
+      if (b.getA().get().has_value()) {
+        b.clear();
+        b.getA().get().value(); // [[unsafe]]
+      }
+    }
+  )cc");
+}
+
+TEST_P(
+    UncheckedOptionalAccessTest,
+    ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithAnotherConstCallAfterCheck) {
+  ExpectDiagnosticsFor(R"cc(
+      #include "unchecked_optional_access_test.h"
+  
+      struct A {
+        const $ns::$optional<int>& get() const { return x; }
+      
+        $ns::$optional<int> x;
+      };
+  
+      struct B {
+        const A& getA() const { return a; }
+  
+        void callWithoutChanges() const { 
+          // no-op 
+        }
+  
+        A a;
+      };
+  
+      void target(B& b) {  
+        if (b.getA().get().has_value()) {
+          b.callWithoutChanges(); // calling const method which cannot change A
+          b.getA().get().value();
+        }
+      }
+    )cc");
+}
+
 // FIXME: Add support for:
 // - constructors (copy, move)
 // - assignment operators (default, copy, move)

@@ -353,7 +353,7 @@ namespace llvm {
   extern char &EarlyMachineLICMID;
 
   /// MachineSinking - This pass performs sinking on machine instructions.
-  extern char &MachineSinkingID;
+  extern char &MachineSinkingLegacyID;
 
   /// MachineCopyPropagation - This pass performs copy propagation on
   /// machine instructions.

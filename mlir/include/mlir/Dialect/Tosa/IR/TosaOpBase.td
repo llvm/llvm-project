@@ -148,13 +148,11 @@ def Tosa_TransConvOpQuantInfoBuilder : OpBuilder<
        "::mlir::Value":$weight, "mlir::Value":$bias,
        "::mlir::DenseI64ArrayAttr":$outpad,
        "::mlir::DenseI64ArrayAttr":$stride,
-       "::mlir::DenseI64ArrayAttr":$outputShape,
        "::mlir::TypeAttr":$acc_type),
   [{
     buildTransConvOpWithQuantInfo($_builder, $_state, outputType,
                                   input, weight, bias,
-                                  outpad, stride,
-                                  outputShape, acc_type);
+                                  outpad, stride, acc_type);
   }]>;
 
 // The tosa.matmul op is also intended to be generated where a fully_connected
@@ -235,6 +233,7 @@ class Tosa_I32EnumAttr<string name, string description, string mnemonic,
 // FP8E5M2      : 8-bit floating-point operations E5M2.
 // FFT          : Fast Fourier Transform operations.
 // VARIABLE     : Stateful variable operations.
+// CONTROLFLOW  : Control Flow operations.
 //===----------------------------------------------------------------------===//
 
 def Tosa_NONE : I32EnumAttrCase<"none", 0>;

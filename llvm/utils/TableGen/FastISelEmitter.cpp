@@ -306,7 +306,7 @@ struct OperandsSignature {
     for (unsigned i = 0, e = Operands.size(); i != e; ++i) {
       OS << LS;
       if (Operands[i].isReg()) {
-        OS << "unsigned Op" << i;
+        OS << "Register Op" << i;
       } else if (Operands[i].isImm()) {
         OS << "uint64_t imm" << i;
       } else if (Operands[i].isFP()) {

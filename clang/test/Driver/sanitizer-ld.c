@@ -514,9 +514,19 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-UBSAN-LINUX-LINK-CXX
+// CHECK-UBSAN-LINUX-LINK-CXX: "{{.*}}ld"
 // CHECK-UBSAN-LINUX-LINK-CXX-NOT: "-lstdc++"
-// CHECK-UBSAN-LINUX-LINK-CXX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone_cxx.a" "--no-whole-archive"
-// CHECK-UBSAN-LINUX-LINK-CXX-NOT: "-lstdc++"
+// CHECK-UBSAN-LINUX-LINK-CXX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone.a" "--no-whole-archive"
+
+// RUN: %clang -fsanitize=vptr -fsanitize-link-c++-runtime -### %s 2>&1 \
+// RUN:     --target=i386-unknown-linux \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefix=CHECK-VPTR-LINUX-LINK-CXX
+// CHECK-VPTR-LINUX-LINK-CXX-NOT: "-lstdc++"
+// CHECK-VPTR-LINUX-LINK-CXX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone.a" "--no-whole-archive"
+// CHECK-VPTR-LINUX-LINK-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone_cxx.a" "--no-whole-archive"
+// CHECK-VPTR-LINUX-LINK-CXX-NOT: "-lstdc++"
 
 // RUN: %clangxx -fsanitize=undefined -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform \
@@ -524,11 +534,22 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-UBSAN-LINUX-CXX
 // CHECK-UBSAN-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
-// CHECK-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone.a" "--no-whole-archive"
-// CHECK-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone_cxx.a" "--no-whole-archive"
+// CHECK-UBSAN-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone.a" "--no-whole-archive"
 // CHECK-UBSAN-LINUX-CXX: "-lstdc++"
 // CHECK-UBSAN-LINUX-CXX: "-lpthread"
 // CHECK-UBSAN-LINUX-CXX: "-lresolv"
+
+// RUN: %clangxx -fsanitize=vptr -### %s 2>&1 \
+// RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck}--check-prefix=CHECK-VPTR-LINUX-CXX
+// CHECK-VPTR-LINUX-CXX: "{{.*}}ld"
+// CHECK-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone.a" "--no-whole-archive"
+// CHECK-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone_cxx.a" "--no-whole-archive"
+// CHECK-VPTR-LINUX-CXX-SAME: "-lstdc++"
+// CHECK-VPTR-LINUX-CXX-SAME: "-lpthread"
+// CHECK-VPTR-LINUX-CXX-SAME: "-lresolv"
 
 // RUN: %clang -fsanitize=undefined -fsanitize-minimal-runtime -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld \
@@ -588,10 +609,24 @@
 // CHECK-ASAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
 // CHECK-ASAN-UBSAN-LINUX-CXX: "--dynamic-list={{.*}}libclang_rt.asan.a.syms"
 // CHECK-ASAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.asan_cxx.a" "--no-whole-archive"
-// CHECK-ASAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone_cxx.a" "--no-whole-archive"
 // CHECK-ASAN-UBSAN-LINUX-CXX: "-lstdc++"
 // CHECK-ASAN-UBSAN-LINUX-CXX: "-lpthread"
 // CHECK-ASAN-UBSAN-LINUX-CXX: "-lresolv"
+
+// RUN: %clangxx -fsanitize=address,vptr -### %s 2>&1 \
+// RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-VPTR-LINUX-CXX
+// CHECK-ASAN-VPTR-LINUX-CXX: "{{.*}}ld"
+// CHECK-ASAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan_static.a" "--no-whole-archive"
+// CHECK-ASAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
+// CHECK-ASAN-VPTR-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.asan.a.syms"
+// CHECK-ASAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan_cxx.a" "--no-whole-archive"
+// CHECK-ASAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone_cxx.a" "--no-whole-archive"
+// CHECK-ASAN-VPTR-LINUX-CXX-SAME: "-lstdc++"
+// CHECK-ASAN-VPTR-LINUX-CXX-SAME: "-lpthread"
+// CHECK-ASAN-VPTR-LINUX-CXX-SAME: "-lresolv"
 
 // RUN: %clangxx -fsanitize=address,undefined -fno-sanitize=vptr -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld -stdlib=platform \
@@ -613,11 +648,22 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-MSAN-UBSAN-LINUX-CXX
 // CHECK-MSAN-UBSAN-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
-// CHECK-MSAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.msan.a" "--no-whole-archive"
-// CHECK-MSAN-UBSAN-LINUX-CXX: "--dynamic-list={{.*}}libclang_rt.msan.a.syms"
-// CHECK-MSAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.msan_cxx.a" "--no-whole-archive"
-// CHECK-MSAN-UBSAN-LINUX-CXX: "--dynamic-list={{.*}}libclang_rt.msan_cxx.a.syms"
-// CHECK-MSAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone_cxx.a" "--no-whole-archive"
+// CHECK-MSAN-UBSAN-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.msan.a" "--no-whole-archive"
+// CHECK-MSAN-UBSAN-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.msan.a.syms"
+// CHECK-MSAN-UBSAN-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.msan_cxx.a" "--no-whole-archive"
+// CHECK-MSAN-UBSAN-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.msan_cxx.a.syms"
+
+// RUN: %clangxx -fsanitize=memory,vptr -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefix=CHECK-MSAN-VPTR-LINUX-CXX
+// CHECK-MSAN-VPTR-LINUX-CXX: "{{.*}}ld"
+// CHECK-MSAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.msan.a" "--no-whole-archive"
+// CHECK-MSAN-VPTR-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.msan.a.syms"
+// CHECK-MSAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.msan_cxx.a" "--no-whole-archive"
+// CHECK-MSAN-VPTR-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.msan_cxx.a.syms"
+// CHECK-MSAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone_cxx.a" "--no-whole-archive"
 
 // RUN: %clangxx -fsanitize=thread,undefined -### %s 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
@@ -625,11 +671,22 @@
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-TSAN-UBSAN-LINUX-CXX
 // CHECK-TSAN-UBSAN-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
-// CHECK-TSAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.tsan.a" "--no-whole-archive"
-// CHECK-TSAN-UBSAN-LINUX-CXX: "--dynamic-list={{.*}}libclang_rt.tsan.a.syms"
-// CHECK-TSAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.tsan_cxx.a" "--no-whole-archive"
-// CHECK-TSAN-UBSAN-LINUX-CXX: "--dynamic-list={{.*}}libclang_rt.tsan_cxx.a.syms"
-// CHECK-TSAN-UBSAN-LINUX-CXX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone_cxx.a" "--no-whole-archive"
+// CHECK-TSAN-UBSAN-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.tsan.a" "--no-whole-archive"
+// CHECK-TSAN-UBSAN-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.tsan.a.syms"
+// CHECK-TSAN-UBSAN-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.tsan_cxx.a" "--no-whole-archive"
+// CHECK-TSAN-UBSAN-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.tsan_cxx.a.syms"
+
+// RUN: %clangxx -fsanitize=thread,vptr -### %s 2>&1 \
+// RUN:     --target=x86_64-unknown-linux -fuse-ld=ld \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:   | %{filecheck} --check-prefix=CHECK-TSAN-VPTR-LINUX-CXX
+// CHECK-TSAN-VPTR-LINUX-CXX: "{{.*}}ld"
+// CHECK-TSAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.tsan.a" "--no-whole-archive"
+// CHECK-TSAN-VPTR-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.tsan.a.syms"
+// CHECK-TSAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.tsan_cxx.a" "--no-whole-archive"
+// CHECK-TSAN-VPTR-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.tsan_cxx.a.syms"
+// CHECK-TSAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone_cxx.a" "--no-whole-archive"
 
 // RUN: %clang -fsanitize=undefined -### %s 2>&1 \
 // RUN:     --target=i386-unknown-linux -fuse-ld=ld \

@@ -30,7 +30,7 @@ using namespace llvm;
 
 #define DEBUG_TYPE "elim-avail-extern"
 
-cl::opt<bool> ConvertToLocal(
+static cl::opt<bool> ConvertToLocal(
     "avail-extern-to-local", cl::Hidden,
     cl::desc("Convert available_externally into locals, renaming them "
              "to avoid link-time clashes."));

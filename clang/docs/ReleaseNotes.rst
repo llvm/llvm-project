@@ -114,6 +114,8 @@ Non-comprehensive list of changes in this release
 New Compiler Flags
 ------------------
 
+- New option ``-Wundef-true`` added and enabled by default to warn when `true` is used in the C preprocessor without being defined before C23.
+
 - New option ``-fprofile-continuous`` added to enable continuous profile syncing to file (#GH124353, `docs <https://clang.llvm.org/docs/UsersManual.html#cmdoption-fprofile-continuous>`_).
   The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
   for a while and this is just a user facing option.
@@ -349,6 +351,8 @@ clang-format
 
 libclang
 --------
+- Added ``clang_visitCXXMethods``, which allows visiting the methods
+  of a class.
 
 - Fixed a buffer overflow in ``CXString`` implementation. The fix may result in
   increased memory allocation.
@@ -386,8 +390,12 @@ Moved checkers
 Sanitizers
 ----------
 
+- ``-fsanitize=vptr`` is no longer a part of ``-fsanitize=undefined``.
+
 Python Binding Changes
 ----------------------
+- Added ``Type.get_methods``, a binding for ``clang_visitCXXMethods``, which
+  allows visiting the methods of a class.
 
 OpenMP Support
 --------------

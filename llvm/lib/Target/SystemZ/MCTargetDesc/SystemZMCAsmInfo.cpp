@@ -8,8 +8,21 @@
 
 #include "SystemZMCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCExpr.h"
 
 using namespace llvm;
+
+const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+    {MCSymbolRefExpr::VK_DTPOFF, "DTPOFF"},
+    {MCSymbolRefExpr::VK_GOT, "GOT"},
+    {MCSymbolRefExpr::VK_GOTENT, "GOTENT"},
+    {MCSymbolRefExpr::VK_INDNTPOFF, "INDNTPOFF"},
+    {MCSymbolRefExpr::VK_NTPOFF, "NTPOFF"},
+    {MCSymbolRefExpr::VK_PLT, "PLT"},
+    {MCSymbolRefExpr::VK_TLSGD, "TLSGD"},
+    {MCSymbolRefExpr::VK_TLSLD, "TLSLD"},
+    {MCSymbolRefExpr::VK_TLSLDM, "TLSLDM"},
+};
 
 SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
   AssemblerDialect = AD_GNU;
@@ -22,6 +35,8 @@ SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
   SupportsDebugInformation = true;
   UsesELFSectionDirectiveForBSS = true;
   ZeroDirective = "\t.space\t";
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {

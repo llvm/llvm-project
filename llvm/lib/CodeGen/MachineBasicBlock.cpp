@@ -1773,7 +1773,7 @@ MachineBasicBlock::liveout_iterator MachineBasicBlock::liveout_begin() const {
       "Liveness information is accurate");
 
   const TargetLowering &TLI = *MF.getSubtarget().getTargetLowering();
-  MCPhysReg ExceptionPointer = 0, ExceptionSelector = 0;
+  MCRegister ExceptionPointer, ExceptionSelector;
   if (MF.getFunction().hasPersonalityFn()) {
     auto PersonalityFn = MF.getFunction().getPersonalityFn();
     ExceptionPointer = TLI.getExceptionPointerRegister(PersonalityFn);

@@ -16,6 +16,7 @@
 #include "InputElement.h"
 #include "OutputSegment.h"
 #include "SymbolTable.h"
+#include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/Support/Path.h"
 #include <optional>
 
@@ -131,6 +132,14 @@ void DylinkSection::writeBody() {
       writeUleb128(sub.os, sym->flags, "sym flags");
     }
 
+    sub.writeTo(os);
+  }
+
+  if (!ctx.arg.rpath.empty()) {
+    SubSection sub(WASM_DYLINK_RUNTIME_PATH);
+    writeUleb128(sub.os, ctx.arg.rpath.size(), "num rpath entries");
+    for (const auto ref : ctx.arg.rpath)
+      writeStr(sub.os, ref, "rpath entry");
     sub.writeTo(os);
   }
 }

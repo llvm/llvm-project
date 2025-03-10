@@ -358,7 +358,9 @@ public:
   MachineBasicBlock *getEHPad() const { return EHPad; }
 
   // Return true if register is callee saved.
-  bool isCalleeSaved(Register Reg) { return (Mask[Reg / 32] >> Reg % 32) & 1; }
+  bool isCalleeSaved(Register Reg) {
+    return (Mask[Reg.id() / 32] >> (Reg.id() % 32)) & 1;
+  }
 
   // Iterates over statepoint meta args to find caller saver registers.
   // Also cache the size of found registers.

@@ -3029,6 +3029,9 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
   switch (MJTI.getEntryKind()) {
   case MachineJumpTableInfo::EK_Inline:
     llvm_unreachable("Cannot emit EK_Inline jump table entry");
+  case MachineJumpTableInfo::EK_GPRel32BlockAddress:
+  case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+    llvm_unreachable("MIPS specific");
   case MachineJumpTableInfo::EK_Custom32:
     Value = MF->getSubtarget().getTargetLowering()->LowerCustomJumpTableEntry(
         &MJTI, MBB, UID, OutContext);
@@ -3038,23 +3041,6 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
     //     .word LBB123
     Value = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
     break;
-  case MachineJumpTableInfo::EK_GPRel32BlockAddress: {
-    // EK_GPRel32BlockAddress - Each entry is an address of block, encoded
-    // with a relocation as gp-relative, e.g.:
-    //     .gprel32 LBB123
-    MCSymbol *MBBSym = MBB->getSymbol();
-    OutStreamer->emitGPRel32Value(MCSymbolRefExpr::create(MBBSym, OutContext));
-    return;
-  }
-
-  case MachineJumpTableInfo::EK_GPRel64BlockAddress: {
-    // EK_GPRel64BlockAddress - Each entry is an address of block, encoded
-    // with a relocation as gp-relative, e.g.:
-    //     .gpdword LBB123
-    MCSymbol *MBBSym = MBB->getSymbol();
-    OutStreamer->emitGPRel64Value(MCSymbolRefExpr::create(MBBSym, OutContext));
-    return;
-  }
 
   case MachineJumpTableInfo::EK_LabelDifference32:
   case MachineJumpTableInfo::EK_LabelDifference64: {

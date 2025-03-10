@@ -14,6 +14,7 @@
 #define CLANG_LIB_CIR_CODEGEN_CIRGENFUNCTION_H
 
 #include "CIRGenBuilder.h"
+#include "CIRGenCall.h"
 #include "CIRGenModule.h"
 #include "CIRGenTypeCache.h"
 #include "CIRGenValue.h"
@@ -96,9 +97,9 @@ public:
 private:
   /// Declare a variable in the current scope, return success if the variable
   /// wasn't declared yet.
-  mlir::LogicalResult declare(Address addr, const clang::Decl *var,
+  mlir::LogicalResult declare(mlir::Value addrVal, const clang::Decl *var,
                               clang::QualType ty, mlir::Location loc,
-                              clang::CharUnits alignment);
+                              clang::CharUnits alignment, bool isParam = false);
 
 public:
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
@@ -196,12 +197,16 @@ public:
   cir::FuncOp generateCode(clang::GlobalDecl gd, cir::FuncOp fn,
                            cir::FuncType funcType);
 
+  clang::QualType buildFunctionArgList(clang::GlobalDecl gd,
+                                       FunctionArgList &args);
+
   /// Emit code for the start of a function.
   /// \param loc       The location to be associated with the function.
   /// \param startLoc  The location of the function body.
   void startFunction(clang::GlobalDecl gd, clang::QualType retTy,
                      cir::FuncOp fn, cir::FuncType funcType,
-                     clang::SourceLocation loc, clang::SourceLocation startLoc);
+                     FunctionArgList args, clang::SourceLocation loc,
+                     clang::SourceLocation startLoc);
 
   Address createTempAlloca(mlir::Type ty, CharUnits align, mlir::Location loc,
                            const Twine &name = "tmp");

@@ -852,7 +852,7 @@ void LiveVariables::addNewBlock(MachineBasicBlock *BB,
                                 MachineBasicBlock *SuccBB) {
   const unsigned NumNew = BB->getNumber();
 
-  DenseSet<unsigned> Defs, Kills;
+  DenseSet<Register> Defs, Kills;
 
   MachineBasicBlock::iterator BBI = SuccBB->begin(), BBE = SuccBB->end();
   for (; BBI != BBE && BBI->isPHI(); ++BBI) {

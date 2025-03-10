@@ -44,7 +44,7 @@ void CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
   mlir::Type allocaTy = convertTypeForMem(ty);
   // Create the temp alloca and declare variable using it.
   address = createTempAlloca(allocaTy, alignment, loc, d.getName());
-  declare(address, &d, ty, getLoc(d.getSourceRange()), alignment);
+  declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()), alignment);
 
   setAddrOfLocalVar(&d, address);
 }

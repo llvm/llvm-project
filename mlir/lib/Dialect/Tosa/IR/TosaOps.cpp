@@ -569,15 +569,15 @@ static void buildConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 
 /// Handles tosa.transpose_conv2d which has outpad and output shape
 /// attributes.
-static void buildTransConvOpWithQuantInfo(
-    OpBuilder &builder, OperationState &result, Type outputType, Value input,
-    Value weight, Value bias, DenseI64ArrayAttr outpad,
-    DenseI64ArrayAttr stride, DenseI64ArrayAttr outputShape, TypeAttr accType) {
+static void
+buildTransConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
+                              Type outputType, Value input, Value weight,
+                              Value bias, DenseI64ArrayAttr outpad,
+                              DenseI64ArrayAttr stride, TypeAttr accType) {
   auto zps = createZPsAsConst(builder, input, weight);
   result.addOperands({input, weight, bias, zps.first, zps.second});
   result.addAttribute("out_pad", outpad);
   result.addAttribute("stride", stride);
-  result.addAttribute("out_shape", outputShape);
   result.addAttribute("acc_type", accType);
   Type finalOutputType = outputType;
   auto quantAttr = buildConvOpQuantizationAttr(builder, input, weight);
@@ -2327,9 +2327,7 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     TransposeConv2DOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  // outputShape is mutable.
-  llvm::SmallVector<int64_t> outputShape =
-      convertToMlirShape(adaptor.getOutShape());
+  llvm::SmallVector<int64_t> outputShape(4, ShapedType::kDynamic);
 
   int64_t inputWidth = ShapedType::kDynamic;
   int64_t inputHeight = ShapedType::kDynamic;

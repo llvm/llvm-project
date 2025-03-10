@@ -25,3 +25,23 @@ int f2() {
 // CHECK:    %[[I_PTR:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["i", const] {alignment = 4 : i64}
 // CHECK:    %[[I:.*]] = cir.load %[[I_PTR]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
 // CHECK:    cir.return %[[I]] : !cir.int<s, 32>
+
+int f3(int i) {
+    return i;
+  }
+
+// CHECK: cir.func @f3(%[[ARG:.*]]: !cir.int<s, 32> loc({{.*}})) -> !cir.int<s, 32>
+// CHECK:   %[[ARG_ALLOCA:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["i", init] {alignment = 4 : i64}
+// CHECK:   cir.store %[[ARG]], %[[ARG_ALLOCA]] : !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>
+// CHECK:   %[[ARG_VAL:.*]] = cir.load %[[ARG_ALLOCA]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
+// CHECK:   cir.return %[[ARG_VAL]] : !cir.int<s, 32>
+
+int f4(const int i) {
+  return i;
+}
+
+// CHECK: cir.func @f4(%[[ARG:.*]]: !cir.int<s, 32> loc({{.*}})) -> !cir.int<s, 32>
+// CHECK:   %[[ARG_ALLOCA:.*]] = cir.alloca !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>, ["i", init, const] {alignment = 4 : i64}
+// CHECK:   cir.store %[[ARG]], %[[ARG_ALLOCA]] : !cir.int<s, 32>, !cir.ptr<!cir.int<s, 32>>
+// CHECK:   %[[ARG_VAL:.*]] = cir.load %[[ARG_ALLOCA]] : !cir.ptr<!cir.int<s, 32>>, !cir.int<s, 32>
+// CHECK:   cir.return %[[ARG_VAL]] : !cir.int<s, 32>

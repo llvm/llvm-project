@@ -1573,9 +1573,8 @@ bool SIFoldOperandsImpl::foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const {
         Vgpr = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
         BuildMI(MBB, CopyMI, DL, TII->get(AMDGPU::COPY), Vgpr).add(*Def);
       }
-      auto Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
-      BuildMI(MBB, CopyMI, DL, TII->get(AMDGPU::V_ACCVGPR_WRITE_B32_e64), Tmp)
-          .addReg(Vgpr);
+      Register Tmp = MRI->createVirtualRegister(&AMDGPU::AGPR_32RegClass);
+      BuildMI(MBB, CopyMI, DL, TII->get(AMDGPU::COPY), Tmp).addReg(Vgpr);
       B.addReg(Tmp);
     }
 

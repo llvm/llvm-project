@@ -228,7 +228,7 @@ public:
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD ||
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML)
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
-           << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';
+           << getContext().getAsmInfo()->getVariantKindName(Kind) << '\n';
       else
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
 

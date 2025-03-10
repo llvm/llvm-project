@@ -205,6 +205,7 @@ class MipsAsmParser : public MCTargetAsmParser {
   ParseStatus parseJumpTarget(OperandVector &Operands);
   ParseStatus parseInvNum(OperandVector &Operands);
   ParseStatus parseRegisterList(OperandVector &Operands);
+  const MCExpr *parseRelocExpr();
 
   bool searchSymbolAlias(OperandVector &Operands);
 
@@ -352,8 +353,6 @@ class MipsAsmParser : public MCTargetAsmParser {
 
   bool reportParseError(const Twine &ErrorMsg);
   bool reportParseError(SMLoc Loc, const Twine &ErrorMsg);
-
-  bool parseMemOffset(const MCExpr *&Res, bool isParenExpr);
 
   bool parseSetMips0Directive();
   bool parseSetArchDirective();
@@ -740,64 +739,6 @@ public:
   void warnIfNoMacro(SMLoc Loc);
 
   bool isLittle() const { return IsLittleEndian; }
-
-  const MCExpr *createTargetUnaryExpr(const MCExpr *E,
-                                      AsmToken::TokenKind OperatorToken,
-                                      MCContext &Ctx) override {
-    switch(OperatorToken) {
-    default:
-      llvm_unreachable("Unknown token");
-      return nullptr;
-    case AsmToken::PercentCall16:
-      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_CALL, E, Ctx);
-    case AsmToken::PercentCall_Hi:
-      return MipsMCExpr::create(MipsMCExpr::MEK_CALL_HI16, E, Ctx);
-    case AsmToken::PercentCall_Lo:
-      return MipsMCExpr::create(MipsMCExpr::MEK_CALL_LO16, E, Ctx);
-    case AsmToken::PercentDtprel_Hi:
-      return MipsMCExpr::create(MipsMCExpr::MEK_DTPREL_HI, E, Ctx);
-    case AsmToken::PercentDtprel_Lo:
-      return MipsMCExpr::create(MipsMCExpr::MEK_DTPREL_LO, E, Ctx);
-    case AsmToken::PercentGot:
-      return MipsMCExpr::create(MipsMCExpr::MEK_GOT, E, Ctx);
-    case AsmToken::PercentGot_Disp:
-      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_DISP, E, Ctx);
-    case AsmToken::PercentGot_Hi:
-      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_HI16, E, Ctx);
-    case AsmToken::PercentGot_Lo:
-      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_LO16, E, Ctx);
-    case AsmToken::PercentGot_Ofst:
-      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_OFST, E, Ctx);
-    case AsmToken::PercentGot_Page:
-      return MipsMCExpr::create(MipsMCExpr::MEK_GOT_PAGE, E, Ctx);
-    case AsmToken::PercentGottprel:
-      return MipsMCExpr::create(MipsMCExpr::MEK_GOTTPREL, E, Ctx);
-    case AsmToken::PercentGp_Rel:
-      return MipsMCExpr::create(MipsMCExpr::MEK_GPREL, E, Ctx);
-    case AsmToken::PercentHi:
-      return MipsMCExpr::create(MipsMCExpr::MEK_HI, E, Ctx);
-    case AsmToken::PercentHigher:
-      return MipsMCExpr::create(MipsMCExpr::MEK_HIGHER, E, Ctx);
-    case AsmToken::PercentHighest:
-      return MipsMCExpr::create(MipsMCExpr::MEK_HIGHEST, E, Ctx);
-    case AsmToken::PercentLo:
-      return MipsMCExpr::create(MipsMCExpr::MEK_LO, E, Ctx);
-    case AsmToken::PercentNeg:
-      return MipsMCExpr::create(MipsMCExpr::MEK_NEG, E, Ctx);
-    case AsmToken::PercentPcrel_Hi:
-      return MipsMCExpr::create(MipsMCExpr::MEK_PCREL_HI16, E, Ctx);
-    case AsmToken::PercentPcrel_Lo:
-      return MipsMCExpr::create(MipsMCExpr::MEK_PCREL_LO16, E, Ctx);
-    case AsmToken::PercentTlsgd:
-      return MipsMCExpr::create(MipsMCExpr::MEK_TLSGD, E, Ctx);
-    case AsmToken::PercentTlsldm:
-      return MipsMCExpr::create(MipsMCExpr::MEK_TLSLDM, E, Ctx);
-    case AsmToken::PercentTprel_Hi:
-      return MipsMCExpr::create(MipsMCExpr::MEK_TPREL_HI, E, Ctx);
-    case AsmToken::PercentTprel_Lo:
-      return MipsMCExpr::create(MipsMCExpr::MEK_TPREL_LO, E, Ctx);
-    }
-  }
 
   bool areEqualRegs(const MCParsedAsmOperand &Op1,
                     const MCParsedAsmOperand &Op2) const override;
@@ -1311,11 +1252,23 @@ public:
   }
 
   template <unsigned Bits> bool isSImm() const {
-    return isConstantImm() ? isInt<Bits>(getConstantImm()) : isImm();
+    if (!isImm())
+      return false;
+    int64_t Res;
+    if (getImm()->evaluateAsAbsolute(Res))
+      return isInt<Bits>(Res);
+    // Allow conservatively if not a parse-time constant.
+    return true;
   }
 
   template <unsigned Bits> bool isUImm() const {
-    return isConstantImm() ? isUInt<Bits>(getConstantImm()) : isImm();
+    if (!isImm())
+      return false;
+    int64_t Res;
+    if (getImm()->evaluateAsAbsolute(Res))
+      return isUInt<Bits>(Res);
+    // Allow conservatively if not a parse-time constant.
+    return true;
   }
 
   template <unsigned Bits> bool isAnyImm() const {
@@ -4337,7 +4290,7 @@ bool MipsAsmParser::expandDivRem(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   }
 
   // Temporary label for first branch traget
-  MCContext &Context = TOut.getStreamer().getContext();
+  MCContext &Context = TOut.getContext();
   MCSymbol *BrTarget;
   MCOperand LabelOp;
 
@@ -5269,7 +5222,7 @@ bool MipsAsmParser::expandMulO(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   if (useTraps()) {
     TOut.emitRRI(Mips::TNE, DstReg, ATReg, 6, IDLoc, STI);
   } else {
-    MCContext & Context = TOut.getStreamer().getContext();
+    MCContext &Context = TOut.getContext();
     MCSymbol * BrTarget = Context.createTempSymbol();
     MCOperand LabelOp =
         MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
@@ -5306,7 +5259,7 @@ bool MipsAsmParser::expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   if (useTraps()) {
     TOut.emitRRI(Mips::TNE, ATReg, Mips::ZERO, 6, IDLoc, STI);
   } else {
-    MCContext & Context = TOut.getStreamer().getContext();
+    MCContext &Context = TOut.getContext();
     MCSymbol * BrTarget = Context.createTempSymbol();
     MCOperand LabelOp =
         MCOperand::createExpr(MCSymbolRefExpr::create(BrTarget, Context));
@@ -6403,6 +6356,64 @@ MCRegister MipsAsmParser::getReg(int RC, int RegNo) {
   return getContext().getRegisterInfo()->getRegClass(RC).getRegister(RegNo);
 }
 
+// Parse an expression with optional relocation operator prefixes (e.g. %lo).
+// Some weird expressions allowed by gas are not supported for simplicity,
+// e.g. "%lo foo", "(%lo(foo))", "%lo(foo)+1".
+const MCExpr *MipsAsmParser::parseRelocExpr() {
+  auto getOp = [](StringRef Op) {
+    return StringSwitch<MipsMCExpr::MipsExprKind>(Op)
+        .Case("call16", MipsMCExpr::MEK_GOT_CALL)
+        .Case("call_hi", MipsMCExpr::MEK_CALL_HI16)
+        .Case("call_lo", MipsMCExpr::MEK_CALL_LO16)
+        .Case("dtprel_hi", MipsMCExpr::MEK_DTPREL_HI)
+        .Case("dtprel_lo", MipsMCExpr::MEK_DTPREL_LO)
+        .Case("got", MipsMCExpr::MEK_GOT)
+        .Case("got_disp", MipsMCExpr::MEK_GOT_DISP)
+        .Case("got_hi", MipsMCExpr::MEK_GOT_HI16)
+        .Case("got_lo", MipsMCExpr::MEK_GOT_LO16)
+        .Case("got_ofst", MipsMCExpr::MEK_GOT_OFST)
+        .Case("got_page", MipsMCExpr::MEK_GOT_PAGE)
+        .Case("gottprel", MipsMCExpr::MEK_GOTTPREL)
+        .Case("gp_rel", MipsMCExpr::MEK_GPREL)
+        .Case("hi", MipsMCExpr::MEK_HI)
+        .Case("higher", MipsMCExpr::MEK_HIGHER)
+        .Case("highest", MipsMCExpr::MEK_HIGHEST)
+        .Case("lo", MipsMCExpr::MEK_LO)
+        .Case("neg", MipsMCExpr::MEK_NEG)
+        .Case("pcrel_hi", MipsMCExpr::MEK_PCREL_HI16)
+        .Case("pcrel_lo", MipsMCExpr::MEK_PCREL_LO16)
+        .Case("tlsgd", MipsMCExpr::MEK_TLSGD)
+        .Case("tlsldm", MipsMCExpr::MEK_TLSLDM)
+        .Case("tprel_hi", MipsMCExpr::MEK_TPREL_HI)
+        .Case("tprel_lo", MipsMCExpr::MEK_TPREL_LO)
+        .Default(MipsMCExpr::MEK_None);
+  };
+
+  MCAsmParser &Parser = getParser();
+  StringRef Name;
+  const MCExpr *Res = nullptr;
+  SmallVector<MipsMCExpr::MipsExprKind, 0> Ops;
+  while (parseOptionalToken(AsmToken::Percent)) {
+    if (Parser.parseIdentifier(Name) ||
+        Parser.parseToken(AsmToken::LParen, "expected '('"))
+      return nullptr;
+    auto Op = getOp(Name);
+    if (Op == MipsMCExpr::MEK_None) {
+      Error(Parser.getTok().getLoc(), "invalid relocation operator");
+      return nullptr;
+    }
+    Ops.push_back(Op);
+  }
+  if (Parser.parseExpression(Res))
+    return nullptr;
+  while (Ops.size()) {
+    if (Parser.parseToken(AsmToken::RParen, "expected ')'"))
+      return nullptr;
+    Res = MipsMCExpr::create(Ops.pop_back_val(), Res, getContext());
+  }
+  return Res;
+}
+
 bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   MCAsmParser &Parser = getParser();
   LLVM_DEBUG(dbgs() << "parseOperand\n");
@@ -6453,15 +6464,11 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     return false;
   }
   default: {
-    LLVM_DEBUG(dbgs() << ".. generic integer expression\n");
-
-    const MCExpr *Expr;
     SMLoc S = Parser.getTok().getLoc(); // Start location of the operand.
-    if (getParser().parseExpression(Expr))
+    const MCExpr *Expr = parseRelocExpr();
+    if (!Expr)
       return true;
-
     SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
-
     Operands.push_back(MipsOperand::CreateImm(Expr, S, E, *this));
     return false;
   }
@@ -6500,14 +6507,6 @@ ParseStatus MipsAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
   return (Reg == (unsigned)-1) ? ParseStatus::NoMatch : ParseStatus::Success;
 }
 
-bool MipsAsmParser::parseMemOffset(const MCExpr *&Res, bool isParenExpr) {
-  SMLoc S;
-
-  if (isParenExpr)
-    return getParser().parseParenExprOfDepth(0, Res, S);
-  return getParser().parseExpression(Res);
-}
-
 ParseStatus MipsAsmParser::parseMemOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   LLVM_DEBUG(dbgs() << "parseMemOperand\n");
@@ -6524,7 +6523,10 @@ ParseStatus MipsAsmParser::parseMemOperand(OperandVector &Operands) {
   }
 
   if (getLexer().getKind() != AsmToken::Dollar) {
-    if (parseMemOffset(IdVal, isParenExpr))
+    IdVal = parseRelocExpr();
+    if (!IdVal)
+      return ParseStatus::Failure;
+    if (isParenExpr && Parser.parseRParen())
       return ParseStatus::Failure;
 
     const AsmToken &Tok = Parser.getTok(); // Get the next token.
@@ -8070,109 +8072,61 @@ bool MipsAsmParser::parseDirectiveSet() {
 /// parseDirectiveGpWord
 ///  ::= .gpword local_sym
 bool MipsAsmParser::parseDirectiveGpWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitGPRel32Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitGPRel32Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitGPRel32Value(Value);
+  return parseEOL();
 }
 
 /// parseDirectiveGpDWord
 ///  ::= .gpdword local_sym
 bool MipsAsmParser::parseDirectiveGpDWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitGPRel64Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitGPRel64Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitGPRel64Value(Value);
+  return parseEOL();
 }
 
 /// parseDirectiveDtpRelWord
 ///  ::= .dtprelword tls_sym
 bool MipsAsmParser::parseDirectiveDtpRelWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitDTPRel32Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitDTPRel32Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitDTPRel32Value(Value);
+  return parseEOL();
 }
 
 /// parseDirectiveDtpRelDWord
 ///  ::= .dtpreldword tls_sym
 bool MipsAsmParser::parseDirectiveDtpRelDWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitDTPRel64Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitDTPRel64Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitDTPRel64Value(Value);
+  return parseEOL();
 }
 
 /// parseDirectiveTpRelWord
 ///  ::= .tprelword tls_sym
 bool MipsAsmParser::parseDirectiveTpRelWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitTPRel32Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitTPRel32Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitTPRel32Value(Value);
+  return parseEOL();
 }
 
 /// parseDirectiveTpRelDWord
 ///  ::= .tpreldword tls_sym
 bool MipsAsmParser::parseDirectiveTpRelDWord() {
-  MCAsmParser &Parser = getParser();
   const MCExpr *Value;
-  // EmitTPRel64Value requires an expression, so we are using base class
-  // method to evaluate the expression.
   if (getParser().parseExpression(Value))
     return true;
-  getParser().getStreamer().emitTPRel64Value(Value);
-
-  if (getLexer().isNot(AsmToken::EndOfStatement))
-    return Error(getLexer().getLoc(),
-                "unexpected token, expected end of statement");
-  Parser.Lex(); // Eat EndOfStatement token.
-  return false;
+  getTargetStreamer().emitTPRel64Value(Value);
+  return parseEOL();
 }
 
 bool MipsAsmParser::parseDirectiveOption() {
