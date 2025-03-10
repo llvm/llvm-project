@@ -160,6 +160,68 @@ define i64 @test_ptrauth_resign_ptrauth_constant(ptr %p) {
   ret i64 %authed
 }
 
+define i64 @test_ptrauth_auth_sign_same_schema(ptr %p) {
+; CHECK-LABEL: @test_ptrauth_auth_sign_same_schema(
+; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[P_INT]], i32 1, i64 1234)
+; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[AUTHED]], i32 1, i64 1234)
+; CHECK-NEXT:    ret i64 [[RESIGNED]]
+;
+  %p.int = ptrtoint ptr %p to i64
+  %authed = call i64 @llvm.ptrauth.auth(i64 %p.int, i32 1, i64 1234)
+  %resigned = call i64 @llvm.ptrauth.sign(i64 %authed, i32 1, i64 1234)
+  ret i64 %resigned
+}
+
+define i64 @test_ptrauth_auth_sign_opaque_disc_same_schema(ptr %p, i64 %disc) {
+; CHECK-LABEL: @test_ptrauth_auth_sign_opaque_disc_same_schema(
+; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[P_INT]], i32 1, i64 [[DISC:%.*]])
+; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[AUTHED]], i32 1, i64 [[DISC]])
+; CHECK-NEXT:    ret i64 [[RESIGNED]]
+;
+  %p.int = ptrtoint ptr %p to i64
+  %authed = call i64 @llvm.ptrauth.auth(i64 %p.int, i32 1, i64 %disc)
+  %resigned = call i64 @llvm.ptrauth.sign(i64 %authed, i32 1, i64 %disc)
+  ret i64 %resigned
+}
+
+define i64 @test_ptrauth_auth_sign_different_disc(ptr %p, i64 %disc) {
+; CHECK-LABEL: @test_ptrauth_auth_sign_different_disc(
+; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[P_INT]], i32 1, i64 [[DISC:%.*]])
+; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[AUTHED]], i32 1, i64 1234)
+; CHECK-NEXT:    ret i64 [[RESIGNED]]
+;
+  %p.int = ptrtoint ptr %p to i64
+  %authed = call i64 @llvm.ptrauth.auth(i64 %p.int, i32 1, i64 %disc)
+  %resigned = call i64 @llvm.ptrauth.sign(i64 %authed, i32 1, i64 1234)
+  ret i64 %resigned
+}
+
+define i64 @test_ptrauth_auth_sign_different_key(ptr %p) {
+; CHECK-LABEL: @test_ptrauth_auth_sign_different_key(
+; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P:%.*]] to i64
+; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[P_INT]], i32 0, i64 1234)
+; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[AUTHED]], i32 1, i64 1234)
+; CHECK-NEXT:    ret i64 [[RESIGNED]]
+;
+  %p.int = ptrtoint ptr %p to i64
+  %authed = call i64 @llvm.ptrauth.auth(i64 %p.int, i32 0, i64 1234)
+  %resigned = call i64 @llvm.ptrauth.sign(i64 %authed, i32 1, i64 1234)
+  ret i64 %resigned
+}
+
+define i64 @test_ptrauth_sign_nonauth_nonconst_disc(i64 %disc) {
+; CHECK-LABEL: @test_ptrauth_sign_nonauth_nonconst_disc(
+; CHECK-NEXT:    [[SIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr @foo to i64), i32 1, i64 [[DISC:%.*]])
+; CHECK-NEXT:    ret i64 [[SIGNED]]
+;
+  %foo.int = ptrtoint ptr @foo to i64
+  %signed = call i64 @llvm.ptrauth.sign(i64 %foo.int, i32 1, i64 %disc)
+  ret i64 %signed
+}
+
 declare i64 @llvm.ptrauth.auth(i64, i32, i64)
 declare i64 @llvm.ptrauth.sign(i64, i32, i64)
 declare i64 @llvm.ptrauth.resign(i64, i32, i64, i32, i64)
