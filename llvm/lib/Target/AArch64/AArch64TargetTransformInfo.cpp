@@ -18,6 +18,7 @@
 #include "llvm/CodeGen/BasicTTIImpl.h"
 #include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -3616,17 +3617,26 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
           // When SVE is available, we get:
           // smulh + lsr + add/sub + asr + add/sub.
           if (Ty->isScalableTy() && ST->hasSVE())
-            return 2 * MulCost /*smulh cost*/ + 2 * AddCost + 2 * AsrCost;
+            return MulCost /*smulh cost*/ + 2 * AddCost + 2 * AsrCost;
           return 2 * MulCost + AddCost /*uzp2 cost*/ + AsrCost + UsraCost;
         }
       }
     }
     if (Op2Info.isConstant() && !Op2Info.isUniform() &&
         LT.second.isFixedLengthVector()) {
-      auto VT = TLI->getValueType(DL, Ty);
-      return VT.getVectorNumElements() *
-             getArithmeticInstrCost(Opcode, Ty->getScalarType(), CostKind,
-                                    Op1Info.getNoProps(), Op2Info.getNoProps());
+      // FIXME: When the constant vector is non-uniform, this may result in
+      // loading the vector from constant pool or in some cases, may also result
+      // in scalarization. For now, we are approximating this with the
+      // scalarization cost.
+      auto ExtractCost = 2 * getVectorInstrCost(Instruction::ExtractElement, Ty,
+                                                CostKind, -1, nullptr, nullptr);
+      auto InsertCost = getVectorInstrCost(Instruction::InsertElement, Ty,
+                                           CostKind, -1, nullptr, nullptr);
+      unsigned NElts = cast<FixedVectorType>(Ty)->getNumElements();
+      return ExtractCost + InsertCost +
+             NElts * getArithmeticInstrCost(Opcode, Ty->getScalarType(),
+                                            CostKind, Op1Info.getNoProps(),
+                                            Op2Info.getNoProps());
     }
     [[fallthrough]];
   case ISD::UDIV:
