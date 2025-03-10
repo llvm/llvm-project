@@ -87,13 +87,8 @@ struct AffineDataCopyGeneration
 
 /// Generates copies for memref's living in 'slowMemorySpace' into newly created
 /// buffers in 'fastMemorySpace', and replaces memory operations to the former
-<<<<<<< HEAD
-/// by the latter.
-std::unique_ptr<OperationPass<func::FuncOp>>
-=======
 /// by the latter. Only load op's handled for now.
 std::unique_ptr<AffineScopePassBase>
->>>>>>> 9bd74f961815 (Make affine and bufferization pass applicable to any AffineScopeOp/AutomaticAllocationScope)
 mlir::affine::createAffineDataCopyGenerationPass(
     unsigned slowMemorySpace, unsigned fastMemorySpace, unsigned tagMemorySpace,
     int minDmaTransferSize, uint64_t fastMemCapacityBytes) {
