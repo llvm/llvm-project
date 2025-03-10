@@ -282,6 +282,12 @@ Bug Fixes to Attribute Support
   or ``__attribute__((malloc(deallocator, ptr-index)))``
   (`#51607 <https://github.com/llvm/llvm-project/issues/51607>`_).
 
+Bug Fixes to C Support
+^^^^^^^^^^^^^^^^^^^^^^
+
+- No longer applying Named Return Value Optimization (NRVO) in C as it is a
+  non-conforming optimization in C. (#GH100902)
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
