@@ -798,8 +798,66 @@ void Fortran::lower::defaultInitializeAtRuntime(
         })
         .end();
   } else {
-    mlir::Value box = builder.createBox(loc, exv);
-    fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+    /// For "simpler" types, relying on "_FortranAInitialize"
+    /// leads to poor runtime performance. Hence optimize
+    /// the same.
+    const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType();
+    mlir::Type symTy = converter.genType(sym);
+    const auto *details =
+        sym.detailsIf<Fortran::semantics::ObjectEntityDetails>();
+    if (details && !Fortran::semantics::IsPolymorphic(sym) &&
+        declTy->category() ==
+            Fortran::semantics::DeclTypeSpec::Category::TypeDerived &&
+        !mlir::isa<fir::SequenceType>(symTy) &&
+        !sym.test(Fortran::semantics::Symbol::Flag::OmpPrivate) &&
+        !sym.test(Fortran::semantics::Symbol::Flag::OmpFirstPrivate)) {
+      std::string globalName = fir::NameUniquer::doGenerated(
+          (converter.mangleName(*declTy->AsDerived()) + fir::kNameSeparator +
+           fir::kDerivedTypeInitSuffix)
+              .str());
+      mlir::Location loc = genLocation(converter, sym);
+      mlir::StringAttr linkage = builder.createInternalLinkage();
+      fir::GlobalOp global = builder.getNamedGlobal(globalName);
+      if (!global && details->init()) {
+        global = builder.createGlobal(loc, symTy, globalName, linkage,
+                                      mlir::Attribute{},
+                                      /*isConst=*/true,
+                                      /*isTarget=*/false,
+                                      /*dataAttr=*/{});
+        Fortran::lower::createGlobalInitialization(
+            builder, global, [&](fir::FirOpBuilder &builder) {
+              Fortran::lower::StatementContext stmtCtx(
+                  /*cleanupProhibited=*/true);
+              fir::ExtendedValue initVal = genInitializerExprValue(
+                  converter, loc, details->init().value(), stmtCtx);
+              mlir::Value castTo =
+                  builder.createConvert(loc, symTy, fir::getBase(initVal));
+              builder.create<fir::HasValueOp>(loc, castTo);
+            });
+      } else if (!global) {
+        global = builder.createGlobal(loc, symTy, globalName, linkage,
+                                      mlir::Attribute{},
+                                      /*isConst=*/true,
+                                      /*isTarget=*/false,
+                                      /*dataAttr=*/{});
+        Fortran::lower::createGlobalInitialization(
+            builder, global, [&](fir::FirOpBuilder &builder) {
+              Fortran::lower::StatementContext stmtCtx(
+                  /*cleanupProhibited=*/true);
+              mlir::Value initVal = genDefaultInitializerValue(
+                  converter, loc, sym, symTy, stmtCtx);
+              mlir::Value castTo = builder.createConvert(loc, symTy, initVal);
+              builder.create<fir::HasValueOp>(loc, castTo);
+            });
+      }
+      auto addrOf = builder.create<fir::AddrOfOp>(loc, global.resultType(),
+                                                  global.getSymbol());
+      builder.create<fir::CopyOp>(loc, addrOf, fir::getBase(exv),
+                                  /*noOverlap=*/true);
+    } else {
+      mlir::Value box = builder.createBox(loc, exv);
+      fir::runtime::genDerivedTypeInitialize(builder, loc, box);
+    }
   }
 }
 
