@@ -74,7 +74,7 @@ static bool exportKernelRuntimeHandles(Module &M) {
     return false;
 
   // FIXME: We shouldn't really need to export the kernel address. We can
-  // initialize the runtime handle with the kernel descriptorG
+  // initialize the runtime handle with the kernel descriptor.
   for (Function &F : M) {
     if (F.getCallingConv() != CallingConv::AMDGPU_KERNEL)
       continue;
