@@ -46,6 +46,6 @@ struct TestOpConversion : public OpConversionPattern<test_irdl_to_cpp::BeefOp> {
 };
 
 void registerIrdlTestDialect(mlir::DialectRegistry &registry) {
-  registry.insert<mlir::test_irdl_to_cpp::Test_irdl_to_cppDialect>();
+  registry.insert<mlir::test_irdl_to_cpp::TestIrdlToCppDialect>();
 }
 } // namespace test

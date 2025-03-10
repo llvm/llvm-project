@@ -52,17 +52,26 @@ struct OpStrings {
   llvm::SmallVector<std::string> opOperandNames;
 };
 
-static std::string capitalize(StringRef str) {
-  return llvm::formatv("{0}{1}", llvm::toUpper(str[0]),
-                       str.slice(1, str.size()));
-}
-
 static std::string joinNameList(llvm::ArrayRef<std::string> names) {
   std::string nameArray;
   llvm::raw_string_ostream nameArrayStream(nameArray);
   nameArrayStream << "{\"" << llvm::join(names, "\", \"") << "\"}";
 
   return nameArray;
+}
+
+static std::string snakeToCamel(llvm::StringRef in) {
+  std::string output{};
+  output.reserve(in.size());
+  for (size_t i = 0; i < in.size(); ++i) {
+    if (in[i] == '_' && i + 1 < in.size()) {
+      output += toupper(in[i + 1]);
+      ++i;
+    } else {
+      output += in[i];
+    }
+  }
+  return output;
 }
 
 static std::string snakeToPascal(llvm::StringRef in) {
@@ -79,10 +88,18 @@ static std::string snakeToPascal(llvm::StringRef in) {
   return output;
 }
 
+static std::string typeToCppName(irdl::TypeOp type) {
+  return llvm::formatv("{0}Type", snakeToPascal(type.getSymName()));
+}
+
+static std::string opToCppName(irdl::OperationOp op) {
+  return llvm::formatv("{0}Op", snakeToPascal(op.getSymName()));
+}
+
 static TypeStrings getStrings(irdl::TypeOp type) {
   TypeStrings strings;
   strings.typeName = type.getSymName();
-  strings.typeCppName = llvm::formatv("{0}Type", capitalize(strings.typeName));
+  strings.typeCppName = typeToCppName(type);
   return strings;
 }
 
@@ -97,7 +114,7 @@ static OpStrings getStrings(irdl::OperationOp op) {
 
   OpStrings strings;
   strings.opName = op.getSymName();
-  strings.opCppName = llvm::formatv("{0}Op", capitalize(strings.opName));
+  strings.opCppName = opToCppName(op);
 
   if (operandOp) {
     strings.opOperandNames = llvm::SmallVector<std::string>(
@@ -151,8 +168,7 @@ static LogicalResult
 generateTypedefList(irdl::DialectOp &dialect,
                     llvm::SmallVector<std::string> &typeNames) {
   auto typeOps = dialect.getOps<irdl::TypeOp>();
-  auto range = llvm::map_range(
-      typeOps, [](auto &&type) { return getStrings(type).typeCppName; });
+  auto range = llvm::map_range(typeOps, typeToCppName);
   typeNames = llvm::SmallVector<std::string>(range);
   return success();
 }
@@ -160,8 +176,7 @@ generateTypedefList(irdl::DialectOp &dialect,
 static LogicalResult generateOpList(irdl::DialectOp &dialect,
                                     llvm::SmallVector<std::string> &opNames) {
   auto operationOps = dialect.getOps<irdl::OperationOp>();
-  auto range = llvm::map_range(
-      operationOps, [](auto &&op) { return getStrings(op).opCppName; });
+  auto range = llvm::map_range(operationOps, opToCppName);
   opNames = llvm::SmallVector<std::string>(range);
   return success();
 }
@@ -174,9 +189,7 @@ static LogicalResult generateTypeInclude(irdl::TypeOp type, raw_ostream &output,
 #include "Templates/TypeDecl.txt"
   );
 
-  const auto typeStrings = getStrings(type);
-  fillDict(dict, typeStrings);
-
+  fillDict(dict, getStrings(type));
   typeDeclTemplate.render(output, dict);
 
   return success();
@@ -203,20 +216,26 @@ static LogicalResult generateOperationInclude(irdl::OperationOp op,
   dict["OP_GETTER_DECLS"] = getters;
   std::string buildDecls;
   llvm::raw_string_ostream stream{buildDecls};
-  stream << llvm::formatv(
-      R"(static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, {0} {1} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});)",
+
+  auto resultParams =
       llvm::join(llvm::map_range(opStrings.opResultNames,
                                  [](StringRef name) -> std::string {
                                    return llvm::formatv("::mlir::Type {0}, ",
-                                                        name);
+                                                        snakeToCamel(name));
                                  }),
-                 ""),
+                 "");
+
+  auto operandParams =
       llvm::join(llvm::map_range(opStrings.opOperandNames,
                                  [](StringRef name) -> std::string {
                                    return llvm::formatv("::mlir::Value {0}, ",
-                                                        name);
+                                                        snakeToCamel(name));
                                  }),
-                 ""));
+                 "");
+
+  stream << llvm::formatv(
+      R"(static void build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState, {0} {1} ::llvm::ArrayRef<::mlir::NamedAttribute> attributes = {{});)",
+      resultParams, operandParams);
   dict["OP_BUILD_DECLS"] = buildDecls;
 
   perOpDeclTemplate.render(output, dict);
@@ -453,7 +472,7 @@ void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState,
   return success();
 }
 
-static LogicalResult verifySymbol(irdl::DialectOp dialect) {
+static LogicalResult verifySupported(irdl::DialectOp dialect) {
   for (auto operation : dialect.getOps<irdl::OperationOp>()) {
     // scan operands of operation
     for (auto operands : operation.getOps<irdl::OperandsOp>()) {
@@ -499,7 +518,7 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
     return dialect->emitError(
         "dialect name must only contain letters, numbers or underscores");
 
-  if (failed(verifySymbol(dialect)))
+  if (failed(verifySupported(dialect)))
     return failure();
 
   llvm::SmallVector<llvm::SmallString<8>> namespaceAbsolutePath{{"mlir"},
@@ -516,7 +535,7 @@ LogicalResult irdl::translateIRDLDialectToCpp(irdl::DialectOp dialect,
     namespacePathStream << "::" << pathElement;
   }
 
-  std::string cppShortName = capitalize(dialectName);
+  std::string cppShortName = snakeToPascal(dialectName);
   std::string dialectBaseTypeName = llvm::formatv("{0}Type", cppShortName);
   std::string cppName = llvm::formatv("{0}Dialect", cppShortName);
 
