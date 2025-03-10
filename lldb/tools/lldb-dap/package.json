@@ -152,6 +152,9 @@
         "windows": {
           "program": "./bin/lldb-dap.exe"
         },
+        "variables": {
+          "pickProcess": "lldb-dap.pickProcess"
+        },
         "configurationAttributes": {
           "launch": {
             "required": [
@@ -361,11 +364,12 @@
                   "number",
                   "string"
                 ],
-                "description": "System process ID to attach to."
+                "description": "Optional process ID to attach to. Defaults to the process picker UI.",
+                "default": "${command:pickProcess}"
               },
               "waitFor": {
                 "type": "boolean",
-                "description": "If set to true, then wait for the process to launch by looking for a process with a basename that matches `program`. No process ID needs to be specified when using this flag.",
+                "description": "If set to true, then wait for the process to launch by looking for a process with a basename that matches `program`. The process ID is ignored when using this flag.",
                 "default": true
               },
               "sourcePath": {
@@ -524,6 +528,16 @@
             }
           },
           {
+            "label": "LLDB: Attach to Process",
+            "description": "",
+            "body": {
+              "type": "lldb-dap",
+              "request": "attach",
+              "name": "${1:Attach}",
+              "pid": "^\"\\${command:pickProcess}\""
+            }
+          },
+          {
             "label": "LLDB: Attach",
             "description": "",
             "body": {
@@ -547,6 +561,26 @@
           }
         ]
       }
-    ]
+    ],
+    "commands": [
+      {
+        "command": "lldb-dap.attachToProcess",
+        "title": "Attach to Process...",
+        "category": "LLDB DAP"
+      },
+      {
+        "command": "lldb-dap.pickProcess",
+        "title": "Pick Process",
+        "category": "LLDB DAP"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        {
+          "command": "lldb-dap.pickProcess",
+          "when": "false"
+        }
+      ]
+    }
   }
 }

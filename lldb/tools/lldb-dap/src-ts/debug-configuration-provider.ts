@@ -1,0 +1,90 @@
+import * as vscode from "vscode";
+
+/**
+ * Converts the given value to an integer if it isn't already.
+ *
+ * If the value cannot be converted then this function will return undefined.
+ *
+ * @param value the value to to be converted
+ * @returns the integer value or undefined if unable to convert
+ */
+function convertToInteger(value: any): number | undefined {
+  let result: number | undefined;
+  switch (typeof value) {
+    case "number":
+      result = value;
+      break;
+    case "string":
+      result = Number(value);
+      break;
+    default:
+      return undefined;
+  }
+  if (!Number.isInteger(result)) {
+    return undefined;
+  }
+  return result;
+}
+
+/**
+ * A {@link vscode.DebugConfigurationProvider} used to resolve LLDB DAP debug configurations.
+ *
+ * Performs checks on the debug configuration before launching a debug session.
+ */
+export class LLDBDapConfigurationProvider
+  implements vscode.DebugConfigurationProvider
+{
+  resolveDebugConfiguration(
+    _folder: vscode.WorkspaceFolder | undefined,
+    debugConfiguration: vscode.DebugConfiguration,
+    _token?: vscode.CancellationToken,
+  ): vscode.ProviderResult<vscode.DebugConfiguration> {
+    if (debugConfiguration.request === "attach") {
+      // Use the process picker by default in attach mode to select the pid.
+      if (!("pid" in debugConfiguration)) {
+        debugConfiguration.pid = "${command:pickProcess}";
+      }
+      // The process picker cannot be used in "waitFor" mode.
+      // Remove the property even if the user explicitly requested it.
+      if (debugConfiguration.waitFor === true) {
+        delete debugConfiguration.pid;
+        if (!("program" in debugConfiguration)) {
+          return vscode.window
+            .showErrorMessage(
+              "Failed to attach to process: 'waitFor' requires that a 'program' be provided . Please update your launch configuration.",
+              { modal: true },
+              "Configure",
+            )
+            .then((userChoice) => {
+              switch (userChoice) {
+                case "Configure":
+                  // returning null from resolveDebugConfiguration() causes VS Code to open the launch configuration
+                  return null;
+                default:
+                  return undefined;
+              }
+            });
+        }
+      }
+    }
+    return debugConfiguration;
+  }
+
+  resolveDebugConfigurationWithSubstitutedVariables(
+    _folder: vscode.WorkspaceFolder | undefined,
+    debugConfiguration: vscode.DebugConfiguration,
+  ): vscode.ProviderResult<vscode.DebugConfiguration> {
+    // Convert the "pid" option to a number if it is a string
+    if ("pid" in debugConfiguration) {
+      const pid = convertToInteger(debugConfiguration.pid);
+      if (pid === undefined) {
+        vscode.window.showErrorMessage(
+          "Invalid debug configuration: property 'pid' must either be an integer or a string containing an integer value.",
+        );
+        return null;
+      }
+      debugConfiguration.pid = pid;
+    }
+    return debugConfiguration;
+  }
+}
