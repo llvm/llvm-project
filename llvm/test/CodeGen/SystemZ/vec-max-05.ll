@@ -14,6 +14,9 @@ declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>)
 declare float @llvm.maximum.f32(float, float)
 declare <4 x float> @llvm.maximum.v4f32(<4 x float>, <4 x float>)
 
+declare half @fmaxh(half, half)
+declare half @llvm.maxnum.f16(half, half)
+
 declare fp128 @fmaxl(fp128, fp128)
 declare fp128 @llvm.maxnum.f128(fp128, fp128)
 declare fp128 @llvm.maximum.f128(fp128, fp128)
@@ -87,6 +90,15 @@ define <2 x double> @f7(<2 x double> %dummy, <2 x double> %val1,
   ret <2 x double> %ret
 }
 
+; Test the fmaxh library function.
+define half @f11_half(half %dummy, half %val1, half %val2) {
+; CHECK-LABEL: f11_half:
+; CHECK: brasl %r14, fmaxh@PLT
+; CHECK: br %r14
+  %ret = call half @fmaxh(half %val1, half %val2) readnone
+  ret half %ret
+}
+
 ; Test the fmaxf library function.
 define float @f11(float %dummy, float %val1, float %val2) {
 ; CHECK-LABEL: f11:
@@ -94,6 +106,18 @@ define float @f11(float %dummy, float %val1, float %val2) {
 ; CHECK: br %r14
   %ret = call float @fmaxf(float %val1, float %val2) readnone
   ret float %ret
+}
+
+; Test the f16 maxnum intrinsic.
+define half @f12_half(half %dummy, half %val1, half %val2) {
+; CHECK-LABEL: f12_half:
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: brasl %r14, __extendhfsf2@PLT
+; CHECK: wfmaxsb %f0, %f0, %f9, 4
+; CHECK: brasl %r14, __truncsfhf2@PLT
+; CHECK: br %r14
+  %ret = call half @llvm.maxnum.f16(half %val1, half %val2)
+  ret half %ret
 }
 
 ; Test the f32 maxnum intrinsic.
