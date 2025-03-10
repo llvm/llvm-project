@@ -1335,6 +1335,71 @@ exit:
   ret i32 %select.next
 }
 
+; Test for https://github.com/llvm/llvm-project/issues/129236.
+define i32 @cost_ashr_with_op_known_invariant_via_scev(i8 %a) {
+; CHECK-LABEL: @cost_ashr_with_op_known_invariant_via_scev(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq i16 0, 0
+; CHECK-NEXT:    [[CONV_I:%.*]] = sext i16 0 to i32
+; CHECK-NEXT:    [[CONV5_I:%.*]] = sext i8 [[A:%.*]] to i32
+; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
+; CHECK:       loop.header:
+; CHECK-NEXT:    [[IV:%.*]] = phi i8 [ 100, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP_LATCH:%.*]] ]
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[THEN:%.*]], label [[ELSE:%.*]]
+; CHECK:       then:
+; CHECK-NEXT:    [[P_1:%.*]] = phi i32 [ [[REM_I:%.*]], [[ELSE]] ], [ 0, [[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[SHR_I:%.*]] = ashr i32 [[CONV5_I]], [[P_1]]
+; CHECK-NEXT:    [[TOBOOL6_NOT_I:%.*]] = icmp eq i32 [[SHR_I]], 0
+; CHECK-NEXT:    [[SEXT_I:%.*]] = shl i32 [[P_1]], 24
+; CHECK-NEXT:    [[TMP0:%.*]] = ashr exact i32 [[SEXT_I]], 24
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[TOBOOL6_NOT_I]], i32 [[TMP0]], i32 0
+; CHECK-NEXT:    br label [[LOOP_LATCH]]
+; CHECK:       else:
+; CHECK-NEXT:    [[REM_I]] = urem i32 -1, [[CONV_I]]
+; CHECK-NEXT:    [[CMP3_I:%.*]] = icmp sgt i32 [[REM_I]], 1
+; CHECK-NEXT:    br i1 [[CMP3_I]], label [[LOOP_LATCH]], label [[THEN]]
+; CHECK:       loop.latch:
+; CHECK-NEXT:    [[P_2:%.*]] = phi i32 [ 0, [[ELSE]] ], [ [[TMP1]], [[THEN]] ]
+; CHECK-NEXT:    [[IV_NEXT]] = add i8 [[IV]], -1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i8 [[IV_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EC]], label [[EXIT:%.*]], label [[LOOP_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    [[P_2_LCSSA:%.*]] = phi i32 [ [[P_2]], [[LOOP_LATCH]] ]
+; CHECK-NEXT:    ret i32 [[P_2_LCSSA]]
+;
+entry:
+  %cmp.i = icmp eq i16 0, 0
+  %conv.i = sext i16 0 to i32
+  %conv5.i = sext i8 %a to i32
+  br label %loop.header
+
+loop.header:
+  %iv = phi i8 [ 100, %entry ], [ %iv.next, %loop.latch ]
+  br i1 %cmp.i, label %then, label %else
+
+then:
+  %p.1 = phi i32 [ %rem.i, %else ], [ 0, %loop.header ]
+  %shr.i = ashr i32 %conv5.i, %p.1
+  %tobool6.not.i = icmp eq i32 %shr.i, 0
+  %sext.i = shl i32 %p.1, 24
+  %2 = ashr exact i32 %sext.i, 24
+  %3 = select i1 %tobool6.not.i, i32 %2, i32 0
+  br label %loop.latch
+
+else:
+  %rem.i = urem i32 -1, %conv.i
+  %cmp3.i = icmp sgt i32 %rem.i, 1
+  br i1 %cmp3.i, label %loop.latch, label %then
+
+loop.latch:
+  %p.2 = phi i32 [ 0, %else ], [ %3, %then ]
+  %iv.next = add i8 %iv, -1
+  %ec = icmp eq i8 %iv.next, 0
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret i32 %p.2
+}
 declare void @llvm.assume(i1 noundef) #0
 
 attributes #0 = { "target-cpu"="penryn" }
