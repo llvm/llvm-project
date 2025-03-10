@@ -484,6 +484,7 @@ public:
   NODE(parser, OmpLocatorList)
   NODE(parser, OmpReductionSpecifier)
   NODE(parser, OmpArgument)
+  NODE(parser, OmpArgumentList)
   NODE(parser, OmpMetadirectiveDirective)
   NODE(parser, OmpMatchClause)
   NODE(parser, OmpOtherwiseClause)
