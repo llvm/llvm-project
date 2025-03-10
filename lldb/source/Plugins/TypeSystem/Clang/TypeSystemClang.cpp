@@ -247,13 +247,15 @@ static lldb::addr_t GetVTableAddress(Process &process,
   // We have an object already read from process memory,
   // so just extract VTable pointer from it
 
-  DataExtractor data;
-  Status err;
-  auto size = valobj.GetData(data, err);
-  if (err.Fail() || vbtable_ptr_offset + data.GetAddressByteSize() > size)
+  auto data_or_err = valobj.GetData();
+  if (!data_or_err)
     return LLDB_INVALID_ADDRESS;
 
-  return data.GetAddress(&vbtable_ptr_offset);
+  auto size = data_or_err->GetByteSize();
+  if (vbtable_ptr_offset + data_or_err->GetAddressByteSize() > size)
+    return LLDB_INVALID_ADDRESS;
+
+  return data_or_err->GetAddress(&vbtable_ptr_offset);
 }
 
 static int64_t ReadVBaseOffsetFromVTable(Process &process,
