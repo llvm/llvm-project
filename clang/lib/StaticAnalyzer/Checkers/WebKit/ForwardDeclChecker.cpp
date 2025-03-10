@@ -28,8 +28,7 @@ using namespace ento;
 
 namespace {
 
-class ForwardDeclChecker
-    : public Checker<check::ASTDecl<TranslationUnitDecl>> {
+class ForwardDeclChecker : public Checker<check::ASTDecl<TranslationUnitDecl>> {
   BugType Bug;
   mutable BugReporter *BR;
   mutable RetainTypeChecker RTC;
@@ -104,8 +103,8 @@ public:
     RTC.visitTranslationUnitDecl(TUD);
     visitor.TraverseDecl(const_cast<TranslationUnitDecl *>(TUD));
   }
-  
-  void visitTypedef(const TypedefDecl* TD) const {
+
+  void visitTypedef(const TypedefDecl *TD) const {
     RTC.visitTypedef(TD);
     auto QT = TD->getUnderlyingType().getCanonicalType();
     if (BR->getSourceManager().isInSystemHeader(TD->getBeginLoc())) {
@@ -129,8 +128,7 @@ public:
     auto Name = R->getName();
     return !R->hasDefinition() && !RTC.isUnretained(QT) &&
            !SystemTypes.contains(CanonicalType) &&
-           !Name.starts_with("Opaque") &&
-           Name != "_NSZone";
+           !Name.starts_with("Opaque") && Name != "_NSZone";
   }
 
   void visitRecordDecl(const RecordDecl *RD, const Decl *DeclWithIssue) const {
@@ -254,7 +252,7 @@ public:
       visitCallArg(E->getArg(i), MethodDecl->getParamDecl(i), DeclWithIssue);
   }
 
-  void visitCallArg(const Expr* Arg, const ParmVarDecl* Param,
+  void visitCallArg(const Expr *Arg, const ParmVarDecl *Param,
                     const Decl *DeclWithIssue) const {
     auto *ArgExpr = Arg->IgnoreParenCasts();
     if (auto *InnerCE = dyn_cast<CallExpr>(Arg)) {
@@ -270,7 +268,7 @@ public:
         isa<CXXDefaultArgExpr>(ArgExpr))
       return;
     if (auto *DRE = dyn_cast<DeclRefExpr>(ArgExpr)) {
-      if (auto* ValDecl = DRE->getDecl()) {
+      if (auto *ValDecl = DRE->getDecl()) {
         if (isa<ParmVarDecl>(ValDecl))
           return;
       }
@@ -307,7 +305,7 @@ public:
     BR->emitReport(std::move(Report));
   }
 
-  void reportUnknownRecieverType(const Expr* Receiver,
+  void reportUnknownRecieverType(const Expr *Receiver,
                                  const Decl *DeclWithIssue) const {
     assert(Receiver);
 
