@@ -488,8 +488,8 @@ public:
   static TEST_CONSTEXPR const result_type multiplier = a;
   static TEST_CONSTEXPR const result_type increment  = c;
   static TEST_CONSTEXPR const result_type modulus    = m;
-  static TEST_CONSTEXPR_CXX14 result_type min() { return min_value; }
-  static TEST_CONSTEXPR_CXX14 result_type max() { return max_value; }
+  static TEST_CONSTEXPR result_type min() { return min_value; }
+  static TEST_CONSTEXPR result_type max() { return max_value; }
   static TEST_CONSTEXPR const result_type default_seed = 1u;
 
   // constructors and seeding functions
