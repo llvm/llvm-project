@@ -51,7 +51,7 @@ using namespace llvm;
 /// \param LockFileName The name of the lock file to read.
 ///
 /// \returns The process ID of the process that owns this lock file
-std::optional<std::pair<std::string, int>>
+std::optional<LockFileManager::OwnedByAnother>
 LockFileManager::readLockFile(StringRef LockFileName) {
   // Read the owning host and PID out of the lock file. If it appears that the
   // owning process is dead, the lock file is invalid.
@@ -69,8 +69,10 @@ LockFileManager::readLockFile(StringRef LockFileName) {
   PIDStr = PIDStr.substr(PIDStr.find_first_not_of(' '));
   int PID;
   if (!PIDStr.getAsInteger(10, PID)) {
-    auto Owner = std::make_pair(std::string(Hostname), PID);
-    if (processStillExecuting(Owner.first, Owner.second))
+    OwnedByAnother Owner;
+    Owner.OwnerHostName = Hostname;
+    Owner.OwnerPID = PID;
+    if (processStillExecuting(Owner.OwnerHostName, Owner.OwnerPID))
       return Owner;
   }
 
@@ -157,9 +159,13 @@ public:
 
 } // end anonymous namespace
 
-LockFileManager::LockFileManager(StringRef FileName) : FileName(FileName) {}
+LockFileManager::LockFileManager(StringRef FileName)
+    : FileName(FileName), Owner(OwnerUnknown{}) {}
 
 Expected<bool> LockFileManager::tryLock() {
+  assert(std::holds_alternative<OwnerUnknown>(Owner) &&
+         "lock has already been attempted");
+
   SmallString<128> AbsoluteFileName(FileName);
   if (std::error_code EC = sys::fs::make_absolute(AbsoluteFileName))
     return createStringError("failed to obtain absolute path for " +
@@ -169,8 +175,10 @@ Expected<bool> LockFileManager::tryLock() {
 
   // If the lock file already exists, don't bother to try to create our own
   // lock file; it won't work anyway. Just figure out who owns this lock file.
-  if ((Owner = readLockFile(LockFileName)))
+  if (auto LockFileOwner = readLockFile(LockFileName)) {
+    Owner = std::move(*LockFileOwner);
     return false;
+  }
 
   // Create a lock file that is unique to this instance.
   UniqueLockFileName = LockFileName;
@@ -213,6 +221,7 @@ Expected<bool> LockFileManager::tryLock() {
         sys::fs::create_link(UniqueLockFileName, LockFileName);
     if (!EC) {
       RemoveUniqueFile.lockAcquired();
+      Owner = OwnedByUs{};
       return true;
     }
 
@@ -222,9 +231,10 @@ Expected<bool> LockFileManager::tryLock() {
 
     // Someone else managed to create the lock file first. Read the process ID
     // from the lock file.
-    if ((Owner = readLockFile(LockFileName))) {
+    if (auto LockFileOwner = readLockFile(LockFileName)) {
       // Wipe out our unique lock file (it's useless now)
       sys::fs::remove(UniqueLockFileName);
+      Owner = std::move(*LockFileOwner);
       return false;
     }
 
@@ -243,7 +253,7 @@ Expected<bool> LockFileManager::tryLock() {
 }
 
 LockFileManager::~LockFileManager() {
-  if (Owner)
+  if (!std::holds_alternative<OwnedByUs>(Owner))
     return;
 
   // Since we own the lock, remove the lock file and our own unique lock file.
@@ -256,8 +266,9 @@ LockFileManager::~LockFileManager() {
 
 LockFileManager::WaitForUnlockResult
 LockFileManager::waitForUnlock(const unsigned MaxSeconds) {
-  if (!Owner)
-    return Res_Success;
+  auto *LockFileOwner = std::get_if<OwnedByAnother>(&Owner);
+  assert(LockFileOwner &&
+         "waiting for lock to be unlocked without knowing the owner");
 
   // Since we don't yet have an event-based method to wait for the lock file,
   // use randomized exponential backoff, similar to Ethernet collision
@@ -278,7 +289,8 @@ LockFileManager::waitForUnlock(const unsigned MaxSeconds) {
     }
 
     // If the process owning the lock died without cleaning up, just bail out.
-    if (!processStillExecuting((*Owner).first, (*Owner).second))
+    if (!processStillExecuting(LockFileOwner->OwnerHostName,
+                               LockFileOwner->OwnerPID))
       return Res_OwnerDied;
   }
 

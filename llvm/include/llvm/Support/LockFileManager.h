@@ -42,19 +42,26 @@ private:
   SmallString<128> LockFileName;
   SmallString<128> UniqueLockFileName;
 
-  std::optional<std::pair<std::string, int>> Owner;
+  struct OwnerUnknown {};
+  struct OwnedByUs{};
+  struct OwnedByAnother {
+    std::string OwnerHostName;
+    int OwnerPID;
+  };
+  std::variant<OwnerUnknown, OwnedByUs, OwnedByAnother> Owner;
 
   LockFileManager(const LockFileManager &) = delete;
   LockFileManager &operator=(const LockFileManager &) = delete;
 
-  static std::optional<std::pair<std::string, int>>
-  readLockFile(StringRef LockFileName);
+  static std::optional<OwnedByAnother> readLockFile(StringRef LockFileName);
 
   static bool processStillExecuting(StringRef Hostname, int PID);
 
 public:
-
+  /// Does not try to acquire the lock.
   LockFileManager(StringRef FileName);
+
+  /// Unlocks the lock if previously acquired by \c tryLock().
   ~LockFileManager();
 
   /// Tries to acquire the lock without blocking.
