@@ -385,7 +385,7 @@ def TrustReturnsNonnullChecker : Checker<"TrustReturnsNonnull">,
 } // end "apiModeling"
 
 //===----------------------------------------------------------------------===//
-// Evaluate "builtin" functions.
+// Evaluate "builtin" functions and assumptions.
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = CoreBuiltin in {
@@ -397,6 +397,10 @@ def NoReturnFunctionChecker : Checker<"NoReturnFunctions">,
 
 def BuiltinFunctionChecker : Checker<"BuiltinFunctions">,
   HelpText<"Evaluate compiler builtin functions (e.g., alloca())">,
+  Documentation<NotDocumented>;
+
+def AssumeModeling : Checker<"AssumeModeling">,
+  HelpText<"Model compiler builtin assume functions and the assume attribute">,
   Documentation<NotDocumented>;
 
 } // end "core.builtin"
