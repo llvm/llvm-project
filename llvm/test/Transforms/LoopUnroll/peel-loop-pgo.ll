@@ -18,13 +18,13 @@
 ; NOPEEL-NOT: PEELING
 
 ; CHECK-LABEL: @basic
-; CHECK: br i1 %{{.*}}, label %[[NEXT0:.*]], label %for.cond.for.end_crit_edge, !prof !15
+; CHECK: br i1 %{{.*}}, label %[[NEXT0:.*]], label %for.cond.for.end_crit_edge
 ; CHECK: [[NEXT0]]:
-; CHECK: br i1 %{{.*}}, label %[[NEXT1:.*]], label %for.cond.for.end_crit_edge, !prof !16
+; CHECK: br i1 %{{.*}}, label %[[NEXT1:.*]], label %for.cond.for.end_crit_edge
 ; CHECK: [[NEXT1]]:
-; CHECK: br i1 %{{.*}}, label %[[NEXT2:.*]], label %for.cond.for.end_crit_edge, !prof !17
+; CHECK: br i1 %{{.*}}, label %[[NEXT2:.*]], label %for.cond.for.end_crit_edge
 ; CHECK: [[NEXT2]]:
-; CHECK: br i1 %{{.*}}, label %for.body, label %{{.*}}, !prof !17
+; CHECK: br i1 %{{.*}}, label %for.body, label %{{.*}}, !prof !15, !llvm.loop !16
 
 define void @basic(ptr %p, i32 %k) #0 !prof !15 {
 entry:
@@ -104,6 +104,7 @@ attributes #1 = { nounwind optsize }
 !16 = !{!"branch_weights", i32 3001, i32 1001}
 
 ;CHECK: !15 = !{!"branch_weights", i32 3001, i32 1001}
-;CHECK: !16 = !{!"branch_weights", i32 2000, i32 1001}
-;CHECK: !17 = !{!"branch_weights", i32 1001, i32 1001}
+;CHECK: !16 = distinct !{!16, !17, !18, {{.*}}}
+;CHECK: !17 = !{!"llvm.loop.peeled.count", i32 4}
+;CHECK: !18 = !{!"llvm.loop.estimated_trip_count", i32 0}
 
