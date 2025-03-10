@@ -23,4 +23,14 @@ def XeGPUFoldAliasOps : Pass<"xegpu-fold-alias-ops"> {
   ];
 }
 
+def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
+  let summary = "Distribute XeGPU ops to work items";
+  let description = [{
+    The pass distributes subgroup level (SIMD) XeGPU ops to work items.
+  }];
+  let dependentDialects = [
+      "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect"
+  ];
+}
+
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
