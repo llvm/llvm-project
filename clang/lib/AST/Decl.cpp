@@ -3362,12 +3362,7 @@ bool FunctionDecl::isMSVCRTEntryPoint() const {
 }
 
 bool FunctionDecl::isReservedGlobalPlacementOperator() const {
-  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
-    return false;
-  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
+  if (!getDeclName().isOperatorNewOrDelete())
     return false;
 
   if (!getDeclContext()->getRedeclContext()->isTranslationUnit())
@@ -3390,12 +3385,7 @@ bool FunctionDecl::isReservedGlobalPlacementOperator() const {
 
 bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
     std::optional<unsigned> *AlignmentParam, bool *IsNothrow) const {
-  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
-    return false;
-  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
+  if (!getDeclName().isOperatorNewOrDelete())
     return false;
 
   if (isa<CXXRecordDecl>(getDeclContext()))
@@ -3406,7 +3396,9 @@ bool FunctionDecl::isUsableAsGlobalAllocationFunctionInConstantEvaluation(
     return false;
 
   bool IsTypeAware = isTypeAwareOperatorNewOrDelete();
-  unsigned MaxParamCount = IsTypeAware + 4;
+  // address, (size or hot_cold_t), alignment, no_throw_t
+  unsigned MaxImplicitParameters = 4;
+  unsigned MaxParamCount = IsTypeAware + MaxImplicitParameters;
   const auto *FPT = getType()->castAs<FunctionProtoType>();
   if (FPT->getNumParams() == 0 || FPT->getNumParams() > MaxParamCount ||
       FPT->isVariadic())
@@ -3506,32 +3498,28 @@ bool FunctionDecl::isDestroyingOperatorDelete() const {
   //   Within a class C, a single object deallocation function with signature
   //     (T, std::destroying_delete_t, <more params>)
   //   is a destroying operator delete.
-  if (!isa<CXXMethodDecl>(this) || getOverloadedOperator() != OO_Delete)
+  if (!isa<CXXMethodDecl>(this) || getOverloadedOperator() != OO_Delete ||
+      getNumParams() < 2)
     return false;
 
-  unsigned DestroyingDeleteTagParam = 1;
   if (isTypeAwareOperatorNewOrDelete())
-    ++DestroyingDeleteTagParam;
-
-  if (getNumParams() <= DestroyingDeleteTagParam)
     return false;
 
-  auto *RD =
-      getParamDecl(DestroyingDeleteTagParam)->getType()->getAsCXXRecordDecl();
+  auto *RD = getParamDecl(1)->getType()->getAsCXXRecordDecl();
   return RD && RD->isInStdNamespace() && RD->getIdentifier() &&
          RD->getIdentifier()->isStr("destroying_delete_t");
 }
 
 bool FunctionDecl::isTypeAwareOperatorNewOrDelete() const {
-  if (getDeclName().getNameKind() != DeclarationName::CXXOperatorName)
+  if (getDeclName().isOperatorNew()) {
+    if (getNumParams() < FunctionDecl::RequiredTypeAwareNewParameterCount)
+      return false;
+  } else if (getDeclName().isOperatorDelete()) {
+    if (getNumParams() < FunctionDecl::RequiredTypeAwareDeleteParameterCount)
+      return false;
+  } else
     return false;
-  if (getDeclName().getCXXOverloadedOperator() != OO_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Delete &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_New &&
-      getDeclName().getCXXOverloadedOperator() != OO_Array_Delete)
-    return false;
-  if (getNumParams() < 2)
-    return false;
+
   return getParamDecl(0)->getType()->isTypeIdentitySpecialization();
 }
 

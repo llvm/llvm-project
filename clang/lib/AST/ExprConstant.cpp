@@ -8340,8 +8340,7 @@ public:
         } else
           FD = LambdaCallOp;
       } else if (FD->isUsableAsGlobalAllocationFunctionInConstantEvaluation()) {
-        if (FD->getDeclName().getCXXOverloadedOperator() == OO_New ||
-            FD->getDeclName().getCXXOverloadedOperator() == OO_Array_New) {
+        if (FD->getDeclName().isOperatorNew()) {
           LValue Ptr;
           if (!HandleOperatorNewCall(Info, E, Ptr))
             return false;

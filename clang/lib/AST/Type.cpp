@@ -3144,7 +3144,7 @@ bool Type::isTypeIdentitySpecialization() const {
   if (!STDecl)
     return false;
   IdentifierInfo *II = STDecl->getIdentifier();
-  return II && STDecl->isInStdNamespace() && II->isStr("type_identity");
+  return STDecl->isInStdNamespace() && II->isStr("type_identity");
 }
 
 bool Type::isSpecifierType() const {

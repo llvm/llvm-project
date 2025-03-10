@@ -2537,7 +2537,21 @@ public:
 
   /// Determines whether this function is one of the replaceable global
   /// allocation functions described in isReplaceableGlobalAllocationFunction,
-  /// or is a function that may be treated as such during constant evaluation
+  /// or is a function that may be treated as such during constant evaluation.
+  /// This adds support for potentially templated type aware global allocation
+  /// functions of the form:
+  ///    void *operator new(type-identity, std::size_t, std::align_val_t)
+  ///    void *operator new(type-identity, std::size_t, std::align_val_t, const std::nothrow_t &) noexcept;
+  ///    void *operator new[](type-identity, std::size_t, std::align_val_t)
+  ///    void *operator new[](type-identity, std::size_t, std::align_val_t, const std::nothrow_t &) noexcept;
+  ///    void operator delete(type-identity, void*, std::size_t, std::align_val_t) noexcept;
+  ///    void operator delete(type-identity, void*, std::size_t, std::align_val_t, const std::nothrow_t &) noexcept;
+  ///    void operator delete[](type-identity, void*, std::size_t, std::align_val_t) noexcept;
+  ///    void operator delete[](type-identity, void*, std::size_t, std::align_val_t, const std::nothrow_t &) noexcept;
+  /// Where `type-identity` is a specialization of std::type_identity. If the
+  /// declaration is a templated function, it may not include a parameter pack
+  /// in the argument list, the type-identity parameter is required to be
+  /// dependent, and is the only permitted dependent parameter.
   bool isUsableAsGlobalAllocationFunctionInConstantEvaluation(
       std::optional<unsigned> *AlignmentParam = nullptr,
       bool *IsNothrow = nullptr) const;
@@ -2547,6 +2561,14 @@ public:
 
   /// Determine whether this is a destroying operator delete.
   bool isDestroyingOperatorDelete() const;
+
+  /// Count of mandatory parameters for type aware operator new
+  static constexpr unsigned RequiredTypeAwareNewParameterCount =
+    /* type-identity */ 1 + /* size */ 1 + /* alignment */ 1;
+
+  /// Count of mandatory parameters for type aware operator delete
+  static constexpr unsigned RequiredTypeAwareDeleteParameterCount =
+    /* type-identity */ 1 + /* address */ 1 + /* size */ 1 + /* alignment */ 1;
 
   /// Determine whether this is a type aware operator new or delete.
   bool isTypeAwareOperatorNewOrDelete() const;

@@ -3465,9 +3465,7 @@ void Sema::DeclareGlobalAllocationFunction(DeclarationName Name,
       /*IsVariadic=*/false, /*IsCXXMethod=*/false, /*IsBuiltin=*/true));
 
   QualType BadAllocType;
-  bool HasBadAllocExceptionSpec
-    = (Name.getCXXOverloadedOperator() == OO_New ||
-       Name.getCXXOverloadedOperator() == OO_Array_New);
+  bool HasBadAllocExceptionSpec = Name.isOperatorNew();
   if (HasBadAllocExceptionSpec) {
     if (!getLangOpts().CPlusPlus11) {
       BadAllocType = Context.getTypeDeclType(getStdBadAlloc());

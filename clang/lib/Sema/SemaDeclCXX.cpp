@@ -16317,11 +16317,6 @@ Sema::BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
   if (!getLangOpts().TypeAwareAllocators || DeallocType.isNull())
     return nullptr;
 
-  TemplateParameterList *TemplateParameters =
-      FnTemplateDecl->getTemplateParameters();
-  if (TemplateParameters->hasParameterPack())
-    return nullptr;
-
   FunctionDecl *FnDecl = FnTemplateDecl->getTemplatedDecl();
   if (!FnDecl->isTypeAwareOperatorNewOrDelete())
     return nullptr;
@@ -16330,7 +16325,10 @@ Sema::BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
     return nullptr;
 
   unsigned NumParams = FnDecl->getNumParams();
-  if (NumParams < 2)
+  constexpr unsigned RequiredParameterCount =
+    FunctionDecl::RequiredTypeAwareDeleteParameterCount;
+  // A usual deallocation function has no placement parameters
+  if (NumParams != RequiredParameterCount)
     return nullptr;
 
   for (size_t Idx = 1; Idx < NumParams; ++Idx) {
@@ -16345,35 +16343,16 @@ Sema::BuildTypeAwareUsualDelete(FunctionTemplateDecl *FnTemplateDecl,
   if (SpecializedTypeIdentity.isNull())
     return nullptr;
 
-  SmallVector<QualType, 4> ArgTypes;
+  SmallVector<QualType, RequiredParameterCount> ArgTypes;
   ArgTypes.reserve(NumParams);
+
+  // The first parameter to a type aware operator delete is by definition the
+  // type-identity argument, so we explicitly set this to the target
+  // type-identity type, the remaining usual parameters should then simply match
+  // the type declared in the function template.
   ArgTypes.push_back(SpecializedTypeIdentity);
-  ArgTypes.push_back(FnDecl->getParamDecl(1)->getType());
-  unsigned UsualParamsIdx = 2;
-  if (UsualParamsIdx < NumParams && FnDecl->isDestroyingOperatorDelete()) {
-    QualType Type = FnDecl->getParamDecl(UsualParamsIdx)->getType();
-    ArgTypes.push_back(Type);
-    ++UsualParamsIdx;
-  }
-
-  if (UsualParamsIdx < NumParams) {
-    QualType Type = FnDecl->getParamDecl(UsualParamsIdx)->getType();
-    if (Context.hasSameUnqualifiedType(Type, Context.getSizeType())) {
-      ArgTypes.push_back(Type);
-      ++UsualParamsIdx;
-    }
-  }
-
-  if (UsualParamsIdx < NumParams) {
-    QualType Type = FnDecl->getParamDecl(UsualParamsIdx)->getType();
-    if (Type->isAlignValT()) {
-      ArgTypes.push_back(Type);
-      ++UsualParamsIdx;
-    }
-  }
-
-  if (UsualParamsIdx != NumParams)
-    return nullptr;
+  for (unsigned ParamIdx = 1; ParamIdx < RequiredParameterCount; ++ParamIdx)
+    ArgTypes.push_back(FnDecl->getParamDecl(ParamIdx)->getType());
 
   FunctionProtoType::ExtProtoInfo EPI;
   QualType ExpectedFunctionType =
@@ -16596,12 +16575,6 @@ CheckOperatorDeleteDeclaration(Sema &SemaRef, FunctionDecl *FnDecl) {
     if (!SemaRef.isUsualDeallocationFunction(MD)) {
       SemaRef.Diag(MD->getLocation(),
                    diag::err_destroying_operator_delete_not_usual);
-      return true;
-    }
-    if (MD->isTypeAwareOperatorNewOrDelete() &&
-        !SemaRef.getLangOpts().TypeAwareDestroyingDelete) {
-      SemaRef.Diag(MD->getLocation(),
-                   diag::err_type_aware_destroying_operator_delete);
       return true;
     }
   }

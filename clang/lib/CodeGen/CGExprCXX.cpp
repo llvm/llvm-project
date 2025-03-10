@@ -1401,11 +1401,13 @@ static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *FD) {
     ++AI;
   }
 
-  // The first non-type argument is always a void*.
+  // The first argument after type_identity (if any) is always a void*
+  // (or C* for a destroying operator delete for class type C).
   ++AI;
 
   // The next parameter may be a std::destroying_delete_t.
   if (FD->isDestroyingOperatorDelete()) {
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
     Params.DestroyingDelete = true;
     assert(AI != AE);
     ++AI;
@@ -1415,12 +1417,14 @@ static UsualDeleteParams getUsualDeleteParams(const FunctionDecl *FD) {
   if (AI != AE && (*AI)->isIntegerType()) {
     Params.Size = true;
     ++AI;
-  }
+  } else
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
 
   if (AI != AE && (*AI)->isAlignValT()) {
     Params.Alignment = AlignedAllocationMode::Yes;
     ++AI;
-  }
+  } else
+    assert(!isTypeAwareAllocation(Params.TypeAwareDelete));
 
   assert(AI == AE && "unexpected usual deallocation function parameter");
   return Params;

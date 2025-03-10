@@ -1103,8 +1103,8 @@ static bool DiagnoseTypeAwareAllocators(Sema &S, SourceLocation Loc,
                                         QualType PromiseType) {
   if (!S.getLangOpts().TypeAwareAllocators)
     return false;
-  if (!PromiseType->isRecordType())
-    return false;
+  assert(PromiseType->isRecordType());
+
   LookupResult R(S, Name, Loc, Sema::LookupOrdinaryName);
   S.LookupQualifiedName(R, PromiseType->getAsCXXRecordDecl());
   bool HaveIssuedWarning = false;

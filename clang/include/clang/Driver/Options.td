@@ -3527,10 +3527,6 @@ defm cxx_type_aware_allocators : BoolFOption<"experimental-cxx-type-aware-alloca
   LangOpts<"TypeAwareAllocators">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption], "Enable experimental C++ type aware allocator operators">,
   NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
-defm cxx_type_aware_destroying_delete : BoolFOption<"experimental-cxx-type-aware-destroying-delete",
-  LangOpts<"TypeAwareDestroyingDelete">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Enable experimental C++ type aware allocator operators for destroying delete">,
-  NegFlag<SetFalse>, BothFlags<[], [ClangOption, CC1Option]>>;
 def fobjc_legacy_dispatch : Flag<["-"], "fobjc-legacy-dispatch">, Group<f_Group>;
 def fobjc_new_property : Flag<["-"], "fobjc-new-property">, Group<clang_ignored_f_Group>;
 defm objc_infer_related_result_type : BoolFOption<"objc-infer-related-result-type",
