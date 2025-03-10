@@ -62,7 +62,7 @@ enum PGOCtxProfileBlockIDs {
 /// like value profiling - which would appear as additional records. For
 /// example, value profiling would produce a new record with a new record ID,
 /// containing the profiled values (much like the counters)
-class PGOCtxProfileWriter : public ctx_profile::ProfileWriter {
+class PGOCtxProfileWriter final : public ctx_profile::ProfileWriter {
   enum class EmptyContextCriteria { None, EntryIsZero, AllAreZero };
 
   BitstreamWriter Writer;
