@@ -25,6 +25,14 @@ transforms to:
   inline auto f2(int arg) -> int noexcept;
   virtual auto f3() const && -> float = delete;
 
+Options
+-------
+
+.. option:: WarnOnNontrailingVoid
+
+  If the option is set to `true`, the check will apply even to function signatures
+  with return type ``void``. Default is `false`.
+
 Known Limitations
 -----------------
 
