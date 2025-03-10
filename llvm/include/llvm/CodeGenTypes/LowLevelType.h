@@ -239,7 +239,8 @@ public:
 
   constexpr bool isValid() const { return isToken() || RawData != 0; }
   constexpr bool isScalar() const {
-    return isValid() && (Info == Kind::INTEGER || Info == Kind::FLOAT || Info == Kind::SCALAR);
+    return isValid() && (Info == Kind::INTEGER || Info == Kind::FLOAT ||
+                         Info == Kind::SCALAR);
   }
   constexpr bool isScalar(unsigned Size) const {
     return isScalar() && getScalarSizeInBits() == Size;

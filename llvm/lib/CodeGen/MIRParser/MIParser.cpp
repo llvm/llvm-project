@@ -1928,7 +1928,8 @@ bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty) {
       TypeDigits.consume_front("f") || TypeDigits.consume_front("p") ||
       TypeDigits.consume_front("bf")) {
     if (TypeDigits.empty() || !llvm::all_of(TypeDigits, isdigit))
-      return error("expected integers after 's'/'i'/'f'/'bf'/'p' type identifier");
+      return error(
+          "expected integers after 's'/'i'/'f'/'bf'/'p' type identifier");
   }
 
   if (Token.range().starts_with("s") || Token.range().starts_with("i")) {
@@ -2064,7 +2065,8 @@ bool MIParser::parseTypedImmediateOperand(MachineOperand &Dest) {
     return error("a typed immediate operand should start with one of 'i', "
                  "'s','f','bf', or 'p'");
   if (TypeDigits.empty() || !llvm::all_of(TypeDigits, isdigit))
-    return error("expected integers after 'i'/'s'/'f'/'bf'/'p' type identifier");
+    return error(
+        "expected integers after 'i'/'s'/'f'/'bf'/'p' type identifier");
 
   auto Loc = Token.location();
   lex();
