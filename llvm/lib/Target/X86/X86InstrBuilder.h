@@ -117,11 +117,7 @@ static inline const MachineInstrBuilder &
 addDirectMem(const MachineInstrBuilder &MIB, Register Reg) {
   // Because memory references are always represented with five
   // values, this adds: Reg, 1, NoReg, 0, NoReg to the instruction.
-  return MIB.addReg(Reg)
-      .addImm(1)
-      .addReg(Register())
-      .addImm(0)
-      .addReg(Register());
+  return MIB.addReg(Reg).addImm(1).addReg(0).addImm(0).addReg(0);
 }
 
 /// Replace the address used in the instruction with the direct memory
@@ -131,19 +127,19 @@ static inline void setDirectAddressInInstr(MachineInstr *MI, unsigned Operand,
   // Direct memory address is in a form of: Reg/FI, 1 (Scale), NoReg, 0, NoReg.
   MI->getOperand(Operand).ChangeToRegister(Reg, /*isDef=*/false);
   MI->getOperand(Operand + 1).setImm(1);
-  MI->getOperand(Operand + 2).setReg(Register());
+  MI->getOperand(Operand + 2).setReg(0);
   MI->getOperand(Operand + 3).ChangeToImmediate(0);
-  MI->getOperand(Operand + 4).setReg(Register());
+  MI->getOperand(Operand + 4).setReg(0);
 }
 
 static inline const MachineInstrBuilder &
 addOffset(const MachineInstrBuilder &MIB, int Offset) {
-  return MIB.addImm(1).addReg(Register()).addImm(Offset).addReg(Register());
+  return MIB.addImm(1).addReg(0).addImm(Offset).addReg(0);
 }
 
 static inline const MachineInstrBuilder &
 addOffset(const MachineInstrBuilder &MIB, const MachineOperand& Offset) {
-  return MIB.addImm(1).addReg(Register()).add(Offset).addReg(Register());
+  return MIB.addImm(1).addReg(0).add(Offset).addReg(0);
 }
 
 /// addRegOffset - This function is used to add a memory reference of the form
@@ -165,7 +161,7 @@ addRegReg(const MachineInstrBuilder &MIB, Register Reg1, bool isKill1,
       .addImm(1)
       .addReg(Reg2, getKillRegState(isKill2), SubReg2)
       .addImm(0)
-      .addReg(Register());
+      .addReg(0);
 }
 
 static inline const MachineInstrBuilder &
@@ -186,7 +182,7 @@ addFullAddress(const MachineInstrBuilder &MIB,
   else
     MIB.addImm(AM.Disp);
 
-  return MIB.addReg(Register());
+  return MIB.addReg(0);
 }
 
 /// addFrameReference - This function is used to add a reference to the base of
@@ -223,11 +219,8 @@ static inline const MachineInstrBuilder &
 addConstantPoolReference(const MachineInstrBuilder &MIB, unsigned CPI,
                          Register GlobalBaseReg, unsigned char OpFlags) {
   //FIXME: factor this
-  return MIB.addReg(GlobalBaseReg)
-      .addImm(1)
-      .addReg(Register())
-      .addConstantPoolIndex(CPI, 0, OpFlags)
-      .addReg(Register());
+  return MIB.addReg(GlobalBaseReg).addImm(1).addReg(0)
+    .addConstantPoolIndex(CPI, 0, OpFlags).addReg(0);
 }
 
 } // end namespace llvm
