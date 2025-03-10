@@ -751,26 +751,25 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   MCRegister MCReg = AMDGPU::getMCReg(Op.getReg(), *ST);
   unsigned RegIdx = TRI->getHWRegIndex(MCReg);
   assert(isUInt<8>(RegIdx));
-  unsigned Reg = (RegIdx << 1) | (AMDGPU::isHi16Reg(MCReg, *TRI) ? 1 : 0);
 
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
   unsigned Size = TRI->getRegSizeInBits(*RC);
 
   // AGPRs/VGPRs are tracked every 16 bits, SGPRs by 32 bits
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
-    assert(Reg <= SQ_MAX_PGM_VGPRS);
+    unsigned Reg = (RegIdx << 1) | (AMDGPU::isHi16Reg(MCReg, *TRI) ? 1 : 0);
+    assert(Reg <= AGPR_OFFSET);
     Result.first = Reg;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
     assert(Size % 16 == 0);
     Result.second = Result.first + (Size / 16);
-  } else if (TRI->isSGPRReg(*MRI, Op.getReg()) &&
-             (Reg >> 1) < SQ_MAX_PGM_SGPRS) {
+  } else if (TRI->isSGPRReg(*MRI, Op.getReg()) && RegIdx < SQ_MAX_PGM_SGPRS) {
     // SGPRs including VCC, TTMPs and EXEC but excluding read-only scalar
     // sources like SRC_PRIVATE_BASE.
-    Result.first = (Reg >> 1) + NUM_ALL_VGPRS;
-    Result.second = Result.first + ((Size + 16) / 32);
+    Result.first = RegIdx + NUM_ALL_VGPRS;
+    Result.second = Result.first + divideCeil(Size, 32);
   } else {
     return {-1, -1};
   }
