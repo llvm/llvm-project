@@ -1,4 +1,4 @@
-// RUN: mlir-link -split-input-file %s | FileCheck %s
+// RUN: mlir-link -sort-symbols -split-input-file %s | FileCheck %s
 
 // CHECK:       llvm.func @f1() {
 // CHECK-NEXT:    llvm.return

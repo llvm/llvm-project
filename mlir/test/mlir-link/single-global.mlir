@@ -1,4 +1,4 @@
-// RUN: mlir-link -split-input-file %s | FileCheck %s
+// RUN: mlir-link -sort-symbols -split-input-file %s | FileCheck %s
 
 // CHECK:       llvm.func @f1() -> i32 {
 // CHECK-NEXT:    %0 = llvm.mlir.addressof @number : !llvm.ptr
@@ -11,14 +11,12 @@
 // CHECK-NEXT:  }
 // CHECK-NEXT:  llvm.mlir.global external @number(7 : i32) {addr_space = 0 : i32} : i32
 
-// -----
-
 llvm.mlir.global @number(7 : i32) : i32
 
 llvm.func @f1() -> i32
 
 llvm.func @f2() -> i32 {
-  %0 = llvm.call @f1() : () -> i32 
+  %0 = llvm.call @f1() : () -> i32
   llvm.return %0 : i32
 }
 

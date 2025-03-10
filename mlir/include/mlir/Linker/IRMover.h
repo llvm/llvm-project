@@ -21,6 +21,8 @@ struct ConflictPair {
   Operation *src;
 
   bool hasConflict() const { return dst; }
+
+  static ConflictPair noConflict(Operation *src) { return {nullptr, src}; }
 };
 
 struct IRMover {

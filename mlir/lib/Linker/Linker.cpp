@@ -59,14 +59,14 @@ LogicalResult Linker::addModule(OwningOpRef<ModuleOp> src) {
     flags &= LinkerFlags::OverrideFromSrc;
   }
 
-  return process(mod, flags);
+  return summarize(mod, flags);
 }
 
-LogicalResult Linker::process(ModuleOp src, unsigned flags) {
+LogicalResult Linker::summarize(ModuleOp src, unsigned flags) {
   ModuleLinkerInterface *iface = getModuleLinkerInterface(src);
   if (!iface)
     return emitError("Module does not have a linker interface");
-  return iface->process(src, flags);
+  return iface->summarize(src, flags);
 }
 
 OwningOpRef<ModuleOp> Linker::link(bool sortSymbols) {
@@ -78,6 +78,7 @@ OwningOpRef<ModuleOp> Linker::link(bool sortSymbols) {
     std::vector<Operation *> symbols;
 
     mod->walk([&](Operation *op) {
+      // TODO use SymbolLinkerInterfaces
       if (auto iface = dyn_cast<SymbolLinkerInterface>(op->getDialect())) {
         if (iface->canBeLinked(op)) {
           symbols.push_back(op);

@@ -82,7 +82,7 @@ private:
   unsigned getFlags() const;
 
   /// Preprocess the given module before linking with the given flags
-  LogicalResult process(ModuleOp src, unsigned flags);
+  LogicalResult summarize(ModuleOp src, unsigned flags);
 
   /// The context used for the linker
   MLIRContext *context;

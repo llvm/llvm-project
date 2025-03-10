@@ -152,66 +152,14 @@ bool isDeclaration(Operation *op) {
 }
 
 //===----------------------------------------------------------------------===//
-// LLVMLinkerState
-//===----------------------------------------------------------------------===//
-
-struct LLVMLinkerState : LinkerState::Base<LLVMLinkerState> {
-  LLVMLinkerState(ModuleOp src) : symbolTable(src) {}
-
-  static std::unique_ptr<LinkerState> create(ModuleOp src) {
-    return std::make_unique<LLVMLinkerState>(src);
-  }
-
-  Operation *lookup(Operation *op) const override {
-    return symbolTable.lookup(symbolTable.getSymbolName(op));
-  }
-
-  void pushValuesToLink(ConflictPair conflict) {
-    valuesToLink.insert(conflict);
-  }
-
-  void pushValueToClone(Operation *op) { valuesToClone.insert(op); }
-
-  ArrayRef<ConflictPair> getValuesToLink() const {
-    return valuesToLink.getArrayRef();
-  }
-
-  unsigned getNumValuesToLink() const { return valuesToLink.size(); }
-
-  FailureOr<StringAttr> rename(Operation *op) {
-    return symbolTable.renameToUnique(op, {});
-  }
-
-  ArrayRef<Operation *> getValuesToClone() const {
-    return valuesToClone.getArrayRef();
-  }
-
-private:
-  SymbolTable symbolTable;
-  SetVector<Operation *> valuesToClone;
-  SetVector<ConflictPair> valuesToLink;
-};
-
-//===----------------------------------------------------------------------===//
 // LLVMSymbolLinkerInterface
 //===----------------------------------------------------------------------===//
 
-struct LLVMSymbolLinkerInterface
-    : SymbolLinkerInterface::Base<LLVMSymbolLinkerInterface, LLVMLinkerState> {
-
-  using Base =
-      SymbolLinkerInterface::Base<LLVMSymbolLinkerInterface, LLVMLinkerState>;
-
-  LLVMSymbolLinkerInterface(Dialect *dialect) : Base(dialect) {}
+class LLVMSymbolLinkerInterface : public SymbolLinkerInterface {
+public:
+  using SymbolLinkerInterface::SymbolLinkerInterface;
 
   enum class LinkFrom { Dst, Src, Both };
-
-  ModuleLinkerInterface *getModuleLinkerInterface(Operation *op) const {
-    ModuleOp mod = op->getParentOfType<ModuleOp>();
-    if (!mod)
-      return nullptr;
-    return dyn_cast_or_null<ModuleLinkerInterface>(mod->getDialect());
-  }
 
   bool canBeLinked(Operation *op) const override {
     return isa<LLVM::GlobalOp>(op) || isa<LLVM::LLVMFuncOp>(op);
@@ -223,18 +171,17 @@ struct LLVMSymbolLinkerInterface
     assert(canBeLinked(src) && "expected linkable operation");
 
     if (isLocalLinkage(getLinkage(src)))
-      return {nullptr, src};
+      return ConflictPair::noConflict(src);
 
     // TODO: make lookup through module state
-    if (ModuleLinkerInterface *iface = getModuleLinkerInterface(src)) {
-      if (Operation *dst = lookup(src)) {
-        if (dst != src && !isLocalLinkage(getLinkage(dst))) {
-          return {dst, src};
-        }
+    if (auto it = summary.find(getSymbol(src)); it != summary.end()) {
+      Operation *dst = it->second;
+      if (dst != src && !isLocalLinkage(getLinkage(dst))) {
+        return {dst, src};
       }
     }
 
-    return {nullptr, src};
+    return ConflictPair::noConflict(src);
   }
 
   bool isLinkNeeded(ConflictPair pair) const override {
@@ -360,27 +307,33 @@ struct LLVMSymbolLinkerInterface
 
     LinkFrom comdatFrom = LinkFrom::Dst;
 
-    LLVMLinkerState &state = getLinkerState();
     if (comdatFrom == LinkFrom::Both)
-      state.pushValueToClone(*linkFromSrc ? pair.dst : pair.src);
-    if (*linkFromSrc)
-      state.pushValuesToLink(pair);
+      valuesToClone.insert(*linkFromSrc ? pair.dst : pair.src);
 
+    if (*linkFromSrc)
+      registerForLink(pair);
     return success();
   }
 
-  void registerOperation(Operation *op) override {
+  void registerForLink(Operation *op) override {
     assert(canBeLinked(op) && "expected linkable operation");
-    getLinkerState().pushValuesToLink({{}, op});
+    registerForLink(ConflictPair::noConflict(op));
   }
 
-  std::unique_ptr<LinkerState> init(ModuleOp src) const override {
-    return LLVMLinkerState::create(src);
+  void registerForLink(ConflictPair pair) {
+    StringRef sym = getSymbol(pair.src);
+    assert(!summary.contains(sym) && "expected unique symbol");
+    summary[sym] = pair.src;
+
+    valuesToLink.insert(pair);
+  }
+
+  LogicalResult initialize(ModuleOp src) override {
+    symbolTable = std::make_unique<SymbolTable>(src);
+    return success();
   }
 
   LogicalResult link(ModuleOp dst) const override {
-    const LLVMLinkerState &state = getLinkerState();
-
     // TODO: Implement
     // for (Operation *gv : state.getValuesToClone()) {
     //   llvm_unreachable("unimplemented");
@@ -391,9 +344,8 @@ struct LLVMSymbolLinkerInterface
     //   llvm_unreachable("unimplemented");
     // }
 
-    // move values
     IRMover mover(dst);
-    return mover.move(state.getValuesToLink());
+    return mover.move(valuesToLink.getArrayRef());
   }
 
   Operation *prototype(ConflictPair pair) const {
@@ -432,6 +384,15 @@ struct LLVMSymbolLinkerInterface
 
     return pair.dst;
   }
+
+private:
+  llvm::StringMap<Operation *> summary;
+
+  std::unique_ptr<SymbolTable> symbolTable;
+
+  SetVector<Operation *> valuesToClone;
+
+  SetVector<ConflictPair> valuesToLink;
 };
 
 //===----------------------------------------------------------------------===//

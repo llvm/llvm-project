@@ -18,71 +18,19 @@ using namespace mlir;
 using namespace mlir::link;
 
 //===----------------------------------------------------------------------===//
-// BuiltinLinkerState
-//===----------------------------------------------------------------------===//
-
-struct BuiltinLinkerState : LinkerState::Base<BuiltinLinkerState> {
-  static std::unique_ptr<LinkerState> create(ModuleOp src) {
-    auto state = std::make_unique<BuiltinLinkerState>();
-
-    // Walk the module and setup all operations with symbol linker interface
-    WalkResult result = src.walk([&](Operation *op) {
-      if (op == src)
-        return WalkResult::advance();
-
-      if (SymbolLinkerInterface *linker = getSymbolLinker(op))
-        if (failed(linker->initialize(src)))
-          return WalkResult::interrupt();
-      return WalkResult::advance();
-    });
-
-    if (result.wasInterrupted())
-      return nullptr;
-
-    return state;
-  }
-
-  Operation *lookup(Operation *op) const override {
-    if (SymbolLinkerInterface *linker = getSymbolLinker(op))
-      return linker->lookup(op);
-    return nullptr;
-  }
-
-  void insertSymbolLinker(SymbolLinkerInterface *linker) {
-    symbolLinkers.insert(linker);
-  }
-
-  ArrayRef<SymbolLinkerInterface *> getSymbolLinkers() const {
-    return symbolLinkers.getArrayRef();
-  }
-
-private:
-  static SymbolLinkerInterface *getSymbolLinker(Operation *op) {
-    Dialect *dialect = op->getDialect();
-    return dyn_cast<SymbolLinkerInterface>(dialect);
-  }
-
-  SetVector<SymbolLinkerInterface *> symbolLinkers;
-};
-
-//===----------------------------------------------------------------------===//
 // BuiltinLinkerInterface
 //===----------------------------------------------------------------------===//
 
-struct BuiltinLinkerInterface
-    : ModuleLinkerInterface::Base<BuiltinLinkerInterface, BuiltinLinkerState> {
+class BuiltinLinkerInterface : public ModuleLinkerInterface {
+public:
+  using ModuleLinkerInterface::ModuleLinkerInterface;
 
-  using Base =
-      ModuleLinkerInterface::Base<BuiltinLinkerInterface, BuiltinLinkerState>;
-
-  BuiltinLinkerInterface(Dialect *dialect) : Base(dialect) {}
-
-  std::unique_ptr<LinkerState> init(ModuleOp src) const override {
-    return BuiltinLinkerState::create(src);
+  LogicalResult initialize(ModuleOp src) override {
+    symbolLinkers = SymbolLinkerInterfaces(src.getContext());
+    return symbolLinkers.initialize(src);
   }
 
-  LogicalResult process(ModuleOp src, unsigned flags) override {
-    BuiltinLinkerState &state = getLinkerState();
+  LogicalResult summarize(ModuleOp src, unsigned flags) override {
     WalkResult result = src.walk([&](Operation *op) {
       if (op == src)
         return WalkResult::advance();
@@ -91,7 +39,7 @@ struct BuiltinLinkerInterface
       if (!linker)
         return WalkResult::advance();
 
-      state.insertSymbolLinker(linker);
+      // TODO do this in init
       linker->setFlags(flags);
 
       if (!linker->canBeLinked(op))
@@ -106,7 +54,8 @@ struct BuiltinLinkerInterface
                    ? WalkResult::interrupt()
                    : WalkResult::advance();
 
-      linker->registerOperation(op);
+      // TODO rename: registerForLink
+      linker->registerForLink(op);
       return WalkResult::advance();
     });
 
@@ -116,20 +65,16 @@ struct BuiltinLinkerInterface
   }
 
   LogicalResult link(ModuleOp dst) const override {
-    const BuiltinLinkerState &state = getLinkerState();
-
-    for (const auto *linker : state.getSymbolLinkers()) {
-      if (failed(linker->link(dst)))
-        return failure();
-    }
-
-    return success();
+    return symbolLinkers.link(dst);
   }
 
   OwningOpRef<ModuleOp> createCompositeModule(ModuleOp src) override {
     return ModuleOp::create(
         FileLineColLoc::get(src.getContext(), "composite", 0, 0));
   }
+
+private:
+  SymbolLinkerInterfaces symbolLinkers;
 };
 
 //===----------------------------------------------------------------------===//

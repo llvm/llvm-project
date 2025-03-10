@@ -23,42 +23,6 @@
 namespace mlir::link {
 
 //===----------------------------------------------------------------------===//
-// LinkerStateBase
-//===----------------------------------------------------------------------===//
-
-struct LinkerState {
-  virtual ~LinkerState() = default;
-
-  TypeID getID() const { return id; }
-
-  template <typename ConcreteType, typename BaseType>
-  struct LinkerStateBase : BaseType {
-    using Base = LinkerStateBase<ConcreteType, BaseType>;
-
-    static TypeID getTypeID() { return TypeID::get<ConcreteType>(); }
-
-    static bool classof(const LinkerState *state) {
-      return state->getID() == TypeID::get<ConcreteType>();
-    }
-
-  protected:
-    LinkerStateBase() : BaseType(getTypeID()) {}
-  };
-
-  template <typename ConcreteType>
-  using Base = LinkerStateBase<ConcreteType, LinkerState>;
-
-  /// Lookup the operation in the linker state of the destination module.
-  virtual Operation *lookup(Operation *op) const { return nullptr; }
-
-protected:
-  explicit LinkerState(TypeID id) : id(id) {}
-
-private:
-  TypeID id;
-};
-
-//===----------------------------------------------------------------------===//
 // LinkerInterface
 //===----------------------------------------------------------------------===//
 
@@ -68,60 +32,31 @@ enum LinkerFlags {
   LinkOnlyNeeded = (1 << 1),
 };
 
-struct LinkerInterface : DialectInterface::Base<LinkerInterface> {
-  using DialectInterface::Base<LinkerInterface>::Base;
+template <typename ConcreteType>
+class LinkerInterface : public DialectInterface::Base<ConcreteType> {
+public:
+  LinkerInterface(Dialect *dialect)
+      : DialectInterface::Base<ConcreteType>(dialect) {}
 
-  template <typename ConcreteType, typename BaseType, typename StateType>
-  struct LinkerInterfaceBase : BaseType {
-    using BaseType::BaseType;
-
-    const StateType &getLinkerState() const { return cast<StateType>(*state); }
-    StateType &getLinkerState() { return cast<StateType>(*state); }
-
-    static bool classof(const LinkerInterface *iface) {
-      return iface->getInterfaceID() == TypeID::get<ConcreteType>();
-    }
-
-    LogicalResult initialize(ModuleOp src) override {
-      if (!state)
-        state = init(src);
-      return success();
-    }
-
-    Operation *lookup(Operation *op) const override {
-      return getLinkerState().lookup(op);
-    }
-
-  private:
-    std::unique_ptr<LinkerState> state = nullptr;
-  };
-
-  template <typename ConcreteType, typename StateType>
-  using Base = LinkerInterfaceBase<ConcreteType, LinkerInterface, StateType>;
-
+  /// TODO comment
   virtual LogicalResult initialize(ModuleOp src) = 0;
 
+  /// TODO comment
   virtual LogicalResult link(ModuleOp dst) const = 0;
-
-  virtual Operation *lookup(Operation *op) const = 0;
-
-protected:
-  virtual std::unique_ptr<LinkerState> init(ModuleOp src) const = 0;
 };
 
 //===----------------------------------------------------------------------===//
 // ModuleLinkerInterface
 //===----------------------------------------------------------------------===//
 
-struct ModuleLinkerInterface : LinkerInterface {
-  template <typename ConcreteType, typename StateType>
-  using Base =
-      LinkerInterfaceBase<ConcreteType, ModuleLinkerInterface, StateType>;
-
+class ModuleLinkerInterface : public LinkerInterface<ModuleLinkerInterface> {
+public:
   using LinkerInterface::LinkerInterface;
 
-  virtual LogicalResult process(ModuleOp src, unsigned flags) = 0;
+  /// TODO comment
+  virtual LogicalResult summarize(ModuleOp src, unsigned flags) = 0;
 
+  /// TODO comment
   virtual OwningOpRef<ModuleOp> createCompositeModule(ModuleOp src) = 0;
 };
 
@@ -129,11 +64,8 @@ struct ModuleLinkerInterface : LinkerInterface {
 // SymbolLinkerInterface
 //===----------------------------------------------------------------------===//
 
-struct SymbolLinkerInterface : LinkerInterface {
-  template <typename ConcreteType, typename StateType>
-  using Base =
-      LinkerInterfaceBase<ConcreteType, SymbolLinkerInterface, StateType>;
-
+class SymbolLinkerInterface : public LinkerInterface<SymbolLinkerInterface> {
+public:
   using LinkerInterface::LinkerInterface;
 
   /// Determines if the given operation is eligible for linking.
@@ -142,17 +74,17 @@ struct SymbolLinkerInterface : LinkerInterface {
   /// Returns the symbol for the given operation.
   virtual StringRef getSymbol(Operation *op) const = 0;
 
-  /// Checks if an operation conflicts with existing linked operations.
-  virtual ConflictPair findConflict(Operation *src) const = 0;
-
   /// Determines if an operation should be linked into the destination module.
   virtual bool isLinkNeeded(ConflictPair pair) const = 0;
+
+  /// Checks if an operation conflicts with existing linked operations.
+  virtual ConflictPair findConflict(Operation *src) const = 0;
 
   /// Resolves a conflict between an existing operation and a new one.
   virtual LogicalResult resolveConflict(ConflictPair pair) = 0;
 
   /// Records a non-conflicting operation for linking.
-  virtual void registerOperation(Operation *op) = 0;
+  virtual void registerForLink(Operation *op) = 0;
 
   /// Link the operations in the source module into the destination module.
   virtual Operation *materialize(ConflictPair pair, ModuleOp dst) const = 0;
@@ -169,6 +101,67 @@ struct SymbolLinkerInterface : LinkerInterface {
 
 protected:
   unsigned flags = LinkerFlags::None;
+};
+
+//===----------------------------------------------------------------------===//
+// SymbolLinkerInterfaceCollection
+//===----------------------------------------------------------------------===//
+
+// TODO: Fix DialectInterfaceCollection to allow non-const access to interfaces.
+struct InterfaceKeyInfo : public DenseMapInfo<DialectInterface *> {
+  using DenseMapInfo<DialectInterface *>::isEqual;
+
+  static unsigned getHashValue(Dialect *key) { return llvm::hash_value(key); }
+  static unsigned getHashValue(DialectInterface *key) {
+    return getHashValue(key->getDialect());
+  }
+
+  static bool isEqual(Dialect *lhs, DialectInterface *rhs) {
+    if (rhs == getEmptyKey() || rhs == getTombstoneKey())
+      return false;
+    return lhs == rhs->getDialect();
+  }
+};
+
+class SymbolLinkerInterfaces {
+public:
+  SymbolLinkerInterfaces() = default;
+
+  SymbolLinkerInterfaces(MLIRContext *ctx) {
+    for (auto *dialect : ctx->getLoadedDialects()) {
+      if (auto *iface =
+              dialect->getRegisteredInterface<SymbolLinkerInterface>()) {
+        interfaces.insert(iface);
+      }
+    }
+  }
+
+  LogicalResult initialize(ModuleOp src) {
+    for (SymbolLinkerInterface *linker : interfaces) {
+      if (failed(linker->initialize(src)))
+        return failure();
+    }
+    return success();
+  }
+
+  LogicalResult link(ModuleOp dst) const {
+    for (SymbolLinkerInterface *linker : interfaces) {
+      if (failed(linker->link(dst)))
+        return failure();
+    }
+    return success();
+  }
+
+  ConflictPair findConflict(Operation *src) const {
+    for (SymbolLinkerInterface *linker : interfaces) {
+      if (auto pair = linker->findConflict(src); pair.hasConflict())
+        return pair;
+    }
+    return ConflictPair::noConflict(src);
+  }
+
+private:
+  SetVector<SymbolLinkerInterface *> interfaces;
 };
 
 } // namespace mlir::link
