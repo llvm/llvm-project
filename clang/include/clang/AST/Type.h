@@ -2633,6 +2633,10 @@ public:
                                                 // C++14 decltype(auto)
   bool isTypedefNameType() const;               // typedef or alias template
 
+  bool isTypeIdentitySpecialization() const; // std::type_identity<X> for any X
+
+  TemplateDecl *TryGetSpecializedTemplateDecl() const;
+
 #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
   bool is##Id##Type() const;
 #include "clang/Basic/OpenCLImageTypes.def"

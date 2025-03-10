@@ -251,7 +251,7 @@ void loadEngineFor() {
 }
 
 template <class T> struct TBase {
-  void* operator new(T size, int); // expected-error {{'operator new' cannot take a dependent type as first parameter; use size_t}}
+  void* operator new(T size, int); // expected-error {{'operator new' cannot take a dependent type as its first parameter; use size_t}}
 };
 
 TBase<int> t1;
