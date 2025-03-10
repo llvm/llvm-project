@@ -499,6 +499,7 @@ clang:static analyzer:
   - clang/tools/scan-build/**
   - clang/utils/analyzer/**
   - clang/docs/analyzer/**
+  - clang/test/Analysis/**
 
 pgo:
   - llvm/lib/Transforms/Instrumentation/CGProfile.cpp
@@ -661,6 +662,11 @@ backend:DirectX:
 
 backend:SPIR-V:
   - clang/lib/Driver/ToolChains/SPIRV.*
+  - clang/lib/Sema/SemaSPIRV.cpp
+  - clang/include/clang/Sema/SemaSPIRV.h
+  - clang/include/clang/Basic/BuiltinsSPIRV.td
+  - clang/test/CodeGenSPIRV/**
+  - clang/test/SemaSPIRV/**
   - llvm/lib/Target/SPIRV/**
   - llvm/test/CodeGen/SPIRV/**
   - llvm/test/Frontend/HLSL/**
@@ -724,6 +730,9 @@ llvm:regalloc:
 
 lldb:
   - lldb/**
+
+lldb-dap:
+  - lldb/tools/lldb-dap/**
 
 backend:AMDGPU:
   - '**/*amdgpu*'

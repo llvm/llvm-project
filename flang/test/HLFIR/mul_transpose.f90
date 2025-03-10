@@ -24,7 +24,7 @@ endsubroutine
 ! CHECK-BASE-NEXT:      hlfir.destroy %[[MATMUL_RES]]
 ! CHECK-BASE-NEXT:      hlfir.destroy %[[TRANSPOSE_RES]]
 
-! CHECK-CANONICAL-NEXT: %[[CHAIN_RES:.*]] = hlfir.matmul_transpose %[[A_DECL]]#0 %[[B_DECL]]#0 : (!fir.ref<!fir.array<2x1xf32>>, !fir.ref<!fir.array<2x2xf32>>) -> !hlfir.expr<1x2xf32>
+! CHECK-CANONICAL-NEXT: %[[CHAIN_RES:.*]] = hlfir.matmul_transpose %[[A_DECL]]#0 %[[B_DECL]]#0 {fastmath = #arith.fastmath<contract>} : (!fir.ref<!fir.array<2x1xf32>>, !fir.ref<!fir.array<2x2xf32>>) -> !hlfir.expr<1x2xf32>
 ! CHECK-CANONICAL-NEXT: hlfir.assign %[[CHAIN_RES]] to %[[RES_DECL]]#0 : !hlfir.expr<1x2xf32>, !fir.ref<!fir.array<1x2xf32>>
 ! CHECK-CANONICAL-NEXT: hlfir.destroy %[[CHAIN_RES]]
 

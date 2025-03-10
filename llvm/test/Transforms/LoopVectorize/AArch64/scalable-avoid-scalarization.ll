@@ -23,9 +23,9 @@ define void @test_no_scalarization(ptr %a, ptr noalias %b, i32 %idx, i32 %n) #0 
 ; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP4]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP1]], [[TMP5]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP1]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[IDX]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i32 [[TMP6]], 2
+; CHECK-NEXT:    [[IND_END:%.*]] = add i32 [[IDX]], [[N_VEC]]
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[IDX]], i64 0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i32> [[DOTSPLATINSERT]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()

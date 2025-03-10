@@ -59,6 +59,7 @@ struct Config {
     std::optional<std::string> FixedCDBPath;
   };
 
+  enum class BuiltinHeaderPolicy { Clangd, QueryDriver };
   /// Controls how the compile command for the current file is determined.
   struct {
     /// Edits to apply to the compile command, in sequence.
@@ -66,6 +67,10 @@ struct Config {
         Edits;
     /// Where to search for compilation databases for this file's flags.
     CDBSearchSpec CDBSearch = {CDBSearchSpec::Ancestors, std::nullopt};
+
+    /// Whether to use clangd's own builtin headers, or ones from the system
+    /// include extractor, if available.
+    BuiltinHeaderPolicy BuiltinHeaders = BuiltinHeaderPolicy::Clangd;
   } CompileFlags;
 
   enum class BackgroundPolicy { Build, Skip };
@@ -124,6 +129,10 @@ struct Config {
     // declarations, always spell out the whole name (with or without leading
     // ::). All nested namespaces are affected as well.
     std::vector<std::string> FullyQualifiedNamespaces;
+
+    // List of matcher functions for inserting certain headers with <> or "".
+    std::vector<std::function<bool(llvm::StringRef)>> QuotedHeaders;
+    std::vector<std::function<bool(llvm::StringRef)>> AngledHeaders;
   } Style;
 
   /// controls the completion options for argument lists.

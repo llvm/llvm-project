@@ -596,6 +596,11 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                                           COFF::IMAGE_SCN_MEM_READ);
   }
 
+  if (T.getArch() == Triple::aarch64) {
+    ImportCallSection =
+        Ctx->getCOFFSection(".impcall", COFF::IMAGE_SCN_LNK_INFO);
+  }
+
   // Debug info.
   COFFDebugSymbolsSection =
       Ctx->getCOFFSection(".debug$S", (COFF::IMAGE_SCN_MEM_DISCARDABLE |
@@ -1061,7 +1066,7 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
                               utostr(Hash), /*IsComdat=*/true);
   case Triple::Wasm:
     return Ctx->getWasmSection(Name, SectionKind::getMetadata(), 0,
-                               utostr(Hash), MCContext::GenericSectionID);
+                               utostr(Hash), MCSection::NonUniqueID);
   case Triple::MachO:
   case Triple::COFF:
   case Triple::GOFF:

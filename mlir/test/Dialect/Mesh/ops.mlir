@@ -157,11 +157,21 @@ func.func @mesh_shard_shape() {
   %c3 = arith.constant 3 : index
   // CHECK-NEXT: %[[S:.*]] = mesh.sharding @mesh0 split_axes = {{\[\[}}]] : !mesh.sharding
   %s = mesh.sharding @mesh0 split_axes = [[]] : !mesh.sharding
-  // CHECK-NEXT: mesh.shard_shape 8x? %[[S]] %[[C3]] : index, index
-  %shp:2 = mesh.shard_shape 8x? %s %c3 : index, index
-  // CHECK-NEXT: mesh.shard_shape 8x4 %[[S]] %[[C3]] : index, index
-  %shp1:2 = mesh.shard_shape 8x4 %s %c3 : index, index
+  // CHECK-NEXT: mesh.shard_shape dims = [8, %[[C3]]
+  // CHECK-SAME: ] sharding = %[[S]] device = [%[[C3]]
+  // CHECK-SAME: ] : index, index
+  %shp:2 = mesh.shard_shape dims = [8, %c3] sharding = %s device = [%c3] : index, index
+  // CHECK-NEXT: mesh.shard_shape dims = [8, 4] sharding = %[[S]] device = [3] : index, index
+  %shp1:2 = mesh.shard_shape dims = [8, 4] sharding = %s device = [3] : index, index
   return
+}
+
+// CHECK-LABEL: func @mesh_get_sharding
+// CHECK-SAME: %[[ARG:.*]]: tensor<4x8xf32>
+func.func @mesh_get_sharding(%arg0 : tensor<4x8xf32>) -> !mesh.sharding {
+  // CHECK-NEXT: mesh.get_sharding %[[ARG]] : tensor<4x8xf32> -> !mesh.sharding
+  %0 = mesh.get_sharding %arg0 : tensor<4x8xf32> -> !mesh.sharding
+  return %0 : !mesh.sharding
 }
 
 // CHECK-LABEL: func @mesh_shape

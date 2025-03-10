@@ -391,9 +391,33 @@ define void @nonzt0_callee() {
   ret void
 }
 
+define void @new_zt0_callee() "aarch64_new_zt0" {
+; CHECK-LABEL: define void @new_zt0_callee
+; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    call void asm sideeffect "
+; CHECK-NEXT:    call void @inlined_body()
+; CHECK-NEXT:    ret void
+;
+  call void asm sideeffect "; inlineasm", ""()
+  call void @inlined_body()
+  ret void
+}
+
+define void @nonzt0_caller_new_zt0_callee_dont_inline() {
+; CHECK-LABEL: define void @nonzt0_caller_new_zt0_callee_dont_inline
+; CHECK-SAME: () #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    call void @new_zt0_callee()
+; CHECK-NEXT:    ret void
+;
+entry:
+  call void @new_zt0_callee()
+  ret void
+}
+
 define void @shared_zt0_caller_nonzt0_callee_dont_inline() "aarch64_inout_zt0" {
 ; CHECK-LABEL: define void @shared_zt0_caller_nonzt0_callee_dont_inline
-; CHECK-SAME: () #[[ATTR4:[0-9]+]] {
+; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:    call void @nonzt0_callee()
 ; CHECK-NEXT:    ret void
 ;
@@ -403,7 +427,7 @@ define void @shared_zt0_caller_nonzt0_callee_dont_inline() "aarch64_inout_zt0" {
 
 define void @shared_zt0_callee() "aarch64_inout_zt0" {
 ; CHECK-LABEL: define void @shared_zt0_callee
-; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-SAME: () #[[ATTR5]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void
@@ -415,7 +439,7 @@ define void @shared_zt0_callee() "aarch64_inout_zt0" {
 
 define void @shared_zt0_caller_shared_zt0_callee_inline() "aarch64_inout_zt0" {
 ; CHECK-LABEL: define void @shared_zt0_caller_shared_zt0_callee_inline
-; CHECK-SAME: () #[[ATTR4]] {
+; CHECK-SAME: () #[[ATTR5]] {
 ; CHECK-NEXT:    call void asm sideeffect "
 ; CHECK-NEXT:    call void @inlined_body()
 ; CHECK-NEXT:    ret void

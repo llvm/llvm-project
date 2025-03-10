@@ -657,20 +657,28 @@ getResultTilePosition(RewriterBase &rewriter, int64_t index, Value tiledResult,
                                     resultOffset, resultSize);
   case scf::SCFTilingOptions::ReductionTilingStrategy::
       PartialReductionOuterReduction: {
-    // TODO: This does not work for non identity accesses to the result tile.
-    // The proper fix is to add a getPartialResultTilePosition method to
-    // PartialReductionOpInterface.
-    resultOffset =
-        SmallVector<OpFoldResult>(offsets.size(), rewriter.getIndexAttr(0));
-    for (size_t i = 0; i < offsets.size(); i++) {
-      resultSize.push_back(
-          tensor::getMixedSize(rewriter, op.getLoc(), tiledResult, i));
+    auto redOp = dyn_cast<PartialReductionOpInterface>(op.getOperation());
+    if (!redOp) {
+      return rewriter.notifyMatchFailure(
+          op, "PartialReductionOuterReduction tiling strategy is only supported"
+              "for operations implementing PartialReductionOpInterface");
     }
-    return success();
+    // Get reduction dimensions.
+    // TODO: PartialReductionOpInterface should really query TilingInterface
+    // itself and find reduction dimensions.
+    SmallVector<int> reductionDims;
+    for (auto [idx, iteratorType] :
+         llvm::enumerate(op.getLoopIteratorTypes())) {
+      if (iteratorType == utils::IteratorType::reduction)
+        reductionDims.push_back(idx);
+    }
+    return redOp.getPartialResultTilePosition(rewriter, index, offsets, sizes,
+                                              resultOffset, resultSize,
+                                              reductionDims);
+  }
   default:
     return rewriter.notifyMatchFailure(op,
                                        "unhandled reduction tiling strategy");
-  }
   }
 }
 
@@ -1111,8 +1119,10 @@ static std::tuple<OpResult, std::optional<OpOperand *>>
 getUntiledProducerFromSliceSource(OpOperand *source,
                                   ArrayRef<LoopLikeOpInterface> loops) {
   std::optional<OpOperand *> destinationIterArg;
+  assert(!loops.empty() && "expected non empty loops container");
   auto loopIt = loops.rbegin();
-  while (auto iterArg = dyn_cast<BlockArgument>(source->get())) {
+  while (loopIt != loops.rend() && isa<BlockArgument>(source->get())) {
+    auto iterArg = cast<BlockArgument>(source->get());
     auto loop = *loopIt;
     if (iterArg.getOwner()->getParentOp() != loop)
       break;

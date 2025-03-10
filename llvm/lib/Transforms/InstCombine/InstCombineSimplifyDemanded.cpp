@@ -1039,11 +1039,14 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Instruction *I,
         APInt DemandedMaskLHS(DemandedMask.lshr(ShiftAmt));
         APInt DemandedMaskRHS(DemandedMask.shl(BitWidth - ShiftAmt));
         if (I->getOperand(0) != I->getOperand(1)) {
-          if (SimplifyDemandedBits(I, 0, DemandedMaskLHS, LHSKnown,
-                                   Depth + 1, Q) ||
+          if (SimplifyDemandedBits(I, 0, DemandedMaskLHS, LHSKnown, Depth + 1,
+                                   Q) ||
               SimplifyDemandedBits(I, 1, DemandedMaskRHS, RHSKnown, Depth + 1,
-                                   Q))
+                                   Q)) {
+            // Range attribute may no longer hold.
+            I->dropPoisonGeneratingReturnAttributes();
             return I;
+          }
         } else { // fshl is a rotate
           // Avoid converting rotate into funnel shift.
           // Only simplify if one operand is constant.

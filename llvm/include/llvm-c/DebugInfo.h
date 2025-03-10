@@ -172,6 +172,7 @@ enum {
   LLVMDIEnumeratorMetadataKind,
   LLVMDIBasicTypeMetadataKind,
   LLVMDIDerivedTypeMetadataKind,
+  LLVMDISubrangeTypeMetadataKind,
   LLVMDICompositeTypeMetadataKind,
   LLVMDISubroutineTypeMetadataKind,
   LLVMDIFileMetadataKind,
@@ -870,13 +871,16 @@ LLVMDIBuilderCreateObjCProperty(LLVMDIBuilderRef Builder,
                                 LLVMMetadataRef Ty);
 
 /**
- * Create a uniqued DIType* clone with FlagObjectPointer and FlagArtificial set.
+ * Create a uniqued DIType* clone with FlagObjectPointer. If \c Implicit
+ * is true, then also set FlagArtificial.
  * \param Builder   The DIBuilder.
  * \param Type      The underlying type to which this pointer points.
+ * \param Implicit  Indicates whether this pointer was implicitly generated
+ *                  (i.e., not spelled out in source).
  */
-LLVMMetadataRef
-LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
-                                     LLVMMetadataRef Type);
+LLVMMetadataRef LLVMDIBuilderCreateObjectPointerType(LLVMDIBuilderRef Builder,
+                                                     LLVMMetadataRef Type,
+                                                     LLVMBool Implicit);
 
 /**
  * Create debugging information entry for a qualified

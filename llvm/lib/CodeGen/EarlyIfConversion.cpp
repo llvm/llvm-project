@@ -111,7 +111,7 @@ public:
   /// Information about each phi in the Tail block.
   struct PHIInfo {
     MachineInstr *PHI;
-    unsigned TReg = 0, FReg = 0;
+    Register TReg, FReg;
     // Latencies from Cond+Branch, TReg, and FReg to DstReg.
     int CondCycles = 0, TCycles = 0, FCycles = 0;
 
@@ -522,8 +522,8 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB, bool Predicate) {
       if (PI.PHI->getOperand(i+1).getMBB() == FPred)
         PI.FReg = PI.PHI->getOperand(i).getReg();
     }
-    assert(Register::isVirtualRegister(PI.TReg) && "Bad PHI");
-    assert(Register::isVirtualRegister(PI.FReg) && "Bad PHI");
+    assert(PI.TReg.isVirtual() && "Bad PHI");
+    assert(PI.FReg.isVirtual() && "Bad PHI");
 
     // Get target information.
     if (!TII->canInsertSelect(*Head, Cond, PI.PHI->getOperand(0).getReg(),
@@ -645,7 +645,7 @@ void SSAIfConv::rewritePHIOperands() {
 
   // Convert all PHIs to select instructions inserted before FirstTerm.
   for (PHIInfo &PI : PHIs) {
-    unsigned DstReg = 0;
+    Register DstReg;
 
     LLVM_DEBUG(dbgs() << "If-converting " << *PI.PHI);
     if (hasSameValue(*MRI, TII, PI.TReg, PI.FReg)) {
@@ -895,7 +895,7 @@ bool EarlyIfConverter::shouldConvertIf() {
         if (!MO.isReg() || !MO.isUse())
           return false;
         Register Reg = MO.getReg();
-        if (Register::isPhysicalRegister(Reg))
+        if (Reg.isPhysical())
           return false;
 
         MachineInstr *Def = MRI->getVRegDef(Reg);
@@ -906,7 +906,7 @@ bool EarlyIfConverter::shouldConvertIf() {
                  if (!MO.isReg() || !MO.isUse())
                    return false;
                  Register Reg = MO.getReg();
-                 if (Register::isPhysicalRegister(Reg))
+                 if (Reg.isPhysical())
                    return false;
 
                  MachineInstr *Def = MRI->getVRegDef(Reg);

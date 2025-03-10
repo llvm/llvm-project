@@ -879,8 +879,8 @@ bool AArch64ExpandPseudo::expandCALL_RVMARKER(
                      .add(RVTarget)
                      .getInstr();
 
-  if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, OriginalCall);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MBB.getParent()->moveAdditionalCallInfo(&MI, OriginalCall);
 
   MI.eraseFromParent();
   finalizeBundle(MBB, OriginalCall->getIterator(),
@@ -908,8 +908,8 @@ bool AArch64ExpandPseudo::expandCALL_BTI(MachineBasicBlock &MBB,
           .addImm(36)
           .getInstr();
 
-  if (MI.shouldUpdateCallSiteInfo())
-    MBB.getParent()->moveCallSiteInfo(&MI, Call);
+  if (MI.shouldUpdateAdditionalCallInfo())
+    MBB.getParent()->moveAdditionalCallInfo(&MI, Call);
 
   MI.eraseFromParent();
   finalizeBundle(MBB, Call->getIterator(), std::next(BTI->getIterator()));
@@ -1382,6 +1382,11 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
                                       AArch64II::MO_NC);
       }
 
+      // If the LOADgot instruction has a debug-instr-number, annotate the
+      // LDRWui instruction that it is expanded to with the same
+      // debug-instr-number to preserve debug information.
+      if (MI.peekDebugInstrNum() != 0)
+        MIB2->setDebugInstrNum(MI.peekDebugInstrNum());
       transferImpOps(MI, MIB1, MIB2);
     }
     MI.eraseFromParent();

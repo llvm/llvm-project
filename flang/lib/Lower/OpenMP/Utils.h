@@ -116,7 +116,8 @@ createMapInfoOp(fir::FirOpBuilder &builder, mlir::Location loc,
                 llvm::ArrayRef<mlir::Value> members,
                 mlir::ArrayAttr membersIndex, uint64_t mapType,
                 mlir::omp::VariableCaptureKind mapCaptureType, mlir::Type retTy,
-                bool partialMap = false);
+                bool partialMap = false,
+                mlir::FlatSymbolRefAttr mapperId = mlir::FlatSymbolRefAttr());
 
 void insertChildMapInfoIntoParent(
     Fortran::lower::AbstractConverter &converter,
@@ -162,6 +163,11 @@ void genObjectList(const ObjectList &objects,
 void lastprivateModifierNotSupported(const omp::clause::Lastprivate &lastp,
                                      mlir::Location loc);
 
+bool collectLoopRelatedInfo(
+    lower::AbstractConverter &converter, mlir::Location currentLocation,
+    lower::pft::Evaluation &eval, const omp::List<omp::Clause> &clauses,
+    mlir::omp::LoopRelatedClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &iv);
 } // namespace omp
 } // namespace lower
 } // namespace Fortran

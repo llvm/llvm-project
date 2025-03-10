@@ -21,7 +21,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define void @_Z3fn1v(ptr %r, ptr %a) #0 {
 ; CHECK-LABEL: define void @_Z3fn1v(
-; CHECK-SAME: ptr nocapture writeonly [[R:%.*]], ptr nocapture readonly [[A:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr writeonly captures(none) [[R:%.*]], ptr readonly captures(none) [[A:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[TMP:%.*]] = load i32, ptr @b, align 4
 ; CHECK-NEXT:    [[TOBOOL20:%.*]] = icmp eq i32 [[TMP]], 0

@@ -3,12 +3,12 @@
 define void @test1(ptr noalias nocapture %a, ptr noalias nocapture readonly %b) {
 ; CHECK-LABEL: @test1(
 ; CHECK:       vector.body:
-; CHECK:         [[FCMP1:%.*]] = fcmp ogt <vscale x 2 x float>
-; CHECK-NEXT:    [[FCMP2:%.*]] = fcmp ogt <vscale x 2 x float>
-; CHECK-NEXT:    [[FCMP1L0:%.*]] = extractelement <vscale x 2 x i1> [[FCMP1]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[FCMP1L0]])
-; CHECK-NEXT:    [[FCMP2L0:%.*]] = extractelement <vscale x 2 x i1> [[FCMP2]], i32 0
-; CHECK-NEXT:    tail call void @llvm.assume(i1 [[FCMP2L0]])
+; CHECK:         [[E1:%.*]] = extractelement <vscale x 2 x float> {{.+}}, i32 0
+; CHECK-NEXT:    [[FCMP1:%.*]] = fcmp ogt float [[E1]]
+; CHECK-NEXT:    [[E2:%.*]] = extractelement <vscale x 2 x float> {{.+}}, i32 0
+; CHECK-NEXT:    [[FCMP2:%.*]] = fcmp ogt float [[E2]]
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[FCMP1]])
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[FCMP2]])
 entry:
   br label %for.body
 

@@ -47,7 +47,9 @@ enum ActionType {
   GenClangBasicReader,
   GenClangBasicWriter,
   GenClangBuiltins,
+  GenClangBuiltinTemplates,
   GenClangDiagsDefs,
+  GenClangDiagsEnums,
   GenClangDiagGroups,
   GenClangDiagsIndexName,
   GenClangCommentNodes,
@@ -68,6 +70,7 @@ enum ActionType {
   GenClangOpenCLBuiltins,
   GenClangOpenCLBuiltinHeader,
   GenClangOpenCLBuiltinTests,
+  GenCXX11AttributeInfo,
   GenArmNeon,
   GenArmFP16,
   GenArmBF16,
@@ -171,8 +174,12 @@ cl::opt<ActionType> Action(
                    "Generate clang attribute traverser"),
         clEnumValN(GenClangBuiltins, "gen-clang-builtins",
                    "Generate clang builtins list"),
+        clEnumValN(GenClangBuiltinTemplates, "gen-clang-builtin-templates",
+                   "Generate clang builtins list"),
         clEnumValN(GenClangDiagsDefs, "gen-clang-diags-defs",
                    "Generate Clang diagnostics definitions"),
+        clEnumValN(GenClangDiagsEnums, "gen-clang-diags-enums",
+                   "Generate Clang diagnostic enums for selects"),
         clEnumValN(GenClangDiagGroups, "gen-clang-diag-groups",
                    "Generate Clang diagnostic groups"),
         clEnumValN(GenClangDiagsIndexName, "gen-clang-diags-index-name",
@@ -225,6 +232,8 @@ cl::opt<ActionType> Action(
                    "Generate OpenCL builtin header"),
         clEnumValN(GenClangOpenCLBuiltinTests, "gen-clang-opencl-builtin-tests",
                    "Generate OpenCL builtin declaration tests"),
+        clEnumValN(GenCXX11AttributeInfo, "gen-cxx11-attribute-info",
+                   "Generate CXX11 attributes info"),
         clEnumValN(GenArmNeon, "gen-arm-neon", "Generate arm_neon.h for clang"),
         clEnumValN(GenArmFP16, "gen-arm-fp16", "Generate arm_fp16.h for clang"),
         clEnumValN(GenArmBF16, "gen-arm-bf16", "Generate arm_bf16.h for clang"),
@@ -333,6 +342,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenClangAttrSubjectMatchRulesParserStringSwitches:
     EmitClangAttrSubjectMatchRulesParserStringSwitches(Records, OS);
     break;
+  case GenCXX11AttributeInfo:
+    EmitCXX11AttributeInfo(Records, OS);
+    break;
   case GenClangAttrImpl:
     EmitClangAttrImpl(Records, OS);
     break;
@@ -384,8 +396,14 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
   case GenClangBuiltins:
     EmitClangBuiltins(Records, OS);
     break;
+  case GenClangBuiltinTemplates:
+    EmitClangBuiltinTemplates(Records, OS);
+    break;
   case GenClangDiagsDefs:
     EmitClangDiagsDefs(Records, OS, ClangComponent);
+    break;
+  case GenClangDiagsEnums:
+    EmitClangDiagsEnums(Records, OS, ClangComponent);
     break;
   case GenClangDiagGroups:
     EmitClangDiagGroups(Records, OS);

@@ -9,7 +9,8 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_STRSTR_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_STRSTR_H
 
-#include "src/__support/macros/config.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/string/memory_utils/inline_memmem.h"
 #include "src/string/string_utils.h"
 #include <stddef.h>

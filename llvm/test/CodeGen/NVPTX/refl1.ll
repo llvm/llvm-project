@@ -5,7 +5,7 @@ target triple = "nvptx-nvidia-cuda"
 
 ; Function Attrs: nounwind
 ; CHECK: .entry foo
-define void @foo(ptr nocapture %a) #0 {
+define ptx_kernel void @foo(ptr nocapture %a) #0 {
   %val = load float, ptr %a
   %tan = tail call fastcc float @__nv_fast_tanf(float %val)
   store float %tan, ptr %a
@@ -34,7 +34,3 @@ entry:
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 attributes #2 = { alwaysinline inlinehint nounwind readnone }
-
-!nvvm.annotations = !{!0}
-
-!0 = !{ptr @foo, !"kernel", i32 1}

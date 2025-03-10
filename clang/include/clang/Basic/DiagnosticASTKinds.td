@@ -90,12 +90,18 @@ def note_constexpr_pointer_subtraction_not_same_array : Note<
 def note_constexpr_pointer_subtraction_zero_size : Note<
   "subtraction of pointers to type %0 of zero size">;
 def note_constexpr_pointer_comparison_unspecified : Note<
-  "comparison between '%0' and '%1' has unspecified value">;
+  "comparison between pointers to unrelated objects '%0' and '%1' has unspecified value">;
+def note_constexpr_pointer_arith_unspecified : Note<
+  "arithmetic involving unrelated objects '%0' and '%1' has unspecified value">;
 def note_constexpr_pointer_constant_comparison : Note<
   "comparison of numeric address '%0' with pointer '%1' can only be performed "
   "at runtime">;
 def note_constexpr_literal_comparison : Note<
-  "comparison of addresses of literals has unspecified value">;
+  "comparison of addresses of potentially overlapping literals has unspecified value">;
+def note_constexpr_literal_arith : Note<
+  "arithmetic on addresses of potentially overlapping literals has unspecified value">;
+def note_constexpr_repeated_literal_eval : Note<
+  "repeated evaluation of the same literal expression can produce different objects">;
 def note_constexpr_opaque_call_comparison : Note<
   "comparison against opaque constant address '%0' can only be performed at "
   "runtime">;
@@ -389,6 +395,16 @@ def note_constexpr_assumption_failed : Note<
   "assumption evaluated to false">;
 def err_experimental_clang_interp_failed : Error<
   "the experimental clang interpreter failed to evaluate an expression">;
+
+def warn_attribute_needs_aggregate : Warning<
+  "%0 attribute is ignored in non-aggregate type %1">,
+  InGroup<IgnoredAttributes>;
+
+def warn_cxx20_compat_requires_explicit_init_non_aggregate : Warning<
+  "explicit initialization of field %1 will not be enforced in C++20 and later "
+  "because %2 has a user-declared constructor, making the type no longer an "
+  "aggregate">,
+  DefaultIgnore, InGroup<CXX20Compat>;
 
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,

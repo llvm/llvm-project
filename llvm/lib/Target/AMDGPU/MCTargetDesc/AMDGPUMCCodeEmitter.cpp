@@ -340,14 +340,13 @@ AMDGPUMCCodeEmitter::getLitEncoding(const MCOperand &MO,
 
 uint64_t AMDGPUMCCodeEmitter::getImplicitOpSelHiEncoding(int Opcode) const {
   using namespace AMDGPU::VOP3PEncoding;
-  using namespace AMDGPU::OpName;
 
-  if (AMDGPU::hasNamedOperand(Opcode, op_sel_hi)) {
-    if (AMDGPU::hasNamedOperand(Opcode, src2))
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::op_sel_hi)) {
+    if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src2))
       return 0;
-    if (AMDGPU::hasNamedOperand(Opcode, src1))
+    if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src1))
       return OP_SEL_HI_2;
-    if (AMDGPU::hasNamedOperand(Opcode, src0))
+    if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0))
       return OP_SEL_HI_1 | OP_SEL_HI_2;
   }
   return OP_SEL_HI_0 | OP_SEL_HI_1 | OP_SEL_HI_2;

@@ -1,0 +1,51 @@
+add_header_library(
+  core_structs
+  HDRS
+    core_structs.h
+  DEPENDS
+    libc.src.__support.CPP.string_view
+    libc.hdr.types.struct_tm
+)
+
+add_header_library(
+  parser
+  HDRS
+    parser.h
+  DEPENDS
+    .core_structs
+    libc.src.__support.CPP.string_view
+    libc.src.__support.ctype_utils
+    libc.src.__support.str_to_integer
+)
+
+add_object_library(
+  converter
+  SRCS
+    converter.cpp
+  HDRS
+    converter.h
+    num_converter.h
+    str_converter.h
+    composite_converter.h
+  DEPENDS
+    .core_structs
+    libc.src.time.time_utils
+    libc.src.time.time_constants
+    libc.src.stdio.printf_core.writer
+    libc.src.__support.CPP.string_view
+    libc.src.__support.integer_to_string
+)
+
+add_object_library(
+  strftime_main
+  SRCS
+    strftime_main.cpp
+  HDRS
+    strftime_main.h
+  DEPENDS
+    .core_structs
+    .parser
+    .converter
+    libc.src.stdio.printf_core.writer
+    libc.hdr.types.struct_tm
+)

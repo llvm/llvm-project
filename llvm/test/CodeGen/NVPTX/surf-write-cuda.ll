@@ -10,7 +10,7 @@ declare void @llvm.nvvm.sust.b.1d.i32.trap(i64, i32, i32)
 declare i64 @llvm.nvvm.texsurf.handle.internal.p1(ptr addrspace(1))
 
 
-define void @foo(i64 %img, i32 %val, i32 %idx) {
+define ptx_kernel void @foo(i64 %img, i32 %val, i32 %idx) {
 ; CHECK-LABEL: foo(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -30,7 +30,7 @@ define void @foo(i64 %img, i32 %val, i32 %idx) {
 @surf0 = internal addrspace(1) global i64 0, align 8
 
 
-define void @bar(i32 %val, i32 %idx) {
+define ptx_kernel void @bar(i32 %val, i32 %idx) {
 ; CHECK-LABEL: bar(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<3>;
@@ -47,8 +47,6 @@ define void @bar(i32 %val, i32 %idx) {
 }
 
 
-!nvvm.annotations = !{!1, !2, !3}
-!1 = !{ptr @foo, !"kernel", i32 1}
-!2 = !{ptr @bar, !"kernel", i32 1}
-!3 = !{ptr addrspace(1) @surf0, !"surface", i32 1}
+!nvvm.annotations = !{!1}
+!1 = !{ptr addrspace(1) @surf0, !"surface", i32 1}
 

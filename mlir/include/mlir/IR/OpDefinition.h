@@ -74,7 +74,10 @@ void ensureRegionTerminator(
 
 /// Structure used by default as a "marker" when no "Properties" are set on an
 /// Operation.
-struct EmptyProperties {};
+struct EmptyProperties {
+  bool operator==(const EmptyProperties &) const { return true; }
+  bool operator!=(const EmptyProperties &) const { return false; }
+};
 
 /// Traits to detect whether an Operation defined a `Properties` type, otherwise
 /// it'll default to `EmptyProperties`.
@@ -272,8 +275,9 @@ public:
   void dump() const { llvm::errs() << *this << "\n"; }
 
   MLIRContext *getContext() const {
-    return is<Attribute>() ? get<Attribute>().getContext()
-                           : get<Value>().getContext();
+    PointerUnion pu = *this;
+    return isa<Attribute>(pu) ? cast<Attribute>(pu).getContext()
+                              : cast<Value>(pu).getContext();
   }
 };
 

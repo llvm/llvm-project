@@ -113,6 +113,8 @@ static cl::opt<bool>
 GVNEnableSplitBackedgeInLoadPRE("enable-split-backedge-in-load-pre",
                                 cl::init(false));
 static cl::opt<bool> GVNEnableMemDep("enable-gvn-memdep", cl::init(true));
+static cl::opt<bool> GVNEnableMemorySSA("enable-gvn-memoryssa",
+                                        cl::init(false));
 
 static cl::opt<uint32_t> MaxNumDeps(
     "gvn-max-num-deps", cl::Hidden, cl::init(100),
@@ -330,19 +332,19 @@ struct llvm::gvn::AvailableValueInBlock {
 //===----------------------------------------------------------------------===//
 
 GVNPass::Expression GVNPass::ValueTable::createExpr(Instruction *I) {
-  Expression e;
-  e.type = I->getType();
-  e.opcode = I->getOpcode();
+  Expression E;
+  E.type = I->getType();
+  E.opcode = I->getOpcode();
   if (const GCRelocateInst *GCR = dyn_cast<GCRelocateInst>(I)) {
     // gc.relocate is 'special' call: its second and third operands are
     // not real values, but indices into statepoint's argument list.
     // Use the refered to values for purposes of identity.
-    e.varargs.push_back(lookupOrAdd(GCR->getOperand(0)));
-    e.varargs.push_back(lookupOrAdd(GCR->getBasePtr()));
-    e.varargs.push_back(lookupOrAdd(GCR->getDerivedPtr()));
+    E.varargs.push_back(lookupOrAdd(GCR->getOperand(0)));
+    E.varargs.push_back(lookupOrAdd(GCR->getBasePtr()));
+    E.varargs.push_back(lookupOrAdd(GCR->getDerivedPtr()));
   } else {
     for (Use &Op : I->operands())
-      e.varargs.push_back(lookupOrAdd(Op));
+      E.varargs.push_back(lookupOrAdd(Op));
   }
   if (I->isCommutative()) {
     // Ensure that commutative instructions that only differ by a permutation
@@ -350,78 +352,78 @@ GVNPass::Expression GVNPass::ValueTable::createExpr(Instruction *I) {
     // numbers.  Since commutative operands are the 1st two operands it is more
     // efficient to sort by hand rather than using, say, std::sort.
     assert(I->getNumOperands() >= 2 && "Unsupported commutative instruction!");
-    if (e.varargs[0] > e.varargs[1])
-      std::swap(e.varargs[0], e.varargs[1]);
-    e.commutative = true;
+    if (E.varargs[0] > E.varargs[1])
+      std::swap(E.varargs[0], E.varargs[1]);
+    E.commutative = true;
   }
 
   if (auto *C = dyn_cast<CmpInst>(I)) {
     // Sort the operand value numbers so x<y and y>x get the same value number.
     CmpInst::Predicate Predicate = C->getPredicate();
-    if (e.varargs[0] > e.varargs[1]) {
-      std::swap(e.varargs[0], e.varargs[1]);
+    if (E.varargs[0] > E.varargs[1]) {
+      std::swap(E.varargs[0], E.varargs[1]);
       Predicate = CmpInst::getSwappedPredicate(Predicate);
     }
-    e.opcode = (C->getOpcode() << 8) | Predicate;
-    e.commutative = true;
-  } else if (auto *E = dyn_cast<InsertValueInst>(I)) {
-    e.varargs.append(E->idx_begin(), E->idx_end());
+    E.opcode = (C->getOpcode() << 8) | Predicate;
+    E.commutative = true;
+  } else if (auto *IVI = dyn_cast<InsertValueInst>(I)) {
+    E.varargs.append(IVI->idx_begin(), IVI->idx_end());
   } else if (auto *SVI = dyn_cast<ShuffleVectorInst>(I)) {
     ArrayRef<int> ShuffleMask = SVI->getShuffleMask();
-    e.varargs.append(ShuffleMask.begin(), ShuffleMask.end());
+    E.varargs.append(ShuffleMask.begin(), ShuffleMask.end());
   } else if (auto *CB = dyn_cast<CallBase>(I)) {
-    e.attrs = CB->getAttributes();
+    E.attrs = CB->getAttributes();
   }
 
-  return e;
+  return E;
 }
 
 GVNPass::Expression GVNPass::ValueTable::createCmpExpr(
     unsigned Opcode, CmpInst::Predicate Predicate, Value *LHS, Value *RHS) {
   assert((Opcode == Instruction::ICmp || Opcode == Instruction::FCmp) &&
          "Not a comparison!");
-  Expression e;
-  e.type = CmpInst::makeCmpResultType(LHS->getType());
-  e.varargs.push_back(lookupOrAdd(LHS));
-  e.varargs.push_back(lookupOrAdd(RHS));
+  Expression E;
+  E.type = CmpInst::makeCmpResultType(LHS->getType());
+  E.varargs.push_back(lookupOrAdd(LHS));
+  E.varargs.push_back(lookupOrAdd(RHS));
 
   // Sort the operand value numbers so x<y and y>x get the same value number.
-  if (e.varargs[0] > e.varargs[1]) {
-    std::swap(e.varargs[0], e.varargs[1]);
+  if (E.varargs[0] > E.varargs[1]) {
+    std::swap(E.varargs[0], E.varargs[1]);
     Predicate = CmpInst::getSwappedPredicate(Predicate);
   }
-  e.opcode = (Opcode << 8) | Predicate;
-  e.commutative = true;
-  return e;
+  E.opcode = (Opcode << 8) | Predicate;
+  E.commutative = true;
+  return E;
 }
 
 GVNPass::Expression
 GVNPass::ValueTable::createExtractvalueExpr(ExtractValueInst *EI) {
   assert(EI && "Not an ExtractValueInst?");
-  Expression e;
-  e.type = EI->getType();
-  e.opcode = 0;
+  Expression E;
+  E.type = EI->getType();
+  E.opcode = 0;
 
   WithOverflowInst *WO = dyn_cast<WithOverflowInst>(EI->getAggregateOperand());
   if (WO != nullptr && EI->getNumIndices() == 1 && *EI->idx_begin() == 0) {
     // EI is an extract from one of our with.overflow intrinsics. Synthesize
     // a semantically equivalent expression instead of an extract value
     // expression.
-    e.opcode = WO->getBinaryOp();
-    e.varargs.push_back(lookupOrAdd(WO->getLHS()));
-    e.varargs.push_back(lookupOrAdd(WO->getRHS()));
-    return e;
+    E.opcode = WO->getBinaryOp();
+    E.varargs.push_back(lookupOrAdd(WO->getLHS()));
+    E.varargs.push_back(lookupOrAdd(WO->getRHS()));
+    return E;
   }
 
   // Not a recognised intrinsic. Fall back to producing an extract value
   // expression.
-  e.opcode = EI->getOpcode();
+  E.opcode = EI->getOpcode();
   for (Use &Op : EI->operands())
-    e.varargs.push_back(lookupOrAdd(Op));
+    E.varargs.push_back(lookupOrAdd(Op));
 
-  append_range(e.varargs, EI->indices());
+  append_range(E.varargs, EI->indices());
 
-  return e;
+  return E;
 }
 
 GVNPass::Expression GVNPass::ValueTable::createGEPExpr(GetElementPtrInst *GEP) {
@@ -503,95 +505,95 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
   }
 
   if (MD && AA->onlyReadsMemory(C)) {
-    Expression exp = createExpr(C);
-    auto ValNum = assignExpNewValueNum(exp);
+    Expression Exp = createExpr(C);
+    auto ValNum = assignExpNewValueNum(Exp);
     if (ValNum.second) {
       valueNumbering[C] = ValNum.first;
       return ValNum.first;
     }
 
-    MemDepResult local_dep = MD->getDependency(C);
+    MemDepResult LocalDep = MD->getDependency(C);
 
-    if (!local_dep.isDef() && !local_dep.isNonLocal()) {
+    if (!LocalDep.isDef() && !LocalDep.isNonLocal()) {
       valueNumbering[C] =  nextValueNumber;
       return nextValueNumber++;
     }
 
-    if (local_dep.isDef()) {
+    if (LocalDep.isDef()) {
       // For masked load/store intrinsics, the local_dep may actually be
       // a normal load or store instruction.
-      CallInst *local_cdep = dyn_cast<CallInst>(local_dep.getInst());
+      CallInst *LocalDepCall = dyn_cast<CallInst>(LocalDep.getInst());
 
-      if (!local_cdep || local_cdep->arg_size() != C->arg_size()) {
+      if (!LocalDepCall || LocalDepCall->arg_size() != C->arg_size()) {
         valueNumbering[C] = nextValueNumber;
         return nextValueNumber++;
       }
 
-      for (unsigned i = 0, e = C->arg_size(); i < e; ++i) {
-        uint32_t c_vn = lookupOrAdd(C->getArgOperand(i));
-        uint32_t cd_vn = lookupOrAdd(local_cdep->getArgOperand(i));
-        if (c_vn != cd_vn) {
+      for (unsigned I = 0, E = C->arg_size(); I < E; ++I) {
+        uint32_t CVN = lookupOrAdd(C->getArgOperand(I));
+        uint32_t LocalDepCallVN = lookupOrAdd(LocalDepCall->getArgOperand(I));
+        if (CVN != LocalDepCallVN) {
           valueNumbering[C] = nextValueNumber;
           return nextValueNumber++;
         }
       }
 
-      uint32_t v = lookupOrAdd(local_cdep);
-      valueNumbering[C] = v;
-      return v;
+      uint32_t V = lookupOrAdd(LocalDepCall);
+      valueNumbering[C] = V;
+      return V;
     }
 
     // Non-local case.
-    const MemoryDependenceResults::NonLocalDepInfo &deps =
+    const MemoryDependenceResults::NonLocalDepInfo &Deps =
         MD->getNonLocalCallDependency(C);
     // FIXME: Move the checking logic to MemDep!
-    CallInst* cdep = nullptr;
+    CallInst *CDep = nullptr;
 
     // Check to see if we have a single dominating call instruction that is
     // identical to C.
-    for (const NonLocalDepEntry &I : deps) {
+    for (const NonLocalDepEntry &I : Deps) {
       if (I.getResult().isNonLocal())
         continue;
 
       // We don't handle non-definitions.  If we already have a call, reject
       // instruction dependencies.
-      if (!I.getResult().isDef() || cdep != nullptr) {
-        cdep = nullptr;
+      if (!I.getResult().isDef() || CDep != nullptr) {
+        CDep = nullptr;
         break;
       }
 
       CallInst *NonLocalDepCall = dyn_cast<CallInst>(I.getResult().getInst());
       // FIXME: All duplicated with non-local case.
       if (NonLocalDepCall && DT->properlyDominates(I.getBB(), C->getParent())) {
-        cdep = NonLocalDepCall;
+        CDep = NonLocalDepCall;
         continue;
       }
 
-      cdep = nullptr;
+      CDep = nullptr;
       break;
     }
 
-    if (!cdep) {
+    if (!CDep) {
       valueNumbering[C] = nextValueNumber;
       return nextValueNumber++;
     }
 
-    if (cdep->arg_size() != C->arg_size()) {
+    if (CDep->arg_size() != C->arg_size()) {
       valueNumbering[C] = nextValueNumber;
       return nextValueNumber++;
     }
-    for (unsigned i = 0, e = C->arg_size(); i < e; ++i) {
-      uint32_t c_vn = lookupOrAdd(C->getArgOperand(i));
-      uint32_t cd_vn = lookupOrAdd(cdep->getArgOperand(i));
-      if (c_vn != cd_vn) {
+    for (unsigned I = 0, E = C->arg_size(); I < E; ++I) {
+      uint32_t CVN = lookupOrAdd(C->getArgOperand(I));
+      uint32_t CDepVN = lookupOrAdd(CDep->getArgOperand(I));
+      if (CVN != CDepVN) {
         valueNumbering[C] = nextValueNumber;
         return nextValueNumber++;
       }
     }
 
-    uint32_t v = lookupOrAdd(cdep);
-    valueNumbering[C] = v;
-    return v;
+    uint32_t V = lookupOrAdd(CDep);
+    valueNumbering[C] = V;
+    return V;
   }
 
   valueNumbering[C] = nextValueNumber;
@@ -616,7 +618,7 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
     return nextValueNumber++;
   }
 
-  Expression exp;
+  Expression Exp;
   switch (I->getOpcode()) {
     case Instruction::Call:
       return lookupOrAddCall(cast<CallInst>(I));
@@ -660,13 +662,13 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
     case Instruction::InsertElement:
     case Instruction::ShuffleVector:
     case Instruction::InsertValue:
-      exp = createExpr(I);
+      Exp = createExpr(I);
       break;
     case Instruction::GetElementPtr:
-      exp = createGEPExpr(cast<GetElementPtrInst>(I));
+      Exp = createGEPExpr(cast<GetElementPtrInst>(I));
       break;
     case Instruction::ExtractValue:
-      exp = createExtractvalueExpr(cast<ExtractValueInst>(I));
+      Exp = createExtractvalueExpr(cast<ExtractValueInst>(I));
       break;
     case Instruction::PHI:
       valueNumbering[V] = nextValueNumber;
@@ -677,9 +679,9 @@ uint32_t GVNPass::ValueTable::lookupOrAdd(Value *V) {
       return nextValueNumber++;
   }
 
-  uint32_t e = assignExpNewValueNum(exp).first;
-  valueNumbering[V] = e;
-  return e;
+  uint32_t E = assignExpNewValueNum(Exp).first;
+  valueNumbering[V] = E;
+  return E;
 }
 
 /// Returns the value number of the specified value. Fails if
@@ -700,8 +702,8 @@ uint32_t GVNPass::ValueTable::lookup(Value *V, bool Verify) const {
 uint32_t GVNPass::ValueTable::lookupOrAddCmp(unsigned Opcode,
                                              CmpInst::Predicate Predicate,
                                              Value *LHS, Value *RHS) {
-  Expression exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
-  return assignExpNewValueNum(exp).first;
+  Expression Exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
+  return assignExpNewValueNum(Exp).first;
 }
 
 /// Remove all entries from the ValueTable.
@@ -820,6 +822,10 @@ bool GVNPass::isMemDepEnabled() const {
   return Options.AllowMemDep.value_or(GVNEnableMemDep);
 }
 
+bool GVNPass::isMemorySSAEnabled() const {
+  return Options.AllowMemorySSA.value_or(GVNEnableMemorySSA);
+}
+
 PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
   // FIXME: The order of evaluation of these 'getResult' calls is very
   // significant! Re-ordering these variables will cause GVN when run alone to
@@ -833,6 +839,11 @@ PreservedAnalyses GVNPass::run(Function &F, FunctionAnalysisManager &AM) {
       isMemDepEnabled() ? &AM.getResult<MemoryDependenceAnalysis>(F) : nullptr;
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto *MSSA = AM.getCachedResult<MemorySSAAnalysis>(F);
+  if (isMemorySSAEnabled() && !MSSA) {
+    assert(!MemDep &&
+           "On-demand computation of MemSSA implies that MemDep is disabled!");
+    MSSA = &AM.getResult<MemorySSAAnalysis>(F);
+  }
   auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
   bool Changed = runImpl(F, AC, DT, TLI, AA, MemDep, LI, &ORE,
                          MSSA ? &MSSA->getMSSA() : nullptr);
@@ -861,7 +872,9 @@ void GVNPass::printPipeline(
     OS << (*Options.AllowLoadPRESplitBackedge ? "" : "no-")
        << "split-backedge-load-pre;";
   if (Options.AllowMemDep != std::nullopt)
-    OS << (*Options.AllowMemDep ? "" : "no-") << "memdep";
+    OS << (*Options.AllowMemDep ? "" : "no-") << "memdep;";
+  if (Options.AllowMemorySSA != std::nullopt)
+    OS << (*Options.AllowMemorySSA ? "" : "no-") << "memoryssa";
   OS << '>';
 }
 
@@ -1083,7 +1096,7 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
   if (isSimpleValue()) {
     Res = getSimpleValue();
     if (Res->getType() != LoadTy) {
-      Res = getValueForLoad(Res, Offset, LoadTy, InsertPt, DL);
+      Res = getValueForLoad(Res, Offset, LoadTy, InsertPt, Load->getFunction());
 
       LLVM_DEBUG(dbgs() << "GVN COERCED NONLOCAL VAL:\nOffset: " << Offset
                         << "  " << *getSimpleValue() << '\n'
@@ -1096,7 +1109,8 @@ Value *AvailableValue::MaterializeAdjustedValue(LoadInst *Load,
       Res = CoercedLoad;
       combineMetadataForCSE(CoercedLoad, Load, false);
     } else {
-      Res = getValueForLoad(CoercedLoad, Offset, LoadTy, InsertPt, DL);
+      Res = getValueForLoad(CoercedLoad, Offset, LoadTy, InsertPt,
+                            Load->getFunction());
       // We are adding a new user for this load, for which the original
       // metadata may not hold. Additionally, the new load may have a different
       // size and type, so their metadata cannot be combined in any
@@ -1278,7 +1292,8 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
 
         // If MD reported clobber, check it was nested.
         if (DepInfo.isClobber() &&
-            canCoerceMustAliasedValueToLoad(DepLoad, LoadType, DL)) {
+            canCoerceMustAliasedValueToLoad(DepLoad, LoadType,
+                                            DepLoad->getFunction())) {
           const auto ClobberOff = MD->getClobberOffset(DepLoad);
           // GVN has no deal with a negative offset.
           Offset = (ClobberOff == std::nullopt || *ClobberOff < 0)
@@ -1330,7 +1345,7 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
     // different types if we have to. If the stored value is convertable to
     // the loaded value, we can reuse it.
     if (!canCoerceMustAliasedValueToLoad(S->getValueOperand(), Load->getType(),
-                                         DL))
+                                         S->getFunction()))
       return std::nullopt;
 
     // Can't forward from non-atomic to atomic without violating memory model.
@@ -1344,7 +1359,8 @@ GVNPass::AnalyzeLoadAvailability(LoadInst *Load, MemDepResult DepInfo,
     // If the types mismatch and we can't handle it, reject reuse of the load.
     // If the stored value is larger or equal to the loaded value, we can reuse
     // it.
-    if (!canCoerceMustAliasedValueToLoad(LD, Load->getType(), DL))
+    if (!canCoerceMustAliasedValueToLoad(LD, Load->getType(),
+                                         LD->getFunction()))
       return std::nullopt;
 
     // Can't forward from non-atomic to atomic without violating memory model.
@@ -1707,7 +1723,8 @@ bool GVNPass::PerformLoadPRE(LoadInst *Load, AvailValInBlkVect &ValuesPerBlock,
   // to speculatively execute the load at that points.
   if (MustEnsureSafetyOfSpeculativeExecution) {
     if (CriticalEdgePredSplit.size())
-      if (!isSafeToSpeculativelyExecute(Load, LoadBB->getFirstNonPHI(), AC, DT))
+      if (!isSafeToSpeculativelyExecute(Load, &*LoadBB->getFirstNonPHIIt(), AC,
+                                        DT))
         return false;
     for (auto &PL : PredLoads)
       if (!isSafeToSpeculativelyExecute(Load, PL.first->getTerminator(), AC,
@@ -2300,15 +2317,15 @@ uint32_t GVNPass::ValueTable::phiTranslateImpl(const BasicBlock *Pred,
     return Num;
   Expression Exp = Expressions[ExprIdx[Num]];
 
-  for (unsigned i = 0; i < Exp.varargs.size(); i++) {
+  for (unsigned I = 0; I < Exp.varargs.size(); I++) {
     // For InsertValue and ExtractValue, some varargs are index numbers
     // instead of value numbers. Those index numbers should not be
     // translated.
-    if ((i > 1 && Exp.opcode == Instruction::InsertValue) ||
-        (i > 0 && Exp.opcode == Instruction::ExtractValue) ||
-        (i > 1 && Exp.opcode == Instruction::ShuffleVector))
+    if ((I > 1 && Exp.opcode == Instruction::InsertValue) ||
+        (I > 0 && Exp.opcode == Instruction::ExtractValue) ||
+        (I > 1 && Exp.opcode == Instruction::ShuffleVector))
       continue;
-    Exp.varargs[i] = phiTranslate(Pred, PhiBlock, Exp.varargs[i], Gvn);
+    Exp.varargs[I] = phiTranslate(Pred, PhiBlock, Exp.varargs[I], Gvn);
   }
 
   if (Exp.commutative) {
@@ -2877,7 +2894,7 @@ bool GVNPass::performScalarPREInsertion(Instruction *Instr, BasicBlock *Pred,
   if (!success)
     return false;
 
-  Instr->insertBefore(Pred->getTerminator());
+  Instr->insertBefore(Pred->getTerminator()->getIterator());
   Instr->setName(Instr->getName() + ".pre");
   Instr->setDebugLoc(Instr->getDebugLoc());
 
@@ -3293,8 +3310,11 @@ class llvm::gvn::GVNLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  explicit GVNLegacyPass(bool NoMemDepAnalysis = !GVNEnableMemDep)
-      : FunctionPass(ID), Impl(GVNOptions().setMemDep(!NoMemDepAnalysis)) {
+  explicit GVNLegacyPass(bool MemDepAnalysis = GVNEnableMemDep,
+                         bool MemSSAAnalysis = GVNEnableMemorySSA)
+      : FunctionPass(ID), Impl(GVNOptions()
+                                   .setMemDep(MemDepAnalysis)
+                                   .setMemorySSA(MemSSAAnalysis)) {
     initializeGVNLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
@@ -3303,6 +3323,9 @@ public:
       return false;
 
     auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
+    if (Impl.isMemorySSAEnabled() && !MSSAWP)
+      MSSAWP = &getAnalysis<MemorySSAWrapperPass>();
+
     return Impl.runImpl(
         F, getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F),
         getAnalysis<DominatorTreeWrapperPass>().getDomTree(),
@@ -3330,6 +3353,8 @@ public:
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     AU.addPreserved<MemorySSAWrapperPass>();
+    if (Impl.isMemorySSAEnabled())
+      AU.addRequired<MemorySSAWrapperPass>();
   }
 
 private:
@@ -3341,6 +3366,7 @@ char GVNLegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(GVNLegacyPass, "gvn", "Global Value Numbering", false, false)
 INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
 INITIALIZE_PASS_DEPENDENCY(MemoryDependenceWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
@@ -3349,6 +3375,4 @@ INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(GVNLegacyPass, "gvn", "Global Value Numbering", false, false)
 
 // The public interface to this file...
-FunctionPass *llvm::createGVNPass(bool NoMemDepAnalysis) {
-  return new GVNLegacyPass(NoMemDepAnalysis);
-}
+FunctionPass *llvm::createGVNPass() { return new GVNLegacyPass(); }

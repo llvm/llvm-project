@@ -262,6 +262,7 @@ define void @uniform_gep(i64 %k, ptr noalias %A, ptr noalias %B) {
 ; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<21> + vp<[[VEC_TC]]> * ir<1>
 ; CHECK-NEXT:   CLONE ir<%gep.A.uniform> = getelementptr inbounds ir<%A>, ir<0>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
@@ -1046,6 +1047,7 @@ define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr n
 ; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%n> + vp<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -1086,10 +1088,11 @@ define void @merge_with_dead_gep_between_regions(i32 %n, ptr noalias %src, ptr n
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[END]]>, ir<%n>
 ; CHECK-NEXT: Successor(s): ir-bb<loop>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop>:
-; CHECK-NEXT:   IR   %iv = phi i32 [ %n, %entry ], [ %iv.next, %loop ]
+; CHECK-NEXT:   IR   %iv = phi i32 [ %n, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK-NEXT:   IR   %iv.next = add nsw i32 %iv, -1
 ; CHECK-NEXT:   IR   %gep.src = getelementptr inbounds i32, ptr %src, i32 %iv
 ; CHECK-NEXT:   IR   %l = load i32, ptr %gep.src, align 16
@@ -1134,6 +1137,7 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT: Successor(s): vector.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: vector.ph:
+; CHECK-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + vp<[[VEC_TC]]> * ir<-1>
 ; CHECK-NEXT: Successor(s): vector loop
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <x1> vector loop: {
@@ -1177,10 +1181,11 @@ define void @ptr_induction_remove_dead_recipe(ptr %start, ptr %end) {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; CHECK-EMPTY:
 ; CHECK-NEXT: scalar.ph:
+; CHECK-NEXT:   EMIT vp<[[RESUME:%.+]]> = resume-phi vp<[[END]]>, ir<%start>
 ; CHECK-NEXT: Successor(s): ir-bb<loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<loop.header>:
-; CHECK-NEXT:   IR   %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ]
+; CHECK-NEXT:   IR   %ptr.iv = phi ptr [ %start, %entry ], [ %ptr.iv.next, %loop.latch ] (extra operand: vp<[[RESUME]]> from scalar.ph)
 ; CHECK-NEXT:   IR   %ptr.iv.next = getelementptr inbounds i8, ptr %ptr.iv, i64 -1
 ; CHECK-NEXT:   IR   %l = load i8, ptr %ptr.iv.next, align 1
 ; CHECK-NEXT:   IR   %c.1 = icmp eq i8 %l, 0

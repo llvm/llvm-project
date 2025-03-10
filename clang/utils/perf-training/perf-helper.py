@@ -16,6 +16,8 @@ import time
 import bisect
 import shlex
 import tempfile
+import re
+import shutil
 
 test_env = {"PATH": os.environ["PATH"]}
 
@@ -558,7 +560,143 @@ def genOrderFile(args):
     return 0
 
 
+def filter_bolt_optimized(inputs, instrumented_outputs, readelf):
+    new_inputs = []
+    new_instrumented_ouputs = []
+    for input, instrumented_output in zip(inputs, instrumented_outputs):
+        output = subprocess.check_output(
+            [readelf, "-WS", input], universal_newlines=True
+        )
+
+        # This binary has already been bolt-optimized, so skip further processing.
+        if re.search("\\.bolt\\.org\\.text", output, re.MULTILINE):
+            print(f"Skipping {input}, it's already instrumented")
+        else:
+            new_inputs.append(input)
+            new_instrumented_ouputs.append(instrumented_output)
+    return new_inputs, new_instrumented_ouputs
+
+
+def bolt_optimize(args):
+    parser = argparse.ArgumentParser("%prog  [options] ")
+    parser.add_argument("--method", choices=["INSTRUMENT", "PERF", "LBR"])
+    parser.add_argument("--input")
+    parser.add_argument("--instrumented-output")
+    parser.add_argument("--fdata")
+    parser.add_argument("--perf-training-binary-dir")
+    parser.add_argument("--readelf")
+    parser.add_argument("--bolt")
+    parser.add_argument("--lit")
+    parser.add_argument("--merge-fdata")
+
+    opts = parser.parse_args(args)
+
+    inputs = opts.input.split(";")
+    instrumented_outputs = opts.instrumented_output.split(";")
+    assert len(inputs) == len(
+        instrumented_outputs
+    ), "inconsistent --input / --instrumented-output arguments"
+
+    inputs, instrumented_outputs = filter_bolt_optimized(inputs,
+                                                         instrumented_outputs,
+                                                         opts.readelf)
+    if not inputs:
+        return 0
+
+    environ = os.environ.copy()
+    if opts.method == "INSTRUMENT":
+        preloads = []
+        for input, instrumented_output in zip(inputs, instrumented_outputs):
+            args = [
+                opts.bolt,
+                input,
+                "-o",
+                instrumented_output,
+                "-instrument",
+                "--instrumentation-file-append-pid",
+                f"--instrumentation-file={opts.fdata}",
+            ]
+            print("Running: " + " ".join(args))
+            process = subprocess.run(
+                args,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+            )
+
+            for line in process.stdout:
+                sys.stdout.write(line)
+            process.check_returncode()
+
+            # Shared library must be preloaded to be covered.
+            if ".so" in input:
+                preloads.append(instrumented_output)
+
+        if preloads:
+            print(
+                f"Patching execution environment for dynamic libraries: {' '.join(preloads)}"
+            )
+            environ["LD_PRELOAD"] = os.pathsep.join(preloads)
+
+    args = [
+        sys.executable,
+        opts.lit,
+        "-v",
+        os.path.join(opts.perf_training_binary_dir, f"bolt-fdata"),
+    ]
+    print("Running: " + " ".join(args))
+    process = subprocess.run(
+        args,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        env=environ,
+    )
+
+    for line in process.stdout:
+        sys.stdout.write(line)
+    process.check_returncode()
+
+    if opts.method in ["PERF", "LBR"]:
+        perf2bolt([opts.bolt, opts.perf_training_binary_dir, opts.input])
+
+    merge_fdata([opts.merge_fdata, opts.fdata, opts.perf_training_binary_dir])
+
+    for input in inputs:
+        shutil.copy(input, f"{input}-prebolt")
+
+        args = [
+            opts.bolt,
+            f"{input}-prebolt",
+            "-o",
+            input,
+            "-data",
+            opts.fdata,
+            "-reorder-blocks=ext-tsp",
+            "-reorder-functions=cdsort",
+            "-split-functions",
+            "-split-all-cold",
+            "-split-eh",
+            "-dyno-stats",
+            "-use-gnu-stack",
+            "-update-debug-sections",
+            "-nl" if opts.method == "PERF" else "",
+        ]
+        print("Running: " + " ".join(args))
+        process = subprocess.run(
+            args,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+        )
+
+        for line in process.stdout:
+            sys.stdout.write(line)
+        process.check_returncode()
+
+
 commands = {
+    "bolt-optimize": bolt_optimize,
     "clean": clean,
     "merge": merge,
     "dtrace": dtrace,

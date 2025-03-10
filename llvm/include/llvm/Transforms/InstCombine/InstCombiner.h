@@ -184,12 +184,6 @@ public:
     return ConstantExpr::getSub(C, ConstantInt::get(C->getType(), 1));
   }
 
-  std::optional<std::pair<
-      CmpPredicate,
-      Constant *>> static getFlippedStrictnessPredicateAndConstant(CmpPredicate
-                                                                       Pred,
-                                                                   Constant *C);
-
   static bool shouldAvoidAbsorbingNotIntoSelect(const SelectInst &SI) {
     // a ? b : false and a ? true : b are the canonical form of logical and/or.
     // This includes !a ? b : false and !a ? true : b. Absorbing the not into

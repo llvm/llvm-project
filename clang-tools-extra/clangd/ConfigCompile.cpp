@@ -290,6 +290,18 @@ struct FragmentCompiler {
       });
     }
 
+    if (F.BuiltinHeaders) {
+      if (auto Val =
+              compileEnum<Config::BuiltinHeaderPolicy>("BuiltinHeaders",
+                                                       *F.BuiltinHeaders)
+                  .map("Clangd", Config::BuiltinHeaderPolicy::Clangd)
+                  .map("QueryDriver", Config::BuiltinHeaderPolicy::QueryDriver)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.CompileFlags.BuiltinHeaders = *Val;
+        });
+    }
+
     if (F.CompilationDatabase) {
       std::optional<Config::CDBSearchSpec> Spec;
       if (**F.CompilationDatabase == "Ancestors") {
@@ -482,6 +494,55 @@ struct FragmentCompiler {
             FullyQualifiedNamespaces.begin(), FullyQualifiedNamespaces.end());
       });
     }
+    auto QuotedFilter = compileHeaderRegexes(F.QuotedHeaders);
+    if (QuotedFilter.has_value()) {
+      Out.Apply.push_back(
+          [QuotedFilter = *QuotedFilter](const Params &, Config &C) {
+            C.Style.QuotedHeaders.emplace_back(QuotedFilter);
+          });
+    }
+    auto AngledFilter = compileHeaderRegexes(F.AngledHeaders);
+    if (AngledFilter.has_value()) {
+      Out.Apply.push_back(
+          [AngledFilter = *AngledFilter](const Params &, Config &C) {
+            C.Style.AngledHeaders.emplace_back(AngledFilter);
+          });
+    }
+  }
+
+  auto compileHeaderRegexes(llvm::ArrayRef<Located<std::string>> HeaderPatterns)
+      -> std::optional<std::function<bool(llvm::StringRef)>> {
+    // TODO: Share this code with Diagnostics.Includes.IgnoreHeader
+#ifdef CLANGD_PATH_CASE_INSENSITIVE
+    static llvm::Regex::RegexFlags Flags = llvm::Regex::IgnoreCase;
+#else
+    static llvm::Regex::RegexFlags Flags = llvm::Regex::NoFlags;
+#endif
+    auto Filters = std::make_shared<std::vector<llvm::Regex>>();
+    for (auto &HeaderPattern : HeaderPatterns) {
+      // Anchor on the right.
+      std::string AnchoredPattern = "(" + *HeaderPattern + ")$";
+      llvm::Regex CompiledRegex(AnchoredPattern, Flags);
+      std::string RegexError;
+      if (!CompiledRegex.isValid(RegexError)) {
+        diag(Warning,
+             llvm::formatv("Invalid regular expression '{0}': {1}",
+                           *HeaderPattern, RegexError)
+                 .str(),
+             HeaderPattern.Range);
+        continue;
+      }
+      Filters->push_back(std::move(CompiledRegex));
+    }
+    if (Filters->empty())
+      return std::nullopt;
+    auto Filter = [Filters](llvm::StringRef Path) {
+      for (auto &Regex : *Filters)
+        if (Regex.match(Path))
+          return true;
+      return false;
+    };
+    return Filter;
   }
 
   void appendTidyCheckSpec(std::string &CurSpec,

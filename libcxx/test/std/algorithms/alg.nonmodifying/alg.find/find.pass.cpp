@@ -14,6 +14,8 @@
 // MSVC warning C4389: '==': signed/unsigned mismatch
 // MSVC warning C4805: '==': unsafe mix of type 'char' and type 'bool' in operation
 // ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4245 /wd4305 /wd4310 /wd4389 /wd4805
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-steps): -fconstexpr-steps=20000000
+// ADDITIONAL_COMPILE_FLAGS(has-fconstexpr-ops-limit): -fconstexpr-ops-limit=80000000
 
 // <algorithm>
 
@@ -24,6 +26,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <deque>
 #include <vector>
 #include <type_traits>
@@ -215,9 +218,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   Test<TriviallyComparable<wchar_t>, TriviallyComparable<wchar_t>>().operator()<TriviallyComparable<wchar_t>*>();
 #endif
 
-  // TODO: Remove the `_LIBCPP_ENABLE_EXPERIMENTAL` check once we have the FTM guarded or views::join isn't
-  // experimental anymore
-#if TEST_STD_VER >= 20 && (!defined(_LIBCPP_VERSION) || defined(_LIBCPP_ENABLE_EXPERIMENTAL))
+#if TEST_STD_VER >= 20
   {
     std::vector<std::vector<int>> vec = {{1, 2, 3}, {4, 5, 6}, {7, 8, 9}};
     auto view                         = vec | std::views::join;
@@ -226,6 +227,18 @@ TEST_CONSTEXPR_CXX20 bool test() {
 #endif
 
   types::for_each(types::integral_types(), TestIntegerPromotions());
+
+  { // Test vector<bool>::iterator optimization
+    std::vector<bool> vec(256 + 8);
+    for (ptrdiff_t i = 8; i <= 256; i *= 2) {
+      for (size_t offset = 0; offset < 8; offset += 2) {
+        std::fill(vec.begin(), vec.end(), false);
+        std::fill(vec.begin() + offset, vec.begin() + i + offset, true);
+        assert(std::find(vec.begin(), vec.end(), true) == vec.begin() + offset);
+        assert(std::find(vec.begin() + offset, vec.end(), false) == vec.begin() + offset + i);
+      }
+    }
+  }
 
   return true;
 }

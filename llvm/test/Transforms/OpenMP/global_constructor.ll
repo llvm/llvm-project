@@ -10,7 +10,7 @@
 @_ZL6Device = internal global double 0.000000e+00, align 8
 @__omp_offloading_fd02_85283c04_main_l11_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0 }, ptr @1, ptr null }
 
-define weak void @__omp_offloading_fd02_85283c04_main_l11(ptr %dyn, ptr nonnull align 8 dereferenceable(8) %X) local_unnamed_addr "kernel" {
+define weak ptx_kernel void @__omp_offloading_fd02_85283c04_main_l11(ptr %dyn, ptr nonnull align 8 dereferenceable(8) %X) local_unnamed_addr "kernel" {
 entry:
   %0 = tail call i32 @__kmpc_target_init(ptr @__omp_offloading_fd02_85283c04_main_l11_kernel_environment, ptr %dyn) #0
   %exec_user_code = icmp eq i32 %0, -1
@@ -39,7 +39,7 @@ declare i32 @__kmpc_target_init(ptr, ptr) local_unnamed_addr
 
 declare void @__kmpc_target_deinit() local_unnamed_addr
 
-define weak void @__omp_offloading__fd02_85283c04_Device_l6_ctor() "kernel" {
+define weak ptx_kernel void @__omp_offloading__fd02_85283c04_Device_l6_ctor() "kernel" {
 entry:
   %call.i = tail call double @__nv_log(double noundef 2.000000e+00) #1
   %call.i2 = tail call double @__nv_log(double noundef 2.000000e+00) #1
@@ -58,15 +58,12 @@ attributes #0 = { nounwind }
 attributes #1 = { convergent nounwind }
 
 !omp_offload.info = !{!0, !1, !2}
-!nvvm.annotations = !{!3, !4}
 !llvm.module.flags = !{!5, !6, !7, !8, !9}
 !llvm.ident = !{!10}
 
 !0 = !{i32 0, i32 64770, i32 -2060960764, !"__omp_offloading__fd02_85283c04_Device_l6_ctor", i32 6, i32 1}
 !1 = !{i32 0, i32 64770, i32 -2060960764, !"main", i32 11, i32 2}
 !2 = !{i32 1, !"_ZL6Device", i32 0, i32 0}
-!3 = !{ptr @__omp_offloading__fd02_85283c04_Device_l6_ctor, !"kernel", i32 1}
-!4 = !{ptr @__omp_offloading_fd02_85283c04_main_l11, !"kernel", i32 1}
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{i32 7, !"openmp", i32 50}
 !7 = !{i32 7, !"openmp-device", i32 50}
@@ -86,12 +83,12 @@ attributes #1 = { convergent nounwind }
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
 ; CHECK:       user_code.entry:
-; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr @_ZL6Device, align 8, !tbaa [[TBAA11:![0-9]+]]
+; CHECK-NEXT:    [[TMP1:%.*]] = load double, ptr @_ZL6Device, align 8, !tbaa [[TBAA9:![0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = tail call i32 @__kmpc_get_hardware_thread_id_in_block() #[[ATTR1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
 ; CHECK:       region.guarded:
-; CHECK-NEXT:    store double [[TMP1]], ptr [[X]], align 8, !tbaa [[TBAA11]]
+; CHECK-NEXT:    store double [[TMP1]], ptr [[X]], align 8, !tbaa [[TBAA9]]
 ; CHECK-NEXT:    br label [[REGION_BARRIER]]
 ; CHECK:       region.barrier:
 ; CHECK-NEXT:    tail call void @__kmpc_barrier_simple_spmd(ptr nonnull @[[GLOB1:[0-9]+]], i32 [[TMP2]]) #[[ATTR1]]
@@ -105,6 +102,6 @@ attributes #1 = { convergent nounwind }
 ; CHECK-NEXT:    [[CALL_I:%.*]] = tail call double @__nv_log(double noundef 2.000000e+00) #[[ATTR2:[0-9]+]]
 ; CHECK-NEXT:    [[CALL_I2:%.*]] = tail call double @__nv_log(double noundef 2.000000e+00) #[[ATTR2]]
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv double [[CALL_I]], [[CALL_I2]]
-; CHECK-NEXT:    store double [[DIV]], ptr @_ZL6Device, align 8, !tbaa [[TBAA11]]
+; CHECK-NEXT:    store double [[DIV]], ptr @_ZL6Device, align 8, !tbaa [[TBAA9]]
 ; CHECK-NEXT:    ret void
 ;

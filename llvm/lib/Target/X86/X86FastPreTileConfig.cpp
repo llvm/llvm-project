@@ -136,12 +136,12 @@ int X86FastPreTileConfig::getStackSpaceFor(Register VirtReg) {
 /// If \p VirtReg live out of the current MBB, it must live out of the current
 /// config
 bool X86FastPreTileConfig::mayLiveOut(Register VirtReg, MachineInstr *CfgMI) {
-  if (MayLiveAcrossBlocks.test(Register::virtReg2Index(VirtReg)))
+  if (MayLiveAcrossBlocks.test(VirtReg.virtRegIndex()))
     return true;
 
   for (const MachineInstr &UseInst : MRI->use_nodbg_instructions(VirtReg)) {
     if (UseInst.getParent() != MBB) {
-      MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
+      MayLiveAcrossBlocks.set(VirtReg.virtRegIndex());
       return true;
     }
 
@@ -150,7 +150,7 @@ bool X86FastPreTileConfig::mayLiveOut(Register VirtReg, MachineInstr *CfgMI) {
     // tile register.
     if (CfgMI) {
       if (dominates(*MBB, *CfgMI, UseInst)) {
-        MayLiveAcrossBlocks.set(Register::virtReg2Index(VirtReg));
+        MayLiveAcrossBlocks.set(VirtReg.virtRegIndex());
         return true;
       }
     }
@@ -355,14 +355,15 @@ void X86FastPreTileConfig::convertPHI(MachineBasicBlock *MBB,
     // Mark it as liveout, so that it will be spilled when visit
     // the incoming MBB. Otherwise since phi will be deleted, it
     // would miss spill when visit incoming MBB.
-    MayLiveAcrossBlocks.set(Register::virtReg2Index(InTileReg));
+    MayLiveAcrossBlocks.set(InTileReg.virtRegIndex());
     MachineBasicBlock *InMBB = PHI.getOperand(I + 1).getMBB();
 
     MachineInstr *TileDefMI = MRI->getVRegDef(InTileReg);
     MachineBasicBlock::iterator InsertPos;
     if (TileDefMI->isPHI()) {
       InsertPos = TileDefMI->getParent()->getFirstNonPHI();
-      if (VisitedPHIs.count(TileDefMI)) { // circular phi reference
+      if (auto It = VisitedPHIs.find(TileDefMI);
+          It != VisitedPHIs.end()) { // circular phi reference
         //        def t1
         //       /       \
         //  def t2       t3 = phi(t1, t4) <--
@@ -372,9 +373,9 @@ void X86FastPreTileConfig::convertPHI(MachineBasicBlock *MBB,
         // For each (row, column and stack address) append phi incoming value.
         // Create r3 = phi(r1, r4)
         // Create r4 = phi(r2, r3)
-        Register InRowReg = VisitedPHIs[TileDefMI].Row;
-        Register InColReg = VisitedPHIs[TileDefMI].Col;
-        Register InStackAddrReg = VisitedPHIs[TileDefMI].StackAddr;
+        Register InRowReg = It->second.Row;
+        Register InColReg = It->second.Col;
+        Register InStackAddrReg = It->second.StackAddr;
         RowPHI.addReg(InRowReg).addMBB(InMBB);
         ColPHI.addReg(InColReg).addMBB(InMBB);
         AddrPHI.addReg(InStackAddrReg).addMBB(InMBB);
