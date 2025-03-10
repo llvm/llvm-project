@@ -92,9 +92,9 @@ void fd(D d, XD xd, D *p) {
   // CHECK: call void %
   p[0].f();
 
-  // FIXME: We can devirtualize this, by C++1z [expr.add]/6 (if the array
-  // element type and the pointee type are not similar, behavior is undefined).
-  // CHECK: call void %
+  // By C++1z [expr.add]/6 (if the array element type and the pointee type
+  // are not similar, behavior is undefined).
+  // CHECK: call void @_ZN1D1fEv
   p[1].f();
 }
 

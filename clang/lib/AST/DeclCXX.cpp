@@ -1689,7 +1689,7 @@ static NamedDecl* getLambdaCallOperatorHelper(const CXXRecordDecl &RD) {
   //     auto L = [](T) { }; // But A's call operator would want A's here.
   //   }
   //
-  // Walk the call operator’s redecl chain to find the one that belongs
+  // Walk the call operator's redecl chain to find the one that belongs
   // to this module.
   //
   // TODO: We need to fix this properly (see
@@ -2464,6 +2464,27 @@ CXXMethodDecl *CXXMethodDecl::getDevirtualizedMethod(const Expr *Base,
   Base = Base->getBestDynamicClassTypeExpr();
   if (Base->isPRValue() && Base->getType()->isRecordType())
     return this;
+
+  // Handle array subscripts with constant indices when the pointee type is
+  // known
+  if (const auto *ASE = dyn_cast<ArraySubscriptExpr>(Base)) {
+    QualType BaseTy = ASE->getBase()->getType();
+
+    // Check if it's a pointer to a record type
+    if (BaseTy->isPointerType() && BaseTy->getPointeeType()->isRecordType()) {
+      // For C++17 and later, we can devirtualize array access beyond p[0]
+      // According to [expr.add]/6, if the array element type and the pointee
+      // type are not similar, behavior is undefined, so we can assume they are
+      // the same type
+      const ASTContext &Context = getParent()->getASTContext();
+      const LangOptions &LangOpts = Context.getLangOpts();
+      if (LangOpts.CPlusPlus17 &&
+          ASE->getIdx()->isIntegerConstantExpr(Context)) {
+        // It's a constant index, so it's safe to devirtualize
+        return this;
+      }
+    }
+  }
 
   // If we don't even know what we would call, we can't devirtualize.
   const CXXRecordDecl *BestDynamicDecl = Base->getBestDynamicClassType();
