@@ -107,6 +107,8 @@ public:
   bool processDepend(mlir::omp::DependClauseOps &result) const;
   bool
   processEnter(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
+  bool processGrainsize(lower::StatementContext &stmtCtx,
+                        mlir::omp::GrainsizeClauseOps &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
                  mlir::omp::IfClauseOps &result) const;
   bool processIsDevicePtr(
@@ -127,6 +129,8 @@ public:
   bool processMotionClauses(lower::StatementContext &stmtCtx,
                             mlir::omp::MapClauseOps &result);
   bool processNontemporal(mlir::omp::NontemporalClauseOps &result) const;
+  bool processNumTasks(lower::StatementContext &stmtCtx,
+                       mlir::omp::NumTasksClauseOps &result) const;
   bool processReduction(
       mlir::Location currentLocation, mlir::omp::ReductionClauseOps &result,
       llvm::SmallVectorImpl<const semantics::Symbol *> &reductionSyms) const;
