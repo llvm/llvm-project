@@ -54,6 +54,7 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32],
     def CV_INSERT : CVInstBitManipRII<0b10, 0b000, (outs GPR:$rd_wb),
                              (ins GPR:$rd, GPR:$rs1, uimm5:$is3, uimm5:$is2),
                              "cv.insert", "$rd, $rs1, $is3, $is2">;
+    let DecoderNamespace = "XCVbitmanip" in
     def CV_INSERTR : RVInstR<0b0011010, 0b011, OPC_CUSTOM_1, (outs GPR:$rd_wb),
                              (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
                              "cv.insertr", "$rd, $rs1, $rs2">;
