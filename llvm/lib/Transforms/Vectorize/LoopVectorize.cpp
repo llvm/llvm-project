@@ -144,16 +144,10 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
-#include <functional>
-#include <iterator>
 #include <limits>
-#include <memory>
 #include <string>
-#include <tuple>
-#include <utility>
 
 using namespace llvm;
 
@@ -4396,10 +4390,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   sort(InvalidCosts, [&Numbering](RecipeVFPair &A, RecipeVFPair &B) {
     if (Numbering[A.first] != Numbering[B.first])
       return Numbering[A.first] < Numbering[B.first];
-    const auto &LHS = A.second;
-    const auto &RHS = B.second;
-    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
-           std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
+    return ElementCount::isKnownLT(A.second, B.second);
   });
 
   // For a list of ordered recipe-VF pairs:
