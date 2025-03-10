@@ -108,18 +108,19 @@ enum AddressSpace {
   UniformConstant =
       storageClassToAddressSpace(SPIRV::StorageClass::UniformConstant),
   Workgroup = storageClassToAddressSpace(SPIRV::StorageClass::Workgroup),
-  Generic = storageClassToAddressSpace(SPIRV::StorageClass::Generic)
+  Generic = storageClassToAddressSpace(SPIRV::StorageClass::Generic),
+  Invalid = UINT32_MAX
 };
 
 unsigned SPIRVTargetMachine::getAssumedAddrSpace(const Value *V) const {
   // TODO: we only enable this for AMDGCN flavoured SPIR-V, where we know it to
   //       be correct; this might be relaxed in the future.
   if (getTargetTriple().getVendor() != Triple::VendorType::AMD)
-    return UINT32_MAX;
+    return Invalid;
 
   const auto *LD = dyn_cast<LoadInst>(V);
   if (!LD)
-    return UINT32_MAX;
+    return Invalid;
 
   // It must be a load from a pointer to Generic.
   assert(V->getType()->isPointerTy() &&
@@ -127,7 +128,7 @@ unsigned SPIRVTargetMachine::getAssumedAddrSpace(const Value *V) const {
 
   const auto *Ptr = LD->getPointerOperand();
   if (Ptr->getType()->getPointerAddressSpace() != AddressSpace::UniformConstant)
-    return UINT32_MAX;
+    return Invalid;
   // For a load from a pointer to UniformConstant, we can infer CrossWorkgroup
   // storage, as this could only have been legally initialised with a
   // CrossWorkgroup (aka device) constant pointer.
