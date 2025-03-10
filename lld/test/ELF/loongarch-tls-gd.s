@@ -3,7 +3,7 @@
 
 ## LoongArch psABI doesn't specify TLS relaxation. It can be handled the same way as gcc:
 ## (a) code sequence can be converted from `pcalau12i+addi.[wd]` to `pcaddi`.
-## (b) dynamic relocations can be omitted for LD->LE relaxation.
+## (b) dynamic relocations can be omitted for GD->LE relaxation.
 
 # RUN: llvm-mc --filetype=obj --triple=loongarch32 %t/a.s -o %t/a.32.o
 # RUN: llvm-mc --filetype=obj --triple=loongarch32 -mattr=+relax %t/a.s -o %t/a.32.relax.o

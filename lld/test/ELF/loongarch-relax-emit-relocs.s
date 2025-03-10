@@ -173,17 +173,17 @@
 
 .macro add dst, src1, src2, src3
 .ifdef ELF64
-add.d \dst, \src1, \src2, \src3
+  add.d \dst, \src1, \src2, \src3
 .else
-add.w \dst, \src1, \src2, \src3
+  add.w \dst, \src1, \src2, \src3
 .endif
 .endm
 
 .macro addi dst, src1, src2
 .ifdef ELF64
-addi.d \dst, \src1, \src2
+  addi.d \dst, \src1, \src2
 .else
-addi.w \dst, \src1, \src2
+  addi.w \dst, \src1, \src2
 .endif
 .endm
 
