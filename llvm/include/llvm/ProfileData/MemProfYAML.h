@@ -158,6 +158,7 @@ template <> struct MappingTraits<memprof::AllocationInfo> {
 template <> struct MappingTraits<memprof::CallSiteInfo> {
   static void mapping(IO &Io, memprof::CallSiteInfo &CS) {
     Io.mapRequired("Frames", CS.Frames);
+    // Keep this optional to make it easier to write tests.
     Io.mapOptional("CalleeGuids", CS.CalleeGuids);
   }
 };
