@@ -190,9 +190,9 @@ public:
 //
 // BIT_UNFILTERED is used as the init value for a filter position.  It is used
 // only for filter processings.
-typedef enum {
-  BIT_TRUE,      // '1'
+typedef enum : uint8_t {
   BIT_FALSE,     // '0'
+  BIT_TRUE,      // '1'
   BIT_UNSET,     // '?'
   BIT_UNFILTERED // unfiltered
 } bit_value_t;
@@ -249,7 +249,7 @@ static const BitsInit &getBitsField(const Record &def, StringRef str) {
         Bits.push_back(BI->getBit(Idx));
       }
     } else if (const BitInit *BI = dyn_cast<BitInit>(SI.Value)) {
-      Bits.push_back(const_cast<BitInit *>(BI));
+      Bits.push_back(BI);
     } else {
       for (unsigned Idx = 0U; Idx < SI.BitWidth; ++Idx)
         Bits.push_back(UnsetInit::get(def.getRecords()));
@@ -688,7 +688,7 @@ static void resolveTableFixups(DecoderTable &Table, const FixupList &Fixups,
     uint32_t Delta = DestIdx - FixupIdx - 3;
     // Our NumToSkip entries are 24-bits. Make sure our table isn't too
     // big.
-    assert(Delta < (1u << 24));
+    assert(isUInt<24>(Delta));
     Table[FixupIdx] = (uint8_t)Delta;
     Table[FixupIdx + 1] = (uint8_t)(Delta >> 8);
     Table[FixupIdx + 2] = (uint8_t)(Delta >> 16);
@@ -698,7 +698,7 @@ static void resolveTableFixups(DecoderTable &Table, const FixupList &Fixups,
 // Emit table entries to decode instructions given a segment or segments
 // of bits.
 void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
-  assert((NumBits < (1u << 8)) && "NumBits overflowed uint8 table entry!");
+  assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
   TableInfo.Table.push_back(MCD::OPC_ExtractField);
 
   SmallString<16> SBytes;
@@ -753,8 +753,7 @@ void Filter::emitTableEntry(DecoderTableInfo &TableInfo) const {
     // two as to account for the width of the NumToSkip field itself.
     if (PrevFilter) {
       uint32_t NumToSkip = Table.size() - PrevFilter - 3;
-      assert(NumToSkip < (1u << 24) &&
-             "disassembler decoding table too large!");
+      assert(isUInt<24>(NumToSkip) && "disassembler decoding table too large!");
       Table[PrevFilter] = (uint8_t)NumToSkip;
       Table[PrevFilter + 1] = (uint8_t)(NumToSkip >> 8);
       Table[PrevFilter + 2] = (uint8_t)(NumToSkip >> 16);
@@ -1446,7 +1445,7 @@ void FilterChooser::emitSingletonTableEntry(DecoderTableInfo &TableInfo,
   // Check any additional encoding fields needed.
   for (unsigned I = Size; I != 0; --I) {
     unsigned NumBits = EndBits[I - 1] - StartBits[I - 1] + 1;
-    assert((NumBits < (1u << 8)) && "NumBits overflowed uint8 table entry!");
+    assert(isUInt<8>(NumBits) && "NumBits overflowed uint8 table entry!");
     TableInfo.Table.push_back(MCD::OPC_CheckField);
     uint8_t Buffer[16], *P;
     encodeULEB128(StartBits[I - 1], Buffer);
@@ -1604,16 +1603,14 @@ bool FilterChooser::filterProcessor(bool AllowMixed, bool Greedy) {
   // (MIXED) ------ . ----> (MIXED)
   // (FILTERED)---- . ----> (FILTERED)
 
-  std::vector<bitAttr_t> bitAttrs;
+  std::vector<bitAttr_t> bitAttrs(BitWidth, ATTR_NONE);
 
   // FILTERED bit positions provide no entropy and are not worthy of pursuing.
   // Filter::recurse() set either BIT_TRUE or BIT_FALSE for each position.
   for (BitIndex = 0; BitIndex < BitWidth; ++BitIndex)
     if (FilterBitValues[BitIndex] == BIT_TRUE ||
         FilterBitValues[BitIndex] == BIT_FALSE)
-      bitAttrs.push_back(ATTR_FILTERED);
-    else
-      bitAttrs.push_back(ATTR_NONE);
+      bitAttrs[BitIndex] = ATTR_FILTERED;
 
   for (const auto &OpcPair : Opcodes) {
     insn_t insn;
