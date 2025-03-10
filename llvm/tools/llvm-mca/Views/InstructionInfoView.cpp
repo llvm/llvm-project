@@ -90,16 +90,15 @@ void InstructionInfoView::printSchedulingInfoView(raw_ostream &OS) const {
   FOS << "\n\nScheduling Info:\n";
   FOS << "[1]: #uOps\n[2]: Latency\n[3]: Bypass Latency\n"
       << "[4]: Throughput\n[5]: Resources\n"
-      << "[6]: LLVM OpcodeName\n[7]: Instruction\n"
-      << "[8]: Comment if any\n\n";
+      << "[6]: LLVM OpcodeName\n";
 
   // paddings for each scheduling info output. Start at [2]
   std::vector<unsigned> paddings = {7, 12, 18, 27, 94, 113, 150};
-  for (unsigned i = 0; i < paddings.size(); i++) {
+  for (unsigned i = 0; i < paddings.size() - 1; i++) {
     FOS << "[" << i + 1 << "]";
     FOS.PadToColumn(paddings[i]);
   }
-  FOS << "[" << paddings.size() + 1 << "]\n";
+  FOS << "Instructions:\n";
 
   for (const auto &[Index, IIVDEntry, Inst] : enumerate(IIVD, Source)) {
     getComment(Inst, CommentString);
