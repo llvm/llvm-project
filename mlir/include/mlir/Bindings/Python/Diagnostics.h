@@ -15,7 +15,6 @@
 
 #include <cassert>
 #include <cstdint>
-#include <sstream>
 #include <string>
 
 namespace mlir {
