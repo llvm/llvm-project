@@ -795,8 +795,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // the given instruction was assessed.
     if (!PrintInstructionComments)
       return;
-    InstructionCostDetailMap[I].CostBefore = Cost;
-    InstructionCostDetailMap[I].ThresholdBefore = Threshold;
+    auto &CostDetail = InstructionCostDetailMap[I];
+    CostDetail.CostBefore = Cost;
+    CostDetail.ThresholdBefore = Threshold;
   }
 
   void onInstructionAnalysisFinish(const Instruction *I) override {
@@ -804,8 +805,9 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // the instruction has been assessed.
     if (!PrintInstructionComments)
       return;
-    InstructionCostDetailMap[I].CostAfter = Cost;
-    InstructionCostDetailMap[I].ThresholdAfter = Threshold;
+    auto &CostDetail = InstructionCostDetailMap[I];
+    CostDetail.CostAfter = Cost;
+    CostDetail.ThresholdAfter = Threshold;
   }
 
   bool isCostBenefitAnalysisEnabled() {

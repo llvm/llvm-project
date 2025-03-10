@@ -80,6 +80,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCDwarf.h"
+#include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
 #include <iterator>
@@ -131,6 +132,9 @@ struct BlockFlags {
   bool StrongNoFrameOnEntry : 1;
   bool HasFrameOnEntry : 1;
   bool HasFrameOnExit : 1;
+  BlockFlags()
+      : Reachable(false), StrongNoFrameOnEntry(false), HasFrameOnEntry(false),
+        HasFrameOnExit(false) {}
 };
 
 // Most functions will have <= 32 basic blocks.
@@ -141,7 +145,7 @@ using BlockFlagsVector = SmallVector<BlockFlags, 32>;
 static BlockFlagsVector
 computeBlockInfo(const MachineFunction &MF,
                  const MachineBasicBlock *PrologueBlock) {
-  BlockFlagsVector BlockInfo(MF.getNumBlockIDs(), {false, false, false, false});
+  BlockFlagsVector BlockInfo(MF.getNumBlockIDs());
   BlockInfo[0].Reachable = true;
   BlockInfo[0].StrongNoFrameOnEntry = true;
 
@@ -247,6 +251,11 @@ fixupBlock(MachineBasicBlock &CurrBB, const BlockFlagsVector &BlockInfo,
   const BlockFlags &Info = BlockInfo[CurrBB.getNumber()];
 
   if (!Info.Reachable)
+    return false;
+
+  // If we don't need to perform full CFI fix up, we only need to fix up the
+  // first basic block in the section.
+  if (!TFL.enableFullCFIFixup(MF) && !CurrBB.isBeginSection())
     return false;
 
   // If the previous block and the current block are in the same section,

@@ -44,10 +44,8 @@ struct DynamicScheduleTracker {
 #define NOT_FINISHED 1
 #define LAST_CHUNK 2
 
-#pragma omp begin declare target device_type(nohost)
-
 // TODO: This variable is a hack inherited from the old runtime.
-static uint64_t SHARED(Cnt);
+[[clang::loader_uninitialized]] static Local<uint64_t> Cnt;
 
 template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
   ////////////////////////////////////////////////////////////////////////////////
@@ -459,7 +457,8 @@ template <typename T, typename ST> struct omptarget_nvptx_LoopSupport {
 //
 //  __kmpc_dispatch_deinit
 //
-static DynamicScheduleTracker **SHARED(ThreadDST);
+[[clang::loader_uninitialized]] static Local<DynamicScheduleTracker **>
+    ThreadDST;
 
 // Create a new DST, link the current one, and define the new as current.
 static DynamicScheduleTracker *pushDST() {
@@ -935,5 +934,3 @@ OMP_LOOP_ENTRY(_4u, uint32_t)
 OMP_LOOP_ENTRY(_8, int64_t)
 OMP_LOOP_ENTRY(_8u, uint64_t)
 }
-
-#pragma omp end declare target

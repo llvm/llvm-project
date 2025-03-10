@@ -3450,6 +3450,21 @@ define i1 @icmp_ult_vscale_false(i8 %x, i8 %y) {
   ret i1 %cmp
 }
 
+define i1 @icmp_eq_false_by_trunc(i8 %x) {
+; CHECK-LABEL: @icmp_eq_false_by_trunc(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %trunc = trunc i8 %x to i1
+  %not = xor i1 %trunc, true
+  call void @llvm.assume(i1 %not)
+  %cmp = icmp eq i8 %x, 1
+  ret i1 %cmp
+}
+
 declare i64 @llvm.vscale.i64()
 
 ; TODO: Add coverage for global aliases, link once, etc..

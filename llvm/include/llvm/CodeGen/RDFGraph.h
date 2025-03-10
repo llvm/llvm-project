@@ -865,8 +865,9 @@ private:
   using BlockRefsMap = RegisterAggrMap<NodeId>;
 
   void buildStmt(Block BA, MachineInstr &In);
-  void recordDefsForDF(BlockRefsMap &PhiM, Block BA);
-  void buildPhis(BlockRefsMap &PhiM, Block BA);
+  void recordDefsForDF(BlockRefsMap &PhiM, BlockRefsMap &PhiClobberM, Block BA);
+  void buildPhis(BlockRefsMap &PhiM, Block BA,
+                 const DefStackMap &DefM = DefStackMap());
   void removeUnusedPhis();
 
   void pushClobbers(Instr IA, DefStackMap &DM);
@@ -874,7 +875,7 @@ private:
   template <typename T> void linkRefUp(Instr IA, NodeAddr<T> TA, DefStack &DS);
   template <typename Predicate>
   void linkStmtRefs(DefStackMap &DefM, Stmt SA, Predicate P);
-  void linkBlockRefs(DefStackMap &DefM, Block BA);
+  void linkBlockRefs(DefStackMap &DefM, BlockRefsMap &PhiClobberM, Block BA);
 
   void unlinkUseDF(Use UA);
   void unlinkDefDF(Def DA);

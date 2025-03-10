@@ -34,9 +34,9 @@ prefix_pat = re.compile(f"^# {args.prefix}: (.*)")
 fdata_pat = re.compile(r"([01].*) (?P<exec>\d+) (?P<mispred>\d+)")
 
 # Pre-aggregated profile:
-# {B|F|f} [<start_id>:]<start_offset> [<end_id>:]<end_offset> <count>
-# [<mispred_count>]
-preagg_pat = re.compile(r"(?P<type>[BFf]) (?P<offsets_count>.*)")
+# {T|B|F|f} [<start_id>:]<start_offset> [<end_id>:]<end_offset> [<ft_end>]
+# <count> [<mispred_count>]
+preagg_pat = re.compile(r"(?P<type>[TBFf]) (?P<offsets_count>.*)")
 
 # No-LBR profile:
 # <is symbol?> <closest elf symbol or DSO name> <relative address> <count>

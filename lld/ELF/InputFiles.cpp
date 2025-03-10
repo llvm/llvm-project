@@ -639,6 +639,13 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
       }
       break;
     case EM_AARCH64:
+      // FIXME: BuildAttributes have been implemented in llvm, but not yet in
+      // lld. Remove the section so that it does not accumulate in the output
+      // file. When support is implemented we expect not to output a build
+      // attributes section in files of type ET_EXEC or ET_SHARED, but ld -r
+      // ouptut will need a single merged attributes section.
+      if (sec.sh_type == SHT_AARCH64_ATTRIBUTES)
+        sections[i] = &InputSection::discarded;
       // Producing a static binary with MTE globals is not currently supported,
       // remove all SHT_AARCH64_MEMTAG_GLOBALS_STATIC sections as they're unused
       // medatada, and we don't want them to end up in the output file for

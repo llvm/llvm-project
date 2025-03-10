@@ -108,6 +108,14 @@ GetFlattenedSpellings(const Record &Attr) {
       Ret.emplace_back("CXX11", Name, "clang", false, *Spelling);
       if (Spelling->getValueAsBit("AllowInC"))
         Ret.emplace_back("C23", Name, "clang", false, *Spelling);
+    } else if (Variety == "ClangGCC") {
+      Ret.emplace_back("GNU", Name, "", false, *Spelling);
+      Ret.emplace_back("CXX11", Name, "clang", false, *Spelling);
+      Ret.emplace_back("CXX11", Name, "gnu", false, *Spelling);
+      if (Spelling->getValueAsBit("AllowInC")) {
+        Ret.emplace_back("C23", Name, "clang", false, *Spelling);
+        Ret.emplace_back("C23", Name, "gnu", false, *Spelling);
+      }
     } else {
       Ret.push_back(FlattenedSpelling(*Spelling));
     }
@@ -4924,6 +4932,9 @@ void EmitClangAttrParsedAttrKinds(const RecordKeeper &Records,
           Matches = &Pragma;
         } else if (Variety == "HLSLAnnotation") {
           Matches = &HLSLAnnotation;
+          if (RawSpelling.compare(RawSpelling.lower()) != 0)
+            PrintError(S.getSpellingRecord().getLoc(),
+                       "HLSLAnnotation Attribute must be lower case.");
         }
 
         assert(Matches && "Unsupported spelling variety found");

@@ -178,7 +178,7 @@ public:
       const llvm::opt::ArgList &DriverArgs, StringRef LibDeviceFile,
       bool Wave64, bool DAZ, bool FiniteOnly, bool UnsafeMathOpt,
       bool FastRelaxedMath, bool CorrectSqrt, DeviceLibABIVersion ABIVer,
-      const std::tuple<bool, const SanitizerArgs> &GPUSan, bool isOpenMP) const;
+      bool GPUSan, bool isOpenMP) const;
   /// Check file paths of default bitcode libraries common to AMDGPU based
   /// toolchains. \returns false if there are invalid or missing files.
   bool checkCommonBitcodeLibs(StringRef GPUArch, StringRef LibDeviceFile,

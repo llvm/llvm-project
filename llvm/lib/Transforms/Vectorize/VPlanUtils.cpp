@@ -30,11 +30,18 @@ VPValue *vputils::getOrCreateVPValueForSCEVExpr(VPlan &Plan, const SCEV *Expr,
   VPValue *Expanded = nullptr;
   if (auto *E = dyn_cast<SCEVConstant>(Expr))
     Expanded = Plan.getOrAddLiveIn(E->getValue());
-  else if (auto *E = dyn_cast<SCEVUnknown>(Expr))
-    Expanded = Plan.getOrAddLiveIn(E->getValue());
   else {
-    Expanded = new VPExpandSCEVRecipe(Expr, SE);
-    Plan.getEntry()->appendRecipe(Expanded->getDefiningRecipe());
+    auto *U = dyn_cast<SCEVUnknown>(Expr);
+    // Skip SCEV expansion if Expr is a SCEVUnknown wrapping a non-instruction
+    // value. Otherwise the value may be defined in a loop and using it directly
+    // will break LCSSA form. The SCEV expansion takes care of preserving LCSSA
+    // form.
+    if (U && !isa<Instruction>(U->getValue())) {
+      Expanded = Plan.getOrAddLiveIn(U->getValue());
+    } else {
+      Expanded = new VPExpandSCEVRecipe(Expr, SE);
+      Plan.getEntry()->appendRecipe(Expanded->getDefiningRecipe());
+    }
   }
   Plan.addSCEVExpansion(Expr, Expanded);
   return Expanded;

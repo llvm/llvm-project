@@ -1,11 +1,11 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9,GCN-SDAG %s
-; XUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9,GCN-GISEL %s
+; XUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SI,NOTGFX9 %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,CIPLUS-SDAG,GCN-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,CIPLUS-GISEL,GCN-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,CIPLUS-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,CIPLUS-SDAG,GCN-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,CIPLUS-GISEL,GCN-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,NOTGFX9,CIPLUS-GISEL %s
 ; RUN: llc -global-isel=0 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9,CIPLUS-SDAG,GCN-SDAG %s
-; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9,CIPLUS-GISEL,GCN-GISEL %s
+; RUN: llc -global-isel=1 -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,CIPLUS,GFX9,CIPLUS-GISEL %s
 
 ; GCN-LABEL: {{^}}ds_append_lds:
 ; GCN: s_load_dword [[PTR:s[0-9]+]]
@@ -73,10 +73,8 @@ define amdgpu_kernel void @ds_append_lds_over_max_offset(ptr addrspace(3) %lds, 
 }
 
 ; GCN-LABEL: {{^}}ds_append_lds_vgpr_addr:
-; GCN-SDAG: v_readfirstlane_b32 [[READLANE:s[0-9]+]], v0
-; GCN-SDAG: s_mov_b32 m0, [[READLANE]]
-
-; GCN-GISEL: v_readfirstlane_b32 m0, v0
+; GCN: v_readfirstlane_b32 [[READLANE:s[0-9]+]], v0
+; GCN: s_mov_b32 m0, [[READLANE]]
 
 ; GCN: ds_append [[RESULT:v[0-9]+]]{{$}}
 ; GCN-NOT: buffer_wbinvl1

@@ -16,11 +16,11 @@
 // fixed form character literals on truncated card images, file
 // inclusion, and driving the Fortran source preprocessor.
 
-#include "flang/Common/Fortran-features.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/message.h"
 #include "flang/Parser/provenance.h"
 #include "flang/Parser/token-sequence.h"
+#include "flang/Support/Fortran-features.h"
 #include <bitset>
 #include <optional>
 #include <string>
@@ -182,6 +182,7 @@ private:
   void SkipCComments();
   void SkipSpaces();
   static const char *SkipWhiteSpace(const char *);
+  const char *SkipWhiteSpaceIncludingEmptyMacros(const char *) const;
   const char *SkipWhiteSpaceAndCComments(const char *) const;
   const char *SkipCComment(const char *) const;
   bool NextToken(TokenSequence &);

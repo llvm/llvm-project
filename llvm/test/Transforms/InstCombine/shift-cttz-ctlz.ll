@@ -103,4 +103,34 @@ entry:
   ret i32 %res
 }
 
+define i64 @fold_cttz_64() vscale_range(1,16) {
+; CHECK-LABEL: define i64 @fold_cttz_64(
+; CHECK-SAME: ) #[[ATTR0:[0-9]+]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i64 4
+;
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %shl0 = shl nuw nsw i64 %vscale, 4
+  %shl1 = shl nuw nsw i64 %vscale, 2
+  %cttz = tail call range(i64 2, 65) i64 @llvm.cttz.i64(i64 %shl1, i1 true)
+  %div1 = lshr i64 %shl0, %cttz
+  ret i64 %div1
+}
+
+define i32 @fold_cttz_32() vscale_range(1,16) {
+; CHECK-LABEL: define i32 @fold_cttz_32(
+; CHECK-SAME: ) #[[ATTR0]] {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    ret i32 4
+;
+entry:
+  %vscale = tail call i32 @llvm.vscale.i32()
+  %shl0 = shl nuw nsw i32 %vscale, 4
+  %shl1 = shl nuw nsw i32 %vscale, 2
+  %cttz = tail call range(i32 2, 65) i32 @llvm.cttz.i32(i32 %shl1, i1 true)
+  %div1 = lshr i32 %shl0, %cttz
+  ret i32 %div1
+}
+
 declare void @use(i32)

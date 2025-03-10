@@ -1356,9 +1356,9 @@ enum DebuggerBroadcastBit {
   eBroadcastBitWarning = (1 << 1),
   eBroadcastBitError = (1 << 2),
   eBroadcastSymbolChange = (1 << 3),
-  eBroadcastBitProgressCategory = (1 << 4),
+  eBroadcastBitProgressCategory = (1 << 4), ///< Deprecated
   eBroadcastBitExternalProgress = (1 << 5),
-  eBroadcastBitExternalProgressCategory = (1 << 6),
+  eBroadcastBitExternalProgressCategory = (1 << 6), ///< Deprecated
 };
 
 /// Used for expressing severity in logs and diagnostics.
@@ -1366,6 +1366,15 @@ enum Severity {
   eSeverityError,
   eSeverityWarning,
   eSeverityInfo, // Equivalent to Remark used in clang.
+};
+
+/// Callback return value, indicating whether it handled printing the
+/// CommandReturnObject or deferred doing so to the CommandInterpreter.
+enum CommandReturnObjectCallbackResult {
+  /// The callback deferred printing the command return object.
+  eCommandReturnObjectPrintCallbackSkipped = 0,
+  /// The callback handled printing the command return object.
+  eCommandReturnObjectPrintCallbackHandled = 1,
 };
 
 } // namespace lldb

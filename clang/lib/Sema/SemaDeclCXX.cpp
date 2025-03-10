@@ -733,8 +733,11 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   }
 
   if (!TemplateParamLists.empty()) {
-    // FIXME: There's no rule against this, but there are also no rules that
-    // would actually make it usable, so we reject it for now.
+    // C++17 [temp]/1:
+    //   A template defines a family of class, functions, or variables, or an
+    //   alias for a family of types.
+    //
+    // Structured bindings are not included.
     Diag(TemplateParamLists.front()->getTemplateLoc(),
          diag::err_decomp_decl_template);
     return nullptr;
@@ -883,8 +886,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     // It's not permitted to shadow a template parameter name.
     if (Previous.isSingleResult() &&
         Previous.getFoundDecl()->isTemplateParameter()) {
-      DiagnoseTemplateParameterShadow(D.getIdentifierLoc(),
-                                      Previous.getFoundDecl());
+      DiagnoseTemplateParameterShadow(B.NameLoc, Previous.getFoundDecl());
       Previous.clear();
     }
 
@@ -980,24 +982,24 @@ static bool CheckBindingsCount(Sema &S, DecompositionDecl *DD,
   if (IsValid && HasPack) {
     // Create the pack expr and assign it to the binding.
     unsigned PackSize = MemberCount - Bindings.size() + 1;
-    QualType PackType = S.Context.getPackExpansionType(
-        S.Context.DependentTy, std::nullopt, /*ExpectsPackInType=*/false);
-    BindingDecl *BD = (*BindingWithPackItr);
-    auto *RP = ResolvedUnexpandedPackExpr::Create(S.Context, DD->getBeginLoc(),
-                                                  DecompType, PackSize);
-    BD->setDecomposedDecl(DD);
-    BD->setBinding(PackType, RP);
 
     BindingDecl *BPack = *BindingWithPackItr;
+    BPack->setDecomposedDecl(DD);
+    SmallVector<ValueDecl *, 8> NestedBDs(PackSize);
     // Create the nested BindingDecls.
-    for (Expr *&E : RP->getExprs()) {
-      auto *NestedBD = BindingDecl::Create(S.Context, BPack->getDeclContext(),
-                                           BPack->getLocation(),
-                                           BPack->getIdentifier(), QualType());
+    for (unsigned I = 0; I < PackSize; ++I) {
+      BindingDecl *NestedBD = BindingDecl::Create(
+          S.Context, BPack->getDeclContext(), BPack->getLocation(),
+          BPack->getIdentifier(), QualType());
       NestedBD->setDecomposedDecl(DD);
-      E = S.BuildDeclRefExpr(NestedBD, S.Context.DependentTy, VK_LValue,
-                             BPack->getLocation());
+      NestedBDs[I] = NestedBD;
     }
+
+    QualType PackType = S.Context.getPackExpansionType(
+        S.Context.DependentTy, PackSize, /*ExpectsPackInType=*/false);
+    auto *PackExpr = FunctionParmPackExpr::Create(
+        S.Context, PackType, BPack, BPack->getBeginLoc(), NestedBDs);
+    BPack->setBinding(PackType, PackExpr);
   }
 
   if (IsValid)
@@ -13584,7 +13586,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
     // Merge any previous default template arguments into our parameters,
     // and check the parameter list.
     if (CheckTemplateParameterList(TemplateParams, OldTemplateParams,
-                                   TPC_TypeAliasTemplate))
+                                   TPC_Other))
       return nullptr;
 
     TypeAliasTemplateDecl *NewDecl =

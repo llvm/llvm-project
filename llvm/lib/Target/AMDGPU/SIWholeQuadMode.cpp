@@ -67,6 +67,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "SIWholeQuadMode.h"
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -148,11 +149,19 @@ struct WorkItem {
   WorkItem(MachineInstr *MI) : MI(MI) {}
 };
 
-class SIWholeQuadMode : public MachineFunctionPass {
+class SIWholeQuadMode {
+public:
+  SIWholeQuadMode(MachineFunction &MF, LiveIntervals *LIS,
+                  MachineDominatorTree *MDT, MachinePostDominatorTree *PDT)
+      : ST(&MF.getSubtarget<GCNSubtarget>()), TII(ST->getInstrInfo()),
+        TRI(&TII->getRegisterInfo()), MRI(&MF.getRegInfo()), LIS(LIS), MDT(MDT),
+        PDT(PDT) {}
+  bool run(MachineFunction &MF);
+
 private:
+  const GCNSubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
-  const GCNSubtarget *ST;
   MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
   MachineDominatorTree *MDT;
@@ -225,12 +234,13 @@ private:
   void lowerInitExec(MachineInstr &MI);
   MachineBasicBlock::iterator lowerInitExecInstrs(MachineBasicBlock &Entry,
                                                   bool &Changed);
+};
 
+class SIWholeQuadModeLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  SIWholeQuadMode() :
-    MachineFunctionPass(ID) { }
+  SIWholeQuadModeLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -250,23 +260,22 @@ public:
         MachineFunctionProperties::Property::IsSSA);
   }
 };
-
 } // end anonymous namespace
 
-char SIWholeQuadMode::ID = 0;
+char SIWholeQuadModeLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
-                      false)
+INITIALIZE_PASS_BEGIN(SIWholeQuadModeLegacy, DEBUG_TYPE, "SI Whole Quad Mode",
+                      false, false)
 INITIALIZE_PASS_DEPENDENCY(LiveIntervalsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTreeWrapperPass)
-INITIALIZE_PASS_END(SIWholeQuadMode, DEBUG_TYPE, "SI Whole Quad Mode", false,
-                    false)
+INITIALIZE_PASS_END(SIWholeQuadModeLegacy, DEBUG_TYPE, "SI Whole Quad Mode",
+                    false, false)
 
-char &llvm::SIWholeQuadModeID = SIWholeQuadMode::ID;
+char &llvm::SIWholeQuadModeID = SIWholeQuadModeLegacy::ID;
 
-FunctionPass *llvm::createSIWholeQuadModePass() {
-  return new SIWholeQuadMode;
+FunctionPass *llvm::createSIWholeQuadModeLegacyPass() {
+  return new SIWholeQuadModeLegacy;
 }
 
 #ifndef NDEBUG
@@ -1689,7 +1698,7 @@ SIWholeQuadMode::lowerInitExecInstrs(MachineBasicBlock &Entry, bool &Changed) {
   return InsertPt;
 }
 
-bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
+bool SIWholeQuadMode::run(MachineFunction &MF) {
   LLVM_DEBUG(dbgs() << "SI Whole Quad Mode on " << MF.getName()
                     << " ------------- \n");
   LLVM_DEBUG(MF.dump(););
@@ -1703,18 +1712,6 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   InitExecInstrs.clear();
   SetInactiveInstrs.clear();
   StateTransition.clear();
-
-  ST = &MF.getSubtarget<GCNSubtarget>();
-
-  TII = ST->getInstrInfo();
-  TRI = &TII->getRegisterInfo();
-  MRI = &MF.getRegInfo();
-  LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
-  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
-  MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
-  auto *PDTWrapper =
-      getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
-  PDT = PDTWrapper ? &PDTWrapper->getPostDomTree() : nullptr;
 
   if (ST->isWave32()) {
     AndOpc = AMDGPU::S_AND_B32;
@@ -1763,9 +1760,10 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   for (MachineInstr *MI : SetInactiveInstrs) {
     if (LowerToCopyInstrs.contains(MI))
       continue;
-    if (Instructions[MI].MarkedStates & StateStrict) {
-      Instructions[MI].Needs |= StateStrictWWM;
-      Instructions[MI].Disabled &= ~StateStrictWWM;
+    auto &Info = Instructions[MI];
+    if (Info.MarkedStates & StateStrict) {
+      Info.Needs |= StateStrictWWM;
+      Info.Disabled &= ~StateStrictWWM;
       Blocks[MI->getParent()].Needs |= StateStrictWWM;
     } else {
       LLVM_DEBUG(dbgs() << "Has no WWM marking: " << *MI);
@@ -1815,4 +1813,39 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
     LIS->removeAllRegUnitsForPhysReg(AMDGPU::EXEC);
 
   return Changed;
+}
+
+bool SIWholeQuadModeLegacy::runOnMachineFunction(MachineFunction &MF) {
+  LiveIntervals *LIS = &getAnalysis<LiveIntervalsWrapperPass>().getLIS();
+  auto *MDTWrapper = getAnalysisIfAvailable<MachineDominatorTreeWrapperPass>();
+  MachineDominatorTree *MDT = MDTWrapper ? &MDTWrapper->getDomTree() : nullptr;
+  auto *PDTWrapper =
+      getAnalysisIfAvailable<MachinePostDominatorTreeWrapperPass>();
+  MachinePostDominatorTree *PDT =
+      PDTWrapper ? &PDTWrapper->getPostDomTree() : nullptr;
+  SIWholeQuadMode Impl(MF, LIS, MDT, PDT);
+  return Impl.run(MF);
+}
+
+PreservedAnalyses
+SIWholeQuadModePass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+
+  LiveIntervals *LIS = &MFAM.getResult<LiveIntervalsAnalysis>(MF);
+  MachineDominatorTree *MDT =
+      MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+  MachinePostDominatorTree *PDT =
+      MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
+  SIWholeQuadMode Impl(MF, LIS, MDT, PDT);
+  bool Changed = Impl.run(MF);
+  if (!Changed)
+    return PreservedAnalyses::all();
+
+  PreservedAnalyses PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserve<SlotIndexesAnalysis>();
+  PA.preserve<LiveIntervalsAnalysis>();
+  PA.preserve<MachineDominatorTreeAnalysis>();
+  PA.preserve<MachinePostDominatorTreeAnalysis>();
+  return PA;
 }

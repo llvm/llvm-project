@@ -8193,6 +8193,29 @@ TEST_P(ImportFunctions, CTADAliasTemplate) {
   EXPECT_TRUE(ToD->getSourceDeductionGuide());
 }
 
+TEST_P(ImportFunctions, CTADAliasTemplateWithExplicitSourceDeductionGuide) {
+  Decl *TU = getTuDecl(
+      R"(
+      template <typename T> struct A {
+        A(T);
+      };
+      template<typename T>
+      using B = A<T>;
+      A(int) -> A<double>; // explicit
+      B b{(int)0};
+      )",
+      Lang_CXX20, "input.cc");
+  auto *FromD = FirstDeclMatcher<CXXDeductionGuideDecl>().match(
+      TU, cxxDeductionGuideDecl(hasParameter(0, hasType(asString("int"))),
+                                hasName("<deduction guide for B>"),
+                                hasReturnTypeLoc(loc(asString("A<double>")))));
+  auto *ToD = Import(FromD, Lang_CXX20);
+  ASSERT_TRUE(ToD);
+  EXPECT_TRUE(ToD->getSourceDeductionGuideKind() ==
+              CXXDeductionGuideDecl::SourceDeductionGuideKind::Alias);
+  EXPECT_TRUE(ToD->getSourceDeductionGuide());
+}
+
 TEST_P(ImportFunctions, ParmVarDeclDeclContext) {
   constexpr auto FromTUCode = R"(
       void f(int P);
