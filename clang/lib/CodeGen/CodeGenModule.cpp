@@ -2492,7 +2492,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
     B.addUWTableAttr(llvm::UWTableKind(CodeGenOpts.UnwindTables));
 
   AttachMitigationMetadataToFunction(*F, MitigationKey::STACK_CLASH_PROTECTION,
-                                     CodeGenOpts.StackClashProtector);
+                                     CodeGenOpts.StackClashProtector,
+                                     CodeGenOpts.MitigationAnalysis);
   if (CodeGenOpts.StackClashProtector)
     B.addAttribute("probe-stack", "inline-asm");
 
@@ -2521,18 +2522,21 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(const Decl *D,
       !noStackProtectionAttr &&
           (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPOn) ||
            isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPStrong) ||
-           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq)));
+           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq)),
+      CodeGenOpts.MitigationAnalysis);
 
   AttachMitigationMetadataToFunction(
       *F, MitigationKey::STACK_PROTECTOR_STRONG,
       !noStackProtectionAttr &&
           (isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPStrong) ||
-           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq)));
+           isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq)),
+      CodeGenOpts.MitigationAnalysis);
 
   AttachMitigationMetadataToFunction(
       *F, MitigationKey::STACK_PROTECTOR_ALL,
       !noStackProtectionAttr &&
-          isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq));
+          isStackProtectorOn(LangOpts, getTriple(), LangOptions::SSPReq),
+      CodeGenOpts.MitigationAnalysis);
 
   if (!D) {
     // Non-entry HLSL functions must always be inlined.

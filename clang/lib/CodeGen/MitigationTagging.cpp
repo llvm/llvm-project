@@ -44,8 +44,17 @@ MitigationKeyToString(enum MitigationKey key) noexcept {
   }
 }
 
+///
+/// Store metadata (tied to the function) related to enablement of mitigations.
+/// @param mitigationAnalysisEnable - if false, do not attach metadata.
+///
 void AttachMitigationMetadataToFunction(llvm::Function &F,
-                                        enum MitigationKey key, bool enabled) {
+                                        enum MitigationKey key, bool enabled,
+                                        bool mitigationAnalysisEnable) {
+  if (!mitigationAnalysisEnable) {
+    return;
+  }
+
   llvm::LLVMContext &Context = F.getContext();
 
   unsigned kindID = Context.getMDKindID("security_mitigations");
@@ -68,16 +77,15 @@ void AttachMitigationMetadataToFunction(llvm::Function &F,
     llvm::MDNode *CombinedMD = llvm::MDNode::get(Context, MDs);
     F.setMetadata(kindID, CombinedMD);
   } else {
-    F.setMetadata(kindID, NewMD);
+    F.setMetadata(kindID, llvm::MDNode::get(
+                              Context, std::vector<llvm::Metadata *>{NewMD}));
   }
 }
 
 void AttachMitigationMetadataToFunction(CodeGenFunction &CGF,
                                         enum MitigationKey key, bool enabled) {
-  if (!CGF.CGM.getCodeGenOpts().MitigationAnalysis) {
-    return;
-  }
-  AttachMitigationMetadataToFunction(*(CGF.CurFn), key, enabled);
+  AttachMitigationMetadataToFunction(
+      *(CGF.CurFn), key, enabled, CGF.CGM.getCodeGenOpts().MitigationAnalysis);
 }
 
 } // namespace CodeGen

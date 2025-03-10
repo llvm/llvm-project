@@ -35,7 +35,8 @@ enum class MitigationKey {
 };
 
 void AttachMitigationMetadataToFunction(llvm::Function &F,
-                                        enum MitigationKey key, bool enabled);
+                                        enum MitigationKey key, bool enabled,
+                                        bool mitigationAnalysisEnable);
 void AttachMitigationMetadataToFunction(CodeGenFunction &CGF,
                                         enum MitigationKey key, bool enabled);
 
