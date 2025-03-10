@@ -35,6 +35,9 @@ Potentially Breaking Changes
 ============================
 
 - The Objective-C ARC migrator (ARCMigrate) has been removed.
+- Fix missing diagnostics for uses of declarations when performing typename access,
+  such as when performing member access on a '[[deprecated]]' type alias.
+  (#GH58547)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
