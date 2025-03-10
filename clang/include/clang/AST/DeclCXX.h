@@ -1550,6 +1550,9 @@ public:
   /// Returns the destructor decl for this class.
   CXXDestructorDecl *getDestructor() const;
 
+  /// Returns the destructor decl for this class.
+  bool hasDeletedDestructor() const;
+
   /// Returns true if the class destructor, or any implicitly invoked
   /// destructors are marked noreturn.
   bool isAnyDestructorNoReturn() const { return data().IsAnyDestructorNoReturn; }

@@ -1529,7 +1529,6 @@ void CXXRecordDecl::addedEligibleSpecialMemberFunction(const CXXMethodDecl *MD,
     if (DD->isNoReturn())
       data().IsAnyDestructorNoReturn = true;
   }
-
   if (!MD->isImplicit() && !MD->isUserProvided()) {
     // This method is user-declared but not user-provided. We can't work
     // out whether it's trivial yet (not until we get to the end of the
@@ -2110,6 +2109,12 @@ CXXDestructorDecl *CXXRecordDecl::getDestructor() const {
       return DD;
   }
   return nullptr;
+}
+
+bool CXXRecordDecl::hasDeletedDestructor() const {
+  if (const CXXDestructorDecl *D = getDestructor())
+    return D->isDeleted();
+  return false;
 }
 
 static bool isDeclContextInNamespace(const DeclContext *DC) {
