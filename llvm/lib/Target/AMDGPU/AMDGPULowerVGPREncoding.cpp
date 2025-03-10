@@ -422,8 +422,8 @@ void AMDGPULowerVGPREncoding::lowerMovBundle(
     setMode(NewMode, &*MIB);
     MII = MachineBasicBlock::instr_iterator(MIB);
   }
-  LoadMI->removeFromBundle();
-  CoreMI.removeFromBundle();
+  LoadMI->eraseFromBundle();
+  CoreMI.eraseFromBundle();
   MI.eraseFromParent();
 }
 
@@ -502,6 +502,11 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
   ModeTy NewMode;
   OpMetaInfo OpInfo;
 
+  // Record all the v_load/store_idx in the bundle in order to transfer
+  // their implicit operands to the CoreMI after the for-loop.
+  // Adding Operand in the middle of the loop may invalidate MachineOperand
+  // pointers used inside the loop.
+  SmallVector<MachineInstr *, 4> AllLoadStoreIdx;
   for (unsigned I = 0; I < OpNum; ++I) {
     MachineOperand *CoreOp = TII->getNamedOperand(*CoreMI, Ops[I]);
 
@@ -548,11 +553,6 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
         int CoreOpId = AMDGPU::getNamedOperandIdx(CoreMI->getOpcode(), Ops[I]);
 
         OpInfo.Encode(NewMode.Ops[I].IdxReg.value(), *MMO, CoreOpId);
-        TransferImplicitVGPROperands(*II, *CoreMI, TRI);
-        // TransferImplicitVGPROperands includes a call to addOperand which can
-        // invalidate any existing MachineOperand pointers.
-        // Regenerate CoreOp in case a re-allocation has happened
-        CoreOp = TII->getNamedOperand(*CoreMI, Ops[I]);
 
         bool HasOtherUsers =
             AMDGPU::STAGING_REGRegClass.contains(DataReg) &&
@@ -562,7 +562,11 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
         // Delete V_LOAD_IDX without other users, and V_STORE_IDX.
         if (Opc == AMDGPU::V_STORE_IDX || !HasOtherUsers) {
           --II;
-          II->getNextNode()->removeFromBundle();
+          auto *IdxMI = II->getNextNode();
+          AllLoadStoreIdx.push_back(IdxMI);
+          IdxMI->removeFromBundle();
+          // Insert it before bundle temporarily, erase it later.
+          MI.getParent()->insert(MI.getIterator(), IdxMI);
         }
       }
     }
@@ -616,6 +620,11 @@ void AMDGPULowerVGPREncoding::lowerInstrOrBundle(
 
   if (IsBundleWithGPRIndexing) {
     AddMetadataForOperandIndexing(*CoreMI, OpInfo);
+    for (auto IdxMI : AllLoadStoreIdx) {
+      TransferImplicitVGPROperands(*IdxMI, *CoreMI, TRI);
+      IdxMI->eraseFromParent();
+    }
+
     MachineBasicBlock::instr_iterator Start(MI.getIterator());
     for (MachineBasicBlock::instr_iterator I = ++Start,
                                            E = MI.getParent()->instr_end();
