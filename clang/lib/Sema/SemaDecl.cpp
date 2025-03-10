@@ -8154,7 +8154,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
               (D.getCXXScopeSpec().isSet() && DC && DC->isRecord() &&
                DC->isDependentContext())
                   ? TPC_ClassTemplateMember
-                  : TPC_VarTemplate))
+                  : TPC_Other))
         NewVD->setInvalidDecl();
 
       // If we are providing an explicit specialization of a static variable
