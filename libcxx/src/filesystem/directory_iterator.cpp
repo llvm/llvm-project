@@ -10,6 +10,7 @@
 #include <__config>
 #include <errno.h>
 #include <filesystem>
+#include <memory>
 #include <stack>
 #include <utility>
 
