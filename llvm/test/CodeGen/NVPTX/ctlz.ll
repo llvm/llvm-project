@@ -130,8 +130,8 @@ define i16 @myctlz_ret16_2(i16 %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u16 %r1, [myctlz_ret16_2_param_0];
-; CHECK-NEXT:    clz.b32 %r2, %r1;
-; CHECK-NEXT:    add.s32 %r3, %r2, -16;
+; CHECK-NEXT:    shl.b32 %r2, %r1, 16;
+; CHECK-NEXT:    clz.b32 %r3, %r2;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r3;
 ; CHECK-NEXT:    ret;
   %val = call i16 @llvm.ctlz.i16(i16 %a, i1 true) readnone

@@ -767,8 +767,10 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
                      {MVT::i16, MVT::i32, MVT::i64}, Legal);
 
+  setOperationAction({ISD::CTPOP, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i16,
+                     Promote);
   setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i32, Legal);
-  setOperationAction({ISD::CTPOP, ISD::CTLZ}, {MVT::i16, MVT::i64}, Custom);
+  setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i64, Custom);
 
   setI16x2OperationAction(ISD::ABS, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SMIN, MVT::v2i16, Legal, Custom);
@@ -2743,40 +2745,17 @@ static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
-static SDValue lowerCTPOP(SDValue Op, SelectionDAG &DAG) {
+// In PTX 64-bit CTLZ and CTPOP are supported, but they return a 32-bit value.
+// Lower these into a node returning the correct type which is zero-extended
+// back to the correct size.
+static SDValue lowerCTLZCTPOP(SDValue Op, SelectionDAG &DAG) {
   SDValue V = Op->getOperand(0);
+  assert(V.getValueType() == MVT::i64 &&
+         "Unexpected CTLZ/CTPOP type to legalize");
+
   SDLoc DL(Op);
-
-  if (V.getValueType() == MVT::i16) {
-    SDValue Zext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, V);
-    SDValue CT = DAG.getNode(ISD::CTPOP, DL, MVT::i32, Zext);
-    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, CT, SDNodeFlags::NoWrap);
-  }
-  if (V.getValueType() == MVT::i64) {
-    SDValue CT = DAG.getNode(ISD::CTPOP, DL, MVT::i32, V);
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT);
-  }
-  llvm_unreachable("Unexpected CTPOP type to legalize");
-}
-
-static SDValue lowerCTLZ(SDValue Op, SelectionDAG &DAG) {
-  SDValue V = Op->getOperand(0);
-  SDLoc DL(Op);
-
-  if (V.getValueType() == MVT::i16) {
-    SDValue Zext = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, V);
-    SDValue CT = DAG.getNode(ISD::CTLZ, DL, MVT::i32, Zext);
-    SDValue Sub =
-        DAG.getNode(ISD::ADD, DL, MVT::i32, CT,
-                    DAG.getConstant(APInt(32, -16, true), DL, MVT::i32),
-                    SDNodeFlags::NoSignedWrap);
-    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, Sub, SDNodeFlags::NoWrap);
-  }
-  if (V.getValueType() == MVT::i64) {
-    SDValue CT = DAG.getNode(ISD::CTLZ, DL, MVT::i32, V);
-    return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT);
-  }
-  llvm_unreachable("Unexpected CTLZ type to legalize");
+  SDValue CT = DAG.getNode(Op->getOpcode(), DL, MVT::i32, V);
+  return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT, SDNodeFlags::NonNeg);
 }
 
 SDValue
@@ -2865,9 +2844,8 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     // Used only for bf16 on SM80, where we select fma for non-ftz operation
     return PromoteBinOpIfF32FTZ(Op, DAG);
   case ISD::CTPOP:
-    return lowerCTPOP(Op, DAG);
   case ISD::CTLZ:
-    return lowerCTLZ(Op, DAG);
+    return lowerCTLZCTPOP(Op, DAG);
 
   default:
     llvm_unreachable("Custom lowering not defined for operation");
