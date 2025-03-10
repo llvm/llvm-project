@@ -1224,6 +1224,69 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   return false;
 }
 
+static bool isSaveToNarrow(unsigned opc, uint64_t num1, uint64_t num2) {
+  if (num1 > 0xffffffff || num2 > 0xffffffff) {
+    // if `num > 0xffffffff`, then `%and = and i64 %a, num` may or may not have
+    // higher 32bit set. Which cause truncate possibly lose infomation
+    return false;
+  }
+  switch (opc) {
+  // If `%and = and i64 %a, num` where num <= 0xffffffff, then `%and` must be
+  // positive.
+  // Since add and mul both increasing function on positive integer domain and
+  // `%ai <= numi`, then if `(num1 op num2) <= 0xffffffff` we have `%a1 + %a2 <=
+  // 0xffffffff`
+  case Instruction::Add:
+    return (num1 + num2) <= 0xffffffff;
+  case Instruction::Mul:
+    return (num1 * num2) <= 0xffffffff;
+    break;
+  }
+
+  return false;
+}
+
+static bool tryNarrowMathIfNoOverflow(Instruction &I,
+                                      TargetTransformInfo &TTI) {
+  unsigned opc = I.getOpcode();
+  if (opc != Instruction::Add && opc != Instruction::Mul) {
+    return false;
+  }
+  LLVMContext &ctx = I.getContext();
+  Type *i64type = Type::getInt64Ty(ctx);
+  Type *i32type = Type::getInt32Ty(ctx);
+
+  if (I.getType() != i64type || !TTI.isTruncateFree(i64type, i32type)) {
+    return false;
+  }
+  InstructionCost costOp64 =
+      TTI.getArithmeticInstrCost(opc, i64type, TTI::TCK_RecipThroughput);
+  InstructionCost costOp32 =
+      TTI.getArithmeticInstrCost(opc, i32type, TTI::TCK_RecipThroughput);
+  InstructionCost costZext64 = TTI.getCastInstrCost(
+      Instruction::ZExt, i64type, i32type, TTI.getCastContextHint(&I),
+      TTI::TCK_RecipThroughput);
+  if ((costOp64 - costOp32) <= costZext64) {
+    return false;
+  }
+  uint64_t AndConst0, AndConst1;
+  Value *X;
+  if ((match(I.getOperand(0), m_And(m_Value(X), m_ConstantInt(AndConst0))) ||
+       match(I.getOperand(0), m_And(m_ConstantInt(AndConst0), m_Value(X)))) &&
+      (match(I.getOperand(1), m_And(m_Value(X), m_ConstantInt(AndConst1))) ||
+       match(I.getOperand(1), m_And(m_ConstantInt(AndConst1), m_Value(X)))) &&
+      isSaveToNarrow(opc, AndConst0, AndConst1)) {
+    IRBuilder<> Builder(&I);
+    Value *trun0 = Builder.CreateTrunc(I.getOperand(0), i32type);
+    Value *trun1 = Builder.CreateTrunc(I.getOperand(1), i32type);
+    Value *arith32 = Builder.CreateAdd(trun0, trun1);
+    Value *zext64 = Builder.CreateZExt(arith32, i64type);
+    I.replaceAllUsesWith(zext64);
+    I.eraseFromParent();
+  }
+  return false;
+}
+
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
@@ -1256,6 +1319,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
       MadeChange |= foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange);
+      MadeChange |= tryNarrowMathIfNoOverflow(I, TTI);
     }
   }
 
