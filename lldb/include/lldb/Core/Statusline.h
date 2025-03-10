@@ -45,8 +45,13 @@ private:
   /// Update terminal dimensions.
   void UpdateTerminalProperties();
 
-  /// Set the scroll window to the given height.
-  void SetScrollWindow(uint64_t height);
+  enum ScrollWindowMode {
+    ScrollWindowExtend,
+    ScrollWindowShrink,
+  };
+
+  /// Set the scroll window for the given mode.
+  void UpdateScrollWindow(ScrollWindowMode mode);
 
   /// Clear the statusline (without redrawing the background).
   void Reset();
@@ -57,7 +62,6 @@ private:
   volatile std::sig_atomic_t m_terminal_size_has_changed = 1;
   uint64_t m_terminal_width = 0;
   uint64_t m_terminal_height = 0;
-  uint64_t m_scroll_height = 0;
 };
 } // namespace lldb_private
 #endif // LLDB_CORE_STATUSLINE_H

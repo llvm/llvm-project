@@ -60,7 +60,7 @@ void Statusline::Enable() {
   UpdateTerminalProperties();
 
   // Reduce the scroll window to make space for the status bar below.
-  SetScrollWindow(m_terminal_height - 1);
+  UpdateScrollWindow(ScrollWindowShrink);
 
   // Draw the statusline.
   Redraw();
@@ -70,7 +70,7 @@ void Statusline::Disable() {
   UpdateTerminalProperties();
 
   // Extend the scroll window to cover the status bar.
-  SetScrollWindow(m_terminal_height);
+  UpdateScrollWindow(ScrollWindowExtend);
 }
 
 std::string Statusline::TrimAndPad(std::string str, size_t max_width) {
@@ -153,24 +153,35 @@ void Statusline::UpdateTerminalProperties() {
   m_terminal_height = m_debugger.GetTerminalHeight();
 
   // Set the scroll window based on the new terminal height.
-  SetScrollWindow(m_terminal_height - 1);
+  UpdateScrollWindow(ScrollWindowShrink);
 
   // Clear the flag.
   m_terminal_size_has_changed = 0;
 }
 
-void Statusline::SetScrollWindow(uint64_t height) {
-  if (lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP()) {
-    LockedStreamFile locked_stream = stream_sp->Lock();
-    locked_stream << '\n';
-    locked_stream << ANSI_SAVE_CURSOR;
-    locked_stream.Printf(ANSI_SET_SCROLL_ROWS, static_cast<unsigned>(height));
-    locked_stream << ANSI_RESTORE_CURSOR;
-    locked_stream.Printf(ANSI_UP_ROWS, 1);
-    locked_stream << ANSI_CLEAR_BELOW;
-  }
+void Statusline::UpdateScrollWindow(ScrollWindowMode mode) {
+  lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
+  if (!stream_sp)
+    return;
 
-  m_scroll_height = height;
+  const unsigned scroll_height =
+      (mode == ScrollWindowExtend) ? m_terminal_height : m_terminal_height - 1;
+
+  LockedStreamFile locked_stream = stream_sp->Lock();
+  locked_stream << ANSI_SAVE_CURSOR;
+  locked_stream.Printf(ANSI_SET_SCROLL_ROWS, scroll_height);
+  locked_stream << ANSI_RESTORE_CURSOR;
+  switch (mode) {
+  case ScrollWindowExtend:
+    // Clear the screen below to hide the old statusline.
+    locked_stream << ANSI_CLEAR_BELOW;
+    break;
+  case ScrollWindowShrink:
+    // Move everything on the screen up.
+    locked_stream.Printf(ANSI_UP_ROWS, 1);
+    locked_stream << '\n';
+    break;
+  }
 }
 
 void Statusline::Redraw(bool update) {
