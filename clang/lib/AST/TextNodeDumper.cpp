@@ -423,6 +423,7 @@ void TextNodeDumper::Visit(const OpenACCClause *C) {
     case OpenACCClauseKind::FirstPrivate:
     case OpenACCClauseKind::Link:
     case OpenACCClauseKind::NoCreate:
+    case OpenACCClauseKind::NoHost:
     case OpenACCClauseKind::NumGangs:
     case OpenACCClauseKind::NumWorkers:
     case OpenACCClauseKind::Present:

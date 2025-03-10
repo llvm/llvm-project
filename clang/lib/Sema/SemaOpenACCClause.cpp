@@ -475,6 +475,14 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::NoHost: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Routine:
+      return true;
+    default:
+      return false;
+    }
+  }
   }
 
   default:
@@ -1284,6 +1292,12 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitAutoClause(
 
   return OpenACCAutoClause::Create(Ctx, Clause.getBeginLoc(),
                                    Clause.getEndLoc());
+}
+
+OpenACCClause *SemaOpenACCClauseVisitor::VisitNoHostClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  return OpenACCNoHostClause::Create(Ctx, Clause.getBeginLoc(),
+                                     Clause.getEndLoc());
 }
 
 OpenACCClause *SemaOpenACCClauseVisitor::VisitIndependentClause(

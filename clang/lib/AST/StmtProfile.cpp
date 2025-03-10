@@ -2764,6 +2764,8 @@ void OpenACCClauseProfiler::VisitIndependentClause(
     const OpenACCIndependentClause &Clause) {}
 
 void OpenACCClauseProfiler::VisitSeqClause(const OpenACCSeqClause &Clause) {}
+void OpenACCClauseProfiler::VisitNoHostClause(
+    const OpenACCNoHostClause &Clause) {}
 
 void OpenACCClauseProfiler::VisitGangClause(const OpenACCGangClause &Clause) {
   for (unsigned I = 0; I < Clause.getNumExprs(); ++I) {

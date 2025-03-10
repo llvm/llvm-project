@@ -1109,6 +1109,12 @@ void OpenACCDeclClauseInstantiator::VisitSeqClause(const OpenACCSeqClause &C) {
                                        ParsedClause.getBeginLoc(),
                                        ParsedClause.getEndLoc());
 }
+void OpenACCDeclClauseInstantiator::VisitNoHostClause(
+    const OpenACCNoHostClause &C) {
+  NewClause = OpenACCNoHostClause::Create(SemaRef.getASTContext(),
+                                          ParsedClause.getBeginLoc(),
+                                          ParsedClause.getEndLoc());
+}
 
 void OpenACCDeclClauseInstantiator::VisitWorkerClause(
     const OpenACCWorkerClause &C) {
