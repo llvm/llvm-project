@@ -102,7 +102,7 @@ static_assert(n9 == 123, "");
 }
 
 namespace TemplateArgumentConversion {
-  template<int n> struct IntParam {}; // expected-note {{template parameter is declared here}}
+  template<int n> struct IntParam {};
 
   using IntParam0 = IntParam<0>;
   using IntParam0 = IntParam<id(0)>;
@@ -1529,7 +1529,7 @@ namespace MutableMembers {
   constexpr int mmn2 = mm.n; // expected-error {{constant expression}} expected-note {{read of mutable member 'n' is not allowed in a constant expression}}
 
   // Here's one reason why allowing this would be a disaster...
-  template<int n> struct Id { int k = n; }; // expected-note {{template parameter is declared here}}
+  template<int n> struct Id { int k = n; };
   int f() {
     constexpr MM m = { 0 };
     ++m.n;
