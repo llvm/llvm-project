@@ -2261,10 +2261,10 @@ void VPlanTransforms::handleUncountableEarlyExit(
   LatchExitingBranch->eraseFromParent();
 }
 
-/// This function try to match following pattern to create
+/// This function tries to match following pattern to create
 /// VPExtendedReductionRecipe and clamp the \p Range if it is beneficial and
-/// valid. The created VPExtendedReductionRecipe will lower to concrete before
-/// executeion.
+/// valid. The created VPExtendedReductionRecipe will lower to concrete recipes
+/// before execution.
 ///   reduce(ext(...)).
 static VPExtendedReductionRecipe *
 tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
