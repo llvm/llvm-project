@@ -642,3 +642,8 @@
 // RUN: %clang -### --target=x86_64-pc-windows-msvc -fno-strict-aliasing %s 2>&1 | FileCheck -check-prefix=CHECK-NO-STRICT-ALIASING %s
 // CHECK-STRICT-ALIASING-NOT: -relaxed-aliasing
 // CHECK-NO-STRICT-ALIASING: -relaxed-aliasing
+
+// RUN: %clang -### -S -fpartial-inlining %s 2>&1 | FileCheck -check-prefix=CHECK-PARTIAL-INLINING %s
+// CHECK-PARTIAL-INLINING: "-mllvm" "-enable-partial-inlining"
+// RUN: %clang -### -S -fno-partial-inlining %s 2>&1 | FileCheck -check-prefix=CHECK-NO-PARTIAL-INLINING %s
+// CHECK-NO-PARTIAL-INLINING: "-mllvm" "-disable-partial-inlining"
