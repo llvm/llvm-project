@@ -398,9 +398,10 @@ Error StaticLibraryDefinitionGenerator::tryToGenerate(
 
   for (const auto &KV : Symbols) {
     const auto &Name = KV.first;
-    if (!ObjectFilesMap.count(Name))
+    auto It = ObjectFilesMap.find(Name);
+    if (It == ObjectFilesMap.end())
       continue;
-    auto ChildBuffer = ObjectFilesMap[Name];
+    auto ChildBuffer = It->second;
     ChildBufferInfos.insert(
         {ChildBuffer.getBuffer(), ChildBuffer.getBufferIdentifier()});
   }

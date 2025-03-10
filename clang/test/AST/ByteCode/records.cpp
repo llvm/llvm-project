@@ -1747,3 +1747,15 @@ namespace CtorOfInvalidClass {
   template<ReferenceOf<InvalidCtor> auto R, typename Rep> int F; // both-error {{non-type template argument is not a constant expression}}
 #endif
 }
+
+namespace IncompleteTypes {
+  struct Incomplete;
+
+  constexpr bool foo() {
+    extern Incomplete bounded[10];
+    extern Incomplete unbounded[];
+    extern Incomplete IT;
+    return true;
+  }
+  static_assert(foo(), "");
+}

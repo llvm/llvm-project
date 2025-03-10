@@ -14,7 +14,8 @@
 %struct.B = type { ptr addrspace(1) }
 %opencl.clk_event_t = type opaque
 
-@__test_block_invoke_kernel_runtime_handle = external addrspace(1) externally_initialized constant ptr addrspace(1)
+@__test_block_invoke_kernel_runtime_handle = external addrspace(1) externally_initialized constant ptr addrspace(1), section ".amdgpu.kernel.runtime.handle"
+@not.a.handle = external addrspace(1) externally_initialized constant ptr addrspace(1)
 
 ; CHECK:              ---
 ; CHECK-NEXT: amdhsa.kernels:
@@ -1678,7 +1679,7 @@ define amdgpu_kernel void @test_pointee_align_attribute(ptr addrspace(1) align 1
 ; CHECK:          .name:           __test_block_invoke_kernel
 ; CHECK:          .symbol:         __test_block_invoke_kernel.kd
 define amdgpu_kernel void @__test_block_invoke_kernel(
-    <{ i32, i32, ptr, ptr addrspace(1), i8 }> %arg) #1
+    <{ i32, i32, ptr, ptr addrspace(1), i8 }> %arg) #1 !associated !112
     !kernel_arg_addr_space !1 !kernel_arg_access_qual !2 !kernel_arg_type !110
     !kernel_arg_base_type !110 !kernel_arg_type_qual !4 {
   ret void
@@ -1734,6 +1735,29 @@ define amdgpu_kernel void @unknown_addrspace_kernarg(ptr addrspace(12345) %ptr) 
   ret void
 }
 
+; Make sure the device_enqueue_symbol is not reported
+; CHECK: - .args:           []
+; CHECK-NEXT: .group_segment_fixed_size: 0
+; CHECK-NEXT: .kernarg_segment_align: 4
+; CHECK-NEXT: .kernarg_segment_size: 0
+; CHECK-NEXT: .language:       OpenCL C
+; CHECK-NEXT: .language_version:
+; CHECK-NEXT: - 2
+; CHECK-NEXT: - 0
+; CHECK-NEXT: .max_flat_workgroup_size: 1024
+; CHECK-NEXT: .name:           associated_global_not_handle
+; CHECK-NEXT: .private_segment_fixed_size: 0
+; CHECK-NEXT: .sgpr_count:
+; CHECK-NEXT: .sgpr_spill_count: 0
+; CHECK-NEXT: .symbol:         associated_global_not_handle.kd
+; CHECK-NEXT: .vgpr_count:
+; CHECK-NEXT: .vgpr_spill_count: 0
+; CHECK-NEXT: .wavefront_size: 64
+; CHECK-NOT: device_enqueue_symbol
+define amdgpu_kernel void @associated_global_not_handle() #3 !associated !113 {
+  ret void
+}
+
 ; CHECK:  amdhsa.printf:
 ; CHECK-NEXT: - '1:1:4:%d\n'
 ; CHECK-NEXT: - '2:1:8:%g\n'
@@ -1744,6 +1768,7 @@ define amdgpu_kernel void @unknown_addrspace_kernarg(ptr addrspace(12345) %ptr) 
 attributes #0 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56" }
 attributes #1 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-implicitarg-num-bytes"="56" "runtime-handle"="__test_block_invoke_kernel_runtime_handle" }
 attributes #2 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" }
+attributes #3 = { optnone noinline "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" }
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"amdhsa_code_object_version", i32 400}
@@ -1803,5 +1828,7 @@ attributes #2 = { optnone noinline "amdgpu-implicitarg-num-bytes"="56" }
 !101 = !{!"2:1:8:%g\5Cn"}
 !110 = !{!"__block_literal"}
 !111 = !{!"char", !"char"}
+!112 = !{ptr addrspace(1) @__test_block_invoke_kernel_runtime_handle }
+!113 = !{ptr addrspace(1) @not.a.handle }
 
 ; PARSER: AMDGPU HSA Metadata Parser Test: PASS

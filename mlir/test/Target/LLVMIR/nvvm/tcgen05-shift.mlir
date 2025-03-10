@@ -1,4 +1,4 @@
-// RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
+// RUN: mlir-translate -mlir-to-llvmir %s | FileCheck %s
 
 // CHECK-LABEL: @llvm_nvvm_tcgen05_shift
 llvm.func @llvm_nvvm_tcgen05_shift(%taddr : !llvm.ptr<6>) {
