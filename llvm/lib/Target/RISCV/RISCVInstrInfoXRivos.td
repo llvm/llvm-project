@@ -26,7 +26,7 @@ class CustomRivosVXI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Inst{11-7} = vd;
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
   let Constraints = "$vd = $vd_wb";
 }
@@ -47,7 +47,7 @@ class CustomRivosXVI<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Inst{11-7} = rd;
   let Inst{6-0} = OPC_CUSTOM_2.Value;
 
-  let Uses = [VTYPE, VL];
+  let Uses = [VL, VTYPE];
   let RVVConstraint = NoConstraint;
 }
 

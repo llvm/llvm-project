@@ -367,10 +367,12 @@ Descriptor::Descriptor(const DeclTy &D, PrimType Type, MetadataSize MD,
 }
 
 /// Arrays of composite elements.
-Descriptor::Descriptor(const DeclTy &D, const Descriptor *Elem, MetadataSize MD,
+Descriptor::Descriptor(const DeclTy &D, const Type *SourceTy,
+                       const Descriptor *Elem, MetadataSize MD,
                        unsigned NumElems, bool IsConst, bool IsTemporary,
                        bool IsMutable)
-    : Source(D), ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
+    : Source(D), SourceType(SourceTy),
+      ElemSize(Elem->getAllocSize() + sizeof(InlineDescriptor)),
       Size(ElemSize * NumElems), MDSize(MD.value_or(0)),
       AllocSize(std::max<size_t>(alignof(void *), Size) + MDSize),
       ElemDesc(Elem), IsConst(IsConst), IsMutable(IsMutable),
@@ -402,14 +404,16 @@ Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
 }
 
 /// Dummy.
-Descriptor::Descriptor(const DeclTy &D)
-    : Source(D), ElemSize(1), Size(1), MDSize(0), AllocSize(MDSize),
-      ElemRecord(nullptr), IsConst(true), IsMutable(false), IsTemporary(false),
-      IsDummy(true) {
+Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
+    : Source(D), ElemSize(1), Size(1), MDSize(MD.value_or(0)),
+      AllocSize(MDSize), ElemRecord(nullptr), IsConst(true), IsMutable(false),
+      IsTemporary(false), IsDummy(true) {
   assert(Source && "Missing source");
 }
 
 QualType Descriptor::getType() const {
+  if (SourceType)
+    return QualType(SourceType, 0);
   if (const auto *D = asValueDecl())
     return D->getType();
   if (const auto *T = dyn_cast_if_present<TypeDecl>(asDecl()))

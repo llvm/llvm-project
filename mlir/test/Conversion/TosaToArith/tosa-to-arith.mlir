@@ -4,7 +4,7 @@
 // CHECK-LABEL: func @const_test
 func.func @const_test() -> (tensor<i32>) {
   // CHECK: [[C3:%.+]] = arith.constant dense<3> : tensor<i32>
-  %result = "tosa.const"() {value = dense<3> : tensor<i32>} : () -> tensor<i32>
+  %result = "tosa.const"() {values = dense<3> : tensor<i32>} : () -> tensor<i32>
 
   // CHECK: return [[C3]]
   return %result : tensor<i32>
