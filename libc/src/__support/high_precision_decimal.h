@@ -401,7 +401,7 @@ public:
         this->right_shift(MAX_SHIFT_AMOUNT);
         shift_amount += MAX_SHIFT_AMOUNT;
       }
-      this->right_shift(-static_cast<uint32_t>(shift_amount));
+      this->right_shift(static_cast<uint32_t>(-shift_amount));
     }
   }
 
