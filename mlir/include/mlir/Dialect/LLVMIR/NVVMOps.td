@@ -2583,6 +2583,10 @@ def NVVM_MapaOp: NVVM_Op<"mapa",
   let assemblyFormat = "$a`,` $b attr-dict `:` type($a) `->` type($res)";
 }
 
+//===----------------------------------------------------------------------===//
+// Special control flow ops
+//===----------------------------------------------------------------------===//
+
 def NVVM_Exit : NVVM_Op<"exit"> {
   let summary = "Exit Op";
   let description = [{
@@ -2596,11 +2600,6 @@ def NVVM_Exit : NVVM_Op<"exit"> {
   let assemblyFormat = "attr-dict";
 }
 
-
-//===----------------------------------------------------------------------===//
-// NVVM breakpoint Op
-//===----------------------------------------------------------------------===//
-
 def NVVM_Breakpoint : NVVM_Op<"breakpoint"> {
   let summary = "Breakpoint Op";
   let description = [{
@@ -2612,6 +2611,31 @@ def NVVM_Breakpoint : NVVM_Op<"breakpoint"> {
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+def NVVM_GlobalTimerWaitOp : NVVM_PTXBuilder_Op<"globaltimer_wait">,  
+    Arguments<(ins I64:$time)> {
+  let summary = "globaltimer busy loop";
+  let description = [{
+    Wait in busy loop for certain number of nanoseconds.
+    [For more information, see PTX ISA.](https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#special-registers-globaltimer)
+  }];
+  let assemblyFormat = "$time attr-dict";
+
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() {
+      return R"({
+  .reg .pred continueloop;
+  .reg .u64 rd<3>;
+  mov.u64 rd0, %globaltimer;
+  add.s64 rd1, rd0, %0;
+  L_busy:
+  mov.u64 rd2, %globaltimer;
+  setp.lt.s64 continueloop, rd2, rd1;
+  @continueloop bra L_busy;
+})";
+    }
+  }];
 }
 
 //===----------------------------------------------------------------------===//
