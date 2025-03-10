@@ -3522,6 +3522,19 @@ Raw pointers and references to an object which supports CheckedPtr or CheckedRef
 
 See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
 
+alpha.webkit.NoUnretainedMemberChecker
+""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to a NS or CF object can't be used as class members or ivars. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled. Only RetainPtr is allowed for NS types when ARC is disabled.
+
+.. code-block:: cpp
+
+ struct Foo {
+   NSObject *ptr; // warn
+   // ...
+ };
+
+See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
+
 alpha.webkit.UnretainedLambdaCapturesChecker
 """"""""""""""""""""""""""""""""""""""""""""
 Raw pointers and references to NS or CF types can't be captured in lambdas. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled, and only RetainPtr is allowed for NS types when ARC is disabled.
