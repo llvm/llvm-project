@@ -13,6 +13,7 @@
 #ifndef LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTCONV_H
 #define LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SMTCONV_H
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/APSIntType.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
@@ -774,16 +775,24 @@ public:
 
     // If we have two real floating types, convert the smaller operand to the
     // bigger result
+    // FIXME: It isn't clear how unordered and equal floating-point ranks should
+    // FIXME: be handled here. For now, they are arbitrarily handled by adding a
+    // FIXME: cast to the RHS to match the LHS.
     // Note: Safe to skip updating bitwidth because this must terminate
-    int order = Ctx.getFloatingTypeOrder(LTy, RTy);
-    if (order > 0) {
+    FloatConvRankCompareResult order = Ctx.getFloatingTypeOrder(LTy, RTy);
+    switch (order) {
+    case FRCR_Unordered:
+    case FRCR_Greater:
+    case FRCR_Equal:
+    case FRCR_Equal_Greater_Subrank:
       RHS = (*doCast)(Solver, RHS, LTy, LBitWidth, RTy, RBitWidth);
       RTy = LTy;
-    } else if (order == 0) {
+      break;
+    case FRCR_Lesser:
+    case FRCR_Equal_Lesser_Subrank:
       LHS = (*doCast)(Solver, LHS, RTy, RBitWidth, LTy, LBitWidth);
       LTy = RTy;
-    } else {
-      llvm_unreachable("Unsupported floating-point type cast!");
+      break;
     }
   }
 };
