@@ -11,8 +11,9 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
 #include <optional>
+#include <string>
 #include <system_error>
-#include <utility> // for std::pair
+#include <variant>
 
 namespace llvm {
 class StringRef;
