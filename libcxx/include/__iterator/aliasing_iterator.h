@@ -12,6 +12,7 @@
 #include <__config>
 #include <__cstddef/ptrdiff_t.h>
 #include <__iterator/iterator_traits.h>
+#include <__memory/addressof.h>
 #include <__memory/pointer_traits.h>
 #include <__type_traits/is_trivial.h>
 
@@ -102,7 +103,7 @@ struct __aliasing_iterator_wrapper {
 
     _LIBCPP_HIDE_FROM_ABI _Alias operator*() const _NOEXCEPT {
       _Alias __val;
-      __builtin_memcpy(&__val, std::__to_address(__base_), sizeof(value_type));
+      __builtin_memcpy(std::addressof(__val), std::__to_address(__base_), sizeof(value_type));
       return __val;
     }
 

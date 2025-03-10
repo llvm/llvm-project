@@ -459,14 +459,8 @@ bool evaluateRequiredTargetFeatures(
 
 /// Kinds of BuiltinTemplateDecl.
 enum BuiltinTemplateKind : int {
-  /// This names the __make_integer_seq BuiltinTemplateDecl.
-  BTK__make_integer_seq,
-
-  /// This names the __type_pack_element BuiltinTemplateDecl.
-  BTK__type_pack_element,
-
-  /// This names the __builtin_common_type BuiltinTemplateDecl.
-  BTK__builtin_common_type,
+#define BuiltinTemplate(BTName) BTK##BTName,
+#include "clang/Basic/BuiltinTemplates.inc"
 };
 
 } // end namespace clang

@@ -96,7 +96,7 @@ if (LLVM_TREE_AVAILABLE)
   # being added to the build. Flang uses the same resource dir as clang.
   include(GetClangResourceDir)
   get_clang_resource_dir(FLANG_RT_OUTPUT_RESOURCE_DIR PREFIX "${LLVM_LIBRARY_OUTPUT_INTDIR}/..")
-  get_clang_resource_dir(FLANG_RT_INSTALL_RESOURCE_PATH)
+  get_clang_resource_dir(FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT)
 
   extend_path(FLANG_RT_OUTPUT_RESOURCE_LIB_DIR "${FLANG_RT_OUTPUT_RESOURCE_DIR}" "${toolchain_lib_subdir}")
 else ()
@@ -108,10 +108,12 @@ else ()
   # be installed there using the same prefix. This is to not have a difference
   # between bootstrap and standalone runtimes builds.
   set(FLANG_RT_OUTPUT_RESOURCE_DIR "${CMAKE_CURRENT_BINARY_DIR}")
-  set(FLANG_RT_INSTALL_RESOURCE_PATH "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
+  set(FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT "lib${LLVM_LIBDIR_SUFFIX}/clang/${LLVM_VERSION_MAJOR}")
 
   extend_path(FLANG_RT_OUTPUT_RESOURCE_LIB_DIR "${FLANG_RT_OUTPUT_RESOURCE_DIR}" "lib${LLVM_LIBDIR_SUFFIX}")
 endif ()
+set(FLANG_RT_INSTALL_RESOURCE_PATH "${FLANG_RT_INSTALL_RESOURCE_PATH_DEFAULT}"
+    CACHE PATH "Path to install runtime libraries to (default: clang resource dir)")
 extend_path(FLANG_RT_INSTALL_RESOURCE_LIB_PATH "${FLANG_RT_INSTALL_RESOURCE_PATH}" "${toolchain_lib_subdir}")
 cmake_path(NORMAL_PATH FLANG_RT_OUTPUT_RESOURCE_DIR)
 cmake_path(NORMAL_PATH FLANG_RT_INSTALL_RESOURCE_PATH)
@@ -243,6 +245,10 @@ check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 # Check whether -fno-lto is supported.
 check_cxx_compiler_flag(-fno-lto FLANG_RT_HAS_FNO_LTO_FLAG)
 
+# Different platform may have different name for the POSIX thread library.
+# For example, libpthread.a on AIX. Search for it as it is needed when
+# building the shared flang_rt.runtime.so.
+find_package(Threads)
 
 # function checks
 find_package(Backtrace)

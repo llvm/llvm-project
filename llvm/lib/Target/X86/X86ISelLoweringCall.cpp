@@ -1095,6 +1095,15 @@ static SDValue lowerRegToMasks(const SDValue &ValArg, const EVT &ValVT,
   return DAG.getBitcast(ValVT, ValReturned);
 }
 
+static SDValue getPopFromX87Reg(SelectionDAG &DAG, SDValue Chain,
+                                const SDLoc &dl, Register Reg, EVT VT,
+                                SDValue Glue) {
+  SDVTList VTs = DAG.getVTList(VT, MVT::Other, MVT::Glue);
+  SDValue Ops[] = {Chain, DAG.getRegister(Reg, VT), Glue};
+  return DAG.getNode(X86ISD::POP_FROM_X87_REG, dl, VTs,
+                     ArrayRef(Ops, Glue.getNode() ? 3 : 2));
+}
+
 /// Lower the result values of a call into the
 /// appropriate copies out of appropriate physical registers.
 ///
@@ -1145,8 +1154,8 @@ SDValue X86TargetLowering::LowerCallResult(
     // If we prefer to use the value in xmm registers, copy it out as f80 and
     // use a truncate to move it from fp stack reg to xmm reg.
     bool RoundAfterCopy = false;
-    if ((VA.getLocReg() == X86::FP0 || VA.getLocReg() == X86::FP1) &&
-        isScalarFPTypeInSSEReg(VA.getValVT())) {
+    bool X87Result = VA.getLocReg() == X86::FP0 || VA.getLocReg() == X86::FP1;
+    if (X87Result && isScalarFPTypeInSSEReg(VA.getValVT())) {
       if (!Subtarget.hasX87())
         report_fatal_error("X87 register return with X87 disabled");
       CopyVT = MVT::f80;
@@ -1160,8 +1169,12 @@ SDValue X86TargetLowering::LowerCallResult(
       Val =
           getv64i1Argument(VA, RVLocs[++I], Chain, DAG, dl, Subtarget, &InGlue);
     } else {
-      Chain = DAG.getCopyFromReg(Chain, dl, VA.getLocReg(), CopyVT, InGlue)
-                  .getValue(1);
+      Chain =
+          X87Result
+              ? getPopFromX87Reg(DAG, Chain, dl, VA.getLocReg(), CopyVT, InGlue)
+                    .getValue(1)
+              : DAG.getCopyFromReg(Chain, dl, VA.getLocReg(), CopyVT, InGlue)
+                    .getValue(1);
       Val = Chain.getValue(0);
       InGlue = Chain.getValue(2);
     }

@@ -764,7 +764,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
 
     for (i = 0; i < ndeps; i++) {
       ompt_deps[i].variable.ptr = (void *)dep_list[i].base_addr;
-      if (dep_list[i].base_addr == KMP_SIZE_T_MAX)
+      if (dep_list[i].base_addr == (kmp_intptr_t)KMP_SIZE_T_MAX)
         ompt_deps[i].dependence_type = ompt_dependence_type_out_all_memory;
       else if (dep_list[i].flags.in && dep_list[i].flags.out)
         ompt_deps[i].dependence_type = ompt_dependence_type_inout;
@@ -781,7 +781,7 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
     }
     for (i = 0; i < ndeps_noalias; i++) {
       ompt_deps[ndeps + i].variable.ptr = (void *)noalias_dep_list[i].base_addr;
-      if (noalias_dep_list[i].base_addr == KMP_SIZE_T_MAX)
+      if (noalias_dep_list[i].base_addr == (kmp_intptr_t)KMP_SIZE_T_MAX)
         ompt_deps[ndeps + i].dependence_type =
             ompt_dependence_type_out_all_memory;
       else if (noalias_dep_list[i].flags.in && noalias_dep_list[i].flags.out)

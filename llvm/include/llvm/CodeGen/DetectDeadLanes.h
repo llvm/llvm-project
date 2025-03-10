@@ -37,6 +37,7 @@ namespace llvm {
 class MachineInstr;
 class MachineOperand;
 class MachineRegisterInfo;
+class Register;
 class TargetRegisterInfo;
 
 class DeadLaneDetector {
@@ -92,8 +93,8 @@ public:
                                 const MachineOperand &MO) const;
 
 private:
-  LaneBitmask determineInitialDefinedLanes(unsigned Reg);
-  LaneBitmask determineInitialUsedLanes(unsigned Reg);
+  LaneBitmask determineInitialDefinedLanes(Register Reg);
+  LaneBitmask determineInitialUsedLanes(Register Reg);
 
   const MachineRegisterInfo *MRI;
   const TargetRegisterInfo *TRI;
