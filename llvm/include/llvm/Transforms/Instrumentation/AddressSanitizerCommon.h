@@ -58,6 +58,13 @@ void getAddressSanitizerParams(const Triple &TargetTriple, int LongSize,
                                bool IsKasan, uint64_t *ShadowBase,
                                int *MappingScale, bool *OrShadowOffset);
 
+/// Remove memory attributes that are incompatible with the instrumentation
+/// added by AddressSanitizer and HWSanitizer. See more details in the
+/// implementation.
+/// \p RemoveWriteOnly - whether to remove writeonly attribute from function
+/// arguments.
+void removeASanIncompatibleFnAttributes(Function &F, bool RemoveWriteOnly);
+
 } // namespace llvm
 
 #endif
