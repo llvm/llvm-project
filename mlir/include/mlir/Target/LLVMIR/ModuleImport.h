@@ -272,6 +272,11 @@ public:
                             SmallVectorImpl<Value> &valuesOut,
                             SmallVectorImpl<NamedAttribute> &attrsOut);
 
+  /// Converts the parameter and result attributes in `argsAttr` and `resAttr`
+  /// and add them to the `callOp`.
+  void convertParameterAttributes(llvm::CallBase *call, ArrayAttr &argsAttr,
+                                  ArrayAttr &resAttr, OpBuilder &builder);
+
 private:
   /// Clears the accumulated state before processing a new region.
   void clearRegionState() {
@@ -350,7 +355,8 @@ private:
   DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                            OpBuilder &builder);
   /// Converts the parameter and result attributes attached to `call` and adds
-  /// them to the `callOp`.
+  /// them to the `callOp`. Implemented in terms of the the public definition of
+  /// convertParameterAttributes.
   void convertParameterAttributes(llvm::CallBase *call, CallOpInterface callOp,
                                   OpBuilder &builder);
   /// Converts the attributes attached to `inst` and adds them to the `op`.

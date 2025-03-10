@@ -129,8 +129,8 @@ TEST_F(LlvmLibcSqrtTest, HardToRound) {
   // Then from the largest number.
   uint64_t k0 = 101904826760412362ULL;
   for (uint64_t k = k0; k > k0 - 10000; --k) {
-    UInt128 k2 = static_cast<UInt128>(k) * static_cast<UInt128>(k);
-    float128 x = static_cast<float128>(k2);
+    float128 k_f128 = static_cast<float128>(k);
+    float128 x = k_f128 * k_f128;
     float128 y = static_cast<float128>(k);
     EXPECT_FP_EQ_ALL_ROUNDING(y, LIBC_NAMESPACE::sqrtf128(x));
   }

@@ -806,6 +806,7 @@ namespace cwg49 { // cwg49: 2.8
   // since-cxx17-error@#cwg49-c {{non-type template argument is not a constant expression}}
   //   since-cxx17-note@#cwg49-c {{read of non-constexpr variable 'q' is not allowed in a constant expression}}
   //   since-cxx17-note@#cwg49-q {{declared here}}
+  //   since-cxx17-note@#cwg49-A {{template parameter is declared here}}
 } // namespace cwg49
 
 namespace cwg50 { // cwg50: 2.7
@@ -1018,9 +1019,9 @@ namespace cwg62 { // cwg62: 2.9
   struct A {
     struct { int n; } b;
   };
-  template<typename T> struct X {};
-  template<typename T> T get() { return get<T>(); }
-  template<typename T> int take(T) { return 0; }
+  template<typename T> struct X {}; // #cwg62-X
+  template<typename T> T get() { return get<T>(); } // #cwg62-get
+  template<typename T> int take(T) { return 0; } // #cwg62-take
 
   X<A> x1;
   A a = get<A>();
@@ -1034,22 +1035,27 @@ namespace cwg62 { // cwg62: 2.9
 
   X<NoNameForLinkagePtr> x2;
   // cxx98-error@-1 {{template argument uses unnamed type}}
+  //   cxx98-note@#cwg62-X {{template parameter is declared here}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
   X<const NoNameForLinkagePtr> x3;
   // cxx98-error@-1 {{template argument uses unnamed type}}
+  //   cxx98-note@#cwg62-X {{template parameter is declared here}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
   NoNameForLinkagePtr p1 = get<NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
+  //   cxx98-note@#cwg62-get {{template parameter is declared here}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
-  //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
+  //   cxx98-note@-4 {{while substituting explicitly-specified template arguments}}
   NoNameForLinkagePtr p2 = get<const NoNameForLinkagePtr>();
   // cxx98-error@-1 {{template argument uses unnamed type}}
+  //   cxx98-note@#cwg62-get {{template parameter is declared here}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
-  //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
+  //   cxx98-note@-4 {{while substituting explicitly-specified template arguments}}
   int n1 = take(noNameForLinkagePtr);
   // cxx98-error@-1 {{template argument uses unnamed type}}
+  //   cxx98-note@#cwg62-take {{template parameter is declared here}}
   //   cxx98-note@#cwg62-unnamed {{unnamed type used in template argument was declared here}}
-  //   cxx98-note@-3 {{while substituting deduced template arguments}}
+  //   cxx98-note@-4 {{while substituting deduced template arguments}}
 
   X<Danger> x4;
 
@@ -1057,18 +1063,24 @@ namespace cwg62 { // cwg62: 2.9
     struct NoLinkage {};
     X<NoLinkage> a;
     // cxx98-error@-1 {{template argument uses local type }}
+    //   cxx98-note@#cwg62-X {{template parameter is declared here}}
     X<const NoLinkage> b;
     // cxx98-error@-1 {{template argument uses local type }}
+    //   cxx98-note@#cwg62-X {{template parameter is declared here}}
     get<NoLinkage>();
     // cxx98-error@-1 {{template argument uses local type }}
-    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments}}
+    //   cxx98-note@#cwg62-get {{template parameter is declared here}}
+    //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
     get<const NoLinkage>();
     // cxx98-error@-1 {{template argument uses local type }}
-    //   cxx98-note@-2 {{while substituting explicitly-specified template arguments}}
+    //   cxx98-note@#cwg62-get {{template parameter is declared here}}
+    //   cxx98-note@-3 {{while substituting explicitly-specified template arguments}}
     X<void (*)(NoLinkage A::*)> c;
     // cxx98-error@-1 {{template argument uses local type }}
+    //   cxx98-note@#cwg62-X {{template parameter is declared here}}
     X<int NoLinkage::*> d;
     // cxx98-error@-1 {{template argument uses local type }}
+    //   cxx98-note@#cwg62-X {{template parameter is declared here}}
   }
 } // namespace cwg62
 
@@ -1135,10 +1147,11 @@ namespace cwg69 { // cwg69: 9
   extern template void f<char>();
   // cxx98-error@-1 {{extern templates are a C++11 extension}}
   // expected-error@-2 {{explicit instantiation declaration of 'f' with internal linkage}}
-  template<void(*)()> struct Q {};
+  template<void(*)()> struct Q {}; // #cwg69-Q
   Q<&f<int> > q;
   // cxx98-error@-1 {{non-type template argument referring to function 'f<int>' with internal linkage is a C++11 extension}}
   //   cxx98-note@#cwg69-f {{non-type template argument refers to function here}}
+  //   cxx98-note@#cwg69-Q {{template parameter is declared here}}
 } // namespace cwg69
 
 namespace cwg70 { // cwg70: 2.7
