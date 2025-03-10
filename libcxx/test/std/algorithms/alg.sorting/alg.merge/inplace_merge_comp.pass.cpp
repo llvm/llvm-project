@@ -15,9 +15,9 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>
-#include <random>
 #include <vector>
 
+#include "constexpr_random.h"
 #include "test_macros.h"
 
 #if TEST_STD_VER >= 11
@@ -67,15 +67,14 @@ struct S {
 #include "test_iterators.h"
 #include "counting_predicates.h"
 
-std::mt19937 randomness;
-
-template <class Iter>
-void test_one_randomized(unsigned N, unsigned M) {
+template <class Iter, class RandSrc>
+TEST_CONSTEXPR_CXX26 void test_one(unsigned N, unsigned M, RandSrc& randomness) {
+  assert(M <= N);
   typedef typename std::iterator_traits<Iter>::value_type value_type;
   value_type* ia = new value_type[N];
   for (unsigned i = 0; i < N; ++i)
     ia[i] = i;
-  std::shuffle(ia, ia + N, randomness);
+  support::shuffle(ia, ia + N, randomness);
   std::sort(ia, ia + M, std::greater<value_type>());
   std::sort(ia + M, ia + N, std::greater<value_type>());
   binary_counting_predicate<std::greater<value_type>, value_type, value_type> pred((std::greater<value_type>()));
@@ -91,71 +90,38 @@ void test_one_randomized(unsigned N, unsigned M) {
   delete[] ia;
 }
 
-template <class Iter>
-TEST_CONSTEXPR_CXX26 void test_one_non_randomized(unsigned N, unsigned M) {
-  typedef typename std::iterator_traits<Iter>::value_type value_type;
-
-  value_type* ia                  = new value_type[N];
-  const unsigned long small_prime = 19937;
-  const unsigned long large_prime = 212987;
-  unsigned long product_mod       = small_prime;
-  for (unsigned i = 0; i < N; ++i) {
-    ia[i]       = static_cast<int>(product_mod);
-    product_mod = product_mod * small_prime % large_prime;
-  }
-  std::sort(ia, ia + M, std::greater<value_type>());
-  std::sort(ia + M, ia + N, std::greater<value_type>());
-  binary_counting_predicate<std::greater<value_type>, value_type, value_type> pred((std::greater<value_type>()));
-  std::inplace_merge(Iter(ia), Iter(ia + M), Iter(ia + N), std::ref(pred));
-  if (N > 0) {
-    assert(std::is_sorted(ia, ia + N, std::greater<value_type>()));
-#if defined(_LIBCPP_HARDENING_MODE) && _LIBCPP_HARDENING_MODE != _LIBCPP_HARDENING_MODE_DEBUG
-    assert(pred.count() <= (N - 1));
-#endif
-  }
-  delete[] ia;
+template <class Iter, class RandSrc>
+TEST_CONSTEXPR_CXX26 void test(unsigned N, RandSrc& randomness) {
+  test_one<Iter>(N, 0, randomness);
+  test_one<Iter>(N, N / 4, randomness);
+  test_one<Iter>(N, N / 2, randomness);
+  test_one<Iter>(N, 3 * N / 4, randomness);
+  test_one<Iter>(N, N, randomness);
 }
 
-template <class Iter>
-TEST_CONSTEXPR_CXX26 void test_one(unsigned N, unsigned M) {
-  assert(M <= N);
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    test_one_randomized<Iter>(N, M);
-  }
-  test_one_non_randomized<Iter>(N, M);
-}
-
-template <class Iter>
-TEST_CONSTEXPR_CXX26 void test(unsigned N) {
-  test_one<Iter>(N, 0);
-  test_one<Iter>(N, N / 4);
-  test_one<Iter>(N, N / 2);
-  test_one<Iter>(N, 3 * N / 4);
-  test_one<Iter>(N, N);
-}
-
-template <class Iter>
-TEST_CONSTEXPR_CXX26 void test() {
-  test_one<Iter>(0, 0);
-  test_one<Iter>(1, 0);
-  test_one<Iter>(1, 1);
-  test_one<Iter>(2, 0);
-  test_one<Iter>(2, 1);
-  test_one<Iter>(2, 2);
-  test_one<Iter>(3, 0);
-  test_one<Iter>(3, 1);
-  test_one<Iter>(3, 2);
-  test_one<Iter>(3, 3);
-  test<Iter>(4);
-  test<Iter>(20);
+template <class Iter, class RandSrc>
+TEST_CONSTEXPR_CXX26 void test(RandSrc& randomness) {
+  test_one<Iter>(0, 0, randomness);
+  test_one<Iter>(1, 0, randomness);
+  test_one<Iter>(1, 1, randomness);
+  test_one<Iter>(2, 0, randomness);
+  test_one<Iter>(2, 1, randomness);
+  test_one<Iter>(2, 2, randomness);
+  test_one<Iter>(3, 0, randomness);
+  test_one<Iter>(3, 1, randomness);
+  test_one<Iter>(3, 2, randomness);
+  test_one<Iter>(3, 3, randomness);
+  test<Iter>(4, randomness);
+  test<Iter>(20, randomness);
+  test<Iter>(50, randomness);
 #if defined(_LIBCPP_HARDENING_MODE)
   if (!TEST_IS_CONSTANT_EVALUATED) // avoid blowing past constant evaluation limit
 #endif
   {
-    test<Iter>(100);
+    test<Iter>(100, randomness);
   }
   if (!TEST_IS_CONSTANT_EVALUATED) { // avoid blowing past constant evaluation limit
-    test<Iter>(1000);
+    test<Iter>(1000, randomness);
   }
 }
 
@@ -178,57 +144,35 @@ TEST_CONSTEXPR_CXX26 void test_PR31166() {
   }
 }
 
-#if TEST_STD_VER >= 11
-void test_wrapped_randomized(int N, unsigned M) {
-  std::unique_ptr<int>* ia = new std::unique_ptr<int>[N];
-  for (int i = 0; i < N; ++i)
-    ia[i].reset(new int(i));
-  std::shuffle(ia, ia + N, randomness);
-  std::sort(ia, ia + M, indirect_less());
-  std::sort(ia + M, ia + N, indirect_less());
-  std::inplace_merge(ia, ia + M, ia + N, indirect_less());
-  if (N > 0) {
-    assert(*ia[0] == 0);
-    assert(*ia[N - 1] == N - 1);
-    assert(std::is_sorted(ia, ia + N, indirect_less()));
-  }
-  delete[] ia;
-}
-
-TEST_CONSTEXPR_CXX26 void test_wrapped_non_randomized(int N, unsigned M) {
-  std::unique_ptr<int>* ia = new std::unique_ptr<int>[N];
-
-  const unsigned long small_prime = 19937;
-  const unsigned long large_prime = 212987;
-  unsigned long product_mod       = small_prime;
-  for (int i = 0; i < N; ++i) {
-    ia[i].reset(new int(static_cast<int>(product_mod)));
-    product_mod = product_mod * small_prime % large_prime;
-  }
-  std::sort(ia, ia + M, indirect_less());
-  std::sort(ia + M, ia + N, indirect_less());
-  std::inplace_merge(ia, ia + M, ia + N, indirect_less());
-  if (N > 0) {
-    assert(std::is_sorted(ia, ia + N, indirect_less()));
-  }
-  delete[] ia;
-}
-#endif // TEST_STD_VER >= 11
-
 TEST_CONSTEXPR_CXX26 bool test() {
-  test<bidirectional_iterator<int*> >();
-  test<random_access_iterator<int*> >();
-  test<int*>();
+  support::minstd_rand randomness;
+
+  test<bidirectional_iterator<int*> >(randomness);
+  test<random_access_iterator<int*> >(randomness);
+  test<int*>(randomness);
 
 #if TEST_STD_VER >= 11
-  test<bidirectional_iterator<S*> >();
-  test<random_access_iterator<S*> >();
-  test<S*>();
+  test<bidirectional_iterator<S*> >(randomness);
+  test<random_access_iterator<S*> >(randomness);
+  test<S*>(randomness);
 
-  if (!TEST_IS_CONSTANT_EVALUATED) {
-    test_wrapped_randomized(100, 50);
+  {
+    constexpr int N          = 100;
+    constexpr int M          = 50;
+    std::unique_ptr<int>* ia = new std::unique_ptr<int>[N];
+    for (int i = 0; i < N; ++i)
+      ia[i].reset(new int(i));
+    support::shuffle(ia, ia + N, randomness);
+    std::sort(ia, ia + M, indirect_less());
+    std::sort(ia + M, ia + N, indirect_less());
+    std::inplace_merge(ia, ia + M, ia + N, indirect_less());
+    if (N > 0) {
+      assert(*ia[0] == 0);
+      assert(*ia[N - 1] == N - 1);
+      assert(std::is_sorted(ia, ia + N, indirect_less()));
+    }
+    delete[] ia;
   }
-  test_wrapped_non_randomized(100, 50);
 #endif // TEST_STD_VER >= 11
 
   test_PR31166();
