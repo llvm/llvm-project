@@ -68,11 +68,9 @@ static bool CharStringSummaryProvider(ValueObject &valobj, Stream &stream) {
 
 template <StringElementType ElemType>
 static bool CharSummaryProvider(ValueObject &valobj, Stream &stream) {
-  DataExtractor data;
-  Status error;
-  valobj.GetData(data, error);
+  auto data_or_err = valobj.GetData();
 
-  if (error.Fail())
+  if (!data_or_err)
     return false;
 
   std::string value;
@@ -84,7 +82,7 @@ static bool CharSummaryProvider(ValueObject &valobj, Stream &stream) {
   if (!value.empty())
     stream.Printf("%s ", value.c_str());
 
-  options.SetData(std::move(data));
+  options.SetData(std::move(*data_or_err));
   options.SetStream(&stream);
   options.SetPrefixToken(ElemTraits.first);
   options.SetQuote('\'');
@@ -169,11 +167,9 @@ bool lldb_private::formatters::Char32SummaryProvider(
 
 bool lldb_private::formatters::WCharSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
-  DataExtractor data;
-  Status error;
-  valobj.GetData(data, error);
+  auto data_or_err = valobj.GetData();
 
-  if (error.Fail())
+  if (!data_or_err)
     return false;
 
   // Get a wchar_t basic type from the current type system
@@ -191,7 +187,7 @@ bool lldb_private::formatters::WCharSummaryProvider(
   const uint32_t wchar_size = *size;
 
   StringPrinter::ReadBufferAndDumpToStreamOptions options(valobj);
-  options.SetData(std::move(data));
+  options.SetData(std::move(*data_or_err));
   options.SetStream(&stream);
   options.SetPrefixToken("L");
   options.SetQuote('\'');
