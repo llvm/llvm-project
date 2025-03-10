@@ -301,6 +301,8 @@ Bug Fixes to C++ Support
 - Correctly diagnoses template template paramters which have a pack parameter
   not in the last position.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
+- Clang was previously coalescing volatile writes to members of volatile base class subobjects.
+  The issue has been addressed by propagating qualifiers during derived-to-base conversions in the AST. (#GH127824)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
