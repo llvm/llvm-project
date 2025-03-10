@@ -200,8 +200,7 @@ define i64 @test_ptrauth_nop_ds_constant() {
 define i64 @test_ptrauth_auth_sign_same_schema(ptr %p) {
 ; CHECK-LABEL: @test_ptrauth_auth_sign_same_schema(
 ; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[P_INT]], i32 1, i64 1234)
-; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[AUTHED]], i32 1, i64 1234)
+; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.resign(i64 [[P_INT]], i32 1, i64 1234, i32 1, i64 1234)
 ; CHECK-NEXT:    ret i64 [[RESIGNED]]
 ;
   %p.int = ptrtoint ptr %p to i64
@@ -213,8 +212,7 @@ define i64 @test_ptrauth_auth_sign_same_schema(ptr %p) {
 define i64 @test_ptrauth_auth_sign_opaque_disc_same_schema(ptr %p, i64 %disc) {
 ; CHECK-LABEL: @test_ptrauth_auth_sign_opaque_disc_same_schema(
 ; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[P_INT]], i32 1, i64 [[DISC:%.*]])
-; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[AUTHED]], i32 1, i64 [[DISC]])
+; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.resign(i64 [[P_INT]], i32 1, i64 [[DISC:%.*]], i32 1, i64 [[DISC]])
 ; CHECK-NEXT:    ret i64 [[RESIGNED]]
 ;
   %p.int = ptrtoint ptr %p to i64
@@ -226,8 +224,7 @@ define i64 @test_ptrauth_auth_sign_opaque_disc_same_schema(ptr %p, i64 %disc) {
 define i64 @test_ptrauth_auth_sign_different_disc(ptr %p, i64 %disc) {
 ; CHECK-LABEL: @test_ptrauth_auth_sign_different_disc(
 ; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[P_INT]], i32 1, i64 [[DISC:%.*]])
-; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[AUTHED]], i32 1, i64 1234)
+; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.resign(i64 [[P_INT]], i32 1, i64 [[DISC:%.*]], i32 1, i64 1234)
 ; CHECK-NEXT:    ret i64 [[RESIGNED]]
 ;
   %p.int = ptrtoint ptr %p to i64
@@ -239,8 +236,7 @@ define i64 @test_ptrauth_auth_sign_different_disc(ptr %p, i64 %disc) {
 define i64 @test_ptrauth_auth_sign_different_key(ptr %p) {
 ; CHECK-LABEL: @test_ptrauth_auth_sign_different_key(
 ; CHECK-NEXT:    [[P_INT:%.*]] = ptrtoint ptr [[P:%.*]] to i64
-; CHECK-NEXT:    [[AUTHED:%.*]] = call i64 @llvm.ptrauth.auth(i64 [[P_INT]], i32 0, i64 1234)
-; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.sign(i64 [[AUTHED]], i32 1, i64 1234)
+; CHECK-NEXT:    [[RESIGNED:%.*]] = call i64 @llvm.ptrauth.resign(i64 [[P_INT]], i32 0, i64 1234, i32 1, i64 1234)
 ; CHECK-NEXT:    ret i64 [[RESIGNED]]
 ;
   %p.int = ptrtoint ptr %p to i64
