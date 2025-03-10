@@ -5623,16 +5623,13 @@ InstructionCost LoopVectorizationCostModel::expectedCost(ElementCount VF) {
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     if (Style == TailFoldingStyle::DataWithEVL) {
       Type *I32Ty = IntegerType::getInt32Ty(Context);
-      IntrinsicCostAttributes Attrs(
-          Intrinsic::experimental_get_vector_length, I32Ty,
-          {PoisonValue::get(IndTy), PoisonValue::get(I32Ty),
-           PoisonValue::get(I1Ty)});
+      IntrinsicCostAttributes Attrs(Intrinsic::experimental_get_vector_length,
+                                    I32Ty, {IndTy, I32Ty, I1Ty});
       Cost += TTI.getIntrinsicInstrCost(Attrs, CostKind);
     } else if (useActiveLaneMask(Style)) {
       VectorType *RetTy = VectorType::get(I1Ty, VF);
-      IntrinsicCostAttributes Attrs(
-          Intrinsic::get_active_lane_mask, RetTy,
-          {PoisonValue::get(IndTy), PoisonValue::get(IndTy)});
+      IntrinsicCostAttributes Attrs(Intrinsic::get_active_lane_mask, RetTy,
+                                    {IndTy, IndTy});
       Cost += TTI.getIntrinsicInstrCost(Attrs, CostKind);
     }
   }

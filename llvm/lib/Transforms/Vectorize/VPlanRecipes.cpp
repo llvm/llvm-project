@@ -752,10 +752,11 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
   case VPInstruction::ExplicitVectorLength: {
+    Type *Arg0Ty = Ctx.Types.inferScalarType(getOperand(0));
     Type *I32Ty = Type::getInt32Ty(Ctx.LLVMCtx);
     Type *I1Ty = Type::getInt1Ty(Ctx.LLVMCtx);
     IntrinsicCostAttributes Attrs(Intrinsic::experimental_get_vector_length,
-                                  I32Ty, {I32Ty, I1Ty});
+                                  I32Ty, {Arg0Ty, I32Ty, I1Ty});
     return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
   default:
