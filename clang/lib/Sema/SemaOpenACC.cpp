@@ -1555,7 +1555,7 @@ bool SemaOpenACC::ActOnStartStmtDirective(
   // Declaration directives an appear in a statement location, so call into that
   // function here.
   if (K == OpenACCDirectiveKind::Declare || K == OpenACCDirectiveKind::Routine)
-    return ActOnStartDeclDirective(K, StartLoc);
+    return ActOnStartDeclDirective(K, StartLoc, Clauses);
 
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
@@ -1832,13 +1832,28 @@ StmtResult SemaOpenACC::ActOnAssociatedStmt(
   llvm_unreachable("Invalid associated statement application");
 }
 
-bool SemaOpenACC::ActOnStartDeclDirective(OpenACCDirectiveKind K,
-                                          SourceLocation StartLoc) {
+bool SemaOpenACC::ActOnStartDeclDirective(
+    OpenACCDirectiveKind K, SourceLocation StartLoc,
+    ArrayRef<const OpenACCClause *> Clauses) {
   // OpenCC3.3 2.1 (line 889)
   // A program must not depend on the order of evaluation of expressions in
   // clause arguments or on any side effects of the evaluations.
   SemaRef.DiscardCleanupsInEvaluationContext();
   SemaRef.PopExpressionEvaluationContext();
+
+  if (K == OpenACCDirectiveKind::Routine &&
+      llvm::find_if(Clauses,
+                    llvm::IsaPred<OpenACCGangClause, OpenACCWorkerClause,
+                                  OpenACCVectorClause, OpenACCSeqClause>) ==
+          Clauses.end())
+    return Diag(StartLoc, diag::err_acc_construct_one_clause_of)
+           << K
+           << GetListOfClauses({
+                  OpenACCClauseKind::Gang,
+                  OpenACCClauseKind::Worker,
+                  OpenACCClauseKind::Vector,
+                  OpenACCClauseKind::Seq,
+              });
 
   return diagnoseConstructAppertainment(*this, K, StartLoc, /*IsStmt=*/false);
 }

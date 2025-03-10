@@ -882,9 +882,9 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
+OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValuesAttr(); }
 
-OpFoldResult ConstShapeOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
+OpFoldResult ConstShapeOp::fold(FoldAdaptor adaptor) { return getValuesAttr(); }
 
 #define REDUCE_FOLDER(OP)                                                      \
   OpFoldResult OP::fold(FoldAdaptor adaptor) {                                 \
@@ -947,7 +947,7 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
       return {};
 
     llvm::SmallVector<int64_t> shapeVec;
-    if (!tosa::getConstShapeValue(getShape().getDefiningOp(), shapeVec))
+    if (!tosa::getConstShapeValues(getShape().getDefiningOp(), shapeVec))
       return {};
 
     return operand.reshape(

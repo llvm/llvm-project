@@ -1539,8 +1539,8 @@ Parser::DeclGroupPtrTy Parser::ParseOpenACCDirectiveDecl() {
 
   OpenACCDirectiveParseInfo DirInfo = ParseOpenACCDirective();
 
-  if (getActions().OpenACC().ActOnStartDeclDirective(DirInfo.DirKind,
-                                                     DirInfo.StartLoc))
+  if (getActions().OpenACC().ActOnStartDeclDirective(
+          DirInfo.DirKind, DirInfo.StartLoc, DirInfo.Clauses))
     return nullptr;
 
   return DeclGroupPtrTy::make(getActions().OpenACC().ActOnEndDeclDirective(

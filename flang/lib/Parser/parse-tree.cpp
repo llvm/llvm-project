@@ -338,7 +338,7 @@ llvm::omp::Clause OmpClause::Id() const {
 }
 
 const OmpClauseList &OmpDirectiveSpecification::Clauses() const {
-  static OmpClauseList empty{std::move(decltype(OmpClauseList::v){})};
+  static OmpClauseList empty{decltype(OmpClauseList::v){}};
   if (auto &clauses = std::get<std::optional<OmpClauseList>>(t)) {
     return *clauses;
   }

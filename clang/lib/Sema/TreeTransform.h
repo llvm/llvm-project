@@ -11875,6 +11875,11 @@ void OpenACCClauseTransform<Derived>::VisitDeviceResidentClause(
     const OpenACCDeviceResidentClause &C) {
   llvm_unreachable("device_resident clause not valid unless a decl transform");
 }
+template <typename Derived>
+void OpenACCClauseTransform<Derived>::VisitNoHostClause(
+    const OpenACCNoHostClause &C) {
+  llvm_unreachable("device_resident clause not valid unless a decl transform");
+}
 
 template <typename Derived>
 void OpenACCClauseTransform<Derived>::VisitCopyInClause(

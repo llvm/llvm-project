@@ -534,6 +534,13 @@ OpenACCSeqClause *OpenACCSeqClause::Create(const ASTContext &C,
   return new (Mem) OpenACCSeqClause(BeginLoc, EndLoc);
 }
 
+OpenACCNoHostClause *OpenACCNoHostClause::Create(const ASTContext &C,
+                                                 SourceLocation BeginLoc,
+                                                 SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCNoHostClause));
+  return new (Mem) OpenACCNoHostClause(BeginLoc, EndLoc);
+}
+
 OpenACCGangClause *
 OpenACCGangClause::Create(const ASTContext &C, SourceLocation BeginLoc,
                           SourceLocation LParenLoc,
@@ -869,6 +876,10 @@ void OpenACCClausePrinter::VisitIndependentClause(
 
 void OpenACCClausePrinter::VisitSeqClause(const OpenACCSeqClause &C) {
   OS << "seq";
+}
+
+void OpenACCClausePrinter::VisitNoHostClause(const OpenACCNoHostClause &C) {
+  OS << "nohost";
 }
 
 void OpenACCClausePrinter::VisitCollapseClause(const OpenACCCollapseClause &C) {

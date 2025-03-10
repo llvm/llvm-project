@@ -66,35 +66,35 @@ void function();
 
 
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) bind(NS::NSFunc)
+#pragma acc routine(use) seq bind(NS::NSFunc)
   // expected-error@+2{{'RecordTy' does not refer to a value}}
   // expected-note@#RecTy{{declared here}}
-#pragma acc routine(use) bind(NS::RecordTy)
+#pragma acc routine(use) seq bind(NS::RecordTy)
   // expected-error@+3{{'Value' is a private member of 'NS::RecordTy'}}
   // expected-note@#VAL{{implicitly declared private here}}
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) bind(NS::RecordTy::Value)
+#pragma acc routine(use) seq bind(NS::RecordTy::Value)
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) bind(NS::RecordTy::ValuePub)
+#pragma acc routine(use) seq bind(NS::RecordTy::ValuePub)
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) bind(NS::TemplTy<int>)
+#pragma acc routine(use) seq bind(NS::TemplTy<int>)
   // expected-error@+1{{no member named 'unknown' in namespace 'NS'}}
-#pragma acc routine(use) bind(NS::unknown<int>)
+#pragma acc routine(use) seq bind(NS::unknown<int>)
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) bind(NS::function)
+#pragma acc routine(use) seq bind(NS::function)
   // expected-error@+3{{'priv_mem_function' is a private member of 'NS::RecordTy'}}
   // expected-note@#PrivMemFun{{implicitly declared private here}}
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) bind(NS::RecordTy::priv_mem_function)
+#pragma acc routine(use) seq bind(NS::RecordTy::priv_mem_function)
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) bind(NS::RecordTy::mem_function)
+#pragma acc routine(use) seq bind(NS::RecordTy::mem_function)
 
   // expected-error@+1{{string literal with user-defined suffix cannot be used here}}
-#pragma acc routine(use) bind("unknown udl"_UDL)
+#pragma acc routine(use) seq bind("unknown udl"_UDL)
 
   // expected-warning@+2{{encoding prefix 'u' on an unevaluated string literal has no effect}}
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) bind(u"16 bits")
+#pragma acc routine(use) seq bind(u"16 bits")
   // expected-warning@+2{{encoding prefix 'U' on an unevaluated string literal has no effect}}
   // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(use) bind(U"32 bits")
+#pragma acc routine(use) seq bind(U"32 bits")

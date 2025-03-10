@@ -566,6 +566,8 @@ void SPIRVModuleAnalysis::processOtherInstrs(const Module &M) {
           collectOtherInstr(MI, MAI, SPIRV::MB_DebugNames, IS);
         } else if (OpCode == SPIRV::OpEntryPoint) {
           collectOtherInstr(MI, MAI, SPIRV::MB_EntryPoints, IS);
+        } else if (TII->isAliasingInstr(MI)) {
+          collectOtherInstr(MI, MAI, SPIRV::MB_AliasingInsts, IS);
         } else if (TII->isDecorationInstr(MI)) {
           collectOtherInstr(MI, MAI, SPIRV::MB_Annotations, IS);
           collectFuncNames(MI, &*F);
@@ -1249,6 +1251,13 @@ void addInstrRequirements(const MachineInstr &MI,
             SPIRV::InstructionSet::NonSemantic_Shader_DebugInfo_100)) {
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
     }
+    break;
+  }
+  case SPIRV::OpAliasDomainDeclINTEL:
+  case SPIRV::OpAliasScopeDeclINTEL:
+  case SPIRV::OpAliasScopeListDeclINTEL: {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing);
+    Reqs.addCapability(SPIRV::Capability::MemoryAccessAliasingINTEL);
     break;
   }
   case SPIRV::OpBitReverse:
