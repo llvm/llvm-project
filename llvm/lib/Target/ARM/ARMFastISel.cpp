@@ -83,56 +83,51 @@ using namespace llvm;
 namespace {
 
   // All possible address modes, plus some.
-  class Address {
-  public:
-    using BaseKind = enum {
-      RegBase,
-      FrameIndexBase
-    };
+class Address {
+public:
+  using BaseKind = enum { RegBase, FrameIndexBase };
 
-  private:
-    BaseKind Kind = RegBase;
-    union {
-      unsigned Reg;
-      int FI;
-    } Base;
+private:
+  BaseKind Kind = RegBase;
+  union {
+    unsigned Reg;
+    int FI;
+  } Base;
 
-    int Offset = 0;
+  int Offset = 0;
 
-  public:
-    // Innocuous defaults for our address.
-    Address() {
-      Base.Reg = 0;
-    }
+public:
+  // Innocuous defaults for our address.
+  Address() { Base.Reg = 0; }
 
-    void setKind(BaseKind K) { Kind = K; }
-    BaseKind getKind() const { return Kind; }
-    bool isRegBase() const { return Kind == RegBase; }
-    bool isFIBase() const { return Kind == FrameIndexBase; }
+  void setKind(BaseKind K) { Kind = K; }
+  BaseKind getKind() const { return Kind; }
+  bool isRegBase() const { return Kind == RegBase; }
+  bool isFIBase() const { return Kind == FrameIndexBase; }
 
-    void setReg(Register Reg) {
-      assert(isRegBase() && "Invalid base register access!");
-      Base.Reg = Reg.id();
-    }
+  void setReg(Register Reg) {
+    assert(isRegBase() && "Invalid base register access!");
+    Base.Reg = Reg.id();
+  }
 
-    Register getReg() const {
-      assert(isRegBase() && "Invalid base register access!");
-      return Base.Reg;
-    }
+  Register getReg() const {
+    assert(isRegBase() && "Invalid base register access!");
+    return Base.Reg;
+  }
 
-    void setFI(int FI) {
-      assert(isFIBase() && "Invalid base frame index  access!");
-      Base.FI = FI;
-    }
+  void setFI(int FI) {
+    assert(isFIBase() && "Invalid base frame index  access!");
+    Base.FI = FI;
+  }
 
-    int getFI() const {
-      assert(isFIBase() && "Invalid base frame index access!");
-      return Base.FI;
-    }
+  int getFI() const {
+    assert(isFIBase() && "Invalid base frame index access!");
+    return Base.FI;
+  }
 
-    void setOffset(int O) { Offset = O; }
-    int getOffset() { return Offset; }
-  };
+  void setOffset(int O) { Offset = O; }
+  int getOffset() { return Offset; }
+};
 
 class ARMFastISel final : public FastISel {
   /// Subtarget - Keep a pointer to the ARMSubtarget around so that we can
@@ -829,7 +824,8 @@ bool ARMFastISel::ARMComputeAddress(const Value *Obj, Address &Addr) {
   }
 
   // Try to get this in a register if nothing else has worked.
-  if (!Addr.getReg()) Addr.setReg(getRegForValue(Obj));
+  if (!Addr.getReg())
+    Addr.setReg(getRegForValue(Obj));
   return Addr.getReg();
 }
 
@@ -868,10 +864,10 @@ void ARMFastISel::ARMSimplifyAddress(Address &Addr, MVT VT, bool useAM3) {
                                              : &ARM::GPRRegClass;
     Register ResultReg = createResultReg(RC);
     unsigned Opc = isThumb2 ? ARM::t2ADDri : ARM::ADDri;
-    AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                            TII.get(Opc), ResultReg)
-                            .addFrameIndex(Addr.getFI())
-                            .addImm(0));
+    AddOptionalDefs(
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg)
+            .addFrameIndex(Addr.getFI())
+            .addImm(0));
     Addr.setKind(Address::RegBase);
     Addr.setReg(ResultReg);
   }
@@ -880,7 +876,7 @@ void ARMFastISel::ARMSimplifyAddress(Address &Addr, MVT VT, bool useAM3) {
   // get the reg+offset into a register.
   if (needsLowering) {
     Addr.setReg(fastEmit_ri_(MVT::i32, ISD::ADD, Addr.getReg(),
-                                 Addr.getOffset(), MVT::i32));
+                             Addr.getOffset(), MVT::i32));
     Addr.setOffset(0);
   }
 }
@@ -907,7 +903,8 @@ void ARMFastISel::AddLoadStoreOperands(MVT VT, Address &Addr,
     // ARM halfword load/stores and signed byte loads need an additional
     // operand.
     if (useAM3) {
-      int Imm = (Addr.getOffset() < 0) ? (0x100 | -Addr.getOffset()) : Addr.getOffset();
+      int Imm = (Addr.getOffset() < 0) ? (0x100 | -Addr.getOffset())
+                                       : Addr.getOffset();
       MIB.addReg(0);
       MIB.addImm(Imm);
     } else {
@@ -921,7 +918,8 @@ void ARMFastISel::AddLoadStoreOperands(MVT VT, Address &Addr,
     // ARM halfword load/stores and signed byte loads need an additional
     // operand.
     if (useAM3) {
-      int Imm = (Addr.getOffset() < 0) ? (0x100 | -Addr.getOffset()) : Addr.getOffset();
+      int Imm = (Addr.getOffset() < 0) ? (0x100 | -Addr.getOffset())
+                                       : Addr.getOffset();
       MIB.addReg(0);
       MIB.addImm(Imm);
     } else {
@@ -944,7 +942,8 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
     case MVT::i1:
     case MVT::i8:
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 &&
+            Subtarget->hasV6T2Ops())
           Opc = isZExt ? ARM::t2LDRBi8 : ARM::t2LDRSBi8;
         else
           Opc = isZExt ? ARM::t2LDRBi12 : ARM::t2LDRSBi12;
@@ -964,7 +963,8 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
         return false;
 
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 &&
+            Subtarget->hasV6T2Ops())
           Opc = isZExt ? ARM::t2LDRHi8 : ARM::t2LDRSHi8;
         else
           Opc = isZExt ? ARM::t2LDRHi12 : ARM::t2LDRSHi12;
@@ -980,7 +980,8 @@ bool ARMFastISel::ARMEmitLoad(MVT VT, Register &ResultReg, Address &Addr,
         return false;
 
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 &&
+            Subtarget->hasV6T2Ops())
           Opc = ARM::t2LDRi8;
         else
           Opc = ARM::t2LDRi12;
@@ -1093,7 +1094,8 @@ bool ARMFastISel::ARMEmitStore(MVT VT, Register SrcReg, Address &Addr,
     }
     case MVT::i8:
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 &&
+            Subtarget->hasV6T2Ops())
           StrOpc = ARM::t2STRBi8;
         else
           StrOpc = ARM::t2STRBi12;
@@ -1107,7 +1109,8 @@ bool ARMFastISel::ARMEmitStore(MVT VT, Register SrcReg, Address &Addr,
         return false;
 
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 &&
+            Subtarget->hasV6T2Ops())
           StrOpc = ARM::t2STRHi8;
         else
           StrOpc = ARM::t2STRHi12;
@@ -1122,7 +1125,8 @@ bool ARMFastISel::ARMEmitStore(MVT VT, Register SrcReg, Address &Addr,
         return false;
 
       if (isThumb2) {
-        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 && Subtarget->hasV6T2Ops())
+        if (Addr.getOffset() < 0 && Addr.getOffset() > -256 &&
+            Subtarget->hasV6T2Ops())
           StrOpc = ARM::t2STRi8;
         else
           StrOpc = ARM::t2STRi12;
