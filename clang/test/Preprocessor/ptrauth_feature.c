@@ -123,6 +123,14 @@ void has_ptrauth_indirect_gotos() {}
 void no_ptrauth_indirect_gotos() {}
 #endif
 
+#if __has_feature(ptrauth_qualifier)
+// INTRIN: has_ptrauth_qualifier
+void has_ptrauth_qualifier() {}
+#else
+// NOINTRIN: no_ptrauth_qualifier
+void no_ptrauth_qualifier() {}
+#endif
+
 #if __has_feature(ptrauth_elf_got)
 // ELFGOT: has_ptrauth_elf_got
 void has_ptrauth_elf_got() {}
