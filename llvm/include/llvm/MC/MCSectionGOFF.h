@@ -37,9 +37,7 @@ public:
   void printSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,
                             uint32_t /*Subsection*/) const override {
-    // TODO: This isn't fully correct HLASM syntax, but we are not
-    // ready to implement the full solution yet.
-    OS << getName() << " CSECT\n";
+    OS << "\t.section\t\"" << getName() << "\"\n";
   }
 
   bool useCodeAlign() const override { return false; }

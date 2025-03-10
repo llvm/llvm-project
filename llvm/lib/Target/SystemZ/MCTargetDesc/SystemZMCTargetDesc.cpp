@@ -288,8 +288,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSystemZTargetMC() {
                                         createSystemZMCInstPrinter);
 
   // Register the asm streamer.
-  TargetRegistry::RegisterAsmStreamer(getTheSystemZTarget(),
-                                      createAsmStreamer);
+  TargetRegistry::RegisterAsmStreamer(getTheSystemZTarget(), createAsmStreamer);
 
   // Register the asm target streamer.
   TargetRegistry::RegisterAsmTargetStreamer(getTheSystemZTarget(),

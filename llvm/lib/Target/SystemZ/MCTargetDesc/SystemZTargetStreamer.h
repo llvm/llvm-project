@@ -59,14 +59,16 @@ public:
   virtual void emitExtern(StringRef Str) {};
 
   virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
-                                        const MCSymbol *Lo) { return nullptr; }
+                                           const MCSymbol *Lo) {
+    return nullptr;
+  }
 };
 
 class SystemZTargetGOFFStreamer : public SystemZTargetStreamer {
 public:
   SystemZTargetGOFFStreamer(MCStreamer &S) : SystemZTargetStreamer(S) {}
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
-                                        const MCSymbol *Lo) override;
+                                   const MCSymbol *Lo) override;
 };
 
 class SystemZTargetHLASMStreamer : public SystemZTargetStreamer {
@@ -77,7 +79,7 @@ public:
       : SystemZTargetStreamer(S), OS(OS) {}
   void emitExtern(StringRef Sym) override;
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
-                                        const MCSymbol *Lo) override;
+                                   const MCSymbol *Lo) override;
 };
 
 } // end namespace llvm

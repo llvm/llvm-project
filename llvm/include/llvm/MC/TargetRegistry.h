@@ -206,7 +206,7 @@ public:
 
   using NullTargetStreamerCtorTy = MCTargetStreamer *(*)(MCStreamer &S);
   using AsmTargetStreamerCtorTy =
-      MCTargetStreamer *(*)(MCStreamer &S, formatted_raw_ostream &OS,
+      MCTargetStreamer *(*)(MCStreamer & S, formatted_raw_ostream &OS,
                             MCInstPrinter *InstPrint);
   using AsmStreamerCtorTy =
       MCStreamer *(*)(MCContext & Ctx,
@@ -217,10 +217,11 @@ public:
       MCTargetStreamer *(*)(MCStreamer & S, const MCSubtargetInfo &STI);
   using MCRelocationInfoCtorTy = MCRelocationInfo *(*)(const Triple &TT,
                                                        MCContext &Ctx);
-  using MCSymbolizerCtorTy = MCSymbolizer *(*)(
-      const Triple &TT, LLVMOpInfoCallback GetOpInfo,
-      LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo, MCContext *Ctx,
-      std::unique_ptr<MCRelocationInfo> &&RelInfo);
+  using MCSymbolizerCtorTy =
+      MCSymbolizer *(*)(const Triple &TT, LLVMOpInfoCallback GetOpInfo,
+                        LLVMSymbolLookupCallback SymbolLookUp, void *DisInfo,
+                        MCContext *Ctx,
+                        std::unique_ptr<MCRelocationInfo> &&RelInfo);
 
   using CustomBehaviourCtorTy =
       mca::CustomBehaviour *(*)(const MCSubtargetInfo &STI,
