@@ -265,19 +265,24 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
   llvm_unreachable("Fully covered switch above!");
 }
 
+ConstString Mangled::GetDemangledName() const {
+  return GetDemangledNameImpl(/*force=*/false);
+}
+
 // Generate the demangled name on demand using this accessor. Code in this
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
-ConstString Mangled::GetDemangledName() const {
+ConstString Mangled::GetDemangledNameImpl(bool force) const {
   if (!m_mangled)
     return m_demangled;
 
   // Re-use previously demangled names.
-  if (!m_demangled.IsNull())
+  if (!force && !m_demangled.IsNull())
     return m_demangled;
 
-  if (m_mangled.GetMangledCounterpart(m_demangled) && !m_demangled.IsNull())
+  if (!force && m_mangled.GetMangledCounterpart(m_demangled) &&
+      !m_demangled.IsNull())
     return m_demangled;
 
   // We didn't already mangle this name, demangle it and if all goes well
