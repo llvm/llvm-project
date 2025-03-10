@@ -68,7 +68,7 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
-  std::string_view getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return "~{vl},~{vtype}"; }
 
   StringRef getConstraintRegister(StringRef Constraint,
                                   StringRef Expression) const override {
