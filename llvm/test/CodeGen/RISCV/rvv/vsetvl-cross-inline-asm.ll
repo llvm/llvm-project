@@ -11,6 +11,11 @@ define void @foo(<vscale x 8 x half> %0, <vscale x 8 x half> %1) {
 ; CHECK-NEXT:    lui a0, 1
 ; CHECK-NEXT:    addiw a0, a0, -1096
 ; CHECK-NEXT:    vmv.v.v v16, v12
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vmv.v.i v12, 0
+; CHECK-NEXT:    lui a0, 1
+; CHECK-NEXT:    addiw a0, a0, -1096
+; CHECK-NEXT:    vmv.v.i v16, 0
 ; CHECK-NEXT:    vsetvli zero, a0, e8, m1, ta, ma
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    vfmadd.vv v16, v12, v12
@@ -19,6 +24,10 @@ define void @foo(<vscale x 8 x half> %0, <vscale x 8 x half> %1) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    vfmadd.vv v16, v12, v12
 ; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    #APP
+; CHECK-NEXT:    vfmadd.vv v16, v12, v12
+; CHECK-NEXT:    #NO_APP
+; CHECK-NEXT:    vsetvli zero, a0, e16, m2, ta, ma
 ; CHECK-NEXT:    vse16.v v8, (zero)
 ; CHECK-NEXT:    ret
 entry:
