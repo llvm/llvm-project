@@ -236,6 +236,7 @@ private:
   std::unique_ptr<InlineAdvice> getAdviceImpl(CallBase &CB) override;
 
   InlineParams Params;
+  EphValuesCacheT EphValuesCache;
 };
 
 /// Used for dynamically registering InlineAdvisors as plugins
