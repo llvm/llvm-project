@@ -346,14 +346,8 @@ def warn_anyx86_excessive_regsave : Warning<
   InGroup<DiagGroup<"excessive-regsave">>;
 def warn_arm_interrupt_vfp_clobber : Warning<
   "interrupt service routine with vfp enabled may clobber the "
-  "interruptee's vfp state; "
-  "consider using the `interrupt_save_fp` attribute to prevent this behavior">,
+  "interruptee's vfp state">,
   InGroup<DiagGroup<"arm-interrupt-vfp-clobber">>;
-def warn_arm_interrupt_save_fp_without_vfp_unit : Warning<
-   "`interrupt_save_fp` only applies to targets that have a VFP unit enabled "
-   "for this compilation; this will be treated as a regular `interrupt` "
-   "attribute">,
-   InGroup<DiagGroup<"arm-interrupt-vfp-clobber">>;
 def err_arm_interrupt_called : Error<
   "interrupt service routine cannot be called directly">;
 def warn_interrupt_signal_attribute_invalid : Warning<
