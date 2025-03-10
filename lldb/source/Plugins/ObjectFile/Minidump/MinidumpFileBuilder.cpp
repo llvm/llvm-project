@@ -974,25 +974,26 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     const lldb_private::CoreFileMemoryRange &range, uint64_t *bytes_read) {
   if (!data_up)
     return Status::FromErrorString("No buffer supplied to read memory.");
+
+  if (!bytes_read)
+    return Status::FromErrorString("Bytes read pointer cannot be null.");
   Log *log = GetLog(LLDBLog::Object);
   const lldb::addr_t addr = range.range.start();
   const lldb::addr_t size = range.range.size();
   // First we set the byte tally to 0, so if we do exit gracefully
   // the caller doesn't think the random garbage on the stack is a
   // success.
-  if (bytes_read)
-    *bytes_read = 0;
+  *bytes_read = 0;
 
   uint64_t bytes_remaining = size;
-  uint64_t total_bytes_read = 0;
   Status error;
   while (bytes_remaining > 0) {
     // Get the next read chunk size as the minimum of the remaining bytes and
     // the write chunk max size.
     const size_t bytes_to_read =
-        std::min(bytes_remaining, MAX_WRITE_CHUNK_SIZE);
+        std::min(bytes_remaining, data_up->GetByteSize());
     const size_t bytes_read_for_chunk =
-        m_process_sp->ReadMemory(range.range.start() + total_bytes_read,
+        m_process_sp->ReadMemory(range.range.start() + *bytes_read,
                                  data_up->GetBytes(), bytes_to_read, error);
     if (error.Fail() || bytes_read_for_chunk == 0) {
       LLDB_LOGF(log,
@@ -1001,7 +1002,7 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
                 addr, bytes_read_for_chunk, error.AsCString());
       // If we've read nothing, and get an error or fail to read
       // we can just give up early.
-      if (total_bytes_read == 0)
+      if (*bytes_read == 0)
         return Status();
 
       // If we've read some bytes, we stop trying to read more and return
@@ -1036,12 +1037,10 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     if (bytes_remaining > 0)
       bytes_remaining -= bytes_read_for_chunk;
 
-    total_bytes_read += bytes_read_for_chunk;
     // If the caller wants a tally back of the bytes_read, update it as we
     // write. We do this in the loop so if we encounter an error we can
     // report the accurate total.
-    if (bytes_read)
-      *bytes_read += bytes_read_for_chunk;
+    *bytes_read += bytes_read_for_chunk;
   }
 
   return error;
