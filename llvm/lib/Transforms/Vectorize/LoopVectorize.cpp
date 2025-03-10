@@ -980,7 +980,6 @@ public:
   /// \return true if the UserVF is a feasible VF to be chosen.
   bool selectUserVectorizationFactor(ElementCount UserVF) {
     collectUniformsAndScalars(UserVF);
-    collectInstsToScalarize(UserVF);
     return expectedCost(UserVF).isValid();
   }
 
@@ -1250,6 +1249,7 @@ public:
     collectLoopUniforms(VF);
     setVectorizedCallDecision(VF);
     collectLoopScalars(VF);
+    collectInstsToScalarize(VF);
   }
 
   /// Returns true if the target machine supports masked store operation
@@ -5382,19 +5382,20 @@ bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
 }
 
 void LoopVectorizationCostModel::collectInstsToScalarize(ElementCount VF) {
-  // If we aren't vectorizing the loop, or if we've already collected the
-  // instructions to scalarize, there's nothing to do. Collection may already
-  // have occurred if we have a user-selected VF and are now computing the
-  // expected cost for interleaving.
-  if (VF.isScalar() || VF.isZero() || InstsToScalarize.contains(VF))
+  assert(VF.isVector() && "Expected VF >= 2");
+
+  // If we've already collected the instructions to scalarize or the predicated
+  // BBs after vectorization, there's nothing to do. Collection may already have
+  // occurred if we have a user-selected VF and are now computing the expected
+  // cost for interleaving.
+  if (InstsToScalarize.contains(VF) ||
+      PredicatedBBsAfterVectorization.contains(VF))
     return;
 
   // Initialize a mapping for VF in InstsToScalalarize. If we find that it's
   // not profitable to scalarize any instructions, the presence of VF in the
   // map will indicate that we've analyzed it already.
   ScalarCostsTy &ScalarCostsVF = InstsToScalarize[VF];
-
-  PredicatedBBsAfterVectorization[VF].clear();
 
   // Find all the instructions that are scalar with predication in the loop and
   // determine if it would be better to not if-convert the blocks they are in.
@@ -7185,15 +7186,9 @@ void LoopVectorizationPlanner::plan(ElementCount UserVF, unsigned UserIC) {
     VFCandidates.push_back(VF);
 
   CM.collectInLoopReductions();
-  for (const auto &VF : VFCandidates) {
+  for (const auto &VF : VFCandidates)
     // Collect Uniform and Scalar instructions after vectorization with VF.
     CM.collectUniformsAndScalars(VF);
-
-    // Collect the instructions (and their associated costs) that will be more
-    // profitable to scalarize.
-    if (VF.isVector())
-      CM.collectInstsToScalarize(VF);
-  }
 
   buildVPlansWithVPRecipes(ElementCount::getFixed(1), MaxFactors.FixedVF);
   buildVPlansWithVPRecipes(ElementCount::getScalable(1), MaxFactors.ScalableVF);
