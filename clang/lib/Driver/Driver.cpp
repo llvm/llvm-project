@@ -4669,7 +4669,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
       Actions.push_back(C.MakeAction<BinaryAnalyzeJobAction>(
           LastAction, types::TY_DX_CONTAINER));
     }
-    if (Args.getLastArg(options::OPT_metal)) {
+    if (TC.requiresBinaryTranslation(Args)) {
       Action *LastAction = Actions.back();
       // Metal shader converter runs on DXIL containers, which can either be
       // validated (in which case they are TY_DX_CONTAINER), or unvalidated
@@ -5219,8 +5219,14 @@ void Driver::BuildJobs(Compilation &C) const {
     unsigned NumOutputs = 0;
     unsigned NumIfsOutputs = 0;
     for (const Action *A : C.getActions()) {
+      // The actions below do not increase the number of outputs, when operating
+      // on DX containers.
+      if (A->getType() == types::TY_DX_CONTAINER &&
+          (A->getKind() == clang::driver::Action::BinaryAnalyzeJobClass ||
+           A->getKind() == clang::driver::Action::BinaryTranslatorJobClass))
+        continue;
+
       if (A->getType() != types::TY_Nothing &&
-          A->getType() != types::TY_DX_CONTAINER &&
           !(A->getKind() == Action::IfsMergeJobClass ||
             (A->getType() == clang::driver::types::TY_IFS_CPP &&
              A->getKind() == clang::driver::Action::CompileJobClass &&
@@ -6221,11 +6227,27 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     return C.addResultFile(C.getArgs().MakeArgString(FcValue.str()), &JA);
   }
 
-  if (JA.getType() == types::TY_Object &&
-      C.getArgs().hasArg(options::OPT_dxc_Fo)) {
+  if ((JA.getType() == types::TY_Object &&
+       C.getArgs().hasArg(options::OPT_dxc_Fo)) ||
+      JA.getType() == types::TY_DX_CONTAINER) {
     StringRef FoValue = C.getArgs().getLastArgValue(options::OPT_dxc_Fo);
-    // TODO: Should we use `MakeCLOutputFilename` here? If so, we can probably
-    // handle this as part of the SLASH_Fo handling below.
+    // If we are targeting DXIL and not validating or translating, we should set
+    // the final result file. Otherwise we should emit to a temporary.
+    if (C.getDefaultToolChain().getTriple().isDXIL()) {
+      const auto &TC = static_cast<const toolchains::HLSLToolChain &>(
+          C.getDefaultToolChain());
+      // Fo can be empty here if the validator is running for a compiler flow
+      // that is using Fc or just printing disassembly.
+      if (TC.isLastJob(C.getArgs(), JA.getKind()) && !FoValue.empty())
+        return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
+      StringRef Name = llvm::sys::path::filename(BaseInput);
+      std::pair<StringRef, StringRef> Split = Name.split('.');
+      const char *Suffix = types::getTypeTempSuffix(JA.getType(), true);
+      return CreateTempFile(C, Split.first, Suffix, false);
+    }
+    // We don't have SPIRV-val integrated (yet), so for now we can assume this
+    // is the final output.
+    assert(C.getDefaultToolChain().getTriple().isSPIRV());
     return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
   }
 
