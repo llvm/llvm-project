@@ -5215,7 +5215,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Args.hasArg(options::OPT_fclangir))
+  if (Args.hasArg(options::OPT_fclangir) ||
+      Args.hasArg(options::OPT_emit_mlir_EQ))
     CmdArgs.push_back("-fclangir");
 
   if (IsOpenMPDevice) {
@@ -5384,8 +5385,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_RewrittenLegacyObjC) {
       CmdArgs.push_back("-rewrite-objc");
       rewriteKind = RK_Fragile;
-    } else if (JA.getType() == types::TY_CIR) {
-      CmdArgs.push_back("-emit-cir");
+    } else if (JA.getType() == types::TY_MLIR) {
+      CmdArgs.push_back(Args.MakeArgString(
+          Twine("-emit-mlir=") +
+          Args.getLastArgValue(options::OPT_emit_mlir_EQ)));
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");
     }

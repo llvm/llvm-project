@@ -13,6 +13,7 @@
 #include "clang/CIR/LowerToLLVM.h"
 #include "clang/CodeGen/BackendUtil.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/FrontendOptions.h"
 #include "llvm/IR/Module.h"
 
 using namespace cir;
@@ -23,7 +24,7 @@ namespace cir {
 static BackendAction
 getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
   switch (Action) {
-  case CIRGenAction::OutputType::EmitCIR:
+  case CIRGenAction::OutputType::EmitMLIR:
     assert(false &&
            "Unsupported output type for getBackendActionFromOutputType!");
     break; // Unreachable, but fall through to report that
@@ -82,14 +83,30 @@ public:
   void HandleTranslationUnit(ASTContext &C) override {
     Gen->HandleTranslationUnit(C);
     mlir::ModuleOp MlirModule = Gen->getModule();
+    mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
+
+    auto emitMLIR = [&](mlir::Operation *MlirMod) {
+      assert(MlirMod &&
+             "MLIR module does not exist, but lowering did not fail?");
+      assert(OutputStream && "Missing output stream when emitting MLIR!");
+      // FIXME: we cannot roundtrip prettyForm=true right now.
+      mlir::OpPrintingFlags Flags;
+      Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
+      MlirMod->print(*OutputStream, Flags);
+    };
+
     switch (Action) {
-    case CIRGenAction::OutputType::EmitCIR:
-      if (OutputStream && MlirModule) {
-        mlir::OpPrintingFlags Flags;
-        Flags.enableDebugInfo(/*enable=*/true, /*prettyForm=*/false);
-        MlirModule->print(*OutputStream, Flags);
+    case CIRGenAction::OutputType::EmitMLIR: {
+      switch (CI.getFrontendOpts().MLIRTargetDialect) {
+      case frontend::MLIR_CORE:
+        emitMLIR(lowerFromCIRToMLIR(MlirModule, MlirCtx));
+        break;
+      case frontend::MLIR_CIR:
+        emitMLIR(MlirModule);
+        break;
       }
       break;
+    }
     case CIRGenAction::OutputType::EmitLLVM:
     case CIRGenAction::OutputType::EmitBC:
     case CIRGenAction::OutputType::EmitObj:
@@ -122,8 +139,8 @@ getOutputStream(CompilerInstance &CI, StringRef InFile,
   switch (Action) {
   case CIRGenAction::OutputType::EmitAssembly:
     return CI.createDefaultOutputFile(false, InFile, "s");
-  case CIRGenAction::OutputType::EmitCIR:
-    return CI.createDefaultOutputFile(false, InFile, "cir");
+  case CIRGenAction::OutputType::EmitMLIR:
+    return CI.createDefaultOutputFile(false, InFile, "mlir");
   case CIRGenAction::OutputType::EmitLLVM:
     return CI.createDefaultOutputFile(false, InFile, "ll");
   case CIRGenAction::OutputType::EmitBC:
@@ -151,9 +168,9 @@ void EmitAssemblyAction::anchor() {}
 EmitAssemblyAction::EmitAssemblyAction(mlir::MLIRContext *MLIRCtx)
     : CIRGenAction(OutputType::EmitAssembly, MLIRCtx) {}
 
-void EmitCIRAction::anchor() {}
-EmitCIRAction::EmitCIRAction(mlir::MLIRContext *MLIRCtx)
-    : CIRGenAction(OutputType::EmitCIR, MLIRCtx) {}
+void EmitMLIRAction::anchor() {}
+EmitMLIRAction::EmitMLIRAction(mlir::MLIRContext *MLIRCtx)
+    : CIRGenAction(OutputType::EmitMLIR, MLIRCtx) {}
 
 void EmitLLVMAction::anchor() {}
 EmitLLVMAction::EmitLLVMAction(mlir::MLIRContext *MLIRCtx)
