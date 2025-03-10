@@ -1,6 +1,6 @@
 ; RUN: llc %s -o %t.o -filetype=obj -relocation-model=pic
 ; RUN: llvm-as %p/Inputs/pr19901-1.ll -o %t2.o
-; RUN: %gold -plugin %llvmshlibdir/LLVMgold%shlibext \
+; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:     -shared -m elf_x86_64 -o %t.so %t2.o %t.o
 ; RUN: llvm-readobj --symbols %t.so | FileCheck %s
 
