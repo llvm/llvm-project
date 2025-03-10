@@ -3276,6 +3276,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
   case ISD::WRITE_REGISTER:
     Select_WRITE_REGISTER(NodeToMatch);
     return;
+  case ISD::POISON:
   case ISD::UNDEF:
     Select_UNDEF(NodeToMatch);
     return;
