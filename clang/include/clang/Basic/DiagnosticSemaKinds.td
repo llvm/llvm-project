@@ -599,16 +599,17 @@ def err_using_typename_non_type : Error<
   "'typename' keyword used on a non-type">;
 def err_using_dependent_value_is_type : Error<
   "dependent using declaration resolved to type without 'typename'">;
-def err_using_decl_nested_name_specifier_is_not_class : Error<
-  "using declaration in class refers into '%0', which is not a class">;
+def err_using_decl_nested_name_specifier_is_not_class
+    : Error<"using declaration in class refers into %0, which is not a class">;
 def warn_cxx17_compat_using_decl_non_member_enumerator : Warning<
   "member using declaration naming non-class '%0' enumerator is "
   "incompatible with C++ standards before C++20">, InGroup<CXXPre20Compat>,
   DefaultIgnore;
 def err_using_decl_nested_name_specifier_is_current_class : Error<
   "using declaration refers to its own class">;
-def err_using_decl_nested_name_specifier_is_not_base_class : Error<
-  "using declaration refers into '%0', which is not a base class of %1">;
+def err_using_decl_nested_name_specifier_is_not_base_class
+    : Error<
+          "using declaration refers into %0, which is not a base class of %1">;
 def err_using_decl_constructor_not_in_direct_base : Error<
   "%0 is not a direct base of %1, cannot inherit constructors">;
 def err_using_decl_can_not_refer_to_class_member : Error<
@@ -1733,8 +1734,8 @@ def err_no_matching_local_friend_suggest : Error<
   "cannot define friend function %0 in a local class definition; did you mean %3?">;
 def err_partial_specialization_friend : Error<
   "partial specialization cannot be declared as a friend">;
-def err_qualified_friend_def : Error<
-  "friend function definition cannot be qualified with '%0'">;
+def err_qualified_friend_def
+    : Error<"friend function definition cannot be qualified with %0">;
 def err_friend_def_in_local_class : Error<
   "friend function cannot be defined in a local class">;
 def err_friend_specialization_def : Error<
@@ -1743,14 +1744,16 @@ def err_friend_not_first_in_declaration : Error<
   "'friend' must appear first in a non-function declaration">;
 def err_using_decl_friend : Error<
   "cannot befriend target of using declaration">;
-def warn_template_qualified_friend_unsupported : Warning<
-  "dependent nested name specifier '%0' for friend class declaration is "
-  "not supported; turning off access control for %1">,
-  InGroup<UnsupportedFriend>;
-def warn_template_qualified_friend_ignored : Warning<
-  "dependent nested name specifier '%0' for friend template declaration is "
-  "not supported; ignoring this friend declaration">,
-  InGroup<UnsupportedFriend>;
+def warn_template_qualified_friend_unsupported
+    : Warning<
+          "dependent nested name specifier %0 for friend class declaration is "
+          "not supported; turning off access control for %1">,
+      InGroup<UnsupportedFriend>;
+def warn_template_qualified_friend_ignored
+    : Warning<"dependent nested name specifier %0 for friend template "
+              "declaration is "
+              "not supported; ignoring this friend declaration">,
+      InGroup<UnsupportedFriend>;
 def ext_friend_tag_redecl_outside_namespace : ExtWarn<
   "unqualified friend declaration referring to type outside of the nearest "
   "enclosing namespace is a Microsoft extension; add a nested name specifier">,
@@ -5556,9 +5559,10 @@ def ext_template_spec_extra_headers : ExtWarn<
 def note_explicit_template_spec_does_not_need_header : Note<
   "'template<>' header not required for explicitly-specialized class %0 "
   "declared here">;
-def err_template_qualified_declarator_no_match : Error<
-  "nested name specifier '%0' for declaration does not refer into a class, "
-  "class template or class template partial specialization">;
+def err_template_qualified_declarator_no_match
+    : Error<"nested name specifier %0 for declaration does not refer into a "
+            "class, "
+            "class template or class template partial specialization">;
 def err_specialize_member_of_template : Error<
   "cannot specialize %select{|(with 'template<>') }0a member of an "
   "unspecialized template">;
@@ -5858,13 +5862,13 @@ def note_typename_member_refers_here : Note<
     "referenced member %0 is declared here">;
 def note_typename_refers_here : Note<
     "referenced %0 is declared here">;
-def err_typename_missing : Error<
-  "missing 'typename' prior to dependent type name '%0%1'">;
-def err_typename_missing_template : Error<
-  "missing 'typename' prior to dependent type template name '%0%1'">;
-def ext_typename_missing : ExtWarn<
-  "missing 'typename' prior to dependent type name '%0%1'">,
-  InGroup<DiagGroup<"typename-missing">>;
+def err_typename_missing
+    : Error<"missing 'typename' prior to dependent type name %0">;
+def err_typename_missing_template
+    : Error<"missing 'typename' prior to dependent type template name %0">;
+def ext_typename_missing
+    : ExtWarn<"missing 'typename' prior to dependent type name %0">,
+      InGroup<DiagGroup<"typename-missing">>;
 def ext_typename_outside_of_template : ExtWarn<
   "'typename' occurs outside of a template">, InGroup<CXX11>;
 def warn_cxx98_compat_typename_outside_of_template : Warning<
@@ -5878,9 +5882,10 @@ def note_using_value_decl_missing_typename : Note<
 def warn_cxx17_compat_implicit_typename : Warning<"use of implicit 'typename' is "
   "incompatible with C++ standards before C++20">, InGroup<CXX20Compat>,
   DefaultIgnore;
-def ext_implicit_typename : ExtWarn<"missing 'typename' prior to dependent "
-  "type name %0%1; implicit 'typename' is a C++20 extension">,
-  InGroup<CXX20>;
+def ext_implicit_typename
+    : ExtWarn<"missing 'typename' prior to dependent "
+              "type name %0; implicit 'typename' is a C++20 extension">,
+      InGroup<CXX20>;
 
 def err_template_kw_refers_to_non_template : Error<
   "%0%select{| following the 'template' keyword}1 "
@@ -5890,12 +5895,13 @@ def note_template_kw_refers_to_non_template : Note<
 def err_template_kw_refers_to_dependent_non_template : Error<
   "%0%select{| following the 'template' keyword}1 "
   "cannot refer to a dependent template">;
-def err_template_kw_refers_to_type_template : Error<
-  "'%0%1' is expected to be a non-type template, but instantiated to a %select{class|type alias}2 template">;
+def err_template_kw_refers_to_type_template
+    : Error<"%0 is expected to be a non-type template, but instantiated to a "
+            "%select{class|type alias}1 template">;
 def note_referenced_type_template : Note<
   "%select{class|type alias}0 template declared here">;
-def err_template_kw_missing : Error<
-  "missing 'template' keyword prior to dependent template name '%0%1'">;
+def err_template_kw_missing
+    : Error<"missing 'template' keyword prior to dependent template name %0">;
 def ext_template_outside_of_template : ExtWarn<
   "'template' keyword outside of a template">, InGroup<CXX11>;
 def warn_cxx98_compat_template_outside_of_template : Warning<
@@ -7888,8 +7894,8 @@ def err_nogetter_property_incdec : Error<
   "no getter method %1 for %select{increment|decrement}0 of property">;
 def err_no_subobject_property_setting : Error<
   "expression is not assignable">;
-def err_qualified_objc_access : Error<
-  "%select{property|instance variable}0 access cannot be qualified with '%1'">;
+def err_qualified_objc_access : Error<"%select{property|instance variable}0 "
+                                      "access cannot be qualified with %1">;
 
 def ext_freestanding_complex : Extension<
   "complex numbers are an extension in a freestanding C99 implementation">;
@@ -9839,8 +9845,8 @@ def note_non_usual_function_declared_here : Note<
 // C++ literal operators
 def err_literal_operator_outside_namespace : Error<
   "literal operator %0 must be in a namespace or global scope">;
-def err_literal_operator_id_outside_namespace : Error<
-  "non-namespace scope '%0' cannot have a literal operator member">;
+def err_literal_operator_id_outside_namespace
+    : Error<"non-namespace scope %0 cannot have a literal operator member">;
 def err_literal_operator_default_argument : Error<
   "literal operator cannot have a default argument">;
 def err_literal_operator_bad_param_count : Error<
