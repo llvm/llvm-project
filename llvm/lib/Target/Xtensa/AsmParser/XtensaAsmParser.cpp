@@ -426,8 +426,7 @@ bool XtensaAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       TmpInst.setOpcode(Xtensa::L32R);
       const MCExpr *Value = Inst.getOperand(1).getExpr();
       MCSymbol *Sym = getContext().createTempSymbol();
-      const MCExpr *Expr =
-          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+      const MCExpr *Expr = MCSymbolRefExpr::create(Sym, getContext());
       const MCExpr *OpExpr = XtensaMCExpr::create(
           Expr, XtensaMCExpr::VK_Xtensa_None, getContext());
       TmpInst.addOperand(Inst.getOperand(0));
@@ -668,7 +667,7 @@ ParseStatus XtensaAsmParser::parseImmediate(OperandVector &Operands) {
       return ParseStatus::Failure;
 
     MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
     break;
   }
   case AsmToken::Percent:

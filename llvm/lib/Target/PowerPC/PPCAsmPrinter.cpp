@@ -680,8 +680,7 @@ void PPCAsmPrinter::EmitAIXTlsCallHelper(const MachineInstr *MI) {
          "Only expecting to emit calls to get the thread pointer on AIX!");
 
   MCSymbol *TlsCall = createMCSymbolForTlsGetAddr(OutContext, MI->getOpcode());
-  const MCExpr *TlsRef =
-      MCSymbolRefExpr::create(TlsCall, MCSymbolRefExpr::VK_None, OutContext);
+  const MCExpr *TlsRef = MCSymbolRefExpr::create(TlsCall, OutContext);
   EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BLA).addExpr(TlsRef));
 }
 
@@ -1008,8 +1007,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       MCSymbol *PICOffset =
         MF->getInfo<PPCFunctionInfo>()->getPICOffsetSymbol(*MF);
       TmpInst.setOpcode(PPC::LWZ);
-      const MCExpr *Exp =
-        MCSymbolRefExpr::create(PICOffset, MCSymbolRefExpr::VK_None, OutContext);
+      const MCExpr *Exp = MCSymbolRefExpr::create(PICOffset, OutContext);
       const MCExpr *PB =
         MCSymbolRefExpr::create(MF->getPICBaseSymbol(),
                                 MCSymbolRefExpr::VK_None,
@@ -1064,8 +1062,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // 'MOSymbol'. Said TOC entry will be synthesized later.
     MCSymbol *TOCEntry =
         lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
-    const MCExpr *Exp =
-        MCSymbolRefExpr::create(TOCEntry, MCSymbolRefExpr::VK_None, OutContext);
+    const MCExpr *Exp = MCSymbolRefExpr::create(TOCEntry, OutContext);
 
     // AIX uses the label directly as the lwz displacement operand for
     // references into the toc section. The displacement value will be generated
@@ -1110,8 +1107,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Map the operand to its corresponding MCSymbol.
     const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
 
-    const MCExpr *Exp =
-        MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_None, OutContext);
+    const MCExpr *Exp = MCSymbolRefExpr::create(MOSymbol, OutContext);
 
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
