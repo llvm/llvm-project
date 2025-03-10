@@ -78,6 +78,7 @@ protected:
   bool BackOffBarrier = false;
   bool UnalignedScratchAccess = false;
   bool UnalignedAccessMode = false;
+  bool RelaxedBufferOOBMode = false;
   bool HasApertureRegs = false;
   bool SupportsXNACK = false;
   bool KernargPreload = false;
@@ -232,6 +233,7 @@ protected:
   bool HasVMEMtoScalarWriteHazard = false;
   bool HasSMEMtoVectorWriteHazard = false;
   bool HasInstFwdPrefetchBug = false;
+  bool HasSafeSmemPrefetch = false;
   bool HasVcmpxExecWARHazard = false;
   bool HasLdsBranchVmemWARHazard = false;
   bool HasNSAtoVMEMBug = false;
@@ -608,6 +610,8 @@ public:
     return UnalignedAccessMode;
   }
 
+  bool hasRelaxedBufferOOBMode() const { return RelaxedBufferOOBMode; }
+
   bool hasApertureRegs() const {
     return HasApertureRegs;
   }
@@ -962,6 +966,8 @@ public:
   }
 
   bool hasPrefetch() const { return GFX12Insts; }
+
+  bool hasSafeSmemPrefetch() const { return HasSafeSmemPrefetch; }
 
   // Has s_cmpk_* instructions.
   bool hasSCmpK() const { return getGeneration() < GFX12; }

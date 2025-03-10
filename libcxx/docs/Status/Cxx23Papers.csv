@@ -43,7 +43,7 @@
 "`P0627R6 <https://wg21.link/P0627R6>`__","Function to mark unreachable code","2022-02 (Virtual)","|Complete|","15",""
 "`P1206R7 <https://wg21.link/P1206R7>`__","``ranges::to``: A function to convert any range to a container","2022-02 (Virtual)","|Complete|","17",""
 "`P1413R3 <https://wg21.link/P1413R3>`__","Deprecate ``std::aligned_storage`` and ``std::aligned_union``","2022-02 (Virtual)","|Complete|","","``std::aligned_storage_t`` and ``std::aligned_union_t`` are marked deprecated, but clang doesn't issue a diagnostic for deprecated using template declarations."
-"`P2255R2 <https://wg21.link/P2255R2>`__","A type trait to detect reference binding to temporary","2022-02 (Virtual)","","",""
+"`P2255R2 <https://wg21.link/P2255R2>`__","A type trait to detect reference binding to temporary","2022-02 (Virtual)","|Partial|","","Implemented the type traits only."
 "`P2273R3 <https://wg21.link/P2273R3>`__","Making ``std::unique_ptr`` constexpr","2022-02 (Virtual)","|Complete|","16",""
 "`P2387R3 <https://wg21.link/P2387R3>`__","Pipe support for user-defined range adaptors","2022-02 (Virtual)","|Complete|","19",""
 "`P2440R1 <https://wg21.link/P2440R1>`__","``ranges::iota``, ``ranges::shift_left`` and ``ranges::shift_right``","2022-02 (Virtual)","","",""

@@ -733,8 +733,9 @@ Error LTO::add(std::unique_ptr<InputFile> Input,
     writeToResolutionFile(*Conf.ResolutionFile, Input.get(), Res);
 
   if (RegularLTO.CombinedModule->getTargetTriple().empty()) {
-    RegularLTO.CombinedModule->setTargetTriple(Input->getTargetTriple());
-    if (Triple(Input->getTargetTriple()).isOSBinFormatELF())
+    Triple InputTriple(Input->getTargetTriple());
+    RegularLTO.CombinedModule->setTargetTriple(InputTriple);
+    if (InputTriple.isOSBinFormatELF())
       Conf.VisibilityScheme = Config::ELF;
   }
 
@@ -1436,12 +1437,10 @@ public:
                         OnWrite, ShouldEmitImportsFiles, ThinLTOParallelism),
         AddStream(std::move(AddStream)), Cache(std::move(Cache)),
         ShouldEmitIndexFiles(ShouldEmitIndexFiles) {
-    for (auto &Name : CombinedIndex.cfiFunctionDefs())
-      CfiFunctionDefs.insert(
-          GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
-    for (auto &Name : CombinedIndex.cfiFunctionDecls())
-      CfiFunctionDecls.insert(
-          GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Name)));
+    auto &Defs = CombinedIndex.cfiFunctionDefs();
+    CfiFunctionDefs.insert(Defs.guid_begin(), Defs.guid_end());
+    auto &Decls = CombinedIndex.cfiFunctionDecls();
+    CfiFunctionDecls.insert(Decls.guid_begin(), Decls.guid_end());
   }
 
   virtual Error runThinLTOBackendThread(
@@ -1964,12 +1963,10 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
 
   // Any functions referenced by the jump table in the regular LTO object must
   // be exported.
-  for (auto &Def : ThinLTO.CombinedIndex.cfiFunctionDefs())
-    ExportedGUIDs.insert(
-        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Def)));
-  for (auto &Decl : ThinLTO.CombinedIndex.cfiFunctionDecls())
-    ExportedGUIDs.insert(
-        GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(Decl)));
+  auto &Defs = ThinLTO.CombinedIndex.cfiFunctionDefs();
+  ExportedGUIDs.insert(Defs.guid_begin(), Defs.guid_end());
+  auto &Decls = ThinLTO.CombinedIndex.cfiFunctionDecls();
+  ExportedGUIDs.insert(Decls.guid_begin(), Decls.guid_end());
 
   auto isExported = [&](StringRef ModuleIdentifier, ValueInfo VI) {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);

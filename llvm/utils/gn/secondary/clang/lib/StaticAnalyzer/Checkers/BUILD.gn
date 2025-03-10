@@ -140,10 +140,10 @@ static_library("Checkers") {
     "WebKit/MemoryUnsafeCastChecker.cpp",
     "WebKit/PtrTypesSemantics.cpp",
     "WebKit/RawPtrRefCallArgsChecker.cpp",
+    "WebKit/RawPtrRefLambdaCapturesChecker.cpp",
     "WebKit/RawPtrRefLocalVarsChecker.cpp",
     "WebKit/RawPtrRefMemberChecker.cpp",
     "WebKit/RefCntblBaseVirtualDtorChecker.cpp",
-    "WebKit/UncountedLambdaCapturesChecker.cpp",
     "cert/InvalidPtrChecker.cpp",
   ]
 }

@@ -9,7 +9,7 @@
 #ifndef _HLSL_HLSL_INTRINSICS_H_
 #define _HLSL_HLSL_INTRINSICS_H_
 
-#include "hlsl_detail.h"
+#include "hlsl/hlsl_intrinsic_helpers.h"
 
 namespace hlsl {
 

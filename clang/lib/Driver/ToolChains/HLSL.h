@@ -29,6 +29,19 @@ public:
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
+
+class LLVM_LIBRARY_VISIBILITY MetalConverter : public Tool {
+public:
+  MetalConverter(const ToolChain &TC)
+      : Tool("hlsl::MetalConverter", "metal-shaderconverter", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
 } // namespace hlsl
 } // namespace tools
 
@@ -57,6 +70,7 @@ public:
 
 private:
   mutable std::unique_ptr<tools::hlsl::Validator> Validator;
+  mutable std::unique_ptr<tools::hlsl::MetalConverter> MetalConverter;
 };
 
 } // end namespace toolchains
