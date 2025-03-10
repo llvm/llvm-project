@@ -7388,7 +7388,8 @@ bool AArch64DAGToDAGISel::SelectAddrModeIndexedSVE(SDNode *Root, SDValue N,
     const auto KnownVScale =
         Subtarget->getSVEVectorSizeInBits() / AArch64::SVEBitsPerBlock;
 
-    if (!KnownVScale || ByteOffset % KnownVScale != 0)
+    if (!KnownVScale || ByteOffset % KnownVScale != 0 ||
+        !MemVT.isScalableVector())
       return false;
 
     MulImm = ByteOffset / KnownVScale;

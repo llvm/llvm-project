@@ -381,11 +381,12 @@ define void @v8i32(ptr %ldptr, ptr %stptr) {
 ; CHECK-256-LABEL: v8i32:
 ; CHECK-256:       // %bb.0:
 ; CHECK-256-NEXT:    ptrue p0.s
-; CHECK-256-NEXT:    mov x8, #8 // =0x8
+; CHECK-256-NEXT:    mov x8, #16 // =0x10
+; CHECK-256-NEXT:    mov x9, #8 // =0x8
 ; CHECK-256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
-; CHECK-256-NEXT:    ld1w { z1.s }, p0/z, [x0, #1, mul vl]
+; CHECK-256-NEXT:    ld1w { z1.s }, p0/z, [x0, x9, lsl #2]
 ; CHECK-256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
-; CHECK-256-NEXT:    st1w { z1.s }, p0, [x1, #1, mul vl]
+; CHECK-256-NEXT:    st1w { z1.s }, p0, [x1, x9, lsl #2]
 ; CHECK-256-NEXT:    ret
 ;
 ; CHECK-512-LABEL: v8i32:
