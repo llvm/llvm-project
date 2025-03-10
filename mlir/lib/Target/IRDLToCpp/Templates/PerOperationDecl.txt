@@ -7,11 +7,6 @@ class __OP_CPP_NAME__GenericAdaptorBase {
 public:
   struct Properties {
   };
-protected:
-  ::mlir::DictionaryAttr odsAttrs;
-  ::std::optional<::mlir::OperationName> odsOpName;
-  Properties properties;
-  ::mlir::RegionRange odsRegions;
 public:
   __OP_CPP_NAME__GenericAdaptorBase(::mlir::DictionaryAttr attrs = {}, const ::mlir::EmptyProperties &properties = {}, ::mlir::RegionRange regions = {}) : odsAttrs(attrs), odsRegions(regions) {
     if (odsAttrs)
@@ -28,6 +23,11 @@ public:
   ::mlir::DictionaryAttr getAttributes() {
     return odsAttrs;
   }
+protected:
+  ::mlir::DictionaryAttr odsAttrs;
+  ::std::optional<::mlir::OperationName> odsOpName;
+  Properties properties;
+  ::mlir::RegionRange odsRegions;
 };
 
 } // namespace detail
