@@ -43,6 +43,8 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
     Mips3, Mips4, Mips5, Mips64, Mips64r2, Mips64r3, Mips64r5, Mips64r6
   };
 
+  // I6400 and I6500 are based on same MIPS64R6 ISA. Hence we define single
+  // subtarget I6400 for subtarget feature use in Mips.td.
   enum class CPU { P5600, I6400 };
 
   // Used to avoid printing dsp warnings multiple times.
