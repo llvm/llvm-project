@@ -238,8 +238,10 @@ public:
 
 class VirtRegRewriterPass : public PassInfoMixin<VirtRegRewriterPass> {
   bool ClearVirtRegs = true;
+
 public:
-  VirtRegRewriterPass(bool ClearVirtRegs = true) : ClearVirtRegs(ClearVirtRegs) {}
+  VirtRegRewriterPass(bool ClearVirtRegs = true)
+      : ClearVirtRegs(ClearVirtRegs) {}
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
 

@@ -29,7 +29,6 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
-#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/TargetFrameLowering.h"
@@ -230,16 +229,15 @@ public:
       : Indexes(Indexes), LIS(LIS), LRM(LRM), VRM(VRM), DebugVars(DebugVars),
         ClearVirtRegs(ClearVirtRegs) {}
 
-  bool run(MachineFunction&);
-
+  bool run(MachineFunction &);
 };
 
 class VirtRegRewriterLegacy : public MachineFunctionPass {
 public:
   static char ID;
   bool ClearVirtRegs;
-  VirtRegRewriterLegacy(bool ClearVirtRegs = true) :
-    MachineFunctionPass(ID), ClearVirtRegs(ClearVirtRegs) {}
+  VirtRegRewriterLegacy(bool ClearVirtRegs = true)
+      : MachineFunctionPass(ID), ClearVirtRegs(ClearVirtRegs) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
@@ -302,13 +300,15 @@ bool VirtRegRewriterLegacy::runOnMachineFunction(MachineFunction &MF) {
   return R.run(MF);
 }
 
-PreservedAnalyses VirtRegRewriterPass::run(MachineFunction &MF,
-  MachineFunctionAnalysisManager &MFAM) {
+PreservedAnalyses
+VirtRegRewriterPass::run(MachineFunction &MF,
+                         MachineFunctionAnalysisManager &MFAM) {
   VirtRegMap &VRM = MFAM.getResult<VirtRegMapAnalysis>(MF);
   LiveIntervals &LIS = MFAM.getResult<LiveIntervalsAnalysis>(MF);
   LiveRegMatrix &LRM = MFAM.getResult<LiveRegMatrixAnalysis>(MF);
   SlotIndexes &Indexes = MFAM.getResult<SlotIndexesAnalysis>(MF);
-  LiveDebugVariables &DebugVars = MFAM.getResult<LiveDebugVariablesAnalysis>(MF);
+  LiveDebugVariables &DebugVars =
+      MFAM.getResult<LiveDebugVariablesAnalysis>(MF);
 
   VirtRegRewriter R(ClearVirtRegs, &Indexes, &LIS, &LRM, &VRM, &DebugVars);
   if (!R.run(MF))
@@ -771,7 +771,8 @@ void VirtRegRewriter::rewrite() {
   RewriteRegs.clear();
 }
 
-void VirtRegRewriterPass::printPipeline(raw_ostream &OS, function_ref<StringRef(StringRef)>) const {
+void VirtRegRewriterPass::printPipeline(
+    raw_ostream &OS, function_ref<StringRef(StringRef)>) const {
   OS << "virt-reg-rewriter<";
   if (!ClearVirtRegs)
     OS << "no-";
