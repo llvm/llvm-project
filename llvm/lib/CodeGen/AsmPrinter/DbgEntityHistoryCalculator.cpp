@@ -401,10 +401,9 @@ static void handleNewDebugValue(InlinedEntity Var, const MachineInstr &DV,
       for (const MachineOperand &Op : DV.debug_operands()) {
         if (Op.isReg() && Op.getReg()) {
           Register NewReg = Op.getReg();
-          if (!TrackedRegs.count(NewReg))
+          if (TrackedRegs.insert_or_assign(NewReg, true).second)
             addRegDescribedVar(RegVars, NewReg, Var);
           LiveEntries[Var].insert(NewIndex);
-          TrackedRegs[NewReg] = true;
         }
       }
     }

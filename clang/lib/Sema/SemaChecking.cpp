@@ -6149,18 +6149,19 @@ tryAgain:
             if (!Sema::getFormatStringInfo(D, PVFormat->getFormatIdx(),
                                            PVFormat->getFirstArg(), &CallerFSI))
               continue;
-            // We also check if the formats are compatible.
-            // We can't pass a 'scanf' string to a 'printf' function.
-            if (Type != S.GetFormatStringType(PVFormat)) {
-              S.Diag(Args[format_idx]->getBeginLoc(),
-                     diag::warn_format_string_type_incompatible)
-                  << PVFormat->getType()->getName()
-                  << S.GetFormatStringTypeName(Type);
-              if (!InFunctionCall) {
-                S.Diag(E->getBeginLoc(), diag::note_format_string_defined);
+            if (PV->getFunctionScopeIndex() == CallerFSI.FormatIdx) {
+              // We also check if the formats are compatible.
+              // We can't pass a 'scanf' string to a 'printf' function.
+              if (Type != S.GetFormatStringType(PVFormat)) {
+                S.Diag(Args[format_idx]->getBeginLoc(),
+                       diag::warn_format_string_type_incompatible)
+                    << PVFormat->getType()->getName()
+                    << S.GetFormatStringTypeName(Type);
+                if (!InFunctionCall) {
+                  S.Diag(E->getBeginLoc(), diag::note_format_string_defined);
+                }
+                return SLCT_UncheckedLiteral;
               }
-              return SLCT_UncheckedLiteral;
-            } else if (PV->getFunctionScopeIndex() == CallerFSI.FormatIdx) {
               // Lastly, check that argument passing kinds transition in a
               // way that makes sense:
               // from a caller with FAPK_VAList, allow FAPK_VAList
@@ -10618,6 +10619,42 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
     case UO_Deref:
     case UO_AddrOf: // should be impossible
       return IntRange::forValueOfType(C, GetExprType(E));
+
+    case UO_Minus: {
+      if (E->getType()->isUnsignedIntegerType()) {
+        return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
+                               Approximate);
+      }
+
+      std::optional<IntRange> SubRange = TryGetExprRange(
+          C, UO->getSubExpr(), MaxWidth, InConstantContext, Approximate);
+
+      if (!SubRange)
+        return std::nullopt;
+
+      // If the range was previously non-negative, we need an extra bit for the
+      // sign bit. If the range was not non-negative, we need an extra bit
+      // because the negation of the most-negative value is one bit wider than
+      // that value.
+      return IntRange(SubRange->Width + 1, false);
+    }
+
+    case UO_Not: {
+      if (E->getType()->isUnsignedIntegerType()) {
+        return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
+                               Approximate);
+      }
+
+      std::optional<IntRange> SubRange = TryGetExprRange(
+          C, UO->getSubExpr(), MaxWidth, InConstantContext, Approximate);
+
+      if (!SubRange)
+        return std::nullopt;
+
+      // The width increments by 1 if the sub-expression cannot be negative
+      // since it now can be.
+      return IntRange(SubRange->Width + (int)SubRange->NonNegative, false);
+    }
 
     default:
       return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,

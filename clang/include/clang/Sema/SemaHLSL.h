@@ -105,13 +105,13 @@ public:
                          HLSLParamModifierAttr::Spelling Spelling);
   void ActOnTopLevelFunction(FunctionDecl *FD);
   void ActOnVariableDeclarator(VarDecl *VD);
+  void ActOnEndOfTranslationUnit(TranslationUnitDecl *TU);
   void CheckEntryPoint(FunctionDecl *FD);
   void CheckSemanticAnnotation(FunctionDecl *EntryPoint, const Decl *Param,
                                const HLSLAnnotationAttr *AnnotationAttr);
   void DiagnoseAttrStageMismatch(
       const Attr *A, llvm::Triple::EnvironmentType Stage,
       std::initializer_list<llvm::Triple::EnvironmentType> AllowedStages);
-  void DiagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 
   QualType handleVectorBinOpConversion(ExprResult &LHS, ExprResult &RHS,
                                        QualType LHSType, QualType RHSType,
@@ -168,11 +168,17 @@ private:
   // List of all resource bindings
   ResourceBindings Bindings;
 
+  // Global declaration collected for the $Globals default constant
+  // buffer which will be created at the end of the translation unit.
+  llvm::SmallVector<Decl *> DefaultCBufferDecls;
+
 private:
   void collectResourceBindingsOnVarDecl(VarDecl *D);
   void collectResourceBindingsOnUserRecordDecl(const VarDecl *VD,
                                                const RecordType *RT);
   void processExplicitBindingsOnDecl(VarDecl *D);
+
+  void diagnoseAvailabilityViolations(TranslationUnitDecl *TU);
 };
 
 } // namespace clang

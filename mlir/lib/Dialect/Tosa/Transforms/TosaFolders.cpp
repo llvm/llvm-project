@@ -363,7 +363,7 @@ struct ReduceConstantOptimization : public OpRewritePattern<OperationType> {
       return rewriter.notifyMatchFailure(op, "result type shape is not static");
 
     auto reductionAxis = op.getAxis();
-    const auto denseElementsAttr = constOp.getValue();
+    const auto denseElementsAttr = constOp.getValues();
     const auto shapedOldElementsValues =
         cast<ShapedType>(denseElementsAttr.getType());
 
@@ -408,7 +408,7 @@ void mlir::tosa::populateTosaConstantReduction(MLIRContext *ctx,
       ctx, aggressiveReduceConstant);
   patterns.add<ReduceConstantOptimization<ReduceMinOp>>(
       ctx, aggressiveReduceConstant);
-  patterns.add<ReduceConstantOptimization<ReduceProdOp>>(
+  patterns.add<ReduceConstantOptimization<ReduceProductOp>>(
       ctx, aggressiveReduceConstant);
   patterns.add<ReduceConstantOptimization<ReduceSumOp>>(
       ctx, aggressiveReduceConstant);

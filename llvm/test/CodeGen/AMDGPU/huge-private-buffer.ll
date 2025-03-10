@@ -7,9 +7,10 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1200 -amdgpu-enable-vopd=0 -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SCRATCH2048K %s
 
 ; GCN-LABEL: {{^}}scratch_buffer_known_high_masklo16:
-; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
-; GCN: v_and_b32_e32 v{{[0-9]+}}, 0xfffc, [[FI]]
-; GCN: {{flat|global}}_store_{{dword|b32}} v[{{[0-9]+:[0-9]+}}],
+; GCN: s_mov_b32 [[FI:s[0-9]+]], 0{{$}}
+; GCN: s_and_b32 s{{[0-9]+}}, [[FI]], 0xfffc
+; GCN: v_mov_b32_e32 [[VFI:v[0-9]+]], [[FI]]{{$}}
+; GCN: {{flat|global}}_store_{{dword|b32}} v[{{[0-9]+:[0-9]+}}], [[VFI]]
 define amdgpu_kernel void @scratch_buffer_known_high_masklo16() {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 15, ptr addrspace(5) %alloca
@@ -20,11 +21,15 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo16() {
 }
 
 ; GCN-LABEL: {{^}}scratch_buffer_known_high_masklo17:
-; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
-; SCRATCH128K-NOT: v_and_b32
-; SCRATCH256K: v_and_b32_e32 v{{[0-9]+}}, 0x1fffc, [[FI]]
-; SCRATCH1024K: v_and_b32_e32 v{{[0-9]+}}, 0x1fffc, [[FI]]
-; SCRATCH2048K: v_and_b32_e32 v{{[0-9]+}}, 0x1fffc, [[FI]]
+; SCRATCH256K: s_mov_b32 [[FI:s[0-9]+]], 0{{$}}
+; SCRATCH256K: s_and_b32 s{{[0-9]+}}, [[FI]], 0x1fffc
+
+; SCRATCH1024K: s_mov_b32 [[FI:s[0-9]+]], 0{{$}}
+; SCRATCH1024K: s_and_b32 s{{[0-9]+}}, [[FI]], 0x1fffc
+
+; SCRATCH2048K: s_mov_b32 [[FI:s[0-9]+]], 0{{$}}
+; SCRATCH2048K: s_and_b32 s{{[0-9]+}}, [[FI]], 0x1fffc
+
 ; GCN: {{flat|global}}_store_{{dword|b32}} v[{{[0-9]+:[0-9]+}}],
 define amdgpu_kernel void @scratch_buffer_known_high_masklo17() {
   %alloca = alloca i32, align 4, addrspace(5)
@@ -36,11 +41,17 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo17() {
 }
 
 ; GCN-LABEL: {{^}}scratch_buffer_known_high_masklo18:
-; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
-; SCRATCH128K-NOT: v_and_b32
-; SCRATCH256K-NOT: v_and_b32
-; SCRATCH1024K: v_and_b32_e32 v{{[0-9]+}}, 0x3fffc, [[FI]]
-; SCRATCH2048K: v_and_b32_e32 v{{[0-9]+}}, 0x3fffc, [[FI]]
+; SCRATCH128K: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
+; SCRATCH256K: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
+; SCRATCH128K-NOT: and_b32
+; SCRATCH256K-NOT: and_b32
+
+; SCRATCH1024K: s_mov_b32 [[FI:s[0-9]+]], 0{{$}}
+; SCRATCH1024K: s_and_b32 s{{[0-9]+}}, [[FI]], 0x3fffc
+
+; SCRATCH2048K: s_mov_b32 [[FI:s[0-9]+]], 0{{$}}
+; SCRATCH2048K: s_and_b32 s{{[0-9]+}}, [[FI]], 0x3fffc
+
 ; GCN: {{flat|global}}_store_{{dword|b32}} v[{{[0-9]+:[0-9]+}}],
 define amdgpu_kernel void @scratch_buffer_known_high_masklo18() {
   %alloca = alloca i32, align 4, addrspace(5)
@@ -52,11 +63,16 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo18() {
 }
 
 ; GCN-LABEL: {{^}}scratch_buffer_known_high_masklo20:
-; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
-; SCRATCH128K-NOT: v_and_b32
-; SCRATCH256K-NOT: v_and_b32
-; SCRATCH1024K-NOT: v_and_b32
-; SCRATCH2048K: v_and_b32_e32 v{{[0-9]+}}, 0xffffc, [[FI]]
+; SCRATCH128K: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
+; SCRATCH256K: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
+; SCRATCH1024K: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
+
+; SCRATCH128K-NOT: and_b32
+; SCRATCH256K-NOT: and_b32
+; SCRATCH1024K-NOT: and_b32
+
+; SCRATCH2048K: s_mov_b32 [[FI:s[0-9]+]], 0{{$}}
+; SCRATCH2048K: s_and_b32 s{{[0-9]+}}, [[FI]], 0xffffc
 ; GCN: {{flat|global}}_store_{{dword|b32}} v[{{[0-9]+:[0-9]+}}],
 define amdgpu_kernel void @scratch_buffer_known_high_masklo20() {
   %alloca = alloca i32, align 4, addrspace(5)
@@ -69,7 +85,7 @@ define amdgpu_kernel void @scratch_buffer_known_high_masklo20() {
 
 ; GCN-LABEL: {{^}}scratch_buffer_known_high_masklo21:
 ; GCN: v_mov_b32_e32 [[FI:v[0-9]+]], 0{{$}}
-; GCN-NOT: v_and_b32
+; GCN-NOT: and_b32
 ; GCN: {{flat|global}}_store_{{dword|b32}} v[{{[0-9]+:[0-9]+}}],
 define amdgpu_kernel void @scratch_buffer_known_high_masklo21() {
   %alloca = alloca i32, align 4, addrspace(5)
