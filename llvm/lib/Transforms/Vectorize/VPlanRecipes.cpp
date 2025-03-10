@@ -713,6 +713,11 @@ Value *VPInstruction::generate(VPTransformState &State) {
         Builder.getInt64Ty(), Mask, true, "first.active.lane");
     return Builder.CreateExtractElement(Vec, Ctz, "early.exit.value");
   }
+  case VPInstruction::StepVector: {
+    Type *EltTy = State.get(getOperand(0), true)->getType();
+    return State.Builder.CreateStepVector(VectorType::get(EltTy, State.VF));
+  }
+
   default:
     llvm_unreachable("Unsupported opcode for instruction");
   }
@@ -824,6 +829,7 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   case VPInstruction::LogicalAnd:
   case VPInstruction::Not:
   case VPInstruction::PtrAdd:
+  case VPInstruction::StepVector:
     return false;
   default:
     return true;
@@ -850,6 +856,7 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnCond:
   case VPInstruction::ResumePhi:
+  case VPInstruction::StepVector:
     return true;
   case VPInstruction::PtrAdd:
     return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
@@ -946,6 +953,9 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractFirstActive:
     O << "extract-first-active";
+    break;
+  case VPInstruction::StepVector:
+    O << "step-vector";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -1710,7 +1720,8 @@ InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
 /// (0 * Step, 1 * Step, 2 * Step, ...)
 /// to each vector element of Val.
 /// \p Opcode is relevant for FP induction variable.
-static Value *getStepVector(Value *Val, Value *Step,
+/// \p InitVec is an integer step vector from 0 with a step of 1.
+static Value *getStepVector(Value *Val, Value *Step, Value *InitVec,
                             Instruction::BinaryOps BinOp, ElementCount VF,
                             IRBuilderBase &Builder) {
   assert(VF.isVector() && "only vector VFs are supported");
@@ -1725,15 +1736,6 @@ static Value *getStepVector(Value *Val, Value *Step,
   assert(Step->getType() == STy && "Step has wrong type");
 
   SmallVector<Constant *, 8> Indices;
-
-  // Create a vector of consecutive numbers from zero to VF.
-  VectorType *InitVecValVTy = ValVTy;
-  if (STy->isFloatingPointTy()) {
-    Type *InitVecValSTy =
-        IntegerType::get(STy->getContext(), STy->getScalarSizeInBits());
-    InitVecValVTy = VectorType::get(InitVecValSTy, VLen);
-  }
-  Value *InitVec = Builder.CreateStepVector(InitVecValVTy);
 
   if (STy->isIntegerTy()) {
     Step = Builder.CreateVectorSplat(VLen, Step);
@@ -1800,8 +1802,11 @@ void VPWidenIntOrFpInductionRecipe::execute(VPTransformState &State) {
   }
 
   Value *SplatStart = Builder.CreateVectorSplat(State.VF, Start);
-  Value *SteppedStart = getStepVector(SplatStart, Step, ID.getInductionOpcode(),
-                                      State.VF, State.Builder);
+  assert(cast<VPInstruction>(getStepVector())->getOpcode() ==
+         VPInstruction::StepVector);
+  Value *SteppedStart =
+      ::getStepVector(SplatStart, Step, State.get(getStepVector()),
+                      ID.getInductionOpcode(), State.VF, State.Builder);
 
   // We create vector phi nodes for both integer and floating-point induction
   // variables. Here, we determine the kind of arithmetic we will perform.
