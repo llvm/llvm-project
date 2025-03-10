@@ -28,8 +28,8 @@ static unsigned getLoadImmediateOpcode(unsigned RegBitWidth) {
 // Generates instruction to load an immediate value into a register.
 static MCInst loadImmediate(MCRegister Reg, unsigned RegBitWidth,
                             const APInt &Value) {
-  assert (Value.getBitWidth() <= RegBitWidth &&
-          "Value must fit in the Register");
+  assert(Value.getBitWidth() <= RegBitWidth &&
+         "Value must fit in the Register");
   return MCInstBuilder(getLoadImmediateOpcode(RegBitWidth))
       .addReg(Reg)
       .addImm(Value.getZExtValue());
@@ -53,9 +53,44 @@ static MCInst loadPPRImmediate(MCRegister Reg, unsigned RegBitWidth,
       .addImm(31); // All lanes true for 16 bits
 }
 
+// Generates instructions to load an immediate value into an FPCR register.
+static std::vector<MCInst>
+loadFPCRImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
+  MCRegister TempReg = AArch64::X8;
+  MCInst LoadImm = MCInstBuilder(AArch64::MOVi64imm).addReg(TempReg).addImm(0);
+  MCInst MoveToFPCR =
+      MCInstBuilder(AArch64::MSR).addImm(AArch64SysReg::FPCR).addReg(TempReg);
+  return {LoadImm, MoveToFPCR};
+}
+
+// Generates instructions to load an immediate value into an FPR8 register.
+static std::vector<MCInst>
+loadFP8Immediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
+  assert(Value.getBitWidth() <= 8 && "Value must fit in 8 bits");
+
+  // Use a temporary general-purpose register (W8) to hold the 8-bit value
+  MCRegister TempReg = AArch64::W8;
+
+  // Load the 8-bit value into a general-purpose register (W8)
+  MCInst LoadImm = MCInstBuilder(AArch64::MOVi32imm)
+                       .addReg(TempReg)
+                       .addImm(Value.getZExtValue());
+
+  // Move the value from the general-purpose register to the FPR16 register
+  // Convert the FPR8 register to an FPR16 register
+  MCRegister FPR16Reg = Reg + (AArch64::H0 - AArch64::B0);
+  MCInst MoveToFPR =
+      MCInstBuilder(AArch64::FMOVWHr).addReg(FPR16Reg).addReg(TempReg);
+  return {LoadImm, MoveToFPR};
+}
+
 // Fetch base-instruction to load an FP immediate value into a register.
 static unsigned getLoadFPImmediateOpcode(unsigned RegBitWidth) {
   switch (RegBitWidth) {
+  case 16:
+    return AArch64::FMOVH0; //FMOVHi;
+  case 32:
+    return AArch64::FMOVS0; //FMOVSi;
   case 64:
     return AArch64::MOVID; //FMOVDi;
   case 128:
@@ -67,11 +102,12 @@ static unsigned getLoadFPImmediateOpcode(unsigned RegBitWidth) {
 // Generates instruction to load an FP immediate value into a register.
 static MCInst loadFPImmediate(MCRegister Reg, unsigned RegBitWidth,
                               const APInt &Value) {
-  assert(Value.getZExtValue() == 0 &&
-         "Expected initialisation value 0");
-  return MCInstBuilder(getLoadFPImmediateOpcode(RegBitWidth))
-      .addReg(Reg)
-      .addImm(Value.getZExtValue());
+  assert(Value.getZExtValue() == 0 && "Expected initialisation value 0");
+  MCInst Instructions =
+      MCInstBuilder(getLoadFPImmediateOpcode(RegBitWidth)).addReg(Reg);
+  if (RegBitWidth >= 64)
+    Instructions.addOperand(MCOperand::createImm(Value.getZExtValue()));
+  return Instructions;
 }
 
 #include "AArch64GenExegesis.inc"
@@ -92,12 +128,20 @@ private:
       return {loadImmediate(Reg, 64, Value)};
     if (AArch64::PPRRegClass.contains(Reg))
       return {loadPPRImmediate(Reg, 16, Value)};
+    if (AArch64::FPR8RegClass.contains(Reg))
+      return loadFP8Immediate(Reg, 8, Value);
+    if (AArch64::FPR16RegClass.contains(Reg))
+      return {loadFPImmediate(Reg, 16, Value)};
+    if (AArch64::FPR32RegClass.contains(Reg))
+      return {loadFPImmediate(Reg, 32, Value)};
     if (AArch64::FPR64RegClass.contains(Reg))
       return {loadFPImmediate(Reg, 64, Value)};
     if (AArch64::FPR128RegClass.contains(Reg))
       return {loadFPImmediate(Reg, 128, Value)};
     if (AArch64::ZPRRegClass.contains(Reg))
       return {loadZPRImmediate(Reg, 128, Value)};
+    if (Reg == AArch64::FPCR)
+      return {loadFPCRImmediate(Reg, 32, Value)};
 
     errs() << "setRegTo is not implemented, results will be unreliable\n";
     return {};
