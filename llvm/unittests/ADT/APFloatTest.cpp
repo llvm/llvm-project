@@ -8168,4 +8168,10 @@ TEST(APFloatTest, Float4E2M1FNToFloat) {
   EXPECT_TRUE(SmallestDenorm.isDenormal());
   EXPECT_EQ(0x0.8p0, SmallestDenorm.convertToFloat());
 }
+
+TEST(APFloatTest, hasSignBitInMSB) {
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEsingle()));
+  EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
+}
+
 } // namespace
