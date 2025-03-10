@@ -281,8 +281,10 @@ follow the process outlined above.
 
 When upstreaming changes originally written by someone else:  
 
-* Ensure that the original author(s) are aware of and approve the upstreaming
-  of their code, and that they are comfortable with you leading the process.
+* Ensure that there are no obstacles to upstreaming the code. In some cases,
+  this simply means checking with the original author(s) to ensure they are
+  aware of and approve the upstreaming. In other cases, licensing
+  considerations may be more complex.
 * Properly attribute the original changes, e.g., by creating a commit with
   multiple authors ([GitHub guide](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors)).  
 * Invite the original author(s) to review the changes, and also include
