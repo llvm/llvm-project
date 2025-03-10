@@ -310,9 +310,9 @@ SPIR-V backend, along with their descriptions and argument details.
      - `[Type, 32-bit Integer, Metadata]`
      - Assigns one of two memory aliasing decorations (specified by the second argument) to instructions using original aliasing metadata node. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_assign_fpmaxerror_decoration`
-      - None
-      - `[Type, Metadata]`
-      - Assigns the maximum error decoration to floating-point instructions using the original metadata node. Not emitted directly but used to support SPIR-V representation in LLVM IR.
+     - None
+     - `[Type, Metadata]`
+     - Assigns the maximum error decoration to floating-point instructions using the original metadata node. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_track_constant`
      - Type
      - `[Type, Metadata]`
