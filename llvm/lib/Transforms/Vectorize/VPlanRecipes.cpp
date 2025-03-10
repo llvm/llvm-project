@@ -746,9 +746,10 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   case VPInstruction::BranchOnCount: {
     Type *ValTy = Ctx.Types.inferScalarType(getOperand(0));
 
-    // If the vector loop only executed once, ignore the cost.
+    // If the vector loop only executed once (VF == original trip count), ignore
+    // the cost of cmp.
     // TODO: We can remove this after hoist `unrollByUF` and
-    // `optimizeForVFandUF` which will should optimize BranchOnCount out.
+    // `optimizeForVFandUF` which will optimize BranchOnCount out.
     auto TC = dyn_cast_if_present<ConstantInt>(
         getParent()->getPlan()->getTripCount()->getUnderlyingValue());
     if (TC && VF.isFixed() && TC->getSExtValue() == VF.getFixedValue())
@@ -760,22 +761,19 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
                                       CmpInst::ICMP_EQ, Ctx.CostKind);
   }
   case VPInstruction::BranchOnCond: {
-    // BranchOnCond will generate `extractelement` when the condition is vector
-    // type.
-    VPValue *Op = getOperand(0);
-    VPRecipeBase *R = Op->getDefiningRecipe();
-    if (R &&
-        any_of(R->operands(), [&](VPValue *V) { return !R->usesScalars(V); }) &&
-        VF.isVector())
-      return Ctx.TTI.getVectorInstrCost(
-          Instruction::ExtractElement,
-          cast<VectorType>(
-              toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF)),
-          Ctx.CostKind, 0, nullptr, nullptr);
 
-    // Otherwise, BranchOnCond is free since the branch cost is already
+    // BranchOnCond is free since the branch cost is already
     // calculated by VPBB.
-    return 0;
+    if (vputils::onlyFirstLaneUsed(getOperand(0)))
+      return 0;
+
+    // Otherwise, BranchOnCond will generate `extractelement` to extract the
+    // condition from vector type.
+    return Ctx.TTI.getVectorInstrCost(
+        Instruction::ExtractElement,
+        cast<VectorType>(
+            toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF)),
+        Ctx.CostKind, 0, nullptr, nullptr);
   }
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
