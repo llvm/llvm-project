@@ -457,15 +457,15 @@ unsigned PPCTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
 unsigned PPCTTIImpl::getRegisterClassForType(bool Vector, Type *Ty) const {
   if (Vector)
     return ST->hasVSX() ? VSXRC : VRRC;
-  if (Ty && (Ty->getScalarType()->isFloatTy() ||
-                  Ty->getScalarType()->isDoubleTy()))
+  if (Ty &&
+      (Ty->getScalarType()->isFloatTy() || Ty->getScalarType()->isDoubleTy()))
     return ST->hasVSX() ? VSXRC : FPRRC;
   if (Ty && (Ty->getScalarType()->isFP128Ty() ||
-                  Ty->getScalarType()->isPPC_FP128Ty()))
+             Ty->getScalarType()->isPPC_FP128Ty()))
     return VRRC;
   if (Ty && Ty->getScalarType()->isHalfTy())
     return VSXRC;
-      return GPRRC;
+  return GPRRC;
 }
 
 const char* PPCTTIImpl::getRegisterClassName(unsigned ClassID) const {
@@ -693,8 +693,8 @@ InstructionCost PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
       return 0;
 
     return Cost;
-
-  } if (Val->getScalarType()->isIntegerTy()) {
+  }
+  if (Val->getScalarType()->isIntegerTy()) {
     unsigned EltSize = Val->getScalarSizeInBits();
     // Computing on 1 bit values requires extra mask or compare operations.
     unsigned MaskCostForOneBitSize = (VecMaskCost && EltSize == 1) ? 1 : 0;
@@ -959,7 +959,7 @@ bool PPCTTIImpl::isLSRCostLess(const TargetTransformInfo::LSRCost &C1,
                     C1.NumBaseAdds, C1.ScaleCost, C1.ImmCost, C1.SetupCost) <
            std::tie(C2.Insns, C2.NumRegs, C2.AddRecCost, C2.NumIVMuls,
                     C2.NumBaseAdds, C2.ScaleCost, C2.ImmCost, C2.SetupCost);
-      return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
+  return TargetTransformInfoImplBase::isLSRCostLess(C1, C2);
 }
 
 bool PPCTTIImpl::isNumRegsMajorCostOfLSR() {
