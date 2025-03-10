@@ -15,7 +15,7 @@ define void @test(i1 %b1, i1 %b2, i1 %b3, i1 %b4) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi i1 [ false, [[E]] ], [ true, [[C]] ]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[FLOW1:%.*]], label [[C]]
 ; CHECK:       Flow1:
-; CHECK-NEXT:    br i1 [[TMP1]], label [[D:%.*]], label [[F:%.*]]
+; CHECK-NEXT:    br i1 false, label [[D:%.*]], label [[F:%.*]]
 ; CHECK:       D:
 ; CHECK-NEXT:    br label [[F]]
 ; CHECK:       E:

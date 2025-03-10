@@ -69,13 +69,13 @@ define amdgpu_kernel void @loop_subregion_misordered(ptr addrspace(1) %arg0) #0 
 ; CHECK-NEXT:    [[TMP5:%.*]] = phi i1 [ [[CMP_END_ELSE_BLOCK:%.*]], [[END_ELSE_BLOCK]] ], [ true, [[FLOW2]] ]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[FLOW4:%.*]], label [[LOOP_HEADER]]
 ; CHECK:       Flow4:
-; CHECK-NEXT:    br i1 [[TMP7:%.*]], label [[BB64:%.*]], label [[RETURN:%.*]]
+; CHECK-NEXT:    br i1 false, label [[BB64:%.*]], label [[RETURN:%.*]]
 ; CHECK:       bb64:
 ; CHECK-NEXT:    call void asm sideeffect "s_nop 42", "~{memory}"() #[[ATTR0]]
 ; CHECK-NEXT:    br label [[RETURN]]
 ; CHECK:       Flow:
 ; CHECK-NEXT:    [[TMP6]] = phi i32 [ [[TMP0]], [[FLOW1]] ], [ undef, [[LOOP_HEADER]] ]
-; CHECK-NEXT:    [[TMP7]] = phi i1 [ [[TMP1]], [[FLOW1]] ], [ false, [[LOOP_HEADER]] ]
+; CHECK-NEXT:    [[TMP7:%.*]] = phi i1 [ [[TMP1]], [[FLOW1]] ], [ false, [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[TMP8]] = phi i1 [ [[TMP2]], [[FLOW1]] ], [ false, [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = phi i1 [ false, [[FLOW1]] ], [ true, [[LOOP_HEADER]] ]
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[BB18]], label [[FLOW2]]

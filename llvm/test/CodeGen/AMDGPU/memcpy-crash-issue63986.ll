@@ -72,34 +72,35 @@ define void @issue63986(i64 %0, i64 %idxprom) {
 ; CHECK-NEXT:    ; =>This Loop Header: Depth=1
 ; CHECK-NEXT:    ; Child Loop BB0_12 Depth 2
 ; CHECK-NEXT:    ; Child Loop BB0_16 Depth 2
-; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
+; CHECK-NEXT:    s_mov_b64 s[8:9], -1
+; CHECK-NEXT:    s_and_saveexec_b64 s[10:11], s[4:5]
 ; CHECK-NEXT:    s_cbranch_execz .LBB0_13
 ; CHECK-NEXT:  ; %bb.11: ; %loop-memcpy-expansion2.preheader
 ; CHECK-NEXT:    ; in Loop: Header=BB0_10 Depth=1
-; CHECK-NEXT:    s_mov_b64 s[10:11], 0
 ; CHECK-NEXT:    s_mov_b64 s[12:13], 0
+; CHECK-NEXT:    s_mov_b64 s[14:15], 0
 ; CHECK-NEXT:  .LBB0_12: ; %loop-memcpy-expansion2
 ; CHECK-NEXT:    ; Parent Loop BB0_10 Depth=1
 ; CHECK-NEXT:    ; => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    v_mov_b32_e32 v8, s12
-; CHECK-NEXT:    v_mov_b32_e32 v9, s13
+; CHECK-NEXT:    v_mov_b32_e32 v8, s14
+; CHECK-NEXT:    v_mov_b32_e32 v9, s15
 ; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
-; CHECK-NEXT:    v_mov_b32_e32 v13, s13
-; CHECK-NEXT:    v_add_co_u32_e32 v12, vcc, s12, v4
-; CHECK-NEXT:    s_add_u32 s12, s12, 16
+; CHECK-NEXT:    v_mov_b32_e32 v13, s15
+; CHECK-NEXT:    v_add_co_u32_e32 v12, vcc, s14, v4
+; CHECK-NEXT:    s_add_u32 s14, s14, 16
 ; CHECK-NEXT:    v_addc_co_u32_e32 v13, vcc, v5, v13, vcc
-; CHECK-NEXT:    s_addc_u32 s13, s13, 0
-; CHECK-NEXT:    v_cmp_ge_u64_e32 vcc, s[12:13], v[0:1]
-; CHECK-NEXT:    s_or_b64 s[10:11], vcc, s[10:11]
+; CHECK-NEXT:    s_addc_u32 s15, s15, 0
+; CHECK-NEXT:    v_cmp_ge_u64_e32 vcc, s[14:15], v[0:1]
+; CHECK-NEXT:    s_or_b64 s[12:13], vcc, s[12:13]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_store_dwordx4 v[12:13], v[8:11]
-; CHECK-NEXT:    s_andn2_b64 exec, exec, s[10:11]
+; CHECK-NEXT:    s_andn2_b64 exec, exec, s[12:13]
 ; CHECK-NEXT:    s_cbranch_execnz .LBB0_12
 ; CHECK-NEXT:  .LBB0_13: ; %Flow15
 ; CHECK-NEXT:    ; in Loop: Header=BB0_10 Depth=1
-; CHECK-NEXT:    s_or_b64 exec, exec, s[8:9]
-; CHECK-NEXT:    s_mov_b64 s[8:9], -1
-; CHECK-NEXT:    s_cbranch_execz .LBB0_9
+; CHECK-NEXT:    s_or_b64 exec, exec, s[10:11]
+; CHECK-NEXT:    s_and_b64 vcc, exec, s[8:9]
+; CHECK-NEXT:    s_cbranch_vccz .LBB0_9
 ; CHECK-NEXT:  ; %bb.14: ; %loop-memcpy-residual-header5
 ; CHECK-NEXT:    ; in Loop: Header=BB0_10 Depth=1
 ; CHECK-NEXT:    s_and_saveexec_b64 s[8:9], s[6:7]

@@ -48,7 +48,7 @@ define void @irreducible(i1 %PredEntry, i1 %PredB1, i1 %PredB2, i1 %PredB3, i1 %
 ; CHECK:       Flow:
 ; CHECK-NEXT:    [[TMP11]] = phi i1 [ [[TMP3]], [[FLOW2]] ], [ undef, [[B4]] ], [ undef, [[IRR_GUARD]] ]
 ; CHECK-NEXT:    [[TMP12]] = phi i1 [ [[TMP4]], [[FLOW2]] ], [ true, [[B4]] ], [ false, [[IRR_GUARD]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ false, [[FLOW2]] ], [ [[PREDB4:%.*]], [[B4]] ], [ true, [[IRR_GUARD]] ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi i1 [ [[TMP13]], [[FLOW2]] ], [ [[PREDB4:%.*]], [[B4]] ], [ true, [[IRR_GUARD]] ]
 ; CHECK-NEXT:    br i1 [[TMP13]], label [[IRR_GUARD1]], label [[FLOW2]]
 ; CHECK:       irr.guard1:
 ; CHECK-NEXT:    br i1 [[TMP12]], label [[B2]], label [[FLOW3]]
