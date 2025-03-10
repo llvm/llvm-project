@@ -259,6 +259,26 @@ Value *readX18AsPtr(CodeGenFunction &CGF) {
   return CGF.Builder.CreateIntToPtr(X18, CGF.Int8PtrTy);
 }
 
+llvm::Constant *CodeGenModule::getDeviceLibFunction(const FunctionDecl *FD,
+                                                    unsigned BuiltinID) {
+  GlobalDecl D(FD);
+  llvm::SmallString<64> Name;
+  if (getTarget().getTriple().isAMDGCN()) {
+    switch (BuiltinID) {
+    default: return nullptr;
+    case Builtin::BIlogb:
+    case Builtin::BI__builtin_logb:
+      Name = "__ocml_logb_f64";
+    }
+  }
+  if (Name.empty())
+    return nullptr;
+
+  llvm::FunctionType *Ty =
+    cast<llvm::FunctionType>(getTypes().ConvertType(FD->getType()));
+  return GetOrCreateLLVMFunction(Name, Ty, D, /*ForVTable*/false);
+}
+
 /// getBuiltinLibFunction - Given a builtin id for a function like
 /// "__builtin_fabsf", return a Function* for "fabsf".
 llvm::Constant *CodeGenModule::getBuiltinLibFunction(const FunctionDecl *FD,
@@ -6591,10 +6611,32 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   }
   }
 
+  // Some targets like GPUs do not support library call and must provide
+  // device overload implementation.
+  if (getTarget().getTriple().isAMDGCN())
+    // Emit library call to device-lib implementation
+    if (auto *DevLibFunc = CGM.getDeviceLibFunction(FD, BuiltinID))
+      return emitLibraryCall(*this, FD, E, DevLibFunc);
+
+  // These will be emitted as Intrinsic later.
+  auto NeedsDeviceOverloadToIntrin = [&](unsigned BuiltinID) {
+    if (getTarget().getTriple().isAMDGCN()) {
+      switch (BuiltinID) {
+      default:
+        return false;
+      case Builtin::BIscalbn:
+      case Builtin::BI__builtin_scalbn:
+        return true;
+      }
+    }
+    return false;
+  };
+
   // If this is an alias for a lib function (e.g. __builtin_sin), emit
   // the call using the normal call path, but using the unmangled
   // version of the function name.
-  if (getContext().BuiltinInfo.isLibFunction(BuiltinID))
+  if (!NeedsDeviceOverloadToIntrin(BuiltinID) &&
+      getContext().BuiltinInfo.isLibFunction(BuiltinID))
     return emitLibraryCall(*this, FD, E,
                            CGM.getBuiltinLibFunction(FD, BuiltinID));
 
@@ -20880,6 +20922,11 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_s_prefetch_data:
     return emitBuiltinWithOneOverloadedType<2>(
         *this, E, Intrinsic::amdgcn_s_prefetch_data);
+  case Builtin::BIscalbn:
+  case Builtin::BI__builtin_scalbn:
+    return emitBinaryExpMaybeConstrainedFPBuiltin(
+        *this, E, Intrinsic::ldexp,
+        Intrinsic::experimental_constrained_ldexp);
   default:
     return nullptr;
   }

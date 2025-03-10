@@ -1234,6 +1234,11 @@ public:
       llvm::FunctionType *FnType = nullptr, bool DontDefer = false,
       ForDefinition_t IsForDefinition = NotForDefinition);
 
+  /// Given a builtin id for a function, return a Function* for device
+  /// overload implementation.
+  llvm::Constant *getDeviceLibFunction(const FunctionDecl *FD,
+                                       unsigned BuiltinID);
+
   /// Given a builtin id for a function like "__builtin_fabsf", return a
   /// Function* for "fabsf".
   llvm::Constant *getBuiltinLibFunction(const FunctionDecl *FD,
