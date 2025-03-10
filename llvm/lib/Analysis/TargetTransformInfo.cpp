@@ -1384,6 +1384,10 @@ bool TargetTransformInfo::preferInLoopReduction(unsigned Opcode,
   return TTIImpl->preferInLoopReduction(Opcode, Ty);
 }
 
+bool TargetTransformInfo::preferAlternateOpcodeVectorization() const {
+  return TTIImpl->preferAlternateOpcodeVectorization();
+}
+
 bool TargetTransformInfo::preferPredicatedReductionSelect(unsigned Opcode,
                                                           Type *Ty) const {
   return TTIImpl->preferPredicatedReductionSelect(Opcode, Ty);
