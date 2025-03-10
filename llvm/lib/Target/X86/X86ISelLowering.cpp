@@ -45486,6 +45486,11 @@ static SDValue combineBitcast(SDNode *N, SelectionDAG &DAG,
   if (SDValue V = combineCastedMaskArithmetic(N, DAG, DCI, Subtarget))
     return V;
 
+  // bitcast(v1Ty insert_vector_elt(X, Y, 0)) --> Y
+  if (N0.getOpcode() == ISD::INSERT_VECTOR_ELT && SrcVT.getScalarType() == VT &&
+      SrcVT.getVectorNumElements() == 1)
+    return N0.getOperand(1);
+
   // Convert a bitcasted integer logic operation that has one bitcasted
   // floating-point operand into a floating-point logic operation. This may
   // create a load of a constant, but that is cheaper than materializing the
@@ -58044,7 +58049,9 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::PSHUFLW:
     case X86ISD::PSHUFD:
       if (!IsSplat && NumOps == 2 && VT.is256BitVector() &&
-          Subtarget.hasInt256() && Op0.getOperand(1) == Ops[1].getOperand(1)) {
+          Subtarget.hasInt256() && llvm::all_of(Ops, [Op0](SDValue Op) {
+            return Op.getOperand(1) == Op0.getOperand(1);
+          })) {
         return DAG.getNode(Op0.getOpcode(), DL, VT,
                            ConcatSubOperand(VT, Ops, 0), Op0.getOperand(1));
       }

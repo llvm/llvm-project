@@ -99,7 +99,7 @@
 .global _start, _start_end
 _start:
   call36 a          # relaxed. la64: bl
-  tail36 $t0, a@plt # relaxed. la64: b
+  tail36 $t0, a     # relaxed. la64: b
 .balign 16
   call36 bar        # PLT call36 can be relaxed. la64: bl
   tail36 $t0, bar   # PLT tail36 can be relaxed. la64: bl
@@ -110,16 +110,16 @@ a:
 _start_end:
 
 .section .mid,"ax",@progbits
-  call36 _start@plt         # relaxed. la64: bl
-  tail36 $t0, _start@plt    # relaxed. la64: b
+  call36 _start         # relaxed. la64: bl
+  tail36 $t0, _start    # relaxed. la64: b
 
 .section .mid2,"ax",@progbits
-  call36 _start@plt         # relaxed. la64: bl
-  tail36 $t0, _start@plt    # relaxed. la64: b
+  call36 _start         # relaxed. la64: bl
+  tail36 $t0, _start    # relaxed. la64: b
 
 .section .high,"ax",@progbits
-  call36 _start@plt         # exceed range, not relaxed
-  tail36 $t0,_start@plt     # exceed range, not relaxed
+  call36 _start         # exceed range, not relaxed
+  tail36 $t0, _start    # exceed range, not relaxed
 
 #--- b.s
 .globl bar

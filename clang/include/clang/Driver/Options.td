@@ -876,7 +876,7 @@ def Wa_COMMA : CommaJoined<["-"], "Wa,">,
   MetaVarName<"<arg>">;
 def warning_suppression_mappings_EQ : Joined<["--"],
   "warning-suppression-mappings=">, Group<Diag_Group>,
-  HelpText<"File containing diagnostic suppresion mappings. See user manual "
+  HelpText<"File containing diagnostic suppression mappings. See user manual "
   "for file format.">, Visibility<[ClangOption, CC1Option]>;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option, FlangOption]>;
@@ -941,7 +941,7 @@ def Xarch__
   target matches the specified architecture. This can be used with the target
   CPU, triple architecture, or offloading host and device. It is most useful
   for separating behavior undesirable on one of the targets when combining many
-  compilation jobs, as is commong with offloading. For example, -Xarch_x86_64,
+  compilation jobs, as is common with offloading. For example, -Xarch_x86_64,
   -Xarch_gfx90a, and -Xarch_device are all valid selectors. -Xarch_device will
   forward the argument to the offloading device while -Xarch_host will target
   the host system, which can be used to suppress incompatible GPU arguments.}]>,
@@ -1678,7 +1678,7 @@ def fsample_profile_use_profi : Flag<["-"], "fsample-profile-use-profi">,
     HelpText<"Use profi to infer block and edge counts">,
     DocBrief<[{Infer block and edge counts. If the profiles have errors or missing
                blocks caused by sampling, profile inference (profi) can convert
-               basic block counts to branch probabilites to fix them by extended
+               basic block counts to branch probabilities to fix them by extended
                and re-engineered classic MCMF (min-cost max-flow) approach.}]>;
 def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">, Group<f_Group>;
 def fno_auto_profile : Flag<["-"], "fno-auto-profile">, Group<f_Group>,

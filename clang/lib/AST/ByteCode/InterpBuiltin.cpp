@@ -1881,11 +1881,21 @@ static bool interp__builtin_memcmp(InterpState &S, CodePtr OpPC,
   bool IsWide =
       (ID == Builtin::BIwmemcmp || ID == Builtin::BI__builtin_wmemcmp);
 
+  auto getElemType = [](const Pointer &P) -> QualType {
+    const Descriptor *Desc = P.getFieldDesc();
+    QualType T = Desc->getType();
+    if (T->isPointerType())
+      return T->getAs<PointerType>()->getPointeeType();
+    if (Desc->isArray())
+      return Desc->getElemQualType();
+    return T;
+  };
+
   const ASTContext &ASTCtx = S.getASTContext();
   // FIXME: This is an arbitrary limitation the current constant interpreter
   // had. We could remove this.
-  if (!IsWide && (!isOneByteCharacterType(PtrA.getType()) ||
-                  !isOneByteCharacterType(PtrB.getType()))) {
+  if (!IsWide && (!isOneByteCharacterType(getElemType(PtrA)) ||
+                  !isOneByteCharacterType(getElemType(PtrB)))) {
     S.FFDiag(S.Current->getSource(OpPC),
              diag::note_constexpr_memcmp_unsupported)
         << ASTCtx.BuiltinInfo.getQuotedName(ID) << PtrA.getType()

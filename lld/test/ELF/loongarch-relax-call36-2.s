@@ -48,8 +48,8 @@ _start:
 
 .section .mid,"ax",@progbits
 .balign 16
-  call36 ifunc@plt      # enable ifunc, not relaxed
-  tail36 $t0, ifunc@plt # enable ifunc, not relaxed
+  call36 ifunc      # enable ifunc, not relaxed
+  tail36 $t0, ifunc # enable ifunc, not relaxed
 
 .type ifunc, @gnu_indirect_function
 ifunc:

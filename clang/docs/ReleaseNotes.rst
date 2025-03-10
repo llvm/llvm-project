@@ -294,6 +294,7 @@ Bug Fixes to C++ Support
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
 - Clang now uses the parameter location for abbreviated function templates in ``extern "C"``. (#GH46386)
+- Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 
 Improvements to C++ diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
