@@ -30,8 +30,6 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: LV: Found an estimated cost of {{[0-9]+}} for VF 1 For instruction:   br
 ; CHECK: Cost of 1 for VF 2: induction instruction   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
 ; CHECK: Cost of 1 for VF 2: induction instruction   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-; CHECK: Cost of 1 for VF 2: exit condition instruction   %exitcond = icmp eq i32 %lftr.wideiv, %n
-; CHECK: Cost of 0 for VF 2: exit condition instruction   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%3> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 1 for VF 2: WIDEN-REDUCTION-PHI ir<%sum.013> = phi ir<0>, vp<%8>
 ; CHECK: Cost of 0 for VF 2: vp<%4> = SCALAR-STEPS vp<%3>, ir<1>
@@ -49,7 +47,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: Cost of 0 for VF 2: WIDEN-CAST vp<%7> = trunc ir<%add5> to i8
 ; CHECK: Cost of 0 for VF 2: WIDEN-CAST vp<%8> = zext vp<%7> to i32
 ; CHECK: Cost of 0 for VF 2: EMIT vp<%index.next> = add nuw vp<%3>, vp<%0>
-; CHECK: Cost of 0 for VF 2: EMIT branch-on-count vp<%index.next>, vp<%1>
+; CHECK: Cost of 1 for VF 2: EMIT branch-on-count vp<%index.next>, vp<%1>
 ;
 define i8 @reduction_i8(ptr nocapture readonly %a, ptr nocapture readonly %b, i32 %n) {
 entry:
