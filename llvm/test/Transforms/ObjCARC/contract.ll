@@ -32,7 +32,7 @@ entry:
   ret void
 }
 
-; Merge objc_retain and objc_autorelease into objc_retainAutorelease.
+; Merge objc_retain and objc_autorelease into objc_retainAutoreleasedReturnValue.
 
 ; CHECK-LABEL: define void @test2(
 ; CHECK: tail call ptr @llvm.objc.retainAutorelease(ptr %x) [[NUW:#[0-9]+]]
@@ -238,3 +238,34 @@ declare void @llvm.objc.clang.arc.use(...) nounwind
 declare void @llvm.objc.clang.arc.noop.use(...) nounwind
 
 ; CHECK: attributes [[NUW]] = { nounwind }
+
+; CHECK-LABEL: define void @test_aggressive_retain_opt(
+; CHECK: tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %p)
+; CHECK: }
+define void @test_aggressive_retain_opt() {
+  %p = call ptr @returner()
+  %unrelated = call ptr @returner()
+  tail call ptr @llvm.objc.retain(ptr %unrelated) nounwind
+  tail call ptr @llvm.objc.retain(ptr %p) nounwind
+  ret void
+}
+
+; CHECK-LABEL: define void @test_aggressive_retain_opt_alias(
+; CHECK: tail call ptr @llvm.objc.retain(ptr %p)
+; CHECK: }
+define void @test_aggressive_retain_opt_alias(ptr %p, ptr %q) {
+  store ptr %p, ptr %q
+  tail call ptr @llvm.objc.retain(ptr %p) nounwind
+  ret void
+}
+
+; CHECK-LABEL: define void @test_aggressive_retain_opt_no_alias(
+; CHECK: tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %p)
+; CHECK: }
+define void @test_aggressive_retain_opt_no_alias() {
+  %p = call ptr @returner()
+  %q = alloca ptr
+  store ptr null, ptr %q
+  tail call ptr @llvm.objc.retain(ptr %p) nounwind
+  ret void
+}
