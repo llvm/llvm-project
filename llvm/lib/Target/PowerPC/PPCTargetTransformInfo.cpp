@@ -112,8 +112,8 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
       // Check that all of the elements are integer constants or undefs.
       bool AllEltsOk = true;
-      for (unsigned i = 0; i != 16; ++i) {
-        Constant *Elt = Mask->getAggregateElement(i);
+      for (unsigned I = 0; I != 16; ++I) {
+        Constant *Elt = Mask->getAggregateElement(I);
         if (!Elt || !(isa<ConstantInt>(Elt) || isa<UndefValue>(Elt))) {
           AllEltsOk = false;
           break;
@@ -132,11 +132,11 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         Value *ExtractedElts[32];
         memset(ExtractedElts, 0, sizeof(ExtractedElts));
 
-        for (unsigned i = 0; i != 16; ++i) {
-          if (isa<UndefValue>(Mask->getAggregateElement(i)))
+        for (unsigned I = 0; I != 16; ++I) {
+          if (isa<UndefValue>(Mask->getAggregateElement(I)))
             continue;
           unsigned Idx =
-              cast<ConstantInt>(Mask->getAggregateElement(i))->getZExtValue();
+              cast<ConstantInt>(Mask->getAggregateElement(I))->getZExtValue();
           Idx &= 31; // Match the hardware behavior.
           if (DL.isLittleEndian())
             Idx = 31 - Idx;
@@ -150,7 +150,7 @@ PPCTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
 
           // Insert this value into the result vector.
           Result = IC.Builder.CreateInsertElement(Result, ExtractedElts[Idx],
-                                                  IC.Builder.getInt32(i));
+                                                  IC.Builder.getInt32(I));
         }
         return CastInst::Create(Instruction::BitCast, Result, II.getType());
       }
@@ -846,9 +846,9 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // stores, loads are expanded using the vector-load + permutation sequence,
   // which is much less expensive).
   if (Src->isVectorTy() && Opcode == Instruction::Store)
-    for (int i = 0, e = cast<FixedVectorType>(Src)->getNumElements(); i < e;
-         ++i)
-      Cost += getVectorInstrCost(Instruction::ExtractElement, Src, CostKind, i,
+    for (int I = 0, E = cast<FixedVectorType>(Src)->getNumElements(); I < E;
+         ++I)
+      Cost += getVectorInstrCost(Instruction::ExtractElement, Src, CostKind, I,
                                  nullptr, nullptr);
 
   return Cost;
