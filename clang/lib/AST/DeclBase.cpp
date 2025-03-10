@@ -1000,6 +1000,7 @@ unsigned Decl::getIdentifierNamespaceForKind(Kind DeclKind) {
     case RequiresExprBody:
     case ImplicitConceptSpecialization:
     case OpenACCDeclare:
+    case OpenACCRoutine:
       // Never looked up by name.
       return 0;
   }
