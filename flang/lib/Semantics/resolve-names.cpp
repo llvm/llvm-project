@@ -1496,7 +1496,7 @@ public:
 
   bool Pre(const parser::OmpDeclareVariantDirective &x) {
     AddOmpSourceRange(x.source);
-    auto FindSymbolOrError = [](parser::Name &procName) {
+    auto FindSymbolOrError = [&](const parser::Name &procName) {
       auto *symbol{FindSymbol(NonDerivedTypeScope(), procName)};
       if (!symbol) {
         context().Say(procName.source,
