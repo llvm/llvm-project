@@ -100,6 +100,12 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char`` to an
   ``ostream``.
 
+- New :doc:`readability-use-span-first-last
+  <clang-tidy/checks/readability/use-span-first-last>` check.
+
+  Suggests using ``std::span::first()`` and ``std::span::last()`` member functions instead of
+  equivalent ``subspan()``.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
