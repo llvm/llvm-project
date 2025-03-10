@@ -17990,7 +17990,7 @@ static bool isPotentiallyConstantEvaluatedContext(Sema &SemaRef) {
 static bool funcHasParameterSizeMangling(Sema &S, FunctionDecl *FD) {
   // These manglings are only applicable for targets whcih use Microsoft
   // mangling scheme for C.
-  if (!S.Context.getTargetInfo().shouldUseMicrosoftCCforMangling())
+  if (!S.Context.getTargetInfo().shouldUseMicrosoftCCforC())
     return false;
 
   // If this is C++ and this isn't an extern "C" function, parameters do not

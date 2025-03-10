@@ -4770,7 +4770,7 @@ ExprResult Sema::CheckOSLogFormatStringArg(Expr *Arg) {
 /// target and calling convention.
 static bool checkVAStartABI(Sema &S, unsigned BuiltinID, Expr *Fn) {
   const TargetInfo &TI = S.Context.getTargetInfo();
-  bool IsMicrosoftCC = TI.shouldUseMicrosoftCCforMangling();
+  bool IsMicrosoftCC = TI.shouldUseMicrosoftCCforC();
   const llvm::Triple &TT = TI.getTriple();
   bool IsX64 = TT.getArch() == llvm::Triple::x86_64;
   bool IsAArch64 = (TT.getArch() == llvm::Triple::aarch64 ||

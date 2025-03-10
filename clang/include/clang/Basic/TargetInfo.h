@@ -253,7 +253,7 @@ protected:
   const char *MCountName;
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
-  bool UseMicrosoftManglingForC = false;
+  bool UseMicrosoftCCForC = false;
   const LangASMap *AddrSpaceMap;
 
   mutable StringRef PlatformName;
@@ -1345,10 +1345,8 @@ public:
     return TheCXXABI;
   }
 
-  /// Should the Microsoft mangling scheme be used for C Calling Convention.
-  bool shouldUseMicrosoftCCforMangling() const {
-    return UseMicrosoftManglingForC;
-  }
+  /// Should the Microsoft C Calling Convention be used.
+  bool shouldUseMicrosoftCCforC() const { return UseMicrosoftCCForC; }
 
   /// Target the specified CPU.
   ///
