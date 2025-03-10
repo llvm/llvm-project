@@ -37,6 +37,7 @@ createSPIRVInstructionSelector(const SPIRVTargetMachine &TM,
 
 void initializeSPIRVModuleAnalysisPass(PassRegistry &);
 void initializeSPIRVConvergenceRegionAnalysisWrapperPassPass(PassRegistry &);
+void initializeSPIRVTypeAnalysisWrapperPassPass(PassRegistry &);
 void initializeSPIRVPreLegalizerPass(PassRegistry &);
 void initializeSPIRVPreLegalizerCombinerPass(PassRegistry &);
 void initializeSPIRVPostLegalizerPass(PassRegistry &);
