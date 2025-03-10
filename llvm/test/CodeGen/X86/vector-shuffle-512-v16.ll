@@ -990,15 +990,15 @@ bb:
   ret void
 }
 
-define <16 x i32> @gen_VPSHUFD_AVX512_0(<16 x i32> %a) {
-; AVX512F-LABEL: gen_VPSHUFD_AVX512_0:
+define <16 x i32> @shuffle_v16f32_00_18_02_18_4_22_06_22_08_26_10_26_12_30_14_30(<16 x i32> %a) {
+; AVX512F-LABEL: shuffle_v16f32_00_18_02_18_4_22_06_22_08_26_10_26_12_30_14_30:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
 ; AVX512F-NEXT:    retq
 ;
-; AVX512BW-LABEL: gen_VPSHUFD_AVX512_0:
+; AVX512BW-LABEL: shuffle_v16f32_00_18_02_18_4_22_06_22_08_26_10_26_12_30_14_30:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; AVX512BW-NEXT:    kmovd %eax, %k1
@@ -1008,15 +1008,15 @@ define <16 x i32> @gen_VPSHUFD_AVX512_0(<16 x i32> %a) {
   ret <16 x i32> %res
 }
 
-define <16 x i32> @gen_VPSHUFD_AVX512_1(<16 x i32> %a) {
-; AVX512F-LABEL: gen_VPSHUFD_AVX512_1:
+define <16 x i32> @shuffle_v16f32_16_02_18_02_20_06_22_06_24_10_26_10_28_14_30_14(<16 x i32> %a) {
+; AVX512F-LABEL: shuffle_v16f32_16_02_18_02_20_06_22_06_24_10_26_10_28_14_30_14:
 ; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; AVX512F-NEXT:    kmovw %eax, %k1
 ; AVX512F-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
 ; AVX512F-NEXT:    retq
 ;
-; AVX512BW-LABEL: gen_VPSHUFD_AVX512_1:
+; AVX512BW-LABEL: shuffle_v16f32_16_02_18_02_20_06_22_06_24_10_26_10_28_14_30_14:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; AVX512BW-NEXT:    kmovd %eax, %k1
