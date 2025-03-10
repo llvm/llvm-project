@@ -220,8 +220,13 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $q0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<4 x s32>) = COPY $q1
-    ; CHECK-NEXT: [[SHUF:%[0-9]+]]:_(<4 x s32>) = G_SHUFFLE_VECTOR [[COPY]](<4 x s32>), [[COPY1]], shufflemask(3, 4, 1, 5)
-    ; CHECK-NEXT: $q0 = COPY [[SHUF]](<4 x s32>)
+    ; CHECK-NEXT: [[ZIP1_:%[0-9]+]]:_(<4 x s32>) = G_ZIP1 [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 3
+    ; CHECK-NEXT: [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[COPY]](<4 x s32>), [[C]](s64)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: [[IVEC:%[0-9]+]]:_(<4 x s32>) = G_INSERT_VECTOR_ELT [[ZIP1_]], [[EVEC]](s32), [[C1]](s64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<4 x s32>) = COPY [[IVEC]](<4 x s32>)
+    ; CHECK-NEXT: $q0 = COPY [[COPY2]](<4 x s32>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<4 x s32>) = COPY $q0
     %1:_(<4 x s32>) = COPY $q1
