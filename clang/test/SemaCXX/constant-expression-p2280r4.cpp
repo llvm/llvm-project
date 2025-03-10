@@ -1,4 +1,7 @@
-// RUN: %clang_cc1 -std=c++23 -verify %s
+// RUN: %clang_cc1 -std=c++23 -verify=expected,nointerpreter %s
+// (Run line removed for backport to 20.x, so we don't need to backport
+// fexperimental-new-constant-interpreter changes)
+// UN: %clang_cc1 -std=c++23 -verify %s -fexperimental-new-constant-interpreter
 
 using size_t = decltype(sizeof(0));
 
@@ -38,8 +41,8 @@ void splash(Swim& swam) {
   static_assert(swam.phelps() == 28);     // ok
   static_assert((&swam)->phelps() == 28); // ok
   Swim* pswam = &swam;                    // expected-note {{declared here}}
-  static_assert(pswam->phelps() == 28);   // expected-error {{static assertion expression is not an integral constant expression}}
-                                          // expected-note@-1 {{read of non-constexpr variable 'pswam' is not allowed in a constant expression}}
+  static_assert(pswam->phelps() == 28);   // expected-error {{static assertion expression is not an integral constant expression}} \
+                                          // expected-note {{read of non-constexpr variable 'pswam' is not allowed in a constant expression}}
   static_assert(how_many(swam) == 28);    // ok
   static_assert(Swim().lochte() == 12);   // ok
   static_assert(swam.lochte() == 12);     // expected-error {{static assertion expression is not an integral constant expression}}
@@ -152,4 +155,27 @@ int g() {
     array<5> arr {};
     static_assert(f(arr) == 5);
 }
+}
+
+namespace GH128409 {
+  int &ff();
+  int &x = ff(); // nointerpreter-note {{declared here}}
+  constinit int &z = x; // expected-error {{variable does not have a constant initializer}} \
+                        // expected-note {{required by 'constinit' specifier here}} \
+                        // nointerpreter-note {{initializer of 'x' is not a constant expression}}
+}
+
+namespace GH129845 {
+  int &ff();
+  int &x = ff(); // nointerpreter-note {{declared here}}
+  struct A { int& x; };
+  constexpr A g = {x}; // expected-error {{constexpr variable 'g' must be initialized by a constant expression}} \
+                       // nointerpreter-note {{initializer of 'x' is not a constant expression}}
+  const A* gg = &g;
+}
+
+namespace extern_reference_used_as_unknown {
+  extern int &x;
+  int y;
+  constinit int& g = (x,y); // expected-warning {{left operand of comma operator has no effect}}
 }
