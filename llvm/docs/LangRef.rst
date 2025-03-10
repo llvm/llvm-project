@@ -24104,10 +24104,12 @@ Examples:
       %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i64(i64 %elem0, i64 429)
       %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %3, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
 
-.. _int_experimental_get_noalias_lane_mask:
 
-'``llvm.experimental.get.noalias.lane.mask.*``' Intrinsics
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. _int_experimental_loop_dependence_war_mask:
+.. _int_experimental_loop_dependence_raw_mask:
+
+'``llvm.experimental.loop.dependence.raw.mask.*``' and '``llvm.experimental.loop.dependence.war.mask.*``' Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
 """""""
@@ -24115,10 +24117,10 @@ This is an overloaded intrinsic.
 
 ::
 
-      declare <4 x i1> @llvm.experimental.get.noalias.lane.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
-      declare <8 x i1> @llvm.experimental.get.noalias.lane.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
-      declare <16 x i1> @llvm.experimental.get.noalias.lane.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
-      declare <vscale x 16 x i1> @llvm.experimental.get.noalias.lane.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize, i1 immarg %writeAfterRead)
+      declare <4 x i1> @llvm.experimental.loop.dependence.raw.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <8 x i1> @llvm.experimental.loop.dependence.war.mask.v8i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <16 x i1> @llvm.experimental.loop.dependence.raw.mask.v16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
+      declare <vscale x 16 x i1> @llvm.experimental.loop.dependence.war.mask.nxv16i1(ptr %ptrA, ptr %ptrB, i64 immarg %elementSize)
 
 
 Overview:
@@ -24131,8 +24133,8 @@ across one vector loop iteration.
 Arguments:
 """"""""""
 
-The first two arguments have the same scalar integer type.
-The final two are immediates and the result is a vector with the i1 element type.
+The first two arguments have the same pointer type.
+The final one is an immediate and the result is a vector with the i1 element type.
 
 Semantics:
 """"""""""
@@ -24140,8 +24142,7 @@ Semantics:
 ``%elementSize`` is the size of the accessed elements in bytes.
 The intrinsic will return poison if ``%ptrA`` and ``%ptrB`` are within
 VF * ``%elementSize`` of each other and ``%ptrA`` + VF * ``%elementSize`` wraps.
-In other cases when ``%writeAfterRead`` is true, the
-'``llvm.experimental.get.noalias.lane.mask.*``' intrinsics are semantically
+The '``llvm.experimental.loop.dependence.war.mask*``' intrinsics are semantically
 equivalent to:
 
 ::
@@ -24149,9 +24150,8 @@ equivalent to:
       %diff = (%ptrB - %ptrA) / %elementSize
       %m[i] = (icmp ult i, %diff) || (%diff <= 0)
 
-When the return value is not poison and ``%writeAfterRead`` is false, the
-'``llvm.experimental.get.noalias.lane.mask.*``' intrinsics are semantically
-equivalent to:
+When the return value is not poison the '``llvm.experimental.loop.dependence.raw.mask.*``'
+intrinsics are semantically equivalent to:
 
 ::
 
@@ -24160,15 +24160,10 @@ equivalent to:
 
 where ``%m`` is a vector (mask) of active/inactive lanes with its elements
 indexed by ``i`` (i = 0 to VF - 1),  and ``%ptrA``, ``%ptrB`` are the two ptr
-arguments to ``llvm.experimental.get.noalias.lane.mask.*`` and ``%elementSize``
-is the first immediate argument. The ``%writeAfterRead`` argument is expected
-to be true if ``%ptrB`` is stored to after ``%ptrA`` is read from, otherwise
-it is false for a read after write.
-The above is equivalent to:
-
-::
-
-      %m = @llvm.experimental.get.noalias.lane.mask(%ptrA, %ptrB, %elementSize, %writeAfterRead)
+arguments to ``llvm.experimental.loop.dependence.{raw,war}.mask.*`` and ``%elementSize``
+is the first immediate argument. The ``war`` variant is expected to be used when
+``%ptrB`` is stored to after ``%ptrA`` is read from, otherwise the ``raw`` variant is
+expected to be used.
 
 This can, for example, be emitted by the loop vectorizer in which case
 ``%ptrA`` is a pointer that is read from within the loop, and ``%ptrB`` is a
@@ -24186,10 +24181,10 @@ Examples:
 
 .. code-block:: llvm
 
-      %noalias.lane.mask = call <4 x i1> @llvm.experimental.get.noalias.lane.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4, i1 1)
-      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrA, i32 4, <4 x i1> %noalias.lane.mask, <4 x i32> poison)
+      %loop.dependence.mask = call <4 x i1> @llvm.experimental.loop.dependence.war.mask.v4i1(ptr %ptrA, ptr %ptrB, i64 4)
+      %vecA = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(ptr %ptrA, i32 4, <4 x i1> %loop.dependence.mask, <4 x i32> poison)
       [...]
-      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrB, i32 4, <4 x i1> %noalias.lane.mask)
+      call @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %vecA, ptr %ptrB, i32 4, <4 x i1> %loop.dependence.mask)
 
 .. _int_experimental_vp_splice:
 
