@@ -47,6 +47,7 @@ public:
   std::vector<const NamedDecl *>
   lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
                       llvm::function_ref<bool(const NamedDecl *ND)> Filter);
+  TagDecl *resolveTypeToTagDecl(QualType T);
 
 private:
   ASTContext &Ctx;
@@ -71,11 +72,6 @@ private:
   // `E`.
   QualType resolveExprToType(const Expr *E);
   std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E);
-
-  // Helper function for HeuristicResolver::resolveDependentMember()
-  // which takes a possibly-dependent type `T` and heuristically
-  // resolves it to a TagDecl in which we can try name lookup.
-  TagDecl *resolveTypeToTagDecl(const Type *T);
 
   // Helper function for simplifying a type.
   // `Type` is the type to simplify.
@@ -132,8 +128,10 @@ TemplateName getReferencedTemplateName(const Type *T) {
 // Helper function for HeuristicResolver::resolveDependentMember()
 // which takes a possibly-dependent type `T` and heuristically
 // resolves it to a CXXRecordDecl in which we can try name lookup.
-TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(const Type *T) {
-  assert(T);
+TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
+  const Type *T = QT.getTypePtrOrNull();
+  if (!T)
+    return nullptr;
 
   // Unwrap type sugar such as type aliases.
   T = T->getCanonicalTypeInternal().getTypePtr();
@@ -315,8 +313,7 @@ HeuristicResolverImpl::resolveTypeOfCallExpr(const CallExpr *CE) {
   if (const auto *FnTypePtr = CalleeType->getAs<PointerType>())
     CalleeType = FnTypePtr->getPointeeType();
   if (const FunctionType *FnType = CalleeType->getAs<FunctionType>()) {
-    if (const auto *D =
-            resolveTypeToTagDecl(FnType->getReturnType().getTypePtr())) {
+    if (const auto *D = resolveTypeToTagDecl(FnType->getReturnType())) {
       return {D};
     }
   }
@@ -427,7 +424,7 @@ bool findOrdinaryMember(const CXXRecordDecl *RD, CXXBasePath &Path,
 bool HeuristicResolverImpl::findOrdinaryMemberInDependentClasses(
     const CXXBaseSpecifier *Specifier, CXXBasePath &Path,
     DeclarationName Name) {
-  TagDecl *TD = resolveTypeToTagDecl(Specifier->getType().getTypePtr());
+  TagDecl *TD = resolveTypeToTagDecl(Specifier->getType());
   if (const auto *RD = dyn_cast_if_present<CXXRecordDecl>(TD)) {
     return findOrdinaryMember(RD, Path, Name);
   }
@@ -470,10 +467,7 @@ std::vector<const NamedDecl *> HeuristicResolverImpl::lookupDependentName(
 std::vector<const NamedDecl *> HeuristicResolverImpl::resolveDependentMember(
     QualType QT, DeclarationName Name,
     llvm::function_ref<bool(const NamedDecl *ND)> Filter) {
-  const Type *T = QT.getTypePtrOrNull();
-  if (!T)
-    return {};
-  TagDecl *TD = resolveTypeToTagDecl(T);
+  TagDecl *TD = resolveTypeToTagDecl(QT);
   if (!TD)
     return {};
   if (auto *ED = dyn_cast<EnumDecl>(TD)) {
@@ -539,6 +533,9 @@ std::vector<const NamedDecl *> HeuristicResolver::lookupDependentName(
 }
 const QualType HeuristicResolver::getPointeeType(QualType T) const {
   return HeuristicResolverImpl(Ctx).getPointeeType(T);
+}
+TagDecl *HeuristicResolver::resolveTypeToTagDecl(QualType T) const {
+  return HeuristicResolverImpl(Ctx).resolveTypeToTagDecl(T);
 }
 
 } // namespace clang
