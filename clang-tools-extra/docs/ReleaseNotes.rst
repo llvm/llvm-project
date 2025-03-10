@@ -165,6 +165,11 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-std-format>` check to support replacing
   member function calls too.
 
+- Improved :doc:`modernize-use-std-numbers
+  <clang-tidy/checks/modernize/use-std-numbers>` check to support math functions
+  of different precisions.
+
+
 - Improved :doc:`misc-unconventional-assign-operator
   <clang-tidy/checks/misc/unconventional-assign-operator>` check to avoid
   false positive for C++23 deducing this.
