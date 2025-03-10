@@ -52,12 +52,11 @@ static cl::opt<bool> PrintSlotIndexes(
     cl::init(true), cl::Hidden);
 
 MachineBasicBlock::MachineBasicBlock(MachineFunction &MF, const BasicBlock *B)
-    : BB(B), Number(-1), xParent(&MF),
-      TRI(MF.getSubtarget().getRegisterInfo()) {
+    : BB(B), Number(-1), xParent(&MF) {
   Insts.Parent = this;
   if (B)
     IrrLoopHeaderWeight = B->getIrrLoopHeaderWeight();
-  LiveInRegUnits.resize(TRI->getNumRegUnits());
+  LiveInRegUnits.resize(MF.getSubtarget().getRegisterInfo()->getNumRegUnits());
 }
 
 MachineBasicBlock::~MachineBasicBlock() = default;
@@ -601,6 +600,7 @@ void MachineBasicBlock::printAsOperand(raw_ostream &OS,
 }
 
 void MachineBasicBlock::addLiveInRegUnit(MCRegister Reg, LaneBitmask LaneMask) {
+  const TargetRegisterInfo *TRI = getParent()->getSubtarget().getRegisterInfo();
   for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
     LaneBitmask UnitMask = (*Unit).second;
     if ((UnitMask & LaneMask).any())
@@ -630,11 +630,13 @@ MachineBasicBlock::removeLiveIn(MachineBasicBlock::livein_iterator I) {
 }
 
 void MachineBasicBlock::removeLiveInRegUnit(MCRegister Reg) {
+  const TargetRegisterInfo *TRI = getParent()->getSubtarget().getRegisterInfo();
   for (MCRegUnit Unit : TRI->regunits(Reg))
     LiveInRegUnits.reset(Unit);
 }
 
 bool MachineBasicBlock::isLiveIn(MCRegister Reg, LaneBitmask LaneMask) const {
+  const TargetRegisterInfo *TRI = getParent()->getSubtarget().getRegisterInfo();
   for (MCRegUnitMaskIterator Unit(Reg, TRI); Unit.isValid(); ++Unit) {
     LaneBitmask UnitMask = (*Unit).second;
     if ((UnitMask & LaneMask).any() && LiveInRegUnits.test((*Unit).first))
