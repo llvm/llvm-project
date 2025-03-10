@@ -67,6 +67,11 @@ struct alignas(32) S32 {};
 struct alignas(64) S64 {};
 struct alignas(128) S128 {};
 
+struct alignas(1) X {
+  unsigned char d[2];
+};
+static_assert(sizeof(X) == 2 * alignof(X));
+
 bool tests() {
   char c;
   int i;
@@ -93,6 +98,9 @@ bool tests() {
   check(&s32);
   check(&s64);
   check(&s128);
+
+  X x;
+  check(&x);
 
   return true;
 }
