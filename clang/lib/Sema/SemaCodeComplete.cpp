@@ -6749,6 +6749,55 @@ void SemaCodeCompletion::CodeCompleteInitializer(Scope *S, Decl *D) {
   CodeCompleteExpression(S, Data);
 }
 
+void SemaCodeCompletion::CodeCompleteIfConst(Scope *S,
+                                             bool AfterExclaim) const {
+  ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(),
+                        CodeCompletionContext::CCC_Other);
+  CodeCompletionBuilder Builder(Results.getAllocator(),
+                                Results.getCodeCompletionTUInfo());
+  Results.EnterNewScope();
+  if (getLangOpts().CPlusPlus17) {
+    if (!AfterExclaim) {
+      if (Results.includeCodePatterns()) {
+        Builder.AddTypedTextChunk("constexpr");
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftParen);
+        Builder.AddPlaceholderChunk("condition");
+        Builder.AddChunk(CodeCompletionString::CK_RightParen);
+        Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddPlaceholderChunk("statements");
+        Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+        Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+        Results.AddResult({Builder.TakeString()});
+      } else {
+        Results.AddResult({"constexpr"});
+      }
+    }
+  }
+  if (getLangOpts().CPlusPlus23) {
+    if (Results.includeCodePatterns()) {
+      Builder.AddTypedTextChunk("consteval");
+      Builder.AddChunk(CodeCompletionString::CK_HorizontalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_LeftBrace);
+      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+      Builder.AddPlaceholderChunk("statements");
+      Builder.AddChunk(CodeCompletionString::CK_VerticalSpace);
+      Builder.AddChunk(CodeCompletionString::CK_RightBrace);
+      Results.AddResult({Builder.TakeString()});
+    } else {
+      Results.AddResult({"consteval"});
+    }
+  }
+  Results.ExitScope();
+
+  HandleCodeCompleteResults(&SemaRef, CodeCompleter,
+                            Results.getCompletionContext(), Results.data(),
+                            Results.size());
+}
+
 void SemaCodeCompletion::CodeCompleteAfterIf(Scope *S, bool IsBracedThen) {
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
