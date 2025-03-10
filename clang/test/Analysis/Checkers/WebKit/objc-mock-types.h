@@ -6,6 +6,7 @@
 #define CF_BRIDGED_MUTABLE_TYPE(T) __attribute__((objc_bridge_mutable(T)))
 typedef CF_BRIDGED_TYPE(id) void * CFTypeRef;
 typedef signed char BOOL;
+typedef unsigned char Boolean;
 typedef signed long CFIndex;
 typedef unsigned long NSUInteger;
 typedef const struct CF_BRIDGED_TYPE(id) __CFAllocator * CFAllocatorRef;
@@ -13,12 +14,43 @@ typedef const struct CF_BRIDGED_TYPE(NSString) __CFString * CFStringRef;
 typedef const struct CF_BRIDGED_TYPE(NSArray) __CFArray * CFArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(NSMutableArray) __CFArray * CFMutableArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(CFRunLoopRef) __CFRunLoop * CFRunLoopRef;
+#define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
+#define CF_CONSUMED __attribute__((cf_consumed))
+#define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
 extern const CFAllocatorRef kCFAllocatorDefault;
 typedef struct _NSZone NSZone;
 CFMutableArrayRef CFArrayCreateMutable(CFAllocatorRef allocator, CFIndex capacity);
 extern void CFArrayAppendValue(CFMutableArrayRef theArray, const void *value);
 CFArrayRef CFArrayCreate(CFAllocatorRef allocator, const void **values, CFIndex numValues);
 CFIndex CFArrayGetCount(CFArrayRef theArray);
+
+typedef const struct CF_BRIDGED_TYPE(NSDictionary) __CFDictionary * CFDictionaryRef;
+typedef struct CF_BRIDGED_MUTABLE_TYPE(NSMutableDictionary) __CFDictionary * CFMutableDictionaryRef;
+
+CFDictionaryRef CFDictionaryCreate(CFAllocatorRef allocator, const void **keys, const void **values, CFIndex numValues);
+CFDictionaryRef CFDictionaryCreateCopy(CFAllocatorRef allocator, CFDictionaryRef theDict);
+CFDictionaryRef CFDictionaryCreateMutableCopy(CFAllocatorRef allocator, CFIndex capacity, CFDictionaryRef theDict);
+CFIndex CFDictionaryGetCount(CFDictionaryRef theDict);
+Boolean CFDictionaryContainsKey(CFDictionaryRef theDict, const void *key);
+Boolean CFDictionaryContainsValue(CFDictionaryRef theDict, const void *value);
+const void *CFDictionaryGetValue(CFDictionaryRef theDict, const void *key);
+void CFDictionaryAddValue(CFMutableDictionaryRef theDict, const void *key, const void *value);
+void CFDictionarySetValue(CFMutableDictionaryRef theDict, const void *key, const void *value);
+void CFDictionaryReplaceValue(CFMutableDictionaryRef theDict, const void *key, const void *value);
+void CFDictionaryRemoveValue(CFMutableDictionaryRef theDict, const void *key);
+
+typedef struct CF_BRIDGED_TYPE(id) __SecTask * SecTaskRef;
+SecTaskRef SecTaskCreateFromSelf(CFAllocatorRef allocator);
+
+typedef struct CF_BRIDGED_TYPE(id) CF_BRIDGED_MUTABLE_TYPE(IOSurface) __IOSurface * IOSurfaceRef;
+IOSurfaceRef IOSurfaceCreate(CFDictionaryRef properties);
+
+typedef struct CF_BRIDGED_TYPE(id) __CVBuffer *CVBufferRef;
+typedef CVBufferRef CVImageBufferRef;
+typedef CVImageBufferRef CVPixelBufferRef;
+typedef signed int CVReturn;
+CVReturn CVPixelBufferCreateWithIOSurface(CFAllocatorRef allocator, IOSurfaceRef surface, CFDictionaryRef pixelBufferAttributes, CVPixelBufferRef * pixelBufferOut);
+
 CFRunLoopRef CFRunLoopGetCurrent(void);
 CFRunLoopRef CFRunLoopGetMain(void);
 extern CFTypeRef CFRetain(CFTypeRef cf);
