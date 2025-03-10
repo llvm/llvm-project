@@ -12375,9 +12375,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("vector<a *_Nonnull> v;");
   verifyFormat("vector<a *_Nullable> v;");
   verifyFormat("vector<a *_Null_unspecified> v;");
-  verifyFormat("vector<a *absl_nonnull> v;");
-  verifyFormat("vector<a *absl_nullable> v;");
-  verifyFormat("vector<a *absl_nullability_unknown> v;");
+  verifyGoogleFormat("vector<a *absl_nonnull> v;");
+  verifyGoogleFormat("vector<a *absl_nullable> v;");
+  verifyGoogleFormat("vector<a *absl_nullability_unknown> v;");
   verifyFormat("vector<a *__ptr32> v;");
   verifyFormat("vector<a *__ptr64> v;");
   verifyFormat("vector<a *__capability> v;");
@@ -12521,9 +12521,10 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("MACRO(A *_Nonnull a);");
   verifyIndependentOfContext("MACRO(A *_Nullable a);");
   verifyIndependentOfContext("MACRO(A *_Null_unspecified a);");
-  verifyIndependentOfContext("MACRO(A *absl_nonnull a);");
-  verifyIndependentOfContext("MACRO(A *absl_nullable a);");
-  verifyIndependentOfContext("MACRO(A *absl_nullability_unknown a);");
+  verifyIndependentOfContext("MACRO(A *absl_nonnull a);", getGoogleStyle());
+  verifyIndependentOfContext("MACRO(A *absl_nullable a);", getGoogleStyle());
+  verifyIndependentOfContext("MACRO(A *absl_nullability_unknown a);",
+                             getGoogleStyle());
   verifyIndependentOfContext("MACRO(A *__attribute__((foo)) a);");
   verifyIndependentOfContext("MACRO(A *__attribute((foo)) a);");
   verifyIndependentOfContext("MACRO(A *[[clang::attr]] a);");
@@ -12680,14 +12681,14 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("SomeType *__unused s{InitValue};", CustomAttrs);
   verifyFormat("SomeType s __unused(InitValue);", CustomAttrs);
   verifyFormat("SomeType s __unused{InitValue};", CustomAttrs);
-  verifyFormat("SomeType *absl_nonnull s(InitValue);", CustomAttrs);
-  verifyFormat("SomeType *absl_nonnull s{InitValue};", CustomAttrs);
-  verifyFormat("SomeType *absl_nullable s(InitValue);", CustomAttrs);
-  verifyFormat("SomeType *absl_nullable s{InitValue};", CustomAttrs);
-  verifyFormat("SomeType *absl_nullability_unknown s(InitValue);", CustomAttrs);
-  verifyFormat("SomeType *absl_nullability_unknown s{InitValue};", CustomAttrs);
   verifyFormat("SomeType *__capability s(InitValue);", CustomAttrs);
   verifyFormat("SomeType *__capability s{InitValue};", CustomAttrs);
+  verifyGoogleFormat("SomeType *absl_nonnull s(InitValue);");
+  verifyGoogleFormat("SomeType *absl_nonnull s{InitValue};");
+  verifyGoogleFormat("SomeType *absl_nullable s(InitValue);");
+  verifyGoogleFormat("SomeType *absl_nullable s{InitValue};");
+  verifyGoogleFormat("SomeType *absl_nullability_unknown s(InitValue);");
+  verifyGoogleFormat("SomeType *absl_nullability_unknown s{InitValue};");
 }
 
 TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
@@ -12699,9 +12700,9 @@ TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
   verifyFormat("x = (foo *_Nonnull)*v;");
   verifyFormat("x = (foo *_Nullable)*v;");
   verifyFormat("x = (foo *_Null_unspecified)*v;");
-  verifyFormat("x = (foo *absl_nonnull)*v;");
-  verifyFormat("x = (foo *absl_nullable)*v;");
-  verifyFormat("x = (foo *absl_nullability_unknown)*v;");
+  verifyGoogleFormat("x = (foo *absl_nonnull)*v;");
+  verifyGoogleFormat("x = (foo *absl_nullable)*v;");
+  verifyGoogleFormat("x = (foo *absl_nullability_unknown)*v;");
   verifyFormat("x = (foo *[[clang::attr]])*v;");
   verifyFormat("x = (foo *[[clang::attr(\"foo\")]])*v;");
   verifyFormat("x = (foo *__ptr32)*v;");
@@ -12715,8 +12716,7 @@ TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
   LongPointerLeft.PointerAlignment = FormatStyle::PAS_Left;
   StringRef AllQualifiers =
       "const volatile restrict __attribute__((foo)) _Nonnull _Null_unspecified "
-      "_Nullable absl_nonnull absl_nullable absl_nullability_unknown "
-      "[[clang::attr]] __ptr32 __ptr64 __capability";
+      "_Nullable [[clang::attr]] __ptr32 __ptr64 __capability";
   verifyFormat(("x = (foo *" + AllQualifiers + ")*v;").str(), LongPointerRight);
   verifyFormat(("x = (foo* " + AllQualifiers + ")*v;").str(), LongPointerLeft);
 
@@ -12734,6 +12734,21 @@ TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
                CustomQualifier);
   verifyFormat(("x = (foo *" + AllQualifiers + " __my_qualifier)&v;").str(),
                CustomQualifier);
+
+  // Check additional attribute macros in Google style:
+  FormatStyle LongPointerRightGoogle = getGoogleStyleWithColumns(999);
+  FormatStyle LongPointerLeftGoogle = getGoogleStyleWithColumns(999);
+  LongPointerLeftGoogle.PointerAlignment = FormatStyle::PAS_Left;
+  Twine AllQualifiersPlusGoogle = AllQualifiers +
+      " absl_nonnull absl_nullable absl_nullability_unknown";
+  verifyFormat(("x = (foo *" + AllQualifiersPlusGoogle + ")*v;").str(),
+               LongPointerRightGoogle);
+  verifyFormat(("x = (foo* " + AllQualifiersPlusGoogle + ")*v;").str(),
+               LongPointerLeftGoogle);
+  verifyFormat(("x = (foo *" + AllQualifiersPlusGoogle + ")&v;").str(),
+               LongPointerRightGoogle);
+  verifyFormat(("x = (foo* " + AllQualifiersPlusGoogle + ")&v;").str(),
+               LongPointerLeftGoogle);
 
   // Check that unknown identifiers result in binary operator parsing:
   verifyFormat("x = (foo * __unknown_qualifier) * v;");
