@@ -762,8 +762,8 @@ SDValue R600TargetLowering::LowerImplicitParameter(SelectionDAG &DAG, EVT VT,
                                                    const SDLoc &DL,
                                                    unsigned DwordOffset) const {
   unsigned ByteOffset = DwordOffset * 4;
-  PointerType * PtrType = PointerType::get(VT.getTypeForEVT(*DAG.getContext()),
-                                      AMDGPUAS::PARAM_I_ADDRESS);
+  PointerType *PtrType =
+      PointerType::get(*DAG.getContext(), AMDGPUAS::PARAM_I_ADDRESS);
 
   // We shouldn't be using an offset wider than 16-bits for implicit parameters.
   assert(isInt<16>(ByteOffset));
@@ -919,7 +919,7 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
     HWTrue = DAG.getConstantFP(1.0f, DL, CompareVT);
     HWFalse = DAG.getConstantFP(0.0f, DL, CompareVT);
   } else if (CompareVT == MVT::i32) {
-    HWTrue = DAG.getConstant(-1, DL, CompareVT);
+    HWTrue = DAG.getAllOnesConstant(DL, CompareVT);
     HWFalse = DAG.getConstant(0, DL, CompareVT);
   }
   else {
@@ -949,7 +949,7 @@ SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
   unsigned DestAS = ASC->getDestAddressSpace();
 
   if (isNullConstant(Op.getOperand(0)) && SrcAS == AMDGPUAS::FLAT_ADDRESS)
-    return DAG.getConstant(TM.getNullPointerValue(DestAS), SL, VT);
+    return DAG.getSignedConstant(TM.getNullPointerValue(DestAS), SL, VT);
 
   return Op;
 }
@@ -1647,16 +1647,18 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
   BuildVector = CompactSwizzlableVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = Swz[i]->getAsZExtVal();
-    if (SwizzleRemap.contains(Idx))
-      Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
+    auto It = SwizzleRemap.find(Idx);
+    if (It != SwizzleRemap.end())
+      Swz[i] = DAG.getConstant(It->second, DL, MVT::i32);
   }
 
   SwizzleRemap.clear();
   BuildVector = ReorganizeVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = Swz[i]->getAsZExtVal();
-    if (SwizzleRemap.contains(Idx))
-      Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
+    auto It = SwizzleRemap.find(Idx);
+    if (It != SwizzleRemap.end())
+      Swz[i] = DAG.getConstant(It->second, DL, MVT::i32);
   }
 
   return BuildVector;
@@ -1748,11 +1750,11 @@ SDValue R600TargetLowering::PerformDAGCombine(SDNode *N,
     }
 
     return DAG.getNode(ISD::SELECT_CC, DL, N->getValueType(0),
-                           SelectCC.getOperand(0), // LHS
-                           SelectCC.getOperand(1), // RHS
-                           DAG.getConstant(-1, DL, MVT::i32), // True
-                           DAG.getConstant(0, DL, MVT::i32),  // False
-                           SelectCC.getOperand(4)); // CC
+                       SelectCC.getOperand(0),               // LHS
+                       SelectCC.getOperand(1),               // RHS
+                       DAG.getAllOnesConstant(DL, MVT::i32), // True
+                       DAG.getConstant(0, DL, MVT::i32),     // False
+                       SelectCC.getOperand(4));              // CC
   }
 
   // insert_vector_elt (build_vector elt0, ... , eltN), NewEltIdx, idx

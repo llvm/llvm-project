@@ -20,7 +20,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Instrumentation.h"
-#include <fstream>
 #include <mutex>
 #include <sstream>
 
@@ -70,7 +69,7 @@ public:
     std::string SymbolName = INSTR_PROF_ORDERFILE_BUFFER_NAME_STR;
     OrderFileBuffer = new GlobalVariable(M, BufferTy, false, GlobalValue::LinkOnceODRLinkage,
                            Constant::getNullValue(BufferTy), SymbolName);
-    Triple TT = Triple(M.getTargetTriple());
+    const Triple &TT = M.getTargetTriple();
     OrderFileBuffer->setSection(
         getInstrProfSectionName(IPSK_orderfile, TT.getObjectFormat()));
 

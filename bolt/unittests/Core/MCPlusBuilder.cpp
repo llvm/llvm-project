@@ -37,12 +37,15 @@ struct MCPlusBuilderTester : public testing::TestWithParam<Triple::ArchType> {
 
 protected:
   void initalizeLLVM() {
-    llvm::InitializeAllTargetInfos();
-    llvm::InitializeAllTargetMCs();
-    llvm::InitializeAllAsmParsers();
-    llvm::InitializeAllDisassemblers();
-    llvm::InitializeAllTargets();
-    llvm::InitializeAllAsmPrinters();
+#define BOLT_TARGET(target)                                                    \
+  LLVMInitialize##target##TargetInfo();                                        \
+  LLVMInitialize##target##TargetMC();                                          \
+  LLVMInitialize##target##AsmParser();                                         \
+  LLVMInitialize##target##Disassembler();                                      \
+  LLVMInitialize##target##Target();                                            \
+  LLVMInitialize##target##AsmPrinter();
+
+#include "bolt/Core/TargetConfig.def"
   }
 
   void prepareElf() {
@@ -58,7 +61,8 @@ protected:
   void initializeBolt() {
     Relocation::Arch = ObjFile->makeTriple().getArch();
     BC = cantFail(BinaryContext::createBinaryContext(
-        ObjFile->makeTriple(), ObjFile->getFileName(), nullptr, true,
+        ObjFile->makeTriple(), std::make_shared<orc::SymbolStringPool>(),
+        ObjFile->getFileName(), nullptr, true,
         DWARFContext::create(*ObjFile.get()), {llvm::outs(), llvm::errs()}));
     ASSERT_FALSE(!BC);
     BC->initializeTarget(std::unique_ptr<MCPlusBuilder>(
@@ -90,14 +94,15 @@ INSTANTIATE_TEST_SUITE_P(AArch64, MCPlusBuilderTester,
                          ::testing::Values(Triple::aarch64));
 
 TEST_P(MCPlusBuilderTester, AliasX0) {
-  uint64_t AliasesX0[] = {AArch64::W0, AArch64::X0, AArch64::W0_W1,
+  uint64_t AliasesX0[] = {AArch64::W0,    AArch64::W0_HI,
+                          AArch64::X0,    AArch64::W0_W1,
                           AArch64::X0_X1, AArch64::X0_X1_X2_X3_X4_X5_X6_X7};
   size_t AliasesX0Count = sizeof(AliasesX0) / sizeof(*AliasesX0);
   testRegAliases(Triple::aarch64, AArch64::X0, AliasesX0, AliasesX0Count);
 }
 
 TEST_P(MCPlusBuilderTester, AliasSmallerX0) {
-  uint64_t AliasesX0[] = {AArch64::W0, AArch64::X0};
+  uint64_t AliasesX0[] = {AArch64::W0, AArch64::W0_HI, AArch64::X0};
   size_t AliasesX0Count = sizeof(AliasesX0) / sizeof(*AliasesX0);
   testRegAliases(Triple::aarch64, AArch64::X0, AliasesX0, AliasesX0Count, true);
 }

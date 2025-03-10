@@ -102,6 +102,12 @@ DebugTranslation::getMDTupleOrNull(ArrayRef<DINodeAttr> elements) {
     return nullptr;
   SmallVector<llvm::Metadata *> llvmElements = llvm::to_vector(
       llvm::map_range(elements, [&](DINodeAttr attr) -> llvm::Metadata * {
+        if (DIAnnotationAttr annAttr = dyn_cast<DIAnnotationAttr>(attr)) {
+          llvm::Metadata *ops[2] = {
+              llvm::MDString::get(llvmCtx, annAttr.getName()),
+              llvm::MDString::get(llvmCtx, annAttr.getValue())};
+          return llvm::MDNode::get(llvmCtx, ops);
+        }
         return translate(attr);
       }));
   return llvm::MDNode::get(llvmCtx, llvmElements);
@@ -145,7 +151,7 @@ DebugTranslation::translateTemporaryImpl(DICompositeTypeAttr attr) {
       attr.getAlignInBits(),
       /*OffsetInBits=*/0,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
-      /*Elements=*/nullptr, /*RuntimeLang=*/0,
+      /*Elements=*/nullptr, /*RuntimeLang=*/0, /*EnumKind=*/std::nullopt,
       /*VTableHolder=*/nullptr);
 }
 
@@ -181,7 +187,7 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
       /*OffsetInBits=*/0,
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()),
       getMDTupleOrNull(attr.getElements()),
-      /*RuntimeLang=*/0, /*VTableHolder=*/nullptr,
+      /*RuntimeLang=*/0, /*EnumKind*/ std::nullopt, /*VTableHolder=*/nullptr,
       /*TemplateParams=*/nullptr, /*Identifier=*/nullptr,
       /*Discriminator=*/nullptr,
       getExpressionAttrOrNull(attr.getDataLocation()),
@@ -332,7 +338,8 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       /*ThisAdjustment=*/0, llvm::DINode::FlagZero,
       static_cast<llvm::DISubprogram::DISPFlags>(attr.getSubprogramFlags()),
       compileUnit, /*TemplateParams=*/nullptr, /*Declaration=*/nullptr,
-      getMDTupleOrNull(attr.getRetainedNodes()));
+      getMDTupleOrNull(attr.getRetainedNodes()), nullptr,
+      getMDTupleOrNull(attr.getAnnotations()));
   if (attr.getId())
     distinctAttrToNode.try_emplace(attr.getId(), node);
   return node;
@@ -390,6 +397,40 @@ llvm::DISubrange *DebugTranslation::translateImpl(DISubrangeAttr attr) {
                                getMetadataOrNull(attr.getStride()));
 }
 
+llvm::DICommonBlock *DebugTranslation::translateImpl(DICommonBlockAttr attr) {
+  return llvm::DICommonBlock::get(llvmCtx, translate(attr.getScope()),
+                                  translate(attr.getDecl()),
+                                  getMDStringOrNull(attr.getName()),
+                                  translate(attr.getFile()), attr.getLine());
+}
+
+llvm::DIGenericSubrange *
+DebugTranslation::translateImpl(DIGenericSubrangeAttr attr) {
+  auto getMetadataOrNull = [&](Attribute attr) -> llvm::Metadata * {
+    if (!attr)
+      return nullptr;
+
+    llvm::Metadata *metadata =
+        llvm::TypeSwitch<Attribute, llvm::Metadata *>(attr)
+            .Case([&](LLVM::DIExpressionAttr expr) {
+              return translateExpression(expr);
+            })
+            .Case([&](LLVM::DILocalVariableAttr local) {
+              return translate(local);
+            })
+            .Case<>([&](LLVM::DIGlobalVariableAttr global) {
+              return translate(global);
+            })
+            .Default([&](Attribute attr) { return nullptr; });
+    return metadata;
+  };
+  return llvm::DIGenericSubrange::get(llvmCtx,
+                                      getMetadataOrNull(attr.getCount()),
+                                      getMetadataOrNull(attr.getLowerBound()),
+                                      getMetadataOrNull(attr.getUpperBound()),
+                                      getMetadataOrNull(attr.getStride()));
+}
+
 llvm::DISubroutineType *
 DebugTranslation::translateImpl(DISubroutineTypeAttr attr) {
   // Concatenate the result and argument types into a single array.
@@ -421,8 +462,9 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
 
   if (!node)
     node = TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
-               .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
-                     DIDerivedTypeAttr, DIFileAttr, DIGlobalVariableAttr,
+               .Case<DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
+                     DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
+                     DIGenericSubrangeAttr, DIGlobalVariableAttr,
                      DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
                      DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
                      DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,

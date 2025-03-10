@@ -11,9 +11,10 @@
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (1000 + (-1 * %start))
-; DBG-NEXT: No successors
+; DBG-NEXT: Successor(s): vector.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
+; DBG-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<%start> + vp<[[VEC_TC]]> * ir<1>
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
@@ -72,7 +73,11 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:  Live-in vp<[[VEC_TC:%.+]]> = vector-trip-count
 ; DBG-NEXT:  Live-in ir<1000> = original trip-count
 ; DBG-EMPTY:
+; DBG-NEXT: ir-bb<entry>:
+; DBG-NEXT: Successor(s): vector.ph
+; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
+; DBG-NEXT:   vp<[[END:%.+]]> = DERIVED-IV ir<false> + vp<[[VEC_TC]]> * ir<true>
 ; DBG-NEXT: Successor(s): vector loop
 ; DBG-EMPTY:
 ; DBG-NEXT: <x1> vector loop: {
@@ -112,17 +117,25 @@ declare i32 @llvm.smin.i32(i32, i32)
 ; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; DBG-EMPTY:
-; DBG-NEXT: ir-bb<exit>:
+; DBG-NEXT: scalar.ph:
+; DBG-NEXT:  EMIT vp<[[RESUME1:%.+]]> = resume-phi vp<[[VEC_TC]]>, ir<0>
+; DBG-NEXT:  EMIT vp<[[RESUME2:%.+]]>.1 = resume-phi vp<[[END]]>, ir<false>
+; DBG-NEXT: Successor(s): ir-bb<loop.header>
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<loop.header>:
+; DBG-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ] (extra operand: vp<[[RESUME1]]> from scalar.ph)
+; DBG-NEXT:   IR   %d = phi i1 [ false, %entry ], [ %d.next, %loop.latch ] (extra operand: vp<[[RESUME2]]>.1 from scalar.ph)
+; DBG-NEXT:   IR   %d.next = xor i1 %d, true
 ; DBG-NEXT: No successors
 ; DBG-EMPTY:
-; DBG-NEXT: scalar.ph:
+; DBG-NEXT: ir-bb<exit>:
 ; DBG-NEXT: No successors
 ; DBG-NEXT: }
 
 define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-LABEL: @test_scalarize_with_branch_cond(
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %pred.store.continue5 ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %pred.store.continue4 ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[INDEX]] to i1
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i1 false, [[TMP0]]
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add i1 [[OFFSET_IDX]], false
@@ -136,15 +149,15 @@ define void @test_scalarize_with_branch_cond(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    store i32 [[TMP4]], ptr [[TMP1]], align 4
 ; CHECK-NEXT:    br label %pred.store.continue
 ; CHECK:       pred.store.continue:
-; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if4, label %pred.store.continue5
-; CHECK:       pred.store.if4:
+; CHECK-NEXT:    br i1 [[INDUCTION3]], label %pred.store.if3, label %pred.store.continue4
+; CHECK:       pred.store.if3:
 ; CHECK-NEXT:    [[INDUCTION5:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr %src, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[TMP6]], align 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr %dst, i64 [[INDUCTION5]]
 ; CHECK-NEXT:    store i32 [[TMP7]], ptr [[TMP2]], align 4
-; CHECK-NEXT:    br label %pred.store.continue5
-; CHECK:       pred.store.continue5:
+; CHECK-NEXT:    br label %pred.store.continue4
+; CHECK:       pred.store.continue4:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP9]], label %middle.block, label %vector.body
@@ -186,7 +199,7 @@ exit:
 ; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<entry>:
 ; DBG-NEXT:  EMIT vp<[[TC]]> = EXPAND SCEV (zext i32 (1 smax %n) to i64)
-; DBG-NEXT: No successors
+; DBG-NEXT: Successor(s): vector.ph
 ; DBG-EMPTY:
 ; DBG-NEXT: vector.ph:
 ; DBG-NEXT:   SCALAR-CAST vp<[[CAST:%.+]]> = trunc ir<1> to i32
@@ -212,14 +225,19 @@ exit:
 ; DBG-NEXT:   EMIT branch-on-cond vp<[[CMP]]>
 ; DBG-NEXT: Successor(s): ir-bb<exit>, scalar.ph
 ; DBG-EMPTY:
+; DBG-NEXT: scalar.ph:
+; DBG-NEXT:  EMIT vp<[[RESUME_IV:%.+]]> = resume-phi vp<[[VTC]]>, ir<0>
+; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
+; DBG-NEXT: Successor(s): ir-bb<loop>
+; DBG-EMPTY:
+; DBG-NEXT: ir-bb<loop>:
+; DBG-NEXT:   IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<[[RESUME_IV]]> from scalar.ph)
+; DBG-NEXT:   IR   %for = phi i32 [ 0, %entry ], [ %iv.trunc, %loop ] (extra operand: vp<[[RESUME_P]]> from scalar.ph)
+; DBG:        IR   %ec = icmp slt i32 %iv.next.trunc, %n
+; DBG-NEXT: No successors
+; DBG-EMPTY:
 ; DBG-NEXT: ir-bb<exit>:
 ; DBG-NEXT: No successors
-; DBG-EMPTY:
-; DBG-NEXT: scalar.ph:
-; DBG-NEXT:  EMIT vp<[[RESUME_P:%.*]]> = resume-phi vp<[[RESUME_1]]>, ir<0>
-; DBG-NEXT: No successors
-; DBG-EMPTY:
-; DBG-NEXT: Live-out i32 %for = vp<[[RESUME_P]]>
 ; DBG-NEXT: }
 
 define void @first_order_recurrence_using_induction(i32 %n, ptr %dst) {
@@ -299,7 +317,7 @@ define void @scalarize_ptrtoint(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    [[TMP11:%.*]] = inttoptr i64 [[TMP9]] to ptr
 ; CHECK-NEXT:    store ptr [[TMP11]], ptr %dst, align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT]], 1024
 ; CHECK-NEXT:    br i1 [[TMP12]], label %middle.block, label %vector.body
 
 entry:
@@ -314,7 +332,7 @@ loop:
   %cast.2 = inttoptr i64 %add to ptr
   store ptr %cast.2, ptr %dst, align 8
   %iv.next = add i64 %iv, 1
-  %ec = icmp eq i64 %iv.next, 0
+  %ec = icmp eq i64 %iv.next, 1024
   br i1 %ec, label %exit, label %loop
 
 exit:

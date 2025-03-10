@@ -6,7 +6,7 @@
 namespace IntOrEnum {
   const int k = 0;
   const int &p = k; // both-note {{declared here}}
-  template<int n> struct S {};
+  template<int n> struct S {}; // both-note {{template parameter is declared here}}
   S<p> s; // both-error {{not an integral constant expression}} \
           // both-note {{read of variable 'p' of non-integral, non-enumeration type 'const int &'}}
 }
@@ -54,3 +54,13 @@ _Static_assert(a == 0, ""); // both-error {{static assertion expression is not a
 struct SelfReference { SelfReference &r; };
 extern SelfReference self_reference_1;
 SelfReference self_reference_2 = {self_reference_1};
+
+struct PR65784s{
+  int *ptr;
+} const PR65784[] = {(int *)""};
+PR65784s PR65784f() { return *PR65784; }
+
+const int b = 1 / 0; // both-warning {{division by zero is undefined}} \
+                     // both-note {{declared here}}
+_Static_assert(b, ""); // both-error {{not an integral constant expression}} \
+                       // both-note {{initializer of 'b' is not a constant expression}}

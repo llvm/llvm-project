@@ -86,6 +86,10 @@ public:
              bool InParens = false) const;
   void dump() const;
 
+  /// Returns whether the given symbol is used anywhere in the expression or
+  /// subexpressions.
+  bool isSymbolUsedInExpression(const MCSymbol *Sym) const;
+
   /// @}
   /// \name Expression Evaluation
   /// @{
@@ -187,6 +191,11 @@ public:
 /// of the symbol as external.
 class MCSymbolRefExpr : public MCExpr {
 public:
+  // VariantKind isn't ideal for encoding relocation operators because:
+  // (a) other expressions, like MCConstantExpr (e.g., 4@l) and MCBinaryExpr
+  // (e.g., (a+1)@l), also need it; (b) semantics become unclear (e.g., folding
+  // expressions with @). MCTargetExpr, as used by AArch64 and RISC-V, offers a
+  // cleaner approach.
   enum VariantKind : uint16_t {
     VK_None,
     VK_Invalid,
@@ -248,15 +257,6 @@ public:
     VK_AVR_DIFF32,
     VK_AVR_PM,
 
-    VK_PPC_LO,              // symbol@l
-    VK_PPC_HI,              // symbol@h
-    VK_PPC_HA,              // symbol@ha
-    VK_PPC_HIGH,            // symbol@high
-    VK_PPC_HIGHA,           // symbol@higha
-    VK_PPC_HIGHER,          // symbol@higher
-    VK_PPC_HIGHERA,         // symbol@highera
-    VK_PPC_HIGHEST,         // symbol@highest
-    VK_PPC_HIGHESTA,        // symbol@highesta
     VK_PPC_GOT_LO,          // symbol@got@l
     VK_PPC_GOT_HI,          // symbol@got@h
     VK_PPC_GOT_HA,          // symbol@got@ha
@@ -299,7 +299,6 @@ public:
     VK_PPC_GOT_TLSGD_LO,    // symbol@got@tlsgd@l
     VK_PPC_GOT_TLSGD_HI,    // symbol@got@tlsgd@h
     VK_PPC_GOT_TLSGD_HA,    // symbol@got@tlsgd@ha
-    VK_PPC_TLSGD,           // symbol@tlsgd
     VK_PPC_AIX_TLSGD,       // symbol@gd
     VK_PPC_AIX_TLSGDM,      // symbol@m
     VK_PPC_AIX_TLSIE,       // symbol@ie
@@ -315,7 +314,6 @@ public:
     VK_PPC_GOT_TLSLD_PCREL, // symbol@got@tlsld@pcrel
     VK_PPC_GOT_TPREL_PCREL, // symbol@got@tprel@pcrel
     VK_PPC_TLS_PCREL,       // symbol@tls@pcrel
-    VK_PPC_TLSLD,           // symbol@tlsld
     VK_PPC_LOCAL,           // symbol@local
     VK_PPC_NOTOC,           // symbol@notoc
     VK_PPC_PCREL_OPT,       // .reloc expr, R_PPC64_PCREL_OPT, expr
@@ -391,14 +389,13 @@ public:
   /// \name Construction
   /// @{
 
-  static const MCSymbolRefExpr *create(const MCSymbol *Symbol, MCContext &Ctx) {
-    return MCSymbolRefExpr::create(Symbol, VK_None, Ctx);
+  static const MCSymbolRefExpr *create(const MCSymbol *Symbol, MCContext &Ctx,
+                                       SMLoc Loc = SMLoc()) {
+    return MCSymbolRefExpr::create(Symbol, VK_None, Ctx, Loc);
   }
 
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, VariantKind Kind,
                                        MCContext &Ctx, SMLoc Loc = SMLoc());
-  static const MCSymbolRefExpr *create(StringRef Name, VariantKind Kind,
-                                       MCContext &Ctx);
 
   /// @}
   /// \name Accessors
@@ -413,14 +410,6 @@ public:
   bool hasSubsectionsViaSymbols() const {
     return (getSubclassData() & HasSubsectionsViaSymbolsBit) != 0;
   }
-
-  /// @}
-  /// \name Static Utility Functions
-  /// @{
-
-  static StringRef getVariantKindName(VariantKind Kind);
-
-  static VariantKind getVariantKindForName(StringRef Name);
 
   /// @}
 
@@ -645,8 +634,10 @@ public:
   }
 };
 
-/// This is an extension point for target-specific MCExpr subclasses to
-/// implement.
+/// Extension point for target-specific MCExpr subclasses to implement.
+/// This can encode a relocation operator, serving as a replacement for
+/// MCSymbolRefExpr::VariantKind. Ideally, limit this to
+/// top-level use, avoiding its inclusion as a subexpression.
 ///
 /// NOTE: All subclasses are required to have trivial destructors because
 /// MCExprs are bump pointer allocated and not destructed.
@@ -663,6 +654,9 @@ public:
                                          const MCFixup *Fixup) const = 0;
   // allow Target Expressions to be checked for equality
   virtual bool isEqualTo(const MCExpr *x) const { return false; }
+  virtual bool isSymbolUsedInExpression(const MCSymbol *Sym) const {
+    return false;
+  }
   // This should be set when assigned expressions are not valid ".set"
   // expressions, e.g. registers, and must be inlined.
   virtual bool inlineAssignedExpr() const { return false; }

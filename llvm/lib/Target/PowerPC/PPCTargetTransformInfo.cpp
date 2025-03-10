@@ -11,13 +11,11 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/BasicTTIImpl.h"
-#include "llvm/CodeGen/CostTable.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Debug.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <optional>
@@ -800,13 +798,19 @@ InstructionCost PPCTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
   // PPCTargetLowering can't compute the cost appropriately. So here we
   // explicitly check this case. There are also corresponding store
   // instructions.
-  unsigned MemBytes = Src->getPrimitiveSizeInBits();
-  if (ST->hasVSX() && IsAltivecType &&
-      (MemBytes == 64 || (ST->hasP8Vector() && MemBytes == 32)))
-    return 1;
+  unsigned MemBits = Src->getPrimitiveSizeInBits();
+  unsigned SrcBytes = LT.second.getStoreSize();
+  if (ST->hasVSX() && IsAltivecType) {
+    if (MemBits == 64 || (ST->hasP8Vector() && MemBits == 32))
+      return 1;
+
+    // Use lfiwax/xxspltw
+    Align AlignBytes = Alignment ? *Alignment : Align(1);
+    if (Opcode == Instruction::Load && MemBits == 32 && AlignBytes < SrcBytes)
+      return 2;
+  }
 
   // Aligned loads and stores are easy.
-  unsigned SrcBytes = LT.second.getStoreSize();
   if (!SrcBytes || !Alignment || *Alignment >= SrcBytes)
     return Cost;
 
@@ -889,6 +893,20 @@ InstructionCost
 PPCTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                   TTI::TargetCostKind CostKind) {
   return BaseT::getIntrinsicInstrCost(ICA, CostKind);
+}
+
+bool PPCTTIImpl::areInlineCompatible(const Function *Caller,
+                                     const Function *Callee) const {
+  const TargetMachine &TM = getTLI()->getTargetMachine();
+
+  const FeatureBitset &CallerBits =
+      TM.getSubtargetImpl(*Caller)->getFeatureBits();
+  const FeatureBitset &CalleeBits =
+      TM.getSubtargetImpl(*Callee)->getFeatureBits();
+
+  // Check that targets features are exactly the same. We can revisit to see if
+  // we can improve this.
+  return CallerBits == CalleeBits;
 }
 
 bool PPCTTIImpl::areTypesABICompatible(const Function *Caller,

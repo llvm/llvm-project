@@ -586,7 +586,7 @@ define <3 x i5> @not_xor_to_or_not_vector(<3 x i5> %a, <3 x i5> %b, <3 x i5> %c)
 ; CHECK-LABEL: @not_xor_to_or_not_vector(
 ; CHECK-NEXT:    [[OR:%.*]] = or <3 x i5> [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <3 x i5> [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], splat (i5 -1)
 ; CHECK-NEXT:    [[NOT:%.*]] = or <3 x i5> [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i5> [[NOT]]
 ;
@@ -601,7 +601,7 @@ define <3 x i5> @not_xor_to_or_not_vector_poison(<3 x i5> %a, <3 x i5> %b, <3 x 
 ; CHECK-LABEL: @not_xor_to_or_not_vector_poison(
 ; CHECK-NEXT:    [[OR:%.*]] = or <3 x i5> [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <3 x i5> [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], splat (i5 -1)
 ; CHECK-NEXT:    [[NOT:%.*]] = or <3 x i5> [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i5> [[NOT]]
 ;
@@ -697,7 +697,7 @@ define <3 x i5> @xor_notand_to_or_not_vector(<3 x i5> %a, <3 x i5> %b, <3 x i5> 
 ; CHECK-LABEL: @xor_notand_to_or_not_vector(
 ; CHECK-NEXT:    [[OR:%.*]] = or <3 x i5> [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <3 x i5> [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], splat (i5 -1)
 ; CHECK-NEXT:    [[XOR:%.*]] = or <3 x i5> [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i5> [[XOR]]
 ;
@@ -712,7 +712,7 @@ define <3 x i5> @xor_notand_to_or_not_vector_poison(<3 x i5> %a, <3 x i5> %b, <3
 ; CHECK-LABEL: @xor_notand_to_or_not_vector_poison(
 ; CHECK-NEXT:    [[OR:%.*]] = or <3 x i5> [[B:%.*]], [[C:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <3 x i5> [[A:%.*]], [[C]]
-; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], <i5 -1, i5 -1, i5 -1>
+; CHECK-NEXT:    [[TMP1:%.*]] = xor <3 x i5> [[OR]], splat (i5 -1)
 ; CHECK-NEXT:    [[XOR:%.*]] = or <3 x i5> [[AND]], [[TMP1]]
 ; CHECK-NEXT:    ret <3 x i5> [[XOR]]
 ;

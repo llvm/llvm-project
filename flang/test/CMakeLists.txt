@@ -58,23 +58,31 @@ set(FLANG_TEST_PARAMS
   flang_site_config=${CMAKE_CURRENT_BINARY_DIR}/lit.site.cfg.py)
 
 set(FLANG_TEST_DEPENDS
-  flang-new
-  llvm-config
-  FileCheck
-  count
-  not
+  flang
   module_files
   fir-opt
   tco
   bbc
-  llvm-dis
-  llvm-objdump
-  llvm-readobj
-  split-file
-  FortranRuntime
   FortranDecimal
 )
-if (LLVM_ENABLE_PLUGINS AND NOT WIN32)
+if (NOT FLANG_STANDALONE_BUILD)
+  list(APPEND FLANG_TEST_DEPENDS
+    llvm-config
+    FileCheck
+    count
+    not
+    llvm-dis
+    llvm-objdump
+    llvm-readobj
+    split-file
+  )
+endif ()
+
+if (FLANG_INCLUDE_RUNTIME)
+  list(APPEND FLANG_TEST_DEPENDS flang_rt.runtime)
+endif ()
+
+if (LLVM_ENABLE_PLUGINS AND NOT WIN32 AND NOT FLANG_STANDALONE_BUILD)
   list(APPEND FLANG_TEST_DEPENDS Bye)
 endif()
 
@@ -120,3 +128,9 @@ if (DEFINED FLANG_TEST_TARGET_TRIPLE)
                         "to use FLANG_TEST_TARGET_TRIPLE.")
   endif()
 endif()
+
+# Compatibility targets.
+if (FLANG_INCLUDE_RUNTIME)
+  add_custom_target(check-flang-rt)
+  add_dependencies(check-flang-rt check-flang)
+endif ()

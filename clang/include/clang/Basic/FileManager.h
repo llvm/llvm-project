@@ -124,8 +124,8 @@ class FileManager : public RefCountedBase<FileManager> {
   std::unique_ptr<FileSystemStatCache> StatCache;
 
   std::error_code getStatValue(StringRef Path, llvm::vfs::Status &Status,
-                               bool isFile,
-                               std::unique_ptr<llvm::vfs::File> *F);
+                               bool isFile, std::unique_ptr<llvm::vfs::File> *F,
+                               bool IsText = true);
 
   /// Add all ancestors of the given path (pointing to either a file
   /// or a directory) as virtual directories.
@@ -230,7 +230,8 @@ public:
   /// the failure to find this file.
   llvm::Expected<FileEntryRef> getFileRef(StringRef Filename,
                                           bool OpenFile = false,
-                                          bool CacheFailure = true);
+                                          bool CacheFailure = true,
+                                          bool IsText = true);
 
   /// Get the FileEntryRef for stdin, returning an error if stdin cannot be
   /// read.
@@ -290,23 +291,28 @@ public:
 
   /// Open the specified file as a MemoryBuffer, returning a new
   /// MemoryBuffer if successful, otherwise returning null.
+  /// The IsText parameter controls whether the file should be opened as a text
+  /// or binary file, and should be set to false if the file contents should be
+  /// treated as binary.
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(FileEntryRef Entry, bool isVolatile = false,
                    bool RequiresNullTerminator = true,
-                   std::optional<int64_t> MaybeLimit = std::nullopt);
+                   std::optional<int64_t> MaybeLimit = std::nullopt,
+                   bool IsText = true);
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFile(StringRef Filename, bool isVolatile = false,
                    bool RequiresNullTerminator = true,
-                   std::optional<int64_t> MaybeLimit = std::nullopt) const {
+                   std::optional<int64_t> MaybeLimit = std::nullopt,
+                   bool IsText = true) const {
     return getBufferForFileImpl(Filename,
                                 /*FileSize=*/MaybeLimit.value_or(-1),
-                                isVolatile, RequiresNullTerminator);
+                                isVolatile, RequiresNullTerminator, IsText);
   }
 
 private:
   llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
   getBufferForFileImpl(StringRef Filename, int64_t FileSize, bool isVolatile,
-                       bool RequiresNullTerminator) const;
+                       bool RequiresNullTerminator, bool IsText) const;
 
   DirectoryEntry *&getRealDirEntry(const llvm::vfs::Status &Status);
 

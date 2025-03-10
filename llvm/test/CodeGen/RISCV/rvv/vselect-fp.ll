@@ -175,6 +175,7 @@ define <vscale x 8 x half> @vmerge_truelhs_nxv8f16_0(<vscale x 8 x half> %va, <v
 define <vscale x 8 x half> @vmerge_falselhs_nxv8f16_0(<vscale x 8 x half> %va, <vscale x 8 x half> %vb) {
 ; CHECK-LABEL: vmerge_falselhs_nxv8f16_0:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 1, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
   %vc = select <vscale x 8 x i1> zeroinitializer, <vscale x 8 x half> %va, <vscale x 8 x half> %vb
@@ -493,17 +494,16 @@ define <vscale x 8 x double> @vfmerge_nzv_nxv8f64(<vscale x 8 x double> %va, <vs
 define <vscale x 16 x double> @vselect_combine_regression(<vscale x 16 x i64> %va, <vscale x 16 x double> %vb) {
 ; CHECK-LABEL: vselect_combine_regression:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vmv8r.v v24, v16
 ; CHECK-NEXT:    csrr a1, vlenb
-; CHECK-NEXT:    slli a1, a1, 3
-; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, mu
+; CHECK-NEXT:    vmseq.vi v24, v16, 0
 ; CHECK-NEXT:    vmseq.vi v0, v8, 0
 ; CHECK-NEXT:    vmv.v.i v16, 0
-; CHECK-NEXT:    vmseq.vi v7, v24, 0
+; CHECK-NEXT:    slli a1, a1, 3
 ; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    add a1, a0, a1
 ; CHECK-NEXT:    vle64.v v8, (a0), v0.t
-; CHECK-NEXT:    vmv1r.v v0, v7
+; CHECK-NEXT:    vmv1r.v v0, v24
 ; CHECK-NEXT:    vle64.v v16, (a1), v0.t
 ; CHECK-NEXT:    ret
   %cond = icmp eq <vscale x 16 x i64> %va, zeroinitializer
@@ -516,11 +516,13 @@ define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vlm.v v24, (a0)
-; CHECK-NEXT:    vmand.mm v7, v0, v24
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    srli a2, a0, 3
+; CHECK-NEXT:    slli a0, a0, 3
+; CHECK-NEXT:    vmand.mm v7, v0, v24
 ; CHECK-NEXT:    vsetvli a3, zero, e8, mf4, ta, ma
 ; CHECK-NEXT:    vslidedown.vx v0, v7, a2
+; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    vsetvli a2, zero, e64, m8, ta, ma
 ; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    vmerge.vvm v16, v24, v16, v0
@@ -528,8 +530,6 @@ define void @vselect_legalize_regression(<vscale x 16 x double> %a, <vscale x 16
 ; CHECK-NEXT:    vmv.v.i v24, 0
 ; CHECK-NEXT:    vmerge.vvm v8, v24, v8, v0
 ; CHECK-NEXT:    vs8r.v v8, (a1)
-; CHECK-NEXT:    slli a0, a0, 3
-; CHECK-NEXT:    add a0, a1, a0
 ; CHECK-NEXT:    vs8r.v v16, (a0)
 ; CHECK-NEXT:    ret
   %cond = and <vscale x 16 x i1> %ma, %mb

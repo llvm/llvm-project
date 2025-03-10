@@ -30,7 +30,7 @@ static bool shouldIgnoreArgument(const Value *V) {
 static Value *replaceIntrinsic(Module &M, IntrinsicInst *II,
                                Intrinsic::ID NewIID,
                                ArrayRef<Type *> Tys = {}) {
-  Function *NewFunc = Intrinsic::getDeclaration(&M, NewIID, Tys);
+  Function *NewFunc = Intrinsic::getOrInsertDeclaration(&M, NewIID, Tys);
   II->setCalledFunction(NewFunc);
   return II;
 }
@@ -106,10 +106,7 @@ static bool callLooksLikeLoadStore(CallBase *CB, Value *&DataArg,
   if (!PtrArg) {
     unsigned AS = CB->getDataLayout().getAllocaAddrSpace();
 
-    PointerType *PtrTy =
-        PointerType::get(DataArg ? DataArg->getType()
-                                 : IntegerType::getInt32Ty(CB->getContext()),
-                         AS);
+    PointerType *PtrTy = PointerType::get(CB->getContext(), AS);
 
     PtrArg = ConstantPointerNull::get(PtrTy);
   }

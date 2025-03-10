@@ -10,6 +10,8 @@
 #include "llvm/SandboxIR/Argument.h"
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Function.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm::sandboxir {
 
@@ -300,6 +302,27 @@ template class GlobalWithNodeAPI<GlobalVariable, llvm::GlobalVariable,
 template class GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
                                  llvm::GlobalValue>;
 
+#ifdef _MSC_VER
+// These are needed for SandboxIRTest when building with LLVM_BUILD_LLVM_DYLIB
+template LLVM_EXPORT_TEMPLATE GlobalIFunc &
+GlobalWithNodeAPI<GlobalIFunc, llvm::GlobalIFunc, GlobalObject,
+                  llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalIFunc
+                                                                  &LLVMGV)
+    const;
+template LLVM_EXPORT_TEMPLATE Function &
+GlobalWithNodeAPI<Function, llvm::Function, GlobalObject, llvm::GlobalObject>::
+    LLVMGVToGV::operator()(llvm::Function &LLVMGV) const;
+
+template LLVM_EXPORT_TEMPLATE GlobalVariable &GlobalWithNodeAPI<
+    GlobalVariable, llvm::GlobalVariable, GlobalObject,
+    llvm::GlobalObject>::LLVMGVToGV::operator()(llvm::GlobalVariable &LLVMGV)
+    const;
+template LLVM_EXPORT_TEMPLATE GlobalAlias &
+GlobalWithNodeAPI<GlobalAlias, llvm::GlobalAlias, GlobalValue,
+                  llvm::GlobalValue>::LLVMGVToGV::operator()(llvm::GlobalAlias
+                                                                 &LLVMGV) const;
+#endif
+
 void GlobalIFunc::setResolver(Constant *Resolver) {
   Ctx.getTracker()
       .emplaceIfTracking<
@@ -466,45 +489,5 @@ GlobalValue *DSOLocalEquivalent::getGlobalValue() const {
   return cast<GlobalValue>(
       Ctx.getValue(cast<llvm::DSOLocalEquivalent>(Val)->getGlobalValue()));
 }
-
-FunctionType *Function::getFunctionType() const {
-  return cast<FunctionType>(
-      Ctx.getType(cast<llvm::Function>(Val)->getFunctionType()));
-}
-
-#ifndef NDEBUG
-void Function::dumpNameAndArgs(raw_ostream &OS) const {
-  auto *F = cast<llvm::Function>(Val);
-  OS << *F->getReturnType() << " @" << F->getName() << "(";
-  interleave(
-      F->args(),
-      [this, &OS](const llvm::Argument &LLVMArg) {
-        auto *SBArg = cast_or_null<Argument>(Ctx.getValue(&LLVMArg));
-        if (SBArg == nullptr)
-          OS << "NULL";
-        else
-          SBArg->printAsOperand(OS);
-      },
-      [&] { OS << ", "; });
-  OS << ")";
-}
-
-void Function::dumpOS(raw_ostream &OS) const {
-  dumpNameAndArgs(OS);
-  OS << " {\n";
-  auto *LLVMF = cast<llvm::Function>(Val);
-  interleave(
-      *LLVMF,
-      [this, &OS](const llvm::BasicBlock &LLVMBB) {
-        auto *BB = cast_or_null<BasicBlock>(Ctx.getValue(&LLVMBB));
-        if (BB == nullptr)
-          OS << "NULL";
-        else
-          OS << *BB;
-      },
-      [&OS] { OS << "\n"; });
-  OS << "}\n";
-}
-#endif // NDEBUG
 
 } // namespace llvm::sandboxir

@@ -41,13 +41,12 @@
 
 #include "llvm/Transforms/HipStdPar/HipStdPar.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
@@ -86,15 +85,13 @@ static inline bool checkIfSupported(GlobalVariable &G) {
     auto U = std::move(Tmp.back());
     Tmp.pop_back();
 
-    if (Visited.contains(U))
+    if (!Visited.insert(U).second)
       continue;
 
     if (isa<Instruction>(U))
       I = cast<Instruction>(U);
     else
       Tmp.insert(Tmp.end(), U->user_begin(), U->user_end());
-
-    Visited.insert(U);
   } while (!I && !Tmp.empty());
 
   assert(I && "thread_local global should have at least one non-constant use.");
@@ -282,10 +279,11 @@ HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
   for (auto &&F : M) {
     if (!F.hasName())
       continue;
-    if (!AllocReplacements.contains(F.getName()))
+    auto It = AllocReplacements.find(F.getName());
+    if (It == AllocReplacements.end())
       continue;
 
-    if (auto R = M.getFunction(AllocReplacements[F.getName()])) {
+    if (auto R = M.getFunction(It->second)) {
       F.replaceAllUsesWith(R);
     } else {
       std::string W;
@@ -301,6 +299,13 @@ HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
     }
   }
 
+  if (auto F = M.getFunction("__hipstdpar_hidden_malloc")) {
+    auto LibcMalloc = M.getOrInsertFunction(
+        "__libc_malloc", F->getFunctionType(), F->getAttributes());
+    F->replaceAllUsesWith(LibcMalloc.getCallee());
+
+    eraseFromModule(*F);
+  }
   if (auto F = M.getFunction("__hipstdpar_hidden_free")) {
     auto LibcFree = M.getOrInsertFunction("__libc_free", F->getFunctionType(),
                                           F->getAttributes());

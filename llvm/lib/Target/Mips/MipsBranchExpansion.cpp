@@ -95,7 +95,6 @@
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <algorithm>
 #include <cassert>
@@ -768,6 +767,8 @@ bool MipsBranchExpansion::handleMFLOSlot(Pred Predicate, Safe SafeInSlot) {
         std::pair<Iter, bool> Res = getNextMachineInstr(std::next(I), &*FI);
         LastInstInFunction |= Res.second;
         IInSlot = Res.first;
+        if (LastInstInFunction)
+          continue;
         if (!SafeInSlot(*IInSlot, *I)) {
           Changed = true;
           TII->insertNop(*(I->getParent()), std::next(I), I->getDebugLoc())

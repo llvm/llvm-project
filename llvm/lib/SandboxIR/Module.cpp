@@ -9,6 +9,7 @@
 #include "llvm/SandboxIR/Module.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Value.h"
 
 using namespace llvm::sandboxir;

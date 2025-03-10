@@ -45,10 +45,19 @@ if(LLVM_BUILD_LLVM_DYLIB)
   if("${CMAKE_SYSTEM_NAME}" STREQUAL "Darwin")
     set(LIB_NAMES -Wl,-all_load ${LIB_NAMES})
   else()
-    configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
-    ${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
-
+    if("${CMAKE_CFG_INTDIR}" STREQUAL ".")
+      configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
+        ${LLVM_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
+    else()
+      foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
+        # Replace the special string with a per config directory.
+        string(REPLACE ${CMAKE_CFG_INTDIR} ${BUILD_MODE} PER_CONF_LIBRARY_DIR ${LLVM_LIBRARY_DIR})
+        configure_file(
+          ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
+          ${PER_CONF_LIBRARY_DIR}/tools/llvm-shlib/simple_version_script.map)
+      endforeach()
+    endif()
     if(MSVC)
       target_link_directories(LLVM PRIVATE ${LLVM_LIBRARY_DIR})
       foreach(library ${LIB_NAMES})
@@ -156,7 +165,10 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   # Need to separate lib names with newlines.
   string(REPLACE ";" "\n" FILE_CONTENT "${FULL_LIB_NAMES}")
 
-  if(NOT "${CMAKE_CFG_INTDIR}" STREQUAL ".")
+  if("${CMAKE_CFG_INTDIR}" STREQUAL ".")
+    # Write out the full lib names into file to be read by the python script.
+    file(WRITE ${LIBSFILE} "${FILE_CONTENT}")
+  else()
     foreach(BUILD_MODE ${CMAKE_CONFIGURATION_TYPES})
       # Replace the special string with a per config directory.
       string(REPLACE ${CMAKE_CFG_INTDIR} ${BUILD_MODE} PER_CONF_CONTENT "${FILE_CONTENT}")
@@ -166,9 +178,6 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
       # ${CMAKE_CFG_INTDIR} correctly and select the right one.
       file(WRITE ${LLVM_BINARY_DIR}/${BUILD_MODE}/libllvm-c.args "${PER_CONF_CONTENT}")
     endforeach()
-  else()
-    # Write out the full lib names into file to be read by the python script.
-    file(WRITE ${LIBSFILE} "${FILE_CONTENT}")
   endif()
 
   # Generate the exports file dynamically.
@@ -188,7 +197,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
 
   if (LLVM_INTEGRATED_CRT_ALLOC AND MSVC)
     # Make sure we search LLVMSupport first, before the CRT libs
-    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -INCLUDE:malloc")
+    set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${CMAKE_CXX_LINKER_WRAPPER_FLAG}-INCLUDE:malloc")
   endif()
   
 endif()

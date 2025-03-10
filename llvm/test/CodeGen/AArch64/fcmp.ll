@@ -922,26 +922,27 @@ define <3 x i32> @v3f64_i32(<3 x double> %a, <3 x double> %b, <3 x i32> %d, <3 x
 ; CHECK-GI-LABEL: v3f64_i32:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-GI-NEXT:    mov w8, #31 // =0x1f
 ; CHECK-GI-NEXT:    fcmp d2, d5
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    mov v1.s[0], w8
 ; CHECK-GI-NEXT:    cset w9, mi
-; CHECK-GI-NEXT:    mov v2.d[0], x9
+; CHECK-GI-NEXT:    mov v2.s[0], w9
 ; CHECK-GI-NEXT:    mov w9, #-1 // =0xffffffff
 ; CHECK-GI-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
 ; CHECK-GI-NEXT:    mov v1.s[1], w8
 ; CHECK-GI-NEXT:    mov v3.s[0], w9
+; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
 ; CHECK-GI-NEXT:    mov v1.s[2], w8
-; CHECK-GI-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
 ; CHECK-GI-NEXT:    mov v3.s[1], w9
+; CHECK-GI-NEXT:    mov v0.d[1], v2.d[0]
+; CHECK-GI-NEXT:    mov v3.s[2], w9
 ; CHECK-GI-NEXT:    ushl v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    neg v1.4s, v1.4s
-; CHECK-GI-NEXT:    mov v3.s[2], w9
 ; CHECK-GI-NEXT:    sshl v0.4s, v0.4s, v1.4s
 ; CHECK-GI-NEXT:    eor v1.16b, v0.16b, v3.16b
 ; CHECK-GI-NEXT:    and v0.16b, v6.16b, v0.16b

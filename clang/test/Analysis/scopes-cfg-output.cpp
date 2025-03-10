@@ -1074,7 +1074,7 @@ void test_switch_with_compound_with_default() {
 // CHECK-NEXT:   Succs (1): B4
 // CHECK:      [B0 (EXIT)]
 // CHECK-NEXT:   Preds (1): B1
-int test_switch_with_compound_without_default() {
+void test_switch_with_compound_without_default() {
   char c = '1';
   switch (int i = getX()) {
     case 0:

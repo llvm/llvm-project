@@ -689,7 +689,7 @@ define <2 x i64> @splatvar_shift_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    psubq %xmm2, %xmm0
 ; X86-SSE-NEXT:    retl
-  %splat = shufflevector <2 x i64> %b, <2 x i64> undef, <2 x i32> zeroinitializer
+  %splat = shufflevector <2 x i64> %b, <2 x i64> poison, <2 x i32> zeroinitializer
   %shift = ashr <2 x i64> %a, %splat
   ret <2 x i64> %shift
 }
@@ -738,7 +738,7 @@ define <4 x i32> @splatvar_shift_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
 ; X86-SSE-NEXT:    psrad %xmm2, %xmm0
 ; X86-SSE-NEXT:    retl
-  %splat = shufflevector <4 x i32> %b, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splat = shufflevector <4 x i32> %b, <4 x i32> poison, <4 x i32> zeroinitializer
   %shift = ashr <4 x i32> %a, %splat
   ret <4 x i32> %shift
 }
@@ -787,7 +787,7 @@ define <8 x i16> @splatvar_shift_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; X86-SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[14,15],zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero,zero
 ; X86-SSE-NEXT:    psraw %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
-  %splat = shufflevector <8 x i16> %b, <8 x i16> undef, <8 x i32> zeroinitializer
+  %splat = shufflevector <8 x i16> %b, <8 x i16> poison, <8 x i32> zeroinitializer
   %shift = ashr <8 x i16> %a, %splat
   ret <8 x i16> %shift
 }
@@ -803,7 +803,7 @@ define <16 x i8> @splatvar_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; SSE2-NEXT:    psrlw $8, %xmm2
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
 ; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32896,32896,32896,32896,32896,32896,32896,32896]
 ; SSE2-NEXT:    psrlw %xmm1, %xmm2
@@ -917,14 +917,14 @@ define <16 x i8> @splatvar_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; X86-SSE-NEXT:    psrlw $8, %xmm2
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,0,0,0,4,5,6,7]
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
 ; X86-SSE-NEXT:    pand %xmm2, %xmm0
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [32896,32896,32896,32896,32896,32896,32896,32896]
 ; X86-SSE-NEXT:    psrlw %xmm1, %xmm2
 ; X86-SSE-NEXT:    pxor %xmm2, %xmm0
 ; X86-SSE-NEXT:    psubb %xmm2, %xmm0
 ; X86-SSE-NEXT:    retl
-  %splat = shufflevector <16 x i8> %b, <16 x i8> undef, <16 x i32> zeroinitializer
+  %splat = shufflevector <16 x i8> %b, <16 x i8> poison, <16 x i32> zeroinitializer
   %shift = ashr <16 x i8> %a, %splat
   ret <16 x i8> %shift
 }
@@ -1008,7 +1008,7 @@ define <2 x i64> @splatvar_modulo_shift_v2i64(<2 x i64> %a, <2 x i64> %b) nounwi
 ; X86-SSE-NEXT:    psubq %xmm2, %xmm0
 ; X86-SSE-NEXT:    retl
   %mod = and <2 x i64> %b, <i64 63, i64 63>
-  %splat = shufflevector <2 x i64> %mod, <2 x i64> undef, <2 x i32> zeroinitializer
+  %splat = shufflevector <2 x i64> %mod, <2 x i64> poison, <2 x i32> zeroinitializer
   %shift = ashr <2 x i64> %a, %splat
   ret <2 x i64> %shift
 }
@@ -1050,7 +1050,7 @@ define <4 x i32> @splatvar_modulo_shift_v4i32(<4 x i32> %a, <4 x i32> %b) nounwi
 ; X86-SSE-NEXT:    psrad %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %mod = and <4 x i32> %b, <i32 31, i32 31, i32 31, i32 31>
-  %splat = shufflevector <4 x i32> %mod, <4 x i32> undef, <4 x i32> zeroinitializer
+  %splat = shufflevector <4 x i32> %mod, <4 x i32> poison, <4 x i32> zeroinitializer
   %shift = ashr <4 x i32> %a, %splat
   ret <4 x i32> %shift
 }
@@ -1092,7 +1092,7 @@ define <8 x i16> @splatvar_modulo_shift_v8i16(<8 x i16> %a, <8 x i16> %b) nounwi
 ; X86-SSE-NEXT:    psraw %xmm1, %xmm0
 ; X86-SSE-NEXT:    retl
   %mod = and <8 x i16> %b, <i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15, i16 15>
-  %splat = shufflevector <8 x i16> %mod, <8 x i16> undef, <8 x i32> zeroinitializer
+  %splat = shufflevector <8 x i16> %mod, <8 x i16> poison, <8 x i32> zeroinitializer
   %shift = ashr <8 x i16> %a, %splat
   ret <8 x i16> %shift
 }
@@ -1107,7 +1107,7 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ; SSE2-NEXT:    psrlw $8, %xmm2
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,0,0,0,4,5,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
 ; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [32896,32896,32896,32896,32896,32896,32896,32896]
 ; SSE2-NEXT:    psrlw %xmm1, %xmm2
@@ -1226,7 +1226,7 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ; X86-SSE-NEXT:    psrlw $8, %xmm2
 ; X86-SSE-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; X86-SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,0,0,0,4,5,6,7]
-; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,0,0,0]
+; X86-SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,1,0,1]
 ; X86-SSE-NEXT:    pand %xmm2, %xmm0
 ; X86-SSE-NEXT:    movdqa {{.*#+}} xmm2 = [32896,32896,32896,32896,32896,32896,32896,32896]
 ; X86-SSE-NEXT:    psrlw %xmm1, %xmm2
@@ -1234,7 +1234,7 @@ define <16 x i8> @splatvar_modulo_shift_v16i8(<16 x i8> %a, <16 x i8> %b) nounwi
 ; X86-SSE-NEXT:    psubb %xmm2, %xmm0
 ; X86-SSE-NEXT:    retl
   %mod = and <16 x i8> %b, <i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7, i8 7>
-  %splat = shufflevector <16 x i8> %mod, <16 x i8> undef, <16 x i32> zeroinitializer
+  %splat = shufflevector <16 x i8> %mod, <16 x i8> poison, <16 x i32> zeroinitializer
   %shift = ashr <16 x i8> %a, %splat
   ret <16 x i8> %shift
 }
@@ -1553,7 +1553,7 @@ define <8 x i16> @constant_shift_v8i16_pairs(<8 x i16> %a) nounwind {
 ; AVX512DQVL:       # %bb.0:
 ; AVX512DQVL-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vmovdqa {{.*#+}} xmm1 = [256,256,16384,16384,4096,4096,512,512]
-; AVX512DQVL-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX512DQVL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (xmm0 & mem)
 ; AVX512DQVL-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    retq
 ;
@@ -1734,7 +1734,7 @@ define <16 x i8> @constant_shift_v16i8_pairs(<16 x i8> %a) nounwind {
 ; AVX512DQVL-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1 # [32768,4096,512,8192,16384,u,2048,1024]
 ; AVX512DQVL-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4],xmm0[5],xmm1[6,7]
 ; AVX512DQVL-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
-; AVX512DQVL-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX512DQVL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (xmm0 & mem)
 ; AVX512DQVL-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    retq
 ;
@@ -1742,7 +1742,7 @@ define <16 x i8> @constant_shift_v16i8_pairs(<16 x i8> %a) nounwind {
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vpsrlvw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vmovdqa {{.*#+}} xmm1 = [64,64,8,8,1,1,16,16,32,32,128,128,4,4,2,2]
-; AVX512BWVL-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX512BWVL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (xmm0 & mem)
 ; AVX512BWVL-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    retq
 ;
@@ -1822,7 +1822,7 @@ define <16 x i8> @constant_shift_v16i8_quads(<16 x i8> %a) nounwind {
 ; AVX512VL:       # %bb.0:
 ; AVX512VL-NEXT:    vpsrlvd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; AVX512VL-NEXT:    vmovdqa {{.*#+}} xmm1 = [128,128,128,128,64,64,64,64,16,16,16,16,32,32,32,32]
-; AVX512VL-NEXT:    vpternlogq $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
+; AVX512VL-NEXT:    vpternlogq {{.*#+}} xmm0 = xmm1 ^ (xmm0 & mem)
 ; AVX512VL-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    retq
 ;
@@ -2021,7 +2021,7 @@ define <16 x i8> @splatconstant_shift_v16i8(<16 x i8> %a) nounwind {
 ; AVX512DQVL:       # %bb.0:
 ; AVX512DQVL-NEXT:    vpsrlw $3, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; AVX512DQVL-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
+; AVX512DQVL-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (xmm0 & mem)
 ; AVX512DQVL-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX512DQVL-NEXT:    retq
 ;
@@ -2029,7 +2029,7 @@ define <16 x i8> @splatconstant_shift_v16i8(<16 x i8> %a) nounwind {
 ; AVX512BWVL:       # %bb.0:
 ; AVX512BWVL-NEXT:    vpsrlw $3, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    vpbroadcastb {{.*#+}} xmm1 = [16,16,16,16,16,16,16,16,16,16,16,16,16,16,16,16]
-; AVX512BWVL-NEXT:    vpternlogd $108, {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm0
+; AVX512BWVL-NEXT:    vpternlogd {{.*#+}} xmm0 = xmm1 ^ (xmm0 & mem)
 ; AVX512BWVL-NEXT:    vpsubb %xmm1, %xmm0, %xmm0
 ; AVX512BWVL-NEXT:    retq
 ;

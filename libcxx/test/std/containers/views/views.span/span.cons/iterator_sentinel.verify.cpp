@@ -15,12 +15,13 @@
 //   If Extent is not equal to dynamic_extent, then last - first shall be equal to Extent.
 //
 
-#include <span>
+#include <cstddef>
 #include <iterator>
+#include <span>
 
-template<class T, std::size_t Extent>
+template <class T, std::size_t Extent>
 std::span<T, Extent> createImplicitSpan(T* first, T* last) {
-    return {first, last}; // expected-error {{chosen constructor is explicit in copy-initialization}}
+  return {first, last}; // expected-error {{chosen constructor is explicit in copy-initialization}}
 }
 
 void f() {

@@ -28,7 +28,7 @@ public:
 
   LogicalResult matchAndRewrite(tosa::ConstOp op,
                                 PatternRewriter &rewriter) const final {
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, op.getValue());
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, op.getValues());
     return success();
   }
 };
@@ -43,7 +43,7 @@ Type matchContainerType(Type element, Type container) {
 TypedAttr getConstantAttr(Type type, int64_t value, PatternRewriter &rewriter) {
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
     Type eTy = shapedTy.getElementType();
-    APInt valueInt(eTy.getIntOrFloatBitWidth(), value);
+    APInt valueInt(eTy.getIntOrFloatBitWidth(), value, /*isSigned=*/true);
     return DenseIntElementsAttr::get(shapedTy, valueInt);
   }
 

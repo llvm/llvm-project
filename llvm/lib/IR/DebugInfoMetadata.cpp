@@ -644,6 +644,48 @@ DIGenericSubrange::BoundType DIGenericSubrange::getStride() const {
   return BoundType();
 }
 
+DISubrangeType::DISubrangeType(LLVMContext &C, StorageType Storage,
+                               unsigned Line, uint64_t SizeInBits,
+                               uint32_t AlignInBits, DIFlags Flags,
+                               ArrayRef<Metadata *> Ops)
+    : DIType(C, DISubrangeTypeKind, Storage, dwarf::DW_TAG_subrange_type, Line,
+             SizeInBits, AlignInBits, 0, 0, Flags, Ops) {}
+
+DISubrangeType *DISubrangeType::getImpl(
+    LLVMContext &Context, MDString *Name, Metadata *File, unsigned Line,
+    Metadata *Scope, uint64_t SizeInBits, uint32_t AlignInBits, DIFlags Flags,
+    Metadata *BaseType, Metadata *LowerBound, Metadata *UpperBound,
+    Metadata *Stride, Metadata *Bias, StorageType Storage, bool ShouldCreate) {
+  assert(isCanonical(Name) && "Expected canonical MDString");
+  DEFINE_GETIMPL_LOOKUP(DISubrangeType, (Name, File, Line, Scope, SizeInBits,
+                                         AlignInBits, Flags, BaseType,
+                                         LowerBound, UpperBound, Stride, Bias));
+  Metadata *Ops[] = {File,       Scope,      Name,   BaseType,
+                     LowerBound, UpperBound, Stride, Bias};
+  DEFINE_GETIMPL_STORE(DISubrangeType, (Line, SizeInBits, AlignInBits, Flags),
+                       Ops);
+}
+
+DISubrangeType::BoundType
+DISubrangeType::convertRawToBound(Metadata *IN) const {
+  if (!IN)
+    return BoundType();
+
+  assert(isa<ConstantAsMetadata>(IN) || isa<DIVariable>(IN) ||
+         isa<DIExpression>(IN));
+
+  if (auto *MD = dyn_cast<ConstantAsMetadata>(IN))
+    return BoundType(cast<ConstantInt>(MD->getValue()));
+
+  if (auto *MD = dyn_cast<DIVariable>(IN))
+    return BoundType(MD);
+
+  if (auto *MD = dyn_cast<DIExpression>(IN))
+    return BoundType(MD);
+
+  return BoundType();
+}
+
 DIEnumerator::DIEnumerator(LLVMContext &C, StorageType Storage,
                            const APInt &Value, bool IsUnsigned,
                            ArrayRef<Metadata *> Ops)
@@ -663,14 +705,16 @@ DIEnumerator *DIEnumerator::getImpl(LLVMContext &Context, const APInt &Value,
 DIBasicType *DIBasicType::getImpl(LLVMContext &Context, unsigned Tag,
                                   MDString *Name, uint64_t SizeInBits,
                                   uint32_t AlignInBits, unsigned Encoding,
-                                  DIFlags Flags, StorageType Storage,
-                                  bool ShouldCreate) {
+                                  uint32_t NumExtraInhabitants, DIFlags Flags,
+                                  StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DIBasicType,
-                        (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags));
+  DEFINE_GETIMPL_LOOKUP(DIBasicType, (Tag, Name, SizeInBits, AlignInBits,
+                                      Encoding, NumExtraInhabitants, Flags));
   Metadata *Ops[] = {nullptr, nullptr, Name};
-  DEFINE_GETIMPL_STORE(DIBasicType,
-                       (Tag, SizeInBits, AlignInBits, Encoding, Flags), Ops);
+  DEFINE_GETIMPL_STORE(
+      DIBasicType,
+      (Tag, SizeInBits, AlignInBits, Encoding, NumExtraInhabitants, Flags),
+      Ops);
 }
 
 std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
@@ -765,35 +809,37 @@ DICompositeType *DICompositeType::getImpl(
     LLVMContext &Context, unsigned Tag, MDString *Name, Metadata *File,
     unsigned Line, Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
     uint32_t AlignInBits, uint64_t OffsetInBits, DIFlags Flags,
-    Metadata *Elements, unsigned RuntimeLang, Metadata *VTableHolder,
-    Metadata *TemplateParams, MDString *Identifier, Metadata *Discriminator,
-    Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
-    Metadata *Rank, Metadata *Annotations, StorageType Storage,
+    Metadata *Elements, unsigned RuntimeLang, std::optional<uint32_t> EnumKind,
+    Metadata *VTableHolder, Metadata *TemplateParams, MDString *Identifier,
+    Metadata *Discriminator, Metadata *DataLocation, Metadata *Associated,
+    Metadata *Allocated, Metadata *Rank, Metadata *Annotations,
+    Metadata *Specification, uint32_t NumExtraInhabitants, StorageType Storage,
     bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
 
   // Keep this in sync with buildODRType.
-  DEFINE_GETIMPL_LOOKUP(DICompositeType,
-                        (Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-                         AlignInBits, OffsetInBits, Flags, Elements,
-                         RuntimeLang, VTableHolder, TemplateParams, Identifier,
-                         Discriminator, DataLocation, Associated, Allocated,
-                         Rank, Annotations));
+  DEFINE_GETIMPL_LOOKUP(
+      DICompositeType,
+      (Tag, Name, File, Line, Scope, BaseType, SizeInBits, AlignInBits,
+       OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder, TemplateParams,
+       Identifier, Discriminator, DataLocation, Associated, Allocated, Rank,
+       Annotations, Specification, NumExtraInhabitants));
   Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
                      Elements,      VTableHolder, TemplateParams, Identifier,
                      Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations};
-  DEFINE_GETIMPL_STORE(
-      DICompositeType,
-      (Tag, Line, RuntimeLang, SizeInBits, AlignInBits, OffsetInBits, Flags),
-      Ops);
+                     Rank,          Annotations,  Specification};
+  DEFINE_GETIMPL_STORE(DICompositeType,
+                       (Tag, Line, RuntimeLang, SizeInBits, AlignInBits,
+                        OffsetInBits, NumExtraInhabitants, EnumKind, Flags),
+                       Ops);
 }
 
 DICompositeType *DICompositeType::buildODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-    DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
+    Metadata *Specification, uint32_t NumExtraInhabitants, DIFlags Flags,
+    Metadata *Elements, unsigned RuntimeLang, std::optional<uint32_t> EnumKind,
     Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
     Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
     Metadata *Rank, Metadata *Annotations) {
@@ -805,9 +851,9 @@ DICompositeType *DICompositeType::buildODRType(
     return CT = DICompositeType::getDistinct(
                Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
                AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang,
-               VTableHolder, TemplateParams, &Identifier, Discriminator,
-               DataLocation, Associated, Allocated, Rank, Annotations);
-
+               EnumKind, VTableHolder, TemplateParams, &Identifier,
+               Discriminator, DataLocation, Associated, Allocated, Rank,
+               Annotations, Specification, NumExtraInhabitants);
   if (CT->getTag() != Tag)
     return nullptr;
 
@@ -818,11 +864,11 @@ DICompositeType *DICompositeType::buildODRType(
 
   // Mutate CT in place.  Keep this in sync with getImpl.
   CT->mutate(Tag, Line, RuntimeLang, SizeInBits, AlignInBits, OffsetInBits,
-             Flags);
+             NumExtraInhabitants, EnumKind, Flags);
   Metadata *Ops[] = {File,          Scope,        Name,           BaseType,
                      Elements,      VTableHolder, TemplateParams, &Identifier,
                      Discriminator, DataLocation, Associated,     Allocated,
-                     Rank,          Annotations};
+                     Rank,          Annotations,  Specification};
   assert((std::end(Ops) - std::begin(Ops)) == (int)CT->getNumOperands() &&
          "Mismatched number of operands");
   for (unsigned I = 0, E = CT->getNumOperands(); I != E; ++I)
@@ -835,7 +881,8 @@ DICompositeType *DICompositeType::getODRType(
     LLVMContext &Context, MDString &Identifier, unsigned Tag, MDString *Name,
     Metadata *File, unsigned Line, Metadata *Scope, Metadata *BaseType,
     uint64_t SizeInBits, uint32_t AlignInBits, uint64_t OffsetInBits,
-    DIFlags Flags, Metadata *Elements, unsigned RuntimeLang,
+    Metadata *Specification, uint32_t NumExtraInhabitants, DIFlags Flags,
+    Metadata *Elements, unsigned RuntimeLang, std::optional<uint32_t> EnumKind,
     Metadata *VTableHolder, Metadata *TemplateParams, Metadata *Discriminator,
     Metadata *DataLocation, Metadata *Associated, Metadata *Allocated,
     Metadata *Rank, Metadata *Annotations) {
@@ -846,9 +893,10 @@ DICompositeType *DICompositeType::getODRType(
   if (!CT) {
     CT = DICompositeType::getDistinct(
         Context, Tag, Name, File, Line, Scope, BaseType, SizeInBits,
-        AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, VTableHolder,
-        TemplateParams, &Identifier, Discriminator, DataLocation, Associated,
-        Allocated, Rank, Annotations);
+        AlignInBits, OffsetInBits, Flags, Elements, RuntimeLang, EnumKind,
+        VTableHolder, TemplateParams, &Identifier, Discriminator, DataLocation,
+        Associated, Allocated, Rank, Annotations, Specification,
+        NumExtraInhabitants);
   } else {
     if (CT->getTag() != Tag)
       return nullptr;
@@ -867,7 +915,7 @@ DISubroutineType::DISubroutineType(LLVMContext &C, StorageType Storage,
                                    DIFlags Flags, uint8_t CC,
                                    ArrayRef<Metadata *> Ops)
     : DIType(C, DISubroutineTypeKind, Storage, dwarf::DW_TAG_subroutine_type, 0,
-             0, 0, 0, Flags, Ops),
+             0, 0, 0, 0, Flags, Ops),
       CC(CC) {}
 
 DISubroutineType *DISubroutineType::getImpl(LLVMContext &Context, DIFlags Flags,

@@ -417,9 +417,9 @@ void gatherImportedSummariesForModule(
     GVSummaryPtrSet &DecSummaries);
 
 /// Emit into \p OutputFilename the files module \p ModulePath will import from.
-std::error_code
-EmitImportsFiles(StringRef ModulePath, StringRef OutputFilename,
-                 const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex);
+Error EmitImportsFiles(
+    StringRef ModulePath, StringRef OutputFilename,
+    const ModuleToSummariesForIndexTy &ModuleToSummariesForIndex);
 
 /// Based on the information recorded in the summaries during global
 /// summary-based analysis:

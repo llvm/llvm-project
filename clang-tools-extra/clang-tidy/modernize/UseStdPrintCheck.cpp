@@ -23,7 +23,7 @@ AST_MATCHER(StringLiteral, isOrdinary) { return Node.isOrdinary(); }
 } // namespace
 
 UseStdPrintCheck::UseStdPrintCheck(StringRef Name, ClangTidyContext *Context)
-    : ClangTidyCheck(Name, Context),
+    : ClangTidyCheck(Name, Context), PP(nullptr),
       StrictMode(Options.getLocalOrGlobal("StrictMode", false)),
       PrintfLikeFunctions(utils::options::parseStringList(
           Options.get("PrintfLikeFunctions", ""))),
@@ -68,6 +68,7 @@ void UseStdPrintCheck::registerPPCallbacks(const SourceManager &SM,
                                            Preprocessor *PP,
                                            Preprocessor *ModuleExpanderPP) {
   IncludeInserter.registerPreprocessor(PP);
+  this->PP = PP;
 }
 
 static clang::ast_matchers::StatementMatcher
@@ -130,8 +131,10 @@ void UseStdPrintCheck::check(const MatchFinder::MatchResult &Result) {
   utils::FormatStringConverter::Configuration ConverterConfig;
   ConverterConfig.StrictMode = StrictMode;
   ConverterConfig.AllowTrailingNewlineRemoval = true;
+  assert(PP && "Preprocessor should be set by registerPPCallbacks");
   utils::FormatStringConverter Converter(
-      Result.Context, Printf, FormatArgOffset, ConverterConfig, getLangOpts());
+      Result.Context, Printf, FormatArgOffset, ConverterConfig, getLangOpts(),
+      *Result.SourceManager, *PP);
   const Expr *PrintfCall = Printf->getCallee();
   const StringRef ReplacementFunction = Converter.usePrintNewlineFunction()
                                             ? ReplacementPrintlnFunction

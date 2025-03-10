@@ -533,6 +533,72 @@ TEST_F(PatternMatchTest, BitWise) {
   EXPECT_FALSE(m_c_BitwiseLogic(m_Zero(), m_Zero()).match(Xor));
 }
 
+TEST_F(PatternMatchTest, XorLike) {
+  Value *AllocaX = IRB.CreateAlloca(IRB.getInt32Ty());
+  Value *X = IRB.CreateLoad(IRB.getInt32Ty(), AllocaX);
+  Value *AllocaY = IRB.CreateAlloca(IRB.getInt32Ty());
+  Value *Y = IRB.CreateLoad(IRB.getInt32Ty(), AllocaY);
+  Value *MaskC = IRB.getInt32(31);
+  Value *NonMaskC = IRB.getInt32(32);
+
+  Value *OpA, *OpB;
+  {
+    Value *Xor = IRB.CreateXor(X, Y);
+    Value *Sub = IRB.CreateNUWSub(X, Y);
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Xor));
+    EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) && (OpA == Y || OpB == Y));
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_FALSE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Sub));
+  }
+  {
+    Value *Xor = IRB.CreateXor(X, MaskC);
+    Value *Sub = IRB.CreateNUWSub(MaskC, X);
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Xor));
+    EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) &&
+                (OpA == MaskC || OpB == MaskC));
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Sub));
+    EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) &&
+                (OpA == MaskC || OpB == MaskC));
+  }
+  {
+    Value *Xor = IRB.CreateXor(X, MaskC);
+    Value *Sub = IRB.CreateNSWSub(MaskC, X);
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Xor));
+    EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) &&
+                (OpA == MaskC || OpB == MaskC));
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_FALSE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Sub));
+  }
+  {
+    Value *Sub = IRB.CreateNUWSub(X, MaskC);
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_FALSE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Sub));
+  }
+  {
+    Value *Xor = IRB.CreateXor(X, NonMaskC);
+    Value *Sub = IRB.CreateNUWSub(NonMaskC, X);
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_TRUE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Xor));
+    EXPECT_TRUE(OpA != OpB && (OpA == X || OpB == X) &&
+                (OpA == NonMaskC || OpB == NonMaskC));
+    OpA = nullptr;
+    OpB = nullptr;
+    EXPECT_FALSE(m_c_XorLike(m_Value(OpA), m_Value(OpB)).match(Sub));
+  }
+}
+
 TEST_F(PatternMatchTest, ZExtSExtSelf) {
   LLVMContext &Ctx = IRB.getContext();
 
@@ -1036,6 +1102,140 @@ TEST_F(PatternMatchTest, FloatingPointUnorderedMax) {
                   .match(IRB.CreateSelect(IRB.CreateFCmpULT(L, R), R, L)));
   EXPECT_TRUE(m_UnordFMax(m_Value(MatchL), m_Value(MatchR))
                   .match(IRB.CreateSelect(IRB.CreateFCmpOLT(L, R), R, L)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+}
+
+TEST_F(PatternMatchTest, FloatingPointMin) {
+  Type *FltTy = IRB.getFloatTy();
+  Value *L = ConstantFP::get(FltTy, 1.0);
+  Value *R = ConstantFP::get(FltTy, 2.0);
+  Value *MatchL, *MatchR;
+
+  // Test OLT.
+  EXPECT_TRUE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOLT(L, R), L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  // Test OLE.
+  EXPECT_TRUE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOLE(L, R), L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  // Test ULT.
+  EXPECT_TRUE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpULT(L, R), L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  // Test ULE.
+  EXPECT_TRUE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpULE(L, R), L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  // Test no match on OGE.
+  EXPECT_FALSE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                   .match(IRB.CreateSelect(IRB.CreateFCmpOGE(L, R), L, R)));
+
+  // Test no match on OGT.
+  EXPECT_FALSE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                   .match(IRB.CreateSelect(IRB.CreateFCmpOGT(L, R), L, R)));
+
+  // Test no match on UGE.
+  EXPECT_FALSE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                   .match(IRB.CreateSelect(IRB.CreateFCmpUGE(L, R), L, R)));
+
+  // Test no match on UGT.
+  EXPECT_FALSE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                   .match(IRB.CreateSelect(IRB.CreateFCmpUGT(L, R), L, R)));
+
+  // Test inverted selects. Note, that this "inverts" the ordering, e.g.:
+  // %cmp = fcmp oge L, R
+  // %min = select %cmp R, L
+
+  // [OU]GE with inverted select.
+  EXPECT_TRUE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOGE(L, R), R, L)));
+  EXPECT_TRUE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpUGE(L, R), R, L)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  // [OU]GT with inverted select.
+  EXPECT_TRUE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOGT(L, R), R, L)));
+  EXPECT_TRUE(m_OrdOrUnordFMin(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpUGT(L, R), R, L)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+}
+
+TEST_F(PatternMatchTest, FloatingPointMax) {
+  Type *FltTy = IRB.getFloatTy();
+  Value *L = ConstantFP::get(FltTy, 1.0);
+  Value *R = ConstantFP::get(FltTy, 2.0);
+  Value *MatchL, *MatchR;
+
+  // Test OGT.
+  EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOGT(L, R), L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  // Test OGE.
+  EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOGE(L, R), L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  // Test UGT.
+  EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpUGT(L, R), L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  // Test UGE.
+  EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpUGE(L, R), L, R)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  // Test no match on OLE.
+  EXPECT_FALSE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                   .match(IRB.CreateSelect(IRB.CreateFCmpOLE(L, R), L, R)));
+
+  // Test no match on OLT.
+  EXPECT_FALSE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                   .match(IRB.CreateSelect(IRB.CreateFCmpOLT(L, R), L, R)));
+
+  // Test no match on ULE.
+  EXPECT_FALSE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                   .match(IRB.CreateSelect(IRB.CreateFCmpULE(L, R), L, R)));
+
+  // Test no match on ULT.
+  EXPECT_FALSE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                   .match(IRB.CreateSelect(IRB.CreateFCmpULT(L, R), L, R)));
+
+  // Test inverted selects. Note, that this "inverts" the ordering, e.g.:
+  // %cmp = fcmp ole L, R
+  // %max = select %cmp, R, L
+
+  // [OU]LE with inverted select.
+  EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOLE(L, R), R, L)));
+  EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpULE(L, R), R, L)));
+  EXPECT_EQ(L, MatchL);
+  EXPECT_EQ(R, MatchR);
+
+  // [OUT]LT with inverted select.
+  EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpOLT(L, R), R, L)));
+  EXPECT_TRUE(m_OrdOrUnordFMax(m_Value(MatchL), m_Value(MatchR))
+                  .match(IRB.CreateSelect(IRB.CreateFCmpULT(L, R), R, L)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
 }
@@ -1766,7 +1966,7 @@ TEST_F(PatternMatchTest, IntrinsicMatcher) {
   Value *Ops[] = {Name, Hash, Num, Index, Step};
   Module *M = BB->getParent()->getParent();
   Function *TheFn =
-      Intrinsic::getDeclaration(M, Intrinsic::instrprof_increment_step);
+      Intrinsic::getOrInsertDeclaration(M, Intrinsic::instrprof_increment_step);
 
   Value *Intrinsic5 = CallInst::Create(TheFn, Ops, "", BB);
 
@@ -2247,7 +2447,7 @@ TYPED_TEST(MutableConstTest, ICmp) {
 
   ValueType MatchL;
   ValueType MatchR;
-  ICmpInst::Predicate MatchPred;
+  CmpPredicate MatchPred;
 
   EXPECT_TRUE(m_ICmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
                   .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
@@ -2339,7 +2539,7 @@ TYPED_TEST(MutableConstTest, FCmp) {
 
   ValueType MatchL;
   ValueType MatchR;
-  FCmpInst::Predicate MatchPred;
+  CmpPredicate MatchPred;
 
   EXPECT_TRUE(m_FCmp(MatchPred, m_Value(MatchL), m_Value(MatchR))
                   .match((InstructionType)IRB.CreateFCmp(Pred, L, R)));
@@ -2406,8 +2606,7 @@ TYPED_TEST(MutableConstTest, FCmp) {
 }
 
 TEST_F(PatternMatchTest, ConstExpr) {
-  Constant *G =
-      M->getOrInsertGlobal("dummy", PointerType::getUnqual(IRB.getInt32Ty()));
+  Constant *G = M->getOrInsertGlobal("dummy", PointerType::getUnqual(Ctx));
   Constant *S = ConstantExpr::getPtrToInt(G, IRB.getInt32Ty());
   Type *VecTy = FixedVectorType::get(IRB.getInt32Ty(), 2);
   PoisonValue *P = PoisonValue::get(VecTy);

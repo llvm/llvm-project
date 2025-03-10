@@ -12,10 +12,10 @@
 
 #include <__config>
 #include <__configuration/abi.h>
+#include <__cstddef/size_t.h>
 #include <__type_traits/integral_constant.h>
 #include <__type_traits/is_trivially_destructible.h>
 #include <__type_traits/negation.h>
-#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,7 +24,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // Trait representing whether a type requires an array cookie at the start of its allocation when
-// allocated as `new T[n]` and deallocated as `delete array`.
+// allocated as `new T[n]` and deallocated as `delete[] array`.
 //
 // Under the Itanium C++ ABI [1], we know that an array cookie is available unless `T` is trivially
 // destructible and the call to `operator delete[]` is not a sized operator delete. Under ABIs other

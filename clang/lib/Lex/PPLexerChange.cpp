@@ -19,7 +19,6 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include <optional>
@@ -755,9 +754,10 @@ void Preprocessor::EnterSubmodule(Module *M, SourceLocation ImportLoc,
   // Switch to this submodule as the current submodule.
   CurSubmoduleState = &State;
 
-  // This module is visible to itself.
+  // This module is visible to itself, but exports should not be made visible
+  // until they are imported.
   if (FirstTime)
-    makeModuleVisible(M, ImportLoc);
+    makeModuleVisible(M, ImportLoc, /*IncludeExports=*/false);
 }
 
 bool Preprocessor::needModuleMacros() const {

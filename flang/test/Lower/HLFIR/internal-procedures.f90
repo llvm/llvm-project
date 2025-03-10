@@ -9,6 +9,9 @@ subroutine internal
   call takes_array(x)
 end subroutine
 end subroutine
+! CHECK-LABEL: func.func @_QPtest_explicit_shape_array(
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFtest_explicit_shape_arrayEx"}
+
 ! CHECK-LABEL: func.func private @_QFtest_explicit_shape_arrayPinternal(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.box<!fir.array<?xf32>>>> {fir.host_assoc}) attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
@@ -27,6 +30,9 @@ subroutine internal
   call takes_array(x)
 end subroutine
 end subroutine
+! CHECK-LABEL: func.func @_QPtest_assumed_shape(
+! CHECK:    %[[VAL_1:.*]]:2 = hlfir.declare {{.*}} {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFtest_assumed_shapeEx"}
+
 ! CHECK-LABEL: func.func private @_QFtest_assumed_shapePinternal(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<tuple<!fir.box<!fir.array<?xf32>>>> {fir.host_assoc}) attributes {fir.host_symbol = {{.*}}, llvm.linkage = #llvm.linkage<internal>} {
 ! CHECK:  %[[VAL_1:.*]] = arith.constant 0 : i32
@@ -64,7 +70,7 @@ contains
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_proc_pointer(
 ! CHECK-SAME:                                    %[[VAL_0:.*]]: !fir.ref<!fir.boxproc<() -> ()>>) {
-! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer>, uniq_name = "_QFtest_proc_pointerEp"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
+! CHECK:           %[[VAL_1:.*]]:2 = hlfir.declare %[[VAL_0]] dummy_scope %{{[0-9]+}} {fortran_attrs = #fir.var_attrs<pointer, internal_assoc>, uniq_name = "_QFtest_proc_pointerEp"} : (!fir.ref<!fir.boxproc<() -> ()>>, !fir.dscope) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
 ! CHECK:           %[[VAL_2:.*]] = fir.alloca tuple<!fir.ref<!fir.boxproc<() -> ()>>>
 ! CHECK:           %[[VAL_3:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<tuple<!fir.ref<!fir.boxproc<() -> ()>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.boxproc<() -> ()>>>
@@ -79,3 +85,19 @@ end subroutine
 ! CHECK:           %[[VAL_2:.*]] = fir.coordinate_of %[[VAL_0]], %[[VAL_1]] : (!fir.ref<tuple<!fir.ref<!fir.boxproc<() -> ()>>>>, i32) -> !fir.llvm_ptr<!fir.ref<!fir.boxproc<() -> ()>>>
 ! CHECK:           %[[VAL_3:.*]] = fir.load %[[VAL_2]] : !fir.llvm_ptr<!fir.ref<!fir.boxproc<() -> ()>>>
 ! CHECK:           %[[VAL_4:.*]]:2 = hlfir.declare %[[VAL_3]] {fortran_attrs = #fir.var_attrs<pointer, host_assoc>, uniq_name = "_QFtest_proc_pointerEp"} : (!fir.ref<!fir.boxproc<() -> ()>>) -> (!fir.ref<!fir.boxproc<() -> ()>>, !fir.ref<!fir.boxproc<() -> ()>>)
+
+
+! Verify that all equivalence members gets the internal_assoc flag set if one
+! of them is captured in an internal procedure.
+subroutine test_captured_equiv()
+  real :: x, y
+  equivalence(x,y)
+  call internal()
+contains
+subroutine internal()
+  y = 0.
+end subroutine
+end subroutine
+! CHECK-LABEL: func.func @_QPtest_captured_equiv() {
+! CHECK:  hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFtest_captured_equivEx"}
+! CHECK:  hlfir.declare %{{.*}} {fortran_attrs = #fir.var_attrs<internal_assoc>, uniq_name = "_QFtest_captured_equivEy"}

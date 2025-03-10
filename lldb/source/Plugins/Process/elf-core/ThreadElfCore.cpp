@@ -9,6 +9,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"
 #include "lldb/Target/Target.h"
+#include "lldb/Target/UnixSignals.h"
 #include "lldb/Target/Unwind.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -33,6 +34,7 @@
 #include "RegisterContextLinuxCore_x86_64.h"
 #include "RegisterContextPOSIXCore_arm.h"
 #include "RegisterContextPOSIXCore_arm64.h"
+#include "RegisterContextPOSIXCore_loongarch64.h"
 #include "RegisterContextPOSIXCore_mips64.h"
 #include "RegisterContextPOSIXCore_powerpc.h"
 #include "RegisterContextPOSIXCore_ppc64le.h"
@@ -49,8 +51,8 @@ using namespace lldb_private;
 // Construct a Thread object with given data
 ThreadElfCore::ThreadElfCore(Process &process, const ThreadData &td)
     : Thread(process, td.tid), m_thread_name(td.name), m_thread_reg_ctx_sp(),
-      m_signo(td.signo), m_code(td.code), m_gpregset_data(td.gpregset),
-      m_notes(td.notes) {}
+      m_gpregset_data(td.gpregset), m_notes(td.notes),
+      m_siginfo(std::move(td.siginfo)) {}
 
 ThreadElfCore::~ThreadElfCore() { DestroyThread(); }
 
@@ -171,6 +173,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
 
     if (!reg_interface && arch.GetMachine() != llvm::Triple::aarch64 &&
         arch.GetMachine() != llvm::Triple::arm &&
+        arch.GetMachine() != llvm::Triple::loongarch64 &&
         arch.GetMachine() != llvm::Triple::riscv64) {
       LLDB_LOGF(log, "elf-core::%s:: Architecture(%d) or OS(%d) not supported",
                 __FUNCTION__, arch.GetMachine(), arch.GetTriple().getOS());
@@ -186,6 +189,10 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
       m_thread_reg_ctx_sp = std::make_shared<RegisterContextCorePOSIX_arm>(
           *this, std::make_unique<RegisterInfoPOSIX_arm>(arch), m_gpregset_data,
           m_notes);
+      break;
+    case llvm::Triple::loongarch64:
+      m_thread_reg_ctx_sp = RegisterContextCorePOSIX_loongarch64::Create(
+          *this, arch, m_gpregset_data, m_notes);
       break;
     case llvm::Triple::riscv64:
       m_thread_reg_ctx_sp = RegisterContextCorePOSIX_riscv64::Create(
@@ -240,8 +247,21 @@ bool ThreadElfCore::CalculateStopInfo() {
   if (!process_sp)
     return false;
 
+  lldb::UnixSignalsSP unix_signals_sp(process_sp->GetUnixSignals());
+  if (!unix_signals_sp)
+    return false;
+
+  const char *sig_description;
+  std::string description = m_siginfo.GetDescription(*unix_signals_sp);
+  if (description.empty())
+    sig_description = nullptr;
+  else
+    sig_description = description.c_str();
+
   SetStopInfo(StopInfo::CreateStopReasonWithSignal(
-      *this, m_signo, /*description=*/nullptr, m_code));
+      *this, m_siginfo.si_signo, sig_description, m_siginfo.si_code));
+
+  SetStopInfo(m_stop_info_sp);
   return true;
 }
 
@@ -541,21 +561,64 @@ size_t ELFLinuxSigInfo::GetSize(const lldb_private::ArchSpec &arch) {
   }
 }
 
-Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch) {
+Status ELFLinuxSigInfo::Parse(const DataExtractor &data, const ArchSpec &arch,
+                              const lldb_private::UnixSignals &unix_signals) {
   Status error;
-  if (GetSize(arch) > data.GetByteSize()) {
+  uint64_t size = GetSize(arch);
+  if (size > data.GetByteSize()) {
     error = Status::FromErrorStringWithFormat(
         "NT_SIGINFO size should be %zu, but the remaining bytes are: %" PRIu64,
         GetSize(arch), data.GetByteSize());
     return error;
   }
 
+  // Set that we've parsed the siginfo from a SIGINFO note.
+  note_type = eNT_SIGINFO;
   // Parsing from a 32 bit ELF core file, and populating/reusing the structure
   // properly, because the struct is for the 64 bit version
   offset_t offset = 0;
   si_signo = data.GetU32(&offset);
   si_errno = data.GetU32(&offset);
   si_code = data.GetU32(&offset);
+  // 64b ELF have a 4 byte pad.
+  if (data.GetAddressByteSize() == 8)
+    offset += 4;
+  // Not every stop signal has a valid address, but that will get resolved in
+  // the unix_signals.GetSignalDescription() call below.
+  if (unix_signals.GetShouldStop(si_signo)) {
+    // Instead of memcpy we call all these individually as the extractor will
+    // handle endianness for us.
+    sigfault.si_addr = data.GetAddress(&offset);
+    sigfault.si_addr_lsb = data.GetU16(&offset);
+    if (data.GetByteSize() - offset >= sizeof(sigfault.bounds)) {
+      sigfault.bounds._addr_bnd._lower = data.GetAddress(&offset);
+      sigfault.bounds._addr_bnd._upper = data.GetAddress(&offset);
+      sigfault.bounds._pkey = data.GetU32(&offset);
+    } else {
+      // Set these to 0 so we don't use bogus data for the description.
+      sigfault.bounds._addr_bnd._lower = 0;
+      sigfault.bounds._addr_bnd._upper = 0;
+      sigfault.bounds._pkey = 0;
+    }
+  }
 
   return error;
+}
+
+std::string ELFLinuxSigInfo::GetDescription(
+    const lldb_private::UnixSignals &unix_signals) const {
+  if (unix_signals.GetShouldStop(si_signo) && note_type == eNT_SIGINFO) {
+    if (sigfault.bounds._addr_bnd._upper != 0)
+      return unix_signals.GetSignalDescription(
+          si_signo, si_code, sigfault.si_addr, sigfault.bounds._addr_bnd._lower,
+          sigfault.bounds._addr_bnd._upper);
+    else
+      return unix_signals.GetSignalDescription(si_signo, si_code,
+                                               sigfault.si_addr);
+  }
+
+  // This looks weird, but there is an existing pattern where we don't pass a
+  // description to keep up with that, we return empty here, and then the above
+  // function will set the description whether or not this is empty.
+  return std::string();
 }

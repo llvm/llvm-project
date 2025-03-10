@@ -27,16 +27,38 @@
 using namespace llvm;
 using namespace llvm::AMDGPU;
 
+// Return the PAL metadata hardware shader stage name.
+static const char *getStageName(CallingConv::ID CC) {
+  switch (CC) {
+  case CallingConv::AMDGPU_PS:
+    return ".ps";
+  case CallingConv::AMDGPU_VS:
+    return ".vs";
+  case CallingConv::AMDGPU_GS:
+    return ".gs";
+  case CallingConv::AMDGPU_ES:
+    return ".es";
+  case CallingConv::AMDGPU_HS:
+    return ".hs";
+  case CallingConv::AMDGPU_LS:
+    return ".ls";
+  case CallingConv::AMDGPU_Gfx:
+    llvm_unreachable("Callable shader has no hardware stage");
+  default:
+    return ".cs";
+  }
+}
+
 // Read the PAL metadata from IR metadata, where it was put by the frontend.
 void AMDGPUPALMetadata::readFromIR(Module &M) {
-  auto NamedMD = M.getNamedMetadata("amdgpu.pal.metadata.msgpack");
+  auto *NamedMD = M.getNamedMetadata("amdgpu.pal.metadata.msgpack");
   if (NamedMD && NamedMD->getNumOperands()) {
     // This is the new msgpack format for metadata. It is a NamedMD containing
     // an MDTuple containing an MDString containing the msgpack data.
     BlobType = ELF::NT_AMDGPU_METADATA;
-    auto MDN = dyn_cast<MDTuple>(NamedMD->getOperand(0));
+    auto *MDN = dyn_cast<MDTuple>(NamedMD->getOperand(0));
     if (MDN && MDN->getNumOperands()) {
-      if (auto MDS = dyn_cast<MDString>(MDN->getOperand(0)))
+      if (auto *MDS = dyn_cast<MDString>(MDN->getOperand(0)))
         setFromMsgPackBlob(MDS->getString());
     }
     return;
@@ -52,12 +74,12 @@ void AMDGPUPALMetadata::readFromIR(Module &M) {
   // containing an MDTuple containing a number of MDNodes each of which is an
   // integer value, and each two integer values forms a key=value pair that we
   // store as Registers[key]=value in the map.
-  auto Tuple = dyn_cast<MDTuple>(NamedMD->getOperand(0));
+  auto *Tuple = dyn_cast<MDTuple>(NamedMD->getOperand(0));
   if (!Tuple)
     return;
   for (unsigned I = 0, E = Tuple->getNumOperands() & -2; I != E; I += 2) {
-    auto Key = mdconst::dyn_extract<ConstantInt>(Tuple->getOperand(I));
-    auto Val = mdconst::dyn_extract<ConstantInt>(Tuple->getOperand(I + 1));
+    auto *Key = mdconst::dyn_extract<ConstantInt>(Tuple->getOperand(I));
+    auto *Val = mdconst::dyn_extract<ConstantInt>(Tuple->getOperand(I + 1));
     if (!Key || !Val)
       continue;
     setRegister(Key->getZExtValue(), Val->getZExtValue());
@@ -76,7 +98,7 @@ bool AMDGPUPALMetadata::setFromBlob(unsigned Type, StringRef Blob) {
 
 // Set PAL metadata from legacy (array of key=value pairs) blob.
 bool AMDGPUPALMetadata::setFromLegacyBlob(StringRef Blob) {
-  auto Data = reinterpret_cast<const uint32_t *>(Blob.data());
+  const auto *Data = reinterpret_cast<const uint32_t *>(Blob.data());
   for (unsigned I = 0; I != Blob.size() / sizeof(uint32_t) / 2; ++I)
     setRegister(Data[I * 2], Data[I * 2 + 1]);
   return true;
@@ -215,15 +237,15 @@ void AMDGPUPALMetadata::setRegister(unsigned Reg, const MCExpr *Val,
       const MCExpr *NExpr = MCConstantExpr::create(N.getUInt(), Ctx);
       Val = MCBinaryExpr::createOr(Val, NExpr, Ctx);
     }
-    ExprIt->getSecond() = Val;
   } else if (N.getKind() == msgpack::Type::UInt) {
     const MCExpr *NExpr = MCConstantExpr::create(N.getUInt(), Ctx);
     Val = MCBinaryExpr::createOr(Val, NExpr, Ctx);
-    int64_t Unused;
-    if (!Val->evaluateAsAbsolute(Unused))
-      REM[Reg] = Val;
-    (void)Unused;
+  } else {
+    // Default to uint64_t 0 so additional calls to setRegister will allow
+    // propagate ORs.
+    N = (uint64_t)0;
   }
+  REM[Reg] = Val;
   DelayedExprs.assignDocNode(N, msgpack::Type::UInt, Val);
 }
 
@@ -232,7 +254,18 @@ void AMDGPUPALMetadata::setEntryPoint(unsigned CC, StringRef Name) {
   if (isLegacy())
     return;
   // Msgpack format.
-  getHwStage(CC)[".entry_point"] = MsgPackDoc.getNode(Name, /*Copy=*/true);
+  // Entry point is updated to .entry_point_symbol and is set to the function
+  // name
+  getHwStage(CC)[".entry_point_symbol"] =
+      MsgPackDoc.getNode(Name, /*Copy=*/true);
+
+  // Set .entry_point which is defined
+  // to be _amdgpu_<stage> and _amdgpu_cs for non-shader functions
+  SmallString<16> EPName("_amdgpu_");
+  raw_svector_ostream EPNameOS(EPName);
+  EPNameOS << getStageName(CC) + 1;
+  getHwStage(CC)[".entry_point"] =
+      MsgPackDoc.getNode(EPNameOS.str(), /*Copy=*/true);
 }
 
 // Set the number of used vgprs in the metadata. This is an optional
@@ -751,7 +784,7 @@ static const char *getRegisterName(unsigned RegNum) {
       {0x2c75, "SPI_SHADER_USER_ACCUM_VS_3"},
 
       {0, nullptr}};
-  auto Entry = RegInfoTable;
+  const auto *Entry = RegInfoTable;
   for (; Entry->Num && Entry->Num != RegNum; ++Entry)
     ;
   return Entry->Name;
@@ -942,28 +975,6 @@ msgpack::MapDocNode AMDGPUPALMetadata::getGraphicsRegisters() {
   return GraphicsRegisters.getMap();
 }
 
-// Return the PAL metadata hardware shader stage name.
-static const char *getStageName(CallingConv::ID CC) {
-  switch (CC) {
-  case CallingConv::AMDGPU_PS:
-    return ".ps";
-  case CallingConv::AMDGPU_VS:
-    return ".vs";
-  case CallingConv::AMDGPU_GS:
-    return ".gs";
-  case CallingConv::AMDGPU_ES:
-    return ".es";
-  case CallingConv::AMDGPU_HS:
-    return ".hs";
-  case CallingConv::AMDGPU_LS:
-    return ".ls";
-  case CallingConv::AMDGPU_Gfx:
-    llvm_unreachable("Callable shader has no hardware stage");
-  default:
-    return ".cs";
-  }
-}
-
 msgpack::DocNode &AMDGPUPALMetadata::refHwStage() {
   auto &N =
       MsgPackDoc.getRoot()
@@ -1070,13 +1081,13 @@ msgpack::DocNode *AMDGPUPALMetadata::refComputeRegister(StringRef field) {
 }
 
 bool AMDGPUPALMetadata::checkComputeRegisters(StringRef field, unsigned Val) {
-  if (auto N = refComputeRegister(field))
+  if (auto *N = refComputeRegister(field))
     return N->getUInt() == Val;
   return false;
 }
 
 bool AMDGPUPALMetadata::checkComputeRegisters(StringRef field, bool Val) {
-  if (auto N = refComputeRegister(field))
+  if (auto *N = refComputeRegister(field))
     return N->getBool() == Val;
   return false;
 }

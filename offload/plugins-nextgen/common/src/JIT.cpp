@@ -114,9 +114,9 @@ createTargetMachine(Module &M, std::string CPU, unsigned OptLevel) {
 
   TargetOptions Options = codegen::InitTargetOptionsFromCodeGenFlags(TT);
 
-  std::unique_ptr<TargetMachine> TM(
-      T->createTargetMachine(M.getTargetTriple(), CPU, Features.getString(),
-                             Options, RelocModel, CodeModel, CGOptLevel));
+  std::unique_ptr<TargetMachine> TM(T->createTargetMachine(
+      M.getTargetTriple().str(), CPU, Features.getString(), Options, RelocModel,
+      CodeModel, CGOptLevel));
   if (!TM)
     return make_error<StringError>("Failed to create target machine",
                                    inconvertibleErrorCode());
@@ -175,8 +175,7 @@ void JITEngine::codegen(TargetMachine *TM, TargetLibraryInfoImpl *TLII,
                         Module &M, raw_pwrite_stream &OS) {
   legacy::PassManager PM;
   PM.add(new TargetLibraryInfoWrapperPass(*TLII));
-  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(
-      reinterpret_cast<LLVMTargetMachine *>(TM));
+  MachineModuleInfoWrapperPass *MMIWP = new MachineModuleInfoWrapperPass(TM);
   TM->addPassesToEmitFile(PM, OS, nullptr,
                           TT.isNVPTX() ? CodeGenFileType::AssemblyFile
                                        : CodeGenFileType::ObjectFile,
@@ -223,7 +222,7 @@ JITEngine::backend(Module &M, const std::string &ComputeUnitKind,
     if (EC)
       return createStringError(
           EC, "Could not open %s to write the post-opt IR module\n",
-          PreOptIRModuleFileName.get().c_str());
+          PostOptIRModuleFileName.get().c_str());
     M.print(FD, nullptr);
   }
 

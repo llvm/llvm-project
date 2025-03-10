@@ -188,8 +188,8 @@ entry:
 define i1 @sgt_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: sgt_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    slt $2, $7, $5
 ; MIPS32-NEXT:    sltu $1, $6, $4
+; MIPS32-NEXT:    slt $2, $7, $5
 ; MIPS32-NEXT:    xor $3, $5, $7
 ; MIPS32-NEXT:    movz $2, $1, $3
 ; MIPS32-NEXT:    jr $ra
@@ -202,10 +202,10 @@ entry:
 define i1 @sge_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: sge_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    slt $1, $5, $7
-; MIPS32-NEXT:    xori $2, $1, 1
 ; MIPS32-NEXT:    sltu $1, $4, $6
 ; MIPS32-NEXT:    xori $1, $1, 1
+; MIPS32-NEXT:    slt $2, $5, $7
+; MIPS32-NEXT:    xori $2, $2, 1
 ; MIPS32-NEXT:    xor $3, $5, $7
 ; MIPS32-NEXT:    movz $2, $1, $3
 ; MIPS32-NEXT:    jr $ra
@@ -218,8 +218,8 @@ entry:
 define i1 @slt_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: slt_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    slt $2, $5, $7
 ; MIPS32-NEXT:    sltu $1, $4, $6
+; MIPS32-NEXT:    slt $2, $5, $7
 ; MIPS32-NEXT:    xor $3, $5, $7
 ; MIPS32-NEXT:    movz $2, $1, $3
 ; MIPS32-NEXT:    jr $ra
@@ -232,10 +232,10 @@ entry:
 define i1 @sle_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: sle_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    slt $1, $7, $5
-; MIPS32-NEXT:    xori $2, $1, 1
 ; MIPS32-NEXT:    sltu $1, $6, $4
 ; MIPS32-NEXT:    xori $1, $1, 1
+; MIPS32-NEXT:    slt $2, $7, $5
+; MIPS32-NEXT:    xori $2, $2, 1
 ; MIPS32-NEXT:    xor $3, $5, $7
 ; MIPS32-NEXT:    movz $2, $1, $3
 ; MIPS32-NEXT:    jr $ra
@@ -248,8 +248,8 @@ entry:
 define i1 @ugt_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: ugt_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sltu $2, $7, $5
 ; MIPS32-NEXT:    sltu $1, $6, $4
+; MIPS32-NEXT:    sltu $2, $7, $5
 ; MIPS32-NEXT:    xor $3, $5, $7
 ; MIPS32-NEXT:    movz $2, $1, $3
 ; MIPS32-NEXT:    jr $ra
@@ -262,10 +262,10 @@ entry:
 define i1 @uge_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: uge_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sltu $1, $5, $7
-; MIPS32-NEXT:    xori $2, $1, 1
 ; MIPS32-NEXT:    sltu $1, $4, $6
 ; MIPS32-NEXT:    xori $1, $1, 1
+; MIPS32-NEXT:    sltu $2, $5, $7
+; MIPS32-NEXT:    xori $2, $2, 1
 ; MIPS32-NEXT:    xor $3, $5, $7
 ; MIPS32-NEXT:    movz $2, $1, $3
 ; MIPS32-NEXT:    jr $ra
@@ -278,8 +278,8 @@ entry:
 define i1 @ult_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: ult_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sltu $2, $5, $7
 ; MIPS32-NEXT:    sltu $1, $4, $6
+; MIPS32-NEXT:    sltu $2, $5, $7
 ; MIPS32-NEXT:    xor $3, $5, $7
 ; MIPS32-NEXT:    movz $2, $1, $3
 ; MIPS32-NEXT:    jr $ra
@@ -292,10 +292,10 @@ entry:
 define i1 @ule_i64(i64 %a, i64 %b) {
 ; MIPS32-LABEL: ule_i64:
 ; MIPS32:       # %bb.0: # %entry
-; MIPS32-NEXT:    sltu $1, $7, $5
-; MIPS32-NEXT:    xori $2, $1, 1
 ; MIPS32-NEXT:    sltu $1, $6, $4
 ; MIPS32-NEXT:    xori $1, $1, 1
+; MIPS32-NEXT:    sltu $2, $7, $5
+; MIPS32-NEXT:    xori $2, $2, 1
 ; MIPS32-NEXT:    xor $3, $5, $7
 ; MIPS32-NEXT:    movz $2, $1, $3
 ; MIPS32-NEXT:    jr $ra

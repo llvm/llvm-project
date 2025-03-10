@@ -16,7 +16,7 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
-    "common/Alarm.cpp",
+    "aix/HostInfoAIX.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
     "common/FileCache.cpp",
@@ -30,6 +30,7 @@ static_library("Host") {
     "common/LZMA.cpp",
     "common/LockFileBase.cpp",
     "common/MainLoopBase.cpp",
+    "common/MemoryMonitor.cpp",
     "common/MonitoringProcessLauncher.cpp",
     "common/NativeProcessProtocol.cpp",
     "common/NativeRegisterContext.cpp",
@@ -113,10 +114,7 @@ static_library("Host") {
     ]
   }
   if (current_os == "android") {
-    sources += [
-      "android/HostInfoAndroid.cpp",
-      "android/LibcGlue.cpp",
-    ]
+    sources += [ "android/HostInfoAndroid.cpp" ]
   }
 
   if (current_os == "freebsd") {

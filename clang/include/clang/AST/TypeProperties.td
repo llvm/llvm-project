@@ -473,12 +473,12 @@ let Class = PackIndexingType in {
   def : Property<"indexExpression", ExprRef> {
     let Read = [{ node->getIndexExpr() }];
   }
-  def : Property<"expandsToEmptyPack", Bool> {
-    let Read = [{ node->expandsToEmptyPack() }];
+  def : Property<"isFullySubstituted", Bool> {
+    let Read = [{ node->isFullySubstituted() }];
   }
 
   def : Creator<[{
-    return ctx.getPackIndexingType(pattern, indexExpression, expandsToEmptyPack);
+    return ctx.getPackIndexingType(pattern, indexExpression, isFullySubstituted);
   }]>;
 }
 
@@ -668,12 +668,16 @@ let Class = AttributedType in {
   def : Property<"equivalentType", QualType> {
     let Read = [{ node->getEquivalentType() }];
   }
-  def : Property<"attribute", AttrKind> {
+  def : Property<"attrKind", AttrKind> {
     let Read = [{ node->getAttrKind() }];
+  }
+  def : Property<"attribute", Attr> {
+    let Read = [{ node->getAttr() }];
   }
 
   def : Creator<[{
-    return ctx.getAttributedType(attribute, modifiedType, equivalentType);
+    return ctx.getAttributedType(attrKind, modifiedType,
+                                 equivalentType, attribute);
   }]>;
 }
 
@@ -820,11 +824,14 @@ let Class = SubstTemplateTypeParmType in {
   def : Property<"PackIndex", Optional<UInt32>> {
     let Read = [{ node->getPackIndex() }];
   }
+  def : Property<"SubstitutionFlag", SubstTemplateTypeParmTypeFlag> {
+    let Read = [{ node->getSubstitutionFlag() }];
+  }
 
   // The call to getCanonicalType here existed in ASTReader.cpp, too.
   def : Creator<[{
     return ctx.getSubstTemplateTypeParmType(
-        replacementType, associatedDecl, Index, PackIndex);
+        replacementType, associatedDecl, Index, PackIndex, SubstitutionFlag);
   }]>;
 }
 
@@ -893,7 +900,7 @@ let Class = BuiltinType in {
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/WebAssemblyReferenceTypes.def"
 
-#define AMDGPU_TYPE(NAME, ID, SINGLETON_ID) \
+#define AMDGPU_TYPE(NAME, ID, SINGLETON_ID, WIDTH, ALIGN) \
       case BuiltinType::ID: return ctx.SINGLETON_ID;
 #include "clang/Basic/AMDGPUTypes.def"
 

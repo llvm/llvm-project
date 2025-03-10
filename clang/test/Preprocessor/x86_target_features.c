@@ -546,6 +546,39 @@
 
 // NO-AMX-COMPLEX-NOT: #define __AMX_COMPLEX__ 1
 
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-transpose -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=AMX-TRANSPOSE %s
+
+// AMX-TRANSPOSE: #define __AMX_TRANSPOSE__ 1
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mno-amx-transpose -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-TRANSPOSE %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-transpose -mno-amx-tile \
+// RUN: -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-TRANSPOSE %s
+
+// NO-AMX-TRANSPOSE-NOT: #define __AMX_TRANSPOSE__ 1
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-avx512 -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=AMX-AVX512 %s
+
+// AMX-AVX512: #define __AMX_AVX512__ 1
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mno-amx-avx512 -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-AVX512 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-avx512 -mno-amx-tile \
+// RUN: -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-AVX512 %s
+
+// NO-AMX-AVX512-NOT: #define __AMX_AVX512__ 1
+
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-tf32 -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=AMX-TF32 %s
+// AMX-TF32: #define __AMX_TF32__ 1
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mno-amx-tf32 -x c \
+// RUN: -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-TF32 %s
+// RUN: %clang -target x86_64-unknown-linux-gnu -march=x86-64 -mamx-tf32 -mno-amx-tile \
+// RUN: -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-AMX-TF32 %s
+// NO-AMX-TF32-NOT: #define __AMX_TF32__ 1
+
 // RUN: %clang -target i386-unknown-unknown -march=atom -mavxvnni -x c -E -dM -o - %s | FileCheck -match-full-lines --check-prefix=AVXVNNI %s
 
 // AVXVNNI: #define __AVX2__ 1
@@ -709,10 +742,8 @@
 // AVXVNNIINT16NOAVX2-NOT: #define __AVX2__ 1
 // AVXVNNIINT16NOAVX2-NOT: #define __AVXVNNIINT16__ 1
 
-// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-256 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-256 -mno-avx512f -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_256 %s
-// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.2 -x c -E -dM -o - %s | FileCheck  -check-prefixes=AVX10_1_256,AVX10_2_256 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.2-256 -x c -E -dM -o - %s | FileCheck  -check-prefixes=AVX10_1_256,AVX10_2_256 %s
 // AVX10_1_256-NOT: __AVX10_1_512__
 // AVX10_1_256: #define __AVX10_1__ 1
@@ -725,6 +756,7 @@
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -mno-avx512f -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.1-512 -mno-evex512 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVX10_1_512 %s
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.2 -x c -E -dM -o - %s | FileCheck  -check-prefixes=AVX10_1_512,AVX10_2_512 %s
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavx10.2-512 -x c -E -dM -o - %s | FileCheck  -check-prefixes=AVX10_1_512,AVX10_2_512 %s
 // AVX10_1_512: #define __AVX10_1_512__ 1
 // AVX10_1_512: #define __AVX10_1__ 1
@@ -739,6 +771,12 @@
 
 // RUN: %clang -target i686-unknown-linux-gnu -march=atom -mno-usermsr -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-USERMSR %s
 // NO-USERMSR-NOT: #define __USERMSR__ 1
+
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mmovrs -x c -E -dM -o - %s | FileCheck  -check-prefix=MOVRS %s
+// MOVRS: #define __MOVRS__ 1
+
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mno-movrs -x c -E -dM -o - %s | FileCheck  -check-prefix=NO-MOVRS %s
+// NO-MOVRS-NOT: #define __MOVRS__ 1
 
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mcrc32 -x c -E -dM -o - %s | FileCheck -check-prefix=CRC32 %s
 

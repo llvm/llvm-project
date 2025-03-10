@@ -10,8 +10,6 @@
 #include "LibCxx.h"
 
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
-#include "lldb/Core/ValueObject.h"
-#include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/StringPrinter.h"
 #include "lldb/DataFormatters/VectorIterator.h"
 #include "lldb/Target/Target.h"
@@ -19,6 +17,8 @@
 #include "lldb/Utility/Endian.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/ValueObject/ValueObject.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
 #include <optional>
 
 using namespace lldb;
@@ -49,8 +49,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -69,8 +67,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 private:
@@ -148,8 +144,6 @@ LibstdcppMapIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
   }
   return lldb::ValueObjectSP();
 }
-
-bool LibstdcppMapIteratorSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 size_t LibstdcppMapIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
@@ -231,8 +225,6 @@ VectorIteratorSyntheticFrontEnd::GetChildAtIndex(uint32_t idx) {
     return m_item_sp;
   return lldb::ValueObjectSP();
 }
-
-bool VectorIteratorSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 size_t VectorIteratorSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
@@ -317,7 +309,8 @@ bool lldb_private::formatters::LibStdcppWStringSummaryProvider(
         return false;
 
       // Safe to pass nullptr for exe_scope here.
-      std::optional<uint64_t> size = wchar_compiler_type.GetBitSize(nullptr);
+      std::optional<uint64_t> size =
+          llvm::expectedToOptional(wchar_compiler_type.GetBitSize(nullptr));
       if (!size)
         return false;
       const uint32_t wchar_size = *size;
@@ -415,8 +408,6 @@ lldb::ChildCacheState LibStdcppSharedPtrSyntheticFrontEnd::Update() {
 
   return lldb::ChildCacheState::eRefetch;
 }
-
-bool LibStdcppSharedPtrSyntheticFrontEnd::MightHaveChildren() { return true; }
 
 size_t LibStdcppSharedPtrSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {

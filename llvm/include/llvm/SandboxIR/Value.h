@@ -9,6 +9,7 @@
 #ifndef LLVM_SANDBOXIR_VALUE_H
 #define LLVM_SANDBOXIR_VALUE_H
 
+#include "llvm/IR/Metadata.h"
 #include "llvm/IR/Value.h"
 #include "llvm/SandboxIR/Use.h"
 
@@ -18,7 +19,7 @@ namespace llvm::sandboxir {
 #define DEF_INSTR(ID, OPC, CLASS) class CLASS;
 #define DEF_CONST(ID, CLASS) class CLASS;
 #define DEF_USER(ID, CLASS) class CLASS;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
 class Context;
 class FuncletPadInst;
 class Type;
@@ -27,6 +28,10 @@ class GlobalObject;
 class Module;
 class UnaryInstruction;
 class CmpInst;
+class IntrinsicInst;
+class Operator;
+class OverflowingBinaryOperator;
+class FPMathOperator;
 
 /// Iterator for the `Use` edges of a Value's users.
 /// \Returns a `Use` when dereferenced.
@@ -63,7 +68,7 @@ public:
 #define DEF_USER(ID, CLASS) ID,
 #define DEF_CONST(ID, CLASS) ID,
 #define DEF_INSTR(ID, OPC, CLASS) ID,
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
   };
 
 protected:
@@ -81,7 +86,7 @@ protected:
 #define DEF_INSTR(ID, OPC, CLASS)                                              \
   case ClassID::ID:                                                            \
     return #ID;
-#include "llvm/SandboxIR/SandboxIRValues.def"
+#include "llvm/SandboxIR/Values.def"
     }
     llvm_unreachable("Unimplemented ID");
   }
@@ -156,9 +161,14 @@ protected:
   friend class ConstantExpr;          // For `Val`.
   friend class Utils;                 // For `Val`.
   friend class Module;                // For `Val`.
+  friend class IntrinsicInst;         // For `Val`.
+  friend class Operator;              // For `Val`.
+  friend class OverflowingBinaryOperator; // For `Val`.
+  friend class FPMathOperator;            // For `Val`.
   // Region needs to manipulate metadata in the underlying LLVM Value, we don't
   // expose metadata in sandboxir.
   friend class Region;
+  friend class ScoreBoard; // Needs access to `Val` for the instruction cost.
 
   /// All values point to the context.
   Context &Ctx;
@@ -271,6 +281,28 @@ public:
   virtual void dumpOS(raw_ostream &OS) const = 0;
   LLVM_DUMP_METHOD void dump() const;
 #endif
+};
+
+class OpaqueValue : public Value {
+protected:
+  OpaqueValue(llvm::Value *V, Context &Ctx)
+      : Value(ClassID::OpaqueValue, V, Ctx) {}
+  friend class Context; // For constructor.
+
+public:
+  static bool classof(const Value *From) {
+    return From->getSubclassID() == ClassID::OpaqueValue;
+  }
+#ifndef NDEBUG
+  void verify() const override {
+    assert((isa<llvm::MetadataAsValue>(Val) || isa<llvm::InlineAsm>(Val)) &&
+           "Expected Metadata or InlineAssembly!");
+  }
+  void dumpOS(raw_ostream &OS) const override {
+    dumpCommonPrefix(OS);
+    dumpCommonSuffix(OS);
+  }
+#endif // NDEBUG
 };
 
 } // namespace llvm::sandboxir

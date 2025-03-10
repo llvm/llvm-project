@@ -9,17 +9,16 @@
 // Implements generic name mangling support for blocks and Objective-C.
 //
 //===----------------------------------------------------------------------===//
-#include "clang/AST/Attr.h"
+#include "clang/AST/Mangle.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
-#include "clang/AST/Mangle.h"
 #include "clang/AST/VTableBuilder.h"
 #include "clang/Basic/ABI.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DataLayout.h"
@@ -75,7 +74,7 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
       if (FD->isMain() && FD->getNumParams() == 2)
         return CCM_WasmMainArgcArgv;
 
-  if (!Triple.isOSWindows() || !Triple.isX86())
+  if (!TI.shouldUseMicrosoftCCforMangling())
     return CCM_Other;
 
   if (Context.getLangOpts().CPlusPlus && !isExternC(ND) &&

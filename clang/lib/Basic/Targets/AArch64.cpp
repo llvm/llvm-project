@@ -26,35 +26,105 @@
 using namespace clang;
 using namespace clang::targets;
 
-static constexpr Builtin::Info BuiltinInfo[] = {
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsNEON.def"
+static constexpr int NumNeonBuiltins =
+    NEON::FirstFp16Builtin - Builtin::FirstTSBuiltin;
+static constexpr int NumFp16Builtins =
+    NEON::FirstTSBuiltin - NEON::FirstFp16Builtin;
+static constexpr int NumSVEBuiltins =
+    SVE::FirstNeonBridgeBuiltin - NEON::FirstTSBuiltin;
+static constexpr int NumSVENeonBridgeBuiltins =
+    SVE::FirstTSBuiltin - SVE::FirstNeonBridgeBuiltin;
+static constexpr int NumSMEBuiltins = SME::FirstTSBuiltin - SVE::FirstTSBuiltin;
+static constexpr int NumAArch64Builtins =
+    AArch64::LastTSBuiltin - SME::FirstTSBuiltin;
+static constexpr int NumBuiltins =
+    AArch64::LastTSBuiltin - Builtin::FirstTSBuiltin;
+static_assert(NumBuiltins ==
+              (NumNeonBuiltins + NumFp16Builtins + NumSVEBuiltins +
+               NumSVENeonBridgeBuiltins + NumSMEBuiltins + NumAArch64Builtins));
 
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsSVE.def"
+namespace clang {
+namespace NEON {
+#define GET_NEON_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_BUILTIN_STR_TABLE
 
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#include "clang/Basic/BuiltinsSME.def"
-
-#define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define LANGBUILTIN(ID, TYPE, ATTRS, LANG)                                     \
-  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, LANG},
-#define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
-#define TARGET_HEADER_BUILTIN(ID, TYPE, ATTRS, HEADER, LANGS, FEATURE)         \
-  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::HEADER, LANGS},
-#include "clang/Basic/BuiltinsAArch64.def"
+static constexpr std::array<Builtin::Info, NumNeonBuiltins> BuiltinInfos = {
+#define GET_NEON_BUILTIN_INFOS
+#include "clang/Basic/arm_neon.inc"
+#undef GET_NEON_BUILTIN_INFOS
 };
+
+namespace FP16 {
+#define GET_NEON_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_fp16.inc"
+#undef GET_NEON_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumFp16Builtins> BuiltinInfos = {
+#define GET_NEON_BUILTIN_INFOS
+#include "clang/Basic/arm_fp16.inc"
+#undef GET_NEON_BUILTIN_INFOS
+};
+} // namespace FP16
+} // namespace NEON
+
+namespace SVE {
+#define GET_SVE_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_sve_builtins.inc"
+#undef GET_SVE_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumSVEBuiltins> BuiltinInfos = {
+#define GET_SVE_BUILTIN_INFOS
+#include "clang/Basic/arm_sve_builtins.inc"
+#undef GET_SVE_BUILTIN_INFOS
+};
+} // namespace SVE
+
+namespace SME {
+#define GET_SME_BUILTIN_STR_TABLE
+#include "clang/Basic/arm_sme_builtins.inc"
+#undef GET_SME_BUILTIN_STR_TABLE
+
+static constexpr std::array<Builtin::Info, NumSMEBuiltins> BuiltinInfos = {
+#define GET_SME_BUILTIN_INFOS
+#include "clang/Basic/arm_sme_builtins.inc"
+#undef GET_SME_BUILTIN_INFOS
+};
+} // namespace SME
+} // namespace clang
+
+static constexpr llvm::StringTable BuiltinSVENeonBridgeStrings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define GET_SVE_BUILTINS
+#include "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
+#undef GET_SVE_BUILTINS
+#undef TARGET_BUILTIN
+    ;
+static constexpr llvm::StringTable BuiltinAArch64Strings =
+    CLANG_BUILTIN_STR_TABLE_START
+#define BUILTIN CLANG_BUILTIN_STR_TABLE
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_STR_TABLE
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_STR_TABLE
+#include "clang/Basic/BuiltinsAArch64.def"
+    ;
+
+static constexpr auto BuiltinSVENeonBridgeInfos =
+    Builtin::MakeInfos<NumSVENeonBridgeBuiltins>({
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define GET_SVE_BUILTINS
+#include "clang/Basic/BuiltinsAArch64NeonSVEBridge.def"
+#undef GET_SVE_BUILTINS
+#undef TARGET_BUILTIN
+    });
+static constexpr auto BuiltinAArch64Infos =
+    Builtin::MakeInfos<NumAArch64Builtins>({
+#define BUILTIN CLANG_BUILTIN_ENTRY
+#define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
+#define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
+#define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
+#include "clang/Basic/BuiltinsAArch64.def"
+    });
 
 void AArch64TargetInfo::setArchFeatures() {
   if (*ArchInfo == llvm::AArch64::ARMV8R) {
@@ -143,6 +213,8 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
     IntMaxType = SignedLong;
   }
 
+  AddrSpaceMap = &ARM64AddrSpaceMap;
+
   // All AArch64 implementations support ARMv8 FP, which makes half a legal type.
   HasLegalHalfType = true;
   HalfArgsAndReturns = true;
@@ -189,6 +261,10 @@ AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,
   assert(UseBitFieldTypeAlignment && "bitfields affect type alignment");
   UseZeroLengthBitfieldAlignment = true;
 
+  // AAPCS64 allows any "fundamental integer data type" to be used for
+  // over-sized bitfields, which includes 128-bit integers.
+  LargestOverSizedBitfieldContainer = 128;
+
   HasUnalignedAccess = true;
 
   // AArch64 targets default to using the ARM C++ ABI.
@@ -230,21 +306,38 @@ bool AArch64TargetInfo::validateTarget(DiagnosticsEngine &Diags) const {
 
 bool AArch64TargetInfo::validateGlobalRegisterVariable(
     StringRef RegName, unsigned RegSize, bool &HasSizeMismatch) const {
-  if ((RegName == "sp") || RegName.starts_with("x")) {
+  if (RegName == "sp") {
     HasSizeMismatch = RegSize != 64;
     return true;
-  } else if (RegName.starts_with("w")) {
-    HasSizeMismatch = RegSize != 32;
-    return true;
   }
-  return false;
+  if (RegName.starts_with("w"))
+    HasSizeMismatch = RegSize != 32;
+  else if (RegName.starts_with("x"))
+    HasSizeMismatch = RegSize != 64;
+  else
+    return false;
+  StringRef RegNum = RegName.drop_front();
+  // Check if the register is reserved. See also
+  // AArch64TargetLowering::getRegisterByName().
+  return RegNum == "0" ||
+         (RegNum == "18" &&
+          llvm::AArch64::isX18ReservedByDefault(getTriple())) ||
+         getTargetOpts().FeatureMap.lookup(("reserve-x" + RegNum).str());
 }
 
 bool AArch64TargetInfo::validateBranchProtection(StringRef Spec, StringRef,
                                                  BranchProtectionInfo &BPI,
+                                                 const LangOptions &LO,
                                                  StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
   if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, HasPAuthLR))
+    return false;
+
+  // GCS is currently untested with ptrauth-returns, but enabling this could be
+  // allowed in future after testing with a suitable system.
+  if (LO.PointerAuthReturns &&
+      (PBP.Scope != "none" || PBP.BranchProtectionPAuthLR ||
+       PBP.GuardedControlStack))
     return false;
 
   BPI.SignReturnAddr =
@@ -373,6 +466,12 @@ void AArch64TargetInfo::getTargetDefinesARMV95A(const LangOptions &Opts,
   getTargetDefinesARMV94A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV96A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Armv9.6-A does not have a v8.* equivalent, but is a superset of v9.5-A.
+  getTargetDefinesARMV95A(Opts, Builder);
+}
+
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
@@ -404,7 +503,7 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
 #define ARM_ACLE_VERSION(Y, Q, P) (100 * (Y) + 10 * (Q) + (P))
   Builder.defineMacro("__ARM_ACLE", Twine(ARM_ACLE_VERSION(2024, 2, 0)));
   Builder.defineMacro("__FUNCTION_MULTI_VERSIONING_SUPPORT_LEVEL",
-                      Twine(ARM_ACLE_VERSION(2024, 2, 0)));
+                      Twine(ARM_ACLE_VERSION(2024, 3, 0)));
 #undef ARM_ACLE_VERSION
   Builder.defineMacro("__ARM_ARCH",
                       std::to_string(ArchInfo->Version.getMajor()));
@@ -439,6 +538,9 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   Builder.defineMacro("__ARM_FP16_FORMAT_IEEE", "1");
   Builder.defineMacro("__ARM_FP16_ARGS", "1");
 
+  // Clang supports arm_neon_sve_bridge.h
+  Builder.defineMacro("__ARM_NEON_SVE_BRIDGE", "1");
+
   if (Opts.UnsafeFPMath)
     Builder.defineMacro("__ARM_FP_FAST", "1");
 
@@ -456,19 +558,16 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (FPU & SveMode)
     Builder.defineMacro("__ARM_FEATURE_SVE", "1");
 
-  if ((FPU & NeonMode) && (FPU & SveMode))
-    Builder.defineMacro("__ARM_NEON_SVE_BRIDGE", "1");
-
   if (HasSVE2)
     Builder.defineMacro("__ARM_FEATURE_SVE2", "1");
 
   if (HasSVE2p1)
     Builder.defineMacro("__ARM_FEATURE_SVE2p1", "1");
 
-  if (HasSVE2 && HasSVE2AES)
+  if (HasSVE2 && HasSVEAES)
     Builder.defineMacro("__ARM_FEATURE_SVE2_AES", "1");
 
-  if (HasSVE2 && HasSVE2BitPerm)
+  if (HasSVE2 && HasSVEBitPerm)
     Builder.defineMacro("__ARM_FEATURE_SVE2_BITPERM", "1");
 
   if (HasSVE2 && HasSVE2SHA3)
@@ -657,6 +756,8 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
     getTargetDefinesARMV94A(Opts, Builder);
   else if (*ArchInfo == llvm::AArch64::ARMV9_5A)
     getTargetDefinesARMV95A(Opts, Builder);
+  else if (*ArchInfo == llvm::AArch64::ARMV9_6A)
+    getTargetDefinesARMV96A(Opts, Builder);
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8|16) builtins work.
   Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
@@ -678,41 +779,40 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   }
 }
 
-ArrayRef<Builtin::Info> AArch64TargetInfo::getTargetBuiltins() const {
-  return llvm::ArrayRef(BuiltinInfo, clang::AArch64::LastTSBuiltin -
-                                         Builtin::FirstTSBuiltin);
+llvm::SmallVector<Builtin::InfosShard>
+AArch64TargetInfo::getTargetBuiltins() const {
+  return {
+      {&NEON::BuiltinStrings, NEON::BuiltinInfos, "__builtin_neon_"},
+      {&NEON::FP16::BuiltinStrings, NEON::FP16::BuiltinInfos,
+       "__builtin_neon_"},
+      {&SVE::BuiltinStrings, SVE::BuiltinInfos, "__builtin_sve_"},
+      {&BuiltinSVENeonBridgeStrings, BuiltinSVENeonBridgeInfos},
+      {&SME::BuiltinStrings, SME::BuiltinInfos, "__builtin_sme_"},
+      {&BuiltinAArch64Strings, BuiltinAArch64Infos},
+  };
 }
 
 std::optional<std::pair<unsigned, unsigned>>
-AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts) const {
+AArch64TargetInfo::getVScaleRange(const LangOptions &LangOpts,
+                                  bool IsArmStreamingFunction) const {
   if (LangOpts.VScaleMin || LangOpts.VScaleMax)
     return std::pair<unsigned, unsigned>(
         LangOpts.VScaleMin ? LangOpts.VScaleMin : 1, LangOpts.VScaleMax);
 
-  if (hasFeature("sve"))
+  if (hasFeature("sve") || (IsArmStreamingFunction && hasFeature("sme")))
     return std::pair<unsigned, unsigned>(1, 16);
 
   return std::nullopt;
 }
 
-unsigned AArch64TargetInfo::multiVersionSortPriority(StringRef Name) const {
-  if (Name == "default")
-    return 0;
-  if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
-    return Ext->Priority;
-  return 0;
-}
-
-unsigned AArch64TargetInfo::multiVersionFeatureCost() const {
-  // Take the maximum priority as per feature cost, so more features win.
-  constexpr unsigned MaxFMVPriority = 1000;
-  return MaxFMVPriority;
+uint64_t AArch64TargetInfo::getFMVPriority(ArrayRef<StringRef> Features) const {
+  return llvm::AArch64::getFMVPriority(Features);
 }
 
 bool AArch64TargetInfo::doesFeatureAffectCodeGen(StringRef Name) const {
   // FMV extensions which imply no backend features do not affect codegen.
   if (auto Ext = llvm::AArch64::parseFMVExtension(Name))
-    return !Ext->Features.empty();
+    return Ext->ID.has_value();
   return false;
 }
 
@@ -755,14 +855,12 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("i8mm", HasMatMul)
       .Case("bf16", HasBFloat16)
       .Case("sve", FPU & SveMode)
-      .Case("sve-bf16", FPU & SveMode && HasBFloat16)
-      .Case("sve-i8mm", FPU & SveMode && HasMatMul)
       .Case("sve-b16b16", HasSVEB16B16)
       .Case("f32mm", FPU & SveMode && HasMatmulFP32)
       .Case("f64mm", FPU & SveMode && HasMatmulFP64)
       .Case("sve2", FPU & SveMode && HasSVE2)
-      .Case("sve2-pmull128", FPU & SveMode && HasSVE2AES)
-      .Case("sve2-bitperm", FPU & SveMode && HasSVE2BitPerm)
+      .Case("sve-aes", HasSVEAES)
+      .Case("sve-bitperm", FPU & HasSVEBitPerm)
       .Case("sve2-sha3", FPU & SveMode && HasSVE2SHA3)
       .Case("sve2-sm4", FPU & SveMode && HasSVE2SM4)
       .Case("sve2p1", FPU & SveMode && HasSVE2p1)
@@ -774,7 +872,7 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
       .Case("sme-fa64", HasSMEFA64)
       .Case("sme-f16f16", HasSMEF16F16)
       .Case("sme-b16b16", HasSMEB16B16)
-      .Cases("memtag", "memtag2", HasMTE)
+      .Case("memtag", HasMTE)
       .Case("sb", HasSB)
       .Case("predres", HasPredRes)
       .Cases("ssbs", "ssbs2", HasSSBS)
@@ -853,12 +951,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasSVE2 = true;
       HasSVE2p1 = true;
     }
-    if (Feature == "+sve2-aes") {
+    if (Feature == "+sve-aes") {
       FPU |= NeonMode;
-      FPU |= SveMode;
       HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2AES = true;
+      HasSVEAES = true;
     }
     if (Feature == "+sve2-sha3") {
       FPU |= NeonMode;
@@ -876,12 +972,10 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     }
     if (Feature == "+sve-b16b16")
       HasSVEB16B16 = true;
-    if (Feature == "+sve2-bitperm") {
+    if (Feature == "+sve-bitperm") {
       FPU |= NeonMode;
-      FPU |= SveMode;
       HasFullFP16 = true;
-      HasSVE2 = true;
-      HasSVE2BitPerm = true;
+      HasSVEBitPerm = true;
     }
     if (Feature == "+f32mm") {
       FPU |= NeonMode;
@@ -1044,6 +1138,9 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v9.5a" &&
         ArchInfo->Version < llvm::AArch64::ARMV9_5A.Version)
       ArchInfo = &llvm::AArch64::ARMV9_5A;
+    if (Feature == "+v9.6a" &&
+        ArchInfo->Version < llvm::AArch64::ARMV9_6A.Version)
+      ArchInfo = &llvm::AArch64::ARMV9_6A;
     if (Feature == "+v8r")
       ArchInfo = &llvm::AArch64::ARMV8R;
     if (Feature == "+fullfp16") {
@@ -1522,11 +1619,16 @@ AArch64leTargetInfo::AArch64leTargetInfo(const llvm::Triple &Triple,
 void AArch64leTargetInfo::setDataLayout() {
   if (getTriple().isOSBinFormatMachO()) {
     if(getTriple().isArch32Bit())
-      resetDataLayout("e-m:o-p:32:32-i64:64-i128:128-n32:64-S128-Fn32", "_");
+      resetDataLayout("e-m:o-p:32:32-p270:32:32-p271:32:32-p272:64:64-i64:64-"
+                      "i128:128-n32:64-S128-Fn32",
+                      "_");
     else
-      resetDataLayout("e-m:o-i64:64-i128:128-n32:64-S128-Fn32", "_");
+      resetDataLayout("e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-"
+                      "n32:64-S128-Fn32",
+                      "_");
   } else
-    resetDataLayout("e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32");
+    resetDataLayout("e-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-"
+                    "i64:64-i128:128-n32:64-S128-Fn32");
 }
 
 void AArch64leTargetInfo::getTargetDefines(const LangOptions &Opts,
@@ -1549,7 +1651,8 @@ void AArch64beTargetInfo::getTargetDefines(const LangOptions &Opts,
 
 void AArch64beTargetInfo::setDataLayout() {
   assert(!getTriple().isOSBinFormatMachO());
-  resetDataLayout("E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128-Fn32");
+  resetDataLayout("E-m:e-p270:32:32-p271:32:32-p272:64:64-i8:8:32-i16:16:32-"
+                  "i64:64-i128:128-n32:64-S128-Fn32");
 }
 
 WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
@@ -1572,8 +1675,10 @@ WindowsARM64TargetInfo::WindowsARM64TargetInfo(const llvm::Triple &Triple,
 
 void WindowsARM64TargetInfo::setDataLayout() {
   resetDataLayout(Triple.isOSBinFormatMachO()
-                      ? "e-m:o-i64:64-i128:128-n32:64-S128-Fn32"
-                      : "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128-Fn32",
+                      ? "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:"
+                        "128-n32:64-S128-Fn32"
+                      : "e-m:w-p270:32:32-p271:32:32-p272:64:64-p:64:64-i32:32-"
+                        "i64:64-i128:128-n32:64-S128-Fn32",
                   Triple.isOSBinFormatMachO() ? "_" : "");
 }
 
@@ -1655,6 +1760,10 @@ MinGWARM64TargetInfo::MinGWARM64TargetInfo(const llvm::Triple &Triple,
   TheCXXABI.set(TargetCXXABI::GenericAArch64);
 }
 
+AppleMachOAArch64TargetInfo::AppleMachOAArch64TargetInfo(
+    const llvm::Triple &Triple, const TargetOptions &Opts)
+    : AppleMachOTargetInfo<AArch64leTargetInfo>(Triple, Opts) {}
+
 DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
                                                  const TargetOptions &Opts)
     : DarwinTargetInfo<AArch64leTargetInfo>(Triple, Opts) {
@@ -1679,9 +1788,9 @@ DarwinAArch64TargetInfo::DarwinAArch64TargetInfo(const llvm::Triple &Triple,
     TheCXXABI.set(TargetCXXABI::AppleARM64);
 }
 
-void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
-                                           const llvm::Triple &Triple,
-                                           MacroBuilder &Builder) const {
+void clang::targets::getAppleMachOAArch64Defines(MacroBuilder &Builder,
+                                                 const LangOptions &Opts,
+                                                 const llvm::Triple &Triple) {
   Builder.defineMacro("__AARCH64_SIMD__");
   if (Triple.isArch32Bit())
     Builder.defineMacro("__ARM64_ARCH_8_32__");
@@ -1694,27 +1803,24 @@ void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
 
   if (Triple.isArm64e())
     Builder.defineMacro("__arm64e__", "1");
+}
 
-  getDarwinDefines(Builder, Opts, Triple, PlatformName, PlatformMinVersion);
+void AppleMachOAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
+                                               const llvm::Triple &Triple,
+                                               MacroBuilder &Builder) const {
+  getAppleMachOAArch64Defines(Builder, Opts, Triple);
+  AppleMachOTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple,
+                                                          Builder);
+}
+
+void DarwinAArch64TargetInfo::getOSDefines(const LangOptions &Opts,
+                                           const llvm::Triple &Triple,
+                                           MacroBuilder &Builder) const {
+  getAppleMachOAArch64Defines(Builder, Opts, Triple);
+  DarwinTargetInfo<AArch64leTargetInfo>::getOSDefines(Opts, Triple, Builder);
 }
 
 TargetInfo::BuiltinVaListKind
 DarwinAArch64TargetInfo::getBuiltinVaListKind() const {
   return TargetInfo::CharPtrBuiltinVaList;
-}
-
-// 64-bit RenderScript is aarch64
-RenderScript64TargetInfo::RenderScript64TargetInfo(const llvm::Triple &Triple,
-                                                   const TargetOptions &Opts)
-    : AArch64leTargetInfo(llvm::Triple("aarch64", Triple.getVendorName(),
-                                       Triple.getOSName(),
-                                       Triple.getEnvironmentName()),
-                          Opts) {
-  IsRenderScriptTarget = true;
-}
-
-void RenderScript64TargetInfo::getTargetDefines(const LangOptions &Opts,
-                                                MacroBuilder &Builder) const {
-  Builder.defineMacro("__RENDERSCRIPT__");
-  AArch64leTargetInfo::getTargetDefines(Opts, Builder);
 }

@@ -8,7 +8,6 @@
 
 #include "ByteCodeEmitter.h"
 #include "Context.h"
-#include "FixedPoint.h"
 #include "Floating.h"
 #include "IntegralAP.h"
 #include "Opcode.h"
@@ -16,7 +15,6 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/Basic/Builtins.h"
 #include <type_traits>
 
 using namespace clang;
@@ -137,11 +135,9 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
   if (!Func) {
-    unsigned BuiltinID = FuncDecl->getBuiltinID();
-    Func =
-        P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                         std::move(ParamDescriptors), std::move(ParamOffsets),
-                         HasThisPointer, HasRVO, BuiltinID);
+    Func = P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
+                            std::move(ParamDescriptors),
+                            std::move(ParamOffsets), HasThisPointer, HasRVO);
   }
 
   assert(Func);
@@ -214,8 +210,7 @@ Function *ByteCodeEmitter::compileObjCBlock(const BlockExpr *BE) {
   Function *Func =
       P.createFunction(BE, ParamOffset, std::move(ParamTypes),
                        std::move(ParamDescriptors), std::move(ParamOffsets),
-                       /*HasThisPointer=*/false, /*HasRVO=*/false,
-                       /*IsUnevaluatedBuiltin=*/false);
+                       /*HasThisPointer=*/false, /*HasRVO=*/false);
 
   assert(Func);
   Func->setDefined(true);
@@ -334,6 +329,12 @@ void emit(Program &P, std::vector<std::byte> &Code, const IntegralAP<true> &Val,
   emitSerialized(Code, Val, Success);
 }
 
+template <>
+void emit(Program &P, std::vector<std::byte> &Code, const FixedPoint &Val,
+          bool &Success) {
+  emitSerialized(Code, Val, Success);
+}
+
 template <typename... Tys>
 bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &...Args,
                              const SourceInfo &SI) {
@@ -363,6 +364,16 @@ bool ByteCodeEmitter::jump(const LabelTy &Label) {
 
 bool ByteCodeEmitter::fallthrough(const LabelTy &Label) {
   emitLabel(Label);
+  return true;
+}
+
+bool ByteCodeEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
+  const Expr *Arg = E->getArg(0);
+  PrimType T = Ctx.classify(Arg->getType()).value_or(PT_Ptr);
+  if (!this->emitBCP(getOffset(EndLabel), T, E))
+    return false;
+  if (!this->visit(Arg))
+    return false;
   return true;
 }
 

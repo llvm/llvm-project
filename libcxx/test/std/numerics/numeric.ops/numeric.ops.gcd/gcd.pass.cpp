@@ -34,10 +34,12 @@ constexpr struct {
     {1, 1, 1},
     {2, 3, 1},
     {2, 4, 2},
+    {11, 9, 1},
     {36, 17, 1},
-    {36, 18, 18}
-};
-
+    {36, 18, 18},
+    {25, 30, 5},
+    {24, 16, 8},
+    {128, 100, 4}};
 
 template <typename Input1, typename Input2, typename Output>
 constexpr bool test0(int in1, int in2, int out)

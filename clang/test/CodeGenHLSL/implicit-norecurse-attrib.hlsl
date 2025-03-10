@@ -12,7 +12,7 @@ struct Node {
 };
 
 // CHECK: Function Attrs:{{.*}}norecurse
-// CHECK: define noundef i32 @"?Find@@YAIY0GE@UNode@@I@Z"(ptr noundef byval([100 x %struct.Node]) align 4 %SortedTree, i32 noundef %key) [[IntAttr:\#[0-9]+]]
+// CHECK: define noundef i32 @_Z4FindA100_4Nodej(ptr noundef byval([100 x %struct.Node]) align 4 %SortedTree, i32 noundef %key) [[IntAttr:\#[0-9]+]]
 // CHECK: ret i32
 // Find and return value corresponding to key in the SortedTree
 uint Find(Node SortedTree[MAX], uint key) {
@@ -31,13 +31,13 @@ uint Find(Node SortedTree[MAX], uint key) {
 }
 
 // CHECK: Function Attrs:{{.*}}norecurse
-// CHECK: define noundef i1 @"?InitTree@@YA_NY0GE@UNode@@V?$RWBuffer@T?$__vector@I$03@__clang@@@hlsl@@I@Z"(ptr noundef byval([100 x %struct.Node]) align 4 %tree, ptr noundef byval(%"class.hlsl::RWBuffer") align 4 %encodedTree, i32 noundef %maxDepth) [[ExtAttr:\#[0-9]+]]
+// CHECK: define noundef i1 @_Z8InitTreeA100_4NodeN4hlsl8RWBufferIDv4_jEEj(ptr noundef byval([100 x %struct.Node]) align 4 %tree, ptr noundef byval(%"class.hlsl::RWBuffer") align 4 %encodedTree, i32 noundef %maxDepth) [[ExtAttr:\#[0-9]+]]
 // CHECK: ret i1
 // Initialize tree with given buffer
 // Imagine the inout works
 export
 bool InitTree(/*inout*/ Node tree[MAX], RWBuffer<uint4> encodedTree, uint maxDepth) {
-  uint size = pow(2.f, maxDepth) - 1;
+  uint size = pow(2.f, (float)maxDepth) - 1;
   if (size > MAX) return false;
   for (uint i = 1; i < size; i++) {
     tree[i].value = encodedTree[i].x;
@@ -52,7 +52,7 @@ RWBuffer<uint4> gTree;
 
 // Mangled entry points are internal
 // CHECK: Function Attrs:{{.*}}norecurse
-// CHECK: define internal void @"?main@@YAXI@Z"(i32 noundef %GI) [[IntAttr]]
+// CHECK: define internal void @_Z4mainj(i32 noundef %GI) [[IntAttr]]
 // CHECK: ret void
 
 // Canonical entry points are external and shader attributed
@@ -71,7 +71,7 @@ void main(uint GI : SV_GroupIndex) {
 
 // Mangled entry points are internal
 // CHECK: Function Attrs:{{.*}}norecurse
-// CHECK: define internal void @"?defaultMain@@YAXXZ"() [[IntAttr]]
+// CHECK: define internal void @_Z11defaultMainv() [[IntAttr]]
 // CHECK: ret void
 
 // Canonical entry points are external and shader attributed

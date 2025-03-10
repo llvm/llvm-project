@@ -10,9 +10,13 @@
 #include "TestingSupport/SubsystemRAII.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
+#include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <chrono>
 #include <fcntl.h>
+#include <future>
 #include <numeric>
+#include <thread>
 #include <vector>
 
 using namespace lldb_private;
@@ -55,6 +59,8 @@ TEST_F(PipeTest, OpenAsReader) {
 }
 #endif
 
+// Tests flaky on Windows
+#ifndef _WIN32
 TEST_F(PipeTest, WriteWithTimeout) {
   Pipe pipe;
   ASSERT_THAT_ERROR(pipe.CreateNew(false).ToError(), llvm::Succeeded());
@@ -85,57 +91,53 @@ TEST_F(PipeTest, WriteWithTimeout) {
   char *read_ptr = reinterpret_cast<char *>(read_buf.data());
   size_t write_bytes = 0;
   size_t read_bytes = 0;
-  size_t num_bytes = 0;
 
   // Write to the pipe until it is full.
   while (write_bytes + write_chunk_size <= buf_size) {
-    Status error =
-        pipe.WriteWithTimeout(write_ptr + write_bytes, write_chunk_size,
-                              std::chrono::milliseconds(10), num_bytes);
-    if (error.Fail())
+    llvm::Expected<size_t> num_bytes =
+        pipe.Write(write_ptr + write_bytes, write_chunk_size,
+                   std::chrono::milliseconds(10));
+    if (num_bytes) {
+      write_bytes += *num_bytes;
+    } else {
+      ASSERT_THAT_ERROR(num_bytes.takeError(), llvm::Failed());
       break; // The write buffer is full.
-    write_bytes += num_bytes;
+    }
   }
   ASSERT_LE(write_bytes + write_chunk_size, buf_size)
       << "Pipe buffer larger than expected";
 
   // Attempt a write with a long timeout.
   auto start_time = std::chrono::steady_clock::now();
-  ASSERT_THAT_ERROR(pipe.WriteWithTimeout(write_ptr + write_bytes,
-                                          write_chunk_size,
-                                          std::chrono::seconds(2), num_bytes)
-                        .ToError(),
-                    llvm::Failed());
+  // TODO: Assert a specific error (EAGAIN?) here.
+  ASSERT_THAT_EXPECTED(pipe.Write(write_ptr + write_bytes, write_chunk_size,
+                                  std::chrono::seconds(2)),
+                       llvm::Failed());
   auto dur = std::chrono::steady_clock::now() - start_time;
   ASSERT_GE(dur, std::chrono::seconds(2));
 
   // Attempt a write with a short timeout.
   start_time = std::chrono::steady_clock::now();
-  ASSERT_THAT_ERROR(
-      pipe.WriteWithTimeout(write_ptr + write_bytes, write_chunk_size,
-                            std::chrono::milliseconds(200), num_bytes)
-          .ToError(),
-      llvm::Failed());
+  ASSERT_THAT_EXPECTED(pipe.Write(write_ptr + write_bytes, write_chunk_size,
+                                  std::chrono::milliseconds(200)),
+                       llvm::Failed());
   dur = std::chrono::steady_clock::now() - start_time;
   ASSERT_GE(dur, std::chrono::milliseconds(200));
   ASSERT_LT(dur, std::chrono::seconds(2));
 
   // Drain the pipe.
   while (read_bytes < write_bytes) {
-    ASSERT_THAT_ERROR(
-        pipe.ReadWithTimeout(read_ptr + read_bytes, write_bytes - read_bytes,
-                             std::chrono::milliseconds(10), num_bytes)
-            .ToError(),
-        llvm::Succeeded());
-    read_bytes += num_bytes;
+    llvm::Expected<size_t> num_bytes =
+        pipe.Read(read_ptr + read_bytes, write_bytes - read_bytes,
+                  std::chrono::milliseconds(10));
+    ASSERT_THAT_EXPECTED(num_bytes, llvm::Succeeded());
+    read_bytes += *num_bytes;
   }
 
   // Be sure the pipe is empty.
-  ASSERT_THAT_ERROR(pipe.ReadWithTimeout(read_ptr + read_bytes, 100,
-                                         std::chrono::milliseconds(10),
-                                         num_bytes)
-                        .ToError(),
-                    llvm::Failed());
+  ASSERT_THAT_EXPECTED(
+      pipe.Read(read_ptr + read_bytes, 100, std::chrono::milliseconds(10)),
+      llvm::Failed());
 
   // Check that we got what we wrote.
   ASSERT_EQ(write_bytes, read_bytes);
@@ -144,9 +146,57 @@ TEST_F(PipeTest, WriteWithTimeout) {
                          read_buf.begin()));
 
   // Write to the pipe again and check that it succeeds.
-  ASSERT_THAT_ERROR(pipe.WriteWithTimeout(write_ptr, write_chunk_size,
-                                          std::chrono::milliseconds(10),
-                                          num_bytes)
-                        .ToError(),
-                    llvm::Succeeded());
+  ASSERT_THAT_EXPECTED(
+      pipe.Write(write_ptr, write_chunk_size, std::chrono::milliseconds(10)),
+      llvm::Succeeded());
 }
+
+TEST_F(PipeTest, ReadWithTimeout) {
+  Pipe pipe;
+  ASSERT_THAT_ERROR(pipe.CreateNew(false).ToError(), llvm::Succeeded());
+
+  char buf[100];
+  // The pipe is initially empty. A polling read returns immediately.
+  ASSERT_THAT_EXPECTED(pipe.Read(buf, sizeof(buf), std::chrono::seconds(0)),
+                       llvm::Failed());
+
+  // With a timeout, we should wait for at least this amount of time (but not
+  // too much).
+  auto start = std::chrono::steady_clock::now();
+  ASSERT_THAT_EXPECTED(
+      pipe.Read(buf, sizeof(buf), std::chrono::milliseconds(200)),
+      llvm::Failed());
+  auto dur = std::chrono::steady_clock::now() - start;
+  EXPECT_GT(dur, std::chrono::milliseconds(200));
+  EXPECT_LT(dur, std::chrono::seconds(2));
+
+  // Write something into the pipe, and read it back. The blocking read call
+  // should return even though it hasn't filled the buffer.
+  llvm::StringRef hello_world("Hello world!");
+  ASSERT_THAT_EXPECTED(pipe.Write(hello_world.data(), hello_world.size()),
+                       llvm::HasValue(hello_world.size()));
+  ASSERT_THAT_EXPECTED(pipe.Read(buf, sizeof(buf)),
+                       llvm::HasValue(hello_world.size()));
+  EXPECT_EQ(llvm::StringRef(buf, hello_world.size()), hello_world);
+
+  // Now write something and try to read it in chunks.
+  memset(buf, 0, sizeof(buf));
+  ASSERT_THAT_EXPECTED(pipe.Write(hello_world.data(), hello_world.size()),
+                       llvm::HasValue(hello_world.size()));
+  ASSERT_THAT_EXPECTED(pipe.Read(buf, 4), llvm::HasValue(4));
+  ASSERT_THAT_EXPECTED(pipe.Read(buf + 4, sizeof(buf) - 4),
+                       llvm::HasValue(hello_world.size() - 4));
+  EXPECT_EQ(llvm::StringRef(buf, hello_world.size()), hello_world);
+
+  // A blocking read should wait until the data arrives.
+  memset(buf, 0, sizeof(buf));
+  std::future<llvm::Expected<size_t>> future_num_bytes = std::async(
+      std::launch::async, [&] { return pipe.Read(buf, sizeof(buf)); });
+  std::this_thread::sleep_for(std::chrono::milliseconds(10));
+  ASSERT_THAT_EXPECTED(pipe.Write(hello_world.data(), hello_world.size()),
+                       llvm::HasValue(hello_world.size()));
+  ASSERT_THAT_EXPECTED(future_num_bytes.get(),
+                       llvm::HasValue(hello_world.size()));
+  EXPECT_EQ(llvm::StringRef(buf, hello_world.size()), hello_world);
+}
+#endif /*ifndef _WIN32*/

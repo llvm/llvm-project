@@ -71,16 +71,6 @@ def TosaOptionalDecompositions
   let constructor = "tosa::createTosaOptionalDecompositions()";
 }
 
-def TosaProfileType : I32EnumAttr<"TosaProfileEnum", "Tosa profile",
-    [
-      I32EnumAttrCase<"BaseInference", 0, "bi">,
-      I32EnumAttrCase<"MainInference", 1, "mi">,
-      I32EnumAttrCase<"MainTraining", 2, "mt">,
-      I32EnumAttrCase<"Undefined", 3>
-    ]>{
-  let cppNamespace = "mlir::tosa";
-}
-
 def TosaLevelType : I32EnumAttr<"TosaLevelEnum", "Tosa level",
     [
       I32EnumAttrCase<"None", 0, "none">,
@@ -97,20 +87,11 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
   }];
 
   let options = [
-      Option<"profile", "profile", "mlir::tosa::TosaProfileEnum",
-             /*default=*/"mlir::tosa::TosaProfileEnum::Undefined",
-             "Validate if operations match for the given profile",
-             [{::llvm::cl::values(
-               clEnumValN(mlir::tosa::TosaProfileEnum::BaseInference, "bi",
-                "Use Base Inference profile."),
-               clEnumValN(mlir::tosa::TosaProfileEnum::MainInference, "mi",
-                "Use Main Inference profile."),
-               clEnumValN(mlir::tosa::TosaProfileEnum::MainTraining, "mt",
-                "Use Main Training profile."),
-               clEnumValN(mlir::tosa::TosaProfileEnum::Undefined, "undefined",
-                "Do not define a profile.")
-              )}]>,
-      Option<"StrictOperationSpecAlignment", "strict-op-spec-alignment", "bool",
+      ListOption<"profile", "profile", "std::string",
+             "Validate if operations match for the given profile set">,
+      ListOption<"extension", "extension", "std::string",
+             "Validate if operations match for the given extension set">,
+      Option<"strictOpSpecAlignment", "strict-op-spec-alignment", "bool",
              /*default=*/"false",
              "Verify if the properties of certain operations align the spec requirement">,
       Option<"level", "level", "mlir::tosa::TosaLevelEnum",

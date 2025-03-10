@@ -9,46 +9,12 @@
 #ifndef LLVM_CLANG_UNITTESTS_ASTMATCHERS_ASTMATCHERSTEST_H
 #define LLVM_CLANG_UNITTESTS_ASTMATCHERS_ASTMATCHERSTEST_H
 
-#include "clang/AST/APValue.h"
-#include "clang/AST/ASTTypeTraits.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclTemplate.h"
-#include "clang/AST/Expr.h"
-#include "clang/AST/NestedNameSpecifier.h"
-#include "clang/AST/Stmt.h"
-#include "clang/AST/Type.h"
-#include "clang/AST/TypeLoc.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/DiagnosticIDs.h"
-#include "clang/Basic/LLVM.h"
-#include "clang/Basic/SourceLocation.h"
 #include "clang/Frontend/ASTUnit.h"
-#include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Testing/TestClangConfig.h"
-#include "clang/Tooling/ArgumentsAdjusters.h"
-#include "clang/Tooling/FixIt.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
-#include <cstddef>
-#include <iterator>
-#include <memory>
-#include <optional>
-#include <string>
-#include <type_traits>
-#include <utility>
-#include <vector>
 
 namespace clang {
 namespace ast_matchers {
@@ -327,8 +293,7 @@ template <typename T>
 testing::AssertionResult matchAndVerifyResultConditionally(
     const Twine &Code, const T &AMatcher,
     std::unique_ptr<BoundNodesCallback> FindResultVerifier, bool ExpectResult,
-    ArrayRef<std::string> Args = {}, StringRef Filename = "input.cc",
-    const FileContentMappings &VirtualMappedFiles = {}) {
+    ArrayRef<std::string> Args = {}, StringRef Filename = "input.cc") {
   bool VerifiedResult = false;
   MatchFinder Finder;
   VerifyMatch VerifyVerifiedResult(std::move(FindResultVerifier),
@@ -345,9 +310,7 @@ testing::AssertionResult matchAndVerifyResultConditionally(
   // choices that we made above.
   llvm::copy(Args, std::back_inserter(CompileArgs));
 
-  if (!runToolOnCodeWithArgs(
-          Factory->create(), Code, CompileArgs, Filename, "clang-tool",
-          std::make_shared<PCHContainerOperations>(), VirtualMappedFiles)) {
+  if (!runToolOnCodeWithArgs(Factory->create(), Code, CompileArgs, Filename)) {
     return testing::AssertionFailure() << "Parsing error in \"" << Code << "\"";
   }
   if (!VerifiedResult && ExpectResult) {
@@ -361,9 +324,7 @@ testing::AssertionResult matchAndVerifyResultConditionally(
   VerifiedResult = false;
   SmallString<256> Buffer;
   std::unique_ptr<ASTUnit> AST(buildASTFromCodeWithArgs(
-      Code.toStringRef(Buffer), CompileArgs, Filename, "clang-tool",
-      std::make_shared<PCHContainerOperations>(),
-      tooling::getClangStripDependencyFileAdjuster(), VirtualMappedFiles));
+      Code.toStringRef(Buffer), CompileArgs, Filename));
   if (!AST.get())
     return testing::AssertionFailure()
            << "Parsing error in \"" << Code << "\" while building AST";
@@ -472,355 +433,6 @@ private:
   std::string Name;
 };
 
-namespace detail {
-template <typename T>
-using hasDump_t = decltype(std::declval<const T &>().dump());
-template <typename T>
-constexpr bool hasDump = llvm::is_detected<hasDump_t, T>::value;
-
-template <typename T>
-using hasGetSourceRange_t =
-    decltype(std::declval<const T &>().getSourceRange());
-template <typename T>
-constexpr bool hasGetSourceRange =
-    llvm::is_detected<hasGetSourceRange_t, T>::value;
-
-template <typename T, std::enable_if_t<hasGetSourceRange<T>, bool> = true>
-std::optional<std::string> getText(const T *const Node,
-                                   const ASTContext &Context) {
-  return tooling::fixit::getText(*Node, Context).str();
-}
-inline std::optional<std::string> getText(const Attr *const Attribute,
-                                          const ASTContext &) {
-  return Attribute->getSpelling();
-}
-inline std::optional<std::string> getText(const void *const,
-                                          const ASTContext &) {
-  return std::nullopt;
-}
-
-template <typename T>
-auto getSourceRange(const T *const Node)
-    -> std::optional<decltype(Node->getSourceRange())> {
-  return Node->getSourceRange();
-}
-inline std::optional<SourceRange> getSourceRange(const void *const) {
-  return std::nullopt;
-}
-
-template <typename T>
-auto getLocation(const T *const Node)
-    -> std::optional<decltype(Node->getLocation())> {
-  return Node->getLocation();
-}
-inline std::optional<SourceLocation> getLocation(const void *const) {
-  return std::nullopt;
-}
-
-template <typename T>
-auto getBeginLoc(const T *const Node)
-    -> std::optional<decltype(Node->getBeginLoc())> {
-  return Node->getBeginLoc();
-}
-inline std::optional<SourceLocation> getBeginLoc(const void *const) {
-  return std::nullopt;
-}
-
-inline std::optional<SourceLocation>
-getLocOfTagDeclFromType(const Type *const Node) {
-  if (Node->isArrayType())
-    if (const auto *const AType = Node->getPointeeOrArrayElementType()) {
-      return getLocOfTagDeclFromType(AType);
-    }
-  if (const auto *const TDecl = Node->getAsTagDecl()) {
-    return TDecl->getLocation();
-  }
-  return std::nullopt;
-}
-inline std::optional<SourceLocation>
-getLocOfTagDeclFromType(const void *const Node) {
-  return std::nullopt;
-}
-
-template <typename T>
-auto getExprLoc(const T *const Node)
-    -> std::optional<decltype(Node->getBeginLoc())> {
-  return Node->getBeginLoc();
-}
-inline std::optional<SourceLocation> getExprLoc(const void *const) {
-  return std::nullopt;
-}
-
-// Provides a string for test failures to show what was matched.
-template <typename T>
-static std::optional<std::string>
-getNodeDescription(const T *const Node, const ASTContext *const Context) {
-  if constexpr (std::is_same_v<T, QualType>) {
-    return Node->getAsString();
-  }
-  if constexpr (std::is_base_of_v<NamedDecl, T>) {
-    return Node->getNameAsString();
-  }
-  if constexpr (std::is_base_of_v<Type, T>) {
-    return QualType{Node, 0}.getAsString();
-  }
-
-  return detail::getText(Node, *Context);
-}
-
-template <typename T>
-bool shouldIgnoreNode(const T *const Node, const ASTContext &Context) {
-  if (const auto Range = detail::getSourceRange(Node); Range.has_value()) {
-    if (Range->isInvalid() ||
-        !Context.getSourceManager().isInMainFile(Range->getBegin()))
-      return true;
-  } else if (const auto Loc = detail::getExprLoc(Node); Loc.has_value()) {
-    if (Loc->isInvalid() || !Context.getSourceManager().isInMainFile(*Loc))
-      return true;
-  } else if (const auto Loc = detail::getLocation(Node); Loc.has_value()) {
-    if (Loc->isInvalid() || !Context.getSourceManager().isInMainFile(*Loc))
-      return true;
-  } else if (const auto Loc = detail::getBeginLoc(Node); Loc.has_value()) {
-    if (Loc->isInvalid() || !Context.getSourceManager().isInMainFile(*Loc))
-      return true;
-  } else if (const auto Loc = detail::getLocOfTagDeclFromType(Node);
-             Loc.has_value()) {
-    if (Loc->isInvalid() || !Context.getSourceManager().isInMainFile(*Loc))
-      return true;
-  }
-  return false;
-}
-} // namespace detail
-
-enum class MatchKind {
-  Code,
-  Name,
-  TypeStr,
-};
-
-inline llvm::StringRef toString(const MatchKind Kind) {
-  switch (Kind) {
-  case MatchKind::Code:
-    return "Code";
-  case MatchKind::Name:
-    return "Name";
-  case MatchKind::TypeStr:
-    return "TypeStr";
-  }
-  llvm_unreachable("Unhandled MatchKind");
-}
-
-template <typename T> class VerifyBoundNodeMatch : public BoundNodesCallback {
-public:
-  class Match {
-  public:
-    Match(const MatchKind Kind, std::string MatchString,
-          const size_t MatchCount = 1)
-        : Kind(Kind), MatchString(std::move(MatchString)),
-          RemainingMatches(MatchCount) {}
-
-    bool shouldRemoveMatched(const T *const Node) {
-      --RemainingMatches;
-      return RemainingMatches == 0U;
-    }
-
-    template <typename U>
-    static std::optional<std::string>
-    getMatchText(const U *const Node, const ASTContext &Context,
-                 const MatchKind Kind, const bool EmitFailures = true) {
-      if constexpr (std::is_same_v<U, NestedNameSpecifier>) {
-        if (const IdentifierInfo *const Info = Node->getAsIdentifier())
-          return Info->getName().str();
-        if (const NamespaceDecl *const NS = Node->getAsNamespace())
-          return getMatchText(NS, Context, Kind, EmitFailures);
-        if (const NamespaceAliasDecl *const Alias = Node->getAsNamespaceAlias())
-          return getMatchText(Alias, Context, Kind, EmitFailures);
-        if (const CXXRecordDecl *const RDecl = Node->getAsRecordDecl())
-          return getMatchText(RDecl, Context, Kind, EmitFailures);
-        if (const Type *const RDecl = Node->getAsType())
-          return getMatchText(RDecl, Context, Kind, EmitFailures);
-      }
-
-      switch (Kind) {
-      case MatchKind::Code:
-        return detail::getText(Node, Context);
-      case MatchKind::Name:
-        return getNameText(Node, EmitFailures);
-      case MatchKind::TypeStr:
-        return getTypeStrText(Node, EmitFailures);
-      }
-    }
-
-    bool isMatch(const T *const Node, const ASTContext &Context) const {
-      if (const auto OptMatchText = getMatchText(Node, Context, Kind))
-        return *OptMatchText == MatchString;
-
-      return false;
-    }
-
-    std::string getAsString() const {
-      return llvm::formatv("MatchKind: {0}, MatchString: '{1}', "
-                           "RemainingMatches: {2}",
-                           toString(Kind), MatchString, RemainingMatches)
-          .str();
-    }
-
-    MatchKind getMatchKind() const { return Kind; }
-    llvm::StringRef getMatchString() const { return MatchString; }
-
-  private:
-    template <typename U>
-    static std::optional<std::string>
-    getNameText(const U *const Node, const bool EmitFailures = true) {
-      if constexpr (std::is_base_of_v<Decl, U>) {
-        if (const auto *const NDecl = llvm::dyn_cast<NamedDecl>(Node))
-          return NDecl->getNameAsString();
-        if (EmitFailures)
-          ADD_FAILURE() << "'MatchKind::Name' requires 'U' to be a'NamedDecl'.";
-      }
-
-      if (EmitFailures)
-        ADD_FAILURE() << "'MatchKind::Name' requires 'U' to be a "
-                         "'NamedDecl', but 'U' is not derived from 'Decl'.";
-      return std::nullopt;
-    }
-
-    template <typename U>
-    static std::optional<std::string>
-    getTypeStrText(const U *const Node, const bool EmitFailures = true) {
-      if constexpr (std::is_base_of_v<Type, U>)
-        return QualType(Node, 0).getAsString();
-      if constexpr (std::is_base_of_v<Decl, U>) {
-        if (const auto *const TDecl = llvm::dyn_cast<TypeDecl>(Node))
-          return getTypeStrText(TDecl->getTypeForDecl());
-        if (const auto *const VDecl = llvm::dyn_cast<ValueDecl>(Node))
-          return VDecl->getType().getAsString();
-      }
-      if (EmitFailures)
-        ADD_FAILURE() << "Match kind is 'TypeStr', but node of type 'U' is "
-                         "not handled.";
-      return std::nullopt;
-    }
-
-    MatchKind Kind;
-    std::string MatchString;
-    size_t RemainingMatches;
-  };
-
-  VerifyBoundNodeMatch(std::string Id, std::vector<Match> Matches)
-      : Id(std::move(Id)), ExpectedMatches(std::move(Matches)),
-        Matches(ExpectedMatches) {}
-
-  bool run(const BoundNodes *const Nodes, ASTContext *const Context) override {
-    const auto *const Node = Nodes->getNodeAs<T>(Id);
-    if (Node == nullptr) {
-      ADD_FAILURE() << "Expected Id '" << Id << "' to be bound to 'T'.";
-      return true;
-    }
-
-    if constexpr (std::is_base_of_v<Decl, T>)
-      if (const auto *const NDecl = llvm::dyn_cast<NamedDecl>(Node))
-        if (const auto *Identifier = NDecl->getIdentifier();
-            Identifier != nullptr && Identifier->getBuiltinID() > 0)
-          return true;
-
-    if (detail::shouldIgnoreNode(Node, *Context)) {
-      return false;
-    }
-
-    const auto Iter = llvm::find_if(Matches, [Node, Context](const Match &M) {
-      return M.isMatch(Node, *Context);
-    });
-    if (Iter == Matches.end()) {
-      const auto NodeText =
-          detail::getNodeDescription(Node, Context).value_or("<unknown>");
-      const auto IsMultilineNodeText = NodeText.find('\n') != std::string::npos;
-      ADD_FAILURE() << "No match of node '" << (IsMultilineNodeText ? "\n" : "")
-                    << NodeText << (IsMultilineNodeText ? "\n" : "")
-                    << "' was expected.\n"
-                    << "No match with remaining matches:"
-                    << getMatchComparisonText(Matches, Node, *Context)
-                    << "Match strings of Node for possible intended matches:"
-                    << getPossibleMatchStrings(Node, *Context)
-                    << "Already found matches:"
-                    << getMatchesAsString(FoundMatches) << "Expected matches:"
-                    << getMatchesAsString(ExpectedMatches);
-      if constexpr (detail::hasDump<T>)
-        Node->dump();
-      return true;
-    }
-
-    if (Iter->shouldRemoveMatched(Node)) {
-      FoundMatches.push_back(*Iter);
-      Matches.erase(Iter);
-    }
-
-    return true;
-  }
-
-  void onEndOfTranslationUnit() override {
-    if (!ExpectedMatches.empty() && Matches.size() == ExpectedMatches.size())
-      ADD_FAILURE() << "No matches were found.\n"
-                    << "Expected matches:"
-                    << getMatchesAsString(ExpectedMatches);
-    else
-      EXPECT_TRUE(Matches.empty())
-          << "Not all expected matches were found.\n"
-          << "Remaining matches:" << getMatchesAsString(Matches)
-          << "Already found matches:" << getMatchesAsString(FoundMatches)
-          << "Expected matches:" << getMatchesAsString(ExpectedMatches);
-
-    Matches = ExpectedMatches;
-    FoundMatches.clear();
-
-    EXPECT_TRUE(FoundMatches.empty());
-  }
-
-private:
-  static std::string getMatchesAsString(const std::vector<Match> &Matches) {
-    if (Matches.empty())
-      return " none\n";
-    std::string FormattedMatches{"\n"};
-    for (const Match &M : Matches)
-      FormattedMatches += "\t" + M.getAsString() + ",\n";
-
-    return FormattedMatches;
-  }
-  static std::string getMatchComparisonText(const std::vector<Match> &Matches,
-                                            const T *const Node,
-                                            const ASTContext &Context) {
-    if (Matches.empty())
-      return " none\n";
-    std::string MatchStrings{"\n"};
-    for (const Match &M : Matches)
-      MatchStrings += llvm::formatv(
-          "\tMatchKind: {0}: '{1}' vs '{2}',\n", toString(M.getMatchKind()),
-          Match::getMatchText(Node, Context, M.getMatchKind(), false)
-              .value_or("<unknown>"),
-          M.getMatchString());
-
-    return MatchStrings;
-  }
-
-  static std::string getPossibleMatchStrings(const T *Node,
-                                             const ASTContext &Context) {
-    std::string MatchStrings{"\n"};
-    for (const auto Kind :
-         {MatchKind::Code, MatchKind::Name, MatchKind::TypeStr})
-      MatchStrings +=
-          llvm::formatv("\tMatchKind:  {0}: '{1}',\n", toString(Kind),
-                        Match::getMatchText(Node, Context, Kind, false)
-                            .value_or("<unknown>"))
-              .str();
-    return MatchStrings;
-  }
-
-  const std::string Id;
-  const std::vector<Match> ExpectedMatches;
-  std::vector<Match> Matches;
-  std::vector<Match> FoundMatches{};
-};
-
 class ASTMatchersTest : public ::testing::Test,
                         public ::testing::WithParamInterface<TestClangConfig> {
 protected:
@@ -841,40 +453,6 @@ protected:
   }
 };
 
-class ASTMatchersDocTest
-    : public ::testing::Test,
-      public ::testing::WithParamInterface<TestClangConfig> {
-protected:
-  template <typename T>
-  testing::AssertionResult
-  matches(const Twine &Code, const T &AMatcher,
-          std::unique_ptr<BoundNodesCallback> FindResultVerifier,
-          const ArrayRef<std::string> CompileArgs = {},
-          const FileContentMappings &VirtualMappedFiles = {}) {
-    const TestClangConfig &TestConfig = GetParam();
-
-    auto Args = TestConfig.getCommandLineArgs();
-    Args.insert(Args.end(), CompileArgs.begin(), CompileArgs.end());
-    return clang::ast_matchers::matchAndVerifyResultConditionally(
-        Code, AMatcher, std::move(FindResultVerifier), /*ExpectMatch=*/true,
-        Args, getFilenameForTesting(TestConfig.Language), VirtualMappedFiles);
-  }
-
-  template <typename T>
-  testing::AssertionResult
-  notMatches(const Twine &Code, const T &AMatcher,
-             std::unique_ptr<BoundNodesCallback> FindResultVerifier,
-             const ArrayRef<std::string> CompileArgs = {},
-             const FileContentMappings &VirtualMappedFiles = {}) {
-    const TestClangConfig &TestConfig = GetParam();
-
-    auto Args = TestConfig.getCommandLineArgs();
-    Args.insert(Args.begin(), CompileArgs.begin(), CompileArgs.end());
-    return clang::ast_matchers::matchAndVerifyResultConditionally(
-        Code, AMatcher, std::move(FindResultVerifier), /*ExpectMatch=*/false,
-        Args, getFilenameForTesting(TestConfig.Language), VirtualMappedFiles);
-  }
-};
 } // namespace ast_matchers
 } // namespace clang
 

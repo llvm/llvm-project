@@ -359,11 +359,6 @@ public:
 
   /// Virtual destructor to allow derivations to be deleted.
   virtual ~SICacheControl() = default;
-
-  virtual bool tryForceStoreSC0SC1(const SIMemOpInfo &MOI,
-                                   MachineBasicBlock::iterator &MI) const {
-    return false;
-  }
 };
 
 class SIGfx6CacheControl : public SICacheControl {
@@ -492,7 +487,6 @@ protected:
   }
 
 public:
-
   SIGfx940CacheControl(const GCNSubtarget &ST) : SIGfx90ACacheControl(ST) {};
 
   bool enableLoadCacheBypass(const MachineBasicBlock::iterator &MI,
@@ -518,20 +512,6 @@ public:
   bool insertRelease(MachineBasicBlock::iterator &MI, SIAtomicScope Scope,
                      SIAtomicAddrSpace AddrSpace, bool IsCrossAddrSpaceOrdering,
                      Position Pos) const override;
-
-  bool tryForceStoreSC0SC1(const SIMemOpInfo &MOI,
-                           MachineBasicBlock::iterator &MI) const override {
-    bool Changed = false;
-    if (ST.hasForceStoreSC0SC1() &&
-        (MOI.getInstrAddrSpace() & (SIAtomicAddrSpace::SCRATCH |
-                                    SIAtomicAddrSpace::GLOBAL |
-                                    SIAtomicAddrSpace::OTHER)) !=
-         SIAtomicAddrSpace::NONE) {
-      Changed |= enableSC0Bit(MI);
-      Changed |= enableSC1Bit(MI);
-    }
-    return Changed;
-  }
 };
 
 class SIGfx10CacheControl : public SIGfx7CacheControl {
@@ -2477,48 +2457,26 @@ bool SIGfx12CacheControl::insertRelease(MachineBasicBlock::iterator &MI,
   if (Pos == Position::AFTER)
     ++MI;
 
-  // GLOBAL_WB is always needed, even for write-through caches, as it
-  // additionally ensures all operations have reached the desired cache level.
+  // global_wb is only necessary at system scope for gfx120x targets.
   //
-  // Note that we can technically skip emission of SCOPE_SE writebacks for
-  // gfx120x as L1 is a buffer there (hence forwards all to L2), but we still
-  // emit them. The current strategy we use is to favor mirrorring SW semantics
-  // in the ISA whenever it is correct, and the performance cost is very low.
-  //
-  // This makes the memory model easier to understand, maintain, and also
-  // reduces the potential for bugs as it is sometimes difficult to anticipate
-  // all possible scenarios in which the WB will actually be needed.
-  bool SkipWB = false;
-  AMDGPU::CPol::CPol ScopeImm = AMDGPU::CPol::SCOPE_DEV;
+  // Emitting it for lower scopes is a slow no-op, so we omit it
+  // for performance.
   switch (Scope) {
   case SIAtomicScope::SYSTEM:
-    ScopeImm = AMDGPU::CPol::SCOPE_SYS;
+    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB))
+        .addImm(AMDGPU::CPol::SCOPE_SYS);
     break;
   case SIAtomicScope::AGENT:
-    ScopeImm = AMDGPU::CPol::SCOPE_DEV;
-    break;
   case SIAtomicScope::WORKGROUP:
-    // In WGP mode the waves of a work-group can be executing on either CU of
-    // the WGP. Therefore we need to ensure all operations have reached L1,
-    // hence the SCOPE_SE WB.
-    // For CU mode, we need operations to reach L0, so the wait is enough -
-    // there are no ways for an operation to report completion without reaching
-    // at least L0.
-    if (ST.isCuModeEnabled())
-      SkipWB = true;
-    else
-      ScopeImm = AMDGPU::CPol::SCOPE_SE;
+    // No WB necessary, but we still have to wait.
     break;
   case SIAtomicScope::WAVEFRONT:
   case SIAtomicScope::SINGLETHREAD:
-    // No cache to invalidate.
+    // No WB or wait necessary here.
     return false;
   default:
     llvm_unreachable("Unsupported synchronization scope");
   }
-
-  if (!SkipWB)
-    BuildMI(MBB, MI, DL, TII->get(AMDGPU::GLOBAL_WB)).addImm(ScopeImm);
 
   if (Pos == Position::AFTER)
     --MI;
@@ -2843,7 +2801,6 @@ bool SIMemoryLegalizer::runOnMachineFunction(MachineFunction &MF) {
         Changed |= expandLoad(*MOI, MI);
       else if (const auto &MOI = MOA.getStoreInfo(MI)) {
         Changed |= expandStore(*MOI, MI);
-        Changed |= CC->tryForceStoreSC0SC1(*MOI, MI);
       } else if (const auto &MOI = MOA.getAtomicFenceInfo(MI))
         Changed |= expandAtomicFence(*MOI, MI);
       else if (const auto &MOI = MOA.getAtomicCmpxchgOrRmwInfo(MI))

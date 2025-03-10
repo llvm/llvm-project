@@ -37,9 +37,9 @@
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
+#include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CodeGen.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Support/raw_ostream.h"
@@ -117,8 +117,8 @@ const char *PPC::stripRegisterPrefix(const char *RegName) {
 /// The operand number argument will be useful when we need to extend this
 /// to instructions that use both Altivec and VSX numbering (for different
 /// operands).
-unsigned PPC::getRegNumForOperand(const MCInstrDesc &Desc, unsigned Reg,
-                                  unsigned OpNo) {
+MCRegister PPC::getRegNumForOperand(const MCInstrDesc &Desc, MCRegister Reg,
+                                    unsigned OpNo) {
   int16_t regClass = Desc.operands()[OpNo].RegClass;
   switch (regClass) {
     // We store F0-F31, VF0-VF31 in MCOperand and it should be F0-F31,
@@ -199,24 +199,6 @@ static MCAsmInfo *createPPCMCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
-static MCStreamer *
-createPPCELFStreamer(const Triple &T, MCContext &Context,
-                     std::unique_ptr<MCAsmBackend> &&MAB,
-                     std::unique_ptr<MCObjectWriter> &&OW,
-                     std::unique_ptr<MCCodeEmitter> &&Emitter) {
-  return createPPCELFStreamer(Context, std::move(MAB), std::move(OW),
-                              std::move(Emitter));
-}
-
-static MCStreamer *
-createPPCXCOFFStreamer(const Triple &T, MCContext &Context,
-                       std::unique_ptr<MCAsmBackend> &&MAB,
-                       std::unique_ptr<MCObjectWriter> &&OW,
-                       std::unique_ptr<MCCodeEmitter> &&Emitter) {
-  return createPPCXCOFFStreamer(Context, std::move(MAB), std::move(OW),
-                                std::move(Emitter));
-}
-
 namespace {
 
 class PPCTargetAsmStreamer : public PPCTargetStreamer {
@@ -246,7 +228,7 @@ public:
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSLD ||
           Kind == MCSymbolRefExpr::VariantKind::VK_PPC_AIX_TLSML)
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << "@"
-           << MCSymbolRefExpr::getVariantKindName(Kind) << '\n';
+           << getContext().getAsmInfo()->getVariantKindName(Kind) << '\n';
       else
         OS << "\t.tc " << TCSym->getName() << "," << XSym->getName() << '\n';
 
@@ -259,7 +241,11 @@ public:
   }
 
   void emitMachine(StringRef CPU) override {
-    OS << "\t.machine " << CPU << '\n';
+    const Triple &TT = Streamer.getContext().getTargetTriple();
+    if (TT.isOSBinFormatXCOFF())
+      OS << "\t.machine\t" << '\"' << CPU << '\"' << '\n';
+    else
+      OS << "\t.machine " << CPU << '\n';
   }
 
   void emitAbiVersion(int AbiVersion) override {
@@ -423,7 +409,8 @@ public:
   }
 
   void emitMachine(StringRef CPU) override {
-    llvm_unreachable("Machine pseudo-ops are invalid for XCOFF.");
+    static_cast<XCOFFObjectWriter &>(Streamer.getAssemblerPtr()->getWriter())
+        .setCPU(CPU);
   }
 
   void emitAbiVersion(int AbiVersion) override {

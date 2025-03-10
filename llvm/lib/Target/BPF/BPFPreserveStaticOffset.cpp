@@ -105,7 +105,6 @@
 #include "BPFCORE.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -163,7 +162,7 @@ static CallInst *makeIntrinsicCall(Module *M,
                                    ArrayRef<Type *> Types,
                                    ArrayRef<Value *> Args) {
 
-  Function *Fn = Intrinsic::getDeclaration(M, Intrinsic, Types);
+  Function *Fn = Intrinsic::getOrInsertDeclaration(M, Intrinsic, Types);
   return CallInst::Create(Fn, Args);
 }
 
@@ -422,12 +421,12 @@ static bool tryToReplaceWithGEPBuiltin(Instruction *LoadOrStoreTemplate,
   Module *M = InsnToReplace->getModule();
   if (auto *Load = dyn_cast<LoadInst>(LoadOrStoreTemplate)) {
     Instruction *Replacement = makeGEPAndLoad(M, GEPChain, Load);
-    Replacement->insertBefore(InsnToReplace);
+    Replacement->insertBefore(InsnToReplace->getIterator());
     InsnToReplace->replaceAllUsesWith(Replacement);
   }
   if (auto *Store = dyn_cast<StoreInst>(LoadOrStoreTemplate)) {
     Instruction *Replacement = makeGEPAndStore(M, GEPChain, Store);
-    Replacement->insertBefore(InsnToReplace);
+    Replacement->insertBefore(InsnToReplace->getIterator());
   }
   return true;
 }

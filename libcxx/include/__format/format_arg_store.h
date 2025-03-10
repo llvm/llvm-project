@@ -49,7 +49,7 @@ template <class _Context, same_as<typename _Context::char_type> _Tp>
 consteval __arg_t __determine_arg_t() {
   return __arg_t::__char_type;
 }
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
 template <class _Context, class _CharT>
   requires(same_as<typename _Context::char_type, wchar_t> && same_as<_CharT, char>)
 consteval __arg_t __determine_arg_t() {
@@ -64,7 +64,7 @@ consteval __arg_t __determine_arg_t() {
     return __arg_t::__int;
   else if constexpr (sizeof(_Tp) <= sizeof(long long))
     return __arg_t::__long_long;
-#  ifndef _LIBCPP_HAS_NO_INT128
+#  if _LIBCPP_HAS_INT128
   else if constexpr (sizeof(_Tp) == sizeof(__int128_t))
     return __arg_t::__i128;
 #  endif
@@ -79,7 +79,7 @@ consteval __arg_t __determine_arg_t() {
     return __arg_t::__unsigned;
   else if constexpr (sizeof(_Tp) <= sizeof(unsigned long long))
     return __arg_t::__unsigned_long_long;
-#  ifndef _LIBCPP_HAS_NO_INT128
+#  if _LIBCPP_HAS_INT128
   else if constexpr (sizeof(_Tp) == sizeof(__uint128_t))
     return __arg_t::__u128;
 #  endif
@@ -164,7 +164,7 @@ consteval __arg_t __determine_arg_t() {
 template <class _Context, class _Tp>
 _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __value) noexcept {
   using _Dp               = remove_const_t<_Tp>;
-  constexpr __arg_t __arg = __determine_arg_t<_Context, _Dp>();
+  constexpr __arg_t __arg = __format::__determine_arg_t<_Context, _Dp>();
   static_assert(__arg != __arg_t::__none, "the supplied type is not formattable");
   static_assert(__formattable_with<_Tp, _Context>);
 
@@ -173,7 +173,7 @@ _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp& __valu
   // final else requires no adjustment.
   if constexpr (__arg == __arg_t::__char_type)
 
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  if _LIBCPP_HAS_WIDE_CHARACTERS
     if constexpr (same_as<typename _Context::char_type, wchar_t> && same_as<_Dp, char>)
       return basic_format_arg<_Context>{__arg, static_cast<wchar_t>(static_cast<unsigned char>(__value))};
     else
@@ -234,6 +234,11 @@ struct __packed_format_arg_store {
   uint64_t __types_ = 0;
 };
 
+template <class _Context>
+struct __packed_format_arg_store<_Context, 0> {
+  uint64_t __types_ = 0;
+};
+
 template <class _Context, size_t _Np>
 struct __unpacked_format_arg_store {
   basic_format_arg<_Context> __args_[_Np];
@@ -252,7 +257,7 @@ struct _LIBCPP_TEMPLATE_VIS __format_arg_store {
     }
   }
 
-  using _Storage =
+  using _Storage _LIBCPP_NODEBUG =
       conditional_t<__format::__use_packed_format_arg_store(sizeof...(_Args)),
                     __format::__packed_format_arg_store<_Context, sizeof...(_Args)>,
                     __format::__unpacked_format_arg_store<_Context, sizeof...(_Args)>>;

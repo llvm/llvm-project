@@ -577,7 +577,7 @@ extern "C" int optMain(
 
   // If we are supposed to override the target triple, do so now.
   if (!TargetTriple.empty())
-    M->setTargetTriple(Triple::normalize(TargetTriple));
+    M->setTargetTriple(Triple(Triple::normalize(TargetTriple)));
 
   // Immediately run the verifier to catch any problems before starting up the
   // pass pipelines.  Otherwise we can crash on broken code during
@@ -801,9 +801,11 @@ extern "C" int optMain(
   }
 
   if (TM) {
-    // FIXME: We should dyn_cast this when supported.
-    auto &LTM = static_cast<LLVMTargetMachine &>(*TM);
-    Pass *TPC = LTM.createPassConfig(Passes);
+    Pass *TPC = TM->createPassConfig(Passes);
+    if (!TPC) {
+      errs() << "Target Machine pass config creation failed.\n";
+      return 1;
+    }
     Passes.add(TPC);
   }
 

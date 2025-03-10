@@ -253,9 +253,9 @@ bool LiveRangeEdit::foldAsLoad(LiveInterval *LI,
     return false;
   LLVM_DEBUG(dbgs() << "                folded: " << *FoldMI);
   LIS.ReplaceMachineInstrInMaps(*UseMI, *FoldMI);
-  // Update the call site info.
-  if (UseMI->shouldUpdateCallSiteInfo())
-    UseMI->getMF()->moveCallSiteInfo(UseMI, FoldMI);
+  // Update the call info.
+  if (UseMI->shouldUpdateAdditionalCallInfo())
+    UseMI->getMF()->moveAdditionalCallInfo(UseMI, FoldMI);
   UseMI->eraseFromParent();
   DefMI->addRegisterDead(LI->reg(), nullptr);
   Dead.push_back(DefMI);
@@ -385,6 +385,7 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
         continue;
       MI->removeOperand(i-1);
     }
+    MI->dropMemRefs(*MI->getMF());
     LLVM_DEBUG(dbgs() << "Converted physregs to:\t" << *MI);
   } else {
     // If the dest of MI is an original reg and MI is reMaterializable,

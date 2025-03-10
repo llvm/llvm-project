@@ -342,7 +342,7 @@ static void ignoreTypeLocClasses(
     Loc = Loc.getNextTypeLoc();
 }
 
-static bool isMutliLevelPointerToTypeLocClasses(
+static bool isMultiLevelPointerToTypeLocClasses(
     TypeLoc Loc,
     std::initializer_list<TypeLoc::TypeLocClass> const &LocClasses) {
   ignoreTypeLocClasses(Loc, {TypeLoc::Paren, TypeLoc::Qualified});
@@ -424,7 +424,7 @@ void UseAutoCheck::replaceExpr(
 
   auto Diag = diag(Range.getBegin(), Message);
 
-  bool ShouldReplenishVariableName = isMutliLevelPointerToTypeLocClasses(
+  bool ShouldReplenishVariableName = isMultiLevelPointerToTypeLocClasses(
       TSI->getTypeLoc(), {TypeLoc::FunctionProto, TypeLoc::ConstantArray});
 
   // Space after 'auto' to handle cases where the '*' in the pointer type is

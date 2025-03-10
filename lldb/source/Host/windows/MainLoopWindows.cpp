@@ -21,14 +21,24 @@
 using namespace lldb;
 using namespace lldb_private;
 
+static DWORD ToTimeout(std::optional<MainLoopWindows::TimePoint> point) {
+  using namespace std::chrono;
+
+  if (!point)
+    return WSA_INFINITE;
+
+  nanoseconds dur = (std::max)(*point - steady_clock::now(), nanoseconds(0));
+  return ceil<milliseconds>(dur).count();
+}
+
 MainLoopWindows::MainLoopWindows() {
-  m_trigger_event = WSACreateEvent();
-  assert(m_trigger_event != WSA_INVALID_EVENT);
+  m_interrupt_event = WSACreateEvent();
+  assert(m_interrupt_event != WSA_INVALID_EVENT);
 }
 
 MainLoopWindows::~MainLoopWindows() {
   assert(m_read_fds.empty());
-  BOOL result = WSACloseEvent(m_trigger_event);
+  BOOL result = WSACloseEvent(m_interrupt_event);
   assert(result == TRUE);
   UNUSED_IF_ASSERT_DISABLED(result);
 }
@@ -43,10 +53,11 @@ llvm::Expected<size_t> MainLoopWindows::Poll() {
 
     events.push_back(info.event);
   }
-  events.push_back(m_trigger_event);
+  events.push_back(m_interrupt_event);
 
-  DWORD result = WSAWaitForMultipleEvents(events.size(), events.data(), FALSE,
-                                          WSA_INFINITE, FALSE);
+  DWORD result =
+      WSAWaitForMultipleEvents(events.size(), events.data(), FALSE,
+                               ToTimeout(GetNextWakeupTime()), FALSE);
 
   for (auto &fd : m_read_fds) {
     int result = WSAEventSelect(fd.first, WSA_INVALID_EVENT, 0);
@@ -54,8 +65,12 @@ llvm::Expected<size_t> MainLoopWindows::Poll() {
     UNUSED_IF_ASSERT_DISABLED(result);
   }
 
-  if (result >= WSA_WAIT_EVENT_0 && result <= WSA_WAIT_EVENT_0 + events.size())
+  if (result >= WSA_WAIT_EVENT_0 && result < WSA_WAIT_EVENT_0 + events.size())
     return result - WSA_WAIT_EVENT_0;
+
+  // A timeout is treated as a (premature) signalization of the interrupt event.
+  if (result == WSA_WAIT_TIMEOUT)
+    return events.size() - 1;
 
   return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                  "WSAWaitForMultipleEvents failed");
@@ -116,9 +131,7 @@ Status MainLoopWindows::Run() {
 
   Status error;
 
-  // run until termination or until we run out of things to listen to
-  while (!m_terminate_request && !m_read_fds.empty()) {
-
+  while (!m_terminate_request) {
     llvm::Expected<size_t> signaled_event = Poll();
     if (!signaled_event)
       return Status::FromError(signaled_event.takeError());
@@ -129,13 +142,11 @@ Status MainLoopWindows::Run() {
       ProcessReadObject(KV.first);
     } else {
       assert(*signaled_event == m_read_fds.size());
-      WSAResetEvent(m_trigger_event);
+      WSAResetEvent(m_interrupt_event);
     }
-    ProcessPendingCallbacks();
+    ProcessCallbacks();
   }
   return Status();
 }
 
-void MainLoopWindows::TriggerPendingCallbacks() {
-  WSASetEvent(m_trigger_event);
-}
+void MainLoopWindows::Interrupt() { WSASetEvent(m_interrupt_event); }

@@ -141,6 +141,19 @@ def call_graph_profile_sort: JJ<"call-graph-profile-sort=">,
 def : FF<"no-call-graph-profile-sort">, Alias<call_graph_profile_sort>, AliasArgs<["none"]>,
   Flags<[HelpHidden]>;
 
+defm irpgo_profile: EEq<"irpgo-profile",
+  "Read a temporary profile file for use with --bp-startup-sort=">;
+def bp_compression_sort: JJ<"bp-compression-sort=">, MetaVarName<"[none,function,data,both]">,
+  HelpText<"Improve Lempel-Ziv compression by grouping similar sections together, resulting in a smaller compressed app size">;
+def bp_startup_sort: JJ<"bp-startup-sort=">, MetaVarName<"[none,function]">,
+  HelpText<"Utilize a temporal profile file to reduce page faults during program startup">;
+
+// Auxiliary options related to balanced partition
+defm bp_compression_sort_startup_functions: BB<"bp-compression-sort-startup-functions",
+  "When --irpgo-profile is pecified, prioritize function similarity for compression in addition to startup time", "">;
+def verbose_bp_section_orderer: FF<"verbose-bp-section-orderer">,
+  HelpText<"Print information on balanced partitioning">;
+
 // --chroot doesn't have a help text because it is an internal option.
 def chroot: Separate<["--"], "chroot">;
 
@@ -434,6 +447,9 @@ defm section_start: Eq<"section-start", "Set address of section">,
 
 def shared: F<"shared">, HelpText<"Build a shared object">;
 
+def randomize_section_padding: JJ<"randomize-section-padding=">,
+  HelpText<"Randomly insert padding between input sections and at the start of each segment using given seed">;
+
 defm soname: Eq<"soname", "Set DT_SONAME">;
 
 defm sort_section:
@@ -562,7 +578,7 @@ def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
 def visual_studio_diagnostics_format : FF<"vs-diagnostics">,
 HelpText<"Format diagnostics for Visual Studio compatibility">;
 
-def package_metadata: JJ<"package-metadata=">, HelpText<"Emit package metadata note">;
+def package_metadata: JJ<"package-metadata=">, HelpText<"Emit a percent-encoded string to the .note.package section">;
 
 // Aliases
 def: Separate<["-"], "dT">, Alias<default_script>, HelpText<"Alias for --default-script">;
@@ -720,7 +736,7 @@ def: J<"plugin-opt=opt-remarks-format=">,
   HelpText<"Alias for --opt-remarks-format">;
 def: F<"plugin-opt=opt-remarks-with-hotness">,
   Alias<opt_remarks_with_hotness>,
-  HelpText<"Alias for --opt-remarks-with_hotness">;
+  HelpText<"Alias for --opt-remarks-with-hotness">;
 def: J<"plugin-opt=opt-remarks-hotness-threshold=">,
   Alias<opt_remarks_hotness_threshold>,
   HelpText<"Alias for --opt-remarks-hotness-threshold">;

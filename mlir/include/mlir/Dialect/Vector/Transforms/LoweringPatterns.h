@@ -157,12 +157,6 @@ void populateVectorTransposeLoweringPatterns(RewritePatternSet &patterns,
 /// Progressive lowering of transfer_write. This pattern supports lowering of
 /// `vector.transfer_write` to `vector.store`
 ///
-/// [VectorLoadToMemrefLoadLowering]
-/// Replace a 0-d vector.load with a memref.load + vector.broadcast.
-///
-/// [VectorStoreToMemrefStoreLowering]
-/// Replace a 0-d vector.store with a vector.extractelement + memref.store.
-///
 /// These patterns lower transfer ops to simpler ops like `vector.load`,
 /// `vector.store` and `vector.broadcast`. Only transfers with a transfer rank
 /// of a most `maxTransferRank` are lowered. This is useful when combined with
@@ -237,6 +231,13 @@ void populateVectorScanLoweringPatterns(RewritePatternSet &patterns,
 
 /// Populate the pattern set with the following patterns:
 ///
+/// [StepToArithConstantOp]
+/// Convert vector.step op into arith ops if not using scalable vectors
+void populateVectorStepLoweringPatterns(RewritePatternSet &patterns,
+                                        PatternBenefit benefit = 1);
+
+/// Populate the pattern set with the following patterns:
+///
 /// [FlattenGather]
 /// Flattens 2 or more dimensional `vector.gather` ops by unrolling the
 /// outermost dimension.
@@ -284,6 +285,10 @@ void populateVectorInterleaveToShufflePatterns(RewritePatternSet &patterns,
 void populateVectorBitCastLoweringPatterns(RewritePatternSet &patterns,
                                            int64_t targetRank = 1,
                                            PatternBenefit benefit = 1);
+
+/// Populates a pattern that rank-reduces n-D FMAs into (n-1)-D FMAs where
+/// n > 1.
+void populateVectorRankReducingFMAPattern(RewritePatternSet &patterns);
 
 } // namespace vector
 } // namespace mlir

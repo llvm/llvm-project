@@ -387,6 +387,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
     case RISCV::LH:
     case RISCV::LH_INX:
     case RISCV::LW:
+    case RISCV::LW_INX:
     case RISCV::LBU:
     case RISCV::LHU:
     case RISCV::LWU:
@@ -398,6 +399,7 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
     case RISCV::SH:
     case RISCV::SH_INX:
     case RISCV::SW:
+    case RISCV::SW_INX:
     case RISCV::SD:
     case RISCV::FSH:
     case RISCV::FSW:
@@ -432,8 +434,8 @@ bool RISCVMergeBaseOffsetOpt::foldIntoMemoryOps(MachineInstr &Hi,
 
         // Memory constraints have two operands.
         if (NumOps != 2 || !Flags.isMemKind()) {
-          // If the register is used by something other than a memory contraint,
-          // we should not fold.
+          // If the register is used by something other than a memory
+          // constraint, we should not fold.
           for (unsigned J = 0; J < NumOps; ++J) {
             const MachineOperand &MO = UseMI.getOperand(I + 1 + J);
             if (MO.isReg() && MO.getReg() == DestReg)

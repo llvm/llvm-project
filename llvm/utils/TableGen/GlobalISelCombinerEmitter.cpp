@@ -40,9 +40,7 @@
 #include "Common/SubtargetFeatureInfo.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/EquivalenceClasses.h"
-#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
@@ -53,6 +51,7 @@
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/StringMatcher.h"
+#include "llvm/TableGen/TGTimer.h"
 #include "llvm/TableGen/TableGenBackend.h"
 #include <cstdint>
 
@@ -1374,7 +1373,7 @@ bool CombineRuleBuilder::addFeaturePredicates(RuleMatcher &M) {
   if (!RuleDef.getValue("Predicates"))
     return true;
 
-  ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
+  const ListInit *Preds = RuleDef.getValueAsListInit("Predicates");
   for (const Init *PI : Preds->getValues()) {
     const DefInit *Pred = dyn_cast<DefInit>(PI);
     if (!Pred)
@@ -2646,18 +2645,18 @@ GICombinerEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules) {
   for (RuleMatcher &Rule : Rules) {
     const StringRef Opcode = Rule.getOpcode();
     assert(!Opcode.empty() && "Didn't expect an undefined opcode");
-    if (OpcodeOrder.count(Opcode) == 0)
-      OpcodeOrder[Opcode] = CurrentOrdering++;
+    if (OpcodeOrder.try_emplace(Opcode, CurrentOrdering).second)
+      ++CurrentOrdering;
   }
 
   llvm::stable_sort(InputRules, [&OpcodeOrder](const Matcher *A,
                                                const Matcher *B) {
     auto *L = static_cast<const RuleMatcher *>(A);
     auto *R = static_cast<const RuleMatcher *>(B);
-    return std::make_tuple(OpcodeOrder[L->getOpcode()],
-                           L->insnmatchers_front().getNumOperandMatchers()) <
-           std::make_tuple(OpcodeOrder[R->getOpcode()],
-                           R->insnmatchers_front().getNumOperandMatchers());
+    return std::tuple(OpcodeOrder[L->getOpcode()],
+                      L->insnmatchers_front().getNumOperandMatchers()) <
+           std::tuple(OpcodeOrder[R->getOpcode()],
+                      R->insnmatchers_front().getNumOperandMatchers());
   });
 
   for (Matcher *Rule : InputRules)
@@ -2681,7 +2680,7 @@ void GICombinerEmitter::gatherRules(std::vector<RuleMatcher> &ActiveRules,
                                     ArrayRef<const Record *> RulesAndGroups) {
   for (const Record *Rec : RulesAndGroups) {
     if (!Rec->isValueUnset("Rules")) {
-      gatherRules(ActiveRules, Rec->getValueAsListOfConstDefs("Rules"));
+      gatherRules(ActiveRules, Rec->getValueAsListOfDefs("Rules"));
       continue;
     }
 
@@ -2718,16 +2717,17 @@ void GICombinerEmitter::run(raw_ostream &OS) {
   InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
   LLTOperandMatcher::initTypeIDValuesMap();
 
-  Records.startTimer("Gather rules");
+  TGTimer &Timer = Records.getTimer();
+  Timer.startTimer("Gather rules");
   std::vector<RuleMatcher> Rules;
-  gatherRules(Rules, Combiner->getValueAsListOfConstDefs("Rules"));
+  gatherRules(Rules, Combiner->getValueAsListOfDefs("Rules"));
   if (ErrorsPrinted)
     PrintFatalError(Combiner->getLoc(), "Failed to parse one or more rules");
 
   if (StopAfterParse)
     return;
 
-  Records.startTimer("Creating Match Table");
+  Timer.startTimer("Creating Match Table");
   unsigned MaxTemporaries = 0;
   for (const auto &Rule : Rules)
     MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
@@ -2744,7 +2744,7 @@ void GICombinerEmitter::run(raw_ostream &OS) {
 
   const MatchTable Table = buildMatchTable(Rules);
 
-  Records.startTimer("Emit combiner");
+  Timer.startTimer("Emit combiner");
 
   emitSourceFileHeader(getClassName().str() + " Combiner Match Table", OS);
 

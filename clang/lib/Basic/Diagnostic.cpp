@@ -12,7 +12,9 @@
 
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/DiagnosticDriver.h"
 #include "clang/Basic/DiagnosticError.h"
+#include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/IdentifierTable.h"
@@ -21,13 +23,19 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Basic/TokenKinds.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/CrashRecoveryContext.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SpecialCaseList.h"
 #include "llvm/Support/Unicode.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -35,6 +43,7 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -136,7 +145,7 @@ void DiagnosticsEngine::Reset(bool soft /*=false*/) {
 
     // Create a DiagState and DiagStatePoint representing diagnostic changes
     // through command-line.
-    DiagStates.emplace_back();
+    DiagStates.emplace_back(*Diags);
     DiagStatesByLoc.appendFirst(&DiagStates.back());
   }
 }
@@ -147,8 +156,11 @@ DiagnosticsEngine::DiagState::getOrAddMapping(diag::kind Diag) {
       DiagMap.insert(std::make_pair(Diag, DiagnosticMapping()));
 
   // Initialize the entry if we added it.
-  if (Result.second)
-    Result.first->second = DiagnosticIDs::getDefaultMapping(Diag);
+  if (Result.second) {
+    Result.first->second = DiagIDs.getDefaultMapping(Diag);
+    if (DiagnosticIDs::IsCustomDiag(Diag))
+      DiagIDs.initCustomDiagMapping(Result.first->second, Diag);
+  }
 
   return Result.first->second;
 }
@@ -290,7 +302,8 @@ void DiagnosticsEngine::DiagStateMap::dump(SourceManager &SrcMgr,
 
       for (auto &Mapping : *Transition.State) {
         StringRef Option =
-            DiagnosticIDs::getWarningOptionForDiag(Mapping.first);
+            SrcMgr.getDiagnostics().Diags->getWarningOptionForDiag(
+                Mapping.first);
         if (!DiagName.empty() && DiagName != Option)
           continue;
 
@@ -334,9 +347,7 @@ void DiagnosticsEngine::PushDiagStatePoint(DiagState *State,
 
 void DiagnosticsEngine::setSeverity(diag::kind Diag, diag::Severity Map,
                                     SourceLocation L) {
-  assert(Diag < diag::DIAG_UPPER_LIMIT &&
-         "Can only map builtin diagnostics");
-  assert((Diags->isBuiltinWarningOrExtension(Diag) ||
+  assert((Diags->isWarningOrExtension(Diag) ||
           (Map == diag::Severity::Fatal || Map == diag::Severity::Error)) &&
          "Cannot map errors into warnings!");
   assert((L.isInvalid() || SourceMgr) && "No SourceMgr for valid location");
@@ -388,6 +399,8 @@ bool DiagnosticsEngine::setSeverityForGroup(diag::Flavor Flavor,
   if (Diags->getDiagnosticsInGroup(Flavor, Group, GroupDiags))
     return true;
 
+  Diags->setGroupSeverity(Group, Map);
+
   // Set the mapping.
   for (diag::kind Diag : GroupDiags)
     setSeverity(Diag, Map, Loc);
@@ -410,6 +423,7 @@ bool DiagnosticsEngine::setDiagnosticGroupWarningAsError(StringRef Group,
   if (Enabled)
     return setSeverityForGroup(diag::Flavor::WarningOrError, Group,
                                diag::Severity::Error);
+  Diags->setGroupSeverity(Group, diag::Severity::Warning);
 
   // Otherwise, we want to set the diagnostic mapping's "no Werror" bit, and
   // potentially downgrade anything already mapped to be a warning.
@@ -441,6 +455,7 @@ bool DiagnosticsEngine::setDiagnosticGroupErrorAsFatal(StringRef Group,
   if (Enabled)
     return setSeverityForGroup(diag::Flavor::WarningOrError, Group,
                                diag::Severity::Fatal);
+  Diags->setGroupSeverity(Group, diag::Severity::Error);
 
   // Otherwise, we want to set the diagnostic mapping's "no Wfatal-errors" bit,
   // and potentially downgrade anything already mapped to be a fatal error.
@@ -473,8 +488,150 @@ void DiagnosticsEngine::setSeverityForAll(diag::Flavor Flavor,
 
   // Set the mapping.
   for (diag::kind Diag : AllDiags)
-    if (Diags->isBuiltinWarningOrExtension(Diag))
+    if (Diags->isWarningOrExtension(Diag))
       setSeverity(Diag, Map, Loc);
+}
+
+namespace {
+// FIXME: We should isolate the parser from SpecialCaseList and just use it
+// here.
+class WarningsSpecialCaseList : public llvm::SpecialCaseList {
+public:
+  static std::unique_ptr<WarningsSpecialCaseList>
+  create(const llvm::MemoryBuffer &Input, std::string &Err);
+
+  // Section names refer to diagnostic groups, which cover multiple individual
+  // diagnostics. Expand diagnostic groups here to individual diagnostics.
+  // A diagnostic can have multiple diagnostic groups associated with it, we let
+  // the last section take precedence in such cases.
+  void processSections(DiagnosticsEngine &Diags);
+
+  bool isDiagSuppressed(diag::kind DiagId, SourceLocation DiagLoc,
+                        const SourceManager &SM) const;
+
+private:
+  // Find the longest glob pattern that matches FilePath amongst
+  // CategoriesToMatchers, return true iff the match exists and belongs to a
+  // positive category.
+  bool globsMatches(const llvm::StringMap<Matcher> &CategoriesToMatchers,
+                    StringRef FilePath) const;
+
+  llvm::DenseMap<diag::kind, const Section *> DiagToSection;
+};
+} // namespace
+
+std::unique_ptr<WarningsSpecialCaseList>
+WarningsSpecialCaseList::create(const llvm::MemoryBuffer &Input,
+                                std::string &Err) {
+  auto WarningSuppressionList = std::make_unique<WarningsSpecialCaseList>();
+  if (!WarningSuppressionList->createInternal(&Input, Err))
+    return nullptr;
+  return WarningSuppressionList;
+}
+
+void WarningsSpecialCaseList::processSections(DiagnosticsEngine &Diags) {
+  // Drop the default section introduced by special case list, we only support
+  // exact diagnostic group names.
+  // FIXME: We should make this configurable in the parser instead.
+  Sections.erase("*");
+  // Make sure we iterate sections by their line numbers.
+  std::vector<std::pair<unsigned, const llvm::StringMapEntry<Section> *>>
+      LineAndSectionEntry;
+  LineAndSectionEntry.reserve(Sections.size());
+  for (const auto &Entry : Sections) {
+    StringRef DiagName = Entry.getKey();
+    // Each section has a matcher with that section's name, attached to that
+    // line.
+    const auto &DiagSectionMatcher = Entry.getValue().SectionMatcher;
+    unsigned DiagLine = DiagSectionMatcher->Globs.at(DiagName).second;
+    LineAndSectionEntry.emplace_back(DiagLine, &Entry);
+  }
+  llvm::sort(LineAndSectionEntry);
+  static constexpr auto WarningFlavor = clang::diag::Flavor::WarningOrError;
+  for (const auto &[_, SectionEntry] : LineAndSectionEntry) {
+    SmallVector<diag::kind> GroupDiags;
+    StringRef DiagGroup = SectionEntry->getKey();
+    if (Diags.getDiagnosticIDs()->getDiagnosticsInGroup(
+            WarningFlavor, DiagGroup, GroupDiags)) {
+      StringRef Suggestion =
+          DiagnosticIDs::getNearestOption(WarningFlavor, DiagGroup);
+      Diags.Report(diag::warn_unknown_diag_option)
+          << static_cast<unsigned>(WarningFlavor) << DiagGroup
+          << !Suggestion.empty() << Suggestion;
+      continue;
+    }
+    for (diag::kind Diag : GroupDiags)
+      // We're intentionally overwriting any previous mappings here to make sure
+      // latest one takes precedence.
+      DiagToSection[Diag] = &SectionEntry->getValue();
+  }
+}
+
+void DiagnosticsEngine::setDiagSuppressionMapping(llvm::MemoryBuffer &Input) {
+  std::string Error;
+  auto WarningSuppressionList = WarningsSpecialCaseList::create(Input, Error);
+  if (!WarningSuppressionList) {
+    // FIXME: Use a `%select` statement instead of printing `Error` as-is. This
+    // should help localization.
+    Report(diag::err_drv_malformed_warning_suppression_mapping)
+        << Input.getBufferIdentifier() << Error;
+    return;
+  }
+  WarningSuppressionList->processSections(*this);
+  DiagSuppressionMapping =
+      [WarningSuppressionList(std::move(WarningSuppressionList))](
+          diag::kind DiagId, SourceLocation DiagLoc, const SourceManager &SM) {
+        return WarningSuppressionList->isDiagSuppressed(DiagId, DiagLoc, SM);
+      };
+}
+
+bool WarningsSpecialCaseList::isDiagSuppressed(diag::kind DiagId,
+                                               SourceLocation DiagLoc,
+                                               const SourceManager &SM) const {
+  const Section *DiagSection = DiagToSection.lookup(DiagId);
+  if (!DiagSection)
+    return false;
+  const SectionEntries &EntityTypeToCategories = DiagSection->Entries;
+  auto SrcEntriesIt = EntityTypeToCategories.find("src");
+  if (SrcEntriesIt == EntityTypeToCategories.end())
+    return false;
+  const llvm::StringMap<llvm::SpecialCaseList::Matcher> &CategoriesToMatchers =
+      SrcEntriesIt->getValue();
+  // We also use presumed locations here to improve reproducibility for
+  // preprocessed inputs.
+  if (PresumedLoc PLoc = SM.getPresumedLoc(DiagLoc); PLoc.isValid())
+    return globsMatches(
+        CategoriesToMatchers,
+        llvm::sys::path::remove_leading_dotslash(PLoc.getFilename()));
+  return false;
+}
+
+bool WarningsSpecialCaseList::globsMatches(
+    const llvm::StringMap<Matcher> &CategoriesToMatchers,
+    StringRef FilePath) const {
+  StringRef LongestMatch;
+  bool LongestIsPositive = false;
+  for (const auto &Entry : CategoriesToMatchers) {
+    StringRef Category = Entry.getKey();
+    const llvm::SpecialCaseList::Matcher &Matcher = Entry.getValue();
+    bool IsPositive = Category != "emit";
+    for (const auto &[Pattern, Glob] : Matcher.Globs) {
+      if (Pattern.size() < LongestMatch.size())
+        continue;
+      if (!Glob.first.match(FilePath))
+        continue;
+      LongestMatch = Pattern;
+      LongestIsPositive = IsPositive;
+    }
+  }
+  return LongestIsPositive;
+}
+
+bool DiagnosticsEngine::isSuppressedViaMapping(diag::kind DiagId,
+                                               SourceLocation DiagLoc) const {
+  if (!hasSourceManager() || !DiagSuppressionMapping)
+    return false;
+  return DiagSuppressionMapping(DiagId, DiagLoc, getSourceManager());
 }
 
 void DiagnosticsEngine::Report(const StoredDiagnostic &storedDiag) {
@@ -650,6 +807,35 @@ static void HandleOrdinalModifier(unsigned ValNo,
   // We could use text forms for the first N ordinals, but the numeric
   // forms are actually nicer in diagnostics because they stand out.
   Out << ValNo << llvm::getOrdinalSuffix(ValNo);
+}
+
+// 123 -> "123".
+// 1234 -> "1.23k".
+// 123456 -> "123.46k".
+// 1234567 -> "1.23M".
+// 1234567890 -> "1.23G".
+// 1234567890123 -> "1.23T".
+static void HandleIntegerHumanModifier(int64_t ValNo,
+                                       SmallVectorImpl<char> &OutStr) {
+  static constexpr std::array<std::pair<int64_t, char>, 4> Units = {
+      {{1'000'000'000'000L, 'T'},
+       {1'000'000'000L, 'G'},
+       {1'000'000L, 'M'},
+       {1'000L, 'k'}}};
+
+  llvm::raw_svector_ostream Out(OutStr);
+  if (ValNo < 0) {
+    Out << "-";
+    ValNo = -ValNo;
+  }
+  for (const auto &[UnitSize, UnitSign] : Units) {
+    if (ValNo >= UnitSize) {
+      Out << llvm::format("%0.2f%c", ValNo / static_cast<double>(UnitSize),
+                          UnitSign);
+      return;
+    }
+  }
+  Out << ValNo;
 }
 
 /// PluralNumber - Parse an unsigned integer and advance Start.
@@ -988,6 +1174,8 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
                              OutStr);
       } else if (ModifierIs(Modifier, ModifierLen, "ordinal")) {
         HandleOrdinalModifier((unsigned)Val, OutStr);
+      } else if (ModifierIs(Modifier, ModifierLen, "human")) {
+        HandleIntegerHumanModifier(Val, OutStr);
       } else {
         assert(ModifierLen == 0 && "Unknown integer modifier");
         llvm::raw_svector_ostream(OutStr) << Val;
@@ -1006,6 +1194,8 @@ FormatDiagnostic(const char *DiagStr, const char *DiagEnd,
                              OutStr);
       } else if (ModifierIs(Modifier, ModifierLen, "ordinal")) {
         HandleOrdinalModifier(Val, OutStr);
+      } else if (ModifierIs(Modifier, ModifierLen, "human")) {
+        HandleIntegerHumanModifier(Val, OutStr);
       } else {
         assert(ModifierLen == 0 && "Unknown integer modifier");
         llvm::raw_svector_ostream(OutStr) << Val;

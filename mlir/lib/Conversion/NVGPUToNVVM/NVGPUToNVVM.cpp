@@ -143,7 +143,7 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
 
       for (unsigned i = 0, e = structType.getBody().size() / 2; i < e; i++) {
         Value vec =
-            rewriter.create<LLVM::UndefOp>(loc, arrayType.getElementType());
+            rewriter.create<LLVM::PoisonOp>(loc, arrayType.getElementType());
         Value x1 =
             rewriter.create<LLVM::ExtractValueOp>(loc, intrinsicResult, i * 2);
         Value x2 = rewriter.create<LLVM::ExtractValueOp>(loc, intrinsicResult,
@@ -157,7 +157,7 @@ static Value convertIntrinsicResult(Location loc, Type intrinsicResultType,
     }
 
     // Create the final vectorized result.
-    Value result = rewriter.create<LLVM::UndefOp>(loc, arrayType);
+    Value result = rewriter.create<LLVM::PoisonOp>(loc, arrayType);
     for (const auto &el : llvm::enumerate(elements)) {
       result = rewriter.create<LLVM::InsertValueOp>(loc, result, el.value(),
                                                     el.index());
@@ -296,7 +296,7 @@ struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
     // actual vector type (still of width 32b) and repack them into a result
     // struct.
     Type finalResultType = typeConverter->convertType(vectorResultType);
-    Value result = b.create<LLVM::UndefOp>(finalResultType);
+    Value result = b.create<LLVM::PoisonOp>(finalResultType);
     for (int64_t i = 0, e = vectorResultType.getDimSize(0); i < e; i++) {
       Value i32Register =
           num32BitRegs > 1 ? b.create<LLVM::ExtractValueOp>(ldMatrixResult, i)
@@ -1254,8 +1254,8 @@ struct NVGPUWarpgroupMmaOpLowering
         wgmmaK = 8;
       } else if (inputElemType.isF16() || inputElemType.isBF16()) {
         wgmmaK = 16;
-      } else if (inputElemType.isFloat8E4M3FN() ||
-                 inputElemType.isFloat8E5M2() || inputElemType.isInteger(16)) {
+      } else if (isa<Float8E4M3FNType, Float8E5M2Type>(inputElemType) ||
+                 inputElemType.isInteger(16)) {
         wgmmaK = 32;
       } else if (inputElemType.isInteger(1)) {
         wgmmaK = 256;
@@ -1276,9 +1276,9 @@ struct NVGPUWarpgroupMmaOpLowering
           return NVVM::WGMMATypes::f16;
         if (elemType.isBF16())
           return NVVM::WGMMATypes::bf16;
-        if (elemType.isFloat8E4M3FN())
+        if (isa<Float8E4M3FNType>(elemType))
           return NVVM::WGMMATypes::e4m3;
-        if (elemType.isFloat8E5M2())
+        if (isa<Float8E5M2Type>(elemType))
           return NVVM::WGMMATypes::e5m2;
         if (elemType.isInteger(1))
           return NVVM::WGMMATypes::b1;
@@ -1421,7 +1421,7 @@ struct NVGPUWarpgroupMmaOpLowering
     /// Generates multiple wgmma instructions to complete the given GEMM shape
     Value generateWgmmaGroup() {
       Value wgmmaResult =
-          b.create<LLVM::UndefOp>(adaptor.getMatrixC().getType());
+          b.create<LLVM::PoisonOp>(adaptor.getMatrixC().getType());
 
       // Perform GEMM
       SmallVector<Value> wgmmaResults;
@@ -1631,7 +1631,7 @@ struct NVGPUWarpgroupMmaInitAccumulatorOpLowering
                         .getBody()
                         .front();
     Value zero = b.create<LLVM::ConstantOp>(elemType, b.getZeroAttr(elemType));
-    Value packStruct = b.create<LLVM::UndefOp>(packStructType);
+    Value packStruct = b.create<LLVM::PoisonOp>(packStructType);
     SmallVector<Value> innerStructs;
     // Unpack the structs and set all values to zero
     for (auto [idx, s] : llvm::enumerate(packStructType.getBody())) {
@@ -1676,7 +1676,7 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
     VectorType inTy = op.getIn().getType();
     // apply rcp.approx.ftz.f on each element in vector.
     auto convert1DVec = [&](Type llvm1DVectorTy, Value inVec) {
-      Value ret1DVec = b.create<LLVM::UndefOp>(llvm1DVectorTy);
+      Value ret1DVec = b.create<LLVM::PoisonOp>(llvm1DVectorTy);
       int numElems = llvm::cast<VectorType>(llvm1DVectorTy).getNumElements();
       for (int i = 0; i < numElems; i++) {
         Value idx = b.create<LLVM::ConstantOp>(i64Ty, b.getI64IntegerAttr(i));
@@ -1701,8 +1701,8 @@ struct NVGPURcpOpLowering : public ConvertOpToLLVMPattern<nvgpu::RcpOp> {
 };
 } // namespace
 
-void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
-                                                 RewritePatternSet &patterns) {
+void mlir::populateNVGPUToNVVMConversionPatterns(
+    const LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<
       NVGPUMBarrierCreateLowering,           // nvgpu.mbarrier.create
       NVGPUMBarrierInitLowering,             // nvgpu.mbarrier.init

@@ -20,8 +20,6 @@
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/ValueObjectConstResult.h"
-#include "lldb/Core/ValueObjectVariable.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/Materializer.h"
 #include "lldb/Symbol/CompileUnit.h"
@@ -47,6 +45,8 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/ValueObject/ValueObjectConstResult.h"
+#include "lldb/ValueObject/ValueObjectVariable.h"
 #include "lldb/lldb-private-types.h"
 #include "lldb/lldb-private.h"
 #include "clang/AST/ASTConsumer.h"
@@ -934,7 +934,7 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
         QualType(interface_type, 0).getAsOpaquePtr(),
         function_decl_ctx.GetTypeSystem()->weak_from_this());
 
-    LLDB_LOG(log, "  FEVD[{0}] Adding type for $__lldb_objc_class: {1}",
+    LLDB_LOG(log, "  FEVD Adding type for $__lldb_objc_class: {0}",
              ClangUtil::ToString(interface_type));
 
     AddOneType(context, class_user_type);
@@ -974,7 +974,7 @@ void ClangExpressionDeclMap::LookUpLldbObjCClass(NameSearchContext &context) {
   if (!self_clang_type)
     return;
 
-  LLDB_LOG(log, "  FEVD[{0}] Adding type for $__lldb_objc_class: {1}",
+  LLDB_LOG(log, "  FEVD Adding type for $__lldb_objc_class: {0}",
            ClangUtil::ToString(self_type->GetFullCompilerType()));
 
   TypeFromUser class_user_type(self_clang_type);
@@ -1883,7 +1883,7 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
       return;
     }
 
-    fun_address = function->GetAddressRange().GetBaseAddress();
+    fun_address = function->GetAddress();
 
     CompilerType copied_function_type = GuardedCopyType(function_clang_type);
     if (copied_function_type) {

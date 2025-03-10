@@ -158,8 +158,8 @@ public:
       ConstStmtVisitor<Derived>::Visit(S);
 
       // Some statements have custom mechanisms for dumping their children.
-      if (isa<DeclStmt>(S) || isa<GenericSelectionExpr>(S) ||
-          isa<RequiresExpr>(S))
+      if (isa<DeclStmt, GenericSelectionExpr, RequiresExpr,
+              OpenACCWaitConstruct, SYCLKernelCallStmt>(S))
         return;
 
       if (Traversal == TK_IgnoreUnlessSpelledInSource &&
@@ -585,6 +585,12 @@ public:
 
   void VisitTopLevelStmtDecl(const TopLevelStmtDecl *D) { Visit(D->getStmt()); }
 
+  void VisitOutlinedFunctionDecl(const OutlinedFunctionDecl *D) {
+    for (const ImplicitParamDecl *Parameter : D->parameters())
+      Visit(Parameter);
+    Visit(D->getBody());
+  }
+
   void VisitCapturedDecl(const CapturedDecl *D) { Visit(D->getBody()); }
 
   void VisitOMPThreadPrivateDecl(const OMPThreadPrivateDecl *D) {
@@ -800,6 +806,13 @@ public:
       Visit(A);
   }
 
+  void VisitLabelStmt(const LabelStmt *Node) {
+    if (Node->getDecl()->hasAttrs()) {
+      for (const auto *A : Node->getDecl()->getAttrs())
+        Visit(A);
+    }
+  }
+
   void VisitCXXCatchStmt(const CXXCatchStmt *Node) {
     Visit(Node->getExceptionDecl());
   }
@@ -808,12 +821,28 @@ public:
     Visit(Node->getCapturedDecl());
   }
 
+  void VisitSYCLKernelCallStmt(const SYCLKernelCallStmt *Node) {
+    Visit(Node->getOriginalStmt());
+    if (Traversal != TK_IgnoreUnlessSpelledInSource)
+      Visit(Node->getOutlinedFunctionDecl());
+  }
+
   void VisitOMPExecutableDirective(const OMPExecutableDirective *Node) {
     for (const auto *C : Node->clauses())
       Visit(C);
   }
 
   void VisitOpenACCConstructStmt(const OpenACCConstructStmt *Node) {
+    for (const auto *C : Node->clauses())
+      Visit(C);
+  }
+
+  void VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *Node) {
+    // Needs custom child checking to put clauses AFTER the children, which are
+    // the expressions in the 'wait' construct. Others likely need this as well,
+    // and might need to do the associated statement after it.
+    for (const Stmt *S : Node->children())
+      Visit(S);
     for (const auto *C : Node->clauses())
       Visit(C);
   }

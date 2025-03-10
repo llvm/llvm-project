@@ -17,13 +17,11 @@
 #include "ARMMachineFunctionInfo.h"
 #include "ARMTargetMachine.h"
 #include "ARMTargetObjectFile.h"
-#include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMInstPrinter.h"
 #include "MCTargetDesc/ARMMCExpr.h"
 #include "TargetInfo/ARMTargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/BinaryFormat/COFF.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
 #include "llvm/IR/Constants.h"
@@ -65,9 +63,11 @@ void ARMAsmPrinter::emitFunctionBodyEnd() {
 }
 
 void ARMAsmPrinter::emitFunctionEntryLabel() {
+  auto &TS =
+      static_cast<ARMTargetStreamer &>(*OutStreamer->getTargetStreamer());
   if (AFI->isThumbFunction()) {
     OutStreamer->emitAssemblerFlag(MCAF_Code16);
-    OutStreamer->emitThumbFunc(CurrentFnSym);
+    TS.emitThumbFunc(CurrentFnSym);
   } else {
     OutStreamer->emitAssemblerFlag(MCAF_Code32);
   }
@@ -1311,6 +1311,10 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
       default:
         MI->print(errs());
         llvm_unreachable("Unsupported opcode for unwinding information");
+      case ARM::tLDRspi:
+        // Used to restore LR in a prologue which uses it as a temporary, has
+        // no effect on unwind tables.
+        return;
       case ARM::MOVr:
       case ARM::tMOVr:
         Offset = 0;

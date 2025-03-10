@@ -352,6 +352,8 @@ static QualType getNeonEltType(NeonTypeFlags Flags, ASTContext &Context,
     return Context.DoubleTy;
   case NeonTypeFlags::BFloat16:
     return Context.BFloat16Ty;
+  case NeonTypeFlags::MFloat8:
+    return Context.MFloat8Ty;
   }
   llvm_unreachable("Invalid NeonTypeFlag!");
 }
@@ -372,7 +374,7 @@ enum ArmSMEState : unsigned {
 
 bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
                                 unsigned ArgIdx, unsigned EltBitWidth,
-                                unsigned VecBitWidth) {
+                                unsigned ContainerBitWidth) {
   // Function that checks whether the operand (ArgIdx) is an immediate
   // that is one of a given set of values.
   auto CheckImmediateInSet = [&](std::initializer_list<int64_t> Set,
@@ -445,17 +447,17 @@ bool SemaARM::CheckImmediateArg(CallExpr *TheCall, unsigned CheckTy,
     break;
   case ImmCheckType::ImmCheckLaneIndex:
     if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0,
-                                        (VecBitWidth / EltBitWidth) - 1))
+                                        (ContainerBitWidth / EltBitWidth) - 1))
       return true;
     break;
   case ImmCheckType::ImmCheckLaneIndexCompRotate:
-    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0,
-                                        (VecBitWidth / (2 * EltBitWidth)) - 1))
+    if (SemaRef.BuiltinConstantArgRange(
+            TheCall, ArgIdx, 0, (ContainerBitWidth / (2 * EltBitWidth)) - 1))
       return true;
     break;
   case ImmCheckType::ImmCheckLaneIndexDot:
-    if (SemaRef.BuiltinConstantArgRange(TheCall, ArgIdx, 0,
-                                        (VecBitWidth / (4 * EltBitWidth)) - 1))
+    if (SemaRef.BuiltinConstantArgRange(
+            TheCall, ArgIdx, 0, (ContainerBitWidth / (4 * EltBitWidth)) - 1))
       return true;
     break;
   case ImmCheckType::ImmCheckComplexRot90_270:
@@ -515,13 +517,13 @@ bool SemaARM::PerformNeonImmChecks(
   bool HasError = false;
 
   for (const auto &I : ImmChecks) {
-    auto [ArgIdx, CheckTy, ElementSizeInBits, VecSizeInBits] = I;
+    auto [ArgIdx, CheckTy, ElementBitWidth, VecBitWidth] = I;
 
     if (OverloadType >= 0)
-      ElementSizeInBits = NeonTypeFlags(OverloadType).getEltSizeInBits();
+      ElementBitWidth = NeonTypeFlags(OverloadType).getEltSizeInBits();
 
-    HasError |= CheckImmediateArg(TheCall, CheckTy, ArgIdx, ElementSizeInBits,
-                                  VecSizeInBits);
+    HasError |= CheckImmediateArg(TheCall, CheckTy, ArgIdx, ElementBitWidth,
+                                  VecBitWidth);
   }
 
   return HasError;
@@ -532,9 +534,9 @@ bool SemaARM::PerformSVEImmChecks(
   bool HasError = false;
 
   for (const auto &I : ImmChecks) {
-    auto [ArgIdx, CheckTy, ElementSizeInBits] = I;
+    auto [ArgIdx, CheckTy, ElementBitWidth] = I;
     HasError |=
-        CheckImmediateArg(TheCall, CheckTy, ArgIdx, ElementSizeInBits, 128);
+        CheckImmediateArg(TheCall, CheckTy, ArgIdx, ElementBitWidth, 128);
   }
 
   return HasError;
@@ -567,15 +569,9 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   // * When compiling for SVE only, the caller must be in non-streaming mode.
   // * When compiling for both SVE and SME, the caller can be in either mode.
   if (BuiltinType == SemaARM::VerifyRuntimeMode) {
-    auto DisableFeatures = [](llvm::StringMap<bool> &Map, StringRef S) {
-      for (StringRef K : Map.keys())
-        if (K.starts_with(S))
-          Map[K] = false;
-    };
-
     llvm::StringMap<bool> CallerFeatureMapWithoutSVE;
     S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSVE, FD);
-    DisableFeatures(CallerFeatureMapWithoutSVE, "sve");
+    CallerFeatureMapWithoutSVE["sve"] = false;
 
     // Avoid emitting diagnostics for a function that can never compile.
     if (FnType == SemaARM::ArmStreaming && !CallerFeatureMapWithoutSVE["sme"])
@@ -583,7 +579,7 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
 
     llvm::StringMap<bool> CallerFeatureMapWithoutSME;
     S.Context.getFunctionFeatureMap(CallerFeatureMapWithoutSME, FD);
-    DisableFeatures(CallerFeatureMapWithoutSME, "sme");
+    CallerFeatureMapWithoutSME["sme"] = false;
 
     // We know the builtin requires either some combination of SVE flags, or
     // some combination of SME flags, but we need to figure out which part
@@ -628,20 +624,6 @@ static bool checkArmStreamingBuiltin(Sema &S, CallExpr *TheCall,
   return true;
 }
 
-static bool hasArmZAState(const FunctionDecl *FD) {
-  const auto *T = FD->getType()->getAs<FunctionProtoType>();
-  return (T && FunctionType::getArmZAState(T->getAArch64SMEAttributes()) !=
-                   FunctionType::ARM_None) ||
-         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZA());
-}
-
-static bool hasArmZT0State(const FunctionDecl *FD) {
-  const auto *T = FD->getType()->getAs<FunctionProtoType>();
-  return (T && FunctionType::getArmZT0State(T->getAArch64SMEAttributes()) !=
-                   FunctionType::ARM_None) ||
-         (FD->hasAttr<ArmNewAttr>() && FD->getAttr<ArmNewAttr>()->isNewZT0());
-}
-
 static ArmSMEState getSMEState(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:
@@ -654,7 +636,8 @@ static ArmSMEState getSMEState(unsigned BuiltinID) {
 
 bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  if (const FunctionDecl *FD =
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
     std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
@@ -694,7 +677,8 @@ bool SemaARM::CheckSMEBuiltinFunctionCall(unsigned BuiltinID,
 
 bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
                                           CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  if (const FunctionDecl *FD =
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
     std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
@@ -723,23 +707,20 @@ bool SemaARM::CheckSVEBuiltinFunctionCall(unsigned BuiltinID,
 bool SemaARM::CheckNeonBuiltinFunctionCall(const TargetInfo &TI,
                                            unsigned BuiltinID,
                                            CallExpr *TheCall) {
-  if (const FunctionDecl *FD = SemaRef.getCurFunctionDecl()) {
+  if (const FunctionDecl *FD =
+          SemaRef.getCurFunctionDecl(/*AllowLambda=*/true)) {
+    std::optional<ArmStreamingType> BuiltinType;
 
     switch (BuiltinID) {
     default:
       break;
-#define GET_NEON_BUILTINS
-#define TARGET_BUILTIN(id, ...) case NEON::BI##id:
-#define BUILTIN(id, ...) case NEON::BI##id:
+#define GET_NEON_STREAMING_COMPAT_FLAG
 #include "clang/Basic/arm_neon.inc"
-      if (checkArmStreamingBuiltin(SemaRef, TheCall, FD, ArmNonStreaming,
-                                   BuiltinID))
-        return true;
-      break;
-#undef TARGET_BUILTIN
-#undef BUILTIN
-#undef GET_NEON_BUILTINS
+#undef GET_NEON_STREAMING_COMPAT_FLAG
     }
+    if (BuiltinType &&
+        checkArmStreamingBuiltin(SemaRef, TheCall, FD, *BuiltinType, BuiltinID))
+      return true;
   }
 
   llvm::APSInt Result;
@@ -913,7 +894,7 @@ bool SemaARM::CheckARMBuiltinExclusiveCall(unsigned BuiltinID,
 
   // Issue a warning if the cast is dodgy.
   CastKind CastNeeded = CK_NoOp;
-  if (!AddrType.isAtLeastAsQualifiedAs(ValType)) {
+  if (!AddrType.isAtLeastAsQualifiedAs(ValType, getASTContext())) {
     CastNeeded = CK_BitCast;
     Diag(DRE->getBeginLoc(), diag::ext_typecheck_convert_discards_qualifiers)
         << PointerArg->getType() << Context.getPointerType(AddrType)
@@ -1332,6 +1313,67 @@ void SemaARM::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   D->addAttr(::new (getASTContext())
                  ARMInterruptAttr(getASTContext(), AL, Kind));
+}
+
+// Check if the function definition uses any AArch64 SME features without
+// having the '+sme' feature enabled and warn user if sme locally streaming
+// function returns or uses arguments with VL-based types.
+void SemaARM::CheckSMEFunctionDefAttributes(const FunctionDecl *FD) {
+  const auto *Attr = FD->getAttr<ArmNewAttr>();
+  bool UsesSM = FD->hasAttr<ArmLocallyStreamingAttr>();
+  bool UsesZA = Attr && Attr->isNewZA();
+  bool UsesZT0 = Attr && Attr->isNewZT0();
+
+  if (UsesZA || UsesZT0) {
+    if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
+      FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+      if (EPI.AArch64SMEAttributes & FunctionType::SME_AgnosticZAStateMask)
+        Diag(FD->getLocation(), diag::err_sme_unsupported_agnostic_new);
+    }
+  }
+
+  if (FD->hasAttr<ArmLocallyStreamingAttr>()) {
+    if (FD->getReturnType()->isSizelessVectorType())
+      Diag(FD->getLocation(),
+           diag::warn_sme_locally_streaming_has_vl_args_returns)
+          << /*IsArg=*/false;
+    if (llvm::any_of(FD->parameters(), [](ParmVarDecl *P) {
+          return P->getOriginalType()->isSizelessVectorType();
+        }))
+      Diag(FD->getLocation(),
+           diag::warn_sme_locally_streaming_has_vl_args_returns)
+          << /*IsArg=*/true;
+  }
+  if (const auto *FPT = FD->getType()->getAs<FunctionProtoType>()) {
+    FunctionProtoType::ExtProtoInfo EPI = FPT->getExtProtoInfo();
+    UsesSM |= EPI.AArch64SMEAttributes & FunctionType::SME_PStateSMEnabledMask;
+    UsesZA |= FunctionType::getArmZAState(EPI.AArch64SMEAttributes) !=
+              FunctionType::ARM_None;
+    UsesZT0 |= FunctionType::getArmZT0State(EPI.AArch64SMEAttributes) !=
+               FunctionType::ARM_None;
+  }
+
+  ASTContext &Context = getASTContext();
+  if (UsesSM || UsesZA) {
+    llvm::StringMap<bool> FeatureMap;
+    Context.getFunctionFeatureMap(FeatureMap, FD);
+    if (!FeatureMap.contains("sme")) {
+      if (UsesSM)
+        Diag(FD->getLocation(),
+             diag::err_sme_definition_using_sm_in_non_sme_target);
+      else
+        Diag(FD->getLocation(),
+             diag::err_sme_definition_using_za_in_non_sme_target);
+    }
+  }
+  if (UsesZT0) {
+    llvm::StringMap<bool> FeatureMap;
+    Context.getFunctionFeatureMap(FeatureMap, FD);
+    if (!FeatureMap.contains("sme2")) {
+      Diag(FD->getLocation(),
+           diag::err_sme_definition_using_zt0_in_non_sme2_target);
+    }
+  }
 }
 
 } // namespace clang

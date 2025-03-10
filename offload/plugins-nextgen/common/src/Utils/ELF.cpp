@@ -45,6 +45,10 @@ uint16_t utils::elf::getTargetMachine() {
   return EM_AARCH64;
 #elif defined(__powerpc64__)
   return EM_PPC64;
+#elif defined(__riscv)
+  return EM_RISCV;
+#elif defined(__loongarch__)
+  return EM_LOONGARCH;
 #else
 #warning "Unknown ELF compilation target architecture"
   return EM_NONE;
@@ -62,10 +66,12 @@ checkMachineImpl(const object::ELFObjectFile<ELFT> &ELFObj, uint16_t EMachine) {
     if (Header.e_ident[EI_OSABI] != ELFOSABI_AMDGPU_HSA)
       return createError("Invalid AMD OS/ABI, must be AMDGPU_HSA");
     if (Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V4 &&
-        Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V5)
-      return createError("Invalid AMD ABI version, must be version 4 or 5");
+        Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V5 &&
+        Header.e_ident[EI_ABIVERSION] != ELFABIVERSION_AMDGPU_HSA_V6)
+      return createError("Invalid AMD ABI version, must be version 4 or above");
     if ((Header.e_flags & EF_AMDGPU_MACH) < EF_AMDGPU_MACH_AMDGCN_GFX700 ||
-        (Header.e_flags & EF_AMDGPU_MACH) > EF_AMDGPU_MACH_AMDGCN_GFX1201)
+        (Header.e_flags & EF_AMDGPU_MACH) >
+            EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC)
       return createError("Unsupported AMDGPU architecture");
   } else if (Header.e_machine == EM_CUDA) {
     if (~Header.e_flags & EF_CUDA_64BIT_ADDRESS)

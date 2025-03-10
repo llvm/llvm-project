@@ -16,8 +16,8 @@ subroutine standalone_distribute
     !$omp end teams
 end subroutine standalone_distribute
 
-! CHECK: omp.private {type = private} @[[I_PRIVATIZER_SYM:.*]] : !fir.ref<i32>
-! CHECK: omp.private {type = private} @[[VAR_PRIVATIZER_SYM:.*]] : !fir.ref<i32>
+! CHECK: omp.private {type = private} @[[I_PRIVATIZER_SYM:.*]] : i32
+! CHECK: omp.private {type = private} @[[VAR_PRIVATIZER_SYM:.*]] : i32
 
 
 ! CHECK-LABEL: func.func @_QPstandalone_distribute() {
@@ -25,13 +25,13 @@ end subroutine standalone_distribute
 ! CHECK:         %[[VAR_DECL:.*]]:2 = hlfir.declare %{{.*}} {uniq_name = "_QFstandalone_distributeEsimple_var"}
 ! CHECK:         omp.teams {
 ! CHECK:           omp.distribute
-! CHECK-SAME:        private(@[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %[[VAR_ARG:.*]] : !fir.ref<i32>,
-! CHECK-SAME:                @[[I_PRIVATIZER_SYM]] %[[I_DECL]]#0 -> %[[I_ARG:.*]] : !fir.ref<i32>) {
+! CHECK-SAME:        private(@[[VAR_PRIVATIZER_SYM]] %[[VAR_DECL]]#0 -> %[[VAR_ARG:[^,]+]],
+! CHECK-SAME:                @[[I_PRIVATIZER_SYM]] %[[I_DECL]]#0 -> %[[I_ARG:.*]] : !fir.ref<i32>, !fir.ref<i32>) {
 ! CHECK:             omp.loop_nest {{.*}} {
 ! CHECK:               %[[VAR_PRIV_DECL:.*]]:2 = hlfir.declare %[[VAR_ARG]]
 ! CHECK:               %[[I_PRIV_DECL:.*]]:2 = hlfir.declare %[[I_ARG]]
 
-! CHECK:               fir.store %{{.*}} to %[[I_PRIV_DECL]]#1 : !fir.ref<i32>
+! CHECK:               hlfir.assign %{{.*}} to %[[I_PRIV_DECL]]#1 : i32, !fir.ref<i32>
 ! CHECK:               %{{.*}} = fir.load %[[VAR_PRIV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:               %{{.*}} = fir.load %[[I_PRIV_DECL]]#0 : !fir.ref<i32>
 ! CHECK:               arith.addi %{{.*}}, %{{.*}} : i32

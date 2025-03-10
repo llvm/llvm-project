@@ -16,7 +16,6 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
-#include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
@@ -162,7 +161,7 @@ public:
   }
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target,
+                             const MCValue &Target, const uint64_t,
                              const MCSubtargetInfo *STI) override {
     MCFixupKind Kind = Fixup.getKind();
     switch ((unsigned)Kind) {

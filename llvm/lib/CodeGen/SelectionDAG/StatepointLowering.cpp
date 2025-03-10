@@ -26,7 +26,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
-#include "llvm/CodeGen/RuntimeLibcallUtil.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/StackMaps.h"
@@ -872,10 +871,11 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
   for (const auto *Relocate : SI.GCRelocates) {
     Value *Derived = Relocate->getDerivedPtr();
     SDValue SD = getValue(Derived);
-    if (!LowerAsVReg.count(SD))
+    auto It = LowerAsVReg.find(SD);
+    if (It == LowerAsVReg.end())
       continue;
 
-    SDValue Relocated = SDValue(StatepointMCNode, LowerAsVReg[SD]);
+    SDValue Relocated = SDValue(StatepointMCNode, It->second);
 
     // Handle local relocate. Note that different relocates might
     // map to the same SDValue.

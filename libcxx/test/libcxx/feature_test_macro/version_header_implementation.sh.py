@@ -16,7 +16,7 @@ TEST_DATA = sys.argv[2]
 del sys.argv[1:3]
 
 sys.path.append(UTILS)
-from generate_feature_test_macro_components import FeatureTestMacros
+from generate_feature_test_macro_components import FeatureTestMacros, VersionHeader
 
 class Test(unittest.TestCase):
     def setUp(self):
@@ -27,114 +27,114 @@ class Test(unittest.TestCase):
         expected = {
             "17": [
                 {
-                    "__cpp_lib_any": {
-                        "value": "201606L",
-                        "implemented": True,
-                        "need_undef": False,
-                        "condition": None,
-                    },
+                    "__cpp_lib_any": VersionHeader(
+                        value="201606L",
+                        implemented=True,
+                        need_undef=False,
+                        condition=None,
+                    ),
                 },
                 {
-                    "__cpp_lib_parallel_algorithm": {
-                        "value": "201603L",
-                        "implemented": True,
-                        "need_undef": False,
-                        "condition": None,
-                    },
+                    "__cpp_lib_parallel_algorithm": VersionHeader(
+                        value="201603L",
+                        implemented=True,
+                        need_undef=False,
+                        condition=None,
+                    ),
                 },
                 {
-                    "__cpp_lib_variant": {
-                        "value": "202102L",
-                        "implemented": True,
-                        "need_undef": False,
-                        "condition": None,
-                    },
+                    "__cpp_lib_variant": VersionHeader(
+                        value="202102L",
+                        implemented=True,
+                        need_undef=False,
+                        condition=None,
+                    ),
                 },
                 {
-                    "__cpp_lib_missing_FTM_in_older_standard": {
-                        "value": "2017L",
-                        "implemented": False,
-                        "need_undef": False,
-                        "condition": None,
-                    },
+                    "__cpp_lib_missing_FTM_in_older_standard" : VersionHeader(
+                        value = "2017L",
+                        implemented = False,
+                        need_undef = False,
+                        condition = None,
+                    ),
                 },
             ],
             "20": [
                 {
-                    "__cpp_lib_barrier": {
-                        "value": "201907L",
-                        "implemented": True,
-                        "need_undef": False,
-                        "condition": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
-                    },
+                    "__cpp_lib_barrier": VersionHeader(
+                        value="201907L",
+                        implemented=True,
+                        need_undef=False,
+                        condition="_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
+                    ),
                 },
                 {
-                    "__cpp_lib_format": {
-                        "value": "202110L",
-                        "implemented": False,
-                        "need_undef": False,
-                        "condition": None,
-                    },
+                    "__cpp_lib_format": VersionHeader(
+                        value="202110L",
+                        implemented=False,
+                        need_undef=False,
+                        condition=None,
+                    ),
                 },
                 {
-                    "__cpp_lib_variant": {
-                        "value": "202106L",
-                        "implemented": False,
-                        "need_undef": False,
-                        "condition": None,
-                    },
+                    "__cpp_lib_variant": VersionHeader(
+                        value="202106L",
+                        implemented=False,
+                        need_undef=False,
+                        condition=None,
+                    ),
                 },
                 {
-                    "__cpp_lib_missing_FTM_in_older_standard": {
-                        "value": "2020L",
-                        "implemented": False,
-                        "need_undef": False,
-                        "condition": None,
-                    },
+                    "__cpp_lib_missing_FTM_in_older_standard" : VersionHeader(
+                        value = "2020L",
+                        implemented = False,
+                        need_undef = False,
+                        condition = None,
+                    ),
                 },
             ],
             "23": [
                 {
-                    "__cpp_lib_format": {
-                        "value": "202207L",
-                        "implemented": False,
-                        "need_undef": False,
-                        "condition": None,
-                    },
+                    "__cpp_lib_format": VersionHeader(
+                        value="202207L",
+                        implemented=False,
+                        need_undef=False,
+                        condition=None,
+                    ),
                 },
             ],
             "26": [
                 {
-                    "__cpp_lib_barrier": {
-                        "value": "299900L",
-                        "implemented": True,
-                        "need_undef": True,
-                        "condition": "!defined(_LIBCPP_HAS_NO_THREADS) && _LIBCPP_AVAILABILITY_HAS_SYNC",
-                    },
+                    "__cpp_lib_barrier": VersionHeader(
+                        value="299900L",
+                        implemented=True,
+                        need_undef=True,
+                        condition="_LIBCPP_HAS_THREADS && _LIBCPP_AVAILABILITY_HAS_SYNC",
+                    ),
                 },
                 {
-                    "__cpp_lib_format": {
-                        "value": "202311L",
-                        "implemented": False,
-                        "need_undef": False,
-                        "condition": None,
-                    },
+                    "__cpp_lib_format": VersionHeader(
+                        value="202311L",
+                        implemented=False,
+                        need_undef=False,
+                        condition=None,
+                    ),
                 },
                 {
-                    "__cpp_lib_variant": {
-                        "value": "202306L",
-                        "implemented": False,
-                        "need_undef": False,
-                        "condition": None,
-                    },
+                    "__cpp_lib_variant": VersionHeader(
+                        value="202306L",
+                        implemented=False,
+                        need_undef=False,
+                        condition=None,
+                    ),
                 },
                 {
-                    "__cpp_lib_missing_FTM_in_older_standard": {
-                        "value": "2026L",
-                        "implemented": False,
-                        "need_undef": False,
-                        "condition": None,
-                    },
+                    "__cpp_lib_missing_FTM_in_older_standard" : VersionHeader(
+                        value = "2026L",
+                        implemented = False,
+                        need_undef = False,
+                        condition = None,
+                    ),
                 },
             ],
         }

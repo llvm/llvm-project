@@ -31,6 +31,7 @@
 
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
+#include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
@@ -583,7 +584,6 @@ public:
         lldb::addr_t pc = m_address.GetFileAddress();
         m_using_file_addr = true;
 
-        const bool data_from_file = disasm->m_data_from_file;
         bool use_hex_immediates = true;
         Disassembler::HexImmediateStyle hex_style = Disassembler::eHexStyleC;
 
@@ -593,12 +593,10 @@ public:
             use_hex_immediates = target->GetUseHexImmediates();
             hex_style = target->GetHexImmediateStyle();
 
-            if (!data_from_file) {
-              const lldb::addr_t load_addr = m_address.GetLoadAddress(target);
-              if (load_addr != LLDB_INVALID_ADDRESS) {
-                pc = load_addr;
-                m_using_file_addr = false;
-              }
+            const lldb::addr_t load_addr = m_address.GetLoadAddress(target);
+            if (load_addr != LLDB_INVALID_ADDRESS) {
+              pc = load_addr;
+              m_using_file_addr = false;
             }
           }
         }
@@ -1439,7 +1437,9 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(
 }
 
 DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
-                                     const char *flavor_string)
+                                     const char *flavor_string,
+                                     const char *cpu_string,
+                                     const char *features_string)
     : Disassembler(arch, flavor_string), m_exe_ctx(nullptr), m_inst(nullptr),
       m_data_from_file(false), m_adrp_address(LLDB_INVALID_ADDRESS),
       m_adrp_insn() {
@@ -1447,6 +1447,7 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
     m_flavor.assign("default");
   }
 
+  const bool cpu_or_features_overriden = cpu_string || features_string;
   unsigned flavor = ~0U;
   llvm::Triple triple = arch.GetTriple();
 
@@ -1483,64 +1484,68 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       triple.getSubArch() == llvm::Triple::NoSubArch)
     triple.setArchName("armv9.3a");
 
-  std::string features_str;
+  std::string features_str =
+      features_string ? std::string(features_string) : "";
   const char *triple_str = triple.getTriple().c_str();
 
   // ARM Cortex M0-M7 devices only execute thumb instructions
   if (arch.IsAlwaysThumbInstructions()) {
     triple_str = thumb_arch.GetTriple().getTriple().c_str();
-    features_str += "+fp-armv8,";
+    if (!features_string)
+      features_str += "+fp-armv8,";
   }
 
-  const char *cpu = "";
+  const char *cpu = cpu_string;
 
-  switch (arch.GetCore()) {
-  case ArchSpec::eCore_mips32:
-  case ArchSpec::eCore_mips32el:
-    cpu = "mips32";
-    break;
-  case ArchSpec::eCore_mips32r2:
-  case ArchSpec::eCore_mips32r2el:
-    cpu = "mips32r2";
-    break;
-  case ArchSpec::eCore_mips32r3:
-  case ArchSpec::eCore_mips32r3el:
-    cpu = "mips32r3";
-    break;
-  case ArchSpec::eCore_mips32r5:
-  case ArchSpec::eCore_mips32r5el:
-    cpu = "mips32r5";
-    break;
-  case ArchSpec::eCore_mips32r6:
-  case ArchSpec::eCore_mips32r6el:
-    cpu = "mips32r6";
-    break;
-  case ArchSpec::eCore_mips64:
-  case ArchSpec::eCore_mips64el:
-    cpu = "mips64";
-    break;
-  case ArchSpec::eCore_mips64r2:
-  case ArchSpec::eCore_mips64r2el:
-    cpu = "mips64r2";
-    break;
-  case ArchSpec::eCore_mips64r3:
-  case ArchSpec::eCore_mips64r3el:
-    cpu = "mips64r3";
-    break;
-  case ArchSpec::eCore_mips64r5:
-  case ArchSpec::eCore_mips64r5el:
-    cpu = "mips64r5";
-    break;
-  case ArchSpec::eCore_mips64r6:
-  case ArchSpec::eCore_mips64r6el:
-    cpu = "mips64r6";
-    break;
-  default:
-    cpu = "";
-    break;
+  if (!cpu_or_features_overriden) {
+    switch (arch.GetCore()) {
+    case ArchSpec::eCore_mips32:
+    case ArchSpec::eCore_mips32el:
+      cpu = "mips32";
+      break;
+    case ArchSpec::eCore_mips32r2:
+    case ArchSpec::eCore_mips32r2el:
+      cpu = "mips32r2";
+      break;
+    case ArchSpec::eCore_mips32r3:
+    case ArchSpec::eCore_mips32r3el:
+      cpu = "mips32r3";
+      break;
+    case ArchSpec::eCore_mips32r5:
+    case ArchSpec::eCore_mips32r5el:
+      cpu = "mips32r5";
+      break;
+    case ArchSpec::eCore_mips32r6:
+    case ArchSpec::eCore_mips32r6el:
+      cpu = "mips32r6";
+      break;
+    case ArchSpec::eCore_mips64:
+    case ArchSpec::eCore_mips64el:
+      cpu = "mips64";
+      break;
+    case ArchSpec::eCore_mips64r2:
+    case ArchSpec::eCore_mips64r2el:
+      cpu = "mips64r2";
+      break;
+    case ArchSpec::eCore_mips64r3:
+    case ArchSpec::eCore_mips64r3el:
+      cpu = "mips64r3";
+      break;
+    case ArchSpec::eCore_mips64r5:
+    case ArchSpec::eCore_mips64r5el:
+      cpu = "mips64r5";
+      break;
+    case ArchSpec::eCore_mips64r6:
+    case ArchSpec::eCore_mips64r6el:
+      cpu = "mips64r6";
+      break;
+    default:
+      cpu = "";
+      break;
+    }
   }
 
-  if (arch.IsMIPS()) {
+  if (arch.IsMIPS() && !cpu_or_features_overriden) {
     uint32_t arch_flags = arch.GetFlags();
     if (arch_flags & ArchSpec::eMIPSAse_msa)
       features_str += "+msa,";
@@ -1550,15 +1555,15 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
       features_str += "+dspr2,";
   }
 
-  // If any AArch64 variant, enable latest ISA with all extensions.
-  if (triple.isAArch64()) {
+  // If any AArch64 variant, enable latest ISA with all extensions unless the
+  // CPU or features were overridden.
+  if (triple.isAArch64() && !cpu_or_features_overriden) {
     features_str += "+all,";
-
     if (triple.getVendor() == llvm::Triple::Apple)
       cpu = "apple-latest";
   }
 
-  if (triple.isRISCV()) {
+  if (triple.isRISCV() && !cpu_or_features_overriden) {
     uint32_t arch_flags = arch.GetFlags();
     if (arch_flags & ArchSpec::eRISCV_rvc)
       features_str += "+c,";
@@ -1614,9 +1619,12 @@ DisassemblerLLVMC::DisassemblerLLVMC(const ArchSpec &arch,
 DisassemblerLLVMC::~DisassemblerLLVMC() = default;
 
 lldb::DisassemblerSP DisassemblerLLVMC::CreateInstance(const ArchSpec &arch,
-                                                       const char *flavor) {
+                                                       const char *flavor,
+                                                       const char *cpu,
+                                                       const char *features) {
   if (arch.GetTriple().getArch() != llvm::Triple::UnknownArch) {
-    auto disasm_sp = std::make_shared<DisassemblerLLVMC>(arch, flavor);
+    auto disasm_sp =
+        std::make_shared<DisassemblerLLVMC>(arch, flavor, cpu, features);
     if (disasm_sp && disasm_sp->IsValid())
       return disasm_sp;
   }
@@ -1780,9 +1788,9 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
           module_sp->ResolveFileAddress(value, value_so_addr);
           module_sp->ResolveFileAddress(pc, pc_so_addr);
         }
-      } else if (target && !target->GetSectionLoadList().IsEmpty()) {
-        target->GetSectionLoadList().ResolveLoadAddress(value, value_so_addr);
-        target->GetSectionLoadList().ResolveLoadAddress(pc, pc_so_addr);
+      } else if (target && target->HasLoadedSections()) {
+        target->ResolveLoadAddress(value, value_so_addr);
+        target->ResolveLoadAddress(pc, pc_so_addr);
       }
 
       SymbolContext sym_ctx;
@@ -1799,10 +1807,13 @@ const char *DisassemblerLLVMC::SymbolLookup(uint64_t value, uint64_t *type_ptr,
         bool format_omitting_current_func_name = false;
         if (sym_ctx.symbol || sym_ctx.function) {
           AddressRange range;
-          if (sym_ctx.GetAddressRange(resolve_scope, 0, false, range) &&
-              range.GetBaseAddress().IsValid() &&
-              range.ContainsLoadAddress(value_so_addr, target)) {
-            format_omitting_current_func_name = true;
+          for (uint32_t idx = 0;
+               sym_ctx.GetAddressRange(resolve_scope, idx, false, range);
+               ++idx) {
+            if (range.ContainsLoadAddress(value_so_addr, target)) {
+              format_omitting_current_func_name = true;
+              break;
+            }
           }
         }
 

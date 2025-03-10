@@ -18,7 +18,6 @@
 #include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
-#include "WebAssembly.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -50,8 +49,7 @@ WebAssemblyAsmTypeCheck::WebAssemblyAsmTypeCheck(MCAsmParser &Parser,
 
 void WebAssemblyAsmTypeCheck::funcDecl(const wasm::WasmSignature &Sig) {
   LocalTypes.assign(Sig.Params.begin(), Sig.Params.end());
-  ReturnTypes.assign(Sig.Returns.begin(), Sig.Returns.end());
-  BrStack.emplace_back(Sig.Returns.begin(), Sig.Returns.end());
+  BlockInfoStack.push_back({Sig, 0, false});
 }
 
 void WebAssemblyAsmTypeCheck::localDecl(
@@ -60,18 +58,19 @@ void WebAssemblyAsmTypeCheck::localDecl(
 }
 
 void WebAssemblyAsmTypeCheck::dumpTypeStack(Twine Msg) {
-  LLVM_DEBUG({ dbgs() << Msg << getTypesString(Stack, 0) << "\n"; });
+  LLVM_DEBUG({ dbgs() << Msg << getTypesString(Stack) << "\n"; });
 }
 
 bool WebAssemblyAsmTypeCheck::typeError(SMLoc ErrorLoc, const Twine &Msg) {
-  // If we're currently in unreachable code, we suppress errors completely.
-  if (Unreachable)
-    return false;
   dumpTypeStack("current stack: ");
   return Parser.Error(ErrorLoc, Msg);
 }
 
 bool WebAssemblyAsmTypeCheck::match(StackType TypeA, StackType TypeB) {
+  // These should have been filtered out in checkTypes()
+  assert(!std::get_if<Polymorphic>(&TypeA) &&
+         !std::get_if<Polymorphic>(&TypeB));
+
   if (TypeA == TypeB)
     return false;
   if (std::get_if<Any>(&TypeA) || std::get_if<Any>(&TypeB))
@@ -88,21 +87,25 @@ bool WebAssemblyAsmTypeCheck::match(StackType TypeA, StackType TypeB) {
 
 std::string WebAssemblyAsmTypeCheck::getTypesString(ArrayRef<StackType> Types,
                                                     size_t StartPos) {
-  SmallVector<std::string, 4> Reverse;
+  SmallVector<std::string, 4> TypeStrs;
   for (auto I = Types.size(); I > StartPos; I--) {
+    if (std::get_if<Polymorphic>(&Types[I - 1])) {
+      TypeStrs.push_back("...");
+      break;
+    }
     if (std::get_if<Any>(&Types[I - 1]))
-      Reverse.push_back("any");
+      TypeStrs.push_back("any");
     else if (std::get_if<Ref>(&Types[I - 1]))
-      Reverse.push_back("ref");
+      TypeStrs.push_back("ref");
     else
-      Reverse.push_back(
+      TypeStrs.push_back(
           WebAssembly::typeToString(std::get<wasm::ValType>(Types[I - 1])));
   }
 
   std::stringstream SS;
   SS << "[";
   bool First = true;
-  for (auto It = Reverse.rbegin(); It != Reverse.rend(); ++It) {
+  for (auto It = TypeStrs.rbegin(); It != TypeStrs.rend(); ++It) {
     if (!First)
       SS << ", ";
     SS << *It;
@@ -112,8 +115,15 @@ std::string WebAssemblyAsmTypeCheck::getTypesString(ArrayRef<StackType> Types,
   return SS.str();
 }
 
+std::string
+WebAssemblyAsmTypeCheck::getTypesString(ArrayRef<wasm::ValType> Types,
+                                        size_t StartPos) {
+  return getTypesString(valTypesToStackTypes(Types), StartPos);
+}
+
 SmallVector<WebAssemblyAsmTypeCheck::StackType, 4>
-WebAssemblyAsmTypeCheck::valTypeToStackType(ArrayRef<wasm::ValType> ValTypes) {
+WebAssemblyAsmTypeCheck::valTypesToStackTypes(
+    ArrayRef<wasm::ValType> ValTypes) {
   SmallVector<StackType, 4> Types(ValTypes.size());
   std::transform(ValTypes.begin(), ValTypes.end(), Types.begin(),
                  [](wasm::ValType Val) -> StackType { return Val; });
@@ -123,7 +133,7 @@ WebAssemblyAsmTypeCheck::valTypeToStackType(ArrayRef<wasm::ValType> ValTypes) {
 bool WebAssemblyAsmTypeCheck::checkTypes(SMLoc ErrorLoc,
                                          ArrayRef<wasm::ValType> ValTypes,
                                          bool ExactMatch) {
-  return checkTypes(ErrorLoc, valTypeToStackType(ValTypes), ExactMatch);
+  return checkTypes(ErrorLoc, valTypesToStackTypes(ValTypes), ExactMatch);
 }
 
 bool WebAssemblyAsmTypeCheck::checkTypes(SMLoc ErrorLoc,
@@ -131,52 +141,75 @@ bool WebAssemblyAsmTypeCheck::checkTypes(SMLoc ErrorLoc,
                                          bool ExactMatch) {
   auto StackI = Stack.size();
   auto TypeI = Types.size();
+  assert(!BlockInfoStack.empty());
+  auto BlockStackStartPos = BlockInfoStack.back().StackStartPos;
   bool Error = false;
+  bool PolymorphicStack = false;
   // Compare elements one by one from the stack top
-  for (; StackI > 0 && TypeI > 0; StackI--, TypeI--) {
+  for (; StackI > BlockStackStartPos && TypeI > 0; StackI--, TypeI--) {
+    // If the stack is polymorphic, we assume all types in 'Types' have been
+    // compared and matched
+    if (std::get_if<Polymorphic>(&Stack[StackI - 1])) {
+      TypeI = 0;
+      break;
+    }
     if (match(Stack[StackI - 1], Types[TypeI - 1])) {
       Error = true;
       break;
     }
   }
+
+  // If the stack top is polymorphic, the stack is in the polymorphic state.
+  if (StackI > BlockStackStartPos &&
+      std::get_if<Polymorphic>(&Stack[StackI - 1]))
+    PolymorphicStack = true;
+
   // Even if no match failure has happened in the loop above, if not all
   // elements of Types has been matched, that means we don't have enough
   // elements on the stack.
   //
   // Also, if not all elements of the Stack has been matched and when
-  // 'ExactMatch' is true, that means we have superfluous elements remaining on
-  // the stack (e.g. at the end of a function).
-  if (TypeI > 0 || (ExactMatch && StackI > 0))
+  // 'ExactMatch' is true and the current stack is not polymorphic, that means
+  // we have superfluous elements remaining on the stack (e.g. at the end of a
+  // function).
+  if (TypeI > 0 ||
+      (ExactMatch && !PolymorphicStack && StackI > BlockStackStartPos))
     Error = true;
 
   if (!Error)
     return false;
 
-  auto StackStartPos =
-      ExactMatch ? 0 : std::max(0, (int)Stack.size() - (int)Types.size());
+  auto StackStartPos = ExactMatch
+                           ? BlockStackStartPos
+                           : std::max((int)BlockStackStartPos,
+                                      (int)Stack.size() - (int)Types.size());
   return typeError(ErrorLoc, "type mismatch, expected " +
-                                 getTypesString(Types, 0) + " but got " +
+                                 getTypesString(Types) + " but got " +
                                  getTypesString(Stack, StackStartPos));
 }
 
-bool WebAssemblyAsmTypeCheck::checkAndPopTypes(SMLoc ErrorLoc,
-                                               ArrayRef<wasm::ValType> ValTypes,
-                                               bool ExactMatch) {
-  return checkAndPopTypes(ErrorLoc, valTypeToStackType(ValTypes), ExactMatch);
+bool WebAssemblyAsmTypeCheck::popTypes(SMLoc ErrorLoc,
+                                       ArrayRef<wasm::ValType> ValTypes,
+                                       bool ExactMatch) {
+  return popTypes(ErrorLoc, valTypesToStackTypes(ValTypes), ExactMatch);
 }
 
-bool WebAssemblyAsmTypeCheck::checkAndPopTypes(SMLoc ErrorLoc,
-                                               ArrayRef<StackType> Types,
-                                               bool ExactMatch) {
+bool WebAssemblyAsmTypeCheck::popTypes(SMLoc ErrorLoc,
+                                       ArrayRef<StackType> Types,
+                                       bool ExactMatch) {
   bool Error = checkTypes(ErrorLoc, Types, ExactMatch);
-  auto NumPops = std::min(Stack.size(), Types.size());
-  for (size_t I = 0, E = NumPops; I != E; I++)
+  auto NumPops = std::min(Stack.size() - BlockInfoStack.back().StackStartPos,
+                          Types.size());
+  for (size_t I = 0, E = NumPops; I != E; I++) {
+    if (std::get_if<Polymorphic>(&Stack.back()))
+      break;
     Stack.pop_back();
+  }
   return Error;
 }
 
 bool WebAssemblyAsmTypeCheck::popType(SMLoc ErrorLoc, StackType Type) {
-  return checkAndPopTypes(ErrorLoc, {Type}, false);
+  return popTypes(ErrorLoc, {Type});
 }
 
 bool WebAssemblyAsmTypeCheck::popRefType(SMLoc ErrorLoc) {
@@ -188,7 +221,7 @@ bool WebAssemblyAsmTypeCheck::popAnyType(SMLoc ErrorLoc) {
 }
 
 void WebAssemblyAsmTypeCheck::pushTypes(ArrayRef<wasm::ValType> ValTypes) {
-  Stack.append(valTypeToStackType(ValTypes));
+  Stack.append(valTypesToStackTypes(ValTypes));
 }
 
 bool WebAssemblyAsmTypeCheck::getLocal(SMLoc ErrorLoc, const MCOperand &LocalOp,
@@ -201,28 +234,9 @@ bool WebAssemblyAsmTypeCheck::getLocal(SMLoc ErrorLoc, const MCOperand &LocalOp,
   return false;
 }
 
-bool WebAssemblyAsmTypeCheck::checkBr(SMLoc ErrorLoc, size_t Level) {
-  if (Level >= BrStack.size())
-    return typeError(ErrorLoc,
-                     StringRef("br: invalid depth ") + std::to_string(Level));
-  const SmallVector<wasm::ValType, 4> &Expected =
-      BrStack[BrStack.size() - Level - 1];
-  return checkTypes(ErrorLoc, Expected, false);
-  return false;
-}
-
-bool WebAssemblyAsmTypeCheck::checkEnd(SMLoc ErrorLoc, bool PopVals) {
-  if (!PopVals)
-    BrStack.pop_back();
-
-  if (PopVals)
-    return checkAndPopTypes(ErrorLoc, LastSig.Returns, false);
-  return checkTypes(ErrorLoc, LastSig.Returns, false);
-}
-
 bool WebAssemblyAsmTypeCheck::checkSig(SMLoc ErrorLoc,
                                        const wasm::WasmSignature &Sig) {
-  bool Error = checkAndPopTypes(ErrorLoc, Sig.Params, false);
+  bool Error = popTypes(ErrorLoc, Sig.Params);
   pushTypes(Sig.Returns);
   return Error;
 }
@@ -309,8 +323,70 @@ bool WebAssemblyAsmTypeCheck::getSignature(SMLoc ErrorLoc,
 }
 
 bool WebAssemblyAsmTypeCheck::endOfFunction(SMLoc ErrorLoc, bool ExactMatch) {
-  bool Error = checkAndPopTypes(ErrorLoc, ReturnTypes, ExactMatch);
-  Unreachable = true;
+  assert(!BlockInfoStack.empty());
+  const auto &FuncInfo = BlockInfoStack[0];
+  return checkTypes(ErrorLoc, FuncInfo.Sig.Returns, ExactMatch);
+}
+
+// Unlike checkTypes() family, this just compare the equivalence of the two
+// ValType vectors
+static bool compareTypes(ArrayRef<wasm::ValType> TypesA,
+                         ArrayRef<wasm::ValType> TypesB) {
+  if (TypesA.size() != TypesB.size())
+    return true;
+  for (size_t I = 0, E = TypesA.size(); I < E; I++)
+    if (TypesA[I] != TypesB[I])
+      return true;
+  return false;
+}
+
+bool WebAssemblyAsmTypeCheck::checkTryTable(SMLoc ErrorLoc,
+                                            const MCInst &Inst) {
+  bool Error = false;
+  unsigned OpIdx = 1; // OpIdx 0 is the block type
+  int64_t NumCatches = Inst.getOperand(OpIdx++).getImm();
+  for (int64_t I = 0; I < NumCatches; I++) {
+    int64_t Opcode = Inst.getOperand(OpIdx++).getImm();
+    std::string ErrorMsgBase =
+        "try_table: catch index " + std::to_string(I) + ": ";
+
+    const wasm::WasmSignature *Sig = nullptr;
+    SmallVector<wasm::ValType> SentTypes;
+    if (Opcode == wasm::WASM_OPCODE_CATCH ||
+        Opcode == wasm::WASM_OPCODE_CATCH_REF) {
+      if (!getSignature(ErrorLoc, Inst.getOperand(OpIdx++),
+                        wasm::WASM_SYMBOL_TYPE_TAG, Sig))
+        SentTypes.insert(SentTypes.end(), Sig->Params.begin(),
+                         Sig->Params.end());
+      else
+        Error = true;
+    }
+    if (Opcode == wasm::WASM_OPCODE_CATCH_REF ||
+        Opcode == wasm::WASM_OPCODE_CATCH_ALL_REF) {
+      SentTypes.push_back(wasm::ValType::EXNREF);
+    }
+
+    unsigned Level = Inst.getOperand(OpIdx++).getImm();
+    if (Level < BlockInfoStack.size()) {
+      const auto &DestBlockInfo =
+          BlockInfoStack[BlockInfoStack.size() - Level - 1];
+      ArrayRef<wasm::ValType> DestTypes;
+      if (DestBlockInfo.IsLoop)
+        DestTypes = DestBlockInfo.Sig.Params;
+      else
+        DestTypes = DestBlockInfo.Sig.Returns;
+      if (compareTypes(SentTypes, DestTypes)) {
+        std::string ErrorMsg =
+            ErrorMsgBase + "type mismatch, catch tag type is " +
+            getTypesString(SentTypes) + ", but destination's type is " +
+            getTypesString(DestTypes);
+        Error |= typeError(ErrorLoc, ErrorMsg);
+      }
+    } else {
+      Error = typeError(ErrorLoc, ErrorMsgBase + "invalid depth " +
+                                      std::to_string(Level));
+    }
+  }
   return Error;
 }
 
@@ -326,12 +402,14 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       pushType(Type);
       return false;
     }
+    pushType(Any{});
     return true;
   }
 
   if (Name == "local.set") {
     if (!getLocal(Operands[1]->getStartLoc(), Inst.getOperand(0), Type))
       return popType(ErrorLoc, Type);
+    popType(ErrorLoc, Any{});
     return true;
   }
 
@@ -341,6 +419,8 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       pushType(Type);
       return Error;
     }
+    popType(ErrorLoc, Any{});
+    pushType(Any{});
     return true;
   }
 
@@ -349,12 +429,14 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       pushType(Type);
       return false;
     }
+    pushType(Any{});
     return true;
   }
 
   if (Name == "global.set") {
     if (!getGlobal(Operands[1]->getStartLoc(), Inst.getOperand(0), Type))
       return popType(ErrorLoc, Type);
+    popType(ErrorLoc, Any{});
     return true;
   }
 
@@ -364,16 +446,21 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       pushType(Type);
       return Error;
     }
+    pushType(Any{});
     return true;
   }
 
   if (Name == "table.set") {
     bool Error = false;
-    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type))
-      Error |= popType(ErrorLoc, Type);
-    else
+    SmallVector<StackType, 2> PopTypes;
+    PopTypes.push_back(wasm::ValType::I32);
+    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type)) {
+      PopTypes.push_back(Type);
+    } else {
       Error = true;
-    Error |= popType(ErrorLoc, wasm::ValType::I32);
+      PopTypes.push_back(Any{});
+    }
+    Error |= popTypes(ErrorLoc, PopTypes);
     return Error;
   }
 
@@ -384,22 +471,32 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "table.grow") {
-    bool Error = popType(ErrorLoc, wasm::ValType::I32);
-    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type))
-      Error |= popType(ErrorLoc, Type);
-    else
+    bool Error = false;
+    SmallVector<StackType, 2> PopTypes;
+    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type)) {
+      PopTypes.push_back(Type);
+    } else {
       Error = true;
+      PopTypes.push_back(Any{});
+    }
+    PopTypes.push_back(wasm::ValType::I32);
+    Error |= popTypes(ErrorLoc, PopTypes);
     pushType(wasm::ValType::I32);
     return Error;
   }
 
   if (Name == "table.fill") {
-    bool Error = popType(ErrorLoc, wasm::ValType::I32);
-    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type))
-      Error |= popType(ErrorLoc, Type);
-    else
+    bool Error = false;
+    SmallVector<StackType, 2> PopTypes;
+    PopTypes.push_back(wasm::ValType::I32);
+    if (!getTable(Operands[1]->getStartLoc(), Inst.getOperand(0), Type)) {
+      PopTypes.push_back(Type);
+    } else {
       Error = true;
-    Error |= popType(ErrorLoc, wasm::ValType::I32);
+      PopTypes.push_back(Any{});
+    }
+    PopTypes.push_back(wasm::ValType::I32);
+    Error |= popTypes(ErrorLoc, PopTypes);
     return Error;
   }
 
@@ -431,52 +528,94 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     return popType(ErrorLoc, Any{});
   }
 
-  if (Name == "try" || Name == "block" || Name == "loop" || Name == "if") {
-    if (Name == "loop")
-      BrStack.emplace_back(LastSig.Params.begin(), LastSig.Params.end());
-    else
-      BrStack.emplace_back(LastSig.Returns.begin(), LastSig.Returns.end());
-    if (Name == "if" && popType(ErrorLoc, wasm::ValType::I32))
-      return true;
-    return false;
+  if (Name == "block" || Name == "loop" || Name == "if" || Name == "try" ||
+      Name == "try_table") {
+    bool Error = Name == "if" && popType(ErrorLoc, wasm::ValType::I32);
+    // Pop block input parameters and check their types are correct
+    Error |= popTypes(ErrorLoc, LastSig.Params);
+    if (Name == "try_table")
+      Error |= checkTryTable(ErrorLoc, Inst);
+    // Push a new block info
+    BlockInfoStack.push_back({LastSig, Stack.size(), Name == "loop"});
+    // Push back block input parameters
+    pushTypes(LastSig.Params);
+    return Error;
   }
 
   if (Name == "end_block" || Name == "end_loop" || Name == "end_if" ||
-      Name == "else" || Name == "end_try" || Name == "catch" ||
-      Name == "catch_all" || Name == "delegate") {
-    bool Error = checkEnd(ErrorLoc, Name == "else" || Name == "catch" ||
-                                        Name == "catch_all");
-    Unreachable = false;
-    if (Name == "catch") {
+      Name == "end_try" || Name == "delegate" || Name == "end_try_table" ||
+      Name == "else" || Name == "catch" || Name == "catch_all") {
+    assert(!BlockInfoStack.empty());
+    // Check if the types on the stack match with the block return type
+    const auto &LastBlockInfo = BlockInfoStack.back();
+    bool Error = checkTypes(ErrorLoc, LastBlockInfo.Sig.Returns, true);
+    // Pop all types added to the stack for the current block level
+    Stack.truncate(LastBlockInfo.StackStartPos);
+    if (Name == "else") {
+      // 'else' expects the block input parameters to be on the stack, in the
+      // same way we entered 'if'
+      pushTypes(LastBlockInfo.Sig.Params);
+    } else if (Name == "catch") {
+      // 'catch' instruction pushes values whose types are specified in the
+      // tag's 'params' part
       const wasm::WasmSignature *Sig = nullptr;
       if (!getSignature(Operands[1]->getStartLoc(), Inst.getOperand(0),
                         wasm::WASM_SYMBOL_TYPE_TAG, Sig))
-        // catch instruction pushes values whose types are specified in the
-        // tag's "params" part
         pushTypes(Sig->Params);
       else
         Error = true;
+    } else if (Name == "catch_all") {
+      // 'catch_all' does not push anything onto the stack
+    } else {
+      // For normal end markers, push block return value types onto the stack
+      // and pop the block info
+      pushTypes(LastBlockInfo.Sig.Returns);
+      BlockInfoStack.pop_back();
     }
     return Error;
   }
 
-  if (Name == "br") {
+  if (Name == "br" || Name == "br_if") {
+    bool Error = false;
+    if (Name == "br_if")
+      Error |= popType(ErrorLoc, wasm::ValType::I32); // cond
     const MCOperand &Operand = Inst.getOperand(0);
-    if (!Operand.isImm())
-      return true;
-    return checkBr(ErrorLoc, static_cast<size_t>(Operand.getImm()));
+    if (Operand.isImm()) {
+      unsigned Level = Operand.getImm();
+      if (Level < BlockInfoStack.size()) {
+        const auto &DestBlockInfo =
+            BlockInfoStack[BlockInfoStack.size() - Level - 1];
+        if (DestBlockInfo.IsLoop)
+          Error |= checkTypes(ErrorLoc, DestBlockInfo.Sig.Params, false);
+        else
+          Error |= checkTypes(ErrorLoc, DestBlockInfo.Sig.Returns, false);
+      } else {
+        Error = typeError(ErrorLoc, StringRef("br: invalid depth ") +
+                                        std::to_string(Level));
+      }
+    } else {
+      Error =
+          typeError(Operands[1]->getStartLoc(), "depth should be an integer");
+    }
+    if (Name == "br")
+      pushType(Polymorphic{});
+    return Error;
   }
 
   if (Name == "return") {
-    return endOfFunction(ErrorLoc, false);
+    bool Error = endOfFunction(ErrorLoc, false);
+    pushType(Polymorphic{});
+    return Error;
   }
 
   if (Name == "call_indirect" || Name == "return_call_indirect") {
     // Function value.
     bool Error = popType(ErrorLoc, wasm::ValType::I32);
     Error |= checkSig(ErrorLoc, LastSig);
-    if (Name == "return_call_indirect" && endOfFunction(ErrorLoc, false))
-      return true;
+    if (Name == "return_call_indirect") {
+      Error |= endOfFunction(ErrorLoc, false);
+      pushType(Polymorphic{});
+    }
     return Error;
   }
 
@@ -488,13 +627,15 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       Error |= checkSig(ErrorLoc, *Sig);
     else
       Error = true;
-    if (Name == "return_call" && endOfFunction(ErrorLoc, false))
-      return true;
+    if (Name == "return_call") {
+      Error |= endOfFunction(ErrorLoc, false);
+      pushType(Polymorphic{});
+    }
     return Error;
   }
 
   if (Name == "unreachable") {
-    Unreachable = true;
+    pushType(Polymorphic{});
     return false;
   }
 
@@ -505,11 +646,21 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
   }
 
   if (Name == "throw") {
+    bool Error = false;
     const wasm::WasmSignature *Sig = nullptr;
     if (!getSignature(Operands[1]->getStartLoc(), Inst.getOperand(0),
                       wasm::WASM_SYMBOL_TYPE_TAG, Sig))
-      return checkSig(ErrorLoc, *Sig);
-    return true;
+      Error |= checkSig(ErrorLoc, *Sig);
+    else
+      Error = true;
+    pushType(Polymorphic{});
+    return Error;
+  }
+
+  if (Name == "throw_ref") {
+    bool Error = popType(ErrorLoc, wasm::ValType::EXNREF);
+    pushType(Polymorphic{});
+    return Error;
   }
 
   // The current instruction is a stack instruction which doesn't have
@@ -525,7 +676,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     if (Op.OperandType == MCOI::OPERAND_REGISTER)
       PopTypes.push_back(WebAssembly::regClassToValType(Op.RegClass));
   }
-  bool Error = checkAndPopTypes(ErrorLoc, PopTypes, false);
+  bool Error = popTypes(ErrorLoc, PopTypes);
   SmallVector<wasm::ValType, 4> PushTypes;
   // Now push all the defs onto the stack.
   for (unsigned I = 0; I < II.getNumDefs(); I++) {

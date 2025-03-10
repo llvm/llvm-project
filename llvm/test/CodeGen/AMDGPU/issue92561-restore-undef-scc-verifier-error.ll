@@ -63,26 +63,25 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; SDAG-NEXT:    image_sample_c_lz v0, [v1, v1, v0, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    image_sample_c_lz v3, [v1, v1, v1, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; SDAG-NEXT:    image_sample_c_lz v2, [v1, v2, v1, v1], s[0:7], s[12:15] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; SDAG-NEXT:    v_mov_b32_e32 v4, v1
 ; SDAG-NEXT:    s_waitcnt vmcnt(2)
 ; SDAG-NEXT:    v_add_f32_e32 v0, v9, v0
 ; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; SDAG-NEXT:    v_add_f32_e32 v0, v2, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v2, v1
-; SDAG-NEXT:    v_dual_add_f32 v0, v3, v0 :: v_dual_mov_b32 v3, v1
+; SDAG-NEXT:    v_add_f32_e32 v0, v3, v0
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-NEXT:    v_mul_f32_e32 v0, 0x3e800000, v0
-; SDAG-NEXT:    image_store v[0:2], v[3:4], s[0:7] dim:SQ_RSRC_IMG_2D unorm
+; SDAG-NEXT:    image_store v[0:2], [v1, v1], s[0:7] dim:SQ_RSRC_IMG_2D unorm
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: issue92561:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    s_clause 0x1
-; GISEL-NEXT:    global_load_b128 v[2:5], v[0:1], off
-; GISEL-NEXT:    global_load_b128 v[6:9], v[0:1], off offset:16
-; GISEL-NEXT:    v_mov_b32_e32 v0, 0
+; GISEL-NEXT:    global_load_b128 v[4:7], v[0:1], off
+; GISEL-NEXT:    global_load_b128 v[0:3], v[0:1], off offset:16
+; GISEL-NEXT:    v_mov_b32_e32 v8, 0
 ; GISEL-NEXT:    s_mov_b32 s20, 0
 ; GISEL-NEXT:    s_mov_b32 s3, exec_lo
 ; GISEL-NEXT:    s_mov_b32 s21, s20
@@ -98,19 +97,19 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    s_mov_b32 s11, s20
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
-; GISEL-NEXT:    v_readfirstlane_b32 s12, v2
-; GISEL-NEXT:    v_readfirstlane_b32 s13, v3
-; GISEL-NEXT:    v_readfirstlane_b32 s14, v4
-; GISEL-NEXT:    v_readfirstlane_b32 s15, v5
-; GISEL-NEXT:    v_readfirstlane_b32 s16, v6
-; GISEL-NEXT:    v_readfirstlane_b32 s17, v7
-; GISEL-NEXT:    v_readfirstlane_b32 s18, v8
-; GISEL-NEXT:    v_readfirstlane_b32 s19, v9
-; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[12:13], v[2:3]
-; GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[14:15], v[4:5]
-; GISEL-NEXT:    v_cmp_eq_u64_e64 s1, s[16:17], v[6:7]
+; GISEL-NEXT:    v_readfirstlane_b32 s12, v4
+; GISEL-NEXT:    v_readfirstlane_b32 s13, v5
+; GISEL-NEXT:    v_readfirstlane_b32 s14, v6
+; GISEL-NEXT:    v_readfirstlane_b32 s15, v7
+; GISEL-NEXT:    v_readfirstlane_b32 s16, v0
+; GISEL-NEXT:    v_readfirstlane_b32 s17, v1
+; GISEL-NEXT:    v_readfirstlane_b32 s18, v2
+; GISEL-NEXT:    v_readfirstlane_b32 s19, v3
+; GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[12:13], v[4:5]
+; GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[14:15], v[6:7]
+; GISEL-NEXT:    v_cmp_eq_u64_e64 s1, s[16:17], v[0:1]
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GISEL-NEXT:    v_cmp_eq_u64_e64 s2, s[18:19], v[8:9]
+; GISEL-NEXT:    v_cmp_eq_u64_e64 s2, s[18:19], v[2:3]
 ; GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_b32 s0, s0, s1
@@ -118,31 +117,31 @@ define void @issue92561(ptr addrspace(1) %arg) {
 ; GISEL-NEXT:    s_and_b32 s0, s0, s2
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_saveexec_b32 s0, s0
-; GISEL-NEXT:    image_sample_c_lz v1, [v0, v0, v0, v0], s[12:19], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; GISEL-NEXT:    ; implicit-def: $vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9
-; GISEL-NEXT:    ; implicit-def: $vgpr0
+; GISEL-NEXT:    image_sample_c_lz v9, [v8, v8, v8, v8], s[12:19], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GISEL-NEXT:    ; implicit-def: $vgpr4_vgpr5_vgpr6_vgpr7
+; GISEL-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
+; GISEL-NEXT:    ; implicit-def: $vgpr8
 ; GISEL-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
 ; GISEL-NEXT:    s_cbranch_execnz .LBB0_1
 ; GISEL-NEXT:  ; %bb.2:
 ; GISEL-NEXT:    s_mov_b32 exec_lo, s3
-; GISEL-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v3, 1.0
-; GISEL-NEXT:    v_mov_b32_e32 v0, 0x7fc00000
+; GISEL-NEXT:    v_dual_mov_b32 v1, 0 :: v_dual_mov_b32 v0, 0x7fc00000
+; GISEL-NEXT:    v_mov_b32_e32 v2, 1.0
 ; GISEL-NEXT:    s_clause 0x2
-; GISEL-NEXT:    image_sample_c_lz v0, [v2, v2, v0, v2], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; GISEL-NEXT:    image_sample_c_lz v3, [v2, v3, v2, v2], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; GISEL-NEXT:    image_sample_c_lz v4, [v2, v2, v2, v2], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
-; GISEL-NEXT:    s_mov_b32 s21, s20
+; GISEL-NEXT:    image_sample_c_lz v0, [v1, v1, v0, v1], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GISEL-NEXT:    image_sample_c_lz v2, [v1, v2, v1, v1], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
+; GISEL-NEXT:    image_sample_c_lz v3, [v1, v1, v1, v1], s[4:11], s[20:23] dmask:0x1 dim:SQ_RSRC_IMG_2D_ARRAY
 ; GISEL-NEXT:    s_waitcnt vmcnt(2)
-; GISEL-NEXT:    v_add_f32_e32 v0, v1, v0
+; GISEL-NEXT:    v_add_f32_e32 v0, v9, v0
 ; GISEL-NEXT:    s_waitcnt vmcnt(1)
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_dual_add_f32 v0, v3, v0 :: v_dual_mov_b32 v3, v2
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GISEL-NEXT:    v_add_f32_e32 v0, v2, v0
+; GISEL-NEXT:    v_mov_b32_e32 v2, v1
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    v_add_f32_e32 v0, v4, v0
-; GISEL-NEXT:    v_dual_mov_b32 v4, s20 :: v_dual_mov_b32 v5, s21
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
-; GISEL-NEXT:    v_mul_f32_e32 v1, 0x3e800000, v0
-; GISEL-NEXT:    image_store v[1:3], v[4:5], s[4:11] dim:SQ_RSRC_IMG_2D unorm
+; GISEL-NEXT:    v_add_f32_e32 v0, v3, v0
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    v_mul_f32_e32 v0, 0x3e800000, v0
+; GISEL-NEXT:    image_store v[0:2], [v1, v1], s[4:11] dim:SQ_RSRC_IMG_2D unorm
 ; GISEL-NEXT:    s_setpc_b64 s[30:31]
 bb:
   %descriptor = load <8 x i32>, ptr addrspace(1) %arg, align 32

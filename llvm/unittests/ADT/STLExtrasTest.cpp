@@ -504,6 +504,43 @@ TEST(STLExtrasTest, ConcatRange) {
   EXPECT_EQ(Expected, Test);
 }
 
+template <typename T> struct Iterator {
+  int i = 0;
+  T operator*() const { return i; }
+  Iterator &operator++() {
+    ++i;
+    return *this;
+  }
+  bool operator==(Iterator RHS) const { return i == RHS.i; }
+};
+
+template <typename T> struct RangeWithValueType {
+  int i;
+  RangeWithValueType(int i) : i(i) {}
+  Iterator<T> begin() { return Iterator<T>{0}; }
+  Iterator<T> end() { return Iterator<T>{i}; }
+};
+
+TEST(STLExtrasTest, ValueReturn) {
+  RangeWithValueType<int> R(1);
+  auto C = concat<int>(R, R);
+  auto I = C.begin();
+  ASSERT_NE(I, C.end());
+  static_assert(std::is_same_v<decltype((*I)), int>);
+  auto V = *I;
+  ASSERT_EQ(V, 0);
+}
+
+TEST(STLExtrasTest, ReferenceReturn) {
+  RangeWithValueType<const int&> R(1);
+  auto C = concat<const int>(R, R);
+  auto I = C.begin();
+  ASSERT_NE(I, C.end());
+  static_assert(std::is_same_v<decltype((*I)), const int &>);
+  auto V = *I;
+  ASSERT_EQ(V, 0);
+}
+
 TEST(STLExtrasTest, PartitionAdaptor) {
   std::vector<int> V = {1, 2, 3, 4, 5, 6, 7, 8};
 
@@ -897,10 +934,19 @@ TEST(STLExtrasTest, hasSingleElement) {
   const std::vector<int> V0 = {}, V1 = {1}, V2 = {1, 2};
   const std::vector<int> V10(10);
 
-  EXPECT_EQ(hasSingleElement(V0), false);
-  EXPECT_EQ(hasSingleElement(V1), true);
-  EXPECT_EQ(hasSingleElement(V2), false);
-  EXPECT_EQ(hasSingleElement(V10), false);
+  EXPECT_FALSE(hasSingleElement(V0));
+  EXPECT_TRUE(hasSingleElement(V1));
+  EXPECT_FALSE(hasSingleElement(V2));
+  EXPECT_FALSE(hasSingleElement(V10));
+
+  // Make sure that we use the `begin`/`end` functions
+  // from `some_namespace`, using ADL.
+  some_namespace::some_struct S;
+  EXPECT_FALSE(hasSingleElement(S));
+  S.data = V1;
+  EXPECT_TRUE(hasSingleElement(S));
+  S.data = V2;
+  EXPECT_FALSE(hasSingleElement(S));
 }
 
 TEST(STLExtrasTest, hasNItems) {

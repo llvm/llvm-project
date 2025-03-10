@@ -16,6 +16,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gtest/gtest.h"
 
@@ -216,10 +217,6 @@ define void @foo(ptr %ptr) {
   auto *F = Ctx.createFunction(LLVMF);
   // Check classof(), creation.
   auto *PtrTy = cast<sandboxir::PointerType>(F->getArg(0)->getType());
-  // Check get(ElementType, AddressSpace).
-  auto *NewPtrTy =
-      sandboxir::PointerType::get(sandboxir::Type::getInt32Ty(Ctx), 0u);
-  EXPECT_EQ(NewPtrTy, PtrTy);
   // Check get(Ctx, AddressSpace).
   auto *NewPtrTy2 = sandboxir::PointerType::get(Ctx, 0u);
   EXPECT_EQ(NewPtrTy2, PtrTy);

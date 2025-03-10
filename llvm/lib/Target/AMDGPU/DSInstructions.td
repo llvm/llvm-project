@@ -194,7 +194,6 @@ class DS_1A1D_RET <string opName, RegisterClass rc = VGPR_32,
   (ins VGPR_32:$addr, data_op:$data0, Offset:$offset, gds:$gds),
   " $vdst, $addr, $data0$offset$gds"> {
 
-  let hasPostISelHook = 1;
   let has_data1 = 0;
   let IsAtomicRet = 1;
 }
@@ -223,7 +222,6 @@ class DS_1A2D_RET<string opName,
   (ins VGPR_32:$addr, src_op:$data0, src_op:$data1, Offset:$offset, gds:$gds),
   " $vdst, $addr, $data0, $data1$offset$gds"> {
 
-  let hasPostISelHook = 1;
   let IsAtomicRet = 1;
 }
 
@@ -248,7 +246,6 @@ class DS_1A2D_Off8_RET<string opName,
   " $vdst, $addr, $data0, $data1$offset0$offset1$gds"> {
 
   let has_offset = 0;
-  let hasPostISelHook = 1;
 }
 
 multiclass DS_1A2D_Off8_RET_mc<string opName,
@@ -294,6 +291,12 @@ multiclass DS_1A_RET_mc<string opName, RegisterClass rc = VGPR_32, bit HasTiedOu
 
   let has_m0_read = 0 in {
     def _gfx9 : DS_1A_RET<opName, rc, HasTiedOutput, ofs>;
+  }
+}
+
+multiclass DS_1A_RET_NoM0<string opName, RegisterClass rc = VGPR_32> {
+  let has_m0_read = 0 in {
+    def "" : DS_1A_RET<opName, rc>;
   }
 }
 
@@ -733,6 +736,8 @@ defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
 defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
 defm DS_SUB_CLAMP_U32     : DS_1A1D_NORET_mc<"ds_sub_clamp_u32">;
 defm DS_SUB_CLAMP_RTN_U32 : DS_1A1D_RET_mc<"ds_sub_clamp_rtn_u32", VGPR_32>;
+def DS_BPERMUTE_FI_B32    : DS_1A1D_PERMUTE <"ds_bpermute_fi_b32",
+                                             int_amdgcn_ds_bpermute_fi_b32>;
 
 multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
                                   ValueType vt, string frag> {
@@ -746,6 +751,13 @@ multiclass DSAtomicRetNoRetPatIntrinsic_mc<DS_Pseudo inst, DS_Pseudo noRetInst,
 
 defm : DSAtomicRetNoRetPatIntrinsic_mc<DS_COND_SUB_RTN_U32, DS_COND_SUB_U32, i32, "int_amdgcn_atomic_cond_sub_u32">;
 } // let SubtargetPredicate = isGFX12Plus
+
+let WaveSizePredicate = isWave64, SubtargetPredicate = HasGFX950Insts, mayStore = 0 in {
+  defm DS_READ_B64_TR_B4  : DS_1A_RET_NoM0<"ds_read_b64_tr_b4", VReg_64>;
+  defm DS_READ_B64_TR_B8  : DS_1A_RET_NoM0<"ds_read_b64_tr_b8", VReg_64>;
+  defm DS_READ_B64_TR_B16 : DS_1A_RET_NoM0<"ds_read_b64_tr_b16", VReg_64>;
+  defm DS_READ_B96_TR_B6  : DS_1A_RET_NoM0<"ds_read_b96_tr_b6", VReg_96>;
+}
 
 //===----------------------------------------------------------------------===//
 // DS Patterns
@@ -795,12 +807,19 @@ defm : DSReadPat_mc <DS_READ_B32, vt, "load_local">;
 
 defm : DSReadPat_mc <DS_READ_U8, i16, "atomic_load_8_local">;
 defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_8_local">;
+defm : DSReadPat_mc <DS_READ_U8, i16, "atomic_load_zext_8_local">;
+defm : DSReadPat_mc <DS_READ_U8, i32, "atomic_load_zext_8_local">;
+defm : DSReadPat_mc <DS_READ_I8, i16, "atomic_load_sext_8_local">;
+defm : DSReadPat_mc <DS_READ_I8, i32, "atomic_load_sext_8_local">;
 defm : DSReadPat_mc <DS_READ_U16, i16, "atomic_load_16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_16_local">;
+defm : DSReadPat_mc <DS_READ_U16, i32, "atomic_load_zext_16_local">;
+defm : DSReadPat_mc <DS_READ_I16, i32, "atomic_load_sext_16_local">;
 defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;
 defm : DSReadPat_mc <DS_READ_B64, i64, "atomic_load_64_local">;
 
 let OtherPredicates = [D16PreservesUnusedBits] in {
+// TODO: Atomic loads
 def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2i16>;
 def : DSReadPat_D16<DS_READ_U16_D16_HI, load_d16_hi_local, v2f16>;
 def : DSReadPat_D16<DS_READ_U8_D16_HI, az_extloadi8_d16_hi_local, v2i16>;
@@ -1175,6 +1194,20 @@ def : GCNPat <
     sub0)
 >;
 
+class DSLoadTrPat <DS_Pseudo inst, ValueType vt, SDPatternOperator node> : GCNPat <
+  (vt (node (DS1Addr1Offset i32:$ptr, i32:$offset))),
+  (inst $ptr, Offset:$offset, (i1 0))
+>;
+
+let SubtargetPredicate = HasGFX950Insts in {
+  def : DSLoadTrPat <DS_READ_B64_TR_B4,  v2i32, int_amdgcn_ds_read_tr4_b64>;
+  def : DSLoadTrPat <DS_READ_B64_TR_B8,  v2i32, int_amdgcn_ds_read_tr8_b64>;
+  def : DSLoadTrPat <DS_READ_B96_TR_B6,  v3i32, int_amdgcn_ds_read_tr6_b96>;
+  def : DSLoadTrPat <DS_READ_B64_TR_B16, v4i16, int_amdgcn_ds_read_tr16_b64>;
+  def : DSLoadTrPat <DS_READ_B64_TR_B16, v4f16, int_amdgcn_ds_read_tr16_b64>;
+  def : DSLoadTrPat <DS_READ_B64_TR_B16, v4bf16, int_amdgcn_ds_read_tr16_b64>;
+}
+
 //===----------------------------------------------------------------------===//
 // Target-specific instruction encodings.
 //===----------------------------------------------------------------------===//
@@ -1233,6 +1266,7 @@ defm DS_PK_ADD_F16        : DS_Real_gfx12<0x09a>;
 defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
 defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
 defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
+defm DS_BPERMUTE_FI_B32   : DS_Real_gfx12<0x0cd>;
 
 // New aliases added in GFX12 without renaming the instructions.
 let AssemblerPredicate = isGFX12Plus in {
@@ -1739,8 +1773,16 @@ def DS_READ_B128_vi       : DS_Real_vi<0xff, DS_READ_B128>;
 def DS_ADD_F64_vi     : DS_Real_vi<0x5c, DS_ADD_F64>;
 def DS_ADD_RTN_F64_vi : DS_Real_vi<0x7c, DS_ADD_RTN_F64>;
 
-// GFX940+.
+// GFX942+.
 def DS_PK_ADD_F16_vi     : DS_Real_vi<0x17, DS_PK_ADD_F16>;
 def DS_PK_ADD_RTN_F16_vi : DS_Real_vi<0xb7, DS_PK_ADD_RTN_F16>;
 def DS_PK_ADD_BF16_vi     : DS_Real_vi<0x18, DS_PK_ADD_BF16>;
 def DS_PK_ADD_RTN_BF16_vi : DS_Real_vi<0xb8, DS_PK_ADD_RTN_BF16>;
+
+//===----------------------------------------------------------------------===//
+// GFX950.
+//===----------------------------------------------------------------------===//
+def DS_READ_B64_TR_B4_vi  : DS_Real_vi<0x0e0, DS_READ_B64_TR_B4>;
+def DS_READ_B96_TR_B6_vi  : DS_Real_vi<0x0e1, DS_READ_B96_TR_B6>;
+def DS_READ_B64_TR_B8_vi  : DS_Real_vi<0x0e2, DS_READ_B64_TR_B8>;
+def DS_READ_B64_TR_B16_vi : DS_Real_vi<0x0e3, DS_READ_B64_TR_B16>;

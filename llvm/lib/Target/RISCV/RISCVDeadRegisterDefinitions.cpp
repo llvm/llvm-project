@@ -11,14 +11,12 @@
 //===---------------------------------------------------------------------===//
 
 #include "RISCV.h"
-#include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveDebugVariables.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
-#include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "riscv-dead-defs"
@@ -39,8 +37,8 @@ public:
     AU.addPreserved<LiveIntervalsWrapperPass>();
     AU.addRequired<LiveIntervalsWrapperPass>();
     AU.addPreserved<SlotIndexesWrapperPass>();
-    AU.addPreserved<LiveDebugVariables>();
-    AU.addPreserved<LiveStacks>();
+    AU.addPreserved<LiveDebugVariablesWrapperLegacy>();
+    AU.addPreserved<LiveStacksWrapperLegacy>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -97,6 +95,8 @@ bool RISCVDeadRegisterDefinitions::runOnMachineFunction(MachineFunction &MF) {
         const TargetRegisterClass *RC = TII->getRegClass(Desc, I, TRI, MF);
         if (RC && RC->contains(RISCV::X0)) {
           X0Reg = RISCV::X0;
+        } else if (RC && RC->contains(RISCV::X0_W)) {
+          X0Reg = RISCV::X0_W;
         } else if (RC && RC->contains(RISCV::X0_H)) {
           X0Reg = RISCV::X0_H;
         } else {

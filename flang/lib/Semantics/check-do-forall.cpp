@@ -154,7 +154,8 @@ public:
   // of its components?
   static bool MightDeallocatePolymorphic(const Symbol &original,
       const std::function<bool(const Symbol &)> &WillDeallocate) {
-    const Symbol &symbol{ResolveAssociations(original)};
+    const Symbol &symbol{
+        ResolveAssociations(original, /*stopAtTypeGuard=*/true)};
     // Check the entity itself, no coarray exception here
     if (IsPolymorphicAllocatable(symbol)) {
       return true;
@@ -182,11 +183,10 @@ public:
         impure.name(), reason);
   }
 
-  void SayDeallocateOfPolymorph(
+  void SayDeallocateOfPolymorphic(
       parser::CharBlock location, const Symbol &entity, const char *reason) {
     context_.SayWithDecl(entity, location,
-        "Deallocation of a polymorphic entity caused by %s"
-        " not allowed in DO CONCURRENT"_err_en_US,
+        "Deallocation of a polymorphic entity caused by %s not allowed in DO CONCURRENT"_err_en_US,
         reason);
   }
 
@@ -206,7 +206,7 @@ public:
         const Symbol &entity{*pair.second};
         if (IsAllocatable(entity) && !IsSaved(entity) &&
             MightDeallocatePolymorphic(entity, DeallocateAll)) {
-          SayDeallocateOfPolymorph(endBlockStmt.source, entity, reason);
+          SayDeallocateOfPolymorphic(endBlockStmt.source, entity, reason);
         }
         if (const Symbol * impure{HasImpureFinal(entity)}) {
           SayDeallocateWithImpureFinal(entity, reason, *impure);
@@ -222,7 +222,7 @@ public:
     if (const Symbol * entity{GetLastName(variable).symbol}) {
       const char *reason{"assignment"};
       if (MightDeallocatePolymorphic(*entity, DeallocateNonCoarray)) {
-        SayDeallocateOfPolymorph(variable.GetSource(), *entity, reason);
+        SayDeallocateOfPolymorphic(variable.GetSource(), *entity, reason);
       }
       if (const auto *assignment{GetAssignment(stmt)}) {
         const auto &lhs{assignment->lhs};
@@ -257,7 +257,7 @@ public:
         const DeclTypeSpec *entityType{entity.GetType()};
         if ((entityType && entityType->IsPolymorphic()) || // POINTER case
             MightDeallocatePolymorphic(entity, DeallocateAll)) {
-          SayDeallocateOfPolymorph(
+          SayDeallocateOfPolymorphic(
               currentStatementSourcePosition_, entity, reason);
         }
         if (const Symbol * impure{HasImpureFinal(entity)}) {
@@ -495,10 +495,8 @@ private:
 
   void CheckDoControl(const parser::CharBlock &sourceLocation, bool isReal) {
     if (isReal) {
-      if (context_.ShouldWarn(common::LanguageFeature::RealDoControls)) {
-        context_.Say(
-            sourceLocation, "DO controls should be INTEGER"_port_en_US);
-      }
+      context_.Warn(common::LanguageFeature::RealDoControls, sourceLocation,
+          "DO controls should be INTEGER"_port_en_US);
     } else {
       SayBadDoControl(sourceLocation);
     }
@@ -552,9 +550,9 @@ private:
     CheckDoExpression(bounds.upper);
     if (bounds.step) {
       CheckDoExpression(*bounds.step);
-      if (IsZero(*bounds.step) &&
-          context_.ShouldWarn(common::UsageWarning::ZeroDoStep)) {
-        context_.Say(bounds.step->thing.value().source,
+      if (IsZero(*bounds.step)) {
+        context_.Warn(common::UsageWarning::ZeroDoStep,
+            bounds.step->thing.value().source,
             "DO step expression should not be zero"_warn_en_US);
       }
     }
@@ -679,10 +677,9 @@ private:
       if (std::holds_alternative<parser::LocalitySpec::DefaultNone>(ls.u)) {
         if (hasDefaultNone) {
           // F'2023 C1129, you can only have one DEFAULT(NONE)
-          if (context_.ShouldWarn(common::LanguageFeature::BenignRedundancy)) {
-            context_.Say(currentStatementSourcePosition_,
-                "Only one DEFAULT(NONE) may appear"_port_en_US);
-          }
+          context_.Warn(common::LanguageFeature::BenignRedundancy,
+              currentStatementSourcePosition_,
+              "Only one DEFAULT(NONE) may appear"_port_en_US);
           break;
         }
         hasDefaultNone = true;
@@ -890,10 +887,9 @@ private:
           },
           assignment.u);
       for (const Symbol &index : indexVars) {
-        if (symbols.count(index) == 0 &&
-            context_.ShouldWarn(common::UsageWarning::UnusedForallIndex)) {
-          context_.Say("FORALL index variable '%s' not used on left-hand side"
-                       " of assignment"_warn_en_US,
+        if (symbols.count(index) == 0) {
+          context_.Warn(common::UsageWarning::UnusedForallIndex,
+              "FORALL index variable '%s' not used on left-hand side of assignment"_warn_en_US,
               index.name());
         }
       }

@@ -8,7 +8,6 @@
 
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 
-#include "llvm/ADT/StringMap.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Host.h"
@@ -40,7 +39,7 @@ Expected<std::unique_ptr<TargetMachine>>
 JITTargetMachineBuilder::createTargetMachine() {
 
   std::string ErrMsg;
-  auto *TheTarget = TargetRegistry::lookupTarget(TT.getTriple(), ErrMsg);
+  auto *TheTarget = TargetRegistry::lookupTarget(TT, ErrMsg);
   if (!TheTarget)
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
 

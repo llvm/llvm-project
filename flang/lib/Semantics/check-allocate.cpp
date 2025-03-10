@@ -531,10 +531,8 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     // Character length distinction is allowed, with a warning
     if (!HaveCompatibleLengths(
             *type_, allocateInfo_.sourceExprType.value())) { // F'2023 C950
-      if (context.ShouldWarn(common::LanguageFeature::AllocateToOtherLength)) {
-        context.Say(name_.source,
-            "Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD"_port_en_US);
-      }
+      context.Warn(common::LanguageFeature::AllocateToOtherLength, name_.source,
+          "Character length of allocatable object in ALLOCATE should be the same as the SOURCE or MOLD"_port_en_US);
       return false;
     }
   }
@@ -618,9 +616,11 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
   }
   if (allocateInfo_.gotPinned) {
     std::optional<common::CUDADataAttr> cudaAttr{GetCUDADataAttr(ultimate_)};
-    if (!cudaAttr || *cudaAttr != common::CUDADataAttr::Pinned) {
+    if ((!cudaAttr || *cudaAttr != common::CUDADataAttr::Pinned) &&
+        context.languageFeatures().ShouldWarn(
+            common::UsageWarning::CUDAUsage)) {
       context.Say(name_.source,
-          "Object in ALLOCATE must have PINNED attribute when PINNED option is specified"_err_en_US);
+          "Object in ALLOCATE should have PINNED attribute when PINNED option is specified"_warn_en_US);
     }
   }
   if (allocateInfo_.gotStream) {

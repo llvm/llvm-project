@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Core/BugReporter/BugSuppression.h"
-#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugReporter.h"
+#include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/TimeProfiler.h"
 
 using namespace clang;
 using namespace ento;
@@ -76,13 +78,13 @@ inline bool fullyContains(SourceRange Larger, SourceRange Smaller,
          isLessOrEqual(Smaller.getEnd(), Larger.getEnd(), SM);
 }
 
-class CacheInitializer : public RecursiveASTVisitor<CacheInitializer> {
+class CacheInitializer : public DynamicRecursiveASTVisitor {
 public:
   static void initialize(const Decl *D, Ranges &ToInit) {
     CacheInitializer(ToInit).TraverseDecl(const_cast<Decl *>(D));
   }
 
-  bool VisitDecl(Decl *D) {
+  bool VisitDecl(Decl *D) override {
     // Bug location could be somewhere in the init value of
     // a freshly declared variable.  Even though it looks like the
     // user applied attribute to a statement, it will apply to a
@@ -90,7 +92,7 @@ public:
     return VisitAttributedNode(D);
   }
 
-  bool VisitAttributedStmt(AttributedStmt *AS) {
+  bool VisitAttributedStmt(AttributedStmt *AS) override {
     // When we apply attributes to statements, it actually creates
     // a wrapper statement that only contains attributes and the wrapped
     // statement.
@@ -118,6 +120,29 @@ private:
   CacheInitializer(Ranges &R) : Result(R) {}
   Ranges &Result;
 };
+
+std::string timeScopeName(const Decl *DeclWithIssue) {
+  if (!llvm::timeTraceProfilerEnabled())
+    return "";
+  return llvm::formatv(
+             "BugSuppression::isSuppressed init suppressions cache for {0}",
+             DeclWithIssue->getDeclKindName())
+      .str();
+}
+
+llvm::TimeTraceMetadata getDeclTimeTraceMetadata(const Decl *DeclWithIssue) {
+  assert(DeclWithIssue);
+  assert(llvm::timeTraceProfilerEnabled());
+  std::string Name = "<noname>";
+  if (const auto *ND = dyn_cast<NamedDecl>(DeclWithIssue)) {
+    Name = ND->getNameAsString();
+  }
+  const auto &SM = DeclWithIssue->getASTContext().getSourceManager();
+  auto Line = SM.getPresumedLineNumber(DeclWithIssue->getBeginLoc());
+  auto Fname = SM.getFilename(DeclWithIssue->getBeginLoc());
+  return llvm::TimeTraceMetadata{std::move(Name), Fname.str(),
+                                 static_cast<int>(Line)};
+}
 
 } // end anonymous namespace
 
@@ -177,6 +202,9 @@ bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
       std::make_pair(DeclWithIssue, CachedRanges{}));
   Ranges &SuppressionRanges = InsertionResult.first->second;
   if (InsertionResult.second) {
+    llvm::TimeTraceScope TimeScope(
+        timeScopeName(DeclWithIssue),
+        [DeclWithIssue]() { return getDeclTimeTraceMetadata(DeclWithIssue); });
     // We haven't checked this declaration for suppressions yet!
     CacheInitializer::initialize(DeclWithIssue, SuppressionRanges);
   }

@@ -31,7 +31,6 @@
 #include "llvm/IR/NoFolder.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Pass.h"
-#include "llvm/PassRegistry.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
@@ -301,7 +300,8 @@ bool ARMParallelDSP::AreSequentialLoads(LoadInst *Ld0, LoadInst *Ld1,
   if (!Ld0 || !Ld1)
     return false;
 
-  if (!LoadPairs.count(Ld0) || LoadPairs[Ld0] != Ld1)
+  auto It = LoadPairs.find(Ld0);
+  if (It == LoadPairs.end() || It->second != Ld1)
     return false;
 
   LLVM_DEBUG(dbgs() << "Loads are sequential and valid:\n";
@@ -383,8 +383,8 @@ bool ARMParallelDSP::RecordMemoryOps(BasicBlock *BB) {
     LoadInst *Dominator = BaseFirst ? Base : Offset;
     LoadInst *Dominated = BaseFirst ? Offset : Base;
 
-    if (RAWDeps.count(Dominated)) {
-      InstSet &WritesBefore = RAWDeps[Dominated];
+    if (auto It = RAWDeps.find(Dominated); It != RAWDeps.end()) {
+      InstSet &WritesBefore = It->second;
 
       for (auto *Before : WritesBefore) {
         // We can't move the second load backward, past a write, to merge
@@ -630,13 +630,14 @@ void ARMParallelDSP::InsertParallelMACs(Reduction &R) {
     Value* Args[] = { WideLd0, WideLd1, Acc };
     Function *SMLAD = nullptr;
     if (Exchange)
-      SMLAD = Acc->getType()->isIntegerTy(32) ?
-        Intrinsic::getDeclaration(M, Intrinsic::arm_smladx) :
-        Intrinsic::getDeclaration(M, Intrinsic::arm_smlaldx);
+      SMLAD =
+          Acc->getType()->isIntegerTy(32)
+              ? Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smladx)
+              : Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smlaldx);
     else
-      SMLAD = Acc->getType()->isIntegerTy(32) ?
-        Intrinsic::getDeclaration(M, Intrinsic::arm_smlad) :
-        Intrinsic::getDeclaration(M, Intrinsic::arm_smlald);
+      SMLAD = Acc->getType()->isIntegerTy(32)
+                  ? Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smlad)
+                  : Intrinsic::getOrInsertDeclaration(M, Intrinsic::arm_smlald);
 
     IRBuilder<NoFolder> Builder(InsertAfter->getParent(),
                                 BasicBlock::iterator(InsertAfter));
@@ -752,7 +753,7 @@ LoadInst* ARMParallelDSP::CreateWideLoad(MemInstList &Loads,
           isa<PHINode>(Source) || isa<PHINode>(Sink))
         return;
 
-      Source->moveBefore(Sink);
+      Source->moveBefore(Sink->getIterator());
       for (auto &Op : Source->operands())
         MoveBefore(Op, Source);
     };

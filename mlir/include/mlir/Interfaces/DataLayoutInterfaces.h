@@ -15,6 +15,7 @@
 #ifndef MLIR_INTERFACES_DATALAYOUTINTERFACES_H
 #define MLIR_INTERFACES_DATALAYOUTINTERFACES_H
 
+#include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
@@ -32,10 +33,7 @@ using DataLayoutEntryKey = llvm::PointerUnion<Type, StringAttr>;
 using DataLayoutEntryList = llvm::SmallVector<DataLayoutEntryInterface, 4>;
 using DataLayoutEntryListRef = llvm::ArrayRef<DataLayoutEntryInterface>;
 using TargetDeviceSpecListRef = llvm::ArrayRef<TargetDeviceSpecInterface>;
-using DeviceIDTargetDeviceSpecPair =
-    std::pair<StringAttr, TargetDeviceSpecInterface>;
-using DeviceIDTargetDeviceSpecPairListRef =
-    llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>;
+using TargetDeviceSpecEntry = std::pair<StringAttr, TargetDeviceSpecInterface>;
 class DataLayoutOpInterface;
 class DataLayoutSpecInterface;
 class ModuleOp;
@@ -79,6 +77,10 @@ Attribute getDefaultEndianness(DataLayoutEntryInterface entry);
 /// Default handler for alloca memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
 Attribute getDefaultAllocaMemorySpace(DataLayoutEntryInterface entry);
+
+/// Default handler for mangling mode request. Dispatches to the
+/// DataLayoutInterface if specified, otherwise returns the default.
+Attribute getDefaultManglingMode(DataLayoutEntryInterface entry);
 
 /// Default handler for program memory space request. Dispatches to the
 /// DataLayoutInterface if specified, otherwise returns the default.
@@ -232,6 +234,9 @@ public:
   /// Returns the memory space used for AllocaOps.
   Attribute getAllocaMemorySpace() const;
 
+  /// Returns the mangling mode.
+  Attribute getManglingMode() const;
+
   /// Returns the memory space used for program memory operations.
   Attribute getProgramMemorySpace() const;
 
@@ -278,6 +283,8 @@ private:
 
   /// Cache for the endianness.
   mutable std::optional<Attribute> endianness;
+  /// Cache for the mangling mode.
+  mutable std::optional<Attribute> manglingMode;
   /// Cache for alloca, global, and program memory spaces.
   mutable std::optional<Attribute> allocaMemorySpace;
   mutable std::optional<Attribute> programMemorySpace;

@@ -135,8 +135,7 @@ void uses(int IntParam, short *PointerParam, float ArrayParam[5], Complete Compo
 #pragma acc parallel private((float)ArrayParam[2])
   while(1);
 
-  // expected-error@+2{{OpenACC 'private' clause is not valid on 'init' directive}}
-  // expected-warning@+1{{OpenACC construct 'init' not yet implemented}}
+  // expected-error@+1{{OpenACC 'private' clause is not valid on 'init' directive}}
 #pragma acc init private(LocalInt)
   for(;;);
 }

@@ -58,7 +58,7 @@ template <typename value_type, std::size_t alignment = unaligned>
 [[nodiscard]] inline value_type read(const void *memory, endianness endian) {
   value_type ret;
 
-  memcpy(&ret,
+  memcpy(static_cast<void *>(&ret),
          LLVM_ASSUME_ALIGNED(
              memory, (detail::PickAlignment<value_type, alignment>::value)),
          sizeof(value_type));

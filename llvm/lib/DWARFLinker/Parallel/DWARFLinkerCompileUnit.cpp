@@ -1813,19 +1813,19 @@ DwarfUnit *CompileUnit::OutputUnitVariantPtr::operator->() {
 }
 
 bool CompileUnit::OutputUnitVariantPtr::isCompileUnit() {
-  return Ptr.is<CompileUnit *>();
+  return isa<CompileUnit *>(Ptr);
 }
 
 bool CompileUnit::OutputUnitVariantPtr::isTypeUnit() {
-  return Ptr.is<TypeUnit *>();
+  return isa<TypeUnit *>(Ptr);
 }
 
 CompileUnit *CompileUnit::OutputUnitVariantPtr::getAsCompileUnit() {
-  return Ptr.get<CompileUnit *>();
+  return cast<CompileUnit *>(Ptr);
 }
 
 TypeUnit *CompileUnit::OutputUnitVariantPtr::getAsTypeUnit() {
-  return Ptr.get<TypeUnit *>();
+  return cast<TypeUnit *>(Ptr);
 }
 
 bool CompileUnit::resolveDependenciesAndMarkLiveness(

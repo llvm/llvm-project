@@ -17,6 +17,8 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
+using LIBC_NAMESPACE::Sign;
+
 template <typename OutType, typename InType>
 class AddTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 

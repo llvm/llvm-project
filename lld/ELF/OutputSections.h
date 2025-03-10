@@ -35,15 +35,16 @@ struct CompressedData {
 // non-overlapping file offsets and VAs.
 class OutputSection final : public SectionBase {
 public:
-  OutputSection(StringRef name, uint32_t type, uint64_t flags);
+  OutputSection(Ctx &, StringRef name, uint32_t type, uint64_t flags);
 
   static bool classof(const SectionBase *s) {
     return s->kind() == SectionBase::Output;
   }
 
-  uint64_t getLMA() const { return ptLoad ? addr + ptLoad->lmaOffset : addr; }
+  uint64_t getLMA() const;
   template <typename ELFT> void writeHeaderTo(typename ELFT::Shdr *sHdr);
 
+  Ctx &ctx;
   uint32_t sectionIndex = UINT32_MAX;
   unsigned sortRank;
 
@@ -75,7 +76,7 @@ public:
 
   void recordSection(InputSectionBase *isec);
   void commitSection(InputSection *isec);
-  void finalizeInputSections(LinkerScript *script = nullptr);
+  void finalizeInputSections();
 
   // The following members are normally only used in linker scripts.
   MemoryRegion *memRegion = nullptr;
@@ -111,17 +112,19 @@ public:
   // DATA_RELRO_END.
   bool relro = false;
 
-  template <bool is64> void finalizeNonAllocCrel();
-  void finalize();
+  template <bool is64> void finalizeNonAllocCrel(Ctx &);
+  void finalize(Ctx &);
   template <class ELFT>
-  void writeTo(uint8_t *buf, llvm::parallel::TaskGroup &tg);
+  void writeTo(Ctx &, uint8_t *buf, llvm::parallel::TaskGroup &tg);
   // Check that the addends for dynamic relocations were written correctly.
-  void checkDynRelAddends(const uint8_t *bufStart);
-  template <class ELFT> void maybeCompress();
+  void checkDynRelAddends(Ctx &);
+  template <class ELFT> void maybeCompress(Ctx &);
 
   void sort(llvm::function_ref<int(InputSectionBase *s)> order);
   void sortInitFini();
   void sortCtorsDtors();
+
+  std::array<uint8_t, 4> getFiller(Ctx &);
 
   // Used for implementation of --compress-debug-sections and
   // --compress-sections.
@@ -129,14 +132,12 @@ public:
 
 private:
   SmallVector<InputSection *, 0> storage;
-
-  std::array<uint8_t, 4> getFiller();
 };
 
 struct OutputDesc final : SectionCommand {
   OutputSection osec;
-  OutputDesc(StringRef name, uint32_t type, uint64_t flags)
-      : SectionCommand(OutputSectionKind), osec(name, type, flags) {}
+  OutputDesc(Ctx &ctx, StringRef name, uint32_t type, uint64_t flags)
+      : SectionCommand(OutputSectionKind), osec(ctx, name, type, flags) {}
 
   static bool classof(const SectionCommand *c) {
     return c->kind == OutputSectionKind;
@@ -150,7 +151,8 @@ struct SectionClass final : public SectionBase {
   SmallVector<InputSectionDescription *, 0> commands;
   bool assigned = false;
 
-  SectionClass(StringRef name) : SectionBase(Class, name, 0, 0, 0, 0, 0, 0) {}
+  SectionClass(StringRef name)
+      : SectionBase(Class, nullptr, name, 0, 0, 0, 0, 0, 0) {}
   static bool classof(const SectionBase *s) { return s->kind() == Class; }
 };
 
@@ -169,7 +171,7 @@ llvm::ArrayRef<InputSection *>
 getInputSections(const OutputSection &os,
                  SmallVector<InputSection *, 0> &storage);
 
-uint64_t getHeaderSize();
+uint64_t getHeaderSize(Ctx &);
 } // namespace lld::elf
 
 #endif

@@ -81,7 +81,7 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
       // If we're generating memory instructions, don't load in the value for
       // the register with the stack pointer as it will be used later to finish
       // the setup.
-      if (RV.Register == StackPointerRegister)
+      if (Register(RV.Register) == StackPointerRegister)
         continue;
     }
     // Load a constant in the register.
@@ -98,7 +98,7 @@ static bool generateSnippetSetupCode(const ExegesisTarget &ET,
       // Load in the stack register now as we're done using it elsewhere
       // and need to set the value in preparation for executing the
       // snippet.
-      if (RV.Register != StackPointerRegister)
+      if (Register(RV.Register) != StackPointerRegister)
         continue;
       const auto SetRegisterCode = ET.setRegTo(*MSI, RV.Register, RV.Value);
       if (SetRegisterCode.empty())
@@ -136,8 +136,8 @@ MachineFunction &createVoidVoidPtrMachineFunction(StringRef FunctionName,
                                                   Module *Module,
                                                   MachineModuleInfo *MMI) {
   Type *const ReturnType = Type::getInt32Ty(Module->getContext());
-  Type *const MemParamType = PointerType::get(
-      Type::getInt8Ty(Module->getContext()), 0 /*default address space*/);
+  Type *const MemParamType =
+      PointerType::get(Module->getContext(), 0 /*default address space*/);
   FunctionType *FunctionType =
       FunctionType::get(ReturnType, {MemParamType}, false);
   Function *const F = Function::Create(
@@ -208,7 +208,7 @@ void BasicBlockFiller::addReturn(const ExegesisTarget &ET,
 }
 
 FunctionFiller::FunctionFiller(MachineFunction &MF,
-                               std::vector<unsigned> RegistersSetUp)
+                               std::vector<MCRegister> RegistersSetUp)
     : MF(MF), MCII(MF.getTarget().getMCInstrInfo()), Entry(addBasicBlock()),
       RegistersSetUp(std::move(RegistersSetUp)) {}
 
@@ -218,7 +218,7 @@ BasicBlockFiller FunctionFiller::addBasicBlock() {
   return BasicBlockFiller(MF, MBB, MCII);
 }
 
-ArrayRef<unsigned> FunctionFiller::getRegistersSetUp() const {
+ArrayRef<MCRegister> FunctionFiller::getRegistersSetUp() const {
   return RegistersSetUp;
 }
 
@@ -232,9 +232,7 @@ createModule(const std::unique_ptr<LLVMContext> &Context, const DataLayout &DL) 
 BitVector getFunctionReservedRegs(const TargetMachine &TM) {
   std::unique_ptr<LLVMContext> Context = std::make_unique<LLVMContext>();
   std::unique_ptr<Module> Module = createModule(Context, TM.createDataLayout());
-  // TODO: This only works for targets implementing LLVMTargetMachine.
-  const LLVMTargetMachine &LLVMTM = static_cast<const LLVMTargetMachine &>(TM);
-  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&LLVMTM);
+  auto MMIWP = std::make_unique<MachineModuleInfoWrapperPass>(&TM);
   MachineFunction &MF = createVoidVoidPtrMachineFunction(
       FunctionID, Module.get(), &MMIWP->getMMI());
   // Saving reserved registers for client.
@@ -242,8 +240,8 @@ BitVector getFunctionReservedRegs(const TargetMachine &TM) {
 }
 
 Error assembleToStream(const ExegesisTarget &ET,
-                       std::unique_ptr<LLVMTargetMachine> TM,
-                       ArrayRef<unsigned> LiveIns, const FillFunction &Fill,
+                       std::unique_ptr<TargetMachine> TM,
+                       ArrayRef<MCRegister> LiveIns, const FillFunction &Fill,
                        raw_pwrite_stream &AsmStream, const BenchmarkKey &Key,
                        bool GenerateMemoryInstructions) {
   auto Context = std::make_unique<LLVMContext>();
@@ -261,34 +259,35 @@ Error assembleToStream(const ExegesisTarget &ET,
   Properties.reset(MachineFunctionProperties::Property::IsSSA);
   Properties.set(MachineFunctionProperties::Property::NoPHIs);
 
-  for (const unsigned Reg : LiveIns)
+  for (const MCRegister Reg : LiveIns)
     MF.getRegInfo().addLiveIn(Reg);
 
   if (GenerateMemoryInstructions) {
-    for (const unsigned Reg : ET.getArgumentRegisters())
+    for (const MCRegister Reg : ET.getArgumentRegisters())
       MF.getRegInfo().addLiveIn(Reg);
     // Add a live in for registers that need saving so that the machine verifier
     // doesn't fail if the register is never defined.
-    for (const unsigned Reg : ET.getRegistersNeedSaving())
+    for (const MCRegister Reg : ET.getRegistersNeedSaving())
       MF.getRegInfo().addLiveIn(Reg);
   }
 
-  std::vector<unsigned> RegistersSetUp;
+  std::vector<MCRegister> RegistersSetUp;
+  RegistersSetUp.reserve(Key.RegisterInitialValues.size());
   for (const auto &InitValue : Key.RegisterInitialValues) {
     RegistersSetUp.push_back(InitValue.Register);
   }
   FunctionFiller Sink(MF, std::move(RegistersSetUp));
   auto Entry = Sink.getEntry();
 
-  for (const unsigned Reg : LiveIns)
+  for (const MCRegister Reg : LiveIns)
     Entry.MBB->addLiveIn(Reg);
 
   if (GenerateMemoryInstructions) {
-    for (const unsigned Reg : ET.getArgumentRegisters())
+    for (const MCRegister Reg : ET.getArgumentRegisters())
       Entry.MBB->addLiveIn(Reg);
     // Add a live in for registers that need saving so that the machine verifier
     // doesn't fail if the register is never defined.
-    for (const unsigned Reg : ET.getRegistersNeedSaving())
+    for (const MCRegister Reg : ET.getRegistersNeedSaving())
       Entry.MBB->addLiveIn(Reg);
   }
 
@@ -311,7 +310,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   MCContext &MCContext = MMIWP->getMMI().getContext();
   legacy::PassManager PM;
 
-  TargetLibraryInfoImpl TLII(Triple(Module->getTargetTriple()));
+  TargetLibraryInfoImpl TLII(Module->getTargetTriple());
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   TargetPassConfig *TPC = TM->createPassConfig(PM);
@@ -358,7 +357,7 @@ object::OwningBinary<object::ObjectFile> getObjectFromFile(StringRef Filename) {
 }
 
 Expected<ExecutableFunction> ExecutableFunction::create(
-    std::unique_ptr<LLVMTargetMachine> TM,
+    std::unique_ptr<TargetMachine> TM,
     object::OwningBinary<object::ObjectFile> &&ObjectFileHolder) {
   assert(ObjectFileHolder.getBinary() && "cannot create object file");
   std::unique_ptr<LLVMContext> Ctx = std::make_unique<LLVMContext>();

@@ -1,0 +1,20 @@
+## Check that BOLT reports an error for a binary with no relocations with the --icf=safe option.
+
+# REQUIRES: system-linux, asserts
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
+# RUN: %clang %cflags %t1.o -o %t.exe
+# RUN: not llvm-bolt --no-threads %t.exe --icf=safe -o %t.bolt 2>&1 | FileCheck --check-prefix=SAFEICFCHECK %s
+
+# SAFEICFCHECK: BOLT-ERROR: binary built without relocations. Safe ICF is not supported
+
+## int main(int argc, char **argv) {
+##   return temp;
+## }
+	.globl	main
+	.type	main,@function
+main:
+	.cfi_startproc
+	retq
+.Lfunc_end8:
+	.size	main, .-main
+	.cfi_endproc

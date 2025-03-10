@@ -108,8 +108,8 @@ Value *VectorBuilder::createVectorInstructionImpl(Intrinsic::ID VPID,
   if (VLenPosOpt)
     IntrinParams[*VLenPosOpt] = &requestEVL();
 
-  auto *VPDecl = VPIntrinsic::getDeclarationForParams(&getModule(), VPID,
-                                                      ReturnTy, IntrinParams);
+  auto *VPDecl = VPIntrinsic::getOrInsertDeclarationForParams(
+      &getModule(), VPID, ReturnTy, IntrinParams);
   return Builder.CreateCall(VPDecl, IntrinParams, Name);
 }
 

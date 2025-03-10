@@ -75,6 +75,8 @@ static bool isSupportedAArch64(uint64_t Type) {
   case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+  case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0:
+  case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
   case ELF::R_AARCH64_LD64_GOT_LO12_NC:
   case ELF::R_AARCH64_TLSDESC_LD64_LO12:
   case ELF::R_AARCH64_TLSDESC_ADD_LO12:
@@ -183,6 +185,8 @@ static size_t getSizeForTypeAArch64(uint64_t Type) {
   case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+  case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0:
+  case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
   case ELF::R_AARCH64_LD64_GOT_LO12_NC:
   case ELF::R_AARCH64_TLSDESC_LD64_LO12:
   case ELF::R_AARCH64_TLSDESC_ADD_LO12:
@@ -267,21 +271,10 @@ static bool skipRelocationProcessAArch64(uint64_t &Type, uint64_t Contents) {
     return (Contents & 0xfc000000) == 0x14000000;
   };
 
-  auto IsAdr = [](uint64_t Contents) -> bool {
-    // The bits 31-24 are 0b0xx10000
-    return (Contents & 0x9f000000) == 0x10000000;
-  };
-
   auto IsAddImm = [](uint64_t Contents) -> bool {
     // The bits 30-23 are 0b00100010
     return (Contents & 0x7F800000) == 0x11000000;
   };
-
-  auto IsNop = [](uint64_t Contents) -> bool { return Contents == 0xd503201f; };
-
-  // The linker might eliminate the instruction and replace it with NOP, ignore
-  if (IsNop(Contents))
-    return true;
 
   // The linker might relax ADRP+LDR instruction sequence for loading symbol
   // address from GOT table to ADRP+ADD sequence that would point to the
@@ -326,18 +319,6 @@ static bool skipRelocationProcessAArch64(uint64_t &Type, uint64_t Contents) {
     if (IsB(Contents))
       return true;
   }
-  }
-
-  // The linker might relax ADRP+ADD or ADRP+LDR sequences to the ADR+NOP
-  switch (Type) {
-  default:
-    break;
-  case ELF::R_AARCH64_ADR_PREL_PG_HI21:
-  case ELF::R_AARCH64_ADD_ABS_LO12_NC:
-  case ELF::R_AARCH64_ADR_GOT_PAGE:
-  case ELF::R_AARCH64_LD64_GOT_LO12_NC:
-    if (IsAdr(Contents))
-      return true;
   }
 
   return false;
@@ -651,6 +632,8 @@ static bool isTLSAArch64(uint64_t Type) {
   case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+  case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0:
+  case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
   case ELF::R_AARCH64_TLSDESC_LD64_LO12:
   case ELF::R_AARCH64_TLSDESC_ADD_LO12:
   case ELF::R_AARCH64_TLSDESC_CALL:
@@ -716,6 +699,8 @@ static bool isPCRelativeAArch64(uint64_t Type) {
   case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+  case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0:
+  case ELF::R_AARCH64_TLSLE_MOVW_TPREL_G0_NC:
   case ELF::R_AARCH64_LD64_GOT_LO12_NC:
   case ELF::R_AARCH64_TLSDESC_LD64_LO12:
   case ELF::R_AARCH64_TLSDESC_ADD_LO12:

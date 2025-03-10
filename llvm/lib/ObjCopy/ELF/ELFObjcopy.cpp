@@ -10,7 +10,6 @@
 #include "ELFObject.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
@@ -28,16 +27,12 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ErrorOr.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Memory.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
 #include <functional>
-#include <iterator>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -191,27 +186,28 @@ static std::unique_ptr<Writer> createWriter(const CommonConfig &Config,
 }
 
 static Error dumpSectionToFile(StringRef SecName, StringRef Filename,
-                               Object &Obj) {
+                               StringRef InputFilename, Object &Obj) {
   for (auto &Sec : Obj.sections()) {
     if (Sec.Name == SecName) {
       if (Sec.Type == SHT_NOBITS)
-        return createStringError(object_error::parse_failed,
-                                 "cannot dump section '%s': it has no contents",
-                                 SecName.str().c_str());
+        return createFileError(InputFilename, object_error::parse_failed,
+                               "cannot dump section '%s': it has no contents",
+                               SecName.str().c_str());
       Expected<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
           FileOutputBuffer::create(Filename, Sec.OriginalData.size());
       if (!BufferOrErr)
-        return BufferOrErr.takeError();
+        return createFileError(Filename, BufferOrErr.takeError());
       std::unique_ptr<FileOutputBuffer> Buf = std::move(*BufferOrErr);
       std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(),
                 Buf->getBufferStart());
       if (Error E = Buf->commit())
-        return E;
+        return createFileError(Filename, std::move(E));
       return Error::success();
     }
   }
-  return createStringError(object_error::parse_failed, "section '%s' not found",
-                           SecName.str().c_str());
+
+  return createFileError(InputFilename, object_error::parse_failed,
+                         "section '%s' not found", SecName.str().c_str());
 }
 
 Error Object::compressOrDecompressSections(const CommonConfig &Config) {
@@ -614,6 +610,113 @@ static void addSymbol(Object &Obj, const NewSymbolInfo &SymInfo,
       Sec ? (uint16_t)SYMBOL_SIMPLE_INDEX : (uint16_t)SHN_ABS, 0);
 }
 
+namespace {
+struct RemoveNoteDetail {
+  struct DeletedRange {
+    uint64_t OldFrom;
+    uint64_t OldTo;
+  };
+
+  template <class ELFT>
+  static std::vector<DeletedRange>
+  findNotesToRemove(ArrayRef<uint8_t> Data, size_t Align,
+                    ArrayRef<RemoveNoteInfo> NotesToRemove);
+  static std::vector<uint8_t> updateData(ArrayRef<uint8_t> OldData,
+                                         ArrayRef<DeletedRange> ToRemove);
+};
+} // namespace
+
+template <class ELFT>
+std::vector<RemoveNoteDetail::DeletedRange>
+RemoveNoteDetail::findNotesToRemove(ArrayRef<uint8_t> Data, size_t Align,
+                                    ArrayRef<RemoveNoteInfo> NotesToRemove) {
+  using Elf_Nhdr = typename ELFT::Nhdr;
+  using Elf_Note = typename ELFT::Note;
+  std::vector<DeletedRange> ToRemove;
+  uint64_t CurPos = 0;
+  while (CurPos + sizeof(Elf_Nhdr) <= Data.size()) {
+    auto Nhdr = reinterpret_cast<const Elf_Nhdr *>(Data.data() + CurPos);
+    size_t FullSize = Nhdr->getSize(Align);
+    if (CurPos + FullSize > Data.size())
+      break;
+    Elf_Note Note(*Nhdr);
+    bool ShouldRemove =
+        llvm::any_of(NotesToRemove, [&Note](const RemoveNoteInfo &NoteInfo) {
+          return NoteInfo.TypeId == Note.getType() &&
+                 (NoteInfo.Name.empty() || NoteInfo.Name == Note.getName());
+        });
+    if (ShouldRemove)
+      ToRemove.push_back({CurPos, CurPos + FullSize});
+    CurPos += FullSize;
+  }
+  return ToRemove;
+}
+
+std::vector<uint8_t>
+RemoveNoteDetail::updateData(ArrayRef<uint8_t> OldData,
+                             ArrayRef<DeletedRange> ToRemove) {
+  std::vector<uint8_t> NewData;
+  NewData.reserve(OldData.size());
+  uint64_t CurPos = 0;
+  for (const DeletedRange &RemRange : ToRemove) {
+    if (CurPos < RemRange.OldFrom) {
+      auto Slice = OldData.slice(CurPos, RemRange.OldFrom - CurPos);
+      NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+    }
+    CurPos = RemRange.OldTo;
+  }
+  if (CurPos < OldData.size()) {
+    auto Slice = OldData.slice(CurPos);
+    NewData.insert(NewData.end(), Slice.begin(), Slice.end());
+  }
+  return NewData;
+}
+
+static Error removeNotes(Object &Obj, endianness Endianness,
+                         ArrayRef<RemoveNoteInfo> NotesToRemove,
+                         function_ref<Error(Error)> ErrorCallback) {
+  // TODO: Support note segments.
+  if (ErrorCallback) {
+    for (Segment &Seg : Obj.segments()) {
+      if (Seg.Type == PT_NOTE) {
+        if (Error E = ErrorCallback(createStringError(
+                errc::not_supported, "note segments are not supported")))
+          return E;
+        break;
+      }
+    }
+  }
+  for (auto &Sec : Obj.sections()) {
+    if (Sec.Type != SHT_NOTE || !Sec.hasContents())
+      continue;
+    // TODO: Support note sections in segments.
+    if (Sec.ParentSegment) {
+      if (ErrorCallback)
+        if (Error E = ErrorCallback(createStringError(
+                errc::not_supported,
+                "cannot remove note(s) from " + Sec.Name +
+                    ": sections in segments are not supported")))
+          return E;
+      continue;
+    }
+    ArrayRef<uint8_t> OldData = Sec.getContents();
+    size_t Align = std::max<size_t>(4, Sec.Align);
+    // Note: notes for both 32-bit and 64-bit ELF files use 4-byte words in the
+    // header, so the parsers are the same.
+    auto ToRemove = (Endianness == endianness::little)
+                        ? RemoveNoteDetail::findNotesToRemove<ELF64LE>(
+                              OldData, Align, NotesToRemove)
+                        : RemoveNoteDetail::findNotesToRemove<ELF64BE>(
+                              OldData, Align, NotesToRemove);
+    if (!ToRemove.empty()) {
+      if (Error E = Obj.updateSectionData(
+              Sec, RemoveNoteDetail::updateData(OldData, ToRemove)))
+        return E;
+    }
+  }
+  return Error::success();
+}
+
 static Error
 handleUserSection(const NewSectionInfo &NewSection,
                   function_ref<Error(StringRef, ArrayRef<uint8_t>)> F) {
@@ -696,7 +799,8 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
     StringRef SectionName;
     StringRef FileName;
     std::tie(SectionName, FileName) = Flag.split('=');
-    if (Error E = dumpSectionToFile(SectionName, FileName, Obj))
+    if (Error E =
+            dumpSectionToFile(SectionName, FileName, Config.InputFilename, Obj))
       return E;
   }
 
@@ -705,10 +809,10 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
   // us to avoid reporting the inappropriate errors about removing symbols
   // named in relocations.
   if (Error E = replaceAndRemoveSections(Config, ELFConfig, Obj))
-    return E;
+    return createFileError(Config.InputFilename, std::move(E));
 
   if (Error E = updateAndRemoveSymbols(Config, ELFConfig, Obj))
-    return E;
+    return createFileError(Config.InputFilename, std::move(E));
 
   if (!Config.SetSectionAlignment.empty()) {
     for (SectionBase &Sec : Obj.sections()) {
@@ -720,12 +824,12 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
 
   if (Config.ChangeSectionLMAValAll != 0) {
     for (Segment &Seg : Obj.segments()) {
-      if (Seg.FileSize > 0) {
+      if (Seg.MemSize > 0) {
         if (Config.ChangeSectionLMAValAll > 0 &&
             Seg.PAddr > std::numeric_limits<uint64_t>::max() -
                             Config.ChangeSectionLMAValAll) {
-          return createStringError(
-              errc::invalid_argument,
+          return createFileError(
+              Config.InputFilename, errc::invalid_argument,
               "address 0x" + Twine::utohexstr(Seg.PAddr) +
                   " cannot be increased by 0x" +
                   Twine::utohexstr(Config.ChangeSectionLMAValAll) +
@@ -733,8 +837,8 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
         } else if (Config.ChangeSectionLMAValAll < 0 &&
                    Seg.PAddr < std::numeric_limits<uint64_t>::min() -
                                    Config.ChangeSectionLMAValAll) {
-          return createStringError(
-              errc::invalid_argument,
+          return createFileError(
+              Config.InputFilename, errc::invalid_argument,
               "address 0x" + Twine::utohexstr(Seg.PAddr) +
                   " cannot be decreased by 0x" +
                   Twine::utohexstr(std::abs(Config.ChangeSectionLMAValAll)) +
@@ -747,10 +851,9 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
 
   if (!Config.ChangeSectionAddress.empty()) {
     if (Obj.Type != ELF::ET_REL)
-      return createStringError(
-          object_error::invalid_file_type,
+      return createFileError(
+          Config.InputFilename, object_error::invalid_file_type,
           "cannot change section address in a non-relocatable file");
-
     StringMap<AddressUpdate> SectionsToUpdateAddress;
     for (const SectionPatternAddressUpdate &PatternUpdate :
          make_range(Config.ChangeSectionAddress.rbegin(),
@@ -761,8 +864,8 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                 .second) {
           if (PatternUpdate.Update.Kind == AdjustKind::Subtract &&
               Sec.Addr < PatternUpdate.Update.Value) {
-            return createStringError(
-                errc::invalid_argument,
+            return createFileError(
+                Config.InputFilename, errc::invalid_argument,
                 "address 0x" + Twine::utohexstr(Sec.Addr) +
                     " cannot be decreased by 0x" +
                     Twine::utohexstr(PatternUpdate.Update.Value) +
@@ -771,8 +874,8 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
           if (PatternUpdate.Update.Kind == AdjustKind::Add &&
               Sec.Addr > std::numeric_limits<uint64_t>::max() -
                              PatternUpdate.Update.Value) {
-            return createStringError(
-                errc::invalid_argument,
+            return createFileError(
+                Config.InputFilename, errc::invalid_argument,
                 "address 0x" + Twine::utohexstr(Sec.Addr) +
                     " cannot be increased by 0x" +
                     Twine::utohexstr(PatternUpdate.Update.Value) +
@@ -804,6 +907,12 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                      ? endianness::little
                      : endianness::big;
 
+  if (!ELFConfig.NotesToRemove.empty()) {
+    if (Error Err =
+            removeNotes(Obj, E, ELFConfig.NotesToRemove, Config.ErrorCallback))
+      return createFileError(Config.InputFilename, std::move(Err));
+  }
+
   for (const NewSectionInfo &AddedSection : Config.AddSection) {
     auto AddSection = [&](StringRef Name, ArrayRef<uint8_t> Data) -> Error {
       OwnedDataSection &NewSection =
@@ -816,7 +925,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
       return Error::success();
     };
     if (Error E = handleUserSection(AddedSection, AddSection))
-      return E;
+      return createFileError(Config.InputFilename, std::move(E));
   }
 
   for (const NewSectionInfo &NewSection : Config.UpdateSection) {
@@ -824,7 +933,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
       return Obj.updateSection(Name, Data);
     };
     if (Error E = handleUserSection(NewSection, UpdateSection))
-      return E;
+      return createFileError(Config.InputFilename, std::move(E));
   }
 
   if (!Config.AddGnuDebugLink.empty())
@@ -835,7 +944,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
   // before adding new symbols.
   if (!Obj.SymbolTable && !Config.SymbolsToAdd.empty())
     if (Error E = Obj.addNewSymbolTable())
-      return E;
+      return createFileError(Config.InputFilename, std::move(E));
 
   for (const NewSymbolInfo &SI : Config.SymbolsToAdd)
     addSymbol(Obj, SI, ELFConfig.NewSymbolVisibility);
@@ -847,7 +956,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
       if (Iter != Config.SetSectionFlags.end()) {
         const SectionFlagsUpdate &SFU = Iter->second;
         if (Error E = setSectionFlagsAndType(Sec, SFU.NewFlags, Obj.Machine))
-          return E;
+          return createFileError(Config.InputFilename, std::move(E));
       }
       auto It2 = Config.SetSectionType.find(Sec.Name);
       if (It2 != Config.SetSectionType.end())
@@ -866,7 +975,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
         Sec.Name = std::string(SR.NewName);
         if (SR.NewFlags) {
           if (Error E = setSectionFlagsAndType(Sec, *SR.NewFlags, Obj.Machine))
-            return E;
+            return createFileError(Config.InputFilename, std::move(E));
         }
         RenamedSections.insert(&Sec);
       } else if (RelocSec && !(Sec.Flags & SHF_ALLOC))
@@ -983,7 +1092,7 @@ Error objcopy::elf::executeObjcopyOnBinary(const CommonConfig &Config,
                                     : getOutputElfType(In);
 
   if (Error E = handleArgs(Config, ELFConfig, OutputElfType, **Obj))
-    return createFileError(Config.InputFilename, std::move(E));
+    return E;
 
   if (Error E = writeOutput(Config, **Obj, Out, OutputElfType))
     return createFileError(Config.InputFilename, std::move(E));

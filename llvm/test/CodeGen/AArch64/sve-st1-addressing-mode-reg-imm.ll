@@ -6,8 +6,7 @@
 define void @st1b_lower_bound(<vscale x 16 x i8> %data, ptr %a) {
 ; CHECK-LABEL: st1b_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0, #-8, mul vl]
+; CHECK-NEXT:    str z0, [x0, #-8, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, ptr %a, i64 -8
   store <vscale x 16 x i8> %data, ptr %base
@@ -17,8 +16,7 @@ define void @st1b_lower_bound(<vscale x 16 x i8> %data, ptr %a) {
 define void @st1b_inbound(<vscale x 16 x i8> %data, ptr %a) {
 ; CHECK-LABEL: st1b_inbound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0, #1, mul vl]
+; CHECK-NEXT:    str z0, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, ptr %a, i64 1
   store <vscale x 16 x i8> %data, ptr %base
@@ -28,8 +26,7 @@ define void @st1b_inbound(<vscale x 16 x i8> %data, ptr %a) {
 define void @st1b_upper_bound(<vscale x 16 x i8> %data, ptr %a) {
 ; CHECK-LABEL: st1b_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0, #7, mul vl]
+; CHECK-NEXT:    str z0, [x0, #7, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, ptr %a, i64 7
   store <vscale x 16 x i8> %data, ptr %base
@@ -39,9 +36,7 @@ define void @st1b_upper_bound(<vscale x 16 x i8> %data, ptr %a) {
 define void @st1b_out_of_upper_bound(<vscale x 16 x i8> %data, ptr %a) {
 ; CHECK-LABEL: st1b_out_of_upper_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    rdvl x8, #8
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x8]
+; CHECK-NEXT:    str z0, [x0, #8, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, ptr %a, i64 8
   store <vscale x 16 x i8> %data, ptr %base
@@ -51,9 +46,7 @@ define void @st1b_out_of_upper_bound(<vscale x 16 x i8> %data, ptr %a) {
 define void @st1b_out_of_lower_bound(<vscale x 16 x i8> %data, ptr %a) {
 ; CHECK-LABEL: st1b_out_of_lower_bound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.b
-; CHECK-NEXT:    rdvl x8, #-9
-; CHECK-NEXT:    st1b { z0.b }, p0, [x0, x8]
+; CHECK-NEXT:    str z0, [x0, #-9, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 16 x i8>, ptr %a, i64 -9
   store <vscale x 16 x i8> %data, ptr %base
@@ -65,8 +58,7 @@ define void @st1b_out_of_lower_bound(<vscale x 16 x i8> %data, ptr %a) {
 define void @st1h_inbound(<vscale x 8 x i16> %data, ptr %a) {
 ; CHECK-LABEL: st1h_inbound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.h
-; CHECK-NEXT:    st1h { z0.h }, p0, [x0, #-6, mul vl]
+; CHECK-NEXT:    str z0, [x0, #-6, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 8 x i16>, ptr %a, i64 -6
   store <vscale x 8 x i16> %data, ptr %base
@@ -78,8 +70,7 @@ define void @st1h_inbound(<vscale x 8 x i16> %data, ptr %a) {
 define void @st1w_inbound(<vscale x 4 x i32> %data, ptr %a) {
 ; CHECK-LABEL: st1w_inbound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    st1w { z0.s }, p0, [x0, #2, mul vl]
+; CHECK-NEXT:    str z0, [x0, #2, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 4 x i32>, ptr %a, i64 2
   store <vscale x 4 x i32> %data, ptr %base
@@ -91,8 +82,7 @@ define void @st1w_inbound(<vscale x 4 x i32> %data, ptr %a) {
 define void @st1d_inbound(<vscale x 2 x i64> %data, ptr %a) {
 ; CHECK-LABEL: st1d_inbound:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    st1d { z0.d }, p0, [x0, #5, mul vl]
+; CHECK-NEXT:    str z0, [x0, #5, mul vl]
 ; CHECK-NEXT:    ret
   %base = getelementptr <vscale x 2 x i64>, ptr %a, i64 5
   store <vscale x 2 x i64> %data, ptr %base
@@ -109,9 +99,7 @@ define void @store_nxv2f32(ptr %out) {
 ; CHECK-NEXT:    ptrue p0.d
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 2 x float> undef, float 1.0, i32 0
-  %splat = shufflevector <vscale x 2 x float> %ins, <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
-  store <vscale x 2 x float> %splat, ptr %out
+  store <vscale x 2 x float> splat(float 1.0), ptr %out
   ret void
 }
 
@@ -122,9 +110,7 @@ define void @store_nxv4f16(ptr %out) {
 ; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0]
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 4 x half> undef, half 1.0, i32 0
-  %splat = shufflevector <vscale x 4 x half> %ins, <vscale x 4 x half> undef, <vscale x 4 x i32> zeroinitializer
-  store <vscale x 4 x half> %splat, ptr %out
+  store <vscale x 4 x half> splat(half 1.0), ptr %out
   ret void
 }
 
@@ -135,13 +121,10 @@ define void @store_nxv6f32(ptr %out) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov z0.s, #1.00000000
 ; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    st1w { z0.d }, p0, [x0, #2, mul vl]
-; CHECK-NEXT:    st1w { z0.s }, p1, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 6 x float> undef, float 1.0, i32 0
-  %splat = shufflevector <vscale x 6 x float> %ins, <vscale x 6 x float> undef, <vscale x 6 x i32> zeroinitializer
-  store <vscale x 6 x float> %splat, ptr %out
+  store <vscale x 6 x float> splat(float 1.0), ptr %out
   ret void
 }
 
@@ -150,12 +133,9 @@ define void @store_nxv12f16(ptr %out) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fmov z0.h, #1.00000000
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    st1h { z0.s }, p0, [x0, #2, mul vl]
-; CHECK-NEXT:    st1h { z0.h }, p1, [x0]
+; CHECK-NEXT:    str z0, [x0]
 ; CHECK-NEXT:    ret
-  %ins = insertelement <vscale x 12 x half> undef, half 1.0, i32 0
-  %splat = shufflevector <vscale x 12 x half> %ins, <vscale x 12 x half> undef, <vscale x 12 x i32> zeroinitializer
-  store <vscale x 12 x half> %splat, ptr %out
+  store <vscale x 12 x half> splat(half 1.0), ptr %out
   ret void
 }

@@ -268,7 +268,7 @@ private:
 // inlining them.
 class StaticMatcherHelper {
 public:
-  StaticMatcherHelper(raw_ostream &os, const RecordKeeper &recordKeeper,
+  StaticMatcherHelper(raw_ostream &os, const RecordKeeper &records,
                       RecordOperatorMap &mapper);
 
   // Determine if we should inline the match logic or delegate to a static
@@ -655,7 +655,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
     }
 
     // Next handle DAG leaf: operand or attribute
-    if (opArg.is<NamedTypeConstraint *>()) {
+    if (isa<NamedTypeConstraint *>(opArg)) {
       auto operandName =
           formatv("{0}.getODSOperands({1})", castedName, nextOperand);
       emitOperandMatch(tree, castedName, operandName.str(), opArgIdx,
@@ -663,7 +663,7 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
                        /*argName=*/tree.getArgName(i), opArgIdx,
                        /*variadicSubIndex=*/std::nullopt);
       ++nextOperand;
-    } else if (opArg.is<NamedAttribute *>()) {
+    } else if (isa<NamedAttribute *>(opArg)) {
       emitAttributeMatch(tree, opName, opArgIdx, depth);
     } else {
       PrintFatalError(loc, "unhandled case when matching op");
@@ -680,7 +680,7 @@ void PatternEmitter::emitOperandMatch(DagNode tree, StringRef opName,
                                       int argIndex,
                                       std::optional<int> variadicSubIndex) {
   Operator &op = tree.getDialectOp(opMap);
-  auto *operand = op.getArg(operandIndex).get<NamedTypeConstraint *>();
+  auto *operand = cast<NamedTypeConstraint *>(op.getArg(operandIndex));
 
   // If a constraint is specified, we need to generate C++ statements to
   // check the constraint.
@@ -770,7 +770,7 @@ void PatternEmitter::emitEitherOperandMatch(DagNode tree, DagNode eitherArgTree,
       // need to queue the operation only if the matching success. Thus we emit
       // the code at the end.
       tblgenOps << formatv("tblgen_ops.push_back({0});\n", argName);
-    } else if (op.getArg(argIndex).is<NamedTypeConstraint *>()) {
+    } else if (isa<NamedTypeConstraint *>(op.getArg(argIndex))) {
       emitOperandMatch(tree, opName, /*operandName=*/formatv("v{0}", i).str(),
                        operandIndex,
                        /*operandMatcher=*/eitherArgTree.getArgAsLeaf(i),
@@ -851,7 +851,7 @@ void PatternEmitter::emitVariadicOperandMatch(DagNode tree,
       os << formatv("tblgen_ops.push_back({0});\n", argName);
 
       os.unindent() << "}\n";
-    } else if (op.getArg(argIndex).is<NamedTypeConstraint *>()) {
+    } else if (isa<NamedTypeConstraint *>(op.getArg(argIndex))) {
       auto operandName = formatv("variadic_operand_range.slice({0}, 1)", i);
       emitOperandMatch(tree, opName, operandName.str(), operandIndex,
                        /*operandMatcher=*/variadicArgTree.getArgAsLeaf(i),
@@ -867,7 +867,7 @@ void PatternEmitter::emitVariadicOperandMatch(DagNode tree,
 void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
                                         int argIndex, int depth) {
   Operator &op = tree.getDialectOp(opMap);
-  auto *namedAttr = op.getArg(argIndex).get<NamedAttribute *>();
+  auto *namedAttr = cast<NamedAttribute *>(op.getArg(argIndex));
   const auto &attr = namedAttr->attr;
 
   os << "{\n";
@@ -879,7 +879,7 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef opName,
   if (attr.hasDefaultValue()) {
     os << "if (!tblgen_attr) tblgen_attr = "
        << std::string(tgfmt(attr.getConstBuilderTemplate(), &fmtCtx,
-                            attr.getDefaultValue()))
+                            tgfmt(attr.getDefaultValue(), &fmtCtx)))
        << ";\n";
   } else if (attr.isOptional()) {
     // For a missing attribute that is optional according to definition, we
@@ -1775,7 +1775,7 @@ void PatternEmitter::supplyValuesForOpArgs(
       auto patArgName = node.getArgName(argIndex);
       if (leaf.isConstantAttr() || leaf.isEnumAttrCase()) {
         // TODO: Refactor out into map to avoid recomputing these.
-        if (!opArg.is<NamedAttribute *>())
+        if (!isa<NamedAttribute *>(opArg))
           PrintFatalError(loc, Twine("expected attribute ") + Twine(argIndex));
         if (!patArgName.empty())
           os << "/*" << patArgName << "=*/";
@@ -1805,7 +1805,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
   bool hasOperandSegmentSizes = false;
   std::vector<std::string> sizes;
   for (int argIndex = 0, e = resultOp.getNumArgs(); argIndex < e; ++argIndex) {
-    if (resultOp.getArg(argIndex).is<NamedAttribute *>()) {
+    if (isa<NamedAttribute *>(resultOp.getArg(argIndex))) {
       // The argument in the op definition.
       auto opArgName = resultOp.getArgName(argIndex);
       hasOperandSegmentSizes =
@@ -1826,7 +1826,7 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
     }
 
     const auto *operand =
-        resultOp.getArg(argIndex).get<NamedTypeConstraint *>();
+        cast<NamedTypeConstraint *>(resultOp.getArg(argIndex));
     std::string varName;
     if (operand->isVariadic()) {
       ++numVariadic;
@@ -1886,9 +1886,9 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
 }
 
 StaticMatcherHelper::StaticMatcherHelper(raw_ostream &os,
-                                         const RecordKeeper &recordKeeper,
+                                         const RecordKeeper &records,
                                          RecordOperatorMap &mapper)
-    : opMap(mapper), staticVerifierEmitter(os, recordKeeper) {}
+    : opMap(mapper), staticVerifierEmitter(os, records) {}
 
 void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
   // PatternEmitter will use the static matcher if there's one generated. To
@@ -1951,17 +1951,17 @@ StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
   return staticVerifierEmitter.getTypeConstraintFn(leaf.getAsConstraint());
 }
 
-static void emitRewriters(const RecordKeeper &recordKeeper, raw_ostream &os) {
-  emitSourceFileHeader("Rewriters", os, recordKeeper);
+static void emitRewriters(const RecordKeeper &records, raw_ostream &os) {
+  emitSourceFileHeader("Rewriters", os, records);
 
-  auto patterns = recordKeeper.getAllDerivedDefinitions("Pattern");
+  auto patterns = records.getAllDerivedDefinitions("Pattern");
 
   // We put the map here because it can be shared among multiple patterns.
   RecordOperatorMap recordOpMap;
 
   // Exam all the patterns and generate static matcher for the duplicated
   // DagNode.
-  StaticMatcherHelper staticMatcher(os, recordKeeper, recordOpMap);
+  StaticMatcherHelper staticMatcher(os, records, recordOpMap);
   for (const Record *p : patterns)
     staticMatcher.addPattern(p);
   staticMatcher.populateStaticConstraintFunctions(os);

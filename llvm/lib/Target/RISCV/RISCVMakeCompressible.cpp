@@ -17,7 +17,7 @@
 // For case 1, if a compressed register is available, then the uncompressed
 // register is copied to the compressed register and its uses are replaced.
 //
-// For example, storing zero uses the uncompressible zero register:
+// For example, storing zero uses the incompressible zero register:
 //   sw zero, 0(a0)   # if zero
 //   sw zero, 8(a0)   # if zero
 //   sw zero, 4(a0)   # if zero
@@ -109,7 +109,9 @@ static unsigned log2LdstWidth(unsigned Opcode) {
   case RISCV::SH_INX:
     return 1;
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::FLW:
   case RISCV::FSW:
     return 2;
@@ -136,7 +138,9 @@ static unsigned offsetMask(unsigned Opcode) {
   case RISCV::SH_INX:
     return maskTrailingOnes<unsigned>(1U);
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::FLW:
   case RISCV::FSW:
   case RISCV::LD:
@@ -178,6 +182,7 @@ static int64_t getBaseAdjustForCompression(int64_t Offset, unsigned Opcode) {
 static bool isCompressedReg(Register Reg) {
   return RISCV::GPRCRegClass.contains(Reg) ||
          RISCV::GPRF16CRegClass.contains(Reg) ||
+         RISCV::GPRF32CRegClass.contains(Reg) ||
          RISCV::FPR32CRegClass.contains(Reg) ||
          RISCV::FPR64CRegClass.contains(Reg);
 }
@@ -195,6 +200,7 @@ static bool isCompressibleLoad(const MachineInstr &MI) {
   case RISCV::LHU:
     return STI.hasStdExtZcb();
   case RISCV::LW:
+  case RISCV::LW_INX:
   case RISCV::LD:
     return STI.hasStdExtCOrZca();
   case RISCV::FLW:
@@ -216,6 +222,7 @@ static bool isCompressibleStore(const MachineInstr &MI) {
   case RISCV::SH_INX:
     return STI.hasStdExtZcb();
   case RISCV::SW:
+  case RISCV::SW_INX:
   case RISCV::SD:
     return STI.hasStdExtCOrZca();
   case RISCV::FSW:
@@ -268,7 +275,7 @@ static RegImmPair getRegImmPairPreventingCompression(const MachineInstr &MI) {
       // rather than used.
       //
       // For stores, we can change SrcDest (and Base if SrcDest == Base) but
-      // cannot resolve an uncompressible offset in this case.
+      // cannot resolve an incompressible offset in this case.
       if (isCompressibleStore(MI)) {
         if (!SrcDestCompressed && (BaseCompressed || SrcDest == Base) &&
             !NewBaseAdjust)
@@ -306,7 +313,7 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
     // If RegImm.Reg is modified by this instruction, then we cannot optimize
     // past this instruction. If the register is already compressed, then it may
     // possible to optimize a large offset in the current instruction - this
-    // will have been detected by the preceeding call to
+    // will have been detected by the preceding call to
     // getRegImmPairPreventingCompression.
     if (MI.modifiesRegister(RegImm.Reg, TRI))
       break;
@@ -329,6 +336,8 @@ static Register analyzeCompressibleUses(MachineInstr &FirstMI,
     RCToScavenge = &RISCV::GPRCRegClass;
   else if (RISCV::GPRF16RegClass.contains(RegImm.Reg))
     RCToScavenge = &RISCV::GPRF16CRegClass;
+  else if (RISCV::GPRF32RegClass.contains(RegImm.Reg))
+    RCToScavenge = &RISCV::GPRF32CRegClass;
   else if (RISCV::FPR32RegClass.contains(RegImm.Reg))
     RCToScavenge = &RISCV::FPR32CRegClass;
   else if (RISCV::FPR64RegClass.contains(RegImm.Reg))
@@ -400,7 +409,7 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
     LLVM_DEBUG(dbgs() << "MBB: " << MBB.getName() << "\n");
     for (MachineInstr &MI : MBB) {
       // Determine if this instruction would otherwise be compressed if not for
-      // an uncompressible register or offset.
+      // an incompressible register or offset.
       RegImmPair RegImm = getRegImmPairPreventingCompression(MI);
       if (!RegImm.Reg && RegImm.Imm == 0)
         continue;
@@ -422,6 +431,11 @@ bool RISCVMakeCompressibleOpt::runOnMachineFunction(MachineFunction &Fn) {
       } else if (RISCV::GPRF16RegClass.contains(RegImm.Reg)) {
         assert(RegImm.Imm == 0);
         BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR16INX),
+                NewReg)
+            .addReg(RegImm.Reg);
+      } else if (RISCV::GPRF32RegClass.contains(RegImm.Reg)) {
+        assert(RegImm.Imm == 0);
+        BuildMI(MBB, MI, MI.getDebugLoc(), TII.get(RISCV::PseudoMV_FPR32INX),
                 NewReg)
             .addReg(RegImm.Reg);
       } else {

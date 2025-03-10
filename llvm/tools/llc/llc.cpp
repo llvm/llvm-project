@@ -349,7 +349,6 @@ int main(int argc, char **argv) {
   initializeHardwareLoopsLegacyPass(*Registry);
   initializeTransformUtils(*Registry);
   initializeReplaceWithVeclibLegacyPass(*Registry);
-  initializeTLSVariableHoistLegacyPassPass(*Registry);
 
   // Initialize debugging passes.
   initializeScavengerTestPass(*Registry);
@@ -550,7 +549,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       TheTarget =
           TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
       if (!TheTarget) {
-        WithColor::error(errs(), argv[0]) << Error;
+        WithColor::error(errs(), argv[0]) << Error << "\n";
         exit(1);
       }
 
@@ -576,7 +575,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       return 1;
     }
     if (!TargetTriple.empty())
-      M->setTargetTriple(Triple::normalize(TargetTriple));
+      M->setTargetTriple(Triple(Triple::normalize(TargetTriple)));
 
     std::optional<CodeModel::Model> CM_IR = M->getCodeModel();
     if (!CM && CM_IR)
@@ -593,7 +592,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
     TheTarget =
         TargetRegistry::lookupTarget(codegen::getMArch(), TheTriple, Error);
     if (!TheTarget) {
-      WithColor::error(errs(), argv[0]) << Error;
+      WithColor::error(errs(), argv[0]) << Error << "\n";
       return 1;
     }
 
@@ -634,7 +633,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
   }
 
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
-  TargetLibraryInfoImpl TLII(Triple(M->getTargetTriple()));
+  TargetLibraryInfoImpl TLII(M->getTargetTriple());
 
   // The -disable-simplify-libcalls flag actually disables all builtin optzns.
   if (DisableSimplifyLibCalls)
@@ -686,9 +685,8 @@ static int compileModule(char **argv, LLVMContext &Context) {
     }
 
     const char *argv0 = argv[0];
-    LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
     MachineModuleInfoWrapperPass *MMIWP =
-        new MachineModuleInfoWrapperPass(&LLVMTM);
+        new MachineModuleInfoWrapperPass(Target.get());
 
     // Construct a custom pass pipeline that starts after instruction
     // selection.
@@ -699,7 +697,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
         delete MMIWP;
         return 1;
       }
-      TargetPassConfig *PTPC = LLVMTM.createPassConfig(PM);
+      TargetPassConfig *PTPC = Target->createPassConfig(PM);
       TargetPassConfig &TPC = *PTPC;
       if (TPC.hasLimitedCodeGenPipeline()) {
         WithColor::warning(errs(), argv[0])
@@ -727,7 +725,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
       reportError("target does not support generation of this file type");
     }
 
-    const_cast<TargetLoweringObjectFile *>(LLVMTM.getObjFileLowering())
+    const_cast<TargetLoweringObjectFile *>(Target->getObjFileLowering())
         ->Initialize(MMIWP->getMMI().getContext(), *Target);
     if (MIR) {
       assert(MMIWP && "Forgot to create MMIWP?");

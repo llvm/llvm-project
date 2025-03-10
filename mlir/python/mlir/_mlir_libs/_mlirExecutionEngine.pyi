@@ -4,7 +4,7 @@
 #   * Relative imports for cross-module references.
 #   * Add __all__
 
-from typing import List, Sequence
+from collections.abc import Sequence
 
 from ._mlir import ir as _ir
 

@@ -22,86 +22,65 @@
 #include "test_allocator.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
-        typedef int V;
-        typedef test_less<int> C;
-        typedef test_allocator<V> A;
-        std::set<int, C, A> mo(C(5), A(7));
-        std::set<int, C, A> m = std::move(mo);
-        assert(m.get_allocator() == A(7));
-        assert(m.key_comp() == C(5));
-        assert(m.size() == 0);
-        assert(std::distance(m.begin(), m.end()) == 0);
+int main(int, char**) {
+  {
+    typedef int V;
+    typedef test_less<int> C;
+    typedef test_allocator<V> A;
+    std::set<int, C, A> mo(C(5), A(7));
+    std::set<int, C, A> m = std::move(mo);
+    assert(m.get_allocator() == A(7));
+    assert(m.key_comp() == C(5));
+    assert(m.size() == 0);
+    assert(std::distance(m.begin(), m.end()) == 0);
 
-        assert(mo.get_allocator() == A(7));
-        assert(mo.key_comp() == C(5));
-        assert(mo.size() == 0);
-        assert(std::distance(mo.begin(), mo.end()) == 0);
-    }
-    {
-        typedef int V;
-        V ar[] =
-        {
-            1,
-            1,
-            1,
-            2,
-            2,
-            2,
-            3,
-            3,
-            3
-        };
-        typedef test_less<int> C;
-        typedef test_allocator<V> A;
-        std::set<int, C, A> mo(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5), A(7));
-        std::set<int, C, A> m = std::move(mo);
-        assert(m.get_allocator() == A(7));
-        assert(m.key_comp() == C(5));
-        assert(m.size() == 3);
-        assert(std::distance(m.begin(), m.end()) == 3);
-        assert(*m.begin() == 1);
-        assert(*std::next(m.begin()) == 2);
-        assert(*std::next(m.begin(), 2) == 3);
+    assert(mo.get_allocator() == A(7));
+    assert(mo.get_allocator().get_id() == test_alloc_base::moved_value);
+    assert(mo.key_comp() == C(5));
+    assert(mo.size() == 0);
+    assert(std::distance(mo.begin(), mo.end()) == 0);
+  }
+  {
+    typedef int V;
+    V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
+    typedef test_less<int> C;
+    typedef test_allocator<V> A;
+    std::set<int, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A(7));
+    std::set<int, C, A> m = std::move(mo);
+    assert(m.get_allocator() == A(7));
+    assert(m.key_comp() == C(5));
+    assert(m.size() == 3);
+    assert(std::distance(m.begin(), m.end()) == 3);
+    assert(*m.begin() == 1);
+    assert(*std::next(m.begin()) == 2);
+    assert(*std::next(m.begin(), 2) == 3);
 
-        assert(mo.get_allocator() == A(7));
-        assert(mo.key_comp() == C(5));
-        assert(mo.size() == 0);
-        assert(std::distance(mo.begin(), mo.end()) == 0);
-    }
-    {
-        typedef int V;
-        V ar[] =
-        {
-            1,
-            1,
-            1,
-            2,
-            2,
-            2,
-            3,
-            3,
-            3
-        };
-        typedef test_less<int> C;
-        typedef min_allocator<V> A;
-        std::set<int, C, A> mo(ar, ar+sizeof(ar)/sizeof(ar[0]), C(5), A());
-        std::set<int, C, A> m = std::move(mo);
-        assert(m.get_allocator() == A());
-        assert(m.key_comp() == C(5));
-        assert(m.size() == 3);
-        assert(std::distance(m.begin(), m.end()) == 3);
-        assert(*m.begin() == 1);
-        assert(*std::next(m.begin()) == 2);
-        assert(*std::next(m.begin(), 2) == 3);
+    assert(mo.get_allocator() == A(7));
+    assert(mo.get_allocator().get_id() == test_alloc_base::moved_value);
+    assert(mo.key_comp() == C(5));
+    assert(mo.size() == 0);
+    assert(std::distance(mo.begin(), mo.end()) == 0);
+  }
+  {
+    typedef int V;
+    V ar[] = {1, 1, 1, 2, 2, 2, 3, 3, 3};
+    typedef test_less<int> C;
+    typedef min_allocator<V> A;
+    std::set<int, C, A> mo(ar, ar + sizeof(ar) / sizeof(ar[0]), C(5), A());
+    std::set<int, C, A> m = std::move(mo);
+    assert(m.get_allocator() == A());
+    assert(m.key_comp() == C(5));
+    assert(m.size() == 3);
+    assert(std::distance(m.begin(), m.end()) == 3);
+    assert(*m.begin() == 1);
+    assert(*std::next(m.begin()) == 2);
+    assert(*std::next(m.begin(), 2) == 3);
 
-        assert(mo.get_allocator() == A());
-        assert(mo.key_comp() == C(5));
-        assert(mo.size() == 0);
-        assert(std::distance(mo.begin(), mo.end()) == 0);
-    }
+    assert(mo.get_allocator() == A());
+    assert(mo.key_comp() == C(5));
+    assert(mo.size() == 0);
+    assert(std::distance(mo.begin(), mo.end()) == 0);
+  }
 
   return 0;
 }

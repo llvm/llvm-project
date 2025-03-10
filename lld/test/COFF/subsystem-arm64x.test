@@ -1,0 +1,41 @@
+REQUIRES: aarch64
+RUN: split-file %s %t.dir && cd %t.dir
+
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows main.s -o main-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows main.s -o main-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows winmain.s -o winmain-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows winmain.s -o winmain-arm64.obj
+RUN: llvm-mc -filetype=obj -triple=arm64ec-windows %S/Inputs/loadconfig-arm64ec.s -o loadconfig-arm64ec.obj
+RUN: llvm-mc -filetype=obj -triple=aarch64-windows %S/Inputs/loadconfig-arm64.s -o loadconfig-arm64.obj
+
+Check that the subsystem is inferred from EC symbols.
+
+RUN: lld-link -machine:arm64x -entry:entry -out:out.exe main-arm64.obj winmain-arm64ec.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj
+RUN: llvm-readobj --headers out.exe | FileCheck --check-prefix=GUI %s
+GUI: Subsystem: IMAGE_SUBSYSTEM_WINDOWS_GUI (0x2)
+GUI: Subsystem: IMAGE_SUBSYSTEM_WINDOWS_GUI (0x2)
+
+RUN: lld-link -machine:arm64x -entry:entry -out:out.exe main-arm64ec.obj winmain-arm64.obj \
+RUN:          loadconfig-arm64.obj loadconfig-arm64ec.obj
+RUN: llvm-readobj --headers out.exe | FileCheck --check-prefix=CUI %s
+CUI: Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)
+CUI: Subsystem: IMAGE_SUBSYSTEM_WINDOWS_CUI (0x3)
+
+#--- main.s
+    .globl "#main"
+    .globl main
+    .globl entry
+"#main":
+main:
+entry:
+    ret
+
+#--- winmain.s
+    .globl "#WinMain"
+    .globl WinMain
+    .globl entry
+"#WinMain":
+WinMain:
+entry:
+    ret

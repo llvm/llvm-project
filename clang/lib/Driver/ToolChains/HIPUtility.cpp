@@ -148,8 +148,8 @@ private:
   bool Verbose;
   std::set<std::string> FatBinSymbols;
   std::set<std::string> GPUBinHandleSymbols;
-  std::set<std::string> DefinedFatBinSymbols;
-  std::set<std::string> DefinedGPUBinHandleSymbols;
+  std::set<std::string, std::less<>> DefinedFatBinSymbols;
+  std::set<std::string, std::less<>> DefinedGPUBinHandleSymbols;
   const std::string FatBinPrefix = "__hip_fatbin";
   const std::string GPUBinHandlePrefix = "__hip_gpubin_handle";
 
@@ -260,11 +260,10 @@ private:
 
       // Add undefined symbols if they are not in the defined sets
       if (isFatBinSymbol &&
-          DefinedFatBinSymbols.find(Name.str()) == DefinedFatBinSymbols.end())
+          DefinedFatBinSymbols.find(Name) == DefinedFatBinSymbols.end())
         FatBinSymbols.insert(Name.str());
-      else if (isGPUBinHandleSymbol &&
-               DefinedGPUBinHandleSymbols.find(Name.str()) ==
-                   DefinedGPUBinHandleSymbols.end())
+      else if (isGPUBinHandleSymbol && DefinedGPUBinHandleSymbols.find(Name) ==
+                                           DefinedGPUBinHandleSymbols.end())
         GPUBinHandleSymbols.insert(Name.str());
     }
   }
@@ -292,7 +291,7 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 
   // ToDo: Remove the dummy host binary entry which is required by
   // clang-offload-bundler.
-  std::string BundlerTargetArg = "-targets=host-x86_64-unknown-linux";
+  std::string BundlerTargetArg = "-targets=host-x86_64-unknown-linux-gnu";
   // AMDGCN:
   // For code object version 2 and 3, the offload kind in bundle ID is 'hip'
   // for backward compatibility. For code object version 4 and greater, the
@@ -304,10 +303,14 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
   for (const auto &II : Inputs) {
     const auto *A = II.getAction();
     auto ArchStr = llvm::StringRef(A->getOffloadingArch());
-    BundlerTargetArg +=
-        "," + OffloadKind + "-" + normalizeForBundler(TT, !ArchStr.empty());
+    BundlerTargetArg += ',' + OffloadKind + '-';
+    if (ArchStr == "amdgcnspirv")
+      BundlerTargetArg +=
+          normalizeForBundler(llvm::Triple("spirv64-amd-amdhsa"), true);
+    else
+      BundlerTargetArg += normalizeForBundler(TT, !ArchStr.empty());
     if (!ArchStr.empty())
-      BundlerTargetArg += "-" + ArchStr.str();
+      BundlerTargetArg += '-' + ArchStr.str();
   }
   BundlerArgs.push_back(Args.MakeArgString(BundlerTargetArg));
 
@@ -340,21 +343,21 @@ void HIP::constructHIPFatbinCommand(Compilation &C, const JobAction &JA,
 void HIP::constructGenerateObjFileFromHIPFatBinary(
     Compilation &C, const InputInfo &Output, const InputInfoList &Inputs,
     const ArgList &Args, const JobAction &JA, const Tool &T) {
-  const ToolChain &TC = T.getToolChain();
+  const Driver &D = C.getDriver();
   std::string Name = std::string(llvm::sys::path::stem(Output.getFilename()));
 
   // Create Temp Object File Generator,
   // Offload Bundled file and Bundled Object file.
   // Keep them if save-temps is enabled.
-  const char *McinFile;
+  const char *ObjinFile;
   const char *BundleFile;
-  if (C.getDriver().isSaveTempsEnabled()) {
-    McinFile = C.getArgs().MakeArgString(Name + ".mcin");
+  if (D.isSaveTempsEnabled()) {
+    ObjinFile = C.getArgs().MakeArgString(Name + ".mcin");
     BundleFile = C.getArgs().MakeArgString(Name + ".hipfb");
   } else {
-    auto TmpNameMcin = C.getDriver().GetTemporaryPath(Name, "mcin");
-    McinFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameMcin));
-    auto TmpNameFb = C.getDriver().GetTemporaryPath(Name, "hipfb");
+    auto TmpNameMcin = D.GetTemporaryPath(Name, "mcin");
+    ObjinFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameMcin));
+    auto TmpNameFb = D.GetTemporaryPath(Name, "hipfb");
     BundleFile = C.addTempFile(C.getArgs().MakeArgString(TmpNameFb));
   }
   HIP::constructHIPFatbinCommand(C, JA, BundleFile, Inputs, Args, T);
@@ -454,19 +457,20 @@ void HIP::constructGenerateObjFileFromHIPFatBinary(
 
   // Open script file and write the contents.
   std::error_code EC;
-  llvm::raw_fd_ostream Objf(McinFile, EC, llvm::sys::fs::OF_None);
+  llvm::raw_fd_ostream Objf(ObjinFile, EC, llvm::sys::fs::OF_None);
 
   if (EC) {
-    C.getDriver().Diag(clang::diag::err_unable_to_make_temp) << EC.message();
+    D.Diag(clang::diag::err_unable_to_make_temp) << EC.message();
     return;
   }
 
   Objf << ObjBuffer;
 
-  ArgStringList McArgs{"-triple", Args.MakeArgString(HostTriple.normalize()),
+  ArgStringList ClangArgs{"-target", Args.MakeArgString(HostTriple.normalize()),
                        "-o",      Output.getFilename(),
-                       McinFile,  "--filetype=obj"};
-  const char *Mc = Args.MakeArgString(TC.GetProgramPath("llvm-mc"));
-  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(), Mc,
-                                         McArgs, Inputs, Output));
+                       "-x",      "assembler",
+                       ObjinFile, "-c"};
+  C.addCommand(std::make_unique<Command>(JA, T, ResponseFileSupport::None(),
+                                         D.getClangProgramPath(), ClangArgs,
+                                         Inputs, Output, D.getPrependArg()));
 }

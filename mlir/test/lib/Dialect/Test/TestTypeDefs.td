@@ -148,8 +148,8 @@ def TestType : Test_Type<"Test", [
 }
 
 def TestTypeWithLayoutType : Test_Type<"TestTypeWithLayout", [
-  DeclareTypeInterfaceMethods<DataLayoutTypeInterface, ["getIndexBitwidth",
-                                                        "areCompatible"]>
+  DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+    ["getIndexBitwidth", "areCompatible", "getPreferredAlignment"]>
 ]> {
   let mnemonic = "test_type_with_layout";
   let parameters = (ins "unsigned":$key);
@@ -375,7 +375,7 @@ def TestI32 : Test_Type<"TestI32"> {
 }
 
 def TestRecursiveAlias
-    : Test_Type<"TestRecursiveAlias", [NativeTypeTrait<"IsMutable">]> {
+    : Test_Type<"TestRecursiveAlias", [MutableType]> {
   let mnemonic = "test_rec_alias";
   let storageClass = "TestRecursiveTypeStorage";
   let storageNamespace = "test";
@@ -396,6 +396,11 @@ def TestTypeVerification : Test_Type<"TestTypeVerification"> {
   let parameters = (ins AnyTypeOf<[I16, I32]>:$param);
   let mnemonic = "type_verification";
   let assemblyFormat = "`<` $param `>`";
+}
+
+def TestTypeOpAsmTypeInterface : Test_Type<"TestTypeOpAsmTypeInterface",
+    [DeclareTypeInterfaceMethods<OpAsmTypeInterface, ["getAsmName", "getAlias"]>]> {
+  let mnemonic = "op_asm_type_interface";
 }
 
 #endif // TEST_TYPEDEFS

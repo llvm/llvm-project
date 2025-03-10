@@ -54,7 +54,7 @@ private:
   // Some Multilib objects don't actually represent library directories you can
   // select. Instead, they represent failures of multilib selection, of the
   // form 'Sorry, we don't have any library compatible with these constraints'.
-  std::optional<std::string> FatalError;
+  std::optional<std::string> Error;
 
 public:
   /// GCCSuffix, OSSuffix & IncludeSuffix will be appended directly to the
@@ -63,7 +63,7 @@ public:
   Multilib(StringRef GCCSuffix = {}, StringRef OSSuffix = {},
            StringRef IncludeSuffix = {}, const flags_list &Flags = flags_list(),
            StringRef ExclusiveGroup = {},
-           std::optional<StringRef> FatalError = std::nullopt);
+           std::optional<StringRef> Error = std::nullopt);
 
   /// Get the detected GCC installation path suffix for the multi-arch
   /// target variant. Always starts with a '/', unless empty
@@ -94,12 +94,36 @@ public:
 
   bool operator==(const Multilib &Other) const;
 
-  bool isFatalError() const { return FatalError.has_value(); }
+  bool isError() const { return Error.has_value(); }
 
-  const std::string &getFatalError() const { return FatalError.value(); }
+  const std::string &getErrorMessage() const { return Error.value(); }
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const Multilib &M);
+
+namespace custom_flag {
+struct Declaration;
+
+struct ValueDetail {
+  std::string Name;
+  std::optional<SmallVector<std::string>> MacroDefines;
+  Declaration *Decl;
+};
+
+struct Declaration {
+  std::string Name;
+  SmallVector<ValueDetail> ValueList;
+  std::optional<size_t> DefaultValueIdx;
+
+  Declaration() = default;
+  Declaration(const Declaration &);
+  Declaration(Declaration &&);
+  Declaration &operator=(const Declaration &);
+  Declaration &operator=(Declaration &&);
+};
+
+static constexpr StringRef Prefix = "-fmultilib-flag=";
+} // namespace custom_flag
 
 /// See also MultilibSetBuilder for combining multilibs into a set.
 class MultilibSet {
@@ -120,15 +144,18 @@ public:
 
 private:
   multilib_list Multilibs;
-  std::vector<FlagMatcher> FlagMatchers;
+  SmallVector<FlagMatcher> FlagMatchers;
+  SmallVector<custom_flag::Declaration> CustomFlagDecls;
   IncludeDirsFunc IncludeCallback;
   IncludeDirsFunc FilePathsCallback;
 
 public:
   MultilibSet() = default;
   MultilibSet(multilib_list &&Multilibs,
-              std::vector<FlagMatcher> &&FlagMatchers = {})
-      : Multilibs(Multilibs), FlagMatchers(FlagMatchers) {}
+              SmallVector<FlagMatcher> &&FlagMatchers = {},
+              SmallVector<custom_flag::Declaration> &&CustomFlagDecls = {})
+      : Multilibs(std::move(Multilibs)), FlagMatchers(std::move(FlagMatchers)),
+        CustomFlagDecls(std::move(CustomFlagDecls)) {}
 
   const multilib_list &getMultilibs() { return Multilibs; }
 
@@ -141,9 +168,18 @@ public:
   const_iterator begin() const { return Multilibs.begin(); }
   const_iterator end() const { return Multilibs.end(); }
 
+  /// Process custom flags from \p Flags and returns an expanded flags list and
+  /// a list of macro defines.
+  /// Returns a pair where:
+  ///  - first: the new flags list including custom flags after processing.
+  ///  - second: the extra macro defines to be fed to the driver.
+  std::pair<Multilib::flags_list, SmallVector<StringRef>>
+  processCustomFlags(const Driver &D, const Multilib::flags_list &Flags) const;
+
   /// Select compatible variants, \returns false if none are compatible
   bool select(const Driver &D, const Multilib::flags_list &Flags,
-              llvm::SmallVectorImpl<Multilib> &) const;
+              llvm::SmallVectorImpl<Multilib> &,
+              llvm::SmallVector<StringRef> * = nullptr) const;
 
   unsigned size() const { return Multilibs.size(); }
 

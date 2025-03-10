@@ -8,12 +8,24 @@
 
 #include "SystemZMCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
-#include "llvm/MC/MCSectionELF.h"
+#include "llvm/MC/MCExpr.h"
 
 using namespace llvm;
 
+const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+    {MCSymbolRefExpr::VK_DTPOFF, "DTPOFF"},
+    {MCSymbolRefExpr::VK_GOT, "GOT"},
+    {MCSymbolRefExpr::VK_GOTENT, "GOTENT"},
+    {MCSymbolRefExpr::VK_INDNTPOFF, "INDNTPOFF"},
+    {MCSymbolRefExpr::VK_NTPOFF, "NTPOFF"},
+    {MCSymbolRefExpr::VK_PLT, "PLT"},
+    {MCSymbolRefExpr::VK_TLSGD, "TLSGD"},
+    {MCSymbolRefExpr::VK_TLSLD, "TLSLD"},
+    {MCSymbolRefExpr::VK_TLSLDM, "TLSLDM"},
+};
+
 SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
-  AssemblerDialect = AD_ATT;
+  AssemblerDialect = AD_GNU;
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
   Data64bitsDirective = "\t.quad\t";
@@ -23,6 +35,8 @@ SystemZMCAsmInfoELF::SystemZMCAsmInfoELF(const Triple &TT) {
   SupportsDebugInformation = true;
   UsesELFSectionDirectiveForBSS = true;
   ZeroDirective = "\t.space\t";
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
@@ -30,20 +44,17 @@ SystemZMCAsmInfoGOFF::SystemZMCAsmInfoGOFF(const Triple &TT) {
   AllowAtInName = true;
   AllowAtAtStartOfIdentifier = true;
   AllowDollarAtStartOfIdentifier = true;
-  AllowHashAtStartOfIdentifier = true;
   AssemblerDialect = AD_HLASM;
   CalleeSaveStackSlotSize = 8;
   CodePointerSize = 8;
   CommentString = "*";
-  DotIsPC = false;
-  EmitGNUAsmStartIndentationMarker = false;
-  EmitLabelsInUpperCase = true;
   ExceptionsType = ExceptionHandling::ZOS;
+  IsHLASM = true;
   IsLittleEndian = false;
   MaxInstLength = 6;
-  RestrictCommentStringToStartOfStatement = true;
-  StarIsPC = true;
   SupportsDebugInformation = true;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 bool SystemZMCAsmInfoGOFF::isAcceptableChar(char C) const {

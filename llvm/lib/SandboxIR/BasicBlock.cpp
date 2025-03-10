@@ -8,6 +8,7 @@
 
 #include "llvm/SandboxIR/BasicBlock.h"
 #include "llvm/SandboxIR/Context.h"
+#include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
 
 namespace llvm::sandboxir {
@@ -65,12 +66,6 @@ void BasicBlock::buildBasicBlockFromLLVMIR(llvm::BasicBlock *LLVMBB) {
     for (auto [OpIdx, Op] : enumerate(I->operands())) {
       // Skip instruction's label operands
       if (isa<llvm::BasicBlock>(Op))
-        continue;
-      // Skip metadata
-      if (isa<llvm::MetadataAsValue>(Op))
-        continue;
-      // Skip asm
-      if (isa<llvm::InlineAsm>(Op))
         continue;
       Ctx.getOrCreateValue(Op);
     }

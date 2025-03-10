@@ -37,11 +37,11 @@ private:
   BitVector RegPressureIgnoredUnits;
 
   /// Sub reg indexes for getRegSplitParts.
-  /// First index represents subreg size from 1 to 16 DWORDs.
+  /// First index represents subreg size from 1 to 32 Half DWORDS.
   /// The inner vector is sorted by bit offset.
   /// Provided a register can be fully split with given subregs,
   /// all elements of the inner vector combined give a full lane mask.
-  static std::array<std::vector<int16_t>, 16> RegSplitParts;
+  static std::array<std::vector<int16_t>, 32> RegSplitParts;
 
   // Table representing sub reg of given width and offset.
   // First index is subreg size: 32, 64, 96, 128, 160, 192, 224, 256, 512.
@@ -81,6 +81,11 @@ public:
   /// Return the end register initially reserved for the scratch buffer in case
   /// spilling is needed.
   MCRegister reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
+
+  /// Return a pair of maximum numbers of VGPRs and AGPRs that meet the number
+  /// of waves per execution unit required for the function \p MF.
+  std::pair<unsigned, unsigned>
+  getMaxNumVectorRegs(const MachineFunction &MF) const;
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
@@ -205,6 +210,9 @@ public:
   }
 
   bool isSGPRReg(const MachineRegisterInfo &MRI, Register Reg) const;
+  bool isSGPRPhysReg(Register Reg) const {
+    return isSGPRClass(getPhysRegBaseClass(Reg));
+  }
 
   /// \returns true if this class contains only VGPR registers
   static bool isVGPRClass(const TargetRegisterClass *RC) {
@@ -266,11 +274,6 @@ public:
   getCompatibleSubRegClass(const TargetRegisterClass *SuperRC,
                            const TargetRegisterClass *SubRC,
                            unsigned SubIdx) const;
-
-  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                            unsigned DefSubReg,
-                            const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const override;
 
   /// \returns True if operands defined with this operand type can accept
   /// a literal constant (i.e. any 32-bit immediate).
@@ -449,6 +452,19 @@ public:
   // No check if the subreg is supported by the current RC is made.
   unsigned getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
                                      unsigned SubReg) const;
+
+  // \returns a number of registers of a given \p RC used in a function.
+  // Does not go inside function calls.
+  unsigned getNumUsedPhysRegs(const MachineRegisterInfo &MRI,
+                              const TargetRegisterClass &RC) const;
+
+  std::optional<uint8_t> getVRegFlagValue(StringRef Name) const override {
+    return Name == "WWM_REG" ? AMDGPU::VirtRegFlag::WWM_REG
+                             : std::optional<uint8_t>{};
+  }
+
+  SmallVector<StringLiteral>
+  getVRegFlagsOfReg(Register Reg, const MachineFunction &MF) const override;
 };
 
 namespace AMDGPU {

@@ -32,7 +32,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         Tests the correct termination of lldb-dap upon a 'disconnect'
         request.
         """
-        self.create_debug_adaptor()
+        self.create_debug_adapter()
         # The underlying lldb-dap process must be alive
         self.assertEqual(self.dap_server.process.poll(), None)
 
@@ -92,7 +92,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
     def test_debuggerRoot(self):
         """
         Tests the "debuggerRoot" will change the working directory of
-        the lldb-dap debug adaptor.
+        the lldb-dap debug adapter.
         """
         program = self.getBuildArtifact("a.out")
         program_parent_dir = os.path.realpath(os.path.dirname(os.path.dirname(program)))
@@ -224,12 +224,47 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
                 'arg[%i] "%s" not in "%s"' % (i + 1, quoted_arg, lines[i]),
             )
 
-    def test_environment(self):
+    def test_environment_with_object(self):
+        """
+        Tests launch of a simple program with environment variables
+        """
+        program = self.getBuildArtifact("a.out")
+        env = {
+            "NO_VALUE": "",
+            "WITH_VALUE": "BAR",
+            "EMPTY_VALUE": "",
+            "SPACE": "Hello World",
+        }
+
+        self.build_and_launch(program, env=env)
+        self.continue_to_exit()
+
+        # Now get the STDOUT and verify our arguments got passed correctly
+        output = self.get_stdout()
+        self.assertTrue(output and len(output) > 0, "expect program output")
+        lines = output.splitlines()
+        # Skip the all arguments so we have only environment vars left
+        while len(lines) and lines[0].startswith("arg["):
+            lines.pop(0)
+        # Make sure each environment variable in "env" is actually set in the
+        # program environment that was printed to STDOUT
+        for var in env:
+            found = False
+            for program_var in lines:
+                if var in program_var:
+                    found = True
+                    break
+            self.assertTrue(
+                found, '"%s" must exist in program environment (%s)' % (var, lines)
+            )
+
+    def test_environment_with_array(self):
         """
         Tests launch of a simple program with environment variables
         """
         program = self.getBuildArtifact("a.out")
         env = ["NO_VALUE", "WITH_VALUE=BAR", "EMPTY_VALUE=", "SPACE=Hello World"]
+
         self.build_and_launch(program, env=env)
         self.continue_to_exit()
 
@@ -341,7 +376,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests the "launchCommands" with extra launching settings
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         source = "main.c"
@@ -405,7 +440,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         """
         Tests "launchCommands" failures prevents a launch.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         # Run an invalid launch command, in this case a bad path.
@@ -448,7 +483,7 @@ class TestDAP_launch(lldbdap_testcase.DAPTestCaseBase):
         Tests that the "terminateCommands", that can be passed during
         launch, are run when the debugger is disconnected.
         """
-        self.build_and_create_debug_adaptor()
+        self.build_and_create_debug_adapter()
         program = self.getBuildArtifact("a.out")
 
         terminateCommands = ["expr 4+2"]

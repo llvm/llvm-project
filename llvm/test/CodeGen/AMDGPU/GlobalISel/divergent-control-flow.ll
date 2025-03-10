@@ -26,7 +26,7 @@ if.true:
   br label %endif
 
 endif:
-  %v = phi i32 [ %val, %if.true ], [ undef, %entry ]
+  %v = phi i32 [ %val, %if.true ], [ poison, %entry ]
   ret i32 %v
 }
 
@@ -49,7 +49,7 @@ entry:
   br i1 %c, label %if.true, label %endif
 
 endif:
-  %v = phi i32 [ %val, %if.true ], [ undef, %entry ]
+  %v = phi i32 [ %val, %if.true ], [ poison, %entry ]
   ret i32 %v
 
 if.true:
@@ -82,7 +82,7 @@ if.true:
   br label %endif
 
 endif:
-  %v = phi i32 [ %val, %if.true ], [ undef, %entry ]
+  %v = phi i32 [ %val, %if.true ], [ poison, %entry ]
   ret i32 %v
 }
 
@@ -114,7 +114,7 @@ if.true:
   br label %endif
 
 endif:
-  %v = phi i32 [ %val, %if.true ], [ undef, %entry ]
+  %v = phi i32 [ %val, %if.true ], [ poison, %entry ]
   ret i32 %v
 }
 
@@ -193,7 +193,7 @@ bb12:
 define amdgpu_kernel void @break_loop(i32 %arg) {
 ; CHECK-LABEL: break_loop:
 ; CHECK:       ; %bb.0: ; %bb
-; CHECK-NEXT:    s_load_dword s0, s[6:7], 0x0
+; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; CHECK-NEXT:    ; implicit-def: $sgpr2_sgpr3
 ; CHECK-NEXT:    ; implicit-def: $vgpr1
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)

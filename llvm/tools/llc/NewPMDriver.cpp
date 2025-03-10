@@ -48,10 +48,10 @@
 
 using namespace llvm;
 
-static cl::opt<std::string>
+static cl::opt<RegAllocType, false, RegAllocTypeParser>
     RegAlloc("regalloc-npm",
              cl::desc("Register allocator to use for new pass manager"),
-             cl::Hidden, cl::init("default"));
+             cl::Hidden, cl::init(RegAllocType::Unset));
 
 static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,
@@ -99,8 +99,6 @@ int llvm::compileModuleWithNewPM(
     return 1;
   }
 
-  LLVMTargetMachine &LLVMTM = static_cast<LLVMTargetMachine &>(*Target);
-
   raw_pwrite_stream *OS = &Out->os();
 
   // Fetch options from TargetPassConfig
@@ -109,12 +107,12 @@ int llvm::compileModuleWithNewPM(
   Opt.DebugPM = DebugPM;
   Opt.RegAlloc = RegAlloc;
 
-  MachineModuleInfo MMI(&LLVMTM);
+  MachineModuleInfo MMI(Target.get());
 
   PassInstrumentationCallbacks PIC;
   StandardInstrumentations SI(Context, Opt.DebugPM,
                               VK == VerifierKind::EachPass);
-  registerCodeGenCallback(PIC, LLVMTM);
+  registerCodeGenCallback(PIC, *Target);
 
   MachineFunctionAnalysisManager MFAM;
   LoopAnalysisManager LAM;
@@ -158,7 +156,7 @@ int llvm::compileModuleWithNewPM(
     if (MIR->parseMachineFunctions(*M, MAM))
       return 1;
   } else {
-    ExitOnErr(LLVMTM.buildCodeGenPipeline(
+    ExitOnErr(Target->buildCodeGenPipeline(
         MPM, *OS, DwoOut ? &DwoOut->os() : nullptr, FileType, Opt, &PIC));
   }
 

@@ -15,7 +15,6 @@
 #include "SIDefines.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/SIDefinesUtils.h"
-#include "llvm/ADT/IndexedMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -453,7 +452,7 @@ bool AMDGPUMCKernelCodeT::ParseKernelCodeT(StringRef ID, MCAsmParser &MCParser,
     return true;
   }
   auto Parser = getParserTable()[Idx];
-  return Parser ? Parser(*this, MCParser, Err) : false;
+  return Parser && Parser(*this, MCParser, Err);
 }
 
 void AMDGPUMCKernelCodeT::EmitKernelCodeT(raw_ostream &OS, MCContext &Ctx,

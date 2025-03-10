@@ -223,12 +223,13 @@ TableGen provides "bang operators" that have a wide variety of uses:
                : !div         !empty       !eq          !exists      !filter
                : !find        !foldl       !foreach     !ge          !getdagarg
                : !getdagname  !getdagop    !gt          !head        !if
-               : !interleave  !isa         !le          !listconcat  !listflatten
-               : !listremove  !listsplat   !logtwo      !lt          !mul
-               : !ne          !not         !or          !range       !repr
-               : !setdagarg   !setdagname  !setdagop    !shl         !size
-               : !sra         !srl         !strconcat   !sub         !subst
-               : !substr      !tail        !tolower     !toupper     !xor
+               : !initialized !interleave  !isa         !le          !listconcat
+               : !listflatten !listremove  !listsplat   !logtwo      !lt
+               : !mul         !ne          !not         !or          !range
+               : !repr        !setdagarg   !setdagname  !setdagop    !shl
+               : !size        !sra         !srl         !strconcat   !sub
+               : !subst       !substr      !tail        !tolower     !toupper
+               : !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -267,7 +268,7 @@ high-level types (e.g., ``dag``). This flexibility allows you to describe a
 wide range of records conveniently and compactly.
 
 .. productionlist::
-   Type: "bit" | "int" | "string" | "dag"
+   Type: "bit" | "int" | "string" | "dag" | "code"
        :| "bits" "<" `TokInteger` ">"
        :| "list" "<" `Type` ">"
        :| `ClassID`
@@ -283,6 +284,10 @@ wide range of records conveniently and compactly.
 ``string``
     The ``string`` type represents an ordered sequence of characters of arbitrary
     length.
+
+``code``
+    The keyword ``code`` is an alias for ``string`` which may be used to
+    indicate string values that are code.
 
 ``bits<``\ *n*\ ``>``
     The ``bits`` type is a fixed-sized integer of arbitrary length *n* that
@@ -362,7 +367,16 @@ Simple values
 The :token:`SimpleValue` has a number of forms.
 
 .. productionlist::
-   SimpleValue: `TokInteger` | `TokString`+ | `TokCode`
+   SimpleValue: `SimpleValue1`
+              :| `SimpleValue2`
+              :| `SimpleValue3`
+              :| `SimpleValue4`
+              :| `SimpleValue5`
+              :| `SimpleValue6`
+              :| `SimpleValue7`
+              :| `SimpleValue8`
+              :| `SimpleValue9`
+   SimpleValue1: `TokInteger` | `TokString`+ | `TokCode`
 
 A value can be an integer literal, a string literal, or a code literal.
 Multiple adjacent string literals are concatenated as in C/C++; the simple
@@ -497,6 +511,8 @@ arguments, producing a value for that bang operator. The ``!cond`` operator
 takes a list of pairs of arguments separated by colons. See `Appendix A:
 Bang Operators`_ for a description of each bang operator.
 
+The `Type` is only accepted for certain bang operators, and must not be
+``code``.
 
 Suffixed values
 ---------------
@@ -555,7 +571,7 @@ previous case, if the *right-hand-side* operand is an undefined name or a
 global name, it is treated as a verbatim string of characters. The
 left-hand-side operand is treated normally.
 
-Values can have a trailing paste operator, in which case the left-hand-side 
+Values can have a trailing paste operator, in which case the left-hand-side
 operand is concatenated to an empty string.
 
 `Appendix B: Paste Operator Examples`_ presents examples of the behavior of
@@ -669,7 +685,7 @@ arguments.
 
 .. productionlist::
    Body: ";" | "{" `BodyItem`* "}"
-   BodyItem: (`Type` | "code") `TokIdentifier` ["=" `Value`] ";"
+   BodyItem: `Type` `TokIdentifier` ["=" `Value`] ";"
            :| "let" `TokIdentifier` ["{" `RangeList` "}"] "=" `Value` ";"
            :| "defvar" `TokIdentifier` "=" `Value` ";"
            :| `Assert`
@@ -677,8 +693,7 @@ arguments.
 A field definition in the body specifies a field to be included in the class
 or record. If no initial value is specified, then the field's value is
 uninitialized. The type must be specified; TableGen will not infer it from
-the value. The keyword ``code`` may be used to emphasize that the field
-has a string value that is code.
+the value.
 
 The ``let`` form is used to reset a field to a new value. This can be done
 for fields defined directly in the body or fields inherited from parent
@@ -1301,8 +1316,9 @@ output. It is intended for debugging purpose.
   instantiation point of the containing record.
 
 .. productionlist::
-   Dump: "dump"  `string` ";"
+   Dump: "dump" `Value` ";"
 
+The :token:`Value` is an arbitrary string expression.
 For example, it can be used in combination with `!repr` to investigate
 the values passed to a multiclass:
 
@@ -1349,11 +1365,12 @@ The ``assert`` statement checks a boolean condition to be sure that it is true
 and prints an error message if it is not.
 
 .. productionlist::
-   Assert: "assert" `condition` "," `message` ";"
+   Assert: "assert" `Value` "," `Value` ";"
 
-If the boolean condition is true, the statement does nothing. If the
-condition is false, it prints a nonfatal error message. The **message**, which
-can be an arbitrary string expression, is included in the error message as a
+The first :token:`Value` is a boolean condition. If it is true, the
+statement does nothing. If the condition is false, it prints a nonfatal
+error message. The second :token:`Value` is a message, which can be an
+arbitrary string expression. It is included in the error message as a
 note. The exact behavior of the ``assert`` statement depends on its
 placement.
 
@@ -1646,7 +1663,8 @@ and non-0 as true.
 ``!and(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator does a bitwise AND on *a*, *b*, etc., and produces the
     result. A logical AND can be performed if all the arguments are either
-    0 or 1.
+    0 or 1. This operator is short-circuit to 0 when the left-most operand
+    is 0.
 
 ``!cast<``\ *type*\ ``>(``\ *a*\ ``)``
     This operator performs a cast on *a* and produces the result.
@@ -1814,6 +1832,10 @@ and non-0 as true.
   ``int``. If the result is not 0, the *then* expression is produced; otherwise
   the *else* expression is produced.
 
+``!initialized(``\ *a*\ ``)``
+  This operator produces 1 if *a* is not the uninitialized value (``?``) and 0
+  otherwise.
+
 ``!interleave(``\ *list*\ ``,`` *delim*\ ``)``
     This operator concatenates the items in the *list*, interleaving the
     *delim* string between each pair, and produces the resulting string.
@@ -1872,7 +1894,8 @@ and non-0 as true.
 ``!or(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator does a bitwise OR on *a*, *b*, etc., and produces the
     result. A logical OR can be performed if all the arguments are either
-    0 or 1.
+    0 or 1. This operator is short-circuit to -1 (all ones) the left-most
+    operand is -1.
 
 ``!range([``\ *start*\ ``,]`` *end*\ ``[,``\ *step*\ ``])``
     This operator produces half-open range sequence ``[start : end : step)`` as

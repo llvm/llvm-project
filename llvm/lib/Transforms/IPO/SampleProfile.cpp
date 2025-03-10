@@ -30,7 +30,6 @@
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AssumptionCache.h"
@@ -163,7 +162,7 @@ static cl::opt<bool> ProfileSampleBlockAccurate(
 static cl::opt<bool> ProfileAccurateForSymsInList(
     "profile-accurate-for-symsinlist", cl::Hidden, cl::init(true),
     cl::desc("For symbols in profile symbol list, regard their profiles to "
-             "be accurate. It may be overriden by profile-sample-accurate. "));
+             "be accurate. It may be overridden by profile-sample-accurate. "));
 
 static cl::opt<bool> ProfileMergeInlinee(
     "sample-profile-merge-inlinee", cl::Hidden, cl::init(true),
@@ -194,9 +193,10 @@ static cl::opt<bool> ProfileSizeInline(
 // and inline the hot functions (that are skipped in this pass).
 static cl::opt<bool> DisableSampleLoaderInlining(
     "disable-sample-loader-inlining", cl::Hidden, cl::init(false),
-    cl::desc("If true, artifically skip inline transformation in sample-loader "
-             "pass, and merge (or scale) profiles (as configured by "
-             "--sample-profile-merge-inlinee)."));
+    cl::desc(
+        "If true, artificially skip inline transformation in sample-loader "
+        "pass, and merge (or scale) profiles (as configured by "
+        "--sample-profile-merge-inlinee)."));
 
 namespace llvm {
 cl::opt<bool>
@@ -256,7 +256,7 @@ static cl::opt<unsigned> PrecentMismatchForStalenessError(
 
 static cl::opt<bool> CallsitePrioritizedInline(
     "sample-profile-prioritized-inline", cl::Hidden,
-    cl::desc("Use call site prioritized inlining for sample profile loader."
+    cl::desc("Use call site prioritized inlining for sample profile loader. "
              "Currently only CSSPGO is supported."));
 
 static cl::opt<bool> UsePreInlinerDecision(
@@ -470,7 +470,8 @@ public:
       std::function<AssumptionCache &(Function &)> GetAssumptionCache,
       std::function<TargetTransformInfo &(Function &)> GetTargetTransformInfo,
       std::function<const TargetLibraryInfo &(Function &)> GetTLI,
-      LazyCallGraph &CG)
+      LazyCallGraph &CG, bool DisableSampleProfileInlining,
+      bool UseFlattenedProfile)
       : SampleProfileLoaderBaseImpl(std::string(Name), std::string(RemapName),
                                     std::move(FS)),
         GetAC(std::move(GetAssumptionCache)),
@@ -479,7 +480,9 @@ public:
         AnnotatedPassName(AnnotateSampleProfileInlinePhase
                               ? llvm::AnnotateInlinePassName(InlineContext{
                                     LTOPhase, InlinePass::SampleProfileInliner})
-                              : CSINLINE_DEBUG) {}
+                              : CSINLINE_DEBUG),
+        DisableSampleProfileInlining(DisableSampleProfileInlining),
+        UseFlattenedProfile(UseFlattenedProfile) {}
 
   bool doInitialization(Module &M, FunctionAnalysisManager *FAM = nullptr);
   bool runOnModule(Module &M, ModuleAnalysisManager *AM,
@@ -527,7 +530,7 @@ protected:
   void generateMDProfMetadata(Function &F);
   bool rejectHighStalenessProfile(Module &M, ProfileSummaryInfo *PSI,
                                   const SampleProfileMap &Profiles);
-  void removePseudoProbeInsts(Module &M);
+  void removePseudoProbeInstsDiscriminator(Module &M);
 
   /// Map from function name to Function *. Used to find the function from
   /// the function name. If the function name contains suffix, additional
@@ -592,6 +595,10 @@ protected:
   // overriden by -profile-sample-accurate or profile-sample-accurate
   // attribute.
   bool ProfAccForSymsInList;
+
+  bool DisableSampleProfileInlining;
+
+  bool UseFlattenedProfile;
 
   // External inline advisor used to replay inline decision from remarks.
   std::unique_ptr<InlineAdvisor> ExternalInlineAdvisor;
@@ -920,7 +927,7 @@ bool SampleProfileLoader::tryPromoteAndInlineCandidate(
     Function &F, InlineCandidate &Candidate, uint64_t SumOrigin, uint64_t &Sum,
     SmallVector<CallBase *, 8> *InlinedCallSite) {
   // Bail out early if sample-loader inliner is disabled.
-  if (DisableSampleLoaderInlining)
+  if (DisableSampleProfileInlining)
     return false;
 
   // Bail out early if MaxNumPromotions is zero.
@@ -1231,7 +1238,7 @@ bool SampleProfileLoader::tryInlineCandidate(
     InlineCandidate &Candidate, SmallVector<CallBase *, 8> *InlinedCallSites) {
   // Do not attempt to inline a candidate if
   // --disable-sample-loader-inlining is true.
-  if (DisableSampleLoaderInlining)
+  if (DisableSampleProfileInlining)
     return false;
 
   CallBase &CB = *Candidate.CallInstr;
@@ -1740,7 +1747,7 @@ void SampleProfileLoader::generateMDProfMetadata(Function &F) {
       if (Weight != 0) {
         if (Weight > MaxWeight) {
           MaxWeight = Weight;
-          MaxDestInst = Succ->getFirstNonPHIOrDbgOrLifetime();
+          MaxDestInst = &*Succ->getFirstNonPHIOrDbgOrLifetime();
         }
       }
     }
@@ -1975,6 +1982,13 @@ bool SampleProfileLoader::doInitialization(Module &M,
 
   PSL = Reader->getProfileSymbolList();
 
+  if (DisableSampleLoaderInlining.getNumOccurrences())
+    DisableSampleProfileInlining = DisableSampleLoaderInlining;
+
+  if (UseFlattenedProfile)
+    ProfileConverter::flattenProfile(Reader->getProfiles(),
+                                     Reader->profileIsCS());
+
   // While profile-sample-accurate is on, ignore symbol list.
   ProfAccForSymsInList =
       ProfileAccurateForSymsInList && PSL && !ProfileSampleAccurate;
@@ -2031,9 +2045,11 @@ bool SampleProfileLoader::doInitialization(Module &M,
     // which is currently only available for pseudo-probe mode. Removing the
     // checksum check could cause regressions for some cases, so further tuning
     // might be needed if we want to enable it for all cases.
-    if (Reader->profileIsProbeBased() &&
-        !SalvageStaleProfile.getNumOccurrences()) {
-      SalvageStaleProfile = true;
+    if (Reader->profileIsProbeBased()) {
+      if (!SalvageStaleProfile.getNumOccurrences())
+        SalvageStaleProfile = true;
+      if (!SalvageUnusedProfile.getNumOccurrences())
+        SalvageUnusedProfile = true;
     }
 
     if (!Reader->profileIsCS()) {
@@ -2125,13 +2141,25 @@ bool SampleProfileLoader::rejectHighStalenessProfile(
   return false;
 }
 
-void SampleProfileLoader::removePseudoProbeInsts(Module &M) {
+void SampleProfileLoader::removePseudoProbeInstsDiscriminator(Module &M) {
   for (auto &F : M) {
     std::vector<Instruction *> InstsToDel;
     for (auto &BB : F) {
       for (auto &I : BB) {
         if (isa<PseudoProbeInst>(&I))
           InstsToDel.push_back(&I);
+        else if (isa<CallBase>(&I))
+          if (const DILocation *DIL = I.getDebugLoc().get()) {
+            // Restore dwarf discriminator for call.
+            unsigned Discriminator = DIL->getDiscriminator();
+            if (DILocation::isPseudoProbeDiscriminator(Discriminator)) {
+              std::optional<uint32_t> DwarfDiscriminator =
+                  PseudoProbeDwarfDiscriminator::extractDwarfBaseDiscriminator(
+                      Discriminator);
+              I.setDebugLoc(DIL->cloneWithDiscriminator(
+                  DwarfDiscriminator ? *DwarfDiscriminator : 0));
+            }
+          }
       }
     }
     for (auto *I : InstsToDel)
@@ -2211,8 +2239,12 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager *AM,
          notInlinedCallInfo)
       updateProfileCallee(pair.first, pair.second.entryCount);
 
-  if (RemoveProbeAfterProfileAnnotation && FunctionSamples::ProfileIsProbeBased)
-    removePseudoProbeInsts(M);
+  if (RemoveProbeAfterProfileAnnotation &&
+      FunctionSamples::ProfileIsProbeBased) {
+    removePseudoProbeInstsDiscriminator(M);
+    if (auto *FuncInfo = M.getNamedMetadata(PseudoProbeDescMetadataName))
+      M.eraseNamedMetadata(FuncInfo);
+  }
 
   return retval;
 }
@@ -2305,9 +2337,12 @@ bool SampleProfileLoader::runOnFunction(Function &F, ModuleAnalysisManager *AM) 
 }
 SampleProfileLoaderPass::SampleProfileLoaderPass(
     std::string File, std::string RemappingFile, ThinOrFullLTOPhase LTOPhase,
-    IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    IntrusiveRefCntPtr<vfs::FileSystem> FS, bool DisableSampleProfileInlining,
+    bool UseFlattenedProfile)
     : ProfileFileName(File), ProfileRemappingFileName(RemappingFile),
-      LTOPhase(LTOPhase), FS(std::move(FS)) {}
+      LTOPhase(LTOPhase), FS(std::move(FS)),
+      DisableSampleProfileInlining(DisableSampleProfileInlining),
+      UseFlattenedProfile(UseFlattenedProfile) {}
 
 PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
                                                ModuleAnalysisManager &AM) {
@@ -2332,7 +2367,8 @@ PreservedAnalyses SampleProfileLoaderPass::run(Module &M,
       ProfileFileName.empty() ? SampleProfileFile : ProfileFileName,
       ProfileRemappingFileName.empty() ? SampleProfileRemappingFile
                                        : ProfileRemappingFileName,
-      LTOPhase, FS, GetAssumptionCache, GetTTI, GetTLI, CG);
+      LTOPhase, FS, GetAssumptionCache, GetTTI, GetTLI, CG,
+      DisableSampleProfileInlining, UseFlattenedProfile);
   if (!SampleLoader.doInitialization(M, &FAM))
     return PreservedAnalyses::all();
 

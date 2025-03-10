@@ -10,8 +10,10 @@
 #define _LIBCPP___FUNCTIONAL_HASH_H
 
 #include <__config>
+#include <__cstddef/nullptr_t.h>
 #include <__functional/unary_function.h>
 #include <__fwd/functional.h>
+#include <__memory/addressof.h>
 #include <__type_traits/conjunction.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
@@ -20,7 +22,6 @@
 #include <__type_traits/underlying_type.h>
 #include <__utility/pair.h>
 #include <__utility/swap.h>
-#include <cstddef>
 #include <cstdint>
 #include <cstring>
 
@@ -33,7 +34,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Size>
 inline _LIBCPP_HIDE_FROM_ABI _Size __loadword(const void* __p) {
   _Size __r;
-  std::memcpy(&__r, __p, sizeof(__r));
+  std::memcpy(std::addressof(__r), __p, sizeof(__r));
   return __r;
 }
 
@@ -276,7 +277,7 @@ struct __scalar_hash<_Tp, 2> : public __unary_function<_Tp, size_t> {
       } __s;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return __murmur2_or_cityhash<size_t>()(std::addressof(__u), sizeof(__u));
   }
 };
 
@@ -292,7 +293,7 @@ struct __scalar_hash<_Tp, 3> : public __unary_function<_Tp, size_t> {
       } __s;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return __murmur2_or_cityhash<size_t>()(std::addressof(__u), sizeof(__u));
   }
 };
 
@@ -309,7 +310,7 @@ struct __scalar_hash<_Tp, 4> : public __unary_function<_Tp, size_t> {
       } __s;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return __murmur2_or_cityhash<size_t>()(std::addressof(__u), sizeof(__u));
   }
 };
 
@@ -332,7 +333,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<_Tp*> : public __unary_function<_Tp*, size_t> {
       size_t __a;
     } __u;
     __u.__t = __v;
-    return __murmur2_or_cityhash<size_t>()(&__u, sizeof(__u));
+    return __murmur2_or_cityhash<size_t>()(std::addressof(__u), sizeof(__u));
   }
 };
 
@@ -356,12 +357,12 @@ struct _LIBCPP_TEMPLATE_VIS hash<unsigned char> : public __unary_function<unsign
   _LIBCPP_HIDE_FROM_ABI size_t operator()(unsigned char __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
 
-#ifndef _LIBCPP_HAS_NO_CHAR8_T
+#if _LIBCPP_HAS_CHAR8_T
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<char8_t> : public __unary_function<char8_t, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(char8_t __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
-#endif // !_LIBCPP_HAS_NO_CHAR8_T
+#endif // _LIBCPP_HAS_CHAR8_T
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<char16_t> : public __unary_function<char16_t, size_t> {
@@ -373,12 +374,12 @@ struct _LIBCPP_TEMPLATE_VIS hash<char32_t> : public __unary_function<char32_t, s
   _LIBCPP_HIDE_FROM_ABI size_t operator()(char32_t __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<wchar_t> : public __unary_function<wchar_t, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(wchar_t __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
 };
-#endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<short> : public __unary_function<short, size_t> {
@@ -407,7 +408,11 @@ struct _LIBCPP_TEMPLATE_VIS hash<long> : public __unary_function<long, size_t> {
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<unsigned long> : public __unary_function<unsigned long, size_t> {
-  _LIBCPP_HIDE_FROM_ABI size_t operator()(unsigned long __v) const _NOEXCEPT { return static_cast<size_t>(__v); }
+  _LIBCPP_HIDE_FROM_ABI size_t operator()(unsigned long __v) const _NOEXCEPT {
+    static_assert(sizeof(size_t) >= sizeof(unsigned long),
+                  "This would be a terrible hash function on a platform where size_t is smaller than unsigned long");
+    return static_cast<size_t>(__v);
+  }
 };
 
 template <>
@@ -416,7 +421,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<long long> : public __scalar_hash<long long> {}
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<unsigned long long> : public __scalar_hash<unsigned long long> {};
 
-#ifndef _LIBCPP_HAS_NO_INT128
+#if _LIBCPP_HAS_INT128
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<__int128_t> : public __scalar_hash<__int128_t> {};
@@ -518,7 +523,7 @@ template <class _Key, class _Hash>
 using __check_hash_requirements _LIBCPP_NODEBUG =
     integral_constant<bool,
                       is_copy_constructible<_Hash>::value && is_move_constructible<_Hash>::value &&
-                          __invokable_r<size_t, _Hash, _Key const&>::value >;
+                          __is_invocable_r_v<size_t, _Hash, _Key const&> >;
 
 template <class _Key, class _Hash = hash<_Key> >
 using __has_enabled_hash _LIBCPP_NODEBUG =

@@ -234,7 +234,8 @@ static unsigned toCallerWindow(unsigned Reg) {
 
 bool SparcTargetLowering::CanLowerReturn(
     CallingConv::ID CallConv, MachineFunction &MF, bool isVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CallConv, isVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, Subtarget->is64Bit() ? RetCC_Sparc64
@@ -2322,7 +2323,7 @@ SDValue SparcTargetLowering::LowerF128_LibCallArg(SDValue Chain,
                          Align(8));
 
     Entry.Node = FIPtr;
-    Entry.Ty   = PointerType::getUnqual(ArgTy);
+    Entry.Ty = PointerType::getUnqual(ArgTy->getContext());
   }
   Args.push_back(Entry);
   return Chain;
@@ -2350,7 +2351,7 @@ SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
     int RetFI = MFI.CreateStackObject(16, Align(8), false);
     RetPtr = DAG.getFrameIndex(RetFI, PtrVT);
     Entry.Node = RetPtr;
-    Entry.Ty   = PointerType::getUnqual(RetTy);
+    Entry.Ty = PointerType::getUnqual(RetTy->getContext());
     if (!Subtarget->is64Bit()) {
       Entry.IsSRet = true;
       Entry.IndirectType = RetTy;
@@ -2762,22 +2763,16 @@ static SDValue LowerVAARG(SDValue Op, SelectionDAG &DAG) {
 
 static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
                                        const SparcSubtarget *Subtarget) {
-  SDValue Chain = Op.getOperand(0);  // Legalize the chain.
-  SDValue Size  = Op.getOperand(1);  // Legalize the size.
-  MaybeAlign Alignment =
-      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
-  Align StackAlign = Subtarget->getFrameLowering()->getStackAlign();
+  SDValue Chain = Op.getOperand(0);
+  SDValue Size = Op.getOperand(1);
+  SDValue Alignment = Op.getOperand(2);
+  MaybeAlign MaybeAlignment =
+      cast<ConstantSDNode>(Alignment)->getMaybeAlignValue();
   EVT VT = Size->getValueType(0);
   SDLoc dl(Op);
 
-  // TODO: implement over-aligned alloca. (Note: also implies
-  // supporting support for overaligned function frames + dynamic
-  // allocations, at all, which currently isn't supported)
-  if (Alignment && *Alignment > StackAlign) {
-    const MachineFunction &MF = DAG.getMachineFunction();
-    report_fatal_error("Function \"" + Twine(MF.getName()) + "\": "
-                       "over-aligned dynamic alloca not supported.");
-  }
+  unsigned SPReg = SP::O6;
+  SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
 
   // The resultant pointer needs to be above the register spill area
   // at the bottom of the stack.
@@ -2811,16 +2806,29 @@ static SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG,
     regSpillArea = 96;
   }
 
-  unsigned SPReg = SP::O6;
-  SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
-  SDValue NewSP = DAG.getNode(ISD::SUB, dl, VT, SP, Size); // Value
-  Chain = DAG.getCopyToReg(SP.getValue(1), dl, SPReg, NewSP);    // Output chain
+  int64_t Bias = Subtarget->getStackPointerBias();
 
-  regSpillArea += Subtarget->getStackPointerBias();
+  // Debias and increment SP past the reserved spill area.
+  // We need the SP to point to the first usable region before calculating
+  // anything to prevent any of the pointers from becoming out of alignment when
+  // we rebias the SP later on.
+  SDValue StartOfUsableStack = DAG.getNode(
+      ISD::ADD, dl, VT, SP, DAG.getConstant(regSpillArea + Bias, dl, VT));
+  SDValue AllocatedPtr =
+      DAG.getNode(ISD::SUB, dl, VT, StartOfUsableStack, Size);
 
-  SDValue NewVal = DAG.getNode(ISD::ADD, dl, VT, NewSP,
-                               DAG.getConstant(regSpillArea, dl, VT));
-  SDValue Ops[2] = { NewVal, Chain };
+  bool IsOveraligned = MaybeAlignment.has_value();
+  SDValue AlignedPtr =
+      IsOveraligned
+          ? DAG.getNode(ISD::AND, dl, VT, AllocatedPtr,
+                        DAG.getSignedConstant(-MaybeAlignment->value(), dl, VT))
+          : AllocatedPtr;
+
+  // Now that we are done, restore the bias and reserved spill area.
+  SDValue NewSP = DAG.getNode(ISD::SUB, dl, VT, AlignedPtr,
+                              DAG.getConstant(regSpillArea + Bias, dl, VT));
+  Chain = DAG.getCopyToReg(SP.getValue(1), dl, SPReg, NewSP);
+  SDValue Ops[2] = {AlignedPtr, Chain};
   return DAG.getMergeValues(Ops, dl);
 }
 
@@ -3360,8 +3368,8 @@ void SparcTargetLowering::LowerAsmOperandForConstraint(
   case 'I':
     if (ConstantSDNode *C = dyn_cast<ConstantSDNode>(Op)) {
       if (isInt<13>(C->getSExtValue())) {
-        Result = DAG.getTargetConstant(C->getSExtValue(), SDLoc(Op),
-                                       Op.getValueType());
+        Result = DAG.getSignedTargetConstant(C->getSExtValue(), SDLoc(Op),
+                                             Op.getValueType());
         break;
       }
       return;
@@ -3548,9 +3556,9 @@ void SparcTargetLowering::ReplaceNodeResults(SDNode *N,
 }
 
 // Override to enable LOAD_STACK_GUARD lowering on Linux.
-bool SparcTargetLowering::useLoadStackGuardNode() const {
+bool SparcTargetLowering::useLoadStackGuardNode(const Module &M) const {
   if (!Subtarget->isTargetLinux())
-    return TargetLowering::useLoadStackGuardNode();
+    return TargetLowering::useLoadStackGuardNode(M);
   return true;
 }
 

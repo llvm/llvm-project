@@ -280,7 +280,7 @@ getPointerDataLayoutEntry(DataLayoutEntryListRef params, LLVMPointerType type,
   for (DataLayoutEntryInterface entry : params) {
     if (!entry.isTypeEntry())
       continue;
-    if (cast<LLVMPointerType>(entry.getKey().get<Type>()).getAddressSpace() ==
+    if (cast<LLVMPointerType>(cast<Type>(entry.getKey())).getAddressSpace() ==
         type.getAddressSpace()) {
       currentEntry = entry.getValue();
       break;
@@ -356,7 +356,8 @@ bool LLVMPointerType::areCompatible(DataLayoutEntryListRef oldLayout,
       continue;
     uint64_t size = kDefaultPointerSizeBits;
     uint64_t abi = kDefaultPointerAlignment;
-    auto newType = llvm::cast<LLVMPointerType>(newEntry.getKey().get<Type>());
+    auto newType =
+        llvm::cast<LLVMPointerType>(llvm::cast<Type>(newEntry.getKey()));
     const auto *it =
         llvm::find_if(oldLayout, [&](DataLayoutEntryInterface entry) {
           if (auto type = llvm::dyn_cast_if_present<Type>(entry.getKey())) {
@@ -392,7 +393,7 @@ LogicalResult LLVMPointerType::verifyEntries(DataLayoutEntryListRef entries,
   for (DataLayoutEntryInterface entry : entries) {
     if (!entry.isTypeEntry())
       continue;
-    auto key = entry.getKey().get<Type>();
+    auto key = llvm::cast<Type>(entry.getKey());
     auto values = llvm::dyn_cast<DenseIntElementsAttr>(entry.getValue());
     if (!values || (values.size() != 3 && values.size() != 4)) {
       return emitError(loc)
@@ -480,12 +481,12 @@ LogicalResult LLVMStructType::setBody(ArrayRef<Type> types, bool isPacked) {
 
 bool LLVMStructType::isPacked() const { return getImpl()->isPacked(); }
 bool LLVMStructType::isIdentified() const { return getImpl()->isIdentified(); }
-bool LLVMStructType::isOpaque() {
+bool LLVMStructType::isOpaque() const {
   return getImpl()->isIdentified() &&
          (getImpl()->isOpaque() || !getImpl()->isInitialized());
 }
 bool LLVMStructType::isInitialized() { return getImpl()->isInitialized(); }
-StringRef LLVMStructType::getName() { return getImpl()->getIdentifier(); }
+StringRef LLVMStructType::getName() const { return getImpl()->getIdentifier(); }
 ArrayRef<Type> LLVMStructType::getBody() const {
   return isIdentified() ? getImpl()->getIdentifiedStructBody()
                         : getImpl()->getTypeList();
@@ -625,11 +626,12 @@ LogicalResult LLVMStructType::verifyEntries(DataLayoutEntryListRef entries,
     if (!entry.isTypeEntry())
       continue;
 
-    auto key = llvm::cast<LLVMStructType>(entry.getKey().get<Type>());
+    auto key = llvm::cast<LLVMStructType>(llvm::cast<Type>(entry.getKey()));
     auto values = llvm::dyn_cast<DenseIntElementsAttr>(entry.getValue());
     if (!values || (values.size() != 2 && values.size() != 1)) {
       return emitError(loc)
-             << "expected layout attribute for " << entry.getKey().get<Type>()
+             << "expected layout attribute for "
+             << llvm::cast<Type>(entry.getKey())
              << " to be a dense integer elements attribute of 1 or 2 elements";
     }
     if (!values.getElementType().isInteger(64))
@@ -780,7 +782,8 @@ bool mlir::LLVM::isCompatibleOuterType(Type type) {
       LLVMFixedVectorType,
       LLVMScalableVectorType,
       LLVMTargetExtType,
-      LLVMVoidType
+      LLVMVoidType,
+      LLVMX86AMXType
     >(type)) {
     // clang-format on
     return true;
@@ -842,7 +845,8 @@ static bool isCompatibleImpl(Type type, DenseSet<Type> &compatibleTypes) {
             LLVMMetadataType,
             LLVMPPCFP128Type,
             LLVMTokenType,
-            LLVMVoidType
+            LLVMVoidType,
+            LLVMX86AMXType
           >([](Type) { return true; })
           // clang-format on
           .Default([](Type) { return false; });

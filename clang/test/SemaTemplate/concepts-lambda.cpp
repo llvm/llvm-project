@@ -279,3 +279,49 @@ void dependent_capture_packs() {
   L(V<0>{}, V<1>{}, V<2>{})(V<3>{}, V<4>{})(1);
 }
 } // namespace init_captures
+
+namespace GH110721 {
+
+template <int N> void connect() {
+  int x = N, y = N;
+  [x, y = y]()
+    requires requires { x; }
+  {}();
+}
+
+void foo() {
+  connect<42>();
+}
+
+} // namespace GH110721
+
+namespace GH123441 {
+
+void test() {
+  auto L = [](auto... x) {
+    return [](decltype(x)... y)
+      requires true
+    {};
+  };
+  L(0, 1)(1, 2);
+}
+
+}
+
+namespace GH128175 {
+
+template <class> void f() {
+  [i{0}] {
+    [&] {
+      [&] {
+        []()
+          requires true
+        {}();
+      }();
+    }();
+  }();
+}
+
+template void f<int>();
+
+}

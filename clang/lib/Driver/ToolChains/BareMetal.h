@@ -67,17 +67,20 @@ public:
   void AddClangCXXStdlibIncludeArgs(
       const llvm::opt::ArgList &DriverArgs,
       llvm::opt::ArgStringList &CC1Args) const override;
-  void AddCXXStdlibLibArgs(const llvm::opt::ArgList &Args,
-                           llvm::opt::ArgStringList &CmdArgs) const override;
-  void AddLinkRuntimeLib(const llvm::opt::ArgList &Args,
-                         llvm::opt::ArgStringList &CmdArgs) const;
   std::string computeSysRoot() const override;
   SanitizerMask getSupportedSanitizers() const override;
+
+  SmallVector<std::string>
+  getMultilibMacroDefinesStr(llvm::opt::ArgList &Args) const override;
 
 private:
   using OrderedMultilibs =
       llvm::iterator_range<llvm::SmallVector<Multilib>::const_reverse_iterator>;
   OrderedMultilibs getOrderedMultilibs() const;
+
+  std::string SysRoot;
+
+  SmallVector<std::string> MultilibMacroDefines;
 };
 
 } // namespace toolchains

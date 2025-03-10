@@ -118,7 +118,7 @@ void ScheduleDAGFast::Schedule() {
   LiveRegCycles.resize(TRI->getNumRegs(), 0);
 
   // Build the scheduling graph.
-  BuildSchedGraph(nullptr);
+  BuildSchedGraph();
 
   LLVM_DEBUG(dump());
 
@@ -436,7 +436,7 @@ static MVT getPhysicalRegisterVT(SDNode *N, unsigned Reg,
 
 /// CheckForLiveRegDef - Return true and update live register vector if the
 /// specified register def of the specified SUnit clobbers any "live" registers.
-static bool CheckForLiveRegDef(SUnit *SU, unsigned Reg,
+static bool CheckForLiveRegDef(SUnit *SU, MCRegister Reg,
                                std::vector<SUnit *> &LiveRegDefs,
                                SmallSet<unsigned, 4> &RegAdded,
                                SmallVectorImpl<unsigned> &LRegs,
@@ -501,8 +501,8 @@ bool ScheduleDAGFast::DelayForLiveRegsBottomUp(SUnit *SU,
             F.isClobberKind()) {
           // Check for def of register or earlyclobber register.
           for (; NumVals; --NumVals, ++i) {
-            unsigned Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
-            if (Register::isPhysicalRegister(Reg))
+            Register Reg = cast<RegisterSDNode>(Node->getOperand(i))->getReg();
+            if (Reg.isPhysical())
               CheckForLiveRegDef(SU, Reg, LiveRegDefs, RegAdded, LRegs, TRI);
           }
         } else
@@ -756,7 +756,7 @@ void ScheduleDAGLinearize::Schedule() {
     // Glue user must be scheduled together with the glue operand. So other
     // users of the glue operand must be treated as its users.
     SDNode *ImmGUser = Glue->getGluedUser();
-    for (const SDNode *U : Glue->uses())
+    for (const SDNode *U : Glue->users())
       if (U == ImmGUser)
         --Degree;
     GUser->setNodeId(UDegree + Degree);

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // The pass adds LPAD (AUIPC with rs1 = X0) machine instructions at the
-// beginning of each basic block or function that is referenced by an indrect
+// beginning of each basic block or function that is referenced by an indirect
 // jump/call instruction.
 //
 //===----------------------------------------------------------------------===//
@@ -15,7 +15,6 @@
 #include "RISCV.h"
 #include "RISCVInstrInfo.h"
 #include "RISCVSubtarget.h"
-#include "RISCVTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"

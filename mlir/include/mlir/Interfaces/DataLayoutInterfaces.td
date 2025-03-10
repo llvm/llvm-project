@@ -86,7 +86,7 @@ def DataLayoutEntryInterface : AttrInterface<"DataLayoutEntryInterface"> {
   let extraClassDeclaration = [{
     /// Returns `true` if the key of this entry is a type.
     bool isTypeEntry() {
-      return getKey().is<::mlir::Type>();
+      return llvm::isa<::mlir::Type>(getKey());
     }
   }];
 }
@@ -151,6 +151,12 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
       /*description=*/"Returns the global memory space identifier.",
       /*retTy=*/"::mlir::StringAttr",
       /*methodName=*/"getGlobalMemorySpaceIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
+      /*description=*/"Returns the mangling mode identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getManglingModeIdentifier",
       /*args=*/(ins "::mlir::MLIRContext *":$context)
     >,
     InterfaceMethod<
@@ -276,7 +282,7 @@ def TargetDeviceSpecInterface : AttrInterface<"TargetDeviceSpecInterface", [DLTI
     /// Helper for default implementation of `DLTIQueryInterface`'s `query`.
     ::mlir::FailureOr<::mlir::Attribute>
     queryHelper(::mlir::DataLayoutEntryKey key) const {
-      if (auto strKey = llvm::dyn_cast<StringAttr>(key))
+      if (auto strKey = ::llvm::dyn_cast<StringAttr>(key))
         if (DataLayoutEntryInterface spec = getSpecForIdentifier(strKey))
           return spec.getValue();
       return ::mlir::failure();
@@ -304,7 +310,7 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface", [DLTI
   let methods = [
     InterfaceMethod<
       /*description=*/"Returns the list of layout entries.",
-      /*retTy=*/"llvm::ArrayRef<DeviceIDTargetDeviceSpecPair>",
+      /*retTy=*/"::llvm::ArrayRef<DataLayoutEntryInterface>",
       /*methodName=*/"getEntries",
       /*args=*/(ins)
     >,
@@ -334,7 +340,7 @@ def TargetSystemSpecInterface : AttrInterface<"TargetSystemSpecInterface", [DLTI
     /// Helper for default implementation of `DLTIQueryInterface`'s `query`.
     ::mlir::FailureOr<::mlir::Attribute>
     queryHelper(::mlir::DataLayoutEntryKey key) const {
-      if (auto strKey = llvm::dyn_cast<::mlir::StringAttr>(key))
+      if (auto strKey = ::llvm::dyn_cast<::mlir::StringAttr>(key))
         if (auto deviceSpec = getDeviceSpecForDeviceID(strKey))
           return *deviceSpec;
       return ::mlir::failure();
@@ -482,6 +488,18 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       }]
     >,
     StaticInterfaceMethod<
+      /*description=*/"Returns the mangling mode computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"::mlir::Attribute",
+      /*methodName=*/"getManglingMode",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultManglingMode(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
       /*description=*/"Returns the memory space used by the ABI computed "
                       "using the relevant entries. The data layout object "
                       "can be used for recursive queries.",
@@ -598,7 +616,11 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
       /*retTy=*/"uint64_t",
       /*methodName=*/"getPreferredAlignment",
       /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
-                    "::mlir::DataLayoutEntryListRef":$params)
+                    "::mlir::DataLayoutEntryListRef":$params),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_type.getABIAlignment(dataLayout, params);
+      }]
     >,
     InterfaceMethod<
       /*description=*/"Returns the bitwidth that should be used when "

@@ -120,10 +120,6 @@ struct ModuleDeps {
   /// additionally appear in \c FileDeps as a dependency.
   std::string ClangModuleMapFile;
 
-  /// A collection of absolute paths to files that this module directly depends
-  /// on, not including transitive dependencies.
-  llvm::StringSet<> FileDeps;
-
   /// A collection of absolute paths to module map files that this module needs
   /// to know about. The ordering is significant.
   std::vector<std::string> ModuleMapFileDeps;
@@ -143,12 +139,24 @@ struct ModuleDeps {
   /// an entity from this module is used.
   llvm::SmallVector<Module::LinkLibrary, 2> LinkLibraries;
 
+  /// Invokes \c Cb for all file dependencies of this module. Each provided
+  /// \c StringRef is only valid within the individual callback invocation.
+  void forEachFileDep(llvm::function_ref<void(StringRef)> Cb) const;
+
   /// Get (or compute) the compiler invocation that can be used to build this
   /// module. Does not include argv[0].
   const std::vector<std::string> &getBuildArguments();
 
 private:
+  friend class ModuleDepCollector;
   friend class ModuleDepCollectorPP;
+
+  /// The base directory for relative paths in \c FileDeps.
+  std::string FileDepsBaseDir;
+
+  /// A collection of paths to files that this module directly depends on, not
+  /// including transitive dependencies.
+  std::vector<std::string> FileDeps;
 
   std::variant<std::monostate, CowCompilerInvocation, std::vector<std::string>>
       BuildInfo;
@@ -217,13 +225,12 @@ private:
 /// \c ModuleDepCollectorPP to the preprocessor.
 class ModuleDepCollector final : public DependencyCollector {
 public:
-  ModuleDepCollector(std::unique_ptr<DependencyOutputOptions> Opts,
+  ModuleDepCollector(DependencyScanningService &Service,
+                     std::unique_ptr<DependencyOutputOptions> Opts,
                      CompilerInstance &ScanInstance, DependencyConsumer &C,
                      DependencyActionController &Controller,
                      CompilerInvocation OriginalCI,
-                     PrebuiltModuleVFSMapT PrebuiltModuleVFSMap,
-                     ScanningOptimizations OptimizeArgs, bool EagerLoadModules,
-                     bool IsStdModuleP1689Format);
+                     PrebuiltModuleVFSMapT PrebuiltModuleVFSMap);
 
   void attachToPreprocessor(Preprocessor &PP) override;
   void attachToASTReader(ASTReader &R) override;
@@ -235,6 +242,8 @@ public:
 private:
   friend ModuleDepCollectorPP;
 
+  /// The parent dependency scanning service.
+  DependencyScanningService &Service;
   /// The compiler instance for scanning the current translation unit.
   CompilerInstance &ScanInstance;
   /// The consumer of collected dependency information.
@@ -266,13 +275,6 @@ private:
   /// a discovered modular dependency. Note that this still needs to be adjusted
   /// for each individual module.
   CowCompilerInvocation CommonInvocation;
-  /// Whether to optimize the modules' command-line arguments.
-  ScanningOptimizations OptimizeArgs;
-  /// Whether to set up command-lines to load PCM files eagerly.
-  bool EagerLoadModules;
-  /// If we're generating dependency output in P1689 format
-  /// for standard C++ modules.
-  bool IsStdModuleP1689Format;
 
   std::optional<P1689ModuleInfo> ProvidedStdCXXModule;
   std::vector<P1689ModuleInfo> RequiredStdCXXModules;
@@ -309,7 +311,7 @@ private:
 
   /// Compute the context hash for \p Deps, and create the mapping
   /// \c ModuleDepsByID[Deps.ID] = &Deps.
-  void associateWithContextHash(const CowCompilerInvocation &CI,
+  void associateWithContextHash(const CowCompilerInvocation &CI, bool IgnoreCWD,
                                 ModuleDeps &Deps);
 };
 

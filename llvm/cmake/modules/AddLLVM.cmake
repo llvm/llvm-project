@@ -149,20 +149,20 @@ function(add_llvm_symbol_exports target_name export_file)
     set(export_file_linker_flag "${CMAKE_CURRENT_BINARY_DIR}/${native_export_file}")
     if(MSVC)
       # cl.exe or clang-cl, i.e. MSVC style command line interface
-      set(export_file_linker_flag "/DEF:\"${export_file_linker_flag}\"")
+      set(export_file_linker_flag "LINKER:/DEF:${export_file_linker_flag}")
     elseif(CMAKE_CXX_SIMULATE_ID STREQUAL "MSVC")
       # clang in msvc mode, calling a link.exe/lld-link style linker
-      set(export_file_linker_flag "-Wl,/DEF:\"${export_file_linker_flag}\"")
+      set(export_file_linker_flag "-Wl,/DEF:${export_file_linker_flag}")
     elseif(MINGW)
       # ${export_file_linker_flag}, which is the plain file name, works as is
       # when passed to the compiler driver, which then passes it on to the
       # linker as an input file.
-      set(export_file_linker_flag "\"${export_file_linker_flag}\"")
+      set(export_file_linker_flag "${export_file_linker_flag}")
     else()
       message(FATAL_ERROR "Unsupported Windows toolchain")
     endif()
-    set_property(TARGET ${target_name} APPEND_STRING PROPERTY
-                 LINK_FLAGS " ${export_file_linker_flag}")
+    set_property(TARGET ${target_name} APPEND PROPERTY
+                 LINK_OPTIONS "${export_file_linker_flag}")
   endif()
 
   add_custom_target(${target_name}_exports DEPENDS ${native_export_file})
@@ -932,7 +932,7 @@ endfunction()
 
 macro(add_llvm_library name)
   cmake_parse_arguments(ARG
-    "SHARED;BUILDTREE_ONLY;MODULE;INSTALL_WITH_TOOLCHAIN"
+    "SHARED;BUILDTREE_ONLY;MODULE;INSTALL_WITH_TOOLCHAIN;NO_EXPORT"
     ""
     ""
     ${ARGN})
@@ -967,7 +967,11 @@ macro(add_llvm_library name)
         set(umbrella)
       endif()
 
-      get_target_export_arg(${name} LLVM export_to_llvmexports ${umbrella})
+      if(ARG_NO_EXPORT)
+        set(export_to_llvmexports)
+      else()
+        get_target_export_arg(${name} LLVM export_to_llvmexports ${umbrella})
+      endif()
       install(TARGETS ${name}
               ${export_to_llvmexports}
               LIBRARY DESTINATION lib${LLVM_LIBDIR_SUFFIX} COMPONENT ${name}
@@ -980,7 +984,9 @@ macro(add_llvm_library name)
                                  COMPONENT ${name})
       endif()
     endif()
-    set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
+    if(NOT ARG_NO_EXPORT)
+      set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
+    endif()
   endif()
 
   get_subproject_title(subproject_title)
@@ -1214,9 +1220,9 @@ function(add_llvm_pass_plugin name)
     endif()
     set_property(GLOBAL APPEND PROPERTY LLVM_STATIC_EXTENSIONS ${name})
   elseif(NOT ARG_NO_MODULE)
-    add_llvm_library(${name} MODULE ${ARG_UNPARSED_ARGUMENTS})
+    add_llvm_library(${name} MODULE NO_EXPORT ${ARG_UNPARSED_ARGUMENTS})
   else()
-    add_llvm_library(${name} OBJECT ${ARG_UNPARSED_ARGUMENTS})
+    add_llvm_library(${name} OBJECT NO_EXPORT ${ARG_UNPARSED_ARGUMENTS})
   endif()
   message(STATUS "Registering ${name} as a pass plugin (static build: ${LLVM_${name_upper}_LINK_INTO_TOOLS})")
 
@@ -1446,6 +1452,7 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-strings
     llvm-strip
     llvm-profdata
+    llvm-profgen
     llvm-symbolizer
     # symlink version of some of above tools that are enabled by
     # LLVM_INSTALL_BINUTILS_SYMLINKS.
@@ -1465,6 +1472,9 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
   if (LLVM_ENABLE_LIBXML2)
     list(APPEND LLVM_TOOLCHAIN_TOOLS llvm-mt)
   endif()
+  if (LLVM_TOOL_LLVM_DRIVER_BUILD)
+    list(APPEND LLVM_TOOLCHAIN_TOOLS llvm-driver)
+  endif()
 endif()
 
 macro(llvm_add_tool project name)
@@ -1483,11 +1493,16 @@ macro(llvm_add_tool project name)
 
     if ( ${name} IN_LIST LLVM_TOOLCHAIN_TOOLS OR NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
       if( LLVM_BUILD_TOOLS )
-        get_target_export_arg(${name} LLVM export_to_llvmexports)
+        get_target_export_arg(${name} ${project} export_to_llvmexports)
         install(TARGETS ${name}
                 ${export_to_llvmexports}
                 RUNTIME DESTINATION ${${project}_TOOLS_INSTALL_DIR}
                 COMPONENT ${name})
+        if (LLVM_ENABLE_PDB)
+          install(FILES $<TARGET_PDB_FILE:${name}> 
+                DESTINATION "${${project}_TOOLS_INSTALL_DIR}" COMPONENT ${name} 
+                OPTIONAL)
+        endif()
 
         if (NOT LLVM_ENABLE_IDE)
           add_llvm_install_targets(install-${name}
@@ -1497,7 +1512,8 @@ macro(llvm_add_tool project name)
       endif()
     endif()
     if( LLVM_BUILD_TOOLS )
-      set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS ${name})
+      string(TOUPPER "${project}" project_upper)
+      set_property(GLOBAL APPEND PROPERTY ${project_upper}_EXPORTS ${name})
     endif()
   endif()
   get_subproject_title(subproject_title)
@@ -1517,6 +1533,11 @@ macro(add_llvm_example name)
   add_llvm_executable(${name} EXPORT_SYMBOLS ${ARGN})
   if( LLVM_BUILD_EXAMPLES )
     install(TARGETS ${name} RUNTIME DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}")
+    if (LLVM_ENABLE_PDB)
+      install(FILES $<TARGET_PDB_FILE:${name}> 
+              DESTINATION "${LLVM_EXAMPLES_INSTALL_DIR}" COMPONENT ${name} 
+              OPTIONAL)
+    endif()
   endif()
   get_subproject_title(subproject_title)
   set_target_properties(${name} PROPERTIES FOLDER "${subproject_title}/Examples")
@@ -1551,6 +1572,11 @@ macro(add_llvm_utility name)
               ${export_to_llvmexports}
               RUNTIME DESTINATION ${LLVM_UTILS_INSTALL_DIR}
               COMPONENT ${name})
+      if (LLVM_ENABLE_PDB)
+        install(FILES $<TARGET_PDB_FILE:${name}> 
+                DESTINATION "${LLVM_UTILS_INSTALL_DIR}" COMPONENT ${name} 
+                OPTIONAL)
+      endif()
 
       if (NOT LLVM_ENABLE_IDE)
         add_llvm_install_targets(install-${name}
@@ -2618,13 +2644,16 @@ function(get_host_tool_path tool_name setting_name exe_var_name target_var_name)
     set(target_name "")
   elseif(LLVM_USE_HOST_TOOLS)
     get_native_tool_path(${tool_name} exe_name)
-    set(target_name ${exe_name})
+    set(target_name host_${tool_name})
   else()
     set(exe_name $<TARGET_FILE:${tool_name}>)
     set(target_name ${tool_name})
   endif()
-  set(${exe_var_name} "${exe_name}" CACHE STRING "")
-  set(${target_var_name} "${target_name}" CACHE STRING "")
+  # Force setting the cache variable because they are only used for being
+  # global in scope. Using regular variables would require careful audit of the
+  # code with several parent scope set commands.
+  set(${exe_var_name} "${exe_name}" CACHE STRING "" FORCE)
+  set(${target_var_name} "${target_name}" CACHE STRING "" FORCE)
 endfunction()
 
 function(setup_host_tool tool_name setting_name exe_var_name target_var_name)
@@ -2632,8 +2661,8 @@ function(setup_host_tool tool_name setting_name exe_var_name target_var_name)
   # Set up a native tool build if necessary
   if(LLVM_USE_HOST_TOOLS AND NOT ${setting_name})
     build_native_tool(${tool_name} exe_name DEPENDS ${tool_name})
-    add_custom_target(${target_var_name} DEPENDS ${exe_name})
+    add_custom_target(${${target_var_name}} DEPENDS ${exe_name})
     get_subproject_title(subproject_title)
-    set_target_properties(${target_var_name} PROPERTIES FOLDER "${subproject_title}/Native")
+    set_target_properties(${${target_var_name}} PROPERTIES FOLDER "${subproject_title}/Native")
   endif()
 endfunction()

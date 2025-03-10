@@ -24,7 +24,6 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/StructuredDataImpl.h"
-#include "lldb/Core/ValueObject.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -43,6 +42,7 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StructuredData.h"
+#include "lldb/ValueObject/ValueObject.h"
 #include "lldb/lldb-enumerations.h"
 
 #include <memory>
@@ -605,8 +605,11 @@ void SBThread::StepInto(const char *target_name, uint32_t end_line,
     if (end_line == LLDB_INVALID_LINE_NUMBER)
       range = sc.line_entry.range;
     else {
-      if (!sc.GetAddressRangeFromHereToEndLine(end_line, range, error.ref()))
+      llvm::Error err = sc.GetAddressRangeFromHereToEndLine(end_line, range);
+      if (err) {
+        error = Status::FromErrorString(llvm::toString(std::move(err)).c_str());
         return;
+      }
     }
 
     const LazyBool step_out_avoids_code_without_debug_info =
@@ -839,7 +842,6 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     // appropriate error message.
 
     bool all_in_function = true;
-    AddressRange fun_range = frame_sc.function->GetAddressRange();
 
     std::vector<addr_t> step_over_until_addrs;
     const bool abort_other_plans = false;
@@ -856,7 +858,9 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
       addr_t step_addr =
           sc.line_entry.range.GetBaseAddress().GetLoadAddress(target);
       if (step_addr != LLDB_INVALID_ADDRESS) {
-        if (fun_range.ContainsLoadAddress(step_addr, target))
+        AddressRange unused_range;
+        if (frame_sc.function->GetRangeContainingLoadAddress(step_addr, *target,
+                                                             unused_range))
           step_over_until_addrs.push_back(step_addr);
         else
           all_in_function = false;

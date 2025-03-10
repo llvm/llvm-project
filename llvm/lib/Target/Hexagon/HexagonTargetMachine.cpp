@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/VLIWMachineScheduler.h"
-#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
@@ -66,6 +65,9 @@ static cl::opt<bool> DisableHexagonMask(
 static cl::opt<bool> DisableStoreWidening("disable-store-widen", cl::Hidden,
                                           cl::init(false),
                                           cl::desc("Disable store widening"));
+
+static cl::opt<bool> DisableLoadWidening("disable-load-widen", cl::Hidden,
+                                         cl::desc("Disable load widening"));
 
 static cl::opt<bool> EnableExpandCondsets("hexagon-expand-condsets",
                                           cl::init(true), cl::Hidden,
@@ -230,6 +232,7 @@ FunctionPass *createHexagonRDFOpt();
 FunctionPass *createHexagonSplitConst32AndConst64();
 FunctionPass *createHexagonSplitDoubleRegs();
 FunctionPass *createHexagonStoreWidening();
+FunctionPass *createHexagonLoadWidening();
 FunctionPass *createHexagonTfrCleanup();
 FunctionPass *createHexagonVectorCombineLegacyPass();
 FunctionPass *createHexagonVectorPrint();
@@ -274,7 +277,7 @@ HexagonTargetMachine::HexagonTargetMachine(const Target &T, const Triple &TT,
     // Specify the vector alignment explicitly. For v512x1, the calculated
     // alignment would be 512*alignment(i1), which is 512 bytes, instead of
     // the required minimum of 64 bytes.
-    : LLVMTargetMachine(
+    : CodeGenTargetMachineImpl(
           T,
           "e-m:e-p:32:32:32-a:0-n16:32-"
           "i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-"
@@ -348,6 +351,11 @@ MachineFunctionInfo *HexagonTargetMachine::createMachineFunctionInfo(
 
 HexagonTargetMachine::~HexagonTargetMachine() = default;
 
+ScheduleDAGInstrs *
+HexagonTargetMachine::createMachineScheduler(MachineSchedContext *C) const {
+  return createVLIWMachineSched(C);
+}
+
 namespace {
 /// Hexagon Code Generator Pass Configuration Options.
 class HexagonPassConfig : public TargetPassConfig {
@@ -357,11 +365,6 @@ public:
 
   HexagonTargetMachine &getHexagonTargetMachine() const {
     return getTM<HexagonTargetMachine>();
-  }
-
-  ScheduleDAGInstrs *
-  createMachineScheduler(MachineSchedContext *C) const override {
-    return createVLIWMachineSched(C);
   }
 
   void addIRPasses() override;
@@ -461,6 +464,8 @@ void HexagonPassConfig::addPreRegAlloc() {
       insertPass(&VirtRegRewriterID, &HexagonTfrCleanupID);
     if (!DisableStoreWidening)
       addPass(createHexagonStoreWidening());
+    if (!DisableLoadWidening)
+      addPass(createHexagonLoadWidening());
     if (EnableGenMemAbs)
       addPass(createHexagonGenMemAbsolute());
     if (!DisableHardwareLoops)

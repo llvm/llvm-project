@@ -14,13 +14,11 @@
 #include "BPF.h"
 #include "BPFInstrInfo.h"
 #include "BPFMCInstLower.h"
-#include "BPFTargetMachine.h"
 #include "BTFDebug.h"
 #include "MCTargetDesc/BPFInstPrinter.h"
 #include "TargetInfo/BPFTargetInfo.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/IR/Module.h"
@@ -62,7 +60,7 @@ bool BPFAsmPrinter::doInitialization(Module &M) {
   // Only emit BTF when debuginfo available.
   if (MAI->doesSupportDebugInformation() && !M.debug_compile_units().empty()) {
     BTF = new BTFDebug(this);
-    DebugHandlers.push_back(std::unique_ptr<BTFDebug>(BTF));
+    Handlers.push_back(std::unique_ptr<BTFDebug>(BTF));
   }
 
   return false;

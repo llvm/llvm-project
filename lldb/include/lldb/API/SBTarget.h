@@ -101,6 +101,11 @@ public:
   ///     A SBStructuredData with the statistics collected.
   lldb::SBStructuredData GetStatistics(SBStatisticsOptions options);
 
+  /// Reset the statistics collected for this target.
+  /// This includes clearing symbol table and debug info parsing/index time for
+  /// all modules, breakpoint resolve time and target statistics.
+  void ResetStatistics();
+
   /// Return the platform object associated with the target.
   ///
   /// After return, the platform object should be checked for
@@ -959,6 +964,7 @@ protected:
   friend class SBSection;
   friend class SBSourceManager;
   friend class SBSymbol;
+  friend class SBType;
   friend class SBTypeStaticField;
   friend class SBValue;
   friend class SBVariablesOptions;

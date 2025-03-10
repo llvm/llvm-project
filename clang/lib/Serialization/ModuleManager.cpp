@@ -119,7 +119,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   // Note: ExpectedSize and ExpectedModTime will be 0 for MK_ImplicitModule
   // when using an ASTFileSignature.
   if (lookupModuleFile(FileName, ExpectedSize, ExpectedModTime, Entry)) {
-    ErrorStr = "module file out of date";
+    ErrorStr = "module file has a different size or mtime than expected";
     return OutOfDate;
   }
 
@@ -170,7 +170,8 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   NewModule->InputFilesValidationTimestamp = 0;
 
   if (NewModule->Kind == MK_ImplicitModule) {
-    std::string TimestampFilename = NewModule->getTimestampFilename();
+    std::string TimestampFilename =
+        ModuleFile::getTimestampFilename(NewModule->FileName);
     llvm::vfs::Status Status;
     // A cached stat value would be fine as well.
     if (!FileMgr.getNoncachedStatValue(TimestampFilename, Status))

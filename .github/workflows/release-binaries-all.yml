@@ -27,6 +27,10 @@ on:
         required: true
         default: false
         type: boolean
+    secrets:
+      RELEASE_TASKS_USER_TOKEN:
+        description: "Secret used to check user permissions."
+        required: false
 
   pull_request:
     types:
@@ -43,6 +47,7 @@ on:
       - '.github/workflows/release-binaries.yml'
       - '.github/workflows/release-binaries-setup-stage/*'
       - '.github/workflows/release-binaries-save-stage/*'
+      - 'clang/cmake/caches/Release.cmake'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || 'dispatch' }}
@@ -82,7 +87,7 @@ jobs:
       matrix:
         runs-on:
           - ubuntu-22.04
-          - windows-2022
+          - ubuntu-22.04-arm
           - macos-13
           - macos-14
 

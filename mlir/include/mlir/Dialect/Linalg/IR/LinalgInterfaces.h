@@ -120,6 +120,16 @@ bool isaConvolutionOpInterface(LinalgOp linalgOp,
 /// Checks whether `linalgOp` is semantically equivalent to a `linalg.copyOp`.
 bool isaCopyOpInterface(LinalgOp linalgOp);
 
+/// Checks whether `genericOp` is semantically equivalent to a
+///  `linalg.broadcast`. Returns broadcast dimensions if true.
+std::optional<SmallVector<int64_t>>
+isaBroadcastOpInterface(GenericOp genericOp);
+
+/// Checks whether `genericOp` is semantically equivalent to a
+///  `linalg.transpose`. Returns permuted dimensions if true.
+std::optional<SmallVector<int64_t>>
+isaTransposeOpInterface(GenericOp genericOp);
+
 /// Checks whether a given `genericOp` is semantically equivalent to a single
 /// linalgelementwise unary op. e.g. linalg.exp.
 /// A linalg.generic body could be a series of unary elementwise ops e.g.
@@ -210,5 +220,8 @@ LogicalResult verifyStructuredOpInterface(Operation *op);
 
 /// Include the generated interface declarations.
 #include "mlir/Dialect/Linalg/IR/LinalgInterfaces.h.inc"
+
+/// Include the generated relayout interface declarations.
+#include "mlir/Dialect/Linalg/IR/RelayoutOpInterface.h.inc"
 
 #endif // MLIR_DIALECT_LINALG_IR_LINALGINTERFACES_H_

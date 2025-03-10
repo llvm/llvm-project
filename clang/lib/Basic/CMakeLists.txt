@@ -89,6 +89,7 @@ add_clang_library(clangBasic
   SourceManager.cpp
   SourceMgrAdapter.cpp
   Stack.cpp
+  StackExhaustionHandler.cpp
   TargetID.cpp
   TargetInfo.cpp
   Targets.cpp
@@ -119,6 +120,7 @@ add_clang_library(clangBasic
   Targets/WebAssembly.cpp
   Targets/X86.cpp
   Targets/XCore.cpp
+  Targets/Xtensa.cpp
   TokenKinds.cpp
   TypeTraits.cpp
   Version.cpp

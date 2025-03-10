@@ -136,6 +136,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_NT>::enumeration(
   ECase(NT_ARM_ZA);
   ECase(NT_ARM_ZT);
   ECase(NT_ARM_FPMR);
+  ECase(NT_ARM_GCS);
   ECase(NT_FILE);
   ECase(NT_PRXFPREG);
   ECase(NT_SIGINFO);
@@ -495,6 +496,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_MACH_V71, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V71T, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_MACH_V73, EF_HEXAGON_MACH);
+    BCaseMask(EF_HEXAGON_MACH_V75, EF_HEXAGON_MACH);
     BCaseMask(EF_HEXAGON_ISA_V2, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V3, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V4, EF_HEXAGON_ISA);
@@ -509,6 +511,7 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_HEXAGON_ISA_V69, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V71, EF_HEXAGON_ISA);
     BCaseMask(EF_HEXAGON_ISA_V73, EF_HEXAGON_ISA);
+    BCaseMask(EF_HEXAGON_ISA_V75, EF_HEXAGON_ISA);
     break;
   case ELF::EM_AVR:
     BCaseMask(EF_AVR_ARCH_AVR1, EF_AVR_ARCH_MASK);
@@ -606,9 +609,8 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX909, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX90A, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX90C, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX940, EF_AMDGPU_MACH);
-    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX941, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX942, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX950, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1010, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1011, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1012, EF_AMDGPU_MACH);
@@ -627,9 +629,11 @@ void ScalarBitSetTraits<ELFYAML::ELF_EF>::bitset(IO &IO,
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1150, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1151, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1152, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1153, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1200, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX1201, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC, EF_AMDGPU_MACH);
+    BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX9_4_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC, EF_AMDGPU_MACH);
     BCaseMask(EF_AMDGPU_MACH_AMDGCN_GFX11_GENERIC, EF_AMDGPU_MACH);
@@ -797,6 +801,9 @@ void ScalarBitSetTraits<ELFYAML::ELF_SHF>::bitset(IO &IO,
     break;
   }
   switch (Object->getMachine()) {
+  case ELF::EM_AARCH64:
+    BCase(SHF_AARCH64_PURECODE);
+    break;
   case ELF::EM_ARM:
     BCase(SHF_ARM_PURECODE);
     break;
@@ -1582,7 +1589,7 @@ static bool isInteger(StringRef Val) {
 
 void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
     IO &IO, std::unique_ptr<ELFYAML::Chunk> &Section) {
-  ELFYAML::ELF_SHT Type;
+  ELFYAML::ELF_SHT Type = ELF::SHT_NULL;
   StringRef TypeStr;
   if (IO.outputting()) {
     if (auto *S = dyn_cast<ELFYAML::Section>(Section.get()))
@@ -1741,7 +1748,9 @@ void MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::mapping(
 std::string MappingTraits<std::unique_ptr<ELFYAML::Chunk>>::validate(
     IO &io, std::unique_ptr<ELFYAML::Chunk> &C) {
   if (const auto *F = dyn_cast<ELFYAML::Fill>(C.get())) {
-    if (F->Pattern && F->Pattern->binary_size() != 0 && !F->Size)
+    // Can't check the `Size`, as it's required and may be left uninitialized by
+    // previous error.
+    if (!io.error() && F->Pattern && F->Pattern->binary_size() != 0 && !F->Size)
       return "\"Size\" can't be 0 when \"Pattern\" is not empty";
     return "";
   }
@@ -1920,6 +1929,7 @@ void MappingTraits<ELFYAML::VerdefEntry>::mapping(IO &IO,
   IO.mapOptional("Flags", E.Flags);
   IO.mapOptional("VersionNdx", E.VersionNdx);
   IO.mapOptional("Hash", E.Hash);
+  IO.mapOptional("VDAux", E.VDAux);
   IO.mapRequired("Names", E.VerNames);
 }
 

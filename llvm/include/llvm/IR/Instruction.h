@@ -206,12 +206,25 @@ public:
 
   /// Insert an unlinked instruction into a basic block immediately before
   /// the specified instruction.
+  ///
+  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
+  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
+  /// insertBefore without unwrapping/rewrapping. For all other positions, call
+  /// getIterator to fetch the instruction iterator.
+  LLVM_DEPRECATED("Use iterators as instruction positions", "")
   void insertBefore(Instruction *InsertPos);
+
+  /// Insert an unlinked instruction into a basic block immediately before
+  /// the specified position.
   void insertBefore(InstListType::iterator InsertPos);
 
   /// Insert an unlinked instruction into a basic block immediately after the
   /// specified instruction.
   void insertAfter(Instruction *InsertPos);
+
+  /// Insert an unlinked instruction into a basic block immediately after the
+  /// specified position.
+  void insertAfter(InstListType::iterator InsertPos);
 
   /// Inserts an unlinked instruction into \p ParentBB at position \p It and
   /// returns the iterator of the inserted instruction.
@@ -222,13 +235,35 @@ public:
 
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right before MovePos.
+  ///
+  /// Deprecated in favour of the iterator-accepting flavour. Iterators at the
+  /// start of a block such as BasicBlock::getFirstNonPHIIt must be passed into
+  /// moveBefore without unwrapping/rewrapping. For all other positions, call
+  /// getIterator to fetch the instruction iterator.
+  LLVM_DEPRECATED("Use iterators as instruction positions", "")
   void moveBefore(Instruction *MovePos);
+
+  /// Unlink this instruction from its current basic block and insert it into
+  /// the basic block that MovePos lives in, right before MovePos.
+  void moveBefore(InstListType::iterator InsertPos);
 
   /// Perform a \ref moveBefore operation, while signalling that the caller
   /// intends to preserve the original ordering of instructions. This implicitly
   /// means that any adjacent debug-info should move with this instruction.
-  /// This method is currently a no-op placeholder, but it will become meaningful
-  /// when the "RemoveDIs" project is enabled.
+  void moveBeforePreserving(InstListType::iterator MovePos);
+
+  /// Perform a \ref moveBefore operation, while signalling that the caller
+  /// intends to preserve the original ordering of instructions. This implicitly
+  /// means that any adjacent debug-info should move with this instruction.
+  void moveBeforePreserving(BasicBlock &BB, InstListType::iterator I);
+
+  /// Perform a \ref moveBefore operation, while signalling that the caller
+  /// intends to preserve the original ordering of instructions. This implicitly
+  /// means that any adjacent debug-info should move with this instruction.
+  ///
+  /// Deprecated in favour of the iterator-accepting flavour of
+  /// moveBeforePreserving, as all insertions should be at iterator positions.
+  LLVM_DEPRECATED("Use iterators as instruction positions", "")
   void moveBeforePreserving(Instruction *MovePos);
 
 private:
@@ -242,12 +277,13 @@ public:
   /// \pre I is a valid iterator into BB.
   void moveBefore(BasicBlock &BB, InstListType::iterator I);
 
-  /// (See other overload for moveBeforePreserving).
-  void moveBeforePreserving(BasicBlock &BB, InstListType::iterator I);
-
   /// Unlink this instruction from its current basic block and insert it into
   /// the basic block that MovePos lives in, right after MovePos.
   void moveAfter(Instruction *MovePos);
+
+  /// Unlink this instruction from its current basic block and insert it into
+  /// the basic block that MovePos lives in, right after MovePos.
+  void moveAfter(InstListType::iterator MovePos);
 
   /// See \ref moveBeforePreserving .
   void moveAfterPreserving(Instruction *MovePos);
@@ -278,6 +314,7 @@ public:
   bool isUnaryOp() const { return isUnaryOp(getOpcode()); }
   bool isBinaryOp() const { return isBinaryOp(getOpcode()); }
   bool isIntDivRem() const { return isIntDivRem(getOpcode()); }
+  bool isFPDivRem() const { return isFPDivRem(getOpcode()); }
   bool isShift() const { return isShift(getOpcode()); }
   bool isCast() const { return isCast(getOpcode()); }
   bool isFuncletPad() const { return isFuncletPad(getOpcode()); }
@@ -302,6 +339,10 @@ public:
 
   static inline bool isIntDivRem(unsigned Opcode) {
     return Opcode == UDiv || Opcode == SDiv || Opcode == URem || Opcode == SRem;
+  }
+
+  static inline bool isFPDivRem(unsigned Opcode) {
+    return Opcode == FDiv || Opcode == FRem;
   }
 
   /// Determine if the Opcode is one of the shift instructions.
@@ -361,6 +402,10 @@ public:
 
   /// Return true if this instruction has any metadata attached to it.
   bool hasMetadata() const { return DbgLoc || Value::hasMetadata(); }
+
+  // Return true if this instruction contains loop metadata other than
+  // a debug location
+  bool hasNonDebugLocLoopMetadata() const;
 
   /// Return true if this instruction has metadata attached to it other than a
   /// debug location.
@@ -881,16 +926,20 @@ public:
   /// This is like isIdenticalTo, except that it ignores the
   /// SubclassOptionalData flags, which may specify conditions under which the
   /// instruction's result is undefined.
-  bool isIdenticalToWhenDefined(const Instruction *I) const LLVM_READONLY;
+  bool
+  isIdenticalToWhenDefined(const Instruction *I,
+                           bool IntersectAttrs = false) const LLVM_READONLY;
 
   /// When checking for operation equivalence (using isSameOperationAs) it is
   /// sometimes useful to ignore certain attributes.
   enum OperationEquivalenceFlags {
     /// Check for equivalence ignoring load/store alignment.
-    CompareIgnoringAlignment = 1<<0,
+    CompareIgnoringAlignment = 1 << 0,
     /// Check for equivalence treating a type and a vector of that type
     /// as equivalent.
-    CompareUsingScalarTypes = 1<<1
+    CompareUsingScalarTypes = 1 << 1,
+    /// Check for equivalence with intersected callbase attrs.
+    CompareUsingIntersectedAttrs = 1 << 2,
   };
 
   /// This function determines if the specified instruction executes the same
@@ -911,8 +960,8 @@ public:
   /// @returns true if the specific instruction has the same opcde specific
   /// characteristics as the current one. Determine if one instruction has the
   /// same state as another.
-  bool hasSameSpecialState(const Instruction *I2,
-                           bool IgnoreAlignment = false) const LLVM_READONLY;
+  bool hasSameSpecialState(const Instruction *I2, bool IgnoreAlignment = false,
+                           bool IntersectAttrs = false) const LLVM_READONLY;
 
   /// Return true if there are any uses of this instruction in blocks other than
   /// the specified block. Note that PHI nodes are considered to evaluate their

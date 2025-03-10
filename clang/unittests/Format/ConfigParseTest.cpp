@@ -144,6 +144,13 @@ TEST(ConfigParseTest, GetsCorrectBasedOnStyle) {
   EXPECT_EQ(0, parseConfiguration(TEXT, &Style).value());                      \
   EXPECT_EQ(VALUE, Style.FIELD) << "Unexpected value after parsing!"
 
+#define CHECK_PARSE_INT(FIELD) CHECK_PARSE(#FIELD ": -1234", FIELD, -1234)
+
+#define CHECK_PARSE_UNSIGNED(FIELD) CHECK_PARSE(#FIELD ": 1234", FIELD, 1234u)
+
+#define CHECK_PARSE_LIST(FIELD)                                                \
+  CHECK_PARSE(#FIELD ": [foo]", FIELD, std::vector<std::string>{"foo"})
+
 #define CHECK_PARSE_NESTED_VALUE(TEXT, STRUCT, FIELD, VALUE)                   \
   EXPECT_NE(VALUE, Style.STRUCT.FIELD) << "Initial value already the same!";   \
   EXPECT_EQ(0, parseConfiguration(#STRUCT ":\n  " TEXT, &Style).value());      \
@@ -159,32 +166,37 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(AllowShortCompoundRequirementOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortEnumsOnASingleLine);
   CHECK_PARSE_BOOL(AllowShortLoopsOnASingleLine);
+  CHECK_PARSE_BOOL(AllowShortNamespacesOnASingleLine);
   CHECK_PARSE_BOOL(BinPackArguments);
+  CHECK_PARSE_BOOL(BinPackLongBracedList);
   CHECK_PARSE_BOOL(BreakAdjacentStringLiterals);
   CHECK_PARSE_BOOL(BreakAfterJavaFieldAnnotations);
+  CHECK_PARSE_BOOL(BreakBeforeTemplateCloser);
   CHECK_PARSE_BOOL(BreakBeforeTernaryOperators);
   CHECK_PARSE_BOOL(BreakStringLiterals);
   CHECK_PARSE_BOOL(CompactNamespaces);
+  CHECK_PARSE_BOOL(Cpp11BracedListStyle);
   CHECK_PARSE_BOOL(DerivePointerAlignment);
   CHECK_PARSE_BOOL_FIELD(DerivePointerAlignment, "DerivePointerBinding");
   CHECK_PARSE_BOOL(DisableFormat);
   CHECK_PARSE_BOOL(IndentAccessModifiers);
-  CHECK_PARSE_BOOL(IndentCaseLabels);
   CHECK_PARSE_BOOL(IndentCaseBlocks);
+  CHECK_PARSE_BOOL(IndentCaseLabels);
+  CHECK_PARSE_BOOL(IndentExportBlock);
   CHECK_PARSE_BOOL(IndentGotoLabels);
-  CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
   CHECK_PARSE_BOOL(IndentRequiresClause);
+  CHECK_PARSE_BOOL_FIELD(IndentRequiresClause, "IndentRequires");
   CHECK_PARSE_BOOL(IndentWrappedFunctionNames);
   CHECK_PARSE_BOOL(InsertBraces);
   CHECK_PARSE_BOOL(InsertNewlineAtEOF);
   CHECK_PARSE_BOOL_FIELD(KeepEmptyLines.AtEndOfFile, "KeepEmptyLinesAtEOF");
   CHECK_PARSE_BOOL_FIELD(KeepEmptyLines.AtStartOfBlock,
                          "KeepEmptyLinesAtTheStartOfBlocks");
+  CHECK_PARSE_BOOL(KeepFormFeed);
   CHECK_PARSE_BOOL(ObjCSpaceAfterProperty);
   CHECK_PARSE_BOOL(ObjCSpaceBeforeProtocolList);
-  CHECK_PARSE_BOOL(Cpp11BracedListStyle);
-  CHECK_PARSE_BOOL(ReflowComments);
   CHECK_PARSE_BOOL(RemoveBracesLLVM);
+  CHECK_PARSE_BOOL(RemoveEmptyLinesInUnwrappedLines);
   CHECK_PARSE_BOOL(RemoveSemicolon);
   CHECK_PARSE_BOOL(SkipMacroDefinitionBody);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
@@ -248,33 +260,40 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
 
 #undef CHECK_PARSE_BOOL
 
+TEST(ConfigParseTest, ParsesConfigurationIntegers) {
+  FormatStyle Style = {};
+  Style.Language = FormatStyle::LK_Cpp;
+
+  CHECK_PARSE_INT(AccessModifierOffset);
+  CHECK_PARSE_INT(BracedInitializerIndentWidth);
+  CHECK_PARSE_INT(PPIndentWidth);
+
+  CHECK_PARSE_UNSIGNED(ColumnLimit);
+  CHECK_PARSE_UNSIGNED(ConstructorInitializerIndentWidth);
+  CHECK_PARSE_UNSIGNED(ContinuationIndentWidth);
+  CHECK_PARSE_UNSIGNED(IndentWidth);
+  CHECK_PARSE_UNSIGNED(MaxEmptyLinesToKeep);
+  CHECK_PARSE_UNSIGNED(ObjCBlockIndentWidth);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakAssignment);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakBeforeFirstCallParameter);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakBeforeMemberAccess);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakComment);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakFirstLessLess);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakOpenParenthesis);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakScopeResolution);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakString);
+  CHECK_PARSE_UNSIGNED(PenaltyBreakTemplateDeclaration);
+  CHECK_PARSE_UNSIGNED(PenaltyExcessCharacter);
+  CHECK_PARSE_UNSIGNED(PenaltyIndentedWhitespace);
+  CHECK_PARSE_UNSIGNED(PenaltyReturnTypeOnItsOwnLine);
+  CHECK_PARSE_UNSIGNED(ShortNamespaceLines);
+  CHECK_PARSE_UNSIGNED(SpacesBeforeTrailingComments);
+  CHECK_PARSE_UNSIGNED(TabWidth);
+}
+
 TEST(ConfigParseTest, ParsesConfiguration) {
   FormatStyle Style = {};
   Style.Language = FormatStyle::LK_Cpp;
-  CHECK_PARSE("AccessModifierOffset: -1234", AccessModifierOffset, -1234);
-  CHECK_PARSE("ConstructorInitializerIndentWidth: 1234",
-              ConstructorInitializerIndentWidth, 1234u);
-  CHECK_PARSE("ObjCBlockIndentWidth: 1234", ObjCBlockIndentWidth, 1234u);
-  CHECK_PARSE("ColumnLimit: 1234", ColumnLimit, 1234u);
-  CHECK_PARSE("MaxEmptyLinesToKeep: 1234", MaxEmptyLinesToKeep, 1234u);
-  CHECK_PARSE("PenaltyBreakAssignment: 1234", PenaltyBreakAssignment, 1234u);
-  CHECK_PARSE("PenaltyBreakBeforeFirstCallParameter: 1234",
-              PenaltyBreakBeforeFirstCallParameter, 1234u);
-  CHECK_PARSE("PenaltyBreakTemplateDeclaration: 1234",
-              PenaltyBreakTemplateDeclaration, 1234u);
-  CHECK_PARSE("PenaltyBreakOpenParenthesis: 1234", PenaltyBreakOpenParenthesis,
-              1234u);
-  CHECK_PARSE("PenaltyBreakScopeResolution: 1234", PenaltyBreakScopeResolution,
-              1234u);
-  CHECK_PARSE("PenaltyExcessCharacter: 1234", PenaltyExcessCharacter, 1234u);
-  CHECK_PARSE("PenaltyReturnTypeOnItsOwnLine: 1234",
-              PenaltyReturnTypeOnItsOwnLine, 1234u);
-  CHECK_PARSE("SpacesBeforeTrailingComments: 1234",
-              SpacesBeforeTrailingComments, 1234u);
-  CHECK_PARSE("IndentWidth: 32", IndentWidth, 32u);
-  CHECK_PARSE("ContinuationIndentWidth: 11", ContinuationIndentWidth, 11u);
-  CHECK_PARSE("BracedInitializerIndentWidth: 34", BracedInitializerIndentWidth,
-              34);
   CHECK_PARSE("CommentPragmas: '// abc$'", CommentPragmas, "// abc$");
 
   Style.QualifierAlignment = FormatStyle::QAS_Right;
@@ -300,48 +319,53 @@ TEST(ConfigParseTest, ParsesConfiguration) {
 #define CHECK_ALIGN_CONSECUTIVE(FIELD)                                         \
   do {                                                                         \
     Style.FIELD.Enabled = true;                                                \
-    CHECK_PARSE(                                                               \
-        #FIELD ": None", FIELD,                                                \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/false, /*AcrossEmptyLines=*/false,                    \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(#FIELD ": None", FIELD,                                        \
+                FormatStyle::AlignConsecutiveStyle({}));                       \
     CHECK_PARSE(                                                               \
         #FIELD ": Consecutive", FIELD,                                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
              /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     CHECK_PARSE(                                                               \
         #FIELD ": AcrossEmptyLines", FIELD,                                    \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
              /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionDeclarations=*/true,                               \
+             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(                                                               \
+        #FIELD ": AcrossComments", FIELD,                                      \
+        FormatStyle::AlignConsecutiveStyle(                                    \
+            {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
+             /*AcrossComments=*/true, /*AlignCompound=*/false,                 \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     CHECK_PARSE(                                                               \
         #FIELD ": AcrossEmptyLinesAndComments", FIELD,                         \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/true,                      \
              /*AcrossComments=*/true, /*AlignCompound=*/false,                 \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
     /* For backwards compability, false / true should still parse */           \
-    CHECK_PARSE(                                                               \
-        #FIELD ": false", FIELD,                                               \
-        FormatStyle::AlignConsecutiveStyle(                                    \
-            {/*Enabled=*/false, /*AcrossEmptyLines=*/false,                    \
-             /*AcrossComments=*/false, /*AlignCompound=*/false,                \
-             /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
+    CHECK_PARSE(#FIELD ": false", FIELD,                                       \
+                FormatStyle::AlignConsecutiveStyle({}));                       \
     CHECK_PARSE(                                                               \
         #FIELD ": true", FIELD,                                                \
         FormatStyle::AlignConsecutiveStyle(                                    \
             {/*Enabled=*/true, /*AcrossEmptyLines=*/false,                     \
              /*AcrossComments=*/false, /*AlignCompound=*/false,                \
+             /*AlignFunctionDeclarations=*/true,                               \
              /*AlignFunctionPointers=*/false, /*PadOperators=*/true}));        \
                                                                                \
     CHECK_PARSE_NESTED_BOOL(FIELD, Enabled);                                   \
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossEmptyLines);                          \
     CHECK_PARSE_NESTED_BOOL(FIELD, AcrossComments);                            \
     CHECK_PARSE_NESTED_BOOL(FIELD, AlignCompound);                             \
+    CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionDeclarations);                 \
+    CHECK_PARSE_NESTED_BOOL(FIELD, AlignFunctionPointers);                     \
     CHECK_PARSE_NESTED_BOOL(FIELD, PadOperators);                              \
   } while (false)
 
@@ -375,6 +399,16 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::PAS_Right);
   CHECK_PARSE("PointerBindsToType: Middle", PointerAlignment,
               FormatStyle::PAS_Middle);
+
+  Style.ReflowComments = FormatStyle::RCS_Always;
+  CHECK_PARSE("ReflowComments: Never", ReflowComments, FormatStyle::RCS_Never);
+  CHECK_PARSE("ReflowComments: IndentOnly", ReflowComments,
+              FormatStyle::RCS_IndentOnly);
+  CHECK_PARSE("ReflowComments: Always", ReflowComments,
+              FormatStyle::RCS_Always);
+  // For backward compatibility:
+  CHECK_PARSE("ReflowComments: false", ReflowComments, FormatStyle::RCS_Never);
+  CHECK_PARSE("ReflowComments: true", ReflowComments, FormatStyle::RCS_Always);
 
   Style.Standard = FormatStyle::LS_Auto;
   CHECK_PARSE("Standard: c++03", Standard, FormatStyle::LS_Cpp03);
@@ -848,6 +882,13 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SortUsingDeclarations: true", SortUsingDeclarations,
               FormatStyle::SUD_LexicographicNumeric);
 
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Never",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Never);
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Always",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Always);
+  CHECK_PARSE("WrapNamespaceBodyWithEmptyLines: Leave",
+              WrapNamespaceBodyWithEmptyLines, FormatStyle::WNBWELS_Leave);
+
   // FIXME: This is required because parsing a configuration simply overwrites
   // the first N elements of the list instead of resetting it.
   Style.ForEachMacros.clear();
@@ -882,11 +923,15 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("StatementMacros: [QUNUSED, QT_REQUIRE_VERSION]", StatementMacros,
               std::vector<std::string>({"QUNUSED", "QT_REQUIRE_VERSION"}));
 
-  Style.NamespaceMacros.clear();
-  CHECK_PARSE("NamespaceMacros: [TESTSUITE]", NamespaceMacros,
-              std::vector<std::string>{"TESTSUITE"});
-  CHECK_PARSE("NamespaceMacros: [TESTSUITE, SUITE]", NamespaceMacros,
-              std::vector<std::string>({"TESTSUITE", "SUITE"}));
+  CHECK_PARSE_LIST(JavaImportGroups);
+  CHECK_PARSE_LIST(Macros);
+  CHECK_PARSE_LIST(NamespaceMacros);
+  CHECK_PARSE_LIST(ObjCPropertyAttributeOrder);
+  CHECK_PARSE_LIST(TableGenBreakingDAGArgOperators);
+  CHECK_PARSE_LIST(TemplateNames);
+  CHECK_PARSE_LIST(TypeNames);
+  CHECK_PARSE_LIST(TypenameMacros);
+  CHECK_PARSE_LIST(VariableTemplates);
 
   Style.WhitespaceSensitiveMacros.clear();
   CHECK_PARSE("WhitespaceSensitiveMacros: [STRINGIZE]",
@@ -1396,8 +1441,10 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_EQ(*Style9, SubSubStyle);
 
   // Test 9.8: use inheritance from a file without BasedOnStyle
-  ASSERT_TRUE(FS.addFile("/e/withoutbase/.clang-format", 0,
-                         llvm::MemoryBuffer::getMemBuffer("ColumnLimit: 123")));
+  ASSERT_TRUE(FS.addFile(
+      "/e/withoutbase/.clang-format", 0,
+      llvm::MemoryBuffer::getMemBuffer("BracedInitializerIndentWidth: 2\n"
+                                       "ColumnLimit: 123")));
   ASSERT_TRUE(
       FS.addFile("/e/withoutbase/sub/.clang-format", 0,
                  llvm::MemoryBuffer::getMemBuffer(
@@ -1407,6 +1454,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
+    Style.BracedInitializerIndentWidth = 2;
     Style.ColumnLimit = 123;
     return Style;
   }());
@@ -1415,6 +1463,7 @@ TEST(ConfigParseTest, GetStyleOfFile) {
   ASSERT_TRUE(static_cast<bool>(Style9));
   ASSERT_EQ(*Style9, [] {
     auto Style = getLLVMStyle();
+    Style.BracedInitializerIndentWidth = 2;
     Style.ColumnLimit = 123;
     Style.IndentWidth = 7;
     return Style;

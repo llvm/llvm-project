@@ -158,17 +158,17 @@ int i3 = f1(f1(f1(&f1, &f1), f1(&f1, &f1), f1(f1(&f1, &f1), &f1)));
 
 namespace user_defined_literal {
 
-consteval int operator"" _test(unsigned long long i) {
+consteval int operator""_test(unsigned long long i) {
 // expected-note@-1+ {{declared here}}
   return 0;
 }
 
 int i = 0_test;
 
-auto ptr = &operator"" _test;
+auto ptr = &operator""_test;
 // expected-error@-1 {{take address}}
 
-consteval auto operator"" _test1(unsigned long long i) {
+consteval auto operator""_test1(unsigned long long i) {
   return &f_eval;
 }
 
@@ -201,7 +201,7 @@ struct A {
 
 using mem_ptr_type = int (A::*)(int);
 
-template<mem_ptr_type ptr>
+template<mem_ptr_type ptr> // expected-note 2{{template parameter is declared here}}
 struct C {};
 
 C<&A::f> c;

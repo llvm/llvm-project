@@ -204,15 +204,15 @@ what to add to your calendar invite.
      - Every 2 weeks on Mondays
      - `gcal <https://calendar.google.com/calendar/u/0?cid=c3ljbC5sbHZtLndnQGdtYWlsLmNvbQ>`__
      - `Meeting details/agenda <https://docs.google.com/document/d/1ivYDSn_5ChTeiZ7TiO64WC_jYJnGwAUiT9Ngi9cAdFU/edit?usp=sharing>`__
-   * - Floating Point Working Group
-     - Every 3rd Wednesday of the month
-     - `ics <https://calendar.google.com/calendar/ical/02582507bac79d186900712566ec3fc69b33ac24d7de0a8c76c7b19976f190c0%40group.calendar.google.com/private-6e35506dbfe13812e92e9aa8cd5d761d/basic.ics>`__
-       `gcal <https://calendar.google.com/calendar/u/0?cid=MDI1ODI1MDdiYWM3OWQxODY5MDA3MTI1NjZlYzNmYzY5YjMzYWMyNGQ3ZGUwYThjNzZjN2IxOTk3NmYxOTBjMEBncm91cC5jYWxlbmRhci5nb29nbGUuY29t>`__
-     - `Meeting details/agenda: <https://docs.google.com/document/d/1QcmUlWftPlBi-Wz6b6PipqJfvjpJ-OuRMRnN9Dm2t0c>`__
    * - Vectorizer Improvement Working Group
-     - Every 3rd Thursday of the month
+     - 3rd Tuesday of the month
      - `ics <https://drive.google.com/file/d/1ten-u-4yjOcCoONUtR4_AxsFxRDTUp1b/view?usp=sharing>`__
      - `Meeting details/agenda: <https://docs.google.com/document/d/1Glzy2JiWuysbD-HBWGUOkZqT09GJ4_Ljodr0lXD5XfQ/edit>`__
+
+
+For event owners, our Discord bot also supports sending automated announcements
+of upcoming sync-ups. Please see the :ref:`discord-bot-event-pings` section for
+info.
 
 Past online sync-ups
 ^^^^^^^^^^^^^^^^^^^^
@@ -311,11 +311,6 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - Monthly, last Monday of the month at 18:00 London time (typically 9am PT), for 30 minutes.
     - `Video Call <https://meet.grosser.science/LLVMOfficeHours>`__
     - English, German, Spanish, French
-  * - Anastasia Stulova
-    - Clang internals for C/C++ language extensions and dialects, OpenCL, GPU, SPIR-V, how to contribute, women in compilers.
-    - Monthly, 1st Tuesday of the month at 17:00 BST - London time (9:00am PT except for 2 weeks in spring), 30 mins slot.
-    - `GoogleMeet <https://meet.google.com/kdy-fdbv-nuk>`__
-    - English, Russian, German (not fluently)
   * - Alexey Bader
     - SYCL compiler, offload tools, OpenCL and SPIR-V, how to contribute.
     - Monthly, 2nd Monday of the month at 9:30am PT, for 30 minutes.
@@ -351,8 +346,8 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - English
   * - Renato Golin
     - General LLVM, MLIR & Linalg, distributed computing, research, socials.
-    - Every first Tuesday of the month, 11:00am UK time, for 60 minutes.
-    - `Google meet <https://meet.google.com/esg-fggc-hfe>`__
+    - Every first Friday of the month, 14:00 UK time, for 60 minutes.
+    - `Google meet <https://meet.google.com/jps-twgq-ivz>`__
     - English, Portuguese
   * - Rotating hosts
     - Getting Started, beginner questions, new contributors.
@@ -360,6 +355,9 @@ The :doc:`CodeOfConduct` applies to all office hours.
     - `Google meet <https://meet.google.com/nga-uhpf-bbb>`__
     - English
 
+For event owners, our Discord bot also supports sending automated announcements
+of upcoming office hours. Please see the :ref:`discord-bot-event-pings` section
+for info.
 
 Guidance for office hours hosts
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -370,14 +368,11 @@ Guidance for office hours hosts
   :ref:`llvm-community-calendar`.
   Please see :ref:`llvm-community-calendar-host-guidance` for more guidance on
   what to add to your calendar invite.
-* When starting an office hours session, consider typing something like "*Hi,
-  I'm available for chats in the next half hour at* video chat URL. *I'm
-  looking forward to having conversations on the video chat or here.*" on the
-  LLVM chat channels that you are already on. These could include:
-
-    * the `#office-hours Discord channel
-      <https://discord.com/channels/636084430946959380/976196303681896538>`__.
-    * :ref:`IRC`
+* When starting an office hours session, if you haven't set up the Discord bot
+  integration, consider typing something like "*Hi, I'm available for chats in
+  the next half hour at* video chat URL. *I'm looking forward to having
+  conversations on the video chat or here.*" on the
+  `#office-hours Discord channel <https://discord.com/channels/636084430946959380/976196303681896538>`__.
 
   Doing this can help:
     * overcome potential anxiety to call in for a first time,
@@ -388,28 +383,73 @@ Guidance for office hours hosts
   from the list above.
 
 
-.. _IRC:
-
-IRC
----
+Discord
+-------
 
 Users and developers of the LLVM project (including subprojects such as Clang)
-can be found in #llvm on `irc.oftc.net <irc://irc.oftc.net/llvm>`_. The channel
-is actively moderated.
+can be found on the community's `Discord <https://discord.gg/xS7Z362>`_
+chat server. The server is actively moderated.
 
-The #llvm-build channel has a bot for
+The #buildbot-status channel has a bot for
 `LLVM buildbot <http://lab.llvm.org/buildbot/#/console>`_ status changes. The
-bot will post a message with a link to a build bot and a blamelist when a build
-goes from passing to failing and again (without the blamelist) when the build
-goes from failing back to passing. It is a good channel for actively monitoring
-build statuses, but it is a noisy channel due to the automated messages. The
-channel is not actively moderated.
+bot will update the channel with a link to a build bot when a build goes from
+passing to failing and again when the build goes from failing back to passing.
+It is a great way to actively monitor the status of the build.
 
-In addition to the traditional IRC there is a
-`Discord <https://discord.com/channels/636084430946959380/636725486533345280>`_
-chat server available. To sign up, please use this
-`invitation link <https://discord.com/invite/xS7Z362>`_.
+The bot also supports @mention-ing you when your email appears on a blamelist.
+For more details, DM ``help`` to the bot.
 
+.. _discord-bot-event-pings:
+
+Discord bot event pings
+^^^^^^^^^^^^^^^^^^^^^^^
+
+Our Discord bot supports automatically sending messages about upcoming events
+on `the LLVM community calendar <https://calendar.google.com/calendar/u/0/embed?src=calendar@llvm.org>`_
+to Discord. This behavior is controlled on a per-event basis, by metadata in the
+event's description. Each piece of metadata should be on its own line in the
+event description.
+
+The currently supported metadata is:
+
+- ``discord-bot-event-type`` - **Required**. Specifies the event type. Valid
+  values are ``office-hours`` and ``sync-up``.
+- ``discord-bot-channels-to-mention`` - **Sometimes required**. A
+  comma-separated list of Discord channels to post notifications in. If your
+  ``discord-bot-event-type`` is ``office-hours``, the ``#office-hours`` channel
+  will be implicitly appended to this list (ergo, you don't need to specify this
+  item). Otherwise, you must specify a value here.
+- ``discord-bot-mention`` - **Optional**. A comma-separated list of people to
+  ping on each event notification. All names mentioned must be Discord
+  usernames, and must have a leading ``@``. e.g., ``@foo, @bar``.
+- ``discord-bot-reminder-time-before-start`` - **Optional**. The number of
+  minutes before the beginning of an event to send a ping. This should be
+  formatted as an integer. Defaults to 30.
+- ``discord-bot-message`` - **Optional**. Text to append to all event pings.
+
+An example of an event description with valid metadata is::
+
+  Regular office hours to chat with people about LLVM! We can help with
+  questions, troubleshooting bugs, etc.
+
+  discord-bot-channels-to-mention: #beginners, #foo
+  discord-bot-event-type: office-hours
+  discord-bot-mention: @gburgessiv, @bar
+  discord-bot-message: Come join us for office hours!
+  discord-bot-reminder-time-before-start: 5
+
+This metadata will prompt the Discord bot to:
+
+* send pings 5 minutes before the given event starts, mentioning ``@gburgessiv``
+  and ``@bar`` in the ping
+* send the pings to the ``#beginners``, ``#foo``, and ``#office-hours`` channels
+* include the text "Come join us for office hours!" in the ping
+
+A few minutes before sending a ping, the bot will double-check that the event
+hasn't been cancelled.
+
+If you need help troubleshooting, or have feature requests/questions, please
+feel free to ping @gburgessiv!
 
 .. _meetups-social-events:
 
@@ -503,6 +543,10 @@ Please put the following pieces of information in your calendar invite:
 * If you have meeting minutes for your event, add a pointer to where those live.
   A good place for meeting minutes could be as a post on LLVM Discourse.
 
+* If you're hosting a sync-up or office hours event and would like it to be
+  announced by the Discord bot, add the relevant metadata (full descriptions
+  available in the :ref:`discord-bot-event-pings` section).
+
 An example invite looks as follows
 
 .. code-block:: none
@@ -518,3 +562,8 @@ An example invite looks as follows
 
   Organizer(s): First Surname (name@email.com)
 
+  discord-bot-channels-to-mention: #lldb
+  discord-bot-event-type: sync-up
+  discord-bot-mention: @host-username, @another-host
+  discord-bot-message: Come join us to chat about LLDB!
+  discord-bot-reminder-time-before-start: 30

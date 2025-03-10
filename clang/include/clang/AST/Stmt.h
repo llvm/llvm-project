@@ -109,6 +109,8 @@ protected:
 
   //===--- Statement bitfields classes ---===//
 
+  #define NumStmtBits 9
+
   class StmtBitfields {
     friend class ASTStmtReader;
     friend class ASTStmtWriter;
@@ -116,9 +118,8 @@ protected:
 
     /// The statement class.
     LLVM_PREFERRED_TYPE(StmtClass)
-    unsigned sClass : 8;
+    unsigned sClass : NumStmtBits;
   };
-  enum { NumStmtBits = 8 };
 
   class NullStmtBitfields {
     friend class ASTStmtReader;
@@ -719,6 +720,18 @@ protected:
     unsigned Kind : 3;
   };
 
+  class ParenExprBitfields {
+    friend class ASTStmtReader;
+    friend class ASTStmtWriter;
+    friend class ParenExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned ProducedByFoldExpansion : 1;
+  };
+
   class StmtExprBitfields {
     friend class ASTStmtReader;
     friend class StmtExpr;
@@ -1202,6 +1215,20 @@ protected:
     SourceLocation Loc;
   };
 
+  class ConvertVectorExprBitfields {
+    friend class ConvertVectorExpr;
+
+    LLVM_PREFERRED_TYPE(ExprBitfields)
+    unsigned : NumExprBits;
+
+    //
+    /// This is only meaningful for operations on floating point
+    /// types when additional values need to be in trailing storage.
+    /// It is 0 otherwise.
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned HasFPFeatures : 1;
+  };
+
   union {
     // Same order as in StmtNodes.td.
     // Statements
@@ -1241,6 +1268,7 @@ protected:
     GenericSelectionExprBitfields GenericSelectionExprBits;
     PseudoObjectExprBitfields PseudoObjectExprBits;
     SourceLocExprBitfields SourceLocExprBits;
+    ParenExprBitfields ParenExprBits;
 
     // GNU Extensions.
     StmtExprBitfields StmtExprBits;
@@ -1279,6 +1307,7 @@ protected:
 
     // Clang Extensions
     OpaqueValueExprBitfields OpaqueValueExprBits;
+    ConvertVectorExprBitfields ConvertVectorExprBits;
   };
 
 public:
