@@ -142,6 +142,10 @@ static bool isSymbolAvailableInC89(const llvm::StringTable &Strings,
 
   auto NameStr = Strings[BuiltinInfo.Offsets.Name];
 
+  if(NameStr.starts_with("__builtin_")) {
+    return true;
+  }
+
   // FIXME: add other C89 symbols here
   if (NameStr == "log") {
     return true;
