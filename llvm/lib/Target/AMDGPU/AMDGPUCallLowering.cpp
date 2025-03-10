@@ -1246,7 +1246,8 @@ bool AMDGPUCallLowering::lowerTailCall(
 
       // On GFX12, we can only change the VGPR allocation for wave32.
       if (!ST.isWave32()) {
-        LLVM_DEBUG(dbgs() << "Dynamic VGPR mode is only supported for wave32\n");
+        F.getContext().diagnose(DiagnosticInfoUnsupported(
+            F, "Dynamic VGPR mode is only supported for wave32\n"));
         return false;
       }
 
