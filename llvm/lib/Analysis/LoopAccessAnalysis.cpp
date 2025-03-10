@@ -2237,6 +2237,10 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       std::min(static_cast<uint64_t>(MinDistance), MinDepDistBytes);
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
+  if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist &&
+      couldPreventStoreLoadForward(MinDistance, TypeByteSize, *CommonStride))
+    return Dependence::BackwardVectorizableButPreventsForwarding;
+
   uint64_t MaxVF = MinDepDistBytes / *CommonStride;
   LLVM_DEBUG(dbgs() << "LAA: Positive min distance " << MinDistance
                     << " with max VF = " << MaxVF << '\n');
@@ -2249,12 +2253,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
     return Dependence::Unknown;
   }
 
-  if (IsTrueDataDependence && EnableForwardingConflictDetection && ConstDist) {
-    if (couldPreventStoreLoadForward(MinDistance, TypeByteSize, *CommonStride))
-      return Dependence::BackwardVectorizableButPreventsForwarding;
-  }
   MaxSafeVectorWidthInBits = std::min(MaxSafeVectorWidthInBits, MaxVFInBits);
-
   return Dependence::BackwardVectorizable;
 }
 

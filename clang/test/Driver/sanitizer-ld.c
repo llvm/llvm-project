@@ -514,7 +514,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-UBSAN-LINUX-LINK-CXX
-// CHECK-UBSAN-LINUX-LINK-CXX: "{{.*}}ld"
+// CHECK-UBSAN-LINUX-LINK-CXX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-UBSAN-LINUX-LINK-CXX-NOT: "-lstdc++"
 // CHECK-UBSAN-LINUX-LINK-CXX: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone.a" "--no-whole-archive"
 
@@ -544,7 +544,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck}--check-prefix=CHECK-VPTR-LINUX-CXX
-// CHECK-VPTR-LINUX-CXX: "{{.*}}ld"
+// CHECK-VPTR-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone.a" "--no-whole-archive"
 // CHECK-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.ubsan_standalone_cxx.a" "--no-whole-archive"
 // CHECK-VPTR-LINUX-CXX-SAME: "-lstdc++"
@@ -618,7 +618,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-ASAN-VPTR-LINUX-CXX
-// CHECK-ASAN-VPTR-LINUX-CXX: "{{.*}}ld"
+// CHECK-ASAN-VPTR-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-ASAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan_static.a" "--no-whole-archive"
 // CHECK-ASAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.asan.a" "--no-whole-archive"
 // CHECK-ASAN-VPTR-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.asan.a.syms"
@@ -658,7 +658,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-MSAN-VPTR-LINUX-CXX
-// CHECK-MSAN-VPTR-LINUX-CXX: "{{.*}}ld"
+// CHECK-MSAN-VPTR-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-MSAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.msan.a" "--no-whole-archive"
 // CHECK-MSAN-VPTR-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.msan.a.syms"
 // CHECK-MSAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.msan_cxx.a" "--no-whole-archive"
@@ -681,7 +681,7 @@
 // RUN:     -resource-dir=%S/Inputs/resource_dir \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | %{filecheck} --check-prefix=CHECK-TSAN-VPTR-LINUX-CXX
-// CHECK-TSAN-VPTR-LINUX-CXX: "{{.*}}ld"
+// CHECK-TSAN-VPTR-LINUX-CXX: "{{.*}}ld{{(.exe)?}}"
 // CHECK-TSAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.tsan.a" "--no-whole-archive"
 // CHECK-TSAN-VPTR-LINUX-CXX-SAME: "--dynamic-list={{.*}}libclang_rt.tsan.a.syms"
 // CHECK-TSAN-VPTR-LINUX-CXX-SAME: "--whole-archive" "{{.*}}libclang_rt.tsan_cxx.a" "--no-whole-archive"

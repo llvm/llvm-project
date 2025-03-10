@@ -274,7 +274,7 @@ protected:
   /// Evaluates an expression and places the result on the stack. If the
   /// expression is of composite type, a local variable will be created
   /// and a pointer to said variable will be placed on the stack.
-  bool visit(const Expr *E);
+  bool visit(const Expr *E) override;
   /// Compiles an initializer. This is like visit() but it will never
   /// create a variable and instead rely on a variable already having
   /// been created. visitInitializer() then relies on a pointer to this
@@ -342,6 +342,9 @@ private:
   /// Emits an integer constant.
   template <typename T> bool emitConst(T Value, PrimType Ty, const Expr *E);
   template <typename T> bool emitConst(T Value, const Expr *E);
+  bool emitBool(bool V, const Expr *E) override {
+    return this->emitConst(V, E);
+  }
 
   llvm::RoundingMode getRoundingMode(const Expr *E) const {
     FPOptions FPO = E->getFPFeaturesInEffect(Ctx.getLangOpts());

@@ -217,7 +217,7 @@ public:
   }
 
   /// Return safe power-of-2 number of elements, which do not prevent store-load
-  /// forwarding and safe to operate simultaneously.
+  /// forwarding, multiplied by the size of the elements in bits.
   std::optional<uint64_t> getStoreLoadForwardSafeVF() const {
     return MaxStoreLoadForwardSafeVF;
   }
@@ -311,7 +311,7 @@ private:
   uint64_t MaxSafeVectorWidthInBits = -1U;
 
   /// Maximum power-of-2 number of elements, which do not prevent store-load
-  /// forwarding and safe to operate simultaneously.
+  /// forwarding, multiplied by the size of the elements in bits.
   std::optional<uint64_t> MaxStoreLoadForwardSafeVF;
 
   /// If we see a non-constant dependence distance we can still try to

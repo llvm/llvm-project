@@ -382,7 +382,8 @@ public:
   const LoopAccessInfo *getLAI() const { return LAI; }
 
   bool isSafeForAnyVectorWidth() const {
-    return LAI->getDepChecker().isSafeForAnyVectorWidth();
+    return LAI->getDepChecker().isSafeForAnyVectorWidth() &&
+           !LAI->getDepChecker().getStoreLoadForwardSafeVF();
   }
 
   uint64_t getMaxSafeVectorWidthInBits() const {
