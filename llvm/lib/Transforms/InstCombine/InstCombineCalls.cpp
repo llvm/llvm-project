@@ -3048,6 +3048,29 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         Intrinsic::getOrInsertDeclaration(II->getModule(), NewIntrin);
     return CallInst::Create(NewFn, CallArgs);
   }
+  case Intrinsic::ptrauth_sign: {
+    // auth + sign can be replaced with resign, which prevents unsafe
+    // spills and reloads of intermediate authenticated value.
+    Value *Ptr = II->getArgOperand(0);
+    Value *SignKey = II->getArgOperand(1);
+    Value *SignDisc = II->getArgOperand(2);
+
+    const auto *CI = dyn_cast<CallBase>(Ptr);
+    if (!CI || CI->getIntrinsicID() != Intrinsic::ptrauth_auth)
+      break;
+
+    Value *BasePtr = CI->getOperand(0);
+    Value *AuthKey = CI->getArgOperand(1);
+    Value *AuthDisc = CI->getArgOperand(2);
+
+    // Not replacing auth+sign using the same schema with nop, as auth+sign
+    // pair traps on authentication failure.
+
+    Function *NewFn = Intrinsic::getOrInsertDeclaration(
+        II->getModule(), Intrinsic::ptrauth_resign);
+    return CallInst::Create(NewFn,
+                            {BasePtr, AuthKey, AuthDisc, SignKey, SignDisc});
+  }
   case Intrinsic::arm_neon_vtbl1:
   case Intrinsic::aarch64_neon_tbl1:
     if (Value *V = simplifyNeonTbl1(*II, Builder))
