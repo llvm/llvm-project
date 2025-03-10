@@ -409,13 +409,13 @@ namespace cwg638 { // cwg638: no
   class X {
     typedef int type;
     template<class T> friend struct A<T>::B;
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::f();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::g();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>' for friend class declaration is not supported; turning off access control for 'X'}}
     template<class T> friend void A<T>::C::h();
-    // expected-warning@-1 {{dependent nested name specifier 'A<T>::C::' for friend class declaration is not supported; turning off access control for 'X'}}
+    // expected-warning@-1 {{dependent nested name specifier 'A<T>::C' for friend class declaration is not supported; turning off access control for 'X'}}
   };
 
   template<> struct A<int> {
