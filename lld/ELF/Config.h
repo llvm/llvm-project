@@ -136,6 +136,9 @@ enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
 // For -z gcs=
 enum class GcsPolicy { Implicit, Never, Always };
 
+// For -z gcs-report= and -zgcs-report-dynamic
+enum class GcsReportPolicy { None, Warning, Error, Unknown };
+
 struct SymbolVersion {
   llvm::StringRef name;
   bool isExternCpp;
@@ -228,7 +231,6 @@ struct Config {
   StringRef zBtiReport = "none";
   StringRef zCetReport = "none";
   StringRef zPauthReport = "none";
-  StringRef zGcsReport = "none";
   StringRef zExecuteOnlyReport = "none";
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
@@ -394,6 +396,8 @@ struct Config {
   UnresolvedPolicy unresolvedSymbolsInShlib;
   Target2Policy target2;
   GcsPolicy zGcs;
+  GcsReportPolicy zGcsReport = GcsReportPolicy::None;
+  GcsReportPolicy zGcsReportDynamic = GcsReportPolicy::None;
   bool power10Stubs;
   ARMVFPArgKind armVFPArgs = ARMVFPArgKind::Default;
   BuildIdKind buildId = BuildIdKind::None;
@@ -745,6 +749,18 @@ ELFSyncStream Fatal(Ctx &ctx);
 uint64_t errCount(Ctx &ctx);
 
 ELFSyncStream InternalErr(Ctx &ctx, const uint8_t *buf);
+
+inline StringRef gcsReportPolicytoString(GcsReportPolicy value) {
+  StringRef ret;
+  if (value == GcsReportPolicy::Warning)
+    ret = "warning";
+  else if (value == GcsReportPolicy::Error)
+    ret = "error";
+  else
+    ret = "none";
+
+  return ret;
+}
 
 #define CHECK2(E, S) lld::check2((E), [&] { return toStr(ctx, S); })
 

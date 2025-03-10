@@ -56,13 +56,13 @@
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/TarWriter.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -400,8 +400,10 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z bti-report only supported on AArch64";
     if (ctx.arg.zPauthReport != "none")
       ErrAlways(ctx) << "-z pauth-report only supported on AArch64";
-    if (ctx.arg.zGcsReport != "none")
+    if (ctx.arg.zGcsReport != GcsReportPolicy::None)
       ErrAlways(ctx) << "-z gcs-report only supported on AArch64";
+    if (ctx.arg.zGcsReportDynamic != GcsReportPolicy::None)
+      ErrAlways(ctx) << "-z gcs-report-dynamic only supported on AArch64";
     if (ctx.arg.zGcs != GcsPolicy::Implicit)
       ErrAlways(ctx) << "-z gcs only supported on AArch64";
   }
@@ -572,6 +574,40 @@ static GcsPolicy getZGcs(Ctx &ctx, opt::InputArgList &args) {
     }
   }
   return ret;
+}
+
+static void getZGcsReport(Ctx &ctx, opt::InputArgList &args) {
+  bool reportDynamicDefined = false;
+
+  for (auto *arg : args.filtered(OPT_z)) {
+    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
+    if ((kv.first == "gcs-report") || kv.first == "gcs-report-dynamic") {
+      arg->claim();
+      GcsReportPolicy value = StringSwitch<GcsReportPolicy>(kv.second)
+                                  .Case("none", GcsReportPolicy::None)
+                                  .Case("warning", GcsReportPolicy::Warning)
+                                  .Case("error", GcsReportPolicy::Error)
+                                  .Default(GcsReportPolicy::Unknown);
+      if (value == GcsReportPolicy::Unknown)
+        ErrAlways(ctx) << "unknown -z " << kv.first << "= value: " << kv.second;
+
+      if (kv.first == "gcs-report")
+        ctx.arg.zGcsReport = value;
+      else if (kv.first == "gcs-report-dynamic") {
+        ctx.arg.zGcsReportDynamic = value;
+        reportDynamicDefined = true;
+      }
+    }
+  }
+
+  // The behaviour of -zgnu-report-dynamic matches that of GNU ld. When
+  // -zgcs-report is set to `warning` or `error`, -zgcs-report-dynamic will
+  // inherit this value if there is no user set value. This detects shared
+  // libraries without the GCS property but does not the shared-libraries to be
+  // rebuilt for successful linking
+  if (!reportDynamicDefined && ctx.arg.zGcsReport != GcsReportPolicy::None &&
+      ctx.arg.zGcsReportDynamic == GcsReportPolicy::None)
+    ctx.arg.zGcsReportDynamic = GcsReportPolicy::Warning;
 }
 
 // Report a warning for an unknown -z option.
@@ -1553,6 +1589,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
   ctx.arg.zGcs = getZGcs(ctx, args);
+  // getZGcsReport assings the values for `ctx.arg.zGcsReport` and
+  // `ctx.arg.zGcsReportDynamic within the function. By doing this, it saves
+  // calling the function twice, as both values can be parsed at once.
+  getZGcsReport(ctx, args);
   ctx.arg.zGlobal = hasZOption(args, "global");
   ctx.arg.zGnustack = getZGnuStack(args);
   ctx.arg.zHazardplt = hasZOption(args, "hazardplt");
@@ -1629,7 +1669,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       std::make_pair("bti-report", &ctx.arg.zBtiReport),
       std::make_pair("cet-report", &ctx.arg.zCetReport),
       std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
-      std::make_pair("gcs-report", &ctx.arg.zGcsReport),
       std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
@@ -2841,7 +2880,7 @@ static void readSecurityNotes(Ctx &ctx) {
         << ": -z bti-report: file does not have "
            "GNU_PROPERTY_AARCH64_FEATURE_1_BTI property";
 
-    reportUnless(ctx.arg.zGcsReport,
+    reportUnless(gcsReportPolicytoString(ctx.arg.zGcsReport),
                  features & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
         << f
         << ": -z gcs-report: file does not have "
@@ -2911,6 +2950,22 @@ static void readSecurityNotes(Ctx &ctx) {
     ctx.arg.andFeatures |= GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
   else if (ctx.arg.zGcs == GcsPolicy::Never)
     ctx.arg.andFeatures &= ~GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
+
+  // If we are utilising GCS at any stage, the sharedFiles should be checked to
+  // ensure they also support this feature. The gcs-report-dynamic option is
+  // used to indicate if the user wants information relating to this, and will
+  // be set depending on the user's input, or warning if gcs-report is set to
+  // either `warning` or `error`.
+  if (ctx.arg.andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+    for (SharedFile *f : ctx.sharedFiles)
+      reportUnless(gcsReportPolicytoString(ctx.arg.zGcsReportDynamic),
+                   f->andFeatures & GNU_PROPERTY_AARCH64_FEATURE_1_GCS)
+          << f
+          << ": GCS is required by -z gcs, but this shared library lacks the "
+             "necessary property note. The "
+          << "dynamic loader might not enable GCS or refuse to load the "
+             "program unless all shared library "
+          << "dependencies have the GCS marking.";
 }
 
 static void initSectionsAndLocalSyms(ELFFileBase *file, bool ignoreComdats) {
