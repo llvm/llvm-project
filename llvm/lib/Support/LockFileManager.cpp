@@ -157,15 +157,16 @@ public:
 
 } // end anonymous namespace
 
-LockFileManager::LockFileManager(StringRef FileName) {
-  SmallString<128> AbsoluteFileName(FileName);
-  if (std::error_code EC = sys::fs::make_absolute(AbsoluteFileName)) {
+LockFileManager::LockFileManager(StringRef FileName)
+{
+  this->FileName = FileName;
+  if (std::error_code EC = sys::fs::make_absolute(this->FileName)) {
     std::string S("failed to obtain absolute path for ");
-    S.append(std::string(AbsoluteFileName));
+    S.append(std::string(this->FileName));
     setError(EC, S);
     return;
   }
-  LockFileName = AbsoluteFileName;
+  LockFileName = this->FileName;
   LockFileName += ".lock";
 
   // If the lock file already exists, don't bother to try to create our own
