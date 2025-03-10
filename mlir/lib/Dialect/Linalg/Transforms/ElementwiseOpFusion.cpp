@@ -817,7 +817,7 @@ createExpandedTransposeOp(PatternRewriter &rewriter, TransposeOp transposeOp,
                           Value expandedInput, Value output) {
   applyPermutationToVector(reassociation, transposeOp.getPermutation());
   SmallVector<int64_t> newPerm;
-  for (auto reassoc : reassociation) {
+  for (const auto &reassoc : reassociation) {
     for (auto dim : reassoc) {
       newPerm.push_back(dim);
     }
