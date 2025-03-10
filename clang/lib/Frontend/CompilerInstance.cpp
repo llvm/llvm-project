@@ -39,6 +39,7 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCacheLock.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -66,11 +67,14 @@ using namespace clang;
 
 CompilerInstance::CompilerInstance(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    InMemoryModuleCache *SharedModuleCache)
+    InMemoryModuleCache *SharedModuleCache,
+    std::shared_ptr<ModuleCacheLock> ModuleCacheLck)
     : ModuleLoader(/* BuildingModule = */ SharedModuleCache),
       Invocation(new CompilerInvocation()),
       ModuleCache(SharedModuleCache ? SharedModuleCache
                                     : new InMemoryModuleCache),
+      ModuleCacheLck(ModuleCacheLck ? ModuleCacheLck
+                                    : getModuleCacheFileLock()),
       ThePCHContainerOperations(std::move(PCHContainerOps)) {}
 
 CompilerInstance::~CompilerInstance() {
@@ -1227,7 +1231,8 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
   // CompilerInstance::CompilerInstance is responsible for finalizing the
   // buffers to prevent use-after-frees.
   CompilerInstance Instance(ImportingInstance.getPCHContainerOperations(),
-                            &ImportingInstance.getModuleCache());
+                            &ImportingInstance.getModuleCache(),
+                            ImportingInstance.getModuleCacheLockPtr());
   auto &Inv = *Invocation;
   Instance.setInvocation(std::move(Invocation));
 
@@ -1471,47 +1476,45 @@ static bool compileModuleAndReadASTBehindLock(
   Diags.Report(ModuleNameLoc, diag::remark_module_lock)
       << ModuleFileName << Module->Name;
 
-  // FIXME: have LockFileManager return an error_code so that we can
-  // avoid the mkdir when the directory already exists.
-  StringRef Dir = llvm::sys::path::parent_path(ModuleFileName);
-  llvm::sys::fs::create_directories(Dir);
+  auto Lock = ImportingInstance.getModuleCacheLockPtr();
+  Lock->prepareLock(ModuleFileName);
 
   while (true) {
-    llvm::LockFileManager Locked(ModuleFileName);
-    switch (Locked) {
-    case llvm::LockFileManager::LFS_Error:
+    auto Locked = Lock->tryLock(ModuleFileName);
+    switch (*Locked) {
+    case LockResult::Error:
       // ModuleCache takes care of correctness and locks are only necessary for
       // performance. Fallback to building the module in case of any lock
       // related errors.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_failure)
-          << Module->Name << Locked.getErrorMessage();
+          << Module->Name << Locked->getErrorMessage();
       // Clear out any potential leftover.
-      Locked.unsafeRemoveLockFile();
+      Locked->unsafeRemoveLock();
       [[fallthrough]];
-    case llvm::LockFileManager::LFS_Owned:
+    case LockResult::Owned:
       // We're responsible for building the module ourselves.
       return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
                                          ModuleNameLoc, Module, ModuleFileName);
 
-    case llvm::LockFileManager::LFS_Shared:
+    case LockResult::Shared:
       break; // The interesting case.
     }
 
     // Someone else is responsible for building the module. Wait for them to
     // finish.
-    switch (Locked.waitForUnlock()) {
-    case llvm::LockFileManager::Res_Success:
+    switch (Locked->waitForUnlock()) {
+    case WaitForUnlockResult::Success:
       break; // The interesting case.
-    case llvm::LockFileManager::Res_OwnerDied:
+    case WaitForUnlockResult::OwnerDied:
       continue; // try again to get the lock.
-    case llvm::LockFileManager::Res_Timeout:
-      // Since ModuleCache takes care of correctness, we try waiting for
-      // another process to complete the build so clang does not do it done
-      // twice. If case of timeout, build it ourselves.
+    case WaitForUnlockResult::Timeout:
+      // Since the InMemoryModuleCache takes care of correctness, we try waiting
+      // for someone else to complete the build so that it does not happen
+      // twice. In case of timeout, build it ourselves.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
           << Module->Name;
-      // Clear the lock file so that future invocations can make progress.
-      Locked.unsafeRemoveLockFile();
+      // Remove the lock so that future invocations can make progress.
+      Locked->unsafeRemoveLock();
       continue;
     }
 

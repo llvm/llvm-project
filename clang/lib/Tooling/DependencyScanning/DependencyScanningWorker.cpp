@@ -22,6 +22,7 @@
 #include "clang/Lex/PreprocessorOptions.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
+#include "clang/Tooling/DependencyScanning/ModuleCacheMutexLock.h"
 #include "clang/Tooling/DependencyScanning/ModuleDepCollector.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
@@ -315,7 +316,10 @@ public:
     Scanned = true;
 
     // Create a compiler instance to handle the actual work.
-    ScanInstanceStorage.emplace(std::move(PCHContainerOps));
+    ModuleCacheLck =
+        getModuleCacheMutexLock(Service.getSharedModuleCacheMutexes());
+    ScanInstanceStorage.emplace(std::move(PCHContainerOps), nullptr,
+                                ModuleCacheLck);
     CompilerInstance &ScanInstance = *ScanInstanceStorage;
     ScanInstance.setInvocation(std::move(Invocation));
 
@@ -479,6 +483,7 @@ private:
   llvm::IntrusiveRefCntPtr<DependencyScanningWorkerFilesystem> DepFS;
   bool DisableFree;
   std::optional<StringRef> ModuleName;
+  std::shared_ptr<ModuleCacheLock> ModuleCacheLck;
   std::optional<CompilerInstance> ScanInstanceStorage;
   std::shared_ptr<ModuleDepCollector> MDC;
   std::vector<std::string> LastCC1Arguments;

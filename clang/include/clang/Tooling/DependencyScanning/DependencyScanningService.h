@@ -10,6 +10,7 @@
 #define LLVM_CLANG_TOOLING_DEPENDENCYSCANNING_DEPENDENCYSCANNINGSERVICE_H
 
 #include "clang/Tooling/DependencyScanning/DependencyScanningFilesystem.h"
+#include "clang/Tooling/DependencyScanning/ModuleCacheMutexLock.h"
 #include "llvm/ADT/BitmaskEnum.h"
 
 namespace clang {
@@ -99,6 +100,10 @@ public:
     return SharedCache;
   }
 
+  ModuleCacheMutexes &getSharedModuleCacheMutexes() {
+    return ModuleCacheMutexes;
+  }
+
 private:
   const ScanningMode Mode;
   const ScanningOutputFormat Format;
@@ -110,6 +115,8 @@ private:
   const bool TraceVFS;
   /// The global file system cache.
   DependencyScanningFilesystemSharedCache SharedCache;
+  /// The global module cache mutexes.
+  ModuleCacheMutexes ModuleCacheMutexes;
 };
 
 } // end namespace dependencies
