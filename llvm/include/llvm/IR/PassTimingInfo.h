@@ -46,6 +46,12 @@ class TimePassesHandler {
   /// to all the instance of a given pass) + sequential invocation counter.
   using PassInvocationID = std::pair<StringRef, unsigned>;
 
+  /// Groups of timers for passes and analyses.
+  TimerGroup &PassTG =
+      NamedRegionTimer::getNamedTimerGroup(PassGroupName, PassGroupDesc);
+  TimerGroup &AnalysisTG = NamedRegionTimer::getNamedTimerGroup(
+      AnalysisGroupName, AnalysisGroupDesc);
+
   using TimerVector = llvm::SmallVector<Timer *, 4>;
   /// Map of timers for pass invocations
   StringMap<TimerVector> TimingData;
@@ -64,11 +70,6 @@ class TimePassesHandler {
 
   bool Enabled;
   bool PerRun;
-
-  TimerGroup &PassTG =
-      NamedRegionTimer::getNamedTimerGroup(PassGroupName, PassGroupDesc);
-  TimerGroup &AnalysisTG = NamedRegionTimer::getNamedTimerGroup(
-      AnalysisGroupName, AnalysisGroupDesc);
 
 public:
   static constexpr StringRef PassGroupName = "pass";
