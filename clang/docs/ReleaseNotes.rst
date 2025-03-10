@@ -295,6 +295,7 @@ Bug Fixes to C++ Support
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
 - Clang now uses the parameter location for abbreviated function templates in ``extern "C"``. (#GH46386)
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
+- Clang modules now allow a module and its user to have a larger variety of configurations.
 
 Improvements to C++ diagnostics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
