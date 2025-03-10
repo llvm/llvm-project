@@ -3520,24 +3520,21 @@ DecompositionDecl *DecompositionDecl::Create(ASTContext &C, DeclContext *DC,
                                              SourceLocation LSquareLoc,
                                              QualType T, TypeSourceInfo *TInfo,
                                              StorageClass SC,
-                                             ArrayRef<BindingDecl *> Bindings,
-                                             bool IsDecisionVariable) {
+                                             ArrayRef<BindingDecl *> Bindings) {
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(Bindings.size());
-  return new (C, DC, Extra) DecompositionDecl(
-      C, DC, StartLoc, LSquareLoc, T, TInfo, SC, Bindings, IsDecisionVariable);
+  return new (C, DC, Extra)
+      DecompositionDecl(C, DC, StartLoc, LSquareLoc, T, TInfo, SC, Bindings);
 }
 
-DecompositionDecl *
-DecompositionDecl::CreateDeserialized(ASTContext &C, GlobalDeclID ID,
-                                      unsigned NumBindings,
-                                      bool IsDecisionVariable) {
+DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
+                                                         GlobalDeclID ID,
+                                                         unsigned NumBindings) {
   size_t Extra = additionalSizeToAlloc<BindingDecl *>(NumBindings);
-  auto *Result = new (C, ID, Extra) DecompositionDecl(
-      C, nullptr, SourceLocation(), SourceLocation(), QualType(), nullptr,
-      StorageClass(), {}, IsDecisionVariable);
+  auto *Result = new (C, ID, Extra)
+      DecompositionDecl(C, nullptr, SourceLocation(), SourceLocation(),
+                        QualType(), nullptr, StorageClass(), {});
   // Set up and clean out the bindings array.
   Result->NumBindings = NumBindings;
-  Result->IsDecisionVariable = IsDecisionVariable;
   auto *Trail = Result->getTrailingObjects<BindingDecl *>();
   for (unsigned I = 0; I != NumBindings; ++I)
     new (Trail + I) BindingDecl*(nullptr);

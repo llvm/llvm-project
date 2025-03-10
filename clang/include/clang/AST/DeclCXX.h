@@ -4224,18 +4224,15 @@ class DecompositionDecl final
     : public VarDecl,
       private llvm::TrailingObjects<DecompositionDecl, BindingDecl *> {
   /// The number of BindingDecl*s following this object.
-  unsigned NumBindings : 31;
-
-  LLVM_PREFERRED_TYPE(bool)
-  unsigned IsDecisionVariable : 1;
+  unsigned NumBindings;
 
   DecompositionDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
                     SourceLocation LSquareLoc, QualType T,
                     TypeSourceInfo *TInfo, StorageClass SC,
-                    ArrayRef<BindingDecl *> Bindings, bool IsDecisionVariable)
+                    ArrayRef<BindingDecl *> Bindings)
       : VarDecl(Decomposition, C, DC, StartLoc, LSquareLoc, nullptr, T, TInfo,
                 SC),
-        NumBindings(Bindings.size()), IsDecisionVariable(IsDecisionVariable) {
+        NumBindings(Bindings.size()) {
     std::uninitialized_copy(Bindings.begin(), Bindings.end(),
                             getTrailingObjects<BindingDecl *>());
     for (auto *B : Bindings) {
@@ -4256,14 +4253,13 @@ public:
 
   static DecompositionDecl *Create(ASTContext &C, DeclContext *DC,
                                    SourceLocation StartLoc,
-                                   SourceLocation LSquareLoc, QualType T,
-                                   TypeSourceInfo *TInfo, StorageClass S,
-                                   ArrayRef<BindingDecl *> Bindings,
-                                   bool IsDecisionVariable);
+                                   SourceLocation LSquareLoc,
+                                   QualType T, TypeSourceInfo *TInfo,
+                                   StorageClass S,
+                                   ArrayRef<BindingDecl *> Bindings);
 
   static DecompositionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
-                                               unsigned NumBindings,
-                                               bool IsDecisionVariable);
+                                               unsigned NumBindings);
 
   // Provide the range of bindings which may have a nested pack.
   llvm::ArrayRef<BindingDecl *> bindings() const {
@@ -4289,12 +4285,6 @@ public:
                                             std::move(PackBindings),
                                             std::move(Bindings));
   }
-
-  /// The decision variable of a condition that is a structured binding
-  /// declaration is specified in [dcl.struct.bind]p4:
-  ///   If a structured binding declaration appears as a condition, the decision
-  ///   variable of the condition is e.
-  bool isDecisionVariable() const { return IsDecisionVariable; }
 
   void printName(raw_ostream &OS, const PrintingPolicy &Policy) const override;
 

@@ -1641,6 +1641,7 @@ Conditional ``explicit``                     __cpp_conditional_explicit       C+
 Attributes on Lambda-Expressions                                              C++23         C++11
 Attributes on Structured Bindings            __cpp_structured_bindings        C++26         C++03
 Packs in Structured Bindings                 __cpp_structured_bindings        C++26         C++03
+Structured binding declaration as a condition                                 C++26         C++11
 Static assert with user-generated message    __cpp_static_assert >= 202306L   C++26         C++11
 Pack Indexing                                __cpp_pack_indexing              C++26         C++03
 ``= delete ("should have a reason");``       __cpp_deleted_function           C++26         C++03

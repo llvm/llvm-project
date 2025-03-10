@@ -4614,10 +4614,9 @@ ExpectedDecl ASTNodeImporter::VisitVarDecl(VarDecl *D) {
             ImportArrayChecked(FromDecomp->bindings(), Bindings.begin()))
       return std::move(Err);
     DecompositionDecl *ToDecomp;
-    if (GetImportedOrCreateDecl(ToDecomp, FromDecomp, Importer.getToContext(),
-                                DC, ToInnerLocStart, Loc, ToType,
-                                ToTypeSourceInfo, D->getStorageClass(),
-                                Bindings, FromDecomp->isDecisionVariable()))
+    if (GetImportedOrCreateDecl(
+            ToDecomp, FromDecomp, Importer.getToContext(), DC, ToInnerLocStart,
+            Loc, ToType, ToTypeSourceInfo, D->getStorageClass(), Bindings))
       return ToDecomp;
     ToVar = ToDecomp;
   } else {

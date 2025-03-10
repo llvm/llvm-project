@@ -894,7 +894,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     EmitStmt(S.getInit());
 
   if (S.getConditionVariable())
-    EmitDecl(*S.getConditionVariable());
+    EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/false);
 
   // If the condition constant folds and can be elided, try to avoid emitting
   // the condition and the dead arm of the if/else.
@@ -914,10 +914,8 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
         incrementProfileCounter(&S);
       if (Executed) {
         if (auto *DD = dyn_cast_if_present<DecompositionDecl>(
-                S.getConditionVariable())) {
-          assert(DD->isDecisionVariable());
+                S.getConditionVariable()))
           EmitDecompositionVarInit(*DD);
-        }
         RunCleanupsScope ExecutedScope(*this);
         EmitStmt(Executed);
       }
@@ -959,14 +957,13 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   // updates are kept linear and consistent.
   if (!CGM.getCodeGenOpts().MCDCCoverage) {
     EmitBranchOnBoolExpr(S.getCond(), ThenBlock, ElseBlock, ThenCount, LH,
-                         nullptr, S.getConditionVariable());
+                         /*ConditionalOp=*/nullptr,
+                         /*ConditionalDecl=*/S.getConditionVariable());
   } else {
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
     if (auto *DD =
-            dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable())) {
-      assert(DD->isDecisionVariable());
+            dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable()))
       EmitDecompositionVarInit(*DD);
-    }
     Builder.CreateCondBr(BoolCondVal, ThenBlock, ElseBlock);
   }
 
@@ -1103,7 +1100,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   RunCleanupsScope ConditionScope(*this);
 
   if (S.getConditionVariable())
-    EmitDecl(*S.getConditionVariable());
+    EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/false);
 
   // Evaluate the conditional in the while header.  C99 6.8.5.1: The
   // evaluation of the controlling expression takes place before each
@@ -1111,8 +1108,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
 
   if (auto *DD =
-          dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable());
-      DD && DD->isDecisionVariable())
+          dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable()))
     EmitDecompositionVarInit(*DD);
 
   // while(1) is common, avoid extra exit blocks.  Be sure
@@ -1323,7 +1319,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     // If the for statement has a condition scope, emit the local variable
     // declaration.
     if (S.getConditionVariable()) {
-      EmitDecl(*S.getConditionVariable());
+      EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/false);
 
       // We have entered the condition variable's scope, so we're now able to
       // jump to the continue block.
@@ -1350,8 +1346,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
 
     if (auto *DD =
-            dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable());
-        DD && DD->isDecisionVariable())
+            dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable()))
       EmitDecompositionVarInit(*DD);
 
     llvm::MDNode *Weights =
@@ -2249,11 +2244,10 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
       // Emit the condition variable if needed inside the entire cleanup scope
       // used by this special case for constant folded switches.
       if (S.getConditionVariable())
-        EmitDecl(*S.getConditionVariable());
+        EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/false);
 
       if (auto *DD =
-              dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable());
-          DD && DD->isDecisionVariable())
+              dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable()))
         EmitDecompositionVarInit(*DD);
 
       // At this point, we are no longer "within" a switch instance, so
@@ -2284,12 +2278,11 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
     EmitStmt(S.getInit());
 
   if (S.getConditionVariable())
-    EmitDecl(*S.getConditionVariable());
+    EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/false);
   llvm::Value *CondV = EmitScalarExpr(S.getCond());
 
   if (auto *DD =
-          dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable());
-      DD && DD->isDecisionVariable())
+          dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable()))
     EmitDecompositionVarInit(*DD);
 
   // Create basic block to hold stuff that comes after switch

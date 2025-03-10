@@ -5051,7 +5051,7 @@ template <class Emitter> bool Compiler<Emitter>::visitStmt(const Stmt *S) {
   case Stmt::CompoundStmtClass:
     return visitCompoundStmt(cast<CompoundStmt>(S));
   case Stmt::DeclStmtClass:
-    return visitDeclStmt(cast<DeclStmt>(S));
+    return visitDeclStmt(cast<DeclStmt>(S), /*EvaluateConditionDecl=*/true);
   case Stmt::ReturnStmtClass:
     return visitReturnStmt(cast<ReturnStmt>(S));
   case Stmt::IfStmtClass:
@@ -5115,7 +5115,8 @@ bool Compiler<Emitter>::emitDecompositionVarInit(const DecompositionDecl *DD) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
+bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS,
+                                      bool EvaluateConditionDecl) {
   for (const auto *D : DS->decls()) {
     if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, BaseUsingDecl,
             FunctionDecl, NamespaceAliasDecl, UsingDirectiveDecl>(D))
@@ -5129,7 +5130,7 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
 
     // Register decomposition decl holding vars.
     if (const auto *DD = dyn_cast<DecompositionDecl>(VD);
-        DD && !DD->isDecisionVariable()) {
+        EvaluateConditionDecl && DD) {
       if (!this->emitDecompositionVarInit(DD))
         return false;
     }
@@ -5180,7 +5181,7 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
       return false;
 
   if (const DeclStmt *CondDecl = IS->getConditionVariableDeclStmt())
-    if (!visitDeclStmt(CondDecl))
+    if (!visitDeclStmt(CondDecl, /*EvaluateConditionDecl=*/false))
       return false;
 
   // Compile condition.
@@ -5198,8 +5199,7 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
   }
 
   if (auto *DD =
-          dyn_cast_if_present<DecompositionDecl>(IS->getConditionVariable());
-      DD && DD->isDecisionVariable())
+          dyn_cast_if_present<DecompositionDecl>(IS->getConditionVariable()))
     if (!this->emitDecompositionVarInit(DD))
       return false;
 
@@ -5258,15 +5258,14 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
   {
     LocalScope<Emitter> CondScope(this);
     if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-      if (!visitDeclStmt(CondDecl))
+      if (!visitDeclStmt(CondDecl, /*EvaluateConditionDecl=*/false))
         return false;
 
     if (!this->visitBool(Cond))
       return false;
 
     if (auto *DD =
-            dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable());
-        DD && DD->isDecisionVariable())
+            dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable()))
       if (!this->emitDecompositionVarInit(DD))
         return false;
 
@@ -5341,7 +5340,7 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
   {
     LocalScope<Emitter> CondScope(this);
     if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-      if (!visitDeclStmt(CondDecl))
+      if (!visitDeclStmt(CondDecl, /*EvaluateConditionDecl=*/false))
         return false;
 
     if (Cond) {
@@ -5352,8 +5351,7 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
     }
 
     if (auto *DD =
-            dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable());
-        DD && DD->isDecisionVariable())
+            dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable()))
       if (!this->emitDecompositionVarInit(DD))
         return false;
 
@@ -5470,7 +5468,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
       return false;
 
   if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-    if (!visitDeclStmt(CondDecl))
+    if (!visitDeclStmt(CondDecl, /*EvaluateConditionDecl=*/false))
       return false;
 
   // Initialize condition variable.
@@ -5480,8 +5478,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
     return false;
 
   if (auto *DD =
-          dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable());
-      DD && DD->isDecisionVariable())
+          dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable()))
     if (!this->emitDecompositionVarInit(DD))
       return false;
 

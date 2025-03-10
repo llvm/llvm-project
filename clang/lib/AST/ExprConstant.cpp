@@ -5221,14 +5221,15 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
 static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
                                           const DecompositionDecl *DD);
 
-static bool EvaluateDecl(EvalInfo &Info, const Decl *D) {
+static bool EvaluateDecl(EvalInfo &Info, const Decl *D,
+                         bool EvaluateConditionDecl) {
   bool OK = true;
 
   if (const VarDecl *VD = dyn_cast<VarDecl>(D))
     OK &= EvaluateVarDecl(Info, VD);
 
   if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(D);
-      DD && !DD->isDecisionVariable())
+      EvaluateConditionDecl && DD)
     OK &= EvaluateDecompositionDeclInit(Info, DD);
 
   return OK;
@@ -5236,12 +5237,12 @@ static bool EvaluateDecl(EvalInfo &Info, const Decl *D) {
 
 static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
                                           const DecompositionDecl *DD) {
-  bool OK = true;
   for (auto *BD : DD->flat_bindings())
     if (auto *VD = BD->getHoldingVar())
-      OK &= EvaluateDecl(Info, VD);
+      if (!EvaluateDecl(Info, VD, /*EvaluateConditionDecl=*/true))
+        return false;
 
-  return OK;
+  return true;
 }
 
 static bool EvaluateDependentExpr(const Expr *E, EvalInfo &Info) {
@@ -5259,13 +5260,12 @@ static bool EvaluateCond(EvalInfo &Info, const VarDecl *CondDecl,
   if (Cond->isValueDependent())
     return false;
   FullExpressionRAII Scope(Info);
-  if (CondDecl && !EvaluateDecl(Info, CondDecl))
+  if (CondDecl && !EvaluateDecl(Info, CondDecl, /*EvaluateConditionDecl=*/false))
     return false;
   if (!EvaluateAsBooleanCondition(Cond, Result, Info))
     return false;
   if (auto *DD = dyn_cast_if_present<DecompositionDecl>(CondDecl);
-      DD && DD->isDecisionVariable() &&
-      !EvaluateDecompositionDeclInit(Info, DD))
+      DD && !EvaluateDecompositionDeclInit(Info, DD))
     return false;
   return Scope.destroy();
 }
@@ -5341,7 +5341,8 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
 
     FullExpressionRAII CondScope(Info);
     if (SS->getConditionVariable() &&
-        !EvaluateDecl(Info, SS->getConditionVariable()))
+        !EvaluateDecl(Info, SS->getConditionVariable(),
+                      /*EvaluateConditionDecl=*/false))
       return ESR_Failed;
     if (SS->getCond()->isValueDependent()) {
       // We don't know what the value is, and which branch should jump to.
@@ -5353,8 +5354,7 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
 
     if (auto *DD =
             dyn_cast_if_present<DecompositionDecl>(SS->getConditionVariable());
-        DD && DD->isDecisionVariable() &&
-        !EvaluateDecompositionDeclInit(Info, DD))
+        DD && !EvaluateDecompositionDeclInit(Info, DD))
       return ESR_Failed;
 
     if (!CondScope.destroy())
@@ -5581,7 +5581,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         return ESR_Failed;
       // Each declaration initialization is its own full-expression.
       FullExpressionRAII Scope(Info);
-      if (!EvaluateDecl(Info, D) && !Info.noteFailure())
+      if (!EvaluateDecl(Info, D, /*EvaluateConditionDecl=*/true) &&
+          !Info.noteFailure())
         return ESR_Failed;
       if (!Scope.destroy())
         return ESR_Failed;
