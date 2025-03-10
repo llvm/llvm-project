@@ -16,3 +16,26 @@ entry:
   %arrayidx = getelementptr inbounds i32, ptr %p, i64 %idx
   ret ptr %arrayidx
 }
+
+; All offsets must be positive, so inbounds can be preserved.
+define void @must_be_inbounds(ptr %dst, ptr %src, i32 %i) {
+; CHECK-LABEL: @must_be_inbounds(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I:%.*]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX_SRC2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX_SRC2]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[DST:%.*]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX_DST4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 4
+; CHECK-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX_DST4]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %i.prom = zext i32 %i to i64
+  %idx = add nsw i64 %i.prom, 1
+  %arrayidx.src = getelementptr inbounds float, ptr %src, i64 %idx
+  %3 = load float, ptr %arrayidx.src, align 4
+  %arrayidx.dst = getelementptr inbounds float, ptr %dst, i64 %idx
+  store float %3, ptr %arrayidx.dst, align 4
+  ret void
+}
