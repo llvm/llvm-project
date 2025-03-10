@@ -405,8 +405,8 @@ def VoidPtr : Type<
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_IntType, CIR_AnyFloat, CIR_PointerType,
-  CIR_FuncType
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_IntType, CIR_AnyFloat,
+  CIR_PointerType, CIR_FuncType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES
