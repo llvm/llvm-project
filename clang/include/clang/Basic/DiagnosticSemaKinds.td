@@ -551,7 +551,7 @@ def err_decomp_decl_constraint : Error<
 def err_decomp_decl_parens : Error<
   "decomposition declaration cannot be declared with parentheses">;
 def err_decomp_decl_template : Error<
-  "decomposition declaration template not supported">;
+  "decomposition declaration cannot be a template">;
 def err_decomp_decl_not_alone : Error<
   "decomposition declaration must be the only declaration in its group">;
 def err_decomp_decl_requires_init : Error<
@@ -10425,8 +10425,13 @@ def warn_type_safety_null_pointer_required : Warning<
   "specified %0 type tag requires a null pointer">, InGroup<TypeSafety>;
 
 // Generic selections.
-def err_assoc_type_incomplete : Error<
-  "type %0 in generic association incomplete">;
+def ext_assoc_type_incomplete : Extension<
+  "incomplete type %0 in a '_Generic' association is a C2y extension">,
+  InGroup<C2y>;
+def warn_c2y_compat_assoc_type_incomplete : Warning<
+  "use of incomplete type %0 in a '_Generic' association is incompatible with "
+  "C standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
 def err_assoc_type_nonobject : Error<
   "type %0 in generic association not an object type">;
 def err_assoc_type_variably_modified : Error<
@@ -12702,6 +12707,10 @@ def err_hlsl_param_qualifier_mismatch :
 def err_hlsl_vector_compound_assignment_truncation : Error<
   "left hand operand of type %0 to compound assignment cannot be truncated "
   "when used with right hand operand of type %1">;
+def err_hlsl_builtin_scalar_vector_mismatch
+    : Error<
+          "%select{all|second and third}0 arguments to %1 must be of scalar or "
+          "vector type with matching scalar element type%diff{: $ vs $|}2,3">;
 
 def warn_hlsl_impcast_vector_truncation : Warning<
   "implicit conversion truncates vector: %0 to %1">, InGroup<Conversion>;

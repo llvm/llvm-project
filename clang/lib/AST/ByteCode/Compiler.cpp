@@ -25,6 +25,16 @@ using APSInt = llvm::APSInt;
 namespace clang {
 namespace interp {
 
+static std::optional<bool> getBoolValue(const Expr *E) {
+  if (const auto *CE = dyn_cast_if_present<ConstantExpr>(E);
+      CE && CE->hasAPValueResult() &&
+      CE->getResultAPValueKind() == APValue::ValueKind::Int) {
+    return CE->getResultAsAPSInt().getBoolValue();
+  }
+
+  return std::nullopt;
+}
+
 /// Scope used to handle temporaries in toplevel variable declarations.
 template <class Emitter> class DeclScope final : public LocalScope<Emitter> {
 public:
@@ -2286,39 +2296,49 @@ bool Compiler<Emitter>::VisitAbstractConditionalOperator(
   const Expr *TrueExpr = E->getTrueExpr();
   const Expr *FalseExpr = E->getFalseExpr();
 
+  auto visitChildExpr = [&](const Expr *E) -> bool {
+    LocalScope<Emitter> S(this);
+    if (!this->delegate(E))
+      return false;
+    return S.destroyLocals();
+  };
+
+  if (std::optional<bool> BoolValue = getBoolValue(Condition)) {
+    if (BoolValue)
+      return visitChildExpr(TrueExpr);
+    return visitChildExpr(FalseExpr);
+  }
+
+  bool IsBcpCall = false;
+  if (const auto *CE = dyn_cast<CallExpr>(Condition->IgnoreParenCasts());
+      CE && CE->getBuiltinCallee() == Builtin::BI__builtin_constant_p) {
+    IsBcpCall = true;
+  }
+
   LabelTy LabelEnd = this->getLabel();   // Label after the operator.
   LabelTy LabelFalse = this->getLabel(); // Label for the false expr.
 
+  if (IsBcpCall) {
+    if (!this->emitStartSpeculation(E))
+      return false;
+  }
+
   if (!this->visitBool(Condition))
     return false;
-
   if (!this->jumpFalse(LabelFalse))
     return false;
-
-  {
-    LocalScope<Emitter> S(this);
-    if (!this->delegate(TrueExpr))
-      return false;
-    if (!S.destroyLocals())
-      return false;
-  }
-
+  if (!visitChildExpr(TrueExpr))
+    return false;
   if (!this->jump(LabelEnd))
     return false;
-
   this->emitLabel(LabelFalse);
-
-  {
-    LocalScope<Emitter> S(this);
-    if (!this->delegate(FalseExpr))
-      return false;
-    if (!S.destroyLocals())
-      return false;
-  }
-
+  if (!visitChildExpr(FalseExpr))
+    return false;
   this->fallthrough(LabelEnd);
   this->emitLabel(LabelEnd);
 
+  if (IsBcpCall)
+    return this->emitEndSpeculation(E);
   return true;
 }
 
@@ -4681,6 +4701,28 @@ bool Compiler<Emitter>::visitAPValueInitializer(const APValue &Val,
 template <class Emitter>
 bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
                                              unsigned BuiltinID) {
+
+  if (BuiltinID == Builtin::BI__builtin_constant_p) {
+    // Void argument is always invalid and harder to handle later.
+    if (E->getArg(0)->getType()->isVoidType()) {
+      if (DiscardResult)
+        return true;
+      return this->emitConst(0, E);
+    }
+
+    if (!this->emitStartSpeculation(E))
+      return false;
+    LabelTy EndLabel = this->getLabel();
+    if (!this->speculate(E, EndLabel))
+      return false;
+    this->fallthrough(EndLabel);
+    if (!this->emitEndSpeculation(E))
+      return false;
+    if (DiscardResult)
+      return this->emitPop(classifyPrim(E), E);
+    return true;
+  }
+
   const Function *Func = getFunction(E->getDirectCallee());
   if (!Func)
     return false;
@@ -5167,6 +5209,12 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
 }
 
 template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
+  auto visitChildStmt = [&](const Stmt *S) -> bool {
+    LocalScope<Emitter> SScope(this);
+    if (!visitStmt(S))
+      return false;
+    return SScope.destroyLocals();
+  };
   if (auto *CondInit = IS->getInit())
     if (!visitStmt(CondInit))
       return false;
@@ -5175,7 +5223,19 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     if (!visitDeclStmt(CondDecl))
       return false;
 
-  // Compile condition.
+  // Save ourselves compiling some code and the jumps, etc. if the condition is
+  // stataically known to be either true or false. We could look at more cases
+  // here, but I think all the ones that actually happen are using a
+  // ConstantExpr.
+  if (std::optional<bool> BoolValue = getBoolValue(IS->getCond())) {
+    if (*BoolValue)
+      return visitChildStmt(IS->getThen());
+    else if (const Stmt *Else = IS->getElse())
+      return visitChildStmt(Else);
+    return true;
+  }
+
+  // Otherwise, compile the condition.
   if (IS->isNonNegatedConsteval()) {
     if (!this->emitIsConstantContext(IS))
       return false;
@@ -5194,35 +5254,20 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
     LabelTy LabelEnd = this->getLabel();
     if (!this->jumpFalse(LabelElse))
       return false;
-    {
-      LocalScope<Emitter> ThenScope(this);
-      if (!visitStmt(IS->getThen()))
-        return false;
-      if (!ThenScope.destroyLocals())
-        return false;
-    }
+    if (!visitChildStmt(IS->getThen()))
+      return false;
     if (!this->jump(LabelEnd))
       return false;
     this->emitLabel(LabelElse);
-    {
-      LocalScope<Emitter> ElseScope(this);
-      if (!visitStmt(Else))
-        return false;
-      if (!ElseScope.destroyLocals())
-        return false;
-    }
+    if (!visitChildStmt(Else))
+      return false;
     this->emitLabel(LabelEnd);
   } else {
     LabelTy LabelEnd = this->getLabel();
     if (!this->jumpFalse(LabelEnd))
       return false;
-    {
-      LocalScope<Emitter> ThenScope(this);
-      if (!visitStmt(IS->getThen()))
-        return false;
-      if (!ThenScope.destroyLocals())
-        return false;
-    }
+    if (!visitChildStmt(IS->getThen()))
+      return false;
     this->emitLabel(LabelEnd);
   }
 

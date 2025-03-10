@@ -522,14 +522,7 @@ LogicalResult tosa::AvgPool2dOp::verify() {
   if (succeeded(maybeOZp) && verifyOutputZeroPoint(*maybeOZp).failed())
     return failure();
 
-  if ((inputETy.isF32() && resultETy.isF32()) ||
-      (inputETy.isF16() && resultETy.isF16()) ||
-      (inputETy.isBF16() && resultETy.isBF16()) ||
-      (inputETy.isInteger(8) && resultETy.isInteger(8)) ||
-      (inputETy.isInteger(16) && resultETy.isInteger(16)))
-    return success();
-
-  return emitOpError("input/output element types are incompatible.");
+  return success();
 }
 
 LogicalResult tosa::ClampOp::verify() {
@@ -636,23 +629,13 @@ buildTransConvOpWithQuantInfo(OpBuilder &builder, OperationState &result,
 static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
                                        OperationState &result, Type outputType,
                                        Value a, Value b) {
-  result.addOperands({a, b});
-  auto quantAttr = ::buildMatMulOpQuantizationAttr(builder, a, b);
+  auto zps = createZPsAsConst(builder, a, b);
+  result.addOperands({a, b, zps.first, zps.second});
 
-  if (quantAttr) {
-    result.addAttribute("a_zp", builder.getI32IntegerAttr(
-                                    static_cast<int32_t>(quantAttr.getAZp())));
-    result.addAttribute("b_zp", builder.getI32IntegerAttr(
-                                    static_cast<int32_t>(quantAttr.getBZp())));
-
-    auto inputType = llvm::dyn_cast<ShapedType>(a.getType());
-    assert(inputType && "Input must be a shaped tensor type!");
-
-    auto inputQType = llvm::dyn_cast<mlir::quant::UniformQuantizedType>(
-        inputType.getElementType());
-    assert(inputQType && "Tensor must have quantized datatype!");
-
-    unsigned inputBits = inputQType.getStorageTypeIntegralWidth();
+  Type finalOutputType{outputType};
+  if (auto quantAttr = buildMatMulOpQuantizationAttr(builder, a, b)) {
+    auto eType = getStorageElementTypeOrSelf(a.getType());
+    auto inputBits = eType.getIntOrFloatBitWidth();
 
     auto outputShapedType = llvm::dyn_cast<ShapedType>(outputType);
     assert(outputShapedType && "Output must be a shaped type");
@@ -662,11 +645,10 @@ static void buildMatMulOpWithQuantInfo(OpBuilder &builder,
       accElementType = builder.getIntegerType(48);
     else
       accElementType = builder.getI32Type();
-    auto accType = outputShapedType.clone(accElementType);
-    result.addTypes(accType);
-  } else {
-    result.addTypes(outputType);
+
+    finalOutputType = outputShapedType.clone(accElementType);
   }
+  result.addTypes(finalOutputType);
 }
 
 /// Both the tosa.avg_pool2d and unary ops use the same
@@ -888,7 +870,7 @@ LogicalResult tosa::RFFT2dOp::verify() {
   // Output width dimension expected to be input_width / 2 + 1
   const int64_t outputWidth = outputType.getDimSize(2);
   if (!ShapedType::isDynamic(width) && !ShapedType::isDynamic(outputWidth) &&
-      (outputWidth - 1) * 2 != width)
+      (outputWidth != (width / 2) + 1))
     return emitOpError(
                "expected output width to be equal to input_width / 2 + 1, got ")
            << outputWidth;
@@ -1147,15 +1129,38 @@ LogicalResult MatMulOp::verify() {
       return emitOpError("expect quantized operands to have same widths, got ")
              << aQuantWidth << " and " << bQuantWidth;
     }
-
-    return success();
+  } else {
+    // non-quantized element types
+    if (aElementType != bElementType) {
+      return emitOpError("expect same element type for inputs a and b, got ")
+             << aElementType << " and " << bElementType;
+    }
   }
 
-  // non-quantized element types
-  if (aElementType != bElementType) {
-    return emitOpError("expect same element type for inputs a and b, got ")
-           << aElementType << " and " << bElementType;
+  // check a_zp and b_zp
+  auto aEType = getStorageElementTypeOrSelf(aType);
+  auto aZpEType = getStorageElementTypeOrSelf(getAZp().getType());
+  if (aEType != aZpEType) {
+    return emitOpError("expect input a and a_zp have the same "
+                       "element type, got ")
+           << aEType << " and " << aZpEType;
   }
+
+  auto bEType = getStorageElementTypeOrSelf(bType);
+  auto bZpEType = getStorageElementTypeOrSelf(getBZp().getType());
+  if (bEType != bZpEType) {
+    return emitOpError("expect input b and b_zp have the same "
+                       "element type, got ")
+           << bEType << " and " << bZpEType;
+  }
+
+  FailureOr<int64_t> maybeAZp = getAZeroPoint();
+  if (succeeded(maybeAZp) && verifyAZeroPoint(*maybeAZp).failed())
+    return failure();
+
+  FailureOr<int64_t> maybeBZp = getBZeroPoint();
+  if (succeeded(maybeBZp) && verifyBZeroPoint(*maybeBZp).failed())
+    return failure();
 
   return success();
 }
@@ -1721,6 +1726,8 @@ ZERO_POINT_HELPER(TransposeConv2DOp, Input)
 ZERO_POINT_HELPER(TransposeConv2DOp, Weight)
 ZERO_POINT_HELPER(AvgPool2dOp, Input)
 ZERO_POINT_HELPER(AvgPool2dOp, Output)
+ZERO_POINT_HELPER(MatMulOp, A)
+ZERO_POINT_HELPER(MatMulOp, B)
 #undef ZERO_POINT_HELPER
 
 LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
@@ -2226,7 +2233,6 @@ NARY_SHAPE_INFER(tosa::MinimumOp)
 NARY_SHAPE_INFER(tosa::NegateOp)
 NARY_SHAPE_INFER(tosa::PowOp)
 NARY_SHAPE_INFER(tosa::ReciprocalOp)
-NARY_SHAPE_INFER(tosa::RescaleOp)
 NARY_SHAPE_INFER(tosa::ReverseOp)
 NARY_SHAPE_INFER(tosa::RsqrtOp)
 NARY_SHAPE_INFER(tosa::SinOp)
@@ -2673,6 +2679,147 @@ LogicalResult TransposeConv2DOp::inferReturnTypeComponents(
 LogicalResult TransposeConv2DOp::verify() {
   if (verifyConvOp(*this).failed() || verifyConvOpModes(*this).failed())
     return failure();
+  return success();
+}
+
+LogicalResult RescaleOp::verify() {
+  auto inputType = llvm::dyn_cast<ShapedType>(getInput().getType());
+  if (!inputType) {
+    emitOpError("expect shaped tensor for input, got ") << getInput().getType();
+    return failure();
+  }
+
+  auto inputElementType =
+      getStorageElementTypeOrSelf(inputType.getElementType());
+  if (!mlir::isa<IntegerType>(inputElementType)) {
+    emitOpError("expect input to have integer element type, got ")
+        << inputElementType;
+    return failure();
+  }
+
+  auto outputType = llvm::dyn_cast<ShapedType>(getOutput().getType());
+  if (!outputType) {
+    emitOpError("expect shaped tensor for output, got ")
+        << getOutput().getType();
+    return failure();
+  }
+
+  auto outputElementType =
+      getStorageElementTypeOrSelf(outputType.getElementType());
+  if (!mlir::isa<IntegerType>(outputElementType)) {
+    emitOpError("expect output to have integer element type, got ")
+        << outputElementType;
+    return failure();
+  }
+
+  auto input_zp = getInputZpAttr().getInt();
+  if (input_zp != 0) {
+    // only int8/uint8 and uint16 input can have non-zero input_zp
+    if (!inputElementType.isInteger(8) &&
+        !(inputElementType.isInteger(16) && getInputUnsigned())) {
+      emitOpError("expect input_zp of 0, got ") << input_zp;
+      return failure();
+    }
+    // input_zp must be either 0 or 32768 for uint16 input
+    if (inputElementType.isInteger(16) && getInputUnsigned() &&
+        input_zp != 32768) {
+      emitOpError(
+          "expect input_zp of 0 or 32768 for unsigned int16 input, got ")
+          << input_zp;
+      return failure();
+    }
+  }
+
+  auto output_zp = getOutputZpAttr().getInt();
+  if (output_zp != 0) {
+    // only int8/uint8 and uint16 output can have non-zero output_zp
+    if (!outputElementType.isInteger(8) &&
+        !(outputElementType.isInteger(16) && getOutputUnsigned())) {
+      emitOpError("expect output_zp of 0, got ") << output_zp;
+      return failure();
+    }
+    // output_zp must be either 0 or 32768 for uint16 output
+    if (outputElementType.isInteger(16) && getOutputUnsigned() &&
+        output_zp != 32768) {
+      emitOpError(
+          "expect output_zp of 0 or 32768 for unsigned int16 output, got ")
+          << output_zp;
+      return failure();
+    }
+  }
+
+  auto multiplierType = llvm::dyn_cast<ShapedType>(getMultiplier().getType());
+  if (!multiplierType) {
+    emitOpError("expect shaped tensor for multiplier, got ")
+        << getMultiplier().getType();
+    return failure();
+  }
+
+  auto shiftType = llvm::dyn_cast<ShapedType>(getShift().getType());
+  if (!shiftType) {
+    emitOpError("expect shaped tensor for shift, got ") << getShift().getType();
+    return failure();
+  }
+
+  // multiplier element type must be i32 for scale32 = true
+  if (getScale32() && !multiplierType.getElementType().isInteger(32)) {
+    emitOpError("expect i32 element type for multiplier for scale32=true, got ")
+        << multiplierType.getElementType();
+    return failure();
+  }
+
+  // multiplier element type must be i16 for scale32 = false
+  if (!getScale32() && !multiplierType.getElementType().isInteger(16)) {
+    emitOpError(
+        "expect i16 element type for multiplier for scale32=false, got ")
+        << multiplierType.getElementType();
+    return failure();
+  }
+
+  if (!inputType.hasRank())
+    return success();
+
+  // multiplier/shift must have shape = {numChannels},
+  // where numChannel is 1 if per_channel = false
+  // otherwise numChannel is dimension in input shape's last axis
+  int64_t numChannels = 1;
+  if (getPerChannel()) {
+    numChannels = inputType.getDimSize(inputType.getRank() - 1);
+  }
+
+  if (!multiplierType.hasRank())
+    return success();
+
+  ArrayRef<int64_t> multiplierShape = multiplierType.getShape();
+  // multiplier input has rank 1 by dialect definition
+  if (multiplierShape[0] != ShapedType::kDynamic &&
+      multiplierShape[0] != numChannels) {
+    emitOpError("expect shape of { ")
+        << numChannels << " } for multiplier input, got { "
+        << multiplierShape[0] << " }";
+    return failure();
+  }
+
+  if (!shiftType.hasRank())
+    return success();
+
+  ArrayRef<int64_t> shiftShape = shiftType.getShape();
+  // shift input has rank 1 by dialect definition
+  if (shiftShape[0] != ShapedType::kDynamic && shiftShape[0] != numChannels) {
+    emitOpError("expect shape of { ")
+        << numChannels << " } for shift input, got { " << shiftShape[0] << " }";
+    return failure();
+  }
+
+  return success();
+}
+
+LogicalResult RescaleOp::inferReturnTypeComponents(
+    MLIRContext *context, ::std::optional<Location> location,
+    RescaleOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  ShapeAdaptor inputShape(adaptor.getInput().getType());
+  inferredReturnShapes.push_back(ShapedTypeComponents(inputShape));
   return success();
 }
 

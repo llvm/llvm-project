@@ -410,8 +410,11 @@ void ModuloScheduleExpander::generateExistingPhis(
       Register NewReg = VRMap[PrevStage][LoopVal];
       rewriteScheduledInstr(NewBB, InstrMap, CurStageNum, 0, &*BBI, Def,
                             InitVal, NewReg);
-      if (VRMap[CurStageNum].count(LoopVal))
-        VRMap[CurStageNum][Def] = VRMap[CurStageNum][LoopVal];
+      auto It = VRMap[CurStageNum].find(LoopVal);
+      if (It != VRMap[CurStageNum].end()) {
+        Register Reg = It->second;
+        VRMap[CurStageNum][Def] = Reg;
+      }
     }
     // Adjust the number of Phis needed depending on the number of prologs left,
     // and the distance from where the Phi is first scheduled. The number of
@@ -464,10 +467,12 @@ void ModuloScheduleExpander::generateExistingPhis(
           InstOp1 = MRI.getVRegDef(PhiOp1);
           int PhiOpStage = Schedule.getStage(InstOp1);
           int StageAdj = (PhiOpStage != -1 ? PhiStage - PhiOpStage : 0);
-          if (PhiOpStage != -1 && PrologStage - StageAdj >= Indirects + np &&
-              VRMap[PrologStage - StageAdj - Indirects - np].count(PhiOp1)) {
-            PhiOp1 = VRMap[PrologStage - StageAdj - Indirects - np][PhiOp1];
-            break;
+          if (PhiOpStage != -1 && PrologStage - StageAdj >= Indirects + np) {
+            auto &M = VRMap[PrologStage - StageAdj - Indirects - np];
+            if (auto It = M.find(PhiOp1); It != M.end()) {
+              PhiOp1 = It->second;
+              break;
+            }
           }
           ++Indirects;
         }
@@ -597,8 +602,11 @@ void ModuloScheduleExpander::generateExistingPhis(
 
     // Check if we need to rename a Phi that has been eliminated due to
     // scheduling.
-    if (NumStages == 0 && IsLast && VRMap[CurStageNum].count(LoopVal))
-      replaceRegUsesAfterLoop(Def, VRMap[CurStageNum][LoopVal], BB, MRI, LIS);
+    if (NumStages == 0 && IsLast) {
+      auto It = VRMap[CurStageNum].find(LoopVal);
+      if (It != VRMap[CurStageNum].end())
+        replaceRegUsesAfterLoop(Def, It->second, BB, MRI, LIS);
+    }
   }
 }
 

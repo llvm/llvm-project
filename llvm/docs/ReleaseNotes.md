@@ -159,6 +159,7 @@ Changes to the LLVM tools
 ---------------------------------
 
 * llvm-objcopy now supports the `--update-section` flag for intermediate Mach-O object files.
+* llvm-strip now supports continuing to process files on encountering an error.
 
 Changes to LLDB
 ---------------------------------

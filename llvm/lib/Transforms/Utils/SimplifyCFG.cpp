@@ -6883,9 +6883,10 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     for (const auto &I : Results) {
       PHINode *PHI = I.first;
       Constant *Value = I.second;
-      if (!ResultLists.count(PHI))
+      auto [It, Inserted] = ResultLists.try_emplace(PHI);
+      if (Inserted)
         PHIs.push_back(PHI);
-      ResultLists[PHI].push_back(std::make_pair(CaseVal, Value));
+      It->second.push_back(std::make_pair(CaseVal, Value));
     }
   }
 

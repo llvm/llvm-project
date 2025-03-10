@@ -83,7 +83,7 @@ ENDIF25:                                          ; preds = %IF29, %main_body
   ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp83
 
 LOOP:                                             ; preds = %ENDIF28, %IF26
-  %.5 = phi float [ undef, %IF26 ], [ %tmp89, %ENDIF28 ]
+  %.5 = phi float [ poison, %IF26 ], [ %tmp89, %ENDIF28 ]
   br i1 false, label %IF29, label %ENDIF28
 
 IF29:                                             ; preds = %LOOP

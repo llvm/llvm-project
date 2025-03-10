@@ -320,7 +320,8 @@ public:
 
 /// Returns true if the given container only contains a single element.
 template <typename ContainerTy> bool hasSingleElement(ContainerTy &&C) {
-  auto B = std::begin(C), E = std::end(C);
+  auto B = adl_begin(C);
+  auto E = adl_end(C);
   return B != E && std::next(B) == E;
 }
 
