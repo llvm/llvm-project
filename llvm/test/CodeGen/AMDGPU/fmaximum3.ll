@@ -1317,10 +1317,10 @@ define amdgpu_ps i32 @s_fmaximum3_f16(half inreg %a, half inreg %b, half inreg %
 ; GFX12-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_maximum3_f16 v0, s0, s1, v0
-; GFX12-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX12-NEXT:    s_wait_alu 0xfffe
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
 ; GFX942-LABEL: s_fmaximum3_f16:
@@ -1335,9 +1335,9 @@ define amdgpu_ps i32 @s_fmaximum3_f16(half inreg %a, half inreg %b, half inreg %
 ; GFX942-NEXT:    v_cmp_o_f16_e32 vcc, s2, v0
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; GFX942-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX942-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-LABEL: s_fmaximum3_f16:
@@ -1346,9 +1346,8 @@ define amdgpu_ps i32 @s_fmaximum3_f16(half inreg %a, half inreg %b, half inreg %
 ; GFX950-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX950-NEXT:    v_pk_maximum3_f16 v0, s0, v0, v1
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX950-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX950-NEXT:    ; return to shader part epilog
   %max0 = call half @llvm.maximum.f16(half %a, half %b)
   %max1 = call half @llvm.maximum.f16(half %max0, half %c)
@@ -3764,12 +3763,12 @@ define amdgpu_ps <2 x i32> @s_no_fmaximum3_f16__multi_use(half inreg %a, half in
 ; GFX942-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX942-NEXT:    v_max_f16_e32 v1, s2, v0
 ; GFX942-NEXT:    v_cmp_o_f16_e32 vcc, s2, v0
-; GFX942-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX942-NEXT:    s_nop 0
-; GFX942-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
-; GFX942-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX942-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX942-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX942-NEXT:    v_cndmask_b32_e32 v1, v2, v1, vcc
+; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX942-NEXT:    s_and_b32 s1, 0xffff, s1
 ; GFX942-NEXT:    ; return to shader part epilog
 ;
 ; GFX950-LABEL: s_no_fmaximum3_f16__multi_use:
@@ -3778,10 +3777,10 @@ define amdgpu_ps <2 x i32> @s_no_fmaximum3_f16__multi_use(half inreg %a, half in
 ; GFX950-NEXT:    v_pk_maximum3_f16 v0, v0, s1, s1
 ; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_pk_maximum3_f16 v1, v0, s2, s2
-; GFX950-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX950-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-NEXT:    s_and_b32 s0, s0, 0xffff
+; GFX950-NEXT:    s_and_b32 s1, s1, 0xffff
 ; GFX950-NEXT:    ; return to shader part epilog
   %max0 = call half @llvm.maximum.f16(half %a, half %b)
   %max1 = call half @llvm.maximum.f16(half %max0, half %c)
