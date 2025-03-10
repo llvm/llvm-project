@@ -162,6 +162,15 @@ MLIR_CAPI_EXPORTED bool mlirContextIsRegisteredOperation(MlirContext context,
 MLIR_CAPI_EXPORTED void mlirContextSetThreadPool(MlirContext context,
                                                  MlirLlvmThreadPool threadPool);
 
+/// Gets the number of threads of the thread pool of the context when
+/// multithreading is enabled. Returns 1 if no multithreading.
+MLIR_CAPI_EXPORTED unsigned mlirContextGetNumThreads(MlirContext context);
+
+/// Gets the thread pool of the context when enabled multithreading, otherwise
+/// an assertion is raised.
+MLIR_CAPI_EXPORTED MlirLlvmThreadPool
+mlirContextGetThreadPool(MlirContext context);
+
 //===----------------------------------------------------------------------===//
 // Dialect API.
 //===----------------------------------------------------------------------===//
