@@ -78,6 +78,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN [[IDX:.*]] = load [[VECP_IDX]]
 ; CHECK-NEXT:     WIDEN-CAST [[EXT_IDX:.*]] = zext [[IDX]] to i64
 ; CHECK-NEXT:     WIDEN-GEP Inv[Var] [[GEP_BUCKET:.*]] = getelementptr inbounds ir<%buckets>, [[EXT_IDX]]
+; CHECK-NEXT:     WIDEN [[L_GEP_BUCKET:.*]] = load [[GEP_BUCKET]]
+; CHECK-NEXT:     WIDEN ir<%inc> = add nsw [[L_GEP_BUCKET]], ir<1>
 ; CHECK-NEXT:     WIDEN-HISTOGRAM buckets: [[GEP_BUCKET]], inc: ir<1>
 ; CHECK-NEXT:     EMIT [[IV_NEXT]] = add nuw [[IV]], [[VFxUF]]
 ; CHECK-NEXT:     EMIT branch-on-count [[IV_NEXT]], [[VTC]]
