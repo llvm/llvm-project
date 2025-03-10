@@ -72,7 +72,7 @@ class GaugeMetric:
 
 def github_get_metrics(
     github_repo: github.Repository, last_workflows_seen_as_completed: set[int]
-):
+) -> tuple[list[JobMetrics], int]:
     """Gets the metrics for specified Github workflows.
 
     This function takes in a list of workflows to track, and optionally the
