@@ -254,6 +254,25 @@ static Type getStorageElementTypeOrSelf(Type type) {
   return elementType;
 }
 
+static LogicalResult verifyRescaleValueAndZpTypes(Operation *op, Value val,
+                                                  Value valZp, StringRef name) {
+  Type eType = getStorageElementTypeOrSelf(val.getType());
+  Type eZpType = getStorageElementTypeOrSelf(valZp.getType());
+
+  bool bothInts =
+      mlir::isa<IntegerType>(eType) && mlir::isa<IntegerType>(eZpType);
+  bool sameBitWidth =
+      (eType.getIntOrFloatBitWidth() == eZpType.getIntOrFloatBitWidth());
+
+  if (!bothInts || !sameBitWidth) {
+    return op->emitOpError()
+           << "expected " << name << " and " << name
+           << "_zp to both be integer of the same bitwidth, but got " << eType
+           << " vs. " << eZpType;
+  }
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TOSA Operator Verifiers.
 //===----------------------------------------------------------------------===//
@@ -1729,6 +1748,33 @@ static LogicalResult verifyZeroPoint(T op, Value val, const int64_t &zp,
   return success();
 }
 
+static LogicalResult verifyZeroPoint(tosa::RescaleOp op, Value zpVal,
+                                     const int64_t &zp,
+                                     const std::string &operand) {
+  bool isInputZp = (operand == "Input");
+
+  bool tensorUnsigned =
+      isInputZp ? op.getInputUnsigned() : op.getOutputUnsigned();
+  StringRef tensorName = isInputZp ? "input" : "output";
+
+  Type zpElemType = getElementTypeOrSelf(zpVal);
+
+  if (zp != 0) {
+    if (!zpElemType.isInteger(8) &&
+        !(zpElemType.isInteger(16) && tensorUnsigned)) {
+      return op.emitOpError()
+             << "expect " << tensorName << "_zp of 0, got " << zp;
+    }
+    if (zpElemType.isInteger(16) && tensorUnsigned && zp != 32768) {
+      return op.emitOpError() << "expect " << tensorName
+                              << "_zp of 0 or 32768 for unsigned int16 "
+                              << tensorName << ", got " << zp;
+    }
+  }
+
+  return success();
+}
+
 #define ZERO_POINT_HELPER(OP, OPERAND_NAME)                                    \
   FailureOr<int64_t> tosa::OP::get##OPERAND_NAME##ZeroPoint() {                \
     return getZeroPoint(*this, get##OPERAND_NAME##Zp());                       \
@@ -1751,7 +1797,8 @@ ZERO_POINT_HELPER(MatMulOp, A)
 ZERO_POINT_HELPER(MatMulOp, B)
 ZERO_POINT_HELPER(NegateOp, Input1)
 ZERO_POINT_HELPER(NegateOp, Output)
-
+ZERO_POINT_HELPER(RescaleOp, Input)
+ZERO_POINT_HELPER(RescaleOp, Output)
 #undef ZERO_POINT_HELPER
 
 LogicalResult tosa::TransposeOp::inferReturnTypeComponents(
@@ -2784,41 +2831,21 @@ LogicalResult RescaleOp::verify() {
     return failure();
   }
 
-  auto input_zp = getInputZpAttr().getInt();
-  if (input_zp != 0) {
-    // only int8/uint8 and uint16 input can have non-zero input_zp
-    if (!inputElementType.isInteger(8) &&
-        !(inputElementType.isInteger(16) && getInputUnsigned())) {
-      emitOpError("expect input_zp of 0, got ") << input_zp;
-      return failure();
-    }
-    // input_zp must be either 0 or 32768 for uint16 input
-    if (inputElementType.isInteger(16) && getInputUnsigned() &&
-        input_zp != 32768) {
-      emitOpError(
-          "expect input_zp of 0 or 32768 for unsigned int16 input, got ")
-          << input_zp;
-      return failure();
-    }
-  }
+  if (verifyRescaleValueAndZpTypes(*this, getInput(), getInputZp(), "input")
+          .failed())
+    return failure();
 
-  auto output_zp = getOutputZpAttr().getInt();
-  if (output_zp != 0) {
-    // only int8/uint8 and uint16 output can have non-zero output_zp
-    if (!outputElementType.isInteger(8) &&
-        !(outputElementType.isInteger(16) && getOutputUnsigned())) {
-      emitOpError("expect output_zp of 0, got ") << output_zp;
-      return failure();
-    }
-    // output_zp must be either 0 or 32768 for uint16 output
-    if (outputElementType.isInteger(16) && getOutputUnsigned() &&
-        output_zp != 32768) {
-      emitOpError(
-          "expect output_zp of 0 or 32768 for unsigned int16 output, got ")
-          << output_zp;
-      return failure();
-    }
-  }
+  if (verifyRescaleValueAndZpTypes(*this, getOutput(), getOutputZp(), "output")
+          .failed())
+    return failure();
+
+  FailureOr<int64_t> maybeIZp = getInputZeroPoint();
+  if (succeeded(maybeIZp) && verifyInputZeroPoint(*maybeIZp).failed())
+    return failure();
+
+  FailureOr<int64_t> maybeOZp = getOutputZeroPoint();
+  if (succeeded(maybeOZp) && verifyOutputZeroPoint(*maybeOZp).failed())
+    return failure();
 
   auto multiplierType = llvm::dyn_cast<ShapedType>(getMultiplier().getType());
   if (!multiplierType) {
