@@ -70,6 +70,8 @@ PreservedAnalyses
 AMDGPUReserveWWMRegsPass::run(MachineFunction &MF,
                               MachineFunctionAnalysisManager &) {
   AMDGPUReserveWWMRegs().run(MF);
+  // TODO: This should abandon RegisterClassInfo once it is turned into an
+  // analysis.
   return PreservedAnalyses::all();
 }
 
