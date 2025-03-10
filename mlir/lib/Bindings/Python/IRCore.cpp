@@ -2743,6 +2743,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   // __init__.py will subclass it with site-specific functionality and set a
   // "Context" attribute on this module.
   //----------------------------------------------------------------------------
+
+  // Expose DefaultThreadPool to python
+  nb::class_<PyThreadPool>(m, "ThreadPool")
+      .def("__init__", [](PyThreadPool &self) { new (&self) PyThreadPool(); })
+      .def("get_max_concurrency", &PyThreadPool::getMaxConcurrency)
+      .def("_mlir_thread_pool_ptr", &PyThreadPool::_mlir_thread_pool_ptr);
+
   nb::class_<PyMlirContext>(m, "_BaseContext")
       .def("__init__",
            [](PyMlirContext &self) {
@@ -2814,6 +2821,25 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             mlirContextEnableMultithreading(self.get(), enable);
           },
           nb::arg("enable"))
+      .def("set_thread_pool",
+           [](PyMlirContext &self, PyThreadPool &pool) {
+             // we should disable multi-threading first before setting
+             // new thread pool otherwise the assert in
+             // MLIRContext::setThreadPool will be raised.
+             mlirContextEnableMultithreading(self.get(), false);
+             mlirContextSetThreadPool(self.get(), pool.get());
+           })
+      .def("get_num_threads",
+           [](PyMlirContext &self) {
+             return mlirContextGetNumThreads(self.get());
+           })
+      .def("_mlir_thread_pool_ptr",
+           [](PyMlirContext &self) {
+             MlirLlvmThreadPool pool = mlirContextGetThreadPool(self.get());
+             std::stringstream ss;
+             ss << pool.ptr;
+             return ss.str();
+           })
       .def(
           "is_registered_operation",
           [](PyMlirContext &self, std::string &name) {
