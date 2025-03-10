@@ -2174,6 +2174,17 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  acoshf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    acoshf16_test.cpp
+  DEPENDS
+    libc.src.math.acoshf16
+)
+
+add_fp_unittest(
   asinf_test
   NEED_MPFR
   SUITE
