@@ -143,8 +143,7 @@ public:
 
   void rememberOutArguments(const CallExpr *CE,
                             const FunctionDecl *Callee) const {
-    auto CalleeName = Callee->getName();
-    if (!CalleeName.contains("Create") && !CalleeName.contains("Copy"))
+    if (!isCreateOrCopyFunction(Callee))
       return;
 
     unsigned ArgCount = CE->getNumArgs();
@@ -236,8 +235,13 @@ public:
     auto *Callee = CE->getDirectCallee();
     if (!Callee)
       return false;
-    auto CalleeName = Callee->getName();
-    return CalleeName.contains("Create") || CalleeName.contains("Copy");
+    return isCreateOrCopyFunction(Callee);
+  }
+
+  bool isCreateOrCopyFunction(const FunctionDecl *FnDecl) const {
+    auto CalleeName = safeGetName(FnDecl);
+    return CalleeName.find("Create") != std::string::npos ||
+           CalleeName.find("Copy") != std::string::npos;
   }
 
   enum class IsOwnedResult { Unknown, Skip, Owned, NotOwned };
