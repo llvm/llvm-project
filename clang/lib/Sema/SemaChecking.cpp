@@ -14026,8 +14026,7 @@ void Sema::CheckVectorAccess(const Expr *BaseExpr, const Expr *IndexExpr) {
   if (!IndexExpr->EvaluateAsInt(Result, Context, Expr::SE_AllowSideEffects))
     return;
 
-  unsigned DiagID = getLangOpts().HLSL ? diag::err_vector_index_out_of_range
-                                       : diag::warn_vector_index_out_of_range;
+  unsigned DiagID = diag::err_vector_index_out_of_range;
 
   llvm::APSInt index = Result.Val.getInt();
   if (index.isNegative() || index >= VTy->getNumElements())
