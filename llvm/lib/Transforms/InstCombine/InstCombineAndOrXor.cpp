@@ -2641,7 +2641,10 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   // TODO: Unify with APInt matcher. This version allows undef unlike m_APInt
   Value *CastOp;
   if (match(Op0, m_ElementWiseBitCast(m_Value(CastOp))) &&
-      CastOp->getType()->isFPOrFPVectorTy() && match(Op1, m_MaxSignedValue()) &&
+      CastOp->getType()->isFPOrFPVectorTy() &&
+      APFloat::hasSignBitInMSB(
+          CastOp->getType()->getScalarType()->getFltSemantics()) &&
+      match(Op1, m_MaxSignedValue()) &&
       !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat)) {
     Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
@@ -4050,7 +4053,10 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // floating-point operation.
   Value *CastOp;
   if (match(Op0, m_ElementWiseBitCast(m_Value(CastOp))) &&
-      CastOp->getType()->isFPOrFPVectorTy() && match(Op1, m_SignMask()) &&
+      CastOp->getType()->isFPOrFPVectorTy() &&
+      APFloat::hasSignBitInMSB(
+          CastOp->getType()->getScalarType()->getFltSemantics()) &&
+      match(Op1, m_SignMask()) &&
       !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat)) {
     Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
@@ -4849,7 +4855,10 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     // TODO: Unify with APInt matcher. This version allows undef unlike m_APInt
     Value *CastOp;
     if (match(Op0, m_ElementWiseBitCast(m_Value(CastOp))) &&
-        CastOp->getType()->isFPOrFPVectorTy() && match(Op1, m_SignMask()) &&
+        CastOp->getType()->isFPOrFPVectorTy() &&
+        APFloat::hasSignBitInMSB(
+            CastOp->getType()->getScalarType()->getFltSemantics()) &&
+        match(Op1, m_SignMask()) &&
         !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
             Attribute::NoImplicitFloat)) {
       Value *FNeg = Builder.CreateFNeg(CastOp);
