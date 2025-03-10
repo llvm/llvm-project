@@ -135,11 +135,9 @@ Function *ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
   if (!Func) {
-    unsigned BuiltinID = FuncDecl->getBuiltinID();
-    Func =
-        P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                         std::move(ParamDescriptors), std::move(ParamOffsets),
-                         HasThisPointer, HasRVO, BuiltinID);
+    Func = P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
+                            std::move(ParamDescriptors),
+                            std::move(ParamOffsets), HasThisPointer, HasRVO);
   }
 
   assert(Func);
@@ -212,8 +210,7 @@ Function *ByteCodeEmitter::compileObjCBlock(const BlockExpr *BE) {
   Function *Func =
       P.createFunction(BE, ParamOffset, std::move(ParamTypes),
                        std::move(ParamDescriptors), std::move(ParamOffsets),
-                       /*HasThisPointer=*/false, /*HasRVO=*/false,
-                       /*IsUnevaluatedBuiltin=*/false);
+                       /*HasThisPointer=*/false, /*HasRVO=*/false);
 
   assert(Func);
   Func->setDefined(true);
@@ -367,6 +364,16 @@ bool ByteCodeEmitter::jump(const LabelTy &Label) {
 
 bool ByteCodeEmitter::fallthrough(const LabelTy &Label) {
   emitLabel(Label);
+  return true;
+}
+
+bool ByteCodeEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
+  const Expr *Arg = E->getArg(0);
+  PrimType T = Ctx.classify(Arg->getType()).value_or(PT_Ptr);
+  if (!this->emitBCP(getOffset(EndLabel), T, E))
+    return false;
+  if (!this->visit(Arg))
+    return false;
   return true;
 }
 

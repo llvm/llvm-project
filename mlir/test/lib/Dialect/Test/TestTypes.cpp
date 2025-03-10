@@ -537,3 +537,9 @@ void TestTypeOpAsmTypeInterfaceType::getAsmName(
     OpAsmSetNameFn setNameFn) const {
   setNameFn("op_asm_type_interface");
 }
+
+::mlir::OpAsmDialectInterface::AliasResult
+TestTypeOpAsmTypeInterfaceType::getAlias(::llvm::raw_ostream &os) const {
+  os << "op_asm_type_interface_type";
+  return ::mlir::OpAsmDialectInterface::AliasResult::FinalAlias;
+}

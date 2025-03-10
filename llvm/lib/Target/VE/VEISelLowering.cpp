@@ -1216,8 +1216,9 @@ SDValue VETargetLowering::lowerATOMIC_SWAP(SDValue Op,
     SDValue NewVal = prepareTS1AM(Op, DAG, Flag, Bits);
 
     SDValue Ptr = N->getOperand(1);
-    SDValue Aligned = DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
-                                  {Ptr, DAG.getConstant(-4, DL, MVT::i64)});
+    SDValue Aligned =
+        DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
+                    {Ptr, DAG.getSignedConstant(-4, DL, MVT::i64)});
     SDValue TS1AM = DAG.getAtomic(VEISD::TS1AM, DL, N->getMemoryVT(),
                                   DAG.getVTList(Op.getNode()->getValueType(0),
                                                 Op.getNode()->getValueType(1)),
@@ -1235,8 +1236,9 @@ SDValue VETargetLowering::lowerATOMIC_SWAP(SDValue Op,
     SDValue NewVal = prepareTS1AM(Op, DAG, Flag, Bits);
 
     SDValue Ptr = N->getOperand(1);
-    SDValue Aligned = DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
-                                  {Ptr, DAG.getConstant(-4, DL, MVT::i64)});
+    SDValue Aligned =
+        DAG.getNode(ISD::AND, DL, Ptr.getValueType(),
+                    {Ptr, DAG.getSignedConstant(-4, DL, MVT::i64)});
     SDValue TS1AM = DAG.getAtomic(VEISD::TS1AM, DL, N->getMemoryVT(),
                                   DAG.getVTList(Op.getNode()->getValueType(0),
                                                 Op.getNode()->getValueType(1)),
@@ -1601,7 +1603,7 @@ SDValue VETargetLowering::lowerVAARG(SDValue Op, SelectionDAG &DAG) const {
     VAList = DAG.getNode(ISD::ADD, DL, PtrVT, VAList,
                          DAG.getConstant(Align - 1, DL, PtrVT));
     VAList = DAG.getNode(ISD::AND, DL, PtrVT, VAList,
-                         DAG.getConstant(-Align, DL, PtrVT));
+                         DAG.getSignedConstant(-Align, DL, PtrVT));
     // Increment the pointer, VAList, by 16 to the next vaarg.
     NextPtr =
         DAG.getNode(ISD::ADD, DL, PtrVT, VAList, DAG.getIntPtrConstant(16, DL));

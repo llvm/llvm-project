@@ -453,7 +453,7 @@ bool DependenceGraphInfo<NodeType>::getDependencies(
   for (auto *SrcI : SrcIList)
     for (auto *DstI : DstIList)
       if (auto Dep =
-              const_cast<DependenceInfo *>(&DI)->depends(SrcI, DstI, true))
+              const_cast<DependenceInfo *>(&DI)->depends(SrcI, DstI))
         Deps.push_back(std::move(Dep));
 
   return !Deps.empty();

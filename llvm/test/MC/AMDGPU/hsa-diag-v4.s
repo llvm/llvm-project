@@ -280,6 +280,16 @@
   .amdhsa_shared_vgpr_count 15
 .end_amdhsa_kernel
 
+// GCN-LABEL: warning: test_amdhsa_inst_pref_size_invalid
+// PREGFX10: error: directive requires gfx11+
+// NONAMDHSA: error: unknown directive
+.warning "test_amdhsa_inst_pref_size_invalid"
+.amdhsa_kernel test_amdhsa_inst_pref_size_invalid
+  .amdhsa_next_free_vgpr 273
+  .amdhsa_next_free_sgpr 0
+  .amdhsa_inst_pref_size 15
+.end_amdhsa_kernel
+
 // GCN-LABEL: warning: test_next_free_vgpr_invalid
 // AMDHSA: error: .amdgcn.next_free_{v,s}gpr symbols must be absolute expressions
 // NONAMDHSA-NOT: error:

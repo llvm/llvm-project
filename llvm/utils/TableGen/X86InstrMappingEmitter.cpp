@@ -228,8 +228,9 @@ void X86InstrMappingEmitter::emitCompressEVEXTable(
       // For each pre-compression instruction look for a match in the
       // appropriate vector (instructions with the same opcode) using function
       // object IsMatch.
-      auto Match = llvm::find_if(CompressedInsts[Opcode], IsMatch(Inst));
-      if (Match != CompressedInsts[Opcode].end())
+      const auto &Insts = CompressedInsts[Opcode];
+      auto Match = llvm::find_if(Insts, IsMatch(Inst));
+      if (Match != Insts.end())
         NewInst = *Match;
     }
 

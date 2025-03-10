@@ -8,7 +8,7 @@ target triple = "riscv64-unknown-linux-gnu"
 
 define void @lshift_significand(i32 %n, ptr nocapture writeonly %dst) {
 ; CHECK-LABEL: define void @lshift_significand(
-; CHECK-SAME: i32 [[N:%.*]], ptr nocapture writeonly [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: i32 [[N:%.*]], ptr writeonly captures(none) [[DST:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CMP1_PEEL:%.*]] = icmp eq i32 [[N]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[CMP1_PEEL]], i64 2, i64 0

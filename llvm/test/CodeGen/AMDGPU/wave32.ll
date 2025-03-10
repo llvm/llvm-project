@@ -372,8 +372,8 @@ define amdgpu_kernel void @test_loop_with_if(ptr addrspace(1) %arg) #0 {
 ; GFX1032-NEXT:  .LBB10_2: ; %bb2
 ; GFX1032-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX1032-NEXT:    v_cmp_ge_i32_e64 s4, v1, v0
-; GFX1032-NEXT:    s_mov_b32 s3, 0
 ; GFX1032-NEXT:    v_cmp_lt_i32_e32 vcc_lo, v1, v0
+; GFX1032-NEXT:    s_mov_b32 s3, 0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s5, vcc_lo
 ; GFX1032-NEXT:    s_cbranch_execz .LBB10_4
 ; GFX1032-NEXT:  ; %bb.3: ; %bb5
@@ -515,8 +515,8 @@ bb13:
 define amdgpu_kernel void @test_loop_with_if_else_break(ptr addrspace(1) %arg) #0 {
 ; GFX1032-LABEL: test_loop_with_if_else_break:
 ; GFX1032:       ; %bb.0: ; %bb
-; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; GFX1032-NEXT:    s_mov_b32 s2, 0
 ; GFX1032-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GFX1032-NEXT:    s_cbranch_execz .LBB11_6
 ; GFX1032-NEXT:  ; %bb.1: ; %.preheader
@@ -1610,7 +1610,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %Flow, %bb
-  %lsr.iv = phi i32 [ undef, %bb ], [ %tmp2, %Flow ]
+  %lsr.iv = phi i32 [ poison, %bb ], [ %tmp2, %Flow ]
   %lsr.iv.next = add i32 %lsr.iv, 1
   %cmp0 = icmp slt i32 %lsr.iv.next, 0
   br i1 %cmp0, label %bb4, label %Flow
@@ -1621,7 +1621,7 @@ bb4:                                              ; preds = %bb1
   br label %Flow
 
 Flow:                                             ; preds = %bb4, %bb1
-  %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ undef, %bb1 ]
+  %tmp2 = phi i32 [ %lsr.iv.next, %bb4 ], [ poison, %bb1 ]
   %tmp3 = phi i1 [ %cmp1, %bb4 ], [ true, %bb1 ]
   br i1 %tmp3, label %bb1, label %bb9
 

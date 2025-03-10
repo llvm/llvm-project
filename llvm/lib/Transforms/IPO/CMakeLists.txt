@@ -14,6 +14,7 @@ add_llvm_component_library(LLVMipo
   EmbedBitcodePass.cpp
   ExpandVariadics.cpp
   ExtractGV.cpp
+  FatLTOCleanup.cpp
   ForceFunctionAttrs.cpp
   FunctionAttrs.cpp
   FunctionImport.cpp

@@ -21,13 +21,14 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
 #include <clc/math/clc_fabs.h>
+#include <clc/math/clc_fma.h>
 #include <clc/math/clc_mad.h>
-
-#include "config.h"
-#include "math.h"
-#include "tables.h"
+#include <clc/math/clc_subnormal_config.h>
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
 
 // compute pow using log and exp
 // x^y = exp(y * log(x))
@@ -68,17 +69,17 @@
 _CLC_DEF _CLC_OVERLOAD float __clc_rootn(float x, int ny) {
   float y = MATH_RECIP((float)ny);
 
-  int ix = as_int(x);
+  int ix = __clc_as_int(x);
   int ax = ix & EXSIGNBIT_SP32;
   int xpos = ix == ax;
 
-  int iy = as_int(y);
+  int iy = __clc_as_int(y);
   int ay = iy & EXSIGNBIT_SP32;
   int ypos = iy == ay;
 
   // Extra precise log calculation
   // First handle case that x is close to 1
-  float r = 1.0f - as_float(ax);
+  float r = 1.0f - __clc_as_float(ax);
   int near1 = __clc_fabs(r) < 0x1.0p-4f;
   float r2 = r * r;
 
@@ -102,7 +103,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rootn(float x, int ny) {
   // Computations for x not near 1
   int m = (int)(ax >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
   float mf = (float)m;
-  int ixs = as_int(as_float(ax | 0x3f800000) - 1.0f);
+  int ixs = __clc_as_int(__clc_as_float(ax | 0x3f800000) - 1.0f);
   float mfs = (float)((ixs >> EXPSHIFTBITS_SP32) - 253);
   int c = m == -127;
   int ixn = c ? ixs : ax;
@@ -111,8 +112,8 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rootn(float x, int ny) {
   int indx = (ixn & 0x007f0000) + ((ixn & 0x00008000) << 1);
 
   // F - Y
-  float f = as_float(0x3f000000 | indx) -
-            as_float(0x3f000000 | (ixn & MANTBITS_SP32));
+  float f = __clc_as_float(0x3f000000 | indx) -
+            __clc_as_float(0x3f000000 | (ixn & MANTBITS_SP32));
 
   indx = indx >> 16;
   float2 tv = USE_TABLE(log_inv_tbl_ep, indx);
@@ -140,13 +141,13 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rootn(float x, int ny) {
   lh = near1 ? lh_near1 : lh;
   l = near1 ? l_near1 : l;
 
-  float gh = as_float(as_int(l) & 0xfffff000);
+  float gh = __clc_as_float(__clc_as_int(l) & 0xfffff000);
   float gt = ((ltt - (lt - lth)) + ((lh - l) + lt)) + (l - gh);
 
-  float yh = as_float(iy & 0xfffff000);
+  float yh = __clc_as_float(iy & 0xfffff000);
 
   float fny = (float)ny;
-  float fnyh = as_float(as_int(fny) & 0xfffff000);
+  float fnyh = __clc_as_float(__clc_as_int(fny) & 0xfffff000);
   float fnyt = (float)(ny - (int)fnyh);
   float yt = MATH_DIVIDE(__clc_mad(-fnyt, yh, __clc_mad(-fnyh, yh, 1.0f)), fny);
 
@@ -156,7 +157,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rootn(float x, int ny) {
 
   // Extra precise exp of ylogx
   const float R_64_BY_LOG2 = 0x1.715476p+6f; // 64/log2 : 92.332482616893657
-  int n = convert_int(ylogx * R_64_BY_LOG2);
+  int n = __clc_convert_int(ylogx * R_64_BY_LOG2);
   float nf = (float)n;
 
   int j = n & 0x3f;
@@ -180,16 +181,16 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rootn(float x, int ny) {
   float expylogx =
       __clc_mad(tv.s0, poly, __clc_mad(tv.s1, poly, tv.s1)) + tv.s0;
   float sexpylogx = __clc_fp32_subnormals_supported()
-                        ? expylogx * as_float(0x1 << (m + 149))
+                        ? expylogx * __clc_as_float(0x1 << (m + 149))
                         : 0.0f;
 
-  float texpylogx = as_float(as_int(expylogx) + m2);
+  float texpylogx = __clc_as_float(__clc_as_int(expylogx) + m2);
   expylogx = m < -125 ? sexpylogx : texpylogx;
 
   // Result is +-Inf if (ylogx + ylogx_t) > 128*log2
   expylogx = ((ylogx > 0x1.62e430p+6f) |
               (ylogx == 0x1.62e430p+6f & ylogx_t > -0x1.05c610p-22f))
-                 ? as_float(PINFBITPATT_SP32)
+                 ? __clc_as_float(PINFBITPATT_SP32)
                  : expylogx;
 
   // Result is 0 if ylogx < -149*log2
@@ -202,9 +203,9 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rootn(float x, int ny) {
 
   int inty = 2 - (ny & 1);
 
-  float signval = as_float((as_uint(expylogx) ^ SIGNBIT_SP32));
+  float signval = __clc_as_float((__clc_as_uint(expylogx) ^ SIGNBIT_SP32));
   expylogx = ((inty == 1) & !xpos) ? signval : expylogx;
-  int ret = as_int(expylogx);
+  int ret = __clc_as_int(expylogx);
 
   // Corner case handling
   ret = (!xpos & (inty == 2)) ? QNANBITPATT_SP32 : ret;
@@ -222,7 +223,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_rootn(float x, int ny) {
   ret = ax > PINFBITPATT_SP32 ? ix : ret;
   ret = ny == 0 ? QNANBITPATT_SP32 : ret;
 
-  return as_float(ret);
+  return __clc_as_float(ret);
 }
 _CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, float, __clc_rootn, float, int)
 
@@ -234,11 +235,11 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rootn(double x, int ny) {
   double dny = (double)ny;
   double y = 1.0 / dny;
 
-  long ux = as_long(x);
+  long ux = __clc_as_long(x);
   long ax = ux & (~SIGNBIT_DP64);
   int xpos = ax == ux;
 
-  long uy = as_long(y);
+  long uy = __clc_as_long(y);
   long ay = uy & (~SIGNBIT_DP64);
   int ypos = ay == uy;
 
@@ -250,7 +251,8 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rootn(double x, int ny) {
     double xexp = (double)exp;
     long mantissa = ax & 0x000FFFFFFFFFFFFFL;
 
-    long temp_ux = as_long(as_double(0x3ff0000000000000L | mantissa) - 1.0);
+    long temp_ux =
+        __clc_as_long(__clc_as_double(0x3ff0000000000000L | mantissa) - 1.0);
     exp = ((temp_ux & 0x7FF0000000000000L) >> 52) - 2045;
     double xexp1 = (double)exp;
     long mantissa1 = temp_ux & 0x000FFFFFFFFFFFFFL;
@@ -262,51 +264,54 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rootn(double x, int ny) {
                ((mantissa & 0x0000080000000000) << 1);
     int index = rax >> 44;
 
-    double F = as_double(rax | 0x3FE0000000000000L);
-    double Y = as_double(mantissa | 0x3FE0000000000000L);
+    double F = __clc_as_double(rax | 0x3FE0000000000000L);
+    double Y = __clc_as_double(mantissa | 0x3FE0000000000000L);
     double f = F - Y;
     double2 tv = USE_TABLE(log_f_inv_tbl, index);
     double log_h = tv.s0;
     double log_t = tv.s1;
     double f_inv = (log_h + log_t) * f;
-    double r1 = as_double(as_long(f_inv) & 0xfffffffff8000000L);
-    double r2 = fma(-F, r1, f) * (log_h + log_t);
+    double r1 = __clc_as_double(__clc_as_long(f_inv) & 0xfffffffff8000000L);
+    double r2 = __clc_fma(-F, r1, f) * (log_h + log_t);
     double r = r1 + r2;
 
-    double poly = fma(
-        r, fma(r, fma(r, fma(r, 1.0 / 7.0, 1.0 / 6.0), 1.0 / 5.0), 1.0 / 4.0),
+    double poly = __clc_fma(
+        r,
+        __clc_fma(r,
+                  __clc_fma(r, __clc_fma(r, 1.0 / 7.0, 1.0 / 6.0), 1.0 / 5.0),
+                  1.0 / 4.0),
         1.0 / 3.0);
     poly = poly * r * r * r;
 
     double hr1r1 = 0.5 * r1 * r1;
     double poly0h = r1 + hr1r1;
     double poly0t = r1 - poly0h + hr1r1;
-    poly = fma(r1, r2, fma(0.5 * r2, r2, poly)) + r2 + poly0t;
+    poly = __clc_fma(r1, r2, __clc_fma(0.5 * r2, r2, poly)) + r2 + poly0t;
 
     tv = USE_TABLE(powlog_tbl, index);
     log_h = tv.s0;
     log_t = tv.s1;
 
-    double resT_t = fma(xexp, real_log2_tail, +log_t) - poly;
+    double resT_t = __clc_fma(xexp, real_log2_tail, +log_t) - poly;
     double resT = resT_t - poly0h;
-    double resH = fma(xexp, real_log2_lead, log_h);
+    double resH = __clc_fma(xexp, real_log2_lead, log_h);
     double resT_h = poly0h;
 
     double H = resT + resH;
-    double H_h = as_double(as_long(H) & 0xfffffffff8000000L);
+    double H_h = __clc_as_double(__clc_as_long(H) & 0xfffffffff8000000L);
     double T = (resH - H + resT) + (resT_t - (resT + resT_h)) + (H - H_h);
     H = H_h;
 
-    double y_head = as_double(uy & 0xfffffffff8000000L);
+    double y_head = __clc_as_double(uy & 0xfffffffff8000000L);
     double y_tail = y - y_head;
 
-    double fnyh = as_double(as_long(dny) & 0xfffffffffff00000);
+    double fnyh = __clc_as_double(__clc_as_long(dny) & 0xfffffffffff00000);
     double fnyt = (double)(ny - (int)fnyh);
-    y_tail = fma(-fnyt, y_head, fma(-fnyh, y_head, 1.0)) / dny;
+    y_tail = __clc_fma(-fnyt, y_head, __clc_fma(-fnyh, y_head, 1.0)) / dny;
 
-    double temp = fma(y_tail, H, fma(y_head, T, y_tail * T));
-    v = fma(y_head, H, temp);
-    vt = fma(y_head, H, -v) + temp;
+    double temp = __clc_fma(y_tail, H, __clc_fma(y_head, T, y_tail * T));
+    v = __clc_fma(y_head, H, temp);
+    vt = __clc_fma(y_head, H, -v) + temp;
   }
 
   // Now calculate exp of (v,vt)
@@ -330,24 +335,25 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rootn(double x, int ny) {
     double f2 = tv.s1;
     double f = f1 + f2;
 
-    double r1 = fma(dn, -lnof2_by_64_head, v);
+    double r1 = __clc_fma(dn, -lnof2_by_64_head, v);
     double r2 = dn * lnof2_by_64_tail;
     double r = (r1 + r2) + vt;
 
-    double q = fma(
-        r,
-        fma(r,
-            fma(r,
-                fma(r, 1.38889490863777199667e-03, 8.33336798434219616221e-03),
-                4.16666666662260795726e-02),
-            1.66666666665260878863e-01),
-        5.00000000000000008883e-01);
-    q = fma(r * r, q, r);
+    double q =
+        __clc_fma(r,
+                  __clc_fma(r,
+                            __clc_fma(r,
+                                      __clc_fma(r, 1.38889490863777199667e-03,
+                                                8.33336798434219616221e-03),
+                                      4.16666666662260795726e-02),
+                            1.66666666665260878863e-01),
+                  5.00000000000000008883e-01);
+    q = __clc_fma(r * r, q, r);
 
-    expv = fma(f, q, f2) + f1;
+    expv = __clc_fma(f, q, f2) + f1;
     expv = ldexp(expv, m);
 
-    expv = v > max_exp_arg ? as_double(0x7FF0000000000000L) : expv;
+    expv = v > max_exp_arg ? __clc_as_double(0x7FF0000000000000L) : expv;
     expv = v < min_exp_arg ? 0.0 : expv;
   }
 
@@ -360,7 +366,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rootn(double x, int ny) {
 
   expv *= ((inty == 1) & !xpos) ? -1.0 : 1.0;
 
-  long ret = as_long(expv);
+  long ret = __clc_as_long(expv);
 
   // Now all the edge cases
   ret = (!xpos & (inty == 2)) ? QNANBITPATT_DP64 : ret;
@@ -378,7 +384,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_rootn(double x, int ny) {
   ret = ((ux == PINFBITPATT_DP64) & ypos) ? PINFBITPATT_DP64 : ret;
   ret = ax > PINFBITPATT_DP64 ? ux : ret;
   ret = ny == 0 ? QNANBITPATT_DP64 : ret;
-  return as_double(ret);
+  return __clc_as_double(ret);
 }
 _CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_rootn, double, int)
 #endif
@@ -388,7 +394,7 @@ _CLC_BINARY_VECTORIZE(_CLC_DEF _CLC_OVERLOAD, double, __clc_rootn, double, int)
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 _CLC_OVERLOAD _CLC_DEF half __clc_rootn(half x, int y) {
-    return (half)__clc_rootn((float)x, y);
+  return (half)__clc_rootn((float)x, y);
 }
 
 _CLC_BINARY_VECTORIZE(_CLC_OVERLOAD _CLC_DEF, half, __clc_rootn, half, int);

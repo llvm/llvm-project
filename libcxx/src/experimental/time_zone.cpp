@@ -668,7 +668,7 @@ __first_rule(seconds __stdoff, const vector<__tz::__rule>& __rules) {
                __continuation_end,
                __continuation.__stdoff + __save,
                chrono::duration_cast<minutes>(__save),
-               __continuation.__format},
+               chrono::__format(__continuation, __continuation.__format, __save)},
       true};
 }
 

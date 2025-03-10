@@ -1270,6 +1270,12 @@ TEST(DIBuilder, CompositeTypes) {
   DICompositeType *Array = DIB.createArrayType(8, 8, nullptr, {});
   EXPECT_EQ(Array->getTag(), dwarf::DW_TAG_array_type);
 
+  StringRef ArrayNameExp = "AnArray";
+  DICompositeType *NamedArray =
+      DIB.createArrayType(nullptr, ArrayNameExp, nullptr, 0, 8, 8, nullptr, {});
+  EXPECT_EQ(NamedArray->getTag(), dwarf::DW_TAG_array_type);
+  EXPECT_EQ(NamedArray->getName(), ArrayNameExp);
+
   DICompositeType *Vector = DIB.createVectorType(8, 8, nullptr, {});
   EXPECT_EQ(Vector->getTag(), dwarf::DW_TAG_array_type);
 

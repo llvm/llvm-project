@@ -231,8 +231,11 @@ but the following example shows how it can be used by a standard user.
     do {
       auto port = server.try_open(warp_size, /*index=*/0);
       // From libllvmlibc_rpc_server.a in the installation.
-      if (port)
-        handle_libc_opcodes(*port, warp_size);
+      if (!port)
+        continue;
+
+      handle_libc_opcodes(*port, warp_size);
+      port->close();
     } while (cudaStreamQuery(stream) == cudaErrorNotReady);
   }
 
