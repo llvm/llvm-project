@@ -43,6 +43,7 @@ static const unsigned DirectXAddrSpaceMap[] = {
     0, // ptr64
     3, // hlsl_groupshared
     2, // hlsl_constant
+    1, // hlsl_device
     // Wasm address space values for this target are dummy values,
     // as it is only enabled for Wasm targets.
     20, // wasm_funcref
