@@ -26,6 +26,7 @@
 #include "clang/Frontend/Utils.h"
 #include "clang/FrontendTool/Utils.h"
 #include "clang/Serialization/ObjectFilePCHContainerReader.h"
+#include "clang/Tooling/ModuleBuildDaemon/Frontend.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Config/llvm-config.h"
@@ -66,7 +67,7 @@ using namespace llvm::opt;
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
                              bool GenCrashDiag) {
-  DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine*>(UserData);
+  DiagnosticsEngine &Diags = *static_cast<DiagnosticsEngine *>(UserData);
 
   Diags.Report(diag::err_fe_error_backend) << Message;
 
@@ -238,8 +239,67 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
     Diags.setSeverity(diag::remark_cc1_round_trip_generated,
                       diag::Severity::Remark, {});
 
-  bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
-                                                    Argv, Diags, Argv0);
+  std::shared_ptr<CompilerInvocation> Invocation =
+      std::make_shared<CompilerInvocation>();
+  bool Success =
+      CompilerInvocation::CreateFromArgs(*Invocation, Argv, Diags, Argv0);
+
+  // FIXME: does not actually flush any diagnostics
+  DiagsBuffer->FlushDiagnostics(Diags);
+  if (!Success) {
+    DiagsBuffer->finish();
+    return 1;
+  }
+
+  // The module build daemon may update the cc1 args and needs someplace to
+  // store a modified command line for the lifetime of the compilation
+  std::vector<std::string> UpdatedArgv;
+  std::vector<const char *> CharUpdatedArgv;
+
+  // Handle module build daemon functionality if enabled
+  if (Invocation->getFrontendOpts().ModuleBuildDaemon) {
+
+    // Scanner needs cc1 invocations working directory
+    IntrusiveRefCntPtr<llvm::vfs::FileSystem> System =
+        createVFSFromCompilerInvocation(*Invocation, Diags);
+    llvm::ErrorOr<std::string> MaybeCWD = System->getCurrentWorkingDirectory();
+
+    if (MaybeCWD.getError()) {
+      llvm::errs() << "Could not get working directory: "
+                   << MaybeCWD.getError().message() << "\n";
+      return 1;
+    }
+
+    Expected<std::vector<std::string>> MaybeUpdatedArgv =
+        clang::tooling::cc1modbuildd::updateCC1WithModuleBuildDaemon(
+            *Invocation, Argv, Argv0, *MaybeCWD, Diags);
+    if (!MaybeUpdatedArgv) {
+      llvm::errs() << toString(std::move(MaybeUpdatedArgv.takeError())) << '\n';
+      return 1;
+    }
+
+    // CompilerInvocation::CreateFromArgs expects an ArrayRef<const char *>
+    UpdatedArgv = std::move(*MaybeUpdatedArgv);
+    CharUpdatedArgv.reserve(UpdatedArgv.size());
+    for (const auto &Arg : UpdatedArgv) {
+      CharUpdatedArgv.push_back(Arg.c_str());
+    }
+  }
+
+  llvm::outs() << "translation unit command line" << '\n';
+  for (const auto &Arg : Argv)
+    llvm::outs() << Arg << " ";
+  llvm::outs() << "\n";
+
+  // If Argv was modified by the module build daemon create new Invocation
+  if (!Argv.equals(ArrayRef<const char *>(CharUpdatedArgv)) &&
+      !CharUpdatedArgv.empty()) {
+    Argv = ArrayRef<const char *>(CharUpdatedArgv);
+    Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(), Argv,
+                                                 Diags, Argv0);
+  } else {
+    Clang->setInvocation(Invocation);
+  }
 
   if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
@@ -262,7 +322,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
       Clang->getHeaderSearchOpts().ResourceDir.empty())
     Clang->getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
+        CompilerInvocation::GetResourcesPath(Argv0, MainAddr);
 
   // Create the actual diagnostics engine.
   Clang->createDiagnostics(*llvm::vfs::getRealFileSystem());
@@ -271,8 +331,8 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
 
   // Set an error handler, so that any LLVM backend diagnostics go through our
   // error handler.
-  llvm::install_fatal_error_handler(LLVMErrorHandler,
-                                  static_cast<void*>(&Clang->getDiagnostics()));
+  llvm::install_fatal_error_handler(
+      LLVMErrorHandler, static_cast<void *>(&Clang->getDiagnostics()));
 
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success) {
