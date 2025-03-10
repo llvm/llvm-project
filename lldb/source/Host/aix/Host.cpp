@@ -9,8 +9,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/Status.h"
 
-using namespace llvm;
-using namespace lldb;
 using namespace lldb_private;
 
 uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
