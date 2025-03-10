@@ -11,48 +11,54 @@
 // cxx98-error@-1 {{variadic macros are a C99 feature}}
 #endif
 
-namespace cwg1 { // cwg1: no
-  namespace X { extern "C" void cwg1_f(int a = 1); }
-  namespace Y { extern "C" void cwg1_f(int a = 1); }
+namespace cwg1 { // cwg1: 21
+  namespace X { extern "C" void cwg1_f(int a = 1); } // #cwg1-X
+  namespace Y { extern "C" void cwg1_f(int a = 1); } // #cwg1-Y
   using X::cwg1_f; using Y::cwg1_f;
   void g() {
     cwg1_f(0);
-    // FIXME: This should be rejected, due to the ambiguous default argument.
     cwg1_f();
+    // expected-error@-1 {{function call relies on default argument that has multiple definitions}}
+    //   expected-note@#cwg1-X {{default argument declared here}}
+    //   expected-note@#cwg1-Y {{default argument declared here}}
   }
   namespace X {
     using Y::cwg1_f;
     void h() {
       cwg1_f(0);
-      // FIXME: This should be rejected, due to the ambiguous default argument.
       cwg1_f();
+      // expected-error@-1 {{function call relies on default argument that has multiple definitions}}
+      //   expected-note@#cwg1-X {{default argument declared here}}
+      //   expected-note@#cwg1-Y {{default argument declared here}}
     }
   }
 
   namespace X {
     void z(int);
   }
-  void X::z(int = 1) {} // #cwg1-z
+  void X::z(int = 1) {}
   namespace X {
-    void z(int = 1);
-    // expected-error@-1 {{redefinition of default argument}}
-    //   expected-note@#cwg1-z {{previous definition is here}}
+    void z(int = 1); // OK, namespace X has a distinct set of default arguments
   }
 
-  void i(int = 1);
+  void i(int = 1); // #cwg1-i
   void j() {
-    void i(int = 1);
+    void i(int = 1); // #cwg1-i-redecl
     using cwg1::i;
     i(0);
-    // FIXME: This should be rejected, due to the ambiguous default argument.
     i();
+    // expected-error@-1 {{function call relies on default argument that has multiple definitions}}
+    //   expected-note@#cwg1-i {{default argument declared here}}
+    //   expected-note@#cwg1-i-redecl {{default argument declared here}}
   }
   void k() {
     using cwg1::i;
-    void i(int = 1);
+    void i(int = 1); // #cwg1-i-redecl2
     i(0);
-    // FIXME: This should be rejected, due to the ambiguous default argument.
     i();
+    // expected-error@-1 {{function call relies on default argument that has multiple definitions}}
+    //   expected-note@#cwg1-i {{default argument declared here}}
+    //   expected-note@#cwg1-i-redecl2 {{default argument declared here}}
   }
 } // namespace cwg1
 
