@@ -352,7 +352,7 @@ public:
   }
 
   bool Pre(const parser::OmpDirectiveSpecification &x) {
-    PushContext(x.source, std::get<llvm::omp::Directive>(x.t));
+    PushContext(x.source, x.DirId());
     return true;
   }
   void Post(const parser::OmpDirectiveSpecification &) { PopContext(); }

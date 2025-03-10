@@ -10,11 +10,13 @@
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
 #include "RunInTerminal.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Host/MemoryMonitor.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
@@ -504,9 +506,24 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  // Create a memory monitor. This can return nullptr if the host platform is
+  // not supported.
+  std::unique_ptr<lldb_private::MemoryMonitor> memory_monitor =
+      lldb_private::MemoryMonitor::Create([&]() {
+        if (log)
+          *log << "memory pressure detected\n";
+        lldb::SBDebugger::MemoryPressureDetected();
+      });
+
+  if (memory_monitor)
+    memory_monitor->Start();
+
   // Terminate the debugger before the C++ destructor chain kicks in.
-  auto terminate_debugger =
-      llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
+  auto terminate_debugger = llvm::make_scope_exit([&] {
+    if (memory_monitor)
+      memory_monitor->Stop();
+    lldb::SBDebugger::Terminate();
+  });
 
   std::vector<std::string> pre_init_commands;
   for (const std::string &arg :

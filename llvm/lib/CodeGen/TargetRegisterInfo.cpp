@@ -498,7 +498,7 @@ bool TargetRegisterInfo::getRegAllocationHints(
       continue;
 
     // All clear, tell the register allocator to prefer this register.
-    Hints.push_back(Phys);
+    Hints.push_back(Phys.id());
   }
   return false;
 }

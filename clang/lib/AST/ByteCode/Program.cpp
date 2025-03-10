@@ -393,6 +393,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (const auto *Record = getOrCreateRecord(RT->getDecl()))
       return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
                                 IsMutable);
+    return allocateDescriptor(D, MDSize);
   }
 
   // Arrays.

@@ -9,6 +9,7 @@
 #include "MCTargetDesc/PPCFixupKinds.h"
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFObjectWriter.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -43,30 +44,7 @@ static MCSymbolRefExpr::VariantKind getAccessVariant(const MCValue &Target,
 
   if (Expr->getKind() != MCExpr::Target)
     return Target.getAccessVariant();
-
-  switch (cast<PPCMCExpr>(Expr)->getKind()) {
-  case PPCMCExpr::VK_PPC_None:
-    return MCSymbolRefExpr::VK_None;
-  case PPCMCExpr::VK_PPC_LO:
-    return MCSymbolRefExpr::VK_PPC_LO;
-  case PPCMCExpr::VK_PPC_HI:
-    return MCSymbolRefExpr::VK_PPC_HI;
-  case PPCMCExpr::VK_PPC_HA:
-    return MCSymbolRefExpr::VK_PPC_HA;
-  case PPCMCExpr::VK_PPC_HIGH:
-    return MCSymbolRefExpr::VK_PPC_HIGH;
-  case PPCMCExpr::VK_PPC_HIGHA:
-    return MCSymbolRefExpr::VK_PPC_HIGHA;
-  case PPCMCExpr::VK_PPC_HIGHERA:
-    return MCSymbolRefExpr::VK_PPC_HIGHERA;
-  case PPCMCExpr::VK_PPC_HIGHER:
-    return MCSymbolRefExpr::VK_PPC_HIGHER;
-  case PPCMCExpr::VK_PPC_HIGHEST:
-    return MCSymbolRefExpr::VK_PPC_HIGHEST;
-  case PPCMCExpr::VK_PPC_HIGHESTA:
-    return MCSymbolRefExpr::VK_PPC_HIGHESTA;
-  }
-  llvm_unreachable("unknown PPCMCExpr kind");
+  return MCSymbolRefExpr::VariantKind(cast<PPCMCExpr>(Expr)->getKind());
 }
 
 unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
@@ -75,6 +53,7 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
   MCFixupKind Kind = Fixup.getKind();
   if (Kind >= FirstLiteralRelocationKind)
     return Kind - FirstLiteralRelocationKind;
+  auto RefKind = static_cast<PPCMCExpr::VariantKind>(Target.getRefKind());
   MCSymbolRefExpr::VariantKind Modifier = getAccessVariant(Target, Fixup);
 
   // determine the type of the relocation
@@ -107,20 +86,18 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       Type = ELF::R_PPC_REL14;
       break;
     case PPC::fixup_ppc_half16:
-      switch (Modifier) {
-      default: llvm_unreachable("Unsupported Modifier");
-      case MCSymbolRefExpr::VK_None:
-        Type = ELF::R_PPC_REL16;
-        break;
-      case MCSymbolRefExpr::VK_PPC_LO:
-        Type = ELF::R_PPC_REL16_LO;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HI:
-        Type = ELF::R_PPC_REL16_HI;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HA:
-        Type = ELF::R_PPC_REL16_HA;
-        break;
+      switch (RefKind) {
+      default:
+        Ctx.reportError(Fixup.getLoc(), "invalid VariantKind");
+        return ELF::R_PPC_NONE;
+      case PPCMCExpr::VK_PPC_None:
+        return ELF::R_PPC_REL16;
+      case PPCMCExpr::VK_PPC_LO:
+        return ELF::R_PPC_REL16_LO;
+      case PPCMCExpr::VK_PPC_HI:
+        return ELF::R_PPC_REL16_HI;
+      case PPCMCExpr::VK_PPC_HA:
+        return ELF::R_PPC_REL16_HA;
       }
       break;
     case PPC::fixup_ppc_half16ds:
@@ -168,37 +145,32 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       Type = ELF::R_PPC_ADDR14; // XXX: or BRNTAKEN?_
       break;
     case PPC::fixup_ppc_half16:
+      switch (RefKind) {
+      case PPCMCExpr::VK_PPC_None:
+        break;
+      case PPCMCExpr::VK_PPC_LO:
+        return ELF::R_PPC_ADDR16_LO;
+      case PPCMCExpr::VK_PPC_HI:
+        return ELF::R_PPC_ADDR16_HI;
+      case PPCMCExpr::VK_PPC_HA:
+        return ELF::R_PPC_ADDR16_HA;
+      case PPCMCExpr::VK_PPC_HIGH:
+        return ELF::R_PPC64_ADDR16_HIGH;
+      case PPCMCExpr::VK_PPC_HIGHA:
+        return ELF::R_PPC64_ADDR16_HIGHA;
+      case PPCMCExpr::VK_PPC_HIGHER:
+        return ELF::R_PPC64_ADDR16_HIGHER;
+      case PPCMCExpr::VK_PPC_HIGHERA:
+        return ELF::R_PPC64_ADDR16_HIGHERA;
+      case PPCMCExpr::VK_PPC_HIGHEST:
+        return ELF::R_PPC64_ADDR16_HIGHEST;
+      case PPCMCExpr::VK_PPC_HIGHESTA:
+        return ELF::R_PPC64_ADDR16_HIGHESTA;
+      }
       switch (Modifier) {
       default: llvm_unreachable("Unsupported Modifier");
       case MCSymbolRefExpr::VK_None:
         Type = ELF::R_PPC_ADDR16;
-        break;
-      case MCSymbolRefExpr::VK_PPC_LO:
-        Type = ELF::R_PPC_ADDR16_LO;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HI:
-        Type = ELF::R_PPC_ADDR16_HI;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HA:
-        Type = ELF::R_PPC_ADDR16_HA;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HIGH:
-        Type = ELF::R_PPC64_ADDR16_HIGH;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HIGHA:
-        Type = ELF::R_PPC64_ADDR16_HIGHA;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HIGHER:
-        Type = ELF::R_PPC64_ADDR16_HIGHER;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HIGHERA:
-        Type = ELF::R_PPC64_ADDR16_HIGHERA;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HIGHEST:
-        Type = ELF::R_PPC64_ADDR16_HIGHEST;
-        break;
-      case MCSymbolRefExpr::VK_PPC_HIGHESTA:
-        Type = ELF::R_PPC64_ADDR16_HIGHESTA;
         break;
       case MCSymbolRefExpr::VK_GOT:
         Type = ELF::R_PPC_GOT16;
@@ -350,13 +322,19 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       break;
     case PPC::fixup_ppc_half16ds:
     case PPC::fixup_ppc_half16dq:
+      switch (RefKind) {
+      default:
+        Ctx.reportError(Fixup.getLoc(), "invalid VariantKind");
+        return ELF::R_PPC64_NONE;
+      case PPCMCExpr::VK_PPC_None:
+        break;
+      case PPCMCExpr::VK_PPC_LO:
+        return ELF::R_PPC64_ADDR16_LO_DS;
+      }
       switch (Modifier) {
       default: llvm_unreachable("Unsupported Modifier");
       case MCSymbolRefExpr::VK_None:
         Type = ELF::R_PPC64_ADDR16_DS;
-        break;
-      case MCSymbolRefExpr::VK_PPC_LO:
-        Type = ELF::R_PPC64_ADDR16_LO_DS;
         break;
       case MCSymbolRefExpr::VK_GOT:
         Type = ELF::R_PPC64_GOT16_DS;

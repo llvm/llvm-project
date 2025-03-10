@@ -482,6 +482,31 @@ func.func @generic_op_reshape_consumer_fusion_projected(%arg0 : tensor<?x?xf32>,
 
 // -----
 
+func.func @fuse_collapse_reduction(%arg0: tensor<10x10x20xf32>) -> tensor<100xf32> {
+  %c0 = arith.constant 0 : index
+  %c_0 = arith.constant 0.0 : f32
+  %0 = tensor.collapse_shape %arg0 [[0, 1], [2]] : tensor<10x10x20xf32> into tensor<100x20xf32>
+  %2 = tensor.empty() : tensor<100xf32>
+  %3 = linalg.fill ins(%c_0 : f32) outs(%2 : tensor<100xf32>) -> tensor<100xf32>
+  %4 = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>],
+    iterator_types = ["parallel", "reduction"]}
+    ins(%0 : tensor<100x20xf32>) outs(%3 : tensor<100xf32>) {
+      ^bb0(%arg1 : f32, %arg2: f32):
+        %4 = arith.addf %arg1, %arg2 : f32
+        linalg.yield %4 : f32
+    } -> tensor<100xf32>
+  return %4 : tensor<100xf32>
+}
+
+//      CHECK: func @fuse_collapse_reduction
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<10x10x20xf32>
+//      CHECK:   %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:       ins(%[[ARG0]] : tensor<10x10x20xf32>)
+//      CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %[[GENERIC]]
+//      CHECK:   return %[[COLLAPSE]]
+// -----
+
 func.func @no_fuse_dynamic_dims(%arg0: tensor<?x?xf32>) -> tensor<?xf32> {
   %c0 = arith.constant 0 : index
   %0 = tensor.collapse_shape %arg0 [[0, 1]] : tensor<?x?xf32> into tensor<?xf32>

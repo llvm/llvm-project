@@ -290,6 +290,11 @@ static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
       Phi1ToMove.moveBefore(*Merge2, Merge2->begin());
     }
 
+    // Remove the dead recipes in Region1's entry block.
+    for (VPRecipeBase &R :
+         make_early_inc_range(reverse(*Region1->getEntryBasicBlock())))
+      R.eraseFromParent();
+
     // Finally, remove the first region.
     for (VPBlockBase *Pred : make_early_inc_range(Region1->getPredecessors())) {
       VPBlockUtils::disconnectBlocks(Pred, Region1);
@@ -1743,11 +1748,10 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     if (unsigned VFSize =
             TypeInfo.inferScalarType(MaxEVL)->getScalarSizeInBits();
         VFSize != 32) {
-      MaxEVL = new VPScalarCastRecipe(
+      VPBuilder Builder(LoopRegion->getPreheaderVPBB());
+      MaxEVL = Builder.createScalarCast(
           VFSize > 32 ? Instruction::Trunc : Instruction::ZExt, MaxEVL,
           Type::getInt32Ty(Ctx), DebugLoc());
-      VPBasicBlock *Preheader = LoopRegion->getPreheaderVPBB();
-      Preheader->appendRecipe(cast<VPScalarCastRecipe>(MaxEVL));
     }
     PrevEVL = new VPScalarPHIRecipe(MaxEVL, &EVL, DebugLoc(), "prev.evl");
     PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
@@ -1867,20 +1871,19 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
 
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
+  Builder.setInsertPoint(CanonicalIVIncrement);
   VPSingleDefRecipe *OpVPEVL = VPEVL;
   if (unsigned IVSize = CanonicalIVPHI->getScalarType()->getScalarSizeInBits();
       IVSize != 32) {
-    OpVPEVL = new VPScalarCastRecipe(
+    OpVPEVL = Builder.createScalarCast(
         IVSize < 32 ? Instruction::Trunc : Instruction::ZExt, OpVPEVL,
         CanonicalIVPHI->getScalarType(), CanonicalIVIncrement->getDebugLoc());
-    OpVPEVL->insertBefore(CanonicalIVIncrement);
   }
-  auto *NextEVLIV =
-      new VPInstruction(Instruction::Add, {OpVPEVL, EVLPhi},
-                        {CanonicalIVIncrement->hasNoUnsignedWrap(),
-                         CanonicalIVIncrement->hasNoSignedWrap()},
-                        CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
-  NextEVLIV->insertBefore(CanonicalIVIncrement);
+  auto *NextEVLIV = Builder.createOverflowingOp(
+      Instruction::Add, {OpVPEVL, EVLPhi},
+      {CanonicalIVIncrement->hasNoUnsignedWrap(),
+       CanonicalIVIncrement->hasNoSignedWrap()},
+      CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
   EVLPhi->addOperand(NextEVLIV);
 
   transformRecipestoEVLRecipes(Plan, *VPEVL);

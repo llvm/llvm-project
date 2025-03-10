@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "PPCMCAsmInfo.h"
+#include "PPCMCExpr.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -26,15 +27,15 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
     {MCSymbolRefExpr::VK_TLSGD, "tlsgd"},
     {MCSymbolRefExpr::VK_TLSLD, "tlsld"},
     {MCSymbolRefExpr::VK_TPREL, "TPREL"},
-    {MCSymbolRefExpr::VK_PPC_LO, "l"},
-    {MCSymbolRefExpr::VK_PPC_HI, "h"},
-    {MCSymbolRefExpr::VK_PPC_HA, "ha"},
-    {MCSymbolRefExpr::VK_PPC_HIGH, "high"},
-    {MCSymbolRefExpr::VK_PPC_HIGHA, "higha"},
-    {MCSymbolRefExpr::VK_PPC_HIGHER, "higher"},
-    {MCSymbolRefExpr::VK_PPC_HIGHERA, "highera"},
-    {MCSymbolRefExpr::VK_PPC_HIGHEST, "highest"},
-    {MCSymbolRefExpr::VK_PPC_HIGHESTA, "highesta"},
+    {PPCMCExpr::VK_PPC_LO, "l"},
+    {PPCMCExpr::VK_PPC_HI, "h"},
+    {PPCMCExpr::VK_PPC_HA, "ha"},
+    {PPCMCExpr::VK_PPC_HIGH, "high"},
+    {PPCMCExpr::VK_PPC_HIGHA, "higha"},
+    {PPCMCExpr::VK_PPC_HIGHER, "higher"},
+    {PPCMCExpr::VK_PPC_HIGHERA, "highera"},
+    {PPCMCExpr::VK_PPC_HIGHEST, "highest"},
+    {PPCMCExpr::VK_PPC_HIGHESTA, "highesta"},
     {MCSymbolRefExpr::VK_PPC_GOT_LO, "got@l"},
     {MCSymbolRefExpr::VK_PPC_GOT_HI, "got@h"},
     {MCSymbolRefExpr::VK_PPC_GOT_HA, "got@ha"},

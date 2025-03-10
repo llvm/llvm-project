@@ -1995,13 +1995,19 @@ static LogicalResult generateCopy(
   SmallVector<int64_t, 4> fastBufferShape;
 
   // Compute the extents of the buffer.
-  std::vector<SmallVector<int64_t, 4>> lbs;
-  SmallVector<int64_t, 8> lbDivisors;
+  SmallVector<AffineMap, 2> lbs;
   lbs.reserve(rank);
-  std::optional<int64_t> numElements = region.getConstantBoundingSizeAndShape(
-      &fastBufferShape, &lbs, &lbDivisors);
+  std::optional<int64_t> numElements =
+      region.getConstantBoundingSizeAndShape(&fastBufferShape, &lbs);
   if (!numElements) {
     LLVM_DEBUG(llvm::dbgs() << "Non-constant region size not supported\n");
+    return failure();
+  }
+
+  if (llvm::any_of(lbs, [](AffineMap lb) { return lb.getNumResults() > 1; })) {
+    // This can be supported in the future if needed.
+    LLVM_DEBUG(llvm::dbgs()
+               << "Max lower bound for memref region start not supported\n");
     return failure();
   }
 
@@ -2028,7 +2034,7 @@ static LogicalResult generateCopy(
   SmallVector<Value, 8> regionSymbols;
   cst->getValues(rank, cst->getNumVars(), &regionSymbols);
 
-  // Construct the index expressions for the fast memory buffer. The index
+  // Construct the access expression for the fast memory buffer. The access
   // expression for a particular dimension of the fast buffer is obtained by
   // subtracting out the lower bound on the original memref's data region
   // along the corresponding dimension.
@@ -2037,19 +2043,13 @@ static LogicalResult generateCopy(
   SmallVector<AffineExpr, 4> fastBufOffsets;
   fastBufOffsets.reserve(rank);
   for (unsigned d = 0; d < rank; d++) {
-    assert(lbs[d].size() == cst->getNumCols() - rank && "incorrect bound size");
-
-    AffineExpr offset = top.getAffineConstantExpr(0);
-    for (unsigned j = 0, e = cst->getNumCols() - rank - 1; j < e; j++)
-      offset = offset + lbs[d][j] * top.getAffineDimExpr(j);
-    assert(lbDivisors[d] > 0);
-    offset =
-        (offset + lbs[d][cst->getNumCols() - 1 - rank]).floorDiv(lbDivisors[d]);
+    assert(lbs[d].getNumSymbols() == cst->getNumCols() - rank - 1 &&
+           "incorrect bound size");
 
     // Set copy start location for this dimension in the lower memory space
     // memref.
-    if (auto caf = dyn_cast<AffineConstantExpr>(offset)) {
-      auto indexVal = caf.getValue();
+    if (auto caf = lbs[d].isSingleConstant()) {
+      auto indexVal = lbs[d].getSingleConstantResult();
       if (indexVal == 0) {
         memIndices.push_back(zeroIndex);
       } else {
@@ -2059,16 +2059,23 @@ static LogicalResult generateCopy(
     } else {
       // The coordinate for the start location is just the lower bound along the
       // corresponding dimension on the memory region (stored in 'offset').
-      auto map = AffineMap::get(
-          cst->getNumDimVars() + cst->getNumSymbolVars() - rank, 0, offset);
-      memIndices.push_back(b.create<AffineApplyOp>(loc, map, regionSymbols));
+      // Remap all inputs of the map to dimensions uniformly since in the
+      // generate IR we need valid affine symbols as opposed to "symbols" for
+      // the purpose of the memref region.
+      SmallVector<AffineExpr> symReplacements(lbs[d].getNumSymbols());
+      for (unsigned i = 0, e = lbs[d].getNumSymbols(); i < e; ++i)
+        symReplacements[i] = top.getAffineDimExpr(i);
+      lbs[d] = lbs[d].replaceDimsAndSymbols(
+          /*dimReplacements=*/{}, symReplacements, lbs[d].getNumSymbols(),
+          /*numResultSyms=*/0);
+      memIndices.push_back(b.create<AffineApplyOp>(loc, lbs[d], regionSymbols));
     }
     // The fast buffer is copied into at location zero; addressing is relative.
     bufIndices.push_back(zeroIndex);
 
     // Record the offsets since they are needed to remap the memory accesses of
     // the original memref further below.
-    fastBufOffsets.push_back(offset);
+    fastBufOffsets.push_back(lbs[d].getResult(0));
   }
 
   // The faster memory space buffer.
@@ -2596,10 +2603,11 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
     cst.setDimSymbolSeparation(/*newSymbolCount=*/cst.getNumDimAndSymbolVars() -
                                1);
     unsigned fullTileLbPos, fullTileUbPos;
-    if (!cst.getConstantBoundOnDimSize(0, /*lb=*/nullptr,
-                                       /*boundFloorDivisor=*/nullptr,
-                                       /*ub=*/nullptr, &fullTileLbPos,
-                                       &fullTileUbPos)) {
+    if (!((IntegerRelation)cst)
+             .getConstantBoundOnDimSize(0, /*lb=*/nullptr,
+                                        /*boundFloorDivisor=*/nullptr,
+                                        /*ub=*/nullptr, &fullTileLbPos,
+                                        &fullTileUbPos)) {
       LLVM_DEBUG(llvm::dbgs() << "Can't get constant diff pair for a loop\n");
       return nullptr;
     }
@@ -2669,9 +2677,10 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
     // pair of <lb, ub> with a constant difference.
     cst.setDimSymbolSeparation(cst.getNumDimAndSymbolVars() - 1);
     unsigned lbPos, ubPos;
-    if (!cst.getConstantBoundOnDimSize(/*pos=*/0, /*lb=*/nullptr,
-                                       /*boundFloorDivisor=*/nullptr,
-                                       /*ub=*/nullptr, &lbPos, &ubPos) ||
+    if (!((IntegerRelation)cst)
+             .getConstantBoundOnDimSize(/*pos=*/0, /*lb=*/nullptr,
+                                        /*boundFloorDivisor=*/nullptr,
+                                        /*ub=*/nullptr, &lbPos, &ubPos) ||
         lbPos == ubPos) {
       LLVM_DEBUG(llvm::dbgs() << "[tile separation] Can't get constant diff / "
                                  "equalities not yet handled\n");

@@ -310,7 +310,7 @@ Error assembleToStream(const ExegesisTarget &ET,
   MCContext &MCContext = MMIWP->getMMI().getContext();
   legacy::PassManager PM;
 
-  TargetLibraryInfoImpl TLII(Triple(Module->getTargetTriple()));
+  TargetLibraryInfoImpl TLII(Module->getTargetTriple());
   PM.add(new TargetLibraryInfoWrapperPass(TLII));
 
   TargetPassConfig *TPC = TM->createPassConfig(PM);

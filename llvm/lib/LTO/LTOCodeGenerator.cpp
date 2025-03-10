@@ -383,12 +383,12 @@ bool LTOCodeGenerator::determineTarget() {
   if (TargetMach)
     return true;
 
-  TripleStr = MergedModule->getTargetTriple();
+  TripleStr = MergedModule->getTargetTriple().str();
+  llvm::Triple Triple(TripleStr);
   if (TripleStr.empty()) {
     TripleStr = sys::getDefaultTargetTriple();
-    MergedModule->setTargetTriple(TripleStr);
+    MergedModule->setTargetTriple(Triple);
   }
-  llvm::Triple Triple(TripleStr);
 
   // create target machine from info for merged modules
   std::string ErrMsg;

@@ -341,6 +341,19 @@ static DecodeStatus decodeUImmOperandGE(MCInst &Inst, uint32_t Imm,
   return MCDisassembler::Success;
 }
 
+template <unsigned Width, unsigned LowerBound>
+static DecodeStatus decodeUImmPlus1OperandGE(MCInst &Inst, uint32_t Imm,
+                                             int64_t Address,
+                                             const MCDisassembler *Decoder) {
+  assert(isUInt<Width>(Imm) && "Invalid immediate");
+
+  if ((Imm + 1) < LowerBound)
+    return MCDisassembler::Fail;
+
+  Inst.addOperand(MCOperand::createImm(Imm + 1));
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeUImmLog2XLenOperand(MCInst &Inst, uint32_t Imm,
                                               int64_t Address,
                                               const MCDisassembler *Decoder) {
@@ -369,6 +382,15 @@ decodeUImmLog2XLenNonZeroOperand(MCInst &Inst, uint32_t Imm, int64_t Address,
   if (Imm == 0)
     return MCDisassembler::Fail;
   return decodeUImmLog2XLenOperand(Inst, Imm, Address, Decoder);
+}
+
+template <unsigned N>
+static DecodeStatus decodeUImmPlus1Operand(MCInst &Inst, uint32_t Imm,
+                                           int64_t Address,
+                                           const MCDisassembler *Decoder) {
+  assert(isUInt<N>(Imm) && "Invalid immediate");
+  Inst.addOperand(MCOperand::createImm(Imm + 1));
+  return MCDisassembler::Success;
 }
 
 template <unsigned N>
@@ -629,11 +651,11 @@ static constexpr FeatureBitset XRivosFeatureGroup = {
 
 static constexpr FeatureBitset XqciFeatureGroup = {
     RISCV::FeatureVendorXqcia,   RISCV::FeatureVendorXqciac,
-    RISCV::FeatureVendorXqcicli, RISCV::FeatureVendorXqcicm,
-    RISCV::FeatureVendorXqcics,  RISCV::FeatureVendorXqcicsr,
-    RISCV::FeatureVendorXqciint, RISCV::FeatureVendorXqcilia,
-    RISCV::FeatureVendorXqcilo,  RISCV::FeatureVendorXqcilsm,
-    RISCV::FeatureVendorXqcisls,
+    RISCV::FeatureVendorXqcibm,  RISCV::FeatureVendorXqcicli,
+    RISCV::FeatureVendorXqcicm,  RISCV::FeatureVendorXqcics,
+    RISCV::FeatureVendorXqcicsr, RISCV::FeatureVendorXqciint,
+    RISCV::FeatureVendorXqcilia, RISCV::FeatureVendorXqcilo,
+    RISCV::FeatureVendorXqcilsm, RISCV::FeatureVendorXqcisls,
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {
@@ -644,6 +666,14 @@ static constexpr FeatureBitset XSfSystemGroup = {
     RISCV::FeatureVendorXSiFivecdiscarddlone,
     RISCV::FeatureVendorXSiFivecflushdlone,
 };
+
+static constexpr FeatureBitset XTHeadGroup = {
+    RISCV::FeatureVendorXTHeadBa,      RISCV::FeatureVendorXTHeadBb,
+    RISCV::FeatureVendorXTHeadBs,      RISCV::FeatureVendorXTHeadCondMov,
+    RISCV::FeatureVendorXTHeadCmo,     RISCV::FeatureVendorXTHeadFMemIdx,
+    RISCV::FeatureVendorXTHeadMac,     RISCV::FeatureVendorXTHeadMemIdx,
+    RISCV::FeatureVendorXTHeadMemPair, RISCV::FeatureVendorXTHeadSync,
+    RISCV::FeatureVendorXTHeadVdot};
 
 DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                                                  ArrayRef<uint8_t> Bytes,
@@ -659,28 +689,8 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
 
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXVentanaCondOps,
                         DecoderTableXVentana32, "XVentanaCondOps");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBa, DecoderTableXTHeadBa32,
-                        "XTHeadBa");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBb, DecoderTableXTHeadBb32,
-                        "XTHeadBb");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBs, DecoderTableXTHeadBs32,
-                        "XTHeadBs");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCondMov,
-                        DecoderTableXTHeadCondMov32, "XTHeadCondMov");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCmo, DecoderTableXTHeadCmo32,
-                        "XTHeadCmo");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadFMemIdx,
-                        DecoderTableXTHeadFMemIdx32, "XTHeadFMemIdx");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMac, DecoderTableXTHeadMac32,
-                        "XTHeadMac");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMemIdx,
-                        DecoderTableXTHeadMemIdx32, "XTHeadMemIdx");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMemPair,
-                        DecoderTableXTHeadMemPair32, "XTHeadMemPair");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadSync,
-                        DecoderTableXTHeadSync32, "XTHeadSync");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadVdot,
-                        DecoderTableXTHeadVdot32, "XTHeadVdot");
+  TRY_TO_DECODE_FEATURE_ANY(XTHeadGroup, DecoderTableXTHead32,
+                            "T-Head extensions");
   TRY_TO_DECODE_FEATURE_ANY(XSfVectorGroup, DecoderTableXSfvector32,
                             "SiFive vector extensions");
   TRY_TO_DECODE_FEATURE_ANY(XSfSystemGroup, DecoderTableXSfsystem32,

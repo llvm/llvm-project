@@ -56,8 +56,48 @@ RISCVMachineFunctionInfo::RISCVMachineFunctionInfo(const Function &F,
   }
 }
 
+RISCVMachineFunctionInfo::InterruptStackKind
+RISCVMachineFunctionInfo::getInterruptStackKind(
+    const MachineFunction &MF) const {
+  if (!MF.getFunction().hasFnAttribute("interrupt"))
+    return InterruptStackKind::None;
+
+  assert(VarArgsSaveSize == 0 &&
+         "Interrupt functions should not having incoming varargs");
+
+  StringRef InterruptVal =
+      MF.getFunction().getFnAttribute("interrupt").getValueAsString();
+  if (InterruptVal == "qci-nest")
+    return InterruptStackKind::QCINest;
+  if (InterruptVal == "qci-nonest")
+    return InterruptStackKind::QCINoNest;
+
+  return InterruptStackKind::None;
+}
+
 void yaml::RISCVMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<RISCVMachineFunctionInfo>::mapping(YamlIO, *this);
+}
+
+RISCVMachineFunctionInfo::PushPopKind
+RISCVMachineFunctionInfo::getPushPopKind(const MachineFunction &MF) const {
+  // We cannot use fixed locations for the callee saved spill slots if the
+  // function uses a varargs save area.
+  // TODO: Use a separate placement for vararg registers to enable Zcmp.
+  if (VarArgsSaveSize != 0)
+    return PushPopKind::None;
+
+  // Zcmp is not compatible with the frame pointer convention.
+  if (MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp() &&
+      !MF.getTarget().Options.DisableFramePointerElim(MF))
+    return PushPopKind::StdExtZcmp;
+
+  // Xqccmp is Zcmp but has a push order compatible with the frame-pointer
+  // convention.
+  if (MF.getSubtarget<RISCVSubtarget>().hasVendorXqccmp())
+    return PushPopKind::VendorXqccmp;
+
+  return PushPopKind::None;
 }
 
 void RISCVMachineFunctionInfo::initializeBaseYamlFields(

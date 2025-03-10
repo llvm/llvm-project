@@ -747,7 +747,7 @@ std::string PredefinedExpr::ComputeName(PredefinedIdentKind IK,
     if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD)) {
       if (MD->isVirtual() && IK != PredefinedIdentKind::PrettyFunctionNoVirtual)
         Out << "virtual ";
-      if (MD->isStatic())
+      if (MD->isStatic() && !ForceElaboratedPrinting)
         Out << "static ";
     }
 

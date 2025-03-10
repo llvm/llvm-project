@@ -505,53 +505,53 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
   }
 
   if (MD && AA->onlyReadsMemory(C)) {
-    Expression exp = createExpr(C);
-    auto ValNum = assignExpNewValueNum(exp);
+    Expression Exp = createExpr(C);
+    auto ValNum = assignExpNewValueNum(Exp);
     if (ValNum.second) {
       valueNumbering[C] = ValNum.first;
       return ValNum.first;
     }
 
-    MemDepResult local_dep = MD->getDependency(C);
+    MemDepResult LocalDep = MD->getDependency(C);
 
-    if (!local_dep.isDef() && !local_dep.isNonLocal()) {
+    if (!LocalDep.isDef() && !LocalDep.isNonLocal()) {
       valueNumbering[C] =  nextValueNumber;
       return nextValueNumber++;
     }
 
-    if (local_dep.isDef()) {
+    if (LocalDep.isDef()) {
       // For masked load/store intrinsics, the local_dep may actually be
       // a normal load or store instruction.
-      CallInst *local_cdep = dyn_cast<CallInst>(local_dep.getInst());
+      CallInst *LocalDepCall = dyn_cast<CallInst>(LocalDep.getInst());
 
-      if (!local_cdep || local_cdep->arg_size() != C->arg_size()) {
+      if (!LocalDepCall || LocalDepCall->arg_size() != C->arg_size()) {
         valueNumbering[C] = nextValueNumber;
         return nextValueNumber++;
       }
 
-      for (unsigned i = 0, e = C->arg_size(); i < e; ++i) {
-        uint32_t c_vn = lookupOrAdd(C->getArgOperand(i));
-        uint32_t cd_vn = lookupOrAdd(local_cdep->getArgOperand(i));
-        if (c_vn != cd_vn) {
+      for (unsigned I = 0, E = C->arg_size(); I < E; ++I) {
+        uint32_t CVN = lookupOrAdd(C->getArgOperand(I));
+        uint32_t LocalDepCallVN = lookupOrAdd(LocalDepCall->getArgOperand(I));
+        if (CVN != LocalDepCallVN) {
           valueNumbering[C] = nextValueNumber;
           return nextValueNumber++;
         }
       }
 
-      uint32_t v = lookupOrAdd(local_cdep);
-      valueNumbering[C] = v;
-      return v;
+      uint32_t V = lookupOrAdd(LocalDepCall);
+      valueNumbering[C] = V;
+      return V;
     }
 
     // Non-local case.
-    const MemoryDependenceResults::NonLocalDepInfo &deps =
+    const MemoryDependenceResults::NonLocalDepInfo &Deps =
         MD->getNonLocalCallDependency(C);
     // FIXME: Move the checking logic to MemDep!
     CallInst *CDep = nullptr;
 
     // Check to see if we have a single dominating call instruction that is
     // identical to C.
-    for (const NonLocalDepEntry &I : deps) {
+    for (const NonLocalDepEntry &I : Deps) {
       if (I.getResult().isNonLocal())
         continue;
 
@@ -582,9 +582,9 @@ uint32_t GVNPass::ValueTable::lookupOrAddCall(CallInst *C) {
       valueNumbering[C] = nextValueNumber;
       return nextValueNumber++;
     }
-    for (unsigned i = 0, e = C->arg_size(); i < e; ++i) {
-      uint32_t CVN = lookupOrAdd(C->getArgOperand(i));
-      uint32_t CDepVN = lookupOrAdd(CDep->getArgOperand(i));
+    for (unsigned I = 0, E = C->arg_size(); I < E; ++I) {
+      uint32_t CVN = lookupOrAdd(C->getArgOperand(I));
+      uint32_t CDepVN = lookupOrAdd(CDep->getArgOperand(I));
       if (CVN != CDepVN) {
         valueNumbering[C] = nextValueNumber;
         return nextValueNumber++;
@@ -702,8 +702,8 @@ uint32_t GVNPass::ValueTable::lookup(Value *V, bool Verify) const {
 uint32_t GVNPass::ValueTable::lookupOrAddCmp(unsigned Opcode,
                                              CmpInst::Predicate Predicate,
                                              Value *LHS, Value *RHS) {
-  Expression exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
-  return assignExpNewValueNum(exp).first;
+  Expression Exp = createCmpExpr(Opcode, Predicate, LHS, RHS);
+  return assignExpNewValueNum(Exp).first;
 }
 
 /// Remove all entries from the ValueTable.

@@ -359,6 +359,41 @@ namespace call_with_ptr_on_ref {
   }
 }
 
+namespace call_with_explicit_construct_from_auto {
+
+  struct Impl {
+    void ref() const;
+    void deref() const;
+
+    static Ref<Impl> create();
+  };
+
+  template <typename T>
+  struct ArgObj {
+    T* t;
+  };
+
+  struct Object {
+    Object();
+    Object(Ref<Impl>&&);
+
+    Impl* impl() const { return m_impl.get(); }
+
+    static Object create(ArgObj<char>&) { return Impl::create(); }
+    static void bar(Impl&);
+
+  private:
+    RefPtr<Impl> m_impl;
+  };
+
+  template<typename CharacterType> void foo()
+  {
+      auto result = Object::create(ArgObj<CharacterType> { });
+      Object::bar(Ref { *result.impl() });
+  }
+
+}
+
 namespace call_with_explicit_temporary_obj {
   void foo() {
     Ref { *provide() }->method();

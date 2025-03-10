@@ -231,6 +231,7 @@ using Inbranch = tomp::clause::InbranchT<TypeTy, IdTy, ExprTy>;
 using Inclusive = tomp::clause::InclusiveT<TypeTy, IdTy, ExprTy>;
 using Indirect = tomp::clause::IndirectT<TypeTy, IdTy, ExprTy>;
 using Init = tomp::clause::InitT<TypeTy, IdTy, ExprTy>;
+using Initializer = tomp::clause::InitializerT<TypeTy, IdTy, ExprTy>;
 using InReduction = tomp::clause::InReductionT<TypeTy, IdTy, ExprTy>;
 using IsDevicePtr = tomp::clause::IsDevicePtrT<TypeTy, IdTy, ExprTy>;
 using Lastprivate = tomp::clause::LastprivateT<TypeTy, IdTy, ExprTy>;

@@ -400,8 +400,8 @@ public:
     if (Emit) {
       assert(State == BlockState[&MBB] &&
              "Basic block state should not have changed on final pass!");
-    } else if (State != BlockState[&MBB]) {
-      BlockState[&MBB] = std::move(State);
+    } else if (DelayState &BS = BlockState[&MBB]; State != BS) {
+      BS = std::move(State);
       Changed = true;
     }
     return Changed;

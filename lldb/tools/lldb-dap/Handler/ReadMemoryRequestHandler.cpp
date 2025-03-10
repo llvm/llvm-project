@@ -108,8 +108,9 @@ void ReadMemoryRequestHandler::operator()(
     return;
   }
   lldb::addr_t addr_int = *addr_opt;
-  addr_int += GetSigned(arguments, "offset", 0);
-  const uint64_t count_requested = GetUnsigned(arguments, "count", 0);
+  addr_int += GetInteger<uint64_t>(arguments, "offset").value_or(0);
+  const uint64_t count_requested =
+      GetInteger<uint64_t>(arguments, "count").value_or(0);
 
   // We also need support reading 0 bytes
   // VS Code sends those requests to check if a `memoryReference`

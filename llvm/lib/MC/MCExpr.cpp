@@ -246,11 +246,6 @@ const MCSymbolRefExpr *MCSymbolRefExpr::create(const MCSymbol *Sym,
   return new (Ctx) MCSymbolRefExpr(Sym, Kind, Ctx.getAsmInfo(), Loc);
 }
 
-const MCSymbolRefExpr *MCSymbolRefExpr::create(StringRef Name, VariantKind Kind,
-                                               MCContext &Ctx) {
-  return create(Ctx.getOrCreateSymbol(Name), Kind, Ctx);
-}
-
 /* *** */
 
 void MCTargetExpr::anchor() {}

@@ -27,7 +27,7 @@ def AffineDataCopyGeneration : Pass<"affine-data-copy-generate", "func::FuncOp">
            /*default=*/"1",
            "Fast memory space identifier for copy generation (default: 1)">,
     Option<"generateDma", "generate-dma", "bool",
-           /*default=*/"true", "Generate DMA instead of point-wise copy">,
+           /*default=*/"false", "Generate DMA instead of point-wise copy">,
     Option<"minDmaTransferSize", "min-dma-transfer", "int",
            /*default=*/"1024",
            "Minimum DMA transfer size supported by the target in bytes">,

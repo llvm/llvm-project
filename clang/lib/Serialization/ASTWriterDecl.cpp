@@ -177,6 +177,7 @@ namespace clang {
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
 
     void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
+    void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
 
     /// Add an Objective-C type parameter list to the given record.
     void AddObjCTypeParamList(ObjCTypeParamList *typeParams) {
@@ -330,6 +331,12 @@ namespace clang {
 }
 
 bool clang::CanElideDeclDef(const Decl *D) {
+  bool isExternalWithNoLinkageType = false;
+  if (auto *VD = dyn_cast<ValueDecl>(D))
+    if (VD->hasExternalFormalLinkage() &&
+        !isExternalFormalLinkage(VD->getType()->getLinkage()))
+      isExternalWithNoLinkageType = true;
+
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->isInlined() || FD->isConstexpr())
       return false;
@@ -338,6 +345,9 @@ bool clang::CanElideDeclDef(const Decl *D) {
       return false;
 
     if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return false;
+
+    if (isExternalWithNoLinkageType && !FD->isExternC())
       return false;
   }
 
@@ -351,6 +361,9 @@ bool clang::CanElideDeclDef(const Decl *D) {
       return false;
 
     if (VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return false;
+
+    if (isExternalWithNoLinkageType && !VD->isExternC())
       return false;
   }
 
@@ -2268,6 +2281,17 @@ void ASTDeclWriter::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
   Record.AddSourceLocation(D->EndLoc);
   Record.writeOpenACCClauseList(D->clauses());
   Code = serialization::DECL_OPENACC_DECLARE;
+}
+void ASTDeclWriter::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
+  Record.writeUInt32(D->clauses().size());
+  VisitDecl(D);
+  Record.writeEnum(D->DirKind);
+  Record.AddSourceLocation(D->DirectiveLoc);
+  Record.AddSourceLocation(D->EndLoc);
+  Record.AddSourceRange(D->ParensLoc);
+  Record.AddStmt(D->FuncRef);
+  Record.writeOpenACCClauseList(D->clauses());
+  Code = serialization::DECL_OPENACC_ROUTINE;
 }
 
 //===----------------------------------------------------------------------===//

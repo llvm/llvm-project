@@ -1046,44 +1046,45 @@ define void @mulhu_v16i8(ptr %x) {
 ; CHECK-LABEL: mulhu_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
-; CHECK-NEXT:    vle8.v v9, (a0)
+; CHECK-NEXT:    vle8.v v8, (a0)
 ; CHECK-NEXT:    lui a1, 3
-; CHECK-NEXT:    vmv.v.i v10, 0
+; CHECK-NEXT:    vmv.v.i v9, 0
 ; CHECK-NEXT:    lui a2, %hi(.LCPI65_0)
 ; CHECK-NEXT:    addi a2, a2, %lo(.LCPI65_0)
-; CHECK-NEXT:    vle8.v v11, (a2)
-; CHECK-NEXT:    lui a2, 1
+; CHECK-NEXT:    vle8.v v10, (a2)
+; CHECK-NEXT:    li a2, -128
 ; CHECK-NEXT:    addi a1, a1, -2044
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    addi a1, a2, 32
-; CHECK-NEXT:    vmv.s.x v8, a1
-; CHECK-NEXT:    li a1, -128
+; CHECK-NEXT:    lui a1, 1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmerge.vxm v12, v10, a1, v0
-; CHECK-NEXT:    li a1, 513
-; CHECK-NEXT:    vmv.v.i v13, 4
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
+; CHECK-NEXT:    vmerge.vxm v11, v9, a2, v0
+; CHECK-NEXT:    addi a2, a1, 32
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a2
+; CHECK-NEXT:    li a2, 513
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vmv.v.i v12, 4
+; CHECK-NEXT:    addi a1, a1, 78
+; CHECK-NEXT:    vmerge.vim v9, v9, 1, v0
+; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a2
+; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; CHECK-NEXT:    vsrl.vv v9, v8, v9
+; CHECK-NEXT:    vmerge.vim v12, v12, 1, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    addi a1, a2, 78
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vmerge.vim v10, v13, 1, v0
-; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a1
-; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vsrl.vv v8, v9, v8
-; CHECK-NEXT:    vmulhu.vv v8, v8, v11
-; CHECK-NEXT:    vmerge.vim v10, v10, 3, v0
+; CHECK-NEXT:    vmulhu.vv v9, v9, v10
+; CHECK-NEXT:    vmerge.vim v10, v12, 3, v0
 ; CHECK-NEXT:    lui a1, 8
 ; CHECK-NEXT:    addi a1, a1, 304
-; CHECK-NEXT:    vsub.vv v9, v9, v8
-; CHECK-NEXT:    vmulhu.vv v9, v9, v12
+; CHECK-NEXT:    vsub.vv v8, v8, v9
+; CHECK-NEXT:    vmulhu.vv v8, v8, v11
 ; CHECK-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vadd.vv v8, v9, v8
+; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    vmerge.vim v9, v10, 2, v0
 ; CHECK-NEXT:    vsrl.vv v8, v8, v9
 ; CHECK-NEXT:    vse8.v v8, (a0)
@@ -3153,48 +3154,49 @@ define void @mulhu_v32i8(ptr %x) {
 ; CHECK-LABEL: mulhu_v32i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 32
-; CHECK-NEXT:    lui a2, 163907
-; CHECK-NEXT:    addi a2, a2, -2044
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v0, a2
-; CHECK-NEXT:    lui a2, 66049
-; CHECK-NEXT:    addi a2, a2, 32
-; CHECK-NEXT:    vmv.s.x v8, a2
-; CHECK-NEXT:    li a2, -128
-; CHECK-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; CHECK-NEXT:    lui a2, %hi(.LCPI181_0)
+; CHECK-NEXT:    addi a2, a2, %lo(.LCPI181_0)
+; CHECK-NEXT:    vsetvli zero, a1, e32, m8, ta, ma
+; CHECK-NEXT:    vle8.v v8, (a2)
+; CHECK-NEXT:    lui a1, 163907
+; CHECK-NEXT:    addi a1, a1, -2044
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    li a1, -128
+; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
 ; CHECK-NEXT:    vmv.v.i v10, 0
-; CHECK-NEXT:    vmerge.vxm v12, v10, a2, v0
-; CHECK-NEXT:    lui a1, %hi(.LCPI181_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI181_0)
-; CHECK-NEXT:    vle8.v v14, (a0)
-; CHECK-NEXT:    vmv1r.v v0, v8
-; CHECK-NEXT:    vmerge.vim v8, v10, 1, v0
-; CHECK-NEXT:    vle8.v v10, (a1)
+; CHECK-NEXT:    vmerge.vxm v12, v10, a1, v0
+; CHECK-NEXT:    lui a1, 66049
+; CHECK-NEXT:    addi a1, a1, 32
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    lui a1, 8208
+; CHECK-NEXT:    vle8.v v14, (a0)
 ; CHECK-NEXT:    addi a1, a1, 513
-; CHECK-NEXT:    vsrl.vv v8, v14, v8
-; CHECK-NEXT:    vmulhu.vv v10, v8, v10
+; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmerge.vim v10, v10, 1, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    lui a1, 66785
+; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vmv.v.i v16, 4
 ; CHECK-NEXT:    addi a1, a1, 78
-; CHECK-NEXT:    vmv.s.x v8, a1
-; CHECK-NEXT:    lui a1, 529160
-; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vsub.vv v14, v14, v10
-; CHECK-NEXT:    vmulhu.vv v12, v14, v12
-; CHECK-NEXT:    vmv.v.i v14, 4
-; CHECK-NEXT:    addi a1, a1, 304
-; CHECK-NEXT:    vmerge.vim v14, v14, 1, v0
+; CHECK-NEXT:    vsrl.vv v10, v14, v10
+; CHECK-NEXT:    vmerge.vim v16, v16, 1, v0
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmv.s.x v9, a1
-; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmv.s.x v0, a1
 ; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmerge.vim v14, v14, 3, v0
-; CHECK-NEXT:    vadd.vv v10, v12, v10
-; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vmerge.vim v8, v14, 2, v0
-; CHECK-NEXT:    vsrl.vv v8, v10, v8
+; CHECK-NEXT:    vmulhu.vv v8, v10, v8
+; CHECK-NEXT:    vmerge.vim v10, v16, 3, v0
+; CHECK-NEXT:    lui a1, 529160
+; CHECK-NEXT:    addi a1, a1, 304
+; CHECK-NEXT:    vsub.vv v14, v14, v8
+; CHECK-NEXT:    vmulhu.vv v12, v14, v12
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
+; CHECK-NEXT:    vmv.s.x v0, a1
+; CHECK-NEXT:    vsetvli zero, zero, e8, m2, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v12, v8
+; CHECK-NEXT:    vmerge.vim v10, v10, 2, v0
+; CHECK-NEXT:    vsrl.vv v8, v8, v10
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <32 x i8>, ptr %x
@@ -3215,27 +3217,28 @@ define void @mulhu_v16i16(ptr %x) {
 ; RV32-NEXT:    vmerge.vxm v12, v8, a1, v0
 ; RV32-NEXT:    lui a1, 4
 ; RV32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v14, 0
+; RV32-NEXT:    vmv.v.i v9, 0
 ; RV32-NEXT:    addi a1, a1, 64
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
 ; RV32-NEXT:    vmv.s.x v8, a1
 ; RV32-NEXT:    lui a1, 2
 ; RV32-NEXT:    addi a1, a1, 289
-; RV32-NEXT:    vmv.s.x v9, a1
+; RV32-NEXT:    vmv1r.v v0, v8
+; RV32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
+; RV32-NEXT:    vmerge.vim v9, v9, 1, v0
+; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
+; RV32-NEXT:    vmv.s.x v0, a1
 ; RV32-NEXT:    lui a1, %hi(.LCPI182_0)
 ; RV32-NEXT:    addi a1, a1, %lo(.LCPI182_0)
 ; RV32-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v15, 3
-; RV32-NEXT:    vmv1r.v v0, v8
-; RV32-NEXT:    vmerge.vim v14, v14, 1, v0
-; RV32-NEXT:    vmv1r.v v0, v9
-; RV32-NEXT:    vmerge.vim v9, v15, 2, v0
+; RV32-NEXT:    vmv.v.i v14, 3
+; RV32-NEXT:    vmerge.vim v14, v14, 2, v0
 ; RV32-NEXT:    vle16.v v16, (a1)
 ; RV32-NEXT:    vmv1r.v v0, v8
-; RV32-NEXT:    vmerge.vim v8, v9, 1, v0
+; RV32-NEXT:    vmerge.vim v8, v14, 1, v0
 ; RV32-NEXT:    vsetvli zero, zero, e16, m2, ta, ma
-; RV32-NEXT:    vsext.vf2 v18, v14
-; RV32-NEXT:    vsrl.vv v14, v10, v18
+; RV32-NEXT:    vsext.vf2 v14, v9
+; RV32-NEXT:    vsrl.vv v14, v10, v14
 ; RV32-NEXT:    vmulhu.vv v14, v14, v16
 ; RV32-NEXT:    vsub.vv v10, v10, v14
 ; RV32-NEXT:    vmulhu.vv v10, v10, v12

@@ -3705,6 +3705,15 @@ TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
 }
 
+TEST_F(TokenAnnotatorTest, CppOnlyKeywordInC) {
+  auto Tokens = annotate("int maximized = new & STATE_MAXIMIZED;",
+                         getLLVMStyle(FormatStyle::LK_C));
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown); // Not tok::kw_new
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown); // Not TT_StartOfName
+}
+
 TEST_F(TokenAnnotatorTest, FunctionTryBlock) {
   auto Tokens =
       annotate("Foo::Foo(int x, int y) try\n"

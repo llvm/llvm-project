@@ -45,7 +45,7 @@ enum CondCode {
 };
 
 CondCode getOppositeBranchCondition(CondCode);
-unsigned getBrCond(CondCode CC, bool Imm = false);
+unsigned getBrCond(const RISCVSubtarget &STI, CondCode CC, bool Imm = false);
 
 } // end of namespace RISCVCC
 
@@ -300,6 +300,12 @@ public:
   analyzeLoopForPipelining(MachineBasicBlock *LoopBB) const override;
 
   bool isHighLatencyDef(int Opc) const override;
+
+  /// Return true if pairing the given load or store may be paired with another.
+  static bool isPairableLdStInstOpc(unsigned Opc);
+
+  static bool isLdStSafeToPair(const MachineInstr &LdSt,
+                               const TargetRegisterInfo *TRI);
 
 protected:
   const RISCVSubtarget &STI;

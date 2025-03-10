@@ -4192,6 +4192,10 @@ public:
     // some sort of IR.
     EmitStmt(S.getAssociatedStmt());
   }
+  void EmitOpenACCCacheConstruct(const OpenACCCacheConstruct &S) {
+    // TODO OpenACC: Implement this.  It is currently implemented as a 'no-op',
+    // but in the future we will implement some sort of IR.
+  }
 
   //===--------------------------------------------------------------------===//
   //                         LValue Expression Emission

@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   pr-comment:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     permissions:
       pull-requests: write
     if: >

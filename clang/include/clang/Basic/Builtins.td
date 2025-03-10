@@ -4765,6 +4765,12 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
 }
 
 // HLSL
+def HLSLAddUint64: LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_adduint64"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "void(...)";
+}
+
 def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_getpointer"];
   let Attributes = [NoThrow];

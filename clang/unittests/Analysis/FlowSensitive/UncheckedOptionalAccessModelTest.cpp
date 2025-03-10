@@ -3829,7 +3829,7 @@ TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessor) {
     };
 
     void target(A& a) {
-      std::optional<int> opt;
+      $ns::$optional<int> opt;
       if (a.isFoo()) {
         opt = 1;
       }
@@ -3851,7 +3851,7 @@ TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessorWithModInBetween) {
     };
 
     void target(A& a) {
-      std::optional<int> opt;
+      $ns::$optional<int> opt;
       if (a.isFoo()) {
         opt = 1;
       }
@@ -3870,13 +3870,13 @@ TEST_P(UncheckedOptionalAccessTest,
 
     struct A {
       const $ns::$optional<int>& get() const { return x; }
-      
+
       $ns::$optional<int> x;
     };
 
     struct B {
       const A& getA() const { return a; }
-    
+
       A a;
     };
 
@@ -3896,13 +3896,13 @@ TEST_P(
 
     struct A {
       const $ns::$optional<int>& get() const { return x; }
-      
+
       $ns::$optional<int> x;
     };
 
     struct B {
       const A& getA() const { return a; }
-    
+
       A a;
     };
 
@@ -3919,13 +3919,13 @@ TEST_P(UncheckedOptionalAccessTest,
 
     struct A {
       const $ns::$optional<int>& get() const { return x; }
-      
+
       $ns::$optional<int> x;
     };
 
     struct B {
       const A& getA() const { return a; }
-    
+
       A a;
     };
 
@@ -3945,13 +3945,13 @@ TEST_P(UncheckedOptionalAccessTest,
 
     struct A {
       const $ns::$optional<int>& get() const { return x; }
-      
+
       $ns::$optional<int> x;
     };
 
     struct B {
       const A copyA() const { return a; }
-    
+
       A a;
     };
 
@@ -3970,13 +3970,13 @@ TEST_P(UncheckedOptionalAccessTest,
 
     struct A {
       const $ns::$optional<int>& get() const { return x; }
-      
+
       $ns::$optional<int> x;
     };
 
     struct B {
       A& getA() { return a; }
-    
+
       A a;
     };
 
@@ -4031,23 +4031,23 @@ TEST_P(
     ConstRefAccessorToOptionalViaConstRefAccessorToHoldingObjectWithAnotherConstCallAfterCheck) {
   ExpectDiagnosticsFor(R"cc(
       #include "unchecked_optional_access_test.h"
-  
+
       struct A {
         const $ns::$optional<int>& get() const { return x; }
-      
+
         $ns::$optional<int> x;
       };
-  
+
       struct B {
         const A& getA() const { return a; }
-  
+
         void callWithoutChanges() const { 
           // no-op 
         }
-  
+
         A a;
       };
-  
+
       void target(B& b) {  
         if (b.getA().get().has_value()) {
           b.callWithoutChanges(); // calling const method which cannot change A
@@ -4055,6 +4055,34 @@ TEST_P(
         }
       }
     )cc");
+}
+
+TEST_P(UncheckedOptionalAccessTest, ConstPointerRefAccessor) {
+  // A crash reproducer for https://github.com/llvm/llvm-project/issues/125589
+  // NOTE: we currently cache const ref accessors's locations.
+  // If we want to support const ref to pointers or bools, we should initialize
+  // their values.
+  ExpectDiagnosticsFor(R"cc(
+    #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    struct PtrWrapper {
+      A*& getPtrRef() const;
+      void reset(A*);
+    };
+
+    void target(PtrWrapper p) {
+      if (p.getPtrRef()->x) {
+        *p.getPtrRef()->x;  // [[unsafe]]
+        p.reset(nullptr);
+        *p.getPtrRef()->x;  // [[unsafe]]
+      }
+    }
+  )cc",
+                       /*IgnoreSmartPointerDereference=*/false);
 }
 
 // FIXME: Add support for:

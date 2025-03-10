@@ -62,7 +62,7 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
     }
     if (IsBOZLiteral(*expr)) {
       messages.Say("BOZ argument requires an explicit interface"_err_en_US);
-    } else if (evaluate::IsNullPointer(*expr)) {
+    } else if (evaluate::IsNullPointerOrAllocatable(expr)) {
       messages.Say(
           "Null pointer argument requires an explicit interface"_err_en_US);
     } else if (auto named{evaluate::ExtractNamedEntity(*expr)}) {
@@ -783,7 +783,6 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // 15.5.2.6 -- dummy is ALLOCATABLE
   bool dummyIsOptional{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Optional)};
-  bool actualIsNull{evaluate::IsNullPointer(actual)};
   if (dummyIsAllocatable) {
     if (actualIsAllocatable) {
       if (actualIsCoindexed && dummy.intent != common::Intent::In) {
@@ -791,7 +790,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             "ALLOCATABLE %s must have INTENT(IN) to be associated with a coindexed actual argument"_err_en_US,
             dummyName);
       }
-    } else if (actualIsNull) {
+    } else if (evaluate::IsBareNullPointer(&actual)) {
       if (dummyIsOptional) {
       } else if (dummy.intent == common::Intent::Default &&
           context.ShouldWarn(
@@ -808,6 +807,16 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       }
       // INTENT(OUT) and INTENT(IN OUT) cases are caught elsewhere as being
       // undefinable actual arguments.
+    } else if (evaluate::IsNullAllocatable(&actual)) {
+      if (dummyIsOptional) {
+      } else if (dummy.intent == common::Intent::Default &&
+          context.ShouldWarn(
+              common::UsageWarning::NullActualForDefaultIntentAllocatable)) {
+        messages.Say(
+            "A null allocatable should not be associated with allocatable %s without INTENT(IN)"_warn_en_US,
+            dummyName);
+      }
+      // INTENT(OUT) and INTENT(IN OUT) cases are caught elsewhere
     } else {
       messages.Say(
           "ALLOCATABLE %s must be associated with an ALLOCATABLE actual argument"_err_en_US,
@@ -946,7 +955,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // NULL(MOLD=) checking for non-intrinsic procedures
   if (!intrinsic && !dummyIsAllocatableOrPointer && !dummyIsOptional &&
-      actualIsNull) {
+      evaluate::IsNullPointer(&actual)) {
     messages.Say(
         "Actual argument associated with %s may not be null pointer %s"_err_en_US,
         dummyName, actual.AsFortran());
@@ -1091,6 +1100,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
           characteristics::Procedure &argInterface{argProc->procedure.value()};
           argInterface.attrs.reset(
               characteristics::Procedure::Attr::NullPointer);
+          argInterface.attrs.reset(
+              characteristics::Procedure::Attr::NullAllocatable);
           if (!argProcSymbol || argProcSymbol->attrs().test(Attr::INTRINSIC)) {
             // It's ok to pass ELEMENTAL unrestricted intrinsic functions.
             argInterface.attrs.reset(
@@ -1105,6 +1116,8 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
             } else {
               argInterface.attrs.reset(
                   characteristics::Procedure::Attr::NullPointer);
+              argInterface.attrs.reset(
+                  characteristics::Procedure::Attr::NullAllocatable);
             }
           }
           if (interface.HasExplicitInterface()) {
@@ -1161,7 +1174,7 @@ static void CheckProcedureArg(evaluate::ActualArgument &arg,
               "Actual argument associated with procedure %s is not a procedure"_err_en_US,
               dummyName);
         }
-      } else if (IsNullPointer(*expr)) {
+      } else if (IsNullPointer(expr)) {
         if (!dummyIsPointer &&
             !dummy.attrs.test(
                 characteristics::DummyProcedure::Attr::Optional)) {
@@ -1263,11 +1276,11 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                     IsBOZLiteral(*expr)) {
                   // ok
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
-                    evaluate::IsNullObjectPointer(*expr)) {
+                    evaluate::IsNullObjectPointer(expr)) {
                   // ok, ASSOCIATED(NULL(without MOLD=))
                 } else if (object.type.attrs().test(characteristics::
                                    TypeAndShape::Attr::AssumedRank) &&
-                    evaluate::IsNullObjectPointer(*expr) &&
+                    evaluate::IsNullObjectPointer(expr) &&
                     (object.attrs.test(
                          characteristics::DummyDataObject::Attr::Allocatable) ||
                         object.attrs.test(
@@ -1280,7 +1293,7 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                                     Attr::Pointer) ||
                                object.attrs.test(characteristics::
                                        DummyDataObject::Attr::Optional)) &&
-                    evaluate::IsNullObjectPointer(*expr)) {
+                    evaluate::IsNullObjectPointer(expr)) {
                   // FOO(NULL(without MOLD=))
                   if (object.type.type().IsAssumedLengthCharacter()) {
                     messages.Say(
@@ -1299,7 +1312,8 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                   }
                 } else if (object.attrs.test(characteristics::DummyDataObject::
                                    Attr::Allocatable) &&
-                    evaluate::IsNullPointer(*expr)) {
+                    (evaluate::IsNullAllocatable(expr) ||
+                        evaluate::IsBareNullPointer(expr))) {
                   if (object.intent == common::Intent::Out ||
                       object.intent == common::Intent::InOut) {
                     messages.Say(
@@ -1573,13 +1587,13 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
                     }
                   }
                 }
-              } else if (!IsNullProcedurePointer(*targetExpr)) {
+              } else if (!IsNullProcedurePointer(targetExpr)) {
                 messages.Say(
                     "POINTER= argument '%s' is a procedure pointer but the TARGET= argument '%s' is not a procedure or procedure pointer"_err_en_US,
                     pointerExpr->AsFortran(), targetExpr->AsFortran());
               }
             }
-          } else if (IsVariable(*targetExpr) || IsNullPointer(*targetExpr)) {
+          } else if (IsVariable(*targetExpr) || IsNullPointer(targetExpr)) {
             // Object pointer and target
             if (ExtractDataRef(*targetExpr)) {
               if (SymbolVector symbols{GetSymbolVector(*targetExpr)};

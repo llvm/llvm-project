@@ -3017,6 +3017,18 @@ void ASTStmtWriter::VisitOpenACCAtomicConstruct(OpenACCAtomicConstruct *S) {
   Code = serialization::STMT_OPENACC_ATOMIC_CONSTRUCT;
 }
 
+void ASTStmtWriter::VisitOpenACCCacheConstruct(OpenACCCacheConstruct *S) {
+  VisitStmt(S);
+  Record.push_back(S->getVarList().size());
+  VisitOpenACCConstructStmt(S);
+  Record.AddSourceRange(S->ParensLoc);
+  Record.AddSourceLocation(S->ReadOnlyLoc);
+
+  for (Expr *E : S->getVarList())
+    Record.AddStmt(E);
+  Code = serialization::STMT_OPENACC_CACHE_CONSTRUCT;
+}
+
 //===----------------------------------------------------------------------===//
 // HLSL Constructs/Directives.
 //===----------------------------------------------------------------------===//

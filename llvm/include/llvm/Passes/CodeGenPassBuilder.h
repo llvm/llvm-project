@@ -31,8 +31,10 @@
 #include "llvm/CodeGen/ExpandLargeDivRem.h"
 #include "llvm/CodeGen/ExpandLargeFpConvert.h"
 #include "llvm/CodeGen/ExpandMemCmp.h"
+#include "llvm/CodeGen/ExpandPostRAPseudos.h"
 #include "llvm/CodeGen/ExpandReductions.h"
 #include "llvm/CodeGen/FinalizeISel.h"
+#include "llvm/CodeGen/FixupStatepointCallerSaved.h"
 #include "llvm/CodeGen/GCMetadata.h"
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
@@ -938,6 +940,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
   derived().addPostRegAlloc(addPass);
 
   addPass(RemoveRedundantDebugValuesPass());
+  addPass(FixupStatepointCallerSavedPass());
 
   // Insert prolog/epilog code.  Eliminate abstract frame index references...
   if (getOptLevel() != CodeGenOptLevel::None) {
