@@ -4,6 +4,7 @@
 // The first compilation verifies that transitive dependencies on non-sysroot input are captured.
 // The second compilation verifies that external paths are resolved when a vfsoverlay is applied when considering sysroot-ness.
 
+// REQUIRES: shell
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: sed -e "s|DIR|%/t|g" %t/compile-commands.json.in > %t/compile-commands.json
@@ -31,13 +32,13 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -c DIR/client.m -isysroot DIR/MacOSX.sdk -I DIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
-  "file": "DIR/client.m"
+  "command": "clang -c DIR/client.c -isysroot DIR/MacOSX.sdk -IDIR/MacOSX.sdk/usr/include -IDIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
+  "file": "DIR/client.c"
 },
 {
   "directory": "DIR",
-  "command": "clang -c DIR/client.m -isysroot DIR/MacOSX.sdk  -ivfsoverlay DIR/overlay.json -DUSE_VFS -I DIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
-  "file": "DIR/client.m"
+  "command": "clang -c DIR/client.c -isysroot DIR/MacOSX.sdk -IDIR/MacOSX.sdk/usr/include -ivfsoverlay DIR/overlay.json -DUSE_VFS -IDIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
+  "file": "DIR/client.c"
 }
 ]
 
@@ -102,6 +103,6 @@ module NotInSDK [system] {
 //--- BuildDir/HeaderNotFoundInSDK.h
 typedef int local_t;
 
-//--- client.m
+//--- client.c
 #include <A/A.h>
 #include <B/B.h>
