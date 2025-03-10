@@ -1723,8 +1723,8 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
     if (!CanUseBlockOps(*CSIt))
       continue;
 
-    // Find all the regs that will fit in a 32-bit block starting at the current
-    // reg and build the mask. It should have 1 for every register that's
+    // Find all the regs that will fit in a 32-bit mask starting at the current
+    // reg and build said mask. It should have 1 for every register that's
     // included, with the current register as the least significant bit.
     uint32_t Mask = 1;
     CSEnd = std::remove_if(
@@ -1737,8 +1737,7 @@ static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
           }
         });
 
-    const TargetRegisterClass *BlockRegClass =
-        TII->getRegClassForBlockOp(TRI, MF);
+    const TargetRegisterClass *BlockRegClass = &AMDGPU::VReg_1024RegClass;
     Register RegBlock =
         MRI->getMatchingSuperReg(Reg, AMDGPU::sub0, BlockRegClass);
     if (!RegBlock) {

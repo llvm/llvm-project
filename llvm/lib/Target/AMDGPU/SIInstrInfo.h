@@ -1460,10 +1460,6 @@ public:
                                          const MachineFunction &MF)
     const override;
 
-  const TargetRegisterClass *
-  getRegClassForBlockOp(const TargetRegisterInfo *TRI,
-                        const MachineFunction &MF) const;
-
   void fixImplicitOperands(MachineInstr &MI) const;
 
   MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
