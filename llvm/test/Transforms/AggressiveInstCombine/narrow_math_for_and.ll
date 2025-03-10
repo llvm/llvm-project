@@ -19,11 +19,28 @@ define i64 @narrow_add(i64 noundef %a, i64 noundef %b) {
   ret i64 %add
 }
 
+define i64 @narrow_add_1(i64 noundef %a, i64 noundef %b) {
+; CHECK-LABEL: define i64 @narrow_add_1(
+; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ZEXT0:%.*]] = and i64 [[A]], 2147483647
+; CHECK-NEXT:    [[ZEXT1:%.*]] = and i64 [[B]], 2147483648
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[ZEXT0]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[ZEXT1]] to i32
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP3]] to i64
+; CHECK-NEXT:    ret i64 [[TMP4]]
+;
+  %zext0 = and i64 %a, 2147483647
+  %zext1 = and i64 %b, 2147483648
+  %add = add i64 %zext0, %zext1
+  ret i64 %add
+}
+
 define i64 @narrow_mul(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: define i64 @narrow_mul(
 ; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ZEXT0:%.*]] = and i64 [[A]], 2147483647
-; CHECK-NEXT:    [[ZEXT1:%.*]] = and i64 [[B]], 2147483647
+; CHECK-NEXT:    [[ZEXT1:%.*]] = and i64 [[B]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[ZEXT0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[ZEXT1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP1]], [[TMP2]]
@@ -31,16 +48,16 @@ define i64 @narrow_mul(i64 noundef %a, i64 noundef %b) {
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   %zext0 = and i64 %a, 2147483647
-  %zext1 = and i64 %b, 2147483647
+  %zext1 = and i64 %b, 0
   %mul = mul i64 %zext0, %zext1
   ret i64 %mul
 }
 
-define i64 @narrow_sub(i64 noundef %a, i64 noundef %b) {
-; CHECK-LABEL: define i64 @narrow_sub(
+define i64 @narrow_mul_1(i64 noundef %a, i64 noundef %b) {
+; CHECK-LABEL: define i64 @narrow_mul_1(
 ; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ZEXT0:%.*]] = and i64 [[A]], 2147483647
-; CHECK-NEXT:    [[ZEXT1:%.*]] = and i64 [[B]], 2147483647
+; CHECK-NEXT:    [[ZEXT1:%.*]] = and i64 [[B]], 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 [[ZEXT0]] to i32
 ; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[ZEXT1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP1]], [[TMP2]]
@@ -48,11 +65,10 @@ define i64 @narrow_sub(i64 noundef %a, i64 noundef %b) {
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   %zext0 = and i64 %a, 2147483647
-  %zext1 = and i64 %b, 2147483647
-  %sub = sub i64 %zext0, %zext1
-  ret i64 %sub
+  %zext1 = and i64 %b, 2
+  %mul = mul i64 %zext0, %zext1
+  ret i64 %mul
 }
-
 
 define i64 @no_narrow_add(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: define i64 @no_narrow_add(
@@ -68,30 +84,30 @@ define i64 @no_narrow_add(i64 noundef %a, i64 noundef %b) {
   ret i64 %add
 }
 
+define i64 @no_narrow_add_1(i64 noundef %a, i64 noundef %b) {
+; CHECK-LABEL: define i64 @no_narrow_add_1(
+; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[ZEXT0:%.*]] = and i64 [[A]], 4294967295
+; CHECK-NEXT:    [[ZEXT1:%.*]] = and i64 [[B]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add i64 [[ZEXT0]], [[ZEXT1]]
+; CHECK-NEXT:    ret i64 [[ADD]]
+;
+  %zext0 = and i64 %a, 4294967295
+  %zext1 = and i64 %b, 1
+  %add = add i64 %zext0, %zext1
+  ret i64 %add
+}
+
 define i64 @no_narrow_mul(i64 noundef %a, i64 noundef %b) {
 ; CHECK-LABEL: define i64 @no_narrow_mul(
 ; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[ZEXT0:%.*]] = and i64 [[A]], 2147483648
-; CHECK-NEXT:    [[ZEXT1:%.*]] = and i64 [[B]], 2147483648
+; CHECK-NEXT:    [[ZEXT1:%.*]] = and i64 [[B]], 2
 ; CHECK-NEXT:    [[MUL:%.*]] = mul i64 [[ZEXT0]], [[ZEXT1]]
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %zext0 = and i64 %a, 2147483648
-  %zext1 = and i64 %b, 2147483648
+  %zext1 = and i64 %b, 2
   %mul = mul i64 %zext0, %zext1
   ret i64 %mul
-}
-
-define i64 @no_narrow_sub(i64 noundef %a, i64 noundef %b) {
-; CHECK-LABEL: define i64 @no_narrow_sub(
-; CHECK-SAME: i64 noundef [[A:%.*]], i64 noundef [[B:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[ZEXT0:%.*]] = and i64 [[A]], 2147483648
-; CHECK-NEXT:    [[ZEXT1:%.*]] = and i64 [[B]], 2147483648
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[ZEXT0]], [[ZEXT1]]
-; CHECK-NEXT:    ret i64 [[SUB]]
-;
-  %zext0 = and i64 %a, 2147483648
-  %zext1 = and i64 %b, 2147483648
-  %sub = sub i64 %zext0, %zext1
-  ret i64 %sub
 }
