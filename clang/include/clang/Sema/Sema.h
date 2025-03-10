@@ -3168,13 +3168,6 @@ public:
 
   DeclGroupPtrTy ConvertDeclToDeclGroup(Decl *Ptr, Decl *OwnedType = nullptr);
 
-  enum class DiagCtorKind { None, Implicit, Typename };
-  /// Returns the TypeDeclType for the given type declaration,
-  /// as ASTContext::getTypeDeclType would, but
-  /// performs the required semantic checks for name lookup of said entity.
-  QualType getTypeDeclType(DeclContext *LookupCtx, DiagCtorKind DCK,
-                           TypeDecl *TD, SourceLocation NameLoc);
-
   /// If the identifier refers to a type name within this scope,
   /// return the declaration of that type.
   ///
@@ -11363,14 +11356,16 @@ public:
 
   /// The context in which we are checking a template parameter list.
   enum TemplateParamListContext {
-    TPC_ClassTemplate,
-    TPC_VarTemplate,
+    // For this context, Class, Variable, TypeAlias, and non-pack Template
+    // Template Parameters are treated uniformly.
+    TPC_Other,
+
     TPC_FunctionTemplate,
     TPC_ClassTemplateMember,
     TPC_FriendClassTemplate,
     TPC_FriendFunctionTemplate,
     TPC_FriendFunctionTemplateDefinition,
-    TPC_TypeAliasTemplate
+    TPC_TemplateTemplateParameterPack,
   };
 
   /// Checks the validity of a template parameter list, possibly

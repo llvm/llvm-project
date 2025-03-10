@@ -35,9 +35,6 @@ Potentially Breaking Changes
 ============================
 
 - The Objective-C ARC migrator (ARCMigrate) has been removed.
-- Fix missing diagnostics for uses of declarations when performing typename access,
-  such as when performing member access on a '[[deprecated]]' type alias.
-  (#GH58547)
 
 C/C++ Language Potentially Breaking Changes
 -------------------------------------------
@@ -241,6 +238,9 @@ Improvements to Clang's diagnostics
   as function arguments or return value respectively. Note that
   :doc:`ThreadSafetyAnalysis` still does not perform alias analysis. The
   feature will be default-enabled with ``-Wthread-safety`` in a future release.
+- The ``-Wsign-compare`` warning now treats expressions with bitwise not(~) and minus(-) as signed integers 
+  except for the case where the operand is an unsigned integer
+  and throws warning if they are compared with unsigned integers (##18878).
 
 - Improve the diagnostics for chained comparisons to report actual expressions and operators (#GH129069).
 
@@ -297,6 +297,9 @@ Bug Fixes to C++ Support
 - Clang now uses the parameter location for abbreviated function templates in ``extern "C"``. (#GH46386)
 - Clang will emit an error instead of crash when use co_await or co_yield in
   C++26 braced-init-list template parameter initialization. (#GH78426)
+- Fixes matching of nested template template parameters. (#GH130362)
+- Correctly diagnoses template template paramters which have a pack parameter
+  not in the last position.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 
 Bug Fixes to AST Handling
