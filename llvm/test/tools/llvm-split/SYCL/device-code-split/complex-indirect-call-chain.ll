@@ -1,7 +1,6 @@
 ; Check that Module splitting can trace through more complex call stacks
 ; involving several nested indirect calls.
 
-;
 ; RUN: llvm-split -sycl-split=source -S < %s -o %t
 ; RUN: FileCheck %s -input-file=%t_0.ll --check-prefix CHECK0 \
 ; RUN:     --implicit-check-not @foo --implicit-check-not @kernel_A \

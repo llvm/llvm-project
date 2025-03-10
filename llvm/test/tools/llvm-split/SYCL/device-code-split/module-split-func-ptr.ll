@@ -7,10 +7,10 @@
 ; RUN: FileCheck %s -input-file=%t_0.ll --check-prefix=CHECK-IR0
 ; RUN: FileCheck %s -input-file=%t_1.ll --check-prefix=CHECK-IR1
 
-; CHECK-SYM0: kernel2
+; CHECK-SYM0: kernelA
 ; CHECK-SYM1: kernel1
 ;
-; CHECK-IR0: define dso_local spir_kernel void @kernel2
+; CHECK-IR0: define dso_local spir_kernel void @kernelA
 ;
 ; CHECK-IR1: @FuncTable = weak global ptr @func
 ; CHECK-IR1: define {{.*}} i32 @func
@@ -29,7 +29,7 @@ entry:
   ret void
 }
 
-define dso_local spir_kernel void @kernel2() #1 {
+define dso_local spir_kernel void @kernelA() #1 {
 entry:
   ret void
 }
