@@ -5093,7 +5093,7 @@ template <class Emitter> bool Compiler<Emitter>::visitStmt(const Stmt *S) {
   case Stmt::CompoundStmtClass:
     return visitCompoundStmt(cast<CompoundStmt>(S));
   case Stmt::DeclStmtClass:
-    return visitDeclStmt(cast<DeclStmt>(S));
+    return visitDeclStmt(cast<DeclStmt>(S), /*EvaluateConditionDecl=*/true);
   case Stmt::ReturnStmtClass:
     return visitReturnStmt(cast<ReturnStmt>(S));
   case Stmt::IfStmtClass:
@@ -5147,7 +5147,18 @@ bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
+bool Compiler<Emitter>::emitDecompositionVarInit(const DecompositionDecl *DD) {
+  for (auto *BD : DD->bindings())
+    if (auto *KD = BD->getHoldingVar()) {
+      if (!this->visitVarDecl(KD))
+        return false;
+    }
+  return true;
+}
+
+template <class Emitter>
+bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS,
+                                      bool EvaluateConditionDecl) {
   for (const auto *D : DS->decls()) {
     if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, BaseUsingDecl,
             FunctionDecl, NamespaceAliasDecl, UsingDirectiveDecl>(D))
@@ -5160,12 +5171,10 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
       return false;
 
     // Register decomposition decl holding vars.
-    if (const auto *DD = dyn_cast<DecompositionDecl>(VD)) {
-      for (auto *BD : DD->bindings())
-        if (auto *KD = BD->getHoldingVar()) {
-          if (!this->visitVarDecl(KD))
-            return false;
-        }
+    if (const auto *DD = dyn_cast<DecompositionDecl>(VD);
+        EvaluateConditionDecl && DD) {
+      if (!this->emitDecompositionVarInit(DD))
+        return false;
     }
   }
 
@@ -5249,6 +5258,11 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
       return false;
   }
 
+  if (auto *DD =
+          dyn_cast_if_present<DecompositionDecl>(IS->getConditionVariable()))
+    if (!this->emitDecompositionVarInit(DD))
+      return false;
+
   if (const Stmt *Else = IS->getElse()) {
     LabelTy LabelElse = this->getLabel();
     LabelTy LabelEnd = this->getLabel();
@@ -5294,6 +5308,12 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
 
     if (!this->visitBool(Cond))
       return false;
+
+    if (auto *DD =
+            dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable()))
+      if (!this->emitDecompositionVarInit(DD))
+        return false;
+
     if (!this->jumpFalse(EndLabel))
       return false;
 
@@ -5374,6 +5394,11 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
       if (!this->jumpFalse(EndLabel))
         return false;
     }
+
+    if (auto *DD =
+            dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable()))
+      if (!this->emitDecompositionVarInit(DD))
+        return false;
 
     if (Body && !this->visitStmt(Body))
       return false;
@@ -5496,6 +5521,11 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
     return false;
   if (!this->emitSetLocal(CondT, CondVar, S))
     return false;
+
+  if (auto *DD =
+          dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable()))
+    if (!this->emitDecompositionVarInit(DD))
+      return false;
 
   CaseMap CaseLabels;
   // Create labels and comparison ops for all case statements.
