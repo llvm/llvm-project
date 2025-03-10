@@ -6,7 +6,7 @@ target datalayout = "p:16:16:16:8"
 ; The GEP should only modify the low 8 bits of the pointer.
 define ptr @test() {
 ; CHECK-LABEL: define ptr @test() {
-; CHECK-NEXT:    ret ptr null
+; CHECK-NEXT:    ret ptr inttoptr (i16 -256 to ptr)
 ;
   %base = inttoptr i16 -1 to ptr
   %gep = getelementptr i8, ptr %base, i8 1
