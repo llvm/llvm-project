@@ -906,41 +906,8 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
     OutStreamer->switchSection(getObjFileLowering().getTextSection());
 
   if (TT.isOSBinFormatCOFF()) {
-    // Emit an absolute @feat.00 symbol.
-    MCSymbol *S = MMI->getContext().getOrCreateSymbol(StringRef("@feat.00"));
-    OutStreamer->beginCOFFSymbolDef(S);
-    OutStreamer->emitCOFFSymbolStorageClass(COFF::IMAGE_SYM_CLASS_STATIC);
-    OutStreamer->emitCOFFSymbolType(COFF::IMAGE_SYM_DTYPE_NULL);
-    OutStreamer->endCOFFSymbolDef();
-    int64_t Feat00Value = 0;
-
-    if (TT.getArch() == Triple::x86) {
-      // According to the PE-COFF spec, the LSB of this value marks the object
-      // for "registered SEH".  This means that all SEH handler entry points
-      // must be registered in .sxdata.  Use of any unregistered handlers will
-      // cause the process to terminate immediately.  LLVM does not know how to
-      // register any SEH handlers, so its object files should be safe.
-      Feat00Value |= COFF::Feat00Flags::SafeSEH;
-    }
-
-    if (M.getModuleFlag("cfguard")) {
-      // Object is CFG-aware.
-      Feat00Value |= COFF::Feat00Flags::GuardCF;
-    }
-
-    if (M.getModuleFlag("ehcontguard")) {
-      // Object also has EHCont.
-      Feat00Value |= COFF::Feat00Flags::GuardEHCont;
-    }
-
-    if (M.getModuleFlag("ms-kernel")) {
-      // Object is compiled with /kernel.
-      Feat00Value |= COFF::Feat00Flags::Kernel;
-    }
-
-    OutStreamer->emitSymbolAttribute(S, MCSA_Global);
-    OutStreamer->emitAssignment(
-        S, MCConstantExpr::create(Feat00Value, MMI->getContext()));
+    emitCOFFFeatureSymbol(M);
+    emitCOFFReplaceableFunctionData(M);
   }
   OutStreamer->emitSyntaxDirective();
 
