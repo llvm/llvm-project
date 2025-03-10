@@ -196,7 +196,7 @@ public:
   CompilerType GetVoidFunctionType();
 
   // Exploring the type
-  std::optional<uint64_t>
+  llvm::Expected<uint64_t>
   GetBitSize(lldb::opaque_compiler_type_t type,
              ExecutionContextScope *exe_scope) override;
   std::optional<uint64_t>

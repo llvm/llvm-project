@@ -534,9 +534,12 @@ public:
         valobj_sp->GetData(data, extract_error);
         if (!extract_error.Success()) {
           if (valobj_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
-            std::optional<uint64_t> size =
-                valobj_type.GetByteSize(frame_sp.get());
-            if (size && *size == 0) {
+            auto size_or_err = valobj_type.GetByteSize(frame_sp.get());
+            if (!size_or_err) {
+              err = Status::FromError(size_or_err.takeError());
+              return;
+            }
+            if (*size_or_err == 0) {
               // We don't need to materialize empty structs in Swift.
               return;
             }
@@ -663,14 +666,19 @@ public:
 
       Status extract_error;
 
-      map.GetMemoryData(data, m_temporary_allocation,
-                        valobj_sp->GetByteSize().value_or(0), extract_error);
+      map.GetMemoryData(
+          data, m_temporary_allocation,
+          llvm::expectedToOptional(valobj_sp->GetByteSize()).value_or(0),
+          extract_error);
 
       if (!extract_error.Success()) {
         if (valobj_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
-          std::optional<uint64_t> size =
-              valobj_type.GetByteSize(frame_sp.get());
-          if (size && *size == 0)
+          auto size_or_err = valobj_type.GetByteSize(frame_sp.get());
+          if (!size_or_err) {
+            err = Status::FromError(size_or_err.takeError());
+            return;
+          }
+          if (*size_or_err == 0)
             // We don't need to dematerialize empty structs in Swift.
             return;
         }

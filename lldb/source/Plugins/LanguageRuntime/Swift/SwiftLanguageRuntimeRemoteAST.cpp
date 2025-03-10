@@ -244,7 +244,9 @@ SwiftLanguageRuntime::GetDynamicTypeAndAddress_ExistentialRemoteAST(
   if (!swift_type)
     return {};
   if (use_local_buffer)
-    PushLocalBuffer(existential_address, in_value.GetByteSize().value_or(0));
+    PushLocalBuffer(
+        existential_address,
+        llvm::expectedToOptional(in_value.GetByteSize()).value_or(0));
 
   auto result = remote_ast.getDynamicTypeAndAddressForExistential(
       remote_existential, swift_type);
