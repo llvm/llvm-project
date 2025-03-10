@@ -18,13 +18,13 @@
 #include "shape.h"
 #include "tools.h"
 #include "type.h"
-#include "flang/Common/Fortran-features.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Parser/char-block.h"
 #include "flang/Semantics/symbol.h"
+#include "flang/Support/Fortran-features.h"
+#include "flang/Support/Fortran.h"
 #include <optional>
 #include <string>
 #include <variant>
@@ -349,8 +349,8 @@ struct FunctionResult {
 
 // 15.3.1
 struct Procedure {
-  ENUM_CLASS(
-      Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer, Subroutine)
+  ENUM_CLASS(Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer,
+      NullAllocatable, Subroutine)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   Procedure(){};
   Procedure(FunctionResult &&, DummyArguments &&, Attrs);

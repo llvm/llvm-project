@@ -274,7 +274,7 @@ protected:
   /// Evaluates an expression and places the result on the stack. If the
   /// expression is of composite type, a local variable will be created
   /// and a pointer to said variable will be placed on the stack.
-  bool visit(const Expr *E);
+  bool visit(const Expr *E) override;
   /// Compiles an initializer. This is like visit() but it will never
   /// create a variable and instead rely on a variable already having
   /// been created. visitInitializer() then relies on a pointer to this
@@ -303,13 +303,13 @@ protected:
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
-                                  bool IsExtended = false);
+                                  const ValueDecl *ExtendingDecl = nullptr);
 
   /// Allocates a space storing a local given its type.
   std::optional<unsigned>
   allocateLocal(DeclTy &&Decl, QualType Ty = QualType(),
                 const ValueDecl *ExtendingDecl = nullptr);
-  unsigned allocateTemporary(const Expr *E);
+  std::optional<unsigned> allocateTemporary(const Expr *E);
 
 private:
   friend class VariableScope<Emitter>;
@@ -342,6 +342,9 @@ private:
   /// Emits an integer constant.
   template <typename T> bool emitConst(T Value, PrimType Ty, const Expr *E);
   template <typename T> bool emitConst(T Value, const Expr *E);
+  bool emitBool(bool V, const Expr *E) override {
+    return this->emitConst(V, E);
+  }
 
   llvm::RoundingMode getRoundingMode(const Expr *E) const {
     FPOptions FPO = E->getFPFeaturesInEffect(Ctx.getLangOpts());
@@ -383,6 +386,7 @@ private:
   bool emitBuiltinBitCast(const CastExpr *E);
   bool compileConstructor(const CXXConstructorDecl *Ctor);
   bool compileDestructor(const CXXDestructorDecl *Dtor);
+  bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
 
   bool checkLiteralType(const Expr *E);
 

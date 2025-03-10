@@ -1484,8 +1484,9 @@ void MicrosoftCXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   // <operator-name> ::= ?_G # scalar deleting destructor
   case Dtor_Deleting: Out << "?_G"; return;
   // <operator-name> ::= ?_E # vector deleting destructor
-  // FIXME: Add a vector deleting dtor type.  It goes in the vtable, so we need
-  // it.
+  case Dtor_VectorDeleting:
+    Out << "?_E";
+    return;
   case Dtor_Comdat:
     llvm_unreachable("not expecting a COMDAT");
   }
@@ -2792,6 +2793,10 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     mangleArtificialTagType(TagTypeKind::Struct, "__bf16", {"__clang"});
     break;
 
+  case BuiltinType::MFloat8:
+    mangleArtificialTagType(TagTypeKind::Struct, "__mfp8", {"__clang"});
+    break;
+
 #define WASM_REF_TYPE(InternalName, MangledName, Id, SingletonId, AS)          \
   case BuiltinType::Id:                                                        \
     mangleArtificialTagType(TagTypeKind::Struct, MangledName);                 \
@@ -2806,47 +2811,12 @@ void MicrosoftCXXNameMangler::mangleType(const BuiltinType *T, Qualifiers,
     break;
 #include "clang/Basic/HLSLIntangibleTypes.def"
 
-#define SVE_TYPE(Name, Id, SingletonId) \
-  case BuiltinType::Id:
-#include "clang/Basic/AArch64SVEACLETypes.def"
-#define PPC_VECTOR_TYPE(Name, Id, Size) \
-  case BuiltinType::Id:
-#include "clang/Basic/PPCTypes.def"
-#define RVV_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
-#include "clang/Basic/RISCVVTypes.def"
-#define AMDGPU_TYPE(Name, Id, SingletonId, Width, Align) case BuiltinType::Id:
-#include "clang/Basic/AMDGPUTypes.def"
-  case BuiltinType::ShortAccum:
-  case BuiltinType::Accum:
-  case BuiltinType::LongAccum:
-  case BuiltinType::UShortAccum:
-  case BuiltinType::UAccum:
-  case BuiltinType::ULongAccum:
-  case BuiltinType::ShortFract:
-  case BuiltinType::Fract:
-  case BuiltinType::LongFract:
-  case BuiltinType::UShortFract:
-  case BuiltinType::UFract:
-  case BuiltinType::ULongFract:
-  case BuiltinType::SatShortAccum:
-  case BuiltinType::SatAccum:
-  case BuiltinType::SatLongAccum:
-  case BuiltinType::SatUShortAccum:
-  case BuiltinType::SatUAccum:
-  case BuiltinType::SatULongAccum:
-  case BuiltinType::SatShortFract:
-  case BuiltinType::SatFract:
-  case BuiltinType::SatLongFract:
-  case BuiltinType::SatUShortFract:
-  case BuiltinType::SatUFract:
-  case BuiltinType::SatULongFract:
-  case BuiltinType::Ibm128:
-  case BuiltinType::Float128: {
+    // Issue an error for any type not explicitly handled.
+  default:
     Error(Range.getBegin(), "built-in type: ",
           T->getName(Context.getASTContext().getPrintingPolicy()))
         << Range;
     break;
-  }
   }
 }
 
@@ -2917,9 +2887,12 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
   //               ::= @ # structors (they have no declared return type)
   if (IsStructor) {
     if (isa<CXXDestructorDecl>(D) && isStructorDecl(D)) {
-      // The scalar deleting destructor takes an extra int argument which is not
-      // reflected in the AST.
-      if (StructorType == Dtor_Deleting) {
+      // The deleting destructors take an extra argument of type int that
+      // indicates whether the storage for the object should be deleted and
+      // whether a single object or an array of objects is being destroyed. This
+      // extra argument is not reflected in the AST.
+      if (StructorType == Dtor_Deleting ||
+          StructorType == Dtor_VectorDeleting) {
         Out << (PointersAre64Bit ? "PEAXI@Z" : "PAXI@Z");
         return;
       }
@@ -3892,10 +3865,10 @@ void MicrosoftMangleContextImpl::mangleCXXDtorThunk(const CXXDestructorDecl *DD,
                                                     const ThunkInfo &Thunk,
                                                     bool /*ElideOverrideInfo*/,
                                                     raw_ostream &Out) {
-  // FIXME: Actually, the dtor thunk should be emitted for vector deleting
-  // dtors rather than scalar deleting dtors. Just use the vector deleting dtor
-  // mangling manually until we support both deleting dtor types.
-  assert(Type == Dtor_Deleting);
+  // The dtor thunk should use vector deleting dtor mangling, however as an
+  // optimization we may end up emitting only scalar deleting dtor body, so just
+  // use the vector deleting dtor mangling manually.
+  assert(Type == Dtor_Deleting || Type == Dtor_VectorDeleting);
   msvc_hashing_ostream MHO(Out);
   MicrosoftCXXNameMangler Mangler(*this, MHO, DD, Type);
   Mangler.getStream() << "??_E";

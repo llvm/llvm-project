@@ -23,6 +23,7 @@ class LoopVectorizationCostModel;
 class TargetLibraryInfo;
 class TargetTransformInfo;
 struct HistogramInfo;
+struct VFRange;
 
 /// A chain of instructions that form a partial reduction.
 /// Designed to match: reduction_bin_op (bin_op (extend (A), (extend (B))),
@@ -127,8 +128,7 @@ class VPRecipeBuilder {
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
   /// that widening should be performed.
-  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
-                            VPBasicBlock *VPBB);
+  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands);
 
   /// Makes Histogram count operations safe for vectorization, by emitting a
   /// llvm.experimental.vector.histogram.add intrinsic in place of the
@@ -139,12 +139,16 @@ class VPRecipeBuilder {
 
   /// Examines reduction operations to see if the target can use a cheaper
   /// operation with a wider per-iteration input VF and narrower PHI VF.
-  /// Returns null if no scaled reduction was found, otherwise a pair with a
-  /// struct containing reduction information and the scaling factor between the
-  /// number of elements in the input and output.
-  std::optional<std::pair<PartialReductionChain, unsigned>>
-  getScaledReduction(PHINode *PHI, const RecurrenceDescriptor &Rdx,
-                     VFRange &Range);
+  /// Each element within Chains is a pair with a struct containing reduction
+  /// information and the scaling factor between the number of elements in
+  /// the input and output.
+  /// Recursively calls itself to identify chained scaled reductions.
+  /// Returns true if this invocation added an entry to Chains, otherwise false.
+  /// i.e. returns false in the case that a subcall adds an entry to Chains,
+  /// but the top-level call does not.
+  bool getScaledReductions(
+      Instruction *PHI, Instruction *RdxExitInstr, VFRange &Range,
+      SmallVectorImpl<std::pair<PartialReductionChain, unsigned>> &Chains);
 
 public:
   VPRecipeBuilder(VPlan &Plan, Loop *OrigLoop, const TargetLibraryInfo *TLI,
@@ -169,7 +173,7 @@ public:
   /// the given VF \p Range.
   VPRecipeBase *tryToCreateWidenRecipe(Instruction *Instr,
                                        ArrayRef<VPValue *> Operands,
-                                       VFRange &Range, VPBasicBlock *VPBB);
+                                       VFRange &Range);
 
   /// Create and return a partial reduction recipe for a reduction instruction
   /// along with binary operation and reduction phi operands.
@@ -214,19 +218,12 @@ public:
     return Ingredient2Recipe[I];
   }
 
-  /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
-  /// last operand. Range.End may be decreased to ensure same recipe behavior
-  /// from \p Range.Start to \p Range.End.
-  VPReplicateRecipe *handleReplication(Instruction *I, VFRange &Range);
-
-  /// Add the incoming values from the backedge to reduction & first-order
-  /// recurrence cross-iteration phis.
-  void fixHeaderPhis();
-
-  /// Returns a range mapping the values of the range \p Operands to their
-  /// corresponding VPValues.
-  iterator_range<mapped_iterator<Use *, std::function<VPValue *(Value *)>>>
-  mapToVPValues(User::op_range Operands);
+  /// Build a VPReplicationRecipe for \p I using \p Operands. If it is
+  /// predicated, add the mask as last operand. Range.End may be decreased to
+  /// ensure same recipe behavior from \p Range.Start to \p Range.End.
+  VPReplicateRecipe *handleReplication(Instruction *I,
+                                       ArrayRef<VPValue *> Operands,
+                                       VFRange &Range);
 
   VPValue *getVPValueOrAddLiveIn(Value *V) {
     if (auto *I = dyn_cast<Instruction>(V)) {

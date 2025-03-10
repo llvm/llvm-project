@@ -72,6 +72,14 @@ clang_tablegen(BuiltinsBPF.inc -gen-clang-builtins
   SOURCE BuiltinsBPF.td
   TARGET ClangBuiltinsBPF)
 
+clang_tablegen(BuiltinsHexagon.inc -gen-clang-builtins
+  SOURCE BuiltinsHexagon.td
+  TARGET ClangBuiltinsHexagon)
+
+clang_tablegen(BuiltinsNVPTX.inc -gen-clang-builtins
+  SOURCE BuiltinsNVPTX.td
+  TARGET ClangBuiltinsNVPTX)
+
 clang_tablegen(BuiltinsRISCV.inc -gen-clang-builtins
   SOURCE BuiltinsRISCV.td
   TARGET ClangBuiltinsRISCV)
@@ -87,6 +95,10 @@ clang_tablegen(BuiltinsX86.inc -gen-clang-builtins
 clang_tablegen(BuiltinsX86_64.inc -gen-clang-builtins
   SOURCE BuiltinsX86_64.td
   TARGET ClangBuiltinsX86_64)
+
+clang_tablegen(BuiltinTemplates.inc -gen-clang-builtin-templates
+  SOURCE BuiltinTemplates.td
+  TARGET ClangBuiltinTemplates)
 
 # ARM NEON and MVE
 clang_tablegen(arm_neon.inc -gen-arm-neon-sema

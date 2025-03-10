@@ -6369,6 +6369,8 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
       rep << "ostype:bridgeos;";
 #elif defined(TARGET_OS_OSX) && TARGET_OS_OSX == 1
       rep << "ostype:macosx;";
+#elif defined(TARGET_OS_XR) && TARGET_OS_XR == 1
+      rep << "ostype:xros;";
 #else
       rep << "ostype:ios;";
 #endif
@@ -6422,6 +6424,8 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
         rep << "ostype:watchos;";
 #elif defined(TARGET_OS_BRIDGE) && TARGET_OS_BRIDGE == 1
         rep << "ostype:bridgeos;";
+#elif defined(TARGET_OS_XR) && TARGET_OS_XR == 1
+        rep << "ostype:xros;";
 #else
         rep << "ostype:ios;";
 #endif

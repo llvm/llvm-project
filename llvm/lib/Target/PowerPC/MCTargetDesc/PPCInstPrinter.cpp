@@ -492,9 +492,9 @@ void PPCInstPrinter::printAbsBranchOperand(const MCInst *MI, unsigned OpNo,
 
 void PPCInstPrinter::printcrbitm(const MCInst *MI, unsigned OpNo,
                                  const MCSubtargetInfo &STI, raw_ostream &O) {
-  unsigned CCReg = MI->getOperand(OpNo).getReg();
+  MCRegister CCReg = MI->getOperand(OpNo).getReg();
   unsigned RegNo;
-  switch (CCReg) {
+  switch (CCReg.id()) {
   default: llvm_unreachable("Unknown CR register");
   case PPC::CR0: RegNo = 0; break;
   case PPC::CR1: RegNo = 1; break;
@@ -580,13 +580,13 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
   // end like __tls_get_addr(x@tlsgd)@notoc. Instead we want it to look
   // like __tls_get_addr@notoc(x@tlsgd).
   if (RefExp->getKind() == MCSymbolRefExpr::VK_PPC_NOTOC)
-    O << '@' << MCSymbolRefExpr::getVariantKindName(RefExp->getKind());
+    O << '@' << MAI.getVariantKindName(RefExp->getKind());
   O << '(';
   printOperand(MI, OpNo + 1, STI, O);
   O << ')';
   if (RefExp->getKind() != MCSymbolRefExpr::VK_None &&
       RefExp->getKind() != MCSymbolRefExpr::VK_PPC_NOTOC)
-    O << '@' << MCSymbolRefExpr::getVariantKindName(RefExp->getKind());
+    O << '@' << MAI.getVariantKindName(RefExp->getKind());
   if (Rhs) {
     SmallString<0> Buf;
     raw_svector_ostream Tmp(Buf);
@@ -648,7 +648,7 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
                                   const MCSubtargetInfo &STI, raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     if (!ShowVSRNumsAsVR)
       Reg = PPC::getRegNumForOperand(MII.get(MI->getOpcode()), Reg, OpNo);
 

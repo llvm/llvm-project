@@ -22,9 +22,8 @@
 
 #include <clc/clc.h>
 #include <clc/clcmacro.h>
-
-#include "math.h"
-#include "tables.h"
+#include <clc/math/math.h>
+#include <clc/math/tables.h>
 
 _CLC_OVERLOAD _CLC_DEF float cbrt(float x) {
 

@@ -493,6 +493,10 @@ If
 .Fl -use-android-relr-tags
 is specified, use SHT_ANDROID_RELR instead of SHT_RELR.
 .Pp
+.It Fl -package-metadata
+Emit a percent-encoded string to the
+.Cm .note.package
+section. For example, %25 decodes to a single %.
 .It Fl -pic-veneer
 Always generate position independent thunks.
 .It Fl -pie , Fl -pic-executable

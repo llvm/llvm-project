@@ -12,7 +12,7 @@ target triple = "loongarch64"
 
 define void @vector_add(ptr noalias nocapture %a, i64 %v) {
 ; CHECK-LABEL: define void @vector_add(
-; CHECK-SAME: ptr noalias nocapture [[A:%.*]], i64 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
+; CHECK-SAME: ptr noalias captures(none) [[A:%.*]], i64 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
@@ -67,3 +67,9 @@ for.body:
 for.end:
   ret void
 }
+;.
+; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
+; CHECK: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; CHECK: [[META2]] = !{!"llvm.loop.unroll.runtime.disable"}
+; CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META2]], [[META1]]}
+;.

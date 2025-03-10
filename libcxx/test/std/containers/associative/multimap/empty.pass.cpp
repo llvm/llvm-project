@@ -18,9 +18,8 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**)
-{
-    {
+int main(int, char**) {
+  {
     typedef std::multimap<int, double> M;
     M m;
     assert(m.empty());
@@ -28,9 +27,9 @@ int main(int, char**)
     assert(!m.empty());
     m.clear();
     assert(m.empty());
-    }
+  }
 #if TEST_STD_VER >= 11
-    {
+  {
     typedef std::multimap<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> M;
     M m;
     assert(m.empty());
@@ -38,7 +37,7 @@ int main(int, char**)
     assert(!m.empty());
     m.clear();
     assert(m.empty());
-    }
+  }
 #endif
 
   return 0;

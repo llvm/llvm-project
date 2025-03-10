@@ -19,11 +19,11 @@
 #include "check_assertion.h"
 
 int main(int, char**) {
-    std::list<int> v(100);
-    std::list<int> v2(100);
-    int a[] = {1, 2, 3, 4, 5};
-    TEST_LIBCPP_ASSERT_FAILURE(v.insert(v2.cbegin(), a, a + 5),
-                                "list::insert(iterator, range) called with an iterator not referring to this list");
+  std::list<int> v(100);
+  std::list<int> v2(100);
+  int a[] = {1, 2, 3, 4, 5};
+  TEST_LIBCPP_ASSERT_FAILURE(v.insert(v2.cbegin(), a, a + 5),
+                             "list::insert(iterator, range) called with an iterator not referring to this list");
 
-    return 0;
+  return 0;
 }

@@ -10,6 +10,7 @@
 #define _LIBCPP___VECTOR_VECTOR_BOOL_H
 
 #include <__algorithm/copy.h>
+#include <__algorithm/copy_backward.h>
 #include <__algorithm/fill_n.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
@@ -17,6 +18,7 @@
 #include <__bit_reference>
 #include <__config>
 #include <__functional/unary_function.h>
+#include <__fwd/bit_reference.h>
 #include <__fwd/functional.h>
 #include <__fwd/vector.h>
 #include <__iterator/distance.h>
@@ -444,7 +446,7 @@ private:
   //  Postcondition:  size() == 0
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vallocate(size_type __n) {
     if (__n > max_size())
-      __throw_length_error();
+      this->__throw_length_error();
     auto __allocation = std::__allocate_at_least(__alloc_, __external_cap_to_internal(__n));
     __begin_          = __allocation.ptr;
     __size_           = 0;
@@ -532,10 +534,8 @@ template <class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<bool, _Allocator>::size_type
 vector<bool, _Allocator>::max_size() const _NOEXCEPT {
   size_type __amax = __storage_traits::max_size(__alloc_);
-  size_type __nmax = numeric_limits<size_type>::max() / 2; // end() >= begin(), always
-  if (__nmax / __bits_per_word <= __amax)
-    return __nmax;
-  return __internal_cap_to_external(__amax);
+  size_type __nmax = numeric_limits<difference_type>::max();
+  return __nmax / __bits_per_word <= __amax ? __nmax : __internal_cap_to_external(__amax);
 }
 
 //  Precondition:  __new_size > capacity()
@@ -552,36 +552,29 @@ vector<bool, _Allocator>::__recommend(size_type __new_size) const {
 }
 
 //  Default constructs __n objects starting at __end_
-//  Precondition:  __n > 0
 //  Precondition:  size() + __n <= capacity()
 //  Postcondition:  size() == size() + __n
 template <class _Allocator>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<bool, _Allocator>::__construct_at_end(size_type __n, bool __x) {
-  size_type __old_size = this->__size_;
+  _LIBCPP_ASSERT_INTERNAL(
+      capacity() >= size() + __n, "vector<bool>::__construct_at_end called with insufficient capacity");
+  std::fill_n(end(), __n, __x);
   this->__size_ += __n;
-  if (__old_size == 0 || ((__old_size - 1) / __bits_per_word) != ((this->__size_ - 1) / __bits_per_word)) {
-    if (this->__size_ <= __bits_per_word)
-      this->__begin_[0] = __storage_type(0);
-    else
-      this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
-  }
-  std::fill_n(__make_iter(__old_size), __n, __x);
+  if (end().__ctz_ != 0) // Ensure uninitialized leading bits in the last word are set to zero
+    std::fill_n(end(), __bits_per_word - end().__ctz_, 0);
 }
 
 template <class _Allocator>
 template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<bool, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n) {
-  size_type __old_size = this->__size_;
+  _LIBCPP_ASSERT_INTERNAL(
+      capacity() >= size() + __n, "vector<bool>::__construct_at_end called with insufficient capacity");
+  std::__copy(std::move(__first), std::move(__last), end());
   this->__size_ += __n;
-  if (__old_size == 0 || ((__old_size - 1) / __bits_per_word) != ((this->__size_ - 1) / __bits_per_word)) {
-    if (this->__size_ <= __bits_per_word)
-      this->__begin_[0] = __storage_type(0);
-    else
-      this->__begin_[(this->__size_ - 1) / __bits_per_word] = __storage_type(0);
-  }
-  std::__copy(std::move(__first), std::move(__last), __make_iter(__old_size));
+  if (end().__ctz_ != 0) // Ensure uninitialized leading bits in the last word are set to zero
+    std::fill_n(end(), __bits_per_word - end().__ctz_, 0);
 }
 
 template <class _Allocator>

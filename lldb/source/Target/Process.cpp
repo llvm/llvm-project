@@ -1664,7 +1664,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
       Address symbol_address = symbol->GetAddress();
       load_addr = ResolveIndirectFunction(&symbol_address, error);
       if (!error.Success() && show_error) {
-        GetTarget().GetDebugger().GetErrorStream().Printf(
+        GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
             "warning: failed to resolve indirect function at 0x%" PRIx64
             " for breakpoint %i.%i: %s\n",
             symbol->GetLoadAddress(&GetTarget()),
@@ -1703,7 +1703,7 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
         } else {
           if (show_error || use_hardware) {
             // Report error for setting breakpoint...
-            GetTarget().GetDebugger().GetErrorStream().Printf(
+            GetTarget().GetDebugger().GetAsyncErrorStream()->Printf(
                 "warning: failed to set breakpoint site at 0x%" PRIx64
                 " for breakpoint %i.%i: %s\n",
                 load_addr, constituent->GetBreakpoint().GetID(),
@@ -2743,10 +2743,9 @@ Status Process::LaunchPrivate(ProcessLaunchInfo &launch_info, StateType &state,
 
     // Now that we know the process type, update its signal responses from the
     // ones stored in the Target:
-    if (m_unix_signals_sp) {
-      StreamSP warning_strm = GetTarget().GetDebugger().GetAsyncErrorStream();
-      GetTarget().UpdateSignalsFromDummy(m_unix_signals_sp, warning_strm);
-    }
+    if (m_unix_signals_sp)
+      GetTarget().UpdateSignalsFromDummy(
+          m_unix_signals_sp, GetTarget().GetDebugger().GetAsyncErrorStream());
 
     DynamicLoader *dyld = GetDynamicLoader();
     if (dyld)
@@ -3131,10 +3130,9 @@ void Process::CompleteAttach() {
   }
   // Now that we know the process type, update its signal responses from the
   // ones stored in the Target:
-  if (m_unix_signals_sp) {
-    StreamSP warning_strm = GetTarget().GetDebugger().GetAsyncErrorStream();
-    GetTarget().UpdateSignalsFromDummy(m_unix_signals_sp, warning_strm);
-  }
+  if (m_unix_signals_sp)
+    GetTarget().UpdateSignalsFromDummy(
+        m_unix_signals_sp, GetTarget().GetDebugger().GetAsyncErrorStream());
 
   // We have completed the attach, now it is time to find the dynamic loader
   // plug-in
@@ -4677,15 +4675,16 @@ public:
       }
 
       if (select_helper.FDIsSetRead(pipe_read_fd)) {
-        size_t bytes_read;
         // Consume the interrupt byte
-        Status error = m_pipe.Read(&ch, 1, bytes_read);
-        if (error.Success()) {
+        if (llvm::Expected<size_t> bytes_read = m_pipe.Read(&ch, 1)) {
           if (ch == 'q')
             break;
           if (ch == 'i')
             if (StateIsRunningState(m_process->GetState()))
               m_process->SendAsyncInterrupt();
+        } else {
+          LLDB_LOG_ERROR(GetLog(LLDBLog::Process), bytes_read.takeError(),
+                         "Pipe read failed: {0}");
         }
       }
     }
@@ -4709,8 +4708,10 @@ public:
     // deadlocking when the pipe gets fed up and blocks until data is consumed.
     if (m_is_running) {
       char ch = 'q'; // Send 'q' for quit
-      size_t bytes_written = 0;
-      m_pipe.Write(&ch, 1, bytes_written);
+      if (llvm::Error err = m_pipe.Write(&ch, 1).takeError()) {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Process), std::move(err),
+                       "Pipe write failed: {0}");
+      }
     }
   }
 
@@ -4722,9 +4723,7 @@ public:
     // m_process->SendAsyncInterrupt() from a much safer location in code.
     if (m_active) {
       char ch = 'i'; // Send 'i' for interrupt
-      size_t bytes_written = 0;
-      Status result = m_pipe.Write(&ch, 1, bytes_written);
-      return result.Success();
+      return !errorToBool(m_pipe.Write(&ch, 1).takeError());
     } else {
       // This IOHandler might be pushed on the stack, but not being run
       // currently so do the right thing if we aren't actively watching for
@@ -6677,11 +6676,8 @@ static void GetUserSpecifiedCoreFileSaveRanges(Process &process,
 
   for (const auto &range : regions) {
     auto entry = option_ranges.FindEntryThatContains(range.GetRange());
-    if (entry) {
-      ranges.Append(range.GetRange().GetRangeBase(),
-                    range.GetRange().GetByteSize(),
-                    CreateCoreFileMemoryRange(range));
-    }
+    if (entry)
+      AddRegion(range, true, ranges);
   }
 }
 

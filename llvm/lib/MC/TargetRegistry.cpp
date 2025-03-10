@@ -139,7 +139,7 @@ const Target *TargetRegistry::lookupTarget(StringRef ArchName,
   } else {
     // Get the target specific parser.
     std::string TempError;
-    TheTarget = TargetRegistry::lookupTarget(TheTriple.getTriple(), TempError);
+    TheTarget = TargetRegistry::lookupTarget(TheTriple, TempError);
     if (!TheTarget) {
       Error = "unable to get target for '" + TheTriple.getTriple() +
               "', see --version and --triple.";
@@ -150,19 +150,20 @@ const Target *TargetRegistry::lookupTarget(StringRef ArchName,
   return TheTarget;
 }
 
-const Target *TargetRegistry::lookupTarget(StringRef TT, std::string &Error) {
+const Target *TargetRegistry::lookupTarget(const Triple &TT,
+                                           std::string &Error) {
   // Provide special warning when no targets are initialized.
   if (targets().begin() == targets().end()) {
     Error = "Unable to find target for this triple (no targets are registered)";
     return nullptr;
   }
-  Triple::ArchType Arch = Triple(TT).getArch();
+  Triple::ArchType Arch = TT.getArch();
   auto ArchMatch = [&](const Target &T) { return T.ArchMatchFn(Arch); };
   auto I = find_if(targets(), ArchMatch);
 
   if (I == targets().end()) {
-    Error = ("No available targets are compatible with triple \"" + TT + "\"")
-                .str();
+    Error =
+        "No available targets are compatible with triple \"" + TT.str() + "\"";
     return nullptr;
   }
 

@@ -1908,7 +1908,23 @@ public:
   /// '\#pragma clang attribute push' directives to the given declaration.
   void AddPragmaAttributes(Scope *S, Decl *D);
 
-  void PrintPragmaAttributeInstantiationPoint();
+  using InstantiationContextDiagFuncRef =
+      llvm::function_ref<void(SourceLocation, PartialDiagnostic)>;
+  auto getDefaultDiagFunc() {
+    return [this](SourceLocation Loc, PartialDiagnostic PD) {
+      // This bypasses a lot of the filters in the diag engine, as it's
+      // to be used to attach notes to diagnostics which have already
+      // been filtered through.
+      DiagnosticBuilder Builder(Diags.Report(Loc, PD.getDiagID()));
+      PD.Emit(Builder);
+    };
+  }
+
+  void PrintPragmaAttributeInstantiationPoint(
+      InstantiationContextDiagFuncRef DiagFunc);
+  void PrintPragmaAttributeInstantiationPoint() {
+    PrintPragmaAttributeInstantiationPoint(getDefaultDiagFunc());
+  }
 
   void DiagnoseUnterminatedPragmaAttribute();
 
@@ -2161,6 +2177,7 @@ public:
     FAPK_Fixed,    // values to format are fixed (no C-style variadic arguments)
     FAPK_Variadic, // values to format are passed as variadic arguments
     FAPK_VAList,   // values to format are passed in a va_list
+    FAPK_Elsewhere, // values to format are not passed to this function
   };
 
   // Used to grab the relevant information from a FormatAttr and a
@@ -2171,12 +2188,15 @@ public:
     FormatArgumentPassingKind ArgPassingKind;
   };
 
-  /// Given a FunctionDecl's FormatAttr, attempts to populate the
-  /// FomatStringInfo parameter with the FormatAttr's correct format_idx and
-  /// firstDataArg. Returns true when the format fits the function and the
-  /// FormatStringInfo has been populated.
-  static bool getFormatStringInfo(const FormatAttr *Format, bool IsCXXMember,
-                                  bool IsVariadic, FormatStringInfo *FSI);
+  /// Given a function and its FormatAttr or FormatMatchesAttr info, attempts to
+  /// populate the FomatStringInfo parameter with the attribute's correct
+  /// format_idx and firstDataArg. Returns true when the format fits the
+  /// function and the FormatStringInfo has been populated.
+  static bool getFormatStringInfo(const Decl *Function, unsigned FormatIdx,
+                                  unsigned FirstArg, FormatStringInfo *FSI);
+  static bool getFormatStringInfo(unsigned FormatIdx, unsigned FirstArg,
+                                  bool IsCXXMember, bool IsVariadic,
+                                  FormatStringInfo *FSI);
 
   // Used by C++ template instantiation.
   ExprResult BuiltinShuffleVector(CallExpr *TheCall);
@@ -2199,7 +2219,10 @@ public:
     FST_Syslog,
     FST_Unknown
   };
+  static StringRef GetFormatStringTypeName(FormatStringType FST);
+  static FormatStringType GetFormatStringType(StringRef FormatFlavor);
   static FormatStringType GetFormatStringType(const FormatAttr *Format);
+  static FormatStringType GetFormatStringType(const FormatMatchesAttr *Format);
 
   bool FormatStringHasSArg(const StringLiteral *FExpr);
 
@@ -2331,7 +2354,8 @@ public:
                          const FunctionProtoType *Proto);
 
   /// \param FPOnly restricts the arguments to floating-point types.
-  bool BuiltinVectorMath(CallExpr *TheCall, QualType &Res, bool FPOnly = false);
+  std::optional<QualType> BuiltinVectorMath(CallExpr *TheCall,
+                                            bool FPOnly = false);
   bool BuiltinVectorToScalarMath(CallExpr *TheCall);
 
   void checkLifetimeCaptureBy(FunctionDecl *FDecl, bool IsMemberFunction,
@@ -2344,6 +2368,25 @@ public:
                  const Expr *ThisArg, ArrayRef<const Expr *> Args,
                  bool IsMemberFunction, SourceLocation Loc, SourceRange Range,
                  VariadicCallType CallType);
+
+  /// Verify that two format strings (as understood by attribute(format) and
+  /// attribute(format_matches) are compatible. If they are incompatible,
+  /// diagnostics are emitted with the assumption that \c
+  /// AuthoritativeFormatString is correct and
+  /// \c TestedFormatString is wrong. If \c FunctionCallArg is provided,
+  /// diagnostics will point to it and a note will refer to \c
+  /// TestedFormatString or \c AuthoritativeFormatString as appropriate.
+  bool
+  CheckFormatStringsCompatible(FormatStringType FST,
+                               const StringLiteral *AuthoritativeFormatString,
+                               const StringLiteral *TestedFormatString,
+                               const Expr *FunctionCallArg = nullptr);
+
+  /// Verify that one format string (as understood by attribute(format)) is
+  /// self-consistent; for instance, that it doesn't have multiple positional
+  /// arguments referring to the same argument in incompatible ways. Diagnose
+  /// if it isn't.
+  bool ValidateFormatString(FormatStringType FST, const StringLiteral *Str);
 
   /// \brief Enforce the bounds of a TCB
   /// CheckTCBEnforcement - Enforces that every function in a named TCB only
@@ -2560,11 +2603,17 @@ private:
                             VariadicCallType CallType, SourceLocation Loc,
                             SourceRange Range,
                             llvm::SmallBitVector &CheckedVarArgs);
+  bool CheckFormatString(const FormatMatchesAttr *Format,
+                         ArrayRef<const Expr *> Args, bool IsCXXMember,
+                         VariadicCallType CallType, SourceLocation Loc,
+                         SourceRange Range,
+                         llvm::SmallBitVector &CheckedVarArgs);
   bool CheckFormatArguments(ArrayRef<const Expr *> Args,
-                            FormatArgumentPassingKind FAPK, unsigned format_idx,
-                            unsigned firstDataArg, FormatStringType Type,
-                            VariadicCallType CallType, SourceLocation Loc,
-                            SourceRange range,
+                            FormatArgumentPassingKind FAPK,
+                            const StringLiteral *ReferenceFormatString,
+                            unsigned format_idx, unsigned firstDataArg,
+                            FormatStringType Type, VariadicCallType CallType,
+                            SourceLocation Loc, SourceRange range,
                             llvm::SmallBitVector &CheckedVarArgs);
 
   void CheckInfNaNFunction(const CallExpr *Call, const FunctionDecl *FDecl);
@@ -3662,6 +3711,13 @@ public:
                              NonTrivialCUnionContext UseContext,
                              unsigned NonTrivialKind);
 
+  /// Certain globally-unique variables might be accidentally duplicated if
+  /// built into multiple shared libraries with hidden visibility. This can
+  /// cause problems if the variable is mutable, its initialization is
+  /// effectful, or its address is taken.
+  bool GloballyUniqueObjectMightBeAccidentallyDuplicated(const VarDecl *Dcl);
+  void DiagnoseUniqueObjectDuplication(const VarDecl *Dcl);
+
   /// AddInitializerToDecl - Adds the initializer Init to the
   /// declaration dcl. If DirectInit is true, this is C++ direct
   /// initialization rather than copy initialization.
@@ -3945,7 +4001,7 @@ public:
   /// Perform ODR-like check for C/ObjC when merging tag types from modules.
   /// Differently from C++, actually parse the body and reject / error out
   /// in case of a structural mismatch.
-  bool ActOnDuplicateDefinition(Decl *Prev, SkipBodyInfo &SkipBody);
+  bool ActOnDuplicateDefinition(Scope *S, Decl *Prev, SkipBodyInfo &SkipBody);
 
   typedef void *SkippedDefinitionContext;
 
@@ -4068,6 +4124,12 @@ public:
   /// diagnostics as appropriate. If there was an error, set New to be invalid.
   void MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
                             LookupResult &OldDecls);
+
+  /// CleanupMergedEnum - We have just merged the decl 'New' by making another
+  /// definition visible.
+  /// This method performs any necessary cleanup on the parser state to discard
+  /// child nodes from newly parsed decl we are retiring.
+  void CleanupMergedEnum(Scope *S, Decl *New);
 
   /// MergeFunctionDecl - We just parsed a function 'New' from
   /// declarator D which has the same name and scope as a previous
@@ -4336,11 +4398,11 @@ public:
   // Whether the callee should be ignored in CUDA/HIP/OpenMP host/device check.
   bool shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee);
 
-private:
   /// Function or variable declarations to be checked for whether the deferred
   /// diagnostics should be emitted.
   llvm::SmallSetVector<Decl *, 4> DeclsToCheckForDeferredDiags;
 
+private:
   /// Map of current shadowing declarations to shadowed declarations. Warn if
   /// it looks like the user is trying to modify the shadowing declaration.
   llvm::DenseMap<const NamedDecl *, const NamedDecl *> ShadowingDecls;
@@ -4552,6 +4614,11 @@ public:
   FormatAttr *mergeFormatAttr(Decl *D, const AttributeCommonInfo &CI,
                               IdentifierInfo *Format, int FormatIdx,
                               int FirstArg);
+  FormatMatchesAttr *mergeFormatMatchesAttr(Decl *D,
+                                            const AttributeCommonInfo &CI,
+                                            IdentifierInfo *Format,
+                                            int FormatIdx,
+                                            StringLiteral *FormatStr);
 
   /// AddAlignedAttr - Adds an aligned attribute to a particular declaration.
   void AddAlignedAttr(Decl *D, const AttributeCommonInfo &CI, Expr *E,
@@ -6020,6 +6087,7 @@ public:
                                          RecordDecl *ClassDecl,
                                          const IdentifierInfo *Name);
 
+  unsigned GetDecompositionElementCount(QualType DecompType);
   void CheckCompleteDecompositionDeclaration(DecompositionDecl *DD);
 
   /// Stack containing information needed when in C++2a an 'auto' is encountered
@@ -7499,9 +7567,14 @@ public:
     return K == ConditionKind::Switch ? Context.IntTy : Context.BoolTy;
   }
 
-  // UsualUnaryConversions - promotes integers (C99 6.3.1.1p2) and converts
-  // functions and arrays to their respective pointers (C99 6.3.2.1).
+  // UsualUnaryConversions - promotes integers (C99 6.3.1.1p2), converts
+  // functions and arrays to their respective pointers (C99 6.3.2.1), and
+  // promotes floating-piont types according to the language semantics.
   ExprResult UsualUnaryConversions(Expr *E);
+
+  // UsualUnaryFPConversions - promotes floating-point types according to the
+  // current language semantics.
+  ExprResult UsualUnaryFPConversions(Expr *E);
 
   /// CallExprUnaryConversions - a special case of an unary conversion
   /// performed on a function designator of a call expression.
@@ -7564,6 +7637,11 @@ public:
   // will create a runtime trap if the resulting type is not a POD type.
   ExprResult DefaultVariadicArgumentPromotion(Expr *E, VariadicCallType CT,
                                               FunctionDecl *FDecl);
+
+  // Check that the usual arithmetic conversions can be performed on this pair
+  // of expressions that might be of enumeration type.
+  void checkEnumArithmeticConversions(Expr *LHS, Expr *RHS, SourceLocation Loc,
+                                      Sema::ArithConvKind ACK);
 
   // UsualArithmeticConversions - performs the UsualUnaryConversions on it's
   // operands and then handles various conversions that are common to binary
@@ -10000,6 +10078,7 @@ public:
     CCEK_CaseValue,    ///< Expression in a case label.
     CCEK_Enumerator,   ///< Enumerator value with fixed underlying type.
     CCEK_TemplateArg,  ///< Value of a non-type template parameter.
+    CCEK_InjectedTTP,  ///< Injected parameter of a template template parameter.
     CCEK_ArrayBound,   ///< Array bound in array declarator or new-expression.
     CCEK_ExplicitBool, ///< Condition in an explicit(bool) specifier.
     CCEK_Noexcept,     ///< Condition in a noexcept(bool) specifier.
@@ -10160,18 +10239,15 @@ public:
   /// \param PartialOverloading true if we are performing "partial" overloading
   /// based on an incomplete set of function arguments. This feature is used by
   /// code completion.
-  void AddOverloadCandidate(FunctionDecl *Function, DeclAccessPair FoundDecl,
-                            ArrayRef<Expr *> Args,
-                            OverloadCandidateSet &CandidateSet,
-                            bool SuppressUserConversions = false,
-                            bool PartialOverloading = false,
-                            bool AllowExplicit = true,
-                            bool AllowExplicitConversion = false,
-                            ADLCallKind IsADLCandidate = ADLCallKind::NotADL,
-                            ConversionSequenceList EarlyConversions = {},
-                            OverloadCandidateParamOrder PO = {},
-                            bool AggregateCandidateDeduction = false,
-                            bool HasMatchedPackOnParmToNonPackOnArg = false);
+  void AddOverloadCandidate(
+      FunctionDecl *Function, DeclAccessPair FoundDecl, ArrayRef<Expr *> Args,
+      OverloadCandidateSet &CandidateSet, bool SuppressUserConversions = false,
+      bool PartialOverloading = false, bool AllowExplicit = true,
+      bool AllowExplicitConversion = false,
+      ADLCallKind IsADLCandidate = ADLCallKind::NotADL,
+      ConversionSequenceList EarlyConversions = {},
+      OverloadCandidateParamOrder PO = {},
+      bool AggregateCandidateDeduction = false, bool StrictPackMatch = false);
 
   /// Add all of the function declarations in the given function set to
   /// the overload candidate set.
@@ -10207,7 +10283,7 @@ public:
                           bool PartialOverloading = false,
                           ConversionSequenceList EarlyConversions = {},
                           OverloadCandidateParamOrder PO = {},
-                          bool HasMatchedPackOnParmToNonPackOnArg = false);
+                          bool StrictPackMatch = false);
 
   /// Add a C++ member function template as a candidate to the candidate
   /// set, using template argument deduction to produce an appropriate member
@@ -10254,7 +10330,7 @@ public:
       CXXRecordDecl *ActingContext, Expr *From, QualType ToType,
       OverloadCandidateSet &CandidateSet, bool AllowObjCConversionOnExplicit,
       bool AllowExplicit, bool AllowResultConversion = true,
-      bool HasMatchedPackOnParmToNonPackOnArg = false);
+      bool StrictPackMatch = false);
 
   /// Adds a conversion function template specialization
   /// candidate to the overload set, using template argument deduction
@@ -10449,7 +10525,8 @@ public:
   /// returned.
   FunctionDecl *ResolveSingleFunctionTemplateSpecialization(
       OverloadExpr *ovl, bool Complain = false, DeclAccessPair *Found = nullptr,
-      TemplateSpecCandidateSet *FailedTSC = nullptr);
+      TemplateSpecCandidateSet *FailedTSC = nullptr,
+      bool ForTypeDeduction = false);
 
   // Resolve and fix an overloaded expression that can be resolved
   // because it identifies a single function template specialization.
@@ -11279,14 +11356,16 @@ public:
 
   /// The context in which we are checking a template parameter list.
   enum TemplateParamListContext {
-    TPC_ClassTemplate,
-    TPC_VarTemplate,
+    // For this context, Class, Variable, TypeAlias, and non-pack Template
+    // Template Parameters are treated uniformly.
+    TPC_Other,
+
     TPC_FunctionTemplate,
     TPC_ClassTemplateMember,
     TPC_FriendClassTemplate,
     TPC_FriendFunctionTemplate,
     TPC_FriendFunctionTemplateDefinition,
-    TPC_TypeAliasTemplate
+    TPC_TemplateTemplateParameterPack,
   };
 
   /// Checks the validity of a template parameter list, possibly
@@ -11650,6 +11729,33 @@ public:
     CTAK_DeducedFromArrayBound
   };
 
+  struct CheckTemplateArgumentInfo {
+    explicit CheckTemplateArgumentInfo(bool PartialOrdering = false,
+                                       bool MatchingTTP = false)
+        : PartialOrdering(PartialOrdering), MatchingTTP(MatchingTTP) {}
+    CheckTemplateArgumentInfo(const CheckTemplateArgumentInfo &) = delete;
+    CheckTemplateArgumentInfo &
+    operator=(const CheckTemplateArgumentInfo &) = delete;
+
+    /// The checked, converted argument will be added to the
+    /// end of these vectors.
+    SmallVector<TemplateArgument, 4> SugaredConverted, CanonicalConverted;
+
+    /// The check is being performed in the context of partial ordering.
+    bool PartialOrdering;
+
+    /// If true, assume these template arguments are
+    /// the injected template arguments for a template template parameter.
+    /// This will relax the requirement that all its possible uses are valid:
+    /// TTP checking is loose, and assumes that invalid uses will be diagnosed
+    /// during instantiation.
+    bool MatchingTTP;
+
+    /// Is set to true when, in the context of TTP matching, a pack parameter
+    /// matches non-pack arguments.
+    bool StrictPackMatch = false;
+  };
+
   /// Check that the given template argument corresponds to the given
   /// template parameter.
   ///
@@ -11669,21 +11775,16 @@ public:
   /// \param ArgumentPackIndex The index into the argument pack where this
   /// argument will be placed. Only valid if the parameter is a parameter pack.
   ///
-  /// \param Converted The checked, converted argument will be added to the
-  /// end of this small vector.
-  ///
   /// \param CTAK Describes how we arrived at this particular template argument:
   /// explicitly written, deduced, etc.
   ///
   /// \returns true on error, false otherwise.
-  bool
-  CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &Arg,
-                        NamedDecl *Template, SourceLocation TemplateLoc,
-                        SourceLocation RAngleLoc, unsigned ArgumentPackIndex,
-                        SmallVectorImpl<TemplateArgument> &SugaredConverted,
-                        SmallVectorImpl<TemplateArgument> &CanonicalConverted,
-                        CheckTemplateArgumentKind CTAK, bool PartialOrdering,
-                        bool *MatchedPackOnParmToNonPackOnArg);
+  bool CheckTemplateArgument(NamedDecl *Param, TemplateArgumentLoc &Arg,
+                             NamedDecl *Template, SourceLocation TemplateLoc,
+                             SourceLocation RAngleLoc,
+                             unsigned ArgumentPackIndex,
+                             CheckTemplateArgumentInfo &CTAI,
+                             CheckTemplateArgumentKind CTAK);
 
   /// Check that the given template arguments can be provided to
   /// the given template, converting the arguments along the way.
@@ -11716,22 +11817,15 @@ public:
   /// \param DefaultArgs any default arguments from template specialization
   /// deduction.
   ///
-  /// \param PartialOrderingTTP If true, assume these template arguments are
-  /// the injected template arguments for a template template parameter.
-  /// This will relax the requirement that all its possible uses are valid:
-  /// TTP checking is loose, and assumes that invalid uses will be diagnosed
-  /// during instantiation.
-  ///
   /// \returns true if an error occurred, false otherwise.
-  bool CheckTemplateArgumentList(
-      TemplateDecl *Template, SourceLocation TemplateLoc,
-      TemplateArgumentListInfo &TemplateArgs,
-      const DefaultArguments &DefaultArgs, bool PartialTemplateArgs,
-      SmallVectorImpl<TemplateArgument> &SugaredConverted,
-      SmallVectorImpl<TemplateArgument> &CanonicalConverted,
-      bool UpdateArgsWithConversions = true,
-      bool *ConstraintsNotSatisfied = nullptr, bool PartialOrderingTTP = false,
-      bool *MatchedPackOnParmToNonPackOnArg = nullptr);
+  bool CheckTemplateArgumentList(TemplateDecl *Template,
+                                 SourceLocation TemplateLoc,
+                                 TemplateArgumentListInfo &TemplateArgs,
+                                 const DefaultArguments &DefaultArgs,
+                                 bool PartialTemplateArgs,
+                                 CheckTemplateArgumentInfo &CTAI,
+                                 bool UpdateArgsWithConversions = true,
+                                 bool *ConstraintsNotSatisfied = nullptr);
 
   bool CheckTemplateTypeArgument(
       TemplateTypeParmDecl *Param, TemplateArgumentLoc &Arg,
@@ -11756,6 +11850,7 @@ public:
                                    QualType InstantiatedParamType, Expr *Arg,
                                    TemplateArgument &SugaredConverted,
                                    TemplateArgument &CanonicalConverted,
+                                   bool MatchingTTP,
                                    CheckTemplateArgumentKind CTAK);
 
   /// Check a template argument against its corresponding
@@ -11767,7 +11862,7 @@ public:
                                      TemplateParameterList *Params,
                                      TemplateArgumentLoc &Arg,
                                      bool PartialOrdering,
-                                     bool *MatchedPackOnParmToNonPackOnArg);
+                                     bool *StrictPackMatch);
 
   void NoteTemplateLocation(const NamedDecl &Decl,
                             std::optional<SourceRange> ParamRange = {});
@@ -11777,6 +11872,9 @@ public:
   /// declaration and the type of its corresponding non-type template
   /// parameter, produce an expression that properly refers to that
   /// declaration.
+  /// FIXME: This is used in some contexts where the resulting expression
+  /// doesn't need to live too long. It would be useful if this function
+  /// could return a temporary expression.
   ExprResult BuildExpressionFromDeclTemplateArgument(
       const TemplateArgument &Arg, QualType ParamType, SourceLocation Loc,
       NamedDecl *TemplateParam = nullptr);
@@ -11805,17 +11903,6 @@ public:
     /// template<template<int Value> class Other> struct X;
     /// \endcode
     TPL_TemplateTemplateParmMatch,
-
-    /// We are matching the template parameter lists of a template
-    /// template argument against the template parameter lists of a template
-    /// template parameter.
-    ///
-    /// \code
-    /// template<template<int Value> class Metafun> struct X;
-    /// template<int Value> struct integer_c;
-    /// X<integer_c> xic;
-    /// \endcode
-    TPL_TemplateTemplateArgumentMatch,
 
     /// We are determining whether the template-parameters are equivalent
     /// according to C++ [temp.over.link]/6. This comparison does not consider
@@ -12469,7 +12556,7 @@ public:
   bool isTemplateTemplateParameterAtLeastAsSpecializedAs(
       TemplateParameterList *PParam, TemplateDecl *PArg, TemplateDecl *AArg,
       const DefaultArguments &DefaultArgs, SourceLocation ArgLoc,
-      bool PartialOrdering, bool *MatchedPackOnParmToNonPackOnArg);
+      bool PartialOrdering, bool *StrictPackMatch);
 
   /// Mark which template parameters are used in a given expression.
   ///
@@ -12538,7 +12625,8 @@ public:
   FunctionTemplateDecl *getMoreSpecializedTemplate(
       FunctionTemplateDecl *FT1, FunctionTemplateDecl *FT2, SourceLocation Loc,
       TemplatePartialOrderingContext TPOC, unsigned NumCallArguments1,
-      QualType RawObj1Ty = {}, QualType RawObj2Ty = {}, bool Reversed = false);
+      QualType RawObj1Ty = {}, QualType RawObj2Ty = {}, bool Reversed = false,
+      bool PartialOverloading = false);
 
   /// Retrieve the most specialized of the given function template
   /// specializations.
@@ -13238,18 +13326,22 @@ public:
   void pushCodeSynthesisContext(CodeSynthesisContext Ctx);
   void popCodeSynthesisContext();
 
-  void PrintContextStack() {
+  void PrintContextStack(InstantiationContextDiagFuncRef DiagFunc) {
     if (!CodeSynthesisContexts.empty() &&
         CodeSynthesisContexts.size() != LastEmittedCodeSynthesisContextDepth) {
-      PrintInstantiationStack();
+      PrintInstantiationStack(DiagFunc);
       LastEmittedCodeSynthesisContextDepth = CodeSynthesisContexts.size();
     }
     if (PragmaAttributeCurrentTargetDecl)
-      PrintPragmaAttributeInstantiationPoint();
+      PrintPragmaAttributeInstantiationPoint(DiagFunc);
   }
+  void PrintContextStack() { PrintContextStack(getDefaultDiagFunc()); }
   /// Prints the current instantiation stack through a series of
   /// notes.
-  void PrintInstantiationStack();
+  void PrintInstantiationStack(InstantiationContextDiagFuncRef DiagFunc);
+  void PrintInstantiationStack() {
+    PrintInstantiationStack(getDefaultDiagFunc());
+  }
 
   /// Determines whether we are currently in a context where
   /// template argument substitution failures are not considered
@@ -13345,6 +13437,10 @@ public:
                             bool ForCallExpr = false);
   ExprResult SubstExpr(Expr *E,
                        const MultiLevelTemplateArgumentList &TemplateArgs);
+  /// Substitute an expression as if it is a address-of-operand, which makes it
+  /// act like a CXXIdExpression rather than an attempt to call.
+  ExprResult SubstCXXIdExpr(Expr *E,
+                            const MultiLevelTemplateArgumentList &TemplateArgs);
 
   // A RAII type used by the TemplateDeclInstantiator and TemplateInstantiator
   // to disable constraint evaluation, then restore the state.
@@ -13471,8 +13567,8 @@ public:
   bool InstantiateClassTemplateSpecialization(
       SourceLocation PointOfInstantiation,
       ClassTemplateSpecializationDecl *ClassTemplateSpec,
-      TemplateSpecializationKind TSK, bool Complain = true,
-      bool PrimaryHasMatchedPackOnParmToNonPackOnArg = false);
+      TemplateSpecializationKind TSK, bool Complain,
+      bool PrimaryStrictPackMatch);
 
   /// Instantiates the definitions of all of the member
   /// of the given class, which is an instantiation of a class template
@@ -13566,12 +13662,16 @@ public:
 
   class LocalEagerInstantiationScope {
   public:
-    LocalEagerInstantiationScope(Sema &S) : S(S) {
+    LocalEagerInstantiationScope(Sema &S, bool AtEndOfTU)
+        : S(S), AtEndOfTU(AtEndOfTU) {
       SavedPendingLocalImplicitInstantiations.swap(
           S.PendingLocalImplicitInstantiations);
     }
 
-    void perform() { S.PerformPendingInstantiations(/*LocalOnly=*/true); }
+    void perform() {
+      S.PerformPendingInstantiations(/*LocalOnly=*/true,
+                                     /*AtEndOfTU=*/AtEndOfTU);
+    }
 
     ~LocalEagerInstantiationScope() {
       assert(S.PendingLocalImplicitInstantiations.empty() &&
@@ -13582,6 +13682,7 @@ public:
 
   private:
     Sema &S;
+    bool AtEndOfTU;
     std::deque<PendingImplicitInstantiation>
         SavedPendingLocalImplicitInstantiations;
   };
@@ -13604,8 +13705,8 @@ public:
 
   class GlobalEagerInstantiationScope {
   public:
-    GlobalEagerInstantiationScope(Sema &S, bool Enabled)
-        : S(S), Enabled(Enabled) {
+    GlobalEagerInstantiationScope(Sema &S, bool Enabled, bool AtEndOfTU)
+        : S(S), Enabled(Enabled), AtEndOfTU(AtEndOfTU) {
       if (!Enabled)
         return;
 
@@ -13619,7 +13720,8 @@ public:
     void perform() {
       if (Enabled) {
         S.DefineUsedVTables();
-        S.PerformPendingInstantiations();
+        S.PerformPendingInstantiations(/*LocalOnly=*/false,
+                                       /*AtEndOfTU=*/AtEndOfTU);
       }
     }
 
@@ -13634,7 +13736,8 @@ public:
       S.SavedVTableUses.pop_back();
 
       // Restore the set of pending implicit instantiations.
-      if (S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) {
+      if ((S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) &&
+          AtEndOfTU) {
         assert(S.PendingInstantiations.empty() &&
                "PendingInstantiations should be empty before it is discarded.");
         S.PendingInstantiations.swap(S.SavedPendingInstantiations.back());
@@ -13653,6 +13756,7 @@ public:
   private:
     Sema &S;
     bool Enabled;
+    bool AtEndOfTU;
   };
 
   ExplicitSpecifier instantiateExplicitSpecifier(
@@ -13838,7 +13942,8 @@ public:
 
   /// Performs template instantiation for all implicit template
   /// instantiations we have seen until this point.
-  void PerformPendingInstantiations(bool LocalOnly = false);
+  void PerformPendingInstantiations(bool LocalOnly = false,
+                                    bool AtEndOfTU = true);
 
   TemplateParameterList *
   SubstTemplateParams(TemplateParameterList *Params, DeclContext *Owner,

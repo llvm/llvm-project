@@ -186,13 +186,13 @@ class SettingsCommandTestCase(TestBase):
         self.addTearDownHook(cleanup)
 
         self.runCmd("settings show frame-format")
-        m = re.match('^frame-format \(format-string\) = "(.*)"$', self.res.GetOutput())
+        m = re.match(r'^frame-format \(format-string\) = "(.*)"$', self.res.GetOutput())
         self.assertTrue(m, "Bad settings string")
         self.format_string = m.group(1)
 
         # Change the default format to print function.name rather than
         # function.name-with-args
-        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}\`${function.name}{${function.pc-offset}}}{ at ${line.file.fullpath}:${line.number}}{, lang=${language}}\n"
+        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}\\`${function.name}{${function.pc-offset}}}{ at ${line.file.fullpath}:${line.number}}{, lang=${language}}\n"
         self.runCmd("settings set frame-format %s" % format_string)
 
         # Immediately test the setting.
@@ -724,7 +724,7 @@ class SettingsCommandTestCase(TestBase):
         )
         self.runCmd("settings set target.run-args 1 2 3")  # Set to known value
         # Set to new value with trailing whitespaces
-        self.runCmd("settings set target.run-args 3 \  \ ")
+        self.runCmd(r"settings set target.run-args 3 \  \ ")
         self.expect(
             "settings show target.run-args",
             SETTING_MSG("target.run-args"),
@@ -846,11 +846,11 @@ class SettingsCommandTestCase(TestBase):
         # Check that settings have their default values after clearing.
         self.expect(
             "settings show target.env-vars",
-            patterns=["^target.env-vars \(dictionary of strings\) =\s*$"],
+            patterns=[r"^target.env-vars \(dictionary of strings\) =\s*$"],
         )
         self.expect(
             "settings show target.run-args",
-            patterns=["^target.run-args \(arguments\) =\s*$"],
+            patterns=[r"^target.run-args \(arguments\) =\s*$"],
         )
         self.expect("settings show auto-confirm", substrs=["false"])
         self.expect("settings show tab-size", substrs=["2"])
@@ -947,7 +947,7 @@ class SettingsCommandTestCase(TestBase):
         # showing & setting an undefined .experimental. setting should generate no errors.
         self.expect(
             "settings show target.experimental.setting-which-does-not-exist",
-            patterns=["^\s$"],
+            patterns=[r"^\s$"],
             error=False,
         )
         self.expect(

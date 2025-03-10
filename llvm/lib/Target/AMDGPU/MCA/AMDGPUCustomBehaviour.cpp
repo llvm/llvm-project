@@ -308,7 +308,7 @@ bool AMDGPUCustomBehaviour::isVMEM(const MCInstrDesc &MCID) {
 
 // taken from SIInstrInfo::hasModifiersSet()
 bool AMDGPUCustomBehaviour::hasModifiersSet(
-    const std::unique_ptr<Instruction> &Inst, unsigned OpName) const {
+    const std::unique_ptr<Instruction> &Inst, AMDGPU::OpName OpName) const {
   int Idx = AMDGPU::getNamedOperandIdx(Inst->getOpcode(), OpName);
   if (Idx == -1)
     return false;

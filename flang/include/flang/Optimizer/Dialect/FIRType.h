@@ -53,6 +53,9 @@ public:
   /// Is this the box for an assumed rank?
   bool isAssumedRank() const;
 
+  /// Is this a box for a pointer?
+  bool isPointer() const;
+
   /// Return the same type, except for the shape, that is taken the shape
   /// of shapeMold.
   BaseBoxType getBoxTypeWithNewShape(mlir::Type shapeMold) const;
@@ -275,6 +278,13 @@ inline mlir::Type unwrapPassByRefType(mlir::Type t) {
     return eleTy;
   return t;
 }
+
+/// Extracts the innermost type, T, **potentially** wrapped inside:
+///   <fir.[ref|ptr|heap] <fir.[ref|ptr|heap|box] <fir.array<T>>>
+///
+/// Any element absent from the above pattern does not affect the returned
+/// value: T.
+mlir::Type getFortranElementType(mlir::Type ty);
 
 /// Unwrap either a sequence or a boxed sequence type, returning the element
 /// type of the sequence type.

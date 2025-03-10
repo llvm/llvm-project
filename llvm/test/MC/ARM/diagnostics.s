@@ -172,9 +172,13 @@
 
         @ p10 and p11 are reserved for NEON
         mcr p10, #2, r5, c1, c1, #4
-        mcrr p11, #8, r5, r4, c1
-@ CHECK-WARN: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
-@ CHECK-WARN: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
+        mcr p11, #2, r5, c1, c1, #4
+        mrc p10, #7, r5, c1, c1, #0
+        mrc p11, #7, r5, c1, c1, #0
+@ CHECK-ERROR-V7: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
+@ CHECK-ERROR-V7: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
+@ CHECK-ERROR-V7: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
+@ CHECK-ERROR-V7: warning: since v7, cp10 and cp11 are reserved for advanced SIMD or floating point instructions
 
         @ Out of range immediate for MOV
         movw r9, 0x10000

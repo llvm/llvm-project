@@ -136,6 +136,7 @@ Clang static analyzer
 
 | Balázs Benics
 | benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
+| balazs.benics\@sonarsource.com (email), balazs-benics-sonarsource (GitHub)
 
 Compiler options
 ~~~~~~~~~~~~~~~~

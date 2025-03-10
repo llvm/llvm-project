@@ -879,12 +879,6 @@ class NestedTupleOf<list<Type> allowedTypes> :
 //===----------------------------------------------------------------------===//
 // Common type constraints
 //===----------------------------------------------------------------------===//
-// Type constraint for types that are "like" some type or set of types T, that is
-// they're either a T, a vector of Ts, or a tensor of Ts.
-class TypeOrContainer<Type allowedType, string name> : TypeConstraint<Or<[
-  allowedType.predicate,
-  ValueSemanticsContainerOf<[allowedType]>.predicate]>,
-  name>;
 
 // Type constraint for types that are "like" some type or set of types T, that is
 // they're either a T or a mapable container of Ts.
@@ -894,36 +888,23 @@ class TypeOrValueSemanticsContainer<Type allowedType, string name>
   ValueSemanticsContainerOf<[allowedType]>.predicate]>,
   name>;
 
-// Temporary constraint to allow gradual transition to supporting 0-D vectors.
-// TODO: Remove this when all ops support 0-D vectors.
-class TypeOrContainerOfAnyRank<Type allowedType, string name> : TypeConstraint<Or<[
-  allowedType.predicate, VectorOfAnyRankOf<[allowedType]>.predicate,
-  TensorOf<[allowedType]>.predicate]>,
-  name>;
-
-
 // Type constraint for bool-like types: bools, vectors of bools, tensors of
 // bools.
-def BoolLike : TypeOrContainer<I1, "bool-like">;
+def BoolLike : TypeOrValueSemanticsContainer<I1, "bool-like">;
 
-def BoolLikeOfAnyRank : TypeOrContainerOfAnyRank<I1, "bool-like">;
-
-// Type constraint for signless-integer-like types: signless integers, 
-// vectors of signless integers or tensors of signless integers.
+// Type constraint for signless-integer-like types: signless integers or
+// value-semantics containers of signless integers.
 def SignlessIntegerLike : TypeOrValueSemanticsContainer<
     AnySignlessInteger, "signless-integer">;
 
 // Type constraint for signless-integer-like types: signless integers, indices,
-// vectors of signless integers or indices, tensors of signless integers.
+// or value-semantics containers of signless integers or indices.
 def SignlessIntegerOrIndexLike : TypeOrValueSemanticsContainer<
     AnySignlessIntegerOrIndex, "signless-integer-like">;
 
-def SignlessIntegerOrIndexLikeOfAnyRank : TypeOrContainerOfAnyRank<
-    AnySignlessIntegerOrIndex,
-    "signless-integer-like">;
-
-// Type constraint for float-like types: floats, vectors or tensors thereof.
-def FloatLike : TypeOrContainer<AnyFloat, "floating-point-like">;
+// Type constraint for float-like types: floats or value-semantics containers
+// of floats.
+def FloatLike : TypeOrValueSemanticsContainer<AnyFloat, "floating-point-like">;
 
 // Type constraint for signless-integer-or-index-like or float-like types.
 def SignlessIntegerOrFloatLike : TypeConstraint<Or<[

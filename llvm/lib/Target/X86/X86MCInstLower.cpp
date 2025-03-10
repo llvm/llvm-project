@@ -889,8 +889,7 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
   bool Is64Bits = Subtarget->is64Bit();
   MCContext &Ctx = OutStreamer->getContext();
   MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
-  const MCSymbolRefExpr *Op =
-      MCSymbolRefExpr::create(fentry, MCSymbolRefExpr::VK_None, Ctx);
+  const MCSymbolRefExpr *Op = MCSymbolRefExpr::create(fentry, Ctx);
 
   EmitAndCountInstruction(
       MCInstBuilder(Is64Bits ? X86::CALL64pcrel32 : X86::CALLpcrel32)
@@ -959,9 +958,8 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   uint64_t ShadowBase;
   int MappingScale;
   bool OrShadowOffset;
-  getAddressSanitizerParams(Triple(TM.getTargetTriple()), 64,
-                            AccessInfo.CompileKernel, &ShadowBase,
-                            &MappingScale, &OrShadowOffset);
+  getAddressSanitizerParams(TM.getTargetTriple(), 64, AccessInfo.CompileKernel,
+                            &ShadowBase, &MappingScale, &OrShadowOffset);
 
   StringRef Name = AccessInfo.IsWrite ? "store" : "load";
   StringRef Op = OrShadowOffset ? "or" : "add";
@@ -1779,6 +1777,14 @@ void X86AsmPrinter::EmitSEHInstruction(const MachineInstr *MI) {
     OutStreamer->emitWinCFIEndProlog();
     break;
 
+  case X86::SEH_BeginEpilogue:
+    OutStreamer->emitWinCFIBeginEpilogue();
+    break;
+
+  case X86::SEH_EndEpilogue:
+    OutStreamer->emitWinCFIEndEpilogue();
+    break;
+
   default:
     llvm_unreachable("expected SEH_ instruction");
   }
@@ -2420,11 +2426,17 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
   case X86::SEH_SetFrame:
   case X86::SEH_PushFrame:
   case X86::SEH_EndPrologue:
+  case X86::SEH_EndEpilogue:
     EmitSEHInstruction(MI);
     return;
 
-  case X86::SEH_Epilogue: {
+  case X86::SEH_BeginEpilogue: {
     assert(MF->hasWinCFI() && "SEH_ instruction in function without WinCFI?");
+    // Windows unwinder will not invoke function's exception handler if IP is
+    // either in prologue or in epilogue.  This behavior causes a problem when a
+    // call immediately precedes an epilogue, because the return address points
+    // into the epilogue.  To cope with that, we insert a 'nop' if it ends up
+    // immediately after a CALL in the final emitted code.
     MachineBasicBlock::const_iterator MBBI(MI);
     // Check if preceded by a call and emit nop if so.
     for (MBBI = PrevCrossBBInst(MBBI);
@@ -2439,6 +2451,8 @@ void X86AsmPrinter::emitInstruction(const MachineInstr *MI) {
         break;
       }
     }
+
+    EmitSEHInstruction(MI);
     return;
   }
   case X86::UBSAN_UD1:

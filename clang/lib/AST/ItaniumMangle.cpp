@@ -3419,24 +3419,24 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
       /* Prior to Clang 18.0 we used this incorrect mangled name */            \
       mangleVendorType("__SVBFloat16_t");                                      \
     } else {                                                                   \
-      type_name = MangledName;                                                 \
-      Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;  \
+      type_name = #MangledName;                                                \
+      Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name; \
     }                                                                          \
     break;
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:                                                        \
-    type_name = MangledName;                                                   \
-    Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;    \
+    type_name = #MangledName;                                                  \
+    Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name;   \
     break;
 #define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)                    \
   case BuiltinType::Id:                                                        \
-    type_name = MangledName;                                                   \
-    Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;    \
+    type_name = #MangledName;                                                  \
+    Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name;   \
     break;
 #define SVE_SCALAR_TYPE(Name, MangledName, Id, SingletonId, Bits)              \
   case BuiltinType::Id:                                                        \
-    type_name = MangledName;                                                   \
-    Out << (type_name == Name ? "u" : "") << type_name.size() << type_name;    \
+    type_name = #MangledName;                                                  \
+    Out << (type_name == #Name ? "u" : "") << type_name.size() << type_name;   \
     break;
 #include "clang/Basic/AArch64SVEACLETypes.def"
 #define PPC_VECTOR_TYPE(Name, Id, Size)                                        \
@@ -3489,6 +3489,20 @@ StringRef CXXNameMangler::getCallingConvQualifierName(CallingConv CC) {
   case CC_M68kRTD:
   case CC_PreserveNone:
   case CC_RISCVVectorCall:
+#define CC_VLS_CASE(ABI_VLEN) case CC_RISCVVLSCall_##ABI_VLEN:
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
     // FIXME: we should be mangling all of the above.
     return "";
 
@@ -4198,7 +4212,7 @@ void CXXNameMangler::mangleRISCVFixedRVVVectorType(const VectorType *T) {
 
   // Apend the LMUL suffix.
   auto VScale = getASTContext().getTargetInfo().getVScaleRange(
-      getASTContext().getLangOpts());
+      getASTContext().getLangOpts(), false);
   unsigned VLen = VScale->first * llvm::RISCV::RVVBitsPerBlock;
 
   if (T->getVectorKind() == VectorKind::RVVFixedLengthData) {
@@ -4932,8 +4946,7 @@ recurse:
   case Expr::AtomicExprClass:
   case Expr::SourceLocExprClass:
   case Expr::EmbedExprClass:
-  case Expr::BuiltinBitCastExprClass:
-  {
+  case Expr::BuiltinBitCastExprClass: {
     NotPrimaryExpr();
     if (!NullOut) {
       // As bad as this diagnostic is, it's better than crashing.
@@ -6001,6 +6014,8 @@ void CXXNameMangler::mangleCXXDtorType(CXXDtorType T) {
   case Dtor_Comdat:
     Out << "D5";
     break;
+  case Dtor_VectorDeleting:
+    llvm_unreachable("Itanium ABI does not use vector deleting dtors");
   }
 }
 

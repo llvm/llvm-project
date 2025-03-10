@@ -230,16 +230,6 @@ MakeForkActions(const ProcessLaunchInfo &info) {
   return result;
 }
 
-static Environment::Envp FixupEnvironment(Environment env) {
-#ifdef __ANDROID__
-  // If there is no PATH variable specified inside the environment then set the
-  // path to /system/bin. It is required because the default path used by
-  // execve() is wrong on android.
-  env.try_emplace("PATH", "/system/bin");
-#endif
-  return env.getEnvp();
-}
-
 ForkLaunchInfo::ForkLaunchInfo(const ProcessLaunchInfo &info)
     : separate_process_group(
           info.GetFlags().Test(eLaunchFlagLaunchInSeparateProcessGroup)),
@@ -247,8 +237,7 @@ ForkLaunchInfo::ForkLaunchInfo(const ProcessLaunchInfo &info)
       disable_aslr(info.GetFlags().Test(eLaunchFlagDisableASLR)),
       wd(info.GetWorkingDirectory().GetPath()),
       argv(info.GetArguments().GetConstArgumentVector()),
-      envp(FixupEnvironment(info.GetEnvironment())),
-      actions(MakeForkActions(info)) {}
+      envp(info.GetEnvironment().getEnvp()), actions(MakeForkActions(info)) {}
 
 HostProcess
 ProcessLauncherPosixFork::LaunchProcess(const ProcessLaunchInfo &launch_info,
