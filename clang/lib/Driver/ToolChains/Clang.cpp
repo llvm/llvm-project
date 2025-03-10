@@ -5386,9 +5386,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-rewrite-objc");
       rewriteKind = RK_Fragile;
     } else if (JA.getType() == types::TY_MLIR) {
-      CmdArgs.push_back(Args.MakeArgString(
-          Twine("-emit-mlir=") +
-          Args.getLastArgValue(options::OPT_emit_mlir_EQ)));
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine("-emit-mlir=") +
+                             Args.getLastArgValue(options::OPT_emit_mlir_EQ)));
     } else {
       assert(JA.getType() == types::TY_PP_Asm && "Unexpected output type!");
     }
