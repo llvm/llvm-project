@@ -71,10 +71,8 @@ struct CodeCompleteOptions {
   /// Whether to present doc comments as plain-text or markdown.
   MarkupKind DocumentationFormat = MarkupKind::PlainText;
 
-  enum IncludeInsertion {
-    IWYU,
-    NeverInsert,
-  } InsertIncludes = IncludeInsertion::IWYU;
+  using IncludeInsertion = Config::HeaderInsertionPolicy;
+  Config::HeaderInsertionPolicy InsertIncludes = IncludeInsertion::IWYU;
 
   /// Whether include insertions for Objective-C code should use #import instead
   /// of #include.
