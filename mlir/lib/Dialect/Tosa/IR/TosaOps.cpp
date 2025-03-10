@@ -805,7 +805,7 @@ LogicalResult tosa::RFFT2dOp::inferReturnTypeComponents(
     MLIRContext *context, ::std::optional<Location> location,
     RFFT2dOp::Adaptor adaptor,
     SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
-  ShapeAdaptor inputShape(adaptor.getInput().getType());
+  ShapeAdaptor inputShape(adaptor.getInputReal().getType());
 
   if (!inputShape.hasRank())
     return failure();
@@ -842,7 +842,8 @@ LogicalResult tosa::RFFT2dOp::verify() {
   if (failed(verifyCompatibleShapes(outputTypes)))
     return emitOpError("expected output shapes to match, got ") << outputTypes;
 
-  const auto inputType = llvm::dyn_cast<RankedTensorType>(getInput().getType());
+  const auto inputType =
+      llvm::dyn_cast<RankedTensorType>(getInputReal().getType());
   if (!inputType)
     return success();
 

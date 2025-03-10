@@ -160,7 +160,7 @@ void ProfileInfoDepot::populateProfileInfo(tosa::FFT2dOp op) {
 
 template <>
 void ProfileInfoDepot::populateProfileInfo(tosa::RFFT2dOp op) {
-  addValue(op.getInput());
+  addValue(op.getInputReal());
   addValue(op.getOutputReal());
   addValue(op.getOutputImag());
 }
