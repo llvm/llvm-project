@@ -389,6 +389,14 @@ public:
     m_language = SourceLanguage(language_type);
   }
 
+  void SetPreferredSymbolContexts(SymbolContextList contexts) {
+    m_preferred_lookup_contexts = std::move(contexts);
+  }
+
+  const SymbolContextList &GetPreferredSymbolContexts() const {
+    return m_preferred_lookup_contexts;
+  }
+
   /// Set the language using a pair of language code and version as
   /// defined by the DWARF 6 specification.
   /// WARNING: These codes may change until DWARF 6 is finalized.
@@ -593,6 +601,11 @@ private:
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
   bool m_prepare_playground_stub_functions = true;
+
+  ///< During expression evaluation, any SymbolContext in this list will be
+  ///< used for symbol/function lookup before any other context (except for
+  ///< the module corresponding to the current frame).
+  SymbolContextList m_preferred_lookup_contexts;
 };
 
 // Target
