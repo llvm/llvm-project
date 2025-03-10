@@ -21,6 +21,7 @@
 #include "CodeGenFunction.h"
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
+#include "MitigationTagging.h"
 #include "PatternInit.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -83,6 +84,8 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
   switch (CGF.getLangOpts().getTrivialAutoVarInit()) {
   case LangOptions::TrivialAutoVarInitKind::Uninitialized:
     // Nothing to initialize.
+    AttachMitigationMetadataToFunction(CGF, MitigationKey::AUTO_VAR_INIT,
+                                       false);
     return;
   case LangOptions::TrivialAutoVarInitKind::Zero:
     Byte = CGF.Builder.getInt8(0x00);
@@ -94,6 +97,7 @@ static void initializeAlloca(CodeGenFunction &CGF, AllocaInst *AI, Value *Size,
     break;
   }
   }
+  AttachMitigationMetadataToFunction(CGF, MitigationKey::AUTO_VAR_INIT, true);
   if (CGF.CGM.stopAutoInit())
     return;
   auto *I = CGF.Builder.CreateMemSet(AI, Byte, Size, AlignmentInBytes);
@@ -4642,6 +4646,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     AI->setAlignment(SuitableAlignmentInBytes);
     if (BuiltinID != Builtin::BI__builtin_alloca_uninitialized)
       initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
+    else
+      AttachMitigationMetadataToFunction(*this, MitigationKey::AUTO_VAR_INIT,
+                                         false);
     LangAS AAS = getASTAllocaAddressSpace();
     LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
     if (AAS != EAS) {
@@ -4664,6 +4671,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     AI->setAlignment(AlignmentInBytes);
     if (BuiltinID != Builtin::BI__builtin_alloca_with_align_uninitialized)
       initializeAlloca(*this, AI, Size, AlignmentInBytes);
+    else
+      AttachMitigationMetadataToFunction(*this, MitigationKey::AUTO_VAR_INIT,
+                                         false);
     LangAS AAS = getASTAllocaAddressSpace();
     LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
     if (AAS != EAS) {
