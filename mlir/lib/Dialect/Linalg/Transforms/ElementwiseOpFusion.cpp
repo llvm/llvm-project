@@ -811,16 +811,50 @@ validateDynamicDimExpansion(LinalgOp linalgOp,
 }
 
 // Create an expanded transpose op.
+// For bubbling a collapse : transpose(collapse_shape),
+// all expanded groups are permuted together. We just permute the reassocation
+// map of the collapse and flatten it. For example,
+//
+// reassociation_map = [[0], [1, 2, 3], [4, 5]]
+// permutation = [2, 0, 1]
+//
+// Becomes
+//
+// permutation = [4, 5, 0 , 1, 2, 3]
+//
+// For sinking expand : expand_shape(transpose),
+// the reassociation map is already permuted hence we inverse permute and then
+// flatten it. Then we inverse permute it again to get the final expanded
+// transpose permutation. For example,
+//
+// permutation = [2, 0, 1]
+// reassociation_map = [[0, 1], [2], [3, 4, 5]]
+//
+// inverse permutation = [1, 2, 0]
+// applied to reassocation_map and then flattened becomes
+// flatened permutation = [2, 3, 4, 5, 0, 1]
+// final permuation is the inverse of the flattened permutation.
+//
+// Becomes
+//
+// permutation=[4, 5, 0, 1, 2, 3]
+
 static Operation *
 createExpandedTransposeOp(PatternRewriter &rewriter, TransposeOp transposeOp,
                           SmallVector<ReassociationIndices> reassociation,
-                          Value expandedInput, Value output) {
-  applyPermutationToVector(reassociation, transposeOp.getPermutation());
+                          Value expandedInput, Value output, bool isExpanding) {
+  ArrayRef<int64_t> permutation =
+      isExpanding ? invertPermutationVector(transposeOp.getPermutation())
+                  : transposeOp.getPermutation();
+  applyPermutationToVector(reassociation, permutation);
   SmallVector<int64_t> newPerm;
   for (const auto &reassoc : reassociation) {
     for (auto dim : reassoc) {
       newPerm.push_back(dim);
     }
+  }
+  if (isExpanding) {
+    newPerm = invertPermutationVector(newPerm);
   }
   return rewriter.create<TransposeOp>(transposeOp.getLoc(), expandedInput,
                                       output, newPerm);
@@ -861,12 +895,13 @@ static Operation *createExpandedOp(
     PatternRewriter &rewriter, LinalgOp linalgOp, TypeRange resultTypes,
     ArrayRef<Value> expandedOpOperands, ArrayRef<Value> outputs,
     ArrayRef<AffineMap> expandedOpIndexingMaps, ExpansionInfo &expansionInfo,
-    SmallVector<ReassociationIndices> reassociation) {
+    SmallVector<ReassociationIndices> reassociation, bool isExpanding) {
 
   return TypeSwitch<Operation *, Operation *>(linalgOp.getOperation())
       .Case<TransposeOp>([&](TransposeOp transposeOp) {
         return createExpandedTransposeOp(rewriter, transposeOp, reassociation,
-                                         expandedOpOperands[0], outputs[0]);
+                                         expandedOpOperands[0], outputs[0],
+                                         isExpanding);
       })
       .Case<FillOp, CopyOp>([&](Operation *op) {
         return clone(rewriter, linalgOp, resultTypes,
@@ -989,9 +1024,10 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
   SmallVector<ReassociationIndices> reassociationBeforeExpansion =
       isExpanding ? expandingReshapeOp.getReassociationIndices()
                   : collapsingReshapeOp.getReassociationIndices();
-  Operation *fusedOp = createExpandedOp(
-      rewriter, linalgOp, resultTypes, expandedOpOperands, outputs,
-      expandedOpIndexingMaps, expansionInfo, reassociationBeforeExpansion);
+  Operation *fusedOp =
+      createExpandedOp(rewriter, linalgOp, resultTypes, expandedOpOperands,
+                       outputs, expandedOpIndexingMaps, expansionInfo,
+                       reassociationBeforeExpansion, isExpanding);
   // Reshape the result values to their original shape if this is a collapsing
   // reshape folded into its consumer.
   SmallVector<Value> resultVals;
