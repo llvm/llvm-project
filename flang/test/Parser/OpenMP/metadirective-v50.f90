@@ -24,8 +24,8 @@ end
 !PARSE-TREE: | | | | | | LiteralConstant -> LogicalLiteralConstant
 !PARSE-TREE: | | | | | | | bool = 'true'
 !PARSE-TREE: | | OmpDirectiveSpecification
-!PARSE-TREE: | | | llvm::omp::Directive = nothing
+!PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | | OmpClauseList ->
 !PARSE-TREE: | OmpClause -> Default -> OmpDefaultClause -> OmpDirectiveSpecification
-!PARSE-TREE: | | llvm::omp::Directive = nothing
+!PARSE-TREE: | | OmpDirectiveName -> llvm::omp::Directive = nothing
 !PARSE-TREE: | | OmpClauseList ->

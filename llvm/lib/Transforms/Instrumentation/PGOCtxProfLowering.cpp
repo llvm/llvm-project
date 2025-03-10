@@ -351,3 +351,25 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
         F.getName());
   return true;
 }
+
+PreservedAnalyses NoinlineNonPrevailing::run(Module &M,
+                                             ModuleAnalysisManager &MAM) {
+  bool Changed = false;
+  for (auto &F : M) {
+    if (F.isDeclaration())
+      continue;
+    if (F.hasFnAttribute(Attribute::NoInline))
+      continue;
+    if (!F.isWeakForLinker())
+      continue;
+
+    if (F.hasFnAttribute(Attribute::AlwaysInline))
+      F.removeFnAttr(Attribute::AlwaysInline);
+
+    F.addFnAttr(Attribute::NoInline);
+    Changed = true;
+  }
+  if (Changed)
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
+}

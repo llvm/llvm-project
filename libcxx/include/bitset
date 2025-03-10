@@ -132,6 +132,7 @@ template <size_t N> struct hash<std::bitset<N>>;
 #  include <__algorithm/copy.h>
 #  include <__algorithm/copy_backward.h>
 #  include <__algorithm/count.h>
+#  include <__algorithm/equal.h>
 #  include <__algorithm/fill.h>
 #  include <__algorithm/fill_n.h>
 #  include <__algorithm/find.h>
@@ -329,12 +330,10 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __bitset<_N_words, _Siz
   for (; __n >= __bits_per_word; ++__p, __n -= __bits_per_word)
     *__p = ~*__p;
   // do last partial word
-  if (__n > 0) {
-    __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-    __storage_type __b = *__p & __m;
-    *__p &= ~__m;
-    *__p |= ~__b & __m;
-  }
+  // Ensure trailing padding bits are zeroed as part of the ABI for consistent hashing behavior. std::hash<bitset>
+  // assumes trailing bits are zeroed; otherwise, identical bitsets could hash differently.
+  if (__n > 0)
+    *__p ^= (__storage_type(1) << __n) - 1;
 }
 
 template <size_t _N_words, size_t _Size>
@@ -514,9 +513,7 @@ __bitset<1, _Size>::operator^=(const __bitset& __v) _NOEXCEPT {
 
 template <size_t _Size>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void __bitset<1, _Size>::flip() _NOEXCEPT {
-  __storage_type __m = ~__storage_type(0) >> (__bits_per_word - _Size);
-  __first_           = ~__first_;
-  __first_ &= __m;
+  __first_ ^= ~__storage_type(0) >> (__bits_per_word - _Size);
 }
 
 template <size_t _Size>

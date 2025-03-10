@@ -42,4 +42,8 @@
 
 // RUN: %clang --target=armv7-linux -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=ARMv7_THREAD_POINTER_NON %s
-// ARMv7_THREAD_POINTER_NON-NOT: "-target-feature" "+read-tp-tpidruro"
+// ARMv7_THREAD_POINTER_NON: "-target-feature" "+read-tp-tpidruro"
+
+// RUN: %clang --target=armv7-linux -mtp=auto -### -S %s 2>&1 | \
+// RUN: FileCheck -check-prefix=ARMv7_THREAD_POINTER_Auto %s
+// ARMv7_THREAD_POINTER_Auto: "-target-feature" "+read-tp-tpidruro"

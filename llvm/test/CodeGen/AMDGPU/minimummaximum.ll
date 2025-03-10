@@ -181,17 +181,29 @@ define amdgpu_ps void @s_test_minmax_f16(half inreg %a, half inreg %b, half inre
 ; SDAG-FAKE16-NEXT:    global_store_b16 v0, v1, s[4:5]
 ; SDAG-FAKE16-NEXT:    s_endpgm
 ;
-; GISEL-LABEL: s_test_minmax_f16:
-; GISEL:       ; %bb.0:
-; GISEL-NEXT:    s_maximum_f16 s0, s0, s1
-; GISEL-NEXT:    s_mov_b32 s6, s3
-; GISEL-NEXT:    s_mov_b32 s7, s4
-; GISEL-NEXT:    v_mov_b32_e32 v1, 0
-; GISEL-NEXT:    s_minimum_f16 s0, s0, s2
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
-; GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GISEL-NEXT:    global_store_b16 v1, v0, s[6:7]
-; GISEL-NEXT:    s_endpgm
+; GISEL-TRUE16-LABEL: s_test_minmax_f16:
+; GISEL-TRUE16:       ; %bb.0:
+; GISEL-TRUE16-NEXT:    s_maximum_f16 s0, s0, s1
+; GISEL-TRUE16-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-TRUE16-NEXT:    s_mov_b32 s6, s3
+; GISEL-TRUE16-NEXT:    s_mov_b32 s7, s4
+; GISEL-TRUE16-NEXT:    s_minimum_f16 s0, s0, s2
+; GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
+; GISEL-TRUE16-NEXT:    global_store_b16 v1, v0, s[6:7]
+; GISEL-TRUE16-NEXT:    s_endpgm
+;
+; GISEL-FAKE16-LABEL: s_test_minmax_f16:
+; GISEL-FAKE16:       ; %bb.0:
+; GISEL-FAKE16-NEXT:    s_maximum_f16 s0, s0, s1
+; GISEL-FAKE16-NEXT:    s_mov_b32 s6, s3
+; GISEL-FAKE16-NEXT:    s_mov_b32 s7, s4
+; GISEL-FAKE16-NEXT:    v_mov_b32_e32 v1, 0
+; GISEL-FAKE16-NEXT:    s_minimum_f16 s0, s0, s2
+; GISEL-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_3)
+; GISEL-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
+; GISEL-FAKE16-NEXT:    global_store_b16 v1, v0, s[6:7]
+; GISEL-FAKE16-NEXT:    s_endpgm
   %smax = call half @llvm.maximum.f16(half %a, half %b)
   %sminmax = call half @llvm.minimum.f16(half %smax, half %c)
   store half %sminmax, ptr addrspace(1) %out

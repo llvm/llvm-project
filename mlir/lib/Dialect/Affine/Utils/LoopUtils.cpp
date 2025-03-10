@@ -1351,10 +1351,12 @@ static bool checkLoopInterchangeDependences(
 /// nested sequence of loops in 'loops' would violate dependences.
 bool mlir::affine::isValidLoopInterchangePermutation(
     ArrayRef<AffineForOp> loops, ArrayRef<unsigned> loopPermMap) {
+  assert(loopPermMap.size() == loops.size() && "invalid loop perm map");
+  unsigned maxLoopDepth = loops.size();
+  if (maxLoopDepth == 1)
+    return true;
   // Gather dependence components for dependences between all ops in loop nest
   // rooted at 'loops[0]', at loop depths in range [1, maxLoopDepth].
-  assert(loopPermMap.size() == loops.size());
-  unsigned maxLoopDepth = loops.size();
   std::vector<SmallVector<DependenceComponent, 2>> depCompsVec;
   getDependenceComponents(loops[0], maxLoopDepth, &depCompsVec);
   return checkLoopInterchangeDependences(depCompsVec, loops, loopPermMap);
@@ -1828,14 +1830,14 @@ static void getMultiLevelStrides(const MemRefRegion &region,
   }
 }
 
-/// Generates a point-wise copy from/to `memref' to/from `fastMemRef' and
-/// returns the outermost AffineForOp of the copy loop nest. `lbMaps` and
-/// `ubMaps` along with `lbOperands` and `ubOperands` hold the lower and upper
-/// bound information for the copy loop nest. `fastBufOffsets` contain the
-/// expressions to be subtracted out from the respective copy loop iterators in
-/// order to index the fast buffer. If `copyOut' is true, generates a copy-out;
-/// otherwise a copy-in. Builder `b` should be set to the point the copy nest is
-/// inserted.
+/// Generates a point-wise copy from/to a non-zero ranked `memref' to/from
+/// `fastMemRef' and returns the outermost AffineForOp of the copy loop nest.
+/// `lbMaps` and `ubMaps` along with `lbOperands` and `ubOperands` hold the
+/// lower and upper bound information for the copy loop nest. `fastBufOffsets`
+/// contain the expressions to be subtracted out from the respective copy loop
+/// iterators in order to index the fast buffer. If `copyOut' is true, generates
+/// a copy-out; otherwise a copy-in. Builder `b` should be set to the point the
+/// copy nest is inserted.
 //
 /// The copy-in nest is generated as follows as an example for a 2-d region:
 /// for x = ...
@@ -1856,6 +1858,8 @@ generatePointWiseCopy(Location loc, Value memref, Value fastMemRef,
   }));
 
   unsigned rank = cast<MemRefType>(memref.getType()).getRank();
+  // A copy nest can't be generated for 0-ranked memrefs.
+  assert(rank != 0 && "non-zero rank memref expected");
   assert(lbMaps.size() == rank && "wrong number of lb maps");
   assert(ubMaps.size() == rank && "wrong number of ub maps");
 
@@ -1919,19 +1923,20 @@ emitRemarkForBlock(Block &block) {
   return block.getParentOp()->emitRemark();
 }
 
-/// Creates a buffer in the faster memory space for the specified memref region;
-/// generates a copy from the lower memory space to this one, and replaces all
-/// loads/stores in the block range [`begin', `end') of `block' to load/store
-/// from that buffer. Returns failure if copies could not be generated due to
-/// yet unimplemented cases. `copyInPlacementStart` and `copyOutPlacementStart`
-/// in copyPlacementBlock specify the insertion points where the incoming copies
-/// and outgoing copies, respectively, should be inserted (the insertion happens
-/// right before the insertion point). Since `begin` can itself be invalidated
-/// due to the memref rewriting done from this method, the output argument
-/// `nBegin` is set to its replacement (set to `begin` if no invalidation
-/// happens). Since outgoing copies could have  been inserted at `end`, the
-/// output argument `nEnd` is set to the new end. `sizeInBytes` is set to the
-/// size of the fast buffer allocated.
+/// Creates a buffer in the faster memory space for the specified memref region
+/// (memref has to be non-zero ranked); generates a copy from the lower memory
+/// space to this one, and replaces all loads/stores in the block range
+/// [`begin', `end') of `block' to load/store from that buffer. Returns failure
+/// if copies could not be generated due to yet unimplemented cases.
+/// `copyInPlacementStart` and `copyOutPlacementStart` in copyPlacementBlock
+/// specify the insertion points where the incoming copies and outgoing copies,
+/// respectively, should be inserted (the insertion happens right before the
+/// insertion point). Since `begin` can itself be invalidated due to the memref
+/// rewriting done from this method, the output argument `nBegin` is set to its
+/// replacement (set to `begin` if no invalidation happens). Since outgoing
+/// copies could have  been inserted at `end`, the output argument `nEnd` is set
+/// to the new end. `sizeInBytes` is set to the size of the fast buffer
+/// allocated.
 static LogicalResult generateCopy(
     const MemRefRegion &region, Block *block, Block::iterator begin,
     Block::iterator end, Block *copyPlacementBlock,
@@ -1982,16 +1987,27 @@ static LogicalResult generateCopy(
   SmallVector<Value, 4> bufIndices;
 
   unsigned rank = memRefType.getRank();
+  if (rank == 0) {
+    LLVM_DEBUG(llvm::dbgs() << "Non-zero ranked memrefs supported\n");
+    return failure();
+  }
+
   SmallVector<int64_t, 4> fastBufferShape;
 
   // Compute the extents of the buffer.
-  std::vector<SmallVector<int64_t, 4>> lbs;
-  SmallVector<int64_t, 8> lbDivisors;
+  SmallVector<AffineMap, 2> lbs;
   lbs.reserve(rank);
-  std::optional<int64_t> numElements = region.getConstantBoundingSizeAndShape(
-      &fastBufferShape, &lbs, &lbDivisors);
+  std::optional<int64_t> numElements =
+      region.getConstantBoundingSizeAndShape(&fastBufferShape, &lbs);
   if (!numElements) {
     LLVM_DEBUG(llvm::dbgs() << "Non-constant region size not supported\n");
+    return failure();
+  }
+
+  if (llvm::any_of(lbs, [](AffineMap lb) { return lb.getNumResults() > 1; })) {
+    // This can be supported in the future if needed.
+    LLVM_DEBUG(llvm::dbgs()
+               << "Max lower bound for memref region start not supported\n");
     return failure();
   }
 
@@ -2018,7 +2034,7 @@ static LogicalResult generateCopy(
   SmallVector<Value, 8> regionSymbols;
   cst->getValues(rank, cst->getNumVars(), &regionSymbols);
 
-  // Construct the index expressions for the fast memory buffer. The index
+  // Construct the access expression for the fast memory buffer. The access
   // expression for a particular dimension of the fast buffer is obtained by
   // subtracting out the lower bound on the original memref's data region
   // along the corresponding dimension.
@@ -2027,19 +2043,13 @@ static LogicalResult generateCopy(
   SmallVector<AffineExpr, 4> fastBufOffsets;
   fastBufOffsets.reserve(rank);
   for (unsigned d = 0; d < rank; d++) {
-    assert(lbs[d].size() == cst->getNumCols() - rank && "incorrect bound size");
-
-    AffineExpr offset = top.getAffineConstantExpr(0);
-    for (unsigned j = 0, e = cst->getNumCols() - rank - 1; j < e; j++)
-      offset = offset + lbs[d][j] * top.getAffineDimExpr(j);
-    assert(lbDivisors[d] > 0);
-    offset =
-        (offset + lbs[d][cst->getNumCols() - 1 - rank]).floorDiv(lbDivisors[d]);
+    assert(lbs[d].getNumSymbols() == cst->getNumCols() - rank - 1 &&
+           "incorrect bound size");
 
     // Set copy start location for this dimension in the lower memory space
     // memref.
-    if (auto caf = dyn_cast<AffineConstantExpr>(offset)) {
-      auto indexVal = caf.getValue();
+    if (auto caf = lbs[d].isSingleConstant()) {
+      auto indexVal = lbs[d].getSingleConstantResult();
       if (indexVal == 0) {
         memIndices.push_back(zeroIndex);
       } else {
@@ -2049,16 +2059,23 @@ static LogicalResult generateCopy(
     } else {
       // The coordinate for the start location is just the lower bound along the
       // corresponding dimension on the memory region (stored in 'offset').
-      auto map = AffineMap::get(
-          cst->getNumDimVars() + cst->getNumSymbolVars() - rank, 0, offset);
-      memIndices.push_back(b.create<AffineApplyOp>(loc, map, regionSymbols));
+      // Remap all inputs of the map to dimensions uniformly since in the
+      // generate IR we need valid affine symbols as opposed to "symbols" for
+      // the purpose of the memref region.
+      SmallVector<AffineExpr> symReplacements(lbs[d].getNumSymbols());
+      for (unsigned i = 0, e = lbs[d].getNumSymbols(); i < e; ++i)
+        symReplacements[i] = top.getAffineDimExpr(i);
+      lbs[d] = lbs[d].replaceDimsAndSymbols(
+          /*dimReplacements=*/{}, symReplacements, lbs[d].getNumSymbols(),
+          /*numResultSyms=*/0);
+      memIndices.push_back(b.create<AffineApplyOp>(loc, lbs[d], regionSymbols));
     }
     // The fast buffer is copied into at location zero; addressing is relative.
     bufIndices.push_back(zeroIndex);
 
     // Record the offsets since they are needed to remap the memory accesses of
     // the original memref further below.
-    fastBufOffsets.push_back(offset);
+    fastBufOffsets.push_back(lbs[d].getResult(0));
   }
 
   // The faster memory space buffer.
@@ -2322,16 +2339,20 @@ mlir::affine::affineDataCopyGenerate(Block::iterator begin, Block::iterator end,
       memref = storeOp.getMemRef();
       memrefType = storeOp.getMemRefType();
     }
-    // Neither load nor a store op.
+    // Not an affine.load/store op.
     if (!memref)
       return;
 
-    auto memorySpaceAttr =
-        dyn_cast_or_null<IntegerAttr>(memrefType.getMemorySpace());
     if ((filterMemRef.has_value() && filterMemRef != memref) ||
-        (memorySpaceAttr &&
+        (isa_and_nonnull<IntegerAttr>(memrefType.getMemorySpace()) &&
          memrefType.getMemorySpaceAsInt() != copyOptions.slowMemorySpace))
       return;
+
+    if (!memref.getParentRegion()->isAncestor(block->getParent())) {
+      LLVM_DEBUG(llvm::dbgs() << "memref definition is inside of the depth at "
+                                 "which copy-in/copy-out would happen\n");
+      return;
+    }
 
     // Compute the MemRefRegion accessed.
     auto region = std::make_unique<MemRefRegion>(opInst->getLoc());
@@ -2582,10 +2603,11 @@ static AffineIfOp createSeparationCondition(MutableArrayRef<AffineForOp> loops,
     cst.setDimSymbolSeparation(/*newSymbolCount=*/cst.getNumDimAndSymbolVars() -
                                1);
     unsigned fullTileLbPos, fullTileUbPos;
-    if (!cst.getConstantBoundOnDimSize(0, /*lb=*/nullptr,
-                                       /*boundFloorDivisor=*/nullptr,
-                                       /*ub=*/nullptr, &fullTileLbPos,
-                                       &fullTileUbPos)) {
+    if (!((IntegerRelation)cst)
+             .getConstantBoundOnDimSize(0, /*lb=*/nullptr,
+                                        /*boundFloorDivisor=*/nullptr,
+                                        /*ub=*/nullptr, &fullTileLbPos,
+                                        &fullTileUbPos)) {
       LLVM_DEBUG(llvm::dbgs() << "Can't get constant diff pair for a loop\n");
       return nullptr;
     }
@@ -2655,9 +2677,10 @@ createFullTiles(MutableArrayRef<AffineForOp> inputNest,
     // pair of <lb, ub> with a constant difference.
     cst.setDimSymbolSeparation(cst.getNumDimAndSymbolVars() - 1);
     unsigned lbPos, ubPos;
-    if (!cst.getConstantBoundOnDimSize(/*pos=*/0, /*lb=*/nullptr,
-                                       /*boundFloorDivisor=*/nullptr,
-                                       /*ub=*/nullptr, &lbPos, &ubPos) ||
+    if (!((IntegerRelation)cst)
+             .getConstantBoundOnDimSize(/*pos=*/0, /*lb=*/nullptr,
+                                        /*boundFloorDivisor=*/nullptr,
+                                        /*ub=*/nullptr, &lbPos, &ubPos) ||
         lbPos == ubPos) {
       LLVM_DEBUG(llvm::dbgs() << "[tile separation] Can't get constant diff / "
                                  "equalities not yet handled\n");

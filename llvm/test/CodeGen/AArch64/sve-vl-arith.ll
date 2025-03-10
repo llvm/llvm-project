@@ -16,8 +16,8 @@ define <vscale x 8 x i16> @inch_vec(<vscale x 8 x i16> %a) {
 ; CHECK-NEXT:    ret
   %vscale = call i16 @llvm.vscale.i16()
   %mul = mul i16 %vscale, 8
-  %vl = insertelement <vscale x 8 x i16> undef, i16 %mul, i32 0
-  %vl.splat = shufflevector <vscale x 8 x i16> %vl, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %vl = insertelement <vscale x 8 x i16> poison, i16 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 8 x i16> %vl, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %res = add <vscale x 8 x i16> %a, %vl.splat
   ret <vscale x 8 x i16> %res
 }
@@ -34,8 +34,8 @@ define <vscale x 4 x i32> @incw_vec(<vscale x 4 x i32> %a) {
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale.i32()
   %mul = mul i32 %vscale, 4
-  %vl = insertelement <vscale x 4 x i32> undef, i32 %mul, i32 0
-  %vl.splat = shufflevector <vscale x 4 x i32> %vl, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %vl = insertelement <vscale x 4 x i32> poison, i32 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 4 x i32> %vl, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %res = add <vscale x 4 x i32> %a, %vl.splat
   ret <vscale x 4 x i32> %res
 }
@@ -52,8 +52,8 @@ define <vscale x 2 x i64> @incd_vec(<vscale x 2 x i64> %a) {
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mul = mul i64 %vscale, 2
-  %vl = insertelement <vscale x 2 x i64> undef, i64 %mul, i32 0
-  %vl.splat = shufflevector <vscale x 2 x i64> %vl, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %vl = insertelement <vscale x 2 x i64> poison, i64 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 2 x i64> %vl, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   %res = add <vscale x 2 x i64> %a, %vl.splat
   ret <vscale x 2 x i64> %res
 }
@@ -70,8 +70,8 @@ define <vscale x 8 x i16> @dech_vec(<vscale x 8 x i16> %a) {
 ; CHECK-NEXT:    ret
   %vscale = call i16 @llvm.vscale.i16()
   %mul = mul i16 %vscale, 16
-  %vl = insertelement <vscale x 8 x i16> undef, i16 %mul, i32 0
-  %vl.splat = shufflevector <vscale x 8 x i16> %vl, <vscale x 8 x i16> undef, <vscale x 8 x i32> zeroinitializer
+  %vl = insertelement <vscale x 8 x i16> poison, i16 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 8 x i16> %vl, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
   %res = sub <vscale x 8 x i16> %a, %vl.splat
   ret <vscale x 8 x i16> %res
 }
@@ -88,8 +88,8 @@ define <vscale x 4 x i32> @decw_vec(<vscale x 4 x i32> %a) {
 ; CHECK-NEXT:    ret
   %vscale = call i32 @llvm.vscale.i32()
   %mul = mul i32 %vscale, 16
-  %vl = insertelement <vscale x 4 x i32> undef, i32 %mul, i32 0
-  %vl.splat = shufflevector <vscale x 4 x i32> %vl, <vscale x 4 x i32> undef, <vscale x 4 x i32> zeroinitializer
+  %vl = insertelement <vscale x 4 x i32> poison, i32 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 4 x i32> %vl, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
   %res = sub <vscale x 4 x i32> %a, %vl.splat
   ret <vscale x 4 x i32> %res
 }
@@ -106,8 +106,8 @@ define <vscale x 2 x i64> @decd_vec(<vscale x 2 x i64> %a) {
 ; CHECK-NEXT:    ret
   %vscale = call i64 @llvm.vscale.i64()
   %mul = mul i64 %vscale, 16
-  %vl = insertelement <vscale x 2 x i64> undef, i64 %mul, i32 0
-  %vl.splat = shufflevector <vscale x 2 x i64> %vl, <vscale x 2 x i64> undef, <vscale x 2 x i32> zeroinitializer
+  %vl = insertelement <vscale x 2 x i64> poison, i64 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 2 x i64> %vl, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
   %res = sub <vscale x 2 x i64> %a, %vl.splat
   ret <vscale x 2 x i64> %res
 }
