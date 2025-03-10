@@ -1,4 +1,5 @@
-//===- TestDialect.cpp - MLIR Test Dialect Types ------------------*- C++ -*-===//
+//===- TestDialect.cpp - MLIR Test Dialect Types ------------------*- C++
+//-*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +16,5 @@
 
 #define GEN_DIALECT_DECL_HEADER
 #include "test_irdl_to_cpp.irdl.mlir.cpp.inc"
-#undef GEN_DIALECT_DECL_HEADER
 
 #endif // MLIR_TEST_LIB_DIALECT_TESTIRDLTOCPP_TESTIRDLTOCPPDIALECT_H

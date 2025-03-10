@@ -29,8 +29,6 @@
 #include "TestIRDLToCppDialect.h"
 
 #define GEN_DIALECT_DEF
-#define GET_TYPEDEF_CLASSES
-#define GET_OP_CLASSES
 #include "test_irdl_to_cpp.irdl.mlir.cpp.inc"
 
 namespace test {

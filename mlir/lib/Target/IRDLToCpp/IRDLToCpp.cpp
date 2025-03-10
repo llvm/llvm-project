@@ -299,9 +299,6 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
   static const auto typeHeaderDefTemplate = mlir::irdl::detail::Template{
 #include "Templates/TypeHeaderDef.txt"
   };
-  static const auto opDefTemplate = mlir::irdl::detail::Template{
-#include "Templates/OperationDef.txt"
-  };
   static const auto typeDefTemplate = mlir::irdl::detail::Template{
 #include "Templates/TypeDef.txt"
   };
@@ -339,9 +336,9 @@ static LogicalResult generateLib(irdl::DialectOp dialect, raw_ostream &output,
           [&](llvm::StringRef name) -> std::string {
             return llvm::formatv(
                 R"(.Case({1}::{0}::getMnemonic(), [&](llvm::StringRef, llvm::SMLoc) {
-value = {1}::{0}::get(parser.getContext());
-return ::mlir::success(!!value);
-}))",
+      value = {1}::{0}::get(parser.getContext());
+      return ::mlir::success(!!value);
+      }))",
                 name, dialectStrings.namespacePath);
           }),
       "\n");
@@ -357,12 +354,7 @@ return ::mlir::success(!!value);
 })",
       std::move(typeCase));
 
-  dict["TYPE_PRINTER"] = llvm::formatv(
-      R"(static ::llvm::LogicalResult generatedTypePrinter(::mlir::Type def, ::mlir::AsmPrinter &printer) {
-  return ::llvm::TypeSwitch<::mlir::Type, ::llvm::LogicalResult>(def)
-    {0}
-    .Default([](auto) {{ return ::mlir::failure(); });
-})",
+  auto typePrintCase =
       llvm::join(llvm::map_range(typeNames,
                                  [&](llvm::StringRef name) -> std::string {
                                    return llvm::formatv(
@@ -372,7 +364,14 @@ return ::mlir::success(!!value);
     }))",
                                        name, dialectStrings.namespacePath);
                                  }),
-                 "\n"));
+                 "\n");
+  dict["TYPE_PRINTER"] = llvm::formatv(
+      R"(static ::llvm::LogicalResult generatedTypePrinter(::mlir::Type def, ::mlir::AsmPrinter &printer) {
+  return ::llvm::TypeSwitch<::mlir::Type, ::llvm::LogicalResult>(def)
+    {0}
+    .Default([](auto) {{ return ::mlir::failure(); });
+})",
+      std::move(typePrintCase));
 
   dict["TYPE_DEFINES"] =
       llvm::join(llvm::map_range(typeNames,
@@ -465,7 +464,7 @@ void {0}::build(::mlir::OpBuilder &odsBuilder, ::mlir::OperationState &odsState,
 
   dict["OP_LIST"] = commaSeparatedOpList;
   dict["OP_CLASSES"] = perOpDefinitions;
-  opDefTemplate.render(output, dict);
+  output << perOpDefinitions;
   dialectDefTemplate.render(output, dict);
 
   output << "#endif // " << definitionMacroFlag << "\n";

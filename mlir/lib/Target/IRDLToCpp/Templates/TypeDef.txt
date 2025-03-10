@@ -9,16 +9,8 @@
 */
 
 R"(
-#ifdef GET_TYPEDEF_LIST
-#undef GET_TYPEDEF_LIST
-
-__TYPE_LIST__
-
-#endif  // GET_TYPEDEF_LIST
 
 
-#ifdef GET_TYPEDEF_CLASSES
-#undef GET_TYPEDEF_CLASSES
 
 __TYPE_DEFINES__
 
@@ -50,5 +42,4 @@ void __DIALECT_CPP_NAME__::printType(::mlir::Type type,
 }
 
 __NAMESPACE_CLOSE__
-#endif // GET_TYPEDEF_CLASSES
 )"
