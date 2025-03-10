@@ -1,0 +1,728 @@
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "ConflictingGlobalAccesses.h"
+
+#include "clang/AST/RecursiveASTVisitor.h"
+
+using namespace clang::ast_matchers;
+
+namespace clang::tidy::bugprone {
+
+namespace {
+// An AccesKind represents one access to a global variable.
+//
+// The unchecked versions represent reads/writes that are not handled by
+// -Wunsequenced. (e.g. accesses inside functions).
+using AccessKind = uint8_t;
+static constexpr AccessKind AkRead = 0;
+static constexpr AccessKind AkWrite = 1;
+static constexpr AccessKind AkUncheckedRead = 2;
+static constexpr AccessKind AkUncheckedWrite = 3;
+
+static constexpr uint8_t AkCount = 4;
+
+// The TraversalResultKind represents a set of accesses.
+// Bits are corresponding to the AccessKind enum values.
+using TraversalResultKind = uint8_t;
+static constexpr TraversalResultKind TrInvalid = 0;
+static constexpr TraversalResultKind TrRead = 1 << AkRead;
+static constexpr TraversalResultKind TrWrite = 1 << AkWrite;
+static constexpr TraversalResultKind TrUncheckedWrite = 1 << AkUncheckedWrite;
+
+// To represent fields in structs or unions we use numbered FieldIndices. The
+// FieldIndexArray represents one field inside a global struct/union system.
+// The FieldIndexArray can be thought of as a path inside a tree.
+using FieldIndex = uint16_t;
+static constexpr FieldIndex FiUnion = 0x8000;
+
+// Note: This bit signals whether the field is a *field of* a struct or a
+// union, not whether the type of the field itself is a struct or a union.
+using FieldIndexArray = SmallVector<FieldIndex>;
+
+/// One traversal recurses into one side of a binary expression or one
+/// parameter of a function call. At least two of these traversals are used to
+/// find conflicting accesses.
+///
+/// A TraversalResult represents one traversal.
+struct TraversalResult {
+  int IndexCreated; // We use indices to keep track of which
+                    // traversal we are in currently. The current
+                    // index is stored in GlobalRWVisitor with the
+                    // name TraversalIndex.
+  SourceLocation Loc[AkCount];
+  TraversalResultKind Kind;
+
+  TraversalResult();
+  TraversalResult(int Index, SourceLocation Loc, AccessKind Access);
+  void addNewAccess(SourceLocation Loc, AccessKind Access);
+};
+
+/// The result of a number of traversals.
+class TraversalAggregation {
+  DeclarationName DeclName; // The name of the global variable being checked.
+
+  // We only store the result of two traversals as two conflicting accesses
+  // are enough to detect undefined behavior. The two stored TraversalResults
+  // have different traversal indices.
+  //
+  // Note: Sometimes multiple traversals are merged into one
+  // TraversalResult.
+  TraversalResult MainPart, OtherPart;
+  // Pairings that are not reportable: Read-Read, Read-Write,
+  // Read-UncheckedRead, Write-Write, UncheckedRead-UncheckedRead.
+
+public:
+  TraversalAggregation();
+  TraversalAggregation(DeclarationName Name, SourceLocation Loc,
+                       AccessKind Access, int Index);
+  void addGlobalRW(SourceLocation Loc, AccessKind Access, int Index);
+  DeclarationName getDeclName() const;
+
+  bool isValid() const;
+
+  // If there is a conflict and that conflict isn't reported by -Wunsequenced
+  // then we report the conflict.
+  bool shouldBeReported() const;
+  bool hasConflictingOperations() const;
+
+private:
+  bool hasTwoAccesses() const;
+  bool isReportedByWunsequenced() const;
+};
+
+/// The ObjectAccessTree stores the TraversalAggregations of one global
+/// struct/union. Because each field can be handled as a single variable, the
+/// tree stores one TraversalAggregation for every field.
+///
+/// Note: structs, classes, and unions are called objects in the code.
+struct ObjectAccessTree {
+  using FieldMap = std::map<int, std::unique_ptr<ObjectAccessTree>>;
+  TraversalAggregation OwnAccesses;
+
+  // In a union, new fields should inherit from UnionTemporalAccesses
+  // instead of OwnAccesses. That's because an access to a field of a union is
+  // also an access to every other field of the same union.
+  TraversalAggregation UnionTemporalAccesses;
+
+  // We try to be lazy and only store fields that are actually accessed.
+  FieldMap Fields;
+  bool IsUnion;
+
+  ObjectAccessTree(TraversalAggregation Own);
+  ObjectAccessTree(ObjectAccessTree& Other) = delete;
+  ObjectAccessTree(const ObjectAccessTree& Other) = delete;
+  ObjectAccessTree(ObjectAccessTree&& Other) = default;
+
+  void addFieldToAll(SourceLocation Loc, AccessKind Access, int Index);
+  void addFieldToAllExcept(uint16_t ExceptIndex, SourceLocation Loc,
+                           AccessKind Access, int Index);
+};
+
+/// This object is the root of all ObjectAccessTrees.
+class ObjectTraversalAggregation {
+  DeclarationName DeclName; // The name of the global struct/union.
+  ObjectAccessTree AccessTree;
+
+public:
+  ObjectTraversalAggregation(DeclarationName Name, SourceLocation Loc,
+                             FieldIndexArray FieldIndices, AccessKind Access,
+                             int Index);
+  void addFieldRW(SourceLocation Loc, FieldIndexArray FieldIndices,
+                  AccessKind Access, int Index);
+  DeclarationName getDeclName() const;
+  bool shouldBeReported() const;
+
+private:
+  bool shouldBeReportedRec(const ObjectAccessTree *Node) const;
+};
+
+/// GlobalRWVisitor (global read write visitor) does all the traversals.
+class GlobalRWVisitor : public RecursiveASTVisitor<GlobalRWVisitor> {
+  friend RecursiveASTVisitor<GlobalRWVisitor>;
+
+public:
+  GlobalRWVisitor();
+
+  // startTraversal is called to start a new traversal. It increments the
+  // TraversalIndex, which in turn will generate new TraversalResults.
+  void startTraversal(Expr *E);
+
+  const std::vector<TraversalAggregation> &getGlobalsFound() const;
+
+  const std::vector<ObjectTraversalAggregation> &getObjectGlobalsFound() const;
+
+protected:
+  // RecursiveASTVisitor overrides
+  bool VisitDeclRefExpr(DeclRefExpr *S);
+  bool VisitUnaryOperator(UnaryOperator *Op);
+  bool VisitBinaryOperator(BinaryOperator *Op);
+  bool VisitCallExpr(CallExpr *CE);
+  bool VisitMemberExpr(MemberExpr *ME);
+
+private:
+  void visitCallExprArgs(CallExpr *CE);
+  void traverseFunctionsToBeChecked();
+
+  std::vector<TraversalAggregation> GlobalsFound;
+  std::vector<ObjectTraversalAggregation> ObjectGlobalsFound;
+
+  // We check inside functions only if the functions hasn't been checked in
+  // the current traversal. We use this array to check if the function is
+  // already registered to be checked.
+  std::vector<std::pair<DeclarationName, Stmt *>> FunctionsToBeChecked;
+
+  // The TraversalIndex is used to differentiate between two sides of a binary
+  // expression or the parameters of a function. Every traversal represents
+  // one such expression and the TraversalIndex is incremented between them.
+  int TraversalIndex;
+
+  // Accesses that are inside functions are not checked by -Wunsequenced,
+  // therefore we keep track of whether we are inside of a function or not.
+  bool IsInFunction;
+
+  void addGlobal(DeclarationName Name, SourceLocation Loc, bool IsWrite,
+                 bool IsUnchecked);
+  void addGlobal(const DeclRefExpr *DR, bool IsWrite, bool IsUnchecked);
+  void addField(DeclarationName Name, FieldIndexArray FieldIndices,
+                SourceLocation Loc, bool IsWrite, bool IsUnchecked);
+  bool handleModified(const Expr *Modified, bool IsUnchecked);
+  bool handleModifiedVariable(const DeclRefExpr *DE, bool IsUnchecked);
+  bool handleAccessedObject(const Expr *E, bool IsWrite, bool IsUnchecked);
+  bool isVariable(const Expr *E);
+};
+} // namespace
+
+static bool isGlobalDecl(const VarDecl *VD) {
+  return VD && VD->hasGlobalStorage() && VD->getLocation().isValid() &&
+         !VD->getType().isConstQualified();
+}
+
+AST_MATCHER_P(Expr, twoGlobalWritesBetweenSequencePoints, const LangStandard *,
+              LangStd) {
+  assert(LangStd);
+
+  const Expr *E = &Node;
+
+  if (const BinaryOperator *Op = dyn_cast<BinaryOperator>(E)) {
+    const BinaryOperator::Opcode Code = Op->getOpcode();
+    if (Code == BO_LAnd || Code == BO_LOr || Code == BO_Comma) {
+      return false;
+    }
+
+    if (Op->isAssignmentOp() && isa<DeclRefExpr>(Op->getLHS())) {
+      return false;
+    }
+
+    if (LangStd->isCPlusPlus17() &&
+        (Code == BO_Shl || Code == BO_Shr || Code == BO_PtrMemD ||
+         Code == BO_PtrMemI || Op->isAssignmentOp())) {
+      return false;
+    }
+
+    return true;
+  }
+
+  if (isa<CallExpr>(E)) {
+    return true;
+  }
+
+  return false;
+}
+
+ConflictingGlobalAccesses::ConflictingGlobalAccesses(StringRef Name,
+                                                     ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context) {}
+
+void ConflictingGlobalAccesses::registerMatchers(MatchFinder *Finder) {
+
+  const LangStandard *LangStd =
+      &LangStandard::getLangStandardForKind(getLangOpts().LangStd);
+
+  ast_matchers::internal::Matcher<Expr> GlobalAccessMatcher =
+      twoGlobalWritesBetweenSequencePoints(LangStd);
+
+  Finder->addMatcher(
+      stmt(traverse(TK_AsIs, expr(GlobalAccessMatcher).bind("gw"))), this);
+}
+
+void ConflictingGlobalAccesses::check(const MatchFinder::MatchResult &Result) {
+  const Expr *E = Result.Nodes.getNodeAs<Expr>("gw");
+  assert(E);
+
+  GlobalRWVisitor Visitor;
+  if (const auto *Op = dyn_cast<BinaryOperator>(E)) {
+    Visitor.startTraversal(Op->getLHS());
+    Visitor.startTraversal(Op->getRHS());
+
+  } else if (const auto *CE = dyn_cast<CallExpr>(E)) {
+    for (uint32_t I = 0; I < CE->getNumArgs(); I++) {
+      Visitor.startTraversal(const_cast<Expr *>(CE->getArg(I)));
+    }
+  }
+
+  const std::vector<TraversalAggregation> &Globals = Visitor.getGlobalsFound();
+
+  for (uint32_t I = 0; I < Globals.size(); I++) {
+    if (Globals[I].shouldBeReported()) {
+      diag(E->getBeginLoc(), "read/write conflict on global variable " +
+                                 Globals[I].getDeclName().getAsString());
+    }
+  }
+  const std::vector<ObjectTraversalAggregation> &ObjectGlobals =
+      Visitor.getObjectGlobalsFound();
+  for (uint32_t I = 0; I < ObjectGlobals.size(); I++) {
+    if (ObjectGlobals[I].shouldBeReported()) {
+      diag(E->getBeginLoc(), "read/write conflict on the field of the global "
+                             "object " +
+                                 ObjectGlobals[I].getDeclName().getAsString());
+    }
+  }
+}
+
+GlobalRWVisitor::GlobalRWVisitor() : TraversalIndex(0), IsInFunction(false) {}
+
+void GlobalRWVisitor::startTraversal(Expr *E) {
+  TraversalIndex++;
+  FunctionsToBeChecked.clear();
+  IsInFunction = false;
+  TraverseStmt(E);
+
+  // We keep a list of functions to be checked during traversal so that they are
+  // not checked multiple times.
+  traverseFunctionsToBeChecked();
+}
+
+void GlobalRWVisitor::traverseFunctionsToBeChecked() {
+  IsInFunction = true;
+
+  // We could find more functions to be checked while checking functions.
+  // Because a simple iterator could get invalidated, we index into the array.
+  for (size_t I = 0; I < FunctionsToBeChecked.size(); ++I) {
+    TraverseStmt(FunctionsToBeChecked[I].second);
+  }
+}
+
+bool GlobalRWVisitor::isVariable(const Expr *E) {
+  const Type *T = E->getType().getTypePtrOrNull();
+  return isa<DeclRefExpr>(E) && (!T->isRecordType() || T->isUnionType());
+}
+
+bool GlobalRWVisitor::VisitDeclRefExpr(DeclRefExpr *DR) {
+  if (!isa<VarDecl>(DR->getDecl())) {
+    return true;
+  }
+  const auto *VD = dyn_cast<VarDecl>(DR->getDecl());
+  if (!isVariable(DR)) {
+    return handleAccessedObject(DR, /*IsWrite*/ false, /*IsUnchecked*/ false);
+  }
+  if (isGlobalDecl(VD)) {
+    addGlobal(VD->getDeclName(), VD->getBeginLoc(), /*IsWrite*/ false,
+              /*IsUnchecked*/ false);
+    return true;
+  }
+  return true;
+}
+
+bool GlobalRWVisitor::VisitMemberExpr(MemberExpr *ME) {
+  return handleAccessedObject(ME, /*IsWrite*/ false, /*IsUnchecked*/ false);
+}
+
+bool GlobalRWVisitor::handleModifiedVariable(const DeclRefExpr *DR,
+                                             bool IsUnchecked) {
+  if (!isa<VarDecl>(DR->getDecl())) {
+    return true;
+  }
+  const auto *VD = dyn_cast<VarDecl>(DR->getDecl());
+
+  if (isGlobalDecl(VD)) {
+    addGlobal(VD->getDeclName(), VD->getBeginLoc(), /*IsWrite*/ true,
+              IsUnchecked);
+    return false;
+  }
+  return true;
+}
+
+bool GlobalRWVisitor::handleAccessedObject(const Expr *E, bool IsWrite,
+                                           bool IsUnchecked) {
+  const Expr *CurrentNode = E;
+  int NodeCount = 0;
+  while (isa<MemberExpr>(CurrentNode)) {
+    const MemberExpr *CurrentField = dyn_cast<MemberExpr>(CurrentNode);
+    if (CurrentField->isArrow()) {
+      return true;
+    }
+
+    const ValueDecl *Decl = CurrentField->getMemberDecl();
+    if (!isa<FieldDecl>(Decl)) {
+      return true;
+    }
+
+    CurrentNode = CurrentField->getBase();
+    NodeCount++;
+  }
+
+  if (!isa<DeclRefExpr>(CurrentNode)) {
+    return true;
+  }
+  const DeclRefExpr *Base = dyn_cast<DeclRefExpr>(CurrentNode);
+
+  if (!isa<VarDecl>(Base->getDecl())) {
+    return true;
+  }
+  const VarDecl *BaseDecl = dyn_cast<VarDecl>(Base->getDecl());
+
+  if (!isGlobalDecl(BaseDecl)) {
+    return true;
+  }
+
+  FieldIndexArray FieldIndices(NodeCount);
+  CurrentNode = E;
+  while (isa<MemberExpr>(CurrentNode)) {
+    const MemberExpr *CurrentField = dyn_cast<MemberExpr>(CurrentNode);
+    const FieldDecl *Decl = dyn_cast<FieldDecl>(CurrentField->getMemberDecl());
+
+    FieldIndices[NodeCount - 1] = Decl->getFieldIndex();
+    const RecordDecl *Record = Decl->getParent();
+    if (Record && Record->isUnion()) {
+      // Not sure what to do if Record isn't a value.
+      FieldIndices[NodeCount - 1] |= FiUnion;
+    }
+
+    CurrentNode = CurrentField->getBase();
+    NodeCount--;
+  }
+
+  addField(BaseDecl->getDeclName(), FieldIndices, Base->getBeginLoc(), IsWrite,
+           IsUnchecked);
+  return false;
+}
+
+bool GlobalRWVisitor::handleModified(const Expr *Modified, bool IsUnchecked) {
+  if (!Modified) {
+    return true;
+  }
+
+  if (isVariable(Modified)) {
+    return handleModifiedVariable(dyn_cast<DeclRefExpr>(Modified), IsUnchecked);
+  }
+
+  return handleAccessedObject(Modified, /*IsWrite*/ true, IsUnchecked);
+}
+
+bool GlobalRWVisitor::VisitUnaryOperator(UnaryOperator *Op) {
+  UnaryOperator::Opcode Code = Op->getOpcode();
+  if (Code == UO_PostInc || Code == UO_PostDec || Code == UO_PreInc ||
+      Code == UO_PreDec) {
+    return handleModified(Op->getSubExpr(), /*IsUnchecked*/ false);
+  }
+  return true;
+}
+
+bool GlobalRWVisitor::VisitBinaryOperator(BinaryOperator *Op) {
+  if (Op->isAssignmentOp()) {
+    return handleModified(Op->getLHS(), /*IsUnchecked*/ false);
+  }
+
+  return true;
+}
+
+void GlobalRWVisitor::visitCallExprArgs(CallExpr *CE) {
+  const Type *CT = CE->getCallee()->getType().getTypePtrOrNull();
+  if (const auto *PT = dyn_cast_if_present<PointerType>(CT)) {
+    CT = PT->getPointeeType().getTypePtrOrNull();
+  }
+  const auto *ProtoType = dyn_cast_if_present<FunctionProtoType>(CT);
+
+  for (uint32_t I = 0; I < CE->getNumArgs(); I++) {
+    Expr *Arg = CE->getArg(I);
+
+    if (!ProtoType || I >= ProtoType->getNumParams()) {
+      continue;
+    }
+
+    if (const auto *Op = dyn_cast<UnaryOperator>(Arg)) {
+      if (Op->getOpcode() != UO_AddrOf) {
+        continue;
+      }
+
+      if (const auto *PtrType = dyn_cast_if_present<PointerType>(
+              ProtoType->getParamType(I).getTypePtrOrNull())) {
+        if (PtrType->getPointeeType().isConstQualified()) {
+          continue;
+        }
+
+        if (handleModified(Op->getSubExpr(), /*IsUnchecked*/ true)) {
+          continue;
+        }
+      }
+    }
+
+    if (const auto *RefType = dyn_cast_if_present<ReferenceType>(
+            ProtoType->getParamType(I).getTypePtrOrNull())) {
+      if (RefType->getPointeeType().isConstQualified()) {
+        continue;
+      }
+
+      if (handleModified(Arg, /*IsUnchecked*/ true)) {
+        continue;
+      }
+    }
+  }
+}
+
+bool GlobalRWVisitor::VisitCallExpr(CallExpr *CE) {
+  visitCallExprArgs(CE);
+
+  if (!isa_and_nonnull<FunctionDecl>(CE->getCalleeDecl())) {
+    return true;
+  }
+  const auto *FD = dyn_cast<FunctionDecl>(CE->getCalleeDecl());
+
+  if (!FD->hasBody()) {
+    return true;
+  }
+
+  for (const std::pair<DeclarationName, Stmt *> &Fun : FunctionsToBeChecked) {
+    if (Fun.first == FD->getDeclName()) {
+      return true;
+    }
+  }
+  FunctionsToBeChecked.emplace_back(FD->getDeclName(), FD->getBody());
+
+  return true;
+}
+
+const std::vector<TraversalAggregation> &
+GlobalRWVisitor::getGlobalsFound() const {
+  return GlobalsFound;
+}
+
+const std::vector<ObjectTraversalAggregation> &
+GlobalRWVisitor::getObjectGlobalsFound() const {
+  return ObjectGlobalsFound;
+}
+
+void GlobalRWVisitor::addGlobal(DeclarationName Name, SourceLocation Loc,
+                                bool IsWrite, bool IsUnchecked) {
+  AccessKind Access = (IsInFunction || IsUnchecked)
+                          ? (IsWrite ? AkUncheckedWrite : AkUncheckedRead)
+                          : (IsWrite ? AkWrite : AkRead);
+  for (uint32_t I = 0; I < GlobalsFound.size(); I++) {
+    if (GlobalsFound[I].getDeclName() == Name) {
+      GlobalsFound[I].addGlobalRW(Loc, Access, TraversalIndex);
+      return;
+    }
+  }
+
+  GlobalsFound.emplace_back(Name, Loc, Access, TraversalIndex);
+}
+
+void GlobalRWVisitor::addField(DeclarationName Name,
+                               FieldIndexArray FieldIndices, SourceLocation Loc,
+                               bool IsWrite, bool IsUnchecked) {
+  AccessKind Access = (IsInFunction || IsUnchecked)
+                          ? (IsWrite ? AkUncheckedWrite : AkUncheckedRead)
+                          : (IsWrite ? AkWrite : AkRead);
+  for (uint32_t I = 0; I < ObjectGlobalsFound.size(); I++) {
+    if (ObjectGlobalsFound[I].getDeclName() == Name) {
+      ObjectGlobalsFound[I].addFieldRW(Loc, FieldIndices, Access,
+                                       TraversalIndex);
+      return;
+    }
+  }
+  ObjectGlobalsFound.emplace_back(Name, Loc, FieldIndices, Access,
+                                  TraversalIndex);
+}
+
+static TraversalResultKind akToTr(AccessKind Ak) { return 1 << Ak; }
+
+TraversalAggregation::TraversalAggregation() {}
+
+TraversalAggregation::TraversalAggregation(DeclarationName Name,
+                                           SourceLocation Loc,
+                                           AccessKind Access, int Index)
+    : DeclName(Name), MainPart(Index, Loc, Access) {}
+
+void TraversalAggregation::addGlobalRW(SourceLocation Loc, AccessKind Access,
+                                       int Index) {
+  if (!isValid()) {
+    MainPart = TraversalResult(Index, Loc, Access);
+    return;
+  }
+  if (isReportedByWunsequenced()) {
+    return;
+  }
+  if (MainPart.IndexCreated == Index) {
+    MainPart.addNewAccess(Loc, Access);
+    return;
+  }
+  if (!hasTwoAccesses()) {
+    OtherPart = TraversalResult(Index, Loc, Access);
+    return;
+  }
+  if (OtherPart.IndexCreated == Index) {
+    OtherPart.addNewAccess(Loc, Access);
+    return;
+  }
+  // We know that the current state is not reported by -Wunsequenced, so
+  // either one of the parts has only unchecked accesses, or both parts have
+  // only reads.
+  switch (Access) {
+  case AkWrite:
+  case AkUncheckedWrite: {
+    if (OtherPart.Kind & (TrRead | TrWrite)) {
+      MainPart = OtherPart;
+    }
+    OtherPart = TraversalResult(Index, Loc, Access);
+    break;
+  }
+  case AkRead: {
+    if (!(MainPart.Kind & TrWrite) &&
+        (OtherPart.Kind & (TrWrite | TrUncheckedWrite))) {
+      MainPart = OtherPart;
+    }
+    OtherPart = TraversalResult(Index, Loc, Access);
+    break;
+  }
+  case AkUncheckedRead:
+  default: {
+    break;
+  }
+  }
+}
+
+bool TraversalAggregation::isValid() const {
+  return MainPart.Kind != TrInvalid;
+}
+
+DeclarationName TraversalAggregation::getDeclName() const { return DeclName; }
+
+bool TraversalAggregation::hasTwoAccesses() const {
+  return OtherPart.Kind != TrInvalid;
+}
+
+bool TraversalAggregation::hasConflictingOperations() const {
+  return hasTwoAccesses() &&
+         (MainPart.Kind | OtherPart.Kind) & (TrWrite | TrUncheckedWrite);
+}
+
+bool TraversalAggregation::isReportedByWunsequenced() const {
+  return ((MainPart.Kind | OtherPart.Kind) & TrWrite) &&
+         (MainPart.Kind & (TrWrite | TrRead)) &&
+         (OtherPart.Kind & (TrWrite | TrRead));
+}
+
+bool TraversalAggregation::shouldBeReported() const {
+  return hasConflictingOperations() && !isReportedByWunsequenced();
+}
+
+TraversalResult::TraversalResult() : IndexCreated(-1), Kind(TrInvalid) {}
+
+TraversalResult::TraversalResult(int Index, SourceLocation Location,
+                                 AccessKind Access)
+    : IndexCreated(Index), Kind(akToTr(Access)) {
+  Loc[Access] = Location;
+}
+
+void TraversalResult::addNewAccess(SourceLocation NewLoc, AccessKind Access) {
+  Kind |= 1 << Access;
+  Loc[Access] = NewLoc;
+}
+
+ObjectTraversalAggregation::ObjectTraversalAggregation(
+    DeclarationName Name, SourceLocation Loc, FieldIndexArray FieldIndices,
+    AccessKind Access, int Index)
+    : DeclName(Name), AccessTree(TraversalAggregation()) {
+  addFieldRW(Loc, FieldIndices, Access, Index);
+}
+
+void ObjectTraversalAggregation::addFieldRW(SourceLocation Loc,
+                                            FieldIndexArray FieldIndices,
+                                            AccessKind Access, int Index) {
+  ObjectAccessTree *CurrentNode = &AccessTree;
+  for (uint16_t I = 0; I < FieldIndices.size(); I++) {
+    bool IsUnion = (FieldIndices[I] & FiUnion) != 0;
+    uint16_t FieldKey = FieldIndices[I] & ~FiUnion;
+
+    ObjectAccessTree *PrevNode = CurrentNode;
+    ObjectAccessTree::FieldMap::iterator It =
+        CurrentNode->Fields.find(FieldKey);
+
+    if (It == CurrentNode->Fields.end()) {
+      CurrentNode =
+          new ObjectAccessTree(IsUnion ? CurrentNode->UnionTemporalAccesses
+                                       : CurrentNode->OwnAccesses);
+      PrevNode->Fields[FieldKey] =
+          std::unique_ptr<ObjectAccessTree>(CurrentNode);
+    } else {
+      CurrentNode = It->second.get();
+    }
+
+    if (IsUnion) {
+      if (!PrevNode->IsUnion) {
+        PrevNode->IsUnion = IsUnion; // Setting the parent of the
+                                     // field instead of the field
+                                     // itself.
+        PrevNode->UnionTemporalAccesses = PrevNode->OwnAccesses;
+      }
+      PrevNode->addFieldToAllExcept(FieldKey, Loc, Access, Index);
+    }
+  }
+  CurrentNode->addFieldToAll(Loc, Access, Index);
+}
+
+bool ObjectTraversalAggregation::shouldBeReported() const {
+  return shouldBeReportedRec(&AccessTree);
+}
+
+bool ObjectTraversalAggregation::shouldBeReportedRec(
+    const ObjectAccessTree *Node) const {
+  if (Node->OwnAccesses.hasConflictingOperations()) {
+    return true;
+  }
+  ObjectAccessTree::FieldMap::const_iterator FieldIt = Node->Fields.begin();
+  for (; FieldIt != Node->Fields.end(); FieldIt++) {
+    if (shouldBeReportedRec(FieldIt->second.get())) {
+      return true;
+    }
+  }
+  return false;
+}
+
+DeclarationName ObjectTraversalAggregation::getDeclName() const {
+  return DeclName;
+}
+
+ObjectAccessTree::ObjectAccessTree(TraversalAggregation Own)
+    : OwnAccesses(Own), IsUnion(false) {}
+
+void ObjectAccessTree::addFieldToAll(SourceLocation Loc, AccessKind Access,
+                                     int Index) {
+  OwnAccesses.addGlobalRW(Loc, Access, Index);
+  UnionTemporalAccesses.addGlobalRW(Loc, Access, Index);
+  FieldMap::iterator FieldIt = Fields.begin();
+  for (; FieldIt != Fields.end(); FieldIt++) {
+    FieldIt->second->addFieldToAll(Loc, Access, Index);
+  }
+}
+
+void ObjectAccessTree::addFieldToAllExcept(uint16_t ExceptIndex,
+                                           SourceLocation Loc,
+                                           AccessKind Access, int Index) {
+
+  UnionTemporalAccesses.addGlobalRW(Loc, Access, Index);
+  FieldMap::const_iterator FieldIt = Fields.begin();
+  for (; FieldIt != Fields.end(); FieldIt++) {
+    if (FieldIt->first != ExceptIndex) {
+      FieldIt->second->addFieldToAll(Loc, Access, Index);
+    }
+  }
+}
+
+} // namespace clang::tidy::bugprone
