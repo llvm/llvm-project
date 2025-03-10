@@ -17,6 +17,7 @@
 
 /*  Constant                                                Value
     __cpp_lib_allocator_traits_is_always_equal              201411L [C++17]
+    __cpp_lib_constexpr_list                                202502L [C++26]
     __cpp_lib_containers_ranges                             202202L [C++23]
     __cpp_lib_default_template_type_for_algorithm_values    202403L [C++26]
     __cpp_lib_erase_if                                      202002L [C++20]
@@ -32,6 +33,10 @@
 
 # ifdef __cpp_lib_allocator_traits_is_always_equal
 #   error "__cpp_lib_allocator_traits_is_always_equal should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_constexpr_list
+#   error "__cpp_lib_constexpr_list should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_containers_ranges
@@ -62,6 +67,10 @@
 
 # ifdef __cpp_lib_allocator_traits_is_always_equal
 #   error "__cpp_lib_allocator_traits_is_always_equal should not be defined before c++17"
+# endif
+
+# ifdef __cpp_lib_constexpr_list
+#   error "__cpp_lib_constexpr_list should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_containers_ranges
@@ -95,6 +104,10 @@
 # endif
 # if __cpp_lib_allocator_traits_is_always_equal != 201411L
 #   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++17"
+# endif
+
+# ifdef __cpp_lib_constexpr_list
+#   error "__cpp_lib_constexpr_list should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_containers_ranges
@@ -134,6 +147,10 @@
 # endif
 # if __cpp_lib_allocator_traits_is_always_equal != 201411L
 #   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++20"
+# endif
+
+# ifdef __cpp_lib_constexpr_list
+#   error "__cpp_lib_constexpr_list should not be defined before c++26"
 # endif
 
 # ifdef __cpp_lib_containers_ranges
@@ -179,6 +196,10 @@
 # endif
 # if __cpp_lib_allocator_traits_is_always_equal != 201411L
 #   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++23"
+# endif
+
+# ifdef __cpp_lib_constexpr_list
+#   error "__cpp_lib_constexpr_list should not be defined before c++26"
 # endif
 
 # ifndef __cpp_lib_containers_ranges
@@ -227,6 +248,13 @@
 # endif
 # if __cpp_lib_allocator_traits_is_always_equal != 201411L
 #   error "__cpp_lib_allocator_traits_is_always_equal should have the value 201411L in c++26"
+# endif
+
+# ifndef __cpp_lib_constexpr_list
+#   error "__cpp_lib_constexpr_list should be defined in c++26"
+# endif
+# if __cpp_lib_constexpr_list != 202502L
+#   error "__cpp_lib_constexpr_list should have the value 202502L in c++26"
 # endif
 
 # ifndef __cpp_lib_containers_ranges
