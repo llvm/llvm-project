@@ -1,19 +1,20 @@
-import requests
 import collections
-import time
-import os
-from dataclasses import dataclass
-import sys
-import logging
-
+import datetime
 import github
-from github import Github
+import logging
+import os
+import requests
+import sys
+import time
+
+from dataclasses import dataclass
 from github import Auth
+from github import Github
 
 GRAFANA_URL = (
     "https://influx-prod-13-prod-us-east-0.grafana.net/api/v1/push/influx/write"
 )
-SCRAPE_INTERVAL_SECONDS = 60
+SCRAPE_INTERVAL_SECONDS = 5 * 60
 
 # Lists the Github workflows we want to track. Maps the Github job name to
 # the metric name prefix in grafana.
@@ -31,12 +32,26 @@ GITHUB_JOB_TO_TRACK = {
     }
 }
 
-# The number of workflows to pull when sampling queue size & running count.
-# Filtering at the query level doesn't work, and thus sampling workflow counts
-# cannot be done in a clean way.
-# If we miss running/queued workflows, we might want to bump this value.
-GITHUB_WORKFLOWS_COUNT_FOR_SAMPLING = 200
+# The number of workflows to pull when sampling Github workflows.
+# - Github API filtering is broken: we cannot apply any filtering:
+# - See https://github.com/orgs/community/discussions/86766
+# - A workflow can complete before another workflow, even when starting later.
+# - We don't want to sample the same workflow twice.
+#
+# This means we essentially have a list of workflows sorted by creation date,
+# and that's all we can deduce from it. So for each iteration, we'll blindly
+# process the last N workflows.
+GITHUB_WORKFLOWS_MAX_PROCESS_COUNT = 1000
+# Second reason for the cut: reaching a workflow older than X.
+# This means we will miss long-tails (exceptional jobs running for more than
+# X hours), but that's also the case with the count cutoff above.
+# Only solution to avoid missing any workflow would be to process the complete
+# list, which is not possible.
+GITHUB_WORKFLOW_MAX_CREATED_AGE_HOURS = 8
 
+# Grafana will fail to insert any metric older than ~2 hours (value determined
+# by trial and error).
+GRAFANA_METRIC_MAX_AGE_MN = 120
 
 @dataclass
 class JobMetrics:
@@ -44,10 +59,9 @@ class JobMetrics:
     queue_time: int
     run_time: int
     status: int
-    created_at_ns: int
+    completed_at_ns: int
     workflow_id: int
     workflow_name: str
-
 
 @dataclass
 class GaugeMetric:
@@ -55,65 +69,10 @@ class GaugeMetric:
     value: int
     time_ns: int
 
-def get_sampled_workflow_metrics(github_repo: github.Repository):
-    """Gets global statistics about the Github workflow queue
 
-    Args:
-      github_repo: A github repo object to use to query the relevant information.
-
-    Returns:
-      Returns a list of GaugeMetric objects, containing the relevant metrics about
-      the workflow
-    """
-    queued_count = collections.Counter()
-    running_count = collections.Counter()
-
-    # Do not apply any filters to this query.
-    # See https://github.com/orgs/community/discussions/86766
-    # Applying filters like `status=completed` will break pagination, and
-    # return a non-sorted and incomplete list of workflows.
-    i = 0
-    for task in iter(github_repo.get_workflow_runs()):
-        if i > GITHUB_WORKFLOWS_COUNT_FOR_SAMPLING:
-            break
-        i += 1
-
-        if task.name not in GITHUB_WORKFLOW_TO_TRACK:
-            continue
-
-        prefix_name = GITHUB_WORKFLOW_TO_TRACK[task.name]
-        for job in task.jobs():
-            if job.name not in GITHUB_JOB_TO_TRACK[prefix_name]:
-                continue
-            suffix_name = GITHUB_JOB_TO_TRACK[prefix_name][job.name]
-            metric_name = f"{prefix_name}_{suffix_name}"
-
-            # Other states are available (pending, waiting, etc), but the meaning
-            # is not documented (See #70540).
-            # "queued" seems to be the info we want.
-            if job.status == "queued":
-                queued_count[metric_name] += 1
-            elif job.status == "in_progress":
-                running_count[metric_name] += 1
-
-    workflow_metrics = []
-    for name, value in queued_count.items():
-        workflow_metrics.append(
-            GaugeMetric(f"workflow_queue_size_{name}", value, time.time_ns())
-        )
-    for name, value in running_count.items():
-        workflow_metrics.append(
-            GaugeMetric(f"running_workflow_count_{name}", value, time.time_ns())
-        )
-
-    # Always send a hearbeat metric so we can monitor is this container is still able to log to Grafana.
-    workflow_metrics.append(
-        GaugeMetric("metrics_container_heartbeat", 1, time.time_ns())
-    )
-    return workflow_metrics
-
-
-def get_per_workflow_metrics(github_repo: github.Repository, last_seen_workflow: str):
+def github_get_metrics(
+    github_repo: github.Repository, last_workflows_seen_as_completed: set[int]
+):
     """Gets the metrics for specified Github workflows.
 
     This function takes in a list of workflows to track, and optionally the
@@ -132,47 +91,65 @@ def get_per_workflow_metrics(github_repo: github.Repository, last_seen_workflow:
         - the ID of the most recent processed workflow run.
     """
     workflow_metrics = []
-    most_recent_workflow_processed = None
+    queued_count = collections.Counter()
+    running_count = collections.Counter()
+
+    # The list of workflows this iteration will process.
+    # MaxSize = GITHUB_WORKFLOWS_MAX_PROCESS_COUNT
+    workflow_seen_as_completed = set()
+
+    # Since we process a fixed count of workflows, we want to know when
+    # the depth is too small and if we miss workflows.
+    # E.g.: is there was more than N workflows int last 2 hours.
+    # To monitor this, we'll log the age of the oldest workflow processed,
+    # and setup alterting in Grafana to help us adjust this depth.
+    oldest_seen_workflow_age_mn = None
 
     # Do not apply any filters to this query.
     # See https://github.com/orgs/community/discussions/86766
     # Applying filters like `status=completed` will break pagination, and
     # return a non-sorted and incomplete list of workflows.
+    i = 0
     for task in iter(github_repo.get_workflow_runs()):
-        # Ignoring non-completed workflows.
-        if task.status != "completed":
-            continue
-
-        # Record the most recent workflow we processed so this script
-        # only processes it once.
-        if most_recent_workflow_processed is None:
-            most_recent_workflow_processed = task.id
-
-        # This condition only happens when this script starts:
-        # this is used to determine a start point. Don't return any
-        # metrics, just the most recent workflow ID.
-        if last_seen_workflow is None:
+        # Max depth reached, stopping.
+        if i >= GITHUB_WORKFLOWS_MAX_PROCESS_COUNT:
             break
+        i += 1
 
-        # This workflow has already been processed. We can stop now.
-        if last_seen_workflow == task.id:
+        workflow_age_mn = (
+            datetime.datetime.now(datetime.timezone.utc) - task.created_at
+        ).total_seconds() / 60
+        oldest_seen_workflow_age_mn = workflow_age_mn
+        # If we reach a workflow older than X, stop.
+        if workflow_age_mn > GITHUB_WORKFLOW_MAX_CREATED_AGE_HOURS * 60:
             break
 
         # This workflow is not interesting to us.
         if task.name not in GITHUB_WORKFLOW_TO_TRACK:
             continue
 
-        name_prefix = GITHUB_WORKFLOW_TO_TRACK[task.name]
+        if task.status == "completed":
+            workflow_seen_as_completed.add(task.id)
 
+        # This workflow has already been seen completed in the previous run.
+        if task.id in last_workflows_seen_as_completed:
+            continue
+
+        name_prefix = GITHUB_WORKFLOW_TO_TRACK[task.name]
         for job in task.jobs():
             # This job is not interesting to us.
             if job.name not in GITHUB_JOB_TO_TRACK[name_prefix]:
                 continue
 
             name_suffix = GITHUB_JOB_TO_TRACK[name_prefix][job.name]
-            created_at = job.created_at
-            started_at = job.started_at
-            completed_at = job.completed_at
+            metric_name = name_prefix + "_" + name_suffix
+
+            if task.status != "completed":
+                if job.status == "queued":
+                    queued_count[metric_name] += 1
+                elif job.status == "in_progress":
+                    running_count[metric_name] += 1
+                continue
 
             job_result = int(job.conclusion == "success")
             if job_result:
@@ -188,31 +165,63 @@ def get_per_workflow_metrics(github_repo: github.Repository, last_seen_workflow:
                         job_result = 0
                         break
 
+            created_at = job.created_at
+            started_at = job.started_at
+            completed_at = job.completed_at
             queue_time = started_at - created_at
             run_time = completed_at - started_at
-
             if run_time.seconds == 0:
                 continue
 
+            # Grafana will refuse to ingest metrics older than ~2 hours, so we
+            # should avoid sending historical data.
+            metric_age_mn = (
+                datetime.datetime.now(datetime.timezone.utc) - completed_at
+            ).total_seconds() / 60
+            if metric_age_mn > GRAFANA_METRIC_MAX_AGE_MN:
+                continue
+
+            logging.info(f"Adding a job metric for job {job.id} in workflow {task.id}")
             # The timestamp associated with the event is expected by Grafana to be
             # in nanoseconds.
             completed_at_ns = int(completed_at.timestamp()) * 10**9
-
-            logging.info(f"Adding a job metric for job {job.id} in workflow {task.id}")
-
             workflow_metrics.append(
                 JobMetrics(
-                    name_prefix + "_" + name_suffix,
+                    metric_name,
                     queue_time.seconds,
                     run_time.seconds,
                     job_result,
                     completed_at_ns,
-                    workflow_run.id,
-                    workflow_run.name,
+                    task.id,
+                    task.name,
                 )
             )
 
-    return workflow_metrics, most_recent_workflow_processed
+    for name, value in queued_count.items():
+        workflow_metrics.append(
+            GaugeMetric(f"workflow_queue_size_{name}", value, time.time_ns())
+        )
+    for name, value in running_count.items():
+        workflow_metrics.append(
+            GaugeMetric(f"running_workflow_count_{name}", value, time.time_ns())
+        )
+
+    # Always send a hearbeat metric so we can monitor is this container is still able to log to Grafana.
+    workflow_metrics.append(
+        GaugeMetric("metrics_container_heartbeat", 1, time.time_ns())
+    )
+
+    # Log the oldest workflow we saw, allowing us to monitor if the processing
+    # depth is correctly set-up.
+    if oldest_seen_workflow_age_mn is not None:
+        workflow_metrics.append(
+            GaugeMetric(
+                "github_oldest_processed_workflow_mn",
+                oldest_seen_workflow_age_mn,
+                time.time_ns(),
+            )
+        )
+    return workflow_metrics, workflow_seen_as_completed
 
 
 def upload_metrics(workflow_metrics, metrics_userid, api_key):
@@ -241,7 +250,7 @@ def upload_metrics(workflow_metrics, metrics_userid, api_key):
         elif isinstance(workflow_metric, JobMetrics):
             name = workflow_metric.job_name.lower().replace(" ", "_")
             metrics_batch.append(
-                f"{name} queue_time={workflow_metric.queue_time},run_time={workflow_metric.run_time},status={workflow_metric.status} {workflow_metric.created_at_ns}"
+                f"{name} queue_time={workflow_metric.queue_time},run_time={workflow_metric.run_time},status={workflow_metric.status} {workflow_metric.completed_at_ns}"
             )
         else:
             raise ValueError(
@@ -267,7 +276,9 @@ def main():
     grafana_metrics_userid = os.environ["GRAFANA_METRICS_USERID"]
 
     # The last workflow this script processed.
-    github_last_seen_workflow = None
+    # Because the Github queries are broken, we'll simply log a 'processed'
+    # bit for the last COUNT_TO_PROCESS workflows.
+    gh_last_workflows_seen_as_completed = set()
 
     # Enter the main loop. Every five minutes we wake up and dump metrics for
     # the relevant jobs.
@@ -275,12 +286,9 @@ def main():
         github_object = Github(auth=github_auth)
         github_repo = github_object.get_repo("llvm/llvm-project")
 
-        github_metrics, github_last_seen_workflow = get_per_workflow_metrics(
-            github_repo, github_last_seen_workflow
+        metrics, gh_last_workflows_seen_as_completed = github_get_metrics(
+            github_repo, gh_last_workflows_seen_as_completed
         )
-        sampled_metrics = get_sampled_workflow_metrics(github_repo)
-        metrics = github_metrics + sampled_metrics
-
         upload_metrics(metrics, grafana_metrics_userid, grafana_api_key)
         logging.info(f"Uploaded {len(metrics)} metrics")
 
