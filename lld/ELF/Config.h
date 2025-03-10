@@ -137,24 +137,7 @@ enum LtoKind : uint8_t {UnifiedThin, UnifiedRegular, Default};
 enum class GcsPolicy { Implicit, Never, Always };
 
 // For -z gcs-report= and -zgcs-report-dynamic
-struct GcsReportPolicy {
-  enum Options { None, Warning, Error, Unknown } value;
-  GcsReportPolicy(GcsReportPolicy::Options valueInput) : value(valueInput) {};
-
-  StringRef toString() {
-    StringRef ret;
-    if (value == Warning)
-      ret = "warning";
-    else if (value == Error)
-      ret = "error";
-    else
-      ret = "none";
-
-    return ret;
-  }
-
-  GcsReportPolicy::Options getValue() { return value; }
-};
+enum class GcsReportPolicy { None, Warning, Error, Unknown };
 
 struct SymbolVersion {
   llvm::StringRef name;
@@ -766,6 +749,18 @@ ELFSyncStream Fatal(Ctx &ctx);
 uint64_t errCount(Ctx &ctx);
 
 ELFSyncStream InternalErr(Ctx &ctx, const uint8_t *buf);
+
+inline StringRef gcsReportPolicytoString(GcsReportPolicy value) {
+  StringRef ret;
+  if (value == GcsReportPolicy::Warning)
+    ret = "warning";
+  else if (value == GcsReportPolicy::Error)
+    ret = "error";
+  else
+    ret = "none";
+
+  return ret;
+}
 
 #define CHECK2(E, S) lld::check2((E), [&] { return toStr(ctx, S); })
 

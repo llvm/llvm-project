@@ -1448,13 +1448,13 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
 template <typename ELFT>
 void SharedFile::parseGnuAndFeatures(const uint8_t *base,
                                      const typename ELFT::PhdrRange headers) {
-  if (numElfPhdrs == 0)
+  if (headers.size() == 0)
     return;
   uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
                                 ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
                                 : GNU_PROPERTY_X86_FEATURE_1_AND;
 
-  for (unsigned i = 0; i < numElfPhdrs; i++) {
+  for (unsigned i = 0; i < headers.size(); i++) {
     if (headers[i].p_type != PT_GNU_PROPERTY)
       continue;
     const typename ELFT::Note note(
@@ -1510,10 +1510,7 @@ template <class ELFT> void SharedFile::parse() {
   ArrayRef<Elf_Dyn> dynamicTags;
   const ELFFile<ELFT> obj = this->getObj<ELFT>();
   ArrayRef<Elf_Shdr> sections = getELFShdrs<ELFT>();
-
   ArrayRef<Elf_Phdr> pHeaders = CHECK2(obj.program_headers(), this);
-  elfPhdrs = pHeaders.data();
-  numElfPhdrs = pHeaders.size();
 
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
@@ -1584,7 +1581,7 @@ template <class ELFT> void SharedFile::parse() {
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
   std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
-  parseGnuAndFeatures<ELFT>(obj.base(), getELFPhdrs<ELFT>());
+  parseGnuAndFeatures<ELFT>(obj.base(), pHeaders);
 
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use
