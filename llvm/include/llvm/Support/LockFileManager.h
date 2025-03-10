@@ -16,14 +16,13 @@
 namespace llvm {
 class StringRef;
 
-/// Class that manages the creation of a lock file to aid
-/// implicit coordination between different processes.
+/// Class that manages the creation of a lock file to aid implicit coordination
+/// between different processes.
 ///
-/// The implicit coordination works by creating a ".lock" file alongside
-/// the file that we're coordinating for, using the atomicity of the file
-/// system to ensure that only a single process can create that ".lock" file.
-/// When the lock file is removed, the owning process has finished the
-/// operation.
+/// The implicit coordination works by creating a ".lock" file, using the
+/// atomicity of the file system to ensure that only a single process can create
+/// that ".lock" file. When the lock file is removed, the owning process has
+/// finished the operation.
 class LockFileManager {
 public:
   /// Describes the state of a lock file.
