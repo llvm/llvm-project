@@ -2,6 +2,10 @@ module BoundsUnsafe {
   header "BoundsUnsafe.h"
 }
 
+module BoundsUnsafeCxx {
+  header "BoundsUnsafeCxx.hpp"
+}
+
 module BoundsUnsafeErrors {
   header "BoundsUnsafeErrors.h"
 }

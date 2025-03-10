@@ -84,9 +84,10 @@ Parser::Parser(Preprocessor &pp, Sema &actions, bool skipFunctionBodies)
   /* TO_UPSTREAM(BoundsSafety) ON */
   Actions.ParseBoundsAttributeArgFromStringCallback =
       [this](StringRef ExprStr, StringRef Context, Decl *Parent,
-             SourceLocation IncludeLoc) {
+             SourceLocation IncludeLoc,
+             Sema::IncompleteBoundsAttributeInfo Payload) {
         return this->ParseBoundsAttributeArgFromString(ExprStr, Context, Parent,
-                                                       IncludeLoc);
+                                                       IncludeLoc, Payload);
       };
   /* TO_UPSTREAM(BoundsSafety) OFF */
 }

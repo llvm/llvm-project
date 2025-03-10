@@ -1530,8 +1530,19 @@ public:
       ParseTypeFromStringCallback;
 
   /* TO_UPSTREAM(BoundsSafety) ON */
+  // Info for completing the processing of the attribute after parsing its
+  // argument
+  struct IncompleteBoundsAttributeInfo {
+    AttributeCommonInfo::Kind Kind;
+    unsigned Level;
+    Decl *D;
+  };
+  /// Complete the suspended bounds attribute after argument has been parsed
+  void CompleteBoundsAttribute(Expr *ParsedExpr,
+                               IncompleteBoundsAttributeInfo Info);
   /// Callback to the parser to parse a type expressed as a string.
-  std::function<ExprResult(StringRef, StringRef, Decl *, SourceLocation)>
+  std::function<void(StringRef, StringRef, Decl *, SourceLocation,
+                     IncompleteBoundsAttributeInfo Info)>
       ParseBoundsAttributeArgFromStringCallback;
   /* TO_UPSTREAM(BoundsSafety) OFF */
 

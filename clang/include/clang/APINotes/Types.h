@@ -623,6 +623,11 @@ public:
   /// Ownership convention for return value
   std::string SwiftReturnOwnership;
 
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  /// Bounds annotations for the return value
+  std::optional<BoundsSafetyInfo> ReturnBoundsSafety;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+
   /// The function parameters.
   std::vector<ParamInfo> Params;
 

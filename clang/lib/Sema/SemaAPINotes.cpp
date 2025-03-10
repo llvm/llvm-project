@@ -409,6 +409,34 @@ static void ProcessAPINotes(Sema &S, Decl *D,
 }
 
 /* TO_UPSTREAM(BoundsSafety) ON */
+void Sema::CompleteBoundsAttribute(Expr *ParsedExpr,
+                                   IncompleteBoundsAttributeInfo Info) {
+  assert(ParsedExpr);
+  std::string AttrName;
+  switch (Info.Kind) {
+  case AttributeCommonInfo::AT_CountedBy:
+    AttrName = "__counted_by";
+    break;
+  case AttributeCommonInfo::AT_CountedByOrNull:
+    AttrName = "__counted_by_or_null";
+    break;
+  case AttributeCommonInfo::AT_SizedBy:
+    AttrName = "__sized_by";
+    break;
+  case AttributeCommonInfo::AT_SizedByOrNull:
+    AttrName = "__sized_by_or_null";
+    break;
+  case AttributeCommonInfo::AT_PtrEndedBy:
+    AttrName = "__ended_by";
+    break;
+  default:
+    llvm_unreachable("invalid bounds attribute kind in API notes");
+  }
+  applyPtrCountedByEndedByAttr(Info.D, Info.Level, Info.Kind, ParsedExpr,
+                               Info.D->getLocation(), Info.D->getSourceRange(),
+                               AttrName,
+                               /* originates in API notes */ true);
+}
 static void applyBoundsSafety(Sema &S, ValueDecl *D,
                               const api_notes::BoundsSafetyInfo &Info,
                               VersionedInfoMetadata Metadata) {
@@ -419,41 +447,29 @@ static void applyBoundsSafety(Sema &S, ValueDecl *D,
     if (auto ParmDecl = dyn_cast<ParmVarDecl>(ScopeDecl)) {
       ScopeDecl = dyn_cast<FunctionDecl>(ParmDecl->getDeclContext());
     }
-    auto ParsedExpr = S.ParseBoundsAttributeArgFromStringCallback(
-        Info.ExternalBounds, "<API Notes>", ScopeDecl, D->getLocation());
-    if (ParsedExpr.isInvalid())
-      return;
-
-    std::string AttrName;
-    AttributeCommonInfo::Kind Kind;
     assert(*Info.getKind() >= BoundsSafetyKind::CountedBy);
     assert(*Info.getKind() <= BoundsSafetyKind::EndedBy);
+    AttributeCommonInfo::Kind Kind;
     switch (*Info.getKind()) {
     case BoundsSafetyKind::CountedBy:
-      AttrName = "__counted_by";
       Kind = AttributeCommonInfo::AT_CountedBy;
       break;
     case BoundsSafetyKind::CountedByOrNull:
-      AttrName = "__counted_by_or_null";
       Kind = AttributeCommonInfo::AT_CountedByOrNull;
       break;
     case BoundsSafetyKind::SizedBy:
-      AttrName = "__sized_by";
       Kind = AttributeCommonInfo::AT_SizedBy;
       break;
     case BoundsSafetyKind::SizedByOrNull:
-      AttrName = "__sized_by_or_null";
       Kind = AttributeCommonInfo::AT_SizedByOrNull;
       break;
     case BoundsSafetyKind::EndedBy:
-      AttrName = "__ended_by";
       Kind = AttributeCommonInfo::AT_PtrEndedBy;
       break;
     }
-
-    S.applyPtrCountedByEndedByAttr(
-        D, *Info.getLevel(), Kind, ParsedExpr.get(), D->getLocation(),
-        D->getSourceRange(), AttrName, /* originates in API notes */ true);
+    S.ParseBoundsAttributeArgFromStringCallback(
+        Info.ExternalBounds, "<API Notes>", ScopeDecl, D->getLocation(),
+        {Kind, *Info.getLevel(), D});
   }
 }
 /* TO_UPSTREAM(BoundsSafety) OFF */
@@ -595,6 +611,14 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
       }
     }
   }
+
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  // FIXME(hnrklssn): apply to ObjC methods when support has landed
+  if (FD && Info.ReturnBoundsSafety.has_value())
+    // applyPtrCountedByEndedByAttr rebuilds FunctionType,
+    // no need to set AnyTypeChanged
+    applyBoundsSafety(S, FD, *Info.ReturnBoundsSafety, Metadata);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 
   // If the result type or any of the parameter types changed for a function
   // declaration, we have to rebuild the type.

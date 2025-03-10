@@ -1,8 +1,12 @@
 // RUN: rm -rf %t && mkdir -p %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fsyntax-only -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks -fexperimental-bounds-safety-attributes %s -ast-dump -ast-dump-filter asdf | FileCheck %s
-// RUN: %clang_cc1 -x c++ -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fsyntax-only -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks -fexperimental-bounds-safety-attributes %s -ast-dump -ast-dump-filter asdf | FileCheck %s
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fsyntax-only -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks -fexperimental-bounds-safety-attributes %s -ast-dump -ast-dump-filter asdf | FileCheck %s --check-prefixes=CHECK,CHECK-MEMBER
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModulesCache -fsyntax-only -fapinotes-modules -I %S/Inputs/Headers -F %S/Inputs/Frameworks -fexperimental-bounds-safety-attributes %s -ast-dump -ast-dump-filter asdf -DFREE_FUNCTIONS | FileCheck %s
 
+#ifdef FREE_FUNCTIONS
 #include "BoundsUnsafe.h"
+#else
+#include "BoundsUnsafeCxx.hpp"
+#endif
 
 // CHECK: asdf_counted 'void (int * __counted_by(len), int)'
 // CHECK: buf 'int * __counted_by(len)':'int *'
@@ -34,7 +38,9 @@
 
 // CHECK: asdf_counted_noescape 'void (int * __counted_by(len), int)'
 // CHECK: buf 'int * __counted_by(len)':'int *'
-// CHECK-NEXT: NoEscapeAttr
+// CHECK-MEMBER-NEXT: | |-SwiftVersionedAdditionAttr {{.*}} Implicit 0 IsReplacedByActive
+// CHECK-MEMBER-NEXT: | | `-NoEscapeAttr
+// CHECK-NEXT: | `-NoEscapeAttr
 
 // CHECK: asdf_counted_default_level 'void (int * __counted_by(len), int)'
 // CHECK: buf 'int * __counted_by(len)':'int *'
@@ -91,7 +97,7 @@
 
 // CHECK: asdf_return_counted_default_level 'int * __counted_by(len)(int)'
 
-// CHECK:e asdf_return_counted_redundant 'int * __counted_by(len)(int)'
+// CHECK: asdf_return_counted_redundant 'int * __counted_by(len)(int)'
 
 // CHECK: asdf_return_ended_chained 'int * __ended_by(mid)(int * __ended_by(end), int * /* __started_by(mid) */ )'
 // CHECK: 'int * __ended_by(end)':'int *'
@@ -101,3 +107,4 @@
 // CHECK: end 'int *'
 
 // CHECK: asdf_return_nterm 'char * __terminated_by(0)()'
+

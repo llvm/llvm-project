@@ -319,6 +319,9 @@ struct Method {
   bool Required = false;
   StringRef ResultType;
   StringRef SwiftReturnOwnership;
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  std::optional<BoundsSafetyNotes> ReturnBoundsSafety;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 };
 
 typedef std::vector<Method> MethodsSeq;
@@ -355,6 +358,9 @@ template <> struct MappingTraits<Method> {
     IO.mapOptional("ResultType", M.ResultType, StringRef(""));
     IO.mapOptional("SwiftReturnOwnership", M.SwiftReturnOwnership,
                    StringRef(""));
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    IO.mapOptional("BoundsSafety", M.ReturnBoundsSafety);
+    /* TO_UPSTREAM(BoundsSafety) OFF */
   }
 };
 } // namespace yaml
@@ -451,6 +457,9 @@ struct Function {
   StringRef Type;
   StringRef ResultType;
   StringRef SwiftReturnOwnership;
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  std::optional<BoundsSafetyNotes> ReturnBoundsSafety;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 };
 
 typedef std::vector<Function> FunctionsSeq;
@@ -475,6 +484,9 @@ template <> struct MappingTraits<Function> {
     IO.mapOptional("ResultType", F.ResultType, StringRef(""));
     IO.mapOptional("SwiftReturnOwnership", F.SwiftReturnOwnership,
                    StringRef(""));
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    IO.mapOptional("BoundsSafety", F.ReturnBoundsSafety);
+    /* TO_UPSTREAM(BoundsSafety) OFF */
   }
 };
 } // namespace yaml
@@ -907,14 +919,14 @@ public:
       PI.setLifetimebound(P.Lifetimebound);
       PI.setType(std::string(P.Type));
       PI.setRetainCountConvention(P.RetainCountConvention);
-      BoundsSafetyInfo BSI;
       /* TO_UPSTREAM(BoundsSafety) ON */
       if (P.BoundsSafety) {
+        BoundsSafetyInfo BSI;
         BSI.setKindAudited(P.BoundsSafety->Kind);
         BSI.setLevelAudited(P.BoundsSafety->Level);
         BSI.ExternalBounds = P.BoundsSafety->BoundsExpr.str();
+        PI.BoundsSafety = BSI;
       }
-      PI.BoundsSafety = BSI;
       /* TO_UPSTREAM(BoundsSafety) OFF */
       if (static_cast<int>(OutInfo.Params.size()) <= P.Position)
         OutInfo.Params.resize(P.Position + 1);
@@ -1114,6 +1126,15 @@ public:
     convertAvailability(Function.Availability, FI, Function.Name);
     FI.setSwiftPrivate(Function.SwiftPrivate);
     FI.SwiftName = std::string(Function.SwiftName);
+    /* TO_UPSTREAM(BoundsSafety) ON */
+    if (Function.ReturnBoundsSafety) {
+      BoundsSafetyInfo BSI;
+      BSI.setKindAudited(Function.ReturnBoundsSafety->Kind);
+      BSI.setLevelAudited(Function.ReturnBoundsSafety->Level);
+      BSI.ExternalBounds = Function.ReturnBoundsSafety->BoundsExpr.str();
+      FI.ReturnBoundsSafety = BSI;
+    }
+    /* TO_UPSTREAM(BoundsSafety) OFF */
     std::optional<ParamInfo> This;
     convertParams(Function.Params, FI, This);
     if constexpr (std::is_same_v<FuncOrMethodInfo, CXXMethodInfo>)

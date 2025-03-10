@@ -384,6 +384,14 @@ void ReadFunctionInfo(const uint8_t *&Data, FunctionInfo &Info) {
   Payload >>= 3;
   Info.NullabilityAudited = Payload & 0x1;
   Payload >>= 1;
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (Payload & 0x01) {
+    BoundsSafetyInfo BSI;
+    ReadBoundsSafetyInfo(Data, BSI);
+    Info.ReturnBoundsSafety = BSI;
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
+  Payload >>= 1;
   assert(Payload == 0 && "Bad API notes");
 
   Info.NumAdjustedNullable =

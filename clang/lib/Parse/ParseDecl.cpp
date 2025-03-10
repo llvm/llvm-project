@@ -7512,7 +7512,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   StartLoc = LParenLoc;
 
   /* TO_UPSTREAM(BoundsSafety) ON */
-  LateParsedAttrList LateParamAttrs(/*PSoon=*/false,
+  LateParsedAttrList LateParamAttrs(/*PSoon=*/true,
                                     /*LateAttrParseExperimentalExtOnly=*/true);
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
@@ -7637,9 +7637,7 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
   }
 
   /* TO_UPSTREAM(BoundsSafety) ON*/
-  for (auto LateParamAttr : LateParamAttrs) {
-    ParseLexedCAttribute(*LateParamAttr, true);
-  }
+  ParseLexedCAttributeList(LateParamAttrs, true, nullptr);
   /* TO_UPSTREAM(BoundsSafety) OFF*/
 
   // Collect non-parameter declarations from the prototype if this is a function
@@ -8549,10 +8547,9 @@ TypeResult Parser::ParseTypeFromString(StringRef TypeStr, StringRef Context,
 }
 
 /* TO_UPSTREAM(BoundsSafety) ON */
-ExprResult
-Parser::ParseBoundsAttributeArgFromString(StringRef ExprStr, StringRef Context,
-                                          Decl *ParentDecl,
-                                          SourceLocation IncludeLoc) {
+void Parser::ParseBoundsAttributeArgFromString(
+    StringRef ExprStr, StringRef Context, Decl *ParentDecl,
+    SourceLocation IncludeLoc, Sema::IncompleteBoundsAttributeInfo Payload) {
   // Consume (unexpanded) tokens up to the end-of-directive.
   SmallVector<Token, 4> Tokens;
   {
@@ -8626,9 +8623,11 @@ Parser::ParseBoundsAttributeArgFromString(StringRef ExprStr, StringRef Context,
   // Consume the end token.
   if (Tok.is(tok::eof) && Tok.getEofData() == ExprStr.data())
     ConsumeAnyToken();
+  // Need to create the type before leaving function context
+  if (Result.isUsable())
+    Actions.CompleteBoundsAttribute(Result.get(), Payload);
   if (EnterScope)
     Actions.ActOnExitFunctionContext();
-  return Result;
 }
 /* TO_UPSTREAM(BoundsSafety) OFF */
 

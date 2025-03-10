@@ -61,6 +61,7 @@ LLVM_DUMP_METHOD void ObjCPropertyInfo::dump(llvm::raw_ostream &OS) const {
   OS << '\n';
 }
 
+/* TO_UPSTREAM(BoundsSafety) ON */
 LLVM_DUMP_METHOD void BoundsSafetyInfo::dump(llvm::raw_ostream &OS) const {
   if (KindAudited) {
     assert((BoundsSafetyKind)Kind >= BoundsSafetyKind::CountedBy);
@@ -88,6 +89,7 @@ LLVM_DUMP_METHOD void BoundsSafetyInfo::dump(llvm::raw_ostream &OS) const {
   OS << "ExternalBounds: "
      << (ExternalBounds.empty() ? "<missing>" : ExternalBounds) << '\n';
 }
+/* TO_UPSTREAM(BoundsSafety) OFF */
 
 LLVM_DUMP_METHOD void ParamInfo::dump(llvm::raw_ostream &OS) const {
   static_cast<const VariableInfo &>(*this).dump(OS);
@@ -97,8 +99,10 @@ LLVM_DUMP_METHOD void ParamInfo::dump(llvm::raw_ostream &OS) const {
     OS << (Lifetimebound ? "[Lifetimebound] " : "");
   OS << "RawRetainCountConvention: " << RawRetainCountConvention << ' ';
   OS << '\n';
+  /* TO_UPSTREAM(BoundsSafety) ON */
   if (BoundsSafety)
     BoundsSafety->dump(OS);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
 }
 
 LLVM_DUMP_METHOD void FunctionInfo::dump(llvm::raw_ostream &OS) const {
@@ -109,6 +113,12 @@ LLVM_DUMP_METHOD void FunctionInfo::dump(llvm::raw_ostream &OS) const {
     OS << "Result Type: " << ResultType << ' ';
   if (!SwiftReturnOwnership.empty())
     OS << "SwiftReturnOwnership: " << SwiftReturnOwnership << ' ';
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (ReturnBoundsSafety) {
+    OS << "Result bounds: ";
+    ReturnBoundsSafety->dump(OS);
+  }
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   if (!Params.empty())
     OS << '\n';
   for (auto &PI : Params)

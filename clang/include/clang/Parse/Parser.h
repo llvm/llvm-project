@@ -1478,6 +1478,11 @@ private:
   /// for each LateParsedAttribute. We consume the saved tokens and
   /// create an attribute with the arguments filled in. We add this
   /// to the Attribute list for the decl.
+  // TO_UPSTREAM(BoundsSafety) ON
+  /// Note: it's important the the LateParsedAttribute is removed after parsing
+  /// to prevent being reparsed later in the wrong context. This is handled
+  /// automatically by Parser::ParseLexedCAttributeList.
+  // TO_UPSTREAM(BoundsSafety) OFF
   void ParseLexedCAttribute(LateParsedAttribute &LA, bool EnterScope,
                             ParsedAttributes *OutAttrs = nullptr);
 
@@ -2856,10 +2861,13 @@ private:
   /// \param ParentDecl If a function or method is provided, the parameters are
   ///   added to the current parsing context.
   /// \param IncludeLoc The location at which this parse was triggered.
-  ExprResult ParseBoundsAttributeArgFromString(StringRef ExprStr,
+  /// \param Payload Info to be passed along to the completion handler before
+  /// leaving the current context
+  void ParseBoundsAttributeArgFromString(StringRef ExprStr,
     StringRef Context,
     Decl *ParentDecl,
-    SourceLocation IncludeLoc);
+    SourceLocation IncludeLoc,
+    Sema::IncompleteBoundsAttributeInfo Payload);
   // TO_UPSTREAM(BoundsSafety) OFF
 
   ///@}

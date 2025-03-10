@@ -1,0 +1,213 @@
+---
+Name: BoundsUnsafeCxx
+Tags:
+  - Name: Foo
+    Methods:
+      - Name:              asdf_counted
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: counted_by
+                Level: 0
+                BoundedBy: len
+      - Name:              asdf_sized
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: sized_by
+                Level: 0
+                BoundedBy: size
+      - Name:              asdf_counted_n
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: counted_by_or_null
+                Level: 0
+                BoundedBy: len
+      - Name:              asdf_sized_n
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: sized_by_or_null
+                Level: 0
+                BoundedBy: size
+      - Name:              asdf_ended
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: ended_by
+                Level: 0
+                BoundedBy: end
+      - Name:              asdf_sized_mul
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: sized_by
+                Level: 0
+                BoundedBy: "size * count"
+      - Name:              asdf_counted_out
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: counted_by
+                Level: 1
+                BoundedBy: "*len"
+      - Name:              asdf_counted_const
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: counted_by
+                Level: 0
+                BoundedBy: 7
+      - Name:             asdf_counted_nullable
+        Parameters:
+          - Position:      1
+            BoundsSafety:
+                Kind: counted_by
+                Level: 0
+                BoundedBy: len
+      - Name:              asdf_counted_noescape
+        Parameters:
+          - Position:      0
+            NoEscape:      true
+            BoundsSafety:
+                Kind: counted_by
+                Level: 0
+                BoundedBy: len
+      - Name:              asdf_counted_default_level
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: counted_by
+                BoundedBy: len
+      - Name:              asdf_counted_redundant
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: counted_by
+                BoundedBy: len
+      - Name:              asdf_ended_chained
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: ended_by
+                Level: 0
+                BoundedBy: mid
+          - Position:      1
+            BoundsSafety:
+                Kind: ended_by
+                Level: 0
+                BoundedBy: end
+      - Name:              asdf_ended_chained_reverse
+        Parameters:
+          - Position:      1
+            BoundsSafety:
+                Kind: ended_by
+                Level: 0
+                BoundedBy: end
+          - Position:      0
+            BoundsSafety:
+                Kind: ended_by
+                Level: 0
+                BoundedBy: mid
+      - Name:              asdf_ended_already_started
+        Parameters:
+          - Position:      1
+            BoundsSafety:
+                Kind: ended_by
+                Level: 0
+                BoundedBy: end
+      - Name:              asdf_ended_already_ended
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: ended_by
+                Level: 0
+                BoundedBy: mid
+      - Name:              asdf_ended_redundant
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: ended_by
+                Level: 0
+                BoundedBy: end
+      - Name:              asdf_nterm
+        Parameters:
+          - Position:      0
+            Type: "int * __attribute__((__terminated_by__(0)))"
+    
+      - Name:              asdf_return_counted
+        BoundsSafety:
+            Kind: counted_by
+            Level: 0
+            BoundedBy: len
+      - Name:              asdf_return_sized
+        BoundsSafety:
+            Kind: sized_by
+            Level: 0
+            BoundedBy: size
+      - Name:              asdf_return_counted_n
+        BoundsSafety:
+            Kind: counted_by_or_null
+            Level: 0
+            BoundedBy: len
+      - Name:              asdf_return_sized_n
+        BoundsSafety:
+            Kind: sized_by_or_null
+            Level: 0
+            BoundedBy: size
+      - Name:              asdf_return_ended
+        BoundsSafety:
+            Kind: ended_by
+            Level: 0
+            BoundedBy: end
+      - Name:              asdf_return_sized_mul
+        BoundsSafety:
+            Kind: sized_by
+            Level: 0
+            BoundedBy: "size * count"
+      - Name:              asdf_return_counted_out
+        BoundsSafety:
+            Kind: counted_by
+            BoundedBy: "*len"
+      - Name:              asdf_return_counted_const
+        BoundsSafety:
+            Kind: counted_by
+            Level: 0
+            BoundedBy: 7
+      - Name:             asdf_return_counted_nullable
+        BoundsSafety:
+            Kind: counted_by
+            Level: 0
+            BoundedBy: len
+      - Name:              asdf_return_counted_default_level
+        BoundsSafety:
+            Kind: counted_by
+            BoundedBy: len
+      - Name:              asdf_return_counted_redundant
+        BoundsSafety:
+            Kind: counted_by
+            BoundedBy: len
+      - Name:              asdf_return_ended_chained
+        Parameters:
+          - Position:      0
+            BoundsSafety:
+                Kind: ended_by
+                Level: 0
+                BoundedBy: end
+        BoundsSafety:
+            Kind: ended_by
+            Level: 0
+            BoundedBy: mid
+      - Name:              asdf_return_ended_chained_reverse
+        BoundsSafety:
+            Kind: ended_by
+            Level: 0
+            BoundedBy: end
+      - Name:              asdf_return_ended_redundant
+        BoundsSafety:
+            Kind: ended_by
+            Level: 0
+            BoundedBy: end
+      - Name:              asdf_return_nterm
+        ResultType: "char * __attribute__((__terminated_by__(0)))"

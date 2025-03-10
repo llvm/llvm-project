@@ -1138,6 +1138,10 @@ unsigned getFunctionInfoSize(const FunctionInfo &FI) {
     size += getParamInfoSize(P);
   size += sizeof(uint16_t) + FI.ResultType.size();
   size += sizeof(uint16_t) + FI.SwiftReturnOwnership.size();
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (auto BSI = FI.ReturnBoundsSafety)
+    size += getBoundsSafetyInfoSize(*BSI);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   return size;
 }
 
@@ -1146,6 +1150,11 @@ void emitFunctionInfo(raw_ostream &OS, const FunctionInfo &FI) {
   emitCommonEntityInfo(OS, FI);
 
   uint8_t flags = 0;
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (FI.ReturnBoundsSafety)
+    flags |= 0x01;
+  flags <<= 0x01;
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   flags |= FI.NullabilityAudited;
   flags <<= 3;
   if (auto RCC = FI.getRetainCountConvention())
@@ -1154,6 +1163,10 @@ void emitFunctionInfo(raw_ostream &OS, const FunctionInfo &FI) {
   llvm::support::endian::Writer writer(OS, llvm::endianness::little);
 
   writer.write<uint8_t>(flags);
+  /* TO_UPSTREAM(BoundsSafety) ON */
+  if (auto BSI = FI.ReturnBoundsSafety)
+    emitBoundsSafetyInfo(OS, *FI.ReturnBoundsSafety);
+  /* TO_UPSTREAM(BoundsSafety) OFF */
   writer.write<uint8_t>(FI.NumAdjustedNullable);
   writer.write<uint64_t>(FI.NullabilityPayload);
 

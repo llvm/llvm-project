@@ -133,3 +133,79 @@ Functions:
     Parameters:
       - Position:      0
         Type: "int * __attribute__((__terminated_by__(0)))"
+
+  - Name:              asdf_return_counted
+    BoundsSafety:
+        Kind: counted_by
+        Level: 0
+        BoundedBy: len
+  - Name:              asdf_return_sized
+    BoundsSafety:
+        Kind: sized_by
+        Level: 0
+        BoundedBy: size
+  - Name:              asdf_return_counted_n
+    BoundsSafety:
+        Kind: counted_by_or_null
+        Level: 0
+        BoundedBy: len
+  - Name:              asdf_return_sized_n
+    BoundsSafety:
+        Kind: sized_by_or_null
+        Level: 0
+        BoundedBy: size
+  - Name:              asdf_return_ended
+    BoundsSafety:
+        Kind: ended_by
+        Level: 0
+        BoundedBy: end
+  - Name:              asdf_return_sized_mul
+    BoundsSafety:
+        Kind: sized_by
+        Level: 0
+        BoundedBy: "size * count"
+  - Name:              asdf_return_counted_out
+    BoundsSafety:
+        Kind: counted_by
+        BoundedBy: "*len"
+  - Name:              asdf_return_counted_const
+    BoundsSafety:
+        Kind: counted_by
+        Level: 0
+        BoundedBy: 7
+  - Name:             asdf_return_counted_nullable
+    BoundsSafety:
+        Kind: counted_by
+        Level: 0
+        BoundedBy: len
+  - Name:              asdf_return_counted_default_level
+    BoundsSafety:
+        Kind: counted_by
+        BoundedBy: len
+  - Name:              asdf_return_counted_redundant
+    BoundsSafety:
+        Kind: counted_by
+        BoundedBy: len
+  - Name:              asdf_return_ended_chained
+    Parameters:
+      - Position:      0
+        BoundsSafety:
+            Kind: ended_by
+            Level: 0
+            BoundedBy: end
+    BoundsSafety:
+        Kind: ended_by
+        Level: 0
+        BoundedBy: mid
+  - Name:              asdf_return_ended_chained_reverse
+    BoundsSafety:
+        Kind: ended_by
+        Level: 0
+        BoundedBy: end
+  - Name:              asdf_return_ended_redundant
+    BoundsSafety:
+        Kind: ended_by
+        Level: 0
+        BoundedBy: end
+  - Name:              asdf_return_nterm
+    ResultType: "char * __attribute__((__terminated_by__(0)))"
