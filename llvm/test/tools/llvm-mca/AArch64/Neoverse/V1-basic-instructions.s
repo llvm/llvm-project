@@ -488,6 +488,16 @@ ror	x27, x28, x29
 # Data-processing (3 sources)
 #------------------------------------------------------------------------------
 
+crc32cb  w30, w23, w15
+crc32cb  w31, w12, w14
+crc32cb  w28, w10, w11
+crc32b   w27, w12, w15
+crc32h   w3, w15, w21
+crc32w   w9, w18, w24
+crc32x   w19, w6, x25
+crc32ch  w25, w26, w16
+crc32cw  w27, w12, w23
+crc32cx  w21, w28, x5
 smulh    x30, x29, x28
 smulh    xzr, x27, x26
 umulh    x30, x29, x28
@@ -1882,6 +1892,16 @@ drps
 # CHECK-NEXT:  1      1     0.25                        asr	x21, x22, x23
 # CHECK-NEXT:  1      1     0.25                        ror	w24, w25, w26
 # CHECK-NEXT:  1      1     0.25                        ror	x27, x28, x29
+# CHECK-NEXT:  1      2     1.00                        crc32cb	w30, w23, w15
+# CHECK-NEXT:  1      2     1.00                        crc32cb	wzr, w12, w14
+# CHECK-NEXT:  1      2     1.00                        crc32cb	w28, w10, w11
+# CHECK-NEXT:  1      2     1.00                        crc32b	w27, w12, w15
+# CHECK-NEXT:  1      2     1.00                        crc32h	w3, w15, w21
+# CHECK-NEXT:  1      2     1.00                        crc32w	w9, w18, w24
+# CHECK-NEXT:  1      2     1.00                        crc32x	w19, w6, x25
+# CHECK-NEXT:  1      2     1.00                        crc32ch	w25, w26, w16
+# CHECK-NEXT:  1      2     1.00                        crc32cw	w27, w12, w23
+# CHECK-NEXT:  1      2     1.00                        crc32cx	w21, w28, x5
 # CHECK-NEXT:  1      3     0.50                        smulh	x30, x29, x28
 # CHECK-NEXT:  1      3     0.50                        smulh	xzr, x27, x26
 # CHECK-NEXT:  1      3     0.50                        umulh	x30, x29, x28
@@ -2711,7 +2731,7 @@ drps
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]
-# CHECK-NEXT: 13.00  13.00  40.50  40.50  48.00  48.00  48.00  96.67  175.17 175.17 312.50 209.50 142.00 142.00 189.00 55.50  65.50  13.00
+# CHECK-NEXT: 13.00  13.00  40.50  40.50  48.00  48.00  48.00  96.67  175.17 175.17 322.50 209.50 142.00 142.00 189.00 55.50  65.50  13.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7.0]  [7.1]  [8]    [9]    [10]   [11]   Instructions:
@@ -3143,6 +3163,16 @@ drps
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     asr	x21, x22, x23
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ror	w24, w25, w26
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     ror	x27, x28, x29
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     crc32cb	w30, w23, w15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     crc32cb	wzr, w12, w14
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     crc32cb	w28, w10, w11
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     crc32b	w27, w12, w15
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     crc32h	w3, w15, w21
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     crc32w	w9, w18, w24
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     crc32x	w19, w6, x25
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     crc32ch	w25, w26, w16
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     crc32cw	w27, w12, w23
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     1.00    -      -      -      -      -      -      -     crc32cx	w21, w28, x5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     smulh	x30, x29, x28
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     smulh	xzr, x27, x26
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.50   0.50    -      -      -      -      -      -     umulh	x30, x29, x28
