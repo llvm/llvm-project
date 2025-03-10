@@ -951,20 +951,8 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
 /// Some registers are generated during the kernel expansion. We calculate the
 /// live intervals of these registers after the expansion.
 void ModuloScheduleExpander::calculateIntervals() {
-  // The interval can be computed if all the register's non-debug users have
-  // slot indexes.
-  auto CanCalculateInterval = [this](Register Reg) -> bool {
-    for (auto &Opnd : this->MRI.reg_nodbg_operands(Reg))
-      if (this->LIS.isNotInMIMap(*Opnd.getParent()))
-        return false;
-    return true;
-  };
-  for (auto Reg : NoIntervalRegs) {
-    if (CanCalculateInterval(Reg))
-      LIS.createAndComputeVirtRegInterval(Reg);
-    else
-      LIS.createEmptyInterval(Reg);
-  }
+  for (auto Reg : NoIntervalRegs)
+    LIS.createAndComputeVirtRegInterval(Reg);
   NoIntervalRegs.clear();
 }
 
