@@ -173,8 +173,7 @@ struct DelegCtor {
 
 template<int n = 0> void DefaultFuncTemplateArg(); // expected-warning {{default template arguments for a function template are incompatible with C++98}}
 
-template<typename T> // expected-note 2{{template parameter is declared here}}
-int TemplateFn(T) { return 0; }
+template<typename T> int TemplateFn(T) { return 0; }
 void LocalTemplateArg() {
   struct S {};
   TemplateFn(S()); // expected-warning {{local type 'S' as template argument is incompatible with C++98}}
@@ -189,7 +188,7 @@ int UnnamedTemplateArg = TemplateFn(obj_of_unnamed_type); // expected-warning {{
 #ifndef CXX17COMPAT
 namespace RedundantParensInAddressTemplateParam {
   int n;
-  template<int*p> struct S {}; // expected-note 2{{template parameter is declared here}}
+  template<int*p> struct S {};
   S<(&n)> s; // expected-warning {{redundant parentheses surrounding address non-type template argument are incompatible with C++98}}
   S<(((&n)))> t; // expected-warning {{redundant parentheses surrounding address non-type template argument are incompatible with C++98}}
 }
@@ -312,7 +311,7 @@ namespace LiteralUCNs {
 // template argument evaluation rules.
 #ifndef CXX17COMPAT
 namespace NonTypeTemplateArgs {
-  template<typename T, T v> struct S {}; // expected-note 2{{template parameter is declared here}}
+  template<typename T, T v> struct S {};
   const int k = 5; // expected-note {{here}}
   static void f() {} // expected-note {{here}}
   S<const int&, k> s1; // expected-warning {{non-type template argument referring to object 'k' with internal linkage is incompatible with C++98}}
@@ -321,8 +320,8 @@ namespace NonTypeTemplateArgs {
 
 namespace NullPointerTemplateArg {
   struct A {};
-  template<int*> struct X {}; // expected-note {{template parameter is declared here}}
-  template<int A::*> struct Y {}; // expected-note {{template parameter is declared here}}
+  template<int*> struct X {};
+  template<int A::*> struct Y {};
   X<(int*)0> x; // expected-warning {{use of null pointer as non-type template argument is incompatible with C++98}}
   Y<(int A::*)0> y; // expected-warning {{use of null pointer as non-type template argument is incompatible with C++98}}
 }
