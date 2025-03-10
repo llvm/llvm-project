@@ -139,6 +139,26 @@ class TypeNameValidatorCCC final : public CorrectionCandidateCallback {
 
 } // end anonymous namespace
 
+QualType Sema::getTypeDeclType(DeclContext *LookupCtx, DiagCtorKind DCK,
+                               TypeDecl *TD, SourceLocation NameLoc) {
+  auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(LookupCtx);
+  auto *FoundRD = dyn_cast<CXXRecordDecl>(TD);
+  if (DCK != DiagCtorKind::None && LookupRD && FoundRD &&
+      FoundRD->isInjectedClassName() &&
+      declaresSameEntity(LookupRD, cast<Decl>(FoundRD->getParent()))) {
+    Diag(NameLoc,
+         DCK == DiagCtorKind::Typename
+             ? diag::ext_out_of_line_qualified_id_type_names_constructor
+             : diag::err_out_of_line_qualified_id_type_names_constructor)
+        << TD->getIdentifier() << /*Type=*/1
+        << 0 /*if any keyword was present, it was 'typename'*/;
+  }
+
+  DiagnoseUseOfDecl(TD, NameLoc);
+  MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
+  return Context.getTypeDeclType(TD);
+}
+
 namespace {
 enum class UnqualifiedTypeNameLookupResult {
   NotFound,
@@ -295,10 +315,11 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                              bool IsClassTemplateDeductionContext,
                              ImplicitTypenameContext AllowImplicitTypename,
                              IdentifierInfo **CorrectedII) {
+  bool IsImplicitTypename = !isClassName && !IsCtorOrDtorName;
   // FIXME: Consider allowing this outside C++1z mode as an extension.
   bool AllowDeducedTemplate = IsClassTemplateDeductionContext &&
-                              getLangOpts().CPlusPlus17 && !IsCtorOrDtorName &&
-                              !isClassName && !HasTrailingDot;
+                              getLangOpts().CPlusPlus17 && IsImplicitTypename &&
+                              !HasTrailingDot;
 
   // Determine where we will perform name lookup.
   DeclContext *LookupCtx = nullptr;
@@ -322,11 +343,9 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
         // refer to a member of an unknown specialization.
         // In C++2a, in several contexts a 'typename' is not required. Also
         // allow this as an extension.
-        if (AllowImplicitTypename == ImplicitTypenameContext::No &&
-            !isClassName && !IsCtorOrDtorName)
-          return nullptr;
-        bool IsImplicitTypename = !isClassName && !IsCtorOrDtorName;
         if (IsImplicitTypename) {
+          if (AllowImplicitTypename == ImplicitTypenameContext::No)
+            return nullptr;
           SourceLocation QualifiedLoc = SS->getRange().getBegin();
           if (getLangOpts().CPlusPlus20)
             Diag(QualifiedLoc, diag::warn_cxx17_compat_implicit_typename);
@@ -515,18 +534,10 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     // C++ [class.qual]p2: A lookup that would find the injected-class-name
     // instead names the constructors of the class, except when naming a class.
     // This is ill-formed when we're not actually forming a ctor or dtor name.
-    auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(LookupCtx);
-    auto *FoundRD = dyn_cast<CXXRecordDecl>(TD);
-    if (!isClassName && !IsCtorOrDtorName && LookupRD && FoundRD &&
-        FoundRD->isInjectedClassName() &&
-        declaresSameEntity(LookupRD, cast<Decl>(FoundRD->getParent())))
-      Diag(NameLoc, diag::err_out_of_line_qualified_id_type_names_constructor)
-          << &II << /*Type*/1;
-
-    DiagnoseUseOfDecl(IIDecl, NameLoc);
-
-    T = Context.getTypeDeclType(TD);
-    MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
+    T = getTypeDeclType(LookupCtx,
+                        IsImplicitTypename ? DiagCtorKind::Implicit
+                                           : DiagCtorKind::None,
+                        TD, NameLoc);
   } else if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(IIDecl)) {
     (void)DiagnoseUseOfDecl(IDecl, NameLoc);
     if (!HasTrailingDot)
