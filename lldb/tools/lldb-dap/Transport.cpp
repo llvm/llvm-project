@@ -25,9 +25,7 @@ using namespace lldb_private;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
-static Expected<std::string> ReadFull(IOObjectSP &descriptor, size_t length) {
-  if (!descriptor || !descriptor->IsValid())
-    return createStringError("transport input is closed");
+static Expected<std::string> ReadFull(IOObject *descriptor, size_t length) {
   std::string data;
   data.resize(length);
   auto status = descriptor->Read(data.data(), length);
@@ -36,7 +34,7 @@ static Expected<std::string> ReadFull(IOObjectSP &descriptor, size_t length) {
   return data.substr(0, length);
 }
 
-static Expected<std::string> ReadUntil(IOObjectSP &descriptor,
+static Expected<std::string> ReadUntil(IOObject *descriptor,
                                        StringRef delimiter) {
   std::string buffer;
   buffer.reserve(delimiter.size() + 1);
@@ -68,8 +66,13 @@ Transport::Transport(StringRef client_name, std::ofstream *log,
       m_output(std::move(output)) {}
 
 std::optional<Message> Transport::Read() {
+  if (!m_input || !m_input->IsValid()) {
+    DAP_LOG(m_log, "({0}) input is closed", m_client_name);
+    return std::nullopt;
+  }
+  IOObject *input = m_input.get();
   Expected<std::string> message_header =
-      ReadFull(m_input, kHeaderContentLength.size());
+      ReadFull(input, kHeaderContentLength.size());
   if (!message_header) {
     DAP_LOG_ERROR(m_log, message_header.takeError(), "({1}) read failed: {0}",
                   m_client_name);
@@ -85,7 +88,7 @@ std::optional<Message> Transport::Read() {
     return std::nullopt;
   }
 
-  Expected<std::string> raw_length = ReadUntil(m_input, kHeaderSeparator);
+  Expected<std::string> raw_length = ReadUntil(input, kHeaderSeparator);
   if (!raw_length) {
     DAP_LOG_ERROR(m_log, raw_length.takeError(), "({1}) read failed: {0}",
                   m_client_name);
@@ -99,7 +102,7 @@ std::optional<Message> Transport::Read() {
     return std::nullopt;
   }
 
-  Expected<std::string> raw_json = ReadFull(m_input, length);
+  Expected<std::string> raw_json = ReadFull(input, length);
   if (!raw_json) {
     DAP_LOG_ERROR(m_log, raw_json.takeError(), "({1}) read failed: {0}",
                   m_client_name);
