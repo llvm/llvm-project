@@ -1233,7 +1233,7 @@ bool AMDGPUCallLowering::lowerTailCall(
     const APInt &FlagsValue = cast<ConstantInt>(FlagsArg.OrigValue)->getValue();
     if (FlagsValue.isZero()) {
       if (Info.OrigArgs.size() != 5) {
-        LLVM_DEBUG(dbgs() << "No additional args allowed if flags == 0");
+        LLVM_DEBUG(dbgs() << "No additional args allowed if flags == 0\n");
         return false;
       }
     } else if (FlagsValue.isOneBitSet(0)) {
