@@ -43,7 +43,7 @@ private:
   SmallString<128> UniqueLockFileName;
 
   struct OwnerUnknown {};
-  struct OwnedByUs{};
+  struct OwnedByUs {};
   struct OwnedByAnother {
     std::string OwnerHostName;
     int OwnerPID;
