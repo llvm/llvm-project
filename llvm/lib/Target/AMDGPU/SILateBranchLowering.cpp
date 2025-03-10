@@ -129,28 +129,29 @@ void SILateBranchLowering::expandChainCall(MachineInstr &MI,
                                            bool DynamicVGPR) {
   // This is a tail call that needs to be expanded into at least
   // 2 instructions, one for setting EXEC and one for the actual tail call.
-  unsigned ExecIdx =
+  int ExecIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::exec);
+  assert(ExecIdx != -1 && "Missing EXEC operand");
+  const DebugLoc &DL = MI.getDebugLoc();
   if (DynamicVGPR) {
     // We have 3 extra operands and we need to:
     // * Try to change the VGPR allocation
     // * Select the callee based on the result of the reallocation attempt
     // * Select the EXEC mask based on the result of the reallocation attempt
-    auto AllocMI = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                           TII->get(AMDGPU::S_ALLOC_VGPR));
+    auto AllocMI =
+        BuildMI(*MI.getParent(), MI, DL, TII->get(AMDGPU::S_ALLOC_VGPR));
     addRegOrCopyOp(AllocMI,
                    *TII->getNamedOperand(MI, AMDGPU::OpName::numvgprs));
 
     auto SelectCallee =
-        BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                TII->get(AMDGPU::S_CSELECT_B64))
+        BuildMI(*MI.getParent(), MI, DL, TII->get(AMDGPU::S_CSELECT_B64))
             .addDef(TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg());
     addRegOrCopyOp(SelectCallee,
                    *TII->getNamedOperand(MI, AMDGPU::OpName::src0));
     addRegOrCopyOp(SelectCallee,
                    *TII->getNamedOperand(MI, AMDGPU::OpName::fbcallee));
 
-    auto SelectExec = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+    auto SelectExec = BuildMI(*MI.getParent(), MI, DL,
                               TII->get(ST.isWave32() ? AMDGPU::S_CSELECT_B32
                                                      : AMDGPU::S_CSELECT_B64))
                           .addDef(ExecReg);
@@ -159,8 +160,7 @@ void SILateBranchLowering::expandChainCall(MachineInstr &MI,
     addRegOrCopyOp(SelectExec,
                    *TII->getNamedOperand(MI, AMDGPU::OpName::fbexec));
   } else {
-    auto SetExec = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
-                           TII->get(MovOpc), ExecReg);
+    auto SetExec = BuildMI(*MI.getParent(), MI, DL, TII->get(MovOpc), ExecReg);
     addRegOrCopyOp(SetExec, *TII->getNamedOperand(MI, AMDGPU::OpName::exec));
   }
 
