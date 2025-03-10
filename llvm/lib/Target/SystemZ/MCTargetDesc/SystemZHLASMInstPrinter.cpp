@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SystemZHLASMInstPrinter.h"
+#include "SystemZInstrInfo.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCRegister.h"
 #include "llvm/Support/raw_ostream.h"
@@ -34,12 +35,27 @@ void SystemZHLASMInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   raw_string_ostream RSO(Str);
   printInstruction(MI, Address, RSO);
   // Eat the first tab character and replace it with a space since it is
-  // hardcoded in AsmWriterEmitter::EmitPrintInstruction
-  // TODO: introduce a line prefix member to AsmWriter to avoid this problem
+  // hardcoded in AsmWriterEmitter::EmitPrintInstruction.
+  // TODO Introduce a line prefix member to AsmWriter to avoid this problem.
   if (!Str.empty() && Str.front() == '\t')
     O << " " << Str.substr(1, Str.length());
   else
     O << Str;
 
   printAnnotation(O, Annot);
+}
+
+void SystemZHLASMInstPrinter::printPCRelOperand(const MCInst *MI, int OpNum,
+                                                raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  if (MO.isImm()) {
+    WithMarkup M = markup(O, Markup::Immediate);
+    O << "0x";
+    O.write_hex(MO.getImm());
+  } else {
+    // Don't print @PLT.
+    // TODO May need to do something more here.
+    const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*(MO.getExpr()));
+    O << SRE.getSymbol().getName();
+  }
 }
