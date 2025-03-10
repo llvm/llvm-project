@@ -824,6 +824,25 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                          {MVT::v4f32, MVT::v8f32, MVT::v16f32, MVT::v32f32},
                          Custom);
     }
+
+    // True 16 instruction is current not supported
+    // FIXME: Add support for true 16 when supported
+    if (!Subtarget->hasTrue16BitInsts() || !Subtarget->useRealTrue16Insts()) {
+      // MVT::vNi16 for src type check in foldToSaturated
+      // MVT::vNi8 for dst type check in CustomLowerNode
+      // FIXME: Handle N = 2, 4, 8 first, should change verification logic from
+      //        LLVM side, like break bigger vector into legal small vectors
+      setOperationAction(ISD::TRUNCATE_SSAT_U,
+                         {
+                             MVT::v2i16,
+                             MVT::v4i16,
+                             MVT::v8i16,
+                             MVT::v2i8,
+                             MVT::v4i8,
+                             MVT::v8i8,
+                         },
+                         Custom);
+    }
   }
 
   setOperationAction({ISD::FNEG, ISD::FABS}, MVT::v4f16, Custom);
@@ -2002,6 +2021,12 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   // create setcc with i1 operands.  We don't have instructions for i1 setcc.
   if (VT == MVT::i1 && Op == ISD::SETCC)
     return false;
+
+  // Special case for vNi8 handling where N is even
+  if (Op == ISD::TRUNCATE_SSAT_U && VT.isVector() &&
+      VT.getVectorElementType() == MVT::i8 &&
+      ((VT.getVectorNumElements() & 1) == 0))
+    return true;
 
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
@@ -6636,6 +6661,45 @@ void SITargetLowering::ReplaceNodeResults(SDNode *N,
     if (N->getValueType(0) != MVT::f16)
       break;
     Results.push_back(lowerFSQRTF16(SDValue(N, 0), DAG));
+    break;
+  }
+  case ISD::TRUNCATE_SSAT_U: {
+    SDLoc SL(N);
+    SDValue Src = N->getOperand(0);
+    EVT SrcVT = Src.getValueType();
+    EVT DstVT = N->getValueType(0);
+
+    assert(SrcVT.isVector() && DstVT.isVector());
+    assert(DstVT.getVectorElementType() == MVT::i8);
+    assert(SrcVT.getVectorElementType() == MVT::i16);
+
+    unsigned EleNo = SrcVT.getVectorNumElements();
+    assert(EleNo == DstVT.getVectorNumElements());
+
+    if (EleNo == 2) {
+      SDValue Op = DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, Src);
+      Op = DAG.getNode(ISD::BITCAST, SL, N->getValueType(0), Op);
+      Results.push_back(Op);
+      break;
+    }
+
+    // Vector case, number of element must be even
+    assert((EleNo & 1) == 0);
+    SmallVector<SDValue> DstPairs;
+    EVT SrcEleVT = SrcVT.getVectorElementType();
+    EVT DstEleVT = DstVT.getVectorElementType();
+    EVT SrcPairVT = EVT::getVectorVT(*DAG.getContext(), SrcEleVT, 2);
+    EVT DstPairVT = EVT::getVectorVT(*DAG.getContext(), DstEleVT, 2);
+    for (unsigned i = 0; i != EleNo; i += 2) {
+      SDValue SrcPair = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL, SrcPairVT, Src,
+                                    DAG.getConstant(i, SL, MVT::i32));
+      SDValue SatPk =
+          DAG.getNode(AMDGPUISD::SAT_PK_CAST, SL, MVT::i16, SrcPair);
+      SDValue DstPair = DAG.getNode(ISD::BITCAST, SL, DstPairVT, SatPk);
+      DstPairs.push_back(DstPair);
+    }
+    SDValue Op = DAG.getNode(ISD::CONCAT_VECTORS, SL, DstVT, DstPairs);
+    Results.push_back(Op);
     break;
   }
   default:
