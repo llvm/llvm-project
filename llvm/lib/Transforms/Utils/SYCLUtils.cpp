@@ -14,8 +14,8 @@
 namespace llvm {
 
 void writeSYCLStringTable(const SYCLStringTable &Table, raw_ostream &OS) {
-  assert(Table.size() > 0 && "table should contain at least column titles");
-  assert(Table[0].size() > 0 && "table should be non-empty");
+  assert(!Table.empty() && "table should contain at least column titles");
+  assert(!Table[0].empty() && "table should be non-empty");
   OS << '[' << join(Table[0].begin(), Table[0].end(), "|") << "]\n";
   for (size_t I = 1, E = Table.size(); I != E; ++I) {
     assert(Table[I].size() == Table[0].size() && "row's size should be equal");
