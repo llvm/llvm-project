@@ -193,6 +193,8 @@ Improvements to Clang's diagnostics
   under the subgroup ``-Wunsafe-buffer-usage-in-libc-call``.
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
+- Adds a diagnostic for out of bounds vector accesses; Errors by default for compile time statically
+  provable out of bounds vector accesses.
 
 Improvements to Clang's time-trace
 ----------------------------------
