@@ -1545,18 +1545,16 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
                       << "'\n");
 
     while (true) {
-      llvm::LockFileManager Locked(LockFilePath.str());
-      switch (Locked) {
-      case LockFileManager::LFS_Error:
+      llvm::LockFileManager Lock(LockFilePath.str());
+      bool Owned;
+      if (Error Err = Lock.tryLock().moveInto(Owned)) {
+        consumeError(std::move(Err));
         LLVM_DEBUG(
             dbgs() << "[amdgpu-split-module] unable to acquire lockfile, debug "
                       "output may be mangled by other processes\n");
-        Locked.unsafeRemoveLockFile();
-        break;
-      case LockFileManager::LFS_Owned:
-        break;
-      case LockFileManager::LFS_Shared: {
-        switch (Locked.waitForUnlock()) {
+        Lock.unsafeRemoveLockFile();
+      } else if (!Owned) {
+        switch (Lock.waitForUnlock()) {
         case LockFileManager::Res_Success:
           break;
         case LockFileManager::Res_OwnerDied:
@@ -1566,11 +1564,9 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
               dbgs()
               << "[amdgpu-split-module] unable to acquire lockfile, debug "
                  "output may be mangled by other processes\n");
-          Locked.unsafeRemoveLockFile();
+          Lock.unsafeRemoveLockFile();
           break; // give up
         }
-        break;
-      }
       }
 
       splitAMDGPUModule(TTIGetter, M, N, ModuleCallback);
