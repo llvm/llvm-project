@@ -4961,12 +4961,10 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
   case X86::CCMP8ri: {
     // The CCMP instruction should not be optimized if the scc/dfv in it is not
     // same as the one in previous CCMP instruction.
-    unsigned Opcode = FlagI.getOpcode();
-    if (Opcode == X86::CCMP64ri32 || Opcode == X86::CCMP32ri ||
-        Opcode == X86::CCMP16ri || Opcode == X86::CCMP8ri)
-      if (OI.getOperand(2).getImm() != FlagI.getOperand(2).getImm() ||
-          (OI.getOperand(3).getImm() != FlagI.getOperand(3).getImm()))
-        return false;
+    if ((FlagI.getOpcode() != OI.getOpcode()) ||
+        (OI.getOperand(2).getImm() != FlagI.getOperand(2).getImm()) ||
+        (OI.getOperand(3).getImm() != FlagI.getOperand(3).getImm()))
+      return false;
     [[fallthrough]];
   }
   case X86::CMP64ri32:

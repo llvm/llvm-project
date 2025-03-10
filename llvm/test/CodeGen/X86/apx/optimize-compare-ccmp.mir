@@ -112,33 +112,6 @@ body: |
     $bl = SETCCr 2, implicit $eflags
 ...
 ---
-name: opt_redundant_flags_adjusted_imm_4
-body: |
-  bb.0:
-    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_4
-    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
-    ; CHECK-NEXT: CCMP64ri32 [[COPY]], 1, 2, 5, implicit-def $eflags, implicit $eflags
-    ; CHECK-NEXT: $cl = SETCCr 4, implicit $eflags
-    ; CHECK-NEXT: $bl = SETCCr 15, implicit $eflags
-    ; CHECK-NEXT: $bl = SETCCr 7, implicit $eflags
-    ; CHECK-NEXT: $bl = SETCCr 14, implicit $eflags
-    ; CHECK-NEXT: $bl = SETCCr 6, implicit $eflags
-    %0:gr64 = COPY $rsi
-    ; CCMP+SETCC   %0 == 1
-    CCMP64ri32 %0, 1, 2, 5, implicit-def $eflags, implicit $eflags
-    $cl = SETCCr 4, implicit $eflags
-    ; CMP+SETCC   %0 >= 2; CMP can be removed.
-    CMP64ri32 %0, 2, implicit-def $eflags
-    ; %0 >=s 2  -->  %0 >s 1
-    $bl = SETCCr 13, implicit $eflags
-    ; %0 >=u 2  -->  %0 >u 1
-    $bl = SETCCr 3, implicit $eflags
-    ; %0 <s 2  -->  %0 <=s 1
-    $bl = SETCCr 12, implicit $eflags
-    ; %0 <u 2  -->  %0 <=u 1
-    $bl = SETCCr 2, implicit $eflags
-...
----
 name: opt_redundant_flags_adjusted_imm_noopt_0
 body: |
   bb.0:
@@ -303,6 +276,34 @@ body: |
     $bl = SETCCr 13, implicit $eflags
     $bl = SETCCr 3, implicit $eflags
     $bl = SETCCr 12, implicit $eflags
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_adjusted_imm_noopt_5
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_noopt_5
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: CCMP64ri32 [[COPY]], 1, 2, 5, implicit-def $eflags, implicit $eflags
+    ; CHECK-NEXT: $cl = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: CMP64ri32 [[COPY]], 2, implicit-def $eflags
+    ; CHECK-NEXT: $bl = SETCCr 13, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 3, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 12, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 2, implicit $eflags
+    %0:gr64 = COPY $rsi
+    ; CCMP+SETCC   %0 == 1
+    CCMP64ri32 %0, 1, 2, 5, implicit-def $eflags, implicit $eflags
+    $cl = SETCCr 4, implicit $eflags
+    ; CMP+SETCC   %0 >= 2; CMP cannot be removed.
+    CMP64ri32 %0, 2, implicit-def $eflags
+    ; %0 >=s 2  -->  %0 >s 1
+    $bl = SETCCr 13, implicit $eflags
+    ; %0 >=u 2  -->  %0 >u 1
+    $bl = SETCCr 3, implicit $eflags
+    ; %0 <s 2  -->  %0 <=s 1
+    $bl = SETCCr 12, implicit $eflags
+    ; %0 <u 2  -->  %0 <=u 1
     $bl = SETCCr 2, implicit $eflags
 ...
 ---
