@@ -1147,6 +1147,7 @@ public:
     CM_Widen_Reverse, // For consecutive accesses with stride -1.
     CM_Interleave,
     CM_GatherScatter,
+    CM_Strided,
     CM_Scalarize,
     CM_VectorCall,
     CM_IntrinsicCall
@@ -1310,6 +1311,18 @@ public:
       Ty = VectorType::get(Ty, VF);
     return (LI && TTI.isLegalMaskedGather(Ty, Align)) ||
            (SI && TTI.isLegalMaskedScatter(Ty, Align));
+  }
+
+  /// Returns true if the target machine can represent \p V as a strided load
+  /// or store operation.
+  bool isLegalStridedLoadStore(Value *V, ElementCount VF) {
+    if (!isa<LoadInst, StoreInst>(V))
+      return false;
+    auto *Ty = getLoadStoreType(V);
+    Align Align = getLoadStoreAlignment(V);
+    if (VF.isVector())
+      Ty = VectorType::get(Ty, VF);
+    return TTI.isLegalStridedLoadStore(Ty, Align);
   }
 
   /// Returns true if the target machine supports all of the reduction
@@ -1644,6 +1657,9 @@ private:
   /// Store: scalar store + (loop invariant value stored? 0 : extract of last
   /// element)
   InstructionCost getUniformMemOpCost(Instruction *I, ElementCount VF);
+
+  /// The cost computation for strided load/store instruction.
+  InstructionCost getStridedLoadStoreCost(Instruction *I, ElementCount VF);
 
   /// Estimate the overhead of scalarizing an instruction. This is a
   /// convenience wrapper for the type-based getScalarizationOverhead API.
@@ -3605,9 +3621,9 @@ void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
     if (IsUniformMemOpUse(I))
       return true;
 
-    return (WideningDecision == CM_Widen ||
-            WideningDecision == CM_Widen_Reverse ||
-            WideningDecision == CM_Interleave);
+    return (
+        WideningDecision == CM_Widen || WideningDecision == CM_Widen_Reverse ||
+        WideningDecision == CM_Strided || WideningDecision == CM_Interleave);
   };
 
   // Returns true if Ptr is the pointer operand of a memory access instruction
@@ -5813,6 +5829,19 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
   return Cost;
 }
 
+InstructionCost
+LoopVectorizationCostModel::getStridedLoadStoreCost(Instruction *I,
+                                                    ElementCount VF) {
+  Type *ValTy = getLoadStoreType(I);
+  auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
+  const Align Alignment = getLoadStoreAlignment(I);
+  const Value *Ptr = getLoadStorePointerOperand(I);
+
+  return TTI.getStridedMemoryOpCost(I->getOpcode(), VectorTy, Ptr,
+                                    Legal->isMaskRequired(I), Alignment,
+                                    CostKind, I);
+}
+
 std::optional<InstructionCost>
 LoopVectorizationCostModel::getReductionPatternCost(Instruction *I,
                                                     ElementCount VF,
@@ -6132,6 +6161,17 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
                "Expected consecutive stride.");
         InstWidening Decision =
             ConsecutiveStride == 1 ? CM_Widen : CM_Widen_Reverse;
+        // Consider using strided load/store for consecutive reverse accesses to
+        // achieve more efficient memory operations.
+        if (ConsecutiveStride == -1) {
+          const InstructionCost StridedLoadStoreCost =
+              isLegalStridedLoadStore(&I, VF) ? getStridedLoadStoreCost(&I, VF)
+                                              : InstructionCost::getInvalid();
+          if (StridedLoadStoreCost < Cost) {
+            Decision = CM_Strided;
+            Cost = StridedLoadStoreCost;
+          }
+        }
         setWideningDecision(&I, VF, Decision, Cost);
         continue;
       }
@@ -6778,6 +6818,8 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
         return TTI::CastContextHint::Normal;
 
       switch (getWideningDecision(I, VF)) {
+      // TODO: New CastContextHint for strided accesses.
+      case LoopVectorizationCostModel::CM_Strided:
       case LoopVectorizationCostModel::CM_GatherScatter:
         return TTI::CastContextHint::GatherScatter;
       case LoopVectorizationCostModel::CM_Interleave:
@@ -8325,16 +8367,27 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   // reverse consecutive.
   LoopVectorizationCostModel::InstWidening Decision =
       CM.getWideningDecision(I, Range.Start);
+
+  auto SameWiden = [&](ElementCount VF) -> bool {
+    return Decision == CM.getWideningDecision(I, VF);
+  };
+  bool ContainsWidenVF =
+      LoopVectorizationPlanner::getDecisionAndClampRange(SameWiden, Range);
+  assert(ContainsWidenVF &&
+         "At least widen the memory accesses by the Start VF.");
+
   bool Reverse = Decision == LoopVectorizationCostModel::CM_Widen_Reverse;
   bool Consecutive =
       Reverse || Decision == LoopVectorizationCostModel::CM_Widen;
+  bool Strided = Decision == LoopVectorizationCostModel::CM_Strided;
 
   VPValue *Ptr = isa<LoadInst>(I) ? Operands[0] : Operands[1];
-  if (Consecutive) {
+  if (Consecutive || Strided) {
     auto *GEP = dyn_cast<GetElementPtrInst>(
         Ptr->getUnderlyingValue()->stripPointerCasts());
     VPSingleDefRecipe *VectorPtr;
     if (Reverse) {
+      assert(!Strided && "Reverse and Strided are mutually exclusive.");
       // When folding the tail, we may compute an address that we don't in the
       // original scalar loop and it may not be inbounds. Drop Inbounds in that
       // case.
@@ -8345,7 +8398,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
       VectorPtr = new VPReverseVectorPointerRecipe(
           Ptr, &Plan.getVF(), getLoadStoreType(I), Flags, I->getDebugLoc());
     } else {
-      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I),
+      VectorPtr = new VPVectorPointerRecipe(Ptr, getLoadStoreType(I), Strided,
                                             GEP ? GEP->getNoWrapFlags()
                                                 : GEPNoWrapFlags::none(),
                                             I->getDebugLoc());
@@ -8355,11 +8408,11 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
   }
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
-                                 I->getDebugLoc());
+                                 Strided, I->getDebugLoc());
 
   StoreInst *Store = cast<StoreInst>(I);
   return new VPWidenStoreRecipe(*Store, Ptr, Operands[0], Mask, Consecutive,
-                                Reverse, I->getDebugLoc());
+                                Reverse, Strided, I->getDebugLoc());
 }
 
 /// Creates a VPWidenIntOrFpInductionRecpipe for \p Phi. If needed, it will also
