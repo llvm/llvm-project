@@ -238,4 +238,16 @@ void Printf(const char *Format, ...) {
   va_end(Args);
 }
 
+size_t CopyToBuffer(const ScopedString &input, char *output_base,
+                    size_t output_length) {
+  if (output_base && output_length) {
+    // Assume that ScopedString internal vector ends with '\0' and that the
+    // terminal null is not reported by `length`.
+    const size_t written = Min(input.length(), output_length - 1);
+    memcpy(output_base, input.data(), written);
+    output_base[written] = '\0';
+  }
+  return input.length() + 1;
+}
+
 } // namespace scudo

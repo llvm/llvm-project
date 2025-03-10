@@ -35,6 +35,23 @@ __attribute__((weak)) void __scudo_realloc_deallocate_hook(void *old_ptr);
 
 void __scudo_print_stats(void);
 
+// Reports all allocators configuration and general statistics as a null
+// terminated text string.
+#ifndef M_INFO_TOPIC_STATS
+#define M_INFO_TOPIC_STATS 1
+#endif
+
+// Reports fragmentation statistics of the primary allocation as a null
+// terminated text string.
+#ifndef M_INFO_TOPIC_FRAGMENTATION
+#define M_INFO_TOPIC_FRAGMENTATION 2
+#endif
+
+// Writes allocator statistics to the buffer, truncating to the specified size
+// if necessary. Returns the full report size (before truncation) for buffer
+// sizing purpose, or zero if the topic is not supported.
+size_t __scudo_get_info(uint32_t topic, char *buffer, size_t size);
+
 typedef void (*iterate_callback)(uintptr_t base, size_t size, void *arg);
 
 // Determine the likely cause of a tag check fault or other memory protection

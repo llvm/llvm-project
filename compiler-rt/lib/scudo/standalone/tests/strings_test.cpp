@@ -128,6 +128,46 @@ TEST(ScudoStringsTest, Padding) {
   testAgainstLibc<int>("%03d - %03d", -12, -1234);
 }
 
+TEST(ScudoStringsTest, CopyToBuffer) {
+  { // Call with null buffer.
+    scudo::ScopedString Str;
+    Str.append("abc");
+    EXPECT_EQ(4U, scudo::CopyToBuffer(Str, nullptr, 0));
+  }
+
+  { // Empty string.
+    scudo::ScopedString Str;
+    char buf[256] = {'0', '1'};
+    EXPECT_EQ(1U, scudo::CopyToBuffer(Str, buf, sizeof(buf)));
+    EXPECT_STREQ("", buf);
+    EXPECT_EQ(0, buf[0]); // Rest of the buffer remains unchanged.
+  }
+
+  { // Empty string in empty buffer.
+    scudo::ScopedString Str;
+    char buf[256] = {'0', '1'};
+    EXPECT_EQ(1U, scudo::CopyToBuffer(Str, buf, 0));
+    EXPECT_EQ('0', buf[0]); // Nothing changed because provided size is 0.
+  }
+
+  { // Some text fittinh in the buffer.
+    scudo::ScopedString Str;
+    Str.append("abc");
+    char buf[256] = {'0', '1', '2', '3', '4', '5'};
+    EXPECT_EQ(4U, scudo::CopyToBuffer(
+                      Str, buf, sizeof(buf))); // Size includes terminal null.
+    EXPECT_STREQ("abc", buf);
+  }
+
+  { // Some text with overflows.
+    scudo::ScopedString Str;
+    Str.append("abc");
+    char buf[256] = {'0', '1', '2', '3', '4', '5'};
+    EXPECT_EQ(4U, scudo::CopyToBuffer(Str, buf, 3));
+    EXPECT_STREQ("ab", buf);
+  }
+}
+
 #if defined(__linux__)
 
 #include <sys/resource.h>

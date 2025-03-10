@@ -38,6 +38,16 @@ static scudo::Allocator<scudo::Config, SCUDO_PREFIX(malloc_postinit)>
 // TODO(kostyak): support both allocators.
 INTERFACE void __scudo_print_stats(void) { Allocator.printStats(); }
 
+INTERFACE size_t __scudo_get_info(uint32_t topic, char *buffer, size_t size) {
+  switch (topic) {
+  case M_INFO_TOPIC_STATS:
+    return Allocator.getStats(buffer, size);
+  case M_INFO_TOPIC_FRAGMENTATION:
+    return Allocator.getFragmentationInfo(buffer, size);
+  }
+  return 0;
+}
+
 INTERFACE void __scudo_get_error_info(
     struct scudo_error_info *error_info, uintptr_t fault_addr,
     const char *stack_depot, size_t stack_depot_size, const char *region_info,
