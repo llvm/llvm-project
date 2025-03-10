@@ -2531,13 +2531,12 @@ template <> bool Equivalent<CompilerType>(CompilerType l, CompilerType r) {
 #else
   // We allow the typeref typesystem to return a type where
   // SwiftASTContext fails.
-  if (!l) {
-    llvm::dbgs() << l.GetMangledTypeName() << " != " << r.GetMangledTypeName()
-                 << "\n";
+  if (!l || !r) {
+    if (l || r)
+      llvm::dbgs() << l.GetMangledTypeName() << " != " << r.GetMangledTypeName()
+                   << "\n";
     return !r;
   }
-  if (!r)
-    return true;
 #endif
 
   // See comments in SwiftASTContext::ReconstructType(). For
