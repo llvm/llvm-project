@@ -228,6 +228,9 @@ define amdgpu_vs i32 @load_i32_hifffffff0(ptr addrspace(6) inreg %p) #4 {
 ; GCN: v_readfirstlane_b32
 ; SI: s_nop
 ; GCN: s_load_dwordx8
+; GCN-NEXT: v_readfirstlane_b32
+; SI-NEXT: v_mov_b32_e32
+; SI-NEXT: s_nop
 ; GCN-NEXT: s_load_dwordx4
 ; GCN: image_sample
 define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @load_sampler(ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, i32, i32, float, i32) #5 {
@@ -260,6 +263,9 @@ main_body:
 ; GCN: v_readfirstlane_b32
 ; SI: s_nop
 ; GCN: s_load_dwordx8
+; GCN-NEXT: v_readfirstlane_b32
+; SI-NEXT: v_mov_b32_e32
+; SI-NEXT: s_nop
 ; GCN-NEXT: s_load_dwordx4
 ; GCN: image_sample
 define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @load_sampler_nouniform(ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, i32, i32, float, i32) #5 {
