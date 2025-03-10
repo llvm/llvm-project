@@ -1224,6 +1224,49 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   return false;
 }
 
+static bool tryNarrowMathIfNoOverflow(Instruction &I,
+                                      TargetTransformInfo &TTI) {
+  unsigned opc = I.getOpcode();
+  if (opc != Instruction::Add && opc != Instruction::Sub &&
+      opc != Instruction::Mul) {
+    return false;
+  }
+  LLVMContext &ctx = I.getContext();
+  Type *i64type = Type::getInt64Ty(ctx);
+  Type *i32type = Type::getInt32Ty(ctx);
+
+  if (I.getType() != i64type || !TTI.isTruncateFree(i64type, i32type)) {
+    return false;
+  }
+  InstructionCost costOp64 =
+      TTI.getArithmeticInstrCost(opc, i64type, TTI::TCK_RecipThroughput);
+  InstructionCost costOp32 =
+      TTI.getArithmeticInstrCost(opc, i32type, TTI::TCK_RecipThroughput);
+  InstructionCost costZext64 = TTI.getCastInstrCost(
+      Instruction::ZExt, i64type, i32type, TTI.getCastContextHint(&I),
+      TTI::TCK_RecipThroughput);
+  if ((costOp64 - costOp32) <= costZext64) {
+    return false;
+  }
+  uint64_t AndConst0, AndConst1;
+  Value *X;
+  if ((match(I.getOperand(0), m_And(m_Value(X), m_ConstantInt(AndConst0))) ||
+       match(I.getOperand(0), m_And(m_ConstantInt(AndConst0), m_Value(X)))) &&
+      AndConst0 <= 2147483647 &&
+      (match(I.getOperand(1), m_And(m_Value(X), m_ConstantInt(AndConst1))) ||
+       match(I.getOperand(1), m_And(m_ConstantInt(AndConst1), m_Value(X)))) &&
+      AndConst1 <= 2147483647) {
+    IRBuilder<> Builder(&I);
+    Value *trun0 = Builder.CreateTrunc(I.getOperand(0), i32type);
+    Value *trun1 = Builder.CreateTrunc(I.getOperand(1), i32type);
+    Value *arith32 = Builder.CreateAdd(trun0, trun1);
+    Value *zext64 = Builder.CreateZExt(arith32, i64type);
+    I.replaceAllUsesWith(zext64);
+    I.eraseFromParent();
+  }
+  return false;
+}
+
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
@@ -1256,6 +1299,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
       MadeChange |= foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange);
+      MadeChange |= tryNarrowMathIfNoOverflow(I, TTI);
     }
   }
 
