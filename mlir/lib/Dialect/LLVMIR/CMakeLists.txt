@@ -60,6 +60,7 @@ add_mlir_dialect_library(MLIRNVVMDialect
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMDialect
+  MLIRGPUDialect
   MLIRSideEffectInterfaces
   MLIRInferIntRangeInterface
   )
