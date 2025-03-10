@@ -139,6 +139,9 @@ struct SymbolLinkerInterface : LinkerInterface {
   /// Determines if the given operation is eligible for linking.
   virtual bool canBeLinked(Operation *op) const = 0;
 
+  /// Returns the symbol for the given operation.
+  virtual StringRef getSymbol(Operation *op) const = 0;
+
   /// Checks if an operation conflicts with existing linked operations.
   virtual ConflictPair findConflict(Operation *src) const = 0;
 

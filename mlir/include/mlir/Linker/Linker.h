@@ -64,7 +64,7 @@ public:
 
   /// Perform linking and materialization in the destination module.
   /// Returns the linked module.
-  OwningOpRef<ModuleOp> link();
+  OwningOpRef<ModuleOp> link(bool sortSymbols = false);
 
   MLIRContext *getContext() { return context; }
 

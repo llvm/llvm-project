@@ -69,10 +69,33 @@ LogicalResult Linker::process(ModuleOp src, unsigned flags) {
   return iface->process(src, flags);
 }
 
-OwningOpRef<ModuleOp> Linker::link() {
+OwningOpRef<ModuleOp> Linker::link(bool sortSymbols) {
   ModuleOp mod = composite.get();
   if (failed(getModuleLinkerInterface(mod)->link(mod)))
     return nullptr;
+
+  if (sortSymbols) {
+    std::vector<Operation *> symbols;
+
+    mod->walk([&](Operation *op) {
+      if (auto iface = dyn_cast<SymbolLinkerInterface>(op->getDialect())) {
+        if (iface->canBeLinked(op)) {
+          symbols.push_back(op);
+        }
+      }
+    });
+
+    llvm::stable_sort(symbols, [](Operation *lhs, Operation *rhs) {
+      auto lhsSym = cast<SymbolLinkerInterface>(lhs->getDialect());
+      auto rhsSym = cast<SymbolLinkerInterface>(rhs->getDialect());
+      return lhsSym->getSymbol(lhs) < rhsSym->getSymbol(rhs);
+    });
+
+    for (Operation *symbol : llvm::reverse(symbols)) {
+      symbol->moveBefore(&mod.front());
+    }
+  }
+
   return std::move(composite);
 }
 

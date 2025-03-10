@@ -69,6 +69,13 @@ struct LinkerCLOptions : public LinkerOptions {
   }
   StringRef outputSplitMarker() const { return outputSplitMarkerFlag; }
 
+  /// Sort symbols in the output module.
+  LinkerCLOptions &sortSymbols(bool sort) {
+    sortSymbolsFlag = sort;
+    return *this;
+  }
+  bool shouldSortSymbols() const { return sortSymbolsFlag; }
+
   /// Creates and initializes a LinkerOptions from command line options.
   /// These options are static but use ExternalStorage to initialize the
   /// members of the LinkerOptions class.
@@ -104,6 +111,10 @@ struct LinkerCLOptions : public LinkerOptions {
         }),
         cl::location(splitInputFileFlag), cl::init(""), cl::cat(getCategory()));
 
+    static cl::opt<bool, /*ExternalStorage=*/true> clSortSymbols(
+        "sort-symbols", cl::desc("Sort symbols in the output module"),
+        cl::location(sortSymbolsFlag), cl::init(false), cl::cat(getCategory()));
+
     static cl::opt<std::string, /*ExternalStorage=*/true> clOutputSplitMarker(
         "output-split-marker",
         cl::desc("Split marker to use for merging the ouput"),
@@ -135,6 +146,9 @@ struct LinkerCLOptions : public LinkerOptions {
 
   /// Show the registered dialects before trying to load the input file.
   bool showDialectsFlag = false;
+
+  /// Sort symbols in the output module.
+  bool sortSymbolsFlag = false;
 
   /// Split the input file based on the given marker into chunks and process
   /// each chunk independently. Input is not split if empty.
@@ -265,7 +279,7 @@ LogicalResult mlir::MlirLinkMain(int argc, char **argv,
   if (failed(proc.linkFiles(options.inputFiles)))
     return failure();
 
-  OwningOpRef<ModuleOp> composite = linker.link();
+  OwningOpRef<ModuleOp> composite = linker.link(options.shouldSortSymbols());
   if (failed(verify(composite.get(), true))) {
     return composite->emitError("verification after linking failed");
   }

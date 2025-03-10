@@ -217,6 +217,8 @@ struct LLVMSymbolLinkerInterface
     return isa<LLVM::GlobalOp>(op) || isa<LLVM::LLVMFuncOp>(op);
   }
 
+  StringRef getSymbol(Operation *op) const override { return symbol(op); }
+
   ConflictPair findConflict(Operation *src) const override {
     assert(canBeLinked(src) && "expected linkable operation");
 
