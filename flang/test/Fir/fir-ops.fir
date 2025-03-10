@@ -942,3 +942,28 @@ func.func @test_copy(%arg0: !fir.ref<!fir.type<sometype{i:i32}>>, %arg1: !fir.pt
   fir.copy %arg0 to %arg1 no_overlap : !fir.ref<!fir.type<sometype{i:i32}>>, !fir.ptr<!fir.type<sometype{i:i32}>>
   return
 }
+
+// CHECK-LABEL:   func.func @test_pack_unpack_array(
+// CHECK-SAME:                                      %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.ref<!fir.box<none>>,
+// CHECK-SAME:                                      %[[VAL_1:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xi32>>) {
+func.func @test_pack_unpack_array(%arg0: !fir.ref<!fir.box<none>>, %arg1: !fir.box<!fir.array<?xi32>>) {
+// CHECK:           %[[VAL_2:.*]] = fir.pack_array %[[VAL_1]] heap whole : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %0 = fir.pack_array %arg1 heap whole : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %1 = fir.convert %0 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+  fir.store %1 to %arg0 : !fir.ref<!fir.box<none>>
+// CHECK:           %[[VAL_4:.*]] = fir.pack_array %[[VAL_1]] stack whole : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %2 = fir.pack_array %arg1 stack whole : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %3 = fir.convert %2 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+  fir.store %3 to %arg0 : !fir.ref<!fir.box<none>>
+// CHECK:           %[[VAL_6:.*]] = fir.pack_array %[[VAL_1]] heap whole no_copy : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %4 = fir.pack_array %arg1 heap whole no_copy constraints {} heuristics <none> : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %5 = fir.convert %4 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+  fir.store %5 to %arg0 : !fir.ref<!fir.box<none>>
+// CHECK:           %[[VAL_8:.*]] = fir.pack_array %[[VAL_1]] stack whole constraints  {max_size = 100 : ui64, max_element_size = 1 : ui64, min_stride = 10 : ui64} heuristics <loop_only> : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %6 = fir.pack_array %arg1 stack whole constraints {max_size = 100 : ui64, max_element_size = 1 : ui64, min_stride = 10 : ui64} heuristics <loop_only> : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.array<?xi32>>
+  %7 = fir.convert %6 : (!fir.box<!fir.array<?xi32>>) -> !fir.box<none>
+  fir.store %7 to %arg0 : !fir.ref<!fir.box<none>>
+// CHECK:           fir.unpack_array %[[VAL_8]] to %[[VAL_1]] stack no_copy : !fir.box<!fir.array<?xi32>>
+  fir.unpack_array %6 to %arg1 stack no_copy : !fir.box<!fir.array<?xi32>>
+  return
+}
