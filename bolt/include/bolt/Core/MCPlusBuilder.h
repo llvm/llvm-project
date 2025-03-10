@@ -1207,8 +1207,9 @@ public:
 
   /// Set the label of \p Inst or return the existing label for the instruction.
   /// This label will be emitted right before \p Inst is emitted to MCStreamer.
+  /// If \p Temp is true, then this label does not survive in the symbol table.
   MCSymbol *getOrCreateInstLabel(MCInst &Inst, const Twine &Name,
-                                 MCContext *Ctx) const;
+                                 MCContext *Ctx, bool Temp = true) const;
 
   /// Set the label of \p Inst. This label will be emitted right before \p Inst
   /// is emitted to MCStreamer.

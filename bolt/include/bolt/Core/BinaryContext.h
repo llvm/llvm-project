@@ -624,6 +624,9 @@ public:
   /// Addresses reserved for kernel on x86_64 start at this location.
   static constexpr uint64_t KernelStartX86_64 = 0xFFFF'FFFF'8000'0000;
 
+  /// Addresses reserved for kernel on aarch64 start at this location.
+  static constexpr uint64_t KernelStartAArch64 = 0xFFFF'0000'0000'0000;
+
   /// Map address to a constant island owner (constant data in code section)
   std::map<uint64_t, BinaryFunction *> AddressToConstantIslandMap;
 
@@ -922,7 +925,11 @@ public:
   /// Return a value of the global \p Symbol or an error if the value
   /// was not set.
   ErrorOr<uint64_t> getSymbolValue(const MCSymbol &Symbol) const {
-    const BinaryData *BD = getBinaryDataByName(Symbol.getName());
+    return getSymbolValue(Symbol.getName());
+  }
+
+  ErrorOr<uint64_t> getSymbolValue(StringRef Name) const {
+    const BinaryData *BD = getBinaryDataByName(Name);
     if (!BD)
       return std::make_error_code(std::errc::bad_address);
     return BD->getAddress();
@@ -1246,6 +1253,13 @@ public:
   ErrorOr<BinarySection &> getSectionForAddress(uint64_t Address);
   ErrorOr<const BinarySection &> getSectionForAddress(uint64_t Address) const {
     return const_cast<BinaryContext *>(this)->getSectionForAddress(Address);
+  }
+
+  ErrorOr<BinarySection &> getSectionForOutputAddress(uint64_t Address);
+  ErrorOr<const BinarySection &>
+  getSectionForOutputAddress(uint64_t Address) const {
+    return const_cast<BinaryContext *>(this)->getSectionForOutputAddress(
+        Address);
   }
 
   /// Return internal section representation for a section in a file.
