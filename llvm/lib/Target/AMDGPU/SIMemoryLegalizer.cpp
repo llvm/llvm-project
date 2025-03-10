@@ -2784,7 +2784,7 @@ bool SIMemoryLegalizerLegacy::runOnMachineFunction(MachineFunction &MF) {
 PreservedAnalyses
 SIMemoryLegalizerPass::run(MachineFunction &MF,
                            MachineFunctionAnalysisManager &MFAM) {
-  auto *MMI = MFAM.getResult<ModuleAnalysisManagerFunctionProxy>(MF)
+  auto *MMI = MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
                   .getCachedResult<MachineModuleAnalysis>(
                       *MF.getFunction().getParent());
   assert(MMI && "MachineModuleAnalysis must be available");
