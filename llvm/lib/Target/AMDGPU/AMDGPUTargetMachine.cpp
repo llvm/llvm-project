@@ -541,7 +541,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerControlFlowLegacyPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
   initializeSILateBranchLoweringPass(*PR);
-  initializeSIMemoryLegalizerPass(*PR);
+  initializeSIMemoryLegalizerLegacyPass(*PR);
   initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
   initializeSIFormMemoryClausesLegacyPass(*PR);
@@ -2151,7 +2151,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less)) {
     addPass(GCNCreateVOPDPass());
   }
-  // TODO: addPass(SIMemoryLegalizerPass());
+
+  addPass(SIMemoryLegalizerPass());
   // TODO: addPass(SIInsertWaitcntsPass());
 
   // TODO: addPass(SIModeRegisterPass());
