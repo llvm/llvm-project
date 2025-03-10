@@ -12,6 +12,8 @@
 
 #include "flang/Lower/Bridge.h"
 
+#include "OpenMP/DataSharingProcessor.h"
+#include "OpenMP/Utils.h"
 #include "flang/Lower/Allocatable.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/Coarray.h"
@@ -1136,6 +1138,14 @@ public:
     return name;
   }
 
+  /// Find the symbol in the inner-most level of the local map or return null.
+  Fortran::lower::SymbolBox
+  shallowLookupSymbol(const Fortran::semantics::Symbol &sym) override {
+    if (Fortran::lower::SymbolBox v = localSymbols.shallowLookupSymbol(sym))
+      return v;
+    return {};
+  }
+
 private:
   FirConverter() = delete;
   FirConverter(const FirConverter &) = delete;
@@ -1206,14 +1216,6 @@ private:
       return {};
     }
     if (Fortran::lower::SymbolBox v = symMap->lookupSymbol(sym))
-      return v;
-    return {};
-  }
-
-  /// Find the symbol in the inner-most level of the local map or return null.
-  Fortran::lower::SymbolBox
-  shallowLookupSymbol(const Fortran::semantics::Symbol &sym) {
-    if (Fortran::lower::SymbolBox v = localSymbols.shallowLookupSymbol(sym))
       return v;
     return {};
   }
@@ -2014,12 +2016,29 @@ private:
 
   /// Create DO CONCURRENT construct symbol bindings and generate LOCAL_INIT
   /// assignments.
-  void handleLocalitySpecs(const IncrementLoopInfo &info) {
+  void handleLocalitySpecs(IncrementLoopInfo &info) {
     Fortran::semantics::SemanticsContext &semanticsContext =
         bridge.getSemanticsContext();
-    for (const Fortran::semantics::Symbol *sym : info.localSymList)
+    Fortran::lower::omp::DataSharingProcessor dsp(
+        *this, semanticsContext, getEval(),
+        /*useDelayedPrivatization=*/true, localSymbols);
+    mlir::omp::PrivateClauseOps privateClauseOps;
+
+    for (const Fortran::semantics::Symbol *sym : info.localSymList) {
+      if (enableDelayedPrivatizationStaging) {
+        dsp.doPrivatize(sym, &privateClauseOps);
+        continue;
+      }
+
       createHostAssociateVarClone(*sym, /*skipDefaultInit=*/false);
+    }
+
     for (const Fortran::semantics::Symbol *sym : info.localInitSymList) {
+      if (enableDelayedPrivatizationStaging) {
+        dsp.doPrivatize(sym, &privateClauseOps);
+        continue;
+      }
+
       createHostAssociateVarClone(*sym, /*skipDefaultInit=*/true);
       const auto *hostDetails =
           sym->detailsIf<Fortran::semantics::HostAssocDetails>();
@@ -2033,11 +2052,27 @@ private:
         assign.u = Fortran::evaluate::Assignment::BoundsSpec{};
       genAssignment(assign);
     }
+
     for (const Fortran::semantics::Symbol *sym : info.sharedSymList) {
       const auto *hostDetails =
           sym->detailsIf<Fortran::semantics::HostAssocDetails>();
       copySymbolBinding(hostDetails->symbol(), *sym);
     }
+
+    info.doLoop.getPrivateVarsMutable().assign(privateClauseOps.privateVars);
+    info.doLoop.setPrivateSymsAttr(
+        builder->getArrayAttr(privateClauseOps.privateSyms));
+
+    for (auto [sym, privateVar] : llvm::zip_equal(
+             dsp.getAllSymbolsToPrivatize(), privateClauseOps.privateVars)) {
+      auto arg = info.doLoop.getRegion().begin()->addArgument(
+          privateVar.getType(), info.doLoop.getLoc());
+      bindSymbol(*sym, hlfir::translateToExtendedValue(
+                           privateVar.getLoc(), *builder, hlfir::Entity{arg},
+                           /*contiguousHint=*/true)
+                           .first);
+    }
+
     // Note that allocatable, types with ultimate components, and type
     // requiring finalization are forbidden in LOCAL/LOCAL_INIT (F2023 C1130),
     // so no clean-up needs to be generated for these entities.
