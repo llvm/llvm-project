@@ -67,7 +67,7 @@ static SmallVector<Value> getMixedAsValues(OpBuilder b, const Location &loc,
     }
   }
   return values;
-};
+}
 
 /// Create operations converting a linear index to a multi-dimensional index.
 static SmallVector<Value> linearToMultiIndex(Location loc, OpBuilder b,
