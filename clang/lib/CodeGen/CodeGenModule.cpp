@@ -5717,6 +5717,10 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     const ASTContext::SectionInfo &SI = Context.SectionInfos[SA->getName()];
     if ((SI.SectionFlags & ASTContext::PSF_Write) == 0)
       GV->setConstant(true);
+    if ((SI.SectionFlags & ASTContext::PSF_Execute) != 0)
+      GV->setExecute(true);
+    if ((SI.SectionFlags & ASTContext::PSF_Shared) != 0)
+      GV->setShared(true);
   }
 
   CharUnits AlignVal = getContext().getDeclAlign(D);
