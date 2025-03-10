@@ -6,15 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/types/struct_sockaddr.h"
+#include "hdr/types/struct_sockaddr_un.h"
+#include "src/errno/libc_errno.h"
+#include "src/stdio/remove.h"
 #include "src/sys/socket/bind.h"
 #include "src/sys/socket/socket.h"
-
-#include "src/stdio/remove.h"
 #include "src/unistd/close.h"
-
-#include "src/errno/libc_errno.h"
 #include "test/UnitTest/Test.h"
 
+// TODO: move to hdr/sys_socket_macros
 #include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
 
 TEST(LlvmLibcSocketTest, BindLocalSocket) {
