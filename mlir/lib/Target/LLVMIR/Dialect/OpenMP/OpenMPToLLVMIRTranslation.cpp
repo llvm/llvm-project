@@ -537,6 +537,18 @@ static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
   llvm_unreachable("Unknown ClauseProcBindKind kind");
 }
 
+/// Maps elements of \p blockArgs (which are MLIR values) to the corresponding
+/// LLVM values of \p operands' elements. This is useful when an OpenMP region
+/// with entry block arguments is converted to LLVM. In this case \p blockArgs
+/// are (part of) of the OpenMP region's entry arguments and \p operands are
+/// (part of) of the operands to the OpenMP op containing the region.
+static void forwardArgs(LLVM::ModuleTranslation &moduleTranslation,
+                        llvm::ArrayRef<BlockArgument> blockArgs,
+                        OperandRange operands) {
+  for (auto [arg, var] : llvm::zip_equal(blockArgs, operands))
+    moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
+}
+
 /// Helper function to map block arguments defined by ignored loop wrappers to
 /// LLVM values and prevent any uses of those from triggering null pointer
 /// dereferences.
@@ -549,18 +561,12 @@ convertIgnoredWrapper(omp::LoopWrapperInterface opInst,
   // Map block arguments directly to the LLVM value associated to the
   // corresponding operand. This is semantically equivalent to this wrapper not
   // being present.
-  auto forwardArgs =
-      [&moduleTranslation](llvm::ArrayRef<BlockArgument> blockArgs,
-                           OperandRange operands) {
-        for (auto [arg, var] : llvm::zip_equal(blockArgs, operands))
-          moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
-      };
-
   return llvm::TypeSwitch<Operation *, LogicalResult>(opInst)
       .Case([&](omp::SimdOp op) {
         auto blockArgIface = cast<omp::BlockArgOpenMPOpInterface>(*op);
-        forwardArgs(blockArgIface.getPrivateBlockArgs(), op.getPrivateVars());
-        forwardArgs(blockArgIface.getReductionBlockArgs(),
+        forwardArgs(moduleTranslation, blockArgIface.getPrivateBlockArgs(),
+                    op.getPrivateVars());
+        forwardArgs(moduleTranslation, blockArgIface.getReductionBlockArgs(),
                     op.getReductionVars());
         op.emitWarning() << "simd information on composite construct discarded";
         return success();
@@ -5296,6 +5302,28 @@ convertTargetDeviceOp(Operation *op, llvm::IRBuilderBase &builder,
   return convertHostOrTargetOperation(op, builder, moduleTranslation);
 }
 
+/// Forwards private entry block arguments, \see forwardArgs for more details.
+template <typename OMPOp>
+static void forwardPrivateArgs(OMPOp ompOp,
+                               LLVM::ModuleTranslation &moduleTranslation) {
+  auto blockArgIface = cast<omp::BlockArgOpenMPOpInterface>(*ompOp);
+  if (blockArgIface) {
+    forwardArgs(moduleTranslation, blockArgIface.getPrivateBlockArgs(),
+                ompOp.getPrivateVars());
+  }
+}
+
+/// Forwards reduction entry block arguments, \see forwardArgs for more details.
+template <typename OMPOp>
+static void forwardReductionArgs(OMPOp ompOp,
+                                 LLVM::ModuleTranslation &moduleTranslation) {
+  auto blockArgIface = cast<omp::BlockArgOpenMPOpInterface>(*ompOp);
+  if (blockArgIface) {
+    forwardArgs(moduleTranslation, blockArgIface.getReductionBlockArgs(),
+                ompOp.getReductionVars());
+  }
+}
+
 static LogicalResult
 convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
                        LLVM::ModuleTranslation &moduleTranslation) {
@@ -5315,6 +5343,51 @@ convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
               return WalkResult::interrupt();
             return WalkResult::skip();
           }
+
+          // Non-target ops might nest target-related ops, therefore, we
+          // translate them as non-OpenMP scopes. Translating them is needed by
+          // nested target-related ops since they might LLVM values defined in
+          // their parent non-target ops.
+          if (isa<omp::OpenMPDialect>(oper->getDialect()) &&
+              oper->getParentOfType<LLVM::LLVMFuncOp>() &&
+              !oper->getRegions().empty()) {
+
+            // TODO Handle other ops with entry block args.
+            llvm::TypeSwitch<Operation &>(*oper)
+                .Case([&](omp::WsloopOp wsloopOp) {
+                  forwardPrivateArgs(wsloopOp, moduleTranslation);
+                  forwardReductionArgs(wsloopOp, moduleTranslation);
+                })
+                .Case([&](omp::ParallelOp parallelOp) {
+                  forwardPrivateArgs(parallelOp, moduleTranslation);
+                  forwardReductionArgs(parallelOp, moduleTranslation);
+                })
+                .Case([&](omp::TaskOp taskOp) {
+                  forwardPrivateArgs(taskOp, moduleTranslation);
+                });
+
+            if (auto loopNest = dyn_cast<omp::LoopNestOp>(oper)) {
+              for (auto iv : loopNest.getIVs()) {
+                // Create fake allocas just to maintain IR validity.
+                moduleTranslation.mapValue(
+                    iv, builder.CreateAlloca(
+                            moduleTranslation.convertType(iv.getType())));
+              }
+            }
+
+            for (Region &region : oper->getRegions()) {
+              auto result = convertOmpOpRegions(
+                  region, oper->getName().getStringRef().str() + ".fake.region",
+                  builder, moduleTranslation);
+              if (failed(handleError(result, *oper)))
+                return WalkResult::interrupt();
+
+              builder.SetInsertPoint(result.get(), result.get()->end());
+            }
+
+            return WalkResult::skip();
+          }
+
           return WalkResult::advance();
         }).wasInterrupted();
   return failure(interrupted);
