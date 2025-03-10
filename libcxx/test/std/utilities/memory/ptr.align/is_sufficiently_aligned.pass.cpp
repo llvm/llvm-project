@@ -25,6 +25,7 @@ void test_is_sufficiently_aligned() {
   constexpr std::size_t N = alignof(T);
 
   alignas(8 * N) std::remove_cv_t<T> buf[5];
+  constexpr std::size_t Sz = sizeof(T);
 
   assert(std::is_sufficiently_aligned<N>(&buf[0]));
   assert(std::is_sufficiently_aligned<2 * N>(&buf[0]));
@@ -32,24 +33,24 @@ void test_is_sufficiently_aligned() {
   assert(std::is_sufficiently_aligned<8 * N>(&buf[0]));
 
   assert(std::is_sufficiently_aligned<N>(&buf[1]));
-  assert(!std::is_sufficiently_aligned<2 * N>(&buf[1]));
-  assert(!std::is_sufficiently_aligned<4 * N>(&buf[1]));
-  assert(!std::is_sufficiently_aligned<8 * N>(&buf[1]));
+  assert(std::is_sufficiently_aligned<2 * N>(&buf[1]) == (((1 * Sz) % (2 * N)) == 0));
+  assert(std::is_sufficiently_aligned<4 * N>(&buf[1]) == (((1 * Sz) % (4 * N)) == 0));
+  assert(std::is_sufficiently_aligned<8 * N>(&buf[1]) == (((1 * Sz) % (8 * N)) == 0));
 
   assert(std::is_sufficiently_aligned<N>(&buf[2]));
-  assert(std::is_sufficiently_aligned<2 * N>(&buf[2]));
-  assert(!std::is_sufficiently_aligned<4 * N>(&buf[2]));
-  assert(!std::is_sufficiently_aligned<8 * N>(&buf[2]));
+  assert(std::is_sufficiently_aligned<2 * N>(&buf[2]) == (((2 * Sz) % (2 * N)) == 0));
+  assert(std::is_sufficiently_aligned<4 * N>(&buf[2]) == (((2 * Sz) % (4 * N)) == 0));
+  assert(std::is_sufficiently_aligned<8 * N>(&buf[2]) == (((2 * Sz) % (8 * N)) == 0));
 
   assert(std::is_sufficiently_aligned<N>(&buf[3]));
-  assert(!std::is_sufficiently_aligned<2 * N>(&buf[3]));
-  assert(!std::is_sufficiently_aligned<4 * N>(&buf[3]));
-  assert(!std::is_sufficiently_aligned<8 * N>(&buf[3]));
+  assert(std::is_sufficiently_aligned<2 * N>(&buf[3]) == (((3 * Sz) % (2 * N)) == 0));
+  assert(std::is_sufficiently_aligned<4 * N>(&buf[3]) == (((3 * Sz) % (4 * N)) == 0));
+  assert(std::is_sufficiently_aligned<8 * N>(&buf[3]) == (((3 * Sz) % (8 * N)) == 0));
 
   assert(std::is_sufficiently_aligned<N>(&buf[4]));
-  assert(std::is_sufficiently_aligned<2 * N>(&buf[4]));
-  assert(std::is_sufficiently_aligned<4 * N>(&buf[4]));
-  assert(!std::is_sufficiently_aligned<8 * N>(&buf[4]));
+  assert(std::is_sufficiently_aligned<2 * N>(&buf[4]) == (((4 * Sz) % (2 * N)) == 0));
+  assert(std::is_sufficiently_aligned<4 * N>(&buf[4]) == (((4 * Sz) % (4 * N)) == 0));
+  assert(std::is_sufficiently_aligned<8 * N>(&buf[4]) == (((4 * Sz) % (8 * N)) == 0));
 }
 
 template <typename T>
