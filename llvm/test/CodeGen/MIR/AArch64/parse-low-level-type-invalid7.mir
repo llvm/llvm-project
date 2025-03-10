@@ -1,10 +1,37 @@
 # RUN: not llc -mtriple=aarch64-- -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 # When a low-level type vector has 0 elements
 ---
-name: test_vector_0_elements
+name: test_vector_0_elements_s
 body: |
   bb.0:
     liveins: $x0
     ; CHECK: [[@LINE+1]]:11: invalid number of vector elements
     %0:_(<0 x s1>) = G_IMPLICIT_DEF
+...
+
+---
+name: test_vector_0_elements_i
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:11: invalid number of vector elements
+    %0:_(<0 x i1>) = G_IMPLICIT_DEF
+...
+
+---
+name: test_vector_0_elements_f
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:11: invalid number of vector elements
+    %0:_(<0 x f32>) = G_IMPLICIT_DEF
+...
+
+---
+name: test_vector_0_elements_bf
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:11: invalid number of vector elements
+    %0:_(<0 x bf16>) = G_IMPLICIT_DEF
 ...

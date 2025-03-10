@@ -8,3 +8,39 @@ body: |
     ; CHECK: [[@LINE+1]]:15: expected integers after 's'/'i'/'f'/'bf'/'p' type identifier
     %0:_(<2 x p>) = COPY $q0
 ...
+
+---
+name: test_low_level_type_is_single_s_s
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK: [[@LINE+1]]:15: expected integers after 's'/'i'/'f'/'bf'/'p' type identifier
+    %0:_(<2 x s>) = COPY $q0
+...
+
+---
+name: test_low_level_type_is_single_s_i
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK: [[@LINE+1]]:15: expected integers after 's'/'i'/'f'/'bf'/'p' type identifier
+    %0:_(<2 x i>) = COPY $q0
+...
+
+---
+name: test_low_level_type_is_single_s_f
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK: [[@LINE+1]]:15: expected integers after 's'/'i'/'f'/'bf'/'p' type identifier
+    %0:_(<2 x f>) = COPY $q0
+...
+
+---
+name: test_low_level_type_is_single_s_bf
+body: |
+  bb.0:
+    liveins: $q0
+    ; CHECK: [[@LINE+1]]:15: expected integers after 's'/'i'/'f'/'bf'/'p' type identifier
+    %0:_(<2 x bf>) = COPY $q0
+...
