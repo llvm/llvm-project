@@ -545,9 +545,6 @@ fitsRegularPattern(typename SmallVectorImpl<ValType>::const_iterator Begin,
 /// Compute whether each element of a shuffle is zeroable.
 ///
 /// A "zeroable" vector shuffle element is one which can be lowered to zero.
-/// Either it is an undef element in the shuffle mask, the element of the input
-/// referenced is undef, or the element of the input referenced is known to be
-/// zero.
 static void computeZeroableShuffleElements(ArrayRef<int> Mask, SDValue V1,
                                            SDValue V2, APInt &KnownUndef,
                                            APInt &KnownZero) {
