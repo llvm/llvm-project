@@ -141,4 +141,6 @@ let TargetPrefix = "spv" in {
   // Memory aliasing intrinsics
   def int_spv_assign_aliasing_decoration : Intrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_metadata_ty], [ImmArg<ArgIndex<1>>]>;
 
+  // FPMaxErrorDecorationINTEL
+  def int_spv_assign_fpmaxerror_decoration: Intrinsic<[], [llvm_any_ty, llvm_metadata_ty]>;
 }

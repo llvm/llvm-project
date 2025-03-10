@@ -820,18 +820,38 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   insertInlineAsmProcess(MF, GR, ST, MIRBuilder, ToProcess);
 }
 
+static uint32_t convertFloatToSPIRVWord(float F) {
+  union {
+    float F;
+    uint32_t Spir;
+  } FPMaxError;
+  FPMaxError.F = F;
+  return FPMaxError.Spir;
+}
+
 static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                                    MachineIRBuilder MIB) {
   SmallVector<MachineInstr *, 10> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration) &&
-          !isSpvIntrinsic(MI, Intrinsic::spv_assign_aliasing_decoration))
+          !isSpvIntrinsic(MI, Intrinsic::spv_assign_aliasing_decoration) &&
+          !isSpvIntrinsic(MI, Intrinsic::spv_assign_fpmaxerror_decoration))
         continue;
       MIB.setInsertPt(*MI.getParent(), MI.getNextNode());
       if (isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration)) {
         buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
                                 MI.getOperand(2).getMetadata());
+      } else if (isSpvIntrinsic(MI,
+                                Intrinsic::spv_assign_fpmaxerror_decoration)) {
+        ConstantFP *OpV = mdconst::dyn_extract<ConstantFP>(
+            MI.getOperand(2).getMetadata()->getOperand(0));
+        uint32_t OpValue =
+            convertFloatToSPIRVWord(OpV->getValueAPF().convertToFloat());
+
+        buildOpDecorate(MI.getOperand(1).getReg(), MIB,
+                        SPIRV::Decoration::FPMaxErrorDecorationINTEL,
+                        {OpValue});
       } else {
         GR->buildMemAliasingOpDecorate(MI.getOperand(1).getReg(), MIB,
                                        MI.getOperand(2).getImm(),

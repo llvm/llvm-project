@@ -207,6 +207,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Allows support for additional group operations within uniform control flow.
    * - ``SPV_KHR_non_semantic_info``
      - Adds the ability to declare extended instruction sets that have no semantic impact and can be safely removed from a module.
+   * - ``SPV_INTEL_fp_max_error``
+     - Adds the ability to specify the maximum error for floating-point operations.
 
 To enable multiple extensions, list them separated by comma. For example, to enable support for atomic operations on floating-point numbers and arbitrary precision integers, use:
 
@@ -307,6 +309,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - None
      - `[Type, 32-bit Integer, Metadata]`
      - Assigns one of two memory aliasing decorations (specified by the second argument) to instructions using original aliasing metadata node. Not emitted directly but used to support SPIR-V representation in LLVM IR.
+   * - `int_spv_assign_fpmaxerror_decoration`
+     - None
+     - `[Type, Metadata]`
+     - Assigns the maximum error decoration to floating-point instructions using the original metadata node. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_track_constant`
      - Type
      - `[Type, Metadata]`
