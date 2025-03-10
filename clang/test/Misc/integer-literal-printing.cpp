@@ -14,6 +14,7 @@ enum class boolTy : bool {
 template <boolTy T> struct Type3Helper;
 template <> struct Type3Helper<boolTy::b> { typedef boolTy Ty; };
 template <boolTy T, typename Type3Helper<T>::Ty U> struct Type3 {};
+// expected-note@-1 {{template parameter is declared here}}
 
 // PR14386
 enum class charTy : char {
@@ -23,6 +24,7 @@ enum class charTy : char {
 template <charTy T> struct Type4Helper;
 template <> struct Type4Helper<charTy::c> { typedef charTy Ty; };
 template <charTy T, typename Type4Helper<T>::Ty U> struct Type4 {};
+// expected-note@-1 {{template parameter is declared here}}
 
 enum class scharTy : signed char {
   c = 0,
@@ -31,6 +33,7 @@ enum class scharTy : signed char {
 template <scharTy T> struct Type5Helper;
 template <> struct Type5Helper<scharTy::c> { typedef scharTy Ty; };
 template <scharTy T, typename Type5Helper<T>::Ty U> struct Type5 {};
+// expected-note@-1 {{template parameter is declared here}}
 
 enum class ucharTy : unsigned char {
   c = 0,
@@ -39,6 +42,7 @@ enum class ucharTy : unsigned char {
 template <ucharTy T> struct Type6Helper;
 template <> struct Type6Helper<ucharTy::c> { typedef ucharTy Ty; };
 template <ucharTy T, typename Type6Helper<T>::Ty U> struct Type6 {};
+// expected-note@-1 {{template parameter is declared here}}
 
 enum class wcharTy : wchar_t {
   c = 0,
@@ -47,6 +51,7 @@ enum class wcharTy : wchar_t {
 template <wcharTy T> struct Type7Helper;
 template <> struct Type7Helper<wcharTy::c> { typedef wcharTy Ty; };
 template <wcharTy T, typename Type7Helper<T>::Ty U> struct Type7 {};
+// expected-note@-1 {{template parameter is declared here}}
 
 enum class char16Ty : char16_t {
   c = 0,
@@ -55,6 +60,7 @@ enum class char16Ty : char16_t {
 template <char16Ty T> struct Type8Helper;
 template <> struct Type8Helper<char16Ty::c> { typedef char16Ty Ty; };
 template <char16Ty T, typename Type8Helper<T>::Ty U> struct Type8 {};
+// expected-note@-1 {{template parameter is declared here}}
 
 enum class char32Ty : char16_t {
   c = 0,
@@ -63,6 +69,7 @@ enum class char32Ty : char16_t {
 template <char32Ty T> struct Type9Helper;
 template <> struct Type9Helper<char32Ty::c> { typedef char32Ty Ty; };
 template <char32Ty T, typename Type9Helper<T>::Ty U> struct Type9 {};
+// expected-note@-1 {{template parameter is declared here}}
 
 void Function() {
   Function1(Type1<-42>()); // expected-error{{no matching function for call to 'Function1'}}

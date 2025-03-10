@@ -64,7 +64,7 @@ namespace lldb_dap {
 DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
          lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
          std::vector<std::string> pre_init_commands)
-    : name(std::move(name)), debug_adaptor_path(path), log(log),
+    : name(std::move(name)), debug_adapter_path(path), log(log),
       input(std::move(input)), output(std::move(output)),
       broadcaster("lldb-dap"), exception_breakpoints(),
       pre_init_commands(std::move(pre_init_commands)),
@@ -195,33 +195,15 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
   in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
 
-  if (auto Error = out.RedirectTo([this](llvm::StringRef output) {
+  if (auto Error = out.RedirectTo(overrideOut, [this](llvm::StringRef output) {
         SendOutput(OutputType::Stdout, output);
       }))
     return Error;
 
-  if (overrideOut) {
-    auto fd = out.GetWriteFileDescriptor();
-    if (auto Error = fd.takeError())
-      return Error;
-
-    if (dup2(*fd, fileno(overrideOut)) == -1)
-      return llvm::errorCodeToError(llvm::errnoAsErrorCode());
-  }
-
-  if (auto Error = err.RedirectTo([this](llvm::StringRef output) {
+  if (auto Error = err.RedirectTo(overrideErr, [this](llvm::StringRef output) {
         SendOutput(OutputType::Stderr, output);
       }))
     return Error;
-
-  if (overrideErr) {
-    auto fd = err.GetWriteFileDescriptor();
-    if (auto Error = fd.takeError())
-      return Error;
-
-    if (dup2(*fd, fileno(overrideErr)) == -1)
-      return llvm::errorCodeToError(llvm::errnoAsErrorCode());
-  }
 
   return llvm::Error::success();
 }
@@ -526,12 +508,14 @@ ExceptionBreakpoint *DAP::GetExceptionBPFromStopReason(lldb::SBThread &thread) {
 }
 
 lldb::SBThread DAP::GetLLDBThread(const llvm::json::Object &arguments) {
-  auto tid = GetSigned(arguments, "threadId", LLDB_INVALID_THREAD_ID);
+  auto tid = GetInteger<int64_t>(arguments, "threadId")
+                 .value_or(LLDB_INVALID_THREAD_ID);
   return target.GetProcess().GetThreadByID(tid);
 }
 
 lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
-  const uint64_t frame_id = GetUnsigned(arguments, "frameId", UINT64_MAX);
+  const uint64_t frame_id =
+      GetInteger<uint64_t>(arguments, "frameId").value_or(UINT64_MAX);
   lldb::SBProcess process = target.GetProcess();
   // Upper 32 bits is the thread index ID
   lldb::SBThread thread =
@@ -727,15 +711,11 @@ PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
 
   llvm::StringRef json_sref(json);
   llvm::Expected<llvm::json::Value> json_value = llvm::json::parse(json_sref);
-  if (!json_value) {
-    auto error = json_value.takeError();
-    if (log) {
-      std::string error_str;
-      llvm::raw_string_ostream strm(error_str);
-      strm << error;
+  if (auto error = json_value.takeError()) {
+    std::string error_str = llvm::toString(std::move(error));
+    if (log)
       *log << "error: failed to parse JSON: " << error_str << std::endl
            << json << std::endl;
-    }
     return PacketStatus::JSONMalformed;
   }
 
@@ -771,7 +751,7 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
   }
 
   if (packet_type == "response") {
-    auto id = GetSigned(object, "request_seq", 0);
+    auto id = GetInteger<int64_t>(object, "request_seq").value_or(0);
 
     std::unique_ptr<ResponseHandler> response_handler;
     {
@@ -787,7 +767,7 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
       response_handler = std::make_unique<UnknownResponseHandler>("", id);
 
     // Result should be given, use null if not.
-    if (GetBoolean(object, "success", false)) {
+    if (GetBoolean(object, "success").value_or(false)) {
       llvm::json::Value Result = nullptr;
       if (auto *B = object.get("body")) {
         Result = std::move(*B);
@@ -846,17 +826,17 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
 
   SendTerminatedEvent();
 
-  // Stop forwarding the debugger output and error handles.
-  out.Stop();
-  err.Stop();
-
   disconnecting = true;
 
   return error;
 }
 
 llvm::Error DAP::Loop() {
-  auto cleanup = llvm::make_scope_exit([this]() { StopEventHandlers(); });
+  auto cleanup = llvm::make_scope_exit([this]() {
+    out.Stop();
+    err.Stop();
+    StopEventHandlers();
+  });
   while (!disconnecting) {
     llvm::json::Object object;
     lldb_dap::PacketStatus status = GetNextObject(object);

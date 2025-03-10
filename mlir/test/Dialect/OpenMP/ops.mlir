@@ -825,6 +825,12 @@ func.func @omp_target_data (%if_cond : i1, %device : si32, %device_ptr: memref<i
     %mapv6 = omp.map.info var_ptr(%map2 : memref<?xi32>, tensor<?xi32>)   map_clauses(exit_release_or_enter_alloc) capture(ByRef) -> memref<?xi32> {name = ""}
     omp.target_exit_data if(%if_cond) device(%device : si32) nowait map_entries(%mapv6 : memref<?xi32>)
 
+    // CHECK: %[[MAP_A:.*]] = omp.map.info var_ptr(%[[VAL_2:.*]] : memref<?xi32>, tensor<?xi32>)   map_clauses(ompx_hold, to) capture(ByRef) -> memref<?xi32> {name = ""}
+    // CHECK: omp.target_data map_entries(%[[MAP_A]] : memref<?xi32>)
+    %mapv7 = omp.map.info var_ptr(%map1 : memref<?xi32>, tensor<?xi32>)   map_clauses(ompx_hold, to) capture(ByRef) -> memref<?xi32> {name = ""}
+    omp.target_data map_entries(%mapv7 : memref<?xi32>) {
+      omp.terminator
+    }
     return
 }
 
@@ -2411,6 +2417,22 @@ func.func @omp_taskloop(%lb: i32, %ub: i32, %step: i32) -> () {
 
   // CHECK: omp.taskloop num_tasks(%{{[^:]+}}: i64) {
   omp.taskloop num_tasks(%testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+
+  // CHECK: omp.taskloop grainsize(strict, %{{[^:]+}}: i64) {
+  omp.taskloop grainsize(strict, %testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      // CHECK: omp.yield
+      omp.yield
+    }
+  }
+
+  // CHECK: omp.taskloop num_tasks(strict, %{{[^:]+}}: i64) {
+  omp.taskloop num_tasks(strict, %testi64: i64) {
     omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
       // CHECK: omp.yield
       omp.yield

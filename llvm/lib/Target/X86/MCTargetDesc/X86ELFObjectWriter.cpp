@@ -54,10 +54,6 @@ static X86_64RelType getType64(MCFixupKind Kind,
     llvm_unreachable("Unimplemented");
   case FK_NONE:
     return RT64_NONE;
-  case X86::reloc_global_offset_table8:
-    Modifier = MCSymbolRefExpr::VK_GOT;
-    IsPCRel = true;
-    return RT64_64;
   case FK_Data_8:
     return RT64_64;
   case X86::reloc_signed_4byte:

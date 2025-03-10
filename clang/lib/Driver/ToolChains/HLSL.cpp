@@ -198,6 +198,22 @@ void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
                                          Exec, CmdArgs, Inputs, Input));
 }
 
+void tools::hlsl::MetalConverter::ConstructJob(
+    Compilation &C, const JobAction &JA, const InputInfo &Output,
+    const InputInfoList &Inputs, const ArgList &Args,
+    const char *LinkingOutput) const {
+  std::string MSCPath = getToolChain().GetProgramPath("metal-shaderconverter");
+  ArgStringList CmdArgs;
+  const InputInfo &Input = Inputs[0];
+  CmdArgs.push_back(Input.getFilename());
+  CmdArgs.push_back("-o");
+  CmdArgs.push_back(Input.getFilename());
+
+  const char *Exec = Args.MakeArgString(MSCPath);
+  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+                                         Exec, CmdArgs, Inputs, Input));
+}
+
 /// DirectX Toolchain
 HLSLToolChain::HLSLToolChain(const Driver &D, const llvm::Triple &Triple,
                              const ArgList &Args)
@@ -214,6 +230,10 @@ Tool *clang::driver::toolchains::HLSLToolChain::getTool(
     if (!Validator)
       Validator.reset(new tools::hlsl::Validator(*this));
     return Validator.get();
+  case Action::BinaryTranslatorJobClass:
+    if (!MetalConverter)
+      MetalConverter.reset(new tools::hlsl::MetalConverter(*this));
+    return MetalConverter.get();
   default:
     return ToolChain::getTool(AC);
   }

@@ -5189,6 +5189,16 @@ public:
 
   unsigned getNumInits() const { return InitExprs.size(); }
 
+  /// getNumInits but if the list has an EmbedExpr inside includes full length
+  /// of embedded data.
+  unsigned getNumInitsWithEmbedExpanded() const {
+    unsigned Sum = InitExprs.size();
+    for (auto *IE : InitExprs)
+      if (auto *EE = dyn_cast<EmbedExpr>(IE))
+        Sum += EE->getDataElementCount() - 1;
+    return Sum;
+  }
+
   /// Retrieve the set of initializers.
   Expr **getInits() { return reinterpret_cast<Expr **>(InitExprs.data()); }
 

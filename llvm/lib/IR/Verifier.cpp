@@ -141,7 +141,7 @@ struct VerifierSupport {
   raw_ostream *OS;
   const Module &M;
   ModuleSlotTracker MST;
-  Triple TT;
+  const Triple &TT;
   const DataLayout &DL;
   LLVMContext &Context;
 
@@ -153,8 +153,8 @@ struct VerifierSupport {
   bool TreatBrokenDebugInfoAsError = true;
 
   explicit VerifierSupport(raw_ostream *OS, const Module &M)
-      : OS(OS), M(M), MST(&M), TT(Triple::normalize(M.getTargetTriple())),
-        DL(M.getDataLayout()), Context(M.getContext()) {}
+      : OS(OS), M(M), MST(&M), TT(M.getTargetTriple()), DL(M.getDataLayout()),
+        Context(M.getContext()) {}
 
 private:
   void Write(const Module *M) {

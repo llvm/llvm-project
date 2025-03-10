@@ -13,23 +13,23 @@ qc.cm.mva01s a1, a2
 # CHECK-ERROR: error: invalid register list, {ra, s0-s10} or {x1, x8-x9, x18-x26} is not supported
 qc.cm.popretz {ra, s0-s10}, 112
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [16, 64]
 qc.cm.popretz {ra, s0-s1}, 112
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
+# CHECK-ERROR: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
 qc.cm.push {ra}, 16
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
 qc.cm.pushfp {ra, s0}, 16
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [16, 64]
 qc.cm.pop {ra, s0-s1}, -32
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
 qc.cm.push {ra}, -8
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [-64, -16]
 qc.cm.pushfp {ra, s0}, -12
 
-# CHECK-ERROR: error: stack adjustment is invalid for this instruction and register list; refer to Xqccmp spec for a detailed range of stack adjustment
+# CHECK-ERROR: error: stack adjustment for register list must be a multiple of 16 bytes in the range [16, 64]
 qc.cm.pop {ra, s0-s1}, -40

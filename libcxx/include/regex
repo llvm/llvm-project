@@ -800,6 +800,7 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #  include <__iterator/default_sentinel.h>
 #  include <__iterator/wrap_iter.h>
 #  include <__locale>
+#  include <__memory/addressof.h>
 #  include <__memory/shared_ptr.h>
 #  include <__memory_resource/polymorphic_allocator.h>
 #  include <__type_traits/is_swappable.h>
@@ -1106,8 +1107,8 @@ regex_traits<_CharT>::transform(_ForwardIterator __f, _ForwardIterator __l) cons
 
 template <class _CharT>
 void regex_traits<_CharT>::__init() {
-  __ct_  = &std::use_facet<ctype<char_type> >(__loc_);
-  __col_ = &std::use_facet<collate<char_type> >(__loc_);
+  __ct_  = std::addressof(std::use_facet<ctype<char_type> >(__loc_));
+  __col_ = std::addressof(std::use_facet<collate<char_type> >(__loc_));
 }
 
 template <class _CharT>
@@ -1222,7 +1223,7 @@ template <class _ForwardIterator>
 typename regex_traits<_CharT>::char_class_type
 regex_traits<_CharT>::__lookup_classname(_ForwardIterator __f, _ForwardIterator __l, bool __icase, char) const {
   string_type __s(__f, __l);
-  __ct_->tolower(&__s[0], &__s[0] + __s.size());
+  __ct_->tolower(std::addressof(__s[0]), std::addressof(__s[0]) + __s.size());
   return std::__get_classname(__s.c_str(), __icase);
 }
 
@@ -1232,7 +1233,7 @@ template <class _ForwardIterator>
 typename regex_traits<_CharT>::char_class_type
 regex_traits<_CharT>::__lookup_classname(_ForwardIterator __f, _ForwardIterator __l, bool __icase, wchar_t) const {
   string_type __s(__f, __l);
-  __ct_->tolower(&__s[0], &__s[0] + __s.size());
+  __ct_->tolower(std::addressof(__s[0]), std::addressof(__s[0]) + __s.size());
   string __n;
   __n.reserve(__s.size());
   for (typename string_type::const_iterator __i = __s.begin(), __e = __s.end(); __i != __e; ++__i) {
@@ -2157,7 +2158,7 @@ void __bracket_expression<_CharT, _Traits>::__exec(__state& __s) const {
           __ch2.first  = __traits_.translate(__ch2.first);
           __ch2.second = __traits_.translate(__ch2.second);
         }
-        if (!__traits_.lookup_collatename(&__ch2.first, &__ch2.first + 2).empty()) {
+        if (!__traits_.lookup_collatename(std::addressof(__ch2.first), std::addressof(__ch2.first) + 2).empty()) {
           // __ch2 is a digraph in this locale
           ++__consumed;
           for (size_t __i = 0; __i < __digraphs_.size(); ++__i) {
@@ -2167,7 +2168,7 @@ void __bracket_expression<_CharT, _Traits>::__exec(__state& __s) const {
             }
           }
           if (__collate_ && !__ranges_.empty()) {
-            string_type __s2 = __traits_.transform(&__ch2.first, &__ch2.first + 2);
+            string_type __s2 = __traits_.transform(std::addressof(__ch2.first), std::addressof(__ch2.first) + 2);
             for (size_t __i = 0; __i < __ranges_.size(); ++__i) {
               if (__ranges_[__i].first <= __s2 && __s2 <= __ranges_[__i].second) {
                 __found = true;
@@ -2176,7 +2177,7 @@ void __bracket_expression<_CharT, _Traits>::__exec(__state& __s) const {
             }
           }
           if (!__equivalences_.empty()) {
-            string_type __s2 = __traits_.transform_primary(&__ch2.first, &__ch2.first + 2);
+            string_type __s2 = __traits_.transform_primary(std::addressof(__ch2.first), std::addressof(__ch2.first) + 2);
             for (size_t __i = 0; __i < __equivalences_.size(); ++__i) {
               if (__s2 == __equivalences_[__i]) {
                 __found = true;
@@ -2224,7 +2225,7 @@ void __bracket_expression<_CharT, _Traits>::__exec(__state& __s) const {
       }
     }
     if (!__ranges_.empty()) {
-      string_type __s2 = __collate_ ? __traits_.transform(&__ch, &__ch + 1) : string_type(1, __ch);
+      string_type __s2 = __collate_ ? __traits_.transform(std::addressof(__ch), std::addressof(__ch) + 1) : string_type(1, __ch);
       for (size_t __i = 0; __i < __ranges_.size(); ++__i) {
         if (__ranges_[__i].first <= __s2 && __s2 <= __ranges_[__i].second) {
           __found = true;
@@ -2233,7 +2234,7 @@ void __bracket_expression<_CharT, _Traits>::__exec(__state& __s) const {
       }
     }
     if (!__equivalences_.empty()) {
-      string_type __s2 = __traits_.transform_primary(&__ch, &__ch + 1);
+      string_type __s2 = __traits_.transform_primary(std::addressof(__ch), std::addressof(__ch) + 1);
       for (size_t __i = 0; __i < __equivalences_.size(); ++__i) {
         if (__s2 == __equivalences_[__i]) {
           __found = true;
@@ -3347,7 +3348,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_expression_term(
         if (__grammar == ECMAScript)
           __first = __parse_class_escape(++__first, __last, __start_range, __ml);
         else
-          __first = __parse_awk_escape(++__first, __last, &__start_range);
+          __first = __parse_awk_escape(++__first, __last, std::addressof(__start_range));
       } else {
         __start_range = *__first;
         ++__first;
@@ -3367,7 +3368,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_expression_term(
             if (__grammar == ECMAScript)
               __first = __parse_class_escape(++__first, __last, __end_range, __ml);
             else
-              __first = __parse_awk_escape(++__first, __last, &__end_range);
+              __first = __parse_awk_escape(++__first, __last, std::addressof(__end_range));
           } else {
             __end_range = *__first;
             ++__first;
@@ -3427,7 +3428,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_class_escape(
     __ml->__add_neg_char('_');
     return ++__first;
   }
-  __first = __parse_character_escape(__first, __last, &__str);
+  __first = __parse_character_escape(__first, __last, std::addressof(__str));
   return __first;
 }
 
@@ -5568,9 +5569,9 @@ private:
   void __init(_BidirectionalIterator __a, _BidirectionalIterator __b);
   void __establish_result() {
     if (__subs_[__n_] == -1)
-      __result_ = &__position_->prefix();
+      __result_ = std::addressof(__position_->prefix());
     else
-      __result_ = &(*__position_)[__subs_[__n_]];
+      __result_ = std::addressof((*__position_)[__subs_[__n_]]);
   }
 };
 
@@ -5587,7 +5588,7 @@ void regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::__init(
     __suffix_.matched = true;
     __suffix_.first   = __a;
     __suffix_.second  = __b;
-    __result_         = &__suffix_;
+    __result_         = std::addressof(__suffix_);
   } else
     __result_ = nullptr;
 }
@@ -5648,8 +5649,8 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::regex_token_itera
       __suffix_(__x.__suffix_),
       __n_(__x.__n_),
       __subs_(__x.__subs_) {
-  if (__x.__result_ == &__x.__suffix_)
-    __result_ = &__suffix_;
+  if (__x.__result_ == std::addressof(__x.__suffix_))
+    __result_ = std::addressof(__suffix_);
   else if (__result_ != nullptr)
     __establish_result();
 }
@@ -5657,17 +5658,17 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::regex_token_itera
 template <class _BidirectionalIterator, class _CharT, class _Traits>
 regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>&
 regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::operator=(const regex_token_iterator& __x) {
-  if (this != &__x) {
+  if (this != std::addressof(__x)) {
     __position_ = __x.__position_;
-    if (__x.__result_ == &__x.__suffix_)
-      __result_ = &__suffix_;
+    if (__x.__result_ == std::addressof(__x.__suffix_))
+      __result_ = std::addressof(__suffix_);
     else
       __result_ = __x.__result_;
     __suffix_ = __x.__suffix_;
     __n_      = __x.__n_;
     __subs_   = __x.__subs_;
 
-    if (__result_ != nullptr && __result_ != &__suffix_)
+    if (__result_ != nullptr && __result_ != std::addressof(__suffix_))
       __establish_result();
   }
   return *this;
@@ -5677,11 +5678,11 @@ template <class _BidirectionalIterator, class _CharT, class _Traits>
 bool regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::operator==(const regex_token_iterator& __x) const {
   if (__result_ == nullptr && __x.__result_ == nullptr)
     return true;
-  if (__result_ == &__suffix_ && __x.__result_ == &__x.__suffix_ && __suffix_ == __x.__suffix_)
+  if (__result_ == std::addressof(__suffix_) && __x.__result_ == std::addressof(__x.__suffix_) && __suffix_ == __x.__suffix_)
     return true;
   if (__result_ == nullptr || __x.__result_ == nullptr)
     return false;
-  if (__result_ == &__suffix_ || __x.__result_ == &__x.__suffix_)
+  if (__result_ == std::addressof(__suffix_) || __x.__result_ == std::addressof(__x.__suffix_))
     return false;
   return __position_ == __x.__position_ && __n_ == __x.__n_ && __subs_ == __x.__subs_;
 }
@@ -5690,7 +5691,7 @@ template <class _BidirectionalIterator, class _CharT, class _Traits>
 regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>&
 regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++() {
   _Position __prev = __position_;
-  if (__result_ == &__suffix_)
+  if (__result_ == std::addressof(__suffix_))
     __result_ = nullptr;
   else if (static_cast<size_t>(__n_ + 1) < __subs_.size()) {
     ++__n_;
@@ -5705,7 +5706,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++() {
         __suffix_.matched = true;
         __suffix_.first   = __prev->suffix().first;
         __suffix_.second  = __prev->suffix().second;
-        __result_         = &__suffix_;
+        __result_         = std::addressof(__suffix_);
       } else
         __result_ = nullptr;
     }

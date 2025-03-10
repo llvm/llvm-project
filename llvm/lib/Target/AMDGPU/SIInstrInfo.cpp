@@ -1337,6 +1337,7 @@ bool SIInstrInfo::getConstValDefinedInReg(const MachineInstr &MI,
   case AMDGPU::S_MOV_B64:
   case AMDGPU::V_MOV_B64_e32:
   case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
+  case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
   case AMDGPU::S_MOV_B64_IMM_PSEUDO:
   case AMDGPU::V_MOV_B64_PSEUDO: {
     const MachineOperand &Src0 = MI.getOperand(1);
@@ -2186,7 +2187,13 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.getMF()->getRegInfo().constrainRegClass(MI.getOperand(0).getReg(),
                                                &AMDGPU::SReg_32_XM0RegClass);
     break;
-
+  case AMDGPU::AV_MOV_B32_IMM_PSEUDO: {
+    Register Dst = MI.getOperand(0).getReg();
+    bool IsAGPR = SIRegisterInfo::isAGPRClass(RI.getPhysRegBaseClass(Dst));
+    MI.setDesc(
+        get(IsAGPR ? AMDGPU::V_ACCVGPR_WRITE_B32_e64 : AMDGPU::V_MOV_B32_e32));
+    break;
+  }
   case AMDGPU::V_MOV_B64_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();
     Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
@@ -3423,6 +3430,7 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
   case AMDGPU::V_ACCVGPR_READ_B32_e64:
   case AMDGPU::V_ACCVGPR_MOV_B32:
+  case AMDGPU::AV_MOV_B32_IMM_PSEUDO:
     return true;
   default:
     return false;
@@ -4920,6 +4928,18 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       return false;
     }
 
+    for (auto Op : {AMDGPU::OpName::src0_sel, AMDGPU::OpName::src1_sel,
+                    AMDGPU::OpName::dst_sel}) {
+      const MachineOperand *MO = getNamedOperand(MI, Op);
+      if (!MO)
+        continue;
+      int64_t Imm = MO->getImm();
+      if (Imm < 0 || Imm > AMDGPU::SDWA::SdwaSel::DWORD) {
+        ErrInfo = "Invalid SDWA selection";
+        return false;
+      }
+    }
+
     int DstIdx = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::vdst);
 
     for (int OpIdx : {DstIdx, Src0Idx, Src1Idx, Src2Idx}) {
@@ -5867,7 +5887,7 @@ unsigned SIInstrInfo::buildExtractSubReg(
     return RI.getSubReg(SuperReg.getReg(), SubIdx);
 
   MachineBasicBlock *MBB = MI->getParent();
-  DebugLoc DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI->getDebugLoc();
   Register SubReg = MRI.createVirtualRegister(SubRC);
 
   unsigned NewSubIdx = RI.composeSubRegIndices(SuperReg.getSubReg(), SubIdx);
@@ -10238,4 +10258,18 @@ bool SIInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
     return false;
 
   return TargetInstrInfo::isGlobalMemoryObject(MI);
+}
+
+bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
+  unsigned Opcode = MI.getOpcode();
+
+  if (!SIInstrInfo::isMAI(MI) || isDGEMM(Opcode) ||
+      Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||
+      Opcode == AMDGPU::V_ACCVGPR_READ_B32_e64)
+    return false;
+
+  if (!ST.hasGFX940Insts())
+    return true;
+
+  return AMDGPU::getMAIIsGFX940XDL(Opcode);
 }

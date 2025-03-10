@@ -158,8 +158,7 @@ define void @test_if_then(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP6]], align 8
 ; TFNONE-NEXT:    [[TMP7:%.*]] = icmp ugt <vscale x 2 x i64> [[WIDE_LOAD]], splat (i64 50)
 ; TFNONE-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i1> [[TMP7]])
-; TFNONE-NEXT:    [[TMP9:%.*]] = xor <vscale x 2 x i1> [[TMP7]], splat (i1 true)
-; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x i64> zeroinitializer, <vscale x 2 x i64> [[TMP8]]
+; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i64> [[TMP8]], <vscale x 2 x i64> zeroinitializer
 ; TFNONE-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP10]], align 8
 ; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
@@ -321,7 +320,7 @@ define void @test_widen_if_then_else(ptr noalias %a, ptr readnone %b) #4 {
 ; TFNONE-NEXT:    [[TMP8:%.*]] = xor <vscale x 2 x i1> [[TMP7]], splat (i1 true)
 ; TFNONE-NEXT:    [[TMP9:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> zeroinitializer, <vscale x 2 x i1> [[TMP8]])
 ; TFNONE-NEXT:    [[TMP10:%.*]] = call <vscale x 2 x i64> @foo_vector(<vscale x 2 x i64> [[WIDE_LOAD]], <vscale x 2 x i1> [[TMP7]])
-; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP8]], <vscale x 2 x i64> [[TMP9]], <vscale x 2 x i64> [[TMP10]]
+; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP7]], <vscale x 2 x i64> [[TMP10]], <vscale x 2 x i64> [[TMP9]]
 ; TFNONE-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[B:%.*]], i64 [[INDEX]]
 ; TFNONE-NEXT:    store <vscale x 2 x i64> [[PREDPHI]], ptr [[TMP11]], align 8
 ; TFNONE-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
@@ -987,8 +986,7 @@ define void @test_widen_exp_v2(ptr noalias %p2, ptr noalias %p, i64 %n) #5 {
 ; TFNONE-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 2 x double> [[BROADCAST_SPLATINSERT]], <vscale x 2 x double> poison, <vscale x 2 x i32> zeroinitializer
 ; TFNONE-NEXT:    [[TMP8:%.*]] = call <vscale x 2 x double> @exp_masked_scalable(<vscale x 2 x double> [[BROADCAST_SPLAT]], <vscale x 2 x i1> splat (i1 true))
 ; TFNONE-NEXT:    [[TMP9:%.*]] = fcmp ogt <vscale x 2 x double> [[TMP8]], zeroinitializer
-; TFNONE-NEXT:    [[TMP10:%.*]] = xor <vscale x 2 x i1> [[TMP9]], splat (i1 true)
-; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP10]], <vscale x 2 x double> splat (double 1.000000e+00), <vscale x 2 x double> zeroinitializer
+; TFNONE-NEXT:    [[PREDPHI:%.*]] = select <vscale x 2 x i1> [[TMP9]], <vscale x 2 x double> zeroinitializer, <vscale x 2 x double> splat (double 1.000000e+00)
 ; TFNONE-NEXT:    [[TMP11:%.*]] = call i32 @llvm.vscale.i32()
 ; TFNONE-NEXT:    [[TMP12:%.*]] = mul i32 [[TMP11]], 2
 ; TFNONE-NEXT:    [[TMP13:%.*]] = sub i32 [[TMP12]], 1

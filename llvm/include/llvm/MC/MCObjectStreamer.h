@@ -166,12 +166,6 @@ public:
   void emitCVStringTableDirective() override;
   void emitCVFileChecksumsDirective() override;
   void emitCVFileChecksumOffsetDirective(unsigned FileNo) override;
-  void emitDTPRel32Value(const MCExpr *Value) override;
-  void emitDTPRel64Value(const MCExpr *Value) override;
-  void emitTPRel32Value(const MCExpr *Value) override;
-  void emitTPRel64Value(const MCExpr *Value) override;
-  void emitGPRel32Value(const MCExpr *Value) override;
-  void emitGPRel64Value(const MCExpr *Value) override;
   std::optional<std::pair<bool, std::string>>
   emitRelocDirective(const MCExpr &Offset, StringRef Name, const MCExpr *Expr,
                      SMLoc Loc, const MCSubtargetInfo &STI) override;

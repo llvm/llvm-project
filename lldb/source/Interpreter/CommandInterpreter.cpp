@@ -46,7 +46,9 @@
 #include "Commands/CommandObjectWatchpoint.h"
 
 #include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Utility/ErrorMessages.h"
 #include "lldb/Utility/LLDBLog.h"
@@ -88,6 +90,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Telemetry/Telemetry.h"
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -1883,9 +1886,48 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
                                        LazyBool lazy_add_to_history,
                                        CommandReturnObject &result,
                                        bool force_repeat_command) {
+  telemetry::ScopedDispatcher<telemetry::CommandInfo> helper(&m_debugger);
+  const bool detailed_command_telemetry =
+      telemetry::TelemetryManager::GetInstance()
+          ->GetConfig()
+          ->detailed_command_telemetry;
+  const int command_id = telemetry::CommandInfo::GetNextId();
+
   std::string command_string(command_line);
   std::string original_command_string(command_string);
   std::string real_original_command_string(command_string);
+  std::string parsed_command_args;
+  CommandObject *cmd_obj = nullptr;
+
+  helper.DispatchNow([&](lldb_private::telemetry::CommandInfo *info) {
+    info->command_id = command_id;
+    if (Target *target = GetExecutionContext().GetTargetPtr()) {
+      // If we have a target attached to this command, then get the UUID.
+      info->target_uuid = target->GetExecutableModule() != nullptr
+                              ? target->GetExecutableModule()->GetUUID()
+                              : UUID();
+    }
+    if (detailed_command_telemetry)
+      info->original_command = original_command_string;
+    // The rest (eg., command_name, args, etc) hasn't been parsed yet;
+    // Those will be collected by the on-exit-callback.
+  });
+
+  helper.DispatchOnExit([&](lldb_private::telemetry::CommandInfo *info) {
+    // TODO: this is logging the time the command-handler finishes.
+    // But we may want a finer-grain durations too?
+    // (ie., the execute_time recorded below?)
+    info->command_id = command_id;
+    llvm::StringRef command_name =
+        cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
+    info->command_name = command_name.str();
+    info->ret_status = result.GetStatus();
+    if (std::string error_str = result.GetErrorString(); !error_str.empty())
+      info->error_data = std::move(error_str);
+
+    if (detailed_command_telemetry)
+      info->args = parsed_command_args;
+  });
 
   Log *log = GetLog(LLDBLog::Commands);
   LLDB_LOGF(log, "Processing command: %s", command_line);
@@ -1991,7 +2033,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // From 1 above, we can determine whether the Execute function wants raw
   // input or not.
 
-  CommandObject *cmd_obj = ResolveCommandImpl(command_string, result);
+  cmd_obj = ResolveCommandImpl(command_string, result);
 
   // We have to preprocess the whole command string for Raw commands, since we
   // don't know the structure of the command.  For parsed commands, we only
@@ -2053,37 +2095,36 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     if (add_to_history)
       m_command_history.AppendString(original_command_string);
 
-    std::string remainder;
     const std::size_t actual_cmd_name_len = cmd_obj->GetCommandName().size();
     if (actual_cmd_name_len < command_string.length())
-      remainder = command_string.substr(actual_cmd_name_len);
+      parsed_command_args = command_string.substr(actual_cmd_name_len);
 
     // Remove any initial spaces
-    size_t pos = remainder.find_first_not_of(k_white_space);
+    size_t pos = parsed_command_args.find_first_not_of(k_white_space);
     if (pos != 0 && pos != std::string::npos)
-      remainder.erase(0, pos);
+      parsed_command_args.erase(0, pos);
 
     LLDB_LOGF(
         log, "HandleCommand, command line after removing command name(s): '%s'",
-        remainder.c_str());
+        parsed_command_args.c_str());
 
     // To test whether or not transcript should be saved, `transcript_item` is
     // used instead of `GetSaveTranscript()`. This is because the latter will
     // fail when the command is "settings set interpreter.save-transcript true".
     if (transcript_item) {
       transcript_item->AddStringItem("commandName", cmd_obj->GetCommandName());
-      transcript_item->AddStringItem("commandArguments", remainder);
+      transcript_item->AddStringItem("commandArguments", parsed_command_args);
     }
 
     ElapsedTime elapsed(execute_time);
     cmd_obj->SetOriginalCommandString(real_original_command_string);
     // Set the indent to the position of the command in the command line.
-    pos = real_original_command_string.rfind(remainder);
+    pos = real_original_command_string.rfind(parsed_command_args);
     std::optional<uint16_t> indent;
     if (pos != std::string::npos)
       indent = pos;
     result.SetDiagnosticIndent(indent);
-    cmd_obj->Execute(remainder.c_str(), result);
+    cmd_obj->Execute(parsed_command_args.c_str(), result);
   }
 
   LLDB_LOGF(log, "HandleCommand, command %s",

@@ -637,10 +637,6 @@ public:
     return false;
   }
 
-  virtual void getADRReg(const MCInst &Inst, MCPhysReg &RegName) const {
-    llvm_unreachable("not implemented");
-  }
-
   virtual bool isMoveMem2Reg(const MCInst &Inst) const { return false; }
 
   virtual bool mayLoad(const MCInst &Inst) const {
@@ -1535,6 +1531,13 @@ public:
 
   virtual void createShortJmp(InstructionListType &Seq, const MCSymbol *Target,
                               MCContext *Ctx, bool IsTailCall = false) {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Undo the linker's ADRP+ADD to ADR relaxation. Take \p ADRInst and return
+  /// ADRP+ADD instruction sequence.
+  virtual InstructionListType undoAdrpAddRelaxation(const MCInst &ADRInst,
+                                                    MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
 

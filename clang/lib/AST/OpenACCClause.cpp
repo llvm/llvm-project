@@ -40,6 +40,8 @@ bool OpenACCClauseWithVarList::classof(const OpenACCClause *C) {
          OpenACCCopyInClause::classof(C) || OpenACCCopyOutClause::classof(C) ||
          OpenACCReductionClause::classof(C) ||
          OpenACCCreateClause::classof(C) || OpenACCDeviceClause::classof(C) ||
+         OpenACCLinkClause::classof(C) ||
+         OpenACCDeviceResidentClause::classof(C) ||
          OpenACCHostClause::classof(C);
 }
 bool OpenACCClauseWithCondition::classof(const OpenACCClause *C) {
@@ -438,6 +440,25 @@ OpenACCCopyClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
       OpenACCCopyClause(Spelling, BeginLoc, LParenLoc, VarList, EndLoc);
 }
 
+OpenACCLinkClause *OpenACCLinkClause::Create(const ASTContext &C,
+                                             SourceLocation BeginLoc,
+                                             SourceLocation LParenLoc,
+                                             ArrayRef<Expr *> VarList,
+                                             SourceLocation EndLoc) {
+  void *Mem =
+      C.Allocate(OpenACCLinkClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem) OpenACCLinkClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
+OpenACCDeviceResidentClause *OpenACCDeviceResidentClause::Create(
+    const ASTContext &C, SourceLocation BeginLoc, SourceLocation LParenLoc,
+    ArrayRef<Expr *> VarList, SourceLocation EndLoc) {
+  void *Mem = C.Allocate(
+      OpenACCDeviceResidentClause::totalSizeToAlloc<Expr *>(VarList.size()));
+  return new (Mem)
+      OpenACCDeviceResidentClause(BeginLoc, LParenLoc, VarList, EndLoc);
+}
+
 OpenACCCopyInClause *
 OpenACCCopyInClause::Create(const ASTContext &C, OpenACCClauseKind Spelling,
                             SourceLocation BeginLoc, SourceLocation LParenLoc,
@@ -511,6 +532,13 @@ OpenACCSeqClause *OpenACCSeqClause::Create(const ASTContext &C,
                                            SourceLocation EndLoc) {
   void *Mem = C.Allocate(sizeof(OpenACCSeqClause));
   return new (Mem) OpenACCSeqClause(BeginLoc, EndLoc);
+}
+
+OpenACCNoHostClause *OpenACCNoHostClause::Create(const ASTContext &C,
+                                                 SourceLocation BeginLoc,
+                                                 SourceLocation EndLoc) {
+  void *Mem = C.Allocate(sizeof(OpenACCNoHostClause));
+  return new (Mem) OpenACCNoHostClause(BeginLoc, EndLoc);
 }
 
 OpenACCGangClause *
@@ -754,6 +782,21 @@ void OpenACCClausePrinter::VisitCopyClause(const OpenACCCopyClause &C) {
   OS << ")";
 }
 
+void OpenACCClausePrinter::VisitLinkClause(const OpenACCLinkClause &C) {
+  OS << "link(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
+void OpenACCClausePrinter::VisitDeviceResidentClause(
+    const OpenACCDeviceResidentClause &C) {
+  OS << "device_resident(";
+  llvm::interleaveComma(C.getVarList(), OS,
+                        [&](const Expr *E) { printExpr(E); });
+  OS << ")";
+}
+
 void OpenACCClausePrinter::VisitCopyInClause(const OpenACCCopyInClause &C) {
   OS << C.getClauseKind() << '(';
   if (C.isReadOnly())
@@ -833,6 +876,10 @@ void OpenACCClausePrinter::VisitIndependentClause(
 
 void OpenACCClausePrinter::VisitSeqClause(const OpenACCSeqClause &C) {
   OS << "seq";
+}
+
+void OpenACCClausePrinter::VisitNoHostClause(const OpenACCNoHostClause &C) {
+  OS << "nohost";
 }
 
 void OpenACCClausePrinter::VisitCollapseClause(const OpenACCCollapseClause &C) {

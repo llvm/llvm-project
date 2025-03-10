@@ -199,7 +199,7 @@ bool TailDuplicator::tailDuplicateAndUpdate(
 
   // Update SSA form.
   if (!SSAUpdateVRs.empty()) {
-    for (unsigned VReg : SSAUpdateVRs) {
+    for (Register VReg : SSAUpdateVRs) {
       SSAUpdate.Initialize(VReg);
 
       // If the original definition is still around, add it as an available

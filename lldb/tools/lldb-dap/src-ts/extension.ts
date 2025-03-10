@@ -1,5 +1,3 @@
-import * as path from "path";
-import * as util from "util";
 import * as vscode from "vscode";
 
 import {
@@ -15,13 +13,14 @@ import { DisposableContext } from "./disposable-context";
 export class LLDBDapExtension extends DisposableContext {
   constructor() {
     super();
+    const factory = new LLDBDapDescriptorFactory();
+    this.pushSubscription(factory);
     this.pushSubscription(
       vscode.debug.registerDebugAdapterDescriptorFactory(
         "lldb-dap",
-        new LLDBDapDescriptorFactory(),
-      ),
+        factory,
+      )
     );
-
     this.pushSubscription(
       vscode.workspace.onDidChangeConfiguration(async (event) => {
         if (event.affectsConfiguration("lldb-dap.executable-path")) {

@@ -871,7 +871,7 @@ MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
                                  ArrayRef<Register> ResultRegs,
                                  bool HasSideEffects, bool isConvergent) {
   auto MIB = buildInstr(getIntrinsicOpcode(HasSideEffects, isConvergent));
-  for (unsigned ResultReg : ResultRegs)
+  for (Register ResultReg : ResultRegs)
     MIB.addDef(ResultReg);
   MIB.addIntrinsicID(ID);
   return MIB;

@@ -173,6 +173,8 @@ list of supported SPIR-V extensions, sorted alphabetically by their extension na
      - Adds decorations that can be applied to global (module scope) variables to help code generation for FPGA devices.
    * - ``SPV_INTEL_media_block_io``
      - Adds additional subgroup block read and write functionality that allow applications to flexibly specify the width and height of the block to read from or write to a 2D image.
+   * - ``SPV_INTEL_memory_access_aliasing``
+     - Adds instructions and decorations to specify memory access aliasing, similar to alias.scope and noalias LLVM metadata.
    * - ``SPV_INTEL_optnone``
      - Adds OptNoneINTEL value for Function Control mask that indicates a request to not optimize the function.
    * - ``SPV_INTEL_split_barrier``
@@ -301,6 +303,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - None
      - `[Type, Metadata]`
      - Assigns decoration to values by associating them with metadatas. Not emitted directly but used to support SPIR-V representation in LLVM IR.
+   * - `int_spv_assign_aliasing_decoration`
+     - None
+     - `[Type, 32-bit Integer, Metadata]`
+     - Assigns one of two memory aliasing decorations (specified by the second argument) to instructions using original aliasing metadata node. Not emitted directly but used to support SPIR-V representation in LLVM IR.
    * - `int_spv_track_constant`
      - Type
      - `[Type, Metadata]`

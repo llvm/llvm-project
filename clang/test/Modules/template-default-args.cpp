@@ -22,7 +22,7 @@ template<typename T = int> struct B;
 template<typename T = int> struct C;
 template<typename T> struct D {};
 template<typename T> struct F {};
-template<typename T> struct G {};
+template<typename T> struct G {}; // #G
 template<typename T> struct J {};
 template<typename T = int> struct J;
 struct K : J<> {};
@@ -39,8 +39,10 @@ E<> e;
 F<> f;
 G<> g; // expected-error {{missing '#include "a.h"'; default argument of 'G' must be defined before it is used}}
 // expected-note@a.h:7 {{default argument declared here is not reachable}}
+// expected-note@#G {{template parameter is declared here}}
 H<> h; // expected-error {{missing '#include "a.h"'; default argument of 'H' must be defined before it is used}}
 // expected-note@a.h:8 {{default argument declared here is not reachable}}
+// expected-note@a.h:8 {{template parameter is declared here}}
 I<> i;
 L<> *l;
 END

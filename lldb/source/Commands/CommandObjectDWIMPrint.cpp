@@ -101,6 +101,10 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
   // Add a hint if object description was requested, but no description
   // function was implemented.
   auto maybe_add_hint = [&](llvm::StringRef output) {
+    static bool note_shown = false;
+    if (note_shown)
+      return;
+
     // Identify the default output of object description for Swift and
     // Objective-C
     // "<Name: 0x...>. The regex is:
@@ -110,16 +114,13 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     // - Followed by 5 or more hex digits.
     // - Followed by ">".
     // - End with zero or more whitespace characters.
-    const std::regex swift_class_regex("^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
+    static const std::regex swift_class_regex(
+        "^<\\S+: 0x[[:xdigit:]]{5,}>\\s*$");
 
     if (GetDebugger().GetShowDontUsePoHint() && target_ptr &&
         (language == lldb::eLanguageTypeSwift ||
          language == lldb::eLanguageTypeObjC) &&
         std::regex_match(output.data(), swift_class_regex)) {
-
-      static bool note_shown = false;
-      if (note_shown)
-        return;
 
       result.AppendNote(
           "object description requested, but type doesn't implement "

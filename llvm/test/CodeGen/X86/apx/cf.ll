@@ -124,3 +124,18 @@ entry:
   call void @llvm.masked.store.v4i64.p0(<4 x i64> %0, ptr %p, i32 8, <4 x i1> %cond2)
   ret void
 }
+
+define void @single_cmp(i32 %a, i32 %b, ptr %c, ptr %d) #2 {
+; CHECK-LABEL: single_cmp:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    cmpl %esi, %edi
+; CHECK-NEXT:    cfcmovnew (%rdx), %ax
+; CHECK-NEXT:    cfcmovnew %ax, (%rcx)
+; CHECK-NEXT:    retq
+entry:
+  %0 = icmp ne i32 %a, %b
+  %1 = insertelement <1 x i1> poison, i1 %0, i64 0
+  %2 = tail call <1 x i16> @llvm.masked.load.v1i16.p0(ptr %c, i32 2, <1 x i1> %1, <1 x i16> poison)
+  tail call void @llvm.masked.store.v1i16.p0(<1 x i16> %2, ptr %d, i32 2, <1 x i1> %1)
+  ret void
+}

@@ -210,7 +210,8 @@ mlir::Type getDerivedType(mlir::Type ty) {
           return seq.getEleTy();
         return p.getEleTy();
       })
-      .Case<fir::BoxType>([](auto p) { return getDerivedType(p.getEleTy()); })
+      .Case<fir::BaseBoxType>(
+          [](auto p) { return getDerivedType(p.getEleTy()); })
       .Default([](mlir::Type t) { return t; });
 }
 
@@ -1356,6 +1357,10 @@ bool fir::BaseBoxType::isAssumedRank() const {
           mlir::dyn_cast<fir::SequenceType>(fir::unwrapRefType(getEleTy())))
     return seqTy.hasUnknownShape();
   return false;
+}
+
+bool fir::BaseBoxType::isPointer() const {
+  return llvm::isa<fir::PointerType>(getEleTy());
 }
 
 //===----------------------------------------------------------------------===//

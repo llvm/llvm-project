@@ -54,7 +54,7 @@ bb2:                                              ; preds = %bb4, %bb
   br i1 undef, label %bb9, label %bb13
 
 bb4:                                              ; preds = %bb7, %bb6, %bb1
-  %tmp5 = phi float [ undef, %bb1 ], [ undef, %bb6 ], [ %tmp8, %bb7 ]
+  %tmp5 = phi float [ poison, %bb1 ], [ poison, %bb6 ], [ %tmp8, %bb7 ]
   br label %bb2
 
 bb6:                                              ; preds = %bb1
@@ -74,8 +74,8 @@ bb13:                                             ; preds = %bb2
   br i1 undef, label %bb23, label %bb24
 
 bb14:                                             ; preds = %bb27, %bb24, %bb9
-  %tmp15 = phi float [ %tmp12, %bb9 ], [ undef, %bb27 ], [ 0.000000e+00, %bb24 ]
-  %tmp16 = phi float [ %tmp11, %bb9 ], [ undef, %bb27 ], [ %tmp25, %bb24 ]
+  %tmp15 = phi float [ %tmp12, %bb9 ], [ poison, %bb27 ], [ 0.000000e+00, %bb24 ]
+  %tmp16 = phi float [ %tmp11, %bb9 ], [ poison, %bb27 ], [ %tmp25, %bb24 ]
   %tmp17 = fmul float 1.050000e+01, %tmp16
   %tmp18 = fmul float 1.150000e+01, %tmp15
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %tmp18, float %tmp17, float %tmp17, float %tmp17, i1 true, i1 true) #0

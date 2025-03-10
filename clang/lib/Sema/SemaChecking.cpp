@@ -6149,18 +6149,19 @@ tryAgain:
             if (!Sema::getFormatStringInfo(D, PVFormat->getFormatIdx(),
                                            PVFormat->getFirstArg(), &CallerFSI))
               continue;
-            // We also check if the formats are compatible.
-            // We can't pass a 'scanf' string to a 'printf' function.
-            if (Type != S.GetFormatStringType(PVFormat)) {
-              S.Diag(Args[format_idx]->getBeginLoc(),
-                     diag::warn_format_string_type_incompatible)
-                  << PVFormat->getType()->getName()
-                  << S.GetFormatStringTypeName(Type);
-              if (!InFunctionCall) {
-                S.Diag(E->getBeginLoc(), diag::note_format_string_defined);
+            if (PV->getFunctionScopeIndex() == CallerFSI.FormatIdx) {
+              // We also check if the formats are compatible.
+              // We can't pass a 'scanf' string to a 'printf' function.
+              if (Type != S.GetFormatStringType(PVFormat)) {
+                S.Diag(Args[format_idx]->getBeginLoc(),
+                       diag::warn_format_string_type_incompatible)
+                    << PVFormat->getType()->getName()
+                    << S.GetFormatStringTypeName(Type);
+                if (!InFunctionCall) {
+                  S.Diag(E->getBeginLoc(), diag::note_format_string_defined);
+                }
+                return SLCT_UncheckedLiteral;
               }
-              return SLCT_UncheckedLiteral;
-            } else if (PV->getFunctionScopeIndex() == CallerFSI.FormatIdx) {
               // Lastly, check that argument passing kinds transition in a
               // way that makes sense:
               // from a caller with FAPK_VAList, allow FAPK_VAList

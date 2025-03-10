@@ -308,7 +308,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
 
   MaxVGPRs = getMaxVGPRs(TM, F);
 
-  bool SufficientLDS = PromoteToLDS ? hasSufficientLocalMem(F) : false;
+  bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
 
   // Use up to 1/4 of available register budget for vectorization.
   // FIXME: Increase the limit for whole function budgets? Perhaps x2?

@@ -1225,7 +1225,7 @@ int main() {
   InitializeAllAsmPrinters();
 
   auto TargetTriple = sys::getDefaultTargetTriple();
-  TheModule->setTargetTriple(TargetTriple);
+  TheModule->setTargetTriple(Triple(TargetTriple));
 
   std::string Error;
   auto Target = TargetRegistry::lookupTarget(TargetTriple, Error);

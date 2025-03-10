@@ -214,14 +214,7 @@ void RISCVMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
 
 bool RISCVMCExpr::evaluateAsConstant(int64_t &Res) const {
   MCValue Value;
-
-  if (Kind == VK_RISCV_PCREL_HI || Kind == VK_RISCV_PCREL_LO ||
-      Kind == VK_RISCV_GOT_HI || Kind == VK_RISCV_TPREL_HI ||
-      Kind == VK_RISCV_TPREL_LO || Kind == VK_RISCV_TPREL_ADD ||
-      Kind == VK_RISCV_TLS_GOT_HI || Kind == VK_RISCV_TLS_GD_HI ||
-      Kind == VK_RISCV_TLSDESC_HI || Kind == VK_RISCV_TLSDESC_LOAD_LO ||
-      Kind == VK_RISCV_TLSDESC_ADD_LO || Kind == VK_RISCV_TLSDESC_CALL ||
-      Kind == VK_RISCV_CALL || Kind == VK_RISCV_CALL_PLT)
+  if (Kind != VK_RISCV_LO && Kind != VK_RISCV_HI)
     return false;
 
   if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr, nullptr))

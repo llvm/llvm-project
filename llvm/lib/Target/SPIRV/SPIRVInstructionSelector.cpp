@@ -1026,7 +1026,9 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
 }
 
 static void addMemoryOperands(MachineMemOperand *MemOp,
-                              MachineInstrBuilder &MIB) {
+                              MachineInstrBuilder &MIB,
+                              MachineIRBuilder &MIRBuilder,
+                              SPIRVGlobalRegistry &GR) {
   uint32_t SpvMemOp = static_cast<uint32_t>(SPIRV::MemoryOperand::None);
   if (MemOp->isVolatile())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Volatile);
@@ -1035,10 +1037,33 @@ static void addMemoryOperands(MachineMemOperand *MemOp,
   if (MemOp->getAlign().value())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned);
 
+  [[maybe_unused]] MachineInstr *AliasList = nullptr;
+  [[maybe_unused]] MachineInstr *NoAliasList = nullptr;
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
+    if (auto *MD = MemOp->getAAInfo().Scope) {
+      AliasList = GR.getOrAddMemAliasingINTELInst(MIRBuilder, MD);
+      if (AliasList)
+        SpvMemOp |=
+            static_cast<uint32_t>(SPIRV::MemoryOperand::AliasScopeINTELMask);
+    }
+    if (auto *MD = MemOp->getAAInfo().NoAlias) {
+      NoAliasList = GR.getOrAddMemAliasingINTELInst(MIRBuilder, MD);
+      if (NoAliasList)
+        SpvMemOp |=
+            static_cast<uint32_t>(SPIRV::MemoryOperand::NoAliasINTELMask);
+    }
+  }
+
   if (SpvMemOp != static_cast<uint32_t>(SPIRV::MemoryOperand::None)) {
     MIB.addImm(SpvMemOp);
     if (SpvMemOp & static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned))
       MIB.addImm(MemOp->getAlign().value());
+    if (AliasList)
+      MIB.addUse(AliasList->getOperand(0).getReg());
+    if (NoAliasList)
+      MIB.addUse(NoAliasList->getOperand(0).getReg());
   }
 }
 
@@ -1087,7 +1112,8 @@ bool SPIRVInstructionSelector::selectLoad(Register ResVReg,
                TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS);
     addMemoryOperands(I.getOperand(2 + OpOffset).getImm(), MIB);
   } else {
-    addMemoryOperands(*I.memoperands_begin(), MIB);
+    MachineIRBuilder MIRBuilder(I);
+    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
@@ -1129,7 +1155,8 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
                TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS);
     addMemoryOperands(I.getOperand(2 + OpOffset).getImm(), MIB);
   } else {
-    addMemoryOperands(*I.memoperands_begin(), MIB);
+    MachineIRBuilder MIRBuilder(I);
+    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
@@ -1206,8 +1233,10 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
                  .addUse(I.getOperand(0).getReg())
                  .addUse(SrcReg)
                  .addUse(I.getOperand(2).getReg());
-  if (I.getNumMemOperands())
-    addMemoryOperands(*I.memoperands_begin(), MIB);
+  if (I.getNumMemOperands()) {
+    MachineIRBuilder MIRBuilder(I);
+    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
+  }
   Result &= MIB.constrainAllUses(TII, TRI, RBI);
   if (ResVReg.isValid() && ResVReg != MIB->getOperand(0).getReg())
     Result &= BuildCOPY(ResVReg, MIB->getOperand(0).getReg(), I);

@@ -4411,6 +4411,10 @@ void Parser::ParseDeclarationSpecifiers(
         DiagID = diag::err_openclcxx_virtual_function;
         PrevSpec = Tok.getIdentifierInfo()->getNameStart();
         isInvalid = true;
+      } else if (getLangOpts().HLSL) {
+        DiagID = diag::err_hlsl_virtual_function;
+        PrevSpec = Tok.getIdentifierInfo()->getNameStart();
+        isInvalid = true;
       } else {
         isInvalid = DS.setFunctionSpecVirtual(Loc, PrevSpec, DiagID);
       }
@@ -5652,7 +5656,7 @@ void Parser::ParseEnumSpecifier(SourceLocation StartLoc, DeclSpec &DS,
     Decl *D = SkipBody.CheckSameAsPrevious ? SkipBody.New : TagDecl;
     ParseEnumBody(StartLoc, D);
     if (SkipBody.CheckSameAsPrevious &&
-        !Actions.ActOnDuplicateDefinition(TagDecl, SkipBody)) {
+        !Actions.ActOnDuplicateDefinition(getCurScope(), TagDecl, SkipBody)) {
       DS.SetTypeSpecError();
       return;
     }

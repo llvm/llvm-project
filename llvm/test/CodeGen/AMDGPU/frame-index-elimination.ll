@@ -346,4 +346,74 @@ entry:
   ret void
 }
 
+; Check for "SOP2/SOPC instruction requires too many immediate
+; constants" verifier error.  Frame index would fold into low half of
+; the lowered flat pointer add, and use s_add_u32 instead of
+; s_add_i32.
+
+; GCN-LABEL: {{^}}fi_sop2_s_add_u32_literal_error:
+; GCN: s_add_u32 [[ADD_LO:s[0-9]+]], 0, 0x2010
+; GCN: s_addc_u32 [[ADD_HI:s[0-9]+]], s{{[0-9]+}}, 0
+define amdgpu_kernel void @fi_sop2_s_add_u32_literal_error() #0 {
+entry:
+  %.omp.reduction.element.i.i.i.i = alloca [1024 x i32], align 4, addrspace(5)
+  %Total3.i.i = alloca [1024 x i32], align 16, addrspace(5)
+  %Total3.ascast.i.i = addrspacecast ptr addrspace(5) %Total3.i.i to ptr
+  %gep = getelementptr i8, ptr %Total3.ascast.i.i, i64 4096
+  %p2i = ptrtoint ptr %gep to i64
+  br label %.shuffle.then.i.i.i.i
+
+.shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
+  store i64 0, ptr addrspace(5) null, align 4
+  %icmp = icmp ugt i64 %p2i, 1
+  br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
+
+vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
+  %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}fi_sop2_and_literal_error:
+; GCN: s_and_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x1fe00
+define amdgpu_kernel void @fi_sop2_and_literal_error() #0 {
+entry:
+  %.omp.reduction.element.i.i.i.i = alloca [1024 x i32], align 4, addrspace(5)
+  %Total3.i.i = alloca [1024 x i32], align 16, addrspace(5)
+  %p2i = ptrtoint ptr addrspace(5) %Total3.i.i to i32
+  br label %.shuffle.then.i.i.i.i
+
+.shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
+  store i64 0, ptr addrspace(5) null, align 4
+  %or = and i32 %p2i, -512
+  %icmp = icmp ugt i32 %or, 9999999
+  br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
+
+vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
+  %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  ret void
+}
+
+; GCN-LABEL: {{^}}fi_sop2_or_literal_error:
+; GCN: s_or_b32 s{{[0-9]+}}, s{{[0-9]+}}, 0x3039
+define amdgpu_kernel void @fi_sop2_or_literal_error() #0 {
+entry:
+  %.omp.reduction.element.i.i.i.i = alloca [1024 x i32], align 4, addrspace(5)
+  %Total3.i.i = alloca [1024 x i32], align 16, addrspace(5)
+  %p2i = ptrtoint ptr addrspace(5) %Total3.i.i to i32
+  br label %.shuffle.then.i.i.i.i
+
+.shuffle.then.i.i.i.i:                            ; preds = %.shuffle.then.i.i.i.i, %entry
+  store i64 0, ptr addrspace(5) null, align 4
+  %or = or i32 %p2i, 12345
+  %icmp = icmp ugt i32 %or, 9999999
+  br i1 %icmp, label %.shuffle.then.i.i.i.i, label %vector.body.i.i.i.i
+
+vector.body.i.i.i.i:                              ; preds = %.shuffle.then.i.i.i.i
+  %wide.load9.i.i.i.i = load <2 x i32>, ptr addrspace(5) %.omp.reduction.element.i.i.i.i, align 4
+  store <2 x i32> %wide.load9.i.i.i.i, ptr addrspace(5) null, align 4
+  ret void
+}
+
 attributes #0 = { nounwind }

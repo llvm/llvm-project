@@ -120,26 +120,22 @@ define amdgpu_kernel void @undef_phi_cond_break_loop(i32 %arg) #0 {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_subrev_i32_e32 v0, vcc, s3, v0
 ; GCN-NEXT:    s_mov_b32 s3, 0xf000
-; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GCN-NEXT:    ; implicit-def: $sgpr6
 ; GCN-NEXT:  .LBB1_1: ; %bb1
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
 ; GCN-NEXT:    s_cmp_gt_i32 s6, -1
+; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GCN-NEXT:    s_cbranch_scc1 .LBB1_3
 ; GCN-NEXT:  ; %bb.2: ; %bb4
 ; GCN-NEXT:    ; in Loop: Header=BB1_1 Depth=1
 ; GCN-NEXT:    buffer_load_dword v1, off, s[0:3], 0 glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_cmp_ge_i32_e32 vcc, v0, v1
-; GCN-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
-; GCN-NEXT:    s_and_b64 s[8:9], vcc, exec
-; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[8:9]
+; GCN-NEXT:    v_cmp_ge_i32_e64 s[4:5], v0, v1
 ; GCN-NEXT:  .LBB1_3: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB1_1 Depth=1
 ; GCN-NEXT:    s_add_i32 s6, s6, 1
-; GCN-NEXT:    s_and_b64 s[8:9], exec, s[4:5]
-; GCN-NEXT:    s_or_b64 s[0:1], s[8:9], s[0:1]
+; GCN-NEXT:    s_and_b64 s[4:5], exec, s[4:5]
+; GCN-NEXT:    s_or_b64 s[0:1], s[4:5], s[0:1]
 ; GCN-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; GCN-NEXT:    s_cbranch_execnz .LBB1_1
 ; GCN-NEXT:  ; %bb.4: ; %bb9

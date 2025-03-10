@@ -25,7 +25,7 @@ template<typename Outer> struct X {
   template<typename Inner> static int y<Outer>; // expected-error 3{{cannot be deduced}} expected-note 3{{'Inner'}}
   template<typename Inner> static int y<Inner>; // expected-error {{does not specialize}}
 
-  template<typename, int> static int z;
+  template<typename, int> static int z; // expected-note {{template parameter is declared here}}
   template<Outer N> static int z<int, N>; // expected-error {{not implicitly convertible}}
 };
 template<typename Outer> template<typename Inner> int X<Outer>::y<Outer>; // expected-error {{cannot be deduced}} expected-note {{'Inner'}}
@@ -33,4 +33,4 @@ template<typename Outer> template<typename Inner> int X<Outer>::y<Inner>; // exp
 template<> template<typename Inner> int X<int>::y<Inner>; // expected-error {{does not specialize}} expected-note {{instantiation of}}
 
 X<int> xi;
-X<int*> xf; // expected-note {{instantiation of}}
+X<int*> xf; // expected-note 2{{instantiation of}}

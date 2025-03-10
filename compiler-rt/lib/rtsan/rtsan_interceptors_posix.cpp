@@ -295,7 +295,7 @@ INTERCEPTOR(int, ftruncate, int fd, off_t length) {
   return REAL(ftruncate)(fd, length);
 }
 
-#if SANITIZER_LINUX
+#if SANITIZER_LINUX && !SANITIZER_MUSL
 INTERCEPTOR(int, truncate64, const char *pathname, off64_t length) {
   __rtsan_notify_intercepted_call("truncate64");
   return REAL(truncate64)(pathname, length);

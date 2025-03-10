@@ -505,10 +505,6 @@ public:
   // Return whether this parser accept star as start of statement
   virtual bool starIsStartOfStatement() { return false; };
 
-  virtual MCSymbolRefExpr::VariantKind
-  getVariantKindForName(StringRef Name) const {
-    return MCSymbolRefExpr::getVariantKindForName(Name);
-  }
   virtual const MCExpr *applyModifierToExpr(const MCExpr *E,
                                             MCSymbolRefExpr::VariantKind,
                                             MCContext &Ctx) {
@@ -523,12 +519,6 @@ public:
   /// Ensure that all previously parsed instructions have been emitted to the
   /// output streamer, if the target does not emit them immediately.
   virtual void flushPendingInstructions(MCStreamer &Out) {}
-
-  virtual const MCExpr *createTargetUnaryExpr(const MCExpr *E,
-                                              AsmToken::TokenKind OperatorToken,
-                                              MCContext &Ctx) {
-    return nullptr;
-  }
 
   // For any initialization at the beginning of parsing.
   virtual void onBeginOfFile() {}

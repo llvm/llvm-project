@@ -294,12 +294,11 @@ void __llvm_ctx_profile_start_collection() {
   __sanitizer::Printf("[ctxprof] Initial NumMemUnits: %zu \n", NumMemUnits);
 }
 
-bool __llvm_ctx_profile_fetch(void *Data,
-                              bool (*Writer)(void *W, const ContextNode &)) {
-  assert(Writer);
+bool __llvm_ctx_profile_fetch(ProfileWriter &Writer) {
   __sanitizer::GenericScopedLock<__sanitizer::SpinMutex> Lock(
       &AllContextsMutex);
 
+  Writer.startContextSection();
   for (int I = 0, E = AllContextRoots.Size(); I < E; ++I) {
     auto *Root = AllContextRoots[I];
     __sanitizer::GenericScopedLock<__sanitizer::StaticSpinMutex> TakenLock(
@@ -308,9 +307,9 @@ bool __llvm_ctx_profile_fetch(void *Data,
       __sanitizer::Printf("[ctxprof] Contextual Profile is %s\n", "invalid");
       return false;
     }
-    if (!Writer(Data, *Root->FirstNode))
-      return false;
+    Writer.writeContextual(*Root->FirstNode);
   }
+  Writer.endContextSection();
   return true;
 }
 
