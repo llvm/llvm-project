@@ -85,22 +85,11 @@ getHighestNumericTupleInDirectory(llvm::vfs::FileSystem &VFS,
   return Highest;
 }
 
-static bool getWindows10SDKVersionFromPath(
-    llvm::vfs::FileSystem &VFS, const std::string &SDKPath,
-    std::optional<llvm::StringRef> WinSdkVersion, std::string &SDKVersion) {
+static bool getWindows10SDKVersionFromPath(llvm::vfs::FileSystem &VFS,
+                                           const std::string &SDKPath,
+                                           std::string &SDKVersion) {
   llvm::SmallString<128> IncludePath(SDKPath);
   llvm::sys::path::append(IncludePath, "Include");
-
-  if (WinSdkVersion) {
-    // Use the provided version, if it exists.
-    llvm::SmallString<128> VersionIncludePath(IncludePath);
-    llvm::sys::path::append(VersionIncludePath, *WinSdkVersion);
-    if (VFS.exists(VersionIncludePath)) {
-      SDKVersion = *WinSdkVersion;
-      return true;
-    }
-  }
-
   SDKVersion = getHighestNumericTupleInDirectory(VFS, IncludePath);
   return !SDKVersion.empty();
 }
@@ -133,8 +122,7 @@ static bool getWindowsSDKDirViaCommandLine(
     if (!SDKVersion.empty()) {
       Major = SDKVersion.getMajor();
       Version = SDKVersion.getAsString();
-    } else if (getWindows10SDKVersionFromPath(VFS, Path, WinSdkVersion,
-                                              Version)) {
+    } else if (getWindows10SDKVersionFromPath(VFS, Path, Version)) {
       Major = 10;
     }
     return true;
@@ -456,8 +444,14 @@ bool getWindowsSDKDir(vfs::FileSystem &VFS, std::optional<StringRef> WinSdkDir,
     return !WindowsSDKLibVersion.empty();
   }
   if (Major == 10) {
-    if (!getWindows10SDKVersionFromPath(VFS, Path, WinSdkVersion,
-                                        WindowsSDKIncludeVersion))
+    if (WinSdkVersion) {
+      // Use the user-provided version as-is.
+      WindowsSDKIncludeVersion = WinSdkVersion->str();
+      WindowsSDKLibVersion = WindowsSDKIncludeVersion;
+      return true;
+    }
+
+    if (!getWindows10SDKVersionFromPath(VFS, Path, WindowsSDKIncludeVersion))
       return false;
     WindowsSDKLibVersion = WindowsSDKIncludeVersion;
     return true;
@@ -488,7 +482,13 @@ bool getUniversalCRTSdkDir(vfs::FileSystem &VFS,
           Path, nullptr))
     return false;
 
-  return getWindows10SDKVersionFromPath(VFS, Path, WinSdkVersion, UCRTVersion);
+  if (WinSdkVersion) {
+    // Use the user-provided version as-is.
+    UCRTVersion = WinSdkVersion->str();
+    return true;
+  }
+
+  return getWindows10SDKVersionFromPath(VFS, Path, UCRTVersion);
 }
 
 bool findVCToolChainViaCommandLine(vfs::FileSystem &VFS,
