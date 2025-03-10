@@ -1691,27 +1691,25 @@ define amdgpu_kernel void @s_copysign_out_f16_mag_f64_sign_f16(ptr addrspace(1) 
 ; GFX11-NEXT:    v_med3_i32 v1, s3, 0, 13
 ; GFX11-NEXT:    v_readfirstlane_b32 s3, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s4
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_readfirstlane_b32 s6, v1
 ; GFX11-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-NEXT:    s_or_b32 s3, s5, s3
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_b32 s5, s3, 0x1000
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instid1(SALU_CYCLE_1)
-; GFX11-NEXT:    s_lshr_b32 s7, s5, s6
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_lshr_b32 s7, s5, s6
 ; GFX11-NEXT:    s_lshl_b32 s6, s7, s6
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cmp_lg_u32 s6, s5
 ; GFX11-NEXT:    s_cselect_b32 s5, 1, 0
 ; GFX11-NEXT:    s_addk_i32 s2, 0xfc10
 ; GFX11-NEXT:    s_or_b32 s5, s7, s5
 ; GFX11-NEXT:    s_lshl_b32 s6, s2, 12
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_or_b32 s6, s3, s6
 ; GFX11-NEXT:    s_cmp_lt_i32 s2, 1
 ; GFX11-NEXT:    s_cselect_b32 s5, s5, s6
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s6, s5, 7
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cmp_gt_i32 s6, 5
 ; GFX11-NEXT:    s_cselect_b32 s7, 1, 0
 ; GFX11-NEXT:    s_cmp_eq_u32 s6, 3

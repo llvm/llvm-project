@@ -2375,7 +2375,6 @@ define void @test_load_store_f64_to_bf16(ptr addrspace(1) %in, ptr addrspace(1) 
 ; GFX11-NEXT:    v_cmp_gt_f64_e64 s1, |v[0:1]|, v[4:5]
 ; GFX11-NEXT:    v_cmp_nlg_f64_e64 s0, |v[0:1]|, v[4:5]
 ; GFX11-NEXT:    v_cndmask_b32_e64 v4, -1, 1, s1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    s_or_b32 vcc_lo, s0, vcc_lo
 ; GFX11-NEXT:    v_add_nc_u32_e32 v4, v6, v4
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)

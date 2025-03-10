@@ -331,6 +331,11 @@ public:
     bool Changed = false;
     MachineInstr *LastDelayAlu = nullptr;
 
+    bool VALUSALUStall = false;
+    MCRegUnit lastSgprWrite = 0;
+    MCRegUnit longestWait = 0;
+    unsigned deletedCyclesNum = 0;
+
     // Iterate over the contents of bundles, but don't emit any instructions
     // inside a bundle.
     for (auto &MI : MBB.instrs()) {
@@ -362,12 +367,51 @@ public:
             for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
               auto It = State.find(Unit);
               if (It != State.end()) {
-                Delay.merge(It->second);
-                State.erase(Unit);
+                if (SII->isSALU(MI.getOpcode()) &&
+                    AMDGPU::isSGPR(Op.getReg(), TRI) &&
+                    It->second.VALUCycles > 0) {
+                  deletedCyclesNum = It->second.VALUCycles;
+                  State.erase(Unit);
+                  VALUSALUStall = true;
+                } else {
+                  Delay.merge(It->second);
+                  State.erase(Unit);
+                }
               }
             }
           }
         }
+        unsigned maxCycles = 0;
+        unsigned lastWrite = 0;
+        if (Type != OTHER) {
+          for (const auto &Op : MI.defs()) {
+            for (MCRegUnit Unit : TRI->regunits(Op.getReg())) {
+              if (AMDGPU::isSGPR(Op.getReg(), TRI)) {
+                maxCycles =
+                    (State.find(longestWait) == State.end())
+                        ? std::max(deletedCyclesNum, (unsigned)0)
+                        : std::max(State[longestWait].VALUCycles,
+                                   State[longestWait].SALUCycles);
+                lastWrite =
+                    (State.find(lastSgprWrite) == State.end())
+                        ? 0
+                        : std::max(State[lastSgprWrite].VALUCycles,
+                                   State[lastSgprWrite].SALUCycles);
+                if (maxCycles <= lastWrite)
+                  longestWait = lastSgprWrite;
+                lastSgprWrite = Unit;
+              }
+            }
+          }
+        }
+
+        if (VALUSALUStall) {
+          State.advance(VALU, maxCycles);
+          VALUSALUStall = false;
+          lastSgprWrite = 0;
+          longestWait = 0;
+        }
+
         if (Emit && !MI.isBundledWithPred()) {
           // TODO: For VALU->SALU delays should we use s_delay_alu or s_nop or
           // just ignore them?
