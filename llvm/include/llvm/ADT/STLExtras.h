@@ -2124,7 +2124,7 @@ void append_values(Container &C, Args &&...Values) {
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
 /// the range [ValIt, ValEnd) (which is not from the same container).
-template<typename Container, typename RandomAccessIterator>
+template <typename Container, typename RandomAccessIterator>
 void replace(Container &Cont, typename Container::iterator ContIt,
              typename Container::iterator ContEnd, RandomAccessIterator ValIt,
              RandomAccessIterator ValEnd) {
@@ -2132,21 +2132,24 @@ void replace(Container &Cont, typename Container::iterator ContIt,
     if (ValIt == ValEnd) {
       Cont.erase(ContIt, ContEnd);
       return;
-    } else if (ContIt == ContEnd) {
+    }
+    if (ContIt == ContEnd) {
       Cont.insert(ContIt, ValIt, ValEnd);
       return;
     }
-    *ContIt++ = *ValIt++;
+    *ContIt = *ValIt;
+    ++ContIt;
+    ++ValIt;
   }
 }
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
 /// the range R.
-template<typename Container, typename Range = std::initializer_list<
-                                 typename Container::value_type>>
+template <typename Container, typename Range = std::initializer_list<
+                                  typename Container::value_type>>
 void replace(Container &Cont, typename Container::iterator ContIt,
-             typename Container::iterator ContEnd, Range R) {
-  replace(Cont, ContIt, ContEnd, R.begin(), R.end());
+             typename Container::iterator ContEnd, Range &&R) {
+  replace(Cont, ContIt, ContEnd, adl_begin(R), adl_end(R));
 }
 
 /// An STL-style algorithm similar to std::for_each that applies a second
