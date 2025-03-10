@@ -764,16 +764,13 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   // Custom handling for i8 intrinsics
   setOperationAction(ISD::INTRINSIC_W_CHAIN, MVT::i8, Custom);
 
-  for (const auto& Ty : {MVT::i16, MVT::i32, MVT::i64}) {
-    setOperationAction(ISD::ABS,  Ty, Legal);
-    setOperationAction(ISD::SMIN, Ty, Legal);
-    setOperationAction(ISD::SMAX, Ty, Legal);
-    setOperationAction(ISD::UMIN, Ty, Legal);
-    setOperationAction(ISD::UMAX, Ty, Legal);
+  setOperationAction({ISD::ABS, ISD::SMIN, ISD::SMAX, ISD::UMIN, ISD::UMAX},
+                     {MVT::i16, MVT::i32, MVT::i64}, Legal);
 
-    setOperationAction(ISD::CTPOP, Ty, Legal);
-    setOperationAction(ISD::CTLZ, Ty, Legal);
-  }
+  setOperationAction({ISD::CTPOP, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i16,
+                     Promote);
+  setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i32, Legal);
+  setOperationAction({ISD::CTPOP, ISD::CTLZ}, MVT::i64, Custom);
 
   setI16x2OperationAction(ISD::ABS, MVT::v2i16, Legal, Custom);
   setI16x2OperationAction(ISD::SMIN, MVT::v2i16, Legal, Custom);
@@ -2748,6 +2745,19 @@ static SDValue LowerIntrinsicVoid(SDValue Op, SelectionDAG &DAG) {
   return Op;
 }
 
+// In PTX 64-bit CTLZ and CTPOP are supported, but they return a 32-bit value.
+// Lower these into a node returning the correct type which is zero-extended
+// back to the correct size.
+static SDValue lowerCTLZCTPOP(SDValue Op, SelectionDAG &DAG) {
+  SDValue V = Op->getOperand(0);
+  assert(V.getValueType() == MVT::i64 &&
+         "Unexpected CTLZ/CTPOP type to legalize");
+
+  SDLoc DL(Op);
+  SDValue CT = DAG.getNode(Op->getOpcode(), DL, MVT::i32, V);
+  return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT, SDNodeFlags::NonNeg);
+}
+
 SDValue
 NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   switch (Op.getOpcode()) {
@@ -2833,6 +2843,9 @@ NVPTXTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FMUL:
     // Used only for bf16 on SM80, where we select fma for non-ftz operation
     return PromoteBinOpIfF32FTZ(Op, DAG);
+  case ISD::CTPOP:
+  case ISD::CTLZ:
+    return lowerCTLZCTPOP(Op, DAG);
 
   default:
     llvm_unreachable("Custom lowering not defined for operation");
