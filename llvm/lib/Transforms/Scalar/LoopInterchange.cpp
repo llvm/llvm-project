@@ -566,6 +566,7 @@ struct LoopInterchange {
                    const DenseMap<const Loop *, unsigned> &CostMap) {
     Loop *OuterLoop = LoopList[OuterLoopId];
     Loop *InnerLoop = LoopList[InnerLoopId];
+    MDNode *LoopID = OuterLoop->getLoopID();
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
     if (findMetadata(OuterLoop) == false || findMetadata(InnerLoop) == false) {
@@ -606,6 +607,34 @@ struct LoopInterchange {
 
     LLVM_DEBUG(dbgs() << "Dependency matrix after interchange:\n";
                printDepMatrix(DependencyMatrix));
+
+    // The next outer loop, or nullptr if TargetLoop is the outermost one.
+    Loop *NextOuterLoop = nullptr;
+    if (0 < OuterLoopId)
+      NextOuterLoop = LoopList[OuterLoopId - 1];
+
+    // Update the metadata.
+    std::optional<MDNode *> MDNextOuterLoopID =
+        makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
+                                    LLVMLoopInterchangeFollowupNextOuter});
+    std::optional<MDNode *> MDOuterLoopID =
+        makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
+                                    LLVMLoopInterchangeFollowupOuter});
+    std::optional<MDNode *> MDInnerLoopID =
+        makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
+                                    LLVMLoopInterchangeFollowupInner});
+    if (MDNextOuterLoopID) {
+      if (NextOuterLoop) {
+        NextOuterLoop->setLoopID(*MDNextOuterLoopID);
+      } else {
+        LLVM_DEBUG(
+            dbgs() << "New metadata for the next outer loop is ignored.\n");
+      }
+    }
+    if (MDOuterLoopID)
+      OuterLoop->setLoopID(*MDOuterLoopID);
+    if (MDInnerLoopID)
+      InnerLoop->setLoopID(*MDInnerLoopID);
 
     return true;
   }
@@ -687,7 +716,6 @@ struct LoopInterchange {
         });
         break;
       }
-      MDNode *LoopID = TargetLoop->getLoopID();
       bool Interchanged = processLoop(LoopList, InnerLoopId, OuterLoopId,
                                       DependencyMatrix, CostMap);
       if (!Interchanged) {
@@ -709,29 +737,6 @@ struct LoopInterchange {
       Changed = true;
       Loop2Index[OuterLoop] = OuterLoopId;
       Loop2Index[InnerLoop] = InnerLoopId;
-
-      // Update the metadata.
-      std::optional<MDNode *> MDNextOuterLoopID =
-          makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
-                                      LLVMLoopInterchangeFollowupNextOuter});
-      std::optional<MDNode *> MDOuterLoopID =
-          makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
-                                      LLVMLoopInterchangeFollowupOuter});
-      std::optional<MDNode *> MDInnerLoopID =
-          makeFollowupLoopID(LoopID, {LLVMLoopInterchangeFollowupAll,
-                                      LLVMLoopInterchangeFollowupInner});
-      if (MDNextOuterLoopID) {
-        if (NextOuterLoop) {
-          NextOuterLoop->setLoopID(*MDNextOuterLoopID);
-        } else {
-          LLVM_DEBUG(dbgs()
-                     << "New metadata for the next outer loop is ignored.\n");
-        }
-      }
-      if (MDOuterLoopID)
-        OuterLoop->setLoopID(*MDOuterLoopID);
-      if (MDInnerLoopID)
-        InnerLoop->setLoopID(*MDInnerLoopID);
 
       // Add new elements, paying attention to the order.
       bool Valid = true;
