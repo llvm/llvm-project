@@ -8,7 +8,7 @@
 ; RUN: FileCheck %s -input-file=%t_1.ll --check-prefix=CHECK-IR1
 
 ; CHECK-SYM0: kernelA
-; CHECK-SYM1: kernel1
+; CHECK-SYM1: kernelB
 ;
 ; CHECK-IR0: define dso_local spir_kernel void @kernelA
 ;
@@ -23,7 +23,7 @@ entry:
   ret i32 %a
 }
 
-define weak_odr dso_local spir_kernel void @kernel1() #0 {
+define weak_odr dso_local spir_kernel void @kernelB() #0 {
 entry:
   %0 = call i32 @indirect_call(ptr addrspace(4) addrspacecast ( ptr getelementptr inbounds ( [1 x ptr] , ptr @FuncTable, i64 0, i64 0) to ptr addrspace(4)), i32 0)
   ret void
