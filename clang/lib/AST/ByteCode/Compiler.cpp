@@ -5105,6 +5105,16 @@ bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
 }
 
 template <class Emitter>
+bool Compiler<Emitter>::emitDecompositionVarInit(const DecompositionDecl *DD) {
+  for (auto *BD : DD->bindings())
+    if (auto *KD = BD->getHoldingVar()) {
+      if (!this->visitVarDecl(KD))
+        return false;
+    }
+  return true;
+}
+
+template <class Emitter>
 bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
   for (const auto *D : DS->decls()) {
     if (isa<StaticAssertDecl, TagDecl, TypedefNameDecl, BaseUsingDecl,
@@ -5118,12 +5128,10 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS) {
       return false;
 
     // Register decomposition decl holding vars.
-    if (const auto *DD = dyn_cast<DecompositionDecl>(VD)) {
-      for (auto *BD : DD->bindings())
-        if (auto *KD = BD->getHoldingVar()) {
-          if (!this->visitVarDecl(KD))
-            return false;
-        }
+    if (const auto *DD = dyn_cast<DecompositionDecl>(VD);
+        DD && !DD->isDecisionVariable()) {
+      if (!this->emitDecompositionVarInit(DD))
+        return false;
     }
   }
 
@@ -5189,6 +5197,12 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
       return false;
   }
 
+  if (auto *DD =
+          dyn_cast_if_present<DecompositionDecl>(IS->getConditionVariable());
+      DD && DD->isDecisionVariable())
+    if (!this->emitDecompositionVarInit(DD))
+      return false;
+
   if (const Stmt *Else = IS->getElse()) {
     LabelTy LabelElse = this->getLabel();
     LabelTy LabelEnd = this->getLabel();
@@ -5249,6 +5263,13 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
 
     if (!this->visitBool(Cond))
       return false;
+
+    if (auto *DD =
+            dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable());
+        DD && DD->isDecisionVariable())
+      if (!this->emitDecompositionVarInit(DD))
+        return false;
+
     if (!this->jumpFalse(EndLabel))
       return false;
 
@@ -5329,6 +5350,12 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
       if (!this->jumpFalse(EndLabel))
         return false;
     }
+
+    if (auto *DD =
+            dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable());
+        DD && DD->isDecisionVariable())
+      if (!this->emitDecompositionVarInit(DD))
+        return false;
 
     if (Body && !this->visitStmt(Body))
       return false;
@@ -5451,6 +5478,12 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
     return false;
   if (!this->emitSetLocal(CondT, CondVar, S))
     return false;
+
+  if (auto *DD =
+          dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable());
+      DD && DD->isDecisionVariable())
+    if (!this->emitDecompositionVarInit(DD))
+      return false;
 
   CaseMap CaseLabels;
   // Create labels and comparison ops for all case statements.
