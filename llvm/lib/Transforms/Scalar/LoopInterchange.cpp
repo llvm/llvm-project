@@ -653,12 +653,8 @@ struct LoopInterchange {
       if (!AddLoopIfEnabled(LoopList[I]))
         return Changed;
 
-    // Set an upper bound of the number of transformations to avoid infinite
-    // loop. There is no deep meaning behind the current value (square of the
-    // size of LoopList).
-    // TODO: Is this really necessary?
-    const unsigned MaxAttemptsCount = LoopList.size() * LoopList.size();
-    unsigned Attempts = 0;
+    // The number of attempts of exchanges. Used for debug build.
+    [[maybe_unused]] unsigned Attempts = 0;
 
     // Process the loops. An exchange is applied to two loops, but a metadata
     // replacement can be applied to three loops: the two loops plus the next
@@ -676,7 +672,7 @@ struct LoopInterchange {
     // In this case we will exchange the innermost two loops at first, the
     // follow-up metadata including enabling interchange is attached on the
     // outermost loop, and it is enqueued as the next candidate to be processed.
-    while (!Worklist.empty() && Attempts < MaxAttemptsCount) {
+    while (!Worklist.empty()) {
       Loop *TargetLoop = Worklist.pop_back_val();
       assert(findMetadata(TargetLoop) == true &&
              "Some metadata was unexpectedlly removed");
@@ -710,7 +706,6 @@ struct LoopInterchange {
         NextOuterLoop = LoopList[OuterLoopId - 1];
       Loop *OuterLoop = LoopList[OuterLoopId];
       Loop *InnerLoop = LoopList[InnerLoopId];
-      Attempts++;
       Changed = true;
       Loop2Index[OuterLoop] = OuterLoopId;
       Loop2Index[InnerLoop] = InnerLoopId;
@@ -746,13 +741,21 @@ struct LoopInterchange {
       Valid &= AddLoopIfEnabled(InnerLoop);
       if (!Valid)
         break;
+
+      // Check that the number of attempts of interchanges hasn't exceeded the
+      // upper limit. It would lead an infinite loops.
+      LLVM_DEBUG({
+        // There is no deep meaning behind the current value (square of the size
+        // of LoopList).
+        unsigned MaxAttemptsCount = LoopList.size() * LoopList.size();
+        Attempts++;
+        assert(Attempts <= MaxAttemptsCount &&
+               "The number of attempts of interchanges exceeded the limit. An "
+               "infinite loop may have occured because the metadata was not "
+               "properly deleted after each exchange.");
+      });
     }
 
-    LLVM_DEBUG({
-      if (!Worklist.empty())
-        dbgs() << "Some metadata was ignored because the maximum number of "
-                  "attempts was reached.\n";
-    });
     return Changed;
   }
 };
