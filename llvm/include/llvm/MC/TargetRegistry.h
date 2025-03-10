@@ -206,15 +206,14 @@ public:
 
   using NullTargetStreamerCtorTy = MCTargetStreamer *(*)(MCStreamer &S);
   using AsmTargetStreamerCtorTy =
-      MCTargetStreamer *(*)(MCStreamer & S, formatted_raw_ostream &OS,
+      MCTargetStreamer *(*)(MCStreamer &S, formatted_raw_ostream &OS,
                             MCInstPrinter *InstPrint);
   using AsmStreamerCtorTy =
-      MCStreamer *(*)(MCContext & Ctx,
-                      std::unique_ptr<formatted_raw_ostream> OS,
+      MCStreamer *(*)(MCContext & Ctx, std::unique_ptr<formatted_raw_ostream> OS,
                       MCInstPrinter *IP, std::unique_ptr<MCCodeEmitter> CE,
                       std::unique_ptr<MCAsmBackend> TAB);
   using ObjectTargetStreamerCtorTy =
-      MCTargetStreamer *(*)(MCStreamer & S, const MCSubtargetInfo &STI);
+      MCTargetStreamer *(*)(MCStreamer &S, const MCSubtargetInfo &STI);
   using MCRelocationInfoCtorTy = MCRelocationInfo *(*)(const Triple &TT,
                                                        MCContext &Ctx);
   using MCSymbolizerCtorTy =
