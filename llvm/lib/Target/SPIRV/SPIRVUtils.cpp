@@ -307,20 +307,11 @@ SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
   MachineInstr *MI = MRI->getVRegDef(ConstReg);
-  MachineInstr *ConstInstr =
-      MI->getOpcode() == SPIRV::G_TRUNC || MI->getOpcode() == SPIRV::G_ZEXT
-          ? MRI->getVRegDef(MI->getOperand(1).getReg())
-          : MI;
-  if (auto *GI = dyn_cast<GIntrinsic>(ConstInstr)) {
-    if (GI->is(Intrinsic::spv_track_constant)) {
-      ConstReg = ConstInstr->getOperand(2).getReg();
-      return MRI->getVRegDef(ConstReg);
-    }
-  } else if (ConstInstr->getOpcode() == SPIRV::ASSIGN_TYPE) {
-    ConstReg = ConstInstr->getOperand(1).getReg();
-    return MRI->getVRegDef(ConstReg);
-  }
-  return MRI->getVRegDef(ConstReg);
+  if (MI->getOpcode() == SPIRV::G_TRUNC || MI->getOpcode() == SPIRV::G_ZEXT)
+    return getDefInstrMaybeConstant(ConstReg = MI->getOperand(1).getReg(), MRI);
+  if (MI->getOpcode() == SPIRV::ASSIGN_TYPE)
+    return getDefInstrMaybeConstant(ConstReg = MI->getOperand(1).getReg(), MRI);
+  return MI;
 }
 
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
