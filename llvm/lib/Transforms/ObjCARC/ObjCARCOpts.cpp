@@ -138,12 +138,6 @@ static const Value *FindSingleUseIdentifiedObject(const Value *Arg) {
 // calls followed by objc_autoreleasePoolPop calls (perhaps in ObjC++ code
 // after inlining) can be turned into plain release calls.
 
-// TODO: Critical-edge splitting. If the optimial insertion point is
-// a critical edge, the current algorithm has to fail, because it doesn't
-// know how to split edges. It should be possible to make the optimizer
-// think in terms of edges, rather than blocks, and then split critical
-// edges on demand.
-
 // TODO: OptimizeSequences could generalized to be Interprocedural.
 
 // TODO: Recognize that a bunch of other objc runtime calls have
@@ -599,6 +593,7 @@ class ObjCARCOpt {
     void init(Function &F);
     bool run(Function &F, AAResults &AA);
     bool hasCFGChanged() const { return CFGChanged; }
+    BasicBlock *SplitCriticalEdge(BasicBlock *Pred, BasicBlock *Succ);
 };
 } // end anonymous namespace
 
@@ -1765,8 +1760,50 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
                            Module *M) {
   LLVM_DEBUG(dbgs() << "== ObjCARCOpt::MoveCalls ==\n");
 
-  // Insert the new retain and release calls.
+  // First, handle critical edges for retain insertion points
+  SmallVector<Instruction *, 4> NewRetainInsertPts;
+  for (Instruction *InsertPt : RetainsToMove.ReverseInsertPts) {
+    BasicBlock *BB = InsertPt->getParent();
+    BasicBlock *Pred = BB->getUniquePredecessor();
+
+    // If this is a critical edge, split it
+    if (!Pred && BB->hasNPredecessors(1)) {
+      for (BasicBlock *PredBB : predecessors(BB)) {
+        if (PredBB->getTerminator()->getNumSuccessors() > 1) {
+          if (BasicBlock *NewBB = SplitCriticalEdge(PredBB, BB)) {
+            // Add the new block as an insertion point
+            NewRetainInsertPts.push_back(NewBB->getTerminator());
+          }
+        }
+      }
+    } else {
+      NewRetainInsertPts.push_back(InsertPt);
+    }
+  }
+
+  // Then handle critical edges for release insertion points
+  SmallVector<Instruction *, 4> NewReleaseInsertPts;
   for (Instruction *InsertPt : ReleasesToMove.ReverseInsertPts) {
+    BasicBlock *BB = InsertPt->getParent();
+    BasicBlock *Pred = BB->getUniquePredecessor();
+
+    // If this is a critical edge, split it
+    if (!Pred && BB->hasNPredecessors(1)) {
+      for (BasicBlock *PredBB : predecessors(BB)) {
+        if (PredBB->getTerminator()->getNumSuccessors() > 1) {
+          if (BasicBlock *NewBB = SplitCriticalEdge(PredBB, BB)) {
+            // Add the new block as an insertion point
+            NewReleaseInsertPts.push_back(NewBB->getTerminator());
+          }
+        }
+      }
+    } else {
+      NewReleaseInsertPts.push_back(InsertPt);
+    }
+  }
+
+  // Now insert the new retain calls at the split points
+  for (Instruction *InsertPt : NewRetainInsertPts) {
     Function *Decl = EP.get(ARCRuntimeEntryPointKind::Retain);
     SmallVector<OperandBundleDef, 1> BundleList;
     addOpBundleForFunclet(InsertPt->getParent(), BundleList);
@@ -1780,7 +1817,9 @@ void ObjCARCOpt::MoveCalls(Value *Arg, RRInfo &RetainsToMove,
                          "At insertion point: "
                       << *InsertPt << "\n");
   }
-  for (Instruction *InsertPt : RetainsToMove.ReverseInsertPts) {
+
+  // And insert the new release calls at the split points
+  for (Instruction *InsertPt : NewReleaseInsertPts) {
     Function *Decl = EP.get(ARCRuntimeEntryPointKind::Release);
     SmallVector<OperandBundleDef, 1> BundleList;
     addOpBundleForFunclet(InsertPt->getParent(), BundleList);
@@ -2486,6 +2525,53 @@ bool ObjCARCOpt::run(Function &F, AAResults &AA) {
   LLVM_DEBUG(dbgs() << "\n");
 
   return Changed;
+}
+
+/// Split critical edges where we need to insert retain/release calls
+BasicBlock *ObjCARCOpt::SplitCriticalEdge(BasicBlock *Pred, BasicBlock *Succ) {
+  // Don't split if either block is a landing pad - we want to maintain
+  // the property that landing pads have exactly one predecessor
+  if (Succ->isLandingPad() || isa<InvokeInst>(Pred->getTerminator()))
+    return nullptr;
+
+  // We need both multiple successors in predecessor and
+  // multiple predecessors in successor
+  if (Pred->getTerminator()->getNumSuccessors() <= 1 ||
+      Succ->getUniquePredecessor())
+    return nullptr;
+
+  // Create a new basic block for the split edge
+  BasicBlock *NewBB = BasicBlock::Create(
+      Pred->getContext(), Pred->getName() + "." + Succ->getName() + ".arc",
+      Pred->getParent());
+
+  // Update the terminator of Pred to branch to NewBB instead of Succ
+  BranchInst *Term = cast<BranchInst>(Pred->getTerminator());
+  for (unsigned i = 0, e = Term->getNumSuccessors(); i != e; ++i) {
+    if (Term->getSuccessor(i) == Succ) {
+      Term->setSuccessor(i, NewBB);
+      break;
+    }
+  }
+
+  // Create an unconditional branch from NewBB to Succ
+  BranchInst::Create(Succ, NewBB);
+
+  // Update PHI nodes in Succ
+  for (PHINode &PHI : Succ->phis()) {
+    Value *V = PHI.getIncomingValueForBlock(Pred);
+    PHI.setIncomingBlock(PHI.getBasicBlockIndex(Pred), NewBB);
+    PHI.addIncoming(V, Pred);
+  }
+
+  // Update any funclet bundles
+  if (!BlockEHColors.empty()) {
+    const ColorVector &CV = BlockEHColors.find(Pred)->second;
+    BlockEHColors[NewBB] = CV;
+  }
+
+  CFGChanged = true;
+  return NewBB;
 }
 
 /// @}
