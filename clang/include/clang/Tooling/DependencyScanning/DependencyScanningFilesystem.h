@@ -93,7 +93,7 @@ public:
   getDirectiveTokens() const {
     assert(!isError() && "error");
     assert(!isDirectory() && "not a file");
-    assert(Contents && "contents not initialized");
+    // Since isError() and isDirectory() imply that Contents is nullptr, the last assertion is unnecessary
     if (auto *Directives = Contents->DepDirectives.load()) {
       if (Directives->has_value())
         return ArrayRef<dependency_directives_scan::Directive>(**Directives);
@@ -126,7 +126,8 @@ public:
 
 private:
   void clearStatName() {
-    if (MaybeStat)
+      
+    if (MaybeStat && MaybeStat->getName().empty())   //If MaybeStat is an error, calling copyWithNewName() can cause undefined behavior
       MaybeStat = llvm::vfs::Status::copyWithNewName(*MaybeStat, "");
   }
 
