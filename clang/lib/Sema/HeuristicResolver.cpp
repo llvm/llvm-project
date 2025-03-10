@@ -49,6 +49,7 @@ public:
   lookupDependentName(CXXRecordDecl *RD, DeclarationName Name,
                       llvm::function_ref<bool(const NamedDecl *ND)> Filter);
   TagDecl *resolveTypeToTagDecl(QualType T);
+  QualType simplifyType(QualType Type, const Expr *E, bool UnwrapPointer);
 
 private:
   ASTContext &Ctx;
@@ -73,15 +74,6 @@ private:
   // `E`.
   QualType resolveExprToType(const Expr *E);
   std::vector<const NamedDecl *> resolveExprToDecls(const Expr *E);
-
-  // Helper function for simplifying a type.
-  // `Type` is the type to simplify.
-  // `E` is the expression whose type `Type` is, if known. This sometimes
-  // contains information relevant to the type that's not stored in `Type`
-  // itself.
-  // If `UnwrapPointer` is true, exactly only pointer type will be unwrapped
-  // during simplification, and the operation fails if no pointer type is found.
-  QualType simplifyType(QualType Type, const Expr *E, bool UnwrapPointer);
 
   bool findOrdinaryMemberInDependentClasses(const CXXBaseSpecifier *Specifier,
                                             CXXBasePath &Path,
@@ -551,6 +543,10 @@ const QualType HeuristicResolver::getPointeeType(QualType T) const {
 }
 TagDecl *HeuristicResolver::resolveTypeToTagDecl(QualType T) const {
   return HeuristicResolverImpl(Ctx).resolveTypeToTagDecl(T);
+}
+QualType HeuristicResolver::simplifyType(QualType Type, const Expr *E,
+                                         bool UnwrapPointer) {
+  return HeuristicResolverImpl(Ctx).simplifyType(Type, E, UnwrapPointer);
 }
 
 } // namespace clang
