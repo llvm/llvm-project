@@ -166,14 +166,14 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_populate_mangled_names(DataBc, &NumNames);
   checkError(Status, "amd_comgr_populate_mangled_names");
 
-  if (NumNames != 3) {
+  if (NumNames != 5) {
     printf("amd_populate_mangled_names Failed: "
-           "produced %zu bitcode names (expected 2)\n",
+           "produced %zu bitcode names (expected 4)\n",
            NumNames);
     exit(1);
   }
 
-  const char *BcNames[] = {"__oclc_ABI_version", "source1", "source2"};
+  const char *BcNames[] = {"__oclc_ABI_version", "source1", "__clang_ocl_kern_imp_source1", "source2", "__clang_ocl_kern_imp_source2"};
 
   for (size_t I = 0; I < NumNames; ++I) {
     size_t Size;
@@ -248,14 +248,14 @@ int main(int argc, char *argv[]) {
   Status = amd_comgr_populate_mangled_names(DataExec, &NumNames);
   checkError(Status, "amd_comgr_populate_mangled_names");
 
-  if (NumNames != 4) {
+  if (NumNames != 6) {
     printf("amd_populate_mangled_names Failed: "
-           "produced %zu executable names (expected 4)\n",
+           "produced %zu executable names (expected 6)\n",
            NumNames);
     exit(1);
   }
 
-  const char *ExecNames[] = {"source1", "source1.kd", "source2", "source2.kd"};
+  const char *ExecNames[] = {"source1", "source1.kd", "__clang_ocl_kern_imp_source1", "source2", "source2.kd", "__clang_ocl_kern_imp_source2"};
 
   for (size_t I = 0; I < NumNames; ++I) {
     size_t Size;
