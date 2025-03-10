@@ -39,8 +39,11 @@ STATISTIC(NumInaccessibleMemOnly,
 STATISTIC(NumReadOnly, "Number of functions inferred as readonly");
 STATISTIC(NumWriteOnly, "Number of functions inferred as writeonly");
 STATISTIC(NumArgMemOnly, "Number of functions inferred as argmemonly");
+STATISTIC(NumErrnoMemOnly, "Number of functions inferred as errnomemonly");
 STATISTIC(NumInaccessibleMemOrArgMemOnly,
           "Number of functions inferred as inaccessiblemem_or_argmemonly");
+STATISTIC(NumArgumentMemOrErrnoMemOnly,
+          "Number of functions inferred as argmem_or_errnomemonly");
 STATISTIC(NumNoUnwind, "Number of functions inferred as nounwind");
 STATISTIC(NumNoCapture, "Number of arguments inferred as nocapture");
 STATISTIC(NumWriteOnlyArg, "Number of arguments inferred as writeonly");
@@ -84,6 +87,14 @@ static bool setOnlyAccessesInaccessibleMemory(Function &F) {
   return true;
 }
 
+static bool setOnlyAccessesErrnoMemory(Function &F) {
+  if (F.onlyAccessesErrnoMemory())
+    return false;
+  F.setOnlyAccessesErrnoMemory();
+  ++NumErrnoMemOnly;
+  return true;
+}
+
 static bool setOnlyReadsMemory(Function &F) {
   if (F.onlyReadsMemory())
     return false;
@@ -113,6 +124,16 @@ static bool setOnlyAccessesInaccessibleMemOrArgMem(Function &F) {
     return false;
   F.setOnlyAccessesInaccessibleMemOrArgMem();
   ++NumInaccessibleMemOrArgMemOnly;
+  return true;
+}
+
+static bool
+setOnlyAccessesArgMemOrErrnoMem(Function &F,
+                                ModRefInfo ArgMR = ModRefInfo::ModRef) {
+  if (F.onlyAccessesArgMemOrErrnoMem())
+    return false;
+  F.setOnlyAccessesArgMemOrErrnoMem(ArgMR);
+  ++NumArgumentMemOrErrnoMemOnly;
   return true;
 }
 
@@ -1145,14 +1166,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_ldexp:
   case LibFunc_ldexpf:
   case LibFunc_ldexpl:
+    Changed |= setOnlyAccessesErrnoMemory(F);
     Changed |= setWillReturn(F);
     break;
-  case LibFunc_remquo:
-  case LibFunc_remquof:
-  case LibFunc_remquol:
-    Changed |= setDoesNotCapture(F, 2);
-    [[fallthrough]];
-  case LibFunc_abs:
   case LibFunc_acos:
   case LibFunc_acosf:
   case LibFunc_acosh:
@@ -1174,15 +1190,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_atanhf:
   case LibFunc_atanhl:
   case LibFunc_atanl:
-  case LibFunc_cbrt:
-  case LibFunc_cbrtf:
-  case LibFunc_cbrtl:
   case LibFunc_ceil:
   case LibFunc_ceilf:
   case LibFunc_ceill:
-  case LibFunc_copysign:
-  case LibFunc_copysignf:
-  case LibFunc_copysignl:
   case LibFunc_cos:
   case LibFunc_cosh:
   case LibFunc_coshf:
@@ -1206,37 +1216,15 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_expm1:
   case LibFunc_expm1f:
   case LibFunc_expm1l:
-  case LibFunc_fabs:
-  case LibFunc_fabsf:
-  case LibFunc_fabsl:
   case LibFunc_fdim:
   case LibFunc_fdiml:
   case LibFunc_fdimf:
-  case LibFunc_ffs:
-  case LibFunc_ffsl:
-  case LibFunc_ffsll:
-  case LibFunc_floor:
-  case LibFunc_floorf:
-  case LibFunc_floorl:
-  case LibFunc_fls:
-  case LibFunc_flsl:
-  case LibFunc_flsll:
-  case LibFunc_fmax:
-  case LibFunc_fmaxf:
-  case LibFunc_fmaxl:
-  case LibFunc_fmin:
-  case LibFunc_fminf:
-  case LibFunc_fminl:
   case LibFunc_fmod:
   case LibFunc_fmodf:
   case LibFunc_fmodl:
   case LibFunc_hypot:
   case LibFunc_hypotf:
   case LibFunc_hypotl:
-  case LibFunc_isascii:
-  case LibFunc_isdigit:
-  case LibFunc_labs:
-  case LibFunc_llabs:
   case LibFunc_log:
   case LibFunc_log10:
   case LibFunc_log10f:
@@ -1255,9 +1243,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_ilogbl:
   case LibFunc_logf:
   case LibFunc_logl:
-  case LibFunc_nearbyint:
-  case LibFunc_nearbyintf:
-  case LibFunc_nearbyintl:
   case LibFunc_pow:
   case LibFunc_powf:
   case LibFunc_powl:
@@ -1294,26 +1279,68 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_tanhf:
   case LibFunc_tanhl:
   case LibFunc_tanl:
+    Changed |= setDoesNotThrow(F);
+    Changed |= setDoesNotFreeMemory(F);
+    Changed |= setWillReturn(F);
+    Changed |= setOnlyAccessesErrnoMemory(F);
+    break;
+  case LibFunc_abs:
+  case LibFunc_cbrt:
+  case LibFunc_cbrtf:
+  case LibFunc_cbrtl:
+  case LibFunc_copysign:
+  case LibFunc_copysignf:
+  case LibFunc_copysignl:
+  case LibFunc_fabs:
+  case LibFunc_fabsf:
+  case LibFunc_fabsl:
+  case LibFunc_ffs:
+  case LibFunc_ffsl:
+  case LibFunc_ffsll:
+  case LibFunc_floor:
+  case LibFunc_floorf:
+  case LibFunc_floorl:
+  case LibFunc_fls:
+  case LibFunc_flsl:
+  case LibFunc_flsll:
+  case LibFunc_fmax:
+  case LibFunc_fmaxf:
+  case LibFunc_fmaxl:
+  case LibFunc_fmin:
+  case LibFunc_fminf:
+  case LibFunc_fminl:
+  case LibFunc_labs:
+  case LibFunc_llabs:
+  case LibFunc_nearbyint:
+  case LibFunc_nearbyintf:
+  case LibFunc_nearbyintl:
   case LibFunc_toascii:
   case LibFunc_trunc:
   case LibFunc_truncf:
   case LibFunc_truncl:
+    Changed |= setDoesNotAccessMemory(F);
+    [[fallthrough]];
+  case LibFunc_isascii:
+  case LibFunc_isdigit:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotFreeMemory(F);
-    Changed |= setOnlyWritesMemory(F);
     Changed |= setWillReturn(F);
     break;
   case LibFunc_sincos:
   case LibFunc_sincosf:
   case LibFunc_sincosl:
+    Changed |= setDoesNotCapture(F, 1);
+    Changed |= setOnlyWritesMemory(F, 1);
+    [[fallthrough]];
+  case LibFunc_remquo:
+  case LibFunc_remquof:
+  case LibFunc_remquol:
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotFreeMemory(F);
-    Changed |= setOnlyWritesMemory(F);
-    Changed |= setOnlyWritesMemory(F, 1);
     Changed |= setOnlyWritesMemory(F, 2);
-    Changed |= setDoesNotCapture(F, 1);
     Changed |= setDoesNotCapture(F, 2);
     Changed |= setWillReturn(F);
+    Changed |= setOnlyAccessesArgMemOrErrnoMem(F, ModRefInfo::Mod);
     break;
   default:
     // FIXME: It'd be really nice to cover all the library functions we're
