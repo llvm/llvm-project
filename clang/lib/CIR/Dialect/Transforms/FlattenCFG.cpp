@@ -44,7 +44,10 @@ public:
 
     // Empty scope: just remove it.
     // TODO: Remove this logic once CIR uses MLIR infrastructure to remove
-    // trivially dead operations
+    // trivially dead operations. MLIR canonicalizer is too aggressive and we
+    // need to either (a) make sure all our ops model all side-effects and/or
+    // (b) have more options in the canonicalizer in MLIR to temper
+    // aggressiveness level.
     if (scopeOp.isEmpty()) {
       rewriter.eraseOp(scopeOp);
       return mlir::success();

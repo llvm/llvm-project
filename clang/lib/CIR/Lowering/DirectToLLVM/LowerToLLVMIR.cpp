@@ -33,16 +33,7 @@ class CIRDialectLLVMIRTranslationInterface
     : public mlir::LLVMTranslationDialectInterface {
 public:
   using LLVMTranslationDialectInterface::LLVMTranslationDialectInterface;
-#if 0
-  /// Any named attribute in the CIR dialect, i.e, with name started with
-  /// "cir.", will be handled here.
-  mlir::LogicalResult amendOperation(
-      mlir::Operation *op, llvm::ArrayRef<llvm::Instruction *> instructions,
-      mlir::NamedAttribute attribute,
-      mlir::LLVM::ModuleTranslation &moduleTranslation) const override {
-    return mlir::success();
-  }
-#endif
+
   /// Translates the given operation to LLVM IR using the provided IR builder
   /// and saving the state in `moduleTranslation`.
   mlir::LogicalResult convertOperation(

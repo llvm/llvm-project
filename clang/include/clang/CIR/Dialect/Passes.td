@@ -14,9 +14,9 @@ include "mlir/Pass/PassBase.td"
 def CIRFlattenCFG : Pass<"cir-flatten-cfg"> {
   let summary = "Produces flatten CFG";
   let description = [{
-    This pass transforms CIR and inline all the nested regions. Thus,
-    the next post condtions are met after the pass applied:
-    - there is not any nested region in a function body
+    This pass transforms CIR by inlining all the nested regions. Thus,
+    the following condtions are true after the pass applied:
+    - there are no nested regions in any function body
     - all the blocks in a function belong to the parent region
     In other words, this pass removes such CIR operations like IfOp, LoopOp,
     ScopeOp and etc. and produces a flat CIR.

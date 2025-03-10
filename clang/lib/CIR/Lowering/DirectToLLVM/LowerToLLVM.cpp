@@ -33,6 +33,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 
 using namespace cir;
@@ -138,6 +139,7 @@ mlir::LLVM::Linkage convertLinkage(cir::GlobalLinkageKind linkage) {
   case CIR::WeakODRLinkage:
     return LLVM::WeakODR;
   };
+  llvm_unreachable("Unknown CIR linkage type");
 }
 
 class CIRAttrToValue {
@@ -606,10 +608,15 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
 }
 
-// The unreachable code is not lowered by applyPartialConversion function
-// since it traverses blocks in the dominance order. At the same time we
-// do need to lower such code - otherwise verification errors occur.
-// For instance, the next CIR code:
+// The applyPartialConversion function traverses blocks in the dominance order,
+// so it does not lower and operations that are not reachachable from the
+// operations passed in as arguments. Since we do need to lower such code in
+// order to avoid verification errors occur, we cannot just pass the module op
+// to applyPartialConversion. We must build a set of unreachable ops and
+// explicitly add them, along with the module, to the vector we pass to
+// applyPartialConversion.
+//
+// For instance, this CIR code:
 //
 //    cir.func @foo(%arg0: !s32i) -> !s32i {
 //      %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
@@ -620,18 +627,18 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
 //        %5 = cir.const #cir.int<0> : !s32i
 //       cir.return %5 : !s32i
 //      }
-//     cir.return %arg0 : !s32i
+//      cir.return %arg0 : !s32i
 //    }
 //
 // contains an unreachable return operation (the last one). After the flattening
-// pass it will be placed into the unreachable block. And the possible error
+// pass it will be placed into the unreachable block. The possible error
 // after the lowering pass is: error: 'cir.return' op expects parent op to be
 // one of 'cir.func, cir.scope, cir.if ... The reason that this operation was
 // not lowered and the new parent is llvm.func.
 //
-// In the future we may want to get rid of this function and use DCE pass or
-// something similar. But now we need to guarantee the absence of the dialect
-// verification errors.
+// In the future we may want to get rid of this function and use a DCE pass or
+// something similar. But for now we need to guarantee the absence of the
+// dialect verification errors.
 static void collectUnreachable(mlir::Operation *parent,
                                llvm::SmallVector<mlir::Operation *> &ops) {
 
