@@ -264,7 +264,7 @@ namespace classes {
     template<class T, class U> struct A {};
 
     template<template<class> class TT> auto f(TT<int> a) { return a; }
-    // expected-note@-1 2{{substitution failure: too few template arguments}}
+    // expected-note@-1 2{{no template parameter}}
 
     A<int, float> v1;
     A<int, double> v2;
@@ -280,7 +280,7 @@ namespace classes {
       static constexpr auto val = E1;
     };
     template <template <class T3> class TT> void f(TT<int> v) {
-      // expected-note@-1 {{substitution failure: too few template arguments}}
+      // expected-note@-1 {{no template parameter}}
       static_assert(v.val == 3);
     };
     void test() {
@@ -313,7 +313,7 @@ namespace classes {
     }
 
     template <template <class T2, int V3> class TT2> auto g(TT2<double, 1>) {
-      // expected-note@-1 {{too few template arguments for class template 'A'}}
+      // expected-note@-1 {{no template parameter}}
       return f(TT2<int, 2>());
     }
 
@@ -347,11 +347,11 @@ namespace packs {
   namespace t1 {
     template<template<int, int...> class> struct A {};
     // expected-error@-1 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
-    // expected-note@-2 {{previous template template parameter is here}}
+    // expected-note@-2 {{template parameter is declared here}}
 
-    template<char> struct B;
+    template<char> struct B; // expected-note {{template parameter is declared here}}
     template struct A<B>;
-    // expected-note@-1 {{has different template parameters}}
+    // expected-note@-1 {{template template argument is incompatible}}
   } // namespace t1
   namespace t2 {
     template<template<char, int...> class> struct A {};
@@ -361,11 +361,11 @@ namespace packs {
   namespace t3 {
     template<template<int...> class> struct A {};
     // expected-error@-1 {{non-type parameter of template template parameter cannot be narrowed from type 'int' to 'char'}}
-    // expected-note@-2 {{previous template template parameter is here}}
+    // expected-note@-2 {{template parameter is declared here}}
 
-    template<char> struct B;
+    template<char> struct B; // expected-note {{template parameter is declared here}}
     template struct A<B>;
-    // expected-note@-1 {{has different template parameters}}
+    // expected-note@-1 {{template template argument is incompatible}}
   } // namespace t3
   namespace t4 {
     template<template<char...> class> struct A {};
@@ -501,7 +501,7 @@ namespace constraints {
   // expected-note@-1 {{similar constraint expressions not considered equivalent}}
 
   namespace t1 {
-    template<template<C1, class... T1s> class TT1> // expected-note {{TT1' declared here}}
+    template<template<C1, class... T1s> class TT1> // expected-note {{template parameter is declared here}}
     struct A {};
     template<D1, class T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
@@ -513,7 +513,7 @@ namespace constraints {
     template struct A<B>;
   } // namespace t2
   namespace t3 {
-    template<template<C1, class... T1s> class TT1> // expected-note {{'TT1' declared here}}
+    template<template<C1, class... T1s> class TT1> // expected-note {{template parameter is declared here}}
     struct A {};
     template<C2, class T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
@@ -521,7 +521,7 @@ namespace constraints {
   } // namespace t2
   namespace t4 {
     // FIXME: This should be accepted.
-    template<template<C1... T1s> class TT1> // expected-note {{'TT1' declared here}}
+    template<template<C1... T1s> class TT1> // expected-note {{template parameter is declared here}}
     struct A {};
     template<C1 T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
@@ -529,14 +529,14 @@ namespace constraints {
   } // namespace t4
   namespace t5 {
     // FIXME: This should be accepted
-    template<template<C2... T1s> class TT1> // expected-note {{'TT1' declared here}}
+    template<template<C2... T1s> class TT1> // expected-note {{template parameter is declared here}}
     struct A {};
     template<C1 T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
     // expected-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
   } // namespace t5
   namespace t6 {
-    template<template<C1... T1s> class TT1> // expected-note {{'TT1' declared here}}
+    template<template<C1... T1s> class TT1> // expected-note {{template parameter is declared here}}
     struct A {};
     template<C2 T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
@@ -555,14 +555,14 @@ namespace constraints {
     template struct A<B>;
   } // namespace t8
   namespace t9 {
-    template<template<C1... T1s> class TT1> // expected-note {{'TT1' declared here}}
+    template<template<C1... T1s> class TT1> // expected-note {{template parameter is declared here}}
     struct A {};
     template<D1 T2> struct B {}; // expected-note {{'B' declared here}}
     template struct A<B>;
     // expected-error@-1 {{'B' is more constrained than template template parameter 'TT1'}}
   } // namespace t9
   namespace t10 {
-    template<template<class...> requires C1<int> class TT1> // expected-note {{'TT1' declared here}}
+    template<template<class...> requires C1<int> class TT1> // expected-note {{template parameter is declared here}}
     struct A {};
 
     template<class> requires C2<int> struct B {}; // expected-note {{'B' declared here}}

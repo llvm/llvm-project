@@ -302,6 +302,16 @@ Bug Fixes to C++ Support
   not in the last position.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 
+Improvements to C++ diagnostics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clang now more consistently adds a note pointing to the relevant template
+  parameter. Some diagnostics are reworded to better take advantage of this.
+- Template Template Parameter diagnostics now stop referring to template
+  parameters as template arguments, in some circumstances, better hiding
+  from the users template template parameter partial ordering arcana.
+
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
