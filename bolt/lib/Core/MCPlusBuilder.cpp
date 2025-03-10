@@ -288,12 +288,17 @@ MCSymbol *MCPlusBuilder::getInstLabel(const MCInst &Inst) const {
 }
 
 MCSymbol *MCPlusBuilder::getOrCreateInstLabel(MCInst &Inst, const Twine &Name,
-                                              MCContext *Ctx) const {
+                                              MCContext *Ctx, bool Temp) const {
   MCSymbol *Label = getInstLabel(Inst);
   if (Label)
     return Label;
 
-  Label = Ctx->createNamedTempSymbol(Name);
+  if (Temp) {
+    Label = Ctx->createNamedTempSymbol(Name);
+  } else {
+    SmallVector<char, 16> Buf;
+    Label = Ctx->createLocalSymbol(Name.toStringRef(Buf));
+  }
   setAnnotationOpValue(Inst, MCAnnotation::kLabel,
                        reinterpret_cast<int64_t>(Label));
   return Label;
