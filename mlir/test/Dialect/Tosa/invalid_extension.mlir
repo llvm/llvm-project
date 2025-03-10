@@ -14,18 +14,18 @@ func.func @test_fft2d(%arg0: tensor<1x4x8xf32>, %arg1: tensor<1x4x8xf32>) -> (te
 // -----
 func.func @test_variable_read_type(%arg0: tensor<2x4x8xi32>) -> () {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+  tosa.variable 1 = dense<-1> : tensor<2x4x8xi32>
   // expected-error@+1 {{'tosa.variable.read' op illegal: requires [variable]}}
-  %0 = tosa.variable.read @stored_var : tensor<2x4x8xi16>
+  %0 = tosa.variable.read 1 : tensor<2x4x8xi16>
   return
 }
 
 // -----
 func.func @test_variable_write_type(%arg0: tensor<2x4x8xi16>) -> () {
   // expected-error@+1 {{'tosa.variable' op illegal: requires [variable] but not enabled in target}}
-  tosa.variable @stored_var = dense<-1> : tensor<2x4x8xi32>
+  tosa.variable 1 = dense<-1> : tensor<2x4x8xi32>
   // expected-error@+1 {{'tosa.variable.write' op illegal: requires [variable]}}
-  tosa.variable.write @stored_var, %arg0 : tensor<2x4x8xi16>
+  tosa.variable.write 1, %arg0 : tensor<2x4x8xi16>
   return
 }
 
