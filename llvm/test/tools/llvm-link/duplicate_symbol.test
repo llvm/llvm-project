@@ -1,0 +1,5 @@
+RUN: llvm-as %S/Inputs/duplicate1.ll -o %t.duplicate1.bc
+RUN: llvm-as %S/Inputs/duplicate2.ll -o %t.duplicate2.bc
+RUN: not llvm-link %t.duplicate1.bc %t.duplicate2.bc -o %t.duplicate.linked.bc 2>&1 | FileCheck %s
+CHECK: symbol multiply defined!
+CHECK: duplicate2
