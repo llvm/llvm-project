@@ -1031,9 +1031,9 @@ public:
 
             auto scaled =
                 rewriter
-                    .create<tosa::ApplyScaleOp>(loc, rewriter.getI32Type(),
-                                                poolVal, multiplier, shift,
-                                                rewriter.getBoolAttr(false))
+                    .create<tosa::ApplyScaleOp>(
+                        loc, rewriter.getI32Type(), poolVal, multiplier, shift,
+                        rewriter.getStringAttr("SINGLE_ROUND"))
                     .getResult();
 
             // If we have quantization information we need to apply output
