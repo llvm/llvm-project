@@ -17,7 +17,7 @@
     defined(_LIBUNWIND_USE_FRAME_HEADER_CACHE)
 
 #include <link.h>
-#include <stdio.h>
+#include <string.h>
 
 // This file defines several of the data structures needed here,
 // and includes FrameHeaderCache.hpp as well.
