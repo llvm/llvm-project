@@ -12739,8 +12739,8 @@ TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
   FormatStyle LongPointerRightGoogle = getGoogleStyleWithColumns(999);
   FormatStyle LongPointerLeftGoogle = getGoogleStyleWithColumns(999);
   LongPointerLeftGoogle.PointerAlignment = FormatStyle::PAS_Left;
-  Twine AllQualifiersPlusGoogle = AllQualifiers +
-      " absl_nonnull absl_nullable absl_nullability_unknown";
+  Twine AllQualifiersPlusGoogle =
+      AllQualifiers + " absl_nonnull absl_nullable absl_nullability_unknown";
   verifyFormat(("x = (foo *" + AllQualifiersPlusGoogle + ")*v;").str(),
                LongPointerRightGoogle);
   verifyFormat(("x = (foo* " + AllQualifiersPlusGoogle + ")*v;").str(),
