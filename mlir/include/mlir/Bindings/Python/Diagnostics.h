@@ -11,6 +11,7 @@
 
 #include "mlir-c/Diagnostics.h"
 #include "mlir-c/IR.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include <cassert>
 #include <cstdint>
@@ -25,32 +26,33 @@ namespace python {
 class CollectDiagnosticsToStringScope {
 public:
   explicit CollectDiagnosticsToStringScope(MlirContext ctx) : context(ctx) {
-    handlerID = mlirContextAttachDiagnosticHandler(ctx, &handler, &errorMessage,
-                                                   /*deleteUserData=*/nullptr);
+    handlerID =
+        mlirContextAttachDiagnosticHandler(ctx, &handler, &messageStream,
+                                           /*deleteUserData=*/nullptr);
   }
   ~CollectDiagnosticsToStringScope() {
     mlirContextDetachDiagnosticHandler(context, handlerID);
   }
 
   [[nodiscard]] std::string takeMessage() {
-    std::ostringstream stream;
-    std::swap(stream, errorMessage);
-    return stream.str();
+    std::string newMessage;
+    std::swap(message, newMessage);
+    return newMessage;
   }
 
 private:
   static MlirLogicalResult handler(MlirDiagnostic diag, void *data) {
     auto printer = +[](MlirStringRef message, void *data) {
-      *static_cast<std::ostringstream *>(data)
+      *static_cast<llvm::raw_string_ostream *>(data)
           << std::string_view(message.data, message.length);
     };
     MlirLocation loc = mlirDiagnosticGetLocation(diag);
-    *static_cast<std::ostringstream *>(data) << "at ";
+    *static_cast<llvm::raw_string_ostream *>(data) << "at ";
     mlirLocationPrint(loc, printer, data);
-    *static_cast<std::ostringstream *>(data) << ": ";
+    *static_cast<llvm::raw_string_ostream *>(data) << ": ";
     mlirDiagnosticPrint(diag, printer, data);
     for (intptr_t i = 0; i < mlirDiagnosticGetNumNotes(diag); i++) {
-      *static_cast<std::ostringstream *>(data) << "\n";
+      *static_cast<llvm::raw_string_ostream *>(data) << "\n";
       MlirDiagnostic note = mlirDiagnosticGetNote(diag, i);
       handler(note, data);
     }
@@ -59,7 +61,9 @@ private:
 
   MlirContext context;
   MlirDiagnosticHandlerID handlerID;
-  std::ostringstream errorMessage;
+
+  std::string message;
+  llvm::raw_string_ostream messageStream{message};
 };
 
 } // namespace python
