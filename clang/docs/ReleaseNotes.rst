@@ -246,6 +246,8 @@ Improvements to Clang's diagnostics
 
 - Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
 
+- Clang now downgrades the inconsistent language options between modules to warnings instead of errors.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
