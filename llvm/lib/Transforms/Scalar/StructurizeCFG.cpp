@@ -996,10 +996,13 @@ BasicBlock *StructurizeCFG::getNextFlow(BasicBlock *Dominator) {
                                         Func, Insert);
   FlowSet.insert(Flow);
 
-  auto *Term = Dominator->getTerminator();
-  if (const DebugLoc &DL =
-          Term ? Term->getDebugLoc() : TermDL.lookup(Dominator))
-    TermDL[Flow] = DL;
+  if (auto *Term = Dominator->getTerminator()) {
+    if (const DebugLoc &DL = Term->getDebugLoc())
+      TermDL[Flow] = DL;
+  } else if (DebugLoc DLTemp = TermDL.lookup(Dominator))
+    // use a temporary variable to avoid a use-after-free if the map's storage
+    // is reallocated
+    TermDL[Flow] = DLTemp;
 
   DT->addNewBlock(Flow, Dominator);
   ParentRegion->getRegionInfo()->setRegionFor(Flow, ParentRegion);
