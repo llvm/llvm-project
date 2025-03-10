@@ -71,7 +71,7 @@ void main(unsigned GI : SV_GroupIndex) {
 
 // NOINLINE: define internal void @_GLOBAL__D_a() [[IntAttr:\#[0-9]+]]
 // NOINLINE-NEXT: entry:
-// NOINLINE-NEXT:   call void @_ZN4TailD1Ev(ptr @_ZZ3WagvE1T)
+// NOINLINE-NEXT:   call void @_ZN4TailD1Ev(ptr addrspacecast (ptr addrspace(10) @_ZZ3WagvE1T to ptr))
 // NOINLINE-NEXT:   call void @_ZN6PupperD1Ev(ptr @GlobalPup)
 // NOINLINE-NEXT:   ret void
 
