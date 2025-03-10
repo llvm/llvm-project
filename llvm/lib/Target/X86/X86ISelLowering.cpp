@@ -17362,9 +17362,9 @@ static SDValue lowerShuffleAsVSELECT(const SDLoc &DL, ArrayRef<int> Mask,
 
   if (!ISD::isBuildVectorAllZeros(BuildVector.getNode()))
     return SDValue();
-  
-  // This relates to the lowering of `_mm512_maskz_shuffle_epi32` intrinsic. 
-  // The `BUILD_VECTOR` contains the zeroing mask. If the corresponding 
+
+  // This relates to the lowering of `_mm512_maskz_shuffle_epi32` intrinsic.
+  // The `BUILD_VECTOR` contains the zeroing mask. If the corresponding
   // element is UNDEF, then the bit in mask is set. If it is zero, the
   // corresponding bit in mask is zero.
   APInt DestMask(16, 0);
