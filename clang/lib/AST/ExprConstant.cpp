@@ -5351,6 +5351,12 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
     if (!EvaluateInteger(SS->getCond(), Value, Info))
       return ESR_Failed;
 
+    if (auto *DD =
+            dyn_cast_if_present<DecompositionDecl>(SS->getConditionVariable());
+        DD && DD->isDecisionVariable() &&
+        !EvaluateDecompositionDeclInit(Info, DD))
+      return ESR_Failed;
+
     if (!CondScope.destroy())
       return ESR_Failed;
   }
