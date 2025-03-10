@@ -34,13 +34,19 @@ XtensaRegisterInfo::XtensaRegisterInfo(const XtensaSubtarget &STI)
 
 const uint16_t *
 XtensaRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
-  return CSR_Xtensa_SaveList;
+  if (Subtarget.isWinABI())
+    return CSRW8_Xtensa_SaveList;
+  else
+    return CSR_Xtensa_SaveList;
 }
 
 const uint32_t *
 XtensaRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
                                          CallingConv::ID) const {
-  return CSR_Xtensa_RegMask;
+  if (Subtarget.isWinABI())
+    return CSRW8_Xtensa_RegMask;
+  else
+    return CSR_Xtensa_RegMask;
 }
 
 BitVector XtensaRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
@@ -129,5 +135,6 @@ bool XtensaRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 Register XtensaRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
-  return TFI->hasFP(MF) ? Xtensa::A15 : Xtensa::SP;
+  return TFI->hasFP(MF) ? (Subtarget.isWinABI() ? Xtensa::A7 : Xtensa::A15)
+                        : Xtensa::SP;
 }
