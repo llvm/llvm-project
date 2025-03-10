@@ -1213,11 +1213,17 @@ void GetDependenciesByModuleNameAction::ExecuteAction() {
   Preprocessor &PP = CI.getPreprocessor();
   SourceManager &SM = PP.getSourceManager();
   FileID MainFileID = SM.getMainFileID();
-  SourceLocation FileStart = SM.getLocForStartOfFile(MainFileID);
-  SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
-  IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
-  Path.push_back(std::make_pair(ModuleID, FileStart));
-  auto ModResult = CI.loadModule(FileStart, Path, Module::Hidden, false);
-  PPCallbacks *CB = PP.getPPCallbacks();
-  CB->moduleImport(SourceLocation(), Path, ModResult);
+  SourceLocation SLoc = SM.getLocForStartOfFile(MainFileID);
+  for (auto ModuleName : ModuleNames) {
+    SmallVector<std::pair<IdentifierInfo *, SourceLocation>, 2> Path;
+    IdentifierInfo *ModuleID = PP.getIdentifierInfo(ModuleName);
+    Path.push_back(std::make_pair(ModuleID, SLoc));
+    auto ModResult = CI.loadModule(SLoc, Path, Module::Hidden, false);
+    PPCallbacks *CB = PP.getPPCallbacks();
+    CB->moduleImport(SourceLocation(), Path, ModResult);
+    // FIXME: how do you know that this offset is correct?
+    SLoc = SLoc.getLocWithOffset(1);
+    assert(SLoc <= SM.getLocForEndOfFile(MainFileID) &&
+           "Import location extends past file");
+  }
 }

@@ -1025,8 +1025,8 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
         }
       } else if (ModuleName) {
         auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
-            *ModuleName, Input->CommandLine, CWD, AlreadySeenModules,
-            LookupOutput);
+            ArrayRef<StringRef>({*ModuleName}), Input->CommandLine, CWD,
+            AlreadySeenModules, LookupOutput);
         if (handleModuleResult(*ModuleName, MaybeModuleDepsGraph, *FD,
                                LocalIndex, DependencyOS, Errs))
           HadErrors = true;
