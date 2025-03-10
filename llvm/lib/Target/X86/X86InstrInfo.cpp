@@ -5352,10 +5352,12 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   MachineInstr *MI = nullptr;
   MachineInstr *Sub = nullptr;
   MachineInstr *Movr0Inst = nullptr;
+  SmallVector<MachineInstr *, 4> NDDInsts;
   bool NoSignFlag = false;
   bool ClearsOverflowFlag = false;
   bool ShouldUpdateCC = false;
   bool IsSwapped = false;
+  bool HasCF = Subtarget.hasNF();
   unsigned OpNo = 0;
   X86::CondCode NewCC = X86::COND_INVALID;
   int64_t ImmDelta = 0;
@@ -5438,6 +5440,13 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         if (!Movr0Inst && Inst.getOpcode() == X86::MOV32r0 &&
             Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
           Movr0Inst = &Inst;
+          continue;
+        }
+
+        // Try to replace NDD with NF instructions.
+        if (HasCF && X86II::hasNewDataDest(Inst.getDesc().TSFlags) &&
+            Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
+          NDDInsts.push_back(&Inst);
           continue;
         }
 
@@ -5635,6 +5644,12 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     }
     if (InsertI == InsertE)
       return false;
+  }
+
+  // Replace NDD with NF instructions.
+  for (MachineInstr *NDD : NDDInsts) {
+    NDD->setDesc(get(X86::getNFVariant(NDD->getOpcode())));
+    NDD->removeOperand(NDD->getNumOperands() - 1);
   }
 
   // Make sure Sub instruction defines EFLAGS and mark the def live.
