@@ -974,35 +974,65 @@ define <16 x float> @test_mul4x4_f32(<16 x float> %a0, <16 x float> %a1) nounwin
 ; SSE-NEXT:    movaps %xmm5, %xmm2
 ; SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: test_mul4x4_f32:
-; AVX1OR2:       # %bb.0: # %entry
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm4 = ymm2[1,1,1,1,5,5,5,5]
-; AVX1OR2-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm0[2,3,2,3]
-; AVX1OR2-NEXT:    vmulps %ymm4, %ymm5, %ymm4
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm6
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm0 = ymm2[0,0,0,0,4,4,4,4]
-; AVX1OR2-NEXT:    vmulps %ymm0, %ymm6, %ymm0
-; AVX1OR2-NEXT:    vaddps %ymm4, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm4
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm7 = ymm2[2,2,2,2,6,6,6,6]
-; AVX1OR2-NEXT:    vmulps %ymm7, %ymm4, %ymm7
-; AVX1OR2-NEXT:    vaddps %ymm7, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[3,3,3,3,7,7,7,7]
-; AVX1OR2-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3,2,3]
-; AVX1OR2-NEXT:    vmulps %ymm2, %ymm1, %ymm2
-; AVX1OR2-NEXT:    vaddps %ymm2, %ymm0, %ymm0
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm2 = ymm3[1,1,1,1,5,5,5,5]
-; AVX1OR2-NEXT:    vmulps %ymm2, %ymm5, %ymm2
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm5 = ymm3[0,0,0,0,4,4,4,4]
-; AVX1OR2-NEXT:    vmulps %ymm5, %ymm6, %ymm5
-; AVX1OR2-NEXT:    vaddps %ymm2, %ymm5, %ymm2
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm5 = ymm3[2,2,2,2,6,6,6,6]
-; AVX1OR2-NEXT:    vmulps %ymm5, %ymm4, %ymm4
-; AVX1OR2-NEXT:    vaddps %ymm4, %ymm2, %ymm2
-; AVX1OR2-NEXT:    vshufps {{.*#+}} ymm3 = ymm3[3,3,3,3,7,7,7,7]
-; AVX1OR2-NEXT:    vmulps %ymm3, %ymm1, %ymm1
-; AVX1OR2-NEXT:    vaddps %ymm1, %ymm2, %ymm1
-; AVX1OR2-NEXT:    retq
+; AVX1-LABEL: test_mul4x4_f32:
+; AVX1:       # %bb.0: # %entry
+; AVX1-NEXT:    vshufps {{.*#+}} ymm4 = ymm2[1,1,1,1,5,5,5,5]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm5 = ymm0[2,3,2,3]
+; AVX1-NEXT:    vmulps %ymm4, %ymm5, %ymm4
+; AVX1-NEXT:    vshufps {{.*#+}} ymm6 = ymm2[0,0,0,0,4,4,4,4]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm7
+; AVX1-NEXT:    vmulps %ymm6, %ymm7, %ymm0
+; AVX1-NEXT:    vaddps %ymm4, %ymm0, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm4 = ymm2[2,2,2,2,6,6,6,6]
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm1, %ymm6
+; AVX1-NEXT:    vmulps %ymm4, %ymm6, %ymm4
+; AVX1-NEXT:    vaddps %ymm4, %ymm0, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[3,3,3,3,7,7,7,7]
+; AVX1-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3,2,3]
+; AVX1-NEXT:    vmulps %ymm2, %ymm1, %ymm2
+; AVX1-NEXT:    vaddps %ymm2, %ymm0, %ymm0
+; AVX1-NEXT:    vshufps {{.*#+}} ymm2 = ymm3[1,1,1,1,5,5,5,5]
+; AVX1-NEXT:    vmulps %ymm2, %ymm5, %ymm2
+; AVX1-NEXT:    vshufps {{.*#+}} ymm4 = ymm3[0,0,0,0,4,4,4,4]
+; AVX1-NEXT:    vmulps %ymm4, %ymm7, %ymm4
+; AVX1-NEXT:    vaddps %ymm2, %ymm4, %ymm2
+; AVX1-NEXT:    vshufps {{.*#+}} ymm4 = ymm3[2,2,2,2,6,6,6,6]
+; AVX1-NEXT:    vmulps %ymm4, %ymm6, %ymm4
+; AVX1-NEXT:    vaddps %ymm4, %ymm2, %ymm2
+; AVX1-NEXT:    vshufps {{.*#+}} ymm3 = ymm3[3,3,3,3,7,7,7,7]
+; AVX1-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; AVX1-NEXT:    vaddps %ymm1, %ymm2, %ymm1
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: test_mul4x4_f32:
+; AVX2:       # %bb.0: # %entry
+; AVX2-NEXT:    vshufps {{.*#+}} ymm4 = ymm2[1,1,1,1,5,5,5,5]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm5 = ymm0[2,3,2,3]
+; AVX2-NEXT:    vmulps %ymm4, %ymm5, %ymm4
+; AVX2-NEXT:    vshufps {{.*#+}} ymm6 = ymm2[0,0,0,0,4,4,4,4]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm7 = ymm0[0,1,0,1]
+; AVX2-NEXT:    vmulps %ymm6, %ymm7, %ymm0
+; AVX2-NEXT:    vaddps %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vshufps {{.*#+}} ymm4 = ymm2[2,2,2,2,6,6,6,6]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm6 = ymm1[0,1,0,1]
+; AVX2-NEXT:    vmulps %ymm4, %ymm6, %ymm4
+; AVX2-NEXT:    vaddps %ymm4, %ymm0, %ymm0
+; AVX2-NEXT:    vshufps {{.*#+}} ymm2 = ymm2[3,3,3,3,7,7,7,7]
+; AVX2-NEXT:    vpermpd {{.*#+}} ymm1 = ymm1[2,3,2,3]
+; AVX2-NEXT:    vmulps %ymm2, %ymm1, %ymm2
+; AVX2-NEXT:    vaddps %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vshufps {{.*#+}} ymm2 = ymm3[1,1,1,1,5,5,5,5]
+; AVX2-NEXT:    vmulps %ymm2, %ymm5, %ymm2
+; AVX2-NEXT:    vshufps {{.*#+}} ymm4 = ymm3[0,0,0,0,4,4,4,4]
+; AVX2-NEXT:    vmulps %ymm4, %ymm7, %ymm4
+; AVX2-NEXT:    vaddps %ymm2, %ymm4, %ymm2
+; AVX2-NEXT:    vshufps {{.*#+}} ymm4 = ymm3[2,2,2,2,6,6,6,6]
+; AVX2-NEXT:    vmulps %ymm4, %ymm6, %ymm4
+; AVX2-NEXT:    vaddps %ymm4, %ymm2, %ymm2
+; AVX2-NEXT:    vshufps {{.*#+}} ymm3 = ymm3[3,3,3,3,7,7,7,7]
+; AVX2-NEXT:    vmulps %ymm3, %ymm1, %ymm1
+; AVX2-NEXT:    vaddps %ymm1, %ymm2, %ymm1
+; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: test_mul4x4_f32:
 ; AVX512:       # %bb.0: # %entry
