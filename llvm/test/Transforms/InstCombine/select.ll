@@ -4904,8 +4904,7 @@ define i32 @src_simplify_2x_at_once_and(i32 %x, i32 %y) {
 
 define void @select_freeze_poison_parameter(ptr noundef %addr.src, ptr %addr.tgt, i1 %cond) {
 ; CHECK-LABEL: @select_freeze_poison_parameter(
-; CHECK-NEXT:    [[ADDR_SRC:%.*]] = select i1 [[COND:%.*]], ptr [[ADDR_SRC1:%.*]], ptr null
-; CHECK-NEXT:    store ptr [[ADDR_SRC]], ptr [[ADDR_TGT:%.*]], align 8
+; CHECK-NEXT:    store ptr [[ADDR_SRC:%.*]], ptr [[ADDR_TGT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %freeze = freeze ptr poison
@@ -4918,8 +4917,7 @@ define void @select_freeze_poison_parameter(ptr noundef %addr.src, ptr %addr.tgt
 
 define void @select_freeze_poison_global(ptr %addr.tgt, i1 %cond) {
 ; CHECK-LABEL: @select_freeze_poison_global(
-; CHECK-NEXT:    [[SELECT_ADDR:%.*]] = select i1 [[COND:%.*]], ptr @glb, ptr null
-; CHECK-NEXT:    store ptr [[SELECT_ADDR]], ptr [[ADDR_TGT:%.*]], align 8
+; CHECK-NEXT:    store ptr @glb, ptr [[ADDR_TGT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %freeze = freeze ptr poison
@@ -4930,12 +4928,40 @@ define void @select_freeze_poison_global(ptr %addr.tgt, i1 %cond) {
 
 define void @select_freeze_poison_constant(ptr %addr.tgt, i1 %cond) {
 ; CHECK-LABEL: @select_freeze_poison_constant(
-; CHECK-NEXT:    [[SELECT_ADDR:%.*]] = select i1 [[COND:%.*]], i32 72, i32 0
-; CHECK-NEXT:    store i32 [[SELECT_ADDR]], ptr [[ADDR_TGT:%.*]], align 4
+; CHECK-NEXT:    store i32 72, ptr [[ADDR_TGT:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %freeze = freeze i32 poison
   %select.addr = select i1 %cond, i32 72, i32 %freeze
   store i32 %select.addr, ptr %addr.tgt
   ret void
+}
+
+define <2 x i8> @select_freeze_poison_mask_vector(i1 %cond, <2 x i8> noundef %y) {
+; CHECK-LABEL: @select_freeze_poison_mask_vector(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x i8> [[Y:%.*]], <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %freeze = freeze <2 x i8> <i8 0, i8 poison>
+  %sel = select i1 %cond, <2 x i8> %y, <2 x i8> %freeze
+  ret <2 x i8> %sel
+}
+
+define <2 x i8> @select_freeze_poison_splat_vector(i1 %cond, <2 x i8> noundef %y) {
+; CHECK-LABEL: @select_freeze_poison_splat_vector(
+; CHECK-NEXT:    ret <2 x i8> [[Y:%.*]]
+;
+  %freeze = freeze <2 x i8> <i8 poison, i8 poison>
+  %sel = select i1 %cond, <2 x i8> %y, <2 x i8> %freeze
+  ret <2 x i8> %sel
+}
+
+define <2 x i8> @select_freeze_constant_vector(i1 %cond, <2 x i8> noundef %y) {
+; CHECK-LABEL: @select_freeze_constant_vector(
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND:%.*]], <2 x i8> [[Y:%.*]], <2 x i8> zeroinitializer
+; CHECK-NEXT:    ret <2 x i8> [[SEL]]
+;
+  %freeze = freeze <2 x i8> <i8 0, i8 0>
+  %sel = select i1 %cond, <2 x i8> %y, <2 x i8> %freeze
+  ret <2 x i8> %sel
 }
