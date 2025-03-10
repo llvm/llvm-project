@@ -5374,7 +5374,7 @@ llvm::Error ASTReader::ReadExtensionBlock(ModuleFile &F) {
     }
   }
 
-  return llvm::Error::success();
+  llvm_unreachable("ReadExtensionBlock should return from while loop");
 }
 
 void ASTReader::InitializeContext() {
