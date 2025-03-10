@@ -1249,6 +1249,21 @@ void OpenACCDeclClauseInstantiator::VisitDevicePtrClause(
       ParsedClause.getEndLoc());
 }
 
+void OpenACCDeclClauseInstantiator::VisitBindClause(
+    const OpenACCBindClause &C) {
+  // Nothing to instantiate, we support only string literal or identifier.
+  if (C.isStringArgument())
+    NewClause = OpenACCBindClause::Create(
+        SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), C.getStringArgument(),
+        ParsedClause.getEndLoc());
+  else
+    NewClause = OpenACCBindClause::Create(
+        SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), C.getIdentifierArgument(),
+        ParsedClause.getEndLoc());
+}
+
 llvm::SmallVector<OpenACCClause *> InstantiateOpenACCClauseList(
     Sema &S, const MultiLevelTemplateArgumentList &MLTAL,
     OpenACCDirectiveKind DK, ArrayRef<const OpenACCClause *> ClauseList) {
