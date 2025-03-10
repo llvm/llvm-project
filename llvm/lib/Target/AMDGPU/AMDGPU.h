@@ -367,7 +367,8 @@ public:
 
 class GCNCreateVOPDPass : public PassInfoMixin<GCNCreateVOPDPass> {
 public:
-  PreservedAnalyses run(MachineFunction &MF, MachineFunctionAnalysisManager &AM);
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &AM);
 };
 
 FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
