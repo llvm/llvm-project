@@ -494,12 +494,7 @@ public:
         MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
         Builder(PSE.getSE()->getContext()), Legal(LVL), Cost(CM), BFI(BFI),
         PSI(PSI), RTChecks(RTChecks), Plan(Plan),
-        VectorPHVPB(Plan.getEntry()->getSingleSuccessor()) {
-    // Query this against the original loop and save it here because the profile
-    // of the original loop header may change as the transformation happens.
-    OptForSizeBasedOnProfile = llvm::shouldOptimizeForSize(
-        OrigLoop->getHeader(), PSI, BFI, PGSOQueryType::IRPass);
-  }
+        VectorPHVPB(Plan.getEntry()->getSingleSuccessor()) {}
 
   virtual ~InnerLoopVectorizer() = default;
 
@@ -671,10 +666,6 @@ protected:
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
-
-  // Whether this loop should be optimized for size based on profile guided size
-  // optimizatios.
-  bool OptForSizeBasedOnProfile;
 
   /// Structure to hold information about generated runtime checks, responsible
   /// for cleaning the checks, if vectorization turns out unprofitable.
@@ -989,13 +980,18 @@ public:
                              AssumptionCache *AC,
                              OptimizationRemarkEmitter *ORE, const Function *F,
                              const LoopVectorizeHints *Hints,
-                             InterleavedAccessInfo &IAI)
+                             InterleavedAccessInfo &IAI,
+                             ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI)
       : ScalarEpilogueStatus(SEL), TheLoop(L), PSE(PSE), LI(LI), Legal(Legal),
         TTI(TTI), TLI(TLI), DB(DB), AC(AC), ORE(ORE), TheFunction(F),
         Hints(Hints), InterleaveInfo(IAI) {
     if (TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors)
       initializeVScaleForTuning();
     CostKind = F->hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
+    // Query this against the original loop and save it here because the profile
+    // of the original loop header may change as the transformation happens.
+    OptForSize = llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI,
+                                             PGSOQueryType::IRPass);
   }
 
   /// \return An upper bound for the vectorization factors (both fixed and
@@ -1832,6 +1828,10 @@ public:
 
   /// The kind of cost that we are calculating
   TTI::TargetCostKind CostKind;
+
+  /// Whether this loop should be optimized for size based on function attribute
+  /// or profile information.
+  bool OptForSize;
 };
 } // end namespace llvm
 
@@ -2604,9 +2604,8 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   if (!SCEVCheckBlock)
     return nullptr;
 
-  assert(!(SCEVCheckBlock->getParent()->hasOptSize() ||
-           (OptForSizeBasedOnProfile &&
-            Cost->Hints->getForce() != LoopVectorizeHints::FK_Enabled)) &&
+  assert((!Cost->OptForSize ||
+          Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
          "Cannot SCEV check stride or overflow when optimizing for size");
   assert(!LoopBypassBlocks.empty() &&
          "Should already be a bypass block due to iteration count check");
@@ -2631,7 +2630,7 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
   if (!MemCheckBlock)
     return nullptr;
 
-  if (MemCheckBlock->getParent()->hasOptSize() || OptForSizeBasedOnProfile) {
+  if (Cost->OptForSize) {
     assert(Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
            "Cannot emit memory checks when optimizing for size, unless forced "
            "to vectorize.");
@@ -5509,6 +5508,9 @@ InstructionCost LoopVectorizationCostModel::computePredInstDiscount(
     // includes the scalarization overhead of the predicated instruction.
     InstructionCost VectorCost = getInstructionCost(I, VF);
 
+    if (VectorCost == InstructionCost::getInvalid())
+      continue;
+
     // Compute the cost of the scalarized instruction. This cost is the cost of
     // the instruction as if it wasn't if-converted and instead remained in the
     // predicated block. We will scale this cost by block probability after
@@ -5649,6 +5651,13 @@ LoopVectorizationCostModel::getMemInstScalarizationCost(Instruction *I,
   assert(VF.isVector() &&
          "Scalarization cost of instruction implies vectorization.");
   if (VF.isScalable())
+    return InstructionCost::getInvalid();
+
+  // Don't scalarize predicated instructions when optimizing for size unless
+  // we're forced to.
+  if (isPredicatedInst(I) && OptForSize &&
+      !ForceTailFoldingStyle.getNumOccurrences() &&
+      Hints->getForce() != LoopVectorizeHints::FK_Enabled)
     return InstructionCost::getInvalid();
 
   Type *ValTy = getLoadStoreType(I);
@@ -10085,7 +10094,7 @@ static bool processLoopInVPlanNativePath(
       getScalarEpilogueLowering(F, L, Hints, PSI, BFI, TTI, TLI, *LVL, &IAI);
 
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE, F,
-                                &Hints, IAI);
+                                &Hints, IAI, PSI, BFI);
   // Use the planner for outer loop vectorization.
   // TODO: CM is not used at this point inside the planner. Turn CM into an
   // optional argument if we don't need it in the future.
@@ -10622,7 +10631,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Use the cost model.
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, DB, AC, ORE,
-                                F, &Hints, IAI);
+                                F, &Hints, IAI, PSI, BFI);
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, IAI, PSE, Hints,
                                ORE);
