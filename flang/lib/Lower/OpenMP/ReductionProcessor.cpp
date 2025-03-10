@@ -617,10 +617,13 @@ void ReductionProcessor::processReductionArguments(
     // this isn't the same as the by-val and by-ref passing later in the
     // pipeline. Both styles assume that the variable is a reference at
     // this point
-    assert(mlir::isa<fir::ReferenceType>(symVal.getType()) &&
-           "reduction input var is a reference");
+    assert(fir::isa_ref_type(symVal.getType()) &&
+           "reduction input var is passed by reference");
+    mlir::Type elementType = fir::dyn_cast_ptrEleTy(symVal.getType());
+    mlir::Type refTy = fir::ReferenceType::get(elementType);
 
-    reductionVars.push_back(symVal);
+    reductionVars.push_back(
+        builder.createConvert(currentLocation, refTy, symVal));
     reduceVarByRef.push_back(doReductionByRef(symVal));
   }
 
