@@ -31,12 +31,12 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -c DIR/client.m -isysroot DIR/MacOSX.sdk -I DIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
+  "command": "clang -c DIR/client.m -isysroot DIR/MacOSX.sdk -IDIR/MacOSX.sdk/usr/include -IDIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
   "file": "DIR/client.m"
 },
 {
   "directory": "DIR",
-  "command": "clang -c DIR/client.m -isysroot DIR/MacOSX.sdk  -ivfsoverlay DIR/overlay.json -DUSE_VFS -I DIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
+  "command": "clang -c DIR/client.m -isysroot DIR/MacOSX.sdk -IDIR/MacOSX.sdk/usr/include -ivfsoverlay DIR/overlay.json -DUSE_VFS -IDIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
   "file": "DIR/client.m"
 }
 ]
