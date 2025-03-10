@@ -161,8 +161,8 @@ related warnings within the method body.
   ``__attribute__((model("large")))`` on non-TLS globals in x86-64 compilations.
   This forces the global to be considered small or large in regards to the
   x86-64 code model, regardless of the code model specified for the compilation.
-- Clang now emits a warning ``-Wreserved-init-priority`` instead of a hard error 
-  when ``__attribute__((init_priority(n)))`` is used with values of n in the 
+- Clang now emits a warning ``-Wreserved-init-priority`` instead of a hard error
+  when ``__attribute__((init_priority(n)))`` is used with values of n in the
   reserved range [0, 100]. The warning will be treated as an error by default.
 
 - There is a new ``format_matches`` attribute to complement the existing
@@ -234,7 +234,8 @@ Improvements to Clang's diagnostics
 - Diagnostics on chained comparisons (``a < b < c``) are now an error by default. This can be disabled with
   ``-Wno-error=parentheses``.
 - The ``-Wshift-bool`` warning has been added to warn about shifting a boolean. (#GH28334)
-
+- Fixed diagnostics adding a trailing ``::`` when printing some source code
+  constructs, like base classes.
 - The :doc:`ThreadSafetyAnalysis` now supports ``-Wthread-safety-pointer``,
   which enables warning on passing or returning pointers to guarded variables
   as function arguments or return value respectively. Note that
