@@ -176,6 +176,11 @@ static bool sameValue(const Expr *E1, const Expr *E2) {
            cast<StringLiteral>(E2)->getString();
   case Stmt::DeclRefExprClass:
     return cast<DeclRefExpr>(E1)->getDecl() == cast<DeclRefExpr>(E2)->getDecl();
+  case Stmt::CStyleCastExprClass:
+  case Stmt::CXXStaticCastExprClass:
+  case Stmt::CXXFunctionalCastExprClass:
+    return sameValue(cast<ExplicitCastExpr>(E1)->getSubExpr(),
+                     cast<ExplicitCastExpr>(E2)->getSubExpr());
   default:
     return false;
   }
@@ -194,15 +199,21 @@ void UseDefaultMemberInitCheck::storeOptions(
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
-  auto InitBase =
-      anyOf(stringLiteral(), characterLiteral(), integerLiteral(),
-            unaryOperator(hasAnyOperatorName("+", "-"),
-                          hasUnaryOperand(integerLiteral())),
-            floatLiteral(),
-            unaryOperator(hasAnyOperatorName("+", "-"),
-                          hasUnaryOperand(floatLiteral())),
-            cxxBoolLiteral(), cxxNullPtrLiteralExpr(), implicitValueInitExpr(),
-            declRefExpr(to(enumConstantDecl())));
+
+  auto ExplicitCastExpr = castExpr(hasSourceExpression(anyOf(
+      unaryOperator(hasAnyOperatorName("+", "-"),
+                    hasUnaryOperand(anyOf(integerLiteral(), floatLiteral()))),
+      integerLiteral(), floatLiteral(), characterLiteral())));
+
+  auto InitBase = anyOf(
+      stringLiteral(), characterLiteral(), integerLiteral(), ExplicitCastExpr,
+      unaryOperator(hasAnyOperatorName("+", "-"),
+                    hasUnaryOperand(integerLiteral())),
+      floatLiteral(),
+      unaryOperator(hasAnyOperatorName("+", "-"),
+                    hasUnaryOperand(floatLiteral())),
+      cxxBoolLiteral(), cxxNullPtrLiteralExpr(), implicitValueInitExpr(),
+      declRefExpr(to(enumConstantDecl())));
 
   auto Init =
       anyOf(initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, InitBase)),
