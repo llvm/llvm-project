@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/CmpInstAnalysis.h"
@@ -21,13 +23,21 @@
 #include "llvm/Analysis/Utils/Local.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/ConstantRange.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/InstrTypes.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/Type.h"
+#include "llvm/IR/Value.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Transforms/InstCombine/InstCombiner.h"
 #include <bitset>
+#include <cstdint>
 
 using namespace llvm;
 using namespace PatternMatch;
@@ -8031,6 +8041,100 @@ static Instruction *foldFCmpReciprocalAndZero(FCmpInst &I, Instruction *LHSI,
   return new FCmpInst(Pred, LHSI->getOperand(1), RHSC, "", &I);
 }
 
+// Fold fptrunc(x) < constant --> x < constant if possible.
+static Instruction *foldFCmpFpTrunc(FCmpInst &I, Instruction *LHSI,
+                                    Constant *RHSC) {
+  FCmpInst::Predicate Pred = I.getPredicate();
+  bool RoundDown = false;
+
+  if (Pred == FCmpInst::FCMP_OGE || Pred == FCmpInst::FCMP_UGE ||
+      Pred == FCmpInst::FCMP_OLT || Pred == FCmpInst::FCMP_ULT)
+    RoundDown = true;
+  else if (Pred == FCmpInst::FCMP_OGT || Pred == FCmpInst::FCMP_UGT ||
+           Pred == FCmpInst::FCMP_OLE || Pred == FCmpInst::FCMP_ULE)
+    RoundDown = false;
+  else
+    return nullptr;
+
+  const APFloat *RValue;
+  if (!match(RHSC, m_APFloat(RValue)))
+    return nullptr;
+
+  // RHSC should not be nan or infinity.
+  if (RValue->isNaN() || RValue->isInfinity())
+    return nullptr;
+
+  Type *LType = LHSI->getOperand(0)->getType();
+  Type *RType = RHSC->getType();
+  Type *LEleType = LType->getScalarType();
+  Type *REleType = RType->getScalarType();
+
+  APFloat NextRValue = *RValue;
+  NextRValue.next(RoundDown);
+
+  // Promote 'RValue' and 'NextRValue' to 'LType'.
+  APFloat ExtRValue = *RValue;
+  APFloat ExtNextRValue = NextRValue;
+  bool lossInfo;
+  ExtRValue.convert(LEleType->getFltSemantics(), APFloat::rmNearestTiesToEven,
+                    &lossInfo);
+  ExtNextRValue.convert(LEleType->getFltSemantics(),
+                        APFloat::rmNearestTiesToEven, &lossInfo);
+
+  // The (negative) maximum of 'RValue' may become infinity when rounded up
+  // (down). Set the limit of 'ExtNextRValue'.
+  if (NextRValue.isInfinity())
+    ExtNextRValue = scalbn(ExtRValue, 1, APFloat::rmNearestTiesToEven);
+
+  // Binary search to find the maximal (or minimal) value after 'RValue'
+  // promotion. 'RValue' should obey normal comparison rules, which means nan or
+  // inf is not allowed here.
+  APFloat RoundValue{LEleType->getFltSemantics()};
+
+  APFloat LowBound = RoundDown ? ExtNextRValue : ExtRValue;
+  APFloat UpBound = RoundDown ? ExtRValue : ExtNextRValue;
+
+  auto IsRoundingFound = [](const APFloat &LowBound, const APFloat &UpBound) {
+    APFloat UpBoundNext = UpBound;
+    UpBoundNext.next(true);
+    return LowBound == UpBoundNext;
+  };
+
+  auto EqualRValueAfterTrunc = [&](const APFloat &ExtValue) {
+    APFloat TruncValue = ExtValue;
+    TruncValue.convert(REleType->getFltSemantics(),
+                       APFloat::rmNearestTiesToEven, &lossInfo);
+    return TruncValue == *RValue;
+  };
+
+  while (true) {
+    // Finish searching when 'LowBound' is next to 'UpBound'.
+    if (IsRoundingFound(LowBound, UpBound)) {
+      RoundValue = RoundDown ? UpBound : LowBound;
+      break;
+    }
+
+    APFloat Mid = scalbn(LowBound + UpBound, -1, APFloat::rmNearestTiesToEven);
+    bool EqualRValue = EqualRValueAfterTrunc(Mid);
+
+    // 'EqualRValue' indicates whether Mid is qualified to be the final round
+    // value. if 'EqualRValue' == true, 'Mid' might be the final round value
+    //     if 'RoundDown' == true, 'UpBound' can't be the final round value
+    //     if 'RoudnDown' == false, 'DownBound' can't be the final round value
+    // if 'EqualRValue' == false, 'Mid' can't be the final round value
+    //     if 'RoundDown' == true, 'DownBound' can't be the final round value
+    //     if 'RoundDown' == false, 'UpBound' can't be the final round value
+    if (EqualRValue == RoundDown) {
+      UpBound = Mid;
+    } else {
+      LowBound = Mid;
+    }
+  }
+
+  return new FCmpInst(Pred, LHSI->getOperand(0),
+                      ConstantFP::get(LType, RoundValue), "", &I);
+}
+
 /// Optimize fabs(X) compared with zero.
 static Instruction *foldFabsWithFcmpZero(FCmpInst &I, InstCombinerImpl &IC) {
   Value *X;
@@ -8521,6 +8625,10 @@ Instruction *InstCombinerImpl::visitFCmpInst(FCmpInst &I) {
           if (Instruction *Res = foldCmpLoadFromIndexedGlobal(
                   cast<LoadInst>(LHSI), GEP, GV, I))
             return Res;
+      break;
+    case Instruction::FPTrunc:
+      if (Instruction *NV = foldFCmpFpTrunc(I, LHSI, RHSC))
+        return NV;
       break;
     }
   }
