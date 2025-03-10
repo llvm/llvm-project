@@ -2530,6 +2530,15 @@ auto ExpressionAnalyzer::AnalyzeProcedureComponentRef(
           return CalleeAndArguments{
               ProcedureDesignator{*resolution}, std::move(arguments)};
         } else if (dataRef.has_value()) {
+          if (ExtractCoarrayRef(*dataRef)) {
+            if (IsProcedurePointer(*sym)) {
+              Say(sc.component.source,
+                  "Base of procedure component reference may not be coindexed"_err_en_US);
+            } else {
+              Say(sc.component.source,
+                  "A procedure binding may not be coindexed unless it can be resolved at compilation time"_err_en_US);
+            }
+          }
           if (sym->attrs().test(semantics::Attr::NOPASS)) {
             const auto *dtSpec{GetDerivedTypeSpec(dtExpr->GetType())};
             if (dtSpec && dtSpec->scope()) {
