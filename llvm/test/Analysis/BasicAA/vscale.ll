@@ -32,9 +32,9 @@ define void @gep_alloca_const_offset_2() {
 }
 
 ; CHECK-LABEL: gep_alloca_const_offset_3
-; CHECK-DAG:  MustAlias:    <vscale x 4 x i32>* %alloc, <vscale x 4 x i32>* %gep1
-; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %alloc, i32* %gep2
-; CHECK-DAG:  MayAlias:     <vscale x 4 x i32>* %gep1, i32* %gep2
+; CHECK-DAG:  MustAlias:            <vscale x 4 x i32>* %alloc, <vscale x 4 x i32>* %gep1
+; CHECK-DAG:  PartialAlias (off 4): <vscale x 4 x i32>* %alloc, i32* %gep2
+; CHECK-DAG:  PartialAlias (off 4): <vscale x 4 x i32>* %gep1, i32* %gep2
 define void @gep_alloca_const_offset_3() {
   %alloc = alloca <vscale x 4 x i32>
   %gep1 = getelementptr <vscale x 4 x i32>, ptr %alloc, i64 0
@@ -628,11 +628,11 @@ define void @gep_recursion_max_lookup_depth_reached(ptr %a, ptr %p) {
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %off255
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %off256, <vscale x 4 x i32>* %p
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %off255, <vscale x 4 x i32>* %off256
+; CHECK-DAG:   PartialAlias: <vscale x 4 x i32>* %off255, <vscale x 4 x i32>* %off256
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %off256
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %off255
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %noff256
+; CHECK-DAG:   PartialAlias: <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %noff256
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %off256
 define void @gep_2048(ptr %p) {
   %off255 = getelementptr i8, ptr %p, i64 255
@@ -652,11 +652,11 @@ define void @gep_2048(ptr %p) {
 ; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %off255
 ; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %off256, <vscale x 4 x i32>* %p
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %off255, <vscale x 4 x i32>* %off256
+; CHECK-DAG:   PartialAlias: <vscale x 4 x i32>* %off255, <vscale x 4 x i32>* %off256
 ; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %off256
 ; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %p
 ; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %off255
-; CHECK-DAG:   MayAlias:     <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %noff256
+; CHECK-DAG:   PartialAlias: <vscale x 4 x i32>* %noff255, <vscale x 4 x i32>* %noff256
 ; CHECK-DAG:   NoAlias:      <vscale x 4 x i32>* %noff256, <vscale x 4 x i32>* %off256
 define void @gep_2048_vscalerange(ptr %p) vscale_range(1,16) {
   %off255 = getelementptr i8, ptr %p, i64 255
