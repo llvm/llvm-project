@@ -159,7 +159,6 @@ private:
 
   MachineFunction *xParent;
   Instructions Insts;
-  const TargetRegisterInfo *TRI;
 
   /// Keep track of the predecessor / successor basic blocks.
   SmallVector<MachineBasicBlock *, 4> Predecessors;
