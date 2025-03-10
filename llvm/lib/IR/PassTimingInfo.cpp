@@ -63,6 +63,7 @@ public:
 private:
   StringMap<unsigned> PassIDCountMap; ///< Map that counts instances of passes
   DenseMap<PassInstanceID, Timer *> TimingData; ///< timers for pass instances
+  TimerGroup *PassTG = nullptr;
 
 public:
   PassTimingInfo() = default;
@@ -98,14 +99,16 @@ void PassTimingInfo::init() {
   // This guarantees that the object will be constructed after static globals,
   // thus it will be destroyed before them.
   static ManagedStatic<PassTimingInfo> TTI;
+  if (!TTI->PassTG)
+    TTI->PassTG = &NamedRegionTimer::getNamedTimerGroup(
+        TimePassesHandler::PassGroupName, TimePassesHandler::PassGroupDesc);
   TheTimeInfo = &*TTI;
 }
 
 /// Prints out timing information and then resets the timers.
 void PassTimingInfo::print(raw_ostream *OutStream) {
-  NamedRegionTimer::getNamedTimerGroup(TimePassesHandler::PassGroupName,
-                                       TimePassesHandler::PassGroupDesc)
-      .print(OutStream ? *OutStream : *CreateInfoOutputFile(), true);
+  assert(PassTG && "PassTG is null, did you call PassTimingInfo::Init()?");
+  PassTG->print(OutStream ? *OutStream : *CreateInfoOutputFile(), true);
 }
 
 Timer *PassTimingInfo::newPassTimer(StringRef PassID, StringRef PassDesc) {
@@ -114,10 +117,8 @@ Timer *PassTimingInfo::newPassTimer(StringRef PassID, StringRef PassDesc) {
   // Appending description with a pass-instance number for all but the first one
   std::string PassDescNumbered =
       num <= 1 ? PassDesc.str() : formatv("{0} #{1}", PassDesc, num).str();
-  return new Timer(
-      PassID, PassDescNumbered,
-      NamedRegionTimer::getNamedTimerGroup(TimePassesHandler::PassGroupName,
-                                           TimePassesHandler::PassGroupDesc));
+  assert(PassTG && "PassTG is null, did you call PassTimingInfo::Init()?");
+  return new Timer(PassID, PassDescNumbered, *PassTG);
 }
 
 Timer *PassTimingInfo::getPassTimer(Pass *P, PassInstanceID Pass) {
@@ -207,10 +208,8 @@ void TimePassesHandler::print() {
     OS = &*MaybeCreated;
   }
 
-  NamedRegionTimer::getNamedTimerGroup(PassGroupName, PassGroupDesc)
-      .print(*OS, true);
-  NamedRegionTimer::getNamedTimerGroup(AnalysisGroupName, AnalysisGroupDesc)
-      .print(*OS, true);
+  PassTG.print(*OS, true);
+  AnalysisTG.print(*OS, true);
 }
 
 LLVM_DUMP_METHOD void TimePassesHandler::dump() const {
