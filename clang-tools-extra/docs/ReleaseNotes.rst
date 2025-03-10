@@ -140,7 +140,12 @@ Changes in existing checks
   <clang-tidy/checks/misc/use-internal-linkage>` check by fix false positives
   for function or variable in header file which contains macro expansion.
 
-- Improved :doc:`performance/unnecessary-value-param
+- Improved :doc:`modernize-use-trailing-return-type
+  <clang-tidy/checks/modernize/use-trailing-return-type>` check by adding the
+  option `WarnOnNontrailingVoid` that applies the check to ``void``-returning
+  functions that by default are excluded from this check.
+
+- Improved :doc:`performance-unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
   tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
