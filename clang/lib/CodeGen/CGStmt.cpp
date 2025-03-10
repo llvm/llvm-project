@@ -894,7 +894,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     EmitStmt(S.getInit());
 
   if (S.getConditionVariable())
-    EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/false);
+    EmitDecl(*S.getConditionVariable());
 
   // If the condition constant folds and can be elided, try to avoid emitting
   // the condition and the dead arm of the if/else.
@@ -1100,7 +1100,7 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   RunCleanupsScope ConditionScope(*this);
 
   if (S.getConditionVariable())
-    EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/false);
+    EmitDecl(*S.getConditionVariable());
 
   // Evaluate the conditional in the while header.  C99 6.8.5.1: The
   // evaluation of the controlling expression takes place before each
@@ -1319,7 +1319,7 @@ void CodeGenFunction::EmitForStmt(const ForStmt &S,
     // If the for statement has a condition scope, emit the local variable
     // declaration.
     if (S.getConditionVariable()) {
-      EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/false);
+      EmitDecl(*S.getConditionVariable());
 
       // We have entered the condition variable's scope, so we're now able to
       // jump to the continue block.
@@ -1679,7 +1679,7 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
     EmitStopPoint(&S);
 
   for (const auto *I : S.decls())
-    EmitDecl(*I);
+    EmitDecl(*I, /*EvaluateConditionDecl=*/true);
 }
 
 void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
@@ -2244,7 +2244,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
       // Emit the condition variable if needed inside the entire cleanup scope
       // used by this special case for constant folded switches.
       if (S.getConditionVariable())
-        EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/false);
+        EmitDecl(*S.getConditionVariable());
 
       if (auto *DD =
               dyn_cast_if_present<DecompositionDecl>(S.getConditionVariable()))
@@ -2278,7 +2278,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
     EmitStmt(S.getInit());
 
   if (S.getConditionVariable())
-    EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/false);
+    EmitDecl(*S.getConditionVariable());
   llvm::Value *CondV = EmitScalarExpr(S.getCond());
 
   if (auto *DD =

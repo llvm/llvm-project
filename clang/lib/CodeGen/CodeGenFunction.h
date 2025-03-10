@@ -3377,7 +3377,7 @@ public:
   /// EmitDecl - Emit a declaration.
   ///
   /// This function can be called with a null (unreachable) insert point.
-  void EmitDecl(const Decl &D, bool EvaluateConditionDecl = true);
+  void EmitDecl(const Decl &D, bool EvaluateConditionDecl = false);
 
   /// EmitVarDecl - Emit a local variable declaration.
   ///

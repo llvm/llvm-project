@@ -5222,7 +5222,7 @@ static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
                                           const DecompositionDecl *DD);
 
 static bool EvaluateDecl(EvalInfo &Info, const Decl *D,
-                         bool EvaluateConditionDecl) {
+                         bool EvaluateConditionDecl = false) {
   if (const VarDecl *VD = dyn_cast<VarDecl>(D))
     if (!EvaluateVarDecl(Info, VD))
       return false;
@@ -5260,8 +5260,7 @@ static bool EvaluateCond(EvalInfo &Info, const VarDecl *CondDecl,
   if (Cond->isValueDependent())
     return false;
   FullExpressionRAII Scope(Info);
-  if (CondDecl &&
-      !EvaluateDecl(Info, CondDecl, /*EvaluateConditionDecl=*/false))
+  if (CondDecl && !EvaluateDecl(Info, CondDecl))
     return false;
   if (!EvaluateAsBooleanCondition(Cond, Result, Info))
     return false;
@@ -5342,8 +5341,7 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
 
     FullExpressionRAII CondScope(Info);
     if (SS->getConditionVariable() &&
-        !EvaluateDecl(Info, SS->getConditionVariable(),
-                      /*EvaluateConditionDecl=*/false))
+        !EvaluateDecl(Info, SS->getConditionVariable()))
       return ESR_Failed;
     if (SS->getCond()->isValueDependent()) {
       // We don't know what the value is, and which branch should jump to.

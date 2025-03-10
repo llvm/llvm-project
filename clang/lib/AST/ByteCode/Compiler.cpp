@@ -5181,7 +5181,7 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
       return false;
 
   if (const DeclStmt *CondDecl = IS->getConditionVariableDeclStmt())
-    if (!visitDeclStmt(CondDecl, /*EvaluateConditionDecl=*/false))
+    if (!visitDeclStmt(CondDecl))
       return false;
 
   // Compile condition.
@@ -5258,7 +5258,7 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
   {
     LocalScope<Emitter> CondScope(this);
     if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-      if (!visitDeclStmt(CondDecl, /*EvaluateConditionDecl=*/false))
+      if (!visitDeclStmt(CondDecl))
         return false;
 
     if (!this->visitBool(Cond))
@@ -5340,7 +5340,7 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
   {
     LocalScope<Emitter> CondScope(this);
     if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-      if (!visitDeclStmt(CondDecl, /*EvaluateConditionDecl=*/false))
+      if (!visitDeclStmt(CondDecl))
         return false;
 
     if (Cond) {
@@ -5468,7 +5468,7 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
       return false;
 
   if (const DeclStmt *CondDecl = S->getConditionVariableDeclStmt())
-    if (!visitDeclStmt(CondDecl, /*EvaluateConditionDecl=*/false))
+    if (!visitDeclStmt(CondDecl))
       return false;
 
   // Initialize condition variable.
