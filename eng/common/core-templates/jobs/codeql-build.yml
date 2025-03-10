@@ -15,7 +15,6 @@ jobs:
     enablePublishBuildArtifacts: false
     enablePublishTestResults: false
     enablePublishBuildAssets: false
-    enablePublishUsingPipelines: false
     enableTelemetry: true
 
     variables:

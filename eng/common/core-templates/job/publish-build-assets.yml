@@ -21,9 +21,6 @@ parameters:
   runAsPublic: false
 
   # Optional: whether the build's artifacts will be published using release pipelines or direct feed publishing
-  publishUsingPipelines: false
-
-  # Optional: whether the build's artifacts will be published using release pipelines or direct feed publishing
   publishAssetsImmediately: false
 
   artifactsPublishingAdditionalParameters: ''
@@ -96,7 +93,6 @@ jobs:
         arguments: -task PublishBuildAssets -restore -msbuildEngine dotnet
           /p:ManifestsPath='$(Build.StagingDirectory)/AssetManifests'
           /p:MaestroApiEndpoint=https://maestro.dot.net
-          /p:PublishUsingPipelines=${{ parameters.publishUsingPipelines }}
           /p:OfficialBuildId=$(Build.BuildNumber)
       condition: ${{ parameters.condition }}
       continueOnError: ${{ parameters.continueOnError }}

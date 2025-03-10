@@ -23,7 +23,6 @@ parameters:
   enablePublishBuildArtifacts: false
   enablePublishBuildAssets: false
   enablePublishTestResults: false
-  enablePublishUsingPipelines: false
   enableBuildRetry: false
   mergeTestResults: false
   testRunTitle: ''
