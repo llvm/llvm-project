@@ -142,7 +142,7 @@ static bool isSymbolAvailableInC89(const llvm::StringTable &Strings,
 
   auto NameStr = Strings[BuiltinInfo.Offsets.Name];
 
-  if (NameStr.starts_with("__builtin_") || NameStr.starts_with("__clang")) {
+  if (NameStr.starts_with("__builtin_")) {
     return true;
   }
 
