@@ -650,8 +650,25 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Designator &d) {
       dataRef = ExtractDataRef(std::move(result),
           /*intoSubstring=*/false, /*intoComplexPart=*/true);
     }
-    if (dataRef && !CheckDataRef(*dataRef)) {
-      result.reset();
+    if (dataRef) {
+      if (!CheckDataRef(*dataRef)) {
+        result.reset();
+      } else if (ExtractCoarrayRef(*dataRef).has_value()) {
+        if (auto dyType{result->GetType()};
+            dyType && dyType->category() == TypeCategory::Derived) {
+          if (!std::holds_alternative<CoarrayRef>(dataRef->u) &&
+              dyType->IsPolymorphic()) { // F'2023 C918
+            Say("The base of a polymorphic object may not be coindexed"_err_en_US);
+          }
+          if (const auto *derived{GetDerivedTypeSpec(*dyType)}) {
+            if (auto bad{FindPolymorphicAllocatablePotentialComponent(
+                    *derived)}) { // F'2023 C917
+              Say("A coindexed designator may not have a type with the polymorphic potential subobject component '%s'"_err_en_US,
+                  bad.BuildResultDesignatorName());
+            }
+          }
+        }
+      }
     }
   }
   return result;
