@@ -1119,8 +1119,10 @@ static std::tuple<OpResult, std::optional<OpOperand *>>
 getUntiledProducerFromSliceSource(OpOperand *source,
                                   ArrayRef<LoopLikeOpInterface> loops) {
   std::optional<OpOperand *> destinationIterArg;
+  assert(!loops.empty() && "expected non empty loops container");
   auto loopIt = loops.rbegin();
-  while (auto iterArg = dyn_cast<BlockArgument>(source->get())) {
+  while (loopIt != loops.rend() && isa<BlockArgument>(source->get())) {
+    auto iterArg = cast<BlockArgument>(source->get());
     auto loop = *loopIt;
     if (iterArg.getOwner()->getParentOp() != loop)
       break;

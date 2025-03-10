@@ -44,7 +44,7 @@ void VirtRegAuxInfo::calculateSpillWeightsAndHints() {
 }
 
 // Return the preferred allocation register for reg, given a COPY instruction.
-Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, unsigned Reg,
+Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, Register Reg,
                                   const TargetRegisterInfo &TRI,
                                   const MachineRegisterInfo &MRI) {
   unsigned Sub, HSub;
@@ -74,7 +74,7 @@ Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, unsigned Reg,
   if (Sub)
     return TRI.getMatchingSuperReg(CopiedPReg, Sub, RC);
 
-  return 0;
+  return Register();
 }
 
 // Check if all values in LI are rematerializable

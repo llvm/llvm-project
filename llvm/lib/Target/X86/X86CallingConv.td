@@ -639,8 +639,9 @@ def CC_X86_Win64_C : CallingConv<[
   // 512 bit vectors are passed by pointer
   CCIfType<[v64i8, v32i16, v16i32, v32f16, v32bf16, v16f32, v8f64, v8i64], CCPassIndirect<i64>>,
 
-  // Long doubles are passed by pointer
+  // Float types larger than 64-bits (long double and fp128) are passed by pointer
   CCIfType<[f80], CCPassIndirect<i64>>,
+  CCIfType<[f128], CCPassIndirect<i64>>,
 
   // If SSE was disabled, pass FP values smaller than 64-bits as integers in
   // GPRs or on the stack.
