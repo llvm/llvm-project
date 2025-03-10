@@ -56,6 +56,89 @@ body: |
     $bl = SETCCr 6, implicit $eflags
 ...
 ---
+name: opt_redundant_flags_adjusted_imm_2
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_2
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: CCMP64ri32 [[COPY]], 1, 2, 5, implicit-def $eflags, implicit $eflags
+    ; CHECK-NEXT: $cl = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 15, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 14, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 6, implicit $eflags
+    %0:gr64 = COPY $rsi
+    %1:gr64 = MOV64ri 1
+    ; CCMP+SETCC   %0 == 1
+    ; CCMP64rr will be optimized to CCMP64ri32 in the peephole optimiztion pass
+    CCMP64rr %0, %1, 2, 5, implicit-def $eflags, implicit $eflags
+    $cl = SETCCr 4, implicit $eflags
+    ; CCMP+SETCC   %0 >= 2; CCMP can be removed.
+    CCMP64ri32 %0, 2, 2, 5, implicit-def $eflags, implicit $eflags
+    ; %0 >=s 2  -->  %0 >s 1
+    $bl = SETCCr 13, implicit $eflags
+    ; %0 >=u 2  -->  %0 >u 1
+    $bl = SETCCr 3, implicit $eflags
+    ; %0 <s 2  -->  %0 <=s 1
+    $bl = SETCCr 12, implicit $eflags
+    ; %0 <u 2  -->  %0 <=u 1
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_adjusted_imm_3
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_3
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: CMP64ri32 [[COPY]], 1, implicit-def $eflags
+    ; CHECK-NEXT: $cl = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 15, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 14, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 6, implicit $eflags
+    %0:gr64 = COPY $rsi
+    ; CMP+SETCC   %0 == 1
+    CMP64ri32 %0, 1, implicit-def $eflags
+    $cl = SETCCr 4, implicit $eflags
+    ; CCMP+SETCC   %0 >= 2; CCMP can be removed.
+    CCMP64ri32 %0, 2, 2, 5, implicit-def $eflags, implicit $eflags
+    ; %0 >=s 2  -->  %0 >s 1
+    $bl = SETCCr 13, implicit $eflags
+    ; %0 >=u 2  -->  %0 >u 1
+    $bl = SETCCr 3, implicit $eflags
+    ; %0 <s 2  -->  %0 <=s 1
+    $bl = SETCCr 12, implicit $eflags
+    ; %0 <u 2  -->  %0 <=u 1
+    $bl = SETCCr 2, implicit $eflags
+...
+---
+name: opt_redundant_flags_adjusted_imm_4
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_4
+    ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
+    ; CHECK-NEXT: CCMP64ri32 [[COPY]], 1, 2, 5, implicit-def $eflags, implicit $eflags
+    ; CHECK-NEXT: $cl = SETCCr 4, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 15, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 7, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 14, implicit $eflags
+    ; CHECK-NEXT: $bl = SETCCr 6, implicit $eflags
+    %0:gr64 = COPY $rsi
+    ; CCMP+SETCC   %0 == 1
+    CCMP64ri32 %0, 1, 2, 5, implicit-def $eflags, implicit $eflags
+    $cl = SETCCr 4, implicit $eflags
+    ; CMP+SETCC   %0 >= 2; CMP can be removed.
+    CMP64ri32 %0, 2, implicit-def $eflags
+    ; %0 >=s 2  -->  %0 >s 1
+    $bl = SETCCr 13, implicit $eflags
+    ; %0 >=u 2  -->  %0 >u 1
+    $bl = SETCCr 3, implicit $eflags
+    ; %0 <s 2  -->  %0 <=s 1
+    $bl = SETCCr 12, implicit $eflags
+    ; %0 <u 2  -->  %0 <=u 1
+    $bl = SETCCr 2, implicit $eflags
+...
+---
 name: opt_redundant_flags_adjusted_imm_noopt_0
 body: |
   bb.0:
