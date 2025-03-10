@@ -50,7 +50,7 @@ exit:
 
 ; CHECK:      --- !Missed
 ; CHECK-NEXT: Pass:            loop-interchange
-; CHECK-NEXT: Name:            AmbigiousOrder
+; CHECK-NEXT: Name:            AmbiguousOrder
 ; CHECK-NEXT: Function:        ambiguous_order
 ; CHECK-NEXT: Args:
 ; CHECK-NEXT:  - String:       The loops to be interchanged are overlapping.
