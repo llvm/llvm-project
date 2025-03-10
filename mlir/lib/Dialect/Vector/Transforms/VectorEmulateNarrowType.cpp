@@ -1106,8 +1106,8 @@ struct ConvertVectorMaskedLoad final
 ///   * vector<4xi4> -> i8 - yes (N = 2)
 ///   * vector<3xi4> -> i8 - no (N would have to be 1.5)
 ///   * vector<3xi2> -> i16 - no (N would have to be 0.5)
-static bool isSubByteVecFittable(VectorType subByteVecTy,
-                                 Type multiByteScalarTy) {
+static bool fitsInMultiByteContainerTy(VectorType subByteVecTy,
+                                       Type multiByteScalarTy) {
   assert((isa<IntegerType, FloatType>(multiByteScalarTy)) && "Not scalar!");
 
   int subByteBits = subByteVecTy.getElementType().getIntOrFloatBitWidth();
@@ -1160,7 +1160,7 @@ struct ConvertVectorTransferRead final
 
     // Note, per-element-alignment was already verified above.
     bool isFullyAligned =
-        isSubByteVecFittable(op.getVectorType(), containerElemTy);
+        fitsInMultiByteContainerTy(op.getVectorType(), containerElemTy);
 
     auto newPadding = rewriter.create<arith::ExtUIOp>(loc, containerElemTy,
                                                       adaptor.getPadding());
@@ -1496,15 +1496,13 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
                                                    VectorType subByteVecTy,
                                                    Type containerTy,
                                                    Operation *op) {
+  assert(containerTy.isIntOrFloat() &&
+         "container element type is not a scalar");
+
   // TODO: This is validating the inputs rather than checking the conditions
   // documented above. Replace with an assert.
   if (!subByteVecTy)
     return rewriter.notifyMatchFailure(op, "not a vector!");
-
-  // TODO: This is validating the inputs rather than checking the conditions
-  // documented above. Replace with an assert.
-  if (!containerTy.isIntOrFloat())
-    return rewriter.notifyMatchFailure(op, "not a scalar!");
 
   unsigned subByteBits = subByteVecTy.getElementTypeBitWidth();
   unsigned multiByteBits = containerTy.getIntOrFloatBitWidth();
@@ -1512,22 +1510,17 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
   // Enforced by the common pre-conditions.
   assert(multiByteBits % 8 == 0 && "Not a multi-byte scalar type!");
 
-  // TODO: Remove this condition - the assert above (and
-  // commonConversionPrecondtion) takes care of that.
-  if (multiByteBits < 8)
-    return rewriter.notifyMatchFailure(op, "not a multi-byte scalar type!");
-
   // TODO: Add support other widths (when/if needed)
   if (subByteBits != 2 && subByteBits != 4)
     return rewriter.notifyMatchFailure(
         op, "only 2-bit and 4-bit sub-byte type is supported at this moment");
 
-  // Condition 1.
+  // Condition 1 ("per-element" alignment)
   if (multiByteBits % subByteBits != 0)
     return rewriter.notifyMatchFailure(op, "unalagined element types");
 
-  // Condition 2.
-  if (!isSubByteVecFittable(subByteVecTy, containerTy))
+  // Condition 2 ("full" alignment)
+  if (!fitsInMultiByteContainerTy(subByteVecTy, containerTy))
     return rewriter.notifyMatchFailure(
         op, "not possible to fit this sub-byte vector type into a vector of "
             "the given multi-byte type");
@@ -1967,9 +1960,9 @@ struct RewriteAlignedSubByteIntExt : OpRewritePattern<ConversionOpType> {
       return failure();
 
     // Check general alignment preconditions.
-    Type containerType = rewriter.getI8Type();
-    if (failed(alignedConversionPrecondition(rewriter, srcVecType,
-                                             containerType, conversionOp)))
+    if (failed(alignedConversionPrecondition(
+            rewriter, srcVecType,
+            /*containerTy=*/rewriter.getI8Type(), conversionOp)))
       return failure();
 
     // Perform the rewrite.
@@ -2033,9 +2026,9 @@ struct RewriteAlignedSubByteIntTrunc : OpRewritePattern<arith::TruncIOp> {
 
     // Check general alignment preconditions. We invert the src/dst type order
     // to reuse the existing precondition logic.
-    Type containerType = rewriter.getI8Type();
-    if (failed(alignedConversionPrecondition(rewriter, dstVecType,
-                                             containerType, truncOp)))
+    if (failed(alignedConversionPrecondition(
+            rewriter, dstVecType,
+            /*containerTy=*/rewriter.getI8Type(), truncOp)))
       return failure();
 
     // Create a new iX -> i8 truncation op.
