@@ -142,6 +142,7 @@ public:
     virtual void copyProperties(OpaqueProperties, OpaqueProperties) = 0;
     virtual bool compareProperties(OpaqueProperties, OpaqueProperties) = 0;
     virtual llvm::hash_code hashProperties(OpaqueProperties) = 0;
+    virtual void printProperties(Operation *, OpAsmPrinter &) = 0;
   };
 
 public:
@@ -223,6 +224,7 @@ protected:
     void copyProperties(OpaqueProperties, OpaqueProperties) final;
     bool compareProperties(OpaqueProperties, OpaqueProperties) final;
     llvm::hash_code hashProperties(OpaqueProperties) final;
+    void printProperties(Operation *, OpAsmPrinter &) final;
   };
 
 public:
@@ -453,6 +455,10 @@ public:
     return getImpl()->hashProperties(properties);
   }
 
+  void printOpProperties(Operation *op, OpAsmPrinter &printer) const {
+    getImpl()->printProperties(op, printer);
+  }
+
   /// Return the dialect this operation is registered to if the dialect is
   /// loaded in the context, or nullptr if the dialect isn't loaded.
   Dialect *getDialect() const {
@@ -665,6 +671,13 @@ public:
         return ConcreteOp::computePropertiesHash(*prop.as<Properties *>());
 
       return {};
+    }
+    void printProperties(Operation *op, OpAsmPrinter &printer) final {
+      if constexpr (hasProperties) {
+        auto concreteOp = cast<ConcreteOp>(op);
+        ConcreteOp::printProperties(concreteOp->getContext(), printer,
+                                    concreteOp.getProperties());
+      }
     }
   };
 
