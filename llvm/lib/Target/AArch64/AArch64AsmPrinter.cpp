@@ -361,7 +361,7 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("branch-target-enforcement"))) {
     if (!BTE->isZero()) {
-      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_BTI_Flag;
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_BTI_Flag;
       GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_BTI;
     }
   }
@@ -369,7 +369,7 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const auto *GCS = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("guarded-control-stack"))) {
     if (!GCS->isZero()) {
-      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_GCS_Flag;
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_GCS_Flag;
       GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_GCS;
     }
   }
@@ -377,7 +377,7 @@ void AArch64AsmPrinter::emitStartOfAsmFile(Module &M) {
   if (const auto *Sign = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("sign-return-address"))) {
     if (!Sign->isZero()) {
-      BAFlags |= AArch64BuildAttrs::FeatureAndBitsFlag::Feature_PAC_Flag;
+      BAFlags |= AArch64BuildAttributes::FeatureAndBitsFlag::Feature_PAC_Flag;
       GNUFlags |= ELF::GNU_PROPERTY_AARCH64_FEATURE_1_PAC;
     }
   }
@@ -480,35 +480,42 @@ void AArch64AsmPrinter::emitAttributes(unsigned Flags,
 
   if (PAuthABIPlatform || PAuthABIVersion) {
     TS->emitAtributesSubsection(
-        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
-        AArch64BuildAttrs::SubsectionOptional::REQUIRED,
-        AArch64BuildAttrs::SubsectionType::ULEB128);
-    TS->emitAttribute(
-        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
-        AArch64BuildAttrs::TAG_PAUTH_PLATFORM, PAuthABIPlatform, "");
-    TS->emitAttribute(
-        AArch64BuildAttrs::getVendorName(AArch64BuildAttrs::AEABI_PAUTHABI),
-        AArch64BuildAttrs::TAG_PAUTH_SCHEMA, PAuthABIVersion, "");
+        AArch64BuildAttributes::getVendorName(
+            AArch64BuildAttributes::AEABI_PAUTHABI),
+        AArch64BuildAttributes::SubsectionOptional::REQUIRED,
+        AArch64BuildAttributes::SubsectionType::ULEB128);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_PAUTHABI),
+                      AArch64BuildAttributes::TAG_PAUTH_PLATFORM,
+                      PAuthABIPlatform, "");
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_PAUTHABI),
+                      AArch64BuildAttributes::TAG_PAUTH_SCHEMA, PAuthABIVersion,
+                      "");
   }
 
-  unsigned BTIValue = (Flags & AArch64BuildAttrs::Feature_BTI_Flag) ? 1 : 0;
-  unsigned PACValue = (Flags & AArch64BuildAttrs::Feature_PAC_Flag) ? 1 : 0;
-  unsigned GCSValue = (Flags & AArch64BuildAttrs::Feature_GCS_Flag) ? 1 : 0;
+  unsigned BTIValue =
+      (Flags & AArch64BuildAttributes::Feature_BTI_Flag) ? 1 : 0;
+  unsigned PACValue =
+      (Flags & AArch64BuildAttributes::Feature_PAC_Flag) ? 1 : 0;
+  unsigned GCSValue =
+      (Flags & AArch64BuildAttributes::Feature_GCS_Flag) ? 1 : 0;
 
   if (BTIValue || PACValue || GCSValue) {
-    TS->emitAtributesSubsection(AArch64BuildAttrs::getVendorName(
-                                    AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                                AArch64BuildAttrs::SubsectionOptional::OPTIONAL,
-                                AArch64BuildAttrs::SubsectionType::ULEB128);
-    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
-                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_BTI, BTIValue, "");
-    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
-                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_PAC, PACValue, "");
-    TS->emitAttribute(AArch64BuildAttrs::getVendorName(
-                          AArch64BuildAttrs::AEABI_FEATURE_AND_BITS),
-                      AArch64BuildAttrs::TAG_FEATURE_GCS, GCSValue, "");
+    TS->emitAtributesSubsection(
+        AArch64BuildAttributes::getVendorName(
+            AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+        AArch64BuildAttributes::SubsectionOptional::OPTIONAL,
+        AArch64BuildAttributes::SubsectionType::ULEB128);
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_BTI, BTIValue, "");
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_PAC, PACValue, "");
+    TS->emitAttribute(AArch64BuildAttributes::getVendorName(
+                          AArch64BuildAttributes::AEABI_FEATURE_AND_BITS),
+                      AArch64BuildAttributes::TAG_FEATURE_GCS, GCSValue, "");
   }
 }
 

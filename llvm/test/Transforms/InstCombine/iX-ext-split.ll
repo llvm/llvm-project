@@ -94,11 +94,7 @@ define void @i128_ext_split_store_i64(i64 %x, ptr %out)  {
 ; CHECK-LABEL: define void @i128_ext_split_store_i64(
 ; CHECK-SAME: i64 [[X:%.*]], ptr [[OUT:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[LO:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[SIGN:%.*]] = ashr i64 [[X]], 63
-; CHECK-NEXT:    [[WIDEN:%.*]] = zext i64 [[SIGN]] to i128
-; CHECK-NEXT:    [[HI:%.*]] = shl nuw i128 [[WIDEN]], 64
-; CHECK-NEXT:    [[RES:%.*]] = or disjoint i128 [[HI]], [[LO]]
+; CHECK-NEXT:    [[RES:%.*]] = sext i64 [[X]] to i128
 ; CHECK-NEXT:    store i128 [[RES]], ptr [[OUT]], align 16
 ; CHECK-NEXT:    ret void
 ;

@@ -2244,9 +2244,13 @@ void OmpStructureChecker::Leave(const parser::OpenMPFlushConstruct &x) {
 
 void OmpStructureChecker::Enter(const parser::OpenMPCancelConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
-  const auto &type{std::get<parser::OmpCancelType>(x.t)};
+  const auto &clauses{std::get<parser::OmpClauseList>(x.t)};
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_cancel);
-  CheckCancellationNest(dir.source, type.v);
+
+  if (auto maybeConstruct{GetCancelType(
+          llvm::omp::Directive::OMPD_cancel, x.source, clauses)}) {
+    CheckCancellationNest(dir.source, *maybeConstruct);
+  }
 }
 
 void OmpStructureChecker::Leave(const parser::OpenMPCancelConstruct &) {
@@ -2297,12 +2301,36 @@ void OmpStructureChecker::Leave(const parser::OpenMPCriticalConstruct &) {
 }
 
 void OmpStructureChecker::Enter(
+    const parser::OmpClause::CancellationConstructType &x) {
+  // Do not call CheckAllowed/CheckAllowedClause, because in case of an error
+  // it will print "CANCELLATION_CONSTRUCT_TYPE" as the clause name instead of
+  // the contained construct name.
+  auto &dirName{std::get<parser::OmpDirectiveName>(x.v.t)};
+  switch (dirName.v) {
+  case llvm::omp::Directive::OMPD_do:
+  case llvm::omp::Directive::OMPD_parallel:
+  case llvm::omp::Directive::OMPD_sections:
+  case llvm::omp::Directive::OMPD_taskgroup:
+    break;
+  default:
+    context_.Say(dirName.source, "%s is not a cancellable construct"_err_en_US,
+        parser::ToUpperCaseLetters(
+            llvm::omp::getOpenMPDirectiveName(dirName.v).str()));
+    break;
+  }
+}
+
+void OmpStructureChecker::Enter(
     const parser::OpenMPCancellationPointConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
-  const auto &type{std::get<parser::OmpCancelType>(x.t)};
+  const auto &clauses{std::get<parser::OmpClauseList>(x.t)};
   PushContextAndClauseSets(
       dir.source, llvm::omp::Directive::OMPD_cancellation_point);
-  CheckCancellationNest(dir.source, type.v);
+
+  if (auto maybeConstruct{GetCancelType(
+          llvm::omp::Directive::OMPD_cancellation_point, x.source, clauses)}) {
+    CheckCancellationNest(dir.source, *maybeConstruct);
+  }
 }
 
 void OmpStructureChecker::Leave(
@@ -2310,8 +2338,42 @@ void OmpStructureChecker::Leave(
   dirContext_.pop_back();
 }
 
+std::optional<llvm::omp::Directive> OmpStructureChecker::GetCancelType(
+    llvm::omp::Directive cancelDir, const parser::CharBlock &cancelSource,
+    const parser::OmpClauseList &clauses) {
+  // Given clauses from CANCEL or CANCELLATION_POINT, identify the construct
+  // to which the cancellation applies.
+  std::optional<llvm::omp::Directive> cancelee;
+  llvm::StringRef cancelName{llvm::omp::getOpenMPDirectiveName(cancelDir)};
+
+  for (const parser::OmpClause &clause : clauses.v) {
+    using CancellationConstructType =
+        parser::OmpClause::CancellationConstructType;
+    if (auto *cctype{std::get_if<CancellationConstructType>(&clause.u)}) {
+      if (cancelee) {
+        context_.Say(cancelSource,
+            "Multiple cancel-directive-name clauses are not allowed on the %s construct"_err_en_US,
+            parser::ToUpperCaseLetters(cancelName.str()));
+        return std::nullopt;
+      }
+      cancelee = std::get<parser::OmpDirectiveName>(cctype->v.t).v;
+    }
+  }
+
+  if (!cancelee) {
+    context_.Say(cancelSource,
+        "Missing cancel-directive-name clause on the %s construct"_err_en_US,
+        parser::ToUpperCaseLetters(cancelName.str()));
+    return std::nullopt;
+  }
+
+  return cancelee;
+}
+
 void OmpStructureChecker::CheckCancellationNest(
-    const parser::CharBlock &source, const parser::OmpCancelType::Type &type) {
+    const parser::CharBlock &source, llvm::omp::Directive type) {
+  llvm::StringRef typeName{llvm::omp::getOpenMPDirectiveName(type)};
+
   if (CurrentDirectiveIsNested()) {
     // If construct-type-clause is taskgroup, the cancellation construct must be
     // closely nested inside a task or a taskloop construct and the cancellation
@@ -2322,8 +2384,9 @@ void OmpStructureChecker::CheckCancellationNest(
     // that matches the type specified in construct-type-clause of the
     // cancellation construct.
     bool eligibleCancellation{false};
+
     switch (type) {
-    case parser::OmpCancelType::Type::Taskgroup:
+    case llvm::omp::Directive::OMPD_taskgroup:
       if (llvm::omp::nestedCancelTaskgroupAllowedSet.test(
               GetContextParent().directive)) {
         eligibleCancellation = true;
@@ -2349,38 +2412,37 @@ void OmpStructureChecker::CheckCancellationNest(
       }
       if (!eligibleCancellation) {
         context_.Say(source,
-            "With %s clause, %s construct must be closely nested inside TASK "
-            "or TASKLOOP construct and %s region must be closely nested inside "
-            "TASKGROUP region"_err_en_US,
-            parser::ToUpperCaseLetters(
-                parser::OmpCancelType::EnumToString(type)),
+            "With %s clause, %s construct must be closely nested inside TASK or TASKLOOP construct and %s region must be closely nested inside TASKGROUP region"_err_en_US,
+            parser::ToUpperCaseLetters(typeName.str()),
             ContextDirectiveAsFortran(), ContextDirectiveAsFortran());
       }
       return;
-    case parser::OmpCancelType::Type::Sections:
+    case llvm::omp::Directive::OMPD_sections:
       if (llvm::omp::nestedCancelSectionsAllowedSet.test(
               GetContextParent().directive)) {
         eligibleCancellation = true;
       }
       break;
-    case parser::OmpCancelType::Type::Do:
+    case llvm::omp::Directive::OMPD_do:
       if (llvm::omp::nestedCancelDoAllowedSet.test(
               GetContextParent().directive)) {
         eligibleCancellation = true;
       }
       break;
-    case parser::OmpCancelType::Type::Parallel:
+    case llvm::omp::Directive::OMPD_parallel:
       if (llvm::omp::nestedCancelParallelAllowedSet.test(
               GetContextParent().directive)) {
         eligibleCancellation = true;
       }
       break;
+    default:
+      // This should have been diagnosed by this point.
+      llvm_unreachable("Unexpected directive");
     }
     if (!eligibleCancellation) {
       context_.Say(source,
-          "With %s clause, %s construct cannot be closely nested inside %s "
-          "construct"_err_en_US,
-          parser::ToUpperCaseLetters(parser::OmpCancelType::EnumToString(type)),
+          "With %s clause, %s construct cannot be closely nested inside %s construct"_err_en_US,
+          parser::ToUpperCaseLetters(typeName.str()),
           ContextDirectiveAsFortran(),
           parser::ToUpperCaseLetters(
               getDirectiveName(GetContextParent().directive).str()));
@@ -2388,38 +2450,33 @@ void OmpStructureChecker::CheckCancellationNest(
   } else {
     // The cancellation directive cannot be orphaned.
     switch (type) {
-    case parser::OmpCancelType::Type::Taskgroup:
+    case llvm::omp::Directive::OMPD_taskgroup:
       context_.Say(source,
-          "%s %s directive is not closely nested inside "
-          "TASK or TASKLOOP"_err_en_US,
+          "%s %s directive is not closely nested inside TASK or TASKLOOP"_err_en_US,
           ContextDirectiveAsFortran(),
-          parser::ToUpperCaseLetters(
-              parser::OmpCancelType::EnumToString(type)));
+          parser::ToUpperCaseLetters(typeName.str()));
       break;
-    case parser::OmpCancelType::Type::Sections:
+    case llvm::omp::Directive::OMPD_sections:
       context_.Say(source,
-          "%s %s directive is not closely nested inside "
-          "SECTION or SECTIONS"_err_en_US,
+          "%s %s directive is not closely nested inside SECTION or SECTIONS"_err_en_US,
           ContextDirectiveAsFortran(),
-          parser::ToUpperCaseLetters(
-              parser::OmpCancelType::EnumToString(type)));
+          parser::ToUpperCaseLetters(typeName.str()));
       break;
-    case parser::OmpCancelType::Type::Do:
+    case llvm::omp::Directive::OMPD_do:
       context_.Say(source,
-          "%s %s directive is not closely nested inside "
-          "the construct that matches the DO clause type"_err_en_US,
+          "%s %s directive is not closely nested inside the construct that matches the DO clause type"_err_en_US,
           ContextDirectiveAsFortran(),
-          parser::ToUpperCaseLetters(
-              parser::OmpCancelType::EnumToString(type)));
+          parser::ToUpperCaseLetters(typeName.str()));
       break;
-    case parser::OmpCancelType::Type::Parallel:
+    case llvm::omp::Directive::OMPD_parallel:
       context_.Say(source,
-          "%s %s directive is not closely nested inside "
-          "the construct that matches the PARALLEL clause type"_err_en_US,
+          "%s %s directive is not closely nested inside the construct that matches the PARALLEL clause type"_err_en_US,
           ContextDirectiveAsFortran(),
-          parser::ToUpperCaseLetters(
-              parser::OmpCancelType::EnumToString(type)));
+          parser::ToUpperCaseLetters(typeName.str()));
       break;
+    default:
+      // This should have been diagnosed by this point.
+      llvm_unreachable("Unexpected directive");
     }
   }
 }
@@ -3106,7 +3163,6 @@ CHECK_SIMPLE_CLAUSE(MemoryOrder, OMPC_memory_order)
 CHECK_SIMPLE_CLAUSE(Bind, OMPC_bind)
 CHECK_SIMPLE_CLAUSE(Align, OMPC_align)
 CHECK_SIMPLE_CLAUSE(Compare, OMPC_compare)
-CHECK_SIMPLE_CLAUSE(CancellationConstructType, OMPC_cancellation_construct_type)
 CHECK_SIMPLE_CLAUSE(OmpxAttribute, OMPC_ompx_attribute)
 CHECK_SIMPLE_CLAUSE(Weak, OMPC_weak)
 
