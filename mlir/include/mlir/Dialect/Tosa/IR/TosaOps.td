@@ -2359,7 +2359,7 @@ def Tosa_ConstOp : Tosa_Op<"const", [ConstantLike, Pure,
   );
 
   let results = (outs
-    TosaTensorOf<[AnyTypeOf<[Tosa_AnyNumber]>]>:$output
+    Tosa_Tensor:$output
   );
 
   list<Availability> availability = [
