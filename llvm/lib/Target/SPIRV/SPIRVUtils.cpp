@@ -303,7 +303,20 @@ SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
     return SPIRV::Scope::Device;
   return SPIRV::Scope::CrossDevice;
 }
-
+/*
+MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
+                                       const MachineRegisterInfo *MRI) {
+  MachineInstr *MI = MRI->getVRegDef(ConstReg);
+  //if (MI->getOpcode() == SPIRV::G_TRUNC || MI->getOpcode() == SPIRV::G_ZEXT)
+  //  return getDefInstrMaybeConstant(ConstReg = MI->getOperand(1).getReg(), MRI);
+  if (MI->getOpcode() == SPIRV::ASSIGN_TYPE)
+    return getDefInstrMaybeConstant(ConstReg = MI->getOperand(1).getReg(), MRI);
+  if (auto *GI = dyn_cast<GIntrinsic>(MI))
+    if (GI->is(Intrinsic::spv_track_constant))
+      return MRI->getVRegDef(ConstReg = MI->getOperand(2).getReg());
+  return MI;
+}
+*/
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
   MachineInstr *MI = MRI->getVRegDef(ConstReg);
@@ -319,6 +332,10 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
   } else if (ConstInstr->getOpcode() == SPIRV::ASSIGN_TYPE) {
     ConstReg = ConstInstr->getOperand(1).getReg();
     return MRI->getVRegDef(ConstReg);
+  } else if (ConstInstr->getOpcode() == TargetOpcode::G_CONSTANT ||
+             ConstInstr->getOpcode() == TargetOpcode::G_FCONSTANT) {
+    ConstReg = ConstInstr->getOperand(0).getReg();
+    return ConstInstr;
   }
   return MRI->getVRegDef(ConstReg);
 }

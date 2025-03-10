@@ -391,12 +391,9 @@ static MachineInstr *getBlockStructInstr(Register ParamReg,
 // TODO: maybe unify with prelegalizer pass.
 static unsigned getConstFromIntrinsic(Register Reg, MachineRegisterInfo *MRI) {
   MachineInstr *DefMI = MRI->getUniqueVRegDef(Reg);
-  assert(isSpvIntrinsic(*DefMI, Intrinsic::spv_track_constant) &&
-         DefMI->getOperand(2).isReg());
-  MachineInstr *DefMI2 = MRI->getUniqueVRegDef(DefMI->getOperand(2).getReg());
-  assert(DefMI2->getOpcode() == TargetOpcode::G_CONSTANT &&
-         DefMI2->getOperand(1).isCImm());
-  return DefMI2->getOperand(1).getCImm()->getValue().getZExtValue();
+  assert(DefMI->getOpcode() == TargetOpcode::G_CONSTANT &&
+         DefMI->getOperand(1).isCImm());
+  return DefMI->getOperand(1).getCImm()->getValue().getZExtValue();
 }
 
 // Return type of the instruction result from spv_assign_type intrinsic.
@@ -1971,8 +1968,7 @@ static bool generateReadImageInst(const StringRef DemangledCall,
       Sampler = GR->buildConstantSampler(
           Register(), getSamplerAddressingModeFromBitmask(SamplerMask),
           getSamplerParamFromBitmask(SamplerMask),
-          getSamplerFilterModeFromBitmask(SamplerMask), MIRBuilder,
-          GR->getSPIRVTypeForVReg(Sampler));
+          getSamplerFilterModeFromBitmask(SamplerMask), MIRBuilder);
     }
     SPIRVType *ImageType = GR->getSPIRVTypeForVReg(Image);
     SPIRVType *SampledImageType =
@@ -2059,7 +2055,7 @@ static bool generateSampleImageInst(const StringRef DemangledCall,
     Register Sampler = GR->buildConstantSampler(
         Call->ReturnRegister, getSamplerAddressingModeFromBitmask(Bitmask),
         getSamplerParamFromBitmask(Bitmask),
-        getSamplerFilterModeFromBitmask(Bitmask), MIRBuilder, Call->ReturnType);
+        getSamplerFilterModeFromBitmask(Bitmask), MIRBuilder);
     return Sampler.isValid();
   } else if (Call->Builtin->Name.contains_insensitive("__spirv_SampledImage")) {
     // Create OpSampledImage.
