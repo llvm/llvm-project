@@ -1848,6 +1848,17 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INTRINSIC_WO_CHAIN, VT, Custom);
   }
 
+  if (Subtarget->hasSVE2() ||
+      (Subtarget->hasSME() && Subtarget->isStreaming())) {
+    for (auto VT : {MVT::v2i32, MVT::v4i16, MVT::v8i8, MVT::v16i8, MVT::nxv2i1,
+                    MVT::nxv4i1, MVT::nxv8i1, MVT::nxv16i1}) {
+      setOperationAction(ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK, VT,
+                         Custom);
+      setOperationAction(ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK, VT,
+                         Custom);
+    }
+  }
+
   // Handle operations that are only available in non-streaming SVE mode.
   if (Subtarget->isSVEAvailable()) {
     for (auto VT : {MVT::nxv16i8,  MVT::nxv8i16, MVT::nxv4i32,  MVT::nxv2i64,
@@ -2862,6 +2873,8 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::LS64_BUILD)
     MAKE_CASE(AArch64ISD::LS64_EXTRACT)
     MAKE_CASE(AArch64ISD::TBL)
+    MAKE_CASE(AArch64ISD::WHILEWR)
+    MAKE_CASE(AArch64ISD::WHILERW)
     MAKE_CASE(AArch64ISD::FADD_PRED)
     MAKE_CASE(AArch64ISD::FADDA_PRED)
     MAKE_CASE(AArch64ISD::FADDV_PRED)
@@ -5312,6 +5325,58 @@ SDValue AArch64TargetLowering::LowerFSINCOS(SDValue Op,
 
 static MVT getSVEContainerType(EVT ContentTy);
 
+SDValue
+AArch64TargetLowering::LowerLOOP_DEPENDENCE_MASK(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  uint64_t EltSize = Op.getConstantOperandVal(2);
+  bool IsWriteAfterRead =
+      Op.getOpcode() == ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK;
+  unsigned Opcode =
+      IsWriteAfterRead ? AArch64ISD::WHILEWR : AArch64ISD::WHILERW;
+  EVT VT = Op.getValueType();
+  MVT SimpleVT = VT.getSimpleVT();
+  // Make sure that the promoted mask size and element size match
+  switch (EltSize) {
+  case 1:
+    assert((SimpleVT == MVT::v16i8 || SimpleVT == MVT::nxv16i1) &&
+           "Unexpected mask or element size");
+    break;
+  case 2:
+    assert((SimpleVT == MVT::v8i8 || SimpleVT == MVT::nxv8i1) &&
+           "Unexpected mask or element size");
+    break;
+  case 4:
+    assert((SimpleVT == MVT::v4i16 || SimpleVT == MVT::nxv4i1) &&
+           "Unexpected mask or element size");
+    break;
+  case 8:
+    assert((SimpleVT == MVT::v2i32 || SimpleVT == MVT::nxv2i1) &&
+           "Unexpected mask or element size");
+    break;
+  default:
+    llvm_unreachable("Unexpected element size for get.alias.lane.mask");
+    break;
+  }
+
+  if (VT.isScalableVector())
+    return DAG.getNode(Opcode, DL, VT, Op.getOperand(0), Op.getOperand(1));
+
+  // We can use the SVE whilewr/whilerw instruction to lower this
+  // intrinsic by creating the appropriate sequence of scalable vector
+  // operations and then extracting a fixed-width subvector from the scalable
+  // vector.
+
+  EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
+  EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
+
+  SDValue Mask =
+      DAG.getNode(Opcode, DL, WhileVT, Op.getOperand(0), Op.getOperand(1));
+  SDValue MaskAsInt = DAG.getNode(ISD::SIGN_EXTEND, DL, ContainerVT, Mask);
+  return DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, MaskAsInt,
+                     DAG.getVectorIdxConstant(0, DL));
+}
+
 SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
                                             SelectionDAG &DAG) const {
   EVT OpVT = Op.getValueType();
@@ -6065,6 +6130,18 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
     return DAG.getNode(AArch64ISD::THREAD_POINTER, dl, PtrVT);
   }
+  case Intrinsic::aarch64_sve_whilewr_b:
+  case Intrinsic::aarch64_sve_whilewr_h:
+  case Intrinsic::aarch64_sve_whilewr_s:
+  case Intrinsic::aarch64_sve_whilewr_d:
+    return DAG.getNode(AArch64ISD::WHILEWR, dl, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::aarch64_sve_whilerw_b:
+  case Intrinsic::aarch64_sve_whilerw_h:
+  case Intrinsic::aarch64_sve_whilerw_s:
+  case Intrinsic::aarch64_sve_whilerw_d:
+    return DAG.getNode(AArch64ISD::WHILERW, dl, Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
   case Intrinsic::aarch64_neon_abs: {
     EVT Ty = Op.getValueType();
     if (Ty == MVT::i64) {
@@ -6525,17 +6602,18 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
   }
   case Intrinsic::get_active_lane_mask: {
-    SDValue ID =
-        DAG.getTargetConstant(Intrinsic::aarch64_sve_whilelo, dl, MVT::i64);
+    unsigned IntrinsicID = Intrinsic::aarch64_sve_whilelo;
+    SDValue ID = DAG.getTargetConstant(IntrinsicID, dl, MVT::i64);
 
     EVT VT = Op.getValueType();
     if (VT.isScalableVector())
       return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, dl, VT, ID, Op.getOperand(1),
                          Op.getOperand(2));
 
-    // We can use the SVE whilelo instruction to lower this intrinsic by
-    // creating the appropriate sequence of scalable vector operations and
-    // then extracting a fixed-width subvector from the scalable vector.
+    // We can use the SVE whilelo instruction to lower this
+    // intrinsic by creating the appropriate sequence of scalable vector
+    // operations and then extracting a fixed-width subvector from the scalable
+    // vector.
 
     EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
     EVT WhileVT = ContainerVT.changeElementType(MVT::i1);
@@ -7395,6 +7473,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
   default:
     llvm_unreachable("unimplemented operand");
     return SDValue();
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK:
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
+    return LowerLOOP_DEPENDENCE_MASK(Op, DAG);
   case ISD::BITCAST:
     return LowerBITCAST(Op, DAG);
   case ISD::GlobalAddress:
@@ -19739,7 +19820,7 @@ static SDValue getPTest(SelectionDAG &DAG, EVT VT, SDValue Pg, SDValue Op,
                         AArch64CC::CondCode Cond);
 
 static bool isPredicateCCSettingOp(SDValue N) {
-  if ((N.getOpcode() == ISD::SETCC) ||
+  if (N.getOpcode() == ISD::SETCC ||
       (N.getOpcode() == ISD::INTRINSIC_WO_CHAIN &&
        (N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilege ||
         N.getConstantOperandVal(0) == Intrinsic::aarch64_sve_whilegt ||
@@ -27632,6 +27713,22 @@ void AArch64TargetLowering::ReplaceNodeResults(
     // CONCAT_VECTORS -- but delegate to common code for result type
     // legalisation
     return;
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_WAR_MASK:
+  case ISD::EXPERIMENTAL_LOOP_DEPENDENCE_RAW_MASK: {
+    EVT VT = N->getValueType(0);
+    if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
+      return;
+
+    // NOTE: Only trivial type promotion is supported.
+    EVT NewVT = getTypeToTransformTo(*DAG.getContext(), VT);
+    if (NewVT.getVectorNumElements() != VT.getVectorNumElements())
+      return;
+
+    SDLoc DL(N);
+    auto V = DAG.getNode(N->getOpcode(), DL, NewVT, N->ops());
+    Results.push_back(DAG.getNode(ISD::TRUNCATE, DL, VT, V));
+    return;
+  }
   case ISD::INTRINSIC_WO_CHAIN: {
     EVT VT = N->getValueType(0);
 
@@ -27688,6 +27785,8 @@ void AArch64TargetLowering::ReplaceNodeResults(
       return;
     }
     case Intrinsic::experimental_vector_match:
+    case Intrinsic::experimental_loop_dependence_raw_mask:
+    case Intrinsic::experimental_loop_dependence_war_mask:
     case Intrinsic::get_active_lane_mask: {
       if (!VT.isFixedLengthVector() || VT.getVectorElementType() != MVT::i1)
         return;
