@@ -90,7 +90,7 @@ void LivePhysRegs::stepForward(const MachineInstr &MI,
       if (O->isDef()) {
         // Note, dead defs are still recorded.  The caller should decide how to
         // handle them.
-        Clobbers.push_back(std::make_pair(Reg, &*O));
+        Clobbers.push_back(std::make_pair(Reg.id(), &*O));
       } else {
         assert(O->isUse());
         if (O->isKill())
