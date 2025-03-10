@@ -45,6 +45,23 @@ define i8 @infer_nuw_nsw(i16 range(i16 -5, -3) %A, i16 range(i16 -5, -3) %B) {
 }
 
 
+define i8 @infer_nsw_from_assume(i16 %x) {
+; CHECK-LABEL: define i8 @infer_nsw_from_assume(
+; CHECK-SAME: i16 [[X:%.*]]) {
+; CHECK-NEXT:    [[ADD:%.*]] = add i16 [[X]], 128
+; CHECK-NEXT:    [[OR_COND_I:%.*]] = icmp ult i16 [[ADD]], 256
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[OR_COND_I]])
+; CHECK-NEXT:    [[CONV1:%.*]] = trunc nsw i16 [[X]] to i8
+; CHECK-NEXT:    ret i8 [[CONV1]]
+;
+  %add = add i16 %x, 128
+  %or.cond.i = icmp ult i16 %add, 256
+  tail call void @llvm.assume(i1 %or.cond.i)
+  %conv1 = trunc i16 %x to i8
+  ret i8 %conv1
+}
+
+
 define i1 @rust_issue_122734(i8 range(i8 0, 3) %A, i8 range(i8 0, 3) %B) {
 ; CHECK-LABEL: define i1 @rust_issue_122734(
 ; CHECK-SAME: i8 range(i8 0, 3) [[A:%.*]], i8 range(i8 0, 3) [[B:%.*]]) {
