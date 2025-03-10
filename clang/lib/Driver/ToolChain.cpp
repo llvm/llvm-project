@@ -16,6 +16,8 @@
 #include "ToolChains/InterfaceStubs.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Sanitizers.h"
+#include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TargetOptions.h"
 #include "clang/Config/config.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Driver.h"
@@ -506,8 +508,21 @@ ToolChain::getTargetAndModeFromProgramName(StringRef PN) {
   StringRef Prefix(ProgName);
   Prefix = Prefix.slice(0, LastComponent);
   std::string IgnoredError;
+
+  // First, check if the target is a supported LLVM target.
   bool IsRegistered =
       llvm::TargetRegistry::lookupTarget(std::string(Prefix), IgnoredError);
+  // If so, further check that clang is able to use it as a target.
+  if (IsRegistered) {
+    std::shared_ptr<TargetOptions> TargetOpts(new TargetOptions);
+    TargetOpts->Triple = Prefix.str();
+    DiagnosticsEngine Diags(new DiagnosticIDs, new DiagnosticOptions,
+                            new IgnoringDiagConsumer);
+    llvm::IntrusiveRefCntPtr<TargetInfo> Target =
+        clang::TargetInfo::CreateTargetInfo(Diags, TargetOpts);
+    if (!Target)
+      IsRegistered = false;
+  }
   return ParsedClangName{std::string(Prefix), ModeSuffix, DS->ModeFlag,
                          IsRegistered};
 }
