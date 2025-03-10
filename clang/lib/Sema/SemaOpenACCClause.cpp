@@ -1264,7 +1264,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitAutoClause(
   // Only one of the seq, independent, and auto clauses may appear.
   const auto *Itr =
       llvm::find_if(ExistingClauses,
-                    llvm::IsaPred<OpenACCIndependentClause, OpenACCSeqClause>);
+                    llvm::IsaPred<OpenACCAutoClause, OpenACCIndependentClause,
+                                  OpenACCSeqClause>);
   if (Itr != ExistingClauses.end()) {
     SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_loop_spec_conflict)
         << Clause.getClauseKind() << Clause.getDirectiveKind();
@@ -1281,7 +1282,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitIndependentClause(
   // OpenACC 3.3 2.9:
   // Only one of the seq, independent, and auto clauses may appear.
   const auto *Itr = llvm::find_if(
-      ExistingClauses, llvm::IsaPred<OpenACCAutoClause, OpenACCSeqClause>);
+      ExistingClauses, llvm::IsaPred<OpenACCIndependentClause,
+                                     OpenACCAutoClause, OpenACCSeqClause>);
   if (Itr != ExistingClauses.end()) {
     SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_loop_spec_conflict)
         << Clause.getClauseKind() << Clause.getDirectiveKind();
@@ -1798,7 +1800,8 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitSeqClause(
   // Only one of the seq, independent, and auto clauses may appear.
   const auto *Itr =
       llvm::find_if(ExistingClauses,
-                    llvm::IsaPred<OpenACCAutoClause, OpenACCIndependentClause>);
+                    llvm::IsaPred<OpenACCAutoClause, OpenACCIndependentClause,
+                                  OpenACCSeqClause>);
   if (Itr != ExistingClauses.end()) {
     SemaRef.Diag(Clause.getBeginLoc(), diag::err_acc_loop_spec_conflict)
         << Clause.getClauseKind() << Clause.getDirectiveKind();
