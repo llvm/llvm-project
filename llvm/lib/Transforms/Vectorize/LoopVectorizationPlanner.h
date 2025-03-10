@@ -42,6 +42,9 @@ class TargetLibraryInfo;
 class VPRecipeBuilder;
 struct VFRange;
 
+extern cl::opt<bool> EnableVPlanNativePath;
+extern cl::opt<unsigned> ForceTargetInstructionCost;
+
 /// VPlan-based builder utility analogous to IRBuilder.
 class VPBuilder {
   VPBasicBlock *BB = nullptr;
