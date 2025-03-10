@@ -63,6 +63,22 @@ static cl::opt<IntrinsicCostStrategy> IntrinsicCost(
 #define CM_NAME "cost-model"
 #define DEBUG_TYPE CM_NAME
 
+static InstructionCost getCost(Instruction &Inst, TTI::TargetCostKind CostKind,
+                               TargetTransformInfo &TTI,
+                               TargetLibraryInfo &TLI) {
+  auto *II = dyn_cast<IntrinsicInst>(&Inst);
+  if (II && IntrinsicCost != IntrinsicCostStrategy::InstructionCost) {
+    IntrinsicCostAttributes ICA(
+        II->getIntrinsicID(), *II, InstructionCost::getInvalid(),
+        /*TypeBasedOnly=*/IntrinsicCost ==
+            IntrinsicCostStrategy::TypeBasedIntrinsicCost,
+        &TLI);
+    return TTI.getIntrinsicInstrCost(ICA, CostKind);
+  }
+
+  return TTI.getInstructionCost(&Inst, CostKind);
+}
+
 PreservedAnalyses CostModelPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
@@ -72,19 +88,7 @@ PreservedAnalyses CostModelPrinterPass::run(Function &F,
     for (Instruction &Inst : B) {
       // TODO: Use a pass parameter instead of cl::opt CostKind to determine
       // which cost kind to print.
-      InstructionCost Cost;
-      auto *II = dyn_cast<IntrinsicInst>(&Inst);
-      if (II && IntrinsicCost != IntrinsicCostStrategy::InstructionCost) {
-        IntrinsicCostAttributes ICA(
-            II->getIntrinsicID(), *II, InstructionCost::getInvalid(),
-            /*TypeBasedOnly=*/IntrinsicCost ==
-                IntrinsicCostStrategy::TypeBasedIntrinsicCost,
-            &TLI);
-        Cost = TTI.getIntrinsicInstrCost(ICA, CostKind);
-      } else {
-        Cost = TTI.getInstructionCost(&Inst, CostKind);
-      }
-
+      InstructionCost Cost = getCost(Inst, CostKind, TTI, TLI);
       if (auto CostVal = Cost.getValue())
         OS << "Cost Model: Found an estimated cost of " << *CostVal;
       else
