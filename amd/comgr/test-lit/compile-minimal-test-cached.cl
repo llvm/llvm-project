@@ -3,7 +3,9 @@
 // RUN: unset AMD_COMGR_CACHE
 // RUN: AMD_COMGR_CACHE_DIR=%t.cache compile-minimal-test %S/compile-minimal-test.cl %t.bin
 // RUN: llvm-objdump -d %t.bin | FileCheck %S/compile-minimal-test.cl
-// RUN: [ ! -d %t.cache ]
+// RUN: [ -d %t.cache ]
+//
+// RUN: rm -fr %t.cache
 //
 // RUN: export AMD_COMGR_CACHE=0
 // RUN: AMD_COMGR_CACHE_DIR=%t.cache compile-minimal-test %S/compile-minimal-test.cl %t.bin

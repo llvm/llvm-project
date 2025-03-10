@@ -120,10 +120,10 @@ and eviction policy can be manipulated through specific environment variables.
 If an issue arises during cache initialization, the execution will proceed with
 the cache turned off.
 
-By default, the cache is turned off, set the environment variable
-`AMD_COMGR_CACHE=1` to enable it.
+By default, the cache is enabled.
 
-* `AMD_COMGR_CACHE`: When unset or set to 0, the cache is turned off.
+* `AMD_COMGR_CACHE`: When unset or set to a value different than "0", the cache is enabled.
+  Disabled when set to "0".
 * `AMD_COMGR_CACHE_DIR`: If assigned a non-empty value, that value is used as
   the path for cache storage. If the variable is unset or set to an empty string `""`,
   it is directed to "$XDG_CACHE_HOME/comgr" (which defaults to
