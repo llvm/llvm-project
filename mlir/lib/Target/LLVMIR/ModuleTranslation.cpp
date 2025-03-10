@@ -2143,7 +2143,8 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
   }
   if (auto targetTripleAttr =
           m->getDiscardableAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
-    llvmModule->setTargetTriple(cast<StringAttr>(targetTripleAttr).getValue());
+    llvmModule->setTargetTriple(
+        llvm::Triple(cast<StringAttr>(targetTripleAttr).getValue()));
 
   return llvmModule;
 }
