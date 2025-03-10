@@ -3058,6 +3058,78 @@ AArch64TargetLowering::EmitGetSMESaveSize(MachineInstr &MI,
             MI.getOperand(0).getReg())
         .addReg(AArch64::XZR);
   BB->remove_instr(&MI);
+
+  return BB;
+}
+
+MachineBasicBlock *
+AArch64TargetLowering::tryRewritingPAC(MachineInstr &MI,
+                                       MachineBasicBlock *BB) const {
+  const TargetInstrInfo *TII = Subtarget->getInstrInfo();
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  MachineInstr *AddrInstr = nullptr;
+  int64_t Offset = 0;
+  // Try to find the address-setting instruction, accumulating the offset
+  // along the way. If any unknown pattern is found, keep everything as-is.
+  MachineOperand *CurOp = &MI.getOperand(1);
+  while (CurOp) {
+    MachineOperand *Def = MRI.getOneDef(CurOp->getReg());
+    if (!Def)
+      return BB;
+    MachineInstr *DefMI = Def->getParent();
+    assert(DefMI != nullptr);
+
+    switch (DefMI->getOpcode()) {
+    case AArch64::COPY:
+      CurOp = &DefMI->getOperand(1);
+      break;
+    case AArch64::ADDXri:
+      if (DefMI->getOperand(3).getImm() != 0) // shifts are not handled
+        return BB;
+      CurOp = &DefMI->getOperand(1);
+      Offset += DefMI->getOperand(2).getImm();
+      break;
+    case AArch64::MOVaddr:
+    case AArch64::LOADgotAUTH:
+      AddrInstr = DefMI;
+      CurOp = nullptr;
+      break;
+    default:
+      return BB;
+    }
+  }
+
+  unsigned NewOpcode = AddrInstr->getOpcode() == AArch64::LOADgotAUTH
+                           ? AArch64::LOADgotPAC
+                           : AArch64::MOVaddrPAC;
+  MachineOperand &AddrOp = AddrInstr->getOperand(1);
+  unsigned TargetFlags = AddrOp.getTargetFlags() & ~AArch64II::MO_PAGE;
+  Offset += AddrOp.getOffset();
+
+  // MOVaddrPAC and LOADgotPAC pseudos are expanded so that they use X16/X17
+  // internally, thus their restrictions on the register class of $AddrDisc
+  // operand are stricter than those of real PAC* instructions.
+  // If the original instruction accepts a discriminator operand, make sure
+  // it is moved out of X16/X17.
+  Register DiscReg = AArch64::XZR;
+  if (!isPACWithZeroDisc(MI.getOpcode())) {
+    DiscReg = MRI.createVirtualRegister(&AArch64::GPR64noipRegClass);
+    BuildMI(*BB, MI, DL, TII->get(AArch64::COPY), DiscReg)
+        .addReg(MI.getOperand(2).getReg());
+  }
+
+  BuildMI(*BB, MI, DL, TII->get(NewOpcode))
+      .addGlobalAddress(AddrOp.getGlobal(), Offset, TargetFlags)
+      .addImm(getKeyForPACOpcode(MI.getOpcode()))
+      .addReg(DiscReg)
+      .addImm(0);
+
+  BuildMI(*BB, MI, DL, TII->get(AArch64::COPY), MI.getOperand(0).getReg())
+      .addReg(AArch64::X16);
+
+  MI.removeFromParent();
   return BB;
 }
 
@@ -3159,6 +3231,16 @@ MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
     return EmitZTInstr(MI, BB, AArch64::ZERO_T, /*Op0IsDef=*/true);
   case AArch64::MOVT_TIZ_PSEUDO:
     return EmitZTInstr(MI, BB, AArch64::MOVT_TIZ, /*Op0IsDef=*/true);
+
+  case AArch64::PACDA:
+  case AArch64::PACDB:
+  case AArch64::PACIA:
+  case AArch64::PACIB:
+  case AArch64::PACDZA:
+  case AArch64::PACDZB:
+  case AArch64::PACIZA:
+  case AArch64::PACIZB:
+    return tryRewritingPAC(MI, BB);
   }
 }
 

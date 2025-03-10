@@ -2018,7 +2018,9 @@ let Predicates = [HasPAuth] in {
     def DZB  : SignAuthZero<prefix_z,  0b11, !strconcat(asm, "dzb"), op>;
   }
 
+  let usesCustomInserter = true in
   defm PAC : SignAuth<0b000, 0b010, "pac", int_ptrauth_sign>;
+
   defm AUT : SignAuth<0b001, 0b011, "aut", null_frag>;
 
   def XPACI : ClearAuth<0, "xpaci">;

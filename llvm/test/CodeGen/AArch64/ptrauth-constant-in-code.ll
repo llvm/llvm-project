@@ -85,7 +85,9 @@ define void @store_signed_const_local(ptr %dest) {
 ; ISEL:         %0:gpr64common = COPY $x0
 ; ISEL-NEXT:    %1:gpr64common = PAUTH_BLEND %0, 1234
 ; ISEL-NEXT:    %2:gpr64common = MOVaddr target-flags(aarch64-page) @const_table_local + 8, target-flags(aarch64-pageoff, aarch64-nc) @const_table_local + 8
-; ISEL-NEXT:    %3:gpr64 = PACDA %2, killed %1
+; ISEL-NEXT:    %4:gpr64noip = COPY %1
+; ISEL-NEXT:    MOVaddrPAC @const_table_local + 8, 2, %4, 0, implicit-def $x16, implicit-def $x17
+; ISEL-NEXT:    %3:gpr64 = COPY $x16
 ; ISEL-NEXT:    STRXui killed %3, %0, 0 :: (store (s64) into %ir.dest)
 ; ISEL-NEXT:    RET_ReallyLR
   %dest.i = ptrtoint ptr %dest to i64
@@ -103,7 +105,9 @@ define void @store_signed_const_got(ptr %dest) {
 ; ISEL-ELF-NEXT:    %1:gpr64common = PAUTH_BLEND %0, 1234
 ; ISEL-ELF-NEXT:    %2:gpr64common = LOADgotAUTH target-flags(aarch64-got) @const_table_got, implicit-def dead $x16, implicit-def dead $x17, implicit-def dead $nzcv
 ; ISEL-ELF-NEXT:    %3:gpr64common = ADDXri killed %2, 8, 0
-; ISEL-ELF-NEXT:    %4:gpr64 = PACDA %3, killed %1
+; ISEL-ELF-NEXT:    %5:gpr64noip = COPY %1
+; ISEL-ELF-NEXT:    LOADgotPAC target-flags(aarch64-got) @const_table_got + 8, 2, %5, 0, implicit-def $x16, implicit-def $x17, implicit-def $nzcv
+; ISEL-ELF-NEXT:    %4:gpr64 = COPY $x16
 ; ISEL-ELF-NEXT:    STRXui killed %4, %0, 0 :: (store (s64) into %ir.dest)
 ; ISEL-ELF-NEXT:    RET_ReallyLR
   %dest.i = ptrtoint ptr %dest to i64
