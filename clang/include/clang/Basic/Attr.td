@@ -994,6 +994,22 @@ def ARMInterrupt : InheritableAttr, TargetSpecificAttr<TargetARM> {
   let Documentation = [ARMInterruptDocs];
 }
 
+def ARMInterruptSaveFP : InheritableAttr, TargetSpecificAttr<TargetARM> {
+  let Spellings = [GNU<"interrupt_save_fp">];
+  let Args = [EnumArgument<"Interrupt", "InterruptType", /*is_string=*/true,
+                           ["IRQ", "FIQ", "SWI", "ABORT", "UNDEF", ""],
+                           ["IRQ", "FIQ", "SWI", "ABORT", "UNDEF", "Generic"],
+                           1>];
+  let HasCustomParsing = 0;
+  let Documentation = [ARMInterruptSaveFPDocs];
+}
+
+def ARMSaveFP : InheritableAttr, TargetSpecificAttr<TargetARM> {
+  let Spellings = [];
+  let Subjects = SubjectList<[Function]>;
+  let Documentation = [InternalOnly];
+}
+
 def AVRInterrupt : InheritableAttr, TargetSpecificAttr<TargetAVR> {
   let Spellings = [GCC<"interrupt">];
   let Subjects = SubjectList<[Function]>;
