@@ -10,7 +10,7 @@ declare void @init_mem(ptr, i64);
 define i64 @same_exit_block_pre_inc_use1_sve() #1 {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_sve'
 ; CHECK: LV: Selecting VF: vscale x 16
-; CHECK: Calculating cost of work in vector early exit block:
+; CHECK: Calculating cost of work in exit block vector.early.exit
 ; CHECK-NEXT: Cost of 6 for VF vscale x 16: EMIT vp<{{.*}}> = extract-first-active
 ; CHECK-NEXT: Cost of 6 for VF vscale x 16: EMIT vp<{{.*}}> = extract-first-active
 ; CHECK: LV: Minimum required TC for runtime checks to be profitable:32
@@ -47,7 +47,7 @@ loop.end:
 define i64 @same_exit_block_pre_inc_use1_nosve() {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_nosve'
 ; CHECK: LV: Selecting VF: 16
-; CHECK: Calculating cost of work in vector early exit block:
+; CHECK: Calculating cost of work in exit block vector.early.exit
 ; CHECK-NEXT: Cost of 50 for VF 16: EMIT vp<{{.*}}> = extract-first-active
 ; CHECK-NEXT: Cost of 50 for VF 16: EMIT vp<{{.*}}> = extract-first-active
 ; CHECK: LV: Minimum required TC for runtime checks to be profitable:176
