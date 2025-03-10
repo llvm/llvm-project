@@ -6,6 +6,6 @@ body: |
     %0:_(<vscale x 4 x pX) = IMPLICIT_DEF
 ...
 
-# CHECK: expected integers after 's'/'p' type character
+# CHECK: expected integers after 's'/'i'/'f'/'bf'/'p' type identifier
 
 
