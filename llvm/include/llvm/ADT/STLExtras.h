@@ -2562,19 +2562,19 @@ bool hasNItemsOrLess(
 
 /// Returns true if the given container has exactly N items
 template <typename ContainerTy> bool hasNItems(ContainerTy &&C, unsigned N) {
-  return hasNItems(std::begin(C), std::end(C), N);
+  return hasNItems(adl_begin(C), adl_end(C), N);
 }
 
 /// Returns true if the given container has N or more items
 template <typename ContainerTy>
 bool hasNItemsOrMore(ContainerTy &&C, unsigned N) {
-  return hasNItemsOrMore(std::begin(C), std::end(C), N);
+  return hasNItemsOrMore(adl_begin(C), adl_end(C), N);
 }
 
 /// Returns true if the given container has N or less items
 template <typename ContainerTy>
 bool hasNItemsOrLess(ContainerTy &&C, unsigned N) {
-  return hasNItemsOrLess(std::begin(C), std::end(C), N);
+  return hasNItemsOrLess(adl_begin(C), adl_end(C), N);
 }
 
 /// Returns a raw pointer that represents the same address as the argument.
