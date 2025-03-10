@@ -68,6 +68,12 @@ def IsBoxAddressOrValueTypePred
 def fir_BoxAddressOrValueType : Type<IsBoxAddressOrValueTypePred,
     "fir.box or fir.class type or reference">;
 
+def RefOfConstantSizeAggregateTypePred
+        : CPred<"::fir::isRefOfConstantSizeAggregateType($_self)">;
+def AnyRefOfConstantSizeAggregateType : TypeConstraint<
+      RefOfConstantSizeAggregateTypePred,
+      "a reference type to a constant size fir.array, fir.char, or fir.type">;
+
 //===----------------------------------------------------------------------===//
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
@@ -363,8 +369,8 @@ def fir_CopyOp : fir_Op<"copy", []> {
     TODO: add FirAliasTagOpInterface to carry TBAA.
   }];
 
-  let arguments = (ins Arg<AnyReferenceLike, "", [MemRead]>:$source,
-                       Arg<AnyReferenceLike, "", [MemWrite]>:$destination,
+  let arguments = (ins Arg<AnyRefOfConstantSizeAggregateType, "", [MemRead]>:$source,
+                       Arg<AnyRefOfConstantSizeAggregateType, "", [MemWrite]>:$destination,
                        OptionalAttr<UnitAttr>:$no_overlap);
 
   let builders = [OpBuilder<(ins "mlir::Value":$source,
