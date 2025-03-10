@@ -2510,6 +2510,25 @@ llvm.linker_options ["/DEFAULTLIB:", "libcmtd"]
 
 // -----
 
+module {
+  llvm.module_flags [#llvm.mlir.module_flag<1 : i64, "wchar_size", 4 : i32>,
+                     #llvm.mlir.module_flag<8 : i64, "PIC Level", 2 : i32>,
+                     #llvm.mlir.module_flag<7 : i64, "PIE Level", 2 : i32>,
+                     #llvm.mlir.module_flag<7 : i64, "uwtable", 2 : i32>,
+                     #llvm.mlir.module_flag<7 : i64, "frame-pointer", 1 : i32>]
+}
+
+// CHECK: !llvm.module.flags = !{![[DBG:.*]], ![[WCHAR:.*]], ![[PIC:.*]], ![[PIE:.*]], ![[UWTABLE:.*]], ![[FP:.*]]}
+
+// CHECK: ![[DBG]] = !{i32 2, !"Debug Info Version", i32 3}
+// CHECK: ![[WCHAR]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: ![[PIC]] = !{i32 8, !"PIC Level", i32 2}
+// CHECK: ![[PIE]] = !{i32 7, !"PIE Level", i32 2}
+// CHECK: ![[UWTABLE]] = !{i32 7, !"uwtable", i32 2}
+// CHECK: ![[FP]] = !{i32 7, !"frame-pointer", i32 1}
+
+// -----
+
 // CHECK: @big_ = common global [4294967296 x i8] zeroinitializer
 llvm.mlir.global common @big_(dense<0> : vector<4294967296xi8>) {addr_space = 0 : i32} : !llvm.array<4294967296 x i8>
 
