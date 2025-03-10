@@ -138,7 +138,15 @@ TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
   }
 
   if (auto *TT = T->getAs<TagType>()) {
-    return TT->getDecl();
+    TagDecl *TD = TT->getDecl();
+    // Template might not be instantiated yet, fall back to primary template
+    // in such cases.
+    if (const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(TD)) {
+      if (CTSD->getTemplateSpecializationKind() == TSK_Undeclared) {
+        return CTSD->getSpecializedTemplate()->getTemplatedDecl();
+      }
+    }
+    return TD;
   }
 
   if (const auto *ICNT = T->getAs<InjectedClassNameType>())
