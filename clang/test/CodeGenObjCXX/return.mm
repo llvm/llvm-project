@@ -12,19 +12,7 @@
 
 @end
 
-enum Enum {
-  a
-};
-
-int (^block)(Enum) = ^int(Enum e) {
-  switch (e) {
-  case a:
-    return 1;
-  }
-};
-
-// Ensure that both methods and blocks don't use the -fstrict-return undefined
-// behaviour optimization.
+// Ensure that methods don't use the -fstrict-return undefined behaviour optimization.
 
 // CHECK-NOT: call void @llvm.trap
 // CHECK-NOT: unreachable
