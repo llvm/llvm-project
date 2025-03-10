@@ -864,6 +864,16 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
   EXPECT_EQ(EIR.end(), I);
 }
 
+TEST(STLExtrasTest, ReplaceADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  std::vector<int> Cont = {0, 1, 2, 3, 4, 5};
+  some_namespace::some_struct S;
+  S.data = {42, 43, 44};
+  replace(Cont, Cont.begin() + 2, Cont.begin() + 5, S);
+  EXPECT_THAT(Cont, ElementsAre(0, 1, 42, 43, 44, 5));
+}
+
 TEST(STLExtrasTest, AllEqual) {
   std::vector<int> V;
   EXPECT_TRUE(all_equal(V));
