@@ -148,7 +148,8 @@ void PseudoProbeVerifier::verifyProbeFactors(
   auto &PrevProbeFactors = FunctionProbeFactors[F->getName()];
   for (const auto &I : ProbeFactors) {
     float CurProbeFactor = I.second;
-    if (PrevProbeFactors.count(I.first)) {
+    auto [It, Inserted] = PrevProbeFactors.try_emplace(I.first);
+    if (!Inserted) {
       float PrevProbeFactor = PrevProbeFactors[I.first];
       if (std::abs(CurProbeFactor - PrevProbeFactor) >
           DistributionFactorVariance) {
@@ -163,7 +164,7 @@ void PseudoProbeVerifier::verifyProbeFactors(
     }
 
     // Update
-    PrevProbeFactors[I.first] = I.second;
+    It->second = I.second;
   }
 }
 
