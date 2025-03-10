@@ -1018,3 +1018,40 @@ func.func @bad_is_assumed_size(%arg0: !fir.ref<!fir.array<*:none>>) {
   %1 = fir.is_assumed_size %arg0 : (!fir.ref<!fir.array<*:none>>) -> i1
   return
 }
+
+// -----
+
+!t=!fir.type<sometype{i:i32}>
+!t2=!fir.type<sometype2{j:i32}>
+func.func @bad_copy_1(%arg0: !fir.ref<!t>, %arg1: !fir.ref<!t2>) {
+  // expected-error@+1{{'fir.copy' op source and destination must have the same value type}}
+  fir.copy %arg0 to %arg1 no_overlap : !fir.ref<!t>, !fir.ref<!t2>
+  return
+}
+
+// -----
+
+!t=!fir.type<sometype{i:i32}>
+func.func @bad_copy_2(%arg0: !fir.ref<!t>, %arg1: !t) {
+  // expected-error@+1{{'fir.copy' op operand #0 must be a reference type to a constant size fir.array, fir.char, or fir.type, but got '!fir.type<sometype{i:i32}>'}}
+  fir.copy %arg1 to %arg0 no_overlap : !t, !fir.ref<!t>
+  return
+}
+
+// -----
+
+!t=!fir.array<?xi32>
+func.func @bad_copy_3(%arg0: !fir.ref<!t>, %arg1: !fir.ref<!t>) {
+  // expected-error@+1{{'fir.copy' op operand #0 must be a reference type to a constant size fir.array, fir.char, or fir.type, but got '!fir.ref<!fir.array<?xi32>>'}}
+  fir.copy %arg0 to %arg1 no_overlap : !fir.ref<!t>, !fir.ref<!t>
+  return
+}
+
+// -----
+
+!t=f32
+func.func @bad_copy_4(%arg0: !fir.ref<!t>, %arg1: !fir.ref<!t>) {
+  // expected-error@+1{{'fir.copy' op operand #0 must be a reference type to a constant size fir.array, fir.char, or fir.type, but got '!fir.ref<f32>'}}
+  fir.copy %arg0 to %arg1 no_overlap : !fir.ref<!t>, !fir.ref<!t>
+  return
+}
