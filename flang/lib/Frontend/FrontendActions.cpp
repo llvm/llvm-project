@@ -15,6 +15,7 @@
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendOptions.h"
 #include "flang/Frontend/ParserActions.h"
+#include "flang/Lower/Bridge.h"
 #include "flang/Lower/Support/Verifier.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
