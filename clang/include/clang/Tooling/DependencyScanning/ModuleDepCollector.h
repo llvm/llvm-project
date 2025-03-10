@@ -114,6 +114,10 @@ struct ModuleDeps {
   /// Whether this is a "system" module.
   bool IsSystem;
 
+  /// Whether this is a module where it's dependencies resolve within the
+  /// sysroot.
+  bool IsInSysroot;
+
   /// The path to the modulemap file which defines this module.
   ///
   /// This can be used to explicitly build this module. This file will
@@ -219,6 +223,9 @@ private:
                               llvm::DenseSet<const Module *> &AddedModules);
   void addAffectingClangModule(const Module *M, ModuleDeps &MD,
                           llvm::DenseSet<const Module *> &AddedModules);
+
+  /// Add discovered module dependency for the given module.
+  void addClangModule(const Module *M, const ModuleID ID, ModuleDeps &MD);
 };
 
 /// Collects modular and non-modular dependencies of the main file by attaching

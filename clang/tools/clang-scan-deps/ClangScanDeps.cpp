@@ -471,6 +471,8 @@ public:
         for (auto &&ModID : ModuleIDs) {
           auto &MD = Modules[ModID];
           JOS.object([&] {
+            if (MD.IsInSysroot)
+              JOS.attribute("is-in-sysroot", MD.IsInSysroot);
             JOS.attributeArray("clang-module-deps",
                                toJSONSorted(JOS, MD.ClangModuleDeps));
             JOS.attribute("clang-modulemap-file",

@@ -698,6 +698,15 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
 
   MD.ID.ModuleName = M->getFullModuleName();
   MD.IsSystem = M->IsSystem;
+
+  // Start off with the assumption that this module is in the sysroot when there
+  // is a sysroot provided. As more dependencies are discovered, check if those
+  // come from the provided sysroot.
+  const StringRef CurrSysroot = MDC.ScanInstance.getHeaderSearchOpts().Sysroot;
+  MD.IsInSysroot =
+      !CurrSysroot.empty() &&
+      (llvm::sys::path::root_directory(CurrSysroot) != CurrSysroot);
+
   // For modules which use export_as link name, the linked product that of the
   // corresponding export_as-named module.
   if (!M->UseExportAsModuleLinkName)
@@ -739,6 +748,11 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
+        auto FullFilePath = ASTReader::ResolveImportedPath(
+            PathBuf, IFI.UnresolvedImportedFilename, MF->BaseDirectory);
+        if (MD.IsInSysroot)
+          MD.IsInSysroot = FullFilePath->starts_with(CurrSysroot);
+        PathBuf.resize_for_overwrite(256);
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
         if (IFI.UnresolvedImportedFilenameAsRequested.ends_with(
@@ -835,6 +849,13 @@ void ModuleDepCollectorPP::addAllSubmoduleDeps(
   });
 }
 
+void ModuleDepCollectorPP::addClangModule(const Module *M, const ModuleID ID,
+                                          ModuleDeps &MD) {
+  MD.ClangModuleDeps.push_back(ID);
+  if (MD.IsInSysroot)
+    MD.IsInSysroot = MDC.ModularDeps[M]->IsInSysroot;
+}
+
 void ModuleDepCollectorPP::addModuleDep(
     const Module *M, ModuleDeps &MD,
     llvm::DenseSet<const Module *> &AddedModules) {
@@ -843,7 +864,7 @@ void ModuleDepCollectorPP::addModuleDep(
         !MDC.isPrebuiltModule(Import)) {
       if (auto ImportID = handleTopLevelModule(Import->getTopLevelModule()))
         if (AddedModules.insert(Import->getTopLevelModule()).second)
-          MD.ClangModuleDeps.push_back(*ImportID);
+          addClangModule(Import->getTopLevelModule(), *ImportID, MD);
     }
   }
 }
@@ -867,7 +888,7 @@ void ModuleDepCollectorPP::addAffectingClangModule(
         !MDC.isPrebuiltModule(Affecting)) {
       if (auto ImportID = handleTopLevelModule(Affecting))
         if (AddedModules.insert(Affecting).second)
-          MD.ClangModuleDeps.push_back(*ImportID);
+          addClangModule(Affecting, *ImportID, MD);
     }
   }
 }
