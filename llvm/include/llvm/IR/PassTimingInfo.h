@@ -65,7 +65,18 @@ class TimePassesHandler {
   bool Enabled;
   bool PerRun;
 
+  TimerGroup &PassTG =
+      NamedRegionTimer::getNamedTimerGroup(PassGroupName, PassGroupDesc);
+  TimerGroup &AnalysisTG = NamedRegionTimer::getNamedTimerGroup(
+      AnalysisGroupName, AnalysisGroupDesc);
+
 public:
+  static constexpr StringRef PassGroupName = "pass";
+  static constexpr StringRef AnalysisGroupName = "analysis";
+  static constexpr StringRef PassGroupDesc = "Pass execution timing report";
+  static constexpr StringRef AnalysisGroupDesc =
+      "Analysis execution timing report";
+
   TimePassesHandler();
   TimePassesHandler(bool Enabled, bool PerRun = false);
 

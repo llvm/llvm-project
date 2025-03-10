@@ -250,21 +250,13 @@ private:
 NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef Description,
                                    StringRef GroupName,
                                    StringRef GroupDescription, bool Enabled)
-    : TimeRegion(!Enabled ? nullptr
-                          : &getNamedGroupTimer(Name, Description, GroupName,
-                                                GroupDescription)) {}
+    : TimeRegion(!Enabled
+                     ? nullptr
+                     : &namedGroupedTimers().get(Name, Description, GroupName,
+                                                 GroupDescription)) {}
 
-Timer &NamedRegionTimer::getNamedGroupTimer(StringRef Name,
-                                            StringRef Description,
-                                            StringRef GroupName,
-                                            StringRef GroupDescription) {
-  return namedGroupedTimers().get(Name, Description, GroupName,
-                                  GroupDescription);
-}
-
-TimerGroup &
-NamedRegionTimer::getNamedGroupTimerGroup(StringRef GroupName,
-                                          StringRef GroupDescription) {
+TimerGroup &NamedRegionTimer::getNamedTimerGroup(StringRef GroupName,
+                                                 StringRef GroupDescription) {
   return namedGroupedTimers().getTimerGroup(GroupName, GroupDescription);
 }
 

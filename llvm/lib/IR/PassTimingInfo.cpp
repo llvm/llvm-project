@@ -37,12 +37,6 @@ namespace llvm {
 bool TimePassesIsEnabled = false;
 bool TimePassesPerRun = false;
 
-static constexpr StringRef PassGroupName = "pass";
-static constexpr StringRef AnalysisGroupName = "analysis";
-static constexpr StringRef PassGroupDesc = "Pass execution timing report";
-static constexpr StringRef AnalysisGroupDesc =
-    "Analysis execution timing report";
-
 static cl::opt<bool, true> EnableTiming(
     "time-passes", cl::location(TimePassesIsEnabled), cl::Hidden,
     cl::desc("Time each pass, printing elapsed time for each on exit"));
@@ -109,7 +103,8 @@ void PassTimingInfo::init() {
 
 /// Prints out timing information and then resets the timers.
 void PassTimingInfo::print(raw_ostream *OutStream) {
-  NamedRegionTimer::getNamedGroupTimerGroup(PassGroupName, PassGroupDesc)
+  NamedRegionTimer::getNamedTimerGroup(TimePassesHandler::PassGroupName,
+                                       TimePassesHandler::PassGroupDesc)
       .print(OutStream ? *OutStream : *CreateInfoOutputFile(), true);
 }
 
@@ -119,8 +114,10 @@ Timer *PassTimingInfo::newPassTimer(StringRef PassID, StringRef PassDesc) {
   // Appending description with a pass-instance number for all but the first one
   std::string PassDescNumbered =
       num <= 1 ? PassDesc.str() : formatv("{0} #{1}", PassDesc, num).str();
-  return &NamedRegionTimer::getNamedGroupTimer(PassID, PassDescNumbered,
-                                               PassGroupName, PassGroupDesc);
+  return new Timer(
+      PassID, PassDescNumbered,
+      NamedRegionTimer::getNamedTimerGroup(TimePassesHandler::PassGroupName,
+                                           TimePassesHandler::PassGroupDesc));
 }
 
 Timer *PassTimingInfo::getPassTimer(Pass *P, PassInstanceID Pass) {
@@ -166,9 +163,7 @@ void reportAndResetTimings(raw_ostream *OutStream) {
 /// Returns the timer for the specified pass invocation of \p PassID.
 /// Each time it creates a new timer.
 Timer &TimePassesHandler::getPassTimer(StringRef PassID, bool IsPass) {
-  StringRef TGName = IsPass ? PassGroupName : PassGroupDesc;
-  StringRef TGDesc = IsPass ? PassGroupDesc : AnalysisGroupDesc;
-  TimerGroup &TG = NamedRegionTimer::getNamedGroupTimerGroup(TGName, TGDesc);
+  TimerGroup &TG = IsPass ? PassTG : AnalysisTG;
   if (!PerRun) {
     TimerVector &Timers = TimingData[PassID];
     if (Timers.size() == 0)
@@ -212,10 +207,9 @@ void TimePassesHandler::print() {
     OS = &*MaybeCreated;
   }
 
-  NamedRegionTimer::getNamedGroupTimerGroup(PassGroupName, PassGroupDesc)
+  NamedRegionTimer::getNamedTimerGroup(PassGroupName, PassGroupDesc)
       .print(*OS, true);
-  NamedRegionTimer::getNamedGroupTimerGroup(AnalysisGroupName,
-                                            AnalysisGroupDesc)
+  NamedRegionTimer::getNamedTimerGroup(AnalysisGroupName, AnalysisGroupDesc)
       .print(*OS, true);
 }
 
