@@ -1488,7 +1488,7 @@ static bool compileModuleAndReadASTBehindLock(
       // Clear out any potential leftover.
       Lock.unsafeRemoveLockFile();
       return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
-                                        ModuleNameLoc, Module, ModuleFileName);
+                                         ModuleNameLoc, Module, ModuleFileName);
     }
     if (Owned) {
       // We're responsible for building the module ourselves.
