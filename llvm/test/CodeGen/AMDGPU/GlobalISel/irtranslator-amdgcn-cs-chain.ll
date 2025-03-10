@@ -166,9 +166,9 @@ define amdgpu_cs_chain_preserve void @retry_vgpr_alloc.v20i32(<20 x i32> inreg %
   ; GFX11-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 -4294967296
   ; GFX11-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; GFX11-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-  ; GFX11-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @retry_vgpr_alloc.v20i32
-  ; GFX11-NEXT:   [[EVEC:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C]](s32)
-  ; GFX11-NEXT:   [[EVEC1:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C1]](s32)
+  ; GFX11-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @retry_vgpr_alloc.v20i32
+  ; GFX11-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C]](s32)
+  ; GFX11-NEXT:   [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C1]](s32)
   ; GFX11-NEXT:   [[EVEC2:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C2]](s32)
   ; GFX11-NEXT:   [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.getpc)
   ; GFX11-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[INT]], [[C3]]
@@ -176,6 +176,9 @@ define amdgpu_cs_chain_preserve void @retry_vgpr_alloc.v20i32(<20 x i32> inreg %
   ; GFX11-NEXT:   [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[AND]], [[ZEXT]]
   ; GFX11-NEXT:   [[INTTOPTR:%[0-9]+]]:ccr_sgpr_64(p0) = G_INTTOPTR [[OR]](s64)
   ; GFX11-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sleep), 2
+  ; GFX11-NEXT:   [[COPY20:%[0-9]+]]:sreg_32(s32) = COPY [[EVEC1]](s32)
+  ; GFX11-NEXT:   [[COPY21:%[0-9]+]]:sreg_32(s32) = COPY [[EVEC]](s32)
+  ; GFX11-NEXT:   [[COPY22:%[0-9]+]]:ccr_sgpr_64(p0) = COPY [[GV]](p0)
   ; GFX11-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<20 x s32>)
   ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
   ; GFX11-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
@@ -217,7 +220,7 @@ define amdgpu_cs_chain_preserve void @retry_vgpr_alloc.v20i32(<20 x i32> inreg %
   ; GFX11-NEXT:   $sgpr18 = COPY [[INTRINSIC_CONVERGENT18]](s32)
   ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT19:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV19]](s32)
   ; GFX11-NEXT:   $sgpr19 = COPY [[INTRINSIC_CONVERGENT19]](s32)
-  ; GFX11-NEXT:   SI_CS_CHAIN_TC_W32_DVGPR [[INTTOPTR]](p0), 0, 0, [[EVEC1]](s32), [[EVEC]](s32), -1, [[GV]](p0), amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19
+  ; GFX11-NEXT:   SI_CS_CHAIN_TC_W32_DVGPR [[INTTOPTR]](p0), 0, 0, [[COPY20]](s32), [[COPY21]](s32), -1, [[COPY22]](p0), amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19
   ;
   ; GFX10-LABEL: name: retry_vgpr_alloc.v20i32
   ; GFX10: bb.1 (%ir-block.1):
@@ -250,9 +253,9 @@ define amdgpu_cs_chain_preserve void @retry_vgpr_alloc.v20i32(<20 x i32> inreg %
   ; GFX10-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 -4294967296
   ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
-  ; GFX10-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @retry_vgpr_alloc.v20i32
-  ; GFX10-NEXT:   [[EVEC:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C]](s32)
-  ; GFX10-NEXT:   [[EVEC1:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C1]](s32)
+  ; GFX10-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @retry_vgpr_alloc.v20i32
+  ; GFX10-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C]](s32)
+  ; GFX10-NEXT:   [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C1]](s32)
   ; GFX10-NEXT:   [[EVEC2:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C2]](s32)
   ; GFX10-NEXT:   [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.getpc)
   ; GFX10-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[INT]], [[C3]]
@@ -260,6 +263,9 @@ define amdgpu_cs_chain_preserve void @retry_vgpr_alloc.v20i32(<20 x i32> inreg %
   ; GFX10-NEXT:   [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[AND]], [[ZEXT]]
   ; GFX10-NEXT:   [[INTTOPTR:%[0-9]+]]:ccr_sgpr_64(p0) = G_INTTOPTR [[OR]](s64)
   ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sleep), 2
+  ; GFX10-NEXT:   [[COPY20:%[0-9]+]]:sreg_32(s32) = COPY [[EVEC1]](s32)
+  ; GFX10-NEXT:   [[COPY21:%[0-9]+]]:sreg_32(s32) = COPY [[EVEC]](s32)
+  ; GFX10-NEXT:   [[COPY22:%[0-9]+]]:ccr_sgpr_64(p0) = COPY [[GV]](p0)
   ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<20 x s32>)
   ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
   ; GFX10-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
@@ -301,9 +307,9 @@ define amdgpu_cs_chain_preserve void @retry_vgpr_alloc.v20i32(<20 x i32> inreg %
   ; GFX10-NEXT:   $sgpr18 = COPY [[INTRINSIC_CONVERGENT18]](s32)
   ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT19:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV19]](s32)
   ; GFX10-NEXT:   $sgpr19 = COPY [[INTRINSIC_CONVERGENT19]](s32)
-  ; GFX10-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr48_sgpr49_sgpr50_sgpr51
-  ; GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY20]](<4 x s32>)
-  ; GFX10-NEXT:   SI_CS_CHAIN_TC_W32_DVGPR [[INTTOPTR]](p0), 0, 0, [[EVEC1]](s32), [[EVEC]](s32), -1, [[GV]](p0), amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GFX10-NEXT:   [[COPY23:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY23]](<4 x s32>)
+  ; GFX10-NEXT:   SI_CS_CHAIN_TC_W32_DVGPR [[INTTOPTR]](p0), 0, 0, [[COPY20]](s32), [[COPY21]](s32), -1, [[COPY22]](p0), amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr48_sgpr49_sgpr50_sgpr51
   %.i19 = extractelement <20 x i32> %0, i64 19
   %.i18 = extractelement <20 x i32> %0, i64 18
   %.i17 = extractelement <20 x i32> %0, i64 17

@@ -18,16 +18,16 @@ define amdgpu_cs_chain void @dynamic_vgprs(i32 inreg %exec, <3 x i32> inreg %sgp
 ; GISEL-GFX12-NEXT:    s_mov_b32 s0, s1
 ; GISEL-GFX12-NEXT:    s_mov_b32 s1, s2
 ; GISEL-GFX12-NEXT:    s_mov_b32 s2, s3
-; GISEL-GFX12-NEXT:    s_mov_b32 s6, callee@abs32@lo
-; GISEL-GFX12-NEXT:    s_mov_b32 s7, callee@abs32@hi
-; GISEL-GFX12-NEXT:    s_mov_b32 s8, retry_vgpr_alloc@abs32@lo
-; GISEL-GFX12-NEXT:    s_mov_b32 s9, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s6, retry_vgpr_alloc@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s7, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s8, callee@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s9, callee@abs32@hi
 ; GISEL-GFX12-NEXT:    s_alloc_vgpr s4
 ; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
-; GISEL-GFX12-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[8:9]
+; GISEL-GFX12-NEXT:    s_cselect_b64 s[8:9], s[8:9], s[6:7]
 ; GISEL-GFX12-NEXT:    s_cselect_b32 exec_lo, s5, -1
 ; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
-; GISEL-GFX12-NEXT:    s_setpc_b64 s[6:7]
+; GISEL-GFX12-NEXT:    s_setpc_b64 s[8:9]
 ;
 ; DAGISEL-GFX12-LABEL: dynamic_vgprs:
 ; DAGISEL-GFX12:       ; %bb.0:
@@ -95,3 +95,67 @@ define amdgpu_cs_chain void @constants(<3 x i32> inreg %sgpr, { i32, ptr addrspa
 }
 
 declare amdgpu_cs_chain_preserve void @retry_vgpr_alloc(<3 x i32> inreg %sgpr)
+
+define amdgpu_cs_chain_preserve void @retry_vgpr_alloc.v20i32(<20 x i32> inreg %0) #10 {
+; GISEL-GFX12-LABEL: retry_vgpr_alloc.v20i32:
+; GISEL-GFX12:       ; %bb.0:
+; GISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_expcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
+; GISEL-GFX12-NEXT:    s_getpc_b64 s[20:21]
+; GISEL-GFX12-NEXT:    s_mov_b32 s22, 0
+; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
+; GISEL-GFX12-NEXT:    s_sext_i32_i16 s21, s21
+; GISEL-GFX12-NEXT:    s_mov_b32 s23, -1
+; GISEL-GFX12-NEXT:    s_mov_b32 s24, s17
+; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
+; GISEL-GFX12-NEXT:    s_and_b64 s[20:21], s[20:21], s[22:23]
+; GISEL-GFX12-NEXT:    s_mov_b32 s25, 0
+; GISEL-GFX12-NEXT:    s_mov_b32 s22, retry_vgpr_alloc.v20i32@abs32@lo
+; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
+; GISEL-GFX12-NEXT:    s_or_b64 s[20:21], s[20:21], s[24:25]
+; GISEL-GFX12-NEXT:    s_mov_b32 s23, retry_vgpr_alloc.v20i32@abs32@hi
+; GISEL-GFX12-NEXT:    s_sleep 2
+; GISEL-GFX12-NEXT:    s_alloc_vgpr s19
+; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
+; GISEL-GFX12-NEXT:    s_cselect_b64 s[20:21], s[20:21], s[22:23]
+; GISEL-GFX12-NEXT:    s_cselect_b32 exec_lo, s18, -1
+; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
+; GISEL-GFX12-NEXT:    s_setpc_b64 s[20:21]
+;
+; DAGISEL-GFX12-LABEL: retry_vgpr_alloc.v20i32:
+; DAGISEL-GFX12:       ; %bb.0:
+; DAGISEL-GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_expcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
+; DAGISEL-GFX12-NEXT:    s_getpc_b64 s[24:25]
+; DAGISEL-GFX12-NEXT:    s_mov_b32 s20, s17
+; DAGISEL-GFX12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-GFX12-NEXT:    s_sext_i32_i16 s25, s25
+; DAGISEL-GFX12-NEXT:    s_mov_b32 s23, retry_vgpr_alloc.v20i32@abs32@hi
+; DAGISEL-GFX12-NEXT:    s_mov_b32 s22, retry_vgpr_alloc.v20i32@abs32@lo
+; DAGISEL-GFX12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-GFX12-NEXT:    s_mov_b32 s21, s25
+; DAGISEL-GFX12-NEXT:    s_sleep 2
+; DAGISEL-GFX12-NEXT:    s_alloc_vgpr s19
+; DAGISEL-GFX12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-GFX12-NEXT:    s_cselect_b64 s[20:21], s[20:21], s[22:23]
+; DAGISEL-GFX12-NEXT:    s_cselect_b32 exec_lo, s18, -1
+; DAGISEL-GFX12-NEXT:    s_wait_alu 0xfffe
+; DAGISEL-GFX12-NEXT:    s_setpc_b64 s[20:21]
+  %.i19 = extractelement <20 x i32> %0, i64 19
+  %.i18 = extractelement <20 x i32> %0, i64 18
+  %.i17 = extractelement <20 x i32> %0, i64 17
+  %2 = call i64 @llvm.amdgcn.s.getpc()
+  %3 = and i64 %2, -4294967296
+  %4 = zext i32 %.i17 to i64
+  %5 = or disjoint i64 %3, %4
+  %6 = inttoptr i64 %5 to ptr
+  call void @llvm.amdgcn.s.sleep(i32 2)
+  call void (ptr, i32, <20 x i32>, {}, i32, ...) @llvm.amdgcn.cs.chain.p0.i32.v20i32.sl_s(ptr inreg %6, i32 inreg %.i18, <20 x i32> inreg %0, {} poison, i32 1, i32 %.i19, i32 -1, ptr nonnull @retry_vgpr_alloc.v20i32)
+  unreachable
+}
