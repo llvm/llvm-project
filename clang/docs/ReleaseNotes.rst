@@ -361,6 +361,8 @@ Fixed Point Support in Clang
 AST Matchers
 ------------
 
+- Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
+
 clang-format
 ------------
 
