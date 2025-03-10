@@ -248,6 +248,8 @@ Bug Fixes in This Version
   (#GH125500).
 - Fixed clang crash when #embed data does not fit into an array
   (#GH128987).
+- Non-local variable and non-variable declarations in the first clause of a ``for`` loop in C are no longer incorrectly
+  considered an error in C23 mode and are allowed as an extension in earlier language modes.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
