@@ -1414,6 +1414,9 @@ def ConvertVectorToLLVMPass : Pass<"convert-vector-to-llvm"> {
            "vector::VectorTransformsOptions",
            /*default=*/"vector::VectorTransformsOptions()",
            "Options to lower some operations like contractions and transposes.">,
+    Option<"indexBitwidth", "index-bitwidth", "unsigned",
+           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
+           "Bitwidth of the index type, 0 to use size of machine word">,
   ];
 }
 
