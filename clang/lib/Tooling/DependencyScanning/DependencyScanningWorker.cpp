@@ -751,10 +751,19 @@ bool DependencyScanningWorker::computeDependencies(
   InMemoryFS->setCurrentWorkingDirectory(WorkingDirectory);
   SmallString<128> FakeInputPath;
   // TODO: We should retry the creation if the path already exists.
-  // FIXME: should we create files for multiple modules? I think so?
+  // FIXME: Using ModuleNames[0] should be sufficient to create a unique
+  // input file name. The diagnostic information is specifc enough about
+  // in which exact module an error occurs. That said any error reporting
+  // that relies on the path below could be confusing.We may want to
+  // find better ways (e.g. by concatenating the module names) to make
+  // the temporary file name more precise.
   llvm::sys::fs::createUniquePath(ModuleNames[0] + "-%%%%%%%%.input",
                                   FakeInputPath,
                                   /*MakeAbsolute=*/false);
+
+  // The fake file must contain at least ModuleNames.size() characters,
+  // since we are simulating lexing it, and we are assuming each module name
+  // takes the space of one character.
   std::string FakeString(ModuleNames.size(), ' ');
   InMemoryFS->addFile(FakeInputPath, 0,
                       llvm::MemoryBuffer::getMemBuffer(FakeString));

@@ -203,7 +203,7 @@ static void ParseArgs(int argc, char **argv) {
   if (const llvm::opt::Arg *A = Args.getLastArg(OPT_compilation_database_EQ))
     CompilationDB = A->getValue();
 
-  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_name_EQ))
+  if (const llvm::opt::Arg *A = Args.getLastArg(OPT_module_names_EQ))
     ModuleName = A->getValue();
 
   for (const llvm::opt::Arg *A : Args.filtered(OPT_dependency_target_EQ))
@@ -1024,11 +1024,17 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
             HadErrors = true;
         }
       } else if (ModuleName) {
+        StringRef NamesRef(*ModuleName);
+        SmallVector<StringRef, 16> NameList;
+        NamesRef.split(NameList, ",");
         auto MaybeModuleDepsGraph = WorkerTool.getModuleDependencies(
-            ArrayRef<StringRef>({*ModuleName}), Input->CommandLine, CWD,
+            NameList, Input->CommandLine, CWD,
             AlreadySeenModules, LookupOutput);
-        if (handleModuleResult(*ModuleName, MaybeModuleDepsGraph, *FD,
-                               LocalIndex, DependencyOS, Errs))
+        // FIXME: Need to have better error handling logic for a list
+        // of modules. Probably through some call back.
+        if (handleModuleResult(/* *ModuleName*/ NameList[0],
+                               MaybeModuleDepsGraph, *FD, LocalIndex,
+                               DependencyOS, Errs))
           HadErrors = true;
       } else {
         std::unique_ptr<llvm::MemoryBuffer> TU;
