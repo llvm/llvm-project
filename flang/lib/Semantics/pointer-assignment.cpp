@@ -194,7 +194,7 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
     return true;
   }
   if (const auto *pureProc{FindPureProcedureContaining(scope_)}) {
-    if (pointerComponentLHS_) { // C1594(4) is a hard error
+    if (pointerComponentLHS_) { // F'2023 C15104(4) is a hard error
       if (const Symbol * object{FindExternallyVisibleObject(rhs, *pureProc)}) {
         if (auto *msg{Say(
                 "Externally visible object '%s' may not be associated with pointer component '%s' in a pure procedure"_err_en_US,
