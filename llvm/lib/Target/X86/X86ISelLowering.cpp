@@ -42607,6 +42607,43 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
 
     return SDValue();
   }
+  case X86ISD::VPERMV: {
+    // Combine VPERMV to VPERMV3 if the source operand can be freely split.
+    SmallVector<int, 32> Mask;
+    SmallVector<SDValue, 2> SrcOps, SubOps;
+    SDValue Src = peekThroughBitcasts(N.getOperand(1));
+    if ((Subtarget.hasVLX() || VT.is512BitVector()) &&
+        getTargetShuffleMask(N, /*AllowSentinelZero=*/false, SrcOps, Mask) &&
+        collectConcatOps(Src.getNode(), SubOps, DAG)) {
+      assert(Mask.size() == NumElts && "Unexpected shuffle mask size");
+      assert(SrcOps.size() == 1 && "Unexpected shuffle ops");
+      assert((SubOps.size() == 2 || SubOps.size() == 4) &&
+             "Unexpected split ops");
+      // Bail if we were permuting a widened vector.
+      if (SubOps[1].isUndef() &&
+          (SubOps.size() == 2 || (SubOps[2].isUndef() && SubOps[3].isUndef())))
+        return SDValue();
+      // Bail if any subops would have folded into the concat.
+      if (any_of(SubOps, [](SDValue Op) { return isShuffleFoldableLoad(Op); }))
+        return SDValue();
+      // Concat 4x128 back to 2x256.
+      if (SubOps.size() == 4) {
+        SubOps[0] = concatSubVectors(SubOps[0], SubOps[1], DAG, DL);
+        SubOps[1] = concatSubVectors(SubOps[2], SubOps[3], DAG, DL);
+      }
+      // Convert mask to 2 operand shuffle.
+      int HalfElts = NumElts / 2;
+      for (int &M : Mask)
+        M += M >= HalfElts ? HalfElts : 0;
+      SDValue Lo = widenSubVector(SubOps[0], false, Subtarget, DAG, DL,
+                                  VT.getSizeInBits());
+      SDValue Hi = widenSubVector(SubOps[1], false, Subtarget, DAG, DL,
+                                  VT.getSizeInBits());
+      return lowerShuffleWithPERMV(DL, VT, Mask, DAG.getBitcast(VT, Lo),
+                                   DAG.getBitcast(VT, Hi), Subtarget, DAG);
+    }
+    return SDValue();
+  }
   case X86ISD::VPERMV3: {
     // Combine VPERMV3 to widened VPERMV if the two source operands can be
     // freely concatenated.
