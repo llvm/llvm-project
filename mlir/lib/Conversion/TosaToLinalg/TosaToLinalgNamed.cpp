@@ -477,13 +477,13 @@ public:
       return rewriter.notifyMatchFailure(
           op, "weight zero point must be zero for non-int8 integer types");
 
-    bool hasZp = (inputZpVal != 0) || (weightZpVal != 0);
+    bool hasNullZps = (inputZpVal == 0) && (weightZpVal == 0);
     auto weightShape = weightTy.getShape();
     auto resultShape = resultTy.getShape();
 
     // Apply padding as necessary.
     TypedAttr zeroAttr = rewriter.getZeroAttr(inputETy);
-    if (hasZp) {
+    if (!hasNullZps) {
       int64_t intMin =
           APInt::getSignedMinValue(inputETy.getIntOrFloatBitWidth())
               .getSExtValue();
@@ -536,7 +536,7 @@ public:
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
     indexingMaps.push_back(rewriter.getMultiDimIdentityMap(resultRank));
 
-    if (!hasZp) {
+    if (hasNullZps) {
       Value conv = rewriter
                        .create<linalg::DepthwiseConv2DNhwcHwcmOp>(
                            loc, linalgConvTy, ValueRange{input, weight},
@@ -556,8 +556,13 @@ public:
                   getNParallelLoopsAttrs(resultRank),
                   [&](OpBuilder &nestedBuilder, Location nestedLoc,
                       ValueRange args) {
-                    Value added = nestedBuilder.create<arith::AddFOp>(
-                        loc, args[0], args[1]);
+                    Value added;
+                    if (llvm::isa<FloatType>(inputETy))
+                      added = nestedBuilder.create<arith::AddFOp>(loc, args[0],
+                                                                  args[1]);
+                    else
+                      added = nestedBuilder.create<arith::AddIOp>(loc, args[0],
+                                                                  args[1]);
                     nestedBuilder.create<linalg::YieldOp>(nestedLoc, added);
                   })
               .getResult(0);
