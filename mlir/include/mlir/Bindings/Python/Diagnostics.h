@@ -30,6 +30,7 @@ public:
                                            /*deleteUserData=*/nullptr);
   }
   ~CollectDiagnosticsToStringScope() {
+    assert(message.empty() && "unchecked error message");
     mlirContextDetachDiagnosticHandler(context, handlerID);
   }
 
