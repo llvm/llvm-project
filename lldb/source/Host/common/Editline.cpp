@@ -567,6 +567,9 @@ int Editline::GetCharacter(EditLineGetCharType *c) {
     m_needs_prompt_repaint = false;
   }
 
+  if (m_redraw_callback)
+    m_redraw_callback();
+
   if (m_multiline_enabled) {
     // Detect when the number of rows used for this input line changes due to
     // an edit

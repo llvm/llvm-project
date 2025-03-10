@@ -258,8 +258,7 @@ Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
     } else if (property_path ==
                g_debugger_properties[ePropertyStatuslineFormat].name) {
       // Statusline format changed. Redraw the statusline.
-      if (m_statusline)
-        m_statusline->Redraw();
+      RedrawStatusline();
     } else if (property_path ==
                g_debugger_properties[ePropertyUseSourceCache].name) {
       // use-source-cache changed. Wipe out the cache contents if it was
@@ -1153,6 +1152,11 @@ void Debugger::RestoreInputTerminalState() {
   m_terminal_state.Restore();
   if (m_statusline)
     m_statusline->Enable();
+}
+
+void Debugger::RedrawStatusline(bool update) {
+  if (m_statusline)
+    m_statusline->Redraw(update);
 }
 
 ExecutionContext Debugger::GetSelectedExecutionContext() {
@@ -2084,8 +2088,7 @@ lldb::thread_result_t Debugger::DefaultEventHandler() {
         if (m_forward_listener_sp)
           m_forward_listener_sp->AddEvent(event_sp);
       }
-      if (m_statusline)
-        m_statusline->Redraw();
+      RedrawStatusline();
     }
   }
 
@@ -2176,9 +2179,7 @@ void Debugger::HandleProgressEvent(const lldb::EventSP &event_sp) {
     }
   }
 
-  // Redraw the statusline if enabled.
-  if (m_statusline)
-    m_statusline->Redraw();
+  RedrawStatusline();
 }
 
 std::optional<Debugger::ProgressReport>

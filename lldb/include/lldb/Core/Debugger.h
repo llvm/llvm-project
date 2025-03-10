@@ -417,6 +417,9 @@ public:
   /// Decrement the "interrupt requested" counter.
   void CancelInterruptRequest();
 
+  /// Redraw the statusline if enabled.
+  void RedrawStatusline(bool update = true);
+
   /// This is the correct way to query the state of Interruption.
   /// If you are on the RunCommandInterpreter thread, it will check the
   /// command interpreter state, and if it is on another thread it will
