@@ -2045,10 +2045,12 @@ static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
   QualType ArgTy0 = TheCall->getArg(0)->getType();
 
   for (unsigned I = 1, N = TheCall->getNumArgs(); I < N; ++I) {
-    if (!S->getASTContext().hasSameUnqualifiedType(ArgTy0, TheCall->getArg(I)->getType())) {
+    if (!S->getASTContext().hasSameUnqualifiedType(
+            ArgTy0, TheCall->getArg(I)->getType())) {
       S->Diag(TheCall->getBeginLoc(), diag::err_vec_builtin_incompatible_vector)
-	<< TheCall->getDirectCallee() << /*useAllTerminology*/ true
-	<< SourceRange(TheCall->getArg(0)->getBeginLoc(), TheCall->getArg(N-1)->getEndLoc());
+          << TheCall->getDirectCallee() << /*useAllTerminology*/ true
+          << SourceRange(TheCall->getArg(0)->getBeginLoc(),
+                         TheCall->getArg(N - 1)->getEndLoc());
       return true;
     }
   }
@@ -2407,7 +2409,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCount(TheCall, 3))
       return true;
     if (CheckAnyScalarOrVector(&SemaRef, TheCall, 0) ||
-	CheckAllArgsHaveSameType(&SemaRef, TheCall))
+        CheckAllArgsHaveSameType(&SemaRef, TheCall))
       return true;
     if (SemaRef.BuiltinElementwiseTernaryMath(
             TheCall, /*CheckForFloatArgs*/

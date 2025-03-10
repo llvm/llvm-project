@@ -1,4 +1,5 @@
-//===--- hlsl_compat_overloads.h - Additional HLSL overload definitions for intrinsics --===//
+//===--- hlsl_compat_overloads.h - Additional HLSL overload definitions for
+//intrinsics --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,26 +21,40 @@ namespace hlsl {
 // clamp builtins overloads
 //===----------------------------------------------------------------------===//
 
-template<typename T, typename R, typename U, uint N>
-constexpr __detail::enable_if_t<__detail::is_arithmetic<U>::Value, vector<T,N>> clamp(vector<T,N> p0, vector<R,N> p1, U p2) {
-  return __builtin_hlsl_elementwise_clamp(p0, (vector<T,N>)p1, (vector<T,N>)p2);
+template <typename T, typename R, typename U, uint N>
+constexpr __detail::enable_if_t<__detail::is_arithmetic<U>::Value, vector<T, N>>
+clamp(vector<T, N> p0, vector<R, N> p1, U p2) {
+  return __builtin_hlsl_elementwise_clamp(p0, (vector<T, N>)p1,
+                                          (vector<T, N>)p2);
 }
-template<typename T, typename R, typename U, uint N>
-constexpr __detail::enable_if_t<__detail::is_arithmetic<U>::Value, vector<T,N>> clamp(vector<T,N> p0, U p1, vector<R,N> p2) {
-  return __builtin_hlsl_elementwise_clamp(p0, (vector<T,N>)p1, (vector<T,N>)p2);
+template <typename T, typename R, typename U, uint N>
+constexpr __detail::enable_if_t<__detail::is_arithmetic<U>::Value, vector<T, N>>
+clamp(vector<T, N> p0, U p1, vector<R, N> p2) {
+  return __builtin_hlsl_elementwise_clamp(p0, (vector<T, N>)p1,
+                                          (vector<T, N>)p2);
 }
-template<typename T, typename U, typename V, uint N>
-constexpr __detail::enable_if_t<__detail::is_arithmetic<U>::Value && __detail::is_arithmetic<V>::Value, vector<T,N>> clamp(vector<T,N> p0, U p1, V p2) {
-  return __builtin_hlsl_elementwise_clamp(p0, (vector<T,N>)p1, (vector<T,N>)p2);
+template <typename T, typename U, typename V, uint N>
+constexpr __detail::enable_if_t<__detail::is_arithmetic<U>::Value &&
+                                    __detail::is_arithmetic<V>::Value,
+                                vector<T, N>>
+clamp(vector<T, N> p0, U p1, V p2) {
+  return __builtin_hlsl_elementwise_clamp(p0, (vector<T, N>)p1,
+                                          (vector<T, N>)p2);
 }
-template<typename T, typename R, typename S, uint N>
-constexpr vector<T,N> clamp(vector<T,N> p0, vector<R,N> p1, vector<S,N> p2) {
-  return __builtin_hlsl_elementwise_clamp(p0, (vector<T,N>)p1, (vector<T,N>)p2);
+template <typename T, typename R, typename S, uint N>
+constexpr vector<T, N> clamp(vector<T, N> p0, vector<R, N> p1,
+                             vector<S, N> p2) {
+  return __builtin_hlsl_elementwise_clamp(p0, (vector<T, N>)p1,
+                                          (vector<T, N>)p2);
 }
-template<typename U, typename V, typename W>
-constexpr __detail::enable_if_t<__detail::is_arithmetic<U>::Value && __detail::is_arithmetic<V>::Value && __detail::is_arithmetic<W>::Value, U> clamp(U p0, V p1, W p2) {
-  return __builtin_hlsl_elementwise_clamp(p0, (U) p1, (U) p2);
+template <typename U, typename V, typename W>
+constexpr __detail::enable_if_t<__detail::is_arithmetic<U>::Value &&
+                                    __detail::is_arithmetic<V>::Value &&
+                                    __detail::is_arithmetic<W>::Value,
+                                U>
+clamp(U p0, V p1, W p2) {
+  return __builtin_hlsl_elementwise_clamp(p0, (U)p1, (U)p2);
 }
- 
+
 } // namespace hlsl
 #endif // _HLSL_COMPAT_OVERLOADS_H_
