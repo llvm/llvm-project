@@ -504,6 +504,16 @@ TEST(STLExtrasTest, ConcatRange) {
   EXPECT_EQ(Expected, Test);
 }
 
+TEST(STLExtrasTest, ConcatRangeADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::some_struct S0;
+  S0.data = {1, 2};
+  some_namespace::some_struct S1;
+  S1.data = {3, 4};
+  EXPECT_THAT(concat<const int>(S0, S1), ElementsAre(1, 2, 3, 4));
+}
+
 template <typename T> struct Iterator {
   int i = 0;
   T operator*() const { return i; }
@@ -934,10 +944,19 @@ TEST(STLExtrasTest, hasSingleElement) {
   const std::vector<int> V0 = {}, V1 = {1}, V2 = {1, 2};
   const std::vector<int> V10(10);
 
-  EXPECT_EQ(hasSingleElement(V0), false);
-  EXPECT_EQ(hasSingleElement(V1), true);
-  EXPECT_EQ(hasSingleElement(V2), false);
-  EXPECT_EQ(hasSingleElement(V10), false);
+  EXPECT_FALSE(hasSingleElement(V0));
+  EXPECT_TRUE(hasSingleElement(V1));
+  EXPECT_FALSE(hasSingleElement(V2));
+  EXPECT_FALSE(hasSingleElement(V10));
+
+  // Make sure that we use the `begin`/`end` functions
+  // from `some_namespace`, using ADL.
+  some_namespace::some_struct S;
+  EXPECT_FALSE(hasSingleElement(S));
+  S.data = V1;
+  EXPECT_TRUE(hasSingleElement(S));
+  S.data = V2;
+  EXPECT_FALSE(hasSingleElement(S));
 }
 
 TEST(STLExtrasTest, hasNItems) {

@@ -659,8 +659,7 @@ void coro::BaseCloner::salvageDebugInfo() {
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
   // Only 64-bit ABIs have a register we can refer to with the entry value.
-  bool UseEntryValue =
-      llvm::Triple(OrigF.getParent()->getTargetTriple()).isArch64Bit();
+  bool UseEntryValue = OrigF.getParent()->getTargetTriple().isArch64Bit();
   for (DbgVariableIntrinsic *DVI : Worklist)
     coro::salvageDebugInfo(ArgToAllocaMap, *DVI, UseEntryValue);
   for (DbgVariableRecord *DVR : DbgVariableRecords)

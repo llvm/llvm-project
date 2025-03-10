@@ -2032,10 +2032,11 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     unsigned ClusterLength = 2;
     unsigned CurrentClusterBytes = MemOpa.Width.getValue().getKnownMinValue() +
                                    MemOpb.Width.getValue().getKnownMinValue();
-    if (SUnit2ClusterInfo.count(MemOpa.SU->NodeNum)) {
-      ClusterLength = SUnit2ClusterInfo[MemOpa.SU->NodeNum].first + 1;
-      CurrentClusterBytes = SUnit2ClusterInfo[MemOpa.SU->NodeNum].second +
-                            MemOpb.Width.getValue().getKnownMinValue();
+    auto It = SUnit2ClusterInfo.find(MemOpa.SU->NodeNum);
+    if (It != SUnit2ClusterInfo.end()) {
+      const auto &[Len, Bytes] = It->second;
+      ClusterLength = Len + 1;
+      CurrentClusterBytes = Bytes + MemOpb.Width.getValue().getKnownMinValue();
     }
 
     if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpa.Offset,

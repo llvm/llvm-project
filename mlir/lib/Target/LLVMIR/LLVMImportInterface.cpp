@@ -45,6 +45,11 @@ LogicalResult mlir::LLVMImportInterface::convertUnregisteredIntrinsic(
 
   moduleImport.setFastmathFlagsAttr(inst, op);
 
+  ArrayAttr argsAttr, resAttr;
+  moduleImport.convertParameterAttributes(inst, argsAttr, resAttr, builder);
+  op.setArgAttrsAttr(argsAttr);
+  op.setResAttrsAttr(resAttr);
+
   // Update importer tracking of results.
   unsigned numRes = op.getNumResults();
   if (numRes == 1)

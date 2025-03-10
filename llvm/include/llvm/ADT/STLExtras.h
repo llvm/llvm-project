@@ -320,7 +320,8 @@ public:
 
 /// Returns true if the given container only contains a single element.
 template <typename ContainerTy> bool hasSingleElement(ContainerTy &&C) {
-  auto B = std::begin(C), E = std::end(C);
+  auto B = adl_begin(C);
+  auto E = adl_end(C);
   return B != E && std::next(B) == E;
 }
 
@@ -573,11 +574,9 @@ iterator_range<filter_iterator<detail::IterOfRange<RangeT>, PredicateT>>
 make_filter_range(RangeT &&Range, PredicateT Pred) {
   using FilterIteratorT =
       filter_iterator<detail::IterOfRange<RangeT>, PredicateT>;
-  return make_range(
-      FilterIteratorT(std::begin(std::forward<RangeT>(Range)),
-                      std::end(std::forward<RangeT>(Range)), Pred),
-      FilterIteratorT(std::end(std::forward<RangeT>(Range)),
-                      std::end(std::forward<RangeT>(Range)), Pred));
+  auto B = adl_begin(Range);
+  auto E = adl_end(Range);
+  return make_range(FilterIteratorT(B, E, Pred), FilterIteratorT(E, E, Pred));
 }
 
 /// A pseudo-iterator adaptor that is designed to implement "early increment"
@@ -1111,8 +1110,8 @@ public:
   /// We need the full range to know how to switch between each of the
   /// iterators.
   template <typename... RangeTs>
-  explicit concat_iterator(RangeTs &&... Ranges)
-      : Begins(std::begin(Ranges)...), Ends(std::end(Ranges)...) {}
+  explicit concat_iterator(RangeTs &&...Ranges)
+      : Begins(adl_begin(Ranges)...), Ends(adl_end(Ranges)...) {}
 
   using BaseT::operator++;
 
@@ -1141,13 +1140,12 @@ template <typename ValueT, typename... RangeTs> class concat_range {
 public:
   using iterator =
       concat_iterator<ValueT,
-                      decltype(std::begin(std::declval<RangeTs &>()))...>;
+                      decltype(adl_begin(std::declval<RangeTs &>()))...>;
 
 private:
   std::tuple<RangeTs...> Ranges;
 
-  template <size_t... Ns>
-  iterator begin_impl(std::index_sequence<Ns...>) {
+  template <size_t... Ns> iterator begin_impl(std::index_sequence<Ns...>) {
     return iterator(std::get<Ns>(Ranges)...);
   }
   template <size_t... Ns>
@@ -1155,12 +1153,12 @@ private:
     return iterator(std::get<Ns>(Ranges)...);
   }
   template <size_t... Ns> iterator end_impl(std::index_sequence<Ns...>) {
-    return iterator(make_range(std::end(std::get<Ns>(Ranges)),
-                               std::end(std::get<Ns>(Ranges)))...);
+    return iterator(make_range(adl_end(std::get<Ns>(Ranges)),
+                               adl_end(std::get<Ns>(Ranges)))...);
   }
   template <size_t... Ns> iterator end_impl(std::index_sequence<Ns...>) const {
-    return iterator(make_range(std::end(std::get<Ns>(Ranges)),
-                               std::end(std::get<Ns>(Ranges)))...);
+    return iterator(make_range(adl_end(std::get<Ns>(Ranges)),
+                               adl_end(std::get<Ns>(Ranges)))...);
   }
 
 public:

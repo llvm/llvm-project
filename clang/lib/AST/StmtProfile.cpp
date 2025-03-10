@@ -2719,6 +2719,8 @@ void OpenACCClauseProfiler::VisitIndependentClause(
     const OpenACCIndependentClause &Clause) {}
 
 void OpenACCClauseProfiler::VisitSeqClause(const OpenACCSeqClause &Clause) {}
+void OpenACCClauseProfiler::VisitNoHostClause(
+    const OpenACCNoHostClause &Clause) {}
 
 void OpenACCClauseProfiler::VisitGangClause(const OpenACCGangClause &Clause) {
   for (unsigned I = 0; I < Clause.getNumExprs(); ++I) {
@@ -2729,6 +2731,10 @@ void OpenACCClauseProfiler::VisitGangClause(const OpenACCGangClause &Clause) {
 void OpenACCClauseProfiler::VisitReductionClause(
     const OpenACCReductionClause &Clause) {
   VisitClauseWithVarList(Clause);
+}
+
+void OpenACCClauseProfiler::VisitBindClause(const OpenACCBindClause &Clause) {
+  assert(false && "not implemented... what can we do about our expr?");
 }
 } // namespace
 

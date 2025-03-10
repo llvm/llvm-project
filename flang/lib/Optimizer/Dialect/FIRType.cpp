@@ -1359,6 +1359,10 @@ bool fir::BaseBoxType::isAssumedRank() const {
   return false;
 }
 
+bool fir::BaseBoxType::isPointer() const {
+  return llvm::isa<fir::PointerType>(getEleTy());
+}
+
 //===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
