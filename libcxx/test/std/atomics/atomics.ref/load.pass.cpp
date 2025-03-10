@@ -20,27 +20,44 @@
 #include "test_helper.h"
 #include "test_macros.h"
 
-template <typename T>
+template <typename U>
 struct TestLoad {
   void operator()() const {
+    do_test<U>();
+    do_test_atomic<U>();
+    do_test<U const>();
+    if constexpr (std::atomic_ref<U>::is_always_lock_free) {
+      do_test<U volatile>();
+      do_test_atomic<U volatile>();
+      do_test<U const volatile>();
+    }
+  }
+
+  template <class T>
+  void do_test() const {
     T x(T(1));
     std::atomic_ref<T> const a(x);
 
     {
-      std::same_as<T> decltype(auto) y = a.load();
-      assert(y == T(1));
+      std::same_as<std::remove_cv_t<T>> decltype(auto) y = a.load();
+      assert(y == std::remove_cv_t<T>(1));
       ASSERT_NOEXCEPT(a.load());
     }
 
     {
-      std::same_as<T> decltype(auto) y = a.load(std::memory_order_seq_cst);
-      assert(y == T(1));
+      std::same_as<std::remove_cv_t<T>> decltype(auto) y = a.load(std::memory_order_seq_cst);
+      assert(y == std::remove_cv_t<T>(1));
       ASSERT_NOEXCEPT(a.load(std::memory_order_seq_cst));
     }
+  }
 
+  template <class T>
+  void do_test_atomic() const {
     // memory_order::seq_cst
     {
-      auto store           = [](std::atomic_ref<T> const& y, T, T new_val) { y.store(new_val); };
+      auto store = [](std::atomic_ref<T> const& y, T const&, T const& new_val) {
+        y.store(const_cast<std::remove_cv_t<T> const&>(new_val));
+      };
       auto load_no_arg     = [](std::atomic_ref<T> const& y) { return y.load(); };
       auto load_with_order = [](std::atomic_ref<T> const& y) { return y.load(std::memory_order::seq_cst); };
       test_seq_cst<T>(store, load_no_arg);
@@ -49,8 +66,10 @@ struct TestLoad {
 
     // memory_order::release
     {
-      auto store = [](std::atomic_ref<T> const& y, T, T new_val) { y.store(new_val, std::memory_order::release); };
-      auto load  = [](std::atomic_ref<T> const& y) { return y.load(std::memory_order::acquire); };
+      auto store = [](std::atomic_ref<T> const& y, T const&, T const& new_val) {
+        y.store(const_cast<std::remove_cv_t<T> const&>(new_val), std::memory_order::release);
+      };
+      auto load = [](std::atomic_ref<T> const& y) { return y.load(std::memory_order::acquire); };
       test_acquire_release<T>(store, load);
     }
   }
