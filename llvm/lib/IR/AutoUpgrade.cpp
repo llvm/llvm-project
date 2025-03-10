@@ -48,6 +48,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/TargetParser/Triple.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <cstdint>
 #include <cstring>
 #include <numeric>
@@ -5518,6 +5519,51 @@ struct AMDGPUUnsafeFPAtomicsUpgradeVisitor
 };
 } // namespace
 
+static StructType *getAMDGPURuntimeHandleType(LLVMContext &C,
+                                              Type *KernelDescriptorPtrTy) {
+  Type *Int32 = Type::getInt32Ty(C);
+  return StructType::create(C, {KernelDescriptorPtrTy, Int32, Int32},
+                            "block.runtime.handle.t");
+}
+
+/// Rewrite to new scheme for enqueued block lowering
+static void upgradeAMDGPUKernelEnqueuedBlock(Function &F) {
+  if (F.isMaterializable()) {
+    // A verifier error is produced if we add metadata to the function during
+    // linking.
+    return;
+  }
+
+  const StringLiteral EnqueuedBlockName("enqueued-block");
+  if (!F.hasFnAttribute(EnqueuedBlockName))
+    return;
+
+  F.removeFnAttr(EnqueuedBlockName);
+
+  Module *M = F.getParent();
+  LLVMContext &Ctx = M->getContext();
+  const DataLayout &DL = M->getDataLayout();
+
+  StructType *HandleTy = getAMDGPURuntimeHandleType(
+      Ctx, PointerType::get(Ctx, DL.getDefaultGlobalsAddressSpace()));
+
+  Twine RuntimeHandleName = F.getName() + ".runtime.handle";
+
+  auto *RuntimeHandle = new GlobalVariable(
+      *M, HandleTy,
+      /*isConstant=*/true, F.getLinkage(),
+      /*Initializer=*/ConstantAggregateZero::get(HandleTy), RuntimeHandleName,
+      /*InsertBefore=*/nullptr, GlobalValue::NotThreadLocal,
+      DL.getDefaultGlobalsAddressSpace(),
+      /*isExternallyInitialized=*/true);
+  RuntimeHandle->setSection(".amdgpu.kernel.runtime.handle");
+
+  MDNode *HandleAsMD = MDNode::get(Ctx, ValueAsMetadata::get(RuntimeHandle));
+  F.setMetadata(LLVMContext::MD_associated, HandleAsMD);
+
+  appendToUsed(*M, {&F, RuntimeHandle});
+}
+
 void llvm::UpgradeFunctionAttributes(Function &F) {
   // If a function definition doesn't have the strictfp attribute,
   // convert any callsite strictfp attributes to nobuiltin.
@@ -5558,6 +5604,9 @@ void llvm::UpgradeFunctionAttributes(Function &F) {
       F.removeFnAttr("amdgpu-unsafe-fp-atomics");
     }
   }
+
+  if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL)
+    upgradeAMDGPUKernelEnqueuedBlock(F);
 }
 
 static bool isOldLoopArgument(Metadata *MD) {
