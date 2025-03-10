@@ -88,11 +88,11 @@ loadFP8Immediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
 static unsigned getLoadFPImmediateOpcode(unsigned RegBitWidth) {
   switch (RegBitWidth) {
   case 16:
-    return AArch64::FMOVH0; //FMOVHi;
+    return AArch64::FMOVH0; // FMOVHi;
   case 32:
-    return AArch64::FMOVS0; //FMOVSi;
+    return AArch64::FMOVS0; // FMOVSi;
   case 64:
-    return AArch64::MOVID; //FMOVDi;
+    return AArch64::MOVID; // FMOVDi;
   case 128:
     return AArch64::MOVIv2d_ns;
   }
