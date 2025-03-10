@@ -144,10 +144,16 @@
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
 #include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
+#include <algorithm>
 #include <cassert>
 #include <cstdint>
+#include <functional>
+#include <iterator>
 #include <limits>
+#include <memory>
 #include <string>
+#include <tuple>
+#include <utility>
 
 using namespace llvm;
 
