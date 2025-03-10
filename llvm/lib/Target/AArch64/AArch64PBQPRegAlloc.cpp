@@ -155,11 +155,11 @@ bool A57ChainingConstraint::addIntraChainConstraint(PBQPRAGraph &G, unsigned Rd,
 
   LiveIntervals &LIs = G.getMetadata().LIS;
 
-  if (Register(Rd).isPhysical() || Register(Ra).isPhysical()) {
-    LLVM_DEBUG(dbgs() << "Rd is a physical reg:" << Register(Rd).isPhysical()
-                      << '\n');
-    LLVM_DEBUG(dbgs() << "Ra is a physical reg:" << Register(Ra).isPhysical()
-                      << '\n');
+  if (Register::isPhysicalRegister(Rd) || Register::isPhysicalRegister(Ra)) {
+    LLVM_DEBUG(dbgs() << "Rd is a physical reg:"
+                      << Register::isPhysicalRegister(Rd) << '\n');
+    LLVM_DEBUG(dbgs() << "Ra is a physical reg:"
+                      << Register::isPhysicalRegister(Ra) << '\n');
     return false;
   }
 

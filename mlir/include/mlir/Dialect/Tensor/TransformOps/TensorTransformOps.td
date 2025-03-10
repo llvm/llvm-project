@@ -101,6 +101,17 @@ def ApplyReassociativeReshapeFoldingPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
+def ApplyBubbleUpExtractSlicePatternsOp : Op<Transform_Dialect,
+    "apply_patterns.tensor.bubble_up_extract_slice",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Indicates that producers of tensor.extract_slice should swap and operate on 
+    the result of the slice.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 def ApplyRewriteTensorOpsAsConstantPatternsOp : Op<Transform_Dialect,
     "apply_patterns.tensor.rewrite_as_constant",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {

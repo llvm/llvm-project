@@ -275,7 +275,7 @@ static bool canCompareBeNewValueJump(const HexagonInstrInfo *QII,
       return false;
   }
 
-  Register cmpReg1, cmpOp2;
+  unsigned cmpReg1, cmpOp2 = 0; // cmpOp2 assignment silences compiler warning.
   cmpReg1 = MI.getOperand(1).getReg();
 
   if (secondReg) {
@@ -290,7 +290,7 @@ static bool canCompareBeNewValueJump(const HexagonInstrInfo *QII,
     // at machine code level, we don't need this, but if we decide
     // to move new value jump prior to RA, we would be needing this.
     MachineRegisterInfo &MRI = MF.getRegInfo();
-    if (!cmpOp2.isPhysical()) {
+    if (!Register::isPhysicalRegister(cmpOp2)) {
       MachineInstr *def = MRI.getVRegDef(cmpOp2);
       if (def->getOpcode() == TargetOpcode::COPY)
         return false;
@@ -480,7 +480,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
     bool foundJump    = false;
     bool foundCompare = false;
     bool invertPredicate = false;
-    Register predReg; // predicate reg of the jump.
+    unsigned predReg = 0; // predicate reg of the jump.
     unsigned cmpReg1 = 0;
     int cmpOp2 = 0;
     MachineBasicBlock::iterator jmpPos;
@@ -516,7 +516,7 @@ bool HexagonNewValueJump::runOnMachineFunction(MachineFunction &MF) {
         jmpPos = MII;
         jmpInstr = &MI;
         predReg = MI.getOperand(0).getReg();
-        afterRA = predReg.isPhysical();
+        afterRA = Register::isPhysicalRegister(predReg);
 
         // If ifconverter had not messed up with the kill flags of the
         // operands, the following check on the kill flag would suffice.

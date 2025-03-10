@@ -139,7 +139,8 @@ void HexagonCopyHoisting::addMItoCopyList(MachineInstr *MI) {
   Register DstReg = MI->getOperand(0).getReg();
   Register SrcReg = MI->getOperand(1).getReg();
 
-  if (!DstReg.isVirtual() || !SrcReg.isVirtual() ||
+  if (!Register::isVirtualRegister(DstReg) ||
+      !Register::isVirtualRegister(SrcReg) ||
       MRI->getRegClass(DstReg) != &Hexagon::IntRegsRegClass ||
       MRI->getRegClass(SrcReg) != &Hexagon::IntRegsRegClass)
     return;
@@ -179,14 +180,15 @@ bool HexagonCopyHoisting::analyzeCopy(MachineBasicBlock *BB) {
     bool IsSafetoMove = true;
     for (MachineBasicBlock *SuccBB : BB->successors()) {
       auto &SuccBBCopyInst = CopyMIList[SuccBB->getNumber()];
-      if (!SuccBBCopyInst.count(Key)) {
+      auto It = SuccBBCopyInst.find(Key);
+      if (It == SuccBBCopyInst.end()) {
         // Same copy not present in this successor
         IsSafetoMove = false;
         break;
       }
       // If present, make sure that it's safe to pull this copy instruction
       // into the predecessor.
-      MachineInstr *SuccMI = SuccBBCopyInst[Key];
+      MachineInstr *SuccMI = It->second;
       if (!isSafetoMove(SuccMI)) {
         IsSafetoMove = false;
         break;

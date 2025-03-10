@@ -184,7 +184,7 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
   if (!common::visit([&](const auto &x) { return Check(x); }, rhs.u)) {
     return false;
   }
-  if (IsNullPointer(rhs)) {
+  if (IsNullPointer(&rhs)) {
     return true;
   }
   if (lhs_ && IsProcedure(*lhs_)) {

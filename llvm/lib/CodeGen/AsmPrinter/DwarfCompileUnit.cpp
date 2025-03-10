@@ -44,7 +44,7 @@
 using namespace llvm;
 
 /// Query value using AddLinkageNamesToDeclCallOriginsForTuning.
-cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
+static cl::opt<cl::boolOrDefault> AddLinkageNamesToDeclCallOrigins(
     "add-linkage-names-to-declaration-call-origins", cl::Hidden,
     cl::desc("Add DW_AT_linkage_name to function declaration DIEs "
              "referenced by DW_AT_call_origin attributes. Enabled by default "
@@ -564,7 +564,7 @@ DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP,
         TFI->getDwarfFrameBase(*Asm->MF);
     switch (FrameBase.Kind) {
     case TargetFrameLowering::DwarfFrameBase::Register: {
-      if (Register(FrameBase.Location.Reg).isPhysical()) {
+      if (Register::isPhysicalRegister(FrameBase.Location.Reg)) {
         MachineLocation Location(FrameBase.Location.Reg);
         addAddress(*SPDie, dwarf::DW_AT_frame_base, Location);
       }
@@ -1777,8 +1777,9 @@ DIE *DwarfCompileUnit::getOrCreateContextDIE(const DIScope *Context) {
 
     // Otherwise the context must be a DISubprogram.
     auto *SPScope = cast<DISubprogram>(Context);
-    if (getAbstractScopeDIEs().count(SPScope))
-      return getAbstractScopeDIEs()[SPScope];
+    const auto &DIEs = getAbstractScopeDIEs();
+    if (auto It = DIEs.find(SPScope); It != DIEs.end())
+      return It->second;
   }
   return DwarfUnit::getOrCreateContextDIE(Context);
 }

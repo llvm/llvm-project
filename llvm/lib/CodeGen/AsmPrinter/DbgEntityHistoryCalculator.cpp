@@ -401,10 +401,9 @@ static void handleNewDebugValue(InlinedEntity Var, const MachineInstr &DV,
       for (const MachineOperand &Op : DV.debug_operands()) {
         if (Op.isReg() && Op.getReg()) {
           Register NewReg = Op.getReg();
-          if (!TrackedRegs.count(NewReg))
+          if (TrackedRegs.insert_or_assign(NewReg, true).second)
             addRegDescribedVar(RegVars, NewReg, Var);
           LiveEntries[Var].insert(NewIndex);
-          TrackedRegs[NewReg] = true;
         }
       }
     }
@@ -525,7 +524,7 @@ void llvm::calculateDbgEntityHistory(const MachineFunction *MF,
           // Don't consider SP to be clobbered by register masks.
           for (auto It : RegVars) {
             unsigned int Reg = It.first;
-            if (Reg != SP && Register(Reg).isPhysical() &&
+            if (Reg != SP && Register::isPhysicalRegister(Reg) &&
                 MO.clobbersPhysReg(Reg))
               RegsToClobber.push_back(Reg);
           }

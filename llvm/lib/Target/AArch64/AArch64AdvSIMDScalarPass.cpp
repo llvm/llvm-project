@@ -105,14 +105,14 @@ static bool isGPR64(unsigned Reg, unsigned SubReg,
                     const MachineRegisterInfo *MRI) {
   if (SubReg)
     return false;
-  if (Register(Reg).isVirtual())
+  if (Register::isVirtualRegister(Reg))
     return MRI->getRegClass(Reg)->hasSuperClassEq(&AArch64::GPR64RegClass);
   return AArch64::GPR64RegClass.contains(Reg);
 }
 
 static bool isFPR64(unsigned Reg, unsigned SubReg,
                     const MachineRegisterInfo *MRI) {
-  if (Register(Reg).isVirtual())
+  if (Register::isVirtualRegister(Reg))
     return (MRI->getRegClass(Reg)->hasSuperClassEq(&AArch64::FPR64RegClass) &&
             SubReg == 0) ||
            (MRI->getRegClass(Reg)->hasSuperClassEq(&AArch64::FPR128RegClass) &&

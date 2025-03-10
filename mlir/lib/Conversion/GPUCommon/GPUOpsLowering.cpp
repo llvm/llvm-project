@@ -624,7 +624,8 @@ LogicalResult impl::scalarizeVectorOp(Operation *op, ValueRange operands,
                                       const LLVMTypeConverter &converter) {
   TypeRange operandTypes(operands);
   if (llvm::any_of(operandTypes, llvm::IsaPred<VectorType>)) {
-    VectorType vectorType = cast<VectorType>(op->getResultTypes()[0]);
+    VectorType vectorType =
+        cast<VectorType>(converter.convertType(op->getResultTypes()[0]));
     rewriter.replaceOp(op, scalarizeVectorOpHelper(op, operands, vectorType,
                                                    rewriter, converter));
     return success();

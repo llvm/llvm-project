@@ -356,7 +356,8 @@ bool ABISysV_s390x::GetArgumentValues(Thread &thread, ValueList &values) const {
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type = value->GetCompilerType();
-    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size =
+        llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
     if (!bit_size)
       return false;
     bool is_signed;
@@ -428,7 +429,7 @@ Status ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning complex values at present");
     else {
       std::optional<uint64_t> bit_width =
-          compiler_type.GetBitSize(frame_sp.get());
+          llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
       if (!bit_width) {
         error = Status::FromErrorString("can't get type size");
         return error;
@@ -496,7 +497,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
     if (type_flags & eTypeIsInteger) {
       // Extract the register context so we can read arguments from registers.
       std::optional<uint64_t> byte_size =
-          return_compiler_type.GetByteSize(&thread);
+          llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
@@ -543,7 +544,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectSimple(
         // Don't handle complex yet.
       } else {
         std::optional<uint64_t> byte_size =
-            return_compiler_type.GetByteSize(&thread);
+            llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
         if (byte_size && *byte_size <= sizeof(long double)) {
           const RegisterInfo *f0_info = reg_ctx->GetRegisterInfoByName("f0", 0);
           RegisterValue f0_value;
@@ -617,10 +618,7 @@ ValueObjectSP ABISysV_s390x::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-bool ABISysV_s390x::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_s390x::CreateFunctionEntryUnwindPlan() {
   UnwindPlan::RowSP row(new UnwindPlan::Row);
 
   // Our Call Frame Address is the stack pointer value + 160
@@ -630,16 +628,17 @@ bool ABISysV_s390x::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToRegister(dwarf_pswa_s390x, dwarf_r14_s390x, true);
 
   // All other registers are the same.
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("s390x at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("s390x at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_s390x::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
+UnwindPlanSP ABISysV_s390x::CreateDefaultUnwindPlan() {
   // There's really no default way to unwind on s390x. Trust the .eh_frame CFI,
   // which should always be good.
-  return false;
+  return nullptr;
 }
 
 bool ABISysV_s390x::GetFallbackRegisterLocation(

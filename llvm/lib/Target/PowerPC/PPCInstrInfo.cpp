@@ -1675,8 +1675,8 @@ static unsigned getCRBitValue(unsigned CRBit) {
 
 void PPCInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                MachineBasicBlock::iterator I,
-                               const DebugLoc &DL, MCRegister DestReg,
-                               MCRegister SrcReg, bool KillSrc,
+                               const DebugLoc &DL, Register DestReg,
+                               Register SrcReg, bool KillSrc,
                                bool RenamableDest, bool RenamableSrc) const {
   // We can end up with self copies and similar things as a result of VSX copy
   // legalization. Promote them here.
@@ -5131,7 +5131,7 @@ static bool isOpZeroOfSubwordPreincLoad(int Opcode) {
 // This function checks for sign extension from 32 bits to 64 bits.
 static bool definedBySignExtendingOp(const unsigned Reg,
                                      const MachineRegisterInfo *MRI) {
-  if (!Register(Reg).isVirtual())
+  if (!Register::isVirtualRegister(Reg))
     return false;
 
   MachineInstr *MI = MRI->getVRegDef(Reg);
@@ -5178,7 +5178,7 @@ static bool definedBySignExtendingOp(const unsigned Reg,
 // in the higher 32 bits then this function will return true.
 static bool definedByZeroExtendingOp(const unsigned Reg,
                                      const MachineRegisterInfo *MRI) {
-  if (!Register(Reg).isVirtual())
+  if (!Register::isVirtualRegister(Reg))
     return false;
 
   MachineInstr *MI = MRI->getVRegDef(Reg);
@@ -5427,8 +5427,8 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   --Iter;
   MachineInstrBuilder MIBuilder(*Iter->getMF(), Iter);
   for (unsigned i = 1; i < MI->getNumOperands(); i++) {
-    if (PromoteRegs.find(i) != PromoteRegs.end())
-      MIBuilder.addReg(PromoteRegs[i], RegState::Kill);
+    if (auto It = PromoteRegs.find(i); It != PromoteRegs.end())
+      MIBuilder.addReg(It->second, RegState::Kill);
     else
       Iter->addOperand(MI->getOperand(i));
   }
@@ -5463,7 +5463,7 @@ std::pair<bool, bool>
 PPCInstrInfo::isSignOrZeroExtended(const unsigned Reg,
                                    const unsigned BinOpDepth,
                                    const MachineRegisterInfo *MRI) const {
-  if (!Register(Reg).isVirtual())
+  if (!Register::isVirtualRegister(Reg))
     return std::pair<bool, bool>(false, false);
 
   MachineInstr *MI = MRI->getVRegDef(Reg);
