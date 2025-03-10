@@ -3271,8 +3271,8 @@ define amdgpu_ps i32 @s_mul_32_f16(half inreg %x, half inreg %y) {
 ; GFX1011-LABEL: s_mul_32_f16:
 ; GFX1011:       ; %bb.0:
 ; GFX1011-NEXT:    v_mul_f16_e64 v0, 0x5000, s0
-; GFX1011-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX1011-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX1011-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX1011-NEXT:    ; return to shader part epilog
   %mul = fmul contract half %x, 32.0
   %cast = bitcast half %mul to i16
