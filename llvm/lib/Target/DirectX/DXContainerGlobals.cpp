@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "DXILRootSignature.h"
 #include "DXILShaderFlags.h"
 #include "DirectX.h"
 #include "llvm/ADT/SmallVector.h"
@@ -25,7 +26,9 @@
 #include "llvm/MC/DXContainerPSVInfo.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/MD5.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::dxil;
@@ -41,6 +44,7 @@ class DXContainerGlobals : public llvm::ModulePass {
   GlobalVariable *buildSignature(Module &M, Signature &Sig, StringRef Name,
                                  StringRef SectionName);
   void addSignature(Module &M, SmallVector<GlobalValue *> &Globals);
+  void addRootSignature(Module &M, SmallVector<GlobalValue *> &Globals);
   void addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV);
   void addPipelineStateValidationInfo(Module &M,
                                       SmallVector<GlobalValue *> &Globals);
@@ -60,6 +64,7 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
     AU.addRequired<ShaderFlagsAnalysisWrapper>();
+    AU.addRequired<RootSignatureAnalysisWrapper>();
     AU.addRequired<DXILMetadataAnalysisWrapperPass>();
     AU.addRequired<DXILResourceTypeWrapperPass>();
     AU.addRequired<DXILResourceBindingWrapperPass>();
@@ -73,6 +78,7 @@ bool DXContainerGlobals::runOnModule(Module &M) {
   Globals.push_back(getFeatureFlags(M));
   Globals.push_back(computeShaderHash(M));
   addSignature(M, Globals);
+  addRootSignature(M, Globals);
   addPipelineStateValidationInfo(M, Globals);
   appendToCompilerUsed(M, Globals);
   return true;
@@ -142,6 +148,36 @@ void DXContainerGlobals::addSignature(Module &M,
 
   Signature OutputSig;
   Globals.emplace_back(buildSignature(M, OutputSig, "dx.osg1", "OSG1"));
+}
+
+void DXContainerGlobals::addRootSignature(Module &M,
+                                          SmallVector<GlobalValue *> &Globals) {
+
+  dxil::ModuleMetadataInfo &MMI =
+      getAnalysis<DXILMetadataAnalysisWrapperPass>().getModuleMetadata();
+
+  // Root Signature in Library don't compile to DXContainer.
+  if (MMI.ShaderProfile == llvm::Triple::Library)
+    return;
+
+  assert(MMI.EntryPropertyVec.size() == 1);
+
+  auto &RSA = getAnalysis<RootSignatureAnalysisWrapper>();
+  const Function *EntryFunction = MMI.EntryPropertyVec[0].Entry;
+  const auto &FuncRs = RSA.find(EntryFunction);
+
+  if (FuncRs == RSA.end())
+    return;
+
+  const RootSignatureDesc &RS = FuncRs->second;
+  SmallString<256> Data;
+  raw_svector_ostream OS(Data);
+
+  RS.write(OS);
+
+  Constant *Constant =
+      ConstantDataArray::getString(M.getContext(), Data, /*AddNull*/ false);
+  Globals.emplace_back(buildContainerGlobal(M, Constant, "dx.rts0", "RTS0"));
 }
 
 void DXContainerGlobals::addResourcesForPSV(Module &M, PSVRuntimeInfo &PSV) {

@@ -406,6 +406,11 @@ static void checkOptions(Ctx &ctx) {
       ErrAlways(ctx) << "-z gcs only supported on AArch64";
   }
 
+  if (ctx.arg.emachine != EM_AARCH64 && ctx.arg.emachine != EM_ARM &&
+      ctx.arg.zExecuteOnlyReport != "none")
+    ErrAlways(ctx)
+        << "-z execute-only-report only supported on AArch64 and ARM";
+
   if (ctx.arg.emachine != EM_PPC64) {
     if (ctx.arg.tocOptimize)
       ErrAlways(ctx) << "--toc-optimize is only supported on PowerPC64 targets";
@@ -814,6 +819,26 @@ static ICFLevel getICF(opt::InputArgList &args) {
   if (arg->getOption().getID() == OPT_icf_safe)
     return ICFLevel::Safe;
   return ICFLevel::All;
+}
+
+static void parsePackageMetadata(Ctx &ctx, const opt::Arg &arg) {
+  unsigned c0, c1;
+  SmallVector<uint8_t, 0> decoded;
+  StringRef s = arg.getValue();
+  for (size_t i = 0, e = s.size(); i != e; ++i) {
+    if (s[i] != '%') {
+      decoded.push_back(s[i]);
+    } else if (i + 2 < e && (c1 = hexDigitValue(s[i + 1])) != -1u &&
+               (c0 = hexDigitValue(s[i + 2])) != -1u) {
+      decoded.push_back(uint8_t(c1 * 16 + c0));
+      i += 2;
+    } else {
+      ErrAlways(ctx) << arg.getSpelling() << ": invalid % escape at byte " << i
+                     << "; supports only %[0-9a-fA-F][0-9a-fA-F]";
+      return;
+    }
+  }
+  ctx.arg.packageMetadata = std::move(decoded);
 }
 
 static StripPolicy getStrip(Ctx &ctx, opt::InputArgList &args) {
@@ -1425,7 +1450,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.optimize = args::getInteger(args, OPT_O, 1);
   ctx.arg.orphanHandling = getOrphanHandling(ctx, args);
   ctx.arg.outputFile = args.getLastArgValue(OPT_o);
-  ctx.arg.packageMetadata = args.getLastArgValue(OPT_package_metadata);
+  if (auto *arg = args.getLastArg(OPT_package_metadata))
+    parsePackageMetadata(ctx, *arg);
   ctx.arg.pie = args.hasFlag(OPT_pie, OPT_no_pie, false);
   ctx.arg.printIcfSections =
       args.hasFlag(OPT_print_icf_sections, OPT_no_print_icf_sections, false);
@@ -1599,10 +1625,12 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       ErrAlways(ctx) << errPrefix << pat.takeError() << ": " << kv.first;
   }
 
-  auto reports = {std::make_pair("bti-report", &ctx.arg.zBtiReport),
-                  std::make_pair("cet-report", &ctx.arg.zCetReport),
-                  std::make_pair("gcs-report", &ctx.arg.zGcsReport),
-                  std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+  auto reports = {
+      std::make_pair("bti-report", &ctx.arg.zBtiReport),
+      std::make_pair("cet-report", &ctx.arg.zCetReport),
+      std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
+      std::make_pair("gcs-report", &ctx.arg.zGcsReport),
+      std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -1611,8 +1639,8 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
         continue;
       arg->claim();
       if (!isValidReportString(option.second)) {
-        ErrAlways(ctx) << "-z " << reportArg.first << "= parameter "
-                       << option.second << " is not recognized";
+        ErrAlways(ctx) << "unknown -z " << reportArg.first
+                       << "= value: " << option.second;
         continue;
       }
       *reportArg.second = option.second;
@@ -2596,8 +2624,7 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
       for (Symbol *sym : obj->getGlobalSymbols()) {
         if (!sym->isDefined())
           continue;
-        if (ctx.hasDynsym && ctx.arg.exportDynamic &&
-            sym->computeBinding(ctx) != STB_LOCAL)
+        if (ctx.arg.exportDynamic && sym->computeBinding(ctx) != STB_LOCAL)
           sym->isExported = true;
         if (sym->hasVersionSuffix)
           sym->parseSymbolVersion(ctx);
@@ -2944,6 +2971,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
 
   // Create dynamic sections for dynamic linking and static PIE.
   ctx.hasDynsym = !ctx.sharedFiles.empty() || ctx.arg.isPic;
+  ctx.arg.exportDynamic &= ctx.hasDynsym;
 
   // If an entry symbol is in a static archive, pull out that file now.
   if (Symbol *sym = ctx.symtab->find(ctx.arg.entry))

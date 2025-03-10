@@ -955,6 +955,25 @@ def BlockArgumentNameFromTypeOp
   let assemblyFormat = "regions attr-dict-with-keyword";
 }
 
+// This is used to test OpAsmTypeInterface::getAsmName's integration with AsmPrinter
+// for op result name when OpAsmOpInterface::getAsmResultNames is the default implementation
+// i.e. does nothing.
+def ResultNameFromTypeInterfaceOp
+ : TEST_Op<"result_name_from_type_interface",
+           [OpAsmOpInterface]> {
+  let results = (outs Variadic<AnyType>:$r);
+}
+
+// This is used to test OpAsmTypeInterface::getAsmName's integration with AsmPrinter
+// for block argument name when OpAsmOpInterface::getAsmBlockArgumentNames is the default implementation
+// i.e. does nothing.
+def BlockArgumentNameFromTypeInterfaceOp
+  : TEST_Op<"block_argument_name_from_type_interface",
+      [OpAsmOpInterface]> {
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat = "regions attr-dict-with-keyword";
+}
+
 // This is used to test the OpAsmOpInterface::getDefaultDialect() feature:
 // operations nested in a region under this op will drop the "test." dialect
 // prefix.
@@ -2483,6 +2502,13 @@ def TableGenBuildOp5 : TableGenBuildInferReturnTypeBaseOp<
 def TableGenBuildOp6 : TEST_Op<"tblgen_build_6", [AttrSizedOperandSegments]> {
   let arguments = (ins Variadic<AnyType>:$a, Variadic<AnyType>:$b);
   let results = (outs F32:$result);
+}
+
+// An inherent attribute. Test collective builders, both those that take properties as
+// properties structs and those that take an attribute dictionary.
+def TableGenBuildOp7 : TEST_Op<"tblgen_build_7", []> {
+  let arguments = (ins BoolAttr:$attr0);
+  let results = (outs);
 }
 
 //===----------------------------------------------------------------------===//

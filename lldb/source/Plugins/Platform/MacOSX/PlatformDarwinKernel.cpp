@@ -129,6 +129,7 @@ PlatformSP PlatformDarwinKernel::CreateInstance(bool force,
       case llvm::Triple::XROS:
       case llvm::Triple::TvOS:
       case llvm::Triple::BridgeOS:
+      case llvm::Triple::DriverKit:
         break;
       // Only accept "vendor" for vendor if the host is Apple and it "unknown"
       // wasn't specified (it was just returned because it was NOT specified)

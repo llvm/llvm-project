@@ -61,8 +61,10 @@ enum class IRMemLocation {
   ArgMem = 0,
   /// Memory that is inaccessible via LLVM IR.
   InaccessibleMem = 1,
+  /// Errno memory.
+  ErrnoMem = 2,
   /// Any other memory.
-  Other = 2,
+  Other = 3,
 
   /// Helpers to iterate all locations in the MemoryEffectsBase class.
   First = ArgMem,
@@ -139,6 +141,16 @@ public:
     return MemoryEffectsBase(Location::InaccessibleMem, MR);
   }
 
+  /// Create MemoryEffectsBase that can only access errno memory.
+  static MemoryEffectsBase errnoMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::ErrnoMem, MR);
+  }
+
+  /// Create MemoryEffectsBase that can only access other memory.
+  static MemoryEffectsBase otherMemOnly(ModRefInfo MR = ModRefInfo::ModRef) {
+    return MemoryEffectsBase(Location::Other, MR);
+  }
+
   /// Create MemoryEffectsBase that can only access inaccessible or argument
   /// memory.
   static MemoryEffectsBase
@@ -210,6 +222,11 @@ public:
   /// Whether this function only (at most) accesses inaccessible memory.
   bool onlyAccessesInaccessibleMem() const {
     return getWithoutLoc(Location::InaccessibleMem).doesNotAccessMemory();
+  }
+
+  /// Whether this function only (at most) accesses errno memory.
+  bool onlyAccessesErrnoMem() const {
+    return getWithoutLoc(Location::ErrnoMem).doesNotAccessMemory();
   }
 
   /// Whether this function only (at most) accesses argument and inaccessible
@@ -309,6 +326,10 @@ inline bool capturesFullProvenance(CaptureComponents CC) {
   return (CC & CaptureComponents::Provenance) == CaptureComponents::Provenance;
 }
 
+inline bool capturesAll(CaptureComponents CC) {
+  return CC == CaptureComponents::All;
+}
+
 raw_ostream &operator<<(raw_ostream &OS, CaptureComponents CC);
 
 /// Represents which components of the pointer may be captured in which
@@ -332,6 +353,15 @@ public:
 
   /// Create CaptureInfo that may capture all components of the pointer.
   static CaptureInfo all() { return CaptureInfo(CaptureComponents::All); }
+
+  /// Create CaptureInfo that may only capture via the return value.
+  static CaptureInfo
+  retOnly(CaptureComponents RetComponents = CaptureComponents::All) {
+    return CaptureInfo(CaptureComponents::None, RetComponents);
+  }
+
+  /// Whether the pointer is only captured via the return value.
+  bool isRetOnly() const { return capturesNothing(OtherComponents); }
 
   /// Get components potentially captured by the return value.
   CaptureComponents getRetComponents() const { return RetComponents; }

@@ -398,6 +398,12 @@ DataLayoutSpecAttr::getGlobalMemorySpaceIdentifier(MLIRContext *context) const {
 }
 
 StringAttr
+DataLayoutSpecAttr::getManglingModeIdentifier(MLIRContext *context) const {
+  return Builder(context).getStringAttr(
+      DLTIDialect::kDataLayoutManglingModeKey);
+}
+
+StringAttr
 DataLayoutSpecAttr::getStackAlignmentIdentifier(MLIRContext *context) const {
   return Builder(context).getStringAttr(
       DLTIDialect::kDataLayoutStackAlignmentKey);
@@ -508,6 +514,9 @@ getClosestQueryable(Operation *op) {
 
 FailureOr<Attribute>
 dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
+  if (!op)
+    return failure();
+
   if (keys.empty()) {
     if (emitError) {
       auto diag = op->emitError() << "target op of failed DLTI query";
@@ -562,6 +571,20 @@ dlti::query(Operation *op, ArrayRef<DataLayoutEntryKey> keys, bool emitError) {
   return currentAttr;
 }
 
+FailureOr<Attribute> dlti::query(Operation *op, ArrayRef<StringRef> keys,
+                                 bool emitError) {
+  if (!op)
+    return failure();
+
+  MLIRContext *ctx = op->getContext();
+  SmallVector<DataLayoutEntryKey> entryKeys;
+  entryKeys.reserve(keys.size());
+  for (StringRef key : keys)
+    entryKeys.push_back(StringAttr::get(ctx, key));
+
+  return dlti::query(op, entryKeys, emitError);
+}
+
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutAttrName;
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessKey;
 constexpr const StringLiteral mlir::DLTIDialect::kDataLayoutEndiannessBig;
@@ -589,7 +612,8 @@ public:
     if (entryName == DLTIDialect::kDataLayoutAllocaMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutProgramMemorySpaceKey ||
         entryName == DLTIDialect::kDataLayoutGlobalMemorySpaceKey ||
-        entryName == DLTIDialect::kDataLayoutStackAlignmentKey)
+        entryName == DLTIDialect::kDataLayoutStackAlignmentKey ||
+        entryName == DLTIDialect::kDataLayoutManglingModeKey)
       return success();
     return emitError(loc) << "unknown data layout entry name: " << entryName;
   }

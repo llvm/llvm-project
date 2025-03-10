@@ -59,7 +59,8 @@ public:
     SectionKind,
     SectionECKind,
     OtherKind,
-    ImportThunkKind
+    ImportThunkKind,
+    ECExportThunkKind
   };
   Kind kind() const { return chunkKind; }
 
@@ -827,7 +828,10 @@ static const uint8_t ECExportThunkCode[] = {
 
 class ECExportThunkChunk : public NonSectionCodeChunk {
 public:
-  explicit ECExportThunkChunk(Defined *targetSym) : target(targetSym) {}
+  explicit ECExportThunkChunk(Defined *targetSym)
+      : NonSectionCodeChunk(ECExportThunkKind), target(targetSym) {}
+  static bool classof(const Chunk *c) { return c->kind() == ECExportThunkKind; }
+
   size_t getSize() const override { return sizeof(ECExportThunkCode); };
   void writeTo(uint8_t *buf) const override;
   MachineTypes getMachine() const override { return AMD64; }
@@ -910,16 +914,17 @@ private:
 // MinGW specific. A Chunk that contains one pointer-sized absolute value.
 class AbsolutePointerChunk : public NonSectionChunk {
 public:
-  AbsolutePointerChunk(COFFLinkerContext &ctx, uint64_t value)
-      : value(value), ctx(ctx) {
+  AbsolutePointerChunk(SymbolTable &symtab, uint64_t value)
+      : value(value), symtab(symtab) {
     setAlignment(getSize());
   }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
+  MachineTypes getMachine() const override;
 
 private:
   uint64_t value;
-  COFFLinkerContext &ctx;
+  SymbolTable &symtab;
 };
 
 // Return true if this file has the hotpatch flag set to true in the S_COMPILE3

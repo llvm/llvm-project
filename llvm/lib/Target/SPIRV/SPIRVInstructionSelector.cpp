@@ -273,10 +273,8 @@ private:
   bool selectPhi(Register ResVReg, const SPIRVType *ResType,
                  MachineInstr &I) const;
 
-  [[maybe_unused]] bool selectExtInst(Register ResVReg,
-                                      const SPIRVType *RestType,
-                                      MachineInstr &I,
-                                      GL::GLSLExtInst GLInst) const;
+  bool selectExtInst(Register ResVReg, const SPIRVType *RestType,
+                     MachineInstr &I, GL::GLSLExtInst GLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
                      MachineInstr &I, CL::OpenCLExtInst CLInst) const;
   bool selectExtInst(Register ResVReg, const SPIRVType *ResType,
@@ -905,6 +903,14 @@ bool SPIRVInstructionSelector::selectExtInst(Register ResVReg,
                                              const SPIRVType *ResType,
                                              MachineInstr &I,
                                              GL::GLSLExtInst GLInst) const {
+  if (!STI.canUseExtInstSet(
+          SPIRV::InstructionSet::InstructionSet::GLSL_std_450)) {
+    std::string DiagMsg;
+    raw_string_ostream OS(DiagMsg);
+    I.print(OS, true, false, false, false);
+    DiagMsg += " is only supported with the GLSL extended instruction set.\n";
+    report_fatal_error(DiagMsg.c_str(), false);
+  }
   return selectExtInst(ResVReg, ResType, I,
                        {{SPIRV::InstructionSet::GLSL_std_450, GLInst}});
 }
@@ -1020,7 +1026,9 @@ bool SPIRVInstructionSelector::selectBitcast(Register ResVReg,
 }
 
 static void addMemoryOperands(MachineMemOperand *MemOp,
-                              MachineInstrBuilder &MIB) {
+                              MachineInstrBuilder &MIB,
+                              MachineIRBuilder &MIRBuilder,
+                              SPIRVGlobalRegistry &GR) {
   uint32_t SpvMemOp = static_cast<uint32_t>(SPIRV::MemoryOperand::None);
   if (MemOp->isVolatile())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Volatile);
@@ -1029,10 +1037,33 @@ static void addMemoryOperands(MachineMemOperand *MemOp,
   if (MemOp->getAlign().value())
     SpvMemOp |= static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned);
 
+  [[maybe_unused]] MachineInstr *AliasList = nullptr;
+  [[maybe_unused]] MachineInstr *NoAliasList = nullptr;
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  if (ST->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing)) {
+    if (auto *MD = MemOp->getAAInfo().Scope) {
+      AliasList = GR.getOrAddMemAliasingINTELInst(MIRBuilder, MD);
+      if (AliasList)
+        SpvMemOp |=
+            static_cast<uint32_t>(SPIRV::MemoryOperand::AliasScopeINTELMask);
+    }
+    if (auto *MD = MemOp->getAAInfo().NoAlias) {
+      NoAliasList = GR.getOrAddMemAliasingINTELInst(MIRBuilder, MD);
+      if (NoAliasList)
+        SpvMemOp |=
+            static_cast<uint32_t>(SPIRV::MemoryOperand::NoAliasINTELMask);
+    }
+  }
+
   if (SpvMemOp != static_cast<uint32_t>(SPIRV::MemoryOperand::None)) {
     MIB.addImm(SpvMemOp);
     if (SpvMemOp & static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned))
       MIB.addImm(MemOp->getAlign().value());
+    if (AliasList)
+      MIB.addUse(AliasList->getOperand(0).getReg());
+    if (NoAliasList)
+      MIB.addUse(NoAliasList->getOperand(0).getReg());
   }
 }
 
@@ -1081,7 +1112,8 @@ bool SPIRVInstructionSelector::selectLoad(Register ResVReg,
                TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS);
     addMemoryOperands(I.getOperand(2 + OpOffset).getImm(), MIB);
   } else {
-    addMemoryOperands(*I.memoperands_begin(), MIB);
+    MachineIRBuilder MIRBuilder(I);
+    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
@@ -1123,7 +1155,8 @@ bool SPIRVInstructionSelector::selectStore(MachineInstr &I) const {
                TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS);
     addMemoryOperands(I.getOperand(2 + OpOffset).getImm(), MIB);
   } else {
-    addMemoryOperands(*I.memoperands_begin(), MIB);
+    MachineIRBuilder MIRBuilder(I);
+    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
   }
   return MIB.constrainAllUses(TII, TRI, RBI);
 }
@@ -1200,8 +1233,10 @@ bool SPIRVInstructionSelector::selectMemOperation(Register ResVReg,
                  .addUse(I.getOperand(0).getReg())
                  .addUse(SrcReg)
                  .addUse(I.getOperand(2).getReg());
-  if (I.getNumMemOperands())
-    addMemoryOperands(*I.memoperands_begin(), MIB);
+  if (I.getNumMemOperands()) {
+    MachineIRBuilder MIRBuilder(I);
+    addMemoryOperands(*I.memoperands_begin(), MIB, MIRBuilder, GR);
+  }
   Result &= MIB.constrainAllUses(TII, TRI, RBI);
   if (ResVReg.isValid() && ResVReg != MIB->getOperand(0).getReg())
     Result &= BuildCOPY(ResVReg, MIB->getOperand(0).getReg(), I);
@@ -3061,6 +3096,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::fract, GL::Fract);
   case Intrinsic::spv_normalize:
     return selectExtInst(ResVReg, ResType, I, CL::normalize, GL::Normalize);
+  case Intrinsic::spv_reflect:
+    return selectExtInst(ResVReg, ResType, I, GL::Reflect);
   case Intrinsic::spv_rsqrt:
     return selectExtInst(ResVReg, ResType, I, CL::rsqrt, GL::InverseSqrt);
   case Intrinsic::spv_sign:
@@ -3391,9 +3428,10 @@ bool SPIRVInstructionSelector::selectFirstBitSet64Overflow(
   MachineIRBuilder MIRBuilder(I);
   SPIRVType *BaseType = GR.retrieveScalarOrVectorIntType(ResType);
   SPIRVType *I64Type = GR.getOrCreateSPIRVIntegerType(64, MIRBuilder);
-  SPIRVType *I64x2Type = GR.getOrCreateSPIRVVectorType(I64Type, 2, MIRBuilder);
+  SPIRVType *I64x2Type =
+      GR.getOrCreateSPIRVVectorType(I64Type, 2, MIRBuilder, false);
   SPIRVType *Vec2ResType =
-      GR.getOrCreateSPIRVVectorType(BaseType, 2, MIRBuilder);
+      GR.getOrCreateSPIRVVectorType(BaseType, 2, MIRBuilder, false);
 
   std::vector<Register> PartialRegs;
 
@@ -3476,8 +3514,8 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
 
   // 1. Split int64 into 2 pieces using a bitcast
   MachineIRBuilder MIRBuilder(I);
-  SPIRVType *PostCastType =
-      GR.getOrCreateSPIRVVectorType(BaseType, 2 * ComponentCount, MIRBuilder);
+  SPIRVType *PostCastType = GR.getOrCreateSPIRVVectorType(
+      BaseType, 2 * ComponentCount, MIRBuilder, false);
   Register BitcastReg =
       MRI->createVirtualRegister(GR.getRegClass(PostCastType));
 
@@ -3554,8 +3592,8 @@ bool SPIRVInstructionSelector::selectFirstBitSet64(
     SelectOp = SPIRV::OpSelectSISCond;
     AddOp = SPIRV::OpIAddS;
   } else {
-    BoolType =
-        GR.getOrCreateSPIRVVectorType(BoolType, ComponentCount, MIRBuilder);
+    BoolType = GR.getOrCreateSPIRVVectorType(BoolType, ComponentCount,
+                                             MIRBuilder, false);
     NegOneReg =
         GR.getOrCreateConstVector((unsigned)-1, I, ResType, TII, ZeroAsNull);
     Reg0 = GR.getOrCreateConstVector(0, I, ResType, TII, ZeroAsNull);
@@ -3922,7 +3960,7 @@ bool SPIRVInstructionSelector::loadVec3BuiltinInputID(
   MachineIRBuilder MIRBuilder(I);
   const SPIRVType *U32Type = GR.getOrCreateSPIRVIntegerType(32, MIRBuilder);
   const SPIRVType *Vec3Ty =
-      GR.getOrCreateSPIRVVectorType(U32Type, 3, MIRBuilder);
+      GR.getOrCreateSPIRVVectorType(U32Type, 3, MIRBuilder, false);
   const SPIRVType *PtrType = GR.getOrCreateSPIRVPointerType(
       Vec3Ty, MIRBuilder, SPIRV::StorageClass::Input);
 
@@ -3971,7 +4009,7 @@ SPIRVType *SPIRVInstructionSelector::widenTypeToVec4(const SPIRVType *Type,
                                                      MachineInstr &I) const {
   MachineIRBuilder MIRBuilder(I);
   if (Type->getOpcode() != SPIRV::OpTypeVector)
-    return GR.getOrCreateSPIRVVectorType(Type, 4, MIRBuilder);
+    return GR.getOrCreateSPIRVVectorType(Type, 4, MIRBuilder, false);
 
   uint64_t VectorSize = Type->getOperand(2).getImm();
   if (VectorSize == 4)
@@ -3979,7 +4017,7 @@ SPIRVType *SPIRVInstructionSelector::widenTypeToVec4(const SPIRVType *Type,
 
   Register ScalarTypeReg = Type->getOperand(1).getReg();
   const SPIRVType *ScalarType = GR.getSPIRVTypeForVReg(ScalarTypeReg);
-  return GR.getOrCreateSPIRVVectorType(ScalarType, 4, MIRBuilder);
+  return GR.getOrCreateSPIRVVectorType(ScalarType, 4, MIRBuilder, false);
 }
 
 bool SPIRVInstructionSelector::loadHandleBeforePosition(

@@ -191,7 +191,7 @@ template <> struct BlockScalarTraits<Module> {
 } // end namespace yaml
 } // end namespace llvm
 
-static void printRegMIR(unsigned Reg, yaml::StringValue &Dest,
+static void printRegMIR(Register Reg, yaml::StringValue &Dest,
                         const TargetRegisterInfo *TRI) {
   raw_string_ostream OS(Dest.Value);
   OS << printReg(Reg, TRI);
@@ -208,7 +208,7 @@ void MIRPrinter::print(const MachineFunction &MF) {
 
   YamlMF.CallsEHReturn = MF.callsEHReturn();
   YamlMF.CallsUnwindInit = MF.callsUnwindInit();
-  YamlMF.HasEHCatchret = MF.hasEHCatchret();
+  YamlMF.HasEHContTarget = MF.hasEHContTarget();
   YamlMF.HasEHScopes = MF.hasEHScopes();
   YamlMF.HasEHFunclets = MF.hasEHFunclets();
   YamlMF.HasFakeUses = MF.hasFakeUses();
@@ -299,7 +299,7 @@ static void printCustomRegMask(const uint32_t *RegMask, raw_ostream &OS,
   OS << ')';
 }
 
-static void printRegClassOrBank(unsigned Reg, yaml::StringValue &Dest,
+static void printRegClassOrBank(Register Reg, yaml::StringValue &Dest,
                                 const MachineRegisterInfo &RegInfo,
                                 const TargetRegisterInfo *TRI) {
   raw_string_ostream OS(Dest.Value);
@@ -1007,10 +1007,9 @@ void MIPrinter::print(const MachineInstr &MI, unsigned OpIdx,
     unsigned TiedOperandIdx = 0;
     if (ShouldPrintRegisterTies && Op.isReg() && Op.isTied() && !Op.isDef())
       TiedOperandIdx = Op.getParent()->findTiedOperandIdx(OpIdx);
-    const TargetIntrinsicInfo *TII = MI.getMF()->getTarget().getIntrinsicInfo();
     Op.print(OS, MST, TypeToPrint, OpIdx, PrintDef, /*IsStandalone=*/false,
-             ShouldPrintRegisterTies, TiedOperandIdx, TRI, TII);
-      OS << formatOperandComment(MOComment);
+             ShouldPrintRegisterTies, TiedOperandIdx, TRI);
+    OS << formatOperandComment(MOComment);
     break;
   }
   case MachineOperand::MO_FrameIndex:

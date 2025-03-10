@@ -138,19 +138,6 @@ def GenericOp : LinalgStructuredBase_Op<"generic", [
       }
     }
     ```
-
-    To allow progressive lowering from the value world (a.k.a tensor values) to
-    the buffer world (a.k.a memref values), a `linalg.generic` op allows mixing
-    tensors and buffers operands and tensor results.
-
-    ```mlir
-    %C = linalg.generic #trait_attribute
-      ins(%A, %B : tensor<?x?xf32>, memref<?x?xf32, stride_specification>)
-      outs(%C : tensor<?x?xf32>)
-      {other-optional-attributes}
-      {region}
-      -> (tensor<?x?xf32>)
-    ```
   }];
 
   let arguments = (ins Variadic<AnyType>:$inputs,
@@ -552,6 +539,126 @@ def BroadcastOp : LinalgStructuredBase_Op<"broadcast", [
 }
 
 //===----------------------------------------------------------------------===//
+// Op definition for ElementwiseOp
+//===----------------------------------------------------------------------===//
+def ElementwiseOp : LinalgStructuredBase_Op<"elementwise", [
+                   AttrSizedOperandSegments]> {
+  let summary = [{ Performs element-wise operation }];
+  let description = [{
+    The attribute `kind` describes arithmetic operation to perform. The
+    operation kind can be unary (e.g. max), binary (e.g. add) or ternary
+    (e.g. select).
+
+    By default, all indexing maps are identities. In the case of default
+    indexing map, all input and output shapes must match. The number of dims in
+    each of the identity maps is equal to the rank of the output type.
+
+    Affine-maps for operands and result are required to be provided by the user
+    when a transpose and/or broadcast is needed on any operand. When a map is not
+    provided, default identity maps are inferred for each operand.
+
+    Iterator-types are always all `parallel`.
+    Iterator-types are needed for constructing the underlying structured op.
+
+    The number of dims of the iterator-types are inferred from the rank of
+    the result type.
+
+    Example:
+
+    Defining a unary linalg.elemwise with default indexing-map:
+    ```mlir
+    %exp = linalg.elemwise
+        kind=#linalg.elemwise_kind<exp>
+        ins(%x : tensor<4x16x8xf32>)
+        outs(%y: tensor<4x16x8xf32>) -> tensor<4x16x8xf32>
+    ```
+
+    Defining a binary linalg.elemwise with user-defined indexing-map:
+    ```mlir
+    %add = linalg.elemwise
+        kind=#linalg.elemwise_kind<add>
+        indexing_maps = [#transpose, #broadcast, #identity]
+        ins(%exp, %arg1 : tensor<4x16x8xf32>, tensor<4x16xf32>)
+        outs(%arg2: tensor<4x8x16xf32>) -> tensor<4x8x16xf32>
+    ```
+  }];
+
+  let arguments = (ins
+      Variadic<AnyType>:$inputs,
+      Variadic<AnyShaped>:$outputs,
+      ElementwiseKindAttr:$kind,
+      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps
+    );
+
+  let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
+  let regions = (region AnyRegion:$region);
+  let skipDefaultBuilders = 1;
+
+  let builders = [
+      OpBuilder<
+      (ins "ValueRange":$inputs, "ValueRange":$outputs,
+            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+      [{
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
+          attributes, ElementwiseOp::getRegionBuilder());
+      }]>
+    ];
+
+  let hasCustomAssemblyFormat = 1;
+  let hasFolder = 1;
+  let hasVerifier = 1;
+
+  let extraClassDeclaration = structuredOpsBaseDecls # [{
+      /// Get the arity enum corresponding to the kind of op, e.g. if arg is
+      /// `ElementwiseKind::add`, return `ElementwiseArityGroup::Binary`.
+      static ElementwiseArityGroup getArityGroup(ElementwiseKind n);
+
+      /// Both user-specified and default indexing map will always depend on
+      /// the current Op instance.
+      static bool hasDynamicIndexingMaps() { return true; }
+
+      /// Implements the block region builder for the elementwiseOp. This is
+      /// called by the 'fillStructuredOpRegion'.
+      static void regionBuilder(ImplicitLocOpBuilder &b,
+                                Block &block, ArrayRef<NamedAttribute> attrs);
+
+      static std::function<void(ImplicitLocOpBuilder &,
+                                Block &, ArrayRef<NamedAttribute>)>
+      getRegionBuilder() {
+        return regionBuilder;
+      }
+
+      /// Returns rank of the result tensor/memref. Useful for knowing
+      /// the dimensionality of the iteration space when others means
+      /// are not possible e.g. absence of user-provided indexing map.
+      unsigned getResultRank() {
+        Value output = getDpsInitOperand(0)->get();
+        ShapedType shapedType = llvm::cast<ShapedType>(output.getType());
+        return shapedType.getRank();
+      }
+
+      /// Returns N 'parallel' iterator types where N is rank of result.
+      SmallVector<utils::IteratorType> getIteratorTypesArray();
+
+      /// The default indexing maps are identities.
+      /// There will be N+1 such maps, where N is the arity of the Op.
+      static SmallVector<AffineMap>
+      getDefaultIndexingMaps(unsigned NumMaps, unsigned numDims,
+                             MLIRContext *context);
+
+      /// Destination passing style interface method.
+      ::mlir::MutableOperandRange getDpsInitsMutable() {
+        return getOutputsMutable();
+      }
+
+      // Generic methods.
+      std::string getLibraryCallName() {
+        return generateLibraryCallName(getOperation());
+      }
+    }];
+}
+
+//===----------------------------------------------------------------------===//
 // Op definition for MatmulOp
 //===----------------------------------------------------------------------===//
 
@@ -606,7 +713,10 @@ def MatmulOp : LinalgStructuredBase_Op<"matmul", [
     let arguments = (ins
       Variadic<AnyType>:$inputs,
       Variadic<AnyShaped>:$outputs,
-      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps,
+      DefaultValuedOptionalAttr<
+        AffineMapArrayAttr,
+        "MatmulOp::getDefaultIndexingMaps($_builder.getContext())"
+      >:$indexing_maps,
       DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
     );
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
@@ -752,7 +862,8 @@ def ContractOp : LinalgStructuredBase_Op<"contract", [
   let arguments = (ins
     Variadic<AnyType>:$inputs,
     Variadic<AnyShaped>:$outputs,
-    AffineMapArrayAttr:$indexing_maps
+    AffineMapArrayAttr:$indexing_maps,
+    DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
   );
   let results = (outs Variadic<AnyShaped>:$result_tensors);
   // NB: The only reason this op has a region - and it get populated at op build
@@ -867,7 +978,11 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
     let arguments = (ins
       Variadic<AnyType>:$inputs,
       Variadic<AnyShaped>:$outputs,
-      DefaultValuedOptionalAttr<AffineMapArrayAttr, "{}">:$indexing_maps
+      DefaultValuedOptionalAttr<
+        AffineMapArrayAttr,
+        "BatchMatmulOp::getDefaultIndexingMaps($_builder.getContext())"
+      >:$indexing_maps,
+      DefaultValuedOptionalAttr<TypeFnAttr, "TypeFn::cast_signed">:$cast
     );
     let results = (outs Variadic<AnyRankedTensor>:$result_tensors);
     let regions = (region AnyRegion:$region);
@@ -893,9 +1008,10 @@ def BatchMatmulOp : LinalgStructuredBase_Op<"batch_matmul", !listconcat([AttrSiz
       }]>,
       OpBuilder<
       (ins "TypeRange":$resultTensorTypes, "ValueRange":$operands,
-            CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
+          "Attribute":$cast, CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes),
       [{
         $_state.addOperands(operands);
+        $_state.addAttribute("cast", cast);
         $_state.addAttributes(attributes);
         $_state.addTypes(resultTensorTypes);
         (void)$_state.addRegion(),

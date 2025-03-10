@@ -23,56 +23,54 @@
 
 #include "test_macros.h"
 
-template<typename Span>
-void testRuntimeSpan(Span sp)
-{
-    ASSERT_NOEXCEPT(std::as_writable_bytes(sp));
+template <typename Span>
+void testRuntimeSpan(Span sp) {
+  ASSERT_NOEXCEPT(std::as_writable_bytes(sp));
 
-    auto spBytes = std::as_writable_bytes(sp);
-    using SB = decltype(spBytes);
-    ASSERT_SAME_TYPE(std::byte, typename SB::element_type);
+  auto spBytes = std::as_writable_bytes(sp);
+  using SB     = decltype(spBytes);
+  ASSERT_SAME_TYPE(std::byte, typename SB::element_type);
 
-    if constexpr (sp.extent == std::dynamic_extent)
-        assert(spBytes.extent == std::dynamic_extent);
-    else
-        assert(spBytes.extent == sizeof(typename Span::element_type) * sp.extent);
+  if constexpr (sp.extent == std::dynamic_extent)
+    assert(spBytes.extent == std::dynamic_extent);
+  else
+    assert(spBytes.extent == sizeof(typename Span::element_type) * sp.extent);
 
-    assert(static_cast<void*>(spBytes.data()) == static_cast<void*>(sp.data()));
-    assert(spBytes.size() == sp.size_bytes());
+  assert(static_cast<void*>(spBytes.data()) == static_cast<void*>(sp.data()));
+  assert(spBytes.size() == sp.size_bytes());
 }
 
-struct A{};
-int iArr2[] = { 0,  1,  2,  3,  4,  5,  6,  7,  8,  9};
+struct A {};
+int iArr2[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
-int main(int, char**)
-{
-    testRuntimeSpan(std::span<int>        ());
-    testRuntimeSpan(std::span<long>       ());
-    testRuntimeSpan(std::span<double>     ());
-    testRuntimeSpan(std::span<A>          ());
-    testRuntimeSpan(std::span<std::string>());
+int main(int, char**) {
+  testRuntimeSpan(std::span<int>());
+  testRuntimeSpan(std::span<long>());
+  testRuntimeSpan(std::span<double>());
+  testRuntimeSpan(std::span<A>());
+  testRuntimeSpan(std::span<std::string>());
 
-    testRuntimeSpan(std::span<int, 0>        ());
-    testRuntimeSpan(std::span<long, 0>       ());
-    testRuntimeSpan(std::span<double, 0>     ());
-    testRuntimeSpan(std::span<A, 0>          ());
-    testRuntimeSpan(std::span<std::string, 0>());
+  testRuntimeSpan(std::span<int, 0>());
+  testRuntimeSpan(std::span<long, 0>());
+  testRuntimeSpan(std::span<double, 0>());
+  testRuntimeSpan(std::span<A, 0>());
+  testRuntimeSpan(std::span<std::string, 0>());
 
-    testRuntimeSpan(std::span<int>(iArr2, 1));
-    testRuntimeSpan(std::span<int>(iArr2, 2));
-    testRuntimeSpan(std::span<int>(iArr2, 3));
-    testRuntimeSpan(std::span<int>(iArr2, 4));
-    testRuntimeSpan(std::span<int>(iArr2, 5));
+  testRuntimeSpan(std::span<int>(iArr2, 1));
+  testRuntimeSpan(std::span<int>(iArr2, 2));
+  testRuntimeSpan(std::span<int>(iArr2, 3));
+  testRuntimeSpan(std::span<int>(iArr2, 4));
+  testRuntimeSpan(std::span<int>(iArr2, 5));
 
-    testRuntimeSpan(std::span<int, 1>(iArr2 + 5, 1));
-    testRuntimeSpan(std::span<int, 2>(iArr2 + 4, 2));
-    testRuntimeSpan(std::span<int, 3>(iArr2 + 3, 3));
-    testRuntimeSpan(std::span<int, 4>(iArr2 + 2, 4));
-    testRuntimeSpan(std::span<int, 5>(iArr2 + 1, 5));
+  testRuntimeSpan(std::span<int, 1>(iArr2 + 5, 1));
+  testRuntimeSpan(std::span<int, 2>(iArr2 + 4, 2));
+  testRuntimeSpan(std::span<int, 3>(iArr2 + 3, 3));
+  testRuntimeSpan(std::span<int, 4>(iArr2 + 2, 4));
+  testRuntimeSpan(std::span<int, 5>(iArr2 + 1, 5));
 
-    std::string s;
-    testRuntimeSpan(std::span<std::string>(&s, (std::size_t) 0));
-    testRuntimeSpan(std::span<std::string>(&s, 1));
+  std::string s;
+  testRuntimeSpan(std::span<std::string>(&s, (std::size_t)0));
+  testRuntimeSpan(std::span<std::string>(&s, 1));
 
   return 0;
 }

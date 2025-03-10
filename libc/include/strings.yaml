@@ -29,6 +29,24 @@ functions:
     arguments:
       - type: void *
       - type: size_t
+  - name: ffs
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: int
+  - name: ffsl
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: long
+  - name: ffsll
+    standards:
+      - POSIX
+    return_type: int
+    arguments:
+      - type: long long
   - name: index
     standards:
       - BSDExtensions

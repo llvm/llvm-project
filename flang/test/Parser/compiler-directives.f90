@@ -46,3 +46,14 @@ subroutine unroll
   do i=1,10
   enddo
 end subroutine
+
+subroutine unroll_and_jam
+  !dir$ unroll_and_jam
+  ! CHECK: !DIR$ UNROLL_AND_JAM
+  do i=1,10
+  enddo
+  !dir$ unroll_and_jam 2
+  ! CHECK: !DIR$ UNROLL_AND_JAM 2
+  do i=1,10
+  enddo
+end subroutine

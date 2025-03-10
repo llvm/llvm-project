@@ -72,6 +72,9 @@ private:
   /// Array of associated devices. These must be alive as long as the server is.
   std::unique_ptr<plugin::GenericDeviceTy *[]> Devices;
 
+  /// Mutex that guards accesses to the buffers and device array.
+  std::mutex BufferMutex{};
+
   /// A helper class for running the user thread that handles the RPC interface.
   /// Because we only need to check the RPC server while any kernels are
   /// working, we track submission / completion events to allow the thread to
@@ -90,6 +93,9 @@ private:
     std::condition_variable CV;
     std::mutex Mutex;
 
+    /// A reference to the main server's mutex.
+    std::mutex &BufferMutex;
+
     /// A reference to all the RPC interfaces that the server is handling.
     llvm::ArrayRef<void *> Buffers;
 
@@ -98,9 +104,9 @@ private:
 
     /// Initialize the worker thread to run in the background.
     ServerThread(void *Buffers[], plugin::GenericDeviceTy *Devices[],
-                 size_t Length)
-        : Running(false), NumUsers(0), CV(), Mutex(), Buffers(Buffers, Length),
-          Devices(Devices, Length) {}
+                 size_t Length, std::mutex &BufferMutex)
+        : Running(false), NumUsers(0), CV(), Mutex(), BufferMutex(BufferMutex),
+          Buffers(Buffers, Length), Devices(Devices, Length) {}
 
     ~ServerThread() { assert(!Running && "Thread not shut down explicitly\n"); }
 

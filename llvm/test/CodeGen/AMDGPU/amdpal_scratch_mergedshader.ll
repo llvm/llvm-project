@@ -28,7 +28,7 @@ define amdgpu_hs void @_amdgpu_hs_main(i32 inreg %arg, i32 inreg %arg1, i32 inre
   br label %bb
 
 bb:                                               ; preds = %bb, %.endls
-  %lsr.iv182 = phi ptr addrspace(5) [ undef, %bb ], [ %__llpc_global_proxy_7.i, %.endls ]
+  %lsr.iv182 = phi ptr addrspace(5) [ poison, %bb ], [ %__llpc_global_proxy_7.i, %.endls ]
   %scevgep183 = getelementptr [3 x <4 x float>], ptr addrspace(5) %lsr.iv182, i32 0, i32 1
   br label %bb
 }

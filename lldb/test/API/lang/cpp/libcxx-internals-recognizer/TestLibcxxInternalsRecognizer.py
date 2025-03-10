@@ -23,7 +23,7 @@ class LibCxxInternalsRecognizerTestCase(TestBase):
             # We never hide the frame of the entry-point into the standard library, even
             # if the name starts with `__` which usually indicates an internal function.
             "ranges_sort_less(int, int)": [
-                re.compile("ranges::__sort::(__fn::)?operator\(\)"),
+                re.compile(r"ranges::__sort::(__fn::)?operator\(\)"),
                 "test_algorithms",
             ],
             # `ranges::views::transform` internally uses `std::invoke`, and that

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-linalg-to-loops -convert-vector-to-scf='full-unroll=true' -lower-affine -convert-scf-to-cf -convert-vector-to-llvm -finalize-memref-to-llvm  -convert-func-to-llvm='use-bare-ptr-memref-call-conv=1' -convert-arith-to-llvm -reconcile-unrealized-casts |\
+// RUN: mlir-opt %s -convert-linalg-to-loops -convert-vector-to-scf='full-unroll=true' -test-lower-to-llvm |\
 // RUN: mlir-translate --mlir-to-llvmir |\
 // RUN: %lli --entry-function=entry --mattr="avx512f" --dlopen=%mlir_c_runner_utils |\
 // RUN: FileCheck %s
@@ -37,4 +37,3 @@ module {
     llvm.return %i0 : i32
   }
 }
-

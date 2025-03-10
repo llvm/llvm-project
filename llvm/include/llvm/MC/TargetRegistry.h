@@ -695,10 +695,21 @@ struct TargetRegistry {
 
   /// lookupTarget - Lookup a target based on a target triple.
   ///
+  /// \param TripleStr - The triple to use for finding a target.
+  /// \param Error - On failure, an error string describing why no target was
+  /// found.
+  // TODO: Drop this in favor of the method accepting Triple.
+  static const Target *lookupTarget(StringRef TripleStr, std::string &Error) {
+    return lookupTarget(Triple(TripleStr), Error);
+  }
+
+  /// lookupTarget - Lookup a target based on a target triple.
+  ///
   /// \param Triple - The triple to use for finding a target.
   /// \param Error - On failure, an error string describing why no target was
   /// found.
-  static const Target *lookupTarget(StringRef Triple, std::string &Error);
+  static const Target *lookupTarget(const Triple &TheTriple,
+                                    std::string &Error);
 
   /// lookupTarget - Lookup a target based on an architecture name
   /// and a target triple.  If the architecture name is non-empty,

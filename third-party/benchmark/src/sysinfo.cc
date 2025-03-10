@@ -160,11 +160,11 @@ ValueUnion GetSysctlImp(std::string const& name) {
   int mib[2];
 
   mib[0] = CTL_HW;
-  if ((name == "hw.ncpu") || (name == "hw.cpuspeed")) {
+  if ((name == "hw.ncpuonline") || (name == "hw.cpuspeed")) {
     ValueUnion buff(sizeof(int));
 
-    if (name == "hw.ncpu") {
-      mib[1] = HW_NCPU;
+    if (name == "hw.ncpuonline") {
+      mib[1] = HW_NCPUONLINE;
     } else {
       mib[1] = HW_CPUSPEED;
     }
@@ -482,27 +482,14 @@ std::string GetSystemName() {
 }
 
 int GetNumCPUsImpl() {
-#ifdef BENCHMARK_HAS_SYSCTL
-  int num_cpu = -1;
-  if (GetSysctl("hw.ncpu", &num_cpu)) return num_cpu;
-  PrintErrorAndDie("Err: ", strerror(errno));
-#elif defined(BENCHMARK_OS_WINDOWS)
+#ifdef BENCHMARK_OS_WINDOWS
   SYSTEM_INFO sysinfo;
   // Use memset as opposed to = {} to avoid GCC missing initializer false
   // positives.
   std::memset(&sysinfo, 0, sizeof(SYSTEM_INFO));
   GetSystemInfo(&sysinfo);
-  return sysinfo.dwNumberOfProcessors;  // number of logical
-                                        // processors in the current
-                                        // group
-#elif defined(__linux__) || defined(BENCHMARK_OS_SOLARIS)
-  // Returns -1 in case of a failure.
-  int num_cpu = static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
-  if (num_cpu < 0) {
-    PrintErrorAndDie("sysconf(_SC_NPROCESSORS_ONLN) failed with error: ",
-                     strerror(errno));
-  }
-  return num_cpu;
+  // number of logical processors in the current group
+  return static_cast<int>(sysinfo.dwNumberOfProcessors);
 #elif defined(BENCHMARK_OS_QNX)
   return static_cast<int>(_syspage_ptr->num_cpu);
 #elif defined(BENCHMARK_OS_QURT)
@@ -511,16 +498,36 @@ int GetNumCPUsImpl() {
     hardware_threads.max_hthreads = 1;
   }
   return hardware_threads.max_hthreads;
+#elif defined(BENCHMARK_HAS_SYSCTL)
+  int num_cpu = -1;
+  constexpr auto* hwncpu =
+#if defined BENCHMARK_OS_MACOSX
+      "hw.logicalcpu";
+#elif defined(HW_NCPUONLINE)
+      "hw.ncpuonline";
+#else
+      "hw.ncpu";
+#endif
+  if (GetSysctl(hwncpu, &num_cpu)) return num_cpu;
+  PrintErrorAndDie("Err: ", strerror(errno));
+#elif defined(_SC_NPROCESSORS_ONLN)
+  // Returns -1 in case of a failure.
+  int num_cpu = static_cast<int>(sysconf(_SC_NPROCESSORS_ONLN));
+  if (num_cpu < 0) {
+    PrintErrorAndDie("sysconf(_SC_NPROCESSORS_ONLN) failed with error: ",
+                     strerror(errno));
+  }
+  return num_cpu;
 #endif
   BENCHMARK_UNREACHABLE();
 }
 
 int GetNumCPUs() {
-  const int num_cpus = GetNumCPUsImpl();
+  int num_cpus = GetNumCPUsImpl();
   if (num_cpus < 1) {
-    PrintErrorAndDie(
-        "Unable to extract number of CPUs.  If your platform uses "
-        "/proc/cpuinfo, custom support may need to be added.");
+    std::cerr << "Unable to extract number of CPUs.\n";
+    /* There is at least one CPU which we run on. */
+    num_cpus = 1;
   }
   return num_cpus;
 }

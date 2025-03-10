@@ -49,6 +49,10 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
   // Set up the register classes.
   addRegisterClass(MVT::i32, &Xtensa::ARRegClass);
 
+  if (Subtarget.hasBoolean()) {
+    addRegisterClass(MVT::v1i1, &Xtensa::BRRegClass);
+  }
+
   // Set up special registers.
   setStackPointerRegisterToSaveRestore(Xtensa::SP);
 

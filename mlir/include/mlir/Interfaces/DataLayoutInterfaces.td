@@ -154,6 +154,12 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
       /*args=*/(ins "::mlir::MLIRContext *":$context)
     >,
     InterfaceMethod<
+      /*description=*/"Returns the mangling mode identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getManglingModeIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
       /*description=*/"Returns the stack alignment identifier.",
       /*retTy=*/"::mlir::StringAttr",
       /*methodName=*/"getStackAlignmentIdentifier",
@@ -482,6 +488,18 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
       }]
     >,
     StaticInterfaceMethod<
+      /*description=*/"Returns the mangling mode computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"::mlir::Attribute",
+      /*methodName=*/"getManglingMode",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultManglingMode(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
       /*description=*/"Returns the memory space used by the ABI computed "
                       "using the relevant entries. The data layout object "
                       "can be used for recursive queries.",
@@ -598,7 +616,11 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
       /*retTy=*/"uint64_t",
       /*methodName=*/"getPreferredAlignment",
       /*args=*/(ins "const ::mlir::DataLayout &":$dataLayout,
-                    "::mlir::DataLayoutEntryListRef":$params)
+                    "::mlir::DataLayoutEntryListRef":$params),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return $_type.getABIAlignment(dataLayout, params);
+      }]
     >,
     InterfaceMethod<
       /*description=*/"Returns the bitwidth that should be used when "

@@ -19,12 +19,12 @@
 #include "MCTargetDesc/PPCMCExpr.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
+#include "MCTargetDesc/PPCTargetStreamer.h"
 #include "PPC.h"
 #include "PPCInstrInfo.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCSubtarget.h"
 #include "PPCTargetMachine.h"
-#include "PPCTargetStreamer.h"
 #include "TargetInfo/PowerPCTargetInfo.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
@@ -680,8 +680,7 @@ void PPCAsmPrinter::EmitAIXTlsCallHelper(const MachineInstr *MI) {
          "Only expecting to emit calls to get the thread pointer on AIX!");
 
   MCSymbol *TlsCall = createMCSymbolForTlsGetAddr(OutContext, MI->getOpcode());
-  const MCExpr *TlsRef =
-      MCSymbolRefExpr::create(TlsCall, MCSymbolRefExpr::VK_None, OutContext);
+  const MCExpr *TlsRef = MCSymbolRefExpr::create(TlsCall, OutContext);
   EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::BLA).addExpr(TlsRef));
 }
 
@@ -984,7 +983,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Get the offset from the GOT Base Register to the GOT
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this);
     if (Subtarget->isSecurePlt() && isPositionIndependent() ) {
-      unsigned PICR = TmpInst.getOperand(0).getReg();
+      MCRegister PICR = TmpInst.getOperand(0).getReg();
       MCSymbol *BaseSymbol = OutContext.getOrCreateSymbol(
           M->getPICLevel() == PICLevel::SmallPIC ? "_GLOBAL_OFFSET_TABLE_"
                                                  : ".LTOC");
@@ -1008,11 +1007,9 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
       MCSymbol *PICOffset =
         MF->getInfo<PPCFunctionInfo>()->getPICOffsetSymbol(*MF);
       TmpInst.setOpcode(PPC::LWZ);
-      const MCExpr *Exp =
-        MCSymbolRefExpr::create(PICOffset, MCSymbolRefExpr::VK_None, OutContext);
+      const MCExpr *Exp = MCSymbolRefExpr::create(PICOffset, OutContext);
       const MCExpr *PB =
         MCSymbolRefExpr::create(MF->getPICBaseSymbol(),
-                                MCSymbolRefExpr::VK_None,
                                 OutContext);
       const MCOperand TR = TmpInst.getOperand(1);
       const MCOperand PICR = TmpInst.getOperand(0);
@@ -1064,8 +1061,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // 'MOSymbol'. Said TOC entry will be synthesized later.
     MCSymbol *TOCEntry =
         lookUpOrCreateTOCEntry(MOSymbol, getTOCEntryTypeForMO(MO), VK);
-    const MCExpr *Exp =
-        MCSymbolRefExpr::create(TOCEntry, MCSymbolRefExpr::VK_None, OutContext);
+    const MCExpr *Exp = MCSymbolRefExpr::create(TOCEntry, OutContext);
 
     // AIX uses the label directly as the lwz displacement operand for
     // references into the toc section. The displacement value will be generated
@@ -1110,8 +1106,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     // Map the operand to its corresponding MCSymbol.
     const MCSymbol *const MOSymbol = getMCSymbolForTOCPseudoMO(MO, *this);
 
-    const MCExpr *Exp =
-        MCSymbolRefExpr::create(MOSymbol, MCSymbolRefExpr::VK_None, OutContext);
+    const MCExpr *Exp = MCSymbolRefExpr::create(MOSymbol, OutContext);
 
     TmpInst.getOperand(2) = MCOperand::createExpr(Exp);
     EmitToStreamer(*OutStreamer, TmpInst);
@@ -1408,10 +1403,12 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::PPC32GOT: {
     MCSymbol *GOTSymbol =
         OutContext.getOrCreateSymbol(StringRef("_GLOBAL_OFFSET_TABLE_"));
-    const MCExpr *SymGotTlsL = MCSymbolRefExpr::create(
-        GOTSymbol, MCSymbolRefExpr::VK_PPC_LO, OutContext);
-    const MCExpr *SymGotTlsHA = MCSymbolRefExpr::create(
-        GOTSymbol, MCSymbolRefExpr::VK_PPC_HA, OutContext);
+    const MCExpr *SymGotTlsL = PPCMCExpr::create(
+        PPCMCExpr::VK_PPC_LO, MCSymbolRefExpr::create(GOTSymbol, OutContext),
+        OutContext);
+    const MCExpr *SymGotTlsHA = PPCMCExpr::create(
+        PPCMCExpr::VK_PPC_HA, MCSymbolRefExpr::create(GOTSymbol, OutContext),
+        OutContext);
     EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::LI)
                                  .addReg(MI->getOperand(0).getReg())
                                  .addExpr(SymGotTlsL));
@@ -1474,7 +1471,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsADDR32: {
     // Transform: %r3 = GETtlsADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsgd)@PLT
-    EmitTlsCall(MI, MCSymbolRefExpr::VK_PPC_TLSGD);
+    EmitTlsCall(MI, MCSymbolRefExpr::VK_TLSGD);
     return;
   }
   case PPC::GETtlsTpointer32AIX: {
@@ -1526,7 +1523,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case PPC::GETtlsldADDR32: {
     // Transform: %r3 = GETtlsldADDR32 %r3, @sym
     // Into: BL_TLS __tls_get_addr(sym at tlsld)@PLT
-    EmitTlsCall(MI, MCSymbolRefExpr::VK_PPC_TLSLD);
+    EmitTlsCall(MI, MCSymbolRefExpr::VK_TLSLD);
     return;
   }
   case PPC::ADDISdtprelHA:

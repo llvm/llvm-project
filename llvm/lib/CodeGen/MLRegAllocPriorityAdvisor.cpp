@@ -12,7 +12,6 @@
 
 #include "AllocationOrder.h"
 #include "RegAllocGreedy.h"
-#include "RegAllocPriorityAdvisor.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InteractiveModelRunner.h"
 #include "llvm/Analysis/MLModelRunner.h"
@@ -25,6 +24,7 @@
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
+#include "llvm/CodeGen/RegAllocPriorityAdvisor.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -121,25 +121,14 @@ static const std::vector<TensorSpec> InputFeatures{
 // ===================================
 // Release (AOT) - specifics
 // ===================================
-class ReleaseModePriorityAdvisorAnalysis final
-    : public RegAllocPriorityAdvisorAnalysis {
+class ReleaseModePriorityAdvisorProvider final
+    : public RegAllocPriorityAdvisorProvider {
 public:
-  ReleaseModePriorityAdvisorAnalysis()
-      : RegAllocPriorityAdvisorAnalysis(AdvisorMode::Release) {}
-  // support for isa<> and dyn_cast.
-  static bool classof(const RegAllocPriorityAdvisorAnalysis *R) {
-    return R->getAdvisorMode() == AdvisorMode::Release;
-  }
-
-private:
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<SlotIndexesWrapperPass>();
-    RegAllocPriorityAdvisorAnalysis::getAnalysisUsage(AU);
-  }
-
+  ReleaseModePriorityAdvisorProvider()
+      : RegAllocPriorityAdvisorProvider(AdvisorMode::Release) {}
   std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             SlotIndexes &SI) override {
     if (!Runner) {
       if (InteractiveChannelBaseName.empty())
         Runner = std::make_unique<ReleaseModeModelRunner<CompiledModelType>>(
@@ -150,10 +139,34 @@ private:
             InteractiveChannelBaseName + ".out",
             InteractiveChannelBaseName + ".in");
     }
-    return std::make_unique<MLPriorityAdvisor>(
-        MF, RA, &getAnalysis<SlotIndexesWrapperPass>().getSI(), Runner.get());
+    return std::make_unique<MLPriorityAdvisor>(MF, RA, &SI, Runner.get());
   }
+
+private:
   std::unique_ptr<MLModelRunner> Runner;
+};
+
+class ReleaseModePriorityAdvisorAnalysisLegacy final
+    : public RegAllocPriorityAdvisorAnalysisLegacy {
+public:
+  ReleaseModePriorityAdvisorAnalysisLegacy()
+      : RegAllocPriorityAdvisorAnalysisLegacy(AdvisorMode::Release) {}
+  // support for isa<> and dyn_cast.
+  static bool classof(const RegAllocPriorityAdvisorAnalysisLegacy *R) {
+    return R->getAdvisorMode() == AdvisorMode::Release;
+  }
+
+private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    AU.addRequired<SlotIndexesWrapperPass>();
+    RegAllocPriorityAdvisorAnalysisLegacy::getAnalysisUsage(AU);
+  }
+
+  bool doInitialization(Module &M) override {
+    Provider = std::make_unique<ReleaseModePriorityAdvisorProvider>();
+    return false;
+  }
 };
 
 // ===================================
@@ -186,14 +199,45 @@ private:
   Logger *const Log;
 };
 
-class DevelopmentModePriorityAdvisorAnalysis final
-    : public RegAllocPriorityAdvisorAnalysis {
+class DevelopmentModePriorityAdvisorProvider final
+    : public RegAllocPriorityAdvisorProvider {
+
 public:
-  DevelopmentModePriorityAdvisorAnalysis()
-      : RegAllocPriorityAdvisorAnalysis(AdvisorMode::Development) {}
-  // support for isa<> and dyn_cast.
-  static bool classof(const RegAllocPriorityAdvisorAnalysis *R) {
-    return R->getAdvisorMode() == AdvisorMode::Development;
+  // Save all the logs (when requested).
+  DevelopmentModePriorityAdvisorProvider(LLVMContext &Ctx)
+      : RegAllocPriorityAdvisorProvider(AdvisorMode::Development) {
+    if (ModelUnderTraining.empty() && TrainingLog.empty()) {
+      Ctx.emitError("Regalloc development mode should be requested with at "
+                    "least logging enabled and/or a training model");
+      return;
+    }
+    if (ModelUnderTraining.empty())
+      Runner = std::make_unique<NoInferenceModelRunner>(Ctx, InputFeatures);
+    else
+      Runner = ModelUnderTrainingRunner::createAndEnsureValid(
+          Ctx, ModelUnderTraining, DecisionName, TrainingInputFeatures);
+    if (!Runner) {
+      Ctx.emitError("Regalloc: could not set up the model runner");
+      return;
+    }
+    if (TrainingLog.empty())
+      return;
+    std::error_code EC;
+    auto OS = std::make_unique<raw_fd_ostream>(TrainingLog, EC);
+    if (EC) {
+      Ctx.emitError(EC.message() + ":" + TrainingLog);
+      return;
+    }
+    std::vector<TensorSpec> LFS = InputFeatures;
+    if (auto *MUTR = dyn_cast<ModelUnderTrainingRunner>(Runner.get()))
+      append_range(LFS, MUTR->extraOutputsForLoggingSpecs());
+    // We always log the output; in particular, if we're not evaluating, we
+    // don't have an output spec json file. That's why we handle the
+    // 'normal' output separately.
+    LFS.push_back(DecisionSpec);
+
+    Log = std::make_unique<Logger>(std::move(OS), LFS, Reward,
+                                   /*IncludeReward*/ true);
   }
 
   void logRewardIfNeeded(const MachineFunction &MF,
@@ -212,75 +256,62 @@ public:
       Log->logReward<float>(GetReward());
   }
 
-private:
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<SlotIndexesWrapperPass>();
-    RegAllocPriorityAdvisorAnalysis::getAnalysisUsage(AU);
-  }
-
-  // Save all the logs (when requested).
-  bool doInitialization(Module &M) override {
-    LLVMContext &Ctx = M.getContext();
-    if (ModelUnderTraining.empty() && TrainingLog.empty()) {
-      Ctx.emitError("Regalloc development mode should be requested with at "
-                    "least logging enabled and/or a training model");
-      return false;
-    }
-    if (ModelUnderTraining.empty())
-      Runner = std::make_unique<NoInferenceModelRunner>(Ctx, InputFeatures);
-    else
-      Runner = ModelUnderTrainingRunner::createAndEnsureValid(
-          Ctx, ModelUnderTraining, DecisionName, TrainingInputFeatures);
-    if (!Runner) {
-      Ctx.emitError("Regalloc: could not set up the model runner");
-      return false;
-    }
-    if (TrainingLog.empty())
-      return false;
-    std::error_code EC;
-    auto OS = std::make_unique<raw_fd_ostream>(TrainingLog, EC);
-    if (EC) {
-      M.getContext().emitError(EC.message() + ":" + TrainingLog);
-      return false;
-    }
-    std::vector<TensorSpec> LFS = InputFeatures;
-    if (auto *MUTR = dyn_cast<ModelUnderTrainingRunner>(Runner.get()))
-      append_range(LFS, MUTR->extraOutputsForLoggingSpecs());
-    // We always log the output; in particular, if we're not evaluating, we
-    // don't have an output spec json file. That's why we handle the
-    // 'normal' output separately.
-    LFS.push_back(DecisionSpec);
-
-    Log = std::make_unique<Logger>(std::move(OS), LFS, Reward,
-                                   /*IncludeReward*/ true);
-    return false;
-  }
-
   std::unique_ptr<RegAllocPriorityAdvisor>
-  getAdvisor(const MachineFunction &MF, const RAGreedy &RA) override {
+  getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
+             SlotIndexes &SI) override {
     if (!Runner)
       return nullptr;
     if (Log) {
       Log->switchContext(MF.getName());
     }
-
     return std::make_unique<DevelopmentModePriorityAdvisor>(
-        MF, RA, &getAnalysis<SlotIndexesWrapperPass>().getSI(), Runner.get(),
-        Log.get());
+        MF, RA, &SI, Runner.get(), Log.get());
   }
 
   std::unique_ptr<MLModelRunner> Runner;
   std::unique_ptr<Logger> Log;
 };
+
+class DevelopmentModePriorityAdvisorAnalysisLegacy final
+    : public RegAllocPriorityAdvisorAnalysisLegacy {
+public:
+  DevelopmentModePriorityAdvisorAnalysisLegacy()
+      : RegAllocPriorityAdvisorAnalysisLegacy(AdvisorMode::Development) {}
+
+  // support for isa<> and dyn_cast.
+  static bool classof(const RegAllocPriorityAdvisorAnalysisLegacy *R) {
+    return R->getAdvisorMode() == AdvisorMode::Development;
+  }
+
+  void logRewardIfNeeded(const MachineFunction &MF,
+                         llvm::function_ref<float()> GetReward) override {
+    Provider->logRewardIfNeeded(MF, GetReward);
+  }
+
+private:
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.setPreservesAll();
+    AU.addRequired<SlotIndexesWrapperPass>();
+    RegAllocPriorityAdvisorAnalysisLegacy::getAnalysisUsage(AU);
+  }
+
+  // Save all the logs (when requested).
+  bool doInitialization(Module &M) override {
+    Provider = std::make_unique<DevelopmentModePriorityAdvisorProvider>(
+        M.getContext());
+    return false;
+    ;
+  }
+};
 #endif //#ifdef LLVM_HAVE_TFLITE
 
 } // namespace llvm
 
-RegAllocPriorityAdvisorAnalysis *llvm::createReleaseModePriorityAdvisor() {
+RegAllocPriorityAdvisorAnalysisLegacy *
+llvm::createReleaseModePriorityAdvisorAnalysis() {
   return llvm::isEmbeddedModelEvaluatorValid<CompiledModelType>() ||
                  !InteractiveChannelBaseName.empty()
-             ? new ReleaseModePriorityAdvisorAnalysis()
+             ? new ReleaseModePriorityAdvisorAnalysisLegacy()
              : nullptr;
 }
 
@@ -310,8 +341,9 @@ unsigned MLPriorityAdvisor::getPriority(const LiveInterval &LI) const {
 }
 
 #ifdef LLVM_HAVE_TFLITE
-RegAllocPriorityAdvisorAnalysis *llvm::createDevelopmentModePriorityAdvisor() {
-  return new DevelopmentModePriorityAdvisorAnalysis();
+RegAllocPriorityAdvisorAnalysisLegacy *
+llvm::createDevelopmentModePriorityAdvisorAnalysis() {
+  return new DevelopmentModePriorityAdvisorAnalysisLegacy();
 }
 
 unsigned
@@ -356,4 +388,14 @@ DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
   return static_cast<unsigned>(Prio);
 }
 
+RegAllocPriorityAdvisorProvider *
+llvm::createDevelopmentModePriorityAdvisorProvider(LLVMContext &Ctx) {
+  return new DevelopmentModePriorityAdvisorProvider(Ctx);
+}
+
 #endif // #ifdef LLVM_HAVE_TFLITE
+
+RegAllocPriorityAdvisorProvider *
+llvm::createReleaseModePriorityAdvisorProvider() {
+  return new ReleaseModePriorityAdvisorProvider();
+}

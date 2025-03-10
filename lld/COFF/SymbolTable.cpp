@@ -1320,6 +1320,32 @@ void SymbolTable::parseModuleDefs(StringRef path) {
   }
 }
 
+// Parse a string of the form of "<from>=<to>".
+void SymbolTable::parseAlternateName(StringRef s) {
+  auto [from, to] = s.split('=');
+  if (from.empty() || to.empty())
+    Fatal(ctx) << "/alternatename: invalid argument: " << s;
+  auto it = alternateNames.find(from);
+  if (it != alternateNames.end() && it->second != to)
+    Fatal(ctx) << "/alternatename: conflicts: " << s;
+  alternateNames.insert(it, std::make_pair(from, to));
+}
+
+// Parses /aligncomm option argument.
+void SymbolTable::parseAligncomm(StringRef s) {
+  auto [name, align] = s.split(',');
+  if (name.empty() || align.empty()) {
+    Err(ctx) << "/aligncomm: invalid argument: " << s;
+    return;
+  }
+  int v;
+  if (align.getAsInteger(0, v)) {
+    Err(ctx) << "/aligncomm: invalid argument: " << s;
+    return;
+  }
+  alignComm[std::string(name)] = std::max(alignComm[std::string(name)], 1 << v);
+}
+
 Symbol *SymbolTable::addUndefined(StringRef name) {
   return addUndefined(name, nullptr, false);
 }

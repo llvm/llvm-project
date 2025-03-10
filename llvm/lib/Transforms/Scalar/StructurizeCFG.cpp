@@ -852,10 +852,11 @@ void StructurizeCFG::setPhiValues() {
     BasicBlock *To = AddedPhi.first;
     const BBVector &From = AddedPhi.second;
 
-    if (!DeletedPhis.count(To))
+    auto It = DeletedPhis.find(To);
+    if (It == DeletedPhis.end())
       continue;
 
-    PhiMap &Map = DeletedPhis[To];
+    PhiMap &Map = It->second;
     SmallVector<BasicBlock *> &UndefBlks = UndefBlksMap[To];
     for (const auto &[Phi, Incoming] : Map) {
       Value *Undef = UndefValue::get(Phi->getType());

@@ -199,11 +199,6 @@ lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::StdlibCoroutineHandleSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
 size_t StdlibCoroutineHandleSyntheticFrontEnd::GetIndexOfChildWithName(
     ConstString name) {
   if (!m_resume_ptr_sp || !m_destroy_ptr_sp)

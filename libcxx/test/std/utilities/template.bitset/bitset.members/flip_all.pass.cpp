@@ -18,19 +18,21 @@
 
 template <std::size_t N>
 TEST_CONSTEXPR_CXX23 void test_flip_all() {
-    std::vector<std::bitset<N> > const cases = get_test_cases<N>();
-    for (std::size_t c = 0; c != cases.size(); ++c) {
-        std::bitset<N> v1 = cases[c];
-        std::bitset<N> v2 = v1;
-        v2.flip();
-        for (std::size_t i = 0; i < v1.size(); ++i)
-            assert(v2[i] == ~v1[i]);
-    }
+  std::vector<std::bitset<N> > const cases = get_test_cases<N>();
+  for (std::size_t c = 0; c != cases.size(); ++c) {
+    std::bitset<N> v1 = cases[c];
+    std::bitset<N> v2 = v1;
+    v2.flip();
+    for (std::size_t i = 0; i < v1.size(); ++i)
+      assert(v2[i] == ~v1[i]);
+  }
 }
 
 TEST_CONSTEXPR_CXX23 bool test() {
   test_flip_all<0>();
   test_flip_all<1>();
+  test_flip_all<2>();
+  test_flip_all<5>();
   test_flip_all<31>();
   test_flip_all<32>();
   test_flip_all<33>();

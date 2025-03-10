@@ -28,8 +28,9 @@ const char WasmMagic[] = {'\0', 'a', 's', 'm'};
 const uint32_t WasmVersion = 0x1;
 // Wasm linking metadata version
 const uint32_t WasmMetadataVersion = 0x2;
-// Wasm uses a 64k page size
-const uint32_t WasmPageSize = 65536;
+// Wasm uses a 64k page size by default (but the custom-page-sizes proposal
+// allows changing it)
+const uint32_t WasmDefaultPageSize = 65536;
 
 enum : unsigned {
   WASM_SEC_CUSTOM = 0,     // Custom / User-defined section
@@ -157,6 +158,7 @@ enum : unsigned {
   WASM_LIMITS_FLAG_HAS_MAX = 0x1,
   WASM_LIMITS_FLAG_IS_SHARED = 0x2,
   WASM_LIMITS_FLAG_IS_64 = 0x4,
+  WASM_LIMITS_FLAG_HAS_PAGE_SIZE = 0x8,
 };
 
 enum : unsigned {
@@ -201,6 +203,7 @@ enum : unsigned {
   WASM_DYLINK_NEEDED = 0x2,
   WASM_DYLINK_EXPORT_INFO = 0x3,
   WASM_DYLINK_IMPORT_INFO = 0x4,
+  WASM_DYLINK_RUNTIME_PATH = 0x5,
 };
 
 // Kind codes used in the custom "linking" section in the WASM_COMDAT_INFO
@@ -294,6 +297,7 @@ struct WasmDylinkInfo {
   std::vector<StringRef> Needed; // Shared library dependencies
   std::vector<WasmDylinkImportInfo> ImportInfo;
   std::vector<WasmDylinkExportInfo> ExportInfo;
+  std::vector<StringRef> RuntimePath;
 };
 
 struct WasmProducerInfo {
@@ -317,6 +321,7 @@ struct WasmLimits {
   uint8_t Flags;
   uint64_t Minimum;
   uint64_t Maximum;
+  uint32_t PageSize;
 };
 
 struct WasmTableType {
@@ -532,7 +537,10 @@ inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
 inline bool operator==(const WasmLimits &LHS, const WasmLimits &RHS) {
   return LHS.Flags == RHS.Flags && LHS.Minimum == RHS.Minimum &&
          (LHS.Flags & WASM_LIMITS_FLAG_HAS_MAX ? LHS.Maximum == RHS.Maximum
-                                               : true);
+                                               : true) &&
+         (LHS.Flags & WASM_LIMITS_FLAG_HAS_PAGE_SIZE
+              ? LHS.PageSize == RHS.PageSize
+              : true);
 }
 
 inline bool operator==(const WasmTableType &LHS, const WasmTableType &RHS) {

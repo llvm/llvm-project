@@ -395,7 +395,8 @@ bool ABISysV_ppc::GetArgumentValues(Thread &thread, ValueList &values) const {
     // We currently only support extracting values with Clang QualTypes. Do we
     // care about others?
     CompilerType compiler_type = value->GetCompilerType();
-    std::optional<uint64_t> bit_size = compiler_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size =
+        llvm::expectedToOptional(compiler_type.GetBitSize(&thread));
     if (!bit_size)
       return false;
     bool is_signed;
@@ -459,7 +460,7 @@ Status ABISysV_ppc::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
           "We don't support returning complex values at present");
     else {
       std::optional<uint64_t> bit_width =
-          compiler_type.GetBitSize(frame_sp.get());
+          llvm::expectedToOptional(compiler_type.GetBitSize(frame_sp.get()));
       if (!bit_width) {
         error = Status::FromErrorString("can't get type size");
         return error;
@@ -524,7 +525,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
       // Extract the register context so we can read arguments from registers
 
       std::optional<uint64_t> byte_size =
-          return_compiler_type.GetByteSize(&thread);
+          llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
       if (!byte_size)
         return return_valobj_sp;
       uint64_t raw_value = thread.GetRegisterContext()->ReadRegisterAsUnsigned(
@@ -571,7 +572,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
         // Don't handle complex yet.
       } else {
         std::optional<uint64_t> byte_size =
-            return_compiler_type.GetByteSize(&thread);
+            llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
         if (byte_size && *byte_size <= sizeof(long double)) {
           const RegisterInfo *f1_info = reg_ctx->GetRegisterInfoByName("f1", 0);
           RegisterValue f1_value;
@@ -605,7 +606,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectSimple(
         thread.GetStackFrameAtIndex(0).get(), value, ConstString(""));
   } else if (type_flags & eTypeIsVector) {
     std::optional<uint64_t> byte_size =
-        return_compiler_type.GetByteSize(&thread);
+        llvm::expectedToOptional(return_compiler_type.GetByteSize(&thread));
     if (byte_size && *byte_size > 0) {
       const RegisterInfo *altivec_reg = reg_ctx->GetRegisterInfoByName("v2", 0);
       if (altivec_reg) {
@@ -655,7 +656,8 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
   if (!reg_ctx_sp)
     return return_valobj_sp;
 
-  std::optional<uint64_t> bit_width = return_compiler_type.GetBitSize(&thread);
+  std::optional<uint64_t> bit_width =
+      llvm::expectedToOptional(return_compiler_type.GetBitSize(&thread));
   if (!bit_width)
     return return_valobj_sp;
   if (return_compiler_type.IsAggregateType()) {
@@ -698,7 +700,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
         CompilerType field_compiler_type = return_compiler_type.GetFieldAtIndex(
             idx, name, &field_bit_offset, nullptr, nullptr);
         std::optional<uint64_t> field_bit_width =
-            field_compiler_type.GetBitSize(&thread);
+            llvm::expectedToOptional(field_compiler_type.GetBitSize(&thread));
         if (!field_bit_width)
           return return_valobj_sp;
 
@@ -857,10 +859,7 @@ ValueObjectSP ABISysV_ppc::GetReturnValueObjectImpl(
   return return_valobj_sp;
 }
 
-bool ABISysV_ppc::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
-
+UnwindPlanSP ABISysV_ppc::CreateFunctionEntryUnwindPlan() {
   uint32_t lr_reg_num = dwarf_lr;
   uint32_t sp_reg_num = dwarf_r1;
   uint32_t pc_reg_num = dwarf_pc;
@@ -870,21 +869,17 @@ bool ABISysV_ppc::CreateFunctionEntryUnwindPlan(UnwindPlan &unwind_plan) {
   // Our Call Frame Address is the stack pointer value
   row->GetCFAValue().SetIsRegisterPlusOffset(sp_reg_num, 0);
 
-  // The previous PC is in the LR
+  // The previous PC is in the LR, all other registers are the same.
   row->SetRegisterLocationToRegister(pc_reg_num, lr_reg_num, true);
-  unwind_plan.AppendRow(row);
 
-  // All other registers are the same.
-
-  unwind_plan.SetSourceName("ppc at-func-entry default");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("ppc at-func-entry default");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  return plan_sp;
 }
 
-bool ABISysV_ppc::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
-  unwind_plan.Clear();
-  unwind_plan.SetRegisterKind(eRegisterKindDWARF);
+UnwindPlanSP ABISysV_ppc::CreateDefaultUnwindPlan() {
 
   uint32_t sp_reg_num = dwarf_r1;
   uint32_t pc_reg_num = dwarf_lr;
@@ -898,13 +893,14 @@ bool ABISysV_ppc::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   row->SetRegisterLocationToAtCFAPlusOffset(pc_reg_num, ptr_size * 1, true);
   row->SetRegisterLocationToIsCFAPlusOffset(sp_reg_num, 0, true);
 
-  unwind_plan.AppendRow(row);
-  unwind_plan.SetSourceName("ppc default unwind plan");
-  unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
-  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
-  unwind_plan.SetReturnAddressRegister(dwarf_lr);
-  return true;
+  auto plan_sp = std::make_shared<UnwindPlan>(eRegisterKindDWARF);
+  plan_sp->AppendRow(row);
+  plan_sp->SetSourceName("ppc default unwind plan");
+  plan_sp->SetSourcedFromCompiler(eLazyBoolNo);
+  plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
+  plan_sp->SetReturnAddressRegister(dwarf_lr);
+  return plan_sp;
 }
 
 bool ABISysV_ppc::RegisterIsVolatile(const RegisterInfo *reg_info) {

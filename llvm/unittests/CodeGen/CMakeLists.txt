@@ -27,6 +27,7 @@ add_llvm_unittest(CodeGenTests
   CCStateTest.cpp
   DIEHashTest.cpp
   DIETest.cpp
+  DroppedVariableStatsMIRTest.cpp
   DwarfStringPoolEntryRefTest.cpp
   InstrRefLDVTest.cpp
   LowLevelTypeTest.cpp

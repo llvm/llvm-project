@@ -1128,9 +1128,34 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         simplifyDemandedLaneMaskArg(IC, II, 1))
       return &II;
 
+    // readfirstlane.ty0 (bitcast ty1 x to ty0) -> bitcast (readfirstlane.ty1)
+    if (auto *BC = dyn_cast<BitCastInst>(Src); BC && BC->hasOneUse()) {
+      Value *BCSrc = BC->getOperand(0);
+
+      // TODO: Handle this for update_dpp, mov_ddp8, and all permlane variants.
+      if (isTypeLegal(BCSrc->getType())) {
+        Module *M = IC.Builder.GetInsertBlock()->getModule();
+        Function *Remangled =
+            Intrinsic::getOrInsertDeclaration(M, IID, {BCSrc->getType()});
+
+        // Make sure convergence tokens are preserved.
+        // TODO: CreateIntrinsic should allow directly copying bundles
+        SmallVector<OperandBundleDef, 2> OpBundles;
+        II.getOperandBundlesAsDefs(OpBundles);
+
+        SmallVector<Value *, 3> Args(II.args());
+        Args[0] = BCSrc;
+
+        CallInst *NewCall = IC.Builder.CreateCall(Remangled, Args, OpBundles);
+        NewCall->takeName(&II);
+        return new BitCastInst(NewCall, II.getType());
+      }
+    }
+
     return std::nullopt;
   }
   case Intrinsic::amdgcn_writelane: {
+    // TODO: Fold bitcast like readlane.
     if (simplifyDemandedLaneMaskArg(IC, II, 1))
       return &II;
     return std::nullopt;
@@ -1256,7 +1281,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   }
   case Intrinsic::amdgcn_is_shared:
   case Intrinsic::amdgcn_is_private: {
-    if (isa<UndefValue>(II.getArgOperand(0)))
+    Value *Src = II.getArgOperand(0);
+    if (isa<PoisonValue>(Src))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+    if (isa<UndefValue>(Src))
       return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
 
     if (isa<ConstantPointerNull>(II.getArgOperand(0)))
@@ -1535,12 +1563,81 @@ static Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
   return NewCall;
 }
 
+Value *GCNTTIImpl::simplifyAMDGCNLaneIntrinsicDemanded(
+    InstCombiner &IC, IntrinsicInst &II, const APInt &DemandedElts,
+    APInt &UndefElts) const {
+  auto *VT = dyn_cast<FixedVectorType>(II.getType());
+  if (!VT)
+    return nullptr;
+
+  const unsigned FirstElt = DemandedElts.countr_zero();
+  const unsigned LastElt = DemandedElts.getActiveBits() - 1;
+  const unsigned MaskLen = LastElt - FirstElt + 1;
+
+  unsigned OldNumElts = VT->getNumElements();
+  if (MaskLen == OldNumElts && MaskLen != 1)
+    return nullptr;
+
+  Type *EltTy = VT->getElementType();
+  Type *NewVT = MaskLen == 1 ? EltTy : FixedVectorType::get(EltTy, MaskLen);
+
+  // Theoretically we should support these intrinsics for any legal type. Avoid
+  // introducing cases that aren't direct register types like v3i16.
+  if (!isTypeLegal(NewVT))
+    return nullptr;
+
+  Value *Src = II.getArgOperand(0);
+
+  // Make sure convergence tokens are preserved.
+  // TODO: CreateIntrinsic should allow directly copying bundles
+  SmallVector<OperandBundleDef, 2> OpBundles;
+  II.getOperandBundlesAsDefs(OpBundles);
+
+  Module *M = IC.Builder.GetInsertBlock()->getModule();
+  Function *Remangled =
+      Intrinsic::getOrInsertDeclaration(M, II.getIntrinsicID(), {NewVT});
+
+  if (MaskLen == 1) {
+    Value *Extract = IC.Builder.CreateExtractElement(Src, FirstElt);
+
+    // TODO: Preserve callsite attributes?
+    CallInst *NewCall = IC.Builder.CreateCall(Remangled, {Extract}, OpBundles);
+
+    return IC.Builder.CreateInsertElement(PoisonValue::get(II.getType()),
+                                          NewCall, FirstElt);
+  }
+
+  SmallVector<int> ExtractMask(MaskLen, -1);
+  for (unsigned I = 0; I != MaskLen; ++I) {
+    if (DemandedElts[FirstElt + I])
+      ExtractMask[I] = FirstElt + I;
+  }
+
+  Value *Extract = IC.Builder.CreateShuffleVector(Src, ExtractMask);
+
+  // TODO: Preserve callsite attributes?
+  CallInst *NewCall = IC.Builder.CreateCall(Remangled, {Extract}, OpBundles);
+
+  SmallVector<int> InsertMask(OldNumElts, -1);
+  for (unsigned I = 0; I != MaskLen; ++I) {
+    if (DemandedElts[FirstElt + I])
+      InsertMask[FirstElt + I] = I;
+  }
+
+  // FIXME: If the call has a convergence bundle, we end up leaving the dead
+  // call behind.
+  return IC.Builder.CreateShuffleVector(NewCall, InsertMask);
+}
+
 std::optional<Value *> GCNTTIImpl::simplifyDemandedVectorEltsIntrinsic(
     InstCombiner &IC, IntrinsicInst &II, APInt DemandedElts, APInt &UndefElts,
     APInt &UndefElts2, APInt &UndefElts3,
     std::function<void(Instruction *, unsigned, APInt, APInt &)>
         SimplifyAndSetOp) const {
   switch (II.getIntrinsicID()) {
+  case Intrinsic::amdgcn_readfirstlane:
+    SimplifyAndSetOp(&II, 0, DemandedElts, UndefElts);
+    return simplifyAMDGCNLaneIntrinsicDemanded(IC, II, DemandedElts, UndefElts);
   case Intrinsic::amdgcn_raw_buffer_load:
   case Intrinsic::amdgcn_raw_ptr_buffer_load:
   case Intrinsic::amdgcn_raw_buffer_load_format:

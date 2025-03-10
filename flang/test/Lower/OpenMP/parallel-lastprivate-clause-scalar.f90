@@ -34,7 +34,7 @@
 !CHECK: %[[T3:.*]] = arith.cmpi sgt, %[[V]], %{{.*}} : i32
 !CHECK: %[[IV_CMP:.*]] = arith.select %[[T1]], %[[T2]], %[[T3]] : i1
 !CHECK: fir.if %[[IV_CMP]] {
-!CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
+!CHECK: hlfir.assign %[[V]] to %{{.*}} : i32, !fir.ref<i32>
 
 ! Testing lastprivate val update
 !CHECK: hlfir.assign %[[ARG1_PVT_DECL]]#0 to %[[ARG1_DECL]]#0 : !fir.ref<!fir.char<1,5>>, !fir.ref<!fir.char<1,5>>
@@ -70,7 +70,7 @@ end subroutine
 !CHECK: %[[T3:.*]] = arith.cmpi sgt, %[[V]], %{{.*}} : i32
 !CHECK: %[[IV_CMP:.*]] = arith.select %[[T1]], %[[T2]], %[[T3]] : i1
 !CHECK: fir.if %[[IV_CMP]] {
-!CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
+!CHECK: hlfir.assign %[[V]] to %{{.*}} : i32, !fir.ref<i32>
 
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE_DECL]]#0 : !fir.ref<i32>
@@ -110,7 +110,7 @@ end subroutine
 !CHECK: %[[T3:.*]] = arith.cmpi sgt, %[[V]], %{{.*}} : i32
 !CHECK: %[[IV_CMP:.*]] = arith.select %[[T1]], %[[T2]], %[[T3]] : i1
 !CHECK: fir.if %[[IV_CMP]] {
-!CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
+!CHECK: hlfir.assign %[[V]] to %{{.*}} : i32, !fir.ref<i32>
 ! Testing lastprivate val update
 !CHECK-DAG: %[[CLONE_LD1:.*]] = fir.load %[[CLONE1_DECL]]#0 : !fir.ref<i32>
 !CHECK-DAG: hlfir.assign %[[CLONE_LD1]] to %[[ARG1_DECL]]#0 : i32, !fir.ref<i32>
@@ -152,7 +152,7 @@ end subroutine
 !CHECK: %[[T3:.*]] = arith.cmpi sgt, %[[V]], %{{.*}} : i32
 !CHECK: %[[IV_CMP:.*]] = arith.select %[[T1]], %[[T2]], %[[T3]] : i1
 !CHECK: fir.if %[[IV_CMP]] {
-!CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
+!CHECK: hlfir.assign %[[V]] to %{{.*}} : i32, !fir.ref<i32>
 !Testing lastprivate val update
 !CHECK-DAG: %[[CLONE_LD2:.*]] = fir.load %[[CLONE2_DECL]]#0 : !fir.ref<i32>
 !CHECK-DAG: hlfir.assign %[[CLONE_LD2]] to %[[ARG2_DECL]]#0 : i32, !fir.ref<i32>
@@ -196,7 +196,7 @@ end subroutine
 !CHECK: %[[T3:.*]] = arith.cmpi sgt, %[[V]], %{{.*}} : i32
 !CHECK: %[[IV_CMP:.*]] = arith.select %[[T1]], %[[T2]], %[[T3]] : i1
 !CHECK: fir.if %[[IV_CMP]] {
-!CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
+!CHECK: hlfir.assign %[[V]] to %{{.*}} : i32, !fir.ref<i32>
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE2_DECL]]#0 : !fir.ref<i32>
 !CHECK-NEXT: hlfir.assign %[[CLONE_LD]] to %[[ARG2_DECL]]#0 : i32, !fir.ref<i32>
@@ -240,7 +240,7 @@ end subroutine
 !CHECK: %[[T3:.*]] = arith.cmpi sgt, %[[V]], %{{.*}} : i32
 !CHECK: %[[IV_CMP:.*]] = arith.select %[[T1]], %[[T2]], %[[T3]] : i1
 !CHECK: fir.if %[[IV_CMP]] {
-!CHECK: fir.store %[[V]] to %{{.*}} : !fir.ref<i32>
+!CHECK: hlfir.assign %[[V]] to %{{.*}} : i32, !fir.ref<i32>
 ! Testing lastprivate val update
 !CHECK-NEXT: %[[CLONE_LD:.*]] = fir.load %[[CLONE1_DECL]]#0 : !fir.ref<i32>
 !CHECK-NEXT: hlfir.assign %[[CLONE_LD]] to %[[ARG1_DECL]]#0 : i32, !fir.ref<i32>

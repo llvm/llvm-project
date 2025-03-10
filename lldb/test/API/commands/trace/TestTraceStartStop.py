@@ -244,7 +244,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect(
             "thread trace dump instructions -f",
             patterns=[
-                f"""thread #1: tid = .*
+                rf"""thread #1: tid = .*
   a.out`main \+ 4 at main.cpp:2
     2: {ADDRESS_REGEX}    movl"""
             ],
@@ -255,7 +255,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect(
             "thread trace dump instructions -f",
             patterns=[
-                f"""thread #1: tid = .*
+                rf"""thread #1: tid = .*
   a.out`main \+ 4 at main.cpp:2
     2: {ADDRESS_REGEX}    movl .*
   a.out`main \+ 11 at main.cpp:4
@@ -269,7 +269,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect(
             "thread trace dump instructions",
             patterns=[
-                f"""thread #1: tid = .*
+                rf"""thread #1: tid = .*
   a.out`main \+ 32 at main.cpp:4
     10: {ADDRESS_REGEX}    jle  .* ; <\+20> at main.cpp:5
     8: {ADDRESS_REGEX}    cmpl .*
@@ -297,7 +297,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect(
             "thread trace dump instructions -f",
             patterns=[
-                f"""thread #1: tid = .*
+                rf"""thread #1: tid = .*
   a.out`main \+ 20 at main.cpp:5
     2: {ADDRESS_REGEX}    xorl"""
             ],
@@ -306,7 +306,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect(
             "thread trace dump instructions",
             patterns=[
-                f"""thread #1: tid = .*
+                rf"""thread #1: tid = .*
   a.out`main \+ 20 at main.cpp:5
     2: {ADDRESS_REGEX}    xorl"""
             ],
@@ -336,7 +336,7 @@ class TestTraceStartStop(TraceIntelPTTestCaseBase):
         self.expect(
             "thread trace dump instructions -c 1",
             patterns=[
-                f"""thread #1: tid = .*
+                rf"""thread #1: tid = .*
   a.out`main \+ 11 at main.cpp:4"""
             ],
         )

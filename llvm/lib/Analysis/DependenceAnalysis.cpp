@@ -187,7 +187,7 @@ static void dumpExampleDependence(raw_ostream &OS, DependenceInfo *DA,
         if (DstI->mayReadOrWriteMemory()) {
           OS << "Src:" << *SrcI << " --> Dst:" << *DstI << "\n";
           OS << "  da analyze - ";
-          if (auto D = DA->depends(&*SrcI, &*DstI, true)) {
+          if (auto D = DA->depends(&*SrcI, &*DstI)) {
             // Normalize negative direction vectors if required by clients.
             if (NormalizeResults && D->normalize(&SE))
                 OS << "normalized - ";
@@ -981,14 +981,6 @@ bool DependenceInfo::checkSubscript(const SCEV *Expr, const Loop *LoopNest,
 
   const SCEV *Start = AddRec->getStart();
   const SCEV *Step = AddRec->getStepRecurrence(*SE);
-  const SCEV *UB = SE->getBackedgeTakenCount(AddRec->getLoop());
-  if (!isa<SCEVCouldNotCompute>(UB)) {
-    if (SE->getTypeSizeInBits(Start->getType()) <
-        SE->getTypeSizeInBits(UB->getType())) {
-      if (!AddRec->getNoWrapFlags())
-        return false;
-    }
-  }
   if (!isLoopInvariant(Step, LoopNest))
     return false;
   if (IsSrc)
@@ -3589,8 +3581,8 @@ bool DependenceInfo::invalidate(Function &F, const PreservedAnalyses &PA,
 // Care is required to keep the routine below, getSplitIteration(),
 // up to date with respect to this routine.
 std::unique_ptr<Dependence>
-DependenceInfo::depends(Instruction *Src, Instruction *Dst,
-                        bool PossiblyLoopIndependent) {
+DependenceInfo::depends(Instruction *Src, Instruction *Dst) {
+  bool PossiblyLoopIndependent = true;
   if (Src == Dst)
     PossiblyLoopIndependent = false;
 

@@ -827,15 +827,17 @@ public:
 
   const llvm::fltSemantics &GetFloatTypeSemantics(size_t byte_size) override;
 
-  std::optional<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
-                                      ExecutionContextScope *exe_scope) {
-    if (std::optional<uint64_t> bit_size = GetBitSize(type, exe_scope))
-      return (*bit_size + 7) / 8;
-    return std::nullopt;
+  llvm::Expected<uint64_t> GetByteSize(lldb::opaque_compiler_type_t type,
+                                       ExecutionContextScope *exe_scope) {
+    auto bit_size_or_err = GetBitSize(type, exe_scope);
+    if (!bit_size_or_err)
+      return bit_size_or_err.takeError();
+    return (*bit_size_or_err + 7) / 8;
   }
 
-  std::optional<uint64_t> GetBitSize(lldb::opaque_compiler_type_t type,
-                                     ExecutionContextScope *exe_scope) override;
+  llvm::Expected<uint64_t>
+  GetBitSize(lldb::opaque_compiler_type_t type,
+             ExecutionContextScope *exe_scope) override;
 
   lldb::Encoding GetEncoding(lldb::opaque_compiler_type_t type,
                              uint64_t &count) override;
@@ -1185,8 +1187,8 @@ private:
   /// on creation of a new instance.
   void LogCreation() const;
 
-  std::optional<uint64_t> GetObjCBitSize(clang::QualType qual_type,
-                                         ExecutionContextScope *exe_scope);
+  llvm::Expected<uint64_t> GetObjCBitSize(clang::QualType qual_type,
+                                          ExecutionContextScope *exe_scope);
 
   // Classes that inherit from TypeSystemClang can see and modify these
   std::string m_target_triple;

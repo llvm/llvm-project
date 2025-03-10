@@ -229,6 +229,7 @@ struct Config {
   StringRef zCetReport = "none";
   StringRef zPauthReport = "none";
   StringRef zGcsReport = "none";
+  StringRef zExecuteOnlyReport = "none";
   bool ltoBBAddrMap;
   llvm::StringRef ltoBasicBlockSections;
   std::pair<llvm::StringRef, llvm::StringRef> thinLTOObjectSuffixReplace;
@@ -411,7 +412,7 @@ struct Config {
   StringRef thinLTOJobs;
   unsigned timeTraceGranularity;
   int32_t splitStackAdjustSize;
-  StringRef packageMetadata;
+  SmallVector<uint8_t, 0> packageMetadata;
 
   // The following config options do not directly correspond to any
   // particular command line options.

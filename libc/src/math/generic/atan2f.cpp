@@ -17,6 +17,14 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 
+#if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
+    defined(LIBC_MATH_HAS_INTERMEDIATE_COMP_IN_FLOAT)
+
+// We use float-float implementation to reduce size.
+#include "src/math/generic/atan2f_float.h"
+
+#else
+
 namespace LIBC_NAMESPACE_DECL {
 
 namespace {
@@ -324,3 +332,5 @@ LLVM_LIBC_FUNCTION(float, atan2f, (float y, float x)) {
 }
 
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif

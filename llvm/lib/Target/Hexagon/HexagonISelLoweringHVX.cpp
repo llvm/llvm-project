@@ -1265,11 +1265,15 @@ HexagonTargetLowering::extractHvxSubvectorReg(SDValue OrigOp, SDValue VecV,
   // the subvector of interest. The subvector will never overlap two single
   // vectors.
   if (isHvxPairTy(VecTy)) {
-    if (Idx * ElemWidth >= 8*HwLen)
+    unsigned SubIdx = Hexagon::vsub_lo;
+    if (Idx * ElemWidth >= 8 * HwLen) {
+      SubIdx = Hexagon::vsub_hi;
       Idx -= VecTy.getVectorNumElements() / 2;
+    }
 
-    VecV = OrigOp;
-    if (typeSplit(VecTy).first == ResTy)
+    VecTy = typeSplit(VecTy).first;
+    VecV = DAG.getTargetExtractSubreg(SubIdx, dl, VecTy, VecV);
+    if (VecTy == ResTy)
       return VecV;
   }
 
@@ -2400,7 +2404,7 @@ HexagonTargetLowering::VectorPair
 HexagonTargetLowering::emitHvxAddWithOverflow(SDValue A, SDValue B,
       const SDLoc &dl, bool Signed, SelectionDAG &DAG) const {
   // Compute A+B, return {A+B, O}, where O = vector predicate indicating
-  // whether an overflow has occured.
+  // whether an overflow has occurred.
   MVT ResTy = ty(A);
   assert(ResTy == ty(B));
   MVT PredTy = MVT::getVectorVT(MVT::i1, ResTy.getVectorNumElements());
@@ -2911,7 +2915,7 @@ HexagonTargetLowering::CreateTLWrapper(SDValue Op, SelectionDAG &DAG) const {
 #ifndef NDEBUG
     Op.dump(&DAG);
 #endif
-    llvm_unreachable("Unepected operator");
+    llvm_unreachable("Unexpected operator");
   }
 
   const SDLoc &dl(Op);

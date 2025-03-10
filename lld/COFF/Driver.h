@@ -209,11 +209,9 @@ private:
   void parseSubsystem(StringRef arg, WindowsSubsystem *sys, uint32_t *major,
                       uint32_t *minor, bool *gotVersion = nullptr);
 
-  void parseAlternateName(StringRef);
   void parseMerge(StringRef);
   void parsePDBPageSize(StringRef);
   void parseSection(StringRef);
-  void parseAligncomm(StringRef);
 
   // Parses a MS-DOS stub file
   void parseDosStub(StringRef path);

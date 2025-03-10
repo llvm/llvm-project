@@ -473,9 +473,8 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       (State.Column + State.Line->Last->TotalLength - Previous.TotalLength >
            getColumnLimit(State) ||
        CurrentState.BreakBeforeParameter) &&
-      (!Current.isTrailingComment() || Current.NewlinesBefore > 0) &&
-      (Style.BreakConstructorInitializers != FormatStyle::BCIS_BeforeColon ||
-       Style.ColumnLimit > 0 || Current.NewlinesBefore > 0)) {
+      ((!Current.isTrailingComment() && Style.ColumnLimit > 0) ||
+       Current.NewlinesBefore > 0)) {
     return true;
   }
 
@@ -629,6 +628,10 @@ bool ContinuationIndenter::mustBreak(const LineState &State) {
       // name.
       !Style.isJavaScript() && Previous.isNot(tok::kw_template) &&
       CurrentState.BreakBeforeParameter) {
+    for (const auto *Tok = &Previous; Tok; Tok = Tok->Previous)
+      if (Tok->FirstAfterPPLine || Tok->is(TT_LineComment))
+        return false;
+
     return true;
   }
 
@@ -1922,9 +1925,9 @@ void ContinuationIndenter::moveStatePastScopeOpener(LineState &State,
       NewIndent = Style.IndentWidth +
                   std::min(State.Column, CurrentState.NestedBlockIndent);
     } else if (Current.is(tok::l_brace)) {
-      NewIndent =
-          CurrentState.LastSpace + Style.BracedInitializerIndentWidth.value_or(
-                                       Style.ContinuationIndentWidth);
+      const auto Width = Style.BracedInitializerIndentWidth;
+      NewIndent = CurrentState.LastSpace +
+                  (Width < 0 ? Style.ContinuationIndentWidth : Width);
     } else {
       NewIndent = CurrentState.LastSpace + Style.ContinuationIndentWidth;
     }

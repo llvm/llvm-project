@@ -12,8 +12,8 @@ func.func @test_simple(%a: !fir.ref<!t_simple>, %b: !fir.ref<!t_simple>) {
 }
 // CHECK-LABEL: func.func @test_simple(
 // CHECK-NOT: Destroy
-// CHECK:  %[[VAL_1:.*]] = fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.ref<!fir.type<simple{i:i32}>>, !fir.field) -> !fir.ref<i32>
-// CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %{{.*}}, %{{.*}} : (!fir.ref<!fir.type<simple{i:i32}>>, !fir.field) -> !fir.ref<i32>
+// CHECK:  %[[VAL_1:.*]] = fir.coordinate_of %{{.*}}, i : (!fir.ref<!fir.type<simple{i:i32}>>) -> !fir.ref<i32>
+// CHECK:  %[[VAL_3:.*]] = fir.coordinate_of %{{.*}}, i : (!fir.ref<!fir.type<simple{i:i32}>>) -> !fir.ref<i32>
 // CHECK:  %[[VAL_4:.*]] = fir.load %[[VAL_1]] : !fir.ref<i32>
 // CHECK:  fir.store %[[VAL_4]] to %[[VAL_3]] : !fir.ref<i32>
 

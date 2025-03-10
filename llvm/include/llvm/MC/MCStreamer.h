@@ -100,6 +100,7 @@ public:
   virtual ~MCTargetStreamer();
 
   MCStreamer &getStreamer() { return Streamer; }
+  MCContext &getContext();
 
   // Allow a target to add behavior to the EmitLabel of MCStreamer.
   virtual void emitLabel(MCSymbol *Symbol);
@@ -168,6 +169,8 @@ public:
 
   virtual void annotateTLSDescriptorSequence(const MCSymbolRefExpr *SRE);
 
+  // Note in the output that the specified \p Symbol is a Thumb mode function.
+  virtual void emitThumbFunc(MCSymbol *Symbol);
   virtual void emitThumbSet(MCSymbol *Symbol, const MCExpr *Value);
 
   void emitConstantPools() override;
@@ -501,10 +504,6 @@ public:
                             const Triple *DarwinTargetVariantTriple,
                             const VersionTuple &DarwinTargetVariantSDKVersion);
 
-  /// Note in the output that the specified \p Func is a Thumb mode
-  /// function (ARM target only).
-  virtual void emitThumbFunc(MCSymbol *Func);
-
   /// Emit an assignment of \p Value to \p Symbol.
   ///
   /// This corresponds to an assembler statement such as:
@@ -762,48 +761,6 @@ public:
   /// a MCExpr for MCSymbols.
   void emitSymbolValue(const MCSymbol *Sym, unsigned Size,
                        bool IsSectionRelative = false);
-
-  /// Emit the expression \p Value into the output as a dtprel
-  /// (64-bit DTP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .dtpreldword on
-  /// targets that support them.
-  virtual void emitDTPRel64Value(const MCExpr *Value);
-
-  /// Emit the expression \p Value into the output as a dtprel
-  /// (32-bit DTP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .dtprelword on
-  /// targets that support them.
-  virtual void emitDTPRel32Value(const MCExpr *Value);
-
-  /// Emit the expression \p Value into the output as a tprel
-  /// (64-bit TP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .tpreldword on
-  /// targets that support them.
-  virtual void emitTPRel64Value(const MCExpr *Value);
-
-  /// Emit the expression \p Value into the output as a tprel
-  /// (32-bit TP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .tprelword on
-  /// targets that support them.
-  virtual void emitTPRel32Value(const MCExpr *Value);
-
-  /// Emit the expression \p Value into the output as a gprel64 (64-bit
-  /// GP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .gpdword on
-  /// targets that support them.
-  virtual void emitGPRel64Value(const MCExpr *Value);
-
-  /// Emit the expression \p Value into the output as a gprel32 (32-bit
-  /// GP relative) value.
-  ///
-  /// This is used to implement assembler directives such as .gprel32 on
-  /// targets that support them.
-  virtual void emitGPRel32Value(const MCExpr *Value);
 
   /// Emit NumBytes bytes worth of the value specified by FillValue.
   /// This implements directives such as '.space'.
@@ -1158,6 +1115,10 @@ public:
                                         const MCSymbol *Label,
                                         unsigned PointerSize) {}
 };
+
+inline MCContext &MCTargetStreamer::getContext() {
+  return Streamer.getContext();
+}
 
 /// Create a dummy machine code streamer, which does nothing. This is useful for
 /// timing the assembler front end.

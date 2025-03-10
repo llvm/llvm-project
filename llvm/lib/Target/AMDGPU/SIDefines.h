@@ -542,7 +542,7 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_EXCP_FLAG_USER = 18,
   ID_TRAP_CTRL = 19,
 
-  // GFX940 specific registers
+  // GFX94* specific registers
   ID_XCC_ID = 20,
   ID_SQ_PERF_SNAPSHOT_DATA = 21,
   ID_SQ_PERF_SNAPSHOT_DATA1 = 22,

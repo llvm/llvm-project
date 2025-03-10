@@ -265,7 +265,7 @@ LaneBitmask DeadLaneDetector::transferDefinedLanes(
   return DefinedLanes;
 }
 
-LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(unsigned Reg) {
+LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(Register Reg) {
   // Live-In or unused registers have no definition but are considered fully
   // defined.
   if (!MRI->hasOneDef(Reg))
@@ -276,7 +276,7 @@ LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(unsigned Reg) {
   if (lowersToCopies(DefMI)) {
     // Start optimisatically with no used or defined lanes for copy
     // instructions. The following dataflow analysis will add more bits.
-    unsigned RegIdx = Register::virtReg2Index(Reg);
+    unsigned RegIdx = Register(Reg).virtRegIndex();
     DefinedByCopy.set(RegIdx);
     PutInWorklist(RegIdx);
 
@@ -330,7 +330,7 @@ LaneBitmask DeadLaneDetector::determineInitialDefinedLanes(unsigned Reg) {
   return MRI->getMaxLaneMaskForVReg(Reg);
 }
 
-LaneBitmask DeadLaneDetector::determineInitialUsedLanes(unsigned Reg) {
+LaneBitmask DeadLaneDetector::determineInitialUsedLanes(Register Reg) {
   LaneBitmask UsedLanes = LaneBitmask::getNone();
   for (const MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
     if (!MO.readsReg())
