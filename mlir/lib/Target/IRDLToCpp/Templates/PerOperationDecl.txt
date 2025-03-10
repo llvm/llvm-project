@@ -8,14 +8,11 @@ public:
   struct Properties {
   };
 public:
-  __OP_CPP_NAME__GenericAdaptorBase(::mlir::DictionaryAttr attrs = {}, const ::mlir::EmptyProperties &properties = {}, ::mlir::RegionRange regions = {}) : odsAttrs(attrs), odsRegions(regions) {
-    if (odsAttrs)
-      odsOpName.emplace("__DIALECT_NAME__.__OP_NAME__", odsAttrs.getContext());
-  }
-
   __OP_CPP_NAME__GenericAdaptorBase(::mlir::Operation *op) : odsAttrs(op->getRawDictionaryAttrs()), odsOpName(op->getName()), odsRegions(op->getRegions()) {}
 
-  std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index, unsigned odsOperandsSize);
+  std::pair<unsigned, unsigned> getODSOperandIndexAndLength(unsigned index, unsigned odsOperandsSize) {
+    return {index, __OP_OPERAND_COUNT__};
+  }
 
   const Properties &getProperties() {
     return properties;
@@ -37,8 +34,6 @@ class __OP_CPP_NAME__GenericAdaptor : public detail::__OP_CPP_NAME__GenericAdapt
   using ValueT = ::llvm::detail::ValueOfRange<RangeT>;
   using Base = detail::__OP_CPP_NAME__GenericAdaptorBase;
 public:
-  __OP_CPP_NAME__GenericAdaptor(RangeT values, ::mlir::DictionaryAttr attrs = {}, const ::mlir::EmptyProperties &properties = {}, ::mlir::RegionRange regions = {}) : Base(attrs, properties, regions), odsOperands(values) {}
-
   __OP_CPP_NAME__GenericAdaptor(RangeT values, ::mlir::DictionaryAttr attrs, ::mlir::OpaqueProperties properties, ::mlir::RegionRange regions = {}) : __OP_CPP_NAME__GenericAdaptor(values, attrs, (properties ? *properties.as<::mlir::EmptyProperties *>() : ::mlir::EmptyProperties{}), regions) {}
 
   __OP_CPP_NAME__GenericAdaptor(RangeT values, const __OP_CPP_NAME__GenericAdaptorBase &base) : Base(base), odsOperands(values) {}

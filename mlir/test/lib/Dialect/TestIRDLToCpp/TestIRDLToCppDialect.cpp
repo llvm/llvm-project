@@ -17,12 +17,14 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/LLVMTranslationInterface.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 #include "mlir/Tools/mlir-translate/Translation.h"
 #include "mlir/Transforms/DialectConversion.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -39,11 +41,43 @@ struct TestOpConversion : public OpConversionPattern<test_irdl_to_cpp::BeefOp> {
   LogicalResult
   matchAndRewrite(mlir::test_irdl_to_cpp::BeefOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+    rewriter.setInsertionPointAfter(op);
+    auto bar = rewriter.replaceOpWithNewOp<test_irdl_to_cpp::BarOp>(
+        op, op->getResultTypes().front());
+
+    rewriter.create<test_irdl_to_cpp::HashOp>(
+        bar.getLoc(), rewriter.getIntegerType(32), adaptor.getLhs(),
+        adaptor.getRhs());
     return success();
+  }
+};
+
+struct ConvertTestDialectToSomethingPass
+    : PassWrapper<ConvertTestDialectToSomethingPass, OperationPass<ModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(
+      ConvertTestDialectToSomethingPass)
+
+  void runOnOperation() override {
+    MLIRContext *ctx = &getContext();
+    RewritePatternSet patterns(ctx);
+    patterns.add<TestOpConversion>(ctx);
+    (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  }
+
+  StringRef getArgument() const final { return "test-irdl-conversion-check"; }
+  StringRef getDescription() const final {
+    return "Checks the convertability of an irdl dialect";
   }
 };
 
 void registerIrdlTestDialect(mlir::DialectRegistry &registry) {
   registry.insert<mlir::test_irdl_to_cpp::TestIrdlToCppDialect>();
 }
+
 } // namespace test
+
+namespace mlir::test {
+void registerTestIrdlTestDialectConversionPass() {
+  PassRegistration<::test::ConvertTestDialectToSomethingPass>();
+}
+} // namespace mlir::test

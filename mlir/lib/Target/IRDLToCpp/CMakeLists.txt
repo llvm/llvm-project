@@ -1,11 +1,9 @@
 add_mlir_translation_library(MLIRTargetIRDLToCpp
   TranslationRegistration.cpp
   IRDLToCpp.cpp
-
   Templates/DialectDecl.txt
   Templates/DialectDef.txt
   Templates/Header.txt
-  Templates/OperationDef.txt
   Templates/PerOperationDecl.txt
   Templates/PerOperationDef.txt
   Templates/TypeDecl.txt
@@ -17,4 +15,4 @@ add_mlir_translation_library(MLIRTargetIRDLToCpp
   MLIRIR
   MLIRIRDL
   MLIRTranslateLib
-  )
+)
