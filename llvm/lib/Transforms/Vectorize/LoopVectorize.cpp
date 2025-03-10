@@ -10177,20 +10177,19 @@ static void checkMixedPrecision(Loop *L, OptimizationRemarkEmitter *ORE) {
 /// TODO: This is currently overly pessimistic because the loop may not take
 /// the early exit, but better to keep this conservative for now. In future,
 /// it might be possible to relax this by using branch probabilities.
-static InstructionCost calculateEarlyExitCost(LoopVectorizationCostModel &CM,
+static InstructionCost calculateEarlyExitCost(VPCostContext &CostCtx,
                                               VPlan &Plan, ElementCount VF) {
   InstructionCost Cost = 0;
-  VPCostContext CostCtx(CM.TTI, *CM.TLI, CM.Legal->getWidestInductionType(), CM,
-                        CM.CostKind);
-  LLVM_DEBUG(
-      dbgs() << "Calculating cost of work in vector early exit block:\n");
   for (auto *ExitVPBB : Plan.getExitBlocks()) {
     for (auto *PredVPBB : ExitVPBB->getPredecessors()) {
       // If the predecessor is not the middle.block, then it must be the
       // vector.early.exit block, which may contain work to calculate the exit
       // values of variables used outside the loop.
-      if (PredVPBB != Plan.getMiddleBlock())
+      if (PredVPBB != Plan.getMiddleBlock()) {
+        LLVM_DEBUG(dbgs() << "Calculating cost of work in exit block "
+                          << PredVPBB->getName() << ":\n");
         Cost += PredVPBB->cost(VF, CostCtx);
+      }
     }
   }
   return Cost;
@@ -10204,18 +10203,18 @@ static InstructionCost calculateEarlyExitCost(LoopVectorizationCostModel &CM,
 ///     extra work when exiting the loop early, such as calculating the final
 ///     exit values of variables used outside the loop.
 static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
-                                        VectorizationFactor &VF,
-                                        LoopVectorizationCostModel &CM,
+                                        VectorizationFactor &VF, Loop *L,
                                         PredicatedScalarEvolution &PSE,
-                                        VPlan &Plan,
-                                        ScalarEpilogueLowering SEL) {
+                                        VPCostContext &CostCtx, VPlan &Plan,
+                                        ScalarEpilogueLowering SEL,
+                                        std::optional<unsigned> VScale) {
   InstructionCost TotalCost = Checks.getCost();
   if (!TotalCost.isValid())
     return false;
 
   // Add on the cost of any work required in the vector early exit block, if
   // one exists.
-  TotalCost += calculateEarlyExitCost(CM, Plan, VF.Width);
+  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
 
   // When interleaving only scalar and vector cost will be equal, which in turn
   // would lead to a divide by 0. Fall back to hard threshold.
@@ -10266,7 +10265,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
   // For now we assume the epilogue cost EpiC = 0 for simplicity. Note that
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
-  unsigned IntVF = getEstimatedRuntimeVF(VF.Width, CM.getVScaleForTuning());
+  unsigned IntVF = getEstimatedRuntimeVF(VF.Width, VScale);
   uint64_t RtC = *TotalCost.getValue();
   uint64_t Div = ScalarC * IntVF - *VF.Cost.getValue();
   uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(RtC * IntVF, Div);
@@ -10294,7 +10293,7 @@ static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
 
   // Skip vectorization if the expected trip count is less than the minimum
   // required trip count.
-  if (auto ExpectedTC = getSmallBestKnownTC(PSE, CM.TheLoop)) {
+  if (auto ExpectedTC = getSmallBestKnownTC(PSE, L)) {
     if (ElementCount::isKnownLT(ElementCount::getFixed(*ExpectedTC),
                                 VF.MinProfitableTripCount)) {
       LLVM_DEBUG(dbgs() << "LV: Vectorization is not beneficial: expected "
@@ -10694,9 +10693,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, CM.Legal->getWidestInductionType(),
+                          CM, CM.CostKind);
     if (!ForceVectorization &&
-        !isOutsideLoopWorkProfitable(Checks, VF, CM, PSE,
-                                     LVP.getPlanFor(VF.Width), SEL)) {
+        !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx,
+                                     LVP.getPlanFor(VF.Width), SEL,
+                                     CM.getVScaleForTuning())) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysisAliasing(
                    DEBUG_TYPE, "CantReorderMemOps", L->getStartLoc(),
