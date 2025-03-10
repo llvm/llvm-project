@@ -52,12 +52,6 @@ using namespace mlir::linalg;
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 
-// Forward declaration of Conv1DGenerator and its validator
-namespace {
-struct Conv1DGenerator;
-bool validateConv1DGenerator(RewriterBase &rewriter, LinalgOp linalgOp);
-} // namespace
-
 /// Try to vectorize `convOp` as a convolution.
 static FailureOr<Operation *>
 vectorizeConvolution(RewriterBase &rewriter, LinalgOp convOp,
@@ -1945,6 +1939,22 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
   return success();
 }
 
+static LogicalResult vectorizeConvOpPrecondition(linalg::LinalgOp convOp) {
+  // We only support 1D convolutions, reject all other cases.
+  if (isa<linalg::Conv2DNhwcHwcfOp, linalg::Conv2DNhwcFhwcOp,
+          linalg::Conv2DNchwFchwOp>(convOp)) {
+    LDBG("2D convolutions are not supported\n");
+    return failure();
+  }
+
+  if (isa<linalg::Conv3DNdhwcDhwcfOp, linalg::Conv3DNcdhwFcdhwOp>(convOp)) {
+    LDBG("3D convolutions are not supported\n");
+    return failure();
+  }
+
+  return success();
+}
+
 static LogicalResult vectorizeLinalgOpPrecondition(
     LinalgOp linalgOp, ArrayRef<int64_t> inputVectorSizes,
     bool vectorizeNDExtract, bool flatten1DDepthwiseConv) {
@@ -1996,20 +2006,8 @@ static LogicalResult vectorizeLinalgOpPrecondition(
   // TODO: isaConvolutionOpInterface that can also infer from generic
   // features. But we will still need stride/dilation attributes that will be
   // annoying to reverse-engineer...
-  if (isa<ConvolutionOpInterface>(linalgOp.getOperation())) {
-    // Create a dummy rewriter first, a rewriter is not required for
-    // validation
-    IRRewriter dummyBuilder(linalgOp.getContext());
-    // Check if we can successfully construct a 1d convolution generator.
-    // For example, if it is 2d+ convolution, return failure because we don't
-    // support it. To use this pass on a 2d+ convolution, it should have already
-    // been decomposed to 1d convolution via
-    // DecomposeConvolutionToLowerDimOpsPass.
-    if (!validateConv1DGenerator(dummyBuilder, linalgOp))
-      return failure();
-
-    return success();
-  }
+  if (isa<ConvolutionOpInterface>(linalgOp.getOperation()))
+    return vectorizeConvOpPrecondition(linalgOp);
 
   // TODO: the common vector shape is equal to the static loop sizes only when
   // all indexing maps are projected permutations. For convs and stencils the
@@ -3918,13 +3916,6 @@ private:
     }
   }
 };
-
-// Helper function to construct Conv1DGenerator
-bool validateConv1DGenerator(RewriterBase &rewriter, LinalgOp linalgOp) {
-  Conv1DGenerator conv1dGen(rewriter, linalgOp);
-  return conv1dGen.isValid();
-}
-
 } // namespace
 
 /// Helper function to vectorize a LinalgOp with convolution semantics.
@@ -3932,20 +3923,21 @@ bool validateConv1DGenerator(RewriterBase &rewriter, LinalgOp linalgOp) {
 static FailureOr<Operation *> vectorizeConvolution(
     RewriterBase &rewriter, LinalgOp op, ArrayRef<int64_t> inputVecSizes,
     ArrayRef<bool> inputScalableVecDims, bool flatten1DDepthwiseConv) {
-  Conv1DGenerator e(rewriter, op);
-  auto res = e.generateNonChanneledConv();
+  Conv1DGenerator conv1dGen(rewriter, op);
+  assert(conv1dGen.isValid() && "Conv1DGenerator failed");
+  auto res = conv1dGen.generateNonChanneledConv();
   if (succeeded(res))
     return res;
-  res = e.generateNwcConv();
+  res = conv1dGen.generateNwcConv();
   if (succeeded(res))
     return res;
-  res = e.generateNcwConv();
+  res = conv1dGen.generateNcwConv();
   if (succeeded(res))
     return res;
-  res = e.generateNwcPooling();
+  res = conv1dGen.generateNwcPooling();
   if (succeeded(res))
     return res;
-  res = e.generateNcwPooling();
+  res = conv1dGen.generateNcwPooling();
   if (succeeded(res))
     return res;
 
@@ -3957,11 +3949,9 @@ static FailureOr<Operation *> vectorizeConvolution(
   if (!inputVecSizes.empty()) {
     // Only use the input vector size corresponding to the channel dim. Other
     // vector dims will be inferred from the Ops.
-    if (!isa<linalg::DepthwiseConv1DNwcWcOp>(*op) &&
-        !isa<linalg::DepthwiseConv1DNcwCwOp>(*op)) {
-      return rewriter.notifyMatchFailure(
-          op, "Unexpected convolution: expected 1D depthwise conv");
-    }
+    assert((isa<linalg::DepthwiseConv1DNwcWcOp>(*op) ||
+            isa<linalg::DepthwiseConv1DNcwCwOp>(*op)) &&
+           "Not a 1D depthwise conv!");
     size_t chDimIdx =
         TypeSwitch<Operation *, size_t>(op)
             .Case<linalg::DepthwiseConv1DNwcWcOp>([](auto conv) { return 2; })
@@ -3970,8 +3960,8 @@ static FailureOr<Operation *> vectorizeConvolution(
     vecChDimSize = inputVecSizes[chDimIdx];
     vecChDimScalableFlag = inputScalableVecDims[chDimIdx];
   }
-  return e.generateDilatedConv(vecChDimSize, vecChDimScalableFlag,
-                               flatten1DDepthwiseConv);
+  return conv1dGen.generateDilatedConv(vecChDimSize, vecChDimScalableFlag,
+                                       flatten1DDepthwiseConv);
 }
 
 struct VectorizeConvolution : public OpInterfaceRewritePattern<LinalgOp> {
