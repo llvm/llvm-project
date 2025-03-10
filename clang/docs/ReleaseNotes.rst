@@ -562,7 +562,7 @@ Bug Fixes in This Version
 - Fixed a bug where an attribute before a ``pragma clang attribute`` or
   ``pragma clang __debug`` would cause an assertion. Instead, this now diagnoses
   the invalid attribute location appropriately. (#GH137861)
-- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an 
+- Fixed a crash when a malformed ``_Pragma`` directive appears as part of an
   ``#include`` directive. (#GH138094)
 
 Bug Fixes to Compiler Builtins
@@ -674,6 +674,7 @@ Bug Fixes to C++ Support
   whose type depends on itself. (#GH51347), (#GH55872)
 - Improved parser recovery of invalid requirement expressions. In turn, this
   fixes crashes from follow-on processing of the invalid requirement. (#GH138820)
+- Clang modules now allow a module and its user to differ on TrivialAutoVarInit*
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
