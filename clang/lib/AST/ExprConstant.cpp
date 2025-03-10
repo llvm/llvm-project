@@ -5223,16 +5223,16 @@ static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
 
 static bool EvaluateDecl(EvalInfo &Info, const Decl *D,
                          bool EvaluateConditionDecl) {
-  bool OK = true;
-
   if (const VarDecl *VD = dyn_cast<VarDecl>(D))
-    OK &= EvaluateVarDecl(Info, VD);
+    if (!EvaluateVarDecl(Info, VD))
+      return false;
 
   if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(D);
       EvaluateConditionDecl && DD)
-    OK &= EvaluateDecompositionDeclInit(Info, DD);
+    if (!EvaluateDecompositionDeclInit(Info, DD))
+      return false;
 
-  return OK;
+  return true;
 }
 
 static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
@@ -5260,7 +5260,8 @@ static bool EvaluateCond(EvalInfo &Info, const VarDecl *CondDecl,
   if (Cond->isValueDependent())
     return false;
   FullExpressionRAII Scope(Info);
-  if (CondDecl && !EvaluateDecl(Info, CondDecl, /*EvaluateConditionDecl=*/false))
+  if (CondDecl &&
+      !EvaluateDecl(Info, CondDecl, /*EvaluateConditionDecl=*/false))
     return false;
   if (!EvaluateAsBooleanCondition(Cond, Result, Info))
     return false;
