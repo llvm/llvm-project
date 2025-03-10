@@ -278,6 +278,12 @@ public:
   void Encode(DataEncoder &encoder, ConstStringTable &strtab) const;
 
 private:
+  /// If \c force is \c false, this function will re-use the previously
+  /// demangled name (if any). If \c force is \c true (or the mangled name
+  /// on this object was not previously demangled), demangle and cache the
+  /// name.
+  ConstString GetDemangledNameImpl(bool force) const;
+
   /// The mangled version of the name.
   ConstString m_mangled;
 
