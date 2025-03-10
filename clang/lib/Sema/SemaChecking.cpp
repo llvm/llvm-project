@@ -10620,6 +10620,42 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
     case UO_AddrOf: // should be impossible
       return IntRange::forValueOfType(C, GetExprType(E));
 
+    case UO_Minus: {
+      if (E->getType()->isUnsignedIntegerType()) {
+        return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
+                               Approximate);
+      }
+
+      std::optional<IntRange> SubRange = TryGetExprRange(
+          C, UO->getSubExpr(), MaxWidth, InConstantContext, Approximate);
+
+      if (!SubRange)
+        return std::nullopt;
+
+      // If the range was previously non-negative, we need an extra bit for the
+      // sign bit. If the range was not non-negative, we need an extra bit
+      // because the negation of the most-negative value is one bit wider than
+      // that value.
+      return IntRange(SubRange->Width + 1, false);
+    }
+
+    case UO_Not: {
+      if (E->getType()->isUnsignedIntegerType()) {
+        return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
+                               Approximate);
+      }
+
+      std::optional<IntRange> SubRange = TryGetExprRange(
+          C, UO->getSubExpr(), MaxWidth, InConstantContext, Approximate);
+
+      if (!SubRange)
+        return std::nullopt;
+
+      // The width increments by 1 if the sub-expression cannot be negative
+      // since it now can be.
+      return IntRange(SubRange->Width + (int)SubRange->NonNegative, false);
+    }
+
     default:
       return TryGetExprRange(C, UO->getSubExpr(), MaxWidth, InConstantContext,
                              Approximate);
