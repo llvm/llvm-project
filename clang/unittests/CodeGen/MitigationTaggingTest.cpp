@@ -84,11 +84,11 @@ TEST(MitigationTaggingTest, MetadataEnabledOnly) {
       continue;
 
     ASSERT_NE(node, nullptr);
-    EXPECT_EQ(node->getNumOperands(), 2);
+    ASSERT_EQ(node->getNumOperands(), (unsigned int)2);
 
     auto *mds = dyn_cast<MDString>(node->getOperand(0));
     auto *cam = dyn_cast<ConstantAsMetadata>(node->getOperand(1));
-    EXPECT_FALSE(!mds || !cam);
+    ASSERT_FALSE(!mds || !cam);
 
     auto *ci = cam->getValue();
     ASSERT_NE(ci, nullptr);
@@ -145,11 +145,11 @@ TEST(MitigationTaggingTest, AutoVarInitZeroEnabled) {
       continue;
 
     ASSERT_NE(node, nullptr);
-    EXPECT_EQ(node->getNumOperands(), 2);
+    ASSERT_EQ(node->getNumOperands(), (unsigned int)2);
 
     auto *mds = dyn_cast<MDString>(node->getOperand(0));
     auto *cam = dyn_cast<ConstantAsMetadata>(node->getOperand(1));
-    EXPECT_FALSE(!mds || !cam);
+    ASSERT_FALSE(!mds || !cam);
 
     auto *ci = cam->getValue();
     ASSERT_NE(ci, nullptr);
@@ -206,11 +206,11 @@ TEST(MitigationTaggingTest, StackClashEnabled) {
       continue;
 
     ASSERT_NE(node, nullptr);
-    EXPECT_EQ(node->getNumOperands(), 2);
+    ASSERT_EQ(node->getNumOperands(), (unsigned int)2);
 
     auto *mds = dyn_cast<MDString>(node->getOperand(0));
     auto *cam = dyn_cast<ConstantAsMetadata>(node->getOperand(1));
-    EXPECT_FALSE(!mds || !cam);
+    ASSERT_FALSE(!mds || !cam);
 
     auto *ci = cam->getValue();
     ASSERT_NE(ci, nullptr);
@@ -267,11 +267,11 @@ TEST(MitigationTaggingTest, StackProtectorEnabled) {
       continue;
 
     ASSERT_NE(node, nullptr);
-    EXPECT_EQ(node->getNumOperands(), 2);
+    ASSERT_EQ(node->getNumOperands(), (unsigned int)2);
 
     auto *mds = dyn_cast<MDString>(node->getOperand(0));
     auto *cam = dyn_cast<ConstantAsMetadata>(node->getOperand(1));
-    EXPECT_FALSE(!mds || !cam);
+    ASSERT_FALSE(!mds || !cam);
 
     auto *ci = cam->getValue();
     ASSERT_NE(ci, nullptr);
@@ -328,11 +328,11 @@ TEST(MitigationTaggingTest, StackProtectorStrongEnabled) {
       continue;
 
     ASSERT_NE(node, nullptr);
-    EXPECT_EQ(node->getNumOperands(), 2);
+    ASSERT_EQ(node->getNumOperands(), (unsigned int)2);
 
     auto *mds = dyn_cast<MDString>(node->getOperand(0));
     auto *cam = dyn_cast<ConstantAsMetadata>(node->getOperand(1));
-    EXPECT_FALSE(!mds || !cam);
+    ASSERT_FALSE(!mds || !cam);
 
     auto *ci = cam->getValue();
     ASSERT_NE(ci, nullptr);
@@ -389,11 +389,11 @@ TEST(MitigationTaggingTest, StackProtectorAllEnabled) {
       continue;
 
     ASSERT_NE(node, nullptr);
-    EXPECT_EQ(node->getNumOperands(), 2);
+    ASSERT_EQ(node->getNumOperands(), (unsigned int)2);
 
     auto *mds = dyn_cast<MDString>(node->getOperand(0));
     auto *cam = dyn_cast<ConstantAsMetadata>(node->getOperand(1));
-    EXPECT_FALSE(!mds || !cam);
+    ASSERT_FALSE(!mds || !cam);
 
     auto *ci = cam->getValue();
     ASSERT_NE(ci, nullptr);
