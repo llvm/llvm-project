@@ -5,6 +5,33 @@ name: test_low_level_type_is_single_s_p
 body: |
   bb.0:
     liveins: $x0
-    ; CHECK: [[@LINE+1]]:10: expected integers after 's'/'p' type character
+    ; CHECK: [[@LINE+1]]:10: expected integers after 's'/'i'/'f'/'bf'/'p' type identifier
     %0:_(s) = COPY $x0
+...
+
+---
+name: test_low_level_type_is_single_i_p
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:10: expected integers after 's'/'i'/'f'/'bf'/'p' type identifier
+    %0:_(i) = COPY $x0
+...
+
+---
+name: test_low_level_type_is_single_f_p
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:10: expected integers after 's'/'i'/'f'/'bf'/'p' type identifier
+    %0:_(f) = COPY $x0
+...
+
+---
+name: test_low_level_type_is_single_bf_p
+body: |
+  bb.0:
+    liveins: $x0
+    ; CHECK: [[@LINE+1]]:10: expected integers after 's'/'i'/'f'/'bf'/'p' type identifier
+    %0:_(bf) = COPY $x0
 ...
