@@ -63,7 +63,7 @@ class SPIRVEmitIntrinsics
   SPIRVTargetMachine *TM = nullptr;
   SPIRVGlobalRegistry *GR = nullptr;
   Function *CurrF = nullptr;
-  bool TrackConstants = true;
+  bool TrackConstants = false;//true;
   bool HaveFunPtrs = false;
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
@@ -316,8 +316,10 @@ static void emitAssignName(Instruction *I, IRBuilder<> &B) {
     return;
   reportFatalOnTokenType(I);
   setInsertPointAfterDef(B, I);
-  std::vector<Value *> Args = {I};
-  addStringImm(I->getName(), B, Args);
+  LLVMContext &Ctx = I->getContext();
+  std::vector<Value *> Args = {
+      I, MetadataAsValue::get(
+             Ctx, MDNode::get(Ctx, MDString::get(Ctx, I->getName())))};
   B.CreateIntrinsic(Intrinsic::spv_assign_name, {I->getType()}, Args);
 }
 
@@ -2036,7 +2038,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
   auto *II = dyn_cast<IntrinsicInst>(I);
   bool IsConstComposite =
       II && II->getIntrinsicID() == Intrinsic::spv_const_composite;
-  if (IsConstComposite && TrackConstants) {
+  if (IsConstComposite) {
     setInsertPointAfterDef(B, I);
     auto t = AggrConsts.find(I);
     assert(t != AggrConsts.end());
@@ -2048,41 +2050,43 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
   }
   bool IsPhi = isa<PHINode>(I), BPrepared = false;
   for (const auto &Op : I->operands()) {
-    if (isa<PHINode>(I) || isa<SwitchInst>(I))
-      TrackConstants = false;
-    if ((isa<ConstantData>(Op) || isa<ConstantExpr>(Op)) && TrackConstants) {
-      unsigned OpNo = Op.getOperandNo();
-      if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
-                 (II->paramHasAttr(OpNo, Attribute::ImmArg))))
-        continue;
-      if (!BPrepared) {
-        IsPhi ? B.SetInsertPointPastAllocas(I->getParent()->getParent())
-              : B.SetInsertPoint(I);
-        BPrepared = true;
-      }
-      Type *OpTy = Op->getType();
-      Value *OpTyVal = Op;
-      if (OpTy->isTargetExtTy())
-        OpTyVal = getNormalizedPoisonValue(OpTy);
-      CallInst *NewOp =
-          buildIntrWithMD(Intrinsic::spv_track_constant,
-                          {OpTy, OpTyVal->getType()}, Op, OpTyVal, {}, B);
-      Type *OpElemTy = nullptr;
-      if (!IsConstComposite && isPointerTy(OpTy) &&
-          (OpElemTy = GR->findDeducedElementType(Op)) != nullptr &&
-          OpElemTy != IntegerType::getInt8Ty(I->getContext())) {
-        GR->buildAssignPtr(B, IntegerType::getInt8Ty(I->getContext()), NewOp);
-        SmallVector<Type *, 2> Types = {OpTy, OpTy};
-        SmallVector<Value *, 2> Args = {
-            NewOp, buildMD(getNormalizedPoisonValue(OpElemTy)),
-            B.getInt32(getPointerAddressSpace(OpTy))};
-        CallInst *PtrCasted =
-            B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
-        GR->buildAssignPtr(B, OpElemTy, PtrCasted);
-        NewOp = PtrCasted;
-      }
-      I->setOperand(OpNo, NewOp);
+    if (isa<PHINode>(I) || isa<SwitchInst>(I) ||
+        !(isa<ConstantData>(Op) || isa<ConstantExpr>(Op)))
+      continue;
+    unsigned OpNo = Op.getOperandNo();
+    if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
+                (II->paramHasAttr(OpNo, Attribute::ImmArg))))
+      continue;
+
+    if (!BPrepared) {
+      IsPhi ? B.SetInsertPointPastAllocas(I->getParent()->getParent())
+            : B.SetInsertPoint(I);
+      BPrepared = true;
     }
+    Type *OpTy = Op->getType();
+    Value *OpTyVal = Op;
+    if (OpTy->isTargetExtTy())
+      OpTyVal = getNormalizedPoisonValue(OpTy);
+    Value *NewOp = Op;
+    if (OpTy->isTargetExtTy())
+      NewOp = buildIntrWithMD(Intrinsic::spv_track_constant,
+                              {OpTy, OpTyVal->getType()}, Op, OpTyVal, {}, B);
+    Type *OpElemTy = nullptr;
+    if (!IsConstComposite && isPointerTy(OpTy) &&
+        (OpElemTy = GR->findDeducedElementType(Op)) != nullptr &&
+        OpElemTy != IntegerType::getInt8Ty(I->getContext())) {
+      GR->buildAssignPtr(B, IntegerType::getInt8Ty(I->getContext()), NewOp);
+      SmallVector<Type *, 2> Types = {OpTy, OpTy};
+      SmallVector<Value *, 2> Args = {
+          NewOp, buildMD(getNormalizedPoisonValue(OpElemTy)),
+          B.getInt32(getPointerAddressSpace(OpTy))};
+      CallInst *PtrCasted =
+          B.CreateIntrinsic(Intrinsic::spv_ptrcast, {Types}, Args);
+      GR->buildAssignPtr(B, OpElemTy, PtrCasted);
+      NewOp = PtrCasted;
+    }
+    if (NewOp != Op)
+      I->setOperand(OpNo, NewOp);
   }
   emitAssignName(I, B);
 }
@@ -2430,7 +2434,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
         deduceOperandElementType(&Phi, nullptr);
 
   for (auto *I : Worklist) {
-    TrackConstants = true;
+    TrackConstants = false;//true;
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
       setInsertPointAfterDef(B, I);
     // Visitors return either the original/newly created instruction for further
