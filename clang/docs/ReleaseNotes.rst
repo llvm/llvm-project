@@ -251,6 +251,8 @@ Bug Fixes in This Version
 - Non-local variable and non-variable declarations in the first clause of a ``for`` loop in C are no longer incorrectly
   considered an error in C23 mode and are allowed as an extension in earlier language modes.
 
+- Remove the ``static`` specifier for the value of ``_FUNCTION_`` for static functions, in MSVC compatibility mode.
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
