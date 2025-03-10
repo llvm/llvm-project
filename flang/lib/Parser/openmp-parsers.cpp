@@ -1249,12 +1249,11 @@ TYPE_PARSER(construct<OmpBlockDirective>(first(
 TYPE_PARSER(sourced(construct<OmpBeginBlockDirective>(
     sourced(Parser<OmpBlockDirective>{}), Parser<OmpClauseList>{})))
 
-TYPE_PARSER(construct<OmpInitializerExpr>("OMP_PRIV =" >> expr))
 TYPE_PARSER(construct<OmpInitializerProc>(Parser<ProcedureDesignator>{},
     parenthesized(many(maybe(","_tok) >> Parser<ActualArgSpec>{}))))
 
 TYPE_PARSER(construct<OmpInitializerClause>(
-    construct<OmpInitializerClause>(Parser<OmpInitializerExpr>{}) ||
+    construct<OmpInitializerClause>(assignmentStmt) ||
     construct<OmpInitializerClause>(Parser<OmpInitializerProc>{})))
 
 // 2.16 Declare Reduction Construct
