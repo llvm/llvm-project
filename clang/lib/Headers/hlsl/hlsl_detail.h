@@ -45,31 +45,6 @@ template <typename T> struct is_arithmetic {
   static const bool Value = __is_arithmetic(T);
 };
 
-template <typename T>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-fmod_impl(T X, T Y) {
-#if !defined(__DIRECTX__)
-  return __builtin_elementwise_fmod(X, Y);
-#else
-  T div = X / Y;
-  bool ge = div >= -div;
-  T frc = frac(abs(div));
-  return select<T>(ge, frc, -frc) * Y;
-#endif
-}
-
-template <typename T, int N>
-constexpr vector<T, N> fmod_vec_impl(vector<T, N> X, vector<T, N> Y) {
-#if !defined(__DIRECTX__)
-  return __builtin_elementwise_fmod(X, Y);
-#else
-  vector<T, N> div = X / Y;
-  vector<bool, N> ge = div >= -div;
-  vector<T, N> frc = frac(abs(div));
-  return select<T>(ge, frc, -frc) * Y;
-#endif
-}
-
 template <typename T, int N>
 using HLSL_FIXED_VECTOR =
     vector<__detail::enable_if_t<(N > 1 && N <= 4), T>, N>;
