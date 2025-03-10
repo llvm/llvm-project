@@ -421,6 +421,16 @@ void swap(some_struct &lhs, some_struct &rhs) {
   rhs.swap_val = "rhs";
 }
 
+struct List {
+  std::list<int> data;
+};
+
+std::list<int>::const_iterator begin(const List &list) {
+  return list.data.begin();
+}
+
+std::list<int>::const_iterator end(const List &list) { return list.data.end(); }
+
 struct requires_move {};
 int *begin(requires_move &&) { return nullptr; }
 int *end(requires_move &&) { return nullptr; }
@@ -981,6 +991,13 @@ TEST(STLExtrasTest, hasNItems) {
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 3, [](int x) { return x < 10; }));
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 0, [](int x) { return x > 10; }));
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 2, [](int x) { return x < 5; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_FALSE(hasNItems(L, 2));
+  EXPECT_TRUE(hasNItems(L, 3));
 }
 
 TEST(STLExtras, hasNItemsOrMore) {
@@ -1003,6 +1020,13 @@ TEST(STLExtras, hasNItemsOrMore) {
       hasNItemsOrMore(V3.begin(), V3.end(), 3, [](int x) { return x > 10; }));
   EXPECT_TRUE(
       hasNItemsOrMore(V3.begin(), V3.end(), 2, [](int x) { return x < 5; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_TRUE(hasNItemsOrMore(L, 1));
+  EXPECT_FALSE(hasNItems(L, 4));
 }
 
 TEST(STLExtras, hasNItemsOrLess) {
@@ -1036,6 +1060,13 @@ TEST(STLExtras, hasNItemsOrLess) {
       hasNItemsOrLess(V3.begin(), V3.end(), 5, [](int x) { return x < 5; }));
   EXPECT_FALSE(
       hasNItemsOrLess(V3.begin(), V3.end(), 2, [](int x) { return x < 10; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_FALSE(hasNItemsOrLess(L, 1));
+  EXPECT_TRUE(hasNItemsOrLess(L, 4));
 }
 
 TEST(STLExtras, MoveRange) {
