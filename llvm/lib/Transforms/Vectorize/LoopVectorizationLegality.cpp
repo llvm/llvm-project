@@ -761,10 +761,10 @@ bool LoopVectorizationLegality::setupOuterLoopInductions() {
 ///      {"llvm.phx.abs.i32", "", 4}
 ///    };
 static bool isTLIScalarize(const TargetLibraryInfo &TLI, const CallInst &CI) {
-  const StringRef ScalarName = CI.getCalledFunction()->getName();
+  const StringRef ScalarName = *CI.getCalledFunctionName();
   bool Scalarize = TLI.isFunctionVectorizable(ScalarName);
   // Check that all known VFs are not associated to a vector
-  // function, i.e. the vector name is emty.
+  // function, i.e. the vector name is empty.
   if (Scalarize) {
     ElementCount WidestFixedVF, WidestScalableVF;
     TLI.getWidestVF(ScalarName, WidestFixedVF, WidestScalableVF);
@@ -909,11 +909,10 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         // If the call is a recognized math libary call, it is likely that
         // we can vectorize it given loosened floating-point constraints.
         LibFunc Func;
+        const std::optional<StringRef> FuncName = CI->getCalledFunctionName();
         bool IsMathLibCall =
-            TLI && CI->getCalledFunction() &&
-            CI->getType()->isFloatingPointTy() &&
-            TLI->getLibFunc(CI->getCalledFunction()->getName(), Func) &&
-            TLI->hasOptimizedCodeGen(Func);
+            TLI && FuncName.has_value() && CI->getType()->isFloatingPointTy() &&
+            TLI->getLibFunc(*FuncName, Func) && TLI->hasOptimizedCodeGen(Func);
 
         if (IsMathLibCall) {
           // TODO: Ideally, we should not use clang-specific language here,
