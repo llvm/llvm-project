@@ -363,12 +363,12 @@ bool Sema::DiagnoseUnknownTemplateName(const IdentifierInfo &II,
 
   // The code is missing a 'template' keyword prior to the dependent template
   // name.
-  NestedNameSpecifier *Qualifier = (NestedNameSpecifier*)SS->getScopeRep();
-  Diag(IILoc, diag::err_template_kw_missing)
-    << Qualifier << II.getName()
-    << FixItHint::CreateInsertion(IILoc, "template ");
+  NestedNameSpecifier *Qualifier = (NestedNameSpecifier *)SS->getScopeRep();
   SuggestedTemplate
     = TemplateTy::make(Context.getDependentTemplateName(Qualifier, &II));
+  Diag(IILoc, diag::err_template_kw_missing)
+      << SuggestedTemplate.get()
+      << FixItHint::CreateInsertion(IILoc, "template ");
   SuggestedKind = TNK_Dependent_template_name;
   return true;
 }
@@ -660,7 +660,7 @@ void Sema::diagnoseExprIntendedAsTemplateName(Scope *S, ExprResult TemplateName,
   // was missing.
   if (MissingTemplateKeyword) {
     Diag(NameInfo.getBeginLoc(), diag::err_template_kw_missing)
-        << "" << NameInfo.getName().getAsString() << SourceRange(Less, Greater);
+        << NameInfo.getName() << SourceRange(Less, Greater);
     return;
   }
 
@@ -3762,16 +3762,17 @@ TypeResult Sema::ActOnTemplateIdType(
     //   elaborated-type-specifier (7.1.5.3).
     if (!LookupCtx && isDependentScopeSpecifier(SS)) {
       // C++2a relaxes some of those restrictions in [temp.res]p5.
+      NestedNameSpecifier *NNS =
+          NestedNameSpecifier::Create(Context, SS.getScopeRep(), TemplateII);
       if (AllowImplicitTypename == ImplicitTypenameContext::Yes) {
         if (getLangOpts().CPlusPlus20)
           Diag(SS.getBeginLoc(), diag::warn_cxx17_compat_implicit_typename);
         else
           Diag(SS.getBeginLoc(), diag::ext_implicit_typename)
-              << SS.getScopeRep() << TemplateII->getName()
+              << NNS
               << FixItHint::CreateInsertion(SS.getBeginLoc(), "typename ");
       } else
-        Diag(SS.getBeginLoc(), diag::err_typename_missing_template)
-            << SS.getScopeRep() << TemplateII->getName();
+        Diag(SS.getBeginLoc(), diag::err_typename_missing_template) << NNS;
 
       // FIXME: This is not quite correct recovery as we don't transform SS
       // into the corresponding dependent form (and we don't diagnose missing
