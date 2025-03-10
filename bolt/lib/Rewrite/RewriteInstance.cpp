@@ -542,9 +542,13 @@ Error RewriteInstance::discoverStorage() {
       BC->SegmentMapInfo[Phdr.p_vaddr] = SegmentInfo{
           Phdr.p_vaddr,  Phdr.p_memsz, Phdr.p_offset,
           Phdr.p_filesz, Phdr.p_align, ((Phdr.p_flags & ELF::PF_X) != 0)};
-      if (BC->TheTriple->getArch() == llvm::Triple::x86_64 &&
-          Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
-        BC->IsLinuxKernel = true;
+      switch (BC->TheTriple->getArch()) {
+      case llvm::Triple::x86_64:
+        if (Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
+          BC->IsLinuxKernel = true;
+        break;
+      default:;
+      }
       break;
     case ELF::PT_INTERP:
       BC->HasInterpHeader = true;
@@ -3221,13 +3225,13 @@ void RewriteInstance::preprocessProfileData() {
 
 void RewriteInstance::initializeMetadataManager() {
   if (BC->IsLinuxKernel)
-    MetadataManager.registerRewriter(createLinuxKernelRewriter(*BC));
+    MetadataManager.registerRewriter(createLinuxKernelRewriter(*this));
 
-  MetadataManager.registerRewriter(createBuildIDRewriter(*BC));
+  MetadataManager.registerRewriter(createBuildIDRewriter(*this));
 
-  MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
+  MetadataManager.registerRewriter(createPseudoProbeRewriter(*this));
 
-  MetadataManager.registerRewriter(createSDTRewriter(*BC));
+  MetadataManager.registerRewriter(createSDTRewriter(*this));
 }
 
 void RewriteInstance::processSectionMetadata() {
@@ -3893,6 +3897,7 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
                       << " to 0x" << Twine::utohexstr(Function.getAddress())
                       << '\n');
     MapSection(*FuncSection, Function.getAddress());
+    Function.getLayout().getMainFragment().setAddress(Function.getAddress());
     Function.setImageAddress(FuncSection->getAllocAddress());
     Function.setImageSize(FuncSection->getOutputSize());
     assert(Function.getImageSize() <= Function.getMaxSize() &&
