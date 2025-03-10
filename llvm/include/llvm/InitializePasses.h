@@ -89,7 +89,7 @@ void initializeDXILResourceTypeWrapperPassPass(PassRegistry &);
 void initializeDeadMachineInstructionElimPass(PassRegistry &);
 void initializeDebugifyMachineModulePass(PassRegistry &);
 void initializeDependenceAnalysisWrapperPassPass(PassRegistry &);
-void initializeDetectDeadLanesPass(PassRegistry &);
+void initializeDetectDeadLanesLegacyPass(PassRegistry &);
 void initializeDomOnlyPrinterWrapperPassPass(PassRegistry &);
 void initializeDomOnlyViewerWrapperPassPass(PassRegistry &);
 void initializeDomPrinterWrapperPassPass(PassRegistry &);
