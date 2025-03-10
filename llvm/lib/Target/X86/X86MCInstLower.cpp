@@ -889,8 +889,7 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
   bool Is64Bits = Subtarget->is64Bit();
   MCContext &Ctx = OutStreamer->getContext();
   MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
-  const MCSymbolRefExpr *Op =
-      MCSymbolRefExpr::create(fentry, MCSymbolRefExpr::VK_None, Ctx);
+  const MCSymbolRefExpr *Op = MCSymbolRefExpr::create(fentry, Ctx);
 
   EmitAndCountInstruction(
       MCInstBuilder(Is64Bits ? X86::CALL64pcrel32 : X86::CALLpcrel32)

@@ -2188,7 +2188,7 @@ ParseStatus RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
     }
     Res = V;
   } else
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
 
   MCBinaryExpr::Opcode Opcode;
   switch (getLexer().getKind()) {
@@ -2234,7 +2234,7 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
   (void)Identifier.consume_back("@plt");
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-  Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+  Res = MCSymbolRefExpr::create(Sym, getContext());
   Res = RISCVMCExpr::create(Res, Kind, getContext());
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
   return ParseStatus::Success;
