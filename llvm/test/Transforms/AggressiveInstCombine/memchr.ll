@@ -9,28 +9,18 @@ declare ptr @memchr(ptr, i32, i64)
 define i1 @test_memchr_null(i32 %x) {
 ; CHECK-LABEL: define i1 @test_memchr_null(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[X]] to i8
-; CHECK-NEXT:    switch i8 [[TMP0]], label %[[ENTRY_SPLIT:.*]] [
-; CHECK-NEXT:      i8 48, label %[[MEMCHR_CASE:.*]]
-; CHECK-NEXT:      i8 49, label %[[MEMCHR_CASE1:.*]]
-; CHECK-NEXT:      i8 0, label %[[MEMCHR_CASE2:.*]]
-; CHECK-NEXT:      i8 50, label %[[MEMCHR_CASE3:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[MEMCHR_CASE]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS:.*]]
-; CHECK:       [[MEMCHR_CASE1]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
-; CHECK:       [[MEMCHR_CASE2]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
-; CHECK:       [[MEMCHR_CASE3]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
-; CHECK:       [[MEMCHR_SUCCESS]]:
-; CHECK-NEXT:    [[MEMCHR_IDX:%.*]] = phi i64 [ 0, %[[MEMCHR_CASE]] ], [ 1, %[[MEMCHR_CASE1]] ], [ 2, %[[MEMCHR_CASE2]] ], [ 3, %[[MEMCHR_CASE3]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr @str, i64 [[MEMCHR_IDX]]
-; CHECK-NEXT:    br label %[[ENTRY_SPLIT]]
-; CHECK:       [[ENTRY_SPLIT]]:
-; CHECK-NEXT:    [[MEMCHR4:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[TMP1]], %[[MEMCHR_SUCCESS]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 48, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], ptr @str, ptr null
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 49, [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], ptr getelementptr (i8, ptr @str, i64 1), ptr [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], ptr getelementptr (i8, ptr @str, i64 2), ptr [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i8 50, [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], ptr getelementptr (i8, ptr @str, i64 3), ptr [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i8 0, [[TMP0]]
+; CHECK-NEXT:    [[MEMCHR4:%.*]] = select i1 [[TMP9]], ptr getelementptr (i8, ptr @str, i64 4), ptr [[TMP8]]
 ; CHECK-NEXT:    [[ISNULL:%.*]] = icmp eq ptr [[MEMCHR4]], null
 ; CHECK-NEXT:    ret i1 [[ISNULL]]
 ;
@@ -43,28 +33,18 @@ entry:
 define ptr @test_memchr(i32 %x) {
 ; CHECK-LABEL: define ptr @test_memchr(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[X]] to i8
-; CHECK-NEXT:    switch i8 [[TMP0]], label %[[ENTRY_SPLIT:.*]] [
-; CHECK-NEXT:      i8 48, label %[[MEMCHR_CASE:.*]]
-; CHECK-NEXT:      i8 49, label %[[MEMCHR_CASE1:.*]]
-; CHECK-NEXT:      i8 0, label %[[MEMCHR_CASE2:.*]]
-; CHECK-NEXT:      i8 50, label %[[MEMCHR_CASE3:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[MEMCHR_CASE]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS:.*]]
-; CHECK:       [[MEMCHR_CASE1]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
-; CHECK:       [[MEMCHR_CASE2]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
-; CHECK:       [[MEMCHR_CASE3]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
-; CHECK:       [[MEMCHR_SUCCESS]]:
-; CHECK-NEXT:    [[MEMCHR_IDX:%.*]] = phi i64 [ 0, %[[MEMCHR_CASE]] ], [ 1, %[[MEMCHR_CASE1]] ], [ 2, %[[MEMCHR_CASE2]] ], [ 3, %[[MEMCHR_CASE3]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr @str, i64 [[MEMCHR_IDX]]
-; CHECK-NEXT:    br label %[[ENTRY_SPLIT]]
-; CHECK:       [[ENTRY_SPLIT]]:
-; CHECK-NEXT:    [[MEMCHR4:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[TMP1]], %[[MEMCHR_SUCCESS]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 48, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], ptr @str, ptr null
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 49, [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], ptr getelementptr (i8, ptr @str, i64 1), ptr [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[TMP5]], ptr getelementptr (i8, ptr @str, i64 2), ptr [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i8 50, [[TMP0]]
+; CHECK-NEXT:    [[TMP8:%.*]] = select i1 [[TMP7]], ptr getelementptr (i8, ptr @str, i64 3), ptr [[TMP6]]
+; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i8 0, [[TMP0]]
+; CHECK-NEXT:    [[MEMCHR4:%.*]] = select i1 [[TMP9]], ptr getelementptr (i8, ptr @str, i64 4), ptr [[TMP8]]
 ; CHECK-NEXT:    ret ptr [[MEMCHR4]]
 ;
 entry:
@@ -75,25 +55,14 @@ entry:
 define ptr @test_memchr_smaller_n(i32 %x) {
 ; CHECK-LABEL: define ptr @test_memchr_smaller_n(
 ; CHECK-SAME: i32 [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[X]] to i8
-; CHECK-NEXT:    switch i8 [[TMP0]], label %[[ENTRY_SPLIT:.*]] [
-; CHECK-NEXT:      i8 48, label %[[MEMCHR_CASE:.*]]
-; CHECK-NEXT:      i8 49, label %[[MEMCHR_CASE1:.*]]
-; CHECK-NEXT:      i8 0, label %[[MEMCHR_CASE2:.*]]
-; CHECK-NEXT:    ]
-; CHECK:       [[MEMCHR_CASE]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS:.*]]
-; CHECK:       [[MEMCHR_CASE1]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
-; CHECK:       [[MEMCHR_CASE2]]:
-; CHECK-NEXT:    br label %[[MEMCHR_SUCCESS]]
-; CHECK:       [[MEMCHR_SUCCESS]]:
-; CHECK-NEXT:    [[MEMCHR_IDX:%.*]] = phi i64 [ 0, %[[MEMCHR_CASE]] ], [ 1, %[[MEMCHR_CASE1]] ], [ 2, %[[MEMCHR_CASE2]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr @str, i64 [[MEMCHR_IDX]]
-; CHECK-NEXT:    br label %[[ENTRY_SPLIT]]
-; CHECK:       [[ENTRY_SPLIT]]:
-; CHECK-NEXT:    [[MEMCHR3:%.*]] = phi ptr [ null, %[[ENTRY]] ], [ [[TMP1]], %[[MEMCHR_SUCCESS]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 48, [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], ptr @str, ptr null
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 49, [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], ptr getelementptr (i8, ptr @str, i64 1), ptr [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i8 0, [[TMP0]]
+; CHECK-NEXT:    [[MEMCHR3:%.*]] = select i1 [[TMP5]], ptr getelementptr (i8, ptr @str, i64 2), ptr [[TMP4]]
 ; CHECK-NEXT:    ret ptr [[MEMCHR3]]
 ;
 entry:
@@ -119,7 +88,26 @@ define ptr @test_memchr_non_constant(i32 %x, ptr %str) {
 ; CHECK-LABEL: define ptr @test_memchr_non_constant(
 ; CHECK-SAME: i32 [[X:%.*]], ptr [[STR:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr [[STR]], i32 [[X]], i64 5)
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[X]] to i8
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[STR]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[TMP2]], ptr [[STR]], ptr null
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr i8, ptr [[STR]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = load i8, ptr [[TMP4]], align 1
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i8 [[TMP5]], [[TMP0]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[TMP6]], ptr [[TMP4]], ptr [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[STR]], i64 2
+; CHECK-NEXT:    [[TMP9:%.*]] = load i8, ptr [[TMP8]], align 1
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i8 [[TMP9]], [[TMP0]]
+; CHECK-NEXT:    [[TMP11:%.*]] = select i1 [[TMP10]], ptr [[TMP8]], ptr [[TMP7]]
+; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[STR]], i64 3
+; CHECK-NEXT:    [[TMP13:%.*]] = load i8, ptr [[TMP12]], align 1
+; CHECK-NEXT:    [[TMP14:%.*]] = icmp eq i8 [[TMP13]], [[TMP0]]
+; CHECK-NEXT:    [[TMP15:%.*]] = select i1 [[TMP14]], ptr [[TMP12]], ptr [[TMP11]]
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[STR]], i64 4
+; CHECK-NEXT:    [[TMP17:%.*]] = load i8, ptr [[TMP16]], align 1
+; CHECK-NEXT:    [[TMP18:%.*]] = icmp eq i8 [[TMP17]], [[TMP0]]
+; CHECK-NEXT:    [[MEMCHR:%.*]] = select i1 [[TMP18]], ptr [[TMP16]], ptr [[TMP15]]
 ; CHECK-NEXT:    ret ptr [[MEMCHR]]
 ;
 entry:
@@ -130,8 +118,7 @@ entry:
 define ptr @test_memchr_constant_ch() {
 ; CHECK-LABEL: define ptr @test_memchr_constant_ch() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[MEMCHR:%.*]] = call ptr @memchr(ptr @str, i32 49, i64 5)
-; CHECK-NEXT:    ret ptr [[MEMCHR]]
+; CHECK-NEXT:    ret ptr getelementptr (i8, ptr @str, i64 1)
 ;
 entry:
   %memchr = call ptr @memchr(ptr @str, i32 49, i64 5)
