@@ -149,7 +149,7 @@ public:
 
   llvm::ArrayRef<elf::ELFProgramHeader> ProgramHeaders();
   lldb_private::DataExtractor GetSegmentData(const elf::ELFProgramHeader &H);
-
+  lldb_private::DataExtractor GetSectionData(const elf::ELFSectionHeader &H);
   llvm::StringRef
   StripLinkerSymbolAnnotations(llvm::StringRef symbol_name) const override;
 
@@ -270,14 +270,48 @@ private:
   lldb::SectionType GetSectionType(const ELFSectionHeaderInfo &H) const;
 
   static void ParseARMAttributes(lldb_private::DataExtractor &data,
-                                 uint64_t length,
                                  lldb_private::ArchSpec &arch_spec);
+
+  /// Read the section contents for a given section header.
+  ///
+  /// Section contents are available in the ELF file data if we have all of the
+  /// data mapped into \a object_data.
+  ///
+  /// \param[in] sh
+  ///    The section header of the section we want to read.
+  ///
+  /// \param[in] object_data
+  ///    The object data that contains all of the contiguous bytes which starts
+  ///    with the ELF header and also contains the program headers. This data
+  ///    will contain the full ELF file if the ELF file is read from disk. If
+  ///    the ELF file is read from memory, then it might only contain the ELF
+  ///    header and program header data.
+  ///
+  /// \param[out] section_data
+  ///    The section data to fill in if we are able to read the section contents
+  ///    completely.
+  ///
+  /// \return True if we are able to read all of the section data from
+  ///    \a object_data. False otherwise.
+  static bool GetSectionContentsFromELFData(
+    const elf::ELFSectionHeader &sh,
+    const lldb_private::DataExtractor &object_data,
+    lldb_private::DataExtractor &section_data);
+
+  /// Callback that can be used to read the data for a section.
+  ///
+  /// \return True if the section has a size and all bytes can be read,
+  ///         False otherwise.
+  using ReadSectionDataCallback =
+  std::function<bool(const elf::ELFSectionHeader &sh,
+                     lldb_private::DataExtractor &data)>;
 
   /// Parses the elf section headers and returns the uuid, debug link name,
   /// crc, archspec.
-  static size_t GetSectionHeaderInfo(SectionHeaderColl &section_headers,
-                                     lldb_private::DataExtractor &object_data,
-                                     const elf::ELFHeader &header,
+  static size_t GetSectionHeaderInfo(const elf::ELFHeader &header,
+                                     const lldb_private::DataExtractor &sh_data,
+                                     SectionHeaderColl &section_headers,
+                                     ReadSectionDataCallback read_sect_callback,
                                      lldb_private::UUID &uuid,
                                      std::string &gnu_debuglink_file,
                                      uint32_t &gnu_debuglink_crc,
