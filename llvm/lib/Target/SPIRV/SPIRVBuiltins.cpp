@@ -1968,8 +1968,7 @@ static bool generateReadImageInst(const StringRef DemangledCall,
       Sampler = GR->buildConstantSampler(
           Register(), getSamplerAddressingModeFromBitmask(SamplerMask),
           getSamplerParamFromBitmask(SamplerMask),
-          getSamplerFilterModeFromBitmask(SamplerMask), MIRBuilder,
-          GR->getSPIRVTypeForVReg(Sampler));
+          getSamplerFilterModeFromBitmask(SamplerMask), MIRBuilder);
     }
     SPIRVType *ImageType = GR->getSPIRVTypeForVReg(Image);
     SPIRVType *SampledImageType =
@@ -2056,7 +2055,7 @@ static bool generateSampleImageInst(const StringRef DemangledCall,
     Register Sampler = GR->buildConstantSampler(
         Call->ReturnRegister, getSamplerAddressingModeFromBitmask(Bitmask),
         getSamplerParamFromBitmask(Bitmask),
-        getSamplerFilterModeFromBitmask(Bitmask), MIRBuilder, Call->ReturnType);
+        getSamplerFilterModeFromBitmask(Bitmask), MIRBuilder);
     return Sampler.isValid();
   } else if (Call->Builtin->Name.contains_insensitive("__spirv_SampledImage")) {
     // Create OpSampledImage.

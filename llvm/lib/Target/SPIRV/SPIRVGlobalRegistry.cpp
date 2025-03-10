@@ -398,7 +398,9 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
                      SPIRV::AccessQualifier::ReadWrite, EmitIR);
     DT.add(ConstInt, &MIRBuilder.getMF(), Res);
     if (EmitIR) {
-      MIRBuilder.buildConstant(Res, *ConstInt);
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildConstant(Res, *ConstInt);
+      });
     } else {
       Register SpvTypeReg = getSPIRVTypeID(SpvType);
       createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
@@ -605,7 +607,9 @@ Register SPIRVGlobalRegistry::getOrCreateIntCompositeOrNull(
     assignSPIRVTypeToVReg(SpvType, SpvVecConst, *CurMF);
     DT.add(CA, CurMF, SpvVecConst);
     if (EmitIR) {
-      MIRBuilder.buildSplatBuildVector(SpvVecConst, SpvScalConst);
+      createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+        return MIRBuilder.buildSplatBuildVector(SpvVecConst, SpvScalConst);
+      });
     } else {
       createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
         if (Val) {
@@ -668,17 +672,10 @@ SPIRVGlobalRegistry::getOrCreateConstNullPtr(MachineIRBuilder &MIRBuilder,
   return Res;
 }
 
-Register SPIRVGlobalRegistry::buildConstantSampler(
-    Register ResReg, unsigned AddrMode, unsigned Param, unsigned FilerMode,
-    MachineIRBuilder &MIRBuilder, SPIRVType *SpvType) {
-  SPIRVType *SampTy;
-  if (SpvType)
-    SampTy = getOrCreateSPIRVType(getTypeForSPIRVType(SpvType), MIRBuilder,
-                                  SPIRV::AccessQualifier::ReadWrite, true);
-  else if ((SampTy = getOrCreateSPIRVTypeByName("opencl.sampler_t", MIRBuilder,
-                                                false)) == nullptr)
-    report_fatal_error("Unable to recognize SPIRV type name: opencl.sampler_t");
-
+Register
+SPIRVGlobalRegistry::buildConstantSampler(Register ResReg, unsigned AddrMode,
+                                          unsigned Param, unsigned FilerMode,
+                                          MachineIRBuilder &MIRBuilder) {
   auto Sampler =
       ResReg.isValid()
           ? ResReg
@@ -686,7 +683,7 @@ Register SPIRVGlobalRegistry::buildConstantSampler(
   auto Res = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
     return MIRBuilder.buildInstr(SPIRV::OpConstantSampler)
         .addDef(Sampler)
-        .addUse(getSPIRVTypeID(SampTy))
+        .addUse(getSPIRVTypeID(getOrCreateOpTypeSampler(MIRBuilder)))
         .addImm(AddrMode)
         .addImm(Param)
         .addImm(FilerMode);
@@ -1383,7 +1380,9 @@ SPIRVGlobalRegistry::getOrCreateOpTypeSampler(MachineIRBuilder &MIRBuilder) {
     return Res;
   Register ResVReg = createTypeVReg(MIRBuilder);
   DT.add(TD, &MIRBuilder.getMF(), ResVReg);
-  return MIRBuilder.buildInstr(SPIRV::OpTypeSampler).addDef(ResVReg);
+  return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+    return MIRBuilder.buildInstr(SPIRV::OpTypeSampler).addDef(ResVReg);
+  });
 }
 
 SPIRVType *SPIRVGlobalRegistry::getOrCreateOpTypePipe(
