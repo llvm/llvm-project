@@ -544,8 +544,7 @@ public:
                                    SPIRVType *SpvType);
   Register buildConstantSampler(Register Res, unsigned AddrMode, unsigned Param,
                                 unsigned FilerMode,
-                                MachineIRBuilder &MIRBuilder,
-                                SPIRVType *SpvType);
+                                MachineIRBuilder &MIRBuilder);
   Register getOrCreateUndef(MachineInstr &I, SPIRVType *SpvType,
                             const SPIRVInstrInfo &TII);
   Register buildGlobalVariable(Register Reg, SPIRVType *BaseType,
