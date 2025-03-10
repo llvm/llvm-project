@@ -990,10 +990,10 @@ static bool addCallTargetOperands(MachineInstrBuilder &CallInst,
       LLT::pointer(GV->getAddressSpace(), 64), GV);
     CallInst.addReg(Ptr.getReg(0));
 
-    if (IsDynamicVGPRChainCall)
+    if (IsDynamicVGPRChainCall) {
       // DynamicVGPR chain calls are always indirect.
       CallInst.addImm(0);
-    else
+    } else
       CallInst.add(Info.Callee);
   } else
     return false;
