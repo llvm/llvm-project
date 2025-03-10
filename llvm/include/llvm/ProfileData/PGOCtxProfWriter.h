@@ -87,10 +87,10 @@ public:
   void writeContextual(const ctx_profile::ContextNode &RootNode) override;
   void endContextSection() override;
 
-  void startFlatSection();
+  void startFlatSection() override;
   void writeFlat(ctx_profile::GUID Guid, const uint64_t *Buffer,
-                 size_t BufferSize);
-  void endFlatSection();
+                 size_t BufferSize) override;
+  void endFlatSection() override;
 
   // constants used in writing which a reader may find useful.
   static constexpr unsigned CodeLen = 2;
