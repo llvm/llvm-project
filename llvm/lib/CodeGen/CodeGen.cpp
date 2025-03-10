@@ -142,7 +142,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeUnreachableBlockElimLegacyPassPass(Registry);
   initializeUnreachableMachineBlockElimLegacyPass(Registry);
   initializeVirtRegMapWrapperLegacyPass(Registry);
-  initializeVirtRegRewriterPass(Registry);
+  initializeVirtRegRewriterLegacyPass(Registry);
   initializeWasmEHPreparePass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeXRayInstrumentationLegacyPass(Registry);
