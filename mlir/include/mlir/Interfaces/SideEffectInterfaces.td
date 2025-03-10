@@ -145,4 +145,29 @@ def RecursivelySpeculatable : TraitList<[
 // are always legal to hoist or sink.
 def Pure : TraitList<[AlwaysSpeculatable, NoMemoryEffect]>;
 
+//===----------------------------------------------------------------------===//
+// LocalEffects
+//===----------------------------------------------------------------------===//
+
+// Interface which could be implemented by imperative operators that have no
+// effects on state outside of what’s directly available through their operands
+// (for example, they can’t access a `memref.global`, can’t make a call to
+// another function that can potentially do so, can’t perform a
+// synchronization/wait on other pending memory operations, etc.), including
+// through operators in their regions.
+def LocalEffectsOpInterface : OpInterface<"LocalEffectsOpInterface"> {
+  let description = [{An interface for operators which have no effects on state
+                      outside of what's directly available through their own
+                      operands or operands of the operators inside their regions.
+  }];
+  let cppNamespace = "::mlir";
+
+  let methods =
+      [InterfaceMethod<[{ Returns true if operator has only local effects. }],
+                       "bool", "hasLocalEffects", (ins), [{}], [{
+                         return mlir::detail::hasLocalEffectsDefaultImpl(
+                             $_op.getOperation());
+                       }]>];
+}
+
 #endif // MLIR_INTERFACES_SIDEEFFECTS
