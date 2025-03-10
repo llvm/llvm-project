@@ -766,8 +766,15 @@ Error SymbolTableSection::removeSymbols(
     function_ref<bool(const Symbol &)> ToRemove) {
   Symbols.erase(
       std::remove_if(std::begin(Symbols) + 1, std::end(Symbols),
-                     [ToRemove](const SymPtr &Sym) { return ToRemove(*Sym); }),
-      std::end(Symbols));
+               [&](const SymPtr &Sym) {
+                   if (ToRemove(*Sym)) {
+                       if(isVerboseFlag)
+                         llvm::outs() << "Symbols Removed:" << Sym->Name<< "\n";
+                       return true;
+                   }
+                   return false;
+               }));
+
   auto PrevSize = Size;
   Size = Symbols.size() * EntrySize;
   if (Size < PrevSize)
@@ -2230,6 +2237,9 @@ Error Object::removeSections(
   for (auto &RemoveSec : make_range(Iter, std::end(Sections))) {
     for (auto &Segment : Segments)
       Segment->removeSection(RemoveSec.get());
+    if (isVerboseEnabled) {
+      llvm::outs() << "Removed Section: " << (RemoveSec.get()->Name);
+    }
     RemoveSec->onRemove();
     RemoveSections.insert(RemoveSec.get());
   }
@@ -2282,8 +2292,12 @@ Error Object::replaceSections(
 Error Object::removeSymbols(function_ref<bool(const Symbol &)> ToRemove) {
   if (SymbolTable)
     for (const SecPtr &Sec : Sections)
-      if (Error E = Sec->removeSymbols(ToRemove))
+      if (Error E = Sec->removeSymbols(ToRemove)) {
+        if (isVerboseEnabled) {
+          llvm::outs() << "Removed Symbols:" << Sec->Name;
+        }
         return E;
+      }
   return Error::success();
 }
 
