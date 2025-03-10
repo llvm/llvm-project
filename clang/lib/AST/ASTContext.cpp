@@ -3321,7 +3321,8 @@ static void encodeTypeForFunctionPointerAuth(const ASTContext &Ctx,
   case Type::MemberPointer: {
     OS << "M";
     const auto *MPT = T->castAs<MemberPointerType>();
-    encodeTypeForFunctionPointerAuth(Ctx, OS, QualType(MPT->getClass(), 0));
+    encodeTypeForFunctionPointerAuth(
+        Ctx, OS, QualType(MPT->getQualifier()->getAsType(), 0));
     encodeTypeForFunctionPointerAuth(Ctx, OS, MPT->getPointeeType());
     return;
   }
@@ -3510,7 +3511,8 @@ uint16_t ASTContext::getPointerAuthTypeDiscriminator(QualType T) {
         if (PointeeType->castAs<FunctionProtoType>()->getExceptionSpecType() !=
             EST_None) {
           QualType FT = getFunctionTypeWithExceptionSpec(PointeeType, EST_None);
-          T = getMemberPointerType(FT, MPT->getClass());
+          T = getMemberPointerType(FT, MPT->getQualifier(),
+                                   MPT->getMostRecentCXXRecordDecl());
         }
       }
     std::unique_ptr<MangleContext> MC(createMangleContext());
@@ -4024,32 +4026,50 @@ QualType ASTContext::getRValueReferenceType(QualType T) const {
   return QualType(New, 0);
 }
 
-/// getMemberPointerType - Return the uniqued reference to the type for a
-/// member pointer to the specified type, in the specified class.
-QualType ASTContext::getMemberPointerType(QualType T, const Type *Cls) const {
+QualType ASTContext::getMemberPointerType(QualType T,
+                                          NestedNameSpecifier *Qualifier,
+                                          const CXXRecordDecl *Cls) const {
+  if (!Qualifier) {
+    assert(Cls && "At least one of Qualifier or Cls must be provided");
+    Qualifier = NestedNameSpecifier::Create(*this, /*Prefix=*/nullptr,
+                                            /*Template=*/false,
+                                            getTypeDeclType(Cls).getTypePtr());
+  } else if (!Cls) {
+    Cls = Qualifier->getAsRecordDecl();
+  }
   // Unique pointers, to guarantee there is only one pointer of a particular
   // structure.
   llvm::FoldingSetNodeID ID;
-  MemberPointerType::Profile(ID, T, Cls);
+  MemberPointerType::Profile(ID, T, Qualifier, Cls);
 
   void *InsertPos = nullptr;
   if (MemberPointerType *PT =
       MemberPointerTypes.FindNodeOrInsertPos(ID, InsertPos))
     return QualType(PT, 0);
 
+  NestedNameSpecifier *CanonicalQualifier = [&] {
+    if (!Cls)
+      return getCanonicalNestedNameSpecifier(Qualifier);
+    NestedNameSpecifier *R = NestedNameSpecifier::Create(
+        *this, /*Prefix=*/nullptr, /*Template=*/false,
+        Cls->getCanonicalDecl()->getTypeForDecl());
+    assert(R == getCanonicalNestedNameSpecifier(R));
+    return R;
+  }();
   // If the pointee or class type isn't canonical, this won't be a canonical
   // type either, so fill in the canonical type field.
   QualType Canonical;
-  if (!T.isCanonical() || !Cls->isCanonicalUnqualified()) {
-    Canonical = getMemberPointerType(getCanonicalType(T),getCanonicalType(Cls));
-
+  if (!T.isCanonical() || Qualifier != CanonicalQualifier) {
+    Canonical =
+        getMemberPointerType(getCanonicalType(T), CanonicalQualifier, Cls);
+    assert(!cast<MemberPointerType>(Canonical)->isSugared());
     // Get the new insert position for the node we care about.
-    MemberPointerType *NewIP =
-      MemberPointerTypes.FindNodeOrInsertPos(ID, InsertPos);
-    assert(!NewIP && "Shouldn't be in the map!"); (void)NewIP;
+    [[maybe_unused]] MemberPointerType *NewIP =
+        MemberPointerTypes.FindNodeOrInsertPos(ID, InsertPos);
+    assert(!NewIP && "Shouldn't be in the map!");
   }
   auto *New = new (*this, alignof(MemberPointerType))
-      MemberPointerType(T, Cls, Canonical);
+      MemberPointerType(T, Qualifier, Canonical);
   Types.push_back(New);
   MemberPointerTypes.InsertNode(New, InsertPos);
   return QualType(New, 0);
@@ -6811,11 +6831,16 @@ bool ASTContext::UnwrapSimilarTypes(QualType &T1, QualType &T2,
     return true;
   }
 
-  const auto *T1MPType = T1->getAs<MemberPointerType>();
-  const auto *T2MPType = T2->getAs<MemberPointerType>();
-  if (T1MPType && T2MPType &&
-      hasSameUnqualifiedType(QualType(T1MPType->getClass(), 0),
-                             QualType(T2MPType->getClass(), 0))) {
+  if (const auto *T1MPType = T1->getAs<MemberPointerType>(),
+      *T2MPType = T2->getAs<MemberPointerType>();
+      T1MPType && T2MPType) {
+    if (auto *RD1 = T1MPType->getMostRecentCXXRecordDecl(),
+        *RD2 = T2MPType->getMostRecentCXXRecordDecl();
+        RD1 != RD2 && RD1->getCanonicalDecl() != RD2->getCanonicalDecl())
+      return false;
+    if (getCanonicalNestedNameSpecifier(T1MPType->getQualifier()) !=
+        getCanonicalNestedNameSpecifier(T2MPType->getQualifier()))
+      return false;
     T1 = T1MPType->getPointeeType();
     T2 = T2MPType->getPointeeType();
     return true;
@@ -13461,13 +13486,112 @@ static ElaboratedTypeKeyword getCommonTypeKeyword(const T *X, const T *Y) {
                                             : ElaboratedTypeKeyword::None;
 }
 
+static NestedNameSpecifier *getCommonNNS(ASTContext &Ctx,
+                                         NestedNameSpecifier *X,
+                                         NestedNameSpecifier *Y, bool Sugar) {
+  if (X == Y)
+    return X;
+
+  NestedNameSpecifier *Canon = Ctx.getCanonicalNestedNameSpecifier(X);
+  if (Canon != Ctx.getCanonicalNestedNameSpecifier(Y)) {
+    if (Sugar)
+      return nullptr;
+    llvm_unreachable("Should be the same NestedNameSpecifier");
+  }
+
+  NestedNameSpecifier *R;
+  switch (auto KX = X->getKind(), KY = Y->getKind(); KX) {
+  case NestedNameSpecifier::SpecifierKind::Identifier: {
+    assert(KY == NestedNameSpecifier::SpecifierKind::Identifier);
+    IdentifierInfo *II = X->getAsIdentifier();
+    assert(II == Y->getAsIdentifier());
+    NestedNameSpecifier *P =
+        ::getCommonNNS(Ctx, X->getPrefix(), Y->getPrefix(), /*Sugar=*/false);
+    R = NestedNameSpecifier::Create(Ctx, P, II);
+    break;
+  }
+  case NestedNameSpecifier::SpecifierKind::Namespace:
+  case NestedNameSpecifier::SpecifierKind::NamespaceAlias: {
+    assert(KY == NestedNameSpecifier::SpecifierKind::Namespace ||
+           KY == NestedNameSpecifier::SpecifierKind::NamespaceAlias);
+    NestedNameSpecifier *P = ::getCommonNNS(Ctx, X->getPrefix(), Y->getPrefix(),
+                                            /*Sugar=*/true);
+    NamespaceAliasDecl *AX = X->getAsNamespaceAlias(),
+                       *AY = Y->getAsNamespaceAlias();
+    if (declaresSameEntity(AX, AY)) {
+      R = NestedNameSpecifier::Create(Ctx, P, ::getCommonDeclChecked(AX, AY));
+      break;
+    }
+    NamespaceDecl *NX = AX ? AX->getNamespace() : X->getAsNamespace(),
+                  *NY = AY ? AY->getNamespace() : Y->getAsNamespace();
+    R = NestedNameSpecifier::Create(Ctx, P, ::getCommonDeclChecked(NX, NY));
+    break;
+  }
+  case NestedNameSpecifier::SpecifierKind::TypeSpec:
+  case NestedNameSpecifier::SpecifierKind::TypeSpecWithTemplate: {
+    assert(KY == NestedNameSpecifier::SpecifierKind::TypeSpec ||
+           KY == NestedNameSpecifier::SpecifierKind::TypeSpecWithTemplate);
+    bool Template =
+        KX == NestedNameSpecifier::SpecifierKind::TypeSpecWithTemplate &&
+        KY == NestedNameSpecifier::SpecifierKind::TypeSpecWithTemplate;
+
+    const Type *TX = X->getAsType(), *TY = Y->getAsType();
+    if (TX == TY) {
+      NestedNameSpecifier *P =
+          ::getCommonNNS(Ctx, X->getPrefix(), Y->getPrefix(),
+                         /*Sugar=*/true);
+      R = NestedNameSpecifier::Create(Ctx, P, Template, TX);
+      break;
+    }
+    // TODO: Try to salvage the original prefix.
+    // If getCommonSugaredType removed any top level sugar, the original prefix
+    // is not applicable anymore.
+    NestedNameSpecifier *P = nullptr;
+    const Type *T = Ctx.getCommonSugaredType(QualType(X->getAsType(), 0),
+                                             QualType(Y->getAsType(), 0),
+                                             /*Unqualified=*/true)
+                        .getTypePtr();
+    switch (T->getTypeClass()) {
+    case Type::Elaborated: {
+      auto *ET = cast<ElaboratedType>(T);
+      R = NestedNameSpecifier::Create(Ctx, ET->getQualifier(), Template,
+                                      ET->getNamedType().getTypePtr());
+      break;
+    }
+    case Type::DependentName: {
+      auto *DN = cast<DependentNameType>(T);
+      R = NestedNameSpecifier::Create(Ctx, DN->getQualifier(),
+                                      DN->getIdentifier());
+      break;
+    }
+    case Type::DependentTemplateSpecialization: {
+      auto *DTST = cast<DependentTemplateSpecializationType>(T);
+      T = Ctx.getDependentTemplateSpecializationType(
+                 DTST->getKeyword(), /*NNS=*/nullptr, DTST->getIdentifier(),
+                 DTST->template_arguments())
+              .getTypePtr();
+      P = DTST->getQualifier();
+      R = NestedNameSpecifier::Create(Ctx, DTST->getQualifier(), Template, T);
+      break;
+    }
+    default:
+      R = NestedNameSpecifier::Create(Ctx, P, Template, T);
+      break;
+    }
+    break;
+  }
+  case NestedNameSpecifier::SpecifierKind::Global:
+  case NestedNameSpecifier::SpecifierKind::Super:
+    return X;
+  }
+  assert(Ctx.getCanonicalNestedNameSpecifier(R) == Canon);
+  return R;
+}
+
 template <class T>
 static NestedNameSpecifier *getCommonNNS(ASTContext &Ctx, const T *X,
-                                         const T *Y) {
-  // FIXME: Try to keep the common NNS sugar.
-  return X->getQualifier() == Y->getQualifier()
-             ? X->getQualifier()
-             : Ctx.getCanonicalNestedNameSpecifier(X->getQualifier());
+                                         const T *Y, bool Sugar) {
+  return ::getCommonNNS(Ctx, X->getQualifier(), Y->getQualifier(), Sugar);
 }
 
 template <class T>
@@ -13714,11 +13838,11 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
   case Type::MemberPointer: {
     const auto *PX = cast<MemberPointerType>(X),
                *PY = cast<MemberPointerType>(Y);
-    return Ctx.getMemberPointerType(
-        getCommonPointeeType(Ctx, PX, PY),
-        Ctx.getCommonSugaredType(QualType(PX->getClass(), 0),
-                                 QualType(PY->getClass(), 0))
-            .getTypePtr());
+    assert(declaresSameEntity(PX->getMostRecentCXXRecordDecl(),
+                              PY->getMostRecentCXXRecordDecl()));
+    return Ctx.getMemberPointerType(getCommonPointeeType(Ctx, PX, PY),
+                                    getCommonNNS(Ctx, PX, PY, /*Sugar=*/false),
+                                    PX->getMostRecentCXXRecordDecl());
   }
   case Type::LValueReference: {
     const auto *PX = cast<LValueReferenceType>(X),
@@ -13877,9 +14001,10 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     const auto *NX = cast<DependentNameType>(X),
                *NY = cast<DependentNameType>(Y);
     assert(NX->getIdentifier() == NY->getIdentifier());
-    return Ctx.getDependentNameType(
-        getCommonTypeKeyword(NX, NY), getCommonNNS(Ctx, NX, NY),
-        NX->getIdentifier(), NX->getCanonicalTypeInternal());
+    return Ctx.getDependentNameType(getCommonTypeKeyword(NX, NY),
+                                    getCommonNNS(Ctx, NX, NY, /*Sugar=*/false),
+                                    NX->getIdentifier(),
+                                    NX->getCanonicalTypeInternal());
   }
   case Type::DependentTemplateSpecialization: {
     const auto *TX = cast<DependentTemplateSpecializationType>(X),
@@ -13888,8 +14013,8 @@ static QualType getCommonNonSugarTypeNode(ASTContext &Ctx, const Type *X,
     auto As = getCommonTemplateArguments(Ctx, TX->template_arguments(),
                                          TY->template_arguments());
     return Ctx.getDependentTemplateSpecializationType(
-        getCommonTypeKeyword(TX, TY), getCommonNNS(Ctx, TX, TY),
-        TX->getIdentifier(), As);
+        getCommonTypeKeyword(TX, TY),
+        getCommonNNS(Ctx, TX, TY, /*Sugar=*/false), TX->getIdentifier(), As);
   }
   case Type::UnaryTransform: {
     const auto *TX = cast<UnaryTransformType>(X),
@@ -14046,7 +14171,8 @@ static QualType getCommonSugarTypeNode(ASTContext &Ctx, const Type *X,
   case Type::Elaborated: {
     const auto *EX = cast<ElaboratedType>(X), *EY = cast<ElaboratedType>(Y);
     return Ctx.getElaboratedType(
-        ::getCommonTypeKeyword(EX, EY), ::getCommonNNS(Ctx, EX, EY),
+        ::getCommonTypeKeyword(EX, EY),
+        ::getCommonNNS(Ctx, EX, EY, /*Sugar=*/true),
         Ctx.getQualifiedType(Underlying),
         ::getCommonDecl(EX->getOwnedTagDecl(), EY->getOwnedTagDecl()));
   }
