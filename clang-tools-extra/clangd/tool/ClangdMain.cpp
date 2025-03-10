@@ -18,6 +18,7 @@
 #include "Protocol.h"
 #include "TidyProvider.h"
 #include "Transport.h"
+#include "Diagnostics.h"
 #include "index/Background.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
@@ -862,7 +863,9 @@ clangd accepts flags on the commandline, and in the CLANGD_FLAGS environment var
   log("{0}", versionString());
   log("Features: {0}", featureString());
   log("PID: {0}", llvm::sys::Process::getProcessId());
+
   {
+    clang::clangd::initializeClangdBinaryPath(argv[0]);
     SmallString<128> CWD;
     if (auto Err = llvm::sys::fs::current_path(CWD))
       log("Working directory unknown: {0}", Err.message());

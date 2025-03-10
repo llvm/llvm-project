@@ -33,6 +33,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
@@ -45,9 +46,17 @@
 #include <tuple>
 #include <utility>
 #include <vector>
+#include <filesystem>
 
 namespace clang {
 namespace clangd {
+
+std::string ClangdBinaryPath;
+void initializeClangdBinaryPath(const char *argv0) {
+    void *mainAddr = (void *)(uintptr_t)&initializeClangdBinaryPath; // can be any function
+    ClangdBinaryPath = llvm::sys::fs::getMainExecutable(argv0, mainAddr);
+}
+
 namespace {
 
 const char *getDiagnosticCode(unsigned ID) {
@@ -216,6 +225,20 @@ bool tryMoveToMainFile(Diag &D, FullSourceLoc DiagLoc) {
   const char *Prefix = getMainFileRange(D, SM, DiagLoc, R);
   if (!Prefix)
     return false;
+
+  auto FID = SM.getFileID(DiagLoc);
+  std::optional<std::string> FilePath;
+  if (const auto FE = SM.getFileEntryRefForID(FID)) {
+    FilePath = getCanonicalPath(*FE, SM.getFileManager());
+  }
+
+  std::filesystem::path extensionDirPath = std::filesystem::path(clang::clangd::ClangdBinaryPath).parent_path().string();
+  std::filesystem::path uCPPLocation = extensionDirPath / "uCPP/source/src";
+
+  // If the file is part of uC++, completely ignore its diagnostics
+  if( !FilePath->empty() && FilePath.value().find(uCPPLocation.string()) == 0) {
+    return false;
+  }
 
   // Add a note that will point to real diagnostic.
   auto FE = *SM.getFileEntryRefForID(SM.getFileID(DiagLoc));
@@ -610,6 +633,7 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
     }
     setTags(Diag);
   }
+
   // Deduplicate clang-tidy diagnostics -- some clang-tidy checks may emit
   // duplicated messages due to various reasons (e.g. the check doesn't handle
   // template instantiations well; clang-tidy alias checks).
@@ -713,6 +737,19 @@ void StoreDiags::HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
   }
 
   SourceManager &SM = Info.getSourceManager();
+  auto FID = SM.getFileID(Info.getLocation());
+  // Retrieve the file path
+  std::optional<std::string> FilePath;
+  if (const auto FE = SM.getFileEntryRefForID(FID)) {
+    FilePath = getCanonicalPath(*FE, SM.getFileManager());
+  }
+
+  std::filesystem::path extensionDirPath = std::filesystem::path(clang::clangd::ClangdBinaryPath).parent_path();
+  std::filesystem::path uCPPLocation = extensionDirPath / "uCPP/source/src";
+  if( !FilePath->empty() && FilePath.value().find(uCPPLocation.string()) == 0) {
+    std::string FileName = std::filesystem::path(FilePath.value()).filename().string();
+    return;
+  }
 
   auto FillDiagBase = [&](DiagBase &D) {
     fillNonLocationData(DiagLevel, Info, D);

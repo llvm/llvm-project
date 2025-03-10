@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CompileCommands.h"
+#include "Diagnostics.h"
 #include "Config.h"
 #include "support/Logger.h"
 #include "support/Trace.h"
@@ -28,6 +29,9 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
+#include "llvm/Support/raw_ostream.h"
+#include <cstdlib>
+#include <filesystem>
 #include <iterator>
 #include <optional>
 #include <string>
@@ -200,6 +204,15 @@ void CommandMangler::operator()(tooling::CompileCommand &Command,
                                 llvm::StringRef File) const {
   std::vector<std::string> &Cmd = Command.CommandLine;
   trace::Span S("AdjustCompileFlags");
+  
+  // Add uCPP code to the include path
+  
+  std::filesystem::path extensionDirPath = std::filesystem::path(clang::clangd::ClangdBinaryPath).parent_path();
+  std::filesystem::path ucppIncludePath = (extensionDirPath / "uCPP/source/src/library");
+
+  Cmd.push_back("-I" + ucppIncludePath.string());
+  Cmd.push_back("-ferror-limit=0"); //"-ferror-limit=0"
+
   // Most of the modifications below assumes the Cmd starts with a driver name.
   // We might consider injecting a generic driver name like "cc" or "c++", but
   // a Cmd missing the driver is probably rare enough in practice and erroneous.
