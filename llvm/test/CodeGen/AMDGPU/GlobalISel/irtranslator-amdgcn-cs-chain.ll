@@ -134,4 +134,187 @@ define amdgpu_cs_chain void @chain_preserve_call(<3 x i32> inreg %sgpr, { i32, p
   unreachable
 }
 
+define amdgpu_cs_chain_preserve void @retry_vgpr_alloc.v20i32(<20 x i32> inreg %0) #10 {
+  ; GFX11-LABEL: name: retry_vgpr_alloc.v20i32
+  ; GFX11: bb.1 (%ir-block.1):
+  ; GFX11-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19
+  ; GFX11-NEXT: {{  $}}
+  ; GFX11-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; GFX11-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; GFX11-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX11-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX11-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX11-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX11-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX11-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX11-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX11-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX11-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX11-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX11-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX11-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX11-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $sgpr14
+  ; GFX11-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $sgpr15
+  ; GFX11-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; GFX11-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; GFX11-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; GFX11-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $sgpr19
+  ; GFX11-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<20 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32)
+  ; GFX11-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 19
+  ; GFX11-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 18
+  ; GFX11-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 17
+  ; GFX11-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 -4294967296
+  ; GFX11-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; GFX11-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+  ; GFX11-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @retry_vgpr_alloc.v20i32
+  ; GFX11-NEXT:   [[EVEC:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C]](s32)
+  ; GFX11-NEXT:   [[EVEC1:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C1]](s32)
+  ; GFX11-NEXT:   [[EVEC2:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C2]](s32)
+  ; GFX11-NEXT:   [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.getpc)
+  ; GFX11-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[INT]], [[C3]]
+  ; GFX11-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[EVEC2]](s32)
+  ; GFX11-NEXT:   [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[AND]], [[ZEXT]]
+  ; GFX11-NEXT:   [[INTTOPTR:%[0-9]+]]:ccr_sgpr_64(p0) = G_INTTOPTR [[OR]](s64)
+  ; GFX11-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sleep), 2
+  ; GFX11-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<20 x s32>)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
+  ; GFX11-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV1]](s32)
+  ; GFX11-NEXT:   $sgpr1 = COPY [[INTRINSIC_CONVERGENT1]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV2]](s32)
+  ; GFX11-NEXT:   $sgpr2 = COPY [[INTRINSIC_CONVERGENT2]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT3:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV3]](s32)
+  ; GFX11-NEXT:   $sgpr3 = COPY [[INTRINSIC_CONVERGENT3]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV4]](s32)
+  ; GFX11-NEXT:   $sgpr4 = COPY [[INTRINSIC_CONVERGENT4]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT5:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV5]](s32)
+  ; GFX11-NEXT:   $sgpr5 = COPY [[INTRINSIC_CONVERGENT5]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT6:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV6]](s32)
+  ; GFX11-NEXT:   $sgpr6 = COPY [[INTRINSIC_CONVERGENT6]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT7:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV7]](s32)
+  ; GFX11-NEXT:   $sgpr7 = COPY [[INTRINSIC_CONVERGENT7]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT8:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV8]](s32)
+  ; GFX11-NEXT:   $sgpr8 = COPY [[INTRINSIC_CONVERGENT8]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT9:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV9]](s32)
+  ; GFX11-NEXT:   $sgpr9 = COPY [[INTRINSIC_CONVERGENT9]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT10:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV10]](s32)
+  ; GFX11-NEXT:   $sgpr10 = COPY [[INTRINSIC_CONVERGENT10]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT11:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV11]](s32)
+  ; GFX11-NEXT:   $sgpr11 = COPY [[INTRINSIC_CONVERGENT11]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT12:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV12]](s32)
+  ; GFX11-NEXT:   $sgpr12 = COPY [[INTRINSIC_CONVERGENT12]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT13:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV13]](s32)
+  ; GFX11-NEXT:   $sgpr13 = COPY [[INTRINSIC_CONVERGENT13]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT14:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV14]](s32)
+  ; GFX11-NEXT:   $sgpr14 = COPY [[INTRINSIC_CONVERGENT14]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT15:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV15]](s32)
+  ; GFX11-NEXT:   $sgpr15 = COPY [[INTRINSIC_CONVERGENT15]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT16:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV16]](s32)
+  ; GFX11-NEXT:   $sgpr16 = COPY [[INTRINSIC_CONVERGENT16]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT17:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV17]](s32)
+  ; GFX11-NEXT:   $sgpr17 = COPY [[INTRINSIC_CONVERGENT17]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT18:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV18]](s32)
+  ; GFX11-NEXT:   $sgpr18 = COPY [[INTRINSIC_CONVERGENT18]](s32)
+  ; GFX11-NEXT:   [[INTRINSIC_CONVERGENT19:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV19]](s32)
+  ; GFX11-NEXT:   $sgpr19 = COPY [[INTRINSIC_CONVERGENT19]](s32)
+  ; GFX11-NEXT:   SI_CS_CHAIN_TC_W32_DVGPR [[INTTOPTR]](p0), 0, 0, [[EVEC1]](s32), [[EVEC]](s32), -1, [[GV]](p0), amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19
+  ;
+  ; GFX10-LABEL: name: retry_vgpr_alloc.v20i32
+  ; GFX10: bb.1 (%ir-block.1):
+  ; GFX10-NEXT:   liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7, $sgpr8, $sgpr9, $sgpr10, $sgpr11, $sgpr12, $sgpr13, $sgpr14, $sgpr15, $sgpr16, $sgpr17, $sgpr18, $sgpr19
+  ; GFX10-NEXT: {{  $}}
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
+  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr2
+  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $sgpr3
+  ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:_(s32) = COPY $sgpr4
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY $sgpr5
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:_(s32) = COPY $sgpr6
+  ; GFX10-NEXT:   [[COPY7:%[0-9]+]]:_(s32) = COPY $sgpr7
+  ; GFX10-NEXT:   [[COPY8:%[0-9]+]]:_(s32) = COPY $sgpr8
+  ; GFX10-NEXT:   [[COPY9:%[0-9]+]]:_(s32) = COPY $sgpr9
+  ; GFX10-NEXT:   [[COPY10:%[0-9]+]]:_(s32) = COPY $sgpr10
+  ; GFX10-NEXT:   [[COPY11:%[0-9]+]]:_(s32) = COPY $sgpr11
+  ; GFX10-NEXT:   [[COPY12:%[0-9]+]]:_(s32) = COPY $sgpr12
+  ; GFX10-NEXT:   [[COPY13:%[0-9]+]]:_(s32) = COPY $sgpr13
+  ; GFX10-NEXT:   [[COPY14:%[0-9]+]]:_(s32) = COPY $sgpr14
+  ; GFX10-NEXT:   [[COPY15:%[0-9]+]]:_(s32) = COPY $sgpr15
+  ; GFX10-NEXT:   [[COPY16:%[0-9]+]]:_(s32) = COPY $sgpr16
+  ; GFX10-NEXT:   [[COPY17:%[0-9]+]]:_(s32) = COPY $sgpr17
+  ; GFX10-NEXT:   [[COPY18:%[0-9]+]]:_(s32) = COPY $sgpr18
+  ; GFX10-NEXT:   [[COPY19:%[0-9]+]]:_(s32) = COPY $sgpr19
+  ; GFX10-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<20 x s32>) = G_BUILD_VECTOR [[COPY]](s32), [[COPY1]](s32), [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32), [[COPY5]](s32), [[COPY6]](s32), [[COPY7]](s32), [[COPY8]](s32), [[COPY9]](s32), [[COPY10]](s32), [[COPY11]](s32), [[COPY12]](s32), [[COPY13]](s32), [[COPY14]](s32), [[COPY15]](s32), [[COPY16]](s32), [[COPY17]](s32), [[COPY18]](s32), [[COPY19]](s32)
+  ; GFX10-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 19
+  ; GFX10-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 18
+  ; GFX10-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 17
+  ; GFX10-NEXT:   [[C3:%[0-9]+]]:_(s64) = G_CONSTANT i64 -4294967296
+  ; GFX10-NEXT:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; GFX10-NEXT:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
+  ; GFX10-NEXT:   [[GV:%[0-9]+]]:ccr_sgpr_64(p0) = G_GLOBAL_VALUE @retry_vgpr_alloc.v20i32
+  ; GFX10-NEXT:   [[EVEC:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C]](s32)
+  ; GFX10-NEXT:   [[EVEC1:%[0-9]+]]:sreg_32(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C1]](s32)
+  ; GFX10-NEXT:   [[EVEC2:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<20 x s32>), [[C2]](s32)
+  ; GFX10-NEXT:   [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.s.getpc)
+  ; GFX10-NEXT:   [[AND:%[0-9]+]]:_(s64) = G_AND [[INT]], [[C3]]
+  ; GFX10-NEXT:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[EVEC2]](s32)
+  ; GFX10-NEXT:   [[OR:%[0-9]+]]:_(s64) = disjoint G_OR [[AND]], [[ZEXT]]
+  ; GFX10-NEXT:   [[INTTOPTR:%[0-9]+]]:ccr_sgpr_64(p0) = G_INTTOPTR [[OR]](s64)
+  ; GFX10-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sleep), 2
+  ; GFX10-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32), [[UV8:%[0-9]+]]:_(s32), [[UV9:%[0-9]+]]:_(s32), [[UV10:%[0-9]+]]:_(s32), [[UV11:%[0-9]+]]:_(s32), [[UV12:%[0-9]+]]:_(s32), [[UV13:%[0-9]+]]:_(s32), [[UV14:%[0-9]+]]:_(s32), [[UV15:%[0-9]+]]:_(s32), [[UV16:%[0-9]+]]:_(s32), [[UV17:%[0-9]+]]:_(s32), [[UV18:%[0-9]+]]:_(s32), [[UV19:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[BUILD_VECTOR]](<20 x s32>)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV]](s32)
+  ; GFX10-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV1]](s32)
+  ; GFX10-NEXT:   $sgpr1 = COPY [[INTRINSIC_CONVERGENT1]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV2]](s32)
+  ; GFX10-NEXT:   $sgpr2 = COPY [[INTRINSIC_CONVERGENT2]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT3:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV3]](s32)
+  ; GFX10-NEXT:   $sgpr3 = COPY [[INTRINSIC_CONVERGENT3]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV4]](s32)
+  ; GFX10-NEXT:   $sgpr4 = COPY [[INTRINSIC_CONVERGENT4]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT5:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV5]](s32)
+  ; GFX10-NEXT:   $sgpr5 = COPY [[INTRINSIC_CONVERGENT5]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT6:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV6]](s32)
+  ; GFX10-NEXT:   $sgpr6 = COPY [[INTRINSIC_CONVERGENT6]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT7:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV7]](s32)
+  ; GFX10-NEXT:   $sgpr7 = COPY [[INTRINSIC_CONVERGENT7]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT8:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV8]](s32)
+  ; GFX10-NEXT:   $sgpr8 = COPY [[INTRINSIC_CONVERGENT8]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT9:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV9]](s32)
+  ; GFX10-NEXT:   $sgpr9 = COPY [[INTRINSIC_CONVERGENT9]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT10:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV10]](s32)
+  ; GFX10-NEXT:   $sgpr10 = COPY [[INTRINSIC_CONVERGENT10]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT11:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV11]](s32)
+  ; GFX10-NEXT:   $sgpr11 = COPY [[INTRINSIC_CONVERGENT11]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT12:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV12]](s32)
+  ; GFX10-NEXT:   $sgpr12 = COPY [[INTRINSIC_CONVERGENT12]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT13:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV13]](s32)
+  ; GFX10-NEXT:   $sgpr13 = COPY [[INTRINSIC_CONVERGENT13]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT14:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV14]](s32)
+  ; GFX10-NEXT:   $sgpr14 = COPY [[INTRINSIC_CONVERGENT14]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT15:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV15]](s32)
+  ; GFX10-NEXT:   $sgpr15 = COPY [[INTRINSIC_CONVERGENT15]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT16:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV16]](s32)
+  ; GFX10-NEXT:   $sgpr16 = COPY [[INTRINSIC_CONVERGENT16]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT17:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV17]](s32)
+  ; GFX10-NEXT:   $sgpr17 = COPY [[INTRINSIC_CONVERGENT17]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT18:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV18]](s32)
+  ; GFX10-NEXT:   $sgpr18 = COPY [[INTRINSIC_CONVERGENT18]](s32)
+  ; GFX10-NEXT:   [[INTRINSIC_CONVERGENT19:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[UV19]](s32)
+  ; GFX10-NEXT:   $sgpr19 = COPY [[INTRINSIC_CONVERGENT19]](s32)
+  ; GFX10-NEXT:   [[COPY20:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr48_sgpr49_sgpr50_sgpr51
+  ; GFX10-NEXT:   $sgpr48_sgpr49_sgpr50_sgpr51 = COPY [[COPY20]](<4 x s32>)
+  ; GFX10-NEXT:   SI_CS_CHAIN_TC_W32_DVGPR [[INTTOPTR]](p0), 0, 0, [[EVEC1]](s32), [[EVEC]](s32), -1, [[GV]](p0), amdgpu_allvgprs, implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $sgpr16, implicit $sgpr17, implicit $sgpr18, implicit $sgpr19, implicit $sgpr48_sgpr49_sgpr50_sgpr51
+  %.i19 = extractelement <20 x i32> %0, i64 19
+  %.i18 = extractelement <20 x i32> %0, i64 18
+  %.i17 = extractelement <20 x i32> %0, i64 17
+  %2 = call i64 @llvm.amdgcn.s.getpc()
+  %3 = and i64 %2, -4294967296
+  %4 = zext i32 %.i17 to i64
+  %5 = or disjoint i64 %3, %4
+  %6 = inttoptr i64 %5 to ptr
+  call void @llvm.amdgcn.s.sleep(i32 2)
+  call void (ptr, i32, <20 x i32>, {}, i32, ...) @llvm.amdgcn.cs.chain.p0.i32.v20i32.sl_s(ptr inreg %6, i32 inreg %.i18, <20 x i32> inreg %0, {} poison, i32 1, i32 %.i19, i32 -1, ptr nonnull @retry_vgpr_alloc.v20i32)
+  unreachable
+}
+
 
