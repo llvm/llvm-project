@@ -1077,6 +1077,8 @@ char *__dfso_getcwd(char *buf, size_t size, dfsan_label buf_label,
   return ret;
 }
 
+#ifndef __OHOS__
+// OpenHarmonyOS doesn't have get_current_dir_name()
 SANITIZER_INTERFACE_ATTRIBUTE
 char *__dfsw_get_current_dir_name(dfsan_label *ret_label) {
   char *ret = get_current_dir_name();
@@ -1091,6 +1093,7 @@ char *__dfso_get_current_dir_name(dfsan_label *ret_label,
                                   dfsan_origin *ret_origin) {
   return __dfsw_get_current_dir_name(ret_label);
 }
+#endif  // __OHOS__
 
 // This function is only available for glibc 2.25 or newer.  Mark it weak so
 // linking succeeds with older glibcs.
