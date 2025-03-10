@@ -55,7 +55,8 @@ struct nasty_char {
   char c;
 };
 
-static_assert(std::is_trivial<nasty_char>::value, "");
+static_assert(std::is_trivially_copyable<nasty_char>::value, "");
+static_assert(std::is_trivially_default_constructible<nasty_char>::value, "");
 static_assert(std::is_standard_layout<nasty_char>::value, "");
 
 // These traits are based on the constexpr_traits test class.
