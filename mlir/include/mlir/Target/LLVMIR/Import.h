@@ -41,11 +41,13 @@ class ModuleOp;
 /// adversarial inputs.
 /// The `loadAllDialects` flag (default on) will load all dialects in the
 /// context.
-OwningOpRef<ModuleOp>
-translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
-                        MLIRContext *context, bool emitExpensiveWarnings = true,
-                        bool dropDICompositeTypeElements = false,
-                        bool loadAllDialects = true);
+/// The `preferUnregisteredIntrinsics` flag (default off) controls whether to
+/// prefer generic version of imported intrinsics with `llvm.intrinsic_call`
+/// than using versions supported by a dialects.
+OwningOpRef<ModuleOp> translateLLVMIRToModule(
+    std::unique_ptr<llvm::Module> llvmModule, MLIRContext *context,
+    bool emitExpensiveWarnings = true, bool dropDICompositeTypeElements = false,
+    bool loadAllDialects = true, bool preferUnregisteredIntrinsics = false);
 
 /// Translate the given LLVM data layout into an MLIR equivalent using the DLTI
 /// dialect.

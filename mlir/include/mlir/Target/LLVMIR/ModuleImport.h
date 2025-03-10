@@ -47,7 +47,8 @@ class LoopAnnotationImporter;
 class ModuleImport {
 public:
   ModuleImport(ModuleOp mlirModule, std::unique_ptr<llvm::Module> llvmModule,
-               bool emitExpensiveWarnings, bool importEmptyDICompositeTypes);
+               bool emitExpensiveWarnings, bool importEmptyDICompositeTypes,
+               bool preferUnregisteredIntrinsics);
 
   /// Calls the LLVMImportInterface initialization that queries the registered
   /// dialect interfaces for the supported LLVM IR intrinsics and metadata kinds
@@ -284,6 +285,12 @@ public:
   void convertParameterAttributes(llvm::CallBase *call, ArrayAttr &argsAttr,
                                   ArrayAttr &resAttr, OpBuilder &builder);
 
+  /// Whether the importer should try to convert all intrinsics to
+  /// llvm.call_intrinsic instead of dialect supported operations.
+  bool useUnregisteredIntrinsicsOnly() const {
+    return preferUnregisteredIntrinsics;
+  }
+
 private:
   /// Clears the accumulated state before processing a new region.
   void clearRegionState() {
@@ -481,6 +488,10 @@ private:
   /// emitted. Avoids generating warnings for unhandled debug intrinsics and
   /// metadata that otherwise dominate the translation time for large inputs.
   bool emitExpensiveWarnings;
+
+  /// An option to control whether to disable supported intrinsic support in
+  /// favor a more generic version via `llvm.intrinsic_call`.
+  bool preferUnregisteredIntrinsics;
 };
 
 } // namespace LLVM
