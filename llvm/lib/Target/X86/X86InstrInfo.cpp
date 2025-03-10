@@ -5352,12 +5352,12 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   MachineInstr *MI = nullptr;
   MachineInstr *Sub = nullptr;
   MachineInstr *Movr0Inst = nullptr;
-  SmallVector<MachineInstr *, 4> NDDInsts;
+  SmallVector<std::pair<MachineInstr *, unsigned>, 4> InstsToUpdate;
   bool NoSignFlag = false;
   bool ClearsOverflowFlag = false;
   bool ShouldUpdateCC = false;
   bool IsSwapped = false;
-  bool HasCF = Subtarget.hasNF();
+  bool HasNF = Subtarget.hasNF();
   unsigned OpNo = 0;
   X86::CondCode NewCC = X86::COND_INVALID;
   int64_t ImmDelta = 0;
@@ -5443,10 +5443,13 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
           continue;
         }
 
-        // Try to replace NDD with NF instructions.
-        if (HasCF && X86II::hasNewDataDest(Inst.getDesc().TSFlags) &&
-            Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
-          NDDInsts.push_back(&Inst);
+        // Try to replace non-NF with NF instructions.
+        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
+          unsigned NewOp = X86::getNFVariant(Inst.getOpcode());
+          if (!NewOp)
+            return false;
+
+          InstsToUpdate.push_back(std::make_pair(&Inst, NewOp));
           continue;
         }
 
@@ -5646,10 +5649,10 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       return false;
   }
 
-  // Replace NDD with NF instructions.
-  for (MachineInstr *NDD : NDDInsts) {
-    NDD->setDesc(get(X86::getNFVariant(NDD->getOpcode())));
-    NDD->removeOperand(NDD->getNumOperands() - 1);
+  // Replace non-NF with NF instructions.
+  for (auto &Inst : InstsToUpdate) {
+    Inst.first->setDesc(get(Inst.second));
+    Inst.first->removeOperand(Inst.first->getNumOperands() - 1);
   }
 
   // Make sure Sub instruction defines EFLAGS and mark the def live.
