@@ -263,6 +263,14 @@ void ProfiledBinary::load() {
 
   warnNoFuncEntry();
 
+  if (auto *ELFObj = dyn_cast<ELFObjectFileBase>(Obj)) {
+    auto BBAddrMapsOrErr =
+        ELFObj->readBBAddrMap(std::nullopt, &PGOAnalysisMaps);
+    if (!BBAddrMapsOrErr.takeError()) {
+      BBAddrMaps = *BBAddrMapsOrErr;
+    }
+  }
+
   // TODO: decode other sections.
 }
 
