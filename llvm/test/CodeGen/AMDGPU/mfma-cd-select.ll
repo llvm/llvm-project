@@ -117,7 +117,7 @@ bb:
 
 declare void @foo()
 
-attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "amdgpu-no-agpr" }
+attributes #0 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" "amdgpu-agpr-alloc"="0" }
 attributes #1 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" }
-attributes #2 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-no-agpr" }
+attributes #2 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-agpr-alloc"="0" }
 attributes #3 = { "amdgpu-flat-work-group-size"="1,256" "amdgpu-waves-per-eu"="2" }
