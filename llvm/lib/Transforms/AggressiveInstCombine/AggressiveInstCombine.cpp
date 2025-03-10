@@ -1224,11 +1224,32 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   return false;
 }
 
+static bool isSaveToNarrow(unsigned opc, uint64_t num1, uint64_t num2) {
+  if (num1 > 0xffffffff || num2 > 0xffffffff) {
+    // if `num > 0xffffffff`, then `%and = and i64 %a, num` may or may not have
+    // higher 32bit set. Which cause truncate possibly lose infomation
+    return false;
+  }
+  switch (opc) {
+  // If `%and = and i64 %a, num` where num <= 0xffffffff, then `%and` must be
+  // positive.
+  // Since add and mul both increasing function on positive integer domain and
+  // `%ai <= numi`, then if `(num1 op num2) <= 0xffffffff` we have `%a1 + %a2 <=
+  // 0xffffffff`
+  case Instruction::Add:
+    return (num1 + num2) <= 0xffffffff;
+  case Instruction::Mul:
+    return (num1 * num2) <= 0xffffffff;
+    break;
+  }
+
+  return false;
+}
+
 static bool tryNarrowMathIfNoOverflow(Instruction &I,
                                       TargetTransformInfo &TTI) {
   unsigned opc = I.getOpcode();
-  if (opc != Instruction::Add && opc != Instruction::Sub &&
-      opc != Instruction::Mul) {
+  if (opc != Instruction::Add && opc != Instruction::Mul) {
     return false;
   }
   LLVMContext &ctx = I.getContext();
@@ -1252,10 +1273,9 @@ static bool tryNarrowMathIfNoOverflow(Instruction &I,
   Value *X;
   if ((match(I.getOperand(0), m_And(m_Value(X), m_ConstantInt(AndConst0))) ||
        match(I.getOperand(0), m_And(m_ConstantInt(AndConst0), m_Value(X)))) &&
-      AndConst0 <= 2147483647 &&
       (match(I.getOperand(1), m_And(m_Value(X), m_ConstantInt(AndConst1))) ||
        match(I.getOperand(1), m_And(m_ConstantInt(AndConst1), m_Value(X)))) &&
-      AndConst1 <= 2147483647) {
+      isSaveToNarrow(opc, AndConst0, AndConst1)) {
     IRBuilder<> Builder(&I);
     Value *trun0 = Builder.CreateTrunc(I.getOperand(0), i32type);
     Value *trun1 = Builder.CreateTrunc(I.getOperand(1), i32type);
