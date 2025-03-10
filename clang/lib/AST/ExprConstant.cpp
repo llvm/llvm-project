@@ -5223,26 +5223,25 @@ static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
 
 static bool EvaluateDecl(EvalInfo &Info, const Decl *D,
                          bool EvaluateConditionDecl = false) {
+  bool OK = true;
   if (const VarDecl *VD = dyn_cast<VarDecl>(D))
-    if (!EvaluateVarDecl(Info, VD))
-      return false;
+    OK &= EvaluateVarDecl(Info, VD);
 
   if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(D);
       EvaluateConditionDecl && DD)
-    if (!EvaluateDecompositionDeclInit(Info, DD))
-      return false;
+    OK &= EvaluateDecompositionDeclInit(Info, DD);
 
-  return true;
+  return OK;
 }
 
 static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
                                           const DecompositionDecl *DD) {
+  bool OK = true;
   for (auto *BD : DD->flat_bindings())
     if (auto *VD = BD->getHoldingVar())
-      if (!EvaluateDecl(Info, VD, /*EvaluateConditionDecl=*/true))
-        return false;
+      OK &= EvaluateDecl(Info, VD, /*EvaluateConditionDecl=*/true);
 
-  return true;
+  return OK;
 }
 
 static bool EvaluateDependentExpr(const Expr *E, EvalInfo &Info) {
