@@ -2614,7 +2614,7 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
     }
 
     auto loc = rfft2d.getLoc();
-    auto input = rfft2d.getInput();
+    auto input = rfft2d.getInputReal();
     auto elementType =
         dyn_cast<FloatType>(cast<ShapedType>(input.getType()).getElementType());
     if (!elementType)
