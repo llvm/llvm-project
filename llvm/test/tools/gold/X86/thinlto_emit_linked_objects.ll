@@ -2,6 +2,9 @@
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: opt -module-summary %p/Inputs/thinlto_emit_linked_objects.ll -o %t2.o
 
+; --start-lib is not supported by ld.bfd, use gold instead.
+; REQUIRES: gold_plugin
+
 ; Next do the ThinLink step, specifying thinlto-index-only so that the gold
 ; plugin exits after generating individual indexes. The objects the linker
 ; decided to include in the link should be emitted into the file specified

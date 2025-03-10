@@ -1,7 +1,7 @@
 # REQUIRES: x86_64-linux
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
-# RUN: not %gold -plugin %llvmshlibdir/LLVMgold%shlibext %t -o /dev/null 2>&1 | FileCheck %s
+# RUN: not %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext %t -o /dev/null 2>&1 | FileCheck %s
 
 # CHECK: error:{{.*}} Invalid bitcode signature
 
