@@ -6,8 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <chrono>
 #include <condition_variable>
+#include <limits>
+#include <ratio>
 #include <thread>
+#include <__system_error/throw_system_error.h>
 
 #if defined(__ELF__) && defined(_LIBCPP_LINK_PTHREAD_LIB)
 #  pragma comment(lib, "pthread")
