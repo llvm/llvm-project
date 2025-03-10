@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Instruction.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/BlockFrequency.h"
@@ -158,10 +159,11 @@ bool RegBankSelect::repairReg(
 
     // Build the instruction used to repair, then clone it at the right
     // places. Avoiding buildCopy bypasses the check that Src and Dst have the
-    // same types because the type is a placeholder when this function is called.
+    // same types because the type is a placeholder when this function is
+    // called.
     MI = MIRBuilder.buildInstrNoInsert(TargetOpcode::COPY)
-      .addDef(Dst)
-      .addUse(Src);
+             .addDef(Dst)
+             .addUse(Src);
     LLVM_DEBUG(dbgs() << "Copy: " << printReg(Src) << ':'
                       << printRegClassOrBank(Src, *MRI, TRI)
                       << " to: " << printReg(Dst) << ':'
@@ -169,15 +171,17 @@ bool RegBankSelect::repairReg(
   } else {
     // TODO: Support with G_IMPLICIT_DEF + G_INSERT sequence or G_EXTRACT
     // sequence.
-    assert(ValMapping.partsAllUniform() && "irregular breakdowns not supported");
+    assert(ValMapping.partsAllUniform() &&
+           "irregular breakdowns not supported");
 
-    LLT RegTy = MRI->getType(MO.getReg());
+    Register MergeReg = MO.getReg();
+    LLT RegTy = MRI->getType(MergeReg);
     if (MO.isDef()) {
       unsigned MergeOp;
       if (RegTy.isVector()) {
-        if (ValMapping.NumBreakDowns == RegTy.getNumElements())
+        if (ValMapping.NumBreakDowns == RegTy.getNumElements()) {
           MergeOp = TargetOpcode::G_BUILD_VECTOR;
-        else {
+        } else {
           assert(
               (ValMapping.BreakDown[0].Length * ValMapping.NumBreakDowns ==
                RegTy.getSizeInBits()) &&
@@ -187,12 +191,17 @@ bool RegBankSelect::repairReg(
 
           MergeOp = TargetOpcode::G_CONCAT_VECTORS;
         }
-      } else
+      } else {
         MergeOp = TargetOpcode::G_MERGE_VALUES;
+        if (RegTy.isFloat()) {
+          const RegisterBank *Bank = ValMapping.BreakDown[0].RegBank;
+          LLT Ty = RegTy.changeToInteger();
+          MergeReg = MRI->createVirtualRegister({Bank, Ty});
+        }
+      }
 
       auto MergeBuilder =
-        MIRBuilder.buildInstrNoInsert(MergeOp)
-        .addDef(MO.getReg());
+          MIRBuilder.buildInstrNoInsert(MergeOp).addDef(MergeReg);
 
       for (Register SrcReg : NewVRegs)
         MergeBuilder.addUse(SrcReg);
@@ -200,11 +209,18 @@ bool RegBankSelect::repairReg(
       MI = MergeBuilder;
     } else {
       MachineInstrBuilder UnMergeBuilder =
-        MIRBuilder.buildInstrNoInsert(TargetOpcode::G_UNMERGE_VALUES);
+          MIRBuilder.buildInstrNoInsert(TargetOpcode::G_UNMERGE_VALUES);
       for (Register DefReg : NewVRegs)
         UnMergeBuilder.addDef(DefReg);
 
-      UnMergeBuilder.addUse(MO.getReg());
+      if (RegTy.isFloat()) {
+        const RegisterBank *Bank = ValMapping.BreakDown[0].RegBank;
+        MergeReg =
+            MIRBuilder.buildBitcast({Bank, RegTy.changeToInteger()}, MO.getReg())
+                .getReg(0);
+      }
+
+      UnMergeBuilder.addUse(MergeReg);
       MI = UnMergeBuilder;
     }
   }
@@ -215,20 +231,30 @@ bool RegBankSelect::repairReg(
   // TODO:
   // Check if MI is legal. if not, we need to legalize all the
   // instructions we are going to insert.
-  std::unique_ptr<MachineInstr *[]> NewInstrs(
-      new MachineInstr *[RepairPt.getNumInsertPoints()]);
-  bool IsFirst = true;
-  unsigned Idx = 0;
-  for (const std::unique_ptr<InsertPoint> &InsertPt : RepairPt) {
+  SmallVector<MachineInstr *> NewInstrs;
+  NewInstrs.reserve(RepairPt.getNumInsertPoints());
+  for (auto &&[Idx, InsertPt] : enumerate(RepairPt)) {
     MachineInstr *CurMI;
-    if (IsFirst)
+    if (Idx == 0)
       CurMI = MI;
     else
       CurMI = MIRBuilder.getMF().CloneMachineInstr(MI);
+
     InsertPt->insert(*CurMI);
-    NewInstrs[Idx++] = CurMI;
-    IsFirst = false;
+    NewInstrs.push_back(CurMI);
   }
+
+  LLT RegTy = MRI->getType(MO.getReg());
+  if (MO.isDef() && RegTy.isFloat()) {
+    for (auto *MI : NewInstrs) {
+      auto Cast = MIRBuilder.buildInstrNoInsert(TargetOpcode::G_BITCAST)
+                      .addDef(MO.getReg())
+                      .addUse(MI->getOperand(0).getReg());
+
+      MI->getParent()->insertAfter(MI, Cast.getInstr());
+    }
+  }
+
   // TODO:
   // Legalize NewInstrs if need be.
   return true;

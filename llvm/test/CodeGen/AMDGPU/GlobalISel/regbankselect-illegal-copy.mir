@@ -3,7 +3,7 @@
 
 # Check behavior for illegal copies.
 
-# CHECK: LLVM ERROR: unable to map instruction: $sgpr0 = COPY %0:vgpr(s32) (in function: illegal_copy_s32_v_to_s)
+# CHECK: LLVM ERROR: unable to map instruction: $sgpr0 = COPY %0:vgpr(i32) (in function: illegal_copy_s32_v_to_s)
 
 ---
 name: illegal_copy_s32_v_to_s
@@ -13,6 +13,6 @@ body: |
   bb.0:
     liveins: $vgpr0
 
-    %0:_(s32) = COPY $vgpr0
+    %0:_(i32) = COPY $vgpr0
     $sgpr0 = COPY %0
 ...

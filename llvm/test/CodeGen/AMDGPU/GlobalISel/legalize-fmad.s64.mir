@@ -18,17 +18,25 @@ body: |
     ; CHECK-LABEL: name: test_fmad_s64_flush
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[FMUL]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FADD]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(s64) = COPY $vgpr4_vgpr5
-    %3:_(s64) = G_FMAD %0, %1, %2
-    $vgpr0_vgpr1 = COPY %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f64) = G_BITCAST [[COPY]](i64)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(f64) = G_BITCAST [[COPY1]](i64)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f64) = G_BITCAST [[COPY2]](i64)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(f64) = G_FMUL [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(f64) = G_FADD [[FMUL]], [[BITCAST2]]
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i64) = G_BITCAST [[FADD]](f64)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST3]](i64)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = COPY $vgpr2_vgpr3
+    %2:_(i64) = COPY $vgpr4_vgpr5
+    %3:_(f64) = G_BITCAST %0(i64)
+    %4:_(f64) = G_BITCAST %1(i64)
+    %5:_(f64) = G_BITCAST %2(i64)
+    %6:_(f64) = G_FMAD %3, %4, %5
+    %7:_(i64) = G_BITCAST %6(f64)
+    $vgpr0_vgpr1 = COPY %7(i64)
 ...
 
 ---
@@ -45,23 +53,31 @@ body: |
     ; CHECK-LABEL: name: test_fmad_v2s64_flush
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY2]](<2 x s64>)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[FMUL]], [[UV4]]
-    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(s64) = G_FMUL [[UV1]], [[UV3]]
-    ; CHECK-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[FMUL1]], [[UV5]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FADD]](s64), [[FADD1]](s64)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
-    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:_(<2 x s64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
-    %3:_(<2 x s64>) = G_FMAD %0, %1, %2
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY]](<2 x i64>)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY1]](<2 x i64>)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY2]](<2 x i64>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[BITCAST]](<2 x f64>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(f64), [[UV3:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[BITCAST1]](<2 x f64>)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(f64), [[UV5:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[BITCAST2]](<2 x f64>)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(f64) = G_FMUL [[UV]], [[UV2]]
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(f64) = G_FADD [[FMUL]], [[UV4]]
+    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(f64) = G_FMUL [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[FADD1:%[0-9]+]]:_(f64) = G_FADD [[FMUL1]], [[UV5]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR [[FADD]](f64), [[FADD1]](f64)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[BUILD_VECTOR]](<2 x f64>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST3]](<2 x i64>)
+    %0:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<2 x i64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %2:_(<2 x i64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    %3:_(<2 x f64>) = G_BITCAST %0(<2 x i64>)
+    %4:_(<2 x f64>) = G_BITCAST %1(<2 x i64>)
+    %5:_(<2 x f64>) = G_BITCAST %2(<2 x i64>)
+    %6:_(<2 x f64>) = G_FMAD %3, %4, %5
+    %7:_(<2 x i64>) = G_BITCAST %6(<2 x f64>)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %7(<2 x i64>)
 ...
 
 ---
@@ -78,17 +94,25 @@ body: |
     ; CHECK-LABEL: name: test_fmad_s64_denorm
     ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s64) = COPY $vgpr4_vgpr5
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[COPY]], [[COPY1]]
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[FMUL]], [[COPY2]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[FADD]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(s64) = COPY $vgpr4_vgpr5
-    %3:_(s64) = G_FMAD %0, %1, %2
-    $vgpr0_vgpr1 = COPY %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i64) = COPY $vgpr4_vgpr5
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f64) = G_BITCAST [[COPY]](i64)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(f64) = G_BITCAST [[COPY1]](i64)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(f64) = G_BITCAST [[COPY2]](i64)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(f64) = G_FMUL [[BITCAST]], [[BITCAST1]]
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(f64) = G_FADD [[FMUL]], [[BITCAST2]]
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(i64) = G_BITCAST [[FADD]](f64)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST3]](i64)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = COPY $vgpr2_vgpr3
+    %2:_(i64) = COPY $vgpr4_vgpr5
+    %3:_(f64) = G_BITCAST %0(i64)
+    %4:_(f64) = G_BITCAST %1(i64)
+    %5:_(f64) = G_BITCAST %2(i64)
+    %6:_(f64) = G_FMAD %3, %4, %5
+    %7:_(i64) = G_BITCAST %6(f64)
+    $vgpr0_vgpr1 = COPY %7(i64)
 ...
 
 ---
@@ -105,21 +129,29 @@ body: |
     ; CHECK-LABEL: name: test_fmad_v2s64_denorm
     ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY]](<2 x s64>)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY1]](<2 x s64>)
-    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(s64), [[UV5:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[COPY2]](<2 x s64>)
-    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(s64) = G_FMUL [[UV]], [[UV2]]
-    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(s64) = G_FADD [[FMUL]], [[UV4]]
-    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(s64) = G_FMUL [[UV1]], [[UV3]]
-    ; CHECK-NEXT: [[FADD1:%[0-9]+]]:_(s64) = G_FADD [[FMUL1]], [[UV5]]
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s64>) = G_BUILD_VECTOR [[FADD]](s64), [[FADD1]](s64)
-    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BUILD_VECTOR]](<2 x s64>)
-    %0:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(<2 x s64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
-    %2:_(<2 x s64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
-    %3:_(<2 x s64>) = G_FMAD %0, %1, %2
-    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(<2 x i64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY]](<2 x i64>)
+    ; CHECK-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY1]](<2 x i64>)
+    ; CHECK-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x f64>) = G_BITCAST [[COPY2]](<2 x i64>)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(f64), [[UV1:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[BITCAST]](<2 x f64>)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(f64), [[UV3:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[BITCAST1]](<2 x f64>)
+    ; CHECK-NEXT: [[UV4:%[0-9]+]]:_(f64), [[UV5:%[0-9]+]]:_(f64) = G_UNMERGE_VALUES [[BITCAST2]](<2 x f64>)
+    ; CHECK-NEXT: [[FMUL:%[0-9]+]]:_(f64) = G_FMUL [[UV]], [[UV2]]
+    ; CHECK-NEXT: [[FADD:%[0-9]+]]:_(f64) = G_FADD [[FMUL]], [[UV4]]
+    ; CHECK-NEXT: [[FMUL1:%[0-9]+]]:_(f64) = G_FMUL [[UV1]], [[UV3]]
+    ; CHECK-NEXT: [[FADD1:%[0-9]+]]:_(f64) = G_FADD [[FMUL1]], [[UV5]]
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x f64>) = G_BUILD_VECTOR [[FADD]](f64), [[FADD1]](f64)
+    ; CHECK-NEXT: [[BITCAST3:%[0-9]+]]:_(<2 x i64>) = G_BITCAST [[BUILD_VECTOR]](<2 x f64>)
+    ; CHECK-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = COPY [[BITCAST3]](<2 x i64>)
+    %0:_(<2 x i64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(<2 x i64>) = COPY $vgpr4_vgpr5_vgpr6_vgpr7
+    %2:_(<2 x i64>) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    %3:_(<2 x f64>) = G_BITCAST %0(<2 x i64>)
+    %4:_(<2 x f64>) = G_BITCAST %1(<2 x i64>)
+    %5:_(<2 x f64>) = G_BITCAST %2(<2 x i64>)
+    %6:_(<2 x f64>) = G_FMAD %3, %4, %5
+    %7:_(<2 x i64>) = G_BITCAST %6(<2 x f64>)
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY %7(<2 x i64>)
 ...

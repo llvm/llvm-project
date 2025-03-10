@@ -6,16 +6,16 @@ define ptr @ptrmask_flat_i64(ptr %ptr, i64 %mask) {
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(s32) = COPY $vgpr3
-  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY2]](s32), [[COPY3]](s32)
-  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[MV]], [[MV1]](s64)
-  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PTRMASK]](p0)
-  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(i32) = COPY $vgpr3
+  ; CHECK-NEXT:   [[MV1:%[0-9]+]]:_(i64) = G_MERGE_VALUES [[COPY2]](i32), [[COPY3]](i32)
+  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p0) = G_PTRMASK [[MV]], [[MV1]](i64)
+  ; CHECK-NEXT:   [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[PTRMASK]](p0)
+  ; CHECK-NEXT:   $vgpr0 = COPY [[UV]](i32)
+  ; CHECK-NEXT:   $vgpr1 = COPY [[UV1]](i32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1
   %masked = call ptr @llvm.ptrmask.p0.i64(ptr %ptr, i64 %mask)
   ret ptr %masked
@@ -27,8 +27,8 @@ define ptr addrspace(3) @ptrmask_local_i32(ptr addrspace(3) %ptr, i32 %mask) {
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p3) = G_PTRMASK [[COPY]], [[COPY1]](s32)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[PTRMASK:%[0-9]+]]:_(p3) = G_PTRMASK [[COPY]], [[COPY1]](i32)
   ; CHECK-NEXT:   $vgpr0 = COPY [[PTRMASK]](p3)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %masked = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) %ptr, i32 %mask)

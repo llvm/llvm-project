@@ -24,50 +24,58 @@ body: |
     ; GFX7-NEXT: [[COPY4:%[0-9]+]]:sreg_64 = COPY $sgpr10_sgpr11
     ; GFX7-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr10_vgpr11
     ; GFX7-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY $vgpr12_vgpr13
-    ; GFX7-NEXT: %7:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: %8:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: %9:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
-    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
-    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
-    ; GFX7-NEXT: %10:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: %11:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: %12:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: S_ENDPGM 0, implicit %10, implicit %11, implicit %12
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = COPY $vgpr0
-    %2:vgpr(s32) = COPY $vgpr1
+    ; GFX7-NEXT: [[V_MIN_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: [[V_MIN_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: [[V_MIN_F32_e64_2:%[0-9]+]]:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], [[V_MIN_F32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (f32), addrspace 1)
+    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], [[V_MIN_F32_e64_1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (f32), addrspace 1)
+    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], [[V_MIN_F32_e64_2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (f32), addrspace 1)
+    ; GFX7-NEXT: [[V_MIN_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: [[V_MIN_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: [[V_MIN_F64_e64_2:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[V_MIN_F64_e64_]], implicit [[V_MIN_F64_e64_1]], implicit [[V_MIN_F64_e64_2]]
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(i32) = COPY $vgpr0
+    %2:vgpr(i32) = COPY $vgpr1
     %3:vgpr(p1) = COPY $vgpr3_vgpr4
+    %4:sgpr(i64) = COPY $sgpr10_sgpr11
+    %5:vgpr(i64) = COPY $vgpr10_vgpr11
+    %6:vgpr(i64) = COPY $vgpr12_vgpr13
+    %7:vgpr(f32) = G_BITCAST %1(i32)
+    %8:sgpr(f32) = G_BITCAST %0(i32)
+    %9:vgpr(f32) = G_FMINNUM %7, %8
+    %10:sgpr(f32) = G_BITCAST %0(i32)
+    %11:vgpr(f32) = G_BITCAST %1(i32)
+    %12:vgpr(f32) = G_FMINNUM %10, %11
+    %13:vgpr(f32) = G_BITCAST %1(i32)
+    %14:vgpr(f32) = G_BITCAST %2(i32)
+    %15:vgpr(f32) = G_FMINNUM %13, %14
+    G_STORE %9(f32), %3(p1) :: (store (f32), addrspace 1)
+    G_STORE %12(f32), %3(p1) :: (store (f32), addrspace 1)
+    G_STORE %15(f32), %3(p1) :: (store (f32), addrspace 1)
+    %16:sgpr(f64) = G_BITCAST %4(i64)
+    %17:vgpr(f64) = G_BITCAST %5(i64)
+    %18:vgpr(f64) = G_FMINNUM %16, %17
+    %19:vgpr(f64) = G_BITCAST %5(i64)
+    %20:sgpr(f64) = G_BITCAST %4(i64)
+    %21:vgpr(f64) = G_FMINNUM %19, %20
+    %22:vgpr(f64) = G_BITCAST %5(i64)
+    %23:vgpr(f64) = G_BITCAST %6(i64)
+    %24:vgpr(f64) = G_FMINNUM %22, %23
+    %25:vgpr(i64) = G_BITCAST %18(f64)
+    %26:vgpr(i64) = G_BITCAST %21(f64)
+    %27:vgpr(i64) = G_BITCAST %24(f64)
+    S_ENDPGM 0, implicit %25(i64), implicit %26(i64), implicit %27(i64)
 
-    %10:sgpr(s64) = COPY $sgpr10_sgpr11
-    %11:vgpr(s64) = COPY $vgpr10_vgpr11
-    %12:vgpr(s64) = COPY $vgpr12_vgpr13
 
-    ; minnum vs
-    %4:vgpr(s32) = G_FMINNUM %1, %0
 
-    ; minnum sv
-    %5:vgpr(s32) = G_FMINNUM %0, %1
 
-    ; minnum vv
-    %6:vgpr(s32) = G_FMINNUM %1, %2
 
-    G_STORE %4, %3 :: (store (s32), addrspace 1)
-    G_STORE %5, %3 :: (store (s32), addrspace 1)
-    G_STORE %6, %3 :: (store (s32), addrspace 1)
 
-    ; 64-bit
 
-    ; minnum vs
-    %14:vgpr(s64) = G_FMINNUM %10, %11
 
-    ; minnum sv
-    %15:vgpr(s64) = G_FMINNUM %11, %10
 
-    ; minnum vv
-    %16:vgpr(s64) = G_FMINNUM %11, %12
 
-    S_ENDPGM 0, implicit %14, implicit %15, implicit %16
 ...
 
 ---
@@ -92,48 +100,56 @@ body: |
     ; GFX7-NEXT: [[COPY4:%[0-9]+]]:sreg_64 = COPY $sgpr10_sgpr11
     ; GFX7-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr10_vgpr11
     ; GFX7-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY $vgpr12_vgpr13
-    ; GFX7-NEXT: %7:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: %8:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: %9:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], %7, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
-    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], %8, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
-    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], %9, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
-    ; GFX7-NEXT: %10:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: %11:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: %12:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
-    ; GFX7-NEXT: S_ENDPGM 0, implicit %10, implicit %11, implicit %12
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = COPY $vgpr0
-    %2:vgpr(s32) = COPY $vgpr1
+    ; GFX7-NEXT: [[V_MIN_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: [[V_MIN_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: [[V_MIN_F32_e64_2:%[0-9]+]]:vgpr_32 = nofpexcept V_MIN_F32_e64 0, [[COPY1]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], [[V_MIN_F32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (f32), addrspace 1)
+    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], [[V_MIN_F32_e64_1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (f32), addrspace 1)
+    ; GFX7-NEXT: FLAT_STORE_DWORD [[COPY3]], [[V_MIN_F32_e64_2]], 0, 0, implicit $exec, implicit $flat_scr :: (store (f32), addrspace 1)
+    ; GFX7-NEXT: [[V_MIN_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY4]], 0, [[COPY5]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: [[V_MIN_F64_e64_1:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY4]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: [[V_MIN_F64_e64_2:%[0-9]+]]:vreg_64 = nofpexcept V_MIN_F64_e64 0, [[COPY5]], 0, [[COPY6]], 0, 0, implicit $mode, implicit $exec
+    ; GFX7-NEXT: S_ENDPGM 0, implicit [[V_MIN_F64_e64_]], implicit [[V_MIN_F64_e64_1]], implicit [[V_MIN_F64_e64_2]]
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(i32) = COPY $vgpr0
+    %2:vgpr(i32) = COPY $vgpr1
     %3:vgpr(p1) = COPY $vgpr3_vgpr4
+    %4:sgpr(i64) = COPY $sgpr10_sgpr11
+    %5:vgpr(i64) = COPY $vgpr10_vgpr11
+    %6:vgpr(i64) = COPY $vgpr12_vgpr13
+    %7:vgpr(f32) = G_BITCAST %1(i32)
+    %8:sgpr(f32) = G_BITCAST %0(i32)
+    %9:vgpr(f32) = G_FMINNUM %7, %8
+    %10:sgpr(f32) = G_BITCAST %0(i32)
+    %11:vgpr(f32) = G_BITCAST %1(i32)
+    %12:vgpr(f32) = G_FMINNUM %10, %11
+    %13:vgpr(f32) = G_BITCAST %1(i32)
+    %14:vgpr(f32) = G_BITCAST %2(i32)
+    %15:vgpr(f32) = G_FMINNUM %13, %14
+    G_STORE %9(f32), %3(p1) :: (store (f32), addrspace 1)
+    G_STORE %12(f32), %3(p1) :: (store (f32), addrspace 1)
+    G_STORE %15(f32), %3(p1) :: (store (f32), addrspace 1)
+    %16:sgpr(f64) = G_BITCAST %4(i64)
+    %17:vgpr(f64) = G_BITCAST %5(i64)
+    %18:vgpr(f64) = G_FMINNUM %16, %17
+    %19:vgpr(f64) = G_BITCAST %5(i64)
+    %20:sgpr(f64) = G_BITCAST %4(i64)
+    %21:vgpr(f64) = G_FMINNUM %19, %20
+    %22:vgpr(f64) = G_BITCAST %5(i64)
+    %23:vgpr(f64) = G_BITCAST %6(i64)
+    %24:vgpr(f64) = G_FMINNUM %22, %23
+    %25:vgpr(i64) = G_BITCAST %18(f64)
+    %26:vgpr(i64) = G_BITCAST %21(f64)
+    %27:vgpr(i64) = G_BITCAST %24(f64)
+    S_ENDPGM 0, implicit %25(i64), implicit %26(i64), implicit %27(i64)
 
-    %10:sgpr(s64) = COPY $sgpr10_sgpr11
-    %11:vgpr(s64) = COPY $vgpr10_vgpr11
-    %12:vgpr(s64) = COPY $vgpr12_vgpr13
 
-    ; minnum vs
-    %4:vgpr(s32) = G_FMINNUM %1, %0
 
-    ; minnum sv
-    %5:vgpr(s32) = G_FMINNUM %0, %1
 
-    ; minnum vv
-    %6:vgpr(s32) = G_FMINNUM %1, %2
 
-    G_STORE %4, %3 :: (store (s32), addrspace 1)
-    G_STORE %5, %3 :: (store (s32), addrspace 1)
-    G_STORE %6, %3 :: (store (s32), addrspace 1)
 
-    ; 64-bit
 
-    ; minnum vs
-    %14:vgpr(s64) = G_FMINNUM %10, %11
 
-    ; minnum sv
-    %15:vgpr(s64) = G_FMINNUM %11, %10
 
-    ; minnum vv
-    %16:vgpr(s64) = G_FMINNUM %11, %12
 
-    S_ENDPGM 0, implicit %14, implicit %15, implicit %16
 ...

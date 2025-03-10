@@ -12,15 +12,15 @@ body:             |
     ; CHECK-LABEL: name: ballot_sgpr_src
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[COPY1]](s1)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INT]](s64)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s1) = G_TRUNC %0
-    %2:_(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), %1
-    S_ENDPGM 0, implicit %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i1) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(i1) = COPY [[TRUNC]](i1)
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[COPY1]](i1)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INTRINSIC_CONVERGENT]](i64)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i1) = G_TRUNC %0(i32)
+    %2:_(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), %1(i1)
+    S_ENDPGM 0, implicit %2(i64)
 ...
 
 ---
@@ -33,15 +33,15 @@ body:             |
     ; CHECK-LABEL: name: ballot_vgpr_src
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(s1) = COPY [[TRUNC]](s1)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[COPY1]](s1)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INT]](s64)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s1) = G_TRUNC %0
-    %2:_(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), %1
-    S_ENDPGM 0, implicit %2
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(i1) = G_TRUNC [[COPY]](i32)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vcc(i1) = COPY [[TRUNC]](i1)
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[COPY1]](i1)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INTRINSIC_CONVERGENT]](i64)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i1) = G_TRUNC %0(i32)
+    %2:_(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), %1(i1)
+    S_ENDPGM 0, implicit %2(i64)
 ...
 
 ---
@@ -54,14 +54,14 @@ body:             |
     ; CHECK-LABEL: name: ballot_vcc_src
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:sgpr(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[ICMP]](s1)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INT]](s64)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s1) = G_ICMP intpred(eq), %0, %1
-    %3:_(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), %2
-    S_ENDPGM 0, implicit %3
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
+    ; CHECK-NEXT: [[ICMP:%[0-9]+]]:vcc(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[COPY1]]
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[ICMP]](i1)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INTRINSIC_CONVERGENT]](i64)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i1) = G_ICMP intpred(eq), %0(i32), %1
+    %3:_(i64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), %2(i1)
+    S_ENDPGM 0, implicit %3(i64)
 ...

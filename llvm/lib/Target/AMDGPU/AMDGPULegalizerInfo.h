@@ -14,9 +14,10 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINELEGALIZER_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUMACHINELEGALIZER_H
 
-#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 #include "AMDGPUArgumentUsageInfo.h"
 #include "SIInstrInfo.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/CodeGen/GlobalISel/LegalizerInfo.h"
 
 namespace llvm {
 
@@ -76,6 +77,11 @@ public:
                            MachineIRBuilder &B) const;
   bool legalizeLoad(LegalizerHelper &Helper, MachineInstr &MI) const;
   bool legalizeStore(LegalizerHelper &Helper, MachineInstr &MI) const;
+
+  bool legalizeFPExt(MachineInstr &MI, MachineRegisterInfo &MRI,
+                     MachineIRBuilder &B) const;
+  bool legalizeFPTrunc(MachineInstr &MI, MachineRegisterInfo &MRI,
+                       MachineIRBuilder &B) const;
 
   bool legalizeFMad(MachineInstr &MI, MachineRegisterInfo &MRI,
                     MachineIRBuilder &B) const;
@@ -222,8 +228,7 @@ public:
                         MachineIRBuilder &B) const;
 
   bool legalizeImageIntrinsic(
-      MachineInstr &MI, MachineIRBuilder &B,
-      GISelChangeObserver &Observer,
+      MachineInstr &MI, MachineIRBuilder &B, LegalizerHelper &Helper,
       const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr) const;
 
   bool legalizeSBufferLoad(LegalizerHelper &Helper, MachineInstr &MI) const;

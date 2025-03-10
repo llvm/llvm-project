@@ -17,9 +17,9 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[S_BCNT1_I32_B32_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B32 [[COPY]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_BCNT1_I32_B32_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s32) = G_CTPOP %0
-    S_ENDPGM 0, implicit %1
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i32) = G_CTPOP %0(i32)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 
 ---
@@ -38,9 +38,9 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[COPY]], 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = G_CTPOP %0
-    S_ENDPGM 0, implicit %1
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(i32) = G_CTPOP %0(i32)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 
 ---
@@ -59,9 +59,9 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[COPY]], 0, implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = G_CTPOP %0
-    S_ENDPGM 0, implicit %1
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = G_CTPOP %0(i32)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 
 ---
@@ -81,11 +81,11 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[COPY]], [[COPY1]], implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vgpr(s32) = G_CTPOP %0
-    %3:vgpr(s32) = G_ADD %2, %1
-    S_ENDPGM 0, implicit %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(i32) = G_CTPOP %0(i32)
+    %3:vgpr(i32) = G_ADD %2, %1
+    S_ENDPGM 0, implicit %3(i32)
 ...
 
 ---
@@ -105,11 +105,11 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[COPY]], [[COPY1]], implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vgpr(s32) = G_CTPOP %0
-    %3:vgpr(s32) = G_ADD %1, %2
-    S_ENDPGM 0, implicit %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(i32) = G_CTPOP %0(i32)
+    %3:vgpr(i32) = G_ADD %1, %2
+    S_ENDPGM 0, implicit %3(i32)
 ...
 
 # Test add+ctpop pattern with all scalars. This should stay scalar.
@@ -131,11 +131,11 @@ body: |
     ; CHECK-NEXT: [[S_BCNT1_I32_B32_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B32 [[COPY]], implicit-def dead $scc
     ; CHECK-NEXT: [[S_ADD_I32_:%[0-9]+]]:sreg_32 = S_ADD_I32 [[S_BCNT1_I32_B32_]], [[COPY1]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_ADD_I32_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s32) = COPY $sgpr1
-    %2:sgpr(s32) = G_CTPOP %0
-    %3:sgpr(s32) = G_ADD %2, %1
-    S_ENDPGM 0, implicit %3
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i32) = COPY $sgpr1
+    %2:sgpr(i32) = G_CTPOP %0(i32)
+    %3:sgpr(i32) = G_ADD %2, %1
+    S_ENDPGM 0, implicit %3(i32)
 ...
 
 ---
@@ -155,11 +155,11 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[COPY]], [[COPY1]], implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:sgpr(s32) = COPY $sgpr0
-    %2:vgpr(s32) = G_CTPOP %0
-    %3:vgpr(s32) = G_ADD %2, %1
-    S_ENDPGM 0, implicit %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = COPY $sgpr0
+    %2:vgpr(i32) = G_CTPOP %0(i32)
+    %3:vgpr(i32) = G_ADD %2, %1
+    S_ENDPGM 0, implicit %3(i32)
 ...
 
 # SGPR->VGPR ctpop with VALU add
@@ -180,11 +180,11 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[COPY1]], [[COPY]], implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:sgpr(s32) = COPY $sgpr0
-    %2:vgpr(s32) = G_CTPOP %1
-    %3:vgpr(s32) = G_ADD %2, %0
-    S_ENDPGM 0, implicit %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = COPY $sgpr0
+    %2:vgpr(i32) = G_CTPOP %1(i32)
+    %3:vgpr(i32) = G_ADD %2, %0
+    S_ENDPGM 0, implicit %3(i32)
 ...
 
 # Scalar ctpop with VALU add
@@ -205,11 +205,11 @@ body: |
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; CHECK-NEXT: [[V_BCNT_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_BCNT_U32_B32_e64 [[COPY]], [[COPY1]], implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BCNT_U32_B32_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s32) = G_CTPOP %0
-    %3:vgpr(s32) = G_ADD %2, %1
-    S_ENDPGM 0, implicit %3
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(i32) = COPY $vgpr0
+    %2:sgpr(i32) = G_CTPOP %0(i32)
+    %3:vgpr(i32) = G_ADD %2, %1
+    S_ENDPGM 0, implicit %3(i32)
 ...
 
 ---
@@ -228,7 +228,7 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: [[S_BCNT1_I32_B64_:%[0-9]+]]:sreg_32 = S_BCNT1_I32_B64 [[COPY]], implicit-def dead $scc
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_BCNT1_I32_B64_]]
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:sgpr(s32) = G_CTPOP %0
-    S_ENDPGM 0, implicit %1
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %1:sgpr(i32) = G_CTPOP %0(i64)
+    S_ENDPGM 0, implicit %1(i32)
 ...

@@ -98,23 +98,53 @@ define i32 @atomic_load_flat_monotonic_i16_sext_to_i32(ptr %ptr) {
 }
 
 define half @atomic_load_flat_monotonic_f16(ptr %ptr) {
-; GCN-LABEL: atomic_load_flat_monotonic_f16:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    flat_load_ushort v0, v[0:1] glc
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: atomic_load_flat_monotonic_f16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    flat_load_ushort v0, v[0:1] glc
+; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: atomic_load_flat_monotonic_f16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    flat_load_ushort v0, v[0:1] glc
+; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: atomic_load_flat_monotonic_f16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    flat_load_ushort v0, v[0:1] glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic half, ptr %ptr monotonic, align 2
   ret half %load
 }
 
 define bfloat @atomic_load_flat_monotonic_bf16(ptr %ptr) {
-; GCN-LABEL: atomic_load_flat_monotonic_bf16:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    flat_load_ushort v0, v[0:1] glc
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; GFX7-LABEL: atomic_load_flat_monotonic_bf16:
+; GFX7:       ; %bb.0:
+; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    flat_load_ushort v0, v[0:1] glc
+; GFX7-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX7-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
+; GFX7-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX8-LABEL: atomic_load_flat_monotonic_bf16:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    flat_load_ushort v0, v[0:1] glc
+; GFX8-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: atomic_load_flat_monotonic_bf16:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    flat_load_ushort v0, v[0:1] glc
+; GFX9-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic bfloat, ptr %ptr monotonic, align 2
   ret bfloat %load
 }
@@ -125,6 +155,7 @@ define i32 @atomic_load_flat_monotonic_f16_zext_to_i32(ptr %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    flat_load_ushort v0, v[0:1] glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic half, ptr %ptr monotonic, align 2
   %cast = bitcast half %load to i16
@@ -138,6 +169,7 @@ define i32 @atomic_load_flat_monotonic_bf16_zext_to_i32(ptr %ptr) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    flat_load_ushort v0, v[0:1] glc
 ; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %load = load atomic bfloat, ptr %ptr monotonic, align 2
   %cast = bitcast bfloat %load to i16

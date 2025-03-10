@@ -31,22 +31,22 @@ body: |
     liveins:  $vgpr0_vgpr1, $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $sgpr5, $sgpr6, $sgpr7
 
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
-    %1:sgpr(s32) = COPY $sgpr0
-    %2:sgpr(s32) = COPY $sgpr1
-    %3:sgpr(s32) = COPY $sgpr2
-    %4:sgpr(s32) = COPY $sgpr3
-    %5:sgpr(s32) = COPY $sgpr4
-    %6:sgpr(s32) = COPY $sgpr5
-    %7:sgpr(s32) = COPY $sgpr6
-    %8:sgpr(s32) = COPY $sgpr7
-    %9:sgpr(s32) = G_ICMP intpred(ne), %1, %2
-    %10:sgpr(s32) = G_ICMP intpred(ne), %5, %6
-    %11:sgpr(s32) = G_SELECT %9, %7, %8
-    %12:sgpr(s32) = G_SELECT %10, %3, %4
-    %13:vgpr(s32) = COPY %11
-    G_STORE %13, %0 :: (volatile store (s32), addrspace 1)
-    %14:vgpr(s32) = COPY %12
-    G_STORE %14, %0 :: (volatile store (s32), addrspace 1)
+    %1:sgpr(i32) = COPY $sgpr0
+    %2:sgpr(i32) = COPY $sgpr1
+    %3:sgpr(i32) = COPY $sgpr2
+    %4:sgpr(i32) = COPY $sgpr3
+    %5:sgpr(i32) = COPY $sgpr4
+    %6:sgpr(i32) = COPY $sgpr5
+    %7:sgpr(i32) = COPY $sgpr6
+    %8:sgpr(i32) = COPY $sgpr7
+    %9:sgpr(i32) = G_ICMP intpred(ne), %1, %2
+    %10:sgpr(i32) = G_ICMP intpred(ne), %5, %6
+    %11:sgpr(i32) = G_SELECT %9, %7, %8
+    %12:sgpr(i32) = G_SELECT %10, %3, %4
+    %13:vgpr(i32) = COPY %11
+    G_STORE %13, %0 :: (volatile store (i32), addrspace 1)
+    %14:vgpr(i32) = COPY %12
+    G_STORE %14, %0 :: (volatile store (i32), addrspace 1)
 
 ...
 ---
@@ -71,50 +71,50 @@ body: |
     liveins: $vgpr0_vgpr1, $sgpr0, $sgpr1, $sgpr2, $sgpr3
 
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
-    %1:sgpr(s32) = COPY $sgpr0
-    %2:sgpr(s32) = COPY $sgpr1
-    %3:sgpr(s32) = COPY $sgpr2
-    %4:sgpr(s32) = COPY $sgpr3
-    %5:sgpr(s32) = G_ICMP intpred(ne), %1, %2
-    %6:sgpr(s32) = G_ICMP intpred(eq), %1, %2
-    %7:sgpr(s32) = G_ICMP intpred(sgt), %1, %2
-    %8:sgpr(s32) = G_ICMP intpred(sge), %1, %2
-    %9:sgpr(s32) = G_ICMP intpred(slt), %1, %2
-    %10:sgpr(s32) = G_ICMP intpred(sle), %1, %2
-    %11:sgpr(s32) = G_ICMP intpred(ugt), %1, %2
-    %12:sgpr(s32) = G_ICMP intpred(uge), %1, %2
-    %13:sgpr(s32) = G_ICMP intpred(ult), %1, %2
-    %14:sgpr(s32) = G_ICMP intpred(ule), %1, %2
-    %15:sgpr(s32) = G_SELECT %5, %3, %4
-    %16:sgpr(s32) = G_SELECT %6, %3, %4
-    %17:sgpr(s32) = G_SELECT %7, %3, %4
-    %18:sgpr(s32) = G_SELECT %8, %3, %4
-    %19:sgpr(s32) = G_SELECT %9, %3, %4
-    %20:sgpr(s32) = G_SELECT %10, %3, %4
-    %21:sgpr(s32) = G_SELECT %11, %3, %4
-    %22:sgpr(s32) = G_SELECT %12, %3, %4
-    %23:sgpr(s32) = G_SELECT %13, %3, %4
-    %24:sgpr(s32) = G_SELECT %14, %3, %4
-    %25:vgpr(s32) = COPY %15
-    G_STORE %25, %0 :: (volatile store (s32), addrspace 1)
-    %26:vgpr(s32) = COPY %16
-    G_STORE %26, %0 :: (volatile store (s32), addrspace 1)
-    %27:vgpr(s32) = COPY %17
-    G_STORE %27, %0 :: (volatile store (s32), addrspace 1)
-    %28:vgpr(s32) = COPY %18
-    G_STORE %28, %0 :: (volatile store (s32), addrspace 1)
-    %29:vgpr(s32) = COPY %19
-    G_STORE %29, %0 :: (volatile store (s32), addrspace 1)
-    %30:vgpr(s32) = COPY %20
-    G_STORE %30, %0 :: (volatile store (s32), addrspace 1)
-    %31:vgpr(s32) = COPY %21
-    G_STORE %31, %0 :: (volatile store (s32), addrspace 1)
-    %32:vgpr(s32) = COPY %22
-    G_STORE %32, %0 :: (volatile store (s32), addrspace 1)
-    %33:vgpr(s32) = COPY %23
-    G_STORE %33, %0 :: (volatile store (s32), addrspace 1)
-    %34:vgpr(s32) = COPY %24
-    G_STORE %34, %0 :: (volatile store (s32), addrspace 1)
+    %1:sgpr(i32) = COPY $sgpr0
+    %2:sgpr(i32) = COPY $sgpr1
+    %3:sgpr(i32) = COPY $sgpr2
+    %4:sgpr(i32) = COPY $sgpr3
+    %5:sgpr(i32) = G_ICMP intpred(ne), %1, %2
+    %6:sgpr(i32) = G_ICMP intpred(eq), %1, %2
+    %7:sgpr(i32) = G_ICMP intpred(sgt), %1, %2
+    %8:sgpr(i32) = G_ICMP intpred(sge), %1, %2
+    %9:sgpr(i32) = G_ICMP intpred(slt), %1, %2
+    %10:sgpr(i32) = G_ICMP intpred(sle), %1, %2
+    %11:sgpr(i32) = G_ICMP intpred(ugt), %1, %2
+    %12:sgpr(i32) = G_ICMP intpred(uge), %1, %2
+    %13:sgpr(i32) = G_ICMP intpred(ult), %1, %2
+    %14:sgpr(i32) = G_ICMP intpred(ule), %1, %2
+    %15:sgpr(i32) = G_SELECT %5, %3, %4
+    %16:sgpr(i32) = G_SELECT %6, %3, %4
+    %17:sgpr(i32) = G_SELECT %7, %3, %4
+    %18:sgpr(i32) = G_SELECT %8, %3, %4
+    %19:sgpr(i32) = G_SELECT %9, %3, %4
+    %20:sgpr(i32) = G_SELECT %10, %3, %4
+    %21:sgpr(i32) = G_SELECT %11, %3, %4
+    %22:sgpr(i32) = G_SELECT %12, %3, %4
+    %23:sgpr(i32) = G_SELECT %13, %3, %4
+    %24:sgpr(i32) = G_SELECT %14, %3, %4
+    %25:vgpr(i32) = COPY %15
+    G_STORE %25, %0 :: (volatile store (i32), addrspace 1)
+    %26:vgpr(i32) = COPY %16
+    G_STORE %26, %0 :: (volatile store (i32), addrspace 1)
+    %27:vgpr(i32) = COPY %17
+    G_STORE %27, %0 :: (volatile store (i32), addrspace 1)
+    %28:vgpr(i32) = COPY %18
+    G_STORE %28, %0 :: (volatile store (i32), addrspace 1)
+    %29:vgpr(i32) = COPY %19
+    G_STORE %29, %0 :: (volatile store (i32), addrspace 1)
+    %30:vgpr(i32) = COPY %20
+    G_STORE %30, %0 :: (volatile store (i32), addrspace 1)
+    %31:vgpr(i32) = COPY %21
+    G_STORE %31, %0 :: (volatile store (i32), addrspace 1)
+    %32:vgpr(i32) = COPY %22
+    G_STORE %32, %0 :: (volatile store (i32), addrspace 1)
+    %33:vgpr(i32) = COPY %23
+    G_STORE %33, %0 :: (volatile store (i32), addrspace 1)
+    %34:vgpr(i32) = COPY %24
+    G_STORE %34, %0 :: (volatile store (i32), addrspace 1)
 
 ...
 ---
@@ -141,20 +141,20 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9
 
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s32) = COPY $vgpr3
-    %3:vgpr(s32) = COPY $vgpr4
-    %4:vgpr(s32) = COPY $vgpr5
-    %5:vgpr(s32) = COPY $vgpr6
-    %6:vgpr(s32) = COPY $vgpr7
-    %7:vgpr(s32) = COPY $vgpr8
-    %8:vgpr(s32) = COPY $vgpr9
-    %9:vcc(s1) = G_ICMP intpred(ne), %1, %2
-    %10:vcc(s1) = G_ICMP intpred(ne), %5, %6
-    %11:vgpr(s32) = G_SELECT %9, %7, %8
-    %12:vgpr(s32) = G_SELECT %10, %3, %4
-    G_STORE %11, %0 :: (volatile store (s32), addrspace 1)
-    G_STORE %12, %0 :: (volatile store (s32), addrspace 1)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i32) = COPY $vgpr3
+    %3:vgpr(i32) = COPY $vgpr4
+    %4:vgpr(i32) = COPY $vgpr5
+    %5:vgpr(i32) = COPY $vgpr6
+    %6:vgpr(i32) = COPY $vgpr7
+    %7:vgpr(i32) = COPY $vgpr8
+    %8:vgpr(i32) = COPY $vgpr9
+    %9:vcc(i1) = G_ICMP intpred(ne), %1, %2
+    %10:vcc(i1) = G_ICMP intpred(ne), %5, %6
+    %11:vgpr(i32) = G_SELECT %9, %7, %8
+    %12:vgpr(i32) = G_SELECT %10, %3, %4
+    G_STORE %11, %0 :: (volatile store (i32), addrspace 1)
+    G_STORE %12, %0 :: (volatile store (i32), addrspace 1)
 ...
 ---
 name:            icmp_s32_valu
@@ -178,40 +178,40 @@ body: |
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
 
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s32) = COPY $vgpr3
-    %3:vgpr(s32) = COPY $vgpr4
-    %4:vgpr(s32) = COPY $vgpr5
-    %5:vcc(s1) = G_ICMP intpred(ne), %1, %2
-    %6:vcc(s1) = G_ICMP intpred(eq), %1, %2
-    %7:vcc(s1) = G_ICMP intpred(sgt), %1, %2
-    %8:vcc(s1) = G_ICMP intpred(sge), %1, %2
-    %9:vcc(s1) = G_ICMP intpred(slt), %1, %2
-    %10:vcc(s1) = G_ICMP intpred(sle), %1, %2
-    %11:vcc(s1) = G_ICMP intpred(ugt), %1, %2
-    %12:vcc(s1) = G_ICMP intpred(uge), %1, %2
-    %13:vcc(s1) = G_ICMP intpred(ult), %1, %2
-    %14:vcc(s1) = G_ICMP intpred(ule), %1, %2
-    %15:vgpr(s32) = G_SELECT %5, %3, %4
-    %16:vgpr(s32) = G_SELECT %6, %3, %4
-    %17:vgpr(s32) = G_SELECT %7, %3, %4
-    %18:vgpr(s32) = G_SELECT %8, %3, %4
-    %19:vgpr(s32) = G_SELECT %9, %3, %4
-    %20:vgpr(s32) = G_SELECT %10, %3, %4
-    %21:vgpr(s32) = G_SELECT %11, %3, %4
-    %22:vgpr(s32) = G_SELECT %12, %3, %4
-    %23:vgpr(s32) = G_SELECT %13, %3, %4
-    %24:vgpr(s32) = G_SELECT %14, %3, %4
-    G_STORE %15, %0 :: (volatile store (s32), addrspace 1)
-    G_STORE %16, %0 :: (volatile store (s32), addrspace 1)
-    G_STORE %17, %0 :: (volatile store (s32), addrspace 1)
-    G_STORE %18, %0 :: (volatile store (s32), addrspace 1)
-    G_STORE %19, %0 :: (volatile store (s32), addrspace 1)
-    G_STORE %20, %0 :: (volatile store (s32), addrspace 1)
-    G_STORE %21, %0 :: (volatile store (s32), addrspace 1)
-    G_STORE %22, %0 :: (volatile store (s32), addrspace 1)
-    G_STORE %23, %0 :: (volatile store (s32), addrspace 1)
-    G_STORE %24, %0 :: (volatile store (s32), addrspace 1)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i32) = COPY $vgpr3
+    %3:vgpr(i32) = COPY $vgpr4
+    %4:vgpr(i32) = COPY $vgpr5
+    %5:vcc(i1) = G_ICMP intpred(ne), %1, %2
+    %6:vcc(i1) = G_ICMP intpred(eq), %1, %2
+    %7:vcc(i1) = G_ICMP intpred(sgt), %1, %2
+    %8:vcc(i1) = G_ICMP intpred(sge), %1, %2
+    %9:vcc(i1) = G_ICMP intpred(slt), %1, %2
+    %10:vcc(i1) = G_ICMP intpred(sle), %1, %2
+    %11:vcc(i1) = G_ICMP intpred(ugt), %1, %2
+    %12:vcc(i1) = G_ICMP intpred(uge), %1, %2
+    %13:vcc(i1) = G_ICMP intpred(ult), %1, %2
+    %14:vcc(i1) = G_ICMP intpred(ule), %1, %2
+    %15:vgpr(i32) = G_SELECT %5, %3, %4
+    %16:vgpr(i32) = G_SELECT %6, %3, %4
+    %17:vgpr(i32) = G_SELECT %7, %3, %4
+    %18:vgpr(i32) = G_SELECT %8, %3, %4
+    %19:vgpr(i32) = G_SELECT %9, %3, %4
+    %20:vgpr(i32) = G_SELECT %10, %3, %4
+    %21:vgpr(i32) = G_SELECT %11, %3, %4
+    %22:vgpr(i32) = G_SELECT %12, %3, %4
+    %23:vgpr(i32) = G_SELECT %13, %3, %4
+    %24:vgpr(i32) = G_SELECT %14, %3, %4
+    G_STORE %15, %0 :: (volatile store (i32), addrspace 1)
+    G_STORE %16, %0 :: (volatile store (i32), addrspace 1)
+    G_STORE %17, %0 :: (volatile store (i32), addrspace 1)
+    G_STORE %18, %0 :: (volatile store (i32), addrspace 1)
+    G_STORE %19, %0 :: (volatile store (i32), addrspace 1)
+    G_STORE %20, %0 :: (volatile store (i32), addrspace 1)
+    G_STORE %21, %0 :: (volatile store (i32), addrspace 1)
+    G_STORE %22, %0 :: (volatile store (i32), addrspace 1)
+    G_STORE %23, %0 :: (volatile store (i32), addrspace 1)
+    G_STORE %24, %0 :: (volatile store (i32), addrspace 1)
 ...
 ---
 
@@ -229,13 +229,13 @@ body: |
     liveins:  $vgpr0_vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
 
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s32) = COPY $vgpr3
-    %3:vgpr(s32) = COPY $vgpr4
-    %4:vgpr(s32) = COPY $vgpr5
-    %5:vcc(s1) = G_ICMP intpred(ne), %1, %2
-    %6:vgpr(s32) = G_SELECT %5, %3, %4
-    G_STORE %6, %0 :: (store (s32), addrspace 1)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i32) = COPY $vgpr3
+    %3:vgpr(i32) = COPY $vgpr4
+    %4:vgpr(i32) = COPY $vgpr5
+    %5:vcc(i1) = G_ICMP intpred(ne), %1, %2
+    %6:vgpr(i32) = G_SELECT %5, %3, %4
+    G_STORE %6, %0 :: (store (i32), addrspace 1)
 ...
 ---
 
@@ -253,13 +253,13 @@ body: |
     liveins:  $vgpr0_vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr0
 
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s32) = COPY $vgpr3
-    %3:vgpr(s32) = COPY $vgpr4
-    %4:sgpr(s32) = COPY $sgpr0
-    %5:vcc(s1) = G_ICMP intpred(ne), %1, %4
-    %6:vgpr(s32) = G_SELECT %5, %2, %3
-    G_STORE %6, %0 :: (store (s32), addrspace 1)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i32) = COPY $vgpr3
+    %3:vgpr(i32) = COPY $vgpr4
+    %4:sgpr(i32) = COPY $sgpr0
+    %5:vcc(i1) = G_ICMP intpred(ne), %1, %4
+    %6:vgpr(i32) = G_SELECT %5, %2, %3
+    G_STORE %6, %0 :: (store (i32), addrspace 1)
 ...
 ---
 
@@ -277,13 +277,13 @@ body: |
     liveins:  $vgpr0_vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr0
 
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s32) = COPY $vgpr3
-    %3:vgpr(s32) = COPY $vgpr4
-    %4:sgpr(s32) = COPY $sgpr0
-    %5:vcc(s1) = G_ICMP intpred(ne), %4, %1
-    %6:vgpr(s32) = G_SELECT %5, %2, %3
-    G_STORE %6, %0 :: (store (s32), addrspace 1)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i32) = COPY $vgpr3
+    %3:vgpr(i32) = COPY $vgpr4
+    %4:sgpr(i32) = COPY $sgpr0
+    %5:vcc(i1) = G_ICMP intpred(ne), %4, %1
+    %6:vgpr(i32) = G_SELECT %5, %2, %3
+    G_STORE %6, %0 :: (store (i32), addrspace 1)
 ...
 ---
 
@@ -301,13 +301,13 @@ body: |
     liveins:  $vgpr0_vgpr1, $vgpr2, $vgpr3, $vgpr4, $sgpr0
 
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s32) = COPY $vgpr3
-    %3:vgpr(s32) = COPY $vgpr4
-    %4:sgpr(s32) = COPY $sgpr0
-    %5:vcc(s1) = G_ICMP intpred(ne), %4, %1
-    %6:vgpr(s32) = G_SELECT %5, %2, %3
-    G_STORE %6, %0 :: (store (s32), addrspace 1)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i32) = COPY $vgpr3
+    %3:vgpr(i32) = COPY $vgpr4
+    %4:sgpr(i32) = COPY $sgpr0
+    %5:vcc(i1) = G_ICMP intpred(ne), %4, %1
+    %6:vgpr(i32) = G_SELECT %5, %2, %3
+    G_STORE %6, %0 :: (store (i32), addrspace 1)
 ...
 
 ---
@@ -326,8 +326,8 @@ body: |
 
     %0:sgpr(p3) = COPY $sgpr0
     %1:sgpr(p3) = COPY $sgpr1
-    %2:sgpr(s32) = G_ICMP intpred(eq), %0, %1
-    %3:sgpr(s32) = G_ICMP intpred(ne), %0, %1
+    %2:sgpr(i32) = G_ICMP intpred(eq), %0, %1
+    %3:sgpr(i32) = G_ICMP intpred(ne), %0, %1
     S_ENDPGM 0, implicit %2, implicit %3
 
 ...
@@ -348,12 +348,12 @@ body: |
 
     %0:vgpr(p3) = COPY $vgpr0
     %1:vgpr(p3) = COPY $vgpr1
-    %2:vcc(s1) = G_ICMP intpred(eq), %0, %1
-    %3:vcc(s1) = G_ICMP intpred(ne), %0, %1
-    %4:vgpr(s1) = COPY %2
-    %5:vgpr(s1) = COPY %3
-    %6:vgpr(s32) = G_SEXT %4
-    %7:vgpr(s32) = G_SEXT %5
+    %2:vcc(i1) = G_ICMP intpred(eq), %0, %1
+    %3:vcc(i1) = G_ICMP intpred(ne), %0, %1
+    %4:vgpr(i1) = COPY %2
+    %5:vgpr(i1) = COPY %3
+    %6:vgpr(i32) = G_SEXT %4
+    %7:vgpr(i32) = G_SEXT %5
     S_ENDPGM 0, implicit %6, implicit %7
 
 ...

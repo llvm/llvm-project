@@ -11,11 +11,11 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p3) :: (load (s8), addrspace 3)
-    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p3) :: (load (i8), addrspace 3)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](i32)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s32) = G_SEXTLOAD %0 :: (load (s8), addrspace 3)
-    $vgpr0 = COPY %1
+    %1:_(i32) = G_SEXTLOAD %0(p3) :: (load (i8), addrspace 3)
+    $vgpr0 = COPY %1(i32)
 ...
 ---
 name: test_sextload_local_i32_i16
@@ -27,11 +27,11 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p3) :: (load (i16), addrspace 3)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](i32)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s32) = G_SEXTLOAD %0 :: (load (s16), addrspace 3)
-    $vgpr0 = COPY %1
+    %1:_(i32) = G_SEXTLOAD %0(p3) :: (load (i16), addrspace 3)
+    $vgpr0 = COPY %1(i32)
 ...
 ---
 name: test_sextload_local_i31_i8
@@ -43,12 +43,12 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p3) :: (load (s8), addrspace 3)
-    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p3) :: (load (i8), addrspace 3)
+    ; CHECK-NEXT: $vgpr0 = COPY [[SEXTLOAD]](i32)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s31) = G_SEXTLOAD %0 :: (load (s8), addrspace 3)
-    %2:_(s32) = G_ANYEXT %1
-    $vgpr0 = COPY %2
+    %1:_(i31) = G_SEXTLOAD %0(p3) :: (load (i8), addrspace 3)
+    %2:_(i32) = G_ANYEXT %1(i31)
+    $vgpr0 = COPY %2(i32)
 ...
 ---
 name: test_sextload_local_i64_i8
@@ -60,12 +60,12 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p3) :: (load (s8), addrspace 3)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p3) :: (load (i8), addrspace 3)
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(i64) = G_SEXT [[SEXTLOAD]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](i64)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s64) = G_SEXTLOAD %0 :: (load (s8), addrspace 3)
-    $vgpr0_vgpr1 = COPY %1
+    %1:_(i64) = G_SEXTLOAD %0(p3) :: (load (i8), addrspace 3)
+    $vgpr0_vgpr1 = COPY %1(i64)
 ...
 ---
 name: test_sextload_local_i64_i16
@@ -77,12 +77,12 @@ body: |
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p3) :: (load (s16), addrspace 3)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; CHECK-NEXT: [[SEXTLOAD:%[0-9]+]]:_(i32) = G_SEXTLOAD [[COPY]](p3) :: (load (i16), addrspace 3)
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(i64) = G_SEXT [[SEXTLOAD]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](i64)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s64) = G_SEXTLOAD %0 :: (load (s16), addrspace 3)
-    $vgpr0_vgpr1 = COPY %1
+    %1:_(i64) = G_SEXTLOAD %0(p3) :: (load (i16), addrspace 3)
+    $vgpr0_vgpr1 = COPY %1(i64)
 ...
 ---
 name: test_sextload_local_i64_i32
@@ -94,10 +94,10 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p3) :: (load (s32), addrspace 3)
-    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[COPY]](p3) :: (load (i32), addrspace 3)
+    ; CHECK-NEXT: [[SEXT:%[0-9]+]]:_(i64) = G_SEXT [[LOAD]](i32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](i64)
     %0:_(p3) = COPY $vgpr0
-    %1:_(s64) = G_SEXTLOAD %0 :: (load (s32), addrspace 3)
-    $vgpr0_vgpr1 = COPY %1
+    %1:_(i64) = G_SEXTLOAD %0(p3) :: (load (i32), addrspace 3)
+    $vgpr0_vgpr1 = COPY %1(i64)
 ...

@@ -11,15 +11,17 @@ body: |
     ; CHECK-LABEL: name: test_fcanonicalize_fcanonicalize_s32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src0:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %fcanonicalize0:_(s32) = G_FCANONICALIZE %src0
+    ; CHECK-NEXT: %src0:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST %src0(i32)
+    ; CHECK-NEXT: %fcanonicalize0:_(f32) = G_FCANONICALIZE [[BITCAST]]
     ; CHECK-NEXT: %ptr:_(p1) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: G_STORE %fcanonicalize0(s32), %ptr(p1) :: (store (s32), addrspace 1)
-    %src0:_(s32) = COPY $vgpr0
-    %fcanonicalize0:_(s32) = G_FCANONICALIZE %src0
-    %fcanonicalize1:_(s32) = G_FCANONICALIZE %fcanonicalize0
+    ; CHECK-NEXT: G_STORE %fcanonicalize0(f32), %ptr(p1) :: (store (f32), addrspace 1)
+    %src0:_(i32) = COPY $vgpr0
+    %1:_(f32) = G_BITCAST %src0(i32)
+    %fcanonicalize0:_(f32) = G_FCANONICALIZE %1
+    %fcanonicalize1:_(f32) = G_FCANONICALIZE %fcanonicalize0
     %ptr:_(p1) = G_IMPLICIT_DEF
-    G_STORE %fcanonicalize1, %ptr :: (store (s32), addrspace 1, align 4)
+    G_STORE %fcanonicalize1(f32), %ptr(p1) :: (store (f32), addrspace 1)
 ...
 
 ---
@@ -32,16 +34,18 @@ body: |
     ; CHECK-LABEL: name: test_fcanonicalize_fcanonicalize_fcanonicalize_s32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src0:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %fcanonicalize0:_(s32) = G_FCANONICALIZE %src0
+    ; CHECK-NEXT: %src0:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST %src0(i32)
+    ; CHECK-NEXT: %fcanonicalize0:_(f32) = G_FCANONICALIZE [[BITCAST]]
     ; CHECK-NEXT: %ptr:_(p1) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: G_STORE %fcanonicalize0(s32), %ptr(p1) :: (store (s32), addrspace 1)
-    %src0:_(s32) = COPY $vgpr0
-    %fcanonicalize0:_(s32) = G_FCANONICALIZE %src0
-    %fcanonicalize1:_(s32) = G_FCANONICALIZE %fcanonicalize0
-    %fcanonicalize2:_(s32) = G_FCANONICALIZE %fcanonicalize1
+    ; CHECK-NEXT: G_STORE %fcanonicalize0(f32), %ptr(p1) :: (store (f32), addrspace 1)
+    %src0:_(i32) = COPY $vgpr0
+    %1:_(f32) = G_BITCAST %src0(i32)
+    %fcanonicalize0:_(f32) = G_FCANONICALIZE %1
+    %fcanonicalize1:_(f32) = G_FCANONICALIZE %fcanonicalize0
+    %fcanonicalize2:_(f32) = G_FCANONICALIZE %fcanonicalize1
     %ptr:_(p1) = G_IMPLICIT_DEF
-    G_STORE %fcanonicalize2, %ptr :: (store (s32), addrspace 1, align 4)
+    G_STORE %fcanonicalize2(f32), %ptr(p1) :: (store (f32), addrspace 1)
 ...
 
 ---
@@ -55,22 +59,24 @@ body: |
     ; CHECK-LABEL: name: test_fcanonicalize_fcanonicalize_s32_multi_use
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src0:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: %src0:_(i32) = COPY $vgpr0
     ; CHECK-NEXT: %ptr:_(p1) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %fcanonicalize0:_(s32) = G_FCANONICALIZE %src0
-    ; CHECK-NEXT: G_STORE %fcanonicalize0(s32), %ptr(p1) :: (volatile store (s32), addrspace 1)
-    ; CHECK-NEXT: G_STORE %fcanonicalize0(s32), %ptr(p1) :: (volatile store (s32), addrspace 1)
-    ; CHECK-NEXT: G_STORE %fcanonicalize0(s32), %ptr(p1) :: (volatile store (s32), addrspace 1)
-    %src0:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST %src0(i32)
+    ; CHECK-NEXT: %fcanonicalize0:_(f32) = G_FCANONICALIZE [[BITCAST]]
+    ; CHECK-NEXT: G_STORE %fcanonicalize0(f32), %ptr(p1) :: (volatile store (f32), addrspace 1)
+    ; CHECK-NEXT: G_STORE %fcanonicalize0(f32), %ptr(p1) :: (volatile store (f32), addrspace 1)
+    ; CHECK-NEXT: G_STORE %fcanonicalize0(f32), %ptr(p1) :: (volatile store (f32), addrspace 1)
+    %src0:_(i32) = COPY $vgpr0
     %ptr:_(p1) = G_IMPLICIT_DEF
+    %2:_(f32) = G_BITCAST %src0(i32)
+    %fcanonicalize0:_(f32) = G_FCANONICALIZE %2
+    G_STORE %fcanonicalize0(f32), %ptr(p1) :: (volatile store (f32), addrspace 1)
+    %fcanonicalize1:_(f32) = G_FCANONICALIZE %fcanonicalize0
+    G_STORE %fcanonicalize1(f32), %ptr(p1) :: (volatile store (f32), addrspace 1)
+    G_STORE %fcanonicalize1(f32), %ptr(p1) :: (volatile store (f32), addrspace 1)
 
-    %fcanonicalize0:_(s32) = G_FCANONICALIZE %src0
-    G_STORE %fcanonicalize0, %ptr :: (volatile store (s32), addrspace 1, align 4)
 
-    %fcanonicalize1:_(s32) = G_FCANONICALIZE %fcanonicalize0
-    G_STORE %fcanonicalize1, %ptr :: (volatile store (s32), addrspace 1, align 4)
 
-    G_STORE %fcanonicalize1, %ptr :: (volatile store (s32), addrspace 1, align 4)
 ...
 
 ---
@@ -83,14 +89,18 @@ body: |
     ; CHECK-LABEL: name: test_fcanonicalize_copy_fcanonicalize_s32
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %src0:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %fcanonicalize0:_(s32) = G_FCANONICALIZE %src0
+    ; CHECK-NEXT: %src0:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:_(f32) = G_BITCAST %src0(i32)
+    ; CHECK-NEXT: %fcanonicalize0:_(f32) = G_FCANONICALIZE [[BITCAST]]
     ; CHECK-NEXT: %ptr:_(p1) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: G_STORE %fcanonicalize0(s32), %ptr(p1) :: (store (s32), addrspace 1)
-    %src0:_(s32) = COPY $vgpr0
-    %fcanonicalize0:_(s32) = G_FCANONICALIZE %src0
-    %copy:_(s32) = COPY %fcanonicalize0
-    %fcanonicalize1:_(s32) = G_FCANONICALIZE %copy
+    ; CHECK-NEXT: G_STORE %fcanonicalize0(f32), %ptr(p1) :: (store (f32), addrspace 1)
+    %src0:_(i32) = COPY $vgpr0
+    %1:_(f32) = G_BITCAST %src0(i32)
+    %fcanonicalize0:_(f32) = G_FCANONICALIZE %1
+    %3:_(i32) = G_BITCAST %fcanonicalize0(f32)
+    %copy:_(i32) = COPY %3(i32)
+    %5:_(f32) = G_BITCAST %copy(i32)
+    %fcanonicalize1:_(f32) = G_FCANONICALIZE %5
     %ptr:_(p1) = G_IMPLICIT_DEF
-    G_STORE %fcanonicalize1, %ptr :: (store (s32), addrspace 1, align 4)
+    G_STORE %fcanonicalize1(f32), %ptr(p1) :: (store (f32), addrspace 1)
 ...

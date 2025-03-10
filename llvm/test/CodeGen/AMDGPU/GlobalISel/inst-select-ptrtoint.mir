@@ -17,8 +17,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(p3) = COPY $sgpr0
-    %1:sgpr(s32) = G_PTRTOINT %0
-    S_ENDPGM 0, implicit %1
+    %1:sgpr(i32) = G_PTRTOINT %0(p3)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 
 ---
@@ -38,8 +38,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(p5) = COPY $sgpr0
-    %1:sgpr(s32) = G_PTRTOINT %0
-    S_ENDPGM 0, implicit %1
+    %1:sgpr(i32) = G_PTRTOINT %0(p5)
+    S_ENDPGM 0, implicit %1(i32)
 ...
 
 ---
@@ -59,8 +59,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(p0) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = G_PTRTOINT %0
-    S_ENDPGM 0, implicit %1
+    %1:sgpr(i64) = G_PTRTOINT %0(p0)
+    S_ENDPGM 0, implicit %1(i64)
 ...
 
 ---
@@ -80,8 +80,8 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(p1) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = G_PTRTOINT %0
-    S_ENDPGM 0, implicit %1
+    %1:sgpr(i64) = G_PTRTOINT %0(p1)
+    S_ENDPGM 0, implicit %1(i64)
 ...
 
 ---
@@ -101,6 +101,6 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(p999) = COPY $sgpr0_sgpr1
-    %1:sgpr(s64) = G_PTRTOINT %0
-    S_ENDPGM 0, implicit %1
+    %1:sgpr(i64) = G_PTRTOINT %0(p999)
+    S_ENDPGM 0, implicit %1(i64)
 ...

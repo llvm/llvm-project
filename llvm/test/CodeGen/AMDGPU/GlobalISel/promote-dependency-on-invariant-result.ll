@@ -10,10 +10,10 @@ define void @use_invariant_promotable_lds(ptr addrspace(5) %arg, i32 %i) {
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[C]](s32), [[DEF]](p0) :: (store (s32) into %ir.tmp)
+  ; CHECK-NEXT:   G_STORE [[C]](i32), [[DEF]](p0) :: (store (i32) into %ir.tmp)
   ; CHECK-NEXT:   SI_RETURN
 bb:
   %tmp = call ptr @llvm.invariant.start.p5(i64 4, ptr addrspace(5) %arg)

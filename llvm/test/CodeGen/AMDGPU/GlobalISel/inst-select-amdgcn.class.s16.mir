@@ -5,9 +5,9 @@
 # RUN: llc -mtriple=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs -global-isel-abort=2 -pass-remarks-missed='gisel*'  %s -o /dev/null 2>&1 | FileCheck -check-prefix=SI-ERR %s
 
 # SI-ERR-NOT: remark
-# SI-ERR: remark: <unknown>:0:0: cannot select: %3:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %2:sgpr(s16), %1:vgpr(s32) (in function: class_s16_vcc_sv)
-# SI-ERR-NEXT: remark: <unknown>:0:0: cannot select: %3:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %2:vgpr(s16), %1:sgpr(s32) (in function: class_s16_vcc_vs)
-# SI-ERR-NEXT: remark: <unknown>:0:0: cannot select: %3:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %2:vgpr(s16), %1:vgpr(s32) (in function: class_s16_vcc_vv)
+# SI-ERR: remark: <unknown>:0:0: cannot select: %4:vcc(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %3:sgpr(f16), %1:vgpr(i32) (in function: class_s16_vcc_sv)
+# SI-ERR-NEXT: remark: <unknown>:0:0: cannot select: %4:vcc(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %3:vgpr(f16), %1:sgpr(i32) (in function: class_s16_vcc_vs)
+# SI-ERR-NEXT: remark: <unknown>:0:0: cannot select: %4:vcc(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %3:vgpr(f16), %1:vgpr(i32) (in function: class_s16_vcc_vv)
 # SI-ERR-NOT: remark
 
 ---
@@ -33,11 +33,12 @@ body: |
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[V_CMP_CLASS_F16_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_CLASS_F16_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_CLASS_F16_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vgpr(s32) = COPY $vgpr0
-    %2:sgpr(s16) = G_TRUNC %0
-    %4:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %2, %1
-    S_ENDPGM 0, implicit %4
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vgpr(i32) = COPY $vgpr0
+    %2:sgpr(i16) = G_TRUNC %0(i32)
+    %3:sgpr(f16) = G_BITCAST %2(i16)
+    %4:vcc(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %3(f16), %1(i32)
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -63,11 +64,12 @@ body: |
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE64-NEXT: [[V_CMP_CLASS_F16_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_CLASS_F16_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_CLASS_F16_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:sgpr(s32) = COPY $sgpr0
-    %2:vgpr(s16) = G_TRUNC %0
-    %4:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %2, %1
-    S_ENDPGM 0, implicit %4
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:sgpr(i32) = COPY $sgpr0
+    %2:vgpr(i16) = G_TRUNC %0(i32)
+    %3:vgpr(f16) = G_BITCAST %2(i16)
+    %4:vcc(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %3(f16), %1(i32)
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -93,9 +95,10 @@ body: |
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; WAVE64-NEXT: [[V_CMP_CLASS_F16_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_CLASS_F16_e64 0, [[COPY]], [[COPY1]], implicit $exec
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_CLASS_F16_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vgpr(s16) = G_TRUNC %0
-    %4:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %2, %1
-    S_ENDPGM 0, implicit %4
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(i16) = G_TRUNC %0(i32)
+    %3:vgpr(f16) = G_BITCAST %2(i16)
+    %4:vcc(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %3(f16), %1(i32)
+    S_ENDPGM 0, implicit %4(i1)
 ...

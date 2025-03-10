@@ -11,14 +11,14 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_lshr_0
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 0
-    %shift:_(s32) = G_LSHR %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 0
+    %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -31,14 +31,14 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_lshr_8
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s32) = G_LSHR %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -51,14 +51,14 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_lshr_16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 16
-    %shift:_(s32) = G_LSHR %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 16
+    %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -71,14 +71,14 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_lshr_24
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 24
-    %shift:_(s32) = G_LSHR %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE3 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 24
+    %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -91,14 +91,14 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte1_lshr_8
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s32) = G_LSHR %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -111,14 +111,14 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte1_lshr_16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 16
-    %shift:_(s32) = G_LSHR %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE3 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 16
+    %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -131,16 +131,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte1_lshr_24
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 24
-    ; CHECK-NEXT: %shift:_(s32) = G_LSHR %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 24
-    %shift:_(s32) = G_LSHR %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 24
+    ; CHECK-NEXT: %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 24
+    %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -153,14 +153,14 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte2_lshr_8
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s32) = G_LSHR %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE3 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -173,16 +173,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte2_lshr_16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: %shift:_(s32) = G_LSHR %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 16
-    %shift:_(s32) = G_LSHR %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 16
+    %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -195,16 +195,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte2_lshr_24
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 24
-    ; CHECK-NEXT: %shift:_(s32) = G_LSHR %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 24
-    %shift:_(s32) = G_LSHR %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 24
+    ; CHECK-NEXT: %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 24
+    %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -217,16 +217,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte3_lshr_8
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: %shift:_(s32) = G_LSHR %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s32) = G_LSHR %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i32) = G_LSHR %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -239,16 +239,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_zext_lshr_8
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %trunc:_(s16) = G_TRUNC %arg
-    %shiftamt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s16) = G_LSHR %trunc, %shiftamt
-    %zext:_(s32) = G_ZEXT %shift
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %zext
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %trunc:_(i16) = G_TRUNC %arg(i32)
+    %shiftamt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i16) = G_LSHR %trunc, %shiftamt(i32)
+    %zext:_(i32) = G_ZEXT %shift(i16)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %zext
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -261,17 +261,17 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_zext_lshr_16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %shift:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %zext:_(s32) = G_ZEXT %shift(s16)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %zext
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %trunc:_(s16) = G_TRUNC %arg
-    %shiftamt:_(s32) = G_CONSTANT i32 16
-    %shift:_(s16) = G_LSHR %trunc, %shiftamt
-    %zext:_(s32) = G_ZEXT %shift
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %zext
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %shift:_(i16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %zext:_(i32) = G_ZEXT %shift(i16)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %zext
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %trunc:_(i16) = G_TRUNC %arg(i32)
+    %shiftamt:_(i32) = G_CONSTANT i32 16
+    %shift:_(i16) = G_LSHR %trunc, %shiftamt(i32)
+    %zext:_(i32) = G_ZEXT %shift(i16)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %zext
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -284,17 +284,17 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_zext_lshr_24
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %shift:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %zext:_(s32) = G_ZEXT %shift(s16)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %zext
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %trunc:_(s16) = G_TRUNC %arg
-    %shiftamt:_(s32) = G_CONSTANT i32 24
-    %shift:_(s16) = G_LSHR %trunc, %shiftamt
-    %zext:_(s32) = G_ZEXT %shift
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %zext
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %shift:_(i16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %zext:_(i32) = G_ZEXT %shift(i16)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %zext
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %trunc:_(i16) = G_TRUNC %arg(i32)
+    %shiftamt:_(i32) = G_CONSTANT i32 24
+    %shift:_(i16) = G_LSHR %trunc, %shiftamt(i32)
+    %zext:_(i32) = G_ZEXT %shift(i16)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %zext
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -307,16 +307,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte1_zext_lshr_8
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %trunc:_(s16) = G_TRUNC %arg
-    %shiftamt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s16) = G_LSHR %trunc, %shiftamt
-    %zext:_(s32) = G_ZEXT %shift
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %zext
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %trunc:_(i16) = G_TRUNC %arg(i32)
+    %shiftamt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i16) = G_LSHR %trunc, %shiftamt(i32)
+    %zext:_(i32) = G_ZEXT %shift(i16)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %zext
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -329,16 +329,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_shl_8
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: %shift:_(s32) = G_SHL %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -351,16 +351,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte1_shl_8
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: %shift:_(s32) = G_SHL %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -373,14 +373,14 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte2_shl_8
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -393,14 +393,14 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte3_shl_8
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -413,16 +413,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_shl_16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: %shift:_(s32) = G_SHL %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 16
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 16
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -435,16 +435,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte1_shl_16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: %shift:_(s32) = G_SHL %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 16
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 16
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -457,16 +457,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte2_shl_16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: %shift:_(s32) = G_SHL %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 16
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 16
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -479,14 +479,14 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte3_shl_16
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %arg
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 16
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %arg
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 16
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -499,16 +499,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte0_shl_24
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 24
-    ; CHECK-NEXT: %shift:_(s32) = G_SHL %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 24
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 24
+    ; CHECK-NEXT: %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 24
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE0 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -521,16 +521,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte1_shl_24
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 24
-    ; CHECK-NEXT: %shift:_(s32) = G_SHL %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 24
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 24
+    ; CHECK-NEXT: %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 24
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -543,16 +543,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte2_shl_24
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 24
-    ; CHECK-NEXT: %shift:_(s32) = G_SHL %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 24
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 24
+    ; CHECK-NEXT: %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 24
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE2 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -565,16 +565,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte3_shl_24
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 24
-    ; CHECK-NEXT: %shift:_(s32) = G_SHL %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 24
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 24
+    ; CHECK-NEXT: %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 24
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 # Shift amount is wrong
@@ -588,16 +588,16 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte1_shl_7
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 7
-    ; CHECK-NEXT: %shift:_(s32) = G_SHL %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 7
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 7
+    ; CHECK-NEXT: %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 7
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE1 %shift
+    $vgpr0 = COPY %result(i32)
 ...
 
 ---
@@ -610,14 +610,14 @@ body:             |
     ; CHECK-LABEL: name: cvt_f32_ubyte3_shl_17
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %arg:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: %shiftamt:_(s32) = G_CONSTANT i32 17
-    ; CHECK-NEXT: %shift:_(s32) = G_SHL %arg, %shiftamt(s32)
-    ; CHECK-NEXT: %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
-    ; CHECK-NEXT: $vgpr0 = COPY %result(s32)
-    %arg:_(s32) = COPY $vgpr0
-    %shiftamt:_(s32) = G_CONSTANT i32 17
-    %shift:_(s32) = G_SHL %arg, %shiftamt
-    %result:_(s32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
-    $vgpr0 = COPY %result
+    ; CHECK-NEXT: %arg:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: %shiftamt:_(i32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    ; CHECK-NEXT: %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
+    ; CHECK-NEXT: $vgpr0 = COPY %result(i32)
+    %arg:_(i32) = COPY $vgpr0
+    %shiftamt:_(i32) = G_CONSTANT i32 17
+    %shift:_(i32) = G_SHL %arg, %shiftamt(i32)
+    %result:_(i32) = G_AMDGPU_CVT_F32_UBYTE3 %shift
+    $vgpr0 = COPY %result(i32)
 ...

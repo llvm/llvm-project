@@ -11,9 +11,9 @@ body: |
     ; CHECK-LABEL: name: else
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1), [[INT1:%[0-9]+]]:sgpr(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), [[COPY]](s64)
-    %0:_(s64) = COPY $sgpr0_sgpr1
-    %1:_(s1), %2:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(i1), [[INT1:%[0-9]+]]:sgpr(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), [[COPY]](i64)
+    %0:_(i64) = COPY $sgpr0_sgpr1
+    %1:_(i1), %2:_(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), %0(i64)
 
 ...

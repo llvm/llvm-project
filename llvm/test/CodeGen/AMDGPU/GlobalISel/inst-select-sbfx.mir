@@ -21,11 +21,11 @@ body:             |
     ; CHECK-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 10, implicit $exec
     ; CHECK-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], [[V_MOV_B32_e32_]], [[V_MOV_B32_e32_1]], implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BFE_I32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = G_CONSTANT i32 2
-    %2:vgpr(s32) = G_CONSTANT i32 10
-    %3:vgpr(s32) = G_SBFX %0, %1(s32), %2
-    S_ENDPGM 0, implicit %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = G_CONSTANT i32 2
+    %2:vgpr(i32) = G_CONSTANT i32 10
+    %3:vgpr(i32) = G_SBFX %0, %1(i32), %2
+    S_ENDPGM 0, implicit %3(i32)
 ...
 
 ---
@@ -44,9 +44,9 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr2
     ; CHECK-NEXT: [[V_BFE_I32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_I32_e64 [[COPY]], [[COPY1]], [[COPY2]], implicit $exec
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_BFE_I32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vgpr(s32) = COPY $vgpr2
-    %3:vgpr(s32) = G_SBFX %0, %1(s32), %2
-    S_ENDPGM 0, implicit %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(i32) = COPY $vgpr2
+    %3:vgpr(i32) = G_SBFX %0, %1(i32), %2
+    S_ENDPGM 0, implicit %3(i32)
 ...

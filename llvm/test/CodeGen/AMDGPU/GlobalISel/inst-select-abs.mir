@@ -27,11 +27,11 @@ body: |
     ; GFX9-NEXT: %src0:sreg_32 = COPY $sgpr0
     ; GFX9-NEXT: %smax:sreg_32 = S_ABS_I32 %src0, implicit-def dead $scc
     ; GFX9-NEXT: S_ENDPGM 0, implicit %smax
-    %src0:sgpr(s32) = COPY $sgpr0
-    %zero:sgpr(s32) = G_CONSTANT i32 0
-    %ineg:sgpr(s32) = G_SUB %zero, %src0
-    %smax:sgpr(s32) = G_SMAX %src0, %ineg
-    S_ENDPGM 0, implicit %smax
+    %src0:sgpr(i32) = COPY $sgpr0
+    %zero:sgpr(i32) = G_CONSTANT i32 0
+    %ineg:sgpr(i32) = G_SUB %zero, %src0
+    %smax:sgpr(i32) = G_SMAX %src0, %ineg
+    S_ENDPGM 0, implicit %smax(i32)
 ...
 
 ---
@@ -57,11 +57,11 @@ body: |
     ; GFX9-NEXT: %src0:sreg_32 = COPY $sgpr0
     ; GFX9-NEXT: %smax:sreg_32 = S_ABS_I32 %src0, implicit-def dead $scc
     ; GFX9-NEXT: S_ENDPGM 0, implicit %smax
-    %src0:sgpr(s32) = COPY $sgpr0
-    %zero:sgpr(s32) = G_CONSTANT i32 0
-    %ineg:sgpr(s32) = G_SUB %zero, %src0
-    %smax:sgpr(s32) = G_SMAX %ineg, %src0
-    S_ENDPGM 0, implicit %smax
+    %src0:sgpr(i32) = COPY $sgpr0
+    %zero:sgpr(i32) = G_CONSTANT i32 0
+    %ineg:sgpr(i32) = G_SUB %zero, %src0
+    %smax:sgpr(i32) = G_SMAX %ineg, %src0
+    S_ENDPGM 0, implicit %smax(i32)
 ...
 
 ---
@@ -91,11 +91,11 @@ body: |
     ; GFX9-NEXT: %ineg:vgpr_32 = V_SUB_U32_e64 %zero, %src0, 0, implicit $exec
     ; GFX9-NEXT: %smax:vgpr_32 = V_MAX_I32_e64 %src0, %ineg, implicit $exec
     ; GFX9-NEXT: S_ENDPGM 0, implicit %smax
-    %src0:vgpr(s32) = COPY $vgpr0
-    %zero:vgpr(s32) = G_CONSTANT i32 0
-    %ineg:vgpr(s32) = G_SUB %zero, %src0
-    %smax:vgpr(s32) = G_SMAX %src0, %ineg
-    S_ENDPGM 0, implicit %smax
+    %src0:vgpr(i32) = COPY $vgpr0
+    %zero:vgpr(i32) = G_CONSTANT i32 0
+    %ineg:vgpr(i32) = G_SUB %zero, %src0
+    %smax:vgpr(i32) = G_SMAX %src0, %ineg
+    S_ENDPGM 0, implicit %smax(i32)
 ...
 
 # FIXME: Violates constant bus restriction
@@ -108,9 +108,9 @@ body: |
 #   bb.0:
 #     liveins: $sgpr0
 
-#     %src0:sgpr(s32) = COPY $sgpr0
-#     %zero:sgpr(s32) = G_CONSTANT i32 0
-#     %ineg:sgpr(s32) = G_SUB %zero, %src0
-#     %smax:vgpr(s32) = G_SMAX %src0, %ineg
+#     %src0:sgpr(i32) = COPY $sgpr0
+#     %zero:sgpr(i32) = G_CONSTANT i32 0
+#     %ineg:sgpr(i32) = G_SUB %zero, %src0
+#     %smax:vgpr(i32) = G_SMAX %src0, %ineg
 #     S_ENDPGM 0, implicit %smax
 # ...

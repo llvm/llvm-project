@@ -10,24 +10,27 @@ body: |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.1(0x80000000), %bb.2(0x00000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GCN-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; GCN-NEXT:   [[C1:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
   ; GCN-NEXT:   S_CBRANCH_EXECNZ %bb.2, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors:
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+  ; GCN-NEXT:   G_STORE [[C]](i32), [[C1]](p1) :: (store (i8), addrspace 1)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    %0:_(s8) = G_CONSTANT i8 0
+    successors: %bb.1(0x80000000)
+
+    %0:_(i8) = G_CONSTANT i8 0
     %1:_(p1) = G_CONSTANT i64 0
     G_TRAP
 
   bb.1:
-    G_STORE %0, %1 :: (store 1, addrspace 1)
+    G_STORE %0(i8), %1(p1) :: (store (i8), addrspace 1)
+
 
 ...
 
@@ -38,7 +41,7 @@ body: |
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; GCN-NEXT:   [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
   ; GCN-NEXT:   S_CBRANCH_EXECNZ %bb.3, implicit $exec
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
@@ -49,16 +52,19 @@ body: |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors:
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   G_STORE [[C]](s32), [[C1]](p1) :: (store (s8), addrspace 1)
+  ; GCN-NEXT:   G_STORE [[C]](i32), [[C1]](p1) :: (store (i8), addrspace 1)
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
-    %0:_(s8) = G_CONSTANT i8 0
+    successors: %bb.1(0x80000000)
+
+    %0:_(i8) = G_CONSTANT i8 0
     G_TRAP
     %1:_(p1) = G_CONSTANT i64 0
 
   bb.1:
-    G_STORE %0, %1 :: (store 1, addrspace 1)
+    G_STORE %0(i8), %1(p1) :: (store (i8), addrspace 1)
+
 
 ...

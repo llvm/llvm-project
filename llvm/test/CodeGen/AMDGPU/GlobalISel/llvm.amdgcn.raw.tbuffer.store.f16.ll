@@ -16,7 +16,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; UNPACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; UNPACKED-NEXT:   S_ENDPGM 0
   ;
   ; PACKED-LABEL: name: raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset
@@ -31,7 +31,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; PACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; PACKED-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset
@@ -46,7 +46,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.tbuffer.store.f16(half %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 0)
   ret void
@@ -69,7 +69,7 @@ define amdgpu_ps void @raw_tbuffer_store_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_so
   ; UNPACKED-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; UNPACKED-NEXT:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[COPY7]], [[COPY]], implicit $exec
   ; UNPACKED-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[V_LSHRREV_B32_e64_]], %subreg.sub1
-  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_XY_gfx80_OFFEN_exact [[REG_SEQUENCE1]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<2 x s16>), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_XY_gfx80_OFFEN_exact [[REG_SEQUENCE1]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<2 x f16>), align 1, addrspace 8)
   ; UNPACKED-NEXT:   S_ENDPGM 0
   ;
   ; PACKED-LABEL: name: raw_tbuffer_store_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset
@@ -84,7 +84,7 @@ define amdgpu_ps void @raw_tbuffer_store_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_so
   ; PACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_XY_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<2 x s16>), align 1, addrspace 8)
+  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_XY_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<2 x f16>), align 1, addrspace 8)
   ; PACKED-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: raw_tbuffer_store_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset
@@ -99,7 +99,7 @@ define amdgpu_ps void @raw_tbuffer_store_v2f16__sgpr_rsrc__vgpr_voffset__sgpr_so
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_XY_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<2 x s16>), align 1, addrspace 8)
+  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_XY_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<2 x f16>), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.tbuffer.store.v2f16(<2 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 0)
   ret void
@@ -131,7 +131,7 @@ define amdgpu_ps void @raw_tbuffer_store_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_so
   ; UNPACKED-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
   ; UNPACKED-NEXT:   [[V_LSHRREV_B32_e64_1:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[COPY9]], [[COPY1]], implicit $exec
   ; UNPACKED-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:vreg_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[V_LSHRREV_B32_e64_]], %subreg.sub1, [[COPY1]], %subreg.sub2, [[V_LSHRREV_B32_e64_1]], %subreg.sub3
-  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_XYZW_gfx80_OFFEN_exact [[REG_SEQUENCE1]], [[COPY6]], [[REG_SEQUENCE]], [[COPY7]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<4 x s16>), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_XYZW_gfx80_OFFEN_exact [[REG_SEQUENCE1]], [[COPY6]], [[REG_SEQUENCE]], [[COPY7]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<4 x f16>), align 1, addrspace 8)
   ; UNPACKED-NEXT:   S_ENDPGM 0
   ;
   ; PACKED-LABEL: name: raw_tbuffer_store_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset
@@ -148,7 +148,7 @@ define amdgpu_ps void @raw_tbuffer_store_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_so
   ; PACKED-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; PACKED-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_XYZW_OFFEN_exact [[REG_SEQUENCE]], [[COPY6]], [[REG_SEQUENCE1]], [[COPY7]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<4 x s16>), align 1, addrspace 8)
+  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_XYZW_OFFEN_exact [[REG_SEQUENCE]], [[COPY6]], [[REG_SEQUENCE1]], [[COPY7]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<4 x f16>), align 1, addrspace 8)
   ; PACKED-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: raw_tbuffer_store_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset
@@ -165,7 +165,7 @@ define amdgpu_ps void @raw_tbuffer_store_v4f16__sgpr_rsrc__vgpr_voffset__sgpr_so
   ; GFX12-NEXT:   [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY2]], %subreg.sub0, [[COPY3]], %subreg.sub1, [[COPY4]], %subreg.sub2, [[COPY5]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:vgpr_32 = COPY $vgpr2
   ; GFX12-NEXT:   [[COPY7:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_XYZW_VBUFFER_OFFEN_exact [[REG_SEQUENCE]], [[COPY6]], [[REG_SEQUENCE1]], [[COPY7]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<4 x s16>), align 1, addrspace 8)
+  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_XYZW_VBUFFER_OFFEN_exact [[REG_SEQUENCE]], [[COPY6]], [[REG_SEQUENCE1]], [[COPY7]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (<4 x f16>), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.tbuffer.store.v4f16(<4 x half> %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 0)
   ret void
@@ -208,7 +208,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__vgpr_rsrc__vgpr_voffset__sgpr_soff
   ; UNPACKED-NEXT: bb.3:
   ; UNPACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; UNPACKED-NEXT: {{  $}}
-  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[COPY6]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[COPY6]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; UNPACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; UNPACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; UNPACKED-NEXT: {{  $}}
@@ -255,7 +255,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__vgpr_rsrc__vgpr_voffset__sgpr_soff
   ; PACKED-NEXT: bb.3:
   ; PACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; PACKED-NEXT: {{  $}}
-  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[COPY6]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[COPY6]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; PACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; PACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; PACKED-NEXT: {{  $}}
@@ -302,7 +302,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__vgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT: bb.3:
   ; GFX12-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[COPY6]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[COPY6]], 0, 94, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
@@ -357,7 +357,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__vgpr_rsrc__vgpr_voffset__vgpr_soff
   ; UNPACKED-NEXT: bb.3:
   ; UNPACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; UNPACKED-NEXT: {{  $}}
-  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; UNPACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; UNPACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; UNPACKED-NEXT: {{  $}}
@@ -407,7 +407,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__vgpr_rsrc__vgpr_voffset__vgpr_soff
   ; PACKED-NEXT: bb.3:
   ; PACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; PACKED-NEXT: {{  $}}
-  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; PACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; PACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; PACKED-NEXT: {{  $}}
@@ -457,7 +457,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__vgpr_rsrc__vgpr_voffset__vgpr_soff
   ; GFX12-NEXT: bb.3:
   ; GFX12-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
@@ -513,7 +513,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; UNPACKED-NEXT: bb.3:
   ; UNPACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; UNPACKED-NEXT: {{  $}}
-  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY7]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY7]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; UNPACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; UNPACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; UNPACKED-NEXT: {{  $}}
@@ -564,7 +564,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; PACKED-NEXT: bb.3:
   ; PACKED-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; PACKED-NEXT: {{  $}}
-  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY7]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY7]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; PACKED-NEXT:   $exec = S_XOR_B64_term $exec, [[S_AND_SAVEEXEC_B64_]], implicit-def $scc
   ; PACKED-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; PACKED-NEXT: {{  $}}
@@ -615,7 +615,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__vgpr_rsrc__sgpr_voffset__vgpr_soff
   ; GFX12-NEXT: bb.3:
   ; GFX12-NEXT:   successors: %bb.4(0x40000000), %bb.2(0x40000000)
   ; GFX12-NEXT: {{  $}}
-  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY7]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY7]], [[REG_SEQUENCE1]], [[V_READFIRSTLANE_B32_4]], 0, 78, 0, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; GFX12-NEXT:   $exec_lo = S_XOR_B32_term $exec_lo, [[S_AND_SAVEEXEC_B32_]], implicit-def $scc
   ; GFX12-NEXT:   SI_WATERFALL_LOOP %bb.2, implicit $exec
   ; GFX12-NEXT: {{  $}}
@@ -643,7 +643,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; UNPACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 1, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 1, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; UNPACKED-NEXT:   S_ENDPGM 0
   ;
   ; PACKED-LABEL: name: raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
@@ -658,7 +658,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; PACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 1, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 1, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; PACKED-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_glc
@@ -673,7 +673,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 1, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 1, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.tbuffer.store.f16(half %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 1)
   ret void
@@ -692,7 +692,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; UNPACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 2, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 2, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; UNPACKED-NEXT:   S_ENDPGM 0
   ;
   ; PACKED-LABEL: name: raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
@@ -707,7 +707,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; PACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 2, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 2, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; PACKED-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc
@@ -722,7 +722,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 2, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 2, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.tbuffer.store.f16(half %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 2)
   ret void
@@ -741,7 +741,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; UNPACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 3, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 3, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; UNPACKED-NEXT:   S_ENDPGM 0
   ;
   ; PACKED-LABEL: name: raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc_glc
@@ -756,7 +756,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; PACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 3, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 3, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; PACKED-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_slc_glc
@@ -771,7 +771,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 3, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 3, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.tbuffer.store.f16(half %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 3)
   ret void
@@ -790,7 +790,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; UNPACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; UNPACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; UNPACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 4, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; UNPACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_gfx80_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 4, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; UNPACKED-NEXT:   S_ENDPGM 0
   ;
   ; PACKED-LABEL: name: raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_dlc
@@ -805,7 +805,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; PACKED-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; PACKED-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; PACKED-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 4, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; PACKED-NEXT:   TBUFFER_STORE_FORMAT_D16_X_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 4, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; PACKED-NEXT:   S_ENDPGM 0
   ;
   ; GFX12-LABEL: name: raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soffset_dlc
@@ -820,7 +820,7 @@ define amdgpu_ps void @raw_tbuffer_store_f16__sgpr_rsrc__vgpr_voffset__sgpr_soff
   ; GFX12-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
   ; GFX12-NEXT:   [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; GFX12-NEXT:   [[COPY6:%[0-9]+]]:sreg_32 = COPY $sgpr6
-  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 4, 0, implicit $exec :: (dereferenceable store (s16), align 1, addrspace 8)
+  ; GFX12-NEXT:   TBUFFER_STORE_FORMAT_D16_X_VBUFFER_OFFEN_exact [[COPY]], [[COPY5]], [[REG_SEQUENCE]], [[COPY6]], 0, 78, 4, 0, implicit $exec :: (dereferenceable store (f16), align 1, addrspace 8)
   ; GFX12-NEXT:   S_ENDPGM 0
   call void @llvm.amdgcn.raw.tbuffer.store.f16(half %val, <4 x i32> %rsrc, i32 %voffset, i32 %soffset, i32 78, i32 4)
   ret void
