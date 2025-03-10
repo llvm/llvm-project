@@ -806,15 +806,13 @@ define <32 x i8> @concat_packsr_unnecessary(<8 x i16> %a0, <8 x i16> %a1, <8 x i
 }
 declare <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16>, <8 x i16>)
 
-; TODO: Not beneficial to concatenate both inputs just to create a 256-bit pshufb
+; Not beneficial to concatenate both inputs just to create a 256-bit pshufb
 define <32 x i8> @concat_pshufb_unnecessary(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2) nounwind {
 ; CHECK-LABEL: concat_pshufb_unnecessary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; CHECK-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpshufb %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpshufb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %lo = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> %a1)
   %hi = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> %a2)
