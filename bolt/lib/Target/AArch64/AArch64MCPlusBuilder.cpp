@@ -548,10 +548,15 @@ public:
   }
 
   bool isBRA(const MCInst &Inst) const {
-    return (Inst.getOpcode() == AArch64::BRAA ||
-            Inst.getOpcode() == AArch64::BRAB ||
-            Inst.getOpcode() == AArch64::BRAAZ ||
-            Inst.getOpcode() == AArch64::BRABZ);
+    switch (Inst.getOpcode()) {
+    case AArch64::BRAA:
+    case AArch64::BRAB:
+    case AArch64::BRAAZ:
+    case AArch64::BRABZ:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool mayLoad(const MCInst &Inst) const override {
