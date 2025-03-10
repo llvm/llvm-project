@@ -208,8 +208,7 @@ __attribute__((objc_root_class))
 // CHECK-NEXT: [[SELFADDR:%.*]] = alloca ptr,
 // CHECK-NEXT: store ptr %{{.*}}, ptr [[SELFADDR]],
 // CHECK-NEXT: [[SELFVAL:%.*]] = load {{.*}} [[SELFADDR]],
-// CHECK-NEXT: [[IVAR:%.*]] = load {{.*}} @"OBJC_IVAR_$_Root._objectProperty",
-// CHECK-NEXT: [[CALL:%.*]] = tail call ptr @objc_getProperty(ptr noundef [[SELF]], ptr noundef poison, i64 noundef [[IVAR]], {{.*}})
+// CHECK-NEXT: [[CALL:%.*]] = tail call ptr @objc_getProperty(ptr noundef [[SELF]], ptr noundef poison, i64 noundef 8, {{.*}})
 
 // CHECK-LABEL: define hidden ptr @"\01-[Root objectProperty]"(ptr noundef %{{.*}})
 // CHECK-LABEL: entry:
