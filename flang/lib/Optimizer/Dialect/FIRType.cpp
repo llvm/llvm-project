@@ -554,70 +554,92 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
   llvm::raw_string_ostream name{buf};
   if (!prefix.empty())
     name << "_";
-  while (ty) {
-    if (fir::isa_trivial(ty)) {
-      if (mlir::isa<mlir::IndexType>(ty)) {
-        name << "idx";
-      } else if (ty.isIntOrIndex()) {
-        name << 'i' << ty.getIntOrFloatBitWidth();
-      } else if (mlir::isa<mlir::FloatType>(ty)) {
-        name << 'f' << ty.getIntOrFloatBitWidth();
-      } else if (auto cplxTy = mlir::dyn_cast_or_null<mlir::ComplexType>(ty)) {
-        name << 'z';
-        auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
-        name << floatTy.getWidth();
-      } else if (auto logTy = mlir::dyn_cast_or_null<fir::LogicalType>(ty)) {
-        name << 'l' << kindMap.getLogicalBitsize(logTy.getFKind());
+
+  std::function<void(mlir::Type)> appendTypeName = [&](mlir::Type ty) {
+    while (ty) {
+      if (fir::isa_trivial(ty)) {
+        if (mlir::isa<mlir::IndexType>(ty)) {
+          name << "idx";
+        } else if (ty.isIntOrIndex()) {
+          name << 'i' << ty.getIntOrFloatBitWidth();
+        } else if (mlir::isa<mlir::FloatType>(ty)) {
+          name << 'f' << ty.getIntOrFloatBitWidth();
+        } else if (auto cplxTy =
+                       mlir::dyn_cast_or_null<mlir::ComplexType>(ty)) {
+          name << 'z';
+          auto floatTy = mlir::cast<mlir::FloatType>(cplxTy.getElementType());
+          name << floatTy.getWidth();
+        } else if (auto logTy = mlir::dyn_cast_or_null<fir::LogicalType>(ty)) {
+          name << 'l' << kindMap.getLogicalBitsize(logTy.getFKind());
+        } else {
+          llvm::report_fatal_error("unsupported type");
+        }
+        break;
+      } else if (mlir::isa<mlir::NoneType>(ty)) {
+        name << "none";
+        break;
+      } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(ty)) {
+        name << 'c' << kindMap.getCharacterBitsize(charTy.getFKind());
+        if (charTy.getLen() == fir::CharacterType::unknownLen())
+          name << "xU";
+        else if (charTy.getLen() != fir::CharacterType::singleton())
+          name << "x" << charTy.getLen();
+        break;
+      } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
+        for (auto extent : seqTy.getShape()) {
+          if (extent == fir::SequenceType::getUnknownExtent())
+            name << "Ux";
+          else
+            name << extent << 'x';
+        }
+        ty = seqTy.getEleTy();
+      } else if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
+        name << "ref_";
+        ty = refTy.getEleTy();
+      } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(ty)) {
+        name << "ptr_";
+        ty = ptrTy.getEleTy();
+      } else if (auto ptrTy =
+                     mlir::dyn_cast_or_null<fir::LLVMPointerType>(ty)) {
+        name << "llvmptr_";
+        ty = ptrTy.getEleTy();
+      } else if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(ty)) {
+        name << "heap_";
+        ty = heapTy.getEleTy();
+      } else if (auto classTy = mlir::dyn_cast_or_null<fir::ClassType>(ty)) {
+        name << "class_";
+        ty = classTy.getEleTy();
+      } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(ty)) {
+        name << "box_";
+        ty = boxTy.getEleTy();
+      } else if (auto boxcharTy =
+                     mlir::dyn_cast_or_null<fir::BoxCharType>(ty)) {
+        name << "boxchar_";
+        ty = boxcharTy.getEleTy();
+      } else if (auto boxprocTy =
+                     mlir::dyn_cast_or_null<fir::BoxProcType>(ty)) {
+        name << "boxproc_";
+        auto procTy = mlir::dyn_cast<mlir::FunctionType>(boxprocTy.getEleTy());
+        assert(procTy.getNumResults() <= 1 &&
+               "function type with more than one result");
+        for (const auto &result : procTy.getResults())
+          appendTypeName(result);
+        name << "_args";
+        for (const auto &arg : procTy.getInputs()) {
+          name << '_';
+          appendTypeName(arg);
+        }
+        break;
+      } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(ty)) {
+        name << "rec_" << recTy.getName();
+        break;
       } else {
         llvm::report_fatal_error("unsupported type");
       }
-      break;
-    } else if (mlir::isa<mlir::NoneType>(ty)) {
-      name << "none";
-      break;
-    } else if (auto charTy = mlir::dyn_cast_or_null<fir::CharacterType>(ty)) {
-      name << 'c' << kindMap.getCharacterBitsize(charTy.getFKind());
-      if (charTy.getLen() == fir::CharacterType::unknownLen())
-        name << "xU";
-      else if (charTy.getLen() != fir::CharacterType::singleton())
-        name << "x" << charTy.getLen();
-      break;
-    } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
-      for (auto extent : seqTy.getShape()) {
-        if (extent == fir::SequenceType::getUnknownExtent())
-          name << "Ux";
-        else
-          name << extent << 'x';
-      }
-      ty = seqTy.getEleTy();
-    } else if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
-      name << "ref_";
-      ty = refTy.getEleTy();
-    } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::PointerType>(ty)) {
-      name << "ptr_";
-      ty = ptrTy.getEleTy();
-    } else if (auto ptrTy = mlir::dyn_cast_or_null<fir::LLVMPointerType>(ty)) {
-      name << "llvmptr_";
-      ty = ptrTy.getEleTy();
-    } else if (auto heapTy = mlir::dyn_cast_or_null<fir::HeapType>(ty)) {
-      name << "heap_";
-      ty = heapTy.getEleTy();
-    } else if (auto classTy = mlir::dyn_cast_or_null<fir::ClassType>(ty)) {
-      name << "class_";
-      ty = classTy.getEleTy();
-    } else if (auto boxTy = mlir::dyn_cast_or_null<fir::BoxType>(ty)) {
-      name << "box_";
-      ty = boxTy.getEleTy();
-    } else if (auto boxcharTy = mlir::dyn_cast_or_null<fir::BoxCharType>(ty)) {
-      name << "boxchar_";
-      ty = boxcharTy.getEleTy();
-    } else if (auto recTy = mlir::dyn_cast_or_null<fir::RecordType>(ty)) {
-      name << "rec_" << recTy.getName();
-      break;
-    } else {
-      llvm::report_fatal_error("unsupported type");
     }
-  }
+  };
+
+  appendTypeName(ty);
   return buf;
 }
 
