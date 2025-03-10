@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/DWARFExpression.h"
+#include "Plugins/ObjectFile/wasm/ObjectFileWasm.h"
 #include "Plugins/Platform/Linux/PlatformLinux.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDebugInfo.h"
 #include "Plugins/SymbolFile/DWARF/SymbolFileDWARFDwo.h"
+#include "Plugins/SymbolVendor/wasm/SymbolVendorWasm.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
 #include "lldb/Core/Debugger.h"
@@ -18,6 +20,8 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Symbol/ObjectFile.h"
+#include "lldb/Target/RegisterContext.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Testing/Support/Error.h"
@@ -26,16 +30,19 @@
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
 using namespace lldb_private::plugin::dwarf;
+using namespace lldb_private::plugin::dwarf::wasm;
+using namespace lldb_private::wasm;
 
 static llvm::Expected<Scalar> Evaluate(llvm::ArrayRef<uint8_t> expr,
                                        lldb::ModuleSP module_sp = {},
                                        DWARFUnit *unit = nullptr,
-                                       ExecutionContext *exe_ctx = nullptr) {
+                                       ExecutionContext *exe_ctx = nullptr,
+                                       RegisterContext *reg_ctx = nullptr) {
   DataExtractor extractor(expr.data(), expr.size(), lldb::eByteOrderLittle,
                           /*addr_size*/ 4);
 
   llvm::Expected<Value> result =
-      DWARFExpression::Evaluate(exe_ctx, /*reg_ctx*/ nullptr, module_sp,
+      DWARFExpression::Evaluate(exe_ctx, reg_ctx, module_sp,
                                 extractor, unit, lldb::eRegisterKindLLDB,
                                 /*initial_value_ptr*/ nullptr,
                                 /*object_address_ptr*/ nullptr);
@@ -373,32 +380,33 @@ TEST(DWARFExpression, DW_OP_unknown) {
           "Unhandled opcode DW_OP_unknown_ff in DWARFExpression"));
 }
 
+namespace {
+struct MockProcess : Process {
+  MockProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
+      : Process(target_sp, listener_sp) {}
+
+  llvm::StringRef GetPluginName() override { return "mock process"; }
+  bool CanDebug(lldb::TargetSP target, bool plugin_specified_by_name) override {
+    return false;
+  };
+  Status DoDestroy() override { return {}; }
+  void RefreshStateAfterStop() override {}
+  bool DoUpdateThreadList(ThreadList &old_thread_list,
+                          ThreadList &new_thread_list) override {
+    return false;
+  };
+  size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
+                      Status &error) override {
+    for (size_t i = 0; i < size; ++i)
+      ((char *)buf)[i] = (vm_addr + i) & 0xff;
+    error.Clear();
+    return size;
+  }
+};
+} // namespace
+
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_deref) {
   EXPECT_THAT_EXPECTED(Evaluate({DW_OP_lit0, DW_OP_deref}), llvm::Failed());
-
-  struct MockProcess : Process {
-    MockProcess(lldb::TargetSP target_sp, lldb::ListenerSP listener_sp)
-        : Process(target_sp, listener_sp) {}
-
-    llvm::StringRef GetPluginName() override { return "mock process"; }
-    bool CanDebug(lldb::TargetSP target,
-                  bool plugin_specified_by_name) override {
-      return false;
-    };
-    Status DoDestroy() override { return {}; }
-    void RefreshStateAfterStop() override {}
-    bool DoUpdateThreadList(ThreadList &old_thread_list,
-                            ThreadList &new_thread_list) override {
-      return false;
-    };
-    size_t DoReadMemory(lldb::addr_t vm_addr, void *buf, size_t size,
-                        Status &error) override {
-      for (size_t i = 0; i < size; ++i)
-        ((char *)buf)[i] = (vm_addr + i) & 0xff;
-      error.Clear();
-      return size;
-    }
-  };
 
   // Set up a mock process.
   ArchSpec arch("i386-pc-linux");
@@ -560,7 +568,7 @@ DWARF:
   ASSERT_EQ(result->GetValueType(), Value::ValueType::LoadAddress);
   ASSERT_EQ(result->GetScalar().UInt(), 0xdeadbeefu);
 }
-
+/*
 class CustomSymbolFileDWARF : public SymbolFileDWARF {
   static char ID;
 
@@ -588,81 +596,11 @@ public:
 
   static lldb_private::SymbolFile *
   CreateInstance(lldb::ObjectFileSP objfile_sp) {
-    return new CustomSymbolFileDWARF(std::move(objfile_sp),
-                                     /*dwo_section_list*/ nullptr);
-  }
-
-  lldb::offset_t
-  GetVendorDWARFOpcodeSize(const lldb_private::DataExtractor &data,
-                           const lldb::offset_t data_offset,
-                           const uint8_t op) const final {
-    auto offset = data_offset;
-    if (op != DW_OP_WASM_location) {
-      return LLDB_INVALID_OFFSET;
-    }
-
-    // DW_OP_WASM_location WASM_GLOBAL:0x03 index:u32
-    // Called with "arguments" 0x03 and 0x04
-    // Location type:
-    if (data.GetU8(&offset) != /* global */ 0x03) {
-      return LLDB_INVALID_OFFSET;
-    }
-
-    // Index
-    if (data.GetU32(&offset) != 0x04) {
-      return LLDB_INVALID_OFFSET;
-    }
-
-    // Report the skipped distance:
-    return offset - data_offset;
-  }
-
-  bool
-  ParseVendorDWARFOpcode(uint8_t op, const lldb_private::DataExtractor &opcodes,
-                         lldb::offset_t &offset,
-                         std::vector<lldb_private::Value> &stack) const final {
-    if (op != DW_OP_WASM_location) {
-      return false;
-    }
-
-    // DW_OP_WASM_location WASM_GLOBAL:0x03 index:u32
-    // Called with "arguments" 0x03 and  0x04
-    // Location type:
-    if (opcodes.GetU8(&offset) != /* global */ 0x03) {
-      return false;
-    }
-
-    // Index:
-    if (opcodes.GetU32(&offset) != 0x04) {
-      return false;
-    }
-
-    // Return some value:
-    stack.push_back({GetScalar(32, 42, false)});
-    return true;
+    return new CustomSymbolFileDWARF(std::move(objfile_sp), nullptr);
   }
 };
 
 char CustomSymbolFileDWARF::ID;
-
-static auto testExpressionVendorExtensions(lldb::ModuleSP module_sp,
-                                           DWARFUnit &dwarf_unit) {
-  // Test that expression extensions can be evaluated, for example
-  // DW_OP_WASM_location which is not currently handled by DWARFExpression:
-  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_WASM_location, 0x03, // WASM_GLOBAL:0x03
-                                 0x04, 0x00, 0x00,          // index:u32
-                                 0x00, DW_OP_stack_value},
-                                module_sp, &dwarf_unit),
-                       llvm::HasValue(GetScalar(32, 42, false)));
-
-  // Test that searches for opcodes work in the presence of extensions:
-  uint8_t expr[] = {DW_OP_WASM_location,   0x03, 0x04, 0x00, 0x00, 0x00,
-                    DW_OP_form_tls_address};
-  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
-                          /*addr_size*/ 4);
-  DWARFExpression dwarf_expr(extractor);
-  ASSERT_TRUE(dwarf_expr.ContainsThreadLocalStorage(&dwarf_unit));
-}
 
 TEST(DWARFExpression, Extensions) {
   const char *yamldata = R"(
@@ -799,7 +737,7 @@ Sections:
 
   testExpressionVendorExtensions(dwo_module_sp, *dwo_dwarf_unit);
 }
-
+*/
 TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
   using ::testing::ByMove;
   using ::testing::ElementsAre;
@@ -837,4 +775,425 @@ TEST_F(DWARFExpressionMockProcessTest, DW_OP_piece_file_addr) {
   ASSERT_THAT_EXPECTED(result, llvm::Succeeded());
   ASSERT_EQ(result->GetValueType(), Value::ValueType::HostAddress);
   ASSERT_THAT(result->GetBuffer().GetData(), ElementsAre(0x11, 0x22));
+}
+
+namespace {
+class MockThread : public Thread {
+public:
+  MockThread(Process &process) : Thread(process, 1 /* tid */), m_reg_ctx_sp() {}
+  ~MockThread() override { DestroyThread(); }
+
+  void RefreshStateAfterStop() override {}
+  lldb::RegisterContextSP GetRegisterContext() override { return m_reg_ctx_sp; }
+  lldb::RegisterContextSP
+  CreateRegisterContextForFrame(StackFrame *frame) override {
+    return m_reg_ctx_sp;
+  }
+  bool CalculateStopInfo() override { return false; }
+
+  void SetRegisterContext(lldb::RegisterContextSP reg_ctx_sp) {
+    m_reg_ctx_sp = reg_ctx_sp;
+  }
+
+private:
+  lldb::RegisterContextSP m_reg_ctx_sp;
+};
+
+class MockRegisterContext : public RegisterContext {
+public:
+  MockRegisterContext(Thread &thread, const RegisterValue &reg_value)
+      : RegisterContext(thread, 0 /*concrete_frame_idx*/),
+        m_reg_value(reg_value) {}
+
+  void InvalidateAllRegisters() override {}
+  size_t GetRegisterCount() override { return 0; }
+  const RegisterInfo *GetRegisterInfoAtIndex(size_t reg) override {
+    if (reg == 0x4000002a) {
+      return &m_reg_info;
+    }
+    return &m_reg_info; /* nullptr; */
+  }
+  size_t GetRegisterSetCount() override { return 0; }
+  const RegisterSet *GetRegisterSet(size_t reg_set) override { return nullptr; }
+  lldb::ByteOrder GetByteOrder() override {
+    return lldb::ByteOrder::eByteOrderLittle;
+  }
+  bool ReadRegister(const RegisterInfo *reg_info,
+                    RegisterValue &reg_value) override {
+    reg_value = m_reg_value;
+    return true;
+  }
+  bool WriteRegister(const RegisterInfo *reg_info,
+                     const RegisterValue &reg_value) override {
+    return false;
+  }
+  uint32_t ConvertRegisterKindToRegisterNumber(lldb::RegisterKind kind,
+                                               uint32_t num) override {
+    return num;
+  }
+
+private:
+  RegisterInfo m_reg_info;
+  RegisterValue m_reg_value;
+};
+
+static auto testExpressionVendorExtensions(lldb::ModuleSP module_sp,
+                                           DWARFUnit &dwarf_unit,
+                                           RegisterContext *reg_ctx) {
+  // Test that expression extensions can be evaluated, for example
+  // DW_OP_WASM_location which is not currently handled by DWARFExpression:
+  EXPECT_THAT_EXPECTED(Evaluate({DW_OP_WASM_location, 0x03, // WASM_GLOBAL:0x03
+                                 0x04, 0x00, 0x00,          // index:u32
+                                 0x00, DW_OP_stack_value},
+                                module_sp, &dwarf_unit, nullptr, reg_ctx),
+                       llvm::HasValue(GetScalar(32, 42, false)));
+
+  // Test that searches for opcodes work in the presence of extensions:
+  uint8_t expr[] = {DW_OP_WASM_location,   0x03, 0x04, 0x00, 0x00, 0x00,
+                    DW_OP_form_tls_address};
+  DataExtractor extractor(expr, sizeof(expr), lldb::eByteOrderLittle,
+                          /*addr_size*/ 4);
+  DWARFExpression dwarf_expr(extractor);
+  ASSERT_TRUE(dwarf_expr.ContainsThreadLocalStorage(&dwarf_unit));
+}
+} // namespace
+
+TEST(DWARFExpression, Extensions) {
+  const char *yamldata = R"(
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            TABLE
+    Tables:
+      - Index:           0
+        ElemType:        FUNCREF
+        Limits:
+          Flags:           [ HAS_MAX ]
+          Minimum:         0x1
+          Maximum:         0x1
+  - Type:            MEMORY
+    Memories:
+      - Flags:           [ HAS_MAX ]
+        Minimum:         0x100
+        Maximum:         0x100
+  - Type:            GLOBAL
+    Globals:
+      - Index:           0
+        Type:            I32
+        Mutable:         true
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           65536
+  - Type:            EXPORT
+    Exports:
+      - Name:            memory
+        Kind:            MEMORY
+        Index:           0
+      - Name:            square
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            __indirect_function_table
+        Kind:            TABLE
+        Index:           0
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+        Body:            2300210141102102200120026B21032003200036020C200328020C2104200328020C2105200420056C210620060F0B
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+      - Index:           0
+        Name:            square
+    GlobalNames:
+      - Index:           0
+        Name:            __stack_pointer
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         011101250E1305030E10171B0E110112060000022E01110112064018030E3A0B3B0B271949133F1900000305000218030E3A0B3B0B49130000042400030E3E0B0B0B000000
+  - Type:            CUSTOM
+    Name:            .debug_info
+    Payload:         510000000400000000000401670000001D005E000000000000000A000000020000003C00000002020000003C00000004ED00039F5700000001014D0000000302910C0400000001014D000000000400000000050400
+  - Type:            CUSTOM
+    Name:            .debug_str
+    Payload:         696E740076616C756500513A5C70616F6C6F7365764D5346545C6C6C766D2D70726F6A6563745C6C6C64625C746573745C4150495C66756E6374696F6E616C69746965735C6764625F72656D6F74655F636C69656E745C737175617265007371756172652E6300636C616E672076657273696F6E2031382E302E30202868747470733A2F2F6769746875622E636F6D2F6C6C766D2F6C6C766D2D70726F6A65637420373535303166353336323464653932616166636532663164613639386232343961373239336463372900
+  - Type:            CUSTOM
+    Name:            .debug_line
+    Payload:         64000000040020000000010101FB0E0D000101010100000001000001007371756172652E6300000000000005020200000001000502250000000301050A0A010005022C00000005120601000502330000000510010005023A0000000503010005023E000000000101
+)";
+
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> mem_fs =
+      new llvm::vfs::InMemoryFileSystem();
+  FileSystem::Initialize(mem_fs);
+  {
+    SubsystemRAII<HostInfo, ObjectFileWasm, SymbolVendorWasm> subsystems;
+
+    // Set up a wasm target
+    ArchSpec arch("wasm32-unknown-unknown-wasm");
+    lldb::PlatformSP host_platform_sp =
+        platform_linux::PlatformLinux::CreateInstance(true, &arch);
+    ASSERT_TRUE(host_platform_sp);
+    Platform::SetHostPlatform(host_platform_sp);
+    lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+    ASSERT_TRUE(debugger_sp);
+    lldb::TargetSP target_sp;
+    lldb::PlatformSP platform_sp;
+    debugger_sp->GetTargetList().CreateTarget(*debugger_sp, "", arch,
+                                              lldb_private::eLoadDependentsNo,
+                                              platform_sp, target_sp);
+    // Set up a mock process and thread.
+    lldb::ListenerSP listener_sp(Listener::MakeListener("dummy"));
+    lldb::ProcessSP process_sp =
+        std::make_shared<MockProcess>(target_sp, listener_sp);
+    ASSERT_TRUE(process_sp);
+    MockThread thread(*process_sp);
+    const uint32_t kExpectedValue = 42;
+    lldb::RegisterContextSP reg_ctx_sp = std::make_shared<MockRegisterContext>(
+        thread, RegisterValue(kExpectedValue));
+    thread.SetRegisterContext(reg_ctx_sp);
+
+    llvm::Expected<TestFile> file = TestFile::fromYaml(yamldata);
+    EXPECT_THAT_EXPECTED(file, llvm::Succeeded());
+    auto module_sp = std::make_shared<Module>(file->moduleSpec());
+    auto obj_file_sp = module_sp->GetObjectFile()->shared_from_this();
+    SymbolFileWasm sym_file_wasm(obj_file_sp, nullptr);
+    auto *dwarf_unit = sym_file_wasm.DebugInfo().GetUnitAtIndex(0);
+
+    testExpressionVendorExtensions(module_sp, *dwarf_unit, reg_ctx_sp.get());
+  }
+  FileSystem::Terminate();
+}
+
+TEST(DWARFExpression, ExtensionsSplitSymbols) {
+  const char *skeleton_yamldata = R"(
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            TABLE
+    Tables:
+      - Index:           0
+        ElemType:        FUNCREF
+        Limits:
+          Flags:           [ HAS_MAX ]
+          Minimum:         0x1
+          Maximum:         0x1
+  - Type:            MEMORY
+    Memories:
+      - Flags:           [ HAS_MAX ]
+        Minimum:         0x100
+        Maximum:         0x100
+  - Type:            GLOBAL
+    Globals:
+      - Index:           0
+        Type:            I32
+        Mutable:         true
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           65536
+  - Type:            EXPORT
+    Exports:
+      - Name:            memory
+        Kind:            MEMORY
+        Index:           0
+      - Name:            square
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            __indirect_function_table
+        Kind:            TABLE
+        Index:           0
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+        Body:            2300210141102102200120026B21032003200036020C200328020C2104200328020C2105200420056C210620060F0B
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+      - Index:           0
+        Name:            square
+    GlobalNames:
+      - Index:           0
+        Name:            __stack_pointer
+  - Type:            CUSTOM
+    Name:            external_debug_info
+    Payload:         167371756172652E7761736D2E64656275672E7761736D
+)";
+
+  const char *sym_yamldata = R"(
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:
+          - I32
+        ReturnTypes:
+          - I32
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            TABLE
+    Tables:
+      - Index:           0
+        ElemType:        FUNCREF
+        Limits:
+          Flags:           [ HAS_MAX ]
+          Minimum:         0x1
+          Maximum:         0x1
+  - Type:            MEMORY
+    Memories:
+      - Flags:           [ HAS_MAX ]
+        Minimum:         0x100
+        Maximum:         0x100
+  - Type:            GLOBAL
+    Globals:
+      - Index:           0
+        Type:            I32
+        Mutable:         true
+        InitExpr:
+          Opcode:          I32_CONST
+          Value:           65536
+  - Type:            EXPORT
+    Exports:
+      - Name:            memory
+        Kind:            MEMORY
+        Index:           0
+      - Name:            square
+        Kind:            FUNCTION
+        Index:           0
+      - Name:            __indirect_function_table
+        Kind:            TABLE
+        Index:           0
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+          - Type:            I32
+            Count:           1
+        Body:            2300210141102102200120026B21032003200036020C200328020C2104200328020C2105200420056C210620060F0B
+  - Type:            CUSTOM
+    Name:            name
+    FunctionNames:
+      - Index:           0
+        Name:            square
+    GlobalNames:
+      - Index:           0
+        Name:            __stack_pointer
+  - Type:            CUSTOM
+    Name:            .debug_abbrev
+    Payload:         011101250E1305030E10171B0E110112060000022E01110112064018030E3A0B3B0B271949133F1900000305000218030E3A0B3B0B49130000042400030E3E0B0B0B000000
+  - Type:            CUSTOM
+    Name:            .debug_info
+    Payload:         510000000400000000000401670000001D005E0000000000000004000000020000003C00000002020000003C00000004ED00039F5700000001014D0000000302910C5100000001014D000000000400000000050400
+  - Type:            CUSTOM
+    Name:            .debug_str
+    Payload:         696E7400513A5C70616F6C6F7365764D5346545C6C6C766D2D70726F6A6563745C6C6C64625C746573745C4150495C66756E6374696F6E616C69746965735C6764625F72656D6F74655F636C69656E740076616C756500737175617265007371756172652E6300636C616E672076657273696F6E2031382E302E30202868747470733A2F2F6769746875622E636F6D2F6C6C766D2F6C6C766D2D70726F6A65637420373535303166353336323464653932616166636532663164613639386232343961373239336463372900
+  - Type:            CUSTOM
+    Name:            .debug_line
+    Payload:         64000000040020000000010101FB0E0D000101010100000001000001007371756172652E6300000000000005020200000001000502250000000301050A0A010005022C00000005120601000502330000000510010005023A0000000503010005023E000000000101
+)";
+
+  llvm::IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> mem_fs =
+      new llvm::vfs::InMemoryFileSystem();
+  FileSystem::Initialize(mem_fs);
+  {
+    SubsystemRAII<HostInfo, ObjectFileWasm, SymbolVendorWasm> subsystems;
+
+    // Set up a wasm target
+    ArchSpec arch("wasm32-unknown-unknown-wasm");
+    lldb::PlatformSP host_platform_sp =
+        platform_linux::PlatformLinux::CreateInstance(true, &arch);
+    ASSERT_TRUE(host_platform_sp);
+    Platform::SetHostPlatform(host_platform_sp);
+    lldb::DebuggerSP debugger_sp = Debugger::CreateInstance();
+    ASSERT_TRUE(debugger_sp);
+    lldb::TargetSP target_sp;
+    lldb::PlatformSP platform_sp;
+    debugger_sp->GetTargetList().CreateTarget(*debugger_sp, "", arch,
+                                              lldb_private::eLoadDependentsNo,
+                                              platform_sp, target_sp);
+    // Set up a mock process and thread.
+    lldb::ListenerSP listener_sp(Listener::MakeListener("dummy"));
+    lldb::ProcessSP process_sp =
+        std::make_shared<MockProcess>(target_sp, listener_sp);
+    ASSERT_TRUE(process_sp);
+    MockThread thread(*process_sp);
+    const uint32_t kExpectedValue = 42;
+    lldb::RegisterContextSP reg_ctx_sp = std::make_shared<MockRegisterContext>(
+        thread, RegisterValue(kExpectedValue));
+    thread.SetRegisterContext(reg_ctx_sp);
+
+    llvm::Expected<TestFile> skeleton_file =
+        TestFile::fromYaml(skeleton_yamldata);
+    EXPECT_THAT_EXPECTED(skeleton_file, llvm::Succeeded());
+    auto skeleton_module_sp =
+        std::make_shared<Module>(skeleton_file->moduleSpec());
+
+    llvm::Expected<TestFile> sym_file = TestFile::fromYaml(sym_yamldata);
+    EXPECT_THAT_EXPECTED(sym_file, llvm::Succeeded());
+    auto sym_module_sp = std::make_shared<Module>(sym_file->moduleSpec());
+
+    auto obj_file_sp = sym_module_sp->GetObjectFile()->shared_from_this();
+    SymbolFileWasm sym_file_wasm(obj_file_sp, nullptr);
+    auto *dwarf_unit = sym_file_wasm.DebugInfo().GetUnitAtIndex(0);
+
+    testExpressionVendorExtensions(sym_module_sp, *dwarf_unit,
+                                   reg_ctx_sp.get());
+  }
+  FileSystem::Terminate();
 }
