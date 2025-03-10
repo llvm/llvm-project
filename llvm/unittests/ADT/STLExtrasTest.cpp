@@ -504,6 +504,16 @@ TEST(STLExtrasTest, ConcatRange) {
   EXPECT_EQ(Expected, Test);
 }
 
+TEST(STLExtrasTest, ConcatRangeADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::some_struct S0;
+  S0.data = {1, 2};
+  some_namespace::some_struct S1;
+  S1.data = {3, 4};
+  EXPECT_THAT(concat<const int>(S0, S1), ElementsAre(1, 2, 3, 4));
+}
+
 template <typename T> struct Iterator {
   int i = 0;
   T operator*() const { return i; }
@@ -852,6 +862,16 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
   EXPECT_EQ(&*L.begin(), *I);
   ++I;
   EXPECT_EQ(EIR.end(), I);
+}
+
+TEST(STLExtrasTest, ReplaceADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  std::vector<int> Cont = {0, 1, 2, 3, 4, 5};
+  some_namespace::some_struct S;
+  S.data = {42, 43, 44};
+  replace(Cont, Cont.begin() + 2, Cont.begin() + 5, S);
+  EXPECT_THAT(Cont, ElementsAre(0, 1, 42, 43, 44, 5));
 }
 
 TEST(STLExtrasTest, AllEqual) {
