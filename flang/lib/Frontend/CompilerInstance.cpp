@@ -163,7 +163,8 @@ bool CompilerInstance::executeAction(FrontendAction &act) {
   if (!setUpTargetMachine())
     return false;
   // Create the semantics context
-  semaContext = invoc.getSemanticsCtx(*allCookedSources, getTargetMachine());
+  semaContext = invoc.getSemanticsCtx(*allCookedSources, getTargetMachine(),
+                                      getDiagnostics());
   // Set options controlling lowering to FIR.
   invoc.setLoweringOptions();
 
