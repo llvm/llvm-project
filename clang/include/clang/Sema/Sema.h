@@ -4002,7 +4002,7 @@ public:
   /// Perform ODR-like check for C/ObjC when merging tag types from modules.
   /// Differently from C++, actually parse the body and reject / error out
   /// in case of a structural mismatch.
-  bool ActOnDuplicateDefinition(Decl *Prev, SkipBodyInfo &SkipBody);
+  bool ActOnDuplicateDefinition(Scope *S, Decl *Prev, SkipBodyInfo &SkipBody);
 
   typedef void *SkippedDefinitionContext;
 
@@ -4125,6 +4125,12 @@ public:
   /// diagnostics as appropriate. If there was an error, set New to be invalid.
   void MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
                             LookupResult &OldDecls);
+
+  /// CleanupMergedEnum - We have just merged the decl 'New' by making another
+  /// definition visible.
+  /// This method performs any necessary cleanup on the parser state to discard
+  /// child nodes from newly parsed decl we are retiring.
+  void CleanupMergedEnum(Scope *S, Decl *New);
 
   /// MergeFunctionDecl - We just parsed a function 'New' from
   /// declarator D which has the same name and scope as a previous
@@ -4393,11 +4399,11 @@ public:
   // Whether the callee should be ignored in CUDA/HIP/OpenMP host/device check.
   bool shouldIgnoreInHostDeviceCheck(FunctionDecl *Callee);
 
-private:
   /// Function or variable declarations to be checked for whether the deferred
   /// diagnostics should be emitted.
   llvm::SmallSetVector<Decl *, 4> DeclsToCheckForDeferredDiags;
 
+private:
   /// Map of current shadowing declarations to shadowed declarations. Warn if
   /// it looks like the user is trying to modify the shadowing declaration.
   llvm::DenseMap<const NamedDecl *, const NamedDecl *> ShadowingDecls;
@@ -10520,7 +10526,8 @@ public:
   /// returned.
   FunctionDecl *ResolveSingleFunctionTemplateSpecialization(
       OverloadExpr *ovl, bool Complain = false, DeclAccessPair *Found = nullptr,
-      TemplateSpecCandidateSet *FailedTSC = nullptr);
+      TemplateSpecCandidateSet *FailedTSC = nullptr,
+      bool ForTypeDeduction = false);
 
   // Resolve and fix an overloaded expression that can be resolved
   // because it identifies a single function template specialization.
@@ -11350,14 +11357,16 @@ public:
 
   /// The context in which we are checking a template parameter list.
   enum TemplateParamListContext {
-    TPC_ClassTemplate,
-    TPC_VarTemplate,
+    // For this context, Class, Variable, TypeAlias, and non-pack Template
+    // Template Parameters are treated uniformly.
+    TPC_Other,
+
     TPC_FunctionTemplate,
     TPC_ClassTemplateMember,
     TPC_FriendClassTemplate,
     TPC_FriendFunctionTemplate,
     TPC_FriendFunctionTemplateDefinition,
-    TPC_TypeAliasTemplate
+    TPC_TemplateTemplateParameterPack,
   };
 
   /// Checks the validity of a template parameter list, possibly
@@ -12617,7 +12626,8 @@ public:
   FunctionTemplateDecl *getMoreSpecializedTemplate(
       FunctionTemplateDecl *FT1, FunctionTemplateDecl *FT2, SourceLocation Loc,
       TemplatePartialOrderingContext TPOC, unsigned NumCallArguments1,
-      QualType RawObj1Ty = {}, QualType RawObj2Ty = {}, bool Reversed = false);
+      QualType RawObj1Ty = {}, QualType RawObj2Ty = {}, bool Reversed = false,
+      bool PartialOverloading = false);
 
   /// Retrieve the most specialized of the given function template
   /// specializations.
@@ -13428,6 +13438,10 @@ public:
                             bool ForCallExpr = false);
   ExprResult SubstExpr(Expr *E,
                        const MultiLevelTemplateArgumentList &TemplateArgs);
+  /// Substitute an expression as if it is a address-of-operand, which makes it
+  /// act like a CXXIdExpression rather than an attempt to call.
+  ExprResult SubstCXXIdExpr(Expr *E,
+                            const MultiLevelTemplateArgumentList &TemplateArgs);
 
   // A RAII type used by the TemplateDeclInstantiator and TemplateInstantiator
   // to disable constraint evaluation, then restore the state.
@@ -13649,12 +13663,16 @@ public:
 
   class LocalEagerInstantiationScope {
   public:
-    LocalEagerInstantiationScope(Sema &S) : S(S) {
+    LocalEagerInstantiationScope(Sema &S, bool AtEndOfTU)
+        : S(S), AtEndOfTU(AtEndOfTU) {
       SavedPendingLocalImplicitInstantiations.swap(
           S.PendingLocalImplicitInstantiations);
     }
 
-    void perform() { S.PerformPendingInstantiations(/*LocalOnly=*/true); }
+    void perform() {
+      S.PerformPendingInstantiations(/*LocalOnly=*/true,
+                                     /*AtEndOfTU=*/AtEndOfTU);
+    }
 
     ~LocalEagerInstantiationScope() {
       assert(S.PendingLocalImplicitInstantiations.empty() &&
@@ -13665,6 +13683,7 @@ public:
 
   private:
     Sema &S;
+    bool AtEndOfTU;
     std::deque<PendingImplicitInstantiation>
         SavedPendingLocalImplicitInstantiations;
   };
@@ -13687,8 +13706,8 @@ public:
 
   class GlobalEagerInstantiationScope {
   public:
-    GlobalEagerInstantiationScope(Sema &S, bool Enabled)
-        : S(S), Enabled(Enabled) {
+    GlobalEagerInstantiationScope(Sema &S, bool Enabled, bool AtEndOfTU)
+        : S(S), Enabled(Enabled), AtEndOfTU(AtEndOfTU) {
       if (!Enabled)
         return;
 
@@ -13702,7 +13721,8 @@ public:
     void perform() {
       if (Enabled) {
         S.DefineUsedVTables();
-        S.PerformPendingInstantiations();
+        S.PerformPendingInstantiations(/*LocalOnly=*/false,
+                                       /*AtEndOfTU=*/AtEndOfTU);
       }
     }
 
@@ -13717,7 +13737,8 @@ public:
       S.SavedVTableUses.pop_back();
 
       // Restore the set of pending implicit instantiations.
-      if (S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) {
+      if ((S.TUKind != TU_Prefix || !S.LangOpts.PCHInstantiateTemplates) &&
+          AtEndOfTU) {
         assert(S.PendingInstantiations.empty() &&
                "PendingInstantiations should be empty before it is discarded.");
         S.PendingInstantiations.swap(S.SavedPendingInstantiations.back());
@@ -13736,6 +13757,7 @@ public:
   private:
     Sema &S;
     bool Enabled;
+    bool AtEndOfTU;
   };
 
   ExplicitSpecifier instantiateExplicitSpecifier(
@@ -13921,7 +13943,8 @@ public:
 
   /// Performs template instantiation for all implicit template
   /// instantiations we have seen until this point.
-  void PerformPendingInstantiations(bool LocalOnly = false);
+  void PerformPendingInstantiations(bool LocalOnly = false,
+                                    bool AtEndOfTU = true);
 
   TemplateParameterList *
   SubstTemplateParams(TemplateParameterList *Params, DeclContext *Owner,

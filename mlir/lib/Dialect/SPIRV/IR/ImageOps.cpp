@@ -41,6 +41,7 @@ static LogicalResult verifyImageOperands(Operation *imageOp,
 
   assert(!spirv::bitEnumContainsAny(attr.getValue(), noSupportOperands) &&
          "unimplemented operands of Image Operands");
+  (void)noSupportOperands;
 
   return success();
 }

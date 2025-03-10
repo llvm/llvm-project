@@ -1270,6 +1270,7 @@ public:
     void OptionParsingStarting(ExecutionContext *execution_context) override {
       m_json_thread = false;
       m_json_stopinfo = false;
+      m_backing_thread = false;
     }
 
     Status SetOptionValue(uint32_t option_idx, llvm::StringRef option_arg,
@@ -1286,6 +1287,10 @@ public:
         m_json_stopinfo = true;
         break;
 
+      case 'b':
+        m_backing_thread = true;
+        break;
+
       default:
         llvm_unreachable("Unimplemented option");
       }
@@ -1298,6 +1303,7 @@ public:
 
     bool m_json_thread;
     bool m_json_stopinfo;
+    bool m_backing_thread;
   };
 
   CommandObjectThreadInfo(CommandInterpreter &interpreter)
@@ -1334,6 +1340,8 @@ public:
     }
 
     Thread *thread = thread_sp.get();
+    if (m_options.m_backing_thread && thread->GetBackingThread())
+      thread = thread->GetBackingThread().get();
 
     Stream &strm = result.GetOutputStream();
     if (!thread->GetDescription(strm, eDescriptionLevelFull,

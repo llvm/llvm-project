@@ -23,6 +23,7 @@ Implementation Status
    setjmp
    signal
    stdbit
+   stdfix
    stdio
    stdlib
    string
