@@ -745,8 +745,8 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   std::optional<uint64_t> item_type_size =
-      pointee_or_element_compiler_type.GetByteSize(
-          exe_ctx.GetBestExecutionContextScope());
+      llvm::expectedToOptional(pointee_or_element_compiler_type.GetByteSize(
+          exe_ctx.GetBestExecutionContextScope()));
   if (!item_type_size)
     return 0;
   const uint64_t bytes = item_count * *item_type_size;
@@ -862,7 +862,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
   uint64_t count = 0;
   const Encoding encoding = GetCompilerType().GetEncoding(count);
 
-  const size_t byte_size = GetByteSize().value_or(0);
+  const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 
   Value::ValueType value_type = m_value.GetValueType();
 
@@ -1292,7 +1292,8 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
   // Verify the proposed new value is the right size.
   lldb::TargetSP target = GetTargetSP();
   uint64_t byte_size = 0;
-  if (auto temp = GetCompilerType().GetByteSize(target.get()))
+  if (auto temp =
+          llvm::expectedToOptional(GetCompilerType().GetByteSize(target.get())))
     byte_size = temp.value();
   if (value.getBitWidth() != byte_size * CHAR_BIT) {
     error = Status::FromErrorString(
@@ -1355,7 +1356,8 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
     if (success) {
       lldb::TargetSP target = GetTargetSP();
       uint64_t num_bits = 0;
-      if (auto temp = new_val_sp->GetCompilerType().GetBitSize(target.get()))
+      if (auto temp = llvm::expectedToOptional(
+              new_val_sp->GetCompilerType().GetBitSize(target.get())))
         num_bits = temp.value();
       SetValueFromInteger(llvm::APInt(num_bits, int_val), error);
     } else
@@ -1747,7 +1749,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
   uint64_t count = 0;
   const Encoding encoding = GetCompilerType().GetEncoding(count);
 
-  const size_t byte_size = GetByteSize().value_or(0);
+  const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 
   Value::ValueType value_type = m_value.GetValueType();
 
@@ -1931,13 +1933,15 @@ ValueObjectSP ValueObject::GetSyntheticBitFieldChild(uint32_t from, uint32_t to,
       uint32_t bit_field_offset = from;
       if (GetDataExtractor().GetByteOrder() == eByteOrderBig)
         bit_field_offset =
-            GetByteSize().value_or(0) * 8 - bit_field_size - bit_field_offset;
+            llvm::expectedToOptional(GetByteSize()).value_or(0) * 8 -
+            bit_field_size - bit_field_offset;
       // We haven't made a synthetic array member for INDEX yet, so lets make
       // one and cache it for any future reference.
       ValueObjectChild *synthetic_child = new ValueObjectChild(
-          *this, GetCompilerType(), index_const_str, GetByteSize().value_or(0),
-          0, bit_field_size, bit_field_offset, false, false,
-          eAddressTypeInvalid, 0);
+          *this, GetCompilerType(), index_const_str,
+          llvm::expectedToOptional(GetByteSize()).value_or(0), 0,
+          bit_field_size, bit_field_offset, false, false, eAddressTypeInvalid,
+          0);
 
       // Cache the value if we got one back...
       if (synthetic_child) {
@@ -1972,8 +1976,8 @@ ValueObjectSP ValueObject::GetSyntheticChildAtOffset(
     return {};
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  std::optional<uint64_t> size =
-      type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  std::optional<uint64_t> size = llvm::expectedToOptional(
+      type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
   if (!size)
     return {};
   ValueObjectChild *synthetic_child =
@@ -2014,8 +2018,8 @@ ValueObjectSP ValueObject::GetSyntheticBase(uint32_t offset,
   const bool is_base_class = true;
 
   ExecutionContext exe_ctx(GetExecutionContextRef());
-  std::optional<uint64_t> size =
-      type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+  std::optional<uint64_t> size = llvm::expectedToOptional(
+      type.GetByteSize(exe_ctx.GetBestExecutionContextScope()));
   if (!size)
     return {};
   ValueObjectChild *synthetic_child =
@@ -3067,8 +3071,10 @@ ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
 
   ExecutionContextScope *exe_scope =
       ExecutionContext(GetExecutionContextRef()).GetBestExecutionContextScope();
-  if (compiler_type.GetByteSize(exe_scope) <=
-          GetCompilerType().GetByteSize(exe_scope) ||
+  if (llvm::expectedToOptional(compiler_type.GetByteSize(exe_scope))
+              .value_or(0) <=
+          llvm::expectedToOptional(GetCompilerType().GetByteSize(exe_scope))
+              .value_or(0) ||
       m_value.GetValueType() == Value::ValueType::LoadAddress)
     return DoCast(compiler_type);
 
@@ -3293,9 +3299,10 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
   lldb::TargetSP target = GetTargetSP();
   uint64_t type_byte_size = 0;
   uint64_t val_byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
+  if (auto temp = llvm::expectedToOptional(type.GetByteSize(target.get())))
     type_byte_size = temp.value();
-  if (auto temp = GetCompilerType().GetByteSize(target.get()))
+  if (auto temp =
+          llvm::expectedToOptional(GetCompilerType().GetByteSize(target.get())))
     val_byte_size = temp.value();
 
   if (is_pointer) {
@@ -3445,7 +3452,7 @@ lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
 
   lldb::TargetSP target = GetTargetSP();
   uint64_t byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
+  if (auto temp = llvm::expectedToOptional(type.GetByteSize(target.get())))
     byte_size = temp.value();
 
   if (is_float) {
@@ -3721,7 +3728,7 @@ ValueObject::CreateValueObjectFromAPInt(lldb::TargetSP target,
                                         llvm::StringRef name) {
   ExecutionContext exe_ctx(target.get(), false);
   uint64_t byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
+  if (auto temp = llvm::expectedToOptional(type.GetByteSize(target.get())))
     byte_size = temp.value();
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(v.getRawData()), byte_size,
@@ -3749,7 +3756,8 @@ ValueObject::CreateValueObjectFromBool(lldb::TargetSP target, bool value,
   }
   ExecutionContext exe_ctx(target.get(), false);
   uint64_t byte_size = 0;
-  if (auto temp = target_type.GetByteSize(target.get()))
+  if (auto temp =
+          llvm::expectedToOptional(target_type.GetByteSize(target.get())))
     byte_size = temp.value();
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(&value), byte_size, exe_ctx.GetByteOrder(),
@@ -3767,7 +3775,7 @@ lldb::ValueObjectSP ValueObject::CreateValueObjectFromNullptr(
   uintptr_t zero = 0;
   ExecutionContext exe_ctx(target.get(), false);
   uint64_t byte_size = 0;
-  if (auto temp = type.GetByteSize(target.get()))
+  if (auto temp = llvm::expectedToOptional(type.GetByteSize(target.get())))
     byte_size = temp.value();
   lldb::DataExtractorSP data_sp = std::make_shared<DataExtractor>(
       reinterpret_cast<const void *>(zero), byte_size, exe_ctx.GetByteOrder(),
