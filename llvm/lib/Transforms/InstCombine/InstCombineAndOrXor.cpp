@@ -2637,18 +2637,15 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   // This is a generous interpretation for noimplicitfloat, this is not a true
   // floating-point operation.
   //
-  // Assumes any IEEE-represented type has the sign bit in the high bit.
+  // Assumes any floating point type has the sign bit in the high bit.
   // TODO: Unify with APInt matcher. This version allows undef unlike m_APInt
   Value *CastOp;
   if (match(Op0, m_ElementWiseBitCast(m_Value(CastOp))) &&
-      match(Op1, m_MaxSignedValue()) &&
+      CastOp->getType()->isFPOrFPVectorTy() && match(Op1, m_MaxSignedValue()) &&
       !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat)) {
-    Type *EltTy = CastOp->getType()->getScalarType();
-    if (EltTy->isFloatingPointTy() && EltTy->isIEEE()) {
-      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
-      return new BitCastInst(FAbs, I.getType());
-    }
+    Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
+    return new BitCastInst(FAbs, I.getType());
   }
 
   // and(shl(zext(X), Y), SignMask) -> and(sext(X), SignMask)
@@ -4047,21 +4044,18 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // the number of instructions. This is still probably a better canonical form
   // as it enables FP value tracking.
   //
-  // Assumes any IEEE-represented type has the sign bit in the high bit.
+  // Assumes any floating point type has the sign bit in the high bit.
   //
   // This is generous interpretation of noimplicitfloat, this is not a true
   // floating-point operation.
   Value *CastOp;
   if (match(Op0, m_ElementWiseBitCast(m_Value(CastOp))) &&
-      match(Op1, m_SignMask()) &&
+      CastOp->getType()->isFPOrFPVectorTy() && match(Op1, m_SignMask()) &&
       !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
           Attribute::NoImplicitFloat)) {
-    Type *EltTy = CastOp->getType()->getScalarType();
-    if (EltTy->isFloatingPointTy() && EltTy->isIEEE()) {
-      Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
-      Value *FNegFAbs = Builder.CreateFNeg(FAbs);
-      return new BitCastInst(FNegFAbs, I.getType());
-    }
+    Value *FAbs = Builder.CreateUnaryIntrinsic(Intrinsic::fabs, CastOp);
+    Value *FNegFAbs = Builder.CreateFNeg(FAbs);
+    return new BitCastInst(FNegFAbs, I.getType());
   }
 
   // (X & C1) | C2 -> X & (C1 | C2) iff (X & C2) == C2
@@ -4851,18 +4845,15 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     // This is generous interpretation of noimplicitfloat, this is not a true
     // floating-point operation.
     //
-    // Assumes any IEEE-represented type has the sign bit in the high bit.
+    // Assumes any floating point type has the sign bit in the high bit.
     // TODO: Unify with APInt matcher. This version allows undef unlike m_APInt
     Value *CastOp;
     if (match(Op0, m_ElementWiseBitCast(m_Value(CastOp))) &&
-        match(Op1, m_SignMask()) &&
+        CastOp->getType()->isFPOrFPVectorTy() && match(Op1, m_SignMask()) &&
         !Builder.GetInsertBlock()->getParent()->hasFnAttribute(
             Attribute::NoImplicitFloat)) {
-      Type *EltTy = CastOp->getType()->getScalarType();
-      if (EltTy->isFloatingPointTy() && EltTy->isIEEE()) {
-        Value *FNeg = Builder.CreateFNeg(CastOp);
-        return new BitCastInst(FNeg, I.getType());
-      }
+      Value *FNeg = Builder.CreateFNeg(CastOp);
+      return new BitCastInst(FNeg, I.getType());
     }
   }
 
