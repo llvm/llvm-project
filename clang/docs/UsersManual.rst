@@ -3195,7 +3195,6 @@ be collected.
    the profile file to ``Name``.
  * ``void __llvm_profile_reset_counters(void)``: resets all counters to zero.
  * ``int __llvm_profile_dump(void)``: write the profile data to disk.
- * ``int __llvm_orderfile_dump(void)``: write the order file to disk.
 
 For example, the following pattern can be used to skip profiling program
 initialization, profile two specific hot regions, and skip profiling program
