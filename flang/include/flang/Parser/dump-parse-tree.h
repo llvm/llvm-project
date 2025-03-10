@@ -540,12 +540,11 @@ public:
         "llvm::omp::Directive = ", llvm::omp::getOpenMPDirectiveName(x))
         .str();
   }
-  NODE(parser, OmpCancelType)
-  NODE_ENUM(OmpCancelType, Type)
   NODE(parser, OmpClause)
 #define GEN_FLANG_DUMP_PARSE_TREE_CLAUSES
 #include "llvm/Frontend/OpenMP/OMP.inc"
   NODE(parser, OmpClauseList)
+  NODE(parser, OmpCancellationConstructTypeClause)
   NODE(parser, OmpContainsClause)
   NODE(parser, OmpCriticalDirective)
   NODE(parser, OmpErrorDirective)
@@ -688,7 +687,6 @@ public:
   NODE(parser, OpenMPAtomicConstruct)
   NODE(parser, OpenMPBlockConstruct)
   NODE(parser, OpenMPCancelConstruct)
-  NODE(OpenMPCancelConstruct, If)
   NODE(parser, OpenMPCancellationPointConstruct)
   NODE(parser, OpenMPConstruct)
   NODE(parser, OpenMPCriticalConstruct)
