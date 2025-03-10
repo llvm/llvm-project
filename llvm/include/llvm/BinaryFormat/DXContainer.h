@@ -17,6 +17,7 @@
 #include "llvm/Support/SwapByteOrder.h"
 #include "llvm/TargetParser/Triple.h"
 
+#include <cstdint>
 #include <stdint.h>
 
 namespace llvm {
@@ -156,6 +157,20 @@ static_assert((uint64_t)FeatureFlags::NextUnusedBit <= 1ull << 63,
 enum class RootElementFlag : uint32_t {
 #include "DXContainerConstants.def"
 };
+
+#define ROOT_PARAMETER(Val, Enum) Enum = Val,
+enum class RootParameterType : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootParameterType>> getRootParameterTypes();
+
+#define SHADER_VISIBILITY(Val, Enum) Enum = Val,
+enum class ShaderVisibility : uint32_t {
+#include "DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ShaderVisibility>> getShaderVisibility();
 
 PartType parsePartType(StringRef S);
 
@@ -546,12 +561,80 @@ struct ProgramSignatureElement {
 static_assert(sizeof(ProgramSignatureElement) == 32,
               "ProgramSignatureElement is misaligned");
 
+struct RootConstants {
+  uint32_t ShaderRegister;
+  uint32_t RegisterSpace;
+  uint32_t Num32BitValues;
+
+  void swapBytes() {
+    sys::swapByteOrder(ShaderRegister);
+    sys::swapByteOrder(RegisterSpace);
+    sys::swapByteOrder(Num32BitValues);
+  }
+};
+
+struct RootParameterHeader {
+  dxbc::RootParameterType ParameterType;
+  dxbc::ShaderVisibility ShaderVisibility;
+  uint32_t ParameterOffset;
+
+  void swapBytes() {
+    sys::swapByteOrder(ParameterType);
+    sys::swapByteOrder(ShaderVisibility);
+    sys::swapByteOrder(ParameterOffset);
+  }
+};
+
+struct RootSignatureHeader {
+  uint32_t Version;
+  uint32_t NumParameters;
+  uint32_t ParametersOffset;
+  uint32_t NumStaticSamplers;
+  uint32_t StaticSamplerOffset;
+  uint32_t Flags;
+
+  void swapBytes() {
+    sys::swapByteOrder(Version);
+    sys::swapByteOrder(NumParameters);
+    sys::swapByteOrder(ParametersOffset);
+    sys::swapByteOrder(NumStaticSamplers);
+    sys::swapByteOrder(StaticSamplerOffset);
+    sys::swapByteOrder(Flags);
+  }
+};
+
 struct RootSignatureValidations {
 
   static bool isValidRootFlag(uint32_t Flags) { return (Flags & ~0xfff) == 0; }
 
   static bool isValidVersion(uint32_t Version) {
     return (Version == 1 || Version == 2);
+  }
+
+  static bool isValidParameterType(dxbc::RootParameterType Type) {
+    switch (Type) {
+    case dxbc::RootParameterType::Constants32Bit:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  static bool isValidShaderVisibility(dxbc::ShaderVisibility Visibility) {
+    switch (Visibility) {
+
+    case ShaderVisibility::All:
+    case ShaderVisibility::Vertex:
+    case ShaderVisibility::Hull:
+    case ShaderVisibility::Domain:
+    case ShaderVisibility::Geometry:
+    case ShaderVisibility::Pixel:
+    case ShaderVisibility::Amplification:
+    case ShaderVisibility::Mesh:
+      return true;
+    default:
+      return false;
+    }
   }
 };
 

@@ -6,23 +6,34 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/BinaryFormat/DXContainer.h"
+#include <cstddef>
 #include <cstdint>
-#include <limits>
 
 namespace llvm {
 
 class raw_ostream;
-
 namespace mcdxbc {
+
+struct RootParameter {
+  dxbc::RootParameterHeader Header;
+  union {
+    dxbc::RootConstants Constants;
+  };
+};
 struct RootSignatureDesc {
-  uint32_t Version = 2;
-  uint32_t NumParameters = 0;
-  uint32_t RootParametersOffset = 0;
-  uint32_t NumStaticSamplers = 0;
-  uint32_t StaticSamplersOffset = 0;
-  uint32_t Flags = 0;
+
+  dxbc::RootSignatureHeader Header;
+  SmallVector<mcdxbc::RootParameter> Parameters;
+  RootSignatureDesc()
+      : Header(dxbc::RootSignatureHeader{
+            2, 0, sizeof(dxbc::RootSignatureHeader), 0, 0, 0}) {}
 
   void write(raw_ostream &OS) const;
+
+  size_t getSize() const {
+    return sizeof(dxbc::RootSignatureHeader) + Parameters.size_in_bytes();
+  }
 };
 } // namespace mcdxbc
 } // namespace llvm

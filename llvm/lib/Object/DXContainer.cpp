@@ -247,6 +247,7 @@ void DXContainer::PartIterator::updateIteratorImpl(const uint32_t Offset) {
 }
 
 Error DirectX::RootSignature::parse(StringRef Data) {
+  const char *Begin = Data.begin();
   const char *Current = Data.begin();
 
   // Root Signature headers expects 6 integers to be present.
@@ -287,6 +288,51 @@ Error DirectX::RootSignature::parse(StringRef Data) {
     return validationFailed("unsupported root signature flag value read: " +
                             llvm::Twine(FValue));
   Flags = FValue;
+
+  Current = Begin + RootParametersOffset;
+  for (uint32_t It = 0; It < NumParameters; It++) {
+    DirectX::RootParameter NewParam;
+
+    NewParam.Header.ParameterType =
+        support::endian::read<dxbc::RootParameterType,
+                              llvm::endianness::little>(Current);
+    if (!dxbc::RootSignatureValidations::isValidParameterType(
+            NewParam.Header.ParameterType))
+      return validationFailed(
+          "unsupported parameter type value read: " +
+          llvm::Twine((uint32_t)NewParam.Header.ParameterType));
+
+    Current += sizeof(dxbc::RootParameterType);
+
+    NewParam.Header.ShaderVisibility =
+        support::endian::read<dxbc::ShaderVisibility, llvm::endianness::little>(
+            Current);
+    if (!dxbc::RootSignatureValidations::isValidShaderVisibility(
+            NewParam.Header.ShaderVisibility))
+      return validationFailed(
+          "unsupported shader visility flag value read: " +
+          llvm::Twine((uint32_t)NewParam.Header.ShaderVisibility));
+
+    Current += sizeof(dxbc::ShaderVisibility);
+
+    NewParam.Header.ParameterOffset =
+        support::endian::read<uint32_t, llvm::endianness::little>(Current);
+    Current += sizeof(uint32_t);
+
+    switch (NewParam.Header.ParameterType) {
+
+    case dxbc::RootParameterType::Constants32Bit:
+      if (Error Err = readStruct(Data, Begin + NewParam.Header.ParameterOffset,
+                                 NewParam.Constants))
+        return Err;
+      break;
+    case dxbc::RootParameterType::Empty:
+      // unreachable  because it was validated and assigned before this point.
+      llvm_unreachable("Invalid value for RootParameterType");
+    }
+
+    Parameters.push_back(NewParam);
+  }
 
   return Error::success();
 }
