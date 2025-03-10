@@ -346,7 +346,7 @@ private:
 
   /// Returns the LLVM metadata corresponding to the given mlir LLVM dialect
   /// TBAATagAttr.
-  llvm::MDNode *getTBAANode(TBAATagAttr tbaaAttr) const;
+  llvm::MDNode *getTBAANode(Attribute tbaaAttr) const;
 
   /// Process tbaa LLVM Metadata operations and create LLVM
   /// metadata nodes for them.
