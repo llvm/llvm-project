@@ -1806,7 +1806,7 @@ InstructionCost ARMTTIImpl::getExtendedReductionCost(
           ((LT.second == MVT::v16i8 && RevVTSize <= 32) ||
            (LT.second == MVT::v8i16 && RevVTSize <= 32) ||
            (LT.second == MVT::v4i32 && RevVTSize <= 64)))
-        return ST->getMVEVectorCostFactor(CostKind) * LT.first;
+        return 3 * ST->getMVEVectorCostFactor(CostKind) * LT.first;
     }
     break;
   default:
