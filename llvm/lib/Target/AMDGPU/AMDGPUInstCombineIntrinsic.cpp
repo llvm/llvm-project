@@ -1118,11 +1118,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   }
   case Intrinsic::amdgcn_permlane64:
   case Intrinsic::amdgcn_readfirstlane:
-  case Intrinsic::amdgcn_readlane:
-  case Intrinsic::amdgcn_ds_bpermute: {
-    // If the data argument is uniform these intrinsics return it unchanged.
-    unsigned SrcIdx = IID == Intrinsic::amdgcn_ds_bpermute ? 1 : 0;
-    const Use &Src = II.getArgOperandUse(SrcIdx);
+  case Intrinsic::amdgcn_readlane: {
+    // If the first argument is uniform these intrinsics return it unchanged.
+    const Use &Src = II.getArgOperandUse(0);
     if (isTriviallyUniform(Src))
       return IC.replaceInstUsesWith(II, Src.get());
 
@@ -1151,22 +1149,6 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
         CallInst *NewCall = IC.Builder.CreateCall(Remangled, Args, OpBundles);
         NewCall->takeName(&II);
         return new BitCastInst(NewCall, II.getType());
-      }
-    }
-
-    // If the lane argument of bpermute is uniform, change it to readlane. This
-    // generates better code and can enable further optimizations because
-    // readlane is AlwaysUniform.
-    if (IID == Intrinsic::amdgcn_ds_bpermute) {
-      const Use &Lane = II.getArgOperandUse(0);
-      if (isTriviallyUniform(Lane)) {
-        Value *NewLane = IC.Builder.CreateLShr(Lane, 2);
-        Function *NewDecl = Intrinsic::getOrInsertDeclaration(
-            II.getModule(), Intrinsic::amdgcn_readlane, II.getType());
-        II.setCalledFunction(NewDecl);
-        II.setOperand(0, Src);
-        II.setOperand(1, NewLane);
-        return &II;
       }
     }
 
