@@ -1791,6 +1791,42 @@ void Parser::checkPotentialAngleBracket(ExprResult &PotentialTemplateName) {
                     Priority);
 }
 
+bool Parser::isMissingTemplateKeywordBeforeScope(bool AnnotateInvalid) {
+  assert(Tok.is(tok::coloncolon));
+  Sema::DisableTypoCorrectionRAII DTC(Actions);
+  ColonProtectionRAIIObject ColonProtection(*this);
+
+  SourceLocation StartLoc = Tok.getLocation();
+  if (TryAnnotateTypeOrScopeToken())
+    return true;
+  if (Tok.isSimpleTypeSpecifier(getLangOpts()))
+    return false;
+  CXXScopeSpec SS;
+  ParseOptionalCXXScopeSpecifier(SS, /*ObjectType=*/nullptr,
+                                 /*ObjectHasErrors=*/false,
+                                 /*EnteringContext=*/false);
+  ExprResult Result = tryParseCXXIdExpression(SS, /*isAddressOfOperand=*/false);
+
+  if (!AnnotateInvalid && Result.isInvalid())
+    return true;
+
+  SourceLocation EndLoc = Tok.getLocation();
+  if (PP.isBacktrackEnabled()) {
+    PP.RevertCachedTokens(1);
+    // if (Result.isInvalid())
+    EndLoc = PP.getLastCachedTokenLocation();
+  } else {
+    PP.EnterToken(Tok, /*IsReinject=*/true);
+  }
+
+  Tok.setKind(tok::annot_primary_expr);
+  setExprAnnotation(Tok, Result);
+  Tok.setLocation(StartLoc);
+  Tok.setAnnotationEndLoc(EndLoc);
+  PP.AnnotateCachedTokens(Tok);
+  return Result.isInvalid();
+}
+
 bool Parser::checkPotentialAngleBracketDelimiter(
     const AngleBracketTracker::Loc &LAngle, const Token &OpToken) {
   // If a comma in an expression context is followed by a type that can be a
@@ -1807,6 +1843,16 @@ bool Parser::checkPotentialAngleBracketDelimiter(
   // followed by '()'.
   if (OpToken.is(tok::greater) && Tok.is(tok::l_paren) &&
       NextToken().is(tok::r_paren)) {
+    Actions.diagnoseExprIntendedAsTemplateName(
+        getCurScope(), LAngle.TemplateName, LAngle.LessLoc,
+        OpToken.getLocation());
+    AngleBrackets.clear(*this);
+    return true;
+  }
+
+  if (OpToken.is(tok::greater) && Tok.is(tok::coloncolon) &&
+      !NextToken().isOneOf(tok::kw_new, tok::kw_delete) &&
+      isMissingTemplateKeywordBeforeScope(/*AnnotateInvalid=*/true)) {
     Actions.diagnoseExprIntendedAsTemplateName(
         getCurScope(), LAngle.TemplateName, LAngle.LessLoc,
         OpToken.getLocation());
