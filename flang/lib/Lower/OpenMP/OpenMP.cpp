@@ -321,6 +321,7 @@ static void bindEntryBlockArgs(lower::AbstractConverter &converter,
   // Process in clause name alphabetical order to match block arguments order.
   // Do not bind host_eval variables because they cannot be used inside of the
   // corresponding region, except for very specific cases handled separately.
+  bindMapLike(args.hasDeviceAddr.syms, op.getHasDeviceAddrBlockArgs());
   bindPrivateLike(args.inReduction.syms, args.inReduction.vars,
                   op.getInReductionBlockArgs());
   bindMapLike(args.map.syms, op.getMapBlockArgs());
@@ -1654,7 +1655,7 @@ static void genTargetClauses(
   cp.processBare(clauseOps);
   cp.processDepend(clauseOps);
   cp.processDevice(stmtCtx, clauseOps);
-  cp.processHasDeviceAddr(clauseOps, hasDeviceAddrSyms);
+  cp.processHasDeviceAddr(stmtCtx, clauseOps, hasDeviceAddrSyms);
   if (!hostEvalInfo.empty()) {
     // Only process host_eval if compiling for the host device.
     processHostEvalClauses(converter, semaCtx, stmtCtx, eval, loc);
@@ -2200,6 +2201,10 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
     if (dsp.getAllSymbolsToPrivatize().contains(&sym))
       return;
 
+    // These symbols are mapped individually in processHasDeviceAddr.
+    if (llvm::is_contained(hasDeviceAddrSyms, &sym))
+      return;
+
     // Structure component symbols don't have bindings, and can only be
     // explicitly mapped individually. If a member is captured implicitly
     // we map the entirety of the derived type when we find its symbol.
@@ -2290,10 +2295,13 @@ genTargetOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
   auto targetOp = firOpBuilder.create<mlir::omp::TargetOp>(loc, clauseOps);
 
-  llvm::SmallVector<mlir::Value> mapBaseValues;
+  llvm::SmallVector<mlir::Value> hasDeviceAddrBaseValues, mapBaseValues;
+  extractMappedBaseValues(clauseOps.hasDeviceAddrVars, hasDeviceAddrBaseValues);
   extractMappedBaseValues(clauseOps.mapVars, mapBaseValues);
 
   EntryBlockArgs args;
+  args.hasDeviceAddr.syms = hasDeviceAddrSyms;
+  args.hasDeviceAddr.vars = hasDeviceAddrBaseValues;
   args.hostEvalVars = clauseOps.hostEvalVars;
   // TODO: Add in_reduction syms and vars.
   args.map.syms = mapSyms;
