@@ -209,7 +209,7 @@ public:
       MCTargetStreamer *(*)(MCStreamer &S, formatted_raw_ostream &OS,
                             MCInstPrinter *InstPrint);
   using AsmStreamerCtorTy =
-      MCStreamer *(*)(MCContext & Ctx, std::unique_ptr<formatted_raw_ostream> OS,
+      MCStreamer *(*)(MCContext &Ctx, std::unique_ptr<formatted_raw_ostream> OS,
                       MCInstPrinter *IP, std::unique_ptr<MCCodeEmitter> CE,
                       std::unique_ptr<MCAsmBackend> TAB);
   using ObjectTargetStreamerCtorTy =
