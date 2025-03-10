@@ -1799,6 +1799,11 @@ def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape", [
 
     static MemRefType computeCollapsedType(
         MemRefType srcType, ArrayRef<ReassociationIndices> reassociation);
+    static MemRefType
+        inferCollapsedType(MemRefType type, ArrayRef<AffineMap> reassociation);
+    static MemRefType
+        inferCollapsedType(MemRefType type,
+                           SmallVector<ReassociationIndices> reassociation);
   }];
 
   let hasVerifier = 1;
