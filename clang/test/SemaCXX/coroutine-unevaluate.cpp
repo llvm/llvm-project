@@ -32,3 +32,11 @@ MyTask DoAnotherthing() {
   static_assert(__is_same(void, decltype(co_yield 0))); // expected-error {{'co_yield' cannot be used in an unevaluated context}}
   co_return;
 }
+
+template<class>
+struct Task {};
+
+void BracedInitListCXX26() {
+  []() -> Task<{ co_await 1 }> {}; // expected-error {{'co_await' cannot be used in an unevaluated context}}
+  []() -> Task<{ co_yield 1 }> {}; // expected-error {{'co_yield' cannot be used in an unevaluated context}}
+}

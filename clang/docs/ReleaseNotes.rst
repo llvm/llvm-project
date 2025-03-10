@@ -295,6 +295,8 @@ Bug Fixes to C++ Support
   direct-list-initialized from an array is corrected to direct-initialization.
 - Clang no longer crashes when a coroutine is declared ``[[noreturn]]``. (#GH127327)
 - Clang now uses the parameter location for abbreviated function templates in ``extern "C"``. (#GH46386)
+- Clang will emit an error instead of crash when use co_await or co_yield in
+  C++26 braced-init-list template parameter initialization. (#GH78426)
 - Fixes matching of nested template template parameters. (#GH130362)
 - Correctly diagnoses template template paramters which have a pack parameter
   not in the last position.
