@@ -17,8 +17,12 @@ define void @caller() sspreq {
 ; CHECK-NEXT:    ldr x8, [x8, :lo12:__security_cookie]
 ; CHECK-NEXT:    str x8, [sp, #8]
 ; CHECK-NEXT:    bl callee
+; CHECK-NEXT:    adrp x8, __security_cookie
 ; CHECK-NEXT:    ldr x0, [sp, #8]
-; CHECK-NEXT:    bl __security_check_cookie
+; CHECK-NEXT:    ldr x8, [x8, :lo12:__security_cookie]
+; CHECK-NEXT:    subs x8, x0, x8
+; CHECK-NEXT:    b.ne .LBB0_2
+; CHECK:       // %bb.1:
 ; CHECK-NEXT:    .seh_startepilogue
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    .seh_save_reg x30, 16
@@ -26,6 +30,9 @@ define void @caller() sspreq {
 ; CHECK-NEXT:    .seh_stackalloc 32
 ; CHECK-NEXT:    .seh_endepilogue
 ; CHECK-NEXT:    ret
+; CHECK:       .LBB0_2:
+; CHECK-NEXT:    bl __security_check_cookie
+; CHECK-NEXT:    brk #0
 ; CHECK-NEXT:    .seh_endfunclet
 ; CHECK-NEXT:    .seh_endproc
 entry:
