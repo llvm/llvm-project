@@ -58,7 +58,7 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   const auto gdb_remote_port =
       GetInteger<uint64_t>(arguments, "gdb-remote-port").value_or(invalid_port);
   const auto gdb_remote_hostname =
-      GetString(arguments, "gdb-remote-hostname", "localhost");
+      GetString(arguments, "gdb-remote-hostname").value_or("localhost");
   if (pid != LLDB_INVALID_PROCESS_ID)
     attach_info.SetProcessID(pid);
   const auto wait_for = GetBoolean(arguments, "waitFor").value_or(false);
@@ -69,23 +69,25 @@ void AttachRequestHandler::operator()(const llvm::json::Object &request) const {
   dap.exit_commands = GetStrings(arguments, "exitCommands");
   dap.terminate_commands = GetStrings(arguments, "terminateCommands");
   auto attachCommands = GetStrings(arguments, "attachCommands");
-  llvm::StringRef core_file = GetString(arguments, "coreFile");
-  const auto timeout_seconds =
+  llvm::StringRef core_file = GetString(arguments, "coreFile").value_or("");
+  const uint64_t timeout_seconds =
       GetInteger<uint64_t>(arguments, "timeout").value_or(30);
   dap.stop_at_entry = core_file.empty()
                           ? GetBoolean(arguments, "stopOnEntry").value_or(false)
                           : true;
   dap.post_run_commands = GetStrings(arguments, "postRunCommands");
-  const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
+  const llvm::StringRef debuggerRoot =
+      GetString(arguments, "debuggerRoot").value_or("");
   dap.enable_auto_variable_summaries =
       GetBoolean(arguments, "enableAutoVariableSummaries").value_or(false);
   dap.enable_synthetic_child_debugging =
       GetBoolean(arguments, "enableSyntheticChildDebugging").value_or(false);
   dap.display_extended_backtrace =
       GetBoolean(arguments, "displayExtendedBacktrace").value_or(false);
-  dap.command_escape_prefix = GetString(arguments, "commandEscapePrefix", "`");
-  dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
-  dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
+  dap.command_escape_prefix =
+      GetString(arguments, "commandEscapePrefix").value_or("`");
+  dap.SetFrameFormat(GetString(arguments, "customFrameFormat").value_or(""));
+  dap.SetThreadFormat(GetString(arguments, "customThreadFormat").value_or(""));
 
   PrintWelcomeMessage();
 
