@@ -701,6 +701,10 @@ func.func @convert_from_float(%arg0 : f32) {
   %7 = fir.convert %arg0 : (f32) -> i16
   %8 = fir.convert %arg0 : (f32) -> i32
   %9 = fir.convert %arg0 : (f32) -> i64
+  %10 = fir.convert %arg0 : (f32) -> ui8
+  %11 = fir.convert %arg0 : (f32) -> ui16
+  %12 = fir.convert %arg0 : (f32) -> ui32
+  %13 = fir.convert %arg0 : (f32) -> ui64
   return
 }
 
@@ -716,6 +720,10 @@ func.func @convert_from_float(%arg0 : f32) {
 // CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i16
 // CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i32
 // CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptosi.sat"(%[[ARG0]]) : (f32) -> i64
+// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptoui.sat"(%[[ARG0]]) : (f32) -> i8
+// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptoui.sat"(%[[ARG0]]) : (f32) -> i16
+// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptoui.sat"(%[[ARG0]]) : (f32) -> i32
+// CHECK:         %{{.*}} = llvm.call_intrinsic "llvm.fptoui.sat"(%[[ARG0]]) : (f32) -> i64
 
 // -----
 
