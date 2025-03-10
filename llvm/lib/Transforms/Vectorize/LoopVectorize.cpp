@@ -1309,10 +1309,14 @@ public:
 
   /// Returns true if the target machine can represent \p V as a strided load
   /// or store operation.
-  bool isLegalStridedLoadStore(Value *V, ElementCount VF) {
+  bool isLegalStridedLoadStore(Value *V, ElementCount VF) const {
     if (!isa<LoadInst, StoreInst>(V))
       return false;
     auto *Ty = getLoadStoreType(V);
+    Value *Ptr = getLoadStorePointerOperand(V);
+    // TODO: Support non-unit-reverse strided accesses.
+    if (Legal->isConsecutivePtr(Ty, Ptr) != -1)
+      return false;
     Align Align = getLoadStoreAlignment(V);
     if (VF.isVector())
       Ty = VectorType::get(Ty, VF);
@@ -1653,7 +1657,8 @@ private:
   InstructionCost getUniformMemOpCost(Instruction *I, ElementCount VF);
 
   /// The cost computation for strided load/store instruction.
-  InstructionCost getStridedLoadStoreCost(Instruction *I, ElementCount VF);
+  InstructionCost getStridedLoadStoreCost(Instruction *I,
+                                          ElementCount VF) const;
 
   /// Estimate the overhead of scalarizing an instruction. This is a
   /// convenience wrapper for the type-based getScalarizationOverhead API.
@@ -5831,7 +5836,7 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
 
 InstructionCost
 LoopVectorizationCostModel::getStridedLoadStoreCost(Instruction *I,
-                                                    ElementCount VF) {
+                                                    ElementCount VF) const {
   Type *ValTy = getLoadStoreType(I);
   auto *VectorTy = cast<VectorType>(toVectorTy(ValTy, VF));
   const Align Alignment = getLoadStoreAlignment(I);
