@@ -7,25 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Host/Host.h"
-#include "lldb/Host/FileSystem.h"
-#include "lldb/Host/HostInfo.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/Status.h"
-#include "llvm/ADT/StringSwitch.h"
-#include "llvm/Object/ELF.h"
-#include "llvm/Support/ScopedPrinter.h"
-#include <cerrno>
-#include <cstdio>
-#include <cstring>
 #include <dirent.h>
-#include <fcntl.h>
-#include <sstream>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/utsname.h>
-#include <unistd.h>
 
 using namespace llvm;
 using namespace lldb;
@@ -102,9 +86,8 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
       if (!all_users && (our_uid != 0) && (process_info.GetUserID() != our_uid))
         continue;
 
-      if (match_info.Matches(process_info)) {
+      if (match_info.Matches(process_info))
         process_infos.push_back(process_info);
-      }
     }
 
     closedir(dirproc);
