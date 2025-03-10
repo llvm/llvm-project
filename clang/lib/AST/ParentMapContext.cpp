@@ -60,6 +60,30 @@ class ParentMapContext::ParentMap {
 
   template <typename, typename...> friend struct ::MatchParents;
 
+  template <class T> struct IndirectDenseMapInfo {
+    using Ptr = T *;
+    using Base = llvm::DenseMapInfo<std::remove_cv_t<T>>;
+    static inline Ptr getEmptyKey() {
+      return static_cast<Ptr>(llvm::DenseMapInfo<void *>::getEmptyKey());
+    }
+    static inline Ptr getTombstoneKey() {
+      return static_cast<Ptr>(llvm::DenseMapInfo<void *>::getTombstoneKey());
+    }
+    static unsigned getHashValue(Ptr Val) {
+      return Val == getEmptyKey() || Val == getTombstoneKey()
+                 ? 0
+                 : Base::getHashValue(*Val);
+    }
+    static bool isEqual(Ptr LHS, Ptr RHS) {
+      if (LHS == getEmptyKey() || LHS == getTombstoneKey() ||
+          RHS == getEmptyKey() || RHS == getTombstoneKey()) {
+        return LHS == RHS;
+      }
+      return Base::isEqual(*LHS, *RHS);
+    }
+  };
+  using MapInfo = IndirectDenseMapInfo<const DynTypedNode>;
+
   /// Contains parents of a node.
   class ParentVector {
   public:
@@ -70,16 +94,38 @@ class ParentMapContext::ParentMap {
         push_back(Value);
     }
     bool contains(const DynTypedNode &Value) {
-      return Seen.contains(Value);
+      assert(Value.getMemoizationData());
+      bool Found = FragileLazySeenCache.contains(&Value);
+      while (!Found && ItemsProcessed < Items.size()) {
+        const auto It = Items.begin() + ItemsProcessed;
+        Found = MapInfo::isEqual(&*It, &Value);
+        FragileLazySeenCache.insert(&*It);
+        ++ItemsProcessed;
+      }
+      return Found;
     }
     void push_back(const DynTypedNode &Value) {
-      if (!Value.getMemoizationData() || Seen.insert(Value).second)
+      if (!Value.getMemoizationData() || !contains(Value)) {
+        const size_t OldCapacity = Items.capacity();
         Items.push_back(Value);
+        if (OldCapacity != Items.capacity()) {
+          // Pointers are invalidated; remove them.
+          ItemsProcessed = 0;
+          // Free memory to avoid doubling peak memory usage during rehashing.
+          FragileLazySeenCache.clear();
+        }
+      }
     }
     llvm::ArrayRef<DynTypedNode> view() const { return Items; }
   private:
+    // BE CAREFUL. Pointers into this container are stored in the
+    // `FragileLazySeenCache` set below.
     llvm::SmallVector<DynTypedNode, 2> Items;
-    llvm::SmallDenseSet<DynTypedNode, 2> Seen;
+    // This cache is fragile because it contains pointers that are invalidated
+    // when the vector capacity changes.
+    llvm::SmallDenseSet<const DynTypedNode *, 2, MapInfo> FragileLazySeenCache;
+    // Lazily tracks which items have been processed for the cache.
+    size_t ItemsProcessed = 0;
   };
 
   /// Maps from a node to its parents. This is used for nodes that have
