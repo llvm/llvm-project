@@ -143,9 +143,13 @@ bool ValueObjectVariable::UpdateValue() {
   CompilerType var_type(GetCompilerTypeImpl());
   if (var_type.IsValid() && var_type.GetMinimumLanguage() == lldb::eLanguageTypeSwift) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
-    std::optional<uint64_t> size =
-      var_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
-    if (size && *size == 0) {
+    auto size_or_err =
+        var_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
+    if (!size_or_err) {
+      m_error = Status::FromError(size_or_err.takeError());
+      return false;
+    }
+    if (*size_or_err == 0) {
       m_value.SetCompilerType(var_type);
       return m_error.Success();
     }

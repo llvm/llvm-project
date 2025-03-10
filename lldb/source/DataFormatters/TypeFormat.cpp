@@ -99,8 +99,6 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
             return false;
         }
 
-        ExecutionContextScope *exe_scope =
-            exe_ctx.GetBestExecutionContextScope();
         auto size_or_err = compiler_type.GetByteSize(exe_scope);
         if (!size_or_err) {
           LLDB_LOG_ERRORV(
