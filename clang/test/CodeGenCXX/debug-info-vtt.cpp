@@ -1,4 +1,4 @@
-// RUN: %clang -g -c -emit-llvm %s -o - | llvm-dis | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-none-linux-gnu -emit-llvm -debug-info-kind=limited %s -o - | FileCheck %s
 
 struct B {
     virtual ~B() {}
