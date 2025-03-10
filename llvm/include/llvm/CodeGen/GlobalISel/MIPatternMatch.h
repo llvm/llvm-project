@@ -451,15 +451,15 @@ struct BinaryOp_match {
     const MachineInstr *TmpMI;
     if (mi_match(Op, MRI, m_MInstr(TmpMI))) {
       if (TmpMI->getOpcode() == Opcode && TmpMI->getNumOperands() == 3) {
-        if (!(L.match(MRI, TmpMI->getOperand(1).getReg()) &&
-              R.match(MRI, TmpMI->getOperand(2).getReg())) &&
+        if ((!L.match(MRI, TmpMI->getOperand(1).getReg()) ||
+             !R.match(MRI, TmpMI->getOperand(2).getReg())) &&
             // NOTE: When trying the alternative operand ordering
             // with a commutative operation, it is imperative to always run
             // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
-            // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as
+            // (i.e. `R`). Otherwise, m_DeferredReg/Type will not work as
             // expected.
-            !(Commutable && (L.match(MRI, TmpMI->getOperand(2).getReg()) &&
-                             R.match(MRI, TmpMI->getOperand(1).getReg()))))
+            (!Commutable || !L.match(MRI, TmpMI->getOperand(2).getReg()) ||
+             !R.match(MRI, TmpMI->getOperand(1).getReg())))
           return false;
         return (TmpMI->getFlags() & Flags) == Flags;
       }
@@ -488,7 +488,7 @@ struct BinaryOpc_match {
                // NOTE: When trying the alternative operand ordering
                // with a commutative operation, it is imperative to always run
                // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
-               // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as
+               // (i.e. `R`). Otherwise, m_DeferredReg/Type will not work as
                // expected.
                (Commutable && (L.match(MRI, TmpMI->getOperand(2).getReg()) &&
                                R.match(MRI, TmpMI->getOperand(1).getReg())));
@@ -754,7 +754,7 @@ struct CompareOp_match {
     // NOTE: When trying the alternative operand ordering
     // with a commutative operation, it is imperative to always run
     // the LHS sub-pattern  (i.e. `L`) before the RHS sub-pattern
-    // (i.e. `R`). Otherwsie, m_DeferredReg/Type will not work as expected.
+    // (i.e. `R`). Otherwise, m_DeferredReg/Type will not work as expected.
     if (Commutable && L.match(MRI, RHS) && R.match(MRI, LHS) &&
         P.match(MRI, CmpInst::getSwappedPredicate(TmpPred)))
       return true;
