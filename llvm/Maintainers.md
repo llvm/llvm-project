@@ -393,6 +393,11 @@ cyndyishida@gmail.com (email), [cyndyishida](https://github.com/cyndyishida) (Gi
 Andrea Di Biagio \
 andrea.dibiagio@sony.com, andrea.dibiagio@gmail.com (email), [adibiagio](https://github.com/adibiagio) (GitHub)
 
+#### llvm-cov and Coverage parts of ProfileData
+
+Takumi Nakamura \
+geek4civic@gmail.com (email), [chapuni](https://github.com/chapuni) (GitHub)
+
 #### Binary Utilities
 
 James Henderson \
