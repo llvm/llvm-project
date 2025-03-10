@@ -20,7 +20,7 @@ namespace llvm {
 namespace mca {
 
 void InstructionInfoView::getComment(const MCInst &MCI,
-                                    std::string &CommentString) const {
+                                     std::string &CommentString) const {
   StringRef s = MCI.getLoc().getPointer();
   std::string InstrStr;
   size_t pos = 0, pos_cmt = 0;
@@ -143,11 +143,11 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
 
   if (PrintSchedulingInfo) {
     if (PrintEncodings)
-	  WithColor::warning()
-	      << "No encodings printed when -scheduling-info option enabled.\n";
+      WithColor::warning()
+          << "No encodings printed when -scheduling-info option enabled.\n";
     if (PrintBarriers)
-          WithColor::warning()
-	      << "No barrier printed when -scheduling-info option enabled.\n";
+      WithColor::warning()
+          << "No barrier printed when -scheduling-info option enabled.\n";
 
     printSchedulingInfoView(OS);
     return;
@@ -269,27 +269,28 @@ void InstructionInfoView::collectData(
     if (PrintSchedulingInfo) {
       // Get latency with bypass
       IIVDEntry.Bypass =
-        IIVDEntry.Latency - MCSchedModel::getBypassDelayCycles(STI, SCDesc);
+          IIVDEntry.Latency - MCSchedModel::getBypassDelayCycles(STI, SCDesc);
       IIVDEntry.OpcodeName = (std::string)MCII.getName(Inst.getOpcode());
       raw_string_ostream TempStream(IIVDEntry.Resources);
       const MCWriteProcResEntry *Index = STI.getWriteProcResBegin(&SCDesc);
       const MCWriteProcResEntry *Last = STI.getWriteProcResEnd(&SCDesc);
       auto sep = "";
       for (; Index != Last; ++Index) {
-	if (!Index->ReleaseAtCycle)
-	  continue;
-	const MCProcResourceDesc *MCProc =
-          SM.getProcResource(Index->ProcResourceIdx);
-	if (Index->ReleaseAtCycle > 1) {
-	  // Output ReleaseAtCycle between [] if not 1 (default)
-	  // This is to be able to evaluate throughput.
-	  // See getReciprocalThroughput in MCSchedule.cpp
-	  // TODO: report AcquireAtCycle to check this scheduling info.
-	  TempStream << sep << format("%s[%d]", MCProc->Name, Index->ReleaseAtCycle);
-	} else {
-	  TempStream << sep << format("%s", MCProc->Name);
-	}
-	sep = ",";
+        if (!Index->ReleaseAtCycle)
+          continue;
+        const MCProcResourceDesc *MCProc =
+            SM.getProcResource(Index->ProcResourceIdx);
+        if (Index->ReleaseAtCycle > 1) {
+          // Output ReleaseAtCycle between [] if not 1 (default)
+          // This is to be able to evaluate throughput.
+          // See getReciprocalThroughput in MCSchedule.cpp
+          // TODO: report AcquireAtCycle to check this scheduling info.
+          TempStream << sep
+                     << format("%s[%d]", MCProc->Name, Index->ReleaseAtCycle);
+        } else {
+          TempStream << sep << format("%s", MCProc->Name);
+        }
+        sep = ",";
       }
       TempStream.flush();
     }

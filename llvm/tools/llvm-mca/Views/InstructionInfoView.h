@@ -95,14 +95,14 @@ public:
                       llvm::MCInstPrinter &IP,
                       ArrayRef<UniqueInst> LoweredInsts,
                       bool ShouldPrintBarriers, bool ShouldPrintSchedulingInfo,
-		      const InstrumentManager &IM,
-		      const InstToInstrumentsT &InstToInstruments)
+                      const InstrumentManager &IM,
+                      const InstToInstrumentsT &InstToInstruments)
       : InstructionView(ST, IP, S), MCII(II), CE(C),
         PrintEncodings(ShouldPrintEncodings),
         PrintBarriers(ShouldPrintBarriers),
-	PrintSchedulingInfo(ShouldPrintSchedulingInfo),
-	LoweredInsts(LoweredInsts), IM(IM),
-	InstToInstruments(InstToInstruments) {}
+        PrintSchedulingInfo(ShouldPrintSchedulingInfo),
+        LoweredInsts(LoweredInsts), IM(IM),
+        InstToInstruments(InstToInstruments) {}
 
   void printView(llvm::raw_ostream &OS) const override;
   StringRef getNameAsString() const override { return "InstructionInfoView"; }
