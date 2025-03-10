@@ -9,6 +9,8 @@
 #ifndef _HLSL_HLSL_ALIAS_INTRINSICS_H_
 #define _HLSL_HLSL_ALIAS_INTRINSICS_H_
 
+#include "hlsl_compat_overloads.h"
+
 namespace hlsl {
 
 // Note: Functions in this file are sorted alphabetically, then grouped by base
