@@ -1501,7 +1501,9 @@ bool clang::driver::findMIPSMultilibs(const Driver &D,
                       CPUName == "mips64r5" || CPUName == "octeon" ||
                       CPUName == "octeon+",
                   "-march=mips64r2", Flags);
-  addMultilibFlag(CPUName == "mips64r6", "-march=mips64r6", Flags);
+  addMultilibFlag(CPUName == "mips64r6" || CPUName == "i6400" ||
+                      CPUName == "i6500",
+                  "-march=mips64r6", Flags);
   addMultilibFlag(isMicroMips(Args), "-mmicromips", Flags);
   addMultilibFlag(tools::mips::isUCLibc(Args), "-muclibc", Flags);
   addMultilibFlag(tools::mips::isNaN2008(D, Args, TargetTriple), "-mnan=2008",
