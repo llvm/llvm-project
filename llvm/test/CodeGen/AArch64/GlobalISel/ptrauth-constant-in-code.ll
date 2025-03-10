@@ -78,6 +78,82 @@ define ptr @foo() {
   ret ptr ptrauth (ptr @g, i32 0)
 }
 
+;--- finalize-isel.ll
+
+; RUN: llc < finalize-isel.ll -mtriple aarch64-elf -mattr=+pauth -global-isel=1 \
+; RUN:   -verify-machineinstrs -global-isel-abort=1 -stop-after=finalize-isel | \
+; RUN:   FileCheck --check-prefixes=ISEL,ISEL-ELF %s
+; RUN: llc < finalize-isel.ll -mtriple arm64-apple-ios -mattr=+pauth -global-isel=1 \
+; RUN:   -verify-machineinstrs -global-isel-abort=1 -stop-after=finalize-isel | \
+; RUN:   FileCheck --check-prefixes=ISEL %s
+
+@const_table_local = dso_local constant [3 x ptr] [ptr null, ptr null, ptr null]
+@const_table_got = constant [3 x ptr] [ptr null, ptr null, ptr null]
+
+define void @store_signed_const_local(ptr %dest) {
+; ISEL-LABEL: name: store_signed_const_local
+; ISEL:       body:
+; ISEL:         %0:gpr64common = COPY $x0
+; ISEL-NEXT:    %10:gpr64common = MOVaddr target-flags(aarch64-page) @const_table_local + 8, target-flags(aarch64-pageoff, aarch64-nc) @const_table_local + 8
+; ISEL-NEXT:    %2:gpr64noip = MOVKXi %0, 1234
+; ISEL-NEXT:    %15:gpr64noip = COPY %0
+; ISEL-NEXT:    %4:gpr64 = PAC %10, 2, 1234, %15, implicit-def dead $x16, implicit-def dead $x17
+; ISEL-NEXT:    %14:gpr64 = COPY %4
+; ISEL-NEXT:    STRXui %14, %0, 0 :: (store (p0) into %ir.dest)
+; ISEL-NEXT:    RET_ReallyLR
+  %dest.i = ptrtoint ptr %dest to i64
+  %discr = call i64 @llvm.ptrauth.blend(i64 %dest.i, i64 1234)
+  %signed.i = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr ([2 x ptr], ptr @const_table_local, i32 0, i32 1) to i64), i32 2, i64 %discr)
+  %signed.ptr = inttoptr i64 %signed.i to ptr
+  store ptr %signed.ptr, ptr %dest
+  ret void
+}
+
+define void @store_signed_const_got(ptr %dest) {
+; ISEL-ELF-LABEL: name: store_signed_const_got
+; ISEL-ELF:       body:
+; ISEL-ELF:         %0:gpr64common = COPY $x0
+; ISEL-ELF-NEXT:    %7:gpr64common = LOADgotAUTH target-flags(aarch64-got) @const_table_got
+; ISEL-ELF-NEXT:    %6:gpr64common = ADDXri %7, 8, 0
+; ISEL-ELF-NEXT:    %2:gpr64noip = MOVKXi %0, 1234
+; ISEL-ELF-NEXT:    %12:gpr64noip = COPY %0
+; ISEL-ELF-NEXT:    %4:gpr64 = PAC %6, 2, 1234, %12, implicit-def dead $x16, implicit-def dead $x17
+; ISEL-ELF-NEXT:    %10:gpr64 = COPY %4
+; ISEL-ELF-NEXT:    STRXui %10, %0, 0 :: (store (p0) into %ir.dest)
+; ISEL-ELF-NEXT:    RET_ReallyLR
+  %dest.i = ptrtoint ptr %dest to i64
+  %discr = call i64 @llvm.ptrauth.blend(i64 %dest.i, i64 1234)
+  %signed.i = call i64 @llvm.ptrauth.sign(i64 ptrtoint (ptr getelementptr ([2 x ptr], ptr @const_table_got, i32 0, i32 1) to i64), i32 2, i64 %discr)
+  %signed.ptr = inttoptr i64 %signed.i to ptr
+  store ptr %signed.ptr, ptr %dest
+  ret void
+}
+
+define void @store_signed_arg(ptr %dest, ptr %p) {
+; ISEL-LABEL: name: store_signed_arg
+; ISEL:       body:
+; ISEL:         %0:gpr64common = COPY $x0
+; ISEL-NEXT:    %1:gpr64common = COPY $x1
+; ISEL-NEXT:    %3:gpr64noip = MOVKXi %0, 1234
+; ISEL-NEXT:    %6:gpr64common = ADDXri %1, 8, 0
+; ISEL-NEXT:    %12:gpr64noip = COPY %0
+; ISEL-NEXT:    %8:gpr64 = PAC %6, 2, 1234, %12, implicit-def dead $x16, implicit-def dead $x17
+; ISEL-NEXT:    %10:gpr64 = COPY %8
+; ISEL-NEXT:    STRXui %10, %0, 0 :: (store (p0) into %ir.dest)
+; ISEL-NEXT:    RET_ReallyLR
+  %dest.i = ptrtoint ptr %dest to i64
+  %discr = call i64 @llvm.ptrauth.blend(i64 %dest.i, i64 1234)
+  %p.offset = getelementptr [2 x ptr], ptr %p, i32 0, i32 1
+  %p.offset.i = ptrtoint ptr %p.offset to i64
+  %signed.i = call i64 @llvm.ptrauth.sign(i64 %p.offset.i, i32 2, i64 %discr)
+  %signed.ptr = inttoptr i64 %signed.i to ptr
+  store ptr %signed.ptr, ptr %dest
+  ret void
+}
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 8, !"ptrauth-elf-got", i32 1}
+
 ;--- ok.ll
 
 ; RUN: llc < ok.ll -mtriple aarch64-elf -mattr=+pauth -global-isel=1 \
