@@ -990,23 +990,38 @@ bb:
   ret void
 }
 
-define <8 x i64> @pr121147(<8 x i64> %a) {
-; AVX512F-LABEL: pr121147:
-; AVX512F:       # %bb.0: # %entry
+define <16 x i32> @gen_VPSHUFD_AVX512_0(<16 x i32> %a) {
+; AVX512F-LABEL: gen_VPSHUFD_AVX512_0:
+; AVX512F:       # %bb.0:
 ; AVX512F-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; AVX512F-NEXT:    kmovw %eax, %k1
-; AVX512F-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[0,2,0,2,4,6,4,6,8,10,8,10,12,14,12,14]
+; AVX512F-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
 ; AVX512F-NEXT:    retq
 ;
-; AVX512BW-LABEL: pr121147:
-; AVX512BW:       # %bb.0: # %entry
+; AVX512BW-LABEL: gen_VPSHUFD_AVX512_0:
+; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    movw $-21846, %ax # imm = 0xAAAA
 ; AVX512BW-NEXT:    kmovd %eax, %k1
-; AVX512BW-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[0,2,0,2,4,6,4,6,8,10,8,10,12,14,12,14]
+; AVX512BW-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
 ; AVX512BW-NEXT:    retq
-entry:
-  %0 = bitcast <8 x i64> %a to <16 x i32>
-  %1 = shufflevector <16 x i32> <i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison>, <16 x i32> %0, <16 x i32> <i32 0, i32 18, i32 2, i32 18, i32 4, i32 22, i32 6, i32 22, i32 8, i32 26, i32 10, i32 26, i32 12, i32 30, i32 14, i32 30>
-  %2 = bitcast <16 x i32> %1 to <8 x i64>
-  ret <8 x i64> %2
+  %res = shufflevector <16 x i32> <i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison>, <16 x i32> %a, <16 x i32> <i32 0, i32 18, i32 2, i32 18, i32 4, i32 22, i32 6, i32 22, i32 8, i32 26, i32 10, i32 26, i32 12, i32 30, i32 14, i32 30>
+  ret <16 x i32> %res
+}
+
+define <16 x i32> @gen_VPSHUFD_AVX512_1(<16 x i32> %a) {
+; AVX512F-LABEL: gen_VPSHUFD_AVX512_1:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    movw $-21846, %ax # imm = 0xAAAA
+; AVX512F-NEXT:    kmovw %eax, %k1
+; AVX512F-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: gen_VPSHUFD_AVX512_1:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    movw $-21846, %ax # imm = 0xAAAA
+; AVX512BW-NEXT:    kmovd %eax, %k1
+; AVX512BW-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[2,2,2,2,6,6,6,6,10,10,10,10,14,14,14,14]
+; AVX512BW-NEXT:    retq
+  %res = shufflevector <16 x i32> %a , <16 x i32> <i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison, i32 0, i32 poison>, <16 x i32> <i32 16, i32 2, i32 18, i32 2, i32 20, i32 6, i32 22, i32 6, i32 24, i32 10, i32 26, i32 10, i32 28, i32 14, i32 30, i32 14>
+  ret <16 x i32> %res
 }

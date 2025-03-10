@@ -17350,24 +17350,23 @@ static SDValue lowerV8I64Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
   return lowerShuffleWithPERMV(DL, MVT::v8i64, Mask, V1, V2, Subtarget, DAG);
 }
 
-static SDValue lowerShuffleAsVSELECT(const SDLoc &DL,
-                                     ArrayRef<int> RepeatedMask, SDValue V1,
-                                     SDValue V2, SelectionDAG &DAG) {
+static SDValue lowerShuffleAsVSELECT(const SDLoc &DL, ArrayRef<int> Mask,
+                                     SDValue V1, SDValue V2,
+                                     SelectionDAG &DAG) {
   if (V1.getOpcode() != ISD::BUILD_VECTOR &&
       V2.getOpcode() != ISD::BUILD_VECTOR)
     return SDValue();
-  SDValue BuildVector;
-  if (V1.getOpcode() == ISD::BUILD_VECTOR) {
-    BuildVector = V1;
-    if (V2.getOpcode() != ISD::BITCAST)
-      return SDValue();
-  } else {
-    BuildVector = V2;
-    if (V1.getOpcode() != ISD::BITCAST)
-      return SDValue();
-  }
+
+  bool IsV1BuildVector = V1.getOpcode() == ISD::BUILD_VECTOR;
+  SDValue BuildVector = IsV1BuildVector ? V1 : V2;
+
   if (!ISD::isBuildVectorAllZeros(BuildVector.getNode()))
     return SDValue();
+  
+  // This relates to the lowering of `_mm512_maskz_shuffle_epi32` intrinsic. 
+  // The `BUILD_VECTOR` contains the zeroing mask. If the corresponding 
+  // element is UNDEF, then the bit in mask is set. If it is zero, the
+  // corresponding bit in mask is zero.
   APInt DestMask(16, 0);
   for (unsigned i = 0; i < 16; ++i) {
     SDValue Op = BuildVector->getOperand(i);
@@ -17377,28 +17376,25 @@ static SDValue lowerShuffleAsVSELECT(const SDLoc &DL,
   if (DestMask.isZero())
     return SDValue();
 
-  unsigned Imm8 = 0;
-  for (unsigned i = 0; i < 4; ++i) {
-    if (V1.getOpcode() != ISD::BUILD_VECTOR) {
-      if (RepeatedMask[i] >= 4) {
-        continue;
-      }
-    } else if (RepeatedMask[i] < 4) {
-      continue;
-    }
-    Imm8 += (RepeatedMask[i] % 4) << (2 * i);
-  }
-
   SDValue Bitcast = DAG.getNode(ISD::BITCAST, DL, MVT::v16i1,
                                 DAG.getConstant(DestMask, DL, MVT::i16));
 
-  std::vector<SDValue> ZeroElements(16, DAG.getConstant(0, DL, MVT::i32));
+  SmallVector<SDValue, 16> ZeroElements(16, DAG.getConstant(0, DL, MVT::i32));
   SDValue Zeros = DAG.getBuildVector(MVT::v16i32, DL, ZeroElements);
 
+  SmallVector<int, 16> NewMask(16);
+  for (int I = 0; I < 16; ++I) {
+    if (IsV1BuildVector) {
+      NewMask[I] = Mask[I] >= 16 ? Mask[I] - 16 : Mask[I] + 16;
+    } else {
+      NewMask[I] = Mask[I];
+    }
+  }
+
   return DAG.getNode(ISD::VSELECT, DL, MVT::v16i32, Bitcast,
-                     DAG.getNode(X86ISD::PSHUFD, DL, MVT::v16i32,
-                                 V1.getOpcode() != ISD::BUILD_VECTOR ? V1 : V2,
-                                 DAG.getTargetConstant(Imm8, DL, MVT::i8)),
+                     DAG.getVectorShuffle(MVT::v16i32, DL,
+                                          IsV1BuildVector ? V2 : V1,
+                                          DAG.getUNDEF(MVT::v16i32), NewMask),
                      Zeros);
 }
 
@@ -17448,7 +17444,7 @@ static SDValue lowerV16I32Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     if (SDValue V = lowerShuffleWithUNPCK(DL, MVT::v16i32, V1, V2, Mask, DAG))
       return V;
 
-    if (SDValue V = lowerShuffleAsVSELECT(DL, RepeatedMask, V1, V2, DAG))
+    if (SDValue V = lowerShuffleAsVSELECT(DL, Mask, V1, V2, DAG))
       return V;
   }
 
