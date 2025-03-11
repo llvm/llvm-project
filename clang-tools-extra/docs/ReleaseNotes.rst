@@ -137,8 +137,8 @@ Changes in existing checks
   warnings logic for ``nullptr`` in ``std::find``.
 
 - Improved :doc:`modernize-use-std-numbers
-  <clang-tidy/checks/modernize/use-std-numbers>` check to support math functions
-  of different precisions.
+  <clang-tidy/checks/modernize/use-std-numbers>` check to support math
+  functions of different precisions.
 
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check by fix false positives
