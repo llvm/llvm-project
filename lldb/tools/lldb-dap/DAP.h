@@ -233,7 +233,6 @@ struct DAP {
   /// @}
 
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
-  ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
 
   /// Redirect stdout and stderr fo the IDE's console output.
   ///
@@ -445,18 +444,6 @@ struct DAP {
     }
     return nullptr;
   }
-
-  FunctionBreakpoint *GetFunctionBPFromStopReason(lldb::SBThread &thread);
-
-  FunctionBreakpoint *GetFunctionBreakPoint(const lldb::break_id_t bp_id);
-
-  void WaitWorkerThreadsToExit();
-
-private:
-  // Send the JSON in "json_str" to the "out" stream. Correctly send the
-  // "Content-Length:" field followed by the length, followed by the raw
-  // JSON bytes.
-  void SendJSON(const std::string &json_str);
 };
 
 } // namespace lldb_dap
