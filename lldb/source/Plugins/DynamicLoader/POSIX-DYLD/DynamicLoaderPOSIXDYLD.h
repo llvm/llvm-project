@@ -28,6 +28,8 @@ public:
 
   static void Initialize();
 
+  static void DebuggerInitialize(lldb_private::Debugger &debugger);
+
   static void Terminate();
 
   static llvm::StringRef GetPluginNameStatic() { return "posix-dyld"; }
