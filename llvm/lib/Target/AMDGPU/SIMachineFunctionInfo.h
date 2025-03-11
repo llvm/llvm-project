@@ -459,8 +459,8 @@ private:
   unsigned NumSpilledSGPRs = 0;
   unsigned NumSpilledVGPRs = 0;
 
-  // The size of the scratch space reserved for the CWSR trap handler to spill
-  // some of the dynamic VGPRs.
+  // The size in bytes of the scratch space reserved for the CWSR trap handler
+  // to spill some of the dynamic VGPRs.
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
   // Tracks information about user SGPRs that will be setup by hardware which
@@ -793,8 +793,8 @@ public:
     return ScratchReservedForDynamicVGPRs;
   }
 
-  void setScratchReservedForDynamicVGPRs(unsigned Size) {
-    ScratchReservedForDynamicVGPRs = Size;
+  void setScratchReservedForDynamicVGPRs(unsigned SizeInBytes) {
+    ScratchReservedForDynamicVGPRs = SizeInBytes;
   }
 
   // Add user SGPRs.
