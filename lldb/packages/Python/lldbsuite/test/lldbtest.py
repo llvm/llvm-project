@@ -1401,6 +1401,10 @@ class Base(unittest.TestCase):
     def isLoongArchLASX(self):
         return self.isLoongArch() and "lasx" in self.getCPUInfo()
 
+    def isRISCV(self):
+        """Returns true if the architecture is RISCV64 or RISCV32."""
+        return self.getArchitecture() in ["riscv64", "riscv32"]
+
     def getArchitecture(self):
         """Returns the architecture in effect the test suite is running with."""
         return lldbplatformutil.getArchitecture()
