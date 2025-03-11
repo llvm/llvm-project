@@ -2432,9 +2432,12 @@ inline bool This(InterpState &S, CodePtr OpPC) {
   // Ensure the This pointer has been cast to the correct base.
   if (!This.isDummy()) {
     assert(isa<CXXMethodDecl>(S.Current->getFunction()->getDecl()));
-    assert(This.getRecord());
+    [[maybe_unused]] const Record *R = This.getRecord();
+    if (!R)
+      R = This.narrow().getRecord();
+    assert(R);
     assert(
-        This.getRecord()->getDecl() ==
+        R->getDecl() ==
         cast<CXXMethodDecl>(S.Current->getFunction()->getDecl())->getParent());
   }
 

@@ -8844,7 +8844,17 @@ void ASTRecordWriter::writeOpenACCClause(const OpenACCClause *C) {
     return;
   }
 
-  case OpenACCClauseKind::Bind:
+  case OpenACCClauseKind::Bind: {
+    const auto *BC = cast<OpenACCBindClause>(C);
+    writeSourceLocation(BC->getLParenLoc());
+    writeBool(BC->isStringArgument());
+    if (BC->isStringArgument())
+      AddStmt(const_cast<StringLiteral *>(BC->getStringArgument()));
+    else
+      AddIdentifierRef(BC->getIdentifierArgument());
+
+    return;
+  }
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }
