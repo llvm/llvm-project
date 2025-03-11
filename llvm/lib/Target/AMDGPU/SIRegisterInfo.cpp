@@ -618,19 +618,19 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
       // Align to accum_offset's allocation granularity.
       MinNumAGPRs = alignTo(MinNumAGPRs, 4);
 
-      MinNumAGPRs = std::min(MinNumAGPRs, NumArchVGPRs);
+      MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
     }
 
     // Clamp values to be inbounds of our limits, and ensure min <= max.
 
     MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
-    MinNumAGPRs = std::min(std::min(MinNumAGPRs, NumArchVGPRs), MaxNumAGPRs);
+    MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
 
     MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
     MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
 
     assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
-           MaxNumAGPRs <= NumArchVGPRs && MaxNumVGPRs <= NumArchVGPRs &&
+           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= NumArchVGPRs &&
            "invalid register counts");
   } else if (ST.hasMAIInsts()) {
     // On gfx908 the number of AGPRs always equals the number of VGPRs.

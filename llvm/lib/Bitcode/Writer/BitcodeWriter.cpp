@@ -5064,32 +5064,28 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
       getReferencedTypeIds(FS, ReferencedTypeIds);
   }
 
-  if (!Index.cfiFunctionDefs().empty()) {
-    for (auto &S : Index.cfiFunctionDefs()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
-        NameVals.push_back(StrtabBuilder.add(S));
-        NameVals.push_back(S.size());
-      }
-    }
-    if (!NameVals.empty()) {
-      Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DEFS, NameVals);
-      NameVals.clear();
+  for (auto &S : Index.cfiFunctionDefs()) {
+    if (DefOrUseGUIDs.contains(
+            GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
+      NameVals.push_back(StrtabBuilder.add(S));
+      NameVals.push_back(S.size());
     }
   }
+  if (!NameVals.empty()) {
+    Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DEFS, NameVals);
+    NameVals.clear();
+  }
 
-  if (!Index.cfiFunctionDecls().empty()) {
-    for (auto &S : Index.cfiFunctionDecls()) {
-      if (DefOrUseGUIDs.contains(
-              GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
-        NameVals.push_back(StrtabBuilder.add(S));
-        NameVals.push_back(S.size());
-      }
+  for (auto &S : Index.cfiFunctionDecls()) {
+    if (DefOrUseGUIDs.contains(
+            GlobalValue::getGUID(GlobalValue::dropLLVMManglingEscape(S)))) {
+      NameVals.push_back(StrtabBuilder.add(S));
+      NameVals.push_back(S.size());
     }
-    if (!NameVals.empty()) {
-      Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DECLS, NameVals);
-      NameVals.clear();
-    }
+  }
+  if (!NameVals.empty()) {
+    Stream.EmitRecord(bitc::FS_CFI_FUNCTION_DECLS, NameVals);
+    NameVals.clear();
   }
 
   // Walk the GUIDs that were referenced, and write the
