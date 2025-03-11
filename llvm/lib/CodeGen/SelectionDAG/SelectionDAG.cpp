@@ -4017,9 +4017,6 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       if (const MDNode *MD = LD->getRanges()) {
         ConstantInt *Lower = mdconst::extract<ConstantInt>(MD->getOperand(0));
 
-        // FIXME: If loads are modified (e.g. type legalization)
-        // so that the load type no longer matches the range metadata type, the
-        // range metadata should be updated to match the new load width.
         Known0 = Known0.trunc(Lower->getBitWidth());
         computeKnownBitsFromRangeMetadata(*MD, Known0);
         if (VT.isVector()) {
