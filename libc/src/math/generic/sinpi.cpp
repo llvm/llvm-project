@@ -29,13 +29,13 @@ static LIB_INLINE int64_t range_reduction_sincospi(double x, double &y) {
   
   
   float result = fmul(x, b);
-  double res = static_cast<double>(result);
-  fputil::DoubleDouble sum = fputil::exact_add(res, -res);
-  double sum_result = sum.hi;
+  double k = static_cast<double>(result);
+  fputil::DoubleDouble y = fputil::exact_add(res, -res);
+  double y = sum.hi;
 
   // do the exceptions here...
 
-  return static_cast<int64_t>(sum_result);
+  return static_cast<int64_t>(k);
 }
   
 LIBC_INLINE void sincospi_eval(double xd, double &sin_k, double &cos_k, double &sin_k, double &cosm1_y) {
