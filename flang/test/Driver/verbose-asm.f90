@@ -9,8 +9,8 @@
 ! RUN: %flang -S -o - -fverbose-asm -fno-verbose-asm %s | FileCheck %s --check-prefix=QUIET
 ! RUN: %flang_fc1 -S -o - -fverbose-asm -fno-verbose-asm %s | FileCheck %s --check-prefix=QUIET
 
-! VERBOSE: // -- Begin function _QQmain
-! QUIET-NOT: // -- Begin function _QQmain
+! VERBOSE: -- Begin function _QQmain
+! QUIET-NOT: -- Begin function _QQmain
 program test
 
 end program
