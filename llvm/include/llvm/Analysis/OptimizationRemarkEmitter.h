@@ -71,9 +71,7 @@ public:
   void emit(DiagnosticInfoOptimizationBase &OptDiag);
   /// Also allow r-value for OptDiag to allow emitting a temporarily-constructed
   /// diagnostic.
-  void emit(DiagnosticInfoOptimizationBase &&OptDiag) {
-    emit(static_cast<DiagnosticInfoOptimizationBase &>(OptDiag));
-  }
+  void emit(DiagnosticInfoOptimizationBase &&OptDiag) { emit(OptDiag); }
 
   /// Take a lambda that returns a remark which will be emitted.  Second
   /// argument is only used to restrict this to functions.
