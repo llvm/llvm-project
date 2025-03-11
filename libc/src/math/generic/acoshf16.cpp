@@ -26,15 +26,15 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   uint16_t x_u = xbits.uintval();
   uint16_t x_abs = x_u & 0x7fff;
 
-//   if (LIBC_UNLIKELY(x <= 1.0f)) {
-//     if (x == 1.0f)
-//       return 0.0f;
-//     // x < 1.
-//     fputil::set_errno_if_required(EDOM);
-//     fputil::raise_except_if_required(FE_INVALID);
-//     return FPBits::quiet_nan().get_val();
-//   }
-  
+  //   if (LIBC_UNLIKELY(x <= 1.0f)) {
+  //     if (x == 1.0f)
+  //       return 0.0f;
+  //     // x < 1.
+  //     fputil::set_errno_if_required(EDOM);
+  //     fputil::raise_except_if_required(FE_INVALID);
+  //     return FPBits::quiet_nan().get_val();
+  //   }
+
   // Check for NaN input first.
   if (LIBC_UNLIKELY(xbits.is_nan())) {
     if (xbits.is_signaling_nan()) {
@@ -89,7 +89,8 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   // }
 
   // Standard computation for general case.
-  float sqrt_term = fputil::sqrt<float>(fputil::multiply_add(xf32, xf32, -1.0f));
+  float sqrt_term =
+      fputil::sqrt<float>(fputil::multiply_add(xf32, xf32, -1.0f));
   float result = static_cast<float>(log_eval(xf32 + sqrt_term));
 
   return fputil::cast<float16>(result);
