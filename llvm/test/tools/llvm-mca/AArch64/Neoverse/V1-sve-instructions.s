@@ -2505,10 +2505,7 @@ zip2	z31.s, z31.s, z31.s
 # CHECK-NEXT: [4]: Throughput
 # CHECK-NEXT: [5]: Resources
 # CHECK-NEXT: [6]: LLVM OpcodeName
-# CHECK-NEXT: [7]: Instruction
-# CHECK-NEXT: [8]: Comment if any
-
-# CHECK:      [1]    [2]  [3]   [4]      [5]                                                                [6]                [7]                                  [8]
+# CHECK-NEXT: [1]    [2]  [3]   [4]      [5]                                                                [6]                Instructions:
 # CHECK-NEXT:  1      2    2     2.00     V1UnitV,V1UnitV01                                                  ABS_ZPmZ_B         abs	z0.b, p0/m, z0.b
 # CHECK-NEXT:  1      2    2     2.00     V1UnitV,V1UnitV01                                                  ABS_ZPmZ_D         abs	z0.d, p0/m, z0.d
 # CHECK-NEXT:  1      2    2     2.00     V1UnitV,V1UnitV01                                                  ABS_ZPmZ_H         abs	z0.h, p0/m, z0.h
