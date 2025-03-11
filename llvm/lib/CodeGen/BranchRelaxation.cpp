@@ -758,6 +758,7 @@ BranchRelaxationPass::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
   if (!BranchRelaxation().run(MF))
     return PreservedAnalyses::all();
+
   return getMachineFunctionPassPreservedAnalyses();
 }
 
