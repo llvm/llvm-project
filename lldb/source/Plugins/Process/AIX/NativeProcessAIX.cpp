@@ -37,21 +37,13 @@ static_assert(sizeof(long) >= k_ptrace_word_size,
 
 // Simple helper function to ensure flags are enabled on the given file
 // descriptor.
-static Status EnsureFDFlags(int fd, int flags) {
-  Status error;
-
+static llvm::Error EnsureFDFlags(int fd, int flags) {
   int status = fcntl(fd, F_GETFL);
-  if (status == -1) {
-    error = Status::FromErrno();
-    return error;
-  }
-
-  if (fcntl(fd, F_SETFL, status | flags) == -1) {
-    error = Status::FromErrno();
-    return error;
-  }
-
-  return error;
+  if (status == -1)
+    return errorCodeToError(errnoAsErrorCode());
+  if (fcntl(fd, F_SETFL, status | flags) == -1)
+    return errorCodeToError(errnoAsErrorCode());
+  return Error::success();
 }
 
 NativeProcessAIX::Manager::Manager(MainLoop &mainloop)
@@ -151,8 +143,8 @@ NativeProcessAIX::NativeProcessAIX(::pid_t pid, int terminal_fd,
       m_arch(arch) {
   manager.AddProcess(*this);
   if (m_terminal_fd != -1) {
-    Status status = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
-    assert(status.Success());
+    llvm::Error error = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
+    assert(!error && "terminal fd invalid");
   }
 
   // Let our process instance know the thread has stopped.
@@ -161,12 +153,10 @@ NativeProcessAIX::NativeProcessAIX(::pid_t pid, int terminal_fd,
 }
 
 llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
-
   Log *log = GetLog(POSIXLog::Process);
   Status status;
-  if ((status = PtraceWrapper(PT_ATTACH, pid)).Fail()) {
+  if (PtraceWrapper(PT_ATTACH, pid))
     return errorCodeToError(errnoAsErrorCode());
-  }
 
   int wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, nullptr, WNOHANG);
   if (wpid <= 0) {
@@ -234,57 +224,50 @@ Status NativeProcessAIX::SetBreakpoint(lldb::addr_t addr, uint32_t size,
                                        bool hardware) {
   if (hardware)
     return SetHardwareBreakpoint(addr, size);
-  else
-    return SetSoftwareBreakpoint(addr, size);
+  return SetSoftwareBreakpoint(addr, size);
 }
 
 Status NativeProcessAIX::RemoveBreakpoint(lldb::addr_t addr, bool hardware) {
   if (hardware)
     return RemoveHardwareBreakpoint(addr);
-  else
-    return NativeProcessProtocol::RemoveBreakpoint(addr);
+  return NativeProcessProtocol::RemoveBreakpoint(addr);
 }
 
 Status NativeProcessAIX::GetSignalInfo(lldb::tid_t tid, void *siginfo) const {
   return Status();
 }
 
-Status NativeProcessAIX::Detach(lldb::tid_t tid) {
+llvm::Error NativeProcessAIX::Detach(lldb::tid_t tid) {
   if (tid == LLDB_INVALID_THREAD_ID)
-    return Status();
+    return llvm::Error::success();
 
   return PtraceWrapper(PT_DETACH, tid);
 }
 
 // Wrapper for ptrace to catch errors and log calls. Note that ptrace sets
 // errno on error because -1 can be a valid result (i.e. for PTRACE_PEEK*)
-Status NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid, void *addr,
-                                       void *data, size_t data_size,
-                                       long *result) {
-  Status error;
+llvm::Error NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
+                                            void *addr, void *data,
+                                            size_t data_size, long *result) {
   long int ret;
 
   Log *log = GetLog(POSIXLog::Ptrace);
   errno = 0;
-  if (req < PT_COMMAND_MAX) {
-    if (req == PT_ATTACH) {
-      ptrace64(req, pid, 0, 0, nullptr);
-    } else if (req == PT_DETACH) {
-      ptrace64(req, pid, 0, 0, nullptr);
-    }
-  } else {
-    assert(0 && "Not supported yet.");
+  switch (req) {
+  case PT_ATTACH:
+  case PT_DETACH:
+    ret = ptrace64(req, pid, 0, 0, nullptr);
+    break;
+  default:
+    assert(0 && "PT_ request not supported yet.");
   }
 
   if (errno) {
-    error = Status::FromErrno();
-    ret = -1;
+    *result = -1;
+    LLDB_LOG(log, "ptrace() failed");
   }
-
   LLDB_LOG(log, "ptrace({0}, {1}, {2}, {3}, {4})={5:x}", req, pid, addr, data,
            data_size, ret);
-  if (error.Fail())
-    LLDB_LOG(log, "ptrace() failed: {0}", error);
 
-  return error;
+  return Error::success();
 }

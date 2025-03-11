@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LIBLLDB_NATIVEPROCESSAIX_H_
-#define LIBLLDB_NATIVEPROCESSAIX_H_
+#ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEPROCESSAIX_H
+#define LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEPROCESSAIX_H
 
 #include "Plugins/Process/Utility/NativeProcessSoftwareSingleStep.h"
 #include "lldb/Host/Debug.h"
@@ -105,9 +105,10 @@ public:
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
 
-  static Status PtraceWrapper(int req, lldb::pid_t pid, void *addr = nullptr,
-                              void *data = nullptr, size_t data_size = 0,
-                              long *result = nullptr);
+  static llvm::Error PtraceWrapper(int req, lldb::pid_t pid,
+                                   void *addr = nullptr, void *data = nullptr,
+                                   size_t data_size = 0,
+                                   long *result = nullptr);
 
   bool SupportHardwareSingleStepping() const;
 
@@ -127,11 +128,11 @@ private:
   // Returns a list of process threads that we have attached to.
   static llvm::Expected<std::vector<::pid_t>> Attach(::pid_t pid);
 
-  Status Detach(lldb::tid_t tid);
+  llvm::Error Detach(lldb::tid_t tid);
 
   void SigchldHandler();
 };
 
 } // namespace lldb_private::process_aix
 
-#endif // #ifndef LIBLLDB_NATIVEPROCESSAIX_H_
+#endif // #ifndef LLDB_SOURCE_PLUGINS_PROCESS_AIX_NATIVEPROCESSAIX_H
