@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/RegionUtils.h"
+
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/IR/Block.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Dominance.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
@@ -1053,4 +1056,62 @@ LogicalResult mlir::simplifyRegions(RewriterBase &rewriter,
   }
   return success(eliminatedBlocks || eliminatedOpsOrArgs ||
                  mergedIdenticalBlocks || droppedRedundantArguments);
+}
+
+//===---------------------------------------------------------------------===//
+// Move operation dependencies
+//===---------------------------------------------------------------------===//
+
+LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
+                                              Operation *op,
+                                              Operation *insertionPoint,
+                                              DominanceInfo &dominance) {
+  // Currently unsupported case where the op and insertion point are
+  // in different basic blocks.
+  if (op->getBlock() != insertionPoint->getBlock()) {
+    return rewriter.notifyMatchFailure(
+        op, "unsupported caes where operation and insertion point are not in "
+            "the same basic block");
+  }
+  // If `insertionPoint` does not dominate `op`, do nothing
+  if (!dominance.properlyDominates(insertionPoint, op)) {
+    return rewriter.notifyMatchFailure(op,
+                                       "insertion point does not dominate op");
+  }
+
+  // Find the backward slice of operation for each `Value` the operation
+  // depends on. Prune the slice to only include operations not already
+  // dominated by the `insertionPoint`
+  BackwardSliceOptions options;
+  options.inclusive = false;
+  options.omitUsesFromAbove = false;
+  // Since current support is to only move within a same basic block,
+  // the slices dont need to look past block arguments.
+  options.omitBlockArguments = true;
+  options.filter = [&](Operation *sliceBoundaryOp) {
+    return !dominance.properlyDominates(sliceBoundaryOp, insertionPoint);
+  };
+  llvm::SetVector<Operation *> slice;
+  getBackwardSlice(op, &slice, options);
+
+  // If the slice contains `insertionPoint` cannot move the dependencies.
+  if (slice.contains(insertionPoint)) {
+    return rewriter.notifyMatchFailure(
+        op,
+        "cannot move dependencies before operation in backward slice of op");
+  }
+
+  // We should move the slice in topological order, but `getBackwardSlice`
+  // already does that. So no need to sort again.
+  for (Operation *op : slice) {
+    rewriter.moveOpBefore(op, insertionPoint);
+  }
+  return success();
+}
+
+LogicalResult mlir::moveOperationDependencies(RewriterBase &rewriter,
+                                              Operation *op,
+                                              Operation *insertionPoint) {
+  DominanceInfo dominance(op);
+  return moveOperationDependencies(rewriter, op, insertionPoint, dominance);
 }

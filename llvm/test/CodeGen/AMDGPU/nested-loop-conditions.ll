@@ -13,28 +13,27 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captu
 ; GCN-NEXT:    s_load_dword s0, s[4:5], 0x9
 ; GCN-NEXT:    v_lshlrev_b32_e32 v0, 3, v0
 ; GCN-NEXT:    s_mov_b32 m0, -1
-; GCN-NEXT:    s_mov_b32 s2, 0
+; GCN-NEXT:    s_and_b64 s[2:3], exec, -1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, s0, v0
 ; GCN-NEXT:    ds_read_b64 v[0:1], v0
-; GCN-NEXT:    s_and_b64 vcc, exec, 0
+; GCN-NEXT:    s_and_b64 s[0:1], exec, 0
 ; GCN-NEXT:    s_branch .LBB0_2
 ; GCN-NEXT:  .LBB0_1: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GCN-NEXT:    ; implicit-def: $sgpr2
-; GCN-NEXT:    s_mov_b64 vcc, vcc
+; GCN-NEXT:    s_mov_b64 vcc, s[0:1]
 ; GCN-NEXT:    s_cbranch_vccz .LBB0_4
 ; GCN-NEXT:  .LBB0_2: ; %bb5
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GCN-NEXT:    s_cmp_lg_u32 s2, 1
-; GCN-NEXT:    s_mov_b64 s[0:1], -1
-; GCN-NEXT:    s_cbranch_scc0 .LBB0_1
+; GCN-NEXT:    s_mov_b64 s[4:5], -1
+; GCN-NEXT:    s_mov_b64 vcc, s[2:3]
+; GCN-NEXT:    s_cbranch_vccz .LBB0_1
 ; GCN-NEXT:  ; %bb.3: ; %bb10
 ; GCN-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GCN-NEXT:    s_mov_b64 s[0:1], 0
+; GCN-NEXT:    s_mov_b64 s[4:5], 0
 ; GCN-NEXT:    s_branch .LBB0_1
 ; GCN-NEXT:  .LBB0_4: ; %loop.exit.guard
-; GCN-NEXT:    s_and_b64 vcc, exec, s[0:1]
+; GCN-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; GCN-NEXT:    s_cbranch_vccz .LBB0_7
 ; GCN-NEXT:  ; %bb.5: ; %bb8
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
@@ -94,6 +93,7 @@ define amdgpu_kernel void @reduced_nested_loop_conditions(ptr addrspace(3) captu
 ; IR:       [[BB23]]:
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP6]])
 ; IR-NEXT:    ret void
+;
 bb:
   %my.tmp = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %my.tmp1 = getelementptr inbounds i64, ptr addrspace(3) %arg, i32 %my.tmp
@@ -236,8 +236,8 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) captures(none
 ; IR-NEXT:    [[MY_TMP17:%.*]] = bitcast i64 [[MY_TMP3]] to <2 x i32>
 ; IR-NEXT:    br label %[[BB18:.*]]
 ; IR:       [[FLOW1]]:
-; IR-NEXT:    [[TMP11]] = phi <4 x i32> [ [[MY_TMP9:%.*]], %[[BB21:.*]] ], [ undef, %[[BB14]] ]
-; IR-NEXT:    [[TMP12]] = phi i32 [ [[MY_TMP10:%.*]], %[[BB21]] ], [ undef, %[[BB14]] ]
+; IR-NEXT:    [[TMP11]] = phi <4 x i32> [ [[MY_TMP9:%.*]], %[[BB21:.*]] ], [ poison, %[[BB14]] ]
+; IR-NEXT:    [[TMP12]] = phi i32 [ [[MY_TMP10:%.*]], %[[BB21]] ], [ poison, %[[BB14]] ]
 ; IR-NEXT:    [[TMP13:%.*]] = phi i1 [ [[MY_TMP12:%.*]], %[[BB21]] ], [ true, %[[BB14]] ]
 ; IR-NEXT:    [[TMP14]] = phi i1 [ [[MY_TMP12]], %[[BB21]] ], [ false, %[[BB14]] ]
 ; IR-NEXT:    [[TMP15:%.*]] = phi i1 [ false, %[[BB21]] ], [ true, %[[BB14]] ]
@@ -278,6 +278,7 @@ define amdgpu_kernel void @nested_loop_conditions(ptr addrspace(1) captures(none
 ; IR-NEXT:    call void @llvm.amdgcn.end.cf.i64(i64 [[TMP7]])
 ; IR-NEXT:    store volatile i32 0, ptr addrspace(1) undef, align 4
 ; IR-NEXT:    ret void
+;
 bb:
   %my.tmp1134 = load volatile i32, ptr addrspace(1) undef
   %my.tmp1235 = icmp slt i32 %my.tmp1134, 9
