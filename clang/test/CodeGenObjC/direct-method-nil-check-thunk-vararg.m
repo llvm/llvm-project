@@ -25,7 +25,7 @@ __attribute__((objc_root_class))
   va_list args;
   // CHECK: call void @llvm.va_start
   va_start(args, format);
-  // CHECK: call void @"\01-[Root vprintWithFormat:Args:]_inner"
+  // CHECK: call void @"\01-[Root vprintWithFormat:Args:]_nonnull"
   [self vprintWithFormat:format Args:args];
   // CHECK: call void @llvm.va_end
   va_end(args);
@@ -33,11 +33,11 @@ __attribute__((objc_root_class))
 // CHECK-NOT: <Root printWithFormat]_inner
 
 // CHECK-LABEL: define {{.*}} void @"\01-[Root vprintWithFormat:Args:]"
-// CHECK: call void @"\01-[Root vprintWithFormat:Args:]_inner"
+// CHECK: call void @"\01-[Root vprintWithFormat:Args:]_nonnull"
 
-// CHECK-LABEL: define {{.*}} void @"\01-[Root vprintWithFormat:Args:]_inner"
+// CHECK-LABEL: define {{.*}} void @"\01-[Root vprintWithFormat:Args:]_nonnull"
 -(void)vprintWithFormat:(const char *)format Args:(va_list) args{
-  // CHECK: call void @"\01-[Root vprintWithFormat:Args:]_inner"
+  // CHECK: call void @"\01-[Root vprintWithFormat:Args:]_nonnull"
   [self vprintWithFormat:format Args:args];
   // CHECK: call i32 @vprintf
   vprintf(format, args);

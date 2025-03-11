@@ -45,7 +45,7 @@ void clang::mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
   OS << MethodName;
   OS << ']';
   if (!isThunk)
-    OS << "_inner";
+    OS << "_nonnull";
 }
 // FIXME: For blocks we currently mimic GCC's mangling scheme, which leaves
 // much to be desired. Come up with a better mangling scheme.

@@ -27,11 +27,11 @@
 //  1. Call inner set (because we alreaday know self is not null)
 //  2. Call thunk get (because we don't know if s is null)
 //  3. Release s.
-// CHECK-LABEL: define hidden void @"\01-[Shape move:]_inner"
+// CHECK-LABEL: define hidden void @"\01-[Shape move:]_nonnull"
 // CHECK: {{.*}} = call i32 @"\01-[Shape x]"
-// CHECK: call void @"\01-[Shape setX:]_inner"
+// CHECK: call void @"\01-[Shape setX:]_nonnull"
 // CHECK: {{.*}} = call i32 @"\01-[Shape y]"
-// CHECK: call void @"\01-[Shape setY:]_inner"
+// CHECK: call void @"\01-[Shape setY:]_nonnull"
 // CHECK: call void @llvm.objc.storeStrong
 // CHECK-LABEL: }
 

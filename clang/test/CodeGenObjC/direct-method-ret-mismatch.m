@@ -19,7 +19,7 @@ __attribute__((objc_root_class))
 }
 @end
 // The inner function should not contain any nil check anymore.
-// CHECK-THUNK-LABEL: define hidden ptr @"\01-[Root method]_inner"(ptr noundef nonnull
+// CHECK-THUNK-LABEL: define hidden ptr @"\01-[Root method]_nonnull"(ptr noundef nonnull
 // CHECK-THUNK-NOT: br i1 %1, label %objc_direct_method.self_is_nil, label %objc_direct_method.cont
 
 // The direct function contains the nil check.

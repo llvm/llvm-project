@@ -73,14 +73,14 @@ static int numInstances=0;
   return [[Shape alloc] initDefault];
 }
 
-// CHECK-LABEL: define {{.*}} @"\01-[Shape clone]_inner"
+// CHECK-LABEL: define {{.*}} @"\01-[Shape clone]_nonnull"
 // CHECK: [[CALL_INIT:%.*]] = call ptr @"\01-[Shape initWithX:Y:]"
 // CHECK-NEXT: [[AUTORELEASE_CLONE:%.*]] = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr [[CALL_INIT]])
 // CHECK-NEXT: ret ptr [[AUTORELEASE_CLONE]]
 // CHECK-LABEL: }
 
 // CHECK-LABEL: define {{.*}} @"\01-[Shape clone]"
-// CHECK: [[CALL_INNER:%.*]] = call ptr @"\01-[Shape clone]_inner"
+// CHECK: [[CALL_INNER:%.*]] = call ptr @"\01-[Shape clone]_nonnull"
 // CHECK-NEXT: call void asm sideeffect "mov\09fp, fp\09\09// marker for objc_retainAutoreleaseReturnValue", ""()
 // CHECK-NEXT: [[RETAINED:%.*]] = call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr [[CALL_INNER]])
 // CHECK-NEXT: store ptr [[RETAINED]], ptr [[RETADDR:%.*]]
@@ -93,7 +93,7 @@ static int numInstances=0;
 }
 
 // InnerFn will release the value since it is "consumed".
-// CHECK: define hidden double @"\01-[Shape distanceFrom:]_inner"(ptr noundef nonnull %{{.*}}, ptr noundef [[S:%.*]]) #0 {
+// CHECK: define hidden double @"\01-[Shape distanceFrom:]_nonnull"(ptr noundef nonnull %{{.*}}, ptr noundef [[S:%.*]]) #0 {
 // CHECK: {{%.*}} = alloca ptr
 // CHECK: [[S_ADDR:%.*]] = alloca ptr
 // CHECK: store ptr [[S]], ptr [[S_ADDR]]

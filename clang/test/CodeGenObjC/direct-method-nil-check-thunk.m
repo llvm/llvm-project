@@ -23,13 +23,13 @@ __attribute__((objc_root_class))
 @end
 
 @implementation Root
-// CHECK-LABEL: define hidden i32 @"\01-[Root intProperty2]_inner"(ptr noundef nonnull %{{.*}}
+// CHECK-LABEL: define hidden i32 @"\01-[Root intProperty2]_nonnull"(ptr noundef nonnull %{{.*}}
 // CHECK-LABEL: define hidden i32 @"\01-[Root intProperty2]"(ptr noundef %{{.*}}
 - (int)intProperty2 {
   return 42;
 }
 
-// CHECK-LABEL: define hidden i32 @"\01-[Root getInt]_inner"(ptr noundef nonnull %{{.*}}
+// CHECK-LABEL: define hidden i32 @"\01-[Root getInt]_nonnull"(ptr noundef nonnull %{{.*}}
 // CHECK-NEXT: entry:
 // CHECK-NEXT: [[SELFADDR:%.*]] = alloca ptr,
 // CHECK-NEXT: store ptr %{{.*}}, ptr [[SELFADDR]],
@@ -54,7 +54,7 @@ __attribute__((objc_root_class))
 
   // set value
   // CHECK-LABEL: objc_direct_method.cont:
-  // CHECK-NEXT: [[RET:%.*]] = call i32 @"\01-[Root getInt]_inner"(ptr noundef nonnull [[ARG0]]
+  // CHECK-NEXT: [[RET:%.*]] = call i32 @"\01-[Root getInt]_nonnull"(ptr noundef nonnull [[ARG0]]
   // CHECK-NEXT: store i32 [[RET]], ptr [[RETVAL]]
   // CHECK-NEXT: br label %return
 
@@ -65,7 +65,7 @@ __attribute__((objc_root_class))
   return 42;
 }
 
-// CHECK-NOT: @"\01+[Root classGetInt]_inner"
+// CHECK-NOT: @"\01+[Root classGetInt]_nonnull"
 + (int)classGetInt __attribute__((objc_direct)) {
   // CHECK: define hidden i32 @"\01+[Root classGetInt]"(ptr noundef [[ARGSELF:%.*]])
   // [self self]
@@ -80,7 +80,7 @@ __attribute__((objc_root_class))
   return 42;
 }
 
-// CHECK-LABEL: define hidden i64 @"\01-[Root getComplex]_inner"(ptr noundef nonnull %{{.*}}
+// CHECK-LABEL: define hidden i64 @"\01-[Root getComplex]_nonnull"(ptr noundef nonnull %{{.*}}
 // CHECK-LABEL: entry:
 // CHECK-NEXT: [[RETVAL:%.*]] = alloca
 // CHECK-NEXT: [[SELFADDR:%.*]] = alloca ptr,
@@ -107,7 +107,7 @@ __attribute__((objc_root_class))
 
   // call the inner function set value
   // CHECK-LABEL: objc_direct_method.cont:
-  // CHECK-NEXT: [[CALL:%.*]] = call i64 @"\01-[Root getComplex]_inner"(ptr noundef nonnull [[ARGSELF]])
+  // CHECK-NEXT: [[CALL:%.*]] = call i64 @"\01-[Root getComplex]_nonnull"(ptr noundef nonnull [[ARGSELF]])
   // CHECK-NEXT: store i64 [[CALL]], ptr [[RETVAL]]
   // CHECK-NEXT: br label
 
@@ -119,14 +119,14 @@ __attribute__((objc_root_class))
   return st;
 }
 
-// CHECK-NOT: @"\01+[Root classGetComplex]_inner"
+// CHECK-NOT: @"\01+[Root classGetComplex]_nonnull"
 + (struct my_complex_struct)classGetComplex __attribute__((objc_direct)) {
   // CHECK-LABEL: define hidden i64 @"\01+[Root classGetComplex]"(ptr noundef
   struct my_complex_struct st = {.a = 42};
   return st;
 }
 
-// CHECK-LABEL: define hidden void @"\01-[Root getAggregate]_inner"(
+// CHECK-LABEL: define hidden void @"\01-[Root getAggregate]_nonnull"(
 // CHECK: ptr {{.*}} sret(%struct.my_aggregate_struct) align 4 [[RETVAL:%[^,]*]], ptr noundef nonnull %self
 // CHECK-LABEL: entry:
 // CHECK-NEXT: [[SELFADDR:%.*]] = alloca ptr,
@@ -155,7 +155,7 @@ __attribute__((objc_root_class))
 
   // set value
   // CHECK-LABEL: objc_direct_method.cont:
-  // CHECK-NEXT: call void @"\01-[Root getAggregate]_inner"(ptr dead_on_unwind noalias writable sret(%struct.my_aggregate_struct) align 4 [[RETVAL]], ptr noundef nonnull [[ARGSELF]])
+  // CHECK-NEXT: call void @"\01-[Root getAggregate]_nonnull"(ptr dead_on_unwind noalias writable sret(%struct.my_aggregate_struct) align 4 [[RETVAL]], ptr noundef nonnull [[ARGSELF]])
   // CHECK-NEXT: br label
 
   // return
@@ -166,13 +166,13 @@ __attribute__((objc_root_class))
 }
 
 // CHECK-LABEL: define hidden void @"\01+[Root classGetAggregate]"({{.*}}, ptr noundef {{.*}})
-// CHECK-NOT: @"\01+[Root classGetAggregate]_inner"
+// CHECK-NOT: @"\01+[Root classGetAggregate]_nonnull"
 + (struct my_aggregate_struct)classGetAggregate __attribute__((objc_direct)) {
   struct my_aggregate_struct st = {.a = 42};
   return st;
 }
 
-// CHECK-LABEL: define hidden void @"\01-[Root accessCmd]_inner"(ptr noundef nonnull
+// CHECK-LABEL: define hidden void @"\01-[Root accessCmd]_nonnull"(ptr noundef nonnull
 // CHECK-LABEL: entry:
 // CHECK-NEXT: [[SELFADDR:%.*]] = alloca ptr,
 // CHECK-NEXT: [[CMDVAL:%_cmd]] = alloca ptr,
@@ -192,18 +192,18 @@ __attribute__((objc_root_class))
   // CHECK-NEXT: br label %return
 
   // CHECK-LABEL: objc_direct_method.cont:
-  // CHECK-NEXT: call void @"\01-[Root accessCmd]_inner"(ptr noundef nonnull %{{.*}})
+  // CHECK-NEXT: call void @"\01-[Root accessCmd]_nonnull"(ptr noundef nonnull %{{.*}})
   // CHECK-NEXT: br label %return
   SEL sel = _cmd;
 }
 
 @end
-// CHECK-LABEL: define hidden i32 @"\01-[Root intProperty]_inner"(ptr noundef nonnull %{{.*}})
+// CHECK-LABEL: define hidden i32 @"\01-[Root intProperty]_nonnull"(ptr noundef nonnull %{{.*}})
 // CHECK-LABEL: define hidden i32 @"\01-[Root intProperty]"(ptr noundef %{{.*}})
 
 // Check the synthesized objectProperty calls objc_getProperty(); this also
 // checks that the synthesized method passes undef for the `cmd` argument.
-// CHECK-LABEL: define hidden ptr @"\01-[Root objectProperty]_inner"(ptr noundef nonnull {{%.*}})
+// CHECK-LABEL: define hidden ptr @"\01-[Root objectProperty]_nonnull"(ptr noundef nonnull {{%.*}})
 // CHECK-NEXT: entry:
 // CHECK-NEXT: [[SELFADDR:%.*]] = alloca ptr,
 // CHECK-NEXT: store ptr %{{.*}}, ptr [[SELFADDR]],
@@ -215,7 +215,7 @@ __attribute__((objc_root_class))
 // CHECK: [[RETADDR:%.*]] = alloca ptr,
 
 // CHECK-LABEL: objc_direct_method.cont:
-// CHECK-NEXT: [[RETVAL:%.*]] = call ptr @"\01-[Root objectProperty]_inner"
+// CHECK-NEXT: [[RETVAL:%.*]] = call ptr @"\01-[Root objectProperty]_nonnull"
 // CHECK-NEXT: [[RETAINED_RET:%.*]] = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr [[RETVAL]])
 // CHECK-NEXT: store ptr [[RETAINED_RET]], ptr [[RETADDR]],
 // CHECK-NEXT: br label %return
@@ -243,27 +243,27 @@ __attribute__((objc_root_class))
 
 __attribute__((objc_direct_members))
 @implementation Foo
-// CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInExtension]_inner"(
+// CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInExtension]_nonnull"(
 // CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInExtension]"(
 - (int)directMethodInExtension {
   return 42;
 }
-// CHECK-LABEL: define hidden i32 @"\01-[Foo getDirect_setDynamic]_inner"(
+// CHECK-LABEL: define hidden i32 @"\01-[Foo getDirect_setDynamic]_nonnull"(
 // CHECK-LABEL: define hidden i32 @"\01-[Foo getDirect_setDynamic]"(
 // CHECK-LABEL: define internal void @"\01-[Foo setGetDirect_setDynamic:]"(
 // CHECK-LABEL: define internal i32 @"\01-[Foo getDynamic_setDirect]"(
-// CHECK-LABEL: define hidden void @"\01-[Foo setGetDynamic_setDirect:]_inner"(
+// CHECK-LABEL: define hidden void @"\01-[Foo setGetDynamic_setDirect:]_nonnull"(
 // CHECK-LABEL: define hidden void @"\01-[Foo setGetDynamic_setDirect:]"(
 // CHECK-LABEL: define internal void @"\01-[Foo .cxx_destruct]"(
 @end
 
 @implementation Foo (Cat)
-// CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInCategory]_inner"(
+// CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInCategory]_nonnull"(
 // CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInCategory]"(
 - (int)directMethodInCategory {
   return 42;
 }
-// CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInCategoryNoDecl]_inner"(
+// CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInCategoryNoDecl]_nonnull"(
 // CHECK-LABEL: define hidden i32 @"\01-[Foo directMethodInCategoryNoDecl]"(
 - (int)directMethodInCategoryNoDecl __attribute__((objc_direct)) {
   return 42;
