@@ -26,35 +26,8 @@
 
 namespace llvm {
 namespace SPIRV {
-class SPIRVInstrInfo;
-// NOTE: using MapVector instead of DenseMap because it helps getting
-// everything ordered in a stable manner for a price of extra (NumKeys)*PtrSize
-// memory and expensive removals which do not happen anyway.
-class DTSortableEntry : public MapVector<const MachineFunction *, Register> {
-  SmallVector<DTSortableEntry *, 2> Deps;
 
-  struct FlagsTy {
-    unsigned IsFunc : 1;
-    unsigned IsGV : 1;
-    unsigned IsConst : 1;
-    // NOTE: bit-field default init is a C++20 feature.
-    FlagsTy() : IsFunc(0), IsGV(0), IsConst(0) {}
-  };
-  FlagsTy Flags;
-
-public:
-  // Common hoisting utility doesn't support function, because their hoisting
-  // require hoisting of params as well.
-  bool getIsFunc() const { return Flags.IsFunc; }
-  bool getIsGV() const { return Flags.IsGV; }
-  bool getIsConst() const { return Flags.IsConst; }
-  void setIsFunc(bool V) { Flags.IsFunc = V; }
-  void setIsGV(bool V) { Flags.IsGV = V; }
-  void setIsConst(bool V) { Flags.IsConst = V; }
-
-  const SmallVector<DTSortableEntry *, 2> &getDeps() const { return Deps; }
-  void addDep(DTSortableEntry *E) { Deps.push_back(E); }
-};
+using IRHandle = std::tuple<const void *, unsigned, unsigned>;
 
 enum SpecialTypeKind {
   STK_Empty = 0,
@@ -63,11 +36,10 @@ enum SpecialTypeKind {
   STK_Sampler,
   STK_Pipe,
   STK_DeviceEvent,
+  STK_ElementPointer,
   STK_Pointer,
   STK_Last = -1
 };
-
-using SpecialTypeDescriptor = std::tuple<const Type *, unsigned, unsigned>;
 
 union ImageAttrs {
   struct BitFlags {
@@ -94,18 +66,18 @@ union ImageAttrs {
   }
 };
 
-inline SpecialTypeDescriptor
-make_descr_image(const Type *SampledTy, unsigned Dim, unsigned Depth,
-                 unsigned Arrayed, unsigned MS, unsigned Sampled,
-                 unsigned ImageFormat, unsigned AQ = 0) {
+inline IRHandle make_descr_image(const Type *SampledTy, unsigned Dim,
+                                 unsigned Depth, unsigned Arrayed, unsigned MS,
+                                 unsigned Sampled, unsigned ImageFormat,
+                                 unsigned AQ = 0) {
   return std::make_tuple(
       SampledTy,
       ImageAttrs(Dim, Depth, Arrayed, MS, Sampled, ImageFormat, AQ).Val,
       SpecialTypeKind::STK_Image);
 }
 
-inline SpecialTypeDescriptor
-make_descr_sampled_image(const Type *SampledTy, const MachineInstr *ImageTy) {
+inline IRHandle make_descr_sampled_image(const Type *SampledTy,
+                                         const MachineInstr *ImageTy) {
   assert(ImageTy->getOpcode() == SPIRV::OpTypeImage);
   unsigned AC = AccessQualifier::AccessQualifier::None;
   if (ImageTy->getNumOperands() > 8)
@@ -120,170 +92,84 @@ make_descr_sampled_image(const Type *SampledTy, const MachineInstr *ImageTy) {
       SpecialTypeKind::STK_SampledImage);
 }
 
-inline SpecialTypeDescriptor make_descr_sampler() {
+inline IRHandle make_descr_sampler() {
   return std::make_tuple(nullptr, 0U, SpecialTypeKind::STK_Sampler);
 }
 
-inline SpecialTypeDescriptor make_descr_pipe(uint8_t AQ) {
+inline IRHandle make_descr_pipe(uint8_t AQ) {
   return std::make_tuple(nullptr, AQ, SpecialTypeKind::STK_Pipe);
 }
 
-inline SpecialTypeDescriptor make_descr_event() {
+inline IRHandle make_descr_event() {
   return std::make_tuple(nullptr, 0U, SpecialTypeKind::STK_DeviceEvent);
 }
 
-inline SpecialTypeDescriptor make_descr_pointee(const Type *ElementType,
-                                                unsigned AddressSpace) {
+inline IRHandle make_descr_pointee(const Type *ElementType,
+                                   unsigned AddressSpace) {
   return std::make_tuple(ElementType, AddressSpace,
-                         SpecialTypeKind::STK_Pointer);
+                         SpecialTypeKind::STK_ElementPointer);
+}
+
+inline IRHandle make_descr_ptr(const void *Ptr) {
+  return std::make_tuple(Ptr, 0U, SpecialTypeKind::STK_Pointer);
 }
 } // namespace SPIRV
 
-template <typename KeyTy> class SPIRVDuplicatesTrackerBase {
-public:
-  // NOTE: using MapVector instead of DenseMap helps getting everything ordered
-  // in a stable manner for a price of extra (NumKeys)*PtrSize memory and
-  // expensive removals which don't happen anyway.
-  using StorageTy = MapVector<KeyTy, SPIRV::DTSortableEntry>;
-
-private:
-  StorageTy Storage;
+// Bi-directional mappings between LLVM entities and (v-reg, machine function)
+// pairs support management of unique SPIR-V definitions per machine function
+// per an LLVM/GlobalISel entity (e.g., Type, Constant, Machine Instruction).
+class SPIRVIRMap {
+  DenseMap < std::pair<IRHandle, const MachineFunction *>, Register >> Vregs;
+  DenseMap<const MachineInstr *, IRHandle> Defs;
 
 public:
-  void add(KeyTy V, const MachineFunction *MF, Register R) {
-    if (find(V, MF).isValid())
-      return;
-
-    auto &S = Storage[V];
-    S[MF] = R;
-    if (std::is_same<Function,
-                     typename std::remove_const<
-                         typename std::remove_pointer<KeyTy>::type>::type>() ||
-        std::is_same<Argument,
-                     typename std::remove_const<
-                         typename std::remove_pointer<KeyTy>::type>::type>())
-      S.setIsFunc(true);
-    if (std::is_same<GlobalVariable,
-                     typename std::remove_const<
-                         typename std::remove_pointer<KeyTy>::type>::type>())
-      S.setIsGV(true);
-    if (std::is_same<Constant,
-                     typename std::remove_const<
-                         typename std::remove_pointer<KeyTy>::type>::type>())
-      S.setIsConst(true);
-  }
-
-  Register find(KeyTy V, const MachineFunction *MF) const {
-    auto iter = Storage.find(V);
-    if (iter != Storage.end()) {
-      auto Map = iter->second;
-      auto iter2 = Map.find(MF);
-      if (iter2 != Map.end())
-        return iter2->second;
+  bool add(IRHandle Handle, const MachineInstr *MI) {
+    auto [It, Inserted] =
+        Vregs.try_emplace(std::make_pair(Handle, MI->getMF()));
+    if (Inserted) {
+      It->second = MI->getOperand(0).getReg();
+      auto [_, IsConsistent] = Defs.insert_or_assign(MI, Handle);
+      assert(IsConsistent);
     }
+    return Inserted1;
+  }
+  bool erase(const MachineInstr *MI) {
+    bool Res = false;
+    if (auto It = Defs.find(MI); It != Defs.end()) {
+      Res = Vregs.erase(std::make_pair(It->second, MI->getMF()));
+      Defs.erase(It);
+    }
+    return Res;
+  }
+  Register find(IRHandle Handle, const MachineFunction *MF) {
+    if (auto It = Vregs.find(std::make_pair(Handle, MF)); It != Vregs.end())
+      return It->second;
     return Register();
   }
 
-  const StorageTy &getAllUses() const { return Storage; }
-
-private:
-  StorageTy &getAllUses() { return Storage; }
-
-  // The friend class needs to have access to the internal storage
-  // to be able to build dependency graph, can't declare only one
-  // function a 'friend' due to the incomplete declaration at this point
-  // and mutual dependency problems.
-  friend class SPIRVGeneralDuplicatesTracker;
-};
-
-template <typename T>
-class SPIRVDuplicatesTracker : public SPIRVDuplicatesTrackerBase<const T *> {};
-
-template <>
-class SPIRVDuplicatesTracker<SPIRV::SpecialTypeDescriptor>
-    : public SPIRVDuplicatesTrackerBase<SPIRV::SpecialTypeDescriptor> {};
-
-class SPIRVGeneralDuplicatesTracker {
-  SPIRVDuplicatesTracker<Type> TT;
-  SPIRVDuplicatesTracker<Constant> CT;
-  SPIRVDuplicatesTracker<GlobalVariable> GT;
-  SPIRVDuplicatesTracker<Function> FT;
-  SPIRVDuplicatesTracker<Argument> AT;
-  SPIRVDuplicatesTracker<MachineInstr> MT;
-  SPIRVDuplicatesTracker<SPIRV::SpecialTypeDescriptor> ST;
-
-public:
-  void add(const Type *Ty, const MachineFunction *MF, Register R) {
-    TT.add(unifyPtrType(Ty), MF, R);
+  // helpers
+  bool add(const Type *Ty, const MachineInstr *MI) {
+    return add(SPIRV::make_descr_ptr(unifyPtrType(Ty)), MI);
   }
-
-  void add(const Type *PointeeTy, unsigned AddressSpace,
-           const MachineFunction *MF, Register R) {
-    ST.add(SPIRV::make_descr_pointee(unifyPtrType(PointeeTy), AddressSpace), MF,
-           R);
+  void add(const void *Key, const MachineInstr *MI) {
+    return add(SPIRV::make_descr_ptr(Key), MI);
   }
-
-  void add(const Constant *C, const MachineFunction *MF, Register R) {
-    CT.add(C, MF, R);
+  bool add(const Type *PointeeTy, unsigned AddressSpace,
+           const MachineInstr *MI) {
+    return add(SPIRV::make_descr_pointee(unifyPtrType(PointeeTy), AddressSpace),
+               MI);
   }
-
-  void add(const GlobalVariable *GV, const MachineFunction *MF, Register R) {
-    GT.add(GV, MF, R);
-  }
-
-  void add(const Function *F, const MachineFunction *MF, Register R) {
-    FT.add(F, MF, R);
-  }
-
-  void add(const Argument *Arg, const MachineFunction *MF, Register R) {
-    AT.add(Arg, MF, R);
-  }
-
-  void add(const MachineInstr *MI, const MachineFunction *MF, Register R) {
-    MT.add(MI, MF, R);
-  }
-
-  void add(const SPIRV::SpecialTypeDescriptor &TD, const MachineFunction *MF,
-           Register R) {
-    ST.add(TD, MF, R);
-  }
-
   Register find(const Type *Ty, const MachineFunction *MF) {
-    return TT.find(unifyPtrType(Ty), MF);
+    return find(SPIRV::make_descr_ptr(unifyPtrType(Ty)), MF);
   }
-
+  Register find(const void *Key, const MachineFunction *MF) {
+    return find(SPIRV::make_descr_ptr(Key), MF);
+  }
   Register find(const Type *PointeeTy, unsigned AddressSpace,
                 const MachineFunction *MF) {
-    return ST.find(
+    return find(
         SPIRV::make_descr_pointee(unifyPtrType(PointeeTy), AddressSpace), MF);
   }
-
-  Register find(const Constant *C, const MachineFunction *MF) {
-    return CT.find(const_cast<Constant *>(C), MF);
-  }
-
-  Register find(const GlobalVariable *GV, const MachineFunction *MF) {
-    return GT.find(const_cast<GlobalVariable *>(GV), MF);
-  }
-
-  Register find(const Function *F, const MachineFunction *MF) {
-    return FT.find(const_cast<Function *>(F), MF);
-  }
-
-  Register find(const Argument *Arg, const MachineFunction *MF) {
-    return AT.find(const_cast<Argument *>(Arg), MF);
-  }
-
-  Register find(const MachineInstr *MI, const MachineFunction *MF) {
-    return MT.find(const_cast<MachineInstr *>(MI), MF);
-  }
-
-  Register find(const SPIRV::SpecialTypeDescriptor &TD,
-                const MachineFunction *MF) {
-    return ST.find(TD, MF);
-  }
-
-  const SPIRVDuplicatesTracker<Type> *getTypes() { return &TT; }
 };
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVDUPLICATESTRACKER_H
