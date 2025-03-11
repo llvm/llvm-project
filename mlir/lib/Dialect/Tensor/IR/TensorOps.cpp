@@ -2367,14 +2367,18 @@ static LogicalResult verifyInBoundsSlice(Operation *op,
     if (ShapedType::isDynamic(staticOffsets[i]))
       continue;
     if (staticOffsets[i] >= tensorType.getDimSize(i))
-      return op->emitOpError("offset ") << i << " is out-of-bounds";
+      return op->emitOpError("offset ")
+             << i << " is out-of-bounds: " << staticOffsets[i]
+             << " >= " << tensorType.getDimSize(i);
     if (ShapedType::isDynamic(staticSizes[i]) ||
         ShapedType::isDynamic(staticStrides[i]))
       continue;
-    if (staticOffsets[i] + (staticSizes[i] - 1) * staticStrides[i] >=
-        tensorType.getDimSize(i))
+    int64_t lastPos =
+        staticOffsets[i] + (staticSizes[i] - 1) * staticStrides[i];
+    if (lastPos >= tensorType.getDimSize(i))
       return op->emitOpError("slice along dimension ")
-             << i << " runs out-of-bounds";
+             << i << " runs out-of-bounds: " << lastPos
+             << " >= " << tensorType.getDimSize(i);
   }
   return success();
 }

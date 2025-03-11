@@ -259,7 +259,7 @@ func.func @illegal_num_offsets(%arg0 : tensor<?x?x?xf32>, %arg1 : index, %arg2 :
 // -----
 
 func.func @extract_slice_offset_out_of_bounds(%arg0: tensor<10xf32>) {
-  // expected-error@+1 {{offset 0 is out-of-bounds}}
+  // expected-error@+1 {{offset 0 is out-of-bounds: 10 >= 10}}
   %0 = tensor.extract_slice %arg0 [10][1][1] : tensor<10xf32> to tensor<1xf32>
   return
 }
@@ -267,7 +267,7 @@ func.func @extract_slice_offset_out_of_bounds(%arg0: tensor<10xf32>) {
 // -----
 
 func.func @extract_slice_runs_out_of_bounds(%arg0: tensor<9xf32>) {
-  // expected-error@+1 {{slice along dimension 0 runs out-of-bounds}}
+  // expected-error@+1 {{slice along dimension 0 runs out-of-bounds: 9 >= 9}}
   %0 = tensor.extract_slice %arg0 [3][4][2] : tensor<9xf32> to tensor<4xf32>
   return
 }
@@ -313,7 +313,7 @@ func.func @insert_slice_wrong_dynamic_type(%t1: tensor<?x4x4xf32>, %t2: tensor<8
 // -----
 
 func.func @insert_slice_offset_out_of_bounds(%arg0: tensor<1xf32>, %arg1: tensor<10xf32>) {
-  // expected-error@+1 {{offset 0 is out-of-bounds}}
+  // expected-error@+1 {{offset 0 is out-of-bounds: 10 >= 10}}
   %0 = tensor.insert_slice %arg0 into %arg1 [10][1][1] : tensor<1xf32> into tensor<10xf32>
   return
 }
@@ -321,7 +321,7 @@ func.func @insert_slice_offset_out_of_bounds(%arg0: tensor<1xf32>, %arg1: tensor
 // -----
 
 func.func @insert_slice_runs_out_of_bounds(%arg0: tensor<4xf32>, %arg1: tensor<9xf32>) {
-  // expected-error@+1 {{slice along dimension 0 runs out-of-bounds}}
+  // expected-error@+1 {{slice along dimension 0 runs out-of-bounds: 9 >= 9}}
   %0 = tensor.insert_slice %arg0 into %arg1 [3][4][2] : tensor<4xf32> into tensor<9xf32>
   return
 }
