@@ -294,14 +294,14 @@ elseif (FLANG_RT_GCC_RESOURCE_DIR)
 endif ()
 
 # Check if 128-bit float computations can be done via long double.
-check_cxx_source_compiles(
-  "#include <cfloat>
-   #if LDBL_MANT_DIG != 113
-   #error LDBL_MANT_DIG != 113
-   #endif
-   int main() { return 0; }
-  "
-  HAVE_LDBL_MANT_DIG_113)
+#check_cxx_source_compiles(
+#  "#include <cfloat>
+#   #if LDBL_MANT_DIG != 113
+#   #error LDBL_MANT_DIG != 113
+#   #endif
+#   int main() { return 0; }
+#  "
+#  HAVE_LDBL_MANT_DIG_113)
 
 
 #####################
@@ -325,7 +325,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED YES)
 
 
 configure_file(cmake/config.h.cmake.in config.h)
-
+if (FLANG_RT_INCLUDE_QUADMATH_H)
+  configure_file("cmake/quadmath_wrapper.h.in" "${FLANG_RT_BINARY_DIR}/quadmath_wrapper.h")
+endif ()
 
 # The bootstrap build will create a phony target with the same as the top-level
 # directory ("flang-rt") and delegate it to the runtimes build dir.
