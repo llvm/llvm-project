@@ -31,6 +31,7 @@
 #include "llvm/IR/SymbolTableListTraits.h"
 #include "llvm/Support/CBindingWrapping.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
 #include <iterator>
@@ -189,8 +190,10 @@ private:
   std::string ModuleID;           ///< Human readable identifier for the module
   std::string SourceFileName;     ///< Original source file name for module,
                                   ///< recorded in bitcode.
-  std::string TargetTriple;       ///< Platform target triple Module compiled on
-                                  ///< Format: (arch)(sub)-(vendor)-(sys0-(abi)
+  /// Platform target triple Module compiled on
+  /// Format: (arch)(sub)-(vendor)-(sys)-(abi)
+  // FIXME: Default construction is not the same as empty triple :(
+  Triple TargetTriple = Triple("");
   NamedMDSymTabType NamedMDSymTab;  ///< NamedMDNode names.
   DataLayout DL;                  ///< DataLayout associated with the module
   StringMap<unsigned>
@@ -294,8 +297,7 @@ public:
   const DataLayout &getDataLayout() const { return DL; }
 
   /// Get the target triple which is a string describing the target host.
-  /// @returns a string containing the target triple.
-  const std::string &getTargetTriple() const { return TargetTriple; }
+  const Triple &getTargetTriple() const { return TargetTriple; }
 
   /// Get the global data context.
   /// @returns LLVMContext - a container for LLVM's global information
@@ -338,7 +340,7 @@ public:
   void setDataLayout(const DataLayout &Other);
 
   /// Set the target triple.
-  void setTargetTriple(StringRef T) { TargetTriple = std::string(T); }
+  void setTargetTriple(Triple T) { TargetTriple = std::move(T); }
 
   /// Set the module-scope inline assembly blocks.
   /// A trailing newline is added if the input doesn't have one.

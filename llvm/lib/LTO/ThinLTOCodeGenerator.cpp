@@ -290,7 +290,7 @@ static void optimizeModule(Module &TheModule, TargetMachine &TM,
   PassBuilder PB(&TM, PTO, PGOOpt, &PIC);
 
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
-      new TargetLibraryInfoImpl(Triple(TM.getTargetTriple())));
+      new TargetLibraryInfoImpl(TM.getTargetTriple()));
   if (Freestanding)
     TLII->disableAllFunctions();
   FAM.registerPass([&] { return TargetLibraryAnalysis(*TLII); });
@@ -1153,8 +1153,7 @@ void ThinLTOCodeGenerator::crossReferenceSymbol(StringRef Name) {
 // TargetMachine factory
 std::unique_ptr<TargetMachine> TargetMachineBuilder::create() const {
   std::string ErrMsg;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(TheTriple.str(), ErrMsg);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TheTriple, ErrMsg);
   if (!TheTarget) {
     report_fatal_error(Twine("Can't load target for this Triple: ") + ErrMsg);
   }
@@ -1263,7 +1262,7 @@ void ThinLTOCodeGenerator::promote(Module &TheModule, ModuleSummaryIndex &Index,
 
   // Convert the preserved symbols set from string to GUID
   auto GUIDPreservedSymbols = computeGUIDPreservedSymbols(
-      File, PreservedSymbols, Triple(TheModule.getTargetTriple()));
+      File, PreservedSymbols, TheModule.getTargetTriple());
 
   // Add used symbol to the preserved symbols.
   addUsedSymbolToPreservedGUID(File, GUIDPreservedSymbols);
@@ -1316,7 +1315,7 @@ void ThinLTOCodeGenerator::crossModuleImport(Module &TheModule,
 
   // Convert the preserved symbols set from string to GUID
   auto GUIDPreservedSymbols = computeGUIDPreservedSymbols(
-      File, PreservedSymbols, Triple(TheModule.getTargetTriple()));
+      File, PreservedSymbols, TheModule.getTargetTriple());
 
   addUsedSymbolToPreservedGUID(File, GUIDPreservedSymbols);
 
@@ -1356,7 +1355,7 @@ void ThinLTOCodeGenerator::gatherImportedSummariesForModule(
 
   // Convert the preserved symbols set from string to GUID
   auto GUIDPreservedSymbols = computeGUIDPreservedSymbols(
-      File, PreservedSymbols, Triple(TheModule.getTargetTriple()));
+      File, PreservedSymbols, TheModule.getTargetTriple());
 
   addUsedSymbolToPreservedGUID(File, GUIDPreservedSymbols);
 
@@ -1394,7 +1393,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
 
   // Convert the preserved symbols set from string to GUID
   auto GUIDPreservedSymbols = computeGUIDPreservedSymbols(
-      File, PreservedSymbols, Triple(TheModule.getTargetTriple()));
+      File, PreservedSymbols, TheModule.getTargetTriple());
 
   addUsedSymbolToPreservedGUID(File, GUIDPreservedSymbols);
 
@@ -1434,7 +1433,7 @@ void ThinLTOCodeGenerator::emitImports(Module &TheModule, StringRef OutputName,
 void ThinLTOCodeGenerator::internalize(Module &TheModule,
                                        ModuleSummaryIndex &Index,
                                        const lto::InputFile &File) {
-  initTMBuilder(TMBuilder, Triple(TheModule.getTargetTriple()));
+  initTMBuilder(TMBuilder, TheModule.getTargetTriple());
   auto ModuleCount = Index.modulePaths().size();
   auto ModuleIdentifier = TheModule.getModuleIdentifier();
 
@@ -1495,7 +1494,7 @@ void ThinLTOCodeGenerator::internalize(Module &TheModule,
  * Perform post-importing ThinLTO optimizations.
  */
 void ThinLTOCodeGenerator::optimize(Module &TheModule) {
-  initTMBuilder(TMBuilder, Triple(TheModule.getTargetTriple()));
+  initTMBuilder(TMBuilder, TheModule.getTargetTriple());
 
   // Optimize now
   optimizeModule(TheModule, *TMBuilder.create(), OptLevel, Freestanding,
