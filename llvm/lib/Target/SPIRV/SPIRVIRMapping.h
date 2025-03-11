@@ -110,8 +110,8 @@ inline IRHandle make_descr_pointee(const Type *ElementType,
                          SpecialTypeKind::STK_ElementPointer);
 }
 
-inline IRHandle make_descr_ptr(const void *Ptr) {
-  return std::make_tuple(Ptr, 0U, SpecialTypeKind::STK_Pointer);
+inline IRHandle make_descr_ptr(const void *Ptr, unsigned Arg = 0U) {
+  return std::make_tuple(Ptr, Arg, SpecialTypeKind::STK_Pointer);
 }
 } // namespace SPIRV
 
