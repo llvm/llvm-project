@@ -316,6 +316,7 @@ protected:
     IK_FoldOpInit,
     IK_IsAOpInit,
     IK_ExistsOpInit,
+    IK_MatchOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
@@ -1181,6 +1182,38 @@ public:
   // Fold - If possible, fold this to a simpler init.  Return this if not
   // possible to fold.
   const Init *Fold(const Record *CurRec, bool IsFinal = false) const;
+
+  bool isComplete() const override { return false; }
+
+  const Init *resolveReferences(Resolver &R) const override;
+
+  const Init *getBit(unsigned Bit) const override;
+
+  std::string getAsString() const override;
+};
+
+/// !match(str, regex) - This operator produces 1 if the `str` matches the
+/// regular expression `regex`.
+class MatchOpInit final : public TypedInit, public FoldingSetNode {
+private:
+  const Init *Str;
+  const Init *Regex;
+
+  MatchOpInit(const Init *Str, const Init *Regex)
+      : TypedInit(IK_MatchOpInit, BitRecTy::get(Str->getRecordKeeper())),
+        Str(Str), Regex(Regex) {}
+
+public:
+  MatchOpInit(const MatchOpInit &) = delete;
+  MatchOpInit &operator=(const MatchOpInit &) = delete;
+
+  static bool classof(const Init *I) { return I->getKind() == IK_MatchOpInit; }
+
+  static const MatchOpInit *get(const Init *Str, const Init *Regex);
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  const Init *Fold() const;
 
   bool isComplete() const override { return false; }
 
