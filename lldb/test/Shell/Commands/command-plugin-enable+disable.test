@@ -1,0 +1,53 @@
+# This test validates the plugin enable and disable commands.
+# Currently it works only for system-runtime plugins and we only have one
+# system runtime plugin so testing is a bit limited.
+#
+# Note that commands that return errors will stop running a script, so we
+# have new RUN lines for any command that is expected to return an error.
+
+# RUN: %lldb -s %s -o exit 2>&1 | FileCheck %s
+
+# Test plugin list shows the default state which is expected to be enabled.
+plugin list
+# CHECK-LABEL: plugin list
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin disable disables a plugin.
+plugin disable systemruntime-macosx
+# CHECK-LABEL: plugin disable systemruntime-macosx
+# CHECK: system-runtime
+# CHECK:  [-] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Make sure plugin list shows it disabled as well.
+plugin list
+# CHECK: system-runtime
+# CHECK:  [-] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin enable re-enables a plugin.
+plugin enable systemruntime-macosx
+# CHECK-LABEL: plugin enable systemruntime-macosx
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Make sure plugin list shows it enabled as well.
+plugin list
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin disable with wildcard works.
+plugin disable system*
+# CHECK-LABEL: plugin disable system*
+# CHECK: system-runtime
+# CHECK:  [-] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin enable with wildcard works.
+plugin enable system*
+# CHECK-LABEL: plugin enable system*
+# CHECK: system-runtime
+# CHECK:  [+] systemruntime-macosx           System runtime plugin for Mac OS X native libraries
+
+# Test plugin enable/disable for unknown plugin returns an error.
+# RUN: %lldb -o "plugin enable some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+# RUN: %lldb -o "plugin disable some-plugin-that-does-not-exist" 2>&1 | FileCheck %s --check-prefix=ERROR_PLUGIN_NOT_FOUND
+# ERROR_PLUGIN_NOT_FOUND: error: Found no matching plugins
