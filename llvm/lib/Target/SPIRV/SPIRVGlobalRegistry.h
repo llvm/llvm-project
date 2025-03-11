@@ -55,11 +55,6 @@ class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // map an instruction to its value's attributes (type, name)
   DenseMap<MachineInstr *, std::pair<Type *, std::string>> ValueAttrs;
 
-  // Look for an equivalent of the newType in the map. Return the equivalent
-  // if it's found, otherwise insert newType to the map and return the type.
-  const MachineInstr *checkSpecialInstr(const SPIRV::SpecialTypeDescriptor &TD,
-                                        MachineIRBuilder &MIRBuilder);
-
   SmallPtrSet<const Type *, 4> TypesInProcessing;
   DenseMap<const Type *, SPIRVType *> ForwardPointerTypes;
 

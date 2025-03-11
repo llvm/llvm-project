@@ -119,19 +119,20 @@ inline IRHandle make_descr_ptr(const void *Ptr, unsigned Arg = 0U) {
 // pairs support management of unique SPIR-V definitions per machine function
 // per an LLVM/GlobalISel entity (e.g., Type, Constant, Machine Instruction).
 class SPIRVIRMapping {
-  DenseMap < std::pair<IRHandle, const MachineFunction *>,
-      const MachineInstr *MI >> Vregs;
-  DenseMap<const MachineInstr *, IRHandle> Defs;
+  DenseMap<std::pair<SPIRV::IRHandle, const MachineFunction *>,
+           const MachineInstr *>
+      Vregs;
+  DenseMap<const MachineInstr *, SPIRV::IRHandle> Defs;
 
 public:
-  bool add(IRHandle Handle, const MachineInstr *MI) {
+  bool add(SPIRV::IRHandle Handle, const MachineInstr *MI) {
     auto [It, Inserted] =
         Vregs.try_emplace(std::make_pair(Handle, MI->getMF()), MI);
     if (Inserted) {
       auto [_, IsConsistent] = Defs.insert_or_assign(MI, Handle);
       assert(IsConsistent);
     }
-    return Inserted1;
+    return Inserted;
   }
   bool erase(const MachineInstr *MI) {
     bool Res = false;
@@ -141,12 +142,13 @@ public:
     }
     return Res;
   }
-  const MachineInstr *findMI(IRHandle Handle, const MachineFunction *MF) {
+  const MachineInstr *findMI(SPIRV::IRHandle Handle,
+                             const MachineFunction *MF) {
     if (auto It = Vregs.find(std::make_pair(Handle, MF)); It != Vregs.end())
       return It->second;
     return nullptr;
   }
-  Register find(IRHandle Handle, const MachineFunction *MF) {
+  Register find(SPIRV::IRHandle Handle, const MachineFunction *MF) {
     const MachineInstr *MI = findMI(Handle, MF);
     return MI ? MI->getOperand(0).getReg() : Register();
   }
@@ -155,7 +157,7 @@ public:
   bool add(const Type *Ty, const MachineInstr *MI) {
     return add(SPIRV::make_descr_ptr(unifyPtrType(Ty)), MI);
   }
-  void add(const void *Key, const MachineInstr *MI) {
+  bool add(const void *Key, const MachineInstr *MI) {
     return add(SPIRV::make_descr_ptr(Key), MI);
   }
   bool add(const Type *PointeeTy, unsigned AddressSpace,
@@ -166,12 +168,23 @@ public:
   Register find(const Type *Ty, const MachineFunction *MF) {
     return find(SPIRV::make_descr_ptr(unifyPtrType(Ty)), MF);
   }
+  const MachineInstr *findMI(const Type *Ty, const MachineFunction *MF) {
+    return findMI(SPIRV::make_descr_ptr(unifyPtrType(Ty)), MF);
+  }
   Register find(const void *Key, const MachineFunction *MF) {
     return find(SPIRV::make_descr_ptr(Key), MF);
+  }
+  const MachineInstr *findMI(const void *Key, const MachineFunction *MF) {
+    return findMI(SPIRV::make_descr_ptr(Key), MF);
   }
   Register find(const Type *PointeeTy, unsigned AddressSpace,
                 const MachineFunction *MF) {
     return find(
+        SPIRV::make_descr_pointee(unifyPtrType(PointeeTy), AddressSpace), MF);
+  }
+  const MachineInstr *findMI(const Type *PointeeTy, unsigned AddressSpace,
+                             const MachineFunction *MF) {
+    return findMI(
         SPIRV::make_descr_pointee(unifyPtrType(PointeeTy), AddressSpace), MF);
   }
 };

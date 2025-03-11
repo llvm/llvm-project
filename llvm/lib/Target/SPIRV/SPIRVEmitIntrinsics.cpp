@@ -63,7 +63,7 @@ class SPIRVEmitIntrinsics
   SPIRVTargetMachine *TM = nullptr;
   SPIRVGlobalRegistry *GR = nullptr;
   Function *CurrF = nullptr;
-  bool TrackConstants = false;//true;
+  bool TrackConstants = true;
   bool HaveFunPtrs = false;
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
@@ -2038,7 +2038,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
   auto *II = dyn_cast<IntrinsicInst>(I);
   bool IsConstComposite =
       II && II->getIntrinsicID() == Intrinsic::spv_const_composite;
-  if (IsConstComposite) {
+  if (IsConstComposite && TrackConstants) {
     setInsertPointAfterDef(B, I);
     auto t = AggrConsts.find(I);
     assert(t != AggrConsts.end());
@@ -2055,7 +2055,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I,
       continue;
     unsigned OpNo = Op.getOperandNo();
     if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
-                (II->paramHasAttr(OpNo, Attribute::ImmArg))))
+               (II->paramHasAttr(OpNo, Attribute::ImmArg))))
       continue;
 
     if (!BPrepared) {
@@ -2434,7 +2434,7 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
         deduceOperandElementType(&Phi, nullptr);
 
   for (auto *I : Worklist) {
-    TrackConstants = false;//true;
+    TrackConstants = true;
     if (!I->getType()->isVoidTy() || isa<StoreInst>(I))
       setInsertPointAfterDef(B, I);
     // Visitors return either the original/newly created instruction for further

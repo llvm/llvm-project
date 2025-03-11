@@ -48,8 +48,7 @@ void SPIRVPreLegalizer::getAnalysisUsage(AnalysisUsage &AU) const {
 static void
 addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
                     const SPIRVSubtarget &STI,
-                    DenseMap<MachineInstr *, Type *> &TargetExtConstTypes,
-                    SmallSet<Register, 4> &TrackedConstRegs) {
+                    DenseMap<MachineInstr *, Type *> &TargetExtConstTypes) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
   DenseMap<MachineInstr *, Register> RegsAlreadyAddedToDT;
   SmallVector<MachineInstr *, 10> ToErase, ToEraseComposites;
@@ -66,7 +65,7 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       if (auto *GV = dyn_cast<GlobalValue>(Const)) {
         Register Reg = GR->find(GV, &MF);
         if (!Reg.isValid()) {
-          GR->add(GV, &MF, SrcReg);
+          GR->add(GV, MRI.getVRegDef(SrcReg));
           GR->addGlobalObject(GV, &MF, SrcReg);
         } else
           RegsAlreadyAddedToDT[&MI] = Reg;
@@ -77,22 +76,24 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             auto *BuildVec = MRI.getVRegDef(SrcReg);
             assert(BuildVec &&
                    BuildVec->getOpcode() == TargetOpcode::G_BUILD_VECTOR);
+            GR->add(Const, BuildVec);
             for (unsigned i = 0; i < ConstVec->getNumElements(); ++i) {
               // Ensure that OpConstantComposite reuses a constant when it's
               // already created and available in the same machine function.
               Constant *ElemConst = ConstVec->getElementAsConstant(i);
               Register ElemReg = GR->find(ElemConst, &MF);
               if (!ElemReg.isValid())
-                GR->add(ElemConst, &MF, BuildVec->getOperand(1 + i).getReg());
+                GR->add(ElemConst,
+                        MRI.getVRegDef(BuildVec->getOperand(1 + i).getReg()));
               else
                 BuildVec->getOperand(1 + i).setReg(ElemReg);
             }
           }
-          GR->add(Const, &MF, SrcReg);
-          TrackedConstRegs.insert(SrcReg);
           if (Const->getType()->isTargetExtTy()) {
             // remember association so that we can restore it when assign types
             MachineInstr *SrcMI = MRI.getVRegDef(SrcReg);
+            if (SrcMI)
+              GR->add(Const, SrcMI);
             if (SrcMI && (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT ||
                           SrcMI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF))
               TargetExtConstTypes[SrcMI] = Const->getType();
@@ -595,7 +596,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           // pointers/PtrCast-null-in-OpSpecConstantOp.ll).
           Register PrimaryReg = GR->find(OpCI, &MF);
           if (!PrimaryReg.isValid()) {
-            GR->add(OpCI, &MF, Reg);
+            GR->add(OpCI, &MI);
           } else if (PrimaryReg != Reg &&
                      MRI.getType(Reg) == MRI.getType(PrimaryReg)) {
             auto *RCReg = MRI.getRegClassOrNull(Reg);
@@ -730,7 +731,7 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
       auto AsmTargetMIB =
           MIRBuilder.buildInstr(SPIRV::OpAsmTargetINTEL).addDef(AsmTargetReg);
       addStringImm(ST.getTargetTripleAsStr(), AsmTargetMIB);
-      GR->add(AsmTargetMIB.getInstr(), &MF, AsmTargetReg);
+      GR->add(AsmTargetMIB.getInstr(), AsmTargetMIB);
     }
 
     // create types
@@ -761,7 +762,7 @@ insertInlineAsmProcess(MachineFunction &MF, SPIRVGlobalRegistry *GR,
     addStringImm(cast<MDString>(I1->getOperand(2).getMetadata()->getOperand(0))
                      ->getString(),
                  AsmMIB);
-    GR->add(AsmMIB.getInstr(), &MF, AsmReg);
+    GR->add(AsmMIB.getInstr(), AsmMIB);
 
     // calls the inline assembly instruction
     unsigned ExtraInfo = I2->getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
@@ -1054,8 +1055,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
   // a registry of target extension constants
   DenseMap<MachineInstr *, Type *> TargetExtConstTypes;
   // to keep record of tracked constants
-  SmallSet<Register, 4> TrackedConstRegs;
-  addConstantsToTrack(MF, GR, ST, TargetExtConstTypes, TrackedConstRegs);
+  addConstantsToTrack(MF, GR, ST, TargetExtConstTypes);
   foldConstantsIntoIntrinsics(MF, MIB);
   insertBitcasts(MF, GR, MIB);
   generateAssignInstrs(MF, GR, MIB, TargetExtConstTypes);
