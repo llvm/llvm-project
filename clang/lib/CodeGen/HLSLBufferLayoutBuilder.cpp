@@ -197,8 +197,7 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
   unsigned ArrayCount = 1;
   unsigned ArrayStride = 0;
 
-  unsigned NextRowOffset =
-      llvm::alignTo(EndOffset, CBufferRowSizeInBytes);
+  unsigned NextRowOffset = llvm::alignTo(EndOffset, CBufferRowSizeInBytes);
 
   llvm::Type *ElemLayoutTy = nullptr;
   QualType FieldTy = FD->getType();
