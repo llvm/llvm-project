@@ -661,7 +661,8 @@ static constexpr FeatureBitset XqciFeatureGroup = {
     RISCV::FeatureVendorXqcicm,  RISCV::FeatureVendorXqcics,
     RISCV::FeatureVendorXqcicsr, RISCV::FeatureVendorXqciint,
     RISCV::FeatureVendorXqcilia, RISCV::FeatureVendorXqcilo,
-    RISCV::FeatureVendorXqcilsm, RISCV::FeatureVendorXqcisls,
+    RISCV::FeatureVendorXqcilsm, RISCV::FeatureVendorXqcisim,
+    RISCV::FeatureVendorXqcisls,
 };
 
 static constexpr FeatureBitset XSfVectorGroup = {
