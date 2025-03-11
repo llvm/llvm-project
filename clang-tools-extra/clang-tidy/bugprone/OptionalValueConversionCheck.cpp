@@ -85,21 +85,26 @@ void OptionalValueConversionCheck::registerMatchers(MatchFinder *Finder) {
                // known template methods in std
                callExpr(
                    argumentCountIs(1),
-                   callee(functionDecl(
-                       matchers::matchesAnyListedName(MakeSmartPtrList),
-                       hasTemplateArgument(0, refersToType(BindOptionalType)))),
+                   anyOf(
+                       // match std::make_unique std::make_shared
+                       callee(functionDecl(
+                           matchers::matchesAnyListedName(MakeSmartPtrList),
+                           hasTemplateArgument(
+                               0, refersToType(BindOptionalType)))),
+                       // match first std::make_optional by limit argument count
+                       // (1) and template count (1).
+                       // 1. template< class T > constexpr
+                       //    std::optional<decay_t<T>> make_optional(T&& value);
+                       // 2. template< class T, class... Args > constexpr
+                       //    std::optional<T> make_optional(Args&&... args);
+                       callee(functionDecl(templateArgumentCountIs(1),
+                                           hasName(MakeOptional),
+                                           returns(BindOptionalType)))),
                    hasArgument(0, OptionalDerefMatcher)),
                callExpr(
-                   // match first std::make_optional by limit argument count (1)
-                   // and template count (1).
-                   // 1. template< class T > constexpr
-                   //    std::optional<decay_t<T>> make_optional(T&& value);
-                   // 2. template< class T, class... Args > constexpr
-                   //    std::optional<T> make_optional(Args&&... args);
+
                    argumentCountIs(1),
-                   callee(functionDecl(templateArgumentCountIs(1),
-                                       hasName(MakeOptional),
-                                       returns(BindOptionalType))),
+
                    hasArgument(0, OptionalDerefMatcher))),
            unless(anyOf(hasAncestor(typeLoc()),
                         hasAncestor(expr(matchers::hasUnevaluatedContext())))))

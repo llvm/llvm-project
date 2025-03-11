@@ -112,6 +112,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-optional-value-conversion
+  <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
+  conversion in argument of ``std::make_optional``.
+
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to find suspicious
   calls of ``std::string`` constructor with char pointer, start position and
@@ -123,10 +127,6 @@ Changes in existing checks
   and accessing ``value``. The option `IgnoreSmartPointerDereference` should
   no longer be needed and will be removed. Also fixing false positive from
   const reference accessors to objects containing optional member.
-
-- Improved :doc:`bugprone-optional-value-conversion
-  <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
-  conversion in argument of ``std::make_optional``.
 
 - Improved :doc:`bugprone-unsafe-functions
   <clang-tidy/checks/bugprone/unsafe-functions>` check to allow specifying
