@@ -2028,12 +2028,7 @@ ValueTrackerResult ValueTracker::getNextSourceFromRegSequence() {
 ValueTrackerResult ValueTracker::getNextSourceFromInsertSubreg() {
   assert((Def->isInsertSubreg() || Def->isInsertSubregLike()) &&
          "Invalid definition");
-
-  if (Def->getOperand(DefIdx).getSubReg())
-    // If we are composing subreg, bail out.
-    // Same remark as getNextSourceFromRegSequence.
-    // I.e., this may be turned into an assert.
-    return ValueTrackerResult();
+  assert(!Def->getOperand(DefIdx).getSubReg() && "no subreg defs in SSA");
 
   RegSubRegPair BaseReg;
   RegSubRegPairAndIdx InsertedReg;
