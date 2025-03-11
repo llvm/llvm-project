@@ -168,8 +168,8 @@ Expected<bool> LockFileManager::tryLock() {
 
   SmallString<128> AbsoluteFileName(FileName);
   if (std::error_code EC = sys::fs::make_absolute(AbsoluteFileName))
-    return createStringError("failed to obtain absolute path for " +
-                             AbsoluteFileName);
+    return createStringError(EC, "failed to obtain absolute path for " +
+                                     AbsoluteFileName);
   LockFileName = AbsoluteFileName;
   LockFileName += ".lock";
 
@@ -186,8 +186,8 @@ Expected<bool> LockFileManager::tryLock() {
   int UniqueLockFileID;
   if (std::error_code EC = sys::fs::createUniqueFile(
           UniqueLockFileName, UniqueLockFileID, UniqueLockFileName))
-    return createStringError("failed to create unique file " +
-                             UniqueLockFileName);
+    return createStringError(EC, "failed to create unique file " +
+                                     UniqueLockFileName);
 
   // Write our process ID to our unique lock file.
   {
