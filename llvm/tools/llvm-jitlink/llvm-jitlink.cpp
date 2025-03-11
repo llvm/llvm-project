@@ -27,7 +27,6 @@
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDebugObjectRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/GetDylibInterface.h"
 #include "llvm/ExecutionEngine/Orc/IndirectionUtils.h"
@@ -1248,13 +1247,11 @@ Session::Session(std::unique_ptr<ExecutorProcessControl> EPC, Error &Err)
       if (!UseEHFrames)
         ObjLayer.addPlugin(ExitOnErr(UnwindInfoRegistrationPlugin::Create(ES)));
       else
-        ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-            ES, ExitOnErr(EPCEHFrameRegistrar::Create(ES))));
+        ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
     }
   } else if (TT.isOSBinFormatELF()) {
     if (!NoExec)
-      ObjLayer.addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-          ES, ExitOnErr(EPCEHFrameRegistrar::Create(this->ES))));
+      ObjLayer.addPlugin(ExitOnErr(EHFrameRegistrationPlugin::Create(ES)));
     if (DebuggerSupport)
       ObjLayer.addPlugin(std::make_unique<DebugObjectManagerPlugin>(
           ES, ExitOnErr(createJITLoaderGDBRegistrar(this->ES)), true, true));
