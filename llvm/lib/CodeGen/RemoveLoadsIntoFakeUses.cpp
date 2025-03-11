@@ -84,6 +84,7 @@ INITIALIZE_PASS_END(RemoveLoadsIntoFakeUsesLegacy, DEBUG_TYPE,
 bool RemoveLoadsIntoFakeUsesLegacy::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
+
   return RemoveLoadsIntoFakeUses().run(MF);
 }
 
