@@ -402,6 +402,7 @@ enum NodeType : unsigned {
   TC_RETURN,
   TC_RETURN_GFX,
   TC_RETURN_CHAIN,
+  TC_RETURN_CHAIN_DVGPR,
   TRAP,
 
   // Masked control flow nodes.

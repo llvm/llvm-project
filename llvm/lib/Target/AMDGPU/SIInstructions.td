@@ -748,16 +748,15 @@ defm : si_cs_chain_tc_patterns<i64>;
 multiclass si_cs_chain_tc_dvgpr_patterns<
   ValueType execvt, RegisterOperand execrc = getSOPSrcForVT<execvt>.ret,
   Instruction tc = SI_CS_CHAIN_TC_W32_DVGPR> {
-  let AddedComplexity = 90 in {
   foreach callee = [ (i64 0), (tglobaladdr) ] in {
   def : GCNPat<
-    (AMDGPUtc_return_chain i64:$src0, callee, (i32 timm:$fpdiff), execvt:$exec,
-                           i32:$numvgprs, execvt:$fbexec, i64:$fbcallee),
+    (AMDGPUtc_return_chain_dvgpr i64:$src0, callee, (i32 timm:$fpdiff),
+                                 execvt:$exec, i32:$numvgprs,
+                                 execvt:$fbexec, i64:$fbcallee),
     (tc CCR_SGPR_64:$src0, (i64 0), i32imm:$fpdiff, execrc:$exec,
         SSrc_b32:$numvgprs, execrc:$fbexec, CCR_SGPR_64:$fbcallee)
   >;
   }
-  } // AddedComplexity
 }
 
 defm : si_cs_chain_tc_dvgpr_patterns<i32>; // On GFX12, dVGPR mode is wave32-only.
