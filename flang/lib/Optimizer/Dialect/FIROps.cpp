@@ -3941,6 +3941,26 @@ void fir::StoreOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
 }
 
 //===----------------------------------------------------------------------===//
+// CopyOp
+//===----------------------------------------------------------------------===//
+
+void fir::CopyOp::build(mlir::OpBuilder &builder, mlir::OperationState &result,
+                        mlir::Value source, mlir::Value destination,
+                        bool noOverlap) {
+  mlir::UnitAttr noOverlapAttr =
+      noOverlap ? builder.getUnitAttr() : mlir::UnitAttr{};
+  build(builder, result, source, destination, noOverlapAttr);
+}
+
+llvm::LogicalResult fir::CopyOp::verify() {
+  mlir::Type sourceType = fir::unwrapRefType(getSource().getType());
+  mlir::Type destinationType = fir::unwrapRefType(getDestination().getType());
+  if (sourceType != destinationType)
+    return emitOpError("source and destination must have the same value type");
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
 // StringLitOp
 //===----------------------------------------------------------------------===//
 
