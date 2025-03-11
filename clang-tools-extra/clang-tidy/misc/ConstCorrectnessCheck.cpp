@@ -56,7 +56,7 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
       AnalyzePointers == false)
     this->configurationDiag(
         "The check 'misc-const-correctness' will not "
-        "perform any analysis because both 'AnalyzeValues', "
+        "perform any analysis because 'AnalyzeValues', "
         "'AnalyzeReferences' and 'AnalyzePointers' are false.");
 }
 
