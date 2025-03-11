@@ -5,7 +5,7 @@
 // RUN:   "misc-const-correctness.AnalyzePointers": false\
 // RUN:  }}' -- -fno-delayed-template-parsing
 
-// CHECK-MESSAGES: warning: The check 'misc-const-correctness' will not perform any analysis because both 'AnalyzeValues', 'AnalyzeReferences' and 'AnalyzePointers' are false. [clang-tidy-config]
+// CHECK-MESSAGES: warning: The check 'misc-const-correctness' will not perform any analysis because 'AnalyzeValues', 'AnalyzeReferences' and 'AnalyzePointers' are false. [clang-tidy-config]
 
 void g() {
   int p_local0 = 42;
