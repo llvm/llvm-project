@@ -178,15 +178,17 @@ The default hostname being used `localhost`.
 
 Debugging sessions can also be starting using special URIs.
 
-The `vscode://llvm-vs-code-extensions.lldb-dap/launch/config?config={launch-config}`
+The `vscode://llvm-vs-code-extensions.lldb-dap/start?config={launch-config}`
 URI accepts a [URL-encoded](https://en.wikipedia.org/wiki/Percent-encoding)
 JSON launch config.
 
 This is useful for integration with custom scripts to start debugging
 sessions. The URI might be printed to the terminal, potentially using
 [OSC-8 hyperlinks](https://gist.github.com/egmontkob/eb114294efbcd5adb1944c9f3cb5feda),
-or passed to `vscode --open-url` or `xdg-open`, although mileage may vary
-depending on your specific debugging setup.
+or passed to `code --open-url` or `xdg-open`, although mileage may vary depending
+on your specific debugging setup. E.g., `code --open-url` will not work when using a
+SSH remote session. Furthermore, placeholders such as `${workspaceFolder}` are not
+supported within launch URLs.
 
 ### Configuration Settings Reference
 

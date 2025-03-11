@@ -4,7 +4,7 @@ export class LaunchUriHandler implements vscode.UriHandler {
     async handleUri(uri: vscode.Uri) {
         try {
             const params = new URLSearchParams(uri.query);
-            if (uri.path == '/launch/config') {
+            if (uri.path == '/start') {
                 const configJson = params.get("config");
                 if (configJson === null) {
                     throw new Error("Missing `config` URI parameter");
@@ -16,7 +16,8 @@ export class LaunchUriHandler implements vscode.UriHandler {
                     name: '',
                 };
                 Object.assign(debugConfig, JSON.parse(configJson));
-                debugConfig.name = debugConfig.name || debugConfig.program || "Adhoc Launch";
+                const defaultName = debugConfig.request == 'launch' ? "URL-based Launch" : "URL-based Attach";
+                debugConfig.name = debugConfig.name || debugConfig.program || defaultName;
                 // Force the type to `lldb-dap`. We don't want to allow launching any other
                 // Debug Adapters using this URI scheme.
                 if (debugConfig.type != "lldb-dap") {
@@ -30,7 +31,7 @@ export class LaunchUriHandler implements vscode.UriHandler {
             if (err instanceof Error) {
                 await vscode.window.showErrorMessage(`Failed to handle lldb-dap URI request: ${err.message}`);
             } else {
-                await vscode.window.showErrorMessage(`Failed to handle lldb-dap URI request`);
+                await vscode.window.showErrorMessage(`Failed to handle lldb-dap URI request: ${JSON.stringify(err)}`);
             }
         }
     }
