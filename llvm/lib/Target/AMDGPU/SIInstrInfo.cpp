@@ -6063,7 +6063,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
     }
   } else if (!IsInlineConst && !MO->isReg() && isSALU(MI)) {
     // There can be at most one literal operand, but it can be repeated.
-    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    for (unsigned i = 0, e = MI.getNumExplicitOperands(); i != e; ++i) {
       if (i == OpIdx)
         continue;
       const MachineOperand &Op = MI.getOperand(i);
