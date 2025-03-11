@@ -30,6 +30,30 @@ define amdgpu_whole_wave i32 @basic_test(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, vcc_lo
 ; DAGISEL-NEXT:    s_wait_loadcnt 0x0
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: basic_test:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_expcnt 0x0
+; GISEL-NEXT:    s_wait_samplecnt 0x0
+; GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GISEL-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    v_dual_cndmask_b32 v0, 5, v0 :: v_dual_cndmask_b32 v1, 3, v1
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
+; GISEL-NEXT:    s_xor_b32 exec_lo, vcc_lo, -1
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    scratch_load_b32 v0, off, s32
+; GISEL-NEXT:    scratch_load_b32 v1, off, s32 offset:4
+; GISEL-NEXT:    s_mov_b32 exec_lo, vcc_lo
+; GISEL-NEXT:    s_wait_loadcnt 0x0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %x = select i1 %active, i32 %a, i32 5
   %y = select i1 %active, i32 %b, i32 3
   %ret = call i32 @llvm.amdgcn.update.dpp.i32(i32 %x, i32 %y, i32 1, i32 1, i32 1, i1 false)
@@ -55,6 +79,24 @@ define amdgpu_whole_wave i32 @unused_active(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; DAGISEL-NEXT:    s_wait_loadcnt 0x0
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: unused_active:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_expcnt 0x0
+; GISEL-NEXT:    s_wait_samplecnt 0x0
+; GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_xor_saveexec_b32 s0, -1
+; GISEL-NEXT:    scratch_store_b32 off, v0, s32 ; 4-byte Folded Spill
+; GISEL-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-NEXT:    v_mov_b32_e32 v0, 14
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
+; GISEL-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
+; GISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GISEL-NEXT:    s_wait_loadcnt 0x0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   ret i32 14
 }
 
@@ -99,6 +141,45 @@ define amdgpu_whole_wave i32 @csr(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    s_wait_loadcnt 0x0
 ; DAGISEL-NEXT:    s_wait_alu 0xf1ff
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: csr:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_expcnt 0x0
+; GISEL-NEXT:    s_wait_samplecnt 0x0
+; GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
+; GISEL-NEXT:    s_clause 0x3
+; GISEL-NEXT:    scratch_store_b32 off, v2, s32
+; GISEL-NEXT:    scratch_store_b32 off, v0, s32 offset:4
+; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:8
+; GISEL-NEXT:    scratch_store_b32 off, v49, s32 offset:16
+; GISEL-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-NEXT:    scratch_store_b32 off, v40, s32 offset:12 ; 4-byte Folded Spill
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; clobber CSR
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    v_writelane_b32 v2, s20, 0
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; clobber non-CSR
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    scratch_load_b32 v40, off, s32 offset:12 ; 4-byte Folded Reload
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    v_dual_cndmask_b32 v0, 5, v0 :: v_dual_cndmask_b32 v1, 3, v1
+; GISEL-NEXT:    v_readlane_b32 s20, v2, 0
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GISEL-NEXT:    v_mov_b32_dpp v0, v1 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
+; GISEL-NEXT:    s_xor_b32 exec_lo, vcc_lo, -1
+; GISEL-NEXT:    s_clause 0x3
+; GISEL-NEXT:    scratch_load_b32 v2, off, s32
+; GISEL-NEXT:    scratch_load_b32 v0, off, s32 offset:4
+; GISEL-NEXT:    scratch_load_b32 v1, off, s32 offset:8
+; GISEL-NEXT:    scratch_load_b32 v49, off, s32 offset:16
+; GISEL-NEXT:    s_mov_b32 exec_lo, vcc_lo
+; GISEL-NEXT:    s_wait_loadcnt 0x0
+; GISEL-NEXT:    s_wait_alu 0xf1ff
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %x = select i1 %active, i32 %a, i32 5
   %y = select i1 %active, i32 %b, i32 3
   call void asm sideeffect "; clobber CSR", "~{v40},~{s48}"()
@@ -126,6 +207,24 @@ define amdgpu_whole_wave void @csr_vgpr_only(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; DAGISEL-NEXT:    s_wait_loadcnt 0x0
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: csr_vgpr_only:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_expcnt 0x0
+; GISEL-NEXT:    s_wait_samplecnt 0x0
+; GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_or_saveexec_b32 s0, -1
+; GISEL-NEXT:    scratch_store_b32 off, v40, s32 ; 4-byte Folded Spill
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; clobber CSR VGPR
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    scratch_load_b32 v40, off, s32 ; 4-byte Folded Reload
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GISEL-NEXT:    s_wait_loadcnt 0x0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   call void asm sideeffect "; clobber CSR VGPR", "~{v40}"()
   ret void
 }
@@ -153,6 +252,29 @@ define amdgpu_whole_wave void @sgpr_spill_only(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, s0
 ; DAGISEL-NEXT:    s_wait_loadcnt 0x0
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: sgpr_spill_only:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_expcnt 0x0
+; GISEL-NEXT:    s_wait_samplecnt 0x0
+; GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_xor_saveexec_b32 s0, -1
+; GISEL-NEXT:    scratch_store_b32 off, v0, s32 ; 4-byte Folded Spill
+; GISEL-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-NEXT:    v_writelane_b32 v0, s68, 0
+; GISEL-NEXT:    ;;#ASMSTART
+; GISEL-NEXT:    ; clobber CSR SGPR
+; GISEL-NEXT:    ;;#ASMEND
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    v_readlane_b32 s68, v0, 0
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_xor_b32 exec_lo, s0, -1
+; GISEL-NEXT:    scratch_load_b32 v0, off, s32 ; 4-byte Folded Reload
+; GISEL-NEXT:    s_mov_b32 exec_lo, s0
+; GISEL-NEXT:    s_wait_loadcnt 0x0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   call void asm sideeffect "; clobber CSR SGPR", "~{s68}"()
   ret void
 }
@@ -187,6 +309,36 @@ define amdgpu_whole_wave i32 @multiple_blocks(i1 %active, i32 %a, i32 %b) {
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, vcc_lo
 ; DAGISEL-NEXT:    s_wait_loadcnt 0x0
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: multiple_blocks:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_expcnt 0x0
+; GISEL-NEXT:    s_wait_samplecnt 0x0
+; GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GISEL-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GISEL-NEXT:    s_mov_b32 s1, exec_lo
+; GISEL-NEXT:    v_cmpx_eq_u32_e64 v0, v1
+; GISEL-NEXT:  ; %bb.1: ; %if.then
+; GISEL-NEXT:    v_add_nc_u32_e32 v1, v0, v1
+; GISEL-NEXT:  ; %bb.2: ; %if.end
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s1
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GISEL-NEXT:    v_cndmask_b32_e32 v0, v1, v0, vcc_lo
+; GISEL-NEXT:    s_xor_b32 exec_lo, vcc_lo, -1
+; GISEL-NEXT:    s_clause 0x1
+; GISEL-NEXT:    scratch_load_b32 v0, off, s32
+; GISEL-NEXT:    scratch_load_b32 v1, off, s32 offset:4
+; GISEL-NEXT:    s_mov_b32 exec_lo, vcc_lo
+; GISEL-NEXT:    s_wait_loadcnt 0x0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %c = icmp eq i32 %a, %b
   br i1 %c, label %if.then, label %if.end
 
@@ -230,6 +382,36 @@ define amdgpu_whole_wave i64 @ret_64(i1 %active, i64 %a, i64 %b) {
 ; DAGISEL-NEXT:    s_mov_b32 exec_lo, vcc_lo
 ; DAGISEL-NEXT:    s_wait_loadcnt 0x0
 ; DAGISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; GISEL-LABEL: ret_64:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GISEL-NEXT:    s_wait_expcnt 0x0
+; GISEL-NEXT:    s_wait_samplecnt 0x0
+; GISEL-NEXT:    s_wait_bvhcnt 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    s_xor_saveexec_b32 vcc_lo, -1
+; GISEL-NEXT:    s_clause 0x3
+; GISEL-NEXT:    scratch_store_b32 off, v0, s32
+; GISEL-NEXT:    scratch_store_b32 off, v1, s32 offset:4
+; GISEL-NEXT:    scratch_store_b32 off, v2, s32 offset:8
+; GISEL-NEXT:    scratch_store_b32 off, v3, s32 offset:12
+; GISEL-NEXT:    s_mov_b32 exec_lo, -1
+; GISEL-NEXT:    s_wait_alu 0xfffe
+; GISEL-NEXT:    v_dual_cndmask_b32 v0, 5, v0 :: v_dual_cndmask_b32 v1, 0, v1
+; GISEL-NEXT:    v_dual_cndmask_b32 v2, 3, v2 :: v_dual_cndmask_b32 v3, 0, v3
+; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GISEL-NEXT:    v_mov_b32_dpp v0, v2 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
+; GISEL-NEXT:    v_mov_b32_dpp v1, v3 quad_perm:[1,0,0,0] row_mask:0x1 bank_mask:0x1
+; GISEL-NEXT:    s_xor_b32 exec_lo, vcc_lo, -1
+; GISEL-NEXT:    s_clause 0x3
+; GISEL-NEXT:    scratch_load_b32 v0, off, s32
+; GISEL-NEXT:    scratch_load_b32 v1, off, s32 offset:4
+; GISEL-NEXT:    scratch_load_b32 v2, off, s32 offset:8
+; GISEL-NEXT:    scratch_load_b32 v3, off, s32 offset:12
+; GISEL-NEXT:    s_mov_b32 exec_lo, vcc_lo
+; GISEL-NEXT:    s_wait_loadcnt 0x0
+; GISEL-NEXT:    s_setpc_b64 s[30:31]
   %x = select i1 %active, i64 %a, i64 5
   %y = select i1 %active, i64 %b, i64 3
   %ret = call i64 @llvm.amdgcn.update.dpp.i64(i64 %x, i64 %y, i32 1, i32 1, i32 1, i1 false)
