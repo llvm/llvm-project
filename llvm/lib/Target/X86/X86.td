@@ -772,7 +772,6 @@ def TuningUseGLMDivSqrtCosts
 def TuningBranchHint: SubtargetFeature<"branch-hint", "HasBranchHint", "true",
                                         "Target has branch hint feature">;
 
-
 //===----------------------------------------------------------------------===//
 // X86 CPU Families
 // TODO: Remove these - use general tuning features to determine codegen.
@@ -1269,8 +1268,7 @@ def ProcessorFeatures {
   // Tremont
   list<SubtargetFeature> TRMAdditionalFeatures = [FeatureCLWB,
                                                   FeatureGFNI];
-  list<SubtargetFeature> TRMAdditionalTuning = [];
-  list<SubtargetFeature> TRMTuning = !listconcat(GLPTuning, TRMAdditionalTuning);
+  list<SubtargetFeature> TRMTuning = GLPTuning;
   list<SubtargetFeature> TRMFeatures =
     !listconcat(GLPFeatures, TRMAdditionalFeatures);
 
@@ -1742,7 +1740,7 @@ def : ProcModel<P, SandyBridgeModel, [
 [
   TuningMacroFusion,
   TuningSlowUAMem16,
-  TuningInsertVZEROUPPER,
+  TuningInsertVZEROUPPER
 ]>;
 }
 foreach P = ["penryn", "core_2_duo_sse4_1"] in {
