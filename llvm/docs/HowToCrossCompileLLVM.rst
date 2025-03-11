@@ -16,8 +16,8 @@ existing ``clang`` install as the host compiler.
 
 .. note::
   These instructions have been tested for targeting 32-bit ARM, AArch64, or
-  64-bit RISC-V from an x86_64 host. But should be equally applicable to any
-  other target.
+  64-bit RISC-V from an x86_64 Linux host. But should be equally applicable to
+  any other target.
 
 Setting up a sysroot
 --------------------
