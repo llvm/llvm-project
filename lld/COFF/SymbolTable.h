@@ -41,6 +41,8 @@ struct WrappedSymbol {
   Symbol *wrap;
 };
 
+struct UndefinedDiag;
+
 // SymbolTable is a bucket of all known symbols, including defined,
 // undefined, or lazy symbols (the last one is symbols in archive
 // files whose archive members are not yet loaded).
@@ -195,6 +197,8 @@ public:
   uint32_t loadConfigSize = 0;
   void initializeLoadConfig();
 
+  std::string printSymbol(Symbol *sym) const;
+
 private:
   /// Given a name without "__imp_" prefix, returns a defined symbol
   /// with the "__imp_" prefix, if it exists.
@@ -216,6 +220,7 @@ private:
   reportProblemSymbols(const llvm::SmallPtrSetImpl<Symbol *> &undefs,
                        const llvm::DenseMap<Symbol *, Symbol *> *localImports,
                        bool needBitcodeFiles);
+  void reportUndefinedSymbol(const UndefinedDiag &undefDiag);
 };
 
 std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);
