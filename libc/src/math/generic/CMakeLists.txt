@@ -4242,6 +4242,16 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  fmaf16
+  SRCS
+    fmaf16.cpp
+  HDRS
+    ../fmaf16.h
+  DEPENDS
+    libc.src.__support.FPUtil.fma
+)
+
+add_entrypoint_object(
   fma
   SRCS
     fma.cpp

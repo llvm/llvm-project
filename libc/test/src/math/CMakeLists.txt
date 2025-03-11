@@ -1777,6 +1777,23 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  fmaf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    fmaf16_test.cpp
+  HDRS
+    FmaTest.h
+  DEPENDS
+    libc.src.math.fmaf16
+    libc.src.stdlib.rand
+    libc.src.stdlib.srand
+  FLAGS
+    FMA_OPT__ONLY
+)
+
+add_fp_unittest(
   fma_test
   NEED_MPFR
   SUITE
