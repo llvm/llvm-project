@@ -1555,3 +1555,98 @@ func.func @bad_reshape(%arg0: !hlfir.expr<1x!fir.char<1,2>>, %arg1: !hlfir.expr<
   %0 = hlfir.reshape %arg0 %arg1 pad %arg2 : (!hlfir.expr<1x!fir.char<1,2>>, !hlfir.expr<1xi32>, !hlfir.expr<1x!fir.char<2,?>>) -> !hlfir.expr<?x!fir.char<1,?>>
   return
 }
+
+// -----
+
+func.func @empty_dc_wrapper_body() {
+  // expected-error@+1 {{'hlfir.do_concurrent' op expects a non-empty block}}
+  hlfir.do_concurrent {
+  }
+  return
+}
+
+// -----
+
+func.func @dc_wrong_terminator() {
+  // expected-error@+1 {{'hlfir.do_concurrent' op must be terminated by 'hlfir.do_concurrent.loop'}}
+  hlfir.do_concurrent {
+    llvm.return
+  }
+  return
+}
+
+// -----
+
+func.func @dc_0d() {
+   // expected-error@+2 {{'hlfir.do_concurrent.loop' op needs at least one tuple element for lowerBound, upperBound and step}}
+  hlfir.do_concurrent {
+    hlfir.do_concurrent.loop () = () to () step () {
+      %tmp = fir.alloca i32
+    }
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_parent(%arg0: index, %arg1: index) {
+  // expected-error@+1 {{'hlfir.do_concurrent.loop' op expects parent op 'hlfir.do_concurrent'}}
+  "hlfir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+  ^bb0(%arg2: index):
+     %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+  }) : (index, index) -> ()
+  return
+}
+
+// -----
+
+func.func @dc_invalid_control(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'hlfir.do_concurrent.loop' op different number of tuple elements for lowerBound, upperBound or step}}
+  hlfir.do_concurrent {
+    "hlfir.do_concurrent.loop"(%arg0, %arg1) <{operandSegmentSizes = array<i32: 1, 1, 0, 0>}> ({
+    ^bb0(%arg2: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_ind_var(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'hlfir.do_concurrent.loop' op expects the same number of induction variables: 2 as bound and step values: 1}}
+  hlfir.do_concurrent {
+    "hlfir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    ^bb0(%arg3: index, %arg4: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_ind_var_type(%arg0: index, %arg1: index) {
+  // expected-error@+2 {{'hlfir.do_concurrent.loop' op expects arguments for the induction variable to be of index type}}
+  hlfir.do_concurrent {
+    "hlfir.do_concurrent.loop"(%arg0, %arg1, %arg0) <{operandSegmentSizes = array<i32: 1, 1, 1, 0>}> ({
+    ^bb0(%arg3: i32):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index) -> ()
+  }
+  return
+}
+
+// -----
+
+func.func @dc_invalid_reduction(%arg0: index, %arg1: index) {
+  %sum = fir.alloca i32
+  // expected-error@+2 {{'hlfir.do_concurrent.loop' op mismatch in number of reduction variables and reduction attributes}}
+  hlfir.do_concurrent {
+    "hlfir.do_concurrent.loop"(%arg0, %arg1, %arg0, %sum) <{operandSegmentSizes = array<i32: 1, 1, 1, 1>}> ({
+    ^bb0(%arg3: index):
+      %tmp = "fir.alloca"() <{in_type = i32, operandSegmentSizes = array<i32: 0, 0>}> : () -> !fir.ref<i32>
+    }) : (index, index, index, !fir.ref<i32>) -> ()
+  }
+  return
+}
