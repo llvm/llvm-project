@@ -65,7 +65,7 @@ fmod_impl(T X, T Y) {
   return __builtin_elementwise_fmod(X, Y);
 #else
   T div = X / Y;
-  bool ge = div >= -div;
+  bool ge = div >= 0;
   T frc = frac(abs(div));
   return select<T>(ge, frc, -frc) * Y;
 #endif
@@ -77,7 +77,7 @@ constexpr vector<T, N> fmod_vec_impl(vector<T, N> X, vector<T, N> Y) {
   return __builtin_elementwise_fmod(X, Y);
 #else
   vector<T, N> div = X / Y;
-  vector<bool, N> ge = div >= -div;
+  vector<bool, N> ge = div >= 0;
   vector<T, N> frc = frac(abs(div));
   return select<T>(ge, frc, -frc) * Y;
 #endif
