@@ -5075,6 +5075,9 @@ void SelectionDAGLegalize::PromoteNode(SDNode *Node) {
   if (Node->getOpcode() == ISD::BR_CC ||
       Node->getOpcode() == ISD::SELECT_CC)
     OVT = Node->getOperand(2).getSimpleValueType();
+  // Preserve fast math flags
+  SDNodeFlags FastMathFlags = Node->getFlags() & SDNodeFlags::FastMathFlags;
+  SelectionDAG::FlagInserter FlagsInserter(DAG, FastMathFlags);
   MVT NVT = TLI.getTypeToPromoteTo(Node->getOpcode(), OVT);
   SDLoc dl(Node);
   SDValue Tmp1, Tmp2, Tmp3, Tmp4;
