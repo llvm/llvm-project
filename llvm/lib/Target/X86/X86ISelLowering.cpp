@@ -31908,7 +31908,7 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
   // especially clever.
 
   // Use `fence seq_cst` over `llvm.x64.sse2.mfence` here to get the correct
-  // lowering for SSID == SyncScope::SingleThread and !hasMFence
+  // lowering for SSID == SyncScope::SingleThread and avoidMFence || !hasMFence
   Builder.CreateFence(AtomicOrdering::SequentiallyConsistent, SSID);
 
   // Finally we can emit the atomic load.
@@ -31997,7 +31997,7 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, const X86Subtarget &Subtarget,
   // cross-thread fence.
   if (FenceOrdering == AtomicOrdering::SequentiallyConsistent &&
       FenceSSID == SyncScope::System) {
-    if (Subtarget.hasMFence())
+    if (!Subtarget.avoidMFence() && Subtarget.hasMFence())
       return DAG.getNode(X86ISD::MFENCE, dl, MVT::Other, Op.getOperand(0));
 
     SDValue Chain = Op.getOperand(0);
@@ -57973,24 +57973,28 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       // TODO: Relax VBMI requirement for repeated shuffle ops - currently
       // limited to targets that should always have good cross lane shuffles.
       if (!IsSplat && NumOps == 2 && VT.is256BitVector() &&
-          (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
-          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1) ||
-           (Ops[0].getOperand(0) == Ops[1].getOperand(0) &&
-            Ops[0].getOperand(1) == Ops[1].getOperand(1) &&
-            Subtarget.hasVBMI()))) {
-        int NumSubElts = Op0.getValueType().getVectorNumElements();
-        SmallVector<int> NewMask;
-        for (int M : cast<ShuffleVectorSDNode>(Ops[0])->getMask()) {
-          M = M >= NumSubElts ? M + NumSubElts : M;
-          NewMask.push_back(M);
+          (EltSizeInBits >= 32 || Subtarget.hasInt256())) {
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1 ||
+            (Ops[0].getOperand(0) == Ops[1].getOperand(0) &&
+             Ops[0].getOperand(1) == Ops[1].getOperand(1) &&
+             Subtarget.hasVBMI())) {
+          int NumSubElts = Op0.getValueType().getVectorNumElements();
+          SmallVector<int> NewMask;
+          for (int M : cast<ShuffleVectorSDNode>(Ops[0])->getMask()) {
+            M = M >= NumSubElts ? M + NumSubElts : M;
+            NewMask.push_back(M);
+          }
+          for (int M : cast<ShuffleVectorSDNode>(Ops[1])->getMask()) {
+            if (0 <= M)
+              M = (M >= NumSubElts ? M + NumSubElts : M) + NumSubElts;
+            NewMask.push_back(M);
+          }
+          Concat0 = Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0);
+          Concat1 = Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1);
+          return DAG.getVectorShuffle(VT, DL, Concat0, Concat1, NewMask);
         }
-        for (int M : cast<ShuffleVectorSDNode>(Ops[1])->getMask()) {
-          if (0 <= M)
-            M = (M >= NumSubElts ? M + NumSubElts : M) + NumSubElts;
-          NewMask.push_back(M);
-        }
-        return DAG.getVectorShuffle(VT, DL, ConcatSubOperand(VT, Ops, 0),
-                                    ConcatSubOperand(VT, Ops, 1), NewMask);
       }
       break;
     }
