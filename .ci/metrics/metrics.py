@@ -179,6 +179,10 @@ def github_get_metrics(
                 datetime.datetime.now(datetime.timezone.utc) - completed_at
             ).total_seconds() / 60
             if metric_age_mn > GRAFANA_METRIC_MAX_AGE_MN:
+                logging.info(
+                    f"Job {job.id} from workflow {task.id} dropped due"
+                    + f" to staleness: {metric_age_mn}mn old."
+                )
                 continue
 
             logging.info(f"Adding a job metric for job {job.id} in workflow {task.id}")
