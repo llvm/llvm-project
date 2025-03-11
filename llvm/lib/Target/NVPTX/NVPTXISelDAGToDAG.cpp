@@ -2039,6 +2039,11 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
       Val = AndLHS;
       Start = CurDAG->getTargetConstant(ShiftAmt, DL, MVT::i32);
       Len = CurDAG->getTargetConstant(NumBits, DL, MVT::i32);
+
+      // If we have a arithmetic right shift, we need to use the signed bfe
+      // variant only if the MSB is copied as part of the mask
+      if (N->getOpcode() == ISD::SRA)
+        IsSigned = (ShiftAmt + NumBits) == Val.getValueSizeInBits();
     } else if (LHS->getOpcode() == ISD::SHL) {
       // Here, we have a pattern like:
       //

@@ -132,7 +132,7 @@ define i32 @bfe_ashr_signed_32(i32 %x) {
 ; CHECK-O0-EMPTY:
 ; CHECK-O0-NEXT:  // %bb.0:
 ; CHECK-O0-NEXT:    ld.param.u32 %r1, [bfe_ashr_signed_32_param_0];
-; CHECK-O0-NEXT:    bfe.u32 %r2, %r1, 20, 12;
+; CHECK-O0-NEXT:    bfe.s32 %r2, %r1, 20, 12;
 ; CHECK-O0-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-O0-NEXT:    ret;
   %and = and i32 %x, -65536
@@ -162,7 +162,7 @@ define i64 @bfe_ashr_signed_64(i64 %x) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.u64 %rd1, [bfe_ashr_signed_64_param_0];
-; CHECK-NEXT:    bfe.u64 %rd2, %rd1, 16, 48;
+; CHECK-NEXT:    bfe.s64 %rd2, %rd1, 16, 48;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd2;
 ; CHECK-NEXT:    ret;
   %and = and i64 %x, -65536
@@ -194,7 +194,7 @@ define i32 @bfe3(i128 %a) {
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [bfe3_param_0];
 ; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
-; CHECK-NEXT:    bfe.u32 %r2, %r1, 15, 17;
+; CHECK-NEXT:    bfe.s32 %r2, %r1, 15, 17;
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
   %trunc = trunc i128 %a to i32
@@ -210,7 +210,7 @@ define i64 @bfe4(i128 %a) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.v2.u64 {%rd1, %rd2}, [bfe4_param_0];
-; CHECK-NEXT:    bfe.u64 %rd3, %rd1, 17, 47;
+; CHECK-NEXT:    bfe.s64 %rd3, %rd1, 17, 47;
 ; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
 ; CHECK-NEXT:    ret;
   %trunc = trunc i128 %a to i64
