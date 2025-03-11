@@ -657,7 +657,8 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
                "is, that `newLayout` spec entries can be nested in an op with "
                "`oldLayout` spec entries. `newSpec` and `identified` are"
                "provided to further query data from the combined spec, e.g.,"
-               "the default address space.",
+               "the default address space. TODO: Revisit this method once"
+               "https://github.com/llvm/llvm-project/issues/130321 gets solved",
       /*retTy=*/"bool",
       /*methodName=*/"areCompatible",
       /*args=*/(ins "::mlir::DataLayoutEntryListRef":$oldLayout,
