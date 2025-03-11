@@ -169,7 +169,7 @@ Expected<bool> LockFileManager::tryLock() {
   SmallString<128> AbsoluteFileName(FileName);
   if (std::error_code EC = sys::fs::make_absolute(AbsoluteFileName))
     return createStringError(EC, "failed to obtain absolute path for " +
-                                     AbsoluteFileName);
+                                     AbsoluteFileName); // We don't even know the LockFileName yet.
   LockFileName = AbsoluteFileName;
   LockFileName += ".lock";
 
@@ -180,6 +180,8 @@ Expected<bool> LockFileManager::tryLock() {
     return false;
   }
 
+  // LockFileName either does not exist or we could not read it and removed it in readLockFile().
+
   // Create a lock file that is unique to this instance.
   UniqueLockFileName = LockFileName;
   UniqueLockFileName += "-%%%%%%%%";
@@ -187,13 +189,13 @@ Expected<bool> LockFileManager::tryLock() {
   if (std::error_code EC = sys::fs::createUniqueFile(
           UniqueLockFileName, UniqueLockFileID, UniqueLockFileName))
     return createStringError(EC, "failed to create unique file " +
-                                     UniqueLockFileName);
+                                     UniqueLockFileName); // LockFileName still does not exist.
 
   // Write our process ID to our unique lock file.
   {
     SmallString<256> HostID;
     if (auto EC = getHostID(HostID))
-      return createStringError(EC, "failed to get host id");
+      return createStringError(EC, "failed to get host id"); // LockFileName still does not exist. We may leave behind UniqueLockFileName though, this that in a follow-up.
 
     raw_fd_ostream Out(UniqueLockFileID, /*shouldClose=*/true);
     Out << HostID << ' ' << sys::Process::getProcessId();
@@ -207,7 +209,7 @@ Expected<bool> LockFileManager::tryLock() {
       sys::fs::remove(UniqueLockFileName);
       // Don't call report_fatal_error.
       Out.clear_error();
-      return std::move(Err);
+      return std::move(Err); // LockFileName still does not exist.
     }
   }
 
@@ -227,7 +229,7 @@ Expected<bool> LockFileManager::tryLock() {
 
     if (EC != errc::file_exists)
       return createStringError(EC, "failed to create link " + LockFileName +
-                                       " to " + UniqueLockFileName);
+                                       " to " + UniqueLockFileName); // We failed to create LockFileName for a weird reason.
 
     // Someone else managed to create the lock file first. Read the process ID
     // from the lock file.
@@ -248,7 +250,7 @@ Expected<bool> LockFileManager::tryLock() {
     // ownership.
     if ((EC = sys::fs::remove(LockFileName)))
       return createStringError(EC, "failed to remove lockfile " +
-                                       UniqueLockFileName);
+                                       UniqueLockFileName); // Failed to remove LockFileName. Why try to do it again?
   }
 }
 
