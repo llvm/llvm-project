@@ -742,16 +742,7 @@ public:
   static char ID;
   SIInsertWaitcntsLegacy() : MachineFunctionPass(ID) {}
 
-  bool runOnMachineFunction(MachineFunction &MF) override {
-    auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
-    auto *PDT =
-        &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
-    AliasAnalysis *AA = nullptr;
-    if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
-      AA = &AAR->getAAResults();
-
-    return SIInsertWaitcnts(MLI, PDT, AA).run(MF);
-  }
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   StringRef getPassName() const override {
     return "SI insert wait instructions";
@@ -2497,6 +2488,17 @@ bool SIInsertWaitcnts::shouldFlushVmCnt(MachineLoop *ML,
   if (!ST->hasVscnt() && HasVMemStore && !HasVMemLoad && UsesVgprLoadedOutside)
     return true;
   return HasVMemLoad && UsesVgprLoadedOutside && ST->hasVmemWriteVgprInOrder();
+}
+
+bool SIInsertWaitcntsLegacy::runOnMachineFunction(MachineFunction &MF) {
+  auto *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  auto *PDT =
+      &getAnalysis<MachinePostDominatorTreeWrapperPass>().getPostDomTree();
+  AliasAnalysis *AA = nullptr;
+  if (auto *AAR = getAnalysisIfAvailable<AAResultsWrapperPass>())
+    AA = &AAR->getAAResults();
+
+  return SIInsertWaitcnts(MLI, PDT, AA).run(MF);
 }
 
 PreservedAnalyses
