@@ -95,7 +95,7 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
         return WalkResult::interrupt();
       }
 
-      if(dim.value() >= shapedType.getRank()) {
+      if (dim.value() >= shapedType.getRank()) {
         op->emitOpError("invalid dim for shaped type rank");
         return WalkResult::interrupt();
       }
