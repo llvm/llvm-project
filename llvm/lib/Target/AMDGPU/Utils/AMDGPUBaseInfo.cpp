@@ -1805,7 +1805,7 @@ unsigned encodeFieldVaSsrc(unsigned Encoded, unsigned VaSsrc) {
 }
 
 unsigned encodeFieldVaSsrc(unsigned VaSsrc) {
-  return encodeFieldVaSsrc(0xfff, VaSsrc);
+  return encodeFieldVaSsrc(0xffff, VaSsrc);
 }
 
 unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt) {
@@ -1813,7 +1813,7 @@ unsigned encodeFieldHoldCnt(unsigned Encoded, unsigned HoldCnt) {
 }
 
 unsigned encodeFieldHoldCnt(unsigned HoldCnt) {
-  return encodeFieldHoldCnt(0xfff, HoldCnt);
+  return encodeFieldHoldCnt(0xffff, HoldCnt);
 }
 
 } // namespace DepCtr

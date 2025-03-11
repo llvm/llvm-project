@@ -76,3 +76,4 @@ body: |
     DBG_VALUE $sgpr0
     renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc
 ...
+
