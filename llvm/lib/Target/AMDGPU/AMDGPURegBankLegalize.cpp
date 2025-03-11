@@ -89,13 +89,12 @@ const RegBankLegalizeRules &getRules(const GCNSubtarget &ST,
   static SmallDenseMap<unsigned, std::unique_ptr<RegBankLegalizeRules>>
       CacheForRuleSet;
   std::lock_guard<std::mutex> Lock(GlobalMutex);
-  if (!CacheForRuleSet.contains(ST.getGeneration())) {
-    auto Rules = std::make_unique<RegBankLegalizeRules>(ST, MRI);
-    CacheForRuleSet[ST.getGeneration()] = std::move(Rules);
-  } else {
-    CacheForRuleSet[ST.getGeneration()]->refreshRefs(ST, MRI);
-  }
-  return *CacheForRuleSet[ST.getGeneration()];
+  auto [It, Inserted] = CacheForRuleSet.try_emplace(ST.getGeneration());
+  if (Inserted)
+    It->second = std::make_unique<RegBankLegalizeRules>(ST, MRI);
+  else
+    It->second->refreshRefs(ST, MRI);
+  return *It->second;
 }
 
 class AMDGPURegBankLegalizeCombiner {
