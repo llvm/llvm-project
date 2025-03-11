@@ -4393,7 +4393,10 @@ gentbl_cc_library(
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Conversion/Passes.td",
-    deps = [":PassBaseTdFiles"],
+    deps = [
+        ":PassBaseTdFiles",
+        ":VectorTransformsTdFiles",
+    ],
 )
 
 cc_library(
@@ -4472,6 +4475,7 @@ cc_library(
         ":VectorToSCF",
         ":VectorToSPIRV",
         ":VectorToXeGPU",
+        ":VectorTransforms",
     ],
 )
 

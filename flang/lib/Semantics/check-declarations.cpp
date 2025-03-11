@@ -3486,7 +3486,7 @@ void CheckHelper::CheckDioDummyIsDefaultInteger(
 }
 
 void CheckHelper::CheckDioDummyIsScalar(const Symbol &subp, const Symbol &arg) {
-  if (arg.Rank() > 0 || arg.Corank() > 0) {
+  if (arg.Rank() > 0) {
     messages_.Say(arg.name(),
         "Dummy argument '%s' of a defined input/output procedure must be a scalar"_err_en_US,
         arg.name());
@@ -3643,6 +3643,13 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
       CheckDioArgCount(*specificSubp, ioKind, dummyArgs.size());
       int argCount{0};
       for (auto *arg : dummyArgs) {
+        if (arg && arg->Corank() > 0) {
+          evaluate::AttachDeclaration(
+              messages_.Say(arg->name(),
+                  "Dummy argument '%s' of defined input/output procedure '%s' may not be a coarray"_err_en_US,
+                  arg->name(), ultimate.name()),
+              *arg);
+        }
         switch (argCount++) {
         case 0:
           // dtv-type-spec, INTENT(INOUT) :: dtv
