@@ -542,6 +542,14 @@ static llvm::omp::ProcBindKind getProcBindKind(omp::ClauseProcBindKind kind) {
 /// with entry block arguments is converted to LLVM. In this case \p blockArgs
 /// are (part of) of the OpenMP region's entry arguments and \p operands are
 /// (part of) of the operands to the OpenMP op containing the region.
+///
+/// This function assumes that \p operands belong to the enclosing op of the
+/// block containing \p blockArgs:
+/// ```
+/// enclosing_op(operands) {
+///   block(blockArgs)
+/// }
+/// ```
 static void forwardArgs(LLVM::ModuleTranslation &moduleTranslation,
                         omp::BlockArgOpenMPOpInterface blockArgIface) {
   llvm::SmallVector<std::pair<Value, BlockArgument>> blockArgsPairs;
@@ -5300,7 +5308,6 @@ convertTargetDeviceOp(Operation *op, llvm::IRBuilderBase &builder,
   return convertHostOrTargetOperation(op, builder, moduleTranslation);
 }
 
-
 static LogicalResult
 convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
                        LLVM::ModuleTranslation &moduleTranslation) {
@@ -5323,8 +5330,8 @@ convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
 
           // Non-target ops might nest target-related ops, therefore, we
           // translate them as non-OpenMP scopes. Translating them is needed by
-          // nested target-related ops since they might LLVM values defined in
-          // their parent non-target ops.
+          // nested target-related ops since they might need LLVM values defined
+          // in their parent non-target ops.
           if (isa<omp::OpenMPDialect>(oper->getDialect()) &&
               oper->getParentOfType<LLVM::LLVMFuncOp>() &&
               !oper->getRegions().empty()) {
@@ -5333,6 +5340,8 @@ convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
               forwardArgs(moduleTranslation, blockArgsIface);
 
             if (auto loopNest = dyn_cast<omp::LoopNestOp>(oper)) {
+              assert(builder.GetInsertBlock() &&
+                     "No insert block is set for the builder");
               for (auto iv : loopNest.getIVs()) {
                 // Create fake allocas just to maintain IR validity.
                 moduleTranslation.mapValue(
@@ -5342,6 +5351,10 @@ convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
             }
 
             for (Region &region : oper->getRegions()) {
+              // Regions are fake in the sense that they are not a truthful
+              // translation of the OpenMP construct being converted (e.g. no
+              // OpenMP runtime calls will be generated). We just need this to
+              // prepare the kernel invocation args.
               auto result = convertOmpOpRegions(
                   region, oper->getName().getStringRef().str() + ".fake.region",
                   builder, moduleTranslation);
