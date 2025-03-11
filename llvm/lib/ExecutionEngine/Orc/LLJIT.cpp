@@ -951,9 +951,10 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
   // If the config state provided an ObjectLinkingLayer factory then use it.
   if (S.CreateObjectLinkingLayer) {
     auto Layer = S.CreateObjectLinkingLayer(ES);
-    if (S.JTMB->getTargetTriple().isOSBinFormatCOFF()) {
-      if (auto *RTDyldLayer =
-              dyn_cast<RTDyldObjectLinkingLayer>(Layer->get())) {
+    if (Layer && S.JTMB->getTargetTriple().isOSBinFormatCOFF()) {
+      auto *RTDyldLayer =
+          dyn_cast_or_null<RTDyldObjectLinkingLayer>(Layer.get().get());
+      if (RTDyldLayer) {
         RTDyldLayer->setOverrideObjectFlagsWithResponsibilityFlags(true);
         RTDyldLayer->setAutoClaimResponsibilityForObjectSymbols(true);
       }
