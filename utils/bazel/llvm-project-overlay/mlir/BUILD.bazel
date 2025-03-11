@@ -3630,6 +3630,27 @@ td_library(
     ],
 )
 
+td_library(
+    name = "NVGPUTypesTdFiles",
+    srcs = ["include/mlir/Dialect/NVGPU/IR/NVGPUTypes.td"],
+    includes = ["include"],
+    deps = [
+        ":InferTypeOpInterfaceTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+td_library(
+    name = "NVGPUOpsTdFiles",
+    srcs = ["include/mlir/Dialect/NVGPU/IR/NVGPUOps.td"],
+    includes = ["include"],
+    deps = [
+        ":InferTypeOpInterfaceTdFiles",
+        ":NVGPUTypesTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
 gentbl_cc_library(
     name = "NVGPUIncGen",
     tbl_outs = [
