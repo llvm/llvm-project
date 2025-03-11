@@ -743,10 +743,10 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   unsigned DiagID;
   if (!getLangOpts().CPlusPlus17)
     DiagID = diag::ext_decomp_decl;
-  else if (D.getContext() == DeclaratorContext::Condition) {
+  else if (D.getContext() == DeclaratorContext::Condition)
     DiagID = getLangOpts().CPlusPlus26 ? diag::warn_cxx26_decomp_decl_cond
                                        : diag::ext_decomp_decl_cond;
-  } else
+  else
     DiagID = diag::warn_cxx14_compat_decomp_decl;
 
   Diag(Decomp.getLSquareLoc(), DiagID) << Decomp.getSourceRange();

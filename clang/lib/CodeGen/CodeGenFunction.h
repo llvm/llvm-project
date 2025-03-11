@@ -3474,7 +3474,7 @@ public:
   void emitAutoVarTypeCleanup(const AutoVarEmission &emission,
                               QualType::DestructionKind dtorKind);
 
-  void EmitDecompositionVarInit(const DecompositionDecl &var);
+  void MaybeEmitDeferredVarDeclInit(const VarDecl *var);
 
   /// Emits the alloca and debug information for the size expressions for each
   /// dimension of an array. It registers the association of its (1-dimensional)

@@ -5105,12 +5105,12 @@ bool Compiler<Emitter>::visitCompoundStmt(const CompoundStmt *S) {
 }
 
 template <class Emitter>
-bool Compiler<Emitter>::emitDecompositionVarInit(const DecompositionDecl *DD) {
-  for (auto *BD : DD->bindings())
-    if (auto *KD = BD->getHoldingVar()) {
-      if (!this->visitVarDecl(KD))
+bool Compiler<Emitter>::maybeEmitDeferredVarInit(const VarDecl *VD) {
+  if (auto *DD = dyn_cast_if_present<DecompositionDecl>(VD)) {
+    for (auto *BD : DD->bindings())
+      if (auto *KD = BD->getHoldingVar(); KD && !this->visitVarDecl(KD))
         return false;
-    }
+  }
   return true;
 }
 
@@ -5129,11 +5129,8 @@ bool Compiler<Emitter>::visitDeclStmt(const DeclStmt *DS,
       return false;
 
     // Register decomposition decl holding vars.
-    if (const auto *DD = dyn_cast<DecompositionDecl>(VD);
-        EvaluateConditionDecl && DD) {
-      if (!this->emitDecompositionVarInit(DD))
-        return false;
-    }
+    if (EvaluateConditionDecl && !this->maybeEmitDeferredVarInit(VD))
+      return false;
   }
 
   return true;
@@ -5198,10 +5195,8 @@ template <class Emitter> bool Compiler<Emitter>::visitIfStmt(const IfStmt *IS) {
       return false;
   }
 
-  if (auto *DD =
-          dyn_cast_if_present<DecompositionDecl>(IS->getConditionVariable()))
-    if (!this->emitDecompositionVarInit(DD))
-      return false;
+  if (!this->maybeEmitDeferredVarInit(IS->getConditionVariable()))
+    return false;
 
   if (const Stmt *Else = IS->getElse()) {
     LabelTy LabelElse = this->getLabel();
@@ -5264,10 +5259,8 @@ bool Compiler<Emitter>::visitWhileStmt(const WhileStmt *S) {
     if (!this->visitBool(Cond))
       return false;
 
-    if (auto *DD =
-            dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable()))
-      if (!this->emitDecompositionVarInit(DD))
-        return false;
+    if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
+      return false;
 
     if (!this->jumpFalse(EndLabel))
       return false;
@@ -5350,10 +5343,8 @@ bool Compiler<Emitter>::visitForStmt(const ForStmt *S) {
         return false;
     }
 
-    if (auto *DD =
-            dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable()))
-      if (!this->emitDecompositionVarInit(DD))
-        return false;
+    if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
+      return false;
 
     if (Body && !this->visitStmt(Body))
       return false;
@@ -5477,10 +5468,8 @@ bool Compiler<Emitter>::visitSwitchStmt(const SwitchStmt *S) {
   if (!this->emitSetLocal(CondT, CondVar, S))
     return false;
 
-  if (auto *DD =
-          dyn_cast_if_present<DecompositionDecl>(S->getConditionVariable()))
-    if (!this->emitDecompositionVarInit(DD))
-      return false;
+  if (!this->maybeEmitDeferredVarInit(S->getConditionVariable()))
+    return false;
 
   CaseMap CaseLabels;
   // Create labels and comparison ops for all case statements.

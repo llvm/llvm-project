@@ -2048,8 +2048,7 @@ void CodeGenFunction::EmitBranchOnBoolExpr(
     CondV = EvaluateExprAsBool(Cond);
   }
 
-  if (auto *DD = dyn_cast_if_present<DecompositionDecl>(ConditionalDecl))
-    EmitDecompositionVarInit(*DD);
+  MaybeEmitDeferredVarDeclInit(ConditionalDecl);
 
   // If not at the top of the logical operator nest, update MCDC temp with the
   // boolean result of the evaluated condition.

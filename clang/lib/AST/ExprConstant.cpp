@@ -5244,6 +5244,15 @@ static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
   return OK;
 }
 
+static bool MaybeEvaluateDeferredVarDeclInit(EvalInfo &Info,
+                                             const VarDecl *VD) {
+  if (auto *DD = dyn_cast_if_present<DecompositionDecl>(VD)) {
+    if (!EvaluateDecompositionDeclInit(Info, DD))
+      return false;
+  }
+  return true;
+}
+
 static bool EvaluateDependentExpr(const Expr *E, EvalInfo &Info) {
   assert(E->isValueDependent());
   if (Info.noteSideEffect())
@@ -5263,8 +5272,7 @@ static bool EvaluateCond(EvalInfo &Info, const VarDecl *CondDecl,
     return false;
   if (!EvaluateAsBooleanCondition(Cond, Result, Info))
     return false;
-  if (auto *DD = dyn_cast_if_present<DecompositionDecl>(CondDecl);
-      DD && !EvaluateDecompositionDeclInit(Info, DD))
+  if (!MaybeEvaluateDeferredVarDeclInit(Info, CondDecl))
     return false;
   return Scope.destroy();
 }
@@ -5350,9 +5358,7 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
     if (!EvaluateInteger(SS->getCond(), Value, Info))
       return ESR_Failed;
 
-    if (auto *DD =
-            dyn_cast_if_present<DecompositionDecl>(SS->getConditionVariable());
-        DD && !EvaluateDecompositionDeclInit(Info, DD))
+    if (!MaybeEvaluateDeferredVarDeclInit(Info, SS->getConditionVariable()))
       return ESR_Failed;
 
     if (!CondScope.destroy())

@@ -386,7 +386,7 @@ private:
   bool compileUnionAssignmentOperator(const CXXMethodDecl *MD);
 
   bool checkLiteralType(const Expr *E);
-  bool emitDecompositionVarInit(const DecompositionDecl *DD);
+  bool maybeEmitDeferredVarInit(const VarDecl *VD);
 
 protected:
   /// Variable to storage mapping.
