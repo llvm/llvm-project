@@ -81,8 +81,6 @@ public:
   TimePassesHandler();
   TimePassesHandler(bool Enabled, bool PerRun = false);
 
-  ~TimePassesHandler() = default;
-
   /// Prints out timing information and then resets the timers.
   void print();
 
