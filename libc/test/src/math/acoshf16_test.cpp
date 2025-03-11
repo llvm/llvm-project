@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/FPUtil/cast.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/acoshf16.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -40,34 +41,38 @@ TEST_F(LlvmLibcAcoshf16Test, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcAcoshf16Test, InFloat16Range) {
-  constexpr uint16_t START = 0x3C00U; // 1.0
-  constexpr uint16_t STOP = 0x7BFFU;  // Largest finite float16 value
+  constexpr uint32_t COUNT = 100'000;
+  constexpr uint32_t STEP = UINT32_MAX / COUNT;
 
-  for (uint16_t bits = START; bits <= STOP; ++bits) {
-    float16 x = FPBits(bits).get_val();
-    if (FPBits(bits).is_nan() || FPBits(bits).is_inf())
+  for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
+    LIBC_NAMESPACE::fputil::FPBits<float> bits(v);
+    float xf32 = bits.get_val();
+    if (bits.is_nan() || bits.is_inf())
       continue;
-    ASSERT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acosh, float(x),
-                                   float(LIBC_NAMESPACE::acoshf16(x)),
-                                   5.0);
+    if (xf32 < 1.0f)
+      continue;
+    float16 xh = LIBC_NAMESPACE::fputil::cast<float16>(xf32);
+
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acosh, xh,
+                                   LIBC_NAMESPACE::acoshf16(xh), 3.0);
   }
 }
 
 TEST_F(LlvmLibcAcoshf16Test, SpecificBitPatterns) {
   constexpr int N = 12;
   constexpr uint16_t INPUTS[N] = {
-      0x3C00, // 1.0
-      0x3C01, // just above 1.0 (minimally larger than 1)
-      0x3E00, // 1.5
-      0x4200, // 3.0
-      0x4500, // 5.0
-      0x4900, // 10.0
-      0x51FF, // ~47.94 (random mid-range value)
-      0x5CB0, // ~300.0 (random mid-range value)
-      0x643F, // ~1087.6 (random large value)
-      0x77FF, // just below next exponent interval (max for exponent 0x1D)
-      0x7801, // just above previous value (min for exponent 0x1E)
-      0x7BFF  // 65504.0 (max finite half)
+      0x3C00, // x = 1.0
+      0x3C01, // x = just above 1.0 (minimally larger than 1)
+      0x3E00, // x = 1.5
+      0x4200, // x = 3.0
+      0x4500, // x = 5.0
+      0x4900, // x = 10.0
+      0x51FF, // x = ~47.94
+      0x5CB0, // x = ~300.0
+      0x643F, // x = ~1087.6
+      0x77FF, // x = just below next exponent interval (max for exponent 0x1D)
+      0x7801, // x = just above previous value (min for exponent 0x1E)
+      0x7BFF  // x = 65504.0 (max finite half)
   };
   for (int i = 0; i < N; ++i) {
     float16 x = FPBits(INPUTS[i]).get_val();
