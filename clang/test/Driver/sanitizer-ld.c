@@ -934,7 +934,7 @@
 // CHECK-SHADOWCALLSTACK-LINUX-AARCH64: '-fsanitize=shadow-call-stack' only allowed with '-ffixed-x18'
 
 // RUN: %clang -fsanitize=shadow-call-stack -### %s 2>&1 \
-// RUN:     --target=riscv32-unknown-elf -fuse-ld=ld \
+// RUN:     --target=riscv32-unknown-elf -fuse-ld=lld \
 // RUN:   | %{filecheck} --check-prefix=CHECK-SHADOWCALLSTACK-ELF-RISCV32
 // CHECK-SHADOWCALLSTACK-ELF-RISCV32-NOT: error:
 // CHECK-SHADOWCALLSTACK-ELF-RISCV32: "{{(.*[^-.0-9A-Z_a-z])?}}ld.lld{{(.exe)?}}"

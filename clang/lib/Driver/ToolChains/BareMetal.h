@@ -36,6 +36,7 @@ protected:
   Tool *buildStaticLibTool() const override;
 
 public:
+  bool isUsingLD() const { return UseLD || GCCInstallation.isValid(); }
   bool isBareMetal() const override { return true; }
   bool isCrossCompiling() const override { return true; }
   bool HasNativeLLVMSupport() const override { return true; }
@@ -53,14 +54,13 @@ public:
     return UnwindTableLevel::None;
   }
 
-  RuntimeLibType GetDefaultRuntimeLibType() const override {
-    return ToolChain::RLT_CompilerRT;
-  }
-  CXXStdlibType GetDefaultCXXStdlibType() const override {
-    return ToolChain::CST_Libcxx;
-  }
+  CXXStdlibType GetDefaultCXXStdlibType() const override;
 
-  const char *getDefaultLinker() const override { return "ld.lld"; }
+  RuntimeLibType GetDefaultRuntimeLibType() const override;
+
+  UnwindLibType GetUnwindLibType(const llvm::opt::ArgList &Args) const override;
+
+  const char *getDefaultLinker() const override;
 
   void
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
@@ -85,7 +85,7 @@ private:
   using OrderedMultilibs =
       llvm::iterator_range<llvm::SmallVector<Multilib>::const_reverse_iterator>;
   OrderedMultilibs getOrderedMultilibs() const;
-
+  bool UseLD;
   std::string SysRoot;
   SmallVector<std::string> MultilibMacroDefines;
 };
@@ -111,7 +111,7 @@ public:
 
 class LLVM_LIBRARY_VISIBILITY Linker final : public Tool {
 public:
-  Linker(const ToolChain &TC) : Tool("baremetal::Linker", "ld.lld", TC) {}
+  Linker(const ToolChain &TC) : Tool("baremetal::Linker", "linker", TC) {}
   bool isLinkJob() const override { return true; }
   bool hasIntegratedCPP() const override { return false; }
   void ConstructJob(Compilation &C, const JobAction &JA,
