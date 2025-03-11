@@ -226,7 +226,7 @@ bool SILateBranchLowering::runOnMachineFunction(MachineFunction &MF) {
         break;
       case AMDGPU::SI_CS_CHAIN_TC_W32_DVGPR:
       case AMDGPU::SI_CS_CHAIN_TC_W64_DVGPR:
-        expandChainCall(MI, ST, /*DynamicVGPR*/ true);
+        expandChainCall(MI, ST, /*DynamicVGPR=*/ true);
         MadeChange = true;
         break;
 
