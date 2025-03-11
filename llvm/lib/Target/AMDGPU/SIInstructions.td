@@ -3949,7 +3949,6 @@ def : FPMinMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
 def : FPMinCanonMaxPat<V_MINMAX_F32_e64, f32, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinCanonMaxPat<V_MAXMIN_F32_e64, f32, fminnum_like, fmaxnum_like_oneuse>;
-}
 
 let True16Predicate = UseRealTrue16Insts in {
 def : FPMinMaxPat<V_MINMAX_F16_t16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
@@ -3964,6 +3963,8 @@ def : FPMinMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneus
 def : FPMinCanonMaxPat<V_MINMAX_F16_fake16_e64, f16, fmaxnum_like, fminnum_like_oneuse>;
 def : FPMinCanonMaxPat<V_MAXMIN_F16_fake16_e64, f16, fminnum_like, fmaxnum_like_oneuse>;
 }
+
+} // End OtherPredicates = [isGFX11Plus]
 
 let SubtargetPredicate = isGFX9Plus in {
 let True16Predicate = NotHasTrue16BitInsts in {
