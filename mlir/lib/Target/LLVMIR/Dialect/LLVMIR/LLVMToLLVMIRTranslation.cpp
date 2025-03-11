@@ -278,7 +278,7 @@ static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
     auto intVal = dyn_cast<IntegerAttr>(flag.getValue());
     assert(intVal && "expected integer attribute");
     llvmModule->addModuleFlag(
-        (llvm::Module::ModFlagBehavior)flag.getBehavior().getValue(),
+        static_cast<llvm::Module::ModFlagBehavior>(flag.getBehavior().getValue()),
         flag.getKey().getValue(), (uint32_t)intVal.getUInt());
   }
 }
