@@ -10262,6 +10262,8 @@ bool SIInstrInfo::isGlobalMemoryObject(const MachineInstr *MI) const {
 
 bool SIInstrInfo::isXDL(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
+  if (AMDGPU::isGFX12(ST))
+    return isWMMA(MI) || isSWMMAC(MI) || isDOT(MI);
 
   if (!SIInstrInfo::isMAI(MI) || isDGEMM(Opcode) ||
       Opcode == AMDGPU::V_ACCVGPR_WRITE_B32_e64 ||

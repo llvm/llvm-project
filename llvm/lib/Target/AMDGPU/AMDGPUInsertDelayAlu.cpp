@@ -16,6 +16,7 @@
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "SIInstrInfo.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/MachineInstr.h"
 
 using namespace llvm;
 
@@ -51,12 +52,15 @@ public:
   enum DelayType { VALU, TRANS, SALU, OTHER };
 
   // Get the delay type for an instruction with the specified TSFlags.
-  static DelayType getDelayType(uint64_t TSFlags) {
-    if (TSFlags & SIInstrFlags::TRANS)
+  DelayType getDelayType(MachineInstr &MI) {
+    if (SIInstrInfo::isTRANS(MI))
       return TRANS;
-    if (TSFlags & SIInstrFlags::VALU)
+    // XDL ops are treated the same as TRANS.
+    if (SII->isXDL(MI))
+      return TRANS;
+    if (SIInstrInfo::isVALU(MI))
       return VALU;
-    if (TSFlags & SIInstrFlags::SALU)
+    if (SIInstrInfo::isSALU(MI))
       return SALU;
     return OTHER;
   }
@@ -343,7 +347,7 @@ public:
         continue;
       }
 
-      DelayType Type = getDelayType(MI.getDesc().TSFlags);
+      DelayType Type = getDelayType(MI);
 
       if (instructionWaitsForVALU(MI)) {
         // Forget about all outstanding VALU delays.
