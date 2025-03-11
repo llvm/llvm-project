@@ -404,7 +404,8 @@ public:
   [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool empty() const _NOEXCEPT { return __size_ == 0; }
 
   // [string.view.access], element access
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference operator[](size_type __pos) const _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference
+  operator[](size_type __pos) const _NOEXCEPT {
     return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__pos < size(), "string_view[] index out of bounds"), __data_[__pos];
   }
 
@@ -412,24 +413,28 @@ public:
     return __pos >= size() ? (__throw_out_of_range("string_view::at"), __data_[0]) : __data_[__pos];
   }
 
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference front() const _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference
+  front() const _NOEXCEPT {
     return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string_view::front(): string is empty"), __data_[0];
   }
 
-  _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference back() const _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_reference
+  back() const _NOEXCEPT {
     return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string_view::back(): string is empty"), __data_[__size_ - 1];
   }
 
   _LIBCPP_CONSTEXPR _LIBCPP_HIDE_FROM_ABI const_pointer data() const _NOEXCEPT { return __data_; }
 
   // [string.view.modifiers], modifiers:
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI void remove_prefix(size_type __n) _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI void
+  remove_prefix(size_type __n) _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n <= size(), "remove_prefix() can't remove more than size()");
     __data_ += __n;
     __size_ -= __n;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI void remove_suffix(size_type __n) _NOEXCEPT {
+  _LIBCPP_VALID_ELEMENT_ACCESS_PRECONDITION _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI void
+  remove_suffix(size_type __n) _NOEXCEPT {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n <= size(), "remove_suffix() can't remove more than size()");
     __size_ -= __n;
   }
