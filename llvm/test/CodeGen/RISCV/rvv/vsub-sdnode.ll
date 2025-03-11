@@ -853,9 +853,8 @@ define <vscale x 8 x i32> @vsub_vx_mask_nxv8i32(<vscale x 8 x i32> %va, i32 sign
 define <vscale x 8 x i32> @vsub_vi_nxv8i32_one(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: vsub_vi_nxv8i32_one:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 1
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsub.vx v8, v8, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vadd.vi v8, v8, -1
 ; CHECK-NEXT:    ret
   %vc = sub <vscale x 8 x i32> %va, splat (i32 1)
   ret <vscale x 8 x i32> %vc
@@ -864,9 +863,8 @@ define <vscale x 8 x i32> @vsub_vi_nxv8i32_one(<vscale x 8 x i32> %va) {
 define <vscale x 8 x i32> @vsub_vi_nxv8i32_minusone(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: vsub_vi_nxv8i32_minusone:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, -1
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsub.vx v8, v8, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vadd.vi v8, v8, 1
 ; CHECK-NEXT:    ret
   %vc = sub <vscale x 8 x i32> %va, splat (i32 -1)
   ret <vscale x 8 x i32> %vc
@@ -875,9 +873,8 @@ define <vscale x 8 x i32> @vsub_vi_nxv8i32_minusone(<vscale x 8 x i32> %va) {
 define <vscale x 8 x i32> @vsub_vi_nxv8i32_15(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: vsub_vi_nxv8i32_15:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 15
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsub.vx v8, v8, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vadd.vi v8, v8, -15
 ; CHECK-NEXT:    ret
   %vc = sub <vscale x 8 x i32> %va, splat (i32 15)
   ret <vscale x 8 x i32> %vc
@@ -886,9 +883,8 @@ define <vscale x 8 x i32> @vsub_vi_nxv8i32_15(<vscale x 8 x i32> %va) {
 define <vscale x 8 x i32> @vsub_vi_nxv8i32_16(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: vsub_vi_nxv8i32_16:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 16
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsub.vx v8, v8, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vadd.vi v8, v8, -16
 ; CHECK-NEXT:    ret
   %vc = sub <vscale x 8 x i32> %va, splat (i32 16)
   ret <vscale x 8 x i32> %vc
@@ -897,9 +893,8 @@ define <vscale x 8 x i32> @vsub_vi_nxv8i32_16(<vscale x 8 x i32> %va) {
 define <vscale x 8 x i32> @vsub_vi_nxv8i32_minus15(<vscale x 8 x i32> %va) {
 ; CHECK-LABEL: vsub_vi_nxv8i32_minus15:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, -15
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
-; CHECK-NEXT:    vsub.vx v8, v8, a0
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vadd.vi v8, v8, 15
 ; CHECK-NEXT:    ret
   %vc = sub <vscale x 8 x i32> %va, splat (i32 -15)
   ret <vscale x 8 x i32> %vc
@@ -919,9 +914,8 @@ define <vscale x 8 x i32> @vsub_vi_nxv8i32_minus16(<vscale x 8 x i32> %va) {
 define <vscale x 8 x i32> @vsub_vi_mask_nxv8i32(<vscale x 8 x i32> %va, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: vsub_vi_mask_nxv8i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a0, 7
-; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, mu
-; CHECK-NEXT:    vsub.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vadd.vi v8, v8, -7, v0.t
 ; CHECK-NEXT:    ret
   %vs = select <vscale x 8 x i1> %mask, <vscale x 8 x i32> splat (i32 7), <vscale x 8 x i32> zeroinitializer
   %vc = sub <vscale x 8 x i32> %va, %vs
