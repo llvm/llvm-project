@@ -814,6 +814,8 @@ class SymbolTableSection : public SectionBase {
   void setStrTab(StringTableSection *StrTab) { SymbolNames = StrTab; }
   void assignIndices();
 
+private:
+  bool VerboseOutput;
 protected:
   std::vector<std::unique_ptr<Symbol>> Symbols;
   StringTableSection *SymbolNames = nullptr;
@@ -856,6 +858,7 @@ public:
   static bool classof(const SectionBase *S) {
     return S->OriginalType == ELF::SHT_SYMTAB;
   }
+  bool getVerboseOutput() { return VerboseOutput; }
 };
 
 struct Relocation {
@@ -1195,7 +1198,7 @@ public:
   uint32_t Flags;
 
   bool HadShdrs = true;
-  bool isVerboseEnabled = true;
+  bool VerboseOutput;
   bool MustBeRelocatable = false;
   StringTableSection *SectionNames = nullptr;
   SymbolTableSection *SymbolTable = nullptr;
@@ -1225,7 +1228,7 @@ public:
   ConstRange<Segment> segments() const { return make_pointee_range(Segments); }
 
   Error removeSections(bool AllowBrokenLinks,
-                       std::function<bool(const SectionBase &)> ToRemove);
+                       std::function<bool(const SectionBase &)> ToRemove, bool VerboseOutput);
   Error compressOrDecompressSections(const CommonConfig &Config);
   Error replaceSections(const DenseMap<SectionBase *, SectionBase *> &FromTo);
   Error removeSymbols(function_ref<bool(const Symbol &)> ToRemove);

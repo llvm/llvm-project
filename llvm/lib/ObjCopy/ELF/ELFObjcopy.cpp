@@ -547,7 +547,7 @@ static Error replaceAndRemoveSections(const CommonConfig &Config,
     };
   }
 
-  if (Error E = Obj.removeSections(ELFConfig.AllowBrokenLinks, RemovePred))
+  if (Error E = Obj.removeSections(ELFConfig.AllowBrokenLinks, RemovePred, Config.Verbose))
     return E;
 
   if (Error E = Obj.compressOrDecompressSections(Config))
@@ -783,7 +783,7 @@ static Error verifyNoteSection(StringRef Name, endianness Endianness,
 // system. The only priority is that keeps/copies overrule removes.
 static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
                         ElfType OutputElfType, Object &Obj) {
-  Obj.isVerboseEnabled = Config.Verbose;
+  Obj.VerboseOutput = Config.Verbose;
   if (Config.OutputArch) {
     Obj.Machine = Config.OutputArch->EMachine;
     Obj.OSABI = Config.OutputArch->OSABI;
@@ -792,7 +792,7 @@ static Error handleArgs(const CommonConfig &Config, const ELFConfig &ELFConfig,
   if (!Config.SplitDWO.empty() && Config.ExtractDWO) {
     return Obj.removeSections(
         ELFConfig.AllowBrokenLinks,
-        [&Obj](const SectionBase &Sec) { return onlyKeepDWOPred(Obj, Sec); });
+        [&Obj](const SectionBase &Sec) { return onlyKeepDWOPred(Obj, Sec); }, Config.Verbose);
   }
 
   // Dump sections before add/remove for compatibility with GNU objcopy.
