@@ -210,9 +210,10 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     registerScope(LocalScope, Result.Context);
     if (ScopesCache[LocalScope]->isPointeeMutated(Variable))
       return;
-    auto Diag = diag(Variable->getBeginLoc(),
-                     "variable %0 of type %1 can be declared 'const'")
-                << Variable << VT;
+    auto Diag =
+        diag(Variable->getBeginLoc(),
+             "pointee of variable %0 of type %1 can be declared 'const'")
+        << Variable << VT;
     if (IsNormalVariableInTemplate)
       TemplateDiagnosticsCache.insert(Variable->getBeginLoc());
     if (!CanBeFixIt)
@@ -241,14 +242,16 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     if (WarnPointersAsValues && !VT.isConstQualified())
       CheckValue();
     if (WarnPointersAsPointers) {
-      if (const auto *PT = dyn_cast<PointerType>(VT))
+      if (const auto *PT = dyn_cast<PointerType>(VT)) {
         if (!PT->getPointeeType().isConstQualified())
           CheckPointee();
-      if (const auto *AT = dyn_cast<ArrayType>(VT))
+      }
+      if (const auto *AT = dyn_cast<ArrayType>(VT)) {
         if (!AT->getElementType().isConstQualified()) {
           assert(AT->getElementType()->isPointerType());
           CheckPointee();
         }
+      }
     }
     return;
   }
