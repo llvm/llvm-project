@@ -968,8 +968,6 @@ enum ScalarEpilogueLowering {
   CM_ScalarEpilogueNotAllowedUsePredicate
 };
 
-using InstructionVFPair = std::pair<Instruction *, ElementCount>;
-
 /// LoopVectorizationCostModel - estimates the expected speedups due to
 /// vectorization.
 /// In many cases vectorization is not profitable. This can happen because of
@@ -2325,8 +2323,8 @@ emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
   llvm_unreachable("invalid enum");
 }
 
-std::optional<unsigned> getMaxVScale(const Function &F,
-                                     const TargetTransformInfo &TTI) {
+static std::optional<unsigned> getMaxVScale(const Function &F,
+                                            const TargetTransformInfo &TTI) {
   if (std::optional<unsigned> MaxVScale = TTI.getMaxVScale())
     return MaxVScale;
 
@@ -2618,10 +2616,6 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
 }
 
 BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
-  // VPlan-native path does not do any analysis for runtime checks currently.
-  if (EnableVPlanNativePath)
-    return nullptr;
-
   BasicBlock *const MemCheckBlock =
       RTChecks.emitMemRuntimeChecks(Bypass, LoopVectorPreHeader);
 
@@ -2630,6 +2624,10 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
   // elements faster.
   if (!MemCheckBlock)
     return nullptr;
+
+  // VPlan-native path does not do any analysis for runtime checks currently.
+  assert((!EnableVPlanNativePath || OrigLoop->begin() == OrigLoop->end()) &&
+         "Runtime checks are not supported for outer loops yet");
 
   if (MemCheckBlock->getParent()->hasOptSize() || OptForSizeBasedOnProfile) {
     assert(Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
@@ -9312,13 +9310,16 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanPtr Plan = VPlan::createInitialVPlan(Legal->getWidestInductionType(),
-                                            PSE, RequiresScalarEpilogueCheck,
-                                            CM.foldTailByMasking(), OrigLoop);
-
+  auto Plan = std::make_unique<VPlan>(OrigLoop);
   // Build hierarchical CFG.
+  // Convert to VPlan-transform and consoliate all transforms for VPlan
+  // creation.
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
   HCFGBuilder.buildHierarchicalCFG();
+
+  VPlanTransforms::introduceTopLevelVectorLoopRegion(
+      *Plan, Legal->getWidestInductionType(), PSE, RequiresScalarEpilogueCheck,
+      CM.foldTailByMasking(), OrigLoop);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -9615,12 +9616,13 @@ VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
   assert(EnableVPlanNativePath && "VPlan-native path is not enabled.");
 
   // Create new empty VPlan
-  auto Plan = VPlan::createInitialVPlan(Legal->getWidestInductionType(), PSE,
-                                        true, false, OrigLoop);
-
+  auto Plan = std::make_unique<VPlan>(OrigLoop);
   // Build hierarchical CFG
   VPlanHCFGBuilder HCFGBuilder(OrigLoop, LI, *Plan);
   HCFGBuilder.buildHierarchicalCFG();
+
+  VPlanTransforms::introduceTopLevelVectorLoopRegion(
+      *Plan, Legal->getWidestInductionType(), PSE, true, false, OrigLoop);
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
@@ -10169,19 +10171,56 @@ static void checkMixedPrecision(Loop *L, OptimizationRemarkEmitter *ORE) {
   }
 }
 
-static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
-                                       VectorizationFactor &VF, Loop *L,
-                                       PredicatedScalarEvolution &PSE,
-                                       ScalarEpilogueLowering SEL,
-                                       std::optional<unsigned> VScale) {
-  InstructionCost CheckCost = Checks.getCost();
-  if (!CheckCost.isValid())
+/// For loops with uncountable early exits, find the cost of doing work when
+/// exiting the loop early, such as calculating the final exit values of
+/// variables used outside the loop.
+/// TODO: This is currently overly pessimistic because the loop may not take
+/// the early exit, but better to keep this conservative for now. In future,
+/// it might be possible to relax this by using branch probabilities.
+static InstructionCost calculateEarlyExitCost(VPCostContext &CostCtx,
+                                              VPlan &Plan, ElementCount VF) {
+  InstructionCost Cost = 0;
+  for (auto *ExitVPBB : Plan.getExitBlocks()) {
+    for (auto *PredVPBB : ExitVPBB->getPredecessors()) {
+      // If the predecessor is not the middle.block, then it must be the
+      // vector.early.exit block, which may contain work to calculate the exit
+      // values of variables used outside the loop.
+      if (PredVPBB != Plan.getMiddleBlock()) {
+        LLVM_DEBUG(dbgs() << "Calculating cost of work in exit block "
+                          << PredVPBB->getName() << ":\n");
+        Cost += PredVPBB->cost(VF, CostCtx);
+      }
+    }
+  }
+  return Cost;
+}
+
+/// This function determines whether or not it's still profitable to vectorize
+/// the loop given the extra work we have to do outside of the loop:
+///  1. Perform the runtime checks before entering the loop to ensure it's safe
+///     to vectorize.
+///  2. In the case of loops with uncountable early exits, we may have to do
+///     extra work when exiting the loop early, such as calculating the final
+///     exit values of variables used outside the loop.
+static bool isOutsideLoopWorkProfitable(GeneratedRTChecks &Checks,
+                                        VectorizationFactor &VF, Loop *L,
+                                        PredicatedScalarEvolution &PSE,
+                                        VPCostContext &CostCtx, VPlan &Plan,
+                                        ScalarEpilogueLowering SEL,
+                                        std::optional<unsigned> VScale) {
+  InstructionCost TotalCost = Checks.getCost();
+  if (!TotalCost.isValid())
     return false;
+
+  // Add on the cost of any work required in the vector early exit block, if
+  // one exists.
+  TotalCost += calculateEarlyExitCost(CostCtx, Plan, VF.Width);
 
   // When interleaving only scalar and vector cost will be equal, which in turn
   // would lead to a divide by 0. Fall back to hard threshold.
   if (VF.Width.isScalar()) {
-    if (CheckCost > VectorizeMemoryCheckThreshold) {
+    // TODO: Should we rename VectorizeMemoryCheckThreshold?
+    if (TotalCost > VectorizeMemoryCheckThreshold) {
       LLVM_DEBUG(
           dbgs()
           << "LV: Interleaving only is not profitable due to runtime checks\n");
@@ -10207,7 +10246,9 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   //  The total cost of the vector loop is
   //    RtC + VecC * (TC / VF) + EpiC
   //  where
-  //  * RtC is the cost of the generated runtime checks
+  //  * RtC is the cost of the generated runtime checks plus the cost of
+  //    performing any additional work in the vector.early.exit block for loops
+  //    with uncountable early exits.
   //  * VecC is the cost of a single vector iteration.
   //  * TC is the actual trip count of the loop
   //  * VF is the vectorization factor
@@ -10225,7 +10266,7 @@ static bool areRuntimeChecksProfitable(GeneratedRTChecks &Checks,
   // the computations are performed on doubles, not integers and the result
   // is rounded up, hence we get an upper estimate of the TC.
   unsigned IntVF = getEstimatedRuntimeVF(VF.Width, VScale);
-  uint64_t RtC = *CheckCost.getValue();
+  uint64_t RtC = *TotalCost.getValue();
   uint64_t Div = ScalarC * IntVF - *VF.Cost.getValue();
   uint64_t MinTC1 = Div == 0 ? 0 : divideCeil(RtC * IntVF, Div);
 
@@ -10553,8 +10594,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         // iteration count is low. However, setting the epilogue policy to
         // `CM_ScalarEpilogueNotAllowedLowTripLoop` prevents vectorizing loops
         // with runtime checks. It's more effective to let
-        // `areRuntimeChecksProfitable` determine if vectorization is beneficial
-        // for the loop.
+        // `isOutsideLoopWorkProfitable` determine if vectorization is
+        // beneficial for the loop.
         if (SEL != CM_ScalarEpilogueNotNeededUsePredicate)
           SEL = CM_ScalarEpilogueNotAllowedLowTripLoop;
       } else {
@@ -10652,9 +10693,12 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     // Check if it is profitable to vectorize with runtime checks.
     bool ForceVectorization =
         Hints.getForce() == LoopVectorizeHints::FK_Enabled;
+    VPCostContext CostCtx(CM.TTI, *CM.TLI, CM.Legal->getWidestInductionType(),
+                          CM, CM.CostKind);
     if (!ForceVectorization &&
-        !areRuntimeChecksProfitable(Checks, VF, L, PSE, SEL,
-                                    CM.getVScaleForTuning())) {
+        !isOutsideLoopWorkProfitable(Checks, VF, L, PSE, CostCtx,
+                                     LVP.getPlanFor(VF.Width), SEL,
+                                     CM.getVScaleForTuning())) {
       ORE->emit([&]() {
         return OptimizationRemarkAnalysisAliasing(
                    DEBUG_TYPE, "CantReorderMemOps", L->getStartLoc(),

@@ -2082,7 +2082,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb11, %bb
-  %tmp = phi <2 x i32> [ %tmp12, %bb11 ], [ undef, %bb ]
+  %tmp = phi <2 x i32> [ %tmp12, %bb11 ], [ poison, %bb ]
   br i1 true, label %bb2, label %bb11
 
 bb2:                                              ; preds = %bb1

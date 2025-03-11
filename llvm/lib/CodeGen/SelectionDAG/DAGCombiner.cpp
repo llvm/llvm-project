@@ -5390,6 +5390,12 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
     }
   }
 
+  // Fold avgfloors(x,y) -> avgflooru(x,y) if both x and y are non-negative
+  if (Opcode == ISD::AVGFLOORS && hasOperation(ISD::AVGFLOORU, VT)) {
+    if (DAG.SignBitIsZero(N0) && DAG.SignBitIsZero(N1))
+      return DAG.getNode(ISD::AVGFLOORU, DL, VT, N0, N1);
+  }
+
   return SDValue();
 }
 

@@ -2419,6 +2419,16 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
           LVal.getLValueCallIndex() == 0) &&
          "have call index for global lvalue");
 
+  if (LVal.allowConstexprUnknown()) {
+    if (BaseVD) {
+      Info.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << BaseVD;
+      NoteLValueLocation(Info, Base);
+    } else {
+      Info.FFDiag(Loc);
+    }
+    return false;
+  }
+
   if (Base.is<DynamicAllocLValue>()) {
     Info.FFDiag(Loc, diag::note_constexpr_dynamic_alloc)
         << IsReferenceType << !Designator.Entries.empty();
@@ -3597,7 +3607,8 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // expressions here; doing so would regress diagnostics for things like
   // reading from a volatile constexpr variable.
   if ((Info.getLangOpts().CPlusPlus && !VD->hasConstantInitialization() &&
-       VD->mightBeUsableInConstantExpressions(Info.Ctx)) ||
+       VD->mightBeUsableInConstantExpressions(Info.Ctx) &&
+       !AllowConstexprUnknown) ||
       ((Info.getLangOpts().CPlusPlus || Info.getLangOpts().OpenCL) &&
        !Info.getLangOpts().CPlusPlus11 && !VD->hasICEInitializer(Info.Ctx))) {
     if (Init) {
@@ -5216,18 +5227,39 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
   return true;
 }
 
-static bool EvaluateDecl(EvalInfo &Info, const Decl *D) {
-  bool OK = true;
+static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
+                                          const DecompositionDecl *DD);
 
+static bool EvaluateDecl(EvalInfo &Info, const Decl *D,
+                         bool EvaluateConditionDecl = false) {
+  bool OK = true;
   if (const VarDecl *VD = dyn_cast<VarDecl>(D))
     OK &= EvaluateVarDecl(Info, VD);
 
-  if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(D))
-    for (auto *BD : DD->flat_bindings())
-      if (auto *VD = BD->getHoldingVar())
-        OK &= EvaluateDecl(Info, VD);
+  if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(D);
+      EvaluateConditionDecl && DD)
+    OK &= EvaluateDecompositionDeclInit(Info, DD);
 
   return OK;
+}
+
+static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
+                                          const DecompositionDecl *DD) {
+  bool OK = true;
+  for (auto *BD : DD->flat_bindings())
+    if (auto *VD = BD->getHoldingVar())
+      OK &= EvaluateDecl(Info, VD, /*EvaluateConditionDecl=*/true);
+
+  return OK;
+}
+
+static bool MaybeEvaluateDeferredVarDeclInit(EvalInfo &Info,
+                                             const VarDecl *VD) {
+  if (auto *DD = dyn_cast_if_present<DecompositionDecl>(VD)) {
+    if (!EvaluateDecompositionDeclInit(Info, DD))
+      return false;
+  }
+  return true;
 }
 
 static bool EvaluateDependentExpr(const Expr *E, EvalInfo &Info) {
@@ -5248,6 +5280,8 @@ static bool EvaluateCond(EvalInfo &Info, const VarDecl *CondDecl,
   if (CondDecl && !EvaluateDecl(Info, CondDecl))
     return false;
   if (!EvaluateAsBooleanCondition(Cond, Result, Info))
+    return false;
+  if (!MaybeEvaluateDeferredVarDeclInit(Info, CondDecl))
     return false;
   return Scope.destroy();
 }
@@ -5331,6 +5365,9 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
       return ESR_Failed;
     }
     if (!EvaluateInteger(SS->getCond(), Value, Info))
+      return ESR_Failed;
+
+    if (!MaybeEvaluateDeferredVarDeclInit(Info, SS->getConditionVariable()))
       return ESR_Failed;
 
     if (!CondScope.destroy())
@@ -5557,7 +5594,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         return ESR_Failed;
       // Each declaration initialization is its own full-expression.
       FullExpressionRAII Scope(Info);
-      if (!EvaluateDecl(Info, D) && !Info.noteFailure())
+      if (!EvaluateDecl(Info, D, /*EvaluateConditionDecl=*/true) &&
+          !Info.noteFailure())
         return ESR_Failed;
       if (!Scope.destroy())
         return ESR_Failed;
@@ -16892,24 +16930,19 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   APValue::LValueBase Base(&BaseMTE);
   Info.setEvaluatingDecl(Base, Result.Val);
 
-  if (Info.EnableNewConstInterp) {
-    if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, this, Result.Val))
-      return false;
-  } else {
-    LValue LVal;
-    LVal.set(Base);
-    // C++23 [intro.execution]/p5
-    // A full-expression is [...] a constant-expression
-    // So we need to make sure temporary objects are destroyed after having
-    // evaluating the expression (per C++23 [class.temporary]/p4).
-    FullExpressionRAII Scope(Info);
-    if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
-        Result.HasSideEffects || !Scope.destroy())
-      return false;
+  LValue LVal;
+  LVal.set(Base);
+  // C++23 [intro.execution]/p5
+  // A full-expression is [...] a constant-expression
+  // So we need to make sure temporary objects are destroyed after having
+  // evaluating the expression (per C++23 [class.temporary]/p4).
+  FullExpressionRAII Scope(Info);
+  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
+      Result.HasSideEffects || !Scope.destroy())
+    return false;
 
-    if (!Info.discardCleanups())
-      llvm_unreachable("Unhandled cleanup; missing full expression marker?");
-  }
+  if (!Info.discardCleanups())
+    llvm_unreachable("Unhandled cleanup; missing full expression marker?");
 
   if (!CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
                                Result.Val, Kind))
@@ -16993,18 +17026,6 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
 
     if (!Info.discardCleanups())
       llvm_unreachable("Unhandled cleanup; missing full expression marker?");
-
-    if (Value.allowConstexprUnknown()) {
-      assert(Value.isLValue() && "Expected an lvalue");
-      auto Base = Value.getLValueBase();
-      const auto *NewVD = Base.dyn_cast<const ValueDecl *>();
-      if (!NewVD)
-        NewVD = VD;
-      Info.FFDiag(getExprLoc(), diag::note_constexpr_var_init_non_constant, 1)
-          << NewVD;
-      NoteLValueLocation(Info, Base);
-      return false;
-    }
   }
 
   return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
