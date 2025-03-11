@@ -7,14 +7,16 @@
 #ifndef PCH_HELPER
 #define PCH_HELPER
 auto Lambda = [](){};
-#pragma acc routine(Lambda) worker
+#pragma acc routine(Lambda) worker nohost
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' '(lambda at
 // CHECK-NEXT: worker clause
+// CHECK-NEXT: nohost clause
 int function();
-#pragma acc routine (function) vector
+#pragma acc routine (function) nohost vector
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'function' 'int ()'
+// CHECK-NEXT: nohost clause
 // CHECK-NEXT: vector clause
 
 namespace NS {
@@ -227,18 +229,20 @@ void TemplFunc() {
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
 // CHECK-NEXT: gang clause
 // CHECK-NEXT: CallExpr{{.*}}'<dependent type>'
-#pragma acc routine(T::StaticMemFunc) worker
+#pragma acc routine(T::StaticMemFunc) nohost worker
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}}'<dependent type>'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
+// CHECK-NEXT: nohost clause
 // CHECK-NEXT: worker clause
-#pragma acc routine(T::Lambda) seq
+#pragma acc routine(T::Lambda) seq nohost
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}}'<dependent type>'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
 // CHECK-NEXT: seq clause
+// CHECK-NEXT: nohost clause
 
 // Instantiation:
 // CHECK: FunctionDecl{{.*}} TemplFunc 'void ()' implicit_instantiation
@@ -254,6 +258,7 @@ void TemplFunc() {
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'void ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
+// CHECK-NEXT: nohost clause
 // CHECK-NEXT: worker clause
 
 // CHECK-NEXT: DeclStmt
@@ -261,6 +266,7 @@ void TemplFunc() {
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const S::(lambda at
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
 // CHECK-NEXT: seq clause
+// CHECK-NEXT: nohost clause
 }
 
 void usage() {
