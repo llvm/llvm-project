@@ -7,13 +7,11 @@ define i1 @infer_nuw(i8 range(i8 0, 2) %A, i8 range(i8 0, 2) %B) {
 ; CHECK-SAME: i8 range(i8 0, 2) [[A:%.*]], i8 range(i8 0, 2) [[B:%.*]]) {
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[B]], [[A]]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[XOR]] to i1
-; CHECK-NEXT:    [[RESULT:%.*]] = xor i1 [[TRUNC]], true
-; CHECK-NEXT:    ret i1 [[RESULT]]
+; CHECK-NEXT:    ret i1 [[TRUNC]]
 ;
   %xor = xor i8 %B, %A
   %trunc = trunc i8 %xor to i1
-  %result = xor i1 %trunc, true
-  ret i1 %result
+  ret i1 %trunc
 }
 
 
@@ -35,13 +33,11 @@ define i8 @infer_nuw_nsw(i16 range(i16 -5, -3) %A, i16 range(i16 -5, -3) %B) {
 ; CHECK-SAME: i16 range(i16 -5, -3) [[A:%.*]], i16 range(i16 -5, -3) [[B:%.*]]) {
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i16 [[B]], [[A]]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i16 [[XOR]] to i8
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i8 [[TRUNC]], 1
-; CHECK-NEXT:    ret i8 [[XOR2]]
+; CHECK-NEXT:    ret i8 [[TRUNC]]
 ;
   %xor = xor i16 %B, %A
   %trunc = trunc i16 %xor to i8
-  %xor2 = xor i8 %trunc, 1
-  ret i8 %xor2
+  ret i8 %trunc
 }
 
 
@@ -104,11 +100,9 @@ define i1 @overdefined_range_negative(i8 %A, i8 %B) {
 ; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[XOR:%.*]] = xor i8 [[A]], [[B]]
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[XOR]] to i1
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i1 [[TRUNC]], true
-; CHECK-NEXT:    ret i1 [[XOR2]]
+; CHECK-NEXT:    ret i1 [[TRUNC]]
 ;
   %xor = xor i8 %A, %B
   %trunc = trunc i8 %xor to i1
-  %xor2 = xor i1 %trunc, true
-  ret i1 %xor2
+  ret i1 %trunc
 }
