@@ -251,6 +251,27 @@ typedef struct CXOpaqueDependencyScannerWorkerScanSettings
     *CXDependencyScannerWorkerScanSettings;
 
 /**
+ * A callback that is called to determine the paths of output files for each
+ * module dependency. The ModuleFile (pcm) path mapping is mandatory.
+ *
+ * \param Context the MLOContext that was passed to
+ *         \c clang_experimental_DependencyScannerWorker_getFileDependencies_vX.
+ * \param CXDepMod the ModuleDep that represents the dependent module.
+ * \param OutputKind the kind of module output to lookup.
+ * \param[out] Output the output path(s) or name, whose total size must be <=
+ *                    \p MaxLen. In the case of multiple outputs of the same
+ *                    kind, this can be a null-separated list.
+ * \param MaxLen the maximum size of Output.
+ *
+ * \returns the actual length of Output. If the return value is > \p MaxLen,
+ *          the callback will be repeated with a larger buffer.
+ */
+typedef size_t CXModuleLookupOutputCallback_v2(void *Context,
+                                               CXDepGraphModule CXDepMod,
+                                               CXOutputKind OutputKind,
+                                               char *Output, size_t MaxLen);
+
+/**
  * Creates a set of settings for
  * \c clang_experimental_DependencyScannerWorker_getDepGraph action.
  * Must be disposed with
@@ -279,6 +300,23 @@ clang_experimental_DependencyScannerWorkerScanSettings_create(
     int argc, const char *const *argv, const char *ModuleName,
     const char *WorkingDirectory, void *MLOContext,
     CXModuleLookupOutputCallback *MLO);
+
+/**
+ * Override the ModuleLookupOutputCallback with \c
+ * CXModuleLookupOutputCallback_v2 in the scanner settings for queries of module
+ * dependencies. This is required for handling output paths of modules that
+ * depend on attributes encoded in
+ * \c CXDepGraphModule.
+ *
+ * \param Settings object created via
+ *     \c clang_experimental_DependencyScannerWorkerScanSettings_create.
+ * \param MLO a callback that is called to determine the paths of output files
+ *            for each module dependency. This may receive the same module on
+ *            different workers.
+ */
+CINDEX_LINKAGE void
+clang_experimental_DependencyScannerWorkerScanSettings_setModuleLookupCallback(
+    CXDependencyScannerWorkerScanSettings, CXModuleLookupOutputCallback_v2 *);
 
 /**
  * Dispose of a \c CXDependencyScannerWorkerScanSettings object.
@@ -397,6 +435,13 @@ CINDEX_LINKAGE CXCStringArray
  */
 CINDEX_LINKAGE CXCStringArray
     clang_experimental_DepGraphModule_getModuleDeps(CXDepGraphModule);
+
+/**
+ * \returns whether the provided module is comprised of
+ * inputs that resolve into stable directories.
+ */
+CINDEX_LINKAGE bool
+    clang_experimental_DepGraphModule_isInStableDirs(CXDepGraphModule);
 
 /**
  * \returns the canonical command line to build this module.

@@ -23,6 +23,7 @@
 #include "clang/Tooling/DependencyScanning/DependencyScanningService.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningTool.h"
 #include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CAS/CASProvidingFileSystem.h"
 #include "llvm/CAS/CachingOnDiskFileSystem.h"
 #include "llvm/Support/Process.h"
@@ -197,14 +198,18 @@ void clang_experimental_DependencyScannerWorker_dispose_v0(
 namespace {
 class OutputLookup {
 public:
-  OutputLookup(void *MLOContext, CXModuleLookupOutputCallback *MLO)
+  OutputLookup(void *MLOContext, std::variant<CXModuleLookupOutputCallback *,
+                                              CXModuleLookupOutputCallback_v2 *>
+                                     MLO)
       : MLOContext(MLOContext), MLO(MLO) {}
   std::string lookupModuleOutput(const ModuleDeps &MD, ModuleOutputKind MOK);
 
 private:
   llvm::DenseMap<ModuleID, std::string> PCMPaths;
   void *MLOContext;
-  CXModuleLookupOutputCallback *MLO;
+  std::variant<CXModuleLookupOutputCallback *,
+               CXModuleLookupOutputCallback_v2 *>
+      MLO;
 };
 
 struct DependencyScannerWorkerScanSettings {
@@ -213,7 +218,9 @@ struct DependencyScannerWorkerScanSettings {
   const char *ModuleName;
   const char *WorkingDirectory;
   void *MLOContext;
-  CXModuleLookupOutputCallback *MLO;
+  std::variant<CXModuleLookupOutputCallback *,
+               CXModuleLookupOutputCallback_v2 *>
+      MLO;
 };
 
 struct CStringsManager {
@@ -273,7 +280,7 @@ struct DependencyGraph {
 };
 
 struct DependencyGraphModule {
-  ModuleDeps *ModDeps;
+  const ModuleDeps *ModDeps;
   CStringsManager StrMgr{};
 };
 
@@ -314,7 +321,9 @@ enum CXErrorCode clang_experimental_DependencyScannerWorker_getDepGraph(
   const char *ModuleName = Settings.ModuleName;
   const char *WorkingDirectory = Settings.WorkingDirectory;
   void *MLOContext = Settings.MLOContext;
-  CXModuleLookupOutputCallback *MLO = Settings.MLO;
+  std::variant<CXModuleLookupOutputCallback *,
+               CXModuleLookupOutputCallback_v2 *>
+      MLO = Settings.MLO;
 
   OutputLookup OL(MLOContext, MLO);
   auto LookupOutputs = [&](const ModuleDeps &MD, ModuleOutputKind MOK) {
@@ -396,19 +405,19 @@ void clang_experimental_DepGraphModule_dispose(CXDepGraphModule CXDepMod) {
 
 const char *
 clang_experimental_DepGraphModule_getName(CXDepGraphModule CXDepMod) {
-  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
   return ModDeps.ID.ModuleName.c_str();
 }
 
 const char *
 clang_experimental_DepGraphModule_getContextHash(CXDepGraphModule CXDepMod) {
-  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
   return ModDeps.ID.ContextHash.c_str();
 }
 
 const char *
 clang_experimental_DepGraphModule_getModuleMapPath(CXDepGraphModule CXDepMod) {
-  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
   if (ModDeps.ClangModuleMapFile.empty())
     return nullptr;
   return ModDeps.ClangModuleMapFile.c_str();
@@ -416,7 +425,7 @@ clang_experimental_DepGraphModule_getModuleMapPath(CXDepGraphModule CXDepMod) {
 
 CXCStringArray
 clang_experimental_DepGraphModule_getFileDeps(CXDepGraphModule CXDepMod) {
-  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
   std::vector<std::string> FileDeps;
   ModDeps.forEachFileDep([&](StringRef File) { FileDeps.emplace_back(File); });
   return unwrap(CXDepMod)->StrMgr.createCStringsOwned(std::move(FileDeps));
@@ -424,7 +433,7 @@ clang_experimental_DepGraphModule_getFileDeps(CXDepGraphModule CXDepMod) {
 
 CXCStringArray
 clang_experimental_DepGraphModule_getModuleDeps(CXDepGraphModule CXDepMod) {
-  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
   std::vector<std::string> Modules;
   Modules.reserve(ModDeps.ClangModuleDeps.size());
   for (const ModuleID &MID : ModDeps.ClangModuleDeps)
@@ -432,16 +441,21 @@ clang_experimental_DepGraphModule_getModuleDeps(CXDepGraphModule CXDepMod) {
   return unwrap(CXDepMod)->StrMgr.createCStringsOwned(std::move(Modules));
 }
 
+bool clang_experimental_DepGraphModule_isInStableDirs(
+    CXDepGraphModule CXDepMod) {
+  return unwrap(CXDepMod)->ModDeps->IsInStableDirectories;
+}
+
 CXCStringArray
 clang_experimental_DepGraphModule_getBuildArguments(CXDepGraphModule CXDepMod) {
-  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
   return unwrap(CXDepMod)->StrMgr.createCStringsRef(
       ModDeps.getBuildArguments());
 }
 
 const char *clang_experimental_DepGraphModule_getFileSystemRootID(
     CXDepGraphModule CXDepMod) {
-  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
   if (ModDeps.CASFileSystemRootID)
     return ModDeps.CASFileSystemRootID->c_str();
   return nullptr;
@@ -449,7 +463,7 @@ const char *clang_experimental_DepGraphModule_getFileSystemRootID(
 
 const char *
 clang_experimental_DepGraphModule_getIncludeTreeID(CXDepGraphModule CXDepMod) {
-  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
   if (ModDeps.IncludeTreeID)
     return ModDeps.IncludeTreeID->c_str();
   return nullptr;
@@ -457,7 +471,7 @@ clang_experimental_DepGraphModule_getIncludeTreeID(CXDepGraphModule CXDepMod) {
 
 const char *
 clang_experimental_DepGraphModule_getCacheKey(CXDepGraphModule CXDepMod) {
-  ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
+  const ModuleDeps &ModDeps = *unwrap(CXDepMod)->ModDeps;
   if (ModDeps.ModuleCacheKey)
     return ModDeps.ModuleCacheKey->c_str();
   return nullptr;
@@ -536,22 +550,46 @@ const char *clang_experimental_DepGraph_getTUContextHash(CXDepGraph Graph) {
   return TUDeps.ID.ContextHash.c_str();
 }
 
+void clang_experimental_DependencyScannerWorkerScanSettings_setModuleLookupCallback(
+    CXDependencyScannerWorkerScanSettings CXSettings,
+    CXModuleLookupOutputCallback_v2 *MLO) {
+  DependencyScannerWorkerScanSettings &Settings = *unwrap(CXSettings);
+  Settings.MLO = MLO;
+}
+
 CXDiagnosticSet clang_experimental_DepGraph_getDiagnostics(CXDepGraph Graph) {
   return unwrap(Graph)->getDiagnosticSet();
 }
 
-static std::string lookupModuleOutput(const ModuleDeps &MD,
-                                      ModuleOutputKind MOK, void *MLOContext,
-                                      CXModuleLookupOutputCallback *MLO) {
+static std::string
+lookupModuleOutput(const ModuleDeps &MD, ModuleOutputKind MOK, void *MLOContext,
+                   std::variant<CXModuleLookupOutputCallback *,
+                                CXModuleLookupOutputCallback_v2 *>
+                       MLO) {
   SmallVector<char, 256> Buffer(256);
-  size_t Len =
-      MLO(MLOContext, MD.ID.ModuleName.c_str(), MD.ID.ContextHash.c_str(),
-          wrap(MOK), Buffer.data(), Buffer.size());
+  auto GetLengthFromOutputCallback = [&]() {
+    return std::visit(llvm::makeVisitor(
+                          [&](CXModuleLookupOutputCallback *) -> size_t {
+                            return std::get<CXModuleLookupOutputCallback *>(
+                                MLO)(MLOContext, MD.ID.ModuleName.c_str(),
+                                     MD.ID.ContextHash.c_str(), wrap(MOK),
+                                     Buffer.data(), Buffer.size());
+                          },
+                          [&](CXModuleLookupOutputCallback_v2 *) -> size_t {
+                            return std::get<CXModuleLookupOutputCallback_v2 *>(
+                                MLO)(MLOContext,
+                                     wrap(new DependencyGraphModule{&MD}),
+                                     wrap(MOK), Buffer.data(), Buffer.size());
+                          }),
+                      MLO);
+  };
+
+  size_t Len = GetLengthFromOutputCallback();
   if (Len > Buffer.size()) {
     Buffer.resize(Len);
-    Len = MLO(MLOContext, MD.ID.ModuleName.c_str(), MD.ID.ContextHash.c_str(),
-              wrap(MOK), Buffer.data(), Buffer.size());
+    Len = GetLengthFromOutputCallback();
   }
+
   return std::string(Buffer.begin(), Len);
 }
 
