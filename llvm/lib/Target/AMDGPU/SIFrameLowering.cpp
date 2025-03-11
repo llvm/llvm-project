@@ -900,7 +900,7 @@ static Register buildScratchExecCopy(LiveRegUnits &LiveUnits,
 
   initLiveUnits(LiveUnits, TRI, FuncInfo, MF, MBB, MBBI, IsProlog);
 
-  if (ST.isWholeWaveFunction()) {
+  if (FuncInfo->isWholeWaveFunction()) {
     // Whole wave functions already have a copy of the original EXEC mask that
     // we can use.
     assert(IsProlog && "Epilog should look at return, not setup");
@@ -977,7 +977,7 @@ void SIFrameLowering::emitCSRSpillStores(
   }
 
   StoreWWMRegisters(WWMCalleeSavedRegs);
-  if (ST.isWholeWaveFunction()) {
+  if (FuncInfo->isWholeWaveFunction()) {
     // SI_SETUP_WHOLE_WAVE_FUNCTION has outlived its purpose, so we can remove
     // it now. If we have already saved some WWM CSR registers, then the EXEC is
     // already -1 and we don't need to do anything else. Otherwise, set EXEC to
@@ -1070,7 +1070,7 @@ void SIFrameLowering::emitCSRSpillRestores(
         }
       };
 
-  if (ST.isWholeWaveFunction()) {
+  if (FuncInfo->isWholeWaveFunction()) {
     // For whole wave functions, the EXEC is already -1 at this point.
     // Therefore, we can restore the CSR WWM registers right away.
     RestoreWWMRegisters(WWMCalleeSavedRegs);
@@ -1665,7 +1665,7 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (MFI->isEntryFunction())
     return;
 
-  if (ST.isWholeWaveFunction()) {
+  if (MFI->isWholeWaveFunction()) {
     // In practice, all the VGPRs are WWM registers, and we will need to save at
     // least their inactive lanes. Add them to WWMReservedRegs.
     assert(!NeedExecCopyReservedReg && "Whole wave functions can use the reg mapped for their i1 argument");

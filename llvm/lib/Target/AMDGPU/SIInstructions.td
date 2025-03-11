@@ -623,7 +623,6 @@ def SI_INIT_WHOLE_WAVE : SPseudoInstSI <
   let isConvergent = 1;
 }
 
-let SubtargetPredicate = IsWholeWaveFunction in {
 // Sets EXEC to all lanes and returns the previous EXEC.
 def SI_SETUP_WHOLE_WAVE_FUNC : SPseudoInstSI <
   (outs SReg_1:$dst), (ins), [(set i1:$dst, (AMDGPUwhole_wave_setup))]> {
@@ -649,8 +648,6 @@ def SI_WHOLE_WAVE_FUNC_RETURN : SPseudoInstSI <
 // argument. It will be filled in by the custom inserter.
 def : GCNPat<
   (AMDGPUwhole_wave_return), (SI_WHOLE_WAVE_FUNC_RETURN (i1 (IMPLICIT_DEF)))>;
-
-} // SubtargetPredicate = IsWholeWaveFunction
 
 // Return for returning shaders to a shader variant epilog.
 def SI_RETURN_TO_EPILOG : SPseudoInstSI <

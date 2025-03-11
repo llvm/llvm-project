@@ -5776,7 +5776,8 @@ void SIInstrInfo::restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
 
 MachineInstr *
 SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
-  assert(ST.isWholeWaveFunction() && "Not a whole wave func");
+  assert(MF.getInfo<SIMachineFunctionInfo>()->isWholeWaveFunction() &&
+         "Not a whole wave func");
   MachineBasicBlock &MBB = *MF.begin();
   for (MachineInstr &MI : MBB)
     if (MI.getOpcode() == AMDGPU::SI_SETUP_WHOLE_WAVE_FUNC)

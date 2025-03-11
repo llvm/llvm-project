@@ -41,7 +41,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
       WorkGroupIDZ(false), WorkGroupInfo(false), LDSKernelId(false),
       PrivateSegmentWaveByteOffset(false), WorkItemIDX(false),
       WorkItemIDY(false), WorkItemIDZ(false), ImplicitArgPtr(false),
-      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0) {
+      GITPtrHigh(0xffffffff), HighBitsOf32BitAddress(0),
+      IsWholeWaveFunction(F.getCallingConv() == CallingConv::AMDGPU_WholeWave) {
   const GCNSubtarget &ST = *static_cast<const GCNSubtarget *>(STI);
   FlatWorkGroupSizes = ST.getFlatWorkGroupSizes(F);
   WavesPerEU = ST.getWavesPerEU(F);
@@ -83,7 +84,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const Function &F,
 
     ImplicitArgPtr = false;
   } else if (!isEntryFunction()) {
-    if (CC != CallingConv::AMDGPU_Gfx)
+    if (CC != CallingConv::AMDGPU_Gfx && CC != CallingConv::AMDGPU_WholeWave)
       ArgInfo = AMDGPUArgumentUsageInfo::FixedABIFunctionInfo;
 
     FrameOffsetReg = AMDGPU::SGPR33;
@@ -713,7 +714,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
       ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
       PSInputAddr(MFI.getPSInputAddr()), PSInputEnable(MFI.getPSInputEnable()),
       MaxMemoryClusterDWords(MFI.getMaxMemoryClusterDWords()),
-      Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()) {
+      Mode(MFI.getMode()), HasInitWholeWave(MFI.hasInitWholeWave()),
+      IsWholeWaveFunction(MFI.isWholeWaveFunction()) {
   for (Register Reg : MFI.getSGPRSpillPhysVGPRs())
     SpillPhysVGPRS.push_back(regToString(Reg, TRI));
 
@@ -758,6 +760,7 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
   HasSpilledVGPRs = YamlMFI.HasSpilledVGPRs;
   BytesInStackArgArea = YamlMFI.BytesInStackArgArea;
   ReturnsVoid = YamlMFI.ReturnsVoid;
+  IsWholeWaveFunction = YamlMFI.IsWholeWaveFunction;
 
   if (YamlMFI.ScavengeFI) {
     auto FIOrErr = YamlMFI.ScavengeFI->getFI(MF.getFrameInfo());
