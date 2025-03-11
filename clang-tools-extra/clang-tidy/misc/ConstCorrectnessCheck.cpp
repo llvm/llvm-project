@@ -13,7 +13,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
-#include "llvm/Support/Casting.h"
 #include <cassert>
 
 using namespace clang::ast_matchers;
@@ -157,13 +156,14 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
 
   VariableCategory VC = VariableCategory::Value;
   const QualType VT = Variable->getType();
-  if (VT->isReferenceType())
+  if (VT->isReferenceType()) {
     VC = VariableCategory::Reference;
-  else if (VT->isPointerType())
+  } else if (VT->isPointerType()) {
     VC = VariableCategory::Pointer;
-  else if (const auto *ArrayT = dyn_cast<ArrayType>(VT))
+  } else if (const auto *ArrayT = dyn_cast<ArrayType>(VT)) {
     if (ArrayT->getElementType()->isPointerType())
       VC = VariableCategory::Pointer;
+  }
 
   auto CheckValue = [&]() {
     // The scope is only registered if the analysis shall be run.
