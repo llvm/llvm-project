@@ -104,6 +104,7 @@ public:
   }
 
   LogicalResult applyLevelCheck(Operation *op);
+  LogicalResult applyAttributeCheck(Operation *op);
 
   // check variable read/write data types against variable declarations
   LogicalResult applyVariableCheck(Operation *op);
@@ -386,6 +387,25 @@ private:
     return true;
   }
 
+  bool attributeCheckRescale(Operation *op) {
+    if (auto rescale = dyn_cast<tosa::RescaleOp>(op)) {
+      if (rescale.getRoundingMode() == "DOUBLE_ROUND" &&
+          !targetEnv.allows(Extension::doubleround)) {
+        op->emitOpError()
+            << "failed attribute check: rounding_mode = DOUBLE_ROUND "
+            << "requires extension [doubleround]";
+        return false;
+      } else if (rescale.getRoundingMode() == "INEXACT_ROUND" &&
+                 !targetEnv.allows(Extension::inexactround)) {
+        op->emitOpError()
+            << "failed attribute check: rounding_mode = INEXACT_ROUND "
+            << "requires extension [inexactround]";
+        return false;
+      }
+    }
+    return true;
+  }
+
   // configure profile and level values from pass options profileName and
   // levelName
   void configLevelAndProfile() {
@@ -415,7 +435,8 @@ private:
         } else {
           llvm::errs() << "unknown TOSA extension name passed in: " << ext
                        << ", supported extension are int16, int4, bf16, "
-                       << "fp8e4m3, fp8e5m2, fft, variable and controlflow\n";
+                       << "fp8e4m3, fp8e5m2, fft, variable, controlflow, "
+                       << "doubleround and inexactround\n";
           return signalPassFailure();
         }
       }
@@ -639,6 +660,12 @@ LogicalResult TosaValidation::applyLevelCheck(Operation *op) {
     return failure();
   }
 
+  return success();
+}
+
+LogicalResult TosaValidation::applyAttributeCheck(Operation *op) {
+  if (!attributeCheckRescale(op))
+    return failure();
   return success();
 }
 
@@ -934,6 +961,10 @@ void TosaValidation::runOnOperation() {
 
     // do level checks
     if (failed(applyLevelCheck(op)))
+      signalPassFailure();
+
+    // check additional attribute restrictions
+    if (failed(applyAttributeCheck(op)))
       signalPassFailure();
 
     // do variable type checks
