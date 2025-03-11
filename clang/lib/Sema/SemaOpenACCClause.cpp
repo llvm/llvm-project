@@ -483,6 +483,14 @@ bool doesClauseApplyToDirective(OpenACCDirectiveKind DirectiveKind,
       return false;
     }
   }
+  case OpenACCClauseKind::Bind: {
+    switch (DirectiveKind) {
+    case OpenACCDirectiveKind::Routine:
+      return true;
+    default:
+      return false;
+    }
+  }
   }
 
   default:
@@ -677,10 +685,6 @@ public:
   SemaOpenACCClauseVisitor(SemaOpenACC &S,
                            ArrayRef<const OpenACCClause *> ExistingClauses)
       : SemaRef(S), Ctx(S.getASTContext()), ExistingClauses(ExistingClauses) {}
-  // Once we've implemented everything, we shouldn't need this infrastructure.
-  // But in the meantime, we use this to help decide whether the clause was
-  // handled for this directive.
-  bool diagNotImplemented() { return NotImplemented; }
 
   OpenACCClause *Visit(SemaOpenACC::OpenACCParsedClause &Clause) {
     switch (Clause.getClauseKind()) {
@@ -1985,6 +1989,17 @@ OpenACCClause *SemaOpenACCClauseVisitor::VisitCollapseClause(
                                        LoopCount.get(), Clause.getEndLoc());
 }
 
+OpenACCClause *SemaOpenACCClauseVisitor::VisitBindClause(
+    SemaOpenACC::OpenACCParsedClause &Clause) {
+  if (std::holds_alternative<StringLiteral *>(Clause.getBindDetails()))
+    return OpenACCBindClause::Create(
+        Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(),
+        std::get<StringLiteral *>(Clause.getBindDetails()), Clause.getEndLoc());
+  return OpenACCBindClause::Create(
+      Ctx, Clause.getBeginLoc(), Clause.getLParenLoc(),
+      std::get<IdentifierInfo *>(Clause.getBindDetails()), Clause.getEndLoc());
+}
+
 // Return true if the two vars refer to the same variable, for the purposes of
 // equality checking.
 bool areVarsEqual(Expr *VarExpr1, Expr *VarExpr2) {
@@ -2073,12 +2088,7 @@ SemaOpenACC::ActOnClause(ArrayRef<const OpenACCClause *> ExistingClauses,
   assert((!Result || Result->getClauseKind() == Clause.getClauseKind()) &&
          "Created wrong clause?");
 
-  if (Visitor.diagNotImplemented())
-    Diag(Clause.getBeginLoc(), diag::warn_acc_clause_unimplemented)
-        << Clause.getClauseKind();
-
   return Result;
-
 }
 
 /// OpenACC 3.3 section 2.5.15:

@@ -346,11 +346,9 @@ Register AArch64FastISel::fastMaterializeAlloca(const AllocaInst *AI) {
          "Alloca should always return a pointer.");
 
   // Don't handle dynamic allocas.
-  if (!FuncInfo.StaticAllocaMap.count(AI))
+  auto SI = FuncInfo.StaticAllocaMap.find(AI);
+  if (SI == FuncInfo.StaticAllocaMap.end())
     return Register();
-
-  DenseMap<const AllocaInst *, int>::iterator SI =
-      FuncInfo.StaticAllocaMap.find(AI);
 
   if (SI != FuncInfo.StaticAllocaMap.end()) {
     Register ResultReg = createResultReg(&AArch64::GPR64spRegClass);
