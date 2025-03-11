@@ -31883,7 +31883,6 @@ X86TargetLowering::lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const {
 
   IRBuilder<> Builder(AI);
   Builder.CollectMetadataToCopy(AI, {LLVMContext::MD_pcsections});
-  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   auto SSID = AI->getSyncScopeID();
   // We must restrict the ordering to avoid generating loads with Release or
   // ReleaseAcquire orderings.
