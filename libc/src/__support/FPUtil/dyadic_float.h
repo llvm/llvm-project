@@ -455,7 +455,7 @@ template <size_t Bits> struct DyadicFloat {
       if (exponent > 0) {
         new_mant <<= exponent;
       } else if (exponent < 0) {
-        size_t shift = -exponent;
+        size_t shift = -static_cast<size_t>(exponent);
         new_mant >>= shift;
         round_dir = rounding_direction(mantissa, shift, sign);
         if (round_dir > 0)
