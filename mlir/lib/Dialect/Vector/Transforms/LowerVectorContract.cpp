@@ -764,7 +764,7 @@ FailureOr<Value> ContractionOpToDotLowering::matchAndRewriteMaskableOp(
     Value rowLhs = rewriter.create<vector::ExtractOp>(op.getLoc(), lhs, r);
     for (unsigned c = 0; c < dstColumns; ++c) {
       // Extract each respective row and column of the LHS and RHS once to
-      // avoid having duplicate SSA values pointing to the same rows/columns. 
+      // avoid having duplicate SSA values pointing to the same rows/columns.
       if (r == 0) {
         Value colRhs =
             rank == 1 ? rhs
