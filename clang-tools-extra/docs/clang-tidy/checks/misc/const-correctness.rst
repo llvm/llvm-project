@@ -137,7 +137,7 @@ Options
   This option enables the suggestion for ``const`` of the value pointing.
   Default is `true`.
 
-  Requires 'AnalyzePointers' to be 'true'.
+  Requires :option:`AnalyzePointers` to be `true`.
 
   .. code-block:: c++
 
@@ -225,10 +225,10 @@ Options
 
 .. option:: TransformPointersAsPointers
 
-  Provides fixit-hints for pointers if the value it pointing to is not changed.
+  Provides fix-it hints for pointers if the value it pointing to is not changed.
   Default is `false`.
 
-  Requires 'WarnPointersAsPointers' to be 'true'.
+  Requires :option:`WarnPointersAsPointers` to be `true`.
 
   .. code-block:: c++
 
