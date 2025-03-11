@@ -8,6 +8,7 @@
 
 #include "ConfusableIdentifierCheck.h"
 
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/SmallString.h"
@@ -91,16 +92,22 @@ static llvm::SmallString<64U> skeleton(StringRef Name) {
 namespace {
 struct Entry {
   const NamedDecl *ND;
+  const Decl *Parent;
   bool FromDerivedClass;
 };
 } // namespace
 
+// Map from a context to the declarations in that context with the current
+// skeleton. At most one entry per distinct identifier is tracked. The
+// context is usually a `DeclContext`, but can also be a template declaration
+// that has no corresponding context, such as an alias template or variable
+// template.
 using DeclsWithinContextMap =
-    llvm::DenseMap<const DeclContext *, llvm::SmallVector<Entry, 1>>;
+    llvm::DenseMap<const Decl *, llvm::SmallVector<Entry, 1>>;
 
 static bool addToContext(DeclsWithinContextMap &DeclsWithinContext,
-                         const DeclContext *DC, Entry E) {
-  auto &Decls = DeclsWithinContext[DC];
+                         const Decl *Context, Entry E) {
+  auto &Decls = DeclsWithinContext[Context];
   if (!Decls.empty() &&
       Decls.back().ND->getIdentifier() == E.ND->getIdentifier()) {
     // Already have a declaration with this identifier in this context. Don't
@@ -120,23 +127,30 @@ static bool addToContext(DeclsWithinContextMap &DeclsWithinContext,
 }
 
 static void addToEnclosingContexts(DeclsWithinContextMap &DeclsWithinContext,
-                                   const DeclContext *DC, const NamedDecl *ND) {
-  while (DC) {
-    DC = DC->getNonTransparentContext()->getPrimaryContext();
-    if (!addToContext(DeclsWithinContext, DC, {ND, false}))
+                                   const Decl *Parent,
+                                   const NamedDecl *ND) {
+  const Decl *Outer = Parent;
+  while (Outer) {
+    if (const auto *NS = dyn_cast<NamespaceDecl>(Outer))
+      Outer = NS->getCanonicalDecl();
+
+    if (!addToContext(DeclsWithinContext, Outer, {ND, Parent, false}))
       return;
 
-    if (const auto *RD = dyn_cast<CXXRecordDecl>(DC)) {
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(Outer)) {
       RD = RD->getDefinition();
       if (RD) {
         RD->forallBases([&](const CXXRecordDecl *Base) {
-          addToContext(DeclsWithinContext, Base, {ND, true});
+          addToContext(DeclsWithinContext, Base, {ND, Parent, true});
           return true;
         });
       }
     }
 
-    DC = DC->getParent();
+    auto *OuterDC = Outer->getDeclContext();
+    if (!OuterDC)
+      break;
+    Outer = cast_or_null<Decl>(OuterDC->getNonTransparentContext());
   }
 }
 
@@ -146,6 +160,24 @@ void ConfusableIdentifierCheck::check(
   if (!ND)
     return;
 
+  addDeclToCheck(ND, cast<Decl>(ND->getDeclContext()
+                                    ->getNonTransparentContext()));
+
+  // Associate template parameters with this declaration of this template.
+  if (const auto *TD = dyn_cast<TemplateDecl>(ND)) {
+    for (const NamedDecl *Param : *TD->getTemplateParameters())
+      addDeclToCheck(Param, TD->getTemplatedDecl());
+  }
+
+  // Associate function parameters with this declaration of this function.
+  if (const auto *FD = dyn_cast<FunctionDecl>(ND)) {
+    for (const NamedDecl *Param : FD->parameters())
+      addDeclToCheck(Param, ND);
+  }
+}
+
+void ConfusableIdentifierCheck::addDeclToCheck(const NamedDecl *ND,
+                                               const Decl *Parent) {
   const IdentifierInfo *NDII = ND->getIdentifier();
   if (!NDII)
     return;
@@ -154,7 +186,7 @@ void ConfusableIdentifierCheck::check(
   if (NDName.empty())
     return;
 
-  NameToDecls[NDII].push_back(ND);
+  NameToDecls[NDII].push_back({ND, Parent});
 }
 
 void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
@@ -173,8 +205,8 @@ void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
     // Find the declaration contexts that transitively contain each identifier.
     DeclsWithinContextMap DeclsWithinContext;
     for (const IdentifierInfo *II : Idents) {
-      for (const NamedDecl *ND : NameToDecls[II]) {
-        addToEnclosingContexts(DeclsWithinContext, ND->getDeclContext(), ND);
+      for (auto [ND, Parent] : NameToDecls[II]) {
+        addToEnclosingContexts(DeclsWithinContext, Parent, ND);
       }
     }
 
@@ -182,11 +214,8 @@ void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
     // transitively contains another declaration with a different identifier but
     // the same skeleton.
     for (const IdentifierInfo *II : Idents) {
-      for (const NamedDecl *OuterND : NameToDecls[II]) {
-        const DeclContext *OuterDC = OuterND->getDeclContext()
-                                         ->getNonTransparentContext()
-                                         ->getPrimaryContext();
-        for (Entry Inner : DeclsWithinContext[OuterDC]) {
+      for (auto [OuterND, OuterParent] : NameToDecls[II]) {
+        for (Entry Inner : DeclsWithinContext[OuterParent]) {
           // Don't complain if the identifiers are the same.
           if (OuterND->getIdentifier() == Inner.ND->getIdentifier())
             continue;
@@ -198,8 +227,7 @@ void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
 
           // If the declarations are in the same context, only diagnose the
           // later one.
-          if (OuterDC->Equals(
-                  Inner.ND->getDeclContext()->getNonTransparentContext()) &&
+          if (OuterParent == Inner.Parent &&
               Inner.ND->getASTContext()
                   .getSourceManager()
                   .isBeforeInTranslationUnit(Inner.ND->getLocation(),
@@ -220,7 +248,17 @@ void ConfusableIdentifierCheck::onEndOfTranslationUnit() {
 
 void ConfusableIdentifierCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-  Finder->addMatcher(ast_matchers::namedDecl().bind("nameddecl"), this);
+  // Parameter declarations sometimes use the translation unit or some outer
+  // enclosing context as their `DeclContext`, instead of their parent, so
+  // we handle them specially in `check`.
+  auto AnyParamDecl = ast_matchers::anyOf(
+      ast_matchers::parmVarDecl(), ast_matchers::templateTypeParmDecl(),
+      ast_matchers::nonTypeTemplateParmDecl(),
+      ast_matchers::templateTemplateParmDecl());
+  Finder->addMatcher(
+      ast_matchers::namedDecl(ast_matchers::unless(AnyParamDecl))
+          .bind("nameddecl"),
+      this);
 }
 
 } // namespace clang::tidy::misc

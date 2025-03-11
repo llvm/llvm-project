@@ -31,8 +31,11 @@ public:
   }
 
 private:
-  llvm::DenseMap<const IdentifierInfo *,
-                 llvm::SmallVector<const NamedDecl *, 1>>
+  void addDeclToCheck(const NamedDecl *ND, const Decl *Parent);
+
+  llvm::DenseMap<
+      const IdentifierInfo *,
+      llvm::SmallVector<std::pair<const NamedDecl *, const Decl *>, 1>>
       NameToDecls;
 };
 
