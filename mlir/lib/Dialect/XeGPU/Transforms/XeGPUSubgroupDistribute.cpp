@@ -355,7 +355,6 @@ void SGMapPropagation::visitVectorMultiReductionOp(
   /// Given that the result is 1D, the layout of the operand should be 2D with
   /// default layout.
   auto operandLayout = getDefaultSgMap(2);
-  operandLayout.print(llvm::outs());
   propagateIfChanged(operands[0], operands[0]->meet(operandLayout));
   /// Accumulator should have the same layout as the result.
   propagateIfChanged(operands[1], operands[1]->meet(resultLayout));
@@ -625,16 +624,11 @@ struct XeGPUSubgroupDistributePass final
     : public xegpu::impl::XeGPUSubgroupDistributeBase<
           XeGPUSubgroupDistributePass> {
   XeGPUSubgroupDistributePass() = default;
-  XeGPUSubgroupDistributePass(const XeGPUSubgroupDistributePass &other)
-      : xegpu::impl::XeGPUSubgroupDistributeBase<XeGPUSubgroupDistributePass>(
-            other) {
-    this->printOnly = other.printOnly;
-  }
+  XeGPUSubgroupDistributePass(const XeGPUSubgroupDistributePass &other) =
+      default;
+  XeGPUSubgroupDistributePass(xegpu::XeGPUSubgroupDistributeOptions options)
+      : XeGPUSubgroupDistributeBase(options) {}
   void runOnOperation() override;
-  /// Print sg map propagation analysis result and exit for testing purposes.
-  Option<bool> printOnly{*this, "print-analysis-only", llvm::cl::init(false),
-                         llvm::cl::desc("Print the result of the subgroup map "
-                                        "propagation analysis and exit.")};
 };
 } // namespace
 

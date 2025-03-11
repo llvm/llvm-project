@@ -31,6 +31,11 @@ def XeGPUSubgroupDistribute : Pass<"xegpu-subgroup-distribute"> {
   let dependentDialects = [
       "memref::MemRefDialect", "xegpu::XeGPUDialect", "vector::VectorDialect"
   ];
+  let options = [
+    Option<"printOnly", "print-analysis-only", "bool",
+         /*default=*/"false",
+         "Print the result of the subgroup map propagation analysis and exit.">
+  ];
 }
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD
