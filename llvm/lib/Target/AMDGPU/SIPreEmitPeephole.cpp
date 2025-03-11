@@ -422,6 +422,7 @@ llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
   if (!SIPreEmitPeephole().run(MF))
     return PreservedAnalyses::all();
+
   return getMachineFunctionPassPreservedAnalyses();
 }
 
