@@ -1224,67 +1224,66 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   return false;
 }
 
-static bool isSaveToNarrow(unsigned opc, uint64_t num1, uint64_t num2) {
-  if (num1 > 0xffffffff || num2 > 0xffffffff) {
-    // if `num > 0xffffffff`, then `%and = and i64 %a, num` may or may not have
-    // higher 32bit set. Which cause truncate possibly lose infomation
+static bool tryNarrowMathIfNoOverflow(Instruction &I, TargetTransformInfo &TTI,
+                                      const DataLayout &DL) {
+  unsigned opc = I.getOpcode();
+  Type *OldType = I.getType();
+  if (opc != Instruction::Add && opc != Instruction::Mul &&
+      !OldType->isIntOrIntVectorTy()) {
     return false;
   }
+  unsigned OrigBit = OldType->getScalarSizeInBits();
+  unsigned MaxBitsNeed = OrigBit;
   switch (opc) {
-  // If `%and = and i64 %a, num` where num <= 0xffffffff, then `%and` must be
-  // positive.
-  // Since add and mul both increasing function on positive integer domain and
-  // `%ai <= numi`, then if `(num1 op num2) <= 0xffffffff` we have `%a1 + %a2 <=
-  // 0xffffffff`
   case Instruction::Add:
-    return (num1 + num2) <= 0xffffffff;
+    MaxBitsNeed = KnownBits::add(computeKnownBits(I.getOperand(0), DL),
+                                 computeKnownBits(I.getOperand(1), DL))
+                      .countMaxActiveBits();
+    break;
   case Instruction::Mul:
-    return (num1 * num2) <= 0xffffffff;
+    MaxBitsNeed = KnownBits::mul(computeKnownBits(I.getOperand(0), DL),
+                                 computeKnownBits(I.getOperand(1), DL))
+                      .countMaxActiveBits();
+    break;
+  default:
     break;
   }
 
-  return false;
-}
+  MaxBitsNeed = std::max<unsigned>(bit_ceil(MaxBitsNeed), 8);
 
-static bool tryNarrowMathIfNoOverflow(Instruction &I,
-                                      TargetTransformInfo &TTI) {
-  unsigned opc = I.getOpcode();
-  if (opc != Instruction::Add && opc != Instruction::Mul) {
+  if (OrigBit <= MaxBitsNeed) {
     return false;
   }
-  LLVMContext &ctx = I.getContext();
-  Type *I64Type = Type::getInt64Ty(ctx);
-  Type *I32Type = Type::getInt32Ty(ctx);
 
-  if (I.getType() != I64Type || !TTI.isTruncateFree(I64Type, I32Type)) {
+  Type *NewType = I.getType()->getWithNewBitWidth(MaxBitsNeed);
+
+  // Old cost
+  InstructionCost OldCost =
+      TTI.getArithmeticInstrCost(opc, OldType, TTI::TCK_RecipThroughput);
+  // New cost of new op
+  InstructionCost NewCost =
+      TTI.getArithmeticInstrCost(opc, NewType, TTI::TCK_RecipThroughput);
+  // New cost of narrowing 2 operands (use trunc)
+  NewCost += TTI.getCastInstrCost(Instruction::Trunc, NewType, OldType,
+                                  TTI.getCastContextHint(&I),
+                                  TTI::TCK_RecipThroughput) *
+             2;
+  // New cost of zext narrowed result to original type
+  NewCost += TTI.getCastInstrCost(Instruction::ZExt, OldType, NewType,
+                                  TTI.getCastContextHint(&I),
+                                  TTI::TCK_RecipThroughput);
+  if (NewCost >= OldCost) {
     return false;
   }
-  InstructionCost CostOp64 =
-      TTI.getArithmeticInstrCost(opc, I64Type, TTI::TCK_RecipThroughput);
-  InstructionCost CostOp32 =
-      TTI.getArithmeticInstrCost(opc, I32Type, TTI::TCK_RecipThroughput);
-  InstructionCost CostZext64 = TTI.getCastInstrCost(
-      Instruction::ZExt, I64Type, I32Type, TTI.getCastContextHint(&I),
-      TTI::TCK_RecipThroughput);
-  if ((CostOp64 - CostOp32) <= CostZext64) {
-    return false;
-  }
-  uint64_t AndConst0, AndConst1;
-  Value *X;
-  if ((match(I.getOperand(0), m_And(m_Value(X), m_ConstantInt(AndConst0))) ||
-       match(I.getOperand(0), m_And(m_ConstantInt(AndConst0), m_Value(X)))) &&
-      (match(I.getOperand(1), m_And(m_Value(X), m_ConstantInt(AndConst1))) ||
-       match(I.getOperand(1), m_And(m_ConstantInt(AndConst1), m_Value(X)))) &&
-      isSaveToNarrow(opc, AndConst0, AndConst1)) {
-    IRBuilder<> Builder(&I);
-    Value *Trun0 = Builder.CreateTrunc(I.getOperand(0), I32Type);
-    Value *Trun1 = Builder.CreateTrunc(I.getOperand(1), I32Type);
-    Value *Arith32 = Builder.CreateAdd(Trun0, Trun1);
-    Value *Zext64 = Builder.CreateZExt(Arith32, I64Type);
-    I.replaceAllUsesWith(Zext64);
-    I.eraseFromParent();
-  }
-  return false;
+  IRBuilder<> Builder(&I);
+  Value *Trun0 = Builder.CreateTrunc(I.getOperand(0), NewType);
+  Value *Trun1 = Builder.CreateTrunc(I.getOperand(1), NewType);
+  Value *Arith = Builder.CreateBinOp((Instruction::BinaryOps)opc, Trun0, Trun1);
+
+  Value *Zext = Builder.CreateZExt(Arith, OldType);
+  I.replaceAllUsesWith(Zext);
+  I.eraseFromParent();
+  return true;
 }
 
 /// This is the entry point for folds that could be implemented in regular
@@ -1319,7 +1318,7 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
       MadeChange |= foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange);
-      MadeChange |= tryNarrowMathIfNoOverflow(I, TTI);
+      MadeChange |= tryNarrowMathIfNoOverflow(I, TTI, DL);
     }
   }
 
