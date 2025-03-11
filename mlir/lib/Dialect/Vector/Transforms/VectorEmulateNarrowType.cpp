@@ -519,7 +519,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
 
     auto origElements = valueToStore.getType().getNumElements();
     // Note, per-element-alignment was already verified above.
-    bool isFullyAligned = origElements % emulatedPerContainerElem == 0;
+    bool isDivisibleInSize = origElements % emulatedPerContainerElem == 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
@@ -535,8 +535,8 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedNumFrontPadElems =
-        isFullyAligned ? 0
-                       : getConstantIntValue(linearizedInfo.intraDataOffset);
+        isDivisibleInSize ? 0
+                          : getConstantIntValue(linearizedInfo.intraDataOffset);
 
     if (!foldedNumFrontPadElems) {
       return rewriter.notifyMatchFailure(
@@ -554,7 +554,7 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
     // need unaligned emulation because the store address is aligned and the
     // source is a whole byte.
     bool emulationRequiresPartialStores =
-        !isFullyAligned || *foldedNumFrontPadElems != 0;
+        !isDivisibleInSize || *foldedNumFrontPadElems != 0;
     if (!emulationRequiresPartialStores) {
       // Basic case: storing full bytes.
       auto numElements = origElements / emulatedPerContainerElem;
@@ -881,7 +881,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
 
     auto origElements = op.getVectorType().getNumElements();
     // Note, per-element-alignment was already verified above.
-    bool isFullyAligned = origElements % emulatedPerContainerElem == 0;
+    bool isDivisibleInSize = origElements % emulatedPerContainerElem == 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
@@ -897,8 +897,8 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedIntraVectorOffset =
-        isFullyAligned ? 0
-                       : getConstantIntValue(linearizedInfo.intraDataOffset);
+        isDivisibleInSize ? 0
+                          : getConstantIntValue(linearizedInfo.intraDataOffset);
 
     // Always load enough elements which can cover the original elements.
     int64_t maxintraDataOffset =
@@ -915,7 +915,7 @@ struct ConvertVectorLoad final : OpConversionPattern<vector::LoadOp> {
       result = dynamicallyExtractSubVector(
           rewriter, loc, dyn_cast<TypedValue<VectorType>>(result), resultVector,
           linearizedInfo.intraDataOffset, origElements);
-    } else if (!isFullyAligned) {
+    } else if (!isDivisibleInSize) {
       result = staticallyExtractSubvector(
           rewriter, loc, result, *foldedIntraVectorOffset, origElements);
     }
@@ -1002,7 +1002,7 @@ struct ConvertVectorMaskedLoad final
     auto origType = op.getVectorType();
     auto origElements = origType.getNumElements();
     // Note, per-element-alignment was already verified above.
-    bool isFullyAligned = origElements % emulatedPerContainerElem == 0;
+    bool isDivisibleInSize = origElements % emulatedPerContainerElem == 0;
 
     auto stridedMetadata =
         rewriter.create<memref::ExtractStridedMetadataOp>(loc, op.getBase());
@@ -1017,8 +1017,8 @@ struct ConvertVectorMaskedLoad final
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedIntraVectorOffset =
-        isFullyAligned ? 0
-                       : getConstantIntValue(linearizedInfo.intraDataOffset);
+        isDivisibleInSize ? 0
+                          : getConstantIntValue(linearizedInfo.intraDataOffset);
 
     int64_t maxIntraDataOffset =
         foldedIntraVectorOffset.value_or(emulatedPerContainerElem - 1);
@@ -1042,7 +1042,7 @@ struct ConvertVectorMaskedLoad final
       passthru = dynamicallyInsertSubVector(
           rewriter, loc, passthru, emptyVector, linearizedInfo.intraDataOffset,
           origElements);
-    } else if (!isFullyAligned) {
+    } else if (!isDivisibleInSize) {
       passthru = staticallyInsertSubvector(rewriter, loc, passthru, emptyVector,
                                            *foldedIntraVectorOffset);
     }
@@ -1070,7 +1070,7 @@ struct ConvertVectorMaskedLoad final
       mask = dynamicallyInsertSubVector(rewriter, loc, mask, emptyMask,
                                         linearizedInfo.intraDataOffset,
                                         origElements);
-    } else if (!isFullyAligned) {
+    } else if (!isDivisibleInSize) {
       mask = staticallyInsertSubvector(rewriter, loc, op.getMask(), emptyMask,
                                        *foldedIntraVectorOffset);
     }
@@ -1081,7 +1081,7 @@ struct ConvertVectorMaskedLoad final
       result = dynamicallyExtractSubVector(
           rewriter, loc, result, op.getPassThru(),
           linearizedInfo.intraDataOffset, origElements);
-    } else if (!isFullyAligned) {
+    } else if (!isDivisibleInSize) {
       result = staticallyExtractSubvector(
           rewriter, loc, result, *foldedIntraVectorOffset, origElements);
     }
@@ -1159,7 +1159,7 @@ struct ConvertVectorTransferRead final
     auto origElements = op.getVectorType().getNumElements();
 
     // Note, per-element-alignment was already verified above.
-    bool isFullyAligned =
+    bool isDivisibleInSize =
         fitsInMultiByteContainerTy(op.getVectorType(), containerElemTy);
 
     auto newPadding = rewriter.create<arith::ExtUIOp>(loc, containerElemTy,
@@ -1179,8 +1179,8 @@ struct ConvertVectorTransferRead final
             getAsOpFoldResult(adaptor.getIndices()));
 
     std::optional<int64_t> foldedIntraVectorOffset =
-        isFullyAligned ? 0
-                       : getConstantIntValue(linearizedInfo.intraDataOffset);
+        isDivisibleInSize ? 0
+                          : getConstantIntValue(linearizedInfo.intraDataOffset);
 
     int64_t maxIntraDataOffset =
         foldedIntraVectorOffset.value_or(emulatedPerContainerElem - 1);
@@ -1204,7 +1204,7 @@ struct ConvertVectorTransferRead final
       result = dynamicallyExtractSubVector(rewriter, loc, bitCast, zeros,
                                            linearizedInfo.intraDataOffset,
                                            origElements);
-    } else if (!isFullyAligned) {
+    } else if (!isDivisibleInSize) {
       result = staticallyExtractSubvector(
           rewriter, loc, result, *foldedIntraVectorOffset, origElements);
     }
