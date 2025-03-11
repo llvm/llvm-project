@@ -14,6 +14,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Pass/Pass.h"
@@ -312,28 +313,6 @@ struct StoreLowering : public OpRewritePattern<vector::StoreOp> {
   }
 };
 
-static LogicalResult validateDpasIndexing(PatternRewriter &rewriter,
-                                          vector::ContractionOp contractOp) {
-  MLIRContext *ctx = contractOp.getContext();
-  SmallVector<AffineMap, 4> maps = contractOp.getIndexingMapsArray();
-
-  // Operand rank defines expected data layout:
-  //   - 2D for standard GEMM
-  //   - 3D for VNNI layout
-  using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-  auto infer = [&](MapList m) { return AffineMap::inferFromExprList(m, ctx); };
-  AffineExpr m, n, k, vnni;
-  bindDims(ctx, m, n, k, vnni);
-
-  if (contractOp.getRhsType().getRank() == 2) {
-    // Require plain GEMM without any transposition.
-    return success(maps == infer({{m, k}, {k, n}, {m, n}}));
-  }
-
-  // Require VNNI layout.
-  return success(maps == infer({{m, k, vnni}, {k, n, vnni}, {m, n}}));
-}
-
 struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
   using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
 
@@ -349,48 +328,30 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
     VectorType accType = dyn_cast<VectorType>(acc.getType());
     if (!accType || accType.getRank() != 2)
       return rewriter.notifyMatchFailure(contractOp, "Expects acc 2D vector");
-    TypedValue<VectorType> lhs = contractOp.getLhs();
-    VectorType lhsType = lhs.getType();
-    int64_t lhsRank = lhsType.getRank();
-    if (!(lhsRank == 2 || lhsRank == 3))
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects lhs 2D or 3D vector");
-    TypedValue<VectorType> rhs = contractOp.getRhs();
-    VectorType rhsType = rhs.getType();
-    int64_t rhsRank = rhsType.getRank();
-    if (!(rhsRank == 2 || rhsRank == 3))
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects rhs 2D or 3D vector");
-    if (lhsRank != rhsRank)
-      return rewriter.notifyMatchFailure(
-          contractOp, "Expects lhs and rhs to be the same rank");
 
-    if (failed(validateDpasIndexing(rewriter, contractOp)))
+    // Accept only plain 2D data layout.
+    // VNNI packing is left to later lowering.
+    TypedValue<VectorType> lhs = contractOp.getLhs();
+    TypedValue<VectorType> rhs = contractOp.getRhs();
+    if (lhs.getType().getRank() != 2 || rhs.getType().getRank() != 2)
+      return rewriter.notifyMatchFailure(contractOp,
+                                         "Expects lhs and rhs 2D vectors");
+
+    if (!isRowMajorMatmul(contractOp.getIndexingMapsAttr()))
       return rewriter.notifyMatchFailure(contractOp, "Invalid indexing maps");
 
-    // 3D shape implies VNNI layout verified by the earlier indexing check.
-    bool isVnni = rhsRank == 3;
-    auto rhsShape = rhsType.getShape();
-    int64_t dimK = isVnni ? rhsShape[0] * rhsShape[2] : rhsShape[0];
-    unsigned elemBitWidth = rhsType.getElementType().getIntOrFloatBitWidth();
-    if (dimK != (8 * 32 / elemBitWidth))
+    // TODO: Update shape validation to be target aware.
+    auto rhsShape = rhs.getType().getShape();
+    auto accShape = accType.getShape();
+    int64_t dimM = accShape[0];
+    int64_t dimN = accShape[1];
+    int64_t dimK = rhsShape[0];
+    if (dimM != 8 || dimN != 16 || dimK % 8 != 0)
       return rewriter.notifyMatchFailure(contractOp,
-                                         "Invalid K-dimension size");
-    if (isVnni && rhsShape[2] != (32 / elemBitWidth))
-      return rewriter.notifyMatchFailure(contractOp, "Invalid VNNI factor");
-
-    if (isVnni) {
-      // Collapse contract lhs VNNI factor back into K-dim as dpas op expects
-      // flat 2D shape for its lhs operand.
-      auto lhsShape = lhsType.getShape();
-      auto lhsFlatType = VectorType::get(
-          {lhsShape[0], lhsShape[1] * lhsShape[2]}, lhsType.getElementType());
-      lhs = rewriter.create<vector::ShapeCastOp>(loc, lhsFlatType, lhs)
-                .getResult();
-    }
+                                         "Invalid operand dimensions");
 
     auto dpasOp = rewriter.create<xegpu::DpasOp>(
-        loc, contractOp.getResultType(), lhs, rhs, acc);
+        loc, TypeRange{contractOp.getResultType()}, ValueRange{lhs, rhs, acc});
     rewriter.replaceOp(contractOp, dpasOp);
 
     return success();
