@@ -372,6 +372,6 @@ struct S {
 static_assert(S(1, 2) == S(1, 2));
 
 static_assert(S(1, 2) == S(3, 4));
-// expected-error@-1 {{failed due to requirement 'S(1, 2) == S(3, 4)'}}
+// expected-error@-1 {{failed due to requirement 'CXXParenListInitExpr::S(1, 2) == CXXParenListInitExpr::S(3, 4)'}}
 
 }
