@@ -411,7 +411,7 @@
 ; RV32XQCICM: .attribute 5, "rv32i2p1_zca1p0_xqcicm0p2"
 ; RV32XQCICS: .attribute 5, "rv32i2p1_xqcics0p2"
 ; RV32XQCICSR: .attribute 5, "rv32i2p1_xqcicsr0p2"
-; RV32XQCIINT: .attribute 5, "rv32i2p1_zca1p0_xqciint0p2"
+; RV32XQCIINT: .attribute 5, "rv32i2p1_zca1p0_xqciint0p4"
 ; RV32XQCILIA: .attribute 5, "rv32i2p1_zca1p0_xqcilia0p2"
 ; RV32XQCILO: .attribute 5, "rv32i2p1_zca1p0_xqcilo0p2"
 ; RV32XQCILSM: .attribute 5, "rv32i2p1_xqcilsm0p2"

@@ -459,9 +459,6 @@ public:
   /// Returns the debug location of the recipe.
   DebugLoc getDebugLoc() const { return DL; }
 
-  /// Set the recipe's debug location to \p NewDL.
-  void setDebugLoc(DebugLoc NewDL) { DL = NewDL; }
-
 protected:
   /// Compute the cost of this recipe either using a recipe's specialized
   /// implementation or using the legacy cost model and the underlying
@@ -795,12 +792,6 @@ public:
     assert(OpType == OperationType::Cmp &&
            "recipe doesn't have a compare predicate");
     return CmpPredicate;
-  }
-
-  void setPredicate(CmpInst::Predicate Pred) {
-    assert(OpType == OperationType::Cmp &&
-           "recipe doesn't have a compare predicate");
-    CmpPredicate = Pred;
   }
 
   GEPNoWrapFlags getGEPNoWrapFlags() const { return GEPFlags; }
@@ -1650,10 +1641,8 @@ public:
 class VPHeaderPHIRecipe : public VPSingleDefRecipe {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
-                    VPValue *Start = nullptr, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>(), UnderlyingInstr, DL) {
-    if (Start)
-      addOperand(Start);
+                    VPValue *Start, DebugLoc DL = {})
+      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
   }
 
 public:
@@ -3512,21 +3501,6 @@ public:
     VPBB->setPlan(this);
   }
 
-  /// Create initial VPlan, having an "entry" VPBasicBlock (wrapping
-  /// original scalar pre-header) which contains SCEV expansions that need
-  /// to happen before the CFG is modified (when executing a VPlan for the
-  /// epilogue vector loop, the original entry needs to be replaced by a new
-  /// one); a VPBasicBlock for the vector pre-header, followed by a region for
-  /// the vector loop, followed by the middle VPBasicBlock. If a check is needed
-  /// to guard executing the scalar epilogue loop, it will be added to the
-  /// middle block, together with VPBasicBlocks for the scalar preheader and
-  /// exit blocks. \p InductionTy is the type of the canonical induction and
-  /// used for related values, like the trip count expression.
-  static VPlanPtr createInitialVPlan(Type *InductionTy,
-                                     PredicatedScalarEvolution &PSE,
-                                     bool RequiresScalarEpilogueCheck,
-                                     bool TailFolded, Loop *TheLoop);
-
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
                         VPTransformState &State);
@@ -3588,11 +3562,18 @@ public:
     return TripCount;
   }
 
+  /// Set the trip count assuming it is currently null; if it is not - use
+  /// resetTripCount().
+  void setTripCount(VPValue *NewTripCount) {
+    assert(!TripCount && NewTripCount && "TripCount should not be set yet.");
+    TripCount = NewTripCount;
+  }
+
   /// Resets the trip count for the VPlan. The caller must make sure all uses of
   /// the original trip count have been replaced.
   void resetTripCount(VPValue *NewTripCount) {
     assert(TripCount && NewTripCount && TripCount->getNumUsers() == 0 &&
-           "TripCount always must be set");
+           "TripCount must be set when resetting");
     TripCount = NewTripCount;
   }
 

@@ -108,7 +108,7 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
       return FPBits::inf(Sign::NEG).get_val();
-#ifndef LIBC_TARGET_CPU_HAS_FMA
+#ifndef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
     case 0x4cc1c80bU: // x = 0x1.839016p+26f
       return fputil::round_result_slightly_down(0x1.26fc04p+4f);
     case 0x5ee8984eU: // x = 0x1.d1309cp+62f
@@ -117,7 +117,7 @@ LLVM_LIBC_FUNCTION(float, log1pf, (float x)) {
       return fputil::round_result_slightly_up(0x1.af66cp+5f);
     case 0x79e7ec37U: // x = 0x1.cfd86ep+116f
       return fputil::round_result_slightly_up(0x1.43ff6ep+6f);
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
     }
 
     return internal::log(xd + 1.0);
