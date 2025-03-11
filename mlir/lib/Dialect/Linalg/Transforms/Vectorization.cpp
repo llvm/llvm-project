@@ -1940,7 +1940,10 @@ vectorizeInsertSliceOpPrecondition(tensor::InsertSliceOp sliceOp,
 }
 
 namespace {
-bool isCastOfBlockArgument(Operation *op) {
+enum class ConvOperationKind { Conv, Pool };
+} // namespace
+
+static bool isCastOfBlockArgument(Operation *op) {
   return isa<CastOpInterface>(op) && op->getNumOperands() == 1 &&
          isa<BlockArgument>(op->getOperand(0));
 }
@@ -1952,8 +1955,8 @@ bool isCastOfBlockArgument(Operation *op) {
 // block arguments or extension of block arguments.
 // Otherwise, check for one or zero `ext` predecessor. The `ext` operands
 // must be block arguments or extension of block arguments.
-enum OperKind { Conv, Pool };
-bool getOperKind(Operation *reduceOp, OperKind &oper) {
+static std::optional<ConvOperationKind>
+getConvOperationKind(Operation *reduceOp) {
   int numBlockArguments =
       llvm::count_if(reduceOp->getOperands(), llvm::IsaPred<BlockArgument>);
 
@@ -1966,33 +1969,34 @@ bool getOperKind(Operation *reduceOp, OperKind &oper) {
     auto feedValIt = llvm::find_if_not(reduceOp->getOperands(),
                                        llvm::IsaPred<BlockArgument>);
     Operation *feedOp = (*feedValIt).getDefiningOp();
-    // llvm::outs() << "feedOp: " << *feedOp << "\n";
     if (isCastOfBlockArgument(feedOp)) {
-      oper = Pool;
-    } else if (!((isa<arith::MulIOp, arith::MulFOp>(feedOp) ||
-                  (isa<arith::AndIOp>(feedOp) &&
-                   feedOp->getResultTypes()[0].isInteger(1))) &&
-                 llvm::all_of(feedOp->getOperands(), [](Value v) {
-                   if (isa<BlockArgument>(v))
-                     return true;
-                   if (Operation *op = v.getDefiningOp())
-                     return isCastOfBlockArgument(op);
-                   return false;
-                 }))) {
-      return false;
+      return ConvOperationKind::Pool;
     }
-    return true;
+
+    if (!((isa<arith::MulIOp, arith::MulFOp>(feedOp) ||
+           (isa<arith::AndIOp>(feedOp) &&
+            feedOp->getResultTypes()[0].isInteger(1))) &&
+          llvm::all_of(feedOp->getOperands(), [](Value v) {
+            if (isa<BlockArgument>(v))
+              return true;
+            if (Operation *op = v.getDefiningOp())
+              return isCastOfBlockArgument(op);
+            return false;
+          }))) {
+      return std::nullopt;
+    }
+
+    return ConvOperationKind::Conv;
   }
   case 2:
     // Must be pooling
-    oper = Pool;
-    return true;
+    return ConvOperationKind::Pool;
   default:
-    return false;
+    return std::nullopt;
   }
 }
 
-bool isSupportedPoolKind(vector::CombiningKind kind) {
+static bool isSupportedPoolKind(vector::CombiningKind kind) {
   switch (kind) {
   case vector::CombiningKind::ADD:
   case vector::CombiningKind::MAXNUMF:
@@ -2008,7 +2012,6 @@ bool isSupportedPoolKind(vector::CombiningKind kind) {
     return false;
   }
 }
-} // namespace
 
 static LogicalResult vectorizeConvOpPrecondition(linalg::LinalgOp convOp) {
   if (convOp.getNumDpsInputs() != 2 || convOp.getNumDpsInits() != 1)
@@ -2032,29 +2035,28 @@ static LogicalResult vectorizeConvOpPrecondition(linalg::LinalgOp convOp) {
   if (!reduceOp)
     return failure();
 
-  OperKind oper = Conv;
-  if (!getOperKind(reduceOp, oper))
+  auto maybeOper = getConvOperationKind(reduceOp);
+  if (!maybeOper.has_value())
     return failure();
+
   auto maybeKind = getCombinerOpKind(reduceOp);
   // Typically convolution will have a `Add` CombiningKind but for i1 type it
   // can get strength reduced to `OR` which is also supported. This strength
   // reduction logic is in `buildBinaryFn` helper in the Linalg dialect.
   if (!maybeKind || ((*maybeKind != vector::CombiningKind::ADD &&
                       *maybeKind != vector::CombiningKind::OR) &&
-                     (oper != Pool || !isSupportedPoolKind(*maybeKind)))) {
+                     (*maybeOper != ConvOperationKind::Pool ||
+                      !isSupportedPoolKind(*maybeKind)))) {
     return failure();
   }
 
   auto rhsRank = rhsShapedType.getRank();
-  switch (oper) {
-  case Conv:
-    if (rhsRank != 1 && rhsRank != 2 && rhsRank != 3)
-      return failure();
-    break;
-  case Pool:
+  if (*maybeOper == ConvOperationKind::Pool) {
     if (rhsRank != 1)
       return failure();
-    break;
+  } else {
+    if (rhsRank != 1 && rhsRank != 2 && rhsRank != 3)
+      return failure();
   }
 
   return success();
@@ -3238,7 +3240,7 @@ struct Conv1DGenerator
     Operation *reduceOp = matchLinalgReduction(linalgOp.getDpsInitOperand(0));
     redOp = reduceOp->getName().getIdentifier();
 
-    setOperKind(reduceOp);
+    setConvOperationKind(reduceOp);
 
     auto maybeKind = getCombinerOpKind(reduceOp);
     reductionKind = maybeKind.value();
@@ -3293,11 +3295,11 @@ struct Conv1DGenerator
       // out{n, w, f}
       bindShapeDims(resShapedType, nSize, wSize, fSize);
       switch (oper) {
-      case Conv:
+      case ConvOperationKind::Conv:
         // kernel{kw, c, f}
         bindShapeDims(rhsShapedType, kwSize, cSize);
         break;
-      case Pool:
+      case ConvOperationKind::Pool:
         // kernel{kw}
         bindShapeDims(rhsShapedType, kwSize);
         cSize = fSize;
@@ -3311,10 +3313,10 @@ struct Conv1DGenerator
                       1,
                   cSize};
       switch (oper) {
-      case Conv:
+      case ConvOperationKind::Conv:
         rhsShape = {kwSize, cSize, fSize};
         break;
-      case Pool:
+      case ConvOperationKind::Pool:
         rhsShape = {kwSize};
         break;
       }
@@ -3324,11 +3326,11 @@ struct Conv1DGenerator
       // out{n, f, w}
       bindShapeDims(resShapedType, nSize, fSize, wSize);
       switch (oper) {
-      case Conv:
+      case ConvOperationKind::Conv:
         // kernel{f, c, kw}
         bindShapeDims(rhsShapedType, fSize, cSize, kwSize);
         break;
-      case Pool:
+      case ConvOperationKind::Pool:
         // kernel{kw}
         bindShapeDims(rhsShapedType, kwSize);
         cSize = fSize;
@@ -3341,10 +3343,10 @@ struct Conv1DGenerator
                   ((wSize - 1) * strideW + 1) + ((kwSize - 1) * dilationW + 1) -
                       1};
       switch (oper) {
-      case Conv:
+      case ConvOperationKind::Conv:
         rhsShape = {fSize, cSize, kwSize};
         break;
-      case Pool:
+      case ConvOperationKind::Pool:
         rhsShape = {kwSize};
         break;
       }
@@ -3376,7 +3378,7 @@ struct Conv1DGenerator
                                                         lhsPadding);
     // This is needed only for Conv.
     Value rhs = nullptr;
-    if (oper == Conv)
+    if (oper == ConvOperationKind::Conv)
       rhs = rewriter.create<vector::TransferReadOp>(loc, rhsType, rhsShaped,
                                                     rhsPadding);
     Value res = rewriter.create<vector::TransferReadOp>(loc, resType, resShaped,
@@ -3399,7 +3401,7 @@ struct Conv1DGenerator
       static constexpr std::array<int64_t, 3> permRhs = {2, 1, 0};
 
       // This is needed only for Conv.
-      if (oper == Conv)
+      if (oper == ConvOperationKind::Conv)
         rhs = rewriter.create<vector::TransposeOp>(loc, rhs, permRhs);
       // nfw -> nwf
       static constexpr std::array<int64_t, 3> permRes = {0, 2, 1};
@@ -3417,7 +3419,7 @@ struct Conv1DGenerator
                                      kwSize, strideW, dilationW, wSizeStep,
                                      isSingleChanneled);
     // Do not do for pooling.
-    if (oper == Conv)
+    if (oper == ConvOperationKind::Conv)
       rhsVals = extractConvFilterSlices(rewriter, loc, rhs, kwSize);
     resVals = extractConvResultSlices(rewriter, loc, res, nSize, wSize, fSize,
                                       wSizeStep, isSingleChanneled);
@@ -3432,7 +3434,7 @@ struct Conv1DGenerator
     for (int64_t kw = 0; kw < kwSize; ++kw) {
       for (int64_t w = 0; w < wSize; w += wSizeStep) {
         switch (oper) {
-        case Conv:
+        case ConvOperationKind::Conv:
           if (isSingleChanneled) {
             resVals[w] = conv1dSliceAsOuterProduct(rewriter, loc,
                                                    lhsVals[linearIndex(kw, w)],
@@ -3443,7 +3445,7 @@ struct Conv1DGenerator
                                                   rhsVals[kw], resVals[w]);
           }
           break;
-        case Pool:
+        case ConvOperationKind::Pool:
           resVals[w] = pool1dSlice(rewriter, loc, lhsVals[linearIndex(kw, w)],
                                    resVals[w]);
           break;
@@ -3898,7 +3900,7 @@ struct Conv1DGenerator
   }
 
 private:
-  OperKind oper = Conv;
+  ConvOperationKind oper = ConvOperationKind::Conv;
   StringAttr redOp;
   StringAttr poolExtOp;
   bool isPoolExt = false;
@@ -3908,7 +3910,7 @@ private:
   vector::CombiningKind reductionKind;
 
   // Sets oper, poolExtOp and isPoolExt for valid conv/pooling ops.
-  void setOperKind(Operation *reduceOp) {
+  void setConvOperationKind(Operation *reduceOp) {
     int numBlockArguments =
         llvm::count_if(reduceOp->getOperands(), llvm::IsaPred<BlockArgument>);
     if (numBlockArguments == 1) {
@@ -3920,17 +3922,17 @@ private:
                                          llvm::IsaPred<BlockArgument>);
       Operation *feedOp = (*feedValIt).getDefiningOp();
       if (isCastOfBlockArgument(feedOp)) {
-        oper = Pool;
+        oper = ConvOperationKind::Pool;
         isPoolExt = true;
         poolExtOp = feedOp->getName().getIdentifier();
-      } else {
-        oper = Conv;
+        return;
       }
-    } else {
-      // Pooling.
-      oper = Pool;
-      isPoolExt = false;
+      oper = ConvOperationKind::Conv;
+      return;
     }
+    // numBlockArugments == 2 and this is a pooling op.
+    oper = ConvOperationKind::Pool;
+    isPoolExt = false;
   }
 };
 } // namespace
