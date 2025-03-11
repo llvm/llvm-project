@@ -422,8 +422,8 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
   if (isSingleScalar() || isVectorToScalar())
     return true;
   switch (Opcode) {
-  case Instruction::PHI:
   case Instruction::ICmp:
+  case Instruction::PHI:
   case Instruction::Select:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
@@ -464,6 +464,7 @@ Value *VPInstruction::generate(VPTransformState &State) {
 
   switch (getOpcode()) {
   case Instruction::PHI: {
+    // At the moment, VPInstructions with PHI opcodes are only user for scalar header phis.
     BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
     Value *Start = State.get(getOperand(0), VPLane(0));
     PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
@@ -784,7 +785,7 @@ bool VPInstruction::isVectorToScalar() const {
 }
 
 bool VPInstruction::isSingleScalar() const {
-  return getOpcode() == VPInstruction::ResumePhi;
+  return getOpcode() == VPInstruction::ResumePhi || getOpcode() == Instruction::PHI;
 }
 
 #if !defined(NDEBUG)

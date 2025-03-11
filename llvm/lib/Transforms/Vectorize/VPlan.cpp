@@ -1004,19 +1004,15 @@ void VPlan::execute(VPTransformState *State) {
         Inc->setOperand(0, State->get(IV->getLastUnrolledPartOperand()));
       continue;
     }
-    if (auto *VPI = dyn_cast<VPInstruction>(&R)) {
-      Value *Phi = State->get(VPI, true);
-      Value *Val = State->get(VPI->getOperand(1), true);
-      cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
-      continue;
-    }
 
-    auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
-    bool NeedsScalar =
+    auto *PhiR = cast<VPSingleDefRecipe>(&R);
+    // VPInstructions currently model scalar Phis only.
+    bool NeedsScalar = isa<VPInstruction>(PhiR) ||
                        (isa<VPReductionPHIRecipe>(PhiR) &&
                         cast<VPReductionPHIRecipe>(PhiR)->isInLoop());
     Value *Phi = State->get(PhiR, NeedsScalar);
-    Value *Val = State->get(PhiR->getBackedgeValue(), NeedsScalar);
+    // VPHeaderPHIRecipe supports getBackedgeValue() but VPInstruction does not.
+    Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
     cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
   }
 }

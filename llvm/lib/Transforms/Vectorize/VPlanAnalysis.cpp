@@ -72,8 +72,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::ExplicitVectorLength:
     return Type::getIntNTy(Ctx, 32);
   case Instruction::PHI:
-    // Avoid inferring the type for other operands, as this may lead to infinite
-    // recursions for cycles.
+    // Infer the type of first operand only, as other operands of header phi's
+    // may lead to infinite recursion.
     return inferScalarType(R->getOperand(0));
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::Not:
