@@ -341,12 +341,9 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
       return rewriter.notifyMatchFailure(contractOp, "Invalid indexing maps");
 
     // TODO: Update shape validation to be target aware.
-    auto rhsShape = rhs.getType().getShape();
     auto accShape = accType.getShape();
-    int64_t dimM = accShape[0];
     int64_t dimN = accShape[1];
-    int64_t dimK = rhsShape[0];
-    if (dimM != 8 || dimN != 16 || dimK % 8 != 0)
+    if (dimN != 8 && dimN != 16)
       return rewriter.notifyMatchFailure(contractOp,
                                          "Invalid operand dimensions");
 

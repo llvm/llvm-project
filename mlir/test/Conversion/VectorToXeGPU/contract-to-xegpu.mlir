@@ -144,51 +144,15 @@ func.func @negative_gemm_transpose_b(%lhs: vector<8x16xf16>, %rhs: vector<16x16x
 #map = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
 #map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
-func.func @negative_m_dim_size(%lhs: vector<16x16xf16>, %rhs: vector<16x16xf16>,
-    %acc: vector<16x16xf32>) -> vector<16x16xf32> {
+func.func @negative_n_dim_size(%lhs: vector<8x16xf16>, %rhs: vector<16x32xf16>,
+    %acc: vector<8x32xf32>) -> vector<8x32xf32> {
   %3 = vector.contract
     {indexing_maps = [#map, #map1, #map2],
     iterator_types = ["parallel", "parallel", "reduction"],
     kind = #vector.kind<add>} %lhs, %rhs, %acc
-    : vector<16x16xf16>, vector<16x16xf16> into vector<16x16xf32>
-  return %3 : vector<16x16xf32>
-}
-
-// CHECK-LABEL: @negative_m_dim_size(
-// CHECK:       vector.contract
-
-// -----
-
-#map = affine_map<(d0, d1, d2) -> (d0, d2)>
-#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
-#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
-func.func @negative_n_dim_size(%lhs: vector<8x16xf16>, %rhs: vector<16x8xf16>,
-    %acc: vector<8x8xf32>) -> vector<8x8xf32> {
-  %3 = vector.contract
-    {indexing_maps = [#map, #map1, #map2],
-    iterator_types = ["parallel", "parallel", "reduction"],
-    kind = #vector.kind<add>} %lhs, %rhs, %acc
-    : vector<8x16xf16>, vector<16x8xf16> into vector<8x8xf32>
-  return %3 : vector<8x8xf32>
+    : vector<8x16xf16>, vector<16x32xf16> into vector<8x32xf32>
+  return %3 : vector<8x32xf32>
 }
 
 // CHECK-LABEL: @negative_n_dim_size(
-// CHECK:       vector.contract
-
-// -----
-
-#map = affine_map<(d0, d1, d2) -> (d0, d2)>
-#map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
-#map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
-func.func @negative_k_dim_size(%lhs: vector<8x12xf16>, %rhs: vector<12x16xf16>,
-    %acc: vector<8x16xf32>) -> vector<8x16xf32> {
-  %3 = vector.contract
-    {indexing_maps = [#map, #map1, #map2],
-    iterator_types = ["parallel", "parallel", "reduction"],
-    kind = #vector.kind<add>} %lhs, %rhs, %acc
-    : vector<8x12xf16>, vector<12x16xf16> into vector<8x16xf32>
-  return %3 : vector<8x16xf32>
-}
-
-// CHECK-LABEL: @negative_k_dim_size(
 // CHECK:       vector.contract
