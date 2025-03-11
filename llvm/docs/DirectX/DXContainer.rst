@@ -496,14 +496,14 @@ signature and passed to the shader without requiring a constant buffer resource:
 #. **RegisterSpace**: The register space used for the binding.
 #. **Num32BitValues**: The number of 32-bit values included in this constant buffer.
 
-Root constants provide a fast way to pass small amounts of data directly to the shader without the overhead of creating and binding a constant buffer resource.
+Root constants provide a fast way to pass small amounts of data directly to the shader without the 
+overhead of creating and binding a constant buffer resource.
 
 Root Descriptor
 ~~~~~~~~~~~~~~~
 
-Root descriptors provide a direct mechanism for binding individual resources to shader stages in the Direct3D 12 
-rendering pipeline. They represent a critical interface for efficient resource management, allowing applications 
-to specify how shader stages access specific GPU resources.
+Root descriptors provide a mechanism for binding individual resources to shader stages in the Direct3D 12 
+rendering pipeline. They allow applications to specify how shader stages access specific GPU resources.
 
 .. code-block:: cpp
 
@@ -529,7 +529,8 @@ to specify how shader stages access specific GPU resources.
    };
 
 Version 1.1 of Root Descriptors has introduced some flags that can hint the drivers into
-performing further code optimizations. For details about it, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signature-version-1-1#static-and-volatile-flags>`_.
+performing further code optimizations. For details, check
+`Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signature-version-1-1#static-and-volatile-flags>`_.
 
 Version 1.0 Root Descriptor
 '''''''''''''''''''''''''''
