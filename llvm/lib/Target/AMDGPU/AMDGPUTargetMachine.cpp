@@ -565,6 +565,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUWaitSGPRHazardsLegacyPass(*PR);
   initializeAMDGPUWaveTransformPass(*PR);
   initializeAMDGPUPreWaveTransformPass(*PR);
+  initializeAMDGPUFinalizeISelWaveTransformPass(*PR);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -1482,15 +1483,10 @@ bool GCNPassConfig::addILPOpts() {
 bool GCNPassConfig::addInstSelector() {
   AMDGPUPassConfig::addInstSelector();
   addPass(&SIFixSGPRCopiesLegacyID);
-  if (!WaveTransformCF) {
+  if (!WaveTransformCF)
     addPass(createSILowerI1CopiesLegacyPass());
-  }
-  // Else {
-  // TODO-WAVETRANSFORM:
-  // When WaveTransform happens later, We may want a different algorithm
-  // for LowerI1Copies, and maybe some other lowering work needed?
-  //   addPass(&AMDGPUFinalizeISelWaveTransformID);
-  // }
+  else
+    addPass(&AMDGPUFinalizeISelWaveTransformID);
   return false;
 }
 

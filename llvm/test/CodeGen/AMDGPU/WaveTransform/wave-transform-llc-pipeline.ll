@@ -80,6 +80,7 @@
 ; GCN-O0-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O0-NEXT:        MachineDominator Tree Construction
 ; GCN-O0-NEXT:        SI Fix SGPR copies
+; GCN-O0-NEXT:        AMDGPU Finalize ISel for Wave Transform
 ; GCN-O0-NEXT:        Finalize ISel and expand pseudo-instructions
 ; GCN-O0-NEXT:        Local Stack Slot Allocation
 ; GCN-O0-NEXT:        Register Usage Information Propagation
@@ -309,6 +310,7 @@
 ; GCN-O3-NEXT:        AMDGPU DAG->DAG Pattern Instruction Selection
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        SI Fix SGPR copies
+; GCN-O3-NEXT:        AMDGPU Finalize ISel for Wave Transform
 ; GCN-O3-NEXT:        Finalize ISel and expand pseudo-instructions
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Early Tail Duplication

@@ -249,16 +249,16 @@ define hidden void @blam() {
   ; GFX940-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64_align2 = REG_SEQUENCE [[V_LSHLREV_B32_e64_]], %subreg.sub0, killed [[V_MOV_B32_e32_]], %subreg.sub1
   ; GFX940-NEXT:   [[COPY9:%[0-9]+]]:vreg_64_align2 = COPY [[REG_SEQUENCE]]
   ; GFX940-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
-  ; GFX940-NEXT:   [[V_CMP_EQ_F32_e64_:%[0-9]+]]:sreg_64 = nsz nofpexcept V_CMP_EQ_F32_e64 0, [[FLAT_LOAD_DWORD]], 0, killed [[S_MOV_B32_3]], 0, implicit $mode, implicit $exec
-  ; GFX940-NEXT:   [[COPY10:%[0-9]+]]:vreg_1 = COPY [[V_CMP_EQ_F32_e64_]]
+  ; GFX940-NEXT:   [[V_CMP_EQ_F32_e64_:%[0-9]+]]:sreg_64_xexec = nsz nofpexcept V_CMP_EQ_F32_e64 0, [[FLAT_LOAD_DWORD]], 0, killed [[S_MOV_B32_3]], 0, implicit $mode, implicit $exec
+  ; GFX940-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, [[V_CMP_EQ_F32_e64_]], implicit $exec
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT: bb.1.bb2:
   ; GFX940-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY9]], 0, 0, implicit $exec :: (load (s32) from %ir.gep, align 16, addrspace 1)
   ; GFX940-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
-  ; GFX940-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
-  ; GFX940-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY11]], [[S_MOV_B32_4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr addrspace(5) null`, align 8, addrspace 5)
+  ; GFX940-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
+  ; GFX940-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY10]], [[S_MOV_B32_4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr addrspace(5) null`, align 8, addrspace 5)
   ; GFX940-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GFX940-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_64 = V_CMP_LT_I32_e64 [[GLOBAL_LOAD_DWORD]], killed [[S_MOV_B32_5]], implicit $exec
   ; GFX940-NEXT:   SI_BRCOND killed [[V_CMP_LT_I32_e64_]], %bb.3
@@ -304,17 +304,17 @@ define hidden void @blam() {
   ; GFX940-NEXT:   $vgpr31 = COPY [[COPY]]
   ; GFX940-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[SI_PC_ADD_REL_OFFSET]], @spam, csr_amdgpu_gfx90ainsts, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit-def $vgpr0
   ; GFX940-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-  ; GFX940-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX940-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX940-NEXT:   [[S_MOV_B32_9:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
-  ; GFX940-NEXT:   [[V_CMP_EQ_F32_e64_1:%[0-9]+]]:sreg_64 = nsz nofpexcept V_CMP_EQ_F32_e64 0, [[COPY12]], 0, killed [[S_MOV_B32_9]], 0, implicit $mode, implicit $exec
+  ; GFX940-NEXT:   [[V_CMP_EQ_F32_e64_1:%[0-9]+]]:sreg_64 = nsz nofpexcept V_CMP_EQ_F32_e64 0, [[COPY11]], 0, killed [[S_MOV_B32_9]], 0, implicit $mode, implicit $exec
   ; GFX940-NEXT:   SI_BRCOND killed [[V_CMP_EQ_F32_e64_1]], %bb.1
   ; GFX940-NEXT:   S_BRANCH %bb.6
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT: bb.6.bb14:
   ; GFX940-NEXT:   successors: %bb.8(0x50000000), %bb.7(0x30000000)
   ; GFX940-NEXT: {{  $}}
-  ; GFX940-NEXT:   [[COPY13:%[0-9]+]]:sreg_64 = COPY [[COPY10]]
-  ; GFX940-NEXT:   SI_BRCOND [[COPY13]], %bb.8
+  ; GFX940-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 [[V_CNDMASK_B32_e64_]], 0, implicit $exec
+  ; GFX940-NEXT:   SI_BRCOND [[V_CMP_NE_U32_e64_1]], %bb.8
   ; GFX940-NEXT:   S_BRANCH %bb.7
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT: bb.7.bb16:
@@ -370,16 +370,16 @@ define hidden void @blam() {
   ; GFX1200-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_LSHLREV_B32_e64_]], %subreg.sub0, killed [[V_MOV_B32_e32_]], %subreg.sub1
   ; GFX1200-NEXT:   [[COPY9:%[0-9]+]]:vreg_64 = COPY [[REG_SEQUENCE]]
   ; GFX1200-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
-  ; GFX1200-NEXT:   [[V_CMP_EQ_F32_e64_:%[0-9]+]]:sreg_32 = nsz nofpexcept V_CMP_EQ_F32_e64 0, [[FLAT_LOAD_DWORD]], 0, killed [[S_MOV_B32_3]], 0, implicit $mode, implicit $exec
-  ; GFX1200-NEXT:   [[COPY10:%[0-9]+]]:vreg_1 = COPY [[V_CMP_EQ_F32_e64_]]
+  ; GFX1200-NEXT:   [[V_CMP_EQ_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nsz nofpexcept V_CMP_EQ_F32_e64 0, [[FLAT_LOAD_DWORD]], 0, killed [[S_MOV_B32_3]], 0, implicit $mode, implicit $exec
+  ; GFX1200-NEXT:   [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, [[V_CMP_EQ_F32_e64_]], implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.1.bb2:
   ; GFX1200-NEXT:   successors: %bb.3(0x40000000), %bb.2(0x40000000)
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT:   [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY9]], 0, 0, implicit $exec :: (load (s32) from %ir.gep, align 16, addrspace 1)
   ; GFX1200-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32_xexec_hi = S_MOV_B32 0
-  ; GFX1200-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
-  ; GFX1200-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY11]], [[S_MOV_B32_4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr addrspace(5) null`, align 8, addrspace 5)
+  ; GFX1200-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_4]]
+  ; GFX1200-NEXT:   SCRATCH_STORE_DWORD_SADDR [[COPY10]], [[S_MOV_B32_4]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr addrspace(5) null`, align 8, addrspace 5)
   ; GFX1200-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 3
   ; GFX1200-NEXT:   [[V_CMP_LT_I32_e64_:%[0-9]+]]:sreg_32 = V_CMP_LT_I32_e64 [[GLOBAL_LOAD_DWORD]], killed [[S_MOV_B32_5]], implicit $exec
   ; GFX1200-NEXT:   SI_BRCOND killed [[V_CMP_LT_I32_e64_]], %bb.3
@@ -425,17 +425,17 @@ define hidden void @blam() {
   ; GFX1200-NEXT:   $vgpr31 = COPY [[COPY]]
   ; GFX1200-NEXT:   $sgpr30_sgpr31 = SI_CALL killed [[SI_PC_ADD_REL_OFFSET]], @spam, csr_amdgpu, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31, implicit-def $vgpr0
   ; GFX1200-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $scc, implicit-def $sgpr32, implicit $sgpr32
-  ; GFX1200-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+  ; GFX1200-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY $vgpr0
   ; GFX1200-NEXT:   [[S_MOV_B32_9:%[0-9]+]]:sgpr_32 = S_MOV_B32 0
-  ; GFX1200-NEXT:   [[V_CMP_EQ_F32_e64_1:%[0-9]+]]:sreg_32 = nsz nofpexcept V_CMP_EQ_F32_e64 0, [[COPY12]], 0, killed [[S_MOV_B32_9]], 0, implicit $mode, implicit $exec
+  ; GFX1200-NEXT:   [[V_CMP_EQ_F32_e64_1:%[0-9]+]]:sreg_32 = nsz nofpexcept V_CMP_EQ_F32_e64 0, [[COPY11]], 0, killed [[S_MOV_B32_9]], 0, implicit $mode, implicit $exec
   ; GFX1200-NEXT:   SI_BRCOND killed [[V_CMP_EQ_F32_e64_1]], %bb.1
   ; GFX1200-NEXT:   S_BRANCH %bb.6
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.6.bb14:
   ; GFX1200-NEXT:   successors: %bb.8(0x50000000), %bb.7(0x30000000)
   ; GFX1200-NEXT: {{  $}}
-  ; GFX1200-NEXT:   [[COPY13:%[0-9]+]]:sreg_32 = COPY [[COPY10]]
-  ; GFX1200-NEXT:   SI_BRCOND [[COPY13]], %bb.8
+  ; GFX1200-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[V_CNDMASK_B32_e64_]], 0, implicit $exec
+  ; GFX1200-NEXT:   SI_BRCOND [[V_CMP_NE_U32_e64_1]], %bb.8
   ; GFX1200-NEXT:   S_BRANCH %bb.7
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.7.bb16:

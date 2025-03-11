@@ -101,11 +101,11 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX940-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 63
   ; GFX940-NEXT:   [[V_READLANE_B32_:%[0-9]+]]:sreg_32 = V_READLANE_B32 [[V_ADD_F32_e64_5]], killed [[S_MOV_B32_2]]
   ; GFX940-NEXT:   early-clobber %1:sgpr_32 = STRICT_WWM killed [[V_READLANE_B32_]], implicit $exec
-  ; GFX940-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 [[V_MBCNT_HI_U32_B32_e64_]], [[S_MOV_B32_1]], implicit $exec
+  ; GFX940-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_EQ_U32_e64 [[V_MBCNT_HI_U32_B32_e64_]], [[S_MOV_B32_1]], implicit $exec
   ; GFX940-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 [[V_MBCNT_HI_U32_B32_e64_]], [[S_MOV_B32_1]], implicit $exec
   ; GFX940-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX940-NEXT:   [[COPY9:%[0-9]+]]:vreg_1 = COPY [[V_CMP_EQ_U32_e64_]]
-  ; GFX940-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
+  ; GFX940-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, [[V_CMP_EQ_U32_e64_]], implicit $exec
+  ; GFX940-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
   ; GFX940-NEXT:   SI_BRCOND killed [[V_CMP_NE_U32_e64_1]], %bb.3
   ; GFX940-NEXT:   S_BRANCH %bb.2
   ; GFX940-NEXT: {{  $}}
@@ -113,22 +113,22 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX940-NEXT:   successors: %bb.3(0x80000000)
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX940-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY %1
-  ; GFX940-NEXT:   [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_F32_SADDR_RTN killed [[V_MOV_B32_e32_1]], [[COPY11]], [[COPY3]], 0, 1, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX940-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY %1
+  ; GFX940-NEXT:   [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_F32_SADDR_RTN killed [[V_MOV_B32_e32_1]], [[COPY10]], [[COPY3]], 0, 1, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT: bb.3 (%ir-block.28):
   ; GFX940-NEXT:   successors: %bb.4(0x80000000)
   ; GFX940-NEXT: {{  $}}
-  ; GFX940-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY10]], %bb.1, [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN]], %bb.2
+  ; GFX940-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY9]], %bb.1, [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN]], %bb.2
   ; GFX940-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[PHI]], implicit $exec
   ; GFX940-NEXT:   early-clobber %47:vgpr_32 = STRICT_WWM [[V_MOV_B32_dpp6]], implicit $exec
   ; GFX940-NEXT:   [[V_ADD_F32_e64_6:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_READFIRSTLANE_B32_]], 0, killed %47, 0, 0, implicit $mode, implicit $exec
-  ; GFX940-NEXT:   [[COPY12:%[0-9]+]]:sreg_64_xexec = COPY [[COPY9]]
-  ; GFX940-NEXT:   [[COPY13:%[0-9]+]]:vgpr_32 = COPY [[V_READFIRSTLANE_B32_]]
-  ; GFX940-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD_F32_e64_6]], 0, [[COPY13]], [[COPY12]], implicit $exec
+  ; GFX940-NEXT:   [[V_CMP_NE_U32_e64_2:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[V_CNDMASK_B32_e64_1]], 0, implicit $exec
+  ; GFX940-NEXT:   [[COPY11:%[0-9]+]]:vgpr_32 = COPY [[V_READFIRSTLANE_B32_]]
+  ; GFX940-NEXT:   [[V_CNDMASK_B32_e64_2:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD_F32_e64_6]], 0, [[COPY11]], [[V_CMP_NE_U32_e64_2]], implicit $exec
   ; GFX940-NEXT: {{  $}}
   ; GFX940-NEXT: bb.4 (%ir-block.34):
-  ; GFX940-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[COPY4]], %bb.0, [[V_CNDMASK_B32_e64_1]], %bb.3
+  ; GFX940-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[COPY4]], %bb.0, [[V_CNDMASK_B32_e64_2]], %bb.3
   ; GFX940-NEXT:   $vgpr0 = COPY [[PHI1]]
   ; GFX940-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -182,11 +182,11 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX1200-NEXT:   [[S_MOV_B32_5:%[0-9]+]]:sreg_32 = S_MOV_B32 31
   ; GFX1200-NEXT:   [[V_READLANE_B32_1:%[0-9]+]]:sreg_32 = V_READLANE_B32 [[V_ADD_F32_e64_4]], killed [[S_MOV_B32_5]]
   ; GFX1200-NEXT:   early-clobber %1:sgpr_32 = STRICT_WWM killed [[V_READLANE_B32_1]], implicit $exec
-  ; GFX1200-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 [[V_MBCNT_LO_U32_B32_e64_]], [[S_MOV_B32_1]], implicit $exec
+  ; GFX1200-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 [[V_MBCNT_LO_U32_B32_e64_]], [[S_MOV_B32_1]], implicit $exec
   ; GFX1200-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[V_MBCNT_LO_U32_B32_e64_]], [[S_MOV_B32_1]], implicit $exec
   ; GFX1200-NEXT:   [[DEF3:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; GFX1200-NEXT:   [[COPY7:%[0-9]+]]:vreg_1 = COPY [[V_CMP_EQ_U32_e64_]]
-  ; GFX1200-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[DEF3]]
+  ; GFX1200-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, [[V_CMP_EQ_U32_e64_]], implicit $exec
+  ; GFX1200-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[DEF3]]
   ; GFX1200-NEXT:   SI_BRCOND killed [[V_CMP_NE_U32_e64_1]], %bb.3
   ; GFX1200-NEXT:   S_BRANCH %bb.2
   ; GFX1200-NEXT: {{  $}}
@@ -194,21 +194,21 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; GFX1200-NEXT:   successors: %bb.3(0x80000000)
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; GFX1200-NEXT:   [[COPY9:%[0-9]+]]:vgpr_32 = COPY %1
-  ; GFX1200-NEXT:   [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_F32_SADDR_RTN killed [[V_MOV_B32_e32_1]], [[COPY9]], [[COPY3]], 0, 1, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
+  ; GFX1200-NEXT:   [[COPY8:%[0-9]+]]:vgpr_32 = COPY %1
+  ; GFX1200-NEXT:   [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN:%[0-9]+]]:vgpr_32 = GLOBAL_ATOMIC_ADD_F32_SADDR_RTN killed [[V_MOV_B32_e32_1]], [[COPY8]], [[COPY3]], 0, 1, implicit $exec :: (load store syncscope("wavefront") monotonic (s32) on %ir.ptr, addrspace 1)
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.3 (%ir-block.25):
   ; GFX1200-NEXT:   successors: %bb.4(0x80000000)
   ; GFX1200-NEXT: {{  $}}
-  ; GFX1200-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY8]], %bb.1, [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN]], %bb.2
+  ; GFX1200-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI [[COPY7]], %bb.1, [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN]], %bb.2
   ; GFX1200-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[PHI]], implicit $exec
   ; GFX1200-NEXT:   early-clobber %49:vgpr_32 = STRICT_WWM [[V_WRITELANE_B32_]], implicit $exec
   ; GFX1200-NEXT:   [[V_ADD_F32_e64_5:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_READFIRSTLANE_B32_]], 0, killed %49, 0, 0, implicit $mode, implicit $exec
-  ; GFX1200-NEXT:   [[COPY10:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[COPY7]]
-  ; GFX1200-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD_F32_e64_5]], 0, [[V_READFIRSTLANE_B32_]], [[COPY10]], implicit $exec
+  ; GFX1200-NEXT:   [[V_CMP_NE_U32_e64_2:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 [[V_CNDMASK_B32_e64_1]], 0, implicit $exec
+  ; GFX1200-NEXT:   [[V_CNDMASK_B32_e64_2:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD_F32_e64_5]], 0, [[V_READFIRSTLANE_B32_]], [[V_CMP_NE_U32_e64_2]], implicit $exec
   ; GFX1200-NEXT: {{  $}}
   ; GFX1200-NEXT: bb.4 (%ir-block.31):
-  ; GFX1200-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[COPY4]], %bb.0, [[V_CNDMASK_B32_e64_1]], %bb.3
+  ; GFX1200-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[COPY4]], %bb.0, [[V_CNDMASK_B32_e64_2]], %bb.3
   ; GFX1200-NEXT:   $vgpr0 = COPY [[PHI1]]
   ; GFX1200-NEXT:   SI_RETURN_TO_EPILOG $vgpr0
   ;
@@ -254,8 +254,8 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; ITERATE-NEXT:   [[PHI:%[0-9]+]]:vgpr_32 = PHI %43, %bb.6, [[GLOBAL_ATOMIC_ADD_F32_SADDR_RTN]], %bb.2
   ; ITERATE-NEXT:   [[V_READFIRSTLANE_B32_:%[0-9]+]]:sreg_32 = V_READFIRSTLANE_B32 [[PHI]], implicit $exec
   ; ITERATE-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[V_READFIRSTLANE_B32_]], 0, %12, 0, 0, implicit $mode, implicit $exec
-  ; ITERATE-NEXT:   [[COPY9:%[0-9]+]]:sreg_32_xm0_xexec = COPY %13
-  ; ITERATE-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD_F32_e64_]], 0, [[V_READFIRSTLANE_B32_]], [[COPY9]], implicit $exec
+  ; ITERATE-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 %46, 0, implicit $exec
+  ; ITERATE-NEXT:   [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, killed [[V_ADD_F32_e64_]], 0, [[V_READFIRSTLANE_B32_]], [[V_CMP_NE_U32_e64_1]], implicit $exec
   ; ITERATE-NEXT: {{  $}}
   ; ITERATE-NEXT: bb.4 (%ir-block.11):
   ; ITERATE-NEXT:   [[PHI1:%[0-9]+]]:vgpr_32 = PHI [[COPY4]], %bb.0, [[V_CNDMASK_B32_e64_1]], %bb.3
@@ -278,8 +278,8 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; ITERATE-NEXT:   [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; ITERATE-NEXT:   S_CMP_LG_U32 [[S_ANDN2_B32_]], killed [[S_MOV_B32_3]], implicit-def $scc
   ; ITERATE-NEXT:   [[S_CSELECT_B32_:%[0-9]+]]:sreg_32_xm0_xexec = S_CSELECT_B32 -1, 0, implicit $scc
-  ; ITERATE-NEXT:   [[COPY10:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_]]
-  ; ITERATE-NEXT:   SI_BRCOND_UNIFORM killed [[COPY10]], %bb.5
+  ; ITERATE-NEXT:   [[COPY9:%[0-9]+]]:sreg_32 = COPY [[S_CSELECT_B32_]]
+  ; ITERATE-NEXT:   SI_BRCOND_UNIFORM killed [[COPY9]], %bb.5
   ; ITERATE-NEXT:   S_BRANCH %bb.6
   ; ITERATE-NEXT: {{  $}}
   ; ITERATE-NEXT: bb.6.ComputeEnd:
@@ -289,10 +289,10 @@ define amdgpu_ps float @global_atomic_fadd_f32_saddr_rtn_atomicrmw(ptr addrspace
   ; ITERATE-NEXT:   [[PHI6:%[0-9]+]]:vgpr_32 = PHI [[V_WRITELANE_B32_]], %bb.5
   ; ITERATE-NEXT:   [[S_MOV_B32_4:%[0-9]+]]:sreg_32 = S_MOV_B32 0
   ; ITERATE-NEXT:   [[V_MBCNT_LO_U32_B32_e64_:%[0-9]+]]:vgpr_32 = V_MBCNT_LO_U32_B32_e64 [[COPY6]], [[S_MOV_B32_4]], implicit $exec
-  ; ITERATE-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_EQ_U32_e64 killed [[V_MBCNT_LO_U32_B32_e64_]], [[S_MOV_B32_4]], implicit $exec
+  ; ITERATE-NEXT:   [[V_CMP_EQ_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_EQ_U32_e64 killed [[V_MBCNT_LO_U32_B32_e64_]], [[S_MOV_B32_4]], implicit $exec
   ; ITERATE-NEXT:   [[DEF2:%[0-9]+]]:sgpr_32 = IMPLICIT_DEF
-  ; ITERATE-NEXT:   [[COPY11:%[0-9]+]]:vreg_1 = COPY [[V_CMP_EQ_U32_e64_]]
-  ; ITERATE-NEXT:   [[COPY12:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
+  ; ITERATE-NEXT:   [[V_CNDMASK_B32_e64_2:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, 0, 0, -1, [[V_CMP_EQ_U32_e64_]], implicit $exec
+  ; ITERATE-NEXT:   [[COPY10:%[0-9]+]]:vgpr_32 = COPY [[DEF2]]
   ; ITERATE-NEXT:   SI_BRCOND [[V_CMP_EQ_U32_e64_]], %bb.2
   ; ITERATE-NEXT:   S_BRANCH %bb.3
   %ret = atomicrmw fadd ptr addrspace(1) %ptr, float %data syncscope("wavefront") monotonic, !amdgpu.no.fine.grained.memory !0, !amdgpu.ignore.denormal.mode !0

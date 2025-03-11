@@ -477,6 +477,10 @@ FunctionPass *createAMDGPUPreWaveTransformPass();
 void initializeAMDGPUPreWaveTransformPass(PassRegistry &);
 extern char &AMDGPUPreWaveTransformID;
 
+FunctionPass *createAMDGPUFinalizeISelWaveTransformPass();
+void initializeAMDGPUFinalizeISelWaveTransformPass(PassRegistry &);
+extern char &AMDGPUFinalizeISelWaveTransformID;
+
 namespace AMDGPU {
 enum TargetIndex {
   TI_CONSTDATA_START,
