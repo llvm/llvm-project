@@ -962,19 +962,19 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
     body.try_emplace("reason", "step");
     break;
   case lldb::eStopReasonBreakpoint: {
-    ExceptionBreakpoint *exc_bp =
+    const auto *exc_bp =
         dap.GetBreakpointFromStopReason<ExceptionBreakpoint>(thread);
     if (exc_bp) {
       body.try_emplace("reason", "exception");
       EmplaceSafeString(body, "description", exc_bp->label);
     } else {
       llvm::StringRef reason = "breakpoint";
-      InstructionBreakpoint *inst_bp =
+      const auto *inst_bp =
           dap.GetBreakpointFromStopReason<InstructionBreakpoint>(thread);
       if (inst_bp) {
         reason = "instruction breakpoint";
       } else {
-        FunctionBreakpoint *function_bp =
+        const auto *function_bp =
             dap.GetBreakpointFromStopReason<FunctionBreakpoint>(thread);
         if (function_bp) {
           reason = "function breakpoint";

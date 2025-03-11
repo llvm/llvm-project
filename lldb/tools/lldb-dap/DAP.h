@@ -233,7 +233,6 @@ struct DAP {
   /// @}
 
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
-  ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
 
   /// Redirect stdout and stderr fo the IDE's console output.
   ///
@@ -416,47 +415,31 @@ struct DAP {
   template <>
   FunctionBreakpoint *
   GetBreakpoint<FunctionBreakpoint>(const lldb::break_id_t bp_id) {
-    for (auto &bp : function_breakpoints) {
-      if (bp.second.bp.GetID() == bp_id)
-        return &bp.second;
-    }
-    return nullptr;
+    auto it = std::find_if(
+        function_breakpoints.begin(), function_breakpoints.end(),
+        [bp_id](const auto &bp) { return bp.second.bp.GetID() == bp_id; });
+    return it != function_breakpoints.end() ? &it->second : nullptr;
   }
 
   template <>
   InstructionBreakpoint *
   GetBreakpoint<InstructionBreakpoint>(const lldb::break_id_t bp_id) {
-    for (auto &bp : instruction_breakpoints) {
-      if (bp.second.bp.GetID() == bp_id)
-        return &bp.second;
-    }
-    return nullptr;
+    auto it = std::find_if(
+        instruction_breakpoints.begin(), instruction_breakpoints.end(),
+        [bp_id](const auto &bp) { return bp.second.bp.GetID() == bp_id; });
+    return it != instruction_breakpoints.end() ? &it->second : nullptr;
   }
 
   template <>
   ExceptionBreakpoint *
   GetBreakpoint<ExceptionBreakpoint>(const lldb::break_id_t bp_id) {
-    // See comment in the other GetExceptionBreakpoint().
     PopulateExceptionBreakpoints();
 
-    for (auto &bp : *exception_breakpoints) {
-      if (bp.bp.GetID() == bp_id)
-        return &bp;
-    }
-    return nullptr;
+    auto it = std::find_if(
+        exception_breakpoints->begin(), exception_breakpoints->end(),
+        [bp_id](const auto &bp) { return bp.bp.GetID() == bp_id; });
+    return it != exception_breakpoints->end() ? &*it : nullptr;
   }
-
-  FunctionBreakpoint *GetFunctionBPFromStopReason(lldb::SBThread &thread);
-
-  FunctionBreakpoint *GetFunctionBreakPoint(const lldb::break_id_t bp_id);
-
-  void WaitWorkerThreadsToExit();
-
-private:
-  // Send the JSON in "json_str" to the "out" stream. Correctly send the
-  // "Content-Length:" field followed by the length, followed by the raw
-  // JSON bytes.
-  void SendJSON(const std::string &json_str);
 };
 
 } // namespace lldb_dap
