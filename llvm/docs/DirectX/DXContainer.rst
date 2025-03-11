@@ -548,9 +548,8 @@ The Version 1.1 RootDescriptor_V1_1 extends the base structure with the followin
 Root Descriptor Table
 ~~~~~~~~~~~~~~~~~~~~~
 
-Descriptor tables provide a flexible mechanism for grouping and managing multiple resource descriptors within 
-a single root signature parameter. They enable efficient binding of complex shader resource sets while minimizing 
-root signature space consumption.
+Descriptor tables function as containers that hold references to descriptors in descriptor heaps. 
+They allow multiple descriptors to be bound to the pipeline through a single root signature parameter.
 
 .. code-block:: cpp
 
@@ -591,7 +590,6 @@ root signature space consumption.
 
 Descriptor Range Version 1.0
 ''''''''''''''''''''''''''''
-
 The Version 1.0 ``DescriptorRange_V1_0`` provides basic descriptor range definition:
 
 #. **RangeType**: Type of descriptors (CBV, SRV, UAV, or Sampler)
@@ -605,10 +603,10 @@ Descriptor Range Version 1.1
 The Version 1.1 DescriptorRange_V1_1 extends the base structure with performance optimization flags.
 
 #. **Flags**: Provide additional information about the descriptors and enable further driver optimizations.
+   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signature-version-1-1#static-and-volatile-flags>`_.
 
 Root Descriptor Table
 '''''''''''''''''''''
-
 RootDescriptorTable provides basic table structure:
 
 #. **NumDescriptorRanges**: Number of descriptor ranges
