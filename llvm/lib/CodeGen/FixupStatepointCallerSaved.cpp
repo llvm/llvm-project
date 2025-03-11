@@ -425,7 +425,7 @@ public:
     }
   }
 
-  void insertReloadBefore(unsigned Reg, MachineBasicBlock::iterator It,
+  void insertReloadBefore(Register Reg, MachineBasicBlock::iterator It,
                           MachineBasicBlock *MBB) {
     const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
     int FI = RegToSlotIdx[Reg];
