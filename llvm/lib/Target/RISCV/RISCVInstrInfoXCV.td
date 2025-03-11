@@ -319,30 +319,24 @@ class CVSIMDRRWb<bits<5> funct5, bit F, bit funct1, bits<3> funct3,
   let Constraints = "$rd = $rd_wb";
 }
 
-class CVSIMDRI<bits<5> funct5, bit F, bits<3> funct3, string opcodestr>
+class CVSIMDRI<bits<5> funct5, bit F, bits<3> funct3, string opcodestr,
+               Operand immtype = simm6>
     : CVInstSIMDRI<funct5, F, funct3, OPC_CUSTOM_3, (outs GPR:$rd),
-              (ins GPR:$rs1, simm6:$imm6), opcodestr, "$rd, $rs1, $imm6">;
+                   (ins GPR:$rs1, immtype:$imm6), opcodestr, "$rd, $rs1, $imm6">;
 
-class CVSIMDRIWb<bits<5> funct5, bit F, bits<3> funct3, string opcodestr>
+class CVSIMDRIWb<bits<5> funct5, bit F, bits<3> funct3, string opcodestr,
+                 Operand immtype = simm6>
     : CVInstSIMDRI<funct5, F, funct3, OPC_CUSTOM_3,
-                   (outs GPR:$rd_wb), (ins GPR:$rd, GPR:$rs1, simm6:$imm6),
+                   (outs GPR:$rd_wb), (ins GPR:$rd, GPR:$rs1, immtype:$imm6),
                    opcodestr, "$rd, $rs1, $imm6"> {
   let Constraints = "$rd = $rd_wb";
 }
 
-class CVSIMDRU<bits<5> funct5, bit F, bits<3> funct3, string opcodestr,
-               Operand immtype = uimm6>
-    : CVInstSIMDRI<funct5, F, funct3, OPC_CUSTOM_3,
-                   (outs GPR:$rd), (ins GPR:$rs1, immtype:$imm6),
-                   opcodestr, "$rd, $rs1, $imm6">;
+class CVSIMDRU<bits<5> funct5, bit F, bits<3> funct3, string opcodestr>
+    : CVSIMDRI<funct5, F, funct3, opcodestr, uimm6>;
 
 class CVSIMDRUWb<bits<5> funct5, bit F, bits<3> funct3, string opcodestr>
-    : CVInstSIMDRI<funct5, F, funct3, OPC_CUSTOM_3,
-                   (outs GPR:$rd_wb),
-                   (ins GPR:$rd, GPR:$rs1, uimm6:$imm6),
-                   opcodestr, "$rd, $rs1, $imm6"> {
-  let Constraints = "$rd = $rd_wb";
-}
+    : CVSIMDRIWb<funct5, F, funct3, opcodestr, uimm6>;
 
 class CVSIMDR<bits<5> funct5, bit F, bit funct1, bits<3> funct3,
               string opcodestr>
@@ -374,8 +368,8 @@ multiclass CVSIMDShift<bits<5> funct5, bit F, bit funct1, string mnemonic> {
   def CV_ # NAME # _B : CVSIMDRR<funct5, F, funct1, 0b001, "cv." # mnemonic # ".b">;
   def CV_ # NAME # _SC_H : CVSIMDRR<funct5, F, funct1, 0b100, "cv." # mnemonic # ".sc.h">;
   def CV_ # NAME # _SC_B : CVSIMDRR<funct5, F, funct1, 0b101, "cv." # mnemonic # ".sc.b">;
-  def CV_ # NAME # _SCI_H : CVSIMDRU<funct5, F, 0b110, "cv." # mnemonic # ".sci.h", uimm4>;
-  def CV_ # NAME # _SCI_B : CVSIMDRU<funct5, F, 0b111, "cv." # mnemonic # ".sci.b", uimm3>;
+  def CV_ # NAME # _SCI_H : CVSIMDRI<funct5, F, 0b110, "cv." # mnemonic # ".sci.h", uimm4>;
+  def CV_ # NAME # _SCI_B : CVSIMDRI<funct5, F, 0b111, "cv." # mnemonic # ".sci.b", uimm3>;
 }
 
 multiclass CVSIMDBinarySignedWb<bits<5> funct5, bit F, bit funct1, string mnemonic> {
