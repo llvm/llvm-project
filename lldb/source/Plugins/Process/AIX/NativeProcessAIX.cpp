@@ -162,9 +162,7 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
   }
   LLDB_LOG(log, "adding pid = {0}", pid);
 
-  std::vector<::pid_t> tids;
-  tids.push_back(pid);
-  return std::move(tids);
+  return std::vector<::pid_t>{pid};
 }
 
 bool NativeProcessAIX::SupportHardwareSingleStepping() const { return false; }
