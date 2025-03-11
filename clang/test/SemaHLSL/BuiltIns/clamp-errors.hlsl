@@ -20,6 +20,26 @@ float2 test_clamp_no_second_arg(float2 p0) {
   // expected-error@-1 {{no matching function for call to 'clamp'}}
 }
 
+float test_scalar_first_arg(float p0, float2 p1) {
+  return clamp(p0, p1, p1);
+  // expected-error@-1 {{call to 'clamp' is ambiguous}}
+}
+
+float test_scalar_first_arg2(float p0, float2 p1) {
+  return clamp(p0, p0, p1);
+  // expected-error@-1 {{call to 'clamp' is ambiguous}}
+}
+
+float2 test_scalar_first_arg3(float p0, float2 p1) {
+  return clamp(p0, p0, p1);
+  // expected-error@-1 {{call to 'clamp' is ambiguous}}
+}
+
+float3 test_thing(float3 p0, float2 p1) {
+  return clamp(p0, p0, p1);
+  // expected-error@-1 {{cannot initialize return object of type 'float3' (aka 'vector<float, 3>') with an rvalue of type 'vector<float, 2>' (vector of 2 'float' values)}}
+}
+
 float2 test_clamp_vector_size_mismatch(float3 p0, float2 p1) {
   return clamp(p0, p0, p1);
   // expected-warning@-1 {{implicit conversion truncates vector: 'float3' (aka 'vector<float, 3>') to 'vector<float, 2>' (vector of 2 'float' values)}}

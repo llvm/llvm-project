@@ -23,6 +23,7 @@
 // HLSL standard library function declarations/definitions.
 #include "hlsl/hlsl_alias_intrinsics.h"
 #include "hlsl/hlsl_intrinsics.h"
+#include "hlsl/hlsl_compat_overloads.h"
 
 #if defined(__clang__)
 #pragma clang diagnostic pop

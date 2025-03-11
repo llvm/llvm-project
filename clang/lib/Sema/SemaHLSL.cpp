@@ -2042,6 +2042,7 @@ static bool CheckVectorElementCallArgs(Sema *S, CallExpr *TheCall) {
 }
 
 static bool CheckAllArgsHaveSameType(Sema *S, CallExpr *TheCall) {
+  assert(TheCall->getNumArgs() > 1);
   QualType ArgTy0 = TheCall->getArg(0)->getType();
 
   for (unsigned I = 1, N = TheCall->getNumArgs(); I < N; ++I) {
