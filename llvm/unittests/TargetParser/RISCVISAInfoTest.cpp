@@ -670,9 +670,10 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
 
   for (StringRef Input : {"rv32i_zcd_xqciac0p3"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'xqciac' extension is incompatible with 'zcd' extension when 'd' "
-              "extension is enabled");
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+        "'xqciac' extension is incompatible with 'zcd' extension when 'd' "
+        "extension is enabled");
   }
 
   for (StringRef Input : {"rv32idc_xqcicm0p2"}) {
@@ -682,9 +683,10 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   }
 
   for (StringRef Input : {"rv32i_zcd_xqcicm0p2"}) {
-    EXPECT_EQ(toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
-              "'xqcicm' extension is incompatible with 'zcd' extension when 'd' "
-              "extension is enabled");
+    EXPECT_EQ(
+        toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+        "'xqcicm' extension is incompatible with 'zcd' extension when 'd' "
+        "extension is enabled");
   }
 
   for (StringRef Input : {"rv32i_zcmp_xqccmp0p1", "rv64i_zcmp_xqccmp0p1"}) {

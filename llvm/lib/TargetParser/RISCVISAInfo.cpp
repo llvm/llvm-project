@@ -748,8 +748,7 @@ Error RISCVISAInfo::checkDependency() {
       {"xqcicm"},  {"xqcics"}, {"xqcicsr"}, {"xqciint"},
       {"xqcilia"}, {"xqcilo"}, {"xqcilsm"}, {"xqcisls"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
-    {"zcmt"}, {"zcmp"}, {"xqciac"}, {"xqcicm"}
-  };
+      {"zcmt"}, {"zcmp"}, {"xqciac"}, {"xqcicm"}};
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");
@@ -763,10 +762,9 @@ Error RISCVISAInfo::checkDependency() {
   if (HasD && (HasC || Exts.count("zcd")))
     for (auto Ext : ZcdOverlaps)
       if (Exts.count(Ext.str()))
-        return getError(Twine("'") + Ext +
-                        "' extension is incompatible with '" +
-                        (HasC ? "c" : "zcd") +
-                        "' extension when 'd' extension is enabled");
+        return getError(
+            Twine("'") + Ext + "' extension is incompatible with '" +
+            (HasC ? "c" : "zcd") + "' extension when 'd' extension is enabled");
 
   if (XLen != 32 && Exts.count("zcf"))
     return getError("'zcf' is only supported for 'rv32'");
