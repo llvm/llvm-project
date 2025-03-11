@@ -525,7 +525,7 @@ public:
   }
 
   static bool MorphToIntPairReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     assert(Op.Reg.Kind == rk_IntReg);
     unsigned regIdx = 32;
     if (Reg >= Sparc::G0 && Reg <= Sparc::G7)
@@ -544,7 +544,7 @@ public:
   }
 
   static bool MorphToDoubleReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     assert(Op.Reg.Kind == rk_FloatReg);
     unsigned regIdx = Reg - Sparc::F0;
     if (regIdx % 2 || regIdx > 31)
@@ -555,7 +555,7 @@ public:
   }
 
   static bool MorphToQuadReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     unsigned regIdx = 0;
     switch (Op.Reg.Kind) {
     default: llvm_unreachable("Unexpected register kind!");
@@ -578,7 +578,7 @@ public:
   }
 
   static bool MorphToCoprocPairReg(SparcOperand &Op) {
-    unsigned Reg = Op.getReg();
+    MCRegister Reg = Op.getReg();
     assert(Op.Reg.Kind == rk_CoprocReg);
     unsigned regIdx = 32;
     if (Reg >= Sparc::C0 && Reg <= Sparc::C31)
@@ -592,7 +592,7 @@ public:
 
   static std::unique_ptr<SparcOperand>
   MorphToMEMrr(unsigned Base, std::unique_ptr<SparcOperand> Op) {
-    unsigned offsetReg = Op->getReg();
+    MCRegister offsetReg = Op->getReg();
     Op->Kind = k_MemoryReg;
     Op->Mem.Base = Base;
     Op->Mem.OffsetReg = offsetReg;

@@ -52,6 +52,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
     case Triple::amdgcn:
     case Triple::nvptx:
     case Triple::nvptx64:
+    case Triple::spirv64:
       ActiveTraits.set(unsigned(TraitProperty::target_device_kind_gpu));
       break;
     default:
@@ -67,7 +68,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
         TargetOffloadTriple.getArch() == Triple::x86_64)                       \
       ActiveTraits.set(unsigned(TraitProperty::Enum));                         \
   }
-#undef OMP_TRAIT_PROPERTY
+#include "llvm/Frontend/OpenMP/OMPKinds.def"
   } else {
     // Add the appropriate device kind trait based on the triple and the
     // IsDeviceCompilation flag.
@@ -98,6 +99,7 @@ OMPContext::OMPContext(bool IsDeviceCompilation, Triple TargetTriple,
     case Triple::amdgcn:
     case Triple::nvptx:
     case Triple::nvptx64:
+    case Triple::spirv64:
       ActiveTraits.set(unsigned(TraitProperty::device_kind_gpu));
       ActiveTraits.set(unsigned(TraitProperty::target_device_kind_gpu));
       break;

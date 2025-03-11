@@ -221,6 +221,7 @@ AFFECTING_VALUE_CODEGENOPT(OptimizationLevel, 2, 0) ///< The -O[0-3] option spec
 AFFECTING_VALUE_CODEGENOPT(OptimizeSize, 2, 0) ///< If -Os (==1) or -Oz (==2) is specified.
 
 CODEGENOPT(AtomicProfileUpdate , 1, 0) ///< Set -fprofile-update=atomic
+CODEGENOPT(ContinuousProfileSync, 1, 0) ///< Enable continuous instrumentation profiling
 /// Choose profile instrumenation kind or no instrumentation.
 ENUM_CODEGENOPT(ProfileInstr, ProfileInstrKind, 2, ProfileNone)
 /// Choose profile kind for PGO use compilation.
@@ -320,6 +321,7 @@ CODEGENOPT(TimePassesPerRun  , 1, 0) ///< Set when -ftime-report=per-pass-run is
 CODEGENOPT(TimeTrace         , 1, 0) ///< Set when -ftime-trace is enabled.
 VALUE_CODEGENOPT(TimeTraceGranularity, 32, 500) ///< Minimum time granularity (in microseconds),
                                                ///< traced by time profiler
+CODEGENOPT(InterchangeLoops  , 1, 0) ///< Run loop-interchange.
 CODEGENOPT(UnrollLoops       , 1, 0) ///< Control whether loops are unrolled.
 CODEGENOPT(RerollLoops       , 1, 0) ///< Control whether loops are rerolled.
 CODEGENOPT(NoUseJumpTables   , 1, 0) ///< Set when -fno-jump-tables is enabled.

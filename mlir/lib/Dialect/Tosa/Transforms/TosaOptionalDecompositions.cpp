@@ -38,7 +38,6 @@ struct TosaOptionalDecompositions
     RewritePatternSet patterns(ctx);
     auto func = getOperation();
 
-    mlir::tosa::populateTosaDecomposeConv2D(ctx, patterns);
     mlir::tosa::populateTosaDecomposeTransposeConv(ctx, patterns);
     mlir::tosa::populateTosaDecomposeDepthwise(ctx, patterns);
 

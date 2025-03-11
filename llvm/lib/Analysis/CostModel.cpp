@@ -17,6 +17,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/CostModel.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -24,6 +25,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
+
 using namespace llvm;
 
 static cl::opt<TargetTransformInfo::TargetCostKind> CostKind(
@@ -38,32 +40,55 @@ static cl::opt<TargetTransformInfo::TargetCostKind> CostKind(
                clEnumValN(TargetTransformInfo::TCK_SizeAndLatency,
                           "size-latency", "Code size and latency")));
 
-static cl::opt<bool> TypeBasedIntrinsicCost("type-based-intrinsic-cost",
-    cl::desc("Calculate intrinsics cost based only on argument types"),
-    cl::init(false));
+enum class IntrinsicCostStrategy {
+  InstructionCost,
+  IntrinsicCost,
+  TypeBasedIntrinsicCost,
+};
+
+static cl::opt<IntrinsicCostStrategy> IntrinsicCost(
+    "intrinsic-cost-strategy",
+    cl::desc("Costing strategy for intrinsic instructions"),
+    cl::init(IntrinsicCostStrategy::InstructionCost),
+    cl::values(
+        clEnumValN(IntrinsicCostStrategy::InstructionCost, "instruction-cost",
+                   "Use TargetTransformInfo::getInstructionCost"),
+        clEnumValN(IntrinsicCostStrategy::IntrinsicCost, "intrinsic-cost",
+                   "Use TargetTransformInfo::getIntrinsicInstrCost"),
+        clEnumValN(
+            IntrinsicCostStrategy::TypeBasedIntrinsicCost,
+            "type-based-intrinsic-cost",
+            "Calculate the intrinsic cost based only on argument types")));
 
 #define CM_NAME "cost-model"
 #define DEBUG_TYPE CM_NAME
 
+static InstructionCost getCost(Instruction &Inst, TTI::TargetCostKind CostKind,
+                               TargetTransformInfo &TTI,
+                               TargetLibraryInfo &TLI) {
+  auto *II = dyn_cast<IntrinsicInst>(&Inst);
+  if (II && IntrinsicCost != IntrinsicCostStrategy::InstructionCost) {
+    IntrinsicCostAttributes ICA(
+        II->getIntrinsicID(), *II, InstructionCost::getInvalid(),
+        /*TypeBasedOnly=*/IntrinsicCost ==
+            IntrinsicCostStrategy::TypeBasedIntrinsicCost,
+        &TLI);
+    return TTI.getIntrinsicInstrCost(ICA, CostKind);
+  }
+
+  return TTI.getInstructionCost(&Inst, CostKind);
+}
+
 PreservedAnalyses CostModelPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  auto &TLI = AM.getResult<TargetLibraryAnalysis>(F);
   OS << "Printing analysis 'Cost Model Analysis' for function '" << F.getName() << "':\n";
   for (BasicBlock &B : F) {
     for (Instruction &Inst : B) {
       // TODO: Use a pass parameter instead of cl::opt CostKind to determine
       // which cost kind to print.
-      InstructionCost Cost;
-      auto *II = dyn_cast<IntrinsicInst>(&Inst);
-      if (II && TypeBasedIntrinsicCost) {
-        IntrinsicCostAttributes ICA(II->getIntrinsicID(), *II,
-                                    InstructionCost::getInvalid(), true);
-        Cost = TTI.getIntrinsicInstrCost(ICA, CostKind);
-      }
-      else {
-        Cost = TTI.getInstructionCost(&Inst, CostKind);
-      }
-
+      InstructionCost Cost = getCost(Inst, CostKind, TTI, TLI);
       if (auto CostVal = Cost.getValue())
         OS << "Cost Model: Found an estimated cost of " << *CostVal;
       else

@@ -1593,6 +1593,21 @@ static unsigned getDwarfCC(CallingConv CC) {
     return llvm::dwarf::DW_CC_LLVM_PreserveNone;
   case CC_RISCVVectorCall:
     return llvm::dwarf::DW_CC_LLVM_RISCVVectorCall;
+#define CC_VLS_CASE(ABI_VLEN) case CC_RISCVVLSCall_##ABI_VLEN:
+    CC_VLS_CASE(32)
+    CC_VLS_CASE(64)
+    CC_VLS_CASE(128)
+    CC_VLS_CASE(256)
+    CC_VLS_CASE(512)
+    CC_VLS_CASE(1024)
+    CC_VLS_CASE(2048)
+    CC_VLS_CASE(4096)
+    CC_VLS_CASE(8192)
+    CC_VLS_CASE(16384)
+    CC_VLS_CASE(32768)
+    CC_VLS_CASE(65536)
+#undef CC_VLS_CASE
+    return llvm::dwarf::DW_CC_LLVM_RISCVVLSCall;
   }
   return 0;
 }
@@ -2104,7 +2119,8 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
       // Emit MS ABI vftable information.  There is only one entry for the
       // deleting dtor.
       const auto *DD = dyn_cast<CXXDestructorDecl>(Method);
-      GlobalDecl GD = DD ? GlobalDecl(DD, Dtor_Deleting) : GlobalDecl(Method);
+      GlobalDecl GD =
+          DD ? GlobalDecl(DD, Dtor_VectorDeleting) : GlobalDecl(Method);
       MethodVFTableLocation ML =
           CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
       VIndex = ML.Index;
@@ -3567,6 +3583,10 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
         DBuilder.createEnumerator(Enum->getName(), Enum->getInitVal()));
   }
 
+  std::optional<EnumExtensibilityAttr::Kind> EnumKind;
+  if (auto *Attr = ED->getAttr<EnumExtensibilityAttr>())
+    EnumKind = Attr->getExtensibility();
+
   // Return a CompositeType for the enum itself.
   llvm::DINodeArray EltArray = DBuilder.getOrCreateArray(Enumerators);
 
@@ -3576,7 +3596,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const EnumType *Ty) {
   llvm::DIType *ClassTy = getOrCreateType(ED->getIntegerType(), DefUnit);
   return DBuilder.createEnumerationType(
       EnumContext, ED->getName(), DefUnit, Line, Size, Align, EltArray, ClassTy,
-      /*RunTimeLang=*/0, Identifier, ED->isScoped());
+      /*RunTimeLang=*/0, Identifier, ED->isScoped(), EnumKind);
 }
 
 llvm::DIMacro *CGDebugInfo::CreateMacro(llvm::DIMacroFile *Parent,
@@ -5118,7 +5138,7 @@ void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {
   DBuilder.insertLabel(L,
                        llvm::DILocation::get(CGM.getLLVMContext(), Line, Column,
                                              Scope, CurInlinedAt),
-                       Builder.GetInsertBlock());
+                       Builder.GetInsertBlock()->end());
 }
 
 llvm::DIType *CGDebugInfo::CreateSelfType(const QualType &QualTy,
@@ -5196,7 +5216,7 @@ void CGDebugInfo::EmitDeclareOfBlockDeclRefVariable(
                                   LexicalBlockStack.back(), CurInlinedAt);
   auto *Expr = DBuilder.createExpression(addr);
   if (InsertPoint)
-    DBuilder.insertDeclare(Storage, D, Expr, DL, InsertPoint);
+    DBuilder.insertDeclare(Storage, D, Expr, DL, InsertPoint->getIterator());
   else
     DBuilder.insertDeclare(Storage, D, Expr, DL, Builder.GetInsertBlock());
 }
@@ -5861,7 +5881,7 @@ void CGDebugInfo::EmitPseudoVariable(CGBuilderTy &Builder,
 
   if (auto InsertPoint = Value->getInsertionPointAfterDef()) {
     DBuilder.insertDbgValueIntrinsic(Value, D, DBuilder.createExpression(), DIL,
-                                     &**InsertPoint);
+                                     *InsertPoint);
   }
 }
 

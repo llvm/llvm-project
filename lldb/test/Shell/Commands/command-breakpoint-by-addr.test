@@ -1,0 +1,14 @@
+# RUN: %clang_host -g -O0 %S/Inputs/main.c -o %t.out
+# RUN: %lldb %t.out -b -s %s | FileCheck %s
+
+breakpoint set -a "main+26"
+breakpoint set -a "main+ 26"
+breakpoint set -a "main +26"
+breakpoint set -a "main + 26"
+breakpoint set -a "main  +    26"
+
+# CHECK: Breakpoint 1: address = 
+# CHECK: Breakpoint 2: address = 
+# CHECK: Breakpoint 3: address = 
+# CHECK: Breakpoint 4: address = 
+# CHECK: Breakpoint 5: address = 

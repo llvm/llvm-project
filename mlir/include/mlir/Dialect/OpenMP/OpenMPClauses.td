@@ -436,12 +436,11 @@ class OpenMP_GrainsizeClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-  let arguments = (ins
-    Optional<IntLikeType>:$grainsize
-  );
+  let arguments = (ins OptionalAttr<GrainsizeTypeAttr>:$grainsize_mod,
+      Optional<IntLikeType>:$grainsize);
 
   let optAssemblyFormat = [{
-    `grainsize` `(` $grainsize `:` type($grainsize) `)`
+    `grainsize` `(` custom<GrainsizeClause>($grainsize_mod , $grainsize, type($grainsize)) `)`
   }];
 
   let description = [{
@@ -463,13 +462,18 @@ class OpenMP_HasDeviceAddrClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$has_device_addr_vars
   );
 
-  let optAssemblyFormat = [{
-    `has_device_addr` `(` $has_device_addr_vars `:` type($has_device_addr_vars)
-                      `)`
+  let extraClassDeclaration = [{
+    unsigned numHasDeviceAddrBlockArgs() {
+      return getHasDeviceAddrVars().size();
+    }
   }];
 
   let description = [{
@@ -895,12 +899,11 @@ class OpenMP_NumTasksClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-  let arguments = (ins
-    Optional<IntLikeType>:$num_tasks
-  );
+  let arguments = (ins OptionalAttr<NumTasksTypeAttr>:$num_tasks_mod,
+      Optional<IntLikeType>:$num_tasks);
 
   let optAssemblyFormat = [{
-    `num_tasks` `(` $num_tasks `:` type($num_tasks) `)`
+    `num_tasks` `(` custom<NumTasksClause>($num_tasks_mod , $num_tasks, type($num_tasks)) `)`
   }];
 
   let description = [{

@@ -18,14 +18,12 @@ using namespace clang;
 using namespace clang::interp;
 
 unsigned Program::getOrCreateNativePointer(const void *Ptr) {
-  auto It = NativePointerIndices.find(Ptr);
-  if (It != NativePointerIndices.end())
-    return It->second;
+  auto [It, Inserted] =
+      NativePointerIndices.try_emplace(Ptr, NativePointers.size());
+  if (Inserted)
+    NativePointers.push_back(Ptr);
 
-  unsigned Idx = NativePointers.size();
-  NativePointers.push_back(Ptr);
-  NativePointerIndices[Ptr] = Idx;
-  return Idx;
+  return It->second;
 }
 
 const void *Program::getNativePointer(unsigned Idx) {
@@ -395,6 +393,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
     if (const auto *Record = getOrCreateRecord(RT->getDecl()))
       return allocateDescriptor(D, Record, MDSize, IsConst, IsTemporary,
                                 IsMutable);
+    return allocateDescriptor(D, MDSize);
   }
 
   // Arrays.
@@ -421,7 +420,7 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         unsigned ElemSize = ElemDesc->getAllocSize() + sizeof(InlineDescriptor);
         if (std::numeric_limits<unsigned>::max() / ElemSize <= NumElems)
           return {};
-        return allocateDescriptor(D, ElemDesc, MDSize, NumElems, IsConst,
+        return allocateDescriptor(D, Ty, ElemDesc, MDSize, NumElems, IsConst,
                                   IsTemporary, IsMutable);
       }
     }
@@ -434,8 +433,8 @@ Descriptor *Program::createDescriptor(const DeclTy &D, const Type *Ty,
         return allocateDescriptor(D, *T, MDSize, IsTemporary,
                                   Descriptor::UnknownSize{});
       } else {
-        const Descriptor *Desc = createDescriptor(D, ElemTy.getTypePtr(),
-                                                  MDSize, IsConst, IsTemporary);
+        const Descriptor *Desc = createDescriptor(
+            D, ElemTy.getTypePtr(), std::nullopt, IsConst, IsTemporary);
         if (!Desc)
           return nullptr;
         return allocateDescriptor(D, Desc, MDSize, IsTemporary,

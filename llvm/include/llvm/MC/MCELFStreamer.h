@@ -54,7 +54,6 @@ public:
   void emitLabelAtPos(MCSymbol *Symbol, SMLoc Loc, MCDataFragment &F,
                       uint64_t Offset) override;
   void emitAssemblerFlag(MCAssemblerFlag Flag) override;
-  void emitThumbFunc(MCSymbol *Func) override;
   void emitWeakReference(MCSymbol *Alias, const MCSymbol *Symbol) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
@@ -106,7 +105,7 @@ public:
     unsigned IntValue;
     std::string StringValue;
     AttributeItem(Types Ty, unsigned Tg, unsigned IV, std::string SV)
-        : Type(Ty), Tag(Tg), IntValue(IV), StringValue(SV) {}
+        : Type(Ty), Tag(Tg), IntValue(IV), StringValue(std::move(SV)) {}
   };
 
   /// ELF object attributes subsection support

@@ -129,7 +129,7 @@ class DynamicValueTestCase(TestBase):
         self.expect(
             "frame var -d run-target --ptr-depth=2 --show-types anotherA.m_client_A",
             "frame var finds its way into a child member",
-            patterns=["\(B \*\)"],
+            patterns=[r"\(B \*\)"],
         )
 
         # Now make sure we also get it right for a reference as well:

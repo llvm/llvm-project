@@ -48,10 +48,10 @@
 
 using namespace llvm;
 
-static cl::opt<std::string>
+static cl::opt<RegAllocType, false, RegAllocTypeParser>
     RegAlloc("regalloc-npm",
              cl::desc("Register allocator to use for new pass manager"),
-             cl::Hidden, cl::init("default"));
+             cl::Hidden, cl::init(RegAllocType::Unset));
 
 static cl::opt<bool>
     DebugPM("debug-pass-manager", cl::Hidden,

@@ -148,8 +148,8 @@ def TestType : Test_Type<"Test", [
 }
 
 def TestTypeWithLayoutType : Test_Type<"TestTypeWithLayout", [
-  DeclareTypeInterfaceMethods<DataLayoutTypeInterface, ["getIndexBitwidth",
-                                                        "areCompatible"]>
+  DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+    ["getIndexBitwidth", "areCompatible", "getPreferredAlignment"]>
 ]> {
   let mnemonic = "test_type_with_layout";
   let parameters = (ins "unsigned":$key);
@@ -399,7 +399,7 @@ def TestTypeVerification : Test_Type<"TestTypeVerification"> {
 }
 
 def TestTypeOpAsmTypeInterface : Test_Type<"TestTypeOpAsmTypeInterface",
-    [DeclareTypeInterfaceMethods<OpAsmTypeInterface, ["getAsmName"]>]> {
+    [DeclareTypeInterfaceMethods<OpAsmTypeInterface, ["getAsmName", "getAlias"]>]> {
   let mnemonic = "op_asm_type_interface";
 }
 

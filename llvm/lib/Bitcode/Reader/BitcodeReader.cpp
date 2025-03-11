@@ -1937,8 +1937,7 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
 }
 
 /// This fills an AttrBuilder object with the LLVM attributes that have
-/// been decoded from the given integer. This function must stay in sync with
-/// 'encodeLLVMAttributesForBitcode'.
+/// been decoded from the given integer.
 static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
                                            uint64_t EncodedAttrs,
                                            uint64_t AttrIdx) {
@@ -2398,9 +2397,28 @@ Error BitcodeReader::parseAttributeGroupBlock() {
             B.addUWTableAttr(UWTableKind(Record[++i]));
           else if (Kind == Attribute::AllocKind)
             B.addAllocKindAttr(static_cast<AllocFnKind>(Record[++i]));
-          else if (Kind == Attribute::Memory)
-            B.addMemoryAttr(MemoryEffects::createFromIntValue(Record[++i]));
-          else if (Kind == Attribute::Captures)
+          else if (Kind == Attribute::Memory) {
+            uint64_t EncodedME = Record[++i];
+            const uint8_t Version = (EncodedME >> 56);
+            if (Version == 0) {
+              // Errno memory location was previously encompassed into default
+              // memory. Ensure this is taken into account while reconstructing
+              // the memory attribute prior to its introduction.
+              ModRefInfo ArgMem = ModRefInfo((EncodedME >> 0) & 3);
+              ModRefInfo InaccessibleMem = ModRefInfo((EncodedME >> 2) & 3);
+              ModRefInfo OtherMem = ModRefInfo((EncodedME >> 4) & 3);
+              auto ME = MemoryEffects::inaccessibleMemOnly(InaccessibleMem) |
+                        MemoryEffects::argMemOnly(ArgMem) |
+                        MemoryEffects::errnoMemOnly(OtherMem) |
+                        MemoryEffects::otherMemOnly(OtherMem);
+              B.addMemoryAttr(ME);
+            } else {
+              // Construct the memory attribute directly from the encoded base
+              // on newer versions.
+              B.addMemoryAttr(MemoryEffects::createFromIntValue(
+                  EncodedME & 0x00FFFFFFFFFFFFFFULL));
+            }
+          } else if (Kind == Attribute::Captures)
             B.addCapturesAttr(CaptureInfo::createFromIntValue(Record[++i]));
           else if (Kind == Attribute::NoFPClass)
             B.addNoFPClassAttr(
@@ -4512,12 +4530,12 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
 
     // Auto-upgrade the layout string
     TentativeDataLayoutStr = llvm::UpgradeDataLayoutString(
-        TentativeDataLayoutStr, TheModule->getTargetTriple());
+        TentativeDataLayoutStr, TheModule->getTargetTriple().str());
 
     // Apply override
     if (Callbacks.DataLayout) {
       if (auto LayoutOverride = (*Callbacks.DataLayout)(
-              TheModule->getTargetTriple(), TentativeDataLayoutStr))
+              TheModule->getTargetTriple().str(), TentativeDataLayoutStr))
         TentativeDataLayoutStr = *LayoutOverride;
     }
 
@@ -4701,7 +4719,7 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
       std::string S;
       if (convertToString(Record, 0, S))
         return error("Invalid record");
-      TheModule->setTargetTriple(S);
+      TheModule->setTargetTriple(Triple(S));
       break;
     }
     case bitc::MODULE_CODE_DATALAYOUT: {  // DATALAYOUT: [strchr x N]
@@ -8057,20 +8075,18 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
-      std::set<std::string, std::less<>> &CfiFunctionDefs =
-          TheIndex.cfiFunctionDefs();
+      auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDefs.insert(
-            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+        CfiFunctionDefs.emplace(Strtab.data() + Record[I],
+                                static_cast<size_t>(Record[I + 1]));
       break;
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
-      std::set<std::string, std::less<>> &CfiFunctionDecls =
-          TheIndex.cfiFunctionDecls();
+      auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
       for (unsigned I = 0; I != Record.size(); I += 2)
-        CfiFunctionDecls.insert(
-            {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
+        CfiFunctionDecls.emplace(Strtab.data() + Record[I],
+                                 static_cast<size_t>(Record[I + 1]));
       break;
     }
 

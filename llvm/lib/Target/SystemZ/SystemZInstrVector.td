@@ -1397,6 +1397,7 @@ multiclass VectorRounding<Instruction insn, TypedReg tr> {
   def : FPConversion<insn, any_ffloor,     tr, tr, 4, 7>;
   def : FPConversion<insn, any_fceil,      tr, tr, 4, 6>;
   def : FPConversion<insn, any_ftrunc,     tr, tr, 4, 5>;
+  def : FPConversion<insn, any_froundeven, tr, tr, 4, 4>;
   def : FPConversion<insn, any_fround,     tr, tr, 4, 1>;
 }
 

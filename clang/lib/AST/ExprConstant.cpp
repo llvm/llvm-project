@@ -2419,6 +2419,16 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
           LVal.getLValueCallIndex() == 0) &&
          "have call index for global lvalue");
 
+  if (LVal.allowConstexprUnknown()) {
+    if (BaseVD) {
+      Info.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << BaseVD;
+      NoteLValueLocation(Info, Base);
+    } else {
+      Info.FFDiag(Loc);
+    }
+    return false;
+  }
+
   if (Base.is<DynamicAllocLValue>()) {
     Info.FFDiag(Loc, diag::note_constexpr_dynamic_alloc)
         << IsReferenceType << !Designator.Entries.empty();
@@ -3597,7 +3607,8 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // expressions here; doing so would regress diagnostics for things like
   // reading from a volatile constexpr variable.
   if ((Info.getLangOpts().CPlusPlus && !VD->hasConstantInitialization() &&
-       VD->mightBeUsableInConstantExpressions(Info.Ctx)) ||
+       VD->mightBeUsableInConstantExpressions(Info.Ctx) &&
+       !AllowConstexprUnknown) ||
       ((Info.getLangOpts().CPlusPlus || Info.getLangOpts().OpenCL) &&
        !Info.getLangOpts().CPlusPlus11 && !VD->hasICEInitializer(Info.Ctx))) {
     if (Init) {
@@ -3628,8 +3639,6 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   if (AllowConstexprUnknown) {
     if (!Result)
       Result = &Info.CurrentCall->createConstexprUnknownAPValues(VD, Base);
-    else
-      Result->setConstexprUnknown();
   }
   return true;
 }
@@ -5218,18 +5227,39 @@ static bool EvaluateVarDecl(EvalInfo &Info, const VarDecl *VD) {
   return true;
 }
 
-static bool EvaluateDecl(EvalInfo &Info, const Decl *D) {
-  bool OK = true;
+static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
+                                          const DecompositionDecl *DD);
 
+static bool EvaluateDecl(EvalInfo &Info, const Decl *D,
+                         bool EvaluateConditionDecl = false) {
+  bool OK = true;
   if (const VarDecl *VD = dyn_cast<VarDecl>(D))
     OK &= EvaluateVarDecl(Info, VD);
 
-  if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(D))
-    for (auto *BD : DD->flat_bindings())
-      if (auto *VD = BD->getHoldingVar())
-        OK &= EvaluateDecl(Info, VD);
+  if (const DecompositionDecl *DD = dyn_cast<DecompositionDecl>(D);
+      EvaluateConditionDecl && DD)
+    OK &= EvaluateDecompositionDeclInit(Info, DD);
 
   return OK;
+}
+
+static bool EvaluateDecompositionDeclInit(EvalInfo &Info,
+                                          const DecompositionDecl *DD) {
+  bool OK = true;
+  for (auto *BD : DD->flat_bindings())
+    if (auto *VD = BD->getHoldingVar())
+      OK &= EvaluateDecl(Info, VD, /*EvaluateConditionDecl=*/true);
+
+  return OK;
+}
+
+static bool MaybeEvaluateDeferredVarDeclInit(EvalInfo &Info,
+                                             const VarDecl *VD) {
+  if (auto *DD = dyn_cast_if_present<DecompositionDecl>(VD)) {
+    if (!EvaluateDecompositionDeclInit(Info, DD))
+      return false;
+  }
+  return true;
 }
 
 static bool EvaluateDependentExpr(const Expr *E, EvalInfo &Info) {
@@ -5250,6 +5280,8 @@ static bool EvaluateCond(EvalInfo &Info, const VarDecl *CondDecl,
   if (CondDecl && !EvaluateDecl(Info, CondDecl))
     return false;
   if (!EvaluateAsBooleanCondition(Cond, Result, Info))
+    return false;
+  if (!MaybeEvaluateDeferredVarDeclInit(Info, CondDecl))
     return false;
   return Scope.destroy();
 }
@@ -5333,6 +5365,9 @@ static EvalStmtResult EvaluateSwitch(StmtResult &Result, EvalInfo &Info,
       return ESR_Failed;
     }
     if (!EvaluateInteger(SS->getCond(), Value, Info))
+      return ESR_Failed;
+
+    if (!MaybeEvaluateDeferredVarDeclInit(Info, SS->getConditionVariable()))
       return ESR_Failed;
 
     if (!CondScope.destroy())
@@ -5559,7 +5594,8 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
         return ESR_Failed;
       // Each declaration initialization is its own full-expression.
       FullExpressionRAII Scope(Info);
-      if (!EvaluateDecl(Info, D) && !Info.noteFailure())
+      if (!EvaluateDecl(Info, D, /*EvaluateConditionDecl=*/true) &&
+          !Info.noteFailure())
         return ESR_Failed;
       if (!Scope.destroy())
         return ESR_Failed;
@@ -11172,6 +11208,11 @@ VectorExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   QualType EltTy = VT->getElementType();
   SmallVector<APValue, 4> Elements;
 
+  // MFloat8 type doesn't have constants and thus constant folding
+  // is impossible.
+  if (EltTy->isMFloat8Type())
+    return false;
+
   // The number of initializers can be less than the number of
   // vector elements. For OpenCL, this can be due to nested vector
   // initialization. For GCC compatibility, missing trailing elements
@@ -12536,10 +12577,9 @@ static const Expr *ignorePointerCastsAndParens(const Expr *E) {
 static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
   assert(!LVal.Designator.Invalid);
 
-  auto IsLastOrInvalidFieldDecl = [&Ctx](const FieldDecl *FD, bool &Invalid) {
+  auto IsLastOrInvalidFieldDecl = [&Ctx](const FieldDecl *FD) {
     const RecordDecl *Parent = FD->getParent();
-    Invalid = Parent->isInvalidDecl();
-    if (Invalid || Parent->isUnion())
+    if (Parent->isInvalidDecl() || Parent->isUnion())
       return true;
     const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Parent);
     return FD->getFieldIndex() + 1 == Layout.getFieldCount();
@@ -12548,14 +12588,12 @@ static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
   auto &Base = LVal.getLValueBase();
   if (auto *ME = dyn_cast_or_null<MemberExpr>(Base.dyn_cast<const Expr *>())) {
     if (auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-      bool Invalid;
-      if (!IsLastOrInvalidFieldDecl(FD, Invalid))
-        return Invalid;
+      if (!IsLastOrInvalidFieldDecl(FD))
+        return false;
     } else if (auto *IFD = dyn_cast<IndirectFieldDecl>(ME->getMemberDecl())) {
       for (auto *FD : IFD->chain()) {
-        bool Invalid;
-        if (!IsLastOrInvalidFieldDecl(cast<FieldDecl>(FD), Invalid))
-          return Invalid;
+        if (!IsLastOrInvalidFieldDecl(cast<FieldDecl>(FD)))
+          return false;
       }
     }
   }
@@ -12591,9 +12629,8 @@ static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
         return false;
       BaseType = CT->getElementType();
     } else if (auto *FD = getAsField(Entry)) {
-      bool Invalid;
-      if (!IsLastOrInvalidFieldDecl(FD, Invalid))
-        return Invalid;
+      if (!IsLastOrInvalidFieldDecl(FD))
+        return false;
       BaseType = FD->getType();
     } else {
       assert(getAsBaseClass(Entry) && "Expecting cast to a base class");
@@ -15029,6 +15066,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_FixedPointCast:
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
+  case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for integral value");
 
   case CK_BitCast:
@@ -15047,6 +15085,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_NoOp:
   case CK_LValueToRValueBitCast:
   case CK_HLSLArrayRValue:
+  case CK_HLSLElementwiseCast:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
 
   case CK_MemberPointerToBoolean:
@@ -15601,16 +15640,11 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fmaxl:
   case Builtin::BI__builtin_fmaxf16:
   case Builtin::BI__builtin_fmaxf128: {
-    // TODO: Handle sNaN.
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
-    // When comparing zeroes, return +0.0 if one of the zeroes is positive.
-    if (Result.isZero() && RHS.isZero() && Result.isNegative())
-      Result = RHS;
-    else if (Result.isNaN() || RHS > Result)
-      Result = RHS;
+    Result = maxnum(Result, RHS);
     return true;
   }
 
@@ -15619,16 +15653,11 @@ bool FloatExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case Builtin::BI__builtin_fminl:
   case Builtin::BI__builtin_fminf16:
   case Builtin::BI__builtin_fminf128: {
-    // TODO: Handle sNaN.
     APFloat RHS(0.);
     if (!EvaluateFloat(E->getArg(0), Result, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
-    // When comparing zeroes, return -0.0 if one of the zeroes is negative.
-    if (Result.isZero() && RHS.isZero() && RHS.isNegative())
-      Result = RHS;
-    else if (Result.isNaN() || RHS < Result)
-      Result = RHS;
+    Result = minnum(Result, RHS);
     return true;
   }
 
@@ -15905,6 +15934,8 @@ bool ComplexExprEvaluator::VisitCastExpr(const CastExpr *E) {
   case CK_IntegralToFixedPoint:
   case CK_MatrixCast:
   case CK_HLSLVectorTruncation:
+  case CK_HLSLElementwiseCast:
+  case CK_HLSLAggregateSplatCast:
     llvm_unreachable("invalid cast kind for complex value");
 
   case CK_LValueToRValue:
@@ -16899,24 +16930,19 @@ bool Expr::EvaluateAsConstantExpr(EvalResult &Result, const ASTContext &Ctx,
   APValue::LValueBase Base(&BaseMTE);
   Info.setEvaluatingDecl(Base, Result.Val);
 
-  if (Info.EnableNewConstInterp) {
-    if (!Info.Ctx.getInterpContext().evaluateAsRValue(Info, this, Result.Val))
-      return false;
-  } else {
-    LValue LVal;
-    LVal.set(Base);
-    // C++23 [intro.execution]/p5
-    // A full-expression is [...] a constant-expression
-    // So we need to make sure temporary objects are destroyed after having
-    // evaluating the expression (per C++23 [class.temporary]/p4).
-    FullExpressionRAII Scope(Info);
-    if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
-        Result.HasSideEffects || !Scope.destroy())
-      return false;
+  LValue LVal;
+  LVal.set(Base);
+  // C++23 [intro.execution]/p5
+  // A full-expression is [...] a constant-expression
+  // So we need to make sure temporary objects are destroyed after having
+  // evaluating the expression (per C++23 [class.temporary]/p4).
+  FullExpressionRAII Scope(Info);
+  if (!::EvaluateInPlace(Result.Val, Info, LVal, this) ||
+      Result.HasSideEffects || !Scope.destroy())
+    return false;
 
-    if (!Info.discardCleanups())
-      llvm_unreachable("Unhandled cleanup; missing full expression marker?");
-  }
+  if (!Info.discardCleanups())
+    llvm_unreachable("Unhandled cleanup; missing full expression marker?");
 
   if (!CheckConstantExpression(Info, getExprLoc(), getStorageType(Ctx, this),
                                Result.Val, Kind))
@@ -17253,7 +17279,6 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::SYCLUniqueStableNameExprClass:
   case Expr::CXXParenListInitExprClass:
   case Expr::HLSLOutArgExprClass:
-  case Expr::ResolvedUnexpandedPackExprClass:
     return ICEDiag(IK_NotICE, E->getBeginLoc());
 
   case Expr::InitListExprClass: {

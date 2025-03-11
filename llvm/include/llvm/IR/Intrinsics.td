@@ -564,6 +564,7 @@ def llvm_v8i32_ty      : LLVMType<v8i32>;    //  8 x i32
 def llvm_v16i32_ty     : LLVMType<v16i32>;   // 16 x i32
 def llvm_v32i32_ty     : LLVMType<v32i32>;   // 32 x i32
 def llvm_v64i32_ty     : LLVMType<v64i32>;   // 64 x i32
+def llvm_v128i32_ty    : LLVMType<v128i32>;  //128 x i32
 def llvm_v256i32_ty    : LLVMType<v256i32>;  //256 x i32
 
 def llvm_v1i64_ty      : LLVMType<v1i64>;    //  1 x i64
@@ -1074,6 +1075,10 @@ let IntrProperties = [IntrNoMem, IntrSpeculatable, IntrWillReturn] in {
   def int_round : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_roundeven    : DefaultAttrsIntrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>]>;
   def int_sincos : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
+                             [llvm_anyfloat_ty]>;
+  def int_sincospi : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
+                             [llvm_anyfloat_ty]>;
+  def int_modf : DefaultAttrsIntrinsic<[LLVMMatchType<0>, LLVMMatchType<0>],
                              [llvm_anyfloat_ty]>;
 
   // Truncate a floating point number with a specific rounding mode

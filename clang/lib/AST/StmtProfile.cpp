@@ -1009,6 +1009,10 @@ void StmtProfiler::VisitOMPTileDirective(const OMPTileDirective *S) {
   VisitOMPLoopTransformationDirective(S);
 }
 
+void StmtProfiler::VisitOMPStripeDirective(const OMPStripeDirective *S) {
+  VisitOMPLoopTransformationDirective(S);
+}
+
 void StmtProfiler::VisitOMPUnrollDirective(const OMPUnrollDirective *S) {
   VisitOMPLoopTransformationDirective(S);
 }
@@ -2285,10 +2289,6 @@ void StmtProfiler::VisitSizeOfPackExpr(const SizeOfPackExpr *S) {
     ID.AddInteger(0);
   }
 }
-void StmtProfiler::VisitResolvedUnexpandedPackExpr(
-    const ResolvedUnexpandedPackExpr *S) {
-  VisitExpr(S);
-}
 
 void StmtProfiler::VisitPackIndexingExpr(const PackIndexingExpr *E) {
   VisitExpr(E);
@@ -2552,6 +2552,16 @@ void OpenACCClauseProfiler::VisitIfClause(const OpenACCIfClause &Clause) {
 void OpenACCClauseProfiler::VisitCopyClause(const OpenACCCopyClause &Clause) {
   VisitClauseWithVarList(Clause);
 }
+
+void OpenACCClauseProfiler::VisitLinkClause(const OpenACCLinkClause &Clause) {
+  VisitClauseWithVarList(Clause);
+}
+
+void OpenACCClauseProfiler::VisitDeviceResidentClause(
+    const OpenACCDeviceResidentClause &Clause) {
+  VisitClauseWithVarList(Clause);
+}
+
 void OpenACCClauseProfiler::VisitCopyInClause(
     const OpenACCCopyInClause &Clause) {
   VisitClauseWithVarList(Clause);
@@ -2700,6 +2710,7 @@ void OpenACCClauseProfiler::VisitWaitClause(const OpenACCWaitClause &Clause) {
   for (auto *E : Clause.getQueueIdExprs())
     Profiler.VisitStmt(E);
 }
+
 /// Nothing to do here, there are no sub-statements.
 void OpenACCClauseProfiler::VisitDeviceTypeClause(
     const OpenACCDeviceTypeClause &Clause) {}
@@ -2710,6 +2721,8 @@ void OpenACCClauseProfiler::VisitIndependentClause(
     const OpenACCIndependentClause &Clause) {}
 
 void OpenACCClauseProfiler::VisitSeqClause(const OpenACCSeqClause &Clause) {}
+void OpenACCClauseProfiler::VisitNoHostClause(
+    const OpenACCNoHostClause &Clause) {}
 
 void OpenACCClauseProfiler::VisitGangClause(const OpenACCGangClause &Clause) {
   for (unsigned I = 0; I < Clause.getNumExprs(); ++I) {
@@ -2720,6 +2733,10 @@ void OpenACCClauseProfiler::VisitGangClause(const OpenACCGangClause &Clause) {
 void OpenACCClauseProfiler::VisitReductionClause(
     const OpenACCReductionClause &Clause) {
   VisitClauseWithVarList(Clause);
+}
+
+void OpenACCClauseProfiler::VisitBindClause(const OpenACCBindClause &Clause) {
+  assert(false && "not implemented... what can we do about our expr?");
 }
 } // namespace
 
@@ -2786,6 +2803,11 @@ void StmtProfiler::VisitOpenACCWaitConstruct(const OpenACCWaitConstruct *S) {
 
   OpenACCClauseProfiler P{*this};
   P.VisitOpenACCClauseList(S->clauses());
+}
+
+void StmtProfiler::VisitOpenACCCacheConstruct(const OpenACCCacheConstruct *S) {
+  // VisitStmt covers 'children', so the exprs inside of it are covered.
+  VisitStmt(S);
 }
 
 void StmtProfiler::VisitOpenACCInitConstruct(const OpenACCInitConstruct *S) {
