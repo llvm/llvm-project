@@ -632,7 +632,8 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 #  include <__type_traits/is_nothrow_constructible.h>
 #  include <__type_traits/is_same.h>
 #  include <__type_traits/is_standard_layout.h>
-#  include <__type_traits/is_trivial.h>
+#  include <__type_traits/is_trivially_constructible.h>
+#  include <__type_traits/is_trivially_copyable.h>
 #  include <__type_traits/is_trivially_relocatable.h>
 #  include <__type_traits/remove_cvref.h>
 #  include <__type_traits/void_t.h>
@@ -788,7 +789,9 @@ public:
 
   static_assert(!is_array<value_type>::value, "Character type of basic_string must not be an array");
   static_assert(is_standard_layout<value_type>::value, "Character type of basic_string must be standard-layout");
-  static_assert(is_trivial<value_type>::value, "Character type of basic_string must be trivial");
+  static_assert(is_trivially_default_constructible<value_type>::value,
+                "Character type of basic_string must be trivially default constructible");
+  static_assert(is_trivially_copyable<value_type>::value, "Character type of basic_string must be trivially copyable");
   static_assert(is_same<_CharT, typename traits_type::char_type>::value,
                 "traits_type::char_type must be the same type as CharT");
   static_assert(is_same<typename allocator_type::value_type, value_type>::value,

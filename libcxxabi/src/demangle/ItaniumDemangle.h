@@ -38,8 +38,10 @@
 DEMANGLE_NAMESPACE_BEGIN
 
 template <class T, size_t N> class PODSmallVector {
-  static_assert(std::is_trivial<T>::value,
-                "T is required to be a trivial type");
+  static_assert(std::is_trivially_copyable<T>::value,
+                "T is required to be a trivially copyable type");
+  static_assert(std::is_trivially_default_constructible<T>::value,
+                "T is required to be trivially default constructible");
   T *First = nullptr;
   T *Last = nullptr;
   T *Cap = nullptr;
