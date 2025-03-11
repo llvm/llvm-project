@@ -750,18 +750,6 @@ uint64_t errCount(Ctx &ctx);
 
 ELFSyncStream InternalErr(Ctx &ctx, const uint8_t *buf);
 
-inline StringRef gcsReportPolicytoString(GcsReportPolicy value) {
-  StringRef ret;
-  if (value == GcsReportPolicy::Warning)
-    ret = "warning";
-  else if (value == GcsReportPolicy::Error)
-    ret = "error";
-  else
-    ret = "none";
-
-  return ret;
-}
-
 #define CHECK2(E, S) lld::check2((E), [&] { return toStr(ctx, S); })
 
 inline DiagLevel toDiagLevel(ReportPolicy policy) {

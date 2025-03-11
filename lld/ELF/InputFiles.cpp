@@ -919,13 +919,13 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats,
 }
 
 template <typename ELFT>
-static void parseGnuPropertyNote(Ctx &ctx, uint32_t &featureAndType,
-                                 ArrayRef<uint8_t> &desc, ELFFileBase *f,
-                                 const uint8_t *base,
+static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
+                                 uint32_t featureAndType,
+                                 ArrayRef<uint8_t> &desc, const uint8_t *base,
                                  ArrayRef<uint8_t> *data = nullptr) {
   auto err = [&](const uint8_t *place) -> ELFSyncStream {
     auto diag = Err(ctx);
-    diag << f->getName() << ":(" << ".note.gnu.property+0x"
+    diag << &f << ":(" << ".note.gnu.property+0x"
          << Twine::utohexstr(place - base) << "): ";
     return diag;
   };
@@ -946,7 +946,7 @@ static void parseGnuPropertyNote(Ctx &ctx, uint32_t &featureAndType,
       // accumulate the bits set.
       if (size < 4)
         return void(err(place) << "FEATURE_1_AND entry is too short");
-      f->andFeatures |= read32<ELFT::Endianness>(desc.data());
+      f.andFeatures |= read32<ELFT::Endianness>(desc.data());
     } else if (ctx.arg.emachine == EM_AARCH64 &&
                type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
       // If the file being parsed is a SharedFile, we cannot pass in
@@ -954,7 +954,7 @@ static void parseGnuPropertyNote(Ctx &ctx, uint32_t &featureAndType,
       // data from. As such, these are ignored. They are needed either
       // when loading a shared library oject.
       ArrayRef<uint8_t> contents = data ? *data : desc;
-      if (!f->aarch64PauthAbiCoreInfo.empty()) {
+      if (!f.aarch64PauthAbiCoreInfo.empty()) {
         return void(
             err(contents.data())
             << "multiple GNU_PROPERTY_AARCH64_FEATURE_PAUTH entries are "
@@ -965,7 +965,7 @@ static void parseGnuPropertyNote(Ctx &ctx, uint32_t &featureAndType,
                        "is invalid: expected 16 bytes, but got "
                     << size);
       }
-      f->aarch64PauthAbiCoreInfo = desc;
+      f.aarch64PauthAbiCoreInfo = desc;
     }
 
     // Padding is present in the note descriptor, if necessary.
@@ -1010,7 +1010,7 @@ static void readGnuProperty(Ctx &ctx, const InputSection &sec,
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(sec.addralign);
     const uint8_t *base = sec.content().data();
-    parseGnuPropertyNote<ELFT>(ctx, featureAndType, desc, &f, base, &data);
+    parseGnuPropertyNote<ELFT>(ctx, f, featureAndType, desc, base, &data);
 
     // Go to next NOTE record to look for more FEATURE_1_AND descriptions.
     data = data.slice(nhdr->getSize(sec.addralign));
@@ -1465,7 +1465,7 @@ void SharedFile::parseGnuAndFeatures(const uint8_t *base,
 
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(headers[i].p_align);
-    parseGnuPropertyNote<ELFT>(ctx, featureAndType, desc, this, base);
+    parseGnuPropertyNote<ELFT>(ctx, *this, featureAndType, desc, base);
   }
 }
 

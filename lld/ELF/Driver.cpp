@@ -578,28 +578,32 @@ static GcsPolicy getZGcs(Ctx &ctx, opt::InputArgList &args) {
 
 static void getZGcsReport(Ctx &ctx, opt::InputArgList &args) {
   bool reportDynamicDefined = false;
-
   for (auto *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
-    if ((kv.first == "gcs-report") || kv.first == "gcs-report-dynamic") {
-      arg->claim();
-      ReportPolicy value = StringSwitch<ReportPolicy>(kv.second)
-                                  .Case("none", ReportPolicy::None)
-                                  .Case("warning", ReportPolicy::Warning)
-                                  .Case("error", ReportPolicy::Error);
-
-      if (kv.first == "gcs-report")
-        ctx.arg.zGcsReport = value;
-      else if (kv.first == "gcs-report-dynamic") {
-        ctx.arg.zGcsReportDynamic = value;
-        reportDynamicDefined = true;
-      }
+    if (kv.first != "gcs-report" && kv.first != "gcs-report-dynamic")
+      continue;
+    arg->claim();
+    ReportPolicy value;
+    if (kv.second == "none")
+      value = ReportPolicy::None;
+    else if (kv.second == "warning")
+      value = ReportPolicy::Warning;
+    else if (kv.second == "error")
+      value = ReportPolicy::Error;
+    else {
+      ErrAlways(ctx) << "unknown -z " << kv.first << "= value: " << kv.second;
+      continue;
+    }
+    if (kv.first == "gcs-report") {
+      ctx.arg.zGcsReport = value;
+    } else if (kv.first == "gcs-report-dynamic") {
+      ctx.arg.zGcsReportDynamic = value;
+      reportDynamicDefined = true;
     }
   }
 
-  // The behaviour of -zgnu-report-dynamic matches that of GNU ld. When
-  // -zgcs-report is set to `warning` or `error`, -zgcs-report-dynamic will
-  // inherit this value if there is no user set value. This detects shared
+  // When -zgcs-report is set to `warning` or `error`, -zgcs-report-dynamic will
+  // inherit this value if unspecified, matching GNU ld. This detects shared
   // libraries without the GCS property but does not the shared-libraries to be
   // rebuilt for successful linking
   if (!reportDynamicDefined && ctx.arg.zGcsReport != ReportPolicy::None &&
@@ -1581,9 +1585,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
   ctx.arg.zGcs = getZGcs(ctx, args);
-  // getZGcsReport assings the values for `ctx.arg.zGcsReport` and
-  // `ctx.arg.zGcsReportDynamic within the function. By doing this, it saves
-  // calling the function twice, as both values can be parsed at once.
   getZGcsReport(ctx, args);
   ctx.arg.zGlobal = hasZOption(args, "global");
   ctx.arg.zGnustack = getZGnuStack(args);
@@ -2822,6 +2823,17 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
   // Update pointers in the symbol table.
   for (const WrappedSymbol &w : wrapped)
     ctx.symtab->wrap(w.sym, w.real, w.wrap);
+}
+
+static StringRef gcsReportPolicytoString(GcsReportPolicy value) {
+  StringRef ret;
+  if (value == GcsReportPolicy::Warning)
+    ret = "warning";
+  else if (value == GcsReportPolicy::Error)
+    ret = "error";
+  else
+    ret = "none";
+  return ret;
 }
 
 // To enable CET (x86's hardware-assisted control flow enforcement), each
