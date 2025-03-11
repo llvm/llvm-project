@@ -58,6 +58,7 @@ for header in public_headers:
 {lit_header_undeprecations.get(header, '')}
 
 #include <{header}>
+#include <pthread.h>
 """
     )
 
