@@ -66,6 +66,7 @@ public:
   bool runOnMachineFunction(MachineFunction &MF) override {
     if (skipFunction(MF.getFunction()))
       return false;
+
     return AMDGPUSetWavePriority().run(MF);
   }
 };
@@ -113,6 +114,7 @@ llvm::AMDGPUSetWavePriorityPass::run(MachineFunction &MF,
                                      MachineFunctionAnalysisManager &MFAM) {
   if (!AMDGPUSetWavePriority().run(MF))
     return PreservedAnalyses::all();
+
   return getMachineFunctionPassPreservedAnalyses();
 }
 
