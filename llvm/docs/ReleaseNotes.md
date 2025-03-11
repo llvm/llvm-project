@@ -122,6 +122,9 @@ Changes to the WebAssembly Backend
 Changes to the Windows Target
 -----------------------------
 
+* `fp128` is now passed indirectly, meaning it uses the same calling convention
+  as `i128`.
+
 Changes to the X86 Backend
 --------------------------
 
