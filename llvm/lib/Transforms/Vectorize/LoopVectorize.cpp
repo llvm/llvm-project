@@ -998,11 +998,6 @@ public:
     SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers;
   };
 
-  /// \return Returns information about the register usages of the loop for the
-  /// given vectorization factors.
-  SmallVector<RegisterUsage, 8>
-  calculateRegisterUsage(ArrayRef<ElementCount> VFs);
-
   /// Collect values we want to ignore in the cost model.
   void collectValuesToIgnore();
 
@@ -4015,27 +4010,12 @@ ElementCount LoopVectorizationCostModel::getMaximizedVFForTarget(
         ComputeScalableMaxVF);
     MaxVectorElementCountMaxBW = MinVF(MaxVectorElementCountMaxBW, MaxSafeVF);
 
-    // Collect all viable vectorization factors larger than the default MaxVF
-    // (i.e. MaxVectorElementCount).
-    SmallVector<ElementCount, 8> VFs;
+    // Set the max VF to the largest viable vectorization factor less than or
+    // equal to the max vector element count.
     for (ElementCount VS = MaxVectorElementCount * 2;
          ElementCount::isKnownLE(VS, MaxVectorElementCountMaxBW); VS *= 2)
-      VFs.push_back(VS);
+      MaxVF = VS;
 
-    // For each VF calculate its register usage.
-    auto RUs = calculateRegisterUsage(VFs);
-
-    // Select the largest VF which doesn't require more registers than existing
-    // ones.
-    for (int I = RUs.size() - 1; I >= 0; --I) {
-      const auto &MLU = RUs[I].MaxLocalUsers;
-      if (all_of(MLU, [&](decltype(MLU.front()) &LU) {
-            return LU.second <= TTI.getNumberOfRegisters(LU.first);
-          })) {
-        MaxVF = VFs[I];
-        break;
-      }
-    }
     if (ElementCount MinVF =
             TTI.getMinimumVF(SmallestType, ComputeScalableMaxVF)) {
       if (ElementCount::isKnownLT(MaxVF, MinVF)) {
@@ -5232,213 +5212,6 @@ LoopVectorizationCostModel::selectInterleaveCount(VPlan &Plan, ElementCount VF,
 
   LLVM_DEBUG(dbgs() << "LV: Not Interleaving.\n");
   return 1;
-}
-
-SmallVector<LoopVectorizationCostModel::RegisterUsage, 8>
-LoopVectorizationCostModel::calculateRegisterUsage(ArrayRef<ElementCount> VFs) {
-  // This function calculates the register usage by measuring the highest number
-  // of values that are alive at a single location. Obviously, this is a very
-  // rough estimation. We scan the loop in a topological order in order and
-  // assign a number to each instruction. We use RPO to ensure that defs are
-  // met before their users. We assume that each instruction that has in-loop
-  // users starts an interval. We record every time that an in-loop value is
-  // used, so we have a list of the first and last occurrences of each
-  // instruction. Next, we transpose this data structure into a multi map that
-  // holds the list of intervals that *end* at a specific location. This multi
-  // map allows us to perform a linear search. We scan the instructions linearly
-  // and record each time that a new interval starts, by placing it in a set.
-  // If we find this value in the multi-map then we remove it from the set.
-  // The max register usage is the maximum size of the set.
-  // We also search for instructions that are defined outside the loop, but are
-  // used inside the loop. We need this number separately from the max-interval
-  // usage number because when we unroll, loop-invariant values do not take
-  // more registers.
-  LoopBlocksDFS DFS(TheLoop);
-  DFS.perform(LI);
-
-  RegisterUsage RU;
-
-  // Each 'key' in the map opens a new interval. The values
-  // of the map are the index of the 'last seen' usage of the
-  // instruction that is the key.
-  using IntervalMap = SmallDenseMap<Instruction *, unsigned, 16>;
-
-  // Maps instruction to its index.
-  SmallVector<Instruction *, 64> IdxToInstr;
-  // Marks the end of each interval.
-  IntervalMap EndPoint;
-  // Saves the list of instruction indices that are used in the loop.
-  SmallPtrSet<Instruction *, 8> Ends;
-  // Saves the list of values that are used in the loop but are defined outside
-  // the loop (not including non-instruction values such as arguments and
-  // constants).
-  SmallSetVector<Instruction *, 8> LoopInvariants;
-
-  for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
-    for (Instruction &I : BB->instructionsWithoutDebug()) {
-      IdxToInstr.push_back(&I);
-
-      // Save the end location of each USE.
-      for (Value *U : I.operands()) {
-        auto *Instr = dyn_cast<Instruction>(U);
-
-        // Ignore non-instruction values such as arguments, constants, etc.
-        // FIXME: Might need some motivation why these values are ignored. If
-        // for example an argument is used inside the loop it will increase the
-        // register pressure (so shouldn't we add it to LoopInvariants).
-        if (!Instr)
-          continue;
-
-        // If this instruction is outside the loop then record it and continue.
-        if (!TheLoop->contains(Instr)) {
-          LoopInvariants.insert(Instr);
-          continue;
-        }
-
-        // Overwrite previous end points.
-        EndPoint[Instr] = IdxToInstr.size();
-        Ends.insert(Instr);
-      }
-    }
-  }
-
-  // Saves the list of intervals that end with the index in 'key'.
-  using InstrList = SmallVector<Instruction *, 2>;
-  SmallDenseMap<unsigned, InstrList, 16> TransposeEnds;
-
-  // Transpose the EndPoints to a list of values that end at each index.
-  for (auto &Interval : EndPoint)
-    TransposeEnds[Interval.second].push_back(Interval.first);
-
-  SmallPtrSet<Instruction *, 8> OpenIntervals;
-  SmallVector<RegisterUsage, 8> RUs(VFs.size());
-  SmallVector<SmallMapVector<unsigned, unsigned, 4>, 8> MaxUsages(VFs.size());
-
-  LLVM_DEBUG(dbgs() << "LV(REG): Calculating max register usage:\n");
-
-  const auto &TTICapture = TTI;
-  auto GetRegUsage = [&TTICapture](Type *Ty, ElementCount VF) -> unsigned {
-    if (Ty->isTokenTy() || !VectorType::isValidElementType(Ty) ||
-        (VF.isScalable() &&
-         !TTICapture.isElementTypeLegalForScalableVector(Ty)))
-      return 0;
-    return TTICapture.getRegUsageForType(VectorType::get(Ty, VF));
-  };
-
-  collectInLoopReductions();
-
-  for (unsigned int Idx = 0, Sz = IdxToInstr.size(); Idx < Sz; ++Idx) {
-    Instruction *I = IdxToInstr[Idx];
-
-    // Remove all of the instructions that end at this location.
-    InstrList &List = TransposeEnds[Idx];
-    for (Instruction *ToRemove : List)
-      OpenIntervals.erase(ToRemove);
-
-    // Ignore instructions that are never used within the loop and do not have
-    // side-effects.
-    if (!Ends.count(I) && !I->mayHaveSideEffects())
-      continue;
-
-    // Skip ignored values.
-    if (ValuesToIgnore.count(I))
-      continue;
-
-    // For each VF find the maximum usage of registers.
-    for (unsigned J = 0, E = VFs.size(); J < E; ++J) {
-      // Count the number of registers used, per register class, given all open
-      // intervals.
-      // Note that elements in this SmallMapVector will be default constructed
-      // as 0. So we can use "RegUsage[ClassID] += n" in the code below even if
-      // there is no previous entry for ClassID.
-      SmallMapVector<unsigned, unsigned, 4> RegUsage;
-
-      if (VFs[J].isScalar()) {
-        for (auto *Inst : OpenIntervals) {
-          unsigned ClassID =
-              TTI.getRegisterClassForType(false, Inst->getType());
-          // FIXME: The target might use more than one register for the type
-          // even in the scalar case.
-          RegUsage[ClassID] += 1;
-        }
-      } else {
-        collectNonVectorizedAndSetWideningDecisions(VFs[J]);
-        for (auto *Inst : OpenIntervals) {
-          // Skip ignored values for VF > 1.
-          if (VecValuesToIgnore.count(Inst))
-            continue;
-          if (isScalarAfterVectorization(Inst, VFs[J])) {
-            unsigned ClassID =
-                TTI.getRegisterClassForType(false, Inst->getType());
-            // FIXME: The target might use more than one register for the type
-            // even in the scalar case.
-            RegUsage[ClassID] += 1;
-          } else {
-            unsigned ClassID =
-                TTI.getRegisterClassForType(true, Inst->getType());
-            RegUsage[ClassID] += GetRegUsage(Inst->getType(), VFs[J]);
-          }
-        }
-      }
-
-      for (const auto &Pair : RegUsage) {
-        auto &Entry = MaxUsages[J][Pair.first];
-        Entry = std::max(Entry, Pair.second);
-      }
-    }
-
-    LLVM_DEBUG(dbgs() << "LV(REG): At #" << Idx << " Interval # "
-                      << OpenIntervals.size() << '\n');
-
-    // Add the current instruction to the list of open intervals.
-    OpenIntervals.insert(I);
-  }
-
-  for (unsigned Idx = 0, End = VFs.size(); Idx < End; ++Idx) {
-    // Note that elements in this SmallMapVector will be default constructed
-    // as 0. So we can use "Invariant[ClassID] += n" in the code below even if
-    // there is no previous entry for ClassID.
-    SmallMapVector<unsigned, unsigned, 4> Invariant;
-
-    for (auto *Inst : LoopInvariants) {
-      // FIXME: The target might use more than one register for the type
-      // even in the scalar case.
-      bool IsScalar = all_of(Inst->users(), [&](User *U) {
-        auto *I = cast<Instruction>(U);
-        return TheLoop != LI->getLoopFor(I->getParent()) ||
-               isScalarAfterVectorization(I, VFs[Idx]);
-      });
-
-      ElementCount VF = IsScalar ? ElementCount::getFixed(1) : VFs[Idx];
-      unsigned ClassID =
-          TTI.getRegisterClassForType(VF.isVector(), Inst->getType());
-      Invariant[ClassID] += GetRegUsage(Inst->getType(), VF);
-    }
-
-    LLVM_DEBUG({
-      dbgs() << "LV(REG): VF = " << VFs[Idx] << '\n';
-      dbgs() << "LV(REG): Found max usage: " << MaxUsages[Idx].size()
-             << " item\n";
-      for (const auto &pair : MaxUsages[Idx]) {
-        dbgs() << "LV(REG): RegisterClass: "
-               << TTI.getRegisterClassName(pair.first) << ", " << pair.second
-               << " registers\n";
-      }
-      dbgs() << "LV(REG): Found invariant usage: " << Invariant.size()
-             << " item\n";
-      for (const auto &pair : Invariant) {
-        dbgs() << "LV(REG): RegisterClass: "
-               << TTI.getRegisterClassName(pair.first) << ", " << pair.second
-               << " registers\n";
-      }
-    });
-
-    RU.LoopInvariantRegs = Invariant;
-    RU.MaxLocalUsers = MaxUsages[Idx];
-    RUs[Idx] = RU;
-  }
-
-  return RUs;
 }
 
 bool LoopVectorizationCostModel::useEmulatedMaskMemRefHack(Instruction *I,
@@ -7621,7 +7394,10 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   }
 
   for (auto &P : VPlans) {
-    for (ElementCount VF : P->vectorFactors()) {
+    SmallVector<ElementCount, 1> VFs(P->vectorFactors());
+    auto RUs = ::calculateRegisterUsage(*P, VFs, TTI, CM.ValuesToIgnore);
+    for (unsigned I = 0; I < VFs.size(); I++) {
+      auto VF = VFs[I];
       if (VF.isScalar())
         continue;
       if (!ForceVectorization && !willGenerateVectors(*P, VF, TTI)) {
@@ -7642,12 +7418,23 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
 
       InstructionCost Cost = cost(*P, VF);
       VectorizationFactor CurrentFactor(VF, Cost, ScalarCost);
-      if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail()))
-        BestFactor = CurrentFactor;
-
       // If profitable add it to ProfitableVF list.
       if (isMoreProfitable(CurrentFactor, ScalarFactor, P->hasScalarTail()))
         ProfitableVFs.push_back(CurrentFactor);
+
+      // Make sure that the VF doesn't use more than the number of available
+      // registers
+      const auto &MLU = RUs[I].MaxLocalUsers;
+      if (any_of(MLU, [&](decltype(MLU.front()) &LU) {
+            return LU.second > TTI.getNumberOfRegisters(LU.first);
+          })) {
+        LLVM_DEBUG(dbgs() << "LV(REG): Ignoring VF " << VF
+                          << " as it uses too many registers\n");
+        continue;
+      }
+
+      if (isMoreProfitable(CurrentFactor, BestFactor, P->hasScalarTail()))
+        BestFactor = CurrentFactor;
     }
   }
 
@@ -7658,6 +7445,30 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // stabilized.
   VectorizationFactor LegacyVF = selectVectorizationFactor();
   VPlan &BestPlan = getPlanFor(BestFactor.Width);
+
+  // VPlan calculates register pressure from the plan, so it can come to
+  // different conclusions than the legacy cost model.
+  bool RegUsageDeterminedVF = false;
+  if (BestFactor.Width != LegacyVF.Width) {
+    SmallVector<ElementCount, 1> LegacyVFs = {LegacyVF.Width};
+    SmallVector<ElementCount, 1> VFs = {BestFactor.Width};
+
+    auto LegacyRUs =
+        ::calculateRegisterUsage(getPlanFor(LegacyVF.Width), LegacyVFs, TTI, CM.ValuesToIgnore);
+    auto RUs = ::calculateRegisterUsage(BestPlan, VFs, TTI, CM.ValuesToIgnore);
+
+    auto GetMaxUsage = [](
+                          SmallMapVector<unsigned, unsigned, 4> MaxLocalUsers) {
+      unsigned Max = 0;
+      for (auto Pair : MaxLocalUsers)
+        if (Pair.second > Max)
+          Max = Pair.second;
+      return Max;
+    };
+    unsigned MaxLegacyRegUsage = GetMaxUsage(LegacyRUs[0].MaxLocalUsers);
+    unsigned MaxRegUsage = GetMaxUsage(RUs[0].MaxLocalUsers);
+    RegUsageDeterminedVF = MaxRegUsage <= MaxLegacyRegUsage;
+  }
 
   // Pre-compute the cost and use it to check if BestPlan contains any
   // simplifications not accounted for in the legacy cost model. If that's the
@@ -7670,6 +7481,7 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // with early exits and plans with additional VPlan simplifications. The
   // legacy cost model doesn't properly model costs for such loops.
   assert((BestFactor.Width == LegacyVF.Width || BestPlan.hasEarlyExit() ||
+          RegUsageDeterminedVF ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop) ||
           planContainsAdditionalSimplifications(getPlanFor(LegacyVF.Width),
