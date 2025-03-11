@@ -1,0 +1,13 @@
+This is a list of the current Clang Area Team members.
+
+Chair
+-----
+Aaron Ballman <aaron@aaronballman.com>
+
+Secretary
+---------
+Reid Kleckner <rnk@google.com>
+
+Other Members
+-------------
+Eli Friedman <efriedma@quicinc.com>
