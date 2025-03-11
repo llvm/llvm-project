@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Make sure that a std::list containing move-only types can't be copy-assigned.
-
 // UNSUPPORTED: c++03
+
+// Make sure that a std::list containing move-only types can't be copy-assigned.
 
 #include <list>
 
