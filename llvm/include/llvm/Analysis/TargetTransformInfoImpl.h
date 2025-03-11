@@ -364,7 +364,7 @@ public:
                               Scale, AddrSpace, /*I=*/nullptr,
                               BaseOffset.getScalable()))
       return 0;
-    return -1;
+    return InstructionCost::getInvalid();
   }
 
   bool LSRWithInstrQueries() const { return false; }
@@ -1007,6 +1007,7 @@ public:
   bool preferFixedOverScalableIfEqualCost() const { return false; }
 
   bool preferInLoopReduction(unsigned Opcode, Type *Ty) const { return false; }
+  bool preferAlternateOpcodeVectorization() const { return true; }
 
   bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const {
     return false;

@@ -51,7 +51,7 @@ mlir::detail::getDefaultTypeSize(Type type, const DataLayout &dataLayout,
 llvm::TypeSize
 mlir::detail::getDefaultTypeSizeInBits(Type type, const DataLayout &dataLayout,
                                        DataLayoutEntryListRef params) {
-  if (isa<IntegerType, FloatType>(type))
+  if (type.isIntOrFloat())
     return llvm::TypeSize::getFixed(type.getIntOrFloatBitWidth());
 
   if (auto ctype = dyn_cast<ComplexType>(type)) {
@@ -745,7 +745,7 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
       continue;
     }
 
-    if (isa<IntegerType, FloatType>(sampleType)) {
+    if (sampleType.isIntOrFloat()) {
       for (DataLayoutEntryInterface entry : kvp.second) {
         auto value = dyn_cast<DenseIntElementsAttr>(entry.getValue());
         if (!value || !value.getElementType().isSignlessInteger(64)) {

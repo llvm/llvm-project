@@ -2536,6 +2536,8 @@ void OMPClauseEnqueue::VisitOMPDynamicAllocatorsClause(
 void OMPClauseEnqueue::VisitOMPAtomicDefaultMemOrderClause(
     const OMPAtomicDefaultMemOrderClause *) {}
 
+void OMPClauseEnqueue::VisitOMPSelfMapsClause(const OMPSelfMapsClause *) {}
+
 void OMPClauseEnqueue::VisitOMPAtClause(const OMPAtClause *) {}
 
 void OMPClauseEnqueue::VisitOMPSeverityClause(const OMPSeverityClause *) {}
@@ -2973,6 +2975,10 @@ void OpenACCClauseEnqueue::VisitAutoClause(const OpenACCAutoClause &C) {}
 void OpenACCClauseEnqueue::VisitIndependentClause(
     const OpenACCIndependentClause &C) {}
 void OpenACCClauseEnqueue::VisitSeqClause(const OpenACCSeqClause &C) {}
+void OpenACCClauseEnqueue::VisitNoHostClause(const OpenACCNoHostClause &C) {}
+void OpenACCClauseEnqueue::VisitBindClause(const OpenACCBindClause &C) {
+  assert(false && "TODO ERICH");
+}
 void OpenACCClauseEnqueue::VisitFinalizeClause(const OpenACCFinalizeClause &C) {
 }
 void OpenACCClauseEnqueue::VisitIfPresentClause(
@@ -7265,6 +7271,7 @@ CXCursor clang_getCursorDefinition(CXCursor C) {
   case Decl::RequiresExprBody:
   case Decl::UnresolvedUsingIfExists:
   case Decl::OpenACCDeclare:
+  case Decl::OpenACCRoutine:
     return C;
 
   // Declaration kinds that don't make any sense here, but are

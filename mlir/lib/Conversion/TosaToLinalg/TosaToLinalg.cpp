@@ -138,7 +138,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
   // tosa::MulOp
   if (isa<tosa::MulOp>(op)) {
     auto shift_val = cast<tosa::MulOp>(op).getShift();
-    ElementsAttr shift_elem;
+    DenseElementsAttr shift_elem;
     if (!shift_val.getImpl() ||
         !matchPattern(shift_val, m_Constant(&shift_elem))) {
       (void)rewriter.notifyMatchFailure(op, "shift value of mul not found");
@@ -170,7 +170,7 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
         auto result = rewriter.create<tosa::ApplyScaleOp>(
             loc, rewriter.getI32Type(), a, b, shiftConst,
-            rewriter.getBoolAttr(false));
+            rewriter.getStringAttr("SINGLE_ROUND"));
 
         if (elementTy.isInteger(32))
           return result;
@@ -193,18 +193,29 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::NegateOp
   if (isa<tosa::NegateOp>(op)) {
+    auto negate = cast<tosa::NegateOp>(op);
+
+    FailureOr<int64_t> maybeInZp = negate.getInput1ZeroPoint();
+    if (failed(maybeInZp)) {
+      (void)rewriter.notifyMatchFailure(
+          op, "input1 zero point cannot be statically determined");
+      return nullptr;
+    }
+
+    FailureOr<int64_t> maybeOutZp = negate.getOutputZeroPoint();
+    if (failed(maybeOutZp)) {
+      (void)rewriter.notifyMatchFailure(
+          op, "output zero point cannot be statically determined");
+      return nullptr;
+    }
+
+    int64_t inZp = *maybeInZp;
+    int64_t outZp = *maybeOutZp;
+
     if (isa<FloatType>(elementTy))
-      return rewriter.create<arith::NegFOp>(loc, resultTypes, args);
+      return rewriter.create<arith::NegFOp>(loc, resultTypes, args[0]);
 
     if (isa<IntegerType>(elementTy)) {
-      auto inputZpAttr = cast<tosa::NegateOp>(op).getInput1ZpAttr();
-      auto outputZpAttr = cast<tosa::NegateOp>(op).getOutputZpAttr();
-
-      const int64_t inZp =
-          inputZpAttr ? inputZpAttr.getValue().getSExtValue() : 0;
-      const int64_t outZp =
-          outputZpAttr ? outputZpAttr.getValue().getSExtValue() : 0;
-
       if (!inZp && !outZp) {
         auto constant = rewriter.create<arith::ConstantOp>(
             loc, IntegerAttr::get(elementTy, 0));
@@ -1374,7 +1385,11 @@ public:
     unsigned rank = inputTy.getRank();
 
     // This is an illegal configuration. terminate and log an error
-    if (op.getDoubleRound() && !op.getScale32())
+    if (op.getRoundingMode() == "INEXACT_ROUND")
+      return rewriter.notifyMatchFailure(
+          op, "tosa.rescale with rounding mode = 'INEXACT_ROUND' is not "
+              "currently supported");
+    if (op.getRoundingMode() == "DOUBLE_ROUND" && !op.getScale32())
       return rewriter.notifyMatchFailure(
           op, "tosa.rescale requires scale32 for double_round to be true");
 
@@ -1389,8 +1404,24 @@ public:
     }
 
     // The shift and multiplier values.
-    SmallVector<int32_t> multiplierValues(op.getMultiplier());
-    SmallVector<int8_t> shiftValues(op.getShift());
+    DenseElementsAttr shiftElems;
+    if (!matchPattern(op.getShift(), m_Constant(&shiftElems)))
+      return rewriter.notifyMatchFailure(
+          op, "tosa.rescale requires constant shift input values");
+
+    DenseElementsAttr multiplierElems;
+    if (!matchPattern(op.getMultiplier(), m_Constant(&multiplierElems)))
+      return rewriter.notifyMatchFailure(
+          op, "tosa.rescale requires constant multiplier input values");
+
+    llvm::SmallVector<int8_t> shiftValues =
+        llvm::to_vector(shiftElems.getValues<int8_t>());
+    // explicit cast is required here
+    llvm::SmallVector<int32_t> multiplierValues = llvm::to_vector(
+        llvm::map_range(multiplierElems.getValues<IntegerAttr>(),
+                        [](IntegerAttr attr) -> int32_t {
+                          return static_cast<int32_t>(attr.getInt());
+                        }));
 
     // If we shift by more than the bitwidth, this just sets to 0.
     for (int i = 0, s = multiplierValues.size(); i < s; i++) {
@@ -1402,9 +1433,13 @@ public:
 
     // Double round only occurs if shift is greater than 31, check that this
     // is ever true.
+
     bool doubleRound =
-        op.getDoubleRound() &&
+        op.getRoundingMode() == "DOUBLE_ROUND" &&
         llvm::any_of(shiftValues, [](int32_t v) { return v > 31; });
+    StringAttr roundingMode = doubleRound
+                                  ? rewriter.getStringAttr("DOUBLE_ROUND")
+                                  : rewriter.getStringAttr("SINGLE_ROUND");
 
     SmallVector<AffineMap> indexingMaps = {
         rewriter.getMultiDimIdentityMap(rank)};
@@ -1500,7 +1535,7 @@ public:
 
           value = nestedBuilder.create<tosa::ApplyScaleOp>(
               loc, nestedBuilder.getI32Type(), value, multiplier, shift,
-              nestedBuilder.getBoolAttr(doubleRound));
+              roundingMode);
 
           // Move to the new zero-point.
           value =
@@ -1578,7 +1613,7 @@ public:
     }
 
     SmallVector<int64_t> scale;
-    if (!tosa::getConstShapeValue(op.getScale().getDefiningOp(), scale)) {
+    if (!tosa::getConstShapeValues(op.getScale().getDefiningOp(), scale)) {
       return failure();
     }
 
@@ -1799,9 +1834,9 @@ public:
       Value inX = b.create<arith::IndexCastOp>(b.getI32Type(), x);
 
       SmallVector<int64_t> scale, offset, border;
-      if (!tosa::getConstShapeValue(op.getScale().getDefiningOp(), scale) ||
-          !tosa::getConstShapeValue(op.getOffset().getDefiningOp(), offset) ||
-          !tosa::getConstShapeValue(op.getBorder().getDefiningOp(), border)) {
+      if (!tosa::getConstShapeValues(op.getScale().getDefiningOp(), scale) ||
+          !tosa::getConstShapeValues(op.getOffset().getDefiningOp(), offset) ||
+          !tosa::getConstShapeValues(op.getBorder().getDefiningOp(), border)) {
         return rewriter.notifyMatchFailure(
             op, "tosa.resize scale/offset/border should have compile time "
                 "constant values.");
@@ -2598,7 +2633,7 @@ struct RFFT2dConverter final : public OpRewritePattern<RFFT2dOp> {
     }
 
     auto loc = rfft2d.getLoc();
-    auto input = rfft2d.getInput();
+    auto input = rfft2d.getInputReal();
     auto elementType =
         dyn_cast<FloatType>(cast<ShapedType>(input.getType()).getElementType());
     if (!elementType)

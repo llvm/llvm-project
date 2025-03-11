@@ -3567,7 +3567,8 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
-bool AMDGPUInstructionSelector::selectBVHIntrinsic(MachineInstr &MI) const{
+bool AMDGPUInstructionSelector::selectBVHIntersectRayIntrinsic(
+    MachineInstr &MI) const {
   MI.setDesc(TII.get(MI.getOperand(1).getImm()));
   MI.removeOperand(1);
   MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
@@ -4085,8 +4086,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     assert(Intr && "not an image intrinsic with image pseudo");
     return selectImageIntrinsic(I, Intr);
   }
-  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
-    return selectBVHIntrinsic(I);
+  case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
+    return selectBVHIntersectRayIntrinsic(I);
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
     return selectG_SBFX_UBFX(I);
