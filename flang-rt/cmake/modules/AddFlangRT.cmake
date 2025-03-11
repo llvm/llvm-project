@@ -186,6 +186,17 @@ function (add_flangrt_library name)
     else ()
       set_target_properties(${tgtname} PROPERTIES FOLDER "Flang-RT/Libraries")
     endif ()
+
+    # flang-rt libraries must not depend on libc++/libstdc++,
+    # so set the linker language to C to avoid the unnecessary
+    # library dependence. Note that libc++/libstdc++ may still
+    # come through CMAKE_CXX_IMPLICIT_LINK_LIBRARIES.
+    set_target_properties(${tgtname} PROPERTIES LINKER_LANGUAGE C)
+    # Use --as-needed to avoid unnecessary dependencies.
+    if (LINKER_AS_NEEDED_OPT)
+      set_property(TARGET ${tgtname} APPEND_STRING PROPERTY
+        LINK_FLAGS "${LINKER_AS_NEEDED_OPT}")
+    endif()
   endforeach ()
 
   # Define how to compile and link the library.
