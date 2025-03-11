@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_VECTOR_TRANSFORMS_LOWERINGPATTERNS_H
 #define MLIR_DIALECT_VECTOR_TRANSFORMS_LOWERINGPATTERNS_H
 
+#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 
 namespace mlir {
@@ -47,7 +48,8 @@ namespace vector {
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
 /// linearized `vector.extract` + `vector.outerproduct` + `vector.insert`.
 void populateVectorContractLoweringPatterns(
-    RewritePatternSet &patterns, VectorTransformsOptions options,
+    RewritePatternSet &patterns,
+    VectorContractLowering vectorContractLoweringOption,
     PatternBenefit benefit = 1, bool disableOuterProductLowering = false);
 
 /// Populate the pattern set with the following patterns:
@@ -142,9 +144,10 @@ void populateVectorShapeCastLoweringPatterns(RewritePatternSet &patterns,
 ///
 /// [TransposeOp2DToShuffleLowering]
 ///
-void populateVectorTransposeLoweringPatterns(RewritePatternSet &patterns,
-                                             VectorTransformsOptions options,
-                                             PatternBenefit benefit = 1);
+void populateVectorTransposeLoweringPatterns(
+    RewritePatternSet &patterns,
+    VectorTransposeLowering vectorTransposeLowering,
+    PatternBenefit benefit = 1);
 
 /// Populate the pattern set with the following patterns:
 ///
