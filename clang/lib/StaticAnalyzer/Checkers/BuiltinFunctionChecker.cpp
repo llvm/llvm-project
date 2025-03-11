@@ -14,7 +14,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/AST/AttrIterator.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Checkers/Taint.h"
@@ -91,29 +90,8 @@ QualType getOverflowBuiltinResultType(const CallEvent &Call, CheckerContext &C,
   }
 }
 
-class BuiltinFunctionChecker
-    : public Checker<eval::Call, check::PostStmt<AttributedStmt>> {
+class BuiltinFunctionChecker : public Checker<eval::Call> {
 public:
-  void checkPostStmt(const AttributedStmt *A, CheckerContext &C) const {
-    if (!hasSpecificAttr<CXXAssumeAttr>(A->getAttrs()))
-      return;
-
-    for (const auto *Attr : getSpecificAttrs<CXXAssumeAttr>(A->getAttrs())) {
-      SVal AssumptionVal = C.getSVal(Attr->getAssumption());
-
-      // The assumption is not evaluated at all if it had sideffects; skip them.
-      if (AssumptionVal.isUnknown())
-        continue;
-
-      const auto *Assumption = AssumptionVal.getAsInteger();
-      assert(Assumption &&
-             "We should know the exact outcome of an assume expr");
-      if (Assumption && Assumption->isZero()) {
-        C.addSink();
-      }
-    }
-  }
-
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
   void handleOverflowBuiltin(const CallEvent &Call, CheckerContext &C,
                              BinaryOperator::Opcode Op,
