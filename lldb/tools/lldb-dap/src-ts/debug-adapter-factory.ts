@@ -70,7 +70,7 @@ async function findDAPExecutable(): Promise<string | undefined> {
 }
 
 async function getDAPExecutable(
-  folder: vscode.WorkspaceFolder | undefined,
+  workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
 ): Promise<string | undefined> {
   // Check if the executable was provided in the launch configuration.
@@ -80,7 +80,7 @@ async function getDAPExecutable(
   }
 
   // Check if the executable was provided in the extension's configuration.
-  const config = vscode.workspace.getConfiguration("lldb-dap", folder);
+  const config = vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
   const configPath = config.get<string>("executable-path");
   if (configPath && configPath.length !== 0) {
     return configPath;
@@ -96,7 +96,7 @@ async function getDAPExecutable(
 }
 
 async function getDAPArguments(
-  folder: vscode.WorkspaceFolder | undefined,
+  workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
   userInteractive?: boolean,
 ): Promise<string[] | null | undefined> {
@@ -124,7 +124,7 @@ async function getDAPArguments(
   }
   // Fall back on the workspace configuration
   return vscode.workspace
-    .getConfiguration("lldb-dap", folder)
+    .getConfiguration("lldb-dap", workspaceFolder)
     .get<string[]>("arguments", []);
 }
 
@@ -132,17 +132,17 @@ async function getDAPArguments(
  * Creates a new {@link vscode.DebugAdapterExecutable} based on the provided workspace folder and
  * debug configuration. Assumes that the given debug configuration is for a local launch of lldb-dap.
  *
- * @param folder The {@link vscode.WorkspaceFolder} that the debug session will be launched within
+ * @param workspaceFolder The {@link vscode.WorkspaceFolder} that the debug session will be launched within
  * @param configuration The {@link vscode.DebugConfiguration}
  * @param userInteractive Whether or not this was called due to user interaction (determines if modals should be shown)
  * @returns
  */
 export async function createDebugAdapterExecutable(
-  folder: vscode.WorkspaceFolder | undefined,
+  workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
   userInteractive?: boolean,
 ): Promise<vscode.DebugAdapterExecutable | undefined> {
-  const config = vscode.workspace.getConfiguration("lldb-dap", folder);
+  const config = vscode.workspace.getConfiguration("lldb-dap", workspaceFolder);
   const log_path = config.get<string>("log-path");
   let env: { [key: string]: string } = {};
   if (log_path) {
@@ -150,7 +150,7 @@ export async function createDebugAdapterExecutable(
   }
   const configEnvironment =
     config.get<{ [key: string]: string }>("environment") || {};
-  const dapPath = await getDAPExecutable(folder, configuration);
+  const dapPath = await getDAPExecutable(workspaceFolder, configuration);
 
   if (!dapPath) {
     if (userInteractive) {
@@ -172,7 +172,11 @@ export async function createDebugAdapterExecutable(
       ...env,
     },
   };
-  const dbgArgs = await getDAPArguments(folder, configuration, userInteractive);
+  const dbgArgs = await getDAPArguments(
+    workspaceFolder,
+    configuration,
+    userInteractive,
+  );
   if (!dbgArgs) {
     return undefined;
   }
