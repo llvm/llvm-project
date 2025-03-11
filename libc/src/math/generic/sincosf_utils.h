@@ -14,7 +14,7 @@
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
-#if defined(LIBC_TARGET_CPU_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
 #include "range_reduction_fma.h"
 // using namespace LIBC_NAMESPACE::fma;
 using LIBC_NAMESPACE::fma::FAST_PASS_BOUND;
@@ -27,7 +27,7 @@ using LIBC_NAMESPACE::fma::small_range_reduction;
 using LIBC_NAMESPACE::generic::FAST_PASS_BOUND;
 using LIBC_NAMESPACE::generic::large_range_reduction;
 using LIBC_NAMESPACE::generic::small_range_reduction;
-#endif // LIBC_TARGET_CPU_HAS_FMA
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 
 namespace LIBC_NAMESPACE_DECL {
 
