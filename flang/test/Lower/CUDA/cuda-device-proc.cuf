@@ -198,3 +198,83 @@ end subroutine
 ! CHECK: %[[CAST:.*]] = builtin.unrealized_conversion_cast %{{.*}}#1 : !fir.ref<f64> to !llvm.ptr
 ! CHECK: %[[ATOMIC:.*]] = llvm.cmpxchg %[[CAST]], %[[BCAST1]], %[[BCAST2]] acq_rel monotonic : !llvm.ptr, i64
 ! CHECK: %[[RES:.*]] = llvm.extractvalue %[[ATOMIC]][1] : !llvm.struct<(i64, i1)> 
+
+attributes(global) subroutine __ldXXi4(b)
+  integer, device :: b(*)
+  integer, device :: x(4)
+  x(1:4) = __ldca(b(i:j))
+  x = __ldcg(b(i:j))
+  x = __ldcs(b(i:j))
+  x(1:4) = __ldlu(b(i:j))
+  x(1:4) = __ldcv(b(i:j))
+end
+
+! CHECK-LABEL: func.func @_QP__ldxxi4
+! CHECK: __ldca_i4x4
+! CHECK: __ldcg_i4x4
+! CHECK: __ldcs_i4x4
+! CHECK: __ldlu_i4x4
+
+attributes(global) subroutine __ldXXi8(b)
+  integer(8), device :: b(*)
+  integer(8), device :: x(2)
+  x(1:2) = __ldca(b(i:j))
+  x = __ldcg(b(i:j))
+  x = __ldcs(b(i:j))
+  x(1:2) = __ldlu(b(i:j))
+  x(1:2) = __ldcv(b(i:j))
+end
+
+! CHECK-LABEL: func.func @_QP__ldxxi8
+! CHECK: __ldca_i8x2
+! CHECK: __ldcg_i8x2
+! CHECK: __ldcs_i8x2
+! CHECK: __ldlu_i8x2
+
+attributes(global) subroutine __ldXXr4(b)
+  real, device :: b(*)
+  real, device :: x(4)
+  x(1:4) = __ldca(b(i:j))
+  x = __ldcg(b(i:j))
+  x = __ldcs(b(i:j))
+  x(1:4) = __ldlu(b(i:j))
+  x(1:4) = __ldcv(b(i:j))
+end
+
+! CHECK-LABEL: func.func @_QP__ldxxr4
+! CHECK: __ldca_r4x4
+! CHECK: __ldcg_r4x4
+! CHECK: __ldcs_r4x4
+! CHECK: __ldlu_r4x4
+
+attributes(global) subroutine __ldXXr2(b)
+  real(2), device :: b(*)
+  real(2), device :: x(2)
+  x(1:2) = __ldca(b(i:j))
+  x = __ldcg(b(i:j))
+  x = __ldcs(b(i:j))
+  x(1:2) = __ldlu(b(i:j))
+  x(1:2) = __ldcv(b(i:j))
+end
+
+! CHECK-LABEL: func.func @_QP__ldxxr2
+! CHECK: __ldca_r2x2
+! CHECK: __ldcg_r2x2
+! CHECK: __ldcs_r2x2
+! CHECK: __ldlu_r2x2
+
+attributes(global) subroutine __ldXXr8(b)
+  real(8), device :: b(*)
+  real(8), device :: x(2)
+  x(1:2) = __ldca(b(i:j))
+  x = __ldcg(b(i:j))
+  x = __ldcs(b(i:j))
+  x(1:2) = __ldlu(b(i:j))
+  x(1:2) = __ldcv(b(i:j))
+end
+
+! CHECK-LABEL: func.func @_QP__ldxxr8
+! CHECK: __ldca_r8x2
+! CHECK: __ldcg_r8x2
+! CHECK: __ldcs_r8x2
+! CHECK: __ldlu_r8x2

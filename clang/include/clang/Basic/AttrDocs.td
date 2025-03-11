@@ -1113,6 +1113,42 @@ template instantiation, so the value for ``T::number`` is known.
   }];
 }
 
+def ExtVectorTypeDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ext_vector_type(N) attribute specifies that a type is a vector with N
+elements, directly mapping to an LLVM vector type. Originally from OpenCL, it
+allows element access the array subscript operator ``[]``, ``sN`` where ``N`` is
+a hexadecimal value, or ``x``, ``y``, ``z``, ``w`` for graphics-style indexing.
+This attribute enables efficient SIMD operations and is usable in
+general-purpose code.
+
+.. code-block:: c++
+
+  template <typename T, uint32_t N>
+  constexpr T simd_reduce(T [[clang::ext_vector_type(N)]] v) {
+    static_assert((N & (N - 1)) == 0, "N must be a power of two");
+    if constexpr (N == 1) {
+      return v[0];
+    } else {
+      T [[clang::ext_vector_type(N / 2)]] reduced = v.hi + v.lo;
+      return simd_reduce(reduced);
+    }
+  }
+
+The vector type also supports swizzling up to sixteen elements. This can be done
+using the object accessors. The OpenCL documentation lists the full list of
+accepted values.
+.. code-block:: c++
+
+  using f16_x16 = _Float16 __attribute__((ext_vector_type(16)));
+
+  f16_x16 reverse(f16_x16 v) { return v.sfedcba9876543210; }
+
+See the OpenCL documentation for some more complete examples.
+  }];
+}
+
 def DiagnoseIfDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
