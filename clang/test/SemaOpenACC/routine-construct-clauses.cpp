@@ -56,9 +56,9 @@ void Func();
 // expected-error@+2{{OpenACC clause 'gang' may not appear on the same construct as a 'gang' clause on a 'routine' construct}}
 // expected-note@+1{{previous clause is here}}
 #pragma acc routine(Func) gang gang
-// expected-error@+1{{REQUIRED}}
+// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'worker', 'vector' or 'seq' clause}}
 #pragma acc routine(Func)
-// expected-error@+1{{REQUIRED}}
+// expected-error@+1{{OpenACC 'routine' construct must have at least one 'gang', 'worker', 'vector' or 'seq' clause}}
 #pragma acc routine(Func) nohost
 
 // only the 'dim' syntax for gang is legal.
