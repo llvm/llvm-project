@@ -283,19 +283,10 @@ public:
   }
 
   void print(OutputBuffer &OB) const {
-    printLeft(OB);
+    OB.printLeft(*this);
     if (RHSComponentCache != Cache::No)
-      printRight(OB);
+      OB.printRight(*this);
   }
-
-  // Print the "left" side of this Node into OutputBuffer.
-  virtual void printLeft(OutputBuffer &) const = 0;
-
-  // Print the "right". This distinction is necessary to represent C++ types
-  // that appear on the RHS of their subtype, such as arrays or functions.
-  // Since most types don't have such a component, provide a default
-  // implementation.
-  virtual void printRight(OutputBuffer &) const {}
 
   // Print an initializer list of this type. Returns true if we printed a custom
   // representation, false if nothing has been printed and the default
@@ -312,6 +303,24 @@ public:
 #ifndef NDEBUG
   DEMANGLE_DUMP_METHOD void dump() const;
 #endif
+
+private:
+  friend class OutputBuffer;
+
+  // Print the "left" side of this Node into OutputBuffer.
+  //
+  // Note, should only be called from OutputBuffer implementations.
+  // Call \ref OutputBuffer::printLeft instead.
+  virtual void printLeft(OutputBuffer &) const = 0;
+
+  // Print the "right". This distinction is necessary to represent C++ types
+  // that appear on the RHS of their subtype, such as arrays or functions.
+  // Since most types don't have such a component, provide a default
+  // implementation.
+  //
+  // Note, should only be called from OutputBuffer implementations.
+  // Call \ref OutputBuffer::printRight instead.
+  virtual void printRight(OutputBuffer &) const {}
 };
 
 class NodeArray {
@@ -460,11 +469,11 @@ public:
   }
 
   void printLeft(OutputBuffer &OB) const override {
-    Child->printLeft(OB);
+    OB.printLeft(*Child);
     printQuals(OB);
   }
 
-  void printRight(OutputBuffer &OB) const override { Child->printRight(OB); }
+  void printRight(OutputBuffer &OB) const override { OB.printRight(*Child); }
 };
 
 class ConversionOperatorType final : public Node {
@@ -493,7 +502,7 @@ public:
   template<typename Fn> void match(Fn F) const { F(Ty, Postfix); }
 
   void printLeft(OutputBuffer &OB) const override {
-    Ty->printLeft(OB);
+    OB.printLeft(*Ty);
     OB += Postfix;
   }
 };
@@ -579,7 +588,7 @@ struct AbiTagAttr : Node {
   std::string_view getBaseName() const override { return Base->getBaseName(); }
 
   void printLeft(OutputBuffer &OB) const override {
-    Base->printLeft(OB);
+    OB.printLeft(*Base);
     OB += "[abi:";
     OB += Tag;
     OB += "]";
@@ -646,7 +655,7 @@ public:
     // We rewrite objc_object<SomeProtocol>* into id<SomeProtocol>.
     if (Pointee->getKind() != KObjCProtoName ||
         !static_cast<const ObjCProtoName *>(Pointee)->isObjCObject()) {
-      Pointee->printLeft(OB);
+      OB.printLeft(*Pointee);
       if (Pointee->hasArray(OB))
         OB += " ";
       if (Pointee->hasArray(OB) || Pointee->hasFunction(OB))
@@ -665,7 +674,7 @@ public:
         !static_cast<const ObjCProtoName *>(Pointee)->isObjCObject()) {
       if (Pointee->hasArray(OB) || Pointee->hasFunction(OB))
         OB += ")";
-      Pointee->printRight(OB);
+      OB.printRight(*Pointee);
     }
   }
 };
@@ -731,7 +740,7 @@ public:
     std::pair<ReferenceKind, const Node *> Collapsed = collapse(OB);
     if (!Collapsed.second)
       return;
-    Collapsed.second->printLeft(OB);
+    OB.printLeft(*Collapsed.second);
     if (Collapsed.second->hasArray(OB))
       OB += " ";
     if (Collapsed.second->hasArray(OB) || Collapsed.second->hasFunction(OB))
@@ -748,7 +757,7 @@ public:
       return;
     if (Collapsed.second->hasArray(OB) || Collapsed.second->hasFunction(OB))
       OB += ")";
-    Collapsed.second->printRight(OB);
+    OB.printRight(*Collapsed.second);
   }
 };
 
@@ -768,7 +777,7 @@ public:
   }
 
   void printLeft(OutputBuffer &OB) const override {
-    MemberType->printLeft(OB);
+    OB.printLeft(*MemberType);
     if (MemberType->hasArray(OB) || MemberType->hasFunction(OB))
       OB += "(";
     else
@@ -780,7 +789,7 @@ public:
   void printRight(OutputBuffer &OB) const override {
     if (MemberType->hasArray(OB) || MemberType->hasFunction(OB))
       OB += ")";
-    MemberType->printRight(OB);
+    OB.printRight(*MemberType);
   }
 };
 
@@ -800,7 +809,7 @@ public:
   bool hasRHSComponentSlow(OutputBuffer &) const override { return true; }
   bool hasArraySlow(OutputBuffer &) const override { return true; }
 
-  void printLeft(OutputBuffer &OB) const override { Base->printLeft(OB); }
+  void printLeft(OutputBuffer &OB) const override { OB.printLeft(*Base); }
 
   void printRight(OutputBuffer &OB) const override {
     if (OB.back() != ']')
@@ -809,7 +818,7 @@ public:
     if (Dimension)
       Dimension->print(OB);
     OB += "]";
-    Base->printRight(OB);
+    OB.printRight(*Base);
   }
 
   bool printInitListAsType(OutputBuffer &OB,
@@ -853,7 +862,7 @@ public:
   // by printing out the return types's left, then print our parameters, then
   // finally print right of the return type.
   void printLeft(OutputBuffer &OB) const override {
-    Ret->printLeft(OB);
+    OB.printLeft(*Ret);
     OB += " ";
   }
 
@@ -861,7 +870,7 @@ public:
     OB.printOpen();
     Params.printWithComma(OB);
     OB.printClose();
-    Ret->printRight(OB);
+    OB.printRight(*Ret);
 
     if (CVQuals & QualConst)
       OB += " const";
@@ -966,6 +975,8 @@ public:
   FunctionRefQual getRefQual() const { return RefQual; }
   NodeArray getParams() const { return Params; }
   const Node *getReturnType() const { return Ret; }
+  const Node *getAttrs() const { return Attrs; }
+  const Node *getRequires() const { return Requires; }
 
   bool hasRHSComponentSlow(OutputBuffer &) const override { return true; }
   bool hasFunctionSlow(OutputBuffer &) const override { return true; }
@@ -974,10 +985,11 @@ public:
 
   void printLeft(OutputBuffer &OB) const override {
     if (Ret) {
-      Ret->printLeft(OB);
+      OB.printLeft(*Ret);
       if (!Ret->hasRHSComponent(OB))
         OB += " ";
     }
+
     Name->print(OB);
   }
 
@@ -985,8 +997,9 @@ public:
     OB.printOpen();
     Params.printWithComma(OB);
     OB.printClose();
+
     if (Ret)
-      Ret->printRight(OB);
+      OB.printRight(*Ret);
 
     if (CVQuals & QualConst)
       OB += " const";
@@ -1326,14 +1339,14 @@ public:
   template<typename Fn> void match(Fn F) const { F(Name, Type); }
 
   void printLeft(OutputBuffer &OB) const override {
-    Type->printLeft(OB);
+    OB.printLeft(*Type);
     if (!Type->hasRHSComponent(OB))
       OB += " ";
   }
 
   void printRight(OutputBuffer &OB) const override {
     Name->print(OB);
-    Type->printRight(OB);
+    OB.printRight(*Type);
   }
 };
 
@@ -1378,11 +1391,11 @@ public:
   template<typename Fn> void match(Fn F) const { F(Param); }
 
   void printLeft(OutputBuffer &OB) const override {
-    Param->printLeft(OB);
+    OB.printLeft(*Param);
     OB += "...";
   }
 
-  void printRight(OutputBuffer &OB) const override { Param->printRight(OB); }
+  void printRight(OutputBuffer &OB) const override { OB.printRight(*Param); }
 };
 
 /// An unexpanded parameter pack (either in the expression or type context). If
@@ -1447,13 +1460,13 @@ public:
     initializePackExpansion(OB);
     size_t Idx = OB.CurrentPackIndex;
     if (Idx < Data.size())
-      Data[Idx]->printLeft(OB);
+      OB.printLeft(*Data[Idx]);
   }
   void printRight(OutputBuffer &OB) const override {
     initializePackExpansion(OB);
     size_t Idx = OB.CurrentPackIndex;
     if (Idx < Data.size())
-      Data[Idx]->printRight(OB);
+      OB.printRight(*Data[Idx]);
   }
 };
 
@@ -1611,13 +1624,13 @@ struct ForwardTemplateReference : Node {
     if (Printing)
       return;
     ScopedOverride<bool> SavePrinting(Printing, true);
-    Ref->printLeft(OB);
+    OB.printLeft(*Ref);
   }
   void printRight(OutputBuffer &OB) const override {
     if (Printing)
       return;
     ScopedOverride<bool> SavePrinting(Printing, true);
-    Ref->printRight(OB);
+    OB.printRight(*Ref);
   }
 };
 
@@ -1769,7 +1782,7 @@ public:
 
   void printLeft(OutputBuffer &OB) const override {
     OB += "~";
-    Base->printLeft(OB);
+    OB.printLeft(*Base);
   }
 };
 
@@ -2049,7 +2062,7 @@ public:
     {
       ScopedOverride<unsigned> LT(OB.GtIsGt, 0);
       OB += "<";
-      To->printLeft(OB);
+      OB.printLeft(*To);
       OB += ">";
     }
     OB.printOpen();
@@ -6179,6 +6192,10 @@ struct ManglingParser : AbstractManglingParser<ManglingParser<Alloc>, Alloc> {
   using AbstractManglingParser<ManglingParser<Alloc>,
                                Alloc>::AbstractManglingParser;
 };
+
+inline void OutputBuffer::printLeft(const Node &N) { N.printLeft(*this); }
+
+inline void OutputBuffer::printRight(const Node &N) { N.printRight(*this); }
 
 DEMANGLE_NAMESPACE_END
 
