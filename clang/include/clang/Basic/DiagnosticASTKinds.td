@@ -131,17 +131,21 @@ def note_constexpr_past_end : Note<
   "dereferenced pointer past the end of %select{|subobject of }0"
   "%select{temporary|%2}1 is not a constant expression">;
 def note_constexpr_past_end_subobject : Note<
-  "cannot %select{access base class of|access derived class of|access field of|"
-  "access array element of|ERROR|"
-  "access real component of|access imaginary component of}0 "
-  "pointer past the end of object">;
+  "cannot %enum_select<AccessType>{"
+    "%BaseClassAccess{access base class of}|%DerivedClassAccess{access derived class of}|"
+    "%FieldAccess{access field of}|%ArrayElementAccess{access array element of}|"
+    "%ErrorAccess{ERROR}|"
+    "%RealComponentAccess{access real component of}|%ImaginaryComponentAccess{access imaginary component of}"
+  "}0 pointer past the end of object">;
 def note_non_null_attribute_failed : Note<
   "null passed to a callee that requires a non-null argument">;
 def note_constexpr_null_subobject : Note<
-  "cannot %select{access base class of|access derived class of|access field of|"
-  "access array element of|perform pointer arithmetic on|"
-  "access real component of|"
-  "access imaginary component of}0 null pointer">;
+  "cannot %enum_select<NullSubobjectAccess>{"
+    "%BaseClassAccess{access base class of}|%DerivedClassAccess{access derived class of}|"
+    "%FieldAccess{access field of}|%ArrayElementAccess{access array element of}|"
+    "%PointerArithmetic{perform pointer arithmetic on}|"
+    "%RealComponentAccess{access real component of}|%ImaginaryComponentAccess{access imaginary component of}"
+  "}0 null pointer">;
 def note_constexpr_null_callee : Note<
   "'%0' evaluates to a null function pointer">;
 def note_constexpr_function_param_value_unknown : Note<
@@ -174,16 +178,22 @@ def note_constexpr_this : Note<
   "%select{|implicit }0use of 'this' pointer is only allowed within the "
   "evaluation of a call to a 'constexpr' member function">;
 def access_kind : TextSubstitution<
-  "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to|construction of|"
-  "destruction of|read of}0">;
+  "%enum_select<AccessKind>{"
+    "%ReadOf{read of}|%AssignmentTo{assignment to}|%IncrementOf{increment of}|"
+    "%DecrementOf{decrement of}|%MemberCallOn{member call on}|"
+    "%DynamicCast{dynamic_cast of}|%TypeIdApplied{typeid applied to}|"
+    "%ConstructionOf{construction of}|%DestructionOf{destruction of}|"
+    "%ReadOfAgain{read of}"
+  "}0">;
 def access_kind_subobject : TextSubstitution<
-  "%select{read of|read of|assignment to|increment of|decrement of|"
-  "member call on|dynamic_cast of|typeid applied to|"
-  "construction of subobject of|destruction of|read of}0">;
+  "%enum_select<AccessKind>{%ReadOf{read of}|%AssignmentTo{assignment to}|"
+  "%IncrementOf{increment of}|%DecrementOf{decrement of}|"
+  "%MemberCallOn{member call on}|%DynamicCastOf{dynamic_cast of}|"
+  "%TypeidAppliedTo{typeid applied to}|%ConstructionOfSubobject{construction of subobject of}|"
+  "%DestructionOf{destruction of}|%ReadOf{read of}}0">;
 def access_kind_volatile : TextSubstitution<
-  "%select{read of|read of|assignment to|increment of|decrement of|"
-  "<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>}0">;
+  "%enum_select<AccessKindVolatile>{%ReadOf{read of}|%AssignmentTo{assignment to}|"
+  "%IncrementOf{increment of}|%DecrementOf{decrement of}|%Error{<ERROR>}}0">;
 def note_constexpr_lifetime_ended : Note<
   "%sub{access_kind}0 %select{temporary|variable}1 whose "
   "%plural{8:storage duration|:lifetime}0 has ended">;
@@ -313,8 +323,8 @@ def note_constexpr_bit_cast_unsupported_bitfield : Note<
   "constexpr bit_cast involving bit-field is not yet supported">;
 def note_constexpr_bit_cast_invalid_type : Note<
   "bit_cast %select{from|to}0 a %select{|type with a }1"
-  "%select{union|pointer|member pointer|volatile|reference}2 "
-  "%select{type|member}1 is not allowed in a constant expression">;
+  "%enum_select<CastType>{%Union{union}|%Pointer{pointer}|%MemberPointer{member pointer}|"
+  "%Volatile{volatile}|%Reference{reference}}2 is not allowed in a constant expression">;
 def note_constexpr_bit_cast_invalid_subtype : Note<
   "invalid type %0 is a %select{member|base}1 of %2">;
 def note_constexpr_bit_cast_invalid_vector : Note<
@@ -485,7 +495,9 @@ def warn_odr_tag_type_inconsistent
               "units">,
       InGroup<ODR>;
 def note_odr_tag_kind_here: Note<
-  "%0 is a %select{struct|interface|union|class|enum}1 here">;
+  "%0 is a %enum_select<ODRTagKind>{"
+    "%Struct{struct}|%Interface{interface}|%Union{union}|"
+    "%Class{class}|%Enum{enum}" "}1 here">;
 def note_odr_field : Note<"field %0 has type %1 here">;
 def note_odr_field_name : Note<"field has name %0 here">;
 def note_odr_missing_field : Note<"no corresponding field here">;
@@ -623,23 +635,25 @@ def note_second_module_difference : Note<
 def err_module_odr_violation_definition_data : Error <
   "%q0 has different definitions in different modules; first difference is "
   "%select{definition in module '%2'|defined here}1 found "
-  "%select{"
-  "%4 base %plural{1:class|:classes}4|"
-  "%4 virtual base %plural{1:class|:classes}4|"
-  "%ordinal4 base class with type %5|"
-  "%ordinal4 %select{non-virtual|virtual}5 base class %6|"
-  "%ordinal4 base class %5 with "
-  "%select{public|protected|private|no}6 access specifier}3">;
+  "%enum_select<BaseClassType>{"
+    "%BaseClass{base %plural{1:class|:classes}}|"
+    "%VirtualBase{virtual base %plural{1:class|:classes}}|"
+    "%OrdinalBaseClassWithType{ordinal base class with type %5}|"
+    "%OrdinalVirtualBaseClass{ordinal %select{non-virtual|virtual}5 base class %6}|"
+    "%OrdinalBaseClassWithAccess{ordinal base class %5 with "
+    "%select{public|protected|private|no}6 access specifier}"
+  "}3">;
 
 def note_module_odr_violation_definition_data : Note <
   "but in '%0' found "
-  "%select{"
-  "%2 base %plural{1:class|:classes}2|"
-  "%2 virtual base %plural{1:class|:classes}2|"
-  "%ordinal2 base class with different type %3|"
-  "%ordinal2 %select{non-virtual|virtual}3 base class %4|"
-  "%ordinal2 base class %3 with "
-  "%select{public|protected|private|no}4 access specifier}1">;
+  "%enum_select<BaseClassType>{"
+    "%BaseClass{base %plural{1:class|:classes}}|"
+    "%VirtualBase{virtual base %plural{1:class|:classes}}|"
+    "%OrdinalBaseClassWithDifferentType{ordinal base class with different type %3}|"
+    "%OrdinalBaseClassWithAccess{ordinal %select{non-virtual|virtual}3 base class %4}|"
+    "%OrdinalBaseClassWithAccessSpecifier{ordinal base class %3 with "
+    "%select{public|protected|private|no}4 access specifier}"
+  "}1">;
 
 def err_module_odr_violation_objc_interface : Error <
   "%0 has different definitions in different modules; first difference is "
