@@ -16,17 +16,17 @@ __attribute__((objc_root_class))
 
 @implementation Fib
 // With optimization, the inner function call should be a tail call.
-// OPT-LABEL: define hidden i32 @"\01-[Fib fibWithN:]_inner"
-// OPT: {{.*}} tail call i32 @"\01-[Fib fibWithN:]_inner"
+// OPT-LABEL: define hidden i32 @"\01-[Fib fibWithN:]_nonnull"
+// OPT: {{.*}} tail call i32 @"\01-[Fib fibWithN:]_nonnull"
 
 // The inner function knows that self is non null so it can call the method without the nil check.
-// CHECK-LABEL: define hidden i32 @"\01-[Fib fibWithN:]_inner"
-// CHECK: {{.*}} call i32 @"\01-[Fib fibWithN:]_inner"
-// CHECK: {{.*}} call i32 @"\01-[Fib fibWithN:]_inner"
+// CHECK-LABEL: define hidden i32 @"\01-[Fib fibWithN:]_nonnull"
+// CHECK: {{.*}} call i32 @"\01-[Fib fibWithN:]_nonnull"
+// CHECK: {{.*}} call i32 @"\01-[Fib fibWithN:]_nonnull"
 
 // Thunk function calls the inner function as usual.
 // CHECK-LABEL: define hidden i32 @"\01-[Fib fibWithN:]"
-// CHECK: {{.*}} call i32 @"\01-[Fib fibWithN:]_inner"
+// CHECK: {{.*}} call i32 @"\01-[Fib fibWithN:]_nonnull"
 - (int)fibWithN:(int)n {
   if (n <= 0) return 0;
   if (n == 1) return 1;
@@ -43,13 +43,13 @@ __attribute__((objc_root_class))
 @implementation SubRoot
 - (int)calculateWithPtr:(int*)ptr {
   // For inner functions, it is trivial to reason that the receiver `self` can't be null
-  // CHECK-LABEL: define hidden i32 @"\01-[SubRoot calculateWithPtr:]_inner"
-  // CHECK: {{.*}} = call i32 @"\01-[SubRoot val]_inner"
-  // CHECK: call void @"\01-[SubRoot setVal:]_inner"
-  // CHECK: {{.*}} = call i32 @"\01-[Root privateLoadWithOffset:]_inner"
-  // CHECK: {{.*}} = call i32 @"\01-[SubRoot privateMethod:]_inner"
-  // CHECK: {{.*}} = call i32 @"\01-[Root idx]_inner"
-  // CHECK: call void @"\01-[Root setIdx:]_inner"
+  // CHECK-LABEL: define hidden i32 @"\01-[SubRoot calculateWithPtr:]_nonnull"
+  // CHECK: {{.*}} = call i32 @"\01-[SubRoot val]_nonnull"
+  // CHECK: call void @"\01-[SubRoot setVal:]_nonnull"
+  // CHECK: {{.*}} = call i32 @"\01-[Root privateLoadWithOffset:]_nonnull"
+  // CHECK: {{.*}} = call i32 @"\01-[SubRoot privateMethod:]_nonnull"
+  // CHECK: {{.*}} = call i32 @"\01-[Root idx]_nonnull"
+  // CHECK: call void @"\01-[Root setIdx:]_nonnull"
   int ret = [self val];
   [self setVal:*ptr];
   ret += [self privateLoadWithOffset:ptr];
@@ -62,7 +62,7 @@ __attribute__((objc_root_class))
 
 // The thunk declarations don't exist since all calls to them are non null.
 // We trust that these symbols will be generated when the definition is available.
-// CHECK-LABEL: declare i32 @"\01-[Root privateLoadWithOffset:]_inner"(ptr, ptr)
-// CHECK-LABEL: declare i32 @"\01-[SubRoot privateMethod:]_inner"(ptr, i32)
-// CHECK-LABEL: declare i32 @"\01-[Root idx]_inner"(ptr)
-// CHECK-LABEL: declare void @"\01-[Root setIdx:]_inner"(ptr, i32)
+// CHECK-LABEL: declare i32 @"\01-[Root privateLoadWithOffset:]_nonnull"(ptr, ptr)
+// CHECK-LABEL: declare i32 @"\01-[SubRoot privateMethod:]_nonnull"(ptr, i32)
+// CHECK-LABEL: declare i32 @"\01-[Root idx]_nonnull"(ptr)
+// CHECK-LABEL: declare void @"\01-[Root setIdx:]_nonnull"(ptr, i32)
