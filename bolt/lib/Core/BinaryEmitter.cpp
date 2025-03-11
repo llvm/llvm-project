@@ -401,11 +401,11 @@ bool BinaryEmitter::emitFunction(BinaryFunction &Function,
   assert((Function.empty() || !(*Function.begin()).isCold()) &&
          "first basic block should never be cold");
 
-  // Emit UD2 at the beginning if requested by user.
+  // Emit undefined instruction at the beginning if requested by user.
   if (!opts::BreakFunctionNames.empty()) {
     for (std::string &Name : opts::BreakFunctionNames) {
       if (Function.hasNameRegex(Name)) {
-        Streamer.emitIntValue(0x0B0F, 2); // UD2: 0F 0B
+        Streamer.emitBytes(BC.MIB->getUndefFillValue());
         break;
       }
     }
