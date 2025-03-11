@@ -19,7 +19,7 @@ if (NOT DEFINED LLVM_LIT_PATH)
     set(LLVM_LIT_PATH "${LLVM_TOOLS_BINARY_DIR}/llvm-lit")
   endif()
 endif()
-message("--LLVM_LIT_PATH: ${LLVM_LIT_PATH}")
+message("-- LLVM_LIT_PATH: ${LLVM_LIT_PATH}")
 
 add_custom_target(test-lit COMMAND "${LLVM_LIT_PATH}"
                   "${CMAKE_CURRENT_BINARY_DIR}" -v)
