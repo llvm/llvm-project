@@ -71,6 +71,7 @@
 #include "llvm/CodeGen/RegUsageInfoPropagate.h"
 #include "llvm/CodeGen/RegisterCoalescerPass.h"
 #include "llvm/CodeGen/RegisterUsageInfo.h"
+#include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/RemoveRedundantDebugValues.h"
 #include "llvm/CodeGen/RenameIndependentSubregs.h"
 #include "llvm/CodeGen/ReplaceWithVeclib.h"
@@ -1000,6 +1001,7 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
 
   addPass(FuncletLayoutPass());
 
+  addPass(RemoveLoadsIntoFakeUsesPass());
   addPass(StackMapLivenessPass());
   addPass(LiveDebugValuesPass());
   addPass(MachineSanitizerBinaryMetadata());
