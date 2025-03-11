@@ -1,15 +1,15 @@
 //===-- Unittests for acoshf16 --------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions. 
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/cast.h"
 #include "src/errno/libc_errno.h"
 #include "src/math/acoshf16.h"
-#include "src/__support/FPUtil/FPBits.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 #include <stdint.h>
@@ -18,7 +18,7 @@ using LlvmLibcAcoshf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 static constexpr uint16_t START = 0x3c00U;
-static constexpr uint16_t STOP  = 0x7bffU;
+static constexpr uint16_t STOP = 0x7bffU;
 
 TEST_F(LlvmLibcAcoshf16Test, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
