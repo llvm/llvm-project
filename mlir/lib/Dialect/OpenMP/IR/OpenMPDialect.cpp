@@ -2025,17 +2025,24 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
   return capturedOp;
 }
 
-llvm::omp::OMPTgtExecModeFlags TargetOp::getKernelExecFlags() {
+llvm::omp::OMPTgtExecModeFlags
+TargetOp::getKernelExecFlags(std::optional<Operation *> capturedOp) {
   using namespace llvm::omp;
+
+  // Use a cached operation, if passed in. Otherwise, find the innermost
+  // captured operation.
+  if (!capturedOp)
+    capturedOp = getInnermostCapturedOmpOp();
+  assert(*capturedOp == getInnermostCapturedOmpOp() &&
+         "unexpected captured op");
 
   // Make sure this region is capturing a loop. Otherwise, it's a generic
   // kernel.
-  Operation *capturedOp = getInnermostCapturedOmpOp();
-  if (!isa_and_present<LoopNestOp>(capturedOp))
+  if (!isa_and_present<LoopNestOp>(*capturedOp))
     return OMP_TGT_EXEC_MODE_GENERIC;
 
   SmallVector<LoopWrapperInterface> wrappers;
-  cast<LoopNestOp>(capturedOp).gatherWrappers(wrappers);
+  cast<LoopNestOp>(*capturedOp).gatherWrappers(wrappers);
   assert(!wrappers.empty());
 
   // Ignore optional SIMD leaf construct.

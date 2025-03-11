@@ -4558,11 +4558,10 @@ static std::optional<int64_t> extractConstInteger(Value value) {
 /// function for the target region, so that they can be used to initialize the
 /// corresponding global `ConfigurationEnvironmentTy` structure.
 static void
-initTargetDefaultAttrs(omp::TargetOp targetOp,
+initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
                        llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs &attrs,
                        bool isTargetDevice) {
   // TODO: Handle constant 'if' clauses.
-  Operation *capturedOp = targetOp.getInnermostCapturedOmpOp();
 
   Value numThreads, numTeamsLower, numTeamsUpper, threadLimit;
   if (!isTargetDevice) {
@@ -4644,7 +4643,7 @@ initTargetDefaultAttrs(omp::TargetOp targetOp,
     combinedMaxThreadsVal = maxThreadsVal;
 
   // Update kernel bounds structure for the `OpenMPIRBuilder` to use.
-  attrs.ExecFlags = targetOp.getKernelExecFlags();
+  attrs.ExecFlags = targetOp.getKernelExecFlags(capturedOp);
   attrs.MinTeams = minTeamsVal;
   attrs.MaxTeams.front() = maxTeamsVal;
   attrs.MinThreads = 1;
@@ -4660,10 +4659,9 @@ initTargetDefaultAttrs(omp::TargetOp targetOp,
 static void
 initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
                        LLVM::ModuleTranslation &moduleTranslation,
-                       omp::TargetOp targetOp,
+                       omp::TargetOp targetOp, Operation *capturedOp,
                        llvm::OpenMPIRBuilder::TargetKernelRuntimeAttrs &attrs) {
-  omp::LoopNestOp loopOp = castOrGetParentOfType<omp::LoopNestOp>(
-      targetOp.getInnermostCapturedOmpOp());
+  omp::LoopNestOp loopOp = castOrGetParentOfType<omp::LoopNestOp>(capturedOp);
   unsigned numLoops = loopOp ? loopOp.getNumLoops() : 0;
 
   Value numThreads, numTeamsLower, numTeamsUpper, teamsThreadLimit;
@@ -4690,7 +4688,8 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
   if (numThreads)
     attrs.MaxThreads = moduleTranslation.lookupValue(numThreads);
 
-  if (targetOp.getKernelExecFlags() != llvm::omp::OMP_TGT_EXEC_MODE_GENERIC) {
+  if (targetOp.getKernelExecFlags(capturedOp) !=
+      llvm::omp::OMP_TGT_EXEC_MODE_GENERIC) {
     llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
     attrs.LoopTripCount = nullptr;
 
@@ -4940,12 +4939,15 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::TargetKernelRuntimeAttrs runtimeAttrs;
   llvm::OpenMPIRBuilder::TargetKernelDefaultAttrs defaultAttrs;
-  initTargetDefaultAttrs(targetOp, defaultAttrs, isTargetDevice);
+  Operation *targetCapturedOp = targetOp.getInnermostCapturedOmpOp();
+  initTargetDefaultAttrs(targetOp, targetCapturedOp, defaultAttrs,
+                         isTargetDevice);
 
   // Collect host-evaluated values needed to properly launch the kernel from the
   // host.
   if (!isTargetDevice)
-    initTargetRuntimeAttrs(builder, moduleTranslation, targetOp, runtimeAttrs);
+    initTargetRuntimeAttrs(builder, moduleTranslation, targetOp,
+                           targetCapturedOp, runtimeAttrs);
 
   // Pass host-evaluated values as parameters to the kernel / host fallback,
   // except if they are constants. In any case, map the MLIR block argument to
