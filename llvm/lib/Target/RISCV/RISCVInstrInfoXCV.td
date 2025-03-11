@@ -71,12 +71,14 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32] in {
   def CV_CNT : CVBitManipR<0b0100100, "cv.cnt">;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class CVInstMac<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstR<funct7, funct3, OPC_CUSTOM_1,
               (outs GPR:$rd_wb), (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
               opcodestr, "$rd, $rs1, $rs2"> {
   let Constraints = "$rd = $rd_wb";
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
   let DecoderNamespace = "XCV";
 }
 
@@ -88,10 +90,14 @@ class CVInstMacMulN<bits<2> funct2, bits<3> funct3, dag outs, dag ins,
 
   let Inst{31-30} = funct2;
   let Inst{29-25} = imm5;
+
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
+
   let DecoderNamespace = "XCV";
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class CVInstMacN<bits<2> funct2, bits<3> funct3, string opcodestr>
     : CVInstMacMulN<funct2, funct3, (outs GPR:$rd_wb),
                     (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5), opcodestr> {
@@ -101,7 +107,6 @@ class CVInstMacN<bits<2> funct2, bits<3> funct3, string opcodestr>
 class CVInstMulN<bits<2> funct2, bits<3> funct3, string opcodestr>
     : CVInstMacMulN<funct2, funct3, (outs GPR:$rd),
                     (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5), opcodestr>;
-} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 let Predicates = [HasVendorXCVmac, IsRV32] in {
   // 32x32 bit macs
@@ -490,7 +495,6 @@ let Predicates = [HasVendorXCVsimd, IsRV32] in {
   def CV_SUB_DIV8 :    CVSIMDRR<0b01110, 1, 0, 0b110, "cv.sub.div8">;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class CVInstImmBranch<bits<3> funct3, dag outs, dag ins,
                       string opcodestr, string argstr>
     : RVInstB<funct3, OPC_CUSTOM_0, outs, ins, opcodestr, argstr> {
@@ -498,6 +502,9 @@ class CVInstImmBranch<bits<3> funct3, dag outs, dag ins,
   let rs2 = imm5;
   let isBranch = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
   let DecoderNamespace = "XCV";
 }
 
