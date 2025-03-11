@@ -161,7 +161,7 @@ public:
   void mangleObjCMethodName(const ObjCMethodDecl *MD, raw_ostream &OS,
                             bool includePrefixByte = true,
                             bool includeCategoryNamespace = true,
-                            bool isThunk = true) const;
+                            bool hasNilCheck = true) const;
   void mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,
                                         raw_ostream &) const;
 
