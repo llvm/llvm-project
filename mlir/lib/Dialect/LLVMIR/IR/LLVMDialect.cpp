@@ -3717,7 +3717,7 @@ LogicalResult LinkerOptionsOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult ModuleFlagsOp::verify() {
-  if (mlir::Operation *parentOp = (*this)->getParentOp();
+  if (Operation *parentOp = (*this)->getParentOp();
       parentOp && !satisfiesLLVMModule(parentOp))
     return emitOpError("must appear at the module level");
   for (auto &flag : getFlags()) {
