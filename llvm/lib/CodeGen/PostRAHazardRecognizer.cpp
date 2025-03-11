@@ -74,6 +74,7 @@ llvm::PostRAHazardRecognizerPass::run(MachineFunction &MF,
                                       MachineFunctionAnalysisManager &MFAM) {
   if (!PostRAHazardRecognizer().run(MF))
     return PreservedAnalyses::all();
+
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   return PA;
