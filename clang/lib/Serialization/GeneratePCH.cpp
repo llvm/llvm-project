@@ -120,13 +120,6 @@ Module *CXX20ModulesGenerator::getEmittingModule(ASTContext &Ctx) {
 }
 
 void CXX20ModulesGenerator::HandleTranslationUnit(ASTContext &Ctx) {
-  // FIMXE: We'd better to wrap such options to a new class ASTWriterOptions
-  // since this is not about searching header really.
-  HeaderSearchOptions &HSOpts =
-      getPreprocessor().getHeaderSearchInfo().getHeaderSearchOpts();
-  HSOpts.ModulesSkipDiagnosticOptions = true;
-  HSOpts.ModulesSkipHeaderSearchPaths = true;
-
   PCHGenerator::HandleTranslationUnit(Ctx);
 
   if (!isComplete())
