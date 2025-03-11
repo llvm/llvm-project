@@ -70,8 +70,10 @@ template <StringElementType ElemType>
 static bool CharSummaryProvider(ValueObject &valobj, Stream &stream) {
   auto data_or_err = valobj.GetData();
 
-  if (!data_or_err)
+  if (!data_or_err) {
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), data_or_err.takeError(), "Cannot extract data: {0}");
     return false;
+  }
 
   std::string value;
   StringPrinter::ReadBufferAndDumpToStreamOptions options(valobj);

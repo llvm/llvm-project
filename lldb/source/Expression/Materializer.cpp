@@ -483,19 +483,17 @@ public:
     }
 
     if (m_is_reference) {
-      DataExtractor valobj_extractor;
-      Status extract_error;
-      valobj_sp->GetData(valobj_extractor, extract_error);
+      auto valobj_extractor_or_err = valobj_sp->GetData();
 
-      if (!extract_error.Success()) {
+      if (auto error = valobj_extractor_or_err.takeError()) {
         err = Status::FromErrorStringWithFormat(
             "couldn't read contents of reference variable %s: %s",
-            GetName().AsCString(), extract_error.AsCString());
+            GetName().AsCString(), llvm::toString(std::move(error)).c_str());
         return;
       }
 
       lldb::offset_t offset = 0;
-      lldb::addr_t reference_addr = valobj_extractor.GetAddress(&offset);
+      lldb::addr_t reference_addr = valobj_extractor_or_err->GetAddress(&offset);
 
       Status write_error;
       map.WritePointerToMemory(load_addr, reference_addr, write_error);
@@ -523,13 +521,11 @@ public:
           return;
         }
       } else {
-        DataExtractor data;
-        Status extract_error;
-        valobj_sp->GetData(data, extract_error);
-        if (!extract_error.Success()) {
+        auto data_or_err = valobj_sp->GetData();
+        if (auto error = data_or_err.takeError()) {
           err = Status::FromErrorStringWithFormat(
               "couldn't get the value of %s: %s", GetName().AsCString(),
-              extract_error.AsCString());
+              llvm::toString(std::move(error)).c_str());
           return;
         }
 
@@ -540,9 +536,9 @@ public:
           return;
         }
 
-        if (data.GetByteSize() <
+        if (data_or_err->GetByteSize() <
             llvm::expectedToOptional(GetByteSize(scope)).value_or(0)) {
-          if (data.GetByteSize() == 0 && !LocationExpressionIsValid()) {
+          if (data_or_err->GetByteSize() == 0 && !LocationExpressionIsValid()) {
             err = Status::FromErrorStringWithFormat(
                 "the variable '%s' has no location, "
                 "it may have been optimized out",
@@ -553,7 +549,7 @@ public:
                 ") is larger than the ValueObject's size (%" PRIu64 ")",
                 GetName().AsCString(),
                 llvm::expectedToOptional(GetByteSize(scope)).value_or(0),
-                data.GetByteSize());
+                data_or_err->GetByteSize());
           }
           return;
         }
@@ -571,14 +567,14 @@ public:
         const bool zero_memory = false;
 
         m_temporary_allocation = map.Malloc(
-            data.GetByteSize(), byte_align,
+            data_or_err->GetByteSize(), byte_align,
             lldb::ePermissionsReadable | lldb::ePermissionsWritable,
             IRMemoryMap::eAllocationPolicyMirror, zero_memory, alloc_error);
 
-        m_temporary_allocation_size = data.GetByteSize();
+        m_temporary_allocation_size = data_or_err->GetByteSize();
 
-        m_original_data = std::make_shared<DataBufferHeap>(data.GetDataStart(),
-                                                           data.GetByteSize());
+        m_original_data = std::make_shared<DataBufferHeap>(data_or_err->GetDataStart(),
+                                                           data_or_err->GetByteSize());
 
         if (!alloc_error.Success()) {
           err = Status::FromErrorStringWithFormat(
@@ -589,8 +585,8 @@ public:
 
         Status write_error;
 
-        map.WriteMemory(m_temporary_allocation, data.GetDataStart(),
-                        data.GetByteSize(), write_error);
+        map.WriteMemory(m_temporary_allocation, data_or_err->GetDataStart(),
+                        data_or_err->GetByteSize(), write_error);
 
         if (!write_error.Success()) {
           err = Status::FromErrorStringWithFormat(
