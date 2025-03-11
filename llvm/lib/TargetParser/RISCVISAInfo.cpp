@@ -748,7 +748,7 @@ Error RISCVISAInfo::checkDependency() {
       {"xqcicm"},  {"xqcics"}, {"xqcicsr"}, {"xqciint"},
       {"xqcilia"}, {"xqcilo"}, {"xqcilsm"}, {"xqcisls"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
-      {"zcmt"}, {"zcmp"}, {"xqciac"}, {"xqcicm"}};
+      {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
 
   if (HasI && HasE)
     return getIncompatibleError("i", "e");
