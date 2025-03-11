@@ -257,8 +257,6 @@ protected:
 
   bool RequiresCOV6 = false;
 
-  bool IsWholeWaveFunction = false;
-
   // Dummy feature to use for assembler in tablegen.
   bool FeatureDisable = false;
 
@@ -1449,10 +1447,6 @@ public:
   // \returns true if S_GETPC_B64 zero-extends the result from 48 bits instead
   // of sign-extending.
   bool hasGetPCZeroExtension() const { return GFX12Insts; }
-
-  /// \returns true if the current function is a whole wave function (i.e. it
-  /// runs with all the lanes enabled).
-  bool isWholeWaveFunction() const { return IsWholeWaveFunction; }
 
   /// \returns SGPR allocation granularity supported by the subtarget.
   unsigned getSGPRAllocGranule() const {
