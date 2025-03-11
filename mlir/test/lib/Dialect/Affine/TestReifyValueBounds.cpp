@@ -85,10 +85,20 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
     Value value = op.getVar();
     std::optional<int64_t> dim = op.getDim();
     auto shapedType = dyn_cast<ShapedType>(value.getType());
-    if (shapedType && shapedType.hasRank() && dim.has_value() &&
-        dim.value() >= shapedType.getRank()) {
-      op->emitOpError("invalid dim for shaped type");
+    if (!shapedType && dim.has_value()) {
+      op->emitOpError("dim specified for non-shaped type");
       return WalkResult::interrupt();
+    }
+    if (shapedType && shapedType.hasRank() && dim.has_value()) {
+      if (dim.value() < 0) {
+        op->emitOpError("dim must be non-negative");
+        return WalkResult::interrupt();
+      }
+
+      if(dim.value() >= shapedType.getRank()) {
+        op->emitOpError("invalid dim for shaped type rank");
+        return WalkResult::interrupt();
+      }
     }
 
     bool constant = op.getConstant();
