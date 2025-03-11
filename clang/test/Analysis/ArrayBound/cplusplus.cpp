@@ -179,4 +179,3 @@ int test_reference_that_might_be_after_the_end(int idx) {
     return -1;
   return ref;
 }
-
