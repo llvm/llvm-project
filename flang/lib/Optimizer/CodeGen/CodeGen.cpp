@@ -3545,6 +3545,36 @@ struct StoreOpConversion : public fir::FIROpConversion<fir::StoreOp> {
   }
 };
 
+/// `fir.copy` --> `llvm.memcpy` or `llvm.memmove`
+struct CopyOpConversion : public fir::FIROpConversion<fir::CopyOp> {
+  using FIROpConversion::FIROpConversion;
+
+  llvm::LogicalResult
+  matchAndRewrite(fir::CopyOp copy, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    mlir::Location loc = copy.getLoc();
+    mlir::Value llvmSource = adaptor.getSource();
+    mlir::Value llvmDestination = adaptor.getDestination();
+    mlir::Type i64Ty = mlir::IntegerType::get(rewriter.getContext(), 64);
+    mlir::Type copyTy = fir::unwrapRefType(copy.getSource().getType());
+    mlir::Value copySize =
+        genTypeStrideInBytes(loc, i64Ty, rewriter, convertType(copyTy));
+
+    mlir::LLVM::AliasAnalysisOpInterface newOp;
+    if (copy.getNoOverlap())
+      newOp = rewriter.create<mlir::LLVM::MemcpyOp>(
+          loc, llvmDestination, llvmSource, copySize, /*isVolatile=*/false);
+    else
+      newOp = rewriter.create<mlir::LLVM::MemmoveOp>(
+          loc, llvmDestination, llvmSource, copySize, /*isVolatile=*/false);
+
+    // TODO: propagate TBAA once FirAliasTagOpInterface added to CopyOp.
+    attachTBAATag(newOp, copyTy, copyTy, nullptr);
+    rewriter.eraseOp(copy);
+    return mlir::success();
+  }
+};
+
 namespace {
 
 /// Convert `fir.unboxchar` into two `llvm.extractvalue` instructions. One for
@@ -4148,11 +4178,11 @@ void fir::populateFIRToLLVMConversionPatterns(
       BoxOffsetOpConversion, BoxProcHostOpConversion, BoxRankOpConversion,
       BoxTypeCodeOpConversion, BoxTypeDescOpConversion, CallOpConversion,
       CmpcOpConversion, ConvertOpConversion, CoordinateOpConversion,
-      DTEntryOpConversion, DeclareOpConversion, DivcOpConversion,
-      EmboxOpConversion, EmboxCharOpConversion, EmboxProcOpConversion,
-      ExtractValueOpConversion, FieldIndexOpConversion, FirEndOpConversion,
-      FreeMemOpConversion, GlobalLenOpConversion, GlobalOpConversion,
-      InsertOnRangeOpConversion, IsPresentOpConversion,
+      CopyOpConversion, DTEntryOpConversion, DeclareOpConversion,
+      DivcOpConversion, EmboxOpConversion, EmboxCharOpConversion,
+      EmboxProcOpConversion, ExtractValueOpConversion, FieldIndexOpConversion,
+      FirEndOpConversion, FreeMemOpConversion, GlobalLenOpConversion,
+      GlobalOpConversion, InsertOnRangeOpConversion, IsPresentOpConversion,
       LenParamIndexOpConversion, LoadOpConversion, MulcOpConversion,
       NegcOpConversion, NoReassocOpConversion, SelectCaseOpConversion,
       SelectOpConversion, SelectRankOpConversion, SelectTypeOpConversion,

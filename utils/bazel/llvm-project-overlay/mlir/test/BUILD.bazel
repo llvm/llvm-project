@@ -630,6 +630,7 @@ cc_library(
         "//mlir:Support",
         "//mlir:TransformUtils",
         "//mlir:Transforms",
+        "//mlir:TransformDialect",
     ],
 )
 
