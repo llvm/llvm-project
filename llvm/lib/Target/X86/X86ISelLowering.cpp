@@ -41368,6 +41368,22 @@ static SmallVector<int, 4> getPSHUFShuffleMask(SDValue N) {
   }
 }
 
+/// Get the expanded blend mask from a BLENDI node.
+/// For v16i16 nodes, this will splat the repeated i8 mask.
+static APInt getBLENDIBlendMask(SDValue V) {
+  assert(V.getOpcode() == X86ISD::BLENDI && "Unknown blend shuffle");
+  unsigned NumElts = V.getSimpleValueType().getVectorNumElements();
+  APInt Mask = V.getConstantOperandAPInt(2);
+  if (Mask.getBitWidth() > NumElts)
+    Mask = Mask.trunc(NumElts);
+  if (NumElts == 16) {
+    assert(Mask.getBitWidth() == 8 && "Unexpected v16i16 blend mask width");
+    Mask = APInt::getSplat(16, Mask);
+  }
+  assert(Mask.getBitWidth() == NumElts && "Unexpected blend mask width");
+  return Mask;
+}
+
 /// Search for a combinable shuffle across a chain ending in pshufd.
 ///
 /// We walk up the chain and look for a combinable shuffle, skipping over
@@ -42266,7 +42282,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         unsigned SrcBits = SrcVT.getScalarSizeInBits();
         if ((EltBits % SrcBits) == 0 && SrcBits >= 32) {
           unsigned NewSize = SrcVT.getVectorNumElements();
-          APInt BlendMask = N.getConstantOperandAPInt(2).zextOrTrunc(NumElts);
+          APInt BlendMask = getBLENDIBlendMask(N);
           APInt NewBlendMask = APIntOps::ScaleBitMask(BlendMask, NewSize);
           return DAG.getBitcast(
               VT, DAG.getNode(X86ISD::BLENDI, DL, SrcVT, N0.getOperand(0),
@@ -58488,16 +58504,11 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::BLENDI:
       if (NumOps == 2 && VT.is512BitVector() && Subtarget.useBWIRegs()) {
-        uint64_t Mask0 = Ops[0].getConstantOperandVal(2);
-        uint64_t Mask1 = Ops[1].getConstantOperandVal(2);
-        // MVT::v16i16 has repeated blend mask.
-        if (Op0.getSimpleValueType() == MVT::v16i16) {
-          Mask0 = (Mask0 << 8) | Mask0;
-          Mask1 = (Mask1 << 8) | Mask1;
-        }
-        uint64_t Mask = (Mask1 << (VT.getVectorNumElements() / 2)) | Mask0;
-        MVT MaskSVT = MVT::getIntegerVT(VT.getVectorNumElements());
-        MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+        unsigned NumElts = VT.getVectorNumElements();
+        APInt Mask = getBLENDIBlendMask(Ops[0]).zext(NumElts);
+        Mask.insertBits(getBLENDIBlendMask(Ops[1]), NumElts / 2);
+        MVT MaskSVT = MVT::getIntegerVT(NumElts);
+        MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
         SDValue Sel =
             DAG.getBitcast(MaskVT, DAG.getConstant(Mask, DL, MaskSVT));
         return DAG.getSelect(DL, VT, Sel, ConcatSubOperand(VT, Ops, 1),
