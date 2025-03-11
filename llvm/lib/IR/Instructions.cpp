@@ -623,10 +623,45 @@ bool CallBase::hasClobberingOperandBundles() const {
          getIntrinsicID() != Intrinsic::assume;
 }
 
+std::optional<RoundingMode> CallBase::getRoundingMode() const {
+  if (auto RoundingBundle = getOperandBundle(LLVMContext::OB_fp_control)) {
+    Value *V = RoundingBundle->Inputs.front();
+    Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return convertStrToRoundingMode(cast<MDString>(MD)->getString(), true);
+  }
+  return std::nullopt;
+}
+
+std::optional<fp::ExceptionBehavior> CallBase::getExceptionBehavior() const {
+  if (auto ExceptionBundle = getOperandBundle(LLVMContext::OB_fp_except)) {
+    Value *V = ExceptionBundle->Inputs.front();
+    Metadata *MD = cast<MetadataAsValue>(V)->getMetadata();
+    return convertStrToExceptionBehavior(cast<MDString>(MD)->getString(), true);
+  }
+  return std::nullopt;
+}
+
+bool CallBase::hasFloatingPointBundles() const {
+  return getOperandBundle(LLVMContext::OB_fp_control) ||
+         getOperandBundle(LLVMContext::OB_fp_except);
+}
+
+MemoryEffects CallBase::getFloatingPointMemoryEffects() const {
+  if (Intrinsic::ID IntrID = getIntrinsicID())
+    if (const BasicBlock *BB = getParent())
+      if (const Function *F = BB->getParent())
+        if (F->hasFnAttribute(Attribute::StrictFP))
+          if (IntrinsicInst::canAccessFPEnvironment(IntrID)) {
+            return MemoryEffects::inaccessibleMemOnly();
+          }
+  return MemoryEffects::none();
+}
+
 MemoryEffects CallBase::getMemoryEffects() const {
   MemoryEffects ME = getAttributes().getMemoryEffects();
   if (auto *Fn = dyn_cast<Function>(getCalledOperand())) {
     MemoryEffects FnME = Fn->getMemoryEffects();
+    FnME |= getFloatingPointMemoryEffects();
     if (hasOperandBundles()) {
       // TODO: Add a method to get memory effects for operand bundles instead.
       if (hasReadingOperandBundles())
@@ -725,6 +760,26 @@ bool CallBase::hasArgumentWithAdditionalReturnCaptureComponents() const {
       return true;
   }
   return false;
+}
+
+void llvm::addFPRoundingBundle(LLVMContext &Ctx,
+                               SmallVectorImpl<OperandBundleDef> &Bundles,
+                               RoundingMode Rounding) {
+  std::optional<StringRef> RndStr = convertRoundingModeToStr(Rounding, true);
+  assert(RndStr && "Garbage rounding mode!");
+  auto *RoundingMDS = MDString::get(Ctx, *RndStr);
+  auto *RM = MetadataAsValue::get(Ctx, RoundingMDS);
+  Bundles.emplace_back("fp.control", RM);
+}
+
+void llvm::addFPExceptionBundle(LLVMContext &Ctx,
+                                SmallVectorImpl<OperandBundleDef> &Bundles,
+                                fp::ExceptionBehavior Except) {
+  std::optional<StringRef> ExcStr = convertExceptionBehaviorToStr(Except, true);
+  assert(ExcStr && "Garbage exception behavior!");
+  auto *ExceptMDS = MDString::get(Ctx, *ExcStr);
+  auto *EB = MetadataAsValue::get(Ctx, ExceptMDS);
+  Bundles.emplace_back("fp.except", EB);
 }
 
 //===----------------------------------------------------------------------===//

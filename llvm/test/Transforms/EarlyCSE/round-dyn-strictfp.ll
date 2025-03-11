@@ -11,7 +11,7 @@ define double @multiple_fadd(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fadd(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0:[0-9]+]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A]], double [[B]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.fadd.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -23,9 +23,9 @@ define double @multiple_fadd(double %a, double %b) #0 {
 define double @multiple_fadd_split(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fadd_split(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    call void @arbitraryfunc() #[[ATTR0]]
+; CHECK-NEXT:    call void @arbitraryfunc() #0
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fadd.f64(double [[A]], double [[B]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.fadd.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -39,7 +39,7 @@ define double @multiple_fsub(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fsub(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A]], double [[B]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.fsub.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -51,9 +51,9 @@ define double @multiple_fsub(double %a, double %b) #0 {
 define double @multiple_fsub_split(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fsub_split(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    call void @arbitraryfunc() #[[ATTR0]]
+; CHECK-NEXT:    call void @arbitraryfunc() #0
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fsub.f64(double [[A]], double [[B]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.fsub.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -67,7 +67,7 @@ define double @multiple_fmul(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fmul(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A]], double [[B]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.fmul.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -79,9 +79,9 @@ define double @multiple_fmul(double %a, double %b) #0 {
 define double @multiple_fmul_split(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fmul_split(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    call void @arbitraryfunc() #[[ATTR0]]
+; CHECK-NEXT:    call void @arbitraryfunc() #0
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fmul.f64(double [[A]], double [[B]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.fmul.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -95,7 +95,7 @@ define double @multiple_fdiv(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fdiv(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A]], double [[B]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -107,9 +107,9 @@ define double @multiple_fdiv(double %a, double %b) #0 {
 define double @multiple_fdiv_split(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_fdiv_split(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    call void @arbitraryfunc() #[[ATTR0]]
+; CHECK-NEXT:    call void @arbitraryfunc() #0
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.fdiv.f64(double [[A]], double [[B]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -123,7 +123,7 @@ define double @multiple_frem(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_frem(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.frem.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.frem.f64(double [[A]], double [[B]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.frem.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -135,9 +135,9 @@ define double @multiple_frem(double %a, double %b) #0 {
 define double @multiple_frem_split(double %a, double %b) #0 {
 ; CHECK-LABEL: @multiple_frem_split(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.frem.f64(double [[A:%.*]], double [[B:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    call void @arbitraryfunc() #[[ATTR0]]
+; CHECK-NEXT:    call void @arbitraryfunc() #0
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.frem.f64(double [[A]], double [[B]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP2]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.frem.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -151,7 +151,7 @@ define double @multiple_uitofp(i32 %a) #0 {
 ; CHECK-LABEL: @multiple_uitofp(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 [[A:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 [[A]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -163,9 +163,9 @@ define double @multiple_uitofp(i32 %a) #0 {
 define double @multiple_uitofp_split(i32 %a) #0 {
 ; CHECK-LABEL: @multiple_uitofp_split(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 [[A:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    call void @arbitraryfunc() #[[ATTR0]]
+; CHECK-NEXT:    call void @arbitraryfunc() #0
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 [[A]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -179,7 +179,7 @@ define double @multiple_sitofp(i32 %a) #0 {
 ; CHECK-LABEL: @multiple_sitofp(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 [[A:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 [[A]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -191,9 +191,9 @@ define double @multiple_sitofp(i32 %a) #0 {
 define double @multiple_sitofp_split(i32 %a) #0 {
 ; CHECK-LABEL: @multiple_sitofp_split(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 [[A:%.*]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    call void @arbitraryfunc() #[[ATTR0]]
+; CHECK-NEXT:    call void @arbitraryfunc() #0
 ; CHECK-NEXT:    [[TMP2:%.*]] = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 [[A]], metadata !"round.dynamic", metadata !"fpexcept.ignore") #[[ATTR0]]
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #[[ATTR0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = call double @foo.f64(double [[TMP1]], double [[TMP1]]) #0
 ; CHECK-NEXT:    ret double [[TMP2]]
 ;
   %1 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.ignore") #0
@@ -204,6 +204,7 @@ define double @multiple_sitofp_split(i32 %a) #0 {
 }
 
 attributes #0 = { strictfp }
+; CHECK: attributes #[[ATTR0]] = { strictfp memory(inaccessiblemem: readwrite) }
 
 declare void @arbitraryfunc() #0
 declare double @foo.f64(double, double) #0

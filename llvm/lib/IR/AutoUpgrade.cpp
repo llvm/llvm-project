@@ -1206,6 +1206,8 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
           F->getParent(), ID, F->getFunctionType()->getReturnType());
       return true;
     }
+    if (Name.starts_with("experimental.constrained."))
+      return true;
     break; // No other 'e*'.
   case 'f':
     if (Name.starts_with("flt.rounds")) {
@@ -4329,6 +4331,53 @@ static void upgradeDbgIntrinsicToDbgRecord(StringRef Name, CallBase *CI) {
   CI->getParent()->insertDbgRecordBefore(DR, CI->getIterator());
 }
 
+static CallBase *upgradeConstrainedIntrinsicCall(CallBase *CB, Function *F,
+                                                 IRBuilder<> &Builder) {
+  if (CB->hasFloatingPointBundles())
+    return nullptr;
+
+  SmallVector<OperandBundleDef, 2> NewBundles;
+
+  auto RM = getRoundingModeArg(*CB);
+  if (RM) {
+    auto CurrentRM = CB->getRoundingMode();
+    assert(!CurrentRM && "unexpected rounding bundle");
+    Builder.createFPRoundingBundle(NewBundles, RM);
+  }
+
+  auto EB = getExceptionBehaviorArg(*CB);
+  if (EB) {
+    auto CurrentEB = CB->getExceptionBehavior();
+    assert(!CurrentEB && "unexpected exception bundle");
+    Builder.createFPExceptionBundle(NewBundles, EB);
+  }
+
+  CallInst *NewCB = nullptr;
+  if (!NewBundles.empty()) {
+    SmallVector<Value *, 4> Args(CB->args());
+    SmallVector<OperandBundleDef, 2> Bundles;
+    CB->getOperandBundlesAsDefs(Bundles);
+    Bundles.append(NewBundles);
+
+    Builder.SetInsertPoint(CB->getParent(), CB->getIterator());
+    NewCB = Builder.CreateCall(F, Args, Bundles, CB->getName());
+    NewCB->copyMetadata(*CB);
+    AttributeList Attrs = CB->getAttributes();
+    NewCB->setAttributes(Attrs);
+    if (isa<FPMathOperator>(CB)) {
+      FastMathFlags FMF = CB->getFastMathFlags();
+      NewCB->setFastMathFlags(FMF);
+    }
+
+    MemoryEffects ME = MemoryEffects::inaccessibleMemOnly();
+    auto A = Attribute::getWithMemoryEffects(CB->getContext(), ME);
+    NewCB->addFnAttr(A);
+    NewCB->addFnAttr(Attribute::StrictFP);
+  }
+
+  return NewCB;
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
@@ -4357,6 +4406,7 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     bool IsARM = Name.consume_front("arm.");
     bool IsAMDGCN = Name.consume_front("amdgcn.");
     bool IsDbg = Name.consume_front("dbg.");
+    bool IsConstrained = Name.consume_front("experimental.constrained.");
     Value *Rep = nullptr;
 
     if (!IsX86 && Name == "stackprotectorcheck") {
@@ -4385,6 +4435,10 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       } else {
         upgradeDbgIntrinsicToDbgRecord(Name, CI);
       }
+    } else if (IsConstrained) {
+      Rep = upgradeConstrainedIntrinsicCall(CI, F, Builder);
+      if (!Rep)
+        return;
     } else {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
@@ -4905,7 +4959,8 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
         UpgradeIntrinsicCall(CB, NewFn);
 
     // Remove old function, no longer used, from the module.
-    F->eraseFromParent();
+    if (NewFn)
+      F->eraseFromParent();
   }
 }
 

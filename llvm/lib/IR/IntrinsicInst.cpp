@@ -66,6 +66,39 @@ bool IntrinsicInst::mayLowerToFunctionCall(Intrinsic::ID IID) {
   }
 }
 
+bool IntrinsicInst::canAccessFPEnvironment(Intrinsic::ID IID) {
+  switch (IID) {
+#define FUNCTION(NAME, A, R, I) case Intrinsic::NAME:
+#include "llvm/IR/ConstrainedOps.def"
+    return true;
+  default:
+    return false;
+  }
+}
+
+std::optional<RoundingMode> llvm::getRoundingModeArg(const CallBase &I) {
+  unsigned NumOperands = I.arg_size();
+  Metadata *MD = nullptr;
+  auto *MAV = dyn_cast<MetadataAsValue>(I.getArgOperand(NumOperands - 2));
+  if (MAV)
+    MD = MAV->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return std::nullopt;
+  return convertStrToRoundingMode(cast<MDString>(MD)->getString());
+}
+
+std::optional<fp::ExceptionBehavior>
+llvm::getExceptionBehaviorArg(const CallBase &I) {
+  unsigned NumOperands = I.arg_size();
+  Metadata *MD = nullptr;
+  auto *MAV = dyn_cast<MetadataAsValue>(I.getArgOperand(NumOperands - 1));
+  if (MAV)
+    MD = MAV->getMetadata();
+  if (!MD || !isa<MDString>(MD))
+    return std::nullopt;
+  return convertStrToExceptionBehavior(cast<MDString>(MD)->getString());
+}
+
 //===----------------------------------------------------------------------===//
 /// DbgVariableIntrinsic - This is the common base class for debug info
 /// intrinsics for variables.
@@ -271,29 +304,6 @@ Value *InstrProfCallsite::getCallee() const {
 void InstrProfCallsite::setCallee(Value *Callee) {
   assert(isa<InstrProfCallsite>(this));
   setArgOperand(4, Callee);
-}
-
-std::optional<RoundingMode> ConstrainedFPIntrinsic::getRoundingMode() const {
-  unsigned NumOperands = arg_size();
-  Metadata *MD = nullptr;
-  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 2));
-  if (MAV)
-    MD = MAV->getMetadata();
-  if (!MD || !isa<MDString>(MD))
-    return std::nullopt;
-  return convertStrToRoundingMode(cast<MDString>(MD)->getString());
-}
-
-std::optional<fp::ExceptionBehavior>
-ConstrainedFPIntrinsic::getExceptionBehavior() const {
-  unsigned NumOperands = arg_size();
-  Metadata *MD = nullptr;
-  auto *MAV = dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 1));
-  if (MAV)
-    MD = MAV->getMetadata();
-  if (!MD || !isa<MDString>(MD))
-    return std::nullopt;
-  return convertStrToExceptionBehavior(cast<MDString>(MD)->getString());
 }
 
 bool ConstrainedFPIntrinsic::isDefaultFPEnvironment() const {
