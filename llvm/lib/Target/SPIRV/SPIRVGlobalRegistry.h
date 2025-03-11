@@ -17,7 +17,7 @@
 #define LLVM_LIB_TARGET_SPIRV_SPIRVTYPEMANAGER_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
-#include "SPIRVDuplicatesTracker.h"
+#include "SPIRVIRMapping.h"
 #include "SPIRVInstrInfo.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/IR/Constant.h"
@@ -27,7 +27,7 @@ namespace llvm {
 class SPIRVSubtarget;
 using SPIRVType = const MachineInstr;
 
-class SPIRVGlobalRegistry : public SPIRVIRMap {
+class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Registers holding values which have types associated with them.
   // Initialized upon VReg definition in IRTranslator.
   // Do not confuse this with DuplicatesTracker as DT maps Type* to <MF, Reg>
@@ -454,12 +454,6 @@ private:
   getOrCreateSpecialType(const Type *Ty, MachineIRBuilder &MIRBuilder,
                          SPIRV::AccessQualifier::AccessQualifier AccQual);
 
-  std::tuple<Register, ConstantInt *, bool, unsigned> getOrCreateConstIntReg(
-      uint64_t Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
-      MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
-  std::tuple<Register, ConstantFP *, bool, unsigned> getOrCreateConstFloatReg(
-      APFloat Val, SPIRVType *SpvType, MachineIRBuilder *MIRBuilder,
-      MachineInstr *I = nullptr, const SPIRVInstrInfo *TII = nullptr);
   SPIRVType *finishCreatingSPIRVType(const Type *LLVMTy, SPIRVType *SpirvType);
   Register getOrCreateBaseRegister(Constant *Val, MachineInstr &I,
                                    SPIRVType *SpvType,

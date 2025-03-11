@@ -11,8 +11,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVDUPLICATESTRACKER_H
-#define LLVM_LIB_TARGET_SPIRV_SPIRVDUPLICATESTRACKER_H
+#ifndef LLVM_LIB_TARGET_SPIRV_SPIRVIRMAPPING_H
+#define LLVM_LIB_TARGET_SPIRV_SPIRVIRMAPPING_H
 
 #include "MCTargetDesc/SPIRVBaseInfo.h"
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
@@ -118,7 +118,7 @@ inline IRHandle make_descr_ptr(const void *Ptr) {
 // Bi-directional mappings between LLVM entities and (v-reg, machine function)
 // pairs support management of unique SPIR-V definitions per machine function
 // per an LLVM/GlobalISel entity (e.g., Type, Constant, Machine Instruction).
-class SPIRVIRMap {
+class SPIRVIRMapping {
   DenseMap < std::pair<IRHandle, const MachineFunction *>,
       const MachineInstr *MI >> Vregs;
   DenseMap<const MachineInstr *, IRHandle> Defs;
@@ -176,4 +176,4 @@ public:
   }
 };
 } // namespace llvm
-#endif // LLVM_LIB_TARGET_SPIRV_SPIRVDUPLICATESTRACKER_H
+#endif // LLVM_LIB_TARGET_SPIRV_SPIRVIRMAPPING_H
