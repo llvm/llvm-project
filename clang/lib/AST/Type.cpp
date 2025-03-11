@@ -410,6 +410,12 @@ VectorType::VectorType(TypeClass tc, QualType vecType, unsigned nElements,
   VectorTypeBits.NumElements = nElements;
 }
 
+bool Type::isPackedVectorBoolType(const ASTContext &ctx) const {
+  if (ctx.getLangOpts().HLSL)
+    return false;
+  return isExtVectorBoolType();
+}
+
 BitIntType::BitIntType(bool IsUnsigned, unsigned NumBits)
     : Type(BitInt, QualType{}, TypeDependence::None), IsUnsigned(IsUnsigned),
       NumBits(NumBits) {}
@@ -5112,6 +5118,10 @@ bool Type::hasSizedVLAType() const {
   }
 
   return false;
+}
+
+bool Type::isHLSLResourceRecord() const {
+  return HLSLAttributedResourceType::findHandleTypeOnResource(this) != nullptr;
 }
 
 bool Type::isHLSLIntangibleType() const {

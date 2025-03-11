@@ -89,6 +89,7 @@ executable("lldb-dap") {
     "LLDBUtils.cpp",
     "OutputRedirector.cpp",
     "ProgressEvent.cpp",
+    "Protocol.cpp",
     "RunInTerminal.cpp",
     "SourceBreakpoint.cpp",
     "Watchpoint.cpp",

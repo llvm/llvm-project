@@ -138,4 +138,7 @@ let TargetPrefix = "spv" in {
   def int_spv_resource_store_typedbuffer
     : DefaultAttrsIntrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_anyvector_ty]>;
 
+  // Memory aliasing intrinsics
+  def int_spv_assign_aliasing_decoration : Intrinsic<[], [llvm_any_ty, llvm_i32_ty, llvm_metadata_ty], [ImmArg<ArgIndex<1>>]>;
+
 }
