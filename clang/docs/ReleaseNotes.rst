@@ -79,6 +79,8 @@ C++2c Feature Support
 
 - Implemented `P1061R10 Structured Bindings can introduce a Pack <https://wg21.link/P1061R10>`_.
 
+- Implemented `P0963R3 Structured binding declaration as a condition <https://wg21.link/P0963R3>`_.
+
 C++23 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
 
