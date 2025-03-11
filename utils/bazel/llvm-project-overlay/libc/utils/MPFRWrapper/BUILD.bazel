@@ -28,6 +28,7 @@ cc_library(
 
 libc_test_library(
     name = "mp_common",
+    testonly = 1,
     srcs = ["MPCommon.cpp"],
     hdrs = ["MPCommon.h"],
     # Disable layering check when using mpfr_system.
