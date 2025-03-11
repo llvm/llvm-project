@@ -32,9 +32,15 @@ namespace xegpu {
 using namespace mlir;
 using namespace mlir::dataflow;
 
-constexpr unsigned subgroupSize = 16;
-constexpr unsigned packedASizeInBits = 16;
-constexpr unsigned packedBSizeInBits = 32;
+/// HW dependent constants.
+/// TODO: These constants should be queried from the uArch interface.
+constexpr unsigned subgroupSize = 16; // How many work items in a subgroup.
+/// If DPAS A or B operands have low precision element types they must be packed
+/// according to the following sizes.
+constexpr unsigned packedSizeInBitsForDefault =
+    16; // Minimum packing size per register for DPAS A.
+constexpr unsigned packedSizeInBitsForDpasB =
+    32; // Minimum packing size per register for DPAS B.
 
 namespace {
 
@@ -51,13 +57,18 @@ struct Layout {
   Layout(std::initializer_list<int64_t> list) : layout(list) {}
   void print(llvm::raw_ostream &os) const;
   size_t size() const { return layout.size(); }
-  int64_t operator[](size_t idx) const { return layout[idx]; }
+  int64_t operator[](size_t idx) const;
 };
 
 void Layout::print(llvm::raw_ostream &os) const {
   os << "[";
   llvm::interleaveComma(layout, os);
   os << "]";
+}
+
+int64_t Layout::operator[](size_t idx) const {
+  assert(idx < layout.size() && "Index out of bounds.");
+  return layout[idx];
 }
 
 /// WiLayout represents the layout of work items within a subgroup when it
@@ -86,14 +97,14 @@ using WiData = Layout;
 
 struct SGMap {
 private:
-  WiLayout layout;
-  WiData data;
+  WiLayout wiLayout;
+  WiData wiData;
 
 public:
   SGMap() = default;
   SGMap(const SGMap &other) = default;
   SGMap(const WiLayout &layout, const WiData &data)
-      : layout(layout), data(data) {}
+      : wiLayout(layout), wiData(data) {}
 
   /// Two lattice values are equal if they have `some` layout. The actual
   /// content of the layout does not matter.
@@ -107,20 +118,20 @@ public:
 
   void print(raw_ostream &os) const;
 
-  bool isAssigned() const { return layout.size() > 0 && data.size() > 0; }
+  bool isAssigned() const { return wiLayout.size() > 0 && wiData.size() > 0; }
 
   SGMap getTransposedLayout(ArrayRef<int64_t> permutation) const;
 
-  const WiLayout &getLayout() const { return layout; }
-  const WiData &getData() const { return data; }
+  const WiLayout &getLayout() const { return wiLayout; }
+  const WiData &getData() const { return wiData; }
 };
 
 void SGMap::print(raw_ostream &os) const {
   if (isAssigned()) {
     os << "wi_layout: ";
-    layout.print(os);
+    wiLayout.print(os);
     os << ", wi_data: ";
-    data.print(os);
+    wiData.print(os);
   } else
     os << "Not assigned.";
 }
@@ -143,8 +154,8 @@ SGMap SGMap::getTransposedLayout(ArrayRef<int64_t> permutation) const {
   WiLayout newLayout;
   WiData newData;
   for (auto idx : permutation) {
-    newLayout.layout.push_back(layout.layout[idx]);
-    newData.layout.push_back(data.layout[idx]);
+    newLayout.layout.push_back(wiLayout.layout[idx]);
+    newData.layout.push_back(wiData.layout[idx]);
   }
   return SGMap(newLayout, newData);
 }
@@ -159,33 +170,14 @@ struct SGMapLattice : public Lattice<SGMap> {
   using Lattice::Lattice;
 };
 
-/// Helper Functions
-
-/// Helper Function to get the expected layouts for DPAS operands.
-static SGMap getSGMapForDPASOperand(Type operandTy, unsigned operandNum) {
-  int packingFactorForB = packedBSizeInBits / operandTy.getIntOrFloatBitWidth();
-  int packingFactorForA =
-      operandTy.getIntOrFloatBitWidth() < packedBSizeInBits
-          ? packedASizeInBits / operandTy.getIntOrFloatBitWidth()
-          : 1;
-  return SGMap(WiLayout({1, subgroupSize}),
-               WiData({operandNum == 1 ? packingFactorForB : 1,
-                       operandNum == 0 ? packingFactorForA : 1}));
-}
-
-/// Helper Function to get the default layout for a given type. Usually this is,
-/// wi_layout = [1, subgroupSize] and wi_data = [1, 1].
-/// However, the minimum granularity of data access per work item is 16-bits.
-/// So, if the bitwidth of the type is less than 16, we need to pack the data to
-/// 16-bits.
-// static SGMap getDefaultSgMap(Type ty, unsigned rank) {
-//   int packingFactor = 1;
-//   if (ty.getIntOrFloatBitWidth() < packedASizeInBits)
-//     packingFactor = packedBSizeInBits / ty.getIntOrFloatBitWidth();
-//   return SGMap(WiLayout({1, subgroupSize}), WiData({1, packingFactor}));
-// }
+/// Helper Functions to get default layouts. A `default layout` is a layout that
+/// is assigned to a value when the layout is not fixed by some anchor operation
+/// (like DPAS). This is the natural layout work items are arranged in a
+/// subgroup.
 
 /// Helper Function to get the default layout for uniform values like constants.
+/// For 1D vector, wi_layout is [subgroupSize] and wi_data is [1].
+/// For 2D vector, wi_layout is [1, subgroupSize] and wi_data is [1, 1].
 static SGMap getDefaultSgMap(unsigned rank) {
   assert((rank == 1 || rank == 2) && "Expected 0D or 1D vector.");
   if (rank == 1)
@@ -193,18 +185,44 @@ static SGMap getDefaultSgMap(unsigned rank) {
   return SGMap(WiLayout({1, subgroupSize}), WiData({1, 1}));
 }
 
+/// Helper to get the default layout for a vector type.
 static SGMap getDefaultSgMap(VectorType vectorTy) {
   /// Expecting a 1D or 2D vector.
   assert((vectorTy.getRank() == 1 || vectorTy.getRank() == 2) &&
          "Expected 1D or 2D vector.");
+  /// Expecting int or float element type.
+  assert(vectorTy.getElementType().isIntOrFloat() &&
+         "Expected int or float element type.");
   /// If the rank is 1, then return default layout for 1D vector.
   if (vectorTy.getRank() == 1)
     return getDefaultSgMap(1);
+  /// Packing factor is determined by the element type bitwidth.
   int packingFactor = 1;
   auto bitwidth = vectorTy.getElementType().getIntOrFloatBitWidth();
-  if (bitwidth < packedASizeInBits)
-    packingFactor = packedBSizeInBits / bitwidth;
+  if (bitwidth < packedSizeInBitsForDefault)
+    packingFactor = packedSizeInBitsForDefault / bitwidth;
   return SGMap(WiLayout({1, subgroupSize}), WiData({1, packingFactor}));
+}
+
+/// Helper Function to get the expected layouts for DPAS operands. `wi_data` is
+/// set according to the following criteria:
+/// * For A operand, the data must be packed in minimum `packedDpasASizeInBits`
+/// * For B operand, the data must be packed in minimum `packedDpasBSizeInBits`
+static SGMap getSGMapForDPASOperand(VectorType vectorTy, unsigned operandNum) {
+  auto elementTy = vectorTy.getElementType();
+  assert(elementTy.isIntOrFloat() &&
+         "Expected int or float type in DPAS operands");
+  WiLayout layout({1, subgroupSize});
+  /// For B operand, data must be packed in minimum `packedDpasBSizeInBits` and
+  /// must have the VNNI format.
+  if (operandNum == 1 &&
+      elementTy.getIntOrFloatBitWidth() < packedSizeInBitsForDpasB) {
+    WiData data(
+        {packedSizeInBitsForDpasB / elementTy.getIntOrFloatBitWidth(), 1});
+    return SGMap(layout, data);
+  }
+  /// Otherwise, return the default layout for the vector type.
+  return getDefaultSgMap(vectorTy);
 }
 
 ///===----------------------------------------------------------------------===///
@@ -360,14 +378,14 @@ void SGMapPropagation::visitUpdateNdOffsetOp(
 void SGMapPropagation::visitDpasOp(xegpu::DpasOp dpas,
                                    ArrayRef<SGMapLattice *> operands,
                                    ArrayRef<const SGMapLattice *> results) {
-  auto aTy = dpas.getLhsType().getElementType();
-  auto bTy = dpas.getRhsType().getElementType();
+  auto aTy = dpas.getLhsType();
+  auto bTy = dpas.getRhsType();
   propagateIfChanged(operands[0],
                      operands[0]->meet(getSGMapForDPASOperand(aTy, 0)));
   propagateIfChanged(operands[1],
                      operands[1]->meet(getSGMapForDPASOperand(bTy, 1)));
   if (operands.size() > 2) {
-    auto cTy = dpas.getAccType().getElementType();
+    auto cTy = dpas.getAccType();
     propagateIfChanged(operands[2],
                        operands[2]->meet(getSGMapForDPASOperand(cTy, 2)));
   }
