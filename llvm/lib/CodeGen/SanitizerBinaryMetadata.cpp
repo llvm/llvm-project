@@ -26,6 +26,8 @@
 using namespace llvm;
 
 namespace {
+// FIXME: This pass modifies Function metadata, which is not to be done in
+// MachineFunctionPass. It should probably be moved to a FunctionPass.
 class MachineSanitizerBinaryMetadataLegacy : public MachineFunctionPass {
 public:
   static char ID;
@@ -63,6 +65,7 @@ MachineSanitizerBinaryMetadataPass::run(MachineFunction &MF,
                                         MachineFunctionAnalysisManager &MFAM) {
   if (!MachineSanitizerBinaryMetadata().run(MF))
     return PreservedAnalyses::all();
+
   return getMachineFunctionPassPreservedAnalyses();
 }
 
