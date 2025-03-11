@@ -142,10 +142,8 @@ NativeProcessAIX::NativeProcessAIX(::pid_t pid, int terminal_fd,
     : NativeProcessProtocol(pid, terminal_fd, delegate), m_manager(manager),
       m_arch(arch) {
   manager.AddProcess(*this);
-  if (m_terminal_fd != -1) {
-    llvm::Error error = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
-    assert(!error && "terminal fd invalid");
-  }
+  if (m_terminal_fd != -1)
+    cantFail(EnsureFDFlags(m_terminal_fd, O_NONBLOCK));
 
   // Let our process instance know the thread has stopped.
   SetCurrentThreadID(tids[0]);
@@ -160,8 +158,7 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
 
   int wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, nullptr, WNOHANG);
   if (wpid <= 0) {
-    return llvm::errorCodeToError(
-        std::error_code(errno, std::generic_category()));
+    return llvm::errorCodeToError(errnoAsErrorCode());
   }
   LLDB_LOG(log, "adding pid = {0}", pid);
 
@@ -176,27 +173,15 @@ Status NativeProcessAIX::Resume(const ResumeActionList &resume_actions) {
   return Status();
 }
 
-Status NativeProcessAIX::Halt() {
-  Status error;
-  return error;
-}
+Status NativeProcessAIX::Halt() { return Status(); }
 
-Status NativeProcessAIX::Detach() {
-  Status error;
-  return error;
-}
+Status NativeProcessAIX::Detach() { return Status(); }
 
-Status NativeProcessAIX::Signal(int signo) {
-  Status error;
-  return error;
-}
+Status NativeProcessAIX::Signal(int signo) { return Status(); }
 
 Status NativeProcessAIX::Interrupt() { return Status(); }
 
-Status NativeProcessAIX::Kill() {
-  Status error;
-  return error;
-}
+Status NativeProcessAIX::Kill() { return Status(); }
 
 Status NativeProcessAIX::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                     size_t &bytes_read) {
