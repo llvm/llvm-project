@@ -1,4 +1,4 @@
-//===-- Half-precision acoshf16 function -----------------------------------===//
+//===-- Half-precision acoshf16 function ----------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -38,7 +38,7 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   // Check for NaN input first.
   if (LIBC_UNLIKELY(xbits.is_nan())) {
     if (xbits.is_signaling_nan()) {
-      fputil::raise_except(FE_INVALID);
+      fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
     }
     return x;
@@ -48,7 +48,7 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   if (LIBC_UNLIKELY(xbits.is_inf())) {
     if (xbits.is_neg()) {
       fputil::set_errno_if_required(EDOM);
-      fputil::raise_except(FE_INVALID);
+      fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
     }
     return x;
@@ -57,36 +57,36 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   // Domain error for inputs less than 1.0.
   if (LIBC_UNLIKELY(x_abs < 0x3c00)) {
     fputil::set_errno_if_required(EDOM);
-    fputil::raise_except(FE_INVALID);
+    fputil::raise_except_if_required(FE_INVALID);
     return FPBits::quiet_nan().get_val();
   }
 
   // acosh(1.0) exactly equals 0.0
-  if (LIBC_UNLIKELY(xbits.uintval() == 0x3c00U))
+  if (LIBC_UNLIKELY(x_u == 0x3c00U))
     return float16(0.0f);
 
   float xf32 = static_cast<float>(x);
 
   // High precision for inputs very close to 1.0
-  if (LIBC_UNLIKELY(xf32 < 1.25f)) {
-    float delta = xf32 - 1.0f;
-    float sqrt_2 = fputil::sqrt<float>(2.0f * delta);
-    float sqrt_2d = fputil::sqrt<float>(2.0f * delta);
-    float d32 = delta * fputil::sqrt<float>(delta);
-    float term2 = d32 / (6.0f * fputil::sqrt<float>(2.0f));
-    float d52 = d32 * delta;
-    float term3 = 3.0f * d52 / (80.0f * sqrt_2);
-    float d72 = d52 * delta;
-    float term4 = 5.0f * d72 / (1792.0f * sqrt_2);
-    float result = sqrt_2d - term2 + term3 - term4;
-    return fputil::cast<float16>(result);
-  }
+  // if (LIBC_UNLIKELY(xf32 < 1.25f)) {
+  //   float delta = xf32 - 1.0f;
+  //   float sqrt_2 = fputil::sqrt<float>(2.0f * delta);
+  //   float sqrt_2d = fputil::sqrt<float>(2.0f * delta);
+  //   float d32 = delta * fputil::sqrt<float>(delta);
+  //   float term2 = d32 / (6.0f * fputil::sqrt<float>(2.0f));
+  //   float d52 = d32 * delta;
+  //   float term3 = 3.0f * d52 / (80.0f * sqrt_2);
+  //   float d72 = d52 * delta;
+  //   float term4 = 5.0f * d72 / (1792.0f * sqrt_2);
+  //   float result = sqrt_2d - term2 + term3 - term4;
+  //   return fputil::cast<float16>(result);
+  // }
 
   // Special optimization for large input values.
-  if (LIBC_UNLIKELY(xf32 >= 32.0f)) {
-    float result = static_cast<float>(log_eval(2.0f * xf32));
-    return fputil::cast<float16>(result);
-  }
+  // if (LIBC_UNLIKELY(xf32 >= 32.0f)) {
+  //   float result = static_cast<float>(log_eval(2.0f * xf32));
+  //   return fputil::cast<float16>(result);
+  // }
 
   // Standard computation for general case.
   float sqrt_term = fputil::sqrt<float>(fputil::multiply_add(xf32, xf32, -1.0f));

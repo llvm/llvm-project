@@ -17,6 +17,9 @@
 using LlvmLibcAcoshf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
+static constexpr uint16_t START = 0x3c00U;
+static constexpr uint16_t STOP  = 0x7bffU;
+
 TEST_F(LlvmLibcAcoshf16Test, SpecialNumbers) {
   LIBC_NAMESPACE::libc_errno = 0;
 
@@ -40,21 +43,12 @@ TEST_F(LlvmLibcAcoshf16Test, SpecialNumbers) {
   EXPECT_MATH_ERRNO(EDOM);
 }
 
-TEST_F(LlvmLibcAcoshf16Test, InFloat16Range) {
-  constexpr uint32_t COUNT = 100'000;
-  constexpr uint32_t STEP = UINT32_MAX / COUNT;
+TEST_F(LlvmLibcAcoshf16Test, PositiveRange) {
+  for (uint16_t v = START; v <= STOP; ++v) {
+    float16 x = FPBits(v).get_val();
 
-  for (uint32_t i = 0, v = 0; i <= COUNT; ++i, v += STEP) {
-    LIBC_NAMESPACE::fputil::FPBits<float> bits(v);
-    float xf32 = bits.get_val();
-    if (bits.is_nan() || bits.is_inf())
-      continue;
-    if (xf32 < 1.0f)
-      continue;
-    float16 xh = LIBC_NAMESPACE::fputil::cast<float16>(xf32);
-
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acosh, xh,
-                                   LIBC_NAMESPACE::acoshf16(xh), 3.0);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acosh, x,
+                                   LIBC_NAMESPACE::acoshf16(x), 3.0);
   }
 }
 
