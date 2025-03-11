@@ -91,9 +91,17 @@ bool tryToFindPtrOrigin(
       }
 
       if (auto *operatorCall = dyn_cast<CXXOperatorCallExpr>(E)) {
-        if (operatorCall->getNumArgs() == 1) {
-          E = operatorCall->getArg(0);
-          continue;
+        if (auto *Callee = operatorCall->getDirectCallee()) {
+          auto ClsName = safeGetName(Callee->getParent());
+          if (isRefType(ClsName) || isCheckedPtr(ClsName) ||
+              isRetainPtr(ClsName) || ClsName == "unique_ptr" ||
+              ClsName == "UniqueRef" || ClsName == "WeakPtr" ||
+              ClsName == "WeakRef") {
+            if (operatorCall->getNumArgs() == 1) {
+              E = operatorCall->getArg(0);
+              continue;
+            }
+          }
         }
       }
 
@@ -215,7 +223,7 @@ bool EnsureFunctionAnalysis::isACallToEnsureFn(const clang::Expr *E) const {
   if (!Callee)
     return false;
   auto *Body = Callee->getBody();
-  if (!Body)
+  if (!Body || Callee->isVirtualAsWritten())
     return false;
   auto [CacheIt, IsNew] = Cache.insert(std::make_pair(Callee, false));
   if (IsNew)

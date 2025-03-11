@@ -656,8 +656,8 @@ iterator_range<early_inc_iterator_impl<detail::IterOfRange<RangeT>>>
 make_early_inc_range(RangeT &&Range) {
   using EarlyIncIteratorT =
       early_inc_iterator_impl<detail::IterOfRange<RangeT>>;
-  return make_range(EarlyIncIteratorT(std::begin(std::forward<RangeT>(Range))),
-                    EarlyIncIteratorT(std::end(std::forward<RangeT>(Range))));
+  return make_range(EarlyIncIteratorT(adl_begin(Range)),
+                    EarlyIncIteratorT(adl_end(Range)));
 }
 
 // Forward declarations required by zip_shortest/zip_equal/zip_first/zip_longest
@@ -1110,8 +1110,8 @@ public:
   /// We need the full range to know how to switch between each of the
   /// iterators.
   template <typename... RangeTs>
-  explicit concat_iterator(RangeTs &&... Ranges)
-      : Begins(std::begin(Ranges)...), Ends(std::end(Ranges)...) {}
+  explicit concat_iterator(RangeTs &&...Ranges)
+      : Begins(adl_begin(Ranges)...), Ends(adl_end(Ranges)...) {}
 
   using BaseT::operator++;
 
@@ -1140,13 +1140,12 @@ template <typename ValueT, typename... RangeTs> class concat_range {
 public:
   using iterator =
       concat_iterator<ValueT,
-                      decltype(std::begin(std::declval<RangeTs &>()))...>;
+                      decltype(adl_begin(std::declval<RangeTs &>()))...>;
 
 private:
   std::tuple<RangeTs...> Ranges;
 
-  template <size_t... Ns>
-  iterator begin_impl(std::index_sequence<Ns...>) {
+  template <size_t... Ns> iterator begin_impl(std::index_sequence<Ns...>) {
     return iterator(std::get<Ns>(Ranges)...);
   }
   template <size_t... Ns>
@@ -1154,12 +1153,12 @@ private:
     return iterator(std::get<Ns>(Ranges)...);
   }
   template <size_t... Ns> iterator end_impl(std::index_sequence<Ns...>) {
-    return iterator(make_range(std::end(std::get<Ns>(Ranges)),
-                               std::end(std::get<Ns>(Ranges)))...);
+    return iterator(make_range(adl_end(std::get<Ns>(Ranges)),
+                               adl_end(std::get<Ns>(Ranges)))...);
   }
   template <size_t... Ns> iterator end_impl(std::index_sequence<Ns...>) const {
-    return iterator(make_range(std::end(std::get<Ns>(Ranges)),
-                               std::end(std::get<Ns>(Ranges)))...);
+    return iterator(make_range(adl_end(std::get<Ns>(Ranges)),
+                               adl_end(std::get<Ns>(Ranges)))...);
   }
 
 public:
@@ -2125,7 +2124,7 @@ void append_values(Container &C, Args &&...Values) {
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
 /// the range [ValIt, ValEnd) (which is not from the same container).
-template<typename Container, typename RandomAccessIterator>
+template <typename Container, typename RandomAccessIterator>
 void replace(Container &Cont, typename Container::iterator ContIt,
              typename Container::iterator ContEnd, RandomAccessIterator ValIt,
              RandomAccessIterator ValEnd) {
@@ -2133,21 +2132,24 @@ void replace(Container &Cont, typename Container::iterator ContIt,
     if (ValIt == ValEnd) {
       Cont.erase(ContIt, ContEnd);
       return;
-    } else if (ContIt == ContEnd) {
+    }
+    if (ContIt == ContEnd) {
       Cont.insert(ContIt, ValIt, ValEnd);
       return;
     }
-    *ContIt++ = *ValIt++;
+    *ContIt = *ValIt;
+    ++ContIt;
+    ++ValIt;
   }
 }
 
 /// Given a sequence container Cont, replace the range [ContIt, ContEnd) with
 /// the range R.
-template<typename Container, typename Range = std::initializer_list<
-                                 typename Container::value_type>>
+template <typename Container, typename Range = std::initializer_list<
+                                  typename Container::value_type>>
 void replace(Container &Cont, typename Container::iterator ContIt,
-             typename Container::iterator ContEnd, Range R) {
-  replace(Cont, ContIt, ContEnd, R.begin(), R.end());
+             typename Container::iterator ContEnd, Range &&R) {
+  replace(Cont, ContIt, ContEnd, adl_begin(R), adl_end(R));
 }
 
 /// An STL-style algorithm similar to std::for_each that applies a second
@@ -2560,19 +2562,19 @@ bool hasNItemsOrLess(
 
 /// Returns true if the given container has exactly N items
 template <typename ContainerTy> bool hasNItems(ContainerTy &&C, unsigned N) {
-  return hasNItems(std::begin(C), std::end(C), N);
+  return hasNItems(adl_begin(C), adl_end(C), N);
 }
 
 /// Returns true if the given container has N or more items
 template <typename ContainerTy>
 bool hasNItemsOrMore(ContainerTy &&C, unsigned N) {
-  return hasNItemsOrMore(std::begin(C), std::end(C), N);
+  return hasNItemsOrMore(adl_begin(C), adl_end(C), N);
 }
 
 /// Returns true if the given container has N or less items
 template <typename ContainerTy>
 bool hasNItemsOrLess(ContainerTy &&C, unsigned N) {
-  return hasNItemsOrLess(std::begin(C), std::end(C), N);
+  return hasNItemsOrLess(adl_begin(C), adl_end(C), N);
 }
 
 /// Returns a raw pointer that represents the same address as the argument.
