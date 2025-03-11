@@ -32,7 +32,7 @@ using namespace clang;
 void clang::mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
                                  bool isInstanceMethod, StringRef ClassName,
                                  std::optional<StringRef> CategoryName,
-                                 StringRef MethodName, bool isThunk) {
+                                 StringRef MethodName, bool isNilCheckThunk) {
   // \01+[ContainerName(CategoryName) SelectorName]
   if (includePrefixByte)
     OS << "\01";
@@ -44,7 +44,7 @@ void clang::mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
   OS << " ";
   OS << MethodName;
   OS << ']';
-  if (!isThunk)
+  if (!isNilCheckThunk)
     OS << "_nonnull";
 }
 // FIXME: For blocks we currently mimic GCC's mangling scheme, which leaves
