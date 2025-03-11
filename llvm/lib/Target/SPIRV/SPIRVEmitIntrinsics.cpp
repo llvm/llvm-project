@@ -2017,7 +2017,7 @@ void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
     processMemAliasingDecoration(LLVMContext::MD_noalias);
   }
   // MD_fpmath
-  if (MDNode *MD = I->getMetadata("fpmath")) {
+  if (MDNode *MD = I->getMetadata(LLVMContext::MD_fpmath)) {
     const SPIRVSubtarget *STI = TM->getSubtargetImpl(*I->getFunction());
     bool AllowFPMaxError =
         STI->canUseExtension(SPIRV::Extension::SPV_INTEL_fp_max_error);
