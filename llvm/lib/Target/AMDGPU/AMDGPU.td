@@ -2765,8 +2765,6 @@ def HasLdsBarrierArriveAtomic : Predicate<"Subtarget->hasLdsBarrierArriveAtomic(
 def HasSetPrioIncWgInst : Predicate<"Subtarget->hasSetPrioIncWgInst()">,
  AssemblerPredicate<(all_of FeatureSetPrioIncWgInst)>;
 
-def IsWholeWaveFunction : Predicate<"Subtarget->isWholeWaveFunction()">;
-
 // Include AMDGPU TD files
 include "SISchedule.td"
 include "GCNProcessors.td"
