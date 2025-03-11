@@ -223,11 +223,16 @@ public:
     const llvm::StructLayout *Layout = DL.getStructLayout(ElTy);
     auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
 
-    return Address(CreateStructGEP(Addr.getElementType(), Addr.getBasePointer(),
-                                   Index, Name),
-                   ElTy->getElementType(Index),
-                   Addr.getAlignment().alignmentAtOffset(Offset),
-                   Addr.isKnownNonNull());
+    // Specially, we don't add inbounds flags if the base pointer is null.
+    // This is a workaround for old-style offsetof macros.
+    llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::noUnsignedWrap();
+    if (!isa<llvm::ConstantPointerNull>(Addr.getBasePointer()))
+      NWFlags |= llvm::GEPNoWrapFlags::inBounds();
+    return Address(
+        CreateConstGEP2_32(Addr.getElementType(), Addr.getBasePointer(), 0,
+                           Index, Name, NWFlags),
+        ElTy->getElementType(Index),
+        Addr.getAlignment().alignmentAtOffset(Offset), Addr.isKnownNonNull());
   }
 
   /// Given
