@@ -28,6 +28,10 @@ define amdgpu_ps <2 x float> @test_sub_u64_vs(i64 %a, i64 inreg %b) {
 ; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    ; return to shader part epilog
 ;
+; GFX_LIT64-LABEL: test_sub_u64_vs:
+; GFX_LIT64:       ; %bb.0:
+; GFX_LIT64-NEXT:    v_sub_nc_u64_e64 v[0:1], v[0:1], s[0:1]
+; GFX_LIT64-NEXT:    ; return to shader part epilog
   %sub = sub i64 %a, %b
   %ret = bitcast i64 %sub to <2 x float>
   ret <2 x float> %ret
@@ -123,7 +127,7 @@ define amdgpu_ps <2 x float> @test_sub_u64_64bit_imm_v(i64 %a) {
 ;
 ; GFX_LIT64-LABEL: test_sub_u64_64bit_imm_v:
 ; GFX_LIT64:       ; %bb.0:
-; GFX_LIT64-NEXT:    v_sub_nc_u64_e32 v[0:1], 0x13b9ac9ff, v[0:1]
+; GFX_LIT64-NEXT:    v_sub_nc_u64_e32 v[0:1], lit64(0x13b9ac9ff), v[0:1]
 ; GFX_LIT64-NEXT:    ; return to shader part epilog
   %sub = sub i64 5294967295, %a
   %ret = bitcast i64 %sub to <2 x float>

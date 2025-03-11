@@ -23,7 +23,7 @@ define amdgpu_cs void @test64_constant_all() {
 ; CHECK-NEXT:    s_mov_to_global_b64 s[12:13], 0
 ; CHECK-NEXT:    s_mov_to_global_b64 s[14:15], 1
 ; CHECK-NEXT:    s_mov_to_global_b64 s[16:17], 0xfffff
-; CHECK-NEXT:    s_mov_to_global_b64 s[18:19], 0x100000000
+; CHECK-NEXT:    s_mov_to_global_b64 s[18:19], lit64(0x100000000)
 ; CHECK-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.mov.to.global.i64(i16 12, i64 0, i32 1280)
   call void @llvm.amdgcn.s.mov.to.global.i64(i16 14, i64 1, i32 1280)

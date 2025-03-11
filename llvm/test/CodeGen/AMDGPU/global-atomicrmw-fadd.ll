@@ -9468,7 +9468,7 @@ define half @global_agent_atomic_fadd_ret_f16__offset12b_neg__amdgpu_no_fine_gra
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_mov_b64 s[0:1], 0xfffffffffffff800
+; GFX1250-NEXT:    s_mov_b64 s[0:1], lit64(0xfffffffffffff800)
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[4:5], s[0:1], v[0:1]
 ; GFX1250-NEXT:    s_mov_b32 s0, 0
@@ -10606,7 +10606,7 @@ define void @global_agent_atomic_fadd_noret_f16__offset12b_neg__amdgpu_no_fine_g
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_mov_b64 s[0:1], 0xfffffffffffff800
+; GFX1250-NEXT:    s_mov_b64 s[0:1], lit64(0xfffffffffffff800)
 ; GFX1250-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[4:5], s[0:1], v[0:1]
 ; GFX1250-NEXT:    s_mov_b32 s0, 0
@@ -13224,7 +13224,7 @@ define bfloat @global_agent_atomic_fadd_ret_bf16__offset12b_neg__amdgpu_no_fine_
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_mov_b64 s[0:1], 0xfffffffffffff800
+; GFX1250-NEXT:    s_mov_b64 s[0:1], lit64(0xfffffffffffff800)
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[4:5], s[0:1], v[0:1]
 ; GFX1250-NEXT:    s_mov_b32 s0, 0
@@ -14538,7 +14538,7 @@ define void @global_agent_atomic_fadd_noret_bf16__offset12b_neg__amdgpu_no_fine_
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_mov_b64 s[0:1], 0xfffffffffffff800
+; GFX1250-NEXT:    s_mov_b64 s[0:1], lit64(0xfffffffffffff800)
 ; GFX1250-NEXT:    v_lshlrev_b32_e32 v6, 16, v2
 ; GFX1250-NEXT:    v_add_nc_u64_e32 v[4:5], s[0:1], v[0:1]
 ; GFX1250-NEXT:    s_mov_b32 s0, 0

@@ -110,7 +110,7 @@ define amdgpu_ps <2 x float> @test_add_u64_v_64bit_imm(i64 %a) {
 ;
 ; GFX_LIT64-LABEL: test_add_u64_v_64bit_imm:
 ; GFX_LIT64:       ; %bb.0:
-; GFX_LIT64-NEXT:    v_add_nc_u64_e32 v[0:1], 0x13b9ac9ff, v[0:1]
+; GFX_LIT64-NEXT:    v_add_nc_u64_e32 v[0:1], lit64(0x13b9ac9ff), v[0:1]
 ; GFX_LIT64-NEXT:    ; return to shader part epilog
   %add = add i64 %a, 5294967295
   %ret = bitcast i64 %add to <2 x float>

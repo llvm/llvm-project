@@ -206,7 +206,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX13-PACKED-SDAG-NEXT:    s_load_b64 s[6:7], s[4:5], 0x34
 ; GFX13-PACKED-SDAG-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX13-PACKED-SDAG-NEXT:    s_wait_kmcnt 0x0
-; GFX13-PACKED-SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], 0xffffffffffff
+; GFX13-PACKED-SDAG-NEXT:    s_and_b64 s[4:5], s[6:7], lit64(0xffffffffffff)
 ; GFX13-PACKED-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX13-PACKED-SDAG-NEXT:    v_mov_b32_e32 v1, s5
