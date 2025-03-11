@@ -213,10 +213,6 @@ void freebsd::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf64lriscv");
     break;
-  case llvm::Triple::loongarch32:
-    CmdArgs.push_back("-m");
-    CmdArgs.push_back("elf32loongarch");
-    break;
   case llvm::Triple::loongarch64:
     CmdArgs.push_back("-m");
     CmdArgs.push_back("elf64loongarch");
@@ -456,12 +452,13 @@ void FreeBSD::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
 
 void FreeBSD::AddCXXStdlibLibArgs(const ArgList &Args,
                                   ArgStringList &CmdArgs) const {
+  Generic_ELF::AddCXXStdlibLibArgs(Args, CmdArgs);
   unsigned Major = getTriple().getOSMajorVersion();
-  bool Profiling = Args.hasArg(options::OPT_pg) && Major != 0 && Major < 14;
-
-  CmdArgs.push_back(Profiling ? "-lc++_p" : "-lc++");
-  if (Args.hasArg(options::OPT_fexperimental_library))
-    CmdArgs.push_back("-lc++experimental");
+  bool SuffixedLib = Args.hasArg(options::OPT_pg) && Major != 0 && Major < 14;
+  if (SuffixedLib && GetCXXStdlibType(Args) == CST_Libcxx)
+    std::replace_if(
+        CmdArgs.begin(), CmdArgs.end(),
+        [](const char *S) { return StringRef(S) == "-lc++"; }, "-lc++_p");
 }
 
 void FreeBSD::AddCudaIncludeArgs(const ArgList &DriverArgs,

@@ -59,6 +59,24 @@ define <2 x ptr addrspace(7)> @gep_vector_scalar(<2 x ptr addrspace(7)> %in, i64
   ret <2 x ptr addrspace(7)> %ret
 }
 
+define <2 x ptr addrspace(7)> @gep_scalar_vector(ptr addrspace(7) %in, <2 x i32> %idxs) {
+; CHECK-LABEL: define { <2 x ptr addrspace(8)>, <2 x i32> } @gep_scalar_vector
+; CHECK-SAME: ({ ptr addrspace(8), i32 } [[IN:%.*]], <2 x i32> [[IDXS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[IN_RSRC:%.*]] = extractvalue { ptr addrspace(8), i32 } [[IN]], 0
+; CHECK-NEXT:    [[IN_OFF:%.*]] = extractvalue { ptr addrspace(8), i32 } [[IN]], 1
+; CHECK-NEXT:    [[IN_RSRC_SPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(8)> poison, ptr addrspace(8) [[IN_RSRC]], i64 0
+; CHECK-NEXT:    [[IN_RSRC_SPLAT:%.*]] = shufflevector <2 x ptr addrspace(8)> [[IN_RSRC_SPLATINSERT]], <2 x ptr addrspace(8)> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[IN_OFF_SPLATINSERT:%.*]] = insertelement <2 x i32> poison, i32 [[IN_OFF]], i64 0
+; CHECK-NEXT:    [[IN_OFF_SPLAT:%.*]] = shufflevector <2 x i32> [[IN_OFF_SPLATINSERT]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[RET:%.*]] = add <2 x i32> [[IN_OFF_SPLAT]], [[IDXS]]
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { <2 x ptr addrspace(8)>, <2 x i32> } poison, <2 x ptr addrspace(8)> [[IN_RSRC_SPLAT]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { <2 x ptr addrspace(8)>, <2 x i32> } [[TMP1]], <2 x i32> [[RET]], 1
+; CHECK-NEXT:    ret { <2 x ptr addrspace(8)>, <2 x i32> } [[TMP2]]
+;
+  %ret = getelementptr inbounds i8, ptr addrspace(7) %in, <2 x i32> %idxs
+  ret <2 x ptr addrspace(7)> %ret
+}
+
 define ptr addrspace(7) @simple_gep(ptr addrspace(7) %ptr, i32 %off) {
 ; CHECK-LABEL: define { ptr addrspace(8), i32 } @simple_gep
 ; CHECK-SAME: ({ ptr addrspace(8), i32 } [[PTR:%.*]], i32 [[OFF:%.*]]) #[[ATTR0]] {
@@ -329,6 +347,20 @@ define <2 x ptr addrspace(7)> @addrspacecast_vec(<2 x ptr addrspace(8)> %buf) {
 ;
   %ret = addrspacecast <2 x ptr addrspace(8)> %buf to <2 x ptr addrspace(7)>
   ret <2 x ptr addrspace(7)> %ret
+}
+
+declare ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1), i16, i32, i32)
+
+define ptr addrspace(7) @make_buffer_rsrc(ptr addrspace(1) %buf, i16 %stride, i32 %numRecords, i32 %flags) {
+; CHECK-LABEL: define { ptr addrspace(8), i32 } @make_buffer_rsrc
+; CHECK-SAME: (ptr addrspace(1) [[BUF:%.*]], i16 [[STRIDE:%.*]], i32 [[NUMRECORDS:%.*]], i32 [[FLAGS:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[RET:%.*]] = call ptr addrspace(8) @llvm.amdgcn.make.buffer.rsrc.p8.p1(ptr addrspace(1) [[BUF]], i16 [[STRIDE]], i32 [[NUMRECORDS]], i32 [[FLAGS]])
+; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr addrspace(8), i32 } poison, ptr addrspace(8) [[RET]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertvalue { ptr addrspace(8), i32 } [[TMP1]], i32 0, 1
+; CHECK-NEXT:    ret { ptr addrspace(8), i32 } [[TMP2]]
+;
+  %ret = call ptr addrspace(7) @llvm.amdgcn.make.buffer.rsrc.p7.p1(ptr addrspace(1) %buf, i16 %stride, i32 %numRecords, i32 %flags)
+  ret ptr addrspace(7) %ret
 }
 
 define i1 @icmp_eq(ptr addrspace(7) %a, ptr addrspace(7) %b) {

@@ -33,7 +33,7 @@ define void @h(ptr %p) {
 
 define void @g(ptr dead_on_unwind noalias writable dereferenceable(8) align 8 %p) minsize {
 ; CHECK-LABEL: define void @g(
-; CHECK-SAME: ptr dead_on_unwind noalias nocapture writable writeonly align 8 dereferenceable(8) initializes((0, 8)) [[P:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; CHECK-SAME: ptr dead_on_unwind noalias writable writeonly align 8 captures(none) dereferenceable(8) initializes((0, 8)) [[P:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CHECK-NEXT:    tail call void @h(ptr nonnull [[P]])
 ; CHECK-NEXT:    ret void
 ;

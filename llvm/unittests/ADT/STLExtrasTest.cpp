@@ -421,6 +421,16 @@ void swap(some_struct &lhs, some_struct &rhs) {
   rhs.swap_val = "rhs";
 }
 
+struct List {
+  std::list<int> data;
+};
+
+std::list<int>::const_iterator begin(const List &list) {
+  return list.data.begin();
+}
+
+std::list<int>::const_iterator end(const List &list) { return list.data.end(); }
+
 struct requires_move {};
 int *begin(requires_move &&) { return nullptr; }
 int *end(requires_move &&) { return nullptr; }
@@ -502,6 +512,16 @@ TEST(STLExtrasTest, ConcatRange) {
   for (int &i : concat<int>(std::vector<int>(V1234), L56, std::move(SV78)))
     Test.push_back(i);
   EXPECT_EQ(Expected, Test);
+}
+
+TEST(STLExtrasTest, ConcatRangeADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::some_struct S0;
+  S0.data = {1, 2};
+  some_namespace::some_struct S1;
+  S1.data = {3, 4};
+  EXPECT_THAT(concat<const int>(S0, S1), ElementsAre(1, 2, 3, 4));
 }
 
 template <typename T> struct Iterator {
@@ -854,6 +874,16 @@ TEST(STLExtrasTest, EarlyIncrementTestCustomPointerIterator) {
   EXPECT_EQ(EIR.end(), I);
 }
 
+TEST(STLExtrasTest, ReplaceADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  std::vector<int> Cont = {0, 1, 2, 3, 4, 5};
+  some_namespace::some_struct S;
+  S.data = {42, 43, 44};
+  replace(Cont, Cont.begin() + 2, Cont.begin() + 5, S);
+  EXPECT_THAT(Cont, ElementsAre(0, 1, 42, 43, 44, 5));
+}
+
 TEST(STLExtrasTest, AllEqual) {
   std::vector<int> V;
   EXPECT_TRUE(all_equal(V));
@@ -934,10 +964,19 @@ TEST(STLExtrasTest, hasSingleElement) {
   const std::vector<int> V0 = {}, V1 = {1}, V2 = {1, 2};
   const std::vector<int> V10(10);
 
-  EXPECT_EQ(hasSingleElement(V0), false);
-  EXPECT_EQ(hasSingleElement(V1), true);
-  EXPECT_EQ(hasSingleElement(V2), false);
-  EXPECT_EQ(hasSingleElement(V10), false);
+  EXPECT_FALSE(hasSingleElement(V0));
+  EXPECT_TRUE(hasSingleElement(V1));
+  EXPECT_FALSE(hasSingleElement(V2));
+  EXPECT_FALSE(hasSingleElement(V10));
+
+  // Make sure that we use the `begin`/`end` functions
+  // from `some_namespace`, using ADL.
+  some_namespace::some_struct S;
+  EXPECT_FALSE(hasSingleElement(S));
+  S.data = V1;
+  EXPECT_TRUE(hasSingleElement(S));
+  S.data = V2;
+  EXPECT_FALSE(hasSingleElement(S));
 }
 
 TEST(STLExtrasTest, hasNItems) {
@@ -952,6 +991,13 @@ TEST(STLExtrasTest, hasNItems) {
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 3, [](int x) { return x < 10; }));
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 0, [](int x) { return x > 10; }));
   EXPECT_TRUE(hasNItems(V3.begin(), V3.end(), 2, [](int x) { return x < 5; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_FALSE(hasNItems(L, 2));
+  EXPECT_TRUE(hasNItems(L, 3));
 }
 
 TEST(STLExtras, hasNItemsOrMore) {
@@ -974,6 +1020,13 @@ TEST(STLExtras, hasNItemsOrMore) {
       hasNItemsOrMore(V3.begin(), V3.end(), 3, [](int x) { return x > 10; }));
   EXPECT_TRUE(
       hasNItemsOrMore(V3.begin(), V3.end(), 2, [](int x) { return x < 5; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_TRUE(hasNItemsOrMore(L, 1));
+  EXPECT_FALSE(hasNItems(L, 4));
 }
 
 TEST(STLExtras, hasNItemsOrLess) {
@@ -1007,6 +1060,13 @@ TEST(STLExtras, hasNItemsOrLess) {
       hasNItemsOrLess(V3.begin(), V3.end(), 5, [](int x) { return x < 5; }));
   EXPECT_FALSE(
       hasNItemsOrLess(V3.begin(), V3.end(), 2, [](int x) { return x < 10; }));
+
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::List L;
+  L.data = {0, 1, 2};
+  EXPECT_FALSE(hasNItemsOrLess(L, 1));
+  EXPECT_TRUE(hasNItemsOrLess(L, 4));
 }
 
 TEST(STLExtras, MoveRange) {

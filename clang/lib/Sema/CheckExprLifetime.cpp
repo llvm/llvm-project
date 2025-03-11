@@ -200,6 +200,7 @@ struct IndirectLocalPathEntry {
     LifetimeBoundCall,
     TemporaryCopy,
     LambdaCaptureInit,
+    MemberExpr,
     GslReferenceInit,
     GslPointerInit,
     GslPointerAssignment,
@@ -593,19 +594,6 @@ static void visitFunctionCallArguments(IndirectLocalPath &Path, Expr *Call,
     Path.pop_back();
   };
   auto VisitGSLPointerArg = [&](const FunctionDecl *Callee, Expr *Arg) {
-    // We are not interested in the temporary base objects of gsl Pointers:
-    //   Temp().ptr; // Here ptr might not dangle.
-    if (isa<MemberExpr>(Arg->IgnoreImpCasts()))
-      return;
-    // Avoid false positives when the object is constructed from a conditional
-    // operator argument. A common case is:
-    //   // 'ptr' might not be owned by the Owner object.
-    //   std::string_view s = cond() ? Owner().ptr : sv;
-    if (const auto *Cond =
-            dyn_cast<AbstractConditionalOperator>(Arg->IgnoreImpCasts());
-        Cond && isPointerLikeType(Cond->getType()))
-      return;
-
     auto ReturnType = Callee->getReturnType();
 
     // Once we initialized a value with a non gsl-owner reference, it can no
@@ -726,6 +714,9 @@ static void visitLocalsRetainedByReferenceBinding(IndirectLocalPath &Path,
         Init = ILE->getInit(0);
     }
 
+    if (MemberExpr *ME = dyn_cast<MemberExpr>(Init->IgnoreImpCasts()))
+      Path.push_back(
+          {IndirectLocalPathEntry::MemberExpr, ME, ME->getMemberDecl()});
     // Step over any subobject adjustments; we may have a materialized
     // temporary inside them.
     Init = const_cast<Expr *>(Init->skipRValueSubobjectAdjustments());
@@ -1117,10 +1108,12 @@ enum PathLifetimeKind {
 static PathLifetimeKind
 shouldLifetimeExtendThroughPath(const IndirectLocalPath &Path) {
   for (auto Elem : Path) {
-    if (Elem.Kind == IndirectLocalPathEntry::DefaultInit)
-      return PathLifetimeKind::Extend;
-    if (Elem.Kind != IndirectLocalPathEntry::LambdaCaptureInit)
-      return PathLifetimeKind::NoExtend;
+    if (Elem.Kind == IndirectLocalPathEntry::MemberExpr ||
+        Elem.Kind == IndirectLocalPathEntry::LambdaCaptureInit)
+      continue;
+    return Elem.Kind == IndirectLocalPathEntry::DefaultInit
+               ? PathLifetimeKind::Extend
+               : PathLifetimeKind::NoExtend;
   }
   return PathLifetimeKind::Extend;
 }
@@ -1138,6 +1131,7 @@ static SourceRange nextPathEntryRange(const IndirectLocalPath &Path, unsigned I,
     case IndirectLocalPathEntry::GslPointerInit:
     case IndirectLocalPathEntry::GslPointerAssignment:
     case IndirectLocalPathEntry::ParenAggInit:
+    case IndirectLocalPathEntry::MemberExpr:
       // These exist primarily to mark the path as not permitting or
       // supporting lifetime extension.
       break;
@@ -1167,6 +1161,7 @@ static bool pathOnlyHandlesGslPointer(const IndirectLocalPath &Path) {
     case IndirectLocalPathEntry::VarInit:
     case IndirectLocalPathEntry::AddressOf:
     case IndirectLocalPathEntry::LifetimeBoundCall:
+    case IndirectLocalPathEntry::MemberExpr:
       continue;
     case IndirectLocalPathEntry::GslPointerInit:
     case IndirectLocalPathEntry::GslReferenceInit:
@@ -1193,12 +1188,33 @@ enum AnalysisResult {
 // Analyze cases where a GSLPointer is initialized or assigned from a
 // temporary owner object.
 static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
-                                               Local L) {
+                                               Local L, LifetimeKind LK) {
   if (!pathOnlyHandlesGslPointer(Path))
     return NotGSLPointer;
 
   // At this point, Path represents a series of operations involving a
   // GSLPointer, either in the process of initialization or assignment.
+
+  // Process  temporary base objects for MemberExpr cases, e.g. Temp().field.
+  for (const auto &E : Path) {
+    if (E.Kind == IndirectLocalPathEntry::MemberExpr) {
+      // Avoid interfering  with the local base object.
+      if (pathContainsInit(Path))
+        return Abandon;
+
+      // We are not interested in the temporary base objects of gsl Pointers:
+      //   auto p1 = Temp().ptr; // Here p1 might not dangle.
+      // However, we want to diagnose for gsl owner fields:
+      //   auto p2 = Temp().owner; // Here p2 is dangling.
+      if (const auto *FD = llvm::dyn_cast_or_null<FieldDecl>(E.D);
+          FD && !FD->getType()->isReferenceType() &&
+          isRecordWithAttr<OwnerAttr>(FD->getType()) &&
+          LK != LK_MemInitializer) {
+        return Report;
+      }
+      return Abandon;
+    }
+  }
 
   // Note: A LifetimeBoundCall can appear interleaved in this sequence.
   // For example:
@@ -1223,11 +1239,12 @@ static AnalysisResult analyzePathForGSLPointer(const IndirectLocalPath &Path,
     }
     // Check the return type, e.g.
     //   const GSLOwner& func(const Foo& foo [[clang::lifetimebound]])
+    //   GSLOwner* func(cosnt Foo& foo [[clang::lifetimebound]])
     //   GSLPointer func(const Foo& foo [[clang::lifetimebound]])
     if (FD &&
-        ((FD->getReturnType()->isReferenceType() &&
+        ((FD->getReturnType()->isPointerOrReferenceType() &&
           isRecordWithAttr<OwnerAttr>(FD->getReturnType()->getPointeeType())) ||
-         isPointerLikeType(FD->getReturnType())))
+         isGLSPointerType(FD->getReturnType())))
       return Report;
 
     return Abandon;
@@ -1297,7 +1314,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
     auto *MTE = dyn_cast<MaterializeTemporaryExpr>(L);
 
     bool IsGslPtrValueFromGslTempOwner = true;
-    switch (analyzePathForGSLPointer(Path, L)) {
+    switch (analyzePathForGSLPointer(Path, L, LK)) {
     case Abandon:
       return false;
     case Skip:
@@ -1429,6 +1446,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
         auto *DRE = dyn_cast<DeclRefExpr>(L);
         // Suppress false positives for code like the one below:
         //   Ctor(unique_ptr<T> up) : pointer(up.get()), owner(move(up)) {}
+        // FIXME: move this logic to analyzePathForGSLPointer.
         if (DRE && isRecordWithAttr<OwnerAttr>(DRE->getType()))
           return false;
 
@@ -1527,6 +1545,7 @@ checkExprLifetimeImpl(Sema &SemaRef, const InitializedEntity *InitEntity,
 
       case IndirectLocalPathEntry::LifetimeBoundCall:
       case IndirectLocalPathEntry::TemporaryCopy:
+      case IndirectLocalPathEntry::MemberExpr:
       case IndirectLocalPathEntry::GslPointerInit:
       case IndirectLocalPathEntry::GslReferenceInit:
       case IndirectLocalPathEntry::GslPointerAssignment:

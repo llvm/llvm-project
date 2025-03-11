@@ -910,9 +910,9 @@ populateEHOperandBundle(VPCandidateInfo &Cand,
     if (!BlockColors.empty()) {
       const ColorVector &CV = BlockColors.find(OrigCall->getParent())->second;
       assert(CV.size() == 1 && "non-unique color for block!");
-      Instruction *EHPad = CV.front()->getFirstNonPHI();
-      if (EHPad->isEHPad())
-        OpBundles.emplace_back("funclet", EHPad);
+      BasicBlock::iterator EHPadIt = CV.front()->getFirstNonPHIIt();
+      if (EHPadIt->isEHPad())
+        OpBundles.emplace_back("funclet", &*EHPadIt);
     }
   }
 }
@@ -1517,9 +1517,10 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     CoveredBlocksToProcess.pop();
     for (auto *BB : InverseDependencies[CoveredBlock]) {
       // If CoveredBlock is covered then BB is covered.
-      if (Coverage[BB])
+      bool &Cov = Coverage[BB];
+      if (Cov)
         continue;
-      Coverage[BB] = true;
+      Cov = true;
       CoveredBlocksToProcess.push(BB);
     }
   }
@@ -1563,14 +1564,15 @@ void PGOUseFunc::populateCoverage(IndexedInstrProfReader *PGOReader) {
     // successors, e.g., when a block calls a function that may call exit(). In
     // those cases, BFI could find its successor to be covered while BCI could
     // find its successor to be dead.
-    if (Coverage[&BB] == IsBlockDead(BB).value_or(false)) {
+    const bool &Cov = Coverage[&BB];
+    if (Cov == IsBlockDead(BB).value_or(false)) {
       LLVM_DEBUG(
           dbgs() << "Found inconsistent block covearge for " << BB.getName()
-                 << ": BCI=" << (Coverage[&BB] ? "Covered" : "Dead") << " BFI="
+                 << ": BCI=" << (Cov ? "Covered" : "Dead") << " BFI="
                  << (IsBlockDead(BB).value() ? "Dead" : "Covered") << "\n");
       ++NumCorruptCoverage;
     }
-    if (Coverage[&BB])
+    if (Cov)
       ++NumCoveredBlocks;
   }
   if (PGOVerifyBFI && NumCorruptCoverage) {

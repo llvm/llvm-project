@@ -73,6 +73,32 @@ func.func @cleanable_loop_iter_args_value(%arg0: index) -> index {
 
 // -----
 
+// Checking that the arguments of linalg.generic are properly handled
+// All code below is removed as a result of the pass
+//
+#map = affine_map<(d0, d1, d2) -> (0, d1, d2)>
+#map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+module {
+  func.func @main() {
+    %cst_3 = arith.constant dense<54> : tensor<1x25x13xi32>
+    %cst_7 = arith.constant dense<11> : tensor<1x25x13xi32>
+    // CHECK-NOT: arith.constant
+    %0 = tensor.empty() : tensor<1x25x13xi32>
+    // CHECK-NOT: tensor
+    %1 = linalg.generic {indexing_maps = [#map, #map, #map1], iterator_types = ["parallel", "parallel", "parallel"]} ins(%cst_3, %cst_7 : tensor<1x25x13xi32>, tensor<1x25x13xi32>) outs(%0 : tensor<1x25x13xi32>) {
+    // CHECK-NOT: linalg.generic
+    ^bb0(%in: i32, %in_15: i32, %out: i32):
+      %29 = arith.xori %in, %in_15 : i32
+      // CHECK-NOT: arith.xori
+      linalg.yield %29 : i32
+      // CHECK-NOT: linalg.yield
+    } -> tensor<1x25x13xi32>
+    return
+  }
+}
+
+// -----
+
 // Note that this cleanup cannot be done by the `canonicalize` pass.
 //
 // CHECK-LABEL: func.func private @clean_func_op_remove_argument_and_return_value() {
@@ -377,6 +403,22 @@ func.func private @clean_region_branch_op_erase_it(%arg0 : i32, %arg1 : i1) -> (
 
 func.func @main(%arg3 : i32, %arg4 : i1) {
   %non_live_0 = func.call @clean_region_branch_op_erase_it(%arg3, %arg4) : (i32, i1) -> (i32)
+  return
+}
+
+// -----
+
+// The scf.if operation represents an if-then-else construct for conditionally
+// executing two regions of code. The 'the' region has exactly 1 block, and
+// the 'else' region may have 0 or 1 block. This case is to ensure 'else' region
+// with 0 block not crash.
+
+// CHECK-LABEL: func.func @clean_region_branch_op_with_empty_region
+func.func @clean_region_branch_op_with_empty_region(%arg0: i1, %arg1: memref<f32>) {
+  %cst = arith.constant 1.000000e+00 : f32
+  scf.if %arg0 {
+    memref.store %cst, %arg1[] : memref<f32>
+  }
   return
 }
 

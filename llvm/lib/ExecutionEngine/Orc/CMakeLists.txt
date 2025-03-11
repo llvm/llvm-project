@@ -15,6 +15,7 @@ add_llvm_component_library(LLVMOrcJIT
   Core.cpp
   DebugObjectManagerPlugin.cpp
   DebugUtils.cpp
+  EHFrameRegistrationPlugin.cpp
   EPCDynamicLibrarySearchGenerator.cpp
   EPCDebugObjectRegistrar.cpp
   EPCEHFrameRegistrar.cpp
@@ -24,6 +25,7 @@ add_llvm_component_library(LLVMOrcJIT
   EPCIndirectionUtils.cpp
   ExecutionUtils.cpp
   ObjectFileInterface.cpp
+  GetDylibInterface.cpp
   IndirectionUtils.cpp
   IRCompileLayer.cpp
   IRTransformLayer.cpp
@@ -56,6 +58,7 @@ add_llvm_component_library(LLVMOrcJIT
   ExecutorProcessControl.cpp
   TaskDispatch.cpp
   ThreadSafeModule.cpp
+  UnwindInfoRegistrationPlugin.cpp
   RedirectionManager.cpp
   JITLinkRedirectableSymbolManager.cpp
   ReOptimizeLayer.cpp
@@ -85,6 +88,7 @@ add_llvm_component_library(LLVMOrcJIT
   Support
   Target
   TargetParser
+  TextAPI
   TransformUtils
   )
 

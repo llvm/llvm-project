@@ -24,6 +24,9 @@ void populateVectorToLLVMConversionPatterns(
     const LLVMTypeConverter &converter, RewritePatternSet &patterns,
     bool reassociateFPReductions = false, bool force32BitVectorIndices = false);
 
+namespace vector {
+void registerConvertVectorToLLVMInterface(DialectRegistry &registry);
+}
 } // namespace mlir
 
 #endif // MLIR_CONVERSION_VECTORTOLLVM_CONVERTVECTORTOLLVM_H_

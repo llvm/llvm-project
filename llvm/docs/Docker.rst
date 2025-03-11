@@ -9,7 +9,7 @@ You can find a number of sources to build docker images with LLVM components in
 images for their own use, or as a starting point for someone who wants to write
 their own Dockerfiles.
 
-We currently provide Dockerfiles with ``debian10`` and ``nvidia-cuda`` base images.
+We currently provide Dockerfiles with ``debian12`` and ``nvidia-cuda`` base images.
 We also provide an ``example`` image, which contains placeholders that one would need
 to fill out in order to produce Dockerfiles for a new docker image.
 
@@ -72,13 +72,13 @@ checkout from git and provide a list of CMake arguments to use during when
 building LLVM inside docker container.
 
 Here's a very simple example of getting a docker image with clang binary,
-compiled by the system compiler in the debian10 image:
+compiled by the system compiler in the debian12 image:
 
 .. code-block:: bash
 
     ./llvm/utils/docker/build_docker_image.sh \
-	--source debian10 \
-	--docker-repository clang-debian10 --docker-tag "staging" \
+	--source debian12 \
+	--docker-repository clang-debian12 --docker-tag "staging" \
 	-p clang -i install-clang -i install-clang-resource-headers \
 	-- \
 	-DCMAKE_BUILD_TYPE=Release
@@ -93,51 +93,45 @@ this command will do that:
     #   LLVM_TARGETS_TO_BUILD=Native is to reduce stage1 compile time.
     #   Options, starting with BOOTSTRAP_* are passed to stage2 cmake invocation.
     ./build_docker_image.sh \
-	--source debian10 \
-	--docker-repository clang-debian10 --docker-tag "staging" \
+	--source debian12 \
+	--docker-repository clang-debian12 --docker-tag "staging" \
 	-p clang -i stage2-install-clang -i stage2-install-clang-resource-headers \
 	-- \
 	-DLLVM_TARGETS_TO_BUILD=Native -DCMAKE_BUILD_TYPE=Release \
 	-DBOOTSTRAP_CMAKE_BUILD_TYPE=Release \
 	-DCLANG_ENABLE_BOOTSTRAP=ON -DCLANG_BOOTSTRAP_TARGETS="install-clang;install-clang-resource-headers"
 	
-This will produce a new image ``clang-debian10:staging`` from the latest
+This will produce a new image ``clang-debian12:staging`` from the latest
 upstream revision.
 After the image is built you can run bash inside a container based on your image
 like this:
 
 .. code-block:: bash
 
-    docker run -ti clang-debian10:staging bash
+    docker run -ti clang-debian12:staging bash
 
 Now you can run bash commands as you normally would:
 
 .. code-block:: bash
 
     root@80f351b51825:/# clang -v
-    clang version 5.0.0 (trunk 305064)
+    clang version 19.1.7 (trunk 524462)
+    Target: x86_64-unknown-linux-gnu
     Target: x86_64-unknown-linux-gnu
     Thread model: posix
     InstalledDir: /bin
-    Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/4.8
-    Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/4.8.4
-    Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/4.9
-    Found candidate GCC installation: /usr/lib/gcc/x86_64-linux-gnu/4.9.2
-    Selected GCC installation: /usr/lib/gcc/x86_64-linux-gnu/4.9
-    Candidate multilib: .;@m64
-    Selected multilib: .;@m64
 
 
 Which image should I choose?
 ============================
-We currently provide two images: Debian10-based and nvidia-cuda-based. They
+We currently provide two images: Debian12-based and nvidia-cuda-based. They
 differ in the base image that they use, i.e. they have a different set of
 preinstalled binaries. Debian8 is very minimal, nvidia-cuda is larger, but has
 preinstalled CUDA libraries and allows to access a GPU, installed on your
 machine.
 
 If you need a minimal linux distribution with only clang and libstdc++ included,
-you should try Debian10-based image.
+you should try Debian12-based image.
 
 If you want to use CUDA libraries and have access to a GPU on your machine,
 you should choose nvidia-cuda-based image and use `nvidia-docker
@@ -150,7 +144,7 @@ If you have a different use-case, you could create your own image based on
 ``example/`` folder.
 
 Any docker image can be built and run using only the docker binary, i.e. you can
-run debian10 build on Fedora or any other Linux distribution. You don't need to
+run debian12 build on Fedora or any other Linux distribution. You don't need to
 install CMake, compilers or any other clang dependencies. It is all handled
 during the build process inside Docker's isolated environment.
 
@@ -158,12 +152,12 @@ Stable build
 ============
 If you want a somewhat recent and somewhat stable build, use the
 ``branches/google/stable`` branch, i.e. the following command will produce a
-Debian10-based image using the latest ``google/stable`` sources for you:
+Debian12-based image using the latest ``google/stable`` sources for you:
 
 .. code-block:: bash
 
     ./llvm/utils/docker/build_docker_image.sh \
-	-s debian10 --d clang-debian10 -t "staging" \
+	-s debian12 --d clang-debian12 -t "staging" \
 	--branch branches/google/stable \
 	-p clang -i install-clang -i install-clang-resource-headers \
 	-- \

@@ -267,7 +267,7 @@ static bool hasNonRISpills(const MachineFunction &MF) {
 /// MustSaveLR - Return true if this function requires that we save the LR
 /// register onto the stack in the prolog and restore it in the epilog of the
 /// function.
-static bool MustSaveLR(const MachineFunction &MF, unsigned LR) {
+static bool MustSaveLR(const MachineFunction &MF, MCRegister LR) {
   const PPCFunctionInfo *MFI = MF.getInfo<PPCFunctionInfo>();
 
   // We need a save/restore of LR if there is any def of LR (which is
@@ -311,7 +311,7 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
 
   const PPCRegisterInfo *RegInfo = Subtarget.getRegisterInfo();
 
-  unsigned LR = RegInfo->getRARegister();
+  MCRegister LR = RegInfo->getRARegister();
   bool DisableRedZone = MF.getFunction().hasFnAttribute(Attribute::NoRedZone);
   bool CanUseRedZone = !MFI.hasVarSizedObjects() && // No dynamic alloca.
                        !MFI.adjustsStack() &&       // No calls.
@@ -646,7 +646,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   bool HasFP = hasFP(MF);
   bool HasBP = RegInfo->hasBasePointer(MF);
   bool HasRedZone = isPPC64 || !isSVR4ABI;
-  bool HasROPProtect = Subtarget.hasROPProtect();
+  const bool HasROPProtect = Subtarget.hasROPProtect();
   bool HasPrivileged = Subtarget.hasPrivileged();
 
   Register SPReg       = isPPC64 ? PPC::X1  : PPC::R1;
@@ -908,8 +908,10 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   // in ScratchReg.
   // If the offset can not be encoded into the store instruction, we also have
   // to save LR here.
+  // If we are using ROP Protection we need to save the LR here as we cannot
+  // move the hashst instruction past the point where we get the stack frame.
   if (MustSaveLR && !HasFastMFLR &&
-      (HasSTUX || !isInt<16>(FrameSize + LROffset)))
+      (HasSTUX || !isInt<16>(FrameSize + LROffset) || HasROPProtect))
     SaveLR(LROffset);
 
   // If FrameSize <= TLI.getStackProbeSize(MF), as POWER ABI requires backchain
@@ -1100,7 +1102,8 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Save the LR now.
-  if (!HasSTUX && MustSaveLR && !HasFastMFLR && isInt<16>(FrameSize + LROffset))
+  if (!HasSTUX && MustSaveLR && !HasFastMFLR &&
+      isInt<16>(FrameSize + LROffset) && !HasROPProtect)
     SaveLR(LROffset + FrameSize);
 
   // Add Call Frame Information for the instructions we generated above.
@@ -1183,7 +1186,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     // CFA.
     const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
     for (const CalleeSavedInfo &I : CSI) {
-      Register Reg = I.getReg();
+      MCRegister Reg = I.getReg();
       if (Reg == PPC::LR || Reg == PPC::LR8 || Reg == PPC::RM) continue;
 
       // This is a bit of a hack: CR2LT, CR2GT, CR2EQ and CR2UN are just
@@ -1984,7 +1987,7 @@ void PPCFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   //  Save and clear the LR state.
   PPCFunctionInfo *FI = MF.getInfo<PPCFunctionInfo>();
-  unsigned LR = RegInfo->getRARegister();
+  MCRegister LR = RegInfo->getRARegister();
   FI->setMustSaveLR(MustSaveLR(MF, LR));
   SavedRegs.reset(LR);
 
@@ -2105,7 +2108,7 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
   SmallVector<CalleeSavedInfo, 18> VRegs;
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     assert((!MF.getInfo<PPCFunctionInfo>()->mustSaveTOC() ||
             (Reg != PPC::X2 && Reg != PPC::R2)) &&
            "Not expecting to try to spill R2 in a function that must save TOC");
@@ -2340,9 +2343,9 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
     // in our CalleSaveInfo vector.
 
     for (auto &CalleeSaveReg : CSI) {
-      MCPhysReg Reg = CalleeSaveReg.getReg();
-      MCPhysReg Lower = RegInfo->getSubReg(Reg, 1);
-      MCPhysReg Higher = RegInfo->getSubReg(Reg, 2);
+      MCRegister Reg = CalleeSaveReg.getReg();
+      MCRegister Lower = RegInfo->getSubReg(Reg, PPC::sub_32);
+      MCRegister Higher = RegInfo->getSubReg(Reg, PPC::sub_32_hi_phony);
 
       if ( // Check only for SuperRegs.
           Lower &&
@@ -2377,7 +2380,7 @@ bool PPCFrameLowering::assignCalleeSavedSpillSlots(
     if (BVAllocatable.none())
       return false;
 
-    Register Reg = CS.getReg();
+    MCRegister Reg = CS.getReg();
 
     if (!PPC::G8RCRegClass.contains(Reg)) {
       AllSpilledToReg = false;
@@ -2434,7 +2437,7 @@ bool PPCFrameLowering::spillCalleeSavedRegisters(
   }
 
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
 
     // CR2 through CR4 are the nonvolatile CR fields.
     bool IsCRField = PPC::CR2 <= Reg && Reg <= PPC::CR4;
@@ -2620,7 +2623,7 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
     --BeforeI;
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
-    Register Reg = CSI[i].getReg();
+    MCRegister Reg = CSI[i].getReg();
 
     if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)
       continue;

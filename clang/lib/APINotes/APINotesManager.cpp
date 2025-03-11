@@ -56,7 +56,7 @@ APINotesManager::APINotesManager(SourceManager &SM, const LangOptions &LangOpts)
 APINotesManager::~APINotesManager() {
   // Free the API notes readers.
   for (const auto &Entry : Readers) {
-    if (auto Reader = Entry.second.dyn_cast<APINotesReader *>())
+    if (auto Reader = dyn_cast_if_present<APINotesReader *>(Entry.second))
       delete Reader;
   }
 
@@ -381,7 +381,7 @@ APINotesManager::findAPINotes(SourceLocation Loc) {
       }
 
       // We have the answer.
-      if (auto Reader = Known->second.dyn_cast<APINotesReader *>())
+      if (auto Reader = dyn_cast_if_present<APINotesReader *>(Known->second))
         Results.push_back(Reader);
       break;
     }

@@ -28,6 +28,20 @@ using namespace clang;
 using namespace serialization;
 
 //===----------------------------------------------------------------------===//
+// Utility functions
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+// Helper function that returns true if the decl passed in the argument is
+// a defintion in dependent contxt.
+template <typename DT> bool isDefinitionInDependentContext(DT *D) {
+  return D->isDependentContext() && D->isThisDeclarationADefinition();
+}
+
+} // namespace
+
+//===----------------------------------------------------------------------===//
 // Declaration serialization
 //===----------------------------------------------------------------------===//
 
@@ -132,6 +146,7 @@ namespace clang {
     void VisitFriendTemplateDecl(FriendTemplateDecl *D);
     void VisitStaticAssertDecl(StaticAssertDecl *D);
     void VisitBlockDecl(BlockDecl *D);
+    void VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D);
     void VisitCapturedDecl(CapturedDecl *D);
     void VisitEmptyDecl(EmptyDecl *D);
     void VisitLifetimeExtendedTemporaryDecl(LifetimeExtendedTemporaryDecl *D);
@@ -160,6 +175,9 @@ namespace clang {
     void VisitOMPDeclareReductionDecl(OMPDeclareReductionDecl *D);
     void VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D);
     void VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D);
+
+    void VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D);
+    void VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D);
 
     /// Add an Objective-C type parameter list to the given record.
     void AddObjCTypeParamList(ObjCTypeParamList *typeParams) {
@@ -313,6 +331,12 @@ namespace clang {
 }
 
 bool clang::CanElideDeclDef(const Decl *D) {
+  bool isExternalWithNoLinkageType = false;
+  if (auto *VD = dyn_cast<ValueDecl>(D))
+    if (VD->hasExternalFormalLinkage() &&
+        !isExternalFormalLinkage(VD->getType()->getLinkage()))
+      isExternalWithNoLinkageType = true;
+
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->isInlined() || FD->isConstexpr())
       return false;
@@ -321,6 +345,9 @@ bool clang::CanElideDeclDef(const Decl *D) {
       return false;
 
     if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return false;
+
+    if (isExternalWithNoLinkageType && !FD->isExternC())
       return false;
   }
 
@@ -334,6 +361,9 @@ bool clang::CanElideDeclDef(const Decl *D) {
       return false;
 
     if (VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+      return false;
+
+    if (isExternalWithNoLinkageType && !VD->isExternC())
       return false;
   }
 
@@ -664,7 +694,7 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
 }
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
-  static_assert(DeclContext::NumFunctionDeclBits == 44,
+  static_assert(DeclContext::NumFunctionDeclBits == 45,
                 "You need to update the serializer after you change the "
                 "FunctionDeclBits");
 
@@ -770,6 +800,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   FunctionDeclBits.addBit(D->hasImplicitReturnZero());
   FunctionDeclBits.addBit(D->isMultiVersion());
   FunctionDeclBits.addBit(D->isLateTemplateParsed());
+  FunctionDeclBits.addBit(D->isInstantiatedFromMemberTemplate());
   FunctionDeclBits.addBit(D->FriendConstraintRefersToEnclosingTemplate());
   FunctionDeclBits.addBit(D->usesSEHTry());
   Record.push_back(FunctionDeclBits);
@@ -800,14 +831,14 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   if (D->getFriendObjectKind()) {
-    // For a function defined inline within a class template, we have to force
-    // the canonical definition to be the one inside the canonical definition of
-    // the template. Remember this relation to deserialize them together.
-    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent()))
-      if (RD->isDependentContext() && RD->isThisDeclarationADefinition()) {
-        Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
-            Writer.GetDeclRef(D));
-      }
+    // For a friend function defined inline within a class template, we have to
+    // force the definition to be the one inside the definition of the template
+    // class. Remember this relation to deserialize them together.
+    if (auto *RD = dyn_cast<CXXRecordDecl>(D->getLexicalParent());
+        RD && isDefinitionInDependentContext(RD)) {
+      Writer.RelatedDeclsMap[Writer.GetDeclRef(RD)].push_back(
+          Writer.GetDeclRef(D));
+    }
   }
 
   Record.push_back(D->param_size());
@@ -831,6 +862,9 @@ void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   Record.AddDeclRef(D->Ctor);
   VisitFunctionDecl(D);
   Record.push_back(static_cast<unsigned char>(D->getDeductionCandidateKind()));
+  Record.AddDeclRef(D->getSourceDeductionGuide());
+  Record.push_back(
+      static_cast<unsigned char>(D->getSourceDeductionGuideKind()));
   Code = serialization::DECL_CXX_DEDUCTION_GUIDE;
 }
 
@@ -1377,6 +1411,16 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
   Code = serialization::DECL_BLOCK;
 }
 
+void ASTDeclWriter::VisitOutlinedFunctionDecl(OutlinedFunctionDecl *D) {
+  Record.push_back(D->getNumParams());
+  VisitDecl(D);
+  for (unsigned I = 0; I < D->getNumParams(); ++I)
+    Record.AddDeclRef(D->getParam(I));
+  Record.push_back(D->isNothrow() ? 1 : 0);
+  Record.AddStmt(D->getBody());
+  Code = serialization::DECL_OUTLINEDFUNCTION;
+}
+
 void ASTDeclWriter::VisitCapturedDecl(CapturedDecl *CD) {
   Record.push_back(CD->getNumParams());
   VisitDecl(CD);
@@ -1572,9 +1616,10 @@ void ASTDeclWriter::VisitCXXRecordDecl(CXXRecordDecl *D) {
     } else {
       Record.push_back(0);
     }
-    // For lambdas inside canonical FunctionDecl remember the mapping.
-    if (auto FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
-        FD && FD->isCanonicalDecl()) {
+    // For lambdas inside template functions, remember the mapping to
+    // deserialize them together.
+    if (auto *FD = llvm::dyn_cast_or_null<FunctionDecl>(D->getDeclContext());
+        FD && isDefinitionInDependentContext(FD)) {
       Writer.RelatedDeclsMap[Writer.GetDeclRef(FD)].push_back(
           Writer.GetDeclRef(D));
     }
@@ -1814,6 +1859,7 @@ void ASTDeclWriter::VisitClassTemplateSpecializationDecl(
   Record.AddTemplateArgumentList(&D->getTemplateArgs());
   Record.AddSourceLocation(D->getPointOfInstantiation());
   Record.push_back(D->getSpecializationKind());
+  Record.push_back(D->hasStrictPackMatch());
   Record.push_back(D->isCanonicalDecl());
 
   if (D->isCanonicalDecl()) {
@@ -1985,8 +2031,7 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   // For an expanded parameter pack, record the number of expansion types here
   // so that it's easier for deserialization to allocate the right amount of
   // memory.
-  Expr *TypeConstraint = D->getPlaceholderTypeConstraint();
-  Record.push_back(!!TypeConstraint);
+  Record.push_back(D->hasPlaceholderTypeConstraint());
   if (D->isExpandedParameterPack())
     Record.push_back(D->getNumExpansionTypes());
 
@@ -1994,8 +2039,9 @@ void ASTDeclWriter::VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
   // TemplateParmPosition.
   Record.push_back(D->getDepth());
   Record.push_back(D->getPosition());
-  if (TypeConstraint)
-    Record.AddStmt(TypeConstraint);
+
+  if (D->hasPlaceholderTypeConstraint())
+    Record.AddStmt(D->getPlaceholderTypeConstraint());
 
   if (D->isExpandedParameterPack()) {
     for (unsigned I = 0, N = D->getNumExpansionTypes(); I != N; ++I) {
@@ -2225,6 +2271,27 @@ void ASTDeclWriter::VisitOMPDeclareMapperDecl(OMPDeclareMapperDecl *D) {
 void ASTDeclWriter::VisitOMPCapturedExprDecl(OMPCapturedExprDecl *D) {
   VisitVarDecl(D);
   Code = serialization::DECL_OMP_CAPTUREDEXPR;
+}
+
+void ASTDeclWriter::VisitOpenACCDeclareDecl(OpenACCDeclareDecl *D) {
+  Record.writeUInt32(D->clauses().size());
+  VisitDecl(D);
+  Record.writeEnum(D->DirKind);
+  Record.AddSourceLocation(D->DirectiveLoc);
+  Record.AddSourceLocation(D->EndLoc);
+  Record.writeOpenACCClauseList(D->clauses());
+  Code = serialization::DECL_OPENACC_DECLARE;
+}
+void ASTDeclWriter::VisitOpenACCRoutineDecl(OpenACCRoutineDecl *D) {
+  Record.writeUInt32(D->clauses().size());
+  VisitDecl(D);
+  Record.writeEnum(D->DirKind);
+  Record.AddSourceLocation(D->DirectiveLoc);
+  Record.AddSourceLocation(D->EndLoc);
+  Record.AddSourceRange(D->ParensLoc);
+  Record.AddStmt(D->FuncRef);
+  Record.writeOpenACCClauseList(D->clauses());
+  Code = serialization::DECL_OPENACC_ROUTINE;
 }
 
 //===----------------------------------------------------------------------===//

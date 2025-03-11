@@ -773,7 +773,10 @@ void WinCOFFWriter::assignFileOffsets(MCAssembler &Asm) {
 
       for (auto &Relocation : Sec->Relocations) {
         assert(Relocation.Symb->getIndex() != -1);
-        Relocation.Data.SymbolTableIndex = Relocation.Symb->getIndex();
+        if (Header.Machine != COFF::IMAGE_FILE_MACHINE_R4000 ||
+            Relocation.Data.Type != COFF::IMAGE_REL_MIPS_PAIR) {
+          Relocation.Data.SymbolTableIndex = Relocation.Symb->getIndex();
+        }
       }
     }
 
@@ -976,8 +979,18 @@ void WinCOFFWriter::recordRelocation(MCAssembler &Asm,
   if (Fixup.getKind() == FK_SecRel_2)
     FixedValue = 0;
 
-  if (OWriter.TargetObjectWriter->recordRelocation(Fixup))
+  if (OWriter.TargetObjectWriter->recordRelocation(Fixup)) {
     Sec->Relocations.push_back(Reloc);
+    if (Header.Machine == COFF::IMAGE_FILE_MACHINE_R4000 &&
+        (Reloc.Data.Type == COFF::IMAGE_REL_MIPS_REFHI ||
+         Reloc.Data.Type == COFF::IMAGE_REL_MIPS_SECRELHI)) {
+      // IMAGE_REL_MIPS_REFHI and IMAGE_REL_MIPS_SECRELHI *must*
+      // be followed by IMAGE_REL_MIPS_PAIR
+      auto RelocPair = Reloc;
+      RelocPair.Data.Type = COFF::IMAGE_REL_MIPS_PAIR;
+      Sec->Relocations.push_back(RelocPair);
+    }
+  }
 }
 
 static std::time_t getTime() {

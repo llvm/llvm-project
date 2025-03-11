@@ -21,99 +21,207 @@
 
 using namespace llvm;
 
-static void replaceTypedBufferAccess(IntrinsicInst *II,
-                                     dxil::ResourceTypeInfo &RTI) {
-  const DataLayout &DL = II->getDataLayout();
+static Value *calculateGEPOffset(GetElementPtrInst *GEP, Value *PrevOffset,
+                                 dxil::ResourceTypeInfo &RTI) {
+  assert(!PrevOffset && "Non-constant GEP chains not handled yet");
 
-  auto *HandleType = cast<TargetExtType>(II->getOperand(0)->getType());
-  assert(HandleType->getName() == "dx.TypedBuffer" &&
-         "Unexpected typed buffer type");
-  Type *ContainedType = HandleType->getTypeParameter(0);
+  const DataLayout &DL = GEP->getDataLayout();
 
-  Type *LoadType =
-      StructType::get(ContainedType, Type::getInt1Ty(II->getContext()));
+  uint64_t ScalarSize = 1;
+  if (RTI.isTyped()) {
+    Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+    // We need the size of an element in bytes so that we can calculate the
+    // offset in elements given a total offset in bytes.
+    Type *ScalarType = ContainedType->getScalarType();
+    ScalarSize = DL.getTypeSizeInBits(ScalarType) / 8;
+  }
 
-  // We need the size of an element in bytes so that we can calculate the offset
-  // in elements given a total offset in bytes later.
-  Type *ScalarType = ContainedType->getScalarType();
-  uint64_t ScalarSize = DL.getTypeSizeInBits(ScalarType) / 8;
+  APInt ConstantOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
+  if (GEP->accumulateConstantOffset(DL, ConstantOffset)) {
+    APInt Scaled = ConstantOffset.udiv(ScalarSize);
+    return ConstantInt::get(Type::getInt32Ty(GEP->getContext()), Scaled);
+  }
 
+  auto IndexIt = GEP->idx_begin();
+  assert(cast<ConstantInt>(IndexIt)->getZExtValue() == 0 &&
+         "GEP is not indexing through pointer");
+  ++IndexIt;
+  Value *Offset = *IndexIt;
+  assert(++IndexIt == GEP->idx_end() && "Too many indices in GEP");
+  return Offset;
+}
+
+static void createTypedBufferStore(IntrinsicInst *II, StoreInst *SI,
+                                   Value *Offset, dxil::ResourceTypeInfo &RTI) {
+  IRBuilder<> Builder(SI);
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+  Type *LoadType = StructType::get(ContainedType, Builder.getInt1Ty());
+
+  Value *V = SI->getValueOperand();
+  if (V->getType() == ContainedType) {
+    // V is already the right type.
+    assert(!Offset && "store of whole element has offset?");
+  } else if (V->getType() == ContainedType->getScalarType()) {
+    // We're storing a scalar, so we need to load the current value and only
+    // replace the relevant part.
+    auto *Load = Builder.CreateIntrinsic(
+        LoadType, Intrinsic::dx_resource_load_typedbuffer,
+        {II->getOperand(0), II->getOperand(1)});
+    auto *Struct = Builder.CreateExtractValue(Load, {0});
+
+    // If we have an offset from seeing a GEP earlier, use that. Otherwise, 0.
+    if (!Offset)
+      Offset = ConstantInt::get(Builder.getInt32Ty(), 0);
+    V = Builder.CreateInsertElement(Struct, V, Offset);
+  } else {
+    llvm_unreachable("Store to typed resource has invalid type");
+  }
+
+  auto *Inst = Builder.CreateIntrinsic(
+      Builder.getVoidTy(), Intrinsic::dx_resource_store_typedbuffer,
+      {II->getOperand(0), II->getOperand(1), V});
+  SI->replaceAllUsesWith(Inst);
+}
+
+static void createRawStore(IntrinsicInst *II, StoreInst *SI, Value *Offset) {
+  IRBuilder<> Builder(SI);
+
+  if (!Offset)
+    Offset = ConstantInt::get(Builder.getInt32Ty(), 0);
+  Value *V = SI->getValueOperand();
+  // TODO: break up larger types
+  auto *Inst = Builder.CreateIntrinsic(
+      Builder.getVoidTy(), Intrinsic::dx_resource_store_rawbuffer,
+      {II->getOperand(0), II->getOperand(1), Offset, V});
+  SI->replaceAllUsesWith(Inst);
+}
+
+static void createStoreIntrinsic(IntrinsicInst *II, StoreInst *SI,
+                                 Value *Offset, dxil::ResourceTypeInfo &RTI) {
+  switch (RTI.getResourceKind()) {
+  case dxil::ResourceKind::TypedBuffer:
+    return createTypedBufferStore(II, SI, Offset, RTI);
+  case dxil::ResourceKind::RawBuffer:
+  case dxil::ResourceKind::StructuredBuffer:
+    return createRawStore(II, SI, Offset);
+  case dxil::ResourceKind::Texture1D:
+  case dxil::ResourceKind::Texture2D:
+  case dxil::ResourceKind::Texture2DMS:
+  case dxil::ResourceKind::Texture3D:
+  case dxil::ResourceKind::TextureCube:
+  case dxil::ResourceKind::Texture1DArray:
+  case dxil::ResourceKind::Texture2DArray:
+  case dxil::ResourceKind::Texture2DMSArray:
+  case dxil::ResourceKind::TextureCubeArray:
+  case dxil::ResourceKind::FeedbackTexture2D:
+  case dxil::ResourceKind::FeedbackTexture2DArray:
+    report_fatal_error("DXIL Load not implemented yet",
+                       /*gen_crash_diag=*/false);
+    return;
+  case dxil::ResourceKind::CBuffer:
+  case dxil::ResourceKind::Sampler:
+  case dxil::ResourceKind::TBuffer:
+  case dxil::ResourceKind::RTAccelerationStructure:
+  case dxil::ResourceKind::Invalid:
+  case dxil::ResourceKind::NumEntries:
+    llvm_unreachable("Invalid resource kind for store");
+  }
+  llvm_unreachable("Unhandled case in switch");
+}
+
+static void createTypedBufferLoad(IntrinsicInst *II, LoadInst *LI,
+                                  Value *Offset, dxil::ResourceTypeInfo &RTI) {
+  IRBuilder<> Builder(LI);
+  Type *ContainedType = RTI.getHandleTy()->getTypeParameter(0);
+  Type *LoadType = StructType::get(ContainedType, Builder.getInt1Ty());
+
+  Value *V =
+      Builder.CreateIntrinsic(LoadType, Intrinsic::dx_resource_load_typedbuffer,
+                              {II->getOperand(0), II->getOperand(1)});
+  V = Builder.CreateExtractValue(V, {0});
+
+  if (Offset)
+    V = Builder.CreateExtractElement(V, Offset);
+
+  LI->replaceAllUsesWith(V);
+}
+
+static void createRawLoad(IntrinsicInst *II, LoadInst *LI, Value *Offset) {
+  IRBuilder<> Builder(LI);
+  // TODO: break up larger types
+  Type *LoadType = StructType::get(LI->getType(), Builder.getInt1Ty());
+  if (!Offset)
+    Offset = ConstantInt::get(Builder.getInt32Ty(), 0);
+  Value *V =
+      Builder.CreateIntrinsic(LoadType, Intrinsic::dx_resource_load_rawbuffer,
+                              {II->getOperand(0), II->getOperand(1), Offset});
+  V = Builder.CreateExtractValue(V, {0});
+
+  LI->replaceAllUsesWith(V);
+}
+
+static void createLoadIntrinsic(IntrinsicInst *II, LoadInst *LI, Value *Offset,
+                                dxil::ResourceTypeInfo &RTI) {
+  switch (RTI.getResourceKind()) {
+  case dxil::ResourceKind::TypedBuffer:
+    return createTypedBufferLoad(II, LI, Offset, RTI);
+  case dxil::ResourceKind::RawBuffer:
+  case dxil::ResourceKind::StructuredBuffer:
+    return createRawLoad(II, LI, Offset);
+  case dxil::ResourceKind::Texture1D:
+  case dxil::ResourceKind::Texture2D:
+  case dxil::ResourceKind::Texture2DMS:
+  case dxil::ResourceKind::Texture3D:
+  case dxil::ResourceKind::TextureCube:
+  case dxil::ResourceKind::Texture1DArray:
+  case dxil::ResourceKind::Texture2DArray:
+  case dxil::ResourceKind::Texture2DMSArray:
+  case dxil::ResourceKind::TextureCubeArray:
+  case dxil::ResourceKind::FeedbackTexture2D:
+  case dxil::ResourceKind::FeedbackTexture2DArray:
+  case dxil::ResourceKind::CBuffer:
+  case dxil::ResourceKind::TBuffer:
+    // TODO: handle these
+    return;
+  case dxil::ResourceKind::Sampler:
+  case dxil::ResourceKind::RTAccelerationStructure:
+  case dxil::ResourceKind::Invalid:
+  case dxil::ResourceKind::NumEntries:
+    llvm_unreachable("Invalid resource kind for load");
+  }
+  llvm_unreachable("Unhandled case in switch");
+}
+
+static void replaceAccess(IntrinsicInst *II, dxil::ResourceTypeInfo &RTI) {
   // Process users keeping track of indexing accumulated from GEPs.
-  struct AccessAndIndex {
+  struct AccessAndOffset {
     User *Access;
-    Value *Index;
+    Value *Offset;
   };
-  SmallVector<AccessAndIndex> Worklist;
+  SmallVector<AccessAndOffset> Worklist;
   for (User *U : II->users())
     Worklist.push_back({U, nullptr});
 
   SmallVector<Instruction *> DeadInsts;
   while (!Worklist.empty()) {
-    AccessAndIndex Current = Worklist.back();
+    AccessAndOffset Current = Worklist.back();
     Worklist.pop_back();
 
     if (auto *GEP = dyn_cast<GetElementPtrInst>(Current.Access)) {
       IRBuilder<> Builder(GEP);
 
-      Value *Index;
-      APInt ConstantOffset(DL.getIndexTypeSizeInBits(GEP->getType()), 0);
-      if (GEP->accumulateConstantOffset(DL, ConstantOffset)) {
-        APInt Scaled = ConstantOffset.udiv(ScalarSize);
-        Index = ConstantInt::get(Builder.getInt32Ty(), Scaled);
-      } else {
-        auto IndexIt = GEP->idx_begin();
-        assert(cast<ConstantInt>(IndexIt)->getZExtValue() == 0 &&
-               "GEP is not indexing through pointer");
-        ++IndexIt;
-        Index = *IndexIt;
-        assert(++IndexIt == GEP->idx_end() && "Too many indices in GEP");
-      }
-
+      Value *Offset = calculateGEPOffset(GEP, Current.Offset, RTI);
       for (User *U : GEP->users())
-        Worklist.push_back({U, Index});
+        Worklist.push_back({U, Offset});
       DeadInsts.push_back(GEP);
 
     } else if (auto *SI = dyn_cast<StoreInst>(Current.Access)) {
       assert(SI->getValueOperand() != II && "Pointer escaped!");
-      IRBuilder<> Builder(SI);
-
-      Value *V = SI->getValueOperand();
-      if (V->getType() == ContainedType) {
-        // V is already the right type.
-      } else if (V->getType() == ScalarType) {
-        // We're storing a scalar, so we need to load the current value and only
-        // replace the relevant part.
-        auto *Load = Builder.CreateIntrinsic(
-            LoadType, Intrinsic::dx_resource_load_typedbuffer,
-            {II->getOperand(0), II->getOperand(1)});
-        auto *Struct = Builder.CreateExtractValue(Load, {0});
-
-        // If we have an offset from seeing a GEP earlier, use it.
-        Value *IndexOp = Current.Index
-                             ? Current.Index
-                             : ConstantInt::get(Builder.getInt32Ty(), 0);
-        V = Builder.CreateInsertElement(Struct, V, IndexOp);
-      } else {
-        llvm_unreachable("Store to typed resource has invalid type");
-      }
-
-      auto *Inst = Builder.CreateIntrinsic(
-          Builder.getVoidTy(), Intrinsic::dx_resource_store_typedbuffer,
-          {II->getOperand(0), II->getOperand(1), V});
-      SI->replaceAllUsesWith(Inst);
+      createStoreIntrinsic(II, SI, Current.Offset, RTI);
       DeadInsts.push_back(SI);
 
     } else if (auto *LI = dyn_cast<LoadInst>(Current.Access)) {
-      IRBuilder<> Builder(LI);
-      Value *V = Builder.CreateIntrinsic(
-          LoadType, Intrinsic::dx_resource_load_typedbuffer,
-          {II->getOperand(0), II->getOperand(1)});
-      V = Builder.CreateExtractValue(V, {0});
-
-      if (Current.Index)
-        V = Builder.CreateExtractElement(V, Current.Index);
-
-      LI->replaceAllUsesWith(V);
+      createLoadIntrinsic(II, LI, Current.Offset, RTI);
       DeadInsts.push_back(LI);
 
     } else
@@ -137,15 +245,8 @@ static bool transformResourcePointers(Function &F, DXILResourceTypeMap &DRTM) {
           Resources.emplace_back(II, DRTM[HandleTy]);
         }
 
-  for (auto &[II, RI] : Resources) {
-    if (RI.isTyped()) {
-      Changed = true;
-      replaceTypedBufferAccess(II, RI);
-    }
-
-    // TODO: handle other resource types. We should probably have an
-    // `unreachable` here once we've added support for all of them.
-  }
+  for (auto &[II, RI] : Resources)
+    replaceAccess(II, RI);
 
   return Changed;
 }

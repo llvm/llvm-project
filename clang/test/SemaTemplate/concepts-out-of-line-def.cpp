@@ -722,6 +722,34 @@ template struct d<int, int>;
 
 } // namespace GH115098
 
+namespace GH123441 {
+
+struct buf {
+  constexpr buf(auto&&... initList) requires (sizeof...(initList) <= 8);
+};
+
+constexpr buf::buf(auto&&... initList) requires (sizeof...(initList) <= 8) {}
+
+template <class>
+struct buffer {
+  constexpr buffer(auto&&... initList) requires (sizeof...(initList) <= 8);
+};
+
+template <class T>
+constexpr buffer<T>::buffer(auto&&... initList) requires (sizeof...(initList) <= 8) {}
+
+template <class...>
+struct foo { // expected-note {{foo defined here}}
+  constexpr foo(auto&&... initList)
+    requires (sizeof...(initList) <= 8);
+};
+
+template <class... T>
+constexpr foo<T...>::foo(auto&&... initList) // expected-error {{does not match any declaration}}
+  requires (sizeof...(T) <= 8) {}
+
+} // namespace GH123441
+
 namespace GH114685 {
 
 template <typename T> struct ptr {
@@ -737,3 +765,17 @@ ptr<U> make_item(auto &&args)
 ptr<char> p;
 
 } // namespace GH114685
+
+namespace GH123472 {
+
+consteval bool fn() { return true; }
+
+struct S {
+  template <typename T>
+  static consteval void mfn() requires (bool(&fn));
+};
+
+template <typename T>
+consteval void S::mfn() requires (bool(&fn)) {}
+
+}

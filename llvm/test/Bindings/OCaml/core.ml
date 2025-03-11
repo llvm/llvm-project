@@ -271,9 +271,6 @@ let test_constants () =
    * CHECK: @const_sub = global i64 sub
    * CHECK: @const_nsw_sub = global i64 sub nsw
    * CHECK: @const_nuw_sub = global i64 sub nuw
-   * CHECK: @const_mul = global i64 mul
-   * CHECK: @const_nsw_mul = global i64 mul nsw
-   * CHECK: @const_nuw_mul = global i64 mul nuw
    * CHECK: @const_xor = global i64 xor
    *)
   let void_ptr = pointer_type context in
@@ -290,9 +287,6 @@ let test_constants () =
   ignore (define_global "const_sub" (const_sub foldbomb five) m);
   ignore (define_global "const_nsw_sub" (const_nsw_sub foldbomb five) m);
   ignore (define_global "const_nuw_sub" (const_nuw_sub foldbomb five) m);
-  ignore (define_global "const_mul" (const_mul foldbomb five) m);
-  ignore (define_global "const_nsw_mul" (const_nsw_mul foldbomb five) m);
-  ignore (define_global "const_nuw_mul" (const_nuw_mul foldbomb five) m);
   ignore (define_global "const_xor" (const_xor foldbomb five) m);
 
   group "constant casts";

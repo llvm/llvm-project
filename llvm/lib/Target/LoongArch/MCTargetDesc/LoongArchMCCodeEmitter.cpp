@@ -249,6 +249,7 @@ LoongArchMCCodeEmitter::getExprOpValue(const MCInst &MI, const MCOperand &MO,
       break;
     case LoongArchMCExpr::VK_LoongArch_CALL36:
       FixupKind = LoongArch::fixup_loongarch_call36;
+      RelaxCandidate = true;
       break;
     case LoongArchMCExpr::VK_LoongArch_TLS_DESC_PC_HI20:
       FixupKind = LoongArch::fixup_loongarch_tls_desc_pc_hi20;

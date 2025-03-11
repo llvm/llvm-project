@@ -83,9 +83,8 @@ static Value *simplifyNeonVld1(const IntrinsicInst &II, unsigned MemAlign,
   if (!isPowerOf2_32(Alignment))
     return nullptr;
 
-  auto *BCastInst = Builder.CreateBitCast(II.getArgOperand(0),
-                                          PointerType::get(II.getType(), 0));
-  return Builder.CreateAlignedLoad(II.getType(), BCastInst, Align(Alignment));
+  return Builder.CreateAlignedLoad(II.getType(), II.getArgOperand(0),
+                                   Align(Alignment));
 }
 
 bool ARMTTIImpl::areInlineCompatible(const Function *Caller,
@@ -2634,8 +2633,7 @@ void ARMTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
   BaseT::getPeelingPreferences(L, SE, PP);
 }
 
-bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
-                                       TTI::ReductionFlags Flags) const {
+bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
 
@@ -2648,8 +2646,8 @@ bool ARMTTIImpl::preferInLoopReduction(unsigned Opcode, Type *Ty,
   }
 }
 
-bool ARMTTIImpl::preferPredicatedReductionSelect(
-    unsigned Opcode, Type *Ty, TTI::ReductionFlags Flags) const {
+bool ARMTTIImpl::preferPredicatedReductionSelect(unsigned Opcode,
+                                                 Type *Ty) const {
   if (!ST->hasMVEIntegerOps())
     return false;
   return true;
@@ -2670,7 +2668,7 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
       return AM.Scale < 0 ? 1 : 0; // positive offsets execute faster
     return 0;
   }
-  return -1;
+  return InstructionCost::getInvalid();
 }
 
 bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {
