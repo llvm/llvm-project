@@ -79,6 +79,12 @@ static cl::opt<int>
                        "use for creating a floating-point immediate value"),
               cl::init(2));
 
+static cl::opt<bool>
+    ReassocShlAddiAdd("reassoc-shl-addi-add", cl::Hidden,
+                      cl::desc("Swap add and addi in cases where the add may "
+                               "be combined with a shift"),
+                      cl::init(true));
+
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
     : TargetLowering(TM), Subtarget(STI) {
@@ -14306,6 +14312,87 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::SHL, DL, VT, SHADD, DAG.getConstant(Bits, DL, VT));
 }
 
+// Check if this SDValue is an add immediate and then
+static bool checkAddiForShift(SDValue AddI) {
+  // Based on testing it seems that performance degrades if the ADDI has
+  // more than 2 uses.
+  if (AddI->use_size() > 2)
+    return false;
+
+  ConstantSDNode *AddConst = dyn_cast<ConstantSDNode>(AddI->getOperand(1));
+  if (!AddConst)
+    return false;
+
+  SDValue SHLVal = AddI->getOperand(0);
+  if (SHLVal->getOpcode() != ISD::SHL)
+    return false;
+
+  ConstantSDNode *ShiftNode = dyn_cast<ConstantSDNode>(SHLVal->getOperand(1));
+  if (!ShiftNode)
+    return false;
+
+  auto ShiftVal = ShiftNode->getSExtValue();
+  if (ShiftVal != 1 && ShiftVal != 2 && ShiftVal != 3)
+    return false;
+
+  return true;
+}
+
+// Optimize (add (add (shl x, c0),  c1), y) ->
+//          (ADDI (SH*ADD y, x), c1), if c0 equals to [1|2|3].
+static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+  if (!ReassocShlAddiAdd)
+    return SDValue();
+
+  // Perform this optimization only in the zba extension.
+  if (!Subtarget.hasStdExtZba())
+    return SDValue();
+
+  // Skip for vector types and larger types.
+  EVT VT = N->getValueType(0);
+  if (VT.isVector() || VT.getSizeInBits() > Subtarget.getXLen())
+    return SDValue();
+
+  // Looking for a reg-reg add and not an addi.
+  auto *Op1 = dyn_cast<ConstantSDNode>(N->getOperand(1));
+  if (Op1)
+    return SDValue();
+  SDValue AddI;
+  SDValue Other;
+
+  if (N->getOperand(0)->getOpcode() == ISD::ADD &&
+      N->getOperand(1)->getOpcode() == ISD::ADD) {
+    AddI = N->getOperand(0);
+    Other = N->getOperand(1);
+    if (!checkAddiForShift(AddI)) {
+      AddI = N->getOperand(1);
+      Other = N->getOperand(0);
+    }
+  } else if (N->getOperand(0)->getOpcode() == ISD::ADD) {
+    AddI = N->getOperand(0);
+    Other = N->getOperand(1);
+  } else if (N->getOperand(1)->getOpcode() == ISD::ADD) {
+    AddI = N->getOperand(1);
+    Other = N->getOperand(0);
+  } else
+    return SDValue();
+
+  if (!checkAddiForShift(AddI))
+    return SDValue();
+
+  auto *AddConst = dyn_cast<ConstantSDNode>(AddI->getOperand(1));
+  SDValue SHLVal = AddI->getOperand(0);
+  auto *ShiftNode = dyn_cast<ConstantSDNode>(SHLVal->getOperand(1));
+  auto ShiftVal = ShiftNode->getSExtValue();
+  SDLoc DL(N);
+
+  SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, SHLVal->getOperand(0),
+                              DAG.getConstant(ShiftVal, DL, VT), Other);
+  return DAG.getNode(ISD::ADD, DL, VT, SHADD,
+                     DAG.getConstant(AddConst->getSExtValue(), DL, VT));
+}
+
 // Combine a constant select operand into its use:
 //
 // (and (select cond, -1, c), x)
@@ -14547,9 +14634,12 @@ static SDValue performADDCombine(SDNode *N,
     return V;
   if (SDValue V = transformAddImmMulImm(N, DAG, Subtarget))
     return V;
-  if (!DCI.isBeforeLegalize() && !DCI.isCalledByLegalizer())
+  if (!DCI.isBeforeLegalize() && !DCI.isCalledByLegalizer()) {
     if (SDValue V = transformAddShlImm(N, DAG, Subtarget))
       return V;
+    if (SDValue V = combineShlAddIAdd(N, DAG, Subtarget))
+      return V;
+  }
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
