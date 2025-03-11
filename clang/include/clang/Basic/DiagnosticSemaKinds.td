@@ -529,8 +529,12 @@ def warn_cxx14_compat_decomp_decl : Warning<
 def ext_decomp_decl : ExtWarn<
   "decomposition declarations are a C++17 extension">, InGroup<CXX17>;
 def ext_decomp_decl_cond : ExtWarn<
-  "ISO C++17 does not permit structured binding declaration in a condition">,
-  InGroup<DiagGroup<"binding-in-condition">>;
+  "structured binding declaration in a condition is a C++2c extenstion">,
+  InGroup<CXX26>;
+def warn_cxx26_decomp_decl_cond : Warning<
+  "structured binding declaration in a condition is incompatible with "
+  "C++ standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
 def err_decomp_decl_spec : Error<
   "decomposition declaration cannot be declared "
   "%plural{1:'%1'|:with '%1' specifiers}0">;
@@ -10683,6 +10687,9 @@ def err_block_on_vm : Error<
   "__block attribute not allowed on declaration with a variably modified type">;
 def err_sizeless_nonlocal : Error<
   "non-local variable with sizeless type %0">;
+
+def err_vector_index_out_of_range : Error<
+  "vector element index %0 is out of bounds">;
 
 def err_vec_builtin_non_vector : Error<
  "%select{first two|all}1 arguments to %0 must be vectors">;

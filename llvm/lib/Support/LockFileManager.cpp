@@ -307,12 +307,8 @@ LockFileManager::waitForUnlock(const unsigned MaxSeconds) {
   while (Backoff.waitForNextAttempt()) {
     // FIXME: implement event-based waiting
     if (sys::fs::access(LockFileName.c_str(), sys::fs::AccessMode::Exist) ==
-        errc::no_such_file_or_directory) {
-      // If the original file wasn't created, somone thought the lock was dead.
-      if (!sys::fs::exists(FileName))
-        return Res_OwnerDied;
+        errc::no_such_file_or_directory)
       return Res_Success;
-    }
 
     // If the process owning the lock died without cleaning up, just bail out.
     if (!processStillExecuting((*Owner).first, (*Owner).second))
