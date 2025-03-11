@@ -21,7 +21,14 @@ namespace irdl {
 /// Translates an IRDL dialect definition to a C++ definition that can be used
 /// with MLIR.
 ///
-/// TODO: Document define flags to obtain declaration or definition.
+/// As with TableGen declarations, the following preprocessor macros will
+/// generate the corresponding code:
+///
+///  // This define generates code for the dialect's class declarations
+///  #define GEN_DIALECT_DECL_HEADER
+///
+///  // This define generates code for the dialect's class definitions
+///  #define GEN_DIALECT_DEF
 LogicalResult translateIRDLDialectToCpp(irdl::DialectOp dialect,
                                         raw_ostream &output);
 
