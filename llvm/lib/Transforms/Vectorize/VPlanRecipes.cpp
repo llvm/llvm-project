@@ -360,6 +360,7 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   assert(OpType == OperationType::FPMathOp &&
          "recipe doesn't have fast math flags");
   FastMathFlags Res;
+  Res.setFast(FMFs.Fast);
   Res.setAllowReassoc(FMFs.AllowReassoc);
   Res.setNoNaNs(FMFs.NoNaNs);
   Res.setNoInfs(FMFs.NoInfs);
@@ -1393,6 +1394,7 @@ VPRecipeWithIRFlags::FastMathFlagsTy::FastMathFlagsTy(
   AllowReciprocal = FMF.allowReciprocal();
   AllowContract = FMF.allowContract();
   ApproxFunc = FMF.approxFunc();
+  Fast = FMF.isFast();
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

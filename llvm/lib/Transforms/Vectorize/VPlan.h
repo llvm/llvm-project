@@ -614,6 +614,7 @@ private:
     char AllowReciprocal : 1;
     char AllowContract : 1;
     char ApproxFunc : 1;
+    char Fast : 1;
 
     FastMathFlagsTy(const FastMathFlags &FMF);
   };
