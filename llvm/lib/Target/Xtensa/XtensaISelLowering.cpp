@@ -349,11 +349,11 @@ SDValue XtensaTargetLowering::LowerFormalArguments(
       // Transform the arguments stored on
       // physical registers into virtual ones
       Register Reg = 0;
-      unsigned FrameReg = Subtarget.getRegisterInfo()->getFrameRegister(MF);
+      MCRegister FrameReg = Subtarget.getRegisterInfo()->getFrameRegister(MF);
 
-      // Argument passed in FrameReg in WinABI we save in A8 (in emitPrologue),
-      // so load argument from A8
-      if (Subtarget.isWinABI() && (VA.getLocReg() == FrameReg)) {
+      // Argument passed in FrameReg in Windowed ABI we save in A8 (in
+      // emitPrologue), so load argument from A8
+      if (Subtarget.isWindowedABI() && (VA.getLocReg() == FrameReg)) {
         Reg = MF.addLiveIn(Xtensa::A8, &Xtensa::ARRegClass);
         XtensaFI->setSaveFrameRegister();
       } else {
@@ -558,7 +558,7 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
   SDValue Glue;
   for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I) {
     unsigned Reg = RegsToPass[I].first;
-    if (Subtarget.isWinABI())
+    if (Subtarget.isWindowedABI())
       Reg = toCallerWindow(Reg);
     Chain = DAG.getCopyToReg(Chain, DL, Reg, RegsToPass[I].second, Glue);
     Glue = Chain.getValue(1);
@@ -609,7 +609,7 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // known live into the call.
   for (unsigned I = 0, E = RegsToPass.size(); I != E; ++I) {
     unsigned Reg = RegsToPass[I].first;
-    if (Subtarget.isWinABI())
+    if (Subtarget.isWindowedABI())
       Reg = toCallerWindow(Reg);
     Ops.push_back(DAG.getRegister(Reg, RegsToPass[I].second.getValueType()));
   }
@@ -619,7 +619,8 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
     Ops.push_back(Glue);
 
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-  Chain = DAG.getNode(Subtarget.isWinABI() ? XtensaISD::CALLW8 : XtensaISD::CALL,
+  Chain = DAG.getNode(Subtarget.isWindowedABI() ? XtensaISD::CALLW8
+                                                : XtensaISD::CALL,
                       DL, NodeTys, Ops);
   Glue = Chain.getValue(1);
 
@@ -631,8 +632,8 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // Assign locations to each value returned by this call.
   SmallVector<CCValAssign, 16> RetLocs;
   CCState RetCCInfo(CallConv, IsVarArg, MF, RetLocs, *DAG.getContext());
-  RetCCInfo.AnalyzeCallResult(Ins, Subtarget.isWinABI() ? RetCCW8_Xtensa
-                                                        : RetCC_Xtensa);
+  RetCCInfo.AnalyzeCallResult(Ins, Subtarget.isWindowedABI() ? RetCCW8_Xtensa
+                                                             : RetCC_Xtensa);
 
   // Copy all of the result registers out of their specified physreg.
   for (unsigned I = 0, E = RetLocs.size(); I != E; ++I) {
@@ -674,8 +675,9 @@ XtensaTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   SDValue Glue;
   // Quick exit for void returns
   if (RetLocs.empty())
-    return DAG.getNode(Subtarget.isWinABI() ? XtensaISD::RETW
-                                            : XtensaISD::RET, DL, MVT::Other, Chain);
+    return DAG.getNode(Subtarget.isWindowedABI() ? XtensaISD::RETW
+                                                 : XtensaISD::RET,
+                       DL, MVT::Other, Chain);
 
   // Copy the result values into the output registers.
   SmallVector<SDValue, 4> RetOps;
@@ -699,8 +701,9 @@ XtensaTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (Glue.getNode())
     RetOps.push_back(Glue);
 
-  return DAG.getNode(Subtarget.isWinABI() ? XtensaISD::RETW
-                                            : XtensaISD::RET, DL, MVT::Other, RetOps);
+  return DAG.getNode(Subtarget.isWindowedABI() ? XtensaISD::RETW
+                                               : XtensaISD::RET,
+                     DL, MVT::Other, RetOps);
 }
 
 static unsigned getBranchOpcode(ISD::CondCode Cond) {
@@ -934,7 +937,7 @@ SDValue XtensaTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   unsigned SPReg = Xtensa::SP;
   SDValue SP = DAG.getCopyFromReg(Chain, DL, SPReg, VT);
   SDValue NewSP = DAG.getNode(ISD::SUB, DL, VT, SP, SizeRoundUp); // Value
-  if (Subtarget.isWinABI()) {
+  if (Subtarget.isWindowedABI()) {
     NewSP = DAG.getNode(XtensaISD::MOVSP, DL, MVT::i32, NewSP);
   }
   Chain = DAG.getCopyToReg(SP.getValue(1), DL, SPReg, NewSP); // Output chain

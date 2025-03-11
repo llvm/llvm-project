@@ -23,9 +23,9 @@
 
 using namespace llvm;
 
-/* minimum frame = reg save area (4 words) plus static chain (1 word)
-   and the total number of words must be a multiple of 128 bits.  */
-/* Width of a word, in units (bytes).  */
+// Minimum frame = reg save area (4 words) plus static chain (1 word)
+// and the total number of words must be a multiple of 128 bits.
+// Width of a word, in units (bytes).
 #define UNITS_PER_WORD 4
 #define MIN_FRAME_SIZE (8 * UNITS_PER_WORD)
 
@@ -58,7 +58,7 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
   // Round up StackSize to 16*N
   StackSize += (16 - StackSize) & 0xf;
 
-  if (STI.isWinABI()) {
+  if (STI.isWindowedABI()) {
     StackSize += 32;
     uint64_t MaxAlignment = MFI.getMaxAlign().value();
     if(MaxAlignment > 32)
@@ -69,8 +69,8 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
           .addReg(SP)
           .addImm(StackSize);
     } else {
-      /* Use a8 as a temporary since a0-a7 may be live.  */
-      unsigned TmpReg = Xtensa::A8;
+      // Use a8 as a temporary since a0-a7 may be live.
+      MCRegister TmpReg = Xtensa::A8;
 
       const XtensaInstrInfo &TII = *static_cast<const XtensaInstrInfo *>(
           MBB.getParent()->getSubtarget().getInstrInfo());
@@ -90,7 +90,7 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
     // diff_to_128_aligned_address = (128 - (SP & 127))
     // new_offset = SP + diff_to_128_aligned_address
     // This is safe to do because we increased the stack size by MaxAlignment.
-    unsigned Reg, RegMisAlign;
+    MCRegister Reg, RegMisAlign;
     if (MaxAlignment > 32){
       TII.loadImmediate(MBB, MBBI, &RegMisAlign, MaxAlignment - 1);
       TII.loadImmediate(MBB, MBBI, &Reg, MaxAlignment);
@@ -135,77 +135,78 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
           .addCFIIndex(CFIIndex);
     }
   } else {
-  // No need to allocate space on the stack.
-  if (StackSize == 0 && !MFI.adjustsStack())
-    return;
+    // No need to allocate space on the stack.
+    if (StackSize == 0 && !MFI.adjustsStack())
+      return;
 
-  // Adjust stack.
-  TII.adjustStackPtr(SP, -StackSize, MBB, MBBI);
+    // Adjust stack.
+    TII.adjustStackPtr(SP, -StackSize, MBB, MBBI);
 
-  // emit ".cfi_def_cfa_offset StackSize"
-  unsigned CFIIndex =
-      MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize));
-  BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-      .addCFIIndex(CFIIndex);
+    // emit ".cfi_def_cfa_offset StackSize"
+    unsigned CFIIndex =
+        MF.addFrameInst(MCCFIInstruction::cfiDefCfaOffset(nullptr, StackSize));
+    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+        .addCFIIndex(CFIIndex);
 
-  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
+    const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
 
-  if (!CSI.empty()) {
-    // Find the instruction past the last instruction that saves a
-    // callee-saved register to the stack. The callee-saved store
-    // instructions are placed at the begin of basic block, so
-    //  iterate over instruction sequence and check that
-    // save instructions are placed correctly.
-    for (unsigned i = 0, e = CSI.size(); i < e; ++i) {
+    if (!CSI.empty()) {
+      // Find the instruction past the last instruction that saves a
+      // callee-saved register to the stack. The callee-saved store
+      // instructions are placed at the begin of basic block, so
+      //  iterate over instruction sequence and check that
+      // save instructions are placed correctly.
+      for (unsigned i = 0, e = CSI.size(); i < e; ++i) {
 #ifndef NDEBUG
-      const CalleeSavedInfo &Info = CSI[i];
-      int FI = Info.getFrameIdx();
-      int StoreFI = 0;
+        const CalleeSavedInfo &Info = CSI[i];
+        int FI = Info.getFrameIdx();
+        int StoreFI = 0;
 
-      // Checking that the instruction is exactly as expected
-      bool IsStoreInst = false;
-      if (MBBI->getOpcode() == TargetOpcode::COPY && Info.isSpilledToReg()) {
-        Register DstReg = MBBI->getOperand(0).getReg();
-        Register Reg = MBBI->getOperand(1).getReg();
-        IsStoreInst = Info.getDstReg() == DstReg.asMCReg() &&
-                      Info.getReg() == Reg.asMCReg();
-      } else {
-        Register Reg = TII.isStoreToStackSlot(*MBBI, StoreFI);
-        IsStoreInst = Reg.asMCReg() == Info.getReg() && StoreFI == FI;
-      }
-      assert(IsStoreInst &&
-             "Unexpected callee-saved register store instruction");
+        // Checking that the instruction is exactly as expected
+        bool IsStoreInst = false;
+        if (MBBI->getOpcode() == TargetOpcode::COPY && Info.isSpilledToReg()) {
+          Register DstReg = MBBI->getOperand(0).getReg();
+          Register Reg = MBBI->getOperand(1).getReg();
+          IsStoreInst = Info.getDstReg() == DstReg.asMCReg() &&
+                        Info.getReg() == Reg.asMCReg();
+        } else {
+          Register Reg = TII.isStoreToStackSlot(*MBBI, StoreFI);
+          IsStoreInst = Reg.asMCReg() == Info.getReg() && StoreFI == FI;
+        }
+        assert(IsStoreInst &&
+               "Unexpected callee-saved register store instruction");
 #endif
-      ++MBBI;
+        ++MBBI;
+      }
+
+      // Iterate over list of callee-saved registers and emit .cfi_offset
+      // directives.
+      for (const auto &I : CSI) {
+        int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
+        MCRegister Reg = I.getReg();
+
+        unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
+            nullptr, MRI->getDwarfRegNum(Reg, 1), Offset));
+        BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
+            .addCFIIndex(CFIIndex);
+      }
     }
 
-    // Iterate over list of callee-saved registers and emit .cfi_offset
-    // directives.
-    for (const auto &I : CSI) {
-      int64_t Offset = MFI.getObjectOffset(I.getFrameIdx());
-      MCRegister Reg = I.getReg();
+    // if framepointer enabled, set it to point to the stack pointer.
+    if (hasFP(MF)) {
+      // Insert instruction "move $fp, $sp" at this location.
+      BuildMI(MBB, MBBI, DL, TII.get(Xtensa::OR), FP)
+          .addReg(SP)
+          .addReg(SP)
+          .setMIFlag(MachineInstr::FrameSetup);
 
-      unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
-          nullptr, MRI->getDwarfRegNum(Reg, 1), Offset));
+      // emit ".cfi_def_cfa_register $fp"
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(
+              nullptr, MRI->getDwarfRegNum(FP, true)));
       BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
           .addCFIIndex(CFIIndex);
     }
-  }
-
-  // if framepointer enabled, set it to point to the stack pointer.
-  if (hasFP(MF)) {
-    // Insert instruction "move $fp, $sp" at this location.
-    BuildMI(MBB, MBBI, DL, TII.get(Xtensa::OR), FP)
-        .addReg(SP)
-        .addReg(SP)
-        .setMIFlag(MachineInstr::FrameSetup);
-
-    // emit ".cfi_def_cfa_register $fp"
-    unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createDefCfaRegister(
-        nullptr, MRI->getDwarfRegNum(FP, true)));
-    BuildMI(MBB, MBBI, DL, TII.get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex);
-  }
   }
 
   if (StackSize != PrevStackSize) {
@@ -264,7 +265,7 @@ void XtensaFrameLowering::emitEpilogue(MachineFunction &MF,
              "Unexpected callee-saved register restore instruction");
 #endif
     }
-    if (STI.isWinABI()) {
+    if (STI.isWindowedABI()) {
       // In most architectures, we need to explicitly restore the stack pointer
       // before returning.
       //
@@ -277,7 +278,7 @@ void XtensaFrameLowering::emitEpilogue(MachineFunction &MF,
     }
   }
 
-  if (STI.isWinABI())
+  if (STI.isWindowedABI())
     return;
 
   // Get the number of bytes from FrameInfo
@@ -296,7 +297,7 @@ bool XtensaFrameLowering::spillCalleeSavedRegisters(
   MachineFunction *MF = MBB.getParent();
   MachineBasicBlock &EntryBlock = *(MF->begin());
 
-  if (STI.isWinABI())
+  if (STI.isWindowedABI())
     return true;
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
@@ -324,7 +325,7 @@ bool XtensaFrameLowering::spillCalleeSavedRegisters(
 bool XtensaFrameLowering::restoreCalleeSavedRegisters(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
     MutableArrayRef<CalleeSavedInfo> CSI, const TargetRegisterInfo *TRI) const {
-  if (STI.isWinABI())
+  if (STI.isWindowedABI())
     return true;
   return TargetFrameLowering::restoreCalleeSavedRegisters(MBB, MI, CSI, TRI);
 }
@@ -353,7 +354,7 @@ void XtensaFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                RegScavenger *RS) const {
   unsigned FP = TRI->getFrameRegister(MF);
 
-  if (STI.isWinABI()) {
+  if (STI.isWindowedABI()) {
     return;
   }
 
