@@ -17,25 +17,123 @@ entry:
   ret ptr %arrayidx
 }
 
-; All offsets must be positive, so inbounds can be preserved.
-define void @must_be_inbounds(ptr %dst, ptr %src, i32 %i) {
+; All indices must be non-negative, so inbounds can be preserved.
+define ptr @must_be_inbounds(ptr %p, i32 %i) {
 ; CHECK-LABEL: @must_be_inbounds(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I_PROM:%.*]] = zext i32 [[I:%.*]] to i64
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds float, ptr [[SRC:%.*]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX_SRC2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX_SRC2]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[DST:%.*]], i64 [[I_PROM]]
-; CHECK-NEXT:    [[ARRAYIDX_DST4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 4
-; CHECK-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX_DST4]], align 4
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[I_PROM]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    ret ptr [[ARRAYIDX2]]
 ;
 entry:
   %i.prom = zext i32 %i to i64
   %idx = add nsw i64 %i.prom, 1
-  %arrayidx.src = getelementptr inbounds float, ptr %src, i64 %idx
-  %3 = load float, ptr %arrayidx.src, align 4
-  %arrayidx.dst = getelementptr inbounds float, ptr %dst, i64 %idx
-  store float %3, ptr %arrayidx.dst, align 4
-  ret void
+  %arrayidx = getelementptr inbounds i32, ptr %p, i64 %idx
+  ret ptr %arrayidx
+}
+
+; idx must be non-negative -> preserve inbounds
+define ptr @sign_bit_clear(ptr %p, i64 %i) {
+; CHECK-LABEL: @sign_bit_clear(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX:%.*]] = and i64 [[I:%.*]], 9223372036854775807
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    ret ptr [[ARRAYIDX]]
+;
+entry:
+  %idx = and i64 %i, u0x7fffffffffffffff
+  %idx.add = add i64 %idx, 1
+  %arrayidx = getelementptr inbounds i32, ptr %p, i64 %idx.add
+  ret ptr %arrayidx
+}
+
+; idx may be negative -> don't preserve inbounds
+define ptr @sign_bit_not_clear(ptr %p, i64 %i) {
+; CHECK-LABEL: @sign_bit_not_clear(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX:%.*]] = and i64 [[I:%.*]], -256
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    ret ptr [[ARRAYIDX2]]
+;
+entry:
+  %idx = and i64 %i, u0xffffffffffffff00
+  %idx.add = add i64 %idx, 1
+  %arrayidx = getelementptr inbounds i32, ptr %p, i64 %idx.add
+  ret ptr %arrayidx
+}
+
+; idx may be 0 or very negative -> don't preserve inbounds
+define ptr @only_sign_bit_not_clear(ptr %p, i64 %i) {
+; CHECK-LABEL: @only_sign_bit_not_clear(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[IDX:%.*]] = and i64 [[I:%.*]], -9223372036854775808
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    ret ptr [[ARRAYIDX2]]
+;
+entry:
+  %idx = and i64 %i, u0x8000000000000000
+  %idx.add = add i64 %idx, 1
+  %arrayidx = getelementptr inbounds i32, ptr %p, i64 %idx.add
+  ret ptr %arrayidx
+}
+
+; all indices non-negative -> preserve inbounds
+define ptr @multi_level_nonnegative(ptr %p, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @multi_level_nonnegative(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MASKED_IDX1:%.*]] = and i64 [[IDX1:%.*]], 255
+; CHECK-NEXT:    [[MASKED_IDX2:%.*]] = and i64 [[IDX2:%.*]], 65535
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [10 x [20 x i32]], ptr [[P:%.*]], i64 0, i64 [[MASKED_IDX1]], i64 [[MASKED_IDX2]]
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 180
+; CHECK-NEXT:    ret ptr [[ARRAYIDX3]]
+;
+entry:
+  %masked.idx1 = and i64 %idx1, u0xff
+  %masked.idx2 = and i64 %idx2, u0xffff
+  %idx1.add = add i64 %masked.idx1, 2
+  %idx2.add = add i64 %masked.idx2, 5
+  %arrayidx = getelementptr inbounds [10 x [20 x i32]], ptr %p, i64 0, i64 %idx1.add, i64 %idx2.add
+  ret ptr %arrayidx
+}
+
+; It doesn't matter that %idx2.add might be negative, the indices in the resulting GEPs are all non-negative -> preserve inbounds
+define ptr @multi_level_mixed_okay(ptr %p, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @multi_level_mixed_okay(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MASKED_IDX1:%.*]] = and i64 [[IDX1:%.*]], 255
+; CHECK-NEXT:    [[MASKED_IDX2:%.*]] = and i64 [[IDX2:%.*]], 65535
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds [10 x [20 x i32]], ptr [[P:%.*]], i64 0, i64 [[MASKED_IDX1]], i64 [[MASKED_IDX2]]
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr inbounds i8, ptr [[TMP0]], i64 156
+; CHECK-NEXT:    ret ptr [[ARRAYIDX3]]
+;
+entry:
+  %masked.idx1 = and i64 %idx1, u0xff
+  %masked.idx2 = and i64 %idx2, u0xffff
+  %idx1.add = add i64 %masked.idx1, 2
+  %idx2.add = add i64 %masked.idx2, -1
+  %arrayidx = getelementptr inbounds [10 x [20 x i32]], ptr %p, i64 0, i64 %idx1.add, i64 %idx2.add
+  ret ptr %arrayidx
+}
+
+; One index may be negative -> don't preserve inbounds
+define ptr @multi_level_mixed_not_okay(ptr %p, i64 %idx1, i64 %idx2) {
+; CHECK-LABEL: @multi_level_mixed_not_okay(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[MASKED_IDX1:%.*]] = and i64 [[IDX1:%.*]], -256
+; CHECK-NEXT:    [[MASKED_IDX2:%.*]] = and i64 [[IDX2:%.*]], 65535
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr [10 x [20 x i32]], ptr [[P:%.*]], i64 0, i64 [[MASKED_IDX1]], i64 [[MASKED_IDX2]]
+; CHECK-NEXT:    [[ARRAYIDX3:%.*]] = getelementptr i8, ptr [[TMP0]], i64 156
+; CHECK-NEXT:    ret ptr [[ARRAYIDX3]]
+;
+entry:
+  %masked.idx1 = and i64 %idx1, u0xffffffffffffff00
+  %masked.idx2 = and i64 %idx2, u0xffff
+  %idx1.add = add i64 %masked.idx1, 2
+  %idx2.add = add i64 %masked.idx2, -1
+  %arrayidx = getelementptr inbounds [10 x [20 x i32]], ptr %p, i64 0, i64 %idx1.add, i64 %idx2.add
+  ret ptr %arrayidx
 }
