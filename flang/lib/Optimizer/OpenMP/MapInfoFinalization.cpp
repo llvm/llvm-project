@@ -243,16 +243,21 @@ class MapInfoFinalizationPass
   /// where necessary, although it does not seem strictly required.
   unsigned long getDescriptorMapType(mlir::omp::MapInfoOp op,
                                      mlir::Operation *target) {
+    using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
     unsigned long mapType = op.getMapType().value_or(0);
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
                               mlir::omp::TargetUpdateOp>(target))
       return mapType;
-
-    using MappingFlags = llvm::omp::OpenMPOffloadMappingFlags;
-    auto flags = MappingFlags::OMP_MAP_TO | MappingFlags::OMP_MAP_ALWAYS;
-    flags |= MappingFlags(mapType) & MappingFlags::OMP_MAP_IMPLICIT;
-    if (fir::isTypeWithDescriptor(op.getVarType()))
-      flags |= MappingFlags::OMP_MAP_DESCRIPTOR;
+    mapFlags flags = mapFlags::OMP_MAP_TO |
+      (mapFlags(mapType) & mapFlags::OMP_MAP_IMPLICIT);
+    // TODO/FIXME: We currently cannot have MAP_CLOSE and MAP_ALWAYS on
+    // the descriptor at once, these are mutually exclusive and when
+    // both are applied the runtime will fail to map.
+    flags |= ((mapFlags(mapType) & mapFlags::OMP_MAP_CLOSE) ==
+              mapFlags::OMP_MAP_CLOSE)
+                 ? mapFlags::OMP_MAP_CLOSE
+                 : mapFlags::OMP_MAP_ALWAYS;
+    flags |= mapFlags::OMP_MAP_DESCRIPTOR;
     return llvm::to_underlying(flags);
   }
 
