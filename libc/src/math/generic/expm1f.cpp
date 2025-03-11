@@ -103,7 +103,7 @@ LLVM_LIBC_FUNCTION(float, expm1f, (float x)) {
         // intermediate results as it is more efficient than using an emulated
         // version of FMA.
 #if defined(LIBC_TARGET_CPU_HAS_FMA_FLOAT)
-      return fputil::multiply_add<float>(x, x, x);
+      return fputil::multiply_add(x, x, x);
 #else
       double xd = x;
       return static_cast<float>(fputil::multiply_add(xd, xd, xd));

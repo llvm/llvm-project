@@ -108,7 +108,7 @@ LIBC_INLINE void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
 //   => pi * x = (k + y) * pi / 32
 static LIBC_INLINE int64_t range_reduction_sincospi(double x, double &y) {
   double kd = fputil::nearest_integer(x * 32);
-  y = fputil::multiply_add<double>(x, 32.0, -kd);
+  y = fputil::multiply_add(x, 32.0, -kd);
 
   return static_cast<int64_t>(kd);
 }
