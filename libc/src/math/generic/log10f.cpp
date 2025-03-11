@@ -139,6 +139,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
       return 9.0f;
     case 0x5015'02f9U: // x = 10,000,000,000
       return 10.0f;
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     case 0x0efe'ee7aU: // x = 0x1.fddcf4p-98f
       return fputil::round_result_slightly_up(-0x1.d33a46p+4f);
     case 0x3f5f'de1bU: // x = 0x1.bfbc36p-1f
@@ -157,6 +158,7 @@ LLVM_LIBC_FUNCTION(float, log10f, (float x)) {
     case 0x7956'ba5eU: // x = 69683218960000541503257137270226944.0
       return fputil::round_result_slightly_up(0x1.16bebap+5f);
 #endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
     }
   }
 

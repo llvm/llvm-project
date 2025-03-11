@@ -397,6 +397,8 @@ AST Matchers
 ------------
 
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
+- Extend ``templateArgumentCountIs`` to support function and variable template
+  specialization.
 
 clang-format
 ------------
