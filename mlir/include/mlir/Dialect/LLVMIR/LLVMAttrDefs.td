@@ -1310,7 +1310,7 @@ def ModuleFlagAttr
       #llvm.mlir.module_flag<1 : i64, "wchar_size", 4 : i32>
     ```
   }];
-  let parameters = (ins "ModFlagBehaviorAttr":$behavior,
+  let parameters = (ins "ModFlagBehavior":$behavior,
                         "StringAttr":$key,
                         "uint32_t":$value);
   let assemblyFormat = "`<` $behavior `,` $key `,` $value `>`";
