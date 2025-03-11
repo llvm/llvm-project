@@ -20,8 +20,3 @@ revert: breaks build of rccl __cpuidex
 1c28b92373 [Clang] __has_builtin should return false for aux triple builtins (#121839) 
 Ron and Saiyed
 ---
-needs flang help
-f1178815d243 [Flang][OpenMP][MLIR] Implement close, present and ompx_ho
-d67947162f4b [flang][OpenMP] Implement HAS_DEVICE_ADDR clause
-AndrewG
----
