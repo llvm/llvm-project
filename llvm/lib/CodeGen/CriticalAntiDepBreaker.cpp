@@ -210,7 +210,7 @@ void CriticalAntiDepBreaker::PrescanInstruction(MachineInstr &MI) {
 
     // If we're still willing to consider this register, note the reference.
     if (Classes[Reg.id()] != reinterpret_cast<TargetRegisterClass *>(-1))
-      RegRefs.insert(std::make_pair(Reg, &MO));
+      RegRefs.emplace(Reg, &MO);
 
     if (MO.isUse() && Special) {
       if (!KeepRegs.test(Reg.id())) {
