@@ -1442,14 +1442,14 @@ Expected<bool> parseMachineSinkingPassOptions(StringRef Params) {
 
 Expected<bool> parseMachineBlockPlacementPassOptions(StringRef Params) {
   bool AllowTailMerge = true;
-  if (Params == "no-tail-merge")
-    AllowTailMerge = false;
-  else if (!Params.empty() && Params != "enable-tail-merge")
-    return make_error<StringError>(
-        formatv("invalid MachineBlockPlacementPass parameter '{0}' ", Params)
-            .str(),
-        inconvertibleErrorCode());
-
+  if (!Params.empty()) {
+    AllowTailMerge = !Params.consume_front("no-");
+    if (Params != "tail-merge")
+      return make_error<StringError>(
+          formatv("invalid MachineBlockPlacementPass parameter '{0}' ", Params)
+              .str(),
+          inconvertibleErrorCode());
+  }
   return AllowTailMerge;
 }
 

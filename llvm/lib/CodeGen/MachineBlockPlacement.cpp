@@ -3544,6 +3544,14 @@ MachineBlockPlacementPass::run(MachineFunction &MF,
   return getMachineFunctionPassPreservedAnalyses();
 }
 
+void MachineBlockPlacementPass::printPipeline(
+    raw_ostream &OS,
+    function_ref<StringRef(StringRef)> MapClassName2PassName) const {
+  OS << MapClassName2PassName(name());
+  if (!AllowTailMerge)
+    OS << "<no-tail-merge>";
+}
+
 bool MachineBlockPlacement::run(MachineFunction &MF) {
 
   // Check for single-block functions and skip them.

@@ -200,7 +200,7 @@ MACHINE_FUNCTION_PASS_WITH_PARAMS(
       // Default is true.
       return MachineBlockPlacementPass(AllowTailMerge);
     },
-    parseMachineBlockPlacementPassOptions, "no-tail-merge;enable-tail-merge")
+    parseMachineBlockPlacementPassOptions, "no-tail-merge;tail-merge")
 
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "machine-sink", "MachineSinkingPass",
