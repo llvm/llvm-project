@@ -2164,9 +2164,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
 
   addPass(SILateBranchLoweringPass());
 
-  if (isPassEnabled(EnableSetWavePriority, CodeGenOptLevel::Less)) {
-    // TODO: addPass(AMDGPUSetWavePriorityPass());
-  }
+  if (isPassEnabled(EnableSetWavePriority, CodeGenOptLevel::Less))
+    addPass(AMDGPUSetWavePriorityPass());
 
   if (TM.getOptLevel() > CodeGenOptLevel::None) {
     // TODO: addPass(SIPreEmitPeepholePass());
