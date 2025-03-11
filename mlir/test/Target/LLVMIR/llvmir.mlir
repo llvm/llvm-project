@@ -2518,14 +2518,14 @@ module {
                      #llvm.mlir.module_flag<7 : i64, "frame-pointer", 1 : i32>]
 }
 
-// CHECK: !llvm.module.flags = !{![[DBG:.*]], ![[WCHAR:.*]], ![[PIC:.*]], ![[PIE:.*]], ![[UWTABLE:.*]], ![[FP:.*]]}
+// CHECK: !llvm.module.flags = !{![[#DBG:]], ![[#WCHAR:]], ![[#PIC:]], ![[#PIE:]], ![[#UWTABLE:]], ![[#FP:]]}
 
-// CHECK: ![[DBG]] = !{i32 2, !"Debug Info Version", i32 3}
-// CHECK: ![[WCHAR]] = !{i32 1, !"wchar_size", i32 4}
-// CHECK: ![[PIC]] = !{i32 8, !"PIC Level", i32 2}
-// CHECK: ![[PIE]] = !{i32 7, !"PIE Level", i32 2}
-// CHECK: ![[UWTABLE]] = !{i32 7, !"uwtable", i32 2}
-// CHECK: ![[FP]] = !{i32 7, !"frame-pointer", i32 1}
+// CHECK: ![[#DBG]] = !{i32 2, !"Debug Info Version", i32 3}
+// CHECK: ![[#WCHAR]] = !{i32 1, !"wchar_size", i32 4}
+// CHECK: ![[#PIC]] = !{i32 8, !"PIC Level", i32 2}
+// CHECK: ![[#PIE]] = !{i32 7, !"PIE Level", i32 2}
+// CHECK: ![[#UWTABLE]] = !{i32 7, !"uwtable", i32 2}
+// CHECK: ![[#FP]] = !{i32 7, !"frame-pointer", i32 1}
 
 // -----
 
