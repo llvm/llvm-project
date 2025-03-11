@@ -1948,7 +1948,10 @@ static bool isCastOfBlockArgument(Operation *op) {
          isa<BlockArgument>(op->getOperand(0));
 }
 
-// Returns true iff it is a valid conv/pooling op.
+// Returns the ConvOperationKind of the op using reduceOp of the generic
+// payload. If it is neither a convolution nor a pooling, it returns
+// std::nullopt.
+//
 // If (region has 2 ops (reduction + yield) or 3 ops (extension + reduction
 // + yield) and rhs is not used) then it is the body of a pooling
 // If conv, check for single `mul` predecessor. The `mul` operands must be
