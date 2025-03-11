@@ -5044,7 +5044,7 @@ static void upgradeNVVMFnVectorAttr(const StringRef Attr, const char DimC,
   }
 
   const unsigned Dim = DimC - 'x';
-  assert(Dim >= 0 && Dim < 3 && "Unexpected dim char");
+  assert(Dim < 3 && "Unexpected dim char");
 
   const uint64_t VInt = mdconst::extract<ConstantInt>(V)->getZExtValue();
 
