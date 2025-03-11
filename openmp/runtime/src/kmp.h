@@ -2606,7 +2606,9 @@ typedef struct {
 typedef struct kmp_taskgraph_flags { /*This needs to be exactly 32 bits */
   unsigned nowait : 1;
   unsigned re_record : 1;
-  unsigned reserved : 30;
+  unsigned graph_reset : 1; /* 1==discard taskgraph record, 0==use taskgraph
+                               record */
+  unsigned reserved : 29;
 } kmp_taskgraph_flags_t;
 
 /// Represents a TDG node

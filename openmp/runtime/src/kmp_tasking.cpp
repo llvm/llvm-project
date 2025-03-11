@@ -5494,6 +5494,34 @@ static kmp_tdg_info_t *__kmp_alloc_tdg(kmp_int32 tdg_id) {
   return res;
 }
 
+// __kmp_free_tdg: Frees a TDG if it exists.
+// tdg_id:  ID of the TDG to be freed.
+// returns: true if a TDG with the given ID was found and successfully freed,
+// false if no such TDG exists.
+static bool __kmp_free_tdg(kmp_int32 tdg_id) {
+  kmp_tdg_info_t *tdg = nullptr;
+  if (__kmp_global_tdgs == NULL)
+    return false;
+
+  for (kmp_int32 tdg_idx = 0; tdg_idx < __kmp_max_tdgs; tdg_idx++) {
+    if (__kmp_global_tdgs[tdg_idx] &&
+        __kmp_global_tdgs[tdg_idx]->tdg_id == tdg_id) {
+      tdg = __kmp_global_tdgs[tdg_idx];
+      for (kmp_int map_idx = 0; map_idx < tdg->map_size; map_idx++) {
+        __kmp_free(tdg->record_map[map_idx].successors);
+      }
+      __kmp_free(tdg->record_map);
+      if (tdg->root_tasks)
+        __kmp_free(tdg->root_tasks);
+
+      __kmp_free(tdg);
+      __kmp_global_tdgs[tdg_idx] = NULL;
+      return true;
+    }
+  }
+  return false;
+}
+
 // __kmp_print_tdg_dot: prints the TDG to a dot file
 // tdg:    ID of the TDG
 // gtid:   Global Thread ID
@@ -5625,23 +5653,24 @@ static inline void __kmp_start_record(kmp_int32 gtid,
 // returns:     1 if we record, otherwise, 0
 kmp_int32 __kmpc_start_record_task(ident_t *loc_ref, kmp_int32 gtid,
                                    kmp_int32 input_flags, kmp_int32 tdg_id) {
-
   kmp_int32 res;
   kmp_taskgraph_flags_t *flags = (kmp_taskgraph_flags_t *)&input_flags;
-  KA_TRACE(10,
-           ("__kmpc_start_record_task(enter): T#%d loc=%p flags=%d tdg_id=%d\n",
-            gtid, loc_ref, input_flags, tdg_id));
+  KA_TRACE(10, ("__kmpc_start_record_task(enter): T#%d loc=%p flags=%d "
+                "tdg_id=%d\n",
+                gtid, loc_ref, input_flags, tdg_id));
 
   if (__kmp_max_tdgs == 0) {
-    KA_TRACE(
-        10,
-        ("__kmpc_start_record_task(abandon): T#%d loc=%p flags=%d tdg_id = %d, "
-         "__kmp_max_tdgs = 0\n",
-         gtid, loc_ref, input_flags, tdg_id));
+    KA_TRACE(10, ("__kmpc_start_record_task(abandon): T#%d loc=%p flags=%d "
+                  "tdg_id = %d, __kmp_max_tdgs = 0\n",
+                  gtid, loc_ref, input_flags, tdg_id));
     return 1;
   }
 
   __kmpc_taskgroup(loc_ref, gtid);
+  if (flags->graph_reset) {
+    __kmp_free_tdg(tdg_id);
+    __kmp_num_tdg--;
+  }
   if (kmp_tdg_info_t *tdg = __kmp_find_tdg(tdg_id)) {
     // TODO: use re_record flag
     __kmp_exec_tdg(gtid, tdg);
