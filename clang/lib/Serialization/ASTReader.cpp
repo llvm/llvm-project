@@ -11094,6 +11094,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_atomic_default_mem_order:
     C = new (Context) OMPAtomicDefaultMemOrderClause();
     break;
+  case llvm::omp::OMPC_self_maps:
+    C = new (Context) OMPSelfMapsClause();
+    break;
   case llvm::omp::OMPC_at:
     C = new (Context) OMPAtClause();
     break;
@@ -11574,6 +11577,8 @@ void OMPClauseReader::VisitOMPAtomicDefaultMemOrderClause(
   C->setLParenLoc(Record.readSourceLocation());
   C->setAtomicDefaultMemOrderKindKwLoc(Record.readSourceLocation());
 }
+
+void OMPClauseReader::VisitOMPSelfMapsClause(OMPSelfMapsClause *) {}
 
 void OMPClauseReader::VisitOMPAtClause(OMPAtClause *C) {
   C->setAtKind(static_cast<OpenMPAtClauseKind>(Record.readInt()));
