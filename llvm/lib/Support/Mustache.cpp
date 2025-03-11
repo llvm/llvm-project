@@ -147,7 +147,7 @@ public:
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
         SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Ty),
-        Parent(Parent), Accessor(std::move(Accessor)), ParentContext(nullptr) {}
+        Parent(Parent), AccessorValue(std::move(Accessor)), ParentContext(nullptr) {}
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
@@ -183,7 +183,7 @@ private:
   ASTNode *Parent;
   // TODO: switch implementation to SmallVector<T>
   std::vector<ASTNode *> Children;
-  const Accessor Accessor;
+  const Accessor AccessorValue;
   const llvm::json::Value *ParentContext;
 };
 
@@ -595,13 +595,13 @@ void ASTNode::render(const json::Value &Data, raw_ostream &OS) {
     OS << Body;
     return;
   case Partial: {
-    auto Partial = Partials.find(Accessor[0]);
+    auto Partial = Partials.find(AccessorValue[0]);
     if (Partial != Partials.end())
       renderPartial(Data, OS, Partial->getValue());
     return;
   }
   case Variable: {
-    auto Lambda = Lambdas.find(Accessor[0]);
+    auto Lambda = Lambdas.find(AccessorValue[0]);
     if (Lambda != Lambdas.end())
       renderLambdas(Data, OS, Lambda->getValue());
     else {
@@ -611,7 +611,7 @@ void ASTNode::render(const json::Value &Data, raw_ostream &OS) {
     return;
   }
   case UnescapeVariable: {
-    auto Lambda = Lambdas.find(Accessor[0]);
+    auto Lambda = Lambdas.find(AccessorValue[0]);
     if (Lambda != Lambdas.end())
       renderLambdas(Data, OS, Lambda->getValue());
     else
@@ -620,7 +620,7 @@ void ASTNode::render(const json::Value &Data, raw_ostream &OS) {
   }
   case Section: {
     // Sections are not rendered if the context is falsey.
-    auto SectionLambda = SectionLambdas.find(Accessor[0]);
+    auto SectionLambda = SectionLambdas.find(AccessorValue[0]);
     bool IsLambda = SectionLambda != SectionLambdas.end();
     if (isFalsey(Context) && !IsLambda)
       return;
@@ -640,7 +640,7 @@ void ASTNode::render(const json::Value &Data, raw_ostream &OS) {
     return;
   }
   case InvertSection: {
-    bool IsLambda = SectionLambdas.find(Accessor[0]) != SectionLambdas.end();
+    bool IsLambda = SectionLambdas.find(AccessorValue[0]) != SectionLambdas.end();
     if (!isFalsey(Context) || IsLambda)
       return;
     renderChild(Context, OS);
@@ -656,13 +656,13 @@ const json::Value *ASTNode::findContext() {
   // We attempt to find the JSON context in the current node, if it is not
   // found, then we traverse the parent nodes to find the context until we
   // reach the root node or the context is found.
-  if (Accessor.empty())
+  if (AccessorValue.empty())
     return nullptr;
-  if (Accessor[0] == ".")
+  if (AccessorValue[0] == ".")
     return ParentContext;
 
   const json::Object *CurrentContext = ParentContext->getAsObject();
-  StringRef CurrentAccessor = Accessor[0];
+  StringRef CurrentAccessor = AccessorValue[0];
   ASTNode *CurrentParent = Parent;
 
   while (!CurrentContext || !CurrentContext->get(CurrentAccessor)) {
@@ -674,11 +674,11 @@ const json::Value *ASTNode::findContext() {
     return nullptr;
   }
   const json::Value *Context = nullptr;
-  for (auto [Idx, Acc] : enumerate(Accessor)) {
+  for (auto [Idx, Acc] : enumerate(AccessorValue)) {
     const json::Value *CurrentValue = CurrentContext->get(Acc);
     if (!CurrentValue)
       return nullptr;
-    if (Idx < Accessor.size() - 1) {
+    if (Idx < AccessorValue.size() - 1) {
       CurrentContext = CurrentValue->getAsObject();
       if (!CurrentContext)
         return nullptr;
@@ -769,9 +769,10 @@ Template::Template(StringRef TemplateStr) {
 Template::Template(Template &&Other) noexcept
     : Partials(std::move(Other.Partials)), Lambdas(std::move(Other.Lambdas)),
       SectionLambdas(std::move(Other.SectionLambdas)),
-      Escapes(std::move(Other.Escapes)), Tree(Other.Tree),
+      Escapes(std::move(Other.Escapes)), 
       AstAllocator(std::move(Other.AstAllocator)),
-      RenderAllocator(std::move(Other.RenderAllocator)) {
+      RenderAllocator(std::move(Other.RenderAllocator)),
+      Tree(Other.Tree) {
   Other.Tree = nullptr;
 }
 
