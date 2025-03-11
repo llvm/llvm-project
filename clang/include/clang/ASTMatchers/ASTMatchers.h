@@ -7494,7 +7494,8 @@ extern const AstTypeMatcher<RValueReferenceType> rValueReferenceType;
 ///   matches "int const *b"
 ///
 /// Usable as: Matcher<BlockPointerType>, Matcher<MemberPointerType>,
-///   Matcher<PointerType>, Matcher<ReferenceType>
+///   Matcher<PointerType>, Matcher<ReferenceType>,
+///   Matcher<ObjCObjectPointerType>
 AST_TYPELOC_TRAVERSE_MATCHER_DECL(
     pointee, getPointee,
     AST_POLYMORPHIC_SUPPORTED_TYPES(BlockPointerType, MemberPointerType,

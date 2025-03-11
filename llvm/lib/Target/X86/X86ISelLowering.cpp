@@ -2634,7 +2634,9 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
           ISD::FSIN,   ISD::STRICT_FSIN,
           ISD::FSINH,  ISD::STRICT_FSINH,
           ISD::FTAN,   ISD::STRICT_FTAN,
-          ISD::FTANH,  ISD::STRICT_FTANH})
+          ISD::FTANH,  ISD::STRICT_FTANH,
+          // TODO: Add ISD:::STRICT_FMODF too once implemented.
+          ISD::FMODF})
       if (isOperationExpand(Op, MVT::f32))
         setOperationAction(Op, MVT::f32, Promote);
   // clang-format on
@@ -58012,7 +58014,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::MOVDDUP:
     case X86ISD::MOVSHDUP:
     case X86ISD::MOVSLDUP: {
-      if (!IsSplat)
+      if (!IsSplat && (VT.is256BitVector() ||
+                       (VT.is512BitVector() && Subtarget.useAVX512Regs())))
         return DAG.getNode(Op0.getOpcode(), DL, VT,
                            ConcatSubOperand(VT, Ops, 0));
       break;
@@ -58095,12 +58098,17 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         MVT SrcVT = Op0.getOperand(0).getSimpleValueType();
         SrcVT = MVT::getVectorVT(SrcVT.getScalarType(),
                                  NumOps * SrcVT.getVectorNumElements());
-        return DAG.getNode(Op0.getOpcode(), DL, VT,
-                           ConcatSubOperand(SrcVT, Ops, 0),
-                           ConcatSubOperand(SrcVT, Ops, 1));
+        SDValue Concat0 = CombineSubOperand(SrcVT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(SrcVT, Ops, 1);
+        if (Concat0 || Concat1)
+          return DAG.getNode(
+              Op0.getOpcode(), DL, VT,
+              Concat0 ? Concat0 : ConcatSubOperand(SrcVT, Ops, 0),
+              Concat1 ? Concat1 : ConcatSubOperand(SrcVT, Ops, 1));
       }
       break;
     case X86ISD::VPERMV:
+      // TODO: Handle 256-bit and NumOps == 4 cases.
       if (!IsSplat && NumOps == 2 &&
           (VT.is512BitVector() && Subtarget.useAVX512Regs())) {
         MVT OpVT = Op0.getSimpleValueType();
@@ -58126,7 +58134,9 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       break;
     case X86ISD::VPERMV3:
-      if (!IsSplat && NumOps == 2 && VT.is512BitVector()) {
+      // TODO: Handle 256-bit and NumOps == 4 cases.
+      if (!IsSplat && NumOps == 2 &&
+          (VT.is512BitVector() && Subtarget.useAVX512Regs())) {
         MVT OpVT = Op0.getSimpleValueType();
         int NumSrcElts = OpVT.getVectorNumElements();
         SmallVector<int, 64> ConcatMask;
@@ -58148,10 +58158,14 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
           }
         }
         if (ConcatMask.size() == (NumOps * NumSrcElts)) {
-          SDValue Src0 = ConcatSubOperand(VT, Ops, 0);
-          SDValue Src1 = ConcatSubOperand(VT, Ops, 2);
-          return lowerShuffleWithPERMV(DL, VT, ConcatMask, Src0, Src1,
-                                       Subtarget, DAG);
+          SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+          SDValue Concat1 = CombineSubOperand(VT, Ops, 2);
+          if (Concat0 || Concat1)
+            return lowerShuffleWithPERMV(
+                DL, VT, ConcatMask,
+                Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+                Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 2), Subtarget,
+                DAG);
         }
       }
       break;
@@ -58299,11 +58313,21 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case ISD::OR:
     case ISD::XOR:
     case X86ISD::ANDNP:
-      if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasInt256()) ||
+      // TODO: AVX2+ targets should only use CombineSubOperand like AVX1.
+      if (!IsSplat && (VT.is256BitVector() ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs()))) {
-        return DAG.getNode(Op0.getOpcode(), DL, VT,
-                           ConcatSubOperand(VT, Ops, 0),
-                           ConcatSubOperand(VT, Ops, 1));
+        // Don't concatenate root AVX1 NOT patterns.
+        if (Op0.getOpcode() == ISD::XOR && Depth == 0 &&
+            !Subtarget.hasInt256() && llvm::all_of(Ops, [](SDValue X) {
+              return ISD::isBuildVectorAllOnes(X.getOperand(1).getNode());
+            }))
+          break;
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1 || Subtarget.hasInt256())
+          return DAG.getNode(Op0.getOpcode(), DL, VT,
+                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
       }
       break;
     case X86ISD::PCMPEQ:
@@ -58383,9 +58407,12 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasInt256()) ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
                         (EltSizeInBits >= 32 || Subtarget.useBWIRegs())))) {
-        return DAG.getNode(Op0.getOpcode(), DL, VT,
-                           ConcatSubOperand(VT, Ops, 0),
-                           ConcatSubOperand(VT, Ops, 1));
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1)
+          return DAG.getNode(Op0.getOpcode(), DL, VT,
+                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
       }
       break;
     // Due to VADD, VSUB, VMUL can executed on more ports than VINSERT and
