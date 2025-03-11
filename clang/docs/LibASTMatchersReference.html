@@ -4108,8 +4108,14 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Char
 Given
   template&lt;typename T&gt; struct C {};
   C&lt;int&gt; c;
+  template&lt;typename T&gt; void f() {}
+  void func() { f&lt;int&gt;(); };
+
 classTemplateSpecializationDecl(templateArgumentCountIs(1))
   matches C&lt;int&gt;.
+
+functionDecl(templateArgumentCountIs(1))
+  matches f&lt;int&gt;();
 </pre></td></tr>
 
 
@@ -4839,8 +4845,14 @@ functionProtoType(parameterCountIs(3))
 Given
   template&lt;typename T&gt; struct C {};
   C&lt;int&gt; c;
+  template&lt;typename T&gt; void f() {}
+  void func() { f&lt;int&gt;(); };
+
 classTemplateSpecializationDecl(templateArgumentCountIs(1))
   matches C&lt;int&gt;.
+
+functionDecl(templateArgumentCountIs(1))
+  matches f&lt;int&gt;();
 </pre></td></tr>
 
 
@@ -5800,8 +5812,14 @@ classTemplateSpecializationDecl(
 Given
   template&lt;typename T&gt; struct C {};
   C&lt;int&gt; c;
+  template&lt;typename T&gt; void f() {}
+  void func() { f&lt;int&gt;(); };
+
 classTemplateSpecializationDecl(templateArgumentCountIs(1))
   matches C&lt;int&gt;.
+
+functionDecl(templateArgumentCountIs(1))
+  matches f&lt;int&gt;();
 </pre></td></tr>
 
 
@@ -6237,8 +6255,14 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Func
 Given
   template&lt;typename T&gt; struct C {};
   C&lt;int&gt; c;
+  template&lt;typename T&gt; void f() {}
+  void func() { f&lt;int&gt;(); };
+
 classTemplateSpecializationDecl(templateArgumentCountIs(1))
   matches C&lt;int&gt;.
+
+functionDecl(templateArgumentCountIs(1))
+  matches f&lt;int&gt;();
 </pre></td></tr>
 
 <!--END_NARROWING_MATCHERS -->
