@@ -1,8 +1,14 @@
 // RUN: mlir-opt -xegpu-subgroup-distribute='print-analysis-only=true' -split-input-file %s | FileCheck %s
 
-// CHECK: function: test_dpas_op_1:
-// CHECK: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16], wi_data: [1]
+// CHECK: function: test_dpas_f16:
+// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf16>' at index: 0
+// CHECK-NEXT: sg_map  : Not assigned.
+// CHECK-NEXT: argument: <block argument> of type 'memref<16x16xf16>' at index: 1
+// CHECK-NEXT: sg_map  : Not assigned.
+// CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
+// CHECK-NEXT: sg_map  : Not assigned.
+// CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
+// CHECK-NEXT: sg_map for result #0: Not assigned.
 // CHECK-NEXT: op    : %{{.*}} = arith.constant dense<0.000000e+00> : vector<8x16xf32>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
@@ -17,7 +23,7 @@
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %{{.*}} = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
-func.func @test_dpas_op_1(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
+func.func @test_dpas_f16(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0.000000e+00> : vector<8x16xf32>
   %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
@@ -32,20 +38,20 @@ func.func @test_dpas_op_1(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %ar
 
 
 // -----
-// CHECK: function: test_dpas_op_2:
+// CHECK: function: test_dpas_i8:
 // CHECK-NEXT: argument: <block argument> of type 'vector<8x32xi8>' at index: 0
 // CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 2]
 // CHECK-NEXT: argument: <block argument> of type 'vector<32x16xi8>' at index: 1
 // CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [4, 1]
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xi32>' at index: 2
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16], wi_data: [1]
+// CHECK-NEXT: sg_map for result #0: Not assigned.
 // CHECK-NEXT: op    : %[[T0:.*]] = xegpu.dpas %{{.*}} : vector<8x32xi8>, vector<32x16xi8> -> vector<8x16xi32>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xi32> -> !xegpu.tensor_desc<8x16xi32>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
-func.func @test_dpas_op_2(%arg0: vector<8x32xi8>, %arg1: vector<32x16xi8>, %arg2: memref<8x16xi32>) {
+func.func @test_dpas_i8(%arg0: vector<8x32xi8>, %arg1: vector<32x16xi8>, %arg2: memref<8x16xi32>) {
   %c0 = arith.constant 0 : index
   %0 = xegpu.dpas %arg0, %arg1 : vector<8x32xi8>, vector<32x16xi8> -> vector<8x16xi32>
   %1 = xegpu.create_nd_tdesc %arg2[%c0, %c0] : memref<8x16xi32> -> !xegpu.tensor_desc<8x16xi32>
@@ -56,13 +62,13 @@ func.func @test_dpas_op_2(%arg0: vector<8x32xi8>, %arg1: vector<32x16xi8>, %arg2
 // -----
 // CHECK: function: test_transpose_op_1:
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf16>' at index: 0
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<16x16xf16>' at index: 1
-// CHECK-NEXT: sg_map  : wi_layout: [16, 1], wi_data: [1, 2]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16], wi_data: [1]
+// CHECK-NEXT: sg_map for result #0: Not assigned.
 // CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<8x16xf32>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
@@ -92,13 +98,13 @@ func.func @test_transpose_op_1(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>
 
 // -----
 // CHECK: argument: <block argument> of type 'memref<8x16xf16>' at index: 0
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<16x16xf16>' at index: 1
-// CHECK-NEXT: sg_map  : wi_layout: [16, 1], wi_data: [1, 2]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16], wi_data: [1]
+// CHECK-NEXT: sg_map for result #0: Not assigned.
 // CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<0.000000e+00> : vector<8x16xf32>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
@@ -156,13 +162,13 @@ func.func @test_extf_truncf_op(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegp
 // -----
 // CHECK: function: test_load_gather_op_1:
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf16>' at index: 0
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<256xf16>' at index: 1
-// CHECK-NEXT: sg_map  : wi_layout: [16, 1], wi_data: [1, 2]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16], wi_data: [1]
+// CHECK-NEXT: sg_map for result #0: Not assigned.
 // CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T1:.*]] = xegpu.load_nd %[[T0]]  : !xegpu.tensor_desc<8x16xf16> -> vector<8x16xf16>
@@ -195,7 +201,7 @@ func.func @test_load_gather_op_1(%arg0: memref<8x16xf16>, %arg1: memref<256xf16>
 
 // -----
 // CHECK: argument: <block argument> of type 'memref<256xf32>' at index: 0
-// CHECK-NEXT: sg_map  : wi_layout: [16], wi_data: [1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type '!xegpu.tensor_desc<16xf32>' at index: 1
 // CHECK-NEXT: sg_map  : wi_layout: [16], wi_data: [1]
 // CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
@@ -217,7 +223,7 @@ func.func @test_load_gather_op_2(%arg0: memref<256xf32>, %arg1: !xegpu.tensor_de
 
 // -----
 // CHECK: argument: <block argument> of type 'memref<128xf32>' at index: 0
-// CHECK-NEXT: sg_map  : wi_layout: [16, 1], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<1.000000e+00> : vector<8x16xf32>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[CST0:.*]] = arith.constant dense<true> : vector<16xi1>
@@ -239,7 +245,7 @@ func.func @test_store_scatter_op_1(%arg0: memref<128xf32>) {
 // CHECK: argument: <block argument> of type 'vector<16xf32>' at index: 0
 // CHECK-NEXT: sg_map  : wi_layout: [16], wi_data: [1]
 // CHECK-NEXT: argument: <block argument> of type 'memref<256xf32>' at index: 1
-// CHECK-NEXT: sg_map  : wi_layout: [16], wi_data: [1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: op    : %[[CST:.*]] = arith.constant dense<[0, 16, 32, 48, 64, 80, 96, 112, 128, 144, 160, 176, 192, 208, 224, 240]> : vector<16xindex>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [16], wi_data: [1]
 // CHECK-NEXT: op    : %[[CST1:.*]] = arith.constant dense<true> : vector<16xi1>
@@ -256,13 +262,13 @@ func.func @test_store_scatter_op_2(%arg0: vector<16xf32>, %arg1: memref<256xf32>
 
 // -----
 // CHECK: argument: <block argument> of type 'memref<8x16xi16>' at index: 0
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<32x16xi8>' at index: 1
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [4, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xi32>' at index: 2
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16], wi_data: [1]
+// CHECK-NEXT: sg_map for result #0: Not assigned.
 // CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x16xi16> -> !xegpu.tensor_desc<8x16xi16>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<32x16xi8> -> !xegpu.tensor_desc<32x16xi8>
@@ -292,13 +298,13 @@ func.func @test_vector_bitcast_op_1(%arg0: memref<8x16xi16>, %arg1: memref<32x16
 
 // -----
 // CHECK: argument: <block argument> of type 'memref<8x32xi8>' at index: 0
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 2]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<16x32xi8>' at index: 1
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [4, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16], wi_data: [1]
+// CHECK-NEXT: sg_map for result #0: Not assigned.
 // CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x32xi8> -> !xegpu.tensor_desc<8x32xi8>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 2]
 // CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<16x32xi8> -> !xegpu.tensor_desc<16x32xi8>
@@ -388,17 +394,17 @@ func.func @test_binary_op_2(%arg0: !xegpu.tensor_desc<8x16xf16>, %arg1: !xegpu.t
 
 // -----
 // CHECK: argument: <block argument> of type 'memref<8x128xf16>' at index: 0
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<128x16xf16>' at index: 1
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [2, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: argument: <block argument> of type 'memref<8x16xf32>' at index: 2
-// CHECK-NEXT: sg_map  : wi_layout: [1, 16], wi_data: [1, 1]
+// CHECK-NEXT: sg_map  : Not assigned.
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 0 : index
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16], wi_data: [1]
+// CHECK-NEXT: sg_map for result #0: Not assigned.
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 128 : index
 // CHECK-NEXT: sg_map for result #0: Not assigned.
 // CHECK-NEXT: op    : %{{.*}} = arith.constant 16 : index
-// CHECK-NEXT: sg_map for result #0: wi_layout: [16], wi_data: [1]
+// CHECK-NEXT: sg_map for result #0: Not assigned.
 // CHECK-NEXT: op    : %[[T0:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<8x128xf16> -> !xegpu.tensor_desc<8x16xf16>
 // CHECK-NEXT: sg_map for result #0: wi_layout: [1, 16], wi_data: [1, 1]
 // CHECK-NEXT: op    : %[[T1:.*]] = xegpu.create_nd_tdesc %{{.*}} : memref<128x16xf16> -> !xegpu.tensor_desc<16x16xf16>
