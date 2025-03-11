@@ -1312,7 +1312,7 @@ def ModuleFlagAttr
   }];
   let parameters = (ins "ModFlagBehaviorAttr":$behavior,
                         "StringAttr":$key,
-                        "IntegerAttr":$value);
+                        "uint32_t":$value);
   let assemblyFormat = "`<` $behavior `,` $key `,` $value `>`";
 }
 
