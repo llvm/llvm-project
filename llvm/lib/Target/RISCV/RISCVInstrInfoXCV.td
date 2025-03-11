@@ -74,6 +74,7 @@ class CVInstMac<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstR<funct7, funct3, OPC_CUSTOM_1,
               (outs GPR:$rd_wb), (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
               opcodestr, "$rd, $rs1, $rs2"> {
+  let Constraints = "$rd = $rd_wb";
   let DecoderNamespace = "XCV";
 }
 
@@ -90,14 +91,16 @@ class CVInstMacMulN<bits<2> funct2, bits<3> funct3, dag outs, dag ins,
 
 class CVInstMacN<bits<2> funct2, bits<3> funct3, string opcodestr>
     : CVInstMacMulN<funct2, funct3, (outs GPR:$rd_wb),
-                    (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5), opcodestr>;
+                    (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5), opcodestr> {
+  let Constraints = "$rd = $rd_wb";
+}
 
 class CVInstMulN<bits<2> funct2, bits<3> funct3, string opcodestr>
     : CVInstMacMulN<funct2, funct3, (outs GPR:$rd),
                     (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5), opcodestr>;
 
 let Predicates = [HasVendorXCVmac, IsRV32], hasSideEffects = 0, mayLoad = 0,
-    mayStore = 0, Constraints = "$rd = $rd_wb" in {
+    mayStore = 0 in {
   // 32x32 bit macs
   def CV_MAC      : CVInstMac<0b1001000, 0b011, "cv.mac">,
                     Sched<[]>;
@@ -179,7 +182,9 @@ let DecoderNamespace = "XCV" in {
 
   class CVInstAluRRNR<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstR<funct7, funct3, OPC_CUSTOM_1, (outs GPR:$rd_wb),
-              (ins GPR:$rd, GPR:$rs1, GPR:$rs2), opcodestr, "$rd, $rs1, $rs2">;
+              (ins GPR:$rd, GPR:$rs1, GPR:$rs2), opcodestr, "$rd, $rs1, $rs2"> {
+    let Constraints = "$rd = $rd_wb";
+  }
 
   class CVInstAluRI<bits<7> funct7, bits<3> funct3, string opcodestr>
       : RVInstIBase<funct3, OPC_CUSTOM_1, (outs GPR:$rd),
@@ -254,8 +259,7 @@ let Predicates = [HasVendorXCValu, IsRV32],
   //   hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 let Predicates = [HasVendorXCValu, IsRV32],
-  hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-  Constraints = "$rd = $rd_wb" in {
+  hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def CV_ADDNR   : CVInstAluRRNR<0b1000000, 0b011, "cv.addnr">,
                    Sched<[]>;
   def CV_ADDUNR  : CVInstAluRRNR<0b1000001, 0b011, "cv.addunr">,
@@ -275,7 +279,6 @@ let Predicates = [HasVendorXCValu, IsRV32],
 
 } // Predicates = [HasVendorXCValu, IsRV32],
   //   hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-  //   Constraints = "$rd = $rd_wb"
 
 let Predicates = [HasVendorXCValu, IsRV32] in {
   def : MnemonicAlias<"cv.slet", "cv.sle">;
