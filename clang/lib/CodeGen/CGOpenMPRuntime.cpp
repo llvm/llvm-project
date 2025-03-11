@@ -1297,9 +1297,11 @@ llvm::Function *CGOpenMPRuntime::emitTaskOutlinedFunction(
   CodeGen.setAction(Action);
   assert(!ThreadIDVar->getType()->isPointerType() &&
          "thread id variable must be of type kmp_int32 for tasks");
+  const OpenMPDirectiveKind DK = D.getDirectiveKind();
   const OpenMPDirectiveKind Region =
-      isOpenMPTaskLoopDirective(D.getDirectiveKind()) ? OMPD_taskloop
-                                                      : OMPD_task;
+      isOpenMPDispatchDirective(DK) ? OMPD_dispatch
+        : isOpenMPTaskLoopDirective(DK) ? OMPD_taskloop
+        : OMPD_task;
   const CapturedStmt *CS = D.getCapturedStmt(Region);
   bool HasCancel = false;
   if (const auto *TD = dyn_cast<OMPTaskDirective>(&D))
