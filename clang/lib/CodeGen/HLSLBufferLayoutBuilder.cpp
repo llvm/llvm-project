@@ -19,6 +19,7 @@
 
 using namespace clang;
 using namespace clang::CodeGen;
+using llvm::hlsl::CBufferRowSizeInBytes;
 
 namespace {
 
@@ -197,7 +198,7 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
   unsigned ArrayStride = 0;
 
   unsigned NextRowOffset =
-      llvm::alignTo(EndOffset, CGHLSLRuntime::BufferRowSizeInBytes);
+      llvm::alignTo(EndOffset, CBufferRowSizeInBytes);
 
   llvm::Type *ElemLayoutTy = nullptr;
   QualType FieldTy = FD->getType();
@@ -227,7 +228,7 @@ bool HLSLBufferLayoutBuilder::layoutField(const FieldDecl *FD,
           getScalarOrVectorSizeInBytes(CGM.getTypes().ConvertTypeForMem(Ty));
       ElemLayoutTy = CGM.getTypes().ConvertTypeForMem(FieldTy);
     }
-    ArrayStride = llvm::alignTo(ElemSize, CGHLSLRuntime::BufferRowSizeInBytes);
+    ArrayStride = llvm::alignTo(ElemSize, CBufferRowSizeInBytes);
     ElemOffset = (Packoffset != -1) ? Packoffset : NextRowOffset;
 
   } else if (FieldTy->isStructureType()) {

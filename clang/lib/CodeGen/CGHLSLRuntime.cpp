@@ -40,6 +40,8 @@ using namespace CodeGen;
 using namespace clang::hlsl;
 using namespace llvm;
 
+using llvm::hlsl::CBufferRowSizeInBytes;
+
 static void createResourceInitFn(CodeGenModule &CGM, llvm::GlobalVariable *GV,
                                  unsigned Slot, unsigned Space);
 
@@ -208,7 +210,7 @@ static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
           if (RBA->getRegisterType() ==
               HLSLResourceBindingAttr::RegisterType::C) {
             // size of constant buffer row is 16 bytes
-            Offset = RBA->getSlotNumber() * CGHLSLRuntime::BufferRowSizeInBytes;
+            Offset = RBA->getSlotNumber() * CBufferRowSizeInBytes;
           }
         }
       }
