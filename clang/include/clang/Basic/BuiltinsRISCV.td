@@ -148,6 +148,14 @@ def ntl_store : RISCVBuiltin<"void(...)">;
 } // Features = "zihintntl", Attributes = [CustomTypeChecking]
 
 //===----------------------------------------------------------------------===//
+// Zawrs extension.
+//===----------------------------------------------------------------------===//
+let Features = "zawrs" in {
+def wrs_nto : RISCVBuiltin<"void()">;
+def wrs_sto : RISCVBuiltin<"void()">;
+} // Features = "zawrs"
+
+//===----------------------------------------------------------------------===//
 // XCV extensions.
 //===----------------------------------------------------------------------===//
 include "clang/Basic/BuiltinsRISCVXCV.td"

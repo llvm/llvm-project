@@ -23680,6 +23680,15 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
     return Store;
   }
+
+  // Zawrs
+  case RISCV::BI__builtin_riscv_wrs_nto:
+    ID = Intrinsic::riscv_wrs_nto;
+    break;
+  case RISCV::BI__builtin_riscv_wrs_sto:
+    ID = Intrinsic::riscv_wrs_sto;
+    break;
+
   // XCValu
   case RISCV::BI__builtin_riscv_cv_alu_addN:
     ID = Intrinsic::riscv_cv_alu_addN;
