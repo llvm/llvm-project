@@ -2019,5 +2019,40 @@ define ptr @gep_merge_nusw_const(ptr %p, i64 %idx, i64 %idx2) {
   ret ptr %gep
 }
 
+define <2 x ptr> @gep_inbounds_null_vec(i64 %idx) {
+; CHECK-LABEL: @gep_inbounds_null_vec(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, <2 x ptr> zeroinitializer, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret <2 x ptr> [[P]]
+;
+  %p = getelementptr inbounds i8, <2 x ptr> zeroinitializer, i64 %idx
+  ret <2 x ptr> %p
+}
+
+define <2 x ptr> @gep_inbounds_null_vec_broadcast(<2 x i64> %idx) {
+; CHECK-LABEL: @gep_inbounds_null_vec_broadcast(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, ptr null, <2 x i64> [[IDX:%.*]]
+; CHECK-NEXT:    ret <2 x ptr> [[P]]
+;
+  %p = getelementptr inbounds i8, ptr null, <2 x i64> %idx
+  ret <2 x ptr> %p
+}
+
+define ptr @gep_noinbounds_null(i64 %idx) {
+; CHECK-LABEL: @gep_noinbounds_null(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr i8, ptr null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %p = getelementptr i8, ptr null, i64 %idx
+  ret ptr %p
+}
+
+define ptr @gep_inbounds_null_null_is_valid(i64 %idx) null_pointer_is_valid {
+; CHECK-LABEL: @gep_inbounds_null_null_is_valid(
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i8, ptr null, i64 [[IDX:%.*]]
+; CHECK-NEXT:    ret ptr [[P]]
+;
+  %p = getelementptr inbounds i8, ptr null, i64 %idx
+  ret ptr %p
+}
 
 !0 = !{!"branch_weights", i32 2, i32 10}
