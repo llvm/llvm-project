@@ -39,9 +39,6 @@ class AsanTestReportDataCase(TestBase):
         self.col_crash = 16
 
     def asan_tests(self, libsanitizers=False):
-        if libsanitizers:
-            self.runCmd("log enable lldb expr")
-
         target = self.createTestTarget()
 
         if libsanitizers:
