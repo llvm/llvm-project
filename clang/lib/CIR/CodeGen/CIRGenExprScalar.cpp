@@ -92,6 +92,8 @@ public:
 
   mlir::Value VisitCastExpr(CastExpr *E);
 
+  mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);
+
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
   /// TODO: do we need ScalarConversionOpts here? Should be done in another
@@ -147,4 +149,28 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                    "CastExpr: ", ce->getCastKindName());
   }
   return {};
+}
+
+/// Return the size or alignment of the type of argument of the sizeof
+/// expression as an integer.
+mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
+    const UnaryExprOrTypeTraitExpr *e) {
+  const QualType typeToSize = e->getTypeOfArgument();
+  if (e->getKind() == UETT_SizeOf) {
+    if (const VariableArrayType *variableArrTy =
+            cgf.getContext().getAsVariableArrayType(typeToSize)) {
+      cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
+                                     "sizeof operator for VariableArrayType",
+                                     e->getStmtClassName());
+    }
+  } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
+    cgf.getCIRGenModule().errorNYI(
+        e->getSourceRange(),
+        "sizeof operator for Not yet implemented: ", e->getStmtClassName());
+  }
+
+  return builder.create<cir::ConstantOp>(
+      cgf.getLoc(e->getSourceRange()), cgf.cgm.UInt64Ty,
+      builder.getAttr<cir::IntAttr>(
+          cgf.cgm.UInt64Ty, e->EvaluateKnownConstInt(cgf.getContext())));
 }
