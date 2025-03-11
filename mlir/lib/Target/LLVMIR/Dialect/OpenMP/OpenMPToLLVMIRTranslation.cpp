@@ -550,18 +550,16 @@ convertIgnoredWrapper(omp::LoopWrapperInterface opInst,
   // corresponding operand. This is semantically equivalent to this wrapper not
   // being present.
   auto forwardArgs =
-      [&moduleTranslation](llvm::ArrayRef<BlockArgument> blockArgs,
-                           OperandRange operands) {
-        for (auto [arg, var] : llvm::zip_equal(blockArgs, operands))
+      [&moduleTranslation](omp::BlockArgOpenMPOpInterface blockArgIface) {
+        llvm::SmallVector<std::pair<Value, BlockArgument>> blockArgsPairs;
+        blockArgIface.getBlockArgsPairs(blockArgsPairs);
+        for (auto [var, arg] : blockArgsPairs)
           moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
       };
 
   return llvm::TypeSwitch<Operation *, LogicalResult>(opInst)
       .Case([&](omp::SimdOp op) {
-        auto blockArgIface = cast<omp::BlockArgOpenMPOpInterface>(*op);
-        forwardArgs(blockArgIface.getPrivateBlockArgs(), op.getPrivateVars());
-        forwardArgs(blockArgIface.getReductionBlockArgs(),
-                    op.getReductionVars());
+        forwardArgs(cast<omp::BlockArgOpenMPOpInterface>(*op));
         op.emitWarning() << "simd information on composite construct discarded";
         return success();
       })
