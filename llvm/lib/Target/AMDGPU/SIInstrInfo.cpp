@@ -5780,10 +5780,11 @@ SIInstrInfo::getWholeWaveFunctionSetup(MachineFunction &MF) const {
          "Not a whole wave func");
   MachineBasicBlock &MBB = *MF.begin();
   for (MachineInstr &MI : MBB)
-    if (MI.getOpcode() == AMDGPU::SI_SETUP_WHOLE_WAVE_FUNC)
+    if (MI.getOpcode() == AMDGPU::SI_SETUP_WHOLE_WAVE_FUNC ||
+        MI.getOpcode() == AMDGPU::G_AMDGPU_WHOLE_WAVE_FUNC_SETUP)
       return &MI;
 
-  llvm_unreachable("Couldn't find instruction. Wrong MBB?");
+  llvm_unreachable("Couldn't find SI_SETUP_WHOLE_WAVE_FUNC instruction");
 }
 
 static const TargetRegisterClass *

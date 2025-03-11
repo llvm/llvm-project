@@ -4340,6 +4340,20 @@ def G_AMDGPU_S_MUL_I64_I32 : AMDGPUGenericInstruction {
   let hasSideEffects = 0;
 }
 
+def G_AMDGPU_WHOLE_WAVE_FUNC_SETUP : AMDGPUGenericInstruction {
+  let OutOperandList = (outs type0:$origExec);
+  let InOperandList = (ins);
+  let isConvergent = 1;
+}
+
+def G_AMDGPU_WHOLE_WAVE_FUNC_RETURN : AMDGPUGenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins type0:$origExec);
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isReturn = 1;
+}
+
 // This is equivalent to the G_INTRINSIC*, but the operands may have
 // been legalized depending on the subtarget requirements.
 def G_AMDGPU_INTRIN_IMAGE_LOAD : AMDGPUGenericInstruction {
