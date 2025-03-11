@@ -62,11 +62,10 @@ function(compile_to_bc)
     DEPENDS
       ${clang_target}
       ${ARG_INPUT}
+      ${ARG_DEPENDENCIES}
     DEPFILE ${ARG_OUTPUT}.d
   )
-  add_custom_target( ${ARG_TARGET}
-    DEPENDS ${ARG_OUTPUT}${TMP_SUFFIX} ${ARG_DEPENDENCIES}
-  )
+  add_custom_target( ${ARG_TARGET} DEPENDS ${ARG_OUTPUT}${TMP_SUFFIX} )
 
   if( ${FILE_EXT} STREQUAL ".ll" )
     add_custom_command(
