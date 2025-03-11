@@ -11,22 +11,22 @@ body:             |
     ; CHECK-LABEL: name: ushlsat_and_1
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1073741820
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(s32) = G_USHLSAT [[C1]], [[C]](s32)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[USHLSAT]], [[USHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1073741820
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(i32) = G_USHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(i32) = G_USHLSAT [[C1]], [[C]](i32)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[USHLSAT]], [[USHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 2
-    %4:_(s32) = G_CONSTANT i32 1073741820
-    %3:_(s32) = G_USHLSAT %0, %2(s32)
-    %5:_(s32) = G_AND %3, %4
-    %6:_(s32) = G_USHLSAT %5, %2(s32)
-    $sgpr0 = COPY %6(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 2
+    %2:_(i32) = G_CONSTANT i32 1073741820
+    %3:_(i32) = G_USHLSAT %0, %1(i32)
+    %4:_(i32) = G_AND %3, %2
+    %5:_(i32) = G_USHLSAT %4, %1(i32)
+    $sgpr0 = COPY %5(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -40,23 +40,23 @@ body:             |
     ; CHECK-LABEL: name: ushlsat_and_2
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 536870880
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(s32) = G_USHLSAT [[C]], [[C1]](s32)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[USHLSAT]], [[USHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 536870880
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(i32) = G_USHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(i32) = G_USHLSAT [[C]], [[C1]](i32)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[USHLSAT]], [[USHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 5
-    %4:_(s32) = G_CONSTANT i32 536870880
-    %6:_(s32) = G_CONSTANT i32 3
-    %3:_(s32) = G_USHLSAT %0, %2(s32)
-    %5:_(s32) = G_AND %3, %4
-    %7:_(s32) = G_USHLSAT %5, %6(s32)
-    $sgpr0 = COPY %7(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 5
+    %2:_(i32) = G_CONSTANT i32 536870880
+    %3:_(i32) = G_CONSTANT i32 3
+    %4:_(i32) = G_USHLSAT %0, %1(i32)
+    %5:_(i32) = G_AND %4, %2
+    %6:_(i32) = G_USHLSAT %5, %3(i32)
+    $sgpr0 = COPY %6(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -70,23 +70,23 @@ body:             |
     ; CHECK-LABEL: name: ushlsat_and_3
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 19
-    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(s32) = G_USHLSAT [[C]], [[C1]](s32)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[USHLSAT]], [[USHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 65536
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 19
+    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(i32) = G_USHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(i32) = G_USHLSAT [[C]], [[C1]](i32)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[USHLSAT]], [[USHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 3
-    %4:_(s32) = G_CONSTANT i32 65536
-    %6:_(s32) = G_CONSTANT i32 16
-    %3:_(s32) = G_USHLSAT %0, %2(s32)
-    %5:_(s32) = G_AND %3, %4
-    %7:_(s32) = G_USHLSAT %5, %6(s32)
-    $sgpr0 = COPY %7(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 3
+    %2:_(i32) = G_CONSTANT i32 65536
+    %3:_(i32) = G_CONSTANT i32 16
+    %4:_(i32) = G_USHLSAT %0, %1(i32)
+    %5:_(i32) = G_AND %4, %2
+    %6:_(i32) = G_USHLSAT %5, %3(i32)
+    $sgpr0 = COPY %6(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -100,22 +100,22 @@ body:             |
     ; CHECK-LABEL: name: ushlsat_or_1
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1073741821
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(s32) = G_USHLSAT [[C1]], [[C]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[USHLSAT]], [[USHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1073741821
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(i32) = G_USHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(i32) = G_USHLSAT [[C1]], [[C]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[USHLSAT]], [[USHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 2
-    %4:_(s32) = G_CONSTANT i32 -1073741821
-    %3:_(s32) = G_USHLSAT %0, %2(s32)
-    %5:_(s32) = G_OR %3, %4
-    %6:_(s32) = G_USHLSAT %5, %2(s32)
-    $sgpr0 = COPY %6(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 2
+    %2:_(i32) = G_CONSTANT i32 -1073741821
+    %3:_(i32) = G_USHLSAT %0, %1(i32)
+    %4:_(i32) = G_OR %3, %2
+    %5:_(i32) = G_USHLSAT %4, %1(i32)
+    $sgpr0 = COPY %5(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -129,23 +129,23 @@ body:             |
     ; CHECK-LABEL: name: ushlsat_or_2
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -536870881
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(s32) = G_USHLSAT [[C]], [[C1]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[USHLSAT]], [[USHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -536870881
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(i32) = G_USHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(i32) = G_USHLSAT [[C]], [[C1]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[USHLSAT]], [[USHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 5
-    %4:_(s32) = G_CONSTANT i32 -536870881
-    %6:_(s32) = G_CONSTANT i32 3
-    %3:_(s32) = G_USHLSAT %0, %2(s32)
-    %5:_(s32) = G_OR %3, %4
-    %7:_(s32) = G_USHLSAT %5, %6(s32)
-    $sgpr0 = COPY %7(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 5
+    %2:_(i32) = G_CONSTANT i32 -536870881
+    %3:_(i32) = G_CONSTANT i32 3
+    %4:_(i32) = G_USHLSAT %0, %1(i32)
+    %5:_(i32) = G_OR %4, %2
+    %6:_(i32) = G_USHLSAT %5, %3(i32)
+    $sgpr0 = COPY %6(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -159,23 +159,23 @@ body:             |
     ; CHECK-LABEL: name: ushlsat_or_3
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 19
-    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(s32) = G_USHLSAT [[C]], [[C1]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[USHLSAT]], [[USHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 65536
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 19
+    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(i32) = G_USHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(i32) = G_USHLSAT [[C]], [[C1]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[USHLSAT]], [[USHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 3
-    %4:_(s32) = G_CONSTANT i32 65536
-    %6:_(s32) = G_CONSTANT i32 16
-    %3:_(s32) = G_USHLSAT %0, %2(s32)
-    %5:_(s32) = G_OR %3, %4
-    %7:_(s32) = G_USHLSAT %5, %6(s32)
-    $sgpr0 = COPY %7(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 3
+    %2:_(i32) = G_CONSTANT i32 65536
+    %3:_(i32) = G_CONSTANT i32 16
+    %4:_(i32) = G_USHLSAT %0, %1(i32)
+    %5:_(i32) = G_OR %4, %2
+    %6:_(i32) = G_USHLSAT %5, %3(i32)
+    $sgpr0 = COPY %6(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -189,23 +189,23 @@ body:             |
     ; CHECK-LABEL: name: ushlsat_xor
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 43690
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(s32) = G_USHLSAT [[C]], [[C1]](s32)
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[USHLSAT]], [[USHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[XOR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 43690
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 5
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[USHLSAT:%[0-9]+]]:_(i32) = G_USHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[USHLSAT1:%[0-9]+]]:_(i32) = G_USHLSAT [[C]], [[C1]](i32)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[USHLSAT]], [[USHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[XOR]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 3
-    %4:_(s32) = G_CONSTANT i32 43690
-    %6:_(s32) = G_CONSTANT i32 5
-    %3:_(s32) = G_USHLSAT %0, %2(s32)
-    %5:_(s32) = G_XOR %3, %4
-    %7:_(s32) = G_USHLSAT %5, %6(s32)
-    $sgpr0 = COPY %7(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 3
+    %2:_(i32) = G_CONSTANT i32 43690
+    %3:_(i32) = G_CONSTANT i32 5
+    %4:_(i32) = G_USHLSAT %0, %1(i32)
+    %5:_(i32) = G_XOR %4, %2
+    %6:_(i32) = G_USHLSAT %5, %3(i32)
+    $sgpr0 = COPY %6(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -219,22 +219,22 @@ body:             |
     ; CHECK-LABEL: name: sshlsat_and_1
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1073741820
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(s32) = G_SSHLSAT [[C1]], [[C]](s32)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SSHLSAT]], [[SSHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1073741820
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(i32) = G_SSHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(i32) = G_SSHLSAT [[C1]], [[C]](i32)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[SSHLSAT]], [[SSHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 2
-    %4:_(s32) = G_CONSTANT i32 1073741820
-    %3:_(s32) = G_SSHLSAT %0, %2(s32)
-    %5:_(s32) = G_AND %3, %4
-    %6:_(s32) = G_SSHLSAT %5, %2(s32)
-    $sgpr0 = COPY %6(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 2
+    %2:_(i32) = G_CONSTANT i32 1073741820
+    %3:_(i32) = G_SSHLSAT %0, %1(i32)
+    %4:_(i32) = G_AND %3, %2
+    %5:_(i32) = G_SSHLSAT %4, %1(i32)
+    $sgpr0 = COPY %5(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -248,23 +248,23 @@ body:             |
     ; CHECK-LABEL: name: sshlsat_and_2
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 536870880
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(s32) = G_SSHLSAT [[C]], [[C1]](s32)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SSHLSAT]], [[SSHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 536870880
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(i32) = G_SSHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(i32) = G_SSHLSAT [[C]], [[C1]](i32)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[SSHLSAT]], [[SSHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 5
-    %4:_(s32) = G_CONSTANT i32 536870880
-    %6:_(s32) = G_CONSTANT i32 3
-    %3:_(s32) = G_SSHLSAT %0, %2(s32)
-    %5:_(s32) = G_AND %3, %4
-    %7:_(s32) = G_SSHLSAT %5, %6(s32)
-    $sgpr0 = COPY %7(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 5
+    %2:_(i32) = G_CONSTANT i32 536870880
+    %3:_(i32) = G_CONSTANT i32 3
+    %4:_(i32) = G_SSHLSAT %0, %1(i32)
+    %5:_(i32) = G_AND %4, %2
+    %6:_(i32) = G_SSHLSAT %5, %3(i32)
+    $sgpr0 = COPY %6(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -278,23 +278,23 @@ body:             |
     ; CHECK-LABEL: name: sshlsat_and_3
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 19
-    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(s32) = G_SSHLSAT [[C]], [[C1]](s32)
-    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SSHLSAT]], [[SSHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 65536
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 19
+    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(i32) = G_SSHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(i32) = G_SSHLSAT [[C]], [[C1]](i32)
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(i32) = G_AND [[SSHLSAT]], [[SSHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[AND]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 3
-    %4:_(s32) = G_CONSTANT i32 65536
-    %6:_(s32) = G_CONSTANT i32 16
-    %3:_(s32) = G_SSHLSAT %0, %2(s32)
-    %5:_(s32) = G_AND %3, %4
-    %7:_(s32) = G_SSHLSAT %5, %6(s32)
-    $sgpr0 = COPY %7(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 3
+    %2:_(i32) = G_CONSTANT i32 65536
+    %3:_(i32) = G_CONSTANT i32 16
+    %4:_(i32) = G_SSHLSAT %0, %1(i32)
+    %5:_(i32) = G_AND %4, %2
+    %6:_(i32) = G_SSHLSAT %5, %3(i32)
+    $sgpr0 = COPY %6(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -308,22 +308,22 @@ body:             |
     ; CHECK-LABEL: name: sshlsat_or_1
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1073741821
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(s32) = G_SSHLSAT [[C1]], [[C]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SSHLSAT]], [[SSHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 2
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 -1073741821
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 4
+    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(i32) = G_SSHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(i32) = G_SSHLSAT [[C1]], [[C]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[SSHLSAT]], [[SSHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 2
-    %4:_(s32) = G_CONSTANT i32 -1073741821
-    %3:_(s32) = G_SSHLSAT %0, %2(s32)
-    %5:_(s32) = G_OR %3, %4
-    %6:_(s32) = G_SSHLSAT %5, %2(s32)
-    $sgpr0 = COPY %6(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 2
+    %2:_(i32) = G_CONSTANT i32 -1073741821
+    %3:_(i32) = G_SSHLSAT %0, %1(i32)
+    %4:_(i32) = G_OR %3, %2
+    %5:_(i32) = G_SSHLSAT %4, %1(i32)
+    $sgpr0 = COPY %5(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -337,23 +337,23 @@ body:             |
     ; CHECK-LABEL: name: sshlsat_or_2
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 -536870881
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(s32) = G_SSHLSAT [[C]], [[C1]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SSHLSAT]], [[SSHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 -536870881
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 3
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(i32) = G_SSHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(i32) = G_SSHLSAT [[C]], [[C1]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[SSHLSAT]], [[SSHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 5
-    %4:_(s32) = G_CONSTANT i32 -536870881
-    %6:_(s32) = G_CONSTANT i32 3
-    %3:_(s32) = G_SSHLSAT %0, %2(s32)
-    %5:_(s32) = G_OR %3, %4
-    %7:_(s32) = G_SSHLSAT %5, %6(s32)
-    $sgpr0 = COPY %7(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 5
+    %2:_(i32) = G_CONSTANT i32 -536870881
+    %3:_(i32) = G_CONSTANT i32 3
+    %4:_(i32) = G_SSHLSAT %0, %1(i32)
+    %5:_(i32) = G_OR %4, %2
+    %6:_(i32) = G_SSHLSAT %5, %3(i32)
+    $sgpr0 = COPY %6(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -367,23 +367,23 @@ body:             |
     ; CHECK-LABEL: name: sshlsat_or_3
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65536
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 19
-    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(s32) = G_SSHLSAT [[C]], [[C1]](s32)
-    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s32) = G_OR [[SSHLSAT]], [[SSHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 65536
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 19
+    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(i32) = G_SSHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(i32) = G_SSHLSAT [[C]], [[C1]](i32)
+    ; CHECK-NEXT: [[OR:%[0-9]+]]:_(i32) = G_OR [[SSHLSAT]], [[SSHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[OR]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 3
-    %4:_(s32) = G_CONSTANT i32 65536
-    %6:_(s32) = G_CONSTANT i32 16
-    %3:_(s32) = G_SSHLSAT %0, %2(s32)
-    %5:_(s32) = G_OR %3, %4
-    %7:_(s32) = G_SSHLSAT %5, %6(s32)
-    $sgpr0 = COPY %7(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 3
+    %2:_(i32) = G_CONSTANT i32 65536
+    %3:_(i32) = G_CONSTANT i32 16
+    %4:_(i32) = G_SSHLSAT %0, %1(i32)
+    %5:_(i32) = G_OR %4, %2
+    %6:_(i32) = G_SSHLSAT %5, %3(i32)
+    $sgpr0 = COPY %6(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...
@@ -397,23 +397,23 @@ body:             |
     ; CHECK-LABEL: name: sshlsat_xor
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 43690
-    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
-    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
-    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[COPY]], [[C2]](s32)
-    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(s32) = G_SSHLSAT [[C]], [[C1]](s32)
-    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[SSHLSAT]], [[SSHLSAT1]]
-    ; CHECK-NEXT: $sgpr0 = COPY [[XOR]](s32)
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 43690
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 5
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 8
+    ; CHECK-NEXT: [[SSHLSAT:%[0-9]+]]:_(i32) = G_SSHLSAT [[COPY]], [[C2]](i32)
+    ; CHECK-NEXT: [[SSHLSAT1:%[0-9]+]]:_(i32) = G_SSHLSAT [[C]], [[C1]](i32)
+    ; CHECK-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[SSHLSAT]], [[SSHLSAT1]]
+    ; CHECK-NEXT: $sgpr0 = COPY [[XOR]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %0:_(s32) = COPY $sgpr0
-    %2:_(s32) = G_CONSTANT i32 3
-    %4:_(s32) = G_CONSTANT i32 43690
-    %6:_(s32) = G_CONSTANT i32 5
-    %3:_(s32) = G_SSHLSAT %0, %2(s32)
-    %5:_(s32) = G_XOR %3, %4
-    %7:_(s32) = G_SSHLSAT %5, %6(s32)
-    $sgpr0 = COPY %7(s32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 3
+    %2:_(i32) = G_CONSTANT i32 43690
+    %3:_(i32) = G_CONSTANT i32 5
+    %4:_(i32) = G_SSHLSAT %0, %1(i32)
+    %5:_(i32) = G_XOR %4, %2
+    %6:_(i32) = G_SSHLSAT %5, %3(i32)
+    $sgpr0 = COPY %6(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 
 ...

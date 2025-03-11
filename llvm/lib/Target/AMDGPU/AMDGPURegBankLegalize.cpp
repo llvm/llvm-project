@@ -21,6 +21,7 @@
 #include "AMDGPUGlobalISelUtils.h"
 #include "AMDGPURegBankLegalizeHelper.h"
 #include "GCNSubtarget.h"
+#include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
 #include "llvm/CodeGen/GlobalISel/CSEMIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -106,10 +107,10 @@ class AMDGPURegBankLegalizeCombiner {
   const RegisterBank *VgprRB;
   const RegisterBank *VccRB;
 
-  static constexpr LLT S1 = LLT::scalar(1);
-  static constexpr LLT S16 = LLT::scalar(16);
-  static constexpr LLT S32 = LLT::scalar(32);
-  static constexpr LLT S64 = LLT::scalar(64);
+  static constexpr LLT I1 = LLT::integer(1);
+  static constexpr LLT I16 = LLT::integer(16);
+  static constexpr LLT I32 = LLT::integer(32);
+  static constexpr LLT I64 = LLT::integer(64);
 
 public:
   AMDGPURegBankLegalizeCombiner(MachineIRBuilder &B, const SIRegisterInfo &TRI,
@@ -125,7 +126,7 @@ public:
       return true;
 
     const TargetRegisterClass *RC = MRI.getRegClassOrNull(Reg);
-    return RC && TRI.isSGPRClass(RC) && MRI.getType(Reg) == LLT::scalar(1);
+    return RC && TRI.isSGPRClass(RC) && MRI.getType(Reg).isScalar(1);
   }
 
   void cleanUpAfterCombine(MachineInstr &MI, MachineInstr *Optional0) {
@@ -156,13 +157,13 @@ public:
     // %Dst:lane-mask(s1) = G_AMDGPU_COPY_VCC_SCC %TruncS32Src:sgpr(s32)
     if (isLaneMask(Dst) && MRI.getRegBankOrNull(Src) == SgprRB) {
       auto [Trunc, TruncS32Src] = tryMatch(Src, AMDGPU::G_TRUNC);
-      assert(Trunc && MRI.getType(TruncS32Src) == S32 &&
+      assert(Trunc && MRI.getType(TruncS32Src) == I32 &&
              "sgpr S1 must be result of G_TRUNC of sgpr S32");
 
       B.setInstr(MI);
       // Ensure that truncated bits in BoolSrc are 0.
-      auto One = B.buildConstant({SgprRB, S32}, 1);
-      auto BoolSrc = B.buildAnd({SgprRB, S32}, TruncS32Src, One);
+      auto One = B.buildConstant({SgprRB, I32}, 1);
+      auto BoolSrc = B.buildAnd({SgprRB, I32}, TruncS32Src, One);
       B.buildInstr(AMDGPU::G_AMDGPU_COPY_VCC_SCC, {Dst}, {BoolSrc});
       cleanUpAfterCombine(MI, Trunc);
       return;
@@ -192,7 +193,7 @@ public:
     // %Dst = G_... %TruncSrc
     Register Dst = MI.getOperand(0).getReg();
     Register Src = MI.getOperand(1).getReg();
-    if (MRI.getType(Src) != S1)
+    if (MRI.getType(Src) != I1)
       return;
 
     auto [Trunc, TruncSrc] = tryMatch(Src, AMDGPU::G_TRUNC);
@@ -210,20 +211,20 @@ public:
 
     B.setInstr(MI);
 
-    if (DstTy == S32 && TruncSrcTy == S64) {
-      auto Unmerge = B.buildUnmerge({SgprRB, S32}, TruncSrc);
+    if (DstTy == I32 && TruncSrcTy == I64) {
+      auto Unmerge = B.buildUnmerge({SgprRB, I32}, TruncSrc);
       MRI.replaceRegWith(Dst, Unmerge.getReg(0));
       cleanUpAfterCombine(MI, Trunc);
       return;
     }
 
-    if (DstTy == S32 && TruncSrcTy == S16) {
+    if (DstTy == I32 && TruncSrcTy == I16) {
       B.buildAnyExt(Dst, TruncSrc);
       cleanUpAfterCombine(MI, Trunc);
       return;
     }
 
-    if (DstTy == S16 && TruncSrcTy == S32) {
+    if (DstTy == I16 && TruncSrcTy == I32) {
       B.buildTrunc(Dst, TruncSrc);
       cleanUpAfterCombine(MI, Trunc);
       return;
@@ -235,10 +236,9 @@ public:
 
 // Search through MRI for virtual registers with sgpr register bank and S1 LLT.
 [[maybe_unused]] static Register getAnySgprS1(const MachineRegisterInfo &MRI) {
-  const LLT S1 = LLT::scalar(1);
   for (unsigned i = 0; i < MRI.getNumVirtRegs(); ++i) {
     Register Reg = Register::index2VirtReg(i);
-    if (MRI.def_empty(Reg) || MRI.getType(Reg) != S1)
+    if (MRI.def_empty(Reg) || !MRI.getType(Reg).isScalar(1))
       continue;
 
     const RegisterBank *RB = MRI.getRegBankOrNull(Reg);
@@ -306,7 +306,7 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
     // Opcodes that support pretty much all combinations of reg banks and LLTs
     // (except S1). There is no point in writing rules for them.
     if (Opc == AMDGPU::G_BUILD_VECTOR || Opc == AMDGPU::G_UNMERGE_VALUES ||
-        Opc == AMDGPU::G_MERGE_VALUES) {
+        Opc == AMDGPU::G_MERGE_VALUES || Opc == AMDGPU::G_BITCAST) {
       RBLHelper.applyMappingTrivial(*MI);
       continue;
     }
@@ -316,7 +316,7 @@ bool AMDGPURegBankLegalize::runOnMachineFunction(MachineFunction &MF) {
          Opc == AMDGPU::G_IMPLICIT_DEF)) {
       Register Dst = MI->getOperand(0).getReg();
       // Non S1 types are trivially accepted.
-      if (MRI.getType(Dst) != LLT::scalar(1)) {
+      if (!MRI.getType(Dst).isScalar(1)) {
         assert(MRI.getRegBank(Dst)->getID() == AMDGPU::SGPRRegBankID);
         continue;
       }

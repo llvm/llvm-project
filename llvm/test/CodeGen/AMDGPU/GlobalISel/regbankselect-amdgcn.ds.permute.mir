@@ -13,13 +13,13 @@ body: |
     ; CHECK-LABEL: name: ds_permute_ss
     ; CHECK: liveins: $sgpr0, $sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY]](s32)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.permute), [[COPY2]](s32), [[COPY3]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.permute), %0, %1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[COPY]](i32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[COPY1]](i32)
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:vgpr(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.permute), [[COPY2]](i32), [[COPY3]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ds.permute), %0(i32), %1(i32)
 
 ...

@@ -11,15 +11,15 @@ body:             |
     ; GCN-LABEL: name: select_from_different_results_of_unmerge_values
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GCN-NEXT: $vgpr0 = COPY [[DEF]](s32)
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+    ; GCN-NEXT: $vgpr0 = COPY [[DEF]](i32)
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0
-    %0:_(<2 x s32>) = G_IMPLICIT_DEF
-    %1:_(s32) = COPY $vgpr0
-    %2:_(s1) = G_TRUNC %1:_(s32)
-    %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %0:_(<2 x s32>)
-    %5:_(s32) = G_SELECT %2:_(s1), %3:_, %4:_
-    $vgpr0 = COPY %5
+    %0:_(<2 x i32>) = G_IMPLICIT_DEF
+    %1:_(i32) = COPY $vgpr0
+    %2:_(i1) = G_TRUNC %1(i32)
+    %3:_(i32), %4:_(i32) = G_UNMERGE_VALUES %0(<2 x i32>)
+    %5:_(i32) = G_SELECT %2(i1), %3, %4
+    $vgpr0 = COPY %5(i32)
     SI_RETURN_TO_EPILOG $vgpr0
 
 ...
@@ -34,15 +34,15 @@ body:             |
     ; GCN-LABEL: name: select_from_same_results_of_unmerge_values
     ; GCN: liveins: $vgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-    ; GCN-NEXT: $vgpr0 = COPY [[DEF]](s32)
+    ; GCN-NEXT: [[DEF:%[0-9]+]]:_(i32) = G_IMPLICIT_DEF
+    ; GCN-NEXT: $vgpr0 = COPY [[DEF]](i32)
     ; GCN-NEXT: SI_RETURN_TO_EPILOG $vgpr0
-    %0:_(<2 x s32>) = G_IMPLICIT_DEF
-    %1:_(s32) = COPY $vgpr0
-    %2:_(s1) = G_TRUNC %1:_(s32)
-    %3:_(s32), %4:_(s32) = G_UNMERGE_VALUES %0:_(<2 x s32>)
-    %5:_(s32) = G_SELECT %2:_(s1), %3:_, %3:_
-    $vgpr0 = COPY %5
+    %0:_(<2 x i32>) = G_IMPLICIT_DEF
+    %1:_(i32) = COPY $vgpr0
+    %2:_(i1) = G_TRUNC %1(i32)
+    %3:_(i32), %4:_(i32) = G_UNMERGE_VALUES %0(<2 x i32>)
+    %5:_(i32) = G_SELECT %2(i1), %3, %3
+    $vgpr0 = COPY %5(i32)
     SI_RETURN_TO_EPILOG $vgpr0
 
 ...
@@ -57,20 +57,20 @@ body: |
     ; GCN-LABEL: name: select_different_result_from_different_unmerge_values_with_the_same_source
     ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr4
-    ; GCN-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[COPY1]](s32)
-    ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
-    ; GCN-NEXT: [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
-    ; GCN-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[UV1]], [[UV7]]
-    ; GCN-NEXT: $vgpr0 = COPY [[SELECT]](s32)
-    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(s32) = COPY $vgpr4
-    %2:_(s1) = G_TRUNC %1:_(s32)
-    %3:_(s32), %4:_(s32), %5:_(s32), %6:_(s32) = G_UNMERGE_VALUES %0:_(<4 x s32>)
-    %7:_(s32), %8:_(s32), %9:_(s32), %10:_(s32) = G_UNMERGE_VALUES %0:_(<4 x s32>)
-    %11:_(s32) = G_SELECT %2:_(s1), %4:_, %10:_
-    $vgpr0 = COPY %11
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr4
+    ; GCN-NEXT: [[TRUNC:%[0-9]+]]:_(i1) = G_TRUNC [[COPY1]](i32)
+    ; GCN-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<4 x i32>)
+    ; GCN-NEXT: [[UV4:%[0-9]+]]:_(i32), [[UV5:%[0-9]+]]:_(i32), [[UV6:%[0-9]+]]:_(i32), [[UV7:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<4 x i32>)
+    ; GCN-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[TRUNC]](i1), [[UV1]], [[UV7]]
+    ; GCN-NEXT: $vgpr0 = COPY [[SELECT]](i32)
+    %0:_(<4 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(i32) = COPY $vgpr4
+    %2:_(i1) = G_TRUNC %1(i32)
+    %3:_(i32), %4:_(i32), %5:_(i32), %6:_(i32) = G_UNMERGE_VALUES %0(<4 x i32>)
+    %7:_(i32), %8:_(i32), %9:_(i32), %10:_(i32) = G_UNMERGE_VALUES %0(<4 x i32>)
+    %11:_(i32) = G_SELECT %2(i1), %4, %10
+    $vgpr0 = COPY %11(i32)
 ...
 
 ---
@@ -83,14 +83,14 @@ body: |
     ; GCN-LABEL: name: select_same_result_from_different_unmerge_values_with_the_same_source
     ; GCN: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<4 x s32>)
-    ; GCN-NEXT: $vgpr0 = COPY [[UV1]](s32)
-    %0:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
-    %1:_(s32) = COPY $vgpr4
-    %2:_(s1) = G_TRUNC %1:_(s32)
-    %3:_(s32), %4:_(s32), %5:_(s32), %6:_(s32) = G_UNMERGE_VALUES %0:_(<4 x s32>)
-    %7:_(s32), %8:_(s32), %9:_(s32), %10:_(s32) = G_UNMERGE_VALUES %0:_(<4 x s32>)
-    %11:_(s32) = G_SELECT %2:_(s1), %4:_, %8:_
-    $vgpr0 = COPY %11
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; GCN-NEXT: [[UV:%[0-9]+]]:_(i32), [[UV1:%[0-9]+]]:_(i32), [[UV2:%[0-9]+]]:_(i32), [[UV3:%[0-9]+]]:_(i32) = G_UNMERGE_VALUES [[COPY]](<4 x i32>)
+    ; GCN-NEXT: $vgpr0 = COPY [[UV1]](i32)
+    %0:_(<4 x i32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %1:_(i32) = COPY $vgpr4
+    %2:_(i1) = G_TRUNC %1(i32)
+    %3:_(i32), %4:_(i32), %5:_(i32), %6:_(i32) = G_UNMERGE_VALUES %0(<4 x i32>)
+    %7:_(i32), %8:_(i32), %9:_(i32), %10:_(i32) = G_UNMERGE_VALUES %0(<4 x i32>)
+    %11:_(i32) = G_SELECT %2(i1), %4, %8
+    $vgpr0 = COPY %11(i32)
 ...

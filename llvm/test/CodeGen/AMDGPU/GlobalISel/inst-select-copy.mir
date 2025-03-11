@@ -20,7 +20,7 @@ body: |
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr2_sgpr3
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY [[COPY]]
     ; WAVE64-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-    ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY1]], [[DEF]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY1]], [[DEF]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32), addrspace 1)
     ;
     ; WAVE32-LABEL: name: copy
     ; WAVE32: liveins: $sgpr2_sgpr3
@@ -28,11 +28,11 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_64_xexec_xnull = COPY $sgpr2_sgpr3
     ; WAVE32-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; WAVE32-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; WAVE32-NEXT: GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[DEF]], [[COPY]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    ; WAVE32-NEXT: GLOBAL_STORE_DWORD_SADDR [[V_MOV_B32_e32_]], [[DEF]], [[COPY]], 0, 0, implicit $exec :: (store (i32), addrspace 1)
     %0:sgpr(p1) = COPY $sgpr2_sgpr3
-    %1:vgpr(p1) = COPY %0
-    %2:vgpr(s32) = G_IMPLICIT_DEF
-    G_STORE %2, %1 :: (store (s32), addrspace 1)
+    %1:vgpr(p1) = COPY %0(p1)
+    %2:vgpr(i32) = G_IMPLICIT_DEF
+    G_STORE %2(i32), %1(p1) :: (store (i32), addrspace 1)
 ...
 ---
 
@@ -54,7 +54,7 @@ body: |
     ; WAVE64-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY3]], implicit-def dead $scc
     ; WAVE64-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_]], implicit $exec
     ; WAVE64-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY2]], 0, [[COPY1]], [[V_CMP_NE_U32_e64_]], implicit $exec
-    ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32), addrspace 1)
     ;
     ; WAVE32-LABEL: name: copy_vcc_bank_sgpr_bank
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
@@ -66,14 +66,14 @@ body: |
     ; WAVE32-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY3]], implicit-def dead $scc
     ; WAVE32-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_]], implicit $exec
     ; WAVE32-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY2]], 0, [[COPY1]], [[V_CMP_NE_U32_e64_]], implicit $exec
-    ; WAVE32-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    ; WAVE32-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec :: (store (i32), addrspace 1)
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s32) = COPY $vgpr3
-    %3:sgpr(s1) = COPY $scc
-    %4:vcc(s1) = COPY %3
-    %5:vgpr(s32) = G_SELECT %4, %1, %2
-    G_STORE %5, %0 :: (store (s32), addrspace 1)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i32) = COPY $vgpr3
+    %3:sgpr(i1) = COPY $scc
+    %4:vcc(i1) = COPY %3(i1)
+    %5:vgpr(i32) = G_SELECT %4(i1), %1, %2
+    G_STORE %5(i32), %0(p1) :: (store (i32), addrspace 1)
 ...
 ---
 
@@ -98,7 +98,7 @@ body: |
     ; WAVE64-NEXT: [[S_AND_B32_1:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY3]], implicit-def dead $scc
     ; WAVE64-NEXT: [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_1]], implicit $exec
     ; WAVE64-NEXT: [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_CNDMASK_B32_e64_]], 0, [[COPY1]], [[V_CMP_NE_U32_e64_1]], implicit $exec
-    ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_1]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32), addrspace 1)
     ;
     ; WAVE32-LABEL: name: copy_vcc_bank_sgpr_bank_2_uses
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
@@ -112,16 +112,16 @@ body: |
     ; WAVE32-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY3]], implicit-def dead $scc
     ; WAVE32-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = V_CMP_NE_U32_e64 0, [[S_AND_B32_]], implicit $exec
     ; WAVE32-NEXT: [[V_CNDMASK_B32_e64_1:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[V_CNDMASK_B32_e64_]], 0, [[COPY1]], [[V_CMP_NE_U32_e64_]], implicit $exec
-    ; WAVE32-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_1]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    ; WAVE32-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_1]], 0, 0, implicit $exec :: (store (i32), addrspace 1)
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s32) = COPY $vgpr3
-    %3:sgpr(s1) = COPY $scc
-    %4:vcc(s1) = COPY %3
-    %5:vgpr(s32) = G_SELECT %4, %1, %2
-    %6:vcc(s1) = COPY %3
-    %7:vgpr(s32) = G_SELECT %6, %1, %5
-    G_STORE %7, %0 :: (store (s32), addrspace 1)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i32) = COPY $vgpr3
+    %3:sgpr(i1) = COPY $scc
+    %4:vcc(i1) = COPY %3(i1)
+    %5:vgpr(i32) = G_SELECT %4(i1), %1, %2
+    %6:vcc(i1) = COPY %3(i1)
+    %7:vgpr(i32) = G_SELECT %6(i1), %1, %5
+    G_STORE %7(i32), %0(p1) :: (store (i32), addrspace 1)
 ...
 
 ---
@@ -142,7 +142,7 @@ body: |
     ; WAVE64-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; WAVE64-NEXT: [[COPY3:%[0-9]+]]:sreg_64_xexec = COPY $scc
     ; WAVE64-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY2]], 0, [[COPY1]], [[COPY3]], implicit $exec
-    ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (s32), addrspace 1)
+    ; WAVE64-NEXT: FLAT_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (store (i32), addrspace 1)
     ;
     ; WAVE32-LABEL: name: copy_vcc_bank_scc_physreg
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3, $scc
@@ -152,13 +152,13 @@ body: |
     ; WAVE32-NEXT: [[COPY2:%[0-9]+]]:vgpr_32 = COPY $vgpr3
     ; WAVE32-NEXT: [[COPY3:%[0-9]+]]:sreg_32_xm0_xexec = COPY $scc
     ; WAVE32-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY2]], 0, [[COPY1]], [[COPY3]], implicit $exec
-    ; WAVE32-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec :: (store (s32), addrspace 1)
+    ; WAVE32-NEXT: GLOBAL_STORE_DWORD [[COPY]], [[V_CNDMASK_B32_e64_]], 0, 0, implicit $exec :: (store (i32), addrspace 1)
     %0:vgpr(p1) = COPY $vgpr0_vgpr1
-    %1:vgpr(s32) = COPY $vgpr2
-    %2:vgpr(s32) = COPY $vgpr3
-    %3:vcc(s1) = COPY $scc
-    %5:vgpr(s32) = G_SELECT %3, %1, %2
-    G_STORE %5, %0 :: (store (s32), addrspace 1)
+    %1:vgpr(i32) = COPY $vgpr2
+    %2:vgpr(i32) = COPY $vgpr3
+    %3:vcc(i1) = COPY $scc
+    %4:vgpr(i32) = G_SELECT %3(i1), %1, %2
+    G_STORE %4(i32), %0(p1) :: (store (i32), addrspace 1)
 ...
 ---
 
@@ -266,10 +266,10 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:sreg_32_xm0_xexec = COPY [[COPY]]
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY1]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:vcc(s1) = G_TRUNC %0
-    %2:vcc(s1) = COPY %1
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:vcc(i1) = G_TRUNC %0(i32)
+    %2:vcc(i1) = COPY %1(i1)
+    S_ENDPGM 0, implicit %2(i1)
 
 ...
 
@@ -296,8 +296,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
     ; WAVE32-NEXT: $vcc = COPY [[COPY]]
     ; WAVE32-NEXT: S_ENDPGM 0, implicit $vcc_lo
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    $vcc = COPY %0
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    $vcc = COPY %0(i64)
     S_ENDPGM 0, implicit $vcc
 
 ...
@@ -325,8 +325,8 @@ body: |
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; WAVE32-NEXT: $vcc_lo = COPY [[COPY]]
     ; WAVE32-NEXT: S_ENDPGM 0, implicit $vcc_lo
-    %0:sgpr(s32) = COPY $sgpr0
-    $vcc_lo = COPY %0
+    %0:sgpr(i32) = COPY $sgpr0
+    $vcc_lo = COPY %0(i32)
     S_ENDPGM 0, implicit $vcc
 
 ...
@@ -352,8 +352,8 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $vcc
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY]]
-    %0:sgpr(s64) = COPY $vcc
-    S_ENDPGM 0, implicit %0
+    %0:sgpr(i64) = COPY $vcc
+    S_ENDPGM 0, implicit %0(i64)
 
 ...
 
@@ -378,8 +378,8 @@ body: |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $vcc_lo
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[COPY]]
-    %0:sgpr(s32) = COPY $vcc_lo
-    S_ENDPGM 0, implicit %0
+    %0:sgpr(i32) = COPY $vcc_lo
+    S_ENDPGM 0, implicit %0(i32)
 
 ...
 
@@ -410,10 +410,10 @@ body:             |
     ; WAVE32-NEXT: [[S_AND_B32_:%[0-9]+]]:sreg_32 = S_AND_B32 1, [[COPY1]], implicit-def dead $scc
     ; WAVE32-NEXT: [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 0, [[S_AND_B32_]], implicit $exec
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NE_U32_e64_]]
-    %0:sgpr(s64) = COPY $sgpr0_sgpr1
-    %1:sgpr(s1) = G_TRUNC %0(s64)
-    %2:vcc(s1) = COPY %1(s1)
-    S_ENDPGM 0, implicit %2
+    %0:sgpr(i64) = COPY $sgpr0_sgpr1
+    %1:sgpr(i1) = G_TRUNC %0(i64)
+    %2:vcc(i1) = COPY %1(i1)
+    S_ENDPGM 0, implicit %2(i1)
 
 ...
 
@@ -438,9 +438,9 @@ body:             |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
-    %0:sgpr(s1) = G_CONSTANT i1 false
-    %1:vcc(s1) = COPY %0(s1)
-    S_ENDPGM 0, implicit %1
+    %0:sgpr(i1) = G_CONSTANT i1 false
+    %1:vcc(i1) = COPY %0(i1)
+    S_ENDPGM 0, implicit %1(i1)
 
 ...
 
@@ -465,8 +465,8 @@ body:             |
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 -1
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_]]
-    %0:sgpr(s1) = G_CONSTANT i1 true
-    %1:vcc(s1) = COPY %0(s1)
-    S_ENDPGM 0, implicit %1
+    %0:sgpr(i1) = G_CONSTANT i1 true
+    %1:vcc(i1) = COPY %0(i1)
+    S_ENDPGM 0, implicit %1(i1)
 
 ...

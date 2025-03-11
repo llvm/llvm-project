@@ -1,6 +1,6 @@
 ; RUN: not --crash llc -global-isel=1 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -o - < %s 2>&1 | FileCheck -check-prefix=GISEL-ERR %s
 
-; GISEL-ERR: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(p8) = G_PTR_ADD %{{[0-9]+}}:_, %{{[0-9]+}}:_(s128)
+; GISEL-ERR: LLVM ERROR: unable to legalize instruction: %{{[0-9]+}}:_(p8) = G_PTR_ADD %{{[0-9]+}}:_, %{{[0-9]+}}:_(i128)
 
 
 define float @gep_on_rsrc(ptr addrspace(8) %rsrc) {

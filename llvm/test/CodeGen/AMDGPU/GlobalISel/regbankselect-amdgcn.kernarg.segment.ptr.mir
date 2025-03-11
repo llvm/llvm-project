@@ -10,5 +10,5 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: kernarg_segment_ptr
     ; CHECK: [[INT:%[0-9]+]]:sgpr(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-    %2:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
+    %0:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
 ...

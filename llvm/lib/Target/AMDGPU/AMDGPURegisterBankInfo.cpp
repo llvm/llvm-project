@@ -131,8 +131,8 @@ public:
       const RegisterBank *SrcBank = RBI.getRegBank(SrcReg, MRI, *RBI.TRI);
       if (SrcBank == &AMDGPU::VCCRegBank) {
         const LLT S32 = LLT::scalar(32);
-        assert(MRI.getType(SrcReg) == LLT::scalar(1));
-        assert(MRI.getType(DstReg) == S32);
+        assert(MRI.getType(SrcReg).isScalar(1));
+        assert(MRI.getType(DstReg).isScalar(32));
         assert(NewBank == &AMDGPU::VGPRRegBank);
 
         // Replace the extension with a select, which really uses the boolean
@@ -170,7 +170,7 @@ public:
         continue;
 
       const RegisterBank *RB = NewBank;
-      if (MRI.getType(Reg) == LLT::scalar(1)) {
+      if (MRI.getType(Reg).isScalar(1)) {
         assert(NewBank == &AMDGPU::VGPRRegBank &&
                "s1 operands should only be used for vector bools");
         assert((MI.getOpcode() != AMDGPU::G_TRUNC &&
@@ -298,7 +298,7 @@ AMDGPURegisterBankInfo::getRegBankFromRegClass(const TargetRegisterClass &RC,
     if (!Ty.isValid())
       return AMDGPU::SGPRRegBank;
 
-    return Ty == LLT::scalar(1) ? AMDGPU::VCCRegBank : AMDGPU::SGPRRegBank;
+    return Ty.isScalar(1) ? AMDGPU::VCCRegBank : AMDGPU::SGPRRegBank;
   }
 
   return TRI->isAGPRClass(&RC) ? AMDGPU::AGPRRegBank : AMDGPU::VGPRRegBank;
@@ -1495,7 +1495,7 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(MachineIRBuilder &B,
   const RegisterBank *DstBank =
     OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
   if (DstBank == &AMDGPU::VGPRRegBank) {
-    if (Ty == S32)
+    if (Ty.isScalar(32))
       return true;
 
     // There is no 64-bit vgpr bitfield extract instructions so the operation
@@ -1568,8 +1568,9 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(MachineIRBuilder &B,
 
   // TODO: It might be worth using a pseudo here to avoid scc clobber and
   // register class constraints.
-  unsigned Opc = Ty == S32 ? (Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32) :
-                             (Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64);
+  unsigned Opc = Ty.isScalar(32)
+                     ? (Signed ? AMDGPU::S_BFE_I32 : AMDGPU::S_BFE_U32)
+                     : (Signed ? AMDGPU::S_BFE_I64 : AMDGPU::S_BFE_U64);
 
   auto MIB = B.buildInstr(Opc, {DstReg}, {SrcReg, MergedInputs});
   if (!constrainSelectedInstRegOperands(*MIB, *TII, *TRI, *this))
@@ -1790,7 +1791,7 @@ Register AMDGPURegisterBankInfo::handleD16VData(MachineIRBuilder &B,
 
   const LLT S16 = LLT::scalar(16);
   LLT StoreVT = MRI.getType(Reg);
-  if (!StoreVT.isVector() || StoreVT.getElementType() != S16)
+  if (!StoreVT.isVector() || !StoreVT.getElementType().isScalar(16))
     return Reg;
 
   auto Unmerge = B.buildUnmerge(S16, Reg);
@@ -1968,7 +1969,7 @@ bool AMDGPURegisterBankInfo::foldExtractEltToCmpSelect(
                                                   IsDivergentIdx, &Subtarget))
     return false;
 
-  LLT S32 = LLT::scalar(32);
+  LLT I32 = LLT::integer(32);
 
   const RegisterBank &DstBank =
     *OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
@@ -1980,10 +1981,10 @@ bool AMDGPURegisterBankInfo::foldExtractEltToCmpSelect(
      SrcBank == AMDGPU::SGPRRegBank &&
      IdxBank == AMDGPU::SGPRRegBank) ? AMDGPU::SGPRRegBank
                                      : AMDGPU::VCCRegBank;
-  LLT CCTy = (CCBank == AMDGPU::SGPRRegBank) ? S32 : LLT::scalar(1);
+  LLT CCTy = (CCBank == AMDGPU::SGPRRegBank) ? I32 : LLT::integer(1);
 
   if (CCBank == AMDGPU::VCCRegBank && IdxBank == AMDGPU::SGPRRegBank) {
-    Idx = B.buildCopy(S32, Idx)->getOperand(0).getReg();
+    Idx = B.buildCopy(I32, Idx)->getOperand(0).getReg();
     MRI.setRegBank(Idx, AMDGPU::VGPRRegBank);
   }
 
@@ -1995,13 +1996,19 @@ bool AMDGPURegisterBankInfo::foldExtractEltToCmpSelect(
   else
     EltTy = MRI.getType(DstRegs[0]);
 
+  if (VecTy.isFloatVector() && !EltTy.isFloat()) {
+    auto ClassOrBank = MRI.getRegClassOrRegBank(VecReg);
+    VecReg = B.buildBitcast({ClassOrBank, VecTy.changeToInteger()}, VecReg).getReg(0);
+  }
+
   auto UnmergeToEltTy = B.buildUnmerge(EltTy, VecReg);
   SmallVector<Register, 2> Res(NumLanes);
-  for (unsigned L = 0; L < NumLanes; ++L)
+  for (unsigned L = 0; L < NumLanes; ++L) {
     Res[L] = UnmergeToEltTy.getReg(L);
+  }
 
   for (unsigned I = 1; I < NumElem; ++I) {
-    auto IC = B.buildConstant(S32, I);
+    auto IC = B.buildConstant(I32, I);
     MRI.setRegBank(IC->getOperand(0).getReg(), AMDGPU::SGPRRegBank);
     auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, CCTy, Idx, IC);
     MRI.setRegBank(Cmp->getOperand(0).getReg(), CCBank);
@@ -2066,7 +2073,7 @@ bool AMDGPURegisterBankInfo::foldInsertEltToCmpSelect(
                                                   IsDivergentIdx, &Subtarget))
     return false;
 
-  LLT S32 = LLT::scalar(32);
+  LLT I32 = LLT::integer(32);
 
   const RegisterBank &DstBank =
     *OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
@@ -2081,10 +2088,10 @@ bool AMDGPURegisterBankInfo::foldInsertEltToCmpSelect(
      InsBank == AMDGPU::SGPRRegBank &&
      IdxBank == AMDGPU::SGPRRegBank) ? AMDGPU::SGPRRegBank
                                      : AMDGPU::VCCRegBank;
-  LLT CCTy = (CCBank == AMDGPU::SGPRRegBank) ? S32 : LLT::scalar(1);
+  LLT CCTy = (CCBank == AMDGPU::SGPRRegBank) ? I32 : LLT::integer(1);
 
   if (CCBank == AMDGPU::VCCRegBank && IdxBank == AMDGPU::SGPRRegBank) {
-    Idx = B.buildCopy(S32, Idx)->getOperand(0).getReg();
+    Idx = B.buildCopy(I32, Idx)->getOperand(0).getReg();
     MRI.setRegBank(Idx, AMDGPU::VGPRRegBank);
   }
 
@@ -2098,11 +2105,17 @@ bool AMDGPURegisterBankInfo::foldInsertEltToCmpSelect(
     EltTy = MRI.getType(InsRegs[0]);
   }
 
+  if (VecTy.getScalarType().isFloat() && !EltTy.isFloat()) {
+    auto RegBankOrClass = MRI.getRegClassOrRegBank(VecReg);
+    auto CastTy = VecTy.changeToInteger();
+    VecReg = B.buildBitcast({RegBankOrClass, CastTy}, VecReg).getReg(0);
+  }
+
   auto UnmergeToEltTy = B.buildUnmerge(EltTy, VecReg);
   SmallVector<Register, 16> Ops(NumElem * NumLanes);
 
   for (unsigned I = 0; I < NumElem; ++I) {
-    auto IC = B.buildConstant(S32, I);
+    auto IC = B.buildConstant(I32, I);
     MRI.setRegBank(IC->getOperand(0).getReg(), AMDGPU::SGPRRegBank);
     auto Cmp = B.buildICmp(CmpInst::ICMP_EQ, CCTy, Idx, IC);
     MRI.setRegBank(Cmp->getOperand(0).getReg(), CCBank);
@@ -2155,7 +2168,7 @@ void AMDGPURegisterBankInfo::applyMappingSMULU64(
   MachineRegisterInfo &MRI = OpdMapper.getMRI();
   MachineInstr &MI = OpdMapper.getMI();
   Register DstReg = MI.getOperand(0).getReg();
-  LLT HalfTy = LLT::scalar(32);
+  LLT HalfTy = LLT::integer(32);
 
   // Depending on where the source registers came from, the generic code may
   // have decided to split the inputs already or not. If not, we still need to
@@ -2213,7 +2226,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_IMPLICIT_DEF: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
-    if (DstTy != LLT::scalar(1))
+    if (!DstTy.isScalar(1))
       break;
 
     const RegisterBank *DstBank =
@@ -2243,7 +2256,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_PHI: {
     Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
-    if (DstTy != LLT::scalar(1))
+    if (!DstTy.isScalar(1))
       break;
 
     const LLT S32 = LLT::scalar(32);
@@ -2514,7 +2527,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     // 16-bit operations are VALU only, but can be promoted to 32-bit SALU.
     // Packed 16-bit operations need to be scalarized and promoted.
-    if (DstTy != LLT::scalar(16) && DstTy != LLT::fixed_vector(2, 16))
+    if (!DstTy.isScalar(16) && !DstTy.isFixedVector(2, 16))
       break;
 
     const RegisterBank *DstBank =
@@ -2588,8 +2601,9 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register SrcReg1 = MI.getOperand(2).getReg();
     const LLT S32 = LLT::scalar(32);
     const LLT S64 = LLT::scalar(64);
-    assert(MRI.getType(DstReg) == S64 && "This is a special case for s_mul_u64 "
-                                         "that handles only 64-bit operands.");
+    assert(MRI.getType(DstReg).isScalar(64) &&
+           "This is a special case for s_mul_u64 "
+           "that handles only 64-bit operands.");
     const RegisterBank *DstBank =
         OpdMapper.getInstrMapping().getOperandMapping(0).BreakDown[0].RegBank;
 
@@ -2684,7 +2698,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register SrcReg = MI.getOperand(1).getReg();
     const LLT S32 = LLT::scalar(32);
     LLT Ty = MRI.getType(SrcReg);
-    if (Ty == S32)
+    if (Ty.isScalar(32))
       break;
 
     ApplyRegBankMapping ApplyVALU(B, *this, MRI, &AMDGPU::VGPRRegBank);
@@ -2708,7 +2722,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register SrcReg = MI.getOperand(1).getReg();
     const LLT S32 = LLT::scalar(32);
     LLT Ty = MRI.getType(SrcReg);
-    if (Ty == S32)
+    if (Ty.isScalar(32))
       break;
 
     // We can narrow this more efficiently than Helper can by using ffbh/ffbl
@@ -2776,7 +2790,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
 
-    if (SrcTy != LLT::scalar(1))
+    if (!SrcTy.isScalar(1))
       return;
 
     // It is not legal to have a legalization artifact with a VCC source. Rather
@@ -2826,7 +2840,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
 
-    const LLT S32 = LLT::scalar(32);
+    const LLT I32 = LLT::integer(32);
     LLT DstTy = MRI.getType(DstReg);
     LLT SrcTy = MRI.getType(SrcReg);
 
@@ -2889,10 +2903,10 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     assert(DstTy.getSizeInBits() == 64);
 
-    LLT Vec32 = LLT::fixed_vector(2 * SrcTy.getNumElements(), 32);
+    LLT Vec32 = LLT::fixed_vector(2 * SrcTy.getNumElements(), I32);
 
     auto CastSrc = B.buildBitcast(Vec32, SrcReg);
-    auto One = B.buildConstant(S32, 1);
+    auto One = B.buildConstant(I32, 1);
 
     MachineBasicBlock::iterator MII = MI.getIterator();
 
@@ -2903,8 +2917,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     MachineInstrSpan Span(MII, &B.getMBB());
 
     // Compute 32-bit element indices, (2 * OrigIdx, 2 * OrigIdx + 1).
-    auto IdxLo = B.buildShl(S32, BaseIdxReg, One);
-    auto IdxHi = B.buildAdd(S32, IdxLo, One);
+    auto IdxLo = B.buildShl(I32, BaseIdxReg, One);
+    auto IdxHi = B.buildAdd(I32, IdxLo, One);
 
     auto Extract0 = B.buildExtractVectorElement(DstRegs[0], CastSrc, IdxLo);
     auto Extract1 = B.buildExtractVectorElement(DstRegs[1], CastSrc, IdxHi);
@@ -2930,8 +2944,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
 
     if (NeedCopyToVGPR) {
       MachineBasicBlock *LoopBB = Extract1->getParent();
-      Register TmpReg0 = MRI.createGenericVirtualRegister(S32);
-      Register TmpReg1 = MRI.createGenericVirtualRegister(S32);
+      Register TmpReg0 = MRI.createGenericVirtualRegister(I32);
+      Register TmpReg1 = MRI.createGenericVirtualRegister(I32);
       MRI.setRegBank(TmpReg0, AMDGPU::SGPRRegBank);
       MRI.setRegBank(TmpReg1, AMDGPU::SGPRRegBank);
 
@@ -3783,10 +3797,9 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // For COPY between a physical reg and an s1, there is no type associated so
     // we need to take the virtual register's type as a hint on how to interpret
     // s1 values.
-    if (!SrcReg.isVirtual() && !DstBank &&
-        MRI.getType(DstReg) == LLT::scalar(1))
+    if (!SrcReg.isVirtual() && !DstBank && MRI.getType(DstReg).isScalar(1))
       DstBank = &AMDGPU::VCCRegBank;
-    else if (!DstReg.isVirtual() && MRI.getType(SrcReg) == LLT::scalar(1))
+    else if (!DstReg.isVirtual() && MRI.getType(SrcReg).isScalar(1))
       DstBank = &AMDGPU::VCCRegBank;
 
     if (!DstBank)
@@ -4150,7 +4163,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_BUILD_VECTOR:
   case AMDGPU::G_BUILD_VECTOR_TRUNC: {
     LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-    if (DstTy == LLT::fixed_vector(2, 16)) {
+    if (DstTy.isFixedVector(2, 16)) {
       unsigned DstSize = DstTy.getSizeInBits();
       unsigned SrcSize = MRI.getType(MI.getOperand(1).getReg()).getSizeInBits();
       unsigned Src0BankID = getRegBankID(MI.getOperand(1).getReg(), MRI);

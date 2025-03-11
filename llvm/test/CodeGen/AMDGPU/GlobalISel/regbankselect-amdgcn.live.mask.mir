@@ -9,8 +9,8 @@ legalized: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: live_mask
-    ; CHECK: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.live.mask)
-    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INT]](s1)
-    %0:_(s1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.live.mask)
-    S_ENDPGM 0, implicit %0
+    ; CHECK: [[INT:%[0-9]+]]:vcc(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.live.mask)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INT]](i1)
+    %0:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.live.mask)
+    S_ENDPGM 0, implicit %0(i1)
 ...

@@ -10,15 +10,21 @@ body: |
     ; GCN-LABEL: name: test_strict_fsub_s64
     ; GCN: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $vgpr2_vgpr3
-    ; GCN-NEXT: [[FNEG:%[0-9]+]]:_(s64) = G_FNEG [[COPY1]]
-    ; GCN-NEXT: [[STRICT_FADD:%[0-9]+]]:_(s64) = G_STRICT_FADD [[COPY]], [[FNEG]]
-    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[STRICT_FADD]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s64) = COPY $vgpr2_vgpr3
-    %2:_(s64) = G_STRICT_FSUB %0, %1
-    $vgpr0_vgpr1 = COPY %2
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(i64) = COPY $vgpr0_vgpr1
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $vgpr2_vgpr3
+    ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(f64) = G_BITCAST [[COPY]](i64)
+    ; GCN-NEXT: [[BITCAST1:%[0-9]+]]:_(f64) = G_BITCAST [[COPY1]](i64)
+    ; GCN-NEXT: [[FNEG:%[0-9]+]]:_(f64) = G_FNEG [[BITCAST1]]
+    ; GCN-NEXT: [[STRICT_FADD:%[0-9]+]]:_(f64) = G_STRICT_FADD [[BITCAST]], [[FNEG]]
+    ; GCN-NEXT: [[BITCAST2:%[0-9]+]]:_(i64) = G_BITCAST [[STRICT_FADD]](f64)
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[BITCAST2]](i64)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i64) = COPY $vgpr2_vgpr3
+    %2:_(f64) = G_BITCAST %0(i64)
+    %3:_(f64) = G_BITCAST %1(i64)
+    %4:_(f64) = G_STRICT_FSUB %2, %3
+    %5:_(i64) = G_BITCAST %4(f64)
+    $vgpr0_vgpr1 = COPY %5(i64)
 ...
 
 ---
@@ -30,13 +36,19 @@ body: |
     ; GCN-LABEL: name: test_strict_fsub_v2s16
     ; GCN: liveins: $vgpr0, $vgpr1
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr1
-    ; GCN-NEXT: [[FNEG:%[0-9]+]]:_(<2 x s16>) = G_FNEG [[COPY1]]
-    ; GCN-NEXT: [[STRICT_FADD:%[0-9]+]]:_(<2 x s16>) = G_STRICT_FADD [[COPY]], [[FNEG]]
-    ; GCN-NEXT: $vgpr0 = COPY [[STRICT_FADD]](<2 x s16>)
-    %0:_(<2 x s16>) = COPY $vgpr0
-    %1:_(<2 x s16>) = COPY $vgpr1
-    %2:_(<2 x s16>) = G_STRICT_FSUB %0, %1
-    $vgpr0 = COPY %2
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr0
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(<2 x i16>) = COPY $vgpr1
+    ; GCN-NEXT: [[BITCAST:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[COPY]](<2 x i16>)
+    ; GCN-NEXT: [[BITCAST1:%[0-9]+]]:_(<2 x f16>) = G_BITCAST [[COPY1]](<2 x i16>)
+    ; GCN-NEXT: [[FNEG:%[0-9]+]]:_(<2 x f16>) = G_FNEG [[BITCAST1]]
+    ; GCN-NEXT: [[STRICT_FADD:%[0-9]+]]:_(<2 x f16>) = G_STRICT_FADD [[BITCAST]], [[FNEG]]
+    ; GCN-NEXT: [[BITCAST2:%[0-9]+]]:_(<2 x i16>) = G_BITCAST [[STRICT_FADD]](<2 x f16>)
+    ; GCN-NEXT: $vgpr0 = COPY [[BITCAST2]](<2 x i16>)
+    %0:_(<2 x i16>) = COPY $vgpr0
+    %1:_(<2 x i16>) = COPY $vgpr1
+    %2:_(<2 x f16>) = G_BITCAST %0(<2 x i16>)
+    %3:_(<2 x f16>) = G_BITCAST %1(<2 x i16>)
+    %4:_(<2 x f16>) = G_STRICT_FSUB %2, %3
+    %5:_(<2 x i16>) = G_BITCAST %4(<2 x f16>)
+    $vgpr0 = COPY %5(<2 x i16>)
 ...

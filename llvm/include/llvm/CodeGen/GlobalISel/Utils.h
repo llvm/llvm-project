@@ -241,12 +241,18 @@ struct DefinitionAndSourceRegister {
 std::optional<DefinitionAndSourceRegister>
 getDefSrcRegIgnoringCopies(Register Reg, const MachineRegisterInfo &MRI);
 
+std::optional<DefinitionAndSourceRegister>
+getDefSrcRegIgnoringBitcasts(Register Reg, const MachineRegisterInfo &MRI);
+
 /// Find the def instruction for \p Reg, folding away any trivial copies. May
 /// return nullptr if \p Reg is not a generic virtual register.
 ///
 /// Also walks through hints such as G_ASSERT_ZEXT.
 MachineInstr *getDefIgnoringCopies(Register Reg,
                                    const MachineRegisterInfo &MRI);
+
+MachineInstr *getDefIgnoringBitcasts(Register Reg,
+                                     const MachineRegisterInfo &MRI);
 
 /// Find the source register for \p Reg, folding away any trivial copies. It
 /// will be an output register of the instruction that getDefIgnoringCopies

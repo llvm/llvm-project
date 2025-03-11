@@ -97,12 +97,13 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_ext_neg_mul(<4 x half> %x,
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_ext_neg_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %entry
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v8, 0x80008000, v2
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v9, 0x80008000, v3
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v5, v0, -v2, -v5 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v3, v1, -v3, -v7 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v0, v0, v8, -v4 op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v2, v1, v9, -v6 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v3, 0x80008000, v3
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v4, v0, v2, -v4 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v5, v0, v2, -v5 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v2, v1, v3, -v6 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v3, v1, v3, -v7 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-DENORM-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX10-DENORM-NEXT:    ; return to shader part epilog
 entry:
@@ -131,12 +132,13 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_neg_ext_mul(<4 x half> %x,
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_neg_ext_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %entry
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v8, 0x80008000, v2
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v9, 0x80008000, v3
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v5, v0, -v2, -v5 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v3, v1, -v3, -v7 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v0, v0, v8, -v4 op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v2, v1, v9, -v6 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v2, 0x80008000, v2
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v3, 0x80008000, v3
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v4, v0, v2, -v4 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v5, v0, v2, -v5 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v2, v1, v3, -v6 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v3, v1, v3, -v7 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_mov_b32_e32 v0, v4
 ; GFX10-DENORM-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX10-DENORM-NEXT:    ; return to shader part epilog
 entry:
@@ -166,12 +168,12 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_ext_neg_mul2(<4 x float> %
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_ext_neg_mul2:
 ; GFX10-DENORM:       ; %bb.0: ; %entry
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v8, 0x80008000, v6
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v9, 0x80008000, v7
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v1, -v4, -v6, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v3, -v5, -v7, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v0, -v4, v8, v0 op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v2, -v5, v9, v2 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v6, 0x80008000, v6
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v7, 0x80008000, v7
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v0, -v4, v6, v0 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v1, -v4, v6, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v2, -v5, v7, v2 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v3, -v5, v7, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0]
 ; GFX10-DENORM-NEXT:    ; return to shader part epilog
 entry:
   %a = fmul fast <4 x half> %y, %z
@@ -199,12 +201,12 @@ define amdgpu_vs <4 x float> @test_v4f16_to_v4f32_sub_neg_ext_mul2(<4 x float> %
 ;
 ; GFX10-DENORM-LABEL: test_v4f16_to_v4f32_sub_neg_ext_mul2:
 ; GFX10-DENORM:       ; %bb.0: ; %entry
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v8, 0x80008000, v6
-; GFX10-DENORM-NEXT:    v_xor_b32_e32 v9, 0x80008000, v7
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v1, -v4, -v6, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v3, -v5, -v7, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v0, -v4, v8, v0 op_sel_hi:[1,1,0]
-; GFX10-DENORM-NEXT:    v_fma_mix_f32 v2, -v5, v9, v2 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v6, 0x80008000, v6
+; GFX10-DENORM-NEXT:    v_xor_b32_e32 v7, 0x80008000, v7
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v0, -v4, v6, v0 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v1, -v4, v6, v1 op_sel:[1,1,0] op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v2, -v5, v7, v2 op_sel_hi:[1,1,0]
+; GFX10-DENORM-NEXT:    v_fma_mix_f32 v3, -v5, v7, v3 op_sel:[1,1,0] op_sel_hi:[1,1,0]
 ; GFX10-DENORM-NEXT:    ; return to shader part epilog
 entry:
   %a = fmul fast <4 x half> %y, %z

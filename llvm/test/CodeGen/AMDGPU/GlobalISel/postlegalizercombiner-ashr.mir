@@ -10,12 +10,12 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: constant_fold_ashr_s32_s32
-    ; CHECK: %shift:_(s32) = G_CONSTANT i32 -482254
-    ; CHECK-NEXT: $vgpr0 = COPY %shift(s32)
-    %val:_(s32) = G_CONSTANT i32 -123456789
-    %shift_amt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s32) = G_ASHR %val, %shift_amt
-    $vgpr0 = COPY %shift
+    ; CHECK: %shift:_(i32) = G_CONSTANT i32 -482254
+    ; CHECK-NEXT: $vgpr0 = COPY %shift(i32)
+    %val:_(i32) = G_CONSTANT i32 -123456789
+    %shift_amt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i32) = G_ASHR %val, %shift_amt(i32)
+    $vgpr0 = COPY %shift(i32)
 
 ...
 
@@ -26,13 +26,13 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: constant_fold_ashr_s16_s16
-    ; CHECK: %ext:_(s32) = G_CONSTANT i32 64764
-    ; CHECK-NEXT: $vgpr0 = COPY %ext(s32)
-    %val:_(s16) = G_CONSTANT i16 -12345
-    %shift_amt:_(s16) = G_CONSTANT i16 4
-    %shift:_(s16) = G_ASHR %val, %shift_amt
-    %ext:_(s32) = G_ANYEXT %shift
-    $vgpr0 = COPY %ext
+    ; CHECK: %ext:_(i32) = G_CONSTANT i32 64764
+    ; CHECK-NEXT: $vgpr0 = COPY %ext(i32)
+    %val:_(i16) = G_CONSTANT i16 -12345
+    %shift_amt:_(i16) = G_CONSTANT i16 4
+    %shift:_(i16) = G_ASHR %val, %shift_amt(i16)
+    %ext:_(i32) = G_ANYEXT %shift(i16)
+    $vgpr0 = COPY %ext(i32)
 
 ...
 
@@ -43,12 +43,12 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: constant_fold_ashr_s64_s32
-    ; CHECK: %shift:_(s64) = G_CONSTANT i64 -482254
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %shift(s64)
-    %val:_(s64) = G_CONSTANT i64 -123456789
-    %shift_amt:_(s32) = G_CONSTANT i32 8
-    %shift:_(s64) = G_ASHR %val, %shift_amt
-    $vgpr0_vgpr1 = COPY %shift
+    ; CHECK: %shift:_(i64) = G_CONSTANT i64 -482254
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %shift(i64)
+    %val:_(i64) = G_CONSTANT i64 -123456789
+    %shift_amt:_(i32) = G_CONSTANT i32 8
+    %shift:_(i64) = G_ASHR %val, %shift_amt(i32)
+    $vgpr0_vgpr1 = COPY %shift(i64)
 
 ...
 
@@ -59,20 +59,20 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: constant_fold_ashr_v2s16_v2s16
-    ; CHECK: %val0:_(s16) = G_CONSTANT i16 1234
-    ; CHECK-NEXT: %val1:_(s16) = G_CONSTANT i16 -5678
-    ; CHECK-NEXT: %val:_(<2 x s16>) = G_BUILD_VECTOR %val0(s16), %val1(s16)
-    ; CHECK-NEXT: %shift_amt_elt:_(s16) = G_CONSTANT i16 8
-    ; CHECK-NEXT: %shift_amt:_(<2 x s16>) = G_BUILD_VECTOR %shift_amt_elt(s16), %shift_amt_elt(s16)
-    ; CHECK-NEXT: %shift:_(<2 x s16>) = G_ASHR %val, %shift_amt(<2 x s16>)
-    ; CHECK-NEXT: $vgpr0 = COPY %shift(<2 x s16>)
-    %val0:_(s16) = G_CONSTANT i16 1234
-    %val1:_(s16) = G_CONSTANT i16 -5678
-    %val:_(<2 x s16>) = G_BUILD_VECTOR %val0, %val1
-    %shift_amt_elt:_(s16) = G_CONSTANT i16 8
-    %shift_amt:_(<2 x s16>) = G_BUILD_VECTOR %shift_amt_elt, %shift_amt_elt
-    %shift:_(<2 x s16>) = G_ASHR %val, %shift_amt
-    $vgpr0 = COPY %shift
+    ; CHECK: %val0:_(i16) = G_CONSTANT i16 1234
+    ; CHECK-NEXT: %val1:_(i16) = G_CONSTANT i16 -5678
+    ; CHECK-NEXT: %val:_(<2 x i16>) = G_BUILD_VECTOR %val0(i16), %val1(i16)
+    ; CHECK-NEXT: %shift_amt_elt:_(i16) = G_CONSTANT i16 8
+    ; CHECK-NEXT: %shift_amt:_(<2 x i16>) = G_BUILD_VECTOR %shift_amt_elt(i16), %shift_amt_elt(i16)
+    ; CHECK-NEXT: %shift:_(<2 x i16>) = G_ASHR %val, %shift_amt(<2 x i16>)
+    ; CHECK-NEXT: $vgpr0 = COPY %shift(<2 x i16>)
+    %val0:_(i16) = G_CONSTANT i16 1234
+    %val1:_(i16) = G_CONSTANT i16 -5678
+    %val:_(<2 x i16>) = G_BUILD_VECTOR %val0(i16), %val1(i16)
+    %shift_amt_elt:_(i16) = G_CONSTANT i16 8
+    %shift_amt:_(<2 x i16>) = G_BUILD_VECTOR %shift_amt_elt(i16), %shift_amt_elt(i16)
+    %shift:_(<2 x i16>) = G_ASHR %val, %shift_amt(<2 x i16>)
+    $vgpr0 = COPY %shift(<2 x i16>)
 
 ...
 
@@ -83,22 +83,22 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: constant_fold_ashr_v2s16_v2s16_undef_amt_elt
-    ; CHECK: %val0:_(s16) = G_CONSTANT i16 1234
-    ; CHECK-NEXT: %val1:_(s16) = G_CONSTANT i16 -5678
-    ; CHECK-NEXT: %val:_(<2 x s16>) = G_BUILD_VECTOR %val0(s16), %val1(s16)
-    ; CHECK-NEXT: %shift_amt_elt:_(s16) = G_CONSTANT i16 8
-    ; CHECK-NEXT: %undef:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %shift_amt:_(<2 x s16>) = G_BUILD_VECTOR %shift_amt_elt(s16), %undef(s16)
-    ; CHECK-NEXT: %shift:_(<2 x s16>) = G_ASHR %val, %shift_amt(<2 x s16>)
-    ; CHECK-NEXT: $vgpr0 = COPY %shift(<2 x s16>)
-    %val0:_(s16) = G_CONSTANT i16 1234
-    %val1:_(s16) = G_CONSTANT i16 -5678
-    %val:_(<2 x s16>) = G_BUILD_VECTOR %val0, %val1
-    %shift_amt_elt:_(s16) = G_CONSTANT i16 8
-    %undef:_(s16) = G_IMPLICIT_DEF
-    %shift_amt:_(<2 x s16>) = G_BUILD_VECTOR %shift_amt_elt, %undef
-    %shift:_(<2 x s16>) = G_ASHR %val, %shift_amt
-    $vgpr0 = COPY %shift
+    ; CHECK: %val0:_(i16) = G_CONSTANT i16 1234
+    ; CHECK-NEXT: %val1:_(i16) = G_CONSTANT i16 -5678
+    ; CHECK-NEXT: %val:_(<2 x i16>) = G_BUILD_VECTOR %val0(i16), %val1(i16)
+    ; CHECK-NEXT: %shift_amt_elt:_(i16) = G_CONSTANT i16 8
+    ; CHECK-NEXT: %undef:_(i16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %shift_amt:_(<2 x i16>) = G_BUILD_VECTOR %shift_amt_elt(i16), %undef(i16)
+    ; CHECK-NEXT: %shift:_(<2 x i16>) = G_ASHR %val, %shift_amt(<2 x i16>)
+    ; CHECK-NEXT: $vgpr0 = COPY %shift(<2 x i16>)
+    %val0:_(i16) = G_CONSTANT i16 1234
+    %val1:_(i16) = G_CONSTANT i16 -5678
+    %val:_(<2 x i16>) = G_BUILD_VECTOR %val0(i16), %val1(i16)
+    %shift_amt_elt:_(i16) = G_CONSTANT i16 8
+    %undef:_(i16) = G_IMPLICIT_DEF
+    %shift_amt:_(<2 x i16>) = G_BUILD_VECTOR %shift_amt_elt(i16), %undef(i16)
+    %shift:_(<2 x i16>) = G_ASHR %val, %shift_amt(<2 x i16>)
+    $vgpr0 = COPY %shift(<2 x i16>)
 
 ...
 
@@ -109,19 +109,19 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: constant_fold_ashr_v2s16_v2s16_undef_val_elt
-    ; CHECK: %val0:_(s16) = G_CONSTANT i16 -1234
-    ; CHECK-NEXT: %undef:_(s16) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: %val:_(<2 x s16>) = G_BUILD_VECTOR %val0(s16), %undef(s16)
-    ; CHECK-NEXT: %shift_amt_elt:_(s16) = G_CONSTANT i16 8
-    ; CHECK-NEXT: %shift_amt:_(<2 x s16>) = G_BUILD_VECTOR %shift_amt_elt(s16), %shift_amt_elt(s16)
-    ; CHECK-NEXT: %shift:_(<2 x s16>) = G_ASHR %val, %shift_amt(<2 x s16>)
-    ; CHECK-NEXT: $vgpr0 = COPY %shift(<2 x s16>)
-    %val0:_(s16) = G_CONSTANT i16 -1234
-    %undef:_(s16) = G_IMPLICIT_DEF
-    %val:_(<2 x s16>) = G_BUILD_VECTOR %val0, %undef
-    %shift_amt_elt:_(s16) = G_CONSTANT i16 8
-    %shift_amt:_(<2 x s16>) = G_BUILD_VECTOR %shift_amt_elt, %shift_amt_elt
-    %shift:_(<2 x s16>) = G_ASHR %val, %shift_amt
-    $vgpr0 = COPY %shift
+    ; CHECK: %val0:_(i16) = G_CONSTANT i16 -1234
+    ; CHECK-NEXT: %undef:_(i16) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: %val:_(<2 x i16>) = G_BUILD_VECTOR %val0(i16), %undef(i16)
+    ; CHECK-NEXT: %shift_amt_elt:_(i16) = G_CONSTANT i16 8
+    ; CHECK-NEXT: %shift_amt:_(<2 x i16>) = G_BUILD_VECTOR %shift_amt_elt(i16), %shift_amt_elt(i16)
+    ; CHECK-NEXT: %shift:_(<2 x i16>) = G_ASHR %val, %shift_amt(<2 x i16>)
+    ; CHECK-NEXT: $vgpr0 = COPY %shift(<2 x i16>)
+    %val0:_(i16) = G_CONSTANT i16 -1234
+    %undef:_(i16) = G_IMPLICIT_DEF
+    %val:_(<2 x i16>) = G_BUILD_VECTOR %val0(i16), %undef(i16)
+    %shift_amt_elt:_(i16) = G_CONSTANT i16 8
+    %shift_amt:_(<2 x i16>) = G_BUILD_VECTOR %shift_amt_elt(i16), %shift_amt_elt(i16)
+    %shift:_(<2 x i16>) = G_ASHR %val, %shift_amt(<2 x i16>)
+    $vgpr0 = COPY %shift(<2 x i16>)
 
 ...

@@ -280,6 +280,7 @@ define half @v_uitofp_i32_to_f16_mask255(i32 %arg0) nounwind {
 ; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_uitofp_i32_to_f16_mask255:
@@ -300,6 +301,7 @@ define half @v_sitofp_i32_to_f16_mask255(i32 %arg0) nounwind {
 ; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_sitofp_i32_to_f16_mask255:
@@ -320,6 +322,7 @@ define half @v_uitofp_to_f16_lshr8_mask255(i32 %arg0) nounwind {
 ; SI-NEXT:    v_bfe_u32 v0, v0, 8, 8
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_uitofp_to_f16_lshr8_mask255:
@@ -341,6 +344,7 @@ define half @v_uitofp_to_f16_lshr16_mask255(i32 %arg0) nounwind {
 ; SI-NEXT:    v_bfe_u32 v0, v0, 16, 8
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_uitofp_to_f16_lshr16_mask255:
@@ -356,12 +360,20 @@ define half @v_uitofp_to_f16_lshr16_mask255(i32 %arg0) nounwind {
 }
 
 define half @v_uitofp_to_f16_lshr24_mask255(i32 %arg0) nounwind {
-; GCN-LABEL: v_uitofp_to_f16_lshr24_mask255:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_cvt_f32_ubyte3_e32 v0, v0
-; GCN-NEXT:    v_cvt_f16_f32_e32 v0, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_uitofp_to_f16_lshr24_mask255:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    v_cvt_f32_ubyte3_e32 v0, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_uitofp_to_f16_lshr24_mask255:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_cvt_f32_ubyte3_e32 v0, v0
+; VI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.16 = lshr i32 %arg0, 24
   %masked = and i32 %lshr.16, 255
   %cvt = uitofp i32 %masked to half
@@ -375,6 +387,7 @@ define half @v_uitofp_i8_to_f16(i8 %arg0) nounwind {
 ; SI-NEXT:    v_and_b32_e32 v0, 0xff, v0
 ; SI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: v_uitofp_i8_to_f16:

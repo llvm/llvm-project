@@ -2,16 +2,16 @@
 
 # Make sure v2s16 SALU operations fail to select
 
-# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x s16>) = G_ADD %0:sgpr, %1:sgpr (in function: s_add_v2s16)
-# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x s16>) = G_SUB %0:sgpr, %1:sgpr (in function: s_sub_v2s16)
-# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x s16>) = G_MUL %0:sgpr, %1:sgpr (in function: s_mul_v2s16)
-# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x s16>) = G_SHL %0:sgpr, %1:sgpr(<2 x s16>) (in function: s_shl_v2s16)
-# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x s16>) = G_LSHR %0:sgpr, %1:sgpr(<2 x s16>) (in function: s_lshr_v2s16)
-# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x s16>) = G_ASHR %0:sgpr, %1:sgpr(<2 x s16>) (in function: s_ashr_v2s16)
-# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x s16>) = G_SMIN %0:sgpr, %1:sgpr (in function: s_smin_v2s16)
-# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x s16>) = G_SMAX %0:sgpr, %1:sgpr (in function: s_smax_v2s16)
-# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x s16>) = G_UMIN %0:sgpr, %1:sgpr (in function: s_umin_v2s16)
-# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x s16>) = G_UMAX %0:sgpr, %1:sgpr (in function: s_umax_v2s16)
+# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x i16>) = G_ADD %0:sgpr, %1:sgpr (in function: s_add_v2s16)
+# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x i16>) = G_SUB %0:sgpr, %1:sgpr (in function: s_sub_v2s16)
+# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x i16>) = G_MUL %0:sgpr, %1:sgpr (in function: s_mul_v2s16)
+# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x i16>) = G_SHL %0:sgpr, %1:sgpr(<2 x i16>) (in function: s_shl_v2s16)
+# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x i16>) = G_LSHR %0:sgpr, %1:sgpr(<2 x i16>) (in function: s_lshr_v2s16)
+# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x i16>) = G_ASHR %0:sgpr, %1:sgpr(<2 x i16>) (in function: s_ashr_v2s16)
+# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x i16>) = G_SMIN %0:sgpr, %1:sgpr (in function: s_smin_v2s16)
+# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x i16>) = G_SMAX %0:sgpr, %1:sgpr (in function: s_smax_v2s16)
+# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x i16>) = G_UMIN %0:sgpr, %1:sgpr (in function: s_umin_v2s16)
+# ERR: remark: <unknown>:0:0: cannot select: %2:sgpr(<2 x i16>) = G_UMAX %0:sgpr, %1:sgpr (in function: s_umax_v2s16)
 
 ---
 name:            s_add_v2s16
@@ -23,9 +23,9 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(<2 x s16>) = COPY $sgpr0
-    %1:sgpr(<2 x s16>) = COPY $sgpr1
-    %2:sgpr(<2 x s16>) = G_ADD %0, %1
+    %0:sgpr(<2 x i16>) = COPY $sgpr0
+    %1:sgpr(<2 x i16>) = COPY $sgpr1
+    %2:sgpr(<2 x i16>) = G_ADD %0, %1
     S_ENDPGM 0, implicit %2
 
 ...
@@ -40,9 +40,9 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(<2 x s16>) = COPY $sgpr0
-    %1:sgpr(<2 x s16>) = COPY $sgpr1
-    %2:sgpr(<2 x s16>) = G_SUB %0, %1
+    %0:sgpr(<2 x i16>) = COPY $sgpr0
+    %1:sgpr(<2 x i16>) = COPY $sgpr1
+    %2:sgpr(<2 x i16>) = G_SUB %0, %1
     S_ENDPGM 0, implicit %2
 
 ...
@@ -57,9 +57,9 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(<2 x s16>) = COPY $sgpr0
-    %1:sgpr(<2 x s16>) = COPY $sgpr1
-    %2:sgpr(<2 x s16>) = G_MUL %0, %1
+    %0:sgpr(<2 x i16>) = COPY $sgpr0
+    %1:sgpr(<2 x i16>) = COPY $sgpr1
+    %2:sgpr(<2 x i16>) = G_MUL %0, %1
     S_ENDPGM 0, implicit %2
 
 ...
@@ -74,9 +74,9 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(<2 x s16>) = COPY $sgpr0
-    %1:sgpr(<2 x s16>) = COPY $sgpr1
-    %2:sgpr(<2 x s16>) = G_SHL %0, %1
+    %0:sgpr(<2 x i16>) = COPY $sgpr0
+    %1:sgpr(<2 x i16>) = COPY $sgpr1
+    %2:sgpr(<2 x i16>) = G_SHL %0, %1
     S_ENDPGM 0, implicit %2
 
 ...
@@ -91,9 +91,9 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(<2 x s16>) = COPY $sgpr0
-    %1:sgpr(<2 x s16>) = COPY $sgpr1
-    %2:sgpr(<2 x s16>) = G_LSHR %0, %1
+    %0:sgpr(<2 x i16>) = COPY $sgpr0
+    %1:sgpr(<2 x i16>) = COPY $sgpr1
+    %2:sgpr(<2 x i16>) = G_LSHR %0, %1
     S_ENDPGM 0, implicit %2
 
 ...
@@ -108,9 +108,9 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(<2 x s16>) = COPY $sgpr0
-    %1:sgpr(<2 x s16>) = COPY $sgpr1
-    %2:sgpr(<2 x s16>) = G_ASHR %0, %1
+    %0:sgpr(<2 x i16>) = COPY $sgpr0
+    %1:sgpr(<2 x i16>) = COPY $sgpr1
+    %2:sgpr(<2 x i16>) = G_ASHR %0, %1
     S_ENDPGM 0, implicit %2
 
 ...
@@ -125,9 +125,9 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(<2 x s16>) = COPY $sgpr0
-    %1:sgpr(<2 x s16>) = COPY $sgpr1
-    %2:sgpr(<2 x s16>) = G_SMIN %0, %1
+    %0:sgpr(<2 x i16>) = COPY $sgpr0
+    %1:sgpr(<2 x i16>) = COPY $sgpr1
+    %2:sgpr(<2 x i16>) = G_SMIN %0, %1
     S_ENDPGM 0, implicit %2
 
 ...
@@ -142,9 +142,9 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(<2 x s16>) = COPY $sgpr0
-    %1:sgpr(<2 x s16>) = COPY $sgpr1
-    %2:sgpr(<2 x s16>) = G_SMAX %0, %1
+    %0:sgpr(<2 x i16>) = COPY $sgpr0
+    %1:sgpr(<2 x i16>) = COPY $sgpr1
+    %2:sgpr(<2 x i16>) = G_SMAX %0, %1
     S_ENDPGM 0, implicit %2
 
 ...
@@ -159,9 +159,9 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(<2 x s16>) = COPY $sgpr0
-    %1:sgpr(<2 x s16>) = COPY $sgpr1
-    %2:sgpr(<2 x s16>) = G_UMIN %0, %1
+    %0:sgpr(<2 x i16>) = COPY $sgpr0
+    %1:sgpr(<2 x i16>) = COPY $sgpr1
+    %2:sgpr(<2 x i16>) = G_UMIN %0, %1
     S_ENDPGM 0, implicit %2
 
 ...
@@ -176,9 +176,9 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
 
-    %0:sgpr(<2 x s16>) = COPY $sgpr0
-    %1:sgpr(<2 x s16>) = COPY $sgpr1
-    %2:sgpr(<2 x s16>) = G_UMAX %0, %1
+    %0:sgpr(<2 x i16>) = COPY $sgpr0
+    %1:sgpr(<2 x i16>) = COPY $sgpr1
+    %2:sgpr(<2 x i16>) = G_UMAX %0, %1
     S_ENDPGM 0, implicit %2
 
 ...

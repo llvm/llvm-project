@@ -19,7 +19,7 @@ body: |
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]], implicit [[COPY]]
     %0:sgpr(p0) = COPY $sgpr30_sgpr31
     %1:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
-    S_ENDPGM 0, implicit %0, implicit %1
+    S_ENDPGM 0, implicit %0(p0), implicit %1(p0)
 ...
 
 ---
@@ -39,7 +39,7 @@ body: |
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY1]], implicit [[COPY]]
     %0:sgpr(p0) = COPY $sgpr30_sgpr31
     %1:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
-    S_ENDPGM 0, implicit %0, implicit %1
+    S_ENDPGM 0, implicit %0(p0), implicit %1(p0)
 ...
 
 ---
@@ -57,7 +57,7 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr30_sgpr31
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[COPY]]
     %0:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
-    S_ENDPGM 0, implicit %0
+    S_ENDPGM 0, implicit %0(p0)
 ...
 
 ---
@@ -78,11 +78,14 @@ body: |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY]]
   bb.0:
+    successors: %bb.1(0x80000000)
+
     G_BR %bb.1
 
   bb.1:
     %0:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
-    S_ENDPGM 0, implicit %0
+    S_ENDPGM 0, implicit %0(p0)
+
 ...
 
 ---
@@ -103,12 +106,15 @@ body: |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   S_ENDPGM 0, implicit [[COPY]], implicit [[COPY]]
   bb.0:
+    successors: %bb.1(0x80000000)
+
     %0:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
     G_BR %bb.1
 
   bb.1:
     %1:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
-    S_ENDPGM 0, implicit %0, implicit %1
+    S_ENDPGM 0, implicit %0(p0), implicit %1(p0)
+
 ...
 
 ---
@@ -125,5 +131,5 @@ body: |
     ; CHECK: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]]
     %0:sgpr(p0) = G_INTRINSIC intrinsic(@llvm.returnaddress), 0
-    S_ENDPGM 0, implicit %0
+    S_ENDPGM 0, implicit %0(p0)
 ...

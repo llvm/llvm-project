@@ -18,8 +18,8 @@ body:             |
     ; GCN-NEXT: $m0 = COPY [[COPY]]
     ; GCN-NEXT: S_SENDMSG 1, implicit $exec, implicit $m0
     ; GCN-NEXT: S_ENDPGM 0
-    %0:sgpr(s32) = COPY $sgpr0
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sendmsg), 1, %0(s32)
+    %0:sgpr(i32) = COPY $sgpr0
+    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.s.sendmsg), 1, %0(i32)
     S_ENDPGM 0
 
 ...

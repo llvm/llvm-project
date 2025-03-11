@@ -56,9 +56,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0
 
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = G_CONSTANT i32 0
-    %2:_(s1) = G_ICMP intpred(ugt), %0, %1
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = G_CONSTANT i32 0
+    %2:_(i1) = G_ICMP intpred(ugt), %0, %1
     %3:_(p0) = G_JUMP_TABLE %jump-table.0
     S_NOP 0, implicit %3
     G_BRCOND %2, %bb.4

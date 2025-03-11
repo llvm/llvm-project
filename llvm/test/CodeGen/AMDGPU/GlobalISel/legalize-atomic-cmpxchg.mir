@@ -12,13 +12,13 @@ body: |
     ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_ATOMIC_CMPXCHG [[COPY]](p3), [[COPY1]], [[COPY2]] :: (load store seq_cst (s32), addrspace 3)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+    ; CHECK-NEXT: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(i32) = G_ATOMIC_CMPXCHG [[COPY]](p3), [[COPY1]], [[COPY2]] :: (load store seq_cst (i32), addrspace 3)
     %0:_(p3) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = COPY $sgpr2
-    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst (s32), addrspace 3)
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i32) = COPY $sgpr2
+    %3:_(i32) = G_ATOMIC_CMPXCHG %0(p3), %1, %2 :: (load store seq_cst (i32), addrspace 3)
 ...
 
 ---
@@ -31,13 +31,13 @@ body: |
     ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p3) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_ATOMIC_CMPXCHG [[COPY]](p3), [[COPY1]], [[COPY2]] :: (load store seq_cst (s64), addrspace 3)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr2
+    ; CHECK-NEXT: [[ATOMIC_CMPXCHG:%[0-9]+]]:_(i32) = G_ATOMIC_CMPXCHG [[COPY]](p3), [[COPY1]], [[COPY2]] :: (load store seq_cst (i64), addrspace 3)
     %0:_(p3) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = COPY $sgpr2
-    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst (s64), addrspace 3)
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i32) = COPY $sgpr2
+    %3:_(i32) = G_ATOMIC_CMPXCHG %0(p3), %1, %2 :: (load store seq_cst (i64), addrspace 3)
 ...
 
 ---
@@ -50,14 +50,14 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr3
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY]](p1), [[BUILD_VECTOR]] :: (load store seq_cst (s32), addrspace 1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[COPY2]](i32), [[COPY1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:_(i32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY]](p1), [[BUILD_VECTOR]] :: (load store seq_cst (i32), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = COPY $sgpr2
-    %2:_(s32) = COPY $sgpr3
-    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst (s32), addrspace 1)
+    %1:_(i32) = COPY $sgpr2
+    %2:_(i32) = COPY $sgpr3
+    %3:_(i32) = G_ATOMIC_CMPXCHG %0(p1), %1, %2 :: (load store seq_cst (i32), addrspace 1)
 ...
 
 ---
@@ -70,14 +70,14 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p1) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr3
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY]](p1), [[BUILD_VECTOR]] :: (load store seq_cst (s64), addrspace 1)
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[COPY2]](i32), [[COPY1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:_(i32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY]](p1), [[BUILD_VECTOR]] :: (load store seq_cst (i64), addrspace 1)
     %0:_(p1) = COPY $sgpr0_sgpr1
-    %1:_(s32) = COPY $sgpr2
-    %2:_(s32) = COPY $sgpr3
-    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst (s64), addrspace 1)
+    %1:_(i32) = COPY $sgpr2
+    %2:_(i32) = COPY $sgpr3
+    %3:_(i32) = G_ATOMIC_CMPXCHG %0(p1), %1, %2 :: (load store seq_cst (i64), addrspace 1)
 ...
 
 ---
@@ -91,14 +91,14 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr3
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY]](p0), [[BUILD_VECTOR]] :: (load store seq_cst (s32))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[COPY2]](i32), [[COPY1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:_(i32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY]](p0), [[BUILD_VECTOR]] :: (load store seq_cst (i32))
     %0:_(p0) = COPY $sgpr0_sgpr1
-    %1:_(s32) = COPY $sgpr2
-    %2:_(s32) = COPY $sgpr3
-    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst (s32), addrspace 0)
+    %1:_(i32) = COPY $sgpr2
+    %2:_(i32) = COPY $sgpr3
+    %3:_(i32) = G_ATOMIC_CMPXCHG %0(p0), %1, %2 :: (load store seq_cst (i32))
 ...
 
 ---
@@ -112,12 +112,12 @@ body: |
     ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2, $sgpr3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $sgpr3
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY1]](s32)
-    ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:_(s32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY]](p0), [[BUILD_VECTOR]] :: (load store seq_cst (s64))
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr2
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $sgpr3
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[COPY2]](i32), [[COPY1]](i32)
+    ; CHECK-NEXT: [[AMDGPU_ATOMIC_CMPXCHG:%[0-9]+]]:_(i32) = G_AMDGPU_ATOMIC_CMPXCHG [[COPY]](p0), [[BUILD_VECTOR]] :: (load store seq_cst (i64))
     %0:_(p0) = COPY $sgpr0_sgpr1
-    %1:_(s32) = COPY $sgpr2
-    %2:_(s32) = COPY $sgpr3
-    %3:_(s32) = G_ATOMIC_CMPXCHG %0, %1, %2 :: (load store seq_cst (s64), addrspace 0)
+    %1:_(i32) = COPY $sgpr2
+    %2:_(i32) = COPY $sgpr3
+    %3:_(i32) = G_ATOMIC_CMPXCHG %0(p0), %1, %2 :: (load store seq_cst (i64))
 ...

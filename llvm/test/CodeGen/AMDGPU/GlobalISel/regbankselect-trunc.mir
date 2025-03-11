@@ -12,10 +12,10 @@ body: |
     ; CHECK-LABEL: name: trunc_i64_to_i32_s
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s32) = G_TRUNC [[COPY]](s64)
-    %0:_(s64) = COPY $sgpr0_sgpr1
-    %1:_(s32) = G_TRUNC %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i32) = G_TRUNC [[COPY]](i64)
+    %0:_(i64) = COPY $sgpr0_sgpr1
+    %1:_(i32) = G_TRUNC %0(i64)
 ...
 
 ---
@@ -28,10 +28,10 @@ body: |
     ; CHECK-LABEL: name: trunc_i64_to_i32_v
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s32) = G_TRUNC [[COPY]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s32) = G_TRUNC %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(i32) = G_TRUNC [[COPY]](i64)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i32) = G_TRUNC %0(i64)
 ...
 ---
 name: trunc_i64_to_i1_s
@@ -43,10 +43,10 @@ body: |
     ; CHECK-LABEL: name: trunc_i64_to_i1_s
     ; CHECK: liveins: $sgpr0_sgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s64)
-    %0:_(s64) = COPY $sgpr0_sgpr1
-    %1:_(s1) = G_TRUNC %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i1) = G_TRUNC [[COPY]](i64)
+    %0:_(i64) = COPY $sgpr0_sgpr1
+    %1:_(i1) = G_TRUNC %0(i64)
 ...
 
 ---
@@ -59,10 +59,10 @@ body: |
     ; CHECK-LABEL: name: trunc_i64_to_i1_v
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s64)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s1) = G_TRUNC %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(i1) = G_TRUNC [[COPY]](i64)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i1) = G_TRUNC %0(i64)
 ...
 
 ---
@@ -75,10 +75,10 @@ body: |
     ; CHECK-LABEL: name: trunc_i32_to_i1_s
     ; CHECK: liveins: $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s1) = G_TRUNC %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i1) = G_TRUNC [[COPY]](i32)
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i1) = G_TRUNC %0(i32)
 ...
 
 ---
@@ -91,8 +91,8 @@ body: |
     ; CHECK-LABEL: name: trunc_i32_to_i1_v
     ; CHECK: liveins: $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s1) = G_TRUNC %0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:vgpr(i1) = G_TRUNC [[COPY]](i32)
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i1) = G_TRUNC %0(i32)
 ...

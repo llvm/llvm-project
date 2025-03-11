@@ -16,25 +16,31 @@ body: |
     ; VI-LABEL: name: ffloor_s16_ss
     ; VI: liveins: $sgpr0
     ; VI-NEXT: {{  $}}
-    ; VI-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; VI-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; VI-NEXT: [[FFLOOR:%[0-9]+]]:sreg_32(s16) = G_FFLOOR [[TRUNC]]
-    ; VI-NEXT: [[COPY1:%[0-9]+]]:sreg_32(s32) = COPY [[FFLOOR]](s16)
-    ; VI-NEXT: $sgpr0 = COPY [[COPY1]](s32)
+    ; VI-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; VI-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; VI-NEXT: [[BITCAST:%[0-9]+]]:sgpr(f16) = G_BITCAST [[TRUNC]](i16)
+    ; VI-NEXT: [[FFLOOR:%[0-9]+]]:sreg_32(f16) = G_FFLOOR [[BITCAST]]
+    ; VI-NEXT: [[COPY1:%[0-9]+]]:sreg_32(i16) = COPY [[FFLOOR]](f16)
+    ; VI-NEXT: [[COPY2:%[0-9]+]]:sreg_32(i32) = COPY [[COPY1]](i16)
+    ; VI-NEXT: $sgpr0 = COPY [[COPY2]](i32)
     ;
     ; GCN-LABEL: name: ffloor_s16_ss
     ; GCN: liveins: $sgpr0
     ; GCN-NEXT: {{  $}}
-    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; GCN-NEXT: [[TRUNC:%[0-9]+]]:sgpr(s16) = G_TRUNC [[COPY]](s32)
-    ; GCN-NEXT: [[FFLOOR:%[0-9]+]]:sreg_32(s16) = G_FFLOOR [[TRUNC]]
-    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32(s32) = COPY [[FFLOOR]](s16)
-    ; GCN-NEXT: $sgpr0 = COPY [[COPY1]](s32)
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s16) = G_TRUNC %0
-    %2:sgpr(s16) = G_FFLOOR %1
-    %3:sgpr(s32) = G_ANYEXT %2
-    $sgpr0 = COPY %3
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; GCN-NEXT: [[TRUNC:%[0-9]+]]:sgpr(i16) = G_TRUNC [[COPY]](i32)
+    ; GCN-NEXT: [[BITCAST:%[0-9]+]]:sgpr(f16) = G_BITCAST [[TRUNC]](i16)
+    ; GCN-NEXT: [[FFLOOR:%[0-9]+]]:sreg_32(f16) = G_FFLOOR [[BITCAST]]
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:sreg_32(i16) = COPY [[FFLOOR]](f16)
+    ; GCN-NEXT: [[COPY2:%[0-9]+]]:sreg_32(i32) = COPY [[COPY1]](i16)
+    ; GCN-NEXT: $sgpr0 = COPY [[COPY2]](i32)
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i16) = G_TRUNC %0(i32)
+    %2:sgpr(f16) = G_BITCAST %1(i16)
+    %3:sgpr(f16) = G_FFLOOR %2
+    %4:sgpr(i16) = G_BITCAST %3(f16)
+    %5:sgpr(i32) = G_ANYEXT %4(i16)
+    $sgpr0 = COPY %5(i32)
 ...
 
 ---
@@ -70,11 +76,13 @@ body: |
     ; GFX11-FAKE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-FAKE16-NEXT: [[V_FLOOR_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-FAKE16-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_fake16_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s16) = G_TRUNC %0
-    %2:vgpr(s16) = G_FFLOOR %1
-    %3:vgpr(s32) = G_ANYEXT %2
-    $vgpr0 = COPY %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i16) = G_TRUNC %0(i32)
+    %2:vgpr(f16) = G_BITCAST %1(i16)
+    %3:vgpr(f16) = G_FFLOOR %2
+    %4:vgpr(i16) = G_BITCAST %3(f16)
+    %5:vgpr(i32) = G_ANYEXT %4(i16)
+    $vgpr0 = COPY %5(i32)
 ...
 
 ---
@@ -109,11 +117,13 @@ body: |
     ; GFX11-FAKE16-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX11-FAKE16-NEXT: [[V_FLOOR_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_fake16_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-FAKE16-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_fake16_e64_]]
-    %0:sgpr(s32) = COPY $sgpr0
-    %1:sgpr(s16) = G_TRUNC %0
-    %2:vgpr(s16) = G_FFLOOR %1
-    %3:vgpr(s32) = G_ANYEXT %2
-    $vgpr0 = COPY %3
+    %0:sgpr(i32) = COPY $sgpr0
+    %1:sgpr(i16) = G_TRUNC %0(i32)
+    %2:sgpr(f16) = G_BITCAST %1(i16)
+    %3:vgpr(f16) = G_FFLOOR %2
+    %4:vgpr(i16) = G_BITCAST %3(f16)
+    %5:vgpr(i32) = G_ANYEXT %4(i16)
+    $vgpr0 = COPY %5(i32)
 ...
 
 ---
@@ -149,10 +159,12 @@ body: |
     ; GFX11-FAKE16-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX11-FAKE16-NEXT: [[V_FLOOR_F16_fake16_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_FLOOR_F16_fake16_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
     ; GFX11-FAKE16-NEXT: $vgpr0 = COPY [[V_FLOOR_F16_fake16_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s16) = G_TRUNC %0
-    %2:vgpr(s16) = G_FNEG %1
-    %3:vgpr(s16) = G_FFLOOR %2
-    %4:vgpr(s32) = G_ANYEXT %3
-    $vgpr0 = COPY %4
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i16) = G_TRUNC %0(i32)
+    %2:vgpr(f16) = G_BITCAST %1(i16)
+    %3:vgpr(f16) = G_FNEG %2
+    %4:vgpr(f16) = G_FFLOOR %3
+    %5:vgpr(i16) = G_BITCAST %4(f16)
+    %6:vgpr(i32) = G_ANYEXT %5(i16)
+    $vgpr0 = COPY %6(i32)
 ...

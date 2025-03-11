@@ -10,12 +10,12 @@ define amdgpu_kernel void @constant_fold_vector_add() {
   ; CHECK-NEXT:   liveins: $sgpr8_sgpr9
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
-  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[C]](s64), [[C]](s64), [[C]](s64), [[C]](s64)
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<4 x i64>) = G_BUILD_VECTOR [[C]](i64), [[C]](i64), [[C]](i64), [[C]](i64)
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(p1) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x s64>) = G_BUILD_VECTOR [[C2]](s64), [[C2]](s64), [[C2]](s64), [[C2]](s64)
-  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR1]](<4 x s64>), [[C1]](p1) :: (store (<4 x s64>) into `ptr addrspace(1) null`, addrspace 1)
+  ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
+  ; CHECK-NEXT:   [[BUILD_VECTOR1:%[0-9]+]]:_(<4 x i64>) = G_BUILD_VECTOR [[C2]](i64), [[C2]](i64), [[C2]](i64), [[C2]](i64)
+  ; CHECK-NEXT:   G_STORE [[BUILD_VECTOR1]](<4 x i64>), [[C1]](p1) :: (store (<4 x i64>) into `ptr addrspace(1) null`, addrspace 1)
   ; CHECK-NEXT:   S_ENDPGM 0
 entry:
   %add = add <4 x i64> zeroinitializer, zeroinitializer

@@ -15,7 +15,7 @@ body: |
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 %stack.0
     ; GCN-NEXT: $sgpr0 = COPY [[S_MOV_B32_]]
     %0:sgpr(p5) = G_FRAME_INDEX %stack.0
-    $sgpr0 = COPY %0
+    $sgpr0 = COPY %0(p5)
 
 ...
 
@@ -33,6 +33,6 @@ body: |
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 %stack.0, implicit $exec
     ; GCN-NEXT: $vgpr0 = COPY [[V_MOV_B32_e32_]]
     %0:vgpr(p5) = G_FRAME_INDEX %stack.0
-    $vgpr0 = COPY %0
+    $vgpr0 = COPY %0(p5)
 
 ...

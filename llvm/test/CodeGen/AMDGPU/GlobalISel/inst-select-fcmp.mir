@@ -14,21 +14,28 @@ body: |
     ; WAVE64-LABEL: name: fcmp_false_s32_vv
     ; WAVE64: liveins: $vgpr0, $vgpr1
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; WAVE64-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(false), [[COPY]](s32), [[COPY1]]
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[FCMP]](s1)
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
+    ; WAVE64-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; WAVE64-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; WAVE64-NEXT: [[FCMP:%[0-9]+]]:vcc(i1) = G_FCMP floatpred(false), [[BITCAST]](f32), [[BITCAST1]]
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[FCMP]](i1)
+    ;
     ; WAVE32-LABEL: name: fcmp_false_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; WAVE32-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(false), [[COPY]](s32), [[COPY1]]
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[FCMP]](s1)
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(false), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
+    ; WAVE32-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; WAVE32-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; WAVE32-NEXT: [[FCMP:%[0-9]+]]:vcc(i1) = G_FCMP floatpred(false), [[BITCAST]](f32), [[BITCAST1]]
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[FCMP]](i1)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(false), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -44,19 +51,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_EQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_EQ_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_EQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_EQ_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_oeq_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_EQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(oeq), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_EQ_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_EQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_EQ_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(oeq), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -72,19 +82,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_GT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_GT_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_GT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_GT_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ogt_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_GT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(ogt), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_GT_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_GT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_GT_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(ogt), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -100,19 +113,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_GE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_GE_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_GE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_GE_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_oge_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_GE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(oge), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_GE_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_GE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_GE_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(oge), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -128,19 +144,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_LT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_LT_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_LT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_LT_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_olt_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_LT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(olt), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_LT_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_LT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_LT_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(olt), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -156,19 +175,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_LE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_LE_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_LE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_LE_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ole_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_LE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(ole), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_LE_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_LE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_LE_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(ole), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -184,19 +206,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_LG_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_LG_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_LG_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_LG_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_one_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_LG_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(one), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_LG_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_LG_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_LG_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(one), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -212,19 +237,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_O_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_O_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_O_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_O_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ord_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_O_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(ord), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_O_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_O_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_O_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(ord), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -240,19 +268,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_U_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_U_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_U_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_U_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_uno_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_U_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(uno), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_U_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_U_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_U_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(uno), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -268,19 +299,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NLG_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NLG_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NLG_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLG_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ueq_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NLG_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(ueq), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NLG_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NLG_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLG_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(ueq), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -296,19 +330,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NLE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NLE_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NLE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLE_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ugt_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NLE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(ugt), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NLE_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NLE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLE_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(ugt), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -324,19 +361,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NLT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NLT_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NLT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLT_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_uge_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NLT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(uge), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NLT_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NLT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLT_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(uge), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -352,19 +392,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NGE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NGE_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NGE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NGE_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ult_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NGE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(ult), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NGE_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NGE_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NGE_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(ult), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -380,19 +423,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NGT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NGT_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NGT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NGT_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ule_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NGT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(ule), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NGT_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NGT_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NGT_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(ule), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -408,19 +454,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NEQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NEQ_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NEQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NEQ_F32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_une_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NEQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(une), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NEQ_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NEQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NEQ_F32_e64_]]
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(une), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -434,21 +483,28 @@ body: |
     ; WAVE64-LABEL: name: fcmp_true_s32_vv
     ; WAVE64: liveins: $vgpr0, $vgpr1
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; WAVE64-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(true), [[COPY]](s32), [[COPY1]]
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[FCMP]](s1)
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
+    ; WAVE64-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; WAVE64-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; WAVE64-NEXT: [[FCMP:%[0-9]+]]:vcc(i1) = G_FCMP floatpred(true), [[BITCAST]](f32), [[BITCAST1]]
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[FCMP]](i1)
+    ;
     ; WAVE32-LABEL: name: fcmp_true_s32_vv
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
-    ; WAVE32-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(true), [[COPY]](s32), [[COPY1]]
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[FCMP]](s1)
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(true), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr1
+    ; WAVE32-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY]](i32)
+    ; WAVE32-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f32) = G_BITCAST [[COPY1]](i32)
+    ; WAVE32-NEXT: [[FCMP:%[0-9]+]]:vcc(i1) = G_FCMP floatpred(true), [[BITCAST]](f32), [[BITCAST1]]
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[FCMP]](i1)
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(true), %2(f32), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -462,21 +518,28 @@ body: |
     ; WAVE64-LABEL: name: fcmp_false_s64_vv
     ; WAVE64: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(false), [[COPY]](s64), [[COPY1]]
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[FCMP]](s1)
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; WAVE64-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; WAVE64-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; WAVE64-NEXT: [[FCMP:%[0-9]+]]:vcc(i1) = G_FCMP floatpred(false), [[BITCAST]](f64), [[BITCAST1]]
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[FCMP]](i1)
+    ;
     ; WAVE32-LABEL: name: fcmp_false_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(false), [[COPY]](s64), [[COPY1]]
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[FCMP]](s1)
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(false), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; WAVE32-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; WAVE32-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; WAVE32-NEXT: [[FCMP:%[0-9]+]]:vcc(i1) = G_FCMP floatpred(false), [[BITCAST]](f64), [[BITCAST1]]
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[FCMP]](i1)
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(false), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -492,19 +555,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_EQ_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_EQ_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_EQ_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_EQ_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_oeq_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_EQ_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(oeq), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_EQ_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_EQ_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_EQ_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(oeq), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -520,19 +586,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_GT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_GT_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_GT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_GT_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ogt_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_GT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(ogt), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_GT_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_GT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_GT_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(ogt), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -548,19 +617,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_GE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_GE_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_GE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_GE_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_oge_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_GE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(oge), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_GE_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_GE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_GE_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(oge), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -576,19 +648,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_LT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_LT_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_LT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_LT_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_olt_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_LT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(olt), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_LT_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_LT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_LT_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(olt), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -604,19 +679,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_LE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_LE_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_LE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_LE_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ole_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_LE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(ole), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_LE_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_LE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_LE_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(ole), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -632,19 +710,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_LG_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_LG_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_LG_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_LG_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_one_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_LG_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(one), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_LG_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_LG_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_LG_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(one), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -660,19 +741,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_O_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_O_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_O_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_O_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ord_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_O_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(ord), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_O_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_O_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_O_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(ord), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -688,19 +772,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_U_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_U_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_U_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_U_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_uno_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_U_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(uno), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_U_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_U_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_U_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(uno), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -716,19 +803,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NLG_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NLG_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NLG_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLG_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ueq_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NLG_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(ueq), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NLG_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NLG_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLG_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(ueq), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -744,19 +834,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NLE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NLE_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NLE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLE_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ugt_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NLE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(ugt), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NLE_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NLE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLE_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(ugt), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -772,19 +865,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NLT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NLT_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NLT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLT_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_uge_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NLT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(uge), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NLT_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NLT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NLT_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(uge), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -800,19 +896,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NGE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NGE_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NGE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NGE_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ult_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NGE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(ult), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NGE_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NGE_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NGE_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(ult), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -828,19 +927,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NGT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NGT_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NGT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NGT_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_ule_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NGT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(ule), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NGT_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NGT_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NGT_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(ule), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -856,19 +958,22 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_NEQ_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit %2
+    ; WAVE64-NEXT: [[V_CMP_NEQ_F64_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_NEQ_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CMP_NEQ_F64_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_une_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_NEQ_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(une), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[V_CMP_NEQ_F64_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_NEQ_F64_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CMP_NEQ_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(une), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -882,21 +987,28 @@ body: |
     ; WAVE64-LABEL: name: fcmp_true_s64_vv
     ; WAVE64: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE64-NEXT: {{  $}}
-    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; WAVE64-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(true), [[COPY]](s64), [[COPY1]]
-    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[FCMP]](s1)
+    ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; WAVE64-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; WAVE64-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; WAVE64-NEXT: [[FCMP:%[0-9]+]]:vcc(i1) = G_FCMP floatpred(true), [[BITCAST]](f64), [[BITCAST1]]
+    ; WAVE64-NEXT: S_ENDPGM 0, implicit [[FCMP]](i1)
+    ;
     ; WAVE32-LABEL: name: fcmp_true_s64_vv
     ; WAVE32: liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
     ; WAVE32-NEXT: {{  $}}
-    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(s64) = COPY $vgpr2_vgpr3
-    ; WAVE32-NEXT: [[FCMP:%[0-9]+]]:vcc(s1) = G_FCMP floatpred(true), [[COPY]](s64), [[COPY1]]
-    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[FCMP]](s1)
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = COPY $vgpr2_vgpr3
-    %2:vcc(s1) = G_FCMP floatpred(true), %0, %1
-    S_ENDPGM 0, implicit %2
+    ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr(i64) = COPY $vgpr2_vgpr3
+    ; WAVE32-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; WAVE32-NEXT: [[BITCAST1:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY1]](i64)
+    ; WAVE32-NEXT: [[FCMP:%[0-9]+]]:vcc(i1) = G_FCMP floatpred(true), [[BITCAST]](f64), [[BITCAST1]]
+    ; WAVE32-NEXT: S_ENDPGM 0, implicit [[FCMP]](i1)
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(i64) = COPY $vgpr2_vgpr3
+    %2:vgpr(f64) = G_BITCAST %0(i64)
+    %3:vgpr(f64) = G_BITCAST %1(i64)
+    %4:vcc(i1) = G_FCMP floatpred(true), %2(f64), %3
+    S_ENDPGM 0, implicit %4(i1)
 ...
 
 ---
@@ -912,20 +1024,23 @@ body: |
     ; WAVE64-NEXT: {{  $}}
     ; WAVE64-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE64-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE64-NEXT: %2:sreg_64_xexec = nofpexcept V_CMP_EQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE64-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY1]], 0, [[COPY]], %2, implicit $exec
+    ; WAVE64-NEXT: [[V_CMP_EQ_F32_e64_:%[0-9]+]]:sreg_64_xexec = nofpexcept V_CMP_EQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE64-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY1]], 0, [[COPY]], [[V_CMP_EQ_F32_e64_]], implicit $exec
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_CNDMASK_B32_e64_]]
+    ;
     ; WAVE32-LABEL: name: fcmp_oeq_s32_vv_select_user
     ; WAVE32: liveins: $vgpr0, $vgpr1
     ; WAVE32-NEXT: {{  $}}
     ; WAVE32-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; WAVE32-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
-    ; WAVE32-NEXT: %2:sreg_32_xm0_xexec = nofpexcept V_CMP_EQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
-    ; WAVE32-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY1]], 0, [[COPY]], %2, implicit $exec
+    ; WAVE32-NEXT: [[V_CMP_EQ_F32_e64_:%[0-9]+]]:sreg_32_xm0_xexec = nofpexcept V_CMP_EQ_F32_e64 0, [[COPY]], 0, [[COPY1]], 0, implicit $mode, implicit $exec
+    ; WAVE32-NEXT: [[V_CNDMASK_B32_e64_:%[0-9]+]]:vgpr_32 = V_CNDMASK_B32_e64 0, [[COPY1]], 0, [[COPY]], [[V_CMP_EQ_F32_e64_]], implicit $exec
     ; WAVE32-NEXT: S_ENDPGM 0, implicit [[V_CNDMASK_B32_e64_]]
-    %0:vgpr(s32) = COPY $vgpr0
-    %1:vgpr(s32) = COPY $vgpr1
-    %2:vcc(s1) = G_FCMP floatpred(oeq), %0, %1
-    %3:vgpr(s32) = G_SELECT %2, %0, %1
-    S_ENDPGM 0, implicit %3
+    %0:vgpr(i32) = COPY $vgpr0
+    %1:vgpr(i32) = COPY $vgpr1
+    %2:vgpr(f32) = G_BITCAST %0(i32)
+    %3:vgpr(f32) = G_BITCAST %1(i32)
+    %4:vcc(i1) = G_FCMP floatpred(oeq), %2(f32), %3
+    %5:vgpr(i32) = G_SELECT %4(i1), %0, %1
+    S_ENDPGM 0, implicit %5(i32)
 ...

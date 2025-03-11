@@ -239,7 +239,7 @@ class MachineIRBuilder {
   unsigned getOpcodeForMerge(const DstOp &DstOp, ArrayRef<SrcOp> SrcOps) const;
 
 protected:
-  void validateTruncExt(const LLT Dst, const LLT Src, bool IsExtend);
+  void validateTruncExt(const LLT Dst, const LLT Src, unsigned Opc);
 
   void validateUnaryOp(const LLT Res, const LLT Op0);
   void validateBinaryOp(const LLT Res, const LLT Op0, const LLT Op1);
@@ -801,6 +801,8 @@ public:
   /// \return The newly created instruction.
   MachineInstrBuilder buildExtOrTrunc(unsigned ExtOpc, const DstOp &Res,
                                       const SrcOp &Op);
+
+  MachineInstrBuilder buildTruncLike(const DstOp &Res, const SrcOp &Op);
 
   /// Build and inserts \p Res = \p G_AND \p Op, \p LowBitsSet(ImmOp)
   /// Since there is no G_ZEXT_INREG like G_SEXT_INREG, the instruction is

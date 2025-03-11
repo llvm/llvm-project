@@ -13,16 +13,16 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %load:_(s32) = G_LOAD %ptr(p1) :: (volatile load (s32), addrspace 1)
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK-NEXT: %inreg:_(s32) = G_AND %load, [[C]]
-    ; CHECK-NEXT: $vgpr0 = COPY %inreg(s32)
+    ; CHECK-NEXT: %load:_(i32) = G_LOAD %ptr(p1) :: (volatile load (i32), addrspace 1)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: %inreg:_(i32) = G_AND %load, [[C]]
+    ; CHECK-NEXT: $vgpr0 = COPY %inreg(i32)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
-    %load:_(s32) = G_LOAD %ptr :: (volatile load (s32), addrspace 1, align 4)
-    %mask:_(s32) = G_CONSTANT i32 -255
-    %and:_(s32) = G_AND %load, %mask
-    %inreg:_(s32) = G_SEXT_INREG %and, 8
-    $vgpr0 = COPY %inreg
+    %load:_(i32) = G_LOAD %ptr(p1) :: (volatile load (i32), addrspace 1)
+    %mask:_(i32) = G_CONSTANT i32 -255
+    %and:_(i32) = G_AND %load, %mask
+    %inreg:_(i32) = G_SEXT_INREG %and, 8
+    $vgpr0 = COPY %inreg(i32)
 
 ...
 
@@ -38,17 +38,17 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %load:_(s32) = G_LOAD %ptr(p1) :: (volatile load (s32), addrspace 1)
-    ; CHECK-NEXT: %mask:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: %and:_(s32) = G_AND %load, %mask
-    ; CHECK-NEXT: %inreg:_(s32) = G_SEXT_INREG %and, 8
-    ; CHECK-NEXT: $vgpr0 = COPY %inreg(s32)
+    ; CHECK-NEXT: %load:_(i32) = G_LOAD %ptr(p1) :: (volatile load (i32), addrspace 1)
+    ; CHECK-NEXT: %mask:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %and:_(i32) = G_AND %load, %mask
+    ; CHECK-NEXT: %inreg:_(i32) = G_SEXT_INREG %and, 8
+    ; CHECK-NEXT: $vgpr0 = COPY %inreg(i32)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
-    %load:_(s32) = G_LOAD %ptr :: (volatile load (s32), addrspace 1, align 4)
-    %mask:_(s32) = G_CONSTANT i32 255
-    %and:_(s32) = G_AND %load, %mask
-    %inreg:_(s32) = G_SEXT_INREG %and, 8
-    $vgpr0 = COPY %inreg
+    %load:_(i32) = G_LOAD %ptr(p1) :: (volatile load (i32), addrspace 1)
+    %mask:_(i32) = G_CONSTANT i32 255
+    %and:_(i32) = G_AND %load, %mask
+    %inreg:_(i32) = G_SEXT_INREG %and, 8
+    $vgpr0 = COPY %inreg(i32)
 
 ...
 
@@ -64,21 +64,21 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %load:_(<2 x s32>) = G_LOAD %ptr(p1) :: (volatile load (<2 x s32>), addrspace 1)
-    ; CHECK-NEXT: %mask_elt:_(s32) = G_CONSTANT i32 -255
-    ; CHECK-NEXT: %mask:_(<2 x s32>) = G_BUILD_VECTOR %mask_elt(s32), %mask_elt(s32)
-    ; CHECK-NEXT: %and:_(<2 x s32>) = G_AND %load, %mask
-    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
-    ; CHECK-NEXT: %inreg:_(<2 x s32>) = G_AND %and, [[BUILD_VECTOR]]
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %inreg(<2 x s32>)
+    ; CHECK-NEXT: %load:_(<2 x i32>) = G_LOAD %ptr(p1) :: (volatile load (<2 x i32>), addrspace 1)
+    ; CHECK-NEXT: %mask_elt:_(i32) = G_CONSTANT i32 -255
+    ; CHECK-NEXT: %mask:_(<2 x i32>) = G_BUILD_VECTOR %mask_elt(i32), %mask_elt(i32)
+    ; CHECK-NEXT: %and:_(<2 x i32>) = G_AND %load, %mask
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x i32>) = G_BUILD_VECTOR [[C]](i32), [[C]](i32)
+    ; CHECK-NEXT: %inreg:_(<2 x i32>) = G_AND %and, [[BUILD_VECTOR]]
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %inreg(<2 x i32>)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
-    %load:_(<2 x s32>) = G_LOAD %ptr :: (volatile load (<2 x s32>), addrspace 1, align 8)
-    %mask_elt:_(s32) = G_CONSTANT i32 -255
-    %mask:_(<2 x s32>) = G_BUILD_VECTOR %mask_elt, %mask_elt
-    %and:_(<2 x s32>) = G_AND %load, %mask
-    %inreg:_(<2 x s32>) = G_SEXT_INREG %and, 8
-    $vgpr0_vgpr1 = COPY %inreg
+    %load:_(<2 x i32>) = G_LOAD %ptr(p1) :: (volatile load (<2 x i32>), addrspace 1)
+    %mask_elt:_(i32) = G_CONSTANT i32 -255
+    %mask:_(<2 x i32>) = G_BUILD_VECTOR %mask_elt(i32), %mask_elt(i32)
+    %and:_(<2 x i32>) = G_AND %load, %mask
+    %inreg:_(<2 x i32>) = G_SEXT_INREG %and, 8
+    $vgpr0_vgpr1 = COPY %inreg(<2 x i32>)
 
 ...
 
@@ -94,18 +94,18 @@ body:             |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: %ptr:_(p1) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %load:_(<2 x s32>) = G_LOAD %ptr(p1) :: (volatile load (<2 x s32>), addrspace 1)
-    ; CHECK-NEXT: %mask_elt:_(s32) = G_CONSTANT i32 255
-    ; CHECK-NEXT: %mask:_(<2 x s32>) = G_BUILD_VECTOR %mask_elt(s32), %mask_elt(s32)
-    ; CHECK-NEXT: %and:_(<2 x s32>) = G_AND %load, %mask
-    ; CHECK-NEXT: %inreg:_(<2 x s32>) = G_SEXT_INREG %and, 8
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %inreg(<2 x s32>)
+    ; CHECK-NEXT: %load:_(<2 x i32>) = G_LOAD %ptr(p1) :: (volatile load (<2 x i32>), addrspace 1)
+    ; CHECK-NEXT: %mask_elt:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %mask:_(<2 x i32>) = G_BUILD_VECTOR %mask_elt(i32), %mask_elt(i32)
+    ; CHECK-NEXT: %and:_(<2 x i32>) = G_AND %load, %mask
+    ; CHECK-NEXT: %inreg:_(<2 x i32>) = G_SEXT_INREG %and, 8
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %inreg(<2 x i32>)
     %ptr:_(p1) = COPY $vgpr0_vgpr1
-    %load:_(<2 x s32>) = G_LOAD %ptr :: (volatile load (<2 x s32>), addrspace 1, align 8)
-    %mask_elt:_(s32) = G_CONSTANT i32 255
-    %mask:_(<2 x s32>) = G_BUILD_VECTOR %mask_elt, %mask_elt
-    %and:_(<2 x s32>) = G_AND %load, %mask
-    %inreg:_(<2 x s32>) = G_SEXT_INREG %and, 8
-    $vgpr0_vgpr1 = COPY %inreg
+    %load:_(<2 x i32>) = G_LOAD %ptr(p1) :: (volatile load (<2 x i32>), addrspace 1)
+    %mask_elt:_(i32) = G_CONSTANT i32 255
+    %mask:_(<2 x i32>) = G_BUILD_VECTOR %mask_elt(i32), %mask_elt(i32)
+    %and:_(<2 x i32>) = G_AND %load, %mask
+    %inreg:_(<2 x i32>) = G_SEXT_INREG %and, 8
+    $vgpr0_vgpr1 = COPY %inreg(<2 x i32>)
 
 ...

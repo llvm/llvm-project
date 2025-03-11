@@ -19,7 +19,7 @@ body: |
     ; WAVE64: [[S_LSHR_B32_:%[0-9]+]]:sreg_32 = S_LSHR_B32 $sgpr32, 6, implicit-def dead $scc
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[S_LSHR_B32_]]
     %0:sgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
-    S_ENDPGM 0, implicit %0
+    S_ENDPGM 0, implicit %0(p5)
 ...
 
 ---
@@ -39,5 +39,5 @@ body: |
     ; WAVE64: [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 6, $sgpr32, implicit $exec
     ; WAVE64-NEXT: S_ENDPGM 0, implicit [[V_LSHRREV_B32_e64_]]
     %0:vgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
-    S_ENDPGM 0, implicit %0
+    S_ENDPGM 0, implicit %0(p5)
 ...

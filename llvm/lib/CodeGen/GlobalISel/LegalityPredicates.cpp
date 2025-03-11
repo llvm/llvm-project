@@ -81,6 +81,18 @@ LegalityPredicate LegalityPredicates::isScalar(unsigned TypeIdx) {
   };
 }
 
+LegalityPredicate LegalityPredicates::isInteger(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx].isInteger();
+  };
+}
+
+LegalityPredicate LegalityPredicates::isFloat(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx].isFloat();
+  };
+}
+
 LegalityPredicate LegalityPredicates::isVector(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     return Query.Types[TypeIdx].isVector();
@@ -104,6 +116,30 @@ LegalityPredicate LegalityPredicates::isPointer(unsigned TypeIdx,
 LegalityPredicate LegalityPredicates::isPointerVector(unsigned TypeIdx) {
   return [=](const LegalityQuery &Query) {
     return Query.Types[TypeIdx].isPointerVector();
+  };
+}
+
+LegalityPredicate LegalityPredicates::isIntegerVector(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx].isIntegerVector();
+  };
+}
+LegalityPredicate
+LegalityPredicates::isIntegerOrIntegerVector(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    LLT Ty = Query.Types[TypeIdx];
+    return Ty.isInteger() || Ty.isIntegerVector();
+  };
+}
+LegalityPredicate LegalityPredicates::isFloatVector(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    return Query.Types[TypeIdx].isFloatVector();
+  };
+}
+LegalityPredicate LegalityPredicates::isFloatOrFloatVector(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    LLT Ty = Query.Types[TypeIdx];
+    return Ty.isFloat() || Ty.isFloatVector();
   };
 }
 
@@ -197,6 +233,28 @@ LegalityPredicate LegalityPredicates::sameSize(unsigned TypeIdx0,
   return [=](const LegalityQuery &Query) {
     return Query.Types[TypeIdx0].getSizeInBits() ==
            Query.Types[TypeIdx1].getSizeInBits();
+  };
+}
+
+LegalityPredicate LegalityPredicates::sameScalarKind(unsigned TypeIdx, LLT Ty) {
+  return [=](const LegalityQuery &Query) {
+    LLT QueryTy = Query.Types[TypeIdx].getScalarType();
+    if (Ty.isFloat())
+      return QueryTy.getKind() == Ty.getKind() &&
+             QueryTy.getFPVariant() == Ty.getFPVariant();
+
+    return QueryTy.getKind() == Ty.getKind();
+  };
+}
+
+LegalityPredicate LegalityPredicates::sameKind(unsigned TypeIdx, LLT Ty) {
+  return [=](const LegalityQuery &Query) {
+    LLT QueryTy = Query.Types[TypeIdx];
+    if (Ty.isFloat() || Ty.isFloatVector())
+      return QueryTy.getKind() == Ty.getKind() &&
+             QueryTy.getFPVariant() == Ty.getFPVariant();
+
+    return QueryTy.getKind() == Ty.getKind();
   };
 }
 

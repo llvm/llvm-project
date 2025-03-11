@@ -10,23 +10,23 @@ body:             |
     ; CHECK-LABEL: name: memset_test
     ; CHECK: liveins: $vgpr0, $vgpr1, $vgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY2]](s32)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY [[TRUNC]](s8)
-    ; CHECK-NEXT: G_STORE [[COPY2]](s32), [[MV]](p0) :: (store (s8))
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(p0) = G_MERGE_VALUES [[COPY]](i32), [[COPY1]](i32)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(i8) = G_TRUNC [[COPY2]](i32)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(i8) = COPY [[TRUNC]](i8)
+    ; CHECK-NEXT: G_STORE [[COPY2]](i32), [[MV]](p0) :: (store (i8))
     ; CHECK-NEXT: S_ENDPGM 0
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(p0) = G_MERGE_VALUES %0:_(s32), %1:_(s32)
-    %3:_(s32) = COPY $vgpr2
-    %4:_(s16) = G_TRUNC %3:_(s32)
-    %5:_(s8) = G_TRUNC %4:_(s16)
-    %6:_(s32) = G_CONSTANT i32 1
-    %7:_(s64) = G_ZEXT %6:_(s32)
-    G_MEMSET %2:_(p0), %5:_(s8), %7:_(s64), 0 :: (store (s8))
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(p0) = G_MERGE_VALUES %0(i32), %1(i32)
+    %3:_(i32) = COPY $vgpr2
+    %4:_(i16) = G_TRUNC %3(i32)
+    %5:_(i8) = G_TRUNC %4(i16)
+    %6:_(i32) = G_CONSTANT i32 1
+    %7:_(i64) = G_ZEXT %6(i32)
+    G_MEMSET %2(p0), %5(i8), %7(i64), 0 :: (store (i8))
     S_ENDPGM 0
 
 ...

@@ -8,16 +8,16 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ptradd_crash__offset_smaller
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[C]](s64)
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[INTTOPTR]](p1) :: (load (s32), addrspace 1)
-    ; CHECK-NEXT: $sgpr0 = COPY [[LOAD]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[C]](i64)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[INTTOPTR]](p1) :: (load (i32), addrspace 1)
+    ; CHECK-NEXT: $sgpr0 = COPY [[LOAD]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %1:_(p1) = G_CONSTANT i64 0
-    %3:_(s32) = G_CONSTANT i32 3
-    %0:_(<4 x s32>) = G_LOAD %1 :: (load (<4 x s32>) from `ptr addrspace(1) null`, addrspace 1)
-    %2:_(s32) = G_EXTRACT_VECTOR_ELT %0, %3
-    $sgpr0 = COPY %2
+    %0:_(p1) = G_CONSTANT i64 0
+    %1:_(i32) = G_CONSTANT i32 3
+    %2:_(<4 x i32>) = G_LOAD %0(p1) :: (load (<4 x i32>) from `ptr addrspace(1) null`, addrspace 1)
+    %3:_(i32) = G_EXTRACT_VECTOR_ELT %2(<4 x i32>), %1(i32)
+    $sgpr0 = COPY %3(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 ...
 
@@ -28,15 +28,15 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_ptradd_crash__offset_wider
-    ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
-    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[C]](s64)
-    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[INTTOPTR]](p1) :: (load (s32), addrspace 1)
-    ; CHECK-NEXT: $sgpr0 = COPY [[LOAD]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 12
+    ; CHECK-NEXT: [[INTTOPTR:%[0-9]+]]:_(p1) = G_INTTOPTR [[C]](i64)
+    ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(i32) = G_LOAD [[INTTOPTR]](p1) :: (load (i32), addrspace 1)
+    ; CHECK-NEXT: $sgpr0 = COPY [[LOAD]](i32)
     ; CHECK-NEXT: SI_RETURN_TO_EPILOG implicit $sgpr0
-    %1:_(p1) = G_CONSTANT i64 0
-    %3:_(s32) = G_CONSTANT i32 3
-    %0:_(<4 x s32>) = G_LOAD %1 :: (load (<4 x s32>) from `ptr addrspace(1) null`, addrspace 1)
-    %2:_(s32) = G_EXTRACT_VECTOR_ELT %0, %3
-    $sgpr0 = COPY %2
+    %0:_(p1) = G_CONSTANT i64 0
+    %1:_(i32) = G_CONSTANT i32 3
+    %2:_(<4 x i32>) = G_LOAD %0(p1) :: (load (<4 x i32>) from `ptr addrspace(1) null`, addrspace 1)
+    %3:_(i32) = G_EXTRACT_VECTOR_ELT %2(<4 x i32>), %1(i32)
+    $sgpr0 = COPY %3(i32)
     SI_RETURN_TO_EPILOG implicit $sgpr0
 ...

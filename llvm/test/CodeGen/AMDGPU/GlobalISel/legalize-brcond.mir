@@ -11,32 +11,35 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE64-NEXT:   G_BRCOND [[ICMP]](s1), %bb.1
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE64-NEXT:   G_BRCOND [[ICMP]](i1), %bb.1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
+  ;
   ; WAVE32-LABEL: name: legal_brcond_vcc
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE32-NEXT:   G_BRCOND [[ICMP]](s1), %bb.1
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE32-NEXT:   G_BRCOND [[ICMP]](i1), %bb.1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   bb.0:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    G_BRCOND %2, %bb.1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    G_BRCOND %2(i1), %bb.1
 
   bb.1:
+
 ...
 
 ---
@@ -49,32 +52,36 @@ body: |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $sgpr0, $sgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
-  ; WAVE64-NEXT:   G_BRCOND [[ICMP]](s1), %bb.1
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[COPY1]]
+  ; WAVE64-NEXT:   G_BRCOND [[ICMP]](i1), %bb.1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
+  ;
   ; WAVE32-LABEL: name: legal_brcond_sgpr_s1
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $sgpr0, $sgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
-  ; WAVE32-NEXT:   G_BRCOND [[ICMP]](s1), %bb.1
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:_(i1) = G_ICMP intpred(eq), [[COPY]](i32), [[COPY1]]
+  ; WAVE32-NEXT:   G_BRCOND [[ICMP]](i1), %bb.1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $sgpr0, $sgpr1
 
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s1) = G_ICMP intpred(eq), %0, %1
-    G_BRCOND %2, %bb.1
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i1) = G_ICMP intpred(eq), %0(i32), %1
+    G_BRCOND %2(i1), %bb.1
 
   bb.1:
+
+
 
 ...
 
@@ -88,32 +95,36 @@ body: |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $sgpr0, $sgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
-  ; WAVE64-NEXT:   G_BRCOND [[ICMP]](s32), %bb.1
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(eq), [[COPY]](i32), [[COPY1]]
+  ; WAVE64-NEXT:   G_BRCOND [[ICMP]](i32), %bb.1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
+  ;
   ; WAVE32-LABEL: name: legal_brcond_sgpr_s32
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $sgpr0, $sgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr1
-  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
-  ; WAVE32-NEXT:   G_BRCOND [[ICMP]](s32), %bb.1
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $sgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $sgpr1
+  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(eq), [[COPY]](i32), [[COPY1]]
+  ; WAVE32-NEXT:   G_BRCOND [[ICMP]](i32), %bb.1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $sgpr0, $sgpr1
 
-    %0:_(s32) = COPY $sgpr0
-    %1:_(s32) = COPY $sgpr1
-    %2:_(s32) = G_ICMP intpred(eq), %0, %1
-    G_BRCOND %2, %bb.1
+    %0:_(i32) = COPY $sgpr0
+    %1:_(i32) = COPY $sgpr1
+    %2:_(i32) = G_ICMP intpred(eq), %0(i32), %1
+    G_BRCOND %2(i32), %bb.1
 
   bb.1:
+
+
 
 ...
 
@@ -125,35 +136,38 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:sreg_64_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE64-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec(s64) = SI_IF [[ICMP]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:sreg_64_xexec(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE64-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec(i64) = SI_IF [[ICMP]](i1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64-NEXT:   G_BR %bb.1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
+  ;
   ; WAVE32-LABEL: name: brcond_si_if
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE32-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s64) = SI_IF [[ICMP]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE32-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(i64) = SI_IF [[ICMP]](i1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32-NEXT:   G_BR %bb.1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   bb.0:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
-    G_BRCOND %3, %bb.1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %3:_(i1), %4:_(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2(i1)
+    G_BRCOND %3(i1), %bb.1
 
   bb.1:
+
 ...
 
 ---
@@ -164,35 +178,38 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:sreg_64_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE64-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_64_xexec(s64) = SI_ELSE [[ICMP]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:sreg_64_xexec(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE64-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_64_xexec(i64) = SI_ELSE [[ICMP]](i1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64-NEXT:   G_BR %bb.1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
+  ;
   ; WAVE32-LABEL: name: brcond_si_else
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE32-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec(s64) = SI_ELSE [[ICMP]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE32-NEXT:   [[SI_ELSE:%[0-9]+]]:sreg_32_xm0_xexec(i64) = SI_ELSE [[ICMP]](i1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32-NEXT:   G_BR %bb.1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   bb.0:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), %2
-    G_BRCOND %3, %bb.1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %3:_(i1), %4:_(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.else), %2(i1)
+    G_BRCOND %3(i1), %bb.1
 
   bb.1:
+
 ...
 
 ---
@@ -204,52 +221,58 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT:   S_NOP 0
-  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](s64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](i64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64-NEXT:   G_BR %bb.2
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.2:
   ; WAVE64-NEXT:   S_NOP 0
+  ;
   ; WAVE32-LABEL: name: brcond_si_loop_brcond
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT:   S_NOP 0
-  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](s64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](i64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32-NEXT:   G_BR %bb.2
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.2:
   ; WAVE32-NEXT:   S_NOP 0
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i64) = COPY $sgpr0_sgpr1
 
   bb.1:
-    successors: %bb.1, %bb.2
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
     S_NOP 0
-    %3:_(s1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2
-    G_BRCOND %3, %bb.2
+    %3:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2(i64)
+    G_BRCOND %3(i1), %bb.2
     G_BR %bb.1
 
   bb.2:
     S_NOP 0
+
+
 ...
 
 # This usage is backwards from how the intrinsic is supposed to be
@@ -263,52 +286,58 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT:   S_NOP 0
-  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](s64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](i64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64-NEXT:   G_BR %bb.1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.2:
   ; WAVE64-NEXT:   S_NOP 0
+  ;
   ; WAVE32-LABEL: name: brcond_si_loop_brcond_back
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT:   S_NOP 0
-  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](s64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](i64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32-NEXT:   G_BR %bb.1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.2:
   ; WAVE32-NEXT:   S_NOP 0
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i64) = COPY $sgpr0_sgpr1
 
   bb.1:
-    successors: %bb.1, %bb.2
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
     S_NOP 0
-    %3:_(s1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2
-    G_BRCOND %3, %bb.1
+    %3:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2(i64)
+    G_BRCOND %3(i1), %bb.1
     G_BR %bb.2
 
   bb.2:
     S_NOP 0
+
+
 ...
 
 # This usage is backwards from how the intrinsic is supposed to be
@@ -322,48 +351,54 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT:   S_NOP 0
-  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](s64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](i64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64-NEXT:   G_BR %bb.1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.2:
+  ;
   ; WAVE32-LABEL: name: brcond_si_loop_brcond_back_fallthrough
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT:   S_NOP 0
-  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](s64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](i64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32-NEXT:   G_BR %bb.1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.2:
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i64) = COPY $sgpr0_sgpr1
 
   bb.1:
-    successors: %bb.1, %bb.2
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
     S_NOP 0
-    %3:_(s1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2
-    G_BRCOND %3, %bb.1
+    %3:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2(i64)
+    G_BRCOND %3(i1), %bb.1
 
   bb.2:
+
+
 ...
 
 # There's another instruction between the intrinsic and the
@@ -376,41 +411,44 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:sreg_64_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; WAVE64-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec(s64) = SI_IF [[ICMP]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:sreg_64_xexec(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
+  ; WAVE64-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec(i64) = SI_IF [[ICMP]](i1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64-NEXT:   G_BR %bb.1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
-  ; WAVE64-NEXT:   S_ENDPGM 0, implicit [[COPY2]](s32)
+  ; WAVE64-NEXT:   S_ENDPGM 0, implicit [[COPY2]](i32)
+  ;
   ; WAVE32-LABEL: name: brcond_si_if_need_insert_terminator_point
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
-  ; WAVE32-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s64) = SI_IF [[ICMP]](s1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:_(i32) = COPY $vgpr2
+  ; WAVE32-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(i64) = SI_IF [[ICMP]](i1), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32-NEXT:   G_BR %bb.1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
-  ; WAVE32-NEXT:   S_ENDPGM 0, implicit [[COPY2]](s32)
+  ; WAVE32-NEXT:   S_ENDPGM 0, implicit [[COPY2]](i32)
   bb.0:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1, $vgpr2
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
-    %5:_(s32) = COPY $vgpr2
-    G_BRCOND %3, %bb.1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %3:_(i1), %4:_(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2(i1)
+    %5:_(i32) = COPY $vgpr2
+    G_BRCOND %3(i1), %bb.1
 
   bb.1:
-    S_ENDPGM 0, implicit %5
+    S_ENDPGM 0, implicit %5(i32)
+
 ...
 
 ---
@@ -422,9 +460,9 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -432,19 +470,20 @@ body:             |
   ; WAVE64-NEXT:   S_NOP 0
   ; WAVE64-NEXT:   S_NOP 0
   ; WAVE64-NEXT:   S_NOP 0
-  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](s64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](i64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64-NEXT:   G_BR %bb.2
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.2:
   ; WAVE64-NEXT:   S_NOP 0
+  ;
   ; WAVE32-LABEL: name: brcond_si_loop_need_terminator_insert_point
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -452,28 +491,33 @@ body:             |
   ; WAVE32-NEXT:   S_NOP 0
   ; WAVE32-NEXT:   S_NOP 0
   ; WAVE32-NEXT:   S_NOP 0
-  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](s64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](i64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32-NEXT:   G_BR %bb.2
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.2:
   ; WAVE32-NEXT:   S_NOP 0
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i64) = COPY $sgpr0_sgpr1
 
   bb.1:
-    successors: %bb.1, %bb.2
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
     S_NOP 0
-    %3:_(s1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2
+    %3:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2(i64)
     S_NOP 0
     S_NOP 0
-    G_BRCOND %3, %bb.2
+    G_BRCOND %3(i1), %bb.2
     G_BR %bb.1
 
   bb.2:
     S_NOP 0
+
+
 ...
 
 ---
@@ -484,10 +528,10 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:sreg_64_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE64-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec(s64) = SI_IF [[ICMP]](s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:sreg_64_xexec(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE64-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec(i64) = SI_IF [[ICMP]](i1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64-NEXT:   G_BR %bb.1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
@@ -497,15 +541,16 @@ body:             |
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.2:
   ; WAVE64-NEXT:   S_NOP 1
+  ;
   ; WAVE32-LABEL: name: brcond_si_if_negated
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE32-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s64) = SI_IF [[ICMP]](s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE32-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(i64) = SI_IF [[ICMP]](i1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32-NEXT:   G_BR %bb.1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
@@ -516,21 +561,26 @@ body:             |
   ; WAVE32-NEXT: bb.2:
   ; WAVE32-NEXT:   S_NOP 1
   bb.0:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
-    %5:_(s1) = G_CONSTANT i1 true
-    %6:_(s1) = G_XOR %3, %5
-    G_BRCOND %6, %bb.2
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %3:_(i1), %4:_(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2(i1)
+    %5:_(i1) = G_CONSTANT i1 true
+    %6:_(i1) = G_XOR %3, %5
+    G_BRCOND %6(i1), %bb.2
 
   bb.1:
+    successors: %bb.2(0x80000000)
+
     S_NOP 0
 
   bb.2:
     S_NOP 1
+
+
 ...
 
 ---
@@ -541,10 +591,10 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:sreg_64_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE64-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec(s64) = SI_IF [[ICMP]](s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[ICMP:%[0-9]+]]:sreg_64_xexec(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE64-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64_xexec(i64) = SI_IF [[ICMP]](i1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64-NEXT:   G_BR %bb.3
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
@@ -559,15 +609,16 @@ body:             |
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.3:
   ; WAVE64-NEXT:   S_NOP 2
+  ;
   ; WAVE32-LABEL: name: brcond_si_if_br_negated
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(s1) = G_ICMP intpred(ne), [[COPY]](s32), [[COPY1]]
-  ; WAVE32-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(s64) = SI_IF [[ICMP]](s1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[ICMP:%[0-9]+]]:sreg_32_xm0_xexec(i1) = G_ICMP intpred(ne), [[COPY]](i32), [[COPY1]]
+  ; WAVE32-NEXT:   [[SI_IF:%[0-9]+]]:sreg_32_xm0_xexec(i64) = SI_IF [[ICMP]](i1), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32-NEXT:   G_BR %bb.3
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
@@ -583,25 +634,33 @@ body:             |
   ; WAVE32-NEXT: bb.3:
   ; WAVE32-NEXT:   S_NOP 2
   bb.0:
-    successors: %bb.1
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s1) = G_ICMP intpred(ne), %0, %1
-    %3:_(s1), %4:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2
-    %5:_(s1) = G_CONSTANT i1 true
-    %6:_(s1) = G_XOR %3, %5
-    G_BRCOND %6, %bb.2
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i1) = G_ICMP intpred(ne), %0(i32), %1
+    %3:_(i1), %4:_(i64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %2(i1)
+    %5:_(i1) = G_CONSTANT i1 true
+    %6:_(i1) = G_XOR %3, %5
+    G_BRCOND %6(i1), %bb.2
     G_BR %bb.3
 
   bb.1:
+    successors: %bb.2(0x80000000)
+
     S_NOP 0
 
   bb.2:
+    successors: %bb.3(0x80000000)
+
     S_NOP 1
 
   bb.3:
     S_NOP 2
+
+
+
 ...
 
 ---
@@ -613,53 +672,59 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT:   S_NOP 0
-  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](s64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](i64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64-NEXT:   G_BR %bb.2
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.2:
   ; WAVE64-NEXT:   S_NOP 0
+  ;
   ; WAVE32-LABEL: name: brcond_si_loop_brcond_negated
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT:   S_NOP 0
-  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](s64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](i64), %bb.1, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32-NEXT:   G_BR %bb.2
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.2:
   ; WAVE32-NEXT:   S_NOP 0
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i64) = COPY $sgpr0_sgpr1
 
   bb.1:
-    successors: %bb.1, %bb.2
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
     S_NOP 0
-    %3:_(s1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2
-    %4:_(s1) = G_CONSTANT i1 true
-    %5:_(s1) = G_XOR %3, %4
-    G_BRCOND %5, %bb.1
+    %3:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2(i64)
+    %4:_(i1) = G_CONSTANT i1 true
+    %5:_(i1) = G_XOR %3, %4
+    G_BRCOND %5(i1), %bb.1
 
   bb.2:
     S_NOP 0
+
+
 ...
 
 ---
@@ -671,52 +736,58 @@ body:             |
   ; WAVE64-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE64-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
-  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE64-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE64-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE64-NEXT:   [[COPY2:%[0-9]+]]:sreg_64_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.1:
   ; WAVE64-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT:   S_NOP 0
-  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](s64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE64-NEXT:   SI_LOOP [[COPY2]](i64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE64-NEXT:   G_BR %bb.1
   ; WAVE64-NEXT: {{  $}}
   ; WAVE64-NEXT: bb.2:
   ; WAVE64-NEXT:   S_NOP 0
+  ;
   ; WAVE32-LABEL: name: brcond_si_loop_brcond_br_negated
   ; WAVE32: bb.0:
   ; WAVE32-NEXT:   successors: %bb.1(0x80000000)
   ; WAVE32-NEXT:   liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
-  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(s64) = COPY $sgpr0_sgpr1
+  ; WAVE32-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $vgpr0
+  ; WAVE32-NEXT:   [[COPY1:%[0-9]+]]:_(i32) = COPY $vgpr1
+  ; WAVE32-NEXT:   [[COPY2:%[0-9]+]]:sreg_32_xm0_xexec(i64) = COPY $sgpr0_sgpr1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.1:
   ; WAVE32-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT:   S_NOP 0
-  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](s64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
+  ; WAVE32-NEXT:   SI_LOOP [[COPY2]](i64), %bb.2, implicit-def $exec, implicit-def $scc, implicit $exec
   ; WAVE32-NEXT:   G_BR %bb.1
   ; WAVE32-NEXT: {{  $}}
   ; WAVE32-NEXT: bb.2:
   ; WAVE32-NEXT:   S_NOP 0
   bb.0:
+    successors: %bb.1(0x80000000)
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
-    %0:_(s32) = COPY $vgpr0
-    %1:_(s32) = COPY $vgpr1
-    %2:_(s64) = COPY $sgpr0_sgpr1
+
+    %0:_(i32) = COPY $vgpr0
+    %1:_(i32) = COPY $vgpr1
+    %2:_(i64) = COPY $sgpr0_sgpr1
 
   bb.1:
-    successors: %bb.1, %bb.2
+    successors: %bb.1(0x40000000), %bb.2(0x40000000)
+
     S_NOP 0
-    %3:_(s1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2
-    %4:_(s1) = G_CONSTANT i1 true
-    %5:_(s1) = G_XOR %3, %4
-    G_BRCOND %5, %bb.2
+    %3:_(i1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), %2(i64)
+    %4:_(i1) = G_CONSTANT i1 true
+    %5:_(i1) = G_XOR %3, %4
+    G_BRCOND %5(i1), %bb.2
     G_BR %bb.1
 
   bb.2:
     S_NOP 0
+
+
 ...

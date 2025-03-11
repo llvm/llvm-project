@@ -15,11 +15,13 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %1:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %1
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = G_FFLOOR %0
-    $vgpr0_vgpr1 = COPY %1
+    ; CHECK-NEXT: [[V_FLOOR_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FLOOR_F64_e64 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[V_FLOOR_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(f64) = G_BITCAST %0(i64)
+    %2:vgpr(f64) = G_FFLOOR %1
+    %3:vgpr(i64) = G_BITCAST %2(f64)
+    $vgpr0_vgpr1 = COPY %3(i64)
 ...
 
 # FIXME: Constant bus restriction
@@ -33,8 +35,8 @@ body: |
 #   bb.0:
 #     liveins: $sgpr0_sgpr1
 
-#     %0:sgpr(s64) = COPY $sgpr0_sgpr1
-#     %1:vgpr(s64) = G_FFLOOR %0
+#     %0:sgpr(i64) = COPY $sgpr0_sgpr1
+#     %1:vgpr(i64) = G_FFLOOR %0
 #     $vgpr0_vgpr1 = COPY %1
 # ...
 
@@ -52,10 +54,12 @@ body: |
     ; CHECK: liveins: $vgpr0_vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: %2:vreg_64 = nofpexcept V_FLOOR_F64_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
-    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY %2
-    %0:vgpr(s64) = COPY $vgpr0_vgpr1
-    %1:vgpr(s64) = G_FNEG %0
-    %2:vgpr(s64) = G_FFLOOR %1
-    $vgpr0_vgpr1 = COPY %2
+    ; CHECK-NEXT: [[V_FLOOR_F64_e64_:%[0-9]+]]:vreg_64 = nofpexcept V_FLOOR_F64_e64 1, [[COPY]], 0, 0, implicit $mode, implicit $exec
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[V_FLOOR_F64_e64_]]
+    %0:vgpr(i64) = COPY $vgpr0_vgpr1
+    %1:vgpr(f64) = G_BITCAST %0(i64)
+    %2:vgpr(f64) = G_FNEG %1
+    %3:vgpr(f64) = G_FFLOOR %2
+    %4:vgpr(i64) = G_BITCAST %3(f64)
+    $vgpr0_vgpr1 = COPY %4(i64)
 ...

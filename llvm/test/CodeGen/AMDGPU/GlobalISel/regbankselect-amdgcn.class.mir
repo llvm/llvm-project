@@ -12,14 +12,16 @@ body: |
     ; CHECK-LABEL: name: class_ss
     ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr2
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY2]](s64), [[COPY3]](s32)
-    %0:_(s64) = COPY $sgpr0_sgpr1
-    %1:_(s32) = COPY $sgpr2
-    %2:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %0, %1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr2
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(f64) = COPY [[BITCAST]](f64)
+    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:vgpr(i32) = COPY [[COPY1]](i32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY2]](f64), [[COPY3]](i32)
+    %0:_(i64) = COPY $sgpr0_sgpr1
+    %1:_(i32) = COPY $sgpr2
+    %2:_(f64) = G_BITCAST %0(i64)
+    %3:_(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %2(f64), %1(i32)
 ...
 
 ---
@@ -33,13 +35,15 @@ body: |
     ; CHECK-LABEL: name: class_sv
     ; CHECK: liveins: $sgpr0_sgpr1, $vgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s64) = COPY $sgpr0_sgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s64) = COPY [[COPY]](s64)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY2]](s64), [[COPY1]](s32)
-    %0:_(s64) = COPY $sgpr0_sgpr1
-    %1:_(s32) = COPY $vgpr0
-    %2:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %0, %1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(i64) = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:sgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(f64) = COPY [[BITCAST]](f64)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY2]](f64), [[COPY1]](i32)
+    %0:_(i64) = COPY $sgpr0_sgpr1
+    %1:_(i32) = COPY $vgpr0
+    %2:_(f64) = G_BITCAST %0(i64)
+    %3:_(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %2(f64), %1(i32)
 ...
 
 ---
@@ -52,13 +56,15 @@ body: |
     ; CHECK-LABEL: name: class_vs
     ; CHECK: liveins: $vgpr0_vgpr1, $sgpr0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(s32) = COPY [[COPY1]](s32)
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY]](s64), [[COPY2]](s32)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s32) = COPY $sgpr0
-    %2:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %0, %1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(i32) = COPY $sgpr0
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:vgpr(i32) = COPY [[COPY1]](i32)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[BITCAST]](f64), [[COPY2]](i32)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i32) = COPY $sgpr0
+    %2:_(f64) = G_BITCAST %0(i64)
+    %3:_(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %2(f64), %1(i32)
 ...
 
 ---
@@ -71,10 +77,12 @@ body: |
     ; CHECK-LABEL: name: class_vv
     ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s64) = COPY $vgpr0_vgpr1
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr2
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[COPY]](s64), [[COPY1]](s32)
-    %0:_(s64) = COPY $vgpr0_vgpr1
-    %1:_(s32) = COPY $vgpr2
-    %2:_(s1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %0, %1
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(i64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr(i32) = COPY $vgpr2
+    ; CHECK-NEXT: [[BITCAST:%[0-9]+]]:vgpr(f64) = G_BITCAST [[COPY]](i64)
+    ; CHECK-NEXT: [[INT:%[0-9]+]]:vcc(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), [[BITCAST]](f64), [[COPY1]](i32)
+    %0:_(i64) = COPY $vgpr0_vgpr1
+    %1:_(i32) = COPY $vgpr2
+    %2:_(f64) = G_BITCAST %0(i64)
+    %3:_(i1) = G_INTRINSIC intrinsic(@llvm.amdgcn.class), %2(f64), %1(i32)
 ...
