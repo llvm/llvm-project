@@ -156,7 +156,8 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *e) {
   const QualType typeToSize = e->getTypeOfArgument();
-  if (e->getKind() == UETT_SizeOf) {
+  if (auto kind = e->getKind();
+      kind == UETT_SizeOf || kind == UETT_DataSizeOf) {
     if (const VariableArrayType *variableArrTy =
             cgf.getContext().getAsVariableArrayType(typeToSize)) {
       cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
@@ -165,8 +166,12 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
     cgf.getCIRGenModule().errorNYI(
-        e->getSourceRange(),
-        "sizeof operator for Not yet implemented: ", e->getStmtClassName());
+        e->getSourceRange(), "sizeof operator for OpenMpRequiredSimdAlign",
+        e->getStmtClassName());
+  } else if (e->getKind() == UETT_VectorElements) {
+    cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
+                                   "sizeof operator for VectorElements",
+                                   e->getStmtClassName());
   }
 
   return builder.create<cir::ConstantOp>(
