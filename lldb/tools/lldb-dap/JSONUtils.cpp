@@ -962,19 +962,21 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
     body.try_emplace("reason", "step");
     break;
   case lldb::eStopReasonBreakpoint: {
-    ExceptionBreakpoint *exc_bp =
+    // Setting the reason as per DAP protocol spec.
+    // https://microsoft.github.io/debug-adapter-protocol/specification#Events_Stopped
+    const auto *exc_bp =
         dap.GetBreakpointFromStopReason<ExceptionBreakpoint>(thread);
     if (exc_bp) {
       body.try_emplace("reason", "exception");
       EmplaceSafeString(body, "description", exc_bp->label);
     } else {
       llvm::StringRef reason = "breakpoint";
-      InstructionBreakpoint *inst_bp =
+      const auto *inst_bp =
           dap.GetBreakpointFromStopReason<InstructionBreakpoint>(thread);
       if (inst_bp) {
         reason = "instruction breakpoint";
       } else {
-        FunctionBreakpoint *function_bp =
+        const auto *function_bp =
             dap.GetBreakpointFromStopReason<FunctionBreakpoint>(thread);
         if (function_bp) {
           reason = "function breakpoint";
@@ -992,6 +994,8 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
   } break;
   case lldb::eStopReasonWatchpoint: {
     // Assuming that all watch points are data breakpoints.
+    // data breakpoints are DAP terminology for watchpoints.
+    // https://microsoft.github.io/debug-adapter-protocol/specification#Requests_SetDataBreakpoints
     body.try_emplace("reason", "data breakpoint");
     lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(0);
     lldb::break_id_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
