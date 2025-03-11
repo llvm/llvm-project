@@ -15,7 +15,7 @@ class BufferScopePass<string name>
   : PassBase<name, "::mlir::bufferization::BufferScopePassBase">;
 
 
-def OwnershipBasedBufferDeallocation : BufferScopePass<
+def OwnershipBasedBufferDeallocationPass : BufferScopePass<
     "ownership-based-buffer-deallocation"> {
   let summary = "Adds all required dealloc operations for all allocations in "
                 "the input program";
@@ -156,7 +156,7 @@ def OwnershipBasedBufferDeallocation : BufferScopePass<
   ];
 }
 
-def BufferDeallocationSimplification :
+def BufferDeallocationSimplificationPass :
     BufferScopePass<"buffer-deallocation-simplification"> {
   let summary = "Optimizes `bufferization.dealloc` operation for more "
                 "efficient codegen";
@@ -173,7 +173,7 @@ def BufferDeallocationSimplification :
   ];
 }
 
-def OptimizeAllocationLiveness
+def OptimizeAllocationLivenessPass
     : BufferScopePass<"optimize-allocation-liveness"> {
   let summary = "This pass optimizes the liveness of temp allocations in the "
                 "input function";
@@ -188,7 +188,7 @@ def OptimizeAllocationLiveness
   let dependentDialects = ["mlir::memref::MemRefDialect"];
 }
 
-def LowerDeallocations : BufferScopePass<"bufferization-lower-deallocations"> {
+def LowerDeallocationsPass : BufferScopePass<"bufferization-lower-deallocations"> {
   let summary = "Lowers `bufferization.dealloc` operations to `memref.dealloc`"
                 "operations";
   let description = [{
@@ -208,7 +208,7 @@ def LowerDeallocations : BufferScopePass<"bufferization-lower-deallocations"> {
   ];
 }
 
-def BufferHoisting : BufferScopePass<"buffer-hoisting"> {
+def BufferHoistingPass : BufferScopePass<"buffer-hoisting"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "into common dominators and out of nested regions";
   let description = [{
@@ -217,7 +217,7 @@ def BufferHoisting : BufferScopePass<"buffer-hoisting"> {
   }];
 }
 
-def BufferLoopHoisting : BufferScopePass<"buffer-loop-hoisting"> {
+def BufferLoopHoistingPass : BufferScopePass<"buffer-loop-hoisting"> {
   let summary = "Optimizes placement of allocation operations by moving them "
                 "out of loop nests";
   let description = [{
@@ -466,7 +466,7 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
   ];
 }
 
-def PromoteBuffersToStack : BufferScopePass<"promote-buffers-to-stack"> {
+def PromoteBuffersToStackPass : BufferScopePass<"promote-buffers-to-stack"> {
   let summary = "Promotes heap-based allocations to automatically managed "
                 "stack-based allocations";
   let description = [{
@@ -486,7 +486,7 @@ def PromoteBuffersToStack : BufferScopePass<"promote-buffers-to-stack"> {
   ];
 }
 
-def EmptyTensorElimination : BufferScopePass<"eliminate-empty-tensors"> {
+def EmptyTensorEliminationPass : BufferScopePass<"eliminate-empty-tensors"> {
   let summary = "Try to eliminate all tensor.empty ops.";
   let description = [{
     Try to eliminate "tensor.empty" ops inside `op`. This transformation looks
