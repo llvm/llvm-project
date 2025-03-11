@@ -254,6 +254,10 @@ static void parseCodeGenArgs(Fortran::frontend::CodeGenOptions &opts,
                                   clang::driver::options::OPT_fno_unroll_loops,
                                   (opts.OptimizationLevel > 1));
 
+  if (args.hasFlag(clang::driver::options::OPT_fverbose_asm,
+                   clang::driver::options::OPT_fno_verbose_asm, false))
+    opts.AsmVerbose = 1;
+
   opts.AliasAnalysis = opts.OptimizationLevel > 0;
 
   // -mframe-pointer=none/non-leaf/all option.

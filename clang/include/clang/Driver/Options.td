@@ -3467,7 +3467,7 @@ defm use_cxa_atexit : BoolFOption<"use-cxa-atexit",
   PosFlag<SetTrue>>;
 def fno_unwind_tables : Flag<["-"], "fno-unwind-tables">, Group<f_Group>;
 def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
 def fno_working_directory : Flag<["-"], "fno-working-directory">, Group<f_Group>;
 def fobjc_arc : Flag<["-"], "fobjc-arc">, Group<f_Group>,
@@ -4142,7 +4142,8 @@ defm use_init_array : BoolFOption<"use-init-array",
   PosFlag<SetTrue>>;
 def fno_var_tracking : Flag<["-"], "fno-var-tracking">, Group<clang_ignored_f_Group>;
 def fverbose_asm : Flag<["-"], "fverbose-asm">, Group<f_Group>,
-  HelpText<"Generate verbose assembly output">;
+  HelpText<"Generate verbose assembly output">,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def dA : Flag<["-"], "dA">, Alias<fverbose_asm>;
 defm visibility_from_dllstorageclass : BoolFOption<"visibility-from-dllstorageclass",
   LangOpts<"VisibilityFromDLLStorageClass">, DefaultFalse,

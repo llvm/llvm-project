@@ -1284,6 +1284,8 @@ void CodeGenAction::executeAction() {
   // given on the command-line).
   llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 
+  targetMachine.Options.MCOptions.AsmVerbose = codeGenOpts.AsmVerbose;
+
   const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 
   if (llvmModule->getTargetTriple() != theTriple) {

@@ -172,7 +172,8 @@ void Flang::addCodegenOptions(const ArgList &Args,
                    options::OPT_finit_global_zero,
                    options::OPT_fno_init_global_zero, options::OPT_ftime_report,
                    options::OPT_ftime_report_EQ, options::OPT_funroll_loops,
-                   options::OPT_fno_unroll_loops});
+                   options::OPT_fno_unroll_loops, options::OPT_fverbose_asm,
+                   options::OPT_fno_verbose_asm});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
