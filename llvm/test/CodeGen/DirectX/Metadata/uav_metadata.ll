@@ -41,6 +41,7 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 ; PRINT-NEXT:;                                       UAV  struct         r/w      U7             u8     1
 ; PRINT-NEXT:;                                       UAV    byte         r/w      U8             u9     1
 ; PRINT-NEXT:;                                       UAV     u64         buf      U9     u10,space2     1
+; PRINT-NEXT:;                                       UAV     f32         buf     U10      u4,space3   100
 
 define void @test() #0 {
   ; RWBuffer<half4> Zero : register(u0)
@@ -93,6 +94,15 @@ define void @test() #0 {
             @llvm.dx.resource.handlefrombinding(i32 2, i32 10, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", i64, 1, 0, 0) %Nine_h, ptr @Nine, align 4
 
+  ; RWBuffer<float4> Array[100] : register(u4, space3);
+  ; RWBuffer<float4> B1 = Array[30];
+  ; RWBuffer<float4> B1 = Array[42];
+  ; resource array accesses should produce one metadata entry   
+  %Array_30_h = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
+            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 30, i1 false)
+  %Array_42_h = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
+            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 42, i1 false)
+
   ret void
 }
 
@@ -104,7 +114,7 @@ attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 ; CHECK: [[UAVList]] = !{![[Zero:[0-9]+]], ![[One:[0-9]+]], ![[Two:[0-9]+]],
 ; CHECK-SAME: ![[Three:[0-9]+]], ![[Four:[0-9]+]], ![[Five:[0-9]+]],
 ; CHECK-SAME: ![[Six:[0-9]+]], ![[Seven:[0-9]+]], ![[Eight:[0-9]+]],
-; CHECK-SAME: ![[Nine:[0-9]+]]}
+; CHECK-SAME: ![[Nine:[0-9]+]], ![[Array:[0-9]+]]}
 
 ; CHECK: ![[Zero]] = !{i32 0, ptr @0, !"", i32 0, i32 0, i32 1, i32 10, i1 false, i1 false, i1 false, ![[Half:[0-9]+]]}
 ; CHECK: ![[Half]] = !{i32 0, i32 8}
@@ -123,3 +133,4 @@ attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 ; CHECK: ![[Eight]] = !{i32 8, ptr @8, !"", i32 0, i32 9, i32 1, i32 11, i1 false, i1 false, i1 true, null}
 ; CHECK: ![[Nine]] = !{i32 9, ptr @9, !"", i32 2, i32 10, i32 1, i32 10, i1 false, i1 false, i1 false, ![[U64:[0-9]+]]}
 ; CHECK: ![[U64]] = !{i32 0, i32 7}
+; CHECK: ![[Array]] = !{i32 10, ptr @10, !"", i32 3, i32 4, i32 100, i32 10, i1 false, i1 false, i1 false, ![[Float]]}
