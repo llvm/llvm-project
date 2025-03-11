@@ -369,9 +369,10 @@ struct S {
   }
 };
 
-static_assert(S(1, 2) == S(1, 2));
+static_assert(S(1, 2) == S(1, 2)); // beforecxx20-warning 2{{C++20 extension}}
 
 static_assert(S(1, 2) == S(3, 4));
-// expected-error@-1 {{failed due to requirement 'CXXParenListInitExpr::S(1, 2) == CXXParenListInitExpr::S(3, 4)'}}
+// expected-error@-1 {{failed due to requirement 'CXXParenListInitExpr::S(1, 2) == CXXParenListInitExpr::S(3, 4)'}} \
+// beforecxx20-warning@-1 2{{C++20 extension}}
 
 }
