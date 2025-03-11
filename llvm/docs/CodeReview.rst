@@ -286,7 +286,7 @@ When upstreaming changes originally written by someone else:
   aware of and approve the upstreaming. In other cases, licensing
   considerations may be more complex.
 * Properly attribute the original changes, e.g., by creating a commit with
-  multiple authors ([GitHub guide](https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors)).  
+  multiple authors (`GitHub guide <https://docs.github.com/en/pull-requests/committing-changes-to-your-project/creating-and-editing-commits/creating-a-commit-with-multiple-authors>`_).
 * Invite the original author(s) to review the changes, and also include
   additional reviewers. Specifically, an LGTM from a (co-)author should not be
   taken as approval to land a change.
