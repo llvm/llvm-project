@@ -7576,7 +7576,7 @@ static void CheckCXX98CompatAccessibleCopy(Sema &S,
 
 void InitializationSequence::PrintInitLocationNote(Sema &S,
                                               const InitializedEntity &Entity) {
-  if (Entity.isParamOrTemplateParamKind() && Entity.getDecl()) {
+  if (Entity.isParameterKind() && Entity.getDecl()) {
     if (Entity.getDecl()->getLocation().isInvalid())
       return;
 
@@ -7585,9 +7585,8 @@ void InitializationSequence::PrintInitLocationNote(Sema &S,
         << Entity.getDecl()->getDeclName();
     else
       S.Diag(Entity.getDecl()->getLocation(), diag::note_parameter_here);
-  }
-  else if (Entity.getKind() == InitializedEntity::EK_RelatedResult &&
-           Entity.getMethodDecl())
+  } else if (Entity.getKind() == InitializedEntity::EK_RelatedResult &&
+             Entity.getMethodDecl())
     S.Diag(Entity.getMethodDecl()->getLocation(),
            diag::note_method_return_type_change)
       << Entity.getMethodDecl()->getDeclName();
