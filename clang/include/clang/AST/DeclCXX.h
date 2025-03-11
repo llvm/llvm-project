@@ -4257,7 +4257,6 @@ public:
                                    QualType T, TypeSourceInfo *TInfo,
                                    StorageClass S,
                                    ArrayRef<BindingDecl *> Bindings);
-
   static DecompositionDecl *CreateDeserialized(ASTContext &C, GlobalDeclID ID,
                                                unsigned NumBindings);
 
