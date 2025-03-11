@@ -1074,6 +1074,32 @@ DAP::GetInstructionBPFromStopReason(lldb::SBThread &thread) {
   return inst_bp;
 }
 
+FunctionBreakpoint *DAP::GetFunctionBPFromStopReason(lldb::SBThread &thread) {
+  const auto num = thread.GetStopReasonDataCount();
+  FunctionBreakpoint *func_bp = nullptr;
+  for (size_t i = 0; i < num; i += 2) {
+    // thread.GetStopReasonDataAtIndex(i) will return the bp ID and
+    // thread.GetStopReasonDataAtIndex(i+1) will return the location
+    // within that breakpoint. We only care about the bp ID so we can
+    // see if this is an function breakpoint that is getting hit.
+    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
+    func_bp = GetFunctionBreakPoint(bp_id);
+    // If any breakpoint is not an function breakpoint, then stop and
+    // report this as a normal breakpoint
+    if (func_bp == nullptr)
+      return nullptr;
+  }
+  return func_bp;
+}
+
+FunctionBreakpoint *DAP::GetFunctionBreakPoint(const lldb::break_id_t bp_id) {
+  for (auto &bp : function_breakpoints) {
+    if (bp.second.bp.GetID() == bp_id)
+      return &bp.second;
+  }
+  return nullptr;
+}
+
 lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
   switch (variablesReference) {
   case VARREF_LOCALS:
