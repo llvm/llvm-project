@@ -44,16 +44,40 @@ class TestDAP_gotoTarget(lldbdap_testcase.DAPTestCaseBase):
 
         target_id = target["id"]
         thread_id = self.dap_server.get_thread_id()
-        self.assertIsNotNone(thread_id, "thread Id should not be none")
+        self.assertIsNotNone(thread_id, "threadId should not be none")
 
         response = self.dap_server.request_goto(thread_id, target_id)
 
-        self.assertEqual(
-            response["success"], True, "expects success to go to a target id"
-        )
+        self.assertEqual(response["success"], True, "expects success to go to targetId")
 
-        var_1_object = self.dap_server.get_local_variable("var_1")
-        self.assertEqual(first_var_1_object["value"], var_1_object["value"])
+        self.dap_server.request_next(thread_id)
+        self.continue_to_next_stop()
 
-        self.continue_to_next_stop()  # a stop event is sent after a successful goto response
+        local_variables = self.dap_server.get_local_variables()
+        verify_variables = {
+            "var_1": {
+                "name": "var_1",
+                "type": "int",
+                "value": "10",
+                "variablesReference": 0,
+            },
+            "var_2": {
+                "name": "var_2",
+                "type": "int",
+                "value": "40",
+                "variablesReference": 0,
+            },
+        }
+
+        for variable in local_variables:
+            name = variable["name"]
+            verify_variable = verify_variables[name]
+
+            for key, value in verify_variable.items():
+                actual_value = variable[key]
+                self.assertEqual(
+                    actual_value,
+                    value,
+                    f"values does not match for key: `{key}` expected_value: `{value}`, actual_value: `{actual_value}`",
+                )
         self.continue_to_exit()
