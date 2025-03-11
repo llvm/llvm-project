@@ -11,6 +11,7 @@
 #include "TestingSupport/SubsystemRAII.h"
 #include "TestingSupport/TestUtilities.h"
 
+#include "lldb/Core/Demangle.h"
 #include "lldb/Core/Mangled.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -319,3 +320,145 @@ Symbols:
   EXPECT_EQ(0, Count("undemangable", eFunctionNameTypeBase));
   EXPECT_EQ(0, Count("undemangable", eFunctionNameTypeMethod));
 }
+
+struct DemanglingPartsTestCase {
+  const char *mangled;
+  FunctionNameInfo expected_info;
+  std::string_view basename;
+  std::string_view scope;
+  bool valid_basename = true;
+};
+
+DemanglingPartsTestCase g_demangling_parts_test_cases[] = {
+    // clang-format off
+   { "_ZNVKO3BarIN2ns3QuxIiEEE1CIPFi3FooIS_IiES6_EEE6methodIS6_EENS5_IT_SC_E5InnerIiEESD_SD_",
+     { .BasenameLocs = {92, 98}, .ScopeLocs = {36, 92}, .ArgumentLocs = { 108, 158 } },
+     .basename = "method",
+     .scope = "Bar<ns::Qux<int>>::C<int (*)(Foo<Bar<int>, Bar<int>>)>::"
+   },
+   { "_Z7getFuncIfEPFiiiET_",
+     { .BasenameLocs = {6, 13}, .ScopeLocs = {6, 6}, .ArgumentLocs = { 20, 27 } },
+     .basename = "getFunc",
+     .scope = ""
+   },
+   { "_ZN1f1b1c1gEv",
+     { .BasenameLocs = {9, 10}, .ScopeLocs = {0, 9}, .ArgumentLocs = { 10, 12 } },
+     .basename = "g",
+     .scope = "f::b::c::"
+   },
+   { "_ZN5test73fD1IiEEDTcmtlNS_1DEL_ZNS_1bEEEcvT__EES2_",
+     { .BasenameLocs = {45, 48}, .ScopeLocs = {38, 45}, .ArgumentLocs = { 53, 58 } },
+     .basename = "fD1",
+     .scope = "test7::"
+   },
+   { "_ZN5test73fD1IiEEDTcmtlNS_1DEL_ZNS_1bINDT1cE1dEEEEEcvT__EES2_",
+     { .BasenameLocs = {61, 64}, .ScopeLocs = {54, 61}, .ArgumentLocs = { 69, 79 } },
+     .basename = "fD1",
+     .scope = "test7::"
+   },
+   { "_ZN5test7INDT1cE1dINDT1cE1dEEEE3fD1INDT1cE1dINDT1cE1dEEEEEDTcmtlNS_1DEL_ZNS_1bINDT1cE1dEEEEEcvT__EES2_",
+     { .BasenameLocs = {120, 123}, .ScopeLocs = {81, 120}, .ArgumentLocs = { 155, 168 } },
+     .basename = "fD1",
+     .scope = "test7<decltype(c)::d<decltype(c)::d>>::"
+   },
+   { "_ZN8nlohmann16json_abi_v3_11_310basic_jsonINSt3__13mapENS2_6vectorENS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEEbxydS8_NS0_14adl_serializerENS4_IhNS8_IhEEEEvE5parseIRA29_KcEESE_OT_NS2_8functionIFbiNS0_6detail13parse_event_tERSE_EEEbb",
+     { .BasenameLocs = {687, 692}, .ScopeLocs = {343, 687}, .ArgumentLocs = { 713, 1174 } },
+     .basename = "parse",
+     .scope = "nlohmann::json_abi_v3_11_3::basic_json<std::__1::map, std::__1::vector, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>, bool, long long, unsigned long long, double, std::__1::allocator, nlohmann::json_abi_v3_11_3::adl_serializer, std::__1::vector<unsigned char, std::__1::allocator<unsigned char>>, void>::"
+   },
+   { "_ZN8nlohmann16json_abi_v3_11_310basic_jsonINSt3__13mapENS2_6vectorENS2_12basic_stringIcNS2_11char_traitsIcEENS2_9allocatorIcEEEEbxydS8_NS0_14adl_serializerENS4_IhNS8_IhEEEEvEC1EDn",
+     { .BasenameLocs = {344, 354}, .ScopeLocs = {0, 344}, .ArgumentLocs = { 354, 370 } },
+     .basename = "basic_json",
+     .scope = "nlohmann::json_abi_v3_11_3::basic_json<std::__1::map, std::__1::vector, std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char>>, bool, long long, unsigned long long, double, std::__1::allocator, nlohmann::json_abi_v3_11_3::adl_serializer, std::__1::vector<unsigned char, std::__1::allocator<unsigned char>>, void>::"
+   },
+   { "_Z3fppIiEPFPFvvEiEf",
+     { .BasenameLocs = {10, 13}, .ScopeLocs = {10, 10}, .ArgumentLocs = { 18, 25 } },
+     .basename = "fpp",
+     .scope = ""
+   },
+   { "_Z3fppIiEPFPFvvEN2ns3FooIiEEEf",
+     { .BasenameLocs = {10, 13}, .ScopeLocs = {10, 10}, .ArgumentLocs = { 18, 25 } },
+     .basename = "fpp",
+     .scope = ""
+   },
+   { "_Z3fppIiEPFPFvPFN2ns3FooIiEENS2_3BarIfE3QuxEEEPFS2_S2_EEf",
+     { .BasenameLocs = {10, 13}, .ScopeLocs = {10, 10}, .ArgumentLocs = { 18, 25 } },
+     .basename = "fpp",
+     .scope = ""
+   },
+   { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvvEiEf",
+     { .BasenameLocs = {64, 67}, .ScopeLocs = {10, 64}, .ArgumentLocs = { 72, 79 } },
+     .basename = "fpp",
+     .scope = "ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::"
+   },
+   { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvvES2_Ef",
+     { .BasenameLocs = {64, 67}, .ScopeLocs = {10, 64}, .ArgumentLocs = { 72, 79 } },
+     .basename = "fpp",
+     .scope = "ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::"
+   },
+   { "_ZN2ns8HasFuncsINS_3FooINS1_IiE3BarIfE3QuxEEEE3fppIiEEPFPFvPFS2_S5_EEPFS2_S2_EEf",
+     { .BasenameLocs = {64, 67}, .ScopeLocs = {10, 64}, .ArgumentLocs = { 72, 79 } },
+     .basename = "fpp",
+     .scope = "ns::HasFuncs<ns::Foo<ns::Foo<int>::Bar<float>::Qux>>::"
+   },
+   { "_ZTV11ImageLoader",
+     { .BasenameLocs = {0, 0}, .ScopeLocs = {0, 0}, .ArgumentLocs = { 0, 0 } },
+     .basename = "",
+     .scope = "",
+     .valid_basename = false
+   }
+    // clang-format on
+};
+
+struct DemanglingPartsTestFixture
+    : public ::testing::TestWithParam<DemanglingPartsTestCase> {};
+
+namespace {
+class TestAllocator {
+  llvm::BumpPtrAllocator Alloc;
+
+public:
+  void reset() { Alloc.Reset(); }
+
+  template <typename T, typename... Args> T *makeNode(Args &&...args) {
+    return new (Alloc.Allocate(sizeof(T), alignof(T)))
+        T(std::forward<Args>(args)...);
+  }
+
+  void *allocateNodeArray(size_t sz) {
+    return Alloc.Allocate(sizeof(llvm::itanium_demangle::Node *) * sz,
+                          alignof(llvm::itanium_demangle::Node *));
+  }
+};
+} // namespace
+
+TEST_P(DemanglingPartsTestFixture, DemanglingParts) {
+  const auto &[mangled, info, basename, scope, valid_basename] = GetParam();
+
+  llvm::itanium_demangle::ManglingParser<TestAllocator> Parser(
+      mangled, mangled + ::strlen(mangled));
+
+  const auto *Root = Parser.parse();
+
+  ASSERT_NE(nullptr, Root);
+
+  TrackingOutputBuffer OB;
+  Root->print(OB);
+  auto demangled = std::string_view(OB);
+
+  ASSERT_EQ(OB.FunctionInfo.hasBasename(), valid_basename);
+
+  EXPECT_EQ(OB.FunctionInfo.BasenameLocs, info.BasenameLocs);
+  EXPECT_EQ(OB.FunctionInfo.ScopeLocs, info.ScopeLocs);
+  EXPECT_EQ(OB.FunctionInfo.ArgumentLocs, info.ArgumentLocs);
+
+  auto get_part = [&](const std::pair<size_t, size_t> &loc) {
+    return demangled.substr(loc.first, loc.second - loc.first);
+  };
+
+  EXPECT_EQ(get_part(OB.FunctionInfo.BasenameLocs), basename);
+  EXPECT_EQ(get_part(OB.FunctionInfo.ScopeLocs), scope);
+}
+
+INSTANTIATE_TEST_SUITE_P(DemanglingPartsTests, DemanglingPartsTestFixture,
+                         ::testing::ValuesIn(g_demangling_parts_test_cases));
