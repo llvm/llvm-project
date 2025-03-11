@@ -117,7 +117,8 @@ static void splitBlock(MachineBasicBlock &MBB, MachineInstr &MI,
   MDT->applyUpdates(DTUpdates);
 }
 
-static void addRegOrCopyOp(MachineInstrBuilder &MIB, MachineOperand &Op) {
+static void copyOpWithoutRegFlags(MachineInstrBuilder &MIB,
+                                  MachineOperand &Op) {
   if (Op.isReg())
     MIB.addReg(Op.getReg());
   else
@@ -138,30 +139,35 @@ void SILateBranchLowering::expandChainCall(MachineInstr &MI,
     // * Try to change the VGPR allocation
     // * Select the callee based on the result of the reallocation attempt
     // * Select the EXEC mask based on the result of the reallocation attempt
+    // If any of the register operands of the chain pseudo is used in more than
+    // one of these instructions, we need to make sure that the kill flags
+    // aren't copied along.
     auto AllocMI =
         BuildMI(*MI.getParent(), MI, DL, TII->get(AMDGPU::S_ALLOC_VGPR));
-    addRegOrCopyOp(AllocMI,
-                   *TII->getNamedOperand(MI, AMDGPU::OpName::numvgprs));
+    copyOpWithoutRegFlags(AllocMI,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::numvgprs));
 
     auto SelectCallee =
         BuildMI(*MI.getParent(), MI, DL, TII->get(AMDGPU::S_CSELECT_B64))
             .addDef(TII->getNamedOperand(MI, AMDGPU::OpName::src0)->getReg());
-    addRegOrCopyOp(SelectCallee,
-                   *TII->getNamedOperand(MI, AMDGPU::OpName::src0));
-    addRegOrCopyOp(SelectCallee,
-                   *TII->getNamedOperand(MI, AMDGPU::OpName::fbcallee));
+    copyOpWithoutRegFlags(SelectCallee,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::src0));
+    copyOpWithoutRegFlags(SelectCallee,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::fbcallee));
 
     auto SelectExec = BuildMI(*MI.getParent(), MI, DL,
                               TII->get(ST.isWave32() ? AMDGPU::S_CSELECT_B32
                                                      : AMDGPU::S_CSELECT_B64))
                           .addDef(ExecReg);
 
-    addRegOrCopyOp(SelectExec, *TII->getNamedOperand(MI, AMDGPU::OpName::exec));
-    addRegOrCopyOp(SelectExec,
-                   *TII->getNamedOperand(MI, AMDGPU::OpName::fbexec));
+    copyOpWithoutRegFlags(SelectExec,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::exec));
+    copyOpWithoutRegFlags(SelectExec,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::fbexec));
   } else {
     auto SetExec = BuildMI(*MI.getParent(), MI, DL, TII->get(MovOpc), ExecReg);
-    addRegOrCopyOp(SetExec, *TII->getNamedOperand(MI, AMDGPU::OpName::exec));
+    copyOpWithoutRegFlags(SetExec,
+                          *TII->getNamedOperand(MI, AMDGPU::OpName::exec));
   }
 
   for (unsigned OpIdx = MI.getNumExplicitOperands() - 1; OpIdx >= ExecIdx;
