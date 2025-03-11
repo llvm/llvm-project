@@ -147,7 +147,8 @@ public:
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
         SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Ty),
-        Parent(Parent), AccessorValue(std::move(Accessor)), ParentContext(nullptr) {}
+        Parent(Parent), AccessorValue(std::move(Accessor)), 
+        ParentContext(nullptr) {}
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
 
@@ -640,7 +641,8 @@ void ASTNode::render(const json::Value &Data, raw_ostream &OS) {
     return;
   }
   case InvertSection: {
-    bool IsLambda = SectionLambdas.find(AccessorValue[0]) != SectionLambdas.end();
+    bool IsLambda = 
+        SectionLambdas.find(AccessorValue[0]) != SectionLambdas.end();
     if (!isFalsey(Context) || IsLambda)
       return;
     renderChild(Context, OS);
@@ -769,10 +771,9 @@ Template::Template(StringRef TemplateStr) {
 Template::Template(Template &&Other) noexcept
     : Partials(std::move(Other.Partials)), Lambdas(std::move(Other.Lambdas)),
       SectionLambdas(std::move(Other.SectionLambdas)),
-      Escapes(std::move(Other.Escapes)), 
+      Escapes(std::move(Other.Escapes)),
       AstAllocator(std::move(Other.AstAllocator)),
-      RenderAllocator(std::move(Other.RenderAllocator)),
-      Tree(Other.Tree) {
+      RenderAllocator(std::move(Other.RenderAllocator)), Tree(Other.Tree) {
   Other.Tree = nullptr;
 }
 
