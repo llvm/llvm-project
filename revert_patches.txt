@@ -22,5 +22,6 @@ Ron and Saiyed
 ---
 needs flang help
 f1178815d243 [Flang][OpenMP][MLIR] Implement close, present and ompx_ho
+d67947162f4b [flang][OpenMP] Implement HAS_DEVICE_ADDR clause
 AndrewG
 ---
