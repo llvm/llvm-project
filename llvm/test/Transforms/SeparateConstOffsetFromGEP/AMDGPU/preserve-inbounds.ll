@@ -3,24 +3,16 @@
 
 ; The inbounds flags cannot be preserved here: If the pointers point to the
 ; beginning of an object and %i is 1, the intermediate GEPs are out of bounds.
-define void @maybe_oob(ptr %dst, ptr %src, i64 %i) {
+define ptr @maybe_oob(ptr %p, i64 %i) {
 ; CHECK-LABEL: @maybe_oob(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[IDX1:%.*]] = sub i64 0, [[I:%.*]]
-; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr float, ptr [[SRC:%.*]], i64 [[IDX1]]
-; CHECK-NEXT:    [[ARRAYIDX_SRC2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX_SRC2]], align 4
-; CHECK-NEXT:    [[IDX3:%.*]] = sub i64 0, [[I]]
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr float, ptr [[DST:%.*]], i64 [[IDX3]]
-; CHECK-NEXT:    [[ARRAYIDX_DST4:%.*]] = getelementptr i8, ptr [[TMP2]], i64 4
-; CHECK-NEXT:    store float [[TMP1]], ptr [[ARRAYIDX_DST4]], align 4
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i32, ptr [[P:%.*]], i64 [[IDX1]]
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr i8, ptr [[TMP0]], i64 4
+; CHECK-NEXT:    ret ptr [[ARRAYIDX2]]
 ;
 entry:
   %idx = sub nsw i64 1, %i
-  %arrayidx.src = getelementptr inbounds float, ptr %src, i64 %idx
-  %3 = load float, ptr %arrayidx.src, align 4
-  %arrayidx.dst = getelementptr inbounds float, ptr %dst, i64 %idx
-  store float %3, ptr %arrayidx.dst, align 4
-  ret void
+  %arrayidx = getelementptr inbounds i32, ptr %p, i64 %idx
+  ret ptr %arrayidx
 }
