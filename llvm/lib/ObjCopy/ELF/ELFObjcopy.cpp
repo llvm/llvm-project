@@ -400,8 +400,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
         return true;
       // We want to remove undefined symbols if all references have been
       // stripped.
-      if (!Config.OnlySection.empty() && !Sym.Referenced &&
-          Sym.getShndx() == SHN_UNDEF)
+      if (!Config.OnlySection.empty() && Sym.getShndx() == SHN_UNDEF)
         return true;
     }
 
