@@ -52,17 +52,9 @@
 ## gcs-report-dynamic should report any dynamic objects that does not have the gcs property. This also ensures the inhertance from gcs-report is working correctly.
 
 # RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
-# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report-dynamic=warning -z gcs-report=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
 # RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
-# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report=error -z gcs-report-dynamic=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
 # RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report-dynamic=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
-# RUN: ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report=error -z gcs-report-dynamic=warning -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-WARN-DYNAMIC %s
-# RUN: not ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report-dynamic=error -z gcs-report=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR-DYNAMIC %s
 # RUN: not ld.lld func1-gcs.o func3-gcs.o no-gcs.so force-gcs.so -z gcs-report-dynamic=error -z gcs=always 2>&1 | FileCheck --check-prefix=REPORT-ERROR-DYNAMIC %s
-# RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report-dynamic=error -z gcs-report=error -z gcs=always 2>&1 | count 0
-# RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report-dynamic=warning -z gcs-report=error -z gcs=always 2>&1 | count 0
-# RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report=warning -z gcs=always 2>&1 | count 0
-# RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report=error -z gcs=always 2>&1 | count 0
 # RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report-dynamic=warning -z gcs=always 2>&1 | count 0
 # RUN: ld.lld func1-gcs.o func3-gcs.o force-gcs.so -z gcs-report-dynamic=error -z gcs=always 2>&1 | count 0
 

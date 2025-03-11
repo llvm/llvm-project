@@ -949,10 +949,6 @@ static void parseGnuPropertyNote(Ctx &ctx, ELFFileBase &f,
       f.andFeatures |= read32<ELFT::Endianness>(desc.data());
     } else if (ctx.arg.emachine == EM_AARCH64 &&
                type == GNU_PROPERTY_AARCH64_FEATURE_PAUTH) {
-      // If the file being parsed is a SharedFile, we cannot pass in
-      // the data variable as there is no InputSection to collect the
-      // data from. As such, these are ignored. They are needed either
-      // when loading a shared library oject.
       ArrayRef<uint8_t> contents = data ? *data : desc;
       if (!f.aarch64PauthAbiCoreInfo.empty()) {
         return void(
@@ -1448,11 +1444,8 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
 template <typename ELFT>
 void SharedFile::parseGnuAndFeatures(const uint8_t *base,
                                      const typename ELFT::PhdrRange headers) {
-  if (headers.size() == 0)
+  if (headers.size() == 0 || ctx.arg.emachine != EM_AARCH64)
     return;
-  uint32_t featureAndType = ctx.arg.emachine == EM_AARCH64
-                                ? GNU_PROPERTY_AARCH64_FEATURE_1_AND
-                                : GNU_PROPERTY_X86_FEATURE_1_AND;
 
   for (unsigned i = 0; i < headers.size(); i++) {
     if (headers[i].p_type != PT_GNU_PROPERTY)
@@ -1465,7 +1458,7 @@ void SharedFile::parseGnuAndFeatures(const uint8_t *base,
 
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(headers[i].p_align);
-    parseGnuPropertyNote<ELFT>(ctx, *this, featureAndType, desc, base);
+    parseGnuPropertyNote<ELFT>(ctx, *this, /*featureAndType*/GNU_PROPERTY_AARCH64_FEATURE_1_AND, desc, base);
   }
 }
 

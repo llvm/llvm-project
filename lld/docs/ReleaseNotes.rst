@@ -25,11 +25,10 @@ Non-comprehensive list of changes in this release
 
 ELF Improvements
 ----------------
-* For AArch64, support for the ``-zgcs-report-dynamic`` option has been added. This will provide users with
-  the ability to check any Dynamic Objects explicitly passed to LLD for the GNU GCS Attribute Flag. This is
-  required for all files when linking with GCS enabled. Unless defined by the user, ``-zgcs-report-dynamic``
-  inherits its value from the ``-zgcs-report`` option, capped at the ``warning`` level to ensure that a users
-  module can still compile. This behaviour is designed to match the GNU ld Linker.
+* For AArch64, added support for ``-zgcs-report-dynamic``, enabling checks for
+GNU GCS Attribute Flags in Dynamic Objects when GCS is enabled. Inherits value
+from ``-zgcs-report`` (capped at ``warning`` level) unless user-defined,
+ensuring compatibility with GNU ld linker.
 
 Breaking changes
 ----------------
