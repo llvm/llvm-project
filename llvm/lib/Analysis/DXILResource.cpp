@@ -847,19 +847,16 @@ void DXILResourceCounterDirectionMap::populate(Module &M,
       int64_t CountLiteral = CountValue->getSExtValue();
 
       ResourceCounterDirection Direction = ResourceCounterDirection::Unknown;
-      if (CountLiteral > 0) {
+      if (CountLiteral > 0)
         Direction = ResourceCounterDirection::Increment;
-      }
-      if (CountLiteral < 0) {
+      if (CountLiteral < 0)
         Direction = ResourceCounterDirection::Decrement;
-      }
 
       // Collect all potential creation points for the handle arg
       Value *HandleArg = CI->getArgOperand(0);
       SmallVector<dxil::ResourceBindingInfo> RBInfos = DBM.findByUse(HandleArg);
-      for (const dxil::ResourceBindingInfo RBInfo : RBInfos) {
+      for (const dxil::ResourceBindingInfo RBInfo : RBInfos)
         CounterDirections.emplace_back(RBInfo, Direction);
-      }
     }
   }
 
