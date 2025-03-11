@@ -60,7 +60,7 @@ public:
 
   Token(std::string Str)
       : TokenType(Type::Text), RawBody(std::move(Str)), TokenBody(RawBody),
-        Accessor({}), Indentation(0) {};
+        AccessorValue({}), Indentation(0) {};
 
   Token(std::string RawBody, std::string TokenBody, char Identifier)
       : RawBody(std::move(RawBody)), TokenBody(std::move(TokenBody)),
@@ -71,10 +71,10 @@ public:
     StringRef AccessorStr(this->TokenBody);
     if (TokenType != Type::Variable)
       AccessorStr = AccessorStr.substr(1);
-    Accessor = splitMustacheString(StringRef(AccessorStr).trim());
+    AccessorValue = splitMustacheString(StringRef(AccessorStr).trim());
   }
 
-  Accessor getAccessor() const { return Accessor; }
+  Accessor getAccessor() const { return AccessorValue; }
 
   Type getType() const { return TokenType; }
 
@@ -106,7 +106,7 @@ public:
   std::string RawBody;
   // TokenBody is the original string with the identifier removed.
   std::string TokenBody;
-  Accessor Accessor;
+  Accessor AccessorValue;
   size_t Indentation;
 };
 
