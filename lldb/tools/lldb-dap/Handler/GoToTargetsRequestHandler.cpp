@@ -21,7 +21,8 @@ namespace lldb_dap {
 //      "description": "This request retrieves the possible goto targets for the
 //      specified source location.\nThese targets can be used in the `goto`
 //      request.\nClients should only call this request if the corresponding
-//      capability `supportsGotoTargetsRequest` is true.", "properties": {
+//      capability `supportsGotoTargetsRequest` is true.",
+//.     "properties": {
 //        "command": {
 //          "type": "string",
 //          "enum": [ "gotoTargets" ]
