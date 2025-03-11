@@ -14961,14 +14961,14 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
     const MDNode *OldRanges = LN0->getRanges();
     const MDNode *NewRanges = nullptr;
     // If LSBs are loaded and the truncated ConstantRange for the OldRanges
-    // metadata is not the full-set for the NewWidth then create a NewRanges
+    // metadata is not the full-set for the new width then create a NewRanges
     // metadata for the truncated load
     if (ShAmt == 0 && OldRanges) {
       ConstantRange CR = getConstantRangeFromMetadata(*OldRanges);
 
-      // FIXME: OldRanges should match the width of the old load, so
-      // CR.getBitWidth() should be wider than the new narrower load.  This
-      // check should be unnecessary.
+      // It is possible for an 8-bit extending load with 8-bit range
+      // metadata to be narrowed to an 8-bit load.  This guard is necessary to
+      // ensure that truncation is strictly smaller.
       if (CR.getBitWidth() > VT.getScalarSizeInBits()) {
         ConstantRange TruncatedCR = CR.truncate(VT.getScalarSizeInBits());
         if (!TruncatedCR.isFullSet()) {
@@ -14979,7 +14979,8 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
                   ConstantInt::get(*DAG.getContext(), TruncatedCR.getUpper()))};
           NewRanges = MDNode::get(*DAG.getContext(), Bounds);
         }
-      }
+      } else if (CR.getBitWidth() == VT.getScalarSizeInBits())
+        NewRanges = OldRanges;
     }
     Load = DAG.getLoad(
         VT, DL, LN0->getChain(), NewPtr,
