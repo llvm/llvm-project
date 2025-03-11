@@ -28,7 +28,7 @@
 
 using namespace llvm;
 
-enum OutputCostKind {
+enum class OutputCostKind {
   RecipThroughput,
   Latency,
   CodeSize,
@@ -87,6 +87,22 @@ static InstructionCost getCost(Instruction &Inst, TTI::TargetCostKind CostKind,
   return TTI.getInstructionCost(&Inst, CostKind);
 }
 
+static TTI::TargetCostKind
+OutputCostKindToTargetCostKind(OutputCostKind CostKind) {
+  switch (CostKind) {
+  case OutputCostKind::RecipThroughput:
+    return TTI::TCK_RecipThroughput;
+  case OutputCostKind::Latency:
+    return TTI::TCK_Latency;
+  case OutputCostKind::CodeSize:
+    return TTI::TCK_CodeSize;
+  case OutputCostKind::SizeAndLatency:
+    return TTI::TCK_SizeAndLatency;
+  default:
+    llvm_unreachable("Unexpected OutputCostKind!");
+  };
+}
+
 PreservedAnalyses CostModelPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &TTI = AM.getResult<TargetIRAnalysis>(F);
@@ -111,7 +127,7 @@ PreservedAnalyses CostModelPrinterPass::run(Function &F,
         OS << " for: " << Inst << "\n";
       } else {
         InstructionCost Cost =
-            getCost(Inst, (TTI::TargetCostKind)(unsigned)CostKind, TTI, TLI);
+            getCost(Inst, OutputCostKindToTargetCostKind(CostKind), TTI, TLI);
         if (auto CostVal = Cost.getValue())
           OS << "Found an estimated cost of " << *CostVal;
         else
