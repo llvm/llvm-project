@@ -118,3 +118,4 @@ if config.have_disable_symbolizer_path_search:
     symbolizer_path = os.path.join(config.llvm_tools_dir, "llvm-symbolizer")
     for sanitizer in tool_symbolizer_path_map.values():
         config.environment[sanitizer] = symbolizer_path 
+        
