@@ -663,8 +663,9 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
         ::testing::EndsWith(" is only supported for 'rv32'"));
   }
 
-  for (StringRef Input : {"rv32idc_xqciac0p3", "rv32i_zcd_xqciac0p3", "rv32idc_xqcicm0p2",
-                          "rv32i_zcd_xqcicm0p2"}) {
+  for (StringRef Input :
+       {"rv32idc_xqciac0p3", "rv32i_zcd_xqciac0p3", "rv32idc_xqcicm0p2",
+        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p1", "rv32i_zcd_xqccmp0p1"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith("extension when 'd' extension is enabled"));
