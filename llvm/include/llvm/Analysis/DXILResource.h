@@ -651,7 +651,6 @@ public:
 
 ModulePass *createDXILResourceCounterDirectionWrapperPassPass();
 
-
 } // namespace llvm
 
 #endif // LLVM_ANALYSIS_DXILRESOURCE_H

@@ -829,8 +829,7 @@ static bool isUpdateCounterIntrinsic(Function &F) {
   return F.getIntrinsicID() == Intrinsic::dx_resource_updatecounter;
 }
 
-void DXILResourceCounterDirectionMap::populate(Module &M,
-                                               DXILBindingMap &DBM) {
+void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
   CounterDirections.clear();
 
   for (Function &F : M.functions()) {
@@ -891,7 +890,8 @@ void DXILResourceCounterDirectionMap::populate(Module &M,
   M.getContext().diagnose(DiagnosticInfoGeneric(Message));
 }
 
-void DXILResourceCounterDirectionWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+void DXILResourceCounterDirectionWrapperPass::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   AU.addRequiredTransitive<DXILResourceBindingWrapperPass>();
   AU.setPreservesAll();
 }
@@ -908,19 +908,18 @@ bool DXILResourceCounterDirectionWrapperPass::runOnModule(Module &M) {
 void DXILResourceCounterDirectionWrapperPass::releaseMemory() { Map.reset(); }
 
 void DXILResourceCounterDirectionWrapperPass::print(raw_ostream &OS,
-                                           const Module *M) const {
+                                                    const Module *M) const {
   if (!Map) {
     OS << "No resource directions have been built!\n";
     return;
   }
-  //Map->print(OS, *DRTM, M->getDataLayout());
+  // Map->print(OS, *DRTM, M->getDataLayout());
 }
 
-
-//#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-//LLVM_DUMP_METHOD
-//void DXILResourceCounterDirectionWrapperPass::dump() const { print(dbgs(), nullptr); }
-//#endif
+// #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+// LLVM_DUMP_METHOD
+// void DXILResourceCounterDirectionWrapperPass::dump() const { print(dbgs(),
+// nullptr); } #endif
 //===----------------------------------------------------------------------===//
 
 AnalysisKey DXILResourceTypeAnalysis::Key;
@@ -951,7 +950,8 @@ INITIALIZE_PASS(DXILResourceCounterDirectionWrapperPass,
 DXILResourceCounterDirectionWrapperPass::
     DXILResourceCounterDirectionWrapperPass()
     : ModulePass(ID) {
-  initializeDXILResourceCounterDirectionWrapperPassPass(*PassRegistry::getPassRegistry());
+  initializeDXILResourceCounterDirectionWrapperPassPass(
+      *PassRegistry::getPassRegistry());
 }
 
 void DXILResourceTypeWrapperPass::anchor() {}
