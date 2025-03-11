@@ -44,7 +44,7 @@ body: |
     ; CCMP+SETCC   %0 != 42
     CCMP64ri32 %0, 42, 2, 5, implicit-def $eflags, implicit $eflags
     $cl = SETCCr 5, implicit $eflags
-    ; CCMP+SETCC   %0 >= 2; CCMP can be removed.
+    ; CCMP+SETCC   %0 > 41; CCMP can be removed.
     CCMP64ri32 %0, 41, 2, 5, implicit-def $eflags, implicit $eflags
     ; %0 >s 41  -->  %0 >=s 42
     $bl = SETCCr 15, implicit $eflags
