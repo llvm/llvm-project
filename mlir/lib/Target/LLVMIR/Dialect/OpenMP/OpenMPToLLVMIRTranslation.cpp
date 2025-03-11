@@ -3793,9 +3793,12 @@ mapParentWithMembers(LLVM::ModuleTranslation &moduleTranslation,
     // further case specific flag modifications). For the moment, it handles
     // what we support as expected.
     llvm::omp::OpenMPOffloadMappingFlags mapFlag = mapData.Types[mapDataIndex];
+    bool hasMapClose = (llvm::omp::OpenMPOffloadMappingFlags(mapFlag) &
+                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE) ==
+                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
     ompBuilder.setCorrectMemberOfFlag(mapFlag, memberOfFlag);
 
-    if (targetDirective == TargetDirective::TargetUpdate) {
+    if (targetDirective == TargetDirective::TargetUpdate || hasMapClose) {
       combinedInfo.Types.emplace_back(mapFlag);
       combinedInfo.DevicePointers.emplace_back(
           mapData.DevicePointers[mapDataIndex]);
