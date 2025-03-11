@@ -820,6 +820,7 @@ public:
       : OSTargetInfo<Target>(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedShort;
+    this->UseMicrosoftManglingForC = true;
   }
 };
 
@@ -840,6 +841,7 @@ public:
       : OSTargetInfo<Target>(Triple, Opts) {
     this->WCharType = TargetInfo::UnsignedShort;
     this->WIntType = TargetInfo::UnsignedShort;
+    this->UseMicrosoftManglingForC = true;
   }
 };
 
