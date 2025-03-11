@@ -1858,6 +1858,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
       if (CondConstant)
         incrementProfileCounter(&S);
       if (Executed) {
+        MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
         RunCleanupsScope ExecutedScope(*this);
         EmitStmt(Executed);
       }
@@ -1897,10 +1898,13 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   // there is a 'return' within the body, but this is particularly beneficial
   // when one if-stmt is nested within another if-stmt so that all of the MC/DC
   // updates are kept linear and consistent.
-  if (!CGM.getCodeGenOpts().MCDCCoverage)
-    EmitBranchOnBoolExpr(S.getCond(), ThenBlock, ElseBlock, ThenCount, LH);
-  else {
+  if (!CGM.getCodeGenOpts().MCDCCoverage) {
+    EmitBranchOnBoolExpr(S.getCond(), ThenBlock, ElseBlock, ThenCount, LH,
+                         /*ConditionalOp=*/nullptr,
+                         /*ConditionalDecl=*/S.getConditionVariable());
+  } else {
     llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+    MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
     Builder.CreateCondBr(BoolCondVal, ThenBlock, ElseBlock);
   }
 
@@ -2043,6 +2047,8 @@ void CodeGenFunction::EmitWhileStmt(const WhileStmt &S,
   // evaluation of the controlling expression takes place before each
   // execution of the loop body.
   llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
+
+  MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
 
   // while(1) is common, avoid extra exit blocks.  Be sure
   // to correctly handle break/continue though.
@@ -2402,6 +2408,9 @@ void CodeGenFunction::EmitForStmtWithArgs(const ForStmt &S,
       // C99 6.8.5p2/p4: The first substatement is executed if the expression
       // compares unequal to 0.  The condition must be a scalar type.
       llvm::Value *BoolCondVal = EvaluateExprAsBool(CondExpr);
+
+      MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
+
       llvm::MDNode *Weights =
           createProfileWeightsForLoop(CondExpr, getProfileCount(S.getBody()));
       if (!Weights && CGM.getCodeGenOpts().OptimizationLevel)
@@ -2810,7 +2819,7 @@ void CodeGenFunction::EmitDeclStmt(const DeclStmt &S) {
     EmitStopPoint(&S);
 
   for (const auto *I : S.decls())
-    EmitDecl(*I);
+    EmitDecl(*I, /*EvaluateConditionDecl=*/true);
 }
 
 void CodeGenFunction::EmitBreakStmt(const BreakStmt &S) {
@@ -3375,7 +3384,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
       // Emit the condition variable if needed inside the entire cleanup scope
       // used by this special case for constant folded switches.
       if (S.getConditionVariable())
-        EmitDecl(*S.getConditionVariable());
+        EmitDecl(*S.getConditionVariable(), /*EvaluateConditionDecl=*/true);
 
       // At this point, we are no longer "within" a switch instance, so
       // we can temporarily enforce this to ensure that any embedded case
@@ -3407,6 +3416,7 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   if (S.getConditionVariable())
     EmitDecl(*S.getConditionVariable());
   llvm::Value *CondV = EmitScalarExpr(S.getCond());
+  MaybeEmitDeferredVarDeclInit(S.getConditionVariable());
 
   // Create basic block to hold stuff that comes after switch
   // statement. We also need to create a default block now so that

@@ -286,6 +286,7 @@ using To = tomp::clause::ToT<TypeTy, IdTy, ExprTy>;
 using UnifiedAddress = tomp::clause::UnifiedAddressT<TypeTy, IdTy, ExprTy>;
 using UnifiedSharedMemory =
     tomp::clause::UnifiedSharedMemoryT<TypeTy, IdTy, ExprTy>;
+using SelfMaps = tomp::clause::SelfMapsT<TypeTy, IdTy, ExprTy>;
 using Uniform = tomp::clause::UniformT<TypeTy, IdTy, ExprTy>;
 using Unknown = tomp::clause::UnknownT<TypeTy, IdTy, ExprTy>;
 using Untied = tomp::clause::UntiedT<TypeTy, IdTy, ExprTy>;
