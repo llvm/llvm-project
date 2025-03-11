@@ -205,13 +205,6 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
   case Type::ConstantArray: {
     const ConstantArrayType *arrTy = cast<ConstantArrayType>(ty);
     mlir::Type elemTy = convertTypeForMem(arrTy->getElementType());
-
-    if (!builder.isSized(elemTy)) {
-      cgm.errorNYI(SourceLocation(), "unimplemented size for type", type);
-      resultType = cir::ArrayType::get(builder.getContext(), cgm.SInt32Ty, 0);
-      break;
-    }
-
     resultType = cir::ArrayType::get(builder.getContext(), elemTy,
                                      arrTy->getSize().getZExtValue());
     break;

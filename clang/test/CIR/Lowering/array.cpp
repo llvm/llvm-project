@@ -3,14 +3,14 @@
 int a[10];
 // CHECK: @a = external dso_local global [10 x i32]
 
-int aa[10][10];
-// CHECK: @aa = external dso_local global [10 x [10 x i32]]
+int aa[10][5];
+// CHECK: @aa = external dso_local global [10 x [5 x i32]]
 
 extern int b[10];
 // CHECK: @b = external dso_local global [10 x i32]
 
-extern int bb[10][10];
-// CHECK: @bb = external dso_local global [10 x [10 x i32]]
+extern int bb[10][5];
+// CHECK: @bb = external dso_local global [10 x [5 x i32]]
 
 void f() {
   int l[10];
@@ -20,5 +20,5 @@ void f() {
 void f2(int p[10]) {}
 // CHECK: alloca ptr, i64 1, align 8
 
-void f3(int pp[10][10]) {}
+void f3(int pp[10][5]) {}
 // CHECK: alloca ptr, i64 1, align 8

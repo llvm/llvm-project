@@ -35,8 +35,12 @@ public:
   }
 
   bool isSized(mlir::Type ty) {
-    return mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType,
-                     cir::IntType>(ty);
+    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType,
+                  cir::IntType>(ty))
+      return true;
+
+    assert(0 && "Unimplemented size for type");
+    return false;
   }
 };
 
