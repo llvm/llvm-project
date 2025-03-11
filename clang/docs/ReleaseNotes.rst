@@ -111,9 +111,9 @@ C Language Changes
 
 C2y Feature Support
 ^^^^^^^^^^^^^^^^^^^
-- Implemented N3411 which allows a source file to not end with a newline
-  character. This is still reported as a conforming extension in earlier
-  language modes.
+- Implemented `WG14 N3411 <https://www.open-std.org/jtc1/sc22/wg14/www/docs/n3411.pdf>`_
+  which allows a source file to not end with a newline character. This is still
+  reported as a conforming extension in earlier language modes.
 
 C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
