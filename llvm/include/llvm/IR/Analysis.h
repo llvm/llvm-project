@@ -127,10 +127,9 @@ public:
     return PA;
   }
 
-  /// Mark an analysis as preserved.
-  template <typename AnalysisT> PreservedAnalyses &preserve() {
-    preserve(AnalysisT::ID());
-    return *this;
+  /// Mark analyses as preserved.
+  template <typename... AnalysisTs> PreservedAnalyses &preserve() {
+    return preserve(AnalysisTs::ID()...);
   }
 
   /// Given an analysis's ID, mark the analysis as preserved, adding it
@@ -146,10 +145,15 @@ public:
     return *this;
   }
 
-  /// Mark an analysis set as preserved.
-  template <typename AnalysisSetT> PreservedAnalyses &preserveSet() {
-    preserveSet(AnalysisSetT::ID());
-    return *this;
+  /// Mark analyses as preserved using IDs.
+  template <typename... AnalysisKeyPtrs>
+  PreservedAnalyses &preserve(AnalysisKeyPtrs... IDs) {
+    return (preserve(IDs), ..., *this);
+  }
+
+  /// Mark analysis sets as preserved.
+  template <typename... AnalysisSetTs> PreservedAnalyses &preserveSet() {
+    return preserveSet(AnalysisSetTs::ID()...);
   }
 
   /// Mark an analysis set as preserved using its ID.
@@ -160,16 +164,21 @@ public:
     return *this;
   }
 
-  /// Mark an analysis as abandoned.
+  /// Mark analysis sets as preserved using IDs.
+  template <typename... AnalysisSetKeyPtrs>
+  PreservedAnalyses &preserveSet(AnalysisSetKeyPtrs... IDs) {
+    return (preserveSet(IDs), ..., *this);
+  }
+
+  /// Mark an analyses as abandoned.
   ///
   /// An abandoned analysis is not preserved, even if it is nominally covered
   /// by some other set or was previously explicitly marked as preserved.
   ///
   /// Note that you can only abandon a specific analysis, not a *set* of
   /// analyses.
-  template <typename AnalysisT> PreservedAnalyses &abandon() {
-    abandon(AnalysisT::ID());
-    return *this;
+  template <typename... AnalysisTs> PreservedAnalyses &abandon() {
+    return abandon(AnalysisTs::ID()...);
   }
 
   /// Mark an analysis as abandoned using its ID.
@@ -183,6 +192,12 @@ public:
     PreservedIDs.erase(ID);
     NotPreservedAnalysisIDs.insert(ID);
     return *this;
+  }
+
+  /// Mark analyses as abandoned using IDs.
+  template <typename... AnalysisKeyPtrs>
+  PreservedAnalyses &abandon(AnalysisKeyPtrs... IDs) {
+    return (abandon(IDs), ..., *this);
   }
 
   /// Intersect this set with another in place.
