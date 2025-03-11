@@ -72,7 +72,7 @@ func.func @negative_vnni_packed(%lhs: vector<8x8x2xf16>, %rhs: vector<8x16x2xf16
 #map = affine_map<(d0, d1, d2) -> (d0, d2)>
 #map1 = affine_map<(d0, d1, d2) -> (d2, d1)>
 #map2 = affine_map<(d0, d1, d2) -> (d0, d1)>
-func.func @negative_combining_type(%lhs: vector<8x16xf16>, %rhs: vector<16x16xf16>,
+func.func @negative_combining_kind(%lhs: vector<8x16xf16>, %rhs: vector<16x16xf16>,
     %acc: vector<8x16xf32>) -> vector<8x16xf32> {
   %3 = vector.contract
     {indexing_maps = [#map, #map1, #map2],
@@ -82,7 +82,7 @@ func.func @negative_combining_type(%lhs: vector<8x16xf16>, %rhs: vector<16x16xf1
   return %3 : vector<8x16xf32>
 }
 
-// CHECK-LABEL: @negative_combining_type(
+// CHECK-LABEL: @negative_combining_kind(
 // CHECK:       vector.contract
 
 // -----
