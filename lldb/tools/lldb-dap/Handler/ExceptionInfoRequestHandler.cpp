@@ -123,7 +123,8 @@ void ExceptionInfoRequestHandler::operator()(
     if (stopReason == lldb::eStopReasonSignal)
       body.try_emplace("exceptionId", "signal");
     else if (stopReason == lldb::eStopReasonBreakpoint) {
-      ExceptionBreakpoint *exc_bp = dap.GetExceptionBPFromStopReason(thread);
+      ExceptionBreakpoint *exc_bp =
+          dap.GetBreakpointFromStopReason<ExceptionBreakpoint>(thread);
       if (exc_bp) {
         EmplaceSafeString(body, "exceptionId", exc_bp->filter);
         EmplaceSafeString(body, "description", exc_bp->label);

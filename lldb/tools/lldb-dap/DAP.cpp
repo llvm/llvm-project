@@ -183,17 +183,6 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const std::string &filter) {
   return nullptr;
 }
 
-ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
-  // See comment in the other GetExceptionBreakpoint().
-  PopulateExceptionBreakpoints();
-
-  for (auto &bp : *exception_breakpoints) {
-    if (bp.bp.GetID() == bp_id)
-      return &bp;
-  }
-  return nullptr;
-}
-
 llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
   in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
 
@@ -442,27 +431,6 @@ DAP::SendFormattedOutput(OutputType o, const char *format, ...) {
   va_end(args);
   SendOutput(
       o, llvm::StringRef(buffer, std::min<int>(actual_length, sizeof(buffer))));
-}
-
-ExceptionBreakpoint *DAP::GetExceptionBPFromStopReason(lldb::SBThread &thread) {
-  const auto num = thread.GetStopReasonDataCount();
-  // Check to see if have hit an exception breakpoint and change the
-  // reason to "exception", but only do so if all breakpoints that were
-  // hit are exception breakpoints.
-  ExceptionBreakpoint *exc_bp = nullptr;
-  for (size_t i = 0; i < num; i += 2) {
-    // thread.GetStopReasonDataAtIndex(i) will return the bp ID and
-    // thread.GetStopReasonDataAtIndex(i+1) will return the location
-    // within that breakpoint. We only care about the bp ID so we can
-    // see if this is an exception breakpoint that is getting hit.
-    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
-    exc_bp = GetExceptionBreakpoint(bp_id);
-    // If any breakpoint is not an exception breakpoint, then stop and
-    // report this as a normal breakpoint
-    if (exc_bp == nullptr)
-      return nullptr;
-  }
-  return exc_bp;
 }
 
 lldb::SBThread DAP::GetLLDBThread(const llvm::json::Object &arguments) {
@@ -1072,32 +1040,6 @@ DAP::GetInstructionBPFromStopReason(lldb::SBThread &thread) {
       return nullptr;
   }
   return inst_bp;
-}
-
-FunctionBreakpoint *DAP::GetFunctionBPFromStopReason(lldb::SBThread &thread) {
-  const auto num = thread.GetStopReasonDataCount();
-  FunctionBreakpoint *func_bp = nullptr;
-  for (size_t i = 0; i < num; i += 2) {
-    // thread.GetStopReasonDataAtIndex(i) will return the bp ID and
-    // thread.GetStopReasonDataAtIndex(i+1) will return the location
-    // within that breakpoint. We only care about the bp ID so we can
-    // see if this is an function breakpoint that is getting hit.
-    lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
-    func_bp = GetFunctionBreakPoint(bp_id);
-    // If any breakpoint is not an function breakpoint, then stop and
-    // report this as a normal breakpoint
-    if (func_bp == nullptr)
-      return nullptr;
-  }
-  return func_bp;
-}
-
-FunctionBreakpoint *DAP::GetFunctionBreakPoint(const lldb::break_id_t bp_id) {
-  for (auto &bp : function_breakpoints) {
-    if (bp.second.bp.GetID() == bp_id)
-      return &bp.second;
-  }
-  return nullptr;
 }
 
 lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {

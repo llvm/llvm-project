@@ -171,3 +171,35 @@ class TestDAP_setDataBreakpoints(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_next_stop()
         x_val = self.dap_server.get_local_variable_value("x")
         self.assertEqual(x_val, "10")
+
+    @skipIfWindows
+    def test_breakpoint_reason(self):
+        """Tests setting data breakpoints on variable. Verify that the breakpoint has the correct reason and description in the stopped event."""
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+        first_loop_break_line = line_number(source, "// first loop breakpoint")
+        self.set_source_breakpoints(source, [first_loop_break_line])
+        self.continue_to_next_stop()
+        self.dap_server.get_local_variables()
+         # Test write watchpoints on x, arr[2]
+        response_x = self.dap_server.request_dataBreakpointInfo(1, "x")
+                # Test response from dataBreakpointInfo request.
+        self.assertEqual(response_x["body"]["dataId"].split("/")[1], "4")
+        self.assertEqual(response_x["body"]["accessTypes"], self.accessTypes)
+        dataBreakpoints = [
+            {"dataId": response_x["body"]["dataId"], "accessType": "write"},
+        ]
+        set_response = self.dap_server.request_setDataBreakpoint(dataBreakpoints)
+        self.assertEqual(
+            set_response["body"]["breakpoints"],
+            [{"verified": True}],
+        )
+
+        stopped_events = self.continue_to_next_stop()
+        self.assertEqual(len(stopped_events), 1)
+        stopped_event = stopped_events[0]
+        self.assertEqual(stopped_event["body"]["reason"], "data breakpoint")
+        self.assertEqual(stopped_event["body"]["description"], "data breakpoint 1.1")
+        x_val = self.dap_server.get_local_variable_value("x")
+        self.assertEqual(x_val, "2")

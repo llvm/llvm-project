@@ -392,6 +392,66 @@ struct DAP {
 
   void SetThreadFormat(llvm::StringRef format);
 
+  template <typename BreakpointType>
+  BreakpointType *GetBreakpointFromStopReason(lldb::SBThread &thread) {
+    // Check to see if have hit the <BreakpointType> breakpoint and change the
+    // reason accordingly, but only do so if all breakpoints that were
+    // hit are of <BreakpointType>.
+    const auto num = thread.GetStopReasonDataCount();
+    BreakpointType *bp = nullptr;
+    for (size_t i = 0; i < num; i += 2) {
+      lldb::break_id_t bp_id = thread.GetStopReasonDataAtIndex(i);
+      // If any breakpoint is not the <BreakpointType>, then stop and
+      // report this as a normal breakpoint
+      bp = GetBreakpoint<BreakpointType>(bp_id);
+      if (bp == nullptr)
+        return nullptr;
+    }
+    return bp;
+  }
+
+  template <typename BreakpointType>
+  BreakpointType *GetBreakpoint(const lldb::break_id_t bp_id);
+
+  template <>
+  FunctionBreakpoint *
+  GetBreakpoint<FunctionBreakpoint>(const lldb::break_id_t bp_id) {
+    for (auto &bp : function_breakpoints) {
+      if (bp.second.bp.GetID() == bp_id)
+        return &bp.second;
+    }
+    return nullptr;
+  }
+
+  template <>
+  InstructionBreakpoint *
+  GetBreakpoint<InstructionBreakpoint>(const lldb::break_id_t bp_id) {
+    for (auto &bp : instruction_breakpoints) {
+      if (bp.second.bp.GetID() == bp_id)
+        return &bp.second;
+    }
+    return nullptr;
+  }
+
+  template <>
+  ExceptionBreakpoint *
+  GetBreakpoint<ExceptionBreakpoint>(const lldb::break_id_t bp_id) {
+    // See comment in the other GetExceptionBreakpoint().
+    PopulateExceptionBreakpoints();
+
+    for (auto &bp : *exception_breakpoints) {
+      if (bp.bp.GetID() == bp_id)
+        return &bp;
+    }
+    return nullptr;
+  }
+
+  FunctionBreakpoint *GetFunctionBPFromStopReason(lldb::SBThread &thread);
+
+  FunctionBreakpoint *GetFunctionBreakPoint(const lldb::break_id_t bp_id);
+
+  void WaitWorkerThreadsToExit();
+
 private:
   // Send the JSON in "json_str" to the "out" stream. Correctly send the
   // "Content-Length:" field followed by the length, followed by the raw
