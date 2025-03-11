@@ -32,7 +32,7 @@ end program main
 ! CHECK: omp.parallel {
 
 
-! Verify that we restort to using the outside value for the upper bound since it
+! Verify that we resort to using the outside value for the upper bound since it
 ! is not originally a constant.
 
 ! CHECK:   omp.wsloop {

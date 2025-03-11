@@ -28,7 +28,7 @@ namespace looputils {
 /// Stores info needed about the induction/iteration variable for each `do
 /// concurrent` in a loop nest.
 struct InductionVariableInfo {
-  /// the operation allocating memory for iteration variable,
+  /// The operation allocating memory for iteration variable.
   mlir::Operation *iterVarMemDef;
 };
 
@@ -57,13 +57,30 @@ using LoopNestToIndVarMap =
 /// proves to be insufficient, this should be made more generic.
 mlir::Operation *findLoopIterationVarMemDecl(fir::DoLoopOp doLoop) {
   mlir::Value result = nullptr;
-  for (mlir::Operation &op : doLoop) {
-    // The first `fir.store` op we come across should be the op that updates the
-    // loop's iteration variable.
-    if (auto storeOp = mlir::dyn_cast<fir::StoreOp>(op)) {
-      result = storeOp.getMemref();
-      break;
+
+  // Checks if a StoreOp is updating the memref of the loop's iteration
+  // variable.
+  auto isStoringIV = [&](fir::StoreOp storeOp) {
+    // Direct store into the IV memref.
+    if (storeOp.getValue() == doLoop.getInductionVar())
+      return true;
+
+    // Indirect store into the IV memref.
+    if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(
+            storeOp.getValue().getDefiningOp())) {
+      if (convertOp.getOperand() == doLoop.getInductionVar())
+        return true;
     }
+
+    return false;
+  };
+
+  for (mlir::Operation &op : doLoop) {
+    if (auto storeOp = mlir::dyn_cast<fir::StoreOp>(op))
+      if (isStoringIV(storeOp)) {
+        result = storeOp.getMemref();
+        break;
+      }
   }
 
   assert(result != nullptr && result.getDefiningOp() != nullptr);
@@ -291,8 +308,8 @@ private:
     assert(loopNestClauseOps.loopLowerBounds.empty() &&
            "Loop nest bounds were already emitted!");
 
-    auto populateBounds = [&](mlir::Value var,
-                              llvm::SmallVectorImpl<mlir::Value> &bounds) {
+    auto populateBounds = [](mlir::Value var,
+                             llvm::SmallVectorImpl<mlir::Value> &bounds) {
       bounds.push_back(var.getDefiningOp()->getResult(0));
     };
 
