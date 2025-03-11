@@ -552,6 +552,11 @@ public:
   /// binary and functions created by BOLT.
   std::vector<BinaryFunction *> getAllBinaryFunctions();
 
+  void undefineInstLabel(const MCInst &Inst) {
+    if (MCSymbol *const Label = MIB->getInstLabel(Inst))
+      UndefinedSymbols.insert(Label);
+  }
+
   /// Construct a jump table for \p Function at \p Address or return an existing
   /// one at that location.
   ///

@@ -1201,6 +1201,21 @@ public:
   /// Return true if all callbacks returned true, false otherwise.
   bool forEachEntryPoint(EntryPointCallbackTy Callback) const;
 
+  void undefineLabels() {
+    for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
+      BC.UndefinedSymbols.insert(LI.second);
+
+    for (MCSymbol *const EndLabel : FunctionEndLabels)
+      if (EndLabel)
+        BC.UndefinedSymbols.insert(EndLabel);
+
+    for (const std::pair<const uint32_t, MCInst> &II : Instructions)
+      BC.undefineInstLabel(II.second);
+
+    for (BinaryBasicBlock *BB : BasicBlocks)
+      BB->undefineLabels();
+  }
+
   /// Return MC symbol associated with the end of the function.
   MCSymbol *
   getFunctionEndLabel(const FragmentNum Fragment = FragmentNum::main()) const {

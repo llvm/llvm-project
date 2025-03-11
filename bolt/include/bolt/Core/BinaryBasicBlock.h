@@ -690,10 +690,16 @@ public:
 
   void setCanOutline(const bool Flag) { CanOutline = Flag; }
 
+  void undefineLabels() {
+    for (const MCInst &Inst : Instructions)
+      undefineInstLabel(Inst);
+  }
+
   /// Erase pseudo instruction at a given iterator.
   /// Return iterator following the removed instruction.
   iterator erasePseudoInstruction(iterator II) {
     --NumPseudos;
+    undefineInstLabel(*II);
     return Instructions.erase(II);
   }
 
@@ -701,6 +707,7 @@ public:
   /// Return iterator following the removed instruction.
   iterator eraseInstruction(iterator II) {
     adjustNumPseudos(*II, -1);
+    undefineInstLabel(*II);
     return Instructions.erase(II);
   }
 
@@ -718,6 +725,7 @@ public:
 
   /// Erase all instructions.
   void clear() {
+    undefineLabels();
     Instructions.clear();
     NumPseudos = 0;
   }
@@ -742,6 +750,7 @@ public:
     adjustNumPseudos(Begin, End, 1);
 
     auto I = II - Instructions.begin();
+    undefineInstLabel(*II);
     Instructions.insert(Instructions.erase(II), Begin, End);
     return I + Instructions.begin();
   }
@@ -917,6 +926,8 @@ public:
   uint64_t getHash() const { return Hash; }
 
 private:
+  void undefineInstLabel(const llvm::MCInst &Inst);
+
   void adjustNumPseudos(const MCInst &Inst, int Sign);
 
   template <typename Itr> void adjustNumPseudos(Itr Begin, Itr End, int Sign) {
