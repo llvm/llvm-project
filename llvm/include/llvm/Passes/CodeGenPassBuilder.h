@@ -81,6 +81,7 @@
 #include "llvm/CodeGen/ShadowStackGCLowering.h"
 #include "llvm/CodeGen/SjLjEHPrepare.h"
 #include "llvm/CodeGen/StackColoring.h"
+#include "llvm/CodeGen/StackFrameLayoutAnalysisPass.h"
 #include "llvm/CodeGen/StackProtector.h"
 #include "llvm/CodeGen/StackSlotColoring.h"
 #include "llvm/CodeGen/TailDuplication.h"
@@ -1016,6 +1017,8 @@ Error CodeGenPassBuilder<Derived, TargetMachineT>::addMachinePasses(
     if (AddOutliner)
       addPass(MachineOutlinerPass(RunOnAllFunctions));
   }
+
+  addPass(StackFrameLayoutAnalysisPass());
 
   // Add passes that directly emit MI after all other MI passes.
   derived().addPreEmitPass2(addPass);
