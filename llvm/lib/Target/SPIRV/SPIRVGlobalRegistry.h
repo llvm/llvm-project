@@ -27,7 +27,7 @@ namespace llvm {
 class SPIRVSubtarget;
 using SPIRVType = const MachineInstr;
 
-class SPIRVGlobalRegistry {
+class SPIRVGlobalRegistry : public SPIRVIRMap {
   // Registers holding values which have types associated with them.
   // Initialized upon VReg definition in IRTranslator.
   // Do not confuse this with DuplicatesTracker as DT maps Type* to <MF, Reg>
@@ -36,9 +36,6 @@ class SPIRVGlobalRegistry {
   // type-declaring ones).
   DenseMap<const MachineFunction *, DenseMap<Register, SPIRVType *>>
       VRegToTypeMap;
-
-  // Map LLVM Type* to <MF, Reg>
-  SPIRVGeneralDuplicatesTracker DT;
 
   DenseMap<SPIRVType *, const Type *> SPIRVToLLVMType;
 
@@ -118,42 +115,6 @@ public:
   SPIRVGlobalRegistry(unsigned PointerSize);
 
   MachineFunction *CurMF;
-
-  void add(const Constant *C, MachineFunction *MF, Register R) {
-    DT.add(C, MF, R);
-  }
-
-  void add(const GlobalVariable *GV, MachineFunction *MF, Register R) {
-    DT.add(GV, MF, R);
-  }
-
-  void add(const Function *F, MachineFunction *MF, Register R) {
-    DT.add(F, MF, R);
-  }
-
-  void add(const Argument *Arg, MachineFunction *MF, Register R) {
-    DT.add(Arg, MF, R);
-  }
-
-  void add(const MachineInstr *MI, MachineFunction *MF, Register R) {
-    DT.add(MI, MF, R);
-  }
-
-  Register find(const MachineInstr *MI, MachineFunction *MF) {
-    return DT.find(MI, MF);
-  }
-
-  Register find(const Constant *C, MachineFunction *MF) {
-    return DT.find(C, MF);
-  }
-
-  Register find(const GlobalVariable *GV, MachineFunction *MF) {
-    return DT.find(GV, MF);
-  }
-
-  Register find(const Function *F, MachineFunction *MF) {
-    return DT.find(F, MF);
-  }
 
   void setBound(unsigned V) { Bound = V; }
   unsigned getBound() { return Bound; }
