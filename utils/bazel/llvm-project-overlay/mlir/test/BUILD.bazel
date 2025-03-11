@@ -606,7 +606,7 @@ cc_library(
 
 td_library(
     name = "TestTransformOpsTdFiles",
-    srcs = glob(["mlir/test/lib/Transforms/*.td"]),
+    srcs = glob(["lib/Transforms/*.td"]),
     deps = [
         ":TransformDialectTdFiles",
         "//mlir:OpBaseTdFiles",
@@ -622,12 +622,16 @@ gentbl_cc_library(
     strip_include_prefix = "lib",
     tbl_outs = [
         (
-            ["-x=cpp"],
+            ["-gen-op-decls"],
             "lib/TestTransformsOps.h.inc",
         ),
+        (
+            ["-gen-op-defs"],
+            "lib/TestTransformsOps.cpp.inc",
+        ),
     ],
-    tblgen = "//mlir:mlir-pdll",
-    td_file = "lib/Transforms/TestTransformsOps.pdll",
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "lib/Transforms/TestTransformsOps.td",
     deps = [
         ":TestTransformOpsTdFiles",
     ],
@@ -661,7 +665,7 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:TransformDialect",
-        "//mlir::TransformDialectInterfaces",
+        "//mlir:TransformDialectInterfaces",
     ],
 )
 

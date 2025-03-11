@@ -23,11 +23,7 @@ constexpr vector<uint, 4> d3d_color_to_ubyte4_impl(vector<float, 4> V) {
   return V.zyxw * 255.001953f;
 }
 
-template <typename T>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-length_impl(T X) {
-  return abs(X);
-}
+template <typename T> constexpr T length_impl(T X) { return abs(X); }
 
 template <typename T, int N>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
@@ -39,9 +35,7 @@ length_vec_impl(vector<T, N> X) {
 #endif
 }
 
-template <typename T>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-distance_impl(T X, T Y) {
+template <typename T> constexpr T distance_impl(T X, T Y) {
   return length_impl(X - Y);
 }
 
@@ -51,9 +45,7 @@ distance_vec_impl(vector<T, N> X, vector<T, N> Y) {
   return length_vec_impl(X - Y);
 }
 
-template <typename T>
-constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
-reflect_impl(T I, T N) {
+template <typename T> constexpr T reflect_impl(T I, T N) {
   return I - 2 * N * I * N;
 }
 

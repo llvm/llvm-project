@@ -41368,6 +41368,22 @@ static SmallVector<int, 4> getPSHUFShuffleMask(SDValue N) {
   }
 }
 
+/// Get the expanded blend mask from a BLENDI node.
+/// For v16i16 nodes, this will splat the repeated i8 mask.
+static APInt getBLENDIBlendMask(SDValue V) {
+  assert(V.getOpcode() == X86ISD::BLENDI && "Unknown blend shuffle");
+  unsigned NumElts = V.getSimpleValueType().getVectorNumElements();
+  APInt Mask = V.getConstantOperandAPInt(2);
+  if (Mask.getBitWidth() > NumElts)
+    Mask = Mask.trunc(NumElts);
+  if (NumElts == 16) {
+    assert(Mask.getBitWidth() == 8 && "Unexpected v16i16 blend mask width");
+    Mask = APInt::getSplat(16, Mask);
+  }
+  assert(Mask.getBitWidth() == NumElts && "Unexpected blend mask width");
+  return Mask;
+}
+
 /// Search for a combinable shuffle across a chain ending in pshufd.
 ///
 /// We walk up the chain and look for a combinable shuffle, skipping over
@@ -42266,7 +42282,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
         unsigned SrcBits = SrcVT.getScalarSizeInBits();
         if ((EltBits % SrcBits) == 0 && SrcBits >= 32) {
           unsigned NewSize = SrcVT.getVectorNumElements();
-          APInt BlendMask = N.getConstantOperandAPInt(2).zextOrTrunc(NumElts);
+          APInt BlendMask = getBLENDIBlendMask(N);
           APInt NewBlendMask = APIntOps::ScaleBitMask(BlendMask, NewSize);
           return DAG.getBitcast(
               VT, DAG.getNode(X86ISD::BLENDI, DL, SrcVT, N0.getOperand(0),
@@ -58336,14 +58352,17 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::PCMPEQ:
     case X86ISD::PCMPGT:
-      if (!IsSplat && VT.is256BitVector() &&
-          (Subtarget.hasInt256() || VT == MVT::v8i32) &&
-          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1))) {
-        if (Subtarget.hasInt256())
+      if (!IsSplat && VT.is256BitVector() && Subtarget.hasInt256()) {
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1)
           return DAG.getNode(Op0.getOpcode(), DL, VT,
-                             ConcatSubOperand(VT, Ops, 0),
-                             ConcatSubOperand(VT, Ops, 1));
+                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
+        break;
+      }
 
+      if (!IsSplat && VT == MVT::v8i32) {
         // Without AVX2, see if we can cast the values to v8f32 and use fcmp.
         // TODO: Handle v4f64 as well?
         unsigned MaxSigBitsLHS = 0, MaxSigBitsRHS = 0;
@@ -58368,8 +58387,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
         if (std::optional<unsigned> CastOpc =
                 CastIntSETCCtoFP(FpVT, ICC, MaxSigBitsLHS, MaxSigBitsRHS)) {
-          SDValue LHS = ConcatSubOperand(VT, Ops, 0);
-          SDValue RHS = ConcatSubOperand(VT, Ops, 1);
+          SDValue LHS = CombineSubOperand(VT, Ops, 0);
+          SDValue RHS = CombineSubOperand(VT, Ops, 1);
+          LHS = LHS ? LHS : ConcatSubOperand(VT, Ops, 0);
+          RHS = RHS ? RHS : ConcatSubOperand(VT, Ops, 1);
           LHS = DAG.getNode(*CastOpc, DL, FpVT, LHS);
           RHS = DAG.getNode(*CastOpc, DL, FpVT, RHS);
 
@@ -58465,9 +58486,13 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         MVT SrcVT = Op0.getOperand(0).getSimpleValueType();
         SrcVT = MVT::getVectorVT(SrcVT.getScalarType(),
                                  NumOps * SrcVT.getVectorNumElements());
-        return DAG.getNode(Op0.getOpcode(), DL, VT,
-                           ConcatSubOperand(SrcVT, Ops, 0),
-                           ConcatSubOperand(SrcVT, Ops, 1));
+        SDValue Concat0 = CombineSubOperand(SrcVT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(SrcVT, Ops, 1);
+        if (Concat0 || Concat1)
+          return DAG.getNode(
+              Op0.getOpcode(), DL, VT,
+              Concat0 ? Concat0 : ConcatSubOperand(SrcVT, Ops, 0),
+              Concat1 ? Concat1 : ConcatSubOperand(SrcVT, Ops, 1));
       }
       break;
     case X86ISD::PALIGNR:
@@ -58488,16 +58513,11 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::BLENDI:
       if (NumOps == 2 && VT.is512BitVector() && Subtarget.useBWIRegs()) {
-        uint64_t Mask0 = Ops[0].getConstantOperandVal(2);
-        uint64_t Mask1 = Ops[1].getConstantOperandVal(2);
-        // MVT::v16i16 has repeated blend mask.
-        if (Op0.getSimpleValueType() == MVT::v16i16) {
-          Mask0 = (Mask0 << 8) | Mask0;
-          Mask1 = (Mask1 << 8) | Mask1;
-        }
-        uint64_t Mask = (Mask1 << (VT.getVectorNumElements() / 2)) | Mask0;
-        MVT MaskSVT = MVT::getIntegerVT(VT.getVectorNumElements());
-        MVT MaskVT = MVT::getVectorVT(MVT::i1, VT.getVectorNumElements());
+        unsigned NumElts = VT.getVectorNumElements();
+        APInt Mask = getBLENDIBlendMask(Ops[0]).zext(NumElts);
+        Mask.insertBits(getBLENDIBlendMask(Ops[1]), NumElts / 2);
+        MVT MaskSVT = MVT::getIntegerVT(NumElts);
+        MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
         SDValue Sel =
             DAG.getBitcast(MaskVT, DAG.getConstant(Mask, DL, MaskSVT));
         return DAG.getSelect(DL, VT, Sel, ConcatSubOperand(VT, Ops, 1),

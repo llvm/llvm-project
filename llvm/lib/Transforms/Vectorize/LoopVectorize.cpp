@@ -4393,10 +4393,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   sort(InvalidCosts, [&Numbering](RecipeVFPair &A, RecipeVFPair &B) {
     if (Numbering[A.first] != Numbering[B.first])
       return Numbering[A.first] < Numbering[B.first];
-    const auto &LHS = A.second;
-    const auto &RHS = B.second;
-    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
-           std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
+    return ElementCount::isKnownLT(A.second, B.second);
   });
 
   // For a list of ordered recipe-VF pairs:
