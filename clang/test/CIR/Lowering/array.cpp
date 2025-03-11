@@ -15,10 +15,13 @@ extern int bb[10][5];
 void f() {
   int l[10];
 }
-// CHECK: alloca [10 x i32], i64 1, align 16
+// CHECK: define void @f()
+// CHECK-NEXT: alloca [10 x i32], i64 1, align 16
 
 void f2(int p[10]) {}
-// CHECK: alloca ptr, i64 1, align 8
+// CHECK: define void @f2(ptr {{%.*}})
+// CHECK-NEXT: alloca ptr, i64 1, align 8
 
 void f3(int pp[10][5]) {}
-// CHECK: alloca ptr, i64 1, align 8
+// CHECK: define void @f3(ptr {{%.*}})
+// CHECK-NEXT: alloca ptr, i64 1, align 8
