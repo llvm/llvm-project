@@ -22,10 +22,14 @@ namespace llvm {
 enum PGOCtxProfileRecords { Invalid = 0, Version, Guid, CalleeIndex, Counters };
 
 enum PGOCtxProfileBlockIDs {
-  ProfileMetadataBlockID = bitc::FIRST_APPLICATION_BLOCKID,
+  FIRST_VALID = bitc::FIRST_APPLICATION_BLOCKID,
+  ProfileMetadataBlockID = FIRST_VALID,
   ContextsSectionBlockID = ProfileMetadataBlockID + 1,
   ContextRootBlockID = ContextsSectionBlockID + 1,
   ContextNodeBlockID = ContextRootBlockID + 1,
+  FlatProfilesSectionBlockID = ContextNodeBlockID + 1,
+  FlatProfileBlockID = FlatProfilesSectionBlockID + 1,
+  LAST_VALID = FlatProfileBlockID
 };
 
 /// Write one or more ContextNodes to the provided raw_fd_stream.
@@ -82,6 +86,11 @@ public:
   void startContextSection() override;
   void writeContextual(const ctx_profile::ContextNode &RootNode) override;
   void endContextSection() override;
+
+  void startFlatSection();
+  void writeFlatSection(ctx_profile::GUID Guid, const uint64_t *Buffer,
+                        size_t BufferSize);
+  void endFlatSection();
 
   // constants used in writing which a reader may find useful.
   static constexpr unsigned CodeLen = 2;
