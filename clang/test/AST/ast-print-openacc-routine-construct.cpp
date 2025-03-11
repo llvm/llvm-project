@@ -7,6 +7,11 @@ int function();
 // CHECK: #pragma acc routine(function) vector nohost
 #pragma acc routine (function) vector nohost
 
+// CHECK: #pragma acc routine(function) device_type(Something) seq
+#pragma acc routine(function) device_type(Something) seq
+// CHECK: #pragma acc routine(function) dtype(Something) seq
+#pragma acc routine(function) dtype(Something) seq
+
 namespace NS {
   int NSFunc();
 auto Lambda = [](){};
@@ -70,6 +75,11 @@ struct DepS {
 #pragma acc routine(DepS<T>::MemFunc) seq nohost
 // CHECK: #pragma acc routine(DepS<T>::StaticMemFunc) nohost worker
 #pragma acc routine(DepS<T>::StaticMemFunc) nohost worker
+
+// CHECK: #pragma acc routine(MemFunc) worker dtype(*)
+#pragma acc routine (MemFunc) worker dtype(*)
+// CHECK: #pragma acc routine(MemFunc) device_type(Lambda) vector
+#pragma acc routine (MemFunc) device_type(Lambda) vector
 };
 
 // CHECK: #pragma acc routine(DepS<int>::Lambda) gang
