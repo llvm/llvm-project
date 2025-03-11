@@ -3771,6 +3771,8 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
 
   // Emit a call to the runtime function that orchestrates the reduction.
   // Declare the reduction function in the process.
+  Type *IndexTy = Builder.getIndexTy(
+      M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   Function *Func = Builder.GetInsertBlock()->getParent();
   Module *Module = Func->getParent();
   uint32_t SrcLocStrSize;
@@ -3786,7 +3788,7 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   Constant *NumVariables = Builder.getInt32(NumReductions);
   const DataLayout &DL = Module->getDataLayout();
   unsigned RedArrayByteSize = DL.getTypeStoreSize(RedArrayTy);
-  Constant *RedArraySize = Builder.getInt64(RedArrayByteSize);
+  Constant *RedArraySize = ConstantInt::get(IndexTy, RedArrayByteSize);
   Function *ReductionFunc = getFreshReductionFunc(*Module);
   Value *Lock = getOMPCriticalRegionLock(".reduction");
   Function *ReduceFunc = getOrCreateRuntimeFunctionPtr(
