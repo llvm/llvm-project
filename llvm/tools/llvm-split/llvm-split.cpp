@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/IR/LLVMContext.h"
@@ -21,7 +19,6 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
@@ -30,8 +27,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
-#include "llvm/Transforms/Utils/SYCLSplitModule.h"
-#include "llvm/Transforms/Utils/SYCLUtils.h"
 #include "llvm/Transforms/Utils/SplitModule.h"
 
 using namespace llvm;
@@ -74,72 +69,6 @@ static cl::opt<std::string>
 static cl::opt<std::string>
     MCPU("mcpu", cl::desc("Target CPU, ignored if --mtriple is not used"),
          cl::value_desc("cpu"), cl::cat(SplitCategory));
-
-static cl::opt<IRSplitMode> SYCLSplitMode(
-    "sycl-split",
-    cl::desc("SYCL Split Mode. If present, SYCL splitting algorithm is used "
-             "with the specified mode."),
-    cl::Optional, cl::init(IRSplitMode::IRSM_NONE),
-    cl::values(clEnumValN(IRSplitMode::IRSM_PER_TU, "source",
-                          "1 ouptput module per translation unit"),
-               clEnumValN(IRSplitMode::IRSM_PER_KERNEL, "kernel",
-                          "1 output module per kernel")),
-    cl::cat(SplitCategory));
-
-static cl::opt<bool> OutputAssembly{
-    "S", cl::desc("Write output as LLVM assembly"), cl::cat(SplitCategory)};
-
-void writeStringToFile(StringRef Content, StringRef Path) {
-  std::error_code EC;
-  raw_fd_ostream OS(Path, EC);
-  if (EC) {
-    errs() << formatv("error opening file: {0}\n", Path);
-    exit(1);
-  }
-
-  OS << Content << "\n";
-}
-
-void writeSplitModulesAsTable(ArrayRef<ModuleAndSYCLMetadata> Modules,
-                              StringRef Path) {
-  SmallVector<SmallString<64>> Columns;
-  Columns.emplace_back("Code");
-  Columns.emplace_back("Symbols");
-
-  SYCLStringTable Table;
-  Table.emplace_back(std::move(Columns));
-  for (const auto &[I, SM] : enumerate(Modules)) {
-    SmallString<128> SymbolsFile;
-    (Twine(Path) + "_" + Twine(I) + ".sym").toVector(SymbolsFile);
-    writeStringToFile(SM.Symbols, SymbolsFile);
-    SmallVector<SmallString<64>> Row;
-    Row.emplace_back(SM.ModuleFilePath);
-    Row.emplace_back(SymbolsFile);
-    Table.emplace_back(std::move(Row));
-  }
-
-  std::error_code EC;
-  raw_fd_ostream OS((Path + ".table").str(), EC);
-  if (EC) {
-    errs() << formatv("error opening file: {0}\n", Path);
-    exit(1);
-  }
-
-  writeSYCLStringTable(Table, OS);
-}
-
-Error runSYCLSplitModule(std::unique_ptr<Module> M) {
-  ModuleSplitterSettings Settings;
-  Settings.Mode = SYCLSplitMode;
-  Settings.OutputAssembly = OutputAssembly;
-  Settings.OutputPrefix = OutputFilename;
-  auto ModulesOrErr = SYCLSplitModule(std::move(M), Settings);
-  if (!ModulesOrErr)
-    return ModulesOrErr.takeError();
-
-  writeSplitModulesAsTable(*ModulesOrErr, OutputFilename);
-  return Error::success();
-}
 
 int main(int argc, char **argv) {
   InitLLVM X(argc, argv);
@@ -193,17 +122,6 @@ int main(int argc, char **argv) {
     // Declare success.
     Out->keep();
   };
-
-  if (SYCLSplitMode != IRSplitMode::IRSM_NONE) {
-    auto E = runSYCLSplitModule(std::move(M));
-    if (E) {
-      errs() << E << "\n";
-      Err.print(argv[0], errs());
-      return 1;
-    }
-
-    return 0;
-  }
 
   if (TM) {
     if (PreserveLocals) {
