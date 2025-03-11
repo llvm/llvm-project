@@ -233,4 +233,6 @@ to a device that runs the target architecture natively:
 
 The generated toolchain is portable, but requires compatible versions of any
 shared libraries it links against. This means using a sysroot that is as
-similar to your target operating system as possible is desirable.
+similar to your target operating system as possible is desirable. Other `CMake
+variables <https://llvm.org/docs/CMake.html#frequently-used-cmake-variables>`_
+may be helpful, for instance ``LLVM_STATIC_LINK_CXX_STDLIB``.
