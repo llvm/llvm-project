@@ -88,7 +88,7 @@ public:
   /// \return id assigned to this line_entry.
   uint64_t InsertLineEntry(lldb::SBLineEntry line_entry);
 
-  /// clears all line entries and reset the generated ids.
+  /// Clears all line entries and reset the generated ids.
   void Clear();
 
 private:
