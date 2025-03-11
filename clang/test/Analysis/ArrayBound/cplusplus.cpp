@@ -1,5 +1,7 @@
 // RUN: %clang_analyze_cc1 -std=c++11 -Wno-array-bounds -analyzer-checker=unix,core,security.ArrayBound -verify %s
 
+// Test the interactions of `security.ArrayBound` with C++ features.
+
 // Tests doing an out-of-bounds access after the end of an array using:
 // - constant integer index
 // - constant integer size for buffer
@@ -150,15 +152,13 @@ void test_dynamic_size(int s) {
 }
 //Tests complex arithmetic
 //in new expression
-void test_dynamic_size2(unsigned m,unsigned n){
+void test_dynamic_size2(unsigned m, unsigned n){
   unsigned *U = nullptr;
   U = new unsigned[m + n + 1];
 }
 
 //Test creating invalid references, which break the invariant that a reference
 //is always holding a value, and could lead to nasty runtime errors.
-//(This is not related to operator new, but placed in this file because the
-//other test files are not C++.)
 int array[10] = {0};
 
 void test_after_the_end_reference() {
@@ -179,4 +179,3 @@ int test_reference_that_might_be_after_the_end(int idx) {
     return -1;
   return ref;
 }
-
