@@ -60,8 +60,7 @@ RUN: llvm-exegesis -mcpu=neoverse-v2 -mode=latency --dump-object-to-disk=%d --op
 RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=FPR8-ASM < %t.s
 FPR8-ASM:         <foo>:
-FPR8-ASM:         mov     w{{[0-9]+}}, #0x0
-FPR8-ASM-NEXT:    fmov    h{{[0-9]+}}, w{{[0-9]+}}
+FPR8-ASM:         movi d{{[0-9]+}}, #0000000000000000
 FPR8-ASM-NEXT:    sqabs   b{{[0-9]+}}, b{{[0-9]+}}
 
 
@@ -71,6 +70,6 @@ RUN: llvm-objdump -d %d > %t.s
 RUN: FileCheck %s --check-prefix=FPCR-ASM < %t.s
 FPCR-ASM:         <foo>:
 FPCR-ASM:         movi d{{[0-9]+}}, #0000000000000000
-FPCR-ASM-NEXT:    mov     x{{[0-9]+}}, #0x0
-FPCR-ASM-NEXT:    msr     FPCR, x{{[0-9]+}}
+FPCR-ASM-NEXT:    mov     x8, #0x0
+FPCR-ASM-NEXT:    msr     FPCR, x8
 FPCR-ASM-NEXT:    bfcvt   h{{[0-9]+}}, s{{[0-9]+}}

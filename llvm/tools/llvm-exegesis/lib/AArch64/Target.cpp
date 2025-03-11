@@ -63,27 +63,6 @@ loadFPCRImmediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
   return {LoadImm, MoveToFPCR};
 }
 
-// Generates instructions to load an immediate value into an FPR8 register.
-static std::vector<MCInst>
-loadFP8Immediate(MCRegister Reg, unsigned RegBitWidth, const APInt &Value) {
-  assert(Value.getBitWidth() <= 8 && "Value must fit in 8 bits");
-
-  // Use a temporary general-purpose register (W8) to hold the 8-bit value
-  MCRegister TempReg = AArch64::W8;
-
-  // Load the 8-bit value into a general-purpose register (W8)
-  MCInst LoadImm = MCInstBuilder(AArch64::MOVi32imm)
-                       .addReg(TempReg)
-                       .addImm(Value.getZExtValue());
-
-  // Move the value from the general-purpose register to the FPR16 register
-  // Convert the FPR8 register to an FPR16 register
-  MCRegister FPR16Reg = Reg + (AArch64::H0 - AArch64::B0);
-  MCInst MoveToFPR =
-      MCInstBuilder(AArch64::FMOVWHr).addReg(FPR16Reg).addReg(TempReg);
-  return {LoadImm, MoveToFPR};
-}
-
 // Fetch base-instruction to load an FP immediate value into a register.
 static unsigned getLoadFPImmediateOpcode(unsigned RegBitWidth) {
   switch (RegBitWidth) {
@@ -129,7 +108,7 @@ private:
     if (AArch64::PPRRegClass.contains(Reg))
       return {loadPPRImmediate(Reg, 16, Value)};
     if (AArch64::FPR8RegClass.contains(Reg))
-      return loadFP8Immediate(Reg, 8, Value);
+      return {loadFPImmediate(Reg - AArch64::B0 + AArch64::D0, 64, Value)};
     if (AArch64::FPR16RegClass.contains(Reg))
       return {loadFPImmediate(Reg, 16, Value)};
     if (AArch64::FPR32RegClass.contains(Reg))
