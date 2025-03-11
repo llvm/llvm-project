@@ -20,8 +20,9 @@ function func(x, n, init)
 !CHECK: red_add: Misc ConstructName
 !CHECK: Subprogram scope: initme
 !CHECK: omp_in size=4 offset=0: ObjectEntity type: INTEGER(4)
-!CHECK: omp_out size=4 offset=4: ObjectEntity type: INTEGER(4)
-!CHECK: omp_priv size=4 offset=8: ObjectEntity type: INTEGER(4)
+!CHECK: omp_orig size=4 offset=4: ObjectEntity type: INTEGER(4)
+!CHECK: omp_out size=4 offset=8: ObjectEntity type: INTEGER(4)
+!CHECK: omp_priv size=4 offset=12: ObjectEntity type: INTEGER(4)
 !$omp simd reduction(red_add:res)
   do i=1,n
      res=res+x(i)
@@ -36,7 +37,8 @@ program main
 
 !CHECK: my_add_red: Misc ConstructName
 !CHECK: omp_in size=4 offset=0: ObjectEntity type: INTEGER(4)
-!CHECK: omp_out size=4 offset=4: ObjectEntity type: INTEGER(4)
-!CHECK: omp_priv size=4 offset=8: ObjectEntity type: INTEGER(4)
+!CHECK: omp_orig size=4 offset=4: ObjectEntity type: INTEGER(4)
+!CHECK: omp_out size=4 offset=8: ObjectEntity type: INTEGER(4)
+!CHECK: omp_priv size=4 offset=12: ObjectEntity type: INTEGER(4)
   
 end program main

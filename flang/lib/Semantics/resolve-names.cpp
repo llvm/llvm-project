@@ -1761,9 +1761,9 @@ void OmpVisitor::ProcessReductionSpecifier(
 
   auto &typeList{std::get<parser::OmpTypeNameList>(spec.t)};
 
-  // Create a temporary variable declaration for the three variables
-  // used in the reduction specifier (omp_out, omp_in and omp_priv),
-  // with of the type in the  typeList.
+  // Create a temporary variable declaration for the four variables
+  // used in the reduction specifier and initializer (omp_out, omp_in,
+  // omp_priv and omp_orig), with the type in the  typeList.
   //
   // In theory it would be possible to create only variables that are
   // actually used, but that requires walking the entire parse-tree of the
@@ -1777,7 +1777,7 @@ void OmpVisitor::ProcessReductionSpecifier(
   // as variables in the outer scope, if there's more than one type in the
   // typelist, duplicate symbols will be reported.
   const parser::CharBlock ompVarNames[]{
-      {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}};
+    {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}, {"omp_orig", 8} };
 
   for (auto &t : typeList.v) {
     PushScope(Scope::Kind::OtherConstruct, nullptr);
