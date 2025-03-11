@@ -147,7 +147,7 @@ public:
           llvm::DenseMap<char, std::string> &Escapes)
       : Allocator(Alloc), Partials(Partials), Lambdas(Lambdas),
         SectionLambdas(SectionLambdas), Escapes(Escapes), Ty(Ty),
-        Parent(Parent), AccessorValue(std::move(Accessor)), 
+        Parent(Parent), AccessorValue(std::move(Accessor)),
         ParentContext(nullptr) {}
 
   void addChild(ASTNode *Child) { Children.emplace_back(Child); };
@@ -641,7 +641,7 @@ void ASTNode::render(const json::Value &Data, raw_ostream &OS) {
     return;
   }
   case InvertSection: {
-    bool IsLambda = 
+    bool IsLambda =
         SectionLambdas.find(AccessorValue[0]) != SectionLambdas.end();
     if (!isFalsey(Context) || IsLambda)
       return;
