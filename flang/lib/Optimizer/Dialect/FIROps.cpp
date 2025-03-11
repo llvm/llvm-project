@@ -3957,9 +3957,6 @@ llvm::LogicalResult fir::CopyOp::verify() {
   mlir::Type destinationType = fir::unwrapRefType(getDestination().getType());
   if (sourceType != destinationType)
     return emitOpError("source and destination must have the same value type");
-  if (fir::hasDynamicSize(sourceType))
-    return emitOpError(
-        "source value type must have a compile time constant size");
   return mlir::success();
 }
 
