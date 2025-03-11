@@ -152,7 +152,7 @@ void test_dynamic_size(int s) {
 }
 //Tests complex arithmetic
 //in new expression
-void test_dynamic_size2(unsigned m,unsigned n){
+void test_dynamic_size2(unsigned m, unsigned n){
   unsigned *U = nullptr;
   U = new unsigned[m + n + 1];
 }
