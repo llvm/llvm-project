@@ -241,24 +241,42 @@ class MapInfoFinalizationPass
   /// allowing `to` mappings, and `target update` not allowing both `to` and
   /// `from` simultaneously. We currently try to maintain the `implicit` flag
   /// where necessary, although it does not seem strictly required.
-  unsigned long getDescriptorMapType(mlir::omp::MapInfoOp op,
+  unsigned long getDescriptorMapType(unsigned long mapTypeFlag,
                                      mlir::Operation *target) {
     using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
-    unsigned long mapType = op.getMapType().value_or(0);
     if (llvm::isa_and_nonnull<mlir::omp::TargetExitDataOp,
                               mlir::omp::TargetUpdateOp>(target))
-      return mapType;
+      return mapTypeFlag;
     mapFlags flags = mapFlags::OMP_MAP_TO |
-      (mapFlags(mapType) & mapFlags::OMP_MAP_IMPLICIT);
+                     (mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_IMPLICIT);
+    // Descriptors for objects will always be copied. This is because the
+    // descriptor can be rematerialized by the compiler, and so the addres
+    // of the descriptor for a given object at one place in the code may
+    // differ from that address in another place. The contents of the
+    // descriptor (the base address in particular) will remain unchanged
+    // though.
     // TODO/FIXME: We currently cannot have MAP_CLOSE and MAP_ALWAYS on
     // the descriptor at once, these are mutually exclusive and when
     // both are applied the runtime will fail to map.
-    flags |= ((mapFlags(mapType) & mapFlags::OMP_MAP_CLOSE) ==
+    flags |= ((mapFlags(mapTypeFlag) & mapFlags::OMP_MAP_CLOSE) ==
               mapFlags::OMP_MAP_CLOSE)
                  ? mapFlags::OMP_MAP_CLOSE
                  : mapFlags::OMP_MAP_ALWAYS;
     flags |= mapFlags::OMP_MAP_DESCRIPTOR;
     return llvm::to_underlying(flags);
+  }
+
+  /// Check if the mapOp is present in the HasDeviceAddr clause on
+  /// the userOp. Only applies to TargetOp.
+  bool isHasDeviceAddr(mlir::omp::MapInfoOp mapOp, mlir::Operation *userOp) {
+    assert(userOp && "Expecting non-null argument");
+    if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(userOp)) {
+      for (mlir::Value hda : targetOp.getHasDeviceAddrVars()) {
+        if (hda.getDefiningOp() == mapOp)
+          return true;
+      }
+    }
+    return false;
   }
 
   mlir::omp::MapInfoOp genDescriptorMemberMaps(mlir::omp::MapInfoOp op,
@@ -270,11 +288,11 @@ class MapInfoFinalizationPass
     // TODO: map the addendum segment of the descriptor, similarly to the
     // base address/data pointer member.
     mlir::Value descriptor = getDescriptorFromBoxMap(op, builder);
-    auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
-                                   op.getMapType().value_or(0), builder);
+
     mlir::ArrayAttr newMembersAttr;
     mlir::SmallVector<mlir::Value> newMembers;
     llvm::SmallVector<llvm::SmallVector<int64_t>> memberIndices;
+    bool IsHasDeviceAddr = isHasDeviceAddr(op, target);
 
     if (!mapMemberUsers.empty() || !op.getMembers().empty())
       getMemberIndicesAsVectors(
@@ -288,6 +306,12 @@ class MapInfoFinalizationPass
     // member information to now have one new member for the base address, or
     // we are expanding a parent that is a descriptor and we have to adjust
     // all of its members to reflect the insertion of the base address.
+    //
+    // If we're expanding a top-level descriptor for a map operation that
+    // resulted from "has_device_addr" clause, then we want the base pointer
+    // from the descriptor to be used verbatim, i.e. without additional
+    // remapping. To avoid this remapping, simply don't generate any map
+    // information for the descriptor members.
     if (!mapMemberUsers.empty()) {
       // Currently, there should only be one user per map when this pass
       // is executed. Either a parent map, holding the current map in its
@@ -298,6 +322,8 @@ class MapInfoFinalizationPass
       assert(mapMemberUsers.size() == 1 &&
              "OMPMapInfoFinalization currently only supports single users of a "
              "MapInfoOp");
+      auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
+                                     op.getMapType().value_or(0), builder);
       ParentAndPlacement mapUser = mapMemberUsers[0];
       adjustMemberIndices(memberIndices, mapUser.index);
       llvm::SmallVector<mlir::Value> newMemberOps;
@@ -309,7 +335,9 @@ class MapInfoFinalizationPass
       mapUser.parent.getMembersMutable().assign(newMemberOps);
       mapUser.parent.setMembersIndexAttr(
           builder.create2DI64ArrayAttr(memberIndices));
-    } else {
+    } else if (!IsHasDeviceAddr) {
+      auto baseAddr = genBaseAddrMap(descriptor, op.getBounds(),
+                                     op.getMapType().value_or(0), builder);
       newMembers.push_back(baseAddr);
       if (!op.getMembers().empty()) {
         for (auto &indices : memberIndices)
@@ -331,7 +359,7 @@ class MapInfoFinalizationPass
             /*bounds=*/mlir::SmallVector<mlir::Value>{},
             builder.getIntegerAttr(
                 builder.getIntegerType(64, false),
-                getDescriptorMapType(op, target)),
+                getDescriptorMapType(op.getMapType().value_or(0), target)),
             /*mapperId*/ mlir::FlatSymbolRefAttr(), op.getMapCaptureTypeAttr(),
             op.getNameAttr(),
             /*partial_map=*/builder.getBoolAttr(false));
@@ -448,6 +476,12 @@ class MapInfoFinalizationPass
       addOperands(useDevPtrMutableOpRange, target,
                   argIface.getUseDevicePtrBlockArgsStart() +
                       argIface.numUseDevicePtrBlockArgs());
+    } else if (auto targetOp = llvm::dyn_cast<mlir::omp::TargetOp>(target)) {
+      mlir::MutableOperandRange hasDevAddrMutableOpRange =
+          targetOp.getHasDeviceAddrVarsMutable();
+      addOperands(hasDevAddrMutableOpRange, target,
+                  argIface.getHasDeviceAddrBlockArgsStart() +
+                      argIface.numHasDeviceAddrBlockArgs());
     }
   }
 

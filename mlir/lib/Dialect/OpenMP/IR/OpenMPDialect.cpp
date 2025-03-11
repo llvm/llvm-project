@@ -600,6 +600,7 @@ struct ReductionParseArgs {
 };
 
 struct AllRegionParseArgs {
+  std::optional<MapParseArgs> hasDeviceAddrArgs;
   std::optional<MapParseArgs> hostEvalArgs;
   std::optional<ReductionParseArgs> inReductionArgs;
   std::optional<MapParseArgs> mapArgs;
@@ -758,6 +759,11 @@ static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
                                        AllRegionParseArgs args) {
   llvm::SmallVector<OpAsmParser::Argument> entryBlockArgs;
 
+  if (failed(parseBlockArgClause(parser, entryBlockArgs, "has_device_addr",
+                                 args.hasDeviceAddrArgs)))
+    return parser.emitError(parser.getCurrentLocation())
+           << "invalid `has_device_addr` format";
+
   if (failed(parseBlockArgClause(parser, entryBlockArgs, "host_eval",
                                  args.hostEvalArgs)))
     return parser.emitError(parser.getCurrentLocation())
@@ -801,8 +807,12 @@ static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
   return parser.parseRegion(region, entryBlockArgs);
 }
 
-static ParseResult parseHostEvalInReductionMapPrivateRegion(
+// These parseXyz functions correspond to the custom<Xyz> definitions
+// in the .td file(s).
+static ParseResult parseTargetOpRegion(
     OpAsmParser &parser, Region &region,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &hasDeviceAddrVars,
+    SmallVectorImpl<Type> &hasDeviceAddrTypes,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &hostEvalVars,
     SmallVectorImpl<Type> &hostEvalTypes,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &inReductionVars,
@@ -814,6 +824,7 @@ static ParseResult parseHostEvalInReductionMapPrivateRegion(
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
     DenseI64ArrayAttr &privateMaps) {
   AllRegionParseArgs args;
+  args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
   args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
@@ -934,6 +945,7 @@ struct ReductionPrintArgs {
       : vars(vars), types(types), byref(byref), syms(syms), modifier(mod) {}
 };
 struct AllRegionPrintArgs {
+  std::optional<MapPrintArgs> hasDeviceAddrArgs;
   std::optional<MapPrintArgs> hostEvalArgs;
   std::optional<ReductionPrintArgs> inReductionArgs;
   std::optional<MapPrintArgs> mapArgs;
@@ -1027,6 +1039,9 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
   auto iface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op);
   MLIRContext *ctx = op->getContext();
 
+  printBlockArgClause(p, ctx, "has_device_addr",
+                      iface.getHasDeviceAddrBlockArgs(),
+                      args.hasDeviceAddrArgs);
   printBlockArgClause(p, ctx, "host_eval", iface.getHostEvalBlockArgs(),
                       args.hostEvalArgs);
   printBlockArgClause(p, ctx, "in_reduction", iface.getInReductionBlockArgs(),
@@ -1049,14 +1064,20 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
-static void printHostEvalInReductionMapPrivateRegion(
-    OpAsmPrinter &p, Operation *op, Region &region, ValueRange hostEvalVars,
-    TypeRange hostEvalTypes, ValueRange inReductionVars,
-    TypeRange inReductionTypes, DenseBoolArrayAttr inReductionByref,
-    ArrayAttr inReductionSyms, ValueRange mapVars, TypeRange mapTypes,
-    ValueRange privateVars, TypeRange privateTypes, ArrayAttr privateSyms,
-    DenseI64ArrayAttr privateMaps) {
+// These parseXyz functions correspond to the custom<Xyz> definitions
+// in the .td file(s).
+static void
+printTargetOpRegion(OpAsmPrinter &p, Operation *op, Region &region,
+                    ValueRange hasDeviceAddrVars, TypeRange hasDeviceAddrTypes,
+                    ValueRange hostEvalVars, TypeRange hostEvalTypes,
+                    ValueRange inReductionVars, TypeRange inReductionTypes,
+                    DenseBoolArrayAttr inReductionByref,
+                    ArrayAttr inReductionSyms, ValueRange mapVars,
+                    TypeRange mapTypes, ValueRange privateVars,
+                    TypeRange privateTypes, ArrayAttr privateSyms,
+                    DenseI64ArrayAttr privateMaps) {
   AllRegionPrintArgs args;
+  args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
   args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
