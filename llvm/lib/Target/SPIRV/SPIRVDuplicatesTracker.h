@@ -119,15 +119,15 @@ inline IRHandle make_descr_ptr(const void *Ptr) {
 // pairs support management of unique SPIR-V definitions per machine function
 // per an LLVM/GlobalISel entity (e.g., Type, Constant, Machine Instruction).
 class SPIRVIRMap {
-  DenseMap < std::pair<IRHandle, const MachineFunction *>, Register >> Vregs;
+  DenseMap < std::pair<IRHandle, const MachineFunction *>,
+      const MachineInstr *MI >> Vregs;
   DenseMap<const MachineInstr *, IRHandle> Defs;
 
 public:
   bool add(IRHandle Handle, const MachineInstr *MI) {
     auto [It, Inserted] =
-        Vregs.try_emplace(std::make_pair(Handle, MI->getMF()));
+        Vregs.try_emplace(std::make_pair(Handle, MI->getMF()), MI);
     if (Inserted) {
-      It->second = MI->getOperand(0).getReg();
       auto [_, IsConsistent] = Defs.insert_or_assign(MI, Handle);
       assert(IsConsistent);
     }
@@ -141,10 +141,14 @@ public:
     }
     return Res;
   }
-  Register find(IRHandle Handle, const MachineFunction *MF) {
+  const MachineInstr *findMI(IRHandle Handle, const MachineFunction *MF) {
     if (auto It = Vregs.find(std::make_pair(Handle, MF)); It != Vregs.end())
       return It->second;
-    return Register();
+    return nullptr;
+  }
+  Register find(IRHandle Handle, const MachineFunction *MF) {
+    const MachineInstr *MI = findMI(Handle, MF);
+    return MI ? MI->getOperand(0).getReg() : Register();
   }
 
   // helpers
