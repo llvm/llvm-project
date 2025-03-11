@@ -58352,14 +58352,17 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       break;
     case X86ISD::PCMPEQ:
     case X86ISD::PCMPGT:
-      if (!IsSplat && VT.is256BitVector() &&
-          (Subtarget.hasInt256() || VT == MVT::v8i32) &&
-          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1))) {
-        if (Subtarget.hasInt256())
+      if (!IsSplat && VT.is256BitVector() && Subtarget.hasInt256()) {
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1)
           return DAG.getNode(Op0.getOpcode(), DL, VT,
-                             ConcatSubOperand(VT, Ops, 0),
-                             ConcatSubOperand(VT, Ops, 1));
+                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
+        break;
+      }
 
+      if (!IsSplat && VT == MVT::v8i32) {
         // Without AVX2, see if we can cast the values to v8f32 and use fcmp.
         // TODO: Handle v4f64 as well?
         unsigned MaxSigBitsLHS = 0, MaxSigBitsRHS = 0;
@@ -58384,8 +58387,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
         if (std::optional<unsigned> CastOpc =
                 CastIntSETCCtoFP(FpVT, ICC, MaxSigBitsLHS, MaxSigBitsRHS)) {
-          SDValue LHS = ConcatSubOperand(VT, Ops, 0);
-          SDValue RHS = ConcatSubOperand(VT, Ops, 1);
+          SDValue LHS = CombineSubOperand(VT, Ops, 0);
+          SDValue RHS = CombineSubOperand(VT, Ops, 1);
+          LHS = LHS ? LHS : ConcatSubOperand(VT, Ops, 0);
+          RHS = RHS ? RHS : ConcatSubOperand(VT, Ops, 1);
           LHS = DAG.getNode(*CastOpc, DL, FpVT, LHS);
           RHS = DAG.getNode(*CastOpc, DL, FpVT, RHS);
 
