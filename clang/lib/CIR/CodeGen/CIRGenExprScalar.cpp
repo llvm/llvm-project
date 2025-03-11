@@ -141,7 +141,7 @@ public:
     if (srcType->isRealFloatingType())
       return emitFloatToBoolConversion(src, loc);
 
-    if ([[maybe_unused]] auto *mpt = llvm::dyn_cast<MemberPointerType>(srcType))
+    if (llvm::isa<MemberPointerType>(srcType))
       cgf.getCIRGenModule().errorNYI(loc, "member pointer to bool conversion");
 
     if (srcType->isIntegerType())
