@@ -1260,7 +1260,7 @@ public:
   /// Register relocation type \p RelType at a given \p Address in the function
   /// against \p Symbol.
   /// Assert if the \p Address is not inside this function.
-  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint64_t RelType,
+  void addRelocation(uint64_t Address, MCSymbol *Symbol, uint32_t RelType,
                      uint64_t Addend, uint64_t Value);
 
   /// Return the name of the section this function originated from.
