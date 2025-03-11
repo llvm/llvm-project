@@ -330,7 +330,7 @@ struct ContractionLowering : public OpRewritePattern<vector::ContractionOp> {
       return rewriter.notifyMatchFailure(contractOp, "Expects acc 2D vector");
 
     // Accept only plain 2D data layout.
-    // VNNI packing is left to later lowering.
+    // VNNI packing is applied to DPAS as a separate lowering step.
     TypedValue<VectorType> lhs = contractOp.getLhs();
     TypedValue<VectorType> rhs = contractOp.getRhs();
     if (lhs.getType().getRank() != 2 || rhs.getType().getRank() != 2)

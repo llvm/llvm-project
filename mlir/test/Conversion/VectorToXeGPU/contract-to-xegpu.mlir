@@ -48,8 +48,8 @@ func.func @dpas_gemm_i8(%lhs: vector<8x32xi8>, %rhs: vector<32x16xi8>,
 
 // -----
 
-// VNNI packing is added automatically by later XeGPU consumer.
 // For simplicity, only plain data layouts are currently supported.
+// VNNI packing is applied later as a separate lowering step.
 
 #map = affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>
 #map1 = affine_map<(d0, d1, d2, d3) -> (d2, d1, d3)>
