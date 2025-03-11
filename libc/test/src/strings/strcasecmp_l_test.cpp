@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/llvm-libc-macros/locale-macros.h"
+#include "hdr/locale_macros.h"
 #include "src/locale/freelocale.h"
 #include "src/locale/newlocale.h"
 #include "src/strings/strcasecmp_l.h"
