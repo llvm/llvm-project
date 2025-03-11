@@ -811,7 +811,7 @@ validateDynamicDimExpansion(LinalgOp linalgOp,
 }
 
 // Create an expanded transpose op.
-// For bubbling a collapse : transpose(collapse_shape),
+// For sinking a collapse : transpose(collapse_shape),
 // all expanded groups are permuted together. We just permute the reassocation
 // map of the collapse and flatten it. For example,
 //
@@ -822,7 +822,7 @@ validateDynamicDimExpansion(LinalgOp linalgOp,
 //
 // permutation = [4, 5, 0 , 1, 2, 3]
 //
-// For sinking expand : expand_shape(transpose),
+// For bubbling an expand : expand_shape(transpose),
 // the reassociation map is already permuted hence we inverse permute and then
 // flatten it. Then we inverse permute it again to get the final expanded
 // transpose permutation. For example,
