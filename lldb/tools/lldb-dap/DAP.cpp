@@ -265,7 +265,7 @@ std::string DAP::ReadJSON() {
   if (!input.read_full(log, length, json_str))
     return json_str;
 
-  DAP_LOG(log, "{0} --> {1}", client_name, json_str);
+  DAP_LOG(log, "({0}) --> {1}", client_name, json_str);
   return json_str;
 }
 
@@ -708,7 +708,7 @@ PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
 
   llvm::json::Object *object_ptr = json_value->getAsObject();
   if (!object_ptr) {
-    DAP_LOG(log, "error: json packet isn't a object");
+    DAP_LOG(log, "({0}) error: json packet isn't a object", client_name);
     return PacketStatus::JSONNotObject;
   }
   object = *object_ptr;
