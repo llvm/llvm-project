@@ -3293,10 +3293,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // The return type might have more elements than the input.
     // Temporarily shrink the return type's number of elements.
     VectorType *ShadowType = cast<VectorType>(getShadowTy(&I));
-    if (ShadowType->getElementCount() == cast<VectorType>(Src->getType())->getElementCount() * 2)
+    if (ShadowType->getElementCount() ==
+        cast<VectorType>(Src->getType())->getElementCount() * 2)
       ShadowType = VectorType::getHalfElementsVectorType(ShadowType);
 
-    assert(ShadowType->getElementCount() == cast<VectorType>(Src->getType())->getElementCount());
+    assert(ShadowType->getElementCount() ==
+           cast<VectorType>(Src->getType())->getElementCount());
 
     IRBuilder<> IRB(&I);
     Value *S0 = getShadow(&I, 0);
@@ -3306,8 +3308,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     /// - fully uninitialized if *any* bit of the input is uninitialized
     /// - fully ininitialized if all bits of the input are ininitialized
     /// We apply the same principle on a per-field basis for vectors.
-    Value *Shadow = IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)),
-                                   ShadowType);
+    Value *Shadow =
+        IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)), ShadowType);
 
     // The return type might have more elements than the input.
     // Extend the return type back to its original width if necessary.
@@ -3317,17 +3319,19 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       FullShadow = Shadow;
     else {
       SmallVector<int, 8> ShadowMask;
-      for (unsigned X = 0; X < cast<FixedVectorType>(FullShadow->getType())->getNumElements(); ++X)
+      for (unsigned X = 0;
+           X < cast<FixedVectorType>(FullShadow->getType())->getNumElements();
+           ++X)
         ShadowMask.push_back(X);
 
       // Append zeros
-      FullShadow = IRB.CreateShuffleVector(Shadow, getCleanShadow(Shadow), ShadowMask);
+      FullShadow =
+          IRB.CreateShuffleVector(Shadow, getCleanShadow(Shadow), ShadowMask);
     }
 
     setShadow(&I, FullShadow);
     setOriginForNaryOp(I);
   }
-
 
   // Instrument x86 SSE vector convert intrinsic.
   //
