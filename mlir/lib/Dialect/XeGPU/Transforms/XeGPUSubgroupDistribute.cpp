@@ -179,7 +179,7 @@ struct SGMapLattice : public Lattice<SGMap> {
 /// For 1D vector, wi_layout is [subgroupSize] and wi_data is [1].
 /// For 2D vector, wi_layout is [1, subgroupSize] and wi_data is [1, 1].
 static SGMap getDefaultSgMap(unsigned rank) {
-  assert((rank == 1 || rank == 2) && "Expected 0D or 1D vector.");
+  assert((rank == 1 || rank == 2) && "Expected 1D or 2D vector.");
   if (rank == 1)
     return SGMap(WiLayout({subgroupSize}), WiData({1}));
   return SGMap(WiLayout({1, subgroupSize}), WiData({1, 1}));
@@ -428,11 +428,10 @@ void SGMapPropagation::visitTransposeOp(
     vector::TransposeOp transpose, ArrayRef<SGMapLattice *> operands,
     ArrayRef<const SGMapLattice *> results) {
   /// Need the layout of transpose result to propagate to the operands.
-  auto operandLayout = results[0]->getValue();
-  if (!operandLayout.isAssigned())
+  auto resultLayout = results[0]->getValue();
+  if (!resultLayout.isAssigned())
     return;
-  auto newLayout =
-      operandLayout.getTransposedLayout(transpose.getPermutation());
+  auto newLayout = resultLayout.getTransposedLayout(transpose.getPermutation());
   /// Propagate the new layout to the vector operand.
   propagateIfChanged(operands[0], operands[0]->meet(newLayout));
 }
