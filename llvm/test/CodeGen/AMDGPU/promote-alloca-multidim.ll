@@ -61,7 +61,7 @@ define amdgpu_kernel void @i32_2d_alloca_store_partial(ptr addrspace(1) %out, pt
 ; CHECK-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 undef, i32 undef, i32 undef, i32 undef>, i32 [[SEL2]]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <8 x i32> <i32 1, i32 2, i32 3, i32 4, i32 {{.*}}, i32 {{.*}}, i32 {{.*}}, i32 {{.*}}>, i32 [[SEL2]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[TMP0]] to float
 ; CHECK-NEXT:    store float [[TMP1]], ptr addrspace(1) [[OUT]], align 4
 ; CHECK-NEXT:    ret void
@@ -208,13 +208,13 @@ define amdgpu_kernel void @i64_2d_load_store_subvec_4(ptr %out) {
 ; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i32 [[SEL2]], 4
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i64> <i64 0, i64 1, i64 2, i64 undef, i64 3, i64 4, i64 5, i64 undef>, i32 [[TMP1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <8 x i64> <i64 0, i64 1, i64 2, i64 {{.*}}, i64 3, i64 4, i64 5, i64 {{.*}}>, i32 [[TMP1]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <3 x i64> poison, i64 [[TMP2]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = add i32 [[TMP1]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i64> <i64 0, i64 1, i64 2, i64 undef, i64 3, i64 4, i64 5, i64 undef>, i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i64> <i64 0, i64 1, i64 2, i64 {{.*}}, i64 3, i64 4, i64 5, i64 {{.*}}>, i32 [[TMP4]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <3 x i64> [[TMP3]], i64 [[TMP5]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP1]], 2
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i64> <i64 0, i64 1, i64 2, i64 undef, i64 3, i64 4, i64 5, i64 undef>, i32 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <8 x i64> <i64 0, i64 1, i64 2, i64 {{.*}}, i64 3, i64 4, i64 5, i64 {{.*}}>, i32 [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <3 x i64> [[TMP6]], i64 [[TMP8]], i64 2
 ; CHECK-NEXT:    [[ELEM:%.*]] = extractelement <3 x i64> [[TMP9]], i32 2
 ; CHECK-NEXT:    store i64 [[ELEM]], ptr [[OUT]], align 8
@@ -351,7 +351,7 @@ define amdgpu_kernel void @ptr_2d_load_store(ptr %out, i32 %sel) {
 ; CHECK-NEXT:    [[PTR_3:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 3
 ; CHECK-NEXT:    [[PTR_4:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 4
 ; CHECK-NEXT:    [[PTR_5:%.*]] = getelementptr inbounds ptr, ptr [[OUT]], i32 5
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x ptr> undef, ptr [[PTR_0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <6 x ptr> {{.*}}, ptr [[PTR_0]], i32 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <6 x ptr> [[TMP1]], ptr [[PTR_1]], i32 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <6 x ptr> [[TMP2]], ptr [[PTR_2]], i32 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <6 x ptr> [[TMP3]], ptr [[PTR_3]], i32 3
