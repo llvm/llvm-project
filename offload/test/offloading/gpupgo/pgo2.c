@@ -18,6 +18,14 @@
 // RUN:     %target_triple.%basename_t.clang.profraw | \
 // RUN:     %fcheck-generic --check-prefix="CLANG-DEV"
 
+// RUN: %libomptarget-compile-generic -Xarch_host -fprofile-generate
+// RUN: env LLVM_PROFILE_FILE=%basename_t.nogpu.profraw \
+// RUN:     %libomptarget-run-generic 2>&1
+// RUN: llvm-profdata show --all-functions --counts \
+// RUN:     %basename_t.nogpu.profraw | %fcheck-generic \
+// RUN:     --check-prefix="LLVM-HOST"
+// RUN: not test -e %target_triple.%basename_t.nogpu.profraw
+
 // REQUIRES: gpu
 // REQUIRES: pgo
 
