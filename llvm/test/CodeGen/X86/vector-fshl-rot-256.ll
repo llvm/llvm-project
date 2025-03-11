@@ -844,7 +844,7 @@ define <16 x i16> @splatvar_funnnel_v16i16(<16 x i16> %x, <16 x i16> %amt) nounw
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
 ; XOPAVX1-NEXT:    vpshuflw {{.*#+}} xmm1 = xmm1[0,0,0,0,4,5,6,7]
-; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,0,0,0]
+; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; XOPAVX1-NEXT:    vprotw %xmm1, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vprotw %xmm1, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
