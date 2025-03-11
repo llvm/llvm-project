@@ -530,10 +530,8 @@ int inline_decl() {
 // CHECK3-NEXT:    [[GEP_K:%.*]] = getelementptr { ptr, ptr }, ptr [[STRUCTARG]], i32 0, i32 1
 // CHECK3-NEXT:    store ptr [[K]], ptr [[GEP_K]], align 8
 // CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z12outline_declv..omp_par, ptr [[STRUCTARG]])
-// CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK3:       omp.par.outlined.exit:
-// CHECK3-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK3:       omp.par.exit.split:
+// CHECK3-NEXT:    br label [[OMP_PAR_EXIT:%.*]]
+// CHECK3:       omp.par.exit:
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[K]], align 4
 // CHECK3-NEXT:    ret i32 [[TMP0]]
 //
@@ -620,7 +618,7 @@ int inline_decl() {
 // CHECK3:       omp_loop.inc:
 // CHECK3-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1
 // CHECK3-NEXT:    br label [[OMP_LOOP_HEADER]]
-// CHECK3:       omp.par.outlined.exit.exitStub:
+// CHECK3:       omp.par.exit.exitStub:
 // CHECK3-NEXT:    ret void
 //
 //
@@ -699,9 +697,7 @@ int inline_decl() {
 // CHECK3-NEXT:    store ptr [[RES]], ptr [[GEP_RES]], align 8
 // CHECK3-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z11inline_declv..omp_par, ptr [[STRUCTARG]])
 // CHECK3-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK3:       omp.par.outlined.exit:
-// CHECK3-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK3:       omp.par.exit.split:
+// CHECK3:       omp.par.exit:
 // CHECK3-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RES]], align 4
 // CHECK3-NEXT:    ret i32 [[TMP0]]
 //
@@ -789,7 +785,7 @@ int inline_decl() {
 // CHECK3:       omp_loop.inc:
 // CHECK3-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1
 // CHECK3-NEXT:    br label [[OMP_LOOP_HEADER]]
-// CHECK3:       omp.par.outlined.exit.exitStub:
+// CHECK3:       omp.par.exit.exitStub:
 // CHECK3-NEXT:    ret void
 //
 //
@@ -870,9 +866,7 @@ int inline_decl() {
 // CHECK4-NEXT:    store ptr [[K]], ptr [[GEP_K]], align 8
 // CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB1]], i32 1, ptr @_Z12outline_declv..omp_par, ptr [[STRUCTARG]]), !dbg [[DBG18:![0-9]+]]
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK4:       omp.par.outlined.exit:
-// CHECK4-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK4:       omp.par.exit.split:
+// CHECK4:       omp.par.exit:
 // CHECK4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[K]], align 4, !dbg [[DBG20:![0-9]+]]
 // CHECK4-NEXT:    ret i32 [[TMP0]], !dbg [[DBG20]]
 //
@@ -959,7 +953,7 @@ int inline_decl() {
 // CHECK4:       omp_loop.inc:
 // CHECK4-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1, !dbg [[DBG28]]
 // CHECK4-NEXT:    br label [[OMP_LOOP_HEADER]], !dbg [[DBG28]]
-// CHECK4:       omp.par.outlined.exit.exitStub:
+// CHECK4:       omp.par.exit.exitStub:
 // CHECK4-NEXT:    ret void
 //
 //
@@ -1048,9 +1042,7 @@ int inline_decl() {
 // CHECK4-NEXT:    store ptr [[RES]], ptr [[GEP_RES]], align 8
 // CHECK4-NEXT:    call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @[[GLOB6]], i32 1, ptr @_Z11inline_declv..omp_par, ptr [[STRUCTARG]]), !dbg [[DBG82:![0-9]+]]
 // CHECK4-NEXT:    br label [[OMP_PAR_OUTLINED_EXIT:%.*]]
-// CHECK4:       omp.par.outlined.exit:
-// CHECK4-NEXT:    br label [[OMP_PAR_EXIT_SPLIT:%.*]]
-// CHECK4:       omp.par.exit.split:
+// CHECK4:       omp.par.exit:
 // CHECK4-NEXT:    [[TMP0:%.*]] = load i32, ptr [[RES]], align 4, !dbg [[DBG84:![0-9]+]]
 // CHECK4-NEXT:    ret i32 [[TMP0]], !dbg [[DBG84]]
 //
@@ -1139,7 +1131,7 @@ int inline_decl() {
 // CHECK4:       omp_loop.inc:
 // CHECK4-NEXT:    [[OMP_LOOP_NEXT]] = add nuw i32 [[OMP_LOOP_IV]], 1, !dbg [[META95]]
 // CHECK4-NEXT:    br label [[OMP_LOOP_HEADER]], !dbg [[META95]]
-// CHECK4:       omp.par.outlined.exit.exitStub:
+// CHECK4:       omp.par.exit.exitStub:
 // CHECK4-NEXT:    ret void
 //
 //

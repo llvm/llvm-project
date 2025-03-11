@@ -80,6 +80,10 @@ extern llvm::cl::opt<unsigned> Verbosity;
 /// Return true if we should process all functions in the binary.
 bool processAllFunctions();
 
+enum GadgetScannerKind { GS_PACRET, GS_ALL };
+
+extern llvm::cl::list<GadgetScannerKind> GadgetScannersToRun;
+
 } // namespace opts
 
 namespace llvm {

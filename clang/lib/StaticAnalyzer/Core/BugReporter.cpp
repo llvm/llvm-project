@@ -2958,7 +2958,7 @@ std::optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
 
 std::unique_ptr<DiagnosticForConsumerMapTy>
 PathSensitiveBugReporter::generatePathDiagnostics(
-    ArrayRef<PathDiagnosticConsumer *> consumers,
+    ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
     ArrayRef<PathSensitiveBugReport *> &bugReports) {
   assert(!bugReports.empty());
 
@@ -2968,9 +2968,9 @@ PathSensitiveBugReporter::generatePathDiagnostics(
       PathDiagnosticBuilder::findValidReport(bugReports, *this);
 
   if (PDB) {
-    for (PathDiagnosticConsumer *PC : consumers) {
-      if (std::unique_ptr<PathDiagnostic> PD = PDB->generate(PC)) {
-        (*Out)[PC] = std::move(PD);
+    for (const auto &PC : consumers) {
+      if (std::unique_ptr<PathDiagnostic> PD = PDB->generate(PC.get())) {
+        (*Out)[PC.get()] = std::move(PD);
       }
     }
   }
@@ -3164,7 +3164,7 @@ void BugReporter::FlushReport(BugReportEquivClass &EQ) {
       return;
   }
 
-  ArrayRef<PathDiagnosticConsumer*> Consumers = getPathDiagnosticConsumers();
+  ArrayRef Consumers = getPathDiagnosticConsumers();
   std::unique_ptr<DiagnosticForConsumerMapTy> Diagnostics =
       generateDiagnosticForConsumerMap(report, Consumers, bugReports);
 
@@ -3298,12 +3298,13 @@ findExecutedLines(const SourceManager &SM, const ExplodedNode *N) {
 
 std::unique_ptr<DiagnosticForConsumerMapTy>
 BugReporter::generateDiagnosticForConsumerMap(
-    BugReport *exampleReport, ArrayRef<PathDiagnosticConsumer *> consumers,
+    BugReport *exampleReport,
+    ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
     ArrayRef<BugReport *> bugReports) {
   auto *basicReport = cast<BasicBugReport>(exampleReport);
   auto Out = std::make_unique<DiagnosticForConsumerMapTy>();
-  for (auto *Consumer : consumers)
-    (*Out)[Consumer] =
+  for (const auto &Consumer : consumers)
+    (*Out)[Consumer.get()] =
         generateDiagnosticForBasicReport(basicReport, AnalysisEntryPoint);
   return Out;
 }
@@ -3371,11 +3372,10 @@ static void resetDiagnosticLocationToMainFile(PathDiagnostic &PD) {
   }
 }
 
-
-
 std::unique_ptr<DiagnosticForConsumerMapTy>
 PathSensitiveBugReporter::generateDiagnosticForConsumerMap(
-    BugReport *exampleReport, ArrayRef<PathDiagnosticConsumer *> consumers,
+    BugReport *exampleReport,
+    ArrayRef<std::unique_ptr<PathDiagnosticConsumer>> consumers,
     ArrayRef<BugReport *> bugReports) {
   std::vector<BasicBugReport *> BasicBugReports;
   std::vector<PathSensitiveBugReport *> PathSensitiveBugReports;

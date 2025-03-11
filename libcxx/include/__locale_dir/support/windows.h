@@ -29,7 +29,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 namespace __locale {
 
-using __lconv_t = std::lconv;
+using __lconv_t _LIBCPP_NODEBUG = std::lconv;
 
 class __lconv_storage {
 public:

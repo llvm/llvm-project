@@ -252,9 +252,9 @@ attributes #6 = { builtin }
 ; REMARKS: call in clone _Z3bazv assigned to call function clone _Z3barv
 ; REMARKS: call in clone _Z3barv marked with memprof allocation attribute notcold
 
-; SIZES: NotCold full allocation context 123 with total size 100 is NotCold after cloning
-; SIZES: Cold full allocation context 456 with total size 200 is Cold after cloning
-; SIZES: Cold full allocation context 789 with total size 300 is Cold after cloning
+; SIZES: NotCold full allocation context 123 with total size 100 is NotCold after cloning (context id 1)
+; SIZES: Cold full allocation context 456 with total size 200 is Cold after cloning (context id 2)
+; SIZES: Cold full allocation context 789 with total size 300 is Cold after cloning (context id 2)
 
 ; IR: define {{.*}} @main
 ;; The first call to foo does not allocate cold memory. It should call the

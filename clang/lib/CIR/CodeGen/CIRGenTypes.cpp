@@ -60,7 +60,7 @@ bool CIRGenTypes::isFuncTypeConvertible(const FunctionType *ft) {
 mlir::Type CIRGenTypes::convertFunctionTypeInternal(QualType qft) {
   assert(qft.isCanonical());
   const FunctionType *ft = cast<FunctionType>(qft.getTypePtr());
-  // First, check whether we can build the full fucntion type. If the function
+  // First, check whether we can build the full function type. If the function
   // type depends on an incomplete type (e.g. a struct or enum), we cannot lower
   // the function type.
   if (!isFuncTypeConvertible(ft)) {
@@ -106,6 +106,11 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     // void
     case BuiltinType::Void:
       resultType = cgm.VoidTy;
+      break;
+
+    // bool
+    case BuiltinType::Bool:
+      resultType = cir::BoolType::get(&getMLIRContext());
       break;
 
     // Signed integral types.

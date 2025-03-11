@@ -68,6 +68,12 @@ def IsBoxAddressOrValueTypePred
 def fir_BoxAddressOrValueType : Type<IsBoxAddressOrValueTypePred,
     "fir.box or fir.class type or reference">;
 
+def RefOfConstantSizeAggregateTypePred
+        : CPred<"::fir::isRefOfConstantSizeAggregateType($_self)">;
+def AnyRefOfConstantSizeAggregateType : TypeConstraint<
+      RefOfConstantSizeAggregateTypePred,
+      "a reference type to a constant size fir.array, fir.char, or fir.type">;
+
 //===----------------------------------------------------------------------===//
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
@@ -341,6 +347,44 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
     static mlir::Type elementType(mlir::Type refType);
   }];
 }
+
+def fir_CopyOp : fir_Op<"copy", []> {
+  let summary = "copy constant size memory";
+
+  let description = [{
+    Copy the memory from a source with compile time constant size to
+    a destination of the same type.
+
+    This is meant to be used for aggregate types where load and store
+    are not appropriate to make a copy because LLVM is not meant to
+    handle load and store of "big" aggregates.
+
+    Its "no_overlap" attribute allows indicating that the source and destination
+    are known to not overlap at compile time.
+
+    ```
+      !t =!fir.type<t{x:!fir.array<1000xi32>}>
+      fir.copy %x to %y : !fir.ref<!t>, !fir.ref<!t>
+    ```
+    TODO: add FirAliasTagOpInterface to carry TBAA.
+  }];
+
+  let arguments = (ins Arg<AnyRefOfConstantSizeAggregateType, "", [MemRead]>:$source,
+                       Arg<AnyRefOfConstantSizeAggregateType, "", [MemWrite]>:$destination,
+                       OptionalAttr<UnitAttr>:$no_overlap);
+
+  let builders = [OpBuilder<(ins "mlir::Value":$source,
+                                 "mlir::Value":$destination,
+                                  CArg<"bool", "false">:$no_overlap)>];
+
+  let assemblyFormat = [{
+    $source `to` $destination (`no_overlap` $no_overlap^)?
+    attr-dict `:` type(operands)
+  }];
+
+  let hasVerifier = 1;
+}
+
 
 def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
   let summary = [{
@@ -1748,10 +1792,16 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
     Unlike LLVM's GEP instruction, one cannot stride over the outermost
     reference; therefore, the leading 0 index must be omitted.
 
+    This operation can be used to index derived type fields, in which case
+    the operand is the name of the index field.
+
     ```
       %i = ... : index
       %h = ... : !fir.heap<!fir.array<100 x f32>>
       %p = fir.coordinate_of %h, %i : (!fir.heap<!fir.array<100 x f32>>, index) -> !fir.ref<f32>
+
+      %d = ... : !fir.ref<!fir.type<t{field1:i32, field2:f32}>>
+      %f = fir.coordinate_of %d, field2 : (!fir.ref<!fir.type<t{field1:i32, field2:f32}>>) -> !fir.ref<f32>
     ```
 
     In the example, `%p` will be a pointer to the `%i`-th f32 value in the
@@ -1761,7 +1811,8 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
   let arguments = (ins
     AnyRefOrBox:$ref,
     Variadic<AnyCoordinateType>:$coor,
-    TypeAttr:$baseType
+    TypeAttr:$baseType,
+    OptionalAttr<DenseI32ArrayAttr>:$field_indices
   );
 
   let results = (outs RefOrLLVMPtr);
@@ -1771,10 +1822,14 @@ def fir_CoordinateOp : fir_Op<"coordinate_of", [NoMemoryEffect]> {
 
   let builders = [
     OpBuilder<(ins "mlir::Type":$resultType,
-      "mlir::Value":$ref, "mlir::ValueRange":$coor),
-    [{ return build($_builder, $_state, resultType, ref, coor,
-           mlir::TypeAttr::get(ref.getType())); }]>,
+      "mlir::Value":$ref, "mlir::ValueRange":$coor)>,
+    OpBuilder<(ins "mlir::Type":$resultType,
+      "mlir::Value":$ref, "llvm::ArrayRef<fir::IntOrValue>":$coor)>
   ];
+  let extraClassDeclaration = [{
+    constexpr static int32_t kDynamicIndex = std::numeric_limits<int32_t>::min();
+    CoordinateIndicesAdaptor getIndices();
+  }];
 }
 
 def fir_ExtractValueOp : fir_OneResultOp<"extract_value", [NoMemoryEffect]> {

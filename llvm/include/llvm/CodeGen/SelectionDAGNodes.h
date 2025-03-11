@@ -421,6 +421,8 @@ public:
 
     PoisonGeneratingFlags = NoUnsignedWrap | NoSignedWrap | Exact | Disjoint |
                             NonNeg | NoNaNs | NoInfs | SameSign,
+    FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
+                    AllowContract | ApproximateFuncs | AllowReassociation,
   };
 
   /// Default constructor turns off all optimization flags.
@@ -877,7 +879,21 @@ public:
 
   /// Return true if there are exactly NUSES uses of the indicated value.
   /// This method ignores uses of other values defined by this operation.
-  bool hasNUsesOfValue(unsigned NUses, unsigned Value) const;
+  bool hasNUsesOfValue(unsigned NUses, unsigned Value) const {
+    assert(Value < getNumValues() && "Bad value!");
+
+    // TODO: Only iterate over uses of a given value of the node
+    for (SDUse &U : uses()) {
+      if (U.getResNo() == Value) {
+        if (NUses == 0)
+          return false;
+        --NUses;
+      }
+    }
+
+    // Found exactly the right number of uses?
+    return NUses == 0;
+  }
 
   /// Return true if there are any use of the indicated value.
   /// This method ignores uses of other values defined by this operation.
@@ -1649,10 +1665,13 @@ public:
 
   bool isSplat() const { return isSplatMask(getMask()); }
 
-  int getSplatIndex() const {
-    assert(isSplat() && "Cannot get splat index for non-splat!");
-    EVT VT = getValueType(0);
-    for (unsigned i = 0, e = VT.getVectorNumElements(); i != e; ++i)
+  int getSplatIndex() const { return getSplatMaskIndex(getMask()); }
+
+  static bool isSplatMask(ArrayRef<int> Mask);
+
+  static int getSplatMaskIndex(ArrayRef<int> Mask) {
+    assert(isSplatMask(Mask) && "Cannot get splat index for non-splat!");
+    for (unsigned i = 0, e = Mask.size(); i != e; ++i)
       if (Mask[i] >= 0)
         return Mask[i];
 
@@ -1660,8 +1679,6 @@ public:
     // are undefined. Return 0 for better potential for callers to simplify.
     return 0;
   }
-
-  static bool isSplatMask(ArrayRef<int> Mask);
 
   /// Change values in a shuffle permute mask assuming
   /// the two vector operands have swapped position.

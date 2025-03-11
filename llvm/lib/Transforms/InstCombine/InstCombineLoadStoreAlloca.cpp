@@ -360,7 +360,10 @@ void PointerReplacer::replace(Instruction *I) {
 
     IC.InsertNewInstWith(NewI, LT->getIterator());
     IC.replaceInstUsesWith(*LT, NewI);
-    WorkMap[LT] = NewI;
+    // LT has actually been replaced by NewI. It is useless to insert LT into
+    // the map. Instead, we insert NewI into the map to indicate this is the
+    // replacement (new value).
+    WorkMap[NewI] = NewI;
   } else if (auto *PHI = dyn_cast<PHINode>(I)) {
     Type *NewTy = getReplacement(PHI->getIncomingValue(0))->getType();
     auto *NewPHI = PHINode::Create(NewTy, PHI->getNumIncomingValues(),
@@ -982,14 +985,48 @@ static bool canSimplifyNullLoadOrGEP(LoadInst &LI, Value *Op) {
   return false;
 }
 
-/// TODO: Recursively simplify nonnull value to handle one-use inbounds GEPs.
-Value *InstCombinerImpl::simplifyNonNullOperand(Value *V) {
+Value *InstCombinerImpl::simplifyNonNullOperand(Value *V,
+                                                bool HasDereferenceable,
+                                                unsigned Depth) {
   if (auto *Sel = dyn_cast<SelectInst>(V)) {
     if (isa<ConstantPointerNull>(Sel->getOperand(1)))
       return Sel->getOperand(2);
 
     if (isa<ConstantPointerNull>(Sel->getOperand(2)))
       return Sel->getOperand(1);
+  }
+
+  if (!V->hasOneUse())
+    return nullptr;
+
+  constexpr unsigned RecursionLimit = 3;
+  if (Depth == RecursionLimit)
+    return nullptr;
+
+  if (auto *GEP = dyn_cast<GetElementPtrInst>(V)) {
+    if (HasDereferenceable || GEP->isInBounds()) {
+      if (auto *Res = simplifyNonNullOperand(GEP->getPointerOperand(),
+                                             HasDereferenceable, Depth + 1)) {
+        replaceOperand(*GEP, 0, Res);
+        addToWorklist(GEP);
+        return nullptr;
+      }
+    }
+  }
+
+  if (auto *PHI = dyn_cast<PHINode>(V)) {
+    bool Changed = false;
+    for (Use &U : PHI->incoming_values()) {
+      // We set Depth to RecursionLimit to avoid expensive recursion.
+      if (auto *Res = simplifyNonNullOperand(U.get(), HasDereferenceable,
+                                             RecursionLimit)) {
+        replaceUse(U, Res);
+        Changed = true;
+      }
+    }
+    if (Changed)
+      addToWorklist(PHI);
+    return nullptr;
   }
 
   return nullptr;
@@ -1076,7 +1113,7 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
   }
 
   if (!NullPointerIsDefined(LI.getFunction(), LI.getPointerAddressSpace()))
-    if (Value *V = simplifyNonNullOperand(Op))
+    if (Value *V = simplifyNonNullOperand(Op, /*HasDereferenceable=*/true))
       return replaceOperand(LI, 0, V);
 
   return nullptr;
@@ -1444,7 +1481,7 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
     return eraseInstFromFunction(SI);
 
   if (!NullPointerIsDefined(SI.getFunction(), SI.getPointerAddressSpace()))
-    if (Value *V = simplifyNonNullOperand(Ptr))
+    if (Value *V = simplifyNonNullOperand(Ptr, /*HasDereferenceable=*/true))
       return replaceOperand(SI, 1, V);
 
   return nullptr;
