@@ -276,9 +276,9 @@ void stripTokenAhead(SmallVectorImpl<Token> &Tokens, size_t Idx) {
   StringRef NextTokenBody = NextToken.TokenBody;
   // Cut off the leading newline which could be \n or \r\n.
   if (NextTokenBody.starts_with("\r\n"))
-    NextToken.TokenBody = std::move(NextTokenBody.substr(2).str());
+    NextToken.TokenBody = NextTokenBody.substr(2).str();
   else if (NextTokenBody.starts_with("\n"))
-    NextToken.TokenBody = std::move(NextTokenBody.substr(1).str());
+    NextToken.TokenBody = NextTokenBody.substr(1).str();
 }
 
 // Adjust previous token body if there no text behind.
@@ -783,9 +783,9 @@ Template &Template::operator=(Template &&Other) noexcept {
     Lambdas = std::move(Other.Lambdas);
     SectionLambdas = std::move(Other.SectionLambdas);
     Escapes = std::move(Other.Escapes);
-    Tree = Other.Tree;
     AstAllocator = std::move(Other.AstAllocator);
     RenderAllocator = std::move(Other.RenderAllocator);
+    Tree = Other.Tree;
     Other.Tree = nullptr;
   }
   return *this;
