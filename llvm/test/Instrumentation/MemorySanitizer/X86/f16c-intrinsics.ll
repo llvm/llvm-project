@@ -3,7 +3,7 @@
 ;
 ; Forked from llvm/test/CodeGen/X86/f16c-intrinsics.ll
 ;
-; Handled by visitInstruction:
+; Handled by handleSSEVectorConvertIntrinsicByProp:
 ; - llvm.x86.vcvtps2ph.128/256
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -16,14 +16,7 @@ define <8 x i16> @test_x86_vcvtps2ph_128(<4 x float> %a0) #0 {
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i16> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> zeroinitializer, i16 [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[TMP3]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[TMP6]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[TMP3]], i64 2
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i16> [[TMP7]], i16 [[TMP8]], i64 2
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[TMP3]], i64 3
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i16> [[TMP9]], i16 [[TMP10]], i64 3
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[RES:%.*]] = call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> [[A0]], i32 0)
 ; CHECK-NEXT:    store <8 x i16> [[TMP11]], ptr @__msan_retval_tls, align 8
 ; CHECK-NEXT:    ret <8 x i16> [[RES]]
@@ -88,23 +81,16 @@ define void @test_x86_vcvtps2ph_128_m(ptr nocapture %d, <4 x float> %a) nounwind
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i32> [[TMP9]], zeroinitializer
 ; CHECK-NEXT:    [[TMP13:%.*]] = sext <4 x i1> [[TMP12]] to <4 x i16>
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i16> [[TMP13]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> zeroinitializer, i16 [[TMP14]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[TMP13]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[TMP6]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[TMP13]], i64 2
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <8 x i16> [[TMP7]], i16 [[TMP8]], i64 2
-; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <4 x i16> [[TMP13]], i64 3
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <8 x i16> [[TMP15]], i16 [[TMP16]], i64 3
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <4 x i16> [[TMP13]], <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP0:%.*]] = tail call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> [[A]], i32 3)
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = shufflevector <8 x i16> [[TMP11]], <8 x i16> splat (i16 -1), <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP10]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB14:.*]], label %[[BB15:.*]], !prof [[PROF1]]
-; CHECK:       [[BB14]]:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB7:.*]], label %[[BB8:.*]], !prof [[PROF1]]
+; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB15]]:
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    [[TMP2:%.*]] = ptrtoint ptr [[D]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = xor i64 [[TMP2]], 87960930222080
 ; CHECK-NEXT:    [[TMP4:%.*]] = inttoptr i64 [[TMP3]] to ptr
@@ -128,25 +114,18 @@ define void @test_x86_vcvtps2ph_128_m2(ptr nocapture %hf4x16, <4 x float> %f4X86
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i16> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> zeroinitializer, i16 [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[TMP3]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[TMP6]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[TMP3]], i64 2
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i16> [[TMP7]], i16 [[TMP8]], i64 2
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[TMP3]], i64 3
-; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <8 x i16> [[TMP9]], i16 [[TMP10]], i64 3
+; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP11:%.*]] = tail call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> [[F4X86]], i32 3)
 ; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <8 x i16> [[TMP14]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i16> [[TMP11]] to <2 x double>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = extractelement <2 x i64> [[TMP13]], i32 0
 ; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x double> [[TMP12]], i32 0
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB15:.*]], label %[[BB16:.*]], !prof [[PROF1]]
-; CHECK:       [[BB15]]:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB16]]:
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[HF4X16]] to i64
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor i64 [[TMP15]], 87960930222080
 ; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[TMP16]] to ptr
@@ -171,25 +150,18 @@ define void @test_x86_vcvtps2ph_128_m3(ptr nocapture %hf4x16, <4 x float> %f4X86
 ; CHECK-NEXT:    call void @llvm.donothing()
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <4 x i32> [[TMP0]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = sext <4 x i1> [[TMP2]] to <4 x i16>
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i16> [[TMP3]], i64 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <8 x i16> zeroinitializer, i16 [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[TMP3]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <8 x i16> [[TMP5]], i16 [[TMP6]], i64 1
-; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <4 x i16> [[TMP3]], i64 2
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <8 x i16> [[TMP7]], i16 [[TMP8]], i64 2
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i16> [[TMP3]], i64 3
-; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <8 x i16> [[TMP9]], i16 [[TMP10]], i64 3
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <4 x i16> [[TMP3]], <4 x i16> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
 ; CHECK-NEXT:    [[TMP11:%.*]] = tail call <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> [[F4X86]], i32 3)
 ; CHECK-NEXT:    [[TMP12:%.*]] = bitcast <8 x i16> [[TMP13]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <8 x i16> [[TMP11]] to <2 x i64>
 ; CHECK-NEXT:    [[VECEXT:%.*]] = extractelement <2 x i64> [[TMP12]], i32 0
 ; CHECK-NEXT:    [[VECEXT1:%.*]] = extractelement <2 x i64> [[TMP14]], i32 0
 ; CHECK-NEXT:    [[_MSCMP1:%.*]] = icmp ne i64 [[TMP1]], 0
-; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB15:.*]], label %[[BB16:.*]], !prof [[PROF1]]
-; CHECK:       [[BB15]]:
+; CHECK-NEXT:    br i1 [[_MSCMP1]], label %[[BB8:.*]], label %[[BB9:.*]], !prof [[PROF1]]
+; CHECK:       [[BB8]]:
 ; CHECK-NEXT:    call void @__msan_warning_noreturn() #[[ATTR4]]
 ; CHECK-NEXT:    unreachable
-; CHECK:       [[BB16]]:
+; CHECK:       [[BB9]]:
 ; CHECK-NEXT:    [[TMP15:%.*]] = ptrtoint ptr [[HF4X16]] to i64
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor i64 [[TMP15]], 87960930222080
 ; CHECK-NEXT:    [[TMP17:%.*]] = inttoptr i64 [[TMP16]] to ptr

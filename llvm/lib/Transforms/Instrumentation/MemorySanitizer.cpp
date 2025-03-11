@@ -3310,16 +3310,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                    ShadowType);
 
     // The return type might have more elements than the input.
-    // Extend the return type back to its original width.
+    // Extend the return type back to its original width if necessary.
     Value *FullShadow = getCleanShadow(&I);
 
     if (Shadow->getType() == FullShadow->getType())
       FullShadow = Shadow;
     else {
-      for (unsigned int i = 0; i < cast<FixedVectorType>(Src->getType())->getNumElements(); i++) {
-        Value *Elem = IRB.CreateExtractElement(Shadow, i);
-        FullShadow = IRB.CreateInsertElement(FullShadow, Elem, i);
-      }
+      SmallVector<int, 8> ShadowMask;
+      for (unsigned X = 0; X < cast<FixedVectorType>(FullShadow->getType())->getNumElements(); ++X)
+        ShadowMask.push_back(X);
+
+      // Append zeros
+      FullShadow = IRB.CreateShuffleVector(Shadow, getCleanShadow(Shadow), ShadowMask);
     }
 
     setShadow(&I, FullShadow);
