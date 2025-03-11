@@ -1598,9 +1598,9 @@ libc_support_library(
     ],
 )
 
-############################### errno targets ################################
+############################### errno ########################################
 
-libc_function(
+libc_support_library(
     name = "errno",
     srcs = ["src/errno/libc_errno.cpp"],
     hdrs = ["src/errno/libc_errno.h"],
