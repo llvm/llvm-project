@@ -519,7 +519,7 @@ protected:
   }
 
   // Calculates the island(s) needed to decode the instruction.
-  // This returns a lit of undecoded bits of an instructions, for example,
+  // This returns a list of undecoded bits of an instructions, for example,
   // Inst{20} = 1 && Inst{3-0} == 0b1111 represents two islands of yet-to-be
   // decoded bits in order to verify that the instruction matches the Opcode.
   unsigned getIslands(std::vector<Island> &Islands, const insn_t &Insn) const;
