@@ -204,9 +204,23 @@ FindInsertBlock(MachineInstr &DefMI, unsigned Reg, MachineDominatorTree *DT,
   return BB;
 }
 
-bool IsSafeToMove(MachineInstr *DefMI, MachineRegisterInfo &MRI) {
-  unsigned OpNum = DefMI->getNumOperands();
+// Maybe expensive to be called all over the place
+bool IsUsedByPhi(MachineInstr *DefMI, MachineRegisterInfo &MRI) {
+  for (auto &Def : DefMI->defs()) {
+    for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Def.getReg())) {
+      if (UseMI.isPHI())
+        return true;
+    }
+  }
+  return false;
+}
 
+bool IsSafeToMove(MachineInstr *DefMI, MachineRegisterInfo &MRI) {
+  // Do not move PHI nodes
+  if (IsUsedByPhi(DefMI, MRI))
+    return false;
+
+  unsigned OpNum = DefMI->getNumOperands();
   // Only move DefMI which all operand is unique def.
   for (unsigned i = 0; i < OpNum; i++) {
     MachineOperand &Op = DefMI->getOperand(i);
