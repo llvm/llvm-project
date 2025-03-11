@@ -249,11 +249,10 @@ static lldb::addr_t GetVTableAddress(Process &process,
 
   auto data_or_err = valobj.GetData();
   if (!data_or_err) {
-    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), data_or_err.takeError(), "Extracted data is an invalid address: {0}");
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::Types), data_or_err.takeError(),
+                    "Extracted data is an invalid address: {0}");
     return LLDB_INVALID_ADDRESS;
   }
-
-
 
   auto size = data_or_err->GetByteSize();
   if (vbtable_ptr_offset + data_or_err->GetAddressByteSize() > size)

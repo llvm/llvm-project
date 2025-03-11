@@ -49,21 +49,24 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
 
     auto data_or_err = valobj->GetData();
     if (!data_or_err) {
-          LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), data_or_err.takeError(), "Failed to extract data: {0}");
-          return false;
-        } 
+      LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), data_or_err.takeError(),
+                      "Failed to extract data: {0}");
+      return false;
+    }
     if (context_type == Value::ContextType::RegisterInfo) {
       const RegisterInfo *reg_info = value.GetRegisterInfo();
       if (reg_info) {
         auto data_or_err = valobj->GetData();
         if (!data_or_err) {
-          LLDB_LOG_ERRORV(GetLog(LLDBLog::Process), data_or_err.takeError(), "Failed to extract data for register info: {0}");
+          LLDB_LOG_ERRORV(GetLog(LLDBLog::Process), data_or_err.takeError(),
+                          "Failed to extract data for register info: {0}");
           return false;
         }
-          
+
         StreamString reg_sstr;
-        DumpDataExtractor(*data_or_err, &reg_sstr, 0, GetFormat(), reg_info->byte_size,
-                          1, UINT32_MAX, LLDB_INVALID_ADDRESS, 0, 0,
+        DumpDataExtractor(*data_or_err, &reg_sstr, 0, GetFormat(),
+                          reg_info->byte_size, 1, UINT32_MAX,
+                          LLDB_INVALID_ADDRESS, 0, 0,
                           exe_ctx.GetBestExecutionContextScope());
         dest = std::string(reg_sstr.GetString());
       }
@@ -95,9 +98,10 @@ bool TypeFormatImpl_Format::FormatObject(ValueObject *valobj,
         } else {
           auto data_or_err = valobj->GetData();
           if (!data_or_err)
-            LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), data_or_err.takeError(),
+            LLDB_LOG_ERRORV(
+                GetLog(LLDBLog::DataFormatters), data_or_err.takeError(),
                 "Failed to extract data for CString info to display: {0}:");
-            return false;
+          return false;
         }
 
         ExecutionContextScope *exe_scope =
@@ -193,10 +197,10 @@ bool TypeFormatImpl_EnumType::FormatObject(ValueObject *valobj,
   auto data_or_err = valobj->GetData();
   if (!data_or_err) {
     LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), data_or_err.takeError(),
-        "Can't extract data related to enum type info: {0}");
+                    "Can't extract data related to enum type info: {0}");
     return false;
   }
-      ExecutionContext exe_ctx(valobj->GetExecutionContextRef());
+  ExecutionContext exe_ctx(valobj->GetExecutionContextRef());
   StreamString sstr;
   valobj_enum_type.DumpTypeValue(&sstr, lldb::eFormatEnum, *data_or_err, 0,
                                  data_or_err->GetByteSize(), 0, 0,

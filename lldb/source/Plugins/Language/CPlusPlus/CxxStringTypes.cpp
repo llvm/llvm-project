@@ -71,7 +71,8 @@ static bool CharSummaryProvider(ValueObject &valobj, Stream &stream) {
   auto data_or_err = valobj.GetData();
 
   if (!data_or_err) {
-    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), data_or_err.takeError(), "Cannot extract data: {0}");
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), data_or_err.takeError(),
+                    "Cannot extract data: {0}");
     return false;
   }
 
@@ -171,8 +172,11 @@ bool lldb_private::formatters::WCharSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &) {
   auto data_or_err = valobj.GetData();
 
-  if (!data_or_err)
+  if (!data_or_err) {
+    LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), data_or_err.takeError(),
+        "Can't extract data for WChar Summary: {0}")
     return false;
+  }
 
   // Get a wchar_t basic type from the current type system
   CompilerType wchar_compiler_type =

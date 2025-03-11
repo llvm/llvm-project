@@ -493,7 +493,8 @@ public:
       }
 
       lldb::offset_t offset = 0;
-      lldb::addr_t reference_addr = valobj_extractor_or_err->GetAddress(&offset);
+      lldb::addr_t reference_addr =
+          valobj_extractor_or_err->GetAddress(&offset);
 
       Status write_error;
       map.WritePointerToMemory(load_addr, reference_addr, write_error);
@@ -573,8 +574,8 @@ public:
 
         m_temporary_allocation_size = data_or_err->GetByteSize();
 
-        m_original_data = std::make_shared<DataBufferHeap>(data_or_err->GetDataStart(),
-                                                           data_or_err->GetByteSize());
+        m_original_data = std::make_shared<DataBufferHeap>(
+            data_or_err->GetDataStart(), data_or_err->GetByteSize());
 
         if (!alloc_error.Success()) {
           err = Status::FromErrorStringWithFormat(
