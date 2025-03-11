@@ -1819,6 +1819,8 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
       "if (auto tmpAttr = {1}) {\n"
       "  tblgen_attrs.emplace_back(rewriter.getStringAttr(\"{0}\"), "
       "tmpAttr);\n}\n";
+  const char *setterCmd = (useProperties) ? setPropCmd : addAttrCmd;
+
   int numVariadic = 0;
   bool hasOperandSegmentSizes = false;
   std::vector<std::string> sizes;
@@ -1833,22 +1835,12 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
           PrintFatalError(loc, "only NativeCodeCall allowed in nested dag node "
                                "for creating attribute");
 
-        if (useProperties) {
-          os << formatv(setPropCmd, opArgName, childNodeNames.lookup(argIndex));
-        } else {
-          os << formatv(addAttrCmd, opArgName, childNodeNames.lookup(argIndex));
-        }
+        os << formatv(setterCmd, opArgName, childNodeNames.lookup(argIndex));
       } else {
         auto leaf = node.getArgAsLeaf(argIndex);
         // The argument in the result DAG pattern.
         auto patArgName = node.getArgName(argIndex);
-        if (useProperties) {
-          os << formatv(setPropCmd, opArgName,
-                        handleOpArgument(leaf, patArgName));
-        } else {
-          os << formatv(addAttrCmd, opArgName,
-                        handleOpArgument(leaf, patArgName));
-        }
+        os << formatv(setterCmd, opArgName, handleOpArgument(leaf, patArgName));
       }
       continue;
     }
