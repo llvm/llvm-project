@@ -1,5 +1,4 @@
-//===-- GoToTargetsRequestHandler.cpp
-//--------------------------------------===//
+//===-- GoToTargetsRequestHandler.cpp -------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -118,4 +117,5 @@ void GoToTargetsRequestHandler::operator()(
   response.try_emplace("body", std::move(body));
   dap.SendJSON(llvm::json::Value(std::move(response)));
 }
+
 } // namespace lldb_dap
