@@ -3287,7 +3287,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     assert(I.arg_size() == 2);
     Value *Src = I.getArgOperand(0);
     assert(Src->getType()->isVectorTy());
-    Value *RoundingMode = I.getArgOperand(1);
+    [[maybe_unused]] Value *RoundingMode = I.getArgOperand(1);
     assert(RoundingMode->getType()->isIntegerTy());
 
     // The return type might have more elements than the input.
