@@ -1604,8 +1604,26 @@ void CodeExtractor::emitFunctionBody(
       Idx[1] = ConstantInt::get(Type::getInt32Ty(header->getContext()), aggIdx);
       GetElementPtrInst *GEP = GetElementPtrInst::Create(
           StructArgTy, AggArg, Idx, "gep_" + inputs[i]->getName(), newFuncRoot);
-      RewriteVal = new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
-                                "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      LoadInst *LoadGEP =
+          new LoadInst(StructArgTy->getElementType(aggIdx), GEP,
+                       "loadgep_" + inputs[i]->getName(), newFuncRoot);
+      PointerType *ItemType =
+          dyn_cast<PointerType>(StructArgTy->getElementType(aggIdx));
+      if (ItemType && !LoadGEP->getMetadata(LLVMContext::MD_align)) {
+        unsigned AddressSpace = ItemType->getAddressSpace();
+        unsigned AlignmentValue = oldFunction->getDataLayout()
+                                      .getPointerPrefAlignment(AddressSpace)
+                                      .value();
+
+        MDBuilder MDB(header->getContext());
+        LoadGEP->setMetadata(
+            LLVMContext::MD_align,
+            MDNode::get(
+                header->getContext(),
+                MDB.createConstant(ConstantInt::get(
+                    Type::getInt64Ty(header->getContext()), AlignmentValue))));
+      }
+      RewriteVal = LoadGEP;
       ++aggIdx;
     } else
       RewriteVal = &*ScalarAI++;
