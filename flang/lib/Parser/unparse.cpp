@@ -2095,7 +2095,7 @@ public:
   }
   void Unparse(const OmpDirectiveSpecification &x) {
     using ArgList = std::list<parser::OmpArgument>;
-    Walk(std::get<llvm::omp::Directive>(x.t));
+    Walk(std::get<OmpDirectiveName>(x.t));
     if (auto &args{std::get<std::optional<ArgList>>(x.t)}) {
       Put("(");
       Walk(*args);
