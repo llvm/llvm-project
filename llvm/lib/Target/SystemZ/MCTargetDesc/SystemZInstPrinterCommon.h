@@ -71,9 +71,9 @@ protected:
   void printS32ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
   void printU48ImmOperand(const MCInst *MI, int OpNum, raw_ostream &O);
-  virtual void printPCRelOperand(const MCInst *MI, int OpNum, raw_ostream &O);
-  virtual void printPCRelOperand(const MCInst *MI, uint64_t /*Address*/,
-                                 int OpNum, raw_ostream &O) {
+  void printPCRelOperand(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printPCRelOperand(const MCInst *MI, uint64_t /*Address*/, int OpNum,
+                         raw_ostream &O) {
     printPCRelOperand(MI, OpNum, O);
   }
   void printPCRelTLSOperand(const MCInst *MI, uint64_t Address, int OpNum,

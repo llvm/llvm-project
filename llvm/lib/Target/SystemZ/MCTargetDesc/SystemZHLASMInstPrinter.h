@@ -36,12 +36,6 @@ public:
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,
                  const MCSubtargetInfo &STI, raw_ostream &O) override;
 
-  void printPCRelOperand(const MCInst *MI, int OpNum, raw_ostream &O) override;
-  void printPCRelOperand(const MCInst *MI, uint64_t /*Address*/, int OpNum,
-                         raw_ostream &O) override {
-    printPCRelOperand(MI, OpNum, O);
-  }
-
 private:
   void printFormattedRegName(const MCAsmInfo *MAI, MCRegister Reg,
                              raw_ostream &O) override;
