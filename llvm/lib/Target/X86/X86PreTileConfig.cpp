@@ -326,10 +326,11 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
   while (!CfgLiveInBBs.empty()) {
     MachineBasicBlock *MBB = CfgLiveInBBs.pop_back_val();
     for (auto *Pred : MBB->predecessors()) {
+      auto &Info = BBVisitedInfo[Pred];
       if (BBVisitedInfo[Pred].LastCall) {
-        CfgNeedInsert.insert(BBVisitedInfo[Pred].LastCall);
-      } else if (!BBVisitedInfo[Pred].NeedTileCfgLiveIn) {
-        BBVisitedInfo[Pred].NeedTileCfgLiveIn = true;
+        CfgNeedInsert.insert(Info.LastCall);
+      } else if (!Info.NeedTileCfgLiveIn) {
+        Info.NeedTileCfgLiveIn = true;
         if (Pred == &MF.front())
           CfgNeedInsert.insert(MIRef(Pred));
         else
