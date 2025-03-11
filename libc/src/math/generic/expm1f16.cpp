@@ -29,7 +29,7 @@ static constexpr fputil::ExceptValues<float16, 1> EXPM1F16_EXCEPTS_LO = {{
     {0x2959U, 0x2975U, 1U, 0U, 1U},
 }};
 
-#ifdef LIBC_TARGET_CPU_HAS_FMA
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
 static constexpr size_t N_EXPM1F16_EXCEPTS_HI = 2;
 #else
 static constexpr size_t N_EXPM1F16_EXCEPTS_HI = 3;
@@ -42,7 +42,7 @@ static constexpr fputil::ExceptValues<float16, N_EXPM1F16_EXCEPTS_HI>
         {0x3f0dU, 0x44d3U, 1U, 0U, 1U},
         // x = -0x1.e28p-3, expm1f16(x) = -0x1.adcp-3 (RZ)
         {0xb38aU, 0xb2b7U, 0U, 1U, 1U},
-#ifndef LIBC_TARGET_CPU_HAS_FMA
+#ifndef LIBC_TARGET_CPU_HAS_FMA_FLOAT
         // x = 0x1.a08p-3, exp10m1f(x) = 0x1.cdcp-3 (RZ)
         {0x3282U, 0x3337U, 1U, 0U, 0U},
 #endif

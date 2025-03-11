@@ -175,53 +175,6 @@ void TransposeOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ConsolidateTransposeOptimization, TransposeIsReshape>(context);
 }
 
-struct MaterializePadValue : public OpRewritePattern<tosa::PadOp> {
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::PadOp op,
-                                PatternRewriter &rewriter) const override {
-    if (op.getPadConst())
-      return failure();
-
-    auto input = op.getInput1();
-    auto padding = op.getPadding();
-
-    ShapedType inputTy = llvm::cast<ShapedType>(input.getType());
-    Type elementTy = inputTy.getElementType();
-
-    Attribute constantAttr;
-    if (llvm::isa<FloatType>(elementTy)) {
-      constantAttr = rewriter.getFloatAttr(elementTy, 0.0);
-    } else if (llvm::isa<IntegerType>(elementTy) && !op.getInputZpAttr()) {
-      constantAttr = rewriter.getIntegerAttr(elementTy, 0);
-    } else if (llvm::isa<IntegerType>(elementTy) && op.getInputZpAttr()) {
-      int64_t value = op.getInputZpAttr().getInt();
-      constantAttr = rewriter.getIntegerAttr(elementTy, value);
-    }
-
-    if (!constantAttr) {
-      return rewriter.notifyMatchFailure(
-          op,
-          "tosa.pad to linalg lowering encountered an unknown element type");
-    }
-
-    auto denseAttr = DenseElementsAttr::get(
-        RankedTensorType::get({1}, elementTy), constantAttr);
-    auto constantVal = rewriter.create<tosa::ConstOp>(
-        op.getLoc(), denseAttr.getType(), denseAttr);
-
-    rewriter.replaceOpWithNewOp<tosa::PadOp>(
-        op, op.getType(), ValueRange{input, padding, constantVal},
-        op->getAttrs());
-    return success();
-  }
-};
-
-void PadOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                        MLIRContext *context) {
-  results.add<MaterializePadValue>(context);
-}
-
 struct MaxPool2dIsNoOp : public OpRewritePattern<tosa::MaxPool2dOp> {
   using OpRewritePattern::OpRewritePattern;
 
@@ -929,9 +882,9 @@ OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
   return {};
 }
 
-OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
+OpFoldResult ConstOp::fold(FoldAdaptor adaptor) { return getValuesAttr(); }
 
-OpFoldResult ConstShapeOp::fold(FoldAdaptor adaptor) { return getValueAttr(); }
+OpFoldResult ConstShapeOp::fold(FoldAdaptor adaptor) { return getValuesAttr(); }
 
 #define REDUCE_FOLDER(OP)                                                      \
   OpFoldResult OP::fold(FoldAdaptor adaptor) {                                 \
@@ -994,7 +947,7 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
       return {};
 
     llvm::SmallVector<int64_t> shapeVec;
-    if (!tosa::getConstShapeValue(getShape().getDefiningOp(), shapeVec))
+    if (!tosa::getConstShapeValues(getShape().getDefiningOp(), shapeVec))
       return {};
 
     return operand.reshape(
@@ -1190,13 +1143,36 @@ OpFoldResult tosa::ExpOp::fold(FoldAdaptor adaptor) {
 }
 
 OpFoldResult tosa::NegateOp::fold(FoldAdaptor adaptor) {
-  auto input = getInput1();
   // Element-wise negate(negate(x)) = x
-  if (auto op = input.getDefiningOp<tosa::NegateOp>()) {
-    return op.getInput1();
+  // iff all zero points are constant 0
+  auto definingOp = getInput1().getDefiningOp<tosa::NegateOp>();
+  if (!definingOp) {
+    // defining op of input1 is not a negate, cannot fold
+    return {};
   }
 
-  return {};
+  if (FailureOr<int64_t> maybeIZp = getInput1ZeroPoint();
+      failed(maybeIZp) || *maybeIZp != 0) {
+    // input1 zero point is not constant 0, cannot fold
+    return {};
+  }
+  if (FailureOr<int64_t> maybeOZp = getOutputZeroPoint();
+      failed(maybeOZp) || *maybeOZp != 0) {
+    // output zero point is not constant 0, cannot fold
+    return {};
+  }
+  if (FailureOr<int64_t> maybeIZp = definingOp.getInput1ZeroPoint();
+      failed(maybeIZp) || *maybeIZp != 0) {
+    // definingOp's input1 zero point is not constant 0, cannot fold
+    return {};
+  }
+  if (FailureOr<int64_t> maybeOZp = definingOp.getOutputZeroPoint();
+      failed(maybeOZp) || *maybeOZp != 0) {
+    // definingOp's output zero point is not constant 0, cannot fold
+    return {};
+  }
+
+  return definingOp.getInput1();
 }
 
 OpFoldResult tosa::AbsOp::fold(FoldAdaptor adaptor) {

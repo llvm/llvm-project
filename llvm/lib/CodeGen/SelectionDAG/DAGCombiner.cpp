@@ -149,10 +149,6 @@ static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
     cl::desc("DAG combiner enable load/<replace bytes>/store with "
              "a narrower store"));
 
-static cl::opt<bool> EnableVectorFCopySignExtendRound(
-    "combiner-vector-fcopysign-extend-round", cl::Hidden, cl::init(false),
-    cl::desc(
-        "Enable merging extends and rounds into FCOPYSIGN on vector types"));
 namespace {
 
   class DAGCombiner {
@@ -5392,6 +5388,12 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
       if (!IsSigned && Add->getFlags().hasNoUnsignedWrap())
         return DAG.getNode(ISD::AVGCEILU, DL, VT, X, Y);
     }
+  }
+
+  // Fold avgfloors(x,y) -> avgflooru(x,y) if both x and y are non-negative
+  if (Opcode == ISD::AVGFLOORS && hasOperation(ISD::AVGFLOORU, VT)) {
+    if (DAG.SignBitIsZero(N0) && DAG.SignBitIsZero(N1))
+      return DAG.getNode(ISD::AVGFLOORU, DL, VT, N0, N1);
   }
 
   return SDValue();
@@ -18011,7 +18013,8 @@ static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(EVT XTy, EVT YTy) {
   if (YTy == MVT::f128)
     return false;
 
-  return !YTy.isVector() || EnableVectorFCopySignExtendRound;
+  // Avoid mismatched vector operand types, for better instruction selection.
+  return !YTy.isVector();
 }
 
 static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(SDNode *N) {

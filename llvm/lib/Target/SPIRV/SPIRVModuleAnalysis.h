@@ -35,6 +35,7 @@ enum ModuleSectionType {
   MB_DebugNames,           // All OpName and OpMemberName intrs.
   MB_DebugStrings,         // All OpString intrs.
   MB_DebugModuleProcessed, // All OpModuleProcessed instructions.
+  MB_AliasingInsts,        // SPV_INTEL_memory_access_aliasing instructions.
   MB_Annotations,          // OpDecorate, OpMemberDecorate etc.
   MB_TypeConstVars,        // OpTypeXXX, OpConstantXXX, and global OpVariables.
   MB_NonSemanticGlobalDI,  // OpExtInst with e.g. DebugSource, DebugTypeBasic.

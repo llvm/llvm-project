@@ -3522,6 +3522,31 @@ Raw pointers and references to an object which supports CheckedPtr or CheckedRef
 
 See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
 
+alpha.webkit.NoUnretainedMemberChecker
+""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to a NS or CF object can't be used as class members or ivars. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled. Only RetainPtr is allowed for NS types when ARC is disabled.
+
+.. code-block:: cpp
+
+ struct Foo {
+   NSObject *ptr; // warn
+   // ...
+ };
+
+See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
+
+alpha.webkit.UnretainedLambdaCapturesChecker
+""""""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to NS or CF types can't be captured in lambdas. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled, and only RetainPtr is allowed for NS types when ARC is disabled.
+
+.. code-block:: cpp
+
+ void foo(NSObject *a, NSObject *b) {
+   [&, a](){ // warn about 'a'
+     do_something(b); // warn about 'b'
+   };
+ };
+
 .. _alpha-webkit-UncountedCallArgsChecker:
 
 alpha.webkit.UncountedCallArgsChecker
@@ -3616,6 +3641,12 @@ alpha.webkit.UncheckedCallArgsChecker
 The goal of this rule is to make sure that lifetime of any dynamically allocated CheckedPtr capable object passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. CheckedPtr capable objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unchecked types.
 
 The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
+alpha.webkit.UnretainedCallArgsChecker
+""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that lifetime of any dynamically allocated NS or CF objects passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. NS or CF objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unretained types.
+
+The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
 
 alpha.webkit.UncountedLocalVarsChecker
 """"""""""""""""""""""""""""""""""""""

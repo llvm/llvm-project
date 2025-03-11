@@ -1351,7 +1351,7 @@ def HasVendorXqcicm
                          "'Xqcicm' (Qualcomm uC Conditional Move Extension)">;
 
 def FeatureVendorXqciint
-    : RISCVExperimentalExtension<0, 2, "Qualcomm uC Interrupts Extension",
+    : RISCVExperimentalExtension<0, 4, "Qualcomm uC Interrupts Extension",
                                  [FeatureStdExtZca]>;
 def HasVendorXqciint
     : Predicate<"Subtarget->hasVendorXqciint()">,
@@ -1365,6 +1365,14 @@ def HasVendorXqcilia
     : Predicate<"Subtarget->hasVendorXqcilia()">,
       AssemblerPredicate<(all_of FeatureVendorXqcilia),
                          "'Xqcilia' (Qualcomm uC Large Immediate Arithmetic Extension)">;
+
+def FeatureVendorXqcibm
+    : RISCVExperimentalExtension<0, 4, "Qualcomm uC Bit Manipulation Extension",
+                                 [FeatureStdExtZca]>;
+def HasVendorXqcibm
+    : Predicate<"Subtarget->hasVendorXqcibm()">,
+      AssemblerPredicate<(all_of FeatureVendorXqcibm),
+                         "'Xqcibm' (Qualcomm uC Bit Manipulation Extension)">;
 
 def FeatureVendorXqcilo
     : RISCVExperimentalExtension<0, 2, "Qualcomm uC Large Offset Load Store Extension",

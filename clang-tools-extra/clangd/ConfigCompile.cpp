@@ -290,6 +290,18 @@ struct FragmentCompiler {
       });
     }
 
+    if (F.BuiltinHeaders) {
+      if (auto Val =
+              compileEnum<Config::BuiltinHeaderPolicy>("BuiltinHeaders",
+                                                       *F.BuiltinHeaders)
+                  .map("Clangd", Config::BuiltinHeaderPolicy::Clangd)
+                  .map("QueryDriver", Config::BuiltinHeaderPolicy::QueryDriver)
+                  .value())
+        Out.Apply.push_back([Val](const Params &, Config &C) {
+          C.CompileFlags.BuiltinHeaders = *Val;
+        });
+    }
+
     if (F.CompilationDatabase) {
       std::optional<Config::CDBSearchSpec> Spec;
       if (**F.CompilationDatabase == "Ancestors") {
