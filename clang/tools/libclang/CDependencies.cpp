@@ -34,6 +34,7 @@ namespace {
 struct DependencyScannerServiceOptions {
   ScanningOutputFormat ConfiguredFormat = ScanningOutputFormat::Full;
   CASOptions CASOpts;
+  ScanningOptimizations OptimizeArgs = ScanningOptimizations::Default;
   std::shared_ptr<cas::ObjectStore> CAS;
   std::shared_ptr<cas::ActionCache> Cache;
 
@@ -100,6 +101,15 @@ void clang_experimental_DependencyScannerServiceOptions_setCASOptions(
   unwrap(Opts)->CASOpts = *cas::unwrap(CASOpts);
 }
 
+void clang_experimental_DependencyScannerServiceOptions_setCWDOptimization(
+    CXDependencyScannerServiceOptions Opts, int Value) {
+  auto Mask =
+      Value != 0 ? ScanningOptimizations::All : ScanningOptimizations::None;
+  auto OptArgs = unwrap(Opts)->OptimizeArgs;
+  unwrap(Opts)->OptimizeArgs = (OptArgs & ~ScanningOptimizations::IgnoreCWD) |
+                               (ScanningOptimizations::IgnoreCWD & Mask);
+}
+
 void clang_experimental_DependencyScannerServiceOptions_setObjectStore(
     CXDependencyScannerServiceOptions Opts, CXCASObjectStore CAS) {
   unwrap(Opts)->CAS = cas::unwrap(CAS)->CAS;
@@ -156,7 +166,8 @@ clang_experimental_DependencyScannerService_create_v1(
   }
   return wrap(new DependencyScanningService(
       ScanningMode::DependencyDirectivesScan, Format, unwrap(Opts)->CASOpts,
-      std::move(CAS), std::move(Cache), std::move(FS)));
+      std::move(CAS), std::move(Cache), std::move(FS),
+      unwrap(Opts)->OptimizeArgs));
 }
 
 void clang_experimental_DependencyScannerService_dispose_v0(
@@ -450,6 +461,10 @@ clang_experimental_DepGraphModule_getCacheKey(CXDepGraphModule CXDepMod) {
   if (ModDeps.ModuleCacheKey)
     return ModDeps.ModuleCacheKey->c_str();
   return nullptr;
+}
+
+int clang_experimental_DepGraphModule_isCWDIgnored(CXDepGraphModule CXDepMod) {
+  return unwrap(CXDepMod)->ModDeps->IgnoreCWD;
 }
 
 size_t clang_experimental_DepGraph_getNumTUCommands(CXDepGraph Graph) {

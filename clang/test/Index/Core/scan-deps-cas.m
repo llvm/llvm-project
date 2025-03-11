@@ -32,6 +32,7 @@
 // CHECK-NEXT:   module:
 // CHECK-NEXT:     name: ModA
 // CHECK-NEXT:     context-hash: [[HASH_MOD_A:[A-Z0-9]+]]
+// CHECK-NEXT:     cwd-ignored: 0
 // CHECK-NEXT:     module-map-path: [[PREFIX]]/Inputs/module/module.modulemap
 // CHECK-NEXT:     casfs-root-id: [[CASFS_MODA_ROOT_ID:llvmcas://[[:xdigit:]]+]]
 // CHECK-NEXT:     cache-key: [[CASFS_MODA_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
@@ -72,6 +73,7 @@
 // INCLUDE_TREE-NEXT:   module:
 // INCLUDE_TREE-NEXT:     name: ModA
 // INCLUDE_TREE-NEXT:     context-hash: [[HASH_MOD_A:[A-Z0-9]+]]
+// INCLUDE_TREE-NEXT:     cwd-ignored: 0
 // INCLUDE_TREE-NEXT:     module-map-path: [[PREFIX]]/Inputs/module/module.modulemap
 // INCLUDE_TREE-NEXT:     include-tree-id: [[ModA_INCLUDE_TREE_ID:llvmcas://[[:xdigit:]]+]]
 // INCLUDE_TREE-NEXT:     cache-key: [[ModA_CACHE_KEY:llvmcas://[[:xdigit:]]+]]

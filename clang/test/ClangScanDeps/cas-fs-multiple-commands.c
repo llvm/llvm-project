@@ -195,6 +195,7 @@
 // CHECK-LIBCLANG-NEXT:   module:
 // CHECK-LIBCLANG-NEXT:     name: Mod
 // CHECK-LIBCLANG-NEXT:     context-hash: {{.*}}
+// CHECK-LIBCLANG-NEXT:     cwd-ignored: 0
 // CHECK-LIBCLANG-NEXT:     module-map-path: [[PREFIX]]/module.modulemap
 // CHECK-LIBCLANG-NEXT:     casfs-root-id: [[M_ROOT_ID:llvmcas://[[:xdigit:]]+]]
 // CHECK-LIBCLANG-NEXT:     cache-key: [[M_CACHE_KEY:llvmcas://[[:xdigit:]]+]]

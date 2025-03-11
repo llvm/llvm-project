@@ -162,7 +162,11 @@ static cl::opt<bool> TestCASCancellation(
     "test-cas-cancellation",
     cl::desc(
         "perform extra CAS API invocation and cancel it for testing purposes"));
-}
+static cl::opt<bool> OptimizeCWD(
+    "optimize-cwd",
+    cl::desc(
+        "instruct the scanner to ignore current working directory if safe."));
+} // namespace options
 } // anonymous namespace
 
 static void printSymbolInfo(SymbolInfo SymInfo, raw_ostream &OS);
@@ -717,6 +721,10 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
   clang_experimental_DependencyScannerServiceOptions_setDependencyMode(
       Opts, CXDependencyMode_Full);
 
+  if (options::OptimizeCWD)
+    clang_experimental_DependencyScannerServiceOptions_setCWDOptimization(Opts,
+                                                                          1);
+
   if (DBs)
     clang_experimental_DependencyScannerServiceOptions_setCASDatabases(Opts,
                                                                        DBs);
@@ -813,6 +821,7 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
       const char *Name = clang_experimental_DepGraphModule_getName(Mod);
       const char *ContextHash =
           clang_experimental_DepGraphModule_getContextHash(Mod);
+      int CwdIgnored = clang_experimental_DepGraphModule_isCWDIgnored(Mod);
       const char *ModuleMapPath =
           clang_experimental_DepGraphModule_getModuleMapPath(Mod);
       const char *ModuleFilesystemRootID =
@@ -832,6 +841,7 @@ static int scanDeps(ArrayRef<const char *> Args, std::string WorkingDirectory,
       llvm::outs() << "  module:\n"
                    << "    name: " << Name << "\n"
                    << "    context-hash: " << ContextHash << "\n"
+                   << "    cwd-ignored: " << CwdIgnored << "\n"
                    << "    module-map-path: "
                    << (ModuleMapPath ? ModuleMapPath : "<none>") << "\n";
       if (ModuleFilesystemRootID)

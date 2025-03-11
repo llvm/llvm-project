@@ -13,6 +13,7 @@
 // CHECK-NEXT:   module:
 // CHECK-NEXT:     name: ModA
 // CHECK-NEXT:     context-hash: [[HASH_MOD_A:[A-Z0-9]+]]
+// CHECK-NEXT:     cwd-ignored: 0
 // CHECK-NEXT:     module-map-path: [[PREFIX]]/Inputs/module/module.modulemap
 // CHECK-NEXT:     module-deps:
 // CHECK-NEXT:     file-deps:

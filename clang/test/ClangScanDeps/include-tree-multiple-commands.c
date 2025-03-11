@@ -195,6 +195,7 @@
 // CHECK-LIBCLANG-NEXT:   module:
 // CHECK-LIBCLANG-NEXT:     name: Mod
 // CHECK-LIBCLANG-NEXT:     context-hash: {{.*}}
+// CHECK-LIBCLANG-NEXT:     cwd-ignored: 0
 // CHECK-LIBCLANG-NEXT:     module-map-path: [[PREFIX]]/include/module.modulemap
 // CHECK-LIBCLANG-NEXT:     include-tree-id: [[M_INCLUDE_TREE:llvmcas://[[:xdigit:]]+]]
 // CHECK-LIBCLANG-NEXT:     cache-key: [[M_CACHE_KEY:llvmcas://[[:xdigit:]]+]]
