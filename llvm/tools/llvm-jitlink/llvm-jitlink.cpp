@@ -336,8 +336,8 @@ static ExitOnError ExitOnErr;
 
 static LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << "Linking in runtime functions\n"
-         << (void *)&llvm_orc_registerEHFrameSectionWrapper << '\n'
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper << '\n'
+         << (void *)&llvm_orc_registerEHFrameSectionAllocAction << '\n'
+         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBWrapper << '\n'
          << (void *)&llvm_orc_registerJITLoaderGDBAllocAction << '\n'
          << (void *)&llvm_orc_registerJITLoaderPerfStart << '\n'

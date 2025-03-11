@@ -22,17 +22,17 @@ Expected<std::unique_ptr<EHFrameRegistrationPlugin>>
 EHFrameRegistrationPlugin::Create(ExecutionSession &ES) {
   // Lookup addresseses of the registration/deregistration functions in the
   // bootstrap map.
-  ExecutorAddr RegisterEHFrameSectionWrapper;
-  ExecutorAddr DeregisterEHFrameSectionWrapper;
+  ExecutorAddr RegisterEHFrameSectionAllocAction;
+  ExecutorAddr DeregisterEHFrameSectionAllocAction;
   if (auto Err = ES.getExecutorProcessControl().getBootstrapSymbols(
-          {{RegisterEHFrameSectionWrapper,
-            rt::RegisterEHFrameSectionWrapperName},
-           {DeregisterEHFrameSectionWrapper,
-            rt::DeregisterEHFrameSectionWrapperName}}))
+          {{RegisterEHFrameSectionAllocAction,
+            rt::RegisterEHFrameSectionAllocActionName},
+           {DeregisterEHFrameSectionAllocAction,
+            rt::DeregisterEHFrameSectionAllocActionName}}))
     return std::move(Err);
 
   return std::make_unique<EHFrameRegistrationPlugin>(
-      ES, RegisterEHFrameSectionWrapper, DeregisterEHFrameSectionWrapper);
+      RegisterEHFrameSectionAllocAction, DeregisterEHFrameSectionAllocAction);
 }
 
 void EHFrameRegistrationPlugin::modifyPassConfig(

@@ -1340,8 +1340,8 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
 // In-process LLJIT uses eh-frame section wrappers via EPC, so we need to force
 // them to be linked in.
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper;
+  errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
+         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction;
 }
 
 } // End namespace orc.

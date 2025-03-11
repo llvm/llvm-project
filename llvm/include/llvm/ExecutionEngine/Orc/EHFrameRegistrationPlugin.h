@@ -28,10 +28,10 @@ public:
   static Expected<std::unique_ptr<EHFrameRegistrationPlugin>>
   Create(ExecutionSession &ES);
 
-  EHFrameRegistrationPlugin(ExecutionSession &ES, ExecutorAddr RegisterEHFrame,
+  EHFrameRegistrationPlugin(ExecutorAddr RegisterEHFrame,
                             ExecutorAddr DeregisterEHFrame)
-      : ES(ES), RegisterEHFrame(RegisterEHFrame),
-        DeregisterEHFrame(DeregisterEHFrame) {}
+      : RegisterEHFrame(RegisterEHFrame), DeregisterEHFrame(DeregisterEHFrame) {
+  }
 
   void modifyPassConfig(MaterializationResponsibility &MR,
                         jitlink::LinkGraph &G,
@@ -46,7 +46,6 @@ public:
                                    ResourceKey SrcKey) override {}
 
 private:
-  ExecutionSession &ES;
   ExecutorAddr RegisterEHFrame;
   ExecutorAddr DeregisterEHFrame;
 };
