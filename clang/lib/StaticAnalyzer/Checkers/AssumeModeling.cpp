@@ -54,7 +54,7 @@ void AssumeModelingChecker::checkPostStmt(const AttributedStmt *A,
 
 bool AssumeModelingChecker::evalCall(const CallEvent &Call,
                                      CheckerContext &C) const {
-  ProgramStateRef state = C.getState();
+  ProgramStateRef State = C.getState();
   const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
   if (!FD)
     return false;
@@ -69,15 +69,13 @@ bool AssumeModelingChecker::evalCall(const CallEvent &Call,
   if (Arg.isUndef())
     return true; // Return true to model purity.
 
-  state = state->assume(Arg.castAs<DefinedOrUnknownSVal>(), true);
-  // FIXME: do we want to warn here? Not right now. The most reports might
-  // come from infeasible paths, thus being false positives.
-  if (!state) {
+  State = State->assume(Arg.castAs<DefinedOrUnknownSVal>(), true);
+  if (!State) {
     C.addSink();
     return true;
   }
 
-  C.addTransition(state);
+  C.addTransition(State);
   return true;
 }
 
