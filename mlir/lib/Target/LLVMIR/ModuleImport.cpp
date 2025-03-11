@@ -544,8 +544,8 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
         builder.getContext(), (ModFlagBehavior)behavior);
 
     moduleFlags.push_back(
-        ModuleFlagAttr::get(builder.getContext(), behaviorAttr,
-                            builder.getStringAttr(key->getString()), valAttr));
+        builder.getAttr<ModuleFlagAttr>(behaviorAttr, builder.getStringAttr(key->getString()),
+                                                                valAttr));
   }
 
   if (!moduleFlags.empty()) {
