@@ -142,7 +142,7 @@ static cl::opt<bool> ShouldStartVectorizeHorAtStore(
         "Attempt to vectorize horizontal reductions feeding into a store"));
 
 static cl::opt<bool> SplitAlternateInstructions(
-    "slp-split-alternate-instructions", cl::init(true), cl::Hidden,
+    "slp-split-alternate-instructions", cl::init(false), cl::Hidden,
     cl::desc("Improve the code quality by splitting alternate instructions"));
 
 static cl::opt<int>

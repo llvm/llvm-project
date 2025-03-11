@@ -13,36 +13,52 @@ define i32 @test(ptr %f, i1 %tobool.i.4, i32 %retval.0.i.219) {
 ; CHECK-NEXT:    br i1 false, label %[[D_EXIT_3]], label %[[D_EXIT_6:.*]]
 ; CHECK:       [[D_EXIT_3]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = phi <2 x i32> [ poison, %[[IF_END_I_2]] ], [ zeroinitializer, %[[ENTRY]] ], [ poison, %[[IF_END_I_1]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[RETVAL_0_I_219]], i32 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_I_4]], label %[[D_EXIT_4:.*]], label %[[D_EXIT_6]]
 ; CHECK:       [[D_EXIT_4]]:
 ; CHECK-NEXT:    br label %[[D_EXIT_6]]
 ; CHECK:       [[IF_END_I_5:.*]]:
 ; CHECK-NEXT:    br i1 false, label %[[D_EXIT_6]], label %[[D_EXIT_7:.*]]
 ; CHECK:       [[D_EXIT_6]]:
-; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ poison, %[[IF_END_I_5]] ], [ [[TMP1]], %[[D_EXIT_3]] ], [ poison, %[[IF_END_I_2]] ], [ [[TMP1]], %[[D_EXIT_4]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ poison, %[[IF_END_I_5]] ], [ [[TMP2]], %[[D_EXIT_3]] ], [ poison, %[[IF_END_I_2]] ], [ zeroinitializer, %[[D_EXIT_4]] ]
-; CHECK-NEXT:    [[TMP8:%.*]] = phi <2 x i32> [ poison, %[[IF_END_I_5]] ], [ zeroinitializer, %[[D_EXIT_3]] ], [ poison, %[[IF_END_I_2]] ], [ zeroinitializer, %[[D_EXIT_4]] ]
+; CHECK-NEXT:    [[RETVAL_0_I_549:%.*]] = phi i32 [ -1, %[[IF_END_I_5]] ], [ 0, %[[D_EXIT_3]] ], [ 0, %[[IF_END_I_2]] ], [ 0, %[[D_EXIT_4]] ]
+; CHECK-NEXT:    [[RETVAL_0_I_219213541:%.*]] = phi i32 [ 0, %[[IF_END_I_5]] ], [ [[RETVAL_0_I_219]], %[[D_EXIT_3]] ], [ 0, %[[IF_END_I_2]] ], [ 0, %[[D_EXIT_4]] ]
+; CHECK-NEXT:    [[TMP9:%.*]] = phi <2 x i32> [ poison, %[[IF_END_I_5]] ], [ [[TMP1]], %[[D_EXIT_3]] ], [ poison, %[[IF_END_I_2]] ], [ [[TMP1]], %[[D_EXIT_4]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ poison, %[[IF_END_I_5]] ], [ <i32 1, i32 0>, %[[D_EXIT_3]] ], [ poison, %[[IF_END_I_2]] ], [ zeroinitializer, %[[D_EXIT_4]] ]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i32 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP3]], i32 1
 ; CHECK-NEXT:    br label %[[D_EXIT_7]]
 ; CHECK:       [[D_EXIT_7]]:
-; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ [[TMP3]], %[[D_EXIT_6]] ], [ poison, %[[IF_END_I_5]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = phi <2 x i32> [ [[TMP4]], %[[D_EXIT_6]] ], [ poison, %[[IF_END_I_5]] ]
-; CHECK-NEXT:    [[TMP5:%.*]] = phi <2 x i32> [ [[TMP8]], %[[D_EXIT_6]] ], [ poison, %[[IF_END_I_5]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP7]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i32> <i32 poison, i32 1, i32 1, i32 poison>, i32 [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i32> [[TMP11]], i32 [[RETVAL_0_I_219]], i32 3
-; CHECK-NEXT:    [[TMP16:%.*]] = add <4 x i32> [[TMP15]], [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <4 x i32> [[TMP14]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP22:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP21]], <4 x i32> [[TMP10]], i64 4)
-; CHECK-NEXT:    [[TMP23:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 0, i32 poison, i32 poison, i32 poison, i32 0, i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <8 x i32> [[TMP23]], <8 x i32> <i32 poison, i32 poison, i32 1, i32 1, i32 1, i32 poison, i32 poison, i32 1>, <8 x i32> <i32 0, i32 1, i32 10, i32 11, i32 12, i32 5, i32 6, i32 15>
-; CHECK-NEXT:    [[TMP19:%.*]] = add <8 x i32> [[TMP18]], [[TMP22]]
-; CHECK-NEXT:    [[TMP20:%.*]] = call <4 x i32> @llvm.vector.extract.v4i32.v8i32(<8 x i32> [[TMP19]], i64 0)
-; CHECK-NEXT:    [[RDX_OP:%.*]] = or <4 x i32> [[TMP20]], [[TMP16]]
-; CHECK-NEXT:    [[TMP12:%.*]] = call <8 x i32> @llvm.vector.insert.v8i32.v4i32(<8 x i32> [[TMP19]], <4 x i32> [[RDX_OP]], i64 0)
-; CHECK-NEXT:    [[TMP17:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP12]])
+; CHECK-NEXT:    [[RETVAL_0_I_4373961:%.*]] = phi i32 [ [[TMP5]], %[[D_EXIT_6]] ], [ 0, %[[IF_END_I_5]] ]
+; CHECK-NEXT:    [[RETVAL_0_I_21921354159:%.*]] = phi i32 [ [[RETVAL_0_I_219213541]], %[[D_EXIT_6]] ], [ 0, %[[IF_END_I_5]] ]
+; CHECK-NEXT:    [[RETVAL_0_I_327294753:%.*]] = phi i32 [ [[TMP4]], %[[D_EXIT_6]] ], [ 0, %[[IF_END_I_5]] ]
+; CHECK-NEXT:    [[RETVAL_0_I_54951:%.*]] = phi i32 [ [[RETVAL_0_I_549]], %[[D_EXIT_6]] ], [ 0, %[[IF_END_I_5]] ]
+; CHECK-NEXT:    [[TMP6:%.*]] = phi <2 x i32> [ [[TMP9]], %[[D_EXIT_6]] ], [ poison, %[[IF_END_I_5]] ]
+; CHECK-NEXT:    [[ADD_5:%.*]] = add nsw i32 [[RETVAL_0_I_54951]], 1
+; CHECK-NEXT:    [[ADD_4:%.*]] = add i32 [[TMP0]], [[RETVAL_0_I_4373961]]
+; CHECK-NEXT:    [[ADD_3:%.*]] = add i32 [[RETVAL_0_I_219]], [[RETVAL_0_I_327294753]]
+; CHECK-NEXT:    [[ADD_2:%.*]] = add i32 [[RETVAL_0_I_21921354159]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x i32> [[TMP6]], i32 0
+; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[RETVAL_0_I_219]], [[TMP7]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add nsw i32 [[TMP7]], 1
+; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[ADD]], [[ADD1]]
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> <i32 poison, i32 1>, i32 [[RETVAL_0_I_219]], i32 0
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <2 x i32> [[TMP6]], <2 x i32> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP11:%.*]] = add <2 x i32> [[TMP2]], [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i32> [[TMP11]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = or i32 [[TMP12]], [[TMP8]]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP11]], i32 1
+; CHECK-NEXT:    [[OR2_1:%.*]] = or i32 [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP15:%.*]] = or i32 [[ADD_2]], [[OR2_1]]
+; CHECK-NEXT:    [[ADD1_2:%.*]] = add i32 [[RETVAL_0_I_219]], [[RETVAL_0_I_21921354159]]
+; CHECK-NEXT:    [[OR2_2:%.*]] = or i32 [[TMP15]], [[ADD1_2]]
+; CHECK-NEXT:    [[TMP16:%.*]] = or i32 [[ADD_3]], [[OR2_2]]
+; CHECK-NEXT:    [[ADD1_3:%.*]] = add nsw i32 [[RETVAL_0_I_327294753]], 1
+; CHECK-NEXT:    [[OR2_3:%.*]] = or i32 [[TMP16]], [[ADD1_3]]
+; CHECK-NEXT:    [[TMP19:%.*]] = or i32 [[ADD_4]], [[OR2_3]]
+; CHECK-NEXT:    [[ADD1_4:%.*]] = add nsw i32 [[RETVAL_0_I_4373961]], 1
+; CHECK-NEXT:    [[OR2_4:%.*]] = or i32 [[TMP19]], [[ADD1_4]]
+; CHECK-NEXT:    [[TMP18:%.*]] = or i32 [[ADD_5]], [[OR2_4]]
+; CHECK-NEXT:    [[ADD1_5:%.*]] = add i32 [[RETVAL_0_I_219]], [[RETVAL_0_I_54951]]
+; CHECK-NEXT:    [[TMP17:%.*]] = or i32 [[TMP18]], [[ADD1_5]]
 ; CHECK-NEXT:    ret i32 [[TMP17]]
 ;
 entry:

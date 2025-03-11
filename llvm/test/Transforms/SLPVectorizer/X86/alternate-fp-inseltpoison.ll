@@ -8,27 +8,21 @@
 
 define <8 x float> @fadd_fsub_v8f32(<8 x float> %a, <8 x float> %b) {
 ; SSE-LABEL: @fadd_fsub_v8f32(
-; SSE-NEXT:    [[TMP1:%.*]] = fsub <8 x float> [[A:%.*]], [[B:%.*]]
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
-; SSE-NEXT:    [[TMP3:%.*]] = fadd <8 x float> [[A]], [[B]]
-; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <4 x i32> <i32 0, i32 3, i32 4, i32 7>
-; SSE-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP2]], <8 x i32> <i32 0, i32 4, i32 5, i32 1, i32 2, i32 6, i32 7, i32 3>
+; SSE-NEXT:    [[TMP3:%.*]] = fadd <8 x float> [[A:%.*]], [[B:%.*]]
+; SSE-NEXT:    [[TMP2:%.*]] = fsub <8 x float> [[A]], [[B]]
+; SSE-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; SSE-NEXT:    ret <8 x float> [[TMP5]]
 ;
 ; SLM-LABEL: @fadd_fsub_v8f32(
-; SLM-NEXT:    [[TMP1:%.*]] = fsub <8 x float> [[A:%.*]], [[B:%.*]]
-; SLM-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
-; SLM-NEXT:    [[TMP3:%.*]] = fadd <8 x float> [[A]], [[B]]
-; SLM-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <4 x i32> <i32 0, i32 3, i32 4, i32 7>
-; SLM-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP2]], <8 x i32> <i32 0, i32 4, i32 5, i32 1, i32 2, i32 6, i32 7, i32 3>
+; SLM-NEXT:    [[TMP3:%.*]] = fadd <8 x float> [[A:%.*]], [[B:%.*]]
+; SLM-NEXT:    [[TMP2:%.*]] = fsub <8 x float> [[A]], [[B]]
+; SLM-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; SLM-NEXT:    ret <8 x float> [[TMP5]]
 ;
 ; AVX-LABEL: @fadd_fsub_v8f32(
-; AVX-NEXT:    [[TMP1:%.*]] = fsub <8 x float> [[A:%.*]], [[B:%.*]]
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
-; AVX-NEXT:    [[TMP3:%.*]] = fadd <8 x float> [[A]], [[B]]
-; AVX-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <4 x i32> <i32 0, i32 3, i32 4, i32 7>
-; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP2]], <8 x i32> <i32 0, i32 4, i32 5, i32 1, i32 2, i32 6, i32 7, i32 3>
+; AVX-NEXT:    [[TMP3:%.*]] = fadd <8 x float> [[A:%.*]], [[B:%.*]]
+; AVX-NEXT:    [[TMP2:%.*]] = fsub <8 x float> [[A]], [[B]]
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; AVX-NEXT:    ret <8 x float> [[TMP5]]
 ;
 ; AVX2-LABEL: @fadd_fsub_v8f32(
@@ -80,35 +74,27 @@ define <8 x float> @fadd_fsub_v8f32(<8 x float> %a, <8 x float> %b) {
 
 define <8 x float> @fmul_fdiv_v8f32(<8 x float> %a, <8 x float> %b) {
 ; SSE-LABEL: @fmul_fdiv_v8f32(
-; SSE-NEXT:    [[TMP1:%.*]] = fdiv <8 x float> [[A:%.*]], [[B:%.*]]
-; SSE-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
-; SSE-NEXT:    [[TMP3:%.*]] = fmul <8 x float> [[A]], [[B]]
-; SSE-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <4 x i32> <i32 0, i32 3, i32 4, i32 7>
-; SSE-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP2]], <8 x i32> <i32 0, i32 4, i32 5, i32 1, i32 2, i32 6, i32 7, i32 3>
+; SSE-NEXT:    [[TMP3:%.*]] = fmul <8 x float> [[A:%.*]], [[B:%.*]]
+; SSE-NEXT:    [[TMP2:%.*]] = fdiv <8 x float> [[A]], [[B]]
+; SSE-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; SSE-NEXT:    ret <8 x float> [[TMP5]]
 ;
 ; SLM-LABEL: @fmul_fdiv_v8f32(
-; SLM-NEXT:    [[TMP1:%.*]] = fdiv <8 x float> [[A:%.*]], [[B:%.*]]
-; SLM-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
-; SLM-NEXT:    [[TMP3:%.*]] = fmul <8 x float> [[A]], [[B]]
-; SLM-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <4 x i32> <i32 0, i32 3, i32 4, i32 7>
-; SLM-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP2]], <8 x i32> <i32 0, i32 4, i32 5, i32 1, i32 2, i32 6, i32 7, i32 3>
+; SLM-NEXT:    [[TMP3:%.*]] = fmul <8 x float> [[A:%.*]], [[B:%.*]]
+; SLM-NEXT:    [[TMP2:%.*]] = fdiv <8 x float> [[A]], [[B]]
+; SLM-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; SLM-NEXT:    ret <8 x float> [[TMP5]]
 ;
 ; AVX-LABEL: @fmul_fdiv_v8f32(
-; AVX-NEXT:    [[TMP1:%.*]] = fdiv <8 x float> [[A:%.*]], [[B:%.*]]
-; AVX-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
-; AVX-NEXT:    [[TMP3:%.*]] = fmul <8 x float> [[A]], [[B]]
-; AVX-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <4 x i32> <i32 0, i32 3, i32 4, i32 7>
-; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP2]], <8 x i32> <i32 0, i32 4, i32 5, i32 1, i32 2, i32 6, i32 7, i32 3>
+; AVX-NEXT:    [[TMP3:%.*]] = fmul <8 x float> [[A:%.*]], [[B:%.*]]
+; AVX-NEXT:    [[TMP2:%.*]] = fdiv <8 x float> [[A]], [[B]]
+; AVX-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; AVX-NEXT:    ret <8 x float> [[TMP5]]
 ;
 ; AVX2-LABEL: @fmul_fdiv_v8f32(
-; AVX2-NEXT:    [[TMP1:%.*]] = fdiv <8 x float> [[A:%.*]], [[B:%.*]]
-; AVX2-NEXT:    [[TMP2:%.*]] = shufflevector <8 x float> [[TMP1]], <8 x float> poison, <4 x i32> <i32 1, i32 2, i32 5, i32 6>
-; AVX2-NEXT:    [[TMP3:%.*]] = fmul <8 x float> [[A]], [[B]]
-; AVX2-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> poison, <4 x i32> <i32 0, i32 3, i32 4, i32 7>
-; AVX2-NEXT:    [[TMP5:%.*]] = shufflevector <4 x float> [[TMP4]], <4 x float> [[TMP2]], <8 x i32> <i32 0, i32 4, i32 5, i32 1, i32 2, i32 6, i32 7, i32 3>
+; AVX2-NEXT:    [[TMP3:%.*]] = fmul <8 x float> [[A:%.*]], [[B:%.*]]
+; AVX2-NEXT:    [[TMP2:%.*]] = fdiv <8 x float> [[A]], [[B]]
+; AVX2-NEXT:    [[TMP5:%.*]] = shufflevector <8 x float> [[TMP3]], <8 x float> [[TMP2]], <8 x i32> <i32 0, i32 9, i32 10, i32 3, i32 4, i32 13, i32 14, i32 7>
 ; AVX2-NEXT:    ret <8 x float> [[TMP5]]
 ;
 ; AVX512-LABEL: @fmul_fdiv_v8f32(
