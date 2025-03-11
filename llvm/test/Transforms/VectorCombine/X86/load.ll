@@ -275,12 +275,8 @@ define <8 x i16> @gep01_load_i16_insert_v8i16_deref_minalign(ptr align 2 derefer
   ret <8 x i16> %r
 }
 
-; Negative test - if we are shuffling a load from the base pointer, the address offset
-; must be a multiple of element size.
-; TODO: Could bitcast around this limitation.
-
-define <4 x i32> @gep01_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceable(16) %p) {
-; CHECK-LABEL: @gep01_bitcast_load_i32_insert_v4i32(
+define <4 x i32> @gep01_bitcast_load_i32_from_v16i8_insert_v4i32(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep01_bitcast_load_i32_from_v16i8_insert_v4i32(
 ; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P:%.*]], i64 0, i64 1
 ; CHECK-NEXT:    [[S:%.*]] = load i32, ptr [[GEP]], align 1
 ; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> undef, i32 [[S]], i64 0
@@ -290,6 +286,84 @@ define <4 x i32> @gep01_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceabl
   %s = load i32, ptr %gep, align 1
   %r = insertelement <4 x i32> undef, i32 %s, i64 0
   ret <4 x i32> %r
+}
+
+define <2 x i64> @gep01_bitcast_load_i64_from_v16i8_insert_v2i64(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep01_bitcast_load_i64_from_v16i8_insert_v2i64(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[S:%.*]] = load i64, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i64> undef, i64 [[S]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %gep = getelementptr inbounds <16 x i8>, ptr %p, i64 0, i64 1
+  %s = load i64, ptr %gep, align 1
+  %r = insertelement <2 x i64> undef, i64 %s, i64 0
+  ret <2 x i64> %r
+}
+
+define <4 x i32> @gep11_bitcast_load_i32_from_v16i8_insert_v4i32(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep11_bitcast_load_i32_from_v16i8_insert_v4i32(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P:%.*]], i64 0, i64 11
+; CHECK-NEXT:    [[S:%.*]] = load i32, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> undef, i32 [[S]], i64 0
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %gep = getelementptr inbounds <16 x i8>, ptr %p, i64 0, i64 11
+  %s = load i32, ptr %gep, align 1
+  %r = insertelement <4 x i32> undef, i32 %s, i64 0
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @gep01_bitcast_load_i32_from_v8i16_insert_v4i32(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep01_bitcast_load_i32_from_v8i16_insert_v4i32(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[S:%.*]] = load i32, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> undef, i32 [[S]], i64 0
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 1
+  %s = load i32, ptr %gep, align 1
+  %r = insertelement <4 x i32> undef, i32 %s, i64 0
+  ret <4 x i32> %r
+}
+
+define <2 x i64> @gep01_bitcast_load_i64_from_v8i16_insert_v2i64(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep01_bitcast_load_i64_from_v8i16_insert_v2i64(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[S:%.*]] = load i64, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i64> undef, i64 [[S]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 1
+  %s = load i64, ptr %gep, align 1
+  %r = insertelement <2 x i64> undef, i64 %s, i64 0
+  ret <2 x i64> %r
+}
+
+define <4 x i32> @gep05_bitcast_load_i32_from_v8i16_insert_v4i32(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep05_bitcast_load_i32_from_v8i16_insert_v4i32(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 5
+; CHECK-NEXT:    [[S:%.*]] = load i32, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> undef, i32 [[S]], i64 0
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 5
+  %s = load i32, ptr %gep, align 1
+  %r = insertelement <4 x i32> undef, i32 %s, i64 0
+  ret <4 x i32> %r
+}
+
+define <2 x i64> @gep01_bitcast_load_i32_from_v4i32_insert_v2i64(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep01_bitcast_load_i32_from_v4i32_insert_v2i64(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P:%.*]], i64 0, i64 1
+; CHECK-NEXT:    [[S:%.*]] = load i64, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i64> undef, i64 [[S]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %gep = getelementptr inbounds <4 x i32>, ptr %p, i64 0, i64 1
+  %s = load i64, ptr %gep, align 1
+  %r = insertelement <2 x i64> undef, i64 %s, i64 0
+  ret <2 x i64> %r
 }
 
 define <4 x i32> @gep012_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceable(20) %p) nofree nosync {
@@ -320,6 +394,58 @@ define <4 x i32> @gep013_bitcast_load_i32_insert_v4i32(ptr align 1 dereferenceab
   %s = load i32, ptr %gep, align 1
   %r = insertelement <4 x i32> undef, i32 %s, i64 0
   ret <4 x i32> %r
+}
+
+define <4 x i32> @gep07_bitcast_load_i32_from_v8i16_insert_v4i32(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep07_bitcast_load_i32_from_v8i16_insert_v4i32(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 7
+; CHECK-NEXT:    [[S:%.*]] = load i32, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x i32> undef, i32 [[S]], i64 0
+; CHECK-NEXT:    ret <4 x i32> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 7
+  %s = load i32, ptr %gep, align 1
+  %r = insertelement <4 x i32> undef, i32 %s, i64 0
+  ret <4 x i32> %r
+}
+
+define <2 x i64> @gep03_bitcast_load_i32_from_v4i32_insert_v2i64(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep03_bitcast_load_i32_from_v4i32_insert_v2i64(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <4 x i32>, ptr [[P:%.*]], i64 0, i64 3
+; CHECK-NEXT:    [[S:%.*]] = load i64, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i64> undef, i64 [[S]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %gep = getelementptr inbounds <4 x i32>, ptr %p, i64 0, i64 3
+  %s = load i64, ptr %gep, align 1
+  %r = insertelement <2 x i64> undef, i64 %s, i64 0
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @gep09_bitcast_load_i64_from_v16i8_insert_v2i64(ptr align 1 dereferenceable(16) %p) #0 {
+; CHECK-LABEL: @gep09_bitcast_load_i64_from_v16i8_insert_v2i64(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <16 x i8>, ptr [[P:%.*]], i64 0, i64 9
+; CHECK-NEXT:    [[S:%.*]] = load i64, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i64> undef, i64 [[S]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %gep = getelementptr inbounds <16 x i8>, ptr %p, i64 0, i64 9
+  %s = load i64, ptr %gep, align 1
+  %r = insertelement <2 x i64> undef, i64 %s, i64 0
+  ret <2 x i64> %r
+}
+
+define <2 x i64> @gep05_bitcast_load_i64_from_v8i16_insert_v2i64(ptr align 1 dereferenceable(16) %p) {
+; CHECK-LABEL: @gep05_bitcast_load_i64_from_v8i16_insert_v2i64(
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds <8 x i16>, ptr [[P:%.*]], i64 0, i64 5
+; CHECK-NEXT:    [[S:%.*]] = load i64, ptr [[GEP]], align 1
+; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i64> undef, i64 [[S]], i64 0
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %gep = getelementptr inbounds <8 x i16>, ptr %p, i64 0, i64 5
+  %s = load i64, ptr %gep, align 1
+  %r = insertelement <2 x i64> undef, i64 %s, i64 0
+  ret <2 x i64> %r
 }
 
 ; If there are enough dereferenceable bytes, we can offset the vector load.
