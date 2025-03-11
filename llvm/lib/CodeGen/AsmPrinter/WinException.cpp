@@ -160,10 +160,10 @@ void WinException::endFunction(const MachineFunction *MF) {
     Asm->OutStreamer->popSection();
   }
 
-  if (!MF->getCatchretTargets().empty()) {
-    // Copy the function's catchret targets to a module-level list.
-    EHContTargets.insert(EHContTargets.end(), MF->getCatchretTargets().begin(),
-                         MF->getCatchretTargets().end());
+  if (!MF->getEHContTargets().empty()) {
+    // Copy the function's EH Continuation targets to a module-level list.
+    EHContTargets.insert(EHContTargets.end(), MF->getEHContTargets().begin(),
+                         MF->getEHContTargets().end());
   }
 }
 

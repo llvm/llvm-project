@@ -12733,6 +12733,8 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   }
   case OpenACCClauseKind::Seq:
     return OpenACCSeqClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::NoHost:
+    return OpenACCNoHostClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::Finalize:
     return OpenACCFinalizeClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::IfPresent:
@@ -12764,7 +12766,8 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
     llvm::SmallVector<Expr *> Exprs;
     for (unsigned I = 0; I < NumExprs; ++I) {
       GangKinds.push_back(readEnum<OpenACCGangKind>());
-      Exprs.push_back(readSubExpr());
+      // Can't use `readSubExpr` because this is usable from a 'decl' construct.
+      Exprs.push_back(readExpr());
     }
     return OpenACCGangClause::Create(getContext(), BeginLoc, LParenLoc,
                                      GangKinds, Exprs, EndLoc);
@@ -12794,7 +12797,6 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
                                                LParenLoc, VarList, EndLoc);
   }
 
-  case OpenACCClauseKind::NoHost:
   case OpenACCClauseKind::Bind:
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");

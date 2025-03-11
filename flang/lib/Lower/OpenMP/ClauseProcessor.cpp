@@ -12,6 +12,7 @@
 
 #include "ClauseProcessor.h"
 #include "Clauses.h"
+#include "Utils.h"
 
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Parser/tools.h"
@@ -201,24 +202,6 @@ static void addUseDeviceClause(
     useDeviceSyms.push_back(object.sym());
 }
 
-static void convertLoopBounds(lower::AbstractConverter &converter,
-                              mlir::Location loc,
-                              mlir::omp::LoopRelatedClauseOps &result,
-                              std::size_t loopVarTypeSize) {
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-  // The types of lower bound, upper bound, and step are converted into the
-  // type of the loop variable if necessary.
-  mlir::Type loopVarType = getLoopVarType(converter, loopVarTypeSize);
-  for (unsigned it = 0; it < (unsigned)result.loopLowerBounds.size(); it++) {
-    result.loopLowerBounds[it] = firOpBuilder.createConvert(
-        loc, loopVarType, result.loopLowerBounds[it]);
-    result.loopUpperBounds[it] = firOpBuilder.createConvert(
-        loc, loopVarType, result.loopUpperBounds[it]);
-    result.loopSteps[it] =
-        firOpBuilder.createConvert(loc, loopVarType, result.loopSteps[it]);
-  }
-}
-
 //===----------------------------------------------------------------------===//
 // ClauseProcessor unique clauses
 //===----------------------------------------------------------------------===//
@@ -240,55 +223,8 @@ bool ClauseProcessor::processCollapse(
     mlir::Location currentLocation, lower::pft::Evaluation &eval,
     mlir::omp::LoopRelatedClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &iv) const {
-  bool found = false;
-  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
-
-  // Collect the loops to collapse.
-  lower::pft::Evaluation *doConstructEval = &eval.getFirstNestedEvaluation();
-  if (doConstructEval->getIf<parser::DoConstruct>()->IsDoConcurrent()) {
-    TODO(currentLocation, "Do Concurrent in Worksharing loop construct");
-  }
-
-  std::int64_t collapseValue = 1l;
-  if (auto *clause = findUniqueClause<omp::clause::Collapse>()) {
-    collapseValue = evaluate::ToInt64(clause->v).value();
-    found = true;
-  }
-
-  std::size_t loopVarTypeSize = 0;
-  do {
-    lower::pft::Evaluation *doLoop =
-        &doConstructEval->getFirstNestedEvaluation();
-    auto *doStmt = doLoop->getIf<parser::NonLabelDoStmt>();
-    assert(doStmt && "Expected do loop to be in the nested evaluation");
-    const auto &loopControl =
-        std::get<std::optional<parser::LoopControl>>(doStmt->t);
-    const parser::LoopControl::Bounds *bounds =
-        std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
-    assert(bounds && "Expected bounds for worksharing do loop");
-    lower::StatementContext stmtCtx;
-    result.loopLowerBounds.push_back(fir::getBase(
-        converter.genExprValue(*semantics::GetExpr(bounds->lower), stmtCtx)));
-    result.loopUpperBounds.push_back(fir::getBase(
-        converter.genExprValue(*semantics::GetExpr(bounds->upper), stmtCtx)));
-    if (bounds->step) {
-      result.loopSteps.push_back(fir::getBase(
-          converter.genExprValue(*semantics::GetExpr(bounds->step), stmtCtx)));
-    } else { // If `step` is not present, assume it as `1`.
-      result.loopSteps.push_back(firOpBuilder.createIntegerConstant(
-          currentLocation, firOpBuilder.getIntegerType(32), 1));
-    }
-    iv.push_back(bounds->name.thing.symbol);
-    loopVarTypeSize = std::max(loopVarTypeSize,
-                               bounds->name.thing.symbol->GetUltimate().size());
-    collapseValue--;
-    doConstructEval =
-        &*std::next(doConstructEval->getNestedEvaluations().begin());
-  } while (collapseValue > 0);
-
-  convertLoopBounds(converter, currentLocation, result, loopVarTypeSize);
-
-  return found;
+  return collectLoopRelatedInfo(converter, currentLocation, eval, clauses,
+                                result, iv);
 }
 
 bool ClauseProcessor::processDevice(lower::StatementContext &stmtCtx,

@@ -31,3 +31,22 @@ OpenACCDeclareDecl::CreateDeserialized(ASTContext &Ctx, GlobalDeclID ID,
   return new (Ctx, ID, additionalSizeToAlloc<const OpenACCClause *>(NumClauses))
       OpenACCDeclareDecl(NumClauses);
 }
+
+OpenACCRoutineDecl *
+OpenACCRoutineDecl::Create(ASTContext &Ctx, DeclContext *DC,
+                           SourceLocation StartLoc, SourceLocation DirLoc,
+                           SourceLocation LParenLoc, Expr *FuncRef,
+                           SourceLocation RParenLoc, SourceLocation EndLoc,
+                           ArrayRef<const OpenACCClause *> Clauses) {
+  return new (Ctx, DC,
+              additionalSizeToAlloc<const OpenACCClause *>(Clauses.size()))
+      OpenACCRoutineDecl(DC, StartLoc, DirLoc, LParenLoc, FuncRef, RParenLoc,
+                         EndLoc, Clauses);
+}
+
+OpenACCRoutineDecl *
+OpenACCRoutineDecl::CreateDeserialized(ASTContext &Ctx, GlobalDeclID ID,
+                                       unsigned NumClauses) {
+  return new (Ctx, ID, additionalSizeToAlloc<const OpenACCClause *>(NumClauses))
+      OpenACCRoutineDecl(NumClauses);
+}

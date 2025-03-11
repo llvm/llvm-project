@@ -1578,7 +1578,7 @@ public:
     }
 
     SmallVector<int64_t> scale;
-    if (!tosa::getConstShapeValue(op.getScale().getDefiningOp(), scale)) {
+    if (!tosa::getConstShapeValues(op.getScale().getDefiningOp(), scale)) {
       return failure();
     }
 
@@ -1799,9 +1799,9 @@ public:
       Value inX = b.create<arith::IndexCastOp>(b.getI32Type(), x);
 
       SmallVector<int64_t> scale, offset, border;
-      if (!tosa::getConstShapeValue(op.getScale().getDefiningOp(), scale) ||
-          !tosa::getConstShapeValue(op.getOffset().getDefiningOp(), offset) ||
-          !tosa::getConstShapeValue(op.getBorder().getDefiningOp(), border)) {
+      if (!tosa::getConstShapeValues(op.getScale().getDefiningOp(), scale) ||
+          !tosa::getConstShapeValues(op.getOffset().getDefiningOp(), offset) ||
+          !tosa::getConstShapeValues(op.getBorder().getDefiningOp(), border)) {
         return rewriter.notifyMatchFailure(
             op, "tosa.resize scale/offset/border should have compile time "
                 "constant values.");

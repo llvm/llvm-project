@@ -2294,6 +2294,26 @@ libc_math_function(name = "canonicalizef128")
 
 libc_math_function(name = "canonicalizef16")
 
+libc_math_function(name = "iscanonical")
+
+libc_math_function(name = "iscanonicalf")
+
+libc_math_function(name = "iscanonicall")
+
+libc_math_function(name = "iscanonicalf128")
+
+libc_math_function(name = "iscanonicalf16")
+
+libc_math_function(name = "issignaling")
+
+libc_math_function(name = "issignalingf")
+
+libc_math_function(name = "issignalingl")
+
+libc_math_function(name = "issignalingf128")
+
+libc_math_function(name = "issignalingf16")
+
 libc_math_function(
     name = "cbrt",
     additional_deps = [
@@ -2349,6 +2369,15 @@ libc_math_function(
         ":__support_macros_optimization",
         ":__support_macros_properties_cpu_features",
         ":sincosf_utils",
+    ],
+)
+
+libc_math_function(
+    name = "cosf16",
+    additional_deps = [
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":sincosf16_utils",
     ],
 )
 
@@ -3446,6 +3475,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "sinf16",
+    additional_deps = [
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":sincosf16_utils",
+    ],
+)
+
+libc_math_function(
     name = "sincos",
     additional_deps = [
         ":__support_fputil_multiply_add",
@@ -3566,6 +3604,15 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "tanf16",
+    additional_deps = [
+        ":__support_fputil_nearest_integer",
+        ":__support_fputil_polyeval",
+        ":sincosf16_utils",
+    ],
+)
+
+libc_math_function(
     name = "tanhf",
     additional_deps = [
         ":__support_fputil_fma",
@@ -3584,6 +3631,17 @@ libc_math_function(
     name = "tanhf16",
     additional_deps = [
         ":expxf16",
+    ],
+)
+
+libc_math_function(
+    name = "tanpif16",
+    additional_deps = [
+        ":sincosf16_utils",
+        ":hdr_errno_macros",
+        ":hdr_fenv_macros",
+        ":__support_fputil_cast",
+        ":__support_fputil_multiply_add",
     ],
 )
 

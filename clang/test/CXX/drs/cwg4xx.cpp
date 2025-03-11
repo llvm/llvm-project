@@ -43,12 +43,15 @@ namespace cwg401 { // cwg401: 2.8
   // expected-error@#cwg401-A {{'type' is a private member of 'cwg401::C'}}
   //   expected-note@#cwg402-friend-A-C {{in instantiation of default argument for 'A<C>' required here}}
   //   expected-note@#cwg402-C-type {{implicitly declared private here}}
+  //   expected-note@#cwg401-A {{template parameter is declared here}}
   // expected-error@#cwg401-A {{'type' is a protected member of 'cwg401::B'}}
   //   expected-note@#cwg402-b {{in instantiation of default argument for 'A<B>' required here}}
   //   expected-note@#cwg402-B-type {{declared protected here}}
+  //   expected-note@#cwg401-A {{template parameter is declared here}}
   // expected-error@#cwg401-A {{'type' is a private member of 'cwg401::D'}}
   //   expected-note@#cwg402-d {{in instantiation of default argument for 'A<D>' required here}}
   //   expected-note@#cwg402-D-type {{implicitly declared private here}}
+  //   expected-note@#cwg401-A {{template parameter is declared here}}
   class B {
   protected:
     typedef int type; // #cwg402-B-type
@@ -80,8 +83,9 @@ namespace cwg401 { // cwg401: 2.8
   // to not treat the default template argument as a SFINAE context in C++98.
   template<class T, class U = typename T::type> void f(T) {} // #cwg402-f
   // cxx98-error@-1 {{default template arguments for a function template are a C++11 extension}}
-  // cxx98-error@-2 {{'type' is a protected member of 'cwg401::B'}}
-  //   cxx98-note@-3 {{in instantiation of default argument for 'f<B>' required here}}
+  //   cxx98-note@-2 {{template parameter is declared here}}
+  // cxx98-error@-3 {{'type' is a protected member of 'cwg401::B'}}
+  //   cxx98-note@-4 {{in instantiation of default argument for 'f<B>' required here}}
   //   cxx98-note@#cwg402-f-b {{while substituting deduced template arguments into function template 'f' [with T = B, U = (no value)]}}
   //   cxx98-note@#cwg402-B-type {{declared protected here}}
   void g(B b) { f(b); } // #cwg402-f-b
@@ -636,15 +640,17 @@ namespace cwg431 { // cwg431: 2.8
 } // namespace cwg431
 
 namespace cwg432 { // cwg432: 3.0
-  template<typename T> struct A {};
+  template<typename T> struct A {}; // #cwg432-A
   template<typename T> struct B : A<B> {};
   // expected-error@-1 {{use of class template 'B' requires template arguments}}
-  //   expected-note@-2 {{template is declared here}}
+  //   expected-note@#cwg432-A {{template parameter is declared here}}
+  //   expected-note@-3 {{template is declared here}}
   template<typename T> struct C : A<C<T> > {};
 #if __cplusplus >= 201103L
   template<typename T> struct D : decltype(A<D>()) {};
   // since-cxx11-error@-1 {{use of class template 'D' requires template arguments}}
-  //   since-cxx11-note@-2 {{template is declared here}}
+  //   since-cxx11-note@#cwg432-A {{template parameter is declared here}}
+  //   since-cxx11-note@-3 {{template is declared here}}
 #endif
 } // namespace cwg432
 
@@ -1377,6 +1383,7 @@ namespace cwg487 { // cwg487: 2.7
 
 namespace cwg488 { // cwg488: 2.9 c++11
   template <typename T> void f(T);
+  // cxx98-note@-1 {{template parameter is declared here}}
   void f(int);
   void g() {
     // FIXME: It seems CWG thought this should be a SFINAE failure prior to

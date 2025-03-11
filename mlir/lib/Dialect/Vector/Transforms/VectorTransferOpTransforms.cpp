@@ -772,14 +772,14 @@ private:
 /// `vector.extract` and `vector.extract_element`.
 template <class VectorExtractOp>
 class RewriteScalarExtractOfTransferReadBase
-    : public OpRewritePattern<VectorExtractOp> {
-  using Base = OpRewritePattern<VectorExtractOp>;
+    : public OpRewritePattern<VectorExtractOp>::SplitMatchAndRewrite {
+  using Base = typename OpRewritePattern<VectorExtractOp>::SplitMatchAndRewrite;
 
 public:
   RewriteScalarExtractOfTransferReadBase(MLIRContext *context,
                                          PatternBenefit benefit,
                                          bool allowMultipleUses)
-      : Base::OpRewritePattern(context, benefit),
+      : Base::SplitMatchAndRewrite(context, benefit),
         allowMultipleUses(allowMultipleUses) {}
 
   LogicalResult match(VectorExtractOp extractOp) const override {

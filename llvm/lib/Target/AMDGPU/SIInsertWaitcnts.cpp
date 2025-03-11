@@ -120,16 +120,6 @@ struct HardwareLimits {
   unsigned VmVsrcMax;    // gfx12+ expert mode only.
 };
 
-// VGPR encoding includes two sections: lane-shared vgpr and
-// private vgpr. Lane-shared vgpr section is at the beginning.
-struct RegisterEncoding {
-  unsigned VGPR0;
-  unsigned VGPRL;
-  unsigned SGPR0;
-  unsigned SGPRL;
-  unsigned LaneSharedSize;
-};
-
 enum WaitEventType {
   VMEM_ACCESS,              // vector-memory read & write
   VMEM_READ_ACCESS,         // vector-memory read
@@ -172,7 +162,7 @@ enum WaitEventType {
 enum RegisterMapping {
   SQ_MAX_PGM_VGPRS = 1024, // Maximum programmable VGPRs across all targets.
   AGPR_OFFSET = 256,       // Maximum programmable ArchVGPRs across all targets.
-  SQ_MAX_PGM_SGPRS = 256,  // Maximum programmable SGPRs across all targets.
+  SQ_MAX_PGM_SGPRS = 128,  // Maximum programmable SGPRs across all targets.
   NUM_EXTRA_VGPRS = 9,     // Reserved slots for DS.
   // Artificial register slots to track LDS writes into specific LDS locations
   // if a location is known. When slots are exhausted or location is
@@ -300,11 +290,11 @@ InstCounterType eventCounter(const unsigned *masks, WaitEventType E) {
 class WaitcntBrackets {
 public:
   WaitcntBrackets(const GCNSubtarget *SubTarget, InstCounterType MaxCounter,
-                  HardwareLimits Limits, RegisterEncoding Encoding,
+                  HardwareLimits Limits,
                   unsigned LaneSharedSize, const unsigned *WaitEventMaskForInst,
                   InstCounterType SmemAccessCounter)
       : ST(SubTarget), MaxCounter(MaxCounter), Limits(Limits),
-        Encoding(Encoding), LaneSharedSize(LaneSharedSize),
+        LaneSharedSize(LaneSharedSize),
         WaitEventMaskForInst(WaitEventMaskForInst),
         SmemAccessCounter(SmemAccessCounter) {}
 
@@ -509,7 +499,6 @@ private:
   const GCNSubtarget *ST = nullptr;
   InstCounterType MaxCounter = NUM_EXTENDED_INST_CNTS;
   HardwareLimits Limits = {};
-  RegisterEncoding Encoding = {};
   unsigned LaneSharedSize = 0;
   const unsigned *WaitEventMaskForInst;
   InstCounterType SmemAccessCounter;
@@ -872,7 +861,7 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
 #endif
 
   Result.first = IsLaneShared ? 0 : LaneSharedSize;
-  int MaxNumVGPRs = Encoding.VGPRL - Encoding.VGPR0 + 1;
+  int MaxNumVGPRs = SQ_MAX_PGM_VGPRS;
   if (GprIdxImmedVals[Idx].has_value()) {
     auto OffsetSrcIdx =
         AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::offset);
@@ -926,21 +915,18 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
   unsigned Reg = TRI->getHWRegIndex(AMDGPU::getMCReg(Op.getReg(), *ST));
 
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.VGPR0 && Reg <= Encoding.VGPRL);
-    Result.first = Reg - Encoding.VGPR0 + LaneSharedSize;
+    assert(Reg <= SQ_MAX_PGM_VGPRS);
+    Result.first = Reg + LaneSharedSize;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
-  } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
-    Result.first = Reg - Encoding.SGPR0 + NUM_ALL_VGPRS;
-    assert(Result.first >= NUM_ALL_VGPRS &&
-           Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
-  }
-  // TODO: Handle TTMP
-  // else if (TRI->isTTMP(*MRI, Reg.getReg())) ...
-  else
+  } else if (TRI->isSGPRReg(*MRI, Op.getReg()) && Reg < SQ_MAX_PGM_SGPRS) {
+    // SGPRs including VCC, TTMPs and EXEC but excluding read-only scalar
+    // sources like SRC_PRIVATE_BASE.
+    Result.first = Reg + NUM_ALL_VGPRS;
+  } else {
     return {-1, -1};
+  }
 
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
   unsigned Size = TRI->getRegSizeInBits(*RC);
@@ -3011,17 +2997,10 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   Limits.VaVdstMax = AMDGPU::DepCtr::getVaVdstBitMask();
   Limits.VmVsrcMax = AMDGPU::DepCtr::getVmVsrcBitMask();
 
-  unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
-  unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
+  [[maybe_unused]] unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
+  [[maybe_unused]] unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
   assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
-
-  RegisterEncoding Encoding = {};
-  Encoding.VGPR0 = TRI->getHWRegIndex(AMDGPU::VGPR0);
-  Encoding.VGPRL = Encoding.VGPR0 + NumVGPRsMax - 1;
-  Encoding.SGPR0 = TRI->getHWRegIndex(AMDGPU::SGPR0);
-  Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
-  Encoding.LaneSharedSize = MFI->getLaneSharedVGPRSize() / 4u;
 
   unsigned LaneSharedSize = MFI->getLaneSharedVGPRSize() / 4u;
 
@@ -3069,7 +3048,7 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     }
 
     auto NonKernelInitialState = std::make_unique<WaitcntBrackets>(
-        ST, MaxCounter, Limits, Encoding, LaneSharedSize, WaitEventMaskForInst,
+        ST, MaxCounter, Limits, LaneSharedSize, WaitEventMaskForInst,
         SmemAccessCounter);
     NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
@@ -3108,11 +3087,11 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       } else {
         if (!Brackets)
           Brackets = std::make_unique<WaitcntBrackets>(
-              ST, MaxCounter, Limits, Encoding, LaneSharedSize,
+              ST, MaxCounter, Limits, LaneSharedSize,
               WaitEventMaskForInst, SmemAccessCounter);
         else
           *Brackets =
-              WaitcntBrackets(ST, MaxCounter, Limits, Encoding, LaneSharedSize,
+              WaitcntBrackets(ST, MaxCounter, Limits, LaneSharedSize,
                               WaitEventMaskForInst, SmemAccessCounter);
       }
 

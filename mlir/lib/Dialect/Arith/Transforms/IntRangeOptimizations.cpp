@@ -115,9 +115,11 @@ protected:
 /// and replace their uses with that constant. Return success() if all results
 /// where thus replaced and the operation is erased. Also replace any block
 /// arguments with their constant values.
-struct MaterializeKnownConstantValues : public RewritePattern {
+struct MaterializeKnownConstantValues
+    : public RewritePattern::SplitMatchAndRewrite {
   MaterializeKnownConstantValues(MLIRContext *context, DataFlowSolver &s)
-      : RewritePattern(Pattern::MatchAnyOpTypeTag(), /*benefit=*/1, context),
+      : RewritePattern::SplitMatchAndRewrite(Pattern::MatchAnyOpTypeTag(),
+                                             /*benefit=*/1, context),
         solver(s) {}
 
   LogicalResult match(Operation *op) const override {

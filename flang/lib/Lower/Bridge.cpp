@@ -4689,7 +4689,7 @@ private:
     mlir::Location loc = getCurrentLocation();
     fir::FirOpBuilder &builder = getFirOpBuilder();
 
-    bool isInDeviceContext = Fortran::lower::isCudaDeviceContext(builder);
+    bool isInDeviceContext = cuf::isCUDADeviceContext(builder.getRegion());
 
     bool isCUDATransfer =
         IsCUDADataTransfer(assign.lhs, assign.rhs) && !isInDeviceContext;
