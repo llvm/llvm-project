@@ -1253,20 +1253,20 @@ static bool tryNarrowMathIfNoOverflow(Instruction &I,
     return false;
   }
   LLVMContext &ctx = I.getContext();
-  Type *i64type = Type::getInt64Ty(ctx);
-  Type *i32type = Type::getInt32Ty(ctx);
+  Type *I64Type = Type::getInt64Ty(ctx);
+  Type *I32Type = Type::getInt32Ty(ctx);
 
-  if (I.getType() != i64type || !TTI.isTruncateFree(i64type, i32type)) {
+  if (I.getType() != I64Type || !TTI.isTruncateFree(I64Type, I32Type)) {
     return false;
   }
-  InstructionCost costOp64 =
-      TTI.getArithmeticInstrCost(opc, i64type, TTI::TCK_RecipThroughput);
-  InstructionCost costOp32 =
-      TTI.getArithmeticInstrCost(opc, i32type, TTI::TCK_RecipThroughput);
-  InstructionCost costZext64 = TTI.getCastInstrCost(
-      Instruction::ZExt, i64type, i32type, TTI.getCastContextHint(&I),
+  InstructionCost CostOp64 =
+      TTI.getArithmeticInstrCost(opc, I64Type, TTI::TCK_RecipThroughput);
+  InstructionCost CostOp32 =
+      TTI.getArithmeticInstrCost(opc, I32Type, TTI::TCK_RecipThroughput);
+  InstructionCost CostZext64 = TTI.getCastInstrCost(
+      Instruction::ZExt, I64Type, I32Type, TTI.getCastContextHint(&I),
       TTI::TCK_RecipThroughput);
-  if ((costOp64 - costOp32) <= costZext64) {
+  if ((CostOp64 - CostOp32) <= CostZext64) {
     return false;
   }
   uint64_t AndConst0, AndConst1;
@@ -1277,11 +1277,11 @@ static bool tryNarrowMathIfNoOverflow(Instruction &I,
        match(I.getOperand(1), m_And(m_ConstantInt(AndConst1), m_Value(X)))) &&
       isSaveToNarrow(opc, AndConst0, AndConst1)) {
     IRBuilder<> Builder(&I);
-    Value *trun0 = Builder.CreateTrunc(I.getOperand(0), i32type);
-    Value *trun1 = Builder.CreateTrunc(I.getOperand(1), i32type);
-    Value *arith32 = Builder.CreateAdd(trun0, trun1);
-    Value *zext64 = Builder.CreateZExt(arith32, i64type);
-    I.replaceAllUsesWith(zext64);
+    Value *Trun0 = Builder.CreateTrunc(I.getOperand(0), I32Type);
+    Value *Trun1 = Builder.CreateTrunc(I.getOperand(1), I32Type);
+    Value *Arith32 = Builder.CreateAdd(Trun0, Trun1);
+    Value *Zext64 = Builder.CreateZExt(Arith32, I64Type);
+    I.replaceAllUsesWith(Zext64);
     I.eraseFromParent();
   }
   return false;
