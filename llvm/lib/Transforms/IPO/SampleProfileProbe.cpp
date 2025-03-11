@@ -150,7 +150,7 @@ void PseudoProbeVerifier::verifyProbeFactors(
     float CurProbeFactor = I.second;
     auto [It, Inserted] = PrevProbeFactors.try_emplace(I.first);
     if (!Inserted) {
-      float PrevProbeFactor = PrevProbeFactors[I.first];
+      float PrevProbeFactor = It->second;
       if (std::abs(CurProbeFactor - PrevProbeFactor) >
           DistributionFactorVariance) {
         if (!BannerPrinted) {
