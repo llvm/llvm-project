@@ -23,10 +23,18 @@ namespace LIBC_NAMESPACE_DECL {
 LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
   FPBits xbits(x);
-
   uint16_t x_u = xbits.uintval();
   uint16_t x_abs = x_u & 0x7fff;
 
+//   if (LIBC_UNLIKELY(x <= 1.0f)) {
+//     if (x == 1.0f)
+//       return 0.0f;
+//     // x < 1.
+//     fputil::set_errno_if_required(EDOM);
+//     fputil::raise_except_if_required(FE_INVALID);
+//     return FPBits::quiet_nan().get_val();
+//   }
+  
   // Check for NaN input first.
   if (LIBC_UNLIKELY(xbits.is_nan())) {
     if (xbits.is_signaling_nan()) {
@@ -62,11 +70,18 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   // High precision for inputs very close to 1.0
   if (LIBC_UNLIKELY(xf32 < 1.25f)) {
     float delta = xf32 - 1.0f;
-    float sqrt_2_delta = fputil::sqrt<float>(2.0f * delta);
-    double correction = (double)delta / 12.0 - (3.0 * (double)delta * delta) / 160.0;
-    double precise_result = (double)sqrt_2_delta * (1.0 - correction);
-    return fputil::cast<float16>(static_cast<float>(precise_result));
+    float sqrt_2 = fputil::sqrt<float>(2.0f * delta);
+    float sqrt_2d = fputil::sqrt<float>(2.0f * delta);
+    float d32 = delta * fputil::sqrt<float>(delta);
+    float term2 = d32 / (6.0f * fputil::sqrt<float>(2.0f));
+    float d52 = d32 * delta;
+    float term3 = 3.0f * d52 / (80.0f * sqrt_2);
+    float d72 = d52 * delta;
+    float term4 = 5.0f * d72 / (1792.0f * sqrt_2);
+    float result = sqrt_2d - term2 + term3 - term4;
+    return fputil::cast<float16>(result);
   }
+
   // Special optimization for large input values.
   if (LIBC_UNLIKELY(xf32 >= 32.0f)) {
     float result = static_cast<float>(log_eval(2.0f * xf32));
