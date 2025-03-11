@@ -55,7 +55,7 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   }
 
   // Domain error for inputs less than 1.0.
-  if (LIBC_UNLIKELY(x_abs < 0x3c00)) {
+  if (LIBC_UNLIKELY(x_abs < 0x3c00U)) {
     fputil::set_errno_if_required(EDOM);
     fputil::raise_except_if_required(FE_INVALID);
     return FPBits::quiet_nan().get_val();
@@ -65,7 +65,7 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   if (LIBC_UNLIKELY(x_u == 0x3c00U))
     return float16(0.0f);
 
-  float xf32 = static_cast<float>(x);
+  float xf32 = x;
 
   // High precision for inputs very close to 1.0
   // if (LIBC_UNLIKELY(xf32 < 1.25f)) {
