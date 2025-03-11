@@ -757,8 +757,8 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   // AGPRs/VGPRs are tracked every 16 bits, SGPRs by 32 bits
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
-    unsigned Reg = (RegIdx << 1) | (AMDGPU::isHi16Reg(MCReg, *TRI) ? 1 : 0);
-    assert(Reg <= AGPR_OFFSET);
+    unsigned Reg = RegIdx << 1 | (AMDGPU::isHi16Reg(MCReg, *TRI) ? 1 : 0);
+    assert(Reg < AGPR_OFFSET);
     Result.first = Reg;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
