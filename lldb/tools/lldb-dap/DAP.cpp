@@ -769,11 +769,15 @@ llvm::Error DAP::Loop() {
     StopEventHandlers();
   });
   while (!disconnecting) {
-    std::optional<protocol::Message> next = transport.Read();
+    llvm::Expected<std::optional<protocol::Message>> next = transport.Read();
     if (!next)
+      return next.takeError();
+
+    // nullopt on EOF
+    if (!*next)
       break;
 
-    if (!HandleObject(*next)) {
+    if (!HandleObject(**next)) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "unhandled packet");
     }

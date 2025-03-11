@@ -345,7 +345,8 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
 
       if (auto Err = dap.Loop()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                    "DAP session error: ");
+                                    "DAP session (" + client_name +
+                                        ") error: ");
       }
 
       DAP_LOG(log, "({0}) client disconnected", client_name);
@@ -587,7 +588,7 @@ int main(int argc, char *argv[]) {
 
   if (auto Err = dap.Loop()) {
     llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
-                                "DAP session error: ");
+                                "DAP session (" + client_name + ") error: ");
     return EXIT_FAILURE;
   }
   return EXIT_SUCCESS;

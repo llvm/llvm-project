@@ -41,7 +41,7 @@ public:
   llvm::Error Write(const protocol::Message &M);
 
   /// Reads the next Debug Adater Protocol message from the input stream.
-  std::optional<protocol::Message> Read();
+  llvm::Expected<std::optional<protocol::Message>> Read();
 
 private:
   llvm::StringRef m_client_name;
