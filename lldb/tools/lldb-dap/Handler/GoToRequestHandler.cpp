@@ -22,7 +22,8 @@ namespace lldb_dap {
 //     the response and then a `stopped` event with reason `goto`.\nClients
 //     should only call this request if the corresponding capability
 //     `supportsGotoTargetsRequest` is true (because only then goto targets
-//     exist that can be passed as arguments).", "properties": {
+//     exist that can be passed as arguments).",
+//.    "properties": {
 //       "command": {
 //         "type": "string",
 //         "enum": [ "goto" ]
