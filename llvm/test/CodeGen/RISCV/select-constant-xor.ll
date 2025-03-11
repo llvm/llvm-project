@@ -243,10 +243,9 @@ define i32 @oneusecmp(i32 %a, i32 %b, i32 %d) {
 define i32 @xor_branch_imm_ret(i32 %x) nounwind {
 ; RV32-LABEL: xor_branch_imm_ret:
 ; RV32:       # %bb.0: # %entry
-; RV32-NEXT:    li a1, -1365
-; RV32-NEXT:    beq a0, a1, .LBB11_2
-; RV32-NEXT:  # %bb.1: # %if.then
 ; RV32-NEXT:    xori a0, a0, -1365
+; RV32-NEXT:    beqz a0, .LBB11_2
+; RV32-NEXT:  # %bb.1: # %if.then
 ; RV32-NEXT:    ret
 ; RV32-NEXT:  .LBB11_2: # %if.end
 ; RV32-NEXT:    addi sp, sp, -16
@@ -255,11 +254,10 @@ define i32 @xor_branch_imm_ret(i32 %x) nounwind {
 ;
 ; RV64-LABEL: xor_branch_imm_ret:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    sext.w a1, a0
-; RV64-NEXT:    li a2, -1365
-; RV64-NEXT:    beq a1, a2, .LBB11_2
-; RV64-NEXT:  # %bb.1: # %if.then
 ; RV64-NEXT:    xori a0, a0, -1365
+; RV64-NEXT:    sext.w a1, a0
+; RV64-NEXT:    beqz a1, .LBB11_2
+; RV64-NEXT:  # %bb.1: # %if.then
 ; RV64-NEXT:    ret
 ; RV64-NEXT:  .LBB11_2: # %if.end
 ; RV64-NEXT:    addi sp, sp, -16
@@ -292,9 +290,9 @@ define i32 @xor_branch_ret(i32 %x) nounwind {
 ;
 ; RV64-LABEL: xor_branch_ret:
 ; RV64:       # %bb.0: # %entry
-; RV64-NEXT:    sext.w a2, a0
 ; RV64-NEXT:    li a1, 1
 ; RV64-NEXT:    slli a1, a1, 11
+; RV64-NEXT:    sext.w a2, a0
 ; RV64-NEXT:    beq a2, a1, .LBB12_2
 ; RV64-NEXT:  # %bb.1: # %if.then
 ; RV64-NEXT:    xor a0, a0, a1
