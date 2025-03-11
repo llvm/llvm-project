@@ -11,6 +11,7 @@
 
 #include "ParsedAST.h"
 #include "Protocol.h"
+#include "SymbolDocumentation.h"
 #include "support/Markup.h"
 #include "clang/Index/IndexSymbol.h"
 #include <optional>
@@ -25,33 +26,6 @@ namespace clangd {
 /// embedding clients can use the structured information to provide their own
 /// UI.
 struct HoverInfo {
-  /// Contains pretty-printed type and desugared type
-  struct PrintedType {
-    PrintedType() = default;
-    PrintedType(const char *Type) : Type(Type) {}
-    PrintedType(const char *Type, const char *AKAType)
-        : Type(Type), AKA(AKAType) {}
-
-    /// Pretty-printed type
-    std::string Type;
-    /// Desugared type
-    std::optional<std::string> AKA;
-  };
-
-  /// Represents parameters of a function, a template or a macro.
-  /// For example:
-  /// - void foo(ParamType Name = DefaultValue)
-  /// - #define FOO(Name)
-  /// - template <ParamType Name = DefaultType> class Foo {};
-  struct Param {
-    /// The printable parameter type, e.g. "int", or "typename" (in
-    /// TemplateParameters), might be std::nullopt for macro parameters.
-    std::optional<PrintedType> Type;
-    /// std::nullopt for unnamed parameters.
-    std::optional<std::string> Name;
-    /// std::nullopt if no default is provided.
-    std::optional<std::string> Default;
-  };
 
   /// For a variable named Bar, declared in clang::clangd::Foo::getFoo the
   /// following fields will hold:
@@ -74,6 +48,8 @@ struct HoverInfo {
   std::optional<Range> SymRange;
   index::SymbolKind Kind = index::SymbolKind::Unknown;
   std::string Documentation;
+  // required to create a comments::CommandTraits object without the ASTContext
+  CommentOptions CommentOpts;
   /// Source code containing the definition of the symbol.
   std::string Definition;
   const char *DefinitionLanguage = "cpp";
@@ -82,13 +58,13 @@ struct HoverInfo {
   std::string AccessSpecifier;
   /// Printable variable type.
   /// Set only for variables.
-  std::optional<PrintedType> Type;
+  std::optional<SymbolPrintedType> Type;
   /// Set for functions and lambdas.
-  std::optional<PrintedType> ReturnType;
+  std::optional<SymbolPrintedType> ReturnType;
   /// Set for functions, lambdas and macros with parameters.
-  std::optional<std::vector<Param>> Parameters;
+  std::optional<std::vector<SymbolParam>> Parameters;
   /// Set for all templates(function, class, variable).
-  std::optional<std::vector<Param>> TemplateParameters;
+  std::optional<std::vector<SymbolParam>> TemplateParameters;
   /// Contains the evaluated value of the symbol if available.
   std::optional<std::string> Value;
   /// Contains the bit-size of fields and types where it's interesting.
@@ -101,7 +77,7 @@ struct HoverInfo {
   std::optional<uint64_t> Align;
   // Set when symbol is inside function call. Contains information extracted
   // from the callee definition about the argument this is passed as.
-  std::optional<Param> CalleeArgInfo;
+  std::optional<SymbolParam> CalleeArgInfo;
   struct PassType {
     // How the variable is passed to callee.
     enum PassMode { Ref, ConstRef, Value };
@@ -122,11 +98,6 @@ struct HoverInfo {
   markup::Document present() const;
 };
 
-inline bool operator==(const HoverInfo::PrintedType &LHS,
-                       const HoverInfo::PrintedType &RHS) {
-  return std::tie(LHS.Type, LHS.AKA) == std::tie(RHS.Type, RHS.AKA);
-}
-
 inline bool operator==(const HoverInfo::PassType &LHS,
                        const HoverInfo::PassType &RHS) {
   return std::tie(LHS.PassBy, LHS.Converted) ==
@@ -136,15 +107,6 @@ inline bool operator==(const HoverInfo::PassType &LHS,
 // Try to infer structure of a documentation comment (e.g. line breaks).
 // FIXME: move to another file so CodeComplete doesn't depend on Hover.
 void parseDocumentation(llvm::StringRef Input, markup::Document &Output);
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &,
-                              const HoverInfo::PrintedType &);
-llvm::raw_ostream &operator<<(llvm::raw_ostream &, const HoverInfo::Param &);
-inline bool operator==(const HoverInfo::Param &LHS,
-                       const HoverInfo::Param &RHS) {
-  return std::tie(LHS.Type, LHS.Name, LHS.Default) ==
-         std::tie(RHS.Type, RHS.Name, RHS.Default);
-}
 
 /// Get the hover information when hovering at \p Pos.
 std::optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
