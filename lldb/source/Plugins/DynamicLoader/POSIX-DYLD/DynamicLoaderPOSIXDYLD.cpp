@@ -746,19 +746,31 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   m_process->PrefetchModuleSpecs(
       module_names, m_process->GetTarget().GetArchitecture().GetTriple());
 
-  for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I) {
-    ModuleSP module_sp =
-        LoadModuleAtAddress(I->file_spec, I->link_addr, I->base_addr, true);
+  auto load_module_fn = [this, &module_list,
+                         &log](const DYLDRendezvous::SOEntry &so_entry) {
+    ModuleSP module_sp = LoadModuleAtAddress(
+        so_entry.file_spec, so_entry.link_addr, so_entry.base_addr, true);
     if (module_sp.get()) {
       LLDB_LOG(log, "LoadAllCurrentModules loading module: {0}",
-               I->file_spec.GetFilename());
+               so_entry.file_spec.GetFilename());
       module_list.Append(module_sp);
     } else {
       Log *log = GetLog(LLDBLog::DynamicLoader);
       LLDB_LOGF(
           log,
           "DynamicLoaderPOSIXDYLD::%s failed loading module %s at 0x%" PRIx64,
-          __FUNCTION__, I->file_spec.GetPath().c_str(), I->base_addr);
+          __FUNCTION__, so_entry.file_spec.GetPath().c_str(),
+          so_entry.base_addr);
+    }
+  };
+  if (GetGlobalPluginProperties().GetParallelModuleLoad()) {
+    llvm::ThreadPoolTaskGroup task_group(Debugger::GetThreadPool());
+    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
+      task_group.async(load_module_fn, *I);
+    task_group.wait();
+  } else {
+    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I) {
+      load_module_fn(*I);
     }
   }
 
