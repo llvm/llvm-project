@@ -1717,6 +1717,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::FABS, VT, Legal);
+      setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction(ISD::FNEG, VT, Legal);
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
       setOperationAction(ISD::FP_ROUND, VT, Custom);
@@ -10706,7 +10707,7 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
   // a SVE FCOPYSIGN.
   if (!VT.isVector() && !Subtarget->isNeonAvailable() &&
       Subtarget->isSVEorStreamingSVEAvailable()) {
-    if (VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64)
+    if (VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64 && VT != MVT::bf16)
       return SDValue();
     EVT SVT = getPackedSVEVectorVT(VT);
 

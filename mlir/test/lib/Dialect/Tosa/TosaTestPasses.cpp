@@ -178,7 +178,7 @@ ConvertTosaConv2DOp::matchAndRewrite(Operation *op,
       /* input_zp = */ rewriter.getI32IntegerAttr(0),
       /* output_zp = */ rewriter.getI32IntegerAttr(outputZp),
       /* scale32 = */ rewriter.getBoolAttr(true),
-      /* double_round = */ rewriter.getBoolAttr(true),
+      /* double_round = */ rewriter.getStringAttr("DOUBLE_ROUND"),
       /* per_channel = */ rewriter.getBoolAttr(false),
       rewriter.getBoolAttr(inputUnsigned),
       rewriter.getBoolAttr(outputUnsigned));
