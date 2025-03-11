@@ -313,6 +313,7 @@ VirtRegRewriterPass::run(MachineFunction &MF,
   VirtRegRewriter R(ClearVirtRegs, &Indexes, &LIS, &LRM, &VRM, &DebugVars);
   if (!R.run(MF))
     return PreservedAnalyses::all();
+
   auto PA = getMachineFunctionPassPreservedAnalyses();
   PA.preserveSet<CFGAnalyses>();
   PA.preserve<LiveIntervalsAnalysis>();
@@ -773,10 +774,9 @@ void VirtRegRewriter::rewrite() {
 
 void VirtRegRewriterPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)>) const {
-  OS << "virt-reg-rewriter<";
+  OS << "virt-reg-rewriter";
   if (!ClearVirtRegs)
-    OS << "no-";
-  OS << "clear-vregs>";
+    OS << "<no-clear-vregs>";
 }
 
 FunctionPass *llvm::createVirtRegRewriter(bool ClearVirtRegs) {
