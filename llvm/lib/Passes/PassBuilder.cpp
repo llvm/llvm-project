@@ -1439,6 +1439,19 @@ Expected<bool> parseMachineSinkingPassOptions(StringRef Params) {
                                             "MachineSinkingPass");
 }
 
+Expected<bool> parseVirtRegRewriterPassOptions(StringRef Params) {
+  bool ClearVirtRegs = true;
+  if (!Params.empty()) {
+    ClearVirtRegs = !Params.consume_front("no-");
+    if (Params != "clear-vregs")
+      return make_error<StringError>(
+          formatv("invalid VirtRegRewriter pass parameter '{0}' ", Params)
+              .str(),
+          inconvertibleErrorCode());
+  }
+  return ClearVirtRegs;
+}
+
 } // namespace
 
 /// Tests whether a pass name starts with a valid prefix for a default pipeline

@@ -2238,7 +2238,7 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   // many things rely on the use lists of the physical registers, such as the
   // verifier. This is only necessary with allocators which use LiveIntervals,
   // since FastRegAlloc does the replacements itself.
-  // TODO: addPass(VirtRegRewriterPass(false));
+  addPass(VirtRegRewriterPass(false));
 
   // At this point, the sgpr-regalloc has been done and it is good to have the
   // stack slot coloring to try to optimize the SGPR spill stack indices before
@@ -2254,14 +2254,14 @@ Error AMDGPUCodeGenPassBuilder::addRegAssignmentOptimized(
   // For allocating other wwm register operands.
   addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::WWM);
   addPass(SILowerWWMCopiesPass());
-  // TODO: addPass(VirtRegRewriterPass(false));
+  addPass(VirtRegRewriterPass(false));
   // TODO: addPass(AMDGPUReserveWWMRegsPass());
 
   // For allocating per-thread VGPRs.
   addRegAlloc<RAGreedyPass>(addPass, RegAllocPhase::VGPR);
 
   // TODO: addPreRewrite();
-  addPass(VirtRegRewriterPass(false));
+  addPass(VirtRegRewriterPass(true));
 
   // TODO: addPass(AMDGPUMarkLastScratchLoadPass());
   return Error::success();
