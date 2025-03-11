@@ -287,6 +287,10 @@ void BinaryEmitter::emitFunctions() {
   // Emit functions added by BOLT.
   emit(BC.getInjectedBinaryFunctions());
 
+  for (BinaryFunction *BF : SortedFunctions)
+    if (!BF->isEmitted())
+      BF->undefineLabels();
+
   // Mark the end of hot text.
   if (opts::HotText) {
     if (BC.HasWarmSection)
