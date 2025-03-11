@@ -3626,16 +3626,6 @@ void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-PHI ";
 
-  auto *OriginalPhi = cast<PHINode>(getUnderlyingValue());
-  // Unless all incoming values are modeled in VPlan  print the original PHI
-  // directly.
-  // TODO: Remove once all VPWidenPHIRecipe instances keep all relevant incoming
-  // values as VPValues.
-  if (getNumOperands() != OriginalPhi->getNumOperands()) {
-    O << VPlanIngredient(OriginalPhi);
-    return;
-  }
-
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);
