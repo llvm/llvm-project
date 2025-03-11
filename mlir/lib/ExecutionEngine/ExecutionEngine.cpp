@@ -313,8 +313,7 @@ ExecutionEngine::create(Operation *m, const ExecutionEngineOptions &options,
 
   // Callback to create the object layer with symbol resolution to current
   // process and dynamically linked libraries.
-  auto objectLinkingLayerCreator = [&](ExecutionSession &session,
-                                       const Triple &tt) {
+  auto objectLinkingLayerCreator = [&](ExecutionSession &session) {
     auto objectLayer = std::make_unique<RTDyldObjectLinkingLayer>(
         session, [sectionMemoryMapper = options.sectionMemoryMapper]() {
           return std::make_unique<SectionMemoryManager>(sectionMemoryMapper);
