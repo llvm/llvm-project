@@ -1958,6 +1958,10 @@ public:
     return StringRef("\0\0\0\0", 4);
   }
 
+  StringRef getUndefFillValue() const override {
+    return StringRef("\xff\xff\x00\x00", 4); // UDF
+  }
+
   void createReturn(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::RET);
     Inst.clear();

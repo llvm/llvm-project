@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Passes/PatchEntries.h"
 #include "bolt/Rewrite/MetadataRewriter.h"
 #include "bolt/Rewrite/MetadataRewriters.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -218,6 +219,8 @@ class LinuxKernelRewriter final : public MetadataRewriter {
     bool InitValue{false};
     bool Nop{false};
     MCSymbol *JumpInstLabel{nullptr};
+    BinarySection *Sec{nullptr};
+    uint64_t JumpAddress{0};
     BinaryFunction *BF{nullptr};
   };
   std::vector<JumpInfoEntry> JumpInfo;
@@ -1217,20 +1220,18 @@ Error LinuxKernelRewriter::readExceptionTable(StringRef SectionName) {
             << ExceptionsSection->getSize() / ExceptionTableEntrySize
             << " exception table entries\n";
 
+  // Disable output of functions with exceptions before rewrite support is
+  // added.
+  for (BinaryFunction *BF : FunctionsWithExceptions)
+    BF->setIgnored();
+
   return Error::success();
 }
 
 /// Depending on the value of CONFIG_BUILDTIME_TABLE_SORT, the kernel expects
 /// the exception table to be sorted. Hence we have to sort it after code
 /// reordering.
-Error LinuxKernelRewriter::rewriteExceptionTable() {
-  // Disable output of functions with exceptions before rewrite support is
-  // added.
-  for (BinaryFunction *BF : FunctionsWithExceptions)
-    BF->setSimple(false);
-
-  return Error::success();
-}
+Error LinuxKernelRewriter::rewriteExceptionTable() { return Error::success(); }
 
 /// .parainsrtuctions section contains information for patching parvirtual call
 /// instructions during runtime. The entries in the section are in the form:
@@ -1297,6 +1298,10 @@ Error LinuxKernelRewriter::readParaInstructions() {
     }
   }
 
+  // Disable output of functions with paravirtual instructions before the
+  // rewrite support is complete.
+  skipFunctionsWithAnnotation("ParaSite");
+
   BC.outs() << "BOLT-INFO: parsed " << EntryID << " paravirtual patch sites\n";
 
   return Error::success();
@@ -1312,7 +1317,7 @@ void LinuxKernelRewriter::skipFunctionsWithAnnotation(
         return BC.MIB->hasAnnotation(Inst, Annotation);
       });
       if (HasAnnotation) {
-        BF.setSimple(false);
+        BF.setIgnored();
         break;
       }
     }
@@ -1320,10 +1325,6 @@ void LinuxKernelRewriter::skipFunctionsWithAnnotation(
 }
 
 Error LinuxKernelRewriter::rewriteParaInstructions() {
-  // Disable output of functions with paravirtual instructions before the
-  // rewrite support is complete.
-  skipFunctionsWithAnnotation("ParaSite");
-
   return Error::success();
 }
 
@@ -1658,7 +1659,7 @@ Error LinuxKernelRewriter::readPCIFixupTable() {
     if (const uint64_t Offset = HookAddress - BF->getAddress()) {
       BC.errs() << "BOLT-WARNING: PCI fixup detected in the middle of function "
                 << *BF << " at offset 0x" << Twine::utohexstr(Offset) << '\n';
-      BF->setSimple(false);
+      BF->setIgnored();
     }
   }
 
@@ -1756,6 +1757,7 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
     JumpInfo.push_back(JumpInfoEntry());
     JumpInfoEntry &Info = JumpInfo.back();
     Info.Likely = KeyAddress & 1;
+    Info.JumpAddress = JumpAddress;
 
     if (opts::DumpStaticKeys) {
       BC.outs() << "Static key jump entry: " << EntryID
@@ -1778,6 +1780,9 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
     assert(BF->getOriginSection() &&
            "the function did not originate from the file");
     Info.BF = BF;
+    Info.Sec = BF->getOriginSection();
+
+    BF->setMayChange();
 
     MCInst *Inst = BF->getInstructionAtOffset(JumpAddress - BF->getAddress());
     if (!Inst)
@@ -2028,6 +2033,31 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
       break;
     default:
       llvm_unreachable("Unsupported architecture");
+    }
+
+    if (BC.HasRelocations) {
+      // To avoid undefined behaviors, fill the jump address with Undef
+
+      size_t PatchSize = PatchEntries::getPatchSize(BC);
+      assert(BF->isPatched());
+      assert(Info.JumpAddress != JumpAddress);
+
+      bool NotOverlap =
+          BF->forEachEntryPoint([&](uint64_t EntryOffset, const MCSymbol *) {
+            uint64_t EntryAddress = EntryOffset + BF->getAddress();
+            return Info.JumpAddress >= EntryAddress + PatchSize ||
+                   Info.JumpAddress + Size <= EntryAddress;
+          });
+
+      if (NotOverlap)
+        Info.Sec->addPatch(Info.JumpAddress - Info.Sec->getAddress(),
+                           BC.MIB->getUndefFillValue());
+      else
+        BC.errs()
+            << "BOLT-WARNING: Skip writing an undefined instruction at static "
+               "key jump address 0x"
+            << Twine::utohexstr(Info.JumpAddress)
+            << " since that address is overlapping an entry point patch\n";
     }
 
     // Check if we need to convert jump instruction into a nop.
