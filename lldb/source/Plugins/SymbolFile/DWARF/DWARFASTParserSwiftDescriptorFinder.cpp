@@ -219,6 +219,8 @@ public:
       const auto *member_field_name =
           child_die.GetAttributeValueAsString(llvm::dwarf::DW_AT_name, "");
       auto *member_type = dwarf_parser->GetTypeForDIE(child_die);
+      if (!member_type)
+        continue;
       auto member_mangled_typename =
           member_type->GetForwardCompilerType().GetMangledTypeName();
 
