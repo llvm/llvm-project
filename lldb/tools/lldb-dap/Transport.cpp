@@ -55,8 +55,8 @@ static Expected<std::string> ReadUntil(IOObject *descriptor,
 /// ```
 /// Content-Length: (?<length>\d+)\r\n\r\n(?<content>.{\k<length>})
 /// ```
-static const StringLiteral kHeaderContentLength = "Content-Length: ";
-static const StringLiteral kHeaderSeparator = "\r\n\r\n";
+static constexpr StringLiteral kHeaderContentLength = "Content-Length: ";
+static constexpr StringLiteral kHeaderSeparator = "\r\n\r\n";
 
 namespace lldb_dap {
 

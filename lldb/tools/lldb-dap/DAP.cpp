@@ -701,9 +701,8 @@ bool DAP::HandleObject(const protocol::Message &M) {
     // Result should be given, use null if not.
     if (GetBoolean(object, "success").value_or(false)) {
       llvm::json::Value Result = nullptr;
-      if (auto *B = object.get("body")) {
+      if (auto *B = object.get("body"))
         Result = std::move(*B);
-      }
       (*response_handler)(Result);
     } else {
       llvm::StringRef message = GetString(object, "message");
@@ -771,9 +770,8 @@ llvm::Error DAP::Loop() {
   });
   while (!disconnecting) {
     std::optional<protocol::Message> next = transport.Read();
-    if (!next) {
+    if (!next)
       break;
-    }
 
     if (!HandleObject(*next)) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),

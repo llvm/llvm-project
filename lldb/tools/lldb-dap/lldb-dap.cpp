@@ -326,9 +326,9 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
                         &dap_sessions]() {
       llvm::set_thread_name(client_name + ".runloop");
-      Transport transport{client_name, log, io, io};
-      DAP dap = DAP(program_path, log, default_repl_mode, pre_init_commands,
-                    client_name, transport);
+      Transport transport(client_name, log, io, io);
+      DAP dap(program_path, log, default_repl_mode, pre_init_commands,
+              client_name, transport);
 
       if (auto Err = dap.ConfigureIO()) {
         llvm::logAllUnhandledErrors(std::move(Err), llvm::errs(),
@@ -568,9 +568,9 @@ int main(int argc, char *argv[]) {
       stdout_fd, File::eOpenOptionWriteOnly, false);
 
   std::string client_name = "stdin/stdout";
-  Transport transport{client_name, log.get(), input, output};
-  DAP dap = DAP(program_path, log.get(), default_repl_mode, pre_init_commands,
-                client_name, transport);
+  Transport transport(client_name, log.get(), input, output);
+  DAP dap(program_path, log.get(), default_repl_mode, pre_init_commands,
+          client_name, transport);
 
   // stdout/stderr redirection to the IDE's console
   if (auto Err = dap.ConfigureIO(stdout, stderr)) {
