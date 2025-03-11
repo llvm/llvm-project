@@ -83,7 +83,7 @@ namespace __format {
 /// When parsing a handle which is not enabled the code is ill-formed.
 /// This helper uses the parser of the appropriate formatter for the stored type.
 template <class _CharT>
-class _LIBCPP_TEMPLATE_VIS __compile_time_handle {
+class __compile_time_handle {
 public:
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr void __parse(_ParseContext& __ctx) const {
@@ -110,7 +110,7 @@ private:
 // Dummy format_context only providing the parts used during constant
 // validation of the basic_format_string.
 template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __compile_time_basic_format_context {
+struct __compile_time_basic_format_context {
 public:
   using char_type = _CharT;
 
@@ -339,7 +339,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr typename _Ctx::iterator __vformat_to(_ParseCtx&&
 
 #  if _LIBCPP_STD_VER >= 26
 template <class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __runtime_format_string {
+struct __runtime_format_string {
 private:
   basic_string_view<_CharT> __str_;
 

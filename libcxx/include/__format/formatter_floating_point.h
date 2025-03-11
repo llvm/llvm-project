@@ -140,7 +140,7 @@ struct __traits<double> {
 /// Depending on the maximum size required for a value, the buffer is allocated
 /// on the stack or the heap.
 template <floating_point _Fp>
-class _LIBCPP_TEMPLATE_VIS __float_buffer {
+class __float_buffer {
   using _Traits _LIBCPP_NODEBUG = __traits<_Fp>;
 
 public:
@@ -750,7 +750,7 @@ __format_floating_point(_Tp __value, _FormatContext& __ctx, __format_spec::__par
 } // namespace __formatter
 
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS __formatter_floating_point {
+struct __formatter_floating_point {
 public:
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {

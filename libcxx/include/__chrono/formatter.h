@@ -698,7 +698,7 @@ __format_chrono(const _Tp& __value,
 } // namespace __formatter
 
 template <__fmt_char_type _CharT>
-struct _LIBCPP_TEMPLATE_VIS __formatter_chrono {
+struct __formatter_chrono {
 public:
   template <class _ParseContext>
   _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator

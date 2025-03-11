@@ -493,14 +493,14 @@ struct _LIBCPP_TEMPLATE_VIS hash<long double> : public __scalar_hash<long double
 };
 
 template <class _Tp, bool = is_enum<_Tp>::value>
-struct _LIBCPP_TEMPLATE_VIS __enum_hash : public __unary_function<_Tp, size_t> {
+struct __enum_hash : public __unary_function<_Tp, size_t> {
   _LIBCPP_HIDE_FROM_ABI size_t operator()(_Tp __v) const _NOEXCEPT {
     typedef typename underlying_type<_Tp>::type type;
     return hash<type>()(static_cast<type>(__v));
   }
 };
 template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS __enum_hash<_Tp, false> {
+struct __enum_hash<_Tp, false> {
   __enum_hash()                              = delete;
   __enum_hash(__enum_hash const&)            = delete;
   __enum_hash& operator=(__enum_hash const&) = delete;

@@ -35,7 +35,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // adaptor headers. To use the format functions users already include <format>.
 
 template <class _Adaptor, class _CharT>
-struct _LIBCPP_TEMPLATE_VIS __formatter_container_adaptor {
+struct __formatter_container_adaptor {
 private:
   using __maybe_const_container _LIBCPP_NODEBUG = __fmt_maybe_const<typename _Adaptor::container_type, _CharT>;
   using __maybe_const_adaptor _LIBCPP_NODEBUG   = __maybe_const<is_const_v<__maybe_const_container>, _Adaptor>;

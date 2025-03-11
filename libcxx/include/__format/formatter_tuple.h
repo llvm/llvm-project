@@ -36,7 +36,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 23
 
 template <__fmt_char_type _CharT, class _Tuple, formattable<_CharT>... _Args>
-struct _LIBCPP_TEMPLATE_VIS __formatter_tuple {
+struct __formatter_tuple {
   _LIBCPP_HIDE_FROM_ABI constexpr void set_separator(basic_string_view<_CharT> __separator) noexcept {
     __separator_ = __separator;
   }
