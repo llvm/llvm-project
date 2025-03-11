@@ -45,7 +45,7 @@ class VarDecl;
 void mangleObjCMethodName(raw_ostream &OS, bool includePrefixByte,
                           bool isInstanceMethod, StringRef ClassName,
                           std::optional<StringRef> CategoryName,
-                          StringRef MethodName, bool isThunk);
+                          StringRef MethodName, bool isNilCheckThunk);
 
 /// MangleContext - Context for tracking state which persists across multiple
 /// calls to the C++ name mangler.
