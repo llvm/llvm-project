@@ -833,6 +833,12 @@ public:
     switch (Attr->getInterrupt()) {
     case RISCVInterruptAttr::supervisor: Kind = "supervisor"; break;
     case RISCVInterruptAttr::machine: Kind = "machine"; break;
+    case RISCVInterruptAttr::qcinest:
+      Kind = "qci-nest";
+      break;
+    case RISCVInterruptAttr::qcinonest:
+      Kind = "qci-nonest";
+      break;
     }
 
     Fn->addFnAttr("interrupt", Kind);
