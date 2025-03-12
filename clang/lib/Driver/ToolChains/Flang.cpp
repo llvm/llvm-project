@@ -817,8 +817,13 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // 'flang -E' always produces output that is suitable for use as fixed form
   // Fortran. However it is only valid free form source if the original is also
-  // free form.
-  if (InputType == types::TY_PP_Fortran &&
+  // free form. Ensure this logic does not incorrectly assume fixed-form for
+  // cases where it shouldn't, such as `flang -x f95 foo.f90`.
+  bool isAtemporaryPreprocessedFile =
+      Input.isFilename() &&
+      llvm::sys::path::extension(Input.getFilename())
+          .ends_with(types::getTypeTempSuffix(InputType, /*CLStyle=*/false));
+  if (InputType == types::TY_PP_Fortran && isAtemporaryPreprocessedFile &&
       !Args.getLastArg(options::OPT_ffixed_form, options::OPT_ffree_form))
     CmdArgs.push_back("-ffixed-form");
 
