@@ -878,10 +878,11 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v2, s0, v13, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, s0, v14, v3, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(9)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v2, s0, v9, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, s0, v10, v3, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(6)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v2, s0, v7, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, s0, v8, v3, s0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -891,24 +892,27 @@ define hidden amdgpu_kernel void @clmem_read(ptr addrspace(1)  %buffer) {
 ; GFX11-NEXT:    v_add_co_u32 v2, s0, v19, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, s0, v20, v3, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(5)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v2, s0, v17, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, s0, v18, v3, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(4)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v2, s0, v15, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, s0, v16, v3, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v2, s0, v21, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, s0, v22, v3, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(2)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v2, s0, v23, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, s0, v24, v3, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_u32 v2, s0, v25, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, s0, v26, v3, s0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_u32 v2, vcc_lo, v27, v2
 ; GFX11-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v28, v3, vcc_lo
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB1_2

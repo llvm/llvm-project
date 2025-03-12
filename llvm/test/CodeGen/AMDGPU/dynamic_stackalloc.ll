@@ -320,6 +320,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent() {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB3_1
@@ -347,6 +348,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent() {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB3_1
@@ -439,6 +441,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_over_aligned
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s4, v0, s3
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s2, s3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s1, s1, s4
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB4_1
@@ -466,6 +469,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_over_aligned
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB4_1
@@ -552,6 +556,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_under_aligne
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB5_1
@@ -579,6 +584,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_divergent_under_aligne
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB5_1
@@ -738,6 +744,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_multiple_allocas(i32 %
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s5, v0, s4
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s3, s4
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s2, s2, s5
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB6_2
@@ -792,6 +799,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_multiple_allocas(i32 %
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s5, v0, s4
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s3, s4
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s2, s2, s5
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB6_2
@@ -954,6 +962,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s4, v0, s3
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s2, s3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s4
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB7_2
@@ -1002,6 +1011,7 @@ define amdgpu_kernel void @test_dynamic_stackalloc_kernel_control_flow(i32 %n, i
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s4, v0, s3
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s0, s3
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s2, s2, s4
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s0, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB7_2
@@ -1122,6 +1132,7 @@ define void @test_dynamic_stackalloc_device_uniform(i32 %n) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB8_1
@@ -1151,6 +1162,7 @@ define void @test_dynamic_stackalloc_device_uniform(i32 %n) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB8_1
@@ -1254,7 +1266,7 @@ define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
 ; GFX11-SDAG-NEXT:    s_addk_i32 s32, 0x100
 ; GFX11-SDAG-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-SDAG-NEXT:    s_ctz_i32_b32 s2, s1
-; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
 ; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
@@ -1288,7 +1300,7 @@ define void @test_dynamic_stackalloc_device_uniform_over_aligned(i32 %n) {
 ; GFX11-GISEL-NEXT:    s_addk_i32 s32, 0x100
 ; GFX11-GISEL-NEXT:  .LBB9_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-GISEL-NEXT:    s_ctz_i32_b32 s2, s1
-; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
@@ -1385,6 +1397,7 @@ define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB10_1
@@ -1414,6 +1427,7 @@ define void @test_dynamic_stackalloc_device_uniform_under_aligned(i32 %n) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB10_1
@@ -1511,6 +1525,7 @@ define void @test_dynamic_stackalloc_device_divergent() {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB11_1
@@ -1542,6 +1557,7 @@ define void @test_dynamic_stackalloc_device_divergent() {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB11_1
@@ -1654,6 +1670,7 @@ define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s4, v0, s3
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s2, s3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s1, s1, s4
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB12_1
@@ -1688,6 +1705,7 @@ define void @test_dynamic_stackalloc_device_divergent_over_aligned() {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB12_1
@@ -1787,6 +1805,7 @@ define void @test_dynamic_stackalloc_device_divergent_under_aligned() {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB13_1
@@ -1818,6 +1837,7 @@ define void @test_dynamic_stackalloc_device_divergent_under_aligned() {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB13_1
@@ -2028,6 +2048,7 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s5, v1, s4
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s2, s4
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s3, s3, s5
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB14_2
@@ -2048,6 +2069,7 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s6, v1, s5
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s4, s5
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s3, s3, s6
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB14_4
@@ -2072,6 +2094,7 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v1, s2
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB14_7
@@ -2114,6 +2137,7 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s5, v2, s4
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s3, s4
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s2, s2, s5
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s3, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB14_2
@@ -2131,6 +2155,7 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s6, v1, s5
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s4, s5
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s3, s3, s6
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s4, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB14_4
@@ -2154,6 +2179,7 @@ define void @test_dynamic_stackalloc_device_multiple_allocas(i32 %n, i32 %m) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB14_7
@@ -2348,6 +2374,7 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s4, v1, s3
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s2, s3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s1, s1, s4
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB15_2
@@ -2375,6 +2402,7 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s4, v0, s3
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s2, s3
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s1, s1, s4
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB15_6
@@ -2416,6 +2444,7 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s4, v0, s3
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s2, s3
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s1, s1, s4
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB15_2
@@ -2444,6 +2473,7 @@ define void @test_dynamic_stackalloc_device_control_flow(i32 %n, i32 %m) {
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s4, v0, s3
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s2, s3
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s1, s1, s4
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s2, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB15_6
@@ -2555,6 +2585,7 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB16_1
@@ -2586,6 +2617,7 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i16(i16 
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB16_1
@@ -2679,6 +2711,7 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 
 ; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-SDAG-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-SDAG-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-SDAG-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-SDAG-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-SDAG-NEXT:    s_cbranch_scc1 .LBB17_1
@@ -2708,6 +2741,7 @@ define void @test_dynamic_stackalloc_device_divergent_non_standard_size_i64(i64 
 ; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-GISEL-NEXT:    v_readlane_b32 s3, v0, s2
 ; GFX11-GISEL-NEXT:    s_bitset0_b32 s1, s2
+; GFX11-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-GISEL-NEXT:    s_max_u32 s0, s0, s3
 ; GFX11-GISEL-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-GISEL-NEXT:    s_cbranch_scc1 .LBB17_1

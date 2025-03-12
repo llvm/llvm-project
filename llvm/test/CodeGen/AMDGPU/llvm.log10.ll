@@ -585,7 +585,7 @@ define amdgpu_kernel void @s_log10_v2f32(ptr addrspace(1) %out, <2 x float> %in)
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s4, 0x800000, s3
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s5, 0x800000, s2
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x411a209b, s4
 ; GFX1100-SDAG-NEXT:    s_and_b32 s4, s4, exec_lo
 ; GFX1100-SDAG-NEXT:    s_cselect_b32 s4, 32, 0
@@ -1133,7 +1133,7 @@ define amdgpu_kernel void @s_log10_v3f32(ptr addrspace(1) %out, <3 x float> %in)
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s3, 0x800000, s2
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s6, 0x800000, s1
 ; GFX1100-SDAG-NEXT:    v_cmp_gt_f32_e64 s7, 0x800000, s0
-; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX1100-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v0, 0, 0x411a209b, s3
 ; GFX1100-SDAG-NEXT:    s_and_b32 s3, s3, exec_lo
 ; GFX1100-SDAG-NEXT:    v_cndmask_b32_e64 v1, 0, 0x411a209b, s6
