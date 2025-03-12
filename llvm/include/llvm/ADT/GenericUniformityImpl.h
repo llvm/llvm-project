@@ -51,6 +51,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/Support/raw_ostream.h"
 
 #define DEBUG_TYPE "uniformity"
@@ -342,6 +343,9 @@ public:
       typename SyncDependenceAnalysisT::DivergenceDescriptor;
   using BlockLabelMapT = typename SyncDependenceAnalysisT::BlockLabelMap;
 
+  using TemporalDivergenceTuple =
+      std::tuple<ConstValueRefT, InstructionT *, const CycleT *>;
+
   GenericUniformityAnalysisImpl(const DominatorTreeT &DT, const CycleInfoT &CI,
                                 const TargetTransformInfo *TTI)
       : Context(CI.getSSAContext()), F(*Context.getFunction()), CI(CI),
@@ -395,6 +399,11 @@ public:
   }
 
   void print(raw_ostream &out) const;
+
+  SmallVector<TemporalDivergenceTuple, 8> TemporalDivergenceList;
+
+  void recordTemporalDivergence(ConstValueRefT, const InstructionT *,
+                                const CycleT *);
 
 protected:
   /// \brief Value/block pair representing a single phi input.
@@ -1130,6 +1139,13 @@ void GenericUniformityAnalysisImpl<ContextT>::compute() {
 }
 
 template <typename ContextT>
+void GenericUniformityAnalysisImpl<ContextT>::recordTemporalDivergence(
+    ConstValueRefT Val, const InstructionT *User, const CycleT *Cycle) {
+  TemporalDivergenceList.emplace_back(Val, const_cast<InstructionT *>(User),
+                                      Cycle);
+}
+
+template <typename ContextT>
 bool GenericUniformityAnalysisImpl<ContextT>::isAlwaysUniform(
     const InstructionT &Instr) const {
   return UniformOverrides.contains(&Instr);
@@ -1145,6 +1161,12 @@ GenericUniformityInfo<ContextT>::GenericUniformityInfo(
 template <typename ContextT>
 void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
   bool haveDivergentArgs = false;
+
+  // When we print Value, LLVM IR instruction, we want to print extra new line.
+  // In LLVM IR print function for Value does not print new line at the end.
+  // In MIR print for MachineInstr prints new line at the end.
+  constexpr bool IsMIR = std::is_same<InstructionT, MachineInstr>::value;
+  std::string NewLine = IsMIR ? "" : "\n";
 
   // Control flow instructions may be divergent even if their inputs are
   // uniform. Thus, although exceedingly rare, it is possible to have a program
@@ -1180,6 +1202,16 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
     }
   }
 
+  if (!TemporalDivergenceList.empty()) {
+    OS << "\nTEMPORAL DIVERGENCE LIST:\n";
+
+    for (auto [Val, UseInst, Cycle] : TemporalDivergenceList) {
+      OS << "Value         :" << Context.print(Val) << NewLine
+         << "Used by       :" << Context.print(UseInst) << NewLine
+         << "Outside cycle :" << Cycle->print(Context) << "\n\n";
+    }
+  }
+
   for (auto &block : F) {
     OS << "\nBLOCK " << Context.print(&block) << '\n';
 
@@ -1191,7 +1223,7 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
         OS << "  DIVERGENT: ";
       else
         OS << "             ";
-      OS << Context.print(value) << '\n';
+      OS << Context.print(value) << NewLine;
     }
 
     OS << "TERMINATORS\n";
@@ -1203,11 +1235,19 @@ void GenericUniformityAnalysisImpl<ContextT>::print(raw_ostream &OS) const {
         OS << "  DIVERGENT: ";
       else
         OS << "             ";
-      OS << Context.print(T) << '\n';
+      OS << Context.print(T) << NewLine;
     }
 
     OS << "END BLOCK\n";
   }
+}
+
+template <typename ContextT>
+iterator_range<
+    typename GenericUniformityInfo<ContextT>::TemporalDivergenceTuple *>
+GenericUniformityInfo<ContextT>::getTemporalDivergenceList() const {
+  return make_range(DA->TemporalDivergenceList.begin(),
+                    DA->TemporalDivergenceList.end());
 }
 
 template <typename ContextT>
