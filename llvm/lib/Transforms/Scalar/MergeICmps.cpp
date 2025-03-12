@@ -846,6 +846,7 @@ static BasicBlock *mergeComparisons(ArrayRef<SingleBCECmpBlock> Comparisons,
         Constants.emplace_back(ConstCmp->Const);
         Types.emplace_back(ConstCmp->Lhs.LoadI->getType());
       }
+      // NOTE: Could check if all elements are of the same type and then use an array instead, if that is more performat.
       auto* StructType = StructType::get(Context, Types, /* currently only matches packed offsets */ true);
       auto* StructAlloca = Builder.CreateAlloca(StructType,nullptr);
       auto *StructConstant = ConstantStruct::get(StructType, Constants);
