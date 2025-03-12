@@ -563,7 +563,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           continue;
 
         if (!cmd->matchesFile(*sec->file) || pat.excludesFile(*sec->file) ||
-            !flagsMatch(sec))
+            sec->parent == &outCmd || !flagsMatch(sec))
           continue;
 
         if (sec->parent) {
@@ -626,7 +626,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
 
     for (InputSectionDescription *isd : scd->sc.commands) {
       for (InputSectionBase *sec : isd->sectionBases) {
-        if (!flagsMatch(sec))
+        if (sec->parent == &outCmd || !flagsMatch(sec))
           continue;
         bool isSpill = sec->parent && isa<OutputSection>(sec->parent);
         if (!sec->parent || (isSpill && outCmd.name == "/DISCARD/")) {
@@ -1585,32 +1585,16 @@ bool LinkerScript::spillSections() {
         if (isa<PotentialSpillSection>(isec))
           continue;
 
+        // Find the next potential spill location and remove it from the list.
         auto it = potentialSpillLists.find(isec);
         if (it == potentialSpillLists.end())
-          break;
-
-        // Consume spills until finding one that might help, then consume it.
-        PotentialSpillList &list = it->second;
-        PotentialSpillSection *spill;
-        for (spill = list.head; spill; spill = spill->next) {
-          if (list.head->next)
-            list.head = spill->next;
-          else
-            potentialSpillLists.erase(isec);
-
-          // Spills to the same region that overflowed cannot help.
-          if (hasRegionOverflowed(osec->memRegion) &&
-              spill->getParent()->memRegion == osec->memRegion)
-            continue;
-          if (hasRegionOverflowed(osec->lmaRegion) &&
-              spill->getParent()->lmaRegion == osec->lmaRegion)
-            continue;
-
-          // This spill might resolve the overflow.
-          break;
-        }
-        if (!spill)
           continue;
+        PotentialSpillList &list = it->second;
+        PotentialSpillSection *spill = list.head;
+        if (spill->next)
+          list.head = spill->next;
+        else
+          potentialSpillLists.erase(isec);
 
         // Replace the next spill location with the spilled section and adjust
         // its properties to match the new location. Note that the alignment of
