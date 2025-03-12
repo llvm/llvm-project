@@ -872,9 +872,14 @@ llvm::Value *ItaniumCXXABI::EmitMemberDataPointerAddress(
 
   CGBuilderTy &Builder = CGF.Builder;
 
-  // Apply the offset, which we assume is non-null.
-  return Builder.CreateInBoundsGEP(CGF.Int8Ty, Base.emitRawPointer(CGF), MemPtr,
-                                   "memptr.offset");
+  // Apply the offset.
+  // Specially, we don't add inbounds flags if the base pointer is a constant
+  // null. This is a workaround for old-style container_of macros.
+  llvm::Value *BaseAddr = Base.emitRawPointer(CGF);
+  return Builder.CreateGEP(CGF.Int8Ty, BaseAddr, MemPtr, "memptr.offset",
+                           isa<llvm::ConstantPointerNull>(BaseAddr)
+                               ? llvm::GEPNoWrapFlags::none()
+                               : llvm::GEPNoWrapFlags::inBounds());
 }
 
 // See if it's possible to return a constant signed pointer.
