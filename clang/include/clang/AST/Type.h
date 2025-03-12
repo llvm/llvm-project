@@ -2568,6 +2568,9 @@ public:
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
   bool isExtVectorBoolType() const;             // Extended vector type with bool element.
+  // Extended vector type with bool element that is packed. HLSL doesn't pack
+  // its bool vectors.
+  bool isPackedVectorBoolType(const ASTContext &ctx) const;
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
@@ -2661,6 +2664,7 @@ public:
   bool isHLSLSpecificType() const; // Any HLSL specific type
   bool isHLSLBuiltinIntangibleType() const; // Any HLSL builtin intangible type
   bool isHLSLAttributedResourceType() const;
+  bool isHLSLResourceRecord() const;
   bool isHLSLIntangibleType()
       const; // Any HLSL intangible type (builtin, array, class)
 

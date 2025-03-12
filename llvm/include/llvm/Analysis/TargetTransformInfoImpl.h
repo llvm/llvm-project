@@ -364,7 +364,7 @@ public:
                               Scale, AddrSpace, /*I=*/nullptr,
                               BaseOffset.getScalable()))
       return 0;
-    return -1;
+    return InstructionCost::getInvalid();
   }
 
   bool LSRWithInstrQueries() const { return false; }
