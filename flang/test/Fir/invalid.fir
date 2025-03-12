@@ -1146,3 +1146,19 @@ func.func @bad_unpack_array4(%arg0: !fir.box<!fir.array<?xf32>>, %arg1: !fir.box
   fir.unpack_array %arg0 to %arg1 stack : !fir.box<!fir.array<?xi32>>
   return
 }
+
+// -----
+
+func.func @bad_is_contiguous_box(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>) -> i1 {
+  // expected-error@+1{{op operand #0 must be any box, but got '!fir.ref<!fir.box<!fir.array<?xi32>>>'}}
+  %0 = fir.is_contiguous_box %arg0 whole : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> i1
+  return %0 : i1
+}
+
+// -----
+
+func.func @bad_box_total_elements(%arg0: !fir.ref<!fir.box<!fir.array<?xi32>>>) -> i32 {
+  // expected-error@+1{{op operand #0 must be any box, but got '!fir.ref<!fir.box<!fir.array<?xi32>>>'}}
+  %0 = fir.box_total_elements %arg0 : (!fir.ref<!fir.box<!fir.array<?xi32>>>) -> i32
+  return %0 : i32
+}
