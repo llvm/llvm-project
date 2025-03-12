@@ -2936,6 +2936,30 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 1},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i64, 1},
 
+      // SVE: to nxv2f16
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i8, 3},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i16, 1},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i32, 1},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i8, 3},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i16, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i32, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, 1},
+
+      // SVE: to nxv4f16
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i8, 3},
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i16, 1},
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, 1},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i8, 3},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i16, 1},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, 1},
+
+      // SVE: to nxv8f16
+      {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8, 3},
+      {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i16, 1},
+      {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8, 3},
+      {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i16, 1},
+
       // Complex: to v2f32
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
@@ -2944,11 +2968,29 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i64, 2},
 
+      // SVE: to nxv2f32
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i8, 5},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i16, 3},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i32, 1},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i8, 5},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i16, 3},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i32, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, 1},
+
       // Complex: to v4f32
       {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i8, 4},
       {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i8, 3},
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
+
+      // SVE: to nxv4f32
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, 5},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, 3},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i32, 1},
+      {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, 5},
+      {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, 3},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i32, 1},
 
       // Complex: to v8f32
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
@@ -2967,6 +3009,16 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i8, 4},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i16, 4},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i32, 2},
+
+      // SVE: to nxv2f64
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8, 7},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, 5},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, 3},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i64, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8, 7},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, 5},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, 3},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i64, 1},
 
       // Complex: to v4f64
       {ISD::SINT_TO_FP, MVT::v4f64, MVT::v4i32, 4},
@@ -3144,21 +3196,6 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::SIGN_EXTEND, MVT::nxv8i32, MVT::nxv8i16, 2},
       {ISD::SIGN_EXTEND, MVT::nxv8i64, MVT::nxv8i16, 6},
       {ISD::SIGN_EXTEND, MVT::nxv4i64, MVT::nxv4i32, 2},
-
-      // Add cost for extending and converting to illegal -too wide- scalable
-      // Extending one size (e.g. i32 -> f64) takes 2 unpacks and 2 fcvts, while
-      // extending twice (e.g. i16 -> f64) takes 6 unpacks and 4 fcvts.
-      {ISD::SINT_TO_FP, MVT::nxv16f16, MVT::nxv16i8, 12},
-      {ISD::SINT_TO_FP, MVT::nxv16f32, MVT::nxv16i8, 22},
-      {ISD::SINT_TO_FP, MVT::nxv8f32, MVT::nxv8i16, 12},
-      {ISD::SINT_TO_FP, MVT::nxv8f64, MVT::nxv8i16, 22},
-      {ISD::SINT_TO_FP, MVT::nxv4f64, MVT::nxv4i32, 12},
-
-      {ISD::UINT_TO_FP, MVT::nxv16f16, MVT::nxv16i8, 12},
-      {ISD::UINT_TO_FP, MVT::nxv16f32, MVT::nxv16i8, 22},
-      {ISD::UINT_TO_FP, MVT::nxv8f32, MVT::nxv8i16, 12},
-      {ISD::UINT_TO_FP, MVT::nxv8f64, MVT::nxv8i16, 22},
-      {ISD::UINT_TO_FP, MVT::nxv4f64, MVT::nxv4i32, 12},
   };
 
   // We have to estimate a cost of fixed length operation upon
