@@ -66,7 +66,7 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   std::string ErrorString;
 
   const llvm::Target *Target = llvm::TargetRegistry::lookupTarget(
-      PTU.TheModule->getTargetTriple(), ErrorString);
+      PTU.TheModule->getTargetTriple().str(), ErrorString);
   if (!Target) {
     return llvm::make_error<llvm::StringError>("Failed to create Wasm Target: ",
                                                llvm::inconvertibleErrorCode());
@@ -74,7 +74,7 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
 
   llvm::TargetOptions TO = llvm::TargetOptions();
   llvm::TargetMachine *TargetMachine = Target->createTargetMachine(
-      PTU.TheModule->getTargetTriple(), "", "", TO, llvm::Reloc::Model::PIC_);
+      PTU.TheModule->getTargetTriple().str(), "", "", TO, llvm::Reloc::Model::PIC_);
   PTU.TheModule->setDataLayout(TargetMachine->createDataLayout());
   std::string ObjectFileName = PTU.TheModule->getName().str() + ".o";
   std::string BinaryFileName = PTU.TheModule->getName().str() + ".wasm";
