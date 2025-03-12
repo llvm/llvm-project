@@ -2016,7 +2016,7 @@ define amdgpu_kernel void @insert_split_bb(ptr addrspace(1) %out, ptr addrspace(
 ; VI-NEXT:  .LBB42_4:
 ; VI-NEXT:    s_branch .LBB42_2
 entry:
-  %0 = insertelement <2 x i32> undef, i32 %a, i32 0
+  %0 = insertelement <2 x i32> poison, i32 %a, i32 0
   %1 = icmp eq i32 %a, 0
   br i1 %1, label %if, label %else
 

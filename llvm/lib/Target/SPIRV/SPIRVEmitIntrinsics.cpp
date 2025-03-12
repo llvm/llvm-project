@@ -151,6 +151,7 @@ class SPIRVEmitIntrinsics
                                         unsigned OperandToReplace,
                                         IRBuilder<> &B);
   void insertPtrCastOrAssignTypeInstr(Instruction *I, IRBuilder<> &B);
+  bool shouldTryToAddMemAliasingDecoration(Instruction *Inst);
   void insertSpirvDecorations(Instruction *I, IRBuilder<> &B);
   void processGlobalValue(GlobalVariable &GV, IRBuilder<> &B);
   void processParamTypes(Function *F, IRBuilder<> &B);
@@ -1169,6 +1170,7 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
       llvm_unreachable("illegal aggregate intrinsic user");
     }
   }
+  New->copyMetadata(*Old);
   Old->eraseFromParent();
 }
 
@@ -1752,6 +1754,7 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
       Intrinsic::spv_store, {I.getValueOperand()->getType(), PtrOp->getType()},
       {I.getValueOperand(), PtrOp, B.getInt16(Flags),
        B.getInt8(I.getAlign().value())});
+  NewI->copyMetadata(I);
   I.eraseFromParent();
   return NewI;
 }
@@ -1955,12 +1958,63 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I,
   }
 }
 
+bool SPIRVEmitIntrinsics::shouldTryToAddMemAliasingDecoration(
+    Instruction *Inst) {
+  const SPIRVSubtarget *STI = TM->getSubtargetImpl(*Inst->getFunction());
+  if (!STI->canUseExtension(SPIRV::Extension::SPV_INTEL_memory_access_aliasing))
+    return false;
+  // Add aliasing decorations to internal load and store intrinsics
+  // and atomic instructions, skipping atomic store as it won't have ID to
+  // attach the decoration.
+  CallInst *CI = dyn_cast<CallInst>(Inst);
+  if (!CI)
+    return false;
+  if (Function *Fun = CI->getCalledFunction()) {
+    if (Fun->isIntrinsic()) {
+      switch (Fun->getIntrinsicID()) {
+      case Intrinsic::spv_load:
+      case Intrinsic::spv_store:
+        return true;
+      default:
+        return false;
+      }
+    }
+    std::string Name = getOclOrSpirvBuiltinDemangledName(Fun->getName());
+    const std::string Prefix = "__spirv_Atomic";
+    const bool IsAtomic = Name.find(Prefix) == 0;
+
+    if (!Fun->getReturnType()->isVoidTy() && IsAtomic)
+      return true;
+  }
+  return false;
+}
+
 void SPIRVEmitIntrinsics::insertSpirvDecorations(Instruction *I,
                                                  IRBuilder<> &B) {
   if (MDNode *MD = I->getMetadata("spirv.Decorations")) {
     setInsertPointAfterDef(B, I);
     B.CreateIntrinsic(Intrinsic::spv_assign_decoration, {I->getType()},
                       {I, MetadataAsValue::get(I->getContext(), MD)});
+  }
+  // Lower alias.scope/noalias metadata
+  {
+    auto processMemAliasingDecoration = [&](unsigned Kind) {
+      if (MDNode *AliasListMD = I->getMetadata(Kind)) {
+        if (shouldTryToAddMemAliasingDecoration(I)) {
+          uint32_t Dec = Kind == LLVMContext::MD_alias_scope
+                             ? SPIRV::Decoration::AliasScopeINTEL
+                             : SPIRV::Decoration::NoAliasINTEL;
+          SmallVector<Value *, 3> Args = {
+              I, ConstantInt::get(B.getInt32Ty(), Dec),
+              MetadataAsValue::get(I->getContext(), AliasListMD)};
+          setInsertPointAfterDef(B, I);
+          B.CreateIntrinsic(Intrinsic::spv_assign_aliasing_decoration,
+                            {I->getType()}, {Args});
+        }
+      }
+    };
+    processMemAliasingDecoration(LLVMContext::MD_alias_scope);
+    processMemAliasingDecoration(LLVMContext::MD_noalias);
   }
 }
 

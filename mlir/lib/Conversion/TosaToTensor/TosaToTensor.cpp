@@ -243,8 +243,8 @@ public:
     }
 
     llvm::SmallVector<int64_t> newShape;
-    if (!tosa::getConstShapeValue(reshape.getShape().getDefiningOp(),
-                                  newShape)) {
+    if (!tosa::getConstShapeValues(reshape.getShape().getDefiningOp(),
+                                   newShape)) {
       return failure();
     }
 

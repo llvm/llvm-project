@@ -20,27 +20,6 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 
 namespace Fortran::lower {
-// Check if the insertion point is currently in a device context. HostDevice
-// subprogram are not considered fully device context so it will return false
-// for it.
-// If the insertion point is inside an OpenACC region op, it is considered
-// device context.
-static bool inline isCudaDeviceContext(fir::FirOpBuilder &builder) {
-  if (builder.getRegion().getParentOfType<cuf::KernelOp>())
-    return true;
-  if (builder.getRegion()
-          .getParentOfType<mlir::acc::ComputeRegionOpInterface>())
-    return true;
-  if (auto funcOp = builder.getRegion().getParentOfType<mlir::func::FuncOp>()) {
-    if (auto cudaProcAttr =
-            funcOp.getOperation()->getAttrOfType<cuf::ProcAttributeAttr>(
-                cuf::getProcAttrName())) {
-      return cudaProcAttr.getValue() != cuf::ProcAttribute::Host &&
-             cudaProcAttr.getValue() != cuf::ProcAttribute::HostDevice;
-    }
-  }
-  return false;
-}
 
 static inline unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
   std::optional<Fortran::common::CUDADataAttr> cudaAttr =

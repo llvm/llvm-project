@@ -266,7 +266,7 @@ define <4 x float> @v_uitofp_unpack_i32_to_v4f32(i32 %arg0) nounwind {
   %mask.lshr.24 = and i32 %lshr.24, 255
   %cvt3 = uitofp i32 %mask.lshr.24 to float
 
-  %ins.0 = insertelement <4 x float> undef, float %cvt0, i32 0
+  %ins.0 = insertelement <4 x float> poison, float %cvt0, i32 0
   %ins.1 = insertelement <4 x float> %ins.0, float %cvt1, i32 1
   %ins.2 = insertelement <4 x float> %ins.1, float %cvt2, i32 2
   %ins.3 = insertelement <4 x float> %ins.2, float %cvt3, i32 3

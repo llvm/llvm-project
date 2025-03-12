@@ -48,13 +48,9 @@ operation type, a special tag must be provided to make the intent explicit:
 ### `matchAndRewrite` implementation
 
 This is the chunk of code that matches a given root `Operation` and performs a
-rewrite of the IR. A `RewritePattern` can specify this implementation either via
-the `matchAndRewrite` method or via separate `match` and `rewrite` methods when
-deriving from `RewritePattern::SplitMatchAndRewrite`. When using the combined
-`matchAndRewrite` method, no IR mutation should take place before the match is
-deemed successful. The combined `matchAndRewrite` is useful when non-trivially
-recomputable information is required by the matching and rewriting phase. See
-below for examples:
+rewrite of the IR. A `RewritePattern` can specify this implementation via the
+`matchAndRewrite` method. No IR mutation should take place before the match is
+deemed successful. See below for examples:
 
 ```c++
 class MyPattern : public RewritePattern {
@@ -67,21 +63,6 @@ public:
   MyPattern(PatternBenefit benefit)
       : RewritePattern(benefit, MatchAnyOpTypeTag()) {}
 
-  /// In this section, the `match` and `rewrite` implementation is specified
-  /// using the separate hooks.
-  LogicalResult match(Operation *op) const override {
-    // The `match` method returns `success()` if the pattern is a match, failure
-    // otherwise.
-    // ...
-  }
-  void rewrite(Operation *op, PatternRewriter &rewriter) const override {
-    // The `rewrite` method performs mutations on the IR rooted at `op` using
-    // the provided rewriter. All mutations must go through the provided
-    // rewriter.
-  }
-
-  /// In this section, the `match` and `rewrite` implementation is specified
-  /// using a single hook.
   LogicalResult matchAndRewrite(Operation *op, PatternRewriter &rewriter) const override {
     // The `matchAndRewrite` method performs both the matching and the mutation.
     // Note that the match must reach a successful point before IR mutation may
@@ -92,12 +73,6 @@ public:
 
 #### Restrictions
 
-Within the `match` section of a pattern, the following constraints apply:
-
-*   No mutation of the IR is allowed.
-
-Within the `rewrite` section of a pattern, the following constraints apply:
-
 *   All IR mutations, including creation, *must* be performed by the given
     `PatternRewriter`. This class provides hooks for performing all of the
     possible mutations that may take place within a pattern. For example, this
@@ -107,8 +82,6 @@ Within the `rewrite` section of a pattern, the following constraints apply:
 *   The root operation is required to either be: updated in-place, replaced, or
     erased.
 *   `matchAndRewrite` must return "success" if and only if the IR was modified.
-    `match` must return "success" if and only if the IR is going to be modified
-    during `rewrite`.
 
 
 ### Application Recursion

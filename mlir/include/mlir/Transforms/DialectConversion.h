@@ -598,6 +598,9 @@ public:
   using OperationT = Operation *;
   using OpAdaptor = ArrayRef<Value>;
   using OneToNOpAdaptor = ArrayRef<ValueRange>;
+
+  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
+  /// separate `match` and `rewrite`.
   using SplitMatchAndRewrite =
       detail::ConversionSplitMatchAndRewriteImpl<ConversionPattern>;
 
@@ -669,6 +672,9 @@ public:
   using OpAdaptor = typename SourceOp::Adaptor;
   using OneToNOpAdaptor =
       typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
+
+  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
+  /// separate `match` and `rewrite`.
   using SplitMatchAndRewrite =
       detail::ConversionSplitMatchAndRewriteImpl<OpConversionPattern<SourceOp>>;
 

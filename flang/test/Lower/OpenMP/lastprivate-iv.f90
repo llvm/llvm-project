@@ -14,11 +14,13 @@
 !CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
 !CHECK:          %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_incEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:          hlfir.assign %[[IV]] to %[[I]]#1 : i32, !fir.ref<i32>
-!CHECK:          %[[V:.*]] = arith.addi %[[IV]], %[[STEP]] : i32
+!CHECK:          %[[UB_2:.*]] = arith.constant 10 : i32
+!CHECK:          %[[STEP_2:.*]]  = arith.constant 3 : i32
+!CHECK:          %[[V:.*]] = arith.addi %[[IV]], %[[STEP_2]] : i32
 !CHECK:          %[[C0:.*]] = arith.constant 0 : i32
-!CHECK:          %[[STEP_NEG:.*]] = arith.cmpi slt, %[[STEP]], %[[C0]] : i32
-!CHECK:          %[[V_LT:.*]] = arith.cmpi slt, %[[V]], %[[UB]] : i32
-!CHECK:          %[[V_GT:.*]] = arith.cmpi sgt, %[[V]], %[[UB]] : i32
+!CHECK:          %[[STEP_NEG:.*]] = arith.cmpi slt, %[[STEP_2]], %[[C0]] : i32
+!CHECK:          %[[V_LT:.*]] = arith.cmpi slt, %[[V]], %[[UB_2]] : i32
+!CHECK:          %[[V_GT:.*]] = arith.cmpi sgt, %[[V]], %[[UB_2]] : i32
 !CHECK:          %[[CMP:.*]] = arith.select %[[STEP_NEG]], %[[V_LT]], %[[V_GT]] : i1
 !CHECK:          fir.if %[[CMP]] {
 !CHECK:            hlfir.assign %[[V]] to %[[I]]#1 : i32, !fir.ref<i32>
@@ -48,11 +50,13 @@ end subroutine
 !CHECK-NEXT:   omp.loop_nest (%[[IV:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
 !CHECK:          %[[I:.*]]:2 = hlfir.declare %[[I_MEM]] {uniq_name = "_QFlastprivate_iv_decEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 !CHECK:          hlfir.assign %[[IV]] to %[[I]]#1 : i32, !fir.ref<i32>
-!CHECK:          %[[V:.*]] = arith.addi %[[IV]], %[[STEP]] : i32
+!CHECK:          %[[UB_2:.*]] = arith.constant 1 : i32
+!CHECK:          %[[STEP_2:.*]]  = arith.constant -3 : i32
+!CHECK:          %[[V:.*]] = arith.addi %[[IV]], %[[STEP_2]] : i32
 !CHECK:          %[[C0:.*]] = arith.constant 0 : i32
-!CHECK:          %[[STEP_NEG:.*]] = arith.cmpi slt, %[[STEP]], %[[C0]] : i32
-!CHECK:          %[[V_LT:.*]] = arith.cmpi slt, %[[V]], %[[UB]] : i32
-!CHECK:          %[[V_GT:.*]] = arith.cmpi sgt, %[[V]], %[[UB]] : i32
+!CHECK:          %[[STEP_NEG:.*]] = arith.cmpi slt, %[[STEP_2]], %[[C0]] : i32
+!CHECK:          %[[V_LT:.*]] = arith.cmpi slt, %[[V]], %[[UB_2]] : i32
+!CHECK:          %[[V_GT:.*]] = arith.cmpi sgt, %[[V]], %[[UB_2]] : i32
 !CHECK:          %[[CMP:.*]] = arith.select %[[STEP_NEG]], %[[V_LT]], %[[V_GT]] : i1
 !CHECK:          fir.if %[[CMP]] {
 !CHECK:            hlfir.assign %[[V]] to %[[I]]#1 : i32, !fir.ref<i32>

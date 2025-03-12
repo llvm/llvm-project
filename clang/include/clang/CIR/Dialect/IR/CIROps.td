@@ -18,6 +18,8 @@ include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypes.td"
 include "clang/CIR/Dialect/IR/CIRAttrs.td"
 
+include "clang/CIR/Interfaces/CIROpInterfaces.td"
+
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -427,8 +429,101 @@ def ScopeOp : CIR_Op<"scope", [
 }
 
 //===----------------------------------------------------------------------===//
+// BrOp
+//===----------------------------------------------------------------------===//
+
+def BrOp : CIR_Op<"br",
+      [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+     Pure, Terminator]> {
+  let summary = "Unconditional branch";
+  let description = [{
+    The `cir.br` branches unconditionally to a block. Used to represent C/C++
+    goto's and general block branching.
+
+    Note that for source level `goto`'s crossing scope boundaries, those are
+    usually represented with the "symbolic" `cir.goto` operation.
+
+    Example:
+
+    ```mlir
+      ...
+        cir.br ^bb3
+      ^bb3:
+        cir.return
+    ```
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Block *":$dest,
+              CArg<"mlir::ValueRange", "{}">:$destOperands), [{
+      $_state.addSuccessors(dest);
+      $_state.addOperands(destOperands);
+    }]>
+  ];
+
+  let arguments = (ins Variadic<CIR_AnyType>:$destOperands);
+  let successors = (successor AnySuccessor:$dest);
+  let assemblyFormat = [{
+    $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
+
+// Linkage types. This is currently a replay of llvm/IR/GlobalValue.h, this is
+// currently handy as part of forwarding appropriate linkage types for LLVM
+// lowering, specially useful for C++ support.
+
+// Externally visible function
+def Global_ExternalLinkage :
+  I32EnumAttrCase<"ExternalLinkage", 0, "external">;
+// Available for inspection, not emission.
+def Global_AvailableExternallyLinkage :
+  I32EnumAttrCase<"AvailableExternallyLinkage", 1, "available_externally">;
+// Keep one copy of function when linking (inline)
+def Global_LinkOnceAnyLinkage :
+  I32EnumAttrCase<"LinkOnceAnyLinkage", 2, "linkonce">;
+// Same, but only replaced by something equivalent.
+def Global_LinkOnceODRLinkage :
+  I32EnumAttrCase<"LinkOnceODRLinkage", 3, "linkonce_odr">;
+// Keep one copy of named function when linking (weak)
+def Global_WeakAnyLinkage :
+  I32EnumAttrCase<"WeakAnyLinkage", 4, "weak">;
+// Same, but only replaced by something equivalent.
+def Global_WeakODRLinkage :
+  I32EnumAttrCase<"WeakODRLinkage", 5, "weak_odr">;
+// TODO: should we add something like appending linkage too?
+// Special purpose, only applies to global arrays
+// def Global_AppendingLinkage :
+//   I32EnumAttrCase<"AppendingLinkage", 6, "appending">;
+// Rename collisions when linking (static functions).
+def Global_InternalLinkage :
+  I32EnumAttrCase<"InternalLinkage", 7, "internal">;
+// Like Internal, but omit from symbol table, prefix it with
+// "cir_" to prevent clash with MLIR's symbol "private".
+def Global_PrivateLinkage :
+  I32EnumAttrCase<"PrivateLinkage", 8, "cir_private">;
+// ExternalWeak linkage description.
+def Global_ExternalWeakLinkage :
+  I32EnumAttrCase<"ExternalWeakLinkage", 9, "extern_weak">;
+// Tentative definitions.
+def Global_CommonLinkage :
+  I32EnumAttrCase<"CommonLinkage", 10, "common">;
+
+/// An enumeration for the kinds of linkage for global values.
+def GlobalLinkageKind : I32EnumAttr<
+    "GlobalLinkageKind",
+    "Linkage type/kind",
+    [Global_ExternalLinkage, Global_AvailableExternallyLinkage,
+     Global_LinkOnceAnyLinkage, Global_LinkOnceODRLinkage,
+     Global_WeakAnyLinkage, Global_WeakODRLinkage,
+     Global_InternalLinkage, Global_PrivateLinkage,
+     Global_ExternalWeakLinkage, Global_CommonLinkage
+     ]> {
+  let cppNamespace = "::cir";
+}
 
 // TODO(CIR): For starters, cir.global has only name and type.  The other
 // properties of a global variable will be added over time as more of ClangIR
@@ -441,12 +536,19 @@ def GlobalOp : CIR_Op<"global"> {
 
     The backing memory for the variable is allocated statically and is
     described by the type of the variable.
+
+    The `linkage` tracks C/C++ linkage types, currently very similar to LLVM's.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$sym_type,
-                       OptionalAttr<AnyAttr>:$initial_value);
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttr:$sym_type,
+                       Arg<GlobalLinkageKind, "linkage type">:$linkage,
+                       OptionalAttr<AnyAttr>:$initial_value,
+                       UnitAttr:$dsolocal);
 
   let assemblyFormat = [{
+    $linkage
+    (`dsolocal` $dsolocal^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
     attr-dict
@@ -459,8 +561,12 @@ def GlobalOp : CIR_Op<"global"> {
 
   let skipDefaultBuilders = 1;
 
-  let builders = [OpBuilder<(ins "llvm::StringRef":$sym_name,
-                                 "mlir::Type":$sym_type)>];
+  let builders = [OpBuilder<(ins
+    "llvm::StringRef":$sym_name,
+    "mlir::Type":$sym_type,
+    // CIR defaults to external linkage.
+    CArg<"cir::GlobalLinkageKind",
+    "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)>];
 
   let hasVerifier = 1;
 }

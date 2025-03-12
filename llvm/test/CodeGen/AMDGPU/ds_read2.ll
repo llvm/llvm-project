@@ -331,7 +331,7 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(ptr addrspace(1) %out, <2
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
+  %index.0 = insertelement <2 x i32> poison, i32 %x.i, i32 0
   %index.1 = insertelement <2 x i32> %index.0, i32 8, i32 0
   %gep = getelementptr inbounds float, <2 x ptr addrspace(3)> %lds.ptr, <2 x i32> %index.1
   %gep.0 = extractelement <2 x ptr addrspace(3)> %gep, i32 0
@@ -382,7 +382,7 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_offset_f32(ptr addrspace(1) %
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
+  %index.0 = insertelement <2 x i32> poison, i32 %x.i, i32 0
   %index.1 = insertelement <2 x i32> %index.0, i32 8, i32 0
   %gep = getelementptr inbounds float, <2 x ptr addrspace(3)> %lds.ptr, <2 x i32> %index.1
   %gep.0 = extractelement <2 x ptr addrspace(3)> %gep, i32 0
@@ -425,9 +425,9 @@ define amdgpu_kernel void @read2_ptr_is_subreg_f32(ptr addrspace(1) %out) #0 {
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %ptr.0 = insertelement <2 x ptr addrspace(3)> undef, ptr addrspace(3) @lds, i32 0
+  %ptr.0 = insertelement <2 x ptr addrspace(3)> poison, ptr addrspace(3) @lds, i32 0
   %ptr.1 = insertelement <2 x ptr addrspace(3)> %ptr.0, ptr addrspace(3) @lds, i32 1
-  %x.i.v.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
+  %x.i.v.0 = insertelement <2 x i32> poison, i32 %x.i, i32 0
   %x.i.v.1 = insertelement <2 x i32> %x.i.v.0, i32 %x.i, i32 1
   %idx = add <2 x i32> %x.i.v.1, <i32 0, i32 8>
   %gep = getelementptr inbounds [512 x float], <2 x ptr addrspace(3)> %ptr.1, <2 x i32> <i32 0, i32 0>, <2 x i32> %idx
@@ -1321,19 +1321,19 @@ bb:
 define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspace(3) %arg) {
 ; CI-LABEL: ds_read_call_read:
 ; CI:       ; %bb.0:
-; CI-NEXT:    s_getpc_b64 s[40:41]
-; CI-NEXT:    s_mov_b32 s40, s0
-; CI-NEXT:    s_load_dwordx4 s[40:43], s[40:41], 0x0
+; CI-NEXT:    s_getpc_b64 s[48:49]
+; CI-NEXT:    s_mov_b32 s48, s0
+; CI-NEXT:    s_load_dwordx4 s[48:51], s[48:49], 0x0
 ; CI-NEXT:    s_mov_b32 s14, s10
 ; CI-NEXT:    v_lshlrev_b32_e32 v3, 2, v0
 ; CI-NEXT:    s_mov_b32 m0, -1
 ; CI-NEXT:    s_mov_b32 s12, s8
 ; CI-NEXT:    s_waitcnt lgkmcnt(0)
-; CI-NEXT:    s_add_u32 s40, s40, s11
+; CI-NEXT:    s_add_u32 s48, s48, s11
 ; CI-NEXT:    s_mov_b64 s[10:11], s[6:7]
 ; CI-NEXT:    s_load_dwordx2 s[36:37], s[4:5], 0x0
 ; CI-NEXT:    s_load_dword s6, s[4:5], 0x2
-; CI-NEXT:    s_addc_u32 s41, s41, 0
+; CI-NEXT:    s_addc_u32 s49, s49, 0
 ; CI-NEXT:    s_add_u32 s8, s4, 12
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 10, v1
 ; CI-NEXT:    s_mov_b32 s13, s9
@@ -1345,11 +1345,11 @@ define amdgpu_kernel void @ds_read_call_read(ptr addrspace(1) %out, ptr addrspac
 ; CI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; CI-NEXT:    s_mov_b64 s[4:5], s[0:1]
 ; CI-NEXT:    s_mov_b64 s[6:7], s[2:3]
-; CI-NEXT:    s_mov_b64 s[0:1], s[40:41]
+; CI-NEXT:    s_mov_b64 s[0:1], s[48:49]
 ; CI-NEXT:    s_mov_b32 s17, void_func_void@abs32@hi
 ; CI-NEXT:    s_mov_b32 s16, void_func_void@abs32@lo
 ; CI-NEXT:    v_or_b32_e32 v31, v0, v2
-; CI-NEXT:    s_mov_b64 s[2:3], s[42:43]
+; CI-NEXT:    s_mov_b64 s[2:3], s[50:51]
 ; CI-NEXT:    s_mov_b32 s32, 0
 ; CI-NEXT:    s_mov_b32 s39, 0xf000
 ; CI-NEXT:    s_mov_b32 s38, -1
@@ -1435,7 +1435,7 @@ define amdgpu_ps <2 x float> @ds_read_interp_read(i32 inreg %prims, ptr addrspac
   %ptr1 = getelementptr float, ptr addrspace(3) %inptr, i32 4
   %v1 = load float, ptr addrspace(3) %ptr1, align 4
   %v1b = fadd float %v1, %intrp
-  %r0 = insertelement <2 x float> undef, float %v0, i32 0
+  %r0 = insertelement <2 x float> poison, float %v0, i32 0
   %r1 = insertelement <2 x float> %r0, float %v1b, i32 1
   ret <2 x float> %r1
 }

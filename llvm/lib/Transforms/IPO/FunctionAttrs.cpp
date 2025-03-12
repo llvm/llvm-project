@@ -406,15 +406,16 @@ static FunctionSummary *calculatePrevailingSummary(
     }
   }
 
+  auto &CPS = CachedPrevailingSummary[VI];
   if (Local) {
     assert(!Prevailing);
-    CachedPrevailingSummary[VI] = Local;
+    CPS = Local;
   } else if (Prevailing) {
     assert(!Local);
-    CachedPrevailingSummary[VI] = Prevailing;
+    CPS = Prevailing;
   }
 
-  return CachedPrevailingSummary[VI];
+  return CPS;
 }
 
 bool llvm::thinLTOPropagateFunctionAttrs(

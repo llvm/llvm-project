@@ -548,7 +548,7 @@ define amdgpu_kernel void @write2_ptr_subreg_arg_two_val_f32(ptr addrspace(1) %C
   %val0 = load float, ptr addrspace(1) %in0.gep, align 4
   %val1 = load float, ptr addrspace(1) %in1.gep, align 4
 
-  %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
+  %index.0 = insertelement <2 x i32> poison, i32 %x.i, i32 0
   %index.1 = insertelement <2 x i32> %index.0, i32 8, i32 0
   %gep = getelementptr inbounds float, <2 x ptr addrspace(3)> %lds.ptr, <2 x i32> %index.1
   %gep.0 = extractelement <2 x ptr addrspace(3)> %gep, i32 0

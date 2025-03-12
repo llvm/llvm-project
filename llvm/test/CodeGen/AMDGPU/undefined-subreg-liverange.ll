@@ -69,7 +69,7 @@ define amdgpu_ps float @valley_partially_undef_copy() #0 {
 bb:
   %tmp = load volatile i32, ptr addrspace(1) undef, align 4
   %tmp1 = load volatile i32, ptr addrspace(1) undef, align 4
-  %tmp2 = insertelement <4 x i32> undef, i32 %tmp1, i32 0
+  %tmp2 = insertelement <4 x i32> poison, i32 %tmp1, i32 0
   %tmp3 = bitcast i32 %tmp1 to float
   %tmp4 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %tmp3, float %tmp3, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
   %tmp5 = extractelement <4 x float> %tmp4, i32 0
@@ -115,7 +115,7 @@ define amdgpu_kernel void @partially_undef_copy() #0 {
   %tmp0 = call i32 asm sideeffect "v_mov_b32_e32 v5, 5", "={v5}"()
   %tmp1 = call i32 asm sideeffect "v_mov_b32_e32 v6, 6", "={v6}"()
 
-  %partially.undef.0 = insertelement <4 x i32> undef, i32 %tmp0, i32 0
+  %partially.undef.0 = insertelement <4 x i32> poison, i32 %tmp0, i32 0
   %partially.undef.1 = insertelement <4 x i32> %partially.undef.0, i32 %tmp1, i32 0
 
   store volatile <4 x i32> %partially.undef.1, ptr addrspace(1) undef, align 16

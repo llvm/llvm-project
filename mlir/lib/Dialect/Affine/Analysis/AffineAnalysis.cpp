@@ -626,7 +626,8 @@ DependenceResult mlir::affine::checkMemrefAccessDependence(
 
   // We can't analyze further if the ops lie in different affine scopes or have
   // no common block in an affine scope.
-  if (getAffineScope(srcAccess.opInst) != getAffineScope(dstAccess.opInst))
+  if (getAffineAnalysisScope(srcAccess.opInst) !=
+      getAffineAnalysisScope(dstAccess.opInst))
     return DependenceResult::Failure;
   if (!getCommonBlockInAffineScope(srcAccess.opInst, dstAccess.opInst))
     return DependenceResult::Failure;

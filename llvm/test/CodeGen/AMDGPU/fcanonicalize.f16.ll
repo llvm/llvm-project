@@ -238,7 +238,7 @@ define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-  %ins0 = insertelement <2 x half> undef, half %lo, i32 0
+  %ins0 = insertelement <2 x half> poison, half %lo, i32 0
   %ins1 = insertelement <2 x half> %ins0, half %hi, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %ins1)
   ret <2 x half> %canonicalized
@@ -2581,7 +2581,7 @@ define <2 x half> @v_test_canonicalize_reg_undef_v2f16(half %val) #1 {
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-  %vec = insertelement <2 x half> undef, half %val, i32 0
+  %vec = insertelement <2 x half> poison, half %val, i32 0
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
 }
@@ -2622,7 +2622,7 @@ define <2 x half> @v_test_canonicalize_undef_reg_v2f16(half %val) #1 {
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-  %vec = insertelement <2 x half> undef, half %val, i32 1
+  %vec = insertelement <2 x half> poison, half %val, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
 }
@@ -2785,7 +2785,7 @@ define <2 x half> @v_test_canonicalize_reg_k_v2f16(half %val) #1 {
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 2.0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-  %vec0 = insertelement <2 x half> undef, half %val, i32 0
+  %vec0 = insertelement <2 x half> poison, half %val, i32 0
   %vec1 = insertelement <2 x half> %vec0, half 2.0, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec1)
   ret <2 x half> %canonicalized
@@ -2829,7 +2829,7 @@ define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) #1 {
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, 2.0, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-  %vec0 = insertelement <2 x half> undef, half 2.0, i32 0
+  %vec0 = insertelement <2 x half> poison, half 2.0, i32 0
   %vec1 = insertelement <2 x half> %vec0, half %val, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec1)
   ret <2 x half> %canonicalized
@@ -2925,7 +2925,7 @@ define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) #1
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-  %vec = insertelement <4 x half> undef, half %val, i32 0
+  %vec = insertelement <4 x half> poison, half %val, i32 0
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec)
   ret <4 x half> %canonicalized
 }
@@ -2977,7 +2977,7 @@ define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, hal
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX11-FAKE16-NEXT:    v_pk_max_f16 v0, v0, v0
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-  %vec0 = insertelement <4 x half> undef, half %val0, i32 0
+  %vec0 = insertelement <4 x half> poison, half %val0, i32 0
   %vec1 = insertelement <4 x half> %vec0, half %val1, i32 1
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec1)
   ret <4 x half> %canonicalized
@@ -3035,7 +3035,7 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
 ; GFX11-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 0
 ; GFX11-FAKE16-NEXT:    v_pk_max_f16 v1, v1, v1
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
-  %vec0 = insertelement <4 x half> undef, half %val0, i32 0
+  %vec0 = insertelement <4 x half> poison, half %val0, i32 0
   %vec1 = insertelement <4 x half> %vec0, half %val1, i32 2
   %vec2 = insertelement <4 x half> %vec1, half %val2, i32 3
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec2)

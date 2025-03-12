@@ -923,6 +923,8 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
                                       F->getAddressSpace(), "", F->getParent());
     NewF->copyAttributesFrom(F);
     NewF->takeName(F);
+    NewF->setComdat(F->getComdat());
+    F->setComdat(nullptr);
     NewF->IsNewDbgInfoFormat = F->IsNewDbgInfoFormat;
     // Ensure CFI type metadata is propagated to the new function.
     copyMetadataIfPresent(F, NewF, "type");

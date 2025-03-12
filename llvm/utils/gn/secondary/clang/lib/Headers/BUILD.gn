@@ -224,6 +224,7 @@ copy("Headers") {
     "hlsl/hlsl_alias_intrinsics.h",
     "hlsl/hlsl_basic_types.h",
     "hlsl/hlsl_detail.h",
+    "hlsl/hlsl_intrinsic_helpers.h",
     "hlsl/hlsl_intrinsics.h",
     "hresetintrin.h",
     "htmintrin.h",

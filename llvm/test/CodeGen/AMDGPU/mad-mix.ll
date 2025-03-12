@@ -456,9 +456,9 @@ define <2 x float> @v_mad_mix_v2f32_shuffle(<2 x half> %src0, <2 x half> %src1, 
 ; GISEL-CI-NEXT:    v_mad_f32 v0, v4, v0, v1
 ; GISEL-CI-NEXT:    v_mac_f32_e32 v1, v5, v2
 ; GISEL-CI-NEXT:    s_setpc_b64 s[30:31]
-  %src0.shuf = shufflevector <2 x half> %src0, <2 x half> undef, <2 x i32> <i32 1, i32 0>
-  %src1.shuf = shufflevector <2 x half> %src1, <2 x half> undef, <2 x i32> <i32 0, i32 1>
-  %src2.shuf = shufflevector <2 x half> %src2, <2 x half> undef, <2 x i32> <i32 1, i32 1>
+  %src0.shuf = shufflevector <2 x half> %src0, <2 x half> poison, <2 x i32> <i32 1, i32 0>
+  %src1.shuf = shufflevector <2 x half> %src1, <2 x half> poison, <2 x i32> <i32 0, i32 1>
+  %src2.shuf = shufflevector <2 x half> %src2, <2 x half> poison, <2 x i32> <i32 1, i32 1>
   %src0.ext = fpext <2 x half> %src0.shuf to <2 x float>
   %src1.ext = fpext <2 x half> %src1.shuf to <2 x float>
   %src2.ext = fpext <2 x half> %src2.shuf to <2 x float>

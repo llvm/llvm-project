@@ -1519,7 +1519,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i64() #0 {
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
   %load = load <2 x i64>, ptr addrspace(1) null
-  %val = shufflevector <2 x i64> %load, <2 x i64> <i64 8589934593, i64 undef>, <3 x i32> <i32 0, i32 1, i32 2>
+  %val = shufflevector <2 x i64> %load, <2 x i64> <i64 8589934593, i64 poison>, <3 x i32> <i32 0, i32 1, i32 2>
 
   call void @external_void_func_v3i64(<3 x i64> %val)
   ret void

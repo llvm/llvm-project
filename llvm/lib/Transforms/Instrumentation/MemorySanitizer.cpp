@@ -3129,6 +3129,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   /// fine).
   ///
   /// Caller guarantees that this intrinsic does not access memory.
+  ///
+  /// TODO: "horizontal"/"pairwise" intrinsics are often incorrectly matched by
+  ///       by this handler.
   [[maybe_unused]] bool
   maybeHandleSimpleNomemIntrinsic(IntrinsicInst &I,
                                   unsigned int trailingFlags) {
@@ -3653,14 +3656,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // Instrument generic vector reduction intrinsics
   // by ORing together all their fields.
   //
-  // The return type does not need to be the same type as the fields
+  // If AllowShadowCast is true, the return type does not need to be the same
+  // type as the fields
   // e.g., declare i32 @llvm.aarch64.neon.uaddv.i32.v16i8(<16 x i8>)
-  void handleVectorReduceIntrinsic(IntrinsicInst &I) {
+  void handleVectorReduceIntrinsic(IntrinsicInst &I, bool AllowShadowCast) {
     assert(I.arg_size() == 1);
 
     IRBuilder<> IRB(&I);
     Value *S = IRB.CreateOrReduce(getShadow(&I, 0));
-    S = CreateShadowCast(IRB, S, getShadowTy(&I));
+    if (AllowShadowCast)
+      S = CreateShadowCast(IRB, S, getShadowTy(&I));
+    else
+      assert(S->getType() == getShadowTy(&I));
     setShadow(&I, S);
     setOriginForNaryOp(I);
   }
@@ -3669,13 +3676,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   // e.g., call float @llvm.vector.reduce.fadd.f32.v2f32(float %a0, <2 x float>
   // %a1)
   //       shadow = shadow[a0] | shadow[a1.0] | shadow[a1.1]
+  //
+  // The type of the return value, initial starting value, and elements of the
+  // vector must be identical.
   void handleVectorReduceWithStarterIntrinsic(IntrinsicInst &I) {
     assert(I.arg_size() == 2);
 
     IRBuilder<> IRB(&I);
     Value *Shadow0 = getShadow(&I, 0);
     Value *Shadow1 = IRB.CreateOrReduce(getShadow(&I, 1));
+    assert(Shadow0->getType() == Shadow1->getType());
     Value *S = IRB.CreateOr(Shadow0, Shadow1);
+    assert(S->getType() == getShadowTy(&I));
     setShadow(&I, S);
     setOriginForNaryOp(I);
   }
@@ -4458,21 +4470,17 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::vector_reduce_add:
     case Intrinsic::vector_reduce_xor:
     case Intrinsic::vector_reduce_mul:
-    // Add reduction to scalar
-    case Intrinsic::aarch64_neon_faddv:
-    case Intrinsic::aarch64_neon_saddv:
-    case Intrinsic::aarch64_neon_uaddv:
-    // Floating-point min/max (vector)
-    // The f{min,max}"nm"v variants handle NaN differently than f{min,max}v,
-    // but our shadow propagation is the same.
-    case Intrinsic::aarch64_neon_fmaxv:
-    case Intrinsic::aarch64_neon_fminv:
-    case Intrinsic::aarch64_neon_fmaxnmv:
-    case Intrinsic::aarch64_neon_fminnmv:
-    // Sum long across vector
-    case Intrinsic::aarch64_neon_saddlv:
-    case Intrinsic::aarch64_neon_uaddlv:
-      handleVectorReduceIntrinsic(I);
+    // Signed/Unsigned Min/Max
+    // TODO: handling similarly to AND/OR may be more precise.
+    case Intrinsic::vector_reduce_smax:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_umax:
+    case Intrinsic::vector_reduce_umin:
+    // TODO: this has no false positives, but arguably we should check that all
+    // the bits are initialized.
+    case Intrinsic::vector_reduce_fmax:
+    case Intrinsic::vector_reduce_fmin:
+      handleVectorReduceIntrinsic(I, /*AllowShadowCast=*/false);
       break;
 
     case Intrinsic::vector_reduce_fadd:
@@ -4871,6 +4879,18 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       setOrigin(&I, getCleanOrigin());
       break;
 
+    // TODO: handling max/min similarly to AND/OR may be more precise
+    // Floating-Point Maximum/Minimum Pairwise
+    case Intrinsic::aarch64_neon_fmaxp:
+    case Intrinsic::aarch64_neon_fminp:
+    // Floating-Point Maximum/Minimum Number Pairwise
+    case Intrinsic::aarch64_neon_fmaxnmp:
+    case Intrinsic::aarch64_neon_fminnmp:
+    // Signed/Unsigned Maximum/Minimum Pairwise
+    case Intrinsic::aarch64_neon_smaxp:
+    case Intrinsic::aarch64_neon_sminp:
+    case Intrinsic::aarch64_neon_umaxp:
+    case Intrinsic::aarch64_neon_uminp:
     // Add Pairwise
     case Intrinsic::aarch64_neon_addp:
     // Floating-point Add Pairwise
@@ -4902,6 +4922,29 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleNEONVectorConvertIntrinsic(I);
       break;
     }
+
+    // Add reduction to scalar
+    case Intrinsic::aarch64_neon_faddv:
+    case Intrinsic::aarch64_neon_saddv:
+    case Intrinsic::aarch64_neon_uaddv:
+    // Signed/Unsigned min/max (Vector)
+    // TODO: handling similarly to AND/OR may be more precise.
+    case Intrinsic::aarch64_neon_smaxv:
+    case Intrinsic::aarch64_neon_sminv:
+    case Intrinsic::aarch64_neon_umaxv:
+    case Intrinsic::aarch64_neon_uminv:
+    // Floating-point min/max (vector)
+    // The f{min,max}"nm"v variants handle NaN differently than f{min,max}v,
+    // but our shadow propagation is the same.
+    case Intrinsic::aarch64_neon_fmaxv:
+    case Intrinsic::aarch64_neon_fminv:
+    case Intrinsic::aarch64_neon_fmaxnmv:
+    case Intrinsic::aarch64_neon_fminnmv:
+    // Sum long across vector
+    case Intrinsic::aarch64_neon_saddlv:
+    case Intrinsic::aarch64_neon_uaddlv:
+      handleVectorReduceIntrinsic(I, /*AllowShadowCast=*/true);
+      break;
 
     // Saturating extract narrow
     case Intrinsic::aarch64_neon_sqxtn:

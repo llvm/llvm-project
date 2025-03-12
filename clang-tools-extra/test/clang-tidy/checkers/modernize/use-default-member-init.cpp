@@ -518,3 +518,22 @@ class ArrayBraceInitMultipleValues {
 };
 
 } // namespace PR63285
+
+namespace PR122480 {
+
+  static int STATIC_VAL = 23;
+  constexpr const char* CONSTEXPR_REF = "Const";
+
+  class StaticConstExprInit {
+
+    StaticConstExprInit() : a{CONSTEXPR_REF}, b{STATIC_VAL}{}
+    // CHECK-FIXES: StaticConstExprInit()  {}
+    const char* a;
+    // CHECK-MESSAGES: :[[@LINE-1]]:17: warning: use default member initializer for 'a' [modernize-use-default-member-init]
+    // CHECK-FIXES: const char* a{CONSTEXPR_REF};
+    int b;
+    // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use default member initializer for 'b' [modernize-use-default-member-init]
+    // CHECK-FIXES: int b{STATIC_VAL};
+  };
+
+} //namespace PR122480

@@ -328,10 +328,10 @@ entry:
   %gep = getelementptr inbounds i16, ptr addrspace(1) %in, i64 32
   %load1 = load i16, ptr addrspace(1) %in
   %load2 = load i16, ptr addrspace(1) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
   store <2 x i16> %build1, ptr addrspace(1) %out
-  %build2 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build2 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build3 = insertelement <2 x i16> %build2, i16 %load2, i32 1
   %gep2 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %out, i64 32
   store <2 x i16> %build3, ptr addrspace(1) %gep2

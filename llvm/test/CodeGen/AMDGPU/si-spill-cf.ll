@@ -80,7 +80,7 @@ main_body:
 
 LOOP:                                             ; preds = %ENDIF2795, %main_body
   %temp894.0 = phi float [ 0.000000e+00, %main_body ], [ %temp894.1, %ENDIF2795 ]
-  %temp18.0 = phi float [ undef, %main_body ], [ %temp18.1, %ENDIF2795 ]
+  %temp18.0 = phi float [ poison, %main_body ], [ %temp18.1, %ENDIF2795 ]
   %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tmp67 = icmp sgt i32 %tid, 4
   br i1 %tmp67, label %ENDLOOP, label %ENDIF
@@ -247,8 +247,8 @@ ELSE2566:                                         ; preds = %ENDIF
   br i1 %tmp201, label %ENDLOOP, label %ELSE2593
 
 ENDIF2564:                                        ; preds = %ENDIF2594, %ENDIF2588
-  %temp894.1 = phi float [ undef, %ENDIF2588 ], [ %temp894.2, %ENDIF2594 ]
-  %temp18.1 = phi float [ %tmp218, %ENDIF2588 ], [ undef, %ENDIF2594 ]
+  %temp894.1 = phi float [ poison, %ENDIF2588 ], [ %temp894.2, %ENDIF2594 ]
+  %temp18.1 = phi float [ %tmp218, %ENDIF2588 ], [ poison, %ENDIF2594 ]
   %tmp202 = fsub float %tmp5, undef
   %tmp203 = fmul float %tmp202, undef
   %tmp204 = call float @llvm.maxnum.f32(float undef, float %tmp203)

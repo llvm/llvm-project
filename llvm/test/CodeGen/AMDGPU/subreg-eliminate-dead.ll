@@ -11,7 +11,7 @@ define amdgpu_kernel void @foobar() {
   %v4 = extractelement <4 x i32> %v3, i32 1
   %v5 = icmp ne i32 %v4, 0
   %v6 = select i1 %v5, i32 undef, i32 0
-  %v15 = insertelement <2 x i32> undef, i32 %v6, i32 1
+  %v15 = insertelement <2 x i32> poison, i32 %v6, i32 1
   store <2 x i32> %v15, ptr addrspace(1) undef, align 8
   ret void
 }

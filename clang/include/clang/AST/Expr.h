@@ -3005,18 +3005,6 @@ public:
                           FPOptionsOverride FPFeatures, unsigned MinNumArgs = 0,
                           ADLCallKind UsesADL = NotADL);
 
-  /// Create a temporary call expression with no arguments in the memory
-  /// pointed to by Mem. Mem must points to at least sizeof(CallExpr)
-  /// + sizeof(Stmt *) bytes of storage, aligned to alignof(CallExpr):
-  ///
-  /// \code{.cpp}
-  ///   alignas(CallExpr) char Buffer[sizeof(CallExpr) + sizeof(Stmt *)];
-  ///   CallExpr *TheCall = CallExpr::CreateTemporary(Buffer, etc);
-  /// \endcode
-  static CallExpr *CreateTemporary(void *Mem, Expr *Fn, QualType Ty,
-                                   ExprValueKind VK, SourceLocation RParenLoc,
-                                   ADLCallKind UsesADL = NotADL);
-
   /// Create an empty call expression, for deserialization.
   static CallExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
                                bool HasFPFeatures, EmptyShell Empty);

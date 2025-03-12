@@ -180,8 +180,9 @@ __gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x,
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_any_u32(uint64_t __lane_mask, uint32_t __x) {
   // Newer targets can use the dedicated CUDA support.
-  if (__CUDA_ARCH__ >= 700 || __nvvm_reflect("__CUDA_ARCH") >= 700)
-    return __nvvm_match_any_sync_i32(__lane_mask, __x);
+#if __CUDA_ARCH__ >= 700
+  return __nvvm_match_any_sync_i32(__lane_mask, __x);
+#endif
 
   uint32_t __match_mask = 0;
   bool __done = 0;
@@ -201,8 +202,9 @@ __gpu_match_any_u32(uint64_t __lane_mask, uint32_t __x) {
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
   // Newer targets can use the dedicated CUDA support.
-  if (__CUDA_ARCH__ >= 700 || __nvvm_reflect("__CUDA_ARCH") >= 700)
-    return __nvvm_match_any_sync_i64(__lane_mask, __x);
+#if __CUDA_ARCH__ >= 700
+  return __nvvm_match_any_sync_i64(__lane_mask, __x);
+#endif
 
   uint64_t __match_mask = 0;
 
@@ -224,9 +226,10 @@ __gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
   // Newer targets can use the dedicated CUDA support.
+#if __CUDA_ARCH__ >= 700
   int predicate;
-  if (__CUDA_ARCH__ >= 700 || __nvvm_reflect("__CUDA_ARCH") >= 700)
-    return __nvvm_match_all_sync_i32p(__lane_mask, __x, &predicate);
+  return __nvvm_match_all_sync_i32p(__lane_mask, __x, &predicate);
+#endif
 
   uint32_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
   uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
@@ -237,9 +240,10 @@ __gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u64(uint64_t __lane_mask, uint64_t __x) {
   // Newer targets can use the dedicated CUDA support.
+#if __CUDA_ARCH__ >= 700
   int predicate;
-  if (__CUDA_ARCH__ >= 700 || __nvvm_reflect("__CUDA_ARCH") >= 700)
-    return __nvvm_match_all_sync_i64p(__lane_mask, __x, &predicate);
+  return __nvvm_match_all_sync_i64p(__lane_mask, __x, &predicate);
+#endif
 
   uint64_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
   uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);

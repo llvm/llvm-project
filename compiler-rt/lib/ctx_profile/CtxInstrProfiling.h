@@ -113,6 +113,28 @@ struct ContextRoot {
   static_assert(sizeof(Taken) == 1);
 };
 
+// This is allocated and zero-initialized by the compiler, the in-place
+// initialization serves mostly as self-documentation and for testing.
+// The design is influenced by the observation that typically (at least for
+// datacenter binaries, which is the motivating target of this profiler) less
+// than 10% of functions in a binary even appear in a profile (of any kind).
+//
+// 1) We could pre-allocate the flat profile storage in the compiler, just like
+// the flat instrumented profiling does. But that penalizes the static size of
+// the binary for little reason
+//
+// 2) We could do the above but zero-initialize the buffers (which should place
+// them in .bss), and dynamically populate them. This, though, would page-in
+// more memory upfront for the binary's runtime
+//
+// The current design trades off a bit of overhead at the first time a function
+// is encountered *for flat profiling* for avoiding size penalties.
+struct FunctionData {
+  FunctionData *Next = nullptr;
+  ContextNode *volatile FlatCtx = nullptr;
+  ::__sanitizer::StaticSpinMutex Mutex;
+};
+
 /// This API is exposed for testing. See the APIs below about the contract with
 /// LLVM.
 inline bool isScratch(const void *Ctx) {
@@ -152,7 +174,8 @@ void __llvm_ctx_profile_release_context(__ctx_profile::ContextRoot *Root);
 
 /// called for any other function than entry points, in the entry BB of such
 /// function. Same consideration about LSB of returned value as .._start_context
-ContextNode *__llvm_ctx_profile_get_context(void *Callee, GUID Guid,
+ContextNode *__llvm_ctx_profile_get_context(__ctx_profile::FunctionData *Data,
+                                            void *Callee, GUID Guid,
                                             uint32_t NumCounters,
                                             uint32_t NumCallsites);
 

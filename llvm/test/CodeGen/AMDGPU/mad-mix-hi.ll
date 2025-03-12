@@ -55,7 +55,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo(half %src0, half %s
   %src2.ext = fpext half %src2 to float
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
   %cvt.result = fptrunc float %result to half
-  %vec.result = insertelement <2 x half> undef, half %cvt.result, i32 1
+  %vec.result = insertelement <2 x half> poison, half %cvt.result, i32 1
   ret <2 x half> %vec.result
 }
 
@@ -112,7 +112,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo(half %src0, half %s
   %src2.ext = fpext half %src2 to float
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
   %cvt.result = fptrunc float %result to half
-  %vec.result = insertelement <2 x half> <half 1.0, half undef>, half %cvt.result, i32 1
+  %vec.result = insertelement <2 x half> <half 1.0, half poison>, half %cvt.result, i32 1
   ret <2 x half> %vec.result
 }
 
@@ -167,7 +167,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo(half %src0, half %src
   %src2.ext = fpext half %src2 to float
   %result = tail call float @llvm.fmuladd.f32(float %src0.ext, float %src1.ext, float %src2.ext)
   %cvt.result = fptrunc float %result to half
-  %vec = insertelement <2 x half> undef, half %lo, i32 0
+  %vec = insertelement <2 x half> poison, half %lo, i32 0
   %vec.result = insertelement <2 x half> %vec, half %cvt.result, i32 1
   ret <2 x half> %vec.result
 }
@@ -398,7 +398,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt(half %
   %max = call float @llvm.maxnum.f32(float %result, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
   %cvt.result = fptrunc float %clamp to half
-  %vec.result = insertelement <2 x half> undef, half %cvt.result, i32 1
+  %vec.result = insertelement <2 x half> poison, half %cvt.result, i32 1
   ret <2 x half> %vec.result
 }
 
@@ -457,7 +457,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt(half 
   %cvt.result = fptrunc float %result to half
   %max = call half @llvm.maxnum.f16(half %cvt.result, half 0.0)
   %clamp = call half @llvm.minnum.f16(half %max, half 1.0)
-  %vec.result = insertelement <2 x half> undef, half %clamp, i32 1
+  %vec.result = insertelement <2 x half> poison, half %clamp, i32 1
   ret <2 x half> %vec.result
 }
 
@@ -534,7 +534,7 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi
   store volatile half %cvt.result, ptr addrspace(1) undef
   %max = call half @llvm.maxnum.f16(half %cvt.result, half 0.0)
   %clamp = call half @llvm.minnum.f16(half %max, half 1.0)
-  %vec.result = insertelement <2 x half> undef, half %clamp, i32 1
+  %vec.result = insertelement <2 x half> poison, half %clamp, i32 1
   ret <2 x half> %vec.result
 }
 

@@ -20,6 +20,12 @@ void use() {
   // CHECK-NEXT: ImplicitCastExpr{{.*}}'int *' <ArrayToPointerDecay>
   // CHECK-NEXT: DeclRefExpr{{.*}}'Array' 'int[5]'
   // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 1
+_Pragma("acc cache(Array[1])")
+  // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
+  // CHECK-NEXT: ArraySubscriptExpr{{.*}}'int' lvalue
+  // CHECK-NEXT: ImplicitCastExpr{{.*}}'int *' <ArrayToPointerDecay>
+  // CHECK-NEXT: DeclRefExpr{{.*}}'Array' 'int[5]'
+  // CHECK-NEXT: IntegerLiteral{{.*}} 'int' 1
 #pragma acc cache(Array[1:2])
   // CHECK-NEXT: OpenACCCacheConstruct{{.*}} cache
   // CHECK-NEXT: ArraySectionExpr{{.*}}'<array section type>' lvalue

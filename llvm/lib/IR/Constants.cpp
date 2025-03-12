@@ -841,6 +841,8 @@ Constant *Constant::mergeUndefsWith(Constant *C, Constant *Other) {
 }
 
 bool Constant::isManifestConstant() const {
+  if (isa<UndefValue>(this))
+    return false;
   if (isa<ConstantData>(this))
     return true;
   if (isa<ConstantAggregate>(this) || isa<ConstantExpr>(this)) {

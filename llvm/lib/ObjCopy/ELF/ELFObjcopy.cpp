@@ -364,7 +364,7 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
   // (like GroupSection or RelocationSection). This way, we know which
   // symbols are still 'needed' and which are not.
   if (Config.StripUnneeded || !Config.UnneededSymbolsToRemove.empty() ||
-      !Config.OnlySection.empty()) {
+      !Config.OnlySection.empty() || Config.DiscardMode != DiscardType::None) {
     for (SectionBase &Sec : Obj.sections())
       Sec.markSymbols();
   }
@@ -386,22 +386,23 @@ static Error updateAndRemoveSymbols(const CommonConfig &Config,
     if (Config.StripDebug && Sym.Type == STT_FILE)
       return true;
 
-    if ((Config.DiscardMode == DiscardType::All ||
-         (Config.DiscardMode == DiscardType::Locals &&
-          StringRef(Sym.Name).starts_with(".L"))) &&
-        Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
-        Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
-      return true;
-
     if ((Config.StripUnneeded ||
          Config.UnneededSymbolsToRemove.matches(Sym.Name)) &&
         (!Obj.isRelocatable() || isUnneededSymbol(Sym)))
       return true;
 
-    // We want to remove undefined symbols if all references have been stripped.
-    if (!Config.OnlySection.empty() && !Sym.Referenced &&
-        Sym.getShndx() == SHN_UNDEF)
-      return true;
+    if (!Sym.Referenced) {
+      if ((Config.DiscardMode == DiscardType::All ||
+           (Config.DiscardMode == DiscardType::Locals &&
+            StringRef(Sym.Name).starts_with(".L"))) &&
+          Sym.Binding == STB_LOCAL && Sym.getShndx() != SHN_UNDEF &&
+          Sym.Type != STT_FILE && Sym.Type != STT_SECTION)
+        return true;
+      // We want to remove undefined symbols if all references have been
+      // stripped.
+      if (!Config.OnlySection.empty() && Sym.getShndx() == SHN_UNDEF)
+        return true;
+    }
 
     return false;
   };

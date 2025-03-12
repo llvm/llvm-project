@@ -375,28 +375,28 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   %12 = extractelement <31 x i32> %userData, i64 24
   %13 = extractelement <31 x i32> %userData, i64 26
   %14 = extractelement <31 x i32> %userData, i64 30
-  %15 = insertelement <2 x i32> undef, i32 %13, i32 0
+  %15 = insertelement <2 x i32> poison, i32 %13, i32 0
   %16 = bitcast <2 x i32> %15 to i64
   %17 = inttoptr i64 %16 to ptr addrspace(4)
-  %18 = insertelement <2 x i32> undef, i32 %12, i32 0
+  %18 = insertelement <2 x i32> poison, i32 %12, i32 0
   %19 = bitcast <2 x i32> %18 to i64
   %20 = inttoptr i64 %19 to ptr addrspace(4)
-  %21 = insertelement <2 x i32> undef, i32 %11, i32 0
+  %21 = insertelement <2 x i32> poison, i32 %11, i32 0
   %22 = bitcast <2 x i32> %21 to i64
-  %23 = insertelement <2 x i32> undef, i32 %10, i32 0
+  %23 = insertelement <2 x i32> poison, i32 %10, i32 0
   %24 = bitcast <2 x i32> %23 to i64
-  %25 = insertelement <2 x i32> undef, i32 %9, i32 0
+  %25 = insertelement <2 x i32> poison, i32 %9, i32 0
   %26 = bitcast <2 x i32> %25 to i64
   %27 = inttoptr i64 %26 to ptr addrspace(4)
-  %28 = insertelement <2 x i32> undef, i32 %8, i32 0
+  %28 = insertelement <2 x i32> poison, i32 %8, i32 0
   %29 = bitcast <2 x i32> %28 to i64
-  %30 = insertelement <2 x i32> undef, i32 %7, i32 0
+  %30 = insertelement <2 x i32> poison, i32 %7, i32 0
   %31 = bitcast <2 x i32> %30 to i64
   %32 = inttoptr i64 %31 to ptr addrspace(4)
-  %33 = insertelement <2 x i32> undef, i32 %6, i32 0
+  %33 = insertelement <2 x i32> poison, i32 %6, i32 0
   %34 = bitcast <2 x i32> %33 to i64
   %35 = inttoptr i64 %34 to ptr addrspace(4)
-  %36 = insertelement <2 x i32> undef, i32 %14, i32 0
+  %36 = insertelement <2 x i32> poison, i32 %14, i32 0
   %37 = bitcast <2 x i32> %36 to i64
   %38 = inttoptr i64 %37 to ptr addrspace(4)
   %39 = getelementptr i8, ptr addrspace(4) %38, i64 232
@@ -404,10 +404,10 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   %.i184.i = getelementptr i8, ptr addrspace(4) %38, i64 236
   %rootDesc58.ii1.i = load i32, ptr addrspace(4) %.i184.i, align 4
   %40 = and i32 %rootDesc58.ii1.i, 65535
-  %41 = insertelement <4 x i32> <i32 undef, i32 undef, i32 -1, i32 553734060>, i32 %rootDesc58.ii0.i, i32 0
+  %41 = insertelement <4 x i32> <i32 poison, i32 poison, i32 -1, i32 553734060>, i32 %rootDesc58.ii0.i, i32 0
   %42 = insertelement <4 x i32> %41, i32 %40, i32 1
   %43 = and i32 undef, 65535
-  %44 = insertelement <4 x i32> undef, i32 %43, i32 1
+  %44 = insertelement <4 x i32> poison, i32 %43, i32 1
   %45 = load <4 x i32>, ptr addrspace(4) undef, align 16
   %46 = call i32 @llvm.amdgcn.struct.buffer.load.format.i32(<4 x i32> %45, i32 0, i32 0, i32 0, i32 0)
   %47 = add i32 %46, -1
@@ -662,7 +662,7 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   %296 = getelementptr i8, ptr addrspace(4) %293, i64 %295
   %.ii0.i = load i32, ptr addrspace(4) %296, align 8
   %297 = and i32 undef, 65535
-  %298 = insertelement <4 x i32> <i32 undef, i32 undef, i32 -1, i32 553734060>, i32 %.ii0.i, i32 0
+  %298 = insertelement <4 x i32> <i32 poison, i32 poison, i32 -1, i32 553734060>, i32 %.ii0.i, i32 0
   %299 = insertelement <4 x i32> %298, i32 %297, i32 1
   %300 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %299, i32 0, i32 0)
   %301 = add i32 %300, -467
@@ -674,7 +674,7 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   %.i191.i = getelementptr i8, ptr addrspace(4) %305, i64 4
   %.ii192.i = load i32, ptr addrspace(4) %.i191.i, align 4
   %306 = and i32 %.ii192.i, 65535
-  %307 = insertelement <4 x i32> <i32 undef, i32 undef, i32 -1, i32 553734060>, i32 %.ii090.i, i32 0
+  %307 = insertelement <4 x i32> <i32 poison, i32 poison, i32 -1, i32 553734060>, i32 %.ii090.i, i32 0
   %308 = insertelement <4 x i32> %307, i32 %306, i32 1
   %309 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %308, i32 0, i32 0)
   %310 = add i32 %309, -468
@@ -686,7 +686,7 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   %.i197.i = getelementptr i8, ptr addrspace(4) %314, i64 4
   %.ii198.i = load i32, ptr addrspace(4) %.i197.i, align 4
   %315 = and i32 %.ii198.i, 65535
-  %316 = insertelement <4 x i32> <i32 undef, i32 undef, i32 -1, i32 553734060>, i32 %.ii096.i, i32 0
+  %316 = insertelement <4 x i32> <i32 poison, i32 poison, i32 -1, i32 553734060>, i32 %.ii096.i, i32 0
   %317 = insertelement <4 x i32> %316, i32 %315, i32 1
   %318 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %317, i32 0, i32 0)
   %319 = add i32 %318, -469
@@ -698,7 +698,7 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   %.ii0102.i = load i32, ptr addrspace(4) %324, align 8
   %.ii1104.i = load i32, ptr addrspace(4) undef, align 4
   %325 = and i32 %.ii1104.i, 65535
-  %326 = insertelement <4 x i32> <i32 undef, i32 undef, i32 -1, i32 553734060>, i32 %.ii0102.i, i32 0
+  %326 = insertelement <4 x i32> <i32 poison, i32 poison, i32 -1, i32 553734060>, i32 %.ii0102.i, i32 0
   %327 = insertelement <4 x i32> %326, i32 %325, i32 1
   %328 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %327, i32 0, i32 0)
   %329 = add i32 %328, -473
@@ -755,7 +755,7 @@ define amdgpu_gs void @_amdgpu_gs_main(i32 inreg %primShaderTableAddrLow, <31 x 
   %.not.i = icmp eq i32 %379, 0
   %380 = load <8 x i32>, ptr addrspace(4) undef, align 32
   %.i010.i = select i1 %.not.i, float 0x36A0000000000000, float 0.000000e+00
-  %381 = insertelement <4 x float> undef, float %.i010.i, i32 3
+  %381 = insertelement <4 x float> poison, float %.i010.i, i32 3
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %381, i32 15, i32 undef, i32 undef, <8 x i32> %380, i32 0, i32 0)
   ret void
 }

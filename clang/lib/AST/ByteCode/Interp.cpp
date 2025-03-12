@@ -54,6 +54,79 @@ static bool Jf(InterpState &S, CodePtr &PC, int32_t Offset) {
   return true;
 }
 
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", off)
+#endif
+// FIXME: We have the large switch over all opcodes here again, and in
+// Interpret().
+static bool BCP(InterpState &S, CodePtr &RealPC, int32_t Offset, PrimType PT) {
+  [[maybe_unused]] CodePtr PCBefore = RealPC;
+  size_t StackSizeBefore = S.Stk.size();
+
+  auto SpeculativeInterp = [&S, RealPC]() -> bool {
+    const InterpFrame *StartFrame = S.Current;
+    CodePtr PC = RealPC;
+
+    for (;;) {
+      auto Op = PC.read<Opcode>();
+      if (Op == OP_EndSpeculation)
+        return true;
+      CodePtr OpPC = PC;
+
+      switch (Op) {
+#define GET_INTERP
+#include "Opcodes.inc"
+#undef GET_INTERP
+      }
+    }
+    llvm_unreachable("We didn't see an EndSpeculation op?");
+  };
+
+  if (SpeculativeInterp()) {
+    if (PT == PT_Ptr) {
+      const auto &Ptr = S.Stk.pop<Pointer>();
+      assert(S.Stk.size() == StackSizeBefore);
+      S.Stk.push<Integral<32, true>>(
+          Integral<32, true>::from(CheckBCPResult(S, Ptr)));
+    } else if (PT == PT_FnPtr) {
+      S.Stk.discard<FunctionPointer>();
+      S.Stk.push<Integral<32, true>>(Integral<32, true>::from(0));
+    } else {
+      // Pop the result from the stack and return success.
+      TYPE_SWITCH(PT, S.Stk.pop<T>(););
+      assert(S.Stk.size() == StackSizeBefore);
+      S.Stk.push<Integral<32, true>>(Integral<32, true>::from(1));
+    }
+  } else {
+    if (!S.inConstantContext())
+      return Invalid(S, RealPC);
+
+    S.Stk.clearTo(StackSizeBefore);
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(0));
+  }
+
+  // RealPC should not have been modified.
+  assert(*RealPC == *PCBefore);
+
+  // Jump to end label. This is a little tricker than just RealPC += Offset
+  // because our usual jump instructions don't have any arguments, to the offset
+  // we get is a little too much and we need to subtract the size of the
+  // bool and PrimType arguments again.
+  int32_t ParamSize = align(sizeof(PrimType));
+  assert(Offset >= ParamSize);
+  RealPC += Offset - ParamSize;
+
+  [[maybe_unused]] CodePtr PCCopy = RealPC;
+  assert(PCCopy.read<Opcode>() == OP_EndSpeculation);
+
+  return true;
+}
+// https://github.com/llvm/llvm-project/issues/102513
+#if defined(_MSC_VER) && !defined(__clang__) && !defined(NDEBUG)
+#pragma optimize("", on)
+#endif
+
 static void diagnoseMissingInitializer(InterpState &S, CodePtr OpPC,
                                        const ValueDecl *VD) {
   const SourceInfo &E = S.Current->getSource(OpPC);
@@ -288,6 +361,22 @@ void cleanupAfterFunctionCall(InterpState &S, CodePtr OpPC,
   // at the end.
   for (PrimType Ty : Func->args_reverse())
     TYPE_SWITCH(Ty, S.Stk.discard<T>());
+}
+
+bool CheckBCPResult(InterpState &S, const Pointer &Ptr) {
+  if (Ptr.isDummy())
+    return false;
+  if (Ptr.isZero())
+    return true;
+  if (Ptr.isIntegralPointer())
+    return true;
+  if (Ptr.isTypeidPointer())
+    return true;
+
+  if (const Expr *Base = Ptr.getDeclDesc()->asExpr())
+    return isa<StringLiteral>(Base);
+
+  return false;
 }
 
 bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {

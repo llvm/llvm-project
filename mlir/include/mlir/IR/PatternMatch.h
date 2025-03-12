@@ -237,6 +237,9 @@ private:
 namespace detail {
 /// Helper class that derives from a RewritePattern class and provides separate
 /// `match` and `rewrite` entry points instead of a combined `matchAndRewrite`.
+///
+/// This class is deprecated. Use `matchAndRewrite` instead of separate `match`
+/// and `rewrite`.
 template <typename PatternT>
 class SplitMatchAndRewriteImpl : public PatternT {
   using PatternT::PatternT;
@@ -268,6 +271,9 @@ class SplitMatchAndRewriteImpl : public PatternT {
 class RewritePattern : public Pattern {
 public:
   using OperationT = Operation *;
+
+  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
+  /// separate `match` and `rewrite`.
   using SplitMatchAndRewrite = detail::SplitMatchAndRewriteImpl<RewritePattern>;
 
   virtual ~RewritePattern() = default;
@@ -350,6 +356,9 @@ struct OpOrInterfaceRewritePatternBase : public RewritePattern {
 template <typename SourceOp>
 struct OpRewritePattern
     : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+
+  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
+  /// separate `match` and `rewrite`.
   using SplitMatchAndRewrite =
       detail::SplitMatchAndRewriteImpl<OpRewritePattern<SourceOp>>;
 
@@ -368,6 +377,9 @@ struct OpRewritePattern
 template <typename SourceOp>
 struct OpInterfaceRewritePattern
     : public detail::OpOrInterfaceRewritePatternBase<SourceOp> {
+
+  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
+  /// separate `match` and `rewrite`.
   using SplitMatchAndRewrite =
       detail::SplitMatchAndRewriteImpl<OpInterfaceRewritePattern<SourceOp>>;
 

@@ -14,7 +14,7 @@ entry:
 sw.bb4:
   %x = load i64, ptr addrspace(1) undef, align 8
   %c = sitofp i64 %x to float
-  %v = insertelement <2 x float> <float undef, float 0.000000e+00>, float %c, i32 0
+  %v = insertelement <2 x float> <float poison, float 0.000000e+00>, float %c, i32 0
   br label %foo.exit
 
 sw.bb10:

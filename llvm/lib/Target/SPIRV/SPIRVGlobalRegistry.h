@@ -92,6 +92,9 @@ class SPIRVGlobalRegistry {
   // Maps OpVariable and OpFunction-related v-regs to its LLVM IR definition.
   DenseMap<std::pair<const MachineFunction *, Register>, const Value *> Reg2GO;
 
+  // map of aliasing decorations to aliasing metadata
+  std::unordered_map<const MDNode *, MachineInstr *> AliasInstMDMap;
+
   // Add a new OpTypeXXX instruction without checking for duplicates.
   SPIRVType *createSPIRVType(const Type *Type, MachineIRBuilder &MIRBuilder,
                              SPIRV::AccessQualifier::AccessQualifier AQ,
@@ -621,6 +624,10 @@ public:
   const TargetRegisterClass *getRegClass(SPIRVType *SpvType) const;
   LLT getRegType(SPIRVType *SpvType) const;
 
+  MachineInstr *getOrAddMemAliasingINTELInst(MachineIRBuilder &MIRBuilder,
+                                             const MDNode *AliasingListMD);
+  void buildMemAliasingOpDecorate(Register Reg, MachineIRBuilder &MIRBuilder,
+                                  uint32_t Dec, const MDNode *GVarMD);
   // Replace all uses of a |Old| with |New| updates the global registry type
   // mappings.
   void replaceAllUsesWith(Value *Old, Value *New, bool DeleteOld = true);

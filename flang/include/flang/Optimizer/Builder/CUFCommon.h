@@ -25,8 +25,10 @@ namespace cuf {
 mlir::gpu::GPUModuleOp getOrCreateGPUModule(mlir::ModuleOp mod,
                                             mlir::SymbolTable &symTab);
 
-bool isInCUDADeviceContext(mlir::Operation *op);
+bool isCUDADeviceContext(mlir::Operation *op);
+bool isCUDADeviceContext(mlir::Region &);
 bool isRegisteredDeviceGlobal(fir::GlobalOp op);
+bool isRegisteredDeviceAttr(std::optional<cuf::DataAttribute> attr);
 
 void genPointerSync(const mlir::Value box, fir::FirOpBuilder &builder);
 

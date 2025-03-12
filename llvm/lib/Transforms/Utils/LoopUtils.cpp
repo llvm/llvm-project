@@ -2051,7 +2051,7 @@ Value *llvm::addDiffRuntimeChecks(
   for (const auto &[SrcStart, SinkStart, AccessSize, NeedsFreeze] : Checks) {
     Type *Ty = SinkStart->getType();
     // Compute VF * IC * AccessSize.
-    auto *VFTimesUFTimesSize =
+    auto *VFTimesICTimesSize =
         ChkBuilder.CreateMul(GetVF(ChkBuilder, Ty->getScalarSizeInBits()),
                              ConstantInt::get(Ty, IC * AccessSize));
     Value *Diff =
@@ -2059,13 +2059,13 @@ Value *llvm::addDiffRuntimeChecks(
 
     // Check if the same compare has already been created earlier. In that case,
     // there is no need to check it again.
-    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesUFTimesSize});
+    Value *IsConflict = SeenCompares.lookup({Diff, VFTimesICTimesSize});
     if (IsConflict)
       continue;
 
     IsConflict =
-        ChkBuilder.CreateICmpULT(Diff, VFTimesUFTimesSize, "diff.check");
-    SeenCompares.insert({{Diff, VFTimesUFTimesSize}, IsConflict});
+        ChkBuilder.CreateICmpULT(Diff, VFTimesICTimesSize, "diff.check");
+    SeenCompares.insert({{Diff, VFTimesICTimesSize}, IsConflict});
     if (NeedsFreeze)
       IsConflict =
           ChkBuilder.CreateFreeze(IsConflict, IsConflict->getName() + ".fr");

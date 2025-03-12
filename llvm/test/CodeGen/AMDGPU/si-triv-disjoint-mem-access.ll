@@ -316,7 +316,7 @@ define amdgpu_vs void @reorder_local_load_tbuffer_store_local_load(ptr addrspace
 
   %tmp1 = load i32, ptr addrspace(3) %ptr1, align 4
 
-  %vdata = insertelement <4 x i32> undef, i32 %a1, i32 0
+  %vdata = insertelement <4 x i32> poison, i32 %a1, i32 0
   %vaddr.add = add i32 %vaddr, 32
   call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4i32(<4 x i32> %vdata, ptr addrspace(8) undef, i32 %vaddr.add, i32 0, i32 0, i32 228, i32 3)
 

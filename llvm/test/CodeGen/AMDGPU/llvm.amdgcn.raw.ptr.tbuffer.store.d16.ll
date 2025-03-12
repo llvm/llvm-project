@@ -144,7 +144,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(ptr addrspace(8) %rsrc, <4 x ha
 ; GFX11-PACKED-NEXT:    tbuffer_store_d16_format_xyz v[0:1], off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
 ; GFX11-PACKED-NEXT:    s_endpgm
 main_body:
-  %data_subvec = shufflevector <4 x half> %data, <4 x half> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  %data_subvec = shufflevector <4 x half> %data, <4 x half> poison, <3 x i32> <i32 0, i32 1, i32 2>
   call void @llvm.amdgcn.raw.ptr.tbuffer.store.v3f16(<3 x half> %data_subvec, ptr addrspace(8) %rsrc, i32 0, i32 0, i32 33, i32 0)
   ret void
 }

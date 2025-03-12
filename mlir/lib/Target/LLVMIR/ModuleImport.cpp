@@ -2263,10 +2263,15 @@ LogicalResult ModuleImport::convertInvokeAttributes(llvm::InvokeInst *inst,
 LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
                                                   CallOp op) {
   setFastmathFlagsAttr(inst, op.getOperation());
+  // Query the attributes directly instead of using `inst->getFnAttr(Kind)`, the
+  // latter does additional lookup to the parent and inherits, changing the
+  // semantics too early.
+  llvm::AttributeList callAttrs = inst->getAttributes();
+
   op.setTailCallKind(convertTailCallKindFromLLVM(inst->getTailCallKind()));
-  op.setConvergent(inst->isConvergent());
-  op.setNoUnwind(inst->doesNotThrow());
-  op.setWillReturn(inst->hasFnAttr(llvm::Attribute::WillReturn));
+  op.setConvergent(callAttrs.getFnAttr(llvm::Attribute::Convergent).isValid());
+  op.setNoUnwind(callAttrs.getFnAttr(llvm::Attribute::NoUnwind).isValid());
+  op.setWillReturn(callAttrs.getFnAttr(llvm::Attribute::WillReturn).isValid());
 
   llvm::MemoryEffects memEffects = inst->getMemoryEffects();
   ModRefInfo othermem = convertModRefInfoFromLLVM(

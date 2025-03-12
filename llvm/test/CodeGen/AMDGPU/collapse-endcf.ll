@@ -1365,7 +1365,7 @@ bb4:                                              ; preds = %bb2
   br i1 %tmp7, label %bb8, label %Flow
 
 bb8:                                              ; preds = %bb4
-  %tmp9 = insertelement <4 x float> undef, float 0.0, i32 1
+  %tmp9 = insertelement <4 x float> poison, float 0.0, i32 1
   br label %Flow
 
 Flow:                                             ; preds = %bb8, %bb4

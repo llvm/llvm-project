@@ -52,8 +52,8 @@ private:
 class FakePlugin : public telemetry::TelemetryManager {
 public:
   FakePlugin()
-      : telemetry::TelemetryManager(
-            std::make_unique<llvm::telemetry::Config>(true)) {}
+      : telemetry::TelemetryManager(std::make_unique<telemetry::LLDBConfig>(
+            /*enable_telemetry=*/true, /*detailed_command_telemetry=*/true)) {}
 
   // TelemetryManager interface
   llvm::Error preDispatch(llvm::telemetry::TelemetryInfo *entry) override {

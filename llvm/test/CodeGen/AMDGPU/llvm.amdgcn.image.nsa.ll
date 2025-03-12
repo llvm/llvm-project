@@ -54,7 +54,7 @@ define amdgpu_ps <2 x float> @sample_contig_nsa(<8 x i32> inreg %rsrc, <4 x i32>
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2, float %t2, float %r2, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }
@@ -70,7 +70,7 @@ define amdgpu_ps <2 x float> @sample_nsa_nsa(<8 x i32> inreg %rsrc, <4 x i32> in
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2, float %t2, float %r2, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }
@@ -86,7 +86,7 @@ define amdgpu_ps <2 x float> @sample_nsa_contig(<8 x i32> inreg %rsrc, <4 x i32>
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2, float %t2, float %r2, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }
@@ -106,7 +106,7 @@ define amdgpu_ps <2 x float> @sample_contig_contig(<8 x i32> inreg %rsrc, <4 x i
 main_body:
   %v1 = call float @llvm.amdgcn.image.sample.c.l.3d.f32.f32(i32 1, float %zcompare, float %s1, float %t1, float %r1, float %lod, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
   %v2 = call float @llvm.amdgcn.image.sample.3d.f32.f32(i32 1, float %s2, float %t2, float %r2, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %r.0 = insertelement <2 x float> undef, float %v1, i32 0
+  %r.0 = insertelement <2 x float> poison, float %v1, i32 0
   %r = insertelement <2 x float> %r.0, float %v2, i32 1
   ret <2 x float> %r
 }

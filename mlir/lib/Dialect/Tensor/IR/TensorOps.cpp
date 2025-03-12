@@ -2352,13 +2352,52 @@ static LogicalResult produceSliceErrorMsg(SliceVerificationResult result,
   }
 }
 
+/// Verify that the offsets/sizes/strides-style access into the given tensor
+/// is in-bounds. Only static information is verified.
+static LogicalResult verifyInBoundsSlice(Operation *op,
+                                         RankedTensorType tensorType,
+                                         ArrayRef<int64_t> staticOffsets,
+                                         ArrayRef<int64_t> staticSizes,
+                                         ArrayRef<int64_t> staticStrides) {
+  for (int64_t i = 0, e = tensorType.getRank(); i < e; ++i) {
+    // Nothing to verify for dynamic source dims.
+    if (tensorType.isDynamicDim(i))
+      continue;
+    // Nothing to verify if the offset is dynamic.
+    if (ShapedType::isDynamic(staticOffsets[i]))
+      continue;
+    if (staticOffsets[i] >= tensorType.getDimSize(i))
+      return op->emitOpError("offset ")
+             << i << " is out-of-bounds: " << staticOffsets[i]
+             << " >= " << tensorType.getDimSize(i);
+    if (ShapedType::isDynamic(staticSizes[i]) ||
+        ShapedType::isDynamic(staticStrides[i]))
+      continue;
+    int64_t lastPos =
+        staticOffsets[i] + (staticSizes[i] - 1) * staticStrides[i];
+    if (lastPos >= tensorType.getDimSize(i))
+      return op->emitOpError("slice along dimension ")
+             << i << " runs out-of-bounds: " << lastPos
+             << " >= " << tensorType.getDimSize(i);
+  }
+  return success();
+}
+
 /// Verifier for ExtractSliceOp.
 LogicalResult ExtractSliceOp::verify() {
+  RankedTensorType sourceType = getSourceType();
+
   // Verify result type against inferred type.
   RankedTensorType expectedType = ExtractSliceOp::inferResultType(
-      getSourceType(), getMixedOffsets(), getMixedSizes(), getMixedStrides());
+      sourceType, getMixedOffsets(), getMixedSizes(), getMixedStrides());
   SliceVerificationResult result = isRankReducedType(expectedType, getType());
-  return produceSliceErrorMsg(result, *this, expectedType);
+  if (result != SliceVerificationResult::Success)
+    return produceSliceErrorMsg(result, *this, expectedType);
+
+  // Verify that offsets, sizes, strides do not run out-of-bounds with respect
+  // to the source tensor.
+  return verifyInBoundsSlice(getOperation(), sourceType, getStaticOffsets(),
+                             getStaticSizes(), getStaticStrides());
 }
 
 llvm::SmallBitVector ExtractSliceOp::getDroppedDims() {
@@ -2729,11 +2768,18 @@ static SliceVerificationResult verifyInsertSliceOp(
 
 /// Verifier for InsertSliceOp.
 LogicalResult InsertSliceOp::verify() {
+  // Verify result type against inferred type.
   RankedTensorType expectedType;
   SliceVerificationResult result =
       verifyInsertSliceOp(getSourceType(), getType(), getStaticOffsets(),
                           getStaticSizes(), getStaticStrides(), &expectedType);
-  return produceSliceErrorMsg(result, *this, expectedType);
+  if (result != SliceVerificationResult::Success)
+    return produceSliceErrorMsg(result, *this, expectedType);
+
+  // Verify that offsets, sizes, strides do not run out-of-bounds with respect
+  // to the source tensor.
+  return verifyInBoundsSlice(getOperation(), getDestType(), getStaticOffsets(),
+                             getStaticSizes(), getStaticStrides());
 }
 
 /// If we have two consecutive InsertSliceOp writing to the same slice, we
@@ -3747,11 +3793,18 @@ LogicalResult ParallelInsertSliceOp::verify() {
     return this->emitError("expected ParallelCombiningOpInterface parent, got:")
            << *(getOperation()->getParentOp());
 
+  // Verify result type against inferred type.
   RankedTensorType expectedType;
   SliceVerificationResult result =
       verifyInsertSliceOp(getSourceType(), getDestType(), getStaticOffsets(),
                           getStaticSizes(), getStaticStrides(), &expectedType);
-  return produceSliceErrorMsg(result, *this, expectedType);
+  if (result != SliceVerificationResult::Success)
+    return produceSliceErrorMsg(result, *this, expectedType);
+
+  // Verify that offsets, sizes, strides do not run out-of-bounds with respect
+  // to the source tensor.
+  return verifyInBoundsSlice(getOperation(), getDestType(), getStaticOffsets(),
+                             getStaticSizes(), getStaticStrides());
 }
 
 void ParallelInsertSliceOp::getCanonicalizationPatterns(

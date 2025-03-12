@@ -6121,8 +6121,9 @@ let Predicates = [HasAVX, NoAVX10_2] in {
                                     v8i16, VR128, load, i128mem, 0,
                                     SchedWriteMPSAD.XMM>, VEX, VVVV, WIG;
   }
+}
 
-let Uses = [MXCSR], mayRaiseFPException = 1 in {
+let Predicates = [HasAVX], Uses = [MXCSR], mayRaiseFPException = 1 in {
   let ExeDomain = SSEPackedSingle in
   defm VDPPS : SS41I_binop_rmi_int<0x40, "vdpps", int_x86_sse41_dpps,
                                    VR128, load, f128mem, 0,
@@ -6135,7 +6136,6 @@ let Uses = [MXCSR], mayRaiseFPException = 1 in {
   defm VDPPSY : SS41I_binop_rmi_int<0x40, "vdpps", int_x86_avx_dp_ps_256,
                                     VR256, load, i256mem, 0,
                                     SchedWriteDPPS.YMM>, VEX, VVVV, VEX_L, WIG;
-}
 }
 
 let Predicates = [HasAVX2, NoAVX10_2] in {

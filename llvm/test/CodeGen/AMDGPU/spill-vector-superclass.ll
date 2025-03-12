@@ -18,7 +18,7 @@ define amdgpu_kernel void @test_spill_av_class(<4 x i32> %arg) #0 {
   ; GCN-NEXT:   INLINEASM &"; use $0", 1 /* sideeffect attdialect */, 3538953 /* reguse:VReg_64 */, %13
   ; GCN-NEXT:   S_ENDPGM 0
   %v0 = call i32 asm sideeffect "; def $0", "=v"()
-  %tmp = insertelement <2 x i32> undef, i32 %v0, i32 0
+  %tmp = insertelement <2 x i32> poison, i32 %v0, i32 0
   %mai = tail call <4 x i32> @llvm.amdgcn.mfma.i32.4x4x4i8(i32 1, i32 2, <4 x i32> %arg, i32 0, i32 0, i32 0)
   store volatile <4 x i32> %mai, ptr addrspace(1) undef
   call void asm sideeffect "; use $0", "v"(<2 x i32> %tmp);

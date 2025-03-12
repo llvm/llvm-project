@@ -1,6 +1,6 @@
 ! RUN: %python %S/test_errors.py %s %flang_fc1
 ! More coarray error tests.
-module m
+module m1
   integer :: local[*] ! ok in module
 end
 program main
@@ -47,4 +47,52 @@ function func2()
   type(t), save :: coarr[*]
   !ERROR: Local variable 'local' without the SAVE or ALLOCATABLE attribute may not have a coarray potential subobject component '%comp'
   type(t) :: local
+end
+
+module m2
+  type t0
+    integer n
+  end type
+  type t1
+    class(t0), allocatable :: a
+  end type
+  type t2
+    type(t1) c
+  end type
+ contains
+  subroutine test(x)
+    type(t2), intent(in) :: x[*]
+    !ERROR: The base of a polymorphic object may not be coindexed
+    call sub1(x[1]%c%a)
+    !ERROR: A coindexed designator may not have a type with the polymorphic potential subobject component '%a'
+    call sub2(x[1]%c)
+  end
+  subroutine sub1(x)
+    type(t0), intent(in) :: x
+  end
+  subroutine sub2(x)
+    type(t1), intent(in) :: x
+  end
+end
+
+module m3
+  type t
+    real, allocatable :: a(:)
+    real, pointer :: p(:)
+    real arr(2)
+  end type
+ contains
+  subroutine sub(ca)
+    real, intent(in) :: ca(:)[*]
+  end
+  subroutine test(cat)
+    type(t), intent(in) :: cat[*]
+    call sub(cat%arr(1:2)) ! ok
+    !ERROR: Actual argument associated with coarray dummy argument 'ca=' must be a coarray
+    call sub(cat%arr([1]))
+    !ERROR: Actual argument associated with coarray dummy argument 'ca=' must be a coarray
+    call sub(cat%a)
+    !ERROR: Actual argument associated with coarray dummy argument 'ca=' must be a coarray
+    call sub(cat%p)
+  end
 end

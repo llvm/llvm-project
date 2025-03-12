@@ -40,6 +40,8 @@ LogicalResult oneToOneRewrite(
 /// during the entire pattern lifetime.
 class ConvertToLLVMPattern : public ConversionPattern {
 public:
+  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
+  /// separate `match` and `rewrite`.
   using SplitMatchAndRewrite =
       detail::ConversionSplitMatchAndRewriteImpl<ConvertToLLVMPattern>;
 
@@ -149,6 +151,9 @@ public:
   using OpAdaptor = typename SourceOp::Adaptor;
   using OneToNOpAdaptor =
       typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
+
+  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
+  /// separate `match` and `rewrite`.
   using SplitMatchAndRewrite = detail::ConversionSplitMatchAndRewriteImpl<
       ConvertOpToLLVMPattern<SourceOp>>;
 
