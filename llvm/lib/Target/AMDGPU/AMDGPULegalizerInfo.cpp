@@ -2073,10 +2073,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .minScalar(0, S32)
       .lower();
 
+  // Only {S32, S32} or {S32, S64} should ever reach codegen.
+  // We allow S/UBFX for S16 so the combiner can form them before
+  // RegBankSelect, and RegBankSelect will then legalize them correctly.
   getActionDefinitionsBuilder({G_SBFX, G_UBFX})
-      .legalFor({{S32, S32}, {S64, S32}})
-      .clampScalar(1, S32, S32)
-      .clampScalar(0, S32, S64)
+      .legalFor({{S16, S16}, {S32, S32}, {S64, S32}})
+      .clampScalar(1, S16, S32)
+      .clampScalar(0, S16, S64)
       .widenScalarToNextPow2(0)
       .scalarize(0);
 
