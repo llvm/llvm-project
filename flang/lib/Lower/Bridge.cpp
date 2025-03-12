@@ -1274,6 +1274,9 @@ private:
         [](const fir::FortranVariableOpInterface &box) {
           return fir::FortranVariableOpInterface(box).isPointer();
         },
+        [](const fir::AbstractBox &box) {
+          return fir::isBoxProcAddressType(box.getAddr().getType());
+        },
         [](const auto &box) { return false; });
 
     copyVarHLFIR(loc, dst, src, isBoxAllocatable, isBoxPointer, flags);

@@ -410,8 +410,11 @@ void ModuloScheduleExpander::generateExistingPhis(
       Register NewReg = VRMap[PrevStage][LoopVal];
       rewriteScheduledInstr(NewBB, InstrMap, CurStageNum, 0, &*BBI, Def,
                             InitVal, NewReg);
-      if (VRMap[CurStageNum].count(LoopVal))
-        VRMap[CurStageNum][Def] = VRMap[CurStageNum][LoopVal];
+      auto It = VRMap[CurStageNum].find(LoopVal);
+      if (It != VRMap[CurStageNum].end()) {
+        Register Reg = It->second;
+        VRMap[CurStageNum][Def] = Reg;
+      }
     }
     // Adjust the number of Phis needed depending on the number of prologs left,
     // and the distance from where the Phi is first scheduled. The number of

@@ -76,42 +76,46 @@ static bool setNoReturn(Function &F) {
   return true;
 }
 
-static bool setOnlyAccessesInaccessibleMemory(Function &F) {
-  if (F.onlyAccessesInaccessibleMemory())
+static bool setMemoryEffects(Function &F, MemoryEffects ME) {
+  MemoryEffects OrigME = F.getMemoryEffects();
+  MemoryEffects NewME = OrigME & ME;
+  if (OrigME == NewME)
     return false;
-  F.setOnlyAccessesInaccessibleMemory();
+  F.setMemoryEffects(NewME);
+  return true;
+}
+
+static bool setOnlyAccessesInaccessibleMemory(Function &F) {
+  if (!setMemoryEffects(F, MemoryEffects::inaccessibleMemOnly()))
+    return false;
   ++NumInaccessibleMemOnly;
   return true;
 }
 
 static bool setOnlyReadsMemory(Function &F) {
-  if (F.onlyReadsMemory())
+  if (!setMemoryEffects(F, MemoryEffects::readOnly()))
     return false;
-  F.setOnlyReadsMemory();
   ++NumReadOnly;
   return true;
 }
 
 static bool setOnlyWritesMemory(Function &F) {
-  if (F.onlyWritesMemory()) // writeonly or readnone
+  if (!setMemoryEffects(F, MemoryEffects::writeOnly()))
     return false;
   ++NumWriteOnly;
-  F.setOnlyWritesMemory();
   return true;
 }
 
 static bool setOnlyAccessesArgMemory(Function &F) {
-  if (F.onlyAccessesArgMemory())
+  if (!setMemoryEffects(F, MemoryEffects::argMemOnly()))
     return false;
-  F.setOnlyAccessesArgMemory();
   ++NumArgMemOnly;
   return true;
 }
 
 static bool setOnlyAccessesInaccessibleMemOrArgMem(Function &F) {
-  if (F.onlyAccessesInaccessibleMemOrArgMem())
+  if (!setMemoryEffects(F, MemoryEffects::inaccessibleOrArgMemOnly()))
     return false;
-  F.setOnlyAccessesInaccessibleMemOrArgMem();
   ++NumInaccessibleMemOrArgMemOnly;
   return true;
 }

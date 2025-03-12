@@ -142,6 +142,9 @@ function (add_flangrt_library name)
   endif ()
   if (build_shared)
     add_library("${name_shared}" SHARED ${extra_args} ${ARG_ADDITIONAL_HEADERS} ${ARG_UNPARSED_ARGUMENTS})
+    if (Threads_FOUND) 
+      target_link_libraries(${name_shared} PUBLIC Threads::Threads)
+    endif ()
   endif ()
 
   if (libtargets)
@@ -195,7 +198,7 @@ function (add_flangrt_library name)
     # Use compiler-specific options to disable exceptions and RTTI.
     if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
       target_compile_options(${tgtname} PRIVATE
-          $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>
+          $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE
