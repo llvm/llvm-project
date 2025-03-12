@@ -56,6 +56,25 @@ RISCVMachineFunctionInfo::RISCVMachineFunctionInfo(const Function &F,
   }
 }
 
+RISCVMachineFunctionInfo::InterruptStackKind
+RISCVMachineFunctionInfo::getInterruptStackKind(
+    const MachineFunction &MF) const {
+  if (!MF.getFunction().hasFnAttribute("interrupt"))
+    return InterruptStackKind::None;
+
+  assert(VarArgsSaveSize == 0 &&
+         "Interrupt functions should not having incoming varargs");
+
+  StringRef InterruptVal =
+      MF.getFunction().getFnAttribute("interrupt").getValueAsString();
+  if (InterruptVal == "qci-nest")
+    return InterruptStackKind::QCINest;
+  if (InterruptVal == "qci-nonest")
+    return InterruptStackKind::QCINoNest;
+
+  return InterruptStackKind::None;
+}
+
 void yaml::RISCVMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<RISCVMachineFunctionInfo>::mapping(YamlIO, *this);
 }
@@ -79,6 +98,29 @@ RISCVMachineFunctionInfo::getPushPopKind(const MachineFunction &MF) const {
     return PushPopKind::VendorXqccmp;
 
   return PushPopKind::None;
+}
+
+bool RISCVMachineFunctionInfo::hasImplicitFPUpdates(
+    const MachineFunction &MF) const {
+  switch (getInterruptStackKind(MF)) {
+  case InterruptStackKind::QCINest:
+  case InterruptStackKind::QCINoNest:
+    // QC.C.MIENTER and QC.C.MIENTER.NEST both update FP on function entry.
+    return true;
+  default:
+    break;
+  }
+
+  switch (getPushPopKind(MF)) {
+  case PushPopKind::VendorXqccmp:
+    // When using Xqccmp, we will use `QC.CM.PUSHFP` when Frame Pointers are
+    // enabled, which will update FP.
+    return true;
+  default:
+    break;
+  }
+
+  return false;
 }
 
 void RISCVMachineFunctionInfo::initializeBaseYamlFields(

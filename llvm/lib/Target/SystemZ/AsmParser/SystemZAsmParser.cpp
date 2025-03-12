@@ -439,9 +439,9 @@ private:
                     bool HasLength = false, bool HasVectorIndex = false);
   bool parseAddressRegister(Register &Reg);
 
-  bool ParseDirectiveInsn(SMLoc L);
-  bool ParseDirectiveMachine(SMLoc L);
-  bool ParseGNUAttribute(SMLoc L);
+  bool parseDirectiveInsn(SMLoc L);
+  bool parseDirectiveMachine(SMLoc L);
+  bool parseGNUAttribute(SMLoc L);
 
   ParseStatus parseAddress(OperandVector &Operands, MemoryKind MemKind,
                            RegisterKind RegKind);
@@ -1236,18 +1236,18 @@ ParseStatus SystemZAsmParser::parseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
 
   if (IDVal == ".insn")
-    return ParseDirectiveInsn(DirectiveID.getLoc());
+    return parseDirectiveInsn(DirectiveID.getLoc());
   if (IDVal == ".machine")
-    return ParseDirectiveMachine(DirectiveID.getLoc());
+    return parseDirectiveMachine(DirectiveID.getLoc());
   if (IDVal.starts_with(".gnu_attribute"))
-    return ParseGNUAttribute(DirectiveID.getLoc());
+    return parseGNUAttribute(DirectiveID.getLoc());
 
   return ParseStatus::NoMatch;
 }
 
 /// ParseDirectiveInsn
 /// ::= .insn [ format, encoding, (operands (, operands)*) ]
-bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
+bool SystemZAsmParser::parseDirectiveInsn(SMLoc L) {
   MCAsmParser &Parser = getParser();
 
   // Expect instruction format as identifier.
@@ -1359,7 +1359,7 @@ bool SystemZAsmParser::ParseDirectiveInsn(SMLoc L) {
 
 /// ParseDirectiveMachine
 /// ::= .machine [ mcpu ]
-bool SystemZAsmParser::ParseDirectiveMachine(SMLoc L) {
+bool SystemZAsmParser::parseDirectiveMachine(SMLoc L) {
   MCAsmParser &Parser = getParser();
   if (Parser.getTok().isNot(AsmToken::Identifier) &&
       Parser.getTok().isNot(AsmToken::String))
@@ -1379,7 +1379,7 @@ bool SystemZAsmParser::ParseDirectiveMachine(SMLoc L) {
   return false;
 }
 
-bool SystemZAsmParser::ParseGNUAttribute(SMLoc L) {
+bool SystemZAsmParser::parseGNUAttribute(SMLoc L) {
   int64_t Tag;
   int64_t IntegerValue;
   if (!Parser.parseGNUAttribute(L, Tag, IntegerValue))

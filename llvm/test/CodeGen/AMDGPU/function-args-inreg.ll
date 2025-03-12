@@ -2060,9 +2060,9 @@ define void @void_func_a13i32_inreg([13  x i32] inreg %arg0, ptr addrspace(1) %p
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s29, s33
 ; GFX9-NEXT:    s_mov_b32 s33, s32
-; GFX9-NEXT:    s_or_saveexec_b64 vcc, -1
+; GFX9-NEXT:    s_or_saveexec_b64 s[40:41], -1
 ; GFX9-NEXT:    buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
-; GFX9-NEXT:    s_mov_b64 exec, vcc
+; GFX9-NEXT:    s_mov_b64 exec, s[40:41]
 ; GFX9-NEXT:    v_mov_b32_e32 v2, s28
 ; GFX9-NEXT:    global_store_dword v[0:1], v2, off offset:48
 ; GFX9-NEXT:    v_mov_b32_e32 v5, s27
