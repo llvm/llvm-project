@@ -100,22 +100,3 @@ if not config.parallelism_group:
 
 if config.host_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))
-
-tool_symbolizer_path_map = {
-    "asan": "ASAN_SYMBOLIZER_PATH",
-    "hwasan": "HWASAN_SYMBOLIZER_PATH",
-    "rtsan": "RTSAN_SYMBOLIZER_PATH",
-    "tsan": "TSAN_SYMBOLIZER_PATH",
-    "msan": "MSAN_SYMBOLIZER_PATH",
-    "lsan": "LSAN_SYMBOLIZER_PATH",
-    "ubsan": "UBSAN_SYMBOLIZER_PATH"
-}
-
-if config.have_disable_symbolizer_path_search:
-    config.available_features.add("disable_symbolizer_path_search")
-
-if config.have_disable_symbolizer_path_search:
-    symbolizer_path = os.path.join(config.llvm_tools_dir, "llvm-symbolizer")
-    for sanitizer in tool_symbolizer_path_map.values():
-        config.environment[sanitizer] = symbolizer_path 
-        
