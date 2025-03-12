@@ -1,4 +1,4 @@
-# RUN: llc -march=hexagon -mcpu=hexagonv60 -run-pass post-RA-sched -o - %s | FileCheck %s
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv60 -run-pass post-RA-sched -o - %s | FileCheck %s
 
 # The post-RA scheduler reorders S2_lsr_r_p and S2_lsr_r_p_or. Both of them
 # use r9, and the last of the two kills it. The kill flag fixup did not

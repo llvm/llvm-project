@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___PSTL_BACKENDS_DEFAULT_H
-#define _LIBCPP___PSTL_BACKENDS_DEFAULT_H
+#ifndef _LIBCPP___CXX03___PSTL_BACKENDS_DEFAULT_H
+#define _LIBCPP___CXX03___PSTL_BACKENDS_DEFAULT_H
 
 #include <__cxx03/__algorithm/copy_n.h>
 #include <__cxx03/__algorithm/equal.h>
@@ -500,4 +500,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___PSTL_BACKENDS_DEFAULT_H
+#endif // _LIBCPP___CXX03___PSTL_BACKENDS_DEFAULT_H

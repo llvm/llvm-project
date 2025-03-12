@@ -20,17 +20,17 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[GEP_INDICES:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_INDICES:%.*]] = getelementptr inbounds nuw i32, ptr [[INDICES]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_IDX:%.*]] = load i32, ptr [[GEP_INDICES]], align 4
 ; CHECK-NEXT:    [[IDXPROM1:%.*]] = zext i32 [[L_IDX]] to i64
-; CHECK-NEXT:    [[GEP_BUCKET:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[IDXPROM1]]
+; CHECK-NEXT:    [[GEP_BUCKET:%.*]] = getelementptr inbounds nuw i32, ptr [[BUCKETS]], i64 [[IDXPROM1]]
 ; CHECK-NEXT:    [[L_BUCKET:%.*]] = load i32, ptr [[GEP_BUCKET]], align 4
 ; CHECK-NEXT:    [[INC:%.*]] = add nsw i32 [[L_BUCKET]], 1
 ; CHECK-NEXT:    store i32 [[INC]], ptr [[GEP_BUCKET]], align 4
-; CHECK-NEXT:    [[IDX_ADDR:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[IV]]
+; CHECK-NEXT:    [[IDX_ADDR:%.*]] = getelementptr inbounds nuw i32, ptr [[ARRAY]], i64 [[IV]]
 ; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i32
 ; CHECK-NEXT:    store i32 [[IV_TRUNC]], ptr [[IDX_ADDR]], align 4
-; CHECK-NEXT:    [[GEP_OTHER:%.*]] = getelementptr inbounds i32, ptr [[OTHER]], i64 [[IV]]
+; CHECK-NEXT:    [[GEP_OTHER:%.*]] = getelementptr inbounds nuw i32, ptr [[OTHER]], i64 [[IV]]
 ; CHECK-NEXT:    [[L_OTHER:%.*]] = load i32, ptr [[GEP_OTHER]], align 4
 ; CHECK-NEXT:    [[ADD_OTHER:%.*]] = add i32 [[L_OTHER]], [[IV_TRUNC]]
 ; CHECK-NEXT:    store i32 [[ADD_OTHER]], ptr [[GEP_OTHER]], align 4
@@ -84,7 +84,7 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i32>, ptr [[GEP_INDICES]], align 4, !alias.scope [[META0:![0-9]+]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP11:%.*]] = zext <vscale x 4 x i32> [[WIDE_LOAD]] to <vscale x 4 x i64>
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], <vscale x 4 x i64> [[TMP11]]
-; NORMAL_DEP_LIMIT-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP12]], i32 1, <vscale x 4 x i1> shufflevector (<vscale x 4 x i1> insertelement (<vscale x 4 x i1> poison, i1 true, i64 0), <vscale x 4 x i1> poison, <vscale x 4 x i32> zeroinitializer))
+; NORMAL_DEP_LIMIT-NEXT:    call void @llvm.experimental.vector.histogram.add.nxv4p0.i32(<vscale x 4 x ptr> [[TMP12]], i32 1, <vscale x 4 x i1> splat (i1 true))
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, ptr [[ARRAY]], i64 [[IV]]
 ; NORMAL_DEP_LIMIT-NEXT:    store <vscale x 4 x i32> [[VEC_IND]], ptr [[TMP13]], align 4, !alias.scope [[META3:![0-9]+]], !noalias [[META5:![0-9]+]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[OTHER]], i64 [[IV]]
@@ -106,7 +106,7 @@ define void @many_deps(ptr noalias %buckets, ptr %array, ptr %indices, ptr %othe
 ; NORMAL_DEP_LIMIT-NEXT:    [[GEP_INDICES1:%.*]] = getelementptr inbounds i32, ptr [[INDICES]], i64 [[IV1]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[L_IDX:%.*]] = load i32, ptr [[GEP_INDICES1]], align 4
 ; NORMAL_DEP_LIMIT-NEXT:    [[IDXPROM1:%.*]] = zext i32 [[L_IDX]] to i64
-; NORMAL_DEP_LIMIT-NEXT:    [[GEP_BUCKET:%.*]] = getelementptr inbounds i32, ptr [[BUCKETS]], i64 [[IDXPROM1]]
+; NORMAL_DEP_LIMIT-NEXT:    [[GEP_BUCKET:%.*]] = getelementptr inbounds nuw i32, ptr [[BUCKETS]], i64 [[IDXPROM1]]
 ; NORMAL_DEP_LIMIT-NEXT:    [[L_BUCKET:%.*]] = load i32, ptr [[GEP_BUCKET]], align 4
 ; NORMAL_DEP_LIMIT-NEXT:    [[INC:%.*]] = add nsw i32 [[L_BUCKET]], 1
 ; NORMAL_DEP_LIMIT-NEXT:    store i32 [[INC]], ptr [[GEP_BUCKET]], align 4

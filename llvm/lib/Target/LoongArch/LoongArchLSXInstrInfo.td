@@ -223,12 +223,14 @@ def f64imm_vldi : PatLeaf<(fpimm), [{
 def to_f32imm_vldi : SDNodeXForm<fpimm, [{
   uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
   x = (0b11011 << 8) | (((x >> 24) & 0xc0) ^ 0x40) | ((x >> 19) & 0x3f);
-  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(SignExtend32<13>(x), SDLoc(N),
+                                         MVT::i32);
 }]>;
 def to_f64imm_vldi : SDNodeXForm<fpimm, [{
   uint64_t x = N->getValueAPF().bitcastToAPInt().getZExtValue();
   x = (0b11100 << 8) | (((x >> 56) & 0xc0) ^ 0x40) | ((x >> 48) & 0x3f);
-  return CurDAG->getTargetConstant(SignExtend32<13>(x), SDLoc(N), MVT::i32);
+  return CurDAG->getSignedTargetConstant(SignExtend32<13>(x), SDLoc(N),
+                                         MVT::i32);
 }]>;
 
 //===----------------------------------------------------------------------===//
@@ -1716,6 +1718,12 @@ def : Pat<(vector_insert v4f32:$vd, FPR32:$fj, uimm2:$imm),
           (VINSGR2VR_W $vd, (COPY_TO_REGCLASS FPR32:$fj, GPR), uimm2:$imm)>;
 def : Pat<(vector_insert v2f64:$vd, FPR64:$fj, uimm1:$imm),
           (VINSGR2VR_D $vd, (COPY_TO_REGCLASS FPR64:$fj, GPR), uimm1:$imm)>;
+
+// scalar_to_vector
+def : Pat<(v4f32 (scalar_to_vector FPR32:$fj)),
+          (SUBREG_TO_REG (i64 0), FPR32:$fj, sub_32)>;
+def : Pat<(v2f64 (scalar_to_vector FPR64:$fj)),
+          (SUBREG_TO_REG (i64 0), FPR64:$fj, sub_64)>;
 
 // VPICKVE2GR_{B/H/W}[U]
 def : Pat<(loongarch_vpick_sext_elt v16i8:$vd, uimm4:$imm, i8),

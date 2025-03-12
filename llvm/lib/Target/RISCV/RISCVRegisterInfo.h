@@ -62,6 +62,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
 
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
 
+  const MCPhysReg *getIPRACSRegs(const MachineFunction *MF) const override;
+
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   bool isAsmClobberable(const MachineFunction &MF,
                         MCRegister PhysReg) const override;

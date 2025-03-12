@@ -780,6 +780,32 @@ define i1 @lshr_nonzero_ult(i32 %x) {
   ret i1 %cmp
 }
 
+define i1 @lshr_nonzero_ugt(i32 %x) {
+; CHECK-LABEL: @lshr_nonzero_ugt(
+; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
+; CHECK-NEXT:    ret i1 false
+;
+  %x_ne_0 = icmp ne i32 %x, 0
+  call void @llvm.assume(i1 %x_ne_0)
+  %lhs = lshr i32 %x, 1
+  %cmp = icmp ugt i32 %lhs, %x
+  ret i1 %cmp
+}
+
+define i1 @lshr_nonzero_ule(i32 %x) {
+; CHECK-LABEL: @lshr_nonzero_ule(
+; CHECK-NEXT:    [[X_NE_0:%.*]] = icmp ne i32 [[X:%.*]], 0
+; CHECK-NEXT:    call void @llvm.assume(i1 [[X_NE_0]])
+; CHECK-NEXT:    ret i1 true
+;
+  %x_ne_0 = icmp ne i32 %x, 0
+  call void @llvm.assume(i1 %x_ne_0)
+  %lhs = lshr i32 %x, 1
+  %cmp = icmp ule i32 %lhs, %x
+  ret i1 %cmp
+}
+
 ; Negative test - unknown shift amount
 define i1 @lshr_nonzero_neg_unknown(i32 %x, i32 %c) {
 ; CHECK-LABEL: @lshr_nonzero_neg_unknown(
@@ -3241,7 +3267,7 @@ define i1 @globals_inequal() {
 ; TODO: Never equal
 define i1 @globals_offset_inequal() {
 ; CHECK-LABEL: @globals_offset_inequal(
-; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr getelementptr inbounds (i8, ptr @A, i32 1), getelementptr inbounds (i8, ptr @B, i32 1)
+; CHECK-NEXT:    [[RES:%.*]] = icmp ne ptr getelementptr inbounds nuw (i8, ptr @A, i32 1), getelementptr inbounds nuw (i8, ptr @B, i32 1)
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a.off = getelementptr i8, ptr @A, i32 1
@@ -3421,6 +3447,21 @@ define i1 @icmp_ult_vscale_false(i8 %x, i8 %y) {
   %x1 = shl nuw nsw i64 %vscale, 1
   %x2 = shl nuw nsw i64 %vscale, 2
   %cmp = icmp ugt i64 %x1, %x2
+  ret i1 %cmp
+}
+
+define i1 @icmp_eq_false_by_trunc(i8 %x) {
+; CHECK-LABEL: @icmp_eq_false_by_trunc(
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[X:%.*]] to i1
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %trunc = trunc i8 %x to i1
+  %not = xor i1 %trunc, true
+  call void @llvm.assume(i1 %not)
+  %cmp = icmp eq i8 %x, 1
   ret i1 %cmp
 }
 

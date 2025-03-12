@@ -10,11 +10,11 @@
 #define FORTRAN_SEMANTICS_SYMBOL_H_
 
 #include "type.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Semantics/module-dependences.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/ADT/DenseMapInfo.h"
 
 #include <array>
@@ -605,12 +605,12 @@ private:
 class UseErrorDetails {
 public:
   UseErrorDetails(const UseDetails &);
-  UseErrorDetails &add_occurrence(const SourceName &, const Scope &);
-  using listType = std::list<std::pair<SourceName, const Scope *>>;
-  const listType occurrences() const { return occurrences_; };
+  UseErrorDetails &add_occurrence(const SourceName &, const Symbol &);
+  using ListType = std::list<std::pair<SourceName, const Symbol *>>;
+  const ListType occurrences() const { return occurrences_; };
 
 private:
-  listType occurrences_;
+  ListType occurrences_;
 };
 
 // A symbol host-associated from an enclosing scope.
@@ -861,23 +861,7 @@ public:
   bool operator!=(const Symbol &that) const { return !(*this == that); }
 
   int Rank() const { return RankImpl(); }
-
-  int Corank() const {
-    return common::visit(
-        common::visitors{
-            [](const SubprogramDetails &sd) {
-              return sd.isFunction() ? sd.result().Corank() : 0;
-            },
-            [](const GenericDetails &) {
-              return 0; /*TODO*/
-            },
-            [](const UseDetails &x) { return x.symbol().Corank(); },
-            [](const HostAssocDetails &x) { return x.symbol().Corank(); },
-            [](const ObjectEntityDetails &oed) { return oed.coshape().Rank(); },
-            [](const auto &) { return 0; },
-        },
-        details_);
-  }
+  int Corank() const { return CorankImpl(); }
 
   // If there is a parent component, return a pointer to its derived type spec.
   // The Scope * argument defaults to this->scope_ but should be overridden
@@ -950,6 +934,32 @@ private:
               } else {
                 return 0;
               }
+            },
+            [](const auto &) { return 0; },
+        },
+        details_);
+  }
+  inline int CorankImpl(int depth = startRecursionDepth) const {
+    if (depth-- == 0) {
+      return 0;
+    }
+    return common::visit(
+        common::visitors{
+            [&](const SubprogramDetails &sd) {
+              return sd.isFunction() ? sd.result().CorankImpl(depth) : 0;
+            },
+            [](const GenericDetails &) { return 0; },
+            [&](const ProcEntityDetails &ped) {
+              const Symbol *iface{ped.procInterface()};
+              return iface ? iface->CorankImpl(depth) : 0;
+            },
+            [&](const UseDetails &x) { return x.symbol().CorankImpl(depth); },
+            [&](const HostAssocDetails &x) {
+              return x.symbol().CorankImpl(depth);
+            },
+            [](const ObjectEntityDetails &oed) { return oed.coshape().Rank(); },
+            [](const AssocEntityDetails &aed) {
+              return aed.expr() ? aed.expr()->Corank() : 0;
             },
             [](const auto &) { return 0; },
         },

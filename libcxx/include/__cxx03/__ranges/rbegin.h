@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_RBEGIN_H
-#define _LIBCPP___RANGES_RBEGIN_H
+#ifndef _LIBCPP___CXX03___RANGES_RBEGIN_H
+#define _LIBCPP___CXX03___RANGES_RBEGIN_H
 
 #include <__cxx03/__concepts/class_or_enum.h>
 #include <__cxx03/__concepts/same_as.h>
@@ -117,4 +117,4 @@ inline constexpr auto crbegin = __crbegin::__fn{};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_RBEGIN_H
+#endif // _LIBCPP___CXX03___RANGES_RBEGIN_H

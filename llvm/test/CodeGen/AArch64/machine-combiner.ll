@@ -262,8 +262,8 @@ define half @reassociate_adds_half(half %x0, half %x1, half %x2, half %x3) {
 ; CHECK-UNSAFE-LABEL: reassociate_adds_half:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fdiv h0, h0, h1
-; CHECK-UNSAFE-NEXT:    fadd h1, h3, h2
-; CHECK-UNSAFE-NEXT:    fadd h0, h1, h0
+; CHECK-UNSAFE-NEXT:    fadd h2, h3, h2
+; CHECK-UNSAFE-NEXT:    fadd h0, h2, h0
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fdiv half %x0, %x1
   %t1 = fadd half %x2, %t0
@@ -284,8 +284,8 @@ define half @reassociate_muls_half(half %x0, half %x1, half %x2, half %x3) {
 ; CHECK-UNSAFE-LABEL: reassociate_muls_half:
 ; CHECK-UNSAFE:       // %bb.0:
 ; CHECK-UNSAFE-NEXT:    fdiv h0, h0, h1
-; CHECK-UNSAFE-NEXT:    fmul h1, h3, h2
-; CHECK-UNSAFE-NEXT:    fmul h0, h1, h0
+; CHECK-UNSAFE-NEXT:    fmul h2, h3, h2
+; CHECK-UNSAFE-NEXT:    fmul h0, h2, h0
 ; CHECK-UNSAFE-NEXT:    ret
   %t0 = fdiv half %x0, %x1
   %t1 = fmul half %x2, %t0

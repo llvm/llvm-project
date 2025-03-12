@@ -21,7 +21,7 @@ entry:
   ; CHECK: callSites:
   ; CHECK-NEXT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], typeId:
   ; CHECK-NEXT: 7854600665770582568 }
-  call void %0(i8 signext 97) [ "type"(metadata !"_ZTSFvcE.generalized") ]
+  call void %0(i8 signext 97) [ "callee_type"(metadata !"_ZTSFvcE.generalized") ]
   ret i32 0
 }
 

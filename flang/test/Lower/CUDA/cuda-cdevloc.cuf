@@ -1,0 +1,21 @@
+! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
+
+attributes(global) subroutine testcdevloc(a)
+  use __fortran_builtins, only: c_devloc => __builtin_c_devloc
+  integer, device :: a(10)
+  print*, c_devloc(a(1))
+end
+
+! CHECK-LABEL: func.func @_QPtestcdevloc(
+! CHECK-SAME: %[[A_ARG:.*]]: !fir.ref<!fir.array<10xi32>> {cuf.data_attr = #cuf.cuda<device>, fir.bindc_name = "a"}) attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
+! CHECK: %[[A:.*]]:2 = hlfir.declare %[[A_ARG]](%{{.*}}) dummy_scope %{{.*}} {data_attr = #cuf.cuda<device>, uniq_name = "_QFtestcdevlocEa"} : (!fir.ref<!fir.array<10xi32>>, !fir.shape<1>, !fir.dscope) -> (!fir.ref<!fir.array<10xi32>>, !fir.ref<!fir.array<10xi32>>)
+! CHECK: %[[A1:.*]] = hlfir.designate %[[A]]#0 (%c1{{.*}})  : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
+! CHECK: %[[BOX:.*]] = fir.embox %[[A1]] : (!fir.ref<i32>) -> !fir.box<i32>
+! CHECK: %[[CDEVPTR:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>
+! CHECK: %[[FIELD_CPTR:.*]] = fir.field_index cptr, !fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>
+! CHECK: %[[COORD_CPTR:.*]] = fir.coordinate_of %[[CDEVPTR]], %[[FIELD_CPTR]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_devptr{cptr:!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>}>>, !fir.field) -> !fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>
+! CHECK: %[[FIELD_ADDRESS:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
+! CHECK: %[[COORD_ADDRESS:.*]] = fir.coordinate_of %[[COORD_CPTR]], %[[FIELD_ADDRESS]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK: %[[BOX_ADDR:.*]] = fir.box_addr %[[BOX]] : (!fir.box<i32>) -> !fir.ref<i32>
+! CHECK: %[[ADDRESS_A1:.*]] = fir.convert %[[BOX_ADDR]] : (!fir.ref<i32>) -> i64
+! CHECK: fir.store %[[ADDRESS_A1]] to %[[COORD_ADDRESS]] : !fir.ref<i64>

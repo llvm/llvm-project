@@ -10,24 +10,22 @@
 define i32 @ne_small_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_small_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    c.li a2, 20
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    bne a1, a2, .LBB0_2
+; RV32IFDC-NEXT:    c.li a1, 20
+; RV32IFDC-NEXT:    bne a0, a1, .LBB0_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB0_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_small_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, 20
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB0_2
+; RV32IFD-NEXT:    addi a1, zero, 20
+; RV32IFD-NEXT:    bne a0, a1, .LBB0_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB0_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, 20
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -38,24 +36,22 @@ define i32 @ne_small_pos(i32 %in0) minsize {
 define i32 @ne_small_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_small_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    c.li a2, -20
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    bne a1, a2, .LBB1_2
+; RV32IFDC-NEXT:    c.li a1, -20
+; RV32IFDC-NEXT:    bne a0, a1, .LBB1_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB1_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_small_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -20
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB1_2
+; RV32IFD-NEXT:    addi a1, zero, -20
+; RV32IFD-NEXT:    bne a0, a1, .LBB1_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB1_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, -20
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -66,24 +62,22 @@ define i32 @ne_small_neg(i32 %in0) minsize {
 define i32 @ne_small_edge_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_small_edge_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    c.li a2, 31
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    bne a1, a2, .LBB2_2
+; RV32IFDC-NEXT:    c.li a1, 31
+; RV32IFDC-NEXT:    bne a0, a1, .LBB2_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB2_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_small_edge_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, 31
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB2_2
+; RV32IFD-NEXT:    addi a1, zero, 31
+; RV32IFD-NEXT:    bne a0, a1, .LBB2_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB2_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, 31
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -94,24 +88,22 @@ define i32 @ne_small_edge_pos(i32 %in0) minsize {
 define i32 @ne_small_edge_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_small_edge_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    c.li a2, -32
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    bne a1, a2, .LBB3_2
+; RV32IFDC-NEXT:    c.li a1, -32
+; RV32IFDC-NEXT:    bne a0, a1, .LBB3_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB3_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_small_edge_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -32
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB3_2
+; RV32IFD-NEXT:    addi a1, zero, -32
+; RV32IFD-NEXT:    bne a0, a1, .LBB3_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB3_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, -32
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -123,23 +115,22 @@ define i32 @ne_small_edge_neg(i32 %in0) minsize {
 define i32 @ne_medium_ledge_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_medium_ledge_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, -33
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.bnez a1, .LBB4_2
+; RV32IFDC-NEXT:    addi a0, a0, -33
+; RV32IFDC-NEXT:    c.bnez a0, .LBB4_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB4_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_medium_ledge_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, 33
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB4_2
+; RV32IFD-NEXT:    addi a1, zero, 33
+; RV32IFD-NEXT:    bne a0, a1, .LBB4_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB4_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, 33
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -151,23 +142,22 @@ define i32 @ne_medium_ledge_pos(i32 %in0) minsize {
 define i32 @ne_medium_ledge_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_medium_ledge_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, 33
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.bnez a1, .LBB5_2
+; RV32IFDC-NEXT:    addi a0, a0, 33
+; RV32IFDC-NEXT:    c.bnez a0, .LBB5_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB5_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_medium_ledge_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -33
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB5_2
+; RV32IFD-NEXT:    addi a1, zero, -33
+; RV32IFD-NEXT:    bne a0, a1, .LBB5_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB5_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, -33
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -179,23 +169,22 @@ define i32 @ne_medium_ledge_neg(i32 %in0) minsize {
 define i32 @ne_medium_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_medium_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, -63
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.bnez a1, .LBB6_2
+; RV32IFDC-NEXT:    addi a0, a0, -63
+; RV32IFDC-NEXT:    c.bnez a0, .LBB6_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB6_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_medium_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, 63
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB6_2
+; RV32IFD-NEXT:    addi a1, zero, 63
+; RV32IFD-NEXT:    bne a0, a1, .LBB6_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB6_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, 63
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -207,23 +196,22 @@ define i32 @ne_medium_pos(i32 %in0) minsize {
 define i32 @ne_medium_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_medium_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, 63
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.bnez a1, .LBB7_2
+; RV32IFDC-NEXT:    addi a0, a0, 63
+; RV32IFDC-NEXT:    c.bnez a0, .LBB7_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB7_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_medium_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -63
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB7_2
+; RV32IFD-NEXT:    addi a1, zero, -63
+; RV32IFD-NEXT:    bne a0, a1, .LBB7_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB7_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, -63
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -235,23 +223,22 @@ define i32 @ne_medium_neg(i32 %in0) minsize {
 define i32 @ne_medium_bedge_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_medium_bedge_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, -2047
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.bnez a1, .LBB8_2
+; RV32IFDC-NEXT:    addi a0, a0, -2047
+; RV32IFDC-NEXT:    c.bnez a0, .LBB8_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB8_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_medium_bedge_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, 2047
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB8_2
+; RV32IFD-NEXT:    addi a1, zero, 2047
+; RV32IFD-NEXT:    bne a0, a1, .LBB8_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB8_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, 2047
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -263,23 +250,22 @@ define i32 @ne_medium_bedge_pos(i32 %in0) minsize {
 define i32 @ne_medium_bedge_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_medium_bedge_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, 2047
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.bnez a1, .LBB9_2
+; RV32IFDC-NEXT:    addi a0, a0, 2047
+; RV32IFDC-NEXT:    c.bnez a0, .LBB9_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB9_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_medium_bedge_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -2047
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB9_2
+; RV32IFD-NEXT:    addi a1, zero, -2047
+; RV32IFD-NEXT:    bne a0, a1, .LBB9_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB9_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, -2047
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -290,26 +276,24 @@ define i32 @ne_medium_bedge_neg(i32 %in0) minsize {
 define i32 @ne_big_ledge_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_big_ledge_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    c.li a0, 1
-; RV32IFDC-NEXT:    slli a2, a0, 11
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    bne a1, a2, .LBB10_2
+; RV32IFDC-NEXT:    c.li a1, 1
+; RV32IFDC-NEXT:    c.slli a1, 11
+; RV32IFDC-NEXT:    bne a0, a1, .LBB10_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB10_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_big_ledge_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a0, zero, 1
-; RV32IFD-NEXT:    slli a2, a0, 11
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB10_2
+; RV32IFD-NEXT:    addi a1, zero, 1
+; RV32IFD-NEXT:    slli a1, a1, 11
+; RV32IFD-NEXT:    bne a0, a1, .LBB10_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB10_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, 2048
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -320,24 +304,22 @@ define i32 @ne_big_ledge_pos(i32 %in0) minsize {
 define i32 @ne_big_ledge_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: ne_big_ledge_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    addi a2, zero, -2048
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    bne a1, a2, .LBB11_2
+; RV32IFDC-NEXT:    addi a1, zero, -2048
+; RV32IFDC-NEXT:    bne a0, a1, .LBB11_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB11_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: ne_big_ledge_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -2048
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    bne a1, a2, .LBB11_2
+; RV32IFD-NEXT:    addi a1, zero, -2048
+; RV32IFD-NEXT:    bne a0, a1, .LBB11_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB11_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp ne i32 %in0, -2048
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -351,24 +333,22 @@ define i32 @ne_big_ledge_neg(i32 %in0) minsize {
 define i32 @eq_small_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_small_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    c.li a2, 20
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    beq a1, a2, .LBB12_2
+; RV32IFDC-NEXT:    c.li a1, 20
+; RV32IFDC-NEXT:    beq a0, a1, .LBB12_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB12_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_small_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, 20
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB12_2
+; RV32IFD-NEXT:    addi a1, zero, 20
+; RV32IFD-NEXT:    beq a0, a1, .LBB12_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB12_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, 20
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -379,24 +359,22 @@ define i32 @eq_small_pos(i32 %in0) minsize {
 define i32 @eq_small_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_small_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    c.li a2, -20
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    beq a1, a2, .LBB13_2
+; RV32IFDC-NEXT:    c.li a1, -20
+; RV32IFDC-NEXT:    beq a0, a1, .LBB13_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB13_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_small_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -20
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB13_2
+; RV32IFD-NEXT:    addi a1, zero, -20
+; RV32IFD-NEXT:    beq a0, a1, .LBB13_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB13_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, -20
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -407,24 +385,22 @@ define i32 @eq_small_neg(i32 %in0) minsize {
 define i32 @eq_small_edge_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_small_edge_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    c.li a2, 31
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    beq a1, a2, .LBB14_2
+; RV32IFDC-NEXT:    c.li a1, 31
+; RV32IFDC-NEXT:    beq a0, a1, .LBB14_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB14_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_small_edge_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, 31
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB14_2
+; RV32IFD-NEXT:    addi a1, zero, 31
+; RV32IFD-NEXT:    beq a0, a1, .LBB14_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB14_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, 31
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -435,24 +411,22 @@ define i32 @eq_small_edge_pos(i32 %in0) minsize {
 define i32 @eq_small_edge_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_small_edge_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    c.li a2, -32
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    beq a1, a2, .LBB15_2
+; RV32IFDC-NEXT:    c.li a1, -32
+; RV32IFDC-NEXT:    beq a0, a1, .LBB15_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB15_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_small_edge_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -32
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB15_2
+; RV32IFD-NEXT:    addi a1, zero, -32
+; RV32IFD-NEXT:    beq a0, a1, .LBB15_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB15_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, -32
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -464,23 +438,22 @@ define i32 @eq_small_edge_neg(i32 %in0) minsize {
 define i32 @eq_medium_ledge_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_medium_ledge_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, -33
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.beqz a1, .LBB16_2
+; RV32IFDC-NEXT:    addi a0, a0, -33
+; RV32IFDC-NEXT:    c.beqz a0, .LBB16_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB16_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_medium_ledge_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, 33
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB16_2
+; RV32IFD-NEXT:    addi a1, zero, 33
+; RV32IFD-NEXT:    beq a0, a1, .LBB16_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB16_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, 33
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -492,23 +465,22 @@ define i32 @eq_medium_ledge_pos(i32 %in0) minsize {
 define i32 @eq_medium_ledge_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_medium_ledge_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, 33
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.beqz a1, .LBB17_2
+; RV32IFDC-NEXT:    addi a0, a0, 33
+; RV32IFDC-NEXT:    c.beqz a0, .LBB17_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB17_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_medium_ledge_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -33
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB17_2
+; RV32IFD-NEXT:    addi a1, zero, -33
+; RV32IFD-NEXT:    beq a0, a1, .LBB17_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB17_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, -33
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -520,23 +492,22 @@ define i32 @eq_medium_ledge_neg(i32 %in0) minsize {
 define i32 @eq_medium_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_medium_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, -63
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.beqz a1, .LBB18_2
+; RV32IFDC-NEXT:    addi a0, a0, -63
+; RV32IFDC-NEXT:    c.beqz a0, .LBB18_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB18_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_medium_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, 63
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB18_2
+; RV32IFD-NEXT:    addi a1, zero, 63
+; RV32IFD-NEXT:    beq a0, a1, .LBB18_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB18_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, 63
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -548,23 +519,22 @@ define i32 @eq_medium_pos(i32 %in0) minsize {
 define i32 @eq_medium_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_medium_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, 63
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.beqz a1, .LBB19_2
+; RV32IFDC-NEXT:    addi a0, a0, 63
+; RV32IFDC-NEXT:    c.beqz a0, .LBB19_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB19_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_medium_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -63
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB19_2
+; RV32IFD-NEXT:    addi a1, zero, -63
+; RV32IFD-NEXT:    beq a0, a1, .LBB19_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB19_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, -63
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -576,23 +546,22 @@ define i32 @eq_medium_neg(i32 %in0) minsize {
 define i32 @eq_medium_bedge_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_medium_bedge_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, -2047
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.beqz a1, .LBB20_2
+; RV32IFDC-NEXT:    addi a0, a0, -2047
+; RV32IFDC-NEXT:    c.beqz a0, .LBB20_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB20_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_medium_bedge_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, 2047
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB20_2
+; RV32IFD-NEXT:    addi a1, zero, 2047
+; RV32IFD-NEXT:    beq a0, a1, .LBB20_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB20_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, 2047
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -604,23 +573,22 @@ define i32 @eq_medium_bedge_pos(i32 %in0) minsize {
 define i32 @eq_medium_bedge_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_medium_bedge_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    addi a1, a0, 2047
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    c.beqz a1, .LBB21_2
+; RV32IFDC-NEXT:    addi a0, a0, 2047
+; RV32IFDC-NEXT:    c.beqz a0, .LBB21_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB21_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_medium_bedge_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -2047
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB21_2
+; RV32IFD-NEXT:    addi a1, zero, -2047
+; RV32IFD-NEXT:    beq a0, a1, .LBB21_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB21_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, -2047
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -631,26 +599,24 @@ define i32 @eq_medium_bedge_neg(i32 %in0) minsize {
 define i32 @eq_big_ledge_pos(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_big_ledge_pos:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    c.li a0, 1
-; RV32IFDC-NEXT:    slli a2, a0, 11
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    beq a1, a2, .LBB22_2
+; RV32IFDC-NEXT:    c.li a1, 1
+; RV32IFDC-NEXT:    c.slli a1, 11
+; RV32IFDC-NEXT:    beq a0, a1, .LBB22_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB22_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_big_ledge_pos:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a0, zero, 1
-; RV32IFD-NEXT:    slli a2, a0, 11
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB22_2
+; RV32IFD-NEXT:    addi a1, zero, 1
+; RV32IFD-NEXT:    slli a1, a1, 11
+; RV32IFD-NEXT:    beq a0, a1, .LBB22_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB22_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, 2048
   %toRet = select i1 %cmp, i32 -99, i32 42
@@ -661,24 +627,22 @@ define i32 @eq_big_ledge_pos(i32 %in0) minsize {
 define i32 @eq_big_ledge_neg(i32 %in0) minsize {
 ; RV32IFDC-LABEL: eq_big_ledge_neg:
 ; RV32IFDC:       # %bb.0:
-; RV32IFDC-NEXT:    c.mv a1, a0
-; RV32IFDC-NEXT:    addi a2, zero, -2048
-; RV32IFDC-NEXT:    addi a0, zero, -99
-; RV32IFDC-NEXT:    beq a1, a2, .LBB23_2
+; RV32IFDC-NEXT:    addi a1, zero, -2048
+; RV32IFDC-NEXT:    beq a0, a1, .LBB23_2
 ; RV32IFDC-NEXT:  # %bb.1:
-; RV32IFDC-NEXT:    addi a0, zero, 42
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_1
 ; RV32IFDC-NEXT:  .LBB23_2:
-; RV32IFDC-NEXT:    c.jr ra
+; RV32IFDC-NEXT:    tail OUTLINED_FUNCTION_0
 ;
 ; RV32IFD-LABEL: eq_big_ledge_neg:
 ; RV32IFD:       # %bb.0:
-; RV32IFD-NEXT:    addi a1, a0, 0
-; RV32IFD-NEXT:    addi a2, zero, -2048
-; RV32IFD-NEXT:    addi a0, zero, -99
-; RV32IFD-NEXT:    beq a1, a2, .LBB23_2
+; RV32IFD-NEXT:    addi a1, zero, -2048
+; RV32IFD-NEXT:    beq a0, a1, .LBB23_2
 ; RV32IFD-NEXT:  # %bb.1:
 ; RV32IFD-NEXT:    addi a0, zero, 42
+; RV32IFD-NEXT:    jalr zero, 0(ra)
 ; RV32IFD-NEXT:  .LBB23_2:
+; RV32IFD-NEXT:    addi a0, zero, -99
 ; RV32IFD-NEXT:    jalr zero, 0(ra)
   %cmp = icmp eq i32 %in0, -2048
   %toRet = select i1 %cmp, i32 -99, i32 42

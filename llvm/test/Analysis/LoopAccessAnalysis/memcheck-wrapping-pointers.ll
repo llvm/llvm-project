@@ -29,20 +29,19 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ; CHECK-NEXT:    Run-time memory checks:
 ; CHECK-NEXT:    Check 0:
 ; CHECK-NEXT:      Comparing group
-; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %a, i64 %idxprom
-; CHECK-NEXT:      Against group
 ; CHECK-NEXT:        %arrayidx4 = getelementptr inbounds i32, ptr %b, i64 %conv11
+; CHECK-NEXT:      Against group
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %a, i64 %idxprom
 ; CHECK-NEXT:    Grouped accesses:
-; CHECK-NEXT:      Group
-; CHECK-NEXT:        (Low: (4 + %a) High: (4 + (4 * (1 umax %x)) + %a))
-; CHECK-NEXT:          Member: {(4 + %a),+,4}<%for.body>
 ; CHECK-NEXT:      Group
 ; CHECK-NEXT:        (Low: %b High: ((4 * (1 umax %x)) + %b))
 ; CHECK-NEXT:          Member: {%b,+,4}<%for.body>
+; CHECK-NEXT:      Group
+; CHECK-NEXT:        (Low: (4 + %a) High: (4 + (4 * (1 umax %x)) + %a))
+; CHECK-NEXT:          Member: {(4 + %a),+,4}<%for.body>
 ; CHECK:         Non vectorizable stores to invariant address were not found in loop.
 ; CHECK-NEXT:    SCEV assumptions:
 ; CHECK-NEXT:    {1,+,1}<%for.body> Added Flags: <nusw>
-; CHECK-NEXT:    {0,+,1}<%for.body> Added Flags: <nusw>
 ; CHECK:         Expressions re-written:
 ; CHECK-NEXT:    [PSE]  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %idxprom:
 ; CHECK-NEXT:      ((4 * (zext i32 {1,+,1}<%for.body> to i64))<nuw><nsw> + %a)<nuw>
@@ -85,7 +84,6 @@ exit:
 ; CHECK: Memory dependences are safe
 ; CHECK: SCEV assumptions:
 ; CHECK-NEXT:   {1,+,1}<%for.body> Added Flags: <nusw>
-; CHECK-NEXT:   {0,+,1}<%for.body> Added Flags: <nusw>
  define void @test2(i64 %x, ptr %a) {
 entry:
   br label %for.body

@@ -101,6 +101,7 @@ define amdgpu_kernel void @addrspacecast(ptr addrspace(5) %ptr.private, ptr addr
 ; GFX9V5-NEXT:    flat_store_dword v[2:3], v0
 ; GFX9V5-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9V5-NEXT:    s_endpgm
+
   %flat.private = addrspacecast ptr addrspace(5) %ptr.private to ptr
   %flat.local = addrspacecast ptr addrspace(3) %ptr.local to ptr
   store volatile i32 1, ptr %flat.private

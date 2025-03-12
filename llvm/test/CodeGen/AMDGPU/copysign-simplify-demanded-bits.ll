@@ -337,9 +337,9 @@ define float @test_copysign_pow_fast_f32__integral_y(float %x, i32 %y.i) {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_mov_b32 s4, 0x800000
 ; GFX9-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
-; GFX9-NEXT:    v_mov_b32_e32 v3, 0x4f800000
-; GFX9-NEXT:    v_cndmask_b32_e32 v3, 1.0, v3, vcc
-; GFX9-NEXT:    v_mul_f32_e64 v3, |v0|, v3
+; GFX9-NEXT:    v_cndmask_b32_e64 v3, 0, 1, vcc
+; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 5, v3
+; GFX9-NEXT:    v_ldexp_f32 v3, |v0|, v3
 ; GFX9-NEXT:    v_log_f32_e32 v3, v3
 ; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; GFX9-NEXT:    v_mov_b32_e32 v2, 0x42000000
@@ -353,10 +353,10 @@ define float @test_copysign_pow_fast_f32__integral_y(float %x, i32 %y.i) {
 ; GFX9-NEXT:    v_fma_f32 v2, v2, v1, v3
 ; GFX9-NEXT:    v_cvt_i32_f32_e32 v1, v1
 ; GFX9-NEXT:    v_exp_f32_e32 v2, v2
-; GFX9-NEXT:    v_mov_b32_e32 v3, 0x1f800000
-; GFX9-NEXT:    v_cndmask_b32_e32 v3, 1.0, v3, vcc
+; GFX9-NEXT:    v_not_b32_e32 v3, 63
+; GFX9-NEXT:    v_cndmask_b32_e32 v3, 0, v3, vcc
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v1, 31, v1
-; GFX9-NEXT:    v_mul_f32_e32 v2, v2, v3
+; GFX9-NEXT:    v_ldexp_f32 v2, v2, v3
 ; GFX9-NEXT:    v_and_b32_e32 v0, v1, v0
 ; GFX9-NEXT:    s_brev_b32 s4, -2
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v2, v0

@@ -20,7 +20,7 @@
 
 define void @sum_of_array(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-LABEL: define void @sum_of_array(
-; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr nocapture [[OUTPUT:%.*]]) {
+; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr captures(none) [[OUTPUT:%.*]]) {
 ; IR-NEXT:  .preheader:
 ; IR-NEXT:    [[TMP0:%.*]] = sext i32 [[Y]] to i64
 ; IR-NEXT:    [[TMP1:%.*]] = sext i32 [[X]] to i64
@@ -86,7 +86,7 @@ define void @sum_of_array(i32 %x, i32 %y, ptr nocapture %output) {
 ; able to extract constant offsets from both forms.
 define void @sum_of_array2(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-LABEL: define void @sum_of_array2(
-; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr nocapture [[OUTPUT:%.*]]) {
+; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr captures(none) [[OUTPUT:%.*]]) {
 ; IR-NEXT:  .preheader:
 ; IR-NEXT:    [[TMP0:%.*]] = sext i32 [[Y]] to i64
 ; IR-NEXT:    [[TMP1:%.*]] = sext i32 [[X]] to i64
@@ -153,7 +153,7 @@ define void @sum_of_array2(i32 %x, i32 %y, ptr nocapture %output) {
 ;    may be invalid.
 define void @sum_of_array3(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-LABEL: define void @sum_of_array3(
-; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr nocapture [[OUTPUT:%.*]]) {
+; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr captures(none) [[OUTPUT:%.*]]) {
 ; IR-NEXT:  .preheader:
 ; IR-NEXT:    [[TMP0:%.*]] = zext i32 [[Y]] to i64
 ; IR-NEXT:    [[TMP1:%.*]] = zext i32 [[X]] to i64
@@ -220,7 +220,7 @@ define void @sum_of_array3(i32 %x, i32 %y, ptr nocapture %output) {
 ; &array[zext(x)][zext(y)]. See the expected IR and PTX for details.
 define void @sum_of_array4(i32 %x, i32 %y, ptr nocapture %output) {
 ; IR-LABEL: define void @sum_of_array4(
-; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr nocapture [[OUTPUT:%.*]]) {
+; IR-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], ptr captures(none) [[OUTPUT:%.*]]) {
 ; IR-NEXT:  .preheader:
 ; IR-NEXT:    [[TMP0:%.*]] = zext i32 [[Y]] to i64
 ; IR-NEXT:    [[TMP1:%.*]] = zext i32 [[X]] to i64

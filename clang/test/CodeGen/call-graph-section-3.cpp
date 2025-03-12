@@ -10,43 +10,44 @@
 // Class definitions (check for indirect target metadata)
 
 class Base {
-public:
-  // FT-DAG: define {{.*}} @_ZN4Base2vfEPc({{.*}} !type [[F_TVF:![0-9]+]]
-  virtual int vf(char *a) { return 0; };
-};
-
-class Derived : public Base {
-public:
-  // FT-DAG: define {{.*}} @_ZN7Derived2vfEPc({{.*}} !type [[F_TVF]]
-  int vf(char *a) override { return 1; };
-};
-
-// FT-DAG: [[F_TVF]] = !{i64 0, !"_ZTSFiPvE.generalized"}
-
-////////////////////////////////////////////////////////////////////////////////
-// Callsites (check for indirect callsite operand bundles)
-
-// CST-LABEL: define {{.*}} @_Z3foov
-void foo() {
-  auto B = Base();
-  auto D = Derived();
-
-  Base *Bptr = &B;
-  Base *BptrToD = &D;
-  Derived *Dptr = &D;
-
-  auto FpBaseVf = &Base::vf;
-  auto FpDerivedVf = &Derived::vf;
-
-  // CST: call noundef i32 %{{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
-  (Bptr->*FpBaseVf)(0);
-
-  // CST: call noundef i32 %{{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
-  (BptrToD->*FpBaseVf)(0);
-
-  // CST: call noundef i32 %{{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
-  (Dptr->*FpBaseVf)(0);
-
-  // CST: call noundef i32 %{{.*}} [ "type"(metadata !"_ZTSFiPvE.generalized") ]
-  (Dptr->*FpDerivedVf)(0);
-}
+    public:
+      // FT-DAG: define {{.*}} @_ZN4Base2vfEPc({{.*}} !type [[F_TVF:![0-9]+]]
+      virtual int vf(char *a) { return 0; };
+    };
+    
+    class Derived : public Base {
+    public:
+      // FT-DAG: define {{.*}} @_ZN7Derived2vfEPc({{.*}} !type [[F_TVF]]
+      int vf(char *a) override { return 1; };
+    };
+    
+    // FT-DAG: [[F_TVF]] = !{i64 0, !"_ZTSFiPvE.generalized"}
+    
+    ////////////////////////////////////////////////////////////////////////////////
+    // Callsites (check for indirect callsite operand bundles)
+    
+    // CST-LABEL: define {{.*}} @_Z3foov
+    void foo() {
+      auto B = Base();
+      auto D = Derived();
+    
+      Base *Bptr = &B;
+      Base *BptrToD = &D;
+      Derived *Dptr = &D;
+    
+      auto FpBaseVf = &Base::vf;
+      auto FpDerivedVf = &Derived::vf;
+    
+      // CST: call noundef i32 %{{.*}} [ "callee_type"(metadata !"_ZTSFiPvE.generalized") ]
+      (Bptr->*FpBaseVf)(0);
+    
+      // CST: call noundef i32 %{{.*}} [ "callee_type"(metadata !"_ZTSFiPvE.generalized") ]
+      (BptrToD->*FpBaseVf)(0);
+    
+      // CST: call noundef i32 %{{.*}} [ "callee_type"(metadata !"_ZTSFiPvE.generalized") ]
+      (Dptr->*FpBaseVf)(0);
+    
+      // CST: call noundef i32 %{{.*}} [ "callee_type"(metadata !"_ZTSFiPvE.generalized") ]
+      (Dptr->*FpDerivedVf)(0);
+    }
+    

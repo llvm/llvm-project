@@ -1,6 +1,7 @@
 # UNSUPPORTED: system-windows
 # RUN: llvm-mc -triple=aarch64 -mattr=+all --cdis %s | FileCheck %s --strict-whitespace --match-full-lines
 
+# CHECK-NOT:{{.}}
 0xa1 0x00 0x00 0x54
 # CHECK:	b.ne	[0;31m#20[0m
 0x00 0x7c 0x00 0x13

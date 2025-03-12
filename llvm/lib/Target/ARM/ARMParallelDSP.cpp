@@ -752,7 +752,7 @@ LoadInst* ARMParallelDSP::CreateWideLoad(MemInstList &Loads,
           isa<PHINode>(Source) || isa<PHINode>(Sink))
         return;
 
-      Source->moveBefore(Sink);
+      Source->moveBefore(Sink->getIterator());
       for (auto &Op : Source->operands())
         MoveBefore(Op, Source);
     };

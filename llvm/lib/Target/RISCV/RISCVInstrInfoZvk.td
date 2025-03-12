@@ -624,6 +624,13 @@ foreach vti = AllIntegerVectors in {
                  vti.RegClass:$rs2,
                  vti.ScalarRegClass:$rs1,
                  vti.AVL, vti.Log2SEW, TA_MA)>;
+    def : Pat<(vti.Vector (and (riscv_splat_vector invLogicImm:$rs1),
+                               vti.RegClass:$rs2)),
+              (!cast<Instruction>("PseudoVANDN_VX_"#vti.LMul.MX)
+                 (vti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs2,
+                 invLogicImm:$rs1,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
   }
 }
 
@@ -754,6 +761,20 @@ foreach vti = AllIntegerVectors in {
                  vti.RegClass:$passthru,
                  vti.RegClass:$rs2,
                  vti.ScalarRegClass:$rs1,
+                 (vti.Mask V0),
+                 GPR:$vl,
+                 vti.Log2SEW,
+                 TAIL_AGNOSTIC)>;
+
+    def : Pat<(vti.Vector (riscv_and_vl (riscv_splat_vector invLogicImm:$rs1),
+                                        (vti.Vector vti.RegClass:$rs2),
+                                        (vti.Vector vti.RegClass:$passthru),
+                                        (vti.Mask V0),
+                                        VLOpFrag)),
+              (!cast<Instruction>("PseudoVANDN_VX_"#vti.LMul.MX#"_MASK")
+                 vti.RegClass:$passthru,
+                 vti.RegClass:$rs2,
+                 invLogicImm:$rs1,
                  (vti.Mask V0),
                  GPR:$vl,
                  vti.Log2SEW,

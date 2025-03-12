@@ -223,7 +223,7 @@ let Definition = "process_experimental" in {
   def OSPluginReportsAllThreads: Property<"os-plugin-reports-all-threads", "Boolean">,
     Global,
     DefaultTrue,
-    Desc<"Set to False if your OS Plugins doesn't report all threads on each stop.">;
+    Desc<"Set to False if your Python OS Plugin doesn't report all threads on each stop.">;
 }
 
 let Definition = "process" in {

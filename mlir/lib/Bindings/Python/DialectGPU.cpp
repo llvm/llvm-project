@@ -9,21 +9,21 @@
 #include "mlir-c/Dialect/GPU.h"
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
-#include "mlir/Bindings/Python/PybindAdaptors.h"
+#include "mlir/Bindings/Python/NanobindAdaptors.h"
+#include "mlir/Bindings/Python/Nanobind.h"
 
-#include <pybind11/detail/common.h>
-#include <pybind11/pybind11.h>
+namespace nb = nanobind;
+using namespace nanobind::literals;
 
-namespace py = pybind11;
 using namespace mlir;
 using namespace mlir::python;
-using namespace mlir::python::adaptors;
+using namespace mlir::python::nanobind_adaptors;
 
 // -----------------------------------------------------------------------------
 // Module initialization.
 // -----------------------------------------------------------------------------
 
-PYBIND11_MODULE(_mlirDialectsGPU, m) {
+NB_MODULE(_mlirDialectsGPU, m) {
   m.doc() = "MLIR GPU Dialect";
   //===-------------------------------------------------------------------===//
   // AsyncTokenType
@@ -34,11 +34,11 @@ PYBIND11_MODULE(_mlirDialectsGPU, m) {
 
   mlirGPUAsyncTokenType.def_classmethod(
       "get",
-      [](py::object cls, MlirContext ctx) {
+      [](nb::object cls, MlirContext ctx) {
         return cls(mlirGPUAsyncTokenTypeGet(ctx));
       },
-      "Gets an instance of AsyncTokenType in the same context", py::arg("cls"),
-      py::arg("ctx") = py::none());
+      "Gets an instance of AsyncTokenType in the same context", nb::arg("cls"),
+      nb::arg("ctx").none() = nb::none());
 
   //===-------------------------------------------------------------------===//
   // ObjectAttr
@@ -47,12 +47,12 @@ PYBIND11_MODULE(_mlirDialectsGPU, m) {
   mlir_attribute_subclass(m, "ObjectAttr", mlirAttributeIsAGPUObjectAttr)
       .def_classmethod(
           "get",
-          [](py::object cls, MlirAttribute target, uint32_t format,
-             py::bytes object, std::optional<MlirAttribute> mlirObjectProps,
+          [](nb::object cls, MlirAttribute target, uint32_t format,
+             nb::bytes object, std::optional<MlirAttribute> mlirObjectProps,
              std::optional<MlirAttribute> mlirKernelsAttr) {
-            py::buffer_info info(py::buffer(object).request());
-            MlirStringRef objectStrRef =
-                mlirStringRefCreate(static_cast<char *>(info.ptr), info.size);
+            MlirStringRef objectStrRef = mlirStringRefCreate(
+                static_cast<char *>(const_cast<void *>(object.data())),
+                object.size());
             return cls(mlirGPUObjectAttrGetWithKernels(
                 mlirAttributeGetContext(target), target, format, objectStrRef,
                 mlirObjectProps.has_value() ? *mlirObjectProps
@@ -61,7 +61,7 @@ PYBIND11_MODULE(_mlirDialectsGPU, m) {
                                             : MlirAttribute{nullptr}));
           },
           "cls"_a, "target"_a, "format"_a, "object"_a,
-          "properties"_a = py::none(), "kernels"_a = py::none(),
+          "properties"_a.none() = nb::none(), "kernels"_a.none() = nb::none(),
           "Gets a gpu.object from parameters.")
       .def_property_readonly(
           "target",
@@ -73,18 +73,18 @@ PYBIND11_MODULE(_mlirDialectsGPU, m) {
           "object",
           [](MlirAttribute self) {
             MlirStringRef stringRef = mlirGPUObjectAttrGetObject(self);
-            return py::bytes(stringRef.data, stringRef.length);
+            return nb::bytes(stringRef.data, stringRef.length);
           })
       .def_property_readonly("properties",
-                             [](MlirAttribute self) {
+                             [](MlirAttribute self) -> nb::object {
                                if (mlirGPUObjectAttrHasProperties(self))
-                                 return py::cast(
+                                 return nb::cast(
                                      mlirGPUObjectAttrGetProperties(self));
-                               return py::none().cast<py::object>();
+                               return nb::none();
                              })
-      .def_property_readonly("kernels", [](MlirAttribute self) {
+      .def_property_readonly("kernels", [](MlirAttribute self) -> nb::object {
         if (mlirGPUObjectAttrHasKernels(self))
-          return py::cast(mlirGPUObjectAttrGetKernels(self));
-        return py::none().cast<py::object>();
+          return nb::cast(mlirGPUObjectAttrGetKernels(self));
+        return nb::none();
       });
 }

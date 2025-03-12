@@ -13,8 +13,8 @@ void foo() {
 // CHECK-DAG: define {{(dso_local)?}} void @bar({{.*}} !type [[F_TVOID]]
 void bar() {
   void (*fp)() = foo;
-  // ITANIUM: call {{.*}} [ "type"(metadata !"_ZTSFvE.generalized") ]
-  // MS:      call {{.*}} [ "type"(metadata !"?6AX@Z.generalized") ]
+  // ITANIUM: call {{.*}} [ "callee_type"(metadata !"_ZTSFvE.generalized") ]
+  // MS:      call {{.*}} [ "callee_type"(metadata !"?6AX@Z.generalized") ]
   fp();
 }
 
@@ -31,13 +31,13 @@ int *qux(char *a, float *b, double *c) {
 // CHECK-DAG: define {{(dso_local)?}} void @corge({{.*}} !type [[F_TVOID]]
 void corge() {
   int (*fp_baz)(char, float, double) = baz;
-  // ITANIUM: call i32 {{.*}} [ "type"(metadata !"_ZTSFicfdE.generalized") ]
-  // MS:      call i32 {{.*}} [ "type"(metadata !"?6AHDMN@Z.generalized") ]
+  // ITANIUM: call i32 {{.*}} [ "callee_type"(metadata !"_ZTSFicfdE.generalized") ]
+  // MS:      call i32 {{.*}} [ "callee_type"(metadata !"?6AHDMN@Z.generalized") ]
   fp_baz('a', .0f, .0);
 
   int *(*fp_qux)(char *, float *, double *) = qux;
-  // ITANIUM: call ptr {{.*}} [ "type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
-  // MS:      call ptr {{.*}} [ "type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
+  // ITANIUM: call ptr {{.*}} [ "callee_type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
+  // MS:      call ptr {{.*}} [ "callee_type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
   fp_qux(0, 0, 0);
 }
 
@@ -56,18 +56,18 @@ void stparam(struct st2 a, struct st2 *b) {}
 void stf() {
   struct st1 St1;
   St1.fp = qux;
-  // ITANIUM: call ptr {{.*}} [ "type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
-  // MS:      call ptr {{.*}} [ "type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
+  // ITANIUM: call ptr {{.*}} [ "callee_type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
+  // MS:      call ptr {{.*}} [ "callee_type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
   St1.fp(0, 0, 0);
 
   struct st2 St2;
   St2.m.fp = qux;
-  // ITANIUM: call ptr {{.*}} [ "type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
-  // MS:      call ptr {{.*}} [ "type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
+  // ITANIUM: call ptr {{.*}} [ "callee_type"(metadata !"_ZTSFPvS_S_S_E.generalized") ]
+  // MS:      call ptr {{.*}} [ "callee_type"(metadata !"?6APEAXPEAX00@Z.generalized") ]
   St2.m.fp(0, 0, 0);
 
-  // ITANIUM: call void {{.*}} [ "type"(metadata !"_ZTSFv3st2PvE.generalized") ]
-  // MS:      call void {{.*}} [ "type"(metadata !"?6AXUst2@@PEAX@Z.generalized") ]
+  // ITANIUM: call void {{.*}} [ "callee_type"(metadata !"_ZTSFv3st2PvE.generalized") ]
+  // MS:      call void {{.*}} [ "callee_type"(metadata !"?6AXUst2@@PEAX@Z.generalized") ]
   void (*fp_stparam)(struct st2, struct st2 *) = stparam;
   fp_stparam(St2, &St2);
 }

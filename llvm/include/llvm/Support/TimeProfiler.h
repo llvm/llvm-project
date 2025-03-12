@@ -185,25 +185,17 @@ public:
   TimeTraceScope(TimeTraceScope &&) = delete;
   TimeTraceScope &operator=(TimeTraceScope &&) = delete;
 
-  TimeTraceScope(StringRef Name) {
-    if (getTimeTraceProfilerInstance() != nullptr)
-      Entry = timeTraceProfilerBegin(Name, StringRef(""));
-  }
-  TimeTraceScope(StringRef Name, StringRef Detail) {
-    if (getTimeTraceProfilerInstance() != nullptr)
-      Entry = timeTraceProfilerBegin(Name, Detail);
-  }
-  TimeTraceScope(StringRef Name, llvm::function_ref<std::string()> Detail) {
-    if (getTimeTraceProfilerInstance() != nullptr)
-      Entry = timeTraceProfilerBegin(Name, Detail);
-  }
+  TimeTraceScope(StringRef Name)
+      : Entry(timeTraceProfilerBegin(Name, StringRef())) {}
+  TimeTraceScope(StringRef Name, StringRef Detail)
+      : Entry(timeTraceProfilerBegin(Name, Detail)) {}
+  TimeTraceScope(StringRef Name, llvm::function_ref<std::string()> Detail)
+      : Entry(timeTraceProfilerBegin(Name, Detail)) {}
   TimeTraceScope(StringRef Name,
-                 llvm::function_ref<TimeTraceMetadata()> Metadata) {
-    if (getTimeTraceProfilerInstance() != nullptr)
-      Entry = timeTraceProfilerBegin(Name, Metadata);
-  }
+                 llvm::function_ref<TimeTraceMetadata()> Metadata)
+      : Entry(timeTraceProfilerBegin(Name, Metadata)) {}
   ~TimeTraceScope() {
-    if (getTimeTraceProfilerInstance() != nullptr)
+    if (Entry)
       timeTraceProfilerEnd(Entry);
   }
 

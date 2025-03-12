@@ -4,7 +4,7 @@
 ;
 ; This test case has an InvalidContext such that part of the predecessors
 ; of for.body.us.i lie within the invalid context. This causes a
-; consistency check withing the invalid context of PR41656 to fail.
+; consistency check within the invalid context of PR41656 to fail.
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

@@ -1,4 +1,4 @@
-; RUN: not --crash llc -march=mipsel -mcpu=mips32r2 -mattr=+soft-float \
+; RUN: not --crash llc -mtriple=mipsel -mcpu=mips32r2 -mattr=+soft-float \
 ; RUN:         -O0 -fast-isel-abort=3 -relocation-model=pic < %s
 
 ; Test that FastISel aborts instead of trying to lower arguments for soft-float.

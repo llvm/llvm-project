@@ -12,8 +12,7 @@ define i1 @unordered_floating_point_compare_on_v8f32(<8 x float> %a_vec) {
 ; CHECK-NEXT:    mov w8, #1 // =0x1
 ; CHECK-NEXT:    uzp1 v0.8h, v0.8h, v1.8h
 ; CHECK-NEXT:    mvn v0.16b, v0.16b
-; CHECK-NEXT:    xtn v0.8b, v0.8h
-; CHECK-NEXT:    umaxv b0, v0.8b
+; CHECK-NEXT:    umaxv h0, v0.8h
 ; CHECK-NEXT:    fmov w9, s0
 ; CHECK-NEXT:    bic w0, w8, w9
 ; CHECK-NEXT:    ret

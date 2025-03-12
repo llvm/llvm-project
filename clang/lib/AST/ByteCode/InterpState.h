@@ -37,6 +37,8 @@ class InterpState final : public State, public SourceMapper {
 public:
   InterpState(State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               SourceMapper *M = nullptr);
+  InterpState(State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
+              const Function *Func);
 
   ~InterpState();
 
@@ -134,6 +136,8 @@ public:
   InterpStack &Stk;
   /// Interpreter Context.
   Context &Ctx;
+  /// Bottom function frame.
+  InterpFrame BottomFrame;
   /// The current frame.
   InterpFrame *Current = nullptr;
   /// Source location of the evaluating expression
