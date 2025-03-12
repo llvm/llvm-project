@@ -40,6 +40,18 @@ using namespace llvm;
 
 #define DEBUG_TYPE "clone-function"
 
+namespace {
+void collectDebugInfoFromInstructions(const Function &F,
+                                      DebugInfoFinder &DIFinder) {
+  const Module *M = F.getParent();
+  if (M) {
+    // Inspect instructions to process e.g. DILexicalBlocks of inlined functions
+    for (const auto &I : instructions(F))
+      DIFinder.processInstruction(*M, I);
+  }
+}
+} // namespace
+
 /// See comments in Cloning.h.
 BasicBlock *llvm::CloneBasicBlock(const BasicBlock *BB, ValueToValueMapTy &VMap,
                                   const Twine &NameSuffix, Function *F,
@@ -146,12 +158,7 @@ DISubprogram *llvm::CollectDebugInfoForCloning(const Function &F,
   if (SPClonedWithinModule)
     DIFinder.processSubprogram(SPClonedWithinModule);
 
-  const Module *M = F.getParent();
-  if (M) {
-    // Inspect instructions to process e.g. DILexicalBlocks of inlined functions
-    for (const auto &I : instructions(F))
-      DIFinder.processInstruction(*M, I);
-  }
+  collectDebugInfoFromInstructions(F, DIFinder);
 
   return SPClonedWithinModule;
 }
