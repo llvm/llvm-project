@@ -53,7 +53,7 @@ namespace clang {
 namespace CodeGen {
 
 // Creates a layout type for given struct with HLSL constant buffer layout
-// taking into account Packoffsets, if provided.
+// taking into account PackOffsets, if provided.
 // Previously created layout types are cached by CGHLSLRuntime.
 //
 // The function iterates over all fields of the StructType (including base
@@ -61,14 +61,14 @@ namespace CodeGen {
 // LLVM type and to calculate its HLSL constant buffer layout. Any embedded
 // structs (or arrays of structs) are converted to target layout types as well.
 //
-// When Packoffsets are specified the elements will be placed based on the
+// When PackOffsets are specified the elements will be placed based on the
 // user-specified offsets. Not all elements must have a packoffset/register(c#)
-// annotation though. For those that don't, the Packoffsets array will constain
+// annotation though. For those that don't, the PackOffsets array will contain
 // -1 value instead. These elements must be placed at the end of the layout
 // after all of the elements with specific offset.
 llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
     const RecordType *StructType,
-    const llvm::SmallVector<int32_t> *Packoffsets) {
+    const llvm::SmallVector<int32_t> *PackOffsets) {
 
   // check if we already have the layout type for this struct
   if (llvm::TargetExtType *Ty =
@@ -94,63 +94,53 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
            "HLSL doesn't support multiple inheritance");
     RecordTypes.push_back(D->bases_begin()->getType()->getAs<RecordType>());
   }
+
+  unsigned FieldOffset;
+  llvm::Type *FieldType;
+
   while (!RecordTypes.empty()) {
     const RecordType *RT = RecordTypes.back();
     RecordTypes.pop_back();
 
     for (const auto *FD : RT->getDecl()->fields()) {
-      unsigned FieldOffset = UINT_MAX;
-      llvm::Type *FieldType = nullptr;
+      assert((!PackOffsets || Index < PackOffsets->size()) &&
+             "number of elements in layout struct does not match number of "
+             "packoffset annotations");
 
-      if (Packoffsets) {
-        // have packoffset/register(c#) annotations
-        assert(Index < Packoffsets->size() &&
-               "number of elements in layout struct does not match number of "
-               "packoffset annotations");
-        int PO = (*Packoffsets)[Index++];
-        if (PO != -1) {
-          if (!layoutField(FD, EndOffset, FieldOffset, FieldType, PO))
-            return nullptr;
-        } else {
-          // No packoffset/register(cX) annotation on this field;
-          // Delay the layout until after all of the other elements
-          // annotated with packoffsets/register(cX) are processed.
-          DelayLayoutFields.emplace_back(FD, LayoutElements.size());
-          // reserve space for this field in the layout vector and elements list
-          Layout.push_back(UINT_MAX);
-          LayoutElements.push_back(nullptr);
-          continue;
-        }
-      } else {
-        if (!layoutField(FD, EndOffset, FieldOffset, FieldType))
+      // No PackOffset info at all, or have a valid packoffset/register(c#)
+      // annotations value -> layout the field.
+      int PO = PackOffsets ? (*PackOffsets)[Index++] : -1;
+      if (!PackOffsets || PO != -1) {
+        if (!layoutField(FD, EndOffset, FieldOffset, FieldType, PO))
           return nullptr;
+        Layout.push_back((unsigned)FieldOffset);
+        LayoutElements.push_back(FieldType);
+        continue;
       }
-
-      assert(FieldOffset != UINT_MAX && FieldType != nullptr);
-      Layout.push_back((unsigned)FieldOffset);
-      LayoutElements.push_back(FieldType);
+      // Have PackOffset info, but there is no packoffset/register(cX)
+      // annotation on this field. Delay the layout until after all of the
+      // other elements with packoffsets/register(cX) are processed.
+      DelayLayoutFields.emplace_back(FD, LayoutElements.size());
+      // reserve space for this field in the layout vector and elements list
+      Layout.push_back(UINT_MAX);
+      LayoutElements.push_back(nullptr);
     }
   }
 
   // process delayed layouts
-  if (!DelayLayoutFields.empty()) {
-    for (auto I : DelayLayoutFields) {
-      const FieldDecl *FD = I.first;
-      unsigned IndexInLayoutElements = I.second;
-      // the first item in layout vector is size, so we need to offset the index
-      // by 1
-      unsigned IndexInLayout = IndexInLayoutElements + 1;
-      assert(Layout[IndexInLayout] == UINT_MAX &&
-             LayoutElements[IndexInLayoutElements] == nullptr);
+  for (auto I : DelayLayoutFields) {
+    const FieldDecl *FD = I.first;
+    unsigned IndexInLayoutElements = I.second;
+    // the first item in layout vector is size, so we need to offset the index
+    // by 1
+    unsigned IndexInLayout = IndexInLayoutElements + 1;
+    assert(Layout[IndexInLayout] == UINT_MAX &&
+           LayoutElements[IndexInLayoutElements] == nullptr);
 
-      unsigned FieldOffset = UINT_MAX;
-      llvm::Type *FieldType = nullptr;
-      if (!layoutField(FD, EndOffset, FieldOffset, FieldType))
-        return nullptr;
-
-      Layout[IndexInLayout] = (unsigned)FieldOffset;
-      LayoutElements[IndexInLayoutElements] = FieldType;
-    }
+    if (!layoutField(FD, EndOffset, FieldOffset, FieldType))
+      return nullptr;
+    Layout[IndexInLayout] = (unsigned)FieldOffset;
+    LayoutElements[IndexInLayoutElements] = FieldType;
   }
 
   // set the size of the buffer

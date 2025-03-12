@@ -1963,13 +1963,12 @@ void SemaHLSL::ActOnEndOfTranslationUnit(TranslationUnitDecl *TU) {
 
     // Set HasValidPackoffset if any of the decls has a register(c#) annotation;
     for (const Decl *VD : DefaultCBufferDecls) {
-      if (const HLSLResourceBindingAttr *RBA =
-              VD->getAttr<HLSLResourceBindingAttr>()) {
-        if (RBA->getRegisterType() ==
-            HLSLResourceBindingAttr::RegisterType::C) {
-          DefaultCBuffer->setHasValidPackoffset(true);
-          break;
-        }
+      const HLSLResourceBindingAttr *RBA =
+          VD->getAttr<HLSLResourceBindingAttr>();
+      if (RBA &&
+          RBA->getRegisterType() == HLSLResourceBindingAttr::RegisterType::C) {
+        DefaultCBuffer->setHasValidPackoffset(true);
+        break;
       }
     }
 

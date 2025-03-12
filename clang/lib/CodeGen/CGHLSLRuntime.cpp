@@ -201,18 +201,24 @@ static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
     VarDecl *VD = dyn_cast<VarDecl>(D);
     if (!VD || VD->getType().getAddressSpace() != LangAS::hlsl_constant)
       continue;
+
+    if (!VD->hasAttrs()) {
+      Layout.push_back(-1);
+      continue;
+    }
+
     size_t Offset = -1;
-    if (VD->hasAttrs()) {
-      for (auto *Attr : VD->getAttrs()) {
-        if (auto *POA = dyn_cast<HLSLPackOffsetAttr>(Attr)) {
-          Offset = POA->getOffsetInBytes();
-        } else if (auto *RBA = dyn_cast<HLSLResourceBindingAttr>(Attr)) {
-          if (RBA->getRegisterType() ==
-              HLSLResourceBindingAttr::RegisterType::C) {
-            // size of constant buffer row is 16 bytes
-            Offset = RBA->getSlotNumber() * CBufferRowSizeInBytes;
-          }
-        }
+    for (auto *Attr : VD->getAttrs()) {
+      if (auto *POA = dyn_cast<HLSLPackOffsetAttr>(Attr)) {
+        Offset = POA->getOffsetInBytes();
+        break;
+      }
+      auto *RBA = dyn_cast<HLSLResourceBindingAttr>(Attr);
+      if (RBA &&
+          RBA->getRegisterType() == HLSLResourceBindingAttr::RegisterType::C) {
+        // size of constant buffer row is 16 bytes
+        Offset = RBA->getSlotNumber() * CBufferRowSizeInBytes;
+        break;
       }
     }
     Layout.push_back(Offset);
