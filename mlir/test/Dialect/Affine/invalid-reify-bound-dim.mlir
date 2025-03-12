@@ -33,3 +33,15 @@ func.func @test_invalid_reify_int_value(%size: index) -> (index) {
 
     return %dim: index
 }
+
+// -----
+
+func.func @test_invalid_reify_without_dim(%size: index) -> (index) {
+    %zero = arith.constant 0 : index
+    %tensor_val = tensor.empty(%size) : tensor<?xf32>
+
+    // expected-error@+1 {{'test.reify_bound' op expected 'dim' attribute for shaped type variable}}
+    %dim = "test.reify_bound"(%tensor_val) : (tensor<?xf32>) -> index
+
+    return %dim: index
+}

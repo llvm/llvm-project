@@ -89,6 +89,10 @@ static LogicalResult testReifyValueBounds(FunctionOpInterface funcOp,
       op->emitOpError("dim specified for non-shaped type");
       return WalkResult::interrupt();
     }
+    if (shapedType && !dim.has_value()) {
+      op->emitOpError("dim not specified for shaped type");
+      return WalkResult::interrupt();
+    }
     if (shapedType && shapedType.hasRank() && dim.has_value()) {
       if (dim.value() < 0) {
         op->emitOpError("dim must be non-negative");
