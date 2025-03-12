@@ -84,16 +84,20 @@ void CapturingThisByFieldCheck::registerMatchers(MatchFinder *Finder) {
       capturesThis(),
       // [self = this]
       capturesVar(varDecl(hasInitializer(cxxThisExpr())))));
-  auto IsInitWithLambda = cxxConstructExpr(hasArgument(
-      0,
-      lambdaExpr(hasAnyCapture(CaptureThis.bind("capture"))).bind("lambda")));
+  auto IsLambdaCapturingThis =
+      lambdaExpr(hasAnyCapture(CaptureThis.bind("capture"))).bind("lambda");
+  auto IsInitWithLambda =
+      anyOf(IsLambdaCapturingThis,
+            cxxConstructExpr(hasArgument(0, IsLambdaCapturingThis)));
   Finder->addMatcher(
       cxxRecordDecl(
-          has(cxxConstructorDecl(
-              unless(isCopyConstructor()), unless(isMoveConstructor()),
-              hasAnyConstructorInitializer(cxxCtorInitializer(
-                  isMemberInitializer(), forField(IsStdFunctionField),
-                  withInitializer(IsInitWithLambda))))),
+          anyOf(has(cxxConstructorDecl(
+                    unless(isCopyConstructor()), unless(isMoveConstructor()),
+                    hasAnyConstructorInitializer(cxxCtorInitializer(
+                        isMemberInitializer(), forField(IsStdFunctionField),
+                        withInitializer(IsInitWithLambda))))),
+                has(fieldDecl(IsStdFunctionField,
+                              hasInClassInitializer(IsInitWithLambda)))),
           unless(correctHandleCaptureThisLambda())),
       this);
 }

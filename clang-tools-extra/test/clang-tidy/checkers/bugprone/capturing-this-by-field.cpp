@@ -18,11 +18,22 @@ struct Fn {
   template<class F> Fn(F &&);
 };
 
-struct Basic {
-  Basic() : Captured([this]() { static_cast<void>(this); }) {}
-  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: 'this' captured by a lambda and stored in a class member variable;
+struct BasicConstructor {
+  BasicConstructor() : Captured([this]() { static_cast<void>(this); }) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:33: warning: 'this' captured by a lambda and stored in a class member variable;
   std::function<void()> Captured;
   // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+};
+
+struct BasicField1 {
+  std::function<void()> Captured = [this]() { static_cast<void>(this); };
+  // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: 'this' captured by a lambda and stored in a class member variable;
+  // CHECK-MESSAGES: :[[@LINE-2]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+};
+struct BasicField2 {
+  std::function<void()> Captured{[this]() { static_cast<void>(this); }};
+  // CHECK-MESSAGES: :[[@LINE-1]]:34: warning: 'this' captured by a lambda and stored in a class member variable;
+  // CHECK-MESSAGES: :[[@LINE-2]]:25: note: 'std::function<void (void)>' that stores captured 'this'
 };
 
 struct NotCaptureThis {
