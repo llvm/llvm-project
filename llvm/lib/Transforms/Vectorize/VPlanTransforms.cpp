@@ -1329,7 +1329,7 @@ static void licm(VPlan &Plan) {
             return !Op->isDefinedOutsideLoopRegions();
           }))
         continue;
-      R.moveBefore(*Preheader, Preheader->end());
+      R.moveBefore(*Preheader, Preheader->end()); // TODO
     }
   }
 }

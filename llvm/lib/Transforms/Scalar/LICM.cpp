@@ -1168,6 +1168,15 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
   if (!isHoistableAndSinkableInst(I))
     return false;
 
+  if (I.getOpcode() == Instruction::Xor) {
+    Constant *C = dyn_cast<Constant>(I.getOperand(1));
+    if (C && C->isAllOnesValue() && all_of(I.users(), [](const User *U) {
+          auto *UI = dyn_cast<Instruction>(U);
+          return UI && UI->isBitwiseLogicOp();
+        }))
+      return false;
+  }
+
   MemorySSA *MSSA = MSSAU.getMemorySSA();
   // Loads have extra constraints we have to verify before we can hoist them.
   if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
