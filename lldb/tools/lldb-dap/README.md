@@ -180,7 +180,10 @@ Debugging sessions can also be starting using special URIs.
 
 The `vscode://llvm-vs-code-extensions.lldb-dap/start?config={launch-config}`
 URI accepts a [URL-encoded](https://en.wikipedia.org/wiki/Percent-encoding)
-JSON launch config.
+JSON launch config. The most frequently used arguments (`request`, `program`,
+`args`, `cwd`, `pid`, ...) can also specified directly, e.g.
+`vscode://llvm-vs-code-extensions.lldb-dap/start?request=attach&pid=1234`, or
+`vscode://llvm-vs-code-extensions.lldb-dap/start?program=ls&args=-a&args=/etc`.
 
 This is useful for integration with custom scripts to start debugging
 sessions. The URI might be printed to the terminal, potentially using
