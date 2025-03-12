@@ -174,7 +174,7 @@ bool lldb_private::formatters::WCharSummaryProvider(
 
   if (!data_or_err) {
     LLDB_LOG_ERRORV(GetLog(LLDBLog::DataFormatters), data_or_err.takeError(),
-        "Can't extract data for WChar Summary: {0}")
+                    "Can't extract data for WChar Summary: {0}");
     return false;
   }
 
