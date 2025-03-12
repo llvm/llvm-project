@@ -276,26 +276,23 @@ void X86InstrMappingEmitter::emitNFTransformTable(
     if (!isInteresting(Rec))
       continue;
     StringRef Name = Rec->getName();
-    auto *NewRec = Records.getDef(Name.str() + "_NF");
-    if (!NewRec && Name.consume_back("_ND"))
-      NewRec = Records.getDef(Name.str() + "_NF_ND");
-
-    if (!NewRec)
-      continue;
-
+    if (auto *NewRec = Name.consume_back("_ND")
+                           ? Records.getDef(Name.str() + "_NF_ND")
+                           : Records.getDef(Name.str() + "_NF")) {
 #ifndef NDEBUG
-    auto ClobberEFLAGS = [](const Record *R) {
-      return llvm::any_of(
-          R->getValueAsListOfDefs("Defs"),
-          [](const Record *Def) { return Def->getName() == "EFLAGS"; });
-    };
-    if (ClobberEFLAGS(NewRec))
-      report_fatal_error("EFLAGS should not be clobbered by " +
-                         NewRec->getName());
-    if (!ClobberEFLAGS(Rec))
-      report_fatal_error("EFLAGS should be clobbered by " + Rec->getName());
+      auto ClobberEFLAGS = [](const Record *R) {
+        return llvm::any_of(
+            R->getValueAsListOfDefs("Defs"),
+            [](const Record *Def) { return Def->getName() == "EFLAGS"; });
+      };
+      if (ClobberEFLAGS(NewRec))
+        report_fatal_error("EFLAGS should not be clobbered by " +
+                           NewRec->getName());
+      if (!ClobberEFLAGS(Rec))
+        report_fatal_error("EFLAGS should be clobbered by " + Rec->getName());
 #endif
-    Table.emplace_back(Inst, &Target.getInstruction(NewRec));
+      Table.emplace_back(Inst, &Target.getInstruction(NewRec));
+    }
   }
   printTable(Table, "X86NFTransformTable", "GET_X86_NF_TRANSFORM_TABLE", OS);
 }
