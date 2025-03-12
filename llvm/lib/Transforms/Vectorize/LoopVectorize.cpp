@@ -1285,22 +1285,6 @@ public:
            (SI && TTI.isLegalMaskedScatter(Ty, Align));
   }
 
-  /// Returns true if the target machine can represent \p V as a strided load
-  /// or store operation.
-  bool isLegalStridedLoadStore(Value *V, ElementCount VF) const {
-    if (!isa<LoadInst, StoreInst>(V))
-      return false;
-    auto *Ty = getLoadStoreType(V);
-    Value *Ptr = getLoadStorePointerOperand(V);
-    // TODO: Support non-unit-reverse strided accesses.
-    if (Legal->isConsecutivePtr(Ty, Ptr) != -1)
-      return false;
-    Align Align = getLoadStoreAlignment(V);
-    if (VF.isVector())
-      Ty = VectorType::get(Ty, VF);
-    return TTI.isLegalStridedLoadStore(Ty, Align);
-  }
-
   /// Returns true if the target machine supports all of the reduction
   /// variables found for the given VF.
   bool canVectorizeReductions(ElementCount VF) const {
@@ -1364,6 +1348,10 @@ public:
   getInterleavedAccessGroup(Instruction *Instr) const {
     return InterleaveInfo.getInterleaveGroup(Instr);
   }
+
+  /// Returns true if \p I is a memory instruction with strided memory access
+  /// that can be vectorized.
+  bool stridedAccessCanBeWidened(Instruction *I, ElementCount VF) const;
 
   /// Returns true if we're required to use a scalar epilogue for at least
   /// the final iteration of the original loop.
@@ -3469,6 +3457,26 @@ bool LoopVectorizationCostModel::memoryInstructionCanBeWidened(
     return false;
 
   return true;
+}
+
+bool LoopVectorizationCostModel::stridedAccessCanBeWidened(
+    Instruction *I, ElementCount VF) const {
+  // Get and ensure we have a valid memory instruction.
+  assert((isa<LoadInst, StoreInst>(I)) && "Invalid memory instruction");
+
+  // Only support strided access for vector VF.
+  if (!VF.isVector())
+    return false;
+
+  auto *Ptr = getLoadStorePointerOperand(I);
+  auto *ScalarTy = getLoadStoreType(I);
+  // Ensure the accessed addresses are evenly spaced apart by a fixed stride.
+  // TODO: Support non-unit-reverse strided accesses.
+  if (Legal->isConsecutivePtr(ScalarTy, Ptr) != -1)
+    return false;
+
+  const Align Alignment = getLoadStoreAlignment(I);
+  return TTI.isLegalStridedLoadStore(toVectorTy(ScalarTy, VF), Alignment);
 }
 
 void LoopVectorizationCostModel::collectLoopUniforms(ElementCount VF) {
@@ -6156,10 +6164,9 @@ void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
             ConsecutiveStride == 1 ? CM_Widen : CM_Widen_Reverse;
         // Consider using strided load/store for consecutive reverse accesses to
         // achieve more efficient memory operations.
-        if (ConsecutiveStride == -1) {
+        if (ConsecutiveStride == -1 && stridedAccessCanBeWidened(&I, VF)) {
           const InstructionCost StridedLoadStoreCost =
-              isLegalStridedLoadStore(&I, VF) ? getStridedLoadStoreCost(&I, VF)
-                                              : InstructionCost::getInvalid();
+              getStridedLoadStoreCost(&I, VF);
           if (StridedLoadStoreCost < Cost) {
             Decision = CM_Strided;
             Cost = StridedLoadStoreCost;
