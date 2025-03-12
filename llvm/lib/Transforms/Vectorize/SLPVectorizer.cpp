@@ -855,25 +855,18 @@ class InterchangeableBinOp {
   // side (0).
   static std::pair<ConstantInt *, unsigned>
   isBinOpWithConstantInt(Instruction *I) {
+    assert(isa<BinaryOperator>(I));
     unsigned Opcode = I->getOpcode();
     assert(binary_search(SupportedOp, Opcode) && "Unsupported opcode.");
-    unsigned Pos = 1;
-    Constant *C;
-    if (!match(I, m_BinOp(m_Value(), m_Constant(C)))) {
-      if (Opcode == Instruction::Sub || Opcode == Instruction::Shl ||
-          Opcode == Instruction::AShr)
-        return std::make_pair(nullptr, Pos);
-      if (!match(I, m_BinOp(m_Constant(C), m_Value())))
-        return std::make_pair(nullptr, Pos);
-      Pos = 0;
-    }
-    if (auto *CI = dyn_cast<ConstantInt>(C))
-      return std::make_pair(CI, Pos);
-    if (auto *CDV = dyn_cast<ConstantDataVector>(C)) {
-      if (auto *CI = dyn_cast_if_present<ConstantInt>(CDV->getSplatValue()))
-        return std::make_pair(CI, Pos);
-    }
-    return std::make_pair(nullptr, Pos);
+    auto *BinOp = cast<BinaryOperator>(I);
+    if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(1)))
+      return {CI, 1};
+    if (Opcode == Instruction::Sub || Opcode == Instruction::Shl ||
+        Opcode == Instruction::AShr)
+      return {nullptr, 0};
+    if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(0)))
+      return {CI, 0};
+    return {nullptr, 0};
   }
 
   // Return false allows getSameOpcode to find an alternate instruction.
