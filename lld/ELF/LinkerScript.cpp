@@ -563,7 +563,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
           continue;
 
         if (!cmd->matchesFile(*sec->file) || pat.excludesFile(*sec->file) ||
-            sec->parent == &outCmd || !flagsMatch(sec))
+            !flagsMatch(sec))
           continue;
 
         if (sec->parent) {
@@ -626,7 +626,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *cmd,
 
     for (InputSectionDescription *isd : scd->sc.commands) {
       for (InputSectionBase *sec : isd->sectionBases) {
-        if (sec->parent == &outCmd || !flagsMatch(sec))
+        if (!flagsMatch(sec))
           continue;
         bool isSpill = sec->parent && isa<OutputSection>(sec->parent);
         if (!sec->parent || (isSpill && outCmd.name == "/DISCARD/")) {
@@ -1559,6 +1559,8 @@ bool LinkerScript::spillSections() {
   if (potentialSpillLists.empty())
     return false;
 
+  DenseSet<PotentialSpillSection *> skippedSpills;
+
   bool spilled = false;
   for (SectionCommand *cmd : reverse(sectionCommands)) {
     auto *osd = dyn_cast<OutputDesc>(cmd);
@@ -1585,16 +1587,34 @@ bool LinkerScript::spillSections() {
         if (isa<PotentialSpillSection>(isec))
           continue;
 
-        // Find the next potential spill location and remove it from the list.
         auto it = potentialSpillLists.find(isec);
         if (it == potentialSpillLists.end())
-          continue;
+          break;
+
+        // Consume spills until finding one that might help, then consume it.
+        auto canSpillHelp = [&](PotentialSpillSection *spill) {
+          // Spills to the same region that overflowed cannot help.
+          if (hasRegionOverflowed(osec->memRegion) &&
+              spill->getParent()->memRegion == osec->memRegion)
+            return false;
+          if (hasRegionOverflowed(osec->lmaRegion) &&
+              spill->getParent()->lmaRegion == osec->lmaRegion)
+            return false;
+          return true;
+        };
         PotentialSpillList &list = it->second;
-        PotentialSpillSection *spill = list.head;
-        if (spill->next)
-          list.head = spill->next;
-        else
-          potentialSpillLists.erase(isec);
+        PotentialSpillSection *spill;
+        for (spill = list.head; spill; spill = spill->next) {
+          if (list.head->next)
+            list.head = spill->next;
+          else
+            potentialSpillLists.erase(isec);
+          if (canSpillHelp(spill))
+            break;
+          skippedSpills.insert(spill);
+        }
+        if (!spill)
+          continue;
 
         // Replace the next spill location with the spilled section and adjust
         // its properties to match the new location. Note that the alignment of
@@ -1628,6 +1648,15 @@ bool LinkerScript::spillSections() {
       }
     }
   }
+
+  // Clean up any skipped spills.
+  DenseSet<InputSectionDescription *> isds;
+  for (PotentialSpillSection *s : skippedSpills)
+    isds.insert(s->isd);
+  for (InputSectionDescription *isd : isds)
+    llvm::erase_if(isd->sections, [&](InputSection *s) {
+      return skippedSpills.contains(dyn_cast<PotentialSpillSection>(s));
+    });
 
   return spilled;
 }

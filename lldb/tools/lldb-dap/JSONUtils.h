@@ -74,8 +74,8 @@ llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key,
 llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
                           llvm::StringRef defaultValue = {});
 
-/// Extract the unsigned integer value for the specified key from
-/// the specified object.
+/// Extract the integer value for the specified key from the specified object
+/// and return it as the specified integer type T.
 ///
 /// \param[in] obj
 ///     A JSON object that we will attempt to extract the value from
@@ -84,13 +84,23 @@ llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
 ///     The key to use when extracting the value
 ///
 /// \return
-///     The unsigned integer value for the specified \a key, or
-///     \a fail_value  if there is no key that matches or if the
-///     value is not an integer.
-uint64_t GetUnsigned(const llvm::json::Object &obj, llvm::StringRef key,
-                     uint64_t fail_value);
-uint64_t GetUnsigned(const llvm::json::Object *obj, llvm::StringRef key,
-                     uint64_t fail_value);
+///     The integer value for the specified \a key, or std::nullopt if there is
+///     no key that matches or if the value is not an integer.
+/// @{
+template <typename T>
+std::optional<T> GetInteger(const llvm::json::Object &obj,
+                            llvm::StringRef key) {
+  return obj.getInteger(key);
+}
+
+template <typename T>
+std::optional<T> GetInteger(const llvm::json::Object *obj,
+                            llvm::StringRef key) {
+  if (obj != nullptr)
+    return GetInteger<T>(*obj, key);
+  return std::nullopt;
+}
+/// @}
 
 /// Extract the boolean value for the specified key from the
 /// specified object.
@@ -111,24 +121,6 @@ std::optional<bool> GetBoolean(const llvm::json::Object &obj,
 std::optional<bool> GetBoolean(const llvm::json::Object *obj,
                                llvm::StringRef key);
 /// @}
-
-/// Extract the signed integer for the specified key from the
-/// specified object.
-///
-/// \param[in] obj
-///     A JSON object that we will attempt to extract the value from
-///
-/// \param[in] key
-///     The key to use when extracting the value
-///
-/// \return
-///     The signed integer value for the specified \a key, or
-///     \a fail_value if there is no key that matches or if the
-///     value is not an integer.
-int64_t GetSigned(const llvm::json::Object &obj, llvm::StringRef key,
-                  int64_t fail_value);
-int64_t GetSigned(const llvm::json::Object *obj, llvm::StringRef key,
-                  int64_t fail_value);
 
 /// Check if the specified key exists in the specified object.
 ///

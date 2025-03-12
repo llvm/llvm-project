@@ -3783,8 +3783,9 @@ private:
   OpenACCWaitParseInfo ParseOpenACCWaitArgument(SourceLocation Loc,
                                                 bool IsDirective);
   /// Parses the clause of the 'bind' argument, which can be a string literal or
-  /// an ID expression.
-  ExprResult ParseOpenACCBindClauseArgument();
+  /// an identifier.
+  std::variant<std::monostate, StringLiteral *, IdentifierInfo *>
+  ParseOpenACCBindClauseArgument();
 
   /// A type to represent the state of parsing after an attempt to parse an
   /// OpenACC int-expr. This is useful to determine whether an int-expr list can

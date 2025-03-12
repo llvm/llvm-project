@@ -1970,7 +1970,11 @@ void SelectionDAGBuilder::visitCatchPad(const CatchPadInst &I) {
   bool IsCoreCLR = Pers == EHPersonality::CoreCLR;
   bool IsSEH = isAsynchronousEHPersonality(Pers);
   MachineBasicBlock *CatchPadMBB = FuncInfo.MBB;
-  if (!IsSEH)
+  if (IsSEH) {
+    // For SEH, EHCont Guard needs to know that this catchpad is a target.
+    CatchPadMBB->setIsEHContTarget(true);
+    DAG.getMachineFunction().setHasEHContTarget(true);
+  } else
     CatchPadMBB->setIsEHScopeEntry();
   // In MSVC C++ and CoreCLR, catchblocks are funclets and need prologues.
   if (IsMSVCCXX || IsCoreCLR)
@@ -1981,8 +1985,6 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
   // Update machine-CFG edge.
   MachineBasicBlock *TargetMBB = FuncInfo.getMBB(I.getSuccessor());
   FuncInfo.MBB->addSuccessor(TargetMBB);
-  TargetMBB->setIsEHCatchretTarget(true);
-  DAG.getMachineFunction().setHasEHCatchret(true);
 
   auto Pers = classifyEHPersonality(FuncInfo.Fn->getPersonalityFn());
   bool IsSEH = isAsynchronousEHPersonality(Pers);
@@ -1995,6 +1997,10 @@ void SelectionDAGBuilder::visitCatchRet(const CatchReturnInst &I) {
                               getControlRoot(), DAG.getBasicBlock(TargetMBB)));
     return;
   }
+
+  // For non-SEH, EHCont Guard needs to know that this catchret is a target.
+  TargetMBB->setIsEHContTarget(true);
+  DAG.getMachineFunction().setHasEHContTarget(true);
 
   // Figure out the funclet membership for the catchret's successor.
   // This will be used by the FuncletLayout pass to determine how to order the
@@ -2028,58 +2034,6 @@ void SelectionDAGBuilder::visitCleanupPad(const CleanupPadInst &CPI) {
   }
 }
 
-// In wasm EH, even though a catchpad may not catch an exception if a tag does
-// not match, it is OK to add only the first unwind destination catchpad to the
-// successors, because there will be at least one invoke instruction within the
-// catch scope that points to the next unwind destination, if one exists, so
-// CFGSort cannot mess up with BB sorting order.
-// (All catchpads with 'catch (type)' clauses have a 'llvm.rethrow' intrinsic
-// call within them, and catchpads only consisting of 'catch (...)' have a
-// '__cxa_end_catch' call within them, both of which generate invokes in case
-// the next unwind destination exists, i.e., the next unwind destination is not
-// the caller.)
-//
-// Having at most one EH pad successor is also simpler and helps later
-// transformations.
-//
-// For example,
-// current:
-//   invoke void @foo to ... unwind label %catch.dispatch
-// catch.dispatch:
-//   %0 = catchswitch within ... [label %catch.start] unwind label %next
-// catch.start:
-//   ...
-//   ... in this BB or some other child BB dominated by this BB there will be an
-//   invoke that points to 'next' BB as an unwind destination
-//
-// next: ; We don't need to add this to 'current' BB's successor
-//   ...
-static void findWasmUnwindDestinations(
-    FunctionLoweringInfo &FuncInfo, const BasicBlock *EHPadBB,
-    BranchProbability Prob,
-    SmallVectorImpl<std::pair<MachineBasicBlock *, BranchProbability>>
-        &UnwindDests) {
-  while (EHPadBB) {
-    BasicBlock::const_iterator Pad = EHPadBB->getFirstNonPHIIt();
-    if (isa<CleanupPadInst>(Pad)) {
-      // Stop on cleanup pads.
-      UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
-      UnwindDests.back().first->setIsEHScopeEntry();
-      break;
-    } else if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
-      // Add the catchpad handlers to the possible destinations. We don't
-      // continue to the unwind destination of the catchswitch for wasm.
-      for (const BasicBlock *CatchPadBB : CatchSwitch->handlers()) {
-        UnwindDests.emplace_back(FuncInfo.getMBB(CatchPadBB), Prob);
-        UnwindDests.back().first->setIsEHScopeEntry();
-      }
-      break;
-    } else {
-      continue;
-    }
-  }
-}
-
 /// When an invoke or a cleanupret unwinds to the next EH pad, there are
 /// many places it could ultimately go. In the IR, we have a single unwind
 /// destination, but in the machine CFG, we enumerate all the possible blocks.
@@ -2100,13 +2054,6 @@ static void findUnwindDestinations(
   bool IsWasmCXX = Personality == EHPersonality::Wasm_CXX;
   bool IsSEH = isAsynchronousEHPersonality(Personality);
 
-  if (IsWasmCXX) {
-    findWasmUnwindDestinations(FuncInfo, EHPadBB, Prob, UnwindDests);
-    assert(UnwindDests.size() <= 1 &&
-           "There should be at most one unwind destination for wasm");
-    return;
-  }
-
   while (EHPadBB) {
     BasicBlock::const_iterator Pad = EHPadBB->getFirstNonPHIIt();
     BasicBlock *NewEHPadBB = nullptr;
@@ -2116,10 +2063,13 @@ static void findUnwindDestinations(
       break;
     } else if (isa<CleanupPadInst>(Pad)) {
       // Stop on cleanup pads. Cleanups are always funclet entries for all known
-      // personalities.
+      // personalities except Wasm. And in Wasm this becomes a catch_all(_ref),
+      // which always catches an exception.
       UnwindDests.emplace_back(FuncInfo.getMBB(EHPadBB), Prob);
       UnwindDests.back().first->setIsEHScopeEntry();
-      UnwindDests.back().first->setIsEHFuncletEntry();
+      // In Wasm, EH scopes are not funclets
+      if (!IsWasmCXX)
+        UnwindDests.back().first->setIsEHFuncletEntry();
       break;
     } else if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(Pad)) {
       // Add the catchpad handlers to the possible destinations.
@@ -12039,7 +11989,7 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
           assert(isa<AllocaInst>(PHIOp) &&
                  FuncInfo.StaticAllocaMap.count(cast<AllocaInst>(PHIOp)) &&
                  "Didn't codegen value into a register!??");
-          Reg = FuncInfo.CreateRegs(PHIOp);
+          Reg = FuncInfo.CreateRegs(&PN);
           CopyValueToVirtualRegister(PHIOp, Reg);
         }
       }
