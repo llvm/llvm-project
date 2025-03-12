@@ -25,9 +25,6 @@
 /// This pass also adds register allocation hints to COPY.
 /// The hints will be post-processed by SIRegisterInfo::getRegAllocationHints.
 /// When using True16, we often see COPY moving a 16-bit value between a VGPR_32
-/// This pass also adds register allocation hints to COPY.
-/// The hints will be post-processed by SIRegisterInfo::getRegAllocationHints.
-/// When using True16, we often see COPY moving a 16-bit value between a VGPR_32
 /// and a VGPR_16. If we use the VGPR_16 that corresponds to the lo16 bits of
 /// the VGPR_32, the COPY can be completely eliminated.
 ///
