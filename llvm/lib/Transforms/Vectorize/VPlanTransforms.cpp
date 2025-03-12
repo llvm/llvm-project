@@ -2184,6 +2184,10 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
         VPValue *NewAddr = GetNewAddr(L->getAddr());
         return new VPWidenLoadEVLRecipe(*L, NewAddr, EVL, NewMask);
       })
+      .Case<VPWidenFFLoadRecipe>([&](VPWidenFFLoadRecipe *L) {
+        VPValue *NewMask = GetNewMask(L->getMask());
+        return new VPWidenFFLoadEVLRecipe(*L, EVL, NewMask);
+      })
       .Case<VPWidenStoreRecipe>([&](VPWidenStoreRecipe *S) {
         VPValue *NewMask = GetNewMask(S->getMask());
         VPValue *NewAddr = GetNewAddr(S->getAddr());
@@ -2212,7 +2216,7 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
 }
 
 /// Replace recipes with their EVL variants.
-static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
+static VPValue *transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   VPTypeAnalysis TypeInfo(Plan);
   VPValue *AllOneMask = Plan.getTrue();
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
@@ -2222,9 +2226,6 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
                 IsaPred<VPVectorEndPointerRecipe, VPScalarIVStepsRecipe,
                         VPWidenIntOrFpInductionRecipe>) &&
          "User of VF that we can't transform to EVL.");
-  Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
-    return isa<VPWidenIntOrFpInductionRecipe, VPScalarIVStepsRecipe>(U);
-  });
 
   assert(all_of(Plan.getVFxUF().users(),
                 [&Plan](VPUser *U) {
@@ -2247,6 +2248,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
+  VPInstruction *PrevEVL = nullptr;
   bool ContainsFORs =
       any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
   if (ContainsFORs) {
@@ -2259,8 +2261,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
         TypeInfo.inferScalarType(MaxEVL), DebugLoc());
 
     Builder.setInsertPoint(Header, Header->getFirstNonPhi());
-    VPValue *PrevEVL =
-        Builder.createScalarPhi({MaxEVL, &EVL}, DebugLoc(), "prev.evl");
+    // Postpone backedge insertion until LastEVL is known.
+    PrevEVL = Builder.createScalarPhi({MaxEVL}, DebugLoc(), "prev.evl");
 
     for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
              vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry()))) {
@@ -2285,7 +2287,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
   VPValue *HeaderMask = findHeaderMask(Plan);
   if (!HeaderMask)
-    return;
+    return &EVL;
 
   // Replace header masks with a mask equivalent to predicating by EVL:
   //
@@ -2313,15 +2315,21 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
       continue;
 
     [[maybe_unused]] unsigned NumDefVal = EVLRecipe->getNumDefinedValues();
-    assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
-           "New recipe must define the same number of values as the "
-           "original.");
-    assert(NumDefVal <= 1 &&
-           "Only supports recipes with a single definition or without users.");
+    if (!isa<VPWidenFFLoadEVLRecipe>(EVLRecipe)) {
+      assert(NumDefVal == CurRecipe->getNumDefinedValues() &&
+             "New recipe must define the same number of values as the "
+             "original.");
+      assert(
+          NumDefVal <= 1 &&
+          "Only supports recipes with a single definition or without users.");
+    }
     EVLRecipe->insertBefore(CurRecipe);
     if (isa<VPSingleDefRecipe, VPWidenLoadEVLRecipe>(EVLRecipe)) {
       VPValue *CurVPV = CurRecipe->getVPSingleValue();
       CurVPV->replaceAllUsesWith(EVLRecipe->getVPSingleValue());
+    } else if (isa<VPWidenFFLoadEVLRecipe>(EVLRecipe)) {
+      VPValue *CurVPV = CurRecipe->getVPSingleValue();
+      CurVPV->replaceAllUsesWith(EVLRecipe->getVPValue(0));
     }
     ToErase.push_back(CurRecipe);
   }
@@ -2329,12 +2337,44 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
   if (EVLMask->getNumUsers() == 0)
     ToErase.push_back(EVLMask->getDefiningRecipe());
 
+  // Find LastEVL
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  VPValue *LastEVL = nullptr;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &CurRecipe : *VPBB) {
+      auto *VPI = dyn_cast<VPInstruction>(&CurRecipe);
+      if (VPI && (VPI->getOpcode() == VPInstruction::ExplicitVectorLength)) {
+        assert((LastEVL == nullptr) && "EVL should be set only once");
+        LastEVL = VPI;
+        continue;
+      }
+      if (!LastEVL)
+        continue;
+      if (isa<VPWidenFFLoadEVLRecipe>(CurRecipe)) {
+        LastEVL = CurRecipe.getVPValue(1);
+      }
+    }
+  }
+
+  Plan.getVF().replaceUsesWithIf(LastEVL, [](VPUser &U, unsigned Idx) {
+    return isa<VPWidenIntOrFpInductionRecipe>(U);
+  });
+  Plan.getVF().replaceUsesWithIf(&EVL, [](VPUser &U, unsigned Idx) {
+    return isa<VPScalarIVStepsRecipe>(U);
+  });
+
+  if (PrevEVL)
+    PrevEVL->addOperand(LastEVL);
+
   for (VPRecipeBase *R : reverse(ToErase)) {
     SmallVector<VPValue *> PossiblyDead(R->operands());
     R->eraseFromParent();
     for (VPValue *Op : PossiblyDead)
       recursivelyDeleteDeadRecipes(Op);
   }
+  return LastEVL;
 }
 
 /// Add a VPEVLBasedIVPHIRecipe and related recipes to \p Plan and
@@ -2408,10 +2448,11 @@ void VPlanTransforms::addExplicitVectorLength(
   auto *VPEVL = Builder.createNaryOp(VPInstruction::ExplicitVectorLength, AVL,
                                      DebugLoc());
 
+  VPValue *OpVPEVL = transformRecipestoEVLRecipes(Plan, *VPEVL);
+
   auto *CanonicalIVIncrement =
       cast<VPInstruction>(CanonicalIVPHI->getBackedgeValue());
   Builder.setInsertPoint(CanonicalIVIncrement);
-  VPValue *OpVPEVL = VPEVL;
 
   auto *I32Ty = Type::getInt32Ty(Plan.getContext());
   OpVPEVL = Builder.createScalarZExtOrTrunc(
@@ -2428,8 +2469,6 @@ void VPlanTransforms::addExplicitVectorLength(
       Instruction::Sub, {AVLPhi, OpVPEVL}, {/*hasNUW=*/true, /*hasNSW=*/false},
       DebugLoc::getCompilerGenerated(), "avl.next");
   AVLPhi->addOperand(NextAVL);
-
-  transformRecipestoEVLRecipes(Plan, *VPEVL);
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.

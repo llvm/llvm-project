@@ -402,6 +402,10 @@ static cl::opt<bool> EnableEarlyExitVectorization(
     cl::desc(
         "Enable vectorization of early exit loops with uncountable exits."));
 
+static cl::opt<bool> EnableSpeculativeLoads(
+    "enable-speculative-load", cl::init(false), cl::Hidden,
+    cl::desc("Enable vectorization of loops with speculative loads."));
+
 // Likelyhood of bypassing the vectorized loop because there are zero trips left
 // after prolog. See `emitIterationCountCheck`.
 static constexpr uint32_t MinItersBypassWeights[] = {1, 127};
@@ -1364,6 +1368,9 @@ public:
 
     if (ChosenTailFoldingStyle->first != TailFoldingStyle::DataWithEVL &&
         ChosenTailFoldingStyle->second != TailFoldingStyle::DataWithEVL)
+      return;
+    // Do not override EVL styles for speculative loads.
+    if (!Legal->getSpeculativeLoads().empty())
       return;
     // Override EVL styles if needed.
     // FIXME: Investigate opportunity for fixed vector factor.
@@ -4164,6 +4171,8 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       case VPDef::VPWidenPointerInductionSC:
       case VPDef::VPReductionPHISC:
       case VPDef::VPInterleaveSC:
+      case VPDef::VPWidenFFLoadEVLSC:
+      case VPDef::VPWidenFFLoadSC:
       case VPDef::VPWidenLoadEVLSC:
       case VPDef::VPWidenLoadSC:
       case VPDef::VPWidenStoreEVLSC:
@@ -7749,6 +7758,12 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     Builder.insert(VectorPtr);
     Ptr = VectorPtr;
   }
+  if (Legal->getSpeculativeLoads().contains(I)) {
+    auto *Load = dyn_cast<LoadInst>(I);
+    return new VPWidenFFLoadRecipe(*Load, Ptr, Mask, VPIRMetadata(*Load, LVer),
+                                   I->getDebugLoc());
+  }
+
   if (LoadInst *Load = dyn_cast<LoadInst>(I))
     return new VPWidenLoadRecipe(*Load, Ptr, Mask, Consecutive, Reverse,
                                  VPIRMetadata(*Load, LVer), I->getDebugLoc());
@@ -9982,7 +9997,26 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     return false;
   }
 
-  if (!LVL.getSpeculativeLoads().empty()) {
+  if (EnableSpeculativeLoads) {
+    // VPWidenFFLoadEVLRecipe is currently the only concrete recipe that
+    // generates speculative load intrinsics. Since it relies on the EVL
+    // transform, speculative loads are only supported when tail-folding with
+    // EVL is enabled.
+    if (ForceTailFoldingStyle != TailFoldingStyle::DataWithEVL ||
+        PreferPredicateOverEpilogue !=
+            PreferPredicateTy::PredicateOrDontVectorize) {
+      reportVectorizationFailure("Auto-vectorization of loops with speculative "
+                                 "load is not enabled",
+                                 "SpeculativeLoadsDisabled", ORE, L);
+      return false;
+    }
+    if (LVL.getSpeculativeLoads().size() > 1) {
+      reportVectorizationFailure("Auto-vectorization of loops with more than 1 "
+                                 "speculative load is not enabled",
+                                 "MoreThanOneSpeculativeLoads", ORE, L);
+      return false;
+    }
+  } else if (!LVL.getSpeculativeLoads().empty()) {
     reportVectorizationFailure("Auto-vectorization of loops with speculative "
                                "load is not supported",
                                "SpeculativeLoadsNotSupported", ORE, L);
