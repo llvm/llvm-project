@@ -1072,11 +1072,12 @@ define i128 @v_mul_i128(i128 %num, i128 %den) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_mov_b32_e32 v2, v11
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[1:2], vcc_lo, v8, v5, v[1:2]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[1:2], s0, v9, v4, v[1:2]
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v7, s0, v12, v7, s0
 ; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v6, vcc_lo, v7, v6, vcc_lo
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[5:6], null, v10, v5, v[6:7]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -2435,33 +2436,39 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[18:19], null, v16, v12, 0
 ; GFX12-NEXT:    v_mul_lo_u32 v30, v17, v14
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v17, v13, v[0:1]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[18:19], s0, v17, v11, v[18:19]
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_cndmask_b32_e64 v20, 0, 1, s0
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v2, v12, v[0:1]
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[18:19], vcc_lo, v2, v10, v[18:19]
 ; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v22, vcc_lo, 0, v20, vcc_lo
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[20:21], null, v16, v10, 0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v3, v11, v[0:1]
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[18:19], vcc_lo, v3, v9, v[18:19]
 ; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v24, vcc_lo, 0, v22, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v4, v10, v[0:1]
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[18:19], vcc_lo, v4, v8, v[18:19]
 ; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v26, vcc_lo, 0, v24, vcc_lo
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], null, v5, v9, v[0:1]
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[22:23], null, v6, v8, v[0:1]
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], s0, v17, v9, v[20:21]
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_cndmask_b32_e64 v25, 0, 1, s0
 ; GFX12-NEXT:    v_mov_b32_e32 v20, v22
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[21:22], vcc_lo, v2, v8, v[0:1]
 ; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v29, vcc_lo, 0, v25, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[0:1], s0, v16, v13, v[19:20]
 ; GFX12-NEXT:    v_mov_b32_e32 v19, v22
 ; GFX12-NEXT:    v_mul_lo_u32 v22, v16, v15
@@ -2483,6 +2490,7 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, s2, 0, v6, s2
 ; GFX12-NEXT:    v_mov_b32_e32 v14, v21
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[1:2], s2, v2, v9, v[11:12]
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v6, s2, 0, v6, s2
@@ -2496,6 +2504,7 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[5:6], s4, v5, v8, v[10:11]
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[1:2], s5, v17, v8, v[12:13]
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_3) | instid1(VALU_DEP_4)
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v3, s5, v9, v3, s5
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v4, s5, v29, v4, s5
@@ -2512,9 +2521,10 @@ define i256 @v_mul_i256(i256 %num, i256 %den) {
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v9, s2, v9, v25, s3
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v9, s1, v9, v20, s1
 ; GFX12-NEXT:    s_wait_alu 0xfffd
-; GFX12-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, v9, v28, vcc_lo
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, v9, v28, vcc_lo
 ; GFX12-NEXT:    v_add_co_ci_u32_e64 v9, vcc_lo, v9, v27, s0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[7:8], null, v7, v8, v[9:10]
 ; GFX12-NEXT:    s_wait_alu 0xf1fd
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]

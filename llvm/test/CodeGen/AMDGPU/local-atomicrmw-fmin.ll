@@ -6361,6 +6361,7 @@ define void @local_atomic_fmin_noret_v2bf16(ptr addrspace(3) %ptr, <2 x bfloat> 
 ; GFX12-NEXT:    v_add3_u32 v6, v6, v4, 0x7fff
 ; GFX12-NEXT:    v_cmp_u_f32_e64 s0, v4, v4
 ; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_cndmask_b32_e64 v4, v6, v8, s0
@@ -6725,6 +6726,7 @@ define void @local_atomic_fmin_noret_v2bf16__ofset(ptr addrspace(3) %ptr, <2 x b
 ; GFX12-NEXT:    v_add3_u32 v6, v6, v4, 0x7fff
 ; GFX12-NEXT:    v_cmp_u_f32_e64 s0, v4, v4
 ; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_cndmask_b32_e32 v5, v7, v9, vcc_lo
 ; GFX12-NEXT:    s_wait_alu 0xf1ff
 ; GFX12-NEXT:    v_cndmask_b32_e64 v4, v6, v8, s0
