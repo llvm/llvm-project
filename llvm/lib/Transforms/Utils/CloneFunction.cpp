@@ -147,8 +147,10 @@ void llvm::CloneFunctionAttributesInto(Function *NewFunc,
 DISubprogram *llvm::CollectDebugInfoForCloning(const Function &F,
                                                CloneFunctionChangeType Changes,
                                                DebugInfoFinder &DIFinder) {
-  // CloneModule takes care of cloning debug info.
-  if (Changes == CloneFunctionChangeType::ClonedModule)
+  // CloneModule takes care of cloning debug info for ClonedModule. Cloning into
+  // DifferentModule is taken care of separately in ClonedFunctionInto as part
+  // of llvm.dbg.cu update.
+  if (Changes >= CloneFunctionChangeType::DifferentModule)
     return nullptr;
 
   DISubprogram *SPClonedWithinModule = nullptr;
@@ -362,6 +364,10 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   SmallPtrSet<const void *, 8> Visited;
   for (auto *Operand : NMD->operands())
     Visited.insert(Operand);
+
+  // Collect and clone all the compile units referenced from the instructions in
+  // the function (e.g. as a scope).
+  collectDebugInfoFromInstructions(*OldFunc, DIFinder);
   for (auto *Unit : DIFinder.compile_units()) {
     MDNode *MappedUnit =
         MapMetadata(Unit, VMap, RF_None, TypeMapper, Materializer);
