@@ -476,8 +476,8 @@ static void assignCalleeSavedSpillSlots(MachineFunction &F,
     // Now that we know which registers need to be saved and restored, allocate
     // stack slots for them.
     for (auto &CS : CSI) {
-      // If the target has spilled this register to another register, we don't
-      // need to allocate a stack slot.
+      // If the target has spilled this register to another register or already
+      // handled it , we don't need to allocate a stack slot.
       if (CS.isSpilledToReg() || CS.isHandledByTarget())
         continue;
 

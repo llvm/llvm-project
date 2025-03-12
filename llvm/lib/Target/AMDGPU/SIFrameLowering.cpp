@@ -1696,7 +1696,6 @@ void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
 
 static void assignSlotsUsingVGPRBlocks(MachineFunction &MF,
                                        const GCNSubtarget &ST,
-                                       const TargetRegisterInfo *TRI,
                                        std::vector<CalleeSavedInfo> &CSI,
                                        unsigned &MinCSFrameIndex,
                                        unsigned &MaxCSFrameIndex) {
@@ -1791,8 +1790,7 @@ bool SIFrameLowering::assignCalleeSavedSpillSlots(
   bool UseVGPRBlocks = ST.useVGPRBlockOpsForCSR();
 
   if (UseVGPRBlocks)
-    assignSlotsUsingVGPRBlocks(MF, ST, TRI, CSI, MinCSFrameIndex,
-                               MaxCSFrameIndex);
+    assignSlotsUsingVGPRBlocks(MF, ST, CSI, MinCSFrameIndex, MaxCSFrameIndex);
 
   return assignCalleeSavedSpillSlots(MF, TRI, CSI);
 }
