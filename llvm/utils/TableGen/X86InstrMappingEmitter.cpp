@@ -276,6 +276,9 @@ void X86InstrMappingEmitter::emitNFTransformTable(
     if (!isInteresting(Rec))
       continue;
     StringRef Name = Rec->getName();
+    if (Name.contains("_NF"))
+      continue;
+
     if (auto *NewRec = Name.consume_back("_ND")
                            ? Records.getDef(Name.str() + "_NF_ND")
                            : Records.getDef(Name.str() + "_NF")) {
