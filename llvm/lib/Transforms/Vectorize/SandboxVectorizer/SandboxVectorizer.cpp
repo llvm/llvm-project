@@ -11,13 +11,11 @@
 #include "llvm/IR/Module.h"
 #include "llvm/SandboxIR/Constant.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Debug.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizerPassBuilder.h"
 #include <regex>
 
 using namespace llvm;
-
-#define SV_NAME "sandbox-vectorizer"
-#define DEBUG_TYPE SV_NAME
 
 static cl::opt<bool>
     PrintPassPipeline("sbvec-print-pass-pipeline", cl::init(false), cl::Hidden,
@@ -119,13 +117,16 @@ bool SandboxVectorizerPass::runImpl(Function &LLVMF) {
 
   // If the target claims to have no vector registers early return.
   if (!TTI->getNumberOfRegisters(TTI->getRegisterClassForType(true))) {
-    LLVM_DEBUG(dbgs() << "SBVec: Target has no vector registers, return.\n");
+    LLVM_DEBUG(dbgs() << DEBUG_PREFIX
+                      << "Target has no vector registers, return.\n");
     return false;
   }
-  LLVM_DEBUG(dbgs() << "SBVec: Analyzing " << LLVMF.getName() << ".\n");
+  LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "Analyzing " << LLVMF.getName()
+                    << ".\n");
   // Early return if the attribute NoImplicitFloat is used.
   if (LLVMF.hasFnAttribute(Attribute::NoImplicitFloat)) {
-    LLVM_DEBUG(dbgs() << "SBVec: NoImplicitFloat attribute, return.\n");
+    LLVM_DEBUG(dbgs() << DEBUG_PREFIX
+                      << "NoImplicitFloat attribute, return.\n");
     return false;
   }
 

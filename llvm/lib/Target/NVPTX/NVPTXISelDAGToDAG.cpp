@@ -2197,11 +2197,11 @@ static SDValue selectBaseADDR(SDValue N, SelectionDAG *DAG) {
   if (N.getOpcode() == NVPTXISD::Wrapper)
     return N.getOperand(0);
 
-  // addrspacecast(MoveParam(arg_symbol) to addrspace(PARAM)) -> arg_symbol
+  // addrspacecast(Wrapper(arg_symbol) to addrspace(PARAM)) -> arg_symbol
   if (AddrSpaceCastSDNode *CastN = dyn_cast<AddrSpaceCastSDNode>(N))
     if (CastN->getSrcAddressSpace() == ADDRESS_SPACE_GENERIC &&
         CastN->getDestAddressSpace() == ADDRESS_SPACE_PARAM &&
-        CastN->getOperand(0).getOpcode() == NVPTXISD::MoveParam)
+        CastN->getOperand(0).getOpcode() == NVPTXISD::Wrapper)
       return selectBaseADDR(CastN->getOperand(0).getOperand(0), DAG);
 
   if (auto *FIN = dyn_cast<FrameIndexSDNode>(N))

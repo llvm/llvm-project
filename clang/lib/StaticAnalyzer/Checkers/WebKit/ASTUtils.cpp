@@ -43,6 +43,10 @@ bool tryToFindPtrOrigin(
         break;
       }
     }
+    if (auto *TempExpr = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
+      if (isSafePtrType(TempExpr->getTypeAsWritten()))
+        return callback(TempExpr, true);
+    }
     if (auto *POE = dyn_cast<PseudoObjectExpr>(E)) {
       if (auto *RF = POE->getResultExpr()) {
         E = RF;
@@ -87,9 +91,17 @@ bool tryToFindPtrOrigin(
       }
 
       if (auto *operatorCall = dyn_cast<CXXOperatorCallExpr>(E)) {
-        if (operatorCall->getNumArgs() == 1) {
-          E = operatorCall->getArg(0);
-          continue;
+        if (auto *Callee = operatorCall->getDirectCallee()) {
+          auto ClsName = safeGetName(Callee->getParent());
+          if (isRefType(ClsName) || isCheckedPtr(ClsName) ||
+              isRetainPtr(ClsName) || ClsName == "unique_ptr" ||
+              ClsName == "UniqueRef" || ClsName == "WeakPtr" ||
+              ClsName == "WeakRef") {
+            if (operatorCall->getNumArgs() == 1) {
+              E = operatorCall->getArg(0);
+              continue;
+            }
+          }
         }
       }
 
@@ -140,8 +152,13 @@ bool tryToFindPtrOrigin(
 bool isASafeCallArg(const Expr *E) {
   assert(E);
   if (auto *Ref = dyn_cast<DeclRefExpr>(E)) {
-    if (auto *D = dyn_cast_or_null<VarDecl>(Ref->getFoundDecl())) {
+    auto *FoundDecl = Ref->getFoundDecl();
+    if (auto *D = dyn_cast_or_null<VarDecl>(FoundDecl)) {
       if (isa<ParmVarDecl>(D) || D->isLocalVarDecl())
+        return true;
+    } else if (auto *BD = dyn_cast_or_null<BindingDecl>(FoundDecl)) {
+      VarDecl *VD = BD->getHoldingVar();
+      if (VD && (isa<ParmVarDecl>(VD) || VD->isLocalVarDecl()))
         return true;
     }
   }
@@ -206,7 +223,7 @@ bool EnsureFunctionAnalysis::isACallToEnsureFn(const clang::Expr *E) const {
   if (!Callee)
     return false;
   auto *Body = Callee->getBody();
-  if (!Body)
+  if (!Body || Callee->isVirtualAsWritten())
     return false;
   auto [CacheIt, IsNew] = Cache.insert(std::make_pair(Callee, false));
   if (IsNew)

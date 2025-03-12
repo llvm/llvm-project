@@ -4854,6 +4854,10 @@ bool X86InstrInfo::analyzeCompare(const MachineInstr &MI, Register &SrcReg,
   case X86::CMP32ri:
   case X86::CMP16ri:
   case X86::CMP8ri:
+  case X86::CCMP64ri32:
+  case X86::CCMP32ri:
+  case X86::CCMP16ri:
+  case X86::CCMP8ri:
     SrcReg = MI.getOperand(0).getReg();
     SrcReg2 = 0;
     if (MI.getOperand(1).isImm()) {
@@ -4950,6 +4954,18 @@ bool X86InstrInfo::isRedundantFlagInstr(const MachineInstr &FlagI,
       return true;
     }
     return false;
+  }
+  case X86::CCMP64ri32:
+  case X86::CCMP32ri:
+  case X86::CCMP16ri:
+  case X86::CCMP8ri: {
+    // The CCMP instruction should not be optimized if the scc/dfv in it is not
+    // same as the one in previous CCMP instruction.
+    if ((FlagI.getOpcode() != OI.getOpcode()) ||
+        (OI.getOperand(2).getImm() != FlagI.getOperand(2).getImm()) ||
+        (OI.getOperand(3).getImm() != FlagI.getOperand(3).getImm()))
+      return false;
+    [[fallthrough]];
   }
   case X86::CMP64ri32:
   case X86::CMP32ri:
@@ -5352,10 +5368,12 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   MachineInstr *MI = nullptr;
   MachineInstr *Sub = nullptr;
   MachineInstr *Movr0Inst = nullptr;
+  SmallVector<std::pair<MachineInstr *, unsigned>, 4> InstsToUpdate;
   bool NoSignFlag = false;
   bool ClearsOverflowFlag = false;
   bool ShouldUpdateCC = false;
   bool IsSwapped = false;
+  bool HasNF = Subtarget.hasNF();
   unsigned OpNo = 0;
   X86::CondCode NewCC = X86::COND_INVALID;
   int64_t ImmDelta = 0;
@@ -5438,6 +5456,16 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         if (!Movr0Inst && Inst.getOpcode() == X86::MOV32r0 &&
             Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
           Movr0Inst = &Inst;
+          continue;
+        }
+
+        // Try to replace non-NF with NF instructions.
+        if (HasNF && Inst.registerDefIsDead(X86::EFLAGS, TRI)) {
+          unsigned NewOp = X86::getNFVariant(Inst.getOpcode());
+          if (!NewOp)
+            return false;
+
+          InstsToUpdate.push_back(std::make_pair(&Inst, NewOp));
           continue;
         }
 
@@ -5635,6 +5663,12 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     }
     if (InsertI == InsertE)
       return false;
+  }
+
+  // Replace non-NF with NF instructions.
+  for (auto &Inst : InstsToUpdate) {
+    Inst.first->setDesc(get(Inst.second));
+    Inst.first->removeOperand(Inst.first->getNumOperands() - 1);
   }
 
   // Make sure Sub instruction defines EFLAGS and mark the def live.
