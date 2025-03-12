@@ -259,7 +259,7 @@ main_body:
   %tex.vec = extractvalue {<2 x half>, i32} %tex, 0
   %tex.err = extractvalue {<2 x half>, i32} %tex, 1
   %tex.vecf = bitcast <2 x half> %tex.vec to float
-  %r.0 = insertelement <2 x float> undef, float %tex.vecf, i32 0
+  %r.0 = insertelement <2 x float> poison, float %tex.vecf, i32 0
   %tex.errf = bitcast i32 %tex.err to float
   %r = insertelement <2 x float> %r.0, float %tex.errf, i32 1
   ret <2 x float> %r
@@ -415,7 +415,7 @@ main_body:
   %tex.vecf = bitcast <4 x half> %tex.vec_wide to <2 x float>
   %tex.vecf.0 = extractelement <2 x float> %tex.vecf, i32 0
   %tex.vecf.1 = extractelement <2 x float> %tex.vecf, i32 1
-  %r.0 = insertelement <4 x float> undef, float %tex.vecf.0, i32 0
+  %r.0 = insertelement <4 x float> poison, float %tex.vecf.0, i32 0
   %r.1 = insertelement <4 x float> %r.0, float %tex.vecf.1, i32 1
   %tex.errf = bitcast i32 %tex.err to float
   %r = insertelement <4 x float> %r.1, float %tex.errf, i32 2
@@ -571,7 +571,7 @@ main_body:
   %tex.vecf = bitcast <4 x half> %tex.vec to <2 x float>
   %tex.vecf.0 = extractelement <2 x float> %tex.vecf, i32 0
   %tex.vecf.1 = extractelement <2 x float> %tex.vecf, i32 1
-  %r.0 = insertelement <4 x float> undef, float %tex.vecf.0, i32 0
+  %r.0 = insertelement <4 x float> poison, float %tex.vecf.0, i32 0
   %r.1 = insertelement <4 x float> %r.0, float %tex.vecf.1, i32 1
   %tex.errf = bitcast i32 %tex.err to float
   %r = insertelement <4 x float> %r.1, float %tex.errf, i32 2

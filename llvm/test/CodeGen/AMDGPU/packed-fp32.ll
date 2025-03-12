@@ -77,7 +77,7 @@ define amdgpu_kernel void @fadd_v2_v_v_splat(ptr addrspace(1) %a) {
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
   %fid = bitcast i32 %id to float
-  %tmp1 = insertelement <2 x float> undef, float %fid, i64 0
+  %tmp1 = insertelement <2 x float> poison, float %fid, i64 0
   %k = insertelement <2 x float> %tmp1, float %fid, i64 1
   %add = fadd <2 x float> %load, %k
   store <2 x float> %add, ptr addrspace(1) %gep, align 8
@@ -152,7 +152,7 @@ define amdgpu_kernel void @fadd_v2_v_fneg(ptr addrspace(1) %a, float %x) {
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
   %fneg = fsub float -0.0, %x
-  %tmp1 = insertelement <2 x float> undef, float %fneg, i64 0
+  %tmp1 = insertelement <2 x float> poison, float %fneg, i64 0
   %k = insertelement <2 x float> %tmp1, float %fneg, i64 1
   %add = fadd <2 x float> %load, %k
   store <2 x float> %add, ptr addrspace(1) %gep, align 8
@@ -169,7 +169,7 @@ define amdgpu_kernel void @fadd_v2_v_fneg_lo(ptr addrspace(1) %a, float %x) {
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
   %fneg = fsub float -0.0, %x
-  %tmp1 = insertelement <2 x float> undef, float %fneg, i64 0
+  %tmp1 = insertelement <2 x float> poison, float %fneg, i64 0
   %k = insertelement <2 x float> %tmp1, float %x, i64 1
   %add = fadd <2 x float> %load, %k
   store <2 x float> %add, ptr addrspace(1) %gep, align 8
@@ -186,7 +186,7 @@ define amdgpu_kernel void @fadd_v2_v_fneg_hi(ptr addrspace(1) %a, float %x) {
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
   %fneg = fsub float -0.0, %x
-  %tmp1 = insertelement <2 x float> undef, float %x, i64 0
+  %tmp1 = insertelement <2 x float> poison, float %x, i64 0
   %k = insertelement <2 x float> %tmp1, float %fneg, i64 1
   %add = fadd <2 x float> %load, %k
   store <2 x float> %add, ptr addrspace(1) %gep, align 8
@@ -203,7 +203,7 @@ define amdgpu_kernel void @fadd_v2_v_fneg_lo2(ptr addrspace(1) %a, float %x, flo
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
   %fneg = fsub float -0.0, %x
-  %tmp1 = insertelement <2 x float> undef, float %fneg, i64 0
+  %tmp1 = insertelement <2 x float> poison, float %fneg, i64 0
   %k = insertelement <2 x float> %tmp1, float %y, i64 1
   %add = fadd <2 x float> %load, %k
   store <2 x float> %add, ptr addrspace(1) %gep, align 8
@@ -220,7 +220,7 @@ define amdgpu_kernel void @fadd_v2_v_fneg_hi2(ptr addrspace(1) %a, float %x, flo
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
   %fneg = fsub float -0.0, %x
-  %tmp1 = insertelement <2 x float> undef, float %y, i64 0
+  %tmp1 = insertelement <2 x float> poison, float %y, i64 0
   %k = insertelement <2 x float> %tmp1, float %fneg, i64 1
   %add = fadd <2 x float> %load, %k
   store <2 x float> %add, ptr addrspace(1) %gep, align 8
@@ -298,7 +298,7 @@ define amdgpu_kernel void @fmul_v2_v_v_splat(ptr addrspace(1) %a) {
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
   %fid = bitcast i32 %id to float
-  %tmp1 = insertelement <2 x float> undef, float %fid, i64 0
+  %tmp1 = insertelement <2 x float> poison, float %fid, i64 0
   %k = insertelement <2 x float> %tmp1, float %fid, i64 1
   %mul = fmul <2 x float> %load, %k
   store <2 x float> %mul, ptr addrspace(1) %gep, align 8
@@ -342,7 +342,7 @@ define amdgpu_kernel void @fmul_v2_v_fneg(ptr addrspace(1) %a, float %x) {
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
   %fneg = fsub float -0.0, %x
-  %tmp1 = insertelement <2 x float> undef, float %fneg, i64 0
+  %tmp1 = insertelement <2 x float> poison, float %fneg, i64 0
   %k = insertelement <2 x float> %tmp1, float %fneg, i64 1
   %mul = fmul <2 x float> %load, %k
   store <2 x float> %mul, ptr addrspace(1) %gep, align 8
@@ -422,7 +422,7 @@ define amdgpu_kernel void @fma_v2_v_v_splat(ptr addrspace(1) %a) {
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
   %fid = bitcast i32 %id to float
-  %tmp1 = insertelement <2 x float> undef, float %fid, i64 0
+  %tmp1 = insertelement <2 x float> poison, float %fid, i64 0
   %k = insertelement <2 x float> %tmp1, float %fid, i64 1
   %fma = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %load, <2 x float> %k, <2 x float> %k)
   store <2 x float> %fma, ptr addrspace(1) %gep, align 8
@@ -468,7 +468,7 @@ define amdgpu_kernel void @fma_v2_v_fneg(ptr addrspace(1) %a, float %x) {
   %gep = getelementptr inbounds <2 x float>, ptr addrspace(1) %a, i32 %id
   %load = load <2 x float>, ptr addrspace(1) %gep, align 8
   %fneg = fsub float -0.0, %x
-  %tmp1 = insertelement <2 x float> undef, float %fneg, i64 0
+  %tmp1 = insertelement <2 x float> poison, float %fneg, i64 0
   %k = insertelement <2 x float> %tmp1, float %fneg, i64 1
   %fma = tail call <2 x float> @llvm.fma.v2f32(<2 x float> %load, <2 x float> %k, <2 x float> %k)
   store <2 x float> %fma, ptr addrspace(1) %gep, align 8
@@ -485,7 +485,7 @@ bb:
   %scalar0 = load volatile float, ptr addrspace(3) %arg2, align 4
   %neg.scalar0 = fsub float -0.0, %scalar0
 
-  %neg.scalar0.vec = insertelement <2 x float> undef, float %neg.scalar0, i32 0
+  %neg.scalar0.vec = insertelement <2 x float> poison, float %neg.scalar0, i32 0
   %neg.scalar0.broadcast = shufflevector <2 x float> %neg.scalar0.vec, <2 x float> undef, <2 x i32> zeroinitializer
 
   %result = fadd <2 x float> %vec0, %neg.scalar0.broadcast
@@ -508,7 +508,7 @@ bb:
   %scalar0 = load volatile float, ptr addrspace(3) %arg2, align 4
   %scalar1 = load volatile float, ptr addrspace(3) %arg2.gep, align 4
 
-  %vec.ins0 = insertelement <2 x float> undef, float %scalar0, i32 0
+  %vec.ins0 = insertelement <2 x float> poison, float %scalar0, i32 0
   %vec2 = insertelement <2 x float> %vec.ins0, float %scalar1, i32 1
   %neg.vec2 = fsub <2 x float> <float -0.0, float -0.0>, %vec2
 

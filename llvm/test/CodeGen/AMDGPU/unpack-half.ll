@@ -13,7 +13,7 @@ define amdgpu_gs void @main(i32 inreg %arg) local_unnamed_addr #0 {
   %tmp = load volatile float, ptr addrspace(1) undef
   %tmp1 = bitcast float %tmp to i32
   %im0.i = lshr i32 %tmp1, 16
-  %tmp2 = insertelement <2 x i32> undef, i32 %im0.i, i32 1
+  %tmp2 = insertelement <2 x i32> poison, i32 %im0.i, i32 1
   %tmp3 = trunc <2 x i32> %tmp2 to <2 x i16>
   %tmp4 = bitcast <2 x i16> %tmp3 to <2 x half>
   %tmp5 = fpext <2 x half> %tmp4 to <2 x float>
