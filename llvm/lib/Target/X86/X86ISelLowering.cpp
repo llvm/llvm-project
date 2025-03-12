@@ -39642,9 +39642,10 @@ static bool matchBinaryPermuteShuffle(
 }
 
 static SDValue combineX86ShuffleChainWithExtract(
-    ArrayRef<SDValue> Inputs, SDValue Root, ArrayRef<int> BaseMask, int Depth,
-    ArrayRef<const SDNode *> SrcNodes, bool AllowVariableCrossLaneMask,
-    bool AllowVariablePerLaneMask, bool IsMaskedShuffle, SelectionDAG &DAG,
+    ArrayRef<SDValue> Inputs, unsigned RootOpcode, MVT RootVT,
+    ArrayRef<int> BaseMask, int Depth, ArrayRef<const SDNode *> SrcNodes,
+    bool AllowVariableCrossLaneMask, bool AllowVariablePerLaneMask,
+    bool IsMaskedShuffle, SelectionDAG &DAG, const SDLoc &DL,
     const X86Subtarget &Subtarget);
 
 /// Combine an arbitrary chain of shuffles into a single instruction if
@@ -39657,16 +39658,14 @@ static SDValue combineX86ShuffleChainWithExtract(
 /// for this operation, or into a PSHUFB instruction which is a fully general
 /// instruction but should only be used to replace chains over a certain depth.
 static SDValue combineX86ShuffleChain(
-    ArrayRef<SDValue> Inputs, SDValue Root, ArrayRef<int> BaseMask, int Depth,
-    ArrayRef<const SDNode *> SrcNodes, bool AllowVariableCrossLaneMask,
-    bool AllowVariablePerLaneMask, bool IsMaskedShuffle, SelectionDAG &DAG,
-    const SDLoc &DL, const X86Subtarget &Subtarget) {
+    ArrayRef<SDValue> Inputs, unsigned RootOpc, MVT RootVT,
+    ArrayRef<int> BaseMask, int Depth, ArrayRef<const SDNode *> SrcNodes,
+    bool AllowVariableCrossLaneMask, bool AllowVariablePerLaneMask,
+    bool IsMaskedShuffle, SelectionDAG &DAG, const SDLoc &DL,
+    const X86Subtarget &Subtarget) {
   assert(!BaseMask.empty() && "Cannot combine an empty shuffle mask!");
   assert((Inputs.size() == 1 || Inputs.size() == 2) &&
          "Unexpected number of shuffle inputs!");
-
-  unsigned RootOpc = Root.getOpcode();
-  MVT RootVT = Root.getSimpleValueType();
   unsigned RootSizeInBits = RootVT.getSizeInBits();
   unsigned NumRootElts = RootVT.getVectorNumElements();
 
@@ -40194,8 +40193,9 @@ static SDValue combineX86ShuffleChain(
     // If that failed and either input is extracted then try to combine as a
     // shuffle with the larger type.
     if (SDValue WideShuffle = combineX86ShuffleChainWithExtract(
-            Inputs, Root, BaseMask, Depth, SrcNodes, AllowVariableCrossLaneMask,
-            AllowVariablePerLaneMask, IsMaskedShuffle, DAG, Subtarget))
+            Inputs, RootOpc, RootVT, BaseMask, Depth, SrcNodes,
+            AllowVariableCrossLaneMask, AllowVariablePerLaneMask,
+            IsMaskedShuffle, DAG, DL, Subtarget))
       return WideShuffle;
 
     // If we have a dual input lane-crossing shuffle then lower to VPERMV3,
@@ -40366,8 +40366,9 @@ static SDValue combineX86ShuffleChain(
   // If that failed and either input is extracted then try to combine as a
   // shuffle with the larger type.
   if (SDValue WideShuffle = combineX86ShuffleChainWithExtract(
-          Inputs, Root, BaseMask, Depth, SrcNodes, AllowVariableCrossLaneMask,
-          AllowVariablePerLaneMask, IsMaskedShuffle, DAG, Subtarget))
+          Inputs, RootOpc, RootVT, BaseMask, Depth, SrcNodes,
+          AllowVariableCrossLaneMask, AllowVariablePerLaneMask, IsMaskedShuffle,
+          DAG, DL, Subtarget))
     return WideShuffle;
 
   // If we have a dual input shuffle then lower to VPERMV3,
@@ -40404,16 +40405,16 @@ static SDValue combineX86ShuffleChain(
 // -->
 // extract_subvector(shuffle(x,y,m2),0)
 static SDValue combineX86ShuffleChainWithExtract(
-    ArrayRef<SDValue> Inputs, SDValue Root, ArrayRef<int> BaseMask, int Depth,
-    ArrayRef<const SDNode *> SrcNodes, bool AllowVariableCrossLaneMask,
-    bool AllowVariablePerLaneMask, bool IsMaskedShuffle, SelectionDAG &DAG,
+    ArrayRef<SDValue> Inputs, unsigned RootOpcode, MVT RootVT,
+    ArrayRef<int> BaseMask, int Depth, ArrayRef<const SDNode *> SrcNodes,
+    bool AllowVariableCrossLaneMask, bool AllowVariablePerLaneMask,
+    bool IsMaskedShuffle, SelectionDAG &DAG, const SDLoc &DL,
     const X86Subtarget &Subtarget) {
   unsigned NumMaskElts = BaseMask.size();
   unsigned NumInputs = Inputs.size();
   if (NumInputs == 0)
     return SDValue();
 
-  EVT RootVT = Root.getValueType();
   unsigned RootSizeInBits = RootVT.getSizeInBits();
   unsigned RootEltSizeInBits = RootSizeInBits / NumMaskElts;
   assert((RootSizeInBits % NumMaskElts) == 0 && "Unexpected root shuffle mask");
@@ -40533,11 +40534,10 @@ static SDValue combineX86ShuffleChainWithExtract(
          "WideRootSize mismatch");
 
   if (SDValue WideShuffle = combineX86ShuffleChain(
-          WideInputs, WideRoot, WideMask, Depth, SrcNodes,
-          AllowVariableCrossLaneMask, AllowVariablePerLaneMask, IsMaskedShuffle,
-          DAG, SDLoc(WideRoot), Subtarget)) {
-    WideShuffle =
-        extractSubVector(WideShuffle, 0, DAG, SDLoc(Root), RootSizeInBits);
+          WideInputs, RootOpcode, WideRoot.getSimpleValueType(), WideMask,
+          Depth, SrcNodes, AllowVariableCrossLaneMask, AllowVariablePerLaneMask,
+          IsMaskedShuffle, DAG, SDLoc(WideRoot), Subtarget)) {
+    WideShuffle = extractSubVector(WideShuffle, 0, DAG, DL, RootSizeInBits);
     return DAG.getBitcast(RootVT, WideShuffle);
   }
 
@@ -41298,8 +41298,9 @@ static SDValue combineX86ShufflesRecursively(
 
     // Try to combine into a single shuffle instruction.
     if (SDValue Shuffle = combineX86ShuffleChain(
-            Ops, Root, Mask, Depth, CombinedNodes, AllowVariableCrossLaneMask,
-            AllowVariablePerLaneMask, IsMaskedShuffle, DAG, DL, Subtarget))
+            Ops, Root.getOpcode(), RootVT, Mask, Depth, CombinedNodes,
+            AllowVariableCrossLaneMask, AllowVariablePerLaneMask,
+            IsMaskedShuffle, DAG, DL, Subtarget))
       return Shuffle;
 
     // If all the operands come from the same larger vector, fallthrough and try
@@ -41317,8 +41318,9 @@ static SDValue combineX86ShufflesRecursively(
   // If that failed and any input is extracted then try to combine as a
   // shuffle with the larger type.
   return combineX86ShuffleChainWithExtract(
-      Ops, Root, Mask, Depth, CombinedNodes, AllowVariableCrossLaneMask,
-      AllowVariablePerLaneMask, IsMaskedShuffle, DAG, Subtarget);
+      Ops, Root.getOpcode(), RootVT, Mask, Depth, CombinedNodes,
+      AllowVariableCrossLaneMask, AllowVariablePerLaneMask, IsMaskedShuffle,
+      DAG, DL, Subtarget);
 }
 
 /// Helper entry wrapper to combineX86ShufflesRecursively.
