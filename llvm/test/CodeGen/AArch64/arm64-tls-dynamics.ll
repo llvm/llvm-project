@@ -3,6 +3,7 @@
 ; RUN: llc < %s -debug-entry-values -mtriple=arm64-none-linux-gnu -stop-after=machineverifier -relocation-model=pic -aarch64-elf-ldtls-generation=1 < %s
 
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -verify-machineinstrs -mattr=+read-tp-soft < %s | FileCheck --check-prefix=CHECK-TP-SOFT %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -aarch64-elf-ldtls-generation=1 -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-RELOC %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -verify-machineinstrs < %s | FileCheck --check-prefix=CHECK-NOLD %s
 ; RUN: llc -mtriple=arm64-none-linux-gnu -relocation-model=pic -filetype=obj < %s | llvm-objdump -r - | FileCheck --check-prefix=CHECK-NOLD-RELOC %s
@@ -27,6 +28,12 @@ define i32 @test_generaldynamic() {
 ; CHECK-NEXT: .tlsdesccall general_dynamic_var
 ; CHECK-NEXT: blr [[CALLEE]]
 
+; CHECK-TP-SOFT: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:general_dynamic_var
+; CHECK-TP-SOFT-NEXT: ldr [[CALLEE:x[0-9]+]], [x[[TLSDESC_HI]], :tlsdesc_lo12:general_dynamic_var]
+; CHECK-TP-SOFT-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_lo12:general_dynamic_var
+; CHECK-TP-SOFT-NEXT: .tlsdesccall general_dynamic_var
+; CHECK-TP-SOFT-NEXT: blr [[CALLEE]]
+
 ; CHECK-NOLD: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:general_dynamic_var
 ; CHECK-NOLD-NEXT: ldr [[CALLEE:x[0-9]+]], [x[[TLSDESC_HI]], :tlsdesc_lo12:general_dynamic_var]
 ; CHECK-NOLD-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_lo12:general_dynamic_var
@@ -36,6 +43,9 @@ define i32 @test_generaldynamic() {
 
 ; CHECK: mrs x[[TP:[0-9]+]], TPIDR_EL0
 ; CHECK: ldr w0, [x[[TP]], x0]
+; CHECK-TP-SOFT: mov x[[TMP:[0-9]+]], x0
+; CHECK-TP-SOFT: bl __aarch64_read_tp
+; CHECK-TP-SOFT: ldr w0, [x0, x[[TMP]]]
 ; CHECK-NOLD: mrs x[[TP:[0-9]+]], TPIDR_EL0
 ; CHECK-NOLD: ldr w0, [x[[TP]], x0]
 
@@ -62,8 +72,17 @@ define ptr @test_generaldynamic_addr() {
 ; CHECK-NEXT: .tlsdesccall general_dynamic_var
 ; CHECK-NEXT: blr [[CALLEE]]
 
+; CHECK-TP-SOFT: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:general_dynamic_var
+; CHECK-TP-SOFT-NEXT: ldr [[CALLEE:x[0-9]+]], [x[[TLSDESC_HI]], :tlsdesc_lo12:general_dynamic_var]
+; CHECK-TP-SOFT-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_lo12:general_dynamic_var
+; CHECK-TP-SOFT-NEXT: .tlsdesccall general_dynamic_var
+; CHECK-TP-SOFT-NEXT: blr [[CALLEE]]
+
 ; CHECK: mrs [[TP:x[0-9]+]], TPIDR_EL0
 ; CHECK: add x0, [[TP]], x0
+; CHECK-TP-SOFT: mov x[[TMP:[0-9]+]], x0
+; CHECK-TP-SOFT: bl __aarch64_read_tp
+; CHECK-TP-SOFT: add x0, x0, x[[TMP]]
 
 ; CHECK-RELOC: R_AARCH64_TLSDESC_ADR_PAGE21
 ; CHECK-RELOC: R_AARCH64_TLSDESC_LD64_LO12
@@ -94,6 +113,16 @@ define i32 @test_localdynamic() {
 ; CHECK-DAG: mrs x[[TPIDR:[0-9]+]], TPIDR_EL0
 ; CHECK-DAG: add x[[TPOFF]], x[[TPOFF]], :dtprel_lo12_nc:local_dynamic_var
 ; CHECK: ldr w0, [x[[TPIDR]], x[[TPOFF]]]
+
+; CHECK-TP-SOFT: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:_TLS_MODULE_BASE_
+; CHECK-TP-SOFT-NEXT: ldr [[CALLEE:x[0-9]+]], [x[[TLSDESC_HI]], :tlsdesc_lo12:_TLS_MODULE_BASE_]
+; CHECK-TP-SOFT-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_lo12:_TLS_MODULE_BASE_
+; CHECK-TP-SOFT-NEXT: .tlsdesccall _TLS_MODULE_BASE_
+; CHECK-TP-SOFT-NEXT: blr [[CALLEE]]
+; CHECK-TP-SOFT-NEXT: add x[[TPOFF:[0-9]+]], x0, :dtprel_hi12:local_dynamic_var
+; CHECK-TP-SOFT-DAG: bl __aarch64_read_tp
+; CHECK-TP-SOFT-DAG: add x[[TPOFF]], x[[TPOFF]], :dtprel_lo12_nc:local_dynamic_var
+; CHECK-TP-SOFT: ldr w0, [x0, x[[TPOFF]]]
 
 ; CHECK-NOLD: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:local_dynamic_var
 ; CHECK-NOLD-NEXT: ldr [[CALLEE:x[0-9]+]], [x[[TLSDESC_HI]], :tlsdesc_lo12:local_dynamic_var]
@@ -130,6 +159,16 @@ define ptr @test_localdynamic_addr() {
 ; CHECK-DAG: add x[[TPOFF]], x[[TPOFF]], :dtprel_lo12_nc:local_dynamic_var
 ; CHECK-DAG: mrs x[[TPIDR:[0-9]+]], TPIDR_EL0
 ; CHECK: add x0, x[[TPIDR]], x[[TPOFF]]
+
+; CHECK-TP-SOFT: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:_TLS_MODULE_BASE_
+; CHECK-TP-SOFT-NEXT: ldr [[CALLEE:x[0-9]+]], [x[[TLSDESC_HI]], :tlsdesc_lo12:_TLS_MODULE_BASE_]
+; CHECK-TP-SOFT-NEXT: add x0, x[[TLSDESC_HI]], :tlsdesc_lo12:_TLS_MODULE_BASE_
+; CHECK-TP-SOFT-NEXT: .tlsdesccall _TLS_MODULE_BASE_
+; CHECK-TP-SOFT-NEXT: blr [[CALLEE]]
+; CHECK-TP-SOFT-NEXT: add x[[TPOFF:[0-9]+]], x0, :dtprel_hi12:local_dynamic_var
+; CHECK-TP-SOFT-DAG: add x[[TPOFF]], x[[TPOFF]], :dtprel_lo12_nc:local_dynamic_var
+; CHECK-TP-SOFT-DAG: bl __aarch64_read_tp
+; CHECK-TP-SOFT: add x0, x0, x[[TPOFF]]
 
 ; CHECK-NOLD: adrp x[[TLSDESC_HI:[0-9]+]], :tlsdesc:local_dynamic_var
 ; CHECK-NOLD-NEXT: ldr [[CALLEE:x[0-9]+]], [x[[TLSDESC_HI]], :tlsdesc_lo12:local_dynamic_var]
