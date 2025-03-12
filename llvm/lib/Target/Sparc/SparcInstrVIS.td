@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains instruction formats, definitions and patterns needed for
-// VIS, VIS II, VIS II instructions on SPARC.
+// VIS, VIS II, VIS III instructions on SPARC.
 //===----------------------------------------------------------------------===//
 
 // VIS Instruction Format.
