@@ -357,7 +357,6 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
-- Clang now supports MSVC vector deleting destructors (GH19772).
 - Clang now defines ``_CRT_USE_BUILTIN_OFFSETOF`` macro in MSVC-compatible mode,
   which makes ``offsetof`` provided by Microsoft's ``<stddef.h>`` to be defined
   correctly. (#GH59689)
