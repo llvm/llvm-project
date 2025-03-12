@@ -388,7 +388,6 @@ public:
     return MVT::i32;
   }
   bool shouldExpandFRemInIR() const override { return true; };
-
 };
 
 namespace AMDGPUISD {
