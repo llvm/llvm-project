@@ -41920,7 +41920,6 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
 
 static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                                       ArrayRef<SDValue> Ops, SelectionDAG &DAG,
-                                      TargetLowering::DAGCombinerInfo &DCI,
                                       const X86Subtarget &Subtarget,
                                       unsigned Depth = 0);
 
@@ -42669,7 +42668,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     if (CanConcat) {
       SDValue Ops[] = {N.getOperand(0), N.getOperand(2)};
       if (SDValue ConcatSrc =
-              combineConcatVectorOps(DL, WideVT, Ops, DAG, DCI, Subtarget)) {
+              combineConcatVectorOps(DL, WideVT, Ops, DAG, Subtarget)) {
         SDValue Mask = widenSubVector(N.getOperand(1), false, Subtarget, DAG,
                                       DL, WideVT.getSizeInBits());
         SDValue Perm = DAG.getNode(X86ISD::VPERMV, DL, WideVT, Mask, ConcatSrc);
@@ -42684,7 +42683,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
       // See if we can concatenate the commuted operands.
       if (CanConcat) {
         if (SDValue ConcatSrc = combineConcatVectorOps(
-                DL, WideVT, {N.getOperand(2), N.getOperand(0)}, DAG, DCI,
+                DL, WideVT, {N.getOperand(2), N.getOperand(0)}, DAG,
                 Subtarget)) {
           ShuffleVectorSDNode::commuteMask(Mask);
           Mask.append(NumElts, SM_SentinelUndef);
@@ -42714,7 +42713,7 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
                    m_InsertSubvector(m_Undef(), m_Value(Ops[1]), m_Zero())) &&
           Ops[0].getValueType() == HalfVT && Ops[1].getValueType() == HalfVT) {
         if (SDValue ConcatSrc =
-                combineConcatVectorOps(DL, VT, Ops, DAG, DCI, Subtarget)) {
+                combineConcatVectorOps(DL, VT, Ops, DAG, Subtarget)) {
           for (int &M : Mask)
             M = (M < (int)NumElts ? M : (M - (NumElts / 2)));
           return lowerShuffleWithPERMV(DL, VT, Mask, ConcatSrc,
@@ -57822,7 +57821,6 @@ CastIntSETCCtoFP(MVT VT, ISD::CondCode CC, unsigned NumSignificantBitsLHS,
 /// ISD::INSERT_SUBVECTOR). The ops are assumed to be of the same type.
 static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                                       ArrayRef<SDValue> Ops, SelectionDAG &DAG,
-                                      TargetLowering::DAGCombinerInfo &DCI,
                                       const X86Subtarget &Subtarget,
                                       unsigned Depth) {
   assert(Subtarget.hasAVX() && "AVX assumed for concat_vectors");
@@ -57980,8 +57978,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       if (AllConstants)
         return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
-      return combineConcatVectorOps(DL, VT, Subs, DAG, DCI, Subtarget,
-                                    Depth + 1);
+      return combineConcatVectorOps(DL, VT, Subs, DAG, Subtarget, Depth + 1);
     };
 
     switch (Op0.getOpcode()) {
@@ -58663,7 +58660,7 @@ static SDValue combineCONCAT_VECTORS(SDNode *N, SelectionDAG &DAG,
 
   if (Subtarget.hasAVX() && TLI.isTypeLegal(VT) && TLI.isTypeLegal(SrcVT)) {
     if (SDValue R = combineConcatVectorOps(SDLoc(N), VT.getSimpleVT(), Ops, DAG,
-                                           DCI, Subtarget))
+                                           Subtarget))
       return R;
   }
 
@@ -58765,7 +58762,7 @@ static SDValue combineINSERT_SUBVECTOR(SDNode *N, SelectionDAG &DAG,
   SmallVector<SDValue, 2> SubVectorOps;
   if (collectConcatOps(N, SubVectorOps, DAG)) {
     if (SDValue Fold =
-            combineConcatVectorOps(dl, OpVT, SubVectorOps, DAG, DCI, Subtarget))
+            combineConcatVectorOps(dl, OpVT, SubVectorOps, DAG, Subtarget))
       return Fold;
 
     // If we're inserting all zeros into the upper half, change this to

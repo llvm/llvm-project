@@ -2207,7 +2207,7 @@ define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
   %load2 = load volatile i32, ptr addrspace(3) undef
   %load3 = load volatile i32, ptr addrspace(3) undef
 
-  %insert.0 = insertelement <3 x i32> undef, i32 %load0, i32 0
+  %insert.0 = insertelement <3 x i32> poison, i32 %load0, i32 0
   %insert.1 = insertelement <3 x i32> %insert.0, i32 %load1, i32 1
   %insert.2 = insertelement <3 x i32> %insert.1, i32 %load2, i32 2
   %insert.3 = insertvalue { <3 x i32>, i32 } poison, <3 x i32> %insert.2, 0
@@ -2266,7 +2266,7 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
   %load2 = load volatile float, ptr addrspace(3) undef
   %load3 = load volatile i32, ptr addrspace(3) undef
 
-  %insert.0 = insertelement <3 x float> undef, float %load0, i32 0
+  %insert.0 = insertelement <3 x float> poison, float %load0, i32 0
   %insert.1 = insertelement <3 x float> %insert.0, float %load1, i32 1
   %insert.2 = insertelement <3 x float> %insert.1, float %load2, i32 2
   %insert.3 = insertvalue { <3 x float>, i32 } poison, <3 x float> %insert.2, 0
