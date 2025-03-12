@@ -26,7 +26,7 @@ using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
 /// ReadFull attempts to read the specified number of bytes. If EOF is
-/// encountered, '' is returned.
+/// encountered, an empty string is returned.
 static Expected<std::string> ReadFull(IOObject &descriptor, size_t length) {
   std::string data;
   data.resize(length);
