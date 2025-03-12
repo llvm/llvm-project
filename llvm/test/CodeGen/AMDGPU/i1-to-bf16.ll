@@ -108,13 +108,14 @@ define amdgpu_ps i32 @s_uitofp_i1_to_bf16(i1 inreg %num) {
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_bfe_u32 s1, s0, 0x10010
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_i32 s1, s1, s0
 ; GFX11-NEXT:    s_bitset1_b32 s0, 22
 ; GFX11-NEXT:    s_addk_i32 s1, 0x7fff
 ; GFX11-NEXT:    s_and_b32 s2, vcc_lo, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -125,6 +126,7 @@ define amdgpu_ps i32 @s_uitofp_i1_to_bf16(i1 inreg %num) {
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, 1.0, s0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_bfe_u32 s1, s0, 0x10010
 ; GFX12-NEXT:    s_or_b32 s2, s0, 0x400000
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -305,10 +307,11 @@ define amdgpu_ps <2 x i32> @s_uitofp_v2i1_to_v2bf16(<2 x i1> inreg %num) {
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1.0, s0
 ; GFX11-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX11-NEXT:    v_cmp_u_f32_e64 s1, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v1
 ; GFX11-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
 ; GFX11-NEXT:    s_bfe_u32 s3, s0, 0x10010
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_i32 s3, s3, s0
 ; GFX11-NEXT:    s_bitset1_b32 s0, 22
 ; GFX11-NEXT:    s_addk_i32 s3, 0x7fff
@@ -338,6 +341,7 @@ define amdgpu_ps <2 x i32> @s_uitofp_v2i1_to_v2bf16(<2 x i1> inreg %num) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_bfe_u32 s1, s0, 0x10010
 ; GFX12-NEXT:    s_or_b32 s3, s0, 0x400000
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -1161,13 +1165,14 @@ define amdgpu_ps i32 @s_sitofp_i1_to_bf16(i1 inreg %num) {
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, s0
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_bfe_u32 s1, s0, 0x10010
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_4) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_i32 s1, s1, s0
 ; GFX11-NEXT:    s_bitset1_b32 s0, 22
 ; GFX11-NEXT:    s_addk_i32 s1, 0x7fff
 ; GFX11-NEXT:    s_and_b32 s2, vcc_lo, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s0, s0, s1
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_ashr_i32 s0, s0, 16
 ; GFX11-NEXT:    ; return to shader part epilog
 ;
@@ -1178,6 +1183,7 @@ define amdgpu_ps i32 @s_sitofp_i1_to_bf16(i1 inreg %num) {
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v0, 0, -1.0, s0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_bfe_u32 s1, s0, 0x10010
 ; GFX12-NEXT:    s_or_b32 s2, s0, 0x400000
 ; GFX12-NEXT:    s_wait_alu 0xfffe
@@ -1358,10 +1364,11 @@ define amdgpu_ps <2 x i32> @s_sitofp_v2i1_to_v2bf16(<2 x i1> inreg %num) {
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, -1.0, s0
 ; GFX11-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX11-NEXT:    v_cmp_u_f32_e64 s0, v0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX11-NEXT:    v_cmp_u_f32_e32 vcc_lo, v1, v1
 ; GFX11-NEXT:    s_bfe_u32 s3, s1, 0x10010
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_add_i32 s3, s3, s1
 ; GFX11-NEXT:    s_bitset1_b32 s1, 22
 ; GFX11-NEXT:    s_addk_i32 s3, 0x7fff
@@ -1391,6 +1398,7 @@ define amdgpu_ps <2 x i32> @s_sitofp_v2i1_to_v2bf16(<2 x i1> inreg %num) {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    s_bfe_u32 s1, s0, 0x10010
 ; GFX12-NEXT:    s_or_b32 s3, s0, 0x400000
 ; GFX12-NEXT:    s_wait_alu 0xfffe
