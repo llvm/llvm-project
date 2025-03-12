@@ -82,47 +82,92 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
 // CastOp
 //===----------------------------------------------------------------------===//
 
-// The enumaration value isn't in sync with clang.
-def CK_IntegralToBoolean : I32EnumAttrCase<"int_to_bool", 1>;
-def CK_ArrayToPointerDecay : I32EnumAttrCase<"array_to_ptrdecay", 2>;
-def CK_IntegralCast : I32EnumAttrCase<"integral", 3>;
-def CK_BitCast : I32EnumAttrCase<"bitcast", 4>;
-def CK_FloatingCast : I32EnumAttrCase<"floating", 5>;
-def CK_PtrToBoolean : I32EnumAttrCase<"ptr_to_bool", 6>;
-def CK_FloatToIntegral : I32EnumAttrCase<"float_to_int", 7>;
-def CK_IntegralToPointer : I32EnumAttrCase<"int_to_ptr", 8>;
-def CK_PointerToIntegral : I32EnumAttrCase<"ptr_to_int", 9>;
-def CK_FloatToBoolean : I32EnumAttrCase<"float_to_bool", 10>;
-def CK_BooleanToIntegral : I32EnumAttrCase<"bool_to_int", 11>;
-def CK_IntegralToFloat : I32EnumAttrCase<"int_to_float", 12>;
-def CK_BooleanToFloat : I32EnumAttrCase<"bool_to_float", 13>;
-def CK_AddressSpaceConversion : I32EnumAttrCase<"address_space", 14>;
-def CK_FloatToComplex : I32EnumAttrCase<"float_to_complex", 15>;
-def CK_IntegralToComplex : I32EnumAttrCase<"int_to_complex", 16>;
-def CK_FloatComplexToReal : I32EnumAttrCase<"float_complex_to_real", 17>;
-def CK_IntegralComplexToReal : I32EnumAttrCase<"int_complex_to_real", 18>;
-def CK_FloatComplexToBoolean : I32EnumAttrCase<"float_complex_to_bool", 19>;
-def CK_IntegralComplexToBoolean : I32EnumAttrCase<"int_complex_to_bool", 20>;
-def CK_FloatComplexCast : I32EnumAttrCase<"float_complex", 21>;
-def CK_FloatComplexToIntegralComplex
-    : I32EnumAttrCase<"float_complex_to_int_complex", 22>;
-def CK_IntegralComplexCast : I32EnumAttrCase<"int_complex", 23>;
-def CK_IntegralComplexToFloatComplex
-    : I32EnumAttrCase<"int_complex_to_float_complex", 24>;
-def CK_MemberPtrToBoolean : I32EnumAttrCase<"member_ptr_to_bool", 25>;
+// CK_Dependent
+def CK_BitCast : I32EnumAttrCase<"bitcast", 1>;
+// CK_LValueBitCast
+// CK_LValueToRValueBitCast
+// CK_LValueToRValue
+// CK_NoOp
+// CK_BaseToDerived
+// CK_DerivedToBase
+// CK_UncheckedDerivedToBase
+// CK_Dynamic
+// CK_ToUnion
+def CK_ArrayToPointerDecay : I32EnumAttrCase<"array_to_ptrdecay", 11>;
+// CK_FunctionToPointerDecay
+// CK_NullToPointer
+// CK_NullToMemberPointer
+// CK_BaseToDerivedMemberPointer
+// CK_DerivedToBaseMemberPointer
+def CK_MemberPointerToBoolean : I32EnumAttrCase<"member_ptr_to_bool", 17>;
+// CK_ReinterpretMemberPointer
+// CK_UserDefinedConversion
+// CK_ConstructorConversion
+def CK_IntegralToPointer : I32EnumAttrCase<"int_to_ptr", 21>;
+def CK_PointerToIntegral : I32EnumAttrCase<"ptr_to_int", 22>;
+def CK_PointerToBoolean : I32EnumAttrCase<"ptr_to_bool", 23>;
+// CK_ToVoid
+// CK_MatrixCast
+// CK_VectorSplat
+def CK_IntegralCast : I32EnumAttrCase<"integral", 27>;
+def CK_IntegralToBoolean : I32EnumAttrCase<"int_to_bool", 28>;
+def CK_IntegralToFloating : I32EnumAttrCase<"int_to_float", 29>;
+// CK_FloatingToFixedPoint
+// CK_FixedPointToFloating
+// CK_FixedPointCast
+// CK_FixedPointToIntegral
+// CK_IntegralToFixedPoint
+// CK_FixedPointToBoolean
+def CK_FloatingToIntegral : I32EnumAttrCase<"float_to_int", 36>;
+def CK_FloatingToBoolean : I32EnumAttrCase<"float_to_bool", 37>;
+def CK_BooleanToSignedIntegral : I32EnumAttrCase<"bool_to_int", 38>;
+def CK_FloatingCast : I32EnumAttrCase<"floating", 39>;
+// CK_CPointerToObjCPointerCast
+// CK_BlockPointerToObjCPointerCast
+// CK_AnyPointerToBlockPointerCast
+// CK_ObjCObjectLValueCast
+// CK_FloatingRealToComplex
+// CK_FloatingComplexToReal
+// CK_FloatingComplexToBoolean
+def CK_FloatingComplexCast : I32EnumAttrCase<"float_complex", 47>;
+// CK_FloatingComplexToIntegralComplex
+// CK_IntegralRealToComplex
+def CK_IntegralComplexToReal : I32EnumAttrCase<"int_complex_to_real", 50>;
+def CK_IntegralComplexToBoolean : I32EnumAttrCase<"int_complex_to_bool", 51>;
+def CK_IntegralComplexCast : I32EnumAttrCase<"int_complex", 52>;
+def CK_IntegralComplexToFloatingComplex
+    : I32EnumAttrCase<"int_complex_to_float_complex", 53>;
+// CK_ARCProduceObject
+// CK_ARCConsumeObject
+// CK_ARCReclaimReturnedObject
+// CK_ARCExtendBlockObject
+// CK_AtomicToNonAtomic
+// CK_NonAtomicToAtomic
+// CK_CopyAndAutoreleaseBlockObject
+// CK_BuiltinFnToFnPtr
+// CK_ZeroToOCLOpaqueType
+def CK_AddressSpaceConversion : I32EnumAttrCase<"address_space", 63>;
+// CK_IntToOCLSampler
+// CK_HLSLVectorTruncation
+// CK_HLSLArrayRValue
+// CK_HLSLElementwiseCast
+// CK_HLSLAggregateSplatCast
+
+// Enums below are specific to CIR and don't have a correspondence to classic
+// codegen:
+def CK_BooleanToFloat : I32EnumAttrCase<"bool_to_float", 1000>;
 
 def CastKind : I32EnumAttr<
     "CastKind",
     "cast kind",
-    [CK_IntegralToBoolean, CK_ArrayToPointerDecay, CK_IntegralCast,
-     CK_BitCast, CK_FloatingCast, CK_PtrToBoolean, CK_FloatToIntegral,
-     CK_IntegralToPointer, CK_PointerToIntegral, CK_FloatToBoolean,
-     CK_BooleanToIntegral, CK_IntegralToFloat, CK_BooleanToFloat,
-     CK_AddressSpaceConversion, CK_FloatToComplex, CK_IntegralToComplex,
-     CK_FloatComplexToReal, CK_IntegralComplexToReal, CK_FloatComplexToBoolean,
-     CK_IntegralComplexToBoolean, CK_FloatComplexCast,
-     CK_FloatComplexToIntegralComplex, CK_IntegralComplexCast,
-     CK_IntegralComplexToFloatComplex, CK_MemberPtrToBoolean]> {
+    [CK_BitCast, CK_ArrayToPointerDecay, CK_MemberPointerToBoolean,
+     CK_IntegralToPointer, CK_PointerToIntegral, CK_PointerToBoolean,
+     CK_IntegralCast, CK_IntegralToBoolean, CK_IntegralToFloating,
+     CK_FloatingToIntegral, CK_FloatingToBoolean, CK_BooleanToSignedIntegral,
+     CK_FloatingCast, CK_FloatingComplexCast, CK_IntegralComplexToReal,
+     CK_IntegralComplexToBoolean, CK_IntegralComplexCast,
+     CK_IntegralComplexToFloatingComplex, CK_AddressSpaceConversion,
+     CK_BooleanToFloat]> {
   let cppNamespace = "::cir";
 }
 

@@ -128,8 +128,16 @@ public:
     if (srcType->isRealFloatingType())
       return emitFloatToBoolConversion(src, loc);
 
-    if (llvm::isa<MemberPointerType>(srcType))
+    if (llvm::isa<MemberPointerType>(srcType)) {
       cgf.getCIRGenModule().errorNYI(loc, "member pointer to bool conversion");
+      auto boolType = cgf.getContext().getBOOLType();
+      auto cirBoolType = cgf.convertType(boolType);
+      CharUnits alignment = cgf.getContext().getTypeAlignInChars(boolType);
+      auto addr =
+          builder.createAlloca(loc, builder.getPointerTo(cirBoolType),
+                               cirBoolType, {}, cgf.cgm.getSize(alignment));
+      return builder.createLoad(loc, addr);
+    }
 
     if (srcType->isIntegerType())
       return emitIntToBoolConversion(src, loc);
@@ -203,6 +211,11 @@ public:
         castKind = cir::CastKind::float_to_int;
       } else if (mlir::isa<cir::CIRFPTypeInterface>(dstTy)) {
         cgf.getCIRGenModule().errorNYI("floating point casts");
+        CharUnits alignment = cgf.getContext().getTypeAlignInChars(dstType);
+        auto addr =
+            builder.createAlloca(src.getLoc(), builder.getPointerTo(dstTy),
+                                 dstTy, {}, cgf.cgm.getSize(alignment));
+        return builder.createLoad(src.getLoc(), addr);
       } else {
         llvm_unreachable("Internal error: Cast to unexpected type");
       }
@@ -436,10 +449,10 @@ public:
     // TODO(leonardchan): When necessary, add another if statement checking for
     // conversions to fixed point types from other types.
     // conversions to fixed point types from other types.
-    if (srcType->isFixedPointType())
+    if (srcType->isFixedPointType() || dstType->isFixedPointType()) {
       cgf.getCIRGenModule().errorNYI(loc, "fixed point conversions");
-    else if (dstType->isFixedPointType())
-      cgf.getCIRGenModule().errorNYI(loc, "fixed point conversions");
+      return nullptr;
+    }
 
     srcType = srcType.getCanonicalType();
     dstType = dstType.getCanonicalType();
@@ -500,6 +513,11 @@ public:
     // some native types (like Obj-C id) may map to a pointer type.
     if (auto dstPT = dyn_cast<cir::PointerType>(mlirDstType)) {
       cgf.getCIRGenModule().errorNYI(loc, "pointer casts");
+      CharUnits alignment = cgf.getContext().getTypeAlignInChars(dstType);
+      auto addr =
+          builder.createAlloca(src.getLoc(), builder.getPointerTo(dstPT), dstPT,
+                               {}, cgf.cgm.getSize(alignment));
+      return builder.createLoad(src.getLoc(), addr);
     }
 
     if (isa<cir::PointerType>(mlirSrcType)) {
@@ -516,7 +534,8 @@ public:
                  srcType.getTypePtr() &&
              "Splatted expr doesn't match with vector element type?");
 
-      llvm_unreachable("not implemented");
+      cgf.getCIRGenModule().errorNYI(loc, "vector splatting");
+      return nullptr;
     }
 
     if (srcType->isMatrixType() && dstType->isMatrixType())
@@ -534,10 +553,11 @@ public:
     if (mlirDstType != resTy) {
       if (cgf.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
         cgf.getCIRGenModule().errorNYI(loc, "cast via llvm.convert.to.fp16");
-      } else {
-        res = builder.createCast(cgf.getLoc(loc), cir::CastKind::floating, res,
-                                 resTy);
       }
+      // FIXME(cir): For now we never use FP16 conversion intrinsics even if
+      // required by the target. Change that once this is implemented
+      res = builder.createCast(cgf.getLoc(loc), cir::CastKind::floating, res,
+                               resTy);
     }
 
     if (opts.emitImplicitIntegerTruncationChecks)
@@ -548,10 +568,6 @@ public:
                                      "implicit integer sign change checks");
 
     return res;
-
-    cgf.getCIRGenModule().errorNYI(loc,
-                                   "emitScalarConversion for unequal types");
-    return {};
   }
 };
 
@@ -691,13 +707,29 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
   case CK_PointerToIntegral: {
     assert(!destTy->isBooleanType() && "bool should use PointerToBool");
     if (cgf.cgm.getCodeGenOpts().StrictVTablePointers)
-      llvm_unreachable("NYI");
+      cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
+                                     "strict vtable pointers");
     return builder.createPtrToInt(Visit(subExpr), cgf.convertType(destTy));
   }
   case CK_ToVoid:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
                                    "ignored expression on void cast");
     return nullptr;
+
+  case CK_IntegralToFloating:
+  case CK_FloatingToIntegral:
+  case CK_FloatingCast:
+  case CK_FixedPointToFloating:
+  case CK_FloatingToFixedPoint: {
+    if (kind == CK_FixedPointToFloating || kind == CK_FloatingToFixedPoint) {
+      cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
+                                     "fixed point casts");
+      return {};
+    }
+    cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(), "fp options");
+    return emitScalarConversion(Visit(subExpr), subExpr->getType(), destTy,
+                                ce->getExprLoc());
+  }
 
   case CK_IntegralToBoolean:
     return emitIntToBoolConversion(Visit(subExpr),
@@ -714,7 +746,6 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                               cir::CastKind::member_ptr_to_bool, memPtr,
                               cgf.convertType(destTy));
   }
-    return nullptr;
 
   default:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
