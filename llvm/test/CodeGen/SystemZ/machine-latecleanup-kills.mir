@@ -54,3 +54,23 @@ body:             |
     STG killed renamable $r1d, killed $r15d, 8, $noreg
     Return
 ...
+
+# Kill flags of both $r1l (subreg) and $r1d need to be removed.
+---
+name:            fun2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; CHECK-LABEL: name: fun2
+    ; CHECK: renamable $r1d = LLILL 1
+    ; CHECK-NEXT: ST renamable $r1l, $r15d, 0, $noreg
+    ; CHECK-NEXT: STG renamable $r1d, $r15d, 8, $noreg
+    ; CHECK-NEXT: STG killed renamable $r1d, $r15d, 16, $noreg
+    ; CHECK-NEXT: Return
+    renamable $r1d = LLILL 1
+    ST killed renamable $r1l, $r15d, 0, $noreg
+    STG killed renamable $r1d, $r15d, 8, $noreg
+    renamable $r1d = LLILL 1
+    STG killed renamable $r1d, $r15d, 16, $noreg
+    Return
+...
