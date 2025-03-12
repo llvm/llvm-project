@@ -1358,7 +1358,16 @@ void tools::addFortranRuntimeLibs(const ToolChain &TC, const ArgList &Args,
       if (AsNeeded)
         addAsNeededOption(TC, Args, CmdArgs, /*as_needed=*/false);
     }
-    CmdArgs.push_back("-lflang_rt.runtime");
+    if (TC.getTriple().isOSAIX()) {
+      // On AIX, pass the whole path of flang_rt.runtime.a to be consistent
+      // with clang.
+      std::string CRTBasename = "libflang_rt.runtime.a";
+      SmallString<128> Path(TC.getCompilerRTPath());
+      llvm::sys::path::append(Path, CRTBasename);
+      if (TC.getVFS().exists(Path))
+        CmdArgs.push_back(Args.MakeArgString(std::string(Path)));
+    } else
+      CmdArgs.push_back("-lflang_rt.runtime");
     addArchSpecificRPath(TC, Args, CmdArgs);
 
     // needs libexecinfo for backtrace functions
