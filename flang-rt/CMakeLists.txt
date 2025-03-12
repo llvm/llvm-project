@@ -223,7 +223,6 @@ check_cxx_source_compiles(
   "
   HAVE_DECL_STRERROR_S)
 
-
 # Search for clang_rt.builtins library. Need in addition to msvcrt.
 if (WIN32)
   find_compiler_rt_library(builtins FLANG_RT_BUILTINS_LIBRARY)
@@ -294,6 +293,15 @@ elseif (FLANG_RT_GCC_RESOURCE_DIR)
   endif ()
 endif ()
 
+# Check if 128-bit float computations can be done via long double.
+check_cxx_source_compiles(
+  "#include <cfloat>
+   #if LDBL_MANT_DIG != 113
+   #error LDBL_MANT_DIG != 113
+   #endif
+   int main() { return 0; }
+  "
+  HAVE_LDBL_MANT_DIG_113)
 
 
 #####################
