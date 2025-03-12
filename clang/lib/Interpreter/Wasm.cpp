@@ -66,7 +66,7 @@ llvm::Error WasmIncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
   std::string ErrorString;
 
   const llvm::Target *Target = llvm::TargetRegistry::lookupTarget(
-      PTU.TheModule->getTargetTriple().str(), ErrorString);
+      PTU.TheModule->getTargetTriple(), ErrorString);
   if (!Target) {
     return llvm::make_error<llvm::StringError>("Failed to create Wasm Target: ",
                                                llvm::inconvertibleErrorCode());
