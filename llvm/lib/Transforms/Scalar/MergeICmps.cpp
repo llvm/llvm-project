@@ -318,12 +318,12 @@ class MultBCECmpBlock {
   MultBCECmpBlock(std::vector<Comparison*> Cmps, BasicBlock *BB, InstructionSet BlockInsts)
       : BB(BB), BlockInsts(std::move(BlockInsts)), Cmps(std::move(Cmps)) {}
 
-  // Returns true if the block does other works besides comparison.
-  bool doesOtherWork() const;
-
   std::vector<Comparison*> getCmps() {
     return Cmps;
   }
+
+  // Returns true if the block does other works besides comparison.
+  bool doesOtherWork() const;
 
   // Returns true if the non-BCE-cmp instructions can be separated from BCE-cmp
   // instructions in the block.
@@ -358,9 +358,7 @@ class SingleBCECmpBlock {
       : BB(M.BB), OrigOrder(OrigOrder), RequireSplit(true), Cmp(M.getCmps()[I]), SplitInsts(SplitInsts)  {}
 
   const BCEAtom* Lhs() const { return Cmp->getLoads().first; }
-  const Comparison* getCmp() const {
-    return Cmp;
-  }
+  const Comparison* getCmp() const { return Cmp; }
 
   bool operator<(const SingleBCECmpBlock &O) const {
     return *Cmp < *O.Cmp;
@@ -579,7 +577,8 @@ std::optional<MultBCECmpBlock> visitCmpBlock(Value *const Val,
 //   LLVM_DEBUG(dbgs() << "\n");
 // }
 
-static inline void enqueueBlock(std::vector<SingleBCECmpBlock> &Comparisons,
+// Enqueues a single comparison and if it's the first comparison of the first block then adds the `OtherInsts` to the block too. To split it.
+static inline void enqueueSingleCmp(std::vector<SingleBCECmpBlock> &Comparisons,
                                 MultBCECmpBlock &&CmpBlock, AliasAnalysis &AA, bool RequireSplit) {
   // emitDebugInfo(Comparison);
   for (unsigned i = 0; i < CmpBlock.getCmps().size(); i++) {
@@ -704,7 +703,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
           LLVM_DEBUG(dbgs()
                      << "Split initial block '" << CmpBlock->BB->getName()
                      << "' that does extra work besides compare\n");
-          enqueueBlock(Comparisons, std::move(*CmpBlock), AA, true);
+          enqueueSingleCmp(Comparisons, std::move(*CmpBlock), AA, true);
         } else {
           LLVM_DEBUG(dbgs()
                      << "ignoring initial block '" << CmpBlock->BB->getName()
@@ -737,7 +736,7 @@ BCECmpChain::BCECmpChain(const std::vector<BasicBlock *> &Blocks, PHINode &Phi,
       // We could still merge bb1 and bb2 though.
       return;
     }
-    enqueueBlock(Comparisons, std::move(*CmpBlock), AA, false);
+    enqueueSingleCmp(Comparisons, std::move(*CmpBlock), AA, false);
   }
   
   // It is possible we have no suitable comparison to merge.

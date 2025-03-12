@@ -4,6 +4,7 @@
 %S = type { i32, i32, i32, i32 }
 
 declare void @foo(...)
+declare void @bar(...)
 
 ; We can split %entry and create a memcmp(16 bytes).
 define zeroext i1 @opeq1(
@@ -239,4 +240,90 @@ land.rhs.i.3:
 opeq1.exit:
   %8 = phi i1 [ false, %entry ], [ false, %land.rhs.i] , [ false, %land.rhs.i.2 ], [ %cmp4.i, %land.rhs.i.3 ]
   ret i1 %8
+}
+
+; Call instruction mixed in with select block but doesn't clobber memory, so can safely sink and merge all comparisons.
+; Make sure that call order stays the same.
+define dso_local noundef zeroext i1 @unclobbered_select_cmp(
+; X86-LABEL: @unclobbered_select_cmp(
+; X86-NEXT:       "entry+land.rhs":
+; X86-NEXT:    call void (...) @foo() #[[ATTR2]]
+; X86-NEXT:    call void (...) @bar() #[[ATTR2]]
+; X86-NEXT:    [[OFFSET:%.*]] = getelementptr inbounds nuw i8, ptr [[A:%.*]], i64 2
+; X86-NEXT:    [[TMP0:%.*]] = alloca [3 x i8], align 1
+; X86-NEXT:    store [3 x i8] c"d\03\C8", ptr [[TMP0]], align 1
+; X86-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr [[OFFSET]], ptr [[TMP0]], i64 3)
+; X86-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[MEMCMP]], 0
+; X86-NEXT:    br label [[LAND_END:%.*]]
+; X86:       land.end:
+; X86-NEXT:    ret i1 [[TMP1]]
+;
+  ptr nocapture readonly dereferenceable(5) %a) local_unnamed_addr nofree nosync {
+entry:
+  %q = getelementptr inbounds nuw i8, ptr %a, i64 4
+  %0 = load i8, ptr %q, align 1
+  call void (...) @foo() inaccessiblememonly
+  %cmp = icmp eq i8 %0, 200
+  %c = getelementptr inbounds nuw i8, ptr %a, i64 2
+  %1 = load i8, ptr %c, align 1
+  %cmp2 = icmp eq i8 %1, 100
+  call void (...) @bar() inaccessiblememonly
+  %or.cond = select i1 %cmp, i1 %cmp2, i1 false
+  br i1 %or.cond, label %land.rhs, label %land.end
+
+land.rhs:                                         ; preds = %entry
+  %b3 = getelementptr inbounds nuw i8, ptr %a, i64 3
+  %2 = load i8, ptr %b3, align 1
+  %cmp5 = icmp eq i8 %2, 3
+  br label %land.end
+
+land.end:                                         ; preds = %land.rhs, %entry
+  %3 = phi i1 [ false, %entry ], [ %cmp5, %land.rhs ]
+  ret i1 %3
+}
+
+
+; Can only split first block. If subsequent block contains a clobber instruction then don't merge.
+define dso_local noundef zeroext i1 @not_split_sec_block(
+; X86-LABEL: @not_split_sec_block(
+; X86-NEXT:  entry:
+; X86-NEXT:    [[TMP0:%.*]] = load i8, ptr [[A:%.*]], align 1
+; X86-NEXT:    call void (...) @foo() #[[ATTR2]]
+; X86-NEXT:    [[CMP0:%.*]] = icmp eq i8 [[TMP0]], -56
+; X86-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 2
+; X86-NEXT:    [[TMP2:%.*]] = load i8, ptr [[TMP1]], align 1
+; X86-NEXT:    [[CMP1:%.*]] = icmp eq i8 [[TMP2]], 100
+; X86-NEXT:    [[SEL0:%.*]] = select i1 [[CMP0]], i1 [[CMP1]], i1 false
+; X86-NEXT:    br i1 [[SEL0]], label [[LAND_RHS:%.*]], label [[LAND_END:%.*]]
+; X86:       land.rhs:
+; X86-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 1
+; X86-NEXT:    [[TMP4:%.*]] = load i8, ptr [[TMP3]], align 1
+; X86-NEXT:    call void (...) @bar() #[[ATTR2]]
+; X86-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[TMP4]], 3
+; X86-NEXT:    br label [[LAND_END]]
+; X86:       land.end:
+; X86-NEXT:    [[RES:%.*]] = phi i1 [ false, %entry ], [ [[CMP2]], [[LAND_RHS]] ]
+; X86-NEXT:    ret i1 [[RES]]
+;
+  ptr nocapture readonly dereferenceable(3) %a) local_unnamed_addr nofree nosync {
+entry:
+  %0 = load i8, ptr %a, align 1
+  call void (...) @foo() inaccessiblememonly
+  %cmp = icmp eq i8 %0, 200
+  %c = getelementptr inbounds nuw i8, ptr %a, i64 2
+  %1 = load i8, ptr %c, align 1
+  %cmp2 = icmp eq i8 %1, 100
+  %or.cond = select i1 %cmp, i1 %cmp2, i1 false
+  br i1 %or.cond, label %land.rhs, label %land.end
+
+land.rhs:                                         ; preds = %entry
+  %b3 = getelementptr inbounds nuw i8, ptr %a, i64 1
+  %2 = load i8, ptr %b3, align 1
+; Even though this call doesn't clobber any memory, can only sink instructions from first block.
+  call void (...) @bar() inaccessiblememonly
+  %cmp5 = icmp eq i8 %2, 3
+  br label %land.end
+land.end:
+  %3 = phi i1 [ false, %entry ], [ %cmp5, %land.rhs ]
+  ret i1 %3
 }
