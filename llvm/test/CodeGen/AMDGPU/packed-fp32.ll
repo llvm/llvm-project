@@ -486,7 +486,7 @@ bb:
   %neg.scalar0 = fsub float -0.0, %scalar0
 
   %neg.scalar0.vec = insertelement <2 x float> poison, float %neg.scalar0, i32 0
-  %neg.scalar0.broadcast = shufflevector <2 x float> %neg.scalar0.vec, <2 x float> undef, <2 x i32> zeroinitializer
+  %neg.scalar0.broadcast = shufflevector <2 x float> %neg.scalar0.vec, <2 x float> poison, <2 x i32> zeroinitializer
 
   %result = fadd <2 x float> %vec0, %neg.scalar0.broadcast
   store <2 x float> %result, ptr addrspace(1) %out, align 4
@@ -526,7 +526,7 @@ bb:
   %vec0 = load volatile <2 x float>, ptr addrspace(3) %lds, align 8
   %lds.gep1 = getelementptr inbounds <2 x float>, ptr addrspace(3) %lds, i32 1
   %vec1 = load volatile <2 x float>, ptr addrspace(3) %lds.gep1, align 8
-  %vec1.swap = shufflevector <2 x float> %vec1, <2 x float> undef, <2 x i32> <i32 1, i32 0>
+  %vec1.swap = shufflevector <2 x float> %vec1, <2 x float> poison, <2 x i32> <i32 1, i32 0>
   %result = fadd <2 x float> %vec0, %vec1.swap
   store <2 x float> %result, ptr addrspace(1) %out, align 8
   ret void
@@ -543,7 +543,7 @@ bb:
   %f32 = load volatile float, ptr addrspace(3) undef, align 8
   %vec1 = load volatile <2 x float>, ptr addrspace(3) %lds.gep1, align 8
   %vec1.neg = fsub <2 x float> <float -0.0, float -0.0>, %vec1
-  %vec1.neg.swap = shufflevector <2 x float> %vec1.neg, <2 x float> undef, <2 x i32> <i32 1, i32 0>
+  %vec1.neg.swap = shufflevector <2 x float> %vec1.neg, <2 x float> poison, <2 x i32> <i32 1, i32 0>
   %result = fadd <2 x float> %vec0, %vec1.neg.swap
   store <2 x float> %result, ptr addrspace(1) %out, align 8
   ret void
@@ -598,7 +598,7 @@ bb:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds <4 x float>, ptr addrspace(1) %arg, i32 %tid
   %in.1 = load <4 x float>, ptr addrspace(1) %gep
-  %shuf = shufflevector <4 x float> %in.1, <4 x float> undef, <4 x i32> zeroinitializer
+  %shuf = shufflevector <4 x float> %in.1, <4 x float> poison, <4 x i32> zeroinitializer
   %add.1 = fadd <4 x float> %in.1, %shuf
   store <4 x float> %add.1, ptr addrspace(1) %gep
   ret void

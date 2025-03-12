@@ -26,7 +26,7 @@ entry:
   %m_scaleMotion = getelementptr inbounds %struct.ShapeData, ptr addrspace(1) %call, i64 0, i32 4
   %tmp2 = load <4 x float>, ptr addrspace(1) %m_scaleMotion, align 16
   %splat.splatinsert = insertelement <4 x float> poison, float %time, i32 0
-  %splat.splat = shufflevector <4 x float> %splat.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
+  %splat.splat = shufflevector <4 x float> %splat.splatinsert, <4 x float> poison, <4 x i32> zeroinitializer
   %tmp3 = tail call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %tmp2, <4 x float> %splat.splat, <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>)
   %tmp4 = load <4 x float>, ptr addrspace(1) %call, align 16
   %m_quaternion = getelementptr inbounds %struct.ShapeData, ptr addrspace(1) %call, i64 0, i32 1
@@ -61,8 +61,8 @@ entry:
   %tmp24 = insertelement <4 x float> %tmp23, float %tmp19, i32 1
   %tmp25 = insertelement <4 x float> %tmp24, float %tmp22, i32 2
   %tmp26 = extractelement <4 x float> %tmp5, i64 3
-  %splat.splat.i8.i = shufflevector <4 x float> %tmp5, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
-  %splat.splat2.i9.i = shufflevector <4 x float> %tmp10, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %splat.splat.i8.i = shufflevector <4 x float> %tmp5, <4 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %splat.splat2.i9.i = shufflevector <4 x float> %tmp10, <4 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %mul3.i10.i = fmul <4 x float> %tmp5, %splat.splat2.i9.i
   %tmp27 = tail call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %splat.splat.i8.i, <4 x float> %tmp10, <4 x float> %mul3.i10.i)
   %add.i11.i = fadd <4 x float> %tmp27, %tmp25
@@ -94,7 +94,7 @@ entry:
   %tmp52 = insertelement <4 x float> <float poison, float poison, float poison, float 0.000000e+00>, float %tmp44, i32 0
   %tmp53 = insertelement <4 x float> %tmp52, float %tmp48, i32 1
   %tmp54 = insertelement <4 x float> %tmp53, float %tmp51, i32 2
-  %splat.splat.i.i = shufflevector <4 x float> %tmp39, <4 x float> undef, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
+  %splat.splat.i.i = shufflevector <4 x float> %tmp39, <4 x float> poison, <4 x i32> <i32 3, i32 3, i32 3, i32 3>
   %tmp55 = extractelement <4 x float> %tmp5, i32 3
   %mul3.i.i = fmul <4 x float> %splat.splat.i8.i, %tmp39
   %tmp56 = tail call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %splat.splat.i.i, <4 x float> %vecinit5.i.i, <4 x float> %mul3.i.i)
@@ -113,12 +113,12 @@ entry:
   %tmp66 = extractelement <4 x float> %tmp1, i64 3
   %mul3 = fmul float %tmp66, %time
   %tmp67 = insertelement <4 x float> %tmp1, float 0.000000e+00, i32 3
-  %tmp68 = shufflevector <4 x float> %tmp67, <4 x float> %tmp1, <4 x i32> <i32 0, i32 5, i32 undef, i32 3>
+  %tmp68 = shufflevector <4 x float> %tmp67, <4 x float> %tmp1, <4 x i32> <i32 0, i32 5, i32 poison, i32 3>
   %vecinit3.i.i = shufflevector <4 x float> %tmp68, <4 x float> %tmp1, <4 x i32> <i32 0, i32 1, i32 6, i32 3>
   %tmp69 = fcmp oeq <4 x float> %vecinit3.i.i, zeroinitializer
   %tmp70 = sext <4 x i1> %tmp69 to <4 x i32>
-  %tmp71 = shufflevector <4 x i32> %tmp70, <4 x i32> undef, <2 x i32> <i32 2, i32 3>
-  %tmp72 = shufflevector <4 x i32> %tmp70, <4 x i32> undef, <2 x i32> <i32 0, i32 1>
+  %tmp71 = shufflevector <4 x i32> %tmp70, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %tmp72 = shufflevector <4 x i32> %tmp70, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
   %tmp73 = and <2 x i32> %tmp71, %tmp72
   %tmp74 = extractelement <2 x i32> %tmp73, i64 0
   %tmp75 = extractelement <2 x i32> %tmp73, i64 1
@@ -205,7 +205,7 @@ bb141:                                            ; preds = %bb109, %bb98, %bb96
   %tmp143 = phi float [ %tmp95, %bb86 ], [ %tmp140, %bb109 ], [ %tmp107, %bb98 ], [ %tmp84, %bb96 ]
   %tmp144 = tail call float @llvm.amdgcn.rsq.f32(float %tmp143)
   %tmp145 = insertelement <4 x float> poison, float %tmp144, i32 0
-  %tmp146 = shufflevector <4 x float> %tmp145, <4 x float> undef, <4 x i32> zeroinitializer
+  %tmp146 = shufflevector <4 x float> %tmp145, <4 x float> poison, <4 x i32> zeroinitializer
   %tmp147 = fmul <4 x float> %tmp142, %tmp146
   br label %qtSet.exit
 
