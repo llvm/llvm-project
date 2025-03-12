@@ -1880,7 +1880,7 @@ define amdgpu_kernel void @insert_undef_offset_sgpr_vector_src(ptr addrspace(1) 
 ; GFX9-IDXMODE-NEXT:    s_endpgm
 entry:
   %ld = load <4 x i32>, ptr addrspace(1) %in
-  %value = insertelement <4 x i32> %ld, i32 5, i32 undef
+  %value = insertelement <4 x i32> %ld, i32 5, i32 poison
   store <4 x i32> %value, ptr addrspace(1) %out
   ret void
 }
@@ -7699,13 +7699,13 @@ bb:
 
 bb1:
   %tmp2 = load volatile <4 x float>, ptr addrspace(1) undef
-  %tmp3 = insertelement <4 x float> %tmp2, float %val0, i32 undef
+  %tmp3 = insertelement <4 x float> %tmp2, float %val0, i32 poison
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp3) ; Prevent block optimize out
   br label %bb7
 
 bb4:
   %tmp5 = load volatile <4 x float>, ptr addrspace(1) undef
-  %tmp6 = insertelement <4 x float> %tmp5, float %val0, i32 undef
+  %tmp6 = insertelement <4 x float> %tmp5, float %val0, i32 poison
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp6) ; Prevent block optimize out
   br label %bb7
 
@@ -9459,7 +9459,7 @@ bb2:
 
 bb4:
   %vgpr = load volatile i32, ptr addrspace(1) undef
-  %tmp5 = insertelement <16 x i32> undef, i32 undef, i32 %vgpr
+  %tmp5 = insertelement <16 x i32> poison, i32 poison, i32 %vgpr
   %tmp6 = insertelement <16 x i32> %tmp5, i32 %arg1, i32 %vgpr
   %tmp7 = extractelement <16 x i32> %tmp6, i32 0
   br label %bb2
