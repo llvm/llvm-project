@@ -33,13 +33,13 @@ define amdgpu_ps <4 x float> @image_bvh_intersect_ray_flat(i32 %node_ptr, float 
 ; GCN-NEXT:    image_bvh_intersect_ray v[0:3], v[0:10], s[0:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
-  %ray_origin0 = insertelement <3 x float> undef, float %ray_origin_x, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float %ray_origin_x, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float %ray_origin_y, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float %ray_origin_z, i32 2
-  %ray_dir0 = insertelement <3 x float> undef, float %ray_dir_x, i32 0
+  %ray_dir0 = insertelement <3 x float> poison, float %ray_dir_x, i32 0
   %ray_dir1 = insertelement <3 x float> %ray_dir0, float %ray_dir_y, i32 1
   %ray_dir = insertelement <3 x float> %ray_dir1, float %ray_dir_z, i32 2
-  %ray_inv_dir0 = insertelement <3 x float> undef, float %ray_inv_dir_x, i32 0
+  %ray_inv_dir0 = insertelement <3 x float> poison, float %ray_inv_dir_x, i32 0
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float %ray_inv_dir_y, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float %ray_inv_dir_z, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
@@ -96,13 +96,13 @@ define amdgpu_ps <4 x float> @image_bvh64_intersect_ray_flat(<2 x i32> %node_ptr
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
   %node_ptr = bitcast <2 x i32> %node_ptr_vec to i64
-  %ray_origin0 = insertelement <3 x float> undef, float %ray_origin_x, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float %ray_origin_x, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float %ray_origin_y, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float %ray_origin_z, i32 2
-  %ray_dir0 = insertelement <3 x float> undef, float %ray_dir_x, i32 0
+  %ray_dir0 = insertelement <3 x float> poison, float %ray_dir_x, i32 0
   %ray_dir1 = insertelement <3 x float> %ray_dir0, float %ray_dir_y, i32 1
   %ray_dir = insertelement <3 x float> %ray_dir1, float %ray_dir_z, i32 2
-  %ray_inv_dir0 = insertelement <3 x float> undef, float %ray_inv_dir_x, i32 0
+  %ray_inv_dir0 = insertelement <3 x float> poison, float %ray_inv_dir_x, i32 0
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float %ray_inv_dir_y, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float %ray_inv_dir_z, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
@@ -725,13 +725,13 @@ define amdgpu_kernel void @image_bvh_intersect_ray_nsa_reassign(ptr %p_node_ptr,
   %node_ptr = load i32, ptr %gep_node_ptr, align 4
   %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
   %ray_extent = load float, ptr %gep_ray, align 4
-  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <3 x float> undef, float 3.0, i32 0
+  %ray_dir0 = insertelement <3 x float> poison, float 3.0, i32 0
   %ray_dir1 = insertelement <3 x float> %ray_dir0, float 4.0, i32 1
   %ray_dir = insertelement <3 x float> %ray_dir1, float 5.0, i32 2
-  %ray_inv_dir0 = insertelement <3 x float> undef, float 6.0, i32 0
+  %ray_inv_dir0 = insertelement <3 x float> poison, float 6.0, i32 0
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f32(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
@@ -829,13 +829,13 @@ define amdgpu_kernel void @image_bvh_intersect_ray_a16_nsa_reassign(ptr %p_node_
   %node_ptr = load i32, ptr %gep_node_ptr, align 4
   %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
   %ray_extent = load float, ptr %gep_ray, align 4
-  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <3 x half> undef, half 3.0, i32 0
+  %ray_dir0 = insertelement <3 x half> poison, half 3.0, i32 0
   %ray_dir1 = insertelement <3 x half> %ray_dir0, half 4.0, i32 1
   %ray_dir = insertelement <3 x half> %ray_dir1, half 5.0, i32 2
-  %ray_inv_dir0 = insertelement <3 x half> undef, half 6.0, i32 0
+  %ray_inv_dir0 = insertelement <3 x half> poison, half 6.0, i32 0
   %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
   %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i32.v4f16(i32 %node_ptr, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)
@@ -911,13 +911,13 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_nsa_reassign(ptr %p_ray, <4
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
   %ray_extent = load float, ptr %gep_ray, align 4
-  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <3 x float> undef, float 3.0, i32 0
+  %ray_dir0 = insertelement <3 x float> poison, float 3.0, i32 0
   %ray_dir1 = insertelement <3 x float> %ray_dir0, float 4.0, i32 1
   %ray_dir = insertelement <3 x float> %ray_dir1, float 5.0, i32 2
-  %ray_inv_dir0 = insertelement <3 x float> undef, float 6.0, i32 0
+  %ray_inv_dir0 = insertelement <3 x float> poison, float 6.0, i32 0
   %ray_inv_dir1 = insertelement <3 x float> %ray_inv_dir0, float 7.0, i32 1
   %ray_inv_dir = insertelement <3 x float> %ray_inv_dir1, float 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f32(i64 1111111111111, float %ray_extent, <3 x float> %ray_origin, <3 x float> %ray_dir, <3 x float> %ray_inv_dir, <4 x i32> %tdescr)
@@ -985,13 +985,13 @@ define amdgpu_kernel void @image_bvh64_intersect_ray_a16_nsa_reassign(ptr %p_ray
   %lid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep_ray = getelementptr inbounds float, ptr %p_ray, i32 %lid
   %ray_extent = load float, ptr %gep_ray, align 4
-  %ray_origin0 = insertelement <3 x float> undef, float 0.0, i32 0
+  %ray_origin0 = insertelement <3 x float> poison, float 0.0, i32 0
   %ray_origin1 = insertelement <3 x float> %ray_origin0, float 1.0, i32 1
   %ray_origin = insertelement <3 x float> %ray_origin1, float 2.0, i32 2
-  %ray_dir0 = insertelement <3 x half> undef, half 3.0, i32 0
+  %ray_dir0 = insertelement <3 x half> poison, half 3.0, i32 0
   %ray_dir1 = insertelement <3 x half> %ray_dir0, half 4.0, i32 1
   %ray_dir = insertelement <3 x half> %ray_dir1, half 5.0, i32 2
-  %ray_inv_dir0 = insertelement <3 x half> undef, half 6.0, i32 0
+  %ray_inv_dir0 = insertelement <3 x half> poison, half 6.0, i32 0
   %ray_inv_dir1 = insertelement <3 x half> %ray_inv_dir0, half 7.0, i32 1
   %ray_inv_dir = insertelement <3 x half> %ray_inv_dir1, half 8.0, i32 2
   %v = call <4 x i32> @llvm.amdgcn.image.bvh.intersect.ray.i64.v4f16(i64 1111111111110, float %ray_extent, <3 x float> %ray_origin, <3 x half> %ray_dir, <3 x half> %ray_inv_dir, <4 x i32> %tdescr)

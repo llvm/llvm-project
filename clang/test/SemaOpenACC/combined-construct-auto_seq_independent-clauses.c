@@ -125,7 +125,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop auto bind(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop auto vector_length(1)
@@ -242,7 +242,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) auto
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop bind(Var) auto
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop vector_length(1) auto
@@ -360,7 +360,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop independent bind(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop independent vector_length(1)
@@ -477,7 +477,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) independent
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop bind(Var) independent
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop vector_length(1) independent
@@ -603,7 +603,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq collapse(1)
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop seq bind(Var)
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop seq vector_length(1)
@@ -726,7 +726,7 @@ void uses() {
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop collapse(1) seq
   for(unsigned i = 0; i < 5; ++i);
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented}}
+  // expected-error@+1{{OpenACC 'bind' clause is not valid on 'parallel loop' directive}}
 #pragma acc parallel loop bind(Var) seq
   for(unsigned i = 0; i < 5; ++i);
 #pragma acc parallel loop vector_length(1) seq
