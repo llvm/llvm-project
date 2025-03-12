@@ -809,7 +809,7 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
       ConsumeToken();
     }
     // Parse the asm-string list for clobbers if present.
-    if (!AteExtraColon && isTokenStringLiteral()) {
+    if (!AteExtraColon && (isTokenStringLiteral() || Tok.is(tok::l_paren))) {
       while (true) {
         ExprResult Clobber(ParseAsmStringLiteral(/*ForAsmLabel*/ false));
 

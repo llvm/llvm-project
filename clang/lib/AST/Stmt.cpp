@@ -455,11 +455,11 @@ std::string AsmStmt::generateAsmString(const ASTContext &C) const {
   llvm_unreachable("unknown asm statement kind!");
 }
 
-StringRef AsmStmt::getOutputConstraint(unsigned i) const {
+std::string AsmStmt::getOutputConstraint(unsigned i) const {
   if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
     return gccAsmStmt->getOutputConstraint(i);
   if (const auto *msAsmStmt = dyn_cast<MSAsmStmt>(this))
-    return msAsmStmt->getOutputConstraint(i);
+    return msAsmStmt->getOutputConstraint(i).str();
   llvm_unreachable("unknown asm statement kind!");
 }
 
@@ -471,11 +471,11 @@ const Expr *AsmStmt::getOutputExpr(unsigned i) const {
   llvm_unreachable("unknown asm statement kind!");
 }
 
-StringRef AsmStmt::getInputConstraint(unsigned i) const {
+std::string AsmStmt::getInputConstraint(unsigned i) const {
   if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
     return gccAsmStmt->getInputConstraint(i);
   if (const auto *msAsmStmt = dyn_cast<MSAsmStmt>(this))
-    return msAsmStmt->getInputConstraint(i);
+    return msAsmStmt->getInputConstraint(i).str();
   llvm_unreachable("unknown asm statement kind!");
 }
 
@@ -487,11 +487,11 @@ const Expr *AsmStmt::getInputExpr(unsigned i) const {
   llvm_unreachable("unknown asm statement kind!");
 }
 
-StringRef AsmStmt::getClobber(unsigned i) const {
+std::string AsmStmt::getClobber(unsigned i) const {
   if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(this))
     return gccAsmStmt->getClobber(i);
   if (const auto *msAsmStmt = dyn_cast<MSAsmStmt>(this))
-    return msAsmStmt->getClobber(i);
+    return msAsmStmt->getClobber(i).str();
   llvm_unreachable("unknown asm statement kind!");
 }
 
@@ -510,8 +510,31 @@ char GCCAsmStmt::AsmStringPiece::getModifier() const {
   return isLetter(Str[0]) ? Str[0] : '\0';
 }
 
-StringRef GCCAsmStmt::getClobber(unsigned i) const {
-  return getClobberStringLiteral(i)->getString();
+std::string GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(const Expr* E) {
+  if(auto* SL = llvm::dyn_cast<StringLiteral>(E))
+    return SL->getString().str();
+  assert(E->getDependence() == ExprDependence::None && "cannot extract a string from a dependent expression");
+  auto* CE = cast<ConstantExpr>(E);
+  APValue Res = CE->getAPValueResult();
+  assert(Res.isArray() && "expected an array");
+
+  std::string Out;
+  Out.reserve(Res.getArraySize());
+  for(unsigned I = 0; I < Res.getArraySize(); ++I) {
+    APValue C = Res.getArrayInitializedElt(I);
+    assert(C.isInt());
+    auto Ch = static_cast<char>(C.getInt().getExtValue());
+    Out.push_back(Ch);
+  }
+  return Out;
+}
+
+std::string GCCAsmStmt::getAsmString() const {
+  return ExtractStringFromGCCAsmStmtComponent(getAsmStringExpr());
+}
+
+std::string GCCAsmStmt::getClobber(unsigned i) const {
+  return ExtractStringFromGCCAsmStmtComponent(getClobberExpr(i));
 }
 
 Expr *GCCAsmStmt::getOutputExpr(unsigned i) {
@@ -521,8 +544,8 @@ Expr *GCCAsmStmt::getOutputExpr(unsigned i) {
 /// getOutputConstraint - Return the constraint string for the specified
 /// output operand.  All output constraints are known to be non-empty (either
 /// '=' or '+').
-StringRef GCCAsmStmt::getOutputConstraint(unsigned i) const {
-  return getOutputConstraintLiteral(i)->getString();
+std::string GCCAsmStmt::getOutputConstraint(unsigned i) const {
+  return ExtractStringFromGCCAsmStmtComponent(getOutputConstraintExpr(i));
 }
 
 Expr *GCCAsmStmt::getInputExpr(unsigned i) {
@@ -543,18 +566,18 @@ StringRef GCCAsmStmt::getLabelName(unsigned i) const {
 
 /// getInputConstraint - Return the specified input constraint.  Unlike output
 /// constraints, these can be empty.
-StringRef GCCAsmStmt::getInputConstraint(unsigned i) const {
-  return getInputConstraintLiteral(i)->getString();
+std::string GCCAsmStmt::getInputConstraint(unsigned i) const {
+  return ExtractStringFromGCCAsmStmtComponent(getInputConstraintExpr(i));
 }
 
 void GCCAsmStmt::setOutputsAndInputsAndClobbers(const ASTContext &C,
                                                 IdentifierInfo **Names,
-                                                StringLiteral **Constraints,
+                                                Expr **Constraints,
                                                 Stmt **Exprs,
                                                 unsigned NumOutputs,
                                                 unsigned NumInputs,
                                                 unsigned NumLabels,
-                                                StringLiteral **Clobbers,
+                                                Expr **Clobbers,
                                                 unsigned NumClobbers) {
   this->NumOutputs = NumOutputs;
   this->NumInputs = NumInputs;
@@ -573,11 +596,11 @@ void GCCAsmStmt::setOutputsAndInputsAndClobbers(const ASTContext &C,
 
   unsigned NumConstraints = NumOutputs + NumInputs;
   C.Deallocate(this->Constraints);
-  this->Constraints = new (C) StringLiteral*[NumConstraints];
+  this->Constraints = new (C) Expr*[NumConstraints];
   std::copy(Constraints, Constraints + NumConstraints, this->Constraints);
 
   C.Deallocate(this->Clobbers);
-  this->Clobbers = new (C) StringLiteral*[NumClobbers];
+  this->Clobbers = new (C) Expr*[NumClobbers];
   std::copy(Clobbers, Clobbers + NumClobbers, this->Clobbers);
 }
 
@@ -609,9 +632,10 @@ int GCCAsmStmt::getNamedOperand(StringRef SymbolicName) const {
 /// true, otherwise return false.
 unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
                                 const ASTContext &C, unsigned &DiagOffs) const {
-  StringRef Str = getAsmString()->getString();
-  const char *StrStart = Str.begin();
-  const char *StrEnd = Str.end();
+
+  std::string Str = getAsmString();
+  const char *StrStart = Str.data();
+  const char *StrEnd = Str.data() + Str.size();
   const char *CurPtr = StrStart;
 
   // "Simple" inline asms have no constraints or operands, just convert the asm
@@ -739,15 +763,21 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
 
       // Str contains "x4" (Operand without the leading %).
       std::string Str(Begin, CurPtr - Begin);
-
       // (BeginLoc, EndLoc) represents the range of the operand we are currently
       // processing. Unlike Str, the range includes the leading '%'.
-      SourceLocation BeginLoc = getAsmString()->getLocationOfByte(
-          Percent - StrStart, SM, LO, TI, &LastAsmStringToken,
-          &LastAsmStringOffset);
-      SourceLocation EndLoc = getAsmString()->getLocationOfByte(
-          CurPtr - StrStart, SM, LO, TI, &LastAsmStringToken,
-          &LastAsmStringOffset);
+      SourceLocation BeginLoc, EndLoc;
+      if(auto* SL = dyn_cast<StringLiteral>(getAsmStringExpr())) {
+        BeginLoc = SL->getLocationOfByte(
+            Percent - StrStart, SM, LO, TI, &LastAsmStringToken,
+            &LastAsmStringOffset);
+        EndLoc = SL->getLocationOfByte(
+            CurPtr - StrStart, SM, LO, TI, &LastAsmStringToken,
+            &LastAsmStringOffset);
+      }
+      else {
+        BeginLoc = getAsmStringExpr()->getBeginLoc();
+        EndLoc = getAsmStringExpr()->getEndLoc();
+      }
 
       Pieces.emplace_back(N, std::move(Str), BeginLoc, EndLoc);
       continue;
@@ -778,12 +808,19 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
 
       // (BeginLoc, EndLoc) represents the range of the operand we are currently
       // processing. Unlike Str, the range includes the leading '%'.
-      SourceLocation BeginLoc = getAsmString()->getLocationOfByte(
+      SourceLocation BeginLoc, EndLoc;
+      if(auto* SL = dyn_cast<StringLiteral>(getAsmStringExpr())) {
+        BeginLoc = SL->getLocationOfByte(
           Percent - StrStart, SM, LO, TI, &LastAsmStringToken,
           &LastAsmStringOffset);
-      SourceLocation EndLoc = getAsmString()->getLocationOfByte(
+        EndLoc = SL->getLocationOfByte(
           NameEnd + 1 - StrStart, SM, LO, TI, &LastAsmStringToken,
           &LastAsmStringOffset);
+      }
+      else {
+        BeginLoc = getAsmStringExpr()->getBeginLoc();
+        EndLoc = getAsmStringExpr()->getEndLoc();
+      }
 
       Pieces.emplace_back(N, std::move(Str), BeginLoc, EndLoc);
 
@@ -863,9 +900,9 @@ void MSAsmStmt::setInputExpr(unsigned i, Expr *E) {
 GCCAsmStmt::GCCAsmStmt(const ASTContext &C, SourceLocation asmloc,
                        bool issimple, bool isvolatile, unsigned numoutputs,
                        unsigned numinputs, IdentifierInfo **names,
-                       StringLiteral **constraints, Expr **exprs,
-                       StringLiteral *asmstr, unsigned numclobbers,
-                       StringLiteral **clobbers, unsigned numlabels,
+                       Expr **constraints, Expr **exprs,
+                       Expr *asmstr, unsigned numclobbers,
+                       Expr **clobbers, unsigned numlabels,
                        SourceLocation rparenloc)
     : AsmStmt(GCCAsmStmtClass, asmloc, issimple, isvolatile, numoutputs,
               numinputs, numclobbers),
@@ -879,10 +916,10 @@ GCCAsmStmt::GCCAsmStmt(const ASTContext &C, SourceLocation asmloc,
   std::copy(exprs, exprs + NumExprs, Exprs);
 
   unsigned NumConstraints = NumOutputs + NumInputs;
-  Constraints = new (C) StringLiteral*[NumConstraints];
+  Constraints = new (C) Expr*[NumConstraints];
   std::copy(constraints, constraints + NumConstraints, Constraints);
 
-  Clobbers = new (C) StringLiteral*[NumClobbers];
+  Clobbers = new (C) Expr*[NumClobbers];
   std::copy(clobbers, clobbers + NumClobbers, Clobbers);
 }
 

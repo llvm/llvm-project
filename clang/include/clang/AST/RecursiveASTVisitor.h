@@ -2410,15 +2410,15 @@ DEF_TRAVERSE_DECL(ImplicitConceptSpecializationDecl, {
   }
 
 DEF_TRAVERSE_STMT(GCCAsmStmt, {
-  TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getAsmString());
+  TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getAsmStringExpr());
   for (unsigned I = 0, E = S->getNumInputs(); I < E; ++I) {
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getInputConstraintLiteral(I));
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getInputConstraintExpr(I));
   }
   for (unsigned I = 0, E = S->getNumOutputs(); I < E; ++I) {
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getOutputConstraintLiteral(I));
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getOutputConstraintExpr(I));
   }
   for (unsigned I = 0, E = S->getNumClobbers(); I < E; ++I) {
-    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getClobberStringLiteral(I));
+    TRY_TO_TRAVERSE_OR_ENQUEUE_STMT(S->getClobberExpr(I));
   }
   // children() iterates over inputExpr and outputExpr.
 })

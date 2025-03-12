@@ -497,6 +497,19 @@ void StmtPrinter::VisitReturnStmt(ReturnStmt *Node) {
   if (Policy.IncludeNewlines) OS << NL;
 }
 
+static void PrintGCCAsmString(raw_ostream &OS, Expr*E) {
+  if(E->getDependence()) {
+    OS << "<<dependent expr>>";
+    return;
+  }
+
+  std::string Str = GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(E);
+  llvm::SmallVector<char> Out;
+  // FIXME: Unify with StringLiteral::outputString
+  EscapeStringForDiagnostic(Str, Out);
+  OS << '"' << Out << '"';
+}
+
 void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
   Indent() << "asm ";
 
@@ -507,7 +520,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
     OS << "goto ";
 
   OS << "(";
-  VisitStringLiteral(Node->getAsmString());
+  PrintGCCAsmString(OS, Node->getAsmStringExpr());
 
   // Outputs
   if (Node->getNumOutputs() != 0 || Node->getNumInputs() != 0 ||
@@ -524,7 +537,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << "] ";
     }
 
-    VisitStringLiteral(Node->getOutputConstraintLiteral(i));
+    PrintGCCAsmString(OS, Node->getOutputConstraintExpr(i));
     OS << " (";
     Visit(Node->getOutputExpr(i));
     OS << ")";
@@ -545,7 +558,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
       OS << "] ";
     }
 
-    VisitStringLiteral(Node->getInputConstraintLiteral(i));
+    PrintGCCAsmString(OS, Node->getInputConstraintExpr(i));
     OS << " (";
     Visit(Node->getInputExpr(i));
     OS << ")";
@@ -559,7 +572,7 @@ void StmtPrinter::VisitGCCAsmStmt(GCCAsmStmt *Node) {
     if (i != 0)
       OS << ", ";
 
-    VisitStringLiteral(Node->getClobberStringLiteral(i));
+    PrintGCCAsmString(OS, Node->getClobberExpr(i));
   }
 
   // Labels
