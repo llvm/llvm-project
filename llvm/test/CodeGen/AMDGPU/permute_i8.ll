@@ -342,7 +342,7 @@ define hidden void @shuffle7330ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 7, i32 3, i32 3, i32 0>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 7, i32 3, i32 3, i32 0>
   store <4 x i8> %shuffle0_0, ptr addrspace(1) %out0, align 4
   ret void
 }
@@ -367,7 +367,7 @@ define hidden void @shuffle5341ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 5, i32 3, i32 4, i32 1>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 5, i32 3, i32 4, i32 1>
   store <4 x i8> %shuffle0_0, ptr addrspace(1) %out0, align 4
   ret void
 }
@@ -393,7 +393,7 @@ define hidden void @shuffle6106ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 6, i32 1, i32 0, i32 6>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 6, i32 1, i32 0, i32 6>
   store <4 x i8> %shuffle0_0, ptr addrspace(1) %out0, align 4
   ret void
 }
@@ -420,7 +420,7 @@ define hidden void @shuffle4327ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 4, i32 3, i32 2, i32 7>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 4, i32 3, i32 2, i32 7>
   store <4 x i8> %shuffle0_0, ptr addrspace(1) %out0, align 4
   ret void
 }
@@ -446,7 +446,7 @@ define hidden void @shuffle3263ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 6, i32 3>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 6, i32 3>
   store <4 x i8> %shuffle0_0, ptr addrspace(1) %out0, align 4
   ret void
 }
@@ -472,7 +472,7 @@ define hidden void @shuffle2763ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 2, i32 7, i32 6, i32 3>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 2, i32 7, i32 6, i32 3>
   store <4 x i8> %shuffle0_0, ptr addrspace(1) %out0, align 4
   ret void
 }
@@ -498,7 +498,7 @@ define hidden void @shuffle1327ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 1, i32 3, i32 2, i32 7>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 1, i32 3, i32 2, i32 7>
   store <4 x i8> %shuffle0_0, ptr addrspace(1) %out0, align 4
   ret void
 }
@@ -524,7 +524,7 @@ define hidden void @shuffle0605ud2(ptr addrspace(1) %in0, ptr addrspace(1) %out0
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 0, i32 6, i32 0, i32 5>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 0, i32 6, i32 0, i32 5>
   store <4 x i8> %shuffle0_0, ptr addrspace(1) %out0, align 4
   ret void
 }
@@ -554,7 +554,7 @@ define hidden void @insertUsesOr(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 4>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 4>
   %vecins = insertelement <4 x i8> %shuffle0_0, i8 %elt, i32 1
   store <4 x i8> %vecins, ptr addrspace(1) %out0
   ret void
@@ -598,7 +598,7 @@ define hidden void @addUsesOr(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 7, i32 0, i32 6, i32 3>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 7, i32 0, i32 6, i32 3>
   %added = add <4 x i8> %shuffle0_0, %vec1
   store <4 x i8> %added, ptr addrspace(1) %out0
   ret void
@@ -783,7 +783,7 @@ define hidden void @add_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %el
   %gep1 = getelementptr <4 x i8>, ptr addrspace(1) %in1, i32 %tid
   %vec0 = load <4 x i8>, ptr addrspace(1) %gep0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %gep1, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 4>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 4>
   %vecins = add <4 x i8> %shuffle0_0, %vec1
   store <4 x i8> %vecins, ptr addrspace(1) %out0
   ret void
@@ -835,7 +835,7 @@ define hidden void @add_store(ptr addrspace(1) %in0, ptr addrspace(1) %in1, i8 %
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
   %vec0 = load <4 x i8>, ptr addrspace(1) %in0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %in1, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 4>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 4>
   %vecins = add <4 x i8> %shuffle0_0, %vec1
   store <4 x i8> %vecins, ptr addrspace(1) %out0
   store <4 x i8> %shuffle0_0, ptr addrspace(1) %out1
@@ -903,7 +903,7 @@ define hidden void @add_store_div_16(ptr addrspace(1) %in0, ptr addrspace(1) %in
   %gep1 = getelementptr <4 x i8>, ptr addrspace(1) %in1, i32 %tid
   %vec0 = load <4 x i8>, ptr addrspace(1) %gep0, align 4
   %vec1 = load <4 x i8>, ptr addrspace(1) %gep1, align 4
-  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 4>
+  %shuffle0_0 = shufflevector <4 x i8> %vec0, <4 x i8> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 4>
   %vecins = add <4 x i8> %shuffle0_0, %vec1
   store <4 x i8> %vecins, ptr addrspace(1) %out0
   store <4 x i8> %shuffle0_0, ptr addrspace(1) %out1

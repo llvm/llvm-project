@@ -67,7 +67,7 @@ define amdgpu_kernel void @scalar_to_vector_v2i32(ptr addrspace(1) %out, ptr add
 ; GFX9-NEXT:    s_endpgm
   %tmp1 = load i32, ptr addrspace(1) %in, align 4
   %bc = bitcast i32 %tmp1 to <2 x i16>
-  %tmp2 = shufflevector <2 x i16> %bc, <2 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp2 = shufflevector <2 x i16> %bc, <2 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   store <4 x i16> %tmp2, ptr addrspace(1) %out, align 8
   ret void
 }
@@ -135,7 +135,7 @@ define amdgpu_kernel void @scalar_to_vector_v2f32(ptr addrspace(1) %out, ptr add
 ; GFX9-NEXT:    s_endpgm
   %tmp1 = load float, ptr addrspace(1) %in, align 4
   %bc = bitcast float %tmp1 to <2 x i16>
-  %tmp2 = shufflevector <2 x i16> %bc, <2 x i16> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+  %tmp2 = shufflevector <2 x i16> %bc, <2 x i16> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
   store <4 x i16> %tmp2, ptr addrspace(1) %out, align 8
   ret void
 }
@@ -193,7 +193,7 @@ define amdgpu_kernel void @scalar_to_vector_v4i16() {
 bb:
   %tmp = load <2 x i8>, ptr addrspace(1) undef, align 1
   %tmp1 = shufflevector <2 x i8> %tmp, <2 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
+  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> poison, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
   store <8 x i8> %tmp2, ptr addrspace(1) undef, align 8
   ret void
 }
@@ -262,7 +262,7 @@ bb:
   %load = load half, ptr addrspace(1) undef, align 1
   %tmp = bitcast half %load to <2 x i8>
   %tmp1 = shufflevector <2 x i8> %tmp, <2 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
-  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> undef, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
+  %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> poison, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
   store <8 x i8> %tmp2, ptr addrspace(1) undef, align 8
   ret void
 }
@@ -275,7 +275,7 @@ bb:
 ;   %tmp1 = load i32, ptr addrspace(1) %in, align 4
 ;   %bc = bitcast i32 %tmp1 to <4 x i8>
 
-;   %tmp2 = shufflevector <4 x i8> %bc, <4 x i8> undef, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+;   %tmp2 = shufflevector <4 x i8> %bc, <4 x i8> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ;   store <8 x i8> %tmp2, ptr addrspace(1) %out, align 4
 ;   ret void
 ; }

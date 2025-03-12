@@ -13,7 +13,7 @@ define <3 x i32> @quux() {
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  %tmp = shufflevector <4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i8> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  %tmp = shufflevector <4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i8> poison, <3 x i32> <i32 0, i32 1, i32 2>
   %tmp1 = extractelement <3 x i8> %tmp, i64 0
   %tmp2 = zext i8 %tmp1 to i32
   %tmp3 = insertelement <3 x i32> poison, i32 %tmp2, i32 0

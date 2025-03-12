@@ -315,7 +315,7 @@ define amdgpu_ps <2 x float> @image_sample_b_2d_v3f16(<8 x i32> inreg %rsrc, <4 
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %tex = call <3 x half> @llvm.amdgcn.image.sample.b.2d.v3f16.f32.f32(i32 7, float %bias, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 0, i32 0)
-  %tex_wide = shufflevector <3 x half> %tex, <3 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tex_wide = shufflevector <3 x half> %tex, <3 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %r = bitcast <4 x half> %tex_wide to <2 x float>
   ret <2 x float> %r
 }
@@ -410,7 +410,7 @@ define amdgpu_ps <4 x float> @image_sample_b_2d_v3f16_tfe(<8 x i32> inreg %rsrc,
 main_body:
   %tex = call {<3 x half>,i32} @llvm.amdgcn.image.sample.b.2d.v3f16i32.f32.f32(i32 7, float %bias, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 1, i32 0)
   %tex.vec = extractvalue {<3 x half>, i32} %tex, 0
-  %tex.vec_wide = shufflevector <3 x half> %tex.vec, <3 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %tex.vec_wide = shufflevector <3 x half> %tex.vec, <3 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %tex.err = extractvalue {<3 x half>, i32} %tex, 1
   %tex.vecf = bitcast <4 x half> %tex.vec_wide to <2 x float>
   %tex.vecf.0 = extractelement <2 x float> %tex.vecf, i32 0
