@@ -10,18 +10,13 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Host/StreamFile.h"
-#include "lldb/Host/ThreadLauncher.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/AnsiTerminal.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Locale.h"
-#include <algorithm>
-#include <cstdint>
 
 #define ESCAPE "\x1b"
 #define ANSI_NORMAL ESCAPE "[0m"
@@ -32,17 +27,9 @@
 #define ANSI_SET_SCROLL_ROWS ESCAPE "[0;%ur"
 #define ANSI_TO_START_OF_ROW ESCAPE "[%u;0f"
 #define ANSI_UP_ROWS ESCAPE "[%dA"
-#define ANSI_DOWN_ROWS ESCAPE "[%dB"
-#define ANSI_FORWARD_COLS ESCAPE "\033[%dC"
-#define ANSI_BACKWARD_COLS ESCAPE "\033[%dD"
 
 using namespace lldb;
 using namespace lldb_private;
-
-static size_t ColumnWidth(llvm::StringRef str) {
-  std::string stripped = ansi::StripAnsiTerminalCodes(str);
-  return llvm::sys::locale::columnWidth(stripped);
-}
 
 Statusline::Statusline(Debugger &debugger) : m_debugger(debugger) { Enable(); }
 
@@ -73,41 +60,6 @@ void Statusline::Disable() {
   UpdateScrollWindow(ScrollWindowExtend);
 }
 
-std::string Statusline::TrimAndPad(std::string str, size_t max_width) {
-  size_t column_width = ColumnWidth(str);
-
-  // Trim the string.
-  if (column_width > max_width) {
-    size_t min_width_idx = max_width;
-    size_t min_width = column_width;
-
-    // Use a StringRef for more efficient slicing in the loop below.
-    llvm::StringRef str_ref = str;
-
-    // Keep extending the string to find the minimum column width to make sure
-    // we include as many ANSI escape characters or Unicode code units as
-    // possible. This is far from the most efficient way to do this, but it's
-    // means our stripping code doesn't need to be ANSI and Unicode aware and
-    // should be relatively cold code path.
-    for (size_t i = column_width; i < str.length(); ++i) {
-      size_t stripped_width = ColumnWidth(str_ref.take_front(i));
-      if (stripped_width <= column_width) {
-        min_width = stripped_width;
-        min_width_idx = i;
-      }
-    }
-
-    str = str.substr(0, min_width_idx);
-    column_width = min_width;
-  }
-
-  // Pad the string.
-  if (column_width < max_width)
-    str.append(max_width - column_width, ' ');
-
-  return str;
-}
-
 void Statusline::Draw(std::string str) {
   lldb::LockableStreamFileSP stream_sp = m_debugger.GetOutputStreamSP();
   if (!stream_sp)
@@ -117,7 +69,7 @@ void Statusline::Draw(std::string str) {
 
   m_last_str = str;
 
-  str = TrimAndPad(str, m_terminal_width);
+  str = ansi::TrimAndPad(str, m_terminal_width);
 
   LockedStreamFile locked_stream = stream_sp->Lock();
   locked_stream << ANSI_SAVE_CURSOR;
