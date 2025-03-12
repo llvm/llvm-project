@@ -215,6 +215,6 @@ union U {
   float f1;
   char __attribute__((__vector_size__(1))) f2;
 };
-int f(union U u) { return u.f2[1]; }
+int f(union U u) { return u.f2[0]; }
 // CHECK-LABEL: define{{.*}} i32 @_ZN6test111fENS_1UE(i32
 }
