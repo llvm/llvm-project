@@ -58,7 +58,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Err>
-class [[nodiscrad]] expected;
+class expected;
 
 template <class _Tp>
 struct __is_std_expected : false_type {};
