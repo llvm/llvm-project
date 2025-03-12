@@ -346,6 +346,12 @@ int elsecondnoret(void) {
   return 0;
 }
 
+// CHECK-LABEL: _Z18statementexprnoretb
+int statementexprnoret(bool crash) {
+  int rc = ({ if (crash) abort(); 0; }); // CHECK-NOT: Gap,File 0, [[@LINE]]:41 -> [[@LINE+1]]:3 = 0
+  return rc;
+}
+
 int main() {
   foo(0);
   foo(1);
@@ -368,5 +374,6 @@ int main() {
   ornoret();
   abstractcondnoret();
   elsecondnoret();
+  statementexprnoret(false);
   return 0;
 }
