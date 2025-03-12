@@ -1502,7 +1502,7 @@ static bool compileModuleAndReadASTBehindLock(
 
     // Someone else is responsible for building the module. Wait for them to
     // finish.
-    switch (Lock.waitForUnlock()) {
+    switch (Lock.waitForUnlockFor(std::chrono::seconds(90))) {
     case llvm::WaitForUnlockResult::Success:
       break; // The interesting case.
     case llvm::WaitForUnlockResult::OwnerDied:
@@ -1514,7 +1514,7 @@ static bool compileModuleAndReadASTBehindLock(
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
           << Module->Name;
       // Clear the lock file so that future invocations can make progress.
-      Lock.unsafeUnlockShared();
+      Lock.unsafeMaybeUnlock();
       continue;
     }
 

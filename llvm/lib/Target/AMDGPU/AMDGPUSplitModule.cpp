@@ -1553,7 +1553,7 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
             dbgs() << "[amdgpu-split-module] unable to acquire lockfile, debug "
                       "output may be mangled by other processes\n");
       } else if (!Owned) {
-        switch (Lock.waitForUnlock()) {
+        switch (Lock.waitForUnlockFor(std::chrono::seconds(90))) {
         case WaitForUnlockResult::Success:
           break;
         case WaitForUnlockResult::OwnerDied:
@@ -1563,7 +1563,7 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
               dbgs()
               << "[amdgpu-split-module] unable to acquire lockfile, debug "
                  "output may be mangled by other processes\n");
-          Lock.unsafeUnlockShared();
+          Lock.unsafeMaybeUnlock();
           break; // give up
         }
       }

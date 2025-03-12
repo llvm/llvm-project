@@ -53,13 +53,14 @@ public:
   Expected<bool> tryLock() override;
 
   /// For a shared lock, wait until the owner releases the lock.
-  /// Total timeout for the file to appear is ~1.5 minutes.
+  ///
   /// \param MaxSeconds the maximum total wait time in seconds.
-  WaitForUnlockResult waitForUnlockFor(unsigned MaxSeconds) override;
+  WaitForUnlockResult
+  waitForUnlockFor(std::chrono::seconds MaxSeconds) override;
 
   /// Remove the lock file.  This may delete a different lock file than
   /// the one previously read if there is a race.
-  std::error_code unsafeUnlockShared() override;
+  std::error_code unsafeMaybeUnlock() override;
 
   /// Unlocks the lock if previously acquired by \c tryLock().
   ~LockFileManager() override;

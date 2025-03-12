@@ -264,7 +264,8 @@ LockFileManager::~LockFileManager() {
   sys::DontRemoveFileOnSignal(UniqueLockFileName);
 }
 
-WaitForUnlockResult LockFileManager::waitForUnlockFor(unsigned MaxSeconds) {
+WaitForUnlockResult
+LockFileManager::waitForUnlockFor(std::chrono::seconds MaxSeconds) {
   auto *LockFileOwner = std::get_if<OwnedByAnother>(&Owner);
   assert(LockFileOwner &&
          "waiting for lock to be unlocked without knowing the owner");
@@ -274,7 +275,7 @@ WaitForUnlockResult LockFileManager::waitForUnlockFor(unsigned MaxSeconds) {
   // algorithm. This improves performance on machines with high core counts
   // when the file lock is heavily contended by multiple clang processes
   using namespace std::chrono_literals;
-  ExponentialBackoff Backoff(std::chrono::seconds(MaxSeconds), 10ms, 500ms);
+  ExponentialBackoff Backoff(MaxSeconds, 10ms, 500ms);
 
   // Wait first as this is only called when the lock is known to be held.
   while (Backoff.waitForNextAttempt()) {
@@ -293,6 +294,6 @@ WaitForUnlockResult LockFileManager::waitForUnlockFor(unsigned MaxSeconds) {
   return WaitForUnlockResult::Timeout;
 }
 
-std::error_code LockFileManager::unsafeUnlockShared() {
+std::error_code LockFileManager::unsafeMaybeUnlock() {
   return sys::fs::remove(LockFileName);
 }
