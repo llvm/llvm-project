@@ -96,9 +96,6 @@ Changes to the AMDGPU Backend
 
 Changes to the ARM Backend
 --------------------------
-* The `+nosimd` attribute is now fully supported. Previously, this had no effect when being used with
-AArch32 targets, however this will now disable NEON instructions being generated. The `simd` option is 
-also now printed when the `--print-supported-extensions` option is used.
 
 Changes to the AVR Backend
 --------------------------
