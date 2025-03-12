@@ -834,7 +834,7 @@ bool Sema::CheckParameterPacksForExpansion(
 
             if (TA.getKind() == TemplateArgument::Type)
               return !TA.getAsType()
-                          ->getAs<PackExpansionType>()
+                          ->castAs<PackExpansionType>()
                           ->getNumExpansions();
 
             if (TA.getKind() == TemplateArgument::Expression)

@@ -4,6 +4,8 @@ import * as vscode from "vscode";
 import * as child_process from "child_process";
 import * as fs from "node:fs/promises";
 
+const exec = util.promisify(child_process.execFile);
+
 export async function isExecutable(path: string): Promise<Boolean> {
   try {
     await fs.access(path, fs.constants.X_OK);
@@ -16,7 +18,6 @@ export async function isExecutable(path: string): Promise<Boolean> {
 async function findWithXcrun(executable: string): Promise<string | undefined> {
   if (process.platform === "darwin") {
     try {
-      const exec = util.promisify(child_process.execFile);
       let { stdout, stderr } = await exec("/usr/bin/xcrun", [
         "-find",
         executable,
@@ -24,7 +25,7 @@ async function findWithXcrun(executable: string): Promise<string | undefined> {
       if (stdout) {
         return stdout.toString().trimEnd();
       }
-    } catch (error) {}
+    } catch (error) { }
   }
   return undefined;
 }
@@ -97,8 +98,15 @@ async function getDAPExecutable(
  * depending on the session configuration.
  */
 export class LLDBDapDescriptorFactory
-  implements vscode.DebugAdapterDescriptorFactory
-{
+  implements vscode.DebugAdapterDescriptorFactory, vscode.Disposable {
+  private server?: Promise<{ process: child_process.ChildProcess, host: string, port: number }>;
+
+  dispose() {
+    this.server?.then(({ process }) => {
+      process.kill();
+    });
+  }
+
   async createDebugAdapterDescriptor(
     session: vscode.DebugSession,
     executable: vscode.DebugAdapterExecutable | undefined,
@@ -115,7 +123,18 @@ export class LLDBDapDescriptorFactory
     }
     const configEnvironment =
       config.get<{ [key: string]: string }>("environment") || {};
-    const dapPath = await getDAPExecutable(session);
+    const dapPath = (await getDAPExecutable(session)) ?? executable?.command;
+
+    if (!dapPath) {
+      LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage();
+      return undefined;
+    }
+
+    if (!(await isExecutable(dapPath))) {
+      LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(dapPath);
+      return;
+    }
+
     const dbgOptions = {
       env: {
         ...executable?.options?.env,
@@ -123,33 +142,52 @@ export class LLDBDapDescriptorFactory
         ...env,
       },
     };
-    if (dapPath) {
-      if (!(await isExecutable(dapPath))) {
-        LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(dapPath);
-        return undefined;
-      }
-      return new vscode.DebugAdapterExecutable(dapPath, [], dbgOptions);
-    } else if (executable) {
-      if (!(await isExecutable(executable.command))) {
-        LLDBDapDescriptorFactory.showLLDBDapNotFoundMessage(executable.command);
-        return undefined;
-      }
-      return new vscode.DebugAdapterExecutable(
-        executable.command,
-        executable.args,
-        dbgOptions,
-      );
+    const dbgArgs = executable?.args ?? [];
+
+    const serverMode = config.get<boolean>('serverMode', false);
+    if (serverMode) {
+      const { host, port } = await this.startServer(dapPath, dbgArgs, dbgOptions);
+      return new vscode.DebugAdapterServer(port, host);
     }
-    return undefined;
+
+    return new vscode.DebugAdapterExecutable(dapPath, dbgArgs, dbgOptions);
+  }
+
+  startServer(dapPath: string, args: string[], options: child_process.CommonSpawnOptions): Promise<{ host: string, port: number }> {
+    if (this.server) return this.server;
+
+    this.server = new Promise(resolve => {
+      args.push(
+        '--connection',
+        'connect://localhost:0'
+      );
+      const server = child_process.spawn(dapPath, args, options);
+      server.stdout!.setEncoding('utf8').once('data', (data: string) => {
+        const connection = /connection:\/\/\[([^\]]+)\]:(\d+)/.exec(data);
+        if (connection) {
+          const host = connection[1];
+          const port = Number(connection[2]);
+          resolve({ process: server, host, port });
+        }
+      });
+      server.on('exit', () => {
+        this.server = undefined;
+      })
+    });
+    return this.server;
   }
 
   /**
    * Shows a message box when the debug adapter's path is not found
    */
-  static async showLLDBDapNotFoundMessage(path: string) {
+  static async showLLDBDapNotFoundMessage(path?: string) {
+    const message =
+      path
+        ? `Debug adapter path: ${path} is not a valid file.`
+        : "Unable to find the path to the LLDB debug adapter executable.";
     const openSettingsAction = "Open Settings";
     const callbackValue = await vscode.window.showErrorMessage(
-      `Debug adapter path: ${path} is not a valid file`,
+      message,
       openSettingsAction,
     );
 

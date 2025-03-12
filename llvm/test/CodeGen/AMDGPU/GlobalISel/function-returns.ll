@@ -1061,6 +1061,7 @@ define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY [[DEF1]](<3 x s32>)
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
@@ -1083,7 +1084,7 @@ define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
   %insert.0 = insertelement <3 x i32> undef, i32 %load0, i32 0
   %insert.1 = insertelement <3 x i32> %insert.0, i32 %load1, i32 1
   %insert.2 = insertelement <3 x i32> %insert.1, i32 %load2, i32 2
-  %insert.3 = insertvalue { <3 x i32>, i32 } undef, <3 x i32> %insert.2, 0
+  %insert.3 = insertvalue { <3 x i32>, i32 } poison, <3 x i32> %insert.2, 0
   %insert.4 = insertvalue { <3 x i32>, i32 } %insert.3, i32 %load3, 1
   ret { <3 x i32>, i32 } %insert.4
 }
@@ -1096,6 +1097,7 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY [[DEF1]](<3 x s32>)
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
@@ -1118,7 +1120,7 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
   %insert.0 = insertelement <3 x float> undef, float %load0, i32 0
   %insert.1 = insertelement <3 x float> %insert.0, float %load1, i32 1
   %insert.2 = insertelement <3 x float> %insert.1, float %load2, i32 2
-  %insert.3 = insertvalue { <3 x float>, i32 } undef, <3 x float> %insert.2, 0
+  %insert.3 = insertvalue { <3 x float>, i32 } poison, <3 x float> %insert.2, 0
   %insert.4 = insertvalue { <3 x float>, i32 } %insert.3, i32 %load3, 1
   ret { <3 x float>, i32 } %insert.4
 }

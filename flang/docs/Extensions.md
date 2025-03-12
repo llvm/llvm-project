@@ -150,13 +150,15 @@ end
   have this capability. An Arm executable will run on either type of
   processor, so it is effectively unknown at compile time whether or
   not this support will be available at runtime. The standard requires
-  that a call to intrinsic module procedure `IEEE_SUPPORT_HALTING` with
+  that a call to intrinsic module procedure `ieee_support_halting` with
   a constant argument has a compile time constant result in `constant
   expression` and `specification expression` contexts. In compilations
   where this information is not known at compile time, f18 generates code
   to determine the absence or presence of this capability at runtime.
-  A call to `IEEE_SUPPORT_HALTING` in contexts that the standard requires
-  to be constant will generate a compilation error.
+  A call to `ieee_support_halting` in contexts that the standard requires
+  to be constant will generate a compilation error. `ieee_support_standard`
+  depends in part on `ieee_support_halting`, so this also applies to
+  `ieee_support_standard` calls.
 
 ## Extensions, deletions, and legacy features supported by default
 
@@ -216,7 +218,7 @@ end
   the length parameter of the implicit type, not the first.
 * Outside a character literal, a comment after a continuation marker (&)
   need not begin with a comment marker (!).
-* Classic C-style /*comments*/ are skipped, so multi-language header
+* Classic C-style `/*comments*/` are skipped, so multi-language header
   files are easier to write and use.
 * $ and \ edit descriptors are supported in FORMAT to suppress newline
   output on user prompts.
