@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// REQUIRES: std-at-least-c++23
 
 // <expected>
 
-// Test that std::expected generates [[nodiscard]] warnings
+// Test that ignoring std::expected generates [[nodiscard]] warnings.
 
 #include <expected>
 
