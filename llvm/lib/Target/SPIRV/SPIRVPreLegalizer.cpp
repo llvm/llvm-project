@@ -120,8 +120,9 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
   for (MachineInstr *MI : ToErase) {
     Register Reg = MI->getOperand(2).getReg();
-    if (RegsAlreadyAddedToDT.contains(MI))
-      Reg = RegsAlreadyAddedToDT[MI];
+    auto It = RegsAlreadyAddedToDT.find(MI);
+    if (It != RegsAlreadyAddedToDT.end())
+      Reg = It->second;
     auto *RC = MRI.getRegClassOrNull(MI->getOperand(0).getReg());
     if (!MRI.getRegClassOrNull(Reg) && RC)
       MRI.setRegClass(Reg, RC);
@@ -652,7 +653,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
   for (MachineInstr *MI : ToErase) {
     auto It = RegsAlreadyAddedToDT.find(MI);
-    if (RegsAlreadyAddedToDT.contains(MI))
+    if (It != RegsAlreadyAddedToDT.end())
       MRI.replaceRegWith(MI->getOperand(0).getReg(), It->second);
     MI->eraseFromParent();
   }

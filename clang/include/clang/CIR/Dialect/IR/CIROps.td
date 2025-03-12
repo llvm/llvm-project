@@ -429,6 +429,46 @@ def ScopeOp : CIR_Op<"scope", [
 }
 
 //===----------------------------------------------------------------------===//
+// BrOp
+//===----------------------------------------------------------------------===//
+
+def BrOp : CIR_Op<"br",
+      [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+     Pure, Terminator]> {
+  let summary = "Unconditional branch";
+  let description = [{
+    The `cir.br` branches unconditionally to a block. Used to represent C/C++
+    goto's and general block branching.
+
+    Note that for source level `goto`'s crossing scope boundaries, those are
+    usually represented with the "symbolic" `cir.goto` operation.
+
+    Example:
+
+    ```mlir
+      ...
+        cir.br ^bb3
+      ^bb3:
+        cir.return
+    ```
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Block *":$dest,
+              CArg<"mlir::ValueRange", "{}">:$destOperands), [{
+      $_state.addSuccessors(dest);
+      $_state.addOperands(destOperands);
+    }]>
+  ];
+
+  let arguments = (ins Variadic<CIR_AnyType>:$destOperands);
+  let successors = (successor AnySuccessor:$dest);
+  let assemblyFormat = [{
+    $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 

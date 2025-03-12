@@ -48,7 +48,7 @@ if.then3.i:                                       ; preds = %if.end60
   br label %if.end5.i
 
 if.end5.i:                                        ; preds = %if.then3.i, %if.end60
-  %pS.addr.0.i = phi ptr addrspace(5) [ undef, %if.then3.i ], [ %runtimeVersionCopy, %if.end60 ]
+  %pS.addr.0.i = phi ptr addrspace(5) [ poison, %if.then3.i ], [ %runtimeVersionCopy, %if.end60 ]
   %2 = load i8, ptr addrspace(5) %pS.addr.0.i, align 1
   %conv612.i = sext i8 %2 to i32
   %sub13.i = add nsw i32 %conv612.i, -48
@@ -65,7 +65,7 @@ if.then3.i308:                                    ; preds = %if.end5.i
   br label %if.end5.i314
 
 if.end5.i314:                                     ; preds = %if.then3.i308, %if.end5.i
-  %pS.addr.0.i309 = phi ptr addrspace(5) [ undef, %if.then3.i308 ], [ %licenseVersionCopy, %if.end5.i ]
+  %pS.addr.0.i309 = phi ptr addrspace(5) [ poison, %if.then3.i308 ], [ %licenseVersionCopy, %if.end5.i ]
   %3 = load i8, ptr addrspace(5) %pS.addr.0.i309, align 1
   %conv612.i311 = sext i8 %3 to i32
   %sub13.i312 = add nsw i32 %conv612.i311, -48
@@ -82,7 +82,7 @@ if.then3.i332:                                    ; preds = %if.end5.i314
   br label %if.end5.i338
 
 if.end5.i338:                                     ; preds = %if.then3.i332, %if.end5.i314
-  %pS.addr.0.i333 = phi ptr addrspace(5) [ undef, %if.then3.i332 ], [ %arrayidx144260.5, %if.end5.i314 ]
+  %pS.addr.0.i333 = phi ptr addrspace(5) [ poison, %if.then3.i332 ], [ %arrayidx144260.5, %if.end5.i314 ]
   %4 = load i8, ptr addrspace(5) %pS.addr.0.i333, align 1
   %conv612.i335 = sext i8 %4 to i32
   %sub13.i336 = add nsw i32 %conv612.i335, -48
@@ -99,7 +99,7 @@ if.then3.i356:                                    ; preds = %if.end5.i338
   br label %if.end5.i362
 
 if.end5.i362:                                     ; preds = %if.then3.i356, %if.end5.i338
-  %pS.addr.0.i357 = phi ptr addrspace(5) [ undef, %if.then3.i356 ], [ %arrayidx156258.5, %if.end5.i338 ]
+  %pS.addr.0.i357 = phi ptr addrspace(5) [ poison, %if.then3.i356 ], [ %arrayidx156258.5, %if.end5.i338 ]
   %5 = load i8, ptr addrspace(5) %pS.addr.0.i357, align 1
   %conv612.i359 = sext i8 %5 to i32
   %sub13.i360 = add nsw i32 %conv612.i359, -48
@@ -120,7 +120,7 @@ if.then3.i394:                                    ; preds = %if.end5.i362
   br label %if.end5.i400
 
 if.end5.i400:                                     ; preds = %if.then3.i394, %if.end5.i362
-  %pS.addr.0.i395 = phi ptr addrspace(5) [ %arrayidx232250.1, %if.then3.i394 ], [ undef, %if.end5.i362 ]
+  %pS.addr.0.i395 = phi ptr addrspace(5) [ %arrayidx232250.1, %if.then3.i394 ], [ poison, %if.end5.i362 ]
   %7 = load i8, ptr addrspace(5) %pS.addr.0.i395, align 1
   %conv612.i397 = sext i8 %7 to i32
   %sub13.i398 = add nsw i32 %conv612.i397, -48
