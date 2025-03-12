@@ -1,5 +1,5 @@
 ; RUN: not opt -S -passes='dxil-op-lower' -mtriple=dxil-pc-shadermodel6.3-library %s 2>&1 | FileCheck %s
-; CHECK:  RWStructuredBuffers may increment or decrement their counters, but not both.
+; CHECK: <unknown>:0:0: RWStructuredBuffers may increment or decrement their counters, but not both.
 
 define void @inc_and_dec() {
 entry:

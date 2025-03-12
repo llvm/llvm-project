@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
@@ -21,6 +22,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
 #include <algorithm>
+#include <iterator>
 
 #define DEBUG_TYPE "dxil-resource"
 
@@ -830,7 +832,8 @@ static bool isUpdateCounterIntrinsic(Function &F) {
 }
 
 void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
-  CounterDirections.clear();
+  std::vector<std::tuple<dxil::ResourceBindingInfo, ResourceCounterDirection, const Function*, const CallInst*>>
+      DiagCounterDirs;
 
   for (Function &F : M.functions()) {
     if (!isUpdateCounterIntrinsic(F))
@@ -855,7 +858,7 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
       Value *HandleArg = CI->getArgOperand(0);
       SmallVector<dxil::ResourceBindingInfo> RBInfos = DBM.findByUse(HandleArg);
       for (const dxil::ResourceBindingInfo RBInfo : RBInfos)
-        CounterDirections.emplace_back(RBInfo, Direction);
+        DiagCounterDirs.emplace_back(RBInfo, Direction, &F, CI);
     }
   }
 
@@ -863,31 +866,51 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
   // overhead and increased complexity to keep an entry explicitly marked
   // unknown
   const auto RemoveEnd = std::remove_if(
-      CounterDirections.begin(), CounterDirections.end(), [](const auto &Item) {
-        return Item.second == ResourceCounterDirection::Unknown;
+      DiagCounterDirs.begin(), DiagCounterDirs.end(), [](const auto &Item) {
+        return std::get<ResourceCounterDirection>(Item) == ResourceCounterDirection::Unknown;
       });
 
-  // Order for fast lookup
-  std::sort(CounterDirections.begin(), RemoveEnd);
+  // Sort by the Binding and Direction for fast lookup
+  std::sort(DiagCounterDirs.begin(), RemoveEnd, [](const auto &LHS, const auto &RHS) {
+    const auto L = std::pair{std::get<dxil::ResourceBindingInfo>(LHS), std::get<ResourceCounterDirection>(LHS)};
+    const auto R = std::pair{std::get<dxil::ResourceBindingInfo>(RHS), std::get<ResourceCounterDirection>(RHS)};
+    return L < R;
+  });
 
   // Remove the duplicate entries. Since direction is considered for equality
   // a unique resource with more than one direction will not be deduped.
-  const auto UniqueEnd = std::unique(CounterDirections.begin(), RemoveEnd);
+  const auto UniqueEnd = std::unique(DiagCounterDirs.begin(), RemoveEnd, [](const auto &LHS, const auto &RHS) {
+    const auto L = std::pair{std::get<dxil::ResourceBindingInfo>(LHS), std::get<ResourceCounterDirection>(LHS)};
+    const auto R = std::pair{std::get<dxil::ResourceBindingInfo>(RHS), std::get<ResourceCounterDirection>(RHS)};
+    return L == R;
+  });
 
   // Actually erase the items invalidated by remove_if + unique
-  CounterDirections.erase(UniqueEnd, CounterDirections.end());
+  DiagCounterDirs.erase(UniqueEnd, DiagCounterDirs.end());
 
   // If any duplicate entries still exist at this point then it must be a
   // resource that was both incremented and decremented which is not allowed.
   const auto DuplicateEntry = std::adjacent_find(
-      CounterDirections.begin(), CounterDirections.end(),
-      [](const auto &LHS, const auto &RHS) { return LHS.first == RHS.first; });
-  if (DuplicateEntry == CounterDirections.end())
+      DiagCounterDirs.begin(), DiagCounterDirs.end(),
+      [](const auto &LHS, const auto &RHS) {
+      return std::get<dxil::ResourceBindingInfo>(LHS) == std::get<dxil::ResourceBindingInfo>(RHS);
+  });
+
+  // Copy the results into the final vec
+  CounterDirections.clear();
+  CounterDirections.reserve(DiagCounterDirs.size());
+  std::transform(DiagCounterDirs.begin(), DiagCounterDirs.end(), std::back_inserter(CounterDirections), [](const auto &Item){
+    return std::pair{std::get<dxil::ResourceBindingInfo>(Item), std::get<ResourceCounterDirection>(Item)};
+  });
+
+  if (DuplicateEntry == DiagCounterDirs.end())
     return;
 
+  const Function* F = std::get<const Function*>(*DuplicateEntry);
+  const CallInst* CI = std::get<const CallInst*>(*DuplicateEntry);
   StringRef Message = "RWStructuredBuffers may increment or decrement their "
                       "counters, but not both.";
-  M.getContext().diagnose(DiagnosticInfoGeneric(Message));
+  M.getContext().diagnose(DiagnosticInfoGenericWithLoc(Message, *F, CI->getDebugLoc()));
 }
 
 void DXILResourceCounterDirectionWrapperPass::getAnalysisUsage(

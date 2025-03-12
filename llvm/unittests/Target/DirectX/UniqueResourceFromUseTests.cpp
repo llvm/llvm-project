@@ -281,6 +281,8 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
   }
 }
 
+// Test that several calls to decrement on the same resource don't raise a
+// Diagnositic and resolves to a single decrement entry
 TEST_F(UniqueResourceFromUseTest, TestResourceCounterDecrement) {
   StringRef Assembly = R"(
 define void @main() {
@@ -322,6 +324,8 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   }
 }
 
+// Test that several calls to increment on the same resource don't raise a
+// Diagnositic and resolves to a single increment entry
 TEST_F(UniqueResourceFromUseTest, TestResourceCounterIncrement) {
   StringRef Assembly = R"(
 define void @main() {
@@ -363,6 +367,8 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   }
 }
 
+// Test that looking up a resource that doesn't have the counter updated
+// resoves to unknown
 TEST_F(UniqueResourceFromUseTest, TestResourceCounterUnknown) {
   StringRef Assembly = R"(
 define void @main() {
@@ -401,6 +407,8 @@ declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
   }
 }
 
+// Test that multiple different resources with unique incs/decs don't
+// raise a Diagnostic and can be individually checked for direction
 TEST_F(UniqueResourceFromUseTest, TestResourceCounterMultiple) {
   StringRef Assembly = R"(
 define void @main() {
