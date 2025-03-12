@@ -188,6 +188,51 @@ RuntimeCheckingPtrGroup::RuntimeCheckingPtrGroup(
   Members.push_back(Index);
 }
 
+/// Return true, if evaluating \p AR at \p MaxBTC cannot wrap, because \p AR at
+/// \p MaxBTC is guaranteed inbounds of the accessed object.
+static bool evaluateAddRecAtMaxBTCWillNotWrap(const SCEVAddRecExpr *AR,
+                                              const SCEV *MaxBTC,
+                                              ScalarEvolution &SE,
+                                              const DataLayout &DL) {
+  auto *PointerBase = SE.getPointerBase(AR->getStart());
+  auto *StartPtr = dyn_cast<SCEVUnknown>(PointerBase);
+  if (!StartPtr)
+    return false;
+  bool CheckForNonNull, CheckForFreed;
+  uint64_t DerefBytes = StartPtr->getValue()->getPointerDereferenceableBytes(
+      DL, CheckForNonNull, CheckForFreed);
+
+  if (CheckForNonNull || CheckForFreed)
+    return false;
+
+  const SCEV *Step = AR->getStepRecurrence(SE);
+  Type *WiderTy = SE.getWiderType(MaxBTC->getType(), Step->getType());
+  Step = SE.getNoopOrSignExtend(Step, WiderTy);
+  MaxBTC = SE.getNoopOrSignExtend(MaxBTC, WiderTy);
+  if (SE.isKnownPositive(Step)) {
+    // For positive steps, check if (AR->getStart() - StartPtr) + MaxBTC <=
+    // DerefBytes / Step
+    return SE.isKnownPredicate(
+        CmpInst::ICMP_ULE,
+        SE.getAddExpr(SE.getMinusSCEV(AR->getStart(), StartPtr), MaxBTC),
+        SE.getUDivExpr(SE.getConstant(WiderTy, DerefBytes), Step));
+  }
+  if (SE.isKnownNegative(Step)) {
+    // For negative steps, check using StartOffset == AR->getStart() - StartPtr:
+    //  * StartOffset >= MaxBTC * Step
+    //  * AND  StartOffset <= DerefBytes / Step
+    auto *StartOffset = SE.getMinusSCEV(AR->getStart(), StartPtr);
+    return SE.isKnownPredicate(
+               CmpInst::ICMP_UGE, StartOffset,
+               SE.getMulExpr(MaxBTC, SE.getNegativeSCEV(Step))) &&
+           SE.isKnownPredicate(
+               CmpInst::ICMP_ULE, StartOffset,
+               SE.getUDivExpr(SE.getConstant(WiderTy, DerefBytes),
+                              SE.getNegativeSCEV(Step)));
+  }
+  return false;
+}
+
 std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
     const Loop *Lp, const SCEV *PtrExpr, Type *AccessTy, const SCEV *BTC,
     const SCEV *MaxBTC, ScalarEvolution *SE,
@@ -226,12 +271,12 @@ std::pair<const SCEV *, const SCEV *> llvm::getStartAndEndForAccess(
       // will get incremented by EltSize before returning, so this effectively
       // sets ScEnd to unsigned max. Note that LAA separately checks that
       // accesses cannot not wrap, so unsigned max represents an upper bound.
-      // TODO: Use additional information to determine no-wrap including
-      // size/dereferencability info from the accessed object.
-      ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
-      if (!SE->isKnownNonNegative(SE->getMinusSCEV(ScEnd, ScStart)))
-        ScEnd = SE->getNegativeSCEV(
-            SE->getAddExpr(EltSizeSCEV, SE->getOne(EltSizeSCEV->getType())));
+      ScEnd = SE->getAddExpr(
+          SE->getNegativeSCEV(EltSizeSCEV),
+          SE->getSCEV(ConstantExpr::getIntToPtr(
+              ConstantInt::get(EltSizeSCEV->getType(), -1), AR->getType())));
+      if (evaluateAddRecAtMaxBTCWillNotWrap(AR, MaxBTC, *SE, DL))
+        ScEnd = AR->evaluateAtIteration(MaxBTC, *SE);
     }
     const SCEV *Step = AR->getStepRecurrence(*SE);
 
