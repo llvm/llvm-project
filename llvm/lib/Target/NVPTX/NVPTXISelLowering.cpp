@@ -833,7 +833,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
   setTargetDAGCombine({ISD::ADD, ISD::AND, ISD::EXTRACT_VECTOR_ELT, ISD::FADD,
                        ISD::MUL, ISD::SHL, ISD::SREM, ISD::UREM, ISD::VSELECT,
                        ISD::BUILD_VECTOR, ISD::ADDRSPACECAST, ISD::FP_ROUND,
-                       ISD::TRUNCATE, ISD::LOAD, ISD::BITCAST});
+                       ISD::TRUNCATE, ISD::LOAD, ISD::STORE, ISD::BITCAST});
 
   // setcc for f16x2 and bf16x2 needs special handling to prevent
   // legalizer's attempt to scalarize it due to v2i1 not being legal.
@@ -3092,10 +3092,10 @@ SDValue NVPTXTargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   if (Op.getValueType() == MVT::i1)
     return LowerLOADi1(Op, DAG);
 
-  // v2f16/v2bf16/v2i16/v4i8 are legal, so we can't rely on legalizer to handle
-  // unaligned loads and have to handle it here.
+  // v2f16/v2bf16/v2i16/v4i8/v2f32 are legal, so we can't rely on legalizer to
+  // handle unaligned loads and have to handle it here.
   EVT VT = Op.getValueType();
-  if (Isv2x16VT(VT) || VT == MVT::v4i8) {
+  if (Isv2x16VT(VT) || VT == MVT::v4i8 || VT == MVT::v2f32) {
     LoadSDNode *Load = cast<LoadSDNode>(Op);
     EVT MemVT = Load->getMemoryVT();
     if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
@@ -3139,15 +3139,15 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   if (VT == MVT::i1)
     return LowerSTOREi1(Op, DAG);
 
-  // v2f16 is legal, so we can't rely on legalizer to handle unaligned
-  // stores and have to handle it here.
-  if ((Isv2x16VT(VT) || VT == MVT::v4i8) &&
+  // v2f16/v2bf16/v2i16/v4i8/v2f32 are legal, so we can't rely on legalizer to
+  // handle unaligned stores and have to handle it here.
+  if ((Isv2x16VT(VT) || VT == MVT::v4i8 || VT == MVT::v2f32) &&
       !allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
                                       VT, *Store->getMemOperand()))
     return expandUnalignedStore(Store, DAG);
 
-  // v2f16, v2bf16 and v2i16 don't need special handling.
-  if (Isv2x16VT(VT) || VT == MVT::v4i8)
+  // v2f16/v2bf16/v2i16/v4i8/v2f32 don't need special handling.
+  if (Isv2x16VT(VT) || VT == MVT::v4i8 || VT == MVT::v2f32)
     return SDValue();
 
   if (VT.isVector())
@@ -3156,8 +3156,8 @@ SDValue NVPTXTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
-SDValue
-NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
+static SDValue convertVectorStore(SDValue Op, SelectionDAG &DAG,
+                                  const SmallVectorImpl<SDValue> &Elements) {
   SDNode *N = Op.getNode();
   SDValue Val = N->getOperand(1);
   SDLoc DL(N);
@@ -3224,6 +3224,8 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
       SDValue SubVector = DAG.getBuildVector(EltVT, DL, SubVectorElts);
       Ops.push_back(SubVector);
     }
+  } else if (!Elements.empty()) {
+    Ops.insert(Ops.end(), Elements.begin(), Elements.end());
   } else {
     for (unsigned i = 0; i < NumElts; ++i) {
       SDValue ExtVal = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, EltVT, Val,
@@ -3241,8 +3243,17 @@ NVPTXTargetLowering::LowerSTOREVector(SDValue Op, SelectionDAG &DAG) const {
       DAG.getMemIntrinsicNode(Opcode, DL, DAG.getVTList(MVT::Other), Ops,
                               MemSD->getMemoryVT(), MemSD->getMemOperand());
 
-  // return DCI.CombineTo(N, NewSt, true);
   return NewSt;
+}
+
+// Default variant where we don't pass in elements.
+static SDValue convertVectorStore(SDValue Op, SelectionDAG &DAG) {
+  return convertVectorStore(Op, DAG, SmallVector<SDValue>{});
+}
+
+SDValue NVPTXTargetLowering::LowerSTOREVector(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  return convertVectorStore(Op, DAG);
 }
 
 // st i1 v, addr
@@ -5400,6 +5411,9 @@ static SDValue PerformStoreCombineHelper(SDNode *N,
     // -->
     //   StoreRetvalV2 {a, b}
     // likewise for V2 -> V4 case
+    //
+    // We also handle target-independent stores, which require us to first
+    // convert to StoreV2.
 
     std::optional<NVPTXISD::NodeType> NewOpcode;
     switch (N->getOpcode()) {
@@ -5425,8 +5439,8 @@ static SDValue PerformStoreCombineHelper(SDNode *N,
         SDValue CurrentOp = N->getOperand(I);
         if (CurrentOp->getOpcode() == ISD::BUILD_VECTOR) {
           assert(CurrentOp.getValueType() == MVT::v2f32);
-          NewOps.push_back(CurrentOp.getNode()->getOperand(0));
-          NewOps.push_back(CurrentOp.getNode()->getOperand(1));
+          NewOps.push_back(CurrentOp.getOperand(0));
+          NewOps.push_back(CurrentOp.getOperand(1));
         } else {
           NewOps.clear();
           break;
@@ -6197,6 +6211,18 @@ static SDValue PerformBITCASTCombine(SDNode *N,
   return SDValue();
 }
 
+static SDValue PerformStoreCombine(SDNode *N,
+                                   TargetLowering::DAGCombinerInfo &DCI) {
+  // check if the store'd value can be scalarized
+  SDValue StoredVal = N->getOperand(1);
+  if (StoredVal.getValueType() == MVT::v2f32 &&
+      StoredVal.getOpcode() == ISD::BUILD_VECTOR) {
+    SmallVector<SDValue> Elements(StoredVal->op_values());
+    return convertVectorStore(SDValue(N, 0), DCI.DAG, Elements);
+  }
+  return SDValue();
+}
+
 SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
                                                DAGCombinerInfo &DCI) const {
   CodeGenOptLevel OptLevel = getTargetMachine().getOptLevel();
@@ -6226,6 +6252,8 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     case NVPTXISD::LoadParam:
     case NVPTXISD::LoadParamV2:
       return PerformLoadCombine(N, DCI);
+    case ISD::STORE:
+      return PerformStoreCombine(N, DCI);
     case NVPTXISD::StoreParam:
     case NVPTXISD::StoreParamV2:
     case NVPTXISD::StoreParamV4:
