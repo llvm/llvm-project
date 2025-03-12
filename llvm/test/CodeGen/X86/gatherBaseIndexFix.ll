@@ -43,7 +43,6 @@ vector.ph:                                        ; preds = %for.body.preheader
 ; CHECK:   vgatherdps      (%rdx,%zmm17), %zmm16 {%k1}
 
 ; OLD-LABEL: .LBB0_6:
-
 ; OLD:  vgatherqps      (%rdx,%zmm12), %ymm15 {%k1}
 ; OLD:  vgatherqps      (%rdx,%zmm11), %ymm12 {%k1}
 ; OLD:  vgatherqps      4(,%zmm14), %ymm12 {%k1}
