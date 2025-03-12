@@ -1846,11 +1846,11 @@ void test1() {
 void test2() {
   std::locale lc = std::locale::classic();
   std::locale lg(lc, new my_numpunct);
-#if (defined(__APPLE__) || defined(TEST_HAS_GLIBC) || defined(__MINGW32__)) && defined(__x86_64__)
+#if (defined(__APPLE__) || defined(TEST_HAS_GLIBC) || defined(__MINGW32__)) && defined(__x86_64__) &&                  \
+    __LDBL_MANT_DIG__ == 64
   // This test is failing on FreeBSD, possibly due to different representations
   // of the floating point numbers.
-  // This test is failing in MSVC environments, where long double is equal to regular
-  // double, and instead of "0x9.32c05a44p+27", this prints "0x1.26580b4880000p+30".
+  // This test assumes that long doubles are x87 80 bit long doubles.
   const my_facet f(1);
   char str[200];
   {
