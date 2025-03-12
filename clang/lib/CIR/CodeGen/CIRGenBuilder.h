@@ -12,6 +12,7 @@
 #include "CIRGenTypeCache.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
+#include "clang/CIR/MissingFeatures.h"
 
 namespace clang::CIRGen {
 
@@ -39,7 +40,7 @@ public:
                   cir::IntType>(ty))
       return true;
 
-    assert(0 && "Unexpected MLIR type");
+    assert(!cir::MissingFeatures::unsizedTypes());
     return false;
   }
 };

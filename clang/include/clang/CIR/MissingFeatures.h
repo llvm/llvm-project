@@ -76,6 +76,8 @@ struct MissingFeatures {
   static bool constructABIArgDirectExtend() { return false; }
   static bool opGlobalViewAttr() { return false; }
   static bool lowerModeOptLevel() { return false; }
+
+  static bool unsizedTypes() { return false; }
 };
 
 } // namespace cir
