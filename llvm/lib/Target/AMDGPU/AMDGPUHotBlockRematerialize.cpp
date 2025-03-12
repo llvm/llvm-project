@@ -339,7 +339,6 @@ unsigned CollectFnPressure(MachineFunction &MF, LiveIntervals *LIS,
       if (!LIS->hasInterval(Reg))
         continue;
 
-      LaneBitmask LiveMask;
       const auto &LI = LIS->getInterval(Reg);
 
       // Skip local live interval to make live input/ouput faster.
@@ -506,15 +505,11 @@ struct RematNode {
     Clone,
   };
   RematNode()
-      : Reg(0), DefMI(nullptr), Kind(RematKind::Candidate),
-        InsertPointMI(nullptr), InsertBlock(nullptr), Size(0) {}
+      : Reg(0), DefMI(nullptr), InsertBlock(nullptr), InsertPointMI(nullptr),
+        Kind(RematKind::Candidate), Size(0) {}
   RematNode(unsigned R, MachineInstr *MI, unsigned S)
-      : Reg(R), DefMI(MI), Kind(RematKind::Candidate), InsertPointMI(nullptr),
-        InsertBlock(nullptr), Size(S) {}
-  RematNode(const RematNode &N)
-      : Reg(N.Reg), DefMI(N.DefMI), Kind(N.Kind),
-        InsertPointMI(N.InsertPointMI), InsertBlock(N.InsertBlock),
-        Size(N.Size) {}
+      : Reg(R), DefMI(MI), InsertBlock(nullptr), InsertPointMI(nullptr),
+        Kind(RematKind::Candidate), Size(S) {}
   unsigned Reg;
   MachineInstr *DefMI;
   MachineBasicBlock *InsertBlock;
@@ -528,10 +523,10 @@ struct RematNode {
 
 struct BlockLiveInfo {
   MachineBasicBlock *BB;
-  unsigned maxSReg;
-  unsigned maxVReg;
+  unsigned MaxSReg;
+  unsigned MaxVReg;
   // Input live is the live reg which cross block.
-  const GCNRPTracker::LiveRegSet inputLive;
+  const GCNRPTracker::LiveRegSet InputLive;
 };
 
 // Skip live reg remated to other block.
@@ -893,7 +888,7 @@ void AddCloneCandidate(std::vector<RematNode *> &cloneList,
   // Group user in same blocks.
   std::vector<BlockSet> UserSetList(cloneList.size());
 
-  for (int i = 0; i < cloneList.size(); i++) {
+  for (size_t i = 0; i < cloneList.size(); i++) {
     auto *Node = cloneList[i];
     unsigned Reg = Node->Reg;
     MachineInstr *DefMI = Node->DefMI;
@@ -1010,7 +1005,7 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
   // Collect hot blocks which Exp is live in.
   DenseSet<MachineBasicBlock *> hotBlockSet;
   for (BlockLiveInfo &hotBlock : hotBlocks) {
-    if (hotBlock.inputLive.count(Reg)) {
+    if (hotBlock.InputLive.count(Reg)) {
       hotBlockSet.insert(hotBlock.BB);
     }
   }
@@ -1411,7 +1406,7 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
     // entry block.
     if (MBB != EntryMBB)
       hotBlocks.emplace_back(LiveInfo);
-    GCNRPTracker::LiveRegSet CandidateRegs = LiveInfo.inputLive;
+    GCNRPTracker::LiveRegSet CandidateRegs = LiveInfo.InputLive;
 
     // Update reg pressure based on remat list.
     InstSet VReducedInsts;
@@ -1552,7 +1547,7 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
     }
     // TODO: what to do when cannot reach target?
     if (newRematSCnt > 0) {
-      if (newRematSCnt <= NearTargetRegLimit) {
+      if ((unsigned)newRematSCnt <= NearTargetRegLimit) {
         bNearTarget = true;
       } else {
         if (!bSGPRSpill)
@@ -2838,7 +2833,7 @@ collectUniformVgprs(Remat *Remat, MachineFunction &MF, MachineRegisterInfo &MRI,
         continue;
       unsigned dstIdx =
           AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdst);
-      if (dstIdx == -1)
+      if (dstIdx == (unsigned)-1)
         continue;
       MachineOperand &DstMO = MI.getOperand(dstIdx);
       if (DstMO.getSubReg() != 0)
@@ -2899,8 +2894,6 @@ bool collectVToSCrossHotSpot(
     }
 
     // Try to make all possible vtos to reduce vpressure.
-    int VExtra = VPressure - VLimit;
-
     const GCNRPTracker::LiveRegSet &CurLives = Tracker.getLiveRegs();
     for (auto it : CurLives) {
       unsigned Reg = it.first;
@@ -2908,7 +2901,6 @@ bool collectVToSCrossHotSpot(
       if (UniformIt == UniformMap.end())
         continue;
       VToSMap[UniformIt->first] = UniformIt->second;
-      VExtra--;
       bUpdated = true;
     }
   }
@@ -4252,7 +4244,7 @@ bool perBlockPassthruRemat(Remat *Remat, std::vector<HotBlock> &hotBlocks,
                            const SIRegisterInfo *SIRI,
                            const SIInstrInfo *SIII) {
   bool bUpdated = false;
-  bool bCanClone = EnableSubExpClone | EnableSubExpAggressive;
+  bool bCanClone = EnableSubExpClone || EnableSubExpAggressive;
 
   SlotIndexes *slotIndexes = LIS->getSlotIndexes();
   // Sort hot blocks by pressure first.
