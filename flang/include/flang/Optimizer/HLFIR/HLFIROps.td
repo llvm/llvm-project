@@ -1961,21 +1961,9 @@ def hlfir_DoConcurrentLoopOp : hlfir_Op<"do_concurrent.loop",
   let hasVerifier = 1;
 
   let extraClassDeclaration = [{
-    /// Get Number of variadic operands
-    unsigned getNumOperands(unsigned segmentIdx) {
-      auto segments = (*this)->getAttrOfType<mlir::DenseI32ArrayAttr>(
-        getOperandSegmentSizeAttr());
-      return static_cast<unsigned>(segments[segmentIdx]);
-    }
-
     // Get Number of reduction operands
     unsigned getNumReduceOperands() {
-      return getNumOperands(3);
-    }
-
-    /// Does the operation hold operands for reduction variables
-    bool hasReduceOperands() {
-      return getNumReduceOperands() > 0;
+      return getReduceOperands().size();
     }
   }];
 }

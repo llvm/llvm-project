@@ -2352,7 +2352,7 @@ void hlfir::DoConcurrentLoopOp::print(mlir::OpAsmPrinter &p) {
   p << " (" << getBody()->getArguments() << ") = (" << getLowerBound()
     << ") to (" << getUpperBound() << ") step (" << getStep() << ")";
 
-  if (hasReduceOperands()) {
+  if (!getReduceOperands().empty()) {
     p << " reduce(";
     auto attrs = getReduceAttrsAttr();
     auto operands = getReduceOperands();
