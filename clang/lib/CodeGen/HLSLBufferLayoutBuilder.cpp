@@ -109,11 +109,11 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
 
       // No PackOffset info at all, or have a valid packoffset/register(c#)
       // annotations value -> layout the field.
-      int PO = PackOffsets ? (*PackOffsets)[Index++] : -1;
+      const int PO = PackOffsets ? (*PackOffsets)[Index++] : -1;
       if (!PackOffsets || PO != -1) {
         if (!layoutField(FD, EndOffset, FieldOffset, FieldType, PO))
           return nullptr;
-        Layout.push_back((unsigned)FieldOffset);
+        Layout.push_back(FieldOffset);
         LayoutElements.push_back(FieldType);
         continue;
       }
@@ -130,16 +130,16 @@ llvm::TargetExtType *HLSLBufferLayoutBuilder::createLayoutType(
   // process delayed layouts
   for (auto I : DelayLayoutFields) {
     const FieldDecl *FD = I.first;
-    unsigned IndexInLayoutElements = I.second;
+    const unsigned IndexInLayoutElements = I.second;
     // the first item in layout vector is size, so we need to offset the index
     // by 1
-    unsigned IndexInLayout = IndexInLayoutElements + 1;
+    const unsigned IndexInLayout = IndexInLayoutElements + 1;
     assert(Layout[IndexInLayout] == UINT_MAX &&
            LayoutElements[IndexInLayoutElements] == nullptr);
 
     if (!layoutField(FD, EndOffset, FieldOffset, FieldType))
       return nullptr;
-    Layout[IndexInLayout] = (unsigned)FieldOffset;
+    Layout[IndexInLayout] = FieldOffset;
     LayoutElements[IndexInLayoutElements] = FieldType;
   }
 

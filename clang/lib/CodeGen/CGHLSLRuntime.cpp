@@ -207,7 +207,7 @@ static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
       continue;
     }
 
-    size_t Offset = -1;
+    int32_t Offset = -1;
     for (auto *Attr : VD->getAttrs()) {
       if (auto *POA = dyn_cast<HLSLPackOffsetAttr>(Attr)) {
         Offset = POA->getOffsetInBytes();
@@ -216,7 +216,6 @@ static void fillPackoffsetLayout(const HLSLBufferDecl *BufDecl,
       auto *RBA = dyn_cast<HLSLResourceBindingAttr>(Attr);
       if (RBA &&
           RBA->getRegisterType() == HLSLResourceBindingAttr::RegisterType::C) {
-        // size of constant buffer row is 16 bytes
         Offset = RBA->getSlotNumber() * CBufferRowSizeInBytes;
         break;
       }
