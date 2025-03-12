@@ -119,7 +119,7 @@ Options
 
 .. option:: WarnPointersAsPointers
 
-  This option enables the suggestion for ``const`` of the value pointing.
+  This option enables the suggestion for ``const`` of the value pointing to.
   Default is `true`.
 
   Requires :option:`AnalyzePointers` to be `true`.
