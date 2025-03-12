@@ -168,7 +168,6 @@ Mat4X4 __attribute__((noinline)) foo(Mat3X3 in) {
 // AMDGCN20-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // AMDGCN20-NEXT:    [[IN_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[IN_ADDR_I]] to ptr
 // AMDGCN20-NEXT:    [[OUT_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR_I]] to ptr
-// AMDGCN20-NEXT:    [[TMP_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[TMP_I]] to ptr
 // AMDGCN20-NEXT:    store ptr addrspace(1) [[TMP0]], ptr [[IN_ADDR_ASCAST_I]], align 8
 // AMDGCN20-NEXT:    store ptr addrspace(1) [[TMP1]], ptr [[OUT_ADDR_ASCAST_I]], align 8
 // AMDGCN20-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST_I]], align 8
@@ -177,8 +176,8 @@ Mat4X4 __attribute__((noinline)) foo(Mat3X3 in) {
 // AMDGCN20-NEXT:    [[TMP4:%.*]] = load [9 x i32], ptr addrspace(1) [[ARRAYIDX1_I]], align 4
 // AMDGCN20-NEXT:    [[CALL_I:%.*]] = call [[STRUCT_MAT4X4]] @[[FOO:[a-zA-Z0-9_$\"\\.-]*[a-zA-Z_$\"\\.-][a-zA-Z0-9_$\"\\.-]*]]([9 x i32] [[TMP4]]) #[[ATTR4:[0-9]+]]
 // AMDGCN20-NEXT:    [[TMP5:%.*]] = extractvalue [[STRUCT_MAT4X4]] [[CALL_I]], 0
-// AMDGCN20-NEXT:    store [16 x i32] [[TMP5]], ptr [[TMP_ASCAST_I]], align 4
-// AMDGCN20-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[TMP2]], ptr align 4 [[TMP_ASCAST_I]], i64 64, i1 false)
+// AMDGCN20-NEXT:    store [16 x i32] [[TMP5]], ptr addrspace(5) [[TMP_I]], align 4
+// AMDGCN20-NEXT:    call void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) align 4 [[TMP2]], ptr addrspace(5) align 4 [[TMP_I]], i64 64, i1 false)
 // AMDGCN20-NEXT:    ret void
 //
 // SPIR-LABEL: define dso_local spir_kernel void @ker(
@@ -271,7 +270,7 @@ kernel void ker(global Mat3X3 *in, global Mat4X4 *out) {
 // AMDGCN-NEXT:    ret void
 //
 // AMDGCN20-LABEL: define dso_local void @foo_large(
-// AMDGCN20-SAME: ptr dead_on_unwind noalias writable sret([[STRUCT_MAT64X64:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr addrspace(5) noundef byref([[STRUCT_MAT32X32:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] {
+// AMDGCN20-SAME: ptr addrspace(5) dead_on_unwind noalias writable sret([[STRUCT_MAT64X64:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr addrspace(5) noundef byref([[STRUCT_MAT32X32:%.*]]) align 4 [[TMP0:%.*]]) #[[ATTR0]] {
 // AMDGCN20-NEXT:  [[ENTRY:.*:]]
 // AMDGCN20-NEXT:    [[COERCE:%.*]] = alloca [[STRUCT_MAT32X32]], align 4, addrspace(5)
 // AMDGCN20-NEXT:    [[IN:%.*]] = addrspacecast ptr addrspace(5) [[COERCE]] to ptr
@@ -365,15 +364,14 @@ Mat64X64 __attribute__((noinline)) foo_large(Mat32X32 in) {
 // AMDGCN20-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST]], align 8
 // AMDGCN20-NEXT:    [[IN_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[IN_ADDR_I]] to ptr
 // AMDGCN20-NEXT:    [[OUT_ADDR_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[OUT_ADDR_I]] to ptr
-// AMDGCN20-NEXT:    [[TMP_ASCAST_I:%.*]] = addrspacecast ptr addrspace(5) [[TMP_I]] to ptr
 // AMDGCN20-NEXT:    store ptr addrspace(1) [[TMP0]], ptr [[IN_ADDR_ASCAST_I]], align 8
 // AMDGCN20-NEXT:    store ptr addrspace(1) [[TMP1]], ptr [[OUT_ADDR_ASCAST_I]], align 8
 // AMDGCN20-NEXT:    [[TMP2:%.*]] = load ptr addrspace(1), ptr [[OUT_ADDR_ASCAST_I]], align 8
 // AMDGCN20-NEXT:    [[TMP3:%.*]] = load ptr addrspace(1), ptr [[IN_ADDR_ASCAST_I]], align 8
 // AMDGCN20-NEXT:    [[ARRAYIDX1_I:%.*]] = getelementptr inbounds [[STRUCT_MAT32X32]], ptr addrspace(1) [[TMP3]], i64 1
 // AMDGCN20-NEXT:    call void @llvm.memcpy.p5.p1.i64(ptr addrspace(5) align 4 [[BYVAL_TEMP_I]], ptr addrspace(1) align 4 [[ARRAYIDX1_I]], i64 4096, i1 false)
-// AMDGCN20-NEXT:    call void @foo_large(ptr dead_on_unwind writable sret([[STRUCT_MAT64X64]]) align 4 [[TMP_ASCAST_I]], ptr addrspace(5) noundef byref([[STRUCT_MAT32X32]]) align 4 [[BYVAL_TEMP_I]]) #[[ATTR4]]
-// AMDGCN20-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 [[TMP2]], ptr align 4 [[TMP_ASCAST_I]], i64 16384, i1 false)
+// AMDGCN20-NEXT:    call void @foo_large(ptr addrspace(5) dead_on_unwind writable sret([[STRUCT_MAT64X64]]) align 4 [[TMP_I]], ptr addrspace(5) noundef byref([[STRUCT_MAT32X32]]) align 4 [[BYVAL_TEMP_I]]) #[[ATTR4]]
+// AMDGCN20-NEXT:    call void @llvm.memcpy.p1.p5.i64(ptr addrspace(1) align 4 [[TMP2]], ptr addrspace(5) align 4 [[TMP_I]], i64 16384, i1 false)
 // AMDGCN20-NEXT:    ret void
 //
 // SPIR-LABEL: define dso_local spir_kernel void @ker_large(
