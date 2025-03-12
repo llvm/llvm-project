@@ -57,11 +57,11 @@ def Ptr_PtrType : Ptr_Type<"Ptr", "ptr", [
   let parameters = (ins "MemorySpaceAttrInterface":$memorySpace);
   let assemblyFormat = "`<` $memorySpace `>`";
   let builders = [
-    TypeBuilder<(ins CArg<"MemorySpaceAttrInterface", "nullptr">:$memorySpace), [{
-      return $_get($_ctxt, memorySpace);
+    TypeBuilderWithInferredContext<(ins
+      "MemorySpaceAttrInterface":$memorySpace), [{
+      return $_get(memorySpace.getContext(), memorySpace);
     }]>
   ];
-  let skipDefaultBuilders = 1;
 }
 
 //===----------------------------------------------------------------------===//

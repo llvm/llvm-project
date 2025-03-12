@@ -331,11 +331,6 @@ TestOpAsmAttrInterfaceAttr::getAlias(::llvm::raw_ostream &os) const {
 // TestConstMemorySpaceAttr
 //===----------------------------------------------------------------------===//
 
-ptr::MemorySpaceAttrInterface
-TestConstMemorySpaceAttr::getDefaultMemorySpace() const {
-  return TestConstMemorySpaceAttr::get(getContext(), 0);
-}
-
 LogicalResult TestConstMemorySpaceAttr::isValidLoad(
     Type type, mlir::ptr::AtomicOrdering ordering, IntegerAttr alignment,
     function_ref<InFlightDiagnostic()> emitError) const {

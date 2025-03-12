@@ -32,13 +32,6 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/        [{
-        Returns the default memory space as an attribute.
-      }],
-      /*returnType=*/  "::mlir::ptr::MemorySpaceAttrInterface",
-      /*methodName=*/  "getDefaultMemorySpace"
-    >,
-    InterfaceMethod<
-      /*desc=*/        [{
         This method checks if it's valid to load a value from the memory space
         with a specific type, alignment, and atomic ordering.
         If `emitError` is non-null then the method is allowed to emit errors.
@@ -96,8 +89,6 @@ def MemorySpaceAttrInterface : AttrInterface<"MemorySpaceAttrInterface"> {
       /*desc=*/        [{
         This method checks if it's valid to perform an `addrspacecast` op
         in the memory space.
-        Both types are expected to be vectors of rank 1, or scalars of `ptr`
-        type.
         If `emitError` is non-null then the method is allowed to emit errors.
       }],
       /*returnType=*/  "::mlir::LogicalResult",
