@@ -77,7 +77,9 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     if (isa<VPActiveLaneMaskPHIRecipe>(RecipeI))
       NumActiveLaneMaskPhiRecipes++;
 
-    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI) && !isa<VPInstruction>(*RecipeI) && cast<VPInstruction>(RecipeI)->getOpcode() == Instruction::PHI) {
+    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI) &&
+        !isa<VPInstruction>(*RecipeI) &&
+        cast<VPInstruction>(RecipeI)->getOpcode() == Instruction::PHI) {
       errs() << "Found non-header PHI recipe in header VPBB";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
@@ -210,8 +212,8 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
             isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI) ||
             (isa<VPIRInstruction>(UI) &&
              isa<PHINode>(cast<VPIRInstruction>(UI)->getInstruction())) ||
-            (isa<VPInstruction>(UI) && cast<VPInstruction>(UI)->getOpcode() == Instruction::PHI)
-            )
+            (isa<VPInstruction>(UI) &&
+             cast<VPInstruction>(UI)->getOpcode() == Instruction::PHI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
