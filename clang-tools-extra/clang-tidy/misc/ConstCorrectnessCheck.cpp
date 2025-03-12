@@ -38,17 +38,20 @@ AST_MATCHER(Type, isDependentType) { return Node.isDependentType(); }
 ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
                                              ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      AnalyzeValues(Options.get("AnalyzeValues", true)),
-      AnalyzeReferences(Options.get("AnalyzeReferences", true)),
       AnalyzePointers(Options.get("AnalyzePointers", true)),
-      WarnPointersAsValues(Options.get("WarnPointersAsValues", false)),
+      AnalyzeReferences(Options.get("AnalyzeReferences", true)),
+      AnalyzeValues(Options.get("AnalyzeValues", true)),
+
       WarnPointersAsPointers(Options.get("WarnPointersAsPointers", true)),
-      TransformValues(Options.get("TransformValues", true)),
-      TransformReferences(Options.get("TransformReferences", true)),
-      TransformPointersAsValues(
-          Options.get("TransformPointersAsValues", false)),
+      WarnPointersAsValues(Options.get("WarnPointersAsValues", false)),
+
       TransformPointersAsPointers(
           Options.get("TransformPointersAsPointers", true)),
+      TransformPointersAsValues(
+          Options.get("TransformPointersAsValues", false)),
+      TransformReferences(Options.get("TransformReferences", true)),
+      TransformValues(Options.get("TransformValues", true)),
+
       AllowedTypes(
           utils::options::parseStringList(Options.get("AllowedTypes", ""))) {
   if (AnalyzeValues == false && AnalyzeReferences == false &&
@@ -60,17 +63,19 @@ ConstCorrectnessCheck::ConstCorrectnessCheck(StringRef Name,
 }
 
 void ConstCorrectnessCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "AnalyzeValues", AnalyzeValues);
-  Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
   Options.store(Opts, "AnalyzePointers", AnalyzePointers);
-  Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
-  Options.store(Opts, "WarnPointersAsPointers", WarnPointersAsPointers);
+  Options.store(Opts, "AnalyzeReferences", AnalyzeReferences);
+  Options.store(Opts, "AnalyzeValues", AnalyzeValues);
 
-  Options.store(Opts, "TransformValues", TransformValues);
-  Options.store(Opts, "TransformReferences", TransformReferences);
-  Options.store(Opts, "TransformPointersAsValues", TransformPointersAsValues);
+  Options.store(Opts, "WarnPointersAsPointers", WarnPointersAsPointers);
+  Options.store(Opts, "WarnPointersAsValues", WarnPointersAsValues);
+
   Options.store(Opts, "TransformPointersAsPointers",
                 TransformPointersAsPointers);
+  Options.store(Opts, "TransformPointersAsValues", TransformPointersAsValues);
+  Options.store(Opts, "TransformReferences", TransformReferences);
+  Options.store(Opts, "TransformValues", TransformValues);
+
   Options.store(Opts, "AllowedTypes",
                 utils::options::serializeStringList(AllowedTypes));
 }
