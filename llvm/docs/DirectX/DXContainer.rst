@@ -639,21 +639,21 @@ Static samplers provide a way to define fixed sampler states within the root sig
 The StaticSamplerDesc structure defines all properties of a static sampler:
 
 #. Filter: The filtering mode (e.g., point, linear, anisotropic) used for texture sampling. 
-   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter#syntax>`_. 
+   For details, check `Static Sampler Fileters definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter#syntax>`_. 
 #. AddressU: The addressing mode for the U texture coordinate.
-   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode>`_. 
+   For details, check `Texture address mode definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode>`_. 
 #. AddressV: The addressing mode for the V texture coordinate.
 #. AddressW: The addressing mode for the W texture coordinate.
 #. MipLODBias: Bias value applied to mipmap level of detail calculations.
 #. MaxAnisotropy: Maximum anisotropy level when using anisotropic filtering.
 #. ComparisonFunc: Comparison function used for comparison samplers.
-   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_comparison_func>`_. 
+   For details, check `Comparison Function definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_comparison_func>`_. 
 #. BorderColor: Predefined border color used when address mode is set to border.
-   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_static_border_color>`_. 
+   For details, check `Static border color <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_static_border_color>`_. 
 #. MinLOD: Minimum level of detail to use for sampling.
 #. MaxLOD: Maximum level of detail to use for sampling.
 #. ShaderRegister: The shader sampler register (s#) where this sampler is bound.
 #. RegisterSpace: The register space used for the binding.
 #. ShaderVisibility: Specifies which shader stages can access this sampler.
-   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shader_visibility>`_. 
+   For details, check `Sahder Visibility definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shader_visibility>`_. 
 
