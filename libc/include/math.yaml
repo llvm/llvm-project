@@ -2541,6 +2541,12 @@ functions:
     arguments:
       - type: const long double *
       - type: const long double *
+  - name: sinpi
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: totalordermag
     standards:
       - stdc
