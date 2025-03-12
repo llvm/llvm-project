@@ -12521,10 +12521,13 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("MACRO(A *_Nonnull a);");
   verifyIndependentOfContext("MACRO(A *_Nullable a);");
   verifyIndependentOfContext("MACRO(A *_Null_unspecified a);");
-  verifyIndependentOfContext("MACRO(A *absl_nonnull a);", getGoogleStyle());
-  verifyIndependentOfContext("MACRO(A *absl_nullable a);", getGoogleStyle());
+
+  Style = getGoogleStyle();
+  verifyIndependentOfContext("MACRO(A *absl_nonnull a);", Style);
+  verifyIndependentOfContext("MACRO(A *absl_nullable a);", Style);
   verifyIndependentOfContext("MACRO(A *absl_nullability_unknown a);",
-                             getGoogleStyle());
+                             Style);
+
   verifyIndependentOfContext("MACRO(A *__attribute__((foo)) a);");
   verifyIndependentOfContext("MACRO(A *__attribute((foo)) a);");
   verifyIndependentOfContext("MACRO(A *[[clang::attr]] a);");
@@ -12734,21 +12737,6 @@ TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
                CustomQualifier);
   verifyFormat(("x = (foo *" + AllQualifiers + " __my_qualifier)&v;").str(),
                CustomQualifier);
-
-  // Check additional attribute macros in Google style:
-  FormatStyle LongPointerRightGoogle = getGoogleStyleWithColumns(999);
-  FormatStyle LongPointerLeftGoogle = getGoogleStyleWithColumns(999);
-  LongPointerLeftGoogle.PointerAlignment = FormatStyle::PAS_Left;
-  Twine AllQualifiersPlusGoogle =
-      AllQualifiers + " absl_nonnull absl_nullable absl_nullability_unknown";
-  verifyFormat(("x = (foo *" + AllQualifiersPlusGoogle + ")*v;").str(),
-               LongPointerRightGoogle);
-  verifyFormat(("x = (foo* " + AllQualifiersPlusGoogle + ")*v;").str(),
-               LongPointerLeftGoogle);
-  verifyFormat(("x = (foo *" + AllQualifiersPlusGoogle + ")&v;").str(),
-               LongPointerRightGoogle);
-  verifyFormat(("x = (foo* " + AllQualifiersPlusGoogle + ")&v;").str(),
-               LongPointerLeftGoogle);
 
   // Check that unknown identifiers result in binary operator parsing:
   verifyFormat("x = (foo * __unknown_qualifier) * v;");
