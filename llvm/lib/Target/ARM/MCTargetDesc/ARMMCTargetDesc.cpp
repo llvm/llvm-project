@@ -450,45 +450,46 @@ public:
 
       // Is Thumb? Check for movw.
       if ((InsnPart1 & 0xffb0) == 0xf200) {
-        uint32_t InsnPart2 = support::endian::read16(
+        uint32_t MovwPart1 = InsnPart1;
+        uint32_t MovwPart2 = support::endian::read16(
             PltContents.data() + Byte + 2, InstrEndianness);
-        if ((InsnPart2 & 0x8f00) != 0xc00)
+        if ((MovwPart2 & 0x8f00) != 0xc00)
           continue;
         uint64_t OffsetLower =
-            (InsnPart2 & 0xff) + ((InsnPart2 & 0x7000) >> 4) +
-            ((InsnPart1 & 0x400) << 1) + ((InsnPart1 & 0xf) << 12);
+            (MovwPart2 & 0xff) + ((MovwPart2 & 0x7000) >> 4) +
+            ((MovwPart1 & 0x400) << 1) + ((MovwPart1 & 0xf) << 12);
         // Check for movt.
-        uint32_t Insn2Part1 = support::endian::read16(
+        uint32_t MovtPart1 = support::endian::read16(
             PltContents.data() + Byte + 4, InstrEndianness);
-        if ((Insn2Part1 & 0xfbf0) != 0xf2c0)
+        if ((MovtPart1 & 0xfbf0) != 0xf2c0)
           continue;
-        uint32_t Insn2Part2 = support::endian::read16(
+        uint32_t MovtPart2 = support::endian::read16(
             PltContents.data() + Byte + 6, InstrEndianness);
-        if ((Insn2Part2 & 0x8f00) != 0xc00)
+        if ((MovtPart2 & 0x8f00) != 0xc00)
           continue;
         uint64_t OffsetHigher =
-            ((Insn2Part2 & 0xff) << 16) + ((Insn2Part2 & 0x7000) << 12) +
-            ((Insn2Part1 & 0x400) << 17) + ((Insn2Part1 & 0xf) << 28);
+            ((MovtPart2 & 0xff) << 16) + ((MovtPart2 & 0x7000) << 12) +
+            ((MovtPart1 & 0x400) << 17) + ((MovtPart1 & 0xf) << 28);
 
         // Check for add.
-        uint32_t Insn3 = support::endian::read16(PltContents.data() + Byte + 8,
-                                                 InstrEndianness);
-        if (Insn3 != 0x44fc)
+        uint32_t Add = support::endian::read16(PltContents.data() + Byte + 8,
+                                               InstrEndianness);
+        if (Add != 0x44fc)
           continue;
         // Check for ldr bottom half.
-        uint32_t Insn4 = support::endian::read16(PltContents.data() + Byte + 10,
-                                                 InstrEndianness);
-        if (Insn4 != 0xf8dc)
+        uint32_t Ldr1 = support::endian::read16(PltContents.data() + Byte + 10,
+                                                InstrEndianness);
+        if (Ldr1 != 0xf8dc)
           continue;
         // Check for ldr upper half.
-        uint32_t Insn5 = support::endian::read16(PltContents.data() + Byte + 12,
-                                                 InstrEndianness);
-        if (Insn5 != 0xf000)
+        uint32_t Ldr2 = support::endian::read16(PltContents.data() + Byte + 12,
+                                                InstrEndianness);
+        if (Ldr2 != 0xf000)
           continue;
         // Check for branch.
-        uint32_t Insn6 = support::endian::read16(PltContents.data() + Byte + 14,
-                                                 InstrEndianness);
-        if (Insn6 != 0xe7fc)
+        uint32_t Br = support::endian::read16(PltContents.data() + Byte + 14,
+                                              InstrEndianness);
+        if (Br != 0xe7fc)
           continue;
 
         uint64_t Offset =
@@ -514,22 +515,23 @@ public:
           Result.emplace_back(PltSectionVA + Byte, Offset);
           Byte += 12;
         } else {
+          uint32_t Add1 = Insn;
           // Check for first add.
-          if ((Insn & 0xe28fc600) != 0xe28fc600)
+          if ((Add1 & 0xe28fc600) != 0xe28fc600)
             continue;
-          uint32_t Insn2 = support::endian::read32(
-              PltContents.data() + Byte + 4, InstrEndianness);
+          uint32_t Add2 = support::endian::read32(PltContents.data() + Byte + 4,
+                                                  InstrEndianness);
           // Check for second add.
-          if ((Insn2 & 0xe28cca00) != 0xe28cca00)
+          if ((Add2 & 0xe28cca00) != 0xe28cca00)
             continue;
-          uint32_t Insn3 = support::endian::read32(
-              PltContents.data() + Byte + 8, InstrEndianness);
+          uint32_t Ldr = support::endian::read32(PltContents.data() + Byte + 8,
+                                                 InstrEndianness);
           // Check for ldr.
-          if ((Insn3 & 0xe5bcf000) != 0xe5bcf000)
+          if ((Ldr & 0xe5bcf000) != 0xe5bcf000)
             continue;
 
-          uint64_t Offset = (PltSectionVA + Byte + 8) + ((Insn & 0xff) << 20) +
-                            ((Insn2 & 0xff) << 12) + (Insn3 & 0xfff);
+          uint64_t Offset = (PltSectionVA + Byte + 8) + ((Add1 & 0xff) << 20) +
+                            ((Add2 & 0xff) << 12) + (Ldr & 0xfff);
           Result.emplace_back(PltSectionVA + Byte, Offset);
           Byte += 8;
         }
