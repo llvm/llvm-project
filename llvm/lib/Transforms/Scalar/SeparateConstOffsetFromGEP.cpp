@@ -1103,7 +1103,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // TODO(jingyue): do some range analysis to keep as many inbounds as
   // possible. GEPs with inbounds are more friendly to alias analysis.
   // TODO(gep_nowrap): Preserve nuw at least.
-  auto NewGEPFlags = GEPNoWrapFlags::none();
+  GEPNoWrapFlags NewGEPFlags = GEPNoWrapFlags::none();
   GEP->setNoWrapFlags(GEPNoWrapFlags::none());
 
   // Lowers a GEP to either GEPs with a single index or arithmetic operations.
