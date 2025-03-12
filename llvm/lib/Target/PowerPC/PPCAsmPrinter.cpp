@@ -109,10 +109,10 @@ struct DenseMapInfo<std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>> {
   using TOCKey = std::pair<const MCSymbol *, MCSymbolRefExpr::VariantKind>;
 
   static inline TOCKey getEmptyKey() {
-    return {nullptr, MCSymbolRefExpr::VariantKind::VK_None};
+    return {nullptr, MCSymbolRefExpr::VK_None};
   }
   static inline TOCKey getTombstoneKey() {
-    return {nullptr, MCSymbolRefExpr::VariantKind::VK_Invalid};
+    return {(const MCSymbol *)1, MCSymbolRefExpr::VK_None};
   }
   static unsigned getHashValue(const TOCKey &PairVal) {
     return detail::combineHashValue(

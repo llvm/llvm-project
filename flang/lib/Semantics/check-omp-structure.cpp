@@ -5605,6 +5605,10 @@ void OmpStructureChecker::Enter(
   CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_unified_shared_memory);
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::SelfMaps &x) {
+  CheckAllowedRequiresClause(llvm::omp::Clause::OMPC_self_maps);
+}
+
 void OmpStructureChecker::Enter(const parser::DoConstruct &x) {
   Base::Enter(x);
   loopStack_.push_back(&x);
