@@ -1134,21 +1134,24 @@ LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
   // This is the new cost model returned from loop cache analysis.
   // A smaller index means the loop should be placed an outer loop, and vice
   // versa.
-  if (CostMap.contains(InnerLoop) && CostMap.contains(OuterLoop)) {
-    unsigned InnerIndex = 0, OuterIndex = 0;
-    InnerIndex = CostMap.find(InnerLoop)->second;
-    OuterIndex = CostMap.find(OuterLoop)->second;
-    LLVM_DEBUG(dbgs() << "InnerIndex = " << InnerIndex
-                      << ", OuterIndex = " << OuterIndex << "\n");
-    if (InnerIndex < OuterIndex)
-      return std::optional<bool>(true);
-    assert(InnerIndex != OuterIndex && "CostMap should assign unique "
-                                       "numbers to each loop");
-    if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
-      return std::nullopt;
-    return std::optional<bool>(false);
-  }
-  return std::nullopt;
+  auto InnerLoopIt = CostMap.find(InnerLoop);
+  if (InnerLoopIt == CostMap.end())
+    return std::nullopt;
+  auto OuterLoopIt = CostMap.find(OuterLoop);
+  if (OuterLoopIt == CostMap.end())
+    return std::nullopt;
+
+  unsigned InnerIndex = InnerLoopIt->second;
+  unsigned OuterIndex = OuterLoopIt->second;
+  LLVM_DEBUG(dbgs() << "InnerIndex = " << InnerIndex
+                    << ", OuterIndex = " << OuterIndex << "\n");
+  if (InnerIndex < OuterIndex)
+    return std::optional<bool>(true);
+  assert(InnerIndex != OuterIndex && "CostMap should assign unique "
+                                     "numbers to each loop");
+  if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
+    return std::nullopt;
+  return std::optional<bool>(false);
 }
 
 std::optional<bool>
