@@ -14,7 +14,6 @@
 #include "llvm/ExecutionEngine/Orc/EHFrameRegistrationPlugin.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/EPCDynamicLibrarySearchGenerator.h"
-#include "llvm/ExecutionEngine/Orc/EPCEHFrameRegistrar.h"
 #include "llvm/ExecutionEngine/Orc/ExecutorProcessControl.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
@@ -1252,12 +1251,11 @@ Expected<JITDylibSP> setUpGenericLLVMIRPlatform(LLJIT &J) {
     // Otherwise fall back to standard unwind registration.
     if (UseEHFrames) {
       auto &ES = J.getExecutionSession();
-      if (auto EHFrameRegistrar = EPCEHFrameRegistrar::Create(ES)) {
-        OLL->addPlugin(std::make_unique<EHFrameRegistrationPlugin>(
-            ES, std::move(*EHFrameRegistrar)));
+      if (auto EHFP = EHFrameRegistrationPlugin::Create(ES)) {
+        OLL->addPlugin(std::move(*EHFP));
         LLVM_DEBUG(dbgs() << "Enabled eh-frame support.\n");
       } else
-        return EHFrameRegistrar.takeError();
+        return EHFP.takeError();
     }
   }
 
@@ -1342,8 +1340,8 @@ LLLazyJIT::LLLazyJIT(LLLazyJITBuilderState &S, Error &Err) : LLJIT(S, Err) {
 // In-process LLJIT uses eh-frame section wrappers via EPC, so we need to force
 // them to be linked in.
 LLVM_ATTRIBUTE_USED void linkComponents() {
-  errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
-         << (void *)&llvm_orc_deregisterEHFrameSectionWrapper;
+  errs() << (void *)&llvm_orc_registerEHFrameSectionAllocAction
+         << (void *)&llvm_orc_deregisterEHFrameSectionAllocAction;
 }
 
 } // End namespace orc.

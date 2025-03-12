@@ -6502,10 +6502,9 @@ void BoUpSLP::reorderTopToBottom() {
         inversePermutation(CurrentOrder, NewReuses);
         addMask(NewReuses, TE->ReuseShuffleIndices);
         TE->ReuseShuffleIndices.swap(NewReuses);
-      }
-      // Update orders in user split vectorize nodes.
-      if (TE->UserTreeIndex &&
-          TE->UserTreeIndex.UserTE->State == TreeEntry::SplitVectorize)
+      } else if (TE->UserTreeIndex &&
+                 TE->UserTreeIndex.UserTE->State == TreeEntry::SplitVectorize)
+        // Update orders in user split vectorize nodes.
         TE->UserTreeIndex.UserTE->reorderSplitNode(TE->UserTreeIndex.EdgeIdx,
                                                    Mask, MaskOrder);
     }

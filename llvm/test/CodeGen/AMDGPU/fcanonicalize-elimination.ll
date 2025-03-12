@@ -740,7 +740,7 @@ define <2 x half> @v_test_canonicalize_build_vector_v2f16(<2 x half> %vec) {
   %hi = extractelement <2 x half> %vec, i32 1
   %lo.op = fadd half %lo, 1.0
   %hi.op = fmul half %lo, 4.0
-  %ins0 = insertelement <2 x half> undef, half %lo.op, i32 0
+  %ins0 = insertelement <2 x half> poison, half %lo.op, i32 0
   %ins1 = insertelement <2 x half> %ins0, half %hi.op, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %ins1)
   ret <2 x half> %canonicalized

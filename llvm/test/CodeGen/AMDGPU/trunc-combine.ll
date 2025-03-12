@@ -45,7 +45,7 @@ define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %load0 = load i32, ptr addrspace(1) undef
   %load1 = load i32, ptr addrspace(1) null
-  %insert.0 = insertelement <2 x i32> undef, i32 %load0, i32 0
+  %insert.0 = insertelement <2 x i32> poison, i32 %load0, i32 0
   %insert.1 = insertelement <2 x i32> %insert.0, i32 99, i32 1
   %bc = bitcast <2 x i32> %insert.1 to i64
   %trunc = trunc i64 %bc to i16
@@ -74,7 +74,7 @@ define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %load0 = load float, ptr addrspace(1) undef
   %load1 = load float, ptr addrspace(1) null
-  %insert.0 = insertelement <2 x float> undef, float %load0, i32 0
+  %insert.0 = insertelement <2 x float> poison, float %load0, i32 0
   %insert.1 = insertelement <2 x float> %insert.0, float 4.0, i32 1
   %bc = bitcast <2 x float> %insert.1 to i64
   %trunc = trunc i64 %bc to i16
@@ -128,8 +128,8 @@ bb:
   %tmp8 = extractelement <2 x i32> %tmp6, i64 0
   %tmp9 = extractelement <2 x i32> %tmp7, i64 0
   %tmp10 = mul nsw i32 %tmp9, %tmp8
-  %tmp11 = insertelement <2 x i32> undef, i32 %tmp10, i32 0
-  %tmp12 = insertelement <2 x i32> %tmp11, i32 undef, i32 1
+  %tmp11 = insertelement <2 x i32> poison, i32 %tmp10, i32 0
+  %tmp12 = insertelement <2 x i32> %tmp11, i32 poison, i32 1
   %tmp13 = lshr <2 x i32> %tmp12, <i32 16, i32 16>
   %tmp14 = trunc <2 x i32> %tmp13 to <2 x i16>
   %tmp15 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %arg2, i64 undef
