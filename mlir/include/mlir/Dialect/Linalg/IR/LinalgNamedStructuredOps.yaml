@@ -1196,7 +1196,7 @@ structured_op: !LinalgStructuredOpConfig
     name: C
     kind: output_tensor
     type_var: U
-    shape_map: affine_map<()[s0, s1, s2] -> (s2, s1)>
+    shape_map: affine_map<()[s0, s1, s2] -> (s1, s2)>
   - !LinalgOperandDefConfig
     name: cast
     kind: type_fn_attr
