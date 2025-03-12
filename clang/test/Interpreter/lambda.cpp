@@ -1,7 +1,7 @@
 // REQUIRES: host-supports-jit
 // UNSUPPORTED: system-aix
 // RUN: cat %s | clang-repl | FileCheck %s
-// RUN: cat %s | not clang-repl -Xcc -Xclang -Xcc -verify -Xcc -O2 | FileCheck %s
+// RUN: cat %s | clang-repl -Xcc -Xclang -Xcc -verify -Xcc -O2 | FileCheck %s
 
 extern "C" int printf(const char *, ...);
 
@@ -20,5 +20,8 @@ int x = 42;
 
 // expected-error@+1 {{non-local lambda expression cannot have a capture-default}}
 auto capture = [&]() { return x * 2; };
+
+// Ensure valid C++ code before exiting
+x = 100;
 
 %quit
