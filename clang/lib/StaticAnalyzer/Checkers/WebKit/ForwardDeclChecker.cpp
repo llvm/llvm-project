@@ -186,18 +186,11 @@ public:
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
-
-    const std::string TypeName = QT.getAsString();
     Os << "Local variable ";
     printQuotedQualifiedName(Os, V);
-    Os << " uses a forward declared type '" << TypeName << "'";
 
-    const SourceLocation SrcLocToReport = V->getBeginLoc();
-    PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
-    auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
-    Report->addRange(V->getSourceRange());
-    Report->setDeclWithIssue(DeclWithIssue);
-    BR->emitReport(std::move(Report));
+    reportBug(V->getBeginLoc(), V->getSourceRange(), DeclWithIssue, Os.str(),
+              QT);
   }
 
   void visitCallExpr(const CallExpr *CE, const Decl *DeclWithIssue) const {
@@ -281,44 +274,43 @@ public:
     reportUnknownArgType(Arg, Param, DeclWithIssue);
   }
 
-  void reportUnknownArgType(const Expr *CallArg, const ParmVarDecl *Param,
+  void reportUnknownArgType(const Expr *CA, const ParmVarDecl *Param,
                             const Decl *DeclWithIssue) const {
-    assert(CallArg);
+    assert(CA);
 
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
     const std::string paramName = safeGetName(Param);
-    const std::string TypeName = Param->getType().getAsString();
     Os << "Call argument";
     if (!paramName.empty()) {
       Os << " for parameter ";
       printQuotedQualifiedName(Os, Param);
     }
-    Os << " uses a forward declared type '" << TypeName << "'";
 
-    const SourceLocation SrcLocToReport = CallArg->getExprLoc();
-    PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
-    auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
-    Report->addRange(CallArg->getSourceRange());
-    Report->setDeclWithIssue(DeclWithIssue);
-    BR->emitReport(std::move(Report));
+    reportBug(CA->getExprLoc(), CA->getSourceRange(), DeclWithIssue, Os.str(),
+              Param->getType());
   }
 
   void reportUnknownRecieverType(const Expr *Receiver,
                                  const Decl *DeclWithIssue) const {
     assert(Receiver);
+    reportBug(Receiver->getExprLoc(), Receiver->getSourceRange(), DeclWithIssue,
+              "Receiver", Receiver->getType());
+  }
 
+  void reportBug(const SourceLocation &SrcLoc, const SourceRange &SrcRange,
+                 const Decl *DeclWithIssue, const StringRef &Description,
+                 QualType Type) const {
     SmallString<100> Buf;
     llvm::raw_svector_ostream Os(Buf);
 
-    const std::string TypeName = Receiver->getType().getAsString();
-    Os << "Receiver uses a forward declared type '" << TypeName << "'";
+    const std::string TypeName = Type.getAsString();
+    Os << Description << " uses a forward declared type '" << TypeName << "'";
 
-    const SourceLocation SrcLocToReport = Receiver->getExprLoc();
-    PathDiagnosticLocation BSLoc(SrcLocToReport, BR->getSourceManager());
+    PathDiagnosticLocation BSLoc(SrcLoc, BR->getSourceManager());
     auto Report = std::make_unique<BasicBugReport>(Bug, Os.str(), BSLoc);
-    Report->addRange(Receiver->getSourceRange());
+    Report->addRange(SrcRange);
     Report->setDeclWithIssue(DeclWithIssue);
     BR->emitReport(std::move(Report));
   }
