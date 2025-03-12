@@ -256,11 +256,11 @@ define <8 x float> @pair_sum_v8f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x fl
 ; AVX2-SLOW-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; AVX2-SLOW-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-SLOW-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
-; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; AVX2-SLOW-NEXT:    vhaddps %xmm7, %xmm6, %xmm2
-; AVX2-SLOW-NEXT:    vhaddps %xmm2, %xmm2, %xmm2
-; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-SLOW-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[2]
+; AVX2-SLOW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-SLOW-NEXT:    vhaddps %xmm7, %xmm6, %xmm1
+; AVX2-SLOW-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
+; AVX2-SLOW-NEXT:    vbroadcastsd %xmm1, %ymm1
+; AVX2-SLOW-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; AVX2-SLOW-NEXT:    retq
 ;
 ; AVX2-FAST-LABEL: pair_sum_v8f32_v4f32:
@@ -277,11 +277,11 @@ define <8 x float> @pair_sum_v8f32_v4f32(<4 x float> %0, <4 x float> %1, <4 x fl
 ; AVX2-FAST-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; AVX2-FAST-NEXT:    vmovlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX2-FAST-NEXT:    vshufpd {{.*#+}} xmm1 = xmm1[1,0]
-; AVX2-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; AVX2-FAST-NEXT:    vhaddps %xmm7, %xmm6, %xmm2
-; AVX2-FAST-NEXT:    vhaddps %xmm0, %xmm2, %xmm2
-; AVX2-FAST-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX2-FAST-NEXT:    vshufpd {{.*#+}} ymm0 = ymm1[0],ymm0[1],ymm1[2],ymm0[2]
+; AVX2-FAST-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-FAST-NEXT:    vhaddps %xmm7, %xmm6, %xmm1
+; AVX2-FAST-NEXT:    vhaddps %xmm0, %xmm1, %xmm1
+; AVX2-FAST-NEXT:    vbroadcastsd %xmm1, %ymm1
+; AVX2-FAST-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm1[6,7]
 ; AVX2-FAST-NEXT:    retq
   %9 = shufflevector <4 x float> %0, <4 x float> poison, <2 x i32> <i32 0, i32 2>
   %10 = shufflevector <4 x float> %0, <4 x float> poison, <2 x i32> <i32 1, i32 3>

@@ -11,7 +11,7 @@
 #ifndef FORTRAN_RUNTIME_CPP_TYPE_H_
 #define FORTRAN_RUNTIME_CPP_TYPE_H_
 
-#include "flang/Common/Fortran.h"
+#include "flang/Common/Fortran-consts.h"
 #include "flang/Common/float128.h"
 #include "flang/Common/float80.h"
 #include "flang/Common/uint128.h"
@@ -45,6 +45,10 @@ constexpr bool HasCppTypeFor{
 
 template <int KIND> struct CppTypeForHelper<TypeCategory::Integer, KIND> {
   using type = common::HostSignedIntType<8 * KIND>;
+};
+
+template <int KIND> struct CppTypeForHelper<TypeCategory::Unsigned, KIND> {
+  using type = common::HostUnsignedIntType<8 * KIND>;
 };
 
 #if HAS_FP16

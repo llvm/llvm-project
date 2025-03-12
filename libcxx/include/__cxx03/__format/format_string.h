@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FORMAT_FORMAT_STRING_H
-#define _LIBCPP___FORMAT_FORMAT_STRING_H
+#ifndef _LIBCPP___CXX03___FORMAT_FORMAT_STRING_H
+#define _LIBCPP___CXX03___FORMAT_FORMAT_STRING_H
 
 #include <__cxx03/__assert>
 #include <__cxx03/__config>
@@ -157,4 +157,4 @@ __parse_arg_id(_Iterator __begin, _Iterator __end, auto& __parse_ctx) {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FORMAT_FORMAT_STRING_H
+#endif // _LIBCPP___CXX03___FORMAT_FORMAT_STRING_H

@@ -122,10 +122,10 @@ class X86PreTileConfig : public MachineFunctionPass {
     case X86::PTILESTOREDV:
     case X86::PTCVTROWD2PSrreV:
     case X86::PTCVTROWD2PSrriV:
-    case X86::PTCVTROWPS2PBF16HrreV:
-    case X86::PTCVTROWPS2PBF16HrriV:
-    case X86::PTCVTROWPS2PBF16LrreV:
-    case X86::PTCVTROWPS2PBF16LrriV:
+    case X86::PTCVTROWPS2BF16HrreV:
+    case X86::PTCVTROWPS2BF16HrriV:
+    case X86::PTCVTROWPS2BF16LrreV:
+    case X86::PTCVTROWPS2BF16LrriV:
     case X86::PTCVTROWPS2PHHrreV:
     case X86::PTCVTROWPS2PHHrriV:
     case X86::PTCVTROWPS2PHLrreV:

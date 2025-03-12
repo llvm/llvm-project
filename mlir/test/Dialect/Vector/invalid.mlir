@@ -186,8 +186,8 @@ func.func @extract_0d(%arg0: vector<f32>) {
 // -----
 
 func.func @extract_position_overflow(%arg0: vector<4x8x16xf32>) {
-  // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension}}
-  %1 = vector.extract %arg0[0, 0, -1] : f32 from vector<4x8x16xf32>
+  // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding vector dimension or poison (-1)}}
+  %1 = vector.extract %arg0[0, 0, -5] : f32 from vector<4x8x16xf32>
 }
 
 // -----
@@ -247,7 +247,7 @@ func.func @insert_vector_type(%a: f32, %b: vector<4x8x16xf32>) {
 
 func.func @insert_position_overflow(%a: f32, %b: vector<4x8x16xf32>) {
   // expected-error@+1 {{expected position attribute #3 to be a non-negative integer smaller than the corresponding dest vector dimension}}
-  %1 = vector.insert %a, %b[0, 0, -1] : f32 into vector<4x8x16xf32>
+  %1 = vector.insert %a, %b[0, 0, -5] : f32 into vector<4x8x16xf32>
 }
 
 // -----
@@ -1519,6 +1519,14 @@ func.func @expand_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1>,
 
 // -----
 
+func.func @expand_base_scalable(%base: memref<?xf32>, %mask: vector<[16]xi1>, %pass_thru: vector<[16]xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.expandload' op operand #2 must be fixed-length vector of 1-bit signless integer values, but got 'vector<[16]xi1>}}
+  %0 = vector.expandload %base[%c0], %mask, %pass_thru : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32> into vector<[16]xf32>
+}
+
+// -----
+
 func.func @expand_dim_mask_mismatch(%base: memref<?xf32>, %mask: vector<17xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.expandload' op expected result dim to match mask dim}}
@@ -1547,6 +1555,14 @@ func.func @compress_base_type_mismatch(%base: memref<?xf64>, %mask: vector<16xi1
   %c0 = arith.constant 0 : index
   // expected-error@+1 {{'vector.compressstore' op base and valueToStore element type should match}}
   vector.compressstore %base[%c0], %mask, %value : memref<?xf64>, vector<16xi1>, vector<16xf32>
+}
+
+// -----
+
+func.func @compress_scalable(%base: memref<?xf32>, %mask: vector<[16]xi1>, %value: vector<[16]xf32>) {
+  %c0 = arith.constant 0 : index
+  // expected-error@+1 {{'vector.compressstore' op operand #2 must be fixed-length vector of 1-bit signless integer values, but got 'vector<[16]xi1>}}
+  vector.compressstore %base[%c0], %mask, %value : memref<?xf32>, vector<[16]xi1>, vector<[16]xf32>
 }
 
 // -----
@@ -1611,92 +1627,6 @@ func.func @invalid_splat(%v : f32) {
 
 // -----
 
-func.func @warp_wrong_num_outputs(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected same number of yield operands and return values.}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
-  }
-  return
-}
-
-// -----
-
-func.func @warp_wrong_num_inputs(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected same number op arguments and block arguments.}}
-  vector.warp_execute_on_lane_0(%laneid)[64] {
-  ^bb0(%arg0 : vector<128xi32>) :
-  }
-  return
-}
-
-// -----
-
-func.func @warp_wrong_return_distribution(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[64] -> (vector<4xi32>) {
-    %0 = arith.constant dense<2>: vector<128xi32>
-    vector.yield %0 : vector<128xi32>
-  }
-  return
-}
-
-
-// -----
-
-func.func @warp_wrong_arg_distribution(%laneid: index, %v0 : vector<4xi32>) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op incompatible distribution dimensions from 'vector<128xi32>' to 'vector<4xi32>'}}
-  vector.warp_execute_on_lane_0(%laneid)[64]
-  args(%v0 : vector<4xi32>) {
-   ^bb0(%arg0 : vector<128xi32>) :
-  }
-  return
-}
-
-// -----
-
-func.func @warp_2_distributed_dims(%laneid: index) {
-  // expected-error@+1 {{incompatible distribution dimensions from 'vector<128x128xi32>' to 'vector<4x4xi32>' with warp size = 32}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
-    %0 = arith.constant dense<2>: vector<128x128xi32>
-    vector.yield %0 : vector<128x128xi32>
-  }
-  return
-}
-
-// -----
-
-func.func @warp_2_distributed_dims(%laneid: index) {
-  // expected-error@+1 {{expected expanded vector dimension #1 (8) to be a multipler of the distributed vector dimension (3)}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<1x3xi32>) {
-    %0 = arith.constant dense<2>: vector<4x8xi32>
-    vector.yield %0 : vector<4x8xi32>
-  }
-  return
-}
-
-// -----
-
-func.func @warp_mismatch_rank(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected distributed vectors to have same rank and element type.}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (vector<4x4xi32>) {
-    %0 = arith.constant dense<2>: vector<128xi32>
-    vector.yield %0 : vector<128xi32>
-  }
-  return
-}
-
-// -----
-
-func.func @warp_mismatch_rank(%laneid: index) {
-  // expected-error@+1 {{'vector.warp_execute_on_lane_0' op expected vector type for distributed operands.}}
-  %2 = vector.warp_execute_on_lane_0(%laneid)[32] -> (i32) {
-    %0 = arith.constant dense<2>: vector<128xi32>
-    vector.yield %0 : vector<128xi32>
-  }
-  return
-}
-
-// -----
-
 func.func @vector_mask_multiple_ops(%t0: tensor<?xf32>, %t1: tensor<?xf32>, %idx: index, %val: vector<16xf32>, %m0: vector<16xi1>) {
   %ft0 = arith.constant 0.0 : f32
   // expected-error@+1 {{'vector.mask' op expects only one operation to mask}}
@@ -1748,6 +1678,21 @@ func.func @vector_mask_non_maskable_op(%a : vector<3x4xf32>) -> vector<3x4xf32> 
   // expected-error@+1 {{'vector.mask' op expects a MaskableOpInterface within the mask region}}
    %0 = vector.mask %m0 { arith.addf %a, %a : vector<3x4xf32> } : vector<3x4xi1> -> vector<3x4xf32>
    return %0 : vector<3x4xf32>
+}
+
+// -----
+
+func.func @vector_mask_0d_mask(%arg0: tensor<2x4xi32>,
+                               %idx0: index, %idx1: index,
+                               %m0: vector<i1>) -> vector<1x1x4xi32> {
+  %cst = arith.constant 0 : i32
+  // expected-error@+1 {{'vector.mask' op operand #0 must be vector of 1-bit signless integer values, but got 'vector<i1>'}}
+  %res = vector.mask %m0 {
+    %0 = vector.transfer_read %arg0[%idx0, %idx1], %cst {permutation_map = affine_map<(d0, d1) -> (0, 0, 0)>}
+      : tensor<2x4xi32>, vector<1x1x4xi32>
+    vector.yield %0 : vector<1x1x4xi32>
+  } : vector<i1> -> vector<1x1x4xi32>
+  return %res : vector<1x1x4xi32>
 }
 
 // -----
@@ -1858,7 +1803,7 @@ func.func @deinterleave_scalable_rank_fail(%vec : vector<2x[4]xf32>) {
 // -----
 
 func.func @invalid_from_elements(%a: f32) {
-  // expected-error @+1 {{'vector.from_elements' 1 operands present, but expected 2}}
+  // expected-error @+1 {{'vector.from_elements' number of operands and types do not match: got 1 operands and 2 types}}
   vector.from_elements %a : vector<2xf32>
   return
 }
@@ -1869,6 +1814,14 @@ func.func @invalid_from_elements(%a: f32) {
 func.func @invalid_from_elements(%a: f32, %b: i32) {
   // expected-error @+1 {{use of value '%b' expects different type than prior uses: 'f32' vs 'i32'}}
   vector.from_elements %a, %b : vector<2xf32>
+  return
+}
+
+// -----
+
+func.func @invalid_from_elements_scalable(%a: f32, %b: i32) {
+  // expected-error @+1 {{'result' must be fixed-length vector of any type values, but got 'vector<[2]xf32>'}}
+  vector.from_elements %a, %b : vector<[2]xf32>
   return
 }
 

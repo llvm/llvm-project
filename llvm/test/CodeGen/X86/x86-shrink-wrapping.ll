@@ -868,7 +868,7 @@ define void @infiniteloop() {
 ; DISABLE-NEXT:    popq %rbp
 ; DISABLE-NEXT:    retq
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 poison, label %if.then, label %if.end
 
 if.then:
   %ptr = alloca i32, i32 4
@@ -983,7 +983,7 @@ define void @infiniteloop2() {
 ; DISABLE-NEXT:    popq %rbp
 ; DISABLE-NEXT:    retq
 entry:
-  br i1 undef, label %if.then, label %if.end
+  br i1 poison, label %if.then, label %if.end
 
 if.then:
   %ptr = alloca i32, i32 4
@@ -994,7 +994,7 @@ for.body:                                         ; preds = %for.body, %entry
   %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.03
   store i32 %add, ptr %ptr
-  br i1 undef, label %body1, label %body2
+  br i1 poison, label %body1, label %body2
 
 body1:
   tail call void asm sideeffect "nop", "~{ebx}"()
@@ -1074,10 +1074,10 @@ define void @infiniteloop3() {
 ; DISABLE-NEXT:  LBB12_7: ## %end
 ; DISABLE-NEXT:    retq
 entry:
-  br i1 undef, label %loop2a, label %body
+  br i1 poison, label %loop2a, label %body
 
 body:                                             ; preds = %entry
-  br i1 undef, label %loop2a, label %end
+  br i1 poison, label %loop2a, label %end
 
 loop1:                                            ; preds = %loop2a, %loop2b
   %var.phi = phi ptr [ %next.phi, %loop2b ], [ %var, %loop2a ]

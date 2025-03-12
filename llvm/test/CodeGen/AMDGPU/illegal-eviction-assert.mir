@@ -6,7 +6,7 @@
 # check was inconsistent with a later assertion when the eviction was
 # performed.
 
-# ERR: error: ran out of registers during register allocation
+# ERR: error: <unknown>:0:0: ran out of registers during register allocation
 
 --- |
   define void @foo() #0 {

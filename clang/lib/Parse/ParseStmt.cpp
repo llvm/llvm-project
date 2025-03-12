@@ -799,7 +799,7 @@ StmtResult Parser::ParseLabeledStatement(ParsedAttributes &Attrs,
   }
 
   // If we've not parsed a statement yet, parse one now.
-  if (!SubStmt.isInvalid() && !SubStmt.isUsable())
+  if (SubStmt.isUnset())
     SubStmt = ParseStatement(nullptr, StmtCtx);
 
   // Broken substmt shouldn't prevent the label from being added to the AST.

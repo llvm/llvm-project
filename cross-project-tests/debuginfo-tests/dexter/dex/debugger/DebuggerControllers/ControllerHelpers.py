@@ -39,7 +39,7 @@ def update_step_watches(step_info, watches, commands):
         for watch in towatch:
             loc = step_info.current_location
             if (
-                loc.path != None
+                loc.path is not None
                 and os.path.exists(loc.path)
                 and os.path.samefile(watch.path, loc.path)
                 and have_hit_line(watch, loc)

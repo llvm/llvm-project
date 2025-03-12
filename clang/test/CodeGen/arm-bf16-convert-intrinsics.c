@@ -24,50 +24,50 @@
 
 // CHECK-A64-LABEL: @test_vcvt_f32_bf16(
 // CHECK-A64-NEXT:  entry:
-// CHECK-A64-NEXT:    [[__REINT_836_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A64-NEXT:    [[__REINT1_836_I:%.*]] = alloca <4 x i32>, align 16
-// CHECK-A64-NEXT:    store <4 x bfloat> [[A:%.*]], ptr [[__REINT_836_I]], align 8
-// CHECK-A64-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_836_I]], align 8
+// CHECK-A64-NEXT:    [[__REINT_808_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A64-NEXT:    [[__REINT1_808_I:%.*]] = alloca <4 x i32>, align 16
+// CHECK-A64-NEXT:    store <4 x bfloat> [[A:%.*]], ptr [[__REINT_808_I]], align 8
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_808_I]], align 8
 // CHECK-A64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-A64-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[TMP0]] to <4 x i32>
+// CHECK-A64-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
 // CHECK-A64-NEXT:    [[VSHLL_N_I:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 16)
-// CHECK-A64-NEXT:    store <4 x i32> [[VSHLL_N_I]], ptr [[__REINT1_836_I]], align 16
-// CHECK-A64-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_836_I]], align 16
+// CHECK-A64-NEXT:    store <4 x i32> [[VSHLL_N_I]], ptr [[__REINT1_808_I]], align 16
+// CHECK-A64-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_808_I]], align 16
 // CHECK-A64-NEXT:    ret <4 x float> [[TMP3]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvt_f32_bf16(
 // CHECK-A32-HARDFP-NEXT:  entry:
-// CHECK-A32-HARDFP-NEXT:    [[__REINT_836_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A32-HARDFP-NEXT:    [[__REINT1_836_I:%.*]] = alloca <4 x i32>, align 8
-// CHECK-A32-HARDFP-NEXT:    store <4 x bfloat> [[A:%.*]], ptr [[__REINT_836_I]], align 8
-// CHECK-A32-HARDFP-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_836_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    [[__REINT_808_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A32-HARDFP-NEXT:    [[__REINT1_808_I:%.*]] = alloca <4 x i32>, align 8
+// CHECK-A32-HARDFP-NEXT:    store <4 x bfloat> [[A:%.*]], ptr [[__REINT_808_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_808_I]], align 8
 // CHECK-A32-HARDFP-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-A32-HARDFP-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[TMP0]] to <4 x i32>
+// CHECK-A32-HARDFP-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
 // CHECK-A32-HARDFP-NEXT:    [[VSHLL_N_I:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 16)
-// CHECK-A32-HARDFP-NEXT:    store <4 x i32> [[VSHLL_N_I]], ptr [[__REINT1_836_I]], align 8
-// CHECK-A32-HARDFP-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_836_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    store <4 x i32> [[VSHLL_N_I]], ptr [[__REINT1_808_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_808_I]], align 8
 // CHECK-A32-HARDFP-NEXT:    ret <4 x float> [[TMP3]]
 //
 // CHECK-A32-SOFTFP-LABEL: @test_vcvt_f32_bf16(
 // CHECK-A32-SOFTFP-NEXT:  entry:
-// CHECK-A32-SOFTFP-NEXT:    [[__P0_836_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A32-SOFTFP-NEXT:    [[__REINT_836_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A32-SOFTFP-NEXT:    [[__REINT1_836_I:%.*]] = alloca <4 x i32>, align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__P0_808_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__REINT_808_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__REINT1_808_I:%.*]] = alloca <4 x i32>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[A:%.*]] = alloca <4 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[COERCE:%.*]] = alloca <4 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    store <2 x i32> [[A_COERCE:%.*]], ptr [[A]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[A1:%.*]] = load <4 x bfloat>, ptr [[A]], align 8
 // CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[A1]], ptr [[COERCE]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr [[COERCE]], align 8
-// CHECK-A32-SOFTFP-NEXT:    store <2 x i32> [[TMP0]], ptr [[__P0_836_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    [[__P0_8361_I:%.*]] = load <4 x bfloat>, ptr [[__P0_836_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[__P0_8361_I]], ptr [[__REINT_836_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[__REINT_836_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    store <2 x i32> [[TMP0]], ptr [[__P0_808_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__P0_8081_I:%.*]] = load <4 x bfloat>, ptr [[__P0_808_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[__P0_8081_I]], ptr [[__REINT_808_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[__REINT_808_I]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP1]] to <8 x i8>
-// CHECK-A32-SOFTFP-NEXT:    [[TMP3:%.*]] = sext <4 x i16> [[TMP1]] to <4 x i32>
+// CHECK-A32-SOFTFP-NEXT:    [[TMP3:%.*]] = zext <4 x i16> [[TMP1]] to <4 x i32>
 // CHECK-A32-SOFTFP-NEXT:    [[VSHLL_N_I:%.*]] = shl <4 x i32> [[TMP3]], splat (i32 16)
-// CHECK-A32-SOFTFP-NEXT:    store <4 x i32> [[VSHLL_N_I]], ptr [[__REINT1_836_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[__REINT1_836_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    store <4 x i32> [[VSHLL_N_I]], ptr [[__REINT1_808_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    [[TMP4:%.*]] = load <4 x float>, ptr [[__REINT1_808_I]], align 8
 // CHECK-A32-SOFTFP-NEXT:    ret <4 x float> [[TMP4]]
 //
 float32x4_t test_vcvt_f32_bf16(bfloat16x4_t a) {
@@ -76,39 +76,39 @@ float32x4_t test_vcvt_f32_bf16(bfloat16x4_t a) {
 
 // CHECK-A64-LABEL: @test_vcvtq_low_f32_bf16(
 // CHECK-A64-NEXT:  entry:
-// CHECK-A64-NEXT:    [[__REINT_836_I_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A64-NEXT:    [[__REINT1_836_I_I:%.*]] = alloca <4 x i32>, align 16
+// CHECK-A64-NEXT:    [[__REINT_808_I_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A64-NEXT:    [[__REINT1_808_I_I:%.*]] = alloca <4 x i32>, align 16
 // CHECK-A64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> [[A]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK-A64-NEXT:    store <4 x bfloat> [[SHUFFLE_I]], ptr [[__REINT_836_I_I]], align 8
-// CHECK-A64-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_836_I_I]], align 8
+// CHECK-A64-NEXT:    store <4 x bfloat> [[SHUFFLE_I]], ptr [[__REINT_808_I_I]], align 8
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_808_I_I]], align 8
 // CHECK-A64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-A64-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[TMP0]] to <4 x i32>
+// CHECK-A64-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
 // CHECK-A64-NEXT:    [[VSHLL_N_I_I:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 16)
-// CHECK-A64-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_836_I_I]], align 16
-// CHECK-A64-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_836_I_I]], align 16
+// CHECK-A64-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_808_I_I]], align 16
+// CHECK-A64-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_808_I_I]], align 16
 // CHECK-A64-NEXT:    ret <4 x float> [[TMP3]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvtq_low_f32_bf16(
 // CHECK-A32-HARDFP-NEXT:  entry:
-// CHECK-A32-HARDFP-NEXT:    [[__REINT_836_I_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A32-HARDFP-NEXT:    [[__REINT1_836_I_I:%.*]] = alloca <4 x i32>, align 8
+// CHECK-A32-HARDFP-NEXT:    [[__REINT_808_I_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A32-HARDFP-NEXT:    [[__REINT1_808_I_I:%.*]] = alloca <4 x i32>, align 8
 // CHECK-A32-HARDFP-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> [[A]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK-A32-HARDFP-NEXT:    store <4 x bfloat> [[SHUFFLE_I]], ptr [[__REINT_836_I_I]], align 8
-// CHECK-A32-HARDFP-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_836_I_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    store <4 x bfloat> [[SHUFFLE_I]], ptr [[__REINT_808_I_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_808_I_I]], align 8
 // CHECK-A32-HARDFP-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-A32-HARDFP-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[TMP0]] to <4 x i32>
+// CHECK-A32-HARDFP-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
 // CHECK-A32-HARDFP-NEXT:    [[VSHLL_N_I_I:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 16)
-// CHECK-A32-HARDFP-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_836_I_I]], align 8
-// CHECK-A32-HARDFP-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_836_I_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_808_I_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_808_I_I]], align 8
 // CHECK-A32-HARDFP-NEXT:    ret <4 x float> [[TMP3]]
 //
 // CHECK-A32-SOFTFP-LABEL: @test_vcvtq_low_f32_bf16(
 // CHECK-A32-SOFTFP-NEXT:  entry:
 // CHECK-A32-SOFTFP-NEXT:    [[RETVAL_I:%.*]] = alloca <4 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[__P0_I2:%.*]] = alloca <8 x bfloat>, align 8
-// CHECK-A32-SOFTFP-NEXT:    [[__P0_836_I_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A32-SOFTFP-NEXT:    [[__REINT_836_I_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A32-SOFTFP-NEXT:    [[__REINT1_836_I_I:%.*]] = alloca <4 x i32>, align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__P0_808_I_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__REINT_808_I_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__REINT1_808_I_I:%.*]] = alloca <4 x i32>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[__P0_I:%.*]] = alloca <8 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[COERCE_I:%.*]] = alloca <8 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[COERCE2_I:%.*]] = alloca <4 x bfloat>, align 8
@@ -132,15 +132,15 @@ float32x4_t test_vcvt_f32_bf16(bfloat16x4_t a) {
 // CHECK-A32-SOFTFP-NEXT:    [[TMP3:%.*]] = load <4 x bfloat>, ptr [[COERCE2_I]], align 8
 // CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[TMP3]], ptr [[COERCE3_I]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[COERCE3_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    store <2 x i32> [[TMP4]], ptr [[__P0_836_I_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    [[__P0_8361_I_I:%.*]] = load <4 x bfloat>, ptr [[__P0_836_I_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[__P0_8361_I_I]], ptr [[__REINT_836_I_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    [[TMP5:%.*]] = load <4 x i16>, ptr [[__REINT_836_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    store <2 x i32> [[TMP4]], ptr [[__P0_808_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__P0_8081_I_I:%.*]] = load <4 x bfloat>, ptr [[__P0_808_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[__P0_8081_I_I]], ptr [[__REINT_808_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    [[TMP5:%.*]] = load <4 x i16>, ptr [[__REINT_808_I_I]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP5]] to <8 x i8>
-// CHECK-A32-SOFTFP-NEXT:    [[TMP7:%.*]] = sext <4 x i16> [[TMP5]] to <4 x i32>
+// CHECK-A32-SOFTFP-NEXT:    [[TMP7:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i32>
 // CHECK-A32-SOFTFP-NEXT:    [[VSHLL_N_I_I:%.*]] = shl <4 x i32> [[TMP7]], splat (i32 16)
-// CHECK-A32-SOFTFP-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_836_I_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[__REINT1_836_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_808_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[__REINT1_808_I_I]], align 8
 // CHECK-A32-SOFTFP-NEXT:    ret <4 x float> [[TMP8]]
 //
 float32x4_t test_vcvtq_low_f32_bf16(bfloat16x8_t a) {
@@ -149,39 +149,39 @@ float32x4_t test_vcvtq_low_f32_bf16(bfloat16x8_t a) {
 
 // CHECK-A64-LABEL: @test_vcvtq_high_f32_bf16(
 // CHECK-A64-NEXT:  entry:
-// CHECK-A64-NEXT:    [[__REINT_836_I_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A64-NEXT:    [[__REINT1_836_I_I:%.*]] = alloca <4 x i32>, align 16
+// CHECK-A64-NEXT:    [[__REINT_808_I_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A64-NEXT:    [[__REINT1_808_I_I:%.*]] = alloca <4 x i32>, align 16
 // CHECK-A64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> [[A]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// CHECK-A64-NEXT:    store <4 x bfloat> [[SHUFFLE_I]], ptr [[__REINT_836_I_I]], align 8
-// CHECK-A64-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_836_I_I]], align 8
+// CHECK-A64-NEXT:    store <4 x bfloat> [[SHUFFLE_I]], ptr [[__REINT_808_I_I]], align 8
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_808_I_I]], align 8
 // CHECK-A64-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-A64-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[TMP0]] to <4 x i32>
+// CHECK-A64-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
 // CHECK-A64-NEXT:    [[VSHLL_N_I_I:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 16)
-// CHECK-A64-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_836_I_I]], align 16
-// CHECK-A64-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_836_I_I]], align 16
+// CHECK-A64-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_808_I_I]], align 16
+// CHECK-A64-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_808_I_I]], align 16
 // CHECK-A64-NEXT:    ret <4 x float> [[TMP3]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvtq_high_f32_bf16(
 // CHECK-A32-HARDFP-NEXT:  entry:
-// CHECK-A32-HARDFP-NEXT:    [[__REINT_836_I_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A32-HARDFP-NEXT:    [[__REINT1_836_I_I:%.*]] = alloca <4 x i32>, align 8
+// CHECK-A32-HARDFP-NEXT:    [[__REINT_808_I_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A32-HARDFP-NEXT:    [[__REINT1_808_I_I:%.*]] = alloca <4 x i32>, align 8
 // CHECK-A32-HARDFP-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[A:%.*]], <8 x bfloat> [[A]], <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-// CHECK-A32-HARDFP-NEXT:    store <4 x bfloat> [[SHUFFLE_I]], ptr [[__REINT_836_I_I]], align 8
-// CHECK-A32-HARDFP-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_836_I_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    store <4 x bfloat> [[SHUFFLE_I]], ptr [[__REINT_808_I_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[__REINT_808_I_I]], align 8
 // CHECK-A32-HARDFP-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to <8 x i8>
-// CHECK-A32-HARDFP-NEXT:    [[TMP2:%.*]] = sext <4 x i16> [[TMP0]] to <4 x i32>
+// CHECK-A32-HARDFP-NEXT:    [[TMP2:%.*]] = zext <4 x i16> [[TMP0]] to <4 x i32>
 // CHECK-A32-HARDFP-NEXT:    [[VSHLL_N_I_I:%.*]] = shl <4 x i32> [[TMP2]], splat (i32 16)
-// CHECK-A32-HARDFP-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_836_I_I]], align 8
-// CHECK-A32-HARDFP-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_836_I_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_808_I_I]], align 8
+// CHECK-A32-HARDFP-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[__REINT1_808_I_I]], align 8
 // CHECK-A32-HARDFP-NEXT:    ret <4 x float> [[TMP3]]
 //
 // CHECK-A32-SOFTFP-LABEL: @test_vcvtq_high_f32_bf16(
 // CHECK-A32-SOFTFP-NEXT:  entry:
 // CHECK-A32-SOFTFP-NEXT:    [[RETVAL_I:%.*]] = alloca <4 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[__P0_I2:%.*]] = alloca <8 x bfloat>, align 8
-// CHECK-A32-SOFTFP-NEXT:    [[__P0_836_I_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A32-SOFTFP-NEXT:    [[__REINT_836_I_I:%.*]] = alloca <4 x bfloat>, align 8
-// CHECK-A32-SOFTFP-NEXT:    [[__REINT1_836_I_I:%.*]] = alloca <4 x i32>, align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__P0_808_I_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__REINT_808_I_I:%.*]] = alloca <4 x bfloat>, align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__REINT1_808_I_I:%.*]] = alloca <4 x i32>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[__P0_I:%.*]] = alloca <8 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[COERCE_I:%.*]] = alloca <8 x bfloat>, align 8
 // CHECK-A32-SOFTFP-NEXT:    [[COERCE2_I:%.*]] = alloca <4 x bfloat>, align 8
@@ -205,15 +205,15 @@ float32x4_t test_vcvtq_low_f32_bf16(bfloat16x8_t a) {
 // CHECK-A32-SOFTFP-NEXT:    [[TMP3:%.*]] = load <4 x bfloat>, ptr [[COERCE2_I]], align 8
 // CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[TMP3]], ptr [[COERCE3_I]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP4:%.*]] = load <2 x i32>, ptr [[COERCE3_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    store <2 x i32> [[TMP4]], ptr [[__P0_836_I_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    [[__P0_8361_I_I:%.*]] = load <4 x bfloat>, ptr [[__P0_836_I_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[__P0_8361_I_I]], ptr [[__REINT_836_I_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    [[TMP5:%.*]] = load <4 x i16>, ptr [[__REINT_836_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    store <2 x i32> [[TMP4]], ptr [[__P0_808_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    [[__P0_8081_I_I:%.*]] = load <4 x bfloat>, ptr [[__P0_808_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    store <4 x bfloat> [[__P0_8081_I_I]], ptr [[__REINT_808_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    [[TMP5:%.*]] = load <4 x i16>, ptr [[__REINT_808_I_I]], align 8
 // CHECK-A32-SOFTFP-NEXT:    [[TMP6:%.*]] = bitcast <4 x i16> [[TMP5]] to <8 x i8>
-// CHECK-A32-SOFTFP-NEXT:    [[TMP7:%.*]] = sext <4 x i16> [[TMP5]] to <4 x i32>
+// CHECK-A32-SOFTFP-NEXT:    [[TMP7:%.*]] = zext <4 x i16> [[TMP5]] to <4 x i32>
 // CHECK-A32-SOFTFP-NEXT:    [[VSHLL_N_I_I:%.*]] = shl <4 x i32> [[TMP7]], splat (i32 16)
-// CHECK-A32-SOFTFP-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_836_I_I]], align 8
-// CHECK-A32-SOFTFP-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[__REINT1_836_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    store <4 x i32> [[VSHLL_N_I_I]], ptr [[__REINT1_808_I_I]], align 8
+// CHECK-A32-SOFTFP-NEXT:    [[TMP8:%.*]] = load <4 x float>, ptr [[__REINT1_808_I_I]], align 8
 // CHECK-A32-SOFTFP-NEXT:    ret <4 x float> [[TMP8]]
 //
 float32x4_t test_vcvtq_high_f32_bf16(bfloat16x8_t a) {
@@ -223,10 +223,8 @@ float32x4_t test_vcvtq_high_f32_bf16(bfloat16x8_t a) {
 // CHECK-A64-LABEL: @test_vcvt_bf16_f32(
 // CHECK-A64-NEXT:  entry:
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_F321_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn(<4 x float> [[A]])
-// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_F322_I:%.*]] = bitcast <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_F321_I]] to <16 x i8>
-// CHECK-A64-NEXT:    [[SHUFFLE_I:%.*]] = shufflevector <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_F321_I]], <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_F321_I]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-// CHECK-A64-NEXT:    ret <4 x bfloat> [[SHUFFLE_I]]
+// CHECK-A64-NEXT:    [[TMP1:%.*]] = fptrunc <4 x float> [[A]] to <4 x bfloat>
+// CHECK-A64-NEXT:    ret <4 x bfloat> [[TMP1]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvt_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
@@ -263,9 +261,9 @@ bfloat16x4_t test_vcvt_bf16_f32(float32x4_t a) {
 // CHECK-A64-LABEL: @test_vcvtq_low_bf16_f32(
 // CHECK-A64-NEXT:  entry:
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_F321_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn(<4 x float> [[A]])
-// CHECK-A64-NEXT:    [[__A64_VCVTQ_LOW_BF16_F322_I:%.*]] = bitcast <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_F321_I]] to <16 x i8>
-// CHECK-A64-NEXT:    ret <8 x bfloat> [[__A64_VCVTQ_LOW_BF16_F321_I]]
+// CHECK-A64-NEXT:    [[TMP1:%.*]] = fptrunc <4 x float> [[A]] to <4 x bfloat>
+// CHECK-A64-NEXT:    [[TMP2:%.*]] = shufflevector <4 x bfloat> [[TMP1]], <4 x bfloat> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// CHECK-A64-NEXT:    ret <8 x bfloat> [[TMP2]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvtq_low_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
@@ -323,9 +321,10 @@ bfloat16x8_t test_vcvtq_low_bf16_f32(float32x4_t a) {
 // CHECK-A64-NEXT:  entry:
 // CHECK-A64-NEXT:    [[TMP0:%.*]] = bitcast <8 x bfloat> [[INACTIVE:%.*]] to <16 x i8>
 // CHECK-A64-NEXT:    [[TMP1:%.*]] = bitcast <4 x float> [[A:%.*]] to <16 x i8>
-// CHECK-A64-NEXT:    [[VCVTQ_HIGH_BF16_F322_I:%.*]] = call <8 x bfloat> @llvm.aarch64.neon.bfcvtn2(<8 x bfloat> [[INACTIVE]], <4 x float> [[A]])
-// CHECK-A64-NEXT:    [[VCVTQ_HIGH_BF16_F323_I:%.*]] = bitcast <8 x bfloat> [[VCVTQ_HIGH_BF16_F322_I]] to <16 x i8>
-// CHECK-A64-NEXT:    ret <8 x bfloat> [[VCVTQ_HIGH_BF16_F322_I]]
+// CHECK-A64-NEXT:    [[TMP2:%.*]] = shufflevector <8 x bfloat> [[INACTIVE]], <8 x bfloat> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+// CHECK-A64-NEXT:    [[TMP3:%.*]] = fptrunc <4 x float> [[A]] to <4 x bfloat>
+// CHECK-A64-NEXT:    [[TMP4:%.*]] = shufflevector <4 x bfloat> [[TMP2]], <4 x bfloat> [[TMP3]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+// CHECK-A64-NEXT:    ret <8 x bfloat> [[TMP4]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvtq_high_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
@@ -404,8 +403,8 @@ bfloat16x8_t test_vcvtq_high_bf16_f32(bfloat16x8_t inactive, float32x4_t a) {
 
 // CHECK-A64-LABEL: @test_vcvth_bf16_f32(
 // CHECK-A64-NEXT:  entry:
-// CHECK-A64-NEXT:    [[VCVTH_BF16_F32_I:%.*]] = call bfloat @llvm.aarch64.neon.bfcvt(float [[A:%.*]])
-// CHECK-A64-NEXT:    ret bfloat [[VCVTH_BF16_F32_I]]
+// CHECK-A64-NEXT:    [[TMP0:%.*]] = fptrunc float [[A:%.*]] to bfloat
+// CHECK-A64-NEXT:    ret bfloat [[TMP0]]
 //
 // CHECK-A32-HARDFP-LABEL: @test_vcvth_bf16_f32(
 // CHECK-A32-HARDFP-NEXT:  entry:
@@ -427,7 +426,7 @@ bfloat16_t test_vcvth_bf16_f32(float32_t a) {
 // CHECK-NEXT:    [[__REINT1_I:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    store bfloat [[A:%.*]], ptr [[__REINT_I]], align 2
 // CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[__REINT_I]], align 2
-// CHECK-NEXT:    [[CONV_I:%.*]] = sext i16 [[TMP0]] to i32
+// CHECK-NEXT:    [[CONV_I:%.*]] = zext i16 [[TMP0]] to i32
 // CHECK-NEXT:    [[SHL_I:%.*]] = shl i32 [[CONV_I]], 16
 // CHECK-NEXT:    store i32 [[SHL_I]], ptr [[__REINT1_I]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[__REINT1_I]], align 4

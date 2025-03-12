@@ -136,6 +136,11 @@ inline ::llvm::hash_code hash_value(Location arg) {
 // Tablegen Attribute Declarations
 //===----------------------------------------------------------------------===//
 
+// Forward declaration for class created later.
+namespace mlir::detail {
+struct FileLineColRangeAttrStorage;
+} // namespace mlir::detail
+
 #define GET_ATTRDEF_CLASSES
 #include "mlir/IR/BuiltinLocationAttributes.h.inc"
 
@@ -163,6 +168,33 @@ public:
     return fusedLoc && mlir::isa_and_nonnull<MetadataT>(fusedLoc.getMetadata());
   }
 };
+
+//===----------------------------------------------------------------------===//
+// FileLineColLoc
+//===----------------------------------------------------------------------===//
+
+/// An instance of this location represents a tuple of file, line number, and
+/// column number. This is similar to the type of location that you get from
+/// most source languages.
+///
+/// FileLineColLoc is a view to FileLineColRange with one line and column.
+class FileLineColLoc : public FileLineColRange {
+public:
+  using FileLineColRange::FileLineColRange;
+
+  static FileLineColLoc get(StringAttr filename, unsigned line,
+                            unsigned column);
+  static FileLineColLoc get(MLIRContext *context, StringRef fileName,
+                            unsigned line, unsigned column);
+
+  StringAttr getFilename() const;
+  unsigned getLine() const;
+  unsigned getColumn() const;
+};
+
+/// Returns true iff the given location is a FileLineColRange with exactly one
+/// line and column.
+bool isStrictFileLineColLoc(Location loc);
 
 //===----------------------------------------------------------------------===//
 // OpaqueLoc

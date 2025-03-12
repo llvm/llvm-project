@@ -760,7 +760,7 @@ void NumericalStabilitySanitizer::createShadowArguments(
       }))
     return;
 
-  IRBuilder<> Builder(F.getEntryBlock().getFirstNonPHI());
+  IRBuilder<> Builder(&F.getEntryBlock(), F.getEntryBlock().getFirstNonPHIIt());
   // The function has shadow args if the shadow args tag matches the function
   // address.
   Value *HasShadowArgs = Builder.CreateICmpEQ(
@@ -1110,7 +1110,7 @@ PHINode *NumericalStabilitySanitizer::maybeCreateShadowPhi(
   // created. They will be populated in a final phase, once all shadow values
   // have been created.
   PHINode *Shadow = PHINode::Create(ExtendedVT, Phi.getNumIncomingValues());
-  Shadow->insertAfter(&Phi);
+  Shadow->insertAfter(Phi.getIterator());
   return Shadow;
 }
 

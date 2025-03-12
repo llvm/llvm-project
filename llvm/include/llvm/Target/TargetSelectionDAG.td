@@ -118,14 +118,18 @@ def SDTIntBinOp : SDTypeProfile<1, 2, [     // add, and, or, xor, udiv, etc.
 def SDTIntShiftOp : SDTypeProfile<1, 2, [   // shl, sra, srl
   SDTCisSameAs<0, 1>, SDTCisInt<0>, SDTCisInt<2>
 ]>;
+def SDTIntShiftPairOp : SDTypeProfile<2, 3, [ // shl_parts, sra_parts, srl_parts
+  SDTCisInt<0>, SDTCisSameAs<1, 0>,
+  SDTCisSameAs<2, 0>, SDTCisSameAs<3, 0>, SDTCisInt<4>
+]>;
 def SDTIntShiftDOp: SDTypeProfile<1, 3, [   // fshl, fshr
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>
 ]>;
 def SDTIntSatNoShOp : SDTypeProfile<1, 2, [   // ssat with no shift
   SDTCisSameAs<0, 1>, SDTCisInt<2>
 ]>;
-def SDTIntBinHiLoOp : SDTypeProfile<2, 2, [ // mulhi, mullo, sdivrem, udivrem
-  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>,SDTCisInt<0>
+def SDTIntBinHiLoOp : SDTypeProfile<2, 2, [ // smullohi, umullohi, sdivrem, udivrem
+  SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisInt<0>
 ]>;
 def SDTIntScaledBinOp : SDTypeProfile<1, 3, [  // smulfix, sdivfix, etc
   SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisInt<0>, SDTCisInt<3>
@@ -349,6 +353,8 @@ class SDNode<string opcode, SDTypeProfile typeprof,
   string SDClass = sdclass;
   let Properties = props;
   SDTypeProfile TypeProfile = typeprof;
+  bit IsStrictFP = false;
+  bits<32> TSFlags = 0;
 }
 
 // Special TableGen-recognized dag nodes
@@ -422,6 +428,9 @@ def sra        : SDNode<"ISD::SRA"       , SDTIntShiftOp>;
 def shl        : SDNode<"ISD::SHL"       , SDTIntShiftOp>;
 def rotl       : SDNode<"ISD::ROTL"      , SDTIntShiftOp>;
 def rotr       : SDNode<"ISD::ROTR"      , SDTIntShiftOp>;
+def shl_parts  : SDNode<"ISD::SHL_PARTS" , SDTIntShiftPairOp>;
+def sra_parts  : SDNode<"ISD::SRA_PARTS" , SDTIntShiftPairOp>;
+def srl_parts  : SDNode<"ISD::SRL_PARTS" , SDTIntShiftPairOp>;
 def fshl       : SDNode<"ISD::FSHL"      , SDTIntShiftDOp>;
 def fshr       : SDNode<"ISD::FSHR"      , SDTIntShiftDOp>;
 def and        : SDNode<"ISD::AND"       , SDTIntBinOp,
@@ -830,6 +839,10 @@ def vector_insert_subvec : SDNode<"ISD::INSERT_SUBVECTOR",
 // This operator does subvector type checking.
 def extract_subvector : SDNode<"ISD::EXTRACT_SUBVECTOR", SDTSubVecExtract, []>;
 def insert_subvector : SDNode<"ISD::INSERT_SUBVECTOR", SDTSubVecInsert, []>;
+
+def find_last_active
+    : SDNode<"ISD::VECTOR_FIND_LAST_ACTIVE",
+             SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisVec<1>]>, []>;
 
 // Nodes for intrinsics, you should use the intrinsic itself and let tblgen use
 // these internally.  Don't reference these directly.
@@ -2079,4 +2092,12 @@ class ComplexPattern<ValueType ty, int numops, string fn,
   list<SDNode> RootNodes = roots;
   list<SDNodeProperty> Properties = props;
   int Complexity = complexity;
+
+  // Set this to true if SelectFunc wants an additional argument
+  // that is the root of the matched pattern.
+  bit WantsRoot = false;
+
+  // Set this to true if SelectFunc wants an additional argument
+  // that is the parent of the matched node.
+  bit WantsParent = false;
 }

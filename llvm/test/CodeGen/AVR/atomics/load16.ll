@@ -1,4 +1,4 @@
-; RUN: llc -mattr=avr6 < %s -march=avr | FileCheck %s
+; RUN: llc -mattr=avr6 < %s -mtriple=avr | FileCheck %s
 
 ; CHECK-LABEL: atomic_load16
 ; CHECK:      in r0, 63

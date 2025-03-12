@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @hello(ptr align 128 nocapture %a, ptr nocapture readonly %c) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@hello
-; CHECK-SAME: (ptr nocapture align 128 [[A:%.*]], ptr nocapture readonly [[C:%.*]]) #0
+; CHECK-SAME: (ptr align 128 captures(none) [[A:%.*]], ptr readonly captures(none) [[C:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 5
@@ -21,7 +21,7 @@ entry:
 
 define void @foo(ptr nocapture %a, ptr nocapture readonly %c) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@foo
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture readonly [[C:%.*]]) #0
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr readonly captures(none) [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 128) ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
@@ -42,7 +42,7 @@ entry:
 
 define void @fooa(ptr nocapture align 128 %a, ptr nocapture readonly %c) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@fooa
-; CHECK-SAME: (ptr nocapture align 128 [[A:%.*]], ptr nocapture readonly [[C:%.*]]) #0
+; CHECK-SAME: (ptr align 128 captures(none) [[A:%.*]], ptr readonly captures(none) [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX_I:%.*]] = getelementptr inbounds float, ptr [[A]], i64 5
@@ -62,7 +62,7 @@ entry:
 
 define void @hello2(ptr align 128 nocapture %a, ptr align 128 nocapture %b, ptr nocapture readonly %c) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@hello2
-; CHECK-SAME: (ptr nocapture align 128 [[A:%.*]], ptr nocapture align 128 [[B:%.*]], ptr nocapture readonly [[C:%.*]]) #0
+; CHECK-SAME: (ptr align 128 captures(none) [[A:%.*]], ptr align 128 captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[C]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 5
@@ -82,7 +82,7 @@ entry:
 
 define void @foo2(ptr nocapture %a, ptr nocapture %b, ptr nocapture readonly %c) #0 {
 ; CHECK-LABEL: define {{[^@]+}}@foo2
-; CHECK-SAME: (ptr nocapture [[A:%.*]], ptr nocapture [[B:%.*]], ptr nocapture readonly [[C:%.*]]) #0
+; CHECK-SAME: (ptr captures(none) [[A:%.*]], ptr captures(none) [[B:%.*]], ptr readonly captures(none) [[C:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[A]], i64 128) ]
 ; CHECK-NEXT:    call void @llvm.assume(i1 true) [ "align"(ptr [[B]], i64 128) ]

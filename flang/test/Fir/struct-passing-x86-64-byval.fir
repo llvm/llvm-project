@@ -81,27 +81,27 @@ func.func @not_enough_int_reg_3(%arg0: i32, %arg1: i32, %arg2: i32, %arg3: i32, 
 }
 }
 
-// CHECK: define void @takes_toobig(ptr byval(%toobig) align 8 %{{.*}}) {
-// CHECK: define void @takes_toobig_align16(ptr byval(%toobig_align16) align 16 %{{.*}}) {
-// CHECK: define void @not_enough_int_reg_1(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%fits_in_1_int_reg) align 8 %{{.*}}) {
-// CHECK: define void @not_enough_int_reg_1b(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, ptr byval(%fits_in_1_int_reg) align 8 %{{.*}}) {
-// CHECK: define void @not_enough_int_reg_2(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%fits_in_2_int_reg) align 8 %{{.*}}) {
-// CHECK: define void @ftakes_toobig(ptr byval(%ftoobig) align 8 %{{.*}}) {
-// CHECK: define void @ftakes_toobig_align16(ptr byval(%ftoobig_align16) align 16 %{{.*}}) {
-// CHECK: define void @not_enough_sse_reg_1(float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, ptr byval(%fits_in_1_sse_reg) align 8 %{{.*}}) {
-// CHECK: define void @not_enough_sse_reg_1b(<2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, ptr byval(%fits_in_1_sse_reg) align 8 %{{.*}}) {
-// CHECK: define void @not_enough_sse_reg_1c(double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}}, ptr byval(%fits_in_1_sse_reg) align 8 %{{.*}}) {
-// CHECK: define void @not_enough_sse_reg_2(float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, ptr byval(%fits_in_2_sse_reg) align 8 %{{.*}}) {
-// CHECK: define void @test_contains_x87(ptr byval(%contains_x87) align 16 %{{.*}}) {
-// CHECK: define void @test_contains_complex_x87(ptr byval(%contains_complex_x87) align 16 %{{.*}}) {
-// CHECK: define void @test_nested_toobig(ptr byval(%nested_toobig) align 8 %{{.*}}) {
-// CHECK: define void @test_badly_aligned(ptr byval(%badly_aligned) align 8 %{{.*}}) {
-// CHECK: define void @test_logical_toobig(ptr byval(%logical_too_big) align 8 %{{.*}}) {
-// CHECK: define void @l_not_enough_int_reg(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%l_fits_in_2_int_reg) align 8 %{{.*}}) {
-// CHECK: define void @test_complex_toobig(ptr byval(%complex_too_big) align 8 %{{.*}}) {
-// CHECK: define void @cplx_not_enough_sse_reg_1(float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, ptr byval(%cplx_fits_in_1_sse_reg) align 8 %{{.*}}) {
-// CHECK: define void @test_char_to_big(ptr byval(%char_too_big) align 8 %{{.*}}) {
-// CHECK: define void @char_not_enough_int_reg_1(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%char_fits_in_1_int_reg) align 8 %{{.*}}) {
-// CHECK: define void @mix_not_enough_int_reg_1(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%mix_in_1_int_reg) align 8 %{{.*}}) {
-// CHECK: define void @mix_not_enough_sse_reg_2(float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, ptr byval(%mix_in_1_int_reg_1_sse_reg) align 8 %{{.*}}) {
-// CHECK: define void @not_enough_int_reg_3(ptr sret({ fp128, fp128 }) align 16 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%fits_in_1_int_reg) align 8 %{{.*}})
+// CHECK: define void @takes_toobig(ptr byval(%toobig) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @takes_toobig_align16(ptr byval(%toobig_align16) align 16 captures(none) %{{.*}}) {
+// CHECK: define void @not_enough_int_reg_1(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%fits_in_1_int_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @not_enough_int_reg_1b(ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}}, ptr captures(none) %{{.*}}, ptr byval(%fits_in_1_int_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @not_enough_int_reg_2(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%fits_in_2_int_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @ftakes_toobig(ptr byval(%ftoobig) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @ftakes_toobig_align16(ptr byval(%ftoobig_align16) align 16 captures(none) %{{.*}}) {
+// CHECK: define void @not_enough_sse_reg_1(float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, ptr byval(%fits_in_1_sse_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @not_enough_sse_reg_1b(<2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, <2 x float> %{{.*}}, ptr byval(%fits_in_1_sse_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @not_enough_sse_reg_1c(double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}}, double %{{.*}}, ptr byval(%fits_in_1_sse_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @not_enough_sse_reg_2(float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, ptr byval(%fits_in_2_sse_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @test_contains_x87(ptr byval(%contains_x87) align 16 captures(none) %{{.*}}) {
+// CHECK: define void @test_contains_complex_x87(ptr byval(%contains_complex_x87) align 16 captures(none) %{{.*}}) {
+// CHECK: define void @test_nested_toobig(ptr byval(%nested_toobig) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @test_badly_aligned(ptr byval(%badly_aligned) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @test_logical_toobig(ptr byval(%logical_too_big) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @l_not_enough_int_reg(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%l_fits_in_2_int_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @test_complex_toobig(ptr byval(%complex_too_big) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @cplx_not_enough_sse_reg_1(float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, ptr byval(%cplx_fits_in_1_sse_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @test_char_to_big(ptr byval(%char_too_big) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @char_not_enough_int_reg_1(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%char_fits_in_1_int_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @mix_not_enough_int_reg_1(i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%mix_in_1_int_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @mix_not_enough_sse_reg_2(float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, float %{{.*}}, ptr byval(%mix_in_1_int_reg_1_sse_reg) align 8 captures(none) %{{.*}}) {
+// CHECK: define void @not_enough_int_reg_3(ptr sret({ fp128, fp128 }) align 16 captures(none) %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, i32 %{{.*}}, ptr byval(%fits_in_1_int_reg) align 8 captures(none) %{{.*}})

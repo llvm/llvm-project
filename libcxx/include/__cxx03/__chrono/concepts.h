@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___CHRONO_CONCEPTS_H
-#define _LIBCPP___CHRONO_CONCEPTS_H
+#ifndef _LIBCPP___CXX03___CHRONO_CONCEPTS_H
+#define _LIBCPP___CXX03___CHRONO_CONCEPTS_H
 
 #include <__cxx03/__chrono/hh_mm_ss.h>
 #include <__cxx03/__chrono/time_point.h>
@@ -33,4 +33,4 @@ concept __is_time_point = __is_specialization_v<_Tp, chrono::time_point>;
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___CHRONO_CONCEPTS_H
+#endif // _LIBCPP___CXX03___CHRONO_CONCEPTS_H

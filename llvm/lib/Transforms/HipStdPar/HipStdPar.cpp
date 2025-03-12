@@ -279,10 +279,11 @@ HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
   for (auto &&F : M) {
     if (!F.hasName())
       continue;
-    if (!AllocReplacements.contains(F.getName()))
+    auto It = AllocReplacements.find(F.getName());
+    if (It == AllocReplacements.end())
       continue;
 
-    if (auto R = M.getFunction(AllocReplacements[F.getName()])) {
+    if (auto R = M.getFunction(It->second)) {
       F.replaceAllUsesWith(R);
     } else {
       std::string W;
@@ -298,6 +299,13 @@ HipStdParAllocationInterpositionPass::run(Module &M, ModuleAnalysisManager&) {
     }
   }
 
+  if (auto F = M.getFunction("__hipstdpar_hidden_malloc")) {
+    auto LibcMalloc = M.getOrInsertFunction(
+        "__libc_malloc", F->getFunctionType(), F->getAttributes());
+    F->replaceAllUsesWith(LibcMalloc.getCallee());
+
+    eraseFromModule(*F);
+  }
   if (auto F = M.getFunction("__hipstdpar_hidden_free")) {
     auto LibcFree = M.getOrInsertFunction("__libc_free", F->getFunctionType(),
                                           F->getAttributes());

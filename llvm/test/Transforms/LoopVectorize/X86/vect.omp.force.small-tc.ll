@@ -146,7 +146,7 @@ define void @vectorized1(ptr noalias nocapture %A, ptr noalias nocapture readonl
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD1:%.*]] = call <8 x float> @llvm.masked.load.v8f32.p0(ptr [[TMP5]], i32 4, <8 x i1> [[TMP1]], <8 x float> poison), !llvm.access.group [[ACC_GRP7]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = fadd fast <8 x float> [[WIDE_MASKED_LOAD]], [[WIDE_MASKED_LOAD1]]
 ; CHECK-NEXT:    call void @llvm.masked.store.v8f32.p0(<8 x float> [[TMP6]], ptr [[TMP5]], i32 4, <8 x i1> [[TMP1]]), !llvm.access.group [[ACC_GRP7]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], 8
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT]], 24
 ; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP8:![0-9]+]]
 ; CHECK:       middle.block:

@@ -49,6 +49,7 @@ def OMPC_Affinity : Clause<"affinity"> {
 }
 def OMPC_Align : Clause<"align"> {
   let clangClass = "OMPAlignClause";
+  let flangClass = "OmpAlignClause";
 }
 def OMPC_Aligned : Clause<"aligned"> {
   let clangClass = "OMPAlignedClause";
@@ -66,6 +67,7 @@ def OMPC_AppendArgs : Clause<"append_args"> {
 }
 def OMPC_At : Clause<"at"> {
   let clangClass = "OMPAtClause";
+  let flangClass = "OmpAtClause";
 }
 def OMPC_AtomicDefaultMemOrder : Clause<"atomic_default_mem_order"> {
   let clangClass = "OMPAtomicDefaultMemOrderClause";
@@ -177,6 +179,7 @@ def OMPC_Exclusive : Clause<"exclusive"> {
 }
 def OMPC_Fail : Clause<"fail"> {
   let clangClass = "OMPFailClause";
+  let flangClass = "OmpFailClause";
 }
 def OMPC_Filter : Clause<"filter"> {
   let clangClass = "OMPFilterClause";
@@ -262,6 +265,7 @@ def OMPC_Map : Clause<"map"> {
   let flangClass = "OmpMapClause";
 }
 def OMPC_Match : Clause<"match"> {
+  let flangClass = "OmpMatchClause";
 }
 def OMP_MEMORY_ORDER_SeqCst : ClauseVal<"seq_cst", 1, 1> {}
 def OMP_MEMORY_ORDER_AcqRel : ClauseVal<"acq_rel", 2, 1> {}
@@ -287,12 +291,16 @@ def OMPC_Mergeable : Clause<"mergeable"> {
 }
 def OMPC_Message : Clause<"message"> {
   let clangClass = "OMPMessageClause";
+  let flangClass = "OmpMessageClause";
 }
 def OMPC_NoOpenMP : Clause<"no_openmp"> {
   let clangClass = "OMPNoOpenMPClause";
 }
 def OMPC_NoOpenMPRoutines : Clause<"no_openmp_routines"> {
   let clangClass = "OMPNoOpenMPRoutinesClause";
+}
+def OMPC_NoOpenMPConstructs : Clause<"no_openmp_constructs"> {
+  let clangClass = "OMPNoOpenMPConstructsClause";
 }
 def OMPC_NoParallelism : Clause<"no_parallelism"> {
   let clangClass = "OMPNoParallelismClause";
@@ -361,6 +369,10 @@ def OMPC_Order : Clause<"order"> {
 def OMPC_Ordered : Clause<"ordered"> {
   let clangClass = "OMPOrderedClause";
   let flangClass = "ScalarIntConstantExpr";
+  let isValueOptional = true;
+}
+def OMPC_Otherwise : Clause<"otherwise"> {
+  let flangClass = "OmpOtherwiseClause";
   let isValueOptional = true;
 }
 def OMPC_Partial: Clause<"partial"> {
@@ -444,6 +456,7 @@ def OMPC_SeqCst : Clause<"seq_cst"> {
 }
 def OMPC_Severity : Clause<"severity"> {
   let clangClass = "OMPSeverityClause";
+  let flangClass = "OmpSeverityClause";
 }
 def OMPC_Shared : Clause<"shared"> {
   let clangClass = "OMPSharedClause";
@@ -463,7 +476,7 @@ def OMPC_Sizes: Clause<"sizes"> {
 }
 def OMPC_TaskReduction : Clause<"task_reduction"> {
   let clangClass = "OMPTaskReductionClause";
-  let flangClass = "OmpReductionClause";
+  let flangClass = "OmpTaskReductionClause";
 }
 def OMPC_ThreadLimit : Clause<"thread_limit"> {
   let clangClass = "OMPThreadLimitClause";
@@ -519,6 +532,7 @@ def OMPC_Weak : Clause<"weak"> {
   let clangClass = "OMPWeakClause";
 }
 def OMPC_When: Clause<"when"> {
+  let flangClass = "OmpWhenClause";
 }
 def OMPC_Write : Clause<"write"> {
   let clangClass = "OMPWriteClause";
@@ -563,6 +577,7 @@ def OMP_Assume : Directive<"assume"> {
     VersionedClause<OMPC_NoOpenMP, 51>,
     VersionedClause<OMPC_NoOpenMPRoutines, 51>,
     VersionedClause<OMPC_NoParallelism, 51>,
+    VersionedClause<OMPC_NoOpenMPConstructs, 60>,
   ];
 }
 def OMP_Atomic : Directive<"atomic"> {
@@ -769,6 +784,7 @@ def OMP_Flush : Directive<"flush"> {
     // OMPKinds.def.
     VersionedClause<OMPC_Flush>,
     VersionedClause<OMPC_Release, 50>,
+    VersionedClause<OMPC_SeqCst, 51>,
   ];
   let association = AS_None;
   let category = CA_Executable;
@@ -839,7 +855,8 @@ def OMP_Metadirective : Directive<"metadirective"> {
     VersionedClause<OMPC_When>,
   ];
   let allowedOnceClauses = [
-    VersionedClause<OMPC_Default>,
+    VersionedClause<OMPC_Otherwise, 52>,
+    VersionedClause<OMPC_Default, 50, 51>,
   ];
   let association = AS_None;
   let category = CA_Meta;
@@ -1016,6 +1033,7 @@ def OMP_Target : Directive<"target"> {
     VersionedClause<OMPC_Device>,
     VersionedClause<OMPC_If>,
     VersionedClause<OMPC_NoWait>,
+    VersionedClause<OMPC_OMPX_Bare>,
     VersionedClause<OMPC_OMPX_DynCGroupMem>,
     VersionedClause<OMPC_ThreadLimit, 51>,
   ];

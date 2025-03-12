@@ -57,7 +57,7 @@ func.func @access_chain_non_composite() -> () {
 
 func.func @access_chain_no_indices(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{custom op 'spirv.AccessChain' 0 operands present, but expected 1}}
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 0 operands and 1 types}}
   %1 = spirv.AccessChain %0[] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
@@ -75,7 +75,7 @@ func.func @access_chain_missing_comma(%index0 : i32) -> () {
 
 func.func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{custom op 'spirv.AccessChain' 1 operands present, but expected 2}}
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 1 operands and 2 types}}
   %1 = spirv.AccessChain %0[%index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32, i32 -> !spirv.ptr<!spirv.array<4xf32>, Function>
   return
 }
@@ -84,7 +84,7 @@ func.func @access_chain_invalid_indices_types_count(%index0 : i32) -> () {
 
 func.func @access_chain_missing_indices_type(%index0 : i32) -> () {
   %0 = spirv.Variable : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>
-  // expected-error @+1 {{custom op 'spirv.AccessChain' 2 operands present, but expected 1}}
+  // expected-error @+1 {{custom op 'spirv.AccessChain' number of operands and types do not match: got 2 operands and 1 types}}
   %1 = spirv.AccessChain %0[%index0, %index0] : !spirv.ptr<!spirv.array<4x!spirv.array<4xf32>>, Function>, i32 -> !spirv.ptr<f32, Function>
   return
 }
@@ -699,7 +699,7 @@ func.func @copy_memory_print_maa() {
 // CHECK-SAME:    %[[ARG1:.*]]: i64)
 // CHECK: spirv.PtrAccessChain %[[ARG0]][%[[ARG1]]] : !spirv.ptr<f32, CrossWorkgroup>, i64
 func.func @ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
-  %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64
+  %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
   return
 }
 
@@ -714,6 +714,6 @@ func.func @ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64
 // CHECK-SAME:    %[[ARG1:.*]]: i64)
 // CHECK: spirv.InBoundsPtrAccessChain %[[ARG0]][%[[ARG1]]] : !spirv.ptr<f32, CrossWorkgroup>, i64
 func.func @inbounds_ptr_access_chain1(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1 : i64) -> () {
-  %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64
+  %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
   return
 }

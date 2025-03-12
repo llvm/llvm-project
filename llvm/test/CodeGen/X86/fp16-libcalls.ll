@@ -9,13 +9,10 @@
 define void @test_half_ceil(half %a0, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_ceil:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vroundss $10, %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rdi)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: test_half_ceil:
@@ -73,7 +70,7 @@ define void @test_half_copysign(half %a0, half %a1, ptr %p0) nounwind {
 ; FP16-LABEL: test_half_copysign:
 ; FP16:       # %bb.0:
 ; FP16-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [NaN,NaN,NaN,NaN,NaN,NaN,NaN,NaN]
-; FP16-NEXT:    vpternlogd $202, %xmm1, %xmm0, %xmm2
+; FP16-NEXT:    vpternlogd {{.*#+}} xmm2 = xmm1 ^ (xmm2 & (xmm0 ^ xmm1))
 ; FP16-NEXT:    vmovsh %xmm2, (%rdi)
 ; FP16-NEXT:    retq
 ;
@@ -107,13 +104,10 @@ define void @test_half_cos(half %a0, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    callq cosf@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -168,13 +162,10 @@ define void @test_half_exp(half %a0, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    callq expf@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -229,13 +220,10 @@ define void @test_half_exp2(half %a0, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    callq exp2f@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -290,13 +278,10 @@ define void @test_half_exp10(half %a0, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    callq exp10f@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -349,13 +334,10 @@ define void @test_half_exp10(half %a0, ptr %p0) nounwind {
 define void @test_half_fabs(half %a0, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_fabs:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rdi)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: test_half_fabs:
@@ -379,22 +361,10 @@ define void @test_half_fabs(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_fabs:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movd %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    andl $32767, %ecx # imm = 0x7FFF
+; X86-NEXT:    movw %cx, (%eax)
 ; X86-NEXT:    retl
   %res = call half @llvm.fabs.half(half %a0)
   store half %res, ptr %p0, align 2
@@ -404,13 +374,10 @@ define void @test_half_fabs(half %a0, ptr %p0) nounwind {
 define void @test_half_floor(half %a0, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_floor:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vroundss $9, %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rdi)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: test_half_floor:
@@ -459,19 +426,12 @@ define void @test_half_fma(half %a0, half %a1, half %a2, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm2, %eax
-; F16C-NEXT:    vpextrw $0, %xmm1, %ecx
-; F16C-NEXT:    vpextrw $0, %xmm0, %edx
-; F16C-NEXT:    vmovd %edx, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    vmovd %ecx, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
-; F16C-NEXT:    vmovd %eax, %xmm2
 ; F16C-NEXT:    vcvtph2ps %xmm2, %xmm2
 ; F16C-NEXT:    callq fmaf@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -554,13 +514,10 @@ define void @test_half_fma(half %a0, half %a1, half %a2, ptr %p0) nounwind {
 define void @test_half_fneg(half %a0, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_fneg:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rdi)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: test_half_fneg:
@@ -584,22 +541,10 @@ define void @test_half_fneg(half %a0, ptr %p0) nounwind {
 ;
 ; X86-LABEL: test_half_fneg:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    subl $8, %esp
-; X86-NEXT:    pinsrw $0, {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esp)
-; X86-NEXT:    calll __extendhfsf2
-; X86-NEXT:    fstps {{[0-9]+}}(%esp)
-; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
-; X86-NEXT:    movd %xmm0, (%esp)
-; X86-NEXT:    calll __truncsfhf2
-; X86-NEXT:    pextrw $0, %xmm0, %eax
-; X86-NEXT:    movw %ax, (%esi)
-; X86-NEXT:    addl $8, %esp
-; X86-NEXT:    popl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl $32768, %ecx # imm = 0x8000
+; X86-NEXT:    xorl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movw %cx, (%eax)
 ; X86-NEXT:    retl
   %res = fneg half %a0
   store half %res, ptr %p0, align 2
@@ -611,13 +556,10 @@ define void @test_half_log(half %a0, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    callq logf@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -672,13 +614,10 @@ define void @test_half_log2(half %a0, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    callq log2f@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -733,13 +672,10 @@ define void @test_half_log10(half %a0, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    callq log10f@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -792,13 +728,10 @@ define void @test_half_log10(half %a0, ptr %p0) nounwind {
 define void @test_half_nearbyint(half %a0, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_nearbyint:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vroundss $12, %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rdi)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: test_half_nearbyint:
@@ -847,16 +780,11 @@ define void @test_half_pow(half %a0, half %a1, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm1, %eax
-; F16C-NEXT:    vpextrw $0, %xmm0, %ecx
-; F16C-NEXT:    vmovd %ecx, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
-; F16C-NEXT:    vmovd %eax, %xmm1
 ; F16C-NEXT:    vcvtph2ps %xmm1, %xmm1
 ; F16C-NEXT:    callq powf@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -931,13 +859,10 @@ define void @test_half_powi(half %a0, i32 %a1, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rsi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    callq __powisf2@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -1000,13 +925,10 @@ define void @test_half_powi(half %a0, i32 %a1, ptr %p0) nounwind {
 define void @test_half_rint(half %a0, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_rint:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rdi)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: test_half_rint:
@@ -1055,13 +977,10 @@ define void @test_half_sin(half %a0, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    callq sinf@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -1114,13 +1033,10 @@ define void @test_half_sin(half %a0, ptr %p0) nounwind {
 define void @test_half_sqrt(half %a0, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_sqrt:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rdi)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: test_half_sqrt:
@@ -1170,13 +1086,10 @@ define void @test_half_tan(half %a0, ptr %p0) nounwind {
 ; F16C:       # %bb.0:
 ; F16C-NEXT:    pushq %rbx
 ; F16C-NEXT:    movq %rdi, %rbx
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    callq tanf@PLT
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rbx)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rbx)
 ; F16C-NEXT:    popq %rbx
 ; F16C-NEXT:    retq
 ;
@@ -1229,13 +1142,10 @@ define void @test_half_tan(half %a0, ptr %p0) nounwind {
 define void @test_half_trunc(half %a0, ptr %p0) nounwind {
 ; F16C-LABEL: test_half_trunc:
 ; F16C:       # %bb.0:
-; F16C-NEXT:    vpextrw $0, %xmm0, %eax
-; F16C-NEXT:    vmovd %eax, %xmm0
 ; F16C-NEXT:    vcvtph2ps %xmm0, %xmm0
 ; F16C-NEXT:    vroundss $11, %xmm0, %xmm0, %xmm0
 ; F16C-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
-; F16C-NEXT:    vmovd %xmm0, %eax
-; F16C-NEXT:    movw %ax, (%rdi)
+; F16C-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; F16C-NEXT:    retq
 ;
 ; FP16-LABEL: test_half_trunc:

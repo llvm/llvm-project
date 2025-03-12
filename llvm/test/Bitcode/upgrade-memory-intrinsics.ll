@@ -39,9 +39,9 @@ define void @test3(ptr %p1, ptr %p2, ptr %p3) {
   ret void
 }
 
-; CHECK: declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
-; CHECK: declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg)
-; CHECK: declare void @llvm.memmove.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1 immarg)
+; CHECK: declare void @llvm.memset.p0.i64(ptr writeonly captures(none), i8, i64, i1 immarg)
+; CHECK: declare void @llvm.memcpy.p0.p0.i64(ptr noalias writeonly captures(none), ptr noalias readonly captures(none), i64, i1 immarg)
+; CHECK: declare void @llvm.memmove.p0.p0.i64(ptr writeonly captures(none), ptr readonly captures(none), i64, i1 immarg)
 declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i32, i1)
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly , ptr nocapture readonly, i64, i32, i1)
 declare void @llvm.memmove.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i32, i1)

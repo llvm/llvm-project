@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -fsyntax-only -Wunused-private-field -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++11 %s
-// RUN: %clang_cc1 -fsyntax-only -Wunused-private-field -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++17 %s
-// RUN: %clang_cc1 -fsyntax-only -Wunused-private-field -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++20 %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++17 %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused -Wused-but-marked-unused -Wno-uninitialized -verify -std=c++20 %s
 
 #if __cplusplus >= 202002L
 
@@ -18,6 +18,40 @@ class SpaceShipDefaultCompare {
 public:
   SpaceShipDefaultCompare(int x) : used(x) {}
   int operator<=>(const SpaceShipDefaultCompare &) const = default;
+};
+
+class EqDefaultCompareOutOfClass {
+  int used; // no warning, the compiler generated AST for the comparison operator
+            // references the fields of the class, and this should be considered
+            // a use.
+            // This test case is needed because clang does not emit the body
+            // of the defaulted operator when it is defined in-class until it
+            // finds a call to it. `-Wunused-private-field` is suppressed in
+            // a different way in that case.
+  bool operator==(const EqDefaultCompareOutOfClass &) const;
+};
+
+bool EqDefaultCompareOutOfClass::operator==(const EqDefaultCompareOutOfClass &) const = default;
+
+class FriendEqDefaultCompareOutOfClass {
+  int used; // no warning, same reasoning just tested via a friend declaration.
+  friend bool operator==(const FriendEqDefaultCompareOutOfClass &, const FriendEqDefaultCompareOutOfClass &);
+};
+
+bool operator==(const FriendEqDefaultCompareOutOfClass &, const FriendEqDefaultCompareOutOfClass &) = default;
+
+class HasUnusedField {
+  int unused_; // expected-warning{{private field 'unused_' is not used}}
+};
+
+class FriendEqDefaultCompare {
+  int used;
+  friend auto operator==(FriendEqDefaultCompare, FriendEqDefaultCompare) -> bool = default;
+};
+
+class UnrelatedFriendEqDefaultCompare {
+  friend auto operator==(UnrelatedFriendEqDefaultCompare, UnrelatedFriendEqDefaultCompare) -> bool = default;
+  int operator<=>(const UnrelatedFriendEqDefaultCompare &) const = default;
 };
 
 #endif
@@ -74,7 +108,7 @@ class ClassWithTemplateFriend {
 template <typename T> class TemplateFriend {
 public:
   TemplateFriend(ClassWithTemplateFriend my_friend) {
-    int var = my_friend.used_by_friend_;
+    int var = my_friend.used_by_friend_; // expected-warning {{unused variable 'var'}}
   }
 };
 
@@ -147,10 +181,10 @@ class EverythingUsed {
  public:
   EverythingUsed() : as_array_index_(0), var_(by_initializer_) {
     var_ = sizeof(sizeof_);
-    int *use = &by_reference_;
+    int *use = &by_reference_; // expected-warning {{unused variable 'use'}}
     int test[2];
     test[as_array_index_] = 42;
-    int EverythingUsed::*ptr = &EverythingUsed::by_pointer_to_member_;
+    int EverythingUsed::*ptr = &EverythingUsed::by_pointer_to_member_; // expected-warning {{unused variable 'ptr'}}
   }
 
   template<class T>
@@ -293,5 +327,30 @@ class C {
   MaybeUnusedClass c; // no-warning
   MaybeUnusedEnum e; // no-warning
   MaybeUnusedTypedef t; // no-warning
+};
+}
+
+namespace GH62472 {
+class [[gnu::warn_unused]] S {
+public:
+  S();
+};
+
+struct [[maybe_unused]] T {};
+
+void f() {
+  int i = 0; // expected-warning {{unused variable 'i'}}
+  S s;       // expected-warning {{unused variable 's'}}
+  T t;       // ok
+}
+
+class C {
+private:
+  const int i = 0; // expected-warning {{private field 'i' is not used}}
+  int j = 0;       // expected-warning {{private field 'j' is not used}}
+  const S s1;      // expected-warning {{private field 's1' is not used}}
+  const T t1;      // ok
+  S s2;            // expected-warning {{private field 's2' is not used}}
+  T t2;            // ok
 };
 }

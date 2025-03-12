@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named,tosa-to-linalg,tosa-to-arith))" | \
 // RUN: mlir-opt -one-shot-bufferize="bufferize-function-boundaries" -buffer-deallocation-pipeline -test-lower-to-llvm | \
-// RUN: mlir-cpu-runner -O3 -e main -entry-point-result=void \
+// RUN: mlir-runner -O3 -e main -entry-point-result=void \
 // RUN:   -shared-libs=%mlir_runner_utils \
 // RUN: | FileCheck %s
 
