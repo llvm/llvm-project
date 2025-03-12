@@ -58,6 +58,9 @@ Semantic Highlighting
 Compile flags
 ^^^^^^^^^^^^^
 
+- Added `BuiltinHeaders` config key which controls whether clangd's built-in
+  headers are used or ones extracted from the driver.
+
 Hover
 ^^^^^
 
@@ -112,7 +115,7 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/unchecked-optional-access>` fixing false
   positives from smart pointer accessors repeated in checking ``has_value``
   and accessing ``value``. The option `IgnoreSmartPointerDereference` should
-  no longer be needed and will be removed. Also fixing false positive from 
+  no longer be needed and will be removed. Also fixing false positive from
   const reference accessors to objects containing optional member.
 
 - Improved :doc:`bugprone-unsafe-functions
@@ -135,7 +138,7 @@ Changes in existing checks
 
 - Improved :doc:`performance/unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
-  tolerating fix-it breaking compilation when functions is used as pointers 
+  tolerating fix-it breaking compilation when functions is used as pointers
   to avoid matching usage of functions within the current compilation unit.
 
 - Improved :doc:`performance-move-const-arg
