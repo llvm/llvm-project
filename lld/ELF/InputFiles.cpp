@@ -1458,7 +1458,9 @@ void SharedFile::parseGnuAndFeatures(const uint8_t *base,
 
     // Read a body of a NOTE record, which consists of type-length-value fields.
     ArrayRef<uint8_t> desc = note.getDesc(headers[i].p_align);
-    parseGnuPropertyNote<ELFT>(ctx, *this, /*featureAndType*/GNU_PROPERTY_AARCH64_FEATURE_1_AND, desc, base);
+    parseGnuPropertyNote<ELFT>(
+        ctx, *this, /*featureAndType*/ GNU_PROPERTY_AARCH64_FEATURE_1_AND, desc,
+        base);
   }
 }
 
