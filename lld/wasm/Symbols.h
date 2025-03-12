@@ -560,7 +560,7 @@ struct WasmSym {
   // Symbol whose value is the size of the TLS block.
   static GlobalSymbol *tlsSize;
 
-  // __tls_size
+  // __tls_align
   // Symbol whose value is the alignment of the TLS block.
   static GlobalSymbol *tlsAlign;
 
