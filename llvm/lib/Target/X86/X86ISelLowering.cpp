@@ -58512,16 +58512,42 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       break;
     case X86ISD::BLENDI:
-      if (NumOps == 2 && VT.is512BitVector() && Subtarget.useBWIRegs()) {
-        unsigned NumElts = VT.getVectorNumElements();
-        APInt Mask = getBLENDIBlendMask(Ops[0]).zext(NumElts);
-        Mask.insertBits(getBLENDIBlendMask(Ops[1]), NumElts / 2);
-        MVT MaskSVT = MVT::getIntegerVT(NumElts);
-        MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
-        SDValue Sel =
-            DAG.getBitcast(MaskVT, DAG.getConstant(Mask, DL, MaskSVT));
-        return DAG.getSelect(DL, VT, Sel, ConcatSubOperand(VT, Ops, 1),
-                             ConcatSubOperand(VT, Ops, 0));
+      if (VT.is256BitVector() && NumOps == 2 &&
+          (EltSizeInBits >= 32 ||
+           (Subtarget.hasInt256() &&
+            Ops[0].getOperand(2) == Ops[1].getOperand(2)))) {
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1) {
+          unsigned NumElts = VT.getVectorNumElements();
+          APInt Mask = getBLENDIBlendMask(Ops[0]).zext(NumElts);
+          Mask.insertBits(getBLENDIBlendMask(Ops[1]), NumElts / 2);
+          Mask = Mask.zextOrTrunc(8);
+          return DAG.getNode(Op0.getOpcode(), DL, VT,
+                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1),
+                             DAG.getTargetConstant(Mask, DL, MVT::i8));
+        }
+      }
+      // TODO: BWI targets should only use CombineSubOperand.
+      if (((VT.is256BitVector() && Subtarget.hasVLX()) ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
+          (EltSizeInBits >= 32 || Subtarget.useBWIRegs())) {
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1 || Subtarget.useBWIRegs()) {
+          unsigned NumElts = VT.getVectorNumElements();
+          APInt Mask = getBLENDIBlendMask(Ops[0]).zext(NumElts);
+          for (unsigned I = 1; I != NumOps; ++I)
+            Mask.insertBits(getBLENDIBlendMask(Ops[I]), I * (NumElts / NumOps));
+          MVT MaskSVT = MVT::getIntegerVT(NumElts);
+          MVT MaskVT = MVT::getVectorVT(MVT::i1, NumElts);
+          SDValue Sel =
+              DAG.getBitcast(MaskVT, DAG.getConstant(Mask, DL, MaskSVT));
+          Concat0 = Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0);
+          Concat1 = Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1);
+          return DAG.getSelect(DL, VT, Sel, Concat1, Concat0);
+        }
       }
       break;
     case ISD::VSELECT:
