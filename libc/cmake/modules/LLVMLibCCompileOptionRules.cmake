@@ -119,6 +119,9 @@ function(_get_common_compile_options output_var flags)
     list(APPEND compile_options "-fpie")
 
     if(LLVM_LIBC_FULL_BUILD)
+      if(LIBC_TARGET_OS_IS_BAREMETAL)
+        list(APPEND compile_options "-DLIBC_TARGET_OS_IS_BAREMETAL")
+      endif()
       # Only add -ffreestanding flag in non-GPU full build mode.
       if(NOT LIBC_TARGET_OS_IS_GPU)
         list(APPEND compile_options "-ffreestanding")
