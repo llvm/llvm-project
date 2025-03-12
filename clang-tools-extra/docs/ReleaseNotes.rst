@@ -112,6 +112,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Improved :doc:`bugprone-optional-value-conversion
+  <clang-tidy/checks/bugprone/optional-value-conversion>` check to detect
+  conversion in argument of ``std::make_optional``.
+
 - Improved :doc:`bugprone-string-constructor
   <clang-tidy/checks/bugprone/string-constructor>` check to find suspicious
   calls of ``std::string`` constructor with char pointer, start position and
@@ -142,9 +146,17 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-ranges>` check by updating suppress 
   warnings logic for ``nullptr`` in ``std::find``.
 
+- Improved :doc:`modernize-use-std-numbers
+  <clang-tidy/checks/modernize/use-std-numbers>` check to support math
+  functions of different precisions.
+
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check by fix false positives
   for function or variable in header file which contains macro expansion.
+
+- Improved :doc:`modernize-use-default-member-init
+  <clang-tidy/checks/modernize/use-default-member-init>` check by matching
+  ``constexpr`` and ``static`` values on member initialization.
 
 - Improved :doc:`performance/unnecessary-value-param
   <clang-tidy/checks/performance/unnecessary-value-param>` check performance by
