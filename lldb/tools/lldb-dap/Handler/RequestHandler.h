@@ -100,8 +100,8 @@ class RequestHandler : public BaseRequestHandler {
     }
 
     auto ResponseBody = Run(arguments);
-    // FIXME: Add a dedicated DAPError for enhanced errors that are user
-    // visibile.
+    // FIXME: Add a dedicated DAPError for enhanced errors that are
+    // user-visibile.
     if (auto Err = ResponseBody.takeError()) {
       response.success = false;
       // FIXME: Build ErrorMessage based on error details instead of using the
