@@ -246,9 +246,9 @@ check_cxx_compiler_flag("-UTESTFLAG" FLANG_RT_SUPPORTS_UNDEFINE_FLAG)
 check_cxx_compiler_flag(-fno-lto FLANG_RT_HAS_FNO_LTO_FLAG)
 
 # Check whether -Wl,--as-needed is supported.
-check_linker_flag(C "-Wl,--as-needed" LINKER_SUPPORTS_AS_NEEDED)
+check_linker_flag(C "LINKER:--as-needed" LINKER_SUPPORTS_AS_NEEDED)
 if (LINKER_SUPPORTS_AS_NEEDED)
-  set(LINKER_AS_NEEDED_OPT "-Wl,--as-needed")
+  set(LINKER_AS_NEEDED_OPT "LINKER:--as-needed")
 endif()
 
 # Different platform may have different name for the POSIX thread library.
@@ -299,6 +299,7 @@ elseif (FLANG_RT_GCC_RESOURCE_DIR)
     set(FLANG_RT_INCLUDE_QUADMATH_H "\"${FLANG_RT_GCC_RESOURCE_DIR}/include/quadmath.h\"")
   endif ()
 endif ()
+
 
 
 #####################
