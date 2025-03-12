@@ -195,8 +195,17 @@ class LldbGdbServerTestCase(
         # Ensure we have a stack pointer register.
         self.assertIn("sp", generic_regs)
 
-        # Ensure we have a flags register.
-        self.assertIn("flags", generic_regs)
+        # Ensure we have a flags register. RISC-V doesn't have a flags register
+        if not self.isRISCV():
+            self.assertIn("flags", generic_regs)
+
+        if self.isRISCV() or self.isAArch64() or self.isARM():
+            # Specific register for a return address
+            self.assertIn("ra", generic_regs)
+
+            # Function arguments registers
+            for i in range(1, 5 if self.isARM() else 9):
+                self.assertIn(f"arg{i}", generic_regs)
 
     def test_qRegisterInfo_contains_at_least_one_register_set(self):
         self.build()

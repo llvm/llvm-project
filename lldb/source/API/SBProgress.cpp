@@ -40,10 +40,22 @@ SBProgress::~SBProgress() = default;
 void SBProgress::Increment(uint64_t amount, const char *description) {
   LLDB_INSTRUMENT_VA(amount, description);
 
+  if (!m_opaque_up)
+    return;
+
   std::optional<std::string> description_opt;
   if (description && description[0])
     description_opt = description;
   m_opaque_up->Increment(amount, std::move(description_opt));
+}
+
+void SBProgress::Finalize() {
+  // The lldb_private::Progress object is designed to be RAII and send the end
+  // progress event when it gets destroyed. So force our contained object to be
+  // destroyed and send the progress end event. Clearing this object also allows
+  // all other methods to quickly return without doing any work if they are
+  // called after this method.
+  m_opaque_up.reset();
 }
 
 lldb_private::Progress &SBProgress::ref() const { return *m_opaque_up; }

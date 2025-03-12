@@ -233,7 +233,7 @@ void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {
   if (targetMachine) {
     // Set the data layout and target triple of the module.
     module.setDataLayout((*targetMachine)->createDataLayout());
-    module.setTargetTriple((*targetMachine)->getTargetTriple().getTriple());
+    module.setTargetTriple((*targetMachine)->getTargetTriple());
   }
 }
 

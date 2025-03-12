@@ -113,7 +113,6 @@ class CheckerNameRef {
 public:
   CheckerNameRef() = default;
 
-  StringRef getName() const { return Name; }
   operator StringRef() const { return Name; }
 };
 

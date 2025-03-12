@@ -614,6 +614,20 @@ void AMDGPUTargetCodeGenInfo::setCUDAKernelCallingConvention(
       FT, FT->getExtInfo().withCallingConv(CC_OpenCLKernel));
 }
 
+/// Return IR struct type for rtinfo struct in rocm-device-libs used for device
+/// enqueue.
+///
+/// ptr addrspace(1) kernel_object, i32 private_segment_size,
+/// i32 group_segment_size
+
+static llvm::StructType *
+getAMDGPURuntimeHandleType(llvm::LLVMContext &C,
+                           llvm::Type *KernelDescriptorPtrTy) {
+  llvm::Type *Int32 = llvm::Type::getInt32Ty(C);
+  return llvm::StructType::create(C, {KernelDescriptorPtrTy, Int32, Int32},
+                                  "block.runtime.handle.t");
+}
+
 /// Create an OpenCL kernel for an enqueued block.
 ///
 /// The type of the first argument (the block literal) is the struct type
@@ -653,23 +667,29 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
     ArgNames.push_back(
         llvm::MDString::get(C, (Twine("local_arg") + Twine(I)).str()));
   }
-  std::string Name = Invoke->getName().str() + "_kernel";
+
+  llvm::Module &Mod = CGF.CGM.getModule();
+  const llvm::DataLayout &DL = Mod.getDataLayout();
+
+  llvm::Twine Name = Invoke->getName() + "_kernel";
   auto *FT = llvm::FunctionType::get(llvm::Type::getVoidTy(C), ArgTys, false);
+
+  // The kernel itself can be internal, the runtime does not directly access the
+  // kernel address (only the kernel descriptor).
   auto *F = llvm::Function::Create(FT, llvm::GlobalValue::InternalLinkage, Name,
-                                   &CGF.CGM.getModule());
+                                   &Mod);
   F->setCallingConv(llvm::CallingConv::AMDGPU_KERNEL);
 
   llvm::AttrBuilder KernelAttrs(C);
   // FIXME: The invoke isn't applying the right attributes either
   // FIXME: This is missing setTargetAttributes
   CGF.CGM.addDefaultFunctionDefinitionAttributes(KernelAttrs);
-  KernelAttrs.addAttribute("enqueued-block");
   F->addFnAttrs(KernelAttrs);
 
   auto IP = CGF.Builder.saveIP();
   auto *BB = llvm::BasicBlock::Create(C, "entry", F);
   Builder.SetInsertPoint(BB);
-  const auto BlockAlign = CGF.CGM.getDataLayout().getPrefTypeAlign(BlockTy);
+  const auto BlockAlign = DL.getPrefTypeAlign(BlockTy);
   auto *BlockPtr = Builder.CreateAlloca(BlockTy, nullptr);
   BlockPtr->setAlignment(BlockAlign);
   Builder.CreateAlignedStore(F->arg_begin(), BlockPtr, BlockAlign);
@@ -692,7 +712,39 @@ llvm::Value *AMDGPUTargetCodeGenInfo::createEnqueuedBlockKernel(
   if (CGF.CGM.getCodeGenOpts().EmitOpenCLArgMetadata)
     F->setMetadata("kernel_arg_name", llvm::MDNode::get(C, ArgNames));
 
-  return F;
+  llvm::StructType *HandleTy = getAMDGPURuntimeHandleType(
+      C, llvm::PointerType::get(C, DL.getDefaultGlobalsAddressSpace()));
+  llvm::Constant *RuntimeHandleInitializer =
+      llvm::ConstantAggregateZero::get(HandleTy);
+
+  llvm::Twine RuntimeHandleName = F->getName() + ".runtime.handle";
+
+  // The runtime needs access to the runtime handle as an external symbol. The
+  // runtime handle will need to be made external later, in
+  // AMDGPUExportOpenCLEnqueuedBlocks. The kernel itself has a hidden reference
+  // inside the runtime handle, and is not directly referenced.
+
+  // TODO: We would initialize the first field by declaring F->getName() + ".kd"
+  // to reference the kernel descriptor. The runtime wouldn't need to bother
+  // setting it. We would need to have a final symbol name though.
+  // TODO: Can we directly use an external symbol with getGlobalIdentifier?
+  auto *RuntimeHandle = new llvm::GlobalVariable(
+      Mod, HandleTy,
+      /*isConstant=*/true, llvm::GlobalValue::InternalLinkage,
+      /*Initializer=*/RuntimeHandleInitializer, RuntimeHandleName,
+      /*InsertBefore=*/nullptr, llvm::GlobalValue::NotThreadLocal,
+      DL.getDefaultGlobalsAddressSpace(),
+      /*isExternallyInitialized=*/true);
+
+  llvm::MDNode *HandleAsMD =
+      llvm::MDNode::get(C, llvm::ValueAsMetadata::get(RuntimeHandle));
+  F->setMetadata(llvm::LLVMContext::MD_associated, HandleAsMD);
+
+  RuntimeHandle->setSection(".amdgpu.kernel.runtime.handle");
+
+  CGF.CGM.addUsedGlobal(F);
+  CGF.CGM.addUsedGlobal(RuntimeHandle);
+  return RuntimeHandle;
 }
 
 void CodeGenModule::handleAMDGPUFlatWorkGroupSizeAttr(
