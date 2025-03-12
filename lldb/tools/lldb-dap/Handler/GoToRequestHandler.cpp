@@ -12,6 +12,21 @@
 
 namespace lldb_dap {
 
+/// Creates an \p StoppedEvent with the reason \a goto
+static void SendThreadGotoEvent(DAP &dap, lldb::tid_t thread_id) {
+
+  llvm::json::Object event(CreateEventObject("stopped"));
+  llvm::json::Object body;
+  body.try_emplace("reason", "goto");
+  body.try_emplace("description", "Paused on Jump To Cursor");
+  body.try_emplace("threadId", thread_id);
+  body.try_emplace("preserveFocusHint", false);
+  body.try_emplace("allThreadsStopped", true);
+
+  event.try_emplace("body", std::move(body));
+  dap.SendJSON(llvm::json::Value(std::move(event)));
+}
+
 // "GotoRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -98,7 +113,7 @@ void GoToRequestHandler::operator()(const llvm::json::Object &request) const {
 
   dap.SendJSON(llvm::json::Value(std::move(response)));
 
-  SendThreadStoppedEvent(dap);
+  SendThreadGotoEvent(dap, current_thread.GetThreadID());
 }
 
 } // namespace lldb_dap
