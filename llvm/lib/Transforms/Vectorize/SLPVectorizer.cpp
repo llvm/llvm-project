@@ -827,7 +827,6 @@ class InterchangeableBinOp {
       Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
       Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
   enum : MaskType {
-    NOBIT = 0,
     ShlBIT = 0b1,
     AShrBIT = 0b10,
     MulBIT = 0b100,
@@ -877,67 +876,6 @@ class InterchangeableBinOp {
     return std::make_pair(nullptr, Pos);
   }
 
-  // Prefer Shl, AShr, Mul, Add, Sub, And, Or and Xor over MainOp.
-  MaskType opcodeToMask(unsigned Opcode) const {
-    switch (Opcode) {
-    case Instruction::Shl:
-      return ShlBIT;
-    case Instruction::AShr:
-      return AShrBIT;
-    case Instruction::Mul:
-      return MulBIT;
-    case Instruction::Add:
-      return AddBIT;
-    case Instruction::Sub:
-      return SubBIT;
-    case Instruction::And:
-      return AndBIT;
-    case Instruction::Or:
-      return OrBIT;
-    case Instruction::Xor:
-      return XorBIT;
-    }
-    return Opcode == MainOp->getOpcode() ? MainOpBIT : NOBIT;
-  }
-
-  MaskType getInterchangeableMask(Instruction *I) const {
-    unsigned Opcode = I->getOpcode();
-    if (!binary_search(SupportedOp, Opcode))
-      return opcodeToMask(Opcode);
-    ConstantInt *CI = isBinOpWithConstantInt(I).first;
-    if (CI) {
-      constexpr MaskType CanBeAll =
-          XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
-      const APInt &CIValue = CI->getValue();
-      switch (Opcode) {
-      case Instruction::Shl:
-        if (CIValue.isZero())
-          return CanBeAll;
-        return MulBIT | ShlBIT;
-      case Instruction::Mul:
-        if (CIValue.isOne())
-          return CanBeAll;
-        if (CIValue.isPowerOf2())
-          return MulBIT | ShlBIT;
-        break;
-      case Instruction::Add:
-      case Instruction::Sub:
-        if (CIValue.isZero())
-          return CanBeAll;
-        return SubBIT | AddBIT;
-      case Instruction::And:
-        if (CIValue.isAllOnes())
-          return CanBeAll;
-        break;
-      default:
-        if (CIValue.isZero())
-          return CanBeAll;
-        break;
-      }
-    }
-    return opcodeToMask(Opcode);
-  }
-
   // Return false allows getSameOpcode to find an alternate instruction.
   // Directly setting the mask will destroy the mask state, preventing us from
   // determining which instruction the MainOp should convert to.
@@ -954,8 +892,70 @@ public:
     assert(is_sorted(SupportedOp) && "SupportedOp is not sorted.");
   }
   bool add(Instruction *I) {
-    SeenBefore |= opcodeToMask(I->getOpcode());
-    return trySet(getInterchangeableMask(I));
+    unsigned Opcode = I->getOpcode();
+    MaskType OpcodeInMaskForm;
+    // Prefer Shl, AShr, Mul, Add, Sub, And, Or and Xor over MainOp.
+    switch (Opcode) {
+    case Instruction::Shl:
+      OpcodeInMaskForm = ShlBIT;
+      break;
+    case Instruction::AShr:
+      OpcodeInMaskForm = AShrBIT;
+      break;
+    case Instruction::Mul:
+      OpcodeInMaskForm = MulBIT;
+      break;
+    case Instruction::Add:
+      OpcodeInMaskForm = AddBIT;
+      break;
+    case Instruction::Sub:
+      OpcodeInMaskForm = SubBIT;
+      break;
+    case Instruction::And:
+      OpcodeInMaskForm = AndBIT;
+      break;
+    case Instruction::Or:
+      OpcodeInMaskForm = OrBIT;
+      break;
+    case Instruction::Xor:
+      OpcodeInMaskForm = XorBIT;
+      break;
+    default:
+      if (Opcode == MainOp->getOpcode()) {
+        SeenBefore |= MainOpBIT;
+        return trySet(MainOpBIT);
+      }
+      return false;
+    }
+    SeenBefore |= OpcodeInMaskForm;
+    ConstantInt *CI = isBinOpWithConstantInt(I).first;
+    if (CI) {
+      constexpr MaskType CanBeAll =
+          XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
+      const APInt &CIValue = CI->getValue();
+      switch (Opcode) {
+      case Instruction::Shl:
+        return trySet(CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT);
+      case Instruction::Mul:
+        if (CIValue.isOne())
+          return trySet(CanBeAll);
+        if (CIValue.isPowerOf2())
+          return trySet(MulBIT | ShlBIT);
+        break;
+      case Instruction::Add:
+      case Instruction::Sub:
+        return trySet(CIValue.isZero() ? CanBeAll : SubBIT | AddBIT);
+      case Instruction::And:
+        if (CIValue.isAllOnes())
+          return trySet(CanBeAll);
+        break;
+      default:
+        if (CIValue.isZero())
+          return trySet(CanBeAll);
+        break;
+      }
+    }
+    return trySet(OpcodeInMaskForm);
   }
   unsigned getOpcode() const {
     MaskType Candidate = Mask & SeenBefore;
