@@ -290,6 +290,10 @@ Bug Fixes to Attribute Support
   or ``__attribute__((malloc(deallocator, ptr-index)))``
   (`#51607 <https://github.com/llvm/llvm-project/issues/51607>`_).
 
+- The ``+nosimd`` attribute is now fully supported. Previously, this had no effect when being used with
+AArch32 targets, however this will now disable NEON instructions being generated. The ``simd`` option is 
+also now printed when the ``--print-supported-extensions`` option is used.
+
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
