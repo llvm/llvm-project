@@ -557,6 +557,8 @@ void OMPClauseProfiler::VisitOMPDynamicAllocatorsClause(
 void OMPClauseProfiler::VisitOMPAtomicDefaultMemOrderClause(
     const OMPAtomicDefaultMemOrderClause *C) {}
 
+void OMPClauseProfiler::VisitOMPSelfMapsClause(const OMPSelfMapsClause *C) {}
+
 void OMPClauseProfiler::VisitOMPAtClause(const OMPAtClause *C) {}
 
 void OMPClauseProfiler::VisitOMPSeverityClause(const OMPSeverityClause *C) {}
@@ -2731,6 +2733,10 @@ void OpenACCClauseProfiler::VisitGangClause(const OpenACCGangClause &Clause) {
 void OpenACCClauseProfiler::VisitReductionClause(
     const OpenACCReductionClause &Clause) {
   VisitClauseWithVarList(Clause);
+}
+
+void OpenACCClauseProfiler::VisitBindClause(const OpenACCBindClause &Clause) {
+  assert(false && "not implemented... what can we do about our expr?");
 }
 } // namespace
 

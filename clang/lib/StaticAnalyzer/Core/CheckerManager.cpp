@@ -139,7 +139,7 @@ std::string checkerScopeName(StringRef Name, const CheckerBase *Checker) {
   if (!llvm::timeTraceProfilerEnabled())
     return "";
   StringRef CheckerName =
-      Checker ? Checker->getCheckerName().getName() : "<unknown>";
+      Checker ? static_cast<StringRef>(Checker->getCheckerName()) : "<unknown>";
   return (Name + ":" + CheckerName).str();
 }
 
@@ -721,7 +721,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
             "The '{0}' call has been already evaluated by the {1} checker, "
             "while the {2} checker also tried to evaluate the same call. At "
             "most one checker supposed to evaluate a call.",
-            toString(Call), evaluatorChecker->getName(),
+            toString(Call), evaluatorChecker,
             EvalCallChecker.Checker->getCheckerName());
         llvm_unreachable(AssertionMessage.c_str());
       }
@@ -799,7 +799,7 @@ void CheckerManager::runCheckersForPrintStateJson(raw_ostream &Out,
       continue;
 
     Indent(Out, Space, IsDot)
-        << "{ \"checker\": \"" << CT.second->getCheckerName().getName()
+        << "{ \"checker\": \"" << CT.second->getCheckerName()
         << "\", \"messages\": [" << NL;
     Indent(Out, InnerSpace, IsDot)
         << '\"' << TempBuf.str().trim() << '\"' << NL;

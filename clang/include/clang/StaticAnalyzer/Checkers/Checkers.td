@@ -385,7 +385,7 @@ def TrustReturnsNonnullChecker : Checker<"TrustReturnsNonnull">,
 } // end "apiModeling"
 
 //===----------------------------------------------------------------------===//
-// Evaluate "builtin" functions.
+// Evaluate "builtin" functions and assumptions.
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = CoreBuiltin in {
@@ -397,6 +397,10 @@ def NoReturnFunctionChecker : Checker<"NoReturnFunctions">,
 
 def BuiltinFunctionChecker : Checker<"BuiltinFunctions">,
   HelpText<"Evaluate compiler builtin functions (e.g., alloca())">,
+  Documentation<NotDocumented>;
+
+def AssumeModeling : Checker<"AssumeModeling">,
+  HelpText<"Model compiler builtin assume functions and the assume attribute">,
   Documentation<NotDocumented>;
 
 } // end "core.builtin"
@@ -1763,6 +1767,14 @@ def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
 
 def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,
   HelpText<"Check for no unchecked member variables.">,
+  Documentation<HasDocumentation>;
+
+def NoUnretainedMemberChecker : Checker<"NoUnretainedMemberChecker">,
+  HelpText<"Check for no unretained member variables.">,
+  Documentation<HasDocumentation>;
+
+def UnretainedLambdaCapturesChecker : Checker<"UnretainedLambdaCapturesChecker">,
+  HelpText<"Check unretained lambda captures.">,
   Documentation<HasDocumentation>;
 
 def UncountedCallArgsChecker : Checker<"UncountedCallArgsChecker">,
