@@ -8,7 +8,6 @@
 
 #include "ASTUtils.h"
 #include "PtrTypesSemantics.h"
-#include "clang/AST/Attr.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -29,15 +28,6 @@ bool tryToFindPtrOrigin(
     std::function<bool(const clang::QualType)> isSafePtrType,
     std::function<bool(const clang::Expr *, bool)> callback) {
   while (E) {
-    if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
-      auto *ValDecl = DRE->getDecl();
-      auto QT = ValDecl->getType();
-      auto ValName = ValDecl->getName();
-      if (ValDecl && (ValName.starts_with('k') || ValName.starts_with("_k")) &&
-          QT.isConstQualified()) { // Treat constants such as kCF* as safe.
-        return callback(E, true);
-      }
-    }
     if (auto *tempExpr = dyn_cast<MaterializeTemporaryExpr>(E)) {
       E = tempExpr->getSubExpr();
       continue;
@@ -65,10 +55,6 @@ bool tryToFindPtrOrigin(
     }
     if (auto *tempExpr = dyn_cast<ParenExpr>(E)) {
       E = tempExpr->getSubExpr();
-      continue;
-    }
-    if (auto *OpaqueValue = dyn_cast<OpaqueValueExpr>(E)) {
-      E = OpaqueValue->getSourceExpr();
       continue;
     }
     if (auto *Expr = dyn_cast<ConditionalOperator>(E)) {
@@ -143,11 +129,6 @@ bool tryToFindPtrOrigin(
           E = call->getArg(0);
           continue;
         }
-
-        auto Name = safeGetName(callee);
-        if (Name == "__builtin___CFStringMakeConstantString" ||
-            Name == "NSClassFromString")
-          return callback(E, true);
       }
     }
     if (auto *ObjCMsgExpr = dyn_cast<ObjCMessageExpr>(E)) {
@@ -155,18 +136,7 @@ bool tryToFindPtrOrigin(
         if (isSafePtrType(Method->getReturnType()))
           return callback(E, true);
       }
-      auto Selector = ObjCMsgExpr->getSelector();
-      auto NameForFirstSlot = Selector.getNameForSlot(0);
-      if ((NameForFirstSlot == "class" || NameForFirstSlot == "superclass") &&
-          !Selector.getNumArgs())
-        return callback(E, true);
     }
-    if (auto *ObjCDict = dyn_cast<ObjCDictionaryLiteral>(E))
-      return callback(ObjCDict, true);
-    if (auto *ObjCArray = dyn_cast<ObjCArrayLiteral>(E))
-      return callback(ObjCArray, true);
-    if (auto *ObjCStr = dyn_cast<ObjCStringLiteral>(E))
-      return callback(ObjCStr, true);
     if (auto *unaryOp = dyn_cast<UnaryOperator>(E)) {
       // FIXME: Currently accepts ANY unary operator. Is it OK?
       E = unaryOp->getSubExpr();
@@ -186,14 +156,6 @@ bool isASafeCallArg(const Expr *E) {
     if (auto *D = dyn_cast_or_null<VarDecl>(FoundDecl)) {
       if (isa<ParmVarDecl>(D) || D->isLocalVarDecl())
         return true;
-      if (auto *ImplicitP = dyn_cast<ImplicitParamDecl>(D)) {
-        auto Kind = ImplicitP->getParameterKind();
-        if (Kind == ImplicitParamKind::ObjCSelf ||
-            Kind == ImplicitParamKind::ObjCCmd ||
-            Kind == ImplicitParamKind::CXXThis ||
-            Kind == ImplicitParamKind::CXXVTT)
-          return true;
-      }
     } else if (auto *BD = dyn_cast_or_null<BindingDecl>(FoundDecl)) {
       VarDecl *VD = BD->getHoldingVar();
       if (VD && (isa<ParmVarDecl>(VD) || VD->isLocalVarDecl()))

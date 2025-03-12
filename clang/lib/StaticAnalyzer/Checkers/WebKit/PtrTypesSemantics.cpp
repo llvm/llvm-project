@@ -372,8 +372,7 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
         auto QT = maybeRefToRawOperator->getConversionType();
         auto *T = QT.getTypePtrOrNull();
-        return T && (T->isPointerType() || T->isReferenceType() ||
-                     T->isObjCObjectPointerType());
+        return T && (T->isPointerType() || T->isReferenceType());
       }
     }
   }
@@ -416,8 +415,7 @@ bool isPtrConversion(const FunctionDecl *F) {
   if (FunctionName == "getPtr" || FunctionName == "WeakPtr" ||
       FunctionName == "dynamicDowncast" || FunctionName == "downcast" ||
       FunctionName == "checkedDowncast" ||
-      FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast" ||
-      FunctionName == "bridge_cast")
+      FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast")
     return true;
 
   return false;

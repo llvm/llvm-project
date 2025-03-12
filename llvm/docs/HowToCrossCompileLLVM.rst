@@ -153,7 +153,7 @@ Working around a ninja dependency issue
 
 If you followed the instructions above to create a sysroot, you may run into a
 `longstanding problem related to path canonicalization in ninja
-<https://github.com/ninja-build/ninja/issues/1330>_`. GCC canonicalizes system
+<https://github.com/ninja-build/ninja/issues/1330>`_. GCC canonicalizes system
 headers in dependency files, so when ninja reads them it does not need to do
 so. Clang does not do this, and unfortunately ninja does not implement the
 canonicalization logic at all, meaning for some system headers with symlinks
