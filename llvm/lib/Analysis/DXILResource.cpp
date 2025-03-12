@@ -900,15 +900,18 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
   // resource that was both incremented and decremented which is not allowed.
   // Mark all those entries as invalid.
   {
-  auto DupFirst = DiagCounterDirs.begin();
-  auto DupNext = DupFirst + 1;
-  auto DupLast = DiagCounterDirs.end();
-  for (; DupFirst < DupLast && DupNext < DupLast; ++DupFirst, ++DupNext) {
-    if (std::get<dxil::ResourceBindingInfo>(*DupFirst) == std::get<dxil::ResourceBindingInfo>(*DupNext)) {
-      std::get<ResourceCounterDirection>(*DupFirst) = ResourceCounterDirection::MyInvalid;
-      std::get<ResourceCounterDirection>(*DupNext) = ResourceCounterDirection::MyInvalid;
+    auto DupFirst = DiagCounterDirs.begin();
+    auto DupNext = DupFirst + 1;
+    auto DupLast = DiagCounterDirs.end();
+    for (; DupFirst < DupLast && DupNext < DupLast; ++DupFirst, ++DupNext) {
+      if (std::get<dxil::ResourceBindingInfo>(*DupFirst) ==
+          std::get<dxil::ResourceBindingInfo>(*DupNext)) {
+        std::get<ResourceCounterDirection>(*DupFirst) =
+            ResourceCounterDirection::MyInvalid;
+        std::get<ResourceCounterDirection>(*DupNext) =
+            ResourceCounterDirection::MyInvalid;
+      }
     }
-  }
   }
 
   // Raise an error for every invalid entry
