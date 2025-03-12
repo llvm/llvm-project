@@ -10,7 +10,7 @@ import lldbdap_testcase
 import os
 
 
-class TestDAP_gotoTarget(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_gotoTargets(lldbdap_testcase.DAPTestCaseBase):
     def verify_variable(
         self, actual_dict: Dict[str, Any], expected_dict: Dict[str, Any]
     ):
@@ -61,8 +61,12 @@ class TestDAP_gotoTarget(lldbdap_testcase.DAPTestCaseBase):
         self.assertIsNotNone(thread_id, "threadId should not be none")
 
         response = self.dap_server.request_goto(thread_id, target_id)
-
         self.assertEqual(response["success"], True, "expects success to go to targetId")
+
+        stopped_events = self.dap_server.wait_for_stopped()
+        is_goto = lambda event: event["body"]["reason"] == "goto"
+        has_goto_event = any(map(is_goto, stopped_events))
+        self.assertEqual(has_goto_event, True, "expects stopped event with reason goto")
 
         self.dap_server.request_next(thread_id)
         self.continue_to_next_stop()
@@ -118,6 +122,12 @@ class TestDAP_gotoTarget(lldbdap_testcase.DAPTestCaseBase):
 
         response = self.dap_server.request_goto(thread_id, target_id)
         self.assertEqual(response["success"], True, "expects success to go to targetId")
+
+        stopped_events = self.dap_server.wait_for_stopped()
+        is_goto = lambda event: event["body"]["reason"] == "goto"
+        has_goto_event = any(map(is_goto, stopped_events))
+        self.assertEqual(has_goto_event, True, "expects stopped event with reason goto")
+
         self.dap_server.request_next(thread_id)
         self.continue_to_next_stop()
 
