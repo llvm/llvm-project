@@ -75,7 +75,7 @@ define void @all_exits_dominate_latch_countable_exits_at_most_500_iterations_not
 ; CHECK-NEXT:          (Low: %B High: (2000 + %B))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %A High: (2000 + %A))
+; CHECK-NEXT:          (Low: %A High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -189,9 +189,9 @@ define i32 @all_exits_dominate_latch_countable_exits_at_most_1000_iterations_not
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
 ; CHECK-NEXT:          (Low: %B High: (4004 + %B))
-; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
+; CHECK-NEXT:          (Low: %B High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %A High: (4004 + %A))
+; CHECK-NEXT:          (Low: %A High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
@@ -232,6 +232,7 @@ e.1:
 e.2:
   ret i32 2
 }
+
 
 define i32 @not_all_exits_dominate_latch(ptr %A, ptr %B) {
 ; CHECK-LABEL: 'not_all_exits_dominate_latch'
@@ -345,10 +346,10 @@ define i32 @b3_does_not_dominate_latch_not_known_deref(ptr %A, ptr %B) {
 ; CHECK-NEXT:          %gep.A = getelementptr inbounds i32, ptr %A, i64 %iv
 ; CHECK-NEXT:      Grouped accesses:
 ; CHECK-NEXT:        Group GRP0:
-; CHECK-NEXT:          (Low: %B High: (4004 + %B))
+; CHECK-NEXT:          (Low: %B High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:            Member: {%B,+,4}<nuw><%loop.header>
 ; CHECK-NEXT:        Group GRP1:
-; CHECK-NEXT:          (Low: %A High: (4004 + %A))
+; CHECK-NEXT:          (Low: %A High: inttoptr (i64 -1 to ptr))
 ; CHECK-NEXT:            Member: {%A,+,4}<nuw><%loop.header>
 ; CHECK-EMPTY:
 ; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.

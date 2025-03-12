@@ -333,6 +333,8 @@ bool llvm::isDereferenceableAndAlignedInLoop(
 
   // Try to get the access size.
   const SCEV *PtrDiff = SE.getMinusSCEV(AccessEnd, AccessStart);
+  if (isa<SCEVCouldNotCompute>(PtrDiff))
+    return false;
   APInt MaxPtrDiff = SE.getUnsignedRangeMax(PtrDiff);
 
   Value *Base = nullptr;
