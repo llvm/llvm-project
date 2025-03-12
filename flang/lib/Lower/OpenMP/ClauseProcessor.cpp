@@ -1029,15 +1029,15 @@ bool ClauseProcessor::processMap(
     }
 
     if (typeMods) {
+      // TODO: Still requires "self" modifier, an OpenMP 6.0+ feature
       if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Always))
         mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
-      // Diagnose unimplemented map-type-modifiers.
-      if (llvm::any_of(*typeMods, [](Map::MapTypeModifier m) {
-            return m != Map::MapTypeModifier::Always;
-          })) {
-        TODO(currentLocation, "Map type modifiers (other than 'ALWAYS')"
-                              " are not implemented yet");
-      }
+      if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Present))
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
+      if (llvm::is_contained(*typeMods, Map::MapTypeModifier::Close))
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
+      if (llvm::is_contained(*typeMods, Map::MapTypeModifier::OmpxHold))
+        mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
     }
 
     if (iterator) {
@@ -1073,19 +1073,20 @@ bool ClauseProcessor::processMotionClauses(lower::StatementContext &stmtCtx,
   auto callbackFn = [&](const auto &clause, const parser::CharBlock &source) {
     mlir::Location clauseLocation = converter.genLocation(source);
     const auto &[expectation, mapper, iterator, objects] = clause.t;
-    // TODO Support motion modifiers: present, mapper, iterator.
-    if (expectation) {
-      TODO(clauseLocation, "PRESENT modifier is not supported yet");
-    } else if (mapper) {
+
+    // TODO Support motion modifiers: mapper, iterator.
+    if (mapper) {
       TODO(clauseLocation, "Mapper modifier is not supported yet");
     } else if (iterator) {
       TODO(clauseLocation, "Iterator modifier is not supported yet");
     }
-    constexpr llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+
+    llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
         std::is_same_v<llvm::remove_cvref_t<decltype(clause)>, omp::clause::To>
             ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO
             : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_FROM;
-
+    if (expectation && *expectation == omp::clause::To::Expectation::Present)
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_PRESENT;
     processMapObjects(stmtCtx, clauseLocation, objects, mapTypeBits,
                       parentMemberIndices, result.mapVars, mapSymbols);
   };
