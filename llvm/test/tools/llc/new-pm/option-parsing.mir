@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes="block-placement<tail-merge>,block-placement<no-tail-merge>" -print-pipeline-passes -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=CHECK
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes='block-placement<tail-merge>,block-placement<no-tail-merge>' -print-pipeline-passes -filetype=null %s 2>&1 | FileCheck %s --check-prefix=CHECK
 
-# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -passes="block-placement<invalid-opt>" -print-pipeline-passes -o /dev/null %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOT
+# RUN: not llc -mtriple=x86_64-unknown-linux-gnu -passes='block-placement<invalid-opt>' -print-pipeline-passes -filetype=null %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOT
 
 # CHECK: block-placement,block-placement<no-tail-merge>
 # CHECK-NOT: invalid MachineBlockPlacementPass parameter 'invalid-opt'
