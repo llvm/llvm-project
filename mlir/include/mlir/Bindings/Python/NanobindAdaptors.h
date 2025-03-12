@@ -321,6 +321,16 @@ struct type_caster<MlirType> {
   }
 };
 
+/// Casts MlirStringRef -> object.
+template <>
+struct type_caster<MlirStringRef> {
+  NB_TYPE_CASTER(MlirStringRef, const_name("MlirStringRef"))
+  static handle from_cpp(MlirStringRef s, rv_policy,
+                         cleanup_list *cleanup) noexcept {
+    return nanobind::str(s.data, s.length).release();
+  }
+};
+
 } // namespace detail
 } // namespace nanobind
 
