@@ -1466,7 +1466,7 @@ define <2 x half> @v_fneg_minnum_multi_use_minnum_f16_no_ieee(half %a, half %b) 
   %min = call half @llvm.minnum.f16(half %a, half %b)
   %fneg = fneg half %min
   %use1 = fmul half %min, 4.0
-  %ins0 = insertelement <2 x half> undef, half %fneg, i32 0
+  %ins0 = insertelement <2 x half> poison, half %fneg, i32 0
   %ins1 = insertelement <2 x half> %ins0, half %use1, i32 1
   ret <2 x half> %ins1
 }
@@ -1904,7 +1904,7 @@ define <2 x half> @v_fneg_maxnum_multi_use_maxnum_f16_no_ieee(half %a, half %b) 
   %max = call half @llvm.maxnum.f16(half %a, half %b)
   %fneg = fneg half %max
   %use1 = fmul half %max, 4.0
-  %ins0 = insertelement <2 x half> undef, half %fneg, i32 0
+  %ins0 = insertelement <2 x half> poison, half %fneg, i32 0
   %ins1 = insertelement <2 x half> %ins0, half %use1, i32 1
   ret <2 x half> %ins1
 }

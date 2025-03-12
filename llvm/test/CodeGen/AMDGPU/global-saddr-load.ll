@@ -3849,7 +3849,7 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16lo_undef_hi(ptr addrspace(
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %load = load i16, ptr addrspace(1) %gep0
-  %build = insertelement <2 x i16> undef, i16 %load, i32 0
+  %build = insertelement <2 x i16> poison, i16 %load, i32 0
   %cast = bitcast <2 x i16> %build to <2 x half>
   ret <2 x half> %cast
 }
@@ -3882,7 +3882,7 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16lo_undef_hi_immneg128(ptr 
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
   %load = load i16, ptr addrspace(1) %gep1
-  %build = insertelement <2 x i16> undef, i16 %load, i32 0
+  %build = insertelement <2 x i16> poison, i16 %load, i32 0
   %cast = bitcast <2 x i16> %build to <2 x half>
   ret <2 x half> %cast
 }
@@ -4225,7 +4225,7 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_undef_hi(ptr addrspace(
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %load = load i16, ptr addrspace(1) %gep0
-  %build = insertelement <2 x i16> undef, i16 %load, i32 1
+  %build = insertelement <2 x i16> poison, i16 %load, i32 1
   %cast = bitcast <2 x i16> %build to <2 x half>
   ret <2 x half> %cast
 }
@@ -4259,7 +4259,7 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_undef_hi_immneg128(ptr 
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
   %load = load i16, ptr addrspace(1) %gep1
-  %build = insertelement <2 x i16> undef, i16 %load, i32 1
+  %build = insertelement <2 x i16> poison, i16 %load, i32 1
   %cast = bitcast <2 x i16> %build to <2 x half>
   ret <2 x half> %cast
 }
@@ -4734,7 +4734,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv(ptr addrspace(1) inreg %arg) {
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-GISEL-NEXT:  .LBB132_1: ; %bb3
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v4, vcc, v0, v2
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v5, vcc, v1, v3, vcc
@@ -4854,7 +4854,7 @@ define amdgpu_ps void @global_addr_64bit_lsr_iv_multiload(ptr addrspace(1) inreg
 ; GFX12-GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX12-GISEL-NEXT:  .LBB133_1: ; %bb3
 ; GFX12-GISEL-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX12-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-GISEL-NEXT:    v_add_co_u32 v4, vcc, v0, v2
 ; GFX12-GISEL-NEXT:    s_wait_alu 0xfffd
 ; GFX12-GISEL-NEXT:    v_add_co_ci_u32_e32 v5, vcc, v1, v3, vcc
