@@ -884,6 +884,12 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::IsDOT;
   }
 
+#if LLPC_BUILD_NPI
+  static bool isXDLWMMA(const MachineInstr &MI) {
+    return (isWMMA(MI) || isSWMMAC(MI)) && AMDGPU::getWMMAIsXDL(MI.getOpcode());
+  }
+
+#endif /* LLPC_BUILD_NPI */
   bool isXDL(const MachineInstr &MI) const;
 
   static bool isDGEMM(unsigned Opcode) { return AMDGPU::getMAIIsDGEMM(Opcode); }

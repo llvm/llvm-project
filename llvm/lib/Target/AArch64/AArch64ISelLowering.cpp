@@ -984,6 +984,23 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 #undef LCALLNAME5
   }
 
+  if (Subtarget->outlineAtomics() && !Subtarget->hasLSFE()) {
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FADD, MVT::bf16, LibCall);
+
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMAX, MVT::bf16, LibCall);
+
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f16, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f32, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::f64, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_FMIN, MVT::bf16, LibCall);
+  }
+
   if (Subtarget->hasLSE128()) {
     // Custom lowering because i128 is not legal. Must be replaced by 2x64
     // values. ATOMIC_LOAD_AND also needs op legalisation to emit LDCLRP.
@@ -1700,6 +1717,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::FABS, VT, Legal);
+      setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction(ISD::FNEG, VT, Legal);
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
       setOperationAction(ISD::FP_ROUND, VT, Custom);
@@ -7906,7 +7924,6 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
 
   // Assign locations to all of the incoming arguments.
   SmallVector<CCValAssign, 16> ArgLocs;
-  DenseMap<unsigned, SDValue> CopiedRegs;
   CCState CCInfo(CallConv, isVarArg, MF, ArgLocs, *DAG.getContext());
 
   // At this point, Ins[].VT may already be promoted to i32. To correctly
@@ -10690,7 +10707,7 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
   // a SVE FCOPYSIGN.
   if (!VT.isVector() && !Subtarget->isNeonAvailable() &&
       Subtarget->isSVEorStreamingSVEAvailable()) {
-    if (VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64)
+    if (VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64 && VT != MVT::bf16)
       return SDValue();
     EVT SVT = getPackedSVEVectorVT(VT);
 
@@ -27905,6 +27922,12 @@ AArch64TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
                        AI->getOperation() == AtomicRMWInst::Or ||
                        AI->getOperation() == AtomicRMWInst::And);
   if (CanUseLSE128)
+    return AtomicExpansionKind::None;
+
+  // If LSFE available, use atomic FP instructions in preference to expansion
+  if (Subtarget->hasLSFE() && (AI->getOperation() == AtomicRMWInst::FAdd ||
+                               AI->getOperation() == AtomicRMWInst::FMax ||
+                               AI->getOperation() == AtomicRMWInst::FMin))
     return AtomicExpansionKind::None;
 
   // Nand is not supported in LSE.

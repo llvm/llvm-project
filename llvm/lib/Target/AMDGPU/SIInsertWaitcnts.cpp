@@ -127,20 +127,6 @@ struct HardwareLimits {
   unsigned VmVsrcMax;    // gfx12+ expert mode only.
 };
 
-#if LLPC_BUILD_NPI
-// VGPR encoding includes two sections: lane-shared vgpr and
-// private vgpr. Lane-shared vgpr section is at the beginning.
-#endif /* LLPC_BUILD_NPI */
-struct RegisterEncoding {
-  unsigned VGPR0;
-  unsigned VGPRL;
-  unsigned SGPR0;
-  unsigned SGPRL;
-#if LLPC_BUILD_NPI
-  unsigned LaneSharedSize;
-#endif /* LLPC_BUILD_NPI */
-};
-
 enum WaitEventType {
   VMEM_ACCESS,              // vector-memory read & write
   VMEM_READ_ACCESS,         // vector-memory read
@@ -188,12 +174,12 @@ enum RegisterMapping {
 #if LLPC_BUILD_NPI
   SQ_MAX_PGM_VGPRS = 1024, // Maximum programmable VGPRs across all targets.
   AGPR_OFFSET = 256,       // Maximum programmable ArchVGPRs across all targets.
-  SQ_MAX_PGM_SGPRS = 256,  // Maximum programmable SGPRs across all targets.
+  SQ_MAX_PGM_SGPRS = 128,  // Maximum programmable SGPRs across all targets.
   NUM_EXTRA_VGPRS = 9,     // Reserved slots for DS.
 #else /* LLPC_BUILD_NPI */
   SQ_MAX_PGM_VGPRS = 512, // Maximum programmable VGPRs across all targets.
   AGPR_OFFSET = 256,      // Maximum programmable ArchVGPRs across all targets.
-  SQ_MAX_PGM_SGPRS = 256, // Maximum programmable SGPRs across all targets.
+  SQ_MAX_PGM_SGPRS = 128, // Maximum programmable SGPRs across all targets.
   NUM_EXTRA_VGPRS = 9,    // Reserved slots for DS.
 #endif /* LLPC_BUILD_NPI */
   // Artificial register slots to track LDS writes into specific LDS locations
@@ -330,11 +316,18 @@ InstCounterType eventCounter(const unsigned *masks, WaitEventType E) {
 class WaitcntBrackets {
 public:
   WaitcntBrackets(const GCNSubtarget *SubTarget, InstCounterType MaxCounter,
-                  HardwareLimits Limits, RegisterEncoding Encoding,
-                  const unsigned *WaitEventMaskForInst,
+#if LLPC_BUILD_NPI
+                  HardwareLimits Limits,
+                  unsigned LaneSharedSize, const unsigned *WaitEventMaskForInst,
+#else /* LLPC_BUILD_NPI */
+                  HardwareLimits Limits, const unsigned *WaitEventMaskForInst,
+#endif /* LLPC_BUILD_NPI */
                   InstCounterType SmemAccessCounter)
       : ST(SubTarget), MaxCounter(MaxCounter), Limits(Limits),
-        Encoding(Encoding), WaitEventMaskForInst(WaitEventMaskForInst),
+#if LLPC_BUILD_NPI
+        LaneSharedSize(LaneSharedSize),
+#endif /* LLPC_BUILD_NPI */
+        WaitEventMaskForInst(WaitEventMaskForInst),
         SmemAccessCounter(SmemAccessCounter) {}
 
   unsigned getWaitCountMax(InstCounterType T) const {
@@ -557,7 +550,9 @@ private:
   const GCNSubtarget *ST = nullptr;
   InstCounterType MaxCounter = NUM_EXTENDED_INST_CNTS;
   HardwareLimits Limits = {};
-  RegisterEncoding Encoding = {};
+#if LLPC_BUILD_NPI
+  unsigned LaneSharedSize = 0;
+#endif /* LLPC_BUILD_NPI */
   const unsigned *WaitEventMaskForInst;
   InstCounterType SmemAccessCounter;
   unsigned ScoreLBs[NUM_INST_CNTS] = {0};
@@ -933,8 +928,8 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
   }
 #endif
 
-  Result.first = IsLaneShared ? 0 : Encoding.LaneSharedSize;
-  int MaxNumVGPRs = Encoding.VGPRL - Encoding.VGPR0 + 1;
+  Result.first = IsLaneShared ? 0 : LaneSharedSize;
+  int MaxNumVGPRs = SQ_MAX_PGM_VGPRS;
   if (GprIdxImmedVals[Idx].has_value()) {
     auto OffsetSrcIdx =
         AMDGPU::getNamedOperandIdx(MI->getOpcode(), AMDGPU::OpName::offset);
@@ -955,7 +950,7 @@ WaitcntBrackets::getRegIndexingInterval(const MachineInstr *MI,
     // TODO-GFX13:
     // We want to build an event-queue and apply alias analysis to
     // get more accurate result in this case.
-    Result.second = Encoding.LaneSharedSize;
+    Result.second = LaneSharedSize;
   } else {
     // TODO-GFX13: we expect to scan implicit defs/uses on VGPRs
     // that should provide more accurate interval for private objects.
@@ -996,25 +991,22 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 #endif /* LLPC_BUILD_NPI */
 
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.VGPR0 && Reg <= Encoding.VGPRL);
+    assert(Reg <= SQ_MAX_PGM_VGPRS);
 #if LLPC_BUILD_NPI
-    Result.first = Reg - Encoding.VGPR0 + Encoding.LaneSharedSize;
+    Result.first = Reg + LaneSharedSize;
 #else /* LLPC_BUILD_NPI */
-    Result.first = Reg - Encoding.VGPR0;
+    Result.first = Reg;
 #endif /* LLPC_BUILD_NPI */
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
-  } else if (TRI->isSGPRReg(*MRI, Op.getReg())) {
-    assert(Reg >= Encoding.SGPR0 && Reg < SQ_MAX_PGM_SGPRS);
-    Result.first = Reg - Encoding.SGPR0 + NUM_ALL_VGPRS;
-    assert(Result.first >= NUM_ALL_VGPRS &&
-           Result.first < SQ_MAX_PGM_SGPRS + NUM_ALL_VGPRS);
-  }
-  // TODO: Handle TTMP
-  // else if (TRI->isTTMP(*MRI, Reg.getReg())) ...
-  else
+  } else if (TRI->isSGPRReg(*MRI, Op.getReg()) && Reg < SQ_MAX_PGM_SGPRS) {
+    // SGPRs including VCC, TTMPs and EXEC but excluding read-only scalar
+    // sources like SRC_PRIVATE_BASE.
+    Result.first = Reg + NUM_ALL_VGPRS;
+  } else {
     return {-1, -1};
+  }
 
   const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
   unsigned Size = TRI->getRegSizeInBits(*RC);
@@ -3239,30 +3231,15 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   Limits.VaVdstMax = AMDGPU::DepCtr::getVaVdstBitMask();
   Limits.VmVsrcMax = AMDGPU::DepCtr::getVmVsrcBitMask();
 
-  unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
-  unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
+  [[maybe_unused]] unsigned NumVGPRsMax = ST->getAddressableNumVGPRs();
+  [[maybe_unused]] unsigned NumSGPRsMax = ST->getAddressableNumSGPRs();
   assert(NumVGPRsMax <= SQ_MAX_PGM_VGPRS);
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
 
-  RegisterEncoding Encoding = {};
 #if LLPC_BUILD_NPI
-  Encoding.VGPR0 = TRI->getHWRegIndex(AMDGPU::VGPR0);
-#else /* LLPC_BUILD_NPI */
-  Encoding.VGPR0 =
-      TRI->getEncodingValue(AMDGPU::VGPR0) & AMDGPU::HWEncoding::REG_IDX_MASK;
-#endif /* LLPC_BUILD_NPI */
-  Encoding.VGPRL = Encoding.VGPR0 + NumVGPRsMax - 1;
-#if LLPC_BUILD_NPI
-  Encoding.SGPR0 = TRI->getHWRegIndex(AMDGPU::SGPR0);
-#else /* LLPC_BUILD_NPI */
-  Encoding.SGPR0 =
-      TRI->getEncodingValue(AMDGPU::SGPR0) & AMDGPU::HWEncoding::REG_IDX_MASK;
-#endif /* LLPC_BUILD_NPI */
-  Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
-#if LLPC_BUILD_NPI
-  Encoding.LaneSharedSize = MFI->getLaneSharedVGPRSize() / 4u;
-#endif /* LLPC_BUILD_NPI */
+  unsigned LaneSharedSize = MFI->getLaneSharedVGPRSize() / 4u;
 
+#endif /* LLPC_BUILD_NPI */
   BlockInfos.clear();
   bool Modified = false;
 
@@ -3311,8 +3288,12 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
     }
 
     auto NonKernelInitialState = std::make_unique<WaitcntBrackets>(
-        ST, MaxCounter, Limits, Encoding, WaitEventMaskForInst,
+#if LLPC_BUILD_NPI
+        ST, MaxCounter, Limits, LaneSharedSize, WaitEventMaskForInst,
         SmemAccessCounter);
+#else /* LLPC_BUILD_NPI */
+        ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
+#endif /* LLPC_BUILD_NPI */
     NonKernelInitialState->setStateOnFunctionEntryOrReturn();
     BlockInfos[&EntryBB].Incoming = std::move(NonKernelInitialState);
 
@@ -3350,11 +3331,21 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
       } else {
         if (!Brackets)
           Brackets = std::make_unique<WaitcntBrackets>(
-              ST, MaxCounter, Limits, Encoding, WaitEventMaskForInst,
-              SmemAccessCounter);
+#if LLPC_BUILD_NPI
+              ST, MaxCounter, Limits, LaneSharedSize,
+              WaitEventMaskForInst, SmemAccessCounter);
+#else /* LLPC_BUILD_NPI */
+              ST, MaxCounter, Limits, WaitEventMaskForInst, SmemAccessCounter);
+#endif /* LLPC_BUILD_NPI */
         else
-          *Brackets = WaitcntBrackets(ST, MaxCounter, Limits, Encoding,
+#if LLPC_BUILD_NPI
+          *Brackets =
+              WaitcntBrackets(ST, MaxCounter, Limits, LaneSharedSize,
+                              WaitEventMaskForInst, SmemAccessCounter);
+#else /* LLPC_BUILD_NPI */
+          *Brackets = WaitcntBrackets(ST, MaxCounter, Limits,
                                       WaitEventMaskForInst, SmemAccessCounter);
+#endif /* LLPC_BUILD_NPI */
       }
 
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);

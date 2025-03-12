@@ -948,10 +948,7 @@ let SubtargetPredicate = isGFX11Plus in {
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;
 } // End SubtargetPredicate = isGFX11Plus
 
-#ifdef LLPC_BUILD_NPI
-#else /* LLPC_BUILD_NPI */
 let SubtargetPredicate = HasPrngInst in
-#endif /* LLPC_BUILD_NPI */
 defm V_PRNG_B32 : VOP1Inst <"v_prng_b32", VOP_I32_I32, int_amdgcn_prng_b32>;
 
 let Constraints = "$vdst = $vdst_in, $src0_out = $src0",
@@ -1643,21 +1640,21 @@ multiclass VOP1_Real_gfx6_gfx7_gfx10_FULL_gfx11_gfx12_gfx13<bits<9> op> :
   VOP1_Real_FULL<GFX13Gen, op>;
 
 multiclass VOP1_Real_gfx6_gfx7_gfx10_NO_DPP_gfx11_gfx12_gfx13<bits<9> op> :
-  VOP1_Real_gfx6_gfx7_gfx10<op>, VOP1_Real_NO_DPP<GFX11Gen, op>,
-  VOP1_Real_NO_DPP<GFX12Gen, op>, VOP1_Real_NO_DPP<GFX13Gen, op>;
-
-multiclass VOP1_Real_gfx6_gfx7_gfx10_NO_DPP_gfx11_gfx13_with_DPP16_gfx12<bits<9> op> :
 #else /* LLPC_BUILD_NPI */
 multiclass VOP1_Real_gfx6_gfx7_gfx10_NO_DPP_gfx11_gfx12<bits<9> op> :
 #endif /* LLPC_BUILD_NPI */
   VOP1_Real_gfx6_gfx7_gfx10<op>, VOP1_Real_NO_DPP<GFX11Gen, op>,
 #ifdef LLPC_BUILD_NPI
-  VOP1_Real_with_DPP16<GFX12Gen, op>, VOP1_Real_NO_DPP<GFX13Gen, op>;
+  VOP1_Real_NO_DPP<GFX12Gen, op>, VOP1_Real_NO_DPP<GFX13Gen, op>;
 #else /* LLPC_BUILD_NPI */
   VOP1_Real_NO_DPP<GFX12Gen, op>;
 #endif /* LLPC_BUILD_NPI */
 
 #ifdef LLPC_BUILD_NPI
+multiclass VOP1_Real_gfx6_gfx7_gfx10_NO_DPP_gfx11_gfx13_with_DPP16_gfx12<bits<9> op> :
+  VOP1_Real_gfx6_gfx7_gfx10<op>, VOP1_Real_NO_DPP<GFX11Gen, op>,
+  VOP1_Real_with_DPP16<GFX12Gen, op>, VOP1_Real_NO_DPP<GFX13Gen, op>;
+
 multiclass VOP1Only_Real_gfx6_gfx7_gfx10_gfx11_gfx12_gfx13<bits<9> op> :
   VOP1Only_Real_gfx6_gfx7<op>, VOP1Only_Real_gfx10_gfx11_gfx12_gfx13<op>;
 #else /* LLPC_BUILD_NPI */
@@ -2087,9 +2084,6 @@ defm V_CVT_F32_BF8       : VOP1_Real_NoDstSel_SDWA_gfx9<0x55>;
 defm V_CVT_PK_F32_FP8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x56>;
 defm V_CVT_PK_F32_BF8    : VOP1_Real_NoDstSel_SDWA_gfx9<0x57>;
 
-#ifdef LLPC_BUILD_NPI
-let SubtargetPredicate = HasPrngInst in
-#endif /* LLPC_BUILD_NPI */
 defm V_PRNG_B32            : VOP1_Real_gfx9 <0x58>;
 defm V_PERMLANE16_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x059>;
 defm V_PERMLANE32_SWAP_B32 : VOP1_OpSel_Real_e32e64_gfx9<0x05a>;

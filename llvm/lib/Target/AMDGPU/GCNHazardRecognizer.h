@@ -108,6 +108,9 @@ private:
   bool fixVALUTransCoexecutionHazards(MachineInstr *MI);
 #endif /* LLPC_BUILD_NPI */
   bool fixWMMAHazards(MachineInstr *MI);
+#if LLPC_BUILD_NPI
+  bool fixWMMACoexecutionHazards(MachineInstr *MI);
+#endif /* LLPC_BUILD_NPI */
   bool fixShift64HighRegBug(MachineInstr *MI);
   bool fixVALUMaskWriteHazard(MachineInstr *MI);
   bool fixRequiredExportPriority(MachineInstr *MI);

@@ -6205,13 +6205,25 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Value *Flags = EmitScalarExpr(E->getArg(1));
     LValue NDRangeL = EmitAggExprToLValue(E->getArg(2));
     llvm::Value *Range = NDRangeL.getAddress().emitRawPointer(*this);
-    llvm::Type *RangeTy = NDRangeL.getAddress().getType();
+
+    // FIXME: Look through the addrspacecast which may exist to the stack
+    // temporary as a hack.
+    //
+    // This is hardcoding the assumed ABI of the target function. This assumes
+    // direct passing for every argument except NDRange, which is assumed to be
+    // byval or byref indirect passed.
+    //
+    // This should be fixed to query a signature from CGOpenCLRuntime, and go
+    // through EmitCallArgs to get the correct target ABI.
+    Range = Range->stripPointerCasts();
+
+    llvm::Type *RangePtrTy = Range->getType();
 
     if (NumArgs == 4) {
       // The most basic form of the call with parameters:
       // queue_t, kernel_enqueue_flags_t, ndrange_t, block(void)
       Name = "__enqueue_kernel_basic";
-      llvm::Type *ArgTys[] = {QueueTy, Int32Ty, RangeTy, GenericVoidPtrTy,
+      llvm::Type *ArgTys[] = {QueueTy, Int32Ty, RangePtrTy, GenericVoidPtrTy,
                               GenericVoidPtrTy};
       llvm::FunctionType *FTy = llvm::FunctionType::get(
           Int32Ty, llvm::ArrayRef<llvm::Type *>(ArgTys), false);
@@ -6286,7 +6298,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
                                    Block,  ConstantInt::get(IntTy, NumArgs - 4),
                                    ElemPtr};
       llvm::Type *const ArgTys[] = {
-          QueueTy,          IntTy, RangeTy,           GenericVoidPtrTy,
+          QueueTy,          IntTy, RangePtrTy,        GenericVoidPtrTy,
           GenericVoidPtrTy, IntTy, ElemPtr->getType()};
 
       llvm::FunctionType *FTy = llvm::FunctionType::get(Int32Ty, ArgTys, false);
@@ -6337,7 +6349,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           Builder.CreatePointerCast(Info.BlockArg, GenericVoidPtrTy);
 
       std::vector<llvm::Type *> ArgTys = {
-          QueueTy, Int32Ty, RangeTy,          Int32Ty,
+          QueueTy, Int32Ty, RangePtrTy,       Int32Ty,
           PtrTy,   PtrTy,   GenericVoidPtrTy, GenericVoidPtrTy};
 
       std::vector<llvm::Value *> Args = {Queue,     Flags,         Range,
@@ -19797,6 +19809,14 @@ case Builtin::BI__builtin_hlsl_elementwise_isinf: {
         RValFalse.isScalar()
             ? RValFalse.getScalarVal()
             : RValFalse.getAggregatePointer(E->getArg(2)->getType(), *this);
+    if (auto *VTy = E->getType()->getAs<VectorType>()) {
+      if (!OpTrue->getType()->isVectorTy())
+        OpTrue =
+            Builder.CreateVectorSplat(VTy->getNumElements(), OpTrue, "splat");
+      if (!OpFalse->getType()->isVectorTy())
+        OpFalse =
+            Builder.CreateVectorSplat(VTy->getNumElements(), OpFalse, "splat");
+    }
 
     Value *SelectVal =
         Builder.CreateSelect(OpCond, OpTrue, OpFalse, "hlsl.select");

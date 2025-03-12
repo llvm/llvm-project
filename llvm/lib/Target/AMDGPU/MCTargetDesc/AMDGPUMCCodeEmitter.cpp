@@ -279,12 +279,17 @@ static uint32_t getLit64Encoding(uint64_t Val, const MCSubtargetInfo &STI) {
     return 248;
 
 #if LLPC_BUILD_NPI
-  if (STI.hasFeature(AMDGPU::Feature64BitLiterals) &&
-      !AMDGPU::isValid32BitLiteral(Val, IsFP))
-    return 254;
+  // The rest part needs to align with AMDGPUInstPrinter::printImmediate64.
 
-#endif /* LLPC_BUILD_NPI */
+  if (IsFP) {
+    return STI.hasFeature(AMDGPU::Feature64BitLiterals) && Lo_32(Val) ? 254
+                                                                      : 255;
+  }
+
+  return STI.hasFeature(AMDGPU::Feature64BitLiterals) && Hi_32(Val) ? 254 : 255;
+#else /* LLPC_BUILD_NPI */
   return 255;
+#endif /* LLPC_BUILD_NPI */
 }
 
 #if LLPC_BUILD_NPI

@@ -15,6 +15,12 @@ The LLVM Project uses `GitHub <https://github.com/>`_ for
 This page describes how the LLVM Project users and developers can
 participate in the project using GitHub.
 
+Before your first PR
+====================
+
+Please ensure that you have set a valid email address in your GitHub account,
+see :ref:`github-email-address`.
+
 Branches
 ========
 
@@ -144,15 +150,31 @@ Approvals
 Before merging a PR you must have the required approvals. See
 :ref:`lgtm_how_a_patch_is_accepted` for more details.
 
+
 Landing your change
 -------------------
 
-When your PR has been approved you can merge your changes.
+After your PR is approved, ensure that:
 
-If you do not have write permissions for the repository, the merge button in
-GitHub's web interface will be disabled. If this is the case, continue following
-the steps here but ask one of your reviewers to click the merge button on your
-behalf.
+  * The PR title and description describe the final changes. These will be used
+    as the title and message of the final squashed commit. The titles and
+    messages of commits in the PR will **not** be used.
+  * You have set a valid email address in your GitHub account, see :ref:`github-email-address`.
+
+.. note::
+   The LLVM Project monorepo on GitHub is configured to always use "Squash
+   and Merge" as the pull request merge option when using the web interface.
+   With this option, GitHub uses the PR summary as the default commit
+   message.
+
+   Users with write access who can merge PRs have a final opportunity to edit
+   the commit title and message before merging. However, this option is not
+   available to contributors without write access.
+
+At this point, you can merge your changes. If you do not have write permissions
+for the repository, the merge button in GitHub's web interface will be
+disabled. If this is the case, continue following the steps here but ask one of
+your reviewers to click the merge button on your behalf.
 
 If the PR is a single commit, all you need to do is click the merge button in
 GitHub's web interface.
@@ -213,7 +235,6 @@ commonly used first:
   to a branch in your fork, this is ok and expected. Github's UI for the pull
   request will understand that you're rebasing just your patches, and display
   this result correctly with a note that a force push did occur.
-
 
 Pre-merge Continuous Integration (CI)
 -------------------------------------

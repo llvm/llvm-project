@@ -597,13 +597,12 @@ MCRegister SIRegisterInfo::reservedPrivateSegmentBufferReg(
 
 std::pair<unsigned, unsigned>
 SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
-  unsigned MaxNumAGPRs = MaxNumVGPRs;
+  const unsigned MaxVectorRegs = ST.getMaxNumVGPRs(MF);
+
+  unsigned MaxNumVGPRs = MaxVectorRegs;
+  unsigned MaxNumAGPRs = 0;
 #if LLPC_BUILD_NPI
   unsigned NumArchVGPRs = ST.has1024AddressableVGPRs() ? 1024 : 256;
-#else /* LLPC_BUILD_NPI */
-  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
 #endif /* LLPC_BUILD_NPI */
 
   // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
@@ -615,22 +614,57 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
   // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
   //       register file accordingly.
   if (ST.hasGFX90AInsts()) {
-    if (MFI->mayNeedAGPRs()) {
-      MaxNumVGPRs /= 2;
-      MaxNumAGPRs = MaxNumVGPRs;
-    } else {
+    unsigned MinNumAGPRs = 0;
+    const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
 #if LLPC_BUILD_NPI
-      if (MaxNumVGPRs > NumArchVGPRs) {
-        MaxNumAGPRs = MaxNumVGPRs - NumArchVGPRs;
-        MaxNumVGPRs = NumArchVGPRs;
 #else /* LLPC_BUILD_NPI */
-      if (MaxNumVGPRs > TotalNumVGPRs) {
-        MaxNumAGPRs = MaxNumVGPRs - TotalNumVGPRs;
-        MaxNumVGPRs = TotalNumVGPRs;
+    const unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
 #endif /* LLPC_BUILD_NPI */
-      } else
-        MaxNumAGPRs = 0;
+
+    const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
+
+    // TODO: Move this logic into subtarget on IR function
+    //
+    // TODO: The lower bound should probably force the number of required
+    // registers up, overriding amdgpu-waves-per-eu.
+    std::tie(MinNumAGPRs, MaxNumAGPRs) = AMDGPU::getIntegerPairAttribute(
+        MF.getFunction(), "amdgpu-agpr-alloc", DefaultNumAGPR,
+        /*OnlyFirstRequired=*/true);
+
+    if (MinNumAGPRs == DefaultNumAGPR.first) {
+      // Default to splitting half the registers if AGPRs are required.
+      MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
+    } else {
+      // Align to accum_offset's allocation granularity.
+      MinNumAGPRs = alignTo(MinNumAGPRs, 4);
+
+      MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
     }
+
+    // Clamp values to be inbounds of our limits, and ensure min <= max.
+
+    MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
+    MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
+
+#if LLPC_BUILD_NPI
+    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, NumArchVGPRs);
+#else /* LLPC_BUILD_NPI */
+    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, TotalNumVGPRs);
+#endif /* LLPC_BUILD_NPI */
+    MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
+
+#if LLPC_BUILD_NPI
+    assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
+           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= NumArchVGPRs &&
+           "invalid register counts");
+#else /* LLPC_BUILD_NPI */
+    assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
+           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= TotalNumVGPRs &&
+           "invalid register counts");
+#endif /* LLPC_BUILD_NPI */
+  } else if (ST.hasMAIInsts()) {
+    // On gfx908 the number of AGPRs always equals the number of VGPRs.
+    MaxNumAGPRs = MaxNumVGPRs = MaxVectorRegs;
   }
 
   return std::pair(MaxNumVGPRs, MaxNumAGPRs);

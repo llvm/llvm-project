@@ -194,8 +194,8 @@ private:
   const TargetMachine &TM;
 };
 
-void initializeAMDGPUReserveWWMRegsPass(PassRegistry &);
-extern char &AMDGPUReserveWWMRegsID;
+void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
+extern char &AMDGPUReserveWWMRegsLegacyID;
 
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
@@ -521,9 +521,9 @@ void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
 void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
-ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass();
-void initializeAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass(PassRegistry &);
-extern char &AMDGPUOpenCLEnqueuedBlockLoweringLegacyID;
+ModulePass *createAMDGPUExportKernelRuntimeHandlesLegacyPass();
+void initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(PassRegistry &);
+extern char &AMDGPUExportKernelRuntimeHandlesLegacyID;
 
 void initializeGCNNSAReassignLegacyPass(PassRegistry &);
 extern char &GCNNSAReassignID;

@@ -1690,7 +1690,7 @@ live:
   br label %export
 
 export:
-  %proxy = phi float [ undef, %kill ], [ %scale, %live ]
+  %proxy = phi float [ poison, %kill ], [ %scale, %live ]
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %proxy, float %proxy, float %proxy, float %proxy, i1 true, i1 true) #3
   ret void
 }

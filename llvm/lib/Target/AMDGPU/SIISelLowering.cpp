@@ -647,7 +647,6 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::i16, Custom);
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
-    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
 
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i32, Custom);
 
@@ -2366,6 +2365,20 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
            Subtarget->hasUnalignedBufferAccessEnabled();
   }
 
+  // Ensure robust out-of-bounds guarantees for buffer accesses are met if
+  // RelaxedBufferOOBMode is disabled. Normally hardware will ensure proper
+  // out-of-bounds behavior, but in the edge case where an access starts
+  // out-of-bounds and then enter in-bounds, the entire access would be treated
+  // as out-of-bounds. Prevent misaligned memory accesses by requiring the
+  // natural alignment of buffer accesses.
+  if (AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
+      AddrSpace == AMDGPUAS::BUFFER_RESOURCE ||
+      AddrSpace == AMDGPUAS::BUFFER_STRIDED_POINTER) {
+    if (!Subtarget->hasRelaxedBufferOOBMode() &&
+        Alignment < Align(PowerOf2Ceil(divideCeil(Size, 8))))
+      return false;
+  }
+
   // Smaller than dword value must be aligned.
   if (Size < 32)
     return false;
@@ -2659,12 +2672,24 @@ SDValue SITargetLowering::getGlobalWorkGroupId(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
     AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
-    AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const {
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV,
+    bool ClustersKnownToBeUsed) const {
   // WorkGroupIdXYZ = ClusterId == 0 ?
   //   ClusterIdXYZ :
   //   ClusterIdXYZ * (ClusterMaxIdXYZ + 1) + ClusterWorkGroupIdXYZ
   SDValue ClusterIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterIdPV);
   SDLoc SL(ClusterIdXYZ);
+  SDValue ClusterMaxIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterMaxIdPV);
+  SDValue One = DAG.getConstant(1, SL, VT);
+  SDValue ClusterSizeXYZ = DAG.getNode(ISD::ADD, SL, VT, ClusterMaxIdXYZ, One);
+  SDValue ClusterWorkGroupIdXYZ =
+      getPreloadedValue(DAG, MFI, VT, ClusterWorkGroupIdPV);
+  SDValue GlobalIdXYZ =
+      DAG.getNode(ISD::ADD, SL, VT, ClusterWorkGroupIdXYZ,
+                  DAG.getNode(ISD::MUL, SL, VT, ClusterIdXYZ, ClusterSizeXYZ));
+  if (ClustersKnownToBeUsed)
+    return GlobalIdXYZ;
+
   using namespace AMDGPU::Hwreg;
   SDValue ClusterIdField = DAG.getTargetConstant(
       AMDGPU::isGFX1250Only(*Subtarget)
@@ -2674,14 +2699,6 @@ SDValue SITargetLowering::getGlobalWorkGroupId(
   SDNode *GetReg =
       DAG.getMachineNode(AMDGPU::S_GETREG_B32_const, SL, VT, ClusterIdField);
   SDValue ClusterId(GetReg, 0);
-  SDValue ClusterMaxIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterMaxIdPV);
-  SDValue One = DAG.getConstant(1, SL, VT);
-  SDValue ClusterSizeXYZ = DAG.getNode(ISD::ADD, SL, VT, ClusterMaxIdXYZ, One);
-  SDValue ClusterWorkGroupIdXYZ =
-      getPreloadedValue(DAG, MFI, VT, ClusterWorkGroupIdPV);
-  SDValue GlobalIdXYZ =
-      DAG.getNode(ISD::ADD, SL, VT, ClusterWorkGroupIdXYZ,
-                  DAG.getNode(ISD::MUL, SL, VT, ClusterIdXYZ, ClusterSizeXYZ));
   SDValue Zero = DAG.getConstant(0, SL, VT);
   return DAG.getNode(ISD::SELECT_CC, SL, VT, ClusterId, Zero, ClusterIdXYZ,
                      GlobalIdXYZ, DAG.getCondCode(ISD::SETEQ));
@@ -2693,23 +2710,25 @@ SDValue SITargetLowering::getPreloadedValue(
     AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
 #if LLPC_BUILD_NPI
   // Return the global position in the grid where clusters are supported.
+  std::optional<std::array<unsigned, 3>> ClusterDims = MFI.getClusterDims();
   if (Subtarget->hasClusters()) {
+    bool ClustersKnownToBeUsed = ClusterDims.has_value();
     switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       return getGlobalWorkGroupId(
           DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_X,
           AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X, ClustersKnownToBeUsed);
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
       return getGlobalWorkGroupId(
           DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_Y,
           AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y, ClustersKnownToBeUsed);
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
       return getGlobalWorkGroupId(
           DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_Z,
           AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z, ClustersKnownToBeUsed);
     default:
       break;
     }
@@ -2746,7 +2765,6 @@ SDValue SITargetLowering::getPreloadedValue(
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
   const ArgDescriptor ClusterWorkGroupMaxFlatID =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
-  std::optional<std::array<unsigned, 3>> ClusterDims = MFI.getClusterDims();
 
   auto LoadConstant = [&](unsigned N) {
     return DAG.getConstant(N, SDLoc(), VT);
@@ -7957,14 +7975,14 @@ SDValue SITargetLowering::lowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
     // TODO: Handle strictfp
     if (Op.getOpcode() != ISD::FP_ROUND)
       return Op;
-#endif /* LLPC_BUILD_NPI */
 
-#if LLPC_BUILD_NPI
     SDValue FpToFp16 = DAG.getNode(ISD::FP_TO_FP16, DL, MVT::i32, Src);
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, MVT::i16, FpToFp16);
     return DAG.getNode(ISD::BITCAST, DL, MVT::f16, Trunc);
   }
+#endif /* LLPC_BUILD_NPI */
 
+#if LLPC_BUILD_NPI
   assert (DstVT.getScalarType() == MVT::bf16 &&
           "custom lower FP_ROUND for f16 or bf16");
   assert (Subtarget->hasBF16ConversionInsts() && "f32 -> bf16 is legal");

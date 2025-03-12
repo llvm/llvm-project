@@ -56,6 +56,7 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUConditionalDiscard.cpp
   AMDGPUCtorDtorLowering.cpp
   AMDGPUExportClustering.cpp
+  AMDGPUExportKernelRuntimeHandles.cpp
   AMDGPUFrameLowering.cpp
   AMDGPUGlobalISelDivergenceLowering.cpp
   AMDGPUGlobalISelUtils.cpp
@@ -87,7 +88,6 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMCResourceInfo.cpp
   AMDGPUMarkLastScratchLoad.cpp
   AMDGPUMIRFormatter.cpp
-  AMDGPUOpenCLEnqueuedBlockLowering.cpp
   AMDGPUPerfHintAnalysis.cpp
   AMDGPUPostLegalizerCombiner.cpp
   AMDGPUPreLegalizerCombiner.cpp
