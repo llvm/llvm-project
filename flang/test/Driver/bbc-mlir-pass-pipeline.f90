@@ -47,6 +47,7 @@ end program
 
 ! CHECK-NEXT: PolymorphicOpConversion
 ! CHECK-NEXT: AssumedRankOpConversion
+! CHECK-NEXT: SimplifyFIROperations
 
 ! CHECK-NEXT: Pipeline Collection : ['fir.global', 'func.func', 'omp.declare_reduction', 'omp.private']
 ! CHECK-NEXT: 'fir.global' Pipeline

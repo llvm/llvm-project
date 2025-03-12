@@ -486,4 +486,18 @@ def GenRuntimeCallsForTest
   let dependentDialects = ["fir::FIROpsDialect", "mlir::func::FuncDialect"];
 }
 
+def SimplifyFIROperations : Pass<"simplify-fir-operations", "mlir::ModuleOp"> {
+  let summary = "Simplifies complex FIR operations";
+  let description = [{
+    Expands complex FIR operations into their equivalent using
+    FIR, SCF and other usual dialects. It may also generate calls
+    to Fortran runtime.
+  }];
+
+  let options = [Option<
+      "preferInlineImplementation", "prefer-inline-implementation", "bool",
+      /*default=*/"false",
+      "Prefer expanding without using Fortran runtime calls.">];
+}
+
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

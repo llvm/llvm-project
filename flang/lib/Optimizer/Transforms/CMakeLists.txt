@@ -31,6 +31,7 @@ add_flang_library(FIRTransforms
   DebugTypeGenerator.cpp
   SetRuntimeCallAttributes.cpp
   GenRuntimeCallsForTest.cpp
+  SimplifyFIROperations.cpp
 
   DEPENDS
   CUFAttrs
