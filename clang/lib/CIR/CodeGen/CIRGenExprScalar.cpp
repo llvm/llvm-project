@@ -502,7 +502,7 @@ public:
     // Handle pointer conversions next: pointers can only be converted to/from
     // other pointers and integers. Check for pointer types in terms of LLVM, as
     // some native types (like Obj-C id) may map to a pointer type.
-    if (isa_cast<cir::PointerType>(mlirDstType)) {
+    if (auto dstPT = dyn_cast<cir::PointerType>(mlirDstType)) {
       cgf.getCIRGenModule().errorNYI(loc, "pointer casts");
       return builder.getNullPtr(dstPT, src.getLoc());
     }
@@ -703,8 +703,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     return builder.createPtrToInt(Visit(subExpr), cgf.convertType(destTy));
   }
   case CK_ToVoid:
-    cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
-                                   "ignored expression on void cast");
+    cgf.emitIgnoredExpr(subExpr);
     return {};
 
   case CK_IntegralToFloating:

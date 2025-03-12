@@ -58,6 +58,7 @@ void should_not_cast() {
 
   unsigned uu = (unsigned)x1;
   bool ib = (bool)x1;
+  (void) ib;
 }
 
 // CHECK:     cir.func @should_not_cast
