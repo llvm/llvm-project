@@ -4019,7 +4019,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
         KnownBits KnownMetadata(Lower->getBitWidth());
         computeKnownBitsFromRangeMetadata(*MD, KnownMetadata);
-        Known0=KnownMetadata;
+        Known0 = KnownMetadata;
         if (VT.isVector()) {
           if (!getDataLayout().isLittleEndian())
             break;
