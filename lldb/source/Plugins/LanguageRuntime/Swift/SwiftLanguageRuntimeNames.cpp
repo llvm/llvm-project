@@ -136,6 +136,43 @@ AreFuncletsOfSameAsyncClosure(swift::Demangle::NodePointer closure1,
   return Node::deepEquals(closure1_function, closure2_function);
 }
 
+std::optional<uint64_t>
+SwiftLanguageRuntime::GetFuncletNumber(swift::Demangle::NodePointer node) {
+  if (!node)
+    return {};
+  NodePointer node_id =
+      childAtPath(node, {Node::Kind::AsyncSuspendResumePartialFunction,
+                         Node::Kind::Number});
+  if (!node_id)
+    node_id = childAtPath(node, {Node::Kind::AsyncAwaitResumePartialFunction,
+                                 Node::Kind::Number});
+  if (node_id) {
+    if (node_id->hasIndex())
+      return node_id->getIndex();
+
+    // This should never happen, log it if it does:
+    std::string node_dump = getNodeTreeAsString(node);
+    LLDB_LOGF(GetLog(LLDBLog::Demangle),
+              "%s::Found a number node without a number:\n%s", __FUNCTION__,
+              node_dump.c_str());
+    return {};
+  }
+
+  // If this is an async function and there was no number, then this is an entry
+  // funclet. Assign it number 0.
+  if (SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(node))
+    return 0;
+  return {};
+}
+
+std::optional<uint64_t>
+SwiftLanguageRuntime::GetFuncletNumber(llvm::StringRef name) {
+  using namespace swift::Demangle;
+  Context ctx;
+  NodePointer node = SwiftLanguageRuntime::DemangleSymbolAsNode(name, ctx);
+  return GetFuncletNumber(node);
+}
+
 SwiftLanguageRuntime::FuncletComparisonResult
 SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(llvm::StringRef name1,
                                                      llvm::StringRef name2) {

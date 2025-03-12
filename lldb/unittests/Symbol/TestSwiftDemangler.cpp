@@ -1,12 +1,16 @@
 #include "gtest/gtest.h"
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#include "llvm/ADT/Sequence.h"
 
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
 static constexpr auto IsSwiftMangledName =
     SwiftLanguageRuntime::IsSwiftMangledName;
+static constexpr auto GetFuncletNumber = [](StringRef name) {
+  return SwiftLanguageRuntime::GetFuncletNumber(name);
+};
 static constexpr auto IsAnySwiftAsyncFunctionSymbol = [](StringRef name) {
   return SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(name);
 };
@@ -47,6 +51,13 @@ CheckGroupOfFuncletsFromDifferentFunctions(ArrayRef<StringRef> funclets1,
     }
 }
 
+/// Check that funclets contain a sequence of funclet names whose "async
+/// numbers" go from 0 to size(funclets).
+static void CheckFuncletNumbersAreARange(ArrayRef<StringRef> funclets) {
+  for (auto idx : llvm::seq<int>(0, funclets.size()))
+    EXPECT_EQ(idx, GetFuncletNumber(funclets[idx]));
+}
+
 TEST(TestSwiftDemangleAsyncNames, BasicAsync) {
   // "sayBasic" == a basic async function
   // "sayGeneric" == a generic async function
@@ -71,6 +82,8 @@ TEST(TestSwiftDemangleAsyncNames, BasicAsync) {
   CheckGroupOfFuncletsFromSameFunction(basic_funclets);
   CheckGroupOfFuncletsFromSameFunction(generic_funclets);
   CheckGroupOfFuncletsFromDifferentFunctions(basic_funclets, generic_funclets);
+  CheckFuncletNumbersAreARange(basic_funclets);
+  CheckFuncletNumbersAreARange(generic_funclets);
 }
 
 TEST(TestSwiftDemangleAsyncNames, ClosureAsync) {
@@ -127,6 +140,10 @@ TEST(TestSwiftDemangleAsyncNames, ClosureAsync) {
                                              nested2_funclets_top_not_async);
   CheckGroupOfFuncletsFromDifferentFunctions(nested2_funclets2,
                                              nested2_funclets_top_not_async);
+  CheckFuncletNumbersAreARange(nested1_funclets);
+  CheckFuncletNumbersAreARange(nested2_funclets1);
+  CheckFuncletNumbersAreARange(nested2_funclets2);
+  CheckFuncletNumbersAreARange(nested2_funclets_top_not_async);
 }
 
 TEST(TestSwiftDemangleAsyncNames, StaticAsync) {
@@ -153,4 +170,20 @@ TEST(TestSwiftDemangleAsyncNames, StaticAsync) {
       "$s1a8sayBasicyySSYaF", "$s1a8sayBasicyySSYaFTY0_"};
   CheckGroupOfFuncletsFromDifferentFunctions(static_async_funclets,
                                              other_funclets);
+  CheckFuncletNumbersAreARange(static_async_funclets);
+}
+
+TEST(TestSwiftDemangleAsyncNames, NonAsync) {
+  // func factorial(_ n:Int) -> Int {
+  {
+    StringRef func = "$s4test9factorialyS2iF";
+    EXPECT_EQ(GetFuncletNumber(func), std::nullopt);
+  }
+
+  // func factorial(_ n:Int) async -> Int {
+  //   func inner_factorial(_ n:Int) -> Int {
+  {
+    StringRef func = "$s4test9factorialyS2iYaF06inner_B0L_yS2iF";
+    EXPECT_EQ(GetFuncletNumber(func), std::nullopt);
+  }
 }

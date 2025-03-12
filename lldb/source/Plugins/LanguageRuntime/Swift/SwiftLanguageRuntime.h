@@ -181,6 +181,14 @@ public:
   /// function, or suspend resume partial function symbol.
   static bool IsAnySwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node);
 
+  /// If node is a Swift async funclet, return its funclet number.
+  static std::optional<uint64_t>
+  GetFuncletNumber(swift::Demangle::NodePointer node);
+
+  /// If name is a Swift async funclet, return its funclet number.
+  static std::optional<uint64_t>
+  GetFuncletNumber(llvm::StringRef name);
+
   /// Return the async context address using the target's specific register.
   static lldb::addr_t GetAsyncContext(RegisterContext *regctx);
 
