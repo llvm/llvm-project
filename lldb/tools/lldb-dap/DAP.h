@@ -222,7 +222,7 @@ struct DAP {
   ///     Transport for this debug session.
   DAP(llvm::StringRef path, std::ofstream *log,
       const ReplMode default_repl_mode,
-      const std::vector<std::string> &pre_init_commands, Transport &transport);
+      std::vector<std::string> pre_init_commands, Transport &transport);
 
   ~DAP();
 

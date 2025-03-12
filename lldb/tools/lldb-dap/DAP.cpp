@@ -66,12 +66,11 @@ namespace lldb_dap {
 
 DAP::DAP(llvm::StringRef path, std::ofstream *log,
          const ReplMode default_repl_mode,
-         const std::vector<std::string> &pre_init_commands,
-         Transport &transport)
+         std::vector<std::string> pre_init_commands, Transport &transport)
     : debug_adapter_path(path), log(log), transport(transport),
       broadcaster("lldb-dap"), exception_breakpoints(),
-      pre_init_commands(pre_init_commands), focus_tid(LLDB_INVALID_THREAD_ID),
-      stop_at_entry(false), is_attach(false),
+      pre_init_commands(std::move(pre_init_commands)),
+      focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
       display_extended_backtrace(false),
