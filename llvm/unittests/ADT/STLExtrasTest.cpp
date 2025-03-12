@@ -428,8 +428,16 @@ struct List {
 std::list<int>::const_iterator begin(const List &list) {
   return list.data.begin();
 }
-
 std::list<int>::const_iterator end(const List &list) { return list.data.end(); }
+
+struct Pairs {
+  std::vector<std::pair<std::string, int>> data;
+  using const_iterator =
+      std::vector<std::pair<std::string, int>>::const_iterator;
+};
+
+Pairs::const_iterator begin(const Pairs &p) { return p.data.begin(); }
+Pairs::const_iterator end(const Pairs &p) { return p.data.end(); }
 
 struct requires_move {};
 int *begin(requires_move &&) { return nullptr; }
@@ -522,6 +530,15 @@ TEST(STLExtrasTest, ConcatRangeADL) {
   some_namespace::some_struct S1;
   S1.data = {3, 4};
   EXPECT_THAT(concat<const int>(S0, S1), ElementsAre(1, 2, 3, 4));
+}
+
+TEST(STLExtrasTest, MakeFirstSecondRangeADL) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::Pairs Pairs;
+  Pairs.data = {{"foo", 1}, {"bar", 2}};
+  EXPECT_THAT(make_first_range(Pairs), ElementsAre("foo", "bar"));
+  EXPECT_THAT(make_second_range(Pairs), ElementsAre(1, 2));
 }
 
 template <typename T> struct Iterator {
