@@ -17,6 +17,7 @@
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
@@ -25,9 +26,6 @@ namespace xegpu {
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h.inc"
 } // namespace xegpu
 } // namespace mlir
-
-#define DEBUG_TYPE "xegpu-subgroup-distribute"
-#define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
 
 using namespace mlir;
 using namespace mlir::dataflow;
@@ -206,8 +204,10 @@ static SGMap getDefaultSgMap(VectorType vectorTy) {
 
 /// Helper Function to get the expected layouts for DPAS operands. `wi_data` is
 /// set according to the following criteria:
-/// * For A operand, the data must be packed in minimum `packedDpasASizeInBits`
-/// * For B operand, the data must be packed in minimum `packedDpasBSizeInBits`
+/// * For A operand, the data must be packed in minimum
+/// `packedSizeInBitsForDefault`
+/// * For B operand, the data must be packed in minimum
+/// `packedSizeInBitsForDpasB`
 static SGMap getSGMapForDPASOperand(VectorType vectorTy, unsigned operandNum) {
   auto elementTy = vectorTy.getElementType();
   assert(elementTy.isIntOrFloat() &&
@@ -299,40 +299,48 @@ LogicalResult
 SGMapPropagation::visitOperation(Operation *op,
                                  ArrayRef<SGMapLattice *> operands,
                                  ArrayRef<const SGMapLattice *> results) {
-  if (auto dpas = dyn_cast<xegpu::DpasOp>(op))
-    visitDpasOp(dpas, operands, results);
-  else if (auto store = dyn_cast<xegpu::StoreNdOp>(op))
-    visitStoreNdOp(store, operands, results);
-  else if (auto load = dyn_cast<xegpu::LoadNdOp>(op))
-    visitLoadNdOp(load, operands, results);
-  else if (auto transpose = dyn_cast<vector::TransposeOp>(op))
-    visitTransposeOp(transpose, operands, results);
-  else if (auto bitcast = dyn_cast<vector::BitCastOp>(op))
-    visitVectorBitcastOp(bitcast, operands, results);
-  else if (auto loadGather = dyn_cast<xegpu::LoadGatherOp>(op))
-    visitLoadGatherOp(loadGather, operands, results);
-  else if (auto createDesc = dyn_cast<xegpu::CreateDescOp>(op))
-    visitCreateDescOp(createDesc, operands, results);
-  else if (auto storeScatter = dyn_cast<xegpu::StoreScatterOp>(op))
-    visitStoreScatterOp(storeScatter, operands, results);
-  else if (auto updateNdOffset = dyn_cast<xegpu::UpdateNdOffsetOp>(op))
-    visitUpdateNdOffsetOp(updateNdOffset, operands, results);
-  else if (auto reduction = dyn_cast<vector::MultiDimReductionOp>(op))
-    visitVectorMultiReductionOp(reduction, operands, results);
-  /// No need to propagate the layout to operands in CreateNdDescOp because they
-  /// are scalars (offsets, sizes, etc.).
-  else if (auto createNdDesc = dyn_cast<xegpu::CreateNdDescOp>(op))
-    return success();
-  /// All other ops
-  else {
-    for (const SGMapLattice *r : results) {
-      for (SGMapLattice *operand : operands) {
-        /// Propagate the layout of the result to the operand.
-        if (r->getValue().isAssigned())
-          meet(operand, *r);
-      }
-    }
-  }
+  TypeSwitch<Operation *>(op)
+      .Case<xegpu::DpasOp>(
+          [&](auto dpasOp) { visitDpasOp(dpasOp, operands, results); })
+      .Case<xegpu::StoreNdOp>(
+          [&](auto storeNdOp) { visitStoreNdOp(storeNdOp, operands, results); })
+      .Case<xegpu::StoreScatterOp>([&](auto storeScatterOp) {
+        visitStoreScatterOp(storeScatterOp, operands, results);
+      })
+      .Case<xegpu::LoadNdOp>(
+          [&](auto loadNdOp) { visitLoadNdOp(loadNdOp, operands, results); })
+      .Case<xegpu::LoadGatherOp>([&](auto loadGatherOp) {
+        visitLoadGatherOp(loadGatherOp, operands, results);
+      })
+      .Case<xegpu::CreateDescOp>([&](auto createDescOp) {
+        visitCreateDescOp(createDescOp, operands, results);
+      })
+      .Case<xegpu::UpdateNdOffsetOp>([&](auto updateNdOffsetOp) {
+        visitUpdateNdOffsetOp(updateNdOffsetOp, operands, results);
+      })
+      /// No need to propagate the layout to operands in CreateNdDescOp because
+      /// they are scalars (offsets, sizes, etc.).
+      .Case<xegpu::CreateNdDescOp>(
+          [&](auto createNdDescOp) { return success(); })
+      .Case<vector::TransposeOp>([&](auto transposeOp) {
+        visitTransposeOp(transposeOp, operands, results);
+      })
+      .Case<vector::BitCastOp>([&](auto bitcastOp) {
+        visitVectorBitcastOp(bitcastOp, operands, results);
+      })
+      .Case<vector::MultiDimReductionOp>([&](auto reductionOp) {
+        visitVectorMultiReductionOp(reductionOp, operands, results);
+      })
+      /// All other ops.
+      .Default([&](Operation *op) {
+        for (const SGMapLattice *r : results) {
+          for (SGMapLattice *operand : operands) {
+            /// Propagate the layout of the result to the operand.
+            if (r->getValue().isAssigned())
+              meet(operand, *r);
+          }
+        }
+      });
   /// Add a dependency from each reult to program point after the operation.
   /// NOTE: not sure if this is required, but all other similar analysis do
   /// this.
@@ -411,7 +419,7 @@ void SGMapPropagation::visitLoadNdOp(xegpu::LoadNdOp load,
   if (!valueLayout.isAssigned())
     return;
   SGMap tensorDescLayout = valueLayout;
-  /// LoadNdOp has the transpose effect. However, at the stage of this analyis
+  /// LoadNdOp has the transpose effect. However, at the stage of this analysis
   /// this effect is not expected and should be abstracted away. Emit a warning.
   if (auto transpose = load.getTranspose()) {
     load.emitWarning("Transpose effect is not expected for LoadNdOp at "
@@ -529,7 +537,7 @@ void SGMapPropagation::visitStoreScatterOp(
     return;
   }
   auto valueLayout = getDefaultSgMap(storeScatter.getValueType());
-  SGMap storeScatterLayout;
+  SGMap storeScatterLayout = valueLayout;
   if (storeScatter.getTranspose()) {
     /// StoreScatteOp allows transpose effect. However, at the stage of this
     /// analyis this effect is not expected and should be abstracted away. Emit
@@ -537,8 +545,7 @@ void SGMapPropagation::visitStoreScatterOp(
     storeScatter.emitWarning("Transpose effect is not expected for "
                              "StoreScatterOp at SGMapPropagation stage.");
     storeScatterLayout = valueLayout.getTransposedLayout({1, 0});
-  } else
-    storeScatterLayout = valueLayout;
+  }
   /// Propagate the value layout.
   propagateIfChanged(operands[0], operands[0]->meet(valueLayout));
   /// Propagate the tensor descriptor layout.
