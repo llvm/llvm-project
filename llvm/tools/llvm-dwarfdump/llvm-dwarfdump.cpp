@@ -565,11 +565,13 @@ static bool lookup(ObjectFile &Obj, DWARFContext &DICtx, uint64_t Address,
 
   // TODO: it is neccessary to set proper SectionIndex here.
   // object::SectionedAddress::UndefSection works for only absolute addresses.
-  DILineInfo LineInfo;
-  if (std::optional<DILineInfo> DBGLineInfo = DICtx.getLineInfoForAddress(
-          {Lookup, object::SectionedAddress::UndefSection}))
-    LineInfo = *DBGLineInfo;
-  LineInfo.dump(OS);
+  if (DILineInfo LineInfo =
+          DICtx
+              .getLineInfoForAddress(
+                  {Lookup, object::SectionedAddress::UndefSection})
+              .value_or(DILineInfo())) {
+    LineInfo.dump(OS);
+  }
 
   return true;
 }

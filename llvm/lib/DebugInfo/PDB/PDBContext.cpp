@@ -69,7 +69,7 @@ std::optional<DILineInfo>
 PDBContext::getLineInfoForDataAddress(object::SectionedAddress Address) {
   // Unimplemented. S_GDATA and S_LDATA in CodeView (used to describe global
   // variables) aren't capable of carrying line information.
-  return std::nullopt;
+  return DILineInfo();
 }
 
 DILineInfoTable
@@ -85,9 +85,8 @@ PDBContext::getLineInfoForAddressRange(object::SectionedAddress Address,
     return Table;
 
   while (auto LineInfo = LineNumbers->getNext()) {
-    std::optional<DILineInfo> LineEntry = getLineInfoForAddress(
-        {LineInfo->getVirtualAddress(), Address.SectionIndex}, Specifier);
-    if (LineEntry)
+    if (std::optional<DILineInfo> LineEntry = getLineInfoForAddress(
+            {LineInfo->getVirtualAddress(), Address.SectionIndex}, Specifier))
       Table.push_back(
           std::make_pair(LineInfo->getVirtualAddress(), *LineEntry));
   }
@@ -98,22 +97,20 @@ DIInliningInfo
 PDBContext::getInliningInfoForAddress(object::SectionedAddress Address,
                                       DILineInfoSpecifier Specifier) {
   DIInliningInfo InlineInfo;
-  std::optional<DILineInfo> CurrentLine =
-      getLineInfoForAddress(Address, Specifier);
+  DILineInfo CurrentLine =
+      getLineInfoForAddress(Address, Specifier).value_or(DILineInfo());
 
   // Find the function at this address.
   std::unique_ptr<PDBSymbol> ParentFunc =
       Session->findSymbolByAddress(Address.Address, PDB_SymType::Function);
   if (!ParentFunc) {
-    if (CurrentLine)
-      InlineInfo.addFrame(*CurrentLine);
+    InlineInfo.addFrame(CurrentLine);
     return InlineInfo;
   }
 
   auto Frames = ParentFunc->findInlineFramesByVA(Address.Address);
   if (!Frames || Frames->getChildCount() == 0) {
-    if (CurrentLine)
-      InlineInfo.addFrame(*CurrentLine);
+    InlineInfo.addFrame(CurrentLine);
     return InlineInfo;
   }
 
@@ -137,8 +134,7 @@ PDBContext::getInliningInfoForAddress(object::SectionedAddress Address,
     InlineInfo.addFrame(LineInfo);
   }
 
-  if (CurrentLine)
-    InlineInfo.addFrame(*CurrentLine);
+  InlineInfo.addFrame(CurrentLine);
   return InlineInfo;
 }
 
