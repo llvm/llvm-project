@@ -612,3 +612,48 @@ RootDescriptorTable provides basic table structure:
 #. **NumDescriptorRanges**: Number of descriptor ranges
 #. **DescriptorRangesOffset**: Offset to descriptor range array
 
+Static Samplers
+~~~~~~~~~~~~~~~
+
+Static samplers provide a way to define fixed sampler states within the root signature itself.
+
+.. code-block:: cpp
+
+   struct StaticSamplerDesc {
+      FilterMode Filter;
+      TextureAddressMode AddressU;
+      TextureAddressMode AddressV;
+      TextureAddressMode AddressW;
+      float MipLODBias;
+      uint32_t MaxAnisotropy;
+      ComparisonFunc ComparisonFunc;
+      StaticBorderColor BorderColor;
+      float MinLOD;
+      float MaxLOD;
+      uint32_t ShaderRegister;
+      uint32_t RegisterSpace;
+      ShaderVisibility ShaderVisibility;
+   };
+
+
+The StaticSamplerDesc structure defines all properties of a static sampler:
+
+#. Filter: The filtering mode (e.g., point, linear, anisotropic) used for texture sampling. 
+   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter#syntax>`_. 
+#. AddressU: The addressing mode for the U texture coordinate.
+   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode>`_. 
+#. AddressV: The addressing mode for the V texture coordinate.
+#. AddressW: The addressing mode for the W texture coordinate.
+#. MipLODBias: Bias value applied to mipmap level of detail calculations.
+#. MaxAnisotropy: Maximum anisotropy level when using anisotropic filtering.
+#. ComparisonFunc: Comparison function used for comparison samplers.
+   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_comparison_func>`_. 
+#. BorderColor: Predefined border color used when address mode is set to border.
+   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_static_border_color>`_. 
+#. MinLOD: Minimum level of detail to use for sampling.
+#. MaxLOD: Maximum level of detail to use for sampling.
+#. ShaderRegister: The shader sampler register (s#) where this sampler is bound.
+#. RegisterSpace: The register space used for the binding.
+#. ShaderVisibility: Specifies which shader stages can access this sampler.
+   For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shader_visibility>`_. 
+
