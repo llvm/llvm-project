@@ -1076,7 +1076,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   // MemsetArg is the number of bytes for the memset libcall, and the number
   // of pattern repetitions if the memset.pattern intrinsic is being used.
   Value *MemsetArg;
-  std::optional<int64_t> BytesWritten = std::nullopt;
+  std::optional<int64_t> BytesWritten;
 
   if (PatternValue && (HasMemsetPattern || ForceMemsetPatternIntrinsic)) {
     const SCEV *TripCountS =
