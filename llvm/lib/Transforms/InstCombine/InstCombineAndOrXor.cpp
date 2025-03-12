@@ -2637,6 +2637,7 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   // This is a generous interpretation for noimplicitfloat, this is not a true
   // floating-point operation.
   //
+  // Assumes any IEEE-represented type has the sign bit in the high bit.
   // TODO: Unify with APInt matcher. This version allows undef unlike m_APInt
   Value *CastOp;
   if (match(Op0, m_ElementWiseBitCast(m_Value(CastOp))) &&
@@ -4047,6 +4048,8 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   // the number of instructions. This is still probably a better canonical form
   // as it enables FP value tracking.
   //
+  // Assumes any IEEE-represented type has the sign bit in the high bit.
+  //
   // This is generous interpretation of noimplicitfloat, this is not a true
   // floating-point operation.
   Value *CastOp;
@@ -4850,6 +4853,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     // This is generous interpretation of noimplicitfloat, this is not a true
     // floating-point operation.
     //
+    // Assumes any IEEE-represented type has the sign bit in the high bit.
     // TODO: Unify with APInt matcher. This version allows undef unlike m_APInt
     Value *CastOp;
     if (match(Op0, m_ElementWiseBitCast(m_Value(CastOp))) &&
