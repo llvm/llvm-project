@@ -27,6 +27,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -450,6 +451,14 @@ public:
 
       // Is Thumb? Check for movw.
       if ((InsnPart1 & 0xffb0) == 0xf200) {
+        // Expected instruction sequence:
+        //
+        // movw ip, #lower16
+        // movt ip, #upper16
+        // add ip, pc
+        // ldr.w pc, [ip]
+        // b . -4
+
         uint32_t MovwPart1 = InsnPart1;
         uint32_t MovwPart2 = support::endian::read16(
             PltContents.data() + Byte + 2, InstrEndianness);
@@ -471,36 +480,40 @@ public:
             ((MovtPart2 & 0xff) << 16) + ((MovtPart2 & 0x7000) << 12) +
             ((MovtPart1 & 0x400) << 17) + ((MovtPart1 & 0xf) << 28);
 
-        // Check for add.
-        uint32_t Add = support::endian::read16(PltContents.data() + Byte + 8,
-                                               InstrEndianness);
-        if (Add != 0x44fc)
-          continue;
-        // Check for ldr bottom half.
-        uint32_t Ldr1 = support::endian::read16(PltContents.data() + Byte + 10,
-                                                InstrEndianness);
-        if (Ldr1 != 0xf8dc)
-          continue;
-        // Check for ldr upper half.
-        uint32_t Ldr2 = support::endian::read16(PltContents.data() + Byte + 12,
-                                                InstrEndianness);
-        if (Ldr2 != 0xf000)
-          continue;
-        // Check for branch.
-        uint32_t Br = support::endian::read16(PltContents.data() + Byte + 14,
-                                              InstrEndianness);
-        if (Br != 0xe7fc)
-          continue;
+        auto CheckInsns = [](const uint8_t *Buf, llvm::endianness E) {
+          const uint16_t Insns[] = {
+              0x44fc,         // add ip, pc
+              0xf8dc, 0xf000, // ldr.w pc, [ip]
+              0xe7fc,         // b . -4
+          };
 
-        uint64_t Offset =
-            (PltSectionVA + Byte + 12) + OffsetLower + OffsetHigher;
-        Result.emplace_back(PltSectionVA + Byte, Offset);
+          for (unsigned I = 0; I < std::size(Insns); ++I) {
+            uint16_t Val = support::endian::read16(Buf + I * sizeof(*Insns), E);
+            if (Val != Insns[I]) {
+              return false;
+            }
+          }
+          return true;
+        };
+
+        if (CheckInsns(PltContents.data() + Byte + 8, InstrEndianness)) {
+          uint64_t Offset =
+              (PltSectionVA + Byte + 12) + OffsetLower + OffsetHigher;
+          Result.emplace_back(PltSectionVA + Byte, Offset);
+        }
         Byte += 12;
       } else {
         uint32_t Insn =
             support::endian::read32(PltContents.data() + Byte, InstrEndianness);
         // Is it a long entry?
         if (Insn == 0xe59fc004) {
+          // Expected instruction sequence:
+          //
+          //     ldr ip, L2
+          // L1: add ip, ip, pc
+          //     ldr pc, [ip]
+          // L2: .word   Offset(&(.got.plt) - L1 - 8
+
           // Check for add.
           if (support::endian::read32(PltContents.data() + Byte + 4,
                                       InstrEndianness) != 0xe08cc00f)
@@ -515,8 +528,14 @@ public:
           Result.emplace_back(PltSectionVA + Byte, Offset);
           Byte += 12;
         } else {
-          uint32_t Add1 = Insn;
+          // Expected instruction sequence:
+          //
+          // L1: add ip, pc,  #0x0NN00000  Offset(&(.got.plt) - L1 - 8
+          //     add ip, ip,  #0x000NN000  Offset(&(.got.plt) - L1 - 8
+          //     ldr pc, [ip, #0x00000NNN] Offset(&(.got.plt) - L1 - 8
+
           // Check for first add.
+          uint32_t Add1 = Insn;
           if ((Add1 & 0xe28fc600) != 0xe28fc600)
             continue;
           uint32_t Add2 = support::endian::read32(PltContents.data() + Byte + 4,
