@@ -617,3 +617,30 @@ bb1:
       EXPECT_FALSE(sandboxir::VecUtils::matchPack(NotPack));
   }
 }
+
+TEST_F(VecUtilsTest, GetAuxPassArg) {
+  // Check no aux argument.
+  EXPECT_EQ(sandboxir::VecUtils::getAuxPassArg("no aux arg"), "");
+  // Check an illegal aux argument.
+  EXPECT_EQ(sandboxir::VecUtils::getAuxPassArg("illegal (arg) other"), "");
+  // Check a valid argument.
+  EXPECT_EQ(sandboxir::VecUtils::getAuxPassArg("(some arg)other stuff"),
+            "some arg");
+  // Missing token.
+  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::getAuxPassArg("(arg other"),
+                     "Missing.*");
+}
+
+TEST_F(VecUtilsTest, StripAuxPassArg) {
+  // Check no aux argument.
+  EXPECT_EQ(sandboxir::VecUtils::stripAuxPassArg("no aux arg"), "no aux arg");
+  // Check a legal aux argument.
+  EXPECT_EQ(sandboxir::VecUtils::stripAuxPassArg("(legal aux arg)foo bar"),
+            "foo bar");
+  // Check an illegal aux argument.
+  EXPECT_EQ(sandboxir::VecUtils::stripAuxPassArg("illegal (arg) other"),
+            "illegal (arg) other");
+  // Missing token.
+  EXPECT_DEBUG_DEATH(sandboxir::VecUtils::stripAuxPassArg("(arg other"),
+                     "Missing.*");
+}
