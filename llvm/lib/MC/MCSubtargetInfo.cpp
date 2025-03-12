@@ -322,11 +322,9 @@ bool MCSubtargetInfo::checkFeatures(StringRef FS) const {
            "Feature flags should start with '+' or '-'");
     const SubtargetFeatureKV *FeatureEntry =
         Find(SubtargetFeatures::StripFlag(F), ProcFeatures);
-    if (!FeatureEntry) {
-      errs() << "'" << F << "' is not a recognized feature for this target"
-             << " (ignoring feature)\n";
-      return true;
-    }
+    if (!FeatureEntry)
+      report_fatal_error(Twine("'") + F +
+                         "' is not a recognized feature for this target");
 
     return FeatureBits.test(FeatureEntry->Value) ==
            SubtargetFeatures::isEnabled(F);
