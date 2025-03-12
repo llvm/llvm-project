@@ -22,8 +22,8 @@ land.rhs:                                         ; preds = %entry
   br label %land.end
 
 land.end:                                         ; preds = %land.rhs, %entry
-  %0 = phi i1 [ false, %entry ], [ %mul.ov, %land.rhs ]
-  %conv = zext i1 %0 to i16
+  %result = phi i1 [ false, %entry ], [ %mul.ov, %land.rhs ]
+  %conv = zext i1 %result to i16
   ret i16 %conv
 }
 
@@ -40,7 +40,7 @@ define i16 @samePatternTwice(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[TMP0]] to i16
 ; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[TMP1]] to i16
 ; CHECK-NEXT:    [[TORET:%.*]] = add nsw i16 [[CONV]], [[CONV2]]
-; CHECK-NEXT:    ret i16 [[CONV]]
+; CHECK-NEXT:    ret i16 [[TORET]]
 ;
 entry:
   %cmp.not = icmp eq i64 %y, 0
@@ -54,12 +54,12 @@ land.rhs:                                         ; preds = %entry
   br label %land.end
 
 land.end:                                         ; preds = %land.rhs, %entry
-  %0 = phi i1 [ false, %entry ], [ %mul.ov, %land.rhs ]
-  %1 = phi i1 [ false, %entry ], [ %mul.ov2, %land.rhs ]
-  %conv = zext i1 %0 to i16
-  %conv2 = zext i1 %1 to i16
-  %toRet = add nsw i16 %conv, %conv2
-  ret i16 %conv
+  %result1 = phi i1 [ false, %entry ], [ %mul.ov, %land.rhs ]
+  %result2 = phi i1 [ false, %entry ], [ %mul.ov2, %land.rhs ]
+  %conv1 = zext i1 %result1 to i16
+  %conv2 = zext i1 %result2 to i16
+  %toRet = add nsw i16 %conv1, %conv2
+  ret i16 %toRet
 }
 
 define i16 @stillHoistNotTooExpensive(i64 %x, i64 %y) {
@@ -84,8 +84,8 @@ land.rhs:                                   ; preds = %entry
   br label %land.end
 
 land.end:                                         ; preds = %land.rhs, %entry
-  %0 = phi i1 [ false, %entry ], [ %mul.ov, %land.rhs ]
-  %conv = zext i1 %0 to i16
+  %result = phi i1 [ false, %entry ], [ %mul.ov, %land.rhs ]
+  %conv = zext i1 %result to i16
   ret i16 %conv
 }
 
@@ -123,7 +123,7 @@ land.rhs:                                   ; preds = %entry
   br label %land.end
 
 land.end:                                         ; preds = %land.rhs, %entry
-  %0 = phi i1 [ false, %entry ], [ %mul.ov, %land.rhs ]
-  %conv = zext i1 %0 to i16
+  %result = phi i1 [ false, %entry ], [ %mul.ov, %land.rhs ]
+  %conv = zext i1 %result to i16
   ret i16 %conv
 }
