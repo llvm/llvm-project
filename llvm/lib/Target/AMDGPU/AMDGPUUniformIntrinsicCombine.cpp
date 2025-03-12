@@ -144,23 +144,18 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
         else
           continue; // Skip if ballot isn't involved
 
-        // Case (icmp eq %ballot, 0) OR (icmp ne %ballot, 1)  -->  xor
-        // %ballot_arg, 1
-        if ((Pred == ICmpInst::ICMP_EQ && match(OtherOp, m_Zero())) ||
-            (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_One()))) {
+        // Case (icmp eq %ballot, 0) -->  xor %ballot_arg, 1
+        if (Pred == ICmpInst::ICMP_EQ && match(OtherOp, m_Zero())) {
           Instruction *NotOp = BinaryOperator::CreateNot(Src);
           NotOp->insertInto(ICmp->getParent(), ICmp->getIterator());
-          LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ/ICMP_NE with NOT: " << *NotOp
-                            << "\n");
+          LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << "\n");
           ICmp->replaceAllUsesWith(NotOp);
           Changed = true;
         }
-        // Case (icmp eq %ballot, 1) OR (icmp ne %ballot, 0)  -->  %ballot_arg
-        else if ((Pred == ICmpInst::ICMP_EQ && match(OtherOp, m_One())) ||
-                 (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_Zero()))) {
-          LLVM_DEBUG(dbgs()
-                     << "Replacing ICMP_EQ/ICMP_NE with ballot argument: "
-                     << *Src << "\n");
+        // (icmp ne %ballot, 0)  -->  %ballot_arg
+        else if (Pred == ICmpInst::ICMP_NE && match(OtherOp, m_Zero())) {
+          LLVM_DEBUG(dbgs() << "Replacing ICMP_NE with ballot argument: "
+                            << *Src << "\n");
           ICmp->replaceAllUsesWith(Src);
           Changed = true;
         }

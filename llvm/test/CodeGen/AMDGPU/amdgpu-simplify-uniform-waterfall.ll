@@ -111,222 +111,16 @@ exit:
   ret void
 }
 
-define protected amdgpu_kernel void @trivial_waterfall_ne_one(ptr addrspace(1) %out) {
-; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_one(
+define protected amdgpu_kernel void @trivial_waterfall_ne_zero(ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero(
 ; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
 ; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
 ; CURRENT-CHECK-NEXT:    br label %[[WHILE:.*]]
 ; CURRENT-CHECK:       [[WHILE]]:
 ; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; CURRENT-CHECK-NEXT:    [[IS_DONE_NOT:%.*]] = icmp eq i32 [[TMP0]], 1
-; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE_NOT]], label %[[EXIT:.*]], label %[[WHILE]], !llvm.loop [[LOOP0:![0-9]+]]
-; CURRENT-CHECK:       [[EXIT]]:
-; CURRENT-CHECK-NEXT:    ret void
-;
-; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_one(
-; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
-; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
-; PASS-CHECK:       [[WHILE]]:
-; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
-; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[DONE]])
-; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[DONE]], true
-; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp ne i64 [[BALLOT]], 1
-; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[IF]], label %[[EXIT:.*]]
-; PASS-CHECK:       [[IF]]:
-; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; PASS-CHECK-NEXT:    br label %[[WHILE]]
-; PASS-CHECK:       [[EXIT]]:
-; PASS-CHECK-NEXT:    ret void
-;
-; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_one(
-; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
-; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; DCE-CHECK-NEXT:    ret void
-;
-entry:
-  br label %while
-
-while:
-  %done = phi i1 [ 0, %entry ], [ 1, %if ]
-  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %done)
-  %is_done = icmp ne i64 %ballot, 1 ; in this case is_done = !done
-  br i1 %is_done, label %if, label %exit
-
-if:
-  store i32 5, ptr addrspace(1) %out
-  br label %while
-
-exit:
-  ret void
-}
-
-define protected amdgpu_kernel void @trivial_waterfall_ne_one_swap_op(ptr addrspace(1) %out) {
-; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_one_swap_op(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
-; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; CURRENT-CHECK-NEXT:    br label %[[WHILE:.*]]
-; CURRENT-CHECK:       [[WHILE]]:
-; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; CURRENT-CHECK-NEXT:    [[IS_DONE_NOT:%.*]] = icmp eq i32 [[TMP0]], 1
-; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE_NOT]], label %[[EXIT:.*]], label %[[WHILE]], !llvm.loop [[LOOP2:![0-9]+]]
-; CURRENT-CHECK:       [[EXIT]]:
-; CURRENT-CHECK-NEXT:    ret void
-;
-; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_one_swap_op(
-; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
-; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
-; PASS-CHECK:       [[WHILE]]:
-; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
-; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[DONE]])
-; PASS-CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[DONE]], true
-; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp ne i64 1, [[BALLOT]]
-; PASS-CHECK-NEXT:    br i1 [[TMP0]], label %[[IF]], label %[[EXIT:.*]]
-; PASS-CHECK:       [[IF]]:
-; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; PASS-CHECK-NEXT:    br label %[[WHILE]]
-; PASS-CHECK:       [[EXIT]]:
-; PASS-CHECK-NEXT:    ret void
-;
-; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_one_swap_op(
-; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
-; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; DCE-CHECK-NEXT:    ret void
-;
-entry:
-  br label %while
-
-while:
-  %done = phi i1 [ 0, %entry ], [ 1, %if ]
-  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %done)
-  %is_done = icmp ne i64 1, %ballot ; in this case is_done = !done
-  br i1 %is_done, label %if, label %exit
-
-if:
-  store i32 5, ptr addrspace(1) %out
-  br label %while
-
-exit:
-  ret void
-}
-
-define protected amdgpu_kernel void @trivial_waterfall_eq_one(ptr addrspace(1) %out) {
-; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_one(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
-; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; CURRENT-CHECK-NEXT:    br label %[[WHILE:.*]]
-; CURRENT-CHECK:       [[WHILE]]:
-; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; CURRENT-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i32 [[TMP0]], 1
-; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE]], label %[[EXIT:.*]], label %[[WHILE]], !llvm.loop [[LOOP3:![0-9]+]]
-; CURRENT-CHECK:       [[EXIT]]:
-; CURRENT-CHECK-NEXT:    ret void
-;
-; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_one(
-; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
-; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
-; PASS-CHECK:       [[WHILE]]:
-; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
-; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[DONE]])
-; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 [[BALLOT]], 1
-; PASS-CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[IF]]
-; PASS-CHECK:       [[IF]]:
-; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; PASS-CHECK-NEXT:    br label %[[WHILE]]
-; PASS-CHECK:       [[EXIT]]:
-; PASS-CHECK-NEXT:    ret void
-;
-; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_one(
-; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
-; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; DCE-CHECK-NEXT:    ret void
-;
-entry:
-  br label %while
-
-while:
-  %done = phi i1 [ 0, %entry ], [ 1, %if ]
-  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %done)
-  %is_done = icmp eq i64 %ballot, 1 ; in this case is_done = done
-  br i1 %is_done, label %exit, label %if
-
-if:
-  store i32 5, ptr addrspace(1) %out
-  br label %while
-
-exit:
-  ret void
-}
-
-define protected amdgpu_kernel void @trivial_waterfall_eq_one_swap_op(ptr addrspace(1) %out) {
-; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_one_swap_op(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
-; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; CURRENT-CHECK-NEXT:    br label %[[WHILE:.*]]
-; CURRENT-CHECK:       [[WHILE]]:
-; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
-; CURRENT-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i32 [[TMP0]], 1
-; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE]], label %[[EXIT:.*]], label %[[WHILE]], !llvm.loop [[LOOP4:![0-9]+]]
-; CURRENT-CHECK:       [[EXIT]]:
-; CURRENT-CHECK-NEXT:    ret void
-;
-; PASS-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_one_swap_op(
-; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; PASS-CHECK-NEXT:  [[ENTRY:.*]]:
-; PASS-CHECK-NEXT:    br label %[[WHILE:.*]]
-; PASS-CHECK:       [[WHILE]]:
-; PASS-CHECK-NEXT:    [[DONE:%.*]] = phi i1 [ false, %[[ENTRY]] ], [ true, %[[IF:.*]] ]
-; PASS-CHECK-NEXT:    [[BALLOT:%.*]] = tail call i64 @llvm.amdgcn.ballot.i64(i1 [[DONE]])
-; PASS-CHECK-NEXT:    [[IS_DONE:%.*]] = icmp eq i64 1, [[BALLOT]]
-; PASS-CHECK-NEXT:    br i1 [[DONE]], label %[[EXIT:.*]], label %[[IF]]
-; PASS-CHECK:       [[IF]]:
-; PASS-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; PASS-CHECK-NEXT:    br label %[[WHILE]]
-; PASS-CHECK:       [[EXIT]]:
-; PASS-CHECK-NEXT:    ret void
-;
-; DCE-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_eq_one_swap_op(
-; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
-; DCE-CHECK-NEXT:  [[ENTRY:.*:]]
-; DCE-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; DCE-CHECK-NEXT:    ret void
-;
-entry:
-  br label %while
-
-while:
-  %done = phi i1 [ 0, %entry ], [ 1, %if ]
-  %ballot = tail call i64 @llvm.amdgcn.ballot.i64(i1 %done)
-  %is_done = icmp eq i64 1, %ballot ; in this case is_done = done
-  br i1 %is_done, label %exit, label %if
-
-if:
-  store i32 5, ptr addrspace(1) %out
-  br label %while
-
-exit:
-  ret void
-}
-
-define protected amdgpu_kernel void @trivial_waterfall_ne_zero(ptr addrspace(1) %out) {
-; CURRENT-CHECK-LABEL: define protected amdgpu_kernel void @trivial_waterfall_ne_zero(
-; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
-; CURRENT-CHECK-NEXT:  [[ENTRY:.*:]]
-; CURRENT-CHECK-NEXT:    store i32 5, ptr addrspace(1) [[OUT]], align 4
-; CURRENT-CHECK-NEXT:    br label %[[WHILE:.*]]
-; CURRENT-CHECK:       [[WHILE]]:
-; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
 ; CURRENT-CHECK-NEXT:    [[IS_DONE_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
-; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE_NOT]], label %[[WHILE]], label %[[EXIT:.*]], !llvm.loop [[LOOP5:![0-9]+]]
+; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE_NOT]], label %[[WHILE]], label %[[EXIT:.*]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CURRENT-CHECK:       [[EXIT]]:
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -377,7 +171,7 @@ define protected amdgpu_kernel void @trivial_waterfall_ne_zero_swap(ptr addrspac
 ; CURRENT-CHECK:       [[WHILE]]:
 ; CURRENT-CHECK-NEXT:    [[TMP0:%.*]] = tail call i32 @llvm.amdgcn.ballot.i32(i1 true)
 ; CURRENT-CHECK-NEXT:    [[IS_DONE_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
-; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE_NOT]], label %[[WHILE]], label %[[EXIT:.*]], !llvm.loop [[LOOP6:![0-9]+]]
+; CURRENT-CHECK-NEXT:    br i1 [[IS_DONE_NOT]], label %[[WHILE]], label %[[EXIT:.*]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CURRENT-CHECK:       [[EXIT]]:
 ; CURRENT-CHECK-NEXT:    ret void
 ;
@@ -577,8 +371,4 @@ declare i64 @llvm.amdgcn.ballot.i64(i1) #1
 ; CURRENT-CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
 ; CURRENT-CHECK: [[META1]] = !{!"llvm.loop.peeled.count", i32 1}
 ; CURRENT-CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META1]]}
-; CURRENT-CHECK: [[LOOP3]] = distinct !{[[LOOP3]], [[META1]]}
-; CURRENT-CHECK: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]]}
-; CURRENT-CHECK: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]]}
-; CURRENT-CHECK: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]]}
 ;.
