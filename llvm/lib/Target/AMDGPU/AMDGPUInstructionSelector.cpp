@@ -4288,8 +4288,7 @@ enum srcStatus {
   IS_LOWER_HALF,
   IS_NEG,
   IS_UPPER_HALF_NEG,
-  IS_LOWER_HALF_NEG,
-  INVALID
+  IS_LOWER_HALF_NEG
 };
 
 static bool isTruncHalf(const MachineInstr *MI,
@@ -4334,9 +4333,6 @@ static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
 
 static bool retOpStat(const MachineOperand *Op, srcStatus stat,
                       std::pair<const MachineOperand *, srcStatus> &curr) {
-  if (stat == INVALID) {
-    return false;
-  }
   if ((Op->isReg() && !(Op->getReg().isPhysical())) || Op->isImm() ||
       Op->isCImm() || Op->isFPImm()) {
     curr = {Op, stat};
@@ -4360,7 +4356,7 @@ srcStatus getNegStatus(srcStatus S) {
   case IS_LOWER_HALF_NEG:
     return IS_LOWER_HALF;
   }
-  return INVALID;
+  llvm_unreachable("unexpected srcStatus");
 }
 
 static bool calcNextStatus(std::pair<const MachineOperand *, srcStatus> &curr,
@@ -4477,7 +4473,7 @@ static bool isSameOperand(const MachineOperand *Op1,
   return Op1->isIdenticalTo(*Op2);
 }
 
-static bool validToPack(int HiStat, int LoStat, unsigned int &Mods,
+static bool validToPack(srcStatus HiStat, srcStatus LoStat, unsigned int &Mods,
                         const MachineOperand *newOp,
                         const MachineOperand *RootOp, const SIInstrInfo &TII,
                         const MachineRegisterInfo &MRI) {
