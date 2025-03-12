@@ -90,7 +90,10 @@ static_library("Host") {
   }
 
   if (current_os == "aix") {
-    sources += [ "aix/HostInfoAIX.cpp" ]
+    sources += [
+      "aix/Host.cpp",
+      "aix/HostInfoAIX.cpp",
+    ]
   }
 
   if (current_os == "mac") {
