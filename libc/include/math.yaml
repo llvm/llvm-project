@@ -249,6 +249,12 @@ functions:
     arguments:
       - type: long double
       - type: long double
+  - name: cospi
+    standards:
+      - stdc
+    return_type: double
+    arguments:
+      - type: double
   - name: dmulf128
     standards:
       - llvm_libc_ext

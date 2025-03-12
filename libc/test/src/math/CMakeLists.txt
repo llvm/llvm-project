@@ -40,6 +40,22 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  cospi_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    cospi_test.cpp
+  HDRS
+    sdcomp26094.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.src.math.cospi
+    libc.src.__support.CPP.array
+    libc.src.__support.FPUtil.fp_bits
+)
+
+add_fp_unittest(
   cospif_test
   NEED_MPFR
   SUITE
