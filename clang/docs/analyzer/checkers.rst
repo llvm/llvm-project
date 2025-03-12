@@ -3762,7 +3762,7 @@ Here are some examples of situations that we warn about as they *might* be poten
 
 webkit.RetainPtrCtorAdoptChecker
 """"""""""""""""""""""""""""""""
-The goal of this rule is to make sure the constructor of RetinPtr as well as adoptNS and adoptCF are used correctly.
+The goal of this rule is to make sure the constructor of RetainPtr as well as adoptNS and adoptCF are used correctly.
 When creating a RetainPtr with +1 semantics, adoptNS or adoptCF should be used, and in +0 semantics, RetainPtr constructor should be used.
 Warn otherwise.
 
