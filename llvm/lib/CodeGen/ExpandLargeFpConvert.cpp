@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
-#include "llvm/IR/FMF.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
@@ -138,9 +137,8 @@ private:
                                                const Twine &PowName) const {
     // Build:
     //   ExName = BUILTIN_FREXP_EXP_ComputeFpTy(Src) - 1;
-    //   PowName =
-    //   BUILTIN_FLDEXP_ComputeFpTy(BUILTIN_FREXP_MANT_ComputeFpTy(ExName),
-    //   NewExp);
+    //   PowName = BUILTIN_FLDEXP_ComputeFpTy(
+    //             BUILTIN_FREXP_MANT_ComputeFpTy(ExName), NewExp);
     Type *Ty = Src->getType();
     Type *ExTy = B.getInt32Ty();
     Value *Frexp = B.CreateIntrinsic(Intrinsic::frexp, {Ty, ExTy}, Src);
@@ -161,10 +159,11 @@ private:
                                  PHINode *RetPhi) const {
     // Build:
     // ex = BUILTIN_FREXP_EXP_ComputeFpTy(ax) - 1;
-    // ax = BUILTIN_FLDEXP_ComputeFpTy(BUILTIN_FREXP_MANT_ComputeFpTy(ax),
-    // bits); ey = BUILTIN_FREXP_EXP_ComputeFpTy(ay) - 1; ay =
-    // BUILTIN_FLDEXP_ComputeFpTy(BUILTIN_FREXP_MANT_ComputeFpTy(ay), 1); auto
-    // [Ax, Ex]{getFrexpResults(B, AxInitial)};
+    // ax = BUILTIN_FLDEXP_ComputeFpTy(
+    //      BUILTIN_FREXP_MANT_ComputeFpTy(ax), bits);
+    // ey = BUILTIN_FREXP_EXP_ComputeFpTy(ay) - 1;
+    // ay = BUILTIN_FLDEXP_ComputeFpTy(
+    //      BUILTIN_FREXP_MANT_ComputeFpTy(ay), 1);
     auto [Ax, Ex] = buildExpAndPower(AxInitial, Bits, "ex", "ax");
     auto [Ay, Ey] = buildExpAndPower(AyInitial, One, "ey", "ay");
 
@@ -218,7 +217,7 @@ private:
         AxPhiExit, B.CreateAdd(B.CreateSub(NbExitPhi, Bits), One), "ax");
     AxFinal = buildUpdateAx(AxFinal, Ay, Ayinv);
 
-    // Adjust exponent and sign
+    // Build:
     //    ax = BUILTIN_FLDEXP_ComputeFpTy(ax, ey);
     //    ret = AS_FLOAT((AS_INT(x) & SIGNBIT_SP32) ^ AS_INT(ax));
     AxFinal = createLdexp(AxFinal, Ey, "ax");
@@ -257,7 +256,8 @@ private:
     // Build:
     //   ret = y == 0.0f ? QNAN_ComputeFpTy : ret;
     //   bool c = !BUILTIN_ISNAN_ComputeFpTy(y) &&
-    //   BUILTIN_ISFINITE_ComputeFpTy(x); ret = c ? ret : QNAN_ComputeFpTy;
+    //   BUILTIN_ISFINITE_ComputeFpTy(x);
+    //   ret = c ? ret : QNAN_ComputeFpTy;
     // TODO Handle NaN and infinity fast math flags separately here?
     Value *Nan = ConstantFP::getQNaN(FremTy);
 
