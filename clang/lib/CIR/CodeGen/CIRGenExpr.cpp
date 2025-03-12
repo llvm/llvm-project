@@ -167,7 +167,7 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
 
 /// Emit code to compute the specified expression which
 /// can have any type.  The result is returned as an RValue struct.
-RValue CIRGenFunction::emitAnyExpr(const Expr *e, bool ignoreResult) {
+RValue CIRGenFunction::emitAnyExpr(const Expr *e) {
   switch (CIRGenFunction::getEvaluationKind(e->getType())) {
   case cir::TEK_Scalar:
     return RValue::get(emitScalarExpr(e));
@@ -185,7 +185,7 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, bool ignoreResult) {
 void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   if (e->isPRValue()) {
     assert(!cir::MissingFeatures::aggValueSlot());
-    emitAnyExpr(e, true);
+    emitAnyExpr(e);
     return;
   }
 

@@ -158,7 +158,7 @@ public:
   /// result is returned as an RValue struct. If this is an aggregate
   /// expression, the aggloc/agglocvolatile arguments indicate where the result
   /// should be returned.
-  RValue emitAnyExpr(const clang::Expr *e, bool ignoreResult = false);
+  RValue emitAnyExpr(const clang::Expr *e);
 
   void finishFunction(SourceLocation endLoc);
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);

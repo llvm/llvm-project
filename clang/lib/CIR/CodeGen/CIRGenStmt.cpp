@@ -255,16 +255,11 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     // this section will do nothing.  But for now a ReturnOp is necessary.
     builder.create<ReturnOp>(loc);
   } else if (rv->getType()->isVoidType()) {
-    // No return value. Emit the return expression for its side effects.
-    // TODO(CIR): Once emitAnyExpr(e) has been upstreamed, get rid of the check
-    // and just call emitAnyExpr(rv) here.
-    if (CIRGenFunction::hasScalarEvaluationKind(rv->getType())) {
-      emitScalarExpr(rv);
-    } else {
-      getCIRGenModule().errorNYI(s.getSourceRange(),
-                                 "non-scalar function return type");
+    // Make sure not to return anything, but evaluate the expression
+    // for side effects.
+    if (rv) {
+      emitAnyExpr(rv);
     }
-    builder.create<ReturnOp>(loc);
   } else if (fnRetTy->isReferenceType()) {
     getCIRGenModule().errorNYI(s.getSourceRange(),
                                "function return type that is a reference");
