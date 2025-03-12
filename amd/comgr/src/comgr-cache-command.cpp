@@ -87,7 +87,7 @@ CachedCommandAdaptor::getIdentifier() const {
   H.update(env::shouldEmitVerboseLogs());
   addString(H, getClangFullVersion());
   addString(H, getComgrHashIdentifier());
-  addString(H, getDeviceLibrariesIdentifier());
+  H.update(getDeviceLibrariesIdentifier());
 
   if (Error E = addInputIdentifier(H))
     return E;

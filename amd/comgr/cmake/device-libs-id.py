@@ -15,6 +15,5 @@ if __name__ == "__main__":
     for x in args.headers:
         hash.update(open(x, 'rb').read())
     digest_uchar = hash.digest()
-    digest_char = [e if e < 128 else e-256 for e in digest_uchar]
-    digest_elts = ", ".join(map(str, digest_char))
-    print(f"static const char {args.varname}[] = {{{digest_elts}, 0}};", file=open(args.output, 'w'))
+    digest_elts = ", ".join(map(str, digest_uchar))
+    print(f"static const unsigned char {args.varname}[] = {{{digest_elts}, 0}};", file=open(args.output, 'w'))
