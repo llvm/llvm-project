@@ -236,18 +236,8 @@ inline std::string TrimAndPad(llvm::StringRef str, size_t visible_length,
       continue;
     }
 
-    // The string doesn't fit but doesn't fit but doesn't contain unicode.
-    // Append the substring that fits.
-    if (column_width == left.size()) {
-      llvm::StringRef trimmed =
-          left.take_front(visible_length - result_visibile_length);
-      result.append(trimmed);
-      result_visibile_length += visible_length - result_visibile_length;
-      continue;
-    }
-
-    // The string doesn't fit but contains unicode. Repeatedly trim the string
-    // until it fits.
+    // The string might contain unicode which means it's not safe to truncate.
+    // Repeatedly trim the string until it its valid unicode and fits.
     llvm::StringRef trimmed = left;
     while (!trimmed.empty()) {
       // This relies on columnWidth returning -2 for invalid/partial unicode
