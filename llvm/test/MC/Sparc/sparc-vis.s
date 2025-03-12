@@ -199,28 +199,39 @@ fcmpeq16 %f0, %f2, %o0
 ! VIS: fcmpeq32 %f0, %f2, %o0                  ! encoding: [0x91,0xb0,0x05,0xc2]
 fcmpeq32 %f0, %f2, %o0
 
+! NO-VIS: error: instruction requires a CPU feature not currently enabled
 ! VIS: edge8 %o0, %o1, %o2                     ! encoding: [0x95,0xb2,0x00,0x09]
 edge8 %o0, %o1, %o2
+! NO-VIS: error: instruction requires a CPU feature not currently enabled
 ! VIS: edge8l %o0, %o1, %o2                    ! encoding: [0x95,0xb2,0x00,0x49]
 edge8l %o0, %o1, %o2
+! NO-VIS: error: instruction requires a CPU feature not currently enabled
 ! VIS: edge16 %o0, %o1, %o2                    ! encoding: [0x95,0xb2,0x00,0x89]
 edge16 %o0, %o1, %o2
+! NO-VIS: error: instruction requires a CPU feature not currently enabled
 ! VIS: edge16l %o0, %o1, %o2                   ! encoding: [0x95,0xb2,0x00,0xc9]
 edge16l %o0, %o1, %o2
+! NO-VIS: error: instruction requires a CPU feature not currently enabled
 ! VIS: edge32 %o0, %o1, %o2                    ! encoding: [0x95,0xb2,0x01,0x09]
 edge32 %o0, %o1, %o2
+! NO-VIS: error: instruction requires a CPU feature not currently enabled
 ! VIS: edge32l %o0, %o1, %o2                   ! encoding: [0x95,0xb2,0x01,0x49]
 edge32l %o0, %o1, %o2
 
+! NO-VIS: error: instruction requires a CPU feature not currently enabled
 ! VIS: pdist %f0, %f2, %f4                     ! encoding: [0x89,0xb0,0x07,0xc2]
 pdist %f0, %f2, %f4
 
+! NO-VIS: error: instruction requires a CPU feature not currently enabled
 ! VIS: array8 %o0, %o1, %o2                    ! encoding: [0x95,0xb2,0x02,0x09]
 array8 %o0, %o1, %o2
+! NO-VIS: error: instruction requires a CPU feature not currently enabled
 ! VIS: array16 %o0, %o1, %o2                   ! encoding: [0x95,0xb2,0x02,0x49]
 array16 %o0, %o1, %o2
+! NO-VIS: error: instruction requires a CPU feature not currently enabled
 ! VIS: array32 %o0, %o1, %o2                   ! encoding: [0x95,0xb2,0x02,0x89]
 array32 %o0, %o1, %o2
 
+! NO-VIS: error: instruction requires a CPU feature not currently enabled
 ! VIS: shutdown                                ! encoding: [0x81,0xb0,0x10,0x00]
 shutdown
