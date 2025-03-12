@@ -280,6 +280,7 @@ class QCIRVInst16CI_RS1<bits<5> funct5, string OpcodeStr>
   let Inst{6-2} = funct5{4-0};
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIBranchInst_rii<bits<3> funct3, DAGOperand InTyImm5, string opcodestr>
     : RVInstB<funct3, OPC_CUSTOM_3, (outs),
               (ins GPRNoX0:$rs1, InTyImm5:$rs2, simm13_lsb0:$imm12),
@@ -288,6 +289,7 @@ class QCIBranchInst_rii<bits<3> funct3, DAGOperand InTyImm5, string opcodestr>
   let isTerminator = 1;
 }
 
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIBranchInst48_rii<bits<5> funct5, DAGOperand InTyImm16, string opcodestr>
     : RVInst48<(outs), (ins GPRNoX0:$rs1, InTyImm16:$imm16, simm13_lsb0:$imm12),
                opcodestr, "$rs1, $imm16, $imm12", [], InstFormatOther> {
@@ -447,7 +449,6 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 } // Predicates = [HasVendorXqcia, IsRV32]
 
 let Predicates = [HasVendorXqcibi, IsRV32] in {
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_BEQI  : QCIBranchInst_rii<0b000, simm5nonzero, "qc.beqi">;
   def QC_BNEI  : QCIBranchInst_rii<0b001, simm5nonzero, "qc.bnei">;
   def QC_BLTI  : QCIBranchInst_rii<0b100, simm5nonzero, "qc.blti">;
@@ -461,8 +462,6 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   def QC_E_BGEI  : QCIBranchInst48_rii<0b11101, simm16nonzero, "qc.e.bgei">;
   def QC_E_BLTUI : QCIBranchInst48_rii<0b11110, uimm16nonzero, "qc.e.bltui">;
   def QC_E_BGEUI : QCIBranchInst48_rii<0b11111, uimm16nonzero, "qc.e.bgeui">;
-} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
-
 } // Predicates = [HasVendorXqcibi, IsRV32]
 
 let Predicates = [HasVendorXqcibm, IsRV32] in {
