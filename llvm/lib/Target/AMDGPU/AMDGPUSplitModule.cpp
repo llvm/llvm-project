@@ -1554,16 +1554,16 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
                       "output may be mangled by other processes\n");
       } else if (!Owned) {
         switch (Lock.waitForUnlock()) {
-        case LockFileManager::Res_Success:
+        case WaitForUnlockResult::Success:
           break;
-        case LockFileManager::Res_OwnerDied:
+        case WaitForUnlockResult::OwnerDied:
           continue; // try again to get the lock.
-        case LockFileManager::Res_Timeout:
+        case WaitForUnlockResult::Timeout:
           LLVM_DEBUG(
               dbgs()
               << "[amdgpu-split-module] unable to acquire lockfile, debug "
                  "output may be mangled by other processes\n");
-          Lock.unsafeRemoveLockFile();
+          Lock.unsafeUnlockShared();
           break; // give up
         }
       }

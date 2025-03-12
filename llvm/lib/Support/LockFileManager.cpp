@@ -264,8 +264,7 @@ LockFileManager::~LockFileManager() {
   sys::DontRemoveFileOnSignal(UniqueLockFileName);
 }
 
-LockFileManager::WaitForUnlockResult
-LockFileManager::waitForUnlock(const unsigned MaxSeconds) {
+WaitForUnlockResult LockFileManager::waitForUnlockFor(unsigned MaxSeconds) {
   auto *LockFileOwner = std::get_if<OwnedByAnother>(&Owner);
   assert(LockFileOwner &&
          "waiting for lock to be unlocked without knowing the owner");
@@ -282,18 +281,18 @@ LockFileManager::waitForUnlock(const unsigned MaxSeconds) {
     // FIXME: implement event-based waiting
     if (sys::fs::access(LockFileName.c_str(), sys::fs::AccessMode::Exist) ==
         errc::no_such_file_or_directory)
-      return Res_Success;
+      return WaitForUnlockResult::Success;
 
     // If the process owning the lock died without cleaning up, just bail out.
     if (!processStillExecuting(LockFileOwner->OwnerHostName,
                                LockFileOwner->OwnerPID))
-      return Res_OwnerDied;
+      return WaitForUnlockResult::OwnerDied;
   }
 
   // Give up.
-  return Res_Timeout;
+  return WaitForUnlockResult::Timeout;
 }
 
-std::error_code LockFileManager::unsafeRemoveLockFile() {
+std::error_code LockFileManager::unsafeUnlockShared() {
   return sys::fs::remove(LockFileName);
 }
