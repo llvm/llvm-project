@@ -13,4 +13,7 @@ class TestCase(TestBase):
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.m"))
-        self.expect("dwim-print obj", substrs=["_number = 15"])
+        self.expect("dwim-print parent", substrs=["_child = 0x"])
+        self.expect(
+            "dwim-print parent.child", patterns=[r'_name = 0x[0-9a-f]+ @"Seven"']
+        )
