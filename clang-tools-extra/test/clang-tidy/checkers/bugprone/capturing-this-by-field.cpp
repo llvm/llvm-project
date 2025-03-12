@@ -25,6 +25,20 @@ struct BasicConstructor {
   // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
 };
 
+struct BasicConstructorWithCaptureAllByValue {
+  BasicConstructorWithCaptureAllByValue() : Captured([=]() { static_cast<void>(this); }) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:54: warning: 'this' captured by a lambda and stored in a class member variable;
+  std::function<void()> Captured;
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+};
+
+struct BasicConstructorWithCaptureAllByRef {
+  BasicConstructorWithCaptureAllByRef() : Captured([&]() { static_cast<void>(this); }) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:52: warning: 'this' captured by a lambda and stored in a class member variable;
+  std::function<void()> Captured;
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: note: 'std::function<void (void)>' that stores captured 'this'
+};
+
 struct BasicField1 {
   std::function<void()> Captured = [this]() { static_cast<void>(this); };
   // CHECK-MESSAGES: :[[@LINE-1]]:36: warning: 'this' captured by a lambda and stored in a class member variable;
