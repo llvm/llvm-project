@@ -89,23 +89,31 @@ void asuint(double4, out uint4, out uint4);
 /// \param X The X input value.
 /// \param Y The Y input value.
 
+template <typename T>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline half distance(half X, half Y) {
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> distance(T X, T Y) {
   return __detail::distance_impl(X, Y);
 }
 
-const inline float distance(float X, float Y) {
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+distance(T X, T Y) {
   return __detail::distance_impl(X, Y);
 }
 
 template <int N>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline half distance(vector<half, N> X, vector<half, N> Y) {
+const inline half distance(__detail::HLSL_FIXED_VECTOR<half, N> X,
+                           __detail::HLSL_FIXED_VECTOR<half, N> Y) {
   return __detail::distance_vec_impl(X, Y);
 }
 
 template <int N>
-const inline float distance(vector<float, N> X, vector<float, N> Y) {
+const inline float distance(__detail::HLSL_FIXED_VECTOR<float, N> X,
+                            __detail::HLSL_FIXED_VECTOR<float, N> Y) {
   return __detail::distance_vec_impl(X, Y);
 }
 
@@ -119,17 +127,29 @@ const inline float distance(vector<float, N> X, vector<float, N> Y) {
 ///
 /// Length is based on the following formula: sqrt(x[0]^2 + x[1]^2 + ...).
 
+template <typename T>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline half length(half X) { return __detail::length_impl(X); }
-const inline float length(float X) { return __detail::length_impl(X); }
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> length(T X) {
+  return __detail::length_impl(X);
+}
+
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+length(T X) {
+  return __detail::length_impl(X);
+}
 
 template <int N>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline half length(vector<half, N> X) {
+const inline half length(__detail::HLSL_FIXED_VECTOR<half, N> X) {
   return __detail::length_vec_impl(X);
 }
 
-template <int N> const inline float length(vector<float, N> X) {
+template <int N>
+const inline float length(__detail::HLSL_FIXED_VECTOR<float, N> X) {
   return __detail::length_vec_impl(X);
 }
 
@@ -173,23 +193,33 @@ constexpr vector<uint, 4> D3DCOLORtoUBYTE4(vector<float, 4> V) {
 ///
 /// Result type and the type of all operands must be the same type.
 
+template <typename T>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline half reflect(half I, half N) {
+const inline __detail::enable_if_t<__detail::is_arithmetic<T>::Value &&
+                                       __detail::is_same<half, T>::value,
+                                   T> reflect(T I, T N) {
   return __detail::reflect_impl(I, N);
 }
 
-const inline float reflect(float I, float N) {
+template <typename T>
+const inline __detail::enable_if_t<
+    __detail::is_arithmetic<T>::Value && __detail::is_same<float, T>::value, T>
+reflect(T I, T N) {
   return __detail::reflect_impl(I, N);
 }
 
 template <int L>
 _HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
-const inline vector<half, L> reflect(vector<half, L> I, vector<half, L> N) {
+const inline __detail::HLSL_FIXED_VECTOR<half, L> reflect(
+    __detail::HLSL_FIXED_VECTOR<half, L> I,
+    __detail::HLSL_FIXED_VECTOR<half, L> N) {
   return __detail::reflect_vec_impl(I, N);
 }
 
 template <int L>
-const inline vector<float, L> reflect(vector<float, L> I, vector<float, L> N) {
+const inline __detail::HLSL_FIXED_VECTOR<float, L>
+reflect(__detail::HLSL_FIXED_VECTOR<float, L> I,
+        __detail::HLSL_FIXED_VECTOR<float, L> N) {
   return __detail::reflect_vec_impl(I, N);
 }
 } // namespace hlsl

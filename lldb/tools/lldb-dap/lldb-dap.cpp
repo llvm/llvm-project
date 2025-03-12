@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPLog.h"
 #include "EventHelper.h"
 #include "Handler/RequestHandler.h"
 #include "RunInTerminal.h"
@@ -294,8 +295,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
   }
 
   std::string address = llvm::join(listener->GetListeningConnectionURI(), ", ");
-  if (log)
-    *log << "started with connection listeners " << address << "\n";
+  DAP_LOG(log, "started with connection listeners {0}", address);
 
   llvm::outs() << "Listening for: " << address << "\n";
   // Ensure listening address are flushed for calles to retrieve the resolve
@@ -315,13 +315,8 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                                           &dap_sessions_mutex, &dap_sessions,
                                           &clientCount](
                                              std::unique_ptr<Socket> sock) {
-    std::string name = llvm::formatv("client_{0}", clientCount++).str();
-    if (log) {
-      auto now = std::chrono::duration<double>(
-          std::chrono::system_clock::now().time_since_epoch());
-      *log << llvm::formatv("{0:f9}", now.count()).str()
-           << " client connected: " << name << "\n";
-    }
+    std::string client_name = llvm::formatv("client_{0}", clientCount++).str();
+    DAP_LOG(log, "({0}) client connected", client_name);
 
     lldb::IOObjectSP io(std::move(sock));
 
@@ -329,8 +324,8 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     // client.
     std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
                         &dap_sessions]() {
-      llvm::set_thread_name(name + ".runloop");
-      DAP dap = DAP(name, program_path, log, io, io, default_repl_mode,
+      llvm::set_thread_name(client_name + ".runloop");
+      DAP dap = DAP(client_name, program_path, log, io, io, default_repl_mode,
                     pre_init_commands);
 
       if (auto Err = dap.ConfigureIO()) {
@@ -351,13 +346,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                                     "DAP session error: ");
       }
 
-      if (log) {
-        auto now = std::chrono::duration<double>(
-            std::chrono::system_clock::now().time_since_epoch());
-        *log << llvm::formatv("{0:f9}", now.count()).str()
-             << " client closed: " << name << "\n";
-      }
-
+      DAP_LOG(log, "({0}) client disconnected", client_name);
       std::unique_lock<std::mutex> lock(dap_sessions_mutex);
       dap_sessions.erase(io.get());
       std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
@@ -374,9 +363,9 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     return status.takeError();
   }
 
-  if (log)
-    *log << "lldb-dap server shutdown requested, disconnecting remaining "
-            "clients...\n";
+  DAP_LOG(
+      log,
+      "lldb-dap server shutdown requested, disconnecting remaining clients...");
 
   bool client_failed = false;
   {
@@ -385,7 +374,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
       auto error = dap->Disconnect();
       if (error.Fail()) {
         client_failed = true;
-        llvm::errs() << "DAP client " << dap->name
+        llvm::errs() << "DAP client " << dap->client_name
                      << " disconnected failed: " << error.GetCString() << "\n";
       }
       // Close the socket to ensure the DAP::Loop read finishes.

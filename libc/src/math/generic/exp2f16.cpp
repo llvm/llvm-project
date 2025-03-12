@@ -21,6 +21,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr fputil::ExceptValues<float16, 3> EXP2F16_EXCEPTS = {{
     // (input, RZ output, RU offset, RD offset, RN offset)
     // x = 0x1.714p-11, exp2f16(x) = 0x1p+0 (RZ)
@@ -30,6 +31,7 @@ static constexpr fputil::ExceptValues<float16, 3> EXP2F16_EXCEPTS = {{
     // x = -0x1.d5cp-4, exp2f16(x) = 0x1.d8cp-1 (RZ)
     {0xaf57U, 0x3b63U, 1U, 0U, 0U},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, exp2f16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -82,8 +84,10 @@ LLVM_LIBC_FUNCTION(float16, exp2f16, (float16 x)) {
     }
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (auto r = EXP2F16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // exp2(x) = exp2(hi + mid) * exp2(lo)
   auto [exp2_hi_mid, exp2_lo] = exp2_range_reduction(x);
