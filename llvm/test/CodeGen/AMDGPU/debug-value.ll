@@ -29,8 +29,8 @@ bb21:                                             ; preds = %bb
   br label %bb28
 
 bb25:                                             ; preds = %bb
-  %tmp26 = insertelement <4 x float> undef, float 0.000000e+00, i32 1
-  %tmp27 = insertelement <4 x float> %tmp26, float undef, i32 2
+  %tmp26 = insertelement <4 x float> poison, float 0.000000e+00, i32 1
+  %tmp27 = insertelement <4 x float> %tmp26, float poison, i32 2
   br label %bb28
 
 bb28:                                             ; preds = %bb25, %bb21
@@ -52,7 +52,7 @@ bb28:                                             ; preds = %bb25, %bb21
   %tmp44 = fsub float %tmp43, undef
   %tmp45 = fadd float undef, undef
   %tmp46 = fdiv float %tmp44, %tmp45
-  %tmp47 = insertelement <4 x float> undef, float %tmp46, i32 0
+  %tmp47 = insertelement <4 x float> poison, float %tmp46, i32 0
   %tmp48 = shufflevector <4 x float> %tmp47, <4 x float> undef, <4 x i32> zeroinitializer
   %tmp49 = fsub <4 x float> %tmp48, %tmp40
   %tmp50 = extractelement <4 x float> %tmp41, i32 1
@@ -70,7 +70,7 @@ bb28:                                             ; preds = %bb25, %bb21
   ; CHECK-NOT: ;DEBUG_VALUE:
   call void @llvm.dbg.value(metadata <4 x float> %tmp29, metadata !3, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !5
   %tmp59 = bitcast i64 %tmp35 to <2 x float>
-  %tmp60 = insertelement <2 x float> undef, float %tmp58, i32 0
+  %tmp60 = insertelement <2 x float> poison, float %tmp58, i32 0
   %tmp61 = shufflevector <2 x float> %tmp60, <2 x float> undef, <2 x i32> zeroinitializer
   %tmp62 = fmul <2 x float> %tmp61, undef
   %tmp63 = fsub <2 x float> %tmp62, %tmp59

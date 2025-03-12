@@ -207,7 +207,7 @@ main_body:
   %res.f = extractelement <4 x float> %res.vec, i32 0
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res.tmp = insertelement <2 x float> poison, float %res.f, i32 0
   %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
   ret <2 x float> %res
 }
@@ -266,7 +266,7 @@ main_body:
   %res.f = extractelement <4 x float> %res.vec, i32 1
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res.tmp = insertelement <2 x float> poison, float %res.f, i32 0
   %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
   ret <2 x float> %res
 }
@@ -325,7 +325,7 @@ main_body:
   %res.f = extractelement <4 x float> %res.vec, i32 2
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res.tmp = insertelement <2 x float> poison, float %res.f, i32 0
   %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
   ret <2 x float> %res
 }
@@ -384,7 +384,7 @@ main_body:
   %res.f = extractelement <4 x float> %res.vec, i32 3
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp = insertelement <2 x float> undef, float %res.f, i32 0
+  %res.tmp = insertelement <2 x float> poison, float %res.f, i32 0
   %res = insertelement <2 x float> %res.tmp, float %res.errf, i32 1
   ret <2 x float> %res
 }
@@ -458,7 +458,7 @@ main_body:
   %res.f2 = extractelement <4 x float> %res.vec, i32 1
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp1 = insertelement <4 x float> undef, float %res.f1, i32 0
+  %res.tmp1 = insertelement <4 x float> poison, float %res.f1, i32 0
   %res.tmp2 = insertelement <4 x float> %res.tmp1, float %res.f2, i32 1
   %res = insertelement <4 x float> %res.tmp2, float %res.errf, i32 2
   ret <4 x float> %res
@@ -533,7 +533,7 @@ main_body:
   %res.f2 = extractelement <4 x float> %res.vec, i32 3
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp1 = insertelement <4 x float> undef, float %res.f1, i32 0
+  %res.tmp1 = insertelement <4 x float> poison, float %res.f1, i32 0
   %res.tmp2 = insertelement <4 x float> %res.tmp1, float %res.f2, i32 1
   %res = insertelement <4 x float> %res.tmp2, float %res.errf, i32 2
   ret <4 x float> %res
@@ -602,7 +602,7 @@ main_body:
   %res.f3 = extractelement <4 x float> %res.vec, i32 3
   %res.err = extractvalue {<4 x float>,i32} %v, 1
   %res.errf = bitcast i32 %res.err to float
-  %res.tmp1 = insertelement <4 x float> undef, float %res.f1, i32 0
+  %res.tmp1 = insertelement <4 x float> poison, float %res.f1, i32 0
   %res.tmp2 = insertelement <4 x float> %res.tmp1, float %res.f2, i32 1
   %res.tmp3 = insertelement <4 x float> %res.tmp2, float %res.f3, i32 2
   %res = insertelement <4 x float> %res.tmp3, float %res.errf, i32 3
@@ -2144,7 +2144,7 @@ main_body:
   %v.f2 = extractelement <2 x float> %v.vec, i32 1
   %v.err = extractvalue {<2 x float>, i32} %v, 1
   %v.errf = bitcast i32 %v.err to float
-  %res.0 = insertelement <4 x float> undef, float %v.f1, i32 0
+  %res.0 = insertelement <4 x float> poison, float %v.f1, i32 0
   %res.1 = insertelement <4 x float> %res.0, float %v.f2, i32 1
   %res.2 = insertelement <4 x float> %res.1, float %v.errf, i32 2
   ret <4 x float> %res.2

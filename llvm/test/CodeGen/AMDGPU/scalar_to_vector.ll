@@ -281,8 +281,8 @@ bb:
 ; }
 
 ; define amdgpu_kernel void @scalar_to_vector_test3(ptr addrspace(1) %out) nounwind {
-;   %newvec0 = insertelement <2 x i64> undef, i64 12345, i32 0
-;   %newvec1 = insertelement <2 x i64> %newvec0, i64 undef, i32 1
+;   %newvec0 = insertelement <2 x i64> poison, i64 12345, i32 0
+;   %newvec1 = insertelement <2 x i64> %newvec0, i64 poison, i32 1
 ;   %bc = bitcast <2 x i64> %newvec1 to <4 x i32>
 ;   %add = add <4 x i32> %bc, <i32 1, i32 2, i32 3, i32 4>
 ;   store <4 x i32> %add, ptr addrspace(1) %out, align 16
@@ -290,7 +290,7 @@ bb:
 ; }
 
 ; define amdgpu_kernel void @scalar_to_vector_test4(ptr addrspace(1) %out) nounwind {
-;   %newvec0 = insertelement <4 x i32> undef, i32 12345, i32 0
+;   %newvec0 = insertelement <4 x i32> poison, i32 12345, i32 0
 ;   %bc = bitcast <4 x i32> %newvec0 to <8 x i16>
 ;   %add = add <8 x i16> %bc, <i16 1, i16 2, i16 3, i16 4, i16 1, i16 2, i16 3, i16 4>
 ;   store <8 x i16> %add, ptr addrspace(1) %out, align 16
@@ -298,7 +298,7 @@ bb:
 ; }
 
 ; define amdgpu_kernel void @scalar_to_vector_test5(ptr addrspace(1) %out) nounwind {
-;   %newvec0 = insertelement <2 x i32> undef, i32 12345, i32 0
+;   %newvec0 = insertelement <2 x i32> poison, i32 12345, i32 0
 ;   %bc = bitcast <2 x i32> %newvec0 to <4 x i16>
 ;   %add = add <4 x i16> %bc, <i16 1, i16 2, i16 3, i16 4>
 ;   store <4 x i16> %add, ptr addrspace(1) %out, align 16
@@ -327,7 +327,7 @@ define amdgpu_kernel void @scalar_to_vector_test6(ptr addrspace(1) %out, i8 zero
 ; GFX89-NEXT:    v_mov_b32_e32 v0, s6
 ; GFX89-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX89-NEXT:    s_endpgm
-  %newvec0 = insertelement <4 x i8> undef, i8 %val, i32 0
+  %newvec0 = insertelement <4 x i8> poison, i8 %val, i32 0
   %bc = bitcast <4 x i8> %newvec0 to <2 x half>
   store <2 x half> %bc, ptr addrspace(1) %out
   ret void

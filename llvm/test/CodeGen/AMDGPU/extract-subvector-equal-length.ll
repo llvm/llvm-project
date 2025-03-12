@@ -16,7 +16,7 @@ bb:
   %tmp = shufflevector <4 x i8> <i8 1, i8 2, i8 3, i8 4>, <4 x i8> undef, <3 x i32> <i32 0, i32 1, i32 2>
   %tmp1 = extractelement <3 x i8> %tmp, i64 0
   %tmp2 = zext i8 %tmp1 to i32
-  %tmp3 = insertelement <3 x i32> undef, i32 %tmp2, i32 0
+  %tmp3 = insertelement <3 x i32> poison, i32 %tmp2, i32 0
   %tmp4 = extractelement <3 x i8> %tmp, i64 1
   %tmp5 = zext i8 %tmp4 to i32
   %tmp6 = insertelement <3 x i32> %tmp3, i32 %tmp5, i32 1
