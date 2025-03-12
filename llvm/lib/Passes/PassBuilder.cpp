@@ -790,6 +790,8 @@ Expected<AddressSanitizerOptions> parseASanPassOptions(StringRef Params) {
 
     if (ParamName == "kernel") {
       Result.CompileKernel = true;
+    } else if (ParamName == "use-after-scope") {
+      Result.UseAfterScope = true;
     } else {
       return make_error<StringError>(
           formatv("invalid AddressSanitizer pass parameter '{0}' ", ParamName)
