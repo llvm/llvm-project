@@ -511,6 +511,7 @@ defm FunctionFloatControlINTEL : CapabilityOperand<5821, 0, 0, [SPV_INTEL_float_
 defm LongCompositesINTEL : CapabilityOperand<6089, 0, 0, [SPV_INTEL_long_composites], []>;
 defm BindlessImagesINTEL : CapabilityOperand<6528, 0, 0, [SPV_INTEL_bindless_images], []>;
 defm MemoryAccessAliasingINTEL : CapabilityOperand<5910, 0, 0, [SPV_INTEL_memory_access_aliasing], []>;
+defm RuntimeAlignedAttributeINTEL : CapabilityOperand<5939, 0, 0, [SPV_INTEL_runtime_aligned], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1161,6 +1162,7 @@ defm NoAlias : FunctionParameterAttributeOperand<4, [Kernel]>;
 defm NoCapture : FunctionParameterAttributeOperand<5, [Kernel]>;
 defm NoWrite : FunctionParameterAttributeOperand<6, [Kernel]>;
 defm NoReadWrite : FunctionParameterAttributeOperand<7, [Kernel]>;
+defm RuntimeAlignedINTEL : FunctionParameterAttributeOperand<8, [RuntimeAlignedAttributeINTEL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Decoration enum values and at the same time

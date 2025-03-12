@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRVMetadata.h"
+#include "llvm/IR/Constants.h"
 
 using namespace llvm;
 
@@ -82,4 +83,13 @@ MDString *getOCLKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
   return getOCLKernelArgAttribute(F, ArgIdx, "kernel_arg_type_qual");
 }
 
+bool isKernelArgRuntimeAligned(const Function &F, unsigned ArgIdx) {
+  if (MDNode *Node = F.getMetadata("kernel_arg_runtime_aligned")) {
+    if (auto *CMeta = dyn_cast<ConstantAsMetadata>(Node->getOperand(ArgIdx))) {
+      if (ConstantInt *Const = dyn_cast<ConstantInt>(CMeta->getValue()))
+        return Const->isOne();
+    }
+  }
+  return false;
+}
 } // namespace llvm

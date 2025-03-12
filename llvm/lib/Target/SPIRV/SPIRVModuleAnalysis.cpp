@@ -888,6 +888,15 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
         SPIRV::Extension::SPV_INTEL_global_variable_fpga_decorations);
   } else if (Dec == SPIRV::Decoration::NonUniformEXT) {
     Reqs.addRequirements(SPIRV::Capability::ShaderNonUniformEXT);
+  } else if (Dec == SPIRV::Decoration::FuncParamAttr) {
+    auto funcParamAttr = static_cast<
+        SPIRV::FunctionParameterAttribute::FunctionParameterAttribute>(
+        MI.getOperand(2).getImm());
+    if (funcParamAttr ==
+        SPIRV::FunctionParameterAttribute::RuntimeAlignedINTEL) {
+      Reqs.addRequirements(SPIRV::Capability::RuntimeAlignedAttributeINTEL);
+      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_runtime_aligned);
+    }
   }
 }
 
