@@ -10,8 +10,7 @@ declare {float, float} @bars({float, float} %input)
 define void @test_v2f32(<2 x float> %input, ptr %output) {
 ; CHECK-LABEL: test_v2f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<5>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_v2f32_param_0];
@@ -24,10 +23,10 @@ define void @test_v2f32(<2 x float> %input, ptr %output) {
 ; CHECK-NEXT:    (
 ; CHECK-NEXT:    param0
 ; CHECK-NEXT:    );
-; CHECK-NEXT:    ld.param.v2.b32 {%f1, %f2}, [retval0];
+; CHECK-NEXT:    ld.param.b64 %rd2, [retval0];
 ; CHECK-NEXT:    } // callseq 0
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_v2f32_param_1];
-; CHECK-NEXT:    st.v2.b32 [%rd2], {%f1, %f2};
+; CHECK-NEXT:    ld.param.b64 %rd4, [test_v2f32_param_1];
+; CHECK-NEXT:    st.b64 [%rd4], %rd2;
 ; CHECK-NEXT:    ret;
   %call = tail call <2 x float> @barv(<2 x float> %input)
   store <2 x float> %call, ptr %output, align 8

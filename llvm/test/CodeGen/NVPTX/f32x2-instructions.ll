@@ -512,14 +512,13 @@ define <2 x float> @test_frem_ftz(<2 x float> %a, <2 x float> %b) #2 {
 define void @test_ldst_v2f32(ptr %a, ptr %b) #0 {
 ; CHECK-LABEL: test_ldst_v2f32(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %f<3>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param.b64 %rd2, [test_ldst_v2f32_param_1];
 ; CHECK-NEXT:    ld.param.b64 %rd1, [test_ldst_v2f32_param_0];
-; CHECK-NEXT:    ld.v2.b32 {%f1, %f2}, [%rd1];
-; CHECK-NEXT:    st.v2.b32 [%rd2], {%f1, %f2};
+; CHECK-NEXT:    ld.b64 %rd3, [%rd1];
+; CHECK-NEXT:    st.b64 [%rd2], %rd3;
 ; CHECK-NEXT:    ret;
   %t1 = load <2 x float>, ptr %a
   store <2 x float> %t1, ptr %b, align 32
