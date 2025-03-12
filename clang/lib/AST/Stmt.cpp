@@ -510,17 +510,18 @@ char GCCAsmStmt::AsmStringPiece::getModifier() const {
   return isLetter(Str[0]) ? Str[0] : '\0';
 }
 
-std::string GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(const Expr* E) {
-  if(auto* SL = llvm::dyn_cast<StringLiteral>(E))
+std::string GCCAsmStmt::ExtractStringFromGCCAsmStmtComponent(const Expr *E) {
+  if (auto *SL = llvm::dyn_cast<StringLiteral>(E))
     return SL->getString().str();
-  assert(E->getDependence() == ExprDependence::None && "cannot extract a string from a dependent expression");
-  auto* CE = cast<ConstantExpr>(E);
+  assert(E->getDependence() == ExprDependence::None &&
+         "cannot extract a string from a dependent expression");
+  auto *CE = cast<ConstantExpr>(E);
   APValue Res = CE->getAPValueResult();
   assert(Res.isArray() && "expected an array");
 
   std::string Out;
   Out.reserve(Res.getArraySize());
-  for(unsigned I = 0; I < Res.getArraySize(); ++I) {
+  for (unsigned I = 0; I < Res.getArraySize(); ++I) {
     APValue C = Res.getArrayInitializedElt(I);
     assert(C.isInt());
     auto Ch = static_cast<char>(C.getInt().getExtValue());
@@ -570,15 +571,10 @@ std::string GCCAsmStmt::getInputConstraint(unsigned i) const {
   return ExtractStringFromGCCAsmStmtComponent(getInputConstraintExpr(i));
 }
 
-void GCCAsmStmt::setOutputsAndInputsAndClobbers(const ASTContext &C,
-                                                IdentifierInfo **Names,
-                                                Expr **Constraints,
-                                                Stmt **Exprs,
-                                                unsigned NumOutputs,
-                                                unsigned NumInputs,
-                                                unsigned NumLabels,
-                                                Expr **Clobbers,
-                                                unsigned NumClobbers) {
+void GCCAsmStmt::setOutputsAndInputsAndClobbers(
+    const ASTContext &C, IdentifierInfo **Names, Expr **Constraints,
+    Stmt **Exprs, unsigned NumOutputs, unsigned NumInputs, unsigned NumLabels,
+    Expr **Clobbers, unsigned NumClobbers) {
   this->NumOutputs = NumOutputs;
   this->NumInputs = NumInputs;
   this->NumClobbers = NumClobbers;
@@ -596,11 +592,11 @@ void GCCAsmStmt::setOutputsAndInputsAndClobbers(const ASTContext &C,
 
   unsigned NumConstraints = NumOutputs + NumInputs;
   C.Deallocate(this->Constraints);
-  this->Constraints = new (C) Expr*[NumConstraints];
+  this->Constraints = new (C) Expr *[NumConstraints];
   std::copy(Constraints, Constraints + NumConstraints, this->Constraints);
 
   C.Deallocate(this->Clobbers);
-  this->Clobbers = new (C) Expr*[NumClobbers];
+  this->Clobbers = new (C) Expr *[NumClobbers];
   std::copy(Clobbers, Clobbers + NumClobbers, this->Clobbers);
 }
 
@@ -766,15 +762,14 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
       // (BeginLoc, EndLoc) represents the range of the operand we are currently
       // processing. Unlike Str, the range includes the leading '%'.
       SourceLocation BeginLoc, EndLoc;
-      if(auto* SL = dyn_cast<StringLiteral>(getAsmStringExpr())) {
-        BeginLoc = SL->getLocationOfByte(
-            Percent - StrStart, SM, LO, TI, &LastAsmStringToken,
-            &LastAsmStringOffset);
-        EndLoc = SL->getLocationOfByte(
-            CurPtr - StrStart, SM, LO, TI, &LastAsmStringToken,
-            &LastAsmStringOffset);
-      }
-      else {
+      if (auto *SL = dyn_cast<StringLiteral>(getAsmStringExpr())) {
+        BeginLoc =
+            SL->getLocationOfByte(Percent - StrStart, SM, LO, TI,
+                                  &LastAsmStringToken, &LastAsmStringOffset);
+        EndLoc =
+            SL->getLocationOfByte(CurPtr - StrStart, SM, LO, TI,
+                                  &LastAsmStringToken, &LastAsmStringOffset);
+      } else {
         BeginLoc = getAsmStringExpr()->getBeginLoc();
         EndLoc = getAsmStringExpr()->getEndLoc();
       }
@@ -809,15 +804,14 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
       // (BeginLoc, EndLoc) represents the range of the operand we are currently
       // processing. Unlike Str, the range includes the leading '%'.
       SourceLocation BeginLoc, EndLoc;
-      if(auto* SL = dyn_cast<StringLiteral>(getAsmStringExpr())) {
-        BeginLoc = SL->getLocationOfByte(
-          Percent - StrStart, SM, LO, TI, &LastAsmStringToken,
-          &LastAsmStringOffset);
-        EndLoc = SL->getLocationOfByte(
-          NameEnd + 1 - StrStart, SM, LO, TI, &LastAsmStringToken,
-          &LastAsmStringOffset);
-      }
-      else {
+      if (auto *SL = dyn_cast<StringLiteral>(getAsmStringExpr())) {
+        BeginLoc =
+            SL->getLocationOfByte(Percent - StrStart, SM, LO, TI,
+                                  &LastAsmStringToken, &LastAsmStringOffset);
+        EndLoc =
+            SL->getLocationOfByte(NameEnd + 1 - StrStart, SM, LO, TI,
+                                  &LastAsmStringToken, &LastAsmStringOffset);
+      } else {
         BeginLoc = getAsmStringExpr()->getBeginLoc();
         EndLoc = getAsmStringExpr()->getEndLoc();
       }
@@ -900,13 +894,12 @@ void MSAsmStmt::setInputExpr(unsigned i, Expr *E) {
 GCCAsmStmt::GCCAsmStmt(const ASTContext &C, SourceLocation asmloc,
                        bool issimple, bool isvolatile, unsigned numoutputs,
                        unsigned numinputs, IdentifierInfo **names,
-                       Expr **constraints, Expr **exprs,
-                       Expr *asmstr, unsigned numclobbers,
-                       Expr **clobbers, unsigned numlabels,
-                       SourceLocation rparenloc)
+                       Expr **constraints, Expr **exprs, Expr *asmstr,
+                       unsigned numclobbers, Expr **clobbers,
+                       unsigned numlabels, SourceLocation rparenloc)
     : AsmStmt(GCCAsmStmtClass, asmloc, issimple, isvolatile, numoutputs,
               numinputs, numclobbers),
-              RParenLoc(rparenloc), AsmStr(asmstr), NumLabels(numlabels) {
+      RParenLoc(rparenloc), AsmStr(asmstr), NumLabels(numlabels) {
   unsigned NumExprs = NumOutputs + NumInputs + NumLabels;
 
   Names = new (C) IdentifierInfo*[NumExprs];
@@ -916,10 +909,10 @@ GCCAsmStmt::GCCAsmStmt(const ASTContext &C, SourceLocation asmloc,
   std::copy(exprs, exprs + NumExprs, Exprs);
 
   unsigned NumConstraints = NumOutputs + NumInputs;
-  Constraints = new (C) Expr*[NumConstraints];
+  Constraints = new (C) Expr *[NumConstraints];
   std::copy(constraints, constraints + NumConstraints, Constraints);
 
-  Clobbers = new (C) Expr*[NumClobbers];
+  Clobbers = new (C) Expr *[NumClobbers];
   std::copy(clobbers, clobbers + NumClobbers, Clobbers);
 }
 

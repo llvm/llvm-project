@@ -497,8 +497,8 @@ void StmtPrinter::VisitReturnStmt(ReturnStmt *Node) {
   if (Policy.IncludeNewlines) OS << NL;
 }
 
-static void PrintGCCAsmString(raw_ostream &OS, Expr*E) {
-  if(E->getDependence()) {
+static void PrintGCCAsmString(raw_ostream &OS, Expr *E) {
+  if (E->getDependence()) {
     OS << "<<dependent expr>>";
     return;
   }

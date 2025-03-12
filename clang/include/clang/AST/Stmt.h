@@ -3314,9 +3314,8 @@ public:
   GCCAsmStmt(const ASTContext &C, SourceLocation asmloc, bool issimple,
              bool isvolatile, unsigned numoutputs, unsigned numinputs,
              IdentifierInfo **names, Expr **constraints, Expr **exprs,
-             Expr *asmstr, unsigned numclobbers,
-             Expr **clobbers, unsigned numlabels,
-             SourceLocation rparenloc);
+             Expr *asmstr, unsigned numclobbers, Expr **clobbers,
+             unsigned numlabels, SourceLocation rparenloc);
 
   /// Build an empty inline-assembly statement.
   explicit GCCAsmStmt(EmptyShell Empty) : AsmStmt(GCCAsmStmtClass, Empty) {}
@@ -3404,9 +3403,7 @@ public:
   const Expr *getOutputConstraintExpr(unsigned i) const {
     return Constraints[i];
   }
-  Expr *getOutputConstraintExpr(unsigned i) {
-    return Constraints[i];
-  }
+  Expr *getOutputConstraintExpr(unsigned i) { return Constraints[i]; }
 
   Expr *getOutputExpr(unsigned i);
 
@@ -3443,7 +3440,7 @@ public:
     return const_cast<GCCAsmStmt*>(this)->getInputExpr(i);
   }
 
-  static std::string ExtractStringFromGCCAsmStmtComponent(const Expr* E);
+  static std::string ExtractStringFromGCCAsmStmtComponent(const Expr *E);
 
   //===--- Labels ---===//
 
@@ -3493,12 +3490,9 @@ public:
 private:
   void setOutputsAndInputsAndClobbers(const ASTContext &C,
                                       IdentifierInfo **Names,
-                                      Expr **Constraints,
-                                      Stmt **Exprs,
-                                      unsigned NumOutputs,
-                                      unsigned NumInputs,
-                                      unsigned NumLabels,
-                                      Expr **Clobbers,
+                                      Expr **Constraints, Stmt **Exprs,
+                                      unsigned NumOutputs, unsigned NumInputs,
+                                      unsigned NumLabels, Expr **Clobbers,
                                       unsigned NumClobbers);
 
 public:
@@ -3512,9 +3506,7 @@ public:
   std::string getClobber(unsigned i) const;
 
   Expr *getClobberExpr(unsigned i) { return Clobbers[i]; }
-  const Expr *getClobberExpr(unsigned i) const {
-    return Clobbers[i];
-  }
+  const Expr *getClobberExpr(unsigned i) const { return Clobbers[i]; }
 
   SourceLocation getBeginLoc() const LLVM_READONLY { return AsmLoc; }
   SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }

@@ -17929,69 +17929,70 @@ std::optional<std::string> Expr::tryEvaluateString(ASTContext &Ctx) const {
 }
 
 template <typename T>
-static bool EvaluateCharRangeAsStringImpl(const Expr*, T& Result,
+static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
                                           const Expr *SizeExpression,
-                                          const Expr *PtrExpression, ASTContext &Ctx,
+                                          const Expr *PtrExpression,
+                                          ASTContext &Ctx,
                                           Expr::EvalResult &Status) {
-    LValue String;
-    EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpression);
-    Info.InConstantContext = true;
+  LValue String;
+  EvalInfo Info(Ctx, Status, EvalInfo::EM_ConstantExpression);
+  Info.InConstantContext = true;
 
-    FullExpressionRAII Scope(Info);
-    APSInt SizeValue;
-    if (!::EvaluateInteger(SizeExpression, SizeValue, Info))
+  FullExpressionRAII Scope(Info);
+  APSInt SizeValue;
+  if (!::EvaluateInteger(SizeExpression, SizeValue, Info))
+    return false;
+
+  uint64_t Size = SizeValue.getZExtValue();
+
+  if constexpr (std::is_same_v<APValue, T>)
+    Result = APValue(APValue::UninitArray{}, Size, Size);
+  // else
+  //     Result.reserve(Size);
+
+  if (!::EvaluatePointer(PtrExpression, String, Info))
+    return false;
+
+  QualType CharTy = PtrExpression->getType()->getPointeeType();
+  for (uint64_t I = 0; I < Size; ++I) {
+    APValue Char;
+    if (!handleLValueToRValueConversion(Info, PtrExpression, CharTy, String,
+                                        Char))
       return false;
 
-    uint64_t Size = SizeValue.getZExtValue();
-
-    if constexpr(std::is_same_v<APValue, T>)
-        Result = APValue(APValue::UninitArray{}, Size, Size);
-    //else
-    //    Result.reserve(Size);
-
-    if (!::EvaluatePointer(PtrExpression, String, Info))
-      return false;
-
-    QualType CharTy = PtrExpression->getType()->getPointeeType();
-    for (uint64_t I = 0; I < Size; ++I) {
-      APValue Char;
-      if (!handleLValueToRValueConversion(Info, PtrExpression, CharTy, String,
-                                          Char))
-        return false;
-
-      if constexpr(std::is_same_v<APValue, T>) {
-          Result.getArrayInitializedElt(I) = std::move(Char);
-      }
-      else {
-          APSInt C = Char.getInt();
-          Result.push_back(static_cast<char>(C.getExtValue()));
-      }
-
-      if (!HandleLValueArrayAdjustment(Info, PtrExpression, String, CharTy, 1))
-        return false;
+    if constexpr (std::is_same_v<APValue, T>) {
+      Result.getArrayInitializedElt(I) = std::move(Char);
+    } else {
+      APSInt C = Char.getInt();
+      Result.push_back(static_cast<char>(C.getExtValue()));
     }
-    if (!Scope.destroy())
-      return false;
 
-    if (!CheckMemoryLeaks(Info))
+    if (!HandleLValueArrayAdjustment(Info, PtrExpression, String, CharTy, 1))
       return false;
+  }
+  if (!Scope.destroy())
+    return false;
 
-    return true;
+  if (!CheckMemoryLeaks(Info))
+    return false;
+
+  return true;
 }
-
 
 bool Expr::EvaluateCharRangeAsString(std::string &Result,
                                      const Expr *SizeExpression,
                                      const Expr *PtrExpression, ASTContext &Ctx,
                                      EvalResult &Status) const {
-    return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression, PtrExpression, Ctx, Status);
+  return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
+                                       PtrExpression, Ctx, Status);
 }
 
 bool Expr::EvaluateCharRangeAsString(APValue &Result,
-                               const Expr *SizeExpression,
-                               const Expr *PtrExpression, ASTContext &Ctx,
-                                EvalResult &Status) const {
-    return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression, PtrExpression, Ctx, Status);
+                                     const Expr *SizeExpression,
+                                     const Expr *PtrExpression, ASTContext &Ctx,
+                                     EvalResult &Status) const {
+  return EvaluateCharRangeAsStringImpl(this, Result, SizeExpression,
+                                       PtrExpression, Ctx, Status);
 }
 
 bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {

@@ -17262,11 +17262,10 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
 }
 
 template <typename ResultType>
-static bool EvaluateAsStringImpl(Sema & SemaRef,
-                            Expr *Message,
-                            ResultType &Result, ASTContext &Ctx,
-                            Sema::StringEvaluationContext EvalContext,
-                            bool ErrorOnInvalidMessage) {
+static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
+                                 ResultType &Result, ASTContext &Ctx,
+                                 Sema::StringEvaluationContext EvalContext,
+                                 bool ErrorOnInvalidMessage) {
 
   assert(Message);
   assert(!Message->isTypeDependent() && !Message->isValueDependent() &&
@@ -17274,20 +17273,21 @@ static bool EvaluateAsStringImpl(Sema & SemaRef,
 
   if (const auto *SL = dyn_cast<StringLiteral>(Message)) {
     assert(SL->isUnevaluated() && "expected an unevaluated string");
-    if constexpr(std::is_same_v<APValue, ResultType>) {
-        Result = APValue(APValue::UninitArray{}, SL->getLength(), SL->getLength());
-        const ConstantArrayType *CAT = SemaRef.getASTContext().getAsConstantArrayType(SL->getType());
-        assert(CAT && "string literal isn't an array");
-        QualType CharType = CAT->getElementType();
-        llvm::APSInt Value(SemaRef.getASTContext().getTypeSize(CharType),
-                     CharType->isUnsignedIntegerType());
-        for(unsigned I = 0; I < SL->getLength(); I++) {
-            Value = SL->getCodeUnit(I);
-            Result.getArrayInitializedElt(I) = APValue(Value);
-        }
-    }
-    else {
-        Result.assign(SL->getString().begin(), SL->getString().end());
+    if constexpr (std::is_same_v<APValue, ResultType>) {
+      Result =
+          APValue(APValue::UninitArray{}, SL->getLength(), SL->getLength());
+      const ConstantArrayType *CAT =
+          SemaRef.getASTContext().getAsConstantArrayType(SL->getType());
+      assert(CAT && "string literal isn't an array");
+      QualType CharType = CAT->getElementType();
+      llvm::APSInt Value(SemaRef.getASTContext().getTypeSize(CharType),
+                         CharType->isUnsignedIntegerType());
+      for (unsigned I = 0; I < SL->getLength(); I++) {
+        Value = SL->getCodeUnit(I);
+        Result.getArrayInitializedElt(I) = APValue(Value);
+      }
+    } else {
+      Result.assign(SL->getString().begin(), SL->getString().end());
     }
     return true;
   }
@@ -17339,7 +17339,8 @@ static bool EvaluateAsStringImpl(Sema & SemaRef,
         CXXScopeSpec(), SourceLocation(), nullptr, LR, nullptr, nullptr);
     if (Res.isInvalid())
       return ExprError();
-    Res = SemaRef.BuildCallExpr(nullptr, Res.get(), Loc, {}, Loc, nullptr, false, true);
+    Res = SemaRef.BuildCallExpr(nullptr, Res.get(), Loc, {}, Loc, nullptr,
+                                false, true);
     if (Res.isInvalid())
       return ExprError();
     if (Res.get()->isTypeDependent() || Res.get()->isValueDependent())
@@ -17351,27 +17352,28 @@ static bool EvaluateAsStringImpl(Sema & SemaRef,
   ExprResult DataE = BuildExpr(*DataMember);
 
   QualType SizeT = SemaRef.Context.getSizeType();
-  QualType ConstCharPtr =
-      SemaRef.Context.getPointerType(SemaRef.Context.getConstType(SemaRef.Context.CharTy));
+  QualType ConstCharPtr = SemaRef.Context.getPointerType(
+      SemaRef.Context.getConstType(SemaRef.Context.CharTy));
 
   ExprResult EvaluatedSize =
-      SizeE.isInvalid() ? ExprError()
-                        : SemaRef.BuildConvertedConstantExpression(
-                              SizeE.get(), SizeT, Sema::CCEK_StaticAssertMessageSize);
+      SizeE.isInvalid()
+          ? ExprError()
+          : SemaRef.BuildConvertedConstantExpression(
+                SizeE.get(), SizeT, Sema::CCEK_StaticAssertMessageSize);
   if (EvaluatedSize.isInvalid()) {
     SemaRef.Diag(Loc, diag::err_user_defined_msg_invalid_mem_fn_ret_ty)
-            << EvalContext << /*size*/ 0;
+        << EvalContext << /*size*/ 0;
     return false;
   }
 
   ExprResult EvaluatedData =
       DataE.isInvalid()
           ? ExprError()
-          : SemaRef.BuildConvertedConstantExpression(DataE.get(), ConstCharPtr,
-                                             Sema::CCEK_StaticAssertMessageData);
+          : SemaRef.BuildConvertedConstantExpression(
+                DataE.get(), ConstCharPtr, Sema::CCEK_StaticAssertMessageData);
   if (EvaluatedData.isInvalid()) {
     SemaRef.Diag(Loc, diag::err_user_defined_msg_invalid_mem_fn_ret_ty)
-            << EvalContext << /*data*/ 1;
+        << EvalContext << /*data*/ 1;
     return false;
   }
 
@@ -17386,9 +17388,9 @@ static bool EvaluateAsStringImpl(Sema & SemaRef,
                                           EvaluatedData.get(), Ctx, Status) ||
       !Notes.empty()) {
     SemaRef.Diag(Message->getBeginLoc(),
-         ErrorOnInvalidMessage ? diag::err_user_defined_msg_constexpr
-                               : diag::warn_user_defined_msg_constexpr)
-            << EvalContext;
+                 ErrorOnInvalidMessage ? diag::err_user_defined_msg_constexpr
+                                       : diag::warn_user_defined_msg_constexpr)
+        << EvalContext;
     for (const auto &Note : Notes)
       SemaRef.Diag(Note.first, Note.second);
     return !ErrorOnInvalidMessage;
@@ -17399,14 +17401,15 @@ static bool EvaluateAsStringImpl(Sema & SemaRef,
 bool Sema::EvaluateAsString(Expr *Message, APValue &Result, ASTContext &Ctx,
                             StringEvaluationContext EvalContext,
                             bool ErrorOnInvalidMessage) {
-    return EvaluateAsStringImpl(*this, Message, Result, Ctx, EvalContext, ErrorOnInvalidMessage);
-
+  return EvaluateAsStringImpl(*this, Message, Result, Ctx, EvalContext,
+                              ErrorOnInvalidMessage);
 }
 
 bool Sema::EvaluateAsString(Expr *Message, std::string &Result, ASTContext &Ctx,
                             StringEvaluationContext EvalContext,
                             bool ErrorOnInvalidMessage) {
-    return EvaluateAsStringImpl(*this, Message, Result, Ctx, EvalContext, ErrorOnInvalidMessage);
+  return EvaluateAsStringImpl(*this, Message, Result, Ctx, EvalContext,
+                              ErrorOnInvalidMessage);
 }
 
 Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
@@ -17455,7 +17458,7 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
     if (!Failed && AssertMessage && Cond.getBoolValue()) {
       std::string Str;
       EvaluateAsString(AssertMessage, Str, Context,
-                        StringEvaluationContext::StaticAssert,
+                       StringEvaluationContext::StaticAssert,
                        /*ErrorOnInvalidMessage=*/false);
     }
 

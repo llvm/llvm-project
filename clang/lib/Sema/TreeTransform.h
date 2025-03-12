@@ -8552,7 +8552,6 @@ template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
 
-
   SmallVector<Expr*, 8> Constraints;
   SmallVector<Expr*, 8> Exprs;
   SmallVector<IdentifierInfo *, 4> Names;
@@ -8561,15 +8560,15 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
 
   bool ExprsChanged = false;
 
-  auto RebuildString = [&] (Expr* E) {
-      ExprResult Result = getDerived().TransformExpr(E);
-      if (Result.isInvalid())
-        return Result;
-      if(!Result.isInvalid() && Result.get() != E) {
-          ExprsChanged = true;
-          Result = SemaRef.ActOnGCCAsmStmtString(Result.get(), /*ForLabel=*/false);
-      }
+  auto RebuildString = [&](Expr *E) {
+    ExprResult Result = getDerived().TransformExpr(E);
+    if (Result.isInvalid())
       return Result;
+    if (!Result.isInvalid() && Result.get() != E) {
+      ExprsChanged = true;
+      Result = SemaRef.ActOnGCCAsmStmtString(Result.get(), /*ForLabel=*/false);
+    }
+    return Result;
   };
 
   // Go through the outputs.
@@ -8627,10 +8626,10 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
 
   // Go through the clobbers.
   for (unsigned I = 0, E = S->getNumClobbers(); I != E; ++I) {
-      ExprResult Result = RebuildString(S->getClobberExpr(I));
-      if (Result.isInvalid())
-        return StmtError();
-      Clobbers.push_back(Result.get());
+    ExprResult Result = RebuildString(S->getClobberExpr(I));
+    if (Result.isInvalid())
+      return StmtError();
+    Clobbers.push_back(Result.get());
   }
 
   ExprResult AsmString = RebuildString(S->getAsmStringExpr());

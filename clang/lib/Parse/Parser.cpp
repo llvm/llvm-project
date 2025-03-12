@@ -1670,32 +1670,33 @@ void Parser::ParseKNRParamDeclarations(Declarator &D) {
 ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
 
   ExprResult AsmString;
-  if(isTokenStringLiteral()) {
+  if (isTokenStringLiteral()) {
     AsmString = ParseStringLiteralExpression();
-    if(AsmString.isInvalid())
+    if (AsmString.isInvalid())
       return AsmString;
 
     const auto *SL = cast<StringLiteral>(AsmString.get());
     if (!SL->isOrdinary()) {
       Diag(Tok, diag::err_asm_operand_wide_string_literal)
-      << SL->isWide()
-      << SL->getSourceRange();
+          << SL->isWide() << SL->getSourceRange();
       return ExprError();
     }
-  }
-  else if(!ForAsmLabel && getLangOpts().CPlusPlus11 && Tok.is(tok::l_paren)) {
+  } else if (!ForAsmLabel && getLangOpts().CPlusPlus11 &&
+             Tok.is(tok::l_paren)) {
     ParenParseOption ExprType = SimpleExpr;
-    SourceLocation   RParenLoc;
+    SourceLocation RParenLoc;
     ParsedType CastTy;
 
-    AsmString = ParseParenExpression(ExprType, true/*stopIfCastExpr*/,
-                                   false, CastTy, RParenLoc);
-    if(!AsmString.isUsable())
+    Sema::ExpressionEvaluationContext Context =
+        Sema::ExpressionEvaluationContext::ConstantEvaluated;
+
+    AsmString = ParseParenExpression(ExprType, true /*stopIfCastExpr*/, false,
+                                     CastTy, RParenLoc);
+    if (!AsmString.isUsable())
       return ExprError();
-  }
-  else {
+  } else {
     Diag(Tok, diag::err_asm_expected_string)
-      << /*and expression=*/(getLangOpts().CPlusPlus11? 0 : 1);
+        << /*and expression=*/(getLangOpts().CPlusPlus11 ? 0 : 1);
   }
 
   return Actions.ActOnGCCAsmStmtString(AsmString.get(), ForAsmLabel);
