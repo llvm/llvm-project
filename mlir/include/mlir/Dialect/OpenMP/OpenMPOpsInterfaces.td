@@ -23,19 +23,41 @@ include "mlir/IR/OpBase.td"
 // arguments corresponding to each of these clauses.
 class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     BlockArgOpenMPClause previousClause> {
-  // Default-implemented method to be overriden by the corresponding clause.
+  // Default-implemented method, overriden by the corresponding clause. It
+  // returns the range of operands passed to the operation associated to the
+  // clause.
+  //
+  // For the override to work, the clause tablegen definition must contain a
+  // `Variadic<...> $clause_name_vars` argument.
   //
   // Usage example:
   //
   // ```c++
-  // auto iface = cast<BlockArgOpenMPOpInterface>(op);
-  // unsigned numInReductionArgs = iface.numInReductionBlockArgs();
+  // OperandRange reductionVars = op.getReductionVars();
+  // ```
+  InterfaceMethod varsMethod = InterfaceMethod<
+    "Get operation operands associated to `" # clauseNameSnake # "`.",
+    "::mlir::OperandRange", "get" # clauseNameCamel # "Vars", (ins), [{}], [{
+      return {0, 0};
+    }]
+  >;
+
+  // It returns the number of entry block arguments introduced by the given
+  // clause.
+  //
+  // By default, it will be the number of operands corresponding to that clause,
+  // but it can be overriden by operations where this might not be the case
+  // (e.g. `map` clause in `omp.target_update`).
+  //
+  // Usage example:
+  //
+  // ```c++
+  // unsigned numInReductionArgs = op.numInReductionBlockArgs();
   // ```
   InterfaceMethod numArgsMethod = InterfaceMethod<
     "Get number of block arguments defined by `" # clauseNameSnake # "`.",
-    "unsigned", "num" # clauseNameCamel # "BlockArgs", (ins), [{}], [{
-      return 0;
-    }]
+    "unsigned", "num" # clauseNameCamel # "BlockArgs", (ins), [{}],
+    "return $_op." # varsMethod.name # "().size();"
   >;
 
   // Unified access method for the start index of clause-associated entry block
@@ -52,7 +74,7 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     "unsigned", "get" # clauseNameCamel # "BlockArgsStart", (ins),
     !if(!initialized(previousClause), [{
         auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
-      }] # "return iface." # previousClause.startMethod.name # "() + $_op."
+      }] # "return iface." # previousClause.startMethod.name # "() + iface."
         # previousClause.numArgsMethod.name # "();",
         "return 0;"
     )
@@ -72,7 +94,7 @@ class BlockArgOpenMPClause<string clauseNameSnake, string clauseNameCamel,
     "get" # clauseNameCamel # "BlockArgs", (ins), [{
       auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
       return $_op->getRegion(0).getArguments().slice(
-    }] # "iface." # startMethod.name # "(), $_op." # numArgsMethod.name # "());"
+    }] # "iface." # startMethod.name # "(), iface." # numArgsMethod.name # "());"
   >;
 }
 
@@ -109,9 +131,26 @@ def BlockArgOpenMPOpInterface : OpInterface<"BlockArgOpenMPOpInterface"> {
     BlockArgUseDeviceAddrClause, BlockArgUseDevicePtrClause ];
 
   let methods = !listconcat(
+    !foreach(clause, clauses, clause.varsMethod),
     !foreach(clause, clauses, clause.numArgsMethod),
     !foreach(clause, clauses, clause.startMethod),
-    !foreach(clause, clauses, clause.blockArgsMethod)
+    !foreach(clause, clauses, clause.blockArgsMethod),
+    [
+      InterfaceMethod<
+        "Populate a vector of pairs representing the matching between operands "
+        "and entry block arguments.", "void", "getBlockArgsPairs",
+        (ins "::llvm::SmallVectorImpl<std::pair<::mlir::Value, ::mlir::BlockArgument>> &" : $pairs),
+        [{
+          auto iface = ::llvm::cast<BlockArgOpenMPOpInterface>(*$_op);
+        }] # !interleave(!foreach(clause, clauses, [{
+        }] # "if (iface." # clause.numArgsMethod.name # "() > 0) {" # [{
+        }] # "  for (auto [var, arg] : ::llvm::zip_equal(" #
+                "iface." # clause.varsMethod.name # "()," #
+                "iface." # clause.blockArgsMethod.name # "()))" # [{
+            pairs.emplace_back(var, arg);
+        } }]), "\n")
+      >
+    ]
   );
 
   let verify = [{
