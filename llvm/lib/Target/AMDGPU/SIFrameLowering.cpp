@@ -1952,10 +1952,10 @@ bool SIFrameLowering::restoreCalleeSavedRegisters(
     // VGPRs in the register block is reserved (e.g. if it's a WWM register),
     // then the whole block will be marked as reserved and `updateLiveness` will
     // skip it.
-    if (!MBB.isLiveIn(Reg))
-      MBB.addLiveIn(Reg);
+    MBB.addLiveIn(Reg);
   }
 
+  MBB.sortUniqueLiveIns();
   return false;
 }
 
