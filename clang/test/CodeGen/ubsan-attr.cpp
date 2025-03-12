@@ -2,10 +2,10 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 %s -o - -fsanitize-recover=signed-integer-overflow | FileCheck %s --check-prefixes=RECOVER
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -fsanitize=signed-integer-overflow -O3 %s -o - | FileCheck %s --check-prefixes=ABORT
 
-// RECOVER: Function Attrs: mustprogress nounwind
+// RECOVER: Function Attrs: mustprogress nounwind willreturn memory(read, argmem: readwrite, inaccessiblemem: readwrite)
 // RECOVER-LABEL: define dso_local noundef range(i32 -32768, 32768) i32 @_Z4testRiRs(
 // RECOVER-SAME: ptr noundef nonnull align 4 captures(none) dereferenceable(4) [[A:%.*]], ptr noundef nonnull readonly align 2 captures(none) dereferenceable(2) [[C:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
-// RECOVER-NEXT:  [[ENTRY:.*]]:
+// RECOVER-NEXT:  [[ENTRY:.*:]]
 // RECOVER-NEXT:    [[TMP0:%.*]] = load i16, ptr [[C]], align 2, !tbaa [[TBAA2:![0-9]+]]
 // RECOVER-NEXT:    [[CONV:%.*]] = sext i16 [[TMP0]] to i32
 // RECOVER-NEXT:    [[TMP1:%.*]] = load i32, ptr [[A]], align 4, !tbaa [[TBAA6:![0-9]+]]
@@ -16,14 +16,11 @@
 // RECOVER-NEXT:    [[TMP4:%.*]] = zext i32 [[TMP1]] to i64, !nosanitize [[META8]]
 // RECOVER-NEXT:    [[TMP5:%.*]] = zext i32 [[CONV]] to i64, !nosanitize [[META8]]
 // RECOVER-NEXT:    tail call void @__ubsan_handle_add_overflow(ptr nonnull @[[GLOB1]], i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR3:[0-9]+]], !nosanitize [[META8]]
-// RECOVER-NEXT:    [[DOTPRE:%.*]] = load i16, ptr [[C]], align 2, !tbaa [[TBAA2]]
-// RECOVER-NEXT:    [[DOTPRE3:%.*]] = sext i16 [[DOTPRE]] to i32
 // RECOVER-NEXT:    br label %[[CONT]], !nosanitize [[META8]]
 // RECOVER:       [[CONT]]:
-// RECOVER-NEXT:    [[CONV1_PRE_PHI:%.*]] = phi i32 [ [[DOTPRE3]], %[[HANDLER_ADD_OVERFLOW]] ], [ [[CONV]], %[[ENTRY]] ]
 // RECOVER-NEXT:    [[TMP6:%.*]] = extractvalue { i32, i1 } [[TMP2]], 0, !nosanitize [[META8]]
 // RECOVER-NEXT:    store i32 [[TMP6]], ptr [[A]], align 4, !tbaa [[TBAA6]]
-// RECOVER-NEXT:    ret i32 [[CONV1_PRE_PHI]]
+// RECOVER-NEXT:    ret i32 [[CONV]]
 //
 // ABORT: Function Attrs: mustprogress nounwind
 // ABORT-LABEL: define dso_local noundef range(i32 -32768, 32768) i32 @_Z4testRiRs(
@@ -50,9 +47,9 @@ int test(int &a, short &c) {
   return c;
 }
 //.
-// RECOVER: attributes #[[ATTR0]] = { mustprogress nounwind "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
+// RECOVER: attributes #[[ATTR0]] = { mustprogress nounwind willreturn memory(read, argmem: readwrite, inaccessiblemem: readwrite) "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
 // RECOVER: attributes #[[ATTR1:[0-9]+]] = { mustprogress nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-// RECOVER: attributes #[[ATTR2:[0-9]+]] = { uwtable }
+// RECOVER: attributes #[[ATTR2:[0-9]+]] = { mustprogress willreturn memory(argmem: read, inaccessiblemem: readwrite) uwtable }
 // RECOVER: attributes #[[ATTR3]] = { nomerge nounwind }
 //.
 // ABORT: attributes #[[ATTR0]] = { mustprogress nounwind "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" }
