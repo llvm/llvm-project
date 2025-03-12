@@ -186,12 +186,9 @@ void tools::hlsl::Validator::ConstructJob(Compilation &C, const JobAction &JA,
   ArgStringList CmdArgs;
   assert(Inputs.size() == 1 && "Unable to handle multiple inputs.");
   const InputInfo &Input = Inputs[0];
-  assert(Input.isFilename() && "Unexpected verify input");
-  // Grabbing the output of the earlier cc1 run.
   CmdArgs.push_back(Input.getFilename());
-  // Use the same name as output.
   CmdArgs.push_back("-o");
-  CmdArgs.push_back(Input.getFilename());
+  CmdArgs.push_back(Output.getFilename());
 
   const char *Exec = Args.MakeArgString(DxvPath);
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
@@ -204,10 +201,11 @@ void tools::hlsl::MetalConverter::ConstructJob(
     const char *LinkingOutput) const {
   std::string MSCPath = getToolChain().GetProgramPath("metal-shaderconverter");
   ArgStringList CmdArgs;
+  assert(Inputs.size() == 1 && "Unable to handle multiple inputs.");
   const InputInfo &Input = Inputs[0];
   CmdArgs.push_back(Input.getFilename());
   CmdArgs.push_back("-o");
-  CmdArgs.push_back(Input.getFilename());
+  CmdArgs.push_back(Output.getFilename());
 
   const char *Exec = Args.MakeArgString(MSCPath);
   C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
@@ -319,5 +317,23 @@ bool HLSLToolChain::requiresValidation(DerivedArgList &Args) const {
     return true;
 
   getDriver().Diag(diag::warn_drv_dxc_missing_dxv);
+  return false;
+}
+
+bool HLSLToolChain::requiresBinaryTranslation(DerivedArgList &Args) const {
+  return Args.hasArg(options::OPT_metal) && Args.hasArg(options::OPT_dxc_Fo);
+}
+
+bool HLSLToolChain::isLastJob(DerivedArgList &Args,
+                              Action::ActionClass AC) const {
+  bool HasTranslation = requiresBinaryTranslation(Args);
+  bool HasValidation = requiresValidation(Args);
+  // If translation and validation are not required, we should only have one
+  // action.
+  if (!HasTranslation && !HasValidation)
+    return true;
+  if ((HasTranslation && AC == Action::BinaryTranslatorJobClass) ||
+      (!HasTranslation && HasValidation && AC == Action::BinaryAnalyzeJobClass))
+    return true;
   return false;
 }
