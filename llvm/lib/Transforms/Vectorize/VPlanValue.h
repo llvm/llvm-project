@@ -40,6 +40,7 @@ class VPUser;
 class VPRecipeBase;
 class VPInterleaveRecipe;
 class VPPhiAccessors;
+class VPWidenFFLoadEVLRecipe;
 
 // This is the base class of the VPlan Def/Use graph, used for modeling the data
 // flow into, within and out of the VPlan. VPValues can stand for live-ins
@@ -51,6 +52,7 @@ class LLVM_ABI_FOR_TEST VPValue {
   friend class VPInterleaveRecipe;
   friend class VPlan;
   friend class VPExpressionRecipe;
+  friend class VPWidenFFLoadEVLRecipe;
 
   const unsigned char SubclassID; ///< Subclass identifier (for isa/dyn_cast).
 
@@ -348,6 +350,8 @@ public:
     VPWidenCastSC,
     VPWidenGEPSC,
     VPWidenIntrinsicSC,
+    VPWidenFFLoadSC,
+    VPWidenFFLoadEVLSC,
     VPWidenLoadEVLSC,
     VPWidenLoadSC,
     VPWidenStoreEVLSC,

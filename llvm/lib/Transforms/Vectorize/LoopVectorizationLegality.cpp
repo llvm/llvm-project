@@ -23,6 +23,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Transforms/Utils/SizeOpts.h"
@@ -1769,15 +1770,61 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   assert(LatchBB->getUniquePredecessor() == SingleUncountableEdge->first &&
          "Expected latch predecessor to be the early exiting block");
 
-  // TODO: Handle loops that may fault.
   Predicates.clear();
-  if (!isDereferenceableReadOnlyLoop(TheLoop, PSE.getSE(), DT, AC,
-                                     &Predicates)) {
-    reportVectorizationFailure(
-        "Loop may fault",
-        "Cannot vectorize potentially faulting early exit loop",
-        "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
-    return false;
+  SmallVector<LoadInst *, 4> NonDerefLoads;
+  unsigned NumLoad = 0;
+  for (BasicBlock *BB : TheLoop->blocks()) {
+    for (Instruction &I : *BB) {
+      if (auto *LI = dyn_cast<LoadInst>(&I)) {
+        NumLoad++;
+        if (!isDereferenceableAndAlignedInLoop(LI, TheLoop, *PSE.getSE(), *DT,
+                                               AC, &Predicates))
+          NonDerefLoads.push_back(LI);
+      } else if (I.mayReadFromMemory() || I.mayWriteToMemory() ||
+                 I.mayThrow()) {
+        reportVectorizationFailure(
+            "Loop may fault on instructions other than load",
+            "Cannot vectorize potentially faulting early exit loop",
+            "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+        return false;
+      }
+    }
+  }
+  // Checks if non-dereferencible loads are supported.
+  if (!NonDerefLoads.empty()) {
+    if (!TTI->supportsSpeculativeLoads()) {
+      reportVectorizationFailure(
+          "Loop may fault",
+          "Cannot vectorize potentially faulting early exit loop",
+          "PotentiallyFaultingEarlyExitLoop", ORE, TheLoop);
+      return false;
+    }
+    // Supports single speculative load for now.
+    if (NumLoad > 1) {
+      reportVectorizationFailure("More than one speculative load",
+                                 "SpeculativeLoadNotSupported", ORE, TheLoop);
+      return false;
+    }
+  }
+  // Speculative loads need to be unit-stride.
+  for (LoadInst *LI : NonDerefLoads) {
+    if (LI->getParent() != TheLoop->getHeader()) {
+      reportVectorizationFailure("Cannot vectorize predicated speculative load",
+                                 "SpeculativeLoadNeedsPredication", ORE,
+                                 TheLoop);
+      return false;
+    }
+    int Stride = isConsecutivePtr(LI->getType(), LI->getPointerOperand());
+    if (Stride != 1) {
+      reportVectorizationFailure("Loop contains non-unit-stride load",
+                                 "Cannot vectorize early exit loop with "
+                                 "speculative non-unit-stride load",
+                                 "SpeculativeNonUnitStrideLoadEarlyExitLoop",
+                                 ORE, TheLoop);
+      return false;
+    }
+    SpeculativeLoads.insert(LI);
+    LLVM_DEBUG(dbgs() << "LV: Found speculative load: " << *LI << "\n");
   }
 
   [[maybe_unused]] const SCEV *SymbolicMaxBTC =
