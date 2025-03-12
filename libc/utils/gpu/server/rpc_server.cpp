@@ -96,8 +96,8 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
     if (!format[lane])
       continue;
 
-    WriteBuffer wb(nullptr, 0);
-    Writer writer(&wb);
+    WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(nullptr, 0);
+    Writer writer(wb);
 
     internal::DummyArgList<packed> printf_args;
     Parser<internal::DummyArgList<packed> &> parser(
@@ -123,8 +123,8 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
     if (!format[lane])
       continue;
 
-    WriteBuffer wb(nullptr, 0);
-    Writer writer(&wb);
+    WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(nullptr, 0);
+    Writer writer(wb);
 
     internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);
     Parser<internal::StructArgList<packed>> parser(
@@ -180,8 +180,9 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
       continue;
 
     char *buffer = temp_storage.alloc(buffer_size[lane]);
-    WriteBuffer wb(buffer, buffer_size[lane]);
-    Writer writer(&wb);
+    WriteBuffer<WriteMode::FILL_BUFF_AND_DROP_OVERFLOW> wb(buffer,
+                                                           buffer_size[lane]);
+    Writer writer(wb);
 
     internal::StructArgList<packed> printf_args(args[lane], args_sizes[lane]);
     Parser<internal::StructArgList<packed>> parser(
