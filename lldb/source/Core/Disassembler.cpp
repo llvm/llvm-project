@@ -556,8 +556,8 @@ bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
       frame.GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol));
   if (sc.function) {
     if (DisassemblerSP disasm_sp = DisassembleRange(
-        arch, nullptr, nullptr, nullptr, nullptr, *frame.CalculateTarget(),
-        sc.function->GetAddressRanges())) {
+            arch, nullptr, nullptr, nullptr, nullptr, *frame.CalculateTarget(),
+            sc.function->GetAddressRanges())) {
       disasm_sp->PrintInstructions(debugger, arch, frame, false, 0, 0, strm);
       return true;
     }
