@@ -2825,17 +2825,6 @@ static void redirectSymbols(Ctx &ctx, ArrayRef<WrappedSymbol> wrapped) {
     ctx.symtab->wrap(w.sym, w.real, w.wrap);
 }
 
-static StringRef gcsReportPolicytoString(GcsReportPolicy value) {
-  StringRef ret;
-  if (value == GcsReportPolicy::Warning)
-    ret = "warning";
-  else if (value == GcsReportPolicy::Error)
-    ret = "error";
-  else
-    ret = "none";
-  return ret;
-}
-
 // To enable CET (x86's hardware-assisted control flow enforcement), each
 // source file must be compiled with -fcf-protection. Object files compiled
 // with the flag contain feature flags indicating that they are compatible
