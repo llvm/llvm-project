@@ -369,6 +369,14 @@ module std_core [system] {
     module negation                                   { header "__type_traits/negation.h" }
     module promote                                    { header "__type_traits/promote.h" }
     module rank                                       { header "__type_traits/rank.h" }
+    module reference_constructs_from_temporary {
+      header "__type_traits/reference_constructs_from_temporary.h"
+      export std_core.type_traits.integral_constant
+    }
+    module reference_converts_from_temporary {
+      header "__type_traits/reference_converts_from_temporary.h"
+      export std_core.type_traits.integral_constant
+    }
     module remove_all_extents                         { header "__type_traits/remove_all_extents.h" }
     module remove_const_ref                           { header "__type_traits/remove_const_ref.h" }
     module remove_const                               { header "__type_traits/remove_const.h" }
