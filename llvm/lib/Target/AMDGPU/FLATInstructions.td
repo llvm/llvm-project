@@ -1542,12 +1542,12 @@ let SubtargetPredicate = isGFX13Plus in {
   let WaveSizePredicate = isWave32 in {
   defm GLOBAL_TILED_LOAD_HALF_B64        : FLAT_Global_Load_Pseudo<"global_tiled_load_half_b64", VGPR_32>;
   defm GLOBAL_TILED_LOAD_B64             : FLAT_Global_Load_Pseudo<"global_tiled_load_b64", VReg_64>;
-  defm GLOBAL_TILED_LOAD_VST2_B64        : FLAT_Global_Load_Pseudo<"global_tiled_load_vst2_b64", VReg_96>;
+  defm GLOBAL_TILED_LOAD_VST2_B64        : FLAT_Global_Load_Pseudo<"global_tiled_load_vst2_b64", VReg_96, 1>;
   defm GLOBAL_TILED_LOAD_QTR_B128        : FLAT_Global_Load_Pseudo<"global_tiled_load_qtr_b128", VGPR_32>;
   defm GLOBAL_TILED_LOAD_HALF_B128       : FLAT_Global_Load_Pseudo<"global_tiled_load_half_b128", VReg_64>;
-  defm GLOBAL_TILED_LOAD_HALF_VST2_B128  : FLAT_Global_Load_Pseudo<"global_tiled_load_half_vst2_b128", VReg_96>;
+  defm GLOBAL_TILED_LOAD_HALF_VST2_B128  : FLAT_Global_Load_Pseudo<"global_tiled_load_half_vst2_b128", VReg_96, 1>;
   defm GLOBAL_TILED_LOAD_B128            : FLAT_Global_Load_Pseudo<"global_tiled_load_b128", VReg_128>;
-  defm GLOBAL_TILED_LOAD_VST2_B128       : FLAT_Global_Load_Pseudo<"global_tiled_load_vst2_b128", VReg_224>;
+  defm GLOBAL_TILED_LOAD_VST2_B128       : FLAT_Global_Load_Pseudo<"global_tiled_load_vst2_b128", VReg_224, 1>;
 
   defm GLOBAL_TILED_STORE_HALF_B64       : FLAT_Global_Store_Pseudo<"global_tiled_store_half_b64", VGPR_32>;
   defm GLOBAL_TILED_STORE_B64            : FLAT_Global_Store_Pseudo<"global_tiled_store_b64", VReg_64>;
@@ -2725,6 +2725,26 @@ let SubtargetPredicate = HasVmemPrefInsts in {
   defm : FlatIntrPrefetchPats<"GLOBAL_PREFETCH_B8", int_amdgcn_global_prefetch>;
 } // End SubtargetPredicate = HasVmemPrefInsts
 
+let OtherPredicates = [isGFX13Plus], WaveSizePredicate = isWave32 in {
+  defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_HALF_B64,       int_amdgcn_global_tiled_load_half_b64, i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_B64,            int_amdgcn_global_tiled_load_b64, v2i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_QTR_B128,       int_amdgcn_global_tiled_load_qtr_b128, i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_HALF_B128,      int_amdgcn_global_tiled_load_half_b128, v2i32>;
+  defm : GlobalFLATLoadPats <GLOBAL_TILED_LOAD_B128,           int_amdgcn_global_tiled_load_b128, v4i32>;
+
+  defm : GlobalFLATLoadPats_D16 <GLOBAL_TILED_LOAD_VST2_B64,       int_amdgcn_global_tiled_load_vst2_b64, v3i32>;
+  defm : GlobalFLATLoadPats_D16 <GLOBAL_TILED_LOAD_HALF_VST2_B128, int_amdgcn_global_tiled_load_half_vst2_b128, v3i32>;
+  defm : GlobalFLATLoadPats_D16 <GLOBAL_TILED_LOAD_VST2_B128,      int_amdgcn_global_tiled_load_vst2_b128, v7i32>;
+
+  defm : GlobalFLATStorePats <GLOBAL_TILED_STORE_HALF_B64,       int_amdgcn_global_tiled_store_half_b64, i32>;
+  defm : GlobalFLATStorePats <GLOBAL_TILED_STORE_B64,            int_amdgcn_global_tiled_store_b64, v2i32>;
+  defm : GlobalFLATStorePats <GLOBAL_TILED_STORE_VST2_B64,       int_amdgcn_global_tiled_store_vst2_b64, v3i32>;
+  defm : GlobalFLATStorePats <GLOBAL_TILED_STORE_QTR_B128,       int_amdgcn_global_tiled_store_qtr_b128, i32>;
+  defm : GlobalFLATStorePats <GLOBAL_TILED_STORE_HALF_B128,      int_amdgcn_global_tiled_store_half_b128, v2i32>;
+  defm : GlobalFLATStorePats <GLOBAL_TILED_STORE_HALF_VST2_B128, int_amdgcn_global_tiled_store_half_vst2_b128, v3i32>;
+  defm : GlobalFLATStorePats <GLOBAL_TILED_STORE_B128,           int_amdgcn_global_tiled_store_b128, v4i32>;
+  defm : GlobalFLATStorePats <GLOBAL_TILED_STORE_VST2_B128,      int_amdgcn_global_tiled_store_vst2_b128, v7i32>;
+}
 
 //===----------------------------------------------------------------------===//
 // GFX13: Discard instruction patterns

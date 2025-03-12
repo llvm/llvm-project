@@ -4009,6 +4009,64 @@ def int_amdgcn_swc_get_exchange_state: Intrinsic<[llvm_i32_ty], [], [IntrHasSide
 def int_amdgcn_swc_set_exchange_state: Intrinsic<[], [llvm_i32_ty], [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
 def int_amdgcn_swc_abort_exchange: Intrinsic<[], [], [IntrHasSideEffects, IntrNoCallback, IntrWillReturn, IntrNoFree], "", [SDNPMemOperand]>;
 
+class AMDGPUTiledLoad<LLVMType data_ty>:
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [data_ty],
+    [global_ptr_ty],
+    [IntrReadMem, IntrConvergent, NoCapture<ArgIndex<0>>],
+    "",
+    [SDNPMemOperand]
+  >;
+
+def int_amdgcn_global_tiled_load_half_b64       : AMDGPUTiledLoad<llvm_i32_ty>;
+def int_amdgcn_global_tiled_load_b64            : AMDGPUTiledLoad<llvm_v2i32_ty>;
+def int_amdgcn_global_tiled_load_qtr_b128       : AMDGPUTiledLoad<llvm_i32_ty>;
+def int_amdgcn_global_tiled_load_half_b128      : AMDGPUTiledLoad<llvm_v2i32_ty>;
+def int_amdgcn_global_tiled_load_b128           : AMDGPUTiledLoad<llvm_v4i32_ty>;
+
+// Strided loads write every other register of the destination (other registers
+// are unmodified). The intrinsics have an extra param for partial result which
+// is tied with destination.
+class AMDGPUTiledLoadStrided<LLVMType data_ty>:
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [data_ty],
+    [
+        global_ptr_ty,
+        data_ty
+    ],
+    [IntrReadMem, IntrConvergent, NoCapture<ArgIndex<0>>],
+    "",
+    [SDNPMemOperand]
+  >;
+
+def int_amdgcn_global_tiled_load_vst2_b64       : AMDGPUTiledLoadStrided<llvm_v3i32_ty>;
+def int_amdgcn_global_tiled_load_half_vst2_b128 : AMDGPUTiledLoadStrided<llvm_v3i32_ty>;
+def int_amdgcn_global_tiled_load_vst2_b128      : AMDGPUTiledLoadStrided<llvm_v7i32_ty>;
+
+class AMDGPUTiledStore<LLVMType data_ty>:
+  ClangBuiltin<!subst("int", "__builtin", NAME)>,
+  DefaultAttrsIntrinsic<
+    [],
+    [
+        data_ty,
+        global_ptr_ty
+    ],
+    [IntrWriteMem, IntrConvergent, NoCapture<ArgIndex<1>>],
+    "",
+    [SDNPMemOperand]
+  >;
+
+def int_amdgcn_global_tiled_store_half_b64       : AMDGPUTiledStore<llvm_i32_ty>;
+def int_amdgcn_global_tiled_store_b64            : AMDGPUTiledStore<llvm_v2i32_ty>;
+def int_amdgcn_global_tiled_store_vst2_b64       : AMDGPUTiledStore<llvm_v3i32_ty>;
+def int_amdgcn_global_tiled_store_qtr_b128       : AMDGPUTiledStore<llvm_i32_ty>;
+def int_amdgcn_global_tiled_store_half_b128      : AMDGPUTiledStore<llvm_v2i32_ty>;
+def int_amdgcn_global_tiled_store_half_vst2_b128 : AMDGPUTiledStore<llvm_v3i32_ty>;
+def int_amdgcn_global_tiled_store_b128           : AMDGPUTiledStore<llvm_v4i32_ty>;
+def int_amdgcn_global_tiled_store_vst2_b128      : AMDGPUTiledStore<llvm_v7i32_ty>;
+
 //===----------------------------------------------------------------------===//
 // Deep learning intrinsics.
 //===----------------------------------------------------------------------===//

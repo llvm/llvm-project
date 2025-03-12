@@ -291,11 +291,15 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
     OutputTable.push_back(IITDescriptor::getVector(6, IsScalableVector));
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
+  case IIT_V7:
+    OutputTable.push_back(IITDescriptor::getVector(7, IsScalableVector));
+    DecodeIITType(NextElt, Infos, Info, OutputTable);
+    return;
   case IIT_V8:
     OutputTable.push_back(IITDescriptor::getVector(8, IsScalableVector));
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;
-  case IIT_v9:
+  case IIT_V9:
     OutputTable.push_back(IITDescriptor::getVector(9, IsScalableVector));
     DecodeIITType(NextElt, Infos, Info, OutputTable);
     return;

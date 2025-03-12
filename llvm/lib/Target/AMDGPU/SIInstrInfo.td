@@ -1870,6 +1870,7 @@ class getVregSrcForVT<ValueType VT, bit IsTrue16 = 0, bit IsFake16 = 1> {
         !eq(VT.Size, 512) : RegisterOperand<VReg_512>,
         !eq(VT.Size, 288) : RegisterOperand<VReg_288>,
         !eq(VT.Size, 256) : RegisterOperand<VReg_256>,
+        !eq(VT.Size, 224) : RegisterOperand<VReg_224>,
         !eq(VT.Size, 192) : RegisterOperand<VReg_192>,
         !eq(VT.Size, 160) : RegisterOperand<VReg_160>,
         !eq(VT.Size, 128) : RegisterOperand<VReg_128>,
