@@ -266,6 +266,7 @@ struct BCECmp : public Comparison {
   }
 };
 
+// TODO: this can be improved to take alignment into account.
 bool Comparison::areContiguous(const Comparison& Other) const {
   assert(isa<BCEConstCmp>(this) == isa<BCEConstCmp>(Other) && "Comparisons are of same kind");
   if (isa<BCEConstCmp>(this)) {
@@ -549,10 +550,8 @@ std::optional<MultBCECmpBlock> visitCmpBlock(Value *const Val,
 
   InstructionSet BlockInsts;
   std::optional<IntraCmpChain> Result = visitComparison(Cond, ExpectedPredicate, BaseId, &BlockInsts);
-  if (!Result) {
-    dbgs() << "invalid result\n";
+  if (!Result)
     return std::nullopt;
-  }
 
   for (auto* Cmp : Result->getCmpChain()) {
     auto CmpInsts = Cmp->getInsts();
@@ -577,7 +576,7 @@ std::optional<MultBCECmpBlock> visitCmpBlock(Value *const Val,
 //   LLVM_DEBUG(dbgs() << "\n");
 // }
 
-// Enqueues a single comparison and if it's the first comparison of the first block then adds the `OtherInsts` to the block too. To split it.
+// Enqueues a single comparison and if it's the first comparison block then adds the `OtherInsts` to the block too to split it.
 static inline void enqueueSingleCmp(std::vector<SingleBCECmpBlock> &Comparisons,
                                 MultBCECmpBlock &&CmpBlock, AliasAnalysis &AA, bool RequireSplit) {
   // emitDebugInfo(Comparison);
@@ -837,18 +836,21 @@ static BasicBlock *mergeComparisons(ArrayRef<SingleBCECmpBlock> Comparisons,
     Lhs = Builder.Insert(FirstCmp.Lhs()->GEP->clone());
   else
     Lhs = FirstCmp.Lhs()->LoadI->getPointerOperand();
-  // Build constant-array to compare to
-  if (auto* FirstConstCmp = dyn_cast<BCEConstCmp>(FirstCmp.getCmp())) {
+  // Build constant-struct to compare pointer to. Has to be a chain of const-comparisons.
+  if (isa<BCEConstCmp>(FirstCmp.getCmp())) {
     if (Comparisons.size() > 1) {
-      auto* ArrayType = ArrayType::get(FirstConstCmp->Lhs.LoadI->getType(),Comparisons.size());
-      auto* ArrayAlloca = Builder.CreateAlloca(ArrayType,nullptr);
       std::vector<Constant*> Constants;
+      std::vector<Type*> Types;
       for (const auto& BceBlock : Comparisons) {
-        Constants.emplace_back(cast<BCEConstCmp>(BceBlock.getCmp())->Const);
+        auto* ConstCmp = cast<BCEConstCmp>(BceBlock.getCmp());
+        Constants.emplace_back(ConstCmp->Const);
+        Types.emplace_back(ConstCmp->Lhs.LoadI->getType());
       }
-      auto *ArrayConstant = ConstantArray::get(ArrayType, Constants);
-      Builder.CreateStore(ArrayConstant,ArrayAlloca);
-      Rhs = ArrayAlloca;
+      auto* StructType = StructType::get(Context, Types, /* currently only matches packed offsets */ true);
+      auto* StructAlloca = Builder.CreateAlloca(StructType,nullptr);
+      auto *StructConstant = ConstantStruct::get(StructType, Constants);
+      Builder.CreateStore(StructConstant, StructAlloca);
+      Rhs = StructAlloca;
     }
   } else if (auto* FirstBceCmp = dyn_cast<BCECmp>(FirstCmp.getCmp())) {
     if (FirstBceCmp->Rhs.GEP)
