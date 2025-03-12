@@ -4,10 +4,6 @@
 ! RUN: %flang_fc1 -emit-llvm -fopenmp -o - %s 2>&1 \
 ! RUN: | FileCheck %s
 
-! UNSUPPORTED: target-x86
-! UNSUPPORTED: target=sparc-{{.*}}
-! UNSUPPORTED: target=sparcel-{{.*}}
-
 subroutine proc
   implicit none
   real(8),allocatable :: F(:)
