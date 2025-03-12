@@ -750,6 +750,18 @@ TEST(STLExtrasTest, DropEndDefaultTest) {
   EXPECT_EQ(i, 4);
 }
 
+TEST(STLExtrasTest, MapRangeTest) {
+  SmallVector<int, 5> Vec{0, 1, 2};
+  EXPECT_THAT(map_range(Vec, [](int V) { return V + 1; }),
+              ElementsAre(1, 2, 3));
+
+  // Make sure that we use the `begin`/`end` functions
+  // from `some_namespace`, using ADL.
+  some_namespace::some_struct S;
+  S.data = {3, 4, 5};
+  EXPECT_THAT(map_range(S, [](int V) { return V * 2; }), ElementsAre(6, 8, 10));
+}
+
 TEST(STLExtrasTest, EarlyIncrementTest) {
   std::list<int> L = {1, 2, 3, 4};
 
@@ -787,7 +799,7 @@ TEST(STLExtrasTest, EarlyIncrementTest) {
 #endif
 
   // Inserting shouldn't break anything. We should be able to keep dereferencing
-  // the currrent iterator and increment. The increment to go to the "next"
+  // the current iterator and increment. The increment to go to the "next"
   // iterator from before we inserted.
   L.insert(std::next(L.begin(), 2), -1);
   ++I;
@@ -799,6 +811,14 @@ TEST(STLExtrasTest, EarlyIncrementTest) {
   EXPECT_EQ(4, *I);
   ++I;
   EXPECT_EQ(EIR.end(), I);
+}
+
+TEST(STLExtrasTest, EarlyIncADLTest) {
+  // Make sure that we use the `begin`/`end` functions from `some_namespace`,
+  // using ADL.
+  some_namespace::some_struct S;
+  S.data = {1, 2, 3};
+  EXPECT_THAT(make_early_inc_range(S), ElementsAre(1, 2, 3));
 }
 
 // A custom iterator that returns a pointer when dereferenced. This is used to

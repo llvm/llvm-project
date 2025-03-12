@@ -376,8 +376,7 @@ inline mapped_iterator<ItTy, FuncTy> map_iterator(ItTy I, FuncTy F) {
 
 template <class ContainerTy, class FuncTy>
 auto map_range(ContainerTy &&C, FuncTy F) {
-  return make_range(map_iterator(std::begin(C), F),
-                    map_iterator(std::end(C), F));
+  return make_range(map_iterator(adl_begin(C), F), map_iterator(adl_end(C), F));
 }
 
 /// A base type of mapped iterator, that is useful for building derived
@@ -656,8 +655,8 @@ iterator_range<early_inc_iterator_impl<detail::IterOfRange<RangeT>>>
 make_early_inc_range(RangeT &&Range) {
   using EarlyIncIteratorT =
       early_inc_iterator_impl<detail::IterOfRange<RangeT>>;
-  return make_range(EarlyIncIteratorT(std::begin(std::forward<RangeT>(Range))),
-                    EarlyIncIteratorT(std::end(std::forward<RangeT>(Range))));
+  return make_range(EarlyIncIteratorT(adl_begin(Range)),
+                    EarlyIncIteratorT(adl_end(Range)));
 }
 
 // Forward declarations required by zip_shortest/zip_equal/zip_first/zip_longest

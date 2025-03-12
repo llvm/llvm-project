@@ -1374,19 +1374,17 @@ define <16 x i16> @splatconstant_rotate_v16i16(<16 x i16> %a) nounwind {
 define <32 x i8> @splatconstant_rotate_v32i8(<32 x i8> %a) nounwind {
 ; AVX1-LABEL: splatconstant_rotate_v32i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm2
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; AVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpsllw $4, %xmm1, %xmm1
-; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm2
-; AVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpsrlw $4, %xmm2, %xmm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm3 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; AVX1-NEXT:    vandnps %ymm1, %ymm3, %ymm1
 ; AVX1-NEXT:    vpsllw $4, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vpsllw $4, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps %ymm3, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splatconstant_rotate_v32i8:
@@ -1635,19 +1633,17 @@ define <16 x i16> @splatconstant_rotate_mask_v16i16(<16 x i16> %a) nounwind {
 define <32 x i8> @splatconstant_rotate_mask_v32i8(<32 x i8> %a) nounwind {
 ; AVX1-LABEL: splatconstant_rotate_mask_v32i8:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-NEXT:    vpsrlw $4, %xmm1, %xmm2
-; AVX1-NEXT:    vbroadcastss {{.*#+}} xmm3 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
-; AVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm2
-; AVX1-NEXT:    vpsllw $4, %xmm1, %xmm1
-; AVX1-NEXT:    vpand %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpor %xmm2, %xmm1, %xmm1
-; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm2
-; AVX1-NEXT:    vpandn %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpsrlw $4, %xmm0, %xmm1
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX1-NEXT:    vpsrlw $4, %xmm2, %xmm3
+; AVX1-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
+; AVX1-NEXT:    vbroadcastss {{.*#+}} ymm3 = [240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240,240]
+; AVX1-NEXT:    vandnps %ymm1, %ymm3, %ymm1
 ; AVX1-NEXT:    vpsllw $4, %xmm0, %xmm0
-; AVX1-NEXT:    vpand %xmm3, %xmm0, %xmm0
-; AVX1-NEXT:    vpor %xmm2, %xmm0, %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    vpsllw $4, %xmm2, %xmm2
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps %ymm3, %ymm0, %ymm0
+; AVX1-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX1-NEXT:    vandps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;

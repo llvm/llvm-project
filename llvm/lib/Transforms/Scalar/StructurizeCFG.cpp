@@ -361,6 +361,8 @@ class StructurizeCFG {
 
   void rebuildSSA();
 
+  void setDebugLoc(BranchInst *Br, BasicBlock *BB);
+
 public:
   void init(Region *R);
   bool run(Region *R, DominatorTree *DT);
@@ -594,14 +596,6 @@ void StructurizeCFG::collectInfos() {
 
     // Find the last back edges
     analyzeLoops(RN);
-  }
-
-  // Reset the collected term debug locations
-  TermDL.clear();
-
-  for (BasicBlock &BB : *Func) {
-    if (const DebugLoc &DL = BB.getTerminator()->getDebugLoc())
-      TermDL[&BB] = DL;
   }
 }
 
@@ -924,11 +918,23 @@ void StructurizeCFG::simplifyAffectedPhis() {
   } while (Changed);
 }
 
+void StructurizeCFG::setDebugLoc(BranchInst *Br, BasicBlock *BB) {
+  auto I = TermDL.find(BB);
+  if (I == TermDL.end())
+    return;
+
+  Br->setDebugLoc(I->second);
+  TermDL.erase(I);
+}
+
 /// Remove phi values from all successors and then remove the terminator.
 void StructurizeCFG::killTerminator(BasicBlock *BB) {
   Instruction *Term = BB->getTerminator();
   if (!Term)
     return;
+
+  if (const DebugLoc &DL = Term->getDebugLoc())
+    TermDL[BB] = DL;
 
   for (BasicBlock *Succ : successors(BB))
     delPhiValues(BB, Succ);
@@ -974,7 +980,7 @@ void StructurizeCFG::changeExit(RegionNode *Node, BasicBlock *NewExit,
     BasicBlock *BB = Node->getNodeAs<BasicBlock>();
     killTerminator(BB);
     BranchInst *Br = BranchInst::Create(NewExit, BB);
-    Br->setDebugLoc(TermDL[BB]);
+    setDebugLoc(Br, BB);
     addPhiValues(BB, NewExit);
     if (IncludeDominator)
       DT->changeImmediateDominator(NewExit, BB);
@@ -990,10 +996,14 @@ BasicBlock *StructurizeCFG::getNextFlow(BasicBlock *Dominator) {
                                         Func, Insert);
   FlowSet.insert(Flow);
 
-  // use a temporary variable to avoid a use-after-free if the map's storage is
-  // reallocated
-  DebugLoc DL = TermDL[Dominator];
-  TermDL[Flow] = std::move(DL);
+  if (auto *Term = Dominator->getTerminator()) {
+    if (const DebugLoc &DL = Term->getDebugLoc())
+      TermDL[Flow] = DL;
+  } else if (DebugLoc DLTemp = TermDL.lookup(Dominator)) {
+    // Use a temporary copy to avoid a use-after-free if the map's storage
+    // is reallocated.
+    TermDL[Flow] = DLTemp;
+  }
 
   DT->addNewBlock(Flow, Dominator);
   ParentRegion->getRegionInfo()->setRegionFor(Flow, ParentRegion);
@@ -1088,7 +1098,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
 
     // let it point to entry and next block
     BranchInst *Br = BranchInst::Create(Entry, Next, BoolPoison, Flow);
-    Br->setDebugLoc(TermDL[Flow]);
+    setDebugLoc(Br, Flow);
     Conditions.push_back(Br);
     addPhiValues(Flow, Entry);
     DT->changeImmediateDominator(Entry, Flow);
@@ -1129,7 +1139,7 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   LoopEnd = needPrefix(false);
   BasicBlock *Next = needPostfix(LoopEnd, ExitUseAllowed);
   BranchInst *Br = BranchInst::Create(Next, LoopStart, BoolPoison, LoopEnd);
-  Br->setDebugLoc(TermDL[LoopEnd]);
+  setDebugLoc(Br, LoopEnd);
   LoopConds.push_back(Br);
   addPhiValues(LoopEnd, LoopStart);
   setPrevNode(Next);
