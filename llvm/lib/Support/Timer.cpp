@@ -284,6 +284,11 @@ TimerGroup::~TimerGroup() {
   while (FirstTimer)
     removeTimer(*FirstTimer);
 
+  if (!TimersToPrint.empty()) {
+    std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
+    PrintQueuedTimers(*OutStream);
+  }
+
   // Remove the group from the TimerGroupList.
   sys::SmartScopedLock<true> L(timerLock());
   *Prev = Next;
@@ -305,14 +310,6 @@ void TimerGroup::removeTimer(Timer &T) {
   *T.Prev = T.Next;
   if (T.Next)
     T.Next->Prev = T.Prev;
-
-  // Print the report when all timers in this group are destroyed if some of
-  // them were started.
-  if (FirstTimer || TimersToPrint.empty())
-    return;
-
-  std::unique_ptr<raw_ostream> OutStream = CreateInfoOutputFile();
-  PrintQueuedTimers(*OutStream);
 }
 
 void TimerGroup::addTimer(Timer &T) {
