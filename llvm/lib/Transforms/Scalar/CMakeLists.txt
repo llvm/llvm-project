@@ -51,6 +51,7 @@ add_llvm_component_library(LLVMScalarOpts
   LowerAtomicPass.cpp
   LowerConstantIntrinsics.cpp
   LowerExpectIntrinsic.cpp
+  LowerGPUIntrinsic.cpp
   LowerGuardIntrinsic.cpp
   LowerMatrixIntrinsics.cpp
   LowerWidenableCondition.cpp

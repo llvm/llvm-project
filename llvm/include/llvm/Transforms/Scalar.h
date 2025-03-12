@@ -137,6 +137,12 @@ Pass *createLowerAtomicPass();
 
 //===----------------------------------------------------------------------===//
 //
+// LowerGPUIntrinsic - Lower GPU intrinsics
+//
+Pass *createLowerGPUIntrinsicPass();
+
+//===----------------------------------------------------------------------===//
+//
 // MergeICmps - Merge integer comparison chains into a memcmp
 //
 Pass *createMergeICmpsLegacyPass();

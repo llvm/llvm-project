@@ -2861,6 +2861,69 @@ def int_experimental_convergence_anchor
 def int_experimental_convergence_loop
   : DefaultAttrsIntrinsic<[llvm_token_ty], [], [IntrNoMem, IntrConvergent]>;
 
+//===------- GPU Intrinsics -----------------------------------------------===//
+
+class GPUIntrinsic<LLVMType ret_type, string name>
+  : DefaultAttrsIntrinsic<[ret_type],
+                          [],
+                          [NoUndef<RetIndex>, IntrNoMem, IntrSpeculatable]>,
+                          ClangBuiltin<name>;
+
+multiclass GPUGridIntrinsic_xyz<string prefix> {
+  def _x : GPUIntrinsic<llvm_i32_ty, !strconcat(prefix, "_x")>;
+  def _y : GPUIntrinsic<llvm_i32_ty, !strconcat(prefix, "_y")>;
+  def _z : GPUIntrinsic<llvm_i32_ty, !strconcat(prefix, "_z")>;
+}
+
+defm int_gpu_num_blocks : GPUGridIntrinsic_xyz<"__builtin_gpu_num_blocks">;
+defm int_gpu_block_id : GPUGridIntrinsic_xyz<"__builtin_gpu_block_id">;
+defm int_gpu_num_threads : GPUGridIntrinsic_xyz<"__builtin_gpu_num_threads">;
+defm int_gpu_thread_id : GPUGridIntrinsic_xyz<"__builtin_gpu_thread_id">;
+
+def int_gpu_num_lanes : GPUIntrinsic<llvm_i32_ty,"__builtin_gpu_num_lanes">;
+def int_gpu_lane_id : GPUIntrinsic<llvm_i32_ty,"__builtin_gpu_lane_id">;
+def int_gpu_lane_mask : GPUIntrinsic<llvm_i64_ty,"__builtin_gpu_lane_mask">;
+
+def int_gpu_read_first_lane_u32 : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                                                        [llvm_i64_ty, llvm_i32_ty],
+                                                        [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>,
+                                                        ClangBuiltin<"__builtin_gpu_read_first_lane_u32">;
+
+def int_gpu_shuffle_idx_u32 : DefaultAttrsIntrinsic<[llvm_i32_ty],
+                                                    [llvm_i64_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+                                                    [IntrNoMem, IntrConvergent, IntrSpeculatable, IntrWillReturn, IntrNoCallback, IntrNoFree]>,
+                                                    ClangBuiltin<"__builtin_gpu_shuffle_idx_u32">;
+
+def int_gpu_ballot : DefaultAttrsIntrinsic<[llvm_i64_ty],
+                                           [llvm_i64_ty, llvm_i1_ty],
+                                           [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>,
+                                           ClangBuiltin<"__builtin_gpu_ballot">;
+
+def int_gpu_sync_threads : DefaultAttrsIntrinsic<[], [],
+    // todo, attributes match barrier, but there's a fence in here too
+    // also why is there a fence in here?
+                                                 [IntrNoMem, IntrHasSideEffects, IntrConvergent,
+                                                  IntrWillReturn, IntrNoCallback, IntrNoFree]>,
+                                                 ClangBuiltin<"__builtin_gpu_sync_threads">;
+
+def int_gpu_sync_lane : DefaultAttrsIntrinsic<[],
+                                              [llvm_i64_ty],
+                                              [IntrNoMem, IntrHasSideEffects, IntrConvergent,
+                                              IntrWillReturn, IntrNoCallback, IntrNoFree]>,
+                                              ClangBuiltin<"__builtin_gpu_sync_lane">;
+
+def int_gpu_exit : DefaultAttrsIntrinsic<[],
+                                         [],
+                                         [IntrNoReturn, IntrConvergent]>,
+                                         ClangBuiltin<"__builtin_gpu_exit">;
+
+
+def int_gpu_thread_suspend : DefaultAttrsIntrinsic<[],
+                                                   [],
+                                                   [IntrWillReturn, IntrNoMem, IntrHasSideEffects, IntrConvergent]>,
+                                                   ClangBuiltin<"__builtin_gpu_thread_suspend">;
+
+
 //===----------------------------------------------------------------------===//
 // Target-specific intrinsics
 //===----------------------------------------------------------------------===//

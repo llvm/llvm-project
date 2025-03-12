@@ -4770,6 +4770,35 @@ def GetDeviceSideMangledName : LangBuiltin<"CUDA_LANG"> {
   let Prototype = "char const*(...)";
 }
 
+// GPU intrinsics
+class GPUBuiltin<string prototype> : Builtin {
+  let Spellings = ["__builtin_" # NAME];
+  let Prototype = prototype;
+  let Attributes = [NoThrow];
+}
+
+multiclass GPUGridBuiltin<string prototype> {
+  def _x : GPUBuiltin<prototype>;
+  def _y : GPUBuiltin<prototype>;
+  def _z : GPUBuiltin<prototype>;
+}
+
+defm gpu_num_blocks : GPUGridBuiltin<"uint32_t()">;
+defm gpu_block_id : GPUGridBuiltin<"uint32_t()">;
+defm gpu_num_threads : GPUGridBuiltin<"uint32_t()">;
+defm gpu_thread_id : GPUGridBuiltin<"uint32_t()">;
+
+def gpu_ballot : GPUBuiltin<"uint64_t(uint64_t, bool)">;
+def gpu_exit : GPUBuiltin<"void()">;
+def gpu_lane_id : GPUBuiltin<"uint32_t()">;
+def gpu_lane_mask : GPUBuiltin<"uint64_t()">;
+def gpu_num_lanes : GPUBuiltin<"uint32_t()">;
+def gpu_read_first_lane_u32 : GPUBuiltin<"uint32_t(uint64_t, uint32_t)">;
+def gpu_shuffle_idx_u32 : GPUBuiltin<"uint32_t(uint64_t, uint32_t, uint32_t, uint32_t)">;
+def gpu_sync_lane : GPUBuiltin<"void(uint64_t)">;
+def gpu_sync_threads : GPUBuiltin<"void()">;
+def gpu_thread_suspend : GPUBuiltin<"void()">;
+
 // HLSL
 def HLSLAddUint64: LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_adduint64"];

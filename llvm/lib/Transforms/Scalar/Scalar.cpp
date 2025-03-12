@@ -34,6 +34,7 @@ void llvm::initializeScalarOpts(PassRegistry &Registry) {
   initializeLoopTermFoldPass(Registry);
   initializeLoopUnrollPass(Registry);
   initializeLowerAtomicLegacyPassPass(Registry);
+  initializeLowerGPUIntrinsicPass(Registry);
   initializeMergeICmpsLegacyPassPass(Registry);
   initializeNaryReassociateLegacyPassPass(Registry);
   initializePartiallyInlineLibCallsLegacyPassPass(Registry);
