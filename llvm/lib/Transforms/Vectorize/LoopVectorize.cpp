@@ -4038,10 +4038,12 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
   }
 
   // The only loops we can vectorize without a scalar epilogue, are loops with
-  // a bottom-test and a single exiting block. We'd have to handle the fact
-  // that not every instruction executes on the last iteration.  This will
-  // require a lane mask which varies through the vector loop body.  (TODO)
-  if (TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) {
+  // a bottom-test and a single exiting block or those with early exits. We'd
+  // have to handle the fact that not every instruction executes on the last
+  // iteration. This will require a lane mask which varies through the vector
+  // loop body. (TODO)
+  if ((TheLoop->getExitingBlock() != TheLoop->getLoopLatch()) &&
+      !Legal->hasUncountableEarlyExit()) {
     // If there was a tail-folding hint/switch, but we can't fold the tail by
     // masking, fallback to a vectorization with a scalar epilogue.
     if (ScalarEpilogueStatus == CM_ScalarEpilogueNotNeededUsePredicate) {
@@ -4092,8 +4094,9 @@ LoopVectorizationCostModel::computeMaxVF(ElementCount UserVF, unsigned UserIC) {
     // uncountable exits whilst also ensuring the symbolic maximum and known
     // back-edge taken count remain identical for loops with countable exits.
     const SCEV *BackedgeTakenCount = PSE.getSymbolicMaxBackedgeTakenCount();
-    assert(BackedgeTakenCount == PSE.getBackedgeTakenCount() &&
-           "Invalid loop count");
+    assert(Legal->hasUncountableEarlyExit() ||
+           (BackedgeTakenCount == PSE.getBackedgeTakenCount()) &&
+               "Invalid loop count");
     const SCEV *ExitCount = SE->getAddExpr(
         BackedgeTakenCount, SE->getOne(BackedgeTakenCount->getType()));
     const SCEV *Rem = SE->getURemExpr(
