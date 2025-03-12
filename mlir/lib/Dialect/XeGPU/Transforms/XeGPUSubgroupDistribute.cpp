@@ -649,6 +649,3 @@ void XeGPUSubgroupDistributePass::runOnOperation() {
     return;
   }
 }
-
-void xegpu::populateXeGPUSubgroupDistributePatterns(
-    RewritePatternSet &patterns) {}
