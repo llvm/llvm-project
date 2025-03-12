@@ -692,7 +692,7 @@ main_body:
   br i1 undef, label %if1, label %endif1
 
 if1:                                              ; preds = %main_body
-  store i32 0, ptr addrspace(3) undef, align 4
+  store i32 0, ptr addrspace(3) poison, align 4
   br label %endif1
 
 endif1:                                           ; preds = %if1, %main_body

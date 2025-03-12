@@ -1062,10 +1062,10 @@ define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   [[IVEC:%[0-9]+]]:_(<3 x s32>) = G_INSERT_VECTOR_ELT [[DEF1]], [[LOAD]](s32), [[C]](s32)
   ; CHECK-NEXT:   [[IVEC1:%[0-9]+]]:_(<3 x s32>) = G_INSERT_VECTOR_ELT [[IVEC]], [[LOAD1]](s32), [[C1]](s32)
   ; CHECK-NEXT:   [[IVEC2:%[0-9]+]]:_(<3 x s32>) = G_INSERT_VECTOR_ELT [[IVEC1]], [[LOAD2]](s32), [[C2]](s32)
@@ -1075,10 +1075,10 @@ define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
   ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](s32)
   ; CHECK-NEXT:   $vgpr3 = COPY [[LOAD3]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
-  %load0 = load volatile i32, ptr addrspace(3) undef
-  %load1 = load volatile i32, ptr addrspace(3) undef
-  %load2 = load volatile i32, ptr addrspace(3) undef
-  %load3 = load volatile i32, ptr addrspace(3) undef
+  %load0 = load volatile i32, ptr addrspace(3) poison
+  %load1 = load volatile i32, ptr addrspace(3) poison
+  %load2 = load volatile i32, ptr addrspace(3) poison
+  %load3 = load volatile i32, ptr addrspace(3) poison
 
   %insert.0 = insertelement <3 x i32> poison, i32 %load0, i32 0
   %insert.1 = insertelement <3 x i32> %insert.0, i32 %load1, i32 1
@@ -1097,10 +1097,10 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
   ; CHECK-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK-NEXT:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
   ; CHECK-NEXT:   [[DEF2:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) undef`, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s32) = G_LOAD [[DEF]](p3) :: (volatile load (s32) from `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   [[IVEC:%[0-9]+]]:_(<3 x s32>) = G_INSERT_VECTOR_ELT [[DEF1]], [[LOAD]](s32), [[C]](s32)
   ; CHECK-NEXT:   [[IVEC1:%[0-9]+]]:_(<3 x s32>) = G_INSERT_VECTOR_ELT [[IVEC]], [[LOAD1]](s32), [[C1]](s32)
   ; CHECK-NEXT:   [[IVEC2:%[0-9]+]]:_(<3 x s32>) = G_INSERT_VECTOR_ELT [[IVEC1]], [[LOAD2]](s32), [[C2]](s32)
@@ -1110,10 +1110,10 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
   ; CHECK-NEXT:   $vgpr2 = COPY [[UV2]](s32)
   ; CHECK-NEXT:   $vgpr3 = COPY [[LOAD3]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
-  %load0 = load volatile float, ptr addrspace(3) undef
-  %load1 = load volatile float, ptr addrspace(3) undef
-  %load2 = load volatile float, ptr addrspace(3) undef
-  %load3 = load volatile i32, ptr addrspace(3) undef
+  %load0 = load volatile float, ptr addrspace(3) poison
+  %load1 = load volatile float, ptr addrspace(3) poison
+  %load2 = load volatile float, ptr addrspace(3) poison
+  %load3 = load volatile i32, ptr addrspace(3) poison
 
   %insert.0 = insertelement <3 x float> poison, float %load0, i32 0
   %insert.1 = insertelement <3 x float> %insert.0, float %load1, i32 1
@@ -1137,9 +1137,9 @@ define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0)
   ; CHECK-NEXT:   [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[PTRTOINT]], [[C]](s32)
   ; CHECK-NEXT:   [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[PTRTOINT]], [[C1]](s32)
   ; CHECK-NEXT:   [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[PTRTOINT]], [[C2]](s32)
-  ; CHECK-NEXT:   G_STORE [[LSHR]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   G_STORE [[LSHR1]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   G_STORE [[LSHR2]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[LSHR]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[LSHR1]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[LSHR2]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   SI_RETURN
   %arg0.int = ptrtoint ptr addrspace(5) %arg0 to i32
 
@@ -1147,9 +1147,9 @@ define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0)
   %lshr1 = lshr i32 %arg0.int, 17
   %lshr2 = lshr i32 %arg0.int, 18
 
-  store volatile i32 %lshr0, ptr addrspace(3) undef
-  store volatile i32 %lshr1, ptr addrspace(3) undef
-  store volatile i32 %lshr2, ptr addrspace(3) undef
+  store volatile i32 %lshr0, ptr addrspace(3) poison
+  store volatile i32 %lshr1, ptr addrspace(3) poison
+  store volatile i32 %lshr2, ptr addrspace(3) poison
   ret void
 }
 

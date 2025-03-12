@@ -54,12 +54,12 @@ entry:
 
 loop:
   %phi = phi <6 x float> [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile <6 x float>, ptr addrspace(3) undef
+  %load = load volatile <6 x float>, ptr addrspace(3) poison
   %add = fadd <6 x float> %load, %phi
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile <6 x float> %add, ptr addrspace(3) undef
+  store volatile <6 x float> %add, ptr addrspace(3) poison
   ret void
 }
 
@@ -73,12 +73,12 @@ entry:
 
 loop:
   %phi = phi <6 x i32> [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile <6 x i32>, ptr addrspace(3) undef
+  %load = load volatile <6 x i32>, ptr addrspace(3) poison
   %add = add <6 x i32> %load, %phi
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile <6 x i32> %add, ptr addrspace(3) undef
+  store volatile <6 x i32> %add, ptr addrspace(3) poison
   ret void
 }
 
@@ -93,12 +93,12 @@ entry:
 
 loop:
   %phi = phi <5 x float> [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile <5 x float>, ptr addrspace(3) undef
+  %load = load volatile <5 x float>, ptr addrspace(3) poison
   %add = fadd <5 x float> %load, %phi
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile <5 x float> %add, ptr addrspace(3) undef
+  store volatile <5 x float> %add, ptr addrspace(3) poison
   ret void
 }
 
@@ -112,12 +112,12 @@ entry:
 
 loop:
   %phi = phi <5 x i32> [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile <5 x i32>, ptr addrspace(3) undef
+  %load = load volatile <5 x i32>, ptr addrspace(3) poison
   %add = add <5 x i32> %load, %phi
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile <5 x i32> %add, ptr addrspace(3) undef
+  store volatile <5 x i32> %add, ptr addrspace(3) poison
   ret void
 }
 
@@ -269,7 +269,7 @@ entry:
 
 loop:
   %phi = phi bfloat [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile bfloat, ptr addrspace(3) undef
+  %load = load volatile bfloat, ptr addrspace(3) poison
   %bc.0 = bitcast bfloat %load to i16
   %bc.1 = bitcast bfloat %phi to i16
   %add.i = add i16 %bc.0, %bc.1
@@ -277,7 +277,7 @@ loop:
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile bfloat %add, ptr addrspace(3) undef
+  store volatile bfloat %add, ptr addrspace(3) poison
   ret void
 }
 
@@ -291,7 +291,7 @@ entry:
 
 loop:
   %phi = phi <2 x bfloat> [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile <2 x bfloat>, ptr addrspace(3) undef
+  %load = load volatile <2 x bfloat>, ptr addrspace(3) poison
   %bc.0 = bitcast <2 x bfloat> %load to <2 x i16>
   %bc.1 = bitcast <2 x bfloat> %phi to <2 x i16>
   %add.i = add <2 x i16> %bc.0, %bc.1
@@ -299,7 +299,7 @@ loop:
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile <2 x bfloat> %add, ptr addrspace(3) undef
+  store volatile <2 x bfloat> %add, ptr addrspace(3) poison
   ret void
 }
 
@@ -313,7 +313,7 @@ entry:
 
 loop:
   %phi = phi <3 x bfloat> [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile <3 x bfloat>, ptr addrspace(3) undef
+  %load = load volatile <3 x bfloat>, ptr addrspace(3) poison
   %bc.0 = bitcast <3 x bfloat> %load to <3 x i16>
   %bc.1 = bitcast <3 x bfloat> %phi to <3 x i16>
   %add.i = add <3 x i16> %bc.0, %bc.1
@@ -321,7 +321,7 @@ loop:
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile <3 x bfloat> %add, ptr addrspace(3) undef
+  store volatile <3 x bfloat> %add, ptr addrspace(3) poison
   ret void
 }
 
@@ -335,7 +335,7 @@ entry:
 
 loop:
   %phi = phi <4 x bfloat> [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile <4 x bfloat>, ptr addrspace(3) undef
+  %load = load volatile <4 x bfloat>, ptr addrspace(3) poison
   %bc.0 = bitcast <4 x bfloat> %load to <4 x i16>
   %bc.1 = bitcast <4 x bfloat> %phi to <4 x i16>
   %add.i = add <4 x i16> %bc.0, %bc.1
@@ -343,7 +343,7 @@ loop:
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile <4 x bfloat> %add, ptr addrspace(3) undef
+  store volatile <4 x bfloat> %add, ptr addrspace(3) poison
   ret void
 }
 
@@ -357,7 +357,7 @@ entry:
 
 loop:
   %phi = phi <6 x bfloat> [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile <6 x bfloat>, ptr addrspace(3) undef
+  %load = load volatile <6 x bfloat>, ptr addrspace(3) poison
   %bc.0 = bitcast <6 x bfloat> %load to <6 x i16>
   %bc.1 = bitcast <6 x bfloat> %phi to <6 x i16>
   %add.i = add <6 x i16> %bc.0, %bc.1
@@ -365,7 +365,7 @@ loop:
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile <6 x bfloat> %add, ptr addrspace(3) undef
+  store volatile <6 x bfloat> %add, ptr addrspace(3) poison
   ret void
 }
 
@@ -379,7 +379,7 @@ entry:
 
 loop:
   %phi = phi <8 x bfloat> [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile <8 x bfloat>, ptr addrspace(3) undef
+  %load = load volatile <8 x bfloat>, ptr addrspace(3) poison
   %bc.0 = bitcast <8 x bfloat> %load to <8 x i16>
   %bc.1 = bitcast <8 x bfloat> %phi to <8 x i16>
   %add.i = add <8 x i16> %bc.0, %bc.1
@@ -387,7 +387,7 @@ loop:
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile <8 x bfloat> %add, ptr addrspace(3) undef
+  store volatile <8 x bfloat> %add, ptr addrspace(3) poison
   ret void
 }
 
@@ -401,7 +401,7 @@ entry:
 
 loop:
   %phi = phi <16 x bfloat> [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile <16 x bfloat>, ptr addrspace(3) undef
+  %load = load volatile <16 x bfloat>, ptr addrspace(3) poison
   %bc.0 = bitcast <16 x bfloat> %load to <16 x i16>
   %bc.1 = bitcast <16 x bfloat> %phi to <16 x i16>
   %add.i = add <16 x i16> %bc.0, %bc.1
@@ -409,7 +409,7 @@ loop:
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile <16 x bfloat> %add, ptr addrspace(3) undef
+  store volatile <16 x bfloat> %add, ptr addrspace(3) poison
   ret void
 }
 
@@ -423,7 +423,7 @@ entry:
 
 loop:
   %phi = phi <32 x bfloat> [ poison, %entry ], [ %add, %loop ]
-  %load = load volatile <32 x bfloat>, ptr addrspace(3) undef
+  %load = load volatile <32 x bfloat>, ptr addrspace(3) poison
   %bc.0 = bitcast <32 x bfloat> %load to <32 x i16>
   %bc.1 = bitcast <32 x bfloat> %phi to <32 x i16>
   %add.i = add <32 x i16> %bc.0, %bc.1
@@ -431,7 +431,7 @@ loop:
   br i1 %cond, label %loop, label %ret
 
 ret:
-  store volatile <32 x bfloat> %add, ptr addrspace(3) undef
+  store volatile <32 x bfloat> %add, ptr addrspace(3) poison
   ret void
 }
 

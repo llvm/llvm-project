@@ -98,7 +98,7 @@ else:                                             ; preds = %main_body
   br i1 %divergent.cond, label %ret.bb, label %unreachable.bb
 
 unreachable.bb:                                           ; preds = %else
-  store volatile i32 8, ptr addrspace(3) undef
+  store volatile i32 8, ptr addrspace(3) poison
   unreachable
 
 ret.bb:                                          ; preds = %else, %main_body
