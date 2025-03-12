@@ -84,7 +84,6 @@ struct RecordKeeperImpl {
   FoldingSet<FoldOpInit> TheFoldOpInitPool;
   FoldingSet<IsAOpInit> TheIsAOpInitPool;
   FoldingSet<ExistsOpInit> TheExistsOpInitPool;
-  FoldingSet<MatchOpInit> TheMatchOpInitPool;
   DenseMap<std::pair<const RecTy *, const Init *>, VarInit *> TheVarInitPool;
   DenseMap<std::pair<const TypedInit *, unsigned>, VarBitInit *>
       TheVarBitInitPool;
@@ -1320,6 +1319,20 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
     }
     break;
   }
+  case MATCH: {
+    const auto *StrInit = dyn_cast<StringInit>(LHS);
+    const auto *RegexInit = dyn_cast<StringInit>(RHS);
+    if (!(StrInit && RegexInit))
+      return this;
+
+    StringRef RegexStr = RegexInit->getValue();
+    llvm::Regex Matcher(RegexStr);
+    if (!Matcher.isValid())
+      PrintFatalError(Twine("invalid regex '") + RegexStr + Twine("'"));
+
+    return BitInit::get(LHS->getRecordKeeper(),
+                        Matcher.match(StrInit->getValue()));
+  }
   case LISTCONCAT: {
     const auto *LHSs = dyn_cast<ListInit>(LHS);
     const auto *RHSs = dyn_cast<ListInit>(RHS);
@@ -1588,6 +1601,9 @@ std::string BinOpInit::getAsString() const {
   case RANGEC:
     return LHS->getAsString() + "..." + RHS->getAsString();
   case CONCAT: Result = "!con"; break;
+  case MATCH:
+    Result = "!match";
+    break;
   case ADD: Result = "!add"; break;
   case SUB: Result = "!sub"; break;
   case MUL: Result = "!mul"; break;
@@ -2199,61 +2215,6 @@ std::string ExistsOpInit::getAsString() const {
   return (Twine("!exists<") + CheckType->getAsString() + ">(" +
           Expr->getAsString() + ")")
       .str();
-}
-
-static void ProfileMatchOpInit(FoldingSetNodeID &ID, const Init *Str,
-                               const Init *Regex) {
-  ID.AddPointer(Str);
-  ID.AddPointer(Regex);
-}
-
-const MatchOpInit *MatchOpInit::get(const Init *Str, const Init *Regex) {
-  FoldingSetNodeID ID;
-  ProfileMatchOpInit(ID, Str, Regex);
-
-  detail::RecordKeeperImpl &RK = Regex->getRecordKeeper().getImpl();
-  void *IP = nullptr;
-  if (const MatchOpInit *I = RK.TheMatchOpInitPool.FindNodeOrInsertPos(ID, IP))
-    return I;
-
-  MatchOpInit *I = new (RK.Allocator) MatchOpInit(Str, Regex);
-  RK.TheMatchOpInitPool.InsertNode(I, IP);
-  return I;
-}
-
-void MatchOpInit::Profile(FoldingSetNodeID &ID) const {
-  ProfileMatchOpInit(ID, Str, Regex);
-}
-
-const Init *MatchOpInit::Fold() const {
-  const auto *StrInit = dyn_cast<StringInit>(Str);
-  const auto *RegexInit = dyn_cast<StringInit>(Regex);
-  if (!(StrInit && RegexInit))
-    return this;
-
-  StringRef RegexStr = RegexInit->getValue();
-  llvm::Regex Matcher(RegexStr);
-  if (!Matcher.isValid())
-    PrintFatalError(Twine("invalid regex '") + RegexStr + Twine("'"));
-
-  return BitInit::get(Str->getRecordKeeper(),
-                      Matcher.match(StrInit->getValue()));
-}
-
-const Init *MatchOpInit::resolveReferences(Resolver &R) const {
-  const Init *NewStr = Str->resolveReferences(R);
-  const Init *NewRegex = Regex->resolveReferences(R);
-  if (Str != NewStr || Regex != NewRegex)
-    return get(NewStr, NewRegex)->Fold();
-  return this;
-}
-
-const Init *MatchOpInit::getBit(unsigned Bit) const {
-  return VarBitInit::get(this, Bit);
-}
-
-std::string MatchOpInit::getAsString() const {
-  return "!match(" + Str->getAsString() + ", " + Regex->getAsString() + ")";
 }
 
 const RecTy *TypedInit::getFieldType(const StringInit *FieldName) const {

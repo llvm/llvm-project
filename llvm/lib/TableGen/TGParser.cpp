@@ -1455,50 +1455,8 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     return (ExistsOpInit::get(Type, Expr))->Fold(CurRec);
   }
 
-  case tgtok::XMatch: {
-    // Value ::= !match '(' Str ',' Regex ')'
-    Lex.Lex(); // eat the operation.
-
-    if (!consume(tgtok::l_paren)) {
-      TokError("expected '(' after !match");
-      return nullptr;
-    }
-
-    SMLoc StrLoc = Lex.getLoc();
-    const Init *Str = ParseValue(CurRec);
-    if (!Str)
-      return nullptr;
-
-    const auto *StrType = dyn_cast<TypedInit>(Str);
-    if (!StrType || !isa<StringRecTy>(StrType->getType())) {
-      Error(StrLoc, "expected string type argument in !match operator");
-      return nullptr;
-    }
-
-    // eat the comma.
-    if (!consume(tgtok::comma))
-      return nullptr;
-
-    SMLoc RegexLoc = Lex.getLoc();
-    const Init *Regex = ParseValue(CurRec);
-    if (!Regex)
-      return nullptr;
-
-    const auto *RegexType = dyn_cast<TypedInit>(Regex);
-    if (!RegexType || !isa<StringRecTy>(RegexType->getType())) {
-      Error(RegexLoc, "expected string type argument in !match operator");
-      return nullptr;
-    }
-
-    if (!consume(tgtok::r_paren)) {
-      TokError("expected ')' in !match");
-      return nullptr;
-    }
-
-    return MatchOpInit::get(Str, Regex)->Fold();
-  }
-
   case tgtok::XConcat:
+  case tgtok::XMatch:
   case tgtok::XADD:
   case tgtok::XSUB:
   case tgtok::XMUL:
@@ -1531,6 +1489,9 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     switch (OpTok) {
     default: llvm_unreachable("Unhandled code!");
     case tgtok::XConcat: Code = BinOpInit::CONCAT; break;
+    case tgtok::XMatch:
+      Code = BinOpInit::MATCH;
+      break;
     case tgtok::XADD:    Code = BinOpInit::ADD; break;
     case tgtok::XSUB:    Code = BinOpInit::SUB; break;
     case tgtok::XMUL:    Code = BinOpInit::MUL; break;
@@ -1568,6 +1529,10 @@ const Init *TGParser::ParseOperation(Record *CurRec, const RecTy *ItemType) {
     switch (OpTok) {
     default:
       llvm_unreachable("Unhandled code!");
+    case tgtok::XMatch:
+      Type = BitRecTy::get(Records);
+      ArgType = StringRecTy::get(Records);
+      break;
     case tgtok::XConcat:
     case tgtok::XSetDagOp:
       Type = DagRecTy::get(Records);
