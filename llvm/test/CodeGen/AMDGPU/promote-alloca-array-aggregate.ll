@@ -134,7 +134,7 @@ define amdgpu_vs void @promote_load_from_store_aggr_varoff(<4 x i32> %input) {
 ; CHECK-NEXT:    [[FOO3_UNPACK2:%.*]] = load i32, ptr addrspace(1) getelementptr inbounds (i8, ptr addrspace(1) @block4, i64 8), align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i32> undef, i32 [[FOO3_UNPACK2]], i32 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i32> [[TMP1]], i32 [[FOO3_UNPACK2]]
-; CHECK-NEXT:    [[FOO12:%.*]] = insertelement <4 x i32> %input, i32 [[TMP2]], i64 3
+; CHECK-NEXT:    [[FOO12:%.*]] = insertelement <4 x i32> [[INPUT:%.*]], i32 [[TMP2]], i64 3
 ; CHECK-NEXT:    store <4 x i32> [[FOO12]], ptr addrspace(1) @pv1, align 16
 ; CHECK-NEXT:    ret void
 ;
@@ -344,7 +344,7 @@ define amdgpu_ps void @promote_double_aggr() #0 {
 ; CHECK-NEXT:    [[FOO10:%.*]] = fadd double [[FOO5_FCA_1_EXTRACT]], [[FOO5_FCA_1_EXTRACT]]
 ; CHECK-NEXT:    [[FOO16:%.*]] = fadd double [[FOO10]], [[FOO5_FCA_1_EXTRACT]]
 ; CHECK-NEXT:    [[FOO17:%.*]] = fptrunc double [[FOO16]] to float
-; CHECK-NEXT:    [[FOO18:%.*]] = insertelement <4 x float> undef, float [[FOO17]], i32 0
+; CHECK-NEXT:    [[FOO18:%.*]] = insertelement <4 x float> poison, float [[FOO17]], i32 0
 ; CHECK-NEXT:    [[FOO19:%.*]] = insertelement <4 x float> [[FOO18]], float [[FOO17]], i32 1
 ; CHECK-NEXT:    [[FOO20:%.*]] = insertelement <4 x float> [[FOO19]], float [[FOO17]], i32 2
 ; CHECK-NEXT:    [[FOO21:%.*]] = insertelement <4 x float> [[FOO20]], float [[FOO17]], i32 3
@@ -370,7 +370,7 @@ define amdgpu_ps void @promote_double_aggr() #0 {
   %foo15 = load double, ptr addrspace(5) %foo14
   %foo16 = fadd double %foo13, %foo15
   %foo17 = fptrunc double %foo16 to float
-  %foo18 = insertelement <4 x float> undef, float %foo17, i32 0
+  %foo18 = insertelement <4 x float> poison, float %foo17, i32 0
   %foo19 = insertelement <4 x float> %foo18, float %foo17, i32 1
   %foo20 = insertelement <4 x float> %foo19, float %foo17, i32 2
   %foo21 = insertelement <4 x float> %foo20, float %foo17, i32 3
