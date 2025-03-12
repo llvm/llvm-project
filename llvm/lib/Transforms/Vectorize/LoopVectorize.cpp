@@ -7673,7 +7673,8 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
                            OrigLoop->getHeader()->getContext());
-  VPlanTransforms::materializeBroadcasts(BestVPlan);
+  VPlanTransforms::materializeBroadcasts(
+      BestVPlan, OrigLoop->getHeader()->getDataLayout());
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
   VPlanTransforms::narrowInterleaveGroups(
@@ -8966,7 +8967,8 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       // Discard the plan if it is not EVL-compatible
       if (CM.foldTailWithEVL() && !HasScalarVF &&
           !VPlanTransforms::runPass(VPlanTransforms::tryAddExplicitVectorLength,
-                                    *Plan, CM.getMaxSafeElements()))
+                                    *Plan, CM.getMaxSafeElements(),
+                                    OrigLoop->getHeader()->getDataLayout()))
         break;
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
@@ -8978,7 +8980,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
 // Add the necessary canonical IV and branch recipes required to control the
 // loop.
 static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
-                                  DebugLoc DL) {
+                                  DebugLoc DL, const DataLayout &Layout) {
   Value *StartIdx = ConstantInt::get(IdxTy, 0);
   auto *StartV = Plan.getOrAddLiveIn(StartIdx);
 
@@ -8988,7 +8990,7 @@ static void addCanonicalIVRecipes(VPlan &Plan, Type *IdxTy, bool HasNUW,
   VPBasicBlock *Header = TopRegion->getEntryBasicBlock();
   Header->insert(CanonicalIVPHI, Header->begin());
 
-  VPBuilder Builder(TopRegion->getExitingBasicBlock());
+  VPBuilder Builder(Layout, TopRegion->getExitingBasicBlock());
   // Add a VPInstruction to increment the scalar canonical IV by VF * UF.
   auto *CanonicalIVIncrement = Builder.createOverflowingOp(
       Instruction::Add, {CanonicalIVPHI, &Plan.getVFxUF()}, {HasNUW, false}, DL,
@@ -9042,15 +9044,16 @@ static VPInstruction *addResumePhiRecipeForInduction(
 /// original phis in the scalar header. End values for inductions are added to
 /// \p IVEndValues.
 static void addScalarResumePhis(VPRecipeBuilder &Builder, VPlan &Plan,
-                                DenseMap<VPValue *, VPValue *> &IVEndValues) {
+                                DenseMap<VPValue *, VPValue *> &IVEndValues,
+                                const DataLayout &DL) {
   VPTypeAnalysis TypeInfo(Plan.getCanonicalIV()->getScalarType());
   auto *ScalarPH = Plan.getScalarPreheader();
   auto *MiddleVPBB = cast<VPBasicBlock>(ScalarPH->getSinglePredecessor());
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   VPBuilder VectorPHBuilder(
-      cast<VPBasicBlock>(VectorRegion->getSinglePredecessor()));
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
-  VPBuilder ScalarPHBuilder(ScalarPH);
+      DL, cast<VPBasicBlock>(VectorRegion->getSinglePredecessor()));
+  VPBuilder MiddleBuilder(DL, MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPBuilder ScalarPHBuilder(DL, ScalarPH);
   VPValue *OneVPV = Plan.getOrAddLiveIn(
       ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 1));
   for (VPRecipeBase &ScalarPhiR : *Plan.getScalarHeader()) {
@@ -9141,12 +9144,13 @@ collectUsersInExitBlocks(Loop *OrigLoop, VPRecipeBuilder &Builder,
 // ExitUsersToFix if needed and their operands are updated.
 static void
 addUsersInExitBlocks(VPlan &Plan,
-                     const SetVector<VPIRInstruction *> &ExitUsersToFix) {
+                     const SetVector<VPIRInstruction *> &ExitUsersToFix,
+                     const DataLayout &DL) {
   if (ExitUsersToFix.empty())
     return;
 
   auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPBuilder B(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPBuilder B(DL, MiddleVPBB, MiddleVPBB->getFirstNonPhi());
 
   // Introduce extract for exiting values and update the VPIRInstructions
   // modeling the corresponding LCSSA phis.
@@ -9164,12 +9168,13 @@ addUsersInExitBlocks(VPlan &Plan,
 /// users in the original exit block using the VPIRInstruction wrapping to the
 /// LCSSA phi.
 static void addExitUsersForFirstOrderRecurrences(
-    VPlan &Plan, SetVector<VPIRInstruction *> &ExitUsersToFix) {
+    VPlan &Plan, SetVector<VPIRInstruction *> &ExitUsersToFix,
+    const DataLayout &DL) {
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto *ScalarPHVPBB = Plan.getScalarPreheader();
   auto *MiddleVPBB = Plan.getMiddleBlock();
-  VPBuilder ScalarPHBuilder(ScalarPHVPBB);
-  VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->getFirstNonPhi());
+  VPBuilder ScalarPHBuilder(DL, ScalarPHVPBB);
+  VPBuilder MiddleBuilder(DL, MiddleVPBB, MiddleVPBB->getFirstNonPhi());
   VPValue *TwoVPV = Plan.getOrAddLiveIn(
       ConstantInt::get(Plan.getCanonicalIV()->getScalarType(), 2));
 
@@ -9312,7 +9317,9 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   // that the canonical induction increment will not overflow as the vector trip
   // count is >= increment and a multiple of the increment.
   bool HasNUW = !IVUpdateMayOverflow || Style == TailFoldingStyle::None;
-  addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW, DL);
+  const DataLayout &Layout = OrigLoop->getHeader()->getDataLayout();
+  addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW, DL,
+                        Layout);
 
   VPRecipeBuilder RecipeBuilder(*Plan, OrigLoop, TLI, &TTI, Legal, CM, PSE,
                                 Builder);
@@ -9499,11 +9506,11 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
                              RecipeBuilder);
   }
   DenseMap<VPValue *, VPValue *> IVEndValues;
-  addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
+  addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues, Layout);
   SetVector<VPIRInstruction *> ExitUsersToFix =
       collectUsersInExitBlocks(OrigLoop, RecipeBuilder, *Plan);
-  addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix);
-  addUsersInExitBlocks(*Plan, ExitUsersToFix);
+  addExitUsersForFirstOrderRecurrences(*Plan, ExitUsersToFix, Layout);
+  addUsersInExitBlocks(*Plan, ExitUsersToFix, Layout);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -9575,7 +9582,7 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
     bool WithoutRuntimeCheck =
         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
     VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
-                                       WithoutRuntimeCheck);
+                                       WithoutRuntimeCheck, Layout);
   }
   VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues);
 
@@ -9614,8 +9621,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   // Tail folding is not supported for outer loops, so the induction increment
   // is guaranteed to not wrap.
   bool HasNUW = true;
+  const DataLayout &DL = OrigLoop->getHeader()->getDataLayout();
   addCanonicalIVRecipes(*Plan, Legal->getWidestInductionType(), HasNUW,
-                        DebugLoc());
+                        DebugLoc(), DL);
 
   // Collect mapping of IR header phis to header phi recipes, to be used in
   // addScalarResumePhis.
@@ -9630,7 +9638,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   DenseMap<VPValue *, VPValue *> IVEndValues;
   // TODO: IVEndValues are not used yet in the native path, to optimize exit
   // values.
-  addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues);
+  addScalarResumePhis(RecipeBuilder, *Plan, IVEndValues, DL);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -10070,7 +10078,7 @@ static bool processLoopInVPlanNativePath(
   // TODO: CM is not used at this point inside the planner. Turn CM into an
   // optional argument if we don't need it in the future.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, LVL, CM, IAI, PSE, Hints,
-                               ORE);
+                               ORE, F->getDataLayout());
 
   // Get user vectorization factor.
   ElementCount UserVF = Hints.getWidth();
@@ -10298,7 +10306,8 @@ LoopVectorizePass::LoopVectorizePass(LoopVectorizeOptions Opts)
 /// Prepare \p MainPlan for vectorizing the main vector loop during epilogue
 /// vectorization. Remove ResumePhis from \p MainPlan for inductions that
 /// don't have a corresponding wide induction in \p EpiPlan.
-static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
+static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan,
+                                         const DataLayout &DL) {
   // Collect PHI nodes of widened phis in the VPlan for the epilogue. Those
   // will need their resume-values computed in the main vector loop. Others
   // can be removed from the main VPlan.
@@ -10338,7 +10347,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
                              m_Specific(VectorTC), m_SpecificInt(0)));
       }))
     return;
-  VPBuilder ScalarPHBuilder(MainScalarPH, MainScalarPH->begin());
+  VPBuilder ScalarPHBuilder(DL, MainScalarPH, MainScalarPH->begin());
   ScalarPHBuilder.createNaryOp(
       VPInstruction::ResumePhi,
       {VectorTC, MainPlan.getCanonicalIV()->getStartValue()}, {},
@@ -10671,7 +10680,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                 F, &Hints, IAI, PSI, BFI);
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, IAI, PSE, Hints,
-                               ORE);
+                               ORE, F->getDataLayout());
 
   // Get user vectorization factor and interleave count.
   ElementCount UserVF = Hints.getWidth();
@@ -10854,7 +10863,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         // factor) again shortly afterwards.
         VPlan &BestEpiPlan = LVP.getPlanFor(EpilogueVF.Width);
         BestEpiPlan.getMiddleBlock()->setName("vec.epilog.middle.block");
-        preparePlanForMainVectorLoop(*BestMainPlan, BestEpiPlan);
+        preparePlanForMainVectorLoop(*BestMainPlan, BestEpiPlan,
+                                     F->getDataLayout());
         EpilogueLoopVectorizationInfo EPI(VF.Width, IC, EpilogueVF.Width, 1,
                                           BestEpiPlan);
         EpilogueVectorizerMainLoop MainILV(L, PSE, LI, DT, TLI, TTI, AC, ORE,

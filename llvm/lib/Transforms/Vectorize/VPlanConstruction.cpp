@@ -88,7 +88,7 @@ void VPlanTransforms::introduceTopLevelVectorLoopRegion(
   // of the corresponding compare because they may have ended up with
   // different line numbers and we want to avoid awkward line stepping while
   // debugging. Eg. if the compare has got a line number inside the loop.
-  VPBuilder Builder(MiddleVPBB);
+  VPBuilder Builder(TheLoop->getHeader()->getDataLayout(), MiddleVPBB);
   VPValue *Cmp =
       TailFolded
           ? Plan.getOrAddLiveIn(ConstantInt::getTrue(

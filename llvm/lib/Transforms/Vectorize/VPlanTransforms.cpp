@@ -603,12 +603,13 @@ static void legalizeAndOptimizeInductions(VPlan &Plan) {
   using namespace llvm::VPlanPatternMatch;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   bool HasOnlyVectorVFs = !Plan.hasScalarVFOnly();
-  VPBuilder Builder(HeaderVPBB, HeaderVPBB->getFirstNonPhi());
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
     auto *PhiR = dyn_cast<VPWidenInductionRecipe>(&Phi);
     if (!PhiR)
       continue;
 
+    const DataLayout &DL = PhiR->getPHINode()->getDataLayout();
+    VPBuilder Builder(DL, HeaderVPBB, HeaderVPBB->getFirstNonPhi());
     // Try to narrow wide and replicating recipes to uniform recipes, based on
     // VPlan analysis.
     // TODO: Apply to all recipes in the future, to replace legacy uniformity
@@ -743,10 +744,9 @@ static VPWidenInductionRecipe *getOptimizableIVOf(VPValue *VPV) {
 
 /// Attempts to optimize the induction variable exit values for users in the
 /// exit block coming from the latch in the original scalar loop.
-static VPValue *
-optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
-                               VPBlockBase *PredVPBB, VPValue *Op,
-                               DenseMap<VPValue *, VPValue *> &EndValues) {
+static VPValue *optimizeLatchExitInductionUser(
+    VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
+    DenseMap<VPValue *, VPValue *> &EndValues, const DataLayout &DL) {
   using namespace VPlanPatternMatch;
 
   VPValue *Incoming;
@@ -768,7 +768,7 @@ optimizeLatchExitInductionUser(VPlan &Plan, VPTypeAnalysis &TypeInfo,
     return EndValue;
 
   // Otherwise, subtract the step from the EndValue.
-  VPBuilder B(cast<VPBasicBlock>(PredVPBB)->getTerminator());
+  VPBuilder B(DL, cast<VPBasicBlock>(PredVPBB)->getTerminator());
   VPValue *Step = WideIV->getStepValue();
   Type *ScalarTy = TypeInfo.inferScalarType(WideIV);
   if (ScalarTy->isIntegerTy())
@@ -801,12 +801,13 @@ void VPlanTransforms::optimizeInductionExitUsers(
       auto *ExitIRI = cast<VPIRInstruction>(&R);
       if (!isa<PHINode>(ExitIRI->getInstruction()))
         break;
+      const DataLayout &DL = ExitIRI->getInstruction().getDataLayout();
 
       for (auto [Idx, PredVPBB] : enumerate(ExitVPBB->getPredecessors())) {
         if (PredVPBB == MiddleVPBB)
           if (VPValue *Escape = optimizeLatchExitInductionUser(
-                  Plan, TypeInfo, PredVPBB, ExitIRI->getOperand(Idx),
-                  EndValues))
+                  Plan, TypeInfo, PredVPBB, ExitIRI->getOperand(Idx), EndValues,
+                  DL))
             ExitIRI->setOperand(Idx, Escape);
         // TODO: Optimize early exit induction users in follow-on patch.
       }
@@ -1520,8 +1521,10 @@ void VPlanTransforms::optimize(VPlan &Plan) {
 //   %Negated = Not %ALM
 //   branch-on-cond %Negated
 //
-static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
-    VPlan &Plan, bool DataAndControlFlowWithoutRuntimeCheck) {
+static VPActiveLaneMaskPHIRecipe *
+addVPLaneMaskPhiAndUpdateExitBranch(VPlan &Plan,
+                                    bool DataAndControlFlowWithoutRuntimeCheck,
+                                    const DataLayout &Layout) {
   VPRegionBlock *TopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *EB = TopRegion->getExitingBasicBlock();
   auto *CanonicalIVPHI = Plan.getCanonicalIV();
@@ -1537,7 +1540,7 @@ static VPActiveLaneMaskPHIRecipe *addVPLaneMaskPhiAndUpdateExitBranch(
   // we have to take unrolling into account. Each part needs to start at
   //   Part * VF
   auto *VecPreheader = Plan.getVectorPreheader();
-  VPBuilder Builder(VecPreheader);
+  VPBuilder Builder(Layout, VecPreheader);
 
   // Create the ActiveLaneMask instruction using the correct start values.
   VPValue *TC = Plan.getTripCount();
@@ -1638,7 +1641,7 @@ static SmallVector<VPValue *> collectAllHeaderMasks(VPlan &Plan) {
 
 void VPlanTransforms::addActiveLaneMask(
     VPlan &Plan, bool UseActiveLaneMaskForControlFlow,
-    bool DataAndControlFlowWithoutRuntimeCheck) {
+    bool DataAndControlFlowWithoutRuntimeCheck, const DataLayout &DL) {
   assert((!DataAndControlFlowWithoutRuntimeCheck ||
           UseActiveLaneMaskForControlFlow) &&
          "DataAndControlFlowWithoutRuntimeCheck implies "
@@ -1654,9 +1657,9 @@ void VPlanTransforms::addActiveLaneMask(
   VPSingleDefRecipe *LaneMask;
   if (UseActiveLaneMaskForControlFlow) {
     LaneMask = addVPLaneMaskPhiAndUpdateExitBranch(
-        Plan, DataAndControlFlowWithoutRuntimeCheck);
+        Plan, DataAndControlFlowWithoutRuntimeCheck, DL);
   } else {
-    VPBuilder B = VPBuilder::getToInsertAfter(WideCanonicalIV);
+    VPBuilder B = VPBuilder::getToInsertAfter(DL, WideCanonicalIV);
     LaneMask = B.createNaryOp(VPInstruction::ActiveLaneMask,
                               {WideCanonicalIV, Plan.getTripCount()}, nullptr,
                               "active.lane.mask");
@@ -1741,7 +1744,8 @@ static VPRecipeBase *createEVLRecipe(VPValue *HeaderMask,
 }
 
 /// Replace recipes with their EVL variants.
-static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
+static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL,
+                                         const DataLayout &DL) {
   Type *CanonicalIVType = Plan.getCanonicalIV()->getScalarType();
   VPTypeAnalysis TypeInfo(CanonicalIVType);
   LLVMContext &Ctx = CanonicalIVType->getContext();
@@ -1761,7 +1765,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
     if (unsigned VFSize =
             TypeInfo.inferScalarType(MaxEVL)->getScalarSizeInBits();
         VFSize != 32) {
-      VPBuilder Builder(LoopRegion->getPreheaderVPBB());
+      VPBuilder Builder(DL, LoopRegion->getPreheaderVPBB());
       MaxEVL = Builder.createScalarCast(
           VFSize > 32 ? Instruction::Trunc : Instruction::ZExt, MaxEVL,
           Type::getInt32Ty(Ctx), DebugLoc());
@@ -1852,7 +1856,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 /// ...
 ///
 bool VPlanTransforms::tryAddExplicitVectorLength(
-    VPlan &Plan, const std::optional<unsigned> &MaxSafeElements) {
+    VPlan &Plan, const std::optional<unsigned> &MaxSafeElements,
+    const DataLayout &DL) {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   // The transform updates all users of inductions to work based on EVL, instead
   // of the VF directly. At the moment, widened inductions cannot be updated, so
@@ -1869,7 +1874,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
   // Create the ExplicitVectorLengthPhi recipe in the main loop.
   auto *EVLPhi = new VPEVLBasedIVPHIRecipe(StartV, DebugLoc());
   EVLPhi->insertAfter(CanonicalIVPHI);
-  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  VPBuilder Builder(DL, Header, Header->getFirstNonPhi());
   // Compute original TC - IV as the AVL (application vector length).
   VPValue *AVL = Builder.createNaryOp(
       Instruction::Sub, {Plan.getTripCount(), EVLPhi}, DebugLoc(), "avl");
@@ -1900,7 +1905,7 @@ bool VPlanTransforms::tryAddExplicitVectorLength(
       CanonicalIVIncrement->getDebugLoc(), "index.evl.next");
   EVLPhi->addOperand(NextEVLIV);
 
-  transformRecipestoEVLRecipes(Plan, *VPEVL);
+  transformRecipestoEVLRecipes(Plan, *VPEVL, DL);
 
   // Replace all uses of VPCanonicalIVPHIRecipe by
   // VPEVLBasedIVPHIRecipe except for the canonical IV increment.
@@ -1949,7 +1954,9 @@ void VPlanTransforms::dropPoisonGeneratingRecipes(
         // where the operands are disjoint or poison otherwise.
         if (match(RecWithFlags, m_BinaryOr(m_VPValue(A), m_VPValue(B))) &&
             RecWithFlags->isDisjoint()) {
-          VPBuilder Builder(RecWithFlags);
+          const DataLayout &DL =
+              RecWithFlags->getUnderlyingInstr()->getDataLayout();
+          VPBuilder Builder(DL, RecWithFlags);
           VPInstruction *New = Builder.createOverflowingOp(
               Instruction::Add, {A, B}, {false, false},
               RecWithFlags->getDebugLoc());
@@ -2056,14 +2063,14 @@ void VPlanTransforms::createInterleaveGroups(
       // zero.
       assert(IG->getIndex(IRInsertPos) != 0 &&
              "index of insert position shouldn't be zero");
-      auto &DL = IRInsertPos->getDataLayout();
+      const DataLayout &DL = IRInsertPos->getDataLayout();
       APInt Offset(32,
                    DL.getTypeAllocSize(getLoadStoreType(IRInsertPos)) *
                        IG->getIndex(IRInsertPos),
                    /*IsSigned=*/true);
       VPValue *OffsetVPV = Plan.getOrAddLiveIn(
           ConstantInt::get(IRInsertPos->getParent()->getContext(), -Offset));
-      VPBuilder B(InsertPos);
+      VPBuilder B(DL, InsertPos);
       Addr = InBounds ? B.createInBoundsPtrAdd(InsertPos->getAddr(), OffsetVPV)
                       : B.createPtrAdd(InsertPos->getAddr(), OffsetVPV);
     }
@@ -2107,9 +2114,10 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
 void VPlanTransforms::handleUncountableEarlyExit(
     VPlan &Plan, ScalarEvolution &SE, Loop *OrigLoop,
     BasicBlock *UncountableExitingBlock, VPRecipeBuilder &RecipeBuilder) {
+  const DataLayout &DL = SE.getDataLayout();
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   auto *LatchVPBB = cast<VPBasicBlock>(LoopRegion->getExiting());
-  VPBuilder Builder(LatchVPBB->getTerminator());
+  VPBuilder Builder(DL, LatchVPBB->getTerminator());
   auto *MiddleVPBB = Plan.getMiddleBlock();
   VPValue *IsEarlyExitTaken = nullptr;
 
@@ -2141,8 +2149,8 @@ void VPlanTransforms::handleUncountableEarlyExit(
   VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, VPEarlyExitBlock);
 
   // Update the exit phis in the early exit block.
-  VPBuilder MiddleBuilder(NewMiddle);
-  VPBuilder EarlyExitB(VectorEarlyExitVPBB);
+  VPBuilder MiddleBuilder(DL, NewMiddle);
+  VPBuilder EarlyExitB(DL, VectorEarlyExitVPBB);
   for (VPRecipeBase &R : *VPEarlyExitBlock) {
     auto *ExitIRI = cast<VPIRInstruction>(&R);
     auto *ExitPhi = dyn_cast<PHINode>(&ExitIRI->getInstruction());
@@ -2189,7 +2197,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
   LatchExitingBranch->eraseFromParent();
 }
 
-void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
+void VPlanTransforms::materializeBroadcasts(VPlan &Plan, const DataLayout &DL) {
   if (Plan.hasScalarVFOnly())
     return;
 
@@ -2227,7 +2235,7 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
                "All users must be in the vector preheader or dominated by it");
     }
 
-    VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
+    VPBuilder Builder(DL, cast<VPBasicBlock>(HoistBlock), HoistPoint);
     auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {VPV});
     VPV->replaceUsesWithIf(Broadcast,
                            [VPV, Broadcast](VPUser &U, unsigned Idx) {

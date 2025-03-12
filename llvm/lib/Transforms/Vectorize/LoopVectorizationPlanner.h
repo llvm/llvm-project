@@ -76,10 +76,16 @@ class VPBuilder {
   }
 
 public:
-  VPBuilder() = default;
-  VPBuilder(VPBasicBlock *InsertBB) { setInsertPoint(InsertBB); }
-  VPBuilder(VPRecipeBase *InsertPt) { setInsertPoint(InsertPt); }
-  VPBuilder(VPBasicBlock *TheBB, VPBasicBlock::iterator IP) {
+  VPBuilder(const DataLayout &DL) : Folder(DL) {}
+  VPBuilder(const DataLayout &DL, VPBasicBlock *InsertBB) : Folder(DL) {
+    setInsertPoint(InsertBB);
+  }
+  VPBuilder(const DataLayout &DL, VPRecipeBase *InsertPt) : Folder(DL) {
+    setInsertPoint(InsertPt);
+  }
+  VPBuilder(const DataLayout &DL, VPBasicBlock *TheBB,
+            VPBasicBlock::iterator IP)
+      : Folder(DL) {
     setInsertPoint(TheBB, IP);
   }
 
@@ -94,8 +100,8 @@ public:
   VPBasicBlock::iterator getInsertPoint() const { return InsertPt; }
 
   /// Create a VPBuilder to insert after \p R.
-  static VPBuilder getToInsertAfter(VPRecipeBase *R) {
-    VPBuilder B;
+  static VPBuilder getToInsertAfter(const DataLayout &DL, VPRecipeBase *R) {
+    VPBuilder B(DL);
     B.setInsertPoint(R->getParent(), std::next(R->getIterator()));
     return B;
   }
@@ -457,9 +463,9 @@ public:
       const TargetTransformInfo &TTI, LoopVectorizationLegality *Legal,
       LoopVectorizationCostModel &CM, InterleavedAccessInfo &IAI,
       PredicatedScalarEvolution &PSE, const LoopVectorizeHints &Hints,
-      OptimizationRemarkEmitter *ORE)
+      OptimizationRemarkEmitter *ORE, const DataLayout &DL)
       : OrigLoop(L), LI(LI), DT(DT), TLI(TLI), TTI(TTI), Legal(Legal), CM(CM),
-        IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE) {}
+        IAI(IAI), PSE(PSE), Hints(Hints), ORE(ORE), Builder(DL) {}
 
   /// Build VPlans for the specified \p UserVF and \p UserIC if they are
   /// non-zero or all applicable candidate VFs otherwise. If vectorization and

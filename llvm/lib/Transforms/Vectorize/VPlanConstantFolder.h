@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanValue.h"
-#include "llvm/IR/ConstantFolder.h"
+#include "llvm/Analysis/TargetFolder.h"
 
 #ifndef LLVM_TRANSFORMS_VECTORIZE_VPLANCONSTANTFOLDER_H
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANCONSTANTFOLDER_H
@@ -15,7 +15,7 @@
 namespace llvm {
 class VPConstantFolder {
 private:
-  ConstantFolder Folder;
+  TargetFolder Folder;
 
   Constant *getIRConstant(VPValue *V) const {
     if (!V->isLiveIn())
@@ -33,6 +33,8 @@ private:
   }
 
 public:
+  VPConstantFolder(const DataLayout &DL) : Folder(DL) {}
+
   Value *foldAnd(VPValue *LHS, VPValue *RHS) const {
     return foldBinOp(Instruction::BinaryOps::And, LHS, RHS);
   }

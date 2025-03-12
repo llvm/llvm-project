@@ -156,7 +156,7 @@ void UnrollState::unrollWidenInductionByUF(
     FMFs = ID.getInductionBinOp()->getFastMathFlags();
 
   VPValue *VectorStep = &Plan.getVF();
-  VPBuilder Builder(PH);
+  VPBuilder Builder(IV->getPHINode()->getDataLayout(), PH);
   if (TypeInfo.inferScalarType(VectorStep) != IVTy) {
     Instruction::CastOps CastOp =
         IVTy->isFloatingPointTy() ? Instruction::UIToFP : Instruction::Trunc;

@@ -73,7 +73,8 @@ private:
 
 public:
   PlainCFGBuilder(Loop *Lp, LoopInfo *LI, VPlan &P)
-      : TheLoop(Lp), LI(LI), Plan(P) {}
+      : TheLoop(Lp), LI(LI), Plan(P),
+        VPIRBuilder(Lp->getHeader()->getDataLayout()) {}
 
   /// Build plain CFG for TheLoop  and connects it to Plan's entry.
   void buildPlainCFG(DenseMap<VPBlockBase *, BasicBlock *> &VPB2IRBB);

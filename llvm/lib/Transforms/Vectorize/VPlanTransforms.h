@@ -119,7 +119,8 @@ struct VPlanTransforms {
   /// UseActiveLaneMaskForControlFlow.
   static void addActiveLaneMask(VPlan &Plan,
                                 bool UseActiveLaneMaskForControlFlow,
-                                bool DataAndControlFlowWithoutRuntimeCheck);
+                                bool DataAndControlFlowWithoutRuntimeCheck,
+                                const DataLayout &DL);
 
   /// Insert truncates and extends for any truncated recipe. Redundant casts
   /// will be folded later.
@@ -151,7 +152,8 @@ struct VPlanTransforms {
   /// \returns true if the transformation succeeds, or false if it doesn't.
   static bool
   tryAddExplicitVectorLength(VPlan &Plan,
-                             const std::optional<unsigned> &MaxEVLSafeElements);
+                             const std::optional<unsigned> &MaxEVLSafeElements,
+                             const DataLayout &DL);
 
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its
@@ -191,7 +193,7 @@ struct VPlanTransforms {
                              DenseMap<VPValue *, VPValue *> &EndValues);
 
   /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
-  static void materializeBroadcasts(VPlan &Plan);
+  static void materializeBroadcasts(VPlan &Plan, const DataLayout &DL);
 
   /// Try to convert a plan with interleave groups with VF elements to a plan
   /// with the interleave groups replaced by wide loads and stores processing VF
