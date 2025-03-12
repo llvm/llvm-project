@@ -1789,8 +1789,6 @@ add_fp_unittest(
     libc.src.math.fmaf16
     libc.src.stdlib.rand
     libc.src.stdlib.srand
-  FLAGS
-    FMA_OPT__ONLY
 )
 
 add_fp_unittest(
