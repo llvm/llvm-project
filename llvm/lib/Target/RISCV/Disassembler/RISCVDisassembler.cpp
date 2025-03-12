@@ -624,11 +624,12 @@ namespace {
 
 struct DecoderListEntry {
   const uint8_t *Table;
-  FeatureBitset RequiredFeatures;
+  FeatureBitset ContainedFeatures;
   const char *Desc;
 
-  bool haveRequiredFeatures(const FeatureBitset &ActiveFeatures) const {
-    return RequiredFeatures.none() || (RequiredFeatures & ActiveFeatures).any();
+  bool haveContainedFeatures(const FeatureBitset &ActiveFeatures) const {
+    return ContainedFeatures.none() ||
+           (ContainedFeatures & ActiveFeatures).any();
   }
 };
 
@@ -709,7 +710,7 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
   uint32_t Insn = support::endian::read32le(Bytes.data());
 
   for (const DecoderListEntry &Entry : DecoderList32) {
-    if (!Entry.haveRequiredFeatures(STI.getFeatureBits()))
+    if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
       continue;
 
     LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << "table:\n");
@@ -755,7 +756,7 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
   uint32_t Insn = support::endian::read16le(Bytes.data());
 
   for (const DecoderListEntry &Entry : DecoderList16) {
-    if (!Entry.haveRequiredFeatures(STI.getFeatureBits()))
+    if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
       continue;
 
     LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << "table:\n");
@@ -791,7 +792,7 @@ DecodeStatus RISCVDisassembler::getInstruction48(MCInst &MI, uint64_t &Size,
     Insn += (static_cast<uint64_t>(Bytes[i]) << 8 * i);
 
   for (const DecoderListEntry &Entry : DecoderList48) {
-    if (!Entry.haveRequiredFeatures(STI.getFeatureBits()))
+    if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
       continue;
 
     LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << "table:\n");
