@@ -21,7 +21,7 @@ as potential ``const``.
   int result = i * i;       // Before transformation
   int const result = i * i; // After transformation
 
-The check can analyze values, pointers and references but not (yet) pointees:
+The check can analyze values, pointers and references and pointees:
 
 .. code-block:: c++
 
@@ -39,8 +39,9 @@ The check can analyze values, pointers and references but not (yet) pointees:
   int const& reference_value = potential_const_int; // After transformation
   int another_copy = reference_value;
 
-  // The similar semantics of pointers are not (yet) analyzed.
-  int *pointer_variable = &potential_const_int; // _NO_ 'const int *pointer_variable' suggestion.
+  // The similar semantics of pointers are analyzed.
+  int *pointer_variable = &potential_const_int; // Before transformation
+  int const*const pointer_variable = &potential_const_int; // After transformation, both pointer itself and pointee are supported.
   int last_copy = *pointer_variable;
 
 The automatic code transformation is only applied to variables that are declared in single
@@ -60,22 +61,6 @@ The check will not analyze templated variables or variables that are instantiati
 Different instantiations can result in different ``const`` correctness properties and in general it
 is not possible to find all instantiations of a template. The template might be used differently in
 an independent translation unit.
-
-Pointees can not be analyzed for constness yet. The following code shows this limitation.
-
-.. code-block:: c++
-
-  // Declare a variable that will not be modified.
-  int constant_value = 42;
-
-  // Declare a pointer to that variable, that does not modify either, but misses 'const'.
-  // Could be 'const int *pointer_to_constant = &constant_value;'
-  int *pointer_to_constant = &constant_value;
-
-  // Usage:
-  int result = 520 * 120 * (*pointer_to_constant);
-
-This limitation affects the capability to add ``const`` to methods which is not possible, too.
 
 Options
 -------
