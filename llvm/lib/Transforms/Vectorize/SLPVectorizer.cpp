@@ -809,18 +809,24 @@ static std::optional<unsigned> getExtractIndex(Instruction *E) {
 }
 
 namespace {
-
-/// Base class for representing instructions that can be interchanged with other
-/// equivalent forms. For example, multiplication by a power of 2 can be
-/// interchanged with a left shift.
+/// \returns true if \p Opcode is allowed as part of the main/alternate
+/// instruction for SLP vectorization.
 ///
-/// The class maintains a reference to the main instruction (MainOp) and
-/// provides methods to:
-/// - Check if the incoming instruction can use the same instruction as MainOp
-/// (add)
-/// - Get the opcode for the interchangeable form (getOpcode)
-/// - Get the operands for the interchangeable form (getOperand)
-class InterchangeableBinOp {
+/// Example of unsupported opcode is SDIV that can potentially cause UB if the
+/// "shuffled out" lane would result in division by zero.
+bool isValidForAlternation(unsigned Opcode) {
+  if (Instruction::isIntDivRem(Opcode))
+    return false;
+
+  return true;
+}
+
+/// Helper class that determines VL can use the same opcode.
+/// Alternate instruction is supported. In addition, it supports interchangeable
+/// instruction. An interchangeable instruction is an instruction that can be
+/// converted to another instruction with same semantics. For example, x << 1 is
+/// equal to x * 2. x * 1 is equal to x | 0.
+class BinOpSameOpcodeHelper {
   using MaskType = std::uint_fast16_t;
   // Sort SupportedOp because it is used by binary_search.
   constexpr static std::initializer_list<unsigned> SupportedOp = {
@@ -838,16 +844,6 @@ class InterchangeableBinOp {
     MainOpBIT = 0b100000000,
     LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
   };
-  Instruction *MainOp = nullptr;
-  // The bit it sets represents whether MainOp can be converted to.
-  MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
-                  MulBIT | AShrBIT | ShlBIT;
-  // We cannot create an interchangeable instruction that does not exist in VL.
-  // For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0], but
-  // 'shl' does not exist in VL. In the end, we convert VL to [x * 1, y * 1].
-  // SeenBefore is used to know what operations have been seen before.
-  MaskType SeenBefore = 0;
-
   // Return a non-nullptr if either operand of I is a ConstantInt.
   // The second return value represents the operand position. We check the
   // right-hand side first (1). If the right hand side is not a ConstantInt and
@@ -855,7 +851,6 @@ class InterchangeableBinOp {
   // side (0).
   static std::pair<ConstantInt *, unsigned>
   isBinOpWithConstantInt(Instruction *I) {
-    assert(isa<BinaryOperator>(I));
     unsigned Opcode = I->getOpcode();
     assert(binary_search(SupportedOp, Opcode) && "Unsupported opcode.");
     auto *BinOp = cast<BinaryOperator>(I);
@@ -868,23 +863,140 @@ class InterchangeableBinOp {
       return {CI, 0};
     return {nullptr, 0};
   }
-
-  // Return false allows getSameOpcode to find an alternate instruction.
-  // Directly setting the mask will destroy the mask state, preventing us from
-  // determining which instruction the MainOp should convert to.
-  bool trySet(MaskType X) {
-    if (Mask & X) {
-      Mask &= X;
-      return true;
+  struct InterchangeableInfo {
+    Instruction *I;
+    // The bit it sets represents whether MainOp can be converted to.
+    MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
+                    MulBIT | AShrBIT | ShlBIT;
+    // We cannot create an interchangeable instruction that does not exist in
+    // VL. For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0],
+    // but << does not exist in VL. In the end, we convert VL to [x * 1, y * 1].
+    // SeenBefore is used to know what operations have been seen before.
+    MaskType SeenBefore = 0;
+    InterchangeableInfo(Instruction *I) : I(I) {}
+    // Return false allows BinOpSameOpcodeHelper to find an alternate
+    // instruction. Directly setting the mask will destroy the mask state,
+    // preventing us from determining which instruction it should convert to.
+    bool trySet(MaskType OpcodeInMaskForm, MaskType InterchangeableMask) {
+      if (Mask & InterchangeableMask) {
+        SeenBefore |= OpcodeInMaskForm;
+        Mask &= InterchangeableMask;
+        return true;
+      }
+      return false;
     }
-    return false;
+    bool equal(unsigned Opcode) {
+      if (Opcode == I->getOpcode())
+        return trySet(MainOpBIT, MainOpBIT);
+      return false;
+    }
+    unsigned getOpcode() const {
+      MaskType Candidate = Mask & SeenBefore;
+      if (Candidate & MainOpBIT)
+        return I->getOpcode();
+      if (Candidate & ShlBIT)
+        return Instruction::Shl;
+      if (Candidate & AShrBIT)
+        return Instruction::AShr;
+      if (Candidate & MulBIT)
+        return Instruction::Mul;
+      if (Candidate & AddBIT)
+        return Instruction::Add;
+      if (Candidate & SubBIT)
+        return Instruction::Sub;
+      if (Candidate & AndBIT)
+        return Instruction::And;
+      if (Candidate & OrBIT)
+        return Instruction::Or;
+      if (Candidate & XorBIT)
+        return Instruction::Xor;
+      llvm_unreachable("Cannot find interchangeable instruction.");
+    }
+    SmallVector<Value *> getOperand(Instruction *To) const {
+      unsigned ToOpcode = To->getOpcode();
+      unsigned FromOpcode = I->getOpcode();
+      if (FromOpcode == ToOpcode)
+        return SmallVector<Value *>(I->operands());
+      assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
+      auto [CI, Pos] = isBinOpWithConstantInt(I);
+      const APInt &FromCIValue = CI->getValue();
+      unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
+      APInt ToCIValue;
+      switch (FromOpcode) {
+      case Instruction::Shl:
+        if (ToOpcode == Instruction::Mul) {
+          ToCIValue = APInt::getOneBitSet(FromCIValueBitWidth,
+                                          FromCIValue.getZExtValue());
+        } else {
+          assert(FromCIValue.isZero() && "Cannot convert the instruction.");
+          ToCIValue = ToOpcode == Instruction::And
+                          ? APInt::getAllOnes(FromCIValueBitWidth)
+                          : APInt::getZero(FromCIValueBitWidth);
+        }
+        break;
+      case Instruction::Mul:
+        assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
+        if (ToOpcode == Instruction::Shl) {
+          ToCIValue = APInt(FromCIValueBitWidth, FromCIValue.logBase2());
+        } else {
+          assert(FromCIValue.isOne() && "Cannot convert the instruction.");
+          ToCIValue = ToOpcode == Instruction::And
+                          ? APInt::getAllOnes(FromCIValueBitWidth)
+                          : APInt::getZero(FromCIValueBitWidth);
+        }
+        break;
+      case Instruction::Add:
+      case Instruction::Sub:
+        if (FromCIValue.isZero()) {
+          ToCIValue = APInt::getZero(FromCIValueBitWidth);
+        } else {
+          assert(is_contained({Instruction::Add, Instruction::Sub}, ToOpcode) &&
+                 "Cannot convert the instruction.");
+          ToCIValue = FromCIValue;
+          ToCIValue.negate();
+        }
+        break;
+      case Instruction::And:
+        assert(FromCIValue.isAllOnes() && "Cannot convert the instruction.");
+        ToCIValue = ToOpcode == Instruction::Mul
+                        ? APInt::getOneBitSet(FromCIValueBitWidth, 0)
+                        : APInt::getZero(FromCIValueBitWidth);
+        break;
+      default:
+        assert(FromCIValue.isZero() && "Cannot convert the instruction.");
+        ToCIValue = APInt::getZero(FromCIValueBitWidth);
+        break;
+      }
+      Value *LHS = I->getOperand(1 - Pos);
+      Constant *RHS =
+          ConstantInt::get(I->getOperand(Pos)->getType(), ToCIValue);
+      if (Pos == 1)
+        return SmallVector<Value *>({LHS, RHS});
+      return SmallVector<Value *>({RHS, LHS});
+    }
+  };
+  InterchangeableInfo MainOp;
+  InterchangeableInfo AltOp;
+  bool isValidForAlternation(Instruction *I) const {
+    return ::isValidForAlternation(MainOp.I->getOpcode()) &&
+           ::isValidForAlternation(I->getOpcode());
+  }
+  bool initializeAltOp(Instruction *I) {
+    if (!AltOp.I) {
+      if (!isValidForAlternation(I))
+        return false;
+      AltOp.I = I;
+    }
+    return true;
   }
 
 public:
-  InterchangeableBinOp(Instruction *MainOp) : MainOp(MainOp) {
+  BinOpSameOpcodeHelper(Instruction *MainOp, Instruction *AltOp = nullptr)
+      : MainOp(MainOp), AltOp(AltOp) {
     assert(is_sorted(SupportedOp) && "SupportedOp is not sorted.");
   }
   bool add(Instruction *I) {
+    assert(isa<BinaryOperator>(I));
     unsigned Opcode = I->getOpcode();
     MaskType OpcodeInMaskForm;
     // Prefer Shl, AShr, Mul, Add, Sub, And, Or and Xor over MainOp.
@@ -914,13 +1026,10 @@ public:
       OpcodeInMaskForm = XorBIT;
       break;
     default:
-      if (Opcode == MainOp->getOpcode()) {
-        SeenBefore |= MainOpBIT;
-        return trySet(MainOpBIT);
-      }
-      return false;
+      return MainOp.equal(Opcode) ||
+             (initializeAltOp(I) && AltOp.equal(Opcode));
     }
-    SeenBefore |= OpcodeInMaskForm;
+    MaskType InterchangeableMask = OpcodeInMaskForm;
     ConstantInt *CI = isBinOpWithConstantInt(I).first;
     if (CI) {
       constexpr MaskType CanBeAll =
@@ -928,120 +1037,46 @@ public:
       const APInt &CIValue = CI->getValue();
       switch (Opcode) {
       case Instruction::Shl:
-        return trySet(CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT);
+        InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
+        break;
       case Instruction::Mul:
-        if (CIValue.isOne())
-          return trySet(CanBeAll);
+        if (CIValue.isOne()) {
+          InterchangeableMask = CanBeAll;
+          break;
+        }
         if (CIValue.isPowerOf2())
-          return trySet(MulBIT | ShlBIT);
+          InterchangeableMask = MulBIT | ShlBIT;
         break;
       case Instruction::Add:
       case Instruction::Sub:
-        return trySet(CIValue.isZero() ? CanBeAll : SubBIT | AddBIT);
+        InterchangeableMask = CIValue.isZero() ? CanBeAll : SubBIT | AddBIT;
+        break;
       case Instruction::And:
         if (CIValue.isAllOnes())
-          return trySet(CanBeAll);
+          InterchangeableMask = CanBeAll;
         break;
       default:
         if (CIValue.isZero())
-          return trySet(CanBeAll);
+          InterchangeableMask = CanBeAll;
         break;
       }
     }
-    return trySet(OpcodeInMaskForm);
+    return MainOp.trySet(OpcodeInMaskForm, InterchangeableMask) ||
+           (initializeAltOp(I) &&
+            AltOp.trySet(OpcodeInMaskForm, InterchangeableMask));
   }
-  unsigned getOpcode() const {
-    MaskType Candidate = Mask & SeenBefore;
-    if (Candidate & MainOpBIT)
-      return MainOp->getOpcode();
-    if (Candidate & ShlBIT)
-      return Instruction::Shl;
-    if (Candidate & AShrBIT)
-      return Instruction::AShr;
-    if (Candidate & MulBIT)
-      return Instruction::Mul;
-    if (Candidate & AddBIT)
-      return Instruction::Add;
-    if (Candidate & SubBIT)
-      return Instruction::Sub;
-    if (Candidate & AndBIT)
-      return Instruction::And;
-    if (Candidate & OrBIT)
-      return Instruction::Or;
-    if (Candidate & XorBIT)
-      return Instruction::Xor;
-    llvm_unreachable("Cannot find interchangeable instruction.");
+  unsigned getMainOpcode() const { return MainOp.getOpcode(); }
+  bool hasAltOp() const { return AltOp.I; }
+  unsigned getAltOpcode() const {
+    return hasAltOp() ? AltOp.getOpcode() : getMainOpcode();
   }
-  SmallVector<Value *> getOperand(Instruction *I) const {
-    unsigned ToOpcode = I->getOpcode();
-    unsigned FromOpcode = MainOp->getOpcode();
-    if (FromOpcode == ToOpcode)
-      return SmallVector<Value *>(MainOp->operands());
-    assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
-    auto [CI, Pos] = isBinOpWithConstantInt(MainOp);
-    const APInt &FromCIValue = CI->getValue();
-    unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
-    APInt ToCIValue;
-    switch (FromOpcode) {
-    case Instruction::Shl:
-      if (ToOpcode == Instruction::Mul) {
-        ToCIValue = APInt::getOneBitSet(FromCIValueBitWidth,
-                                        FromCIValue.getZExtValue());
-      } else {
-        assert(FromCIValue.isZero() && "Cannot convert the instruction.");
-        ToCIValue = ToOpcode == Instruction::And
-                        ? APInt::getAllOnes(FromCIValueBitWidth)
-                        : APInt::getZero(FromCIValueBitWidth);
-      }
-      break;
-    case Instruction::Mul:
-      assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
-      if (ToOpcode == Instruction::Shl) {
-        ToCIValue = APInt(FromCIValueBitWidth, FromCIValue.logBase2());
-      } else {
-        assert(FromCIValue.isOne() && "Cannot convert the instruction.");
-        ToCIValue = ToOpcode == Instruction::And
-                        ? APInt::getAllOnes(FromCIValueBitWidth)
-                        : APInt::getZero(FromCIValueBitWidth);
-      }
-      break;
-    case Instruction::Add:
-    case Instruction::Sub:
-      if (FromCIValue.isZero()) {
-        ToCIValue = APInt::getZero(FromCIValueBitWidth);
-      } else {
-        assert(is_contained({Instruction::Add, Instruction::Sub}, ToOpcode) &&
-               "Cannot convert the instruction.");
-        ToCIValue = FromCIValue;
-        ToCIValue.negate();
-      }
-      break;
-    case Instruction::And:
-      assert(FromCIValue.isAllOnes() && "Cannot convert the instruction.");
-      ToCIValue = ToOpcode == Instruction::Mul
-                      ? APInt::getOneBitSet(FromCIValueBitWidth, 0)
-                      : APInt::getZero(FromCIValueBitWidth);
-      break;
-    default:
-      ToCIValue = APInt::getZero(FromCIValueBitWidth);
-      break;
-    }
-    Value *LHS = MainOp->getOperand(1 - Pos);
-    Constant *RHS =
-        ConstantInt::get(MainOp->getOperand(Pos)->getType(), ToCIValue);
-    if (Pos == 1)
-      return SmallVector<Value *>({LHS, RHS});
-    return SmallVector<Value *>({RHS, LHS});
+  SmallVector<Value *> getMainOperand(Instruction *I) const {
+    return MainOp.getOperand(I);
+  }
+  SmallVector<Value *> getAltOperand(Instruction *I) const {
+    return AltOp.getOperand(I);
   }
 };
-
-std::optional<InterchangeableBinOp> isConvertible(Instruction *From,
-                                                  Instruction *To) {
-  InterchangeableBinOp Converter(From);
-  if (Converter.add(From) && Converter.add(To))
-    return Converter;
-  return {};
-}
 
 bool isConvertible(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
   assert(MainOp && "MainOp cannot be nullptr.");
@@ -1052,7 +1087,8 @@ bool isConvertible(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
     return true;
   if (!I->isBinaryOp())
     return false;
-  return isConvertible(I, MainOp) || isConvertible(I, AltOp);
+  BinOpSameOpcodeHelper Converter(MainOp, AltOp);
+  return Converter.add(I) && Converter.add(MainOp) && Converter.add(AltOp);
 }
 
 std::pair<Instruction *, SmallVector<Value *>>
@@ -1064,12 +1100,10 @@ convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
   if (I->getOpcode() == AltOp->getOpcode())
     return std::make_pair(AltOp, SmallVector<Value *>(I->operands()));
   assert(I->isBinaryOp() && "Cannot convert the instruction.");
-  std::optional<InterchangeableBinOp> Converter(isConvertible(I, MainOp));
-  if (Converter)
-    return std::make_pair(MainOp, Converter->getOperand(MainOp));
-  Converter = isConvertible(I, AltOp);
-  assert(Converter && "Cannot convert the instruction.");
-  return std::make_pair(AltOp, Converter->getOperand(AltOp));
+  BinOpSameOpcodeHelper Converter(I);
+  if (Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp())
+    return std::make_pair(MainOp, Converter.getMainOperand(MainOp));
+  return std::make_pair(AltOp, Converter.getAltOperand(AltOp));
 }
 
 /// Main data required for vectorization of instructions.
@@ -1113,18 +1147,6 @@ public:
 };
 
 } // end anonymous namespace
-
-/// \returns true if \p Opcode is allowed as part of the main/alternate
-/// instruction for SLP vectorization.
-///
-/// Example of unsupported opcode is SDIV that can potentially cause UB if the
-/// "shuffled out" lane would result in division by zero.
-static bool isValidForAlternation(unsigned Opcode) {
-  if (Instruction::isIntDivRem(Opcode))
-    return false;
-
-  return true;
-}
 
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                                        const TargetLibraryInfo &TLI);
@@ -1183,6 +1205,17 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       (VL.size() == 2 && InstCnt < 2))
     return InstructionsState::invalid();
 
+  auto FindInstructionWithOpcode = [&](unsigned Opcode) {
+    for (Value *V : VL) {
+      if (isa<PoisonValue>(V))
+        continue;
+      auto *Inst = cast<Instruction>(V);
+      if (Inst->getOpcode() == Opcode)
+        return Inst;
+    }
+    llvm_unreachable("Opcode not found.");
+  };
+
   bool IsCastOp = isa<CastInst>(MainOp);
   bool IsBinOp = isa<BinaryOperator>(MainOp);
   bool IsCmpOp = isa<CmpInst>(MainOp);
@@ -1192,8 +1225,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   unsigned Opcode = MainOp->getOpcode();
   unsigned AltOpcode = Opcode;
 
-  InterchangeableBinOp InterchangeableConverter(MainOp);
-  std::optional<InterchangeableBinOp> AlternateInterchangeableConverter;
+  BinOpSameOpcodeHelper BinOpHelper(MainOp);
   bool SwappedPredsCompatible = IsCmpOp && [&]() {
     SetVector<unsigned> UniquePreds, UniqueNonSwappedPreds;
     UniquePreds.insert(BasePred);
@@ -1240,15 +1272,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       return InstructionsState::invalid();
     unsigned InstOpcode = I->getOpcode();
     if (IsBinOp && isa<BinaryOperator>(I)) {
-      if (InterchangeableConverter.add(I))
-        continue;
-      if (!AlternateInterchangeableConverter) {
-        if (!isValidForAlternation(Opcode) ||
-            !isValidForAlternation(InstOpcode))
-          return InstructionsState::invalid();
-        AlternateInterchangeableConverter = InterchangeableBinOp(I);
-      }
-      if (AlternateInterchangeableConverter->add(I))
+      if (BinOpHelper.add(I))
         continue;
     } else if (IsCastOp && isa<CastInst>(I)) {
       Value *Op0 = MainOp->getOperand(0);
@@ -1351,23 +1375,8 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   }
 
   if (IsBinOp) {
-    auto FindOp =
-        [&](const InterchangeableBinOp &Converter) {
-          unsigned InterchangeableInstructionOpcode = Converter.getOpcode();
-          for (Value *V : VL) {
-            if (isa<PoisonValue>(V))
-              continue;
-            auto *Inst = cast<Instruction>(V);
-            if (Inst->getOpcode() == InterchangeableInstructionOpcode)
-              return Inst;
-          }
-          llvm_unreachable(
-              "Cannot find the candidate instruction for InstructionsState.");
-        };
-    MainOp = FindOp(InterchangeableConverter);
-    AltOp = AlternateInterchangeableConverter
-                ? FindOp(*AlternateInterchangeableConverter)
-                : MainOp;
+    MainOp = FindInstructionWithOpcode(BinOpHelper.getMainOpcode());
+    AltOp = FindInstructionWithOpcode(BinOpHelper.getAltOpcode());
   }
   return InstructionsState(MainOp, AltOp);
 }
