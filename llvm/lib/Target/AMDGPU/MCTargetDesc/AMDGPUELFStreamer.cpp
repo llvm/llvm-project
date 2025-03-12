@@ -9,6 +9,7 @@
 #include "AMDGPUELFStreamer.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCCodeEmitter.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 
@@ -23,7 +24,10 @@ public:
                     std::unique_ptr<MCObjectWriter> OW,
                     std::unique_ptr<MCCodeEmitter> Emitter)
       : MCELFStreamer(Context, std::move(MAB), std::move(OW),
-                      std::move(Emitter)) {}
+                      std::move(Emitter)) {
+    // Give temporary names to basic blocks for the benefit of DumpCode.
+    Context.setUseNamesOnTempLabels(true);
+  }
 };
 
 } // anonymous namespace
