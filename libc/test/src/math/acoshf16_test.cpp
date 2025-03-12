@@ -48,7 +48,7 @@ TEST_F(LlvmLibcAcoshf16Test, PositiveRange) {
     float16 x = FPBits(v).get_val();
 
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Acosh, x,
-                                   LIBC_NAMESPACE::acoshf16(x), 3.0);
+                                   LIBC_NAMESPACE::acoshf16(x), 1.0);
   }
 }
 
