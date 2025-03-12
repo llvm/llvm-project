@@ -174,6 +174,7 @@ using CtxProfContextualProfiles =
     std::map<GlobalValue::GUID, PGOCtxProfContext>;
 struct PGOCtxProfile {
   CtxProfContextualProfiles Contexts;
+  CtxProfFlatProfile FlatProfiles;
 
   PGOCtxProfile() = default;
   PGOCtxProfile(const PGOCtxProfile &) = delete;
@@ -186,12 +187,18 @@ class PGOCtxProfileReader final {
   BitstreamCursor Cursor;
   Expected<BitstreamEntry> advance();
   Error readMetadata();
-  Error wrongValue(const Twine &);
-  Error unsupported(const Twine &);
+  Error wrongValue(const Twine &Msg);
+  Error unsupported(const Twine &Msg);
 
   Expected<std::pair<std::optional<uint32_t>, PGOCtxProfContext>>
-  readContext(bool ExpectIndex);
-  bool canReadContext();
+  readProfile(PGOCtxProfileBlockIDs Kind);
+
+  bool tryGetNextKnownBlockID(PGOCtxProfileBlockIDs &ID);
+  bool canEnterBlockWithID(PGOCtxProfileBlockIDs ID);
+  Error enterBlockWithID(PGOCtxProfileBlockIDs ID);
+
+  Error loadContexts(CtxProfContextualProfiles &P);
+  Error loadFlatProfiles(CtxProfFlatProfile &P);
 
 public:
   PGOCtxProfileReader(StringRef Buffer)
@@ -201,7 +208,6 @@ public:
   Expected<PGOCtxProfile> loadProfiles();
 };
 
-void convertCtxProfToYaml(raw_ostream &OS,
-                          const PGOCtxProfContext::CallTargetMapTy &);
+void convertCtxProfToYaml(raw_ostream &OS, const PGOCtxProfile &Profile);
 } // namespace llvm
 #endif

@@ -180,5 +180,5 @@ TargetFrameLowering::getInitialCFARegister(const MachineFunction &MF) const {
 TargetFrameLowering::DwarfFrameBase
 TargetFrameLowering::getDwarfFrameBase(const MachineFunction &MF) const {
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
-  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF)}};
+  return DwarfFrameBase{DwarfFrameBase::Register, {RI->getFrameRegister(MF).id()}};
 }

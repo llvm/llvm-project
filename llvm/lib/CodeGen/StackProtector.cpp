@@ -136,7 +136,8 @@ PreservedAnalyses StackProtectorPass::run(Function &F,
   bool Changed = InsertStackProtectors(TM, &F, DT ? &DTU : nullptr,
                                        Info.HasPrologue, Info.HasIRCheck);
 #ifdef EXPENSIVE_CHECKS
-  assert((!DT || DT->verify(DominatorTree::VerificationLevel::Full)) &&
+  assert((!DT ||
+          DTU.getDomTree().verify(DominatorTree::VerificationLevel::Full)) &&
          "Failed to maintain validity of domtree!");
 #endif
 
@@ -217,7 +218,7 @@ static bool ContainsProtectableArray(Type *Ty, Module *M, unsigned SSPBufferSize
       // add stack protectors unless the array is a character array.
       // However, in strong mode any array, regardless of type and size,
       // triggers a protector.
-      if (!Strong && (InStruct || !Triple(M->getTargetTriple()).isOSDarwin()))
+      if (!Strong && (InStruct || !M->getTargetTriple().isOSDarwin()))
         return false;
     }
 

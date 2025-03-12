@@ -175,6 +175,27 @@ _HLSL_BUILTIN_ALIAS(__builtin_elementwise_acos)
 float4 acos(float4);
 
 //===----------------------------------------------------------------------===//
+// AddUint64 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T AddUint64(T a, T b)
+/// \brief Implements unsigned 64-bit integer addition using pairs of unsigned
+/// 32-bit integers.
+/// \param x [in] The first unsigned 32-bit integer pair(s)
+/// \param y [in] The second unsigned 32-bit integer pair(s)
+///
+/// This function takes one or two pairs (low, high) of unsigned 32-bit integer
+/// values and returns pairs (low, high) of unsigned 32-bit integer
+/// values representing the result of unsigned 64-bit integer addition.
+
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_adduint64)
+uint32_t2 AddUint64(uint32_t2, uint32_t2);
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_adduint64)
+uint32_t4 AddUint64(uint32_t4, uint32_t4);
+
+//===----------------------------------------------------------------------===//
 // all builtins
 //===----------------------------------------------------------------------===//
 
@@ -2101,6 +2122,41 @@ T select(bool, T, T);
 template <typename T, int Sz>
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
 vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, vector<T, Sz>);
+
+/// \fn vector<T,Sz> select(vector<bool,Sz> Conds, T TrueVal,
+///                         vector<T,Sz> FalseVals)
+/// \brief ternary operator for vectors. All vectors must be the same size.
+/// \param Conds The Condition input values.
+/// \param TrueVal The scalar value to splat from when conditions are true.
+/// \param FalseVals The vector values are chosen from when conditions are
+/// false.
+
+template <typename T, int Sz>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, Sz> select(vector<bool, Sz>, T, vector<T, Sz>);
+
+/// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
+///                         T FalseVal)
+/// \brief ternary operator for vectors. All vectors must be the same size.
+/// \param Conds The Condition input values.
+/// \param TrueVals The vector values are chosen from when conditions are true.
+/// \param FalseVal The scalar value to splat from when conditions are false.
+
+template <typename T, int Sz>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+vector<T, Sz> select(vector<bool, Sz>, vector<T, Sz>, T);
+
+/// \fn vector<T,Sz> select(vector<bool,Sz> Conds, vector<T,Sz> TrueVals,
+///                         T FalseVal)
+/// \brief ternary operator for vectors. All vectors must be the same size.
+/// \param Conds The Condition input values.
+/// \param TrueVal The scalar value to splat from when conditions are true.
+/// \param FalseVal The scalar value to splat from when conditions are false.
+
+template <typename T, int Sz>
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_select)
+__detail::enable_if_t<__detail::is_arithmetic<T>::Value, vector<T, Sz>> select(
+    vector<bool, Sz>, T, T);
 
 //===----------------------------------------------------------------------===//
 // sin builtins

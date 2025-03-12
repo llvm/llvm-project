@@ -2668,7 +2668,7 @@ InstructionCost ARMTTIImpl::getScalingFactorCost(Type *Ty, GlobalValue *BaseGV,
       return AM.Scale < 0 ? 1 : 0; // positive offsets execute faster
     return 0;
   }
-  return -1;
+  return InstructionCost::getInvalid();
 }
 
 bool ARMTTIImpl::hasArmWideBranch(bool Thumb) const {
