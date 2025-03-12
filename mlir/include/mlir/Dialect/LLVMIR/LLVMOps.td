@@ -364,7 +364,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     [DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<PromotableMemOpInterface>,
-     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>]> {
+     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
+     DeclareOpInterfaceMethods<DereferenceableOpInterface>]> {
   dag args = (ins LLVM_AnyPointer:$addr,
               OptionalAttr<I64Attr>:$alignment,
               UnitAttr:$volatile_,
@@ -373,7 +374,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
               UnitAttr:$invariantGroup,
               DefaultValuedAttr<
                 AtomicOrdering, "AtomicOrdering::not_atomic">:$ordering,
-              OptionalAttr<StrAttr>:$syncscope);
+              OptionalAttr<StrAttr>:$syncscope,
+              OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs LLVM_LoadableType:$res);
@@ -407,6 +409,7 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
     (`atomic` (`syncscope` `(` $syncscope^ `)`)? $ordering^)?
     (`invariant` $invariant^)?
     (`invariant_group` $invariantGroup^)?
+    (`dereferenceable` `` $dereferenceable^)?
     attr-dict `:` qualified(type($addr)) `->` type($res)
   }];
   string llvmBuilder = [{
@@ -416,6 +419,8 @@ def LLVM_LoadOp : LLVM_MemAccessOpBase<"load",
       llvm::MDNode *metadata = llvm::MDNode::get(inst->getContext(), std::nullopt);
       inst->setMetadata(llvm::LLVMContext::MD_invariant_load, metadata);
     }
+    if ($dereferenceable)
+      moduleTranslation.setDereferenceableMetadata(op, inst);
   }] # setOrderingCode
      # setSyncScopeCode
      # setAlignmentCode
@@ -571,6 +576,29 @@ class LLVM_CastOpWithOverflowFlag<string mnemonic, string instName, Type type,
   }];
 }
 
+class LLVM_DereferenceableCastOp<string mnemonic, string instName, Type type,
+                  Type resultType, list<Trait> traits = []> :
+    LLVM_Op<mnemonic, !listconcat([Pure], [DeclareOpInterfaceMethods<DereferenceableOpInterface>], traits)> {
+  let arguments = (ins type:$arg, OptionalAttr<LLVM_DereferenceableAttr>:$dereferenceable);
+  let results = (outs resultType:$res);
+  let builders = [LLVM_OneResultOpBuilder];
+  let assemblyFormat = "$arg (`dereferenceable` `` $dereferenceable^)? attr-dict `:` type($arg) `to` type($res)";
+  string llvmInstName = instName;
+  string llvmBuilder = [{
+    auto *val = builder.Create}] # instName # [{($arg, $_resultType);
+    $res = val;
+    if ($dereferenceable) {
+      llvm::Instruction *inst = dyn_cast<llvm::Instruction>(val);
+      moduleTranslation.setDereferenceableMetadata(op, inst);
+    }
+  }];
+  string mlirBuilder = [{
+    auto op = $_builder.create<$_qualCppClassName>(
+      $_location, $_resultType, $arg);
+    $res = op;
+  }];
+}
+
 def LLVM_BitcastOp : LLVM_CastOp<"bitcast", "BitCast", LLVM_AnyNonAggregate,
     LLVM_AnyNonAggregate, [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
   let hasFolder = 1;
@@ -583,7 +611,7 @@ def LLVM_AddrSpaceCastOp : LLVM_CastOp<"addrspacecast", "AddrSpaceCast",
      DeclareOpInterfaceMethods<ViewLikeOpInterface>]> {
   let hasFolder = 1;
 }
-def LLVM_IntToPtrOp : LLVM_CastOp<"inttoptr", "IntToPtr",
+def LLVM_IntToPtrOp : LLVM_DereferenceableCastOp<"inttoptr", "IntToPtr",
                                   LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                                   LLVM_ScalarOrVectorOf<LLVM_AnyPointer>>;
 def LLVM_PtrToIntOp : LLVM_CastOp<"ptrtoint", "PtrToInt",

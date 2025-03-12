@@ -1267,4 +1267,28 @@ def WorkgroupAttributionAttr
   let assemblyFormat = "`<` $num_elements `,` $element_type `>`";
 }
 
+//===----------------------------------------------------------------------===//
+// DereferenceableAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
+  let summary = "LLVM dereferenceable attribute";
+  let description = [{
+    Defines `dereferenceable` or `dereferenceable_or_null` metadata that can
+    be set via the `DereferenceableOpInterface` on an `inttoptr` operation or
+    on a `load` operation which loads a pointer. The attribute is used to
+    denote that the result of these operations is dereferenceable up to a
+    certain number of bytes, represented by `$bytes`. The optional `$mayBeNull`
+    parameter is set to true if the attribute defines `dereferenceable_or_null`
+    metadata.
+
+    See the following links for more details:
+    https://llvm.org/docs/LangRef.html#dereferenceable-metadata
+    https://llvm.org/docs/LangRef.html#dereferenceable-or-null-metadata
+  }];
+  let parameters = (ins "uint64_t":$bytes,
+                        DefaultValuedParameter<"bool", "false">:$mayBeNull);
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
 #endif // LLVMIR_ATTRDEFS
