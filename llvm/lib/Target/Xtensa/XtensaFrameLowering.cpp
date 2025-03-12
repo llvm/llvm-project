@@ -72,8 +72,6 @@ void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
       // Use a8 as a temporary since a0-a7 may be live.
       MCRegister TmpReg = Xtensa::A8;
 
-      const XtensaInstrInfo &TII = *static_cast<const XtensaInstrInfo *>(
-          MBB.getParent()->getSubtarget().getInstrInfo());
       BuildMI(MBB, MBBI, DL, TII.get(Xtensa::ENTRY))
           .addReg(SP)
           .addImm(MIN_FRAME_SIZE);
@@ -334,9 +332,6 @@ bool XtensaFrameLowering::restoreCalleeSavedRegisters(
 MachineBasicBlock::iterator XtensaFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator I) const {
-  const XtensaInstrInfo &TII =
-      *static_cast<const XtensaInstrInfo *>(MF.getSubtarget().getInstrInfo());
-
   if (!hasReservedCallFrame(MF)) {
     int64_t Amount = I->getOperand(0).getImm();
 
