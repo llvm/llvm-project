@@ -43,6 +43,8 @@ void CIRGenerator::Initialize(ASTContext &astContext) {
 mlir::ModuleOp CIRGenerator::getModule() const { return cgm->getModule(); }
 
 bool CIRGenerator::HandleTopLevelDecl(DeclGroupRef group) {
+  if (diags.hasUnrecoverableErrorOccurred())
+    return true;
 
   for (Decl *decl : group)
     cgm->emitTopLevelDecl(decl);
