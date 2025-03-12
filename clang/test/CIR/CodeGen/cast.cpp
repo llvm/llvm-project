@@ -35,11 +35,7 @@ int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
   int si = (int)x1; // sign add
   // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<u, 32>), !cir.int<s, 32>
 
-  unsigned uu = (unsigned)x1; // should not be generated
-  // CHECK-NOT: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<u, 32>), !cir.int<u, 32>
-
-  bool ib = (bool)x1; // No checking, because this isn't a regular cast.
-
+  bool ib;
   int bi = (int)ib; // bool to int
   // CHECK: %{{[0-9]+}} = cir.cast(bool_to_int, %{{[0-9]+}} : !cir.bool), !cir.int<s, 32>
 
@@ -56,3 +52,15 @@ bool cptr(void *d) {
 
 // CHECK:   %2 = cir.load %0 : !cir.ptr<!cir.ptr<!cir.void>>, !cir.ptr<!cir.void>
 // CHECK:   %3 = cir.cast(ptr_to_bool, %2 : !cir.ptr<!cir.void>), !cir.bool
+
+void should_not_cast() {
+  unsigned x1;
+
+  unsigned uu = (unsigned)x1;
+  bool ib = (bool)x1;
+  return (void) x1;
+}
+
+// CHECK:     cir.func @should_not_cast
+// CHECK-NOT:   cir.cast
+// CHECK:     }
