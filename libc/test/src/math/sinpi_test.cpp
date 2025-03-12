@@ -11,30 +11,22 @@
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-using LlvmLibcSinpiTest = LIBC_NAMESPACE::testing::FPTest<double>;
+#include <iostream>
 
+using LlvmLibcSinpiTest = LIBC_NAMESPACE::testing::FPTest<double>;
+using namespace std;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-// Range: [0, Inf]
-static constexpr uint64_t POS_START = 0x0000U;
-static constexpr uint64_t POS_STOP = 0x7c00U;
 
-// Range: [-Inf, 0]
-static constexpr uint16_t NEG_START = 0x8000U;
-static constexpr uint16_t NEG_STOP = 0xfc00U;
+static constexpr double POS_START = 0;
+static constexpr double POS_STOP = 200;
 
-TEST_F(LlvmLibcSinpif16Test, PositiveRange) {
-  for (uint64_t v = POS_START; v <= POS_STOP; ++v) {
-    double x = FPBits(v).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinpi, x,
-                                   LIBC_NAMESPACE::sinpi(x), 0.5);
-  }
-}
 
-TEST_F(LlvmLibcSinpif16Test, NegativeRange) {
-  for (uint64_t v = NEG_START; v <= NEG_STOP; ++v) {
-    double x = FPBits(v).get_val();
-    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinpi, x,
-                                   LIBC_NAMESPACE::sinpi(x), 0.5);
+TEST_F(LlvmLibcSinpiTest, PositiveRange) {
+  for (double v = POS_START; v <= POS_STOP; ++v) {
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinpi, v,
+                                   LIBC_NAMESPACE::sinpi(v), 0.5);
+    EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinpi, -v,
+                                   LIBC_NAMESPACE::sinpi(-v), 0.5);
   }
 }
