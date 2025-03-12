@@ -1,6 +1,16 @@
 // RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-output=text        \
 // RUN:     -analyzer-checker=core,security.ArrayBound,unix.Malloc,optin.taint -verify %s
 
+// When the checker security.ArrayBound encounters an array subscript operation
+// that _may be_ in bounds, it assumes that indexing _is_ in bound. These
+// assumptions will be reported to the user if the execution path leads to a
+// bug report (made by any checker) and the symbol which was constrainted by
+// the assumption is marked as interesting (with `markInteresting` or
+// indirectly via `trackExpressionValue`) in that bug report.
+//
+// This test file validates the content of these note tags which describe the
+// assumptions for the user.
+
 int TenElements[10];
 
 int irrelevantAssumptions(int arg) {
@@ -196,4 +206,15 @@ int *extentInterestingness(int arg) {
   return &mem[12];
   // expected-warning@-1 {{Out of bound access to memory after the end of the heap area}}
   // expected-note@-2 {{Access of 'int' element in the heap area at index 12}}
+}
+
+int triggeredByAnyReport(int arg) {
+  // Verify that note tags explaining the assumptions made by ArrayBound are
+  // not limited to ArrayBound reports but will appear on any bug report (that
+  // marks the relevant symbol as interesting).
+  TenElements[arg + 10] = 8;
+  // expected-note@-1 {{Assuming index is non-negative and less than 10, the number of 'int' elements in 'TenElements'}}
+  return 1024 >> arg;
+  // expected-warning@-1 {{Right operand is negative in right shift}}
+  // expected-note@-2 {{The result of right shift is undefined because the right operand is negative}}
 }
