@@ -1595,6 +1595,8 @@ public:
 };
 
 /// A recipe to compute the pointers for widened memory accesses of IndexTy.
+/// Supports both consecutive and reverse consecutive accesses.
+/// TODO: Support non-unit strided accesses .
 class VPVectorPointerRecipe : public VPRecipeWithIRFlags,
                               public VPUnrollPartAccessor<1> {
   Type *IndexedTy;
