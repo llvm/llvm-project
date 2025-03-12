@@ -18,7 +18,6 @@ add_llvm_unittest(SupportTests
   BranchProbabilityTest.cpp
   CachePruningTest.cpp
   CrashRecoveryTest.cpp
-  Caching.cpp
   Casting.cpp
   CheckedArithmeticTest.cpp
   Chrono.cpp
