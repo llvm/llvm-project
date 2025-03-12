@@ -463,7 +463,10 @@ static Value *GEPToVectorIndex(GetElementPtrInst *GEP, AllocaInst *Alloca,
 
   Value *Offset = VarOffset.first;
   if (!Quot.isOne()) {
-    ConstantInt *ConstMul = ConstantInt::get(GEP->getContext(), Quot);
+    auto *OffsetType = dyn_cast<IntegerType>(Offset->getType());
+    if (!OffsetType)
+      return nullptr;
+    ConstantInt *ConstMul = ConstantInt::get(OffsetType, Quot.getZExtValue());
     Offset = Builder.CreateMul(Offset, ConstMul);
     if (Instruction *NewInst = dyn_cast<Instruction>(Offset))
       NewInsts.push_back(NewInst);
