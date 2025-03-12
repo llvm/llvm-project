@@ -613,45 +613,45 @@ protected:
 /// common base class.  This allows returning the result of the insertion
 /// directly by value, e.g. return OptimizationRemarkAnalysis(...) << "blah".
 template <class RemarkT>
-decltype(auto) operator<<(
-    RemarkT &&R,
-    std::enable_if_t<std::is_base_of<DiagnosticInfoOptimizationBase,
-                                     std::remove_reference_t<RemarkT>>::value,
-                     StringRef>
-        S) {
+decltype(auto)
+operator<<(RemarkT &&R,
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            StringRef>
+               S) {
   R.insert(S);
   return std::forward<RemarkT>(R);
 }
 
 template <class RemarkT>
-decltype(auto) operator<<(
-    RemarkT &&R,
-    std::enable_if_t<std::is_base_of<DiagnosticInfoOptimizationBase,
-                                     std::remove_reference_t<RemarkT>>::value,
-                     DiagnosticInfoOptimizationBase::Argument>
-        A) {
+decltype(auto)
+operator<<(RemarkT &&R,
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            DiagnosticInfoOptimizationBase::Argument>
+               A) {
   R.insert(A);
   return std::forward<RemarkT>(R);
 }
 
 template <class RemarkT>
-decltype(auto) operator<<(
-    RemarkT &&R,
-    std::enable_if_t<std::is_base_of<DiagnosticInfoOptimizationBase,
-                                     std::remove_reference_t<RemarkT>>::value,
-                     DiagnosticInfoOptimizationBase::setIsVerbose>
-        V) {
+decltype(auto)
+operator<<(RemarkT &&R,
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            DiagnosticInfoOptimizationBase::setIsVerbose>
+               V) {
   R.insert(V);
   return std::forward<RemarkT>(R);
 }
 
 template <class RemarkT>
-decltype(auto) operator<<(
-    RemarkT &&R,
-    std::enable_if_t<std::is_base_of<DiagnosticInfoOptimizationBase,
-                                     std::remove_reference_t<RemarkT>>::value,
-                     DiagnosticInfoOptimizationBase::setExtraArgs>
-        EA) {
+decltype(auto)
+operator<<(RemarkT &&R,
+           std::enable_if_t<std::is_base_of_v<DiagnosticInfoOptimizationBase,
+                                              std::remove_reference_t<RemarkT>>,
+                            DiagnosticInfoOptimizationBase::setExtraArgs>
+               EA) {
   R.insert(EA);
   return std::forward<RemarkT>(R);
 }
