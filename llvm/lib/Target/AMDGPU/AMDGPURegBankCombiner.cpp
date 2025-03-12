@@ -74,17 +74,27 @@ public:
     Register Val0, Val1, Val2;
   };
 
+  struct VOP3MatchInfo {
+    unsigned Opc;
+    Register Val0, Val1, Val2;
+  };
+
   MinMaxMedOpc getMinMaxPair(unsigned Opc) const;
+  unsigned getMinMax3(unsigned Opc) const;
 
   template <class m_Cst, typename CstTy>
   bool matchMed(MachineInstr &MI, MachineRegisterInfo &MRI, MinMaxMedOpc MMMOpc,
                 Register &Val, CstTy &K0, CstTy &K1) const;
+  bool matchVOP3(MachineInstr &MI, MachineRegisterInfo &MRI, unsigned Opc,
+                 Register &A, Register &B, Register &C) const;
 
   bool matchIntMinMaxToMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo) const;
   bool matchFPMinMaxToMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo) const;
+  bool matchMinMaxToMinMax3(MachineInstr &MI, VOP3MatchInfo &MatchInfo) const;
   bool matchFPMinMaxToClamp(MachineInstr &MI, Register &Reg) const;
   bool matchFPMed3ToClamp(MachineInstr &MI, Register &Reg) const;
   void applyMed3(MachineInstr &MI, Med3MatchInfo &MatchInfo) const;
+  void applyVOP3(MachineInstr &MI, VOP3MatchInfo &MatchInfo) const;
   void applyClamp(MachineInstr &MI, Register &Reg) const;
 
 private:
@@ -165,6 +175,27 @@ AMDGPURegBankCombinerImpl::getMinMaxPair(unsigned Opc) const {
   }
 }
 
+unsigned AMDGPURegBankCombinerImpl::getMinMax3(unsigned Opc) const {
+  switch (Opc) {
+  default:
+    llvm_unreachable("Unsupported opcode");
+  case AMDGPU::G_SMAX:
+    return AMDGPU::G_AMDGPU_SMAX3;
+  case AMDGPU::G_SMIN:
+    return AMDGPU::G_AMDGPU_SMIN3;
+  case AMDGPU::G_UMAX:
+    return AMDGPU::G_AMDGPU_UMAX3;
+  case AMDGPU::G_UMIN:
+    return AMDGPU::G_AMDGPU_UMIN3;
+  case AMDGPU::G_FMAXNUM:
+  case AMDGPU::G_FMAXNUM_IEEE:
+    return AMDGPU::G_AMDGPU_FMAX3;
+  case AMDGPU::G_FMINNUM:
+  case AMDGPU::G_FMINNUM_IEEE:
+    return AMDGPU::G_AMDGPU_FMIN3;
+  }
+}
+
 template <class m_Cst, typename CstTy>
 bool AMDGPURegBankCombinerImpl::matchMed(MachineInstr &MI,
                                          MachineRegisterInfo &MRI,
@@ -185,6 +216,40 @@ bool AMDGPURegBankCombinerImpl::matchMed(MachineInstr &MI,
           m_CommutativeBinOp(
               MMMOpc.Max, m_CommutativeBinOp(MMMOpc.Min, m_Reg(Val), m_Cst(K1)),
               m_Cst(K0))));
+}
+
+bool AMDGPURegBankCombinerImpl::matchVOP3(MachineInstr &MI,
+                                          MachineRegisterInfo &MRI,
+                                          unsigned Opc, Register &A,
+                                          Register &B, Register &C) const {
+  return mi_match(
+      MI, MRI,
+      m_any_of(m_BinOp(Opc, m_OneNonDBGUse(m_BinOp(Opc, m_Reg(A), m_Reg(B))),
+                       m_Reg(C)),
+               m_BinOp(Opc, m_Reg(A),
+                       m_OneNonDBGUse(m_BinOp(Opc, m_Reg(B), m_Reg(C))))));
+}
+
+bool AMDGPURegBankCombinerImpl::matchMinMaxToMinMax3(
+    MachineInstr &MI, VOP3MatchInfo &MatchInfo) const {
+  Register Dst = MI.getOperand(0).getReg();
+  if (!isVgprRegBank(Dst))
+    return false;
+
+  LLT Ty = MRI.getType(Dst);
+  if (Ty == LLT::scalar(16)) {
+    if (!STI.hasMin3Max3_16())
+      return false;
+  } else if (Ty != LLT::scalar(32)) {
+    return false;
+  }
+
+  unsigned Opc = MI.getOpcode();
+  Register R0, R1, R2;
+  if (!matchVOP3(MI, MRI, Opc, R0, R1, R2))
+    return false;
+  MatchInfo = {getMinMax3(Opc), R0, R1, R2};
+  return true;
 }
 
 bool AMDGPURegBankCombinerImpl::matchIntMinMaxToMed3(
@@ -355,6 +420,15 @@ void AMDGPURegBankCombinerImpl::applyClamp(MachineInstr &MI,
 
 void AMDGPURegBankCombinerImpl::applyMed3(MachineInstr &MI,
                                           Med3MatchInfo &MatchInfo) const {
+  B.buildInstr(MatchInfo.Opc, {MI.getOperand(0)},
+               {getAsVgpr(MatchInfo.Val0), getAsVgpr(MatchInfo.Val1),
+                getAsVgpr(MatchInfo.Val2)},
+               MI.getFlags());
+  MI.eraseFromParent();
+}
+
+void AMDGPURegBankCombinerImpl::applyVOP3(MachineInstr &MI,
+                                          VOP3MatchInfo &MatchInfo) const {
   B.buildInstr(MatchInfo.Opc, {MI.getOperand(0)},
                {getAsVgpr(MatchInfo.Val0), getAsVgpr(MatchInfo.Val1),
                 getAsVgpr(MatchInfo.Val2)},

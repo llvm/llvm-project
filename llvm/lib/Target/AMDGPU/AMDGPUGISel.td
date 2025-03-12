@@ -244,6 +244,12 @@ def : GINodeEquiv<G_AMDGPU_CVT_PK_I16_I32, AMDGPUpk_i16_i32_impl>;
 def : GINodeEquiv<G_AMDGPU_SMED3, AMDGPUsmed3>;
 def : GINodeEquiv<G_AMDGPU_UMED3, AMDGPUumed3>;
 def : GINodeEquiv<G_AMDGPU_FMED3, AMDGPUfmed3_impl>;
+def : GINodeEquiv<G_AMDGPU_SMAX3, AMDGPUsmax3>;
+def : GINodeEquiv<G_AMDGPU_UMAX3, AMDGPUumax3>;
+def : GINodeEquiv<G_AMDGPU_FMAX3, AMDGPUfmax3>;
+def : GINodeEquiv<G_AMDGPU_SMIN3, AMDGPUsmin3>;
+def : GINodeEquiv<G_AMDGPU_UMIN3, AMDGPUumin3>;
+def : GINodeEquiv<G_AMDGPU_FMIN3, AMDGPUfmin3>;
 def : GINodeEquiv<G_AMDGPU_CLAMP, AMDGPUclamp>;
 
 def : GINodeEquiv<G_AMDGPU_ATOMIC_CMPXCHG, AMDGPUatomic_cmp_swap>;
