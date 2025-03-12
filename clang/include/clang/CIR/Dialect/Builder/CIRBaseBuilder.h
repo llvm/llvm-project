@@ -81,12 +81,11 @@ public:
   }
 
   mlir::Value createDummyValue(mlir::Location loc, mlir::Type type,
-    clang::CharUnits alignment) {
-auto addr =
-createAlloca(loc, getPointerTo(type), type, {},
-getSizeFromCharUnits(getContext(), alignment));
-return createLoad(loc, addr);
-}
+                               clang::CharUnits alignment) {
+    auto addr = createAlloca(loc, getPointerTo(type), type, {},
+                             getSizeFromCharUnits(getContext(), alignment));
+    return createLoad(loc, addr);
+  }
 
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
