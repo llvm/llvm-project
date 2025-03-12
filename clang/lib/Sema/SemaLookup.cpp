@@ -1580,13 +1580,9 @@ llvm::DenseSet<Module*> &Sema::getLookupModules() {
   unsigned N = CodeSynthesisContexts.size();
   for (unsigned I = CodeSynthesisContextLookupModules.size();
        I != N; ++I) {
-    auto &Ctx = CodeSynthesisContexts[I];
-    // FIXME: Are there any other context kinds that shouldn't be looked at
-    // here?
-    if (Ctx.Kind == CodeSynthesisContext::PartialOrderingTTP ||
-        Ctx.Kind == CodeSynthesisContext::CheckTemplateParameter)
-      continue;
-    Module *M = Ctx.Entity ? getDefiningModule(*this, Ctx.Entity) : nullptr;
+    Module *M = CodeSynthesisContexts[I].Entity ?
+                getDefiningModule(*this, CodeSynthesisContexts[I].Entity) :
+                nullptr;
     if (M && !LookupModulesCache.insert(M).second)
       M = nullptr;
     CodeSynthesisContextLookupModules.push_back(M);
@@ -3707,8 +3703,7 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
       TemplateParameterList *Params = FD->getTemplateParameters();
       if (Params->size() == 1) {
         IsTemplate = true;
-        NamedDecl *Param = Params->getParam(0);
-        if (!Param->isTemplateParameterPack() && !StringLit) {
+        if (!Params->getParam(0)->isTemplateParameterPack() && !StringLit) {
           // Implied but not stated: user-defined integer and floating literals
           // only ever use numeric literal operator templates, not templates
           // taking a parameter of class type.
@@ -3721,7 +3716,6 @@ Sema::LookupLiteralOperator(Scope *S, LookupResult &R,
         if (StringLit) {
           SFINAETrap Trap(*this);
           CheckTemplateArgumentInfo CTAI;
-          CheckTemplateParameterRAII CTP(*this, Param);
           TemplateArgumentLoc Arg(TemplateArgument(StringLit), StringLit);
           if (CheckTemplateArgument(
                   Params->getParam(0), Arg, FD, R.getNameLoc(), R.getNameLoc(),
