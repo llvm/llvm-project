@@ -789,6 +789,8 @@ public:
   /// Area in the input binary reserved for BOLT.
   AddressRange BOLTReserved;
 
+  AddressRange BOLTReservedRW;
+
   /// Address of the code/function that is executed before any other code in
   /// the binary.
   std::optional<uint64_t> StartFunctionAddress;
