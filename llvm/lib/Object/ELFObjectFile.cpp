@@ -782,6 +782,7 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
   std::string Err;
   const auto Triple = makeTriple();
   const auto *T = TargetRegistry::lookupTarget(Triple, Err);
+  std::optional<llvm::endianness> InstrEndianness;
   if (!T)
     return {};
   uint32_t JumpSlotReloc = 0, GlobDatReloc = 0;
@@ -803,6 +804,13 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
     case Triple::thumb:
     case Triple::thumbeb:
       JumpSlotReloc = ELF::R_ARM_JUMP_SLOT;
+
+      if (const auto *Elf32BE = dyn_cast<ELF32BEObjectFile>(this)) {
+        if (!Elf32BE->isRelocatableObject() &&
+            (Elf32BE->getPlatformFlags() & ELF::EF_ARM_BE8)) {
+          InstrEndianness = endianness::little;
+        }
+      }
       break;
     case Triple::hexagon:
       JumpSlotReloc = ELF::R_HEX_JMP_SLOT;
@@ -838,13 +846,6 @@ std::vector<ELFPltEntry> ELFObjectFileBase::getPltEntries() const {
       if (!PltContents) {
         consumeError(PltContents.takeError());
         return {};
-      }
-      std::optional<llvm::endianness> InstrEndianness;
-      if (const auto *Elf32BE = dyn_cast<ELF32BEObjectFile>(this)) {
-        if (!Elf32BE->isRelocatableObject() &&
-            (Elf32BE->getPlatformFlags() & ELF::EF_ARM_BE8)) {
-          InstrEndianness = endianness::little;
-        }
       }
 
       llvm::append_range(
