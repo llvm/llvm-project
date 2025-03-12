@@ -300,12 +300,10 @@ def Tosa_FFT2dOp : Tosa_InferShapedTypeOp<"fft2d", [
 // Operator: matmul
 //===----------------------------------------------------------------------===//
 def Tosa_MatMulOp : Tosa_InferShapedTypeOp<"matmul"> {
-  let summary = "Matrix multiplication with bias";
+  let summary = "Matrix multiplication";
 
   let description = [{
-    Performs a two dimensional matrix multiplication. This allows both inputs to
-    be activations, rather than reserving weights as an attribute in the
-    FULLY_CONNECTED operator.
+    Performs two dimensional matrix multiplications.
   }];
 
   let arguments = (ins
@@ -396,7 +394,7 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
   }];
 
   let arguments = (ins
-    Tosa_Tensor3D:$input,
+    Tosa_Tensor3D:$input_real,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
@@ -411,7 +409,7 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
   ];
 
   let assemblyFormat = [{
-    $input attr-dict `:` `(` type($input) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
+    $input_real attr-dict `:` `(` type($input_real) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
   }];
 
   let hasVerifier = 1;
@@ -1356,7 +1354,9 @@ def Tosa_LogicalNotOp : Tosa_ElementwiseUnaryOp<"logical_not"> {
 //===----------------------------------------------------------------------===//
 // Operator: negate
 //===----------------------------------------------------------------------===//
-def Tosa_NegateOp : Tosa_ElementwiseUnaryOp<"negate"> {
+def Tosa_NegateOp : Tosa_InferShapedTypeOp<"negate", [
+    TosaElementwiseOperator,
+    Pure]> {
   let summary = "Elementwise negate op";
 
   let description = [{
@@ -1365,8 +1365,8 @@ def Tosa_NegateOp : Tosa_ElementwiseUnaryOp<"negate"> {
 
   let arguments = (ins
       Tosa_Tensor:$input1,
-      OptionalAttr<I32Attr>:$input1_zp,
-      OptionalAttr<I32Attr>:$output_zp
+      Tosa_ScalarIntOrFloatTensor:$input1_zp,
+      Tosa_ScalarIntOrFloatTensor:$output_zp
   );
 
   let results = (outs
@@ -1378,9 +1378,20 @@ def Tosa_NegateOp : Tosa_ElementwiseUnaryOp<"negate"> {
     Extension<[Tosa_EXT_BF16]>,
   ];
 
-  let builders = [Tosa_UnaryOpQuantInfoBuilder];
+  let builders = [Tosa_NegateOpQuantInfoBuilder];
+
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getInput1ZeroPoint();
+    FailureOr<int64_t> getOutputZeroPoint();
+    LogicalResult verifyInput1ZeroPoint(int64_t zp);
+    LogicalResult verifyOutputZeroPoint(int64_t zp);
+  }];
 
   let hasFolder = 1;
+  let hasVerifier = 1;
+
+  let assemblyFormat =
+      "operands attr-dict `:` functional-type(operands, results)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2344,10 +2355,10 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
     Tosa_Tensor:$input,
     Tosa_1DInt16Or32Tensor:$multiplier,
     Tosa_1DInt8Tensor:$shift,
-    I32Attr:$input_zp,
-    I32Attr:$output_zp,
+    Tosa_ScalarIntOrFloatTensor:$input_zp,
+    Tosa_ScalarIntOrFloatTensor:$output_zp,
     BoolAttr:$scale32,
-    BoolAttr:$double_round,
+    Tosa_RoundingTypeAttr:$rounding_mode,
     BoolAttr:$per_channel,
     BoolAttr: $input_unsigned,
     BoolAttr: $output_unsigned
@@ -2361,6 +2372,13 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
     Profile<[Tosa_PRO_INT]>,
     Extension<[Tosa_EXT_INT16]>,
   ];
+
+  let extraClassDeclaration = [{
+    FailureOr<int64_t> getInputZeroPoint();
+    FailureOr<int64_t> getOutputZeroPoint();
+    LogicalResult verifyInputZeroPoint(int64_t zp);
+    LogicalResult verifyOutputZeroPoint(int64_t zp);
+  }];
 
   let hasVerifier = 1;
 

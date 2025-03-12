@@ -337,7 +337,7 @@ class DebugCommunication(object):
                     self.send_packet(
                         {
                             "type": "response",
-                            "seq": -1,
+                            "seq": 0,
                             "request_seq": response_or_request["seq"],
                             "success": True,
                             "command": "runInTerminal",
@@ -349,7 +349,7 @@ class DebugCommunication(object):
                     self.send_packet(
                         {
                             "type": "response",
-                            "seq": -1,
+                            "seq": 0,
                             "request_seq": response_or_request["seq"],
                             "success": True,
                             "command": "startDebugging",
