@@ -552,28 +552,35 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
 
 bool Disassembler::Disassemble(Debugger &debugger, const ArchSpec &arch,
                                StackFrame &frame, Stream &strm) {
-  AddressRange range;
   SymbolContext sc(
       frame.GetSymbolContext(eSymbolContextFunction | eSymbolContextSymbol));
   if (sc.function) {
-    range = sc.function->GetAddressRange();
-  } else if (sc.symbol && sc.symbol->ValueIsAddress()) {
+    if (DisassemblerSP disasm_sp = DisassembleRange(
+        arch, nullptr, nullptr, nullptr, nullptr, *frame.CalculateTarget(),
+        sc.function->GetAddressRanges())) {
+      disasm_sp->PrintInstructions(debugger, arch, frame, false, 0, 0, strm);
+      return true;
+    }
+    return false;
+  }
+
+  AddressRange range;
+  if (sc.symbol && sc.symbol->ValueIsAddress()) {
     range.GetBaseAddress() = sc.symbol->GetAddressRef();
     range.SetByteSize(sc.symbol->GetByteSize());
   } else {
     range.GetBaseAddress() = frame.GetFrameCodeAddress();
   }
 
-    if (range.GetBaseAddress().IsValid() && range.GetByteSize() == 0)
-      range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
+  if (range.GetBaseAddress().IsValid() && range.GetByteSize() == 0)
+    range.SetByteSize(DEFAULT_DISASM_BYTE_SIZE);
 
-    Disassembler::Limit limit = {Disassembler::Limit::Bytes,
-                                 range.GetByteSize()};
-    if (limit.value == 0)
-      limit.value = DEFAULT_DISASM_BYTE_SIZE;
+  Disassembler::Limit limit = {Disassembler::Limit::Bytes, range.GetByteSize()};
+  if (limit.value == 0)
+    limit.value = DEFAULT_DISASM_BYTE_SIZE;
 
-    return Disassemble(debugger, arch, nullptr, nullptr, nullptr, nullptr,
-                       frame, range.GetBaseAddress(), limit, false, 0, 0, strm);
+  return Disassemble(debugger, arch, nullptr, nullptr, nullptr, nullptr, frame,
+                     range.GetBaseAddress(), limit, false, 0, 0, strm);
 }
 
 Instruction::Instruction(const Address &address, AddressClass addr_class)
