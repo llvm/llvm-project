@@ -313,6 +313,7 @@ Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed type checking when a statement expression ends in an l-value of atomic type. (#GH106576)
 - Fixed uninitialized use check in a lambda within CXXOperatorCallExpr. (#GH129198)
+- Fixed a malformed printout of ``CXXParenListInitExpr`` in certain contexts.
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -397,6 +398,8 @@ AST Matchers
 ------------
 
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
+- Extend ``templateArgumentCountIs`` to support function and variable template
+  specialization.
 
 clang-format
 ------------

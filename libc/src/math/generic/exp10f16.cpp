@@ -26,6 +26,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
 static constexpr size_t N_EXP10F16_EXCEPTS = 5;
 #else
@@ -53,6 +54,7 @@ static constexpr fputil::ExceptValues<float16, N_EXP10F16_EXCEPTS>
         {0x446eU, 0x7690U, 1U, 0U, 1U},
 #endif
     }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, exp10f16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -119,8 +121,10 @@ LLVM_LIBC_FUNCTION(float16, exp10f16, (float16 x)) {
     }
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (auto r = EXP10F16_EXCEPTS.lookup(x_u); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // 10^x = 2^((hi + mid) * log2(10)) * 10^lo
   auto [exp2_hi_mid, exp10_lo] = exp10_range_reduction(x);
