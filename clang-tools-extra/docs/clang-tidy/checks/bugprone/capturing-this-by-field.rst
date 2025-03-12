@@ -12,7 +12,6 @@ or moved, the captured ``this`` pointer will be implicitly propagated to the
 new object. Most of the time, people will believe that the captured ``this``
 pointer points to the new object, which will lead to bugs.
 
-
 .. code-block:: c++
 
   struct C {
@@ -34,4 +33,4 @@ method or passing the this pointer as a parameter.
 
   A semicolon-separated list of names of types. Used to specify function
   wrapper that can hold lambda expressions.
-  Default is ``::std::function;::boost::function``.
+  Default is ``::std::function;::std::move_only_function;::boost::function``.

@@ -60,11 +60,14 @@ AST_MATCHER(CXXRecordDecl, correctHandleCaptureThisLambda) {
 
 } // namespace
 
+constexpr const char *DefaultFunctionWrapperTypes =
+    "::std::function;::std::move_only_function;::boost::function";
+
 CapturingThisByFieldCheck::CapturingThisByFieldCheck(StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      FunctionWrapperTypes(utils::options::parseStringList(Options.get(
-          "FunctionWrapperTypes", "::std::function;::boost::function"))) {}
+      FunctionWrapperTypes(utils::options::parseStringList(
+          Options.get("FunctionWrapperTypes", DefaultFunctionWrapperTypes))) {}
 void CapturingThisByFieldCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "FunctionWrapperTypes",
@@ -100,9 +103,9 @@ void CapturingThisByFieldCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
   const auto *Field = Result.Nodes.getNodeAs<FieldDecl>("field");
   diag(Lambda->getBeginLoc(),
-       "using lambda expressions to capture 'this' and storing it in class "
-       "member will cause potential variable lifetime issue when the class "
-       "instance is moved or copied")
+       "'this' captured by a lambda and stored in a class member variable; "
+       "disable implicit class copying/moving to prevent potential "
+       "use-after-free")
       << Capture->getLocation();
   diag(Field->getLocation(),
        "'%0' that stores captured 'this' and becomes invalid during "
