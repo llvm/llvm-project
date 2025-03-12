@@ -198,7 +198,6 @@ public:
   // cleaner approach.
   enum VariantKind : uint16_t {
     VK_None,
-    VK_Invalid,
 
     VK_GOT,
     VK_GOTENT,

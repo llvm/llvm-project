@@ -743,13 +743,16 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     return nullptr;
   }
 
-  Diag(Decomp.getLSquareLoc(),
-       !getLangOpts().CPlusPlus17
-           ? diag::ext_decomp_decl
-           : D.getContext() == DeclaratorContext::Condition
-                 ? diag::ext_decomp_decl_cond
-                 : diag::warn_cxx14_compat_decomp_decl)
-      << Decomp.getSourceRange();
+  unsigned DiagID;
+  if (!getLangOpts().CPlusPlus17)
+    DiagID = diag::ext_decomp_decl;
+  else if (D.getContext() == DeclaratorContext::Condition)
+    DiagID = getLangOpts().CPlusPlus26 ? diag::warn_cxx26_decomp_decl_cond
+                                       : diag::ext_decomp_decl_cond;
+  else
+    DiagID = diag::warn_cxx14_compat_decomp_decl;
+
+  Diag(Decomp.getLSquareLoc(), DiagID) << Decomp.getSourceRange();
 
   // The semantic context is always just the current context.
   DeclContext *const DC = CurContext;
@@ -13586,7 +13589,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
     // Merge any previous default template arguments into our parameters,
     // and check the parameter list.
     if (CheckTemplateParameterList(TemplateParams, OldTemplateParams,
-                                   TPC_TypeAliasTemplate))
+                                   TPC_Other))
       return nullptr;
 
     TypeAliasTemplateDecl *NewDecl =

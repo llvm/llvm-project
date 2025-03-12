@@ -21,6 +21,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
+
 using namespace llvm;
 
 static std::pair<Type *, Align> getArgumentTypeAlign(const Argument &Arg,
@@ -36,6 +38,27 @@ static std::pair<Type *, Align> getArgumentTypeAlign(const Argument &Arg,
     ArgAlign = DL.getABITypeAlign(Ty);
 
   return std::pair(Ty, *ArgAlign);
+}
+
+/// Find the mangled symbol name for the runtime handle for \p EnqueuedBlock
+static std::string getEnqueuedBlockSymbolName(const AMDGPUTargetMachine &TM,
+                                              const Function &EnqueuedBlock) {
+  const MDNode *Associated =
+      EnqueuedBlock.getMetadata(LLVMContext::MD_associated);
+  if (!Associated)
+    return "";
+
+  auto *VM = cast<ValueAsMetadata>(Associated->getOperand(0));
+  auto *RuntimeHandle =
+      dyn_cast<GlobalVariable>(VM->getValue()->stripPointerCasts());
+  if (!RuntimeHandle ||
+      RuntimeHandle->getSection() != ".amdgpu.kernel.runtime.handle")
+    return "";
+
+  SmallString<128> Name;
+  TM.getNameWithPrefix(Name, RuntimeHandle,
+                       TM.getObjFileLowering()->getMangler());
+  return Name.str().str();
 }
 
 namespace llvm {
@@ -230,7 +253,8 @@ void MetadataStreamerMsgPackV4::emitKernelLanguage(const Function &Func,
   Kern[".language_version"] = LanguageVersion;
 }
 
-void MetadataStreamerMsgPackV4::emitKernelAttrs(const MachineFunction &MF,
+void MetadataStreamerMsgPackV4::emitKernelAttrs(const AMDGPUTargetMachine &TM,
+                                                const MachineFunction &MF,
                                                 msgpack::MapDocNode Kern) {
   const Function &Func = MF.getFunction();
   if (auto *Node = Func.getMetadata("reqd_work_group_size"))
@@ -244,11 +268,13 @@ void MetadataStreamerMsgPackV4::emitKernelAttrs(const MachineFunction &MF,
             mdconst::extract<ConstantInt>(Node->getOperand(1))->getZExtValue()),
         /*Copy=*/true);
   }
-  if (Func.hasFnAttribute("runtime-handle")) {
-    Kern[".device_enqueue_symbol"] = Kern.getDocument()->getNode(
-        Func.getFnAttribute("runtime-handle").getValueAsString().str(),
-        /*Copy=*/true);
+
+  std::string HandleName = getEnqueuedBlockSymbolName(TM, Func);
+  if (!HandleName.empty()) {
+    Kern[".device_enqueue_symbol"] =
+        Kern.getDocument()->getNode(std::move(HandleName), /*Copy=*/true);
   }
+
   if (Func.hasFnAttribute("device-init"))
     Kern[".kind"] = Kern.getDocument()->getNode("init");
   else if (Func.hasFnAttribute("device-fini"))
@@ -575,12 +601,13 @@ void MetadataStreamerMsgPackV4::emitKernel(const MachineFunction &MF,
   auto Kernels =
       getRootMetadata("amdhsa.kernels").getArray(/*Convert=*/true);
 
+  auto &TM = static_cast<const AMDGPUTargetMachine &>(MF.getTarget());
   {
     Kern[".name"] = Kern.getDocument()->getNode(Func.getName());
     Kern[".symbol"] = Kern.getDocument()->getNode(
         (Twine(Func.getName()) + Twine(".kd")).str(), /*Copy=*/true);
     emitKernelLanguage(Func, Kern);
-    emitKernelAttrs(MF, Kern);
+    emitKernelAttrs(TM, MF, Kern);
     emitKernelArgs(MF, Kern);
   }
 
@@ -706,9 +733,10 @@ void MetadataStreamerMsgPackV5::emitHiddenKernelArgs(
     emitKernelArg(DL, Int8PtrTy, Align(8), "hidden_queue_ptr", Offset, Args);
 }
 
-void MetadataStreamerMsgPackV5::emitKernelAttrs(const MachineFunction &MF,
+void MetadataStreamerMsgPackV5::emitKernelAttrs(const AMDGPUTargetMachine &TM,
+                                                const MachineFunction &MF,
                                                 msgpack::MapDocNode Kern) {
-  MetadataStreamerMsgPackV4::emitKernelAttrs(MF, Kern);
+  MetadataStreamerMsgPackV4::emitKernelAttrs(TM, MF, Kern);
 
   const Function &Func = MF.getFunction();
   if (Func.getFnAttribute("uniform-work-group-size").getValueAsBool())
@@ -726,9 +754,10 @@ void MetadataStreamerMsgPackV6::emitVersion() {
   getRootMetadata("amdhsa.version") = Version;
 }
 
-void MetadataStreamerMsgPackV6::emitKernelAttrs(const MachineFunction &MF,
+void MetadataStreamerMsgPackV6::emitKernelAttrs(const AMDGPUTargetMachine &TM,
+                                                const MachineFunction &MF,
                                                 msgpack::MapDocNode Kern) {
-  MetadataStreamerMsgPackV5::emitKernelAttrs(MF, Kern);
+  MetadataStreamerMsgPackV5::emitKernelAttrs(TM, MF, Kern);
 
   const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
   if (std::optional<std::array<unsigned, 3>> Dims = MFI.getClusterDims()) {

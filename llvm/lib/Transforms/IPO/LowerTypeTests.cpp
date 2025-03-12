@@ -2207,9 +2207,9 @@ bool LowerTypeTestsModule::lower() {
     bool IsExported = false;
     if (Function *F = dyn_cast<Function>(&GO)) {
       IsJumpTableCanonical = isJumpTableCanonical(F);
-      if (ExportedFunctions.count(F->getName())) {
-        IsJumpTableCanonical |=
-            ExportedFunctions[F->getName()].Linkage == CFL_Definition;
+      if (auto It = ExportedFunctions.find(F->getName());
+          It != ExportedFunctions.end()) {
+        IsJumpTableCanonical |= It->second.Linkage == CFL_Definition;
         IsExported = true;
       // TODO: The logic here checks only that the function is address taken,
       // not that the address takers are live. This can be updated to check
@@ -2407,9 +2407,9 @@ bool LowerTypeTestsModule::lower() {
             cast<MDString>(AliasMD->getOperand(0))->getString();
         StringRef Aliasee = cast<MDString>(AliasMD->getOperand(1))->getString();
 
-        if (!ExportedFunctions.count(Aliasee) ||
-            ExportedFunctions[Aliasee].Linkage != CFL_Definition ||
-            !M.getNamedAlias(Aliasee))
+        if (auto It = ExportedFunctions.find(Aliasee);
+            It == ExportedFunctions.end() ||
+            It->second.Linkage != CFL_Definition || !M.getNamedAlias(Aliasee))
           continue;
 
         GlobalValue::VisibilityTypes Visibility =
