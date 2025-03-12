@@ -27,6 +27,7 @@ static LIBC_INLINE void sincospi_poly_eval(double k, double y, double &sin_k,
                                            double &cos_k, double &sin_y,
 
                                            double &cosm1_y) {
+  
   // Q3 = fpminimax(sin(x*pi), 7, [|64...|], [-0.0078125, 0.0078125]);
   sin_k =
       k * fputil::polyeval(k, 0x1.59b6a771a45cbab8p-94, 0x1.921fb54442d1846ap1,
@@ -58,9 +59,8 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
-  // uint64_t x_u = xbits.uintval();
   double x_abs = fputil::abs(x);
-  double p = 0x1p52; // precision = 52; 2^p
+  double p = 0x1p52; // 2^p where p is the precision
 
   if (LIBC_UNLIKELY(x_abs == 0U))
     return x;
