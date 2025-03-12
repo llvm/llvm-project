@@ -1215,7 +1215,7 @@ public:
     for (const std::pair<const uint32_t, MCInst> &II : Instructions)
       BC.undefineInstLabel(II.second);
 
-    for (const BinaryBasicBlock *BB : BasicBlocks)
+    for (BinaryBasicBlock *BB : BasicBlocks)
       BB->undefineLabels();
   }
 

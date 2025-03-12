@@ -44,7 +44,7 @@ const JumpTable *BinaryBasicBlock::getJumpTable() const {
   return JT;
 }
 
-void BinaryBasicBlock::undefineInstLabel(const llvm::MCInst &Inst) const {
+void BinaryBasicBlock::undefineInstLabel(const llvm::MCInst &Inst) {
   BinaryContext &BC = Function->getBinaryContext();
   BC.undefineInstLabel(Inst);
 }

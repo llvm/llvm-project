@@ -54,7 +54,7 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
       MustPatch = true;
 
     // Check if we can skip patching the function.
-    if (!MustPatch && !Function.hasEHRanges() &&
+    if (!MustPatch && !Function.hasEHRanges() && !opts::Instrument &&
         Function.getSize() < PatchThreshold)
       continue;
 

@@ -690,7 +690,7 @@ public:
 
   void setCanOutline(const bool Flag) { CanOutline = Flag; }
 
-  void undefineLabels() const {
+  void undefineLabels() {
     for (const MCInst &Inst : Instructions)
       undefineInstLabel(Inst);
   }
@@ -926,7 +926,7 @@ public:
   uint64_t getHash() const { return Hash; }
 
 private:
-  void undefineInstLabel(const llvm::MCInst &Inst) const;
+  void undefineInstLabel(const llvm::MCInst &Inst);
 
   void adjustNumPseudos(const MCInst &Inst, int Sign);
 

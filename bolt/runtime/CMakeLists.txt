@@ -17,6 +17,13 @@ add_library(bolt_rt_instr STATIC
   ${CMAKE_CURRENT_BINARY_DIR}/config.h
   )
 set_target_properties(bolt_rt_instr PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "lib${LLVM_LIBDIR_SUFFIX}")
+
+add_library(bolt_rt_instr_linux STATIC
+  instr_linux.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/config.h
+  )
+set_target_properties(bolt_rt_instr_linux PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "lib${LLVM_LIBDIR_SUFFIX}")
+
 add_library(bolt_rt_hugify STATIC
   hugify.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/config.h
@@ -26,6 +33,8 @@ set_target_properties(bolt_rt_hugify PROPERTIES ARCHIVE_OUTPUT_DIRECTORY "lib${L
 if(NOT BOLT_BUILT_STANDALONE)
   add_custom_command(TARGET bolt_rt_instr POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/libbolt_rt_instr.a" "${LLVM_LIBRARY_DIR}")
+  add_custom_command(TARGET bolt_rt_instr_linux POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/libbolt_rt_instr_linux.a" "${LLVM_LIBRARY_DIR}")
   add_custom_command(TARGET bolt_rt_hugify POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/libbolt_rt_hugify.a" "${LLVM_LIBRARY_DIR}")
 endif()
@@ -50,10 +59,12 @@ endif()
 # Don't let the compiler think it can create calls to standard libs
 target_compile_options(bolt_rt_instr PRIVATE ${BOLT_RT_FLAGS})
 target_include_directories(bolt_rt_instr PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(bolt_rt_instr_linux PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_compile_options(bolt_rt_hugify PRIVATE ${BOLT_RT_FLAGS})
 target_include_directories(bolt_rt_hugify PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 install(TARGETS bolt_rt_instr DESTINATION "lib${LLVM_LIBDIR_SUFFIX}")
+install(TARGETS bolt_rt_instr_linux DESTINATION "lib${LLVM_LIBDIR_SUFFIX}")
 install(TARGETS bolt_rt_hugify DESTINATION "lib${LLVM_LIBDIR_SUFFIX}")
 
 if (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang.*" AND CMAKE_SYSTEM_NAME STREQUAL "Darwin")
