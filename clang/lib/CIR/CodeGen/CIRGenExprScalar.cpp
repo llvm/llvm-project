@@ -156,6 +156,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
     const UnaryExprOrTypeTraitExpr *e) {
   const QualType typeToSize = e->getTypeOfArgument();
+  const mlir::Location loc = cgf.getLoc(e->getSourceRange());
   if (auto kind = e->getKind();
       kind == UETT_SizeOf || kind == UETT_DataSizeOf) {
     if (const VariableArrayType *variableArrTy =
@@ -163,19 +164,27 @@ mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
       cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
                                      "sizeof operator for VariableArrayType",
                                      e->getStmtClassName());
+      return builder.getConstant(
+          loc, builder.getAttr<cir::IntAttr>(
+                   cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
     }
   } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
     cgf.getCIRGenModule().errorNYI(
         e->getSourceRange(), "sizeof operator for OpenMpRequiredSimdAlign",
         e->getStmtClassName());
+    return builder.getConstant(
+        loc, builder.getAttr<cir::IntAttr>(
+                 cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
   } else if (e->getKind() == UETT_VectorElements) {
     cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
                                    "sizeof operator for VectorElements",
                                    e->getStmtClassName());
+    return builder.getConstant(
+        loc, builder.getAttr<cir::IntAttr>(
+                 cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
   }
 
-  return builder.create<cir::ConstantOp>(
-      cgf.getLoc(e->getSourceRange()), cgf.cgm.UInt64Ty,
-      builder.getAttr<cir::IntAttr>(
-          cgf.cgm.UInt64Ty, e->EvaluateKnownConstInt(cgf.getContext())));
+  return builder.getConstant(
+      loc, builder.getAttr<cir::IntAttr>(
+               cgf.cgm.UInt64Ty, e->EvaluateKnownConstInt(cgf.getContext())));
 }
