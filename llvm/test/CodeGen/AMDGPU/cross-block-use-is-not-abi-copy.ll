@@ -168,7 +168,7 @@ bb1:
   %val1 = extractvalue { <4 x i32>, <4 x half> } %split.ret.type, 1
   %extract0 = extractelement <4 x i32> %val0, i32 0
   %extract1 = extractelement <4 x half> %val1, i32 0
-  %ins0 = insertvalue { i32, half } undef, i32 %extract0, 0
+  %ins0 = insertvalue { i32, half } poison, i32 %extract0, 0
   %ins1 = insertvalue { i32, half } %ins0, half %extract1, 1
   ret { i32, half } %ins1
 }

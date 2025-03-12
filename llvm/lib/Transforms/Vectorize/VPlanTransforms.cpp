@@ -2184,32 +2184,36 @@ void VPlanTransforms::materializeLiveInBroadcasts(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
+#ifndef NDEBUG
   VPDominatorTree VPDT;
   VPDT.recalculate(Plan);
+#endif
+
   auto *VectorPreheader = Plan.getVectorPreheader();
-  VPBuilder Builder(VectorPreheader);
   for (VPValue *LiveIn : Plan.getLiveIns()) {
     if (all_of(LiveIn->users(),
-               [LiveIn](VPUser *U) {
-                 return cast<VPRecipeBase>(U)->usesScalars(LiveIn);
-               }) ||
+               [LiveIn](VPUser *U) { return U->usesScalars(LiveIn); }) ||
         !LiveIn->getLiveInIRValue() ||
         isa<Constant>(LiveIn->getLiveInIRValue()))
       continue;
 
-    // Add explicit broadcast if the vector preheader dominates all users.
-    // TODO: Find valid insert point for all users.
-    if (all_of(LiveIn->users(), [&VPDT, VectorPreheader](VPUser *U) {
-          return VectorPreheader != cast<VPRecipeBase>(U)->getParent() &&
-                 VPDT.dominates(VectorPreheader,
-                                cast<VPRecipeBase>(U)->getParent());
-        })) {
-      auto *Broadcast =
-          Builder.createNaryOp(VPInstruction::Broadcast, {LiveIn});
-      LiveIn->replaceUsesWithIf(Broadcast, [LiveIn, Broadcast](VPUser &U,
-                                                               unsigned Idx) {
-        return Broadcast != &U && !cast<VPRecipeBase>(&U)->usesScalars(LiveIn);
-      });
+    // Add explicit broadcast at the insert point that dominates all users.
+    VPBasicBlock *HoistBlock = VectorPreheader;
+    VPBasicBlock::iterator HoistPoint = VectorPreheader->end();
+    for (VPUser *User : LiveIn->users()) {
+      if (cast<VPRecipeBase>(User)->getParent() == VectorPreheader)
+        HoistPoint = HoistBlock->begin();
+      else
+        assert(VPDT.dominates(VectorPreheader,
+                              cast<VPRecipeBase>(User)->getParent()) &&
+               "All users must be in the vector preheader or dominated by it");
     }
+
+    VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
+    auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {LiveIn});
+    LiveIn->replaceUsesWithIf(
+        Broadcast, [LiveIn, Broadcast](VPUser &U, unsigned Idx) {
+          return Broadcast != &U && !U.usesScalars(LiveIn);
+        });
   }
 }

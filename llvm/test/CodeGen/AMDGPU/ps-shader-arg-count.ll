@@ -7,7 +7,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_1_arg(i32 inreg %arg, i32
 .entry:
   %i1 = extractelement <2 x float> %arg3, i32 1
   %ret1 = insertelement <4 x float> undef, float %i1, i32 0
-  %ret2 = insertvalue { <4 x float> } undef, <4 x float> %ret1, 0
+  %ret2 = insertvalue { <4 x float> } poison, <4 x float> %ret1, 0
   ret { <4 x float> } %ret2
 }
 
@@ -21,7 +21,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_3_arg(i32 inreg %arg, i32
   %ret1 = insertelement <4 x float> undef, float %i1, i32 0
   %ret1.1 = insertelement <4 x float> %ret1, float %i2, i32 1
   %ret1.2 = insertelement <4 x float> %ret1.1, float %i3, i32 2
-  %ret2 = insertvalue { <4 x float> } undef, <4 x float> %ret1.2, 0
+  %ret2 = insertvalue { <4 x float> } poison, <4 x float> %ret1.2, 0
   ret { <4 x float> } %ret2
 }
 
@@ -33,7 +33,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_2_arg_gap(i32 inreg %arg,
   %i3 = extractelement <2 x float> %arg5, i32 1
   %ret1 = insertelement <4 x float> undef, float %i1, i32 0
   %ret1.2 = insertelement <4 x float> %ret1, float %i3, i32 1
-  %ret2 = insertvalue { <4 x float> } undef, <4 x float> %ret1.2, 0
+  %ret2 = insertvalue { <4 x float> } poison, <4 x float> %ret1.2, 0
   ret { <4 x float> } %ret2
 }
 
@@ -47,7 +47,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_2_arg_no_pack(i32 inreg %
   %i3 = extractelement <2 x float> %arg5, i32 1
   %ret1 = insertelement <4 x float> undef, float %i1, i32 0
   %ret1.2 = insertelement <4 x float> %ret1, float %i3, i32 1
-  %ret2 = insertvalue { <4 x float> } undef, <4 x float> %ret1.2, 0
+  %ret2 = insertvalue { <4 x float> } poison, <4 x float> %ret1.2, 0
   ret { <4 x float> } %ret2
 }
 
@@ -88,7 +88,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
   %ret4.2 = insertelement <4 x float> %ret4.1, float %arg17.f, i32 2
   %ret4.3 = insertelement <4 x float> %ret4.2, float %arg18.f, i32 3
 
-  %ret.res1 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } undef, <4 x float> %ret1.3, 0
+  %ret.res1 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } poison, <4 x float> %ret1.3, 0
   %ret.res2 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res1, <4 x float> %ret2.3, 1
   %ret.res3 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res2, <4 x float> %ret3.3, 2
   %ret.res  = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res3, <4 x float> %ret4.3, 3
@@ -134,7 +134,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
   %ret4.2 = insertelement <4 x float> %ret4.1, float %arg17.f, i32 2
   %ret4.3 = insertelement <4 x float> %ret4.2, float %arg18.f, i32 3
 
-  %ret.res1 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } undef, <4 x float> %ret1.3, 0
+  %ret.res1 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } poison, <4 x float> %ret1.3, 0
   %ret.res2 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res1, <4 x float> %ret2.3, 1
   %ret.res3 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res2, <4 x float> %ret3.3, 2
   %ret.res  = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res3, <4 x float> %ret4.3, 3
@@ -183,7 +183,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
   %ret4.2 = insertelement <4 x float> %ret4.1, float %arg15_16.f, i32 2
   %ret4.3 = insertelement <4 x float> %ret4.2, float %arg17_18.f, i32 3
 
-  %ret.res1 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } undef, <4 x float> %ret1.3, 0
+  %ret.res1 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } poison, <4 x float> %ret1.3, 0
   %ret.res2 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res1, <4 x float> %ret2.3, 1
   %ret.res3 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res2, <4 x float> %ret3.3, 2
   %ret.res  = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res3, <4 x float> %ret4.3, 3
@@ -215,7 +215,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_used(i32
   %ret4.1 = insertelement <4 x float> undef, float %extra_arg1, i32 0
   %ret4.2 = insertelement <4 x float> %ret4.1, float %extra_arg2, i32 1
 
-  %ret.res  = insertvalue { <4 x float> } undef, <4 x float> %ret4.2, 0
+  %ret.res  = insertvalue { <4 x float> } poison, <4 x float> %ret4.2, 0
 
   ret { <4 x float> } %ret.res
 }
@@ -228,7 +228,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_part_unused_extra_used(i3
   %ret4.2 = insertelement <4 x float> %ret4.1, float %extra_arg1, i32 1
   %ret4.3 = insertelement <4 x float> %ret4.2, float %extra_arg2, i32 2
 
-  %ret.res  = insertvalue { <4 x float> } undef, <4 x float> %ret4.3, 0
+  %ret.res  = insertvalue { <4 x float> } poison, <4 x float> %ret4.3, 0
 
   ret { <4 x float> } %ret.res
 }
@@ -241,7 +241,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_part_unused_extra_unused(
   %ret4.2 = insertelement <4 x float> %ret4.1, float %arg13, i32 1
   %ret4.3 = insertelement <4 x float> %ret4.2, float %arg14, i32 2
 
-  %ret.res  = insertvalue { <4 x float> } undef, <4 x float> %ret4.3, 0
+  %ret.res  = insertvalue { <4 x float> } poison, <4 x float> %ret4.3, 0
 
   ret { <4 x float> } %ret.res
 }
@@ -262,7 +262,7 @@ define dllexport amdgpu_ps { <4 x float> } @_amdgpu_ps_all_unused_extra_used_no_
   %ret4.1 = insertelement <4 x float> undef, float %extra_arg1, i32 0
   %ret4.2 = insertelement <4 x float> %ret4.1, float %extra_arg2, i32 1
 
-  %ret.res  = insertvalue { <4 x float> } undef, <4 x float> %ret4.2, 0
+  %ret.res  = insertvalue { <4 x float> } poison, <4 x float> %ret4.2, 0
 
   ret { <4 x float> } %ret.res
 }
@@ -310,7 +310,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
   %ret4.2 = insertelement <4 x float> %ret4.1, float %arg15.f, i32 2
   %ret4.3 = insertelement <4 x float> %ret4.2, float %arg16.f, i32 3
 
-  %ret.res1 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } undef, <4 x float> %ret1.3, 0
+  %ret.res1 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } poison, <4 x float> %ret1.3, 0
   %ret.res2 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res1, <4 x float> %ret2.3, 1
   %ret.res3 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res2, <4 x float> %ret3.3, 2
   %ret.res  = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res3, <4 x float> %ret4.3, 3
@@ -349,7 +349,7 @@ define dllexport amdgpu_ps { <4 x float>, <4 x float>, <4 x float>, <4 x float> 
   %ret4 = insertelement <4 x float> undef, float %extra_arg1, i32 0
   %ret4.1 = insertelement <4 x float> %ret4, float %extra_arg2, i32 1
 
-  %ret.res1 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } undef, <4 x float> %ret1.3, 0
+  %ret.res1 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } poison, <4 x float> %ret1.3, 0
   %ret.res2 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res1, <4 x float> %ret2.3, 1
   %ret.res3 = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res2, <4 x float> %ret3.3, 2
   %ret.res  = insertvalue { < 4 x float>, <4 x float>, <4 x float>, <4 x float> } %ret.res3, <4 x float> %ret4.1, 3

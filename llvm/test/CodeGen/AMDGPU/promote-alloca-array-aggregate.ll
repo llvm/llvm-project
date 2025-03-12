@@ -337,7 +337,7 @@ define amdgpu_ps void @promote_double_aggr() #0 {
 ; CHECK-NEXT:    [[FOO1:%.*]] = load double, ptr addrspace(1) [[FOO]], align 8
 ; CHECK-NEXT:    [[FOO2:%.*]] = getelementptr { [4 x double], <2 x double>, <3 x double>, <4 x double> }, ptr addrspace(1) @tmp_g, i32 0, i32 0, i32 1
 ; CHECK-NEXT:    [[FOO3:%.*]] = load double, ptr addrspace(1) [[FOO2]], align 8
-; CHECK-NEXT:    [[FOO4:%.*]] = insertvalue [2 x double] undef, double [[FOO1]], 0
+; CHECK-NEXT:    [[FOO4:%.*]] = insertvalue [2 x double] poison, double [[FOO1]], 0
 ; CHECK-NEXT:    [[FOO5:%.*]] = insertvalue [2 x double] [[FOO4]], double [[FOO3]], 1
 ; CHECK-NEXT:    [[FOO5_FCA_0_EXTRACT:%.*]] = extractvalue [2 x double] [[FOO5]], 0
 ; CHECK-NEXT:    [[FOO5_FCA_1_EXTRACT:%.*]] = extractvalue [2 x double] [[FOO5]], 1
@@ -356,7 +356,7 @@ define amdgpu_ps void @promote_double_aggr() #0 {
   %foo1 = load double, ptr addrspace(1) %foo
   %foo2 = getelementptr { [4 x double], <2 x double>, <3 x double>, <4 x double> }, ptr addrspace(1) @tmp_g, i32 0, i32 0, i32 1
   %foo3 = load double, ptr addrspace(1) %foo2
-  %foo4 = insertvalue [2 x double] undef, double %foo1, 0
+  %foo4 = insertvalue [2 x double] poison, double %foo1, 0
   %foo5 = insertvalue [2 x double] %foo4, double %foo3, 1
   store [2 x double] %foo5, ptr addrspace(5) %s
   %foo6 = getelementptr [2 x double], ptr addrspace(5) %s, i32 0, i32 1
