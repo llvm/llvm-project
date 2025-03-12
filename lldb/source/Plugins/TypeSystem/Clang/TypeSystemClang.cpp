@@ -2614,6 +2614,9 @@ RemoveWrappingTypes(QualType type, ArrayRef<clang::Type::TypeClass> mask = {}) {
     case clang::Type::TypeOf:
     case clang::Type::TypeOfExpr:
     case clang::Type::Using:
+    case clang::Type::CountAttributed:
+    case clang::Type::DynamicRangePointer:
+    case clang::Type::ValueTerminated:
       type = type->getLocallyUnqualifiedSingleStepDesugaredType();
       break;
     default:
@@ -4228,6 +4231,8 @@ TypeSystemClang::GetTypeClass(lldb::opaque_compiler_type_t type) {
   case clang::Type::Atomic:
   case clang::Type::Auto:
   case clang::Type::CountAttributed:
+  case clang::Type::DynamicRangePointer:
+  case clang::Type::ValueTerminated:
   case clang::Type::Decltype:
   case clang::Type::Elaborated:
   case clang::Type::Paren:
@@ -4986,6 +4991,8 @@ lldb::Encoding TypeSystemClang::GetEncoding(lldb::opaque_compiler_type_t type,
   case clang::Type::Atomic:
   case clang::Type::Auto:
   case clang::Type::CountAttributed:
+  case clang::Type::DynamicRangePointer:
+  case clang::Type::ValueTerminated:
   case clang::Type::Decltype:
   case clang::Type::Elaborated:
   case clang::Type::Paren:
@@ -5284,6 +5291,8 @@ lldb::Format TypeSystemClang::GetFormat(lldb::opaque_compiler_type_t type) {
   case clang::Type::Atomic:
   case clang::Type::Auto:
   case clang::Type::CountAttributed:
+  case clang::Type::DynamicRangePointer:
+  case clang::Type::ValueTerminated:
   case clang::Type::Decltype:
   case clang::Type::Elaborated:
   case clang::Type::Paren:
