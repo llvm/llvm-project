@@ -39,7 +39,7 @@ public:
                   cir::IntType>(ty))
       return true;
 
-    assert(0 && "Unimplemented size for type");
+    assert(0 && "Unexpected MLIR type");
     return false;
   }
 };
