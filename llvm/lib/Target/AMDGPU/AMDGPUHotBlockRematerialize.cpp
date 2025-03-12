@@ -14,7 +14,6 @@
 
 #include "AMDGPU.h"
 #include "AMDGPUMIRUtils.h"
-#include "AMDGPUMirDivergenceAnalysis.h"
 #include "AMDGPUOccupancyAndLatencyHelper.h"
 #include "AMDGPUSubExpDag.h"
 #include "AMDGPUSubtarget.h"
@@ -4620,8 +4619,7 @@ bool AMDGPUHotBlockRematerialize::runOnMachineFunction(MachineFunction &MF) {
     MachineUniformityInfo MachineUniformity =
         llvm::computeMachineUniformityInfo(MF, CI, *DT,
                                            /*HasBranchDivergence*/ true);
-
-    // llvm::MirGPUDivergenceAnalysis DA(MF, *DT, *PDT, *MLI);
+    TotalUniformInsts.clear();
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : MBB) {
         if (MachineUniformity.isUniform(&MI)) {

@@ -82,8 +82,6 @@ add_llvm_target(AMDGPUCodeGen
   AMDGPUMCInstLower.cpp
   AMDGPUMemoryUtils.cpp
   AMDGPUMIRUtils.cpp
-  AMDGPUMirDivergenceAnalysis.cpp
-  AMDGPUMirSyncDependenceAnalysis.cpp
   AMDGPUIGroupLP.cpp
   AMDGPUMCResourceInfo.cpp
   AMDGPUMarkLastScratchLoad.cpp
