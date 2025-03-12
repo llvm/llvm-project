@@ -1255,7 +1255,7 @@ bool AMDGPUCallLowering::lowerTailCall(
       assert(FallbackExecArg.Regs.size() == 1 &&
              "Expected single register for fallback EXEC");
       if (!FallbackExecArg.Ty->isIntegerTy(ST.getWavefrontSize())) {
-        LLVM_DEBUG(dbgs() << "Bad type for fallback EXEC");
+        LLVM_DEBUG(dbgs() << "Bad type for fallback EXEC\n");
         return false;
       }
     }
