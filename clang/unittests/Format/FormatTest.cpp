@@ -12525,8 +12525,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   Style = getGoogleStyle();
   verifyIndependentOfContext("MACRO(A *absl_nonnull a);", Style);
   verifyIndependentOfContext("MACRO(A *absl_nullable a);", Style);
-  verifyIndependentOfContext("MACRO(A *absl_nullability_unknown a);",
-                             Style);
+  verifyIndependentOfContext("MACRO(A *absl_nullability_unknown a);", Style);
 
   verifyIndependentOfContext("MACRO(A *__attribute__((foo)) a);");
   verifyIndependentOfContext("MACRO(A *__attribute((foo)) a);");
