@@ -1003,6 +1003,32 @@ void VPlan::execute(VPTransformState *State) {
     Value *Val = State->get(PhiR->getOperand(1), NeedsScalar);
     cast<PHINode>(Phi)->addIncoming(Val, VectorLatchBB);
   }
+
+  // Check if it's EVL-vectorized and mark the corresponding metadata.
+  // Note that we could have done this during the codegen of
+  // ExplictVectorLength, but the enclosing vector loop was not in a good shape
+  // for us to attach the metadata.
+  bool IsEVLVectorized = llvm::any_of(*Header, [](const VPRecipeBase &Recipe) {
+    // Looking for the ExplictVectorLength VPInstruction.
+    if (const auto *VI = dyn_cast<VPInstruction>(&Recipe))
+      return VI->getOpcode() == VPInstruction::ExplicitVectorLength;
+    return false;
+  });
+  if (IsEVLVectorized) {
+    // VPTransformState::CurrentParentLoop has already been reset
+    // at this moment.
+    Loop *L = State->LI->getLoopFor(VectorLatchBB);
+    assert(L);
+    LLVMContext &Context = State->Builder.getContext();
+    MDNode *LoopID = L->getLoopID();
+    auto *IsEVLVectorizedMD = MDNode::get(
+        Context,
+        {MDString::get(Context, "llvm.loop.isvectorized.withevl"),
+         ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, 1)))});
+    MDNode *NewLoopID = makePostTransformationMetadata(Context, LoopID, {},
+                                                       {IsEVLVectorizedMD});
+    L->setLoopID(NewLoopID);
+  }
 }
 
 InstructionCost VPlan::cost(ElementCount VF, VPCostContext &Ctx) {
