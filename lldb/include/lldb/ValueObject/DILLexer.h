@@ -42,22 +42,8 @@ public:
 
   bool IsNot(Kind kind) const { return m_kind != kind; }
 
-  bool IsOneOf(Kind kind1, Kind kind2) const { return Is(kind1) || Is(kind2); }
-
-  bool IsOneOf(std::vector<Kind> kinds) const {
-    if (kinds.empty())
-      return false;
-
-    if (kinds.size() == 1)
-      return Is(kinds[0]);
-
-    Kind k = kinds.back();
-    kinds.pop_back();
-    return Is(k) || IsOneOf(kinds);
-  }
-
-  template <typename... Ts> bool IsOneOf(Kind kind, Ts... Ks) const {
-    return Is(kind) || IsOneOf(Ks...);
+  bool IsOneOf(llvm::ArrayRef<Kind> kinds) const {
+    return llvm::is_contained(kinds, m_kind);
   }
 
   uint32_t GetLocation() const { return m_start_pos; }

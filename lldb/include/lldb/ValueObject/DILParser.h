@@ -42,7 +42,7 @@ public:
                                          bool use_synthetic, bool fragile_ivar,
                                          bool check_ptr_vs_member);
 
-  ~DILParser() { m_ctx_scope.reset(); }
+  ~DILParser() = default;
 
   bool UseSynthetic() { return m_use_synthetic; }
 

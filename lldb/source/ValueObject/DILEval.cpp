@@ -52,19 +52,15 @@ static lldb::VariableSP DILFindVariable(ConstString name,
   lldb::VariableSP exact_match;
   std::vector<lldb::VariableSP> possible_matches;
 
-  typedef std::vector<lldb::VariableSP> collection;
-  typedef collection::iterator iterator;
-
-  iterator pos, end = variable_list->end();
-  for (pos = variable_list->begin(); pos != end; ++pos) {
-    llvm::StringRef str_ref_name = pos->get()->GetName().GetStringRef();
+  for (lldb::VariableSP var_sp : *variable_list) {
+    llvm::StringRef str_ref_name = var_sp->GetName().GetStringRef();
     // Check for global vars, which might start with '::'.
     str_ref_name.consume_front("::");
 
     if (str_ref_name == name.GetStringRef())
-      possible_matches.push_back(*pos);
-    else if (pos->get()->NameMatches(name))
-      possible_matches.push_back(*pos);
+      possible_matches.push_back(var_sp);
+    else if (var_sp->NameMatches(name))
+      possible_matches.push_back(var_sp);
   }
 
   // Look for exact matches (favors local vars over global vars)
@@ -74,23 +70,21 @@ static lldb::VariableSP DILFindVariable(ConstString name,
       });
 
   if (exact_match_it != possible_matches.end())
-    exact_match = *exact_match_it;
+    return *exact_match_it;
 
-  if (!exact_match)
-    // Look for a global var exact match.
-    for (auto var_sp : possible_matches) {
-      llvm::StringRef str_ref_name = var_sp->GetName().GetStringRef();
-      str_ref_name.consume_front("::");
-      if (str_ref_name == name.GetStringRef()) {
-        exact_match = var_sp;
-        break;
-      }
-    }
+  // Look for a global var exact match.
+  for (auto var_sp : possible_matches) {
+    llvm::StringRef str_ref_name = var_sp->GetName().GetStringRef();
+    str_ref_name.consume_front("::");
+    if (str_ref_name == name.GetStringRef())
+      return var_sp;
+  }
 
-  if (!exact_match && possible_matches.size() == 1)
-    exact_match = possible_matches[0];
+  // If there's a single non-exact match, take it.
+  if (possible_matches.size() == 1)
+    return possible_matches[0];
 
-  return exact_match;
+  return nullptr;
 }
 
 std::unique_ptr<IdentifierInfo> LookupGlobalIdentifier(
@@ -239,9 +233,8 @@ Interpreter::Visit(const IdentifierNode *node) {
     identifier = LookupGlobalIdentifier(node->GetName(), m_exe_ctx_scope,
                                         m_target, use_dynamic);
   if (!identifier) {
-    std::string errMsg;
-    std::string name = node->GetName();
-    errMsg = llvm::formatv("use of undeclared identifier '{0}'", name);
+    std::string errMsg =
+        llvm::formatv("use of undeclared identifier '{0}'", node->GetName());
     Status error = Status(
         (uint32_t)ErrorCode::kUndeclaredIdentifier, lldb::eErrorTypeGeneric,
         FormatDiagnostics(m_expr, errMsg, node->GetLocation()));
@@ -249,7 +242,6 @@ Interpreter::Visit(const IdentifierNode *node) {
   }
   lldb::ValueObjectSP val;
   lldb::TargetSP target_sp;
-  Status error;
 
   assert(identifier->GetKind() == IdentifierInfo::Kind::eValue &&
          "Unrecognized identifier kind");
@@ -262,10 +254,6 @@ Interpreter::Visit(const IdentifierNode *node) {
     if (error.Fail())
       return error.ToError();
   }
-
-  target_sp = val->GetTargetSP();
-  assert(target_sp && target_sp->IsValid() &&
-         "identifier doesn't resolve to a valid value");
 
   return val;
 }

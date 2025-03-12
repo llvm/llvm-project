@@ -514,9 +514,7 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
     VariableSP &var_sp, Status &error) {
   ExecutionContext exe_ctx;
   CalculateExecutionContext(exe_ctx);
-
   bool use_DIL = exe_ctx.GetTargetRef().GetUseDIL(&exe_ctx);
-
   if (use_DIL)
     return DILGetValueForVariableExpressionPath(var_expr, use_dynamic, options,
                                                 var_sp, error);
@@ -542,12 +540,11 @@ ValueObjectSP StackFrame::DILGetValueForVariableExpressionPath(
     error = Status::FromError(lex_or_err.takeError());
     return ValueObjectSP();
   }
-  dil::DILLexer &lexer = *lex_or_err;
 
   // Parse the expression.
   auto tree_or_error = dil::DILParser::Parse(
-      var_expr, lexer, shared_from_this(), use_dynamic, !no_synth_child,
-      !no_fragile_ivar, check_ptr_vs_member);
+      var_expr, std::move(*lex_or_err), shared_from_this(), use_dynamic,
+      !no_synth_child, !no_fragile_ivar, check_ptr_vs_member);
   if (!tree_or_error) {
     error = Status::FromError(tree_or_error.takeError());
     return ValueObjectSP();

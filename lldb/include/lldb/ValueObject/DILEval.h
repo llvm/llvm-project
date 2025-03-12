@@ -31,16 +31,9 @@ public:
         new IdentifierInfo(Kind::eValue, type, valobj.GetSP(), {}));
   }
 
-  static std::unique_ptr<IdentifierInfo> FromContextArg(CompilerType type) {
-    lldb::ValueObjectSP empty_value;
-    return std::unique_ptr<IdentifierInfo>(
-        new IdentifierInfo(Kind::eContextArg, type, empty_value, {}));
-  }
-
   Kind GetKind() const { return m_kind; }
   lldb::ValueObjectSP GetValue() const { return m_value; }
 
-  CompilerType GetType() { return m_type; }
   bool IsValid() const { return m_type.IsValid(); }
 
   IdentifierInfo(Kind kind, CompilerType type, lldb::ValueObjectSP value,

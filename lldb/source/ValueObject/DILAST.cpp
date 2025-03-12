@@ -13,7 +13,6 @@ namespace lldb_private::dil {
 
 llvm::Expected<lldb::ValueObjectSP> ErrorNode::Accept(Visitor *v) const {
   llvm_unreachable("Attempting to Visit a DIL ErrorNode.");
-  return lldb::ValueObjectSP();
 }
 
 llvm::Expected<lldb::ValueObjectSP> IdentifierNode::Accept(Visitor *v) const {

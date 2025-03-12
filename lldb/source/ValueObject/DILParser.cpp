@@ -20,7 +20,7 @@
 #include <limits.h>
 #include <memory>
 #include <sstream>
-#include <stdlib.h>
+#include <cstdlib>
 #include <string>
 
 namespace lldb_private::dil {
@@ -29,7 +29,7 @@ std::string FormatDiagnostics(llvm::StringRef text, const std::string &message,
                               uint32_t loc) {
   // Get the position, in the current line of text, of the diagnostics pointer.
   // ('loc' is the location of the start of the current token/error within the
-  // overal text line).
+  // overall text line).
   int32_t arrow = loc + 1; // Column offset starts at 1, not 0.
 
   return llvm::formatv("<expr:1:{0}>: {1}\n{2}\n{3}", loc, message,
@@ -58,9 +58,7 @@ DILParser::DILParser(llvm::StringRef dil_input_expr, DILLexer lexer,
       m_check_ptr_vs_member(check_ptr_vs_member) {}
 
 llvm::Expected<ASTNodeUP> DILParser::Run() {
-  ASTNodeUP expr;
-
-  expr = ParseExpression();
+  ASTNodeUP expr = ParseExpression();
 
   Expect(Token::Kind::eof);
 
@@ -84,7 +82,7 @@ ASTNodeUP DILParser::ParseExpression() { return ParsePrimaryExpression(); }
 //    "(" expression ")"
 //
 ASTNodeUP DILParser::ParsePrimaryExpression() {
-  if (CurToken().IsOneOf(Token::coloncolon, Token::identifier)) {
+  if (CurToken().IsOneOf({Token::coloncolon, Token::identifier})) {
     // Save the source location for the diagnostics message.
     uint32_t loc = CurToken().GetLocation();
     auto identifier = ParseIdExpression();
