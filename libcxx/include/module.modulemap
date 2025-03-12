@@ -2285,6 +2285,9 @@ module std [system] {
     header "__assert"
     export *
   }
+  module assertion_handler {
+    header "__assertion_handler" // Generated via CMake
+  }
 
   module undef_macros {
     textual header "__undef_macros"
