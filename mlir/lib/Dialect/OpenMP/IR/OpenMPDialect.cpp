@@ -1905,7 +1905,8 @@ LogicalResult TargetOp::verifyRegions() {
     return emitError("target containing multiple 'omp.teams' nested ops");
 
   // Check that host_eval values are only used in legal ways.
-  llvm::omp::OMPTgtExecModeFlags execFlags = getKernelExecFlags();
+  llvm::omp::OMPTgtExecModeFlags execFlags =
+      getKernelExecFlags(getInnermostCapturedOmpOp());
   for (Value hostEvalArg :
        cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs()) {
     for (Operation *user : hostEvalArg.getUsers()) {
@@ -2026,23 +2027,26 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
 }
 
 llvm::omp::OMPTgtExecModeFlags
-TargetOp::getKernelExecFlags(std::optional<Operation *> capturedOp) {
+TargetOp::getKernelExecFlags(Operation *capturedOp) {
   using namespace llvm::omp;
 
-  // Use a cached operation, if passed in. Otherwise, find the innermost
-  // captured operation.
-  if (!capturedOp)
-    capturedOp = getInnermostCapturedOmpOp();
-  assert(*capturedOp == getInnermostCapturedOmpOp() &&
-         "unexpected captured op");
+#ifndef NDEBUG
+  if (capturedOp) {
+    // A non-null captured op is only valid if it resides inside of a TargetOp
+    // and is the result of calling getInnermostCapturedOmpOp() on it.
+    TargetOp targetOp = capturedOp->getParentOfType<TargetOp>();
+    assert(targetOp && targetOp.getInnermostCapturedOmpOp() &&
+           "unexpected captured op");
+  }
+#endif
 
   // Make sure this region is capturing a loop. Otherwise, it's a generic
   // kernel.
-  if (!isa_and_present<LoopNestOp>(*capturedOp))
+  if (!isa_and_present<LoopNestOp>(capturedOp))
     return OMP_TGT_EXEC_MODE_GENERIC;
 
   SmallVector<LoopWrapperInterface> wrappers;
-  cast<LoopNestOp>(*capturedOp).gatherWrappers(wrappers);
+  cast<LoopNestOp>(capturedOp).gatherWrappers(wrappers);
   assert(!wrappers.empty());
 
   // Ignore optional SIMD leaf construct.

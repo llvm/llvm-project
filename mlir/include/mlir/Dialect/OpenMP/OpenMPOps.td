@@ -1343,20 +1343,15 @@ def TargetOp : OpenMP_Op<"target", traits = [
     ///
     /// If there are omp.loop_nest operations in the sequence of nested
     /// operations, the top level one will be the one captured.
-    ///
-    /// This is a relatively expensive operation, so if it is needed at the same
-    /// time as the result of `getKernelExecFlags` it is preferable to cache the
-    /// result of this function and pass it along.
     Operation *getInnermostCapturedOmpOp();
 
     /// Infers the kernel type (Generic, SPMD or Generic-SPMD) based on the
     /// contents of the target region.
     ///
     /// \param capturedOp result of a still valid (no modifications made to any
-    /// nested operations) previous call to `getInnermostCapturedOmpOp()`. If
-    /// not specified, this will call that function itself instead.
-    llvm::omp::OMPTgtExecModeFlags
-    getKernelExecFlags(std::optional<Operation *> capturedOp = std::nullopt);
+    /// nested operations) previous call to `getInnermostCapturedOmpOp()`.
+    static llvm::omp::OMPTgtExecModeFlags
+    getKernelExecFlags(Operation *capturedOp);
   }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
