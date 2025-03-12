@@ -12,6 +12,7 @@
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/DiagnosticInfo.h"
+#include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -53,6 +54,7 @@ class CtxInstrumentationLowerer final {
   ModuleAnalysisManager &MAM;
   Type *ContextNodeTy = nullptr;
   Type *ContextRootTy = nullptr;
+  Type *FunctionDataTy = nullptr;
 
   DenseMap<const Function *, Constant *> ContextRootMap;
   Function *StartCtx = nullptr;
@@ -120,6 +122,12 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                           PointerTy,          /*CurrentMem*/
                                           SanitizerMutexType, /*Taken*/
                                       });
+  FunctionDataTy =
+      StructType::get(M.getContext(), {
+                                          PointerTy,          /*FlatCtx*/
+                                          SanitizerMutexType, /*Mutex*/
+                                      });
+
   // The Context header.
   ContextNodeTy = StructType::get(M.getContext(), {
                                                       I64Ty,     /*Guid*/
@@ -163,7 +171,8 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
   GetCtx = cast<Function>(
       M.getOrInsertFunction(CompilerRtAPINames::GetCtx,
                             FunctionType::get(PointerTy,
-                                              {PointerTy, /*Callee*/
+                                              {PointerTy, /*FunctionData*/
+                                               PointerTy, /*Callee*/
                                                I64Ty,     /*Guid*/
                                                I32Ty,     /*NumCounters*/
                                                I32Ty},    /*NumCallsites*/
@@ -224,7 +233,6 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
       assert(Mark->getIndex()->isZero());
 
       IRBuilder<> Builder(Mark);
-
       Guid = Builder.getInt64(
           AssignGUIDPass::getGUID(cast<Function>(*Mark->getNameValue())));
       // The type of the context of this function is now knowable since we have
@@ -248,9 +256,14 @@ bool CtxInstrumentationLowerer::lowerFunction(Function &F) {
         ORE.emit(
             [&] { return OptimizationRemark(DEBUG_TYPE, "Entrypoint", &F); });
       } else {
-        Context =
-            Builder.CreateCall(GetCtx, {&F, Guid, Builder.getInt32(NumCounters),
-                                        Builder.getInt32(NumCallsites)});
+        // Make up a compact name, these names end up taking up a lot of space
+        // in the binary.
+        auto *FData = new GlobalVariable(
+            M, FunctionDataTy, false, GlobalVariable::InternalLinkage,
+            Constant::getNullValue(FunctionDataTy));
+        Context = Builder.CreateCall(GetCtx, {FData, &F, Guid,
+                                              Builder.getInt32(NumCounters),
+                                              Builder.getInt32(NumCallsites)});
         ORE.emit([&] {
           return OptimizationRemark(DEBUG_TYPE, "RegularFunction", &F);
         });

@@ -101,7 +101,7 @@ static bool compareVersions(StringRef A, StringRef B) {
     unsigned Pos = S.find_last_of('_');
     StringRef VerStr = (Pos == StringRef::npos) ? S : S.substr(Pos + 1);
     VersionTuple Vt;
-    (void)VersionTuple::parse(VerStr, Vt);
+    (void)Vt.tryParse(VerStr);
     return Vt;
   };
 

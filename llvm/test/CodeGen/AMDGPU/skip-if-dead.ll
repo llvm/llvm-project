@@ -1349,7 +1349,6 @@ define amdgpu_ps void @no_skip_no_successors(float inreg %arg, float inreg %arg1
 ; GFX11-LABEL: no_skip_no_successors:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    v_cmp_nge_f32_e64 s[4:5], s1, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_and_b64 vcc, exec, s[4:5]
 ; GFX11-NEXT:    s_cbranch_vccz .LBB12_3
 ; GFX11-NEXT:  ; %bb.1: ; %bb6
@@ -1361,7 +1360,6 @@ define amdgpu_ps void @no_skip_no_successors(float inreg %arg, float inreg %arg1
 ; GFX11-NEXT:    s_mov_b64 exec, 0
 ; GFX11-NEXT:  .LBB12_3: ; %bb3
 ; GFX11-NEXT:    v_cmp_nle_f32_e64 s[0:1], 0x3e7ae148, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_and_b64 vcc, exec, s[0:1]
 ; GFX11-NEXT:  ; %bb.4: ; %bb5
 ; GFX11-NEXT:  .LBB12_5:
@@ -1690,7 +1688,7 @@ live:
   br label %export
 
 export:
-  %proxy = phi float [ undef, %kill ], [ %scale, %live ]
+  %proxy = phi float [ poison, %kill ], [ %scale, %live ]
   call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %proxy, float %proxy, float %proxy, float %proxy, i1 true, i1 true) #3
   ret void
 }

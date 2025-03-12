@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPLog.h"
 #include "Handler/ResponseHandler.h"
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
@@ -25,6 +26,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -61,10 +63,10 @@ const char DEV_NULL[] = "/dev/null";
 
 namespace lldb_dap {
 
-DAP::DAP(std::string name, llvm::StringRef path, std::ofstream *log,
+DAP::DAP(llvm::StringRef client_name, llvm::StringRef path, std::ofstream *log,
          lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
          std::vector<std::string> pre_init_commands)
-    : name(std::move(name)), debug_adapter_path(path), log(log),
+    : client_name(client_name), debug_adapter_path(path), log(log),
       input(std::move(input)), output(std::move(output)),
       broadcaster("lldb-dap"), exception_breakpoints(),
       pre_init_commands(std::move(pre_init_commands)),
@@ -239,14 +241,7 @@ void DAP::SendJSON(const llvm::json::Value &json) {
   std::lock_guard<std::mutex> locker(mutex);
   SendJSON(json_str);
 
-  if (log) {
-    auto now = std::chrono::duration<double>(
-        std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} {1} <-- ", now.count(), name).str()
-         << std::endl
-         << "Content-Length: " << json_str.size() << "\r\n\r\n"
-         << llvm::formatv("{0:2}", json).str() << std::endl;
-  }
+  DAP_LOG(log, "({0}) <-- {1}", client_name, json_str);
 }
 
 // Read a JSON packet from the "in" stream.
@@ -270,13 +265,7 @@ std::string DAP::ReadJSON() {
   if (!input.read_full(log, length, json_str))
     return json_str;
 
-  if (log) {
-    auto now = std::chrono::duration<double>(
-        std::chrono::system_clock::now().time_since_epoch());
-    *log << llvm::formatv("{0:f9} {1} --> ", now.count(), name).str()
-         << std::endl
-         << "Content-Length: " << length << "\r\n\r\n";
-  }
+  DAP_LOG(log, "({0}) --> {1}", client_name, json_str);
   return json_str;
 }
 
@@ -711,22 +700,15 @@ PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
 
   llvm::StringRef json_sref(json);
   llvm::Expected<llvm::json::Value> json_value = llvm::json::parse(json_sref);
-  if (auto error = json_value.takeError()) {
-    std::string error_str = llvm::toString(std::move(error));
-    if (log)
-      *log << "error: failed to parse JSON: " << error_str << std::endl
-           << json << std::endl;
+  if (!json_value) {
+    DAP_LOG_ERROR(log, json_value.takeError(),
+                  "({1}) failed to parse JSON: {0}", client_name);
     return PacketStatus::JSONMalformed;
-  }
-
-  if (log) {
-    *log << llvm::formatv("{0:2}", *json_value).str() << std::endl;
   }
 
   llvm::json::Object *object_ptr = json_value->getAsObject();
   if (!object_ptr) {
-    if (log)
-      *log << "error: json packet isn't a object" << std::endl;
+    DAP_LOG(log, "({0}) error: json packet isn't a object", client_name);
     return PacketStatus::JSONNotObject;
   }
   object = *object_ptr;
@@ -744,9 +726,7 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
       return true; // Success
     }
 
-    if (log)
-      *log << "error: unhandled command \"" << command.data() << "\""
-           << std::endl;
+    DAP_LOG(log, "({0}) error: unhandled command '{1}'", client_name, command);
     return false; // Fail
   }
 

@@ -162,13 +162,14 @@ static bool isPtrOfType(const clang::QualType T, Predicate Pred) {
       type = elaboratedT->desugar();
       continue;
     }
-    auto *SpecialT = type->getAs<TemplateSpecializationType>();
-    if (!SpecialT)
-      return false;
-    auto *Decl = SpecialT->getTemplateName().getAsTemplateDecl();
-    if (!Decl)
-      return false;
-    return Pred(Decl->getNameAsString());
+    if (auto *SpecialT = type->getAs<TemplateSpecializationType>()) {
+      auto *Decl = SpecialT->getTemplateName().getAsTemplateDecl();
+      return Decl && Pred(Decl->getNameAsString());
+    } else if (auto *DTS = type->getAs<DeducedTemplateSpecializationType>()) {
+      auto *Decl = DTS->getTemplateName().getAsTemplateDecl();
+      return Decl && Pred(Decl->getNameAsString());
+    } else
+      break;
   }
   return false;
 }
@@ -479,6 +480,10 @@ public:
   TrivialFunctionAnalysisVisitor(CacheTy &Cache) : Cache(Cache) {}
 
   bool IsFunctionTrivial(const Decl *D) {
+    if (auto *FnDecl = dyn_cast<FunctionDecl>(D)) {
+      if (FnDecl->isVirtualAsWritten())
+        return false;
+    }
     return WithCachedResult(D, [&]() {
       if (auto *CtorDecl = dyn_cast<CXXConstructorDecl>(D)) {
         for (auto *CtorInit : CtorDecl->inits()) {

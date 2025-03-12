@@ -14,9 +14,8 @@
 #include "flang/Frontend/CompilerInstance.h"
 #include "flang/Frontend/CompilerInvocation.h"
 #include "flang/Frontend/FrontendOptions.h"
-#include "flang/Frontend/PreprocessorOptions.h"
+#include "flang/Frontend/ParserActions.h"
 #include "flang/Lower/Bridge.h"
-#include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/Support/Verifier.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
@@ -25,13 +24,7 @@
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Parser/dump-parse-tree.h"
-#include "flang/Parser/parsing.h"
-#include "flang/Parser/provenance.h"
-#include "flang/Parser/source.h"
-#include "flang/Parser/unparse.h"
 #include "flang/Semantics/runtime-type-info.h"
-#include "flang/Semantics/semantics.h"
 #include "flang/Semantics/unparse-with-symbols.h"
 #include "flang/Support/default-kinds.h"
 #include "flang/Tools/CrossToolHelpers.h"
@@ -317,9 +310,9 @@ bool CodeGenAction::beginSourceFileAction() {
   lower::LoweringBridge lb = Fortran::lower::LoweringBridge::create(
       *mlirCtx, ci.getSemanticsContext(), defKinds,
       ci.getSemanticsContext().intrinsics(),
-      ci.getSemanticsContext().targetCharacteristics(),
-      ci.getParsing().allCooked(), ci.getInvocation().getTargetOpts().triple,
-      kindMap, ci.getInvocation().getLoweringOpts(),
+      ci.getSemanticsContext().targetCharacteristics(), getAllCooked(ci),
+      ci.getInvocation().getTargetOpts().triple, kindMap,
+      ci.getInvocation().getLoweringOpts(),
       ci.getInvocation().getFrontendOpts().envDefaults,
       ci.getInvocation().getFrontendOpts().features, targetMachine,
       ci.getInvocation().getTargetOpts(), ci.getInvocation().getCodeGenOpts());
@@ -333,8 +326,7 @@ bool CodeGenAction::beginSourceFileAction() {
   }
 
   // Create a parse tree and lower it to FIR
-  Fortran::parser::Program &parseTree{*ci.getParsing().parseTree()};
-  lb.lower(parseTree, ci.getSemanticsContext());
+  parseAndLowerTree(ci, lb);
 
   // Fetch module from lb, so we can set
   mlirModule = lb.getModuleAndRelease();
@@ -431,19 +423,8 @@ void PrintPreprocessedAction::executeAction() {
   std::string buf;
   llvm::raw_string_ostream outForPP{buf};
 
-  // Format or dump the prescanner's output
   CompilerInstance &ci = this->getInstance();
-  if (ci.getInvocation().getPreprocessorOpts().showMacros) {
-    ci.getParsing().EmitPreprocessorMacros(outForPP);
-  } else if (ci.getInvocation().getPreprocessorOpts().noReformat) {
-    ci.getParsing().DumpCookedChars(outForPP);
-  } else {
-    ci.getParsing().EmitPreprocessedSource(
-        outForPP, !ci.getInvocation().getPreprocessorOpts().noLineDirectives);
-  }
-
-  // Print getDiagnostics from the prescanner
-  ci.getParsing().messages().Emit(llvm::errs(), ci.getAllCookedSources());
+  formatOrDumpPrescanner(buf, outForPP, ci);
 
   // If a pre-defined output stream exists, dump the preprocessed content there
   if (!ci.isOutputStreamNull()) {
@@ -463,60 +444,31 @@ void PrintPreprocessedAction::executeAction() {
 }
 
 void DebugDumpProvenanceAction::executeAction() {
-  this->getInstance().getParsing().DumpProvenance(llvm::outs());
+  dumpProvenance(this->getInstance());
 }
 
 void ParseSyntaxOnlyAction::executeAction() {}
 
 void DebugUnparseNoSemaAction::executeAction() {
-  auto &invoc = this->getInstance().getInvocation();
-  auto &parseTree{getInstance().getParsing().parseTree()};
-
-  // TODO: Options should come from CompilerInvocation
-  Unparse(llvm::outs(), *parseTree,
-          /*encoding=*/Fortran::parser::Encoding::UTF_8,
-          /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
-          /*preStatement=*/nullptr,
-          invoc.getUseAnalyzedObjectsForUnparse() ? &invoc.getAsFortran()
-                                                  : nullptr);
+  debugUnparseNoSema(this->getInstance(), llvm::outs());
 }
 
 void DebugUnparseAction::executeAction() {
-  auto &invoc = this->getInstance().getInvocation();
-  auto &parseTree{getInstance().getParsing().parseTree()};
-
   CompilerInstance &ci = this->getInstance();
   auto os{ci.createDefaultOutputFile(
       /*Binary=*/false, /*InFile=*/getCurrentFileOrBufferName())};
 
-  // TODO: Options should come from CompilerInvocation
-  Unparse(*os, *parseTree,
-          /*encoding=*/Fortran::parser::Encoding::UTF_8,
-          /*capitalizeKeywords=*/true, /*backslashEscapes=*/false,
-          /*preStatement=*/nullptr,
-          invoc.getUseAnalyzedObjectsForUnparse() ? &invoc.getAsFortran()
-                                                  : nullptr);
-
-  // Report fatal semantic errors
+  debugUnparseNoSema(ci, *os);
   reportFatalSemanticErrors();
 }
 
 void DebugUnparseWithSymbolsAction::executeAction() {
-  auto &parseTree{*getInstance().getParsing().parseTree()};
-
-  Fortran::semantics::UnparseWithSymbols(
-      llvm::outs(), parseTree, /*encoding=*/Fortran::parser::Encoding::UTF_8);
-
-  // Report fatal semantic errors
+  debugUnparseWithSymbols(this->getInstance());
   reportFatalSemanticErrors();
 }
 
 void DebugUnparseWithModulesAction::executeAction() {
-  auto &parseTree{*getInstance().getParsing().parseTree()};
-  CompilerInstance &ci{getInstance()};
-  Fortran::semantics::UnparseWithModules(
-      llvm::outs(), ci.getSemantics().context(), parseTree,
-      /*encoding=*/Fortran::parser::Encoding::UTF_8);
+  debugUnparseWithModules(this->getInstance());
   reportFatalSemanticErrors();
 }
 
@@ -540,12 +492,7 @@ void DebugDumpAllAction::executeAction() {
   CompilerInstance &ci = this->getInstance();
 
   // Dump parse tree
-  auto &parseTree{getInstance().getParsing().parseTree()};
-  llvm::outs() << "========================";
-  llvm::outs() << " Flang: parse tree dump ";
-  llvm::outs() << "========================\n";
-  Fortran::parser::DumpTree(llvm::outs(), parseTree,
-                            &ci.getInvocation().getAsFortran());
+  dumpTree(ci);
 
   if (!ci.getRtTyTables().schemata) {
     unsigned diagID = ci.getDiagnostics().getCustomDiagID(
@@ -564,21 +511,11 @@ void DebugDumpAllAction::executeAction() {
 }
 
 void DebugDumpParseTreeNoSemaAction::executeAction() {
-  auto &parseTree{getInstance().getParsing().parseTree()};
-
-  // Dump parse tree
-  Fortran::parser::DumpTree(
-      llvm::outs(), parseTree,
-      &this->getInstance().getInvocation().getAsFortran());
+  dumpTree(this->getInstance());
 }
 
 void DebugDumpParseTreeAction::executeAction() {
-  auto &parseTree{getInstance().getParsing().parseTree()};
-
-  // Dump parse tree
-  Fortran::parser::DumpTree(
-      llvm::outs(), parseTree,
-      &this->getInstance().getInvocation().getAsFortran());
+  dumpTree(this->getInstance());
 
   // Report fatal semantic errors
   reportFatalSemanticErrors();
@@ -586,62 +523,20 @@ void DebugDumpParseTreeAction::executeAction() {
 
 void DebugMeasureParseTreeAction::executeAction() {
   CompilerInstance &ci = this->getInstance();
-
-  // Parse. In case of failure, report and return.
-  ci.getParsing().Parse(llvm::outs());
-
-  if ((ci.getParsing().parseTree().has_value() &&
-       !ci.getParsing().consumedWholeFile()) ||
-      (!ci.getParsing().messages().empty() &&
-       (ci.getInvocation().getWarnAsErr() ||
-        ci.getParsing().messages().AnyFatalError()))) {
-    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Could not parse %0");
-    ci.getDiagnostics().Report(diagID) << getCurrentFileOrBufferName();
-
-    ci.getParsing().messages().Emit(llvm::errs(),
-                                    this->getInstance().getAllCookedSources());
-    return;
-  }
-
-  // Report the getDiagnostics from parsing
-  ci.getParsing().messages().Emit(llvm::errs(), ci.getAllCookedSources());
-
-  auto &parseTree{*ci.getParsing().parseTree()};
-
-  // Measure the parse tree
-  MeasurementVisitor visitor;
-  Fortran::parser::Walk(parseTree, visitor);
-  llvm::outs() << "Parse tree comprises " << visitor.objects
-               << " objects and occupies " << visitor.bytes
-               << " total bytes.\n";
+  debugMeasureParseTree(ci, getCurrentFileOrBufferName());
 }
 
 void DebugPreFIRTreeAction::executeAction() {
-  CompilerInstance &ci = this->getInstance();
   // Report and exit if fatal semantic errors are present
   if (reportFatalSemanticErrors()) {
     return;
   }
 
-  auto &parseTree{*ci.getParsing().parseTree()};
-
-  // Dump pre-FIR tree
-  if (auto ast{
-          Fortran::lower::createPFT(parseTree, ci.getSemanticsContext())}) {
-    Fortran::lower::dumpPFT(llvm::outs(), *ast);
-  } else {
-    unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-        clang::DiagnosticsEngine::Error, "Pre FIR Tree is NULL.");
-    ci.getDiagnostics().Report(diagID);
-  }
+  dumpPreFIRTree(this->getInstance());
 }
 
 void DebugDumpParsingLogAction::executeAction() {
-  CompilerInstance &ci = this->getInstance();
-
-  ci.getParsing().Parse(llvm::errs());
-  ci.getParsing().DumpParsingLog(llvm::outs());
+  debugDumpParsingLog(this->getInstance());
 }
 
 void GetDefinitionAction::executeAction() {
@@ -1473,17 +1368,7 @@ void InitOnlyAction::executeAction() {
 void PluginParseTreeAction::executeAction() {}
 
 void DebugDumpPFTAction::executeAction() {
-  CompilerInstance &ci = this->getInstance();
-
-  if (auto ast = Fortran::lower::createPFT(*ci.getParsing().parseTree(),
-                                           ci.getSemantics().context())) {
-    Fortran::lower::dumpPFT(llvm::outs(), *ast);
-    return;
-  }
-
-  unsigned diagID = ci.getDiagnostics().getCustomDiagID(
-      clang::DiagnosticsEngine::Error, "Pre FIR Tree is NULL.");
-  ci.getDiagnostics().Report(diagID);
+  dumpPreFIRTree(this->getInstance());
 }
 
 Fortran::parser::Parsing &PluginParseTreeAction::getParsing() {
