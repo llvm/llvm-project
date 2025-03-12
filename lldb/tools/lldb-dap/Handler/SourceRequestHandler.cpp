@@ -19,23 +19,8 @@
 
 namespace lldb_dap {
 
-// "SourceRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Source request; value of command field is 'source'. The
-//     request retrieves the source code for a given source reference.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "source" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/SourceArguments"
-//       }
-//     },
-//     "required": [ "command", "arguments"  ]
-//   }]
-// },
+/// Source request; value of command field is 'source'. The request retrieves
+/// the source code for a given source reference.
 llvm::Expected<protocol::SourceResponseBody>
 SourceRequestHandler::Run(const protocol::SourceArguments &args) const {
   const auto source =
