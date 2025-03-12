@@ -14312,27 +14312,28 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::SHL, DL, VT, SHADD, DAG.getConstant(Bits, DL, VT));
 }
 
-// Check if this SDValue is an add immediate and then
-static bool checkAddiForShift(SDValue AddI) {
+// Check if this SDValue is an add immediate that is fed by a shift of 1, 2, or 3.
+static bool checkAddiForShift(SDValue AddI, int64_t &AddConst, int64_t &ShlConst) {
   // Based on testing it seems that performance degrades if the ADDI has
   // more than 2 uses.
   if (AddI->use_size() > 2)
     return false;
 
-  ConstantSDNode *AddConst = dyn_cast<ConstantSDNode>(AddI->getOperand(1));
-  if (!AddConst)
+  auto *AddConstNode = dyn_cast<ConstantSDNode>(AddI->getOperand(1));
+  if (!AddConstNode)
     return false;
+  AddConst = AddConstNode->getSExtValue();
 
   SDValue SHLVal = AddI->getOperand(0);
   if (SHLVal->getOpcode() != ISD::SHL)
     return false;
 
-  ConstantSDNode *ShiftNode = dyn_cast<ConstantSDNode>(SHLVal->getOperand(1));
+  auto *ShiftNode = dyn_cast<ConstantSDNode>(SHLVal->getOperand(1));
   if (!ShiftNode)
     return false;
 
-  auto ShiftVal = ShiftNode->getSExtValue();
-  if (ShiftVal != 1 && ShiftVal != 2 && ShiftVal != 3)
+  ShlConst = ShiftNode->getSExtValue();
+  if (ShlConst < 1 || ShlConst > 3)
     return false;
 
   return true;
@@ -14342,11 +14343,8 @@ static bool checkAddiForShift(SDValue AddI) {
 //          (ADDI (SH*ADD y, x), c1), if c0 equals to [1|2|3].
 static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
                                  const RISCVSubtarget &Subtarget) {
-  if (!ReassocShlAddiAdd)
-    return SDValue();
-
   // Perform this optimization only in the zba extension.
-  if (!Subtarget.hasStdExtZba())
+  if (!ReassocShlAddiAdd || !Subtarget.hasStdExtZba())
     return SDValue();
 
   // Skip for vector types and larger types.
@@ -14355,42 +14353,36 @@ static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Looking for a reg-reg add and not an addi.
-  auto *Op1 = dyn_cast<ConstantSDNode>(N->getOperand(1));
-  if (Op1)
-    return SDValue();
-  SDValue AddI;
-  SDValue Other;
-
-  if (N->getOperand(0)->getOpcode() == ISD::ADD &&
-      N->getOperand(1)->getOpcode() == ISD::ADD) {
-    AddI = N->getOperand(0);
-    Other = N->getOperand(1);
-    if (!checkAddiForShift(AddI)) {
-      AddI = N->getOperand(1);
-      Other = N->getOperand(0);
-    }
-  } else if (N->getOperand(0)->getOpcode() == ISD::ADD) {
-    AddI = N->getOperand(0);
-    Other = N->getOperand(1);
-  } else if (N->getOperand(1)->getOpcode() == ISD::ADD) {
-    AddI = N->getOperand(1);
-    Other = N->getOperand(0);
-  } else
+  if (isa<ConstantSDNode>(N->getOperand(1)))
     return SDValue();
 
-  if (!checkAddiForShift(AddI))
+  SDValue AddI = N->getOperand(0);
+  SDValue Other = N->getOperand(1);
+  bool LHSIsAdd = AddI.getOpcode() == ISD::ADD;
+  bool RHSIsAdd = Other.getOpcode() == ISD::ADD;
+  int64_t AddConst;
+  int64_t ShlConst;
+
+  // At least one add is required.
+  if (!(LHSIsAdd || RHSIsAdd))
     return SDValue();
 
-  auto *AddConst = dyn_cast<ConstantSDNode>(AddI->getOperand(1));
+  // If the LHS is not the result of an add or both sides are results of an add, but
+  // the LHS does not have the desired structure with a shift, swap the operands.
+  if (!LHSIsAdd || (LHSIsAdd && RHSIsAdd && !checkAddiForShift(AddI, AddConst, ShlConst)))
+    std::swap(AddI, Other);
+
+  // We simply need to ensure AddI has the desired structure.
+  if (!checkAddiForShift(AddI, AddConst, ShlConst))
+     return SDValue();
+
   SDValue SHLVal = AddI->getOperand(0);
-  auto *ShiftNode = dyn_cast<ConstantSDNode>(SHLVal->getOperand(1));
-  auto ShiftVal = ShiftNode->getSExtValue();
   SDLoc DL(N);
 
   SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, SHLVal->getOperand(0),
-                              DAG.getConstant(ShiftVal, DL, VT), Other);
+                              DAG.getConstant(ShlConst, DL, VT), Other);
   return DAG.getNode(ISD::ADD, DL, VT, SHADD,
-                     DAG.getConstant(AddConst->getSExtValue(), DL, VT));
+                     DAG.getConstant(AddConst, DL, VT));
 }
 
 // Combine a constant select operand into its use:
