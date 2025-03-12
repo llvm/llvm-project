@@ -18,7 +18,7 @@ define <4 x float> @t1(ptr %p1) {
 define <4 x float> @t2(ptr %p1) {
 ; CHECK-NOT: ld.v4
 ; CHECK-NOT: ld.v2
-; CHECK: ld.f32
+; CHECK: ld.u32
   %r = load <4 x float>, ptr %p1, align 4
   ret <4 x float> %r
 }
@@ -26,7 +26,7 @@ define <4 x float> @t2(ptr %p1) {
 ; CHECK-LABEL: t3
 define <4 x float> @t3(ptr %p1) {
 ; CHECK-NOT: ld.v4
-; CHECK: ld.v2
+; CHECK: ld.b64
   %r = load <4 x float>, ptr %p1, align 8
   ret <4 x float> %r
 }
@@ -111,7 +111,7 @@ define void @s1(ptr %p1, <4 x float> %v) {
 define void @s2(ptr %p1, <4 x float> %v) {
 ; CHECK-NOT: st.v4
 ; CHECK-NOT: st.v2
-; CHECK: st.f32
+; CHECK: st.u32
   store <4 x float> %v, ptr %p1, align 4
   ret void
 }
