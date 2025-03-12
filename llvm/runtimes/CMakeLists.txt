@@ -251,6 +251,8 @@ function(runtime_default_target)
     endif()
   endforeach()
   if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+    # The target libomp-mod is a dependee of check-flang needed to run its
+    # OpenMP tests
     list(APPEND extra_targets "libomp-mod")
   endif ()
 
