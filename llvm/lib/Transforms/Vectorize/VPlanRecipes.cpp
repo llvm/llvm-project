@@ -27,7 +27,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorBuilder.h"
@@ -587,6 +586,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Builder.GetInsertBlock()->getTerminator()->eraseFromParent();
     return CondBr;
   }
+  case VPInstruction::Broadcast: {
+    return Builder.CreateVectorSplat(
+        State.VF, State.get(getOperand(0), /*IsScalar*/ true), "broadcast");
+  }
   case VPInstruction::ComputeReductionResult: {
     // FIXME: The cross-recipe dependency on VPReductionPHIRecipe is temporary
     // and will be removed by breaking up the recipe further.
@@ -739,6 +742,18 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticReductionCost(
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
+  case VPInstruction::ExtractFirstActive: {
+    // Calculate the cost of determining the lane index.
+    auto *PredTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(1)), VF);
+    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
+                                  Type::getInt64Ty(Ctx.LLVMCtx),
+                                  {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
+    InstructionCost Cost = Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+    // Add on the cost of extracting the element.
+    auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
+    return Cost + Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
+                                             Ctx.CostKind);
+  }
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
@@ -837,7 +852,6 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case Instruction::ICmp:
   case Instruction::Select:
   case Instruction::Or:
-  case VPInstruction::PtrAdd:
     // TODO: Cover additional opcodes.
     return vputils::onlyFirstLaneUsed(this);
   case VPInstruction::ActiveLaneMask:
@@ -848,6 +862,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   case VPInstruction::BranchOnCond:
   case VPInstruction::ResumePhi:
     return true;
+  case VPInstruction::PtrAdd:
+    return Op == getOperand(0) || vputils::onlyFirstLaneUsed(this);
   };
   llvm_unreachable("switch should return");
 }
@@ -920,6 +936,10 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::BranchOnCount:
     O << "branch-on-count";
     break;
+  case VPInstruction::Broadcast:
+    O << "broadcast";
+    break;
+
   case VPInstruction::ExtractFromEnd:
     O << "extract-from-end";
     break;
@@ -1176,7 +1196,8 @@ InstructionCost VPWidenIntrinsicRecipe::computeCost(ElementCount VF,
   FastMathFlags FMF = hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
   IntrinsicCostAttributes CostAttrs(
       VectorIntrinsicID, RetTy, Arguments, ParamTys, FMF,
-      dyn_cast_or_null<IntrinsicInst>(getUnderlyingValue()));
+      dyn_cast_or_null<IntrinsicInst>(getUnderlyingValue()),
+      InstructionCost::getInvalid(), &Ctx.TLI);
   return Ctx.TTI.getIntrinsicInstrCost(CostAttrs, Ctx.CostKind);
 }
 
@@ -2212,6 +2233,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "Reduction being replicated.");
   Value *PrevInChain = State.get(getChainOp(), /*IsScalar*/ true);
   RecurKind Kind = RdxDesc.getRecurrenceKind();
+  assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+         "In-loop AnyOf reductions aren't currently supported");
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   State.Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
@@ -2222,12 +2245,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
     Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
 
-    Value *Start;
-    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind))
-      Start = RdxDesc.getRecurrenceStartValue();
-    else
-      Start = llvm::getRecurrenceIdentity(Kind, ElementTy,
-                                          RdxDesc.getFastMathFlags());
+    Value *Start =
+        getRecurrenceIdentity(Kind, ElementTy, RdxDesc.getFastMathFlags());
     if (State.VF.isVector())
       Start = State.Builder.CreateVectorSplat(VecTy->getElementCount(), Start);
 
@@ -2459,24 +2478,21 @@ void VPScalarCastRecipe ::print(raw_ostream &O, const Twine &Indent,
 #endif
 
 void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
+  State.setDebugLocFrom(getDebugLoc());
   assert(State.Lane && "Branch on Mask works only on single instance.");
 
-
-  Value *ConditionBit = nullptr;
-  VPValue *BlockInMask = getMask();
-  if (BlockInMask)
-    ConditionBit = State.get(BlockInMask, *State.Lane);
-  else // Block in mask is all-one.
-    ConditionBit = State.Builder.getTrue();
+  VPValue *BlockInMask = getOperand(0);
+  Value *ConditionBit = State.get(BlockInMask, *State.Lane);
 
   // Replace the temporary unreachable terminator with a new conditional branch,
   // whose two destinations will be set later when they are created.
   auto *CurrentTerminator = State.CFG.PrevBB->getTerminator();
   assert(isa<UnreachableInst>(CurrentTerminator) &&
          "Expected to replace unreachable terminator with conditional branch.");
-  auto *CondBr = BranchInst::Create(State.CFG.PrevBB, nullptr, ConditionBit);
+  auto CondBr =
+      State.Builder.CreateCondBr(ConditionBit, State.CFG.PrevBB, nullptr);
   CondBr->setSuccessor(0, nullptr);
-  ReplaceInstWithInst(CurrentTerminator, CondBr);
+  CurrentTerminator->eraseFromParent();
 }
 
 InstructionCost VPBranchOnMaskRecipe::computeCost(ElementCount VF,
@@ -3601,7 +3617,7 @@ void VPWidenPHIRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   Value *Op0 = State.get(getOperand(0));
   Type *VecTy = Op0->getType();
-  Value *VecPhi = State.Builder.CreatePHI(VecTy, 2, "vec.phi");
+  Value *VecPhi = State.Builder.CreatePHI(VecTy, 2, Name);
   State.set(this, VecPhi);
 }
 
@@ -3609,16 +3625,6 @@ void VPWidenPHIRecipe::execute(VPTransformState &State) {
 void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-PHI ";
-
-  auto *OriginalPhi = cast<PHINode>(getUnderlyingValue());
-  // Unless all incoming values are modeled in VPlan  print the original PHI
-  // directly.
-  // TODO: Remove once all VPWidenPHIRecipe instances keep all relevant incoming
-  // values as VPValues.
-  if (getNumOperands() != OriginalPhi->getNumOperands()) {
-    O << VPlanIngredient(OriginalPhi);
-    return;
-  }
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";

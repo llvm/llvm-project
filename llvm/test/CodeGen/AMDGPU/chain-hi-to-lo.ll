@@ -72,7 +72,7 @@ bb:
   %load_lo = load half, ptr addrspace(5) %gep_lo
   %load_hi = load half, ptr addrspace(5) null
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -133,7 +133,7 @@ bb:
   %load_lo = load half, ptr addrspace(5) %base_lo
   %load_hi = load half, ptr addrspace(5) %base_hi
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -197,7 +197,7 @@ bb:
   %arith_lo = fadd half %in, 1.0
   %load_hi = load half, ptr addrspace(5) %base
 
-  %temp = insertelement <2 x half> undef, half %arith_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %arith_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -238,7 +238,7 @@ bb:
   %load_lo = load half, ptr addrspace(3) %gep_lo
   %load_hi = load half, ptr addrspace(3) null
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -275,7 +275,7 @@ bb:
   %load_lo = load half, ptr addrspace(3) %base_lo
   %load_hi = load half, ptr addrspace(3) %base_hi
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -334,7 +334,7 @@ bb:
   %load_lo = load half, ptr addrspace(1) %gep_lo
   %load_hi = load half, ptr addrspace(1) null
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -377,7 +377,7 @@ bb:
   %load_lo = load half, ptr addrspace(1) %base_lo
   %load_hi = load half, ptr addrspace(1) %base_hi
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -440,7 +440,7 @@ bb:
   %load_lo = load half, ptr %gep_lo
   %load_hi = load half, ptr null
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -486,7 +486,7 @@ bb:
   %load_lo = load half, ptr %base_lo
   %load_hi = load half, ptr %base_hi
 
-  %temp = insertelement <2 x half> undef, half %load_lo, i32 0
+  %temp = insertelement <2 x half> poison, half %load_lo, i32 0
   %result = insertelement <2 x half> %temp, half %load_hi, i32 1
 
   ret <2 x half> %result
@@ -740,7 +740,7 @@ bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(3) %ptr, i64 1
   %load_lo = load i16, ptr addrspace(3) %gep_lo
   %load_hi = load i16, ptr addrspace(3) %ptr
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %op.hi = add <2 x i16> %to.hi, <i16 12, i16 12>
   %result = insertelement <2 x i16> %op.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
@@ -794,7 +794,7 @@ bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(3) %ptr, i64 1
   %load_lo = load volatile i16, ptr addrspace(3) %gep_lo
   %load_hi = load volatile i16, ptr addrspace(3) %ptr
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %op.hi = add <2 x i16> %to.hi, <i16 12, i16 12>
   %result = insertelement <2 x i16> %op.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
@@ -859,7 +859,7 @@ bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(5) %ptr, i64 1
   %load_lo = load i16, ptr addrspace(5) %gep_lo
   %load_hi = load i16, ptr addrspace(5) %ptr
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %op.hi = add <2 x i16> %to.hi, <i16 12, i16 12>
   %result = insertelement <2 x i16> %op.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
@@ -929,7 +929,7 @@ bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(1) %ptr, i64 1
   %load_lo = load volatile i16, ptr addrspace(1) %gep_lo
   %load_hi = load volatile i16, ptr addrspace(1) %ptr
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %op.hi = add <2 x i16> %to.hi, <i16 12, i16 12>
   %result = insertelement <2 x i16> %op.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
@@ -1004,7 +1004,7 @@ bb:
   %gep_lo = getelementptr inbounds i16, ptr addrspace(0) %ptr, i64 1
   %load_lo = load volatile i16, ptr addrspace(0) %gep_lo
   %load_hi = load volatile i16, ptr addrspace(0) %ptr
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %op.hi = add <2 x i16> %to.hi, <i16 12, i16 12>
   %result = insertelement <2 x i16> %op.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
@@ -1073,7 +1073,7 @@ bb:
   store i16 123, ptr addrspace(3) %may.alias
   %load_lo = load i16, ptr addrspace(3) %gep_lo
 
-  %to.hi = insertelement <2 x i16> undef, i16 %load_hi, i32 1
+  %to.hi = insertelement <2 x i16> poison, i16 %load_hi, i32 1
   %result = insertelement <2 x i16> %to.hi, i16 %load_lo, i32 0
   ret <2 x i16> %result
 }

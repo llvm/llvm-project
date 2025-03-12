@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/CUF/CUFOps.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Support/DataLayout.h"
@@ -44,6 +45,17 @@ fir::FirOpBuilder::createFunction(mlir::Location loc, mlir::ModuleOp module,
                                   llvm::StringRef name, mlir::FunctionType ty,
                                   mlir::SymbolTable *symbolTable) {
   return fir::createFuncOp(loc, module, name, ty, /*attrs*/ {}, symbolTable);
+}
+
+mlir::func::FuncOp
+fir::FirOpBuilder::createRuntimeFunction(mlir::Location loc,
+                                         llvm::StringRef name,
+                                         mlir::FunctionType ty, bool isIO) {
+  mlir::func::FuncOp func = createFunction(loc, name, ty);
+  func->setAttr(fir::FIROpsDialect::getFirRuntimeAttrName(), getUnitAttr());
+  if (isIO)
+    func->setAttr("fir.io", getUnitAttr());
+  return func;
 }
 
 mlir::func::FuncOp
@@ -263,6 +275,9 @@ mlir::Block *fir::FirOpBuilder::getAllocaBlock() {
           getRegion().getParentOfType<mlir::accomp::RecipeInterface>()) {
     return recipeIface.getAllocaBlock(getRegion());
   }
+
+  if (auto cufKernelOp = getRegion().getParentOfType<cuf::KernelOp>())
+    return &cufKernelOp.getRegion().front();
 
   return getEntryBlock();
 }

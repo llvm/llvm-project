@@ -5833,9 +5833,10 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
   for (const auto &Case : SI->cases()) {
     auto *Successor = Case.getCaseSuccessor();
     if (DTU) {
-      if (!NumPerSuccessorCases.count(Successor))
+      auto [It, Inserted] = NumPerSuccessorCases.try_emplace(Successor);
+      if (Inserted)
         UniqueSuccessors.push_back(Successor);
-      ++NumPerSuccessorCases[Successor];
+      ++It->second;
     }
     const APInt &CaseVal = Case.getCaseValue()->getValue();
     if (Known.Zero.intersects(CaseVal) || !Known.One.isSubsetOf(CaseVal) ||
@@ -6882,9 +6883,10 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     for (const auto &I : Results) {
       PHINode *PHI = I.first;
       Constant *Value = I.second;
-      if (!ResultLists.count(PHI))
+      auto [It, Inserted] = ResultLists.try_emplace(PHI);
+      if (Inserted)
         PHIs.push_back(PHI);
-      ResultLists[PHI].push_back(std::make_pair(CaseVal, Value));
+      It->second.push_back(std::make_pair(CaseVal, Value));
     }
   }
 

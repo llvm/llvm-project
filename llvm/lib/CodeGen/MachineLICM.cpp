@@ -208,17 +208,17 @@ namespace {
     /// Keep track of information about hoisting candidates.
     struct CandidateInfo {
       MachineInstr *MI;
-      unsigned      Def;
+      Register      Def;
       int           FI;
 
-      CandidateInfo(MachineInstr *mi, unsigned def, int fi)
+      CandidateInfo(MachineInstr *mi, Register def, int fi)
         : MI(mi), Def(def), FI(fi) {}
     };
 
     void HoistRegionPostRA(MachineLoop *CurLoop,
                            MachineBasicBlock *CurPreheader);
 
-    void HoistPostRA(MachineInstr *MI, unsigned Def, MachineLoop *CurLoop,
+    void HoistPostRA(MachineInstr *MI, Register Def, MachineLoop *CurLoop,
                      MachineBasicBlock *CurPreheader);
 
     void ProcessMI(MachineInstr *MI, BitVector &RUDefs, BitVector &RUClobbers,
@@ -518,7 +518,7 @@ void MachineLICMImpl::ProcessMI(MachineInstr *MI, BitVector &RUDefs,
                                 MachineLoop *CurLoop) {
   bool RuledOut = false;
   bool HasNonInvariantUse = false;
-  unsigned Def = 0;
+  Register Def;
   for (const MachineOperand &MO : MI->operands()) {
     if (MO.isFI()) {
       // Remember if the instruction stores to the frame index.
@@ -672,7 +672,7 @@ void MachineLICMImpl::HoistRegionPostRA(MachineLoop *CurLoop,
         StoredFIs.count(Candidate.FI))
       continue;
 
-    unsigned Def = Candidate.Def;
+    Register Def = Candidate.Def;
     bool Safe = true;
     for (MCRegUnitIterator RUI(Def, TRI); RUI.isValid(); ++RUI) {
       if (RUClobbers.test(*RUI) || TermRUs.test(*RUI)) {
@@ -725,7 +725,7 @@ void MachineLICMImpl::AddToLiveIns(MCRegister Reg, MachineLoop *CurLoop) {
 
 /// When an instruction is found to only use loop invariant operands that is
 /// safe to hoist, this instruction is called to do the dirty work.
-void MachineLICMImpl::HoistPostRA(MachineInstr *MI, unsigned Def,
+void MachineLICMImpl::HoistPostRA(MachineInstr *MI, Register Def,
                                   MachineLoop *CurLoop,
                                   MachineBasicBlock *CurPreheader) {
   MachineBasicBlock *Preheader = getCurPreheader(CurLoop, CurPreheader);

@@ -108,7 +108,7 @@ namespace lldb_dap {
 //   }]
 // }
 void DataBreakpointInfoRequestHandler::operator()(
-    const llvm::json::Object &request) {
+    const llvm::json::Object &request) const {
   llvm::json::Object response;
   FillResponse(request, response);
   llvm::json::Object body;
@@ -116,7 +116,7 @@ void DataBreakpointInfoRequestHandler::operator()(
   llvm::json::Array accessTypes{"read", "write", "readWrite"};
   const auto *arguments = request.getObject("arguments");
   const auto variablesReference =
-      GetUnsigned(arguments, "variablesReference", 0);
+      GetInteger<uint64_t>(arguments, "variablesReference").value_or(0);
   llvm::StringRef name = GetString(arguments, "name");
   lldb::SBFrame frame = dap.GetLLDBFrame(*arguments);
   lldb::SBValue variable = dap.variables.FindVariable(variablesReference, name);

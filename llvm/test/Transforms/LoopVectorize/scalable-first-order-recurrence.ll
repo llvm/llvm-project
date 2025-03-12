@@ -197,12 +197,12 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; CHECK-VF4UF2: vector.ph
 ; CHECK-VF4UF2: call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: call i32 @llvm.vscale.i32()
+; CHECK-VF4UF2: %[[SPLAT_INS1:.*]] = insertelement <vscale x 4 x i32> poison, i32 %x, i64 0
+; CHECK-VF4UF2: %[[SPLAT1:.*]] = shufflevector <vscale x 4 x i32> %[[SPLAT_INS1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-VF4UF2: %[[VSCALE1:.*]] = call i32 @llvm.vscale.i32()
 ; CHECK-VF4UF2: %[[MUL1:.*]] = mul i32 %[[VSCALE1]], 4
 ; CHECK-VF4UF2: %[[SUB1:.*]] = sub i32 %[[MUL1]], 1
 ; CHECK-VF4UF2: %[[VEC_RECUR_INIT:.*]] = insertelement <vscale x 4 x i32> poison, i32 0, i32 %[[SUB1]]
-; CHECK-VF4UF2: %[[SPLAT_INS1:.*]] = insertelement <vscale x 4 x i32> poison, i32 %x, i64 0
-; CHECK-VF4UF2: %[[SPLAT1:.*]] = shufflevector <vscale x 4 x i32> %[[SPLAT_INS1]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; ; CHECK-VF4UF2: vector.body
 ; CHECK-VF4UF2: %[[VEC_RECUR:.*]] = phi <vscale x 4 x i32> [ %[[VEC_RECUR_INIT]], %vector.ph ], [ %[[ADD2:.*]], %vector.body ]
 ; CHECK-VF4UF2: %[[ADD1:.*]] = add <vscale x 4 x i32> %{{.*}}, %[[SPLAT1]]
