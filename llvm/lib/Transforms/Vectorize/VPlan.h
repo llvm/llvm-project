@@ -2672,9 +2672,9 @@ struct VPWidenLoadRecipe final : public VPWidenMemoryRecipe, public VPValue {
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    // Widened, consecutive loads operations only demand the first lane of
-    // their address.
-    return Op == getAddr() && isConsecutive();
+    // Widened, consecutive/strided loads operations only demand the first
+    // lane of their address.
+    return Op == getAddr() && (isConsecutive() || isStrided());
   }
 };
 
@@ -2712,9 +2712,10 @@ struct VPWidenLoadEVLRecipe final : public VPWidenMemoryRecipe, public VPValue {
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    // Widened loads only demand the first lane of EVL and consecutive loads
-    // only demand the first lane of their address.
-    return Op == getEVL() || (Op == getAddr() && isConsecutive());
+    // Widened loads only demand the first lane of EVL and consecutive/strided
+    // loads only demand the first lane of their address.
+    return Op == getEVL() ||
+           (Op == getAddr() && (isConsecutive() || isStrided()));
   }
 };
 
@@ -2753,9 +2754,10 @@ struct VPWidenStoreRecipe final : public VPWidenMemoryRecipe {
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
     assert(is_contained(operands(), Op) &&
            "Op must be an operand of the recipe");
-    // Widened, consecutive stores only demand the first lane of their address,
-    // unless the same operand is also stored.
-    return Op == getAddr() && isConsecutive() && Op != getStoredValue();
+    // Widened, consecutive/strided stores only demand the first lane of their
+    // address, unless the same operand is also stored.
+    return Op == getAddr() && (isConsecutive() || isStrided()) &&
+           Op != getStoredValue();
   }
 };
 
@@ -2800,10 +2802,11 @@ struct VPWidenStoreEVLRecipe final : public VPWidenMemoryRecipe {
       assert(getStoredValue() != Op && "unexpected store of EVL");
       return true;
     }
-    // Widened, consecutive memory operations only demand the first lane of
-    // their address, unless the same operand is also stored. That latter can
+    // Widened, consecutive/strided memory operations only demand the first lane
+    // of their address, unless the same operand is also stored. That latter can
     // happen with opaque pointers.
-    return Op == getAddr() && isConsecutive() && Op != getStoredValue();
+    return Op == getAddr() && (isConsecutive() || isStrided()) &&
+           Op != getStoredValue();
   }
 };
 
