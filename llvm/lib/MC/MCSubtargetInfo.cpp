@@ -317,14 +317,20 @@ FeatureBitset MCSubtargetInfo::ApplyFeatureFlag(StringRef FS) {
 
 bool MCSubtargetInfo::checkFeatures(StringRef FS) const {
   SubtargetFeatures T(FS);
-  FeatureBitset Set, All;
-  for (std::string F : T.getFeatures()) {
-    ::ApplyFeatureFlag(Set, F, ProcFeatures);
-    if (F[0] == '-')
-      F[0] = '+';
-    ::ApplyFeatureFlag(All, F, ProcFeatures);
-  }
-  return (FeatureBits & All) == Set;
+  return all_of(T.getFeatures(), [this](const std::string &F) {
+    assert(SubtargetFeatures::hasFlag(F) &&
+           "Feature flags should start with '+' or '-'");
+    const SubtargetFeatureKV *FeatureEntry =
+        Find(SubtargetFeatures::StripFlag(F), ProcFeatures);
+    if (!FeatureEntry) {
+      errs() << "'" << F << "' is not a recognized feature for this target"
+             << " (ignoring feature)\n";
+      return true;
+    }
+
+    return FeatureBits.test(FeatureEntry->Value) ==
+           SubtargetFeatures::isEnabled(F);
+  });
 }
 
 const MCSchedModel &MCSubtargetInfo::getSchedModelForCPU(StringRef CPU) const {
