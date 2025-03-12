@@ -2556,12 +2556,24 @@ SDValue SITargetLowering::getGlobalWorkGroupId(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
     AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
-    AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const {
+    AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV,
+    bool ClustersKnownToBeUsed) const {
   // WorkGroupIdXYZ = ClusterId == 0 ?
   //   ClusterIdXYZ :
   //   ClusterIdXYZ * (ClusterMaxIdXYZ + 1) + ClusterWorkGroupIdXYZ
   SDValue ClusterIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterIdPV);
   SDLoc SL(ClusterIdXYZ);
+  SDValue ClusterMaxIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterMaxIdPV);
+  SDValue One = DAG.getConstant(1, SL, VT);
+  SDValue ClusterSizeXYZ = DAG.getNode(ISD::ADD, SL, VT, ClusterMaxIdXYZ, One);
+  SDValue ClusterWorkGroupIdXYZ =
+      getPreloadedValue(DAG, MFI, VT, ClusterWorkGroupIdPV);
+  SDValue GlobalIdXYZ =
+      DAG.getNode(ISD::ADD, SL, VT, ClusterWorkGroupIdXYZ,
+                  DAG.getNode(ISD::MUL, SL, VT, ClusterIdXYZ, ClusterSizeXYZ));
+  if (ClustersKnownToBeUsed)
+    return GlobalIdXYZ;
+
   using namespace AMDGPU::Hwreg;
   SDValue ClusterIdField = DAG.getTargetConstant(
       AMDGPU::isGFX1250Only(*Subtarget)
@@ -2571,14 +2583,6 @@ SDValue SITargetLowering::getGlobalWorkGroupId(
   SDNode *GetReg =
       DAG.getMachineNode(AMDGPU::S_GETREG_B32_const, SL, VT, ClusterIdField);
   SDValue ClusterId(GetReg, 0);
-  SDValue ClusterMaxIdXYZ = getPreloadedValue(DAG, MFI, VT, ClusterMaxIdPV);
-  SDValue One = DAG.getConstant(1, SL, VT);
-  SDValue ClusterSizeXYZ = DAG.getNode(ISD::ADD, SL, VT, ClusterMaxIdXYZ, One);
-  SDValue ClusterWorkGroupIdXYZ =
-      getPreloadedValue(DAG, MFI, VT, ClusterWorkGroupIdPV);
-  SDValue GlobalIdXYZ =
-      DAG.getNode(ISD::ADD, SL, VT, ClusterWorkGroupIdXYZ,
-                  DAG.getNode(ISD::MUL, SL, VT, ClusterIdXYZ, ClusterSizeXYZ));
   SDValue Zero = DAG.getConstant(0, SL, VT);
   return DAG.getNode(ISD::SELECT_CC, SL, VT, ClusterId, Zero, ClusterIdXYZ,
                      GlobalIdXYZ, DAG.getCondCode(ISD::SETEQ));
@@ -2588,23 +2592,25 @@ SDValue SITargetLowering::getPreloadedValue(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue PVID) const {
   // Return the global position in the grid where clusters are supported.
+  std::optional<std::array<unsigned, 3>> ClusterDims = MFI.getClusterDims();
   if (Subtarget->hasClusters()) {
+    bool ClustersKnownToBeUsed = ClusterDims.has_value();
     switch (PVID) {
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_X:
       return getGlobalWorkGroupId(
           DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_X,
           AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X, ClustersKnownToBeUsed);
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Y:
       return getGlobalWorkGroupId(
           DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_Y,
           AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y, ClustersKnownToBeUsed);
     case AMDGPUFunctionArgInfo::WORKGROUP_ID_Z:
       return getGlobalWorkGroupId(
           DAG, MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_ID_Z,
           AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z,
-          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
+          AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z, ClustersKnownToBeUsed);
     default:
       break;
     }
@@ -2639,7 +2645,6 @@ SDValue SITargetLowering::getPreloadedValue(
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x00F00000u);
   const ArgDescriptor ClusterWorkGroupMaxFlatID =
       ArgDescriptor::createRegister(AMDGPU::TTMP6, 0x0F000000u);
-  std::optional<std::array<unsigned, 3>> ClusterDims = MFI.getClusterDims();
 
   auto LoadConstant = [&](unsigned N) {
     return DAG.getConstant(N, SDLoc(), VT);

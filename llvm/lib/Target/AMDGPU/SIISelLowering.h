@@ -67,7 +67,8 @@ private:
       SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
-      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
+      AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV,
+      bool ClustersKnownToBeUsed) const;
   SDValue getPreloadedValue(SelectionDAG &DAG,
                             const SIMachineFunctionInfo &MFI,
                             EVT VT,
