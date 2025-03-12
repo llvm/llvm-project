@@ -2383,7 +2383,7 @@ define <2 x i16> @v2i16_hi16bits(ptr addrspace(1) %x0) {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load0 = load <2 x i16>, ptr addrspace(1) %x0, align 4
-  %insert1 = insertelement <2 x i16> undef, i16 0, i32 0
+  %insert1 = insertelement <2 x i16> poison, i16 0, i32 0
   %insert2 = insertelement <2 x i16> %insert1, i16 0, i32 1
   %vec.ret = shufflevector <2 x i16> %insert2, <2 x i16> %load0, <2 x i32> <i32 0, i32 3>
   ret <2 x i16> %vec.ret
@@ -2415,7 +2415,7 @@ define <2 x half> @v2half_hi16bits(ptr addrspace(1) %x0) {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load0 = load <2 x half>, ptr addrspace(1) %x0, align 4
-  %insert1 = insertelement <2 x half> undef, half 0.0, i32 0
+  %insert1 = insertelement <2 x half> poison, half 0.0, i32 0
   %insert2 = insertelement <2 x half> %insert1, half 0.0, i32 1
   %vec.ret = shufflevector <2 x half> %insert2, <2 x half> %load0, <2 x i32> <i32 0, i32 3>
   ret <2 x half> %vec.ret
@@ -5330,7 +5330,7 @@ define <2 x bfloat> @v2bfloat_hi16bits(ptr addrspace(1) %x0) {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load0 = load <2 x bfloat>, ptr addrspace(1) %x0, align 4
-  %insert1 = insertelement <2 x bfloat> undef, bfloat 0.0, i32 0
+  %insert1 = insertelement <2 x bfloat> poison, bfloat 0.0, i32 0
   %insert2 = insertelement <2 x bfloat> %insert1, bfloat 0.0, i32 1
   %vec.ret = shufflevector <2 x bfloat> %insert2, <2 x bfloat> %load0, <2 x i32> <i32 0, i32 3>
   ret <2 x bfloat> %vec.ret
