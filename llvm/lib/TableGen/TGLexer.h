@@ -154,6 +154,7 @@ enum TokKind {
   XToLower,
   XToUpper,
   XRange,
+  XRecords,
   XGetDagArg,
   XGetDagName,
   XSetDagArg,
