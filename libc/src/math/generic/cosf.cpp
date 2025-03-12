@@ -20,6 +20,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 // Exceptional cases for cosf.
 static constexpr size_t N_EXCEPTS = 6;
 
@@ -38,6 +39,7 @@ static constexpr fputil::ExceptValues<float, N_EXCEPTS> COSF_EXCEPTS{{
     // x = 0x1.ddebdep120, cos(x) = 0x1.114438p-1 (RZ)
     {0x7beef5ef, 0x3f08a21c, 1, 0, 0},
 }};
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
   using FPBits = typename fputil::FPBits<float>;
@@ -108,8 +110,10 @@ LLVM_LIBC_FUNCTION(float, cosf, (float x)) {
 #endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
   }
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   if (auto r = COSF_EXCEPTS.lookup(x_abs); LIBC_UNLIKELY(r.has_value()))
     return r.value();
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // x is inf or nan.
   if (LIBC_UNLIKELY(x_abs >= 0x7f80'0000U)) {
