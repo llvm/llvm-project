@@ -316,7 +316,6 @@ protected:
     IK_FoldOpInit,
     IK_IsAOpInit,
     IK_ExistsOpInit,
-    IK_MatchOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
