@@ -4017,8 +4017,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       if (const MDNode *MD = LD->getRanges()) {
         ConstantInt *Lower = mdconst::extract<ConstantInt>(MD->getOperand(0));
 
-        Known0 = Known0.trunc(Lower->getBitWidth());
-        computeKnownBitsFromRangeMetadata(*MD, Known0);
+        KnownBits KnownMetadata(Lower->getBitWidth());
+        computeKnownBitsFromRangeMetadata(*MD, KnownMetadata);
+        Known0=KnownMetadata;
         if (VT.isVector()) {
           if (!getDataLayout().isLittleEndian())
             break;
