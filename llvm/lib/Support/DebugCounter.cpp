@@ -208,7 +208,7 @@ void DebugCounter::print(raw_ostream &OS) const {
   OS << "Counters and values:\n";
   for (auto &CounterName : CounterNames) {
     unsigned CounterID = getCounterId(std::string(CounterName));
-    auto &C = Us.Counters[CounterID];
+    const CounterInfo &C = Us.Counters[CounterID];
     OS << left_justify(RegisteredCounters[CounterID], 32) << ": {" << C.Count
        << ",";
     printChunks(OS, C.Chunks);
