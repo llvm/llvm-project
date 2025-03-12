@@ -347,12 +347,12 @@ struct IndexedCallSiteInfo {
   // The call stack ID for this call site
   CallStackId CSId = 0;
   // The GUIDs of the callees at this call site
-  std::vector<GlobalValue::GUID> CalleeGuids;
+  SmallVector<GlobalValue::GUID, 1> CalleeGuids;
 
   IndexedCallSiteInfo() = default;
   IndexedCallSiteInfo(CallStackId CSId) : CSId(CSId) {}
   IndexedCallSiteInfo(CallStackId CSId,
-                      std::vector<GlobalValue::GUID> CalleeGuids)
+                      SmallVector<GlobalValue::GUID, 1> CalleeGuids)
       : CSId(CSId), CalleeGuids(std::move(CalleeGuids)) {}
 
   bool operator==(const IndexedCallSiteInfo &Other) const {
@@ -483,12 +483,12 @@ struct CallSiteInfo {
   std::vector<Frame> Frames;
 
   // The GUIDs of the callees at this call site
-  std::vector<GlobalValue::GUID> CalleeGuids;
+  SmallVector<GlobalValue::GUID, 1> CalleeGuids;
 
   CallSiteInfo() = default;
   CallSiteInfo(std::vector<Frame> Frames) : Frames(std::move(Frames)) {}
   CallSiteInfo(std::vector<Frame> Frames,
-               std::vector<GlobalValue::GUID> CalleeGuids)
+               SmallVector<GlobalValue::GUID, 1> CalleeGuids)
       : Frames(std::move(Frames)), CalleeGuids(std::move(CalleeGuids)) {}
 
   bool operator==(const CallSiteInfo &Other) const {
