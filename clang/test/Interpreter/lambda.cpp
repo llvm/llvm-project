@@ -18,7 +18,7 @@ auto r3 = l2();
 // Verify non-local lambda capture error is correctly reported
 int x = 42;
 
-// expected-error@+1 {{non-local lambda expression cannot have a capture-default}}
+// expected-error {{non-local lambda expression cannot have a capture-default}}
 auto capture = [&]() { return x * 2; };
 
 // Ensure valid C++ code before exiting
