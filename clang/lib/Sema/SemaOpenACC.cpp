@@ -1904,7 +1904,31 @@ DeclGroupRef SemaOpenACC::ActOnEndDeclDirective(
         Diag(DirLoc, diag::note_acc_construct_here)
             << OpenACCDirectiveKind::Routine;
       }
-      FD->addAttr(OpenACCRoutineAnnotAttr::Create(getASTContext(), DirLoc));
+
+      // OpenACC 3.3 2.15:
+      // A bind clause may not bind to a routine name that has a visible bind
+      // clause.
+      // TODO OpenACC: There is an exception to this rule that if these are the
+      // implicit function style (that is, without a name), they may have
+      // duplicates as long as they have the same name.
+      auto BindItr = llvm::find_if(Clauses, llvm::IsaPred<OpenACCBindClause>);
+      if (auto *A = FD->getAttr<OpenACCRoutineAnnotAttr>()) {
+        if (BindItr != Clauses.end()) {
+          if (A->BindClause.isInvalid()) {
+            // If we have a bind clause, and the function doesn't have one
+            // annotated yet, set it.
+            A->BindClause = (*BindItr)->getBeginLoc();
+          } else {
+            Diag((*BindItr)->getBeginLoc(), diag::err_acc_duplicate_bind);
+            Diag(A->BindClause, diag::note_acc_previous_clause_here);
+          }
+        }
+      } else {
+        auto *RAA = OpenACCRoutineAnnotAttr::Create(getASTContext(), DirLoc);
+        FD->addAttr(RAA);
+        if (BindItr != Clauses.end())
+          RAA->BindClause = (*BindItr)->getBeginLoc();
+      }
     }
 
     return DeclGroupRef{RoutineDecl};

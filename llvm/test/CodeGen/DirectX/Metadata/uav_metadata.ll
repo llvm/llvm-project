@@ -41,67 +41,67 @@ target triple = "dxil-pc-shadermodel6.6-compute"
 ; PRINT-NEXT:;                                       UAV  struct         r/w      U7             u8     1
 ; PRINT-NEXT:;                                       UAV    byte         r/w      U8             u9     1
 ; PRINT-NEXT:;                                       UAV     u64         buf      U9     u10,space2     1
+; PRINT-NEXT:;                                       UAV     f32         buf     U10      u4,space3   100
 
 define void @test() #0 {
   ; RWBuffer<half4> Zero : register(u0)
   %Zero_h = call target("dx.TypedBuffer", <4 x half>, 1, 0, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4f16_1_0_0t(
-                  i32 0, i32 0, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", <4 x half>, 1, 0, 0) %Zero_h, ptr @Zero, align 4
  
   ; RWBuffer<float4> One : register(u1)
   %One_h = call target("dx.TypedBuffer", <2 x float>, 1, 0, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v2f32_1_0_0t(
-                  i32 0, i32 1, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", <2 x float>, 1, 0, 0) %One_h, ptr @One, align 4
  
   ; RWBuffer<double> Two : register(u2);
   %Two_h = call target("dx.TypedBuffer", double, 1, 0, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
-                  i32 0, i32 2, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 2, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", double, 1, 0, 0) %Two_h, ptr @Two, align 4
 
   ; RWBuffer<int4> Three : register(u3);
   %Three_h = call target("dx.TypedBuffer", <4 x i32>, 1, 0, 1)
-            @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_i32_1_0_1t(
-                  i32 0, i32 3, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 3, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", <4 x i32>, 1, 0, 1) %Three_h, ptr @Three, align 4
 
   ; ByteAddressBuffer Four : register(u5)
   %Four_h = call target("dx.RawBuffer", i8, 1, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_1_0t(
-                  i32 0, i32 5, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 5, i32 1, i32 0, i1 false)
   store target("dx.RawBuffer", i8, 1, 0) %Four_h, ptr @Four, align 4
 
   ; RWStructuredBuffer<int16_t> Five : register(u6);
   %Five_h = call target("dx.RawBuffer", i16, 1, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i16_1_0t(
-                  i32 0, i32 6, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 6, i32 1, i32 0, i1 false)
   store target("dx.RawBuffer", i16, 1, 0) %Five_h, ptr @Five, align 4
   
   ; RasterizerOrderedBuffer<int4> Six : register(u7);
   %Six_h = call target("dx.TypedBuffer", <4 x i32>, 1, 1, 1)
-            @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_v4i32_1_1_1t(
-                  i32 0, i32 7, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 7, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", <4 x i32>, 1, 1, 1) %Six_h, ptr @Six, align 4
 
   ; RasterizerOrderedStructuredBuffer<uint4> Seven : register(u3, space10);
   %Seven_h = call target("dx.RawBuffer", <4 x i32>, 1, 1)
-            @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_v4i32_1_1t(
-                  i32 0, i32 8, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 8, i32 1, i32 0, i1 false)
   store target("dx.RawBuffer", <4 x i32>, 1, 1) %Seven_h, ptr @Seven, align 4
 
   ; RasterizerOrderedByteAddressBuffer Eight : register(u9); 
   %Eight_h = call target("dx.RawBuffer", i8, 1, 1) 
-            @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_i8_1_1t(
-                  i32 0, i32 9, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 9, i32 1, i32 0, i1 false)
   store target("dx.RawBuffer", i8, 1, 1) %Eight_h, ptr @Eight, align 4
 
   ; RWBuffer<double> Nine : register(u2);
   %Nine_h = call target("dx.TypedBuffer", i64, 1, 0, 0)
-            @llvm.dx.resource.handlefrombinding.tdx.TypedBuffer_f64_1_0_0t(
-                  i32 2, i32 10, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 2, i32 10, i32 1, i32 0, i1 false)
   store target("dx.TypedBuffer", i64, 1, 0, 0) %Nine_h, ptr @Nine, align 4
+
+  ; RWBuffer<float4> Array[100] : register(u4, space3);
+  ; RWBuffer<float4> B1 = Array[30];
+  ; RWBuffer<float4> B1 = Array[42];
+  ; resource array accesses should produce one metadata entry   
+  %Array_30_h = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
+            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 30, i1 false)
+  %Array_42_h = call target("dx.TypedBuffer", <4 x float>, 1, 0, 0)
+            @llvm.dx.resource.handlefrombinding(i32 3, i32 4, i32 100, i32 42, i1 false)
 
   ret void
 }
@@ -114,7 +114,7 @@ attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 ; CHECK: [[UAVList]] = !{![[Zero:[0-9]+]], ![[One:[0-9]+]], ![[Two:[0-9]+]],
 ; CHECK-SAME: ![[Three:[0-9]+]], ![[Four:[0-9]+]], ![[Five:[0-9]+]],
 ; CHECK-SAME: ![[Six:[0-9]+]], ![[Seven:[0-9]+]], ![[Eight:[0-9]+]],
-; CHECK-SAME: ![[Nine:[0-9]+]]}
+; CHECK-SAME: ![[Nine:[0-9]+]], ![[Array:[0-9]+]]}
 
 ; CHECK: ![[Zero]] = !{i32 0, ptr @0, !"", i32 0, i32 0, i32 1, i32 10, i1 false, i1 false, i1 false, ![[Half:[0-9]+]]}
 ; CHECK: ![[Half]] = !{i32 0, i32 8}
@@ -133,3 +133,4 @@ attributes #0 = { noinline nounwind "hlsl.shader"="compute" }
 ; CHECK: ![[Eight]] = !{i32 8, ptr @8, !"", i32 0, i32 9, i32 1, i32 11, i1 false, i1 false, i1 true, null}
 ; CHECK: ![[Nine]] = !{i32 9, ptr @9, !"", i32 2, i32 10, i32 1, i32 10, i1 false, i1 false, i1 false, ![[U64:[0-9]+]]}
 ; CHECK: ![[U64]] = !{i32 0, i32 7}
+; CHECK: ![[Array]] = !{i32 10, ptr @10, !"", i32 3, i32 4, i32 100, i32 10, i1 false, i1 false, i1 false, ![[Float]]}

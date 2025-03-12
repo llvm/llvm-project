@@ -1,8 +1,8 @@
-================
-StdFix Functions
-================
+========
+stdfix.h
+========
 
-.. include:: ../../check.rst
+.. include:: ../check.rst
 
 Standards and Goals
 -------------------
@@ -89,9 +89,9 @@ The following functions are included in the ISO/IEC TR 18037:2008 standard.
 ================== =========
 Type Generic Macro Available
 ================== =========
-absfx
-countlsfx
-roundfx
+absfx              |check|
+countlsfx          |check|
+roundfx            |check|
 ================== =========
 
 

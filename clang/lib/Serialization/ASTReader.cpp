@@ -11094,6 +11094,9 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_atomic_default_mem_order:
     C = new (Context) OMPAtomicDefaultMemOrderClause();
     break;
+  case llvm::omp::OMPC_self_maps:
+    C = new (Context) OMPSelfMapsClause();
+    break;
   case llvm::omp::OMPC_at:
     C = new (Context) OMPAtClause();
     break;
@@ -11574,6 +11577,8 @@ void OMPClauseReader::VisitOMPAtomicDefaultMemOrderClause(
   C->setLParenLoc(Record.readSourceLocation());
   C->setAtomicDefaultMemOrderKindKwLoc(Record.readSourceLocation());
 }
+
+void OMPClauseReader::VisitOMPSelfMapsClause(OMPSelfMapsClause *) {}
 
 void OMPClauseReader::VisitOMPAtClause(OMPAtClause *C) {
   C->setAtKind(static_cast<OpenMPAtClauseKind>(Record.readInt()));
@@ -12733,6 +12738,8 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
   }
   case OpenACCClauseKind::Seq:
     return OpenACCSeqClause::Create(getContext(), BeginLoc, EndLoc);
+  case OpenACCClauseKind::NoHost:
+    return OpenACCNoHostClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::Finalize:
     return OpenACCFinalizeClause::Create(getContext(), BeginLoc, EndLoc);
   case OpenACCClauseKind::IfPresent:
@@ -12795,8 +12802,15 @@ OpenACCClause *ASTRecordReader::readOpenACCClause() {
                                                LParenLoc, VarList, EndLoc);
   }
 
-  case OpenACCClauseKind::NoHost:
-  case OpenACCClauseKind::Bind:
+  case OpenACCClauseKind::Bind: {
+    SourceLocation LParenLoc = readSourceLocation();
+    bool IsString = readBool();
+    if (IsString)
+      return OpenACCBindClause::Create(getContext(), BeginLoc, LParenLoc,
+                                       cast<StringLiteral>(readExpr()), EndLoc);
+    return OpenACCBindClause::Create(getContext(), BeginLoc, LParenLoc,
+                                     readIdentifier(), EndLoc);
+  }
   case OpenACCClauseKind::Invalid:
     llvm_unreachable("Clause serialization not yet implemented");
   }
