@@ -20,6 +20,7 @@ add_clang_library(clangSema
   DeclSpec.cpp
   DelayedDiagnostic.cpp
   HeuristicResolver.cpp
+  HLSLBuiltinTypeDeclBuilder.cpp
   HLSLExternalSemaSource.cpp
   IdentifierResolver.cpp
   JumpDiagnostics.cpp
