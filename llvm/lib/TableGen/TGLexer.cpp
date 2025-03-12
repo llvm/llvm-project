@@ -619,6 +619,7 @@ tgtok::TokKind TGLexer::LexExclaim() {
           .Case("sra", tgtok::XSRA)
           .Case("srl", tgtok::XSRL)
           .Case("cast", tgtok::XCast)
+          .Case("defined", tgtok::XDefined)
           .Case("empty", tgtok::XEmpty)
           .Case("subst", tgtok::XSubst)
           .Case("foldl", tgtok::XFoldl)

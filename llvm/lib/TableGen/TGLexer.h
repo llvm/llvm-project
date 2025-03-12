@@ -134,6 +134,7 @@ enum TokKind {
   XHead,
   XTail,
   XSize,
+  XDefined,
   XEmpty,
   XInitialized,
   XIf,

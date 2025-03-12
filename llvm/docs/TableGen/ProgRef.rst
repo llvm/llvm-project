@@ -220,16 +220,16 @@ TableGen provides "bang operators" that have a wide variety of uses:
 .. productionlist::
    BangOperator: one of
                : !add         !and         !cast        !con         !dag
-               : !div         !empty       !eq          !exists      !filter
-               : !find        !foldl       !foreach     !ge          !getdagarg
-               : !getdagname  !getdagop    !gt          !head        !if
-               : !initialized !interleave  !isa         !le          !listconcat
-               : !listflatten !listremove  !listsplat   !logtwo      !lt
-               : !mul         !ne          !not         !or          !range
-               : !repr        !setdagarg   !setdagname  !setdagop    !shl
-               : !size        !sra         !srl         !strconcat   !sub
-               : !subst       !substr      !tail        !tolower     !toupper
-               : !xor
+               : !defined     !div         !empty       !eq          !exists
+               : !filter      !find        !foldl       !foreach     !ge
+               : !getdagarg   !getdagname  !getdagop    !gt          !head
+               : !if          !initialized !interleave  !isa         !le
+               : !listconcat  !listflatten !listremove  !listsplat   !logtwo
+               : !lt          !mul         !ne          !not         !or
+               : !range       !repr        !setdagarg   !setdagname  !setdagop
+               : !shl         !size        !sra         !srl         !strconcat
+               : !sub         !subst       !substr      !tail        !tolower
+               : !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -1721,6 +1721,11 @@ and non-0 as true.
 
     Example: ``!dag(op, [a1, a2, ?], ["name1", "name2", "name3"])`` results in
     ``(op a1-value:$name1, a2-value:$name2, ?:$name3)``.
+
+``!defined<``\ *type*\ ``>([``\ *regex*\ ``])``
+    This operator produces a list of records whose type is *type*. If *regex*
+    is provided, only records whose name matches the regular expression *regex*
+    will be included.
 
 ``!div(``\ *a*\ ``,`` *b*\ ``)``
     This operator performs signed division of *a* by *b*, and produces the quotient.
