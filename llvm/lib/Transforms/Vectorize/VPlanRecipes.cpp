@@ -2224,7 +2224,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   RecurKind Kind = RdxDesc.getRecurrenceKind();
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
-  State.Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+  if (hasFastMathFlags())
+    State.Builder.setFastMathFlags(getFastMathFlags());
   State.setDebugLocFrom(getDebugLoc());
   Value *NewVecOp = State.get(getVecOp());
   if (VPValue *Cond = getCondOp()) {
@@ -2275,7 +2276,8 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(Builder);
   const RecurrenceDescriptor &RdxDesc = getRecurrenceDescriptor();
-  Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+  if (hasFastMathFlags())
+    Builder.setFastMathFlags(getFastMathFlags());
 
   RecurKind Kind = RdxDesc.getRecurrenceKind();
   Value *Prev = State.get(getChainOp(), /*IsScalar*/ true);
@@ -2312,6 +2314,8 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   Type *ElementTy = Ctx.Types.inferScalarType(this);
   auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
   unsigned Opcode = RdxDesc.getOpcode();
+  FastMathFlags FMFs =
+      hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
 
   // TODO: Support any-of and in-loop reductions.
   assert(
@@ -2331,12 +2335,12 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
       Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, Ctx.CostKind);
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
-    return Cost + Ctx.TTI.getMinMaxReductionCost(
-                      Id, VectorTy, RdxDesc.getFastMathFlags(), Ctx.CostKind);
+    return Cost +
+           Ctx.TTI.getMinMaxReductionCost(Id, VectorTy, FMFs, Ctx.CostKind);
   }
 
-  return Cost + Ctx.TTI.getArithmeticReductionCost(
-                    Opcode, VectorTy, RdxDesc.getFastMathFlags(), Ctx.CostKind);
+  return Cost + Ctx.TTI.getArithmeticReductionCost(Opcode, VectorTy, FMFs,
+                                                   Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2347,8 +2351,8 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " +";
-  if (isa<FPMathOperator>(getUnderlyingInstr()))
-    O << getUnderlyingInstr()->getFastMathFlags();
+  if (isa_and_nonnull<FPMathOperator>(getUnderlyingValue()))
+    printFlags(O);
   O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (isConditional()) {
@@ -2369,8 +2373,8 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " +";
-  if (isa<FPMathOperator>(getUnderlyingInstr()))
-    O << getUnderlyingInstr()->getFastMathFlags();
+  if (isa_and_nonnull<FPMathOperator>(getUnderlyingValue()))
+    printFlags(O);
   O << " vp.reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   O << ", ";

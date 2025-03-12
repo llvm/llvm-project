@@ -713,6 +713,8 @@ public:
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenIntrinsicSC ||
+           R->getVPDefID() == VPRecipeBase::VPReductionSC ||
+           R->getVPDefID() == VPRecipeBase::VPReductionEVLSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
            R->getVPDefID() == VPRecipeBase::VPReverseVectorPointerSC ||
            R->getVPDefID() == VPRecipeBase::VPVectorPointerSC;
@@ -786,6 +788,12 @@ public:
     case OperationType::Other:
       break;
     }
+  }
+
+  /// Set fast-math flags for this recipe.
+  void setFastMathFlags(FastMathFlags FMFs) {
+    OpType = OperationType::FPMathOp;
+    this->FMFs = FMFs;
   }
 
   CmpInst::Predicate getPredicate() const {
@@ -2286,7 +2294,7 @@ public:
 /// A recipe to represent inloop reduction operations, performing a reduction on
 /// a vector operand into a scalar value, and adding the result to a chain.
 /// The Operands are {ChainOp, VecOp, [Condition]}.
-class VPReductionRecipe : public VPSingleDefRecipe {
+class VPReductionRecipe : public VPRecipeWithIRFlags {
   /// The recurrence decriptor for the reduction in question.
   const RecurrenceDescriptor &RdxDesc;
   bool IsOrdered;
@@ -2296,29 +2304,32 @@ class VPReductionRecipe : public VPSingleDefRecipe {
 protected:
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
                     Instruction *I, ArrayRef<VPValue *> Operands,
-                    VPValue *CondOp, bool IsOrdered, DebugLoc DL)
-      : VPSingleDefRecipe(SC, Operands, I, DL), RdxDesc(R),
+                    VPValue *CondOp, bool IsOrdered)
+      : VPRecipeWithIRFlags(SC, Operands, *I), RdxDesc(R),
         IsOrdered(IsOrdered) {
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
     }
+    // The inloop reduction may across multiple scalar instruction and the
+    // underlying instruction may not contains the corresponding flags. Set the
+    // flags explicit from the redurrence descriptor.
+    setFastMathFlags(R.getFastMathFlags());
   }
 
 public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    bool IsOrdered, DebugLoc DL = {})
+                    bool IsOrdered)
       : VPReductionRecipe(VPDef::VPReductionSC, R, I,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
-                          IsOrdered, DL) {}
+                          IsOrdered) {}
 
   ~VPReductionRecipe() override = default;
 
   VPReductionRecipe *clone() override {
     return new VPReductionRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                 getVecOp(), getCondOp(), IsOrdered,
-                                 getDebugLoc());
+                                 getVecOp(), getCondOp(), IsOrdered);
   }
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -2373,7 +2384,7 @@ public:
             VPDef::VPReductionEVLSC, R.getRecurrenceDescriptor(),
             cast_or_null<Instruction>(R.getUnderlyingValue()),
             ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
-            R.isOrdered(), R.getDebugLoc()) {}
+            R.isOrdered()) {}
 
   ~VPReductionEVLRecipe() override = default;
 
