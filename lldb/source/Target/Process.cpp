@@ -1065,25 +1065,29 @@ const char *Process::GetExitDescription() {
 bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Use a mutex to protect setting the exit status.
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
-  telemetry::ScopedDispatcher<telemetry::TargetInfo> helper;
+  telemetry::ScopedDispatcher<telemetry::ProcessExitInfo> helper;
 
-  // TODO: Find the executable-module's UUID somehow. (Maybe save the UUID in
-  // Target?) We might not have a valid executable-mod anymore.
-  helper.DispatchNow([&](telemetry::TargetInfo *info) {
-    // Check if there is (still) a valid target and get the debugger from it.
-    TargetSP target_sp(Debugger::FindTargetWithProcessID(m_pid));
-    if (target_sp)
-      helper.SetDebugger(&(target_sp->GetDebugger()));
+  // Find the executable-module's UUID, if available.
+  UUID exec_uuid;
+  // Check if there is (still) a valid target and get the debugger and exec_uuid
+  // from it.
+  TargetSP target_sp(Debugger::FindTargetWithProcessID(m_pid));
+  if (target_sp) {
+    helper.SetDebugger(&(target_sp->GetDebugger()));
+    if (ModuleSP exec_mod = target_sp->GetExecutableModule())
+      exec_uuid = exec_mod->GetUUID();
+  }
 
-    // info->target_uuid = target_uuid;
+  helper.DispatchNow([&](telemetry::ProcessExitInfo *info) {
+    info->exec_uuid = exec_uuid;
     info->pid = m_pid;
     info->is_start_entry = true;
+    info->exit_desc = {status, exit_string.str()};
   });
 
-  helper.DispatchOnExit([&](telemetry::TargetInfo *info) {
-    // info->target_uuid = target_uuid;
+  helper.DispatchOnExit([&](telemetry::ProcessExitInfo *info) {
+    info->exec_uuid = exec_uuid;
     info->pid = m_pid;
-    info->exit_desc = {status, exit_string.str()};
   });
 
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));

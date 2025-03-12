@@ -1560,25 +1560,26 @@ void Target::DidExec() {
 
 void Target::SetExecutableModule(ModuleSP &executable_sp,
                                  LoadDependentFiles load_dependent_files) {
-  telemetry::ScopedDispatcher<telemetry::TargetInfo> helper(&m_debugger);
+  telemetry::ScopedDispatcher<telemetry::ExecModuleInfo> helper(&m_debugger);
   Log *log = GetLog(LLDBLog::Target);
   ClearModules(false);
 
   if (executable_sp) {
+    m_current_exec_mod_uuid = executable_sp->GetUUID();
     lldb::pid_t pid;
     if (ProcessSP proc = GetProcessSP())
       pid = proc->GetID();
-    helper.DispatchNow([&](telemetry::TargetInfo *info) {
+    helper.DispatchNow([&](telemetry::ExecModuleInfo *info) {
       info->exec_mod = executable_sp;
-      info->target_uuid = executable_sp->GetUUID();
+      info->exec_uuid = m_current_exec_mod_uuid;
       info->pid = pid;
       info->arch_name = executable_sp->GetArchitecture().GetArchitectureName();
       info->is_start_entry = true;
     });
 
-    helper.DispatchOnExit([&](telemetry::TargetInfo *info) {
+    helper.DispatchOnExit([&](telemetry::ExecModuleInfo *info) {
       info->exec_mod = executable_sp;
-      info->target_uuid = executable_sp->GetUUID();
+      info->exec_uuid = executable_sp->GetUUID();
       info->pid = pid;
     });
 
