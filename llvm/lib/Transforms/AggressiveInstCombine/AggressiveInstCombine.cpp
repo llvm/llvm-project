@@ -1224,67 +1224,6 @@ static bool foldLibCalls(Instruction &I, TargetTransformInfo &TTI,
   return false;
 }
 
-static bool tryNarrowMathIfNoOverflow(Instruction &I, TargetTransformInfo &TTI,
-                                      const DataLayout &DL) {
-  unsigned Opc = I.getOpcode();
-  Type *OldType = I.getType();
-
-  if (Opc != Instruction::Add && Opc != Instruction::Mul)
-    return false;
-
-  unsigned OrigBit = OldType->getScalarSizeInBits();
-  unsigned MaxBitsNeed = OrigBit;
-  switch (Opc) {
-  case Instruction::Add:
-    MaxBitsNeed = KnownBits::add(computeKnownBits(I.getOperand(0), DL),
-                                 computeKnownBits(I.getOperand(1), DL))
-                      .countMaxActiveBits();
-    break;
-  case Instruction::Mul:
-    MaxBitsNeed = KnownBits::mul(computeKnownBits(I.getOperand(0), DL),
-                                 computeKnownBits(I.getOperand(1), DL))
-                      .countMaxActiveBits();
-    break;
-  default:
-    break;
-  }
-
-  MaxBitsNeed = std::max<unsigned>(bit_ceil(MaxBitsNeed), 8);
-
-  if (OrigBit <= MaxBitsNeed)
-    return false;
-
-  Type *NewType = I.getType()->getWithNewBitWidth(MaxBitsNeed);
-
-  // Old cost
-  InstructionCost OldCost =
-      TTI.getArithmeticInstrCost(Opc, OldType, TTI::TCK_RecipThroughput);
-  // New cost of new op
-  InstructionCost NewCost =
-      TTI.getArithmeticInstrCost(Opc, NewType, TTI::TCK_RecipThroughput);
-  // New cost of narrowing 2 operands (use trunc)
-  NewCost += TTI.getCastInstrCost(Instruction::Trunc, NewType, OldType,
-                                  TTI.getCastContextHint(&I),
-                                  TTI::TCK_RecipThroughput) *
-             2;
-  // New cost of zext narrowed result to original type
-  NewCost += TTI.getCastInstrCost(Instruction::ZExt, OldType, NewType,
-                                  TTI.getCastContextHint(&I),
-                                  TTI::TCK_RecipThroughput);
-  if (NewCost >= OldCost) {
-    return false;
-  }
-  IRBuilder<> Builder(&I);
-  Value *Trun0 = Builder.CreateTrunc(I.getOperand(0), NewType);
-  Value *Trun1 = Builder.CreateTrunc(I.getOperand(1), NewType);
-  Value *Arith = Builder.CreateBinOp((Instruction::BinaryOps)Opc, Trun0, Trun1);
-
-  Value *Zext = Builder.CreateZExt(Arith, OldType);
-  I.replaceAllUsesWith(Zext);
-  I.eraseFromParent();
-  return true;
-}
-
 /// This is the entry point for folds that could be implemented in regular
 /// InstCombine, but they are separated because they are not expected to
 /// occur frequently and/or have more than a constant-length pattern match.
@@ -1317,7 +1256,6 @@ static bool foldUnusualPatterns(Function &F, DominatorTree &DT,
       // needs to be called at the end of this sequence, otherwise we may make
       // bugs.
       MadeChange |= foldLibCalls(I, TTI, TLI, AC, DT, DL, MadeCFGChange);
-      MadeChange |= tryNarrowMathIfNoOverflow(I, TTI, DL);
     }
   }
 
