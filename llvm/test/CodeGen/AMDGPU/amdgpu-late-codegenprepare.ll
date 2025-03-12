@@ -41,7 +41,7 @@ define amdgpu_kernel void @constant_from_offset_cast_global_null() {
   ret void
 }
 
-@gv = unnamed_addr addrspace(1) global [64 x i8] undef, align 4
+@gv = unnamed_addr addrspace(1) global [64 x i8] poison, align 4
 
 define amdgpu_kernel void @constant_from_offset_cast_global_gv() {
 ; GFX9-LABEL: @constant_from_offset_cast_global_gv(

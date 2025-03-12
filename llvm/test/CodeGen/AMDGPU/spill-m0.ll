@@ -48,7 +48,7 @@ endif:
   ret void
 }
 
-@lds = internal addrspace(3) global [64 x float] undef
+@lds = internal addrspace(3) global [64 x float] poison
 
 ; m0 is killed, so it isn't necessary during the entry block spill to preserve it
 ; GCN-LABEL: {{^}}spill_kill_m0_lds:

@@ -220,7 +220,7 @@ define void @test_8_3(ptr %p) {
   ret void
 }
 
-@shm = internal addrspace(3) global [2 x i8] undef, align 4
+@shm = internal addrspace(3) global [2 x i8] poison, align 4
 
 ; CHECK-LABEL: Function: test_8_4
 ; CHECK: NoAlias:   i8* %p, i8 addrspace(3)* %p1

@@ -6,7 +6,7 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
-@lds.obj = addrspace(3) global [256 x i32] undef, align 4
+@lds.obj = addrspace(3) global [256 x i32] poison, align 4
 
 define amdgpu_kernel void @write_ds_sub0_offset0_global() #0 {
 ; CI-LABEL: write_ds_sub0_offset0_global:
