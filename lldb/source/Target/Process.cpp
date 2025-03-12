@@ -1074,8 +1074,7 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   TargetSP target_sp(Debugger::FindTargetWithProcessID(m_pid));
   if (target_sp) {
     helper.SetDebugger(&(target_sp->GetDebugger()));
-    if (ModuleSP exec_mod = target_sp->GetExecutableModule())
-      exec_uuid = exec_mod->GetUUID();
+    exec_uuid = target_sp->GetExecModuleUUID();
   }
 
   helper.DispatchNow([&](telemetry::ProcessExitInfo *info) {
