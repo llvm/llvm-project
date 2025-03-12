@@ -1321,8 +1321,11 @@ const Init *BinOpInit::Fold(const Record *CurRec) const {
   }
   case MATCH: {
     const auto *StrInit = dyn_cast<StringInit>(LHS);
+    if (!StrInit)
+      return this;
+
     const auto *RegexInit = dyn_cast<StringInit>(RHS);
-    if (!(StrInit && RegexInit))
+    if (!RegexInit)
       return this;
 
     StringRef RegexStr = RegexInit->getValue();
