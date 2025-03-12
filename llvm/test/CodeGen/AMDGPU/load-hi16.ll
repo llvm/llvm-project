@@ -66,7 +66,7 @@ entry:
   %load.lo = load i16, ptr addrspace(3) %in
   %load.hi = load i16, ptr addrspace(3) %gep
   store i16 %load.lo, ptr addrspace(3) null
-  %build0 = insertelement <2 x i16> undef, i16 %load.lo, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %load.lo, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load.hi, i32 1
   ret <2 x i16> %build1
 }
@@ -133,7 +133,7 @@ entry:
   %load.lo = load i16, ptr addrspace(3) %in
   %load.hi = load i16, ptr addrspace(3) %gep
   store i16 %load.hi, ptr addrspace(3) null
-  %build0 = insertelement <2 x i16> undef, i16 %load.lo, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %load.lo, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load.hi, i32 1
   ret <2 x i16> %build1
 }
@@ -201,7 +201,7 @@ entry:
   %load.hi = load i16, ptr addrspace(3) %gep
   store i16 %load.lo, ptr addrspace(3) %out0
   store i16 %load.hi, ptr addrspace(3) %out1
-  %build0 = insertelement <2 x i16> undef, i16 %load.lo, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %load.lo, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load.hi, i32 1
   ret <2 x i16> %build1
 }
@@ -239,7 +239,7 @@ define <2 x i16> @load_local_hi_v2i16_undeflo(ptr addrspace(3) %in) #0 {
 ; GFX900-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load i16, ptr addrspace(3) %in
-  %build = insertelement <2 x i16> undef, i16 %load, i32 1
+  %build = insertelement <2 x i16> poison, i16 %load, i32 1
   ret <2 x i16> %build
 }
 
@@ -280,7 +280,7 @@ define <2 x i16> @load_local_hi_v2i16_reglo(ptr addrspace(3) %in, i16 %reg) #0 {
 ; GFX900-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load i16, ptr addrspace(3) %in
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
   ret <2 x i16> %build1
 }
@@ -328,7 +328,7 @@ define void @load_local_hi_v2i16_reglo_vreg(ptr addrspace(3) %in, i16 %reg) #0 {
 ; GFX900-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load i16, ptr addrspace(3) %in
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -459,7 +459,7 @@ define void @load_local_hi_v2f16_reglo_vreg(ptr addrspace(3) %in, half %reg) #0 
 ; GFX900-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load half, ptr addrspace(3) %in
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -509,7 +509,7 @@ define void @load_local_hi_v2i16_reglo_vreg_zexti8(ptr addrspace(3) %in, i16 %re
 entry:
   %load = load i8, ptr addrspace(3) %in
   %ext = zext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -559,7 +559,7 @@ define void @load_local_hi_v2i16_reglo_vreg_sexti8(ptr addrspace(3) %in, i16 %re
 entry:
   %load = load i8, ptr addrspace(3) %in
   %ext = sext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -611,7 +611,7 @@ entry:
   %ext = zext i8 %load to i16
   %bitcast = bitcast i16 %ext to half
 
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -663,7 +663,7 @@ entry:
   %ext = sext i8 %load to i16
   %bitcast = bitcast i16 %ext to half
 
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -714,7 +714,7 @@ define void @load_global_hi_v2i16_reglo_vreg(ptr addrspace(1) %in, i16 %reg) #0 
 entry:
   %gep = getelementptr inbounds i16, ptr addrspace(1) %in, i64 -2047
   %load = load i16, ptr addrspace(1) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -765,7 +765,7 @@ define void @load_global_hi_v2f16_reglo_vreg(ptr addrspace(1) %in, half %reg) #0
 entry:
   %gep = getelementptr inbounds half, ptr addrspace(1) %in, i64 -2047
   %load = load half, ptr addrspace(1) %gep
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -817,7 +817,7 @@ entry:
   %gep = getelementptr inbounds i8, ptr addrspace(1) %in, i64 -4095
   %load = load i8, ptr addrspace(1) %gep
   %ext = zext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -869,7 +869,7 @@ entry:
   %gep = getelementptr inbounds i8, ptr addrspace(1) %in, i64 -4095
   %load = load i8, ptr addrspace(1) %gep
   %ext = sext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -922,7 +922,7 @@ entry:
   %load = load i8, ptr addrspace(1) %gep
   %ext = sext i8 %load to i16
   %bitcast = bitcast i16 %ext to half
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -975,7 +975,7 @@ entry:
   %load = load i8, ptr addrspace(1) %gep
   %ext = zext i8 %load to i16
   %bitcast = bitcast i16 %ext to half
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -1023,7 +1023,7 @@ define void @load_flat_hi_v2i16_reglo_vreg(ptr %in, i16 %reg) #0 {
 ; GFX900-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load i16, ptr %in
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -1071,7 +1071,7 @@ define void @load_flat_hi_v2f16_reglo_vreg(ptr %in, half %reg) #0 {
 ; GFX900-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load half, ptr %in
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -1120,7 +1120,7 @@ define void @load_flat_hi_v2i16_reglo_vreg_zexti8(ptr %in, i16 %reg) #0 {
 entry:
   %load = load i8, ptr %in
   %ext = zext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -1169,7 +1169,7 @@ define void @load_flat_hi_v2i16_reglo_vreg_sexti8(ptr %in, i16 %reg) #0 {
 entry:
   %load = load i8, ptr %in
   %ext = sext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -1219,7 +1219,7 @@ entry:
   %load = load i8, ptr %in
   %ext = zext i8 %load to i16
   %bitcast = bitcast i16 %ext to half
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -1269,7 +1269,7 @@ entry:
   %load = load i8, ptr %in
   %ext = sext i8 %load to i16
   %bitcast = bitcast i16 %ext to half
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -1318,7 +1318,7 @@ define void @load_private_hi_v2i16_reglo_vreg(ptr addrspace(5) byval(i16) %in, i
 entry:
   %gep = getelementptr inbounds i16, ptr addrspace(5) %in, i64 2047
   %load = load i16, ptr addrspace(5) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -1367,7 +1367,7 @@ define void @load_private_hi_v2f16_reglo_vreg(ptr addrspace(5) byval(half) %in, 
 entry:
   %gep = getelementptr inbounds half, ptr addrspace(5) %in, i64 2047
   %load = load half, ptr addrspace(5) %gep
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -1416,7 +1416,7 @@ define void @load_private_hi_v2i16_reglo_vreg_nooff(ptr addrspace(5) byval(i16) 
 ; GFX900-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load volatile i16, ptr addrspace(5) inttoptr (i32 4094 to ptr addrspace(5))
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -1465,7 +1465,7 @@ define void @load_private_hi_v2f16_reglo_vreg_nooff(ptr addrspace(5) %in, half %
 ; GFX900-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load volatile half, ptr addrspace(5) inttoptr (i32 4094 to ptr addrspace(5))
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -1515,7 +1515,7 @@ entry:
   %gep = getelementptr inbounds i8, ptr addrspace(5) %in, i64 4095
   %load = load i8, ptr addrspace(5) %gep
   %ext = zext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -1566,7 +1566,7 @@ entry:
   %load = load i8, ptr addrspace(5) %gep
   %ext = zext i8 %load to i16
   %bitcast = bitcast i16 %ext to half
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -1617,7 +1617,7 @@ entry:
   %load = load i8, ptr addrspace(5) %gep
   %ext = sext i8 %load to i16
   %bitcast = bitcast i16 %ext to half
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -1667,7 +1667,7 @@ entry:
   %gep = getelementptr inbounds i8, ptr addrspace(5) %in, i64 4095
   %load = load i8, ptr addrspace(5) %gep
   %ext = sext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -1717,7 +1717,7 @@ define void @load_private_hi_v2i16_reglo_vreg_nooff_zexti8(ptr addrspace(5) %in,
 entry:
   %load = load volatile i8, ptr addrspace(5) inttoptr (i32 4094 to ptr addrspace(5))
   %ext = zext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -1767,7 +1767,7 @@ define void @load_private_hi_v2i16_reglo_vreg_nooff_sexti8(ptr addrspace(5) %in,
 entry:
   %load = load volatile i8, ptr addrspace(5) inttoptr (i32 4094 to ptr addrspace(5))
   %ext = sext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -1818,7 +1818,7 @@ entry:
   %load = load volatile i8, ptr addrspace(5) inttoptr (i32 4094 to ptr addrspace(5))
   %ext = zext i8 %load to i16
   %bc.ext = bitcast i16 %ext to half
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bc.ext, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -1869,7 +1869,7 @@ define void @load_constant_hi_v2i16_reglo_vreg(ptr addrspace(4) %in, i16 %reg) #
 entry:
   %gep = getelementptr inbounds i16, ptr addrspace(4) %in, i64 -2047
   %load = load i16, ptr addrspace(4) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -1920,7 +1920,7 @@ define void @load_constant_hi_v2f16_reglo_vreg(ptr addrspace(4) %in, half %reg) 
 entry:
   %gep = getelementptr inbounds half, ptr addrspace(4) %in, i64 -2047
   %load = load half, ptr addrspace(4) %gep
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %load, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -1973,7 +1973,7 @@ entry:
   %load = load i8, ptr addrspace(4) %gep
   %ext = sext i8 %load to i16
   %bitcast = bitcast i16 %ext to half
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -2026,7 +2026,7 @@ entry:
   %load = load i8, ptr addrspace(4) %gep
   %ext = zext i8 %load to i16
   %bitcast = bitcast i16 %ext to half
-  %build0 = insertelement <2 x half> undef, half %reg, i32 0
+  %build0 = insertelement <2 x half> poison, half %reg, i32 0
   %build1 = insertelement <2 x half> %build0, half %bitcast, i32 1
   store <2 x half> %build1, ptr addrspace(1) undef
   ret void
@@ -2092,7 +2092,7 @@ entry:
   store volatile i32 123, ptr addrspace(5) %obj0
   %gep = getelementptr inbounds [4096 x i16], ptr addrspace(5) %obj1, i32 0, i32 2027
   %load = load i16, ptr addrspace(5) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -2156,7 +2156,7 @@ entry:
   %gep = getelementptr inbounds [4096 x i8], ptr addrspace(5) %obj1, i32 0, i32 4055
   %load = load i8, ptr addrspace(5) %gep
   %ext = sext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -2220,7 +2220,7 @@ entry:
   %gep = getelementptr inbounds [4096 x i8], ptr addrspace(5) %obj1, i32 0, i32 4055
   %load = load i8, ptr addrspace(5) %gep
   %ext = zext i8 %load to i16
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %ext, i32 1
   store <2 x i16> %build1, ptr addrspace(1) undef
   ret void
@@ -2273,7 +2273,7 @@ entry:
   %gep = getelementptr inbounds i16, ptr addrspace(3) %in, i32 1
   %load0 = load volatile i16, ptr addrspace(3) %in
   %load1 = load volatile i16, ptr addrspace(3) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %load0, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
   ret <2 x i16> %build1
 }
@@ -2324,7 +2324,7 @@ entry:
   %gep = getelementptr inbounds i16, ptr addrspace(3) %in, i32 8
   %load.lo = load i16, ptr addrspace(3) %in
   %load.hi = load i16, ptr addrspace(3) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %load.lo, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %load.lo, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load.hi, i32 1
   ret <2 x i16> %build1
 }
@@ -2370,7 +2370,7 @@ define <2 x i16> @load_local_v2i16_broadcast(ptr addrspace(3) %in) #0 {
 entry:
   %gep = getelementptr inbounds i16, ptr addrspace(3) %in, i32 1
   %load0 = load i16, ptr addrspace(3) %in
-  %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %load0, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load0, i32 1
   ret <2 x i16> %build1
 }
@@ -2429,7 +2429,7 @@ entry:
   %load.lo = load i16, ptr addrspace(3) %in
   store i16 123, ptr addrspace(3) %may.alias
   %load.hi = load i16, ptr addrspace(3) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %load.lo, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %load.lo, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load.hi, i32 1
   ret <2 x i16> %build1
 }
@@ -2483,7 +2483,7 @@ entry:
   %gep = getelementptr inbounds i16, ptr addrspace(1) %in, i64 1
   %load0 = load volatile i16, ptr addrspace(1) %in
   %load1 = load volatile i16, ptr addrspace(1) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %load0, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
   ret <2 x i16> %build1
 }
@@ -2538,7 +2538,7 @@ entry:
   %gep = getelementptr inbounds i16, ptr %in, i64 1
   %load0 = load volatile i16, ptr %in
   %load1 = load volatile i16, ptr %gep
-  %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %load0, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
   ret <2 x i16> %build1
 }
@@ -2590,7 +2590,7 @@ entry:
   %gep = getelementptr inbounds i16, ptr addrspace(4) %in, i64 1
   %load0 = load volatile i16, ptr addrspace(4) %in
   %load1 = load volatile i16, ptr addrspace(4) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %load0, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
   ret <2 x i16> %build1
 }
@@ -2641,7 +2641,7 @@ entry:
   %gep = getelementptr inbounds i16, ptr addrspace(5) %in, i32 1
   %load0 = load volatile i16, ptr addrspace(5) %in
   %load1 = load volatile i16, ptr addrspace(5) %gep
-  %build0 = insertelement <2 x i16> undef, i16 %load0, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %load0, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load1, i32 1
   ret <2 x i16> %build1
 }
@@ -2698,7 +2698,7 @@ define <2 x i16> @load_local_hi_v2i16_store_local_lo(i16 %reg, ptr addrspace(3) 
 ; GFX900-FLATSCR-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %load = load i16, ptr addrspace(3) %in
-  %build0 = insertelement <2 x i16> undef, i16 %reg, i32 0
+  %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
   store volatile i16 %reg, ptr addrspace(3) %in
   ret <2 x i16> %build1

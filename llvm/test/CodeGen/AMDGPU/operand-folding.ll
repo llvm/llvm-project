@@ -68,7 +68,7 @@ entry:
   %tmp1 = add i32 %tmp0, 1
   %tmp2 = add i32 %tmp0, 2
   %tmp3 = add i32 %tmp0, 3
-  %vec0 = insertelement <4 x i32> undef, i32 %tmp0, i32 0
+  %vec0 = insertelement <4 x i32> poison, i32 %tmp0, i32 0
   %vec1 = insertelement <4 x i32> %vec0, i32 %tmp1, i32 1
   %vec2 = insertelement <4 x i32> %vec1, i32 %tmp2, i32 2
   %vec3 = insertelement <4 x i32> %vec2, i32 %tmp3, i32 3
@@ -100,7 +100,7 @@ entry:
   %tmp1 = add i32 %tmp0, 1
   %tmp2 = add i32 %tmp0, 2
   %tmp3 = add i32 %tmp0, 3
-  %vec0 = insertelement <4 x i32> undef, i32 %tmp0, i32 0
+  %vec0 = insertelement <4 x i32> poison, i32 %tmp0, i32 0
   %vec1 = insertelement <4 x i32> %vec0, i32 %tmp1, i32 1
   %vec2 = insertelement <4 x i32> %vec1, i32 %tmp2, i32 2
   %vec3 = insertelement <4 x i32> %vec2, i32 %tmp3, i32 3
