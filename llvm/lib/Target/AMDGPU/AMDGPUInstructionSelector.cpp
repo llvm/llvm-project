@@ -4289,19 +4289,23 @@ enum srcStatus {
   IS_NEG,
   IS_UPPER_HALF_NEG,
   IS_LOWER_HALF_NEG,
-  LAST_STAT = IS_LOWER_HALF_NEG
+  INVALID
 };
 
 static bool isTruncHalf(const MachineInstr *MI,
                         const MachineRegisterInfo &MRI) {
-  assert(MI->getOpcode() == AMDGPU::G_TRUNC);
+  if (MI->getOpcode() != AMDGPU::G_TRUNC) {
+    return false;
+  }
   unsigned dstSize = MRI.getType(MI->getOperand(0).getReg()).getSizeInBits();
   unsigned srcSize = MRI.getType(MI->getOperand(1).getReg()).getSizeInBits();
   return dstSize * 2 == srcSize;
 }
 
 static bool isLshrHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
-  assert(MI->getOpcode() == AMDGPU::G_LSHR);
+  if (MI->getOpcode() != AMDGPU::G_LSHR) {
+    return false;
+  }
   Register ShiftSrc;
   std::optional<ValueAndVReg> ShiftAmt;
   if (mi_match(MI->getOperand(0).getReg(), MRI,
@@ -4314,7 +4318,9 @@ static bool isLshrHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
 }
 
 static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
-  assert(MI->getOpcode() == AMDGPU::G_SHL);
+  if (MI->getOpcode() != AMDGPU::G_SHL) {
+    return false;
+  }
   Register ShiftSrc;
   std::optional<ValueAndVReg> ShiftAmt;
   if (mi_match(MI->getOperand(0).getReg(), MRI,
@@ -4326,8 +4332,11 @@ static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
   return false;
 }
 
-static bool retOpStat(const MachineOperand *Op, int stat,
-                      std::pair<const MachineOperand *, int> &curr) {
+static bool retOpStat(const MachineOperand *Op, srcStatus stat,
+                      std::pair<const MachineOperand *, srcStatus> &curr) {
+  if (stat == INVALID) {
+    return false;
+  }
   if ((Op->isReg() && !(Op->getReg().isPhysical())) || Op->isImm() ||
       Op->isCImm() || Op->isFPImm()) {
     curr = {Op, stat};
@@ -4336,7 +4345,25 @@ static bool retOpStat(const MachineOperand *Op, int stat,
   return false;
 }
 
-static bool calcNextStatus(std::pair<const MachineOperand *, int> &curr,
+srcStatus getNegStatus(srcStatus S) {
+  switch (S) {
+  case IS_SAME:
+    return IS_NEG;
+  case IS_UPPER_HALF:
+    return IS_UPPER_HALF_NEG;
+  case IS_LOWER_HALF:
+    return IS_LOWER_HALF_NEG;
+  case IS_NEG:
+    return IS_SAME;
+  case IS_UPPER_HALF_NEG:
+    return IS_UPPER_HALF;
+  case IS_LOWER_HALF_NEG:
+    return IS_LOWER_HALF;
+  }
+  return INVALID;
+}
+
+static bool calcNextStatus(std::pair<const MachineOperand *, srcStatus> &curr,
                            const MachineRegisterInfo &MRI) {
   if (!curr.first->isReg()) {
     return false;
@@ -4363,92 +4390,56 @@ static bool calcNextStatus(std::pair<const MachineOperand *, int> &curr,
     return retOpStat(&MI->getOperand(1), curr.second, curr);
   case AMDGPU::G_FNEG:
     // XXXX + 3 = XXXX_NEG, (XXXX_NEG + 3) mod 3 = XXXX
-    return retOpStat(&MI->getOperand(1),
-                     (curr.second + ((LAST_STAT + 1) / 2)) % (LAST_STAT + 1),
-                     curr);
+    return retOpStat(&MI->getOperand(1), getNegStatus(curr.second), curr);
   }
 
   // Calc next stat from current stat
   switch (curr.second) {
   case IS_SAME:
-    switch (Opc) {
-    case AMDGPU::G_TRUNC: {
-      if (isTruncHalf(MI, MRI)) {
-        return retOpStat(&MI->getOperand(1), IS_LOWER_HALF, curr);
-      }
-      break;
-    }
+    if (isTruncHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF, curr);
     }
     break;
   case IS_NEG:
-    switch (Opc) {
-    case AMDGPU::G_TRUNC: {
-      if (isTruncHalf(MI, MRI)) {
-        return retOpStat(&MI->getOperand(1), IS_LOWER_HALF_NEG, curr);
-      }
-      break;
-    }
+    if (isTruncHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF_NEG, curr);
     }
     break;
   case IS_UPPER_HALF:
-    switch (Opc) {
-    case AMDGPU::G_SHL: {
-      if (isShlHalf(MI, MRI)) {
-        return retOpStat(&MI->getOperand(1), IS_LOWER_HALF, curr);
-      }
-      break;
-    }
+    if (isShlHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF, curr);
     }
     break;
   case IS_LOWER_HALF:
-    switch (Opc) {
-    case AMDGPU::G_LSHR: {
-      if (isLshrHalf(MI, MRI)) {
-        return retOpStat(&MI->getOperand(1), IS_UPPER_HALF, curr);
-      }
-      break;
-    }
+    if (isLshrHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_UPPER_HALF, curr);
     }
     break;
   case IS_UPPER_HALF_NEG:
-    switch (Opc) {
-    case AMDGPU::G_SHL: {
-      if (isShlHalf(MI, MRI)) {
-        return retOpStat(&MI->getOperand(1), IS_LOWER_HALF_NEG, curr);
-      }
-      break;
-    }
+    if (isShlHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF_NEG, curr);
     }
     break;
   case IS_LOWER_HALF_NEG:
-    switch (Opc) {
-    case AMDGPU::G_LSHR: {
-      if (isLshrHalf(MI, MRI)) {
-        return retOpStat(&MI->getOperand(1), IS_UPPER_HALF_NEG, curr);
-      }
-      break;
-    }
+    if (isLshrHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_UPPER_HALF_NEG, curr);
     }
     break;
   }
   return false;
 }
 
-SmallVector<std::pair<const MachineOperand *, int>>
+SmallVector<std::pair<const MachineOperand *, srcStatus>>
 getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
             bool onlyLastSameOrNeg = false, int maxDepth = 6) {
   int depth = 0;
-  std::pair<const MachineOperand *, int> curr = {Op, IS_SAME};
-  SmallVector<std::pair<const MachineOperand *, int>> statList;
+  std::pair<const MachineOperand *, srcStatus> curr = {Op, IS_SAME};
+  SmallVector<std::pair<const MachineOperand *, srcStatus>> statList;
 
-  while (true) {
+  while (depth <= maxDepth && calcNextStatus(curr, MRI)) {
     depth++;
-    if (depth > maxDepth) {
-      break;
-    }
-    bool ret = calcNextStatus(curr, MRI);
-    if (!ret || (onlyLastSameOrNeg &&
-                 (curr.second != IS_SAME && curr.second != IS_NEG))) {
+    if ((onlyLastSameOrNeg &&
+         (curr.second != IS_SAME && curr.second != IS_NEG))) {
       break;
     } else if (!onlyLastSameOrNeg) {
       statList.push_back(curr);
@@ -4535,7 +4526,8 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
                                                bool IsDOT) const {
   unsigned Mods = 0;
   const MachineOperand *RootOp = Op;
-  std::pair<const MachineOperand *, int> stat = getSrcStats(Op, MRI, true)[0];
+  std::pair<const MachineOperand *, srcStatus> stat =
+      getSrcStats(Op, MRI, true)[0];
   if (!stat.first->isReg()) {
     Mods |= SISrcMods::OP_SEL_1;
     return {Op, Mods};
@@ -4547,8 +4539,8 @@ AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
   MachineInstr *MI = MRI.getVRegDef(Op->getReg());
   if (MI->getOpcode() == AMDGPU::G_BUILD_VECTOR && MI->getNumOperands() == 3 &&
       (!IsDOT || !Subtarget->hasDOTOpSelHazard())) {
-    SmallVector<std::pair<const MachineOperand *, int>> statList_Hi;
-    SmallVector<std::pair<const MachineOperand *, int>> statList_Lo;
+    SmallVector<std::pair<const MachineOperand *, srcStatus>> statList_Hi;
+    SmallVector<std::pair<const MachineOperand *, srcStatus>> statList_Lo;
     statList_Hi = getSrcStats(&MI->getOperand(2), MRI);
     if (statList_Hi.size() != 0) {
       statList_Lo = getSrcStats(&MI->getOperand(1), MRI);
