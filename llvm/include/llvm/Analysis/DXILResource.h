@@ -581,6 +581,7 @@ enum ResourceCounterDirection {
   Increment,
   Decrement,
   Unknown,
+  MyInvalid,
 };
 
 class DXILResourceCounterDirectionMap {

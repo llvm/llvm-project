@@ -898,12 +898,33 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
 
   // If any duplicate entries still exist at this point then it must be a
   // resource that was both incremented and decremented which is not allowed.
-  const auto DuplicateEntry =
-      std::adjacent_find(DiagCounterDirs.begin(), DiagCounterDirs.end(),
-                         [](const auto &LHS, const auto &RHS) {
-                           return std::get<dxil::ResourceBindingInfo>(LHS) ==
-                                  std::get<dxil::ResourceBindingInfo>(RHS);
-                         });
+  // Mark all those entries as invalid.
+  {
+  auto DupFirst = DiagCounterDirs.begin();
+  auto DupNext = DupFirst + 1;
+  auto DupLast = DiagCounterDirs.end();
+  for (; DupFirst < DupLast && DupNext < DupLast; ++DupFirst, ++DupNext) {
+    if (std::get<dxil::ResourceBindingInfo>(*DupFirst) == std::get<dxil::ResourceBindingInfo>(*DupNext)) {
+      std::get<ResourceCounterDirection>(*DupFirst) = ResourceCounterDirection::MyInvalid;
+      std::get<ResourceCounterDirection>(*DupNext) = ResourceCounterDirection::MyInvalid;
+    }
+  }
+  }
+
+  // Raise an error for every invalid entry
+  for (const auto Entry : DiagCounterDirs) {
+    ResourceCounterDirection Dir = std::get<ResourceCounterDirection>(Entry);
+    const Function *F = std::get<const Function *>(Entry);
+    const CallInst *CI = std::get<const CallInst *>(Entry);
+
+    if (Dir != ResourceCounterDirection::MyInvalid)
+      continue;
+
+    StringRef Message = "RWStructuredBuffers may increment or decrement their "
+                        "counters, but not both.";
+    M.getContext().diagnose(
+        DiagnosticInfoGenericWithLoc(Message, *F, CI->getDebugLoc()));
+  }
 
   // Copy the results into the final vec
   CounterDirections.clear();
@@ -913,16 +934,6 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
                    return std::pair{std::get<dxil::ResourceBindingInfo>(Item),
                                     std::get<ResourceCounterDirection>(Item)};
                  });
-
-  if (DuplicateEntry == DiagCounterDirs.end())
-    return;
-
-  const Function *F = std::get<const Function *>(*DuplicateEntry);
-  const CallInst *CI = std::get<const CallInst *>(*DuplicateEntry);
-  StringRef Message = "RWStructuredBuffers may increment or decrement their "
-                      "counters, but not both.";
-  M.getContext().diagnose(
-      DiagnosticInfoGenericWithLoc(Message, *F, CI->getDebugLoc()));
 }
 
 void DXILResourceCounterDirectionWrapperPass::getAnalysisUsage(
