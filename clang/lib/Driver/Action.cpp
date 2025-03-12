@@ -51,6 +51,8 @@ const char *Action::getClassName(ActionClass AC) {
     return "static-lib-linker";
   case BinaryAnalyzeJobClass:
     return "binary-analyzer";
+  case BinaryTranslatorJobClass:
+    return "binary-translator";
   }
 
   llvm_unreachable("invalid class");
@@ -465,3 +467,9 @@ void BinaryAnalyzeJobAction::anchor() {}
 
 BinaryAnalyzeJobAction::BinaryAnalyzeJobAction(Action *Input, types::ID Type)
     : JobAction(BinaryAnalyzeJobClass, Input, Type) {}
+
+void BinaryTranslatorJobAction::anchor() {}
+
+BinaryTranslatorJobAction::BinaryTranslatorJobAction(Action *Input,
+                                                     types::ID Type)
+    : JobAction(BinaryTranslatorJobClass, Input, Type) {}
