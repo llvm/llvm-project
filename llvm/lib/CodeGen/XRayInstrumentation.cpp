@@ -184,10 +184,9 @@ XRayInstrumentationPass::run(MachineFunction &MF,
   if (!XRayInstrumentation(MDT, MLI).run(MF))
     return PreservedAnalyses::all();
 
-  return getMachineFunctionPassPreservedAnalyses()
-      .preserve<MachineDominatorTreeAnalysis>()
-      .preserve<MachineLoopAnalysis>()
-      .preserveSet<CFGAnalyses>();
+  auto PA = getMachineFunctionPassPreservedAnalyses();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 bool XRayInstrumentationLegacy::runOnMachineFunction(MachineFunction &MF) {
