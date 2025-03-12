@@ -604,6 +604,39 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "TestTransformOpsTdFiles",
+    srcs = glob(["lib/Transforms/*.td"]),
+    deps = [
+        ":TransformDialectTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:SideEffectInterfacesTdFiles",
+        "//mlir:TransformDialectTdFiles",
+        "//mlir:TransformInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "TestTransformsOpsIncGen",
+    includes = ["lib/Dialect/Test"],
+    strip_include_prefix = "lib",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "lib/TestTransformsOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "lib/TestTransformsOps.cpp.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "lib/Transforms/TestTransformsOps.td",
+    deps = [
+        ":TestTransformOpsTdFiles",
+    ],
+)
+
 cc_library(
     name = "TestTransforms",
     srcs = glob(["lib/Transforms/*.cpp"]),
@@ -611,6 +644,7 @@ cc_library(
     deps = [
         ":TestDialect",
         ":TestDialectConversionPDLLPatternsIncGen",
+        ":TestTransformsOpsIncGen",
         "//llvm:Support",
         "//mlir:AffineAnalysis",
         "//mlir:AffineDialect",
@@ -631,6 +665,7 @@ cc_library(
         "//mlir:TransformUtils",
         "//mlir:Transforms",
         "//mlir:TransformDialect",
+        "//mlir:TransformDialectInterfaces",
     ],
 )
 

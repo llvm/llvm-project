@@ -1007,7 +1007,6 @@ public:
   bool preferFixedOverScalableIfEqualCost() const { return false; }
 
   bool preferInLoopReduction(unsigned Opcode, Type *Ty) const { return false; }
-  bool preferAlternateOpcodeVectorization() const { return true; }
 
   bool preferPredicatedReductionSelect(unsigned Opcode, Type *Ty) const {
     return false;
