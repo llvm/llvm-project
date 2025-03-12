@@ -108,9 +108,9 @@ define ptx_kernel void @foo10(ptr noalias readonly %from, ptr %to) {
 }
 
 ; SM20-LABEL: .visible .entry foo11(
-; SM20: ld.global.v2.b32
+; SM20: ld.global.b64
 ; SM35-LABEL: .visible .entry foo11(
-; SM35: ld.global.nc.v2.b32
+; SM35: ld.global.nc.b64
 define ptx_kernel void @foo11(ptr noalias readonly %from, ptr %to) {
   %1 = load <2 x float>, ptr %from
   store <2 x float> %1, ptr %to
