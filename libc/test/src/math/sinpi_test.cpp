@@ -17,10 +17,8 @@ using LlvmLibcSinpiTest = LIBC_NAMESPACE::testing::FPTest<double>;
 using namespace std;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
-
 static constexpr double POS_START = 0;
 static constexpr double POS_STOP = 200;
-
 
 TEST_F(LlvmLibcSinpiTest, PositiveRange) {
   for (double v = POS_START; v <= POS_STOP; ++v) {
