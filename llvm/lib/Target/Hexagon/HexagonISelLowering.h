@@ -363,6 +363,8 @@ public:
     return AtomicExpansionKind::LLSC;
   }
 
+  bool softPromoteHalfType() const override { return true; }
+
 private:
   void initializeHVXLowering();
   unsigned getPreferredHvxVectorAction(MVT VecTy) const;
