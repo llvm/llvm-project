@@ -34,18 +34,16 @@ TEST_F(LlvmLibcSinpiTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcSinpiTest, Integers) {
-  EXPECT_FP_EQ(neg_zero,
-               LIBC_NAMESPACE::sinpi(
-                   LIBC_NAMESPACE::fputil::cast<double>(-0x420.0p0)));
-  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpi(
-                             LIBC_NAMESPACE::fputil::cast<double>(-0x1p+10)));
-  EXPECT_FP_EQ(neg_zero,
-               LIBC_NAMESPACE::sinpi(
-                   LIBC_NAMESPACE::fputil::cast<double>(-0x1.4p+14)));
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpi(
-                         LIBC_NAMESPACE::fputil::cast<double>(0x420.0p0)));
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpi(
-                         LIBC_NAMESPACE::fputil::cast<double>(0x1.cp+15)));
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpi(
-                         LIBC_NAMESPACE::fputil::cast<double>(0x1.cp+7)));
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpi(-0x1.0000000000003p52));
+                   
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpi(-0x1.0000000000005p52));
+                             
+  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::sinpi(-0x1.0000000000006p52));
+                   
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpi(0x1.0000000000003p52));
+                         
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpi(0x1.0000000000005p52));
+                         
+  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::sinpi(0x1.0000000000006p52));
+                         
 }

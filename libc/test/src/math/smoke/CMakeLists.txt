@@ -81,7 +81,7 @@ add_fp_unittest(
     sinpi_test.cpp
   DEPENDS
     libc.src.errno.errno
-    libc.src.math.sinpif
+    libc.src.math.sinpi
     libc.src.__support.CPP.array
     libc.src.__support.FPUtil.fp_bits
 )
