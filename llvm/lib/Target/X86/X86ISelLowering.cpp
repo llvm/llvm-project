@@ -61670,6 +61670,7 @@ bool X86TargetLowering::updateBaseAndIndex(const Value *Ptr, SDValue &Base,
           Op10.getOperand(0).getScalarValueSizeInBits() <= 32 &&
           DAG.ComputeNumSignBits(Op10) > (IndexWidth - 32) &&
           Op11.getOpcode() == ISD::BUILD_VECTOR) {
+
         KnownBits ExtKnown = DAG.computeKnownBits(Op10);
         bool ExtIsNonNegative = ExtKnown.isNonNegative();
         KnownBits ExtOpKnown = DAG.computeKnownBits(Op10.getOperand(0));
