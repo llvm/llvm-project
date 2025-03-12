@@ -11,13 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Mask immediates for MMA instructions (2, 4 and 8 bits).
-def Msk2Imm : ImmLeaf<i32, [{ return isUInt<2>(Imm); }]>;
-def Msk4Imm : ImmLeaf<i32, [{ return isUInt<4>(Imm); }]>;
-def Msk8Imm : ImmLeaf<i32, [{ return isUInt<8>(Imm); }]>;
-
-def MMA : Predicate<"Subtarget->hasMMA()">;
-
 class XX3Form_AT3_XABp5_P1<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
                            string asmstr, list<dag> pattern>
   : I<opcode, OOL, IOL, asmstr, NoItinerary> {
@@ -132,7 +125,7 @@ class MMIRR_XX3Form_X8YP4_XAp5B6<bits<6> opcode, bits<8> xo, dag OOL, dag IOL,
 
 multiclass DMR_UM_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
                        string asmstr> {
-  let Predicates = [IsISAFuture] in {
+  let Predicates = [MMA, IsISAFuture] in {
   def NAME :
     XX3Form_AT3_XAp5B6<opcode, !or(xo, 0x01), (outs dmr:$AT), IOL,
                      !strconcat(asmbase#" ", asmstr), IIC_VecFP, []>,
@@ -147,7 +140,7 @@ multiclass DMR_UM_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
 multiclass DMR_UM_M448_XOEO<bits<6> opcode, bits<8> xo, dag IOL, string asmbase,
                             string asmstr> {
   defm NAME : DMR_UM_XOEO<opcode, xo, IOL, asmbase, asmstr>;
-  let Predicates = [IsISAFuture] in {
+  let Predicates = [MMA, PrefixInstrs, IsISAFuture] in {
   def PM#NAME :
     MMIRR_XX3Form_X8YP4_XAp5B6<
       opcode, !or(xo, 0x01), (outs dmr:$AT),
