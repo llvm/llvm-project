@@ -308,17 +308,6 @@ llvm.func @target_device(%x : i32) {
 
 // -----
 
-llvm.func @target_has_device_addr(%x : !llvm.ptr) {
-  // expected-error@below {{not yet implemented: Unhandled clause has_device_addr in omp.target operation}}
-  // expected-error@below {{LLVM Translation failed for operation: omp.target}}
-  omp.target has_device_addr(%x : !llvm.ptr) {
-    omp.terminator
-  }
-  llvm.return
-}
-
-// -----
-
 omp.declare_reduction @add_f32 : f32
 init {
 ^bb0(%arg: f32):

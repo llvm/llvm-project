@@ -2094,14 +2094,30 @@ public:
     Word(llvm::omp::getOpenMPDirectiveName(x).str());
   }
   void Unparse(const OmpDirectiveSpecification &x) {
-    using ArgList = std::list<parser::OmpArgument>;
-    Walk(std::get<llvm::omp::Directive>(x.t));
-    if (auto &args{std::get<std::optional<ArgList>>(x.t)}) {
-      Put("(");
-      Walk(*args);
-      Put(")");
+    auto unparseArgs{[&]() {
+      using ArgList = std::list<parser::OmpArgument>;
+      if (auto &args{std::get<std::optional<ArgList>>(x.t)}) {
+        Put("(");
+        Walk(*args);
+        Put(")");
+      }
+    }};
+    auto unparseClauses{[&]() { //
+      Walk(std::get<std::optional<OmpClauseList>>(x.t));
+    }};
+
+    Walk(std::get<OmpDirectiveName>(x.t));
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.t)};
+    if (flags == OmpDirectiveSpecification::Flags::DeprecatedSyntax) {
+      if (x.DirId() == llvm::omp::Directive::OMPD_flush) {
+        // FLUSH clause arglist
+        unparseClauses();
+        unparseArgs();
+      }
+    } else {
+      unparseArgs();
+      unparseClauses();
     }
-    Walk(std::get<std::optional<OmpClauseList>>(x.t));
   }
   void Unparse(const OmpTraitScore &x) {
     Word("SCORE(");

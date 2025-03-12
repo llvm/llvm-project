@@ -603,7 +603,7 @@ namespace cwg336 { // cwg336: 2.7
     // expected-error@-1 {{out-of-line definition of 'mf1' does not match any declaration in 'cwg336::Pre::A<int>::B<double>'}}
     //   expected-note@#cwg336-B {{defined here}}
     template<class Y> template<> void A<Y>::B<double>::mf2() {}
-    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>::' for declaration does not refer into a class, class template or class template partial specialization}}
+    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>' for declaration does not refer into a class, class template or class template partial specialization}}
   }
   namespace Post {
     template<class T1> class A {
@@ -618,7 +618,7 @@ namespace cwg336 { // cwg336: 2.7
     template<> template<> template<class T> void A<int>::B<double>::mf1(T t) {}
     // FIXME: This diagnostic isn't very good.
     template<class Y> template<> void A<Y>::B<double>::mf2() {}
-    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>::' for declaration does not refer into a class, class template or class template partial specialization}}
+    // expected-error@-1 {{nested name specifier 'A<Y>::B<double>' for declaration does not refer into a class, class template or class template partial specialization}}
   }
 } // namespace cwg336
 

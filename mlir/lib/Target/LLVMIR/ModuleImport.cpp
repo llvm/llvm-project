@@ -673,8 +673,9 @@ LogicalResult ModuleImport::convertDataLayout() {
 }
 
 void ModuleImport::convertTargetTriple() {
-  mlirModule->setAttr(LLVM::LLVMDialect::getTargetTripleAttrName(),
-                      builder.getStringAttr(llvmModule->getTargetTriple()));
+  mlirModule->setAttr(
+      LLVM::LLVMDialect::getTargetTripleAttrName(),
+      builder.getStringAttr(llvmModule->getTargetTriple().str()));
 }
 
 LogicalResult ModuleImport::convertFunctions() {
@@ -759,11 +760,6 @@ void ModuleImport::setFastmathFlagsAttr(llvm::Instruction *inst,
   iface->setAttr(iface.getFastmathAttrName(), attr);
 }
 
-/// Returns if `type` is a scalar integer or floating-point type.
-static bool isScalarType(Type type) {
-  return isa<IntegerType, FloatType>(type);
-}
-
 /// Returns `type` if it is a builtin integer or floating-point vector type that
 /// can be used to create an attribute or nullptr otherwise. If provided,
 /// `arrayShape` is added to the shape of the vector to create an attribute that
@@ -781,7 +777,7 @@ static Type getVectorTypeForAttr(Type type, ArrayRef<int64_t> arrayShape = {}) {
 
   // An LLVM dialect vector can only contain scalars.
   Type elementType = LLVM::getVectorElementType(type);
-  if (!isScalarType(elementType))
+  if (!elementType.isIntOrFloat())
     return {};
 
   SmallVector<int64_t> shape(arrayShape);
@@ -794,7 +790,7 @@ Type ModuleImport::getBuiltinTypeForAttr(Type type) {
     return {};
 
   // Return builtin integer and floating-point types as is.
-  if (isScalarType(type))
+  if (type.isIntOrFloat())
     return type;
 
   // Return builtin vectors of integer and floating-point types as is.
@@ -808,7 +804,7 @@ Type ModuleImport::getBuiltinTypeForAttr(Type type) {
     arrayShape.push_back(arrayType.getNumElements());
     type = arrayType.getElementType();
   }
-  if (isScalarType(type))
+  if (type.isIntOrFloat())
     return RankedTensorType::get(arrayShape, type);
   return getVectorTypeForAttr(type, arrayShape);
 }
@@ -2267,10 +2263,15 @@ LogicalResult ModuleImport::convertInvokeAttributes(llvm::InvokeInst *inst,
 LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
                                                   CallOp op) {
   setFastmathFlagsAttr(inst, op.getOperation());
+  // Query the attributes directly instead of using `inst->getFnAttr(Kind)`, the
+  // latter does additional lookup to the parent and inherits, changing the
+  // semantics too early.
+  llvm::AttributeList callAttrs = inst->getAttributes();
+
   op.setTailCallKind(convertTailCallKindFromLLVM(inst->getTailCallKind()));
-  op.setConvergent(inst->isConvergent());
-  op.setNoUnwind(inst->doesNotThrow());
-  op.setWillReturn(inst->hasFnAttr(llvm::Attribute::WillReturn));
+  op.setConvergent(callAttrs.getFnAttr(llvm::Attribute::Convergent).isValid());
+  op.setNoUnwind(callAttrs.getFnAttr(llvm::Attribute::NoUnwind).isValid());
+  op.setWillReturn(callAttrs.getFnAttr(llvm::Attribute::WillReturn).isValid());
 
   llvm::MemoryEffects memEffects = inst->getMemoryEffects();
   ModRefInfo othermem = convertModRefInfoFromLLVM(

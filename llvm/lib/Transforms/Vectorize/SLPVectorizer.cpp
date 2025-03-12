@@ -3801,7 +3801,7 @@ private:
   SetVector<const TreeEntry *> PostponedGathers;
 
   using ValueToGatherNodesMap =
-      DenseMap<Value *, SmallPtrSet<const TreeEntry *, 4>>;
+      DenseMap<Value *, SmallSetVector<const TreeEntry *, 4>>;
   ValueToGatherNodesMap ValueToGatherNodes;
 
   /// A list of the load entries (node indices), which can be vectorized using
@@ -8328,8 +8328,9 @@ public:
       }
       return;
     }
-    SmallDenseMap<BasicBlock *, SmallVector<unsigned>, 4> Blocks;
-    for (unsigned I : seq<unsigned>(0, Main->getNumIncomingValues())) {
+    SmallMapVector<BasicBlock *, SmallVector<unsigned>, 4>
+        Blocks;
+    for (unsigned I : seq<unsigned>(Main->getNumIncomingValues())) {
       BasicBlock *InBB = Main->getIncomingBlock(I);
       if (!DT.isReachableFromEntry(InBB)) {
         Operands[I].assign(Phis.size(), PoisonValue::get(Main->getType()));
@@ -8344,7 +8345,7 @@ public:
         continue;
       }
       auto *P = cast<PHINode>(V);
-      for (unsigned I : seq<unsigned>(0, P->getNumIncomingValues())) {
+      for (unsigned I : seq<unsigned>(P->getNumIncomingValues())) {
         BasicBlock *InBB = P->getIncomingBlock(I);
         if (InBB == Main->getIncomingBlock(I)) {
           if (isa_and_nonnull<PoisonValue>(Operands[I][Idx]))
@@ -8352,17 +8353,18 @@ public:
           Operands[I][Idx] = P->getIncomingValue(I);
           continue;
         }
-        auto It = Blocks.find(InBB);
+        auto *It = Blocks.find(InBB);
         if (It == Blocks.end())
           continue;
         Operands[It->second.front()][Idx] = P->getIncomingValue(I);
       }
     }
     for (const auto &P : Blocks) {
-      if (P.getSecond().size() <= 1)
+      ArrayRef<unsigned> IncomingValues = P.second;
+      if (IncomingValues.size() <= 1)
         continue;
-      unsigned BasicI = P.getSecond().front();
-      for (unsigned I : ArrayRef(P.getSecond()).drop_front()) {
+      unsigned BasicI = IncomingValues.front();
+      for (unsigned I : IncomingValues.drop_front()) {
         assert(all_of(enumerate(Operands[I]),
                       [&](const auto &Data) {
                         return !Data.value() ||
@@ -13585,6 +13587,15 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
           UserPHI ? UserPHI->getIncomingBlock(UseEI.EdgeIdx)->getTerminator()
                   : &getLastInstructionInBundle(UseEI.UserTE);
       if (TEInsertPt == InsertPt) {
+        // If the users are the PHI nodes with the same incoming blocks - skip.
+        if (TEUseEI.UserTE->State == TreeEntry::Vectorize &&
+            TEUseEI.UserTE->getOpcode() == Instruction::PHI &&
+            UseEI.UserTE->State == TreeEntry::Vectorize &&
+            UseEI.UserTE->getOpcode() == Instruction::PHI &&
+            TEUseEI.UserTE != UseEI.UserTE &&
+            TEUseEI.UserTE->getMainOp()->getParent() ==
+                UseEI.UserTE->getMainOp()->getParent())
+          continue;
         // If 2 gathers are operands of the same entry (regardless of whether
         // user is PHI or else), compare operands indices, use the earlier one
         // as the base.
