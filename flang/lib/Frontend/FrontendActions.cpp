@@ -1220,6 +1220,7 @@ void CodeGenAction::executeAction() {
 
   clang::DiagnosticsEngine &diags = ci.getDiagnostics();
   const CodeGenOptions &codeGenOpts = ci.getInvocation().getCodeGenOpts();
+  const TargetOptions &targetOpts = ci.getInvocation().getTargetOpts();
   Fortran::lower::LoweringOptions &loweringOpts =
       ci.getInvocation().getLoweringOpts();
   mlir::DefaultTimingManager &timingMgr = ci.getTimingManager();
@@ -1284,7 +1285,7 @@ void CodeGenAction::executeAction() {
   // given on the command-line).
   llvm::TargetMachine &targetMachine = ci.getTargetMachine();
 
-  targetMachine.Options.MCOptions.AsmVerbose = codeGenOpts.AsmVerbose;
+  targetMachine.Options.MCOptions.AsmVerbose = targetOpts.asmVerbose;
 
   const llvm::Triple &theTriple = targetMachine.getTargetTriple();
 
