@@ -8350,6 +8350,9 @@ TEST(APFloatTest, AddOrSubtractSignificand) {
 
 TEST(APFloatTest, hasSignBitInMSB) {
   EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEsingle()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::x87DoubleExtended()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::PPCDoubleDouble()));
+  EXPECT_TRUE(APFloat::hasSignBitInMSB(APFloat::IEEEquad()));
   EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E8M0FNU()));
 }
 
