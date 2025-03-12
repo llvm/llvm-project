@@ -137,6 +137,7 @@ private:
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool shrinkType(Instruction &I);
+  bool shrinkLoadForShuffles(Instruction &I);
 
   void replaceValue(Value &Old, Value &New) {
     LLVM_DEBUG(dbgs() << "VC: Replacing: " << Old << '\n');
@@ -3691,6 +3692,101 @@ bool VectorCombine::foldInterleaveIntrinsics(Instruction &I) {
   return true;
 }
 
+// If `I` is a load instruction, used only by shufflevector instructions with
+// poison values, attempt to shrink the load to only the lanes being used.
+bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
+  auto *OldLoad = dyn_cast<LoadInst>(&I);
+  if (!OldLoad || !OldLoad->isSimple())
+    return false;
+
+  auto *VecTy = dyn_cast<FixedVectorType>(I.getType());
+  if (!VecTy)
+    return false;
+
+  auto IsPoisonOrUndef = [](Value *V) -> bool {
+    if (auto *C = dyn_cast<Constant>(V)) {
+      return isa<PoisonValue>(C) || isa<UndefValue>(C);
+    }
+    return false;
+  };
+
+  using IndexRange = std::pair<int, int>;
+  auto GetIndexRangeInShuffles = [&]() -> std::optional<IndexRange> {
+    auto OutputRange = IndexRange(VecTy->getNumElements(), -1);
+    for (auto &Use : I.uses()) {
+      // All uses must be ShuffleVector instructions.
+      auto *Shuffle = dyn_cast<ShuffleVectorInst>(Use.getUser());
+      if (!Shuffle)
+        return {};
+
+      // Get index range for value.
+      auto *Op0 = Shuffle->getOperand(0u);
+      auto *Op1 = Shuffle->getOperand(1u);
+      if (!IsPoisonOrUndef(Op1))
+        return {};
+
+      // Find the min and max indices used by the ShuffleVector instruction.
+      auto Mask = Shuffle->getShuffleMask();
+      auto *Op0Ty = cast<FixedVectorType>(Op0->getType());
+      auto NumElems = int(Op0Ty->getNumElements());
+
+      for (auto Index : Mask) {
+        if (Index >= 0 && Index < NumElems) {
+          OutputRange.first = std::min(Index, OutputRange.first);
+          OutputRange.second = std::max(Index, OutputRange.second);
+        }
+      }
+
+      if (OutputRange.second < OutputRange.first)
+        return {};
+    }
+    return OutputRange;
+  };
+
+  if (auto Indices = GetIndexRangeInShuffles()) {
+    auto OldSize = VecTy->getNumElements();
+    auto NewSize = Indices->second + 1u;
+
+    if (NewSize < OldSize) {
+      auto Builder = IRBuilder(&I);
+      Builder.SetCurrentDebugLocation(I.getDebugLoc());
+
+      // Create new load of smaller vector.
+      auto *ElemTy = VecTy->getElementType();
+      auto *NewVecTy = FixedVectorType::get(ElemTy, NewSize);
+      auto *NewLoad = cast<LoadInst>(
+          Builder.CreateLoad(NewVecTy, OldLoad->getPointerOperand()));
+      NewLoad->copyMetadata(I);
+
+      // Compare cost of old and new loads.
+      auto OldCost = TTI.getMemoryOpCost(
+          Instruction::Load, OldLoad->getType(), OldLoad->getAlign(),
+          OldLoad->getPointerAddressSpace(), CostKind);
+      auto NewCost = TTI.getMemoryOpCost(
+          Instruction::Load, NewLoad->getType(), NewLoad->getAlign(),
+          NewLoad->getPointerAddressSpace(), CostKind);
+
+      if (OldCost < NewCost || !NewCost.isValid())
+        return false;
+
+      // Replace all users.
+      for (auto &Use : I.uses()) {
+        auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
+
+        Builder.SetInsertPoint(Shuffle);
+        Builder.SetCurrentDebugLocation(Shuffle->getDebugLoc());
+        auto *NewShuffle = Builder.CreateShuffleVector(
+            NewLoad, PoisonValue::get(NewVecTy), Shuffle->getShuffleMask());
+
+        replaceValue(*Shuffle, *NewShuffle);
+      }
+
+      return true;
+    }
+  }
+  return false;
+}
+
 /// This is the entry point for all transforms. Pass manager differences are
 /// handled in the callers of this function.
 bool VectorCombine::run() {
@@ -3774,6 +3870,9 @@ bool VectorCombine::run() {
       case Instruction::Or:
       case Instruction::Xor:
         MadeChange |= foldBitOpOfBitcasts(I);
+        break;
+      case Instruction::Load:
+        MadeChange |= shrinkLoadForShuffles(I);
         break;
       default:
         MadeChange |= shrinkType(I);
