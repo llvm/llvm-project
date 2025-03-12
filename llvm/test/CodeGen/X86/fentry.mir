@@ -8,8 +8,9 @@
   }
 
   attributes #1 = { "fentry-call"="true" }
----
+...
 
+---
 name: with_fentry
 body: |
   bb.0:
@@ -17,3 +18,4 @@ body: |
    ; CHECK: FENTRY_CALL
    ; CHECK-NEXT: RET 0
     RET 0
+...
