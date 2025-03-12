@@ -8075,8 +8075,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       break;
 
     case bitc::FS_CFI_FUNCTION_DEFS: {
-      std::set<std::string, std::less<>> &CfiFunctionDefs =
-          TheIndex.cfiFunctionDefs();
+      auto &CfiFunctionDefs = TheIndex.cfiFunctionDefs();
       for (unsigned I = 0; I != Record.size(); I += 2)
         CfiFunctionDefs.insert(
             {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
@@ -8084,8 +8083,7 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     }
 
     case bitc::FS_CFI_FUNCTION_DECLS: {
-      std::set<std::string, std::less<>> &CfiFunctionDecls =
-          TheIndex.cfiFunctionDecls();
+      auto &CfiFunctionDecls = TheIndex.cfiFunctionDecls();
       for (unsigned I = 0; I != Record.size(); I += 2)
         CfiFunctionDecls.insert(
             {Strtab.data() + Record[I], static_cast<size_t>(Record[I + 1])});
