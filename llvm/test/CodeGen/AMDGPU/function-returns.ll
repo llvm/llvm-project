@@ -22,7 +22,7 @@ define i1 @i1_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_u8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i1, ptr addrspace(1) undef
+  %val = load i1, ptr addrspace(1) poison
   ret i1 %val
 }
 
@@ -45,7 +45,7 @@ define zeroext i1 @i1_zeroext_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_u8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i1, ptr addrspace(1) undef
+  %val = load i1, ptr addrspace(1) poison
   ret i1 %val
 }
 
@@ -69,7 +69,7 @@ define signext i1 @i1_signext_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_bfe_i32 v0, v0, 0, 1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i1, ptr addrspace(1) undef
+  %val = load i1, ptr addrspace(1) poison
   ret i1 %val
 }
 
@@ -91,7 +91,7 @@ define i8 @i8_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_u8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i8, ptr addrspace(1) undef
+  %val = load i8, ptr addrspace(1) poison
   ret i8 %val
 }
 
@@ -113,7 +113,7 @@ define zeroext i8 @i8_zeroext_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_u8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i8, ptr addrspace(1) undef
+  %val = load i8, ptr addrspace(1) poison
   ret i8 %val
 }
 
@@ -135,7 +135,7 @@ define signext i8 @i8_signext_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_i8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i8, ptr addrspace(1) undef
+  %val = load i8, ptr addrspace(1) poison
   ret i8 %val
 }
 
@@ -157,7 +157,7 @@ define i16 @i16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_u16 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i16, ptr addrspace(1) undef
+  %val = load i16, ptr addrspace(1) poison
   ret i16 %val
 }
 
@@ -179,7 +179,7 @@ define zeroext i16 @i16_zeroext_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_u16 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i16, ptr addrspace(1) undef
+  %val = load i16, ptr addrspace(1) poison
   ret i16 %val
 }
 
@@ -201,7 +201,7 @@ define signext i16 @i16_signext_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_i16 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i16, ptr addrspace(1) undef
+  %val = load i16, ptr addrspace(1) poison
   ret i16 %val
 }
 
@@ -223,7 +223,7 @@ define i32 @i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i32, ptr addrspace(1) undef
+  %val = load i32, ptr addrspace(1) poison
   ret i32 %val
 }
 
@@ -248,7 +248,7 @@ define i48 @i48_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_u16 v1, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i48, ptr addrspace(1) undef, align 8
+  %val = load i48, ptr addrspace(1) poison, align 8
   ret i48 %val
 }
 
@@ -273,7 +273,7 @@ define zeroext i48 @i48_zeroext_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_u16 v1, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i48, ptr addrspace(1) undef, align 8
+  %val = load i48, ptr addrspace(1) poison, align 8
   ret i48 %val
 }
 
@@ -298,7 +298,7 @@ define signext i48 @i48_signext_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_i16 v1, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i48, ptr addrspace(1) undef, align 8
+  %val = load i48, ptr addrspace(1) poison, align 8
   ret i48 %val
 }
 
@@ -373,7 +373,7 @@ define i64 @i64_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i64, ptr addrspace(1) undef
+  %val = load i64, ptr addrspace(1) poison
   ret i64 %val
 }
 
@@ -398,7 +398,7 @@ define i65 @i65_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_u8 v2, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load i65, ptr addrspace(1) undef
+  %val = load i65, ptr addrspace(1) poison
   ret i65 %val
 }
 
@@ -420,7 +420,7 @@ define float @f32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load float, ptr addrspace(1) undef
+  %val = load float, ptr addrspace(1) poison
   ret float %val
 }
 
@@ -442,7 +442,7 @@ define double @f64_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load double, ptr addrspace(1) undef
+  %val = load double, ptr addrspace(1) poison
   ret double %val
 }
 
@@ -464,7 +464,7 @@ define <2 x double> @v2f64_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x double>, ptr addrspace(1) undef
+  %val = load <2 x double>, ptr addrspace(1) poison
   ret <2 x double> %val
 }
 
@@ -486,7 +486,7 @@ define <2 x i32> @v2i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x i32>, ptr addrspace(1) undef
+  %val = load <2 x i32>, ptr addrspace(1) poison
   ret <2 x i32> %val
 }
 
@@ -508,7 +508,7 @@ define <3 x i32> @v3i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b96 v[0:2], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <3 x i32>, ptr addrspace(1) undef
+  %val = load <3 x i32>, ptr addrspace(1) poison
   ret <3 x i32> %val
 }
 
@@ -530,7 +530,7 @@ define <4 x i32> @v4i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <4 x i32>, ptr addrspace(1) undef
+  %val = load <4 x i32>, ptr addrspace(1) poison
   ret <4 x i32> %val
 }
 
@@ -556,7 +556,7 @@ define <5 x i32> @v5i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load volatile <5 x i32>, ptr addrspace(1) undef
+  %val = load volatile <5 x i32>, ptr addrspace(1) poison
   ret <5 x i32> %val
 }
 
@@ -684,7 +684,7 @@ define <2 x i64> @v2i64_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x i64>, ptr addrspace(1) undef
+  %val = load <2 x i64>, ptr addrspace(1) poison
   ret <2 x i64> %val
 }
 
@@ -884,7 +884,7 @@ define <2 x i16> @v2i16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x i16>, ptr addrspace(1) undef
+  %val = load <2 x i16>, ptr addrspace(1) poison
   ret <2 x i16> %val
 }
 
@@ -918,7 +918,7 @@ define <3 x i16> @v3i16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <3 x i16>, ptr addrspace(1) undef
+  %val = load <3 x i16>, ptr addrspace(1) poison
   ret <3 x i16> %val
 }
 
@@ -953,7 +953,7 @@ define <4 x i16> @v4i16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <4 x i16>, ptr addrspace(1) undef
+  %val = load <4 x i16>, ptr addrspace(1) poison
   ret <4 x i16> %val
 }
 
@@ -990,7 +990,7 @@ define <4 x half> @v4f16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <4 x half>, ptr addrspace(1) undef
+  %val = load <4 x half>, ptr addrspace(1) poison
   ret <4 x half> %val
 }
 
@@ -1262,7 +1262,7 @@ define {i8, i32} @struct_i8_i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b32 v1, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load { i8, i32 }, ptr addrspace(1) undef
+  %val = load { i8, i32 }, ptr addrspace(1) poison
   ret { i8, i32 } %val
 }
 
@@ -1294,8 +1294,8 @@ define void @void_func_sret_struct_i8_i32(ptr addrspace(5) sret({ i8, i32 }) %ar
 ; GFX11-NEXT:    scratch_store_b8 v0, v1, off
 ; GFX11-NEXT:    scratch_store_b32 v0, v2, off offset:4
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val0 = load volatile i8, ptr addrspace(1) undef
-  %val1 = load volatile i32, ptr addrspace(1) undef
+  %val0 = load volatile i8, ptr addrspace(1) poison
+  %val1 = load volatile i32, ptr addrspace(1) poison
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   store i8 %val0, ptr addrspace(5) %gep0
@@ -2361,7 +2361,7 @@ define bfloat @bf16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_u16 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load bfloat, ptr addrspace(1) undef
+  %val = load bfloat, ptr addrspace(1) poison
   ret bfloat %val
 }
 
@@ -2394,7 +2394,7 @@ define <2 x bfloat> @v2bf16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <2 x bfloat>, ptr addrspace(1) undef
+  %val = load <2 x bfloat>, ptr addrspace(1) poison
   ret <2 x bfloat> %val
 }
 
@@ -2428,7 +2428,7 @@ define <3 x bfloat> @v3bf16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <3 x bfloat>, ptr addrspace(1) undef
+  %val = load <3 x bfloat>, ptr addrspace(1) poison
   ret <3 x bfloat> %val
 }
 
@@ -2463,7 +2463,7 @@ define <4 x bfloat> @v4bf16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <4 x bfloat>, ptr addrspace(1) undef
+  %val = load <4 x bfloat>, ptr addrspace(1) poison
   ret <4 x bfloat> %val
 }
 
@@ -2500,7 +2500,7 @@ define <6 x bfloat> @v6bf16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b96 v[0:2], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <6 x bfloat>, ptr addrspace(1) undef
+  %val = load <6 x bfloat>, ptr addrspace(1) poison
   ret <6 x bfloat> %val
 }
 
@@ -2539,7 +2539,7 @@ define <8 x bfloat> @v8bf16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <8 x bfloat>, ptr addrspace(1) undef
+  %val = load <8 x bfloat>, ptr addrspace(1) poison
   ret <8 x bfloat> %val
 }
 
@@ -2592,7 +2592,7 @@ define <16 x bfloat> @v16bf16_func_void() #0 {
 ; GFX11-NEXT:    v_dual_mov_b32 v4, v0 :: v_dual_mov_b32 v5, v1
 ; GFX11-NEXT:    v_dual_mov_b32 v6, v2 :: v_dual_mov_b32 v7, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <16 x bfloat>, ptr addrspace(1) undef
+  %val = load <16 x bfloat>, ptr addrspace(1) poison
   ret <16 x bfloat> %val
 }
 
@@ -2673,7 +2673,7 @@ define <32 x bfloat> @v32bf16_func_void() #0 {
 ; GFX11-NEXT:    v_dual_mov_b32 v12, v0 :: v_dual_mov_b32 v13, v1
 ; GFX11-NEXT:    v_dual_mov_b32 v14, v2 :: v_dual_mov_b32 v15, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %val = load <32 x bfloat>, ptr addrspace(1) undef
+  %val = load <32 x bfloat>, ptr addrspace(1) poison
   ret <32 x bfloat> %val
 }
 

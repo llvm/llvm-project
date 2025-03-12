@@ -727,7 +727,7 @@ bb0:
   br i1 %tmp, label %bb2, label %bb3
 
 bb2:
-  store volatile i32 17, ptr addrspace(1) undef
+  store volatile i32 17, ptr addrspace(1) poison
   br label %bb4
 
 bb3:
@@ -1258,7 +1258,7 @@ loop_body:
   br label %loop
 
 ret:
-  store volatile i32 7, ptr addrspace(1) undef
+  store volatile i32 7, ptr addrspace(1) poison
   ret void
 }
 

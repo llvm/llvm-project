@@ -179,7 +179,7 @@ define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
 ; GFX11-NEXT:    global_store_b32 v[0:1], v1, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %lshr.8 = lshr i32 %arg0, 8
-  store i32 %lshr.8, ptr addrspace(1) undef
+  store i32 %lshr.8, ptr addrspace(1) poison
   %masked = and i32 %lshr.8, 255
   %cvt = uitofp i32 %masked to float
   ret float %cvt
@@ -2992,14 +2992,14 @@ entry:
   br label %for.body.i
 
 for.body.i:                                       ; preds = %for.body.i, %entry
-  %retval.sroa.0.0.copyload = load ptr, ptr addrspace(1) undef, align 8
+  %retval.sroa.0.0.copyload = load ptr, ptr addrspace(1) poison, align 8
   %add.ptr = getelementptr inbounds %Vec, ptr %retval.sroa.0.0.copyload, i64 undef
   %retval.sroa.0.0..sroa_cast_adr = addrspacecast ptr %add.ptr to ptr addrspace(1)
   %retval.sroa.0.0.copyload.i = load i32, ptr addrspace(1) %retval.sroa.0.0..sroa_cast_adr, align 1
   %p1.sroa.6.0.extract.shift = lshr i32 %retval.sroa.0.0.copyload.i, 24
   %p1.sroa.6.0.extract.trunc = trunc i32 %p1.sroa.6.0.extract.shift to i8
   %conv12 = uitofp i8 %p1.sroa.6.0.extract.trunc to float
-  %0 = load float, ptr addrspace(1) undef, align 8
+  %0 = load float, ptr addrspace(1) poison, align 8
   %mul = fmul contract float %0, %conv12
   %add = fadd contract float %mul, 5.000000e-01
   %conv13 = fptoui float %add to i8
@@ -3011,7 +3011,7 @@ for.body.i:                                       ; preds = %for.body.i, %entry
   %retval.sroa.2.0.insert.insert = or i32 %retval.sroa.3.0.insert.insert, %retval.sroa.2.0.insert.ext
   %retval.sroa.0.0.insert.ext = and i32 %retval.sroa.0.0.copyload.i, 255
   %retval.sroa.0.0.insert.insert = or i32 %retval.sroa.2.0.insert.insert, %retval.sroa.0.0.insert.ext
-  store i32 %retval.sroa.0.0.insert.insert, ptr addrspace(1) undef, align 1
+  store i32 %retval.sroa.0.0.insert.insert, ptr addrspace(1) poison, align 1
   ret void
 }
 

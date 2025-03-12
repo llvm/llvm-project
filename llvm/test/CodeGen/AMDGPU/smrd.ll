@@ -487,7 +487,7 @@ ret_block:                                       ; preds = %.outer, %.label22, %
 .inner_loop_body:
   %descriptor = load <4 x i32>, ptr addrspace(4) %0, align 16, !invariant.load !0
   %load1result = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %descriptor, i32 0, i32 0)
-  store float %load1result, ptr addrspace(1) undef
+  store float %load1result, ptr addrspace(1) poison
   %inner_br2 = icmp uge i32 %1, 10
   br i1 %inner_br2, label %.inner_loop_header, label %.outer_loop_body
 

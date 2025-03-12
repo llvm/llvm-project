@@ -102,7 +102,7 @@ unreachable.bb:                                           ; preds = %else
   unreachable
 
 ret.bb:                                          ; preds = %else, %main_body
-  store volatile i32 11, ptr addrspace(1) undef
+  store volatile i32 11, ptr addrspace(1) poison
   ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> undef
 }
 

@@ -12,7 +12,7 @@ main_body:
   %tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %tmp3 = bitcast <4 x i32> %tmp2 to <4 x float>
   %tmp4 = extractelement <4 x float> %tmp3, i32 0
-  store volatile float %tmp4, ptr addrspace(1) undef
+  store volatile float %tmp4, ptr addrspace(1) poison
   ret void
 }
 
@@ -28,7 +28,7 @@ main_body:
   %tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
   %tmp3 = bitcast <4 x i32> %tmp2 to <4 x float>
   %tmp4 = extractelement <4 x float> %tmp3, i32 1
-  store volatile float %tmp4, ptr addrspace(1) undef
+  store volatile float %tmp4, ptr addrspace(1) poison
   ret void
 }
 
@@ -44,7 +44,7 @@ main_body:
   %tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %tmp3 = bitcast <4 x i32> %tmp2 to <4 x float>
   %tmp4 = extractelement <4 x float> %tmp3, i32 0
-  store volatile float %tmp4, ptr addrspace(1) undef
+  store volatile float %tmp4, ptr addrspace(1) poison
   ret void
 }
 
@@ -60,7 +60,7 @@ main_body:
   %tmp2 = shufflevector <2 x i32> %tmp1, <2 x i32> poison, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
   %tmp3 = bitcast <4 x i32> %tmp2 to <4 x float>
   %tmp4 = extractelement <4 x float> %tmp3, i32 1
-  store volatile float %tmp4, ptr addrspace(1) undef
+  store volatile float %tmp4, ptr addrspace(1) poison
   ret void
 }
 
@@ -71,7 +71,7 @@ main_body:
   %tmp2 = shufflevector <4 x i32> %tmp1, <4 x i32> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
   %tmp3 = bitcast <4 x i32> %tmp2 to <4 x float>
   %tmp4 = extractelement <4 x float> %tmp3, i32 0
-  store volatile float %tmp4, ptr addrspace(1) undef
+  store volatile float %tmp4, ptr addrspace(1) poison
   ret void
 }
 

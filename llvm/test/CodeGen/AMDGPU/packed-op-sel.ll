@@ -704,7 +704,7 @@ define amdgpu_kernel void @extract_from_i64(ptr addrspace(1) %out, ptr addrspace
 ; GCN-NEXT:    s_endpgm
 bb:
   %vec0 = load volatile <2 x i16>, ptr addrspace(3) %lds, align 4
-  %i64 = load volatile i64, ptr addrspace(1) undef
+  %i64 = load volatile i64, ptr addrspace(1) poison
 
   %elt0 = trunc i64 %i64 to i16
   %hi = lshr i64 %i64, 16
@@ -743,7 +743,7 @@ bb:
   %vec1 = load volatile <2 x half>, ptr addrspace(3) %lds.gep1, align 4
   %vec2 = load volatile <2 x half>, ptr addrspace(3) %lds.gep2, align 4
 
-  %scalar0 = load volatile i16, ptr addrspace(1) undef
+  %scalar0 = load volatile i16, ptr addrspace(1) poison
   %shl = shl i16 %scalar0, 1
   %shl.bc = bitcast i16 %shl to half
 
@@ -786,8 +786,8 @@ bb:
   %vec1 = load volatile <2 x half>, ptr addrspace(3) %lds.gep1, align 4
   %vec2 = load volatile <2 x half>, ptr addrspace(3) %lds.gep2, align 4
 
-  %scalar0 = load volatile i16, ptr addrspace(1) undef
-  %scalar1 = load volatile half, ptr addrspace(1) undef
+  %scalar0 = load volatile i16, ptr addrspace(1) poison
+  %scalar1 = load volatile half, ptr addrspace(1) poison
   %shl = shl i16 %scalar0, 1
   %shl.bc = bitcast i16 %shl to half
 
