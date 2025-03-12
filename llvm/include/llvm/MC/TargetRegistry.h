@@ -463,6 +463,16 @@ public:
                                JIT);
   }
 
+  [[deprecated("Use overload accepting Triple instead")]]
+  TargetMachine *createTargetMachine(
+      StringRef TT, StringRef CPU, StringRef Features,
+      const TargetOptions &Options, std::optional<Reloc::Model> RM,
+      std::optional<CodeModel::Model> CM = std::nullopt,
+      CodeGenOptLevel OL = CodeGenOptLevel::Default, bool JIT = false) const {
+    return createTargetMachine(Triple(TT), CPU, Features, Options, RM, CM, OL,
+                               JIT);
+  }
+
   /// createMCAsmBackend - Create a target specific assembly parser.
   MCAsmBackend *createMCAsmBackend(const MCSubtargetInfo &STI,
                                    const MCRegisterInfo &MRI,
