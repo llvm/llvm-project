@@ -3631,6 +3631,12 @@ static void emitCheckHandlerCall(CodeGenFunction &CGF,
         .addAttribute(llvm::Attribute::NoUnwind);
   }
   B.addUWTableAttr(llvm::UWTableKind::Default);
+  // Add more precise attributes to recoverable ubsan handlers for better optimizations.
+  if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 && MayReturn) {
+    B.addMemoryAttr(llvm::MemoryEffects::argMemOnly(llvm::ModRefInfo::Ref) | llvm::MemoryEffects::inaccessibleMemOnly());
+    // If the handler does not return, we must hit a undefined behavior.
+    B.addAttribute(llvm::Attribute::WillReturn);
+  }
 
   llvm::FunctionCallee Fn = CGF.CGM.CreateRuntimeFunction(
       FnType, FnName,
