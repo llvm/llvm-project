@@ -61,7 +61,6 @@ public:
   BuiltinTypeDeclBuilder &addSimpleTemplateParams(ArrayRef<StringRef> Names,
                                                   ConceptDecl *CD);
   CXXRecordDecl *finalizeForwardDeclaration();
-  //BuiltinTypeDeclBuilder &startDefinition();
   BuiltinTypeDeclBuilder &completeDefinition();
 
   BuiltinTypeDeclBuilder &
