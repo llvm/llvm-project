@@ -55,8 +55,7 @@ public:
     if (SIInstrInfo::isTRANS(MI))
       return TRANS;
     // WMMA XDL ops are treated the same as TRANS.
-    if ((SIInstrInfo::isWMMA(MI) || SIInstrInfo::isSWMMAC(MI)) &&
-       AMDGPU::getWMMAIsXDL(MI.getOpcode()))
+    if (SIInstrInfo::isXDLWMMA(MI))
       return TRANS;
     if (SIInstrInfo::isVALU(MI))
       return VALU;
@@ -404,8 +403,8 @@ public:
     if (Emit) {
       assert(State == BlockState[&MBB] &&
              "Basic block state should not have changed on final pass!");
-    } else if (State != BlockState[&MBB]) {
-      BlockState[&MBB] = std::move(State);
+    } else if (DelayState &BS = BlockState[&MBB]; State != BS) {
+      BS = std::move(State);
       Changed = true;
     }
     return Changed;

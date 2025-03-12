@@ -19,12 +19,13 @@
 #include "AMDGPUAliasAnalysis.h"
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
+#include "AMDGPUExportKernelRuntimeHandles.h"
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUMacroFusion.h"
-#include "AMDGPUOpenCLEnqueuedBlockLowering.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
+#include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
@@ -537,7 +538,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
-  initializeAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass(*PR);
+  initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
@@ -550,7 +551,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUMarkPromotableLaneSharedLegacyPass(*PR);
   initializeAMDGPUMarkPromotablePrivateLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
-  initializeAMDGPUReserveWWMRegsPass(*PR);
+  initializeAMDGPUReserveWWMRegsLegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
@@ -1253,8 +1254,8 @@ void AMDGPUPassConfig::addIRPasses() {
   if (Arch == Triple::r600)
     addPass(createR600OpenCLImageTypeLoweringPass());
 
-  // Replace OpenCL enqueued block function pointers with global variables.
-  addPass(createAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass());
+  // Make enqueued block runtime handles externally visible.
+  addPass(createAMDGPUExportKernelRuntimeHandlesLegacyPass());
 
   // Lower LDS accesses to global memory pass if address sanitizer is enabled.
   if (EnableSwLowerLDS)
@@ -1643,7 +1644,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(createWWMRegAllocPass(false));
 
   addPass(&SILowerWWMCopiesLegacyID);
-  addPass(&AMDGPUReserveWWMRegsID);
+  addPass(&AMDGPUReserveWWMRegsLegacyID);
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(false));
@@ -1680,7 +1681,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createWWMRegAllocPass(true));
   addPass(&SILowerWWMCopiesLegacyID);
   addPass(createVirtRegRewriter(false));
-  addPass(&AMDGPUReserveWWMRegsID);
+  addPass(&AMDGPUReserveWWMRegsLegacyID);
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(true));
@@ -2023,7 +2024,7 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   addPass(AMDGPUAlwaysInlinePass());
   addPass(AlwaysInlinerPass());
 
-  addPass(AMDGPUOpenCLEnqueuedBlockLoweringPass());
+  addPass(AMDGPUExportKernelRuntimeHandlesPass());
 
   if (EnableSwLowerLDS)
     addPass(AMDGPUSwLowerLDSPass(TM));

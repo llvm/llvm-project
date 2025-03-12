@@ -117,5 +117,14 @@ s_prefetch_inst s[14:15], 0xffffff, m0, 7
 s_endpgm_ordered_ps_done
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 
+s_alloc_vgpr v0
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_alloc_vgpr exec
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
+s_alloc_vgpr vcc
+// GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+
 s_getreg_b32 s0, hwreg(HW_REG_WAVE_GROUP_INFO)
 // GFX12-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid hardware register: not supported on this GPU

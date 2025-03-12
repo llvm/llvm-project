@@ -12,7 +12,7 @@
 ; GFX10-NEXT:   v_cmp_eq_u32_e32 vcc_lo, 0, v2          ; 7D840480
 ; GFX10-NEXT:   s_or_b32 s4, vcc_lo, s4                 ; 8804046A
 ; GFX10-NEXT:   s_andn2_b32 exec_lo, exec_lo, s4        ; 8A7E047E
-; GFX10-NEXT:   s_cbranch_execnz ""                     ; BF890000
+; GFX10-NEXT:   s_cbranch_execnz .LBB0_1                ; BF890000
 ; GFX10-NEXT:   s_or_b32 exec_lo, exec_lo, s4           ; 887E047E
 ; GFX10-NEXT:   s_setpc_b64 s[30:31]                    ; BE80201E
 

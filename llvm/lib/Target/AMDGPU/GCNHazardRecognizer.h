@@ -74,8 +74,7 @@ private:
   // used on a newly inserted instruction before returning from PreEmitNoops.
   void runOnInstruction(MachineInstr *MI);
 
-  int getWaitStatesSince(IsHazardFn IsHazard, int Limit,
-                         bool CountVALUOnly = false);
+  int getWaitStatesSince(IsHazardFn IsHazard, int Limit);
   int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef, int Limit);
   int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit);
 

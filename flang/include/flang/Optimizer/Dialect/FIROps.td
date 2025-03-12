@@ -68,6 +68,12 @@ def IsBoxAddressOrValueTypePred
 def fir_BoxAddressOrValueType : Type<IsBoxAddressOrValueTypePred,
     "fir.box or fir.class type or reference">;
 
+def RefOfConstantSizeAggregateTypePred
+        : CPred<"::fir::isRefOfConstantSizeAggregateType($_self)">;
+def AnyRefOfConstantSizeAggregateType : TypeConstraint<
+      RefOfConstantSizeAggregateTypePred,
+      "a reference type to a constant size fir.array, fir.char, or fir.type">;
+
 //===----------------------------------------------------------------------===//
 // Memory SSA operations
 //===----------------------------------------------------------------------===//
@@ -341,6 +347,44 @@ def fir_StoreOp : fir_Op<"store", [FirAliasTagOpInterface]> {
     static mlir::Type elementType(mlir::Type refType);
   }];
 }
+
+def fir_CopyOp : fir_Op<"copy", []> {
+  let summary = "copy constant size memory";
+
+  let description = [{
+    Copy the memory from a source with compile time constant size to
+    a destination of the same type.
+
+    This is meant to be used for aggregate types where load and store
+    are not appropriate to make a copy because LLVM is not meant to
+    handle load and store of "big" aggregates.
+
+    Its "no_overlap" attribute allows indicating that the source and destination
+    are known to not overlap at compile time.
+
+    ```
+      !t =!fir.type<t{x:!fir.array<1000xi32>}>
+      fir.copy %x to %y : !fir.ref<!t>, !fir.ref<!t>
+    ```
+    TODO: add FirAliasTagOpInterface to carry TBAA.
+  }];
+
+  let arguments = (ins Arg<AnyRefOfConstantSizeAggregateType, "", [MemRead]>:$source,
+                       Arg<AnyRefOfConstantSizeAggregateType, "", [MemWrite]>:$destination,
+                       OptionalAttr<UnitAttr>:$no_overlap);
+
+  let builders = [OpBuilder<(ins "mlir::Value":$source,
+                                 "mlir::Value":$destination,
+                                  CArg<"bool", "false">:$no_overlap)>];
+
+  let assemblyFormat = [{
+    $source `to` $destination (`no_overlap` $no_overlap^)?
+    attr-dict `:` type(operands)
+  }];
+
+  let hasVerifier = 1;
+}
+
 
 def fir_SaveResultOp : fir_Op<"save_result", [AttrSizedOperandSegments]> {
   let summary = [{

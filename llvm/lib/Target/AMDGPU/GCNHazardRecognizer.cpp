@@ -489,8 +489,7 @@ static int getWaitStatesSince(
     GCNHazardRecognizer::IsHazardFn IsHazard, const MachineBasicBlock *MBB,
     MachineBasicBlock::const_reverse_instr_iterator I, int WaitStates,
     IsExpiredFn IsExpired, DenseSet<const MachineBasicBlock *> &Visited,
-    GetNumWaitStatesFn GetNumWaitStates = SIInstrInfo::getNumWaitStates,
-    bool CountVALUOnly = false) {
+    GetNumWaitStatesFn GetNumWaitStates = SIInstrInfo::getNumWaitStates) {
   for (auto E = MBB->instr_rend(); I != E; ++I) {
     // Don't add WaitStates for parent BUNDLE instructions.
     if (I->isBundle())
@@ -502,8 +501,7 @@ static int getWaitStatesSince(
     if (I->isInlineAsm())
       continue;
 
-    if (!CountVALUOnly || SIInstrInfo::isVALU(*I))
-      WaitStates += GetNumWaitStates(*I);
+    WaitStates += GetNumWaitStates(*I);
 
     if (IsExpired(*I, WaitStates))
       return std::numeric_limits<int>::max();
@@ -515,8 +513,7 @@ static int getWaitStatesSince(
       continue;
 
     int W = getWaitStatesSince(IsHazard, Pred, Pred->instr_rbegin(), WaitStates,
-                               IsExpired, Visited, GetNumWaitStates,
-                               CountVALUOnly);
+                               IsExpired, Visited, GetNumWaitStates);
 
     MinWaitStates = std::min(MinWaitStates, W);
   }
@@ -525,23 +522,19 @@ static int getWaitStatesSince(
 }
 
 static int getWaitStatesSince(GCNHazardRecognizer::IsHazardFn IsHazard,
-                              const MachineInstr *MI, IsExpiredFn IsExpired,
-                              bool CountVALUOnly = false) {
+                              const MachineInstr *MI, IsExpiredFn IsExpired) {
   DenseSet<const MachineBasicBlock *> Visited;
   return getWaitStatesSince(IsHazard, MI->getParent(),
                             std::next(MI->getReverseIterator()), 0, IsExpired,
-                            Visited, SIInstrInfo::getNumWaitStates,
-                            CountVALUOnly);
+                            Visited, SIInstrInfo::getNumWaitStates);
 }
 
-int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard, int Limit,
-                                            bool CountVALUOnly) {
+int GCNHazardRecognizer::getWaitStatesSince(IsHazardFn IsHazard, int Limit) {
   if (IsHazardRecognizerMode) {
     auto IsExpiredFn = [Limit](const MachineInstr &, int WaitStates) {
       return WaitStates >= Limit;
     };
-    return ::getWaitStatesSince(IsHazard, CurrCycleInstr, IsExpiredFn,
-                                CountVALUOnly);
+    return ::getWaitStatesSince(IsHazard, CurrCycleInstr, IsExpiredFn);
   }
 
   int WaitStates = 0;
@@ -1994,12 +1987,12 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
 
   // WaitStates here is the number of V_NOPs or unrelated VALU instructions must
-  // be in between the first WMMA and the second instruction to cover the haward
+  // be in between the first WMMA and the second instruction to cover the hazard
   // (WMMAWaitStates if the second is also a WMMA, VALUWaitStates if the second
   // is a VALU). Refer to SPG 4.6.12.1. "Requirements for WMMA data hazards" for
   // numbers, which depends on the category of the first WMMA.
-  const unsigned WMMAWaitStates[] = {5, 9, 3, 5};
-  const unsigned VALUWaitStates[] = {4, 8, 2, 4};
+  const int WMMAWaitStates[] = {5, 9, 3, 5};
+  const int VALUWaitStates[] = {4, 8, 2, 4};
   unsigned Category = 0;
 
   auto IsWMMAHazardFn = [MI, TII, TRI, &Category, this](const MachineInstr &I) {
@@ -2066,20 +2059,41 @@ bool GCNHazardRecognizer::fixWMMACoexecutionHazards(MachineInstr *MI) {
     return false;
   };
 
+  int Limit = 0;
+  auto IsExpiredFn = [&Limit](const MachineInstr &, int WaitStates) {
+    return WaitStates >= Limit;
+  };
+
+  auto GetWaitStatesFn = [](const MachineInstr &I) {
+    return SIInstrInfo::isVALU(I) ? 1 : 0;
+  };
+
   int WaitStatesNeeded = -1;
   if (SIInstrInfo::isXDLWMMA(*MI)) {
     for (Category = 0; WaitStatesNeeded < 0 && Category < 4; Category++) {
+      Limit = WMMAWaitStates[Category]; // for IsExpiredFn.
+      DenseSet<const MachineBasicBlock *> Visited;
+      // '::getWaitStatesSince' returns the number of VALUs in between if hazard
+      // exists, and INT_MAX if there is no hazard. As a result, a negative
+      // WaitStatesNeeded here means no hazard, and we will continue to search
+      // for other categories.
       WaitStatesNeeded =
-        WMMAWaitStates[Category] -
-        getWaitStatesSince(IsWMMAHazardFn, WMMAWaitStates[Category],
-                           true /*CountVALUOnly*/);
+          Limit - ::getWaitStatesSince(IsWMMAHazardFn, MI->getParent(),
+                                       std::next(MI->getReverseIterator()), 0,
+                                       IsExpiredFn, Visited, GetWaitStatesFn);
     }
   } else { // Must be a co-executable VALU.
     for (Category = 0; WaitStatesNeeded < 0 && Category < 4; Category++) {
+      Limit = VALUWaitStates[Category]; // for IsExpiredFn.
+      DenseSet<const MachineBasicBlock *> Visited;
+      // '::getWaitStatesSince' returns the number of VALUs in between if hazard
+      // exists, and INT_MAX if there is no hazard. As a result, a negative
+      // WaitStatesNeeded here means no hazard, and we will continue to search
+      // for other categories.
       WaitStatesNeeded =
-          VALUWaitStates[Category] -
-          getWaitStatesSince(IsVALUHazardFn, VALUWaitStates[Category],
-                             true /*CountVALUOnly*/);
+          Limit - ::getWaitStatesSince(IsVALUHazardFn, MI->getParent(),
+                                       std::next(MI->getReverseIterator()), 0,
+                                       IsExpiredFn, Visited, GetWaitStatesFn);
     }
   }
 
