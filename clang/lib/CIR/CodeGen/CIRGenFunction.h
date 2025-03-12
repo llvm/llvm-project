@@ -109,6 +109,8 @@ public:
   mlir::Value emitAlloca(llvm::StringRef name, mlir::Type ty,
                          mlir::Location loc, clang::CharUnits alignment);
 
+  mlir::Value createDummyValue(mlir::Location loc, clang::QualType qt);
+
 private:
   // Track current variable initialization (if there's one)
   const clang::VarDecl *currVarDecl = nullptr;

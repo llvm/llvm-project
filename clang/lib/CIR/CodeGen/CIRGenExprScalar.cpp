@@ -103,7 +103,7 @@ public:
   }
 
   mlir::Value emitFloatToBoolConversion(mlir::Value src, mlir::Location loc) {
-    auto boolTy = builder.getBoolTy();
+    cir::BoolType boolTy = builder.getBoolTy();
     return builder.create<cir::CastOp>(loc, boolTy,
                                        cir::CastKind::float_to_bool, src);
   }
@@ -114,7 +114,7 @@ public:
     // as a logical value again.
     // TODO: optimize this common case here or leave it for later
     // CIR passes?
-    mlir::Type boolTy = cgf.convertType(cgf.getContext().BoolTy);
+    cir::BoolType boolTy = builder.getBoolTy();
     return builder.create<cir::CastOp>(loc, boolTy, cir::CastKind::int_to_bool,
                                        srcVal);
   }
@@ -130,13 +130,9 @@ public:
 
     if (llvm::isa<MemberPointerType>(srcType)) {
       cgf.getCIRGenModule().errorNYI(loc, "member pointer to bool conversion");
-      auto boolType = cgf.getContext().getBOOLType();
-      auto cirBoolType = cgf.convertType(boolType);
-      CharUnits alignment = cgf.getContext().getTypeAlignInChars(boolType);
-      auto addr =
-          builder.createAlloca(loc, builder.getPointerTo(cirBoolType),
-                               cirBoolType, {}, cgf.cgm.getSize(alignment));
-      return builder.createLoad(loc, addr);
+      mlir::Type boolType = builder.getBoolTy();
+      return builder.create<cir::ConstantOp>(loc, boolType,
+                                             builder.getCIRBoolAttr(false));
     }
 
     if (srcType->isIntegerType())
@@ -175,9 +171,9 @@ public:
                              mlir::Type dstTy, ScalarConversionOpts opts) {
     assert(!srcType->isMatrixType() && !dstType->isMatrixType() &&
            "Internal error: matrix types not handled by this function.");
-    if (mlir::isa<mlir::IntegerType>(srcTy) ||
-        mlir::isa<mlir::IntegerType>(dstTy))
-      llvm_unreachable("Obsolete code. Don't use mlir::IntegerType with CIR.");
+    assert(!(mlir::isa<mlir::IntegerType>(srcTy) ||
+             mlir::isa<mlir::IntegerType>(dstTy)) &&
+           "Obsolete code. Don't use mlir::IntegerType with CIR.");
 
     mlir::Type fullDstTy = dstTy;
     assert(!cir::MissingFeatures::vectorType());
@@ -211,11 +207,7 @@ public:
         castKind = cir::CastKind::float_to_int;
       } else if (mlir::isa<cir::CIRFPTypeInterface>(dstTy)) {
         cgf.getCIRGenModule().errorNYI("floating point casts");
-        CharUnits alignment = cgf.getContext().getTypeAlignInChars(dstType);
-        auto addr =
-            builder.createAlloca(src.getLoc(), builder.getPointerTo(dstTy),
-                                 dstTy, {}, cgf.cgm.getSize(alignment));
-        return builder.createLoad(src.getLoc(), addr);
+        return builder.getNullPtr(dstTy, src.getLoc());
       } else {
         llvm_unreachable("Internal error: Cast to unexpected type");
       }
@@ -451,7 +443,7 @@ public:
     // conversions to fixed point types from other types.
     if (srcType->isFixedPointType() || dstType->isFixedPointType()) {
       cgf.getCIRGenModule().errorNYI(loc, "fixed point conversions");
-      return nullptr;
+      return {};
     }
 
     srcType = srcType.getCanonicalType();
@@ -464,7 +456,7 @@ public:
     }
 
     if (dstType->isVoidType())
-      return nullptr;
+      return {};
 
     mlir::Type mlirSrcType = src.getType();
 
@@ -486,12 +478,11 @@ public:
         // Cast to other types through float, using either the intrinsic or
         // FPExt, depending on whether the half type itself is supported (as
         // opposed to operations on half, available with NativeHalfType).
-        if (cgf.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
+        if (cgf.getContext().getTargetInfo().useFP16ConversionIntrinsics())
           cgf.getCIRGenModule().errorNYI(loc,
                                          "cast via llvm.convert.from.fp16");
-          // FIXME(cir): For now lets pretend we shouldn't use the conversion
-          // intrinsics and insert a cast here unconditionally.
-        }
+        // FIXME(cir): For now lets pretend we shouldn't use the conversion
+        // intrinsics and insert a cast here unconditionally.
         src = builder.createCast(cgf.getLoc(loc), cir::CastKind::floating, src,
                                  cgf.FloatTy);
         srcType = cgf.getContext().FloatTy;
@@ -513,11 +504,7 @@ public:
     // some native types (like Obj-C id) may map to a pointer type.
     if (isa_cast<cir::PointerType>(mlirDstType)) {
       cgf.getCIRGenModule().errorNYI(loc, "pointer casts");
-      CharUnits alignment = cgf.getContext().getTypeAlignInChars(dstType);
-      auto addr =
-          builder.createAlloca(src.getLoc(), builder.getPointerTo(dstPT), dstPT,
-                               {}, cgf.cgm.getSize(alignment));
-      return builder.createLoad(src.getLoc(), addr);
+      return builder.getNullPtr(dstPT, src.getLoc());
     }
 
     if (isa<cir::PointerType>(mlirSrcType)) {
@@ -535,12 +522,14 @@ public:
              "Splatted expr doesn't match with vector element type?");
 
       cgf.getCIRGenModule().errorNYI(loc, "vector splatting");
-      return nullptr;
+      return {};
     }
 
-    if (srcType->isMatrixType() && dstType->isMatrixType())
+    if (srcType->isMatrixType() && dstType->isMatrixType()) {
       cgf.getCIRGenModule().errorNYI(loc,
                                      "matrix type to matrix type conversion");
+      return {};
+    }
     assert(!srcType->isMatrixType() && !dstType->isMatrixType() &&
            "Internal error: conversion between matrix type and scalar type");
 
@@ -649,10 +638,12 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                           src, dstTy);
   }
 
-  case CK_AtomicToNonAtomic:
+  case CK_AtomicToNonAtomic: {
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
                                    "CastExpr: ", ce->getCastKindName());
-    break;
+    mlir::Location loc = cgf.getLoc(subExpr->getSourceRange());
+    return cgf.createDummyValue(loc, destTy);
+  }
   case CK_NonAtomicToAtomic:
   case CK_UserDefinedConversion:
     return Visit(const_cast<Expr *>(subExpr));
@@ -714,7 +705,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
   case CK_ToVoid:
     cgf.getCIRGenModule().errorNYI(subExpr->getSourceRange(),
                                    "ignored expression on void cast");
-    return nullptr;
+    return {};
 
   case CK_IntegralToFloating:
   case CK_FloatingToIntegral:

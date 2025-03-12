@@ -10,6 +10,7 @@
 #define LLVM_CLANG_CIR_DIALECT_BUILDER_CIRBASEBUILDER_H
 
 #include "clang/AST/CharUnits.h"
+#include "clang/AST/Type.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
@@ -78,6 +79,14 @@ public:
                            mlir::Value dst) {
     return create<cir::StoreOp>(loc, val, dst);
   }
+
+  mlir::Value createDummyValue(mlir::Location loc, mlir::Type type,
+    clang::CharUnits alignment) {
+auto addr =
+createAlloca(loc, getPointerTo(type), type, {},
+getSizeFromCharUnits(getContext(), alignment));
+return createLoad(loc, addr);
+}
 
   //===--------------------------------------------------------------------===//
   // Cast/Conversion Operators
