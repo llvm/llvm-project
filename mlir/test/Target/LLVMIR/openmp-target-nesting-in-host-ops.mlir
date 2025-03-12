@@ -51,10 +51,9 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_gpu = true, 
 // CHECK-NEXT:    %{{.*}} = alloca i32, i64 1, align 4
 // CHECK-NEXT:    br label %omp.wsloop.fake.region
 // CHECK:       omp.wsloop.fake.region:
-// CHECK-NEXT:    %{{.*}} = alloca i32, align 4
 // CHECK-NEXT:    br label %omp.loop_nest.fake.region
 // CHECK:       omp.loop_nest.fake.region:
-// CHECK-NEXT:    store ptr %3, ptr %2, align 8
+// CHECK-NEXT:    store i32 poison, ptr %{{.*}}
 // CHECK-NEXT:    br label %omp.region.cont1
 // CHECK:       omp.region.cont1:
 // CHECK-NEXT:    br label %omp.region.cont

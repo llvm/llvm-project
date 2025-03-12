@@ -29,6 +29,7 @@
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -5336,9 +5337,9 @@ convertTargetOpsInNest(Operation *op, llvm::IRBuilderBase &builder,
               assert(builder.GetInsertBlock() &&
                      "No insert block is set for the builder");
               for (auto iv : loopNest.getIVs()) {
-                // Create fake allocas just to maintain IR validity.
+                // Map iv to an undefined value just to keep the IR validity.
                 moduleTranslation.mapValue(
-                    iv, builder.CreateAlloca(
+                    iv, llvm::PoisonValue::get(
                             moduleTranslation.convertType(iv.getType())));
               }
             }
