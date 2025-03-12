@@ -1777,7 +1777,7 @@ void OmpVisitor::ProcessReductionSpecifier(
   // as variables in the outer scope, if there's more than one type in the
   // typelist, duplicate symbols will be reported.
   const parser::CharBlock ompVarNames[]{
-    {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}, {"omp_orig", 8} };
+      {"omp_in", 6}, {"omp_out", 7}, {"omp_priv", 8}, {"omp_orig", 8}};
 
   for (auto &t : typeList.v) {
     PushScope(Scope::Kind::OtherConstruct, nullptr);
