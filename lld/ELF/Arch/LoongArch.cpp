@@ -58,8 +58,6 @@ enum Op {
   LD_W = 0x28800000,
   LD_D = 0x28c00000,
   JIRL = 0x4c000000,
-  B = 0x50000000,
-  BL = 0x54000000,
 };
 
 enum Reg {
@@ -832,37 +830,6 @@ static void relaxPCHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
   remove = 4;
 }
 
-// Relax code sequence.
-// From:
-//   pcaddu18i $ra, %call36(foo)
-//   jirl $ra, $ra, 0
-// To:
-//   b/bl foo
-static void relaxCall36(Ctx &ctx, const InputSection &sec, size_t i,
-                        uint64_t loc, Relocation &r, uint32_t &remove) {
-  const uint64_t dest =
-      (r.expr == R_PLT_PC ? r.sym->getPltVA(ctx) : r.sym->getVA(ctx)) +
-      r.addend;
-
-  const int64_t displace = dest - loc;
-  // Check if the displace aligns 4 bytes or exceeds the range of b[l].
-  if ((displace & 0x3) != 0 || !isInt<28>(displace))
-    return;
-
-  const uint32_t nextInsn = read32le(sec.content().data() + r.offset + 4);
-  if (getD5(nextInsn) == R_RA) {
-    // convert jirl to bl
-    sec.relaxAux->relocTypes[i] = R_LARCH_B26;
-    sec.relaxAux->writes.push_back(insn(BL, 0, 0, 0));
-    remove = 4;
-  } else if (getD5(nextInsn) == R_ZERO) {
-    // convert jirl to b
-    sec.relaxAux->relocTypes[i] = R_LARCH_B26;
-    sec.relaxAux->writes.push_back(insn(B, 0, 0, 0));
-    remove = 4;
-  }
-}
-
 static bool relax(Ctx &ctx, InputSection &sec) {
   const uint64_t secAddr = sec.getVA();
   const MutableArrayRef<Relocation> relocs = sec.relocs();
@@ -906,10 +873,6 @@ static bool relax(Ctx &ctx, InputSection &sec) {
       // The overflow check for i+2 will be carried out in isPairRelaxable.
       if (isPairRelaxable(relocs, i))
         relaxPCHi20Lo12(ctx, sec, i, loc, r, relocs[i + 2], remove);
-      break;
-    case R_LARCH_CALL36:
-      if (relaxable(relocs, i))
-        relaxCall36(ctx, sec, i, loc, r, remove);
       break;
     }
 
@@ -1013,10 +976,6 @@ void LoongArch::finalizeRelax(int passes) const {
             write32le(p, aux.writes[writesIdx++]);
             // RelExpr is needed for relocating.
             r.expr = r.sym->hasFlag(NEEDS_PLT) ? R_PLT_PC : R_PC;
-            break;
-          case R_LARCH_B26:
-            skip = 4;
-            write32le(p, aux.writes[writesIdx++]);
             break;
           default:
             llvm_unreachable("unsupported type");
