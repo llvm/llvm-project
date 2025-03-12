@@ -521,8 +521,7 @@ Error RawMemProfReader::mapRawProfileToRecords() {
     // we insert a new entry for callsite data if we need to.
     IndexedMemProfRecord &Record = MemProfData.Records[Id];
     for (LocationPtr Loc : Locs)
-      Record.CallSites.push_back(
-          IndexedCallSiteInfo(MemProfData.addCallStack(*Loc)));
+      Record.CallSites.emplace_back(MemProfData.addCallStack(*Loc));
   }
 
   return Error::success();

@@ -174,7 +174,7 @@ static IndexedMemProfRecord deserializeV2(const MemProfSchema &Schema,
   for (uint64_t J = 0; J < NumCtxs; J++) {
     CallStackId CSId =
         endian::readNext<CallStackId, llvm::endianness::little>(Ptr);
-    Record.CallSites.push_back(IndexedCallSiteInfo(CSId));
+    Record.CallSites.emplace_back(CSId);
   }
 
   return Record;
@@ -210,7 +210,7 @@ static IndexedMemProfRecord deserializeV3(const MemProfSchema &Schema,
     static_assert(sizeof(LinearCallStackId) <= sizeof(CallStackId));
     LinearCallStackId CSId =
         endian::readNext<LinearCallStackId, llvm::endianness::little>(Ptr);
-    Record.CallSites.push_back(IndexedCallSiteInfo(CSId));
+    Record.CallSites.emplace_back(CSId);
   }
 
   return Record;
@@ -244,7 +244,7 @@ MemProfRecord IndexedMemProfRecord::toMemProfRecord(
   Record.CallSites.reserve(CallSites.size());
   for (const IndexedCallSiteInfo &CS : CallSites) {
     std::vector<Frame> Frames = Callback(CS.CSId);
-    Record.CallSites.push_back(CallSiteInfo(std::move(Frames), CS.CalleeGuids));
+    Record.CallSites.emplace_back(std::move(Frames), CS.CalleeGuids);
   }
 
   return Record;
