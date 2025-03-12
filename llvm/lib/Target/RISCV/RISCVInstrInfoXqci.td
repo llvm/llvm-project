@@ -280,16 +280,17 @@ class QCIRVInst16CI_RS1<bits<5> funct5, string OpcodeStr>
   let Inst{6-2} = funct5{4-0};
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIBranchInst_rii<bits<3> funct3, DAGOperand InTyImm5, string opcodestr>
     : RVInstB<funct3, OPC_CUSTOM_3, (outs),
               (ins GPRNoX0:$rs1, InTyImm5:$rs2, simm13_lsb0:$imm12),
               opcodestr, "$rs1, $rs2, $imm12"> {
   let isBranch = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class QCIBranchInst48_rii<bits<5> funct5, DAGOperand InTyImm16, string opcodestr>
     : RVInst48<(outs), (ins GPRNoX0:$rs1, InTyImm16:$imm16, simm13_lsb0:$imm12),
                opcodestr, "$rs1, $imm16, $imm12", [], InstFormatOther> {
@@ -308,6 +309,9 @@ class QCIBranchInst48_rii<bits<5> funct5, DAGOperand InTyImm16, string opcodestr
   let Inst{6-0} = 0b0011111;
   let isBranch = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
 let hasSideEffects = 1 in
@@ -635,7 +639,7 @@ let Predicates = [HasVendorXqciint, IsRV32], hasSideEffects = 1 in {
 
   let mayLoad = 0, mayStore = 1,
     Uses = [X1, X2, X5, X6, X7, X8, X10, X11, X12, X13, X14, X15, X16, X17, X28, X29, X30, X31],
-    Defs = [X2] in {
+    Defs = [X2, X8] in {
   def QC_C_MIENTER      : QCIRVInst16CI_NONE<0b10000, "qc.c.mienter">;
   def QC_C_MIENTER_NEST : QCIRVInst16CI_NONE<0b10001, "qc.c.mienter.nest">;
   } // mayLoad = 1, mayStore = 1, Uses = [...], Defs = [...]

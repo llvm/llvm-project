@@ -3726,38 +3726,37 @@ private:
                   return VL[Idx];
                 });
       InstructionsState S = getSameOpcode(Last->Scalars, *TLI);
-      if (S) {
+      if (S)
         Last->setOperations(S);
-      } else if (EntryState == TreeEntry::SplitVectorize) {
-        auto *MainOp =
-            cast<Instruction>(*find_if(Last->Scalars, IsaPred<Instruction>));
-        auto *AltOp = cast<Instruction>(*find_if(Last->Scalars, [=](Value *V) {
-          auto *I = dyn_cast<Instruction>(V);
-          return I && I->getOpcode() != MainOp->getOpcode();
-        }));
-        Last->setOperations(InstructionsState(MainOp, AltOp));
-      }
-      if (EntryState == TreeEntry::SplitVectorize) {
-        SmallPtrSet<Value *, 4> Processed;
-        for (Value *V : VL) {
-          auto *I = dyn_cast<Instruction>(V);
-          if (!I)
-            continue;
-          auto It = ScalarsInSplitNodes.find(V);
-          if (It == ScalarsInSplitNodes.end()) {
-            ScalarsInSplitNodes.try_emplace(V).first->getSecond().push_back(
-                Last);
-            (void)Processed.insert(V);
-          } else if (Processed.insert(V).second) {
-            assert(!is_contained(It->getSecond(), Last) &&
-                   "Value already associated with the node.");
-            It->getSecond().push_back(Last);
-          }
-        }
-      }
       Last->ReorderIndices.append(ReorderIndices.begin(), ReorderIndices.end());
     }
-    if (!Last->isGather() && Last->State != TreeEntry::SplitVectorize) {
+    if (EntryState == TreeEntry::SplitVectorize) {
+      auto *MainOp =
+          cast<Instruction>(*find_if(Last->Scalars, IsaPred<Instruction>));
+      auto *AltOp = cast<Instruction>(*find_if(Last->Scalars, [=](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        if (!I)
+          return false;
+        InstructionsState LocalS = getSameOpcode({I, MainOp}, *TLI);
+        return !LocalS || LocalS.isAltShuffle();
+      }));
+      Last->setOperations(InstructionsState(MainOp, AltOp));
+      SmallPtrSet<Value *, 4> Processed;
+      for (Value *V : VL) {
+        auto *I = dyn_cast<Instruction>(V);
+        if (!I)
+          continue;
+        auto It = ScalarsInSplitNodes.find(V);
+        if (It == ScalarsInSplitNodes.end()) {
+          ScalarsInSplitNodes.try_emplace(V).first->getSecond().push_back(Last);
+          (void)Processed.insert(V);
+        } else if (Processed.insert(V).second) {
+          assert(!is_contained(It->getSecond(), Last) &&
+                 "Value already associated with the node.");
+          It->getSecond().push_back(Last);
+        }
+      }
+    } else if (!Last->isGather()) {
       SmallPtrSet<Value *, 4> Processed;
       for (Value *V : VL) {
         if (isa<PoisonValue>(V))
@@ -3794,7 +3793,7 @@ private:
         }
       }
       assert(!BundleMember && "Bundle and VL out of sync");
-    } else if (Last->isGather()) {
+    } else {
       // Build a map for gathered scalars to the nodes where they are used.
       bool AllConstsOrCasts = true;
       for (Value *V : VL)
@@ -14013,7 +14012,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   const BasicBlock *TEInsertBlock = nullptr;
   // Main node of PHI entries keeps the correct order of operands/incoming
   // blocks.
-  if (auto *PHI = dyn_cast<PHINode>(TEUseEI.UserTE->getMainOp())) {
+  if (auto *PHI = dyn_cast<PHINode>(TEUseEI.UserTE->getMainOp());
+      PHI && TEUseEI.UserTE->State != TreeEntry::SplitVectorize) {
     TEInsertBlock = PHI->getIncomingBlock(TEUseEI.EdgeIdx);
     TEInsertPt = TEInsertBlock->getTerminator();
   } else {
@@ -14093,7 +14093,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
              "Expected only single user of a gather node.");
       const EdgeInfo &UseEI = TEPtr->UserTreeIndex;
 
-      PHINode *UserPHI = dyn_cast<PHINode>(UseEI.UserTE->getMainOp());
+      PHINode *UserPHI = UseEI.UserTE->State != TreeEntry::SplitVectorize
+                             ? dyn_cast<PHINode>(UseEI.UserTE->getMainOp())
+                             : nullptr;
       const Instruction *InsertPt =
           UserPHI ? UserPHI->getIncomingBlock(UseEI.EdgeIdx)->getTerminator()
                   : &getLastInstructionInBundle(UseEI.UserTE);
@@ -14132,17 +14134,21 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       VToTEs.insert(TEPtr);
     }
     if (ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V); !VTEs.empty()) {
-      const TreeEntry *VTE = VTEs.front();
-      if (none_of(TE->CombinedEntriesWithIndices,
-                  [&](const auto &P) { return P.first == VTE->Idx; })) {
-        Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
-        if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
-          continue;
+      const auto *It = find_if(
+          VTEs, [&](const TreeEntry *MTE) { return MTE != TEUseEI.UserTE; });
+      if (It != VTEs.end()) {
+        const TreeEntry *VTE = *It;
+        if (none_of(TE->CombinedEntriesWithIndices,
+                    [&](const auto &P) { return P.first == VTE->Idx; })) {
+          Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
+          if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
+            continue;
+        }
+        // The node is reused - exit.
+        if (CheckAndUseSameNode(VTE))
+          break;
+        VToTEs.insert(VTE);
       }
-      // The node is reused - exit.
-      if (CheckAndUseSameNode(VTE))
-        break;
-      VToTEs.insert(VTE);
     }
     if (ArrayRef<TreeEntry *> VTEs = getTreeEntries(V); !VTEs.empty()) {
       const TreeEntry *VTE = VTEs.front();

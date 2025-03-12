@@ -811,19 +811,35 @@ validateDynamicDimExpansion(LinalgOp linalgOp,
 }
 
 // Create an expanded transpose op.
-static Operation *
-createExpandedTransposeOp(PatternRewriter &rewriter, TransposeOp transposeOp,
-                          SmallVector<ReassociationIndices> reassociation,
-                          Value expandedInput, Value output) {
-  applyPermutationToVector(reassociation, transposeOp.getPermutation());
+// the reassociation map is already permuted hence we inverse permute and then
+// flatten it. Then we inverse permute it again to get the final expanded
+// transpose permutation. For example,
+//
+// permutation = [2, 0, 1]
+// reassociation_map for expansion = [[0, 1], [2], [3, 4, 5]]
+//
+// inverse permutation = [1, 2, 0]
+// applied to reassocation_map and then flattened becomes
+// flatened permutation = [2, 3, 4, 5, 0, 1]
+// final permuation is the inverse of the flattened permutation.
+//
+// Becomes
+//
+// permutation=[4, 5, 0, 1, 2, 3]
+
+static Operation *createExpandedTransposeOp(PatternRewriter &rewriter,
+                                            TransposeOp transposeOp,
+                                            Value expandedInput, Value output,
+                                            ExpansionInfo &expansionInfo) {
   SmallVector<int64_t> newPerm;
-  for (const auto &reassoc : reassociation) {
-    for (auto dim : reassoc) {
+  for (int64_t perm : invertPermutationVector(transposeOp.getPermutation())) {
+    auto reassoc = expansionInfo.getExpandedDims(perm);
+    for (int64_t dim : reassoc) {
       newPerm.push_back(dim);
     }
   }
   return rewriter.create<TransposeOp>(transposeOp.getLoc(), expandedInput,
-                                      output, newPerm);
+                                      output, invertPermutationVector(newPerm));
 }
 
 // Create an expanded generic op.
@@ -857,16 +873,18 @@ static Operation *createExpandedGenericOp(
 // Create an expanded fused op that retains the name for certain ops
 // such as fill, copy and transpose and produce a generic op for
 // rest of linalg ops.
-static Operation *createExpandedOp(
-    PatternRewriter &rewriter, LinalgOp linalgOp, TypeRange resultTypes,
-    ArrayRef<Value> expandedOpOperands, ArrayRef<Value> outputs,
-    ArrayRef<AffineMap> expandedOpIndexingMaps, ExpansionInfo &expansionInfo,
-    SmallVector<ReassociationIndices> reassociation) {
+static Operation *createExpandedOp(PatternRewriter &rewriter, LinalgOp linalgOp,
+                                   TypeRange resultTypes,
+                                   ArrayRef<Value> expandedOpOperands,
+                                   ArrayRef<Value> outputs,
+                                   ArrayRef<AffineMap> expandedOpIndexingMaps,
+                                   ExpansionInfo &expansionInfo) {
 
   return TypeSwitch<Operation *, Operation *>(linalgOp.getOperation())
       .Case<TransposeOp>([&](TransposeOp transposeOp) {
-        return createExpandedTransposeOp(rewriter, transposeOp, reassociation,
-                                         expandedOpOperands[0], outputs[0]);
+        return createExpandedTransposeOp(rewriter, transposeOp,
+                                         expandedOpOperands[0], outputs[0],
+                                         expansionInfo);
       })
       .Case<FillOp, CopyOp>([&](Operation *op) {
         return clone(rewriter, linalgOp, resultTypes,
@@ -986,12 +1004,9 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
   }
 
   TypeRange resultTypes = ValueRange(outputs).getTypes();
-  SmallVector<ReassociationIndices> reassociationBeforeExpansion =
-      isExpanding ? expandingReshapeOp.getReassociationIndices()
-                  : collapsingReshapeOp.getReassociationIndices();
-  Operation *fusedOp = createExpandedOp(
-      rewriter, linalgOp, resultTypes, expandedOpOperands, outputs,
-      expandedOpIndexingMaps, expansionInfo, reassociationBeforeExpansion);
+  Operation *fusedOp =
+      createExpandedOp(rewriter, linalgOp, resultTypes, expandedOpOperands,
+                       outputs, expandedOpIndexingMaps, expansionInfo);
   // Reshape the result values to their original shape if this is a collapsing
   // reshape folded into its consumer.
   SmallVector<Value> resultVals;
