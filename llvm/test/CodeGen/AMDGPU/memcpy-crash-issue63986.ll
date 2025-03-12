@@ -3,7 +3,7 @@
 
 %"struct.__llvm_libc::rpc::Buffer" = type { [8 x i64] }
 
-define void @issue63986(i64 %0, i64 %idxprom) {
+define void @issue63986(i64 %0, i64 %idxprom) null_pointer_is_valid {
 ; CHECK-LABEL: issue63986:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)

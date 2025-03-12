@@ -383,7 +383,7 @@ bb:
   ret <2 x half> %result
 }
 
-define <2 x half> @chain_hi_to_lo_flat() {
+define <2 x half> @chain_hi_to_lo_flat() null_pointer_is_valid {
 ; GCN-LABEL: chain_hi_to_lo_flat:
 ; GCN:       ; %bb.0: ; %bb
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
