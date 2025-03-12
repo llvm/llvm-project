@@ -40889,6 +40889,7 @@ static SDValue combineX86ShufflesRecursively(
   assert(!RootMask.empty() &&
          (RootMask.size() > 1 || (RootMask[0] == 0 && SrcOpIndex == 0)) &&
          "Illegal shuffle root mask");
+  unsigned RootOpc = Root.getOpcode();
   MVT RootVT = Root.getSimpleValueType();
   assert(RootVT.isVector() && "Shuffles operate on vector types!");
   unsigned RootSizeInBits = RootVT.getSizeInBits();
@@ -41298,7 +41299,7 @@ static SDValue combineX86ShufflesRecursively(
 
     // Try to combine into a single shuffle instruction.
     if (SDValue Shuffle = combineX86ShuffleChain(
-            Ops, Root.getOpcode(), RootVT, Mask, Depth, CombinedNodes,
+            Ops, RootOpc, RootVT, Mask, Depth, CombinedNodes,
             AllowVariableCrossLaneMask, AllowVariablePerLaneMask,
             IsMaskedShuffle, DAG, DL, Subtarget))
       return Shuffle;
@@ -41318,7 +41319,7 @@ static SDValue combineX86ShufflesRecursively(
   // If that failed and any input is extracted then try to combine as a
   // shuffle with the larger type.
   return combineX86ShuffleChainWithExtract(
-      Ops, Root.getOpcode(), RootVT, Mask, Depth, CombinedNodes,
+      Ops, RootOpc, RootVT, Mask, Depth, CombinedNodes,
       AllowVariableCrossLaneMask, AllowVariablePerLaneMask, IsMaskedShuffle,
       DAG, DL, Subtarget);
 }
