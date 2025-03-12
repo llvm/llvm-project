@@ -2285,6 +2285,7 @@ module std [system] {
   }
   module internal_assert {
     header "__assert"
+    header "__assertion_handler" // Generated via CMake
     export *
   }
 
