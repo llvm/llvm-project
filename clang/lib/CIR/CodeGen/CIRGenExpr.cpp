@@ -185,7 +185,8 @@ RValue CIRGenFunction::emitAnyExpr(const Expr *e, bool ignoreResult) {
 void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
   if (e->isPRValue()) {
     assert(!cir::MissingFeatures::aggValueSlot());
-    return (void)emitAnyExpr(e, true);
+    emitAnyExpr(e, true);
+    return;
   }
 
   // Just emit it as an l-value and drop the result.

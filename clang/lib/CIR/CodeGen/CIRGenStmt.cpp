@@ -186,6 +186,7 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OMPInterchangeDirectiveClass:
   case Stmt::OMPAssumeDirectiveClass:
   case Stmt::OMPMaskedDirectiveClass:
+  case Stmt::OMPStripeDirectiveClass:
   case Stmt::OpenACCComputeConstructClass:
   case Stmt::OpenACCLoopConstructClass:
   case Stmt::OpenACCCombinedConstructClass:
@@ -198,12 +199,16 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OpenACCShutdownConstructClass:
   case Stmt::OpenACCSetConstructClass:
   case Stmt::OpenACCUpdateConstructClass:
+  case Stmt::OpenACCCacheConstructClass:
+  case Stmt::OpenACCAtomicConstructClass:
   case Stmt::ObjCAtCatchStmtClass:
   case Stmt::ObjCAtFinallyStmtClass:
     cgm.errorNYI(s->getSourceRange(),
                  std::string("emitStmt: ") + s->getStmtClassName());
+    return mlir::failure();
   }
-  return mlir::failure();
+
+  llvm_unreachable("Unexpected statement class");
 }
 
 mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
