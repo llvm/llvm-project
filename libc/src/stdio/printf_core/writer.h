@@ -107,21 +107,20 @@ template <WriteMode write_mode> struct WriteBuffer {
   // this with an empty string will flush the buffer if relevant.
 
   LIBC_INLINE int overflow_write(cpp::string_view new_str) {
-#ifdef LIBC_COPT_PRINTF_RUNTIME_DISPATCH
-    if (write_mode_ == WriteMode::FILL_BUFF_AND_DROP_OVERFLOW)
+    if constexpr (write_mode == WriteMode::RUNTIME_DISPATCH) {
+      if (write_mode_ == WriteMode::FILL_BUFF_AND_DROP_OVERFLOW)
+        return fill_remaining_to_buff(new_str);
+      else if (write_mode_ == WriteMode::FLUSH_TO_STREAM)
+        return flush_to_stream(new_str);
+      else if (write_mode_ == WriteMode::RESIZE_AND_FILL_BUFF)
+        return resize_and_write(new_str);
+    } else if constexpr (write_mode == WriteMode::FILL_BUFF_AND_DROP_OVERFLOW) {
       return fill_remaining_to_buff(new_str);
-    else if (write_mode_ == WriteMode::FLUSH_TO_STREAM)
+    } else if constexpr (write_mode == WriteMode::FLUSH_TO_STREAM) {
       return flush_to_stream(new_str);
-    else if (write_mode_ == WriteMode::RESIZE_AND_FILL_BUFF)
+    } else if constexpr (write_mode == WriteMode::RESIZE_AND_FILL_BUFF) {
       return resize_and_write(new_str);
-#else
-    if constexpr (write_mode == WriteMode::FILL_BUFF_AND_DROP_OVERFLOW)
-      return fill_remaining_to_buff(new_str);
-    else if constexpr (write_mode == WriteMode::FLUSH_TO_STREAM)
-      return flush_to_stream(new_str);
-    else if constexpr (write_mode == WriteMode::RESIZE_AND_FILL_BUFF)
-      return resize_and_write(new_str);
-#endif
+    }
     __builtin_unreachable();
   }
 };
