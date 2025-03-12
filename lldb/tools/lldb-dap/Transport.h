@@ -41,7 +41,13 @@ public:
   llvm::Error Write(const protocol::Message &M);
 
   /// Reads the next Debug Adater Protocol message from the input stream.
+  ///
+  /// \returns Returns the next protocol message or nullopt if EOF is reached.
   llvm::Expected<std::optional<protocol::Message>> Read();
+
+  /// Returns the name of this transport client, for example `stdin/stdout` or
+  /// `client_1`.
+  llvm::StringRef GetClientName() { return m_client_name; }
 
 private:
   llvm::StringRef m_client_name;

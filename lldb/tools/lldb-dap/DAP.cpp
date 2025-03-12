@@ -67,11 +67,11 @@ namespace lldb_dap {
 DAP::DAP(llvm::StringRef path, std::ofstream *log,
          const ReplMode default_repl_mode,
          const std::vector<std::string> &pre_init_commands,
-         llvm::StringRef client_name, Transport &transport)
-    : debug_adapter_path(path), log(log), client_name(client_name),
-      transport(transport), broadcaster("lldb-dap"), exception_breakpoints(),
-      pre_init_commands(std::move(pre_init_commands)),
-      focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
+         Transport &transport)
+    : debug_adapter_path(path), log(log), transport(transport),
+      broadcaster("lldb-dap"), exception_breakpoints(),
+      pre_init_commands(pre_init_commands), focus_tid(LLDB_INVALID_THREAD_ID),
+      stop_at_entry(false), is_attach(false),
       enable_auto_variable_summaries(false),
       enable_synthetic_child_debugging(false),
       display_extended_backtrace(false),
@@ -231,11 +231,12 @@ void DAP::SendJSON(const llvm::json::Value &json) {
   llvm::json::Path::Root root;
   if (!fromJSON(json, message, root)) {
     DAP_LOG_ERROR(log, root.getError(), "({1}) encoding failed: {0}",
-                  client_name);
+                  transport.GetClientName());
     return;
   }
-  if (llvm::Error err = transport.Write(message)) 
-    DAP_LOG_ERROR(log, std::move(err), "({1}) write failed: {0}", client_name);
+  if (llvm::Error err = transport.Write(message))
+    DAP_LOG_ERROR(log, std::move(err), "({1}) write failed: {0}",
+                  transport.GetClientName());
 }
 
 // "OutputEvent": {
@@ -676,7 +677,8 @@ bool DAP::HandleObject(const protocol::Message &M) {
       return true; // Success
     }
 
-    DAP_LOG(log, "({0}) error: unhandled command '{1}'", client_name, command);
+    DAP_LOG(log, "({0}) error: unhandled command '{1}'",
+            transport.GetClientName(), command);
     return false; // Fail
   }
 

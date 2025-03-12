@@ -125,21 +125,21 @@ struct Variables {
 
 struct StartDebuggingRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit StartDebuggingRequestHandler(DAP &d) : dap(d) {};
+  explicit StartDebuggingRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct ReplModeRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit ReplModeRequestHandler(DAP &d) : dap(d) {};
+  explicit ReplModeRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
 
 struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
   DAP &dap;
-  explicit SendEventRequestHandler(DAP &d) : dap(d) {};
+  explicit SendEventRequestHandler(DAP &d) : dap(d){};
   bool DoExecute(lldb::SBDebugger debugger, char **command,
                  lldb::SBCommandReturnObject &result) override;
 };
@@ -147,7 +147,6 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 struct DAP {
   llvm::StringRef debug_adapter_path;
   std::ofstream *log;
-  llvm::StringRef client_name;
   Transport &transport;
   lldb::SBFile in;
   OutputRedirector out;
@@ -219,14 +218,11 @@ struct DAP {
   ///     Default repl mode behavior, as configured by the binary.
   /// \param[in] pre_init_commands
   ///     LLDB commands to execute as soon as the debugger instance is allocaed.
-  /// \param[in] client_name
-  ///     Debug session client name, for example 'stdin/stdout' or 'client_1'.
   /// \param[in] transport
   ///     Transport for this debug session.
   DAP(llvm::StringRef path, std::ofstream *log,
       const ReplMode default_repl_mode,
-      const std::vector<std::string> &pre_init_commands,
-      llvm::StringRef client_name, Transport &transport);
+      const std::vector<std::string> &pre_init_commands, Transport &transport);
 
   ~DAP();
 
