@@ -25,6 +25,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/Regex.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
@@ -83,6 +84,7 @@ struct RecordKeeperImpl {
   FoldingSet<FoldOpInit> TheFoldOpInitPool;
   FoldingSet<IsAOpInit> TheIsAOpInitPool;
   FoldingSet<ExistsOpInit> TheExistsOpInitPool;
+  FoldingSet<DefinedOpInit> TheDefinedOpInitPool;
   DenseMap<std::pair<const RecTy *, const Init *>, VarInit *> TheVarInitPool;
   DenseMap<std::pair<const TypedInit *, unsigned>, VarBitInit *>
       TheVarBitInitPool;
@@ -2197,6 +2199,65 @@ std::string ExistsOpInit::getAsString() const {
   return (Twine("!exists<") + CheckType->getAsString() + ">(" +
           Expr->getAsString() + ")")
       .str();
+}
+
+static void ProfileDefinedOpInit(FoldingSetNodeID &ID, const RecTy *Type,
+                                 const Init *Regex) {
+  ID.AddPointer(Type);
+  ID.AddPointer(Regex);
+}
+
+const DefinedOpInit *DefinedOpInit::get(const RecTy *Type, const Init *Regex) {
+  FoldingSetNodeID ID;
+  ProfileDefinedOpInit(ID, Type, Regex);
+
+  detail::RecordKeeperImpl &RK = Regex->getRecordKeeper().getImpl();
+  void *IP = nullptr;
+  if (const DefinedOpInit *I =
+          RK.TheDefinedOpInitPool.FindNodeOrInsertPos(ID, IP))
+    return I;
+
+  DefinedOpInit *I = new (RK.Allocator) DefinedOpInit(Type, Regex);
+  RK.TheDefinedOpInitPool.InsertNode(I, IP);
+  return I;
+}
+
+void DefinedOpInit::Profile(FoldingSetNodeID &ID) const {
+  ProfileDefinedOpInit(ID, Type, Regex);
+}
+
+const Init *DefinedOpInit::Fold() const {
+  const auto *RegexInit = dyn_cast<StringInit>(Regex);
+  if (!RegexInit)
+    return this;
+
+  StringRef RegexStr = RegexInit->getValue();
+  llvm::Regex Matcher(RegexStr);
+  if (!Matcher.isValid())
+    PrintFatalError(Twine("invalid regex '") + RegexStr + Twine("'"));
+
+  const RecordKeeper &RK = Type->getRecordKeeper();
+  SmallVector<Init *, 8> Selected;
+  for (auto &Def : RK.getAllDerivedDefinitionsIfDefined(Type->getAsString()))
+    if (Matcher.match(Def->getName()))
+      Selected.push_back(Def->getDefInit());
+
+  return ListInit::get(Selected, Type);
+}
+
+const Init *DefinedOpInit::resolveReferences(Resolver &R) const {
+  const Init *NewRegex = Regex->resolveReferences(R);
+  if (Regex != NewRegex)
+    return get(Type, NewRegex)->Fold();
+  return this;
+}
+
+const Init *DefinedOpInit::getBit(unsigned Bit) const {
+  return VarBitInit::get(this, Bit);
+}
+
+std::string DefinedOpInit::getAsString() const {
+  return "!defined<" + Type->getAsString() + ">(" + Regex->getAsString() + ")";
 }
 
 const RecTy *TypedInit::getFieldType(const StringInit *FieldName) const {
