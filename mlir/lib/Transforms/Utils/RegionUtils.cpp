@@ -1170,8 +1170,6 @@ LogicalResult mlir::moveValueDefinitions(RewriterBase &rewriter,
   // Sort operations topologically before moving.
   mlir::topologicalSort(slice);
 
-  // We should move the slice in topological order, but `getBackwardSlice`
-  // already does that. So no need to sort again.
   for (Operation *op : slice) {
     rewriter.moveOpBefore(op, insertionPoint);
   }

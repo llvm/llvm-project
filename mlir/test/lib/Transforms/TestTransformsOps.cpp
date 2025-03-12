@@ -41,8 +41,8 @@ transform::TestMoveOperandDeps::apply(TransformRewriter &rewriter,
 
 DiagnosedSilenceableFailure
 transform::TestMoveValueDefns::apply(TransformRewriter &rewriter,
-                                      TransformResults &TransformResults,
-                                      TransformState &state) {
+                                     TransformResults &TransformResults,
+                                     TransformState &state) {
   SmallVector<Value> values;
   for (auto tdValue : getValues()) {
     values.push_back(*state.getPayloadValues(tdValue).begin());
@@ -55,7 +55,6 @@ transform::TestMoveValueDefns::apply(TransformRewriter &rewriter,
   }
   return DiagnosedSilenceableFailure::success();
 }
-
 
 namespace {
 
