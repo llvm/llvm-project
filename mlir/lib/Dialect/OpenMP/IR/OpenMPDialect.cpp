@@ -2030,15 +2030,13 @@ llvm::omp::OMPTgtExecModeFlags
 TargetOp::getKernelExecFlags(Operation *capturedOp) {
   using namespace llvm::omp;
 
-#ifndef NDEBUG
-  if (capturedOp) {
-    // A non-null captured op is only valid if it resides inside of a TargetOp
-    // and is the result of calling getInnermostCapturedOmpOp() on it.
-    TargetOp targetOp = capturedOp->getParentOfType<TargetOp>();
-    assert(targetOp && targetOp.getInnermostCapturedOmpOp() &&
-           "unexpected captured op");
-  }
-#endif
+  // A non-null captured op is only valid if it resides inside of a TargetOp
+  // and is the result of calling getInnermostCapturedOmpOp() on it.
+  TargetOp targetOp =
+      capturedOp ? capturedOp->getParentOfType<TargetOp>() : nullptr;
+  assert((!capturedOp ||
+          (targetOp && targetOp.getInnermostCapturedOmpOp() == capturedOp)) &&
+         "unexpected captured op");
 
   // Make sure this region is capturing a loop. Otherwise, it's a generic
   // kernel.
@@ -2065,7 +2063,7 @@ TargetOp::getKernelExecFlags(Operation *capturedOp) {
     if (!isa_and_present<TeamsOp>(teamsOp))
       return OMP_TGT_EXEC_MODE_GENERIC;
 
-    if (teamsOp->getParentOp() == *this)
+    if (teamsOp->getParentOp() == targetOp.getOperation())
       return OMP_TGT_EXEC_MODE_GENERIC_SPMD;
   }
 
@@ -2086,7 +2084,7 @@ TargetOp::getKernelExecFlags(Operation *capturedOp) {
     if (!isa_and_present<TeamsOp>(teamsOp))
       return OMP_TGT_EXEC_MODE_GENERIC;
 
-    if (teamsOp->getParentOp() == *this)
+    if (teamsOp->getParentOp() == targetOp.getOperation())
       return OMP_TGT_EXEC_MODE_SPMD;
   }
 
