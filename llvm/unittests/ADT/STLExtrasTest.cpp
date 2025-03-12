@@ -750,6 +750,18 @@ TEST(STLExtrasTest, DropEndDefaultTest) {
   EXPECT_EQ(i, 4);
 }
 
+TEST(STLExtrasTest, MapRangeTest) {
+  SmallVector<int, 5> Vec{0, 1, 2};
+  EXPECT_THAT(map_range(Vec, [](int V) { return V + 1; }),
+              ElementsAre(1, 2, 3));
+
+  // Make sure that we use the `begin`/`end` functions
+  // from `some_namespace`, using ADL.
+  some_namespace::some_struct S;
+  S.data = {3, 4, 5};
+  EXPECT_THAT(map_range(S, [](int V) { return V * 2; }), ElementsAre(6, 8, 10));
+}
+
 TEST(STLExtrasTest, EarlyIncrementTest) {
   std::list<int> L = {1, 2, 3, 4};
 
