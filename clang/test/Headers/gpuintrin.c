@@ -9,6 +9,11 @@
 // RUN:   -target-feature +ptx62 \
 // RUN:   -triple nvptx64-nvidia-cuda -emit-llvm %s -o - \
 // RUN: | FileCheck %s --check-prefix=NVPTX
+//
+// RUN: %clang_cc1 -internal-isystem %S/Inputs/include  \
+// RUN:   -internal-isystem %S/../../lib/Headers/ \
+// RUN:   -triple spirv64-- -emit-llvm %s -o - \
+// RUN: | FileCheck %s --check-prefix=SPIRV64
 
 #include <gpuintrin.h>
 
@@ -977,6 +982,224 @@ __gpu_kernel void foo() {
 // NVPTX-NEXT:  [[ENTRY:.*:]]
 // NVPTX-NEXT:    call void @llvm.nvvm.exit()
 // NVPTX-NEXT:    ret void
+//
+//
+// SPIRV64-LABEL: define spir_func void @foo(
+// SPIRV64-SAME: ) #[[ATTR0:[0-9]+]] {
+// SPIRV64-NEXT:  [[ENTRY:.*:]]
+// SPIRV64-NEXT:    [[CALL:%.*]] = call spir_func i32 @__gpu_num_blocks_x()
+// SPIRV64-NEXT:    [[CALL1:%.*]] = call spir_func i32 @__gpu_num_blocks_y()
+// SPIRV64-NEXT:    [[CALL2:%.*]] = call spir_func i32 @__gpu_num_blocks_z()
+// SPIRV64-NEXT:    [[CALL3:%.*]] = call spir_func i32 @__gpu_num_blocks(i32 noundef 0)
+// SPIRV64-NEXT:    [[CALL4:%.*]] = call spir_func i32 @__gpu_block_id_x()
+// SPIRV64-NEXT:    [[CALL5:%.*]] = call spir_func i32 @__gpu_block_id_y()
+// SPIRV64-NEXT:    [[CALL6:%.*]] = call spir_func i32 @__gpu_block_id_z()
+// SPIRV64-NEXT:    [[CALL7:%.*]] = call spir_func i32 @__gpu_block_id(i32 noundef 0)
+// SPIRV64-NEXT:    [[CALL8:%.*]] = call spir_func i32 @__gpu_num_threads_x()
+// SPIRV64-NEXT:    [[CALL9:%.*]] = call spir_func i32 @__gpu_num_threads_y()
+// SPIRV64-NEXT:    [[CALL10:%.*]] = call spir_func i32 @__gpu_num_threads_z()
+// SPIRV64-NEXT:    [[CALL11:%.*]] = call spir_func i32 @__gpu_num_threads(i32 noundef 0)
+// SPIRV64-NEXT:    [[CALL12:%.*]] = call spir_func i32 @__gpu_thread_id_x()
+// SPIRV64-NEXT:    [[CALL13:%.*]] = call spir_func i32 @__gpu_thread_id_y()
+// SPIRV64-NEXT:    [[CALL14:%.*]] = call spir_func i32 @__gpu_thread_id_z()
+// SPIRV64-NEXT:    [[CALL15:%.*]] = call spir_func i32 @__gpu_thread_id(i32 noundef 0)
+// SPIRV64-NEXT:    [[CALL16:%.*]] = call spir_func i32 @__gpu_num_lanes()
+// SPIRV64-NEXT:    [[CALL17:%.*]] = call spir_func i32 @__gpu_lane_id()
+// SPIRV64-NEXT:    [[CALL18:%.*]] = call spir_func i64 @__gpu_lane_mask()
+// SPIRV64-NEXT:    [[CALL19:%.*]] = call spir_func i32 @__gpu_read_first_lane_u32(i64 noundef -1, i32 noundef -1)
+// SPIRV64-NEXT:    [[CALL20:%.*]] = call spir_func i64 @__gpu_read_first_lane_u64(i64 noundef -1, i64 noundef -1)
+// SPIRV64-NEXT:    [[CALL21:%.*]] = call spir_func i64 @__gpu_ballot(i64 noundef -1, i1 noundef zeroext true)
+// SPIRV64-NEXT:    call spir_func void @__gpu_sync_threads()
+// SPIRV64-NEXT:    call spir_func void @__gpu_sync_lane(i64 noundef -1)
+// SPIRV64-NEXT:    [[CALL22:%.*]] = call spir_func i32 @__gpu_shuffle_idx_u32(i64 noundef -1, i32 noundef -1, i32 noundef -1, i32 noundef 0)
+// SPIRV64-NEXT:    [[CALL23:%.*]] = call spir_func i64 @__gpu_first_lane_id(i64 noundef -1)
+// SPIRV64-NEXT:    [[CALL24:%.*]] = call spir_func zeroext i1 @__gpu_is_first_in_lane(i64 noundef -1)
+// SPIRV64-NEXT:    call spir_func void @__gpu_exit() #[[ATTR4:[0-9]+]]
+// SPIRV64-NEXT:    unreachable
+//
+//
+// SPIRV64-LABEL: define internal spir_func i32 @__gpu_num_blocks(
+// SPIRV64-SAME: i32 noundef [[__DIM:%.*]]) #[[ATTR0]] {
+// SPIRV64-NEXT:  [[ENTRY:.*:]]
+// SPIRV64-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRV64-NEXT:    [[__DIM_ADDR:%.*]] = alloca i32, align 4
+// SPIRV64-NEXT:    store i32 [[__DIM]], ptr [[__DIM_ADDR]], align 4
+// SPIRV64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[__DIM_ADDR]], align 4
+// SPIRV64-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// SPIRV64-NEXT:      i32 0, label %[[SW_BB:.*]]
+// SPIRV64-NEXT:      i32 1, label %[[SW_BB1:.*]]
+// SPIRV64-NEXT:      i32 2, label %[[SW_BB3:.*]]
+// SPIRV64-NEXT:    ]
+// SPIRV64:       [[SW_BB]]:
+// SPIRV64-NEXT:    [[CALL:%.*]] = call spir_func i32 @__gpu_num_blocks_x()
+// SPIRV64-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN:.*]]
+// SPIRV64:       [[SW_BB1]]:
+// SPIRV64-NEXT:    [[CALL2:%.*]] = call spir_func i32 @__gpu_num_blocks_y()
+// SPIRV64-NEXT:    store i32 [[CALL2]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN]]
+// SPIRV64:       [[SW_BB3]]:
+// SPIRV64-NEXT:    [[CALL4:%.*]] = call spir_func i32 @__gpu_num_blocks_z()
+// SPIRV64-NEXT:    store i32 [[CALL4]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN]]
+// SPIRV64:       [[SW_DEFAULT]]:
+// SPIRV64-NEXT:    unreachable
+// SPIRV64:       [[RETURN]]:
+// SPIRV64-NEXT:    [[TMP1:%.*]] = load i32, ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    ret i32 [[TMP1]]
+//
+//
+// SPIRV64-LABEL: define internal spir_func i32 @__gpu_block_id(
+// SPIRV64-SAME: i32 noundef [[__DIM:%.*]]) #[[ATTR0]] {
+// SPIRV64-NEXT:  [[ENTRY:.*:]]
+// SPIRV64-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRV64-NEXT:    [[__DIM_ADDR:%.*]] = alloca i32, align 4
+// SPIRV64-NEXT:    store i32 [[__DIM]], ptr [[__DIM_ADDR]], align 4
+// SPIRV64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[__DIM_ADDR]], align 4
+// SPIRV64-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// SPIRV64-NEXT:      i32 0, label %[[SW_BB:.*]]
+// SPIRV64-NEXT:      i32 1, label %[[SW_BB1:.*]]
+// SPIRV64-NEXT:      i32 2, label %[[SW_BB3:.*]]
+// SPIRV64-NEXT:    ]
+// SPIRV64:       [[SW_BB]]:
+// SPIRV64-NEXT:    [[CALL:%.*]] = call spir_func i32 @__gpu_block_id_x()
+// SPIRV64-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN:.*]]
+// SPIRV64:       [[SW_BB1]]:
+// SPIRV64-NEXT:    [[CALL2:%.*]] = call spir_func i32 @__gpu_block_id_y()
+// SPIRV64-NEXT:    store i32 [[CALL2]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN]]
+// SPIRV64:       [[SW_BB3]]:
+// SPIRV64-NEXT:    [[CALL4:%.*]] = call spir_func i32 @__gpu_block_id_z()
+// SPIRV64-NEXT:    store i32 [[CALL4]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN]]
+// SPIRV64:       [[SW_DEFAULT]]:
+// SPIRV64-NEXT:    unreachable
+// SPIRV64:       [[RETURN]]:
+// SPIRV64-NEXT:    [[TMP1:%.*]] = load i32, ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    ret i32 [[TMP1]]
+//
+//
+// SPIRV64-LABEL: define internal spir_func i32 @__gpu_num_threads(
+// SPIRV64-SAME: i32 noundef [[__DIM:%.*]]) #[[ATTR0]] {
+// SPIRV64-NEXT:  [[ENTRY:.*:]]
+// SPIRV64-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRV64-NEXT:    [[__DIM_ADDR:%.*]] = alloca i32, align 4
+// SPIRV64-NEXT:    store i32 [[__DIM]], ptr [[__DIM_ADDR]], align 4
+// SPIRV64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[__DIM_ADDR]], align 4
+// SPIRV64-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// SPIRV64-NEXT:      i32 0, label %[[SW_BB:.*]]
+// SPIRV64-NEXT:      i32 1, label %[[SW_BB1:.*]]
+// SPIRV64-NEXT:      i32 2, label %[[SW_BB3:.*]]
+// SPIRV64-NEXT:    ]
+// SPIRV64:       [[SW_BB]]:
+// SPIRV64-NEXT:    [[CALL:%.*]] = call spir_func i32 @__gpu_num_threads_x()
+// SPIRV64-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN:.*]]
+// SPIRV64:       [[SW_BB1]]:
+// SPIRV64-NEXT:    [[CALL2:%.*]] = call spir_func i32 @__gpu_num_threads_y()
+// SPIRV64-NEXT:    store i32 [[CALL2]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN]]
+// SPIRV64:       [[SW_BB3]]:
+// SPIRV64-NEXT:    [[CALL4:%.*]] = call spir_func i32 @__gpu_num_threads_z()
+// SPIRV64-NEXT:    store i32 [[CALL4]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN]]
+// SPIRV64:       [[SW_DEFAULT]]:
+// SPIRV64-NEXT:    unreachable
+// SPIRV64:       [[RETURN]]:
+// SPIRV64-NEXT:    [[TMP1:%.*]] = load i32, ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    ret i32 [[TMP1]]
+//
+//
+// SPIRV64-LABEL: define internal spir_func i32 @__gpu_thread_id(
+// SPIRV64-SAME: i32 noundef [[__DIM:%.*]]) #[[ATTR0]] {
+// SPIRV64-NEXT:  [[ENTRY:.*:]]
+// SPIRV64-NEXT:    [[RETVAL:%.*]] = alloca i32, align 4
+// SPIRV64-NEXT:    [[__DIM_ADDR:%.*]] = alloca i32, align 4
+// SPIRV64-NEXT:    store i32 [[__DIM]], ptr [[__DIM_ADDR]], align 4
+// SPIRV64-NEXT:    [[TMP0:%.*]] = load i32, ptr [[__DIM_ADDR]], align 4
+// SPIRV64-NEXT:    switch i32 [[TMP0]], label %[[SW_DEFAULT:.*]] [
+// SPIRV64-NEXT:      i32 0, label %[[SW_BB:.*]]
+// SPIRV64-NEXT:      i32 1, label %[[SW_BB1:.*]]
+// SPIRV64-NEXT:      i32 2, label %[[SW_BB3:.*]]
+// SPIRV64-NEXT:    ]
+// SPIRV64:       [[SW_BB]]:
+// SPIRV64-NEXT:    [[CALL:%.*]] = call spir_func i32 @__gpu_thread_id_x()
+// SPIRV64-NEXT:    store i32 [[CALL]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN:.*]]
+// SPIRV64:       [[SW_BB1]]:
+// SPIRV64-NEXT:    [[CALL2:%.*]] = call spir_func i32 @__gpu_thread_id_y()
+// SPIRV64-NEXT:    store i32 [[CALL2]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN]]
+// SPIRV64:       [[SW_BB3]]:
+// SPIRV64-NEXT:    [[CALL4:%.*]] = call spir_func i32 @__gpu_thread_id_z()
+// SPIRV64-NEXT:    store i32 [[CALL4]], ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    br label %[[RETURN]]
+// SPIRV64:       [[SW_DEFAULT]]:
+// SPIRV64-NEXT:    unreachable
+// SPIRV64:       [[RETURN]]:
+// SPIRV64-NEXT:    [[TMP1:%.*]] = load i32, ptr [[RETVAL]], align 4
+// SPIRV64-NEXT:    ret i32 [[TMP1]]
+//
+//
+// SPIRV64-LABEL: define internal spir_func i64 @__gpu_read_first_lane_u64(
+// SPIRV64-SAME: i64 noundef [[__LANE_MASK:%.*]], i64 noundef [[__X:%.*]]) #[[ATTR0]] {
+// SPIRV64-NEXT:  [[ENTRY:.*:]]
+// SPIRV64-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8
+// SPIRV64-NEXT:    [[__X_ADDR:%.*]] = alloca i64, align 8
+// SPIRV64-NEXT:    [[__HI:%.*]] = alloca i32, align 4
+// SPIRV64-NEXT:    [[__LO:%.*]] = alloca i32, align 4
+// SPIRV64-NEXT:    store i64 [[__LANE_MASK]], ptr [[__LANE_MASK_ADDR]], align 8
+// SPIRV64-NEXT:    store i64 [[__X]], ptr [[__X_ADDR]], align 8
+// SPIRV64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__X_ADDR]], align 8
+// SPIRV64-NEXT:    [[SHR:%.*]] = lshr i64 [[TMP0]], 32
+// SPIRV64-NEXT:    [[CONV:%.*]] = trunc i64 [[SHR]] to i32
+// SPIRV64-NEXT:    store i32 [[CONV]], ptr [[__HI]], align 4
+// SPIRV64-NEXT:    [[TMP1:%.*]] = load i64, ptr [[__X_ADDR]], align 8
+// SPIRV64-NEXT:    [[AND:%.*]] = and i64 [[TMP1]], 4294967295
+// SPIRV64-NEXT:    [[CONV1:%.*]] = trunc i64 [[AND]] to i32
+// SPIRV64-NEXT:    store i32 [[CONV1]], ptr [[__LO]], align 4
+// SPIRV64-NEXT:    [[TMP2:%.*]] = load i64, ptr [[__LANE_MASK_ADDR]], align 8
+// SPIRV64-NEXT:    [[TMP3:%.*]] = load i32, ptr [[__HI]], align 4
+// SPIRV64-NEXT:    [[CALL:%.*]] = call spir_func i32 @__gpu_read_first_lane_u32(i64 noundef [[TMP2]], i32 noundef [[TMP3]])
+// SPIRV64-NEXT:    [[CONV2:%.*]] = zext i32 [[CALL]] to i64
+// SPIRV64-NEXT:    [[SHL:%.*]] = shl i64 [[CONV2]], 32
+// SPIRV64-NEXT:    [[TMP4:%.*]] = load i64, ptr [[__LANE_MASK_ADDR]], align 8
+// SPIRV64-NEXT:    [[TMP5:%.*]] = load i32, ptr [[__LO]], align 4
+// SPIRV64-NEXT:    [[CALL3:%.*]] = call spir_func i32 @__gpu_read_first_lane_u32(i64 noundef [[TMP4]], i32 noundef [[TMP5]])
+// SPIRV64-NEXT:    [[CONV4:%.*]] = zext i32 [[CALL3]] to i64
+// SPIRV64-NEXT:    [[AND5:%.*]] = and i64 [[CONV4]], 4294967295
+// SPIRV64-NEXT:    [[OR:%.*]] = or i64 [[SHL]], [[AND5]]
+// SPIRV64-NEXT:    ret i64 [[OR]]
+//
+//
+// SPIRV64-LABEL: define internal spir_func i64 @__gpu_first_lane_id(
+// SPIRV64-SAME: i64 noundef [[__LANE_MASK:%.*]]) #[[ATTR0]] {
+// SPIRV64-NEXT:  [[ENTRY:.*:]]
+// SPIRV64-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8
+// SPIRV64-NEXT:    store i64 [[__LANE_MASK]], ptr [[__LANE_MASK_ADDR]], align 8
+// SPIRV64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__LANE_MASK_ADDR]], align 8
+// SPIRV64-NEXT:    [[TMP1:%.*]] = call i64 @llvm.cttz.i64(i64 [[TMP0]], i1 true)
+// SPIRV64-NEXT:    [[TMP2:%.*]] = add i64 [[TMP1]], 1
+// SPIRV64-NEXT:    [[ISZERO:%.*]] = icmp eq i64 [[TMP0]], 0
+// SPIRV64-NEXT:    [[FFS:%.*]] = select i1 [[ISZERO]], i64 0, i64 [[TMP2]]
+// SPIRV64-NEXT:    [[CAST:%.*]] = trunc i64 [[FFS]] to i32
+// SPIRV64-NEXT:    [[SUB:%.*]] = sub nsw i32 [[CAST]], 1
+// SPIRV64-NEXT:    [[CONV:%.*]] = sext i32 [[SUB]] to i64
+// SPIRV64-NEXT:    ret i64 [[CONV]]
+//
+//
+// SPIRV64-LABEL: define internal spir_func zeroext i1 @__gpu_is_first_in_lane(
+// SPIRV64-SAME: i64 noundef [[__LANE_MASK:%.*]]) #[[ATTR0]] {
+// SPIRV64-NEXT:  [[ENTRY:.*:]]
+// SPIRV64-NEXT:    [[__LANE_MASK_ADDR:%.*]] = alloca i64, align 8
+// SPIRV64-NEXT:    store i64 [[__LANE_MASK]], ptr [[__LANE_MASK_ADDR]], align 8
+// SPIRV64-NEXT:    [[CALL:%.*]] = call spir_func i32 @__gpu_lane_id()
+// SPIRV64-NEXT:    [[CONV:%.*]] = zext i32 [[CALL]] to i64
+// SPIRV64-NEXT:    [[TMP0:%.*]] = load i64, ptr [[__LANE_MASK_ADDR]], align 8
+// SPIRV64-NEXT:    [[CALL1:%.*]] = call spir_func i64 @__gpu_first_lane_id(i64 noundef [[TMP0]])
+// SPIRV64-NEXT:    [[CMP:%.*]] = icmp eq i64 [[CONV]], [[CALL1]]
+// SPIRV64-NEXT:    ret i1 [[CMP]]
 //
 //.
 // AMDGPU: [[RNG3]] = !{i32 1, i32 0}

@@ -150,6 +150,8 @@ defm int_amdgcn_workitem_id : AMDGPUReadPreloadRegisterIntrinsic_xyz;
 defm int_amdgcn_workgroup_id : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
                                <"__builtin_amdgcn_workgroup_id">;
 
+defm int_amdgcn_grid_size : AMDGPUReadPreloadRegisterIntrinsic_xyz;
+
 def int_amdgcn_dispatch_ptr :
   DefaultAttrsIntrinsic<[LLVMQualPointerType<4>], [],
   [Align<RetIndex, 4>, NoUndef<RetIndex>, NonNull<RetIndex>, IntrNoMem, IntrSpeculatable]>;
