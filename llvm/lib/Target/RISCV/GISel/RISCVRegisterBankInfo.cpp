@@ -151,6 +151,7 @@ bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   switch (MI.getOpcode()) {
   case RISCV::G_FCVT_W_RV64:
   case RISCV::G_FCVT_WU_RV64:
+  case RISCV::G_FCLASS:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
   case TargetOpcode::G_FCMP:
@@ -326,19 +327,21 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Use FPR64 for s64 loads on rv32.
     if (GPRSize == 32 && Size.getFixedValue() == 64) {
       assert(MF.getSubtarget<RISCVSubtarget>().hasStdExtD());
-      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+      OpdsMapping[0] = getFPValueMapping(Size);
       break;
     }
 
     // Check if that load feeds fp instructions.
     // In that case, we want the default mapping to be on FPR
     // instead of blind map every scalar to GPR.
-    if (anyUseOnlyUseFP(MI.getOperand(0).getReg(), MRI, TRI))
+    if (anyUseOnlyUseFP(MI.getOperand(0).getReg(), MRI, TRI)) {
       // If we have at least one direct use in a FP instruction,
       // assume this was a floating point load in the IR. If it was
       // not, we would have had a bitcast before reaching that
       // instruction.
-      OpdsMapping[0] = getFPValueMapping(Ty.getSizeInBits());
+      OpdsMapping[0] = getFPValueMapping(Size);
+      break;
+    }
 
     break;
   }

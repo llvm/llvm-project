@@ -28,7 +28,7 @@ void MCSPIRVStreamer::emitInstToData(const MCInst &Inst,
   MCDataFragment *DF = getOrCreateDataFragment();
 
   DF->setHasInstructions(STI);
-  DF->getContents().append(Code.begin(), Code.end());
+  DF->appendContents(Code);
 }
 
 MCStreamer *llvm::createSPIRVStreamer(MCContext &Context,

@@ -138,6 +138,10 @@ public:
   void printAsOperand(raw_ostream &OS, ModuleSlotTracker &MST,
                       const Module *M = nullptr) const;
   /// @}
+
+  /// Metadata IDs that may generate poison.
+  constexpr static const unsigned PoisonGeneratingIDs[] = {
+      LLVMContext::MD_range, LLVMContext::MD_nonnull, LLVMContext::MD_align};
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -1456,6 +1460,7 @@ public:
   static MDNode *getMostGenericTBAA(MDNode *A, MDNode *B);
   static MDNode *getMostGenericFPMath(MDNode *A, MDNode *B);
   static MDNode *getMostGenericRange(MDNode *A, MDNode *B);
+  static MDNode *getMostGenericNoaliasAddrspace(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAliasScope(MDNode *A, MDNode *B);
   static MDNode *getMostGenericAlignmentOrDereferenceable(MDNode *A, MDNode *B);
   /// Merge !prof metadata from two instructions.
@@ -1463,6 +1468,8 @@ public:
   static MDNode *getMergedProfMetadata(MDNode *A, MDNode *B,
                                        const Instruction *AInstr,
                                        const Instruction *BInstr);
+  static MDNode *getMergedMemProfMetadata(MDNode *A, MDNode *B);
+  static MDNode *getMergedCallsiteMetadata(MDNode *A, MDNode *B);
 };
 
 /// Tuple of metadata.

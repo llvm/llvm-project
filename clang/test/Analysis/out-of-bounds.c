@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,alpha.security.ArrayBoundV2,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -Wno-array-bounds -analyzer-checker=core,security.ArrayBound,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(int);
 
@@ -153,7 +153,7 @@ void test_assume_after_access(unsigned long x) {
 int *get_symbolic(void);
 void test_underflow_symbolic(void) {
   int *buf = get_symbolic();
-  buf[-1] = 0; // no-warning;
+  buf[-1] = 0; // no-warning
 }
 
 // But warn if we understand the internal memory layout of a symbolic region.

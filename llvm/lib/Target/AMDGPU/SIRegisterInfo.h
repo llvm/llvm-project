@@ -275,11 +275,6 @@ public:
                            const TargetRegisterClass *SubRC,
                            unsigned SubIdx) const;
 
-  bool shouldRewriteCopySrc(const TargetRegisterClass *DefRC,
-                            unsigned DefSubReg,
-                            const TargetRegisterClass *SrcRC,
-                            unsigned SrcSubReg) const override;
-
   /// \returns True if operands defined with this operand type can accept
   /// a literal constant (i.e. any 32-bit immediate).
   bool opCanUseLiteralConstant(unsigned OpType) const;

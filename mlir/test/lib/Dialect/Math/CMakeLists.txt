@@ -5,8 +5,8 @@ add_mlir_library(MLIRMathTestPasses
   TestPolynomialApproximation.cpp
 
   EXCLUDE_FROM_LIBMLIR
-
-  LINK_LIBS PUBLIC
+  )
+mlir_target_link_libraries(MLIRMathTestPasses PUBLIC
   MLIRMathTransforms
   MLIRPass
   MLIRTransformUtils

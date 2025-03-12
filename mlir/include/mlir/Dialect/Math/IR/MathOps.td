@@ -28,8 +28,8 @@ class Math_Op<string mnemonic, list<Trait> traits = []> :
 // tensor thereof.
 class Math_IntegerUnaryOp<string mnemonic, list<Trait> traits = []> :
     Math_Op<mnemonic, traits # [SameOperandsAndResultType]> {
-  let arguments = (ins SignlessIntegerLike:$operand);
-  let results = (outs SignlessIntegerLike:$result);
+  let arguments = (ins SignlessIntegerOrIndexLike:$operand);
+  let results = (outs SignlessIntegerOrIndexLike:$result);
 
   let assemblyFormat = "$operand attr-dict `:` type($result)";
 }
@@ -55,8 +55,8 @@ class Math_FloatUnaryOp<string mnemonic, list<Trait> traits = []> :
 // type, vector or tensor thereof.
 class Math_IntegerBinaryOp<string mnemonic, list<Trait> traits = []> :
     Math_Op<mnemonic, traits # [SameOperandsAndResultType]> {
-  let arguments = (ins SignlessIntegerLike:$lhs, SignlessIntegerLike:$rhs);
-  let results = (outs SignlessIntegerLike:$result);
+  let arguments = (ins SignlessIntegerOrIndexLike:$lhs, SignlessIntegerOrIndexLike:$rhs);
+  let results = (outs SignlessIntegerOrIndexLike:$result);
 
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type($result)";
 }
@@ -976,7 +976,7 @@ def Math_FPowIOp : Math_Op<"fpowi",
     ```
   }];
 
-  let arguments = (ins FloatLike:$lhs, SignlessIntegerLike:$rhs,
+  let arguments = (ins FloatLike:$lhs, SignlessIntegerOrIndexLike:$rhs,
       DefaultValuedAttr<Arith_FastMathAttr,
                         "::mlir::arith::FastMathFlags::none">:$fastmath);
   let results = (outs FloatLike:$result);

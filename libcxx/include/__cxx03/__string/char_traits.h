@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___STRING_CHAR_TRAITS_H
-#define _LIBCPP___STRING_CHAR_TRAITS_H
+#ifndef _LIBCPP___CXX03___STRING_CHAR_TRAITS_H
+#define _LIBCPP___CXX03___STRING_CHAR_TRAITS_H
 
 #include <__cxx03/__algorithm/fill_n.h>
 #include <__cxx03/__algorithm/find.h>
@@ -540,4 +540,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___STRING_CHAR_TRAITS_H
+#endif // _LIBCPP___CXX03___STRING_CHAR_TRAITS_H

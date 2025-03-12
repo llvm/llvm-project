@@ -3771,6 +3771,54 @@ TEST_P(UncheckedOptionalAccessTest, ConstPointerAccessorWithModInBetween) {
                        /*IgnoreSmartPointerDereference=*/false);
 }
 
+TEST_P(UncheckedOptionalAccessTest, SmartPointerAccessorMixed) {
+  ExpectDiagnosticsFor(R"cc(
+     #include "unchecked_optional_access_test.h"
+
+    struct A {
+      $ns::$optional<int> x;
+    };
+
+    namespace absl {
+    template<typename T>
+    class StatusOr {
+      public:
+      bool ok() const;
+
+      const T& operator*() const&;
+      T& operator*() &;
+
+      const T* operator->() const;
+      T* operator->();
+
+      const T& value() const;
+      T& value();
+    };
+    }
+
+    void target(absl::StatusOr<A> &mut, const absl::StatusOr<A> &imm) {
+      if (!mut.ok() || !imm.ok())
+        return;
+
+      if (mut->x.has_value()) {
+        mut->x.value();
+        ((*mut).x).value();
+        (mut.value().x).value();
+
+        // check flagged after modifying
+        mut = imm;
+        mut->x.value();  // [[unsafe]]
+      }
+      if (imm->x.has_value()) {
+        imm->x.value();
+        ((*imm).x).value();
+        (imm.value().x).value();
+      }
+    }
+  )cc",
+                       /*IgnoreSmartPointerDereference=*/false);
+}
+
 TEST_P(UncheckedOptionalAccessTest, ConstBoolAccessor) {
   ExpectDiagnosticsFor(R"cc(
     #include "unchecked_optional_access_test.h"

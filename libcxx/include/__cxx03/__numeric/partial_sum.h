@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___NUMERIC_PARTIAL_SUM_H
-#define _LIBCPP___NUMERIC_PARTIAL_SUM_H
+#ifndef _LIBCPP___CXX03___NUMERIC_PARTIAL_SUM_H
+#define _LIBCPP___CXX03___NUMERIC_PARTIAL_SUM_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__iterator/iterator_traits.h>
@@ -63,4 +63,4 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
-#endif // _LIBCPP___NUMERIC_PARTIAL_SUM_H
+#endif // _LIBCPP___CXX03___NUMERIC_PARTIAL_SUM_H

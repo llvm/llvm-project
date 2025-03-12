@@ -149,8 +149,8 @@ struct CUDAKernelTy : public GenericKernelTy {
   }
 
   /// Launch the CUDA kernel function.
-  Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                   uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+  Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads[3],
+                   uint32_t NumBlocks[3], KernelArgsTy &KernelArgs,
                    KernelLaunchParamsTy LaunchParams,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
@@ -395,7 +395,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
 
   virtual Error callGlobalConstructors(GenericPluginTy &Plugin,
                                        DeviceImageTy &Image) override {
-    // Check for the presense of global destructors at initialization time. This
+    // Check for the presence of global destructors at initialization time. This
     // is required when the image may be deallocated before destructors are run.
     GenericGlobalHandlerTy &Handler = Plugin.getGlobalHandler();
     if (Handler.isSymbolInImage(*this, Image, "nvptx$device$fini"))
@@ -495,17 +495,15 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// We want to set up the RPC server for host services to the GPU if it is
-  /// availible.
-  bool shouldSetupRPCServer() const override {
-    return libomptargetSupportsRPC();
-  }
+  /// available.
+  bool shouldSetupRPCServer() const override { return true; }
 
-  /// The RPC interface should have enough space for all availible parallelism.
+  /// The RPC interface should have enough space for all available parallelism.
   uint64_t requestedRPCPortCount() const override {
     return getHardwareParallelism();
   }
 
-  /// Get the stream of the asynchronous info sructure or get a new one.
+  /// Get the stream of the asynchronous info structure or get a new one.
   Error getStream(AsyncInfoWrapperTy &AsyncInfoWrapper, CUstream &Stream) {
     // Get the stream (if any) from the async info.
     Stream = AsyncInfoWrapper.getQueueAs<CUstream>();
@@ -630,17 +628,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
   Error synchronizeImpl(__tgt_async_info &AsyncInfo) override {
     CUstream Stream = reinterpret_cast<CUstream>(AsyncInfo.Queue);
     CUresult Res;
-    // If we have an RPC server running on this device we will continuously
-    // query it for work rather than blocking.
-    if (!getRPCServer()) {
-      Res = cuStreamSynchronize(Stream);
-    } else {
-      do {
-        Res = cuStreamQuery(Stream);
-        if (auto Err = getRPCServer()->runServer(*this))
-          return Err;
-      } while (Res == CUDA_ERROR_NOT_READY);
-    }
+    Res = cuStreamSynchronize(Stream);
 
     // Once the stream is synchronized, return it to stream pool and reset
     // AsyncInfo. This is to make sure the synchronization only works for its
@@ -687,7 +675,7 @@ struct CUDADeviceTy : public GenericDeviceTy {
     if (Size >= Free) {
       *Addr = nullptr;
       return Plugin::error(
-          "Canot map memory size larger than the available device memory");
+          "Cannot map memory size larger than the available device memory");
     }
 
     // currently NVidia only supports pinned device types
@@ -824,17 +812,6 @@ struct CUDADeviceTy : public GenericDeviceTy {
     CUstream Stream;
     if (auto Err = getStream(AsyncInfoWrapper, Stream))
       return Err;
-
-    // If there is already pending work on the stream it could be waiting for
-    // someone to check the RPC server.
-    if (auto *RPCServer = getRPCServer()) {
-      CUresult Res = cuStreamQuery(Stream);
-      while (Res == CUDA_ERROR_NOT_READY) {
-        if (auto Err = RPCServer->runServer(*this))
-          return Err;
-        Res = cuStreamQuery(Stream);
-      }
-    }
 
     CUresult Res = cuMemcpyDtoHAsync(HstPtr, (CUdeviceptr)TgtPtr, Size, Stream);
     return Plugin::check(Res, "Error in cuMemcpyDtoHAsync: %s");
@@ -1230,10 +1207,10 @@ private:
     AsyncInfoWrapperTy AsyncInfoWrapper(*this, nullptr);
 
     KernelArgsTy KernelArgs = {};
-    if (auto Err =
-            CUDAKernel.launchImpl(*this, /*NumThread=*/1u,
-                                  /*NumBlocks=*/1ul, KernelArgs,
-                                  KernelLaunchParamsTy{}, AsyncInfoWrapper))
+    uint32_t NumBlocksAndThreads[3] = {1u, 1u, 1u};
+    if (auto Err = CUDAKernel.launchImpl(
+            *this, NumBlocksAndThreads, NumBlocksAndThreads, KernelArgs,
+            KernelLaunchParamsTy{}, AsyncInfoWrapper))
       return Err;
 
     Error Err = Plugin::success();
@@ -1276,7 +1253,7 @@ private:
 };
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
-                               uint32_t NumThreads, uint64_t NumBlocks,
+                               uint32_t NumThreads[3], uint32_t NumBlocks[3],
                                KernelArgsTy &KernelArgs,
                                KernelLaunchParamsTy LaunchParams,
                                AsyncInfoWrapperTy &AsyncInfoWrapper) const {
@@ -1294,10 +1271,25 @@ Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                     reinterpret_cast<void *>(&LaunchParams.Size),
                     CU_LAUNCH_PARAM_END};
 
-  CUresult Res = cuLaunchKernel(Func, NumBlocks, /*gridDimY=*/1,
-                                /*gridDimZ=*/1, NumThreads,
-                                /*blockDimY=*/1, /*blockDimZ=*/1,
+  // If we are running an RPC server we want to wake up the server thread
+  // whenever there is a kernel running and let it sleep otherwise.
+  if (GenericDevice.getRPCServer())
+    GenericDevice.Plugin.getRPCServer().Thread->notify();
+
+  CUresult Res = cuLaunchKernel(Func, NumBlocks[0], NumBlocks[1], NumBlocks[2],
+                                NumThreads[0], NumThreads[1], NumThreads[2],
                                 MaxDynCGroupMem, Stream, nullptr, Config);
+
+  // Register a callback to indicate when the kernel is complete.
+  if (GenericDevice.getRPCServer())
+    cuLaunchHostFunc(
+        Stream,
+        [](void *Data) {
+          GenericPluginTy &Plugin = *reinterpret_cast<GenericPluginTy *>(Data);
+          Plugin.getRPCServer().Thread->finish();
+        },
+        &GenericDevice.Plugin);
+
   return Plugin::check(Res, "Error in cuLaunchKernel for '%s': %s", getName());
 }
 

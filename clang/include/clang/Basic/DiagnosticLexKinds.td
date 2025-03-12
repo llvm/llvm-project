@@ -407,6 +407,9 @@ def warn_pp_macro_hides_keyword : Extension<
 def warn_pp_macro_is_reserved_id : Warning<
   "macro name is a reserved identifier">, DefaultIgnore,
   InGroup<ReservedIdAsMacro>;
+def warn_pp_macro_is_reserved_attribute_id : Warning<
+  "%0 is a reserved attribute identifier">, DefaultIgnore,
+  InGroup<ReservedAttributeIdentifier>;
 def warn_pp_objc_macro_redef_ignored : Warning<
   "ignoring redefinition of Objective-C qualifier macro">,
   InGroup<DiagGroup<"objc-macro-redefinition">>;
@@ -486,14 +489,14 @@ def ext_embedded_directive : Extension<
   InGroup<DiagGroup<"embedded-directive">>;
 def ext_c_missing_varargs_arg : Extension<
   "passing no argument for the '...' parameter of a variadic macro is "
-  "a C23 extension">, InGroup<C23>;
+  "a C23 extension">, InGroup<VariadicMacroArgumentsOmitted>;
 def ext_cxx_missing_varargs_arg : Extension<
   "passing no argument for the '...' parameter of a variadic macro is "
-  "a C++20 extension">, InGroup<CXX20>;
+  "a C++20 extension">, InGroup<VariadicMacroArgumentsOmitted>;
 def warn_c17_compat_missing_varargs_arg : Warning<
   "passing no argument for the '...' parameter of a variadic macro is "
   "incompatible with C standards before C23">,
-  InGroup<CPre23Compat>, DefaultIgnore;
+  InGroup<VariadicMacroArgumentsOmitted>, DefaultIgnore;
 def warn_cxx17_compat_missing_varargs_arg : Warning<
   "passing no argument for the '...' parameter of a variadic macro is "
   "incompatible with C++ standards before C++20">,

@@ -20,6 +20,7 @@
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
 #include "llvm/ExecutionEngine/Orc/Shared/WrapperFunctionUtils.h"
 #include "llvm/ExecutionEngine/Orc/SymbolStringPool.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/UnwindInfoManager.h"
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -181,7 +182,7 @@ public:
 
   ExecutorProcessControl(std::shared_ptr<SymbolStringPool> SSP,
                          std::unique_ptr<TaskDispatcher> D)
-    : SSP(std::move(SSP)), D(std::move(D)) {}
+      : SSP(std::move(SSP)), D(std::move(D)) {}
 
   virtual ~ExecutorProcessControl();
 
@@ -507,6 +508,9 @@ private:
                           SymbolLookupCompleteFn F) override;
 
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
+#ifdef __APPLE__
+  std::unique_ptr<UnwindInfoManager> UnwindInfoMgr;
+#endif // __APPLE__
   char GlobalManglingPrefix = 0;
 };
 

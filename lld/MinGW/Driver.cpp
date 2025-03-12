@@ -58,13 +58,13 @@ enum {
 #undef OPTION
 };
 
-// Create prefix string literals used in Options.td
-#define PREFIX(NAME, VALUE)                                                    \
-  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
-  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
-      NAME##_init, std::size(NAME##_init) - 1);
+#define OPTTABLE_STR_TABLE_CODE
 #include "Options.inc"
-#undef PREFIX
+#undef OPTTABLE_STR_TABLE_CODE
+
+#define OPTTABLE_PREFIXES_TABLE_CODE
+#include "Options.inc"
+#undef OPTTABLE_PREFIXES_TABLE_CODE
 
 // Create table mapping all options defined in Options.td
 static constexpr opt::OptTable::Info infoTable[] = {
@@ -92,7 +92,9 @@ static constexpr opt::OptTable::Info infoTable[] = {
 namespace {
 class MinGWOptTable : public opt::GenericOptTable {
 public:
-  MinGWOptTable() : opt::GenericOptTable(infoTable, false) {}
+  MinGWOptTable()
+      : opt::GenericOptTable(OptionStrTable, OptionPrefixesTable, infoTable,
+                             false) {}
   opt::InputArgList parse(ArrayRef<const char *> argv);
 };
 } // namespace
@@ -406,6 +408,9 @@ bool link(ArrayRef<const char *> argsArr, llvm::raw_ostream &stdoutOS,
   if (args.hasFlag(OPT_allow_multiple_definition,
                    OPT_no_allow_multiple_definition, false))
     add("-force:multiple");
+
+  if (auto *a = args.getLastArg(OPT_dependent_load_flag))
+    add("-dependentloadflag:" + StringRef(a->getValue()));
 
   if (auto *a = args.getLastArg(OPT_icf)) {
     StringRef s = a->getValue();

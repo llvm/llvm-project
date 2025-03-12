@@ -35,6 +35,16 @@ AArch64TargetStreamer::AArch64TargetStreamer(MCStreamer &S)
 
 AArch64TargetStreamer::~AArch64TargetStreamer() = default;
 
+void AArch64TargetStreamer::emitAuthValue(const MCExpr *Expr,
+                                          uint16_t Discriminator,
+                                          AArch64PACKey::ID Key,
+                                          bool HasAddressDiversity) {
+  Streamer.emitValueImpl(AArch64AuthMCExpr::create(Expr, Discriminator, Key,
+                                                   HasAddressDiversity,
+                                                   Streamer.getContext()),
+                         8);
+}
+
 // The constant pool handling is shared by all AArch64TargetStreamer
 // implementations.
 const MCExpr *AArch64TargetStreamer::addConstantPoolEntry(const MCExpr *Expr,
@@ -140,4 +150,108 @@ llvm::createAArch64ObjectTargetStreamer(MCStreamer &S,
 
 MCTargetStreamer *llvm::createAArch64NullTargetStreamer(MCStreamer &S) {
   return new AArch64TargetStreamer(S);
+}
+
+void AArch64TargetStreamer::emitAtributesSubsection(
+    StringRef VendorName, AArch64BuildAttrs::SubsectionOptional IsOptional,
+    AArch64BuildAttrs::SubsectionType ParameterType) {
+
+  // If exists, return.
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (VendorName == SubSection.VendorName) {
+      activateAtributesSubsection(VendorName);
+      return;
+    }
+  }
+  // else, add the subsection
+  MCELFStreamer::AttributeSubSection AttSubSection;
+  AttSubSection.VendorName = VendorName;
+  AttSubSection.IsOptional = IsOptional;
+  AttSubSection.ParameterType = ParameterType;
+  AttributeSubSections.push_back(AttSubSection);
+  activateAtributesSubsection(VendorName);
+}
+
+std::unique_ptr<MCELFStreamer::AttributeSubSection>
+AArch64TargetStreamer::getActiveAtributesSubsection() {
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (SubSection.IsActive) {
+      return std::make_unique<MCELFStreamer::AttributeSubSection>(SubSection);
+    }
+  }
+  return nullptr;
+}
+
+std::unique_ptr<MCELFStreamer::AttributeSubSection>
+AArch64TargetStreamer::getAtributesSubsectionByName(StringRef Name) {
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (Name == SubSection.VendorName) {
+      return std::make_unique<MCELFStreamer::AttributeSubSection>(SubSection);
+    }
+  }
+  return nullptr;
+}
+
+void AArch64TargetStreamer::emitAttribute(StringRef VendorName, unsigned Tag,
+                                          unsigned Value, std::string String,
+                                          bool Override) {
+
+  if (unsigned(-1) == Value && "" == String) {
+    assert(0 && "Arguments error");
+    return;
+  }
+  if (AttributeSubSections.size() == 0) {
+    assert(0 &&
+           "Can not add AArch64 build attribute: no AArch64 subsection exists");
+    return;
+  }
+
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (VendorName == SubSection.VendorName) {
+      if (!SubSection.IsActive) {
+        assert(0 &&
+               "Can not add AArch64 build attribute: subsection is not active");
+        return;
+      }
+      for (MCELFStreamer::AttributeItem &Item : SubSection.Content) {
+        if (Item.Tag == Tag) {
+          if (!Override) {
+            if ((unsigned(-1) != Value && Item.IntValue != Value) ||
+                ("" != String && Item.StringValue != String)) {
+              assert(0 &&
+                     "Can not add AArch64 build attribute: An attribute with "
+                     "the same tag and a different value already exists");
+              return;
+            } else {
+              // Case Item.IntValue == Value, no need to emit twice
+              assert(0 &&
+                     "AArch64 build attribute: An attribute with the same tag "
+                     "and a same value already exists");
+              return;
+            }
+          }
+        }
+      }
+      if (unsigned(-1) != Value)
+        SubSection.Content.push_back(MCELFStreamer::AttributeItem(
+            MCELFStreamer::AttributeItem::NumericAttribute, Tag, Value, ""));
+      if ("" != String)
+        SubSection.Content.push_back(MCELFStreamer::AttributeItem(
+            MCELFStreamer::AttributeItem::TextAttribute, Tag, unsigned(-1),
+            String));
+      return;
+    }
+  }
+  assert(0 && "Can not add AArch64 build attribute: required subsection does "
+              "not exist");
+}
+
+void AArch64TargetStreamer::activateAtributesSubsection(StringRef VendorName) {
+  for (MCELFStreamer::AttributeSubSection &SubSection : AttributeSubSections) {
+    if (VendorName == SubSection.VendorName) {
+      SubSection.IsActive = true;
+    } else {
+      SubSection.IsActive = false;
+    }
+  }
 }

@@ -576,7 +576,7 @@ processFunctionBeforeFrameFinalized(MachineFunction &MF,
   unsigned Size = TRI.getSpillSize(RC);
   Align Alignment = TRI.getSpillAlign(RC);
   if (XFI->isLargeFrame(MF) || hasFP(MF))
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Alignment, false));
+    RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(Size, Alignment));
   if (XFI->isLargeFrame(MF) && !hasFP(MF))
-    RS->addScavengingFrameIndex(MFI.CreateStackObject(Size, Alignment, false));
+    RS->addScavengingFrameIndex(MFI.CreateSpillStackObject(Size, Alignment));
 }

@@ -175,7 +175,7 @@ static unsigned extractRotateInfo(int64_t Val) {
 
 static void generateInstSeqLeadingZeros(int64_t Val, const MCSubtargetInfo &STI,
                                         RISCVMatInt::InstSeq &Res) {
-  assert(Val > 0 && "Expected postive val");
+  assert(Val > 0 && "Expected positive val");
 
   unsigned LeadingZeros = llvm::countl_zero((uint64_t)Val);
   uint64_t ShiftedVal = (uint64_t)Val << LeadingZeros;

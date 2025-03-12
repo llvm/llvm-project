@@ -23,6 +23,16 @@ static cl::opt<bool>
                                 "to lower to librt functions"),
                        cl::init(true));
 
+bool AArch64SelectionDAGInfo::isTargetMemoryOpcode(unsigned Opcode) const {
+  return Opcode >= AArch64ISD::FIRST_MEMORY_OPCODE &&
+         Opcode <= AArch64ISD::LAST_MEMORY_OPCODE;
+}
+
+bool AArch64SelectionDAGInfo::isTargetStrictFPOpcode(unsigned Opcode) const {
+  return Opcode >= AArch64ISD::FIRST_STRICTFP_OPCODE &&
+         Opcode <= AArch64ISD::LAST_STRICTFP_OPCODE;
+}
+
 SDValue AArch64SelectionDAGInfo::EmitMOPS(unsigned Opcode, SelectionDAG &DAG,
                                           const SDLoc &DL, SDValue Chain,
                                           SDValue Dst, SDValue SrcOrValue,

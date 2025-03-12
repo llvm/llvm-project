@@ -20,6 +20,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+using namespace llvm;
+
 static int savedStdHandleAutoConversionMode[3] = {-1, -1, -1};
 
 int disablezOSAutoConversion(int FD) {
@@ -116,4 +118,40 @@ std::error_code llvm::setzOSFileTag(int FD, int CCSID, bool Text) {
   return std::error_code();
 }
 
-#endif // __MVS__
+ErrorOr<__ccsid_t> llvm::getzOSFileTag(const char *FileName, const int FD) {
+  // If we have a file descriptor, use it to find out file tagging. Otherwise we
+  // need to use stat() with the file path.
+  if (FD != -1) {
+    struct f_cnvrt Query = {
+        QUERYCVT, // cvtcmd
+        0,        // pccsid
+        0,        // fccsid
+    };
+    if (fcntl(FD, F_CONTROL_CVT, &Query) == -1)
+      return std::error_code(errno, std::generic_category());
+    return Query.fccsid;
+  }
+  struct stat Attr;
+  if (stat(FileName, &Attr) == -1)
+    return std::error_code(errno, std::generic_category());
+  return Attr.st_tag.ft_ccsid;
+}
+
+ErrorOr<bool> llvm::needzOSConversion(const char *FileName, const int FD) {
+  ErrorOr<__ccsid_t> Ccsid = getzOSFileTag(FileName, FD);
+  if (std::error_code EC = Ccsid.getError())
+    return EC;
+  // We don't need conversion for UTF-8 tagged files or binary files.
+  // TODO: Remove the assumption of ISO8859-1 = UTF-8 here when we fully resolve
+  // problems related to UTF-8 tagged source files.
+  switch (*Ccsid) {
+  case CCSID_UTF_8:
+  case CCSID_ISO8859_1:
+  case FT_BINARY:
+    return false;
+  default:
+    return true;
+  }
+}
+
+#endif //__MVS__

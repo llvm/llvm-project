@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___RANGES_CONCEPTS_H
-#define _LIBCPP___RANGES_CONCEPTS_H
+#ifndef _LIBCPP___CXX03___RANGES_CONCEPTS_H
+#define _LIBCPP___CXX03___RANGES_CONCEPTS_H
 
 #include <__cxx03/__concepts/constructible.h>
 #include <__cxx03/__concepts/movable.h>
@@ -139,4 +139,4 @@ concept viewable_range =
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___RANGES_CONCEPTS_H
+#endif // _LIBCPP___CXX03___RANGES_CONCEPTS_H

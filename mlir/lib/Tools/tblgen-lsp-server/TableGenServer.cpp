@@ -165,11 +165,11 @@ struct TableGenRecordSymbol : public TableGenIndexSymbol {
   ~TableGenRecordSymbol() override = default;
 
   static bool classof(const TableGenIndexSymbol *symbol) {
-    return symbol->definition.is<const Record *>();
+    return isa<const Record *>(symbol->definition);
   }
 
   /// Return the value of this symbol.
-  const Record *getValue() const { return definition.get<const Record *>(); }
+  const Record *getValue() const { return cast<const Record *>(definition); }
 };
 /// This class represents a single record value symbol.
 struct TableGenRecordValSymbol : public TableGenIndexSymbol {
@@ -178,12 +178,12 @@ struct TableGenRecordValSymbol : public TableGenIndexSymbol {
   ~TableGenRecordValSymbol() override = default;
 
   static bool classof(const TableGenIndexSymbol *symbol) {
-    return symbol->definition.is<const RecordVal *>();
+    return isa<const RecordVal *>(symbol->definition);
   }
 
   /// Return the value of this symbol.
   const RecordVal *getValue() const {
-    return definition.get<const RecordVal *>();
+    return cast<const RecordVal *>(definition);
   }
 
   /// The parent record of this symbol.

@@ -15,8 +15,6 @@
 #include "Interface.h"
 #include "State.h"
 
-#pragma omp begin declare target device_type(nohost)
-
 #include "llvm/Frontend/OpenMP/OMPGridValues.h"
 
 using namespace ompx;
@@ -24,28 +22,12 @@ using namespace ompx;
 namespace ompx {
 namespace impl {
 
-// Forward declarations defined to be defined for AMDGCN and NVPTX.
-const llvm::omp::GV &getGridValue();
-LaneMaskTy activemask();
-LaneMaskTy lanemaskLT();
-LaneMaskTy lanemaskGT();
-uint32_t getThreadIdInWarp();
-uint32_t getThreadIdInBlock(int32_t Dim);
-uint32_t getNumberOfThreadsInBlock(int32_t Dim);
-uint32_t getNumberOfThreadsInKernel();
-uint32_t getBlockIdInKernel(int32_t Dim);
-uint32_t getNumberOfBlocksInKernel(int32_t Dim);
-uint32_t getWarpIdInBlock();
-uint32_t getNumberOfWarpsInBlock();
-
 /// AMDGCN Implementation
 ///
 ///{
-#pragma omp begin declare variant match(device = {arch(amdgcn)})
+#ifdef __AMDGPU__
 
-const llvm::omp::GV &getGridValue() {
-  return llvm::omp::getAMDGPUGridValues<__AMDGCN_WAVEFRONT_SIZE>();
-}
+uint32_t getWarpSize() { return __builtin_amdgcn_wavefrontsize(); }
 
 uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
   switch (Dim) {
@@ -130,15 +112,13 @@ uint32_t getNumberOfWarpsInBlock() {
   return mapping::getNumberOfThreadsInBlock() / mapping::getWarpSize();
 }
 
-#pragma omp end declare variant
+#endif
 ///}
 
 /// NVPTX Implementation
 ///
 ///{
-#pragma omp begin declare variant match(                                       \
-        device = {arch(nvptx, nvptx64)},                                       \
-            implementation = {extension(match_any)})
+#ifdef __NVPTX__
 
 uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
   switch (Dim) {
@@ -152,7 +132,7 @@ uint32_t getNumberOfThreadsInBlock(int32_t Dim) {
   UNREACHABLE("Dim outside range!");
 }
 
-const llvm::omp::GV &getGridValue() { return llvm::omp::NVPTXGridValues; }
+uint32_t getWarpSize() { return __nvvm_read_ptx_sreg_warpsize(); }
 
 LaneMaskTy activemask() { return __nvvm_activemask(); }
 
@@ -216,10 +196,8 @@ uint32_t getNumberOfWarpsInBlock() {
          mapping::getWarpSize();
 }
 
-#pragma omp end declare variant
+#endif
 ///}
-
-uint32_t getWarpSize() { return getGridValue().GV_Warp_Size; }
 
 } // namespace impl
 } // namespace ompx
@@ -330,7 +308,7 @@ uint32_t mapping::getNumberOfProcessorElements() {
 
 // TODO: This is a workaround for initialization coming from kernels outside of
 //       the TU. We will need to solve this more correctly in the future.
-[[gnu::weak]] int SHARED(IsSPMDMode);
+[[gnu::weak, clang::loader_uninitialized]] Local<int> IsSPMDMode;
 
 void mapping::init(bool IsSPMD) {
   if (mapping::isInitialThreadInLevel0(IsSPMD))
@@ -375,19 +353,17 @@ int ompx_shfl_down_sync_i(uint64_t mask, int var, unsigned delta, int width) {
 
 float ompx_shfl_down_sync_f(uint64_t mask, float var, unsigned delta,
                             int width) {
-  return utils::convertViaPun<float>(utils::shuffleDown(
-      mask, utils::convertViaPun<int32_t>(var), delta, width));
+  return utils::bitCast<float>(
+      utils::shuffleDown(mask, utils::bitCast<int32_t>(var), delta, width));
 }
 
 long ompx_shfl_down_sync_l(uint64_t mask, long var, unsigned delta, int width) {
-  return utils::shuffleDown(mask, var, delta, width);
+  return utils::shuffleDown(mask, utils::bitCast<int64_t>(var), delta, width);
 }
 
 double ompx_shfl_down_sync_d(uint64_t mask, double var, unsigned delta,
                              int width) {
-  return utils::convertViaPun<double>(utils::shuffleDown(
-      mask, utils::convertViaPun<int64_t>(var), delta, width));
+  return utils::bitCast<double>(
+      utils::shuffleDown(mask, utils::bitCast<int64_t>(var), delta, width));
 }
 }
-
-#pragma omp end declare target

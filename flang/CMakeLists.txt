@@ -66,11 +66,20 @@ if (MSVC AND CMAKE_CXX_COMPILER_ID MATCHES Clang)
   if (IS_DIRECTORY "${LIBDIR}")
     link_libraries(${CLANG_RT_BUILTINS_LIBRARY})
   endif()
+
+  if (MSVC_VERSION EQUAL 1942)
+    message(FATAL_ERROR "Flang cannot be built with clang and the MSVC 17.12 "
+            "toolchain version. Please upgrade to 17.13 or later, or switch "
+            "to the 17.10 LTSC release. "
+            "See https://github.com/microsoft/STL/issues/4959 for more details.")
+  endif()
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "flang isn't supported on 32 bit CPUs")
 endif()
+
+set(MLIR_MAIN_SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../mlir" CACHE PATH "Path to MLIR source tree")
 
 if (FLANG_STANDALONE_BUILD)
   set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
@@ -84,28 +93,37 @@ if (FLANG_STANDALONE_BUILD)
 
   # If the user specifies a relative path to LLVM_DIR, the calls to include
   # LLVM modules fail. Append the absolute path to LLVM_DIR instead.
-  get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR}
-    REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
-  list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR_ABSOLUTE})
+  if (LLVM_DIR)
+    get_filename_component(LLVM_DIR_ABSOLUTE ${LLVM_DIR}
+      REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR_ABSOLUTE})
+  endif()
   # We need a pre-built/installed version of LLVM.
   find_package(LLVM REQUIRED HINTS "${LLVM_DIR_ABSOLUTE}")
+  if (NOT LLVM_DIR_ABSOLUTE)
+    # If the user did not specify a LLVM_DIR (and therefore LLVM_DIR_ABSOLUTE
+    # was not set), append the discovered path to CMAKE_MODULE_PATH.
+    list(APPEND CMAKE_MODULE_PATH ${LLVM_DIR})
+  endif()
 
   # Users might specify a path to CLANG_DIR that's:
   #   * a full path, or
   #   * a path relative to the path of this script.
   # Append the absolute path to CLANG_DIR so that find_package works in both
   # cases.
-  get_filename_component(
-    CLANG_DIR_ABSOLUTE
-    ${CLANG_DIR}
-    REALPATH
-    BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
-  list(APPEND CMAKE_MODULE_PATH ${CLANG_DIR_ABSOLUTE})
+  if (CLANG_DIR)
+    get_filename_component(
+      CLANG_DIR_ABSOLUTE
+      ${CLANG_DIR}
+      REALPATH
+      BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    list(APPEND CMAKE_MODULE_PATH ${CLANG_DIR_ABSOLUTE})
 
-  # TODO: Remove when libclangDriver is lifted out of Clang
-  find_package(Clang REQUIRED PATHS "${CLANG_DIR_ABSOLUTE}" NO_DEFAULT_PATH)
-  if (NOT Clang_FOUND)
-    message(FATAL_ERROR "Failed to find Clang")
+    # TODO: Remove when libclangDriver is lifted out of Clang
+    find_package(Clang REQUIRED PATHS "${CLANG_DIR_ABSOLUTE}" NO_DEFAULT_PATH)
+  else()
+    find_package(Clang REQUIRED)
+    list(APPEND CMAKE_MODULE_PATH ${Clang_DIR})
   endif()
 
   # If LLVM links to zlib we need the imported targets so we can too.
@@ -117,7 +135,6 @@ if (FLANG_STANDALONE_BUILD)
     set(USE_NO_MAYBE_UNINITIALIZED 1)
   endif()
 
-  include(CMakeParseArguments)
   include(AddLLVM)
   include(HandleLLVMOptions)
   include(VersionFromVCS)
@@ -128,10 +145,15 @@ if (FLANG_STANDALONE_BUILD)
   include(TableGen)
   # If the user specifies a relative path to MLIR_DIR, the calls to include
   # MLIR modules fail. Append the absolute path to MLIR_DIR instead.
-  get_filename_component(MLIR_DIR_ABSOLUTE ${MLIR_DIR}
-    REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
-  list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR_ABSOLUTE})
+  if (MLIR_DIR)
+    get_filename_component(MLIR_DIR_ABSOLUTE ${MLIR_DIR}
+      REALPATH BASE_DIR ${CMAKE_CURRENT_BINARY_DIR})
+    list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR_ABSOLUTE})
+  endif()
   find_package(MLIR REQUIRED CONFIG HINTS ${MLIR_DIR_ABSOLUTE})
+  if (NOT MLIR_DIR_ABSOLUTE)
+    list(APPEND CMAKE_MODULE_PATH ${MLIR_DIR})
+  endif()
   # Use SYSTEM for the same reasons as for LLVM includes
   include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
   include(AddMLIR)
@@ -220,12 +242,13 @@ else()
     set(FLANG_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
   endif()
 
-  set(MLIR_MAIN_SRC_DIR ${LLVM_MAIN_SRC_DIR}/../mlir ) # --src-root
-  set(MLIR_INCLUDE_DIR ${MLIR_MAIN_SRC_DIR}/include ) # --includedir
+  set(MLIR_INCLUDE_DIRS ${MLIR_MAIN_SRC_DIR}/include ) # --includedir
   set(MLIR_TABLEGEN_OUTPUT_DIR ${CMAKE_BINARY_DIR}/tools/mlir/include)
-  include_directories(SYSTEM ${MLIR_INCLUDE_DIR})
+  include_directories(SYSTEM ${MLIR_INCLUDE_DIRS})
   include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
 endif()
+
+option(FLANG_INCLUDE_RUNTIME "Build the runtime in-tree (deprecated; to be replaced with LLVM_ENABLE_RUNTIMES=flang-rt)" ON)
 
 set(FLANG_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
     "Path for binary subdirectory (defaults to '${CMAKE_INSTALL_BINDIR}')")
@@ -279,7 +302,7 @@ set(FLANG_DEFAULT_LINKER "" CACHE STRING
   "Default linker to use (linker name or absolute path, empty for platform default)")
 
 set(FLANG_DEFAULT_RTLIB "" CACHE STRING
-   "Default Fortran runtime library to use (\"libFortranRuntime\"), leave empty for platform default.")
+   "Default Fortran runtime library to use (\"libflang_rt.runtime\"), leave empty for platform default.")
 
 if (NOT(FLANG_DEFAULT_RTLIB STREQUAL ""))
   message(WARNING "Resetting Flang's default runtime library to use platform default.")
@@ -445,11 +468,16 @@ if (APPLE)
   endif()
 endif()
 
-include(CMakeParseArguments)
 include(AddFlang)
 
 if (FLANG_INCLUDE_TESTS)
   add_compile_definitions(FLANG_INCLUDE_TESTS=1)
+endif()
+
+option(FLANG_CUF_RUNTIME
+  "Compile CUDA Fortran runtime sources" OFF)
+if (FLANG_CUF_RUNTIME)
+  find_package(CUDAToolkit REQUIRED)
 endif()
 
 add_subdirectory(include)
@@ -462,13 +490,9 @@ if (FLANG_BUILD_TOOLS)
   add_subdirectory(tools)
 endif()
 
-option(FLANG_CUF_RUNTIME
-  "Compile CUDA Fortran runtime sources" OFF)
-if (FLANG_CUF_RUNTIME)
-  find_package(CUDAToolkit REQUIRED)
-endif()
-
-add_subdirectory(runtime)
+if (FLANG_INCLUDE_RUNTIME)
+  add_subdirectory(runtime)
+endif ()
 
 if (LLVM_INCLUDE_EXAMPLES)
   add_subdirectory(examples)

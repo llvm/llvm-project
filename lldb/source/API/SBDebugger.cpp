@@ -185,7 +185,7 @@ lldb::SBError SBDebugger::InitializeWithErrorHandling() {
     llvm::sys::DynamicLibrary dynlib =
         llvm::sys::DynamicLibrary::getPermanentLibrary(spec.GetPath().c_str());
     if (dynlib.isValid()) {
-      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger & debugger);
+      typedef bool (*LLDBCommandPluginInit)(lldb::SBDebugger debugger);
 
       lldb::SBDebugger debugger_sb(debugger_sp);
       // This calls the bool lldb::PluginInitialize(lldb::SBDebugger debugger)
@@ -1403,6 +1403,19 @@ void SBDebugger::SetTerminalWidth(uint32_t term_width) {
 
   if (m_opaque_sp)
     m_opaque_sp->SetTerminalWidth(term_width);
+}
+
+uint32_t SBDebugger::GetTerminalHeight() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  return (m_opaque_sp ? m_opaque_sp->GetTerminalWidth() : 0);
+}
+
+void SBDebugger::SetTerminalHeight(uint32_t term_height) {
+  LLDB_INSTRUMENT_VA(this, term_height);
+
+  if (m_opaque_sp)
+    m_opaque_sp->SetTerminalHeight(term_height);
 }
 
 const char *SBDebugger::GetPrompt() const {

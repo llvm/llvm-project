@@ -278,9 +278,16 @@ void Kernels() {
 #pragma acc kernels
 #pragma acc loop gang(num:1)
   for(int j = 0; j < 5; ++j) {
-    // expected-error@+2{{loop with a 'gang' clause may not exist in the region of a 'gang' clause on a 'kernels' compute construct}}
+    // expected-error@+2{{loop with a 'gang' clause may not exist in the region of a 'gang' clause on a 'kernels' construct}}
     // expected-note@-3{{previous clause is here}}
 #pragma acc loop gang(static:1)
+    for(int i = 0; i < 5; ++i);
+  }
+
+#pragma acc kernels
+#pragma acc loop gang(num:1)
+  for(int j = 0; j < 5; ++j) {
+#pragma acc loop worker(1) vector(1)
     for(int i = 0; i < 5; ++i);
   }
 

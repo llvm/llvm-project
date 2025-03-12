@@ -20,8 +20,8 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 #if TEST_STD_VER >= 11
-#include "emplace_constructible.h"
-#include "container_test_types.h"
+#  include "emplace_constructible.h"
+#  include "container_test_types.h"
 #endif
 
 template <class C, class Iterator>
@@ -31,9 +31,8 @@ TEST_CONSTEXPR_CXX20 void test(Iterator first, Iterator last) {
     LIBCPP_ASSERT(c.__invariants());
     assert(c.size() == static_cast<std::size_t>(std::distance(first, last)));
     LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
-    for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e;
-      ++i, ++first)
-    assert(*i == *first);
+    for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e; ++i, ++first)
+      assert(*i == *first);
   }
   // Test with an empty range
   {
@@ -47,14 +46,10 @@ TEST_CONSTEXPR_CXX20 void test(Iterator first, Iterator last) {
 TEST_CONSTEXPR_CXX20 void basic_test_cases() {
   int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
   int* an = a + sizeof(a) / sizeof(a[0]);
-  test<std::vector<int> >(cpp17_input_iterator<const int*>(a),
-                          cpp17_input_iterator<const int*>(an));
-  test<std::vector<int> >(forward_iterator<const int*>(a),
-                          forward_iterator<const int*>(an));
-  test<std::vector<int> >(bidirectional_iterator<const int*>(a),
-                          bidirectional_iterator<const int*>(an));
-  test<std::vector<int> >(random_access_iterator<const int*>(a),
-                          random_access_iterator<const int*>(an));
+  test<std::vector<int> >(cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an));
+  test<std::vector<int> >(forward_iterator<const int*>(a), forward_iterator<const int*>(an));
+  test<std::vector<int> >(bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
+  test<std::vector<int> >(random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
   test<std::vector<int> >(a, an);
 
   test<std::vector<int, limited_allocator<int, 63> > >(
@@ -63,23 +58,18 @@ TEST_CONSTEXPR_CXX20 void basic_test_cases() {
   test<std::vector<int, limited_allocator<int, 18 + 1> > >(
       forward_iterator<const int*>(a), forward_iterator<const int*>(an));
   test<std::vector<int, limited_allocator<int, 18 + 1> > >(
-      bidirectional_iterator<const int*>(a),
-      bidirectional_iterator<const int*>(an));
+      bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
   test<std::vector<int, limited_allocator<int, 18 + 1> > >(
-      random_access_iterator<const int*>(a),
-      random_access_iterator<const int*>(an));
+      random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
   test<std::vector<int, limited_allocator<int, 18 + 1> > >(a, an);
 #if TEST_STD_VER >= 11
-  test<std::vector<int, min_allocator<int> > >(cpp17_input_iterator<const int*>(a),
-                                               cpp17_input_iterator<const int*>(an));
   test<std::vector<int, min_allocator<int> > >(
-      forward_iterator<const int*>(a), forward_iterator<const int*>(an));
+      cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an));
+  test<std::vector<int, min_allocator<int> > >(forward_iterator<const int*>(a), forward_iterator<const int*>(an));
   test<std::vector<int, min_allocator<int> > >(
-      bidirectional_iterator<const int*>(a),
-      bidirectional_iterator<const int*>(an));
+      bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
   test<std::vector<int, min_allocator<int> > >(
-      random_access_iterator<const int*>(a),
-      random_access_iterator<const int*>(an));
+      random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
   test<std::vector<int> >(a, an);
   test<std::vector<int, safe_allocator<int> > >(
       cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an));
@@ -102,7 +92,7 @@ TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
   {
-    using T = EmplaceConstructible<int>;
+    using T  = EmplaceConstructible<int>;
     using It = forward_iterator<int*>;
     {
       std::vector<T> v(It(arr1), It(std::end(arr1)));
@@ -116,7 +106,7 @@ TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
     }
   }
   {
-    using T = EmplaceConstructibleAndMoveInsertable<int>;
+    using T  = EmplaceConstructibleAndMoveInsertable<int>;
     using It = cpp17_input_iterator<int*>;
     {
       std::vector<T> v(It(arr1), It(std::end(arr1)));
@@ -141,7 +131,7 @@ void test_ctor_under_alloc() {
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
   {
-    using C = TCT::vector<>;
+    using C  = TCT::vector<>;
     using It = forward_iterator<int*>;
     {
       ExpectConstructGuard<int&> G(1);
@@ -153,7 +143,7 @@ void test_ctor_under_alloc() {
     }
   }
   {
-    using C = TCT::vector<>;
+    using C  = TCT::vector<>;
     using It = cpp17_input_iterator<int*>;
     {
       ExpectConstructGuard<int&> G(1);
@@ -168,9 +158,15 @@ void test_ctor_under_alloc() {
 }
 
 // In C++03, you can't instantiate a template with a local type.
-struct B1 { int x; };
-struct B2 { int y; };
-struct Der : B1, B2 { int z; };
+struct B1 {
+  int x;
+};
+struct B2 {
+  int y;
+};
+struct Der : B1, B2 {
+  int z;
+};
 
 // Initialize a vector with a different value type.
 TEST_CONSTEXPR_CXX20 void test_ctor_with_different_value_type() {
@@ -188,7 +184,7 @@ TEST_CONSTEXPR_CXX20 void test_ctor_with_different_value_type() {
   }
   {
     Der z;
-    Der *array[1] = { &z };
+    Der* array[1] = {&z};
     // Though the types Der* and B2* are very similar, initialization still cannot
     // be done with `memcpy`.
     std::vector<B2*> v(array, array + 1);
@@ -196,7 +192,7 @@ TEST_CONSTEXPR_CXX20 void test_ctor_with_different_value_type() {
   }
   {
     // Though the types are different, initialization can be done with `memcpy`.
-    std::int32_t array[1] = { -1 };
+    std::int32_t array[1] = {-1};
     std::vector<std::uint32_t> v(array, array + 1);
     assert(v[0] == 4294967295U);
   }
@@ -210,12 +206,11 @@ TEST_CONSTEXPR_CXX20 bool tests() {
   return true;
 }
 
-int main(int, char**)
-{
-    tests();
-    test_ctor_under_alloc();
+int main(int, char**) {
+  tests();
+  test_ctor_under_alloc();
 #if TEST_STD_VER > 17
-    static_assert(tests());
+  static_assert(tests());
 #endif
-    return 0;
+  return 0;
 }

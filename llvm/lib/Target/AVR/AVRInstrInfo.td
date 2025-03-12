@@ -69,9 +69,9 @@ def AVRasrbn : SDNode<"AVRISD::ASRBN", SDTIntBinOp>;
 def AVRlslwn : SDNode<"AVRISD::LSLWN", SDTIntBinOp>;
 def AVRlsrwn : SDNode<"AVRISD::LSRWN", SDTIntBinOp>;
 def AVRasrwn : SDNode<"AVRISD::ASRWN", SDTIntBinOp>;
-def AVRlslw : SDNode<"AVRISD::LSLW", SDTIntShiftDOp>;
-def AVRlsrw : SDNode<"AVRISD::LSRW", SDTIntShiftDOp>;
-def AVRasrw : SDNode<"AVRISD::ASRW", SDTIntShiftDOp>;
+def AVRlslw : SDNode<"AVRISD::LSLW", SDTIntShiftPairOp>;
+def AVRlsrw : SDNode<"AVRISD::LSRW", SDTIntShiftPairOp>;
+def AVRasrw : SDNode<"AVRISD::ASRW", SDTIntShiftPairOp>;
 
 // Pseudo shift nodes for non-constant shift amounts.
 def AVRlslLoop : SDNode<"AVRISD::LSLLOOP", SDTIntShiftOp>;
@@ -232,32 +232,8 @@ def imm_port6 : Operand<i8> {
 }
 
 // Addressing mode pattern reg+imm6
-def addr : ComplexPattern<iPTR, 2, "SelectAddr", [], [SDNPWantRoot]>;
-
-// AsmOperand class for a pointer register.
-// Used with the LD/ST family of instructions.
-// See FSTLD in AVRInstrFormats.td
-def PtrRegAsmOperand : AsmOperandClass { let Name = "Reg"; }
-
-// A special operand type for the LD/ST instructions.
-// It converts the pointer register number into a two-bit field used in the
-// instruction.
-def LDSTPtrReg : Operand<i16> {
-  let MIOperandInfo = (ops PTRREGS);
-  let EncoderMethod = "encodeLDSTPtrReg";
-
-  let ParserMatchClass = PtrRegAsmOperand;
-}
-
-// A special operand type for the LDD/STD instructions.
-// It behaves identically to the LD/ST version, except restricts
-// the pointer registers to Y and Z.
-def LDDSTDPtrReg : Operand<i16> {
-  let MIOperandInfo = (ops PTRDISPREGS);
-  let EncoderMethod = "encodeLDSTPtrReg";
-
-  let ParserMatchClass = PtrRegAsmOperand;
-}
+let WantsRoot = true in
+def addr : ComplexPattern<iPTR, 2, "SelectAddr">;
 
 //===----------------------------------------------------------------------===//
 // AVR predicates for subtarget features
@@ -896,7 +872,7 @@ let canFoldAsLoad = 1, isReMaterializable = 1 in {
 
 // Indirect loads.
 let canFoldAsLoad = 1, isReMaterializable = 1 in {
-  def LDRdPtr : FSTLD<0, 0b00, (outs GPR8:$reg), (ins LDSTPtrReg:$ptrreg),
+  def LDRdPtr : FSTLD<0, 0b00, (outs GPR8:$reg), (ins PTRREGS:$ptrreg),
                       "ld\t$reg, $ptrreg",
                       [(set GPR8:$reg, (load i16:$ptrreg))]>,
                 Requires<[HasSRAM]>;
@@ -919,13 +895,8 @@ let canFoldAsLoad = 1, isReMaterializable = 1 in {
 // Indirect loads (with postincrement or predecrement).
 let mayLoad = 1, hasSideEffects = 0,
     Constraints = "$ptrreg = $base_wb,@earlyclobber $reg" in {
-  def LDRdPtrPi : FSTLD<0, 0b01,
-                        (outs GPR8
-                         : $reg, PTRREGS
-                         : $base_wb),
-                        (ins LDSTPtrReg
-                         : $ptrreg),
-                        "ld\t$reg, $ptrreg+", []>,
+  def LDRdPtrPi : FSTLD<0, 0b01, (outs GPR8:$reg, PTRREGS:$base_wb),
+                        (ins PTRREGS:$ptrreg), "ld\t$reg, $ptrreg+", []>,
                   Requires<[HasSRAM]>;
 
   // LDW Rd+1:Rd, P+
@@ -937,7 +908,7 @@ let mayLoad = 1, hasSideEffects = 0,
                    Requires<[HasSRAM]>;
 
   def LDRdPtrPd : FSTLD<0, 0b10, (outs GPR8:$reg, PTRREGS:$base_wb),
-                        (ins LDSTPtrReg:$ptrreg), "ld\t$reg, -$ptrreg", []>,
+                        (ins PTRREGS:$ptrreg), "ld\t$reg, -$ptrreg", []>,
                   Requires<[HasSRAM]>;
 
   // LDW Rd+1:Rd, -P
@@ -1063,7 +1034,7 @@ def STSWKRr : Pseudo<(outs), (ins i16imm:$dst, DREGS:$src),
 // Indirect stores.
 // ST P, Rr
 // Stores the value of Rr into the location addressed by pointer P.
-def STPtrRr : FSTLD<1, 0b00, (outs), (ins LDSTPtrReg:$ptrreg, GPR8:$reg),
+def STPtrRr : FSTLD<1, 0b00, (outs), (ins PTRREGS:$ptrreg, GPR8:$reg),
                     "st\t$ptrreg, $reg", [(store GPR8:$reg, i16:$ptrreg)]>,
               Requires<[HasSRAM]>;
 
@@ -1087,8 +1058,8 @@ let Constraints = "$ptrreg = $base_wb,@earlyclobber $base_wb" in {
   // ST P+, Rr
   // Stores the value of Rr into the location addressed by pointer P.
   // Post increments P.
-  def STPtrPiRr : FSTLD<1, 0b01, (outs LDSTPtrReg:$base_wb),
-                        (ins LDSTPtrReg:$ptrreg, GPR8:$reg, i8imm:$offs),
+  def STPtrPiRr : FSTLD<1, 0b01, (outs PTRREGS:$base_wb),
+                        (ins PTRREGS:$ptrreg, GPR8:$reg, i8imm:$offs),
                         "st\t$ptrreg+, $reg",
                         [(set i16:$base_wb, (post_store GPR8:$reg, i16:$ptrreg,
                          imm:$offs))]>,
@@ -1112,8 +1083,8 @@ let Constraints = "$ptrreg = $base_wb,@earlyclobber $base_wb" in {
   // ST -P, Rr
   // Stores the value of Rr into the location addressed by pointer P.
   // Pre decrements P.
-  def STPtrPdRr : FSTLD<1, 0b10, (outs LDSTPtrReg:$base_wb),
-                        (ins LDSTPtrReg:$ptrreg, GPR8:$reg, i8imm:$offs),
+  def STPtrPdRr : FSTLD<1, 0b10, (outs PTRREGS:$base_wb),
+                        (ins PTRREGS:$ptrreg, GPR8:$reg, i8imm:$offs),
                         "st\t-$ptrreg, $reg",
                         [(set i16: $base_wb,
                          (pre_store GPR8:$reg, i16:$ptrreg, imm:$offs))]>,
@@ -1176,28 +1147,16 @@ let canFoldAsLoad = 1, isReMaterializable = 1, mayLoad = 1,
                   Requires<[HasLPM]>;
   }
 
-  def LPMRdZ : FLPMX<0, 0,
-                     (outs GPR8
-                      : $rd),
-                     (ins ZREG
-                      : $z),
-                     "lpm\t$rd, $z", []>,
+  def LPMRdZ : FLPMX<0, 0, (outs GPR8:$rd), (ins ZREG:$z), "lpm\t$rd, $z", []>,
                Requires<[HasLPMX]>;
 
   // Load program memory, while postincrementing the Z register.
   let Defs = [R31R30] in {
-    def LPMRdZPi : FLPMX<0, 1,
-                         (outs GPR8
-                          : $rd),
-                         (ins ZREG
-                          : $z),
+    def LPMRdZPi : FLPMX<0, 1, (outs GPR8:$rd), (ins ZREG:$z),
                          "lpm\t$rd, $z+", []>,
                    Requires<[HasLPMX]>;
 
-    def LPMWRdZPi : Pseudo<(outs DREGS
-                            : $dst),
-                           (ins ZREG
-                            : $z),
+    def LPMWRdZPi : Pseudo<(outs DREGS:$dst), (ins ZREG:$z),
                            "lpmw\t$dst, $z+", []>,
                     Requires<[HasLPMX]>;
   }
@@ -1205,20 +1164,18 @@ let canFoldAsLoad = 1, isReMaterializable = 1, mayLoad = 1,
 
 // Extended load program memory operations.
 let mayLoad = 1, hasSideEffects = 0 in {
-  let Defs = [R0],
-      Uses = [R31R30] in def ELPM
-      : F16<0b1001010111011000, (outs), (ins), "elpm", []>,
-      Requires<[HasELPM]>;
+  let Defs = [R0], Uses = [R31R30] in
+  def ELPM : F16<0b1001010111011000, (outs), (ins), "elpm", []>,
+             Requires<[HasELPM]>;
 
-  def ELPMRdZ : FLPMX<1, 0, (outs GPR8:$rd), (ins ZREG:$z),
-                      "elpm\t$rd, $z", []>,
+  def ELPMRdZ : FLPMX<1, 0, (outs GPR8:$rd), (ins ZREG:$z), "elpm\t$rd, $z",
+                      []>,
                 Requires<[HasELPMX]>;
 
-  let Defs = [R31R30] in {
-    def ELPMRdZPi : FLPMX<1, 1, (outs GPR8:$rd), (ins ZREG:$z),
-                          "elpm\t$rd, $z+", []>,
-                    Requires<[HasELPMX]>;
-  }
+  let Defs = [R31R30] in
+  def ELPMRdZPi : FLPMX<1, 1, (outs GPR8:$rd), (ins ZREG:$z), "elpm\t$rd, $z+",
+                        []>,
+                  Requires<[HasELPMX]>;
 
   // These pseudo instructions are combination of the OUT and ELPM instructions.
   let Defs = [R0] in {
@@ -1246,116 +1203,64 @@ let mayLoad = 1, hasSideEffects = 0 in {
 
 // Store program memory operations.
 let Uses = [R1, R0] in {
-  let Uses = [R31R30, R1, R0] in def SPM
-      : F16<0b1001010111101000, (outs), (ins), "spm", []>,
-      Requires<[HasSPM]>;
+  let Uses = [R31R30, R1, R0] in
+  def SPM : F16<0b1001010111101000, (outs), (ins), "spm", []>,
+            Requires<[HasSPM]>;
 
-  let Defs = [R31R30] in def SPMZPi : F16<0b1001010111111000, (outs),
-                                          (ins ZREG
-                                           : $z),
-                                          "spm $z+", []>,
-      Requires<[HasSPMX]>;
+  let Defs = [R31R30] in 
+  def SPMZPi : F16<0b1001010111111000, (outs), (ins ZREG:$z), "spm $z+", []>,
+               Requires<[HasSPMX]>;
 }
 
 // Read data from IO location operations.
 let canFoldAsLoad = 1, isReMaterializable = 1 in {
-  def INRdA : FIORdA<(outs GPR8
-                      : $rd),
-                     (ins imm_port6
-                      : $A),
-                     "in\t$rd, $A", [(set i8
-                                         : $rd, (load ioaddr8
-                                                  : $A))]>;
+  def INRdA : FIORdA<(outs GPR8:$rd), (ins imm_port6:$A), "in\t$rd, $A",
+                     [(set i8:$rd, (load ioaddr8:$A))]>;
 
-  def INWRdA : Pseudo<(outs DREGS
-                       : $dst),
-                      (ins imm_port6
-                       : $src),
-                      "inw\t$dst, $src", [(set i16
-                                           : $dst, (load ioaddr16
-                                                    : $src))]>;
+  def INWRdA : Pseudo<(outs DREGS:$d), (ins imm_port6:$s), "inw\t$d, $s",
+                      [(set i16:$d, (load ioaddr16:$s))]>;
 }
 
 // Write data to IO location operations.
-def OUTARr : FIOARr<(outs),
-                    (ins imm_port6
-                     : $A, GPR8
-                     : $rr),
-                    "out\t$A, $rr", [(store i8
-                                         : $rr, ioaddr8
-                                         : $A)]>;
+def OUTARr : FIOARr<(outs), (ins imm_port6:$A, GPR8:$rr), "out\t$A, $rr",
+                    [(store i8:$rr, ioaddr8:$A)]>;
 
-def OUTWARr : Pseudo<(outs),
-                     (ins imm_port6
-                      : $dst, DREGS
-                      : $src),
-                     "outw\t$dst, $src", [(store i16
-                                           : $src, ioaddr16
-                                           : $dst)]>;
+def OUTWARr : Pseudo<(outs), (ins imm_port6:$dst, DREGS:$src),
+                     "outw\t$dst, $src", [(store i16:$src, ioaddr16:$dst)]>;
 
 // Stack push/pop operations.
 let Defs = [SP], Uses = [SP], hasSideEffects = 0 in {
   // Stack push operations.
   let mayStore = 1 in {
-    def PUSHRr : FRd<0b1001, 0b0011111, (outs),
-                     (ins GPR8
-                      : $rd),
-                     "push\t$rd", []>,
+    def PUSHRr : FRd<0b1001, 0b0011111, (outs), (ins GPR8:$rd), "push\t$rd",
+                     []>,
                  Requires<[HasSRAM]>;
 
-    def PUSHWRr : Pseudo<(outs),
-                         (ins DREGS
-                          : $reg),
-                         "pushw\t$reg", []>,
+    def PUSHWRr : Pseudo<(outs), (ins DREGS:$reg), "pushw\t$reg", []>,
                   Requires<[HasSRAM]>;
   }
 
   // Stack pop operations.
   let mayLoad = 1 in {
-    def POPRd : FRd<0b1001, 0b0001111,
-                    (outs GPR8
-                     : $rd),
-                    (ins), "pop\t$rd", []>,
+    def POPRd : FRd<0b1001, 0b0001111, (outs GPR8:$rd), (ins), "pop\t$rd", []>,
                 Requires<[HasSRAM]>;
 
-    def POPWRd : Pseudo<(outs DREGS
-                         : $reg),
-                        (ins), "popw\t$reg", []>,
+    def POPWRd : Pseudo<(outs DREGS:$reg), (ins), "popw\t$reg", []>,
                  Requires<[HasSRAM]>;
   }
 }
 
 // Read-Write-Modify (RMW) instructions.
-def XCHZRd : FZRd<0b100,
-                  (outs GPR8
-                   : $rd),
-                  (ins ZREG
-                   : $z),
-                  "xch\t$z, $rd", []>,
+def XCHZRd : FZRd<0b100, (outs GPR8:$rd), (ins ZREG:$z), "xch\t$z, $rd", []>,
              Requires<[SupportsRMW]>;
 
-def LASZRd : FZRd<0b101,
-                  (outs GPR8
-                   : $rd),
-                  (ins ZREG
-                   : $z),
-                  "las\t$z, $rd", []>,
+def LASZRd : FZRd<0b101, (outs GPR8:$rd), (ins ZREG:$z), "las\t$z, $rd", []>,
              Requires<[SupportsRMW]>;
 
-def LACZRd : FZRd<0b110,
-                  (outs GPR8
-                   : $rd),
-                  (ins ZREG
-                   : $z),
-                  "lac\t$z, $rd", []>,
+def LACZRd : FZRd<0b110, (outs GPR8:$rd), (ins ZREG:$z), "lac\t$z, $rd", []>,
              Requires<[SupportsRMW]>;
 
-def LATZRd : FZRd<0b111,
-                  (outs GPR8
-                   : $rd),
-                  (ins ZREG
-                   : $z),
-                  "lat\t$z, $rd", []>,
+def LATZRd : FZRd<0b111, (outs GPR8:$rd), (ins ZREG:$z), "lat\t$z, $rd", []>,
              Requires<[SupportsRMW]>;
 
 //===----------------------------------------------------------------------===//
@@ -1366,240 +1271,106 @@ def LATZRd : FZRd<0b111,
 let Constraints = "$src = $rd", Defs = [SREG] in {
   // 8-bit LSL is an alias of ADD Rd, Rd
 
-  def LSLWRd : Pseudo<(outs DREGS
-                       : $rd),
-                      (ins DREGS
-                       : $src),
-                      "lslw\t$rd",
-                      [(set i16
-                        : $rd, (AVRlsl i16
-                                : $src))]>;
+  def LSLWRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "lslw\t$rd",
+                      [(set i16:$rd, (AVRlsl i16:$src))]>;
 
   def LSLWHiRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "lslwhi\t$rd",
                         [(set i16:$rd, (AVRlslhi i16:$src))]>;
 
-  def LSLWNRd : Pseudo<(outs DLDREGS
-                        : $rd),
-                       (ins DREGS
-                        : $src, imm16
-                        : $bits),
-                       "lslwn\t$rd, $bits", [
-                         (set i16
-                          : $rd, (AVRlslwn i16
-                                  : $src, imm
-                                  : $bits))
-                       ]>;
+  def LSLWNRd : Pseudo<(outs DLDREGS:$rd), (ins DREGS:$src, imm16:$bits),
+                       "lslwn\t$rd, $bits",
+                       [(set i16:$rd, (AVRlslwn i16:$src, imm:$bits))]>;
 
-  def LSLBNRd : Pseudo<(outs LD8
-                        : $rd),
-                       (ins GPR8
-                        : $src, imm_ldi8
-                        : $bits),
-                       "lslbn\t$rd, $bits", [
-                         (set i8
-                          : $rd, (AVRlslbn i8
-                                  : $src, imm
-                                  : $bits))
-                       ]>;
+  def LSLBNRd : Pseudo<(outs LD8:$rd), (ins GPR8:$src, imm_ldi8:$bits),
+                       "lslbn\t$rd, $bits",
+                       [(set i8:$rd, (AVRlslbn i8:$src, imm:$bits))]>;
 
-  def LSRRd
-      : FRd<0b1001, 0b0100110,
-            (outs GPR8
-             : $rd),
-            (ins GPR8
-             : $src),
-            "lsr\t$rd", [(set i8
-                          : $rd, (AVRlsr i8
-                                  : $src))]>;
+  def LSRRd : FRd<0b1001, 0b0100110, (outs GPR8:$rd), (ins GPR8:$src), "lsr\t$rd",
+                  [(set i8:$rd, (AVRlsr i8:$src))]>;
 
-  def LSRWRd : Pseudo<(outs DREGS
-                       : $rd),
-                      (ins DREGS
-                       : $src),
-                      "lsrw\t$rd",
-                      [(set i16
-                        : $rd, (AVRlsr i16
-                                : $src))]>;
+  def LSRWRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "lsrw\t$rd",
+                      [(set i16:$rd, (AVRlsr i16:$src))]>;
 
   def LSRWLoRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "lsrwlo\t$rd",
                         [(set i16:$rd, (AVRlsrlo i16:$src))]>;
 
-  def LSRWNRd : Pseudo<(outs DLDREGS
-                        : $rd),
-                       (ins DREGS
-                        : $src, imm16
-                        : $bits),
-                       "lsrwn\t$rd, $bits", [
-                         (set i16
-                          : $rd, (AVRlsrwn i16
-                                  : $src, imm
-                                  : $bits))
-                       ]>;
+  def LSRWNRd : Pseudo<(outs DLDREGS:$rd), (ins DREGS:$src, imm16:$bits),
+                       "lsrwn\t$rd, $bits",
+                       [(set i16:$rd, (AVRlsrwn i16:$src, imm:$bits))]>;
 
-  def LSRBNRd : Pseudo<(outs LD8
-                        : $rd),
-                       (ins GPR8
-                        : $src, imm_ldi8
-                        : $bits),
-                       "lsrbn\t$rd, $bits", [
-                         (set i8
-                          : $rd, (AVRlsrbn i8
-                                  : $src, imm
-                                  : $bits))
-                       ]>;
+  def LSRBNRd : Pseudo<(outs LD8:$rd), (ins GPR8:$src, imm_ldi8:$bits),
+                       "lsrbn\t$rd, $bits",
+                       [(set i8:$rd, (AVRlsrbn i8:$src, imm:$bits))]>;
 
-  def ASRRd
-      : FRd<0b1001, 0b0100101,
-            (outs GPR8
-             : $rd),
-            (ins GPR8
-             : $src),
-            "asr\t$rd", [(set i8
-                          : $rd, (AVRasr i8
-                                  : $src))]>;
+  def ASRRd : FRd<0b1001, 0b0100101, (outs GPR8:$rd), (ins GPR8:$src), "asr\t$rd",
+                  [(set i8:$rd, (AVRasr i8:$src))]>;
 
-  def ASRWNRd : Pseudo<(outs DREGS
-                        : $rd),
-                       (ins DREGS
-                        : $src, imm16
-                        : $bits),
-                       "asrwn\t$rd, $bits", [
-                         (set i16
-                          : $rd, (AVRasrwn i16
-                                  : $src, imm
-                                  : $bits))
-                       ]>;
+  def ASRWNRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src, imm16:$bits),
+                       "asrwn\t$rd, $bits",
+                       [(set i16:$rd, (AVRasrwn i16:$src, imm:$bits))]>;
 
-  def ASRBNRd : Pseudo<(outs LD8
-                        : $rd),
-                       (ins GPR8
-                        : $src, imm_ldi8
-                        : $bits),
-                       "asrbn\t$rd, $bits", [
-                         (set i8
-                          : $rd, (AVRasrbn i8
-                                  : $src, imm
-                                  : $bits))
-                       ]>;
+  def ASRBNRd : Pseudo<(outs LD8:$rd), (ins GPR8:$src, imm_ldi8:$bits),
+                       "asrbn\t$rd, $bits",
+                       [(set i8:$rd, (AVRasrbn i8:$src, imm:$bits))]>;
 
-  def ASRWRd : Pseudo<(outs DREGS
-                       : $rd),
-                      (ins DREGS
-                       : $src),
-                      "asrw\t$rd",
-                      [(set i16
-                        : $rd, (AVRasr i16
-                                : $src))]>;
+  def ASRWRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "asrw\t$rd",
+                      [(set i16:$rd, (AVRasr i16:$src))]>;
 
   def ASRWLoRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "asrwlo\t$rd",
                         [(set i16:$rd, (AVRasrlo i16:$src))]>;
+
   let Uses = [R1] in
-  def ROLBRdR1 : Pseudo<(outs GPR8:$rd),
-                        (ins GPR8:$src),
-                        "rolb\t$rd",
+  def ROLBRdR1 : Pseudo<(outs GPR8:$rd), (ins GPR8:$src), "rolb\t$rd",
                         [(set i8:$rd, (AVRrol i8:$src))]>,
                  Requires<[HasNonTinyEncoding]>;
 
   let Uses = [R17] in
-  def ROLBRdR17 : Pseudo<(outs GPR8:$rd),
-                         (ins GPR8:$src),
-                         "rolb\t$rd",
+  def ROLBRdR17 : Pseudo<(outs GPR8:$rd), (ins GPR8:$src), "rolb\t$rd",
                          [(set i8:$rd, (AVRrol i8:$src))]>,
                   Requires<[HasTinyEncoding]>;
 
-  def RORBRd : Pseudo<(outs GPR8
-                       : $rd),
-                      (ins GPR8
-                       : $src),
-                      "rorb\t$rd",
-                      [(set i8
-                        : $rd, (AVRror i8
-                                : $src))]>;
+  def RORBRd : Pseudo<(outs GPR8:$rd), (ins GPR8:$src), "rorb\t$rd",
+                      [(set i8:$rd, (AVRror i8:$src))]>;
 
   // Bit rotate operations.
   let Uses = [SREG] in {
+    def ROLWRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "rolw\t$rd",
+                        [(set i16:$rd, (AVRrol i16:$src))]>;
 
-    def ROLWRd
-        : Pseudo<(outs DREGS
-                  : $rd),
-                 (ins DREGS
-                  : $src),
-                 "rolw\t$rd",
-                 [(set i16
-                   : $rd, (AVRrol i16
-                           : $src))]>;
-
-    def RORRd : FRd<0b1001, 0b0100111,
-                    (outs GPR8
-                     : $rd),
-                    (ins GPR8
-                     : $src),
+    def RORRd : FRd<0b1001, 0b0100111, (outs GPR8:$rd), (ins GPR8:$src),
                     "ror\t$rd", []>;
 
-    def RORWRd
-        : Pseudo<(outs DREGS
-                  : $rd),
-                 (ins DREGS
-                  : $src),
-                 "rorw\t$rd",
-                 [(set i16
-                   : $rd, (AVRror i16
-                           : $src))]>;
+    def RORWRd : Pseudo<(outs DREGS:$rd), (ins DREGS:$src), "rorw\t$rd",
+                        [(set i16:$rd, (AVRror i16:$src))]>;
   }
 }
 
 // SWAP Rd
 // Swaps the high and low nibbles in a register.
-let Constraints =
-    "$src = $rd" in def SWAPRd : FRd<0b1001, 0b0100010,
-                                     (outs GPR8
-                                      : $rd),
-                                     (ins GPR8
-                                      : $src),
-                                     "swap\t$rd", [(set i8
-                                                    : $rd, (AVRSwap i8
-                                                            : $src))]>;
+let Constraints = "$src = $rd" in
+def SWAPRd : FRd<0b1001, 0b0100010, (outs GPR8:$rd), (ins GPR8:$src),
+                 "swap\t$rd", [(set i8:$rd, (AVRSwap i8:$src))]>;
 
 // IO register bit set/clear operations.
 //: TODO: add patterns when popcount(imm)==2 to be expanded with 2 sbi/cbi
 // instead of in+ori+out which requires one more instr.
-def SBIAb : FIOBIT<0b10, (outs),
-                   (ins imm_port5
-                    : $addr, i8imm
-                    : $b),
-                   "sbi\t$addr, $b", [(store(or(i8(load lowioaddr8
-                                                     : $addr)),
-                                               iobitpos8
-                                               : $b),
-                                         lowioaddr8
-                                         : $addr)]>;
+def SBIAb : FIOBIT<0b10, (outs), (ins imm_port5:$addr, i8imm:$b),
+                   "sbi\t$addr, $b",
+                   [(store(or(i8(load lowioaddr8:$addr)), iobitpos8:$b),
+                     lowioaddr8:$addr)]>;
 
-def CBIAb : FIOBIT<0b00, (outs),
-                   (ins imm_port5
-                    : $addr, i8imm
-                    : $b),
-                   "cbi\t$addr, $b", [(store(and(i8(load lowioaddr8
-                                                      : $addr)),
-                                               iobitposn8
-                                               : $b),
-                                         lowioaddr8
-                                         : $addr)]>;
+def CBIAb : FIOBIT<0b00, (outs), (ins imm_port5:$addr, i8imm :$b),
+                   "cbi\t$addr, $b",
+                   [(store(and(i8(load lowioaddr8:$addr)), iobitposn8:$b),
+                     lowioaddr8:$addr)]>;
 
 // Status register bit load/store operations.
-let Defs = [SREG] in def BST : FRdB<0b01, (outs),
-                                    (ins GPR8
-                                     : $rd, i8imm
-                                     : $b),
-                                    "bst\t$rd, $b", []>;
+let Defs = [SREG] in
+def BST : FRdB<0b01, (outs), (ins GPR8:$rd, i8imm:$b), "bst\t$rd, $b", []>;
 
-let Constraints = "$src = $rd",
-    Uses = [SREG] in def BLD : FRdB<0b00,
-                                    (outs GPR8
-                                     : $rd),
-                                    (ins GPR8
-                                     : $src, i8imm
-                                     : $b),
-                                    "bld\t$rd, $b", []>;
+let Constraints = "$src = $rd", Uses = [SREG] in
+def BLD : FRdB<0b00, (outs GPR8:$rd), (ins GPR8:$src, i8imm:$b), "bld\t$rd, $b",
+               []>;
 
 def CBR : InstAlias<"cbr\t$rd, $k", (ANDIRdK LD8 : $rd, imm_com8 : $k), 0>;
 
@@ -1624,15 +1395,8 @@ def ROL : InstAlias<"rol\t$rd", (ADCRdRr GPR8 : $rd, GPR8 : $rd)>;
 def : InstAlias<"ser\t$rd", (LDIRdK LD8 : $rd, 0xff), 0>;
 
 let hasSideEffects=1 in {
-  let Defs = [SREG] in def BSETs : FS<0,
-                                      (outs),
-                                      (ins i8imm:$s),
-                                      "bset\t$s", []>;
-
-  let Defs = [SREG] in def BCLRs : FS<1,
-                                      (outs),
-                                      (ins i8imm:$s),
-                                      "bclr\t$s", []>;
+  let Defs = [SREG] in def BSETs : FS<0, (outs), (ins i8imm:$s), "bset\t$s", []>;
+  let Defs = [SREG] in def BCLRs : FS<1, (outs), (ins i8imm:$s), "bclr\t$s", []>;
 }
 
 // Set/clear aliases for the carry (C) status flag (bit 0).

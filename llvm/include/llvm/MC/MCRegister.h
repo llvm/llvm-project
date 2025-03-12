@@ -68,6 +68,10 @@ public:
     return FirstPhysicalReg <= Reg && Reg < FirstStackSlot;
   }
 
+  /// Return true if the specified register number is in the physical register
+  /// namespace.
+  constexpr bool isPhysical() const { return isPhysicalRegister(Reg); }
+
   constexpr operator unsigned() const { return Reg; }
 
   /// Check the provided unsigned value is a valid MCRegister.

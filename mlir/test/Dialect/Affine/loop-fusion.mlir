@@ -448,8 +448,8 @@ func.func @should_fuse_no_top_level_access() {
 
 #set0 = affine_set<(d0) : (1 == 0)>
 
-// CHECK-LABEL: func @should_not_fuse_if_op_at_top_level() {
-func.func @should_not_fuse_if_op_at_top_level() {
+// CHECK-LABEL: func @should_fuse_despite_affine_if() {
+func.func @should_fuse_despite_affine_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf7 = arith.constant 7.0 : f32
 
@@ -462,12 +462,10 @@ func.func @should_not_fuse_if_op_at_top_level() {
   %c0 = arith.constant 4 : index
   affine.if #set0(%c0) {
   }
-  // Top-level IfOp should prevent fusion.
+  // An unrelated affine.if op doesn't prevent fusion.
   // CHECK:      affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[%{{.*}}] : memref<10xf32>
-  // CHECK-NEXT: }
-  // CHECK:      affine.for %{{.*}} = 0 to 10 {
-  // CHECK-NEXT:   affine.load %{{.*}}[%{{.*}}] : memref<10xf32>
+  // CHECK-NEXT:   affine.store %{{.*}}, %{{.*}}[0] : memref<1xf32>
+  // CHECK-NEXT:   affine.load %{{.*}}[0] : memref<1xf32>
   // CHECK-NEXT: }
   return
 }

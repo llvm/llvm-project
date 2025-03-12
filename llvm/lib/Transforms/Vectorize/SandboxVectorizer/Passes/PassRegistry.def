@@ -19,6 +19,8 @@
 
 REGION_PASS("null", ::llvm::sandboxir::NullPass)
 REGION_PASS("print-instruction-count", ::llvm::sandboxir::PrintInstructionCount)
+REGION_PASS("tr-accept", ::llvm::sandboxir::TransactionAlwaysAccept)
+REGION_PASS("tr-accept-or-revert", ::llvm::sandboxir::TransactionAcceptOrRevert)
 
 #undef REGION_PASS
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -std=c++23 -fsyntax-only -verify %s
 
 // This test is testing the diagnostics that Clang emits when compiling without '+sme'.
 
@@ -48,3 +48,9 @@ void streaming_compatible_def2(void (*streaming_fn_ptr)(void) __arm_streaming,
 // Also test when call-site is not a function.
 int streaming_decl_ret_int() __arm_streaming;
 int x = streaming_decl_ret_int(); // expected-error {{call to a streaming function requires 'sme'}}
+
+void sme_attrs_lambdas() {
+  [] __arm_locally_streaming () { return; }();  // expected-error {{function executed in streaming-SVE mode requires 'sme'}}
+  [] __arm_new("za") () { return; }();  // expected-error {{function using ZA state requires 'sme'}}
+  [] __arm_new("zt0") () { return; }();  // expected-error {{function using ZT0 state requires 'sme2'}}
+}

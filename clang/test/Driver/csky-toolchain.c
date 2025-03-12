@@ -3,6 +3,7 @@
 
 // RUN: %clang -### %s --target=csky 2>&1 | FileCheck -check-prefix=CC1 %s
 // CC1: "-cc1" "-triple" "csky"
+// CC1: "-fno-signed-char"
 
 // In the below tests, --rtlib=platform is used so that the driver ignores
 // the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib

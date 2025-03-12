@@ -24,6 +24,7 @@
 #include "lldb/Core/Section.h"
 #include "lldb/Core/SourceManager.h"
 #include "lldb/Core/StructuredDataImpl.h"
+#include "lldb/DataFormatters/FormatterSection.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/ExpressionVariable.h"
 #include "lldb/Expression/REPL.h"
@@ -63,8 +64,6 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/Timer.h"
-#include "lldb/ValueObject/ValueObject.h"
-#include "lldb/ValueObject/ValueObjectConstResult.h"
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
@@ -271,11 +270,17 @@ void Target::DeleteCurrentProcess() {
   if (m_process_sp) {
     // We dispose any active tracing sessions on the current process
     m_trace_sp.reset();
-    m_section_load_history.Clear();
+
     if (m_process_sp->IsAlive())
       m_process_sp->Destroy(false);
 
     m_process_sp->Finalize(false /* not destructing */);
+
+    // Let the process finalize itself first, then clear the section load
+    // history. Some objects owned by the process might end up calling
+    // SectionLoadHistory::SetSectionUnloaded() which can create entries in
+    // the section load history that can mess up subsequent processes.
+    m_section_load_history.Clear();
 
     CleanupProcess();
 
@@ -1818,6 +1823,8 @@ void Target::ModulesDidLoad(ModuleList &module_list) {
     for (size_t idx = 0; idx < num_images; ++idx) {
       ModuleSP module_sp(module_list.GetModuleAtIndex(idx));
       LoadScriptingResourceForModule(module_sp, this);
+      LoadTypeSummariesForModule(module_sp);
+      LoadFormattersForModule(module_sp);
     }
     m_breakpoint_list.UpdateBreakpoints(module_list, true, false);
     m_internal_breakpoint_list.UpdateBreakpoints(module_list, true, false);
@@ -2842,14 +2849,9 @@ ExpressionResults Target::EvaluateExpression(
     execution_results = eExpressionCompleted;
   } else {
     llvm::StringRef prefix = GetExpressionPrefixContents();
-    Status error;
-    execution_results = UserExpression::Evaluate(exe_ctx, options, expr, prefix,
-                                                 result_valobj_sp, error,
-                                                 fixed_expression, ctx_obj);
-    // Pass up the error by wrapping it inside an error result.
-    if (error.Fail() && !result_valobj_sp)
-      result_valobj_sp = ValueObjectConstResult::Create(
-          exe_ctx.GetBestExecutionContextScope(), std::move(error));
+    execution_results =
+        UserExpression::Evaluate(exe_ctx, options, expr, prefix,
+                                 result_valobj_sp, fixed_expression, ctx_obj);
   }
 
   if (execution_results == eExpressionCompleted)
@@ -3221,8 +3223,9 @@ Status Target::Install(ProcessLaunchInfo *launch_info) {
 }
 
 bool Target::ResolveLoadAddress(addr_t load_addr, Address &so_addr,
-                                uint32_t stop_id) {
-  return m_section_load_history.ResolveLoadAddress(stop_id, load_addr, so_addr);
+                                uint32_t stop_id, bool allow_section_end) {
+  return m_section_load_history.ResolveLoadAddress(stop_id, load_addr, so_addr,
+                                                   allow_section_end);
 }
 
 bool Target::ResolveFileAddress(lldb::addr_t file_addr,
@@ -5151,3 +5154,15 @@ Target::ReportStatistics(const lldb_private::StatisticsOptions &options) {
 }
 
 void Target::ResetStatistics() { m_stats.Reset(*this); }
+
+bool Target::HasLoadedSections() { return !GetSectionLoadList().IsEmpty(); }
+
+lldb::addr_t Target::GetSectionLoadAddress(const lldb::SectionSP &section_sp) {
+  return GetSectionLoadList().GetSectionLoadAddress(section_sp);
+}
+
+void Target::ClearSectionLoadList() { GetSectionLoadList().Clear(); }
+
+void Target::DumpSectionLoadList(Stream &s) {
+  GetSectionLoadList().Dump(s, this);
+}

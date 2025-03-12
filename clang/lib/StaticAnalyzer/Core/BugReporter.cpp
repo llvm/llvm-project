@@ -62,6 +62,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -286,6 +287,33 @@ private:
 
   const PathSensitiveBugReport *getBugReport() const { return R; }
 };
+
+std::string timeTraceName(const BugReportEquivClass &EQ) {
+  if (!llvm::timeTraceProfilerEnabled())
+    return "";
+  const auto &BugReports = EQ.getReports();
+  if (BugReports.empty())
+    return "Empty Equivalence Class";
+  const BugReport *R = BugReports.front().get();
+  const auto &BT = R->getBugType();
+  return ("Flushing EQC " + BT.getDescription()).str();
+}
+
+llvm::TimeTraceMetadata timeTraceMetadata(const BugReportEquivClass &EQ,
+                                          const SourceManager &SM) {
+  // Must be called only when constructing non-bogus TimeTraceScope
+  assert(llvm::timeTraceProfilerEnabled());
+
+  const auto &BugReports = EQ.getReports();
+  if (BugReports.empty())
+    return {};
+  const BugReport *R = BugReports.front().get();
+  const auto &BT = R->getBugType();
+  auto Loc = R->getLocation().asLocation();
+  std::string File = SM.getFilename(Loc).str();
+  return {BT.getCheckerName().str(), std::move(File),
+          static_cast<int>(Loc.getLineNumber())};
+}
 
 } // namespace
 
@@ -2416,6 +2444,28 @@ PathSensitiveBugReport::getRanges() const {
   return Ranges;
 }
 
+static bool exitingDestructor(const ExplodedNode *N) {
+  // Need to loop here, as some times the Error node is already outside of the
+  // destructor context, and the previous node is an edge that is also outside.
+  while (N && !N->getLocation().getAs<StmtPoint>()) {
+    N = N->getFirstPred();
+  }
+  return N && isa<CXXDestructorDecl>(N->getLocationContext()->getDecl());
+}
+
+static const Stmt *
+findReasonableStmtCloseToFunctionExit(const ExplodedNode *N) {
+  if (exitingDestructor(N)) {
+    // If we are exiting a destructor call, it is more useful to point to
+    // the next stmt which is usually the temporary declaration.
+    if (const Stmt *S = N->getNextStmtForDiagnostics())
+      return S;
+    // If next stmt is not found, it is likely the end of a top-level
+    // function analysis. find the last execution statement then.
+  }
+  return N->getPreviousStmtForDiagnostics();
+}
+
 PathDiagnosticLocation
 PathSensitiveBugReport::getLocation() const {
   assert(ErrorNode && "Cannot create a location with a null node.");
@@ -2433,15 +2483,7 @@ PathSensitiveBugReport::getLocation() const {
       if (const ReturnStmt *RS = FE->getStmt())
         return PathDiagnosticLocation::createBegin(RS, SM, LC);
 
-      // If we are exiting a destructor call, it is more useful to point to the
-      // next stmt which is usually the temporary declaration.
-      // For non-destructor and non-top-level calls, the next stmt will still
-      // refer to the last executed stmt of the body.
-      S = ErrorNode->getNextStmtForDiagnostics();
-      // If next stmt is not found, it is likely the end of a top-level function
-      // analysis. find the last execution statement then.
-      if (!S)
-        S = ErrorNode->getPreviousStmtForDiagnostics();
+      S = findReasonableStmtCloseToFunctionExit(ErrorNode);
     }
     if (!S)
       S = ErrorNode->getNextStmtForDiagnostics();
@@ -2878,6 +2920,7 @@ std::optional<PathDiagnosticBuilder> PathDiagnosticBuilder::findValidReport(
 
     if (R->isValid()) {
       if (Reporter.getAnalyzerOptions().ShouldCrosscheckWithZ3) {
+        llvm::TimeTraceScope TCS{"Crosscheck with Z3"};
         // If crosscheck is enabled, remove all visitors, add the refutation
         // visitor and check again
         R->clearVisitors();
@@ -3105,7 +3148,10 @@ BugReport *PathSensitiveBugReporter::findReportInEquivalenceClass(
   return exampleReport;
 }
 
-void BugReporter::FlushReport(BugReportEquivClass& EQ) {
+void BugReporter::FlushReport(BugReportEquivClass &EQ) {
+  llvm::TimeTraceScope TCS{timeTraceName(EQ), [&]() {
+                             return timeTraceMetadata(EQ, getSourceManager());
+                           }};
   SmallVector<BugReport*, 10> bugReports;
   BugReport *report = findReportInEquivalenceClass(EQ, bugReports);
   if (!report)

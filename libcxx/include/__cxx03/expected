@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP_EXPECTED
-#define _LIBCPP_EXPECTED
+#ifndef _LIBCPP___CXX03_EXPECTED
+#define _LIBCPP___CXX03_EXPECTED
 
 /*
   Header <expected> synopsis
@@ -59,4 +59,4 @@ namespace std {
 #  include <__cxx03/new>
 #endif
 
-#endif // _LIBCPP_EXPECTED
+#endif // _LIBCPP___CXX03_EXPECTED

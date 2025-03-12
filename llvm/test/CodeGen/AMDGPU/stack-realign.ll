@@ -42,7 +42,7 @@ define void @needs_align16_default_stack_align(i32 %idx) #0 {
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 
-; GCN: s_addk_i32 s32, 0xd800
+; GCN: s_mov_b32 s32, s34
 
 ; GCN: ; ScratchSize: 160
 define void @needs_align16_stack_align4(i32 %idx) #2 {
@@ -63,7 +63,7 @@ define void @needs_align16_stack_align4(i32 %idx) #2 {
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
 
-; GCN: s_addk_i32 s32, 0xd000
+; GCN: s_mov_b32 s32, s34
 
 ; GCN: ; ScratchSize: 192
 define void @needs_align32(i32 %idx) #0 {
@@ -79,7 +79,7 @@ define void @needs_align32(i32 %idx) #0 {
 ; GCN: s_addk_i32 s32, 0xd00{{$}}
 
 ; GCN: buffer_store_dword v{{[0-9]+}}, v{{[0-9]+}}, s[0:3], 0 offen
-; GCN: s_addk_i32 s32, 0xf300
+; GCN: s_mov_b32 s32, s34
 
 ; GCN: ; ScratchSize: 52
 define void @force_realign4(i32 %idx) #1 {
@@ -127,10 +127,12 @@ define amdgpu_kernel void @kernel_call_align4_from_5() {
 ; GCN: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
 ; GCN-NEXT: s_add_i32 s33, s32, 0x1fc0
 ; GCN-NEXT: s_and_b32 s33, s33, 0xffffe000
+; GCN-NEXT: s_mov_b32 s5, s34
+; GCN-NEXT: s_mov_b32 s34, s32
 ; GCN-NEXT: s_addk_i32 s32, 0x4000
 ; GCN-NOT: s33
 ; GCN: buffer_store_dword v0, off, s[0:3], s33{{$}}
-; GCN: s_addk_i32 s32, 0xc000
+; GCN: s_mov_b32 s32, s34
 ; GCN: s_mov_b32 s33, [[FP_COPY]]
 define void @default_realign_align128(i32 %idx) #0 {
   %alloca.align = alloca i32, align 128, addrspace(5)
@@ -175,12 +177,12 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 
 ; GCN: v_readlane_b32 s31, [[VGPR_REG]], 1
 ; GCN: v_readlane_b32 s30, [[VGPR_REG]], 0
+; GCN-NEXT: s_mov_b32 s32, s34
 ; GCN-NEXT: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], [[VGPR_REG]], 2
 ; GCN-NEXT: v_readlane_b32 s34, [[VGPR_REG]], 3
 ; GCN-NEXT: s_or_saveexec_b64 s[6:7], -1
 ; GCN-NEXT: buffer_load_dword [[VGPR_REG]], off, s[0:3], s33 offset:1028 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, s[6:7]
-; GCN-NEXT: s_add_i32 s32, s32, 0xfffd0000
 ; GCN-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN: s_setpc_b64 s[30:31]
   %temp = alloca i32, align 1024, addrspace(5)
@@ -209,8 +211,8 @@ define i32 @needs_align1024_stack_args_used_inside_loop(ptr addrspace(5) nocaptu
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:1024
 ; GCN: buffer_load_dword v{{[0-9]+}}, [[VGPR_REG]], s[0:3], 0 offen
 ; GCN: v_add_u32_e32 [[VGPR_REG]], vcc, 4, [[VGPR_REG]]
-; GCN: s_mov_b32 s34, [[BP_COPY]]
-; GCN-NEXT: s_add_i32 s32, s32, 0xfffd0000
+; GCN: s_mov_b32 s32, s34
+; GCN-NEXT: s_mov_b32 s34, [[BP_COPY]]
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
 ; GCN-NEXT: s_setpc_b64 s[30:31]
 begin:

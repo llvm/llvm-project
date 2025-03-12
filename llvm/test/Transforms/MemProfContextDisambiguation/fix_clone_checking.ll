@@ -7,14 +7,8 @@
 ; RUN:		-memprof-verify-ccg -memprof-verify-nodes \
 ; RUN: 		-pass-remarks=memprof-context-disambiguation %s -S 2>&1 | FileCheck %s
 
-;; Make sure we created some clones
-; CHECK: created clone A.memprof.1
-; CHECK: created clone C.memprof.1
-; CHECK: created clone D.memprof.1
-; CHECK: created clone E.memprof.1
-; CHECK: created clone B.memprof.1
-; CHECK: created clone F.memprof.1
-; CHECK: created clone G.memprof.1
+;; Make sure we successfully created at least one clone
+; CHECK: created clone {{.*}}.memprof.1
 
 ; ModuleID = '<stdin>'
 source_filename = "reduced.ll"

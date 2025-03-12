@@ -603,6 +603,7 @@ TEST_F(LexerTest, CharRangeOffByOne) {
 
 TEST_F(LexerTest, FindNextToken) {
   Lex("int abcd = 0;\n"
+      "// A comment.\n"
       "int xyz = abcd;\n");
   std::vector<std::string> GeneratedByNextToken;
   SourceLocation Loc =
@@ -617,6 +618,61 @@ TEST_F(LexerTest, FindNextToken) {
   }
   EXPECT_THAT(GeneratedByNextToken, ElementsAre("abcd", "=", "0", ";", "int",
                                                 "xyz", "=", "abcd", ";"));
+}
+
+TEST_F(LexerTest, FindNextTokenIncludingComments) {
+  Lex("int abcd = 0;\n"
+      "// A comment.\n"
+      "int xyz = abcd;\n");
+  std::vector<std::string> GeneratedByNextToken;
+  SourceLocation Loc =
+      SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID());
+  while (true) {
+    auto T = Lexer::findNextToken(Loc, SourceMgr, LangOpts, true);
+    ASSERT_TRUE(T);
+    if (T->is(tok::eof))
+      break;
+    GeneratedByNextToken.push_back(getSourceText(*T, *T));
+    Loc = T->getLocation();
+  }
+  EXPECT_THAT(GeneratedByNextToken,
+              ElementsAre("abcd", "=", "0", ";", "// A comment.", "int", "xyz",
+                          "=", "abcd", ";"));
+}
+
+TEST_F(LexerTest, FindPreviousToken) {
+  Lex("int abcd = 0;\n"
+      "// A comment.\n"
+      "int xyz = abcd;\n");
+  std::vector<std::string> GeneratedByPrevToken;
+  SourceLocation Loc = SourceMgr.getLocForEndOfFile(SourceMgr.getMainFileID());
+  while (true) {
+    auto T = Lexer::findPreviousToken(Loc, SourceMgr, LangOpts, false);
+    if (!T.has_value())
+      break;
+    GeneratedByPrevToken.push_back(getSourceText(*T, *T));
+    Loc = Lexer::GetBeginningOfToken(T->getLocation(), SourceMgr, LangOpts);
+  }
+  EXPECT_THAT(GeneratedByPrevToken, ElementsAre(";", "abcd", "=", "xyz", "int",
+                                                ";", "0", "=", "abcd", "int"));
+}
+
+TEST_F(LexerTest, FindPreviousTokenIncludingComments) {
+  Lex("int abcd = 0;\n"
+      "// A comment.\n"
+      "int xyz = abcd;\n");
+  std::vector<std::string> GeneratedByPrevToken;
+  SourceLocation Loc = SourceMgr.getLocForEndOfFile(SourceMgr.getMainFileID());
+  while (true) {
+    auto T = Lexer::findPreviousToken(Loc, SourceMgr, LangOpts, true);
+    if (!T.has_value())
+      break;
+    GeneratedByPrevToken.push_back(getSourceText(*T, *T));
+    Loc = Lexer::GetBeginningOfToken(T->getLocation(), SourceMgr, LangOpts);
+  }
+  EXPECT_THAT(GeneratedByPrevToken,
+              ElementsAre(";", "abcd", "=", "xyz", "int", "// A comment.", ";",
+                          "0", "=", "abcd", "int"));
 }
 
 TEST_F(LexerTest, CreatedFIDCountForPredefinedBuffer) {
@@ -650,6 +706,38 @@ TEST_F(LexerTest, RawAndNormalLexSameForLineComments) {
     ToksView = ToksView.drop_front();
   }
   EXPECT_TRUE(ToksView.empty());
+}
+
+TEST_F(LexerTest, GetRawTokenOnEscapedNewLineChecksWhitespace) {
+  const llvm::StringLiteral Source = R"cc(
+  #define ONE \
+  1
+
+  int i = ONE;
+  )cc";
+  std::vector<Token> Toks =
+      CheckLex(Source, {tok::kw_int, tok::identifier, tok::equal,
+                        tok::numeric_constant, tok::semi});
+
+  // Set up by getting the raw token for the `1` in the macro definition.
+  const Token &OneExpanded = Toks[3];
+  Token Tok;
+  ASSERT_FALSE(
+      Lexer::getRawToken(OneExpanded.getLocation(), Tok, SourceMgr, LangOpts));
+  // The `ONE`.
+  ASSERT_EQ(Tok.getKind(), tok::raw_identifier);
+  ASSERT_FALSE(
+      Lexer::getRawToken(SourceMgr.getSpellingLoc(OneExpanded.getLocation()),
+                         Tok, SourceMgr, LangOpts));
+  // The `1` in the macro definition.
+  ASSERT_EQ(Tok.getKind(), tok::numeric_constant);
+
+  // Go back 4 characters: two spaces, one newline, and the backslash.
+  SourceLocation EscapedNewLineLoc = Tok.getLocation().getLocWithOffset(-4);
+  // Expect true (=failure) because the whitespace immediately after the
+  // escaped newline is not ignored.
+  EXPECT_TRUE(Lexer::getRawToken(EscapedNewLineLoc, Tok, SourceMgr, LangOpts,
+                                 /*IgnoreWhiteSpace=*/false));
 }
 
 TEST(LexerPreambleTest, PreambleBounds) {

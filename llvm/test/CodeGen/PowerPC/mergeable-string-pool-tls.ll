@@ -258,8 +258,8 @@ entry:
   ret void
 }
 
-; Check the contents of the TLS data and the __ModuleStringPool structure to
-; check that TLS data has been skipped during string pool merging.
+; Check the contents of the TLS data and the _MergedGlobals structure to
+; check that TLS data has been skipped during global merge.
 
 ; CHECK64: 	.csect a[TL],2
 ; CHECK64-NEXT:	.lglobl	a[TL]

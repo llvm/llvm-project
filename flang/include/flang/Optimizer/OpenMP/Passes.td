@@ -50,9 +50,29 @@ def FunctionFilteringPass : Pass<"omp-function-filtering"> {
   ];
 }
 
+
 // Needs to be scheduled on Module as we create functions in it
 def LowerWorkshare : Pass<"lower-workshare", "::mlir::ModuleOp"> {
   let summary = "Lower workshare construct";
+}
+
+def GenericLoopConversionPass
+    : Pass<"omp-generic-loop-conversion", "mlir::func::FuncOp"> {
+  let summary = "Converts OpenMP generic `omp.loop` to semantically "
+                "equivalent OpenMP ops";
+  let description = [{
+     Rewrites `omp.loop` ops to their semantically equivalent nest of ops. The
+     rewrite depends on the nesting/combination structure of the `loop` op
+     within its surrounding context as well as its `bind` clause value.
+
+     We assume for now that all `omp.loop` ops will occur inside `FuncOp`'s. This
+     will most likely remain the case in the future; even if, for example, we 
+     need a loop in copying data for a `firstprivate` variable, this loop will
+     be nested in a constructor, an overloaded operator, or a runtime function.
+  }];
+  let dependentDialects = [
+    "mlir::omp::OpenMPDialect"
+  ];
 }
 
 #endif //FORTRAN_OPTIMIZER_OPENMP_PASSES
