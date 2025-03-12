@@ -2868,15 +2868,17 @@ mlir::Value IntrinsicLibrary::genAtomicOr(mlir::Type resultType,
 }
 
 // ATOMICCAS
-mlir::Value IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
-                                           llvm::ArrayRef<mlir::Value> args) {
+fir::ExtendedValue
+IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 3);
   auto successOrdering = mlir::LLVM::AtomicOrdering::acq_rel;
   auto failureOrdering = mlir::LLVM::AtomicOrdering::monotonic;
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(resultType.getContext());
 
-  mlir::Value arg1 = args[1];
-  mlir::Value arg2 = args[2];
+  mlir::Value arg0 = fir::getBase(args[0]);
+  mlir::Value arg1 = fir::getBase(args[1]);
+  mlir::Value arg2 = fir::getBase(args[2]);
 
   auto bitCastFloat = [&](mlir::Value arg) -> mlir::Value {
     if (mlir::isa<mlir::Float32Type>(arg.getType()))
@@ -2897,7 +2899,7 @@ mlir::Value IntrinsicLibrary::genAtomicCas(mlir::Type resultType,
   }
 
   auto address =
-      builder.create<mlir::UnrealizedConversionCastOp>(loc, llvmPtrTy, args[0])
+      builder.create<mlir::UnrealizedConversionCastOp>(loc, llvmPtrTy, arg0)
           .getResult(0);
   auto cmpxchg = builder.create<mlir::LLVM::AtomicCmpXchgOp>(
       loc, address, arg1, arg2, successOrdering, failureOrdering);
@@ -2914,13 +2916,16 @@ mlir::Value IntrinsicLibrary::genAtomicDec(mlir::Type resultType,
 }
 
 // ATOMICEXCH
-mlir::Value IntrinsicLibrary::genAtomicExch(mlir::Type resultType,
-                                            llvm::ArrayRef<mlir::Value> args) {
+fir::ExtendedValue
+IntrinsicLibrary::genAtomicExch(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args) {
   assert(args.size() == 2);
-  assert(args[1].getType().isIntOrFloat());
+  mlir::Value arg0 = fir::getBase(args[0]);
+  mlir::Value arg1 = fir::getBase(args[1]);
+  assert(arg1.getType().isIntOrFloat());
 
   mlir::LLVM::AtomicBinOp binOp = mlir::LLVM::AtomicBinOp::xchg;
-  return genAtomBinOp(builder, loc, binOp, args[0], args[1]);
+  return genAtomBinOp(builder, loc, binOp, arg0, arg1);
 }
 
 mlir::Value IntrinsicLibrary::genAtomicInc(mlir::Type resultType,
