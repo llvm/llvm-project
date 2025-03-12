@@ -160,6 +160,7 @@ Changes to the LLVM tools
 
 * llvm-objcopy now supports the `--update-section` flag for intermediate Mach-O object files.
 * llvm-strip now supports continuing to process files on encountering an error.
+* In llvm-objcopy's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
 
 Changes to LLDB
 ---------------------------------

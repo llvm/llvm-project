@@ -3320,4 +3320,100 @@ def fir_DummyScopeOp : fir_Op<"dummy_scope",
   let assemblyFormat = "attr-dict `:` type(results)";
 }
 
+def fir_PackArrayOp
+    : fir_Op<"pack_array", [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+                            AllTypesMatch<["array", "result"]>]> {
+  let summary = "Pack non-contiguous array into a temporary";
+
+  let description = [{
+    The operation creates a new !fir.box/class<!fir.array<>> value
+    to represent either the original array or a newly allocated
+    temporary array, maybe identical to the original array by value.
+
+    Arguments:
+      - array is the original array.
+        It must have !fir.box/class<!fir.array<>> type.
+      - stack/heap attribute indicates where the temporary array
+        needs to be allocated.
+      - innermost/whole attribute identifies the contiguity mode.
+        innermost means that the repacking has to be done iff the original
+        array is not contiguous in the leading dimension.
+        whole means that the repacking has to be done iff the original
+        array is not contiguous in any dimension.
+        innermost is disallowed for 1D arrays in favor of whole.
+      - no_copy attribute indicates that the original array
+        is not copied into the temporary.
+      - typeparams specify the length parameters of the original array.
+        Even though the array is fully represented with a box, the explicit
+        length parameters might be specified to simplify computing
+        the size of the array's element in compilation time (e.g. constant
+        length parameters might be propagated after MLIR inlining).
+      - optional constraints attributes:
+        * max_size is an unsigned integer attribute specifying the maximum
+          byte size of an array that is eligible for repacking.
+        * max_element_size is an unsigned integer attribute specifying
+          the maximum byte element-size of an array that is eligible
+          for repacking.
+        * min_stride is an unsigned integer attribute specifying
+          the minimum byte stride of the innermost dimension of an array
+          that is eligible for repacking.
+      - heuristics attribute specifies conditions when the array repacking
+        may be optimized.
+  }];
+
+  let arguments = (ins AnyBoxedArray:$array, UnitAttr:$stack,
+      UnitAttr:$innermost, UnitAttr:$no_copy, OptionalAttr<UI64Attr>:$max_size,
+      OptionalAttr<UI64Attr>:$max_element_size,
+      OptionalAttr<UI64Attr>:$min_stride,
+      DefaultValuedAttr<fir_PackArrayHeuristicsAttr,
+                        "::fir::PackArrayHeuristics::None">:$heuristics,
+      Variadic<AnyIntegerType>:$typeparams);
+
+  let results = (outs AnyBoxedArray:$result);
+  let assemblyFormat = [{
+    $array (`stack` $stack^):(`heap`)?
+    (`innermost` $innermost^):(`whole`)?
+    (`no_copy` $no_copy^)?
+    (`constraints` custom<PackArrayConstraints>($max_size, $max_element_size, $min_stride)^)?
+    (`heuristics` $heuristics^)?
+    (`typeparams` $typeparams^)?
+    attr-dict `:` functional-type(operands, results)
+  }];
+
+  let hasVerifier = 1;
+}
+
+def fir_UnpackArrayOp
+    : fir_Op<"unpack_array", [SameTypeOperands,
+                              DeclareOpInterfaceMethods<
+                                  MemoryEffectsOpInterface>]> {
+  let summary = "Unpack values from temporary array into original array";
+
+  let description = [{
+    The operation is either a no-op or deallocates the temporary array,
+    and maybe copies the temporary array into the original array.
+
+    Arguments:
+      - temp is a fir.box/fir.class value produced by fir.pack_array.
+        It describes either the original array or the temporary array.
+      - original is the original array descriptor.
+      - stack/heap attribute indicates where the temporary array
+        was allocated.
+      - no_copy attribute indicates that the temporary array
+        is not copied into the original temporary array.
+  }];
+
+  let arguments = (ins AnyBoxedArray:$temp, AnyBoxedArray:$original,
+      UnitAttr:$stack, UnitAttr:$no_copy);
+
+  let assemblyFormat = [{
+    $temp `to` $original
+    (`stack` $stack^):(`heap`)?
+    (`no_copy` $no_copy^)?
+    attr-dict `:` type($original)
+  }];
+
+  let hasVerifier = 1;
+}
+
 #endif

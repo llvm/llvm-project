@@ -139,9 +139,6 @@ constexpr int bar(auto) {
   }();
   static_assert(value == S(1, 2));
 
-  // FIXME: The diagnostic message adds a trailing comma "static assertion failed due to requirement 'value == Case1::S((0, 1, ))'"
-  // static_assert(value == S(0, 1));
-
   constexpr auto value2 = [] {
     if (auto [a, b] = S(1, 2))
       return S(a, b);
