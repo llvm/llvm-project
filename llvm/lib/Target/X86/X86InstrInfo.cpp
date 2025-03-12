@@ -3304,10 +3304,28 @@ static unsigned getNewOpcFromTable(ArrayRef<X86TableEntry> Table,
   return (I == Table.end() || I->OldOpc != Opc) ? 0U : I->NewOpc;
 }
 unsigned X86::getNFVariant(unsigned Opc) {
+#if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
+  // Make sure the tables are sorted.
+  static std::atomic<bool> NFTableChecked(false);
+  if (!NFTableChecked.load(std::memory_order_relaxed)) {
+    assert(llvm::is_sorted(X86NFTransformTable) &&
+           "X86NFTransformTable is not sorted!");
+    NFTableChecked.store(true, std::memory_order_relaxed);
+  }
+#endif
   return getNewOpcFromTable(X86NFTransformTable, Opc);
 }
 
 unsigned X86::getNonNDVariant(unsigned Opc) {
+#if defined(EXPENSIVE_CHECKS) && !defined(NDEBUG)
+  // Make sure the tables are sorted.
+  static std::atomic<bool> NDTableChecked(false);
+  if (!NDTableChecked.load(std::memory_order_relaxed)) {
+    assert(llvm::is_sorted(X86ND2NonNDTable) &&
+           "X86ND2NonNDTableis not sorted!");
+    NDTableChecked.store(true, std::memory_order_relaxed);
+  }
+#endif
   return getNewOpcFromTable(X86ND2NonNDTable, Opc);
 }
 
