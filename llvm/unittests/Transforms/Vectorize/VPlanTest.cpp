@@ -1168,8 +1168,8 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, ChainOp, CondOp,
-                             VecOp, false);
+    VPReductionRecipe Recipe(RecurrenceDescriptor(), ChainOp, CondOp, VecOp,
+                             false);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1180,8 +1180,8 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, ChainOp, CondOp,
-                             VecOp, false);
+    VPReductionRecipe Recipe(RecurrenceDescriptor(), ChainOp, CondOp, VecOp,
+                             false);
     VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 4));
     VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
     EXPECT_FALSE(EVLRecipe.mayHaveSideEffects());
@@ -1532,8 +1532,8 @@ TEST_F(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
-  VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, ChainOp, CondOp,
-                           VecOp, false);
+  VPReductionRecipe Recipe(RecurrenceDescriptor(), ChainOp, CondOp, VecOp,
+                           false);
   EXPECT_TRUE(isa<VPUser>(&Recipe));
   VPRecipeBase *BaseR = &Recipe;
   EXPECT_TRUE(isa<VPUser>(BaseR));
@@ -1544,8 +1544,8 @@ TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
-  VPReductionRecipe Recipe(RecurrenceDescriptor(), nullptr, ChainOp, CondOp,
-                           VecOp, false);
+  VPReductionRecipe Recipe(RecurrenceDescriptor(), ChainOp, CondOp, VecOp,
+                           false);
   VPValue *EVL = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 0));
   VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
   EXPECT_TRUE(isa<VPUser>(&EVLRecipe));
