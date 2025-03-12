@@ -178,7 +178,7 @@ public:
       return;
 
     auto Selector = E->getSelector();
-    if (auto *Receiver = E->getInstanceReceiver()->IgnoreParenCasts()) {
+    if (auto *Receiver = E->getInstanceReceiver()) {
       std::optional<bool> IsUnsafe = isUnsafePtr(E->getReceiverType());
       if (IsUnsafe && *IsUnsafe && !isPtrOriginSafe(Receiver)) {
         if (auto *InnerMsg = dyn_cast<ObjCMessageExpr>(Receiver)) {
