@@ -3,6 +3,7 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BottomUpVec.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/NullPass.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/PrintInstructionCount.h"
+#include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/PrintRegion.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/RegionsFromBBs.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/RegionsFromMetadata.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/SeedCollection.h"
