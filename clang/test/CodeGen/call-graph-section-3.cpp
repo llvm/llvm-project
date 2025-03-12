@@ -50,4 +50,3 @@ class Base {
       // CST: call noundef i32 %{{.*}} [ "callee_type"(metadata !"_ZTSFiPvE.generalized") ]
       (Dptr->*FpDerivedVf)(0);
     }
-    

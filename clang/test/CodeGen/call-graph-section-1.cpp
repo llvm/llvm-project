@@ -108,4 +108,3 @@ class Cls1 {
       // CST: call void %{{.*}} [ "callee_type"(metadata !"_ZTSKFvvE.generalized") ]
       (ObjCls2Ptr->*fp_f9)();
     }
-    
