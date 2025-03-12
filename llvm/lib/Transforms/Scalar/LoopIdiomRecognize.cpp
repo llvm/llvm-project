@@ -1100,7 +1100,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
             : Builder.CreateMul(TripCount,
                                 Builder.getIntN(IntIdxTy->getIntegerBitWidth(),
                                                 PatternRepsPerTrip));
-    if (auto CI = dyn_cast<ConstantInt>(TripCount))
+    if (auto *CI = dyn_cast<ConstantInt>(TripCount))
       BytesWritten =
           CI->getZExtValue() * ConstStoreSize->getValue()->getZExtValue();
   } else {
@@ -1113,7 +1113,7 @@ bool LoopIdiomRecognize::processLoopStridedStore(
       return Changed;
     MemsetArg =
         Expander.expandCodeFor(NumBytesS, IntIdxTy, Preheader->getTerminator());
-    if (auto CI = dyn_cast<ConstantInt>(MemsetArg))
+    if (auto *CI = dyn_cast<ConstantInt>(MemsetArg))
       BytesWritten = CI->getZExtValue();
   }
   assert(MemsetArg && "MemsetArg should have been set");
@@ -1138,8 +1138,6 @@ bool LoopIdiomRecognize::processLoopStridedStore(
   } else {
     assert(ForceMemsetPatternIntrinsic ||
            isLibFuncEmittable(M, TLI, LibFunc_memset_pattern16));
-    // Everything is emitted in default address space
-
     assert(isa<SCEVConstant>(StoreSizeSCEV) && "Expected constant store size");
 
     Value *PatternArg;
@@ -1451,7 +1449,7 @@ bool LoopIdiomRecognize::processLoopStoreOfLoopLoad(
   AAMDNodes AATags = TheLoad->getAAMetadata();
   AAMDNodes StoreAATags = TheStore->getAAMetadata();
   AATags = AATags.merge(StoreAATags);
-  if (auto CI = dyn_cast<ConstantInt>(NumBytes))
+  if (auto *CI = dyn_cast<ConstantInt>(NumBytes))
     AATags = AATags.extendTo(CI->getZExtValue());
   else
     AATags = AATags.extendTo(-1);
