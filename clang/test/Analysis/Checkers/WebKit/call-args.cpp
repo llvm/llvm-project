@@ -414,6 +414,10 @@ namespace call_with_explicit_temporary_obj {
       Ref { ensure() }->method();
     }
   };
+
+  void baz(Ref<RefCountable>&& arg) {
+    Ref { arg }->method();
+  }
 }
 
 namespace call_with_explicit_construct {
