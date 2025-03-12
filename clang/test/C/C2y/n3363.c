@@ -21,10 +21,10 @@
 // lvalue.
 void f(int a, ...) {
   va_list rvalue(); // array-type-error {{function cannot return array type 'va_list' (aka '__builtin_va_list')}}
-  va_start(rvalue()); // char-ptr-type-error {{'va_list' argument to 'va_start' is required to be an lvalue}}
+  va_start(rvalue()); // / char-ptr-type-error {{non-const lvalue reference to type '__builtin_va_list' cannot bind to a temporary of type 'va_list' (aka 'char *')}}
   va_arg(rvalue(), int); // char-ptr-type-error {{expression is not assignable}}
   // FIXME: this should get two diagnostics about use of a non-lvalue.
-  va_copy(rvalue(), rvalue());
+  va_copy(rvalue(), rvalue()); // char-ptr-type-error {{non-const lvalue reference to type '__builtin_va_list' cannot bind to a temporary of type 'va_list' (aka 'char *')}}
   va_end(rvalue()); // char-ptr-type-error {{non-const lvalue reference to type '__builtin_va_list' cannot bind to a temporary of type 'va_list' (aka 'char *')}}
 }
 
