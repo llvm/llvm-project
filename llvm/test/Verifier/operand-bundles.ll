@@ -106,14 +106,14 @@ declare ptr @objc_unsafeClaimAutoreleasedReturnValue(ptr)
 declare void @llvm.assume(i1)
 
 define void @f_type(ptr %ptr) {
-; CHECK: Multiple "type" operand bundles
-; CHECK-NEXT: call void @g() [ "type"(metadata !"_ZTSFvE.generalized"), "type"(metadata !"_ZTSFvE.generalized") ]
-; CHECK-NOT: call void @g() [ "type"(metadata !"_ZTSFvE.generalized") ]
+; CHECK: Multiple "callee_type" operand bundles
+; CHECK-NEXT: call void @g() [ "callee_type"(metadata !"_ZTSFvE.generalized"), "callee_type"(metadata !"_ZTSFvE.generalized") ]
+; CHECK-NOT: call void @g() [ "callee_type"(metadata !"_ZTSFvE.generalized") ]
 
  entry:
   %l = load i32, ptr %ptr, align 4
-  call void @g() [ "type"(metadata !"_ZTSFvE.generalized"), "type"(metadata !"_ZTSFvE.generalized") ]
-  call void @g() [ "type"(metadata !"_ZTSFvE.generalized") ]
+  call void @g() [ "callee_type"(metadata !"_ZTSFvE.generalized"), "callee_type"(metadata !"_ZTSFvE.generalized") ]
+  call void @g() [ "callee_type"(metadata !"_ZTSFvE.generalized") ]
   %x = add i32 42, 1
   ret void
 }

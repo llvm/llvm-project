@@ -31,7 +31,7 @@ void BalancedPartitioning::BPThreadPool::async(Func &&F) {
 #if LLVM_ENABLE_THREADS
   // This new thread could spawn more threads, so mark it as active
   ++NumActiveThreads;
-  TheThreadPool.async([=]() {
+  TheThreadPool.async([this, F]() {
     // Run the task
     F();
 
@@ -93,7 +93,7 @@ void BalancedPartitioning::run(std::vector<BPFunctionNode> &Nodes) const {
     Nodes[I].InputOrderIndex = I;
 
   auto NodesRange = llvm::make_range(Nodes.begin(), Nodes.end());
-  auto BisectTask = [=, &TP]() {
+  auto BisectTask = [this, NodesRange, &TP]() {
     bisect(NodesRange, /*RecDepth=*/0, /*RootBucket=*/1, /*Offset=*/0, TP);
   };
   if (TP) {
@@ -147,10 +147,11 @@ void BalancedPartitioning::bisect(const FunctionNodeRange Nodes,
   auto LeftNodes = llvm::make_range(Nodes.begin(), NodesMid);
   auto RightNodes = llvm::make_range(NodesMid, Nodes.end());
 
-  auto LeftRecTask = [=, &TP]() {
+  auto LeftRecTask = [this, LeftNodes, RecDepth, LeftBucket, Offset, &TP]() {
     bisect(LeftNodes, RecDepth + 1, LeftBucket, Offset, TP);
   };
-  auto RightRecTask = [=, &TP]() {
+  auto RightRecTask = [this, RightNodes, RecDepth, RightBucket, MidOffset,
+                       &TP]() {
     bisect(RightNodes, RecDepth + 1, RightBucket, MidOffset, TP);
   };
 
@@ -304,7 +305,7 @@ void BalancedPartitioning::split(const FunctionNodeRange Nodes,
   unsigned NumNodes = std::distance(Nodes.begin(), Nodes.end());
   auto NodesMid = Nodes.begin() + (NumNodes + 1) / 2;
 
-  std::nth_element(Nodes.begin(), NodesMid, Nodes.end(), [](auto &L, auto &R) {
+  llvm::sort(Nodes.begin(), Nodes.end(), [](auto &L, auto &R) {
     return L.InputOrderIndex < R.InputOrderIndex;
   });
 

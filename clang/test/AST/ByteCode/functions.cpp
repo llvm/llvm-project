@@ -208,11 +208,11 @@ namespace Comparison {
 
   constexpr bool u13 = pf < pg; // both-warning {{ordered comparison of function pointers}} \
                                 // both-error {{must be initialized by a constant expression}} \
-                                // both-note {{comparison between '&f' and '&g' has unspecified value}}
+                                // both-note {{comparison between pointers to unrelated objects '&f' and '&g' has unspecified value}}
 
   constexpr bool u14 = pf < (void(*)())nullptr; // both-warning {{ordered comparison of function pointers}} \
                                                 // both-error {{must be initialized by a constant expression}} \
-                                                // both-note {{comparison between '&f' and 'nullptr' has unspecified value}}
+                                                // both-note {{comparison between pointers to unrelated objects '&f' and 'nullptr' has unspecified value}}
 
 
 
@@ -303,21 +303,17 @@ namespace ReturnLocalPtr {
     return &a; // both-warning {{address of stack memory}}
   }
 
-  /// GCC rejects the expression below, just like the new interpreter. The current interpreter
-  /// however accepts it and only warns about the function above returning an address to stack
-  /// memory. If we change the condition to 'p() != nullptr', it even succeeds.
-  static_assert(p() == nullptr, ""); // ref-error {{static assertion failed}} \
-                                     // expected-error {{not an integral constant expression}}
+  /// FIXME: Both interpreters should diagnose this. We're returning a pointer to a local
+  /// variable.
+  static_assert(p() == nullptr, ""); // both-error {{static assertion failed}}
 
-  /// FIXME: The current interpreter emits diagnostics in the reference case below, but the
-  /// new one does not.
   constexpr const int &p2() {
-    int a = 12; // ref-note {{declared here}}
+    int a = 12; // both-note {{declared here}}
     return a; // both-warning {{reference to stack memory associated with local variable}}
   }
 
   static_assert(p2() == 12, ""); // both-error {{not an integral constant expression}} \
-                                 // ref-note {{read of variable whose lifetime has ended}}
+                                 // both-note {{read of variable whose lifetime has ended}}
 }
 
 namespace VoidReturn {

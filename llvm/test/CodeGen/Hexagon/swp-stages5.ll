@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -mcpu=hexagonv5 -enable-pipeliner -pipeliner-max-stages=2 -hexagon-bit=0 < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon -mcpu=hexagonv5 -enable-pipeliner -pipeliner-max-stages=2 -hexagon-bit=0 < %s | FileCheck %s
 
 ; Very similar to swp-stages4.ll, but the pipelined schedule is a little
 ; different.

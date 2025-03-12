@@ -1,4 +1,5 @@
 # RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs -run-pass=si-opt-vgpr-liverange -o - %s | FileCheck %s
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -passes=si-opt-vgpr-liverange -o - %s | FileCheck %s
 #
 # This is a very rare case which comes from llvm-reduce. The SI_IF/SI_ELSE usage is quite different from normal.
 #

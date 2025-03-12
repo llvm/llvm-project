@@ -25,6 +25,13 @@ GenericDomTreeUpdater<MachineDomTreeUpdater, MachineDominatorTree,
                       MachinePostDominatorTree>::recalculate(MachineFunction
                                                                  &MF);
 
+template void GenericDomTreeUpdater<
+    MachineDomTreeUpdater, MachineDominatorTree,
+    MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/true>();
+template void GenericDomTreeUpdater<
+    MachineDomTreeUpdater, MachineDominatorTree,
+    MachinePostDominatorTree>::applyUpdatesImpl</*IsForward=*/false>();
+
 bool MachineDomTreeUpdater::forceFlushDeletedBB() {
   if (DeletedBBs.empty())
     return false;

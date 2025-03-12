@@ -29,6 +29,7 @@ const char *BoltRevision =
 namespace opts {
 
 bool HeatmapMode = false;
+bool BinaryAnalysisMode = false;
 
 cl::OptionCategory BoltCategory("BOLT generic options");
 cl::OptionCategory BoltDiffCategory("BOLTDIFF generic options");
@@ -38,6 +39,7 @@ cl::OptionCategory BoltOutputCategory("Output options");
 cl::OptionCategory AggregatorCategory("Data aggregation options");
 cl::OptionCategory BoltInstrCategory("BOLT instrumentation options");
 cl::OptionCategory HeatmapCategory("Heatmap options");
+cl::OptionCategory BinaryAnalysisCategory("BinaryAnalysis options");
 
 cl::opt<unsigned> AlignText("align-text",
                             cl::desc("alignment of .text section"), cl::Hidden,

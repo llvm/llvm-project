@@ -13,6 +13,7 @@
 #include "mlir/Dialect/Linalg/Passes.h"
 
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
@@ -88,12 +89,18 @@ static bool isOpOperandCanBeDroppedAfterFusedLinalgs(
       indexingMaps.push_back(op.getMatchingIndexingMap(&opOperand));
     }
   }
+  if (indexingMaps.empty()) {
+    // If there are no indexing maps, the operand can only be dropped
+    // if neither op has loops.
+    return producer.getNumLoops() == 0 && consumer.getNumLoops() == 0;
+  }
 
   // The concatanation of the remained indexing maps must be invertible, so
   // the bounds of the op can be still computed after dropping the selected
   // operand. inversePermutation returns an empty AffineMap in case the
   // concatanated indexing maps are not invertible.
-  return inversePermutation(concatAffineMaps(indexingMaps)) != AffineMap();
+  return inversePermutation(concatAffineMaps(
+             indexingMaps, producer.getContext())) != AffineMap();
 }
 
 /// Returns a set of indices of the producer's results which would
@@ -1566,9 +1573,9 @@ void generateCollapsedIndexingRegion(Location loc, Block *block,
         rewriter.create<linalg::IndexOp>(loc, foldedDims.index());
     for (auto dim : llvm::reverse(foldedDimsRef.drop_front())) {
       indexReplacementVals[dim] =
-          rewriter.create<arith::RemUIOp>(loc, newIndexVal, loopRange[dim]);
+          rewriter.create<arith::RemSIOp>(loc, newIndexVal, loopRange[dim]);
       newIndexVal =
-          rewriter.create<arith::DivUIOp>(loc, newIndexVal, loopRange[dim]);
+          rewriter.create<arith::DivSIOp>(loc, newIndexVal, loopRange[dim]);
     }
     indexReplacementVals[foldedDims.value().front()] = newIndexVal;
   }
@@ -1701,7 +1708,7 @@ FailureOr<CollapseResult> mlir::linalg::collapseOpIterationDims(
     if (auto attr = llvm::dyn_cast_if_present<Attribute>(ofr))
       return cast<IntegerAttr>(attr).getInt() == value;
     llvm::APInt actual;
-    return matchPattern(ofr.get<Value>(), m_ConstantInt(&actual)) &&
+    return matchPattern(cast<Value>(ofr), m_ConstantInt(&actual)) &&
            actual.getSExtValue() == value;
   };
   if (!llvm::all_of(loopRanges, [&](Range range) {
@@ -1995,7 +2002,8 @@ public:
             genericOp.getMatchingIndexingMap(&outputOperand));
 
       // Check if the operation shapes to loops map is computable.
-      if (!inversePermutation(concatAffineMaps(fusedIndexMaps))) {
+      if (!inversePermutation(
+              concatAffineMaps(fusedIndexMaps, rewriter.getContext()))) {
         return rewriter.notifyMatchFailure(
             genericOp, "fused op loop bound computation failed");
       }
@@ -2199,7 +2207,7 @@ struct LinalgElementwiseOpFusionPass
     // Use TopDownTraversal for compile time reasons
     GreedyRewriteConfig grc;
     grc.useTopDownTraversal = true;
-    (void)applyPatternsAndFoldGreedily(op, std::move(patterns), grc);
+    (void)applyPatternsGreedily(op, std::move(patterns), grc);
   }
 };
 

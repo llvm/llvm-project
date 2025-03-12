@@ -12,6 +12,7 @@
 
 #include "llvm/IR/Instruction.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
@@ -19,6 +20,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
@@ -112,6 +114,12 @@ void Instruction::insertAfter(Instruction *InsertPos) {
   DestParent->getInstList().insertAfter(InsertPos->getIterator(), this);
 }
 
+void Instruction::insertAfter(BasicBlock::iterator InsertPos) {
+  BasicBlock *DestParent = InsertPos->getParent();
+
+  DestParent->getInstList().insertAfter(InsertPos, this);
+}
+
 BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
                                              BasicBlock::iterator It) {
   assert(getParent() == nullptr && "Expected detached instruction");
@@ -168,8 +176,16 @@ void Instruction::moveBefore(Instruction *MovePos) {
   moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), false);
 }
 
+void Instruction::moveBefore(BasicBlock::iterator MovePos) {
+  moveBeforeImpl(*MovePos->getParent(), MovePos, false);
+}
+
 void Instruction::moveBeforePreserving(Instruction *MovePos) {
   moveBeforeImpl(*MovePos->getParent(), MovePos->getIterator(), true);
+}
+
+void Instruction::moveBeforePreserving(BasicBlock::iterator MovePos) {
+  moveBeforeImpl(*MovePos->getParent(), MovePos, true);
 }
 
 void Instruction::moveAfter(Instruction *MovePos) {
@@ -456,15 +472,36 @@ void Instruction::dropPoisonGeneratingFlags() {
 }
 
 bool Instruction::hasPoisonGeneratingMetadata() const {
-  return hasMetadata(LLVMContext::MD_range) ||
-         hasMetadata(LLVMContext::MD_nonnull) ||
-         hasMetadata(LLVMContext::MD_align);
+  return any_of(Metadata::PoisonGeneratingIDs,
+                [this](unsigned ID) { return hasMetadata(ID); });
+}
+
+bool Instruction::hasNonDebugLocLoopMetadata() const {
+  // If there is no loop metadata at all, we also don't have
+  // non-debug loop metadata, obviously.
+  if (!hasMetadata(LLVMContext::MD_loop))
+    return false;
+
+  // If we do have loop metadata, retrieve it.
+  MDNode *LoopMD = getMetadata(LLVMContext::MD_loop);
+
+  // Check if the existing operands are debug locations. This loop
+  // should terminate after at most three iterations. Skip
+  // the first item because it is a self-reference.
+  for (const MDOperand &Op : llvm::drop_begin(LoopMD->operands())) {
+    // check for debug location type by attempting a cast.
+    if (!dyn_cast<DILocation>(Op)) {
+      return true;
+    }
+  }
+
+  // If we get here, then all we have is debug locations in the loop metadata.
+  return false;
 }
 
 void Instruction::dropPoisonGeneratingMetadata() {
-  eraseMetadata(LLVMContext::MD_range);
-  eraseMetadata(LLVMContext::MD_nonnull);
-  eraseMetadata(LLVMContext::MD_align);
+  for (unsigned ID : Metadata::PoisonGeneratingIDs)
+    eraseMetadata(ID);
 }
 
 bool Instruction::hasPoisonGeneratingReturnAttributes() const {
@@ -1132,7 +1169,7 @@ bool Instruction::mayThrow(bool IncludePhaseOneUnwind) const {
     // Landingpads themselves don't unwind -- however, an invoke of a skipped
     // landingpad may continue unwinding.
     BasicBlock *UnwindDest = cast<InvokeInst>(this)->getUnwindDest();
-    Instruction *Pad = UnwindDest->getFirstNonPHI();
+    BasicBlock::iterator Pad = UnwindDest->getFirstNonPHIIt();
     if (auto *LP = dyn_cast<LandingPadInst>(Pad))
       return canUnwindPastLandingPad(LP, IncludePhaseOneUnwind);
     return false;

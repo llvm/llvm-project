@@ -30,11 +30,13 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<>} {
 // CHECK-DAG: #[[MOD:.*]] = #llvm.di_module<{{.*}}scope = #[[CU]], name = "helper"{{.*}}>
 // CHECK-DAG: #[[LOC1:.*]] = loc("{{.*}}test.f90":12{{.*}})
 // CHECK-DAG: #[[GLI:.*]] = #llvm.di_global_variable<scope = #[[MOD]], name = "gli", linkageName = "_QMhelperEgli"{{.*}}line = 12, type = #[[I4]], isDefined = true>
+// CHECK-DAG: #[[GLIE:.*]] = #llvm.di_global_variable_expression<var = #[[GLI]]>
 // CHECK-DAG: #[[LOC2:.*]] = loc("{{.*}}test.f90":15{{.*}})
 // CHECK-DAG: #[[GLR:.*]] = #llvm.di_global_variable<scope = #[[MOD]], name = "glr", linkageName = "_QMhelperEglr"{{.*}}line = 15, type = #[[R4]], isDefined = true>
+// CHECK-DAG: #[[GLRE:.*]] = #llvm.di_global_variable_expression<var = #[[GLR]]>
 // CHECK-DAG: #[[LOC3:.*]] = loc("{{.*}}test.f90":20{{.*}})
 // CHECK-DAG: #[[TEST:.*]] = #llvm.di_subprogram<{{.*}}compileUnit = #[[CU]], scope = #[[MOD]], name = "test", linkageName = "_QMhelperPtest"{{.*}}line = 20, scopeLine = 20{{.*}}>
-// CHECK-DAG: loc(fused<#[[GLI]]>[#[[LOC1]]])
-// CHECK-DAG: loc(fused<#[[GLR]]>[#[[LOC2]]])
+// CHECK-DAG: loc(fused<[#[[GLIE]]]>[#[[LOC1]]])
+// CHECK-DAG: loc(fused<[#[[GLRE]]]>[#[[LOC2]]])
 // CHECK-DAG: loc(fused<#[[TEST]]>[#[[LOC3]]])
 

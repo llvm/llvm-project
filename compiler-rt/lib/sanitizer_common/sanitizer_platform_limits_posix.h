@@ -98,10 +98,13 @@ const unsigned struct_kernel_stat64_sz = 104;
 const unsigned struct_kernel_stat_sz = 144;
 const unsigned struct_kernel_stat64_sz = 104;
 #elif defined(__mips__)
-const unsigned struct_kernel_stat_sz =
-    SANITIZER_ANDROID
-        ? FIRST_32_SECOND_64(104, 128)
-        : FIRST_32_SECOND_64((_MIPS_SIM == _ABIN32) ? 176 : 160, 216);
+const unsigned struct_kernel_stat_sz = SANITIZER_ANDROID
+                                           ? FIRST_32_SECOND_64(104, 128)
+#      if defined(_ABIN32) && _MIPS_SIM == _ABIN32
+                                           : FIRST_32_SECOND_64(176, 216);
+#      else
+                                           : FIRST_32_SECOND_64(160, 216);
+#      endif
 const unsigned struct_kernel_stat64_sz = 104;
 #elif defined(__s390__) && !defined(__s390x__)
 const unsigned struct_kernel_stat_sz = 64;
@@ -313,7 +316,7 @@ extern unsigned struct_statvfs_sz;
 
 struct __sanitizer_iovec {
   void *iov_base;
-  uptr iov_len;
+  usize iov_len;
 };
 
 #if !SANITIZER_ANDROID
@@ -523,6 +526,7 @@ struct __sanitizer_dirent64 {
   unsigned short d_reclen;
   // more fields that we don't care about
 };
+extern unsigned struct_sock_fprog_sz;
 #endif
 
 #if defined(__x86_64__) && !defined(_LP64)
@@ -600,7 +604,7 @@ struct __sanitizer_siginfo_pad {
 #if SANITIZER_LINUX
 # define SANITIZER_HAS_SIGINFO 1
 union __sanitizer_siginfo {
-  struct {
+  __extension__ struct {
     int si_signo;
 # if SANITIZER_MIPS
     int si_code;
@@ -1076,7 +1080,6 @@ extern unsigned struct_serial_struct_sz;
 extern unsigned struct_sockaddr_ax25_sz;
 extern unsigned struct_unimapdesc_sz;
 extern unsigned struct_unimapinit_sz;
-extern unsigned struct_sock_fprog_sz;
 #  endif  // SANITIZER_LINUX && !SANITIZER_ANDROID
 
 extern const unsigned long __sanitizer_bufsiz;
@@ -1090,6 +1093,8 @@ extern unsigned struct_ppp_stats_sz;
 extern unsigned struct_sioc_sg_req_sz;
 extern unsigned struct_sioc_vif_req_sz;
 #endif
+
+extern unsigned fpos_t_sz;
 
 // ioctl request identifiers
 

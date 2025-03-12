@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___FUNCTIONAL_IDENTITY_H
-#define _LIBCPP___FUNCTIONAL_IDENTITY_H
+#ifndef _LIBCPP___CXX03___FUNCTIONAL_IDENTITY_H
+#define _LIBCPP___CXX03___FUNCTIONAL_IDENTITY_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__fwd/functional.h>
@@ -62,4 +62,4 @@ struct __is_identity<reference_wrapper<const identity> > : true_type {};
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___FUNCTIONAL_IDENTITY_H
+#endif // _LIBCPP___CXX03___FUNCTIONAL_IDENTITY_H

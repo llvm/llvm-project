@@ -10,7 +10,7 @@
 ; This happens due to when register allocator is out of registers
 ; it takes the first avialable register.
 
-; CHECK: error: ran out of registers during register allocation
+; CHECK: error: <unknown>:0:0: ran out of registers during register allocation
 ; CHECK: Bad machine code: Using an undefined physical register
 define amdgpu_kernel void @alloc_failure_with_split_vregs(float %v0, float %v1) #0 {
   %agpr0 = call float asm sideeffect "; def $0", "=${a0}"()

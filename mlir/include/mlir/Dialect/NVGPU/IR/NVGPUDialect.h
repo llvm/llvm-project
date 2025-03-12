@@ -22,7 +22,19 @@
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUEnums.h.inc"
 
+// Maximum warp size
 constexpr int kWarpSize = 32;
+
+// Maximum number of threads in a block and block in a grid
+// https://docs.nvidia.com/cuda/cuda-c-programming-guide/#features-and-technical-specifications-technical-specifications-per-compute-capability
+constexpr int kMaxTotalBlockdim = 1024;
+constexpr int kMaxBlockdimx = 1024;
+constexpr int kMaxBlockdimy = 1024;
+constexpr int kMaxBlockdimz = 64;
+constexpr int kMaxTotalGriddim = 2147483647;
+constexpr int kMaxGriddimx = 2147483647;
+constexpr int kMaxGriddimy = 65535;
+constexpr int kMaxGriddimz = 65535;
 
 /// M size of wgmma.mma_async instruction
 constexpr int kWgmmaSizeM = 64;

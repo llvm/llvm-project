@@ -402,16 +402,6 @@ def note_file_misc_sloc_usage : Note<
 def err_module_format_unhandled : Error<
   "no handler registered for module format '%0'">, DefaultFatal;
 
-// TransformActions
-// TODO: Use a custom category name to distinguish rewriter errors.
-def err_mt_message : Error<"[rewriter] %0">, SuppressInSystemHeader;
-def warn_mt_message : Warning<"[rewriter] %0">;
-def note_mt_message : Note<"[rewriter] %0">;
-
-// ARCMigrate
-def warn_arcmt_nsalloc_realloc : Warning<"[rewriter] call returns pointer to GC managed memory; it will become unmanaged in ARC">;
-def err_arcmt_nsinvocation_ownership : Error<"NSInvocation's %0 is not safe to be used with an object with ownership other than __unsafe_unretained">;
-
 // API notes
 def err_apinotes_message : Error<"%0">;
 def warn_apinotes_message : Warning<"%0">, InGroup<DiagGroup<"apinotes">>;

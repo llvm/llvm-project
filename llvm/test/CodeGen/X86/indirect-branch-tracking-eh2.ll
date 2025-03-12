@@ -24,9 +24,9 @@ define dso_local i32 @main() #0 personality ptr @__gxx_personality_sj0 {
 ; NUM-NEXT:    movq %rbp, -104(%rbp)
 ; NUM-NEXT:    movq %rsp, -88(%rbp)
 ; NUM-NEXT:    movq $.LBB0_9, -96(%rbp)
-; NUM-NEXT:    movl $1, -144(%rbp)
 ; NUM-NEXT:    leaq -152(%rbp), %rdi
 ; NUM-NEXT:    callq _Unwind_SjLj_Register@PLT
+; NUM-NEXT:    movl $1, -144(%rbp)
 ; NUM-NEXT:  .Ltmp0:
 ; NUM-NEXT:    callq _Z3foov
 ; NUM-NEXT:  .Ltmp1:
@@ -110,9 +110,9 @@ define dso_local i32 @main() #0 personality ptr @__gxx_personality_sj0 {
 ; SJLJ-NEXT:    movq %rbp, -104(%rbp)
 ; SJLJ-NEXT:    movq %rsp, -88(%rbp)
 ; SJLJ-NEXT:    movq $.LBB0_9, -96(%rbp)
-; SJLJ-NEXT:    movl $1, -144(%rbp)
 ; SJLJ-NEXT:    leaq -152(%rbp), %rdi
 ; SJLJ-NEXT:    callq _Unwind_SjLj_Register@PLT
+; SJLJ-NEXT:    movl $1, -144(%rbp)
 ; SJLJ-NEXT:  .Ltmp0:
 ; SJLJ-NEXT:    callq _Z3foov
 ; SJLJ-NEXT:  .Ltmp1:

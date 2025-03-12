@@ -81,7 +81,7 @@ bool HexagonOptimizeSZextends::runOnFunction(Function &F) {
             assert (EVT::getEVT(SI->getType()) ==
                     (EVT::getEVT(Use->getType())));
             Use->replaceAllUsesWith(SI);
-            Instruction* First = &F.getEntryBlock().front();
+            BasicBlock::iterator First = F.getEntryBlock().begin();
             SI->insertBefore(First);
             Use->eraseFromParent();
           }

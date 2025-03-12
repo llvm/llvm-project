@@ -94,7 +94,7 @@ public:
 
   /// creates a mapping for the specified virtual register to
   /// the specified physical register
-  void assignVirt2Phys(Register virtReg, MCPhysReg physReg);
+  void assignVirt2Phys(Register virtReg, MCRegister physReg);
 
   bool isShapeMapEmpty() const { return Virt2ShapeMap.empty(); }
 

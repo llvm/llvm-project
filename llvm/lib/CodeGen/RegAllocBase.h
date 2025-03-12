@@ -123,6 +123,12 @@ protected:
   virtual MCRegister selectOrSplit(const LiveInterval &VirtReg,
                                    SmallVectorImpl<Register> &splitLVRs) = 0;
 
+  /// Query a physical register to use as a filler in contexts where the
+  /// allocation has failed. This will raise an error, but not abort the
+  /// compilation.
+  MCPhysReg getErrorAssignment(const TargetRegisterClass &RC,
+                               const MachineInstr *CtxMI = nullptr);
+
   // Use this group name for NamedRegionTimer.
   static const char TimerGroupName[];
   static const char TimerGroupDescription[];

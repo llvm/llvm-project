@@ -1,4 +1,4 @@
-; RUN: llc -O0 < %s -march=avr | FileCheck %s
+; RUN: llc -O0 < %s -mtriple=avr | FileCheck %s
 
 define i32 @std_ldd_overflow() {
   %src = alloca [4 x i8]

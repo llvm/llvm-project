@@ -85,7 +85,7 @@ int OnExit() {
 // ---------------------- Wrappers ---------------- {{{1
 using namespace __asan;
 
-DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, uptr)
+DECLARE_REAL_AND_INTERCEPTOR(void *, malloc, usize)
 DECLARE_REAL_AND_INTERCEPTOR(void, free, void *)
 
 #define COMMON_INTERCEPT_FUNCTION_VER(name, ver) \
@@ -365,7 +365,7 @@ INTERCEPTOR(void, makecontext, struct ucontext_t *ucp, void (*func)(), int argc,
   va_list ap;
   uptr args[64];
   // We don't know a better way to forward ... into REAL function. We can
-  // increase args size if neccecary.
+  // increase args size if necessary.
   CHECK_LE(argc, ARRAY_SIZE(args));
   internal_memset(args, 0, sizeof(args));
   va_start(ap, argc);
@@ -529,13 +529,13 @@ DEFINE_REAL(char*, index, const char *string, int c)
     return REAL(strcat)(to, from);
   }
 
-INTERCEPTOR(char*, strncat, char *to, const char *from, uptr size) {
+INTERCEPTOR(char*, strncat, char *to, const char *from, usize size) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strncat);
   AsanInitFromRtl();
   if (flags()->replace_str) {
     uptr from_length = MaybeRealStrnlen(from, size);
-    uptr copy_length = Min(size, from_length + 1);
+    uptr copy_length = Min<uptr>(size, from_length + 1);
     ASAN_READ_RANGE(ctx, from, copy_length);
     uptr to_length = internal_strlen(to);
     ASAN_READ_STRING_OF_LEN(ctx, to, to_length, to_length);
@@ -584,6 +584,9 @@ INTERCEPTOR(char *, strcpy, char *to, const char *from) {
 INTERCEPTOR(char*, strdup, const char *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strdup);
+  // Allowing null input is Windows-specific
+  if (SANITIZER_WINDOWS && UNLIKELY(!s))
+    return nullptr;
   if (UNLIKELY(!TryAsanInitFromRtl()))
     return internal_strdup(s);
   uptr length = internal_strlen(s);
@@ -617,12 +620,12 @@ INTERCEPTOR(char*, __strdup, const char *s) {
 }
 #endif // ASAN_INTERCEPT___STRDUP
 
-INTERCEPTOR(char*, strncpy, char *to, const char *from, uptr size) {
+INTERCEPTOR(char*, strncpy, char *to, const char *from, usize size) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, strncpy);
   AsanInitFromRtl();
   if (flags()->replace_str) {
-    uptr from_size = Min(size, MaybeRealStrnlen(from, size) + 1);
+    uptr from_size = Min<uptr>(size, MaybeRealStrnlen(from, size) + 1);
     CHECK_RANGES_OVERLAP("strncpy", to, from_size, from, from_size);
     ASAN_READ_RANGE(ctx, from, from_size);
     ASAN_WRITE_RANGE(ctx, to, size);

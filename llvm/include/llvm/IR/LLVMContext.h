@@ -96,7 +96,7 @@ public:
     OB_ptrauth = 7,                // "ptrauth"
     OB_kcfi = 8,                   // "kcfi"
     OB_convergencectrl = 9,        // "convergencectrl"
-    OB_type = 10,                  // "type"
+    OB_callee_type = 10,           // "callee_type"
   };
 
   /// getMDKindID - Return a unique non-zero ID for the specified metadata kind.
@@ -306,7 +306,6 @@ public:
   /// be prepared to drop the erroneous construct on the floor and "not crash".
   /// The generated code need not be correct.  The error message will be
   /// implicitly prefixed with "error: " and should not end with a ".".
-  void emitError(uint64_t LocCookie, const Twine &ErrorStr);
   void emitError(const Instruction *I, const Twine &ErrorStr);
   void emitError(const Twine &ErrorStr);
 

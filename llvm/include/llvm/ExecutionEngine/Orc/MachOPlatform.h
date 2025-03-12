@@ -176,6 +176,11 @@ public:
   static ArrayRef<std::pair<const char *, const char *>>
   standardRuntimeUtilityAliases();
 
+  /// Returns a list of aliases required to enable lazy compilation via the
+  /// ORC runtime.
+  static ArrayRef<std::pair<const char *, const char *>>
+  standardLazyCompilationAliases();
+
 private:
   using SymbolTableVector = SmallVector<
       std::tuple<ExecutorAddr, ExecutorAddr, MachOExecutorSymbolFlags>>;
@@ -235,7 +240,6 @@ private:
     };
     using JITSymTabVector = SmallVector<SymbolTablePair>;
 
-    Error bootstrapPipelineStart(jitlink::LinkGraph &G);
     Error bootstrapPipelineRecordRuntimeFunctions(jitlink::LinkGraph &G);
     Error bootstrapPipelineEnd(jitlink::LinkGraph &G);
 
@@ -255,6 +259,7 @@ private:
 
     std::optional<UnwindSections> findUnwindSectionInfo(jitlink::LinkGraph &G);
     Error registerObjectPlatformSections(jitlink::LinkGraph &G, JITDylib &JD,
+                                         ExecutorAddr HeaderAddr,
                                          bool InBootstrapPhase);
 
     Error createObjCRuntimeObject(jitlink::LinkGraph &G);
@@ -363,11 +368,11 @@ private:
   DenseMap<JITDylib *, SymbolLookupSet> RegisteredInitSymbols;
 
   std::mutex PlatformMutex;
+  bool ForceEHFrames = false;
+  BootstrapInfo *Bootstrap = nullptr;
   DenseMap<JITDylib *, ExecutorAddr> JITDylibToHeaderAddr;
   DenseMap<ExecutorAddr, JITDylib *> HeaderAddrToJITDylib;
   DenseMap<JITDylib *, uint64_t> JITDylibToPThreadKey;
-
-  std::atomic<BootstrapInfo *> Bootstrap;
 };
 
 // Generates a MachO header.

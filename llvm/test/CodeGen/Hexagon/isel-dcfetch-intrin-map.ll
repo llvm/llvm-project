@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon < %s | FileCheck %s
+; RUN: llc -mtriple=hexagon < %s | FileCheck %s
 
 ; Check that intrinsic int_hexagon_Y2_dcfetch is mapped to Y2_dcfetchbo
 ; (not Y2_dcfetch).

@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _LIBCPP___UTILITY_NO_DESTROY_H
-#define _LIBCPP___UTILITY_NO_DESTROY_H
+#ifndef _LIBCPP___CXX03___UTILITY_NO_DESTROY_H
+#define _LIBCPP___CXX03___UTILITY_NO_DESTROY_H
 
 #include <__cxx03/__config>
 #include <__cxx03/__type_traits/is_constant_evaluated.h>
@@ -51,4 +51,4 @@ private:
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP___UTILITY_NO_DESTROY_H
+#endif // _LIBCPP___CXX03___UTILITY_NO_DESTROY_H

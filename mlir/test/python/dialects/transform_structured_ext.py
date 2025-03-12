@@ -103,6 +103,42 @@ def testFuseIntoContainingOpCompact(target):
 
 @run
 @create_sequence
+def testFuseOpCompact(target):
+    structured.FuseOp(
+        target, tile_sizes=[4, 8], tile_interchange=[0, 1], apply_cleanup=True
+    )
+    # CHECK-LABEL: TEST: testFuseOpCompact
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
+    # CHECK-SAME: interchange [0, 1] apply_cleanup = true
+    # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
+def testFuseOpNoArg(target):
+    structured.FuseOp(target)
+    # CHECK-LABEL: TEST: testFuseOpNoArg
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}} = transform.structured.fuse %{{.*}} :
+    # CHECK-SAME: (!transform.any_op) -> !transform.any_op
+
+
+@run
+@create_sequence
+def testFuseOpAttributes(target):
+    attr = DenseI64ArrayAttr.get([4, 8])
+    ichange = DenseI64ArrayAttr.get([0, 1])
+    structured.FuseOp(target, tile_sizes=attr, tile_interchange=ichange)
+    # CHECK-LABEL: TEST: testFuseOpAttributes
+    # CHECK: transform.sequence
+    # CHECK: %{{.+}}, %{{.+}}:2 = transform.structured.fuse %{{.*}}[4, 8]
+    # CHECK-SAME: interchange [0, 1]
+    # CHECK-SAME: (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
 def testGeneralize(target):
     structured.GeneralizeOp(target)
     # CHECK-LABEL: TEST: testGeneralize

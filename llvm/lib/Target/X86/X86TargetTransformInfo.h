@@ -169,7 +169,8 @@ public:
   InstructionCost getScalarizationOverhead(VectorType *Ty,
                                            const APInt &DemandedElts,
                                            bool Insert, bool Extract,
-                                           TTI::TargetCostKind CostKind);
+                                           TTI::TargetCostKind CostKind,
+                                           ArrayRef<Value *> VL = {});
   InstructionCost getReplicationShuffleCost(Type *EltTy, int ReplicationFactor,
                                             int VF,
                                             const APInt &DemandedDstElts,

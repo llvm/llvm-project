@@ -124,6 +124,11 @@ union UnwindCode {
   uint8_t getOpInfo() const {
     return (u.UnwindOpAndOpInfo >> 4) & 0x0F;
   }
+  /// Gets the offset for an UOP_Epilog unwind code.
+  uint32_t getEpilogOffset() const {
+    assert(getUnwindOp() == UOP_Epilog);
+    return (getOpInfo() << 8) | static_cast<uint32_t>(u.CodeOffset);
+  }
 };
 
 enum {
