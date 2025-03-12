@@ -173,6 +173,12 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
       preferred_name = name;
       compiler_type = m_swift_typesystem.GetTypeFromMangledTypename(
           ConstString(typedef_name));
+    } else {
+      // Otherwise ignore the typedef name and resolve the pointee.
+      if (TypeSP desugared_type = get_type(die)) {
+        preferred_name = name;
+        compiler_type = desugared_type->GetForwardCompilerType();
+      }
     }
   }
 

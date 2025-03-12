@@ -2384,9 +2384,18 @@ TypeSystemSwiftTypeRef::FindTypeInModule(opaque_compiler_type_t opaque_type) {
     return {};
   // DW_AT_linkage_name is not part of the accelerator table, so
   // we need to search by decl context.
+  auto options =
+      TypeQueryOptions::e_find_one | TypeQueryOptions::e_module_search;
 
-  TypeQuery query(*context, TypeQueryOptions::e_find_one |
-                                TypeQueryOptions::e_module_search);
+  // FIXME: It would be nice to not need this.
+  if (context->size() == 2 &&
+      context->front().kind == CompilerContextKind::Module &&
+      context->front().name == "Builtin") {
+    // LLVM cannot nest basic types inside a module.
+    context->erase(context->begin());
+    options = TypeQueryOptions::e_find_one;
+  }
+  TypeQuery query(*context, options);
   query.SetLanguages(TypeSystemSwift::GetSupportedLanguagesForTypes());
 
   TypeResults results;
