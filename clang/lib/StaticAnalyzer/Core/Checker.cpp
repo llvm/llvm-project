@@ -18,9 +18,7 @@ using namespace ento;
 
 int ImplicitNullDerefEvent::Tag;
 
-StringRef CheckerBase::getTagDescription() const {
-  return getCheckerName().getName();
-}
+StringRef CheckerBase::getTagDescription() const { return getCheckerName(); }
 
 CheckerNameRef CheckerBase::getCheckerName() const { return Name; }
 
@@ -30,10 +28,10 @@ CheckerProgramPointTag::CheckerProgramPointTag(StringRef CheckerName,
 
 CheckerProgramPointTag::CheckerProgramPointTag(const CheckerBase *Checker,
                                                StringRef Msg)
-    : SimpleProgramPointTag(Checker->getCheckerName().getName(), Msg) {}
+    : SimpleProgramPointTag(Checker->getCheckerName(), Msg) {}
 
 raw_ostream& clang::ento::operator<<(raw_ostream &Out,
                                      const CheckerBase &Checker) {
-  Out << Checker.getCheckerName().getName();
+  Out << Checker.getCheckerName();
   return Out;
 }

@@ -5490,6 +5490,22 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::amdgcn_swc_reorder_swap_resume:
     case Intrinsic::amdgcn_swc_get_exchange_state:
     case Intrinsic::amdgcn_swc_set_exchange_state:
+    case Intrinsic::amdgcn_global_tiled_load_half_b64:
+    case Intrinsic::amdgcn_global_tiled_load_b64:
+    case Intrinsic::amdgcn_global_tiled_load_vst2_b64:
+    case Intrinsic::amdgcn_global_tiled_load_qtr_b128:
+    case Intrinsic::amdgcn_global_tiled_load_half_b128:
+    case Intrinsic::amdgcn_global_tiled_load_half_vst2_b128:
+    case Intrinsic::amdgcn_global_tiled_load_b128:
+    case Intrinsic::amdgcn_global_tiled_load_vst2_b128:
+    case Intrinsic::amdgcn_global_tiled_store_half_b64:
+    case Intrinsic::amdgcn_global_tiled_store_b64:
+    case Intrinsic::amdgcn_global_tiled_store_vst2_b64:
+    case Intrinsic::amdgcn_global_tiled_store_qtr_b128:
+    case Intrinsic::amdgcn_global_tiled_store_half_b128:
+    case Intrinsic::amdgcn_global_tiled_store_half_vst2_b128:
+    case Intrinsic::amdgcn_global_tiled_store_b128:
+    case Intrinsic::amdgcn_global_tiled_store_vst2_b128:
 #endif /* LLPC_BUILD_NPI */
       return getDefaultMappingAllVGPR(MI);
     case Intrinsic::amdgcn_ds_ordered_add:

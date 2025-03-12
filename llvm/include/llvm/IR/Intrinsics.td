@@ -328,10 +328,11 @@ def IIT_AARCH64_SVCOUNT : IIT_VT<aarch64svcount, 59>;
 def IIT_V6 : IIT_Vec<6, 60>;
 def IIT_V10 : IIT_Vec<10, 61>;
 #ifdef LLPC_BUILD_NPI
-def IIT_v9  : IIT_Vec<9, 62>;
+def IIT_V9  : IIT_Vec<9, 62>;
 def IIT_ONE_THIRD_VEC_ARG : IIT_Base<63>;
 def IIT_ONE_FIFTH_VEC_ARG : IIT_Base<64>;
 def IIT_ONE_SEVENTH_VEC_ARG : IIT_Base<65>;
+def IIT_V7  : IIT_Vec<7, 66>;
 #else /* LLPC_BUILD_NPI */
 def IIT_ONE_THIRD_VEC_ARG : IIT_Base<62>;
 def IIT_ONE_FIFTH_VEC_ARG : IIT_Base<63>;
@@ -567,6 +568,9 @@ def llvm_v2i32_ty      : LLVMType<v2i32>;    //  2 x i32
 def llvm_v3i32_ty      : LLVMType<v3i32>;    //  3 x i32
 def llvm_v4i32_ty      : LLVMType<v4i32>;    //  4 x i32
 def llvm_v6i32_ty      : LLVMType<v6i32>;    //  6 x i32
+#ifdef LLPC_BUILD_NPI
+def llvm_v7i32_ty      : LLVMType<v7i32>;    //  7 x i32
+#endif /* LLPC_BUILD_NPI */
 def llvm_v8i32_ty      : LLVMType<v8i32>;    //  8 x i32
 def llvm_v10i32_ty     : LLVMType<v10i32>;   // 10 x i32
 def llvm_v16i32_ty     : LLVMType<v16i32>;   // 16 x i32
