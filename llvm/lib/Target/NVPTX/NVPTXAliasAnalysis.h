@@ -93,7 +93,9 @@ public:
             AAR.addAAResult(WrapperPass->getResult());
         }) {}
 
-  StringRef getPassName() const override { return "NVPTX Address space based Alias Analysis Wrapper"; }
+  StringRef getPassName() const override {
+    return "NVPTX Address space based Alias Analysis Wrapper";
+  }
 };
 
 ImmutablePass *createNVPTXAAWrapperPass();
