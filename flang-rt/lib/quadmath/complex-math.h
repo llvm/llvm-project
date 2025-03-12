@@ -13,7 +13,7 @@
 #include "flang/Runtime/entry-names.h"
 
 #if HAS_QUADMATHLIB
-#include "quadmath_wrapper.h"
+#include "quadmath.h"
 #define CAbs(x) cabsq(x)
 #define CAcos(x) cacosq(x)
 #define CAcosh(x) cacoshq(x)
