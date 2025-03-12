@@ -165,6 +165,11 @@ public:
   static FuncletComparisonResult
   AreFuncletsOfSameAsyncFunction(llvm::StringRef name1, llvm::StringRef name2);
 
+  /// See AreFuncletsOfSameAsyncFunction(StringRef, StringRef).
+  static FuncletComparisonResult
+  AreFuncletsOfSameAsyncFunction(swift::Demangle::NodePointer node1,
+                                 swift::Demangle::NodePointer node2);
+
   /// Return true if name is a Swift async function symbol.
   static bool IsSwiftAsyncFunctionSymbol(llvm::StringRef name);
 

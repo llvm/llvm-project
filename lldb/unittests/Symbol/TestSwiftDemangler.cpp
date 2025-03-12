@@ -10,10 +10,13 @@ static constexpr auto IsSwiftMangledName =
 static constexpr auto IsAnySwiftAsyncFunctionSymbol = [](StringRef name) {
   return SwiftLanguageRuntime::IsAnySwiftAsyncFunctionSymbol(name);
 };
+static constexpr auto AreFuncletsOfSameAsyncFunction = [](StringRef name1,
+                                                          StringRef name2) {
+  return SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(name1, name2);
+};
+
 
 using FuncletComparisonResult = SwiftLanguageRuntime::FuncletComparisonResult;
-static constexpr auto AreFuncletsOfSameAsyncFunction =
-    SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction;
 
 /// Checks that all names in \c funclets belong to the same function.
 static void CheckGroupOfFuncletsFromSameFunction(ArrayRef<StringRef> funclets) {

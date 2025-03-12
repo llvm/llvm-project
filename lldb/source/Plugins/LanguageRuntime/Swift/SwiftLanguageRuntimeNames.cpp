@@ -143,7 +143,12 @@ SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(llvm::StringRef name1,
   Context ctx;
   NodePointer node1 = DemangleSymbolAsNode(name1, ctx);
   NodePointer node2 = DemangleSymbolAsNode(name2, ctx);
+  return AreFuncletsOfSameAsyncFunction(node1, node2);
+}
 
+SwiftLanguageRuntime::FuncletComparisonResult
+SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(
+    swift::Demangle::NodePointer node1, swift::Demangle::NodePointer node2) {
   if (!IsAnySwiftAsyncFunctionSymbol(node1) ||
       !IsAnySwiftAsyncFunctionSymbol(node2))
     return FuncletComparisonResult::NotBothFunclets;
