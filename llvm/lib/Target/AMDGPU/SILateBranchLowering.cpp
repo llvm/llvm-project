@@ -122,7 +122,7 @@ static void copyOpWithoutRegFlags(MachineInstrBuilder &MIB,
   if (Op.isReg())
     MIB.addReg(Op.getReg());
   else
-    MIB->addOperand(Op);
+    MIB.add(Op);
 }
 
 void SILateBranchLowering::expandChainCall(MachineInstr &MI,
