@@ -2,8 +2,8 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnu     | FileCheck %s --check-prefix=GNU
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc  | FileCheck %s --check-prefix=WIN
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin     | FileCheck %s --check-prefix=MAC
-; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=GISEL-X86
-; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=2 | FileCheck %s --check-prefixes=GISEL-X64
+; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X86
+; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X64
 
 ; PR35672 - https://bugs.llvm.org/show_bug.cgi?id=35672
 ; FIXME: We would not need the function-level attributes if FMF were propagated to DAG nodes for this case.
@@ -24,15 +24,18 @@ define float @exp_f32(float %x) #0 {
 ; GISEL-X86-LABEL: exp_f32:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstps (%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%esp)
 ; GISEL-X86-NEXT:    calll expf
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: exp_f32:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp expf@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq expf
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf float @llvm.exp.f32(float %x)
   ret float %r
 }
@@ -53,15 +56,23 @@ define double @exp_f64(double %x) #0 {
 ; GISEL-X86-LABEL: exp_f64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstpl (%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movl 4(%eax), %eax
+; GISEL-X86-NEXT:    xorl %edx, %edx
+; GISEL-X86-NEXT:    addl %esp, %edx
+; GISEL-X86-NEXT:    movl %ecx, (%esp)
+; GISEL-X86-NEXT:    movl %eax, 4(%edx)
 ; GISEL-X86-NEXT:    calll exp
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: exp_f64:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp exp@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq exp
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf double @llvm.exp.f64(double %x)
   ret double %r
 }
@@ -116,7 +127,7 @@ define x86_fp80 @exp_f80(x86_fp80 %x) #0 {
 ; GISEL-X64-NEXT:    subq $24, %rsp
 ; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fstpt (%rsp)
-; GISEL-X64-NEXT:    callq expl@PLT
+; GISEL-X64-NEXT:    callq expl
 ; GISEL-X64-NEXT:    addq $24, %rsp
 ; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf x86_fp80 @llvm.exp.f80(x86_fp80 %x)
@@ -139,15 +150,18 @@ define float @exp2_f32(float %x) #0 {
 ; GISEL-X86-LABEL: exp2_f32:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstps (%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%esp)
 ; GISEL-X86-NEXT:    calll exp2f
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: exp2_f32:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp exp2f@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq exp2f
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf float @llvm.exp2.f32(float %x)
   ret float %r
 }
@@ -168,15 +182,23 @@ define double @exp2_f64(double %x) #0 {
 ; GISEL-X86-LABEL: exp2_f64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstpl (%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movl 4(%eax), %eax
+; GISEL-X86-NEXT:    xorl %edx, %edx
+; GISEL-X86-NEXT:    addl %esp, %edx
+; GISEL-X86-NEXT:    movl %ecx, (%esp)
+; GISEL-X86-NEXT:    movl %eax, 4(%edx)
 ; GISEL-X86-NEXT:    calll exp2
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: exp2_f64:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp exp2@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq exp2
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf double @llvm.exp2.f64(double %x)
   ret double %r
 }
@@ -231,7 +253,7 @@ define x86_fp80 @exp2_f80(x86_fp80 %x) #0 {
 ; GISEL-X64-NEXT:    subq $24, %rsp
 ; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fstpt (%rsp)
-; GISEL-X64-NEXT:    callq exp2l@PLT
+; GISEL-X64-NEXT:    callq exp2l
 ; GISEL-X64-NEXT:    addq $24, %rsp
 ; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf x86_fp80 @llvm.exp2.f80(x86_fp80 %x)
@@ -254,15 +276,18 @@ define float @log_f32(float %x) #0 {
 ; GISEL-X86-LABEL: log_f32:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstps (%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%esp)
 ; GISEL-X86-NEXT:    calll logf
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: log_f32:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp logf@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq logf
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf float @llvm.log.f32(float %x)
   ret float %r
 }
@@ -283,15 +308,23 @@ define double @log_f64(double %x) #0 {
 ; GISEL-X86-LABEL: log_f64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstpl (%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movl 4(%eax), %eax
+; GISEL-X86-NEXT:    xorl %edx, %edx
+; GISEL-X86-NEXT:    addl %esp, %edx
+; GISEL-X86-NEXT:    movl %ecx, (%esp)
+; GISEL-X86-NEXT:    movl %eax, 4(%edx)
 ; GISEL-X86-NEXT:    calll log
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: log_f64:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp log@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq log
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf double @llvm.log.f64(double %x)
   ret double %r
 }
@@ -346,7 +379,7 @@ define x86_fp80 @log_f80(x86_fp80 %x) #0 {
 ; GISEL-X64-NEXT:    subq $24, %rsp
 ; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fstpt (%rsp)
-; GISEL-X64-NEXT:    callq logl@PLT
+; GISEL-X64-NEXT:    callq logl
 ; GISEL-X64-NEXT:    addq $24, %rsp
 ; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf x86_fp80 @llvm.log.f80(x86_fp80 %x)
@@ -369,15 +402,18 @@ define float @log2_f32(float %x) #0 {
 ; GISEL-X86-LABEL: log2_f32:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstps (%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%esp)
 ; GISEL-X86-NEXT:    calll log2f
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: log2_f32:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp log2f@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq log2f
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf float @llvm.log2.f32(float %x)
   ret float %r
 }
@@ -398,15 +434,23 @@ define double @log2_f64(double %x) #0 {
 ; GISEL-X86-LABEL: log2_f64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstpl (%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movl 4(%eax), %eax
+; GISEL-X86-NEXT:    xorl %edx, %edx
+; GISEL-X86-NEXT:    addl %esp, %edx
+; GISEL-X86-NEXT:    movl %ecx, (%esp)
+; GISEL-X86-NEXT:    movl %eax, 4(%edx)
 ; GISEL-X86-NEXT:    calll log2
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: log2_f64:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp log2@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq log2
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf double @llvm.log2.f64(double %x)
   ret double %r
 }
@@ -461,7 +505,7 @@ define x86_fp80 @log2_f80(x86_fp80 %x) #0 {
 ; GISEL-X64-NEXT:    subq $24, %rsp
 ; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fstpt (%rsp)
-; GISEL-X64-NEXT:    callq log2l@PLT
+; GISEL-X64-NEXT:    callq log2l
 ; GISEL-X64-NEXT:    addq $24, %rsp
 ; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf x86_fp80 @llvm.log2.f80(x86_fp80 %x)
@@ -484,15 +528,18 @@ define float @log10_f32(float %x) #0 {
 ; GISEL-X86-LABEL: log10_f32:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstps (%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%esp)
 ; GISEL-X86-NEXT:    calll log10f
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: log10_f32:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp log10f@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq log10f
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf float @llvm.log10.f32(float %x)
   ret float %r
 }
@@ -513,15 +560,23 @@ define double @log10_f64(double %x) #0 {
 ; GISEL-X86-LABEL: log10_f64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstpl (%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movl 4(%eax), %eax
+; GISEL-X86-NEXT:    xorl %edx, %edx
+; GISEL-X86-NEXT:    addl %esp, %edx
+; GISEL-X86-NEXT:    movl %ecx, (%esp)
+; GISEL-X86-NEXT:    movl %eax, 4(%edx)
 ; GISEL-X86-NEXT:    calll log10
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: log10_f64:
 ; GISEL-X64:       # %bb.0:
-; GISEL-X64-NEXT:    jmp log10@PLT # TAILCALL
+; GISEL-X64-NEXT:    pushq %rax
+; GISEL-X64-NEXT:    callq log10
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf double @llvm.log10.f64(double %x)
   ret double %r
 }
@@ -576,7 +631,7 @@ define x86_fp80 @log10_f80(x86_fp80 %x) #0 {
 ; GISEL-X64-NEXT:    subq $24, %rsp
 ; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fstpt (%rsp)
-; GISEL-X64-NEXT:    callq log10l@PLT
+; GISEL-X64-NEXT:    callq log10l
 ; GISEL-X64-NEXT:    addq $24, %rsp
 ; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf x86_fp80 @llvm.log10.f80(x86_fp80 %x)
@@ -602,17 +657,20 @@ define float @pow_f32(float %x) #0 {
 ; GISEL-X86-LABEL: pow_f32:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $12, %esp
-; GISEL-X86-NEXT:    flds {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fsts {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstps (%esp)
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl %eax, (%esp)
+; GISEL-X86-NEXT:    movl %eax, {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    calll powf
 ; GISEL-X86-NEXT:    addl $12, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: pow_f32:
 ; GISEL-X64:       # %bb.0:
+; GISEL-X64-NEXT:    pushq %rax
 ; GISEL-X64-NEXT:    movaps %xmm0, %xmm1
-; GISEL-X64-NEXT:    jmp powf@PLT # TAILCALL
+; GISEL-X64-NEXT:    callq powf
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf float @llvm.pow.f32(float %x, float %x)
   ret float %r
 }
@@ -636,17 +694,28 @@ define double @pow_f64(double %x) #0 {
 ; GISEL-X86-LABEL: pow_f64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $28, %esp
-; GISEL-X86-NEXT:    fldl {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstl {{[0-9]+}}(%esp)
-; GISEL-X86-NEXT:    fstpl (%esp)
+; GISEL-X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; GISEL-X86-NEXT:    movl 4(%eax), %eax
+; GISEL-X86-NEXT:    xorl %edx, %edx
+; GISEL-X86-NEXT:    addl %esp, %edx
+; GISEL-X86-NEXT:    movl %ecx, (%esp)
+; GISEL-X86-NEXT:    movl %eax, 4(%edx)
+; GISEL-X86-NEXT:    movl $8, %edx
+; GISEL-X86-NEXT:    addl %esp, %edx
+; GISEL-X86-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
+; GISEL-X86-NEXT:    movl %eax, 4(%edx)
 ; GISEL-X86-NEXT:    calll pow
 ; GISEL-X86-NEXT:    addl $28, %esp
 ; GISEL-X86-NEXT:    retl
 ;
 ; GISEL-X64-LABEL: pow_f64:
 ; GISEL-X64:       # %bb.0:
+; GISEL-X64-NEXT:    pushq %rax
 ; GISEL-X64-NEXT:    movaps %xmm0, %xmm1
-; GISEL-X64-NEXT:    jmp pow@PLT # TAILCALL
+; GISEL-X64-NEXT:    callq pow
+; GISEL-X64-NEXT:    popq %rax
+; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf double @llvm.pow.f64(double %x, double %x)
   ret double %r
 }
@@ -699,8 +768,8 @@ define x86_fp80 @pow_f80(x86_fp80 %x) #0 {
 ; GISEL-X86-NEXT:    subl $28, %esp
 ; GISEL-X86-NEXT:    fldt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fld %st(0)
-; GISEL-X86-NEXT:    fstpt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    fstpt (%esp)
+; GISEL-X86-NEXT:    fstpt {{[0-9]+}}(%esp)
 ; GISEL-X86-NEXT:    calll powl
 ; GISEL-X86-NEXT:    addl $28, %esp
 ; GISEL-X86-NEXT:    retl
@@ -710,9 +779,9 @@ define x86_fp80 @pow_f80(x86_fp80 %x) #0 {
 ; GISEL-X64-NEXT:    subq $40, %rsp
 ; GISEL-X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fld %st(0)
-; GISEL-X64-NEXT:    fstpt {{[0-9]+}}(%rsp)
 ; GISEL-X64-NEXT:    fstpt (%rsp)
-; GISEL-X64-NEXT:    callq powl@PLT
+; GISEL-X64-NEXT:    fstpt {{[0-9]+}}(%rsp)
+; GISEL-X64-NEXT:    callq powl
 ; GISEL-X64-NEXT:    addq $40, %rsp
 ; GISEL-X64-NEXT:    retq
   %r = tail call nnan ninf x86_fp80 @llvm.pow.f80(x86_fp80 %x, x86_fp80 %x)
