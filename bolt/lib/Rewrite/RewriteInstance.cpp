@@ -1059,6 +1059,16 @@ void RewriteInstance::discoverFileObjects() {
       registerName(SymbolSize);
       continue;
     }
+    if (SymName == getBOLTReservedRWStart()) {
+      BOLTReservedRWStartAddress = SymbolAddress;
+      registerName(SymbolSize);
+      continue;
+    }
+    if (SymName == getBOLTReservedRWEnd()) {
+      BOLTReservedRWEndAddress = SymbolAddress;
+      registerName(SymbolSize);
+      continue;
+    }
 
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: considering symbol " << UniqueName
                       << " for function\n");
@@ -1374,6 +1384,36 @@ void RewriteInstance::discoverBOLTReserved() {
     NewTextSegmentAddress = 0;
     NewTextSegmentOffset = 0;
     NextAvailableAddress = BC->BOLTReserved.start();
+  }
+
+  if (!BOLTReservedRWStartAddress != !BOLTReservedRWEndAddress) {
+    BC->errs() << "BOLT-ERROR: one of the symbols is missing from the binary: "
+               << getBOLTReservedRWStart() << ", " << getBOLTReservedRWEnd()
+               << '\n';
+    exit(1);
+  }
+
+  if (BOLTReservedRWStartAddress && !BOLTReservedStartAddress) {
+    BC->errs() << "BOLT-ERROR: BOLT reserved RW space needs to be used "
+                  "together with BOLT reserved space\n";
+    exit(1);
+  }
+
+  if (BC->IsLinuxKernel && opts::Instrument && !BOLTReservedRWStartAddress) {
+    BC->errs() << "BOLT-ERROR: Linux kernel instrumentation requires BOLT "
+                  "reserved RW space\n";
+    exit(1);
+  }
+
+  if (BOLTReservedRWStartAddress) {
+    if (BOLTReservedRWStartAddress >= BOLTReservedRWEndAddress) {
+      BC->errs() << "BOLT-ERROR: invalid reserved RW space boundaries\n";
+      exit(1);
+    }
+    BC->BOLTReservedRW =
+        AddressRange(BOLTReservedRWStartAddress, BOLTReservedRWEndAddress);
+    BC->outs() << "BOLT-INFO: using reserved RW space for allocating new RW "
+                  "sections\n";
   }
 }
 
@@ -4055,7 +4095,11 @@ void RewriteInstance::mapAllocatableSections(
   enum : uint8_t { ST_READONLY, ST_READWRITE };
   for (uint8_t SType = ST_READONLY; SType <= ST_READWRITE; ++SType) {
     const uint64_t LastNextAvailableAddress = NextAvailableAddress;
+
     if (SType == ST_READWRITE) {
+      if (!BC->BOLTReservedRW.empty())
+        NextAvailableAddress = BC->BOLTReservedRW.start();
+
       // Align R+W segment to regular page size
       NextAvailableAddress = alignTo(NextAvailableAddress, BC->RegularPageSize);
       NewWritableSegmentAddress = NextAvailableAddress;
@@ -4119,9 +4163,23 @@ void RewriteInstance::mapAllocatableSections(
       }
     } else if (SType == ST_READWRITE) {
       NewWritableSegmentSize = NextAvailableAddress - NewWritableSegmentAddress;
-      // Restore NextAvailableAddress if no new writable sections
-      if (!NewWritableSegmentSize)
+
+      // Even empty sections should be kept for their page align effects
+
+      if (!BC->BOLTReservedRW.empty()) {
+        const uint64_t AllocatedSize =
+            NextAvailableAddress - BC->BOLTReservedRW.start();
+        if (BC->BOLTReservedRW.size() < AllocatedSize) {
+          BC->errs() << "BOLT-ERROR: reserved RW space ("
+                     << BC->BOLTReservedRW.size() << " byte"
+                     << (BC->BOLTReservedRW.size() == 1 ? "" : "s")
+                     << ") is smaller than required for new RW allocations ("
+                     << AllocatedSize << " bytes)\n";
+          exit(1);
+        }
+
         NextAvailableAddress = LastNextAvailableAddress;
+      }
     }
   }
 }

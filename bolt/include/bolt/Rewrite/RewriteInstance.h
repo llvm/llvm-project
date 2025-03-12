@@ -425,6 +425,11 @@ private:
   static StringRef getBOLTReservedStart() { return "__bolt_reserved_start"; }
   static StringRef getBOLTReservedEnd() { return "__bolt_reserved_end"; }
 
+  static StringRef getBOLTReservedRWStart() {
+    return "__bolt_reserved_rw_start";
+  }
+  static StringRef getBOLTReservedRWEnd() { return "__bolt_reserved_rw_end"; }
+
   /// Common section names.
   static StringRef getEHFrameSectionName() { return ".eh_frame"; }
   static StringRef getEHFrameHdrSectionName() { return ".eh_frame_hdr"; }
@@ -475,6 +480,9 @@ private:
 
   uint64_t BOLTReservedStartAddress{0};
   uint64_t BOLTReservedEndAddress{0};
+
+  uint64_t BOLTReservedRWStartAddress{0};
+  uint64_t BOLTReservedRWEndAddress{0};
 
   /// Location and size of dynamic relocations.
   std::optional<uint64_t> DynamicRelocationsAddress;

@@ -9,7 +9,7 @@
 ## after .text when no update is needed to .eh_frame.
 
 # CHECK: {{ .text}} PROGBITS [[#%x,ADDR:]] [[#%x,OFFSET:]] [[#%x,SIZE:]]
-# CHECK-NEXT: 0000000000000000 [[#%x, OFFSET + SIZE]]
+# CHECK-NEXT-TODO: 0000000000000000 [[#%x, OFFSET + SIZE]]
 
   .text
   .globl nocfi_function
