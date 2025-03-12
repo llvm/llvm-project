@@ -7,7 +7,7 @@
 ; RUN:    --plugin-opt=thinlto \
 ; RUN:    --plugin-opt=thinlto-index-only \
 ; RUN:    -shared %t.o %t2.o -o %t3
-; RUN: not test -e %t3
+; RUN: not test -s %t3
 ; RUN: %ld_bfd -plugin %llvmshlibdir/LLVMgold%shlibext \
 ; RUN:    -m elf_x86_64 \
 ; RUN:    --plugin-opt=thinlto \
@@ -28,7 +28,7 @@
 ; RUN: llvm-bcanalyzer -dump %t2.o.thinlto.bc | FileCheck %s --check-prefix=BACKEND2
 ; RUN: llvm-dis %t.o.thinlto.bc -o - | FileCheck %s --check-prefix=DIS1
 ; RUN: llvm-dis %t2.o.thinlto.bc -o - | FileCheck %s --check-prefix=DIS2
-; RUN: not test -e %t3
+; RUN: not test -s %t3
 
 ; Ensure gold generates an index as well as a binary with save-temps in ThinLTO mode.
 ; First force single-threaded mode
