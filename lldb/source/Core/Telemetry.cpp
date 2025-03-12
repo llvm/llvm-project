@@ -91,6 +91,7 @@ void TargetInfo::serialize(Serializer &serializer) const {
   LLDBBaseTelemetryInfo::serialize(serializer);
 
   serializer.write("target_uuid", target_uuid.GetAsString());
+  serializer.write("pid", pid);
   serializer.write("arch_name", arch_name);
   serializer.write("is_start_entry", is_start_entry);
   if (exit_desc.has_value()) {

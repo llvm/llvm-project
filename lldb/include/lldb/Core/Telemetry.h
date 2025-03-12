@@ -23,10 +23,10 @@
 #include <atomic>
 #include <chrono>
 #include <ctime>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
-#include <functional>
 #include <type_traits>
 #include <utility>
 
