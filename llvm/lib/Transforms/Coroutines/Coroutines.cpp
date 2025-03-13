@@ -523,39 +523,38 @@ static void addCallToCallGraph(CallGraph *CG, CallInst *Call, Function *Callee){
 
 Value *coro::Shape::emitAlloc(IRBuilder<> &Builder, Value *Size,
                               CallGraph *CG) const {
-  unsigned sizeParamIndex = UINT_MAX;
   switch (ABI) {
   case coro::ABI::Switch:
     llvm_unreachable("can't allocate memory in coro switch-lowering");
 
   case coro::ABI::Retcon:
   case coro::ABI::RetconOnce:
-    sizeParamIndex = 0;
-    break;
-  case coro::ABI::RetconOnceDynamic:
-    sizeParamIndex = 1;
-    break;
+  case coro::ABI::RetconOnceDynamic: {
+    unsigned sizeParamIndex = 0;
+    SmallVector<Value *, 2> Args;
+    if (ABI == coro::ABI::RetconOnceDynamic) {
+      sizeParamIndex = 1;
+      Args.push_back(RetconLowering.Allocator);
+    }
+    auto Alloc = RetconLowering.Alloc;
+    Size = Builder.CreateIntCast(
+        Size, Alloc->getFunctionType()->getParamType(sizeParamIndex),
+        /*is signed*/ false);
+    Args.push_back(Size);
+    if (ABI == coro::ABI::RetconOnce) {
+      ConstantInt *TypeId = RetconLowering.TypeId;
+      if (TypeId != nullptr)
+        Args.push_back(TypeId);
+    }
+    auto *Call = Builder.CreateCall(Alloc, Args);
+    propagateCallAttrsFromCallee(Call, Alloc);
+    addCallToCallGraph(CG, Call, Alloc);
+    return Call;
+  }
   case coro::ABI::Async:
     llvm_unreachable("can't allocate memory in coro async-lowering");
   }
-  auto Alloc = RetconLowering.Alloc;
-  Size = Builder.CreateIntCast(
-      Size, Alloc->getFunctionType()->getParamType(sizeParamIndex),
-      /*is signed*/ false);
-  SmallVector<Value *, 2> Args;
-  if (ABI == coro::ABI::RetconOnceDynamic) {
-    Args.push_back(RetconLowering.Allocator);
-  }
-  Args.push_back(Size);
-  if (ABI == coro::ABI::RetconOnce) {
-    ConstantInt *TypeId = RetconLowering.TypeId;
-    if (TypeId != nullptr)
-      Args.push_back(TypeId);
-  }
-  auto *Call = Builder.CreateCall(Alloc, Args);
-  propagateCallAttrsFromCallee(Call, Alloc);
-  addCallToCallGraph(CG, Call, Alloc);
-  return Call;
+  llvm_unreachable("Unknown coro::ABI enum");
 }
 
 void coro::Shape::emitDealloc(IRBuilder<> &Builder, Value *Ptr,
