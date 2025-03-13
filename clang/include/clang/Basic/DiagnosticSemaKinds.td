@@ -10613,8 +10613,8 @@ def err_va_start_used_in_wrong_abi_function : Error<
   "'va_start' used in %select{System V|Win64}0 ABI function">;
 def err_ms_va_start_used_in_sysv_function : Error<
   "'__builtin_ms_va_start' used in System V ABI function">;
-def warn_second_arg_of_va_start_not_last_named_param : Warning<
-  "second argument to 'va_start' is not the last named parameter">,
+def warn_second_arg_of_va_start_not_last_non_variadic_param : Warning<
+  "second argument to 'va_start' is not the last non-variadic parameter">,
   InGroup<Varargs>;
 def warn_c17_compat_ellipsis_only_parameter : Warning<
   "'...' as the only parameter of a function is incompatible with C standards "
