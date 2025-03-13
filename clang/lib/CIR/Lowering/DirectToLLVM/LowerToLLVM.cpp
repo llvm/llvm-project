@@ -298,7 +298,7 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Type targetType = convertTy(ptrTy);
     mlir::Type elementTy = convertTypeForMemory(*getTypeConverter(), dataLayout,
                                                 ptrTy.getPointee());
-    auto offset = llvm::SmallVector<mlir::LLVM::GEPArg>{0};
+    llvm::SmallVector<mlir::LLVM::GEPArg> offset{0};
     rewriter.replaceOpWithNewOp<mlir::LLVM::GEPOp>(
         castOp, targetType, elementTy, sourceValue, offset);
     break;
