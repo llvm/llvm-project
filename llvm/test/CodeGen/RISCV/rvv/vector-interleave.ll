@@ -2080,37 +2080,37 @@ define <vscale x 112 x i1> @vector_interleave_nxv112i1_nxv16i1(<vscale x 16 x i1
 ; CHECK-NEXT:    add a0, sp, a0
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    csrr a2, vlenb
-; CHECK-NEXT:    vmerge.vim v18, v14, 1, v0
-; CHECK-NEXT:    vmv1r.v v0, v8
 ; CHECK-NEXT:    vmerge.vim v16, v14, 1, v0
+; CHECK-NEXT:    vmv1r.v v0, v8
+; CHECK-NEXT:    vmerge.vim v22, v14, 1, v0
 ; CHECK-NEXT:    add a3, a4, a2
 ; CHECK-NEXT:    srli a1, a2, 2
 ; CHECK-NEXT:    add a5, a0, a2
-; CHECK-NEXT:    vmv2r.v v2, v18
+; CHECK-NEXT:    vmv4r.v v24, v16
 ; CHECK-NEXT:    vmv1r.v v0, v9
-; CHECK-NEXT:    vmerge.vim v20, v14, 1, v0
+; CHECK-NEXT:    vmerge.vim v18, v14, 1, v0
 ; CHECK-NEXT:    add a6, a3, a2
-; CHECK-NEXT:    vmv1r.v v3, v16
+; CHECK-NEXT:    vmv1r.v v25, v22
 ; CHECK-NEXT:    vmv1r.v v0, v10
 ; CHECK-NEXT:    vmerge.vim v8, v14, 1, v0
-; CHECK-NEXT:    vmv1r.v v4, v20
+; CHECK-NEXT:    vmv1r.v v26, v18
 ; CHECK-NEXT:    vmv1r.v v0, v11
-; CHECK-NEXT:    vmerge.vim v22, v14, 1, v0
-; CHECK-NEXT:    vmv1r.v v5, v8
+; CHECK-NEXT:    vmerge.vim v20, v14, 1, v0
+; CHECK-NEXT:    vmv1r.v v27, v8
 ; CHECK-NEXT:    vmv1r.v v0, v12
 ; CHECK-NEXT:    vmerge.vim v10, v14, 1, v0
-; CHECK-NEXT:    vmv1r.v v6, v22
-; CHECK-NEXT:    vmv1r.v v20, v17
+; CHECK-NEXT:    vmv1r.v v28, v20
+; CHECK-NEXT:    vmv1r.v v18, v23
 ; CHECK-NEXT:    add a7, a6, a2
-; CHECK-NEXT:    vmv1r.v v7, v10
-; CHECK-NEXT:    vmv1r.v v22, v9
+; CHECK-NEXT:    vmv1r.v v29, v10
+; CHECK-NEXT:    vmv1r.v v20, v9
 ; CHECK-NEXT:    vmv1r.v v0, v13
-; CHECK-NEXT:    vmerge.vim v8, v14, 1, v0
-; CHECK-NEXT:    vmv1r.v v24, v11
+; CHECK-NEXT:    vmerge.vim v30, v14, 1, v0
+; CHECK-NEXT:    vmv1r.v v22, v11
 ; CHECK-NEXT:    vsetvli t0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vsseg7e8.v v2, (a4)
-; CHECK-NEXT:    vmv1r.v v25, v9
-; CHECK-NEXT:    vsseg7e8.v v19, (a0)
+; CHECK-NEXT:    vsseg7e8.v v24, (a4)
+; CHECK-NEXT:    vmv1r.v v23, v31
+; CHECK-NEXT:    vsseg7e8.v v17, (a0)
 ; CHECK-NEXT:    vl1r.v v8, (a6)
 ; CHECK-NEXT:    add a6, a7, a2
 ; CHECK-NEXT:    vl1r.v v10, (a4)
@@ -2174,37 +2174,37 @@ define <vscale x 112 x i1> @vector_interleave_nxv112i1_nxv16i1(<vscale x 16 x i1
 ; ZVBB-NEXT:    add a0, sp, a0
 ; ZVBB-NEXT:    addi a0, a0, 16
 ; ZVBB-NEXT:    csrr a2, vlenb
-; ZVBB-NEXT:    vmerge.vim v18, v14, 1, v0
-; ZVBB-NEXT:    vmv1r.v v0, v8
 ; ZVBB-NEXT:    vmerge.vim v16, v14, 1, v0
+; ZVBB-NEXT:    vmv1r.v v0, v8
+; ZVBB-NEXT:    vmerge.vim v22, v14, 1, v0
 ; ZVBB-NEXT:    add a3, a4, a2
 ; ZVBB-NEXT:    srli a1, a2, 2
 ; ZVBB-NEXT:    add a5, a0, a2
-; ZVBB-NEXT:    vmv2r.v v2, v18
+; ZVBB-NEXT:    vmv4r.v v24, v16
 ; ZVBB-NEXT:    vmv1r.v v0, v9
-; ZVBB-NEXT:    vmerge.vim v20, v14, 1, v0
+; ZVBB-NEXT:    vmerge.vim v18, v14, 1, v0
 ; ZVBB-NEXT:    add a6, a3, a2
-; ZVBB-NEXT:    vmv1r.v v3, v16
+; ZVBB-NEXT:    vmv1r.v v25, v22
 ; ZVBB-NEXT:    vmv1r.v v0, v10
 ; ZVBB-NEXT:    vmerge.vim v8, v14, 1, v0
-; ZVBB-NEXT:    vmv1r.v v4, v20
+; ZVBB-NEXT:    vmv1r.v v26, v18
 ; ZVBB-NEXT:    vmv1r.v v0, v11
-; ZVBB-NEXT:    vmerge.vim v22, v14, 1, v0
-; ZVBB-NEXT:    vmv1r.v v5, v8
+; ZVBB-NEXT:    vmerge.vim v20, v14, 1, v0
+; ZVBB-NEXT:    vmv1r.v v27, v8
 ; ZVBB-NEXT:    vmv1r.v v0, v12
 ; ZVBB-NEXT:    vmerge.vim v10, v14, 1, v0
-; ZVBB-NEXT:    vmv1r.v v6, v22
-; ZVBB-NEXT:    vmv1r.v v20, v17
+; ZVBB-NEXT:    vmv1r.v v28, v20
+; ZVBB-NEXT:    vmv1r.v v18, v23
 ; ZVBB-NEXT:    add a7, a6, a2
-; ZVBB-NEXT:    vmv1r.v v7, v10
-; ZVBB-NEXT:    vmv1r.v v22, v9
+; ZVBB-NEXT:    vmv1r.v v29, v10
+; ZVBB-NEXT:    vmv1r.v v20, v9
 ; ZVBB-NEXT:    vmv1r.v v0, v13
-; ZVBB-NEXT:    vmerge.vim v8, v14, 1, v0
-; ZVBB-NEXT:    vmv1r.v v24, v11
+; ZVBB-NEXT:    vmerge.vim v30, v14, 1, v0
+; ZVBB-NEXT:    vmv1r.v v22, v11
 ; ZVBB-NEXT:    vsetvli t0, zero, e8, m1, ta, ma
-; ZVBB-NEXT:    vsseg7e8.v v2, (a4)
-; ZVBB-NEXT:    vmv1r.v v25, v9
-; ZVBB-NEXT:    vsseg7e8.v v19, (a0)
+; ZVBB-NEXT:    vsseg7e8.v v24, (a4)
+; ZVBB-NEXT:    vmv1r.v v23, v31
+; ZVBB-NEXT:    vsseg7e8.v v17, (a0)
 ; ZVBB-NEXT:    vl1r.v v8, (a6)
 ; ZVBB-NEXT:    add a6, a7, a2
 ; ZVBB-NEXT:    vl1r.v v10, (a4)

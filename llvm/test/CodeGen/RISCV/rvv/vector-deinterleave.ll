@@ -609,21 +609,21 @@ define {<vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16 x i1>, <vscale x 16
 ; CHECK-NEXT:    vmv1r.v v12, v13
 ; CHECK-NEXT:    vs8r.v v8, (a1)
 ; CHECK-NEXT:    vsetvli a2, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vlseg5e8.v v12, (a0)
-; CHECK-NEXT:    vlseg5e8.v v18, (a1)
-; CHECK-NEXT:    vmv2r.v v8, v12
-; CHECK-NEXT:    vmv2r.v v10, v14
-; CHECK-NEXT:    vmv1r.v v9, v18
+; CHECK-NEXT:    vlseg5e8.v v8, (a0)
+; CHECK-NEXT:    vlseg5e8.v v14, (a1)
+; CHECK-NEXT:    vmv2r.v v20, v8
+; CHECK-NEXT:    vmv2r.v v22, v10
+; CHECK-NEXT:    vmv1r.v v21, v14
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-NEXT:    vmsne.vi v0, v8, 0
-; CHECK-NEXT:    vmv1r.v v18, v13
-; CHECK-NEXT:    vmsne.vi v8, v18, 0
-; CHECK-NEXT:    vmv1r.v v11, v20
-; CHECK-NEXT:    vmsne.vi v9, v10, 0
-; CHECK-NEXT:    vmv1r.v v20, v15
-; CHECK-NEXT:    vmsne.vi v10, v20, 0
-; CHECK-NEXT:    vmv1r.v v17, v22
-; CHECK-NEXT:    vmsne.vi v11, v16, 0
+; CHECK-NEXT:    vmsne.vi v0, v20, 0
+; CHECK-NEXT:    vmv1r.v v14, v9
+; CHECK-NEXT:    vmsne.vi v8, v14, 0
+; CHECK-NEXT:    vmv1r.v v23, v16
+; CHECK-NEXT:    vmsne.vi v9, v22, 0
+; CHECK-NEXT:    vmv1r.v v16, v11
+; CHECK-NEXT:    vmsne.vi v10, v16, 0
+; CHECK-NEXT:    vmv1r.v v13, v18
+; CHECK-NEXT:    vmsne.vi v11, v12, 0
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 4
 ; CHECK-NEXT:    add sp, sp, a0

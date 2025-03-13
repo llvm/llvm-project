@@ -1311,17 +1311,17 @@ define void @load_factor4_one_active_storeback_full(ptr %ptr) {
 ; CHECK-LABEL: load_factor4_one_active_storeback_full:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
-; CHECK-NEXT:    vle32.v v12, (a0)
+; CHECK-NEXT:    vle32.v v8, (a0)
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m2, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v12, 4
-; CHECK-NEXT:    vmv1r.v v17, v12
-; CHECK-NEXT:    vmv1r.v v18, v8
+; CHECK-NEXT:    vslidedown.vi v12, v8, 4
+; CHECK-NEXT:    vmv1r.v v13, v8
+; CHECK-NEXT:    vmv1r.v v14, v12
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m4, ta, ma
-; CHECK-NEXT:    vslidedown.vi v8, v12, 8
-; CHECK-NEXT:    vmv1r.v v19, v8
-; CHECK-NEXT:    vslidedown.vi v20, v12, 12
+; CHECK-NEXT:    vslidedown.vi v16, v8, 8
+; CHECK-NEXT:    vmv1r.v v15, v16
+; CHECK-NEXT:    vslidedown.vi v16, v8, 12
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
-; CHECK-NEXT:    vsseg4e32.v v17, (a0)
+; CHECK-NEXT:    vsseg4e32.v v13, (a0)
 ; CHECK-NEXT:    ret
   %interleaved.vec = load <16 x i32>, ptr %ptr
   %v0 = shufflevector <16 x i32> %interleaved.vec, <16 x i32> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
