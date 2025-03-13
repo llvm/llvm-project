@@ -14,9 +14,11 @@ typedef const struct CF_BRIDGED_TYPE(NSString) __CFString * CFStringRef;
 typedef const struct CF_BRIDGED_TYPE(NSArray) __CFArray * CFArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(NSMutableArray) __CFArray * CFMutableArrayRef;
 typedef struct CF_BRIDGED_MUTABLE_TYPE(CFRunLoopRef) __CFRunLoop * CFRunLoopRef;
+
 #define NS_RETURNS_RETAINED __attribute__((ns_returns_retained))
 #define CF_CONSUMED __attribute__((cf_consumed))
 #define CF_RETURNS_RETAINED __attribute__((cf_returns_retained))
+
 extern const CFAllocatorRef kCFAllocatorDefault;
 typedef struct _NSZone NSZone;
 CFMutableArrayRef CFArrayCreateMutable(CFAllocatorRef allocator, CFIndex capacity);
