@@ -92,7 +92,7 @@ void ExecModuleInfo::serialize(Serializer &serializer) const {
 
   serializer.write("exec_uuid", exec_uuid.GetAsString());
   serializer.write("pid", pid);
-  serializer.write("arch_name", arch_name);
+  serializer.write("triple", triple);
   serializer.write("is_start_entry", is_start_entry);
 }
 

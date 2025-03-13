@@ -544,8 +544,6 @@ public:
     return GetStaticBroadcasterClass();
   }
 
-  UUID GetExecModuleUUID() const { return m_current_exec_mod_uuid; }
-
   // This event data class is for use by the TargetList to broadcast new target
   // notifications.
   class TargetEventData : public EventData {
@@ -1642,8 +1640,6 @@ protected:
 private:
   // Target metrics storage.
   TargetStats m_stats;
-  // The current executable module UUID.
-  UUID m_current_exec_mod_uuid;
 
 public:
   /// Get metrics associated with this target in JSON format.

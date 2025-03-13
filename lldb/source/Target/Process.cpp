@@ -1068,14 +1068,11 @@ bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   telemetry::ScopedDispatcher<telemetry::ProcessExitInfo> helper;
 
   // Find the executable-module's UUID, if available.
+  Target &target = GetTarget();
+  helper.SetDebugger(&(target.GetDebugger()));
   UUID exec_uuid;
-  // Check if there is (still) a valid target and get the debugger and exec_uuid
-  // from it.
-  TargetSP target_sp(Debugger::FindTargetWithProcessID(m_pid));
-  if (target_sp) {
-    helper.SetDebugger(&(target_sp->GetDebugger()));
-    exec_uuid = target_sp->GetExecModuleUUID();
-  }
+  if (ModuleSP exec_mod = target.GetExecutableModule())
+    exec_uuid = exec_mod->GetUUID();
 
   helper.DispatchNow([&](telemetry::ProcessExitInfo *info) {
     info->exec_uuid = exec_uuid;

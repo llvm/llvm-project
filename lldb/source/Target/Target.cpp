@@ -1565,15 +1565,15 @@ void Target::SetExecutableModule(ModuleSP &executable_sp,
   ClearModules(false);
 
   if (executable_sp) {
-    m_current_exec_mod_uuid = executable_sp->GetUUID();
     lldb::pid_t pid;
     if (ProcessSP proc = GetProcessSP())
       pid = proc->GetID();
+
     helper.DispatchNow([&](telemetry::ExecModuleInfo *info) {
       info->exec_mod = executable_sp;
-      info->exec_uuid = m_current_exec_mod_uuid;
+      info->exec_uuid = executable_sp->GetUUID();
       info->pid = pid;
-      info->arch_name = executable_sp->GetArchitecture().GetArchitectureName();
+      info->triple = executable_sp->GetArchitecture().GetTriple().getTriple();
       info->is_start_entry = true;
     });
 

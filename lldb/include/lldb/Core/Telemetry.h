@@ -162,7 +162,8 @@ struct ExecModuleInfo : public LLDBBaseTelemetryInfo {
   UUID exec_uuid;
   /// PID of the process owned by this target.
   lldb::pid_t pid;
-  std::string arch_name;
+  /// The triple of this executable module.
+  std::string triple;
 
   /// If true, this entry was emitted at the beginning of an event (eg., before
   /// the executable is set). Otherwise, it was emitted at the end of an
