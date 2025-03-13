@@ -324,8 +324,8 @@ static void convertFunctionLineTable(OutputAggregator &Out, CUInfo &CUI,
     // when it refers to an empty line sequence. In such cases, the DWARF linker
     // will exclude the empty sequence from the final output and assign
     // `UINT64_MAX` to the `DW_AT_LLVM_stmt_sequence` attribute.
-    auto StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, UINT64_MAX);
-    if (StmtSeqVal != UINT32_MAX)
+    uint64_t StmtSeqVal = dwarf::toSectionOffset(StmtSeqAttr, UINT64_MAX);
+    if (StmtSeqVal != UINT64_MAX)
       StmtSeqOffset = StmtSeqVal;
   }
 
