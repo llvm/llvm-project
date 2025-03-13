@@ -530,28 +530,20 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
   for (const auto [behavior, key, val] : llvmModuleFlags) {
     // Currently only supports most common: int constant values.
     auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(val);
-    if (!constInt) {
+    if (!constInt)
       return emitWarning(mlirModule.getLoc())
              << "unsupported module flag value: "
              << diagMD(val, llvmModule.get())
              << ", only constant integer currently supported";
-    }
-    // auto valAttr = builder.getIntegerAttr(
-    //     IntegerType::get(context, constInt->getType()->getIntegerBitWidth()),
-    //     constInt->getValue());
-
-    // ModFlagBehaviorAttr behaviorAttr = ModFlagBehaviorAttr::get(
-    //     builder.getContext(), (ModFlagBehavior)behavior);
 
     moduleFlags.push_back(builder.getAttr<ModuleFlagAttr>(
-        (ModFlagBehavior)behavior, builder.getStringAttr(key->getString()),
-        constInt->getZExtValue()));
+        convertModFlagBehaviorFromLLVM(behavior),
+        builder.getStringAttr(key->getString()), constInt->getZExtValue()));
   }
 
-  if (!moduleFlags.empty()) {
+  if (!moduleFlags.empty())
     builder.create<LLVM::ModuleFlagsOp>(mlirModule.getLoc(),
                                         builder.getArrayAttr(moduleFlags));
-  }
 
   return success();
 }
