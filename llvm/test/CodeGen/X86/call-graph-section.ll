@@ -3,27 +3,11 @@
 ; RUN: llc --call-graph-section -filetype=obj -o - < %s | \
 ; RUN: llvm-readelf -x .callgraph - | FileCheck %s
 
-; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @foo() #0 !type !4 {
-entry:
-  ret void
-}
+declare !type !4 void @foo() #0
 
-; Function Attrs: noinline nounwind optnone uwtable
-define dso_local i32 @bar(i8 signext %a) #0 !type !5 {
-entry:
-  %a.addr = alloca i8, align 1
-  store i8 %a, ptr %a.addr, align 1
-  ret i32 0
-}
+declare !type !5 noundef i32 @bar(i8 signext %a) #0
 
-; Function Attrs: noinline nounwind optnone uwtable
-define dso_local ptr @baz(ptr %a) #0 !type !6 {
-entry:
-  %a.addr = alloca ptr, align 8
-  store ptr %a, ptr %a.addr, align 8
-  ret ptr null
-}
+declare !type !6 noundef ptr @baz(ptr %a) #0
 
 ; Function Attrs: noinline nounwind optnone uwtable
 define dso_local void @main() #0 !type !7 {
