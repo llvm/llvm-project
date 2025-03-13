@@ -320,7 +320,12 @@ There is **no consistent way** to identify:
 A more consistent way to classify "to", "from", and "value-to-store" arguments
 is by determining whether an operand is _indexed_ or _non-indexed_.
 
-#### **Example: `vector.transfer_read` and `vector.transfer_write`**
+The distinction is somewhat intuitive, but for clarity:
+- Indexed operands require indices to specify an element/slice (e.g., `%A[0]`).
+- Non-indexed operands do not require indices as they are accessed in their
+  entirety (e.g., `%B`).
+
+Below is an example using: `vector.transfer_read` and `vector.transfer_write`
 ```mlir
                       Indexed Operand
                              |
