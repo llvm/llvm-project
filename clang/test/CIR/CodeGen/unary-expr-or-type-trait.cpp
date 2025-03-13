@@ -15,6 +15,12 @@ void foo() {
 
   unsigned long d =  sizeof(double);
   // CHECK: cir.const #cir.int<8> : !cir.int<u, 64>
+
+  unsigned long iArr = sizeof(int[5]);
+  // CHECK: cir.const #cir.int<20> : !cir.int<u, 64>
+
+  unsigned long dArr =  sizeof(double[5]);
+  // CHECK: cir.const #cir.int<40> : !cir.int<u, 64>
 }
 
 void foo2() {
@@ -31,5 +37,11 @@ void foo2() {
   // CHECK: cir.const #cir.int<4> : !cir.int<u, 64>
 
   unsigned long d =  alignof(double);
+  // CHECK: cir.const #cir.int<8> : !cir.int<u, 64>
+
+  unsigned long iArr = alignof(int[5]);
+  // CHECK: cir.const #cir.int<4> : !cir.int<u, 64>
+
+  unsigned long dArr =  alignof(double[5]);
   // CHECK: cir.const #cir.int<8> : !cir.int<u, 64>
 }

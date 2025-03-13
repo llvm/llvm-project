@@ -15,6 +15,12 @@ void foo() {
 
   unsigned long d =  sizeof(double);
   // CHECK: store i64 8, ptr {{%.*}}, align 4
+
+  unsigned long iArr =  sizeof(float[5]);
+  // CHECK: store i64 20, ptr {{%.*}}, align 4
+
+  unsigned long dArr =  sizeof(double[5]);
+  // CHECK: store i64 40, ptr {{%.*}}, align 4
 }
 
 void foo2() {
@@ -31,5 +37,11 @@ void foo2() {
   // CHECK: store i64 4, ptr {{%.*}}, align 4
 
   unsigned long d =  alignof(double);
+  // CHECK: store i64 8, ptr {{%.*}}, align 4
+
+  unsigned long iArr =  alignof(int[5]);
+  // CHECK: store i64 4, ptr {{%.*}}, align 4
+
+  unsigned long dArr =  alignof(double[5]);
   // CHECK: store i64 8, ptr {{%.*}}, align 4
 }
