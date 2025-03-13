@@ -79,6 +79,111 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo;
 
 //===----------------------------------------------------------------------===//
+// CastOp
+//===----------------------------------------------------------------------===//
+
+// The enumaration value isn't in sync with clang.
+def CK_IntegralToBoolean : I32EnumAttrCase<"int_to_bool", 1>;
+def CK_ArrayToPointerDecay : I32EnumAttrCase<"array_to_ptrdecay", 2>;
+def CK_IntegralCast : I32EnumAttrCase<"integral", 3>;
+def CK_BitCast : I32EnumAttrCase<"bitcast", 4>;
+def CK_FloatingCast : I32EnumAttrCase<"floating", 5>;
+def CK_PtrToBoolean : I32EnumAttrCase<"ptr_to_bool", 6>;
+def CK_FloatToIntegral : I32EnumAttrCase<"float_to_int", 7>;
+def CK_IntegralToPointer : I32EnumAttrCase<"int_to_ptr", 8>;
+def CK_PointerToIntegral : I32EnumAttrCase<"ptr_to_int", 9>;
+def CK_FloatToBoolean : I32EnumAttrCase<"float_to_bool", 10>;
+def CK_BooleanToIntegral : I32EnumAttrCase<"bool_to_int", 11>;
+def CK_IntegralToFloat : I32EnumAttrCase<"int_to_float", 12>;
+def CK_BooleanToFloat : I32EnumAttrCase<"bool_to_float", 13>;
+def CK_AddressSpaceConversion : I32EnumAttrCase<"address_space", 14>;
+def CK_FloatToComplex : I32EnumAttrCase<"float_to_complex", 15>;
+def CK_IntegralToComplex : I32EnumAttrCase<"int_to_complex", 16>;
+def CK_FloatComplexToReal : I32EnumAttrCase<"float_complex_to_real", 17>;
+def CK_IntegralComplexToReal : I32EnumAttrCase<"int_complex_to_real", 18>;
+def CK_FloatComplexToBoolean : I32EnumAttrCase<"float_complex_to_bool", 19>;
+def CK_IntegralComplexToBoolean : I32EnumAttrCase<"int_complex_to_bool", 20>;
+def CK_FloatComplexCast : I32EnumAttrCase<"float_complex", 21>;
+def CK_FloatComplexToIntegralComplex
+    : I32EnumAttrCase<"float_complex_to_int_complex", 22>;
+def CK_IntegralComplexCast : I32EnumAttrCase<"int_complex", 23>;
+def CK_IntegralComplexToFloatComplex
+    : I32EnumAttrCase<"int_complex_to_float_complex", 24>;
+def CK_MemberPtrToBoolean : I32EnumAttrCase<"member_ptr_to_bool", 25>;
+
+def CastKind : I32EnumAttr<
+    "CastKind",
+    "cast kind",
+    [CK_IntegralToBoolean, CK_ArrayToPointerDecay, CK_IntegralCast,
+     CK_BitCast, CK_FloatingCast, CK_PtrToBoolean, CK_FloatToIntegral,
+     CK_IntegralToPointer, CK_PointerToIntegral, CK_FloatToBoolean,
+     CK_BooleanToIntegral, CK_IntegralToFloat, CK_BooleanToFloat,
+     CK_AddressSpaceConversion, CK_FloatToComplex, CK_IntegralToComplex,
+     CK_FloatComplexToReal, CK_IntegralComplexToReal, CK_FloatComplexToBoolean,
+     CK_IntegralComplexToBoolean, CK_FloatComplexCast,
+     CK_FloatComplexToIntegralComplex, CK_IntegralComplexCast,
+     CK_IntegralComplexToFloatComplex, CK_MemberPtrToBoolean]> {
+  let cppNamespace = "::cir";
+}
+
+def CastOp : CIR_Op<"cast",
+             [Pure,
+              DeclareOpInterfaceMethods<PromotableOpInterface>]> {
+  // FIXME: not all conversions are free of side effects.
+  let summary = "Conversion between values of different types";
+  let description = [{
+    Apply C/C++ usual conversions rules between values. Currently supported kinds:
+
+    - `array_to_ptrdecay`
+    - `bitcast`
+    - `integral`
+    - `int_to_bool`
+    - `int_to_float`
+    - `floating`
+    - `float_to_int`
+    - `float_to_bool`
+    - `ptr_to_int`
+    - `ptr_to_bool`
+    - `bool_to_int`
+    - `bool_to_float`
+    - `address_space`
+    - `float_to_complex`
+    - `int_to_complex`
+    - `float_complex_to_real`
+    - `int_complex_to_real`
+    - `float_complex_to_bool`
+    - `int_complex_to_bool`
+    - `float_complex`
+    - `float_complex_to_int_complex`
+    - `int_complex`
+    - `int_complex_to_float_complex`
+
+    This is effectively a subset of the rules from
+    `llvm-project/clang/include/clang/AST/OperationKinds.def`; but note that some
+    of the conversions aren't implemented in terms of `cir.cast`, `lvalue-to-rvalue`
+    for instance is modeled as a regular `cir.load`.
+
+    ```mlir
+    %4 = cir.cast (int_to_bool, %3 : i32), !cir.bool
+    ...
+    %x = cir.cast(array_to_ptrdecay, %0 : !cir.ptr<!cir.array<i32 x 10>>), !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins CastKind:$kind, CIR_AnyType:$src);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    `(` $kind `,` $src `:` type($src) `)`
+    `,` type($result) attr-dict
+  }];
+
+  // The input and output types should match the cast kind.
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
