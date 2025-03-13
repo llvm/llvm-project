@@ -868,7 +868,7 @@ class BinOpSameOpcodeHelper {
     return {nullptr, 0};
   }
   struct InterchangeableInfo {
-    Instruction *I;
+    Instruction *I = nullptr;
     // The bit it sets represents whether MainOp can be converted to.
     MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
                     MulBIT | AShrBIT | ShlBIT;
