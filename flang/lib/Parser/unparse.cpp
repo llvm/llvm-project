@@ -2859,9 +2859,8 @@ public:
   }
   void Unparse(const OpenMPDepobjConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP DEPOBJ");
-    Walk("(", std::get<std::optional<OmpArgumentList>>(x.v.t), ")");
-    Walk(" ", std::get<std::optional<OmpClauseList>>(x.v.t));
+    Word("!$OMP ");
+    Walk(x.v);
     Put("\n");
     EndOpenMP();
   }
