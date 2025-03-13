@@ -1336,7 +1336,7 @@ protected:
       T Make();
     )");
     UncheckedOptionalAccessModelOptions Options{IgnoreSmartPointerDereference};
-    std::vector<SourceLocation> Diagnostics;
+    std::vector<UncheckedOptionalAccessDiagnostic> Diagnostics;
     llvm::Error Error = checkDataflow<UncheckedOptionalAccessModel>(
         AnalysisInputs<UncheckedOptionalAccessModel>(
             SourceCode, std::move(FuncMatcher),
@@ -1369,17 +1369,17 @@ protected:
           }
           auto &SrcMgr = AO.ASTCtx.getSourceManager();
           llvm::DenseSet<unsigned> DiagnosticLines;
-          for (SourceLocation &Loc : Diagnostics) {
-            unsigned Line = SrcMgr.getPresumedLineNumber(Loc);
+          for (const UncheckedOptionalAccessDiagnostic &Diag : Diagnostics) {
+            unsigned Line = SrcMgr.getPresumedLineNumber(Diag.Range.getBegin());
             DiagnosticLines.insert(Line);
             if (!AnnotationLines.contains(Line)) {
               IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(
                   new DiagnosticOptions());
               TextDiagnostic TD(llvm::errs(), AO.ASTCtx.getLangOpts(),
                                 DiagOpts.get());
-              TD.emitDiagnostic(FullSourceLoc(Loc, SrcMgr),
+              TD.emitDiagnostic(FullSourceLoc(Diag.Range.getBegin(), SrcMgr),
                                 DiagnosticsEngine::Error,
-                                "unexpected diagnostic", {}, {});
+                                "unexpected diagnostic", {Diag.Range}, {});
             }
           }
 
