@@ -18,10 +18,11 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-static constexpr size_t N_EXCEPTS = 1;
+static constexpr size_t N_EXCEPTS = 2;
 static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ACOSHF16_EXCEPTS{
     {// (input, RZ output, RU offset, RD offset, RN offset)
-     {0x41B7, 0x3ED8, 0, 1, 0}}};
+     {0x41B7, 0x3ED8, 1, 0, 0},
+     {0x3CE4, 0x393E, 1, 0, 1}}};
 
 LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   using FPBits = fputil::FPBits<float16>;
@@ -59,8 +60,11 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
   if (LIBC_UNLIKELY(x_u == 0x3c00U))
     return float16(0.0f);
 
-  float xf32 = x;
+  if (auto r = ACOSHF16_EXCEPTS.lookup(xbits.uintval());
+      LIBC_UNLIKELY(r.has_value()))
+    return r.value();
 
+  float xf32 = x;
   // High precision for inputs very close to 1.0
   if (LIBC_UNLIKELY(xf32 < 1.25f)) {
     float delta = xf32 - 1.0f;
@@ -72,10 +76,6 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
     float approx = sqrt_2_delta * pe;
     return fputil::cast<float16>(approx);
   }
-
-  if (auto r = ACOSHF16_EXCEPTS.lookup(xbits.uintval());
-      LIBC_UNLIKELY(r.has_value()))
-    return r.value();
 
   // Standard computation for general case.
   float sqrt_term =
