@@ -23,6 +23,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
@@ -927,6 +928,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
   isAccum = false;
   hadError = false;
   isBitInt = false;
+  isBFloat16 = false;
 
   // This routine assumes that the range begin/end matches the regex for integer
   // and FP constants (specifically, the 'pp-number' regex), and assumes that
@@ -1032,6 +1034,24 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
 
       isFloat = true;
       continue;  // Success.
+    // C++23 5.13.4 [lex.fcon]
+    case 'b':
+    case 'B':
+      if (!isFPConstant)
+        break; // Error for integer constant.
+      if (HasSize)
+        break;
+      HasSize = true;
+
+      if ((s + 3 < ThisTokEnd) && Target.hasFullBFloat16Type()) {
+        StringRef suffix(s, 4);
+        if (suffix == "bf16" || suffix == "BF16") {
+          s += 3;
+          isBFloat16 = true;
+          continue;
+        }
+      }
+      break;
     case 'q':    // FP Suffix for "__float128"
     case 'Q':
       if (!isFPConstant) break;  // Error for integer constant.
@@ -1190,6 +1210,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
         saw_fixed_point_suffix = false;
         isFract = false;
         isAccum = false;
+        isBFloat16 = false;
       }
 
       saw_ud_suffix = true;
