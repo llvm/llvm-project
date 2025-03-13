@@ -795,8 +795,8 @@ bb:
   br i1 %cmp, label %bb11, label %bb7
 
 bb11:
-  %tmp14 = shufflevector <2 x i32> %arg1, <2 x i32> undef, <2 x i32> zeroinitializer
-  %tmp16 = shufflevector <2 x i32> %arg2, <2 x i32> undef, <2 x i32> zeroinitializer
+  %tmp14 = shufflevector <2 x i32> %arg1, <2 x i32> poison, <2 x i32> zeroinitializer
+  %tmp16 = shufflevector <2 x i32> %arg2, <2 x i32> poison, <2 x i32> zeroinitializer
   %tmp17 = shl <2 x i32> %tmp14, <i32 8, i32 8>
   %tmp18 = ashr <2 x i32> %tmp17, <i32 8, i32 8>
   %tmp19 = shl <2 x i32> %tmp16, <i32 8, i32 8>
@@ -813,17 +813,16 @@ bb7:
 define amdgpu_kernel void @test_umul_i24(ptr addrspace(1) %out, i32 %arg) {
 ; SI-LABEL: test_umul_i24:
 ; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s1, s[4:5], 0xb
+; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
 ; SI-NEXT:    v_mov_b32_e32 v0, 0xff803fe1
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_lshr_b32 s1, s1, 9
-; SI-NEXT:    v_mul_hi_u32 v0, s1, v0
-; SI-NEXT:    s_mul_i32 s1, s1, 0xff803fe1
-; SI-NEXT:    v_alignbit_b32 v0, v0, s1, 1
+; SI-NEXT:    s_lshr_b32 s2, s2, 9
+; SI-NEXT:    v_mul_hi_u32 v0, s2, v0
+; SI-NEXT:    s_mul_i32 s2, s2, 0xff803fe1
+; SI-NEXT:    v_alignbit_b32 v0, v0, s2, 1
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b32 s1, s0
 ; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -836,26 +835,24 @@ define amdgpu_kernel void @test_umul_i24(ptr addrspace(1) %out, i32 %arg) {
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    s_lshr_b32 s0, s0, 9
 ; VI-NEXT:    v_mad_u64_u32 v[0:1], s[0:1], s0, v0, 0
-; VI-NEXT:    s_mov_b32 s0, 0
-; VI-NEXT:    s_mov_b32 s1, s0
+; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    v_alignbit_b32 v0, v1, v0, 1
-; VI-NEXT:    s_nop 1
+; VI-NEXT:    s_nop 2
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; VI-NEXT:    s_endpgm
 ;
 ; GFX9-LABEL: test_umul_i24:
 ; GFX9:       ; %bb.0:
-; GFX9-NEXT:    s_load_dword s1, s[4:5], 0x2c
-; GFX9-NEXT:    s_mov_b32 s0, 0
+; GFX9-NEXT:    s_load_dword s2, s[4:5], 0x2c
+; GFX9-NEXT:    s_mov_b64 s[0:1], 0
 ; GFX9-NEXT:    s_mov_b32 s3, 0xf000
-; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshr_b32 s1, s1, 9
-; GFX9-NEXT:    s_mul_hi_u32 s4, s1, 0xff803fe1
-; GFX9-NEXT:    s_mul_i32 s1, s1, 0xff803fe1
-; GFX9-NEXT:    v_mov_b32_e32 v0, s1
+; GFX9-NEXT:    s_lshr_b32 s2, s2, 9
+; GFX9-NEXT:    s_mul_hi_u32 s4, s2, 0xff803fe1
+; GFX9-NEXT:    s_mul_i32 s2, s2, 0xff803fe1
+; GFX9-NEXT:    v_mov_b32_e32 v0, s2
 ; GFX9-NEXT:    v_alignbit_b32 v0, s4, v0, 1
-; GFX9-NEXT:    s_mov_b32 s1, s0
+; GFX9-NEXT:    s_mov_b32 s2, -1
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 ;

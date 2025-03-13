@@ -88,6 +88,12 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "lldb-dap.serverMode": {
+          "scope": "resource",
+          "type": "boolean",
+          "markdownDescription": "Run lldb-dap in server mode.\n\nWhen enabled, lldb-dap will start a background server that will be reused between debug sessions. This allows caching of debug symbols between sessions and improves launch performance.",
+          "default": false
         }
       }
     },

@@ -103,7 +103,7 @@
 ; REMARK-NEXT:   - BytesLDS:        '512'
 ; REMARK-NEXT: ...
 
-@lds = internal unnamed_addr addrspace(3) global [128 x i32] undef, align 4
+@lds = internal unnamed_addr addrspace(3) global [128 x i32] poison, align 4
 
 define amdgpu_kernel void @test_kernel() !dbg !3 {
   call void asm sideeffect "; clobber v8", "~{v8}"()

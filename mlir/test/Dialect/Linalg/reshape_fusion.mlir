@@ -195,13 +195,36 @@ func.func @generic_op_reshape_consumer_static(%arg0: tensor<264x4xf32>)
 // CHECK-SAME:     : tensor<8x33x4xf32>
 //  CHECK-DAG:   %[[INIT:.+]] = tensor.empty()
 //      CHECK:   %[[T0:.+]] = tensor.expand_shape %[[ARG0]] {{\[\[}}0, 1], [2]] output_shape [8, 33, 4] : tensor<264x4xf32> into tensor<8x33x4xf32>
-//      CHECK:   %[[T1:.+]] = tensor.expand_shape %[[VAL_0]] {{\[\[}}0, 1], [2]] output_shape [8, 33, 4] : tensor<264x4xf32> into tensor<8x33x4xf32>
+//      CHECK:   %[[T1:.+]] = tensor.expand_shape %[[INIT]] {{\[\[}}0, 1], [2]] output_shape [8, 33, 4] : tensor<264x4xf32> into tensor<8x33x4xf32>
 //      CHECK:   %[[T2:.+]] = linalg.generic
 // CHECK-SAME:     indexing_maps = [#[[MAP2]], #[[MAP2]], #[[MAP2]]]
 // CHECK-SAME:     ["parallel", "parallel", "parallel"]
 // CHECK-SAME:     ins(%[[T0]], %[[CST]] :
 // CHECK-SAME:     outs(%[[T1]] : tensor<8x33x4xf32>)
 //      CHECK:   return %[[T2]] : tensor<8x33x4xf32>
+
+// -----
+
+func.func @reshape_as_consumer_transpose
+  (%a :  tensor<4x210x6xf32>)
+    -> tensor<2x3x4x5x6x7xf32> {
+  %b = tensor.empty() : tensor<6x4x210xf32>
+  %c = linalg.transpose
+          ins(%a : tensor<4x210x6xf32>)
+         outs(%b : tensor<6x4x210xf32>) permutation = [2, 0, 1]
+  %d = tensor.expand_shape %c [[0, 1], [2], [3, 4, 5]] output_shape [2, 3, 4, 5, 6, 7] : tensor<6x4x210xf32> into tensor<2x3x4x5x6x7xf32>
+  return %d : tensor<2x3x4x5x6x7xf32>
+}
+//      CHECK: func @reshape_as_consumer_transpose
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<4x210x6xf32>
+//  CHECK-DAG:   %[[INIT:.+]] = tensor.empty()
+//  CHECK-DAG:   %[[T0:.+]] = tensor.expand_shape %[[ARG0]] {{\[\[}}0], [1, 2, 3], [4, 5]] output_shape [4, 5, 6, 7, 2, 3] : tensor<4x210x6xf32> into tensor<4x5x6x7x2x3xf32>
+//  CHECK-DAG:   %[[T1:.+]] = tensor.expand_shape %[[INIT]] {{\[\[}}0, 1], [2], [3, 4, 5]] output_shape [2, 3, 4, 5, 6, 7] : tensor<6x4x210xf32> into tensor<2x3x4x5x6x7xf32
+//      CHECK:   %[[T2:.+]] = linalg.transpose ins(%[[T0]] : tensor<4x5x6x7x2x3xf32>)
+// CHECK-SAME:     outs(%[[T1]] : tensor<2x3x4x5x6x7xf32>)
+// CHECK-SAME:     permutation = [4, 5, 0, 1, 2, 3]
+//      CHECK:   return %[[T2]] : tensor<2x3x4x5x6x7xf32>
+
 
 // -----
 
@@ -480,6 +503,31 @@ func.func @generic_op_reshape_consumer_fusion_projected(%arg0 : tensor<?x?xf32>,
 // CHECK-SAME:     outs(%[[T2]] : tensor<?x?x4x5xf32>)
 //      CHECK:   return %[[T3]] : tensor<?x?x4x5xf32>
 
+// -----
+
+func.func @fuse_collapse_reduction(%arg0: tensor<10x10x20xf32>) -> tensor<100xf32> {
+  %c0 = arith.constant 0 : index
+  %c_0 = arith.constant 0.0 : f32
+  %0 = tensor.collapse_shape %arg0 [[0, 1], [2]] : tensor<10x10x20xf32> into tensor<100x20xf32>
+  %2 = tensor.empty() : tensor<100xf32>
+  %3 = linalg.fill ins(%c_0 : f32) outs(%2 : tensor<100xf32>) -> tensor<100xf32>
+  %4 = linalg.generic {
+    indexing_maps = [affine_map<(d0, d1) -> (d0, d1)>, affine_map<(d0, d1) -> (d0)>],
+    iterator_types = ["parallel", "reduction"]}
+    ins(%0 : tensor<100x20xf32>) outs(%3 : tensor<100xf32>) {
+      ^bb0(%arg1 : f32, %arg2: f32):
+        %4 = arith.addf %arg1, %arg2 : f32
+        linalg.yield %4 : f32
+    } -> tensor<100xf32>
+  return %4 : tensor<100xf32>
+}
+
+//      CHECK: func @fuse_collapse_reduction
+// CHECK-SAME:     %[[ARG0:.+]]: tensor<10x10x20xf32>
+//      CHECK:   %[[GENERIC:.+]] = linalg.generic
+// CHECK-SAME:       ins(%[[ARG0]] : tensor<10x10x20xf32>)
+//      CHECK:   %[[COLLAPSE:.+]] = tensor.collapse_shape %[[GENERIC]]
+//      CHECK:   return %[[COLLAPSE]]
 // -----
 
 func.func @no_fuse_dynamic_dims(%arg0: tensor<?x?xf32>) -> tensor<?xf32> {
@@ -783,9 +831,6 @@ func.func @linalg_add_reshape_consumer_fusion(%arg0 : tensor<?x?xf32>,
 
 // -----
 
-#map0 = affine_map<(d0, d1, d2) -> (d2, d0)>
-#map1 = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
-#map2 = affine_map<(d0, d1, d2) -> (d0, d2)>
 func.func @linalg_add_reshape_producer_fusion(%arg0 : tensor<?x7x?x8xf32>,
                                               %arg1 : tensor<?x?xf32>,
                                               %arg2 : tensor<?x?xf32>) ->
@@ -826,6 +871,65 @@ func.func @linalg_add_reshape_producer_fusion(%arg0 : tensor<?x7x?x8xf32>,
 // CHECK-SAME:     [0, 1], [2, 3]
 // CHECK-SAME:     tensor<?x7x?x8xf32> into tensor<?x?xf32>
 //      CHECK:   return %[[T4]]
+
+// -----
+
+func.func @linalg_copy_reshape_producer_fusion(%arg0 : tensor<?x7x?x8xf32>,
+                                              %arg1 : tensor<?x?xf32>) ->
+                                              tensor<?x?xf32>
+{
+  %0 = tensor.collapse_shape %arg0 [[0, 1], [2, 3]] :
+    tensor<?x7x?x8xf32> into tensor<?x?xf32>
+  %1 = linalg.copy ins(%0 : tensor<?x?xf32>)
+       outs(%arg1 : tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %1 : tensor<?x?xf32>
+}
+
+//      CHECK: func @linalg_copy_reshape_producer_fusion
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<?x7x?x8xf32>
+// CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: tensor<?x?xf32>
+//      CHECK:   %[[C8:.+]] = arith.constant 8 : index
+//      CHECK:   %[[C7:.+]] = arith.constant 7 : index
+//      CHECK:   %[[C1:.+]] = arith.constant 1 : index
+//      CHECK:   %[[C0:.+]] = arith.constant 0 : index
+//      CHECK:   %[[DIM:.+]] = tensor.dim %[[ARG1]], %[[C0]] : tensor<?x?xf32>
+//      CHECK:   %[[DIM_0:.+]] = tensor.dim %[[ARG1]], %[[C1]] : tensor<?x?xf32>
+//      CHECK:   %[[VAL_0:.+]] = arith.divsi %[[DIM]], %[[C7]] : index
+//      CHECK:   %[[VAL_1:.+]] = arith.divsi %[[DIM_0]], %[[C8]] : index
+//      CHECK:   %[[T1:.+]] = tensor.expand_shape %[[ARG1]] {{\[\[}}0, 1], [2, 3]] output_shape [%[[VAL_0]], 7, %[[VAL_1]], 8] : tensor<?x?xf32> into tensor<?x7x?x8xf32>
+//      CHECK:   %[[T2:.+]] = linalg.copy
+// CHECK-SAME:     ins(%[[ARG0]] : tensor<?x7x?x8xf32>)
+// CHECK-SAME:     outs(%[[T1]] : tensor<?x7x?x8xf32>)
+//      CHECK:   %[[T3:.+]] = tensor.collapse_shape %[[T2]]
+// CHECK-SAME:     [0, 1], [2, 3]
+// CHECK-SAME:     tensor<?x7x?x8xf32> into tensor<?x?xf32>
+//      CHECK:   return %[[T3]]
+
+// -----
+
+
+func.func @reshape_as_producer_transpose
+  (%a :  tensor<4x5x6x7x2x3xf32>)
+    -> tensor<6x4x210xf32> {
+  %b = tensor.empty() : tensor<6x4x210xf32>
+  %c = tensor.collapse_shape %a [[0], [1, 2, 3], [4, 5]] :
+    tensor<4x5x6x7x2x3xf32> into tensor<4x210x6xf32>
+  %d = linalg.transpose
+          ins(%c : tensor<4x210x6xf32>)
+         outs(%b : tensor<6x4x210xf32>) permutation = [2, 0, 1]
+  return %d : tensor<6x4x210xf32>
+}
+
+//      CHECK: func @reshape_as_producer_transpose
+// CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: tensor<4x5x6x7x2x3xf32>
+//  CHECK-DAG:   %[[INIT:.+]] = tensor.empty()
+//  CHECK-DAG:   %[[T0:.+]] = tensor.expand_shape %[[INIT]] {{\[\[}}0, 1], [2], [3, 4, 5]] output_shape [2, 3, 4, 5, 6, 7] : tensor<6x4x210xf32> into tensor<2x3x4x5x6x7xf32>
+//      CHECK:   %[[T1:.+]] = linalg.transpose ins(%[[ARG0]] : tensor<4x5x6x7x2x3xf32>)
+// CHECK-SAME:     outs(%[[T0]] : tensor<2x3x4x5x6x7xf32>)
+// CHECK-SAME:     permutation = [4, 5, 0, 1, 2, 3]
+//      CHECK:   %[[T2:.+]] = tensor.collapse_shape %[[T1]] {{\[\[}}0, 1], [2], [3, 4, 5]] : tensor<2x3x4x5x6x7xf32> into tensor<6x4x210xf32>
+//      CHECK:   return %[[T2]] : tensor<6x4x210xf32>
+
 
 // -----
 

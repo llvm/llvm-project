@@ -19,7 +19,9 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace clang;
@@ -50,8 +52,6 @@ public:
   void checkEndFunction(const ReturnStmt *RS, CheckerContext &Ctx) const;
 
 private:
-  void checkReturnedBlockCaptures(const BlockDataRegion &B,
-                                  CheckerContext &C) const;
   void checkAsyncExecutedBlockCaptures(const BlockDataRegion &B,
                                        CheckerContext &C) const;
   void EmitReturnLeakError(CheckerContext &C, const MemRegion *LeakedRegion,
@@ -59,9 +59,10 @@ private:
   bool isSemaphoreCaptured(const BlockDecl &B) const;
   static SourceRange genName(raw_ostream &os, const MemRegion *R,
                              ASTContext &Ctx);
-  static SmallVector<const MemRegion *, 4>
+  static SmallVector<std::pair<const MemRegion *, const StackSpaceRegion *>, 4>
   getCapturedStackRegions(const BlockDataRegion &B, CheckerContext &C);
-  static bool isNotInCurrentFrame(const MemRegion *R, CheckerContext &C);
+  static bool isNotInCurrentFrame(const StackSpaceRegion *MS,
+                                  CheckerContext &C);
 };
 } // namespace
 
@@ -117,10 +118,9 @@ SourceRange StackAddrEscapeChecker::genName(raw_ostream &os, const MemRegion *R,
   return range;
 }
 
-bool StackAddrEscapeChecker::isNotInCurrentFrame(const MemRegion *R,
+bool StackAddrEscapeChecker::isNotInCurrentFrame(const StackSpaceRegion *MS,
                                                  CheckerContext &C) {
-  const StackSpaceRegion *S = cast<StackSpaceRegion>(R->getMemorySpace());
-  return S->getStackFrame() != C.getStackFrame();
+  return MS->getStackFrame() != C.getStackFrame();
 }
 
 bool StackAddrEscapeChecker::isSemaphoreCaptured(const BlockDecl &B) const {
@@ -134,15 +134,20 @@ bool StackAddrEscapeChecker::isSemaphoreCaptured(const BlockDecl &B) const {
   return false;
 }
 
-SmallVector<const MemRegion *, 4>
+SmallVector<std::pair<const MemRegion *, const StackSpaceRegion *>, 4>
 StackAddrEscapeChecker::getCapturedStackRegions(const BlockDataRegion &B,
                                                 CheckerContext &C) {
-  SmallVector<const MemRegion *, 4> Regions;
+  SmallVector<std::pair<const MemRegion *, const StackSpaceRegion *>, 4>
+      Regions;
+  ProgramStateRef State = C.getState();
   for (auto Var : B.referenced_vars()) {
-    SVal Val = C.getState()->getSVal(Var.getCapturedRegion());
-    const MemRegion *Region = Val.getAsRegion();
-    if (Region && isa<StackSpaceRegion>(Region->getMemorySpace()))
-      Regions.push_back(Region);
+    SVal Val = State->getSVal(Var.getCapturedRegion());
+    if (const MemRegion *Region = Val.getAsRegion()) {
+      if (const auto *Space =
+              Region->getMemorySpaceAs<StackSpaceRegion>(State)) {
+        Regions.emplace_back(Region, Space);
+      }
+    }
   }
   return Regions;
 }
@@ -198,7 +203,8 @@ void StackAddrEscapeChecker::checkAsyncExecutedBlockCaptures(
   // a variable of the type "dispatch_semaphore_t".
   if (isSemaphoreCaptured(*B.getDecl()))
     return;
-  for (const MemRegion *Region : getCapturedStackRegions(B, C)) {
+  auto Regions = getCapturedStackRegions(B, C);
+  for (const MemRegion *Region : llvm::make_first_range(Regions)) {
     // The block passed to dispatch_async may capture another block
     // created on the stack. However, there is no leak in this situaton,
     // no matter if ARC or no ARC is enabled:
@@ -272,8 +278,7 @@ public:
 
 private:
   void SaveIfEscapes(const MemRegion *MR) {
-    const StackSpaceRegion *SSR =
-        MR->getMemorySpace()->getAs<StackSpaceRegion>();
+    const auto *SSR = MR->getMemorySpaceAs<StackSpaceRegion>(Ctxt.getState());
 
     if (!SSR)
       return;
@@ -370,19 +375,18 @@ void StackAddrEscapeChecker::checkPreStmt(const ReturnStmt *RS,
     EmitReturnLeakError(C, ER, RetE);
 }
 
-static const MemSpaceRegion *getStackOrGlobalSpaceRegion(const MemRegion *R) {
+static const MemSpaceRegion *getStackOrGlobalSpaceRegion(ProgramStateRef State,
+                                                         const MemRegion *R) {
   assert(R);
-  if (const auto *MemSpace = R->getMemorySpace()) {
-    if (const auto *SSR = MemSpace->getAs<StackSpaceRegion>())
-      return SSR;
-    if (const auto *GSR = MemSpace->getAs<GlobalsSpaceRegion>())
-      return GSR;
-  }
+  if (const auto *MemSpace = R->getMemorySpace(State);
+      isa<StackSpaceRegion, GlobalsSpaceRegion>(MemSpace))
+    return MemSpace;
+
   // If R describes a lambda capture, it will be a symbolic region
   // referring to a field region of another symbolic region.
   if (const auto *SymReg = R->getBaseRegion()->getAs<SymbolicRegion>()) {
     if (const auto *OriginReg = SymReg->getSymbol()->getOriginRegion())
-      return getStackOrGlobalSpaceRegion(OriginReg);
+      return getStackOrGlobalSpaceRegion(State, OriginReg);
   }
   return nullptr;
 }
@@ -398,7 +402,8 @@ static const MemRegion *getOriginBaseRegion(const MemRegion *Reg) {
   return Reg;
 }
 
-static std::optional<std::string> printReferrer(const MemRegion *Referrer) {
+static std::optional<std::string> printReferrer(ProgramStateRef State,
+                                                const MemRegion *Referrer) {
   assert(Referrer);
   const StringRef ReferrerMemorySpace = [](const MemSpaceRegion *Space) {
     if (isa<StaticGlobalSpaceRegion>(Space))
@@ -408,7 +413,7 @@ static std::optional<std::string> printReferrer(const MemRegion *Referrer) {
     assert(isa<StackSpaceRegion>(Space));
     // This case covers top-level and inlined analyses.
     return "caller";
-  }(getStackOrGlobalSpaceRegion(Referrer));
+  }(getStackOrGlobalSpaceRegion(State, Referrer));
 
   while (!Referrer->canPrintPretty()) {
     if (const auto *SymReg = dyn_cast<SymbolicRegion>(Referrer);
@@ -475,6 +480,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
   class CallBack : public StoreManager::BindingsHandler {
   private:
     CheckerContext &Ctx;
+    ProgramStateRef State;
     const StackFrameContext *PoppedFrame;
     const bool TopFrame;
 
@@ -483,9 +489,10 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     /// referred by an other stack variable from different stack frame.
     bool checkForDanglingStackVariable(const MemRegion *Referrer,
                                        const MemRegion *Referred) {
-      const auto *ReferrerMemSpace = getStackOrGlobalSpaceRegion(Referrer);
+      const auto *ReferrerMemSpace =
+          getStackOrGlobalSpaceRegion(State, Referrer);
       const auto *ReferredMemSpace =
-          Referred->getMemorySpace()->getAs<StackSpaceRegion>();
+          Referred->getMemorySpaceAs<StackSpaceRegion>(State);
 
       if (!ReferrerMemSpace || !ReferredMemSpace)
         return false;
@@ -534,7 +541,8 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
     llvm::SmallPtrSet<const MemRegion *, 4> ExcludedRegions;
 
     CallBack(CheckerContext &CC, bool TopFrame)
-        : Ctx(CC), PoppedFrame(CC.getStackFrame()), TopFrame(TopFrame) {}
+        : Ctx(CC), State(CC.getState()), PoppedFrame(CC.getStackFrame()),
+          TopFrame(TopFrame) {}
 
     bool HandleBinding(StoreManager &SMgr, Store S, const MemRegion *Region,
                        SVal Val) override {
@@ -548,10 +556,15 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
 
       // Check the globals for the same.
       if (!isa_and_nonnull<GlobalsSpaceRegion>(
-              getStackOrGlobalSpaceRegion(Region)))
+              getStackOrGlobalSpaceRegion(State, Region)))
         return true;
-      if (VR && VR->hasStackStorage() && !isNotInCurrentFrame(VR, Ctx))
-        V.emplace_back(Region, VR);
+
+      if (VR) {
+        if (const auto *S = VR->getMemorySpaceAs<StackSpaceRegion>(State);
+            S && !isNotInCurrentFrame(S, Ctx)) {
+          V.emplace_back(Region, VR);
+        }
+      }
       return true;
     }
   };
@@ -599,7 +612,7 @@ void StackAddrEscapeChecker::checkEndFunction(const ReturnStmt *RS,
       return;
     }
 
-    auto ReferrerVariable = printReferrer(Referrer);
+    auto ReferrerVariable = printReferrer(State, Referrer);
     if (!ReferrerVariable) {
       continue;
     }
