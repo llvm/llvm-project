@@ -12702,9 +12702,9 @@ TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
   verifyFormat("x = (foo *_Nonnull)*v;");
   verifyFormat("x = (foo *_Nullable)*v;");
   verifyFormat("x = (foo *_Null_unspecified)*v;");
-  verifyGoogleFormat("x = (foo *absl_nonnull)*v;");
-  verifyGoogleFormat("x = (foo *absl_nullable)*v;");
-  verifyGoogleFormat("x = (foo *absl_nullability_unknown)*v;");
+  verifyGoogleFormat("x = (foo* absl_nonnull)*v;");
+  verifyGoogleFormat("x = (foo* absl_nullable)*v;");
+  verifyGoogleFormat("x = (foo* absl_nullability_unknown)*v;");
   verifyFormat("x = (foo *[[clang::attr]])*v;");
   verifyFormat("x = (foo *[[clang::attr(\"foo\")]])*v;");
   verifyFormat("x = (foo *__ptr32)*v;");
