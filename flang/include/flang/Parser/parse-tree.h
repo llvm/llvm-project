@@ -4269,12 +4269,10 @@ struct OmpInitializerProc {
   TUPLE_CLASS_BOILERPLATE(OmpInitializerProc);
   std::tuple<ProcedureDesignator, std::list<ActualArgSpec>> t;
 };
-WRAPPER_CLASS(OmpInitializerExpr, Expr);
-
 // Initialization for declare reduction construct
 struct OmpInitializerClause {
   UNION_CLASS_BOILERPLATE(OmpInitializerClause);
-  std::variant<OmpInitializerProc, OmpInitializerExpr> u;
+  std::variant<OmpInitializerProc, AssignmentStmt> u;
 };
 
 // Ref: [4.5:199-201], [5.0:288-290], [5.1:321-322], [5.2:115-117]

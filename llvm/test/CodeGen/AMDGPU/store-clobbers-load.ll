@@ -20,7 +20,7 @@ entry:
 
 
 declare i32 @llvm.amdgcn.workitem.id.x()
-@lds0 = addrspace(3) global [512 x i32] undef, align 4
+@lds0 = addrspace(3) global [512 x i32] poison, align 4
 
 ; To check that %arrayidx0 is not marked as amdgpu.noclobber.
 
