@@ -7471,6 +7471,13 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       // comparing against the legacy cost isn't desirable.
       if (isa<VPPartialReductionRecipe>(&R))
         return true;
+
+      // The VPlan-based cost model may calculate the cost of strided load/store
+      // which can't be modeled in the legacy cost model.
+      if (isa<VPWidenLoadEVLRecipe, VPWidenStoreEVLRecipe>(&R))
+        if (cast<VPWidenMemoryRecipe>(&R)->isReverse())
+          return true;
+
       if (Instruction *UI = GetInstructionForCost(&R))
         SeenInstrs.insert(UI);
     }
@@ -8328,7 +8335,7 @@ VPRecipeBuilder::tryToWidenMemory(Instruction *I, ArrayRef<VPValue *> Operands,
     auto *GEP = dyn_cast<GetElementPtrInst>(
         Ptr->getUnderlyingValue()->stripPointerCasts());
     VPSingleDefRecipe *VectorPtr;
-    if (Reverse) {
+    if (Reverse && !CM.foldTailWithEVL()) {
       // When folding the tail, we may compute an address that we don't in the
       // original scalar loop and it may not be inbounds. Drop Inbounds in that
       // case.
