@@ -96,7 +96,8 @@ define void @iv_casts(ptr %dst, ptr %src, i32 %x, i64 %N) #0 {
 ; PRED-NEXT:    [[SRC2:%.*]] = ptrtoint ptr [[SRC]] to i64
 ; PRED-NEXT:    [[DST1:%.*]] = ptrtoint ptr [[DST]] to i64
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
+; PRED-NEXT:    [[TMP6:%.*]] = icmp ult i64 [[TMP0]], 5
+; PRED-NEXT:    br i1 [[TMP6]], label [[SCALAR_PH:%.*]], label [[VECTOR_MEMCHECK:%.*]]
 ; PRED:       vector.memcheck:
 ; PRED-NEXT:    [[TMP1:%.*]] = call i64 @llvm.vscale.i64()
 ; PRED-NEXT:    [[TMP2:%.*]] = mul i64 [[TMP1]], 8
@@ -258,7 +259,8 @@ define void @iv_trunc(i32 %x, ptr %dst, i64 %N) #0 {
 ; PRED-NEXT:  entry:
 ; PRED-NEXT:    [[MUL_X:%.*]] = add i32 [[X]], 1
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; PRED-NEXT:    [[TMP26:%.*]] = icmp ult i64 [[TMP0]], 26
+; PRED-NEXT:    br i1 [[TMP26]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; PRED:       vector.scevcheck:
 ; PRED-NEXT:    [[TMP1:%.*]] = sub i32 -1, [[X]]
 ; PRED-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[MUL_X]], 0
@@ -430,7 +432,8 @@ define void @trunc_ivs_and_store(i32 %x, ptr %dst, i64 %N) #0 {
 ; PRED-NEXT:  entry:
 ; PRED-NEXT:    [[MUL:%.*]] = mul i32 [[X]], [[X]]
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; PRED-NEXT:    [[TMP37:%.*]] = icmp ult i64 [[TMP0]], 24
+; PRED-NEXT:    br i1 [[TMP37]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; PRED:       vector.scevcheck:
 ; PRED-NEXT:    [[TMP1:%.*]] = mul i32 [[X]], [[X]]
 ; PRED-NEXT:    [[TMP2:%.*]] = sub i32 0, [[TMP1]]
@@ -628,7 +631,8 @@ define void @ivs_trunc_and_ext(i32 %x, ptr %dst, i64 %N) #0 {
 ; PRED-NEXT:  entry:
 ; PRED-NEXT:    [[ADD:%.*]] = add i32 [[X]], 1
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[N]], 1
-; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; PRED-NEXT:    [[TMP36:%.*]] = icmp ult i64 [[TMP0]], 22
+; PRED-NEXT:    br i1 [[TMP36]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; PRED:       vector.scevcheck:
 ; PRED-NEXT:    [[TMP1:%.*]] = sub i32 -1, [[X]]
 ; PRED-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[ADD]], 0
@@ -805,7 +809,8 @@ define void @exit_cond_zext_iv(ptr %dst, i64 %N) {
 ; PRED-SAME: ptr [[DST:%.*]], i64 [[N:%.*]]) {
 ; PRED-NEXT:  entry:
 ; PRED-NEXT:    [[UMAX1:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
-; PRED-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
+; PRED-NEXT:    [[TMP9:%.*]] = icmp ult i64 [[UMAX1]], 20
+; PRED-NEXT:    br i1 [[TMP9]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; PRED:       vector.scevcheck:
 ; PRED-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[N]], i64 1)
 ; PRED-NEXT:    [[TMP0:%.*]] = add i64 [[UMAX]], -1

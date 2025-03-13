@@ -410,7 +410,8 @@ define void @overflow_indvar_known_false(ptr nocapture noundef %p, i32 noundef %
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i32 [[TC]], 1
 ; CHECK-NEXT:    [[TMP20:%.*]] = zext i32 [[TMP19]] to i64
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i64 1028, [[TMP20]]
-; CHECK-NEXT:    br i1 false, label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
+; CHECK-NEXT:    [[MIN_PROF_CHECK:%.*]] = icmp ult i64 [[TMP1]], 8
+; CHECK-NEXT:    br i1 [[MIN_PROF_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_SCEVCHECK:.*]]
 ; CHECK:       [[VECTOR_SCEVCHECK]]:
 ; CHECK-NEXT:    [[TMP21:%.*]] = add i32 [[TC]], 1
 ; CHECK-NEXT:    [[TMP22:%.*]] = zext i32 [[TMP21]] to i64
