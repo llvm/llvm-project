@@ -46,7 +46,7 @@ protected:
 
     TargetOptions Options;
     TM = std::unique_ptr<TargetMachine>(T->createTargetMachine(
-        "riscv64", "", "+m,+f,+d,+v", Options, std::nullopt, std::nullopt,
+        TargetTriple, "", "+m,+f,+d,+v", Options, std::nullopt, std::nullopt,
         CodeGenOptLevel::Aggressive));
     if (!TM)
       GTEST_SKIP();

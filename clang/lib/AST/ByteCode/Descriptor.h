@@ -200,7 +200,7 @@ public:
              bool IsTemporary, bool IsMutable);
 
   /// Allocates a dummy descriptor.
-  Descriptor(const DeclTy &D);
+  Descriptor(const DeclTy &D, MetadataSize MD = std::nullopt);
 
   /// Make this descriptor a dummy descriptor.
   void makeDummy() { IsDummy = true; }
@@ -263,7 +263,7 @@ public:
   bool isUnknownSizeArray() const { return Size == UnknownSizeMark; }
 
   /// Checks if the descriptor is of a primitive.
-  bool isPrimitive() const { return !IsArray && !ElemRecord; }
+  bool isPrimitive() const { return !IsArray && !ElemRecord && !IsDummy; }
 
   /// Checks if the descriptor is of an array.
   bool isArray() const { return IsArray; }

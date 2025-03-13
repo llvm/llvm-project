@@ -1475,16 +1475,6 @@ llvm::Type *CGOpenMPRuntime::getIdentTyPointerTy() {
   return OMPBuilder.IdentPtr;
 }
 
-llvm::Type *CGOpenMPRuntime::getKmpc_MicroPointerTy() {
-  if (!Kmpc_MicroTy) {
-    // Build void (*kmpc_micro)(kmp_int32 *global_tid, kmp_int32 *bound_tid,...)
-    llvm::Type *MicroParams[] = {llvm::PointerType::getUnqual(CGM.Int32Ty),
-                                 llvm::PointerType::getUnqual(CGM.Int32Ty)};
-    Kmpc_MicroTy = llvm::FunctionType::get(CGM.VoidTy, MicroParams, true);
-  }
-  return llvm::PointerType::getUnqual(Kmpc_MicroTy);
-}
-
 static llvm::OffloadEntriesInfoManager::OMPTargetDeviceClauseKind
 convertDeviceClause(const VarDecl *VD) {
   std::optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =
@@ -1857,11 +1847,10 @@ void CGOpenMPRuntime::emitParallelCall(CodeGenFunction &CGF, SourceLocation Loc,
   auto &&ThenGen = [&M, OutlinedFn, CapturedVars, RTLoc,
                     this](CodeGenFunction &CGF, PrePostActionTy &) {
     // Build call __kmpc_fork_call(loc, n, microtask, var1, .., varn);
-    CGOpenMPRuntime &RT = CGF.CGM.getOpenMPRuntime();
     llvm::Value *Args[] = {
         RTLoc,
         CGF.Builder.getInt32(CapturedVars.size()), // Number of captured vars
-        CGF.Builder.CreateBitCast(OutlinedFn, RT.getKmpc_MicroPointerTy())};
+        OutlinedFn};
     llvm::SmallVector<llvm::Value *, 16> RealArgs;
     RealArgs.append(std::begin(Args), std::end(Args));
     RealArgs.append(CapturedVars.begin(), CapturedVars.end());
@@ -9937,7 +9926,7 @@ void CGOpenMPRuntime::emitTeamsCall(CodeGenFunction &CGF,
   llvm::Value *Args[] = {
       RTLoc,
       CGF.Builder.getInt32(CapturedVars.size()), // Number of captured vars
-      CGF.Builder.CreateBitCast(OutlinedFn, getKmpc_MicroPointerTy())};
+      OutlinedFn};
   llvm::SmallVector<llvm::Value *, 16> RealArgs;
   RealArgs.append(std::begin(Args), std::end(Args));
   RealArgs.append(CapturedVars.begin(), CapturedVars.end());

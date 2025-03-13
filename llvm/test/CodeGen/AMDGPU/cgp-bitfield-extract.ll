@@ -42,12 +42,12 @@ entry:
 
 bb0:
   %val0 = and i32 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i32 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -82,12 +82,12 @@ entry:
 
 bb0:
   %val0 = and i32 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i32 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -139,12 +139,12 @@ entry:
 
 bb0:
   %val0 = and i16 %shr, 255
-  store volatile i16 0, ptr addrspace(1) undef
+  store volatile i16 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i16 %shr, 127
-  store volatile i16 0, ptr addrspace(1) undef
+  store volatile i16 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -190,12 +190,12 @@ entry:
 
 bb0:
   %val0 = and i64 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i64 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -238,12 +238,12 @@ entry:
 
 bb0:
   %val0 = and i64 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i64 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -284,12 +284,12 @@ entry:
 
 bb0:
   %val0 = and i64 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i64 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:

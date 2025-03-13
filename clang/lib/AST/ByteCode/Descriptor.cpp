@@ -404,10 +404,10 @@ Descriptor::Descriptor(const DeclTy &D, const Record *R, MetadataSize MD,
 }
 
 /// Dummy.
-Descriptor::Descriptor(const DeclTy &D)
-    : Source(D), ElemSize(1), Size(1), MDSize(0), AllocSize(MDSize),
-      ElemRecord(nullptr), IsConst(true), IsMutable(false), IsTemporary(false),
-      IsDummy(true) {
+Descriptor::Descriptor(const DeclTy &D, MetadataSize MD)
+    : Source(D), ElemSize(1), Size(1), MDSize(MD.value_or(0)),
+      AllocSize(MDSize), ElemRecord(nullptr), IsConst(true), IsMutable(false),
+      IsTemporary(false), IsDummy(true) {
   assert(Source && "Missing source");
 }
 

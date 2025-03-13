@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 -triple spir64 -fsycl-is-device -verify -fsyntax-only %s
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fsycl-is-device -fsyntax-only %s
 
+typedef _Complex float __cfloat128 __attribute__ ((__mode__ (__TC__)));
 typedef __float128 BIGTY;
 
 template <class T>

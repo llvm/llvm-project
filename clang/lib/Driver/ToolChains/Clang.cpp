@@ -762,8 +762,7 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     else {
       CmdArgs.push_back("-fprofile-continuous");
       // Platforms that require a bias variable:
-      if (T.isOSBinFormatELF() || T.isOSAIX() ||
-          T.isKnownWindowsMSVCEnvironment()) {
+      if (T.isOSBinFormatELF() || T.isOSAIX() || T.isOSWindows()) {
         CmdArgs.push_back("-mllvm");
         CmdArgs.push_back("-runtime-counter-relocation");
       }
@@ -8028,21 +8027,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       }
     } else {
       CmdArgs.push_back("-global-isel=0");
-    }
-  }
-
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_forder_file_instrumentation)) {
-    D.Diag(diag::warn_drv_deprecated_arg)
-        << A->getAsString(Args) << /*hasReplacement=*/true
-        << "-ftemporal-profile";
-    CmdArgs.push_back("-forder-file-instrumentation");
-    // Enable order file instrumentation when ThinLTO is not on. When ThinLTO is
-    // on, we need to pass these flags as linker flags and that will be handled
-    // outside of the compiler.
-    if (!IsUsingLTO) {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-order-file-instrumentation");
     }
   }
 

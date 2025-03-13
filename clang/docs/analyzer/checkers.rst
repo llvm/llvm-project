@@ -3476,6 +3476,24 @@ Limitations:
 alpha.WebKit
 ^^^^^^^^^^^^
 
+alpha.webkit.ForwardDeclChecker
+"""""""""""""""""""""""""""""""
+Check for local variables, member variables, and function arguments that are forward declared.
+
+.. code-block:: cpp
+
+ struct Obj;
+ Obj* provide();
+
+ struct Foo {
+   Obj* ptr; // warn
+ };
+
+  void foo() {
+    Obj* obj = provide(); // warn
+    consume(obj); // warn
+  }
+
 .. _alpha-webkit-NoUncheckedPtrMemberChecker:
 
 alpha.webkit.MemoryUnsafeCastChecker
@@ -3521,6 +3539,31 @@ Raw pointers and references to an object which supports CheckedPtr or CheckedRef
  };
 
 See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
+
+alpha.webkit.NoUnretainedMemberChecker
+""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to a NS or CF object can't be used as class members or ivars. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled. Only RetainPtr is allowed for NS types when ARC is disabled.
+
+.. code-block:: cpp
+
+ struct Foo {
+   NSObject *ptr; // warn
+   // ...
+ };
+
+See `WebKit Guidelines for Safer C++ Programming <https://github.com/WebKit/WebKit/wiki/Safer-CPP-Guidelines>`_ for details.
+
+alpha.webkit.UnretainedLambdaCapturesChecker
+""""""""""""""""""""""""""""""""""""""""""""
+Raw pointers and references to NS or CF types can't be captured in lambdas. Only RetainPtr is allowed for CF types regardless of whether ARC is enabled or disabled, and only RetainPtr is allowed for NS types when ARC is disabled.
+
+.. code-block:: cpp
+
+ void foo(NSObject *a, NSObject *b) {
+   [&, a](){ // warn about 'a'
+     do_something(b); // warn about 'b'
+   };
+ };
 
 .. _alpha-webkit-UncountedCallArgsChecker:
 
@@ -3616,6 +3659,12 @@ alpha.webkit.UncheckedCallArgsChecker
 The goal of this rule is to make sure that lifetime of any dynamically allocated CheckedPtr capable object passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. CheckedPtr capable objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unchecked types.
 
 The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
+alpha.webkit.UnretainedCallArgsChecker
+""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that lifetime of any dynamically allocated NS or CF objects passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. NS or CF objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unretained types.
+
+The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
 
 alpha.webkit.UncountedLocalVarsChecker
 """"""""""""""""""""""""""""""""""""""
@@ -3747,6 +3796,26 @@ Here are some examples of situations that we warn about as they *might* be poten
       // The scope of unretained is not EMBEDDED in the scope of retained.
       NSObject* unretained = retained.get(); // warn
     }
+
+webkit.RetainPtrCtorAdoptChecker
+""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure the constructor of RetainPtr as well as adoptNS and adoptCF are used correctly.
+When creating a RetainPtr with +1 semantics, adoptNS or adoptCF should be used, and in +0 semantics, RetainPtr constructor should be used.
+Warn otherwise.
+
+These are examples of cases that we consider correct:
+
+  .. code-block:: cpp
+
+    RetainPtr ptr = adoptNS([[NSObject alloc] init]); // ok
+    RetainPtr ptr = CGImageGetColorSpace(image); // ok
+
+Here are some examples of cases that we consider incorrect use of RetainPtr constructor and adoptCF
+
+  .. code-block:: cpp
+
+    RetainPtr ptr = [[NSObject alloc] init]; // warn
+    auto ptr = adoptCF(CGImageGetColorSpace(image)); // warn
 
 Debug Checkers
 ---------------
