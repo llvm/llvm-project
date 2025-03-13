@@ -644,6 +644,12 @@ void RISCVDisassembler::addSPOperands(MCInst &MI) const {
 #define TRY_TO_DECODE_FEATURE_ANY(FEATURES, DECODER_TABLE, DESC)               \
   TRY_TO_DECODE((STI.getFeatureBits() & (FEATURES)).any(), DECODER_TABLE, DESC)
 
+static constexpr FeatureBitset XCVFeatureGroup = {
+    RISCV::FeatureVendorXCVbitmanip, RISCV::FeatureVendorXCVelw,
+    RISCV::FeatureVendorXCVmac,      RISCV::FeatureVendorXCVmem,
+    RISCV::FeatureVendorXCValu,      RISCV::FeatureVendorXCVsimd,
+    RISCV::FeatureVendorXCVbi};
+
 static constexpr FeatureBitset XRivosFeatureGroup = {
     RISCV::FeatureVendorXRivosVisni,
     RISCV::FeatureVendorXRivosVizip,
@@ -701,20 +707,8 @@ DecodeStatus RISCVDisassembler::getInstruction32(MCInst &MI, uint64_t &Size,
                         "MIPS mips.lsp");
   TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXMIPSCMove,
                         DecoderTableXmipscmove32, "MIPS mips.ccmov");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbitmanip,
-                        DecoderTableXCVbitmanip32, "CORE-V Bit Manipulation");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVelw, DecoderTableXCVelw32,
-                        "CORE-V Event load");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVmac, DecoderTableXCVmac32,
-                        "CORE-V MAC");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVmem, DecoderTableXCVmem32,
-                        "CORE-V MEM");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCValu, DecoderTableXCValu32,
-                        "CORE-V ALU");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVsimd, DecoderTableXCVsimd32,
-                        "CORE-V SIMD extensions");
-  TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbi, DecoderTableXCVbi32,
-                        "CORE-V Immediate Branching");
+  TRY_TO_DECODE_FEATURE_ANY(XCVFeatureGroup, DecoderTableXCV32,
+                            "CORE-V extensions");
   TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci32,
                             "Qualcomm uC Extensions");
 
