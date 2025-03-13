@@ -92,9 +92,9 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
         return ELF::R_PPC_NONE;
       case PPCMCExpr::VK_PPC_None:
         return ELF::R_PPC_REL16;
-      case PPCMCExpr::VK_PPC_LO:
+      case PPCMCExpr::VK_LO:
         return ELF::R_PPC_REL16_LO;
-      case PPCMCExpr::VK_PPC_HI:
+      case PPCMCExpr::VK_HI:
         return ELF::R_PPC_REL16_HI;
       case PPCMCExpr::VK_PPC_HA:
         return ELF::R_PPC_REL16_HA;
@@ -148,23 +148,23 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
       switch (RefKind) {
       case PPCMCExpr::VK_PPC_None:
         break;
-      case PPCMCExpr::VK_PPC_LO:
+      case PPCMCExpr::VK_LO:
         return ELF::R_PPC_ADDR16_LO;
-      case PPCMCExpr::VK_PPC_HI:
+      case PPCMCExpr::VK_HI:
         return ELF::R_PPC_ADDR16_HI;
       case PPCMCExpr::VK_PPC_HA:
         return ELF::R_PPC_ADDR16_HA;
-      case PPCMCExpr::VK_PPC_HIGH:
+      case PPCMCExpr::VK_HIGH:
         return ELF::R_PPC64_ADDR16_HIGH;
-      case PPCMCExpr::VK_PPC_HIGHA:
+      case PPCMCExpr::VK_HIGHA:
         return ELF::R_PPC64_ADDR16_HIGHA;
-      case PPCMCExpr::VK_PPC_HIGHER:
+      case PPCMCExpr::VK_HIGHER:
         return ELF::R_PPC64_ADDR16_HIGHER;
-      case PPCMCExpr::VK_PPC_HIGHERA:
+      case PPCMCExpr::VK_HIGHERA:
         return ELF::R_PPC64_ADDR16_HIGHERA;
-      case PPCMCExpr::VK_PPC_HIGHEST:
+      case PPCMCExpr::VK_HIGHEST:
         return ELF::R_PPC64_ADDR16_HIGHEST;
-      case PPCMCExpr::VK_PPC_HIGHESTA:
+      case PPCMCExpr::VK_HIGHESTA:
         return ELF::R_PPC64_ADDR16_HIGHESTA;
       }
       switch (Modifier) {
@@ -328,7 +328,7 @@ unsigned PPCELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
         return ELF::R_PPC64_NONE;
       case PPCMCExpr::VK_PPC_None:
         break;
-      case PPCMCExpr::VK_PPC_LO:
+      case PPCMCExpr::VK_LO:
         return ELF::R_PPC64_ADDR16_LO_DS;
       }
       switch (Modifier) {

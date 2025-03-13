@@ -1365,7 +1365,7 @@ ParseStatus PPCAsmParser::tryParseRegister(MCRegister &Reg, SMLoc &StartLoc,
 }
 
 /// Extract \code @l/@ha \endcode modifier from expression.  Recursively scan
-/// the expression and check for VK_PPC_LO/HI/HA
+/// the expression and check for VK_LO/HI/HA
 /// symbol variants.  If all symbols with modifier use the same
 /// variant, return the corresponding PPCMCExpr::VariantKind,
 /// and a modified expression using the default symbol variant.
@@ -1385,32 +1385,32 @@ PPCAsmParser::extractModifierFromExpr(const MCExpr *E,
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
 
     switch ((PPCMCExpr::VariantKind)SRE->getKind()) {
-    case PPCMCExpr::VK_PPC_LO:
-      Variant = PPCMCExpr::VK_PPC_LO;
+    case PPCMCExpr::VK_LO:
+      Variant = PPCMCExpr::VK_LO;
       break;
-    case PPCMCExpr::VK_PPC_HI:
-      Variant = PPCMCExpr::VK_PPC_HI;
+    case PPCMCExpr::VK_HI:
+      Variant = PPCMCExpr::VK_HI;
       break;
     case PPCMCExpr::VK_PPC_HA:
       Variant = PPCMCExpr::VK_PPC_HA;
       break;
-    case PPCMCExpr::VK_PPC_HIGH:
-      Variant = PPCMCExpr::VK_PPC_HIGH;
+    case PPCMCExpr::VK_HIGH:
+      Variant = PPCMCExpr::VK_HIGH;
       break;
-    case PPCMCExpr::VK_PPC_HIGHA:
-      Variant = PPCMCExpr::VK_PPC_HIGHA;
+    case PPCMCExpr::VK_HIGHA:
+      Variant = PPCMCExpr::VK_HIGHA;
       break;
-    case PPCMCExpr::VK_PPC_HIGHER:
-      Variant = PPCMCExpr::VK_PPC_HIGHER;
+    case PPCMCExpr::VK_HIGHER:
+      Variant = PPCMCExpr::VK_HIGHER;
       break;
-    case PPCMCExpr::VK_PPC_HIGHERA:
-      Variant = PPCMCExpr::VK_PPC_HIGHERA;
+    case PPCMCExpr::VK_HIGHERA:
+      Variant = PPCMCExpr::VK_HIGHERA;
       break;
-    case PPCMCExpr::VK_PPC_HIGHEST:
-      Variant = PPCMCExpr::VK_PPC_HIGHEST;
+    case PPCMCExpr::VK_HIGHEST:
+      Variant = PPCMCExpr::VK_HIGHEST;
       break;
-    case PPCMCExpr::VK_PPC_HIGHESTA:
-      Variant = PPCMCExpr::VK_PPC_HIGHESTA;
+    case PPCMCExpr::VK_HIGHESTA:
+      Variant = PPCMCExpr::VK_HIGHESTA;
       break;
     default:
       return nullptr;
@@ -1854,15 +1854,15 @@ PPCAsmParser::applyModifierToExpr(const MCExpr *E,
                                   MCContext &Ctx) {
   if (isa<MCConstantExpr>(E)) {
     switch (PPCMCExpr::VariantKind(Variant)) {
-    case PPCMCExpr::VariantKind::VK_PPC_LO:
-    case PPCMCExpr::VariantKind::VK_PPC_HI:
+    case PPCMCExpr::VariantKind::VK_LO:
+    case PPCMCExpr::VariantKind::VK_HI:
     case PPCMCExpr::VariantKind::VK_PPC_HA:
-    case PPCMCExpr::VariantKind::VK_PPC_HIGH:
-    case PPCMCExpr::VariantKind::VK_PPC_HIGHA:
-    case PPCMCExpr::VariantKind::VK_PPC_HIGHER:
-    case PPCMCExpr::VariantKind::VK_PPC_HIGHERA:
-    case PPCMCExpr::VariantKind::VK_PPC_HIGHEST:
-    case PPCMCExpr::VariantKind::VK_PPC_HIGHESTA:
+    case PPCMCExpr::VariantKind::VK_HIGH:
+    case PPCMCExpr::VariantKind::VK_HIGHA:
+    case PPCMCExpr::VariantKind::VK_HIGHER:
+    case PPCMCExpr::VariantKind::VK_HIGHERA:
+    case PPCMCExpr::VariantKind::VK_HIGHEST:
+    case PPCMCExpr::VariantKind::VK_HIGHESTA:
       break;
     default:
       return nullptr;
