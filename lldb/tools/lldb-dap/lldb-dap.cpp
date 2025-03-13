@@ -1,4 +1,4 @@
-//===-- lldb-dap.cpp -----------------------------------------*- C++ -*-===//
+//===-- lldb-dap.cpp ------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,17 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPLog.h"
 #include "EventHelper.h"
-#include "FifoFiles.h"
 #include "Handler/RequestHandler.h"
-#include "JSONUtils.h"
-#include "LLDBUtils.h"
 #include "RunInTerminal.h"
+#include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/Host/Config.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Host/MemoryMonitor.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/UriParser.h"
@@ -38,22 +38,15 @@
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
-#include <algorithm>
 #include <condition_variable>
-#include <cstdint>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
 #include <fcntl.h>
 #include <fstream>
 #include <map>
 #include <memory>
 #include <mutex>
-#include <optional>
-#include <ostream>
 #include <string>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <thread>
 #include <utility>
 #include <vector>
@@ -118,8 +111,9 @@ public:
       : llvm::opt::GenericOptTable(OptionStrTable, OptionPrefixesTable,
                                    InfoTable, true) {}
 };
+} // anonymous namespace
 
-void RegisterRequestCallbacks(DAP &dap) {
+static void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<AttachRequestHandler>();
   dap.RegisterRequest<BreakpointLocationsRequestHandler>();
   dap.RegisterRequest<CompletionsRequestHandler>();
@@ -160,9 +154,7 @@ void RegisterRequestCallbacks(DAP &dap) {
   dap.RegisterRequest<TestGetTargetBreakpointsRequestHandler>();
 }
 
-} // anonymous namespace
-
-static void printHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
+static void PrintHelp(LLDBDAPOptTable &table, llvm::StringRef tool_name) {
   std::string usage_str = tool_name.str() + " options";
   table.printHelp(llvm::outs(), usage_str.c_str(), "LLDB DAP", false);
 
@@ -186,22 +178,22 @@ EXAMPLES:
 // If --launch-target is provided, this instance of lldb-dap becomes a
 // runInTerminal launcher. It will ultimately launch the program specified in
 // the --launch-target argument, which is the original program the user wanted
-// to debug. This is done in such a way that the actual debug adaptor can
+// to debug. This is done in such a way that the actual debug adapter can
 // place breakpoints at the beginning of the program.
 //
-// The launcher will communicate with the debug adaptor using a fifo file in the
+// The launcher will communicate with the debug adapter using a fifo file in the
 // directory specified in the --comm-file argument.
 //
-// Regarding the actual flow, this launcher will first notify the debug adaptor
+// Regarding the actual flow, this launcher will first notify the debug adapter
 // of its pid. Then, the launcher will be in a pending state waiting to be
-// attached by the adaptor.
+// attached by the adapter.
 //
 // Once attached and resumed, the launcher will exec and become the program
 // specified by --launch-target, which is the original target the
 // user wanted to run.
 //
 // In case of errors launching the target, a suitable error message will be
-// emitted to the debug adaptor.
+// emitted to the debug adapter.
 static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
                                              llvm::StringRef comm_file,
                                              lldb::pid_t debugger_pid,
@@ -230,7 +222,7 @@ static llvm::Error LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
   const char *timeout_env_var = getenv("LLDB_DAP_RIT_TIMEOUT_IN_MS");
   int timeout_in_ms =
       timeout_env_var != nullptr ? atoi(timeout_env_var) : 20000;
-  if (llvm::Error err = comm_channel.WaitUntilDebugAdaptorAttaches(
+  if (llvm::Error err = comm_channel.WaitUntilDebugAdapterAttaches(
           std::chrono::milliseconds(timeout_in_ms))) {
     return err;
   }
@@ -303,8 +295,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
   }
 
   std::string address = llvm::join(listener->GetListeningConnectionURI(), ", ");
-  if (log)
-    *log << "started with connection listeners " << address << "\n";
+  DAP_LOG(log, "started with connection listeners {0}", address);
 
   llvm::outs() << "Listening for: " << address << "\n";
   // Ensure listening address are flushed for calles to retrieve the resolve
@@ -324,13 +315,8 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                                           &dap_sessions_mutex, &dap_sessions,
                                           &clientCount](
                                              std::unique_ptr<Socket> sock) {
-    std::string name = llvm::formatv("client_{0}", clientCount++).str();
-    if (log) {
-      auto now = std::chrono::duration<double>(
-          std::chrono::system_clock::now().time_since_epoch());
-      *log << llvm::formatv("{0:f9}", now.count()).str()
-           << " client connected: " << name << "\n";
-    }
+    std::string client_name = llvm::formatv("client_{0}", clientCount++).str();
+    DAP_LOG(log, "({0}) client connected", client_name);
 
     lldb::IOObjectSP io(std::move(sock));
 
@@ -338,8 +324,8 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     // client.
     std::thread client([=, &dap_sessions_condition, &dap_sessions_mutex,
                         &dap_sessions]() {
-      llvm::set_thread_name(name + ".runloop");
-      DAP dap = DAP(name, program_path, log, io, io, default_repl_mode,
+      llvm::set_thread_name(client_name + ".runloop");
+      DAP dap = DAP(client_name, program_path, log, io, io, default_repl_mode,
                     pre_init_commands);
 
       if (auto Err = dap.ConfigureIO()) {
@@ -360,13 +346,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
                                     "DAP session error: ");
       }
 
-      if (log) {
-        auto now = std::chrono::duration<double>(
-            std::chrono::system_clock::now().time_since_epoch());
-        *log << llvm::formatv("{0:f9}", now.count()).str()
-             << " client closed: " << name << "\n";
-      }
-
+      DAP_LOG(log, "({0}) client disconnected", client_name);
       std::unique_lock<std::mutex> lock(dap_sessions_mutex);
       dap_sessions.erase(io.get());
       std::notify_all_at_thread_exit(dap_sessions_condition, std::move(lock));
@@ -383,9 +363,9 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
     return status.takeError();
   }
 
-  if (log)
-    *log << "lldb-dap server shutdown requested, disconnecting remaining "
-            "clients...\n";
+  DAP_LOG(
+      log,
+      "lldb-dap server shutdown requested, disconnecting remaining clients...");
 
   bool client_failed = false;
   {
@@ -394,7 +374,7 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
       auto error = dap->Disconnect();
       if (error.Fail()) {
         client_failed = true;
-        llvm::errs() << "DAP client " << dap->name
+        llvm::errs() << "DAP client " << dap->client_name
                      << " disconnected failed: " << error.GetCString() << "\n";
       }
       // Close the socket to ensure the DAP::Loop read finishes.
@@ -433,7 +413,7 @@ int main(int argc, char *argv[]) {
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (input_args.hasArg(OPT_help)) {
-    printHelp(T, llvm::sys::path::filename(argv[0]));
+    PrintHelp(T, llvm::sys::path::filename(argv[0]));
     return EXIT_SUCCESS;
   }
 
@@ -515,9 +495,24 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
+  // Create a memory monitor. This can return nullptr if the host platform is
+  // not supported.
+  std::unique_ptr<lldb_private::MemoryMonitor> memory_monitor =
+      lldb_private::MemoryMonitor::Create([&]() {
+        if (log)
+          *log << "memory pressure detected\n";
+        lldb::SBDebugger::MemoryPressureDetected();
+      });
+
+  if (memory_monitor)
+    memory_monitor->Start();
+
   // Terminate the debugger before the C++ destructor chain kicks in.
-  auto terminate_debugger =
-      llvm::make_scope_exit([] { lldb::SBDebugger::Terminate(); });
+  auto terminate_debugger = llvm::make_scope_exit([&] {
+    if (memory_monitor)
+      memory_monitor->Stop();
+    lldb::SBDebugger::Terminate();
+  });
 
   std::vector<std::string> pre_init_commands;
   for (const std::string &arg :

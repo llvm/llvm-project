@@ -26,7 +26,7 @@ RT_OFFLOAD_API_GROUP_BEGIN
 RT_API_ATTRS Descriptor::Descriptor(const Descriptor &that) { *this = that; }
 
 RT_API_ATTRS Descriptor &Descriptor::operator=(const Descriptor &that) {
-  std::memcpy(this, &that, that.SizeInBytes());
+  std::memcpy(reinterpret_cast<void *>(this), &that, that.SizeInBytes());
   return *this;
 }
 

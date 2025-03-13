@@ -1758,16 +1758,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
   assert(coffHeaderOffset == buf - buffer->getBufferStart());
   auto *coff = reinterpret_cast<coff_file_header *>(buf);
   buf += sizeof(*coff);
-  switch (config->machine) {
-  case ARM64EC:
-    coff->Machine = AMD64;
-    break;
-  case ARM64X:
-    coff->Machine = ARM64;
-    break;
-  default:
-    coff->Machine = config->machine;
-  }
+  coff->Machine = ctx.symtab.isEC() ? AMD64 : ctx.symtab.machine;
   coff->NumberOfSections = ctx.outputSections.size();
   coff->Characteristics = IMAGE_FILE_EXECUTABLE_IMAGE;
   if (config->largeAddressAware)
@@ -1995,9 +1986,16 @@ static void maybeAddAddressTakenFunction(SymbolRVASet &addressTakenSyms,
     // Common is always data, so it is ignored.
     break;
   case Symbol::DefinedAbsoluteKind:
-  case Symbol::DefinedSyntheticKind:
     // Absolute is never code, synthetic generally isn't and usually isn't
     // determinable.
+    break;
+  case Symbol::DefinedSyntheticKind:
+    // For EC export thunks, mark both the thunk itself and its target.
+    if (auto expChunk = dyn_cast_or_null<ECExportThunkChunk>(
+            cast<Defined>(s)->getChunk())) {
+      addSymbolToRVASet(addressTakenSyms, cast<Defined>(s));
+      addSymbolToRVASet(addressTakenSyms, expChunk->target);
+    }
     break;
   case Symbol::LazyArchiveKind:
   case Symbol::LazyObjectKind:
@@ -2063,9 +2061,11 @@ void Writer::createGuardCFTables() {
     // with /guard:cf.
     for (ObjFile *file : ctx.objFileInstances) {
       if (file->hasGuardCF()) {
-        Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
-        cast<DefinedAbsolute>(flagSym)->setVA(
-            uint32_t(GuardFlags::CF_INSTRUMENTED));
+        ctx.forEachSymtab([&](SymbolTable &symtab) {
+          Symbol *flagSym = symtab.findUnderscore("__guard_flags");
+          cast<DefinedAbsolute>(flagSym)->setVA(
+              uint32_t(GuardFlags::CF_INSTRUMENTED));
+        });
         break;
       }
     }
@@ -2147,8 +2147,10 @@ void Writer::createGuardCFTables() {
     guardFlags |= uint32_t(GuardFlags::CF_LONGJUMP_TABLE_PRESENT);
   if (config->guardCF & GuardCFLevel::EHCont)
     guardFlags |= uint32_t(GuardFlags::EH_CONTINUATION_TABLE_PRESENT);
-  Symbol *flagSym = ctx.symtab.findUnderscore("__guard_flags");
-  cast<DefinedAbsolute>(flagSym)->setVA(guardFlags);
+  ctx.forEachSymtab([guardFlags](SymbolTable &symtab) {
+    Symbol *flagSym = symtab.findUnderscore("__guard_flags");
+    cast<DefinedAbsolute>(flagSym)->setVA(guardFlags);
+  });
 }
 
 // Take a list of input sections containing symbol table indices and add those
@@ -2219,10 +2221,12 @@ void Writer::maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
     tableChunk = make<RVATableChunk>(std::move(tableSymbols));
   rdataSec->addChunk(tableChunk);
 
-  Symbol *t = ctx.symtab.findUnderscore(tableSym);
-  Symbol *c = ctx.symtab.findUnderscore(countSym);
-  replaceSymbol<DefinedSynthetic>(t, t->getName(), tableChunk);
-  cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / (hasFlag ? 5 : 4));
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    Symbol *t = symtab.findUnderscore(tableSym);
+    Symbol *c = symtab.findUnderscore(countSym);
+    replaceSymbol<DefinedSynthetic>(t, t->getName(), tableChunk);
+    cast<DefinedAbsolute>(c)->setVA(tableChunk->getSize() / (hasFlag ? 5 : 4));
+  });
 }
 
 // Create CHPE metadata chunks.
@@ -2284,49 +2288,53 @@ void Writer::createECChunks() {
 // uses for fixing them up, and provide the synthetic symbols that the
 // runtime uses for finding the table.
 void Writer::createRuntimePseudoRelocs() {
-  std::vector<RuntimePseudoReloc> rels;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    std::vector<RuntimePseudoReloc> rels;
 
-  for (Chunk *c : ctx.driver.getChunks()) {
-    auto *sc = dyn_cast<SectionChunk>(c);
-    if (!sc || !sc->live)
-      continue;
-    // Don't create pseudo relocations for sections that won't be
-    // mapped at runtime.
-    if (sc->header->Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
-      continue;
-    sc->getRuntimePseudoRelocs(rels);
-  }
+    for (Chunk *c : ctx.driver.getChunks()) {
+      auto *sc = dyn_cast<SectionChunk>(c);
+      if (!sc || !sc->live || &sc->file->symtab != &symtab)
+        continue;
+      // Don't create pseudo relocations for sections that won't be
+      // mapped at runtime.
+      if (sc->header->Characteristics & IMAGE_SCN_MEM_DISCARDABLE)
+        continue;
+      sc->getRuntimePseudoRelocs(rels);
+    }
 
-  if (!ctx.config.pseudoRelocs) {
-    // Not writing any pseudo relocs; if some were needed, error out and
-    // indicate what required them.
-    for (const RuntimePseudoReloc &rpr : rels)
-      Err(ctx) << "automatic dllimport of " << rpr.sym->getName() << " in "
-               << toString(rpr.target->file) << " requires pseudo relocations";
-    return;
-  }
+    if (!ctx.config.pseudoRelocs) {
+      // Not writing any pseudo relocs; if some were needed, error out and
+      // indicate what required them.
+      for (const RuntimePseudoReloc &rpr : rels)
+        Err(ctx) << "automatic dllimport of " << rpr.sym->getName() << " in "
+                 << toString(rpr.target->file)
+                 << " requires pseudo relocations";
+      return;
+    }
 
-  if (!rels.empty()) {
-    Log(ctx) << "Writing " << rels.size() << " runtime pseudo relocations";
-    const char *symbolName = "_pei386_runtime_relocator";
-    Symbol *relocator = ctx.symtab.findUnderscore(symbolName);
-    if (!relocator)
-      Err(ctx)
-          << "output image has runtime pseudo relocations, but the function "
-          << symbolName
-          << " is missing; it is needed for fixing the relocations at runtime";
-  }
+    if (!rels.empty()) {
+      Log(ctx) << "Writing " << Twine(rels.size())
+               << " runtime pseudo relocations";
+      const char *symbolName = "_pei386_runtime_relocator";
+      Symbol *relocator = symtab.findUnderscore(symbolName);
+      if (!relocator)
+        Err(ctx)
+            << "output image has runtime pseudo relocations, but the function "
+            << symbolName
+            << " is missing; it is needed for fixing the relocations at "
+               "runtime";
+    }
 
-  PseudoRelocTableChunk *table = make<PseudoRelocTableChunk>(rels);
-  rdataSec->addChunk(table);
-  EmptyChunk *endOfList = make<EmptyChunk>();
-  rdataSec->addChunk(endOfList);
+    PseudoRelocTableChunk *table = make<PseudoRelocTableChunk>(rels);
+    rdataSec->addChunk(table);
+    EmptyChunk *endOfList = make<EmptyChunk>();
+    rdataSec->addChunk(endOfList);
 
-  Symbol *headSym = ctx.symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST__");
-  Symbol *endSym =
-      ctx.symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST_END__");
-  replaceSymbol<DefinedSynthetic>(headSym, headSym->getName(), table);
-  replaceSymbol<DefinedSynthetic>(endSym, endSym->getName(), endOfList);
+    Symbol *headSym = symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST__");
+    Symbol *endSym = symtab.findUnderscore("__RUNTIME_PSEUDO_RELOC_LIST_END__");
+    replaceSymbol<DefinedSynthetic>(headSym, headSym->getName(), table);
+    replaceSymbol<DefinedSynthetic>(endSym, endSym->getName(), endOfList);
+  });
 }
 
 // MinGW specific.

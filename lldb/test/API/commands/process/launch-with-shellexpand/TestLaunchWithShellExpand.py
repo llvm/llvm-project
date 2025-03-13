@@ -93,7 +93,7 @@ class LaunchWithShellExpandTestCase(TestBase):
 
         self.runCmd("process kill")
 
-        self.runCmd("process launch -X true -w %s -- foo\ bar" % (self.getBuildDir()))
+        self.runCmd(r"process launch -X true -w %s -- foo\ bar" % (self.getBuildDir()))
 
         process = self.process()
 

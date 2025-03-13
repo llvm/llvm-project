@@ -150,6 +150,10 @@ public:
   DGNode *getBot() const;
   /// Move all bundle instructions to \p Where back-to-back.
   void cluster(BasicBlock::iterator Where);
+  /// \Returns true if all nodes in the bundle are ready.
+  bool ready() const {
+    return all_of(Nodes, [](const auto *N) { return N->ready(); });
+  }
 #ifndef NDEBUG
   void dump(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;

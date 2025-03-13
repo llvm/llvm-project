@@ -5427,8 +5427,8 @@ void PPCInstrInfo::promoteInstr32To64ForElimEXTSW(const Register &Reg,
   --Iter;
   MachineInstrBuilder MIBuilder(*Iter->getMF(), Iter);
   for (unsigned i = 1; i < MI->getNumOperands(); i++) {
-    if (PromoteRegs.find(i) != PromoteRegs.end())
-      MIBuilder.addReg(PromoteRegs[i], RegState::Kill);
+    if (auto It = PromoteRegs.find(i); It != PromoteRegs.end())
+      MIBuilder.addReg(It->second, RegState::Kill);
     else
       Iter->addOperand(MI->getOperand(i));
   }
