@@ -236,7 +236,7 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
 // 2.7 teams Construct
 //===----------------------------------------------------------------------===//
 def TeamsOp : OpenMP_Op<"teams", traits = [
-    AttrSizedOperandSegments, RecursiveMemoryEffects
+    AttrSizedOperandSegments, RecursiveMemoryEffects, OutlineableOpenMPOpInterface
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_IfClause, OpenMP_NumTeamsClause,
     OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_ThreadLimitClause
