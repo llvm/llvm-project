@@ -64,9 +64,9 @@ bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
 /// Response for a request.
 struct Response {
   enum class Message {
-    /// the request was cancelled
+    /// The request was cancelled
     cancelled,
-    /// the request may be retried once the adapter is in a 'stopped' state
+    /// The request may be retried once the adapter is in a 'stopped' state
     notStopped,
   };
 
@@ -167,7 +167,6 @@ struct Source {
   // unsupported keys origin, sources, adapterData, checksums
 };
 bool fromJSON(const llvm::json::Value &, Source &, llvm::json::Path);
-llvm::json::Value toJSON(const Source &);
 
 // MARK: Requests
 
