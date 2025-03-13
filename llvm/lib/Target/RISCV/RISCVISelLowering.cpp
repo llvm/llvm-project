@@ -14314,8 +14314,10 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::SHL, DL, VT, SHADD, DAG.getConstant(Bits, DL, VT));
 }
 
-// Check if this SDValue is an add immediate that is fed by a shift of 1, 2, or 3.
-static bool checkAddiForShift(SDValue AddI, int64_t &AddConst, int64_t &ShlConst) {
+// Check if this SDValue is an add immediate that is fed by a shift of 1, 2,
+// or 3.
+static bool checkAddiForShift(SDValue AddI, int64_t &AddConst,
+                              int64_t &ShlConst) {
   // Based on testing it seems that performance degrades if the ADDI has
   // more than 2 uses.
   if (AddI->use_size() > 2)
@@ -14373,14 +14375,15 @@ static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
   if (!LHSIsAddI && !RHSIsAddI)
     return SDValue();
 
-  // If the LHS is not the result of an add or both sides are results of an add, but
-  // the LHS does not have the desired structure with a shift, swap the operands.
+  // If the LHS is not the result of an add or both sides are results of an add,
+  // but the LHS does not have the desired structure with a shift, swap the
+  // operands.
   if (!LHSIsAddI || (RHSIsAddI && !checkAddiForShift(AddI, AddConst, ShlConst)))
     std::swap(AddI, Other);
 
   // We simply need to ensure AddI has the desired structure.
   if (!checkAddiForShift(AddI, AddConst, ShlConst))
-     return SDValue();
+    return SDValue();
 
   SDValue SHLVal = AddI->getOperand(0);
   SDLoc DL(N);
