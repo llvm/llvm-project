@@ -1404,7 +1404,7 @@ void PPCAsmPrinter::emitInstruction(const MachineInstr *MI) {
     MCSymbol *GOTSymbol =
         OutContext.getOrCreateSymbol(StringRef("_GLOBAL_OFFSET_TABLE_"));
     const MCExpr *SymGotTlsL = PPCMCExpr::create(
-        PPCMCExpr::VK_PPC_LO, MCSymbolRefExpr::create(GOTSymbol, OutContext),
+        PPCMCExpr::VK_LO, MCSymbolRefExpr::create(GOTSymbol, OutContext),
         OutContext);
     const MCExpr *SymGotTlsHA = PPCMCExpr::create(
         PPCMCExpr::VK_PPC_HA, MCSymbolRefExpr::create(GOTSymbol, OutContext),
