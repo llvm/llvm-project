@@ -1532,7 +1532,7 @@ bb3:                                              ; preds = %bb
   br label %bb4
 
 bb4:                                              ; preds = %bb3, %bb
-  %tmp5 = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32 16, float %arg2, float %arg3, <8 x i32> undef, <4 x i32> poison, i1 0, i32 0, i32 0)
+  %tmp5 = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32 16, float %arg2, float %arg3, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp6 = extractelement <4 x float> %tmp5, i32 0
   %tmp7 = fcmp une float %tmp6, 0.000000e+00
   br i1 %tmp7, label %bb8, label %bb9
@@ -1677,7 +1677,7 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX11-NEXT:    exp mrt0 off, off, off, off done
 ; GFX11-NEXT:    s_endpgm
 .entry:
-  %sample = call float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 1, float %val1, float %val1, float %val1, float 0.000000e+00, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0)
+  %sample = call float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 1, float %val1, float %val1, float %val1, float 0.000000e+00, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   %cond0 = fcmp ugt float %sample, 0.000000e+00
   br i1 %cond0, label %live, label %kill
 

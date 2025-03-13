@@ -1994,7 +1994,7 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 entry:
-  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %in, i32 15, i32 undef, <8 x i32> undef, i32 0, i32 0)
+  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %in, i32 15, i32 undef, <8 x i32> poison, i32 0, i32 0)
   br label %loop
 
 loop:
@@ -2005,7 +2005,7 @@ loop:
 
 body:
   %c.iv0 = extractelement <4 x float> %c.iv, i32 0
-  %c.next = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.iv0, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0) #0
+  %c.next = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.iv0, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   %ctr.next = fadd float %ctr.iv, 2.0
   br label %loop
 
@@ -2080,7 +2080,7 @@ entry:
   %c.gep = getelementptr [32 x i32], ptr addrspace(5) %array, i32 0, i32 %idx
   %c = load i32, ptr addrspace(5) %c.gep, align 4
   %c.bc = bitcast i32 %c to float
-  %t = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.bc, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0) #0
+  %t = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.bc, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %t, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
 
   ret void
@@ -2112,9 +2112,9 @@ define amdgpu_ps <4 x float> @test_nonvoid_return() nounwind {
 ; GFX10-W32-NEXT:    image_sample v[0:3], v0, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    ; return to shader part epilog
-  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float undef, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0) #0
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float undef, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   %tex0 = extractelement <4 x float> %tex, i32 0
-  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0) #0
+  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   ret <4 x float> %dtex
 }
 
@@ -2155,9 +2155,9 @@ define amdgpu_ps <4 x float> @test_nonvoid_return_unreachable(i32 inreg %c) noun
 ; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:  .LBB38_3:
 entry:
-  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float undef, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0) #0
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float undef, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   %tex0 = extractelement <4 x float> %tex, i32 0
-  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0) #0
+  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   %cc = icmp sgt i32 %c, 0
   br i1 %cc, label %if, label %else
 
@@ -2227,11 +2227,11 @@ main_body:
   br i1 %cc, label %if, label %else
 
 if:
-  %r.if = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0) #0
+  %r.if = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   br label %end
 
 else:
-  %r.else = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.0, float bitcast (i32 1 to float), <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0) #0
+  %r.else = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.0, float bitcast (i32 1 to float), <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   br label %end
 
 end:

@@ -143,7 +143,7 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
 ; GFX11-NEXT:    v_max_f32_e32 v0, 0, v1
 ; GFX11-NEXT:    ; return to shader part epilog
 .entry:
-  %0 = call <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 7, float undef, float undef, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0)
+  %0 = call <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 7, float undef, float undef, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   %.i2243 = extractelement <3 x float> %0, i32 2
   %1 = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> poison, i32 0, i32 0)
   %2 = shufflevector <3 x i32> %1, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
@@ -151,13 +151,13 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
   %.i2248 = extractelement <4 x float> %3, i32 2
   %.i2249 = fmul reassoc nnan nsz arcp contract afn float %.i2243, %.i2248
   %4 = call reassoc nnan nsz arcp contract afn float @llvm.amdgcn.fmed3.f32(float undef, float 0.000000e+00, float 1.000000e+00)
-  %5 = call <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 7, float undef, float undef, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0)
+  %5 = call <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 7, float undef, float undef, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   %.i2333 = extractelement <3 x float> %5, i32 2
   %6 = call reassoc nnan nsz arcp contract afn float @llvm.amdgcn.fmed3.f32(float undef, float 0.000000e+00, float 1.000000e+00)
-  %7 = call <2 x float> @llvm.amdgcn.image.sample.2d.v2f32.f32(i32 3, float undef, float undef, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0)
+  %7 = call <2 x float> @llvm.amdgcn.image.sample.2d.v2f32.f32(i32 3, float undef, float undef, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   %.i1408 = extractelement <2 x float> %7, i32 1
   %.i0364 = extractelement <2 x float> %7, i32 0
-  %8 = call float @llvm.amdgcn.image.sample.2d.f32.f32(i32 1, float undef, float undef, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0)
+  %8 = call float @llvm.amdgcn.image.sample.2d.f32.f32(i32 1, float undef, float undef, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   %9 = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> poison, i32 112, i32 0)
   %10 = shufflevector <3 x i32> %9, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 poison>
   %11 = bitcast <4 x i32> %10 to <4 x float>
@@ -204,10 +204,10 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
   %40 = fmul reassoc nnan nsz arcp contract afn float %39, 0x3F847AE140000000
   %41 = fadd reassoc nnan nsz arcp contract afn float %40, 0x3F947AE140000000
   %.i2415 = fmul reassoc nnan nsz arcp contract afn float %.i2407, %41
-  %42 = call <3 x float> @llvm.amdgcn.image.load.mip.2d.v3f32.i32(i32 7, i32 undef, i32 undef, i32 0, <8 x i32> undef, i32 0, i32 0)
+  %42 = call <3 x float> @llvm.amdgcn.image.load.mip.2d.v3f32.i32(i32 7, i32 undef, i32 undef, i32 0, <8 x i32> poison, i32 0, i32 0)
   %.i2521 = extractelement <3 x float> %42, i32 2
   %43 = call reassoc nnan nsz arcp contract afn float @llvm.amdgcn.fmed3.f32(float undef, float 0.000000e+00, float 1.000000e+00)
-  %44 = call <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 7, float undef, float undef, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0)
+  %44 = call <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 7, float undef, float undef, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   %.i2465 = extractelement <3 x float> %44, i32 2
   %.i2466 = fmul reassoc nnan nsz arcp contract afn float %.i2465, %43
   %.i2469 = fmul reassoc nnan nsz arcp contract afn float %.i2415, %.i2466
@@ -224,7 +224,7 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
   %.i2488 = fmul reassoc nnan nsz arcp contract afn float %.i2249, %18
   %.i2491 = fmul reassoc nnan nsz arcp contract afn float %.i2485, %4
   %.i2494 = fadd reassoc nnan nsz arcp contract afn float %.i2479, %.i2491
-  %51 = call <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 7, float undef, float undef, <8 x i32> undef, <4 x i32> poison, i1 false, i32 0, i32 0)
+  %51 = call <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 7, float undef, float undef, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   %.i2515 = extractelement <3 x float> %51, i32 2
   %.i2516 = fadd reassoc nnan nsz arcp contract afn float %.i2515, %.i2494
   %.i2522 = fadd reassoc nnan nsz arcp contract afn float %.i2521, %.i2516
