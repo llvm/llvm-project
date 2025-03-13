@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z16 -verify-machineinstrs \
 ; RUN:   | FileCheck %s
 ;
-; Various tests comparaisons and uses involving 16-bit floating point (half).
+; Some tests with comparisons and their uses involving 16-bit floating point.
 
 ; fcmp half; select half
 define half @fun0(half %Arg0, half %Arg1) {
