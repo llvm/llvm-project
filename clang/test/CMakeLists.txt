@@ -144,6 +144,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-dis
     llvm-dwarfdump
     llvm-ifs
+    llvm-link
     llvm-lto2
     llvm-mc
     llvm-modextract
