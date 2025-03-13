@@ -189,8 +189,7 @@ Expected<bool> LockFileManager::tryLock() {
     return createStringError(EC, "failed to create unique file " +
                                      UniqueLockFileName);
 
-  // Clean up the unique file on signal or scope exit. This also releases the
-  // lock if it's held since the .lock symlink will point to a nonexistent file.
+  // Clean up the unique file on signal or scope exit.
   RemoveUniqueLockFileOnSignal RemoveUniqueFile(UniqueLockFileName);
 
   // Write our process ID to our unique lock file.
