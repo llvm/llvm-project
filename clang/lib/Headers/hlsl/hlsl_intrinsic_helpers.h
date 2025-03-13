@@ -57,6 +57,32 @@ constexpr vector<T, L> reflect_vec_impl(vector<T, L> I, vector<T, L> N) {
   return I - 2 * N * dot(I, N);
 #endif
 }
+
+template <typename T>
+constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
+fmod_impl(T X, T Y) {
+#if !defined(__DIRECTX__)
+  return __builtin_elementwise_fmod(X, Y);
+#else
+  T div = X / Y;
+  bool ge = div >= 0;
+  T frc = frac(abs(div));
+  return select<T>(ge, frc, -frc) * Y;
+#endif
+}
+
+template <typename T, int N>
+constexpr vector<T, N> fmod_vec_impl(vector<T, N> X, vector<T, N> Y) {
+#if !defined(__DIRECTX__)
+  return __builtin_elementwise_fmod(X, Y);
+#else
+  vector<T, N> div = X / Y;
+  vector<bool, N> ge = div >= 0;
+  vector<T, N> frc = frac(abs(div));
+  return select<T>(ge, frc, -frc) * Y;
+#endif
+}
+
 } // namespace __detail
 } // namespace hlsl
 

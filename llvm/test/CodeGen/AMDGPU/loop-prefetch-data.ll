@@ -71,8 +71,7 @@ define amdgpu_kernel void @copy_flat(ptr nocapture %d, ptr nocapture readonly %s
 ; GFX12ES2-SPREFETCH-NEXT:    s_add_nc_u64 s[2:3], s[2:3], 0xb0
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB0_2: ; %for.body
 ; GFX12ES2-SPREFETCH-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xffe3
-; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xfffe
+; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xffe2
 ; GFX12ES2-SPREFETCH-NEXT:    v_dual_mov_b32 v0, s2 :: v_dual_mov_b32 v1, s3
 ; GFX12ES2-SPREFETCH-NEXT:    s_prefetch_data s[2:3], 0x0, null, 0
 ; GFX12ES2-SPREFETCH-NEXT:    v_dual_mov_b32 v5, s1 :: v_dual_mov_b32 v4, s0
@@ -443,8 +442,7 @@ define amdgpu_kernel void @copy_local(ptr addrspace(3) nocapture %d, ptr addrspa
 ; GFX12ES2-SPREFETCH-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GFX12ES2-SPREFETCH-NEXT:  .LBB3_1: ; %for.body
 ; GFX12ES2-SPREFETCH-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xffe3
-; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xfffe
+; GFX12ES2-SPREFETCH-NEXT:    s_wait_alu 0xffe2
 ; GFX12ES2-SPREFETCH-NEXT:    v_mov_b32_e32 v2, s1
 ; GFX12ES2-SPREFETCH-NEXT:    v_mov_b32_e32 v4, s0
 ; GFX12ES2-SPREFETCH-NEXT:    s_add_co_i32 s2, s2, -1

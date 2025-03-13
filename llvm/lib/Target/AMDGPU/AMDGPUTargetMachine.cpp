@@ -543,7 +543,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeSILowerControlFlowLegacyPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
   initializeSILateBranchLoweringPass(*PR);
-  initializeSIMemoryLegalizerPass(*PR);
+  initializeSIMemoryLegalizerLegacyPass(*PR);
   initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
   initializeSIFormMemoryClausesLegacyPass(*PR);
@@ -1384,7 +1384,11 @@ bool GCNPassConfig::addPreISel() {
   // control flow modifications.
   addPass(createAMDGPURewriteUndefForPHILegacyPass());
 
-  addPass(createLCSSAPass());
+  // SDAG requires LCSSA, GlobalISel does not. Disable LCSSA for -global-isel
+  // with -new-reg-bank-select and without any of the fallback options.
+  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
+      !isGlobalISelAbortEnabled() || !NewRegBankSelect)
+    addPass(createLCSSAPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     addPass(&AMDGPUPerfHintAnalysisLegacyID);
@@ -2090,7 +2094,9 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
   // control flow modifications.
   addPass(AMDGPURewriteUndefForPHIPass());
 
-  addPass(LCSSAPass());
+  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
+      !isGlobalISelAbortEnabled() || !NewRegBankSelect)
+    addPass(LCSSAPass());
 
   if (TM.getOptLevel() > CodeGenOptLevel::Less)
     addPass(AMDGPUPerfHintAnalysisPass(TM));
@@ -2155,7 +2161,8 @@ void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
   if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less)) {
     // TODO: addPass(GCNCreateVOPDPass());
   }
-  // TODO: addPass(SIMemoryLegalizerPass());
+
+  addPass(SIMemoryLegalizerPass());
   // TODO: addPass(SIInsertWaitcntsPass());
 
   // TODO: addPass(SIModeRegisterPass());

@@ -538,7 +538,7 @@ define i1 @test_fold_and_unord(float %a) {
 ; SI: s_and_b64
 define i1 @test_fold_and_ord_multi_use(float %a) {
   %class = call i1 @llvm.amdgcn.class.f32(float %a, i32 35) #1
-  store volatile i1 %class, ptr addrspace(1) undef
+  store volatile i1 %class, ptr addrspace(1) poison
   %ord = fcmp ord float %a, %a
   %and = and i1 %ord, %class
   ret i1 %and
