@@ -301,7 +301,7 @@ define i32 @inline_A_constraint_V2() {
 
 ; NOGCN: error: invalid operand for inline asm constraint 'A'
 define i32 @inline_A_constraint_V3() {
-  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x half> <half undef, half -0.5>)
+  %v0 = tail call i32 asm "v_mov_b32 $0, $1", "=v,A"(<2 x half> <half poison, half -0.5>)
   ret i32 %v0
 }
 
