@@ -1246,9 +1246,9 @@ static bool doesInTreeUserNeedToExtract(Value *Scalar, Instruction *UserInst,
 
 // Determine that the vector could be vectorized with copyable elements.
 static bool isCopyableOp(ArrayRef<Value *> VL, Value *Main, Value *Alt) {
-  if (any_of(VL, IsaPred<PoisonValue>) || Main == Alt ||
+  if (Main == Alt ||
       !isa<BinaryOperator>(Main) || !isa<Instruction>(Alt) ||
-      find_if(VL, IsaPred<PHINode>) != VL.end())
+      any_of(VL, IsaPred<PoisonValue, PHINode>))
     return false;
 
   Instruction *MainOp = cast<Instruction>(Main);
