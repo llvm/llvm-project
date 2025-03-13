@@ -500,8 +500,7 @@ CodeGenTypes::arrangeCXXConstructorCall(const CallArgList &args,
 /// definition of the given function.
 const CGFunctionInfo &
 CodeGenTypes::arrangeFunctionDeclaration(const GlobalDecl GD) {
-  const FunctionDecl *FD = dyn_cast<FunctionDecl>(GD.getDecl());
-  assert(FD && "GD must contain FunctionDecl");
+  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
   if (const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD))
     if (MD->isImplicitObjectMemberFunction())
       return arrangeCXXMethodDeclaration(MD);
