@@ -81,7 +81,7 @@ constexpr TheA V19[3] = {};
 constexpr TheV V20[3] = {};
 // expected-error@-1 {{constexpr variable cannot have type 'const TheV[3]' (aka 'const volatile short[3]')}}
 constexpr TheR V21[3] = {};
-// expected-error@-1 {{constexpr variable cannot have type 'const TheR[3]' (aka 'float *restrict const[3]')}}
+// expected-error@-1 {{constexpr variable cannot have type 'const TheR[3]' (aka 'float *const restrict[3]')}}
 
 struct HasA {
   TheA f;
