@@ -387,7 +387,7 @@ static bool expandFRem(BinaryOperator &I) {
   if (ReturnTy->isFloatingPointTy())
     Ret = Expander->buildFRem(I.getOperand(0), I.getOperand(1));
   else {
-    auto VecTy = cast<FixedVectorType>(ReturnTy);
+    auto *VecTy = cast<FixedVectorType>(ReturnTy);
 
     // This could use SplitBlockAndInsertForEachLane but the interface
     // is a bit awkward for a constant number of elements and it will
@@ -406,8 +406,7 @@ static bool expandFRem(BinaryOperator &I) {
 
   I.replaceAllUsesWith(Ret);
   Ret->takeName(&I);
-  I.removeFromParent();
-  I.dropAllReferences();
+  I.eraseFromParent();
 
   return true;
 }
@@ -1036,7 +1035,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
   while (!Replace.empty()) {
     Instruction *I = Replace.pop_back_val();
     if (I->getOpcode() == Instruction::FRem)
-      expandFRem(llvm::cast<BinaryOperator>(*I));
+      expandFRem(cast<BinaryOperator>(*I));
     else if (I->getOpcode() == Instruction::FPToUI ||
              I->getOpcode() == Instruction::FPToSI) {
       expandFPToI(I);
