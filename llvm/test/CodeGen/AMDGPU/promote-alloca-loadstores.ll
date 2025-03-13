@@ -9,15 +9,15 @@ define amdgpu_kernel void @test_overwrite(i64 %val, i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP:%.*]], label [[END:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <3 x i64> [ [[TMP2:%.*]], [[LOOP]] ], [ <i64 43, i64 undef, i64 undef>, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i64> [[PROMOTEALLOCA]], i64 68, i32 0
+; CHECK-NEXT:    [[PROMOTEALLOCA1:%.*]] = phi <3 x i64> [ [[TMP2:%.*]], [[LOOP]] ], [ <i64 43, i64 undef, i64 undef>, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA1]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <3 x i64> [[PROMOTEALLOCA1]], i64 68, i32 0
 ; CHECK-NEXT:    [[TMP2]] = insertelement <3 x i64> [[TMP1]], i64 32, i32 0
 ; CHECK-NEXT:    [[LOOP_CC:%.*]] = icmp ne i64 [[TMP0]], 68
 ; CHECK-NEXT:    br i1 [[LOOP_CC]], label [[LOOP]], label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PROMOTEALLOCA1:%.*]] = phi <3 x i64> [ [[TMP2]], [[LOOP]] ], [ <i64 43, i64 undef, i64 undef>, [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA1]], i32 0
+; CHECK-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <3 x i64> [ [[TMP2]], [[LOOP]] ], [ <i64 43, i64 undef, i64 undef>, [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA]], i32 0
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -64,15 +64,15 @@ define amdgpu_kernel void @test_no_overwrite(i64 %val, i1 %cond) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br i1 [[COND]], label [[LOOP:%.*]], label [[END:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <3 x i64> [ [[TMP1:%.*]], [[LOOP]] ], [ <i64 43, i64 undef, i64 undef>, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA]], i32 0
-; CHECK-NEXT:    [[TMP1]] = insertelement <3 x i64> [[PROMOTEALLOCA]], i64 32, i32 1
+; CHECK-NEXT:    [[PROMOTEALLOCA1:%.*]] = phi <3 x i64> [ [[TMP1:%.*]], [[LOOP]] ], [ <i64 43, i64 undef, i64 undef>, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA1]], i32 0
+; CHECK-NEXT:    [[TMP1]] = insertelement <3 x i64> [[PROMOTEALLOCA1]], i64 32, i32 1
 ; CHECK-NEXT:    [[LOOP_CC:%.*]] = icmp ne i64 [[TMP0]], 32
 ; CHECK-NEXT:    br i1 [[LOOP_CC]], label [[LOOP]], label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PROMOTEALLOCA1:%.*]] = phi <3 x i64> [ [[TMP1]], [[LOOP]] ], [ <i64 43, i64 undef, i64 undef>, [[ENTRY]] ]
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA1]], i32 0
-; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA1]], i32 1
+; CHECK-NEXT:    [[PROMOTEALLOCA:%.*]] = phi <3 x i64> [ [[TMP1]], [[LOOP]] ], [ <i64 43, i64 undef, i64 undef>, [[ENTRY]] ]
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <3 x i64> [[PROMOTEALLOCA]], i32 1
 ; CHECK-NEXT:    ret void
 ;
 entry:
