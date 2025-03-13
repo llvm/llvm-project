@@ -135,14 +135,7 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
         Value *Op1 = ICmp->getOperand(1);
         ICmpInst::Predicate Pred = ICmp->getPredicate();
 
-        // Ensure ballot is one of the operands
-        Value *OtherOp = nullptr;
-        if (Op0 == &II)
-          OtherOp = Op1;
-        else if (Op1 == &II)
-          OtherOp = Op0;
-        else
-          continue; // Skip if ballot isn't involved
+        Value *OtherOp = (Op0 == &II ? Op1 : Op0);
 
         // Case (icmp eq %ballot, 0) -->  xor %ballot_arg, 1
         if (Pred == ICmpInst::ICMP_EQ && match(OtherOp, m_Zero())) {
