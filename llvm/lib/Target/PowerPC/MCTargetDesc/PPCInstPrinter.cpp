@@ -13,6 +13,7 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
+#include "PPCMCExpr.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
@@ -81,7 +82,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   }
 
   // Check if the last operand is an expression with the variant kind
-  // VK_PPC_PCREL_OPT. If this is the case then this is a linker optimization
+  // VK_PCREL_OPT. If this is the case then this is a linker optimization
   // relocation and the .reloc directive needs to be added.
   unsigned LastOp = MI->getNumOperands() - 1;
   if (MI->getNumOperands() > 1) {
@@ -91,7 +92,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       const MCSymbolRefExpr *SymExpr =
           static_cast<const MCSymbolRefExpr *>(Expr);
 
-      if (SymExpr && SymExpr->getKind() == MCSymbolRefExpr::VK_PPC_PCREL_OPT) {
+      if (SymExpr && getVariantKind(SymExpr) == PPCMCExpr::VK_PCREL_OPT) {
         const MCSymbol &Symbol = SymExpr->getSymbol();
         if (MI->getOpcode() == PPC::PLDpc) {
           printInstruction(MI, Address, STI, O);
@@ -575,17 +576,17 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
     RefExp = cast<MCSymbolRefExpr>(Op.getExpr());
 
   O << RefExp->getSymbol().getName();
-  // The variant kind VK_PPC_NOTOC needs to be handled as a special case
+  // The variant kind VK_NOTOC needs to be handled as a special case
   // because we do not want the assembly to print out the @notoc at the
   // end like __tls_get_addr(x@tlsgd)@notoc. Instead we want it to look
   // like __tls_get_addr@notoc(x@tlsgd).
-  if (RefExp->getKind() == MCSymbolRefExpr::VK_PPC_NOTOC)
+  if (getVariantKind(RefExp) == PPCMCExpr::VK_NOTOC)
     O << '@' << MAI.getVariantKindName(RefExp->getKind());
   O << '(';
   printOperand(MI, OpNo + 1, STI, O);
   O << ')';
-  if (RefExp->getKind() != MCSymbolRefExpr::VK_None &&
-      RefExp->getKind() != MCSymbolRefExpr::VK_PPC_NOTOC)
+  if (getVariantKind(RefExp) != PPCMCExpr::VK_None &&
+      getVariantKind(RefExp) != PPCMCExpr::VK_NOTOC)
     O << '@' << MAI.getVariantKindName(RefExp->getKind());
   if (Rhs) {
     SmallString<0> Buf;
