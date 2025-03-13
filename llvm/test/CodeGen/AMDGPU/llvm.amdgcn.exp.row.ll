@@ -41,8 +41,8 @@ define amdgpu_kernel void @undef_f32() #0 {
 ; GFX12-NEXT:    export pos0 off, off, off, off row_en
 ; GFX12-NEXT:    export pos1 off, off, off, off done row_en
 ; GFX12-NEXT:    s_endpgm
-  call void @llvm.amdgcn.exp.row.f32(i32 12, i32 0, float undef, float undef, float undef, float undef, i1 false, i32 0)
-  call void @llvm.amdgcn.exp.row.f32(i32 13, i32 0, float undef, float undef, float undef, float undef, i1 true, i32 0)
+  call void @llvm.amdgcn.exp.row.f32(i32 12, i32 0, float poison, float poison, float poison, float poison, i1 false, i32 0)
+  call void @llvm.amdgcn.exp.row.f32(i32 13, i32 0, float poison, float poison, float poison, float poison, i1 true, i32 0)
   ret void
 }
 
@@ -83,8 +83,8 @@ define amdgpu_kernel void @one_f32() #0 {
 ; GFX12-NEXT:    export pos0 v0, v0, v0, off row_en
 ; GFX12-NEXT:    export pos1 v0, v0, v0, off done row_en
 ; GFX12-NEXT:    s_endpgm
-  call void @llvm.amdgcn.exp.row.f32(i32 12, i32 7, float 1.0, float 1.0, float 1.0, float undef, i1 false, i32 0)
-  call void @llvm.amdgcn.exp.row.f32(i32 13, i32 7, float 1.0, float 1.0, float 1.0, float undef, i1 true, i32 0)
+  call void @llvm.amdgcn.exp.row.f32(i32 12, i32 7, float 1.0, float 1.0, float 1.0, float poison, i1 false, i32 0)
+  call void @llvm.amdgcn.exp.row.f32(i32 13, i32 7, float 1.0, float 1.0, float 1.0, float poison, i1 true, i32 0)
   ret void
 }
 

@@ -390,7 +390,7 @@ define <4 x float> @insertelement_to_sgpr() nounwind {
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %tmp = load <4 x i32>, ptr addrspace(4) undef
   %tmp1 = insertelement <4 x i32> %tmp, i32 0, i32 0
-  %tmp2 = call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32 1, float undef, float undef, <8 x i32> poison, <4 x i32> %tmp1, i1 0, i32 0, i32 0)
+  %tmp2 = call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32 1, float poison, float poison, <8 x i32> poison, <4 x i32> %tmp1, i1 0, i32 0, i32 0)
   ret <4 x float> %tmp2
 }
 
