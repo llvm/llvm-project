@@ -92,7 +92,7 @@ define amdgpu_kernel void @infer_ptr_alignment_global_offset(ptr addrspace(1) %o
 }
 
 
-@ptr = addrspace(3) global ptr addrspace(3) undef
+@ptr = addrspace(3) global ptr addrspace(3) poison
 @dst = addrspace(3) global [16383 x i32] undef
 
 ; FUNC-LABEL: {{^}}global_ptr:
