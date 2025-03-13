@@ -8,10 +8,13 @@
 
 #include "PPCMCExpr.h"
 #include "PPCFixupKinds.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -49,7 +52,7 @@ std::optional<int64_t> PPCMCExpr::evaluateAsInt64(int64_t Value) const {
     return Value & 0xffff;
   case VK_HI:
     return (Value >> 16) & 0xffff;
-  case VK_PPC_HA:
+  case VK_HA:
     return ((Value + 0x8000) >> 16) & 0xffff;
   case VK_HIGH:
     return (Value >> 16) & 0xffff;

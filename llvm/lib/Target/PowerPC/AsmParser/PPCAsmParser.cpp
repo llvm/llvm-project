@@ -745,8 +745,8 @@ public:
       return CreateImm(CE->getValue(), S, E, IsPPC64);
 
     if (const MCSymbolRefExpr *SRE = dyn_cast<MCSymbolRefExpr>(Val))
-      if (SRE->getKind() == MCSymbolRefExpr::VK_PPC_TLS ||
-          SRE->getKind() == MCSymbolRefExpr::VK_PPC_TLS_PCREL)
+      if (getVariantKind(SRE) == PPCMCExpr::VK_TLS ||
+          getVariantKind(SRE) == PPCMCExpr::VK_TLS_PCREL)
         return CreateTLSReg(SRE, S, E, IsPPC64);
 
     if (const PPCMCExpr *TE = dyn_cast<PPCMCExpr>(Val)) {
@@ -1374,7 +1374,7 @@ const MCExpr *
 PPCAsmParser::extractModifierFromExpr(const MCExpr *E,
                                       PPCMCExpr::VariantKind &Variant) {
   MCContext &Context = getParser().getContext();
-  Variant = PPCMCExpr::VK_PPC_None;
+  Variant = PPCMCExpr::VK_None;
 
   switch (E->getKind()) {
   case MCExpr::Target:
@@ -1383,16 +1383,16 @@ PPCAsmParser::extractModifierFromExpr(const MCExpr *E,
 
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr *SRE = cast<MCSymbolRefExpr>(E);
-
-    switch ((PPCMCExpr::VariantKind)SRE->getKind()) {
+    Variant = (PPCMCExpr::VariantKind)SRE->getKind();
+    switch (Variant) {
     case PPCMCExpr::VK_LO:
       Variant = PPCMCExpr::VK_LO;
       break;
     case PPCMCExpr::VK_HI:
       Variant = PPCMCExpr::VK_HI;
       break;
-    case PPCMCExpr::VK_PPC_HA:
-      Variant = PPCMCExpr::VK_PPC_HA;
+    case PPCMCExpr::VK_HA:
+      Variant = PPCMCExpr::VK_HA;
       break;
     case PPCMCExpr::VK_HIGH:
       Variant = PPCMCExpr::VK_HIGH;
@@ -1439,9 +1439,9 @@ PPCAsmParser::extractModifierFromExpr(const MCExpr *E,
     if (!LHS) LHS = BE->getLHS();
     if (!RHS) RHS = BE->getRHS();
 
-    if (LHSVariant == PPCMCExpr::VK_PPC_None)
+    if (LHSVariant == PPCMCExpr::VK_None)
       Variant = RHSVariant;
-    else if (RHSVariant == PPCMCExpr::VK_PPC_None)
+    else if (RHSVariant == PPCMCExpr::VK_None)
       Variant = LHSVariant;
     else if (LHSVariant == RHSVariant)
       Variant = LHSVariant;
@@ -1539,8 +1539,9 @@ bool PPCAsmParser::parseOperand(OperandVector &Operands) {
       if (!(parseOptionalToken(AsmToken::Identifier) &&
             Tok.getString().compare_insensitive("plt") == 0))
         return Error(Tok.getLoc(), "expected 'plt'");
-      EVal = MCSymbolRefExpr::create(getContext().getOrCreateSymbol(TlsGetAddr),
-                                     MCSymbolRefExpr::VK_PLT, getContext());
+      EVal = MCSymbolRefExpr::create(
+          getContext().getOrCreateSymbol(TlsGetAddr),
+          MCSymbolRefExpr::VariantKind(PPCMCExpr::VK_PLT), getContext());
       if (parseOptionalToken(AsmToken::Plus)) {
         const MCExpr *Addend = nullptr;
         SMLoc EndLoc;
@@ -1856,7 +1857,7 @@ PPCAsmParser::applyModifierToExpr(const MCExpr *E,
     switch (PPCMCExpr::VariantKind(Variant)) {
     case PPCMCExpr::VariantKind::VK_LO:
     case PPCMCExpr::VariantKind::VK_HI:
-    case PPCMCExpr::VariantKind::VK_PPC_HA:
+    case PPCMCExpr::VariantKind::VK_HA:
     case PPCMCExpr::VariantKind::VK_HIGH:
     case PPCMCExpr::VariantKind::VK_HIGHA:
     case PPCMCExpr::VariantKind::VK_HIGHER:
