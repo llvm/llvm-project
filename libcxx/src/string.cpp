@@ -373,19 +373,17 @@ wstring to_wstring(unsigned long val) { return i_to_string<wstring>(val); }
 wstring to_wstring(unsigned long long val) { return i_to_string<wstring>(val); }
 #endif
 
-#if _LIBCPP_STD_VER >= 26
+namespace __cpp26 {
+_LIBCPP_EXPORTED_FROM_ABI string __to_string(float __val) { return std::format("{}", __val); }
+_LIBCPP_EXPORTED_FROM_ABI string __to_string(double __val) { return std::format("{}", __val); }
+_LIBCPP_EXPORTED_FROM_ABI string __to_string(long double __val) { return std::format("{}", __val); }
 
-string to_string(float val) { return std::format("{}", val); }
-string to_string(double val) { return std::format("{}", val); }
-string to_string(long double val) { return std::format("{}", val); }
-
-#  ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
-wstring to_wstring(float val) { return std::format(L"{}", val); }
-wstring to_wstring(double val) { return std::format(L"{}", val); }
-wstring to_wstring(long double val) { return std::format(L"{}", val); }
-#  endif
-
-#else
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+_LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(float __val) { return std::format(L"{}", __val); }
+_LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(double __val) { return std::format(L"{}", __val); }
+_LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(long double __val) { return std::format(L"{}", __val); }
+#endif
+} // namespace __cpp26
 
 string to_string(float val) { return as_string(snprintf, initial_string< string>()(), "%f", val); }
 string to_string(double val) { return as_string(snprintf, initial_string< string>()(), "%f", val); }
@@ -396,7 +394,5 @@ wstring to_wstring(float val) { return as_string(get_swprintf(), initial_string<
 wstring to_wstring(double val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%f", val); }
 wstring to_wstring(long double val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%Lf", val); }
 #  endif
-
-#endif // _LIBCPP_STD_VER >= 26
 
 _LIBCPP_END_NAMESPACE_STD
