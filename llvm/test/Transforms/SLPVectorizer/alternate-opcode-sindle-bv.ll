@@ -3,17 +3,6 @@
 ; RUN: %if aarch64-registered-target %{ opt -S --passes=slp-vectorizer -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck %s --check-prefix=AARCH64 %}
 
 define <2 x i32> @test(i32 %arg) {
-; CHECK-LABEL: define <2 x i32> @test(
-; CHECK-SAME: i32 [[ARG:%.*]]) {
-; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[ARG]], 0
-; CHECK-NEXT:    [[MUL:%.*]] = mul i32 0, 1
-; CHECK-NEXT:    [[MUL1:%.*]] = mul i32 [[OR]], [[MUL]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 0, [[MUL1]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> poison, i32 [[OR]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> [[TMP0]], i32 [[MUL]], i32 1
-; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
-;
 ; X86-LABEL: define <2 x i32> @test(
 ; X86-SAME: i32 [[ARG:%.*]]) {
 ; X86-NEXT:  bb:
