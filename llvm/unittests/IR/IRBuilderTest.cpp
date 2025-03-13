@@ -121,6 +121,15 @@ TEST_F(IRBuilderTest, Intrinsics) {
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
+  FastMathFlags SavedFMF = Builder.getFastMathFlags();
+  Builder.setFastMathFlags(FastMathFlags::getFast());
+  Result = Builder.CreateFMA(V, V, V);
+  II = cast<IntrinsicInst>(Result);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
+  EXPECT_TRUE(II->hasNoInfs());
+  EXPECT_TRUE(II->hasNoNaNs());
+  Builder.setFastMathFlags(SavedFMF);
+
   Result = Builder.CreateUnaryIntrinsic(Intrinsic::roundeven, V);
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::roundeven);
@@ -298,6 +307,11 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   ASSERT_TRUE(isa<IntrinsicInst>(V));
   II = cast<IntrinsicInst>(V);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_frem);
+
+  V = Builder.CreateFMA(V, V, V);
+  ASSERT_TRUE(isa<IntrinsicInst>(V));
+  II = cast<IntrinsicInst>(V);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fma);
 
   VInt = Builder.CreateFPToUI(VDouble, Builder.getInt32Ty());
   ASSERT_TRUE(isa<IntrinsicInst>(VInt));

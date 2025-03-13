@@ -1068,7 +1068,12 @@ public:
   /// Create call to the fma intrinsic.
   Value *CreateFMA(Value *Factor1, Value *Factor2, Value *Summand,
                    FMFSource FMFSource = {}, const Twine &Name = "") {
-    assert(!IsFPConstrained && "TODO: Support experimental_constrained_fma");
+    if (IsFPConstrained) {
+      return CreateConstrainedFPIntrinsic(
+          Intrinsic::experimental_constrained_fma, {Factor1->getType()},
+          {Factor1, Factor2, Summand}, FMFSource, Name);
+    }
+
     return CreateIntrinsic(Intrinsic::fma, {Factor1->getType()},
                            {Factor1, Factor2, Summand}, FMFSource, Name);
   }
