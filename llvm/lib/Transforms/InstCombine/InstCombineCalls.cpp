@@ -1895,7 +1895,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(I0, m_OneUse(m_NUWShl(m_Value(Base), m_Value(Shamt1)))) &&
         match(I1, m_OneUse(m_NUWShl(m_Deferred(Base), m_Value(Shamt2))))) {
       Value *MaxMin = Builder.CreateBinaryIntrinsic(IID, Shamt1, Shamt2);
-      return BinaryOperator::CreateNUWShl(Base, MaxMin);
+      auto *NewShl = BinaryOperator::CreateNUWShl(Base, MaxMin);
+      if (cast<BinaryOperator>(I0)->hasNoSignedWrap() &&
+          cast<BinaryOperator>(I1)->hasNoSignedWrap())
+        NewShl->setHasNoSignedWrap();
+      return NewShl;
     }
 
     // If both operands of unsigned min/max are sign-extended, it is still ok
