@@ -391,6 +391,8 @@ private:
   bool mayLiveOut(Register VirtReg);
   bool mayLiveIn(Register VirtReg);
 
+  bool isInlineAsmBrSpill(const MachineInstr &MI) const;
+
   void dumpState() const;
 };
 
@@ -489,6 +491,20 @@ static bool dominates(InstrPosIndexes &PosIndexes, const MachineInstr &A,
   if (LLVM_UNLIKELY(PosIndexes.getIndex(B, IndexB)))
     PosIndexes.getIndex(A, IndexA);
   return IndexA < IndexB;
+}
+
+bool RegAllocFastImpl::isInlineAsmBrSpill(const MachineInstr &MI) const {
+  int FI;
+  auto *MBB = MI.getParent();
+  if (MBB->isInlineAsmBrIndirectTarget() && TII->isStoreToStackSlot(MI, FI) &&
+      MFI->isSpillSlotObjectIndex(FI)) {
+    for (const auto &Op : MI.operands())
+      if (Op.isReg() && any_of(MBB->liveins(), [&](const auto &RegP) {
+            return Op.getReg() == RegP.PhysReg;
+          }))
+        return true;
+  }
+  return false;
 }
 
 /// Returns false if \p VirtReg is known to not live out of the current block.
@@ -648,8 +664,8 @@ MachineBasicBlock::iterator RegAllocFastImpl::getMBBBeginInsertionPoint(
       continue;
     }
 
-    // Most reloads should be inserted after prolog instructions.
-    if (!TII->isBasicBlockPrologue(*I))
+    // Skip prologues and inlineasm_br spills to place reloads afterwards.
+    if (!TII->isBasicBlockPrologue(*I) && !isInlineAsmBrSpill(*I))
       break;
 
     // However if a prolog instruction reads a register that needs to be
@@ -736,6 +752,8 @@ bool RegAllocFastImpl::displacePhysReg(MachineInstr &MI, MCRegister PhysReg) {
       assert(LRI != LiveVirtRegs.end() && "datastructures in sync");
       MachineBasicBlock::iterator ReloadBefore =
           std::next((MachineBasicBlock::iterator)MI.getIterator());
+      while (isInlineAsmBrSpill(*ReloadBefore))
+        ++ReloadBefore;
       reload(ReloadBefore, VirtReg, LRI->PhysReg);
 
       setPhysRegState(LRI->PhysReg, regFree);
