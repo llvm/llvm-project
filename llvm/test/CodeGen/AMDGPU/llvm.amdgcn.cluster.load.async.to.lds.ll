@@ -12,7 +12,6 @@ define amdgpu_ps void @cluster_load_async_to_lds_b8_vaddr(ptr addrspace(1) %gadd
 ; GFX1250-SDAG:       ; %bb.0: ; %entry
 ; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    s_mov_b32 m0, s0
 ; GFX1250-SDAG-NEXT:    cluster_load_async_to_lds_b8 v2, v[0:1], off offset:16 th:TH_LOAD_NT
 ; GFX1250-SDAG-NEXT:    s_endpgm
@@ -71,7 +70,6 @@ define amdgpu_ps void @cluster_load_async_to_lds_b32_vaddr(ptr addrspace(1) %gad
 ; GFX1250-SDAG:       ; %bb.0: ; %entry
 ; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    s_mov_b32 m0, s0
 ; GFX1250-SDAG-NEXT:    cluster_load_async_to_lds_b32 v2, v[0:1], off offset:16 th:TH_LOAD_HT scope:SCOPE_SE
 ; GFX1250-SDAG-NEXT:    s_endpgm
@@ -130,7 +128,6 @@ define amdgpu_ps void @cluster_load_async_to_lds_b64_vaddr(ptr addrspace(1) %gad
 ; GFX1250-SDAG:       ; %bb.0: ; %entry
 ; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    s_mov_b32 m0, s0
 ; GFX1250-SDAG-NEXT:    cluster_load_async_to_lds_b64 v2, v[0:1], off offset:16 th:TH_LOAD_NT_HT scope:SCOPE_DEV
 ; GFX1250-SDAG-NEXT:    s_endpgm
@@ -189,7 +186,6 @@ define amdgpu_ps void @cluster_load_async_to_lds_b128_vaddr(ptr addrspace(1) %ga
 ; GFX1250-SDAG:       ; %bb.0: ; %entry
 ; GFX1250-SDAG-NEXT:    v_add_nc_u64_e32 v[0:1], 32, v[0:1]
 ; GFX1250-SDAG-NEXT:    v_readfirstlane_b32 s0, v3
-; GFX1250-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-SDAG-NEXT:    s_mov_b32 m0, s0
 ; GFX1250-SDAG-NEXT:    cluster_load_async_to_lds_b128 v2, v[0:1], off offset:16 th:TH_LOAD_BYPASS scope:SCOPE_SYS
 ; GFX1250-SDAG-NEXT:    s_endpgm
