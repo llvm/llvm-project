@@ -2439,7 +2439,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   CallingConv::ID CallConv              = CLI.CallConv;
   bool doesNotRet                       = CLI.DoesNotReturn;
   bool isVarArg                         = CLI.IsVarArg;
-  const auto *CB = CLI.CB;
+  const CallBase *CB = CLI.CB;
 
   MachineFunction &MF = DAG.getMachineFunction();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
