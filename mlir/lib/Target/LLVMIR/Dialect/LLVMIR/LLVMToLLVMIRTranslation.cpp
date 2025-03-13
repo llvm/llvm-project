@@ -275,7 +275,7 @@ static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
   llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
   for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>())
     llvmModule->addModuleFlag(
-        static_cast<llvm::Module::ModFlagBehavior>(flagAttr.getBehavior()),
+        convertModFlagBehaviorToLLVM(flagAttr.getBehavior()),
         flagAttr.getKey().getValue(), flagAttr.getValue());
 }
 
