@@ -15,6 +15,7 @@
 #include "DXILDataScalarization.h"
 #include "DXILFlattenArrays.h"
 #include "DXILIntrinsicExpansion.h"
+#include "DXILLegalizePass.h"
 #include "DXILOpLowering.h"
 #include "DXILPrettyPrinter.h"
 #include "DXILResourceAccess.h"
@@ -25,7 +26,6 @@
 #include "DirectX.h"
 #include "DirectXSubtarget.h"
 #include "DirectXTargetTransformInfo.h"
-#include "LegalizeI8Pass.h"
 #include "TargetInfo/DirectXTargetInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/Passes.h"
@@ -53,7 +53,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeDirectXTarget() {
   initializeDXILDataScalarizationLegacyPass(*PR);
   initializeDXILFlattenArraysLegacyPass(*PR);
   initializeScalarizerLegacyPassPass(*PR);
-  initializeLegalizeI8LegacyPass(*PR);
+  initializeDXILLegalizeLegacyPass(*PR);
   initializeDXILPrepareModulePass(*PR);
   initializeEmbedDXILPassPass(*PR);
   initializeWriteDXILPassPass(*PR);
@@ -101,8 +101,8 @@ public:
     ScalarizerPassOptions DxilScalarOptions;
     DxilScalarOptions.ScalarizeLoadStore = true;
     addPass(createScalarizerPass(DxilScalarOptions));
+    addPass(createDXILLegalizeLegacyPass());
     addPass(createDXILTranslateMetadataLegacyPass());
-    addPass(createLegalizeI8LegacyPass());
     addPass(createDXILOpLoweringLegacyPass());
     addPass(createDXILPrepareModulePass());
   }

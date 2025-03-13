@@ -32,7 +32,7 @@ add_llvm_target(DirectXCodeGen
   DXILShaderFlags.cpp
   DXILTranslateMetadata.cpp
   DXILRootSignature.cpp
-  LegalizeI8Pass.cpp
+  DXILLegalizePass.cpp
   
   LINK_COMPONENTS
   Analysis
