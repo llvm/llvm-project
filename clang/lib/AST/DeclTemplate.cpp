@@ -1642,7 +1642,7 @@ void TemplateParamObjectDecl::printAsInit(llvm::raw_ostream &OS,
   getValue().printPretty(OS, Policy, getType(), &getASTContext());
 }
 
-TemplateParameterList *clang::getReplacedTemplateParameterList(Decl *D) {
+TemplateParameterList *clang::getReplacedTemplateParameterList(const Decl *D) {
   switch (D->getKind()) {
   case Decl::Kind::CXXRecord:
     return cast<CXXRecordDecl>(D)
