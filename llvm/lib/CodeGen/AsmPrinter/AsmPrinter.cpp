@@ -1662,8 +1662,8 @@ static ConstantInt *extractNumericCGTypeId(const Function &F) {
     return nullptr;
 
   uint64_t TypeIdVal = llvm::MD5Hash(MDGeneralizedTypeId->getString());
-  Type *Int64Ty = Type::getInt64Ty(F.getContext());
-  return cast<ConstantInt>(ConstantInt::get(Int64Ty, TypeIdVal));
+  IntegerType *Int64Ty = Type::getInt64Ty(F.getContext());
+  return ConstantInt::get(Int64Ty, TypeIdVal);
 }
 
 /// Emits call graph section.
