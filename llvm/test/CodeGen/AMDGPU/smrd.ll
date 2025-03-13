@@ -697,7 +697,7 @@ if1:                                              ; preds = %main_body
 
 endif1:                                           ; preds = %if1, %main_body
   %tmp13 = extractelement <3 x i32> %arg4, i32 0
-  %tmp97 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 %tmp13, i32 0)
+  %tmp97 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 %tmp13, i32 0)
   ret float %tmp97
 }
 
