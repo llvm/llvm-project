@@ -884,8 +884,8 @@ StmtResult Parser::ParseAsmStatement(bool &msAsm) {
 bool Parser::ParseAsmOperandsOpt(SmallVectorImpl<IdentifierInfo *> &Names,
                                  SmallVectorImpl<Expr *> &Constraints,
                                  SmallVectorImpl<Expr *> &Exprs) {
-  // 'asm-operands' isn't present?
-  if (!isTokenStringLiteral() && Tok.isNot(tok::l_square))
+  // 'asm-operands' isn't present
+  if (Tok.isOneOf(tok::colon, tok::coloncolon, tok::r_paren))
     return false;
 
   while (true) {

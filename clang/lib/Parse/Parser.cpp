@@ -1687,16 +1687,18 @@ ExprResult Parser::ParseAsmStringLiteral(bool ForAsmLabel) {
     SourceLocation RParenLoc;
     ParsedType CastTy;
 
-    Sema::ExpressionEvaluationContext Context =
-        Sema::ExpressionEvaluationContext::ConstantEvaluated;
-
+    EnterExpressionEvaluationContext ConstantEvaluated(
+        Actions, Sema::ExpressionEvaluationContext::ConstantEvaluated);
     AsmString = ParseParenExpression(ExprType, true /*stopIfCastExpr*/, false,
                                      CastTy, RParenLoc);
-    if (!AsmString.isUsable())
+    if (!AsmString.isInvalid())
+      AsmString = Actions.ActOnConstantExpression(AsmString);
+
+    if (AsmString.isInvalid())
       return ExprError();
   } else {
-    Diag(Tok, diag::err_asm_expected_string)
-        << /*and expression=*/(getLangOpts().CPlusPlus11 ? 0 : 1);
+    Diag(Tok, diag::err_asm_expected_string) << /*and expression=*/(
+        (getLangOpts().CPlusPlus11 && !ForAsmLabel) ? 0 : 1);
   }
 
   return Actions.ActOnGCCAsmStmtString(AsmString.get(), ForAsmLabel);
