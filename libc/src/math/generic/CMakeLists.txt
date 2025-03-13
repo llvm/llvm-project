@@ -4249,6 +4249,7 @@ add_entrypoint_object(
     ../fmaf16.h
   DEPENDS
     libc.src.__support.FPUtil.fma
+    libc.src.__support.macros.properties.types
 )
 
 add_entrypoint_object(
