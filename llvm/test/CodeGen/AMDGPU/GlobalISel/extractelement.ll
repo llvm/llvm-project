@@ -1619,7 +1619,7 @@ define amdgpu_ps void @dyn_extract_v8p3_s_s(<8 x ptr addrspace(3)> inreg %vec, i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x ptr addrspace(3)> %vec, i32 %idx
-  store ptr addrspace(3) %ext, ptr addrspace(3) undef
+  store ptr addrspace(3) %ext, ptr addrspace(3) poison
   ret void
 }
 

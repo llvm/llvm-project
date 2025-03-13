@@ -330,28 +330,82 @@ namespace clang {
   };
 }
 
+// When building a C++20 module interface unit or a partition unit, a
+// strong definition in the module interface is provided by the
+// compilation of that unit, not by its users. (Inline variables are still
+// emitted in module users.)
+static bool shouldVarGenerateHereOnly(const VarDecl *VD) {
+  if (VD->getStorageDuration() != SD_Static)
+    return false;
+
+  if (VD->getDescribedVarTemplate())
+    return false;
+
+  Module *M = VD->getOwningModule();
+  if (!M)
+    return false;
+
+  M = M->getTopLevelModule();
+  ASTContext &Ctx = VD->getASTContext();
+  if (!M->isInterfaceOrPartition() &&
+      (!VD->hasAttr<DLLExportAttr>() ||
+       !Ctx.getLangOpts().BuildingPCHWithObjectFile))
+    return false;
+
+  return Ctx.GetGVALinkageForVariable(VD) >= GVA_StrongExternal;
+}
+
+static bool shouldFunctionGenerateHereOnly(const FunctionDecl *FD) {
+  if (FD->isDependentContext())
+    return false;
+
+  ASTContext &Ctx = FD->getASTContext();
+  auto Linkage = Ctx.GetGVALinkageForFunction(FD);
+  if (Ctx.getLangOpts().ModulesCodegen ||
+      (FD->hasAttr<DLLExportAttr>() &&
+       Ctx.getLangOpts().BuildingPCHWithObjectFile))
+    // Under -fmodules-codegen, codegen is performed for all non-internal,
+    // non-always_inline functions, unless they are available elsewhere.
+    if (!FD->hasAttr<AlwaysInlineAttr>() && Linkage != GVA_Internal &&
+        Linkage != GVA_AvailableExternally)
+      return true;
+
+  Module *M = FD->getOwningModule();
+  if (!M)
+    return false;
+
+  M = M->getTopLevelModule();
+  if (M->isInterfaceOrPartition())
+    if (Linkage >= GVA_StrongExternal)
+      return true;
+
+  return false;
+}
+
 bool clang::CanElideDeclDef(const Decl *D) {
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
-    if (FD->isInlined() || FD->isConstexpr())
+    if (FD->isInlined() || FD->isConstexpr() || FD->isConsteval())
       return false;
 
-    if (FD->isDependentContext())
-      return false;
-
-    if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+    // If the function should be generated somewhere else, we shouldn't elide
+    // it.
+    if (!shouldFunctionGenerateHereOnly(FD))
       return false;
   }
 
   if (auto *VD = dyn_cast<VarDecl>(D)) {
-    if (!VD->getDeclContext()->getRedeclContext()->isFileContext() ||
-        VD->isInline() || VD->isConstexpr() || isa<ParmVarDecl>(VD) ||
-        // Constant initialized variable may not affect the ABI, but they
-        // may be used in constant evaluation in the frontend, so we have
-        // to remain them.
-        VD->hasConstantInitialization())
+    if (VD->getDeclContext()->isDependentContext())
       return false;
 
-    if (VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
+    // Constant initialized variable may not affect the ABI, but they
+    // may be used in constant evaluation in the frontend, so we have
+    // to remain them.
+    if (VD->hasConstantInitialization() || VD->isConstexpr())
+      return false;
+
+    // If the variable should be generated somewhere else, we shouldn't elide
+    // it.
+    if (!shouldVarGenerateHereOnly(VD))
       return false;
   }
 
@@ -1183,19 +1237,7 @@ void ASTDeclWriter::VisitVarDecl(VarDecl *D) {
   VarDeclBits.addBits(llvm::to_underlying(D->getLinkageInternal()),
                       /*BitWidth=*/3);
 
-  bool ModulesCodegen = false;
-  if (Writer.WritingModule && D->getStorageDuration() == SD_Static &&
-      !D->getDescribedVarTemplate()) {
-    // When building a C++20 module interface unit or a partition unit, a
-    // strong definition in the module interface is provided by the
-    // compilation of that unit, not by its users. (Inline variables are still
-    // emitted in module users.)
-    ModulesCodegen = (Writer.WritingModule->isInterfaceOrPartition() ||
-                      (D->hasAttr<DLLExportAttr>() &&
-                       Writer.getLangOpts().BuildingPCHWithObjectFile)) &&
-                     Record.getASTContext().GetGVALinkageForVariable(D) >=
-                         GVA_StrongExternal;
-  }
+  bool ModulesCodegen = shouldVarGenerateHereOnly(D);
   VarDeclBits.addBit(ModulesCodegen);
 
   VarDeclBits.addBits(D->getStorageClass(), /*BitWidth=*/3);
@@ -3012,32 +3054,7 @@ void ASTRecordWriter::AddFunctionDefinition(const FunctionDecl *FD) {
   Writer->ClearSwitchCaseIDs();
 
   assert(FD->doesThisDeclarationHaveABody());
-  bool ModulesCodegen = false;
-  if (!FD->isDependentContext()) {
-    std::optional<GVALinkage> Linkage;
-    if (Writer->WritingModule &&
-        Writer->WritingModule->isInterfaceOrPartition()) {
-      // When building a C++20 module interface unit or a partition unit, a
-      // strong definition in the module interface is provided by the
-      // compilation of that unit, not by its users. (Inline functions are still
-      // emitted in module users.)
-      Linkage = getASTContext().GetGVALinkageForFunction(FD);
-      ModulesCodegen = *Linkage >= GVA_StrongExternal;
-    }
-    if (Writer->getLangOpts().ModulesCodegen ||
-        (FD->hasAttr<DLLExportAttr>() &&
-         Writer->getLangOpts().BuildingPCHWithObjectFile)) {
-
-      // Under -fmodules-codegen, codegen is performed for all non-internal,
-      // non-always_inline functions, unless they are available elsewhere.
-      if (!FD->hasAttr<AlwaysInlineAttr>()) {
-        if (!Linkage)
-          Linkage = getASTContext().GetGVALinkageForFunction(FD);
-        ModulesCodegen =
-            *Linkage != GVA_Internal && *Linkage != GVA_AvailableExternally;
-      }
-    }
-  }
+  bool ModulesCodegen = shouldFunctionGenerateHereOnly(FD);
   Record->push_back(ModulesCodegen);
   if (ModulesCodegen)
     Writer->AddDeclRef(FD, Writer->ModularCodegenDecls);
