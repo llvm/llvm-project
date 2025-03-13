@@ -43,11 +43,10 @@ define <16 x float> @test_gather_16f32_1(ptr %x, ptr %arr, <16 x i1> %mask, <16 
 define <16 x float> @test_gather_16f32_2(ptr %x, ptr %arr, <16 x i1> %mask, <16 x float> %src0)  {
 ; CHECK-LABEL: test_gather_16f32_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; CHECK-NEXT:    vpslld $4, (%rsi), %zmm2
+; CHECK-NEXT:    vpsllw $7, %xmm0, %xmm0
 ; CHECK-NEXT:    vpmovb2m %xmm0, %k1
-; CHECK-NEXT:    vpord {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm2, %zmm0
-; CHECK-NEXT:    vgatherdps (%rdi,%zmm0), %zmm1 {%k1}
+; CHECK-NEXT:    vgatherdps 4(%rdi,%zmm2), %zmm1 {%k1}
 ; CHECK-NEXT:    vmovaps %zmm1, %zmm0
 ; CHECK-NEXT:    retq
 ;

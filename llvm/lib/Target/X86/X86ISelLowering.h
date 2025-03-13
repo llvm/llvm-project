@@ -1671,13 +1671,6 @@ namespace llvm {
       return TargetLoweringBase::getTypeToTransformTo(Context, VT);
     }
 
-    // Target override this function to decided whether it want to update the
-    // base and index value of a non-uniform gep
-    bool updateBaseAndIndex(const Value *Ptr, SDValue &Base, SDValue &Index,
-                            const SDLoc &DL, const SDValue &Gep,
-                            SelectionDAG &DAG,
-                            const BasicBlock *CurBB) const override;
-
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,

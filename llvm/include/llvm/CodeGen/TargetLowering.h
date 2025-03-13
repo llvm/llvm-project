@@ -5127,13 +5127,6 @@ public:
                                               SmallVectorImpl<SDValue> &Ops,
                                               SelectionDAG &DAG) const;
 
-  // Target may override this function to decided whether it want to update the
-  // base and index value of a non-uniform gep
-  virtual bool updateBaseAndIndex(const Value *Ptr, SDValue &Base,
-                                  SDValue &Index, const SDLoc &DL,
-                                  const SDValue &Gep, SelectionDAG &DAG,
-                                  const BasicBlock *CurBB) const;
-
   //===--------------------------------------------------------------------===//
   // Div utility functions
   //

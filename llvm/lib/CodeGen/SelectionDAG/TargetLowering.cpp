@@ -5655,14 +5655,6 @@ void TargetLowering::CollectTargetIntrinsicOperands(
     const CallInst &I, SmallVectorImpl<SDValue> &Ops, SelectionDAG &DAG) const {
 }
 
-// By default, this function is disabled. Overriding target can enable it
-bool TargetLowering::updateBaseAndIndex(const Value *Ptr, SDValue &Base,
-                                        SDValue &Index, const SDLoc &DL,
-                                        const SDValue &Gep, SelectionDAG &DAG,
-                                        const BasicBlock *CurBB) const {
-  return false;
-}
-
 std::pair<unsigned, const TargetRegisterClass *>
 TargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *RI,
                                              StringRef Constraint,

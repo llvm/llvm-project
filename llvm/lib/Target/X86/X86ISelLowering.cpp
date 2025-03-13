@@ -56375,6 +56375,112 @@ static SDValue rebuildGatherScatter(MaskedGatherScatterSDNode *GorS,
                               Scatter->isTruncatingStore());
 }
 
+// Target override this function to decide whether it want to update the base
+// and index value of a non-uniform gep
+static bool updateBaseAndIndex(SDValue &Base, SDValue &Index, const SDLoc &DL,
+                               const SDValue &Gep, SelectionDAG &DAG) {
+  if (!EnableBaseIndexUpdate)
+    return false;
+
+  SDValue Nbase;
+  SDValue Nindex;
+  bool Changed = false;
+  // This function check the opcode of Index and update the index
+  auto checkAndUpdateIndex = [&](SDValue &Idx) {
+    if (Idx.getOpcode() == ISD::SHL) {  // shl zext, BV
+      SDValue Op10 = Idx.getOperand(0); // Zext or Sext value
+      SDValue Op11 = Idx.getOperand(1); // Build vector of constant
+
+      unsigned IndexWidth = Op10.getScalarValueSizeInBits();
+      if ((Op10.getOpcode() == ISD::SIGN_EXTEND ||
+           Op10.getOpcode() == ISD::ZERO_EXTEND) &&
+          IndexWidth > 32 &&
+          Op10.getOperand(0).getScalarValueSizeInBits() <= 32 &&
+          DAG.ComputeNumSignBits(Op10) > (IndexWidth - 32) &&
+          Op11.getOpcode() == ISD::BUILD_VECTOR) {
+
+        KnownBits ExtKnown = DAG.computeKnownBits(Op10);
+        bool ExtIsNonNegative = ExtKnown.isNonNegative();
+        KnownBits ExtOpKnown = DAG.computeKnownBits(Op10.getOperand(0));
+        bool ExtOpIsNonNegative = ExtOpKnown.isNonNegative();
+        if (!ExtIsNonNegative || !ExtOpIsNonNegative)
+          return false;
+
+        SDValue NewOp10 =
+            Op10.getOperand(0);          // Get the Operand zero from the ext
+        EVT VT = NewOp10.getValueType(); // Use the operand's type to determine
+                                         // the type of index
+
+        auto *ConstEltNo = dyn_cast<ConstantSDNode>(Op11.getOperand(0));
+        if (!ConstEltNo)
+          return false;
+
+        SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(),
+                                    DAG.getConstant(ConstEltNo->getZExtValue(),
+                                                    DL, VT.getScalarType()));
+        Nindex = DAG.getNode(ISD::SHL, DL, VT, NewOp10,
+                             DAG.getBuildVector(VT, DL, Ops));
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // For the gep instruction, we are trying to properly assign the base and
+  // index value We are go through the lower code and iterate backward.
+  if (isNullConstant(Base) && Gep.getOpcode() == ISD::ADD) {
+    SDValue Op0 = Gep.getOperand(0); // base or  add
+    SDValue Op1 = Gep.getOperand(1); // build vector or SHL
+    Nbase = Op0;
+    SDValue Idx = Op1;
+    auto Flags = Gep->getFlags();
+
+    if (Op0->getOpcode() == ISD::ADD) { // add t15(base), t18(Idx)
+      SDValue Op00 = Op0.getOperand(0); // Base
+      Nbase = Op00;
+      Idx = Op0.getOperand(1);
+    } else if (!(Op0->getOpcode() == ISD::BUILD_VECTOR &&
+                 Op0.getOperand(0).getOpcode() == ISD::CopyFromReg)) {
+      return false;
+    }
+    if (!checkAndUpdateIndex(Idx)) {
+      return false;
+    }
+    if (Op0 != Nbase) {
+      auto *ConstEltNo = dyn_cast<ConstantSDNode>(Op1.getOperand(0));
+      if (!ConstEltNo)
+        return false;
+
+      SmallVector<SDValue, 8> Ops(
+          Nindex.getValueType().getVectorNumElements(),
+          DAG.getConstant(ConstEltNo->getZExtValue(), DL,
+                          Nindex.getValueType().getScalarType()));
+      Nindex = DAG.getNode(ISD::ADD, DL, Nindex.getValueType(), Nindex,
+                           DAG.getBuildVector(Nindex.getValueType(), DL, Ops),
+                           Flags);
+    }
+    Base = Nbase.getOperand(0);
+    Index = Nindex;
+    Changed = true;
+  } else if (Base.getOpcode() == ISD::CopyFromReg ||
+             (Base.getOpcode() == ISD::ADD &&
+              Base.getOperand(0).getOpcode() == ISD::CopyFromReg &&
+              isConstOrConstSplat(Base.getOperand(1)))) {
+    if (checkAndUpdateIndex(Index)) {
+      Index = Nindex;
+      Changed = true;
+    }
+  }
+  if (Changed) {
+    LLVM_DEBUG(dbgs() << "Successful in updating the non uniform gep "
+                         "information\n";
+               dbgs() << "updated base "; Base.dump();
+               dbgs() << "updated Index "; Index.dump(););
+    return true;
+  }
+  return false;
+}
+
 static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
                                     TargetLowering::DAGCombinerInfo &DCI) {
   SDLoc DL(N);
@@ -56385,6 +56491,8 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (DCI.isBeforeLegalize()) {
+    if (updateBaseAndIndex(Base, Index, DL, Index, DAG))
+      return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
     unsigned IndexWidth = Index.getScalarValueSizeInBits();
 
     // Shrink constant indices if they are larger than 32-bits.
@@ -56480,7 +56588,6 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
       return SDValue(N, 0);
     }
   }
-
   return SDValue();
 }
 
@@ -61625,97 +61732,4 @@ Align X86TargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
   return TargetLowering::getPrefLoopAlignment();
 }
 
-// Target override this function to decide whether it want to update the base
-// and index value of a non-uniform gep
-bool X86TargetLowering::updateBaseAndIndex(const Value *Ptr, SDValue &Base,
-                                           SDValue &Index, const SDLoc &DL,
-                                           const SDValue &Gep,
-                                           SelectionDAG &DAG,
-                                           const BasicBlock *CurBB) const {
-  if (!EnableBaseIndexUpdate)
-    return false;
 
-  const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Ptr);
-  if (GEP && GEP->getParent() != CurBB)
-    return false;
-
-  SDValue Nbase;
-  // For the gep instruction, we are trying to properly assign the base and
-  // index value We are go through the lower code and iterate backward.
-  if (Gep.getOpcode() == ISD::ADD) {
-    SDValue Op0 = Gep.getOperand(0); // base or  add
-    SDValue Op1 = Gep.getOperand(1); // build vector or SHL
-    Nbase = Op0;
-    SDValue Idx = Op1;
-    auto Flags = Gep->getFlags();
-
-    if (Op0->getOpcode() == ISD::ADD) { // add t15(base), t18(Idx)
-      SDValue Op00 = Op0.getOperand(0); // Base
-      Nbase = Op00;
-      Idx = Op0.getOperand(1);
-    } else if (!(Op0->getOpcode() == ISD::BUILD_VECTOR &&
-                 Op0.getOperand(0).getOpcode() == ISD::CopyFromReg)) {
-      return false;
-    }
-    SDValue Nindex;
-    if (Idx.getOpcode() == ISD::SHL) {  // shl zext, BV
-      SDValue Op10 = Idx.getOperand(0); // Zext or Sext value
-      SDValue Op11 = Idx.getOperand(1); // Build vector of constant
-
-      unsigned IndexWidth = Op10.getScalarValueSizeInBits();
-      if ((Op10.getOpcode() == ISD::SIGN_EXTEND ||
-           Op10.getOpcode() == ISD::ZERO_EXTEND) &&
-          IndexWidth > 32 &&
-          Op10.getOperand(0).getScalarValueSizeInBits() <= 32 &&
-          DAG.ComputeNumSignBits(Op10) > (IndexWidth - 32) &&
-          Op11.getOpcode() == ISD::BUILD_VECTOR) {
-
-        KnownBits ExtKnown = DAG.computeKnownBits(Op10);
-        bool ExtIsNonNegative = ExtKnown.isNonNegative();
-        KnownBits ExtOpKnown = DAG.computeKnownBits(Op10.getOperand(0));
-        bool ExtOpIsNonNegative = ExtOpKnown.isNonNegative();
-        if (!ExtIsNonNegative || !ExtOpIsNonNegative)
-          return false;
-
-        SDValue newOp10 =
-            Op10.getOperand(0);          // Get the Operand zero from the ext
-        EVT VT = newOp10.getValueType(); // Use the operand's type to determine the type of index
-
-        auto *ConstEltNo = dyn_cast<ConstantSDNode>(Op11.getOperand(0));
-        if (!ConstEltNo)
-	  return false;
-
-	SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(),
-                                    DAG.getConstant(ConstEltNo->getZExtValue(),
-                                                    DL, VT.getScalarType()));
-        Nindex = DAG.getNode(ISD::SHL, DL, VT, newOp10,
-                             DAG.getBuildVector(VT, DL, Ops));
-      } else {
-        return false;
-      }
-    } else {
-      return false;
-    }
-    if (Op0 != Nbase) {
-      auto *ConstEltNo = dyn_cast<ConstantSDNode>(Op1.getOperand(0));
-      if (!ConstEltNo)
-        return false;
-
-      SmallVector<SDValue, 8> Ops(
-          Nindex.getValueType().getVectorNumElements(),
-          DAG.getConstant(ConstEltNo->getZExtValue(), DL,
-                          Nindex.getValueType().getScalarType()));
-      Nindex = DAG.getNode(ISD::ADD, DL, Nindex.getValueType(), Nindex,
-                           DAG.getBuildVector(Nindex.getValueType(), DL, Ops),
-                           Flags);
-    }
-    Base = Nbase.getOperand(0);
-    Index = Nindex;
-    LLVM_DEBUG(dbgs() << "Successful in updating the non uniform gep "
-                         "information\n";
-               dbgs() << "updated base "; Base.dump();
-               dbgs() << "updated Index "; Index.dump(););
-    return true;
-  }
-  return false;
-}
