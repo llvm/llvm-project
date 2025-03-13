@@ -46,7 +46,6 @@
 #include <utility>
 
 #define DEBUG_TYPE "openmp-to-llvmir"
-#define PDBGS() (llvm::dbgs() << "[" << DEBUG_TYPE << "]: ")
 using namespace mlir;
 
 namespace {
@@ -210,19 +209,9 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   };
   auto checkPrivate = [&todo](auto op, LogicalResult &result) {
     if constexpr (std::is_same_v<std::decay_t<decltype(op)>, omp::TargetOp>) {
-      // Privatization clauses are supported, except on some situations, so we
-      // need to check here whether any of these unsupported cases are being
-      // translated.
-      // if (std::optional<ArrayAttr> privateSyms = op.getPrivateSyms()) {
-      //   for (Attribute privatizerNameAttr : *privateSyms) {
-      //     omp::PrivateClauseOp privatizer = findPrivatizer(
-      //         op.getOperation(), cast<SymbolRefAttr>(privatizerNameAttr));
-
-      //     if (privatizer.getDataSharingType() ==
-      //         omp::DataSharingClauseType::FirstPrivate)
-      //       result = todo("firstprivate");
-      //   }
-      // }
+      // Privatization is supported only for include target tasks.
+      if (!op.getPrivateVars().empty() && op.getNowait())
+        result = todo("privatization for deferred target tasks");
     } else {
       if (!op.getPrivateVars().empty() || op.getPrivateSyms())
         result = todo("privatization");
@@ -4860,6 +4849,10 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
                                     &mappedPrivateVars),
                     *targetOp)
             .failed())
+      return llvm::make_error<PreviouslyReportedError>();
+
+    if (failed(copyFirstPrivateVars(builder, moduleTranslation, mlirPrivateVars,
+                                    llvmPrivateVars, privateDecls)))
       return llvm::make_error<PreviouslyReportedError>();
 
     SmallVector<Region *> privateCleanupRegions;

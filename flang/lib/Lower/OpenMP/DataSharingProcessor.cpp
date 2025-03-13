@@ -26,8 +26,6 @@
 #include "flang/Semantics/tools.h"
 
 #define DEBUG_TYPE "flang-data-sharing"
-#define PDBGS() (llvm::dbgs() << "[" << DEBUG_TYPE << "]: ")
-#define PDBGS_NL() (llvm::dbgs() << "\n")
 namespace Fortran {
 namespace lower {
 namespace omp {
@@ -520,19 +518,11 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
   hlfir::Entity entity{hsb.getAddr()};
   bool cannotHaveNonDefaultLowerBounds = !entity.mayHaveNonDefaultLowerBounds();
 
-  LLVM_DEBUG(PDBGS_NL());
-  LLVM_DEBUG(PDBGS() << "***********doPrivatize************\n");
-  LLVM_DEBUG(PDBGS() << "Symbol (sym): " << *sym << "\n");
-  LLVM_DEBUG(PDBGS() << "SymbolBox: (hsb): " << hsb);
-  LLVM_DEBUG(PDBGS() << "Address: (hsb.getAddr()):  " << hsb.getAddr() << "\n");
-  LLVM_DEBUG(PDBGS() << "Address Type (hsb.getAddr.getType()):  "
-                     << hsb.getAddr().getType() << "\n");
   mlir::Location symLoc = hsb.getAddr().getLoc();
   std::string privatizerName = sym->name().ToString() + ".privatizer";
   bool isFirstPrivate = sym->test(semantics::Symbol::Flag::OmpFirstPrivate);
 
   mlir::Value privVal = hsb.getAddr();
-  LLVM_DEBUG(PDBGS() << "privVal: " << privVal << "\n");
   mlir::Type allocType = privVal.getType();
   if (!mlir::isa<fir::PointerType>(privVal.getType()))
     allocType = fir::unwrapRefType(privVal.getType());
@@ -541,13 +531,12 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
     if (!mlir::isa<fir::PointerType>(poly.getEleTy()) && isFirstPrivate)
       TODO(symLoc, "create polymorphic host associated copy");
   }
-  LLVM_DEBUG(PDBGS() << "allocType = " << allocType << "\n");
+
   // fir.array<> cannot be converted to any single llvm type and fir helpers
   // are not available in openmp to llvmir translation so we cannot generate
   // an alloca for a fir.array type there. Get around this by boxing all
   // arrays.
   if (mlir::isa<fir::SequenceType>(allocType)) {
-    LLVM_DEBUG(PDBGS() << "(flow_msg): " << allocType << "is a SequenceType\n");
     entity = genVariableBox(symLoc, firOpBuilder, entity);
     privVal = entity.getBase();
     allocType = privVal.getType();
@@ -555,8 +544,6 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
 
   if (mlir::isa<fir::BaseBoxType>(privVal.getType())) {
     // Boxes should be passed by reference into nested regions:
-    LLVM_DEBUG(PDBGS() << "(flow_msg): " << privVal.getType()
-                       << "is a BaseBoxType\n");
     auto oldIP = firOpBuilder.saveInsertionPoint();
     firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
     auto alloca = firOpBuilder.create<fir::AllocaOp>(symLoc, privVal.getType());
@@ -566,9 +553,6 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
   }
 
   mlir::Type argType = privVal.getType();
-  LLVM_DEBUG(PDBGS() << "allocType : " << allocType << "\n");
-  LLVM_DEBUG(PDBGS() << "privVal = " << privVal << "\n");
-  LLVM_DEBUG(PDBGS() << "privVal.getType() = " << privVal.getType() << "\n");
   mlir::omp::PrivateClauseOp privatizerOp = [&]() {
     auto moduleOp = firOpBuilder.getModule();
     auto uniquePrivatizerName = fir::getTypeAsString(

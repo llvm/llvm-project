@@ -1691,13 +1691,19 @@ static void genTargetClauses(
   cp.processNowait(clauseOps);
   cp.processThreadLimit(stmtCtx, clauseOps);
 
-  cp.processTODO<clause::Allocate, clause::Defaultmap, // clause::Firstprivate,
-                 clause::InReduction, clause::UsesAllocators>(
-      loc, llvm::omp::Directive::OMPD_target);
+  cp.processTODO<clause::Allocate, clause::Defaultmap, clause::InReduction,
+                 clause::UsesAllocators>(loc,
+                                         llvm::omp::Directive::OMPD_target);
 
   // `target private(..)` is only supported in delayed privatization mode.
   if (!enableDelayedPrivatizationStaging)
     cp.processTODO<clause::Private>(loc, llvm::omp::Directive::OMPD_target);
+
+  // We do not yet have MLIR to LLVMIR translation for privatization in
+  // for deferred target tasks.
+  if (clauseOps.nowait)
+    cp.processTODO<clause::Private, clause::Firstprivate>(
+        loc, llvm::omp::Directive::OMPD_target);
 }
 
 static void genTargetDataClauses(
