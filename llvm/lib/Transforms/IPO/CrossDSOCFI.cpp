@@ -94,6 +94,14 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
   Triple T(M.getTargetTriple());
   if (T.isARM() || T.isThumb())
     F->addFnAttr("target-features", "+thumb-mode");
+  if (T.isAArch64()) {
+    if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
+            M.getModuleFlag("branch-target-enforcement"))) {
+      if (BTE->getZExtValue() != 0) {
+        F->addFnAttr("branch-target-enforcement");
+      }
+    }
+  }
 
   auto args = F->arg_begin();
   Value &CallSiteTypeId = *(args++);
