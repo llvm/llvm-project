@@ -162,7 +162,6 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::windows_resource:
   case file_magic::pdb:
   case file_magic::minidump:
-  case file_magic::goff_object:
   case file_magic::cuda_fatbinary:
   case file_magic::offload_binary:
   case file_magic::dxcontainer_object:
@@ -178,6 +177,8 @@ ObjectFile::createObjectFile(MemoryBufferRef Object, file_magic Type,
   case file_magic::elf_shared_object:
   case file_magic::elf_core:
     return createELFObjectFile(Object, InitContent);
+  case file_magic::goff_object:
+    return createGOFFObjectFile(Object);
   case file_magic::macho_object:
   case file_magic::macho_executable:
   case file_magic::macho_fixed_virtual_memory_shared_lib:
