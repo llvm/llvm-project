@@ -372,7 +372,16 @@ def CXX11WarnInconsistentOverrideMethod :
 def CXX11WarnSuggestOverrideDestructor : DiagGroup<"suggest-destructor-override">;
 def CXX11WarnSuggestOverride : DiagGroup<"suggest-override">;
 
-def WarnUnnecessaryVirtualSpecifier : DiagGroup<"unnecessary-virtual-specifier">;
+def WarnUnnecessaryVirtualSpecifier : DiagGroup<"unnecessary-virtual-specifier"> {
+  code Documentation = [{
+Warns when a ``final`` class contains a virtual method (including virtual
+destructors). Since ``final`` classes cannot be subclassed, their methods
+cannot be overridden, and hence the ``virtual`` specifier is useless.
+
+The warning also detects virtual methods in classes whose destructor is
+``final``, for the same reason.
+  }];
+}
 
 // Original name of this warning in Clang
 def : DiagGroup<"c++0x-narrowing", [CXX11Narrowing]>;
