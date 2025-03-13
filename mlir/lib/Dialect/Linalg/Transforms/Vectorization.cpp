@@ -1971,6 +1971,8 @@ getConvOperationKind(Operation *reduceOp) {
     // is in `buildBinaryFn` helper in the Linalg dialect.
     auto feedValIt = llvm::find_if_not(reduceOp->getOperands(),
                                        llvm::IsaPred<BlockArgument>);
+    assert(feedValIt != reduceOp->operand_end() &&
+           "Expected a non-block argument operand");
     Operation *feedOp = (*feedValIt).getDefiningOp();
     if (isCastOfBlockArgument(feedOp)) {
       return ConvOperationKind::Pool;
@@ -2017,17 +2019,12 @@ static bool isSupportedPoolKind(vector::CombiningKind kind) {
 }
 
 static LogicalResult vectorizeConvOpPrecondition(linalg::LinalgOp convOp) {
-  if (convOp.getNumDpsInputs() != 2 || convOp.getNumDpsInits() != 1)
-    return failure();
-
-  auto lhsShaped = convOp.getDpsInputOperand(0)->get();
-  auto rhsShaped = convOp.getDpsInputOperand(1)->get();
-  auto resShaped = convOp.getDpsInitOperand(0)->get();
-  auto lhsShapedType = dyn_cast<ShapedType>(lhsShaped.getType());
-  auto rhsShapedType = dyn_cast<ShapedType>(rhsShaped.getType());
-  auto resShapedType = dyn_cast<ShapedType>(resShaped.getType());
-  if (!lhsShapedType || !rhsShapedType || !resShapedType)
-    return failure();
+  auto getOperandType = [&](auto operand) {
+    return dyn_cast<ShapedType>((operand->get()).getType());
+  };
+  ShapedType lhsShapedType = getOperandType(convOp.getDpsInputOperand(0));
+  ShapedType rhsShapedType = getOperandType(convOp.getDpsInputOperand(1));
+  ShapedType resShapedType = getOperandType(convOp.getDpsInitOperand(0));
   // (LHS has dimension NCW/NWC and RES has dimension NFW/NCW/NWF/NWC) OR
   // (non-channeled convolution -> LHS and RHS both have single dimensions).
   if ((lhsShapedType.getRank() != 3 || resShapedType.getRank() != 3) &&
