@@ -129,19 +129,17 @@ def buildkite_fetch_page_build_list(
       }}
     }}
     """
-    data = BUILDKITE_GRAPHQL_QUERY.format(
+    query = BUILDKITE_GRAPHQL_QUERY.format(
         PAGE_SIZE=BUILDKITE_GRAPHQL_BUILDS_PER_PAGE,
         AFTER="null" if after_cursor is None else '"{}"'.format(after_cursor),
     )
-    data = data.replace("\n", "").replace('"', '\\"')
-    data = json.dumps({"query": data})  #'{ "query": "' + data + '" }'
+    query = json.dumps({"query": query})
     url = "https://graphql.buildkite.com/v1"
     headers = {
         "Authorization": "Bearer " + buildkite_token,
         "Content-Type": "application/json",
     }
-    r = requests.post(url, data=data, headers=headers)
-    data = r.json()
+    data = requests.post(url, data=query, headers=headers).json()
     # De-nest the build list.
     if "errors" in data:
         logging.info("Failed to fetch BuildKite jobs: {}".format(data["errors"]))
@@ -516,7 +514,6 @@ def main():
         gh_metrics, gh_last_workflows_seen_as_completed = github_get_metrics(
             github_repo, gh_last_workflows_seen_as_completed
         )
-        gh_metrics = []
 
         bk_metrics, bk_incomplete = buildkite_get_metrics(
             buildkite_token, bk_incomplete
