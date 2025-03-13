@@ -9716,9 +9716,9 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
       if (auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink)) {
         assert(Blend->getNumIncomingValues() == 2 &&
                "Blend must have 2 incoming values");
-        if (Blend->getIncomingValue(0) == PhiR)
+        if (Blend->getIncomingValue(0) == PhiR) {
           Blend->replaceAllUsesWith(Blend->getIncomingValue(1));
-        else {
+        } else {
           assert(Blend->getIncomingValue(1) == PhiR &&
                  "PhiR must be an operand of the blend");
           Blend->replaceAllUsesWith(Blend->getIncomingValue(0));
