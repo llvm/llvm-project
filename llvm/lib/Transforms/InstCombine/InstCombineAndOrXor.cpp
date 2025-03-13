@@ -4685,6 +4685,24 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
   return nullptr;
 }
 
+static Instruction *sinkNotIntoBitwiseOp(BinaryOperator &I) {
+  if (!match(&I, m_Not(m_Value())))
+    return nullptr;
+  BasicBlock *BB = I.getParent();
+  if (!all_of(I.users(), [BB](const User *U) {
+        auto *UI = dyn_cast<Instruction>(U);
+        // TODO: check if target has ANDN/ORN/XNOR
+        return UI && UI->getParent() != BB && UI->isBitwiseLogicOp();
+      }))
+    return nullptr;
+  for (Use &U : I.uses()) {
+    Instruction *NewNot = I.clone();
+    NewNot->insertBefore(cast<Instruction>(U.getUser())->getIterator());
+    U.set(NewNot);
+  }
+  return &I;
+}
+
 // FIXME: We use commutative matchers (m_c_*) for some, but not all, matches
 // here. We should standardize that construct where it is needed or choose some
 // other way to ensure that commutated variants of patterns are not missed.
@@ -5019,6 +5037,9 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
     return Res;
 
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
+    return Res;
+
+  if (Instruction *Res = sinkNotIntoBitwiseOp(I))
     return Res;
 
   return nullptr;
