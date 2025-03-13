@@ -5680,6 +5680,10 @@ public:
                                        LoadSDNode *OriginalLoad,
                                        SelectionDAG &DAG) const;
 
+  /// Indicates whether the FRem instruction should be expanded before
+  /// ISel in the LLVM IR.
+  virtual bool shouldExpandFRemInIR() const { return false; };
+
 private:
   SDValue foldSetCCWithAnd(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
                            const SDLoc &DL, DAGCombinerInfo &DCI) const;
