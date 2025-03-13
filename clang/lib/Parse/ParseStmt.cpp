@@ -1554,7 +1554,8 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
       ConstevalLoc = ConsumeToken();
     } else if (Tok.is(tok::code_completion)) {
       cutOffParsing();
-      Actions.CodeCompletion().CodeCompleteKeywordAfterIf(NotLocation.isValid());
+      Actions.CodeCompletion().CodeCompleteKeywordAfterIf(
+          NotLocation.isValid());
       return StmtError();
     }
   }
