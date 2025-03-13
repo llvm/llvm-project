@@ -775,15 +775,13 @@ define <32 x i8> @combine_pshufb_pshufb_or_pshufb(<32 x i8> %a0) {
   ret <32 x i8> %4
 }
 
-; TODO: Not beneficial to concatenate both inputs just to create a 256-bit vpaddb
+; Not beneficial to concatenate both inputs just to create a 256-bit vpaddb
 define <32 x i8> @concat_add_unnecessary(<16 x i8> %a0, <16 x i8> noundef %a1, <16 x i8> %a2) nounwind {
 ; CHECK-LABEL: concat_add_unnecessary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; CHECK-NEXT:    vpaddb %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpaddb %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %lo = add <16 x i8> %a0, %a1
   %hi = add <16 x i8> %a0, %a2
@@ -791,15 +789,13 @@ define <32 x i8> @concat_add_unnecessary(<16 x i8> %a0, <16 x i8> noundef %a1, <
   ret <32 x i8> %res
 }
 
-; TODO: Not beneficial to concatenate both inputs just to create a 256-bit vpmullw
+; Not beneficial to concatenate both inputs just to create a 256-bit vpmullw
 define <16 x i16> @concat_mul_unnecessary(<8 x i16> %a0, <8 x i16> %a1, <8 x i16> %a2) nounwind {
 ; CHECK-LABEL: concat_mul_unnecessary:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; CHECK-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpmullw %xmm1, %xmm0, %xmm1
+; CHECK-NEXT:    vpmullw %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %lo = mul <8 x i16> %a0, %a1
   %hi = mul <8 x i16> %a0, %a2
