@@ -25,6 +25,7 @@
 #include "AMDGPUOpenCLEnqueuedBlockLowering.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
+#include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
@@ -528,7 +529,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
-  initializeAMDGPUReserveWWMRegsPass(*PR);
+  initializeAMDGPUReserveWWMRegsLegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
@@ -1599,7 +1600,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(createWWMRegAllocPass(false));
 
   addPass(&SILowerWWMCopiesLegacyID);
-  addPass(&AMDGPUReserveWWMRegsID);
+  addPass(&AMDGPUReserveWWMRegsLegacyID);
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(false));
@@ -1636,7 +1637,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createWWMRegAllocPass(true));
   addPass(&SILowerWWMCopiesLegacyID);
   addPass(createVirtRegRewriter(false));
-  addPass(&AMDGPUReserveWWMRegsID);
+  addPass(&AMDGPUReserveWWMRegsLegacyID);
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(true));
