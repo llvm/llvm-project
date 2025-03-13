@@ -24,7 +24,7 @@ class TestFrameVarDILLocalVars(TestBase):
                                           lldb.SBFileSpec("main.cpp"))
 
         self.expect("settings set target.experimental.use-DIL true", substrs=[""])
-        self.expect("frame variable a", substrs=["1"])
-        self.expect("frame variable b", substrs=["2"])
-        self.expect("frame variable c", substrs=["\\xfd"])
-        self.expect("frame variable s", substrs=["4"])
+        self.expect_var_path("a", value="1")
+        self.expect_var_path("b", value="2")
+        self.expect_var_path("c", value="'\\xfd'")
+        self.expect_var_path("s", value="4")

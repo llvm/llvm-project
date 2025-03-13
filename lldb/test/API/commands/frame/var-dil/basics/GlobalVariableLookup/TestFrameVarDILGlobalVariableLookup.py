@@ -24,11 +24,12 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
                                           lldb.SBFileSpec("main.cpp"))
 
         self.expect("settings set target.experimental.use-DIL true", substrs=[""])
-        self.expect("frame variable 'globalVar'", substrs=["-559038737"])  # 0xDEADBEEF
-        self.expect("frame variable 'globalPtr'", patterns=["0x[0-9]+"])
-        self.expect("frame variable 'globalRef'", substrs=["-559038737"])
-        self.expect("frame variable '::globalPtr'", patterns=["0x[0-9]+"])
-        self.expect("frame variable '::globalRef'", substrs=["-559038737"])
+        self.expect_var_path("globalVar", type="int", value="-559038737")  # 0xDEADBEEF
+        self.expect_var_path("globalPtr", type="int *")
+        self.expect_var_path("globalRef", value="-559038737")
+        self.expect_var_path("::globalVar", value="-559038737")
+        self.expect_var_path("::globalPtr", type="int *")
+        self.expect_var_path("::globalRef", value="-559038737")
 
         self.expect(
             "frame variable 'externGlobalVar'",
@@ -40,8 +41,9 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
             error=True,
             substrs=["use of undeclared identifier"],
         )  # ["12648430"])
-        self.expect("frame variable 'ns::globalVar'", substrs=["13"])
-        self.expect("frame variable 'ns::globalPtr'", patterns=["0x[0-9]+"])
-        self.expect("frame variable 'ns::globalRef'", substrs=["13"])
-        self.expect("frame variable '::ns::globalVar'", substrs=["13"])
-        self.expect("frame variable '::ns::globalPtr'", patterns=["0x[0-9]+"])
+
+        self.expect_var_path("ns::globalVar", value="13")
+        self.expect_var_path("ns::globalPtr", type="int *")
+        self.expect_var_path("ns::globalRef", value="13")
+        self.expect_var_path("::ns::globalVar", value="13")
+        self.expect_var_path("::ns::globalPtr", type="int *")

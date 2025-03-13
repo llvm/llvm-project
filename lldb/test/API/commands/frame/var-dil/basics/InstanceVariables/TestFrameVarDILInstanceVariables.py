@@ -24,5 +24,5 @@ class TestFrameVarDILInstanceVariables(TestBase):
                                           lldb.SBFileSpec("main.cpp"))
 
         self.expect("settings set target.experimental.use-DIL true", substrs=[""])
-        self.expect("frame variable 'this'", patterns=["0x[0-9]+"])
+        self.expect_var_path("this", type="TestMethods *")
         self.expect("frame variable 'c'", substrs=["(field_ = -1)"])
