@@ -102,7 +102,7 @@ typedef AMDGPUHotBlockRematerialize Remat;
 // Util functions.
 namespace {
 
-MachineBasicBlock *NearestCommonDominator(MachineDominatorTree *DT,
+MachineBasicBlock *nearestCommonDominator(MachineDominatorTree *DT,
                                           BlockSet &Blocks) {
   auto I = Blocks.begin(), E = Blocks.end();
 
@@ -181,7 +181,7 @@ findInsertBlock(MachineInstr &DefMI, unsigned Reg, MachineDominatorTree *DT,
 
   MachineBasicBlock *BB = *BBSet.begin();
   if (BBSet.size() > 1) {
-    MachineBasicBlock *BDom = NearestCommonDominator(DT, BBSet);
+    MachineBasicBlock *BDom = nearestCommonDominator(DT, BBSet);
     if (!BDom)
       return nullptr;
     BB = BDom;
@@ -194,7 +194,7 @@ findInsertBlock(MachineInstr &DefMI, unsigned Reg, MachineDominatorTree *DT,
     return nullptr;
 
   // If BB is already a hot block, move to BB will not help.
-  // hotBlockRemat will fail it when process BB.
+  // hotBlockRemat will fail It when process BB.
 
   // Must reachable from DefMI.
   if (!llvm::reach_block(DefMI.getParent(), DT, PDT, MLI, BB))
@@ -221,8 +221,8 @@ bool isSafeToMove(MachineInstr *DefMI, MachineRegisterInfo &MRI) {
 
   unsigned OpNum = DefMI->getNumOperands();
   // Only move DefMI which all operand is unique def.
-  for (unsigned i = 0; i < OpNum; i++) {
-    MachineOperand &Op = DefMI->getOperand(i);
+  for (unsigned I = 0; I < OpNum; I++) {
+    MachineOperand &Op = DefMI->getOperand(I);
     if (!Op.isReg())
       continue;
     if (!MRI.getUniqueVRegDef(Op.getReg()) &&
@@ -257,7 +257,7 @@ struct RematStatus {
   unsigned MaxSPressure;
   unsigned InputPhysicalVPressure;
   unsigned InputPhysicalSPressure;
-  // More occupancy can help more than latency cost to reach it.
+  // More occupancy can help more than latency cost to reach It.
   bool MemBound;
   // abs(VTargetOcc-STargetOcc) > 1.
   bool NotBalance;
@@ -273,7 +273,7 @@ struct RematStatus {
 unsigned collectMBBPressure(MachineBasicBlock &MBB, LiveIntervals *LIS,
                             const GCNSubtarget *ST, unsigned &MaxVPressure,
                             unsigned &MaxSPressure, RematStatus &Status) {
-  // Skip processing current block if it has only debug instructions
+  // Skip processing current block if It has only debug instructions
   if (MBB.getFirstNonDebugInstr() == MBB.end())
     return ST->getOccupancyWithNumVGPRs(0);
   auto BBEnd = MBB.rbegin();
@@ -366,17 +366,17 @@ unsigned collectFnPressure(MachineFunction &MF, LiveIntervals *LIS,
 
   LLVM_DEBUG(
       const SIRegisterInfo *SIRI = ST->getRegisterInfo();
-      dbgs() << "output live"; for (auto &it
+      dbgs() << "output live"; for (auto &It
                                     : Status.MBBOutputLiveMap) {
-        unsigned Idx = it.first->getNumber();
-        auto LiveReg = it.second;
+        unsigned Idx = It.first->getNumber();
+        auto LiveReg = It.second;
         dbgs() << "MBB" << Idx << ":";
         llvm::dumpLiveSet(LiveReg, SIRI);
       } dbgs() << "input live";
-      for (auto &it
+      for (auto &It
            : Status.MBBInputLiveMap) {
-        unsigned Idx = it.first->getNumber();
-        auto LiveReg = it.second;
+        unsigned Idx = It.first->getNumber();
+        auto LiveReg = It.second;
         dbgs() << "MBB" << Idx << ":";
         llvm::dumpLiveSet(LiveReg, SIRI);
       });
@@ -548,7 +548,7 @@ void updateLiveInfo(MapVector<Register, RematNode> &RematMap,
     if (Node.Kind == RematNode::RematKind::OneDefOneUse) {
       MachineBasicBlock *InsertBB = Node.InsertBlock;
       // If LiveInfo.BB is after InsertBB in Reverse post order, the def is
-      // still before LiveInfo.BB, it is still live.
+      // still before LiveInfo.BB, It is still live.
       unsigned LiveBBIndex = RPOTIndexMap[CurBB];
       unsigned InsertBBIndex = RPOTIndexMap[InsertBB];
       if (LiveBBIndex > InsertBBIndex) {
@@ -607,8 +607,8 @@ int getSharedReducedSize(InstSet &ReducedInsts, bool IsVGPR,
         unsigned PrevMask = SharedRegIt->second.getAsInteger();
         if (unsigned SharedMask = (PrevMask & Mask)) {
           // Some thing is shared.
-          for (int i = 0; i < MOSize; i++) {
-            if (SharedMask & (1 << i)) {
+          for (int I = 0; I < MOSize; I++) {
+            if (SharedMask & (1 << I)) {
               SharedSize += 1;
             }
           }
@@ -637,7 +637,7 @@ int getReducedSize(MapVector<Register, RematNode> &RematMap,
     if (Node.Kind == RematNode::RematKind::OneDefOneUse) {
       MachineBasicBlock *InsertBB = Node.InsertBlock;
       // If LiveInfo.BB is before InsertBB in Reverse post order, the def is
-      // moved after LiveInfo.BB, it is not live anymore.
+      // moved after LiveInfo.BB, It is not live anymore.
       unsigned LiveBBIndex = RPOTIndexMap[LiveInfo.BB];
       unsigned InsertBBIndex = RPOTIndexMap[InsertBB];
       if (LiveBBIndex < InsertBBIndex)
@@ -706,7 +706,7 @@ int rematGain(MachineInstr *DefMI, unsigned Reg, const MachineRegisterInfo &MRI,
     }
 
     if (IsSingleDef) {
-      // The reg might share with other candidates,  check it here.
+      // The reg might share with other candidates,  check It here.
       // Count share reg in getReducedSize.
       if (EnableAggressive) {
         // In case of aggressive remat, treat multi use reg as shared reg and
@@ -720,7 +720,7 @@ int rematGain(MachineInstr *DefMI, unsigned Reg, const MachineRegisterInfo &MRI,
           OpRC = SIRI->getSubRegisterClass(OpRC, SubIdx);
       }
       int InputSize = SIRI->getRegSizeInBits(*OpRC);
-      // If input not live in hotspot, move it cross hotspot should have
+      // If input not live in hotspot, move It cross hotspot should have
       // less reg then DefMi.
       if (RematSize > InputSize) {
         RematSize -= InputSize;
@@ -789,7 +789,7 @@ void buildRematCandiates(std::vector<RematNode> &Candidates,
 
   // Sort by gain.
   std::sort(Candidates.begin(), Candidates.end(),
-            [](RematNode &i, RematNode &j) { return i.Size > j.Size; });
+            [](RematNode &I, RematNode &J) { return I.Size > J.Size; });
 }
 
 // For case like
@@ -799,7 +799,7 @@ void buildRematCandiates(std::vector<RematNode> &Candidates,
 //  xb.uniform %2489:sreg_32_xm0 = S_CSELECT_B32 %477:sreg_32_xm0, 16, implicit
 //  killed $scc; xb.uniform
 // Sink S_AND right before S_CSELECT will overwrite SCC.
-// To avoid it, skip case when DefMI and UseMI has implicit define use.
+// To avoid It, skip case when DefMI and UseMI has implicit define use.
 bool isImplicitDefUse(MachineInstr *DefMI, MachineInstr *UseMI) {
   if (DefMI->getDesc().NumImplicitDefs == 0)
     return false;
@@ -880,12 +880,12 @@ void addCloneCandidate(std::vector<RematNode *> &CloneList,
   // Group user in same blocks.
   std::vector<BlockSet> UserSetList(CloneList.size());
 
-  for (size_t i = 0; i < CloneList.size(); i++) {
-    auto *Node = CloneList[i];
+  for (size_t I = 0; I < CloneList.size(); I++) {
+    auto *Node = CloneList[I];
     unsigned Reg = Node->Reg;
     MachineInstr *DefMI = Node->DefMI;
     // Group user in same blocks.
-    BlockSet &UserSet = UserSetList[i];
+    BlockSet &UserSet = UserSetList[I];
 
     for (auto UseIt = MRI.use_instr_nodbg_begin(Reg);
          UseIt != MRI.use_instr_nodbg_end();) {
@@ -973,8 +973,8 @@ int filterRematCandiates(std::vector<RematNode> &Candidates,
 }
 
 void updateUsers(unsigned Reg, unsigned NewReg, bool IsSubRegDef,
-                 SmallVector<MachineInstr *, 2> &userMIs) {
-  for (MachineInstr *UseMI : userMIs) {
+                 SmallVector<MachineInstr *, 2> &UserMIs) {
+  for (MachineInstr *UseMI : UserMIs) {
     for (MachineOperand &MO : UseMI->operands()) {
       if (!MO.isReg())
         continue;
@@ -988,14 +988,14 @@ void updateUsers(unsigned Reg, unsigned NewReg, bool IsSubRegDef,
 }
 
 DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
-    unsigned Reg, BlockMap<SmallVector<MachineInstr *, 2>> &userBlocks,
+    unsigned Reg, BlockMap<SmallVector<MachineInstr *, 2>> &UserBlocks,
     DenseSet<MachineBasicBlock *> &UserMBBSet,
-    std::vector<BlockLiveInfo> &hotBlocks, MachineDominatorTree *DT) {
+    std::vector<BlockLiveInfo> &HotBlocks, MachineDominatorTree *DT) {
   // Collect hot blocks which Exp is live in.
-  DenseSet<MachineBasicBlock *> hotBlockSet;
-  for (BlockLiveInfo &hotBlock : hotBlocks) {
-    if (hotBlock.InputLive.count(Reg)) {
-      hotBlockSet.insert(hotBlock.BB);
+  DenseSet<MachineBasicBlock *> HotBlockSet;
+  for (BlockLiveInfo &HotBlock : HotBlocks) {
+    if (HotBlock.InputLive.count(Reg)) {
+      HotBlockSet.insert(HotBlock.BB);
     }
   }
 
@@ -1003,19 +1003,19 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
   // the value not cross hotBlocks when later blocks are cloned.
   // For userBlocks which dominated by all hotBlocks, they could share clones
   // because once after hot block, the pressure is OK.
-  DenseSet<MachineBasicBlock *> afterHotRangeMBBs;
+  DenseSet<MachineBasicBlock *> AfterHotRangeMBBs;
   for (MachineBasicBlock *MBB : UserMBBSet) {
     // Always clone in hot block.
-    if (hotBlockSet.count(MBB))
+    if (HotBlockSet.count(MBB))
       continue;
 
     bool IsDomAllHotBlocks = true;
     bool IsDomedByAllHotBlocks = true;
-    for (MachineBasicBlock *hotMBB : hotBlockSet) {
-      if (!DT->dominates(MBB, hotMBB)) {
+    for (MachineBasicBlock *HotMBB : HotBlockSet) {
+      if (!DT->dominates(MBB, HotMBB)) {
         IsDomAllHotBlocks = false;
       }
-      if (!DT->dominates(hotMBB, MBB)) {
+      if (!DT->dominates(HotMBB, MBB)) {
         IsDomedByAllHotBlocks = false;
       }
       if (!IsDomAllHotBlocks && !IsDomedByAllHotBlocks) {
@@ -1023,19 +1023,17 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
       }
     }
     if (IsDomAllHotBlocks) {
-      userBlocks.erase(MBB);
+      UserBlocks.erase(MBB);
     } else if (IsDomedByAllHotBlocks) {
-      afterHotRangeMBBs.insert(MBB);
+      AfterHotRangeMBBs.insert(MBB);
     }
   }
 
   // Split after hotRange block set by domtree.
   DenseMap<MachineBasicBlock *, BlockSet> DomMap;
-  if (!afterHotRangeMBBs.empty()) {
-    for (auto it : afterHotRangeMBBs) {
-      MachineBasicBlock *MBB = it;
-      for (auto it2 : afterHotRangeMBBs) {
-        MachineBasicBlock *MBB2 = it2;
+  if (!AfterHotRangeMBBs.empty()) {
+    for (MachineBasicBlock *MBB : AfterHotRangeMBBs) {
+      for (MachineBasicBlock *MBB2 : AfterHotRangeMBBs) {
         if (MBB == MBB2)
           continue;
         if (DT->dominates(MBB, MBB2)) {
@@ -1046,13 +1044,12 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
         }
       }
     }
-    for (auto it : afterHotRangeMBBs) {
-      MachineBasicBlock *MBB = it;
+    for (MachineBasicBlock *MBB : AfterHotRangeMBBs) {
       auto &Dom = DomMap[MBB];
-      for (MachineBasicBlock *domedMBB : Dom) {
+      for (MachineBasicBlock *DomedMBB : Dom) {
         // Remove domedMBB.
-        DomMap.erase(domedMBB);
-        UserMBBSet.erase(domedMBB);
+        DomMap.erase(DomedMBB);
+        UserMBBSet.erase(DomedMBB);
       }
     }
   }
@@ -1062,7 +1059,7 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
 
 // Look for an earlier insert point if the InstructionToMove
 // writes to scc and scc is live at the CurrentInsertPoint.
-static MachineBasicBlock::iterator AdjustInsertPointToAvoidSccSmash(
+static MachineBasicBlock::iterator adjustInsertPointToAvoidSccSmash(
     MachineInstr *InstructionToMove, MachineBasicBlock *MBB,
     MachineBasicBlock::iterator CurrentInsertPoint, MachineRegisterInfo &MRI,
     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
@@ -1078,7 +1075,7 @@ static MachineBasicBlock::iterator AdjustInsertPointToAvoidSccSmash(
 
 // Look for an earlier insert point if the SubExp
 // writes to scc and scc is live at the CurrentInsertPoint.
-static MachineBasicBlock::iterator AdjustInsertPointForSubExpToAvoidSccSmash(
+static MachineBasicBlock::iterator adjustInsertPointForSubExpToAvoidSccSmash(
     const SubExp &SubExpToMove, MachineBasicBlock *MBB,
     MachineBasicBlock::iterator CurrentInsertPoint, MachineRegisterInfo &MRI,
     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
@@ -1092,7 +1089,7 @@ static MachineBasicBlock::iterator AdjustInsertPointForSubExpToAvoidSccSmash(
 }
 
 // Return trun if moving MI to Location will smash a live scc value.
-static bool WillSmashSccAtLocation(MachineInstr *MI, MachineBasicBlock *MBB,
+static bool willSmashSccAtLocation(MachineInstr *MI, MachineBasicBlock *MBB,
                                    MachineBasicBlock::iterator Location) {
   // It is ok to pass nullptr to `modifiesRegister` for TRI here since
   // SCC has no subreg/suprereg relationships.
@@ -1100,8 +1097,8 @@ static bool WillSmashSccAtLocation(MachineInstr *MI, MachineBasicBlock *MBB,
          llvm::IsSccLiveAt(MBB, Location);
 }
 
-void ApplyCloneRemat(Remat *Remat, RematNode &Node,
-                     std::vector<BlockLiveInfo> &hotBlocks,
+void applyCloneRemat(Remat *Remat, RematNode &Node,
+                     std::vector<BlockLiveInfo> &HotBlocks,
                      MachineDominatorTree *DT, MachineRegisterInfo &MRI,
                      SlotIndexes *SlotIndexes, const SIRegisterInfo *SIRI,
                      const SIInstrInfo *SIII, MachineFunction &MF) {
@@ -1125,18 +1122,18 @@ void ApplyCloneRemat(Remat *Remat, RematNode &Node,
   // Group user in same blocks.
   BlockMap<SmallVector<MachineInstr *, 2>> UserMap;
   DenseSet<MachineBasicBlock *> UserMBBSet;
-  for (auto useIt = MRI.use_instr_nodbg_begin(Reg);
-       useIt != MRI.use_instr_nodbg_end();) {
-    MachineInstr &UseMI = *(useIt++);
+  for (auto UseIt = MRI.use_instr_nodbg_begin(Reg);
+       UseIt != MRI.use_instr_nodbg_end();) {
+    MachineInstr &UseMI = *(UseIt++);
     UserMap[UseMI.getParent()].emplace_back(&UseMI);
     UserMBBSet.insert(UseMI.getParent());
   }
 
   DenseMap<MachineBasicBlock *, BlockSet> DomMap =
-      reduceClonedMBBs(Reg, UserMap, UserMBBSet, hotBlocks, DT);
+      reduceClonedMBBs(Reg, UserMap, UserMBBSet, HotBlocks, DT);
 
-  for (auto useIt : UserMap) {
-    MachineBasicBlock *MBB = useIt.first;
+  for (auto UseIt : UserMap) {
+    MachineBasicBlock *MBB = UseIt.first;
     // Skip same block uses.
     if (MBB == DefMI->getParent()) {
       continue;
@@ -1145,24 +1142,24 @@ void ApplyCloneRemat(Remat *Remat, RematNode &Node,
     if (UserMBBSet.count(MBB) == 0)
       continue;
 
-    unsigned NewReg = MRI.createVirtualRegister(RC);
+    Register NewReg = MRI.createVirtualRegister(RC);
     auto NewDef = BuildMI(MF, DL, Desc).addDef(NewReg);
-    for (unsigned i = 1; i < OpNum; i++) {
-      NewDef = NewDef.add(DefMI->getOperand(i));
+    for (unsigned I = 1; I < OpNum; I++) {
+      NewDef = NewDef.add(DefMI->getOperand(I));
     }
 
-    MachineInstr *InsertPointMI = useIt.second.front();
-    SlotIndex lastSlot = SlotIndexes->getInstructionIndex(*InsertPointMI);
+    MachineInstr *InsertPointMI = UseIt.second.front();
+    SlotIndex LastSlot = SlotIndexes->getInstructionIndex(*InsertPointMI);
 
-    for (MachineInstr *UseMI : useIt.second) {
-      SlotIndex slot = SlotIndexes->getInstructionIndex(*UseMI);
-      if (lastSlot > slot) {
-        lastSlot = slot;
+    for (MachineInstr *UseMI : UseIt.second) {
+      SlotIndex Slot = SlotIndexes->getInstructionIndex(*UseMI);
+      if (LastSlot > Slot) {
+        LastSlot = Slot;
         InsertPointMI = UseMI;
       }
     }
 
-    MachineBasicBlock::iterator InsertPoint = AdjustInsertPointToAvoidSccSmash(
+    MachineBasicBlock::iterator InsertPoint = adjustInsertPointToAvoidSccSmash(
         DefMI, InsertPointMI->getParent(), InsertPointMI, MRI, SIRI, SIII);
 
     for (MachineMemOperand *MO : DefMI->memoperands()) {
@@ -1173,15 +1170,15 @@ void ApplyCloneRemat(Remat *Remat, RematNode &Node,
 
     SlotIndexes->insertMachineInstrInMaps(*NewDef);
 
-    SmallVector<MachineInstr *, 2> &userMIs = useIt.second;
-    updateUsers(Reg, NewReg, IsSubRegDef, userMIs);
+    SmallVector<MachineInstr *, 2> &UserMIs = UseIt.second;
+    updateUsers(Reg, NewReg, IsSubRegDef, UserMIs);
 
     // update users in dom MBBs.
-    auto domMapIt = DomMap.find(MBB);
-    if (domMapIt != DomMap.end()) {
-      for (MachineBasicBlock *UpdateMBB : domMapIt->second) {
-        SmallVector<MachineInstr *, 2> &userMIs = UserMap[UpdateMBB];
-        updateUsers(Reg, NewReg, IsSubRegDef, userMIs);
+    auto DomMapIt = DomMap.find(MBB);
+    if (DomMapIt != DomMap.end()) {
+      for (MachineBasicBlock *UpdateMBB : DomMapIt->second) {
+        SmallVector<MachineInstr *, 2> &UserMIs = UserMap[UpdateMBB];
+        updateUsers(Reg, NewReg, IsSubRegDef, UserMIs);
       }
     }
 
@@ -1194,8 +1191,8 @@ void ApplyCloneRemat(Remat *Remat, RematNode &Node,
   }
 }
 
-void ApplyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
-                            SlotIndexes *slotIndexes,
+void applyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
+                            SlotIndexes *SlotIndexes,
                             const SIRegisterInfo *SIRI,
                             const SIInstrInfo *SIII) {
   MachineInstr *DefMI = Node.DefMI;
@@ -1212,7 +1209,7 @@ void ApplyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
     MBB = Node.InsertBlock;
   }
 
-  InsertPoint = AdjustInsertPointToAvoidSccSmash(DefMI, MBB, InsertPoint, MRI,
+  InsertPoint = adjustInsertPointToAvoidSccSmash(DefMI, MBB, InsertPoint, MRI,
                                                  SIRI, SIII);
 
   // Move instruction to new location.
@@ -1220,33 +1217,33 @@ void ApplyOneDefOneUseRemat(RematNode &Node, MachineRegisterInfo &MRI,
   InsertPoint->getParent()->insert(InsertPoint, DefMI);
 
   // Update slot index.
-  slotIndexes->removeSingleMachineInstrFromMaps(*DefMI);
-  slotIndexes->insertMachineInstrInMaps(*DefMI);
+  SlotIndexes->removeSingleMachineInstrFromMaps(*DefMI);
+  SlotIndexes->insertMachineInstrInMaps(*DefMI);
 }
 
-void ApplyRemat(Remat *Remat, MapVector<Register, RematNode> &RematMap,
-                std::vector<BlockLiveInfo> &hotBlocks,
-                MachineDominatorTree *DT, SlotIndexes *slotIndexes,
-                MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-                const SIInstrInfo *SIII, MachineFunction &MF) {
+void applyRemat(Remat *Remat, MapVector<Register, RematNode> &RematMap,
+                std::vector<BlockLiveInfo> &HotBlocks, MachineDominatorTree *DT,
+                SlotIndexes *SlotIndexes, MachineRegisterInfo &MRI,
+                const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
+                MachineFunction &MF) {
   std::vector<RematNode> UpdateList;
-  for (auto &it : RematMap) {
-    UpdateList.emplace_back(it.second);
+  for (auto &It : RematMap) {
+    UpdateList.emplace_back(It.second);
   }
   // Sort update list with slotIndex to make sure def moved before use.
-  // If use moved before def, it might not be the first use anymore.
+  // If use moved before def, It might not be the first use anymore.
   std::sort(UpdateList.begin(), UpdateList.end(),
-            [&slotIndexes](RematNode &i, RematNode &j) {
-              SlotIndex a = slotIndexes->getInstructionIndex(*i.DefMI);
-              SlotIndex b = slotIndexes->getInstructionIndex(*j.DefMI);
-              return a < b;
+            [&SlotIndexes](RematNode &I, RematNode &J) {
+              SlotIndex A = SlotIndexes->getInstructionIndex(*I.DefMI);
+              SlotIndex B = SlotIndexes->getInstructionIndex(*J.DefMI);
+              return A < B;
             });
 
   for (RematNode &Node : UpdateList) {
     if (Node.Kind == RematNode::RematKind::OneDefOneUse) {
-      ApplyOneDefOneUseRemat(Node, MRI, slotIndexes, SIRI, SIII);
+      applyOneDefOneUseRemat(Node, MRI, SlotIndexes, SIRI, SIII);
     } else if (Node.Kind == RematNode::RematKind::Clone) {
-      ApplyCloneRemat(Remat, Node, hotBlocks, DT, MRI, slotIndexes, SIRI, SIII,
+      applyCloneRemat(Remat, Node, HotBlocks, DT, MRI, SlotIndexes, SIRI, SIII,
                       MF);
     }
   }
@@ -1255,8 +1252,8 @@ void ApplyRemat(Remat *Remat, MapVector<Register, RematNode> &RematMap,
 void dumpRematMap(MapVector<Register, RematNode> &RematMap,
                   const SIRegisterInfo *SIRI) {
   dbgs() << "\n rematMap: \n";
-  for (auto it : RematMap) {
-    int Reg = it.first;
+  for (auto It : RematMap) {
+    int Reg = It.first;
     dbgs() << printReg(Reg, SIRI);
     dbgs() << "\n";
   }
@@ -1308,29 +1305,29 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
   auto &MRI = MF.getRegInfo();
 
   bool IsUpdated = false;
-  RematStatus status = getRematStatus(MF, MLI, LIS, MRI, ST);
+  RematStatus Status = getRematStatus(MF, MLI, LIS, MRI, ST);
 
   const unsigned MaxOcc = ST->getWavesPerEU(MF.getFunction()).second;
-  if (status.TargetOcc >= MaxOcc)
+  if (Status.TargetOcc >= MaxOcc)
     return false;
 
-  unsigned VLimit = status.TargetVLimit;
-  unsigned SLimit = status.TargetSLimit;
+  unsigned VLimit = Status.TargetVLimit;
+  unsigned SLimit = Status.TargetSLimit;
 
-  int rematSCnt = status.MaxSPressure - SLimit;
+  int RematSCnt = Status.MaxSPressure - SLimit;
   // when agressive sgpr remat, reserve some for allocation lost.
   if (EnableAggressive)
-    rematSCnt += NearTargetRegLimit;
+    RematSCnt += NearTargetRegLimit;
 
   bool IsSGPRSpill = false;
-  if (rematSCnt > 0) {
-    IsSGPRSpill = nearSgprSpill(status.MaxSPressure, ST, MF);
+  if (RematSCnt > 0) {
+    IsSGPRSpill = nearSgprSpill(Status.MaxSPressure, ST, MF);
   }
 
-  bool IsForceRematSgpr = IsSGPRSpill | status.NotBalance;
+  const bool IsForceRematSgpr = IsSGPRSpill || Status.NotBalance;
 
   // If bound by lds, skip.
-  if (status.TargetOcc > ST->getOccupancyWithWorkGroupSizes(MF).second &&
+  if (Status.TargetOcc > ST->getOccupancyWithWorkGroupSizes(MF).second &&
       !IsForceRematSgpr)
     return false;
 
@@ -1343,27 +1340,27 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
   MapVector<Register, RematNode> SRematMap;
   // Reg which cannot move around to remat.
   DenseSet<unsigned> PinnedRegSet;
-  std::vector<BlockLiveInfo> hotBlocks;
-  for (auto it = po_begin(EntryMBB); it != po_end(EntryMBB); it++) {
-    MachineBasicBlock *MBB = *it;
-    auto &RP = status.MBBPressureMap[MBB];
+  std::vector<BlockLiveInfo> HotBlocks;
+  for (auto It = po_begin(EntryMBB); It != po_end(EntryMBB); It++) {
+    MachineBasicBlock *MBB = *It;
+    auto &RP = Status.MBBPressureMap[MBB];
     // ignore block not hot.
-    if (RP.getVGPRNum(ST->hasGFX90AInsts()) < status.TargetVLimit &&
-        (RP.getMaxSGPR() + RegForVCC + status.InputPhysicalSPressure) <
-            status.TargetSLimit)
+    if (RP.getVGPRNum(ST->hasGFX90AInsts()) < Status.TargetVLimit &&
+        (RP.getMaxSGPR() + RegForVCC + Status.InputPhysicalSPressure) <
+            Status.TargetSLimit)
       continue;
     // Collect reg pressure.
-    unsigned maxVPressure = 0;
-    unsigned maxSPressure = 0;
-    const GCNRPTracker::LiveRegSet inputLive = status.MBBInputLiveMap[MBB];
+    unsigned MaxVPressure = 0;
+    unsigned MaxSPressure = 0;
+    const GCNRPTracker::LiveRegSet InputLive = Status.MBBInputLiveMap[MBB];
 
-    const GCNRPTracker::LiveRegSet outputLive = status.MBBOutputLiveMap[MBB];
+    const GCNRPTracker::LiveRegSet OutputLive = Status.MBBOutputLiveMap[MBB];
     LLVM_DEBUG(
-        dumpHotBlock(inputLive, VRematMap, SRematMap, MBB->getNumber(), SIRI));
+        dumpHotBlock(InputLive, VRematMap, SRematMap, MBB->getNumber(), SIRI));
 
     GCNDownwardRPTracker Tracker(*LIS);
 
-    Tracker.reset(*MBB->begin(), &inputLive);
+    Tracker.reset(*MBB->begin(), &InputLive);
 
     for (MachineInstr &MI : *MBB) {
       if (MI.isDebugInstr())
@@ -1371,30 +1368,30 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
       Tracker.advance();
       auto LISLR = Tracker.getLiveRegs();
       // Update live set for things already remated.
-      updateLiveInfo(VRematMap, LISLR, inputLive, MBB, RPOTIndexMap);
-      updateLiveInfo(SRematMap, LISLR, inputLive, MBB, RPOTIndexMap);
+      updateLiveInfo(VRematMap, LISLR, InputLive, MBB, RPOTIndexMap);
+      updateLiveInfo(SRematMap, LISLR, InputLive, MBB, RPOTIndexMap);
 
-      const GCNRPTracker::LiveRegSet &liveSet = LISLR;
+      const GCNRPTracker::LiveRegSet &LiveSet = LISLR;
       unsigned VPressure = 0;
       unsigned SPressure = 0;
-      CollectLiveSetPressure(liveSet, MRI, SIRI, VPressure, SPressure);
-      if (maxVPressure < VPressure)
-        maxVPressure = VPressure;
-      if (maxSPressure < SPressure)
-        maxSPressure = SPressure;
+      CollectLiveSetPressure(LiveSet, MRI, SIRI, VPressure, SPressure);
+      if (MaxVPressure < VPressure)
+        MaxVPressure = VPressure;
+      if (MaxSPressure < SPressure)
+        MaxSPressure = SPressure;
     }
-    maxSPressure += RegForVCC + status.InputPhysicalSPressure;
-    if (maxVPressure <= VLimit && maxSPressure <= SLimit)
+    MaxSPressure += RegForVCC + Status.InputPhysicalSPressure;
+    if (MaxVPressure <= VLimit && MaxSPressure <= SLimit)
       continue;
 
     // Build block live info.
     // Use outputLive for EntryMBB.
-    BlockLiveInfo LiveInfo = {MBB, maxSPressure, maxVPressure,
-                              MBB != EntryMBB ? inputLive : outputLive};
+    BlockLiveInfo LiveInfo = {MBB, MaxSPressure, MaxVPressure,
+                              MBB != EntryMBB ? InputLive : OutputLive};
     // Skip entry block when save hotBlock to reduce clone because not clone in
     // entry block.
     if (MBB != EntryMBB)
-      hotBlocks.emplace_back(LiveInfo);
+      HotBlocks.emplace_back(LiveInfo);
     GCNRPTracker::LiveRegSet CandidateRegs = LiveInfo.InputLive;
 
     // Update reg pressure based on remat list.
@@ -1406,18 +1403,18 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
                                   LiveInfo, RPOTIndexMap);
 
     // Calculate size need to be remat.
-    int rematVCnt = maxVPressure - VReduced - VLimit;
-    int rematSCnt = maxSPressure - SReduced - SLimit;
+    int RematVCnt = MaxVPressure - VReduced - VLimit;
+    int RematSCnt = MaxSPressure - SReduced - SLimit;
 
     bool IsSGPRSpill = false;
-    if (rematSCnt > 0) {
-      IsSGPRSpill = nearSgprSpill(maxSPressure, ST, MF);
+    if (RematSCnt > 0) {
+      IsSGPRSpill = nearSgprSpill(MaxSPressure, ST, MF);
     }
-    bool IsForceRematSgpr = IsSGPRSpill || status.NotBalance;
+    bool IsForceRematSgpr = IsSGPRSpill || Status.NotBalance;
     // Try to add candidates into remat list.
 
-    int newRematSCnt = 0;
-    if (rematSCnt > 0) {
+    int NewRematSCnt = 0;
+    if (RematSCnt > 0) {
       // Build candidate nodes.
       std::vector<RematNode> SRematCandidates;
       buildRematCandiates(SRematCandidates, CandidateRegs, PinnedRegSet, MRI,
@@ -1426,19 +1423,19 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
       LLVM_DEBUG(dumpCandidates(SRematCandidates, MBB->getNumber(), SIRI));
       std::vector<RematNode> SRematList;
       // Filter candidates.
-      newRematSCnt = filterRematCandiates(SRematCandidates, SRematList,
+      NewRematSCnt = filterRematCandiates(SRematCandidates, SRematList,
                                           PinnedRegSet, DT, PDT, MLI, MRI,
-                                          /*IsVGPR*/ false, status.MemBound);
-      if (newRematSCnt > rematSCnt) {
+                                          /*IsVGPR*/ false, Status.MemBound);
+      if (NewRematSCnt > RematSCnt) {
         // Has enough remat node to cover rematCnt.
-        int rematCnt = 0;
+        int RematCnt = 0;
         for (RematNode &Node : SRematList) {
           SRematMap[Node.Reg] = Node;
-          rematCnt += Node.Size;
-          if (rematCnt > rematSCnt && !EnableAggressive)
+          RematCnt += Node.Size;
+          if (RematCnt > RematSCnt && !EnableAggressive)
             break;
         }
-        newRematSCnt = 0;
+        NewRematSCnt = 0;
       } else {
 
         for (RematNode &Node : SRematList) {
@@ -1447,8 +1444,8 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
         // Check shared size.
         int SharedReducedSize =
             getSharedReducedSize(SReducedInsts, /*IsVGPR*/ false, MRI, SIRI);
-        if (((newRematSCnt + SharedReducedSize) + (int)NearTargetRegLimit) >=
-            rematSCnt) {
+        if (((NewRematSCnt + SharedReducedSize) + (int)NearTargetRegLimit) >=
+            RematSCnt) {
           for (RematNode &Node : SRematList) {
             SRematMap[Node.Reg] = Node;
           }
@@ -1477,14 +1474,14 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
             MachineInstr &UseMI = *MRI.use_instr_nodbg_begin(Reg);
             if (UseMI.getParent() != MBB)
               continue;
-            int gain = rematGain(&MI, Reg, MRI, SIRI,
+            int Gain = rematGain(&MI, Reg, MRI, SIRI,
                                  /*IsVGPR*/ false);
-            if (gain > 0) {
+            if (Gain > 0) {
               // Skip case when DefMI has implicit define which used by UseMI.
               if (isImplicitDefUse(&MI, &UseMI)) {
                 continue;
               }
-              RematNode Node = {Reg, &MI, (unsigned)gain >> 5};
+              RematNode Node = {Reg, &MI, (unsigned)Gain >> 5};
               Node.InsertPointMI = &UseMI;
               Node.Kind = RematNode::RematKind::OneDefOneUse;
               SRematMap[Reg] = Node;
@@ -1492,7 +1489,7 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
             }
           }
         }
-        newRematSCnt = rematSCnt - newRematSCnt - SharedReducedSize;
+        NewRematSCnt = RematSCnt - NewRematSCnt - SharedReducedSize;
       }
     }
     // If works, continue.
@@ -1503,17 +1500,17 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
     // Apply the remat.
 
     int NewRematVCnt = 0;
-    if (rematVCnt > 0) {
+    if (RematVCnt > 0) {
       // TODO: V remat.
     }
 
-    bool NeedSRemat = rematSCnt > 0;
-    bool NeedVRemat = rematVCnt > 0;
+    bool NeedSRemat = RematSCnt > 0;
+    bool NeedVRemat = RematVCnt > 0;
     // If sgpr spill, always do remat.
     bool IsSRematOK =
-        (newRematSCnt <= 0 && !SRematMap.empty()) || IsForceRematSgpr;
+        (NewRematSCnt <= 0 && !SRematMap.empty()) || IsForceRematSgpr;
     bool IsVRematOK =
-        (status.NotBalance || NewRematVCnt <= 0) && !VRematMap.empty();
+        (Status.NotBalance || NewRematVCnt <= 0) && !VRematMap.empty();
     if (NeedSRemat && NeedVRemat) {
       if (IsVRematOK && IsSRematOK) {
         IsUpdated = true;
@@ -1530,8 +1527,8 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
       }
     }
     // TODO: what to do when cannot reach target?
-    if (newRematSCnt > 0) {
-      if ((unsigned)newRematSCnt <= NearTargetRegLimit) {
+    if (NewRematSCnt > 0) {
+      if ((unsigned)NewRematSCnt <= NearTargetRegLimit) {
         IsNearTarget = true;
       } else {
         if (!IsSGPRSpill)
@@ -1546,7 +1543,7 @@ bool hotBlockRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
 
   if (!SRematMap.empty()) {
     IsUpdated = true;
-    ApplyRemat(Remat, SRematMap, hotBlocks, DT, SlotIndexes, MRI, SIRI, SIII,
+    applyRemat(Remat, SRematMap, HotBlocks, DT, SlotIndexes, MRI, SIRI, SIII,
                MF);
     LLVM_DEBUG(llvm::dbgs() << "after hotremat"; MF.print(dbgs()););
   }
@@ -1567,7 +1564,7 @@ bool isPhyRegUniqueDef(unsigned Reg, const MachineRegisterInfo &MRI) {
   return DefMIs.size() == 1;
 }
 
-static bool IsImplicitUseOfReg(const MachineOperand &MO, unsigned Reg) {
+static bool isImplicitUseOfReg(const MachineOperand &MO, unsigned Reg) {
   if (!MO.isImplicit() || !MO.isUse() || !MO.isReg()) {
     return false;
   }
@@ -1575,15 +1572,7 @@ static bool IsImplicitUseOfReg(const MachineOperand &MO, unsigned Reg) {
   return MO.getReg() == Reg;
 }
 
-static bool IsImplicitDefOfReg(const MachineOperand &MO, unsigned Reg) {
-  if (!MO.isImplicit() || !MO.isDef() || !MO.isReg()) {
-    return false;
-  }
-
-  return MO.getReg() == Reg;
-}
-
-static bool IsSafeRematCandidateUser(const MachineInstr *UseMI,
+static bool isSafeRematCandidateUser(const MachineInstr *UseMI,
                                      const SIInstrInfo *SIII) {
   // Make sure UseMI is not wqm like sample.
   if (SIII->isWQM(UseMI->getOpcode()))
@@ -1628,17 +1617,17 @@ bool isSafeCandidate(Remat *Remat, Register Reg, const MachineRegisterInfo &MRI,
   unsigned OpNum = DefMI->getNumOperands();
 
   // Only move DefMI which all operand is unique def.
-  for (unsigned i = 0; i < OpNum; i++) {
-    MachineOperand &Op = DefMI->getOperand(i);
+  for (unsigned I = 0; I < OpNum; I++) {
+    MachineOperand &Op = DefMI->getOperand(I);
     if (!Op.isReg())
       continue;
     Register OpReg = Op.getReg();
-    if (IsImplicitUseOfReg(Op, AMDGPU::EXEC) ||
-        IsImplicitUseOfReg(Op, AMDGPU::EXEC_LO))
+    if (isImplicitUseOfReg(Op, AMDGPU::EXEC) ||
+        isImplicitUseOfReg(Op, AMDGPU::EXEC_LO))
       continue;
-    if (IsImplicitUseOfReg(Op, AMDGPU::MODE))
+    if (isImplicitUseOfReg(Op, AMDGPU::MODE))
       continue;
-    if (IsImplicitUseOfReg(Op, AMDGPU::M0) && isPhyRegUniqueDef(OpReg, MRI))
+    if (isImplicitUseOfReg(Op, AMDGPU::M0) && isPhyRegUniqueDef(OpReg, MRI))
       continue;
     // Alow unused scc define.
     if (Op.isImplicit() && Op.isDead() && Op.isDef())
@@ -1658,7 +1647,7 @@ bool isSafeCandidate(Remat *Remat, Register Reg, const MachineRegisterInfo &MRI,
     }
 
     for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
-      if (!IsSafeRematCandidateUser(&UseMI, SIII))
+      if (!isSafeRematCandidateUser(&UseMI, SIII))
         return false;
     }
   }
@@ -1669,30 +1658,30 @@ bool isSafeCandidate(Remat *Remat, Register Reg, const MachineRegisterInfo &MRI,
 std::vector<SubExp> buildSubExpFromCandidates(
     Remat *Remat, GCNRPTracker::LiveRegSet &Candidates, MachineBasicBlock *MBB,
     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
-    const MachineRegisterInfo &MRI, SlotIndexes *slotIndexes,
-    GCNRPTracker::LiveRegSet &unUsedPassThrus, bool AllowPartialUseInSubExp) {
+    const MachineRegisterInfo &MRI, SlotIndexes *SlotIndexes,
+    GCNRPTracker::LiveRegSet &UnusedPassThrus, bool AllowPartialUseInSubExp) {
   InstSet CandidateDefs;
   DenseSet<unsigned> RemovedCandidates;
   std::vector<unsigned> CandidateRegs;
   CandidateRegs.reserve(Candidates.size());
-  for (auto it : Candidates) {
-    unsigned Reg = it.first;
+  for (auto It : Candidates) {
+    unsigned Reg = It.first;
     CandidateRegs.emplace_back(Reg);
   }
   // Sort candidate by defMI order to make sure defMI has dependent check after
   // all its dependent node.
   std::sort(CandidateRegs.begin(), CandidateRegs.end(),
-            [&MRI, &slotIndexes](const unsigned a, unsigned b) {
-              MachineInstr *MIa = MRI.getUniqueVRegDef(a);
+            [&MRI, &SlotIndexes](const unsigned A, unsigned B) {
+              MachineInstr *MIa = MRI.getUniqueVRegDef(A);
 
-              MachineInstr *MIb = MRI.getUniqueVRegDef(b);
+              MachineInstr *MIb = MRI.getUniqueVRegDef(B);
               // Later instr first.
               return !SlotIndex::isEarlierInstr(
-                  slotIndexes->getInstructionIndex(*MIa),
-                  slotIndexes->getInstructionIndex(*MIb));
+                  SlotIndexes->getInstructionIndex(*MIa),
+                  SlotIndexes->getInstructionIndex(*MIb));
             });
 
-  // If Candidate def has user in MBB, add it when allow partial candidates.
+  // If Candidate def has user in MBB, add It when allow partial candidates.
   // And the subExp has the define could only be clone, cannot move cross blocks
   // because user in MBB.
   DenseSet<MachineInstr *> PartialCandidates;
@@ -1704,7 +1693,7 @@ std::vector<SubExp> buildSubExpFromCandidates(
       if (UseMI.getParent() == MI->getParent()) {
         if (UseMI.getNumExplicitDefs() == 1) {
           // Skip user which already in Candidates.
-          unsigned UserDefReg = UseMI.getOperand(0).getReg();
+          Register UserDefReg = UseMI.getOperand(0).getReg();
           if (Candidates.count(UserDefReg) > 0 &&
               RemovedCandidates.count(UserDefReg) == 0)
             continue;
@@ -1728,14 +1717,14 @@ std::vector<SubExp> buildSubExpFromCandidates(
   if (CandidateDefs.empty())
     return std::vector<SubExp>();
   for (unsigned Reg : RemovedCandidates) {
-    unUsedPassThrus[Reg] = Candidates[Reg];
+    UnusedPassThrus[Reg] = Candidates[Reg];
     Candidates.erase(Reg);
   }
 
   // iterate MBB backward.
   // add inst which only used for candidate defines.
-  for (auto it = MBB->rbegin(); it != MBB->rend(); it++) {
-    MachineInstr &MI = *it;
+  for (auto It = MBB->rbegin(); It != MBB->rend(); It++) {
+    MachineInstr &MI = *It;
     if (CandidateDefs.count(&MI) > 0) {
       continue;
     }
@@ -1815,45 +1804,45 @@ std::vector<SubExp> buildSubExpFromCandidates(
   }
 
   // Build defs in order.
-  std::vector<MachineInstr *> defs;
-  defs.reserve(CandidateDefs.size());
+  std::vector<MachineInstr *> Defs;
+  Defs.reserve(CandidateDefs.size());
   for (MachineInstr &MI : *MBB) {
     if (CandidateDefs.count(&MI) == 0)
       continue;
-    defs.emplace_back(&MI);
+    Defs.emplace_back(&MI);
   }
 
   LLVM_DEBUG(dbgs() << "\nFinished Candidate Defs:\n"; for (MachineInstr *MI
-                                                            : defs) {
+                                                            : Defs) {
     MI->dump();
   } dbgs() << "\nFinished Candidate Defs End\n";);
 
   // Build SubExp with CandidateDefs as Nodes, CandidateInput as input
   // Candidates as output.
-  ExpDag dag(MRI, SIRI, SIII, /*IsJoinInput*/ true);
-  dag.build(CandidateInput, Candidates, defs);
+  ExpDag Dag(MRI, SIRI, SIII, /*IsJoinInput*/ true);
+  Dag.build(CandidateInput, Candidates, Defs);
   if (AllowPartialUseInSubExp) {
-    for (auto &subExp : dag.SubExps) {
-      for (auto *MI : subExp.SUnits) {
+    for (auto &SubExp : Dag.SubExps) {
+      for (auto *MI : SubExp.SUnits) {
         if (PartialCandidates.count(MI)) {
-          subExp.IsCloneOnly = true;
+          SubExp.IsCloneOnly = true;
           break;
         }
       }
     }
   }
-  return dag.SubExps;
+  return Dag.SubExps;
 }
 
 std::vector<SubExp> buildSubExpFromCandidatesTopBottom(
     Remat *Remat, GCNRPTracker::LiveRegSet &Candidates, MachineBasicBlock *MBB,
     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
-    const MachineRegisterInfo &MRI, SlotIndexes *slotIndexes) {
+    const MachineRegisterInfo &MRI) {
   InstSet CandidateDefs;
 
   LLVM_DEBUG(dbgs() << "\nCandidate Defs:\n";);
-  for (auto it : Candidates) {
-    unsigned Reg = it.first;
+  for (auto It : Candidates) {
+    unsigned Reg = It.first;
     MachineInstr *MI = MRI.getUniqueVRegDef(Reg);
 
     for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
@@ -1893,8 +1882,8 @@ std::vector<SubExp> buildSubExpFromCandidatesTopBottom(
   // iterate MBB.
   GCNRPTracker::LiveRegSet LocalCandidates = Candidates;
   // add inst which only used by candidate defines.
-  for (auto it = MBB->begin(); it != MBB->end(); it++) {
-    MachineInstr &MI = *it;
+  for (auto It = MBB->begin(); It != MBB->end(); It++) {
+    MachineInstr &MI = *It;
     if (CandidateDefs.count(&MI) > 0) {
       for (MachineOperand &MO : MI.operands()) {
         if (!MO.isReg())
@@ -2003,33 +1992,33 @@ std::vector<SubExp> buildSubExpFromCandidatesTopBottom(
   }
 
   // Build defs in order.
-  std::vector<MachineInstr *> defs;
-  defs.reserve(CandidateDefs.size());
+  std::vector<MachineInstr *> Defs;
+  Defs.reserve(CandidateDefs.size());
   for (MachineInstr &MI : *MBB) {
     if (CandidateDefs.count(&MI) == 0)
       continue;
-    defs.emplace_back(&MI);
+    Defs.emplace_back(&MI);
   }
 
   LLVM_DEBUG(dbgs() << "\nFinished Candidate Defs:\n"; for (MachineInstr *MI
-                                                            : defs) {
+                                                            : Defs) {
     MI->dump();
   } dbgs() << "\nFinished Candidate Defs End\n";);
 
-  LLVM_DEBUG(dbgs() << "\nLocalCandidates:\n"; for (auto it
+  LLVM_DEBUG(dbgs() << "\nLocalCandidates:\n"; for (auto It
                                                     : LocalCandidates) {
-    pressure::print_reg(it.first, MRI, SIRI, llvm::dbgs());
+    pressure::print_reg(It.first, MRI, SIRI, llvm::dbgs());
   } dbgs() << "\nLocalCandidates End\n";);
   // Make sure all input reg are uniqueDef.
   // Input is Candidates, output is?
   // Build SubExp with CandidateDefs as Nodes, CandidateInput as input
   // Candidates as output.
-  ExpDag dag(MRI, SIRI, SIII, /*IsJoinInput*/ true);
-  dag.build(Candidates, LocalCandidates, defs);
-  return dag.SubExps;
+  ExpDag Dag(MRI, SIRI, SIII, /*IsJoinInput*/ true);
+  Dag.build(Candidates, LocalCandidates, Defs);
+  return Dag.SubExps;
 }
 
-void print_vreg(Register Reg, const MachineRegisterInfo &MRI) {
+void printVreg(Register Reg, const MachineRegisterInfo &MRI) {
   if (Reg.isVirtual()) {
     StringRef Name = MRI.getVRegName(Reg);
     if (Name != "") {
@@ -2040,50 +2029,49 @@ void print_vreg(Register Reg, const MachineRegisterInfo &MRI) {
   }
 }
 
-MachineBasicBlock *FindTargetBlock(unsigned Reg, MachineBasicBlock *FromBB,
+MachineBasicBlock *findTargetBlock(unsigned Reg, MachineBasicBlock *FromBB,
                                    const MachineRegisterInfo &MRI,
                                    MachineDominatorTree *DT) {
-  BlockSet userBlocks;
+  BlockSet UserBlocks;
   for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
     MachineBasicBlock *UserBB = UseMI.getParent();
     // Skip current BB.
     if (UserBB != FromBB)
-      userBlocks.insert(UserBB);
+      UserBlocks.insert(UserBB);
     else
       // When has user in FromBB, userBlock will be FromBB.
       return nullptr;
   }
-  if (userBlocks.empty())
+  if (UserBlocks.empty())
     return nullptr;
-  MachineBasicBlock *userBlock = NearestCommonDominator(DT, userBlocks);
-  if (!DT->dominates(FromBB, userBlock)) {
+  MachineBasicBlock *UserBlock = nearestCommonDominator(DT, UserBlocks);
+  if (!DT->dominates(FromBB, UserBlock)) {
     return nullptr;
   }
-  if (userBlock == FromBB)
+  if (UserBlock == FromBB)
     return nullptr;
-  return userBlock;
+  return UserBlock;
 }
 
-void ApplySubExpMoveNearUser(SubExp &Exp, const MachineRegisterInfo &MRI,
+void applySubExpMoveNearUser(SubExp &Exp, const MachineRegisterInfo &MRI,
                              MachineDominatorTree *DT,
-                             SlotIndexes *slotIndexes, const SIInstrInfo *SIII,
-                             const SIRegisterInfo *SIRI) {
+                             SlotIndexes *SlotIndexes) {
   // Move from bottom.
   MachineBasicBlock *FromBB = Exp.FromBB;
-  for (auto it = Exp.SUnits.rbegin(); it != Exp.SUnits.rend(); it++) {
-    MachineInstr *DefMI = *it;
+  for (auto It = Exp.SUnits.rbegin(); It != Exp.SUnits.rend(); It++) {
+    MachineInstr *DefMI = *It;
     if (DefMI->getNumExplicitDefs() != 1)
       continue;
 
-    unsigned Reg = DefMI->getOperand(0).getReg();
-    MachineBasicBlock *ToBB = FindTargetBlock(Reg, FromBB, MRI, DT);
+    Register Reg = DefMI->getOperand(0).getReg();
+    MachineBasicBlock *ToBB = findTargetBlock(Reg, FromBB, MRI, DT);
     if (!ToBB)
       continue;
 
     // Do not overwrite a live scc.
     MachineBasicBlock::iterator InsertPoint =
         ToBB->SkipPHIsAndLabels(ToBB->begin());
-    if (WillSmashSccAtLocation(DefMI, ToBB, InsertPoint))
+    if (willSmashSccAtLocation(DefMI, ToBB, InsertPoint))
       continue;
 
     DefMI->removeFromParent();
@@ -2094,14 +2082,13 @@ void ApplySubExpMoveNearUser(SubExp &Exp, const MachineRegisterInfo &MRI,
     if (DefMI->isDebugInstr())
       continue;
     // Update slot index.
-    slotIndexes->removeSingleMachineInstrFromMaps(*DefMI);
-    slotIndexes->insertMachineInstrInMaps(*DefMI);
+    SlotIndexes->removeSingleMachineInstrFromMaps(*DefMI);
+    SlotIndexes->insertMachineInstrInMaps(*DefMI);
   }
 }
 
-void ApplySubExpMoveNearDefine(SubExp &Exp, MachineRegisterInfo &MRI,
-                               MachineDominatorTree *DT,
-                               SlotIndexes *slotIndexes,
+void applySubExpMoveNearDefine(SubExp &Exp, MachineRegisterInfo &MRI,
+                               SlotIndexes *SlotIndexes,
                                const SIInstrInfo *SIII,
                                const SIRegisterInfo *SIRI) {
   // Move from top.
@@ -2119,11 +2106,11 @@ void ApplySubExpMoveNearDefine(SubExp &Exp, MachineRegisterInfo &MRI,
       Terminator = ToBB->end();
   }
 
-  Terminator = AdjustInsertPointForSubExpToAvoidSccSmash(Exp, ToBB, Terminator,
+  Terminator = adjustInsertPointForSubExpToAvoidSccSmash(Exp, ToBB, Terminator,
                                                          MRI, SIRI, SIII);
 
-  for (auto it = Exp.SUnits.begin(); it != Exp.SUnits.end(); it++) {
-    MachineInstr *DefMI = *it;
+  for (auto It = Exp.SUnits.begin(); It != Exp.SUnits.end(); It++) {
+    MachineInstr *DefMI = *It;
     if (DefMI->getNumExplicitDefs() != 1)
       continue;
     if (SIII->isEXP(DefMI->getOpcode()))
@@ -2138,38 +2125,38 @@ void ApplySubExpMoveNearDefine(SubExp &Exp, MachineRegisterInfo &MRI,
     if (DefMI->isDebugInstr())
       continue;
     // Update slot index.
-    slotIndexes->removeSingleMachineInstrFromMaps(*DefMI);
-    slotIndexes->insertMachineInstrInMaps(*DefMI);
+    SlotIndexes->removeSingleMachineInstrFromMaps(*DefMI);
+    SlotIndexes->insertMachineInstrInMaps(*DefMI);
   }
 }
 
-DenseSet<MachineInstr *> buildCloneSet(ExpDag &dag,
-                                       DenseSet<SUnit *> &dagBottoms,
-                                       GCNRPTracker::LiveRegSet &usedOutput) {
-  DenseSet<MachineInstr *> copySet;
-  for (auto it = dag.SUnits.rbegin(); it != dag.SUnits.rend(); it++) {
-    SUnit &SU = *it;
+DenseSet<MachineInstr *> buildCloneSet(ExpDag &Dag,
+                                       DenseSet<SUnit *> &DagBottoms,
+                                       GCNRPTracker::LiveRegSet &UsedOutput) {
+  DenseSet<MachineInstr *> CopySet;
+  for (auto It = Dag.SUnits.rbegin(); It != Dag.SUnits.rend(); It++) {
+    SUnit &SU = *It;
     // Skip non-inst node.
     if (!SU.isInstr())
       continue;
     MachineInstr *MI = SU.getInstr();
-    if (dagBottoms.find(&SU) != dagBottoms.end()) {
+    if (DagBottoms.find(&SU) != DagBottoms.end()) {
       bool IsUsed = false;
       // For bottom SU, if in usedOutput, add to copySet;
       for (MachineOperand &DefMO : MI->defs()) {
         if (!DefMO.isReg())
           continue;
-        unsigned Reg = DefMO.getReg();
-        if (usedOutput.count(Reg) > 0) {
+        Register Reg = DefMO.getReg();
+        if (UsedOutput.count(Reg) > 0) {
           IsUsed = true;
           break;
         }
       }
       if (IsUsed) {
-        copySet.insert(MI);
+        CopySet.insert(MI);
         continue;
       }
-      // bottom SU may still have succNode when it used both inExp and outExp.
+      // bottom SU may still have succNode when It used both inExp and outExp.
       // So continue check succNode.
     }
 
@@ -2178,29 +2165,29 @@ DenseSet<MachineInstr *> buildCloneSet(ExpDag &dag,
     for (SDep &SucDep : SU.Succs) {
       SUnit *SucSU = SucDep.getSUnit();
       MachineInstr *SuccMI = SucSU->getInstr();
-      if (copySet.count(SuccMI) > 0) {
+      if (CopySet.count(SuccMI) > 0) {
         IsSuccCopied = true;
         break;
       }
     }
     if (IsSuccCopied)
-      copySet.insert(MI);
+      CopySet.insert(MI);
   }
-  return copySet;
+  return CopySet;
 }
 
-void updateUsers(SmallVector<MachineInstr *, 2> &userMIs,
+void updateUsers(SmallVector<MachineInstr *, 2> &UserMIs,
                  DenseMap<unsigned, unsigned> &RegMap) {
 
-  for (MachineInstr *UserMI : userMIs) {
+  for (MachineInstr *UserMI : UserMIs) {
     for (MachineOperand &MO : UserMI->uses()) {
       if (!MO.isReg())
         continue;
-      unsigned Reg = MO.getReg();
-      auto it = RegMap.find(Reg);
-      if (it == RegMap.end())
+      Register Reg = MO.getReg();
+      auto It = RegMap.find(Reg);
+      if (It == RegMap.end())
         continue;
-      unsigned NewReg = it->second;
+      unsigned NewReg = It->second;
       MO.setReg(NewReg);
     }
   }
@@ -2208,24 +2195,24 @@ void updateUsers(SmallVector<MachineInstr *, 2> &userMIs,
 
 struct HotBlock {
   MachineBasicBlock *MBB = nullptr;
-  GCNRPTracker::LiveRegSet inputLive;
-  std::pair<unsigned, unsigned> maxPressures;
+  GCNRPTracker::LiveRegSet InputLive;
+  std::pair<unsigned, unsigned> MaxPressures;
   // Info about vmemLd.
-  int vmemLdInputSize;
-  int vmemLdOutputSize;
+  int VmemLdInputSize;
+  int VmemLdOutputSize;
 };
 
 DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
     SubExp &Exp,
-    MapVector<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> &userBlocks,
-    DenseMap<MachineBasicBlock *, GCNRPTracker::LiveRegSet> &userBlocksLiveRegs,
-    std::vector<HotBlock> &hotBlocks, MachineDominatorTree *DT) {
+    MapVector<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> &UserBlocks,
+    DenseMap<MachineBasicBlock *, GCNRPTracker::LiveRegSet> &UserBlocksLiveRegs,
+    std::vector<HotBlock> &HotBlocks, MachineDominatorTree *DT) {
   // Collect hot blocks which Exp is live in.
-  DenseSet<MachineBasicBlock *> hotBlockSet;
-  for (HotBlock &hotBlock : hotBlocks) {
+  DenseSet<MachineBasicBlock *> HotBlockSet;
+  for (HotBlock &HotBlock : HotBlocks) {
     for (unsigned Reg : Exp.BottomRegs) {
-      if (hotBlock.inputLive.count(Reg)) {
-        hotBlockSet.insert(hotBlock.MBB);
+      if (HotBlock.InputLive.count(Reg)) {
+        HotBlockSet.insert(HotBlock.MBB);
         break;
       }
     }
@@ -2235,20 +2222,20 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
   // the value not cross hotBlocks when later blocks are cloned.
   // For userBlocks which dominated by all hotBlocks, they could share clones
   // because once after hot block, the pressure is OK.
-  DenseSet<MachineBasicBlock *> afterHotRangeMBBs;
-  for (auto it : userBlocksLiveRegs) {
-    MachineBasicBlock *MBB = it.first;
+  DenseSet<MachineBasicBlock *> AfterHotRangeMBBs;
+  for (auto It : UserBlocksLiveRegs) {
+    MachineBasicBlock *MBB = It.first;
     // Always clone in hot block.
-    if (hotBlockSet.count(MBB))
+    if (HotBlockSet.count(MBB))
       continue;
 
     bool IsDomAllHotBlocks = true;
     bool IsDomedByAllHotBlocks = true;
-    for (MachineBasicBlock *hotMBB : hotBlockSet) {
-      if (!DT->dominates(MBB, hotMBB)) {
+    for (MachineBasicBlock *HotMBB : HotBlockSet) {
+      if (!DT->dominates(MBB, HotMBB)) {
         IsDomAllHotBlocks = false;
       }
-      if (!DT->dominates(hotMBB, MBB)) {
+      if (!DT->dominates(HotMBB, MBB)) {
         IsDomedByAllHotBlocks = false;
       }
       if (!IsDomAllHotBlocks && !IsDomedByAllHotBlocks) {
@@ -2256,19 +2243,17 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
       }
     }
     if (IsDomAllHotBlocks) {
-      userBlocks.erase(MBB);
+      UserBlocks.erase(MBB);
     } else if (IsDomedByAllHotBlocks) {
-      afterHotRangeMBBs.insert(MBB);
+      AfterHotRangeMBBs.insert(MBB);
     }
   }
 
   // Split after hotRange block set by domtree.
   DenseMap<MachineBasicBlock *, BlockSet> DomMap;
-  if (!afterHotRangeMBBs.empty()) {
-    for (auto it : afterHotRangeMBBs) {
-      MachineBasicBlock *MBB = it;
-      for (auto it2 : afterHotRangeMBBs) {
-        MachineBasicBlock *MBB2 = it2;
+  if (!AfterHotRangeMBBs.empty()) {
+    for (MachineBasicBlock *MBB : AfterHotRangeMBBs) {
+      for (MachineBasicBlock *MBB2 : AfterHotRangeMBBs) {
         if (MBB == MBB2)
           continue;
         if (DT->dominates(MBB, MBB2)) {
@@ -2279,16 +2264,15 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
         }
       }
     }
-    for (auto it : afterHotRangeMBBs) {
-      MachineBasicBlock *MBB = it;
-      auto &usedOutput = userBlocksLiveRegs[MBB];
+    for (MachineBasicBlock *MBB : AfterHotRangeMBBs) {
+      auto &UsedOutput = UserBlocksLiveRegs[MBB];
       auto &Dom = DomMap[MBB];
-      for (MachineBasicBlock *domedMBB : Dom) {
+      for (MachineBasicBlock *DomedMBB : Dom) {
         // Merge domed use to MBB use.
-        mergeLiveRegSet(usedOutput, userBlocksLiveRegs[domedMBB]);
+        mergeLiveRegSet(UsedOutput, UserBlocksLiveRegs[DomedMBB]);
         // Remove domedMBB.
-        DomMap.erase(domedMBB);
-        userBlocksLiveRegs.erase(domedMBB);
+        DomMap.erase(DomedMBB);
+        UserBlocksLiveRegs.erase(DomedMBB);
       }
     }
   }
@@ -2296,13 +2280,13 @@ DenseMap<MachineBasicBlock *, BlockSet> reduceClonedMBBs(
   return DomMap;
 }
 
-void ApplySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &hotBlocks,
+void applySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &HotBlocks,
                               MachineDominatorTree *DT,
                               MachineRegisterInfo &MRI,
-                              SlotIndexes *slotIndexes, const SIInstrInfo *SIII,
+                              SlotIndexes *SlotIndexes, const SIInstrInfo *SIII,
                               const SIRegisterInfo *SIRI) {
-  MapVector<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> userBlocks;
-  DenseMap<MachineBasicBlock *, GCNRPTracker::LiveRegSet> userBlocksLiveRegs;
+  MapVector<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> UserBlocks;
+  DenseMap<MachineBasicBlock *, GCNRPTracker::LiveRegSet> UserBlocksLiveRegs;
   for (unsigned Reg : Exp.BottomRegs) {
     for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
       MachineBasicBlock *UserBB = UseMI.getParent();
@@ -2310,36 +2294,36 @@ void ApplySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &hotBlocks,
       if (UserBB == Exp.FromBB)
         continue;
 
-      userBlocks[UserBB].emplace_back(&UseMI);
-      auto &userLives = userBlocksLiveRegs[UserBB];
+      UserBlocks[UserBB].emplace_back(&UseMI);
+      auto &UserLives = UserBlocksLiveRegs[UserBB];
       for (MachineOperand &MO : UseMI.uses()) {
         if (!MO.isReg())
           continue;
-        unsigned UseReg = MO.getReg();
+        Register UseReg = MO.getReg();
         if (Reg != UseReg)
           continue;
-        userLives[Reg] |= getRegMask(MO, MRI);
+        UserLives[Reg] |= getRegMask(MO, MRI);
       }
     }
   }
   // Build dag for SubExp to help remove unused inst when clone.
-  ExpDag dag(MRI, SIRI, SIII, /*IsJoinInput*/ true);
-  dag.build(Exp.inputLive, Exp.outputLive, Exp.SUnits);
-  DenseSet<SUnit *> dagBottoms;
-  for (SUnit &SU : dag.SUnits) {
+  ExpDag Dag(MRI, SIRI, SIII, /*IsJoinInput*/ true);
+  Dag.build(Exp.inputLive, Exp.outputLive, Exp.SUnits);
+  DenseSet<SUnit *> DagBottoms;
+  for (SUnit &SU : Dag.SUnits) {
     if (!SU.isInstr())
       continue;
     if (SU.NumSuccs == 0) {
-      dagBottoms.insert(&SU);
+      DagBottoms.insert(&SU);
     } else {
       MachineInstr *MI = SU.getInstr();
       // Add SU which def value in Exp.outputLive.
       for (MachineOperand &DefMO : MI->defs()) {
         if (!DefMO.isReg())
           continue;
-        unsigned Reg = DefMO.getReg();
+        Register Reg = DefMO.getReg();
         if (Exp.BottomRegs.count(Reg) > 0) {
-          dagBottoms.insert(&SU);
+          DagBottoms.insert(&SU);
           break;
         }
       }
@@ -2351,46 +2335,46 @@ void ApplySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &hotBlocks,
   // For userBlocks which dominated by all hotBlocks, they could share clones
   // because once after hot block, the pressure is OK.
   DenseMap<MachineBasicBlock *, BlockSet> DomMap =
-      reduceClonedMBBs(Exp, userBlocks, userBlocksLiveRegs, hotBlocks, DT);
+      reduceClonedMBBs(Exp, UserBlocks, UserBlocksLiveRegs, HotBlocks, DT);
 
   // Sort to make stable order.
   std::sort(
-      userBlocks.begin(), userBlocks.end(),
-      [](std::pair<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> &it0,
-         std::pair<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> &it1) {
-        return it0.first->getNumber() < it1.first->getNumber();
+      UserBlocks.begin(), UserBlocks.end(),
+      [](std::pair<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> &It0,
+         std::pair<MachineBasicBlock *, SmallVector<MachineInstr *, 2>> &It1) {
+        return It0.first->getNumber() < It1.first->getNumber();
       });
 
   const bool IsModifiesScc = Exp.modifiesRegister(AMDGPU::SCC, SIRI);
 
   // Clone for each userBlocks. Not share clone thru dom tree which cannot help
   // reg pressure.
-  for (auto it : userBlocks) {
-    MachineBasicBlock *MBB = it.first;
+  for (auto It : UserBlocks) {
+    MachineBasicBlock *MBB = It.first;
     // Skip MBB which share clone from other MBBs.
-    if (userBlocksLiveRegs.count(MBB) == 0)
+    if (UserBlocksLiveRegs.count(MBB) == 0)
       continue;
-    auto &usedOutput = userBlocksLiveRegs[MBB];
-    auto copySet = buildCloneSet(dag, dagBottoms, usedOutput);
+    auto &UsedOutput = UserBlocksLiveRegs[MBB];
+    auto CopySet = buildCloneSet(Dag, DagBottoms, UsedOutput);
     // Clone to MBB.
     // Create new regs first.
     DenseMap<unsigned, unsigned> RegMap;
-    auto insertPtr = MBB->getFirstNonPHI();
+    auto InsertPtr = MBB->getFirstNonPHI();
     // If Exp has scc read/write, make sure MBB not have scc in liveins.
-    if (IsModifiesScc && llvm::IsSccLiveAt(MBB, insertPtr))
+    if (IsModifiesScc && llvm::IsSccLiveAt(MBB, InsertPtr))
       continue;
     MachineFunction *MF = MBB->getParent();
-    for (auto it = Exp.SUnits.begin(); it != Exp.SUnits.end(); it++) {
-      MachineInstr *DefMI = *it;
+    for (auto It = Exp.SUnits.begin(); It != Exp.SUnits.end(); It++) {
+      MachineInstr *DefMI = *It;
       // Not clone if already in MBB.
       if (DefMI->getParent() == MBB)
         continue;
       // Not clone if not used for MBB.
-      if (copySet.count(DefMI) == 0)
+      if (CopySet.count(DefMI) == 0)
         continue;
 
       auto ClonedMI =
-          BuildMI(*MBB, insertPtr, DefMI->getDebugLoc(), DefMI->getDesc());
+          BuildMI(*MBB, InsertPtr, DefMI->getDebugLoc(), DefMI->getDesc());
 
       for (MachineOperand &Def : DefMI->defs()) {
         Register Reg = Def.getReg();
@@ -2399,7 +2383,7 @@ void ApplySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &hotBlocks,
             continue;
           ClonedMI.addDef(Reg, 0, Def.getSubReg());
         } else {
-          unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
+          Register NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
           RegMap[Reg] = NewReg;
           ClonedMI.addDef(NewReg, 0, Def.getSubReg());
         }
@@ -2413,11 +2397,11 @@ void ApplySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &hotBlocks,
               continue;
             ClonedMI.addReg(Reg, 0, MO.getSubReg());
           } else {
-            auto it = RegMap.find(Reg);
-            if (it == RegMap.end()) {
+            auto It = RegMap.find(Reg);
+            if (It == RegMap.end()) {
               ClonedMI.addReg(Reg, 0, MO.getSubReg());
             } else {
-              ClonedMI.addReg(it->second, 0, MO.getSubReg());
+              ClonedMI.addReg(It->second, 0, MO.getSubReg());
             }
           }
         } else {
@@ -2426,7 +2410,7 @@ void ApplySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &hotBlocks,
       }
 
       MachineInstr *NewDef = ClonedMI.getInstr();
-      slotIndexes->insertMachineInstrInMaps(*NewDef);
+      SlotIndexes->insertMachineInstrInMaps(*NewDef);
       // Set mem operand
       for (MachineMemOperand *MO : DefMI->memoperands()) {
         NewDef->addMemOperand(*MF, MO);
@@ -2434,43 +2418,43 @@ void ApplySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &hotBlocks,
     }
 
     // update users in MBB.
-    SmallVector<MachineInstr *, 2> &userMIs = it.second;
-    updateUsers(userMIs, RegMap);
+    SmallVector<MachineInstr *, 2> &UserMIs = It.second;
+    updateUsers(UserMIs, RegMap);
 
     // update users in dom MBBs.
-    auto domMapIt = DomMap.find(MBB);
-    if (domMapIt != DomMap.end()) {
-      for (MachineBasicBlock *UpdateMBB : domMapIt->second) {
-        SmallVector<MachineInstr *, 2> &userMIs = userBlocks[UpdateMBB];
-        updateUsers(userMIs, RegMap);
+    auto DomMapIt = DomMap.find(MBB);
+    if (DomMapIt != DomMap.end()) {
+      for (MachineBasicBlock *UpdateMBB : DomMapIt->second) {
+        SmallVector<MachineInstr *, 2> &UserMIs = UserBlocks[UpdateMBB];
+        updateUsers(UserMIs, RegMap);
       }
     }
   }
 }
 
-void ApplySubExpCloneNearUserInBlock(
+void applySubExpCloneNearUserInBlock(
     SubExp &Exp,
-    DenseMap<MachineBasicBlock *, MachineInstr *> &inBlockHotVInstMap,
-    DenseMap<MachineBasicBlock *, MachineInstr *> &inBlockHotSInstMap,
-    MachineRegisterInfo &MRI, SlotIndexes *slotIndexes, const SIInstrInfo *SIII,
+    DenseMap<MachineBasicBlock *, MachineInstr *> &InBlockHotVInstMap,
+    DenseMap<MachineBasicBlock *, MachineInstr *> &InBlockHotSInstMap,
+    MachineRegisterInfo &MRI, SlotIndexes *SlotIndexes,
     const SIRegisterInfo *SIRI) {
   MachineBasicBlock *MBB = Exp.FromBB;
   MachineFunction *MF = MBB->getParent();
-  MachineInstr *hotVMI = inBlockHotVInstMap[MBB];
-  MachineInstr *hotSMI = inBlockHotSInstMap[MBB];
+  MachineInstr *HotVMI = InBlockHotVInstMap[MBB];
+  MachineInstr *HotSMI = InBlockHotSInstMap[MBB];
   // Exp is build with hotVMI or hotSMI, cannot mix.
-  assert(!(hotVMI && hotSMI) && "cannot mix hot MI");
-  MachineInstr *hotMI = hotVMI;
-  if (!hotMI) {
-    hotMI = hotSMI;
+  assert(!(HotVMI && HotSMI) && "cannot mix hot MI");
+  MachineInstr *HotMI = HotVMI;
+  if (!HotMI) {
+    HotMI = HotSMI;
   }
 
-  SlotIndex hotSlot = slotIndexes->getInstructionIndex(*hotMI).getBaseIndex();
+  SlotIndex HotSlot = SlotIndexes->getInstructionIndex(*HotMI).getBaseIndex();
   const bool IsModifiesScc = Exp.modifiesRegister(AMDGPU::SCC, SIRI);
 
   for (unsigned Reg : Exp.BottomRegs) {
 
-    SmallVector<MachineInstr *, 2> useMIs;
+    SmallVector<MachineInstr *, 2> UseMIs;
     for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
       MachineBasicBlock *UserBB = UseMI.getParent();
       // Skip current BB.
@@ -2479,40 +2463,40 @@ void ApplySubExpCloneNearUserInBlock(
       // Skip inst in Exp.
       if (Exp.BottomRoots.find(&UseMI) != Exp.BottomRoots.end())
         continue;
-      SlotIndex useSlot =
-          slotIndexes->getInstructionIndex(UseMI).getBaseIndex();
+      SlotIndex UseSlot =
+          SlotIndexes->getInstructionIndex(UseMI).getBaseIndex();
       // Only clone for use after hot slot.
-      if (useSlot < hotSlot)
+      if (UseSlot < HotSlot)
         continue;
 
       // Do not overwrite a live scc.
       if (IsModifiesScc && llvm::IsSccLiveAt(UserBB, &UseMI))
         continue;
 
-      useMIs.emplace_back(&UseMI);
+      UseMIs.emplace_back(&UseMI);
     }
-    if (useMIs.empty())
+    if (UseMIs.empty())
       continue;
     DenseMap<unsigned, unsigned> RegMap;
 
-    std::sort(useMIs.begin(), useMIs.end(),
-              [&slotIndexes](const MachineInstr *MIa, const MachineInstr *MIb) {
-                return slotIndexes->getInstructionIndex(*MIa).getBaseIndex() <
-                       slotIndexes->getInstructionIndex(*MIb).getBaseIndex();
+    std::sort(UseMIs.begin(), UseMIs.end(),
+              [&SlotIndexes](const MachineInstr *MIa, const MachineInstr *MIb) {
+                return SlotIndexes->getInstructionIndex(*MIa).getBaseIndex() <
+                       SlotIndexes->getInstructionIndex(*MIb).getBaseIndex();
               });
-    auto insertPtr = useMIs.front()->getIterator();
+    auto InsertPtr = UseMIs.front()->getIterator();
 
-    for (auto it = Exp.SUnits.begin(); it != Exp.SUnits.end(); it++) {
-      MachineInstr *DefMI = *it;
+    for (auto It = Exp.SUnits.begin(); It != Exp.SUnits.end(); It++) {
+      MachineInstr *DefMI = *It;
       auto ClonedMI =
-          BuildMI(*MBB, insertPtr, DefMI->getDebugLoc(), DefMI->getDesc());
+          BuildMI(*MBB, InsertPtr, DefMI->getDebugLoc(), DefMI->getDesc());
 
       for (MachineOperand &Def : DefMI->defs()) {
         Register Reg = Def.getReg();
         if (Reg.isPhysical()) {
           ClonedMI.addDef(Reg, 0, Def.getSubReg());
         } else {
-          unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
+          Register NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
           RegMap[Reg] = NewReg;
           ClonedMI.addDef(NewReg, 0, Def.getSubReg());
         }
@@ -2527,11 +2511,11 @@ void ApplySubExpCloneNearUserInBlock(
           if (Reg.isPhysical()) {
             ClonedMI.addReg(Reg, 0, MO.getSubReg());
           } else {
-            auto it = RegMap.find(Reg);
-            if (it == RegMap.end()) {
+            auto It = RegMap.find(Reg);
+            if (It == RegMap.end()) {
               ClonedMI.addReg(Reg, 0, MO.getSubReg());
             } else {
-              ClonedMI.addReg(it->second, 0, MO.getSubReg());
+              ClonedMI.addReg(It->second, 0, MO.getSubReg());
             }
           }
         } else {
@@ -2540,55 +2524,55 @@ void ApplySubExpCloneNearUserInBlock(
       }
 
       MachineInstr *NewDef = ClonedMI.getInstr();
-      slotIndexes->insertMachineInstrInMaps(*NewDef);
+      SlotIndexes->insertMachineInstrInMaps(*NewDef);
       // Set mem operand
       for (MachineMemOperand *MO : DefMI->memoperands()) {
         NewDef->addMemOperand(*MF, MO);
       }
     }
     // TODO: only clone to cross hot range.
-    for (MachineInstr *UseMI : useMIs) {
+    for (MachineInstr *UseMI : UseMIs) {
       for (MachineOperand &MO : UseMI->uses()) {
         if (!MO.isReg())
           continue;
-        unsigned Reg = MO.getReg();
-        auto it = RegMap.find(Reg);
-        if (it == RegMap.end())
+        Register Reg = MO.getReg();
+        auto It = RegMap.find(Reg);
+        if (It == RegMap.end())
           continue;
-        unsigned NewReg = it->second;
+        Register NewReg = It->second;
         MO.setReg(NewReg);
       }
     }
   }
 }
 
-bool isInLiveSet(unsigned Reg, LaneBitmask mask,
-                 const GCNRPTracker::LiveRegSet &live) {
-  auto it = live.find(Reg);
-  if (it == live.end())
+bool isInLiveSet(unsigned Reg, LaneBitmask Mask,
+                 const GCNRPTracker::LiveRegSet &Live) {
+  auto It = Live.find(Reg);
+  if (It == Live.end())
     return false;
 
-  LaneBitmask liveMask = it->second;
-  return (liveMask | mask) == liveMask;
+  LaneBitmask LiveMask = It->second;
+  return (LiveMask | Mask) == LiveMask;
 }
 
 unsigned getPacifistLevel(unsigned Reg,
-                          DenseMap<MachineInstr *, unsigned> &pacifistLevels,
+                          DenseMap<MachineInstr *, unsigned> &PacifistLevels,
                           const MachineRegisterInfo &MRI) {
-  unsigned level = 0;
+  unsigned Level = 0;
   for (MachineInstr &MI : MRI.def_instructions(Reg)) {
-    auto it = pacifistLevels.find(&MI);
-    if (it == pacifistLevels.end())
+    auto It = PacifistLevels.find(&MI);
+    if (It == PacifistLevels.end())
       continue;
-    level = it->second;
+    Level = It->second;
   }
-  return level;
+  return Level;
 }
 
 bool hasInBlockDef(unsigned Reg, MachineBasicBlock *MBB,
                    const MachineRegisterInfo &MRI) {
-  for (MachineInstr &def : MRI.def_instructions(Reg)) {
-    if (def.getParent() != MBB)
+  for (MachineInstr &Def : MRI.def_instructions(Reg)) {
+    if (Def.getParent() != MBB)
       continue;
     return true;
   }
@@ -2596,38 +2580,36 @@ bool hasInBlockDef(unsigned Reg, MachineBasicBlock *MBB,
 }
 
 MachineInstr *getInBlockUniqueDef(unsigned Reg, MachineBasicBlock *MBB,
-                                  const GCNRPTracker::LiveRegSet &inputLive,
-                                  const GCNRPTracker::LiveRegSet &outputLive,
+                                  const GCNRPTracker::LiveRegSet &InputLive,
                                   const MachineRegisterInfo &MRI) {
   MachineInstr *DefMI = nullptr;
   // If live as input for MBB, cannot be unique def.
-  if (inputLive.count(Reg))
+  if (InputLive.count(Reg))
     return DefMI;
-  for (MachineInstr &def : MRI.def_instructions(Reg)) {
-    if (def.getParent() != MBB)
+  for (MachineInstr &Def : MRI.def_instructions(Reg)) {
+    if (Def.getParent() != MBB)
       continue;
     if (DefMI) {
       // Not unique.
       DefMI = nullptr;
       break;
     }
-    DefMI = &def;
+    DefMI = &Def;
   }
   return DefMI;
 }
 
-bool isPassThru(unsigned Reg, const GCNRPTracker::LiveRegSet &inputLive,
-                const GCNRPTracker::LiveRegSet &outputLive) {
-  return inputLive.count(Reg) && outputLive.count(Reg);
+bool isPassThru(unsigned Reg, const GCNRPTracker::LiveRegSet &InputLive,
+                const GCNRPTracker::LiveRegSet &OutputLive) {
+  return InputLive.count(Reg) && OutputLive.count(Reg);
 }
 
 // Instructions which only use imm/passThru reg/output only reg will not kill
 // any live reg, so name them pacifist here.
 bool collectPacifist(MachineInstr &MI,
-                     const GCNRPTracker::LiveRegSet &inputLive,
-                     const GCNRPTracker::LiveRegSet &outputLive,
-                     const MachineRegisterInfo &MRI,
-                     const SIRegisterInfo *SIRI) {
+                     const GCNRPTracker::LiveRegSet &InputLive,
+                     const GCNRPTracker::LiveRegSet &OutputLive,
+                     const MachineRegisterInfo &MRI) {
   // If has implicit def, not move.
   if (MI.getDesc().NumImplicitDefs != 0)
     return false;
@@ -2645,16 +2627,15 @@ bool collectPacifist(MachineInstr &MI,
     if (Reg.isPhysical())
       return false;
     // The def for reg must be unique def in block or pass thru which not has
-    // def in block. If not, it is not safe to move.
-    if (!(nullptr != getInBlockUniqueDef(Reg, MI.getParent(), inputLive,
-                                         outputLive, MRI) ||
-          (isPassThru(Reg, inputLive, outputLive) &&
+    // def in block. If not, It is not safe to move.
+    if (!(nullptr != getInBlockUniqueDef(Reg, MI.getParent(), InputLive, MRI) ||
+          (isPassThru(Reg, InputLive, OutputLive) &&
            !hasInBlockDef(Reg, MI.getParent(), MRI))))
       return false;
 
-    LaneBitmask mask = llvm::getRegMask(MO, MRI);
+    LaneBitmask Mask = llvm::getRegMask(MO, MRI);
 
-    if (isInLiveSet(Reg, mask, outputLive))
+    if (isInLiveSet(Reg, Mask, OutputLive))
       continue;
 
     return false;
@@ -2666,13 +2647,12 @@ bool collectPacifist(MachineInstr &MI,
     if (Reg.isPhysical())
       return false;
 
-    if (nullptr ==
-        getInBlockUniqueDef(Reg, MI.getParent(), inputLive, outputLive, MRI))
+    if (nullptr == getInBlockUniqueDef(Reg, MI.getParent(), InputLive, MRI))
       return false;
 
     IsHasDef = true;
   }
-  // If no def, it will not increase pressure, don't mark it.
+  // If no def, It will not increase pressure, don't mark It.
   return IsHasDef;
 }
 
@@ -2696,103 +2676,102 @@ static MachineInstr *findPacifistInsertPoint(MachineInstr &MI,
                                              MachineBasicBlock &MBB,
                                              MachineRegisterInfo &MRI,
                                              AliasAnalysis *AA,
-                                             SlotIndexes *slotIndexes) {
+                                             SlotIndexes *SlotIndexes) {
 
-  SmallVector<MachineInstr *, 2> users;
+  SmallVector<MachineInstr *, 2> Users;
 
   // We cannot move the pacifist instruction past any memory
-  // op with which it aliases. Find the first instruction
-  // that aliases the pacifist MI (if any) and add it to the list
+  // op with which It aliases. Find the first instruction
+  // that aliases the pacifist MI (if any) and add It to the list
   // of users. The sort() below will select the earliest user instruction.
   if (MachineInstr *AliasMI = findFirstAliasingLoadOrStoreInMBB(MI, MBB, AA)) {
-    users.push_back(AliasMI);
+    Users.push_back(AliasMI);
   }
 
   for (MachineOperand &MO : MI.defs()) {
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
       if (&MBB != UseMI.getParent())
         continue;
-      users.emplace_back(&UseMI);
+      Users.emplace_back(&UseMI);
     }
   }
-  if (users.empty())
+  if (Users.empty())
     return nullptr;
 
-  std::sort(users.begin(), users.end(),
-            [&slotIndexes](const MachineInstr *MIa, MachineInstr *MIb) {
+  std::sort(Users.begin(), Users.end(),
+            [&SlotIndexes](const MachineInstr *MIa, MachineInstr *MIb) {
               // Early instr first.
               return SlotIndex::isEarlierInstr(
-                  slotIndexes->getInstructionIndex(*MIa),
-                  slotIndexes->getInstructionIndex(*MIb));
+                  SlotIndexes->getInstructionIndex(*MIa),
+                  SlotIndexes->getInstructionIndex(*MIb));
             });
-  return users.front();
+  return Users.front();
 }
 
 // Pacifist inst will only add pressure since they don't kill.
 // Try to hold them as late as possible in a MBB to help pressure.
 bool tryHoldPacifist(MachineBasicBlock &MBB, LiveIntervals *LIS,
                      MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-                     const SIInstrInfo *SIII, AliasAnalysis *AA,
-                     RematStatus &status) {
-  const GCNRPTracker::LiveRegSet inputLive = status.MBBInputLiveMap[&MBB];
-  const GCNRPTracker::LiveRegSet outputLive = status.MBBOutputLiveMap[&MBB];
+                     AliasAnalysis *AA, RematStatus &Status) {
+  const GCNRPTracker::LiveRegSet InputLive = Status.MBBInputLiveMap[&MBB];
+  const GCNRPTracker::LiveRegSet OutputLive = Status.MBBOutputLiveMap[&MBB];
 
-  SmallVector<MachineInstr *, 32> pacifistList;
+  SmallVector<MachineInstr *, 32> PacifistList;
   LLVM_DEBUG(dbgs() << "pacifist begin\n");
   for (MachineInstr &MI : MBB) {
     if (MI.isDebugInstr())
       continue;
-    if (collectPacifist(MI, inputLive, outputLive, MRI, SIRI)) {
-      pacifistList.emplace_back(&MI);
+    if (collectPacifist(MI, InputLive, OutputLive, MRI)) {
+      PacifistList.emplace_back(&MI);
       LLVM_DEBUG(MI.dump());
     }
   }
   LLVM_DEBUG(dbgs() << "pacifist end\n");
 
-  SlotIndexes *slotIndexes = LIS->getSlotIndexes();
+  SlotIndexes *SlotIndexes = LIS->getSlotIndexes();
   bool IsUpdated = false;
 
   // Move pacifist to its first user.
   // for (MachineInstr *MI : pacifistList) {
-  for (auto it = pacifistList.rbegin(); it != pacifistList.rend(); it++) {
-    MachineInstr *MI = *it;
-    MachineInstr *firstUser =
-        findPacifistInsertPoint(*MI, MBB, MRI, AA, slotIndexes);
-    if (firstUser == MI)
+  for (auto It = PacifistList.rbegin(); It != PacifistList.rend(); It++) {
+    MachineInstr *MI = *It;
+    MachineInstr *FirstUser =
+        findPacifistInsertPoint(*MI, MBB, MRI, AA, SlotIndexes);
+    if (FirstUser == MI)
       continue;
-    if (firstUser == MI->getNextNode())
+    if (FirstUser == MI->getNextNode())
       continue;
 
-    auto insertPoint = MBB.getFirstInstrTerminator();
-    if (firstUser) {
-      insertPoint = firstUser->getIterator();
+    auto InsertPoint = MBB.getFirstInstrTerminator();
+    if (FirstUser) {
+      InsertPoint = FirstUser->getIterator();
     } else {
       // When there's no terminator.
-      if (insertPoint == MBB.end())
-        insertPoint--;
+      if (InsertPoint == MBB.end())
+        InsertPoint--;
       else
-        // BRANCH may have exec update before it.
-        insertPoint--;
+        // BRANCH may have exec update before It.
+        InsertPoint--;
 
-      insertPoint =
-          llvm::skipDebugInstructionsBackward(insertPoint, MBB.instr_begin());
+      InsertPoint =
+          llvm::skipDebugInstructionsBackward(InsertPoint, MBB.instr_begin());
 
-      while ((insertPoint->definesRegister(AMDGPU::EXEC, SIRI) ||
-              insertPoint->definesRegister(AMDGPU::EXEC_LO, SIRI)) &&
-             insertPoint != MI->getIterator()) {
-        insertPoint--;
-        insertPoint =
-            llvm::skipDebugInstructionsBackward(insertPoint, MBB.instr_begin());
+      while ((InsertPoint->definesRegister(AMDGPU::EXEC, SIRI) ||
+              InsertPoint->definesRegister(AMDGPU::EXEC_LO, SIRI)) &&
+             InsertPoint != MI->getIterator()) {
+        InsertPoint--;
+        InsertPoint =
+            llvm::skipDebugInstructionsBackward(InsertPoint, MBB.instr_begin());
       }
-      if (insertPoint == MI->getIterator())
+      if (InsertPoint == MI->getIterator())
         continue;
     }
     // Do not overwrite a live scc.
-    if (WillSmashSccAtLocation(MI, &MBB, insertPoint))
+    if (willSmashSccAtLocation(MI, &MBB, InsertPoint))
       continue;
     MI->removeFromParent();
-    MBB.insert(insertPoint, MI);
+    MBB.insert(InsertPoint, MI);
 
     LIS->handleMove(*MI);
     IsUpdated = true;
@@ -2813,16 +2792,16 @@ collectUniformVgprs(Remat *Remat, MachineFunction &MF, MachineRegisterInfo &MRI,
         continue;
       if (MI.getNumDefs() != 1)
         continue;
-      unsigned dstIdx =
+      unsigned DstIdx =
           AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::vdst);
-      if (dstIdx == (unsigned)-1)
+      if (DstIdx == (unsigned)-1)
         continue;
-      MachineOperand &DstMO = MI.getOperand(dstIdx);
+      MachineOperand &DstMO = MI.getOperand(DstIdx);
       if (DstMO.getSubReg() != 0)
         continue;
       if (DstMO.isTied())
         continue;
-      unsigned Reg = DstMO.getReg();
+      Register Reg = DstMO.getReg();
       if (MRI.getUniqueVRegDef(Reg) == nullptr)
         continue;
 
@@ -2839,22 +2818,21 @@ collectUniformVgprs(Remat *Remat, MachineFunction &MF, MachineRegisterInfo &MRI,
   return UniformMap;
 }
 
-// Try insert readfirstlane on uniform vgpr to turn it in sgpr and save vgpr
+// Try insert readfirstlane on uniform vgpr to turn It in sgpr and save vgpr
 // pressure.
 bool collectVToSCrossHotSpot(
-    MachineBasicBlock &MBB, RematStatus &status,
+    MachineBasicBlock &MBB, RematStatus &Status,
     DenseMap<unsigned, MachineInstr *> &UniformMap,
-    SmallMapVector<unsigned, MachineInstr *, 4> &VToSMap, LiveIntervals *LIS)
-{
-  unsigned VLimit = status.TargetVLimit;
-  unsigned SLimit = status.TargetSLimit;
+    SmallMapVector<unsigned, MachineInstr *, 4> &VToSMap, LiveIntervals *LIS) {
+  unsigned VLimit = Status.TargetVLimit;
+  unsigned SLimit = Status.TargetSLimit;
   auto &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
 
   GCNDownwardRPTracker Tracker(*LIS);
 
   bool IsUpdated = false;
-  const auto inputLive = status.MBBInputLiveMap[&MBB];
-  Tracker.reset(*MBB.begin(), &inputLive);
+  const auto InputLive = Status.MBBInputLiveMap[&MBB];
+  Tracker.reset(*MBB.begin(), &InputLive);
   for (MachineInstr &MI : MBB) {
     if (MI.isDebugInstr()) {
       continue;
@@ -2876,8 +2854,8 @@ bool collectVToSCrossHotSpot(
 
     // Try to make all possible vtos to reduce vpressure.
     const GCNRPTracker::LiveRegSet &CurLives = Tracker.getLiveRegs();
-    for (auto it : CurLives) {
-      unsigned Reg = it.first;
+    for (auto It : CurLives) {
+      unsigned Reg = It.first;
       auto UniformIt = UniformMap.find(Reg);
       if (UniformIt == UniformMap.end())
         continue;
@@ -2889,53 +2867,53 @@ bool collectVToSCrossHotSpot(
 }
 
 // Return true if the user is outside of the def's loop.
-static bool IsCrossLoopUse(MachineInstr *Def, MachineInstr *User,
+static bool isCrossLoopUse(MachineInstr *Def, MachineInstr *User,
                            MachineLoopInfo *MLI) {
   MachineLoop *L = MLI->getLoopFor(Def->getParent());
   return L && !L->contains(User->getParent());
 }
 
-bool rematUniformVgprToSgpr(
-    Remat *Remat, MachineFunction &MF, RematStatus &status,
-    DenseMap<MachineBasicBlock *, GCNRegPressure> &MBBPressureMap,
-    std::vector<HotBlock> &hotBlocks, LiveIntervals *LIS,
-    MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-    const SIInstrInfo *SIII, MachineLoopInfo *MLI) {
+bool rematUniformVgprToSgpr(Remat *Remat, MachineFunction &MF,
+                            RematStatus &Status,
+                            std::vector<HotBlock> &HotBlocks,
+                            LiveIntervals *LIS, MachineRegisterInfo &MRI,
+                            const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
+                            MachineLoopInfo *MLI) {
   DenseMap<unsigned, MachineInstr *> UniformVgprMap =
       collectUniformVgprs(Remat, MF, MRI, SIRI);
 
   SmallMapVector<unsigned, MachineInstr *, 4> VToSMap;
 
-  for (auto &hotBlock : hotBlocks) {
-    MachineBasicBlock &MBB = *hotBlock.MBB;
-    collectVToSCrossHotSpot(MBB, status, UniformVgprMap, VToSMap, LIS);
+  for (auto &HotBlock : HotBlocks) {
+    MachineBasicBlock &MBB = *HotBlock.MBB;
+    collectVToSCrossHotSpot(MBB, Status, UniformVgprMap, VToSMap, LIS);
   }
 
   if (VToSMap.empty())
     return false;
-  SlotIndexes *slotIndexes = LIS->getSlotIndexes();
+  SlotIndexes *SlotIndexes = LIS->getSlotIndexes();
   const MCInstrDesc &ReadFirstLaneDesc = SIII->get(AMDGPU::V_READFIRSTLANE_B32);
-  for (auto it : VToSMap) {
-    unsigned Reg = it.first;
-    MachineInstr *MI = it.second;
+  for (auto It : VToSMap) {
+    unsigned Reg = It.first;
+    MachineInstr *MI = It.second;
 
     auto *VRC = SIRI->getRegClassForReg(MRI, Reg);
     // TODO: support bigger vgpr to sgpr.
     if (VRC != &AMDGPU::VGPR_32RegClass)
       continue;
     auto *NewRC = SIRI->getEquivalentSGPRClass(VRC);
-    unsigned newDst = MRI.createVirtualRegister(NewRC);
+    Register NewDst = MRI.createVirtualRegister(NewRC);
 
     auto ReadFirstLane =
-        BuildMI(MF, MI->getDebugLoc(), ReadFirstLaneDesc, newDst);
-    SmallVector<MachineInstr *, 2> userMIs;
-    for (MachineInstr &userMI : MRI.use_nodbg_instructions(Reg)) {
+        BuildMI(MF, MI->getDebugLoc(), ReadFirstLaneDesc, NewDst);
+    SmallVector<MachineInstr *, 2> UserMIs;
+    for (MachineInstr &UserMI : MRI.use_nodbg_instructions(Reg)) {
       // Do not replace v->s across loops. Even if the value is uniform
       // branch divergence can cause a uniform value in a loop to be
       // non-uniform when used outside a loop.
-      if (IsSafeRematCandidateUser(&userMI, SIII) &&
-          !IsCrossLoopUse(MI, &userMI, MLI))
-        userMIs.emplace_back(&userMI);
+      if (isSafeRematCandidateUser(&UserMI, SIII) &&
+          !isCrossLoopUse(MI, &UserMI, MLI))
+        UserMIs.emplace_back(&UserMI);
     }
 
     // Finish readfirstlane
@@ -2945,32 +2923,32 @@ bool rematUniformVgprToSgpr(
     Remat->SafeToRemoveInsts.insert(VToSMI);
     MachineBasicBlock *MBB = MI->getParent();
     MBB->insertAfter(MI->getIterator(), VToSMI);
-    slotIndexes->insertMachineInstrInMaps(*VToSMI);
+    SlotIndexes->insertMachineInstrInMaps(*VToSMI);
 
-    for (MachineInstr *userMI : userMIs) {
-      const auto &Desc = userMI->getDesc();
+    for (MachineInstr *UserMI : UserMIs) {
+      const auto &Desc = UserMI->getDesc();
       bool IsIllegal = false;
-      for (unsigned i = 0; i < userMI->getNumOperands(); i++) {
-        MachineOperand &MO = userMI->getOperand(i);
+      for (unsigned I = 0; I < UserMI->getNumOperands(); I++) {
+        MachineOperand &MO = UserMI->getOperand(I);
         if (!MO.isReg())
           continue;
         if (MO.isDef())
           continue;
         if (MO.getReg() != Reg)
           continue;
-        if (i >= Desc.getNumOperands()) {
+        if (I >= Desc.getNumOperands()) {
           IsIllegal = true;
           break;
         }
 
-        MO.setReg(newDst);
-        if (userMI->getDesc().operands()[i].RegClass != -1) {
-          if (!SIII->isOperandLegal(*userMI, i, &MO)) {
-            SIII->legalizeOperands(*userMI);
+        MO.setReg(NewDst);
+        if (UserMI->getDesc().operands()[I].RegClass != -1) {
+          if (!SIII->isOperandLegal(*UserMI, I, &MO)) {
+            SIII->legalizeOperands(*UserMI);
             // In case legalizeOperands not help, just legalize with mov.
-            if (userMI->getDesc().operands()[i].RegClass != -1 &&
-                !SIII->isOperandLegal(*userMI, i)) {
-              SIII->legalizeOpWithMove(*userMI, i);
+            if (UserMI->getDesc().operands()[I].RegClass != -1 &&
+                !SIII->isOperandLegal(*UserMI, I)) {
+              SIII->legalizeOpWithMove(*UserMI, I);
             }
           }
         } else {
@@ -2980,12 +2958,12 @@ bool rematUniformVgprToSgpr(
       if (IsIllegal)
         continue;
 
-      auto rit = userMI->getReverseIterator();
-      rit++;
-      auto endIt = userMI->getParent()->rend();
-      while (rit != endIt && !rit->isDebugInstr() &&
-             !slotIndexes->hasIndex(*rit))
-        slotIndexes->insertMachineInstrInMaps(*(rit++));
+      auto RIt = UserMI->getReverseIterator();
+      RIt++;
+      auto EndIt = UserMI->getParent()->rend();
+      while (RIt != EndIt && !RIt->isDebugInstr() &&
+             !SlotIndexes->hasIndex(*RIt))
+        SlotIndexes->insertMachineInstrInMaps(*(RIt++));
     }
   }
 
@@ -2993,19 +2971,17 @@ bool rematUniformVgprToSgpr(
 }
 
 bool collectRematableHotReg(
-    MachineInstr &MI, const GCNRPTracker::LiveRegSet &hotLive,
-    GCNRPTracker::LiveRegSet &pureHotRematSet,
-    DenseMap<MachineInstr *, unsigned> &pureHotRematLevels, unsigned &DefReg,
-    const GCNRPTracker::LiveRegSet &inputLive,
-    const GCNRPTracker::LiveRegSet &outputLive, const MachineRegisterInfo &MRI,
-    const SIRegisterInfo *SIRI) {
+    MachineInstr &MI, const GCNRPTracker::LiveRegSet &HotLive,
+    GCNRPTracker::LiveRegSet &PureHotRematSet,
+    DenseMap<MachineInstr *, unsigned> &PureHotRematLevels, unsigned &DefReg,
+    const GCNRPTracker::LiveRegSet &InputLive, const MachineRegisterInfo &MRI) {
   // Ignore inst not have def or more than 1 def.
   if (MI.getDesc().getNumDefs() != 1)
     return false;
 
   DefReg = MI.defs().begin()->getReg();
 
-  unsigned level = 0;
+  unsigned Level = 0;
   for (MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
@@ -3016,7 +2992,7 @@ bool collectRematableHotReg(
 
     // If user is in same MI like
     //  %4:vgpr_32 = V_MAD_LEGACY_F32 %2:vgpr_32, %3:vgpr_32, %4:vgpr_32
-    // remat it will not help.
+    // remat It will not help.
     if (Reg == DefReg) {
       return false;
     }
@@ -3026,18 +3002,17 @@ bool collectRematableHotReg(
     if (Reg.isPhysical())
       return false;
 
-    if (nullptr ==
-        getInBlockUniqueDef(Reg, MI.getParent(), inputLive, outputLive, MRI))
+    if (nullptr == getInBlockUniqueDef(Reg, MI.getParent(), InputLive, MRI))
       return false;
 
-    LaneBitmask mask = llvm::getRegMask(MO, MRI);
+    LaneBitmask Mask = llvm::getRegMask(MO, MRI);
 
-    if (isInLiveSet(Reg, mask, hotLive))
+    if (isInLiveSet(Reg, Mask, HotLive))
       continue;
 
-    if (isInLiveSet(Reg, mask, pureHotRematSet)) {
-      unsigned regLevel = getPacifistLevel(Reg, pureHotRematLevels, MRI);
-      level = std::max(level, regLevel);
+    if (isInLiveSet(Reg, Mask, PureHotRematSet)) {
+      unsigned RegLevel = getPacifistLevel(Reg, PureHotRematLevels, MRI);
+      Level = std::max(Level, RegLevel);
       continue;
     }
 
@@ -3050,46 +3025,44 @@ bool collectRematableHotReg(
     if (Reg.isPhysical())
       return false;
 
-    if (nullptr ==
-        getInBlockUniqueDef(Reg, MI.getParent(), inputLive, outputLive, MRI))
+    if (nullptr == getInBlockUniqueDef(Reg, MI.getParent(), InputLive, MRI))
       return false;
 
-    LaneBitmask mask = llvm::getRegMask(MO, MRI);
-    pureHotRematSet[Reg] |= mask;
+    LaneBitmask Mask = llvm::getRegMask(MO, MRI);
+    PureHotRematSet[Reg] |= Mask;
   }
 
-  pureHotRematLevels[&MI] = level + 1;
-  // If no def, it will not increase pressure, don't mark it.
+  PureHotRematLevels[&MI] = Level + 1;
+  // If no def, It will not increase pressure, don't mark It.
   return true;
 }
 
-bool tryRemat(MachineBasicBlock &MBB, MachineInstr *hotMI,
-              std::vector<SubExp> &inBlockCloneSubExps, bool IsVGPR,
-              const GCNRPTracker::LiveRegSet &inputLive,
-              const GCNRPTracker::LiveRegSet &outputLive,
-              DenseSet<MachineInstr *> &hotSet, int vDistance, int sDistance,
+bool tryRemat(MachineBasicBlock &MBB, MachineInstr *HotMi,
+              std::vector<SubExp> &InBlockCloneSubExps, bool IsVGPR,
+              const GCNRPTracker::LiveRegSet &InputLive,
+              DenseSet<MachineInstr *> &HotSet, int VDistance, int SDistance,
               unsigned VLimit, unsigned SLimit,
               const DenseSet<MachineBasicBlock *> &MemWriteMBBSet,
               LiveIntervals *LIS, const MachineRegisterInfo &MRI,
               const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
   auto &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
-  const auto &SI = LIS->getInstructionIndex(*hotMI).getBaseIndex();
+  const auto &SI = LIS->getInstructionIndex(*HotMi).getBaseIndex();
   const auto LISLR = llvm::getLiveRegs(SI, *LIS, MRI);
 
-  GCNRPTracker::LiveRegSet hotLive = LISLR;
+  GCNRPTracker::LiveRegSet HotLive = LISLR;
 
-  GCNRPTracker::LiveRegSet pureHotRematSet;
-  std::vector<MachineInstr *> pureHotRematList;
-  DenseMap<MachineInstr *, unsigned> pureHotRematLevels;
+  GCNRPTracker::LiveRegSet PureHotRematSet;
+  std::vector<MachineInstr *> PureHotRematList;
+  DenseMap<MachineInstr *, unsigned> PureHotRematLevels;
 
-  GCNRPTracker::LiveRegSet outputSet;
+  GCNRPTracker::LiveRegSet OutputSet;
   LLVM_DEBUG(dbgs() << "pure hot remat begin\n");
   // Find reg which could remat from other reg in liveSet.
-  const unsigned kMaxRematLevel = 6;
+  const unsigned KMaxRematLevel = 6;
   GCNDownwardRPTracker Tracker(*LIS);
-  Tracker.reset(*MBB.begin(), &inputLive);
-  for (auto it = MBB.begin(); it != MBB.end(); it++) {
-    MachineInstr &MI = *it;
+  Tracker.reset(*MBB.begin(), &InputLive);
+  for (auto It = MBB.begin(); It != MBB.end(); It++) {
+    MachineInstr &MI = *It;
     const GCNRegPressure &RP = Tracker.getPressure();
 
     if (MI.isDebugInstr())
@@ -3103,31 +3076,31 @@ bool tryRemat(MachineBasicBlock &MBB, MachineInstr *hotMI,
     }
 
     // Stop at hotMI.
-    if (&MI == hotMI)
+    if (&MI == HotMi)
       break;
 
     Tracker.advance();
 
     unsigned DefReg = 0;
-    if (collectRematableHotReg(MI, hotLive, pureHotRematSet, pureHotRematLevels,
-                               DefReg, inputLive, outputLive, MRI, SIRI)) {
-      unsigned level = pureHotRematLevels[&MI];
-      if (level >= kMaxRematLevel)
+    if (collectRematableHotReg(MI, HotLive, PureHotRematSet, PureHotRematLevels,
+                               DefReg, InputLive, MRI)) {
+      unsigned Level = PureHotRematLevels[&MI];
+      if (Level >= KMaxRematLevel)
         continue;
 
       // If the def reg is in hot reg.
       // Add to output.
-      if (hotLive.find(DefReg) != hotLive.end()) {
+      if (HotLive.find(DefReg) != HotLive.end()) {
         bool IsUserIsHot = false;
         for (MachineInstr &UseMI : MRI.use_nodbg_instructions(DefReg)) {
           if (UseMI.getParent() != &MBB)
             continue;
-          if (0 == hotSet.count(&UseMI))
+          if (0 == HotSet.count(&UseMI))
             continue;
 
-          const auto &useSI = LIS->getInstructionIndex(UseMI).getBaseIndex();
-          // When has a hot user after hotMI, remat it may not help.
-          if (useSI > SI) {
+          const auto &UseSI = LIS->getInstructionIndex(UseMI).getBaseIndex();
+          // When has a hot user after hotMI, remat It may not help.
+          if (UseSI > SI) {
             IsUserIsHot = true;
             break;
           }
@@ -3135,14 +3108,14 @@ bool tryRemat(MachineBasicBlock &MBB, MachineInstr *hotMI,
 
         if (IsUserIsHot)
           continue;
-        outputSet[DefReg];
+        OutputSet[DefReg];
         LLVM_DEBUG(dbgs() << "hotRemat:");
         LLVM_DEBUG(MI.getOperand(0).dump());
-        // remove it from hotLive to avoid it as input when build dag.
-        hotLive.erase(DefReg);
+        // remove It from hotLive to avoid It as input when build dag.
+        HotLive.erase(DefReg);
       }
-      pureHotRematList.emplace_back(&MI);
-      LLVM_DEBUG(dbgs() << "level:" << level);
+      PureHotRematList.emplace_back(&MI);
+      LLVM_DEBUG(dbgs() << "level:" << Level);
       LLVM_DEBUG(MI.dump());
     }
   }
@@ -3154,82 +3127,82 @@ bool tryRemat(MachineBasicBlock &MBB, MachineInstr *hotMI,
   // Build SubExp with pureHotRematList as Nodes, hotLive as input
   // rematHot as output.
   // Not join input when build ExpDag to get small subExps.
-  ExpDag dag(MRI, SIRI, SIII, /*IsJoinInput*/ false);
-  dag.build(hotLive, outputSet, pureHotRematList);
+  ExpDag Dag(MRI, SIRI, SIII, /*IsJoinInput*/ false);
+  Dag.build(HotLive, OutputSet, PureHotRematList);
   // Find best subExp add to inBlockCloneSubExps.
   // Sort by size of subExp.
-  std::sort(dag.SubExps.begin(), dag.SubExps.end(),
+  std::sort(Dag.SubExps.begin(), Dag.SubExps.end(),
             [](const SubExp &A, const SubExp &B) {
               return A.SUnits.size() < B.SUnits.size();
             });
-  std::vector<SubExp> cloneSubExps;
-  int distance = IsVGPR ? vDistance : sDistance;
-  for (SubExp &subExp : dag.SubExps) {
-    if (subExp.IsNotSafeToCopy)
+  std::vector<SubExp> CloneSubExps;
+  int Distance = IsVGPR ? VDistance : SDistance;
+  for (SubExp &SubExp : Dag.SubExps) {
+    if (SubExp.IsNotSafeToCopy)
       continue;
     if (IsVGPR) {
-      if (subExp.vOutputSize == 0)
+      if (SubExp.vOutputSize == 0)
         continue;
     } else {
-      if (subExp.sOutputSize == 0)
+      if (SubExp.sOutputSize == 0)
         continue;
     }
-    if (!subExp.isSafeToMove(MRI, /*IsMoveUp*/ false))
+    if (!SubExp.isSafeToMove(MRI, /*IsMoveUp*/ false))
       continue;
     // Not clone .
-    if (subExp.SUnits.size() > 10)
+    if (SubExp.SUnits.size() > 10)
       continue;
     // Do not allow remat in the block when the expression has a memory op and
     // the block has a write. We could allow this in some cases with better
     // analysis.
-    if (subExp.IsHasMemInst && MemWriteMBBSet.count(&MBB))
+    if (SubExp.IsHasMemInst && MemWriteMBBSet.count(&MBB))
       continue;
     if (IsVGPR) {
-      distance -= subExp.vOutputSize;
+      Distance -= SubExp.vOutputSize;
     } else {
-      distance -= subExp.sOutputSize;
+      Distance -= SubExp.sOutputSize;
     }
-    cloneSubExps.emplace_back(subExp);
-    if (distance <= 0)
+    CloneSubExps.emplace_back(SubExp);
+    if (Distance <= 0)
       break;
   }
-  if (distance <= 0) {
-    inBlockCloneSubExps.insert(inBlockCloneSubExps.end(), cloneSubExps.begin(),
-                               cloneSubExps.end());
+  if (Distance <= 0) {
+    InBlockCloneSubExps.insert(InBlockCloneSubExps.end(), CloneSubExps.begin(),
+                               CloneSubExps.end());
   }
-  return distance <= 0;
+  return Distance <= 0;
 }
 
 // Try to remat live reg in hot spot from other live reg in hot spot.
 //
 bool tryRematInHotSpot(
-    MachineBasicBlock &MBB, RematStatus &status, int vDistance, int sDistance,
-    int vSaved, int sSaved, std::vector<SubExp> &inBlockCloneSubExps,
-    DenseMap<MachineBasicBlock *, MachineInstr *> &inBlockHotVInstMap,
-    DenseMap<MachineBasicBlock *, MachineInstr *> &inBlockHotSInstMap,
+    MachineBasicBlock &MBB, RematStatus &Status, int VDistance, int SDistance,
+    int VSaved, int SSaved, std::vector<SubExp> &InBlockCloneSubExps,
+    DenseMap<MachineBasicBlock *, MachineInstr *> &InBlockHotVInstMap,
+    DenseMap<MachineBasicBlock *, MachineInstr *> &InBlockHotSInstMap,
     LiveIntervals *LIS, const MachineRegisterInfo &MRI,
     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII) {
-  unsigned VLimit = status.TargetVLimit;
-  unsigned SLimit = status.TargetSLimit;
+  unsigned VLimit = Status.TargetVLimit;
+  unsigned SLimit = Status.TargetSLimit;
 
   auto &ST = MBB.getParent()->getSubtarget<GCNSubtarget>();
-  const GCNRPTracker::LiveRegSet inputLive = status.MBBInputLiveMap[&MBB];
+  const GCNRPTracker::LiveRegSet InputLive = Status.MBBInputLiveMap[&MBB];
 
-  const GCNRPTracker::LiveRegSet outputLive = status.MBBOutputLiveMap[&MBB];
+  const GCNRPTracker::LiveRegSet OutputLive = Status.MBBOutputLiveMap[&MBB];
 
   // Collect reg pressure.
-  unsigned maxLocalVPressure = 0;
-  unsigned maxLocalSPressure = 0;
+  unsigned MaxLocalVPressure = 0;
+  unsigned MaxLocalSPressure = 0;
   // Build a DAG or only on demand?
-  MachineInstr *hotVMI = nullptr;
-  MachineInstr *hotSMI = nullptr;
-  DenseSet<MachineInstr *> hotSet;
+  MachineInstr *HotVMI = nullptr;
+  MachineInstr *HotSMI = nullptr;
+  DenseSet<MachineInstr *> HotSet;
 
   GCNDownwardRPTracker Tracker(*LIS);
 
-  Tracker.reset(*MBB.begin(), &inputLive);
-  for (auto it = MBB.begin(); it != MBB.end(); it++) {
-    MachineInstr &MI = *it;
+  Tracker.reset(*MBB.begin(), &InputLive);
+  for (auto It = MBB.begin(); It != MBB.end(); It++) {
+    MachineInstr &MI = *It;
     if (MI.isDebugInstr()) {
       continue;
     }
@@ -3239,42 +3212,42 @@ bool tryRematInHotSpot(
 
     SPressure += RegForVCC;
 
-    VPressure -= vSaved;
-    SPressure -= sSaved;
+    VPressure -= VSaved;
+    SPressure -= SSaved;
     Tracker.advance();
 
     if (VPressure <= VLimit && SPressure <= SLimit) {
       continue;
     }
-    hotSet.insert(&MI);
-    if (maxLocalVPressure < VPressure) {
-      maxLocalVPressure = VPressure;
-      hotVMI = &MI;
+    HotSet.insert(&MI);
+    if (MaxLocalVPressure < VPressure) {
+      MaxLocalVPressure = VPressure;
+      HotVMI = &MI;
     }
-    if (maxLocalSPressure < SPressure) {
-      maxLocalSPressure = SPressure;
-      hotSMI = &MI;
+    if (MaxLocalSPressure < SPressure) {
+      MaxLocalSPressure = SPressure;
+      HotSMI = &MI;
     }
   }
 
-  inBlockHotVInstMap[&MBB] = hotVMI;
-  inBlockHotSInstMap[&MBB] = hotSMI;
-  if (vDistance > 0 && hotVMI) {
+  InBlockHotVInstMap[&MBB] = HotVMI;
+  InBlockHotSInstMap[&MBB] = HotSMI;
+  if (VDistance > 0 && HotVMI) {
     // Use hotVMI when apply.
-    inBlockHotSInstMap[&MBB] = nullptr;
-    if (tryRemat(MBB, hotVMI, inBlockCloneSubExps, /*IsVGPR*/ true, inputLive,
-                 outputLive, hotSet, vDistance, sDistance, VLimit, SLimit,
-                 status.MemWriteMBBSet, LIS, MRI, SIRI, SIII))
+    InBlockHotSInstMap[&MBB] = nullptr;
+    if (tryRemat(MBB, HotVMI, InBlockCloneSubExps, /*IsVGPR*/ true, InputLive,
+                 HotSet, VDistance, SDistance, VLimit, SLimit,
+                 Status.MemWriteMBBSet, LIS, MRI, SIRI, SIII))
       return true;
   }
 
-  if (sDistance > 0 && hotSMI) {
+  if (SDistance > 0 && HotSMI) {
     // Use hotSMI when apply.
-    inBlockHotSInstMap[&MBB] = hotSMI;
-    inBlockHotVInstMap[&MBB] = nullptr;
-    return tryRemat(MBB, hotSMI, inBlockCloneSubExps, /*IsVGPR*/ false,
-                    inputLive, outputLive, hotSet, vDistance, sDistance, VLimit,
-                    SLimit, status.MemWriteMBBSet, LIS, MRI, SIRI, SIII);
+    InBlockHotSInstMap[&MBB] = HotSMI;
+    InBlockHotVInstMap[&MBB] = nullptr;
+    return tryRemat(MBB, HotSMI, InBlockCloneSubExps, /*IsVGPR*/ false,
+                    InputLive, HotSet, VDistance, VDistance, VLimit, SLimit,
+                    Status.MemWriteMBBSet, LIS, MRI, SIRI, SIII);
   }
   return false;
 }
@@ -3282,9 +3255,9 @@ bool tryRematInHotSpot(
 // If subExp0 use result of subExp1, subExp0 is deeper than subExp1.
 // When apply subExp1 before subExp0, new clone of subExp0 which use result of
 // subExp1 will have old reg of subExp1. And reg pressure will not be reduced.
-void sortSubExpCandidates(std::vector<SubExp> &subExpCandidates) {
-  MapVector<unsigned, SetVector<SubExp *>> inputMap;
-  MapVector<unsigned, SetVector<SubExp *>> outputMap;
+void sortSubExpCandidates(std::vector<SubExp> &SubExpCandidates) {
+  MapVector<unsigned, SetVector<SubExp *>> InputMap;
+  MapVector<unsigned, SetVector<SubExp *>> OutputMap;
   struct SortNode {
     SubExp Exp;
     unsigned Depth;
@@ -3295,67 +3268,67 @@ void sortSubExpCandidates(std::vector<SubExp> &subExpCandidates) {
 
   {
     SmallVector<unsigned, 10> RegSortStorage;
-    for (SubExp &Exp : subExpCandidates) {
+    for (SubExp &Exp : SubExpCandidates) {
       RegSortStorage.assign(Exp.TopRegs.begin(), Exp.TopRegs.end());
       std::sort(RegSortStorage.begin(), RegSortStorage.end());
-      for (auto it : RegSortStorage) {
-        unsigned Reg = it;
-        inputMap[Reg].insert(&Exp);
+      for (auto It : RegSortStorage) {
+        unsigned Reg = It;
+        InputMap[Reg].insert(&Exp);
       }
 
       RegSortStorage.assign(Exp.BottomRegs.begin(), Exp.BottomRegs.end());
       std::sort(RegSortStorage.begin(), RegSortStorage.end());
-      for (auto it : RegSortStorage) {
-        unsigned Reg = it;
-        outputMap[Reg].insert(&Exp);
+      for (auto It : RegSortStorage) {
+        unsigned Reg = It;
+        OutputMap[Reg].insert(&Exp);
       }
     }
   }
 
-  MapVector<SubExp *, SortNode> sortMap;
-  for (auto it : inputMap) {
-    unsigned Reg = it.first;
-    auto outIt = outputMap.find(Reg);
-    if (outIt == outputMap.end())
+  MapVector<SubExp *, SortNode> SortMap;
+  for (auto It : InputMap) {
+    unsigned Reg = It.first;
+    auto OutIt = OutputMap.find(Reg);
+    if (OutIt == OutputMap.end())
       continue;
-    auto &inExps = it.second;
-    auto &outExps = outIt->second;
-    for (SubExp *inExp : inExps) {
-      for (SubExp *outExp : outExps) {
-        if (inExp->IsHoist != outExp->IsHoist) {
+    auto &InExps = It.second;
+    auto &OutExps = OutIt->second;
+    for (SubExp *InExp : InExps) {
+      for (SubExp *OutExp : OutExps) {
+        if (InExp->IsHoist != OutExp->IsHoist) {
           // Different direction.
           // If output (def) move up, input(use) move down, nothing happens.
-          if (outExp->IsHoist)
+          if (OutExp->IsHoist)
             continue;
           // Canot input(use) move up, output(def) move down.
           // Choose the exp which save more.
-          int inExpGain = inExp->vOutputSize - inExp->vInputSize;
-          int outExpGain = outExp->vInputSize - inExp->vOutputSize;
-          if (inExpGain >= outExpGain) {
-            outExp->SUnits.clear();
+          int InExpGain = InExp->vOutputSize - InExp->vInputSize;
+          int OutExpGain = OutExp->vInputSize - InExp->vOutputSize;
+          if (InExpGain >= OutExpGain) {
+            OutExp->SUnits.clear();
           } else {
-            inExp->SUnits.clear();
+            InExp->SUnits.clear();
           }
           continue;
         }
         // Link outExp to inExp.
-        if (inExp->IsHoist) {
-          sortMap[outExp].Preds.insert(inExp);
-          sortMap[inExp].Succs.insert(outExp);
+        if (InExp->IsHoist) {
+          SortMap[OutExp].Preds.insert(InExp);
+          SortMap[InExp].Succs.insert(OutExp);
         } else {
-          sortMap[inExp].Preds.insert(outExp);
-          sortMap[outExp].Succs.insert(inExp);
+          SortMap[InExp].Preds.insert(OutExp);
+          SortMap[OutExp].Succs.insert(InExp);
         }
       }
     }
   }
 
-  if (sortMap.empty())
+  if (SortMap.empty())
     return;
 
   SmallVector<SubExp *, 8> WorkList;
-  for (SubExp &Exp : subExpCandidates) {
-    SortNode &Node = sortMap[&Exp];
+  for (SubExp &Exp : SubExpCandidates) {
+    SortNode &Node = SortMap[&Exp];
     Node.Depth = 0;
     Node.Exp = Exp;
     Node.IsDepthDirty = !Node.Preds.empty();
@@ -3365,13 +3338,13 @@ void sortSubExpCandidates(std::vector<SubExp> &subExpCandidates) {
   // Calc depth.
   while (!WorkList.empty()) {
     SubExp *Exp = WorkList.pop_back_val();
-    SortNode &Node = sortMap[Exp];
+    SortNode &Node = SortMap[Exp];
     for (SubExp *Succ : Node.Succs) {
-      SortNode &SuccNode = sortMap[Succ];
+      SortNode &SuccNode = SortMap[Succ];
       SuccNode.Depth = std::max(SuccNode.Depth, Node.Depth + 1);
       bool IsAllPrevClean = true;
       for (SubExp *Prev : SuccNode.Preds) {
-        SortNode &PrevNode = sortMap[Prev];
+        SortNode &PrevNode = SortMap[Prev];
         if (PrevNode.IsDepthDirty) {
           IsAllPrevClean = false;
           break;
@@ -3384,35 +3357,35 @@ void sortSubExpCandidates(std::vector<SubExp> &subExpCandidates) {
     }
   }
 
-  std::vector<SortNode *> nodes;
-  for (auto &it : sortMap) {
-    SortNode &node = it.second;
-    nodes.emplace_back(&node);
+  std::vector<SortNode *> Nodes;
+  for (auto &It : SortMap) {
+    SortNode &Node = It.second;
+    Nodes.emplace_back(&Node);
   }
 
-  struct sorter {
-    bool operator()(const SortNode *a, const SortNode *b) {
-      return a->Depth > b->Depth;
+  struct Sorter {
+    bool operator()(const SortNode *A, const SortNode *B) {
+      return A->Depth > B->Depth;
     }
   };
 
   // subExp deeper should be apply first.
-  std::sort(nodes.begin(), nodes.end(), sorter());
+  std::sort(Nodes.begin(), Nodes.end(), Sorter());
 
-  subExpCandidates.clear();
-  for (auto &node : nodes) {
-    subExpCandidates.emplace_back(node->Exp);
+  SubExpCandidates.clear();
+  for (auto &Node : Nodes) {
+    SubExpCandidates.emplace_back(Node->Exp);
   }
 }
 
 // Compare pressure, return ture if maxV0/maxS0 pressure is higher than
 // maxV1/maxS1.
-bool pressureHigher(unsigned maxV0, unsigned maxS0, unsigned maxV1,
-                    unsigned maxS1, const GCNSubtarget *ST) {
-  unsigned VTgtOcc0 = ST->getOccupancyWithNumVGPRs(maxV0);
-  unsigned VTgtOcc1 = ST->getOccupancyWithNumVGPRs(maxV1);
-  unsigned STgtOcc0 = ST->getOccupancyWithNumSGPRs(maxS0);
-  unsigned STgtOcc1 = ST->getOccupancyWithNumSGPRs(maxS1);
+bool pressureHigher(unsigned MaxV0, unsigned MaxS0, unsigned MaxV1,
+                    unsigned MaxS1, const GCNSubtarget *ST) {
+  unsigned VTgtOcc0 = ST->getOccupancyWithNumVGPRs(MaxV0);
+  unsigned VTgtOcc1 = ST->getOccupancyWithNumVGPRs(MaxV1);
+  unsigned STgtOcc0 = ST->getOccupancyWithNumSGPRs(MaxS0);
+  unsigned STgtOcc1 = ST->getOccupancyWithNumSGPRs(MaxS1);
   unsigned Occ0 = std::min(VTgtOcc0, STgtOcc0);
   unsigned Occ1 = std::min(VTgtOcc1, STgtOcc1);
   //  is low pressure.
@@ -3422,146 +3395,146 @@ bool pressureHigher(unsigned maxV0, unsigned maxS0, unsigned maxV1,
     return true;
   // When sgpr bound,  is high pressure.
   if (VTgtOcc0 > STgtOcc0 && VTgtOcc1 > STgtOcc1) {
-    return maxS0 > maxS1;
+    return MaxS0 > MaxS1;
   }
   // When vgpr bound or mix, vgpr higher is higher pressure.
-  return maxV0 > maxV1;
+  return MaxV0 > MaxV1;
 }
 
 // Return true if the subExp can help pressure for passThrus.
-bool canHelpPressureWhenSink(
-    SubExp &subExp, const GCNRPTracker::LiveRegSet &passThrus,
-    const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-    const SIInstrInfo *SIII, const MachineLoopInfo *MLI,
-    MachineDominatorTree *DT, bool IsCanClone, bool IsSgprBound) {
-  LLVM_DEBUG(subExp.dump(MRI, SIRI));
-  if (!subExp.isSafeToMove(MRI, /*IsMoveUp*/ false))
+bool canHelpPressureWhenSink(SubExp &SubExp,
+                             const GCNRPTracker::LiveRegSet &PassThrus,
+                             const MachineRegisterInfo &MRI,
+                             const SIRegisterInfo *SIRI,
+                             const MachineLoopInfo *MLI,
+                             MachineDominatorTree *DT, bool IsCanClone,
+                             bool IsSgprBound) {
+  LLVM_DEBUG(SubExp.dump(MRI, SIRI));
+  if (!SubExp.isSafeToMove(MRI, /*IsMoveUp*/ false))
     return false;
 
   // Update input size to ignore lives in which already in
   // passThrus.
-  for (auto it : subExp.inputLive) {
-    unsigned Reg = it.first;
-    if (passThrus.count(Reg) == 0)
+  for (auto It : SubExp.inputLive) {
+    unsigned Reg = It.first;
+    if (PassThrus.count(Reg) == 0)
       continue;
-    unsigned Size = getRegSize(Reg, it.second, MRI, SIRI);
+    unsigned Size = getRegSize(Reg, It.second, MRI, SIRI);
     if (SIRI->isVGPR(MRI, Reg)) {
-      subExp.vInputSize -= Size;
+      SubExp.vInputSize -= Size;
     } else {
-      subExp.sInputSize -= Size;
+      SubExp.sInputSize -= Size;
     }
   }
 
-  if (subExp.vInputSize > subExp.vOutputSize)
+  if (SubExp.vInputSize > SubExp.vOutputSize)
     return false;
 
-  if (subExp.sInputSize > subExp.sOutputSize && IsSgprBound)
+  if (SubExp.sInputSize > SubExp.sOutputSize && IsSgprBound)
     return false;
 
-  if (subExp.sInputSize >= subExp.sOutputSize &&
-      subExp.vInputSize == subExp.vOutputSize)
+  if (SubExp.sInputSize >= SubExp.sOutputSize &&
+      SubExp.vInputSize == SubExp.vOutputSize)
     return false;
 
   // Try to find a Insert Block.
   // Skip multi def output sub exp.
   // Collect user blocks, find common dom.
-  BlockSet userBlocks;
-  for (unsigned Reg : subExp.BottomRegs) {
+  BlockSet UserBlocks;
+  for (unsigned Reg : SubExp.BottomRegs) {
     for (MachineInstr &UseMI : MRI.use_nodbg_instructions(Reg)) {
       MachineBasicBlock *UserBB = UseMI.getParent();
       // Skip current BB.
-      if (UserBB != subExp.FromBB)
-        userBlocks.insert(UserBB);
+      if (UserBB != SubExp.FromBB)
+        UserBlocks.insert(UserBB);
     }
   }
-  if (userBlocks.empty())
+  if (UserBlocks.empty())
     return false;
-  MachineBasicBlock *userBlock = NearestCommonDominator(DT, userBlocks);
-  if (!DT->dominates(subExp.FromBB, userBlock)) {
+  MachineBasicBlock *UserBlock = nearestCommonDominator(DT, UserBlocks);
+  if (!DT->dominates(SubExp.FromBB, UserBlock)) {
     return false;
   }
-  if (userBlock == subExp.FromBB &&
+  if (UserBlock == SubExp.FromBB &&
       // When allow clone, could go clone path if cannot move subExp.
       !IsCanClone)
     return false;
 
-  subExp.ToBB = userBlock;
-  if (auto *toLoop = MLI->getLoopFor(userBlock)) {
-    auto *fromLoop = MLI->getLoopFor(subExp.FromBB);
-    if (!fromLoop || fromLoop->getLoopDepth() < toLoop->getLoopDepth())
-      subExp.IsMoveIntoLoop = true;
-  } else if (auto *fromLoop = MLI->getLoopFor(subExp.FromBB)) {
-    auto *toLoop = MLI->getLoopFor(userBlock);
+  SubExp.ToBB = UserBlock;
+  if (auto *ToLoop = MLI->getLoopFor(UserBlock)) {
+    auto *FromLoop = MLI->getLoopFor(SubExp.FromBB);
+    if (!FromLoop || FromLoop->getLoopDepth() < ToLoop->getLoopDepth())
+      SubExp.IsMoveIntoLoop = true;
+  } else if (auto *FromLoop = MLI->getLoopFor(SubExp.FromBB)) {
+    auto *ToLoop = MLI->getLoopFor(UserBlock);
     // not safe to move out of loop.
-    if (!toLoop || fromLoop->getLoopDepth() > toLoop->getLoopDepth() ||
-        toLoop != fromLoop)
+    if (!ToLoop || FromLoop->getLoopDepth() > ToLoop->getLoopDepth() ||
+        ToLoop != FromLoop)
       return false;
   }
   return true;
 }
 
-bool canHelpPressureWhenHoist(SubExp &subExp, const MachineRegisterInfo &MRI,
-                              const SIRegisterInfo *SIRI,
-                              const SIInstrInfo *SIII,
+bool canHelpPressureWhenHoist(SubExp &SubExp, const MachineRegisterInfo &MRI,
                               const MachineLoopInfo *MLI, bool IsSgprBound) {
-  if (!subExp.isSafeToMove(MRI, /*IsMoveUp*/ true))
+  if (!SubExp.isSafeToMove(MRI, /*IsMoveUp*/ true))
     return false;
-  if (subExp.vInputSize < subExp.vOutputSize)
+  if (SubExp.vInputSize < SubExp.vOutputSize)
     return false;
-  if (subExp.sInputSize < subExp.sOutputSize && IsSgprBound)
+  if (SubExp.sInputSize < SubExp.sOutputSize && IsSgprBound)
     return false;
 
-  if (subExp.sInputSize <= subExp.sOutputSize &&
-      subExp.vInputSize == subExp.vOutputSize)
+  if (SubExp.sInputSize <= SubExp.sOutputSize &&
+      SubExp.vInputSize == SubExp.vOutputSize)
     return false;
 
   // Try to find a Insert Block.
   // Skip multi def output sub exp.
   // Collect user blocks, find common dom.
-  BlockSet defBlocks;
-  for (unsigned Reg : subExp.TopRegs) {
+  BlockSet DefBlocks;
+  for (unsigned Reg : SubExp.TopRegs) {
     MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
     if (!DefMI)
       continue;
-    defBlocks.insert(DefMI->getParent());
+    DefBlocks.insert(DefMI->getParent());
   }
-  if (defBlocks.size() != 1)
+  if (DefBlocks.size() != 1)
     return false;
-  MachineBasicBlock *defBlock = *defBlocks.begin();
-  subExp.ToBB = defBlock;
+  MachineBasicBlock *DefBlock = *DefBlocks.begin();
+  SubExp.ToBB = DefBlock;
   // Not do same block hoist.
-  if (subExp.ToBB == subExp.FromBB)
+  if (SubExp.ToBB == SubExp.FromBB)
     return false;
 
-  if (auto *toLoop = MLI->getLoopFor(defBlock)) {
-    auto *fromLoop = MLI->getLoopFor(subExp.FromBB);
+  if (auto *ToLoop = MLI->getLoopFor(DefBlock)) {
+    auto *FromLoop = MLI->getLoopFor(SubExp.FromBB);
     // TODO: enable move into loop when hoist.
-    if (!fromLoop || fromLoop->getLoopDepth() < toLoop->getLoopDepth())
+    if (!FromLoop || FromLoop->getLoopDepth() < ToLoop->getLoopDepth())
       return false;
-  } else if (auto *fromLoop = MLI->getLoopFor(subExp.FromBB)) {
-    auto *toLoop = MLI->getLoopFor(defBlock);
+  } else if (auto *FromLoop = MLI->getLoopFor(SubExp.FromBB)) {
+    auto *ToLoop = MLI->getLoopFor(DefBlock);
     // not safe to move out of loop.
-    if (!toLoop || fromLoop->getLoopDepth() > toLoop->getLoopDepth() ||
-        toLoop != fromLoop)
+    if (!ToLoop || FromLoop->getLoopDepth() > ToLoop->getLoopDepth() ||
+        ToLoop != FromLoop)
       return false;
   }
   return true;
 }
 
 SmallVector<std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet>>
-groupPassThruByDefBlock(Remat *Remat, const GCNRPTracker::LiveRegSet &passThrus,
-                        GCNRPTracker::LiveRegSet &usedPassThrus,
+groupPassThruByDefBlock(Remat *Remat, const GCNRPTracker::LiveRegSet &PassThrus,
+                        GCNRPTracker::LiveRegSet &UsedPassThrus,
                         MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
                         const SIInstrInfo *SIII) {
   MapVector<MachineBasicBlock *, GCNRPTracker::LiveRegSet> Candidates;
 
   // Group safe candidates by define block.
-  for (auto it : passThrus) {
-    unsigned Reg = it.first;
-    // Skip used pass thru reg to avoid count it twice for different hot block.
-    if (usedPassThrus.count(Reg))
+  for (auto It : PassThrus) {
+    Register Reg = It.first;
+    // Skip used pass thru reg to avoid count It twice for different hot block.
+    if (UsedPassThrus.count(Reg))
       continue;
-    LLVM_DEBUG(print_vreg(Reg, MRI));
+    LLVM_DEBUG(printVreg(Reg, MRI));
     LLVM_DEBUG(if (SIRI->isSGPRReg(MRI, Reg)) dbgs() << " sgpr ";
                else dbgs() << " vgpr ";);
     if (!isSafeCandidate(Remat, Reg, MRI, SIRI, SIII, /*IsSink*/ true)) {
@@ -3573,61 +3546,60 @@ groupPassThruByDefBlock(Remat *Remat, const GCNRPTracker::LiveRegSet &passThrus,
     MachineInstr *DefMI = MRI.getUniqueVRegDef(Reg);
 
     GCNRPTracker::LiveRegSet &DefInMBB = Candidates[DefMI->getParent()];
-    DefInMBB[Reg] = it.second;
+    DefInMBB[Reg] = It.second;
   }
 
   llvm::SmallVector<std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet>>
-      result = Candidates.takeVector();
+      Result = Candidates.takeVector();
 
-  LLVM_DEBUG(llvm::dbgs() << "Before sort candidates\n"; for (auto it
-                                                              : result) {
-    MachineBasicBlock *MBB = it.first;
-    auto &defInMBB = it.second;
+  LLVM_DEBUG(llvm::dbgs() << "Before sort candidates\n"; for (auto It
+                                                              : Result) {
+    MachineBasicBlock *MBB = It.first;
+    auto &defInMBB = It.second;
     MBB->dump();
     llvm::dumpLiveSet(defInMBB, SIRI);
   } llvm::dbgs() << "end of candidates\n";);
 
-  std::sort(result.begin(), result.end(),
-            [](std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet> &it0,
-               std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet> &it1) {
-              return it0.first->getNumber() < it1.first->getNumber();
+  std::sort(Result.begin(), Result.end(),
+            [](std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet> &It0,
+               std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet> &It1) {
+              return It0.first->getNumber() < It1.first->getNumber();
             });
 
-  LLVM_DEBUG(llvm::dbgs() << "After sort candidates\n"; for (auto it
-                                                             : result) {
-    MachineBasicBlock *MBB = it.first;
-    auto &defInMBB = it.second;
+  LLVM_DEBUG(llvm::dbgs() << "After sort candidates\n"; for (auto It
+                                                             : Result) {
+    MachineBasicBlock *MBB = It.first;
+    auto &defInMBB = It.second;
     MBB->dump();
     llvm::dumpLiveSet(defInMBB, SIRI);
   } llvm::dbgs() << "end of candidates\n";);
 
-  return result;
+  return Result;
 }
 
 // collect pass thru regs of MBB.
 GCNRPTracker::LiveRegSet
 collectPassThrus(MachineBasicBlock *MBB,
-                 const GCNRPTracker::LiveRegSet &inputLive,
-                 const GCNRPTracker::LiveRegSet &outputLive,
-                 const GCNRPTracker::LiveRegSet &usedPassThrus,
-                 const GCNRPTracker::LiveRegSet &liveRegCandidates,
+                 const GCNRPTracker::LiveRegSet &InputLive,
+                 const GCNRPTracker::LiveRegSet &OutputLive,
+                 const GCNRPTracker::LiveRegSet &LiveRegCandidates,
                  MachineRegisterInfo &MRI, bool IsCanClone) {
-  GCNRPTracker::LiveRegSet passThrus;
-  llvm::mergeLiveRegSet(passThrus, inputLive);
-  llvm::andLiveRegSet(passThrus, outputLive);
+  GCNRPTracker::LiveRegSet PassThrus;
+  llvm::mergeLiveRegSet(PassThrus, InputLive);
+  llvm::andLiveRegSet(PassThrus, OutputLive);
 
   // Remove reg which not in liveRegCandidates.
-  GCNRPTracker::LiveRegSet tmpPassThrus = passThrus;
-  for (auto it : tmpPassThrus) {
-    unsigned Reg = it.first;
-    if (!liveRegCandidates.count(Reg)) {
-      passThrus.erase(Reg);
+  GCNRPTracker::LiveRegSet TmpPassThrus = PassThrus;
+  for (auto It : TmpPassThrus) {
+    unsigned Reg = It.first;
+    if (!LiveRegCandidates.count(Reg)) {
+      PassThrus.erase(Reg);
     }
   }
-  tmpPassThrus = passThrus;
+  TmpPassThrus = PassThrus;
   // Remove reg which has read/write in MBB.
-  for (auto it : tmpPassThrus) {
-    unsigned Reg = it.first;
+  for (auto It : TmpPassThrus) {
+    unsigned Reg = It.first;
     DenseSet<MachineBasicBlock *> DefMBBs;
     for (MachineInstr &DefMI : MRI.def_instructions(Reg)) {
       MachineBasicBlock *MBB = DefMI.getParent();
@@ -3646,45 +3618,45 @@ collectPassThrus(MachineBasicBlock *MBB,
 
     bool IsPassThru = !IsW && !IsR;
     if (!IsPassThru)
-      passThrus.erase(Reg);
+      PassThrus.erase(Reg);
   }
-  return passThrus;
+  return PassThrus;
 }
 // Try to build a free subExp which all input is passThrus.
-SubExp buildFreeSubExp(Remat *Remat, SubExp &subExp,
-                       GCNRPTracker::LiveRegSet &passThrus,
+SubExp buildFreeSubExp(SubExp &Exp,
+                       GCNRPTracker::LiveRegSet &PassThrus,
                        MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI) {
-  SubExp freeExp;
+  SubExp FreeExp;
   // Try to split the subExp to find a help case.
   // Scan all inst in subExp, propagate free inst which input is from
   // passThrus.
-  SmallDenseSet<unsigned, 4> freeRegs;
-  SmallDenseSet<unsigned, 8> freeInstUseRegs;
-  SmallVector<MachineInstr *, 4> freeInsts;
-  for (MachineInstr *MI : subExp.SUnits) {
+  SmallDenseSet<Register, 4> FreeRegs;
+  SmallDenseSet<Register, 8> FreeInstUseRegs;
+  SmallVector<MachineInstr *, 4> FreeInsts;
+  for (MachineInstr *MI : Exp.SUnits) {
     bool IsFree = true;
     // Check all use regs are free.
     for (MachineOperand &MO : MI->uses()) {
       if (!MO.isReg())
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (MO.isImplicit() && Reg == AMDGPU::EXEC)
         continue;
       if (MRI.getUniqueVRegDef(Reg) == nullptr) {
         IsFree = false;
         break;
       }
-      // Skip local pass thrus unless it is free.
-      if (passThrus.count(Reg) && subExp.TopRegs.count(Reg))
+      // Skip local pass thrus unless It is free.
+      if (PassThrus.count(Reg) && Exp.TopRegs.count(Reg))
         continue;
-      if (freeRegs.count(Reg))
+      if (FreeRegs.count(Reg))
         continue;
       IsFree = false;
       break;
     }
     // Check def is unique.
     for (MachineOperand &MO : MI->defs()) {
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       if (MRI.getUniqueVRegDef(Reg) == nullptr) {
         IsFree = false;
         break;
@@ -3693,104 +3665,103 @@ SubExp buildFreeSubExp(Remat *Remat, SubExp &subExp,
     if (!IsFree)
       continue;
     // Save inst as free inst.
-    freeInsts.emplace_back(MI);
+    FreeInsts.emplace_back(MI);
     // Save def as free reg.
     for (MachineOperand &MO : MI->defs()) {
-      unsigned Reg = MO.getReg();
-      freeRegs.insert(Reg);
+      Register Reg = MO.getReg();
+      FreeRegs.insert(Reg);
     }
     // Save use regs as free use reg.
     for (MachineOperand &MO : MI->uses()) {
       if (!MO.isReg())
         continue;
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
 
-      freeInstUseRegs.insert(Reg);
+      FreeInstUseRegs.insert(Reg);
     }
   }
   // Then remove local inst has no output use.
-  for (MachineInstr *MI : freeInsts) {
+  for (MachineInstr *MI : FreeInsts) {
     bool IsFreeUsed = false;
     for (MachineOperand &MO : MI->defs()) {
-      unsigned Reg = MO.getReg();
+      Register Reg = MO.getReg();
       // Used as freeInst or output.
-      IsFreeUsed |=
-          freeInstUseRegs.count(Reg) > 0 || subExp.BottomRegs.count(Reg);
+      IsFreeUsed |= FreeInstUseRegs.count(Reg) > 0 || Exp.BottomRegs.count(Reg);
     }
     if (!IsFreeUsed)
       continue;
-    freeExp.SUnits.emplace_back(MI);
+    FreeExp.SUnits.emplace_back(MI);
   }
-  if (freeExp.SUnits.empty()) {
-    // mark has terminator to make it unsafe.
-    freeExp.IsHasTerminatorInst = true;
-    return freeExp;
+  if (FreeExp.SUnits.empty()) {
+    // mark has terminator to make It unsafe.
+    FreeExp.IsHasTerminatorInst = true;
+    return FreeExp;
   }
   // Build BottomRegs and TopRegs for freeExp.
   // BottomRegs is freeRegs in subExp.BottomRegs.
-  for (unsigned freeReg : freeRegs) {
-    if (subExp.BottomRegs.count(freeReg))
-      freeExp.BottomRegs.insert(freeReg);
+  for (Register FreeReg : FreeRegs) {
+    if (Exp.BottomRegs.count(FreeReg))
+      FreeExp.BottomRegs.insert(FreeReg);
   }
   // TopRegs is freeInstUseRegs in subExp.TopRegs.
-  for (unsigned freeInstUseReg : freeInstUseRegs) {
-    if (subExp.TopRegs.count(freeInstUseReg))
-      freeExp.TopRegs.insert(freeInstUseReg);
+  for (Register FreeInstUseReg : FreeInstUseRegs) {
+    if (Exp.TopRegs.count(FreeInstUseReg))
+      FreeExp.TopRegs.insert(FreeInstUseReg);
   }
-  freeExp.FromBB = subExp.FromBB;
-  freeExp.ToBB = subExp.ToBB;
+  FreeExp.FromBB = Exp.FromBB;
+  FreeExp.ToBB = Exp.ToBB;
   // must be clone since is partial of subExp.
-  freeExp.IsCloneOnly = true;
+  FreeExp.IsCloneOnly = true;
 
   // Calc reg for freeExp.
-  for (unsigned Reg : freeExp.TopRegs) {
-    freeExp.inputLive[Reg];
+  for (unsigned Reg : FreeExp.TopRegs) {
+    FreeExp.inputLive[Reg];
   }
 
-  for (unsigned Reg : freeExp.BottomRegs) {
-    freeExp.outputLive[Reg];
+  for (unsigned Reg : FreeExp.BottomRegs) {
+    FreeExp.outputLive[Reg];
   }
 
-  CollectLiveSetPressure(freeExp.inputLive, MRI, SIRI, freeExp.vInputSize,
-                         freeExp.sInputSize);
-  CollectLiveSetPressure(freeExp.outputLive, MRI, SIRI, freeExp.vOutputSize,
-                         freeExp.sOutputSize);
-  return freeExp;
+  CollectLiveSetPressure(FreeExp.inputLive, MRI, SIRI, FreeExp.vInputSize,
+                         FreeExp.sInputSize);
+  CollectLiveSetPressure(FreeExp.outputLive, MRI, SIRI, FreeExp.vOutputSize,
+                         FreeExp.sOutputSize);
+  return FreeExp;
 }
 
 std::vector<SubExp> buildSubExpCandidates(
     Remat *Remat,
     SmallVector<std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet>>
         &Candidates,
-    GCNRPTracker::LiveRegSet &passThrus, MachineRegisterInfo &MRI,
+    GCNRPTracker::LiveRegSet &PassThrus, MachineRegisterInfo &MRI,
     const SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
-    const MachineLoopInfo *MLI, SlotIndexes *slotIndexes,
+    const MachineLoopInfo *MLI, SlotIndexes *SlotIndexes,
     MachineDominatorTree *DT, bool IsCanClone, bool IsSgprBound,
-    GCNRPTracker::LiveRegSet &unUsedPassThrus,
+    GCNRPTracker::LiveRegSet &UnusedPassThrus,
     DenseSet<MachineBasicBlock *> &MemWriteMBBSet,
     bool AllowPartialUseInSubExp) {
-  std::vector<SubExp> subExpCandidates;
+  std::vector<SubExp> SubExpCandidates;
   // Build exp dag on define blocks.
   // Save profit candidates into list.
-  for (auto &it : Candidates) {
-    MachineBasicBlock *DefMBB = it.first;
+  for (auto &It : Candidates) {
+    MachineBasicBlock *DefMBB = It.first;
     // Try to remove out reg def sub exp from DefMBB.
-    GCNRPTracker::LiveRegSet &DefInMBB = it.second;
+    GCNRPTracker::LiveRegSet &DefInMBB = It.second;
     // Go up on the dag until reach share node.
-    auto subExps = buildSubExpFromCandidates(
-        Remat, DefInMBB, DefMBB, SIRI, SIII, MRI, slotIndexes, unUsedPassThrus,
+    auto SubExps = buildSubExpFromCandidates(
+        Remat, DefInMBB, DefMBB, SIRI, SIII, MRI, SlotIndexes, UnusedPassThrus,
         AllowPartialUseInSubExp);
-    for (SubExp &subExp : subExps) {
-      if (subExp.IsHasMemInst) {
+    for (SubExp &Exp : SubExps) {
+      if (Exp.IsHasMemInst) {
         // Skip when memory ld/st inst need to cross MBB which write memory.
         // TODO: check all MBBs in between FromBB and ToBB not write memory.
         // Currently just skip when any memory write exist.
         if (!MemWriteMBBSet.empty()) {
-          MachineBasicBlock *FromBB = subExp.FromBB;
-          MachineBasicBlock *ToBB = subExp.ToBB;
-          if (subExp.IsHoist) {
-            FromBB = subExp.ToBB;
-            ToBB = subExp.FromBB;
+          MachineBasicBlock *FromBB = Exp.FromBB;
+          MachineBasicBlock *ToBB = Exp.ToBB;
+          if (Exp.IsHoist) {
+            FromBB = Exp.ToBB;
+            ToBB = Exp.FromBB;
           }
           bool IsCrossMemWriteMBB = false;
           for (MachineBasicBlock *MemMBB : MemWriteMBBSet) {
@@ -3805,37 +3776,36 @@ std::vector<SubExp> buildSubExpCandidates(
             continue;
         }
       }
-      if (!canHelpPressureWhenSink(subExp, passThrus, MRI, SIRI, SIII, MLI, DT,
+      if (!canHelpPressureWhenSink(Exp, PassThrus, MRI, SIRI, MLI, DT,
                                    IsCanClone, IsSgprBound)) {
         if (AllowPartialUseInSubExp &&
-            subExp.isSafeToMove(MRI, /*IsMoveUp*/ false)) {
-          SubExp freeSubExp =
-              buildFreeSubExp(Remat, subExp, passThrus, MRI, SIRI);
-          if (canHelpPressureWhenSink(freeSubExp, passThrus, MRI, SIRI, SIII,
-                                      MLI, DT, IsCanClone, IsSgprBound)) {
-            subExpCandidates.emplace_back(freeSubExp);
+            Exp.isSafeToMove(MRI, /*IsMoveUp*/ false)) {
+          SubExp FreeSubExp = buildFreeSubExp(Exp, PassThrus, MRI, SIRI);
+          if (canHelpPressureWhenSink(FreeSubExp, PassThrus, MRI, SIRI, MLI, DT,
+                                      IsCanClone, IsSgprBound)) {
+            SubExpCandidates.emplace_back(FreeSubExp);
           }
         }
         continue;
       }
 
-      subExpCandidates.emplace_back(subExp);
+      SubExpCandidates.emplace_back(Exp);
     }
   }
-  return subExpCandidates;
+  return SubExpCandidates;
 }
 
 std::pair<int, int>
-calculateSaving(HotBlock &hotBB, std::vector<SubExp> &subExpCandidates,
-                GCNRPTracker::LiveRegSet &inputLive,
-                GCNRPTracker::LiveRegSet &outputLive, bool IsVOutBound,
+calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
+                GCNRPTracker::LiveRegSet &InputLive,
+                GCNRPTracker::LiveRegSet &OutputLive, bool IsVOutBound,
                 bool IsSOutBound, bool IsCanClone, MachineDominatorTree *DT,
                 const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI) {
-  int vgpr = 0;
-  int sgpr = 0;
-  MachineBasicBlock *MBB = hotBB.MBB;
+  int Vgpr = 0;
+  int Sgpr = 0;
+  MachineBasicBlock *MBB = HotBb.MBB;
   // Sink saving.
-  for (SubExp &Exp : subExpCandidates) {
+  for (SubExp &Exp : SubExpCandidates) {
     if (Exp.IsHoist) {
       // ToMBB -> MBB -> FromMBB.
       // If ToMBB not dom hot block, reg will not live in MBB.
@@ -3851,28 +3821,28 @@ calculateSaving(HotBlock &hotBB, std::vector<SubExp> &subExpCandidates,
           continue;
         if (IsSOutBound && Exp.sOutputSize < Exp.sInputSize)
           continue;
-        vgpr += Exp.vInputSize;
-        vgpr -= Exp.vOutputSize;
-        sgpr += Exp.sInputSize;
-        sgpr -= Exp.sOutputSize;
+        Vgpr += Exp.vInputSize;
+        Vgpr -= Exp.vOutputSize;
+        Sgpr += Exp.sInputSize;
+        Sgpr -= Exp.sOutputSize;
         continue;
       }
     }
-    int vgprDiff = 0;
-    int sgprDiff = 0;
+    int VgprDiff = 0;
+    int SgprDiff = 0;
     MachineBasicBlock *ToMBB = Exp.ToBB;
-    // If subExp is to hotBB, it is crossing output instead of input.
-    GCNRPTracker::LiveRegSet &crossLive = MBB == ToMBB ? outputLive : inputLive;
+    // If subExp is to hotBB, It is crossing output instead of input.
+    GCNRPTracker::LiveRegSet &CrossLive = MBB == ToMBB ? OutputLive : InputLive;
 
     bool IsClone = false;
-    GCNRPTracker::LiveRegSet newInput;
+    GCNRPTracker::LiveRegSet NewInput;
     if (!Exp.IsMoveIntoLoop) {
       if (Exp.IsHoist) {
-        // If FromBB dom hot block, it will not change live for MBB.
+        // If FromBB dom hot block, It will not change live for MBB.
         if (Exp.FromBB != MBB && DT->dominates(Exp.FromBB, MBB))
           continue;
       } else {
-        // If ToBB dom hot block, it will not change live for MBB.
+        // If ToBB dom hot block, It will not change live for MBB.
         if (ToMBB != MBB && DT->dominates(ToMBB, MBB)) {
           if (IsCanClone && !Exp.IsNotSafeToCopy) {
             IsClone = true;
@@ -3882,19 +3852,19 @@ calculateSaving(HotBlock &hotBB, std::vector<SubExp> &subExpCandidates,
         }
       }
 
-      for (auto outIt : Exp.outputLive) {
-        unsigned Reg = outIt.first;
-        LaneBitmask outMask = outIt.second;
+      for (auto OutIt : Exp.outputLive) {
+        unsigned Reg = OutIt.first;
+        LaneBitmask OutMask = OutIt.second;
         LaneBitmask MBBBeginMask;
-        if (crossLive.find(Reg) != crossLive.end())
-          MBBBeginMask = crossLive[Reg];
+        if (CrossLive.find(Reg) != CrossLive.end())
+          MBBBeginMask = CrossLive[Reg];
         // Check mask which live in both BeginSlot and exp output when sink to
         // kill the output. Check mask which not live in BeginSlot  in
         // exp output when hoist to live the output.
-        LaneBitmask profitMask = Exp.IsHoist ? (outMask & (~MBBBeginMask))
-                                             : (outMask & MBBBeginMask);
+        LaneBitmask ProfitMask = Exp.IsHoist ? (OutMask & (~MBBBeginMask))
+                                             : (OutMask & MBBBeginMask);
         if (MBBBeginMask.any()) {
-          unsigned Size = getRegSize(Reg, profitMask, MRI, SIRI);
+          unsigned Size = getRegSize(Reg, ProfitMask, MRI, SIRI);
           LLVM_DEBUG(std::string movStr =
                          Exp.IsHoist ? "output hoist:" : "output sink:";
                      dbgs()
@@ -3904,36 +3874,36 @@ calculateSaving(HotBlock &hotBB, std::vector<SubExp> &subExpCandidates,
           if (SIRI->isVGPR(MRI, Reg)) {
             LLVM_DEBUG(dbgs() << "v\n");
             if (Exp.IsHoist)
-              vgprDiff += Size;
+              VgprDiff += Size;
             else
-              vgprDiff -= Size;
+              VgprDiff -= Size;
           } else {
             LLVM_DEBUG(dbgs() << "s\n");
             if (Exp.IsHoist)
-              sgprDiff += Size;
+              SgprDiff += Size;
             else
-              sgprDiff -= Size;
+              SgprDiff -= Size;
           }
         }
       }
 
-      for (auto inIt : Exp.inputLive) {
-        unsigned Reg = inIt.first;
-        LaneBitmask inMask = inIt.second;
+      for (auto InIt : Exp.inputLive) {
+        unsigned Reg = InIt.first;
+        LaneBitmask InMask = InIt.second;
         LaneBitmask MBBBeginMask;
-        if (crossLive.find(Reg) != crossLive.end())
-          MBBBeginMask = crossLive[Reg];
+        if (CrossLive.find(Reg) != CrossLive.end())
+          MBBBeginMask = CrossLive[Reg];
         // Check mask which not live in BeginSlot  in exp input when
         // sink to live the input. Check mask which live in both BeginSlot and
         // exp output when hoist to kill the input.
-        LaneBitmask profitMask =
-            Exp.IsHoist ? (inMask & MBBBeginMask) : (inMask & (~MBBBeginMask));
-        if (profitMask.any()) {
+        LaneBitmask ProfitMask =
+            Exp.IsHoist ? (InMask & MBBBeginMask) : (InMask & (~MBBBeginMask));
+        if (ProfitMask.any()) {
           // Update input live to avoid count same input more than once.
-          newInput[Reg] |= inMask;
+          NewInput[Reg] |= InMask;
           // Exp in not live at block input.
           // It will increase live for MBB.
-          unsigned Size = getRegSize(Reg, profitMask, MRI, SIRI);
+          unsigned Size = getRegSize(Reg, ProfitMask, MRI, SIRI);
 
           LLVM_DEBUG(
               std::string movStr = Exp.IsHoist ? "input hoist:" : "input sink:";
@@ -3941,26 +3911,26 @@ calculateSaving(HotBlock &hotBB, std::vector<SubExp> &subExpCandidates,
           if (SIRI->isVGPR(MRI, Reg)) {
             LLVM_DEBUG(dbgs() << "v\n");
             if (Exp.IsHoist)
-              vgprDiff -= Size;
+              VgprDiff -= Size;
             else
-              vgprDiff += Size;
+              VgprDiff += Size;
           } else {
             LLVM_DEBUG(dbgs() << "s\n");
             if (Exp.IsHoist)
-              sgprDiff -= Size;
+              SgprDiff -= Size;
             else
-              sgprDiff += Size;
+              SgprDiff += Size;
           }
         }
       }
     } else {
       // When sink into loop, the input will live for every block inside loop.
       // The output will only lived between to blocks and the use blocks.
-      // If MBB dominate any user of output live reg, it will still live in
+      // If MBB dominate any user of output live reg, It will still live in
       // MBB. So cannot count that output live reg as profit.
       // Hoist into loop is not supported now.
-      for (auto outIt : Exp.outputLive) {
-        unsigned Reg = outIt.first;
+      for (auto OutIt : Exp.outputLive) {
+        unsigned Reg = OutIt.first;
         bool IsDomUser = false;
         for (MachineInstr &MI : MRI.use_nodbg_instructions(Reg)) {
           MachineBasicBlock *UserMBB = MI.getParent();
@@ -3972,142 +3942,142 @@ calculateSaving(HotBlock &hotBB, std::vector<SubExp> &subExpCandidates,
         if (IsDomUser)
           continue;
 
-        LaneBitmask outMask = outIt.second;
+        LaneBitmask OutMask = OutIt.second;
         LaneBitmask MBBBeginMask;
-        if (inputLive.find(Reg) != inputLive.end())
-          MBBBeginMask = inputLive[Reg];
-        LaneBitmask profitMask = outMask & MBBBeginMask;
+        if (InputLive.find(Reg) != InputLive.end())
+          MBBBeginMask = InputLive[Reg];
+        LaneBitmask ProfitMask = OutMask & MBBBeginMask;
         if (MBBBeginMask.any()) {
-          unsigned Size = getRegSize(Reg, profitMask, MRI, SIRI);
+          unsigned Size = getRegSize(Reg, ProfitMask, MRI, SIRI);
           LLVM_DEBUG(dbgs()
                      << "move:" << Register::virtReg2Index(Reg) << " " << Size);
           // Exp out live at block input.
           // It will descrease live for MBB.
           if (SIRI->isVGPR(MRI, Reg)) {
             LLVM_DEBUG(dbgs() << "v\n");
-            vgprDiff -= Size;
+            VgprDiff -= Size;
           } else {
             LLVM_DEBUG(dbgs() << "s\n");
-            sgprDiff -= Size;
+            SgprDiff -= Size;
           }
         }
       }
 
-      for (auto inIt : Exp.inputLive) {
-        unsigned Reg = inIt.first;
-        LaneBitmask inMask = inIt.second;
+      for (auto InIt : Exp.inputLive) {
+        unsigned Reg = InIt.first;
+        LaneBitmask InMask = InIt.second;
         LaneBitmask MBBBeginMask;
-        if (inputLive.find(Reg) != inputLive.end())
-          MBBBeginMask = inputLive[Reg];
+        if (InputLive.find(Reg) != InputLive.end())
+          MBBBeginMask = InputLive[Reg];
         // Check mask which not live in BeginSlot  in exp input.
-        LaneBitmask profitMask = inMask & (~MBBBeginMask);
-        if (profitMask.any()) {
+        LaneBitmask ProfitMask = InMask & (~MBBBeginMask);
+        if (ProfitMask.any()) {
           // Update input live to avoid count same input more than once.
-          newInput[Reg] |= inMask;
+          NewInput[Reg] |= InMask;
           // Exp in not live at block input.
           // It will increase live for MBB.
-          unsigned Size = getRegSize(Reg, profitMask, MRI, SIRI);
+          unsigned Size = getRegSize(Reg, ProfitMask, MRI, SIRI);
 
           LLVM_DEBUG(dbgs()
                      << "add:" << Register::virtReg2Index(Reg) << " " << Size);
           if (SIRI->isVGPR(MRI, Reg)) {
             LLVM_DEBUG(dbgs() << "v\n");
-            vgprDiff += Size;
+            VgprDiff += Size;
           } else {
             LLVM_DEBUG(dbgs() << "s\n");
-            sgprDiff += Size;
+            SgprDiff += Size;
           }
         }
       }
     }
 
-    if (IsVOutBound && vgprDiff > 0)
+    if (IsVOutBound && VgprDiff > 0)
       continue;
 
-    if (IsSOutBound && sgprDiff > 0)
+    if (IsSOutBound && SgprDiff > 0)
       continue;
-    llvm::mergeLiveRegSet(crossLive, newInput);
-    vgpr += vgprDiff;
-    sgpr += sgprDiff;
+    llvm::mergeLiveRegSet(CrossLive, NewInput);
+    Vgpr += VgprDiff;
+    Sgpr += SgprDiff;
     if (IsClone)
       Exp.IsCloneOnly = true;
   }
 
-  return std::make_pair(vgpr, sgpr);
+  return std::make_pair(Vgpr, Sgpr);
 }
 
-void addExpCandidates(std::vector<SubExp> &subExpCandidates,
-                      std::vector<SubExp> &subExps,
-                      GCNRPTracker::LiveRegSet &usedRegs) {
-  subExpCandidates.insert(subExpCandidates.end(), subExps.begin(),
-                          subExps.end());
-  for (auto &Exp : subExps) {
+void addExpCandidates(std::vector<SubExp> &SubExpCandidates,
+                      std::vector<SubExp> &SubExps,
+                      GCNRPTracker::LiveRegSet &UsedRegs) {
+  SubExpCandidates.insert(SubExpCandidates.end(), SubExps.begin(),
+                          SubExps.end());
+  for (auto &Exp : SubExps) {
     if (Exp.IsHoist) {
       for (auto &Reg : Exp.TopRegs) {
-        usedRegs[Reg];
+        UsedRegs[Reg];
       }
     } else {
       for (auto &Reg : Exp.BottomRegs) {
-        usedRegs[Reg];
+        UsedRegs[Reg];
       }
     }
   }
 }
 
 bool tryToAddSubExps(
-    Remat *Remat, HotBlock &hotBB, RematStatus &status,
-    std::vector<SubExp> &subExpCandidates,
-    std::vector<SubExp> &inBlockCloneSubExps,
-    DenseMap<MachineBasicBlock *, MachineInstr *> &inBlockHotVInstMap,
-    DenseMap<MachineBasicBlock *, MachineInstr *> &inBlockHotSInstMap,
+    Remat *Remat, HotBlock &HotBB, RematStatus &Status,
+    std::vector<SubExp> &SubExpCandidates,
+    std::vector<SubExp> &InBlockCloneSubExps,
+    DenseMap<MachineBasicBlock *, MachineInstr *> &InBlockHotVInstMap,
+    DenseMap<MachineBasicBlock *, MachineInstr *> &InBlockHotSInstMap,
     SmallVector<std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet>>
         Candidates,
-    int vgpr, int sgpr, const GCNRPTracker::LiveRegSet &savingInputLive,
-    const GCNRPTracker::LiveRegSet &savingOutputLive,
-    GCNRPTracker::LiveRegSet &passThrus, GCNRPTracker::LiveRegSet &usedRegs,
+    int Vgpr, int Sgpr, const GCNRPTracker::LiveRegSet &SavingInputLive,
+    const GCNRPTracker::LiveRegSet &SavingOutputLive,
+    GCNRPTracker::LiveRegSet &PassThrus, GCNRPTracker::LiveRegSet &UsedRegs,
     MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-    const SIInstrInfo *SIII, const MachineLoopInfo *MLI,
-    SlotIndexes *slotIndexes, LiveIntervals *LIS, MachineDominatorTree *DT,
-    bool IsCanClone, bool IsVOutBound, bool IsSOutBound,
-    GCNRPTracker::LiveRegSet &unUsedPassThrus, bool AllowPartialUseInSubExp) {
-  std::vector<SubExp> partialSubExps = buildSubExpCandidates(
-      Remat, Candidates, passThrus, MRI, SIRI, SIII, MLI, slotIndexes, DT,
-      IsCanClone, IsSOutBound, unUsedPassThrus, status.MemWriteMBBSet,
-      AllowPartialUseInSubExp);
+    const SIInstrInfo *SIII, const MachineLoopInfo *MLI, SlotIndexes *SI,
+    LiveIntervals *LIS, MachineDominatorTree *DT, bool IsCanClone,
+    bool IsVOutBound, bool IsSOutBound,
+    GCNRPTracker::LiveRegSet &UnusedPassThrus, bool AllowPartialUseInSubExp) {
+  std::vector<SubExp> PartialSubExps =
+      buildSubExpCandidates(Remat, Candidates, PassThrus, MRI, SIRI, SIII, MLI,
+                            SI, DT, IsCanClone, IsSOutBound, UnusedPassThrus,
+                            Status.MemWriteMBBSet, AllowPartialUseInSubExp);
 
-  GCNRPTracker::LiveRegSet tmpSavingInputLive = savingInputLive;
-  GCNRPTracker::LiveRegSet tmpSavingOutputLive = savingOutputLive;
-  std::pair<int, int> curSaving = calculateSaving(
-      hotBB, partialSubExps, tmpSavingInputLive, tmpSavingOutputLive,
+  GCNRPTracker::LiveRegSet TmpSavingInputLive = SavingInputLive;
+  GCNRPTracker::LiveRegSet TmpSavingOutputLive = SavingOutputLive;
+  std::pair<int, int> CurSaving = calculateSaving(
+      HotBB, PartialSubExps, TmpSavingInputLive, TmpSavingOutputLive,
       IsVOutBound, IsSOutBound, IsCanClone, DT, MRI, SIRI);
-  const int VLimit = status.TargetVLimit;
-  const int SLimit = status.TargetSLimit;
+  const int VLimit = Status.TargetVLimit;
+  const int SLimit = Status.TargetSLimit;
 
-  vgpr += curSaving.first;
-  sgpr += curSaving.second;
+  Vgpr += CurSaving.first;
+  Sgpr += CurSaving.second;
 
-  if (vgpr <= VLimit && sgpr <= SLimit) {
-    // nrmSubExps can help reach target occupancy, add it to
+  if (Vgpr <= VLimit && Sgpr <= SLimit) {
+    // nrmSubExps can help reach target occupancy, add It to
     // subExpCandidates.
-    addExpCandidates(subExpCandidates, partialSubExps, usedRegs);
+    addExpCandidates(SubExpCandidates, PartialSubExps, UsedRegs);
     return true;
   }
 
   if (EnableSubExpAggressive) {
     // Build candidates from passThrus  used in partialSubExps.
-    GCNRPTracker::LiveRegSet sinkUsedRegs;
-    for (auto &Exp : partialSubExps) {
+    GCNRPTracker::LiveRegSet SinkUsedRegs;
+    for (auto &Exp : PartialSubExps) {
       for (auto &Reg : Exp.BottomRegs) {
-        sinkUsedRegs[Reg];
+        SinkUsedRegs[Reg];
       }
     }
     MapVector<MachineBasicBlock *, GCNRPTracker::LiveRegSet> HoistCandidates;
-    for (auto &it : hotBB.inputLive) {
-      unsigned Reg = it.first;
+    for (auto &It : HotBB.InputLive) {
+      unsigned Reg = It.first;
       // Skip reg which already used for sink exp.
-      if (sinkUsedRegs.count(Reg))
+      if (SinkUsedRegs.count(Reg))
         continue;
-      if (usedRegs.count(Reg))
+      if (UsedRegs.count(Reg))
         continue;
       // Skip unsafe reg.
       if (!isSafeCandidate(Remat, Reg, MRI, SIRI, SIII, /*IsSink*/ false)) {
@@ -4133,42 +4103,40 @@ bool tryToAddSubExps(
       UseInMBB[Reg] = getRegMask(DefMI->getOperand(0), MRI);
     }
 
-    SlotIndexes *slotIndexes = LIS->getSlotIndexes();
     // Build exp dag on define blocks.
-    std::vector<SubExp> hoistSubExpCandidates;
+    std::vector<SubExp> HoistSubExpCandidates;
     // Save profit candidates into list.
-    for (auto it : HoistCandidates) {
-      MachineBasicBlock *UseMBB = it.first;
+    for (auto It : HoistCandidates) {
+      MachineBasicBlock *UseMBB = It.first;
       // Try to remove out reg def sub exp from DefMBB.
-      GCNRPTracker::LiveRegSet &UseInMBB = it.second;
+      GCNRPTracker::LiveRegSet &UseInMBB = It.second;
       // Go up on the dag until reach share node.
-      auto subExps = buildSubExpFromCandidatesTopBottom(
-          Remat, UseInMBB, UseMBB, SIRI, SIII, MRI, slotIndexes);
-      for (SubExp &subExp : subExps) {
-        if (!canHelpPressureWhenHoist(subExp, MRI, SIRI, SIII, MLI,
-                                      IsSOutBound))
+      auto SubExps = buildSubExpFromCandidatesTopBottom(Remat, UseInMBB, UseMBB,
+                                                        SIRI, SIII, MRI);
+      for (SubExp &SubExp : SubExps) {
+        if (!canHelpPressureWhenHoist(SubExp, MRI, MLI, IsSOutBound))
           continue;
-        subExp.IsHoist = true;
-        hoistSubExpCandidates.emplace_back(subExp);
+        SubExp.IsHoist = true;
+        HoistSubExpCandidates.emplace_back(SubExp);
       }
     }
 
-    std::pair<int, int> hoistSaving = calculateSaving(
-        hotBB, hoistSubExpCandidates, tmpSavingInputLive, tmpSavingOutputLive,
+    std::pair<int, int> HoistSaving = calculateSaving(
+        HotBB, HoistSubExpCandidates, TmpSavingInputLive, TmpSavingOutputLive,
         IsVOutBound, IsSOutBound, IsCanClone, DT, MRI, SIRI);
 
-    int hoistVgpr = vgpr + hoistSaving.first;
-    int hoistSgpr = sgpr + hoistSaving.second;
+    int HoistVgpr = Vgpr + HoistSaving.first;
+    int HoistSgpr = Sgpr + HoistSaving.second;
 
-    if ((hoistVgpr <= VLimit && hoistSgpr <= SLimit) ||
+    if ((HoistVgpr <= VLimit && HoistSgpr <= SLimit) ||
         // If status not balance, do the remat even cannot reach target.
         // TODO: check the result not help even one occupancy.
-        (!hoistSubExpCandidates.empty() && !status.NotBalance &&
+        (!HoistSubExpCandidates.empty() && !Status.NotBalance &&
          TargetOccupancy != 0)) {
-      // nrmSubExps can help reach target occupancy, add it to
+      // nrmSubExps can help reach target occupancy, add It to
       // subExpCandidates.
-      addExpCandidates(subExpCandidates, partialSubExps, usedRegs);
-      addExpCandidates(subExpCandidates, hoistSubExpCandidates, usedRegs);
+      addExpCandidates(SubExpCandidates, PartialSubExps, UsedRegs);
+      addExpCandidates(SubExpCandidates, HoistSubExpCandidates, UsedRegs);
 
       return true;
     }
@@ -4179,132 +4147,131 @@ bool tryToAddSubExps(
       // If not, AllowPartialUseInSubExp will no chance to be true.
       (AllowPartialUseInSubExp || !EnableSubExpAggressive)) {
     // Assume vmemLdSize could be optimized by not parallel.
-    if (((vgpr - hotBB.vmemLdInputSize) <= VLimit ||
-         (vgpr - hotBB.vmemLdOutputSize) <= VLimit) &&
-        sgpr <= SLimit) {
-      // nrmSubExps can help reach target occupancy, add it to
+    if (((Vgpr - HotBB.VmemLdInputSize) <= VLimit ||
+         (Vgpr - HotBB.VmemLdOutputSize) <= VLimit) &&
+        Sgpr <= SLimit) {
+      // nrmSubExps can help reach target occupancy, add It to
       // subExpCandidates.
-      addExpCandidates(subExpCandidates, partialSubExps, usedRegs);
+      addExpCandidates(SubExpCandidates, PartialSubExps, UsedRegs);
       return true;
     }
   }
 
-  int vDistance = vgpr - (int)VLimit;
-  int sDistance = status.TargetOcc > 4 ? (sgpr - (int)SLimit) : 0;
-  int vSaved = hotBB.maxPressures.first - vgpr;
-  int sSaved = hotBB.maxPressures.second - sgpr;
+  int VDistance = Vgpr - (int)VLimit;
+  int SDistance = Status.TargetOcc > 4 ? (Sgpr - (int)SLimit) : 0;
+  int VSaved = HotBB.MaxPressures.first - Vgpr;
+  int SSaved = HotBB.MaxPressures.second - Sgpr;
   // Try to add inBlockCloneSubExps.
-  if (!tryRematInHotSpot(*hotBB.MBB, status, vDistance, sDistance, vSaved,
-                         sSaved, inBlockCloneSubExps, inBlockHotVInstMap,
-                         inBlockHotSInstMap, LIS, MRI, SIRI, SIII)) {
-    // return false always when not allow partialUseInSubExp, it will try again
+  if (!tryRematInHotSpot(*HotBB.MBB, Status, VDistance, SDistance, VSaved,
+                         SSaved, InBlockCloneSubExps, InBlockHotVInstMap,
+                         InBlockHotSInstMap, LIS, MRI, SIRI, SIII)) {
+    // return false always when not allow partialUseInSubExp, It will try again
     // with partialUseInSubExp enabled.
     if (!AllowPartialUseInSubExp)
       return false;
     // If status not balance, do the remat even cannot reach target.
     // TODO: check the result not help even one occupancy.
-    if (!status.NotBalance && TargetOccupancy == 0)
+    if (!Status.NotBalance && TargetOccupancy == 0)
       return false;
   }
-  // nrmSubExps can help reach target occupancy, add it to
+  // nrmSubExps can help reach target occupancy, add It to
   // subExpCandidates.
-  addExpCandidates(subExpCandidates, partialSubExps, usedRegs);
+  addExpCandidates(SubExpCandidates, PartialSubExps, UsedRegs);
   return true;
 }
 
 // Remat passthru regs per hot block.
-// Reason to do it per block is to make sure passthru reuse is precise.
+// Reason to do It per block is to make sure passthru reuse is precise.
 // If try remat on all hot blocks together, the passthru might be on one block,
 //  reuse in on another block which the reg is not passthru there.
-bool perBlockPassthruRemat(Remat *Remat, std::vector<HotBlock> &hotBlocks,
-                           RematStatus &status,
-                           GCNRPTracker::LiveRegSet &liveRegCandidates,
+bool perBlockPassthruRemat(Remat *Remat, std::vector<HotBlock> &HotBlocks,
+                           RematStatus &Status,
+                           GCNRPTracker::LiveRegSet &LiveRegCandidates,
                            const GCNSubtarget *ST, LiveIntervals *LIS,
-                           const MachineLoopInfo *MLI,
-                           MachineDominatorTree *DT, MachineRegisterInfo &MRI,
-                           const SIRegisterInfo *SIRI,
+                           const MachineLoopInfo *MLI, MachineDominatorTree *DT,
+                           MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
                            const SIInstrInfo *SIII) {
   bool IsUpdated = false;
   bool IsCanClone = EnableSubExpClone || EnableSubExpAggressive;
 
-  SlotIndexes *slotIndexes = LIS->getSlotIndexes();
+  SlotIndexes *SlotIndexes = LIS->getSlotIndexes();
   // Sort hot blocks by pressure first.
   // The hot block with higher pressure is easier to fail.
-  // If fail, fail fast. It it works, save the subExpCandidates. The
+  // If fail, fail fast. It It works, save the subExpCandidates. The
   // subExpCandidates may help other hotblocks.
-  std::sort(hotBlocks.begin(), hotBlocks.end(),
-            [&ST](const HotBlock &a, const HotBlock &b) {
-              return pressureHigher(a.maxPressures.first, a.maxPressures.second,
-                                    b.maxPressures.first, b.maxPressures.second,
+  std::sort(HotBlocks.begin(), HotBlocks.end(),
+            [&ST](const HotBlock &A, const HotBlock &B) {
+              return pressureHigher(A.MaxPressures.first, A.MaxPressures.second,
+                                    B.MaxPressures.first, B.MaxPressures.second,
                                     ST);
             });
 
-  std::vector<SubExp> subExpCandidates;
+  std::vector<SubExp> SubExpCandidates;
   // For inBlock remat clone.
-  std::vector<SubExp> inBlockCloneSubExps;
-  DenseMap<MachineBasicBlock *, MachineInstr *> inBlockHotVInstMap;
-  DenseMap<MachineBasicBlock *, MachineInstr *> inBlockHotSInstMap;
+  std::vector<SubExp> InBlockCloneSubExps;
+  DenseMap<MachineBasicBlock *, MachineInstr *> InBlockHotVInstMap;
+  DenseMap<MachineBasicBlock *, MachineInstr *> InBlockHotSInstMap;
 
   // Save used passThrus to avoid use same reg on different MBB.
-  GCNRPTracker::LiveRegSet usedPassThrus;
+  GCNRPTracker::LiveRegSet UsedPassThrus;
   // Save moved regs to avoid use same reg hoist and sink.
-  GCNRPTracker::LiveRegSet usedRegs;
+  GCNRPTracker::LiveRegSet UsedRegs;
 
-  const int VLimit = status.TargetVLimit;
-  const int SLimit = status.TargetSLimit;
+  const int VLimit = Status.TargetVLimit;
+  const int SLimit = Status.TargetSLimit;
   // Collect passthru for hot block.
-  // Try remat on it.
-  for (auto &it : hotBlocks) {
-    MachineBasicBlock *MBB = it.MBB;
+  // Try remat on It.
+  for (auto &It : HotBlocks) {
+    MachineBasicBlock *MBB = It.MBB;
 
-    const GCNRPTracker::LiveRegSet inputLive = status.MBBInputLiveMap[MBB];
-    const GCNRPTracker::LiveRegSet outputLive = status.MBBOutputLiveMap[MBB];
+    const GCNRPTracker::LiveRegSet InputLive = Status.MBBInputLiveMap[MBB];
+    const GCNRPTracker::LiveRegSet OutputLive = Status.MBBOutputLiveMap[MBB];
 
-    it.inputLive = inputLive;
+    It.InputLive = InputLive;
 
     // Add pressure by 1 to consider spill to vgpr.
     const int PressureDelta = -1;
-    int vgpr = it.maxPressures.first - PressureDelta;
-    int sgpr = it.maxPressures.second;
-    bool IsVOutBound = vgpr > VLimit;
-    bool IsSOutBound = sgpr > SLimit;
+    int Vgpr = It.MaxPressures.first - PressureDelta;
+    int Sgpr = It.MaxPressures.second;
+    bool IsVOutBound = Vgpr > VLimit;
+    bool IsSOutBound = Sgpr > SLimit;
     // savingInputLive is used to calculate saving which will be modified to
     // avoid count same input multiple times.
-    GCNRPTracker::LiveRegSet savingInputLive = inputLive;
-    GCNRPTracker::LiveRegSet savingOutputLive = outputLive;
-    std::pair<int, int> curSaving =
-        calculateSaving(it, subExpCandidates, savingInputLive, savingOutputLive,
+    GCNRPTracker::LiveRegSet SavingInputLive = InputLive;
+    GCNRPTracker::LiveRegSet SavingOutputLive = OutputLive;
+    std::pair<int, int> CurSaving =
+        calculateSaving(It, SubExpCandidates, SavingInputLive, SavingOutputLive,
                         IsVOutBound, IsSOutBound, IsCanClone, DT, MRI, SIRI);
 
-    vgpr += curSaving.first;
-    sgpr += curSaving.second;
+    Vgpr += CurSaving.first;
+    Sgpr += CurSaving.second;
 
-    if (vgpr <= VLimit && sgpr <= SLimit)
+    if (Vgpr <= VLimit && Sgpr <= SLimit)
       continue;
 
     // Collect pass thru regs.
-    GCNRPTracker::LiveRegSet passThrus =
-        collectPassThrus(MBB, inputLive, outputLive, usedPassThrus,
-                         liveRegCandidates, MRI, IsCanClone);
+    GCNRPTracker::LiveRegSet PassThrus =
+        collectPassThrus(MBB, InputLive, OutputLive,
+                         LiveRegCandidates, MRI, IsCanClone);
 
     // Group pass thru regs by def MBB.
     SmallVector<std::pair<MachineBasicBlock *, GCNRPTracker::LiveRegSet>>
-        Candidates = groupPassThruByDefBlock(Remat, passThrus, usedPassThrus,
+        Candidates = groupPassThruByDefBlock(Remat, PassThrus, UsedPassThrus,
                                              MRI, SIRI, SIII);
     // unUsedPassThrus used to collect passThru which is skipped when build
     // subExp.
-    GCNRPTracker::LiveRegSet unusedPassThrus;
+    GCNRPTracker::LiveRegSet UnusedPassThrus;
     // Build exp dag on define blocks.
     bool AllowPartialUseInSubExp = false;
     if (tryToAddSubExps(
-            Remat, it, status, subExpCandidates, inBlockCloneSubExps,
-            inBlockHotVInstMap, inBlockHotSInstMap, Candidates, vgpr, sgpr,
-            savingInputLive, savingOutputLive, passThrus, usedRegs, MRI, SIRI,
-            SIII, MLI, slotIndexes, LIS, DT, IsCanClone, IsVOutBound,
-            IsSOutBound, unusedPassThrus, AllowPartialUseInSubExp)) {
+            Remat, It, Status, SubExpCandidates, InBlockCloneSubExps,
+            InBlockHotVInstMap, InBlockHotSInstMap, Candidates, Vgpr, Sgpr,
+            SavingInputLive, SavingOutputLive, PassThrus, UsedRegs, MRI, SIRI,
+            SIII, MLI, SlotIndexes, LIS, DT, IsCanClone, IsVOutBound,
+            IsSOutBound, UnusedPassThrus, AllowPartialUseInSubExp)) {
       // Remove unusedPassThrus from passThrus first.
-      llvm::andNotLiveRegSet(passThrus, unusedPassThrus);
-      llvm::mergeLiveRegSet(usedPassThrus, passThrus);
+      llvm::andNotLiveRegSet(PassThrus, UnusedPassThrus);
+      llvm::mergeLiveRegSet(UsedPassThrus, PassThrus);
       continue;
     }
     // If cannot clone, don't need to try partialUseInSubExp which must clone.
@@ -4312,54 +4279,53 @@ bool perBlockPassthruRemat(Remat *Remat, std::vector<HotBlock> &hotBlocks,
       return false;
 
     // Partial use subExp may result  count caused by clone.
-    // Only try it when enable aggressive remat.
+    // Only try It when enable aggressive remat.
     if (!EnableSubExpAggressive)
       return false;
 
     AllowPartialUseInSubExp = true;
     if (!tryToAddSubExps(
-            Remat, it, status, subExpCandidates, inBlockCloneSubExps,
-            inBlockHotVInstMap, inBlockHotSInstMap, Candidates, vgpr, sgpr,
-            savingInputLive, savingOutputLive, passThrus, usedRegs, MRI, SIRI,
-            SIII, MLI, slotIndexes, LIS, DT, IsCanClone, IsVOutBound,
-            IsSOutBound, unusedPassThrus, AllowPartialUseInSubExp)) {
+            Remat, It, Status, SubExpCandidates, InBlockCloneSubExps,
+            InBlockHotVInstMap, InBlockHotSInstMap, Candidates, Vgpr, Sgpr,
+            SavingInputLive, SavingOutputLive, PassThrus, UsedRegs, MRI, SIRI,
+            SIII, MLI, SlotIndexes, LIS, DT, IsCanClone, IsVOutBound,
+            IsSOutBound, UnusedPassThrus, AllowPartialUseInSubExp)) {
       return false;
     }
     // Just merge all passThrus after tryToAddSubExps allow partialUseInSubExp.
-    llvm::mergeLiveRegSet(usedPassThrus, passThrus);
+    llvm::mergeLiveRegSet(UsedPassThrus, PassThrus);
   }
 
   // Apply changes.
   {
     // sort subExpCandidates to make sure input use apply before output use if a
     // reg is input and output of subExps.
-    LLVM_DEBUG(for (SubExp &Exp : subExpCandidates) { Exp.dump(MRI, SIRI); });
-    sortSubExpCandidates(subExpCandidates);
+    LLVM_DEBUG(for (SubExp &Exp : SubExpCandidates) { Exp.dump(MRI, SIRI); });
+    sortSubExpCandidates(SubExpCandidates);
 
-    for (SubExp &Exp : subExpCandidates) {
+    for (SubExp &Exp : SubExpCandidates) {
       // Skip exp which is cleared in sort for hoist sink conflict.
       if (Exp.SUnits.empty())
         continue;
       LLVM_DEBUG(Exp.dump(MRI, SIRI));
       if (Exp.IsHoist) {
-        ApplySubExpMoveNearDefine(Exp, MRI, DT, slotIndexes, SIII, SIRI);
+        applySubExpMoveNearDefine(Exp, MRI, SlotIndexes, SIII, SIRI);
       } else {
         if (Exp.IsCloneOnly)
-          ApplySubExpCloneNearUser(Exp, hotBlocks, DT, MRI, slotIndexes, SIII,
+          applySubExpCloneNearUser(Exp, HotBlocks, DT, MRI, SlotIndexes, SIII,
                                    SIRI);
         else
-          ApplySubExpMoveNearUser(Exp, MRI, DT, slotIndexes, SIII, SIRI);
+          applySubExpMoveNearUser(Exp, MRI, DT, SlotIndexes);
       }
     }
 
-    for (SubExp &Exp : inBlockCloneSubExps) {
-      ApplySubExpCloneNearUserInBlock(Exp, inBlockHotVInstMap,
-                                      inBlockHotSInstMap, MRI, slotIndexes,
-                                      SIII, SIRI);
+    for (SubExp &Exp : InBlockCloneSubExps) {
+      applySubExpCloneNearUserInBlock(
+          Exp, InBlockHotVInstMap, InBlockHotSInstMap, MRI, SlotIndexes, SIRI);
     }
     // Try to see possible occupancy could reach, then dicide a target.
     // Apply remat.
-    IsUpdated = subExpCandidates.size();
+    IsUpdated = SubExpCandidates.size();
   }
 
   return IsUpdated;
@@ -4367,7 +4333,7 @@ bool perBlockPassthruRemat(Remat *Remat, std::vector<HotBlock> &hotBlocks,
 
 int getVMemLdSize(MachineBasicBlock &MBB, const SIInstrInfo *SIII,
                   const SIRegisterInfo *SIRI, const MachineRegisterInfo &MRI) {
-  int vmemLdSize = 0;
+  int VmemLdSize = 0;
   // Collect vmemLd when enable split.
   for (MachineInstr &MI : MBB) {
     bool IsHighLatency = SIII->isHighLatencyInstruction(MI);
@@ -4379,16 +4345,16 @@ int getVMemLdSize(MachineBasicBlock &MBB, const SIInstrInfo *SIII,
       continue;
     // a vmem ld.
     MachineOperand &Dst = MI.getOperand(0);
-    LaneBitmask mask = llvm::getRegMask(Dst, MRI);
-    unsigned size = llvm::getRegSize(Dst.getReg(), mask, MRI, SIRI);
-    vmemLdSize += size;
+    LaneBitmask Mask = llvm::getRegMask(Dst, MRI);
+    unsigned Size = llvm::getRegSize(Dst.getReg(), Mask, MRI, SIRI);
+    VmemLdSize += Size;
   }
-  return vmemLdSize;
+  return VmemLdSize;
 }
 
 } // namespace
 
-bool GroupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
+bool groupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
                 LiveIntervals *LIS, MachineDominatorTree *DT,
                 MachinePostDominatorTree *PDT, AliasAnalysis *AA) {
   if (MF.size() < 2)
@@ -4400,95 +4366,95 @@ bool GroupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
 
   auto &MRI = MF.getRegInfo();
 
-  RematStatus status = getRematStatus(MF, MLI, LIS, MRI, ST);
+  RematStatus Status = getRematStatus(MF, MLI, LIS, MRI, ST);
 
   const unsigned MaxOcc = ST->getWavesPerEU(MF.getFunction()).second;
-  if (status.TargetOcc >= MaxOcc)
+  if (Status.TargetOcc >= MaxOcc)
     return false;
 
-  unsigned VLimit = status.TargetVLimit;
-  unsigned SLimit = status.TargetSLimit;
+  unsigned VLimit = Status.TargetVLimit;
+  unsigned SLimit = Status.TargetSLimit;
 
-  int rematVCnt = status.MaxVPressure - VLimit;
-  int rematSCnt = status.MaxSPressure - SLimit;
+  int RematVCnt = Status.MaxVPressure - VLimit;
+  int RematSCnt = Status.MaxSPressure - SLimit;
 
   bool IsSGPRSpill = false;
-  if (rematSCnt > 0) {
-    IsSGPRSpill = nearSgprSpill(status.MaxSPressure, ST, MF);
+  if (RematSCnt > 0) {
+    IsSGPRSpill = nearSgprSpill(Status.MaxSPressure, ST, MF);
   }
 
   // If bound by lds, skip.
-  if ((status.TargetOcc + 1) > ST->getOccupancyWithWorkGroupSizes(MF).second &&
+  if ((Status.TargetOcc + 1) > ST->getOccupancyWithWorkGroupSizes(MF).second &&
       !IsSGPRSpill)
     return false;
 
-  bool IsBothOutLimit = rematVCnt > 0 && rematSCnt > 0;
+  bool IsBothOutLimit = RematVCnt > 0 && RematSCnt > 0;
   // TODO: use check wqm and support vreg remat.
   bool IsCheckWQM = MF.getFunction().getCallingConv() == CallingConv::AMDGPU_PS;
-  rematVCnt = IsCheckWQM & false;
+  RematVCnt = IsCheckWQM & false;
 
   // Remat on every hot block.
 
   // Collect all hot blocks.
-  std::vector<HotBlock> hotBlocks;
+  std::vector<HotBlock> HotBlocks;
   for (MachineBasicBlock &MBB : MF) {
     // Collect reg pressure.
-    auto &RP = status.MBBPressureMap[&MBB];
-    unsigned maxLocalVPressure = RP.getVGPRNum(ST->hasGFX90AInsts());
-    unsigned maxLocalSPressure = RP.getMaxSGPR();
+    auto &RP = Status.MBBPressureMap[&MBB];
+    unsigned MaxLocalVPressure = RP.getVGPRNum(ST->hasGFX90AInsts());
+    unsigned MaxLocalSPressure = RP.getMaxSGPR();
 
-    maxLocalSPressure += RegForVCC;
+    MaxLocalSPressure += RegForVCC;
 
     if (!EnableInBlockRemat) {
-      if (maxLocalVPressure <= VLimit && maxLocalSPressure <= SLimit)
+      if (MaxLocalVPressure <= VLimit && MaxLocalSPressure <= SLimit)
         continue;
     }
 
     // Move inst which input is imm/pass thru reg/out reg to help pressure.
-    if (tryHoldPacifist(MBB, LIS, MRI, SIRI, SIII, AA, status)) {
-      maxLocalVPressure = 0;
-      maxLocalSPressure = 0;
-      collectMBBPressure(MBB, LIS, ST, maxLocalVPressure, maxLocalSPressure,
-                         status);
+    if (tryHoldPacifist(MBB, LIS, MRI, SIRI, AA, Status)) {
+      MaxLocalVPressure = 0;
+      MaxLocalSPressure = 0;
+      collectMBBPressure(MBB, LIS, ST, MaxLocalVPressure, MaxLocalSPressure,
+                         Status);
 
-      maxLocalSPressure += RegForVCC;
+      MaxLocalSPressure += RegForVCC;
     }
-    if (maxLocalVPressure <= VLimit && maxLocalSPressure <= SLimit)
+    if (MaxLocalVPressure <= VLimit && MaxLocalSPressure <= SLimit)
       continue;
 
     // When both vgpr sgpr out limit, only help vgpr.
-    if (IsBothOutLimit && maxLocalVPressure <= VLimit)
+    if (IsBothOutLimit && MaxLocalVPressure <= VLimit)
       continue;
-    GCNRPTracker::LiveRegSet liveSet;
-    hotBlocks.push_back({&MBB, liveSet,
-                         std::make_pair(maxLocalVPressure, maxLocalSPressure),
+    GCNRPTracker::LiveRegSet LiveSet;
+    HotBlocks.push_back({&MBB, LiveSet,
+                         std::make_pair(MaxLocalVPressure, MaxLocalSPressure),
                          0, 0});
   }
   // Collect vmemLdInput/OutputSize.
   if (EnableVmemDegree) {
-    DenseMap<MachineBasicBlock *, unsigned> outputVMemLdSizeMap;
-    for (auto it : hotBlocks) {
-      MachineBasicBlock *MBB = it.MBB;
+    DenseMap<MachineBasicBlock *, unsigned> OutputVMemLdSizeMap;
+    for (auto It : HotBlocks) {
+      MachineBasicBlock *MBB = It.MBB;
       // Collect vmemLd when enable split.
-      int vmemLdSize = getVMemLdSize(*MBB, SIII, SIRI, MRI);
-      if (vmemLdSize) {
-        outputVMemLdSizeMap[MBB] = vmemLdSize;
+      int VmemLdSize = getVMemLdSize(*MBB, SIII, SIRI, MRI);
+      if (VmemLdSize) {
+        OutputVMemLdSizeMap[MBB] = VmemLdSize;
       }
     }
-    for (auto &it : hotBlocks) {
-      MachineBasicBlock *MBB = it.MBB;
+    for (auto &It : HotBlocks) {
+      MachineBasicBlock *MBB = It.MBB;
 
-      auto oit = outputVMemLdSizeMap.find(MBB);
-      if (oit != outputVMemLdSizeMap.end())
-        it.vmemLdOutputSize = oit->second;
+      auto OIt = OutputVMemLdSizeMap.find(MBB);
+      if (OIt != OutputVMemLdSizeMap.end())
+        It.VmemLdOutputSize = OIt->second;
 
       if (MBB->pred_size() != 1)
         continue;
 
       MachineBasicBlock *Pred = *MBB->pred_begin();
-      oit = outputVMemLdSizeMap.find(Pred);
-      if (oit != outputVMemLdSizeMap.end()) {
-        it.vmemLdInputSize = oit->second;
+      OIt = OutputVMemLdSizeMap.find(Pred);
+      if (OIt != OutputVMemLdSizeMap.end()) {
+        It.VmemLdInputSize = OIt->second;
       } else {
         if (Pred->getFirstTerminator() != Pred->end())
           continue;
@@ -4497,60 +4463,60 @@ bool GroupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
         bool IsHighLatency = SIII->isHighLatencyInstruction(Pred->back());
         if (!IsHighLatency)
           continue;
-        int vmemLdSize = getVMemLdSize(*Pred, SIII, SIRI, MRI);
-        it.vmemLdInputSize = vmemLdSize;
+        int VmemLdSize = getVMemLdSize(*Pred, SIII, SIRI, MRI);
+        It.VmemLdInputSize = VmemLdSize;
       }
     }
   }
 
   if (EnableUniformVectorToScalar) {
-    if (rematUniformVgprToSgpr(Remat, MF, status, status.MBBPressureMap,
-                               hotBlocks, LIS, MRI, SIRI, SIII, MLI)) {
+    if (rematUniformVgprToSgpr(Remat, MF, Status, HotBlocks, LIS, MRI, SIRI,
+                               SIII, MLI)) {
       // Rebuild LIS.
       LIS->reanalyze(MF);
-      status = getRematStatus(MF, MLI, LIS, MRI, ST);
-      bool IsSgprSpilled = nearSgprSpill(status.MaxSPressure, ST, MF);
+      Status = getRematStatus(MF, MLI, LIS, MRI, ST);
+      bool IsSgprSpilled = nearSgprSpill(Status.MaxSPressure, ST, MF);
       if (IsSgprSpilled) {
         bool IsNearTarget = false;
         hotBlockRemat(Remat, MF, MLI, LIS, DT, PDT, IsNearTarget);
         // Rebuild LIS.
         LIS->reanalyze(MF);
-        status = getRematStatus(MF, MLI, LIS, MRI, ST);
+        Status = getRematStatus(MF, MLI, LIS, MRI, ST);
       }
 
-      for (auto &it : hotBlocks) {
-        MachineBasicBlock *MBB = it.MBB;
+      for (auto &It : HotBlocks) {
+        MachineBasicBlock *MBB = It.MBB;
 
         // Update pressure.
-        auto &RP = status.MBBPressureMap[MBB];
-        unsigned maxLocalVPressure = RP.getVGPRNum(ST->hasGFX90AInsts());
-        unsigned maxLocalSPressure = RP.getMaxSGPR();
+        auto &RP = Status.MBBPressureMap[MBB];
+        unsigned MaxLocalVPressure = RP.getVGPRNum(ST->hasGFX90AInsts());
+        unsigned MaxLocalSPressure = RP.getMaxSGPR();
 
-        maxLocalSPressure += RegForVCC;
-        it.maxPressures.first = maxLocalVPressure;
-        it.maxPressures.second = maxLocalSPressure;
+        MaxLocalSPressure += RegForVCC;
+        It.MaxPressures.first = MaxLocalVPressure;
+        It.MaxPressures.second = MaxLocalSPressure;
       }
     }
   }
 
   // Collect all live reg which cross hot blocks.
-  GCNRPTracker::LiveRegSet liveRegCandidates;
-  for (auto it : hotBlocks) {
-    MachineBasicBlock *MBB = it.MBB;
+  GCNRPTracker::LiveRegSet LiveRegCandidates;
+  for (auto It : HotBlocks) {
+    MachineBasicBlock *MBB = It.MBB;
 
-    const GCNRPTracker::LiveRegSet inputLive = status.MBBInputLiveMap[MBB];
+    const GCNRPTracker::LiveRegSet InputLive = Status.MBBInputLiveMap[MBB];
 
-    const GCNRPTracker::LiveRegSet outputLive = status.MBBOutputLiveMap[MBB];
+    const GCNRPTracker::LiveRegSet OutputLive = Status.MBBOutputLiveMap[MBB];
 
-    llvm::mergeLiveRegSet(liveRegCandidates, inputLive);
-    llvm::mergeLiveRegSet(liveRegCandidates, outputLive);
+    llvm::mergeLiveRegSet(LiveRegCandidates, InputLive);
+    llvm::mergeLiveRegSet(LiveRegCandidates, OutputLive);
   }
 
   // Check min VGPR bound.
   BlockSet PressureUnderLimitSet;
   if (EnableSubExpMinReg) {
-    for (auto &it : hotBlocks) {
-      MachineBasicBlock *MBB = it.MBB;
+    for (auto &It : HotBlocks) {
+      MachineBasicBlock *MBB = It.MBB;
       unsigned MaxLocalVGPR = 0;
       unsigned MaxLocalSGPR = 0;
       llvm::getRegBound(MBB, MRI, SIRI, SIII, LIS, MaxLocalVGPR, MaxLocalSGPR);
@@ -4558,17 +4524,17 @@ bool GroupRemat(Remat *Remat, MachineFunction &MF, MachineLoopInfo *MLI,
       if (MaxLocalVGPR < VLimit && MaxLocalSGPR < SLimit) {
         PressureUnderLimitSet.insert(MBB);
       } else {
-        if (MaxLocalVGPR < it.maxPressures.first)
-          it.maxPressures =
-              std::make_pair(MaxLocalVGPR, it.maxPressures.second);
-        if (MaxLocalSGPR < it.maxPressures.second)
-          it.maxPressures = std::make_pair(it.maxPressures.first, MaxLocalSGPR);
+        if (MaxLocalVGPR < It.MaxPressures.first)
+          It.MaxPressures =
+              std::make_pair(MaxLocalVGPR, It.MaxPressures.second);
+        if (MaxLocalSGPR < It.MaxPressures.second)
+          It.MaxPressures = std::make_pair(It.MaxPressures.first, MaxLocalSGPR);
       }
     }
   }
 
   bool IsUpdated =
-      perBlockPassthruRemat(Remat, hotBlocks, status, liveRegCandidates, ST,
+      perBlockPassthruRemat(Remat, HotBlocks, Status, LiveRegCandidates, ST,
                             LIS, MLI, DT, MRI, SIRI, SIII);
 
   return IsUpdated;
@@ -4614,7 +4580,7 @@ bool AMDGPUHotBlockRematerialize::runOnMachineFunction(MachineFunction &MF) {
       LIS->reanalyze(MF);
     }
 
-    IsUpdated = GroupRemat(this, MF, MLI, LIS, DT, PDT, AA);
+    IsUpdated = groupRemat(this, MF, MLI, LIS, DT, PDT, AA);
 
     IsFinalUpdated |= IsUpdated;
   }
