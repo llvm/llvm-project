@@ -1,3 +1,4 @@
+// RUN: %clang_cc1 -triple x86_64 %s -S -o /dev/null -Werror -verify
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 
 struct string_view {
@@ -36,3 +37,15 @@ void foo(unsigned long long addr, unsigned long long a0) {
 
     // CHECK:{{.*}} call i64 asm "call *$1", "={rax},r,{rdi},~{memory},~{dirflag},~{fpsr},~{flags}"
 }
+
+
+void test_srcloc() {
+    asm((string_view( // expected-error {{invalid instruction mnemonic 'nonsense'}} \
+                      // expected-error {{invalid instruction mnemonic 'foobar'}} \
+                      // expected-note@1 {{instantiated into assembly here}} \
+                      // expected-note@2 {{instantiated into assembly here}}
+        R"o(nonsense
+        foobar)o")
+
+    ) ::(string_view("r"))(func()));
+  }

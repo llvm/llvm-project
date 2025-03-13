@@ -2586,12 +2586,14 @@ static void UpdateAsmCallInst(llvm::CallBase &Result, bool HasSideEffect,
 
   // Slap the source location of the inline asm into a !srcloc metadata on the
   // call.
-  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S)) {
-    if (const StringLiteral *SL =
-            dyn_cast<StringLiteral>(gccAsmStmt->getAsmStringExpr()))
-      Result.setMetadata("srcloc", getAsmSrcLocInfo(SL, CGF));
+  const StringLiteral *SL;
+  if (const auto *gccAsmStmt = dyn_cast<GCCAsmStmt>(&S);
+      gccAsmStmt &&
+      (SL = dyn_cast<StringLiteral>(gccAsmStmt->getAsmStringExpr()))) {
+    Result.setMetadata("srcloc", getAsmSrcLocInfo(SL, CGF));
   } else {
-    // At least put the line number on MS inline asm blobs.
+    // At least put the line number on MS inline asm blobs and GCC asm constexpr
+    // strings.
     llvm::Constant *Loc =
         llvm::ConstantInt::get(CGF.Int64Ty, S.getAsmLoc().getRawEncoding());
     Result.setMetadata("srcloc",
