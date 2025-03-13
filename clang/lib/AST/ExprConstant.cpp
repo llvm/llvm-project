@@ -2596,6 +2596,16 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
           LVal.getLValueCallIndex() == 0) &&
          "have call index for global lvalue");
 
+  if (LVal.allowConstexprUnknown()) {
+    if (BaseVD) {
+      Info.FFDiag(Loc, diag::note_constexpr_var_init_non_constant, 1) << BaseVD;
+      NoteLValueLocation(Info, Base);
+    } else {
+      Info.FFDiag(Loc);
+    }
+    return false;
+  }
+
   if (Base.is<DynamicAllocLValue>()) {
     Info.FFDiag(Loc, diag::note_constexpr_dynamic_alloc)
         << IsReferenceType << !Designator.Entries.empty();
@@ -3774,7 +3784,8 @@ static bool evaluateVarDeclInit(EvalInfo &Info, const Expr *E,
   // expressions here; doing so would regress diagnostics for things like
   // reading from a volatile constexpr variable.
   if ((Info.getLangOpts().CPlusPlus && !VD->hasConstantInitialization() &&
-       VD->mightBeUsableInConstantExpressions(Info.Ctx)) ||
+       VD->mightBeUsableInConstantExpressions(Info.Ctx) &&
+       !AllowConstexprUnknown) ||
       ((Info.getLangOpts().CPlusPlus || Info.getLangOpts().OpenCL) &&
        !Info.getLangOpts().CPlusPlus11 && !VD->hasICEInitializer(Info.Ctx))) {
     if (Init) {
@@ -17441,18 +17452,6 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
 
     if (!Info.discardCleanups())
       llvm_unreachable("Unhandled cleanup; missing full expression marker?");
-
-    if (Value.allowConstexprUnknown()) {
-      assert(Value.isLValue() && "Expected an lvalue");
-      auto Base = Value.getLValueBase();
-      const auto *NewVD = Base.dyn_cast<const ValueDecl *>();
-      if (!NewVD)
-        NewVD = VD;
-      Info.FFDiag(getExprLoc(), diag::note_constexpr_var_init_non_constant, 1)
-          << NewVD;
-      NoteLValueLocation(Info, Base);
-      return false;
-    }
   }
 
   return CheckConstantExpression(Info, DeclLoc, DeclTy, Value,
