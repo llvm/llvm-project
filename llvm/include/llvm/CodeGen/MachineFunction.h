@@ -513,20 +513,17 @@ public:
       if (!CB.isIndirectCall())
         return;
 
-      std::optional<OperandBundleUse> Opt =
+      std::optional<OperandBundleUse> CalleeTypeOB =
           CB.getOperandBundle(LLVMContext::OB_callee_type);
       // Return if the operand bundle for call graph section cannot be found.
-      if (!Opt)
+      if (!CalleeTypeOB)
         return;
 
       // Get generalized type id string
-      auto OB = *Opt;
-      assert(OB.Inputs.size() == 1 && "invalid input size");
-      auto *OBVal = OB.Inputs.front().get();
-      auto *TypeIdMD = cast<MetadataAsValue>(OBVal)->getMetadata();
-      auto *TypeIdStr = cast<MDString>(TypeIdMD);
-      assert(TypeIdStr->getString().ends_with(".generalized") &&
-             "invalid type identifier");
+      Value *CalleeTypeOBVal = CalleeTypeOB->Inputs.front().get();
+      Metadata *TypeIdMD =
+          cast<MetadataAsValue>(CalleeTypeOBVal)->getMetadata();
+      MDString *TypeIdStr = cast<MDString>(TypeIdMD);
 
       // Compute numeric type id from generalized type id string
       uint64_t TypeIdVal = MD5Hash(TypeIdStr->getString());
