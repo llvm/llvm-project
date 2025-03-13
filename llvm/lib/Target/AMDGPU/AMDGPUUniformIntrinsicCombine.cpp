@@ -95,6 +95,20 @@ AMDGPUUniformIntrinsicCombinePass::run(Function &F,
 
 bool AMDGPUUniformIntrinsicCombineImpl::run(Function &F) {
   bool IsChanged{false};
+  Module *M = F.getParent();
+  llvm::LLVMContext &Ctx = M->getContext();
+  llvm::Type *IntrinsicTy = llvm::Type::getInt32Ty(Ctx);
+
+  if (!Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_permlane64,
+                                         {IntrinsicTy}) &&
+      !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_readfirstlane,
+                                         {IntrinsicTy}) &&
+      !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_readlane,
+                                         {IntrinsicTy}) &&
+      !Intrinsic::getDeclarationIfExists(M, Intrinsic::amdgcn_ballot,
+                                         {IntrinsicTy})) {
+    return false;
+  }
 
   // Iterate over each instruction in the function to get the desired intrinsic
   // inst to check for optimization.
