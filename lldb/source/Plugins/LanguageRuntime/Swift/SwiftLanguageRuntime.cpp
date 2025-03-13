@@ -2600,31 +2600,29 @@ static llvm::Expected<addr_t> ReadAsyncContextRegisterFromUnwind(
 /// CFA of the currently executing function. This is the case at the start of
 /// "Q" funclets, before the low level code changes the meaning of the async
 /// register to not require the indirection.
-/// This implementation detects the transition point by comparing the
-/// continuation pointer in the async context with the currently executing
-/// funclet given by the SymbolContext sc. If they are the same, the PC is
-/// before the transition point.
-/// FIXME: this fails in some recursive async functions. See: rdar://139676623
+/// The end of the prologue approximates the transition point.
+/// FIXME: In the few instructions between the end of the prologue and the
+/// transition point, this approximation fails. rdar://139676623
 static llvm::Expected<bool> IsIndirectContext(Process &process,
                                               StringRef mangled_name,
-                                              addr_t async_reg,
-                                              SymbolContext &sc) {
+                                              Address pc, SymbolContext &sc) {
   if (!SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
           mangled_name))
     return false;
 
-  llvm::Expected<addr_t> continuation_ptr = ReadPtrFromAddr(
-      process, async_reg, /*offset*/ process.GetAddressByteSize());
-  if (!continuation_ptr)
-    return continuation_ptr.takeError();
-
-  if (sc.function)
-    return sc.function->GetAddressRange().ContainsLoadAddress(
-        *continuation_ptr, &process.GetTarget());
-  assert(sc.symbol);
-  Address continuation_addr;
-  continuation_addr.SetLoadAddress(*continuation_ptr, &process.GetTarget());
-  return sc.symbol->ContainsFileAddress(continuation_addr.GetFileAddress());
+  // This is checked prior to calling this function.
+  assert(sc.function || sc.symbol);
+  uint32_t prologue_size = sc.function ? sc.function->GetPrologueByteSize()
+                                       : sc.symbol->GetPrologueByteSize();
+  Address func_start_addr =
+      sc.function ? sc.function->GetAddressRange().GetBaseAddress()
+                  : sc.symbol->GetAddress();
+  // Include one instruction after the prologue. This is where breakpoints
+  // by function name are set, so it's important to get this point right. This
+  // instruction is exactly at address "base + prologue", so adding 1
+  // in the range will do.
+  AddressRange prologue_range(func_start_addr, prologue_size + 1);
+  return prologue_range.ContainsLoadAddress(pc, &process.GetTarget());
 }
 
 // Examine the register state and detect the transition from a real
@@ -2694,7 +2692,7 @@ SwiftLanguageRuntime::GetRuntimeUnwindPlan(ProcessSP process_sp,
     return log_expected(async_reg.takeError());
 
   llvm::Expected<bool> maybe_indirect_context =
-      IsIndirectContext(*process_sp, mangled_name, *async_reg, sc);
+      IsIndirectContext(*process_sp, mangled_name, pc, sc);
   if (!maybe_indirect_context)
     return log_expected(maybe_indirect_context.takeError());
 

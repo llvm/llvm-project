@@ -62,7 +62,80 @@ class TestCase(lldbtest.TestBase):
                 breakpoints.add(bp.GetID())
         return breakpoints
 
+    unwind_fail_range_cache = dict()
+
+    # There are challenges when unwinding Q funclets ("await resume"): LLDB cannot
+    # detect the transition point where x22 stops containing the indirect context,
+    # and instead contains the direct context.
+    # Up to and including the first non-prologue instruction, LLDB correctly assumes
+    # it is the indirect context.
+    # After that, it assume x22 contains the direct context. There are a few
+    # instructions where this is not true; this function computes a range that
+    # includes such instructions, so the test may skip checks while stopped in them.
+    def compute_unwind_fail_range(self, function, target):
+        name = function.GetName()
+        if name in TestCase.unwind_fail_range_cache:
+            return TestCase.unwind_fail_range_cache[name]
+
+        if "await resume" not in function.GetName():
+            TestCase.unwind_fail_range_cache[name] = range(0)
+            return range(0)
+
+        first_pc_after_prologue = function.GetStartAddress()
+        first_pc_after_prologue.OffsetAddress(function.GetPrologueByteSize())
+        first_bad_instr = None
+        first_good_instr = None
+        for instr in function.GetInstructions(target):
+            instr_addr = instr.GetAddress()
+
+            # The first bad instruction is approximately the second instruction after the prologue
+            # In actuality, it is at some point after that.
+            if first_bad_instr is None and (
+                instr_addr.GetFileAddress() > first_pc_after_prologue.GetFileAddress()
+            ):
+                first_bad_instr = instr
+                continue
+
+            # The first good instr is approximately the branch to swift_task_dealloc.
+            # In actuality, it is at some point before that.
+            if "swift_task_dealloc" in instr.GetComment(target):
+                first_good_instr = instr
+                break
+
+            # If inside the bad range, no branches can be found.
+            # If this happens, this test must fail so we know unwinding will be broken during stepping.
+            if first_bad_instr is not None:
+                # GetControlFlowKind is only implemented for x86.
+                if "x86" in target.GetTriple():
+                    self.assertEqual(
+                        instr.GetControlFlowKind(target),
+                        lldb.eInstructionControlFlowKindOther,
+                        str(instr),
+                    )
+
+        self.assertNotEqual(first_bad_instr, None)
+        self.assertNotEqual(first_good_instr, None)
+
+        fail_range = range(
+            first_bad_instr.GetAddress().GetFileAddress(),
+            first_good_instr.GetAddress().GetFileAddress(),
+        )
+        TestCase.unwind_fail_range_cache[name] = fail_range
+        return fail_range
+
+    def should_skip_Q_funclet(self, thread):
+        current_frame = thread.frames[0]
+        function = current_frame.GetFunction()
+        fail_range = self.compute_unwind_fail_range(
+            function, thread.GetProcess().GetTarget()
+        )
+
+        current_pc = current_frame.GetPCAddress()
+        return current_pc.GetFileAddress() in fail_range
+
     def check_unwind_ok(self, thread, bpid):
+        if self.should_skip_Q_funclet(thread):
+            return
         # Check that we see the virtual backtrace:
         expected_funcnames = [
             "ASYNC___1___",
