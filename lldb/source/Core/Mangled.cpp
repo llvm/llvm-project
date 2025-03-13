@@ -278,7 +278,10 @@ bool Mangled::GetRichManglingInfo(RichManglingContext &context,
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
-ConstString Mangled::GetDemangledName() const {
+ConstString Mangled::GetDemangledName(// BEGIN SWIFT
+                                      const SymbolContext *sc
+                                      // END SWIFT
+                                      ) const {
   if (!m_mangled)
     return m_demangled;
 
