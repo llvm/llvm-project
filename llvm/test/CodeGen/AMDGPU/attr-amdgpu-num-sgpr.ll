@@ -68,7 +68,7 @@ define amdgpu_kernel void @max_10_sgprs() #0 {
 ;  %x.3 = call i64 @llvm.amdgcn.dispatch.id()
 ;  %x.4 = call ptr addrspace(4) @llvm.amdgcn.dispatch.ptr()
 ;  %x.5 = call ptr addrspace(4) @llvm.amdgcn.queue.ptr()
-;  store volatile i32 0, ptr undef
+;  store volatile i32 0, ptr poison
 ;  br label %stores
 ;
 ;stores:
@@ -99,7 +99,7 @@ define amdgpu_kernel void @max_10_sgprs() #0 {
 ;                                        ptr addrspace(1) %out3,
 ;                                        ptr addrspace(1) %out4,
 ;                                        i32 %one, i32 %two, i32 %three, i32 %four) #2 {
-;  store volatile i32 0, ptr undef
+;  store volatile i32 0, ptr poison
 ;  %x.0 = call i32 @llvm.amdgcn.workgroup.id.x()
 ;  store volatile i32 %x.0, ptr addrspace(1) poison
 ;  %x.1 = call i32 @llvm.amdgcn.workgroup.id.y()
