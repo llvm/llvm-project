@@ -3572,6 +3572,7 @@ add_fp_unittest(
     FmaTest.h
   DEPENDS
     libc.src.math.fmaf16
+    libc.src.__support.macros.properties.types
 )
 
 add_fp_unittest(
