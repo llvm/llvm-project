@@ -1,10 +1,10 @@
 ! RUN: %flang_fc1 -fdebug-unparse -fopenmp-version=52 -fopenmp %s | FileCheck --ignore-case --check-prefix="UNPARSE" %s 
 ! RUN: %flang_fc1 -fdebug-dump-parse-tree-no-sema -fopenmp-version=52 -fopenmp %s | FileCheck --check-prefix="PARSE-TREE" %s
 
-subroutine test_interop_01()
-  !$omp interop device(1)
-  print *,'pass'
-end subroutine test_interop_01
+SUBROUTINE test_interop_01()
+  !$OMP INTEROP DEVICE(1)
+  PRINT *,'pass'
+END SUBROUTINE test_interop_01
 
 !UNPARSE: SUBROUTINE test_interop_01
 !UNPARSE: !$OMP INTEROP DEVICE(1_4)
@@ -26,12 +26,12 @@ end subroutine test_interop_01
 !PARSE-TREE: | | | | string = 'pass'
 !PARSE-TREE: | EndSubroutineStmt -> Name = 'test_interop_01'
 
-subroutine test_interop_02()
-  use omp_lib
-  integer(omp_interop_kind) :: obj1, obj2, obj3
-  !$omp interop init(targetsync: obj) use(obj1) destroy(obj3)
-  print *,'pass'
-end subroutine test_interop_02
+SUBROUTINE test_interop_02()
+  USE omp_lib
+  INTEGER(OMP_INTEROP_KIND) :: obj1, obj2, obj3
+  !$OMP INTEROP INIT(TARGETSYNC: obj) USE(obj1) DESTROY(obj3)
+  PRINT *,'pass'
+END SUBROUTINE test_interop_02
 
 !UNPARSE: SUBROUTINE test_interop_02
 !UNPARSE:  USE :: omp_lib
@@ -68,12 +68,12 @@ end subroutine test_interop_02
 !PARSE-TREE: | | | | string = 'pass'
 !PARSE-TREE: | EndSubroutineStmt -> Name = 'test_interop_02'
 
-subroutine test_interop_03()
-  use omp_lib
-  Integer(omp_interop_kind) :: obj
-  !$omp interop init(targetsync: obj) depend(inout: obj)
-  print *,'pass'
-end subroutine test_interop_03
+SUBROUTINE test_interop_03()
+  USE omp_lib
+  INTEGER(OMP_INTEROP_KIND) :: obj
+  !$OMP INTEROP INIT(TARGETSYNC: obj) DEPEND(INOUT: obj)
+  PRINT *,'pass'
+END SUBROUTINE test_interop_03
 
 !UNPARSE: SUBROUTINE test_interop_03
 !UNPARSE:  USE :: omp_lib
@@ -107,13 +107,13 @@ end subroutine test_interop_03
 !PARSE-TREE: | | | | string = 'pass'
 !PARSE-TREE: | EndSubroutineStmt -> Name = 'test_interop_03'
 
-subroutine test_interop_04()
-  use omp_lib
-  integer(omp_interop_kind) :: obj
-  integer, dimension(1,10) :: arr
-  !$omp interop init(prefer_type("cuda"),targetsync,target: obj) depend(inout: arr) nowait
-  print *,'pass'
-end subroutine test_interop_04
+SUBROUTINE test_interop_04()
+  USE omp_lib
+  INTEGER(OMP_INTEROP_KIND) :: obj
+  INTEGER, DIMENSION(1,10) :: arr
+  !$OMP INTEROP INIT(PREFER_TYPE("cuda"),TARGETSYNC,TARGET: obj) DEPEND(INOUT: arr) NOWAIT
+  PRINT *,'pass'
+END SUBROUTINE test_interop_04
 
 !UNPARSE: SUBROUTINE test_interop_04
 !UNPARSE:  USE :: omp_lib
@@ -161,12 +161,12 @@ end subroutine test_interop_04
 !PARSE-TREE: | | | | string = 'pass'
 !PARSE-TREE: | EndSubroutineStmt -> Name = 'test_interop_04'
 
-subroutine test_interop_05()
-  use omp_lib
-  integer(omp_interop_kind) :: obj
-  !$omp interop init(prefer_type(omp_ifr_sycl), targetsync: obj) device(device_num:0)
-  print *,'pass'
-end subroutine test_interop_05
+SUBROUTINE test_interop_05()
+  USE omp_lib
+  INTEGER(OMP_INTEROP_KIND) :: obj
+  !$OMP INTEROP INIT(PREFER_TYPE(omp_ifr_sycl), TARGETSYNC: obj) DEVICE(DEVICE_NUM:0)
+  PRINT *,'pass'
+END SUBROUTINE test_interop_05
 
 !UNPARSE: SUBROUTINE test_interop_05
 !UNPARSE:  USE :: omp_lib
