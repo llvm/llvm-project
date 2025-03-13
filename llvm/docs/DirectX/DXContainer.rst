@@ -401,7 +401,6 @@ The SFI0 part encodes a 64-bit unsigned integer bitmask of the feature flags.
 This denotes which optional features the shader requires. The flag values are
 defined in `llvm/include/llvm/BinaryFormat/DXContainerConstants.def <https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/BinaryFormat/DXContainerConstants.def>`_.
 
-
 Root Signature (RTS0) Part
 --------------------------
 .. _RTS0:
@@ -417,7 +416,7 @@ and static samplers. The structure uses a versioned design with offset-based ref
 to allow for flexible serialization and deserialization.
 
 Root Signature Header
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: c
 
@@ -447,7 +446,7 @@ This header allows readers to navigate the binary representation of the root sig
 providing counts and offsets to locate each component within the serialized data.
 
 Root Parameter Header
-~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: c
 
@@ -656,4 +655,3 @@ The StaticSamplerDesc structure defines all properties of a static sampler:
 #. RegisterSpace: The register space used for the binding.
 #. ShaderVisibility: Specifies which shader stages can access this sampler.
    For details, check `Sahder Visibility definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shader_visibility>`_. 
-
