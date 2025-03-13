@@ -61679,13 +61679,14 @@ bool X86TargetLowering::updateBaseAndIndex(const Value *Ptr, SDValue &Base,
 
         SDValue newOp10 =
             Op10.getOperand(0);          // Get the Operand zero from the ext
-        EVT VT = newOp10.getValueType(); // Use the operand's type to determine the type of index
+        EVT VT = newOp10.getValueType(); // Use the operand's type to determine
+                                         // the type of index
 
         auto *ConstEltNo = dyn_cast<ConstantSDNode>(Op11.getOperand(0));
         if (!ConstEltNo)
-	  return false;
+          return false;
 
-	SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(),
+        SmallVector<SDValue, 8> Ops(VT.getVectorNumElements(),
                                     DAG.getConstant(ConstEltNo->getZExtValue(),
                                                     DL, VT.getScalarType()));
         Nindex = DAG.getNode(ISD::SHL, DL, VT, newOp10,
