@@ -389,10 +389,10 @@ string to_string(float val) { return as_string(snprintf, initial_string< string>
 string to_string(double val) { return as_string(snprintf, initial_string< string>()(), "%f", val); }
 string to_string(long double val) { return as_string(snprintf, initial_string< string>()(), "%Lf", val); }
 
-#  if _LIBCPP_HAS_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 wstring to_wstring(float val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%f", val); }
 wstring to_wstring(double val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%f", val); }
 wstring to_wstring(long double val) { return as_string(get_swprintf(), initial_string<wstring>()(), L"%Lf", val); }
-#  endif
+#endif
 
 _LIBCPP_END_NAMESPACE_STD

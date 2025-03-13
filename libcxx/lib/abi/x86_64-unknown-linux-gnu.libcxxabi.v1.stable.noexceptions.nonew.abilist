@@ -1386,6 +1386,12 @@
 {'is_defined': True, 'name': '_ZNSt3__16thread6detachEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16threadD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16threadD2Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__17__cpp2611__to_stringEd', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__17__cpp2611__to_stringEe', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__17__cpp2611__to_stringEf', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__17__cpp2612__to_wstringEd', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__17__cpp2612__to_wstringEe', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZNSt3__17__cpp2612__to_wstringEf', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__17codecvtIDiDu11__mbstate_tE2idE', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__17codecvtIDiDu11__mbstate_tED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__17codecvtIDiDu11__mbstate_tED1Ev', 'type': 'FUNC'}
@@ -1607,6 +1613,7 @@
 {'is_defined': True, 'name': '_ZTINSt3__112codecvt_baseE', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__112ctype_bynameIcEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__112ctype_bynameIwEE', 'size': 24, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTINSt3__112format_errorE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__112future_errorE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__112strstreambufE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__112system_errorE', 'size': 24, 'type': 'OBJECT'}
@@ -1740,6 +1747,7 @@
 {'is_defined': True, 'name': '_ZTSNSt3__112codecvt_baseE', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__112ctype_bynameIcEE', 'size': 26, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__112ctype_bynameIwEE', 'size': 26, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTSNSt3__112format_errorE', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__112future_errorE', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__112strstreambufE', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__112system_errorE', 'size': 23, 'type': 'OBJECT'}
@@ -1877,6 +1885,7 @@
 {'is_defined': True, 'name': '_ZTVNSt3__112bad_weak_ptrE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112ctype_bynameIcEE', 'size': 104, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112ctype_bynameIwEE', 'size': 136, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTVNSt3__112format_errorE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112future_errorE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112strstreambufE', 'size': 128, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112system_errorE', 'size': 40, 'type': 'OBJECT'}

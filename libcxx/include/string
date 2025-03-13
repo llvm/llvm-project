@@ -3946,9 +3946,9 @@ _LIBCPP_EXPORTED_FROM_ABI string __to_string(float __val);
 _LIBCPP_EXPORTED_FROM_ABI string __to_string(double __val);
 _LIBCPP_EXPORTED_FROM_ABI string __to_string(long double __val);
 
-_LIBCPP_HIDE_FROM_ABI inline string to_string(float __val) { return __to_string(__val); }
-_LIBCPP_HIDE_FROM_ABI inline string to_string(double __val) { return __to_string(__val); }
-_LIBCPP_HIDE_FROM_ABI inline string to_string(long double __val) { return __to_string(__val); }
+inline _LIBCPP_HIDE_FROM_ABI string to_string(float __val) { return std::__to_string(__val); }
+inline _LIBCPP_HIDE_FROM_ABI string to_string(double __val) { return std::__to_string(__val); }
+inline _LIBCPP_HIDE_FROM_ABI string to_string(long double __val) { return std::__to_string(__val); }
 } // namespace __cpp26
 #  else
 _LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
@@ -3980,9 +3980,9 @@ _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(float __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(double __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(long double __val);
 
-_LIBCPP_HIDE_FROM_ABI inline wstring to_wstring(float __val) { return __to_wstring(__val); }
-_LIBCPP_HIDE_FROM_ABI inline wstring to_wstring(double __val) { return __to_wstring(__val); }
-_LIBCPP_HIDE_FROM_ABI inline wstring to_wstring(long double __val) { return __to_wstring(__val); }
+inline _LIBCPP_HIDE_FROM_ABI wstring to_wstring(float __val) { return std::__to_wstring(__val); }
+inline _LIBCPP_HIDE_FROM_ABI wstring to_wstring(double __val) { return std::__to_wstring(__val); }
+inline _LIBCPP_HIDE_FROM_ABI wstring to_wstring(long double __val) { return std::__to_wstring(__val); }
 } // namespace __cpp26
 #    else
 _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(float __val);
