@@ -2202,27 +2202,27 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
                                     DebugLineStrPool);
     } else {
       // Create TrackedRow objects for all input rows.
-      std::vector<TrackedRow> AllTrackedRows;
-      AllTrackedRows.reserve(LT->Rows.size());
+      std::vector<TrackedRow> InputRows;
+      InputRows.reserve(LT->Rows.size());
       for (size_t i = 0; i < LT->Rows.size(); i++)
-        AllTrackedRows.emplace_back(TrackedRow{LT->Rows[i], i, false});
+        InputRows.emplace_back(TrackedRow{LT->Rows[i], i, false});
 
       // This vector is the output line table (still in TrackedRow form).
-      std::vector<TrackedRow> NewRows;
-      NewRows.reserve(AllTrackedRows.size());
+      std::vector<TrackedRow> OutputRows;
+      OutputRows.reserve(InputRows.size());
 
       // Current sequence of rows being extracted, before being inserted
-      // in NewRows.
+      // in OutputRows.
       std::vector<TrackedRow> Seq;
-      Seq.reserve(AllTrackedRows.size());
+      Seq.reserve(InputRows.size());
 
       const auto &FunctionRanges = Unit.getFunctionRanges();
       std::optional<AddressRangeValuePair> CurrRange;
 
       // FIXME: This logic is meant to generate exactly the same output as
       // Darwin's classic dsymutil. There is a nicer way to implement this
-      // by simply putting all the relocated line info in NewRows and simply
-      // sorting NewRows before passing it to emitLineTableForUnit. This
+      // by simply putting all the relocated line info in OutputRows and simply
+      // sorting OutputRows before passing it to emitLineTableForUnit. This
       // should be correct as sequences for a function should stay
       // together in the sorted output. There are a few corner cases that
       // look suspicious though, and that required to implement the logic
@@ -2230,8 +2230,8 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
 
       // Iterate over the object file line info and extract the sequences
       // that correspond to linked functions.
-      for (size_t i = 0; i < AllTrackedRows.size(); i++) {
-        TrackedRow TR = AllTrackedRows[i];
+      for (size_t i = 0; i < InputRows.size(); i++) {
+        TrackedRow TR = InputRows[i];
 
         // Check whether we stepped out of the range. The range is
         // half-open, but consider accepting the end address of the range if
@@ -2255,7 +2255,7 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
             NextLine.Row.BasicBlock = 0;
             NextLine.Row.EpilogueBegin = 0;
             Seq.push_back(NextLine);
-            insertLineSequence(Seq, NewRows);
+            insertLineSequence(Seq, OutputRows);
           }
 
           if (!CurrRange)
@@ -2271,13 +2271,13 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
         Seq.push_back(TR);
 
         if (TR.Row.EndSequence)
-          insertLineSequence(Seq, NewRows);
+          insertLineSequence(Seq, OutputRows);
       }
 
       // Materialize the tracked rows into final DWARFDebugLine::Row objects.
       LineTable.Rows.clear();
-      LineTable.Rows.reserve(NewRows.size());
-      for (auto &TR : NewRows)
+      LineTable.Rows.reserve(OutputRows.size());
+      for (auto &TR : OutputRows)
         LineTable.Rows.push_back(TR.Row);
 
       // Use OutputRowOffsets to store the offsets of each line table row in the
@@ -2292,8 +2292,8 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
                                     hasStmtSeq ? &OutputRowOffsets : nullptr);
 
       if (hasStmtSeq) {
-        assert(OutputRowOffsets.size() == NewRows.size() &&
-               "OutputRowOffsets size mismatch");
+        assert(OutputRowOffsets.size() == OutputRows.size() &&
+               "must have an offset for each row");
 
         // Create a map of stmt sequence offsets to original row indices.
         DenseMap<uint64_t, unsigned> SeqOffToOrigRow;
@@ -2302,8 +2302,8 @@ void DWARFLinker::DIECloner::generateLineTableForUnit(CompileUnit &Unit) {
 
         // Create a map of original row indices to new row indices.
         DenseMap<size_t, size_t> OrigRowToNewRow;
-        for (size_t i = 0; i < NewRows.size(); ++i)
-          OrigRowToNewRow[NewRows[i].OriginalRowIndex] = i;
+        for (size_t i = 0; i < OutputRows.size(); ++i)
+          OrigRowToNewRow[OutputRows[i].OriginalRowIndex] = i;
 
         // Patch DW_AT_LLVM_stmt_sequence attributes in the compile unit DIE
         // with the correct offset into the .debug_line section.

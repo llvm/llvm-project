@@ -177,7 +177,7 @@ public:
   }
 
   // Provide access to the list of DW_AT_LLVM_stmt_sequence attributes that may
-  // need to be patched
+  // need to be patched.
   const StmtSeqListAttributesTy &getStmtSeqListAttributes() const {
     return StmtSeqListAttributes;
   }
@@ -218,7 +218,7 @@ public:
   void noteLocationAttribute(PatchLocation Attr);
 
   // Record that the given DW_AT_LLVM_stmt_sequence attribute may need to be
-  // patched later
+  // patched later.
   void noteStmtSeqListAttribute(PatchLocation Attr);
 
   /// Add a name accelerator entry for \a Die with \a Name.
