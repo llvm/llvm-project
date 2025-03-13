@@ -12441,14 +12441,14 @@ define void @mscatter_baseidx_v32i8(<32 x i8> %val, ptr %base, <32 x i8> %idxs, 
 ; RV64V-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
 ; RV64V-NEXT:    vsoxei64.v v8, (a0), v16, v0.t
 ; RV64V-NEXT:    vsetivli zero, 16, e8, m2, ta, ma
-; RV64V-NEXT:    vslidedown.vi v8, v8, 16
-; RV64V-NEXT:    vslidedown.vi v10, v10, 16
+; RV64V-NEXT:    vslidedown.vi v16, v8, 16
+; RV64V-NEXT:    vslidedown.vi v18, v10, 16
 ; RV64V-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
 ; RV64V-NEXT:    vslidedown.vi v0, v0, 2
 ; RV64V-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
-; RV64V-NEXT:    vsext.vf8 v16, v10
+; RV64V-NEXT:    vsext.vf8 v8, v18
 ; RV64V-NEXT:    vsetvli zero, zero, e8, m1, ta, ma
-; RV64V-NEXT:    vsoxei64.v v8, (a0), v16, v0.t
+; RV64V-NEXT:    vsoxei64.v v16, (a0), v8, v0.t
 ; RV64V-NEXT:    ret
 ;
 ; RV64ZVE32F-LABEL: mscatter_baseidx_v32i8:

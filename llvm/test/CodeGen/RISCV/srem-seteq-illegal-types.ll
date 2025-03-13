@@ -667,17 +667,17 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV32MV-NEXT:    vsetivli zero, 3, e8, mf2, ta, ma
 ; RV32MV-NEXT:    vmv.v.i v10, 1
 ; RV32MV-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
-; RV32MV-NEXT:    vmv.v.i v11, 0
+; RV32MV-NEXT:    vmv.v.i v12, 0
 ; RV32MV-NEXT:    vsetivli zero, 3, e8, mf2, tu, ma
-; RV32MV-NEXT:    vslideup.vi v11, v10, 2
+; RV32MV-NEXT:    vslideup.vi v12, v10, 2
 ; RV32MV-NEXT:    vsetivli zero, 5, e8, mf2, ta, ma
 ; RV32MV-NEXT:    vmv.v.i v10, 2
 ; RV32MV-NEXT:    vsetvli zero, zero, e8, mf2, tu, ma
-; RV32MV-NEXT:    vslideup.vi v11, v10, 4
+; RV32MV-NEXT:    vslideup.vi v12, v10, 4
 ; RV32MV-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
-; RV32MV-NEXT:    vsext.vf4 v12, v11
+; RV32MV-NEXT:    vsext.vf4 v10, v12
 ; RV32MV-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV32MV-NEXT:    vmsne.vv v0, v8, v12
+; RV32MV-NEXT:    vmsne.vv v0, v8, v10
 ; RV32MV-NEXT:    vmv.v.i v8, 0
 ; RV32MV-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV32MV-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
@@ -735,7 +735,7 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    ld a6, %lo(.LCPI3_2)(a6)
 ; RV64MV-NEXT:    addi a7, a7, 256
 ; RV64MV-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
-; RV64MV-NEXT:    vmv.s.x v8, a7
+; RV64MV-NEXT:    vmv.s.x v10, a7
 ; RV64MV-NEXT:    slli a3, a3, 32
 ; RV64MV-NEXT:    srli a7, a1, 2
 ; RV64MV-NEXT:    or a3, a2, a3
@@ -766,16 +766,16 @@ define void @test_srem_vec(ptr %X) nounwind {
 ; RV64MV-NEXT:    add a1, a1, a5
 ; RV64MV-NEXT:    li a4, -1
 ; RV64MV-NEXT:    srli a4, a4, 31
-; RV64MV-NEXT:    vsext.vf8 v10, v8
+; RV64MV-NEXT:    vsext.vf8 v8, v10
 ; RV64MV-NEXT:    add a3, a3, a6
 ; RV64MV-NEXT:    slli a6, a6, 2
-; RV64MV-NEXT:    vmv.v.x v8, a1
+; RV64MV-NEXT:    vmv.v.x v10, a1
 ; RV64MV-NEXT:    add a3, a3, a6
-; RV64MV-NEXT:    vslide1down.vx v8, v8, a2
-; RV64MV-NEXT:    vslide1down.vx v8, v8, a3
-; RV64MV-NEXT:    vslidedown.vi v8, v8, 1
-; RV64MV-NEXT:    vand.vx v8, v8, a4
-; RV64MV-NEXT:    vmsne.vv v0, v8, v10
+; RV64MV-NEXT:    vslide1down.vx v10, v10, a2
+; RV64MV-NEXT:    vslide1down.vx v10, v10, a3
+; RV64MV-NEXT:    vslidedown.vi v10, v10, 1
+; RV64MV-NEXT:    vand.vx v10, v10, a4
+; RV64MV-NEXT:    vmsne.vv v0, v10, v8
 ; RV64MV-NEXT:    vmv.v.i v8, 0
 ; RV64MV-NEXT:    vmerge.vim v8, v8, -1, v0
 ; RV64MV-NEXT:    vslidedown.vi v10, v8, 2

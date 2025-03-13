@@ -752,18 +752,24 @@ def VR : VReg<!listconcat(VM1VTs, VMaskVTs),
 
 def VRNoV0 : VReg<!listconcat(VM1VTs, VMaskVTs), (sub VR, V0), 1>;
 
+let AllocationPriority = 2 in
 def VRM2 : VReg<VM2VTs, (add (sequence "V%uM2", 8, 31, 2),
                              (sequence "V%uM2", 6, 0, 2)), 2>;
 
+let AllocationPriority = 2 in
 def VRM2NoV0 : VReg<VM2VTs, (sub VRM2, V0M2), 2>;
 
+let AllocationPriority = 4 in
 def VRM4 : VReg<VM4VTs, (add V8M4, V12M4, V16M4, V20M4,
                              V24M4, V28M4, V4M4, V0M4), 4>;
 
+let AllocationPriority = 4 in
 def VRM4NoV0 : VReg<VM4VTs, (sub VRM4, V0M4), 4>;
 
+let AllocationPriority = 8 in
 def VRM8 : VReg<VM8VTs, (add V8M8, V16M8, V24M8, V0M8), 8>;
 
+let AllocationPriority = 8 in
 def VRM8NoV0 : VReg<VM8VTs, (sub VRM8, V0M8), 8>;
 
 def VMV0 : VReg<VMaskVTs, (add V0), 1>;
