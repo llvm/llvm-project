@@ -535,7 +535,7 @@ define amdgpu_kernel void @v_clamp_multi_use_max_f32(ptr addrspace(1) %out, ptr 
   %med = call float @llvm.minnum.f32(float %max, float 1.0)
 
   store float %med, ptr addrspace(1) %out.gep
-  store volatile float %max, ptr addrspace(1) undef
+  store volatile float %max, ptr addrspace(1) poison
   ret void
 }
 

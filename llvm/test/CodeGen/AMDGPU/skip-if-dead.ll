@@ -745,13 +745,13 @@ bb:
   %cmp.var = fcmp olt float %var, 0.0
   ; TODO: We could do an early-exit here (the branch above is uniform!)
   call void @llvm.amdgcn.kill(i1 %cmp.var)
-  store volatile float %live.across, ptr addrspace(1) undef
+  store volatile float %live.across, ptr addrspace(1) poison
   %live.out = call float asm sideeffect "v_mov_b32_e64 v9, -2", "={v9}"()
   br label %exit
 
 exit:
   %phi = phi float [ 0.0, %entry ], [ %live.out, %bb ]
-  store float %phi, ptr addrspace(1) undef
+  store float %phi, ptr addrspace(1) poison
   ret void
 }
 
@@ -1124,12 +1124,12 @@ bb:
     v_nop_e64", "={v7}"()
   %cmp.var = fcmp olt float %var, 0.0
   call void @llvm.amdgcn.kill(i1 %cmp.var)
-  %vgpr = load volatile i32, ptr addrspace(1) undef
+  %vgpr = load volatile i32, ptr addrspace(1) poison
   %loop.cond = icmp eq i32 %vgpr, 0
   br i1 %loop.cond, label %bb, label %exit
 
 exit:
-  store volatile i32 8, ptr addrspace(1) undef
+  store volatile i32 8, ptr addrspace(1) poison
   ret void
 }
 
@@ -1273,11 +1273,11 @@ phibb:
   br i1 %tmp6, label %bb10, label %end
 
 bb8:
-  store volatile i32 8, ptr addrspace(1) undef
+  store volatile i32 8, ptr addrspace(1) poison
   br label %phibb
 
 bb10:
-  store volatile i32 9, ptr addrspace(1) undef
+  store volatile i32 9, ptr addrspace(1) poison
   br label %end
 
 end:
@@ -1532,13 +1532,13 @@ bb3:                                              ; preds = %bb
   br label %bb4
 
 bb4:                                              ; preds = %bb3, %bb
-  %tmp5 = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32 16, float %arg2, float %arg3, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
+  %tmp5 = call <4 x float> @llvm.amdgcn.image.sample.c.1d.v4f32.f32(i32 16, float %arg2, float %arg3, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp6 = extractelement <4 x float> %tmp5, i32 0
   %tmp7 = fcmp une float %tmp6, 0.000000e+00
   br i1 %tmp7, label %bb8, label %bb9
 
 bb8:                                              ; preds = %bb9, %bb4
-  store volatile i32 9, ptr addrspace(1) undef
+  store volatile i32 9, ptr addrspace(1) poison
   ret void
 
 bb9:                                              ; preds = %bb4
@@ -1677,7 +1677,7 @@ define amdgpu_ps void @cbranch_kill(i32 inreg %0, float %val0, float %val1) {
 ; GFX11-NEXT:    exp mrt0 off, off, off, off done
 ; GFX11-NEXT:    s_endpgm
 .entry:
-  %sample = call float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 1, float %val1, float %val1, float %val1, float 0.000000e+00, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0)
+  %sample = call float @llvm.amdgcn.image.sample.l.2darray.f32.f32(i32 1, float %val1, float %val1, float %val1, float 0.000000e+00, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
   %cond0 = fcmp ugt float %sample, 0.000000e+00
   br i1 %cond0, label %live, label %kill
 
