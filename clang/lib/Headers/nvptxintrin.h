@@ -13,15 +13,12 @@
 #error "This file is intended for NVPTX targets or offloading to NVPTX"
 #endif
 
-#ifndef __CUDA_ARCH__
-#define __CUDA_ARCH__ 0
+#ifndef __GPUINTRIN_H
+#error "Never use <nvptxintrin.h> directly; include <gpuintrin.h> instead"
 #endif
 
-#include <stdint.h>
-
-#if !defined(__cplusplus)
-_Pragma("push_macro(\"bool\")");
-#define bool _Bool
+#ifndef __CUDA_ARCH__
+#define __CUDA_ARCH__ 0
 #endif
 
 _Pragma("omp begin declare target device_type(nohost)");
@@ -153,18 +150,6 @@ __gpu_shuffle_idx_u32(uint64_t __lane_mask, uint32_t __idx, uint32_t __x,
                                   ((__gpu_num_lanes() - __width) << 8u) | 0x1f);
 }
 
-// Shuffles the the lanes inside the warp according to the given index.
-_DEFAULT_FN_ATTRS static __inline__ uint64_t
-__gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x,
-                      uint32_t __width) {
-  uint32_t __hi = (uint32_t)(__x >> 32ull);
-  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
-  uint32_t __mask = (uint32_t)__lane_mask;
-  return ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __hi, __width)
-          << 32ull) |
-         ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __lo, __width));
-}
-
 // Returns a bitmask marking all lanes that have the same value of __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_any_u32(uint64_t __lane_mask, uint32_t __x) {
@@ -262,9 +247,5 @@ _DEFAULT_FN_ATTRS static __inline__ void __gpu_thread_suspend(void) {
 
 _Pragma("omp end declare variant");
 _Pragma("omp end declare target");
-
-#if !defined(__cplusplus)
-_Pragma("pop_macro(\"bool\")");
-#endif
 
 #endif // __NVPTXINTRIN_H
