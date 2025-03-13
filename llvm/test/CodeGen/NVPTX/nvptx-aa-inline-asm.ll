@@ -1,4 +1,4 @@
-; RUN: opt -passes=aa-eval -aa-pipeline=nvptx-aa -print-all-alias-modref-info < %s -disable-output 2>&1 \
+; RUN: opt -passes=aa-eval -aa-pipeline=nvptx-aa,basic-aa -print-all-alias-modref-info < %s -disable-output 2>&1 \
 ; RUN:   | FileCheck %s --check-prefixes CHECK-ALIAS
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
