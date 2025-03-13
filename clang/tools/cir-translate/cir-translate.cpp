@@ -86,7 +86,7 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
   clang::TargetOptions targetOptions;
   targetOptions.Triple = rawTriple;
   // FIXME: AllocateTarget is a big deal. Better make it a global state.
-  auto targetInfo =
+  std::unique_ptr<clang::TargetInfo> targetInfo =
       clang::targets::AllocateTarget(llvm::Triple(rawTriple), targetOptions);
   if (!targetInfo) {
     mod.emitError() << "error: invalid target triple '" << rawTriple << "'\n";
@@ -146,7 +146,7 @@ void registerToLLVMTranslation() {
           return mlir::failure();
 
         llvm::LLVMContext llvmContext;
-        auto llvmModule =
+        std::unique_ptr<llvm::Module> llvmModule =
             cir::direct::lowerDirectlyFromCIRToLLVMIR(cirModule, llvmContext);
         if (!llvmModule)
           return mlir::failure();
