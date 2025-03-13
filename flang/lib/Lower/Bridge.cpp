@@ -4417,8 +4417,7 @@ private:
       rhs = hlfir::Entity{builder->create<fir::LoadOp>(loc, rhs)};
     mlir::Value rhsBox = hlfir::genVariableBox(
         loc, *builder, rhs, lhsBoxType.getBoxTypeWithNewShape(rhs.getRank()));
-    mlir::Type indexTy = builder->getIndexType();
-    // Bounds
+    // Apply lower bounds or reshaping if any.
     if (const auto *lbExprs =
             std::get_if<Fortran::evaluate::Assignment::BoundsSpec>(&assign.u);
         lbExprs && !lbExprs->empty()) {
