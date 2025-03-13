@@ -90,6 +90,7 @@
 #include "clang/Serialization/ContinuousRangeMap.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/ModuleManager.h"
@@ -3318,9 +3319,12 @@ ASTReader::ReadControlBlock(ModuleFile &F,
                                 StoredSignature, Capabilities);
 
       // If we diagnosed a problem, produce a backtrace.
-      bool recompilingFinalized =
-          Result == OutOfDate && (Capabilities & ARR_OutOfDate) &&
-          getModuleManager().getModuleCache().isPCMFinal(F.FileName);
+      bool recompilingFinalized = Result == OutOfDate &&
+                                  (Capabilities & ARR_OutOfDate) &&
+                                  getModuleManager()
+                                      .getModuleCache()
+                                      .getInMemoryModuleCache()
+                                      .isPCMFinal(F.FileName);
       if (isDiagnosedResult(Result, Capabilities) || recompilingFinalized)
         Diag(diag::note_module_file_imported_by)
             << F.FileName << !F.ModuleName.empty() << F.ModuleName;
@@ -5006,7 +5010,7 @@ ASTReader::ReadASTCore(StringRef FileName,
 
   bool ShouldFinalizePCM = false;
   auto FinalizeOrDropPCM = llvm::make_scope_exit([&]() {
-    auto &MC = getModuleManager().getModuleCache();
+    auto &MC = getModuleManager().getModuleCache().getInMemoryModuleCache();
     if (ShouldFinalizePCM)
       MC.finalizePCM(FileName);
     else
@@ -5143,7 +5147,8 @@ ASTReader::readUnhashedControlBlock(ModuleFile &F, bool WasImportedBy,
     // validation will fail during the as-system import since the PCM on disk
     // doesn't guarantee that -Werror was respected.  However, the -Werror
     // flags were checked during the initial as-user import.
-    if (getModuleManager().getModuleCache().isPCMFinal(F.FileName)) {
+    if (getModuleManager().getModuleCache().getInMemoryModuleCache().isPCMFinal(
+            F.FileName)) {
       Diag(diag::warn_module_system_bit_conflict) << F.FileName;
       return Success;
     }
@@ -5651,14 +5656,14 @@ namespace {
 } // namespace
 
 bool ASTReader::readASTFileControlBlock(
-    StringRef Filename, FileManager &FileMgr,
-    const InMemoryModuleCache &ModuleCache,
+    StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
     const PCHContainerReader &PCHContainerRdr, bool FindModuleFileExtensions,
     ASTReaderListener &Listener, bool ValidateDiagnosticOptions,
     unsigned ClientLoadCapabilities) {
   // Open the AST file.
   std::unique_ptr<llvm::MemoryBuffer> OwnedBuffer;
-  llvm::MemoryBuffer *Buffer = ModuleCache.lookupPCM(Filename);
+  llvm::MemoryBuffer *Buffer =
+      ModCache.getInMemoryModuleCache().lookupPCM(Filename);
   if (!Buffer) {
     // FIXME: We should add the pcm to the InMemoryModuleCache if it could be
     // read again later, but we do not have the context here to determine if it
@@ -5947,19 +5952,15 @@ bool ASTReader::readASTFileControlBlock(
   return false;
 }
 
-bool ASTReader::isAcceptableASTFile(StringRef Filename, FileManager &FileMgr,
-                                    const InMemoryModuleCache &ModuleCache,
-                                    const PCHContainerReader &PCHContainerRdr,
-                                    const LangOptions &LangOpts,
-                                    const TargetOptions &TargetOpts,
-                                    const PreprocessorOptions &PPOpts,
-                                    StringRef ExistingModuleCachePath,
-                                    bool RequireStrictOptionMatches) {
+bool ASTReader::isAcceptableASTFile(
+    StringRef Filename, FileManager &FileMgr, const ModuleCache &ModCache,
+    const PCHContainerReader &PCHContainerRdr, const LangOptions &LangOpts,
+    const TargetOptions &TargetOpts, const PreprocessorOptions &PPOpts,
+    StringRef ExistingModuleCachePath, bool RequireStrictOptionMatches) {
   SimplePCHValidator validator(LangOpts, TargetOpts, PPOpts,
                                ExistingModuleCachePath, FileMgr,
                                RequireStrictOptionMatches);
-  return !readASTFileControlBlock(Filename, FileMgr, ModuleCache,
-                                  PCHContainerRdr,
+  return !readASTFileControlBlock(Filename, FileMgr, ModCache, PCHContainerRdr,
                                   /*FindModuleFileExtensions=*/false, validator,
                                   /*ValidateDiagnosticOptions=*/true);
 }
@@ -6496,7 +6497,10 @@ ASTReader::getModulePreprocessedEntities(ModuleFile &Mod) const {
 bool ASTReader::canRecoverFromOutOfDate(StringRef ModuleFileName,
                                         unsigned int ClientLoadCapabilities) {
   return ClientLoadCapabilities & ARR_OutOfDate &&
-         !getModuleManager().getModuleCache().isPCMFinal(ModuleFileName);
+         !getModuleManager()
+              .getModuleCache()
+              .getInMemoryModuleCache()
+              .isPCMFinal(ModuleFileName);
 }
 
 llvm::iterator_range<ASTReader::ModuleDeclIterator>
@@ -10862,7 +10866,7 @@ void ASTReader::pushExternalDeclIntoScope(NamedDecl *D, DeclarationName Name) {
   }
 }
 
-ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
+ASTReader::ASTReader(Preprocessor &PP, ModuleCache &ModCache,
                      ASTContext *Context,
                      const PCHContainerReader &PCHContainerRdr,
                      ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
@@ -10878,7 +10882,7 @@ ASTReader::ASTReader(Preprocessor &PP, InMemoryModuleCache &ModuleCache,
       SourceMgr(PP.getSourceManager()), FileMgr(PP.getFileManager()),
       PCHContainerRdr(PCHContainerRdr), Diags(PP.getDiagnostics()),
       StackHandler(Diags), PP(PP), ContextObj(Context),
-      ModuleMgr(PP.getFileManager(), ModuleCache, PCHContainerRdr,
+      ModuleMgr(PP.getFileManager(), ModCache, PCHContainerRdr,
                 PP.getHeaderSearchInfo()),
       DummyIdResolver(PP), ReadTimer(std::move(ReadTimer)), isysroot(isysroot),
       DisableValidationKind(DisableValidationKind),
