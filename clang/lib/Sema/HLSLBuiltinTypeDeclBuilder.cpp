@@ -71,22 +71,23 @@ struct TemplateParameterListBuilder {
 //   BuiltinTypeMethodBuilder(RecordBuilder, "MethodName", ReturnType)
 //       .addParam("param_name", Type, InOutModifier)
 //       .callBuiltin("builtin_name", BuiltinParams...)
-//       .finalizeMethod();
+//       .finalize();
 //
 // The builder needs to have all of the method parameters before it can create
 // a CXXMethodDecl. It collects them in addParam calls and when a first
 // method that builds the body is called or when access to 'this` is needed it
 // creates the CXXMethodDecl and ParmVarDecls instances. These can then be
 // referenced from the body building methods. Destructor or an explicit call to
-// finalizeMethod() will complete the method definition.
+// finalize() will complete the method definition.
 //
 // The callBuiltin helper method accepts constants via `Expr *` or placeholder
 // value arguments to indicate which function arguments to forward to the
 // builtin.
 //
 // If the method that is being built has a non-void return type the
-// finalizeMethod will create a return statent with the value of the last
-// statement (unless the last statement is already a ReturnStmt).
+// finalize() will create a return statement with the value of the last
+// statement (unless the last statement is already a ReturnStmt or the return
+// value is void).
 struct BuiltinTypeMethodBuilder {
 private:
   struct Param {
@@ -135,7 +136,7 @@ public:
                            bool IsConstructor = false);
   BuiltinTypeMethodBuilder(const BuiltinTypeMethodBuilder &Other) = delete;
 
-  ~BuiltinTypeMethodBuilder() { finalizeMethod(); }
+  ~BuiltinTypeMethodBuilder() { finalize(); }
 
   BuiltinTypeMethodBuilder &
   operator=(const BuiltinTypeMethodBuilder &Other) = delete;
@@ -149,7 +150,7 @@ public:
   template <typename TLHS, typename TRHS>
   BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS);
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
-  BuiltinTypeDeclBuilder &finalizeMethod();
+  BuiltinTypeDeclBuilder &finalize();
   Expr *getResourceHandleExpr();
 
 private:
@@ -478,7 +479,7 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::dereference(T Ptr) {
   return *this;
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalizeMethod() {
+BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalize() {
   assert(!DeclBuilder.Record->isCompleteDefinition() &&
          "record is already complete");
 
@@ -638,7 +639,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
   // value will get overwritten.
   return BuiltinTypeMethodBuilder(*this, "", SemaRef.getASTContext().VoidTy,
                                   false, true)
-      .finalizeMethod();
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
@@ -732,7 +733,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
                                   SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
                    PH::Handle, getConstantIntExpr(1))
-      .finalizeMethod();
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
@@ -741,7 +742,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
                                   SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
                    PH::Handle, getConstantIntExpr(-1))
-      .finalizeMethod();
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &
@@ -765,7 +766,7 @@ BuiltinTypeDeclBuilder::addHandleAccessFunction(DeclarationName &Name,
       .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
                    PH::_0)
       .dereference(PH::LastStmt)
-      .finalizeMethod();
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addAppendMethod() {
@@ -780,7 +781,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addAppendMethod() {
                    AST.getPointerType(ElemTy), PH::Handle, PH::LastStmt)
       .dereference(PH::LastStmt)
       .assign(PH::LastStmt, PH::_0)
-      .finalizeMethod();
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addConsumeMethod() {
@@ -793,7 +794,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addConsumeMethod() {
       .callBuiltin("__builtin_hlsl_resource_getpointer",
                    AST.getPointerType(ElemTy), PH::Handle, PH::LastStmt)
       .dereference(PH::LastStmt)
-      .finalizeMethod();
+      .finalize();
 }
 
 } // namespace hlsl
