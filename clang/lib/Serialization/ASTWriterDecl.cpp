@@ -331,12 +331,6 @@ namespace clang {
 }
 
 bool clang::CanElideDeclDef(const Decl *D) {
-  bool isExternalWithNoLinkageType = false;
-  if (auto *VD = dyn_cast<ValueDecl>(D))
-    if (VD->hasExternalFormalLinkage() &&
-        !isExternalFormalLinkage(VD->getType()->getLinkage()))
-      isExternalWithNoLinkageType = true;
-
   if (auto *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->isInlined() || FD->isConstexpr())
       return false;
@@ -345,9 +339,6 @@ bool clang::CanElideDeclDef(const Decl *D) {
       return false;
 
     if (FD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
-      return false;
-
-    if (isExternalWithNoLinkageType && !FD->isExternC())
       return false;
   }
 
@@ -361,9 +352,6 @@ bool clang::CanElideDeclDef(const Decl *D) {
       return false;
 
     if (VD->getTemplateSpecializationKind() == TSK_ImplicitInstantiation)
-      return false;
-
-    if (isExternalWithNoLinkageType && !VD->isExternC())
       return false;
   }
 

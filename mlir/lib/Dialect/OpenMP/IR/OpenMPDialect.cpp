@@ -2248,12 +2248,12 @@ LogicalResult TeamsOp::verify() {
 // SectionOp
 //===----------------------------------------------------------------------===//
 
-unsigned SectionOp::numPrivateBlockArgs() {
-  return getParentOp().numPrivateBlockArgs();
+OperandRange SectionOp::getPrivateVars() {
+  return getParentOp().getPrivateVars();
 }
 
-unsigned SectionOp::numReductionBlockArgs() {
-  return getParentOp().numReductionBlockArgs();
+OperandRange SectionOp::getReductionVars() {
+  return getParentOp().getReductionVars();
 }
 
 //===----------------------------------------------------------------------===//

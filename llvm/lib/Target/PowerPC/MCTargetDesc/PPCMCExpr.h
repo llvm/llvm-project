@@ -21,15 +21,15 @@ public:
     VK_PPC_None,
     // We currently use both MCSymbolRefExpr::VariantKind and
     // PPCMCExpr::VariantKind. Start at a larger number to avoid conflicts.
-    VK_PPC_LO = 200,
-    VK_PPC_HI,
+    VK_LO = 200,
+    VK_HI,
     VK_PPC_HA,
-    VK_PPC_HIGH,
-    VK_PPC_HIGHA,
-    VK_PPC_HIGHER,
-    VK_PPC_HIGHERA,
-    VK_PPC_HIGHEST,
-    VK_PPC_HIGHESTA
+    VK_HIGH,
+    VK_HIGHA,
+    VK_HIGHER,
+    VK_HIGHERA,
+    VK_HIGHEST,
+    VK_HIGHESTA,
   };
 
 private:
@@ -49,11 +49,11 @@ public:
                                  MCContext &Ctx);
 
   static const PPCMCExpr *createLo(const MCExpr *Expr, MCContext &Ctx) {
-    return create(VK_PPC_LO, Expr, Ctx);
+    return create(VK_LO, Expr, Ctx);
   }
 
   static const PPCMCExpr *createHi(const MCExpr *Expr, MCContext &Ctx) {
-    return create(VK_PPC_HI, Expr, Ctx);
+    return create(VK_HI, Expr, Ctx);
   }
 
   static const PPCMCExpr *createHa(const MCExpr *Expr, MCContext &Ctx) {
