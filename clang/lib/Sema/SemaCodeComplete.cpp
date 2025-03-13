@@ -6755,7 +6755,6 @@ void SemaCodeCompletion::CodeCompleteKeywordAfterIf(bool AfterExclaim) const {
                         CodeCompletionContext::CCC_Other);
   CodeCompletionBuilder Builder(Results.getAllocator(),
                                 Results.getCodeCompletionTUInfo());
-  Results.EnterNewScope();
   if (getLangOpts().CPlusPlus17) {
     if (!AfterExclaim) {
       if (Results.includeCodePatterns()) {
@@ -6790,7 +6789,6 @@ void SemaCodeCompletion::CodeCompleteKeywordAfterIf(bool AfterExclaim) const {
       Results.AddResult({"consteval"});
     }
   }
-  Results.ExitScope();
 
   HandleCodeCompleteResults(&SemaRef, CodeCompleter,
                             Results.getCompletionContext(), Results.data(),
