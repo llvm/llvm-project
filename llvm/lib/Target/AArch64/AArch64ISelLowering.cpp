@@ -4600,6 +4600,10 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
   bool Trunc = Op.getConstantOperandVal(IsStrict ? 2 : 1) == 1;
 
   if (VT.isScalableVector()) {
+    // Let common code split the operation.
+    if (SrcVT == MVT::nxv8f32)
+      return Op;
+
     if (VT.getScalarType() != MVT::bf16)
       return LowerToPredicatedOp(Op, DAG, AArch64ISD::FP_ROUND_MERGE_PASSTHRU);
 
@@ -4742,31 +4746,10 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
   assert(!(IsStrict && VT.isScalableVector()) &&
          "Unimplemented SVE support for STRICT_FP_to_INT!");
 
-  if (VT.isScalableVector()) {
-    if (VT.getVectorElementType() == MVT::i1) {
-      SDLoc DL(Op);
-      EVT CvtVT = getPromotedVTForPredicate(VT);
-      SDValue Cvt = DAG.getNode(Op.getOpcode(), DL, CvtVT, Op.getOperand(0));
-      SDValue Zero = DAG.getConstant(0, DL, CvtVT);
-      return DAG.getSetCC(DL, VT, Cvt, Zero, ISD::SETNE);
-    }
-
-    unsigned Opcode = Op.getOpcode() == ISD::FP_TO_UINT
-                          ? AArch64ISD::FCVTZU_MERGE_PASSTHRU
-                          : AArch64ISD::FCVTZS_MERGE_PASSTHRU;
-    return LowerToPredicatedOp(Op, DAG, Opcode);
-  }
-
-  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()) ||
-      useSVEForFixedLengthVectorVT(InVT, !Subtarget->isNeonAvailable()))
-    return LowerFixedLengthFPToIntToSVE(Op, DAG);
-
-  unsigned NumElts = InVT.getVectorNumElements();
-
   // f16 conversions are promoted to f32 when full fp16 is not supported.
   if ((InVT.getVectorElementType() == MVT::f16 && !Subtarget->hasFullFP16()) ||
       InVT.getVectorElementType() == MVT::bf16) {
-    MVT NewVT = MVT::getVectorVT(MVT::f32, NumElts);
+    EVT NewVT = VT.changeElementType(MVT::f32);
     SDLoc dl(Op);
     if (IsStrict) {
       SDValue Ext = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, {NewVT, MVT::Other},
@@ -4778,6 +4761,29 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
         Op.getOpcode(), dl, Op.getValueType(),
         DAG.getNode(ISD::FP_EXTEND, dl, NewVT, Op.getOperand(0)));
   }
+
+  if (VT.isScalableVector()) {
+    if (VT.getVectorElementType() == MVT::i1) {
+      SDLoc DL(Op);
+      EVT CvtVT = getPromotedVTForPredicate(VT);
+      SDValue Cvt = DAG.getNode(Op.getOpcode(), DL, CvtVT, Op.getOperand(0));
+      SDValue Zero = DAG.getConstant(0, DL, CvtVT);
+      return DAG.getSetCC(DL, VT, Cvt, Zero, ISD::SETNE);
+    }
+
+    // Let common code split the operation.
+    if (InVT == MVT::nxv8f32)
+      return Op;
+
+    unsigned Opcode = Op.getOpcode() == ISD::FP_TO_UINT
+                          ? AArch64ISD::FCVTZU_MERGE_PASSTHRU
+                          : AArch64ISD::FCVTZS_MERGE_PASSTHRU;
+    return LowerToPredicatedOp(Op, DAG, Opcode);
+  }
+
+  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()) ||
+      useSVEForFixedLengthVectorVT(InVT, !Subtarget->isNeonAvailable()))
+    return LowerFixedLengthFPToIntToSVE(Op, DAG);
 
   uint64_t VTSize = VT.getFixedSizeInBits();
   uint64_t InVTSize = InVT.getFixedSizeInBits();
@@ -4813,7 +4819,7 @@ SDValue AArch64TargetLowering::LowerVectorFP_TO_INT(SDValue Op,
 
   // Use a scalar operation for conversions between single-element vectors of
   // the same size.
-  if (NumElts == 1) {
+  if (InVT.getVectorNumElements() == 1) {
     SDLoc dl(Op);
     SDValue Extract = DAG.getNode(
         ISD::EXTRACT_VECTOR_ELT, dl, InVT.getScalarType(),
@@ -5059,22 +5065,13 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
   assert(!(IsStrict && VT.isScalableVector()) &&
          "Unimplemented SVE support for ISD:::STRICT_INT_TO_FP!");
 
-  if (VT.isScalableVector()) {
-    if (InVT.getVectorElementType() == MVT::i1) {
-      SDValue FalseVal = DAG.getConstantFP(0.0, dl, VT);
-      SDValue TrueVal = IsSigned ? DAG.getConstantFP(-1.0, dl, VT)
-                                 : DAG.getConstantFP(1.0, dl, VT);
-      return DAG.getNode(ISD::VSELECT, dl, VT, In, TrueVal, FalseVal);
-    }
-
-    unsigned Opcode = IsSigned ? AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU
-                               : AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU;
-    return LowerToPredicatedOp(Op, DAG, Opcode);
+  // NOTE: i1->bf16 does not require promotion to f32.
+  if (VT.isScalableVector() && InVT.getVectorElementType() == MVT::i1) {
+    SDValue FalseVal = DAG.getConstantFP(0.0, dl, VT);
+    SDValue TrueVal = IsSigned ? DAG.getConstantFP(-1.0, dl, VT)
+                               : DAG.getConstantFP(1.0, dl, VT);
+    return DAG.getNode(ISD::VSELECT, dl, VT, In, TrueVal, FalseVal);
   }
-
-  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()) ||
-      useSVEForFixedLengthVectorVT(InVT, !Subtarget->isNeonAvailable()))
-    return LowerFixedLengthIntToFPToSVE(Op, DAG);
 
   // Promote bf16 conversions to f32.
   if (VT.getVectorElementType() == MVT::bf16) {
@@ -5091,6 +5088,20 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
                        DAG.getNode(Op.getOpcode(), dl, F32, In),
                        DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
   }
+
+  if (VT.isScalableVector()) {
+    // Let common code split the operation.
+    if (VT == MVT::nxv8f32)
+      return Op;
+
+    unsigned Opcode = IsSigned ? AArch64ISD::SINT_TO_FP_MERGE_PASSTHRU
+                               : AArch64ISD::UINT_TO_FP_MERGE_PASSTHRU;
+    return LowerToPredicatedOp(Op, DAG, Opcode);
+  }
+
+  if (useSVEForFixedLengthVectorVT(VT, !Subtarget->isNeonAvailable()) ||
+      useSVEForFixedLengthVectorVT(InVT, !Subtarget->isNeonAvailable()))
+    return LowerFixedLengthIntToFPToSVE(Op, DAG);
 
   uint64_t VTSize = VT.getFixedSizeInBits();
   uint64_t InVTSize = InVT.getFixedSizeInBits();
