@@ -35,7 +35,7 @@ bb25:                                             ; preds = %bb
 
 bb28:                                             ; preds = %bb25, %bb21
   %tmp29 = phi <4 x float> [ %tmp27, %bb25 ], [ %tmp24, %bb21 ]
-  store <4 x float> %tmp29, ptr addrspace(5) undef, align 16
+  store <4 x float> %tmp29, ptr addrspace(5) poison, align 16
   %tmp30 = getelementptr inbounds %struct.wombat, ptr addrspace(1) %arg, i64 %tmp2, i32 2, i64 2
   %tmp31 = load i32, ptr addrspace(1) %tmp30, align 4
   %tmp32 = sext i32 %tmp31 to i64
