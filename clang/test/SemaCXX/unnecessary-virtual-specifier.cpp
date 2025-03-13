@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wunnecessary-virtual-specifier -Wsuggest-override %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wunnecessary-virtual-specifier %s
 
 struct Foo final {
   Foo() = default;
