@@ -66,10 +66,10 @@ define i32 @s_add_co_select_user() {
 ; GFX11-NEXT:    s_load_b32 s0, s[0:1], 0x0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v0, s1, s0, s0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
 ; GFX11-NEXT:    s_addc_u32 s1, s0, 0
 ; GFX11-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s2, s2, exec_lo
 ; GFX11-NEXT:    s_cselect_b32 s1, s1, 0
 ; GFX11-NEXT:    s_cmp_gt_u32 s0, 31

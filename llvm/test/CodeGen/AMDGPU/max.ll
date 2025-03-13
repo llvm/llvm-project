@@ -1254,7 +1254,6 @@ define amdgpu_kernel void @test_umax_ugt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_cmp_gt_u64_e64 s6, s[2:3], s[4:5]
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX13-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX13-NEXT:    s_cselect_b32 s3, s3, s5
@@ -1324,7 +1323,6 @@ define amdgpu_kernel void @test_umax_uge_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_cmp_ge_u64_e64 s6, s[2:3], s[4:5]
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX13-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX13-NEXT:    s_cselect_b32 s3, s3, s5
@@ -1394,7 +1392,6 @@ define amdgpu_kernel void @test_imax_sgt_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_cmp_gt_i64_e64 s6, s[2:3], s[4:5]
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX13-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX13-NEXT:    s_cselect_b32 s3, s3, s5
@@ -1464,7 +1461,6 @@ define amdgpu_kernel void @test_imax_sge_i64(ptr addrspace(1) %out, i64 %a, i64 
 ; GFX13-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX13-NEXT:    s_wait_kmcnt 0x0
 ; GFX13-NEXT:    v_cmp_ge_i64_e64 s6, s[2:3], s[4:5]
-; GFX13-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-NEXT:    s_and_b32 s6, s6, exec_lo
 ; GFX13-NEXT:    s_cselect_b32 s2, s2, s4
 ; GFX13-NEXT:    s_cselect_b32 s3, s3, s5
