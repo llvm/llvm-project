@@ -396,7 +396,7 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
   }];
 
   let arguments = (ins
-    Tosa_Tensor3D:$input,
+    Tosa_Tensor3D:$input_real,
     DefaultValuedOptionalAttr<BoolAttr, "false">:$local_bound
   );
 
@@ -411,7 +411,7 @@ def Tosa_RFFT2dOp : Tosa_InferShapedTypeOp<"rfft2d", [
   ];
 
   let assemblyFormat = [{
-    $input attr-dict `:` `(` type($input) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
+    $input_real attr-dict `:` `(` type($input_real) `)` `->` `(` type($output_real) `,` type($output_imag) `)`
   }];
 
   let hasVerifier = 1;
