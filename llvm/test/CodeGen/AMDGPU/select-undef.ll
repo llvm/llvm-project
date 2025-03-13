@@ -255,7 +255,7 @@ define void @inf_loop_undef_vector(<6 x float> %arg, float %arg1, i64 %arg2) {
   %i5 = extractelement <3 x i64> %i3, i64 1
   %i6 = mul i64 %i5, %arg2
   %i7 = add i64 %i6, %i4
-  store volatile i64 %i7, ptr addrspace(1) undef, align 4
+  store volatile i64 %i7, ptr addrspace(1) poison, align 4
   ret void
 }
 

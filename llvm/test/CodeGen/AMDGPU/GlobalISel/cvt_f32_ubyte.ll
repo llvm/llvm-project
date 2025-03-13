@@ -96,7 +96,7 @@ define float @v_uitofp_to_f32_multi_use_lshr8_mask255(i32 %arg0) nounwind {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
   %lshr.8 = lshr i32 %arg0, 8
-  store i32 %lshr.8, ptr addrspace(1) undef
+  store i32 %lshr.8, ptr addrspace(1) poison
   %masked = and i32 %lshr.8, 255
   %cvt = uitofp i32 %masked to float
   ret float %cvt
