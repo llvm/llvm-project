@@ -196,6 +196,7 @@
 // CHECK-NEXT:     xqccmp               0.1       'Xqccmp' (Qualcomm 16-bit Push/Pop and Double Moves)
 // CHECK-NEXT:     xqcia                0.4       'Xqcia' (Qualcomm uC Arithmetic Extension)
 // CHECK-NEXT:     xqciac               0.3       'Xqciac' (Qualcomm uC Load-Store Address Calculation Extension)
+// CHECK-NEXT:     xqcibi               0.2       'Xqcibi' (Qualcomm uC Branch Immediate Extension)
 // CHECK-NEXT:     xqcibm               0.4       'Xqcibm' (Qualcomm uC Bit Manipulation Extension)
 // CHECK-NEXT:     xqcicli              0.2       'Xqcicli' (Qualcomm uC Conditional Load Immediate Extension)
 // CHECK-NEXT:     xqcicm               0.2       'Xqcicm' (Qualcomm uC Conditional Move Extension)
