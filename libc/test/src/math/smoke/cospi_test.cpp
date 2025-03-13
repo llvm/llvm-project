@@ -20,10 +20,10 @@ TEST_F(LlvmLibcCospiTest, SpecialNumbers) {
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cospi(aNaN));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::cospi(zero));
+  EXPECT_FP_EQ(FPBits::one().get_val(), LIBC_NAMESPACE::cospi(zero));
   EXPECT_MATH_ERRNO(0);
 
-  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::cospi(neg_zero));
+  EXPECT_FP_EQ(FPBits::one().get_val(), LIBC_NAMESPACE::cospi(neg_zero));
   EXPECT_MATH_ERRNO(0);
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::cospi(inf));
@@ -34,15 +34,12 @@ TEST_F(LlvmLibcCospiTest, SpecialNumbers) {
 }
 
 TEST_F(LlvmLibcCospiTest, Integers) {
-  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::cospi(-0x1.0000000000003p52));
 
-  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::cospi(-0x1.0000000000005p52));
+  EXPECT_FP_EQ(FPBits::one(Sign::NEG).get_val(), LIBC_NAMESPACE::cospi(-0x1.8406003b2ae63p52));
 
-  EXPECT_FP_EQ(neg_zero, LIBC_NAMESPACE::cospi(-0x1.0000000000006p52));
+  EXPECT_FP_EQ(FPBits::one().get_val(), LIBC_NAMESPACE::cospi(0x1p54));
 
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::cospi(0x1.0000000000003p52));
+  EXPECT_FP_EQ(FPBits::one().get_val(), LIBC_NAMESPACE::cospi(0x1p55));
 
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::cospi(0x1.0000000000005p52));
-
-  EXPECT_FP_EQ(zero, LIBC_NAMESPACE::cospi(0x1.0000000000006p52));
+  EXPECT_FP_EQ(FPBits::one().get_val(), LIBC_NAMESPACE::cospi(0x1p56));
 }

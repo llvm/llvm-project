@@ -59,21 +59,27 @@ LLVM_LIBC_FUNCTION(double, cospi, (double x)) {
   using FPBits = typename fputil::FPBits<double>;
   FPBits xbits(x);
 
+  xbits.set_sign(Sign::POS);
+
+  uint64_t x_abs_ = xbits.uintval();
   double x_abs = fputil::abs(x);
   double p = 0x1p52; // 2^p where p is the precision
-
+  double p2 = 0x1p53;
+  double p3 = 1.0;
   if (LIBC_UNLIKELY(x_abs == 0U))
-    return x;
+    return p3;
 
   if (x_abs >= p) {
+    if (x_abs < p2)
+      return ((x_abs_ & 0x1) ? -p3 : p3);
     if (xbits.is_nan())
       return x;
     if (xbits.is_inf()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
-      return FPBits::quiet_nan().get_val();
+      return x + FPBits::quiet_nan().get_val();
     }
-    return FPBits::zero(xbits.sign()).get_val();
+    return p3;
   }
   double n = pow(2, -52);
   double k = fputil::nearest_integer(x * n);
