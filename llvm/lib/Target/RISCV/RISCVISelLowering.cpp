@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -50,6 +51,7 @@
 #include <optional>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "riscv-lower"
 
@@ -14322,7 +14324,6 @@ static bool checkAddiForShift(SDValue AddI, int64_t &AddConst, int64_t &ShlConst
   auto *AddConstNode = dyn_cast<ConstantSDNode>(AddI->getOperand(1));
   if (!AddConstNode)
     return false;
-  AddConst = AddConstNode->getSExtValue();
 
   SDValue SHLVal = AddI->getOperand(0);
   if (SHLVal->getOpcode() != ISD::SHL)
@@ -14332,10 +14333,11 @@ static bool checkAddiForShift(SDValue AddI, int64_t &AddConst, int64_t &ShlConst
   if (!ShiftNode)
     return false;
 
-  ShlConst = ShiftNode->getSExtValue();
   if (ShlConst < 1 || ShlConst > 3)
     return false;
 
+  AddConst = AddConstNode->getSExtValue();
+  ShlConst = ShiftNode->getSExtValue();
   return true;
 }
 
@@ -14349,7 +14351,7 @@ static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
 
   // Skip for vector types and larger types.
   EVT VT = N->getValueType(0);
-  if (VT.isVector() || VT.getSizeInBits() > Subtarget.getXLen())
+  if (VT != Subtarget.getXLenVT())
     return SDValue();
 
   // Looking for a reg-reg add and not an addi.
@@ -14358,18 +14360,22 @@ static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
 
   SDValue AddI = N->getOperand(0);
   SDValue Other = N->getOperand(1);
-  bool LHSIsAdd = AddI.getOpcode() == ISD::ADD;
-  bool RHSIsAdd = Other.getOpcode() == ISD::ADD;
-  int64_t AddConst;
-  int64_t ShlConst;
+  bool LHSIsAddI = SDPatternMatch::sd_match(
+      AddI, SDPatternMatch::m_Add(SDPatternMatch::m_Value(),
+                                  SDPatternMatch::m_ConstInt()));
+  bool RHSIsAddI = SDPatternMatch::sd_match(
+      Other, SDPatternMatch::m_Add(SDPatternMatch::m_Value(),
+                                   SDPatternMatch::m_ConstInt()));
+  int64_t AddConst = 0;
+  int64_t ShlConst = 0;
 
-  // At least one add is required.
-  if (!(LHSIsAdd || RHSIsAdd))
+  // At least one addi is required.
+  if (!LHSIsAddI && !RHSIsAddI)
     return SDValue();
 
   // If the LHS is not the result of an add or both sides are results of an add, but
   // the LHS does not have the desired structure with a shift, swap the operands.
-  if (!LHSIsAdd || (LHSIsAdd && RHSIsAdd && !checkAddiForShift(AddI, AddConst, ShlConst)))
+  if (!LHSIsAddI || (RHSIsAddI && !checkAddiForShift(AddI, AddConst, ShlConst)))
     std::swap(AddI, Other);
 
   // We simply need to ensure AddI has the desired structure.
