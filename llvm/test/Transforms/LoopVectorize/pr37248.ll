@@ -46,6 +46,9 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[PRED_STORE_CONTINUE3:%.*]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[START]], [[INDEX]]
+; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
+; CHECK-NEXT:    br i1 [[TMP14]], label [[PRED_STORE_IF:%.*]], label [[PRED_STORE_CONTINUE:%.*]]
 ; CHECK:       pred.store.if:
 ; CHECK-NEXT:    store i32 10, ptr [[B]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE]]
@@ -56,6 +59,10 @@ define void @f1(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK-NEXT:    store i32 10, ptr [[B]], align 1
 ; CHECK-NEXT:    br label [[PRED_STORE_CONTINUE3]]
 ; CHECK:       pred.store.continue3:
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x i16], ptr @a, i16 0, i16 [[TMP12]]
+; CHECK-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i16, ptr [[TMP16]], i32 0
+; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds i16, ptr [[TMP17]], i32 -1
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP18]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP19]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
@@ -135,6 +142,11 @@ define void @f2(ptr noalias %b, i1 %c, i32 %start) {
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i32 [[START]], [[INDEX]]
+; CHECK-NEXT:    [[TMP11:%.*]] = trunc i32 [[OFFSET_IDX]] to i16
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds [2 x i16], ptr @a, i16 0, i16 [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i16, ptr [[TMP13]], i32 0
+; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i16, ptr [[TMP14]], i32 -1
+; CHECK-NEXT:    store <2 x i16> zeroinitializer, ptr [[TMP15]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP16]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]

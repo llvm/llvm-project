@@ -54,8 +54,7 @@ define float @fadd_strict(ptr noalias nocapture readonly %a, i64 %n) {
 ; CHECK:       vec.epilog.vector.body:
 ; CHECK-NEXT:    [[INDEX6:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], [[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT9:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_PHI7:%.*]] = phi float [ [[BC_MERGE_RDX]], [[VEC_EPILOG_PH]] ], [ [[TMP24:%.*]], [[VEC_EPILOG_VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX6]], 0
-; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[TMP21]]
+; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[INDEX6]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr inbounds float, ptr [[TMP22]], i32 0
 ; CHECK-NEXT:    [[WIDE_LOAD8:%.*]] = load <2 x float>, ptr [[TMP23]], align 4
 ; CHECK-NEXT:    [[TMP24]] = call float @llvm.vector.reduce.fadd.v2f32(float [[VEC_PHI7]], <2 x float> [[WIDE_LOAD8]])

@@ -137,7 +137,6 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = icmp ule <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = select <vscale x 2 x i1> [[ACTIVE_LANE_MASK]], <vscale x 2 x i1> [[TMP22]], <vscale x 2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP24:%.*]] = extractelement <vscale x 2 x i1> [[TMP23]], i32 0
@@ -145,7 +144,7 @@ define void @sdiv_feeding_gep_predicated(ptr %dst, i32 %x, i64 %M, i64 %conv6, i
 ; CHECK-NEXT:    [[TMP26:%.*]] = sdiv i64 [[M]], [[TMP25]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = trunc i64 [[TMP26]] to i32
 ; CHECK-NEXT:    [[TMP28:%.*]] = mul i64 [[TMP26]], [[CONV61]]
-; CHECK-NEXT:    [[TMP29:%.*]] = sub i64 [[TMP21]], [[TMP28]]
+; CHECK-NEXT:    [[TMP29:%.*]] = sub i64 [[INDEX]], [[TMP28]]
 ; CHECK-NEXT:    [[TMP30:%.*]] = trunc i64 [[TMP29]] to i32
 ; CHECK-NEXT:    [[TMP31:%.*]] = mul i32 [[X]], [[TMP27]]
 ; CHECK-NEXT:    [[TMP32:%.*]] = add i32 [[TMP31]], [[TMP30]]
@@ -261,9 +260,8 @@ define void @udiv_urem_feeding_gep(i64 %x, ptr %dst, i64 %N) {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = phi <vscale x 2 x i1> [ [[ACTIVE_LANE_MASK_ENTRY]], %[[VECTOR_PH]] ], [ [[ACTIVE_LANE_MASK_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 2 x i64> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP21:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP23:%.*]] = udiv <vscale x 2 x i64> [[VEC_IND]], [[BROADCAST_SPLAT]]
-; CHECK-NEXT:    [[TMP24:%.*]] = urem i64 [[TMP21]], [[MUL_2_I]]
+; CHECK-NEXT:    [[TMP24:%.*]] = urem i64 [[INDEX]], [[MUL_2_I]]
 ; CHECK-NEXT:    [[TMP25:%.*]] = udiv i64 [[TMP24]], [[MUL_1_I]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = urem i64 [[TMP24]], [[MUL_1_I]]
 ; CHECK-NEXT:    [[TMP27:%.*]] = udiv i64 [[TMP26]], [[X]]
