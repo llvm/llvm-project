@@ -1044,6 +1044,12 @@ private:
   /// The IDs of all decls with function effects to be checked.
   SmallVector<GlobalDeclID> DeclsWithEffectsToVerify;
 
+  struct RecordAndCopyingCtor {
+    GlobalDeclID RecordID;
+    GlobalDeclID CtorID;
+  };
+  SmallVector<RecordAndCopyingCtor> RecordToCopyingCtor;
+
 private:
   struct ImportedSubmodule {
     serialization::SubmoduleID ID;
@@ -2158,6 +2164,10 @@ public:
   bool
   LoadExternalSpecializations(const Decl *D,
                               ArrayRef<TemplateArgument> TemplateArgs) override;
+
+  void LoadExternalExceptionCopyingConstructors(
+      llvm::SmallDenseMap<CXXRecordDecl *, CXXConstructorDecl *> &RecordToCtor)
+      override;
 
   /// Finds all the visible declarations with a given name.
   /// The current implementation of this method just loads the entire

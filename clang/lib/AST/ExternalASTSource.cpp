@@ -105,6 +105,9 @@ bool ExternalASTSource::LoadExternalSpecializations(
   return false;
 }
 
+void ExternalASTSource::LoadExternalExceptionCopyingConstructors(
+    llvm::SmallDenseMap<CXXRecordDecl *, CXXConstructorDecl *> &) {}
+
 void ExternalASTSource::completeVisibleDeclsMap(const DeclContext *DC) {}
 
 void ExternalASTSource::FindExternalLexicalDecls(
