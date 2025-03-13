@@ -298,7 +298,8 @@ private:
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsLambda : 1;
 
-    /// Whether we are currently parsing base specifiers.
+    /// Whether we are currently parsing base specifiers; the
+    /// colon has been consumed but the beginning left brace hasn't.
     LLVM_PREFERRED_TYPE(bool)
     unsigned IsParsingBaseSpecifiers : 1;
 
@@ -599,7 +600,9 @@ public:
     return !hasDefinition() || !isDynamicClass() || hasAnyDependentBases();
   }
 
-  void setIsParsingBaseSpecifiers() { data().IsParsingBaseSpecifiers = true; }
+  void setIsParsingBaseSpecifiers(bool To) {
+    data().IsParsingBaseSpecifiers = To;
+  }
 
   bool isParsingBaseSpecifiers() const {
     return data().IsParsingBaseSpecifiers;
