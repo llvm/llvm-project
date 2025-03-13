@@ -534,6 +534,7 @@ public:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
     case VPRecipeBase::VPScalarCastSC:
+    case VPRecipeBase::VPScalarPHISC:
     case VPRecipeBase::VPPartialReductionSC:
       return true;
     case VPRecipeBase::VPBranchOnMaskSC:
@@ -1167,14 +1168,7 @@ public:
     return R;
   }
 
-  static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPWidenSC;
-  }
-
-  static inline bool classof(const VPUser *U) {
-    auto *R = dyn_cast<VPRecipeBase>(U);
-    return R && classof(R);
-  }
+  VP_CLASSOF_IMPL(VPDef::VPWidenSC)
 
   /// Produce a widened instruction using the opcode and operands of the recipe,
   /// processing State.VF elements.
@@ -1334,12 +1328,6 @@ public:
                          !Attrs.hasFnAttr(Attribute::NoUnwind) ||
                          !Attrs.hasFnAttr(Attribute::WillReturn);
   }
-
-  VPWidenIntrinsicRecipe(Intrinsic::ID VectorIntrinsicID,
-                         std::initializer_list<VPValue *> CallArguments,
-                         Type *Ty, DebugLoc DL = {})
-      : VPWidenIntrinsicRecipe(VectorIntrinsicID,
-                               ArrayRef<VPValue *>(CallArguments), Ty, DL) {}
 
   ~VPWidenIntrinsicRecipe() override = default;
 
@@ -1709,10 +1697,8 @@ public:
 class VPHeaderPHIRecipe : public VPSingleDefRecipe {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
-                    VPValue *Start = nullptr, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>(), UnderlyingInstr, DL) {
-    if (Start)
-      addOperand(Start);
+                    VPValue *Start, DebugLoc DL = {})
+      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
   }
 
 public:
@@ -1817,6 +1803,16 @@ public:
     llvm_unreachable(
         "VPWidenIntOrFpInductionRecipe generates its own backedge value");
   }
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    // The recipe creates its own wide start value, so it only requests the
+    // first lane of the operand.
+    // TODO: Remove once creating the start value is modeled separately.
+    return Op == getStartValue() || Op == getStepValue();
+  }
 };
 
 /// A recipe for handling phi nodes of integer and floating-point inductions,
@@ -1893,16 +1889,6 @@ public:
   VPValue *getLastUnrolledPartOperand() {
     return getNumOperands() == 5 ? getOperand(4) : this;
   }
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    // The recipe creates its own wide start value, so it only requests the
-    // first lane of the operand.
-    // TODO: Remove once creating the start value is modeled separately.
-    return Op == getStartValue();
-  }
 };
 
 class VPWidenPointerInductionRecipe : public VPWidenInductionRecipe,
@@ -1934,13 +1920,6 @@ public:
 
   /// Returns true if only scalar values will be generated.
   bool onlyScalarsGenerated(bool IsScalable);
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return Op == getOperand(0);
-  }
 
   /// Returns the VPValue representing the value of this induction at
   /// the first unrolled part, if it exists. Returns itself if unrolling did not
@@ -2002,11 +1981,15 @@ public:
 /// the second from the exiting block of the region.
 class VPWidenPHIRecipe : public VPSingleDefRecipe,
                          public VPPhiAccessors<VPWidenPHIRecipe> {
+  std::string Name;
+
 public:
   /// Create a new VPWidenPHIRecipe for \p Phi with start value \p Start and
   /// debug location \p DL.
-  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL) {
+  VPWidenPHIRecipe(PHINode *Phi, VPValue *Start = nullptr, DebugLoc DL = {},
+                   const Twine &Name = "")
+      : VPSingleDefRecipe(VPDef::VPWidenPHISC, ArrayRef<VPValue *>(), Phi, DL),
+        Name(Name.str()) {
     if (Start)
       addOperand(Start);
   }
@@ -2037,10 +2020,6 @@ struct VPFirstOrderRecurrencePHIRecipe : public VPHeaderPHIRecipe {
       : VPHeaderPHIRecipe(VPDef::VPFirstOrderRecurrencePHISC, Phi, &Start) {}
 
   VP_CLASSOF_IMPL(VPDef::VPFirstOrderRecurrencePHISC)
-
-  static inline bool classof(const VPHeaderPHIRecipe *R) {
-    return R->getVPDefID() == VPDef::VPFirstOrderRecurrencePHISC;
-  }
 
   VPFirstOrderRecurrencePHIRecipe *clone() override {
     return new VPFirstOrderRecurrencePHIRecipe(
@@ -2108,10 +2087,6 @@ public:
   }
 
   VP_CLASSOF_IMPL(VPDef::VPReductionPHISC)
-
-  static inline bool classof(const VPHeaderPHIRecipe *R) {
-    return R->getVPDefID() == VPDef::VPReductionPHISC;
-  }
 
   /// Generate the phi/select nodes.
   void execute(VPTransformState &State) override;
@@ -2931,10 +2906,6 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPCanonicalIVPHISC)
 
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPCanonicalIVPHISC;
-  }
-
   void execute(VPTransformState &State) override {
     llvm_unreachable(
         "cannot execute this recipe, should be replaced by VPScalarPHIRecipe");
@@ -2994,10 +2965,6 @@ public:
 
   VP_CLASSOF_IMPL(VPDef::VPActiveLaneMaskPHISC)
 
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPActiveLaneMaskPHISC;
-  }
-
   /// Generate the active lane mask phi of the vector loop.
   void execute(VPTransformState &State) override;
 
@@ -3024,10 +2991,6 @@ public:
   }
 
   VP_CLASSOF_IMPL(VPDef::VPEVLBasedIVPHISC)
-
-  static inline bool classof(const VPHeaderPHIRecipe *D) {
-    return D->getVPDefID() == VPDef::VPEVLBasedIVPHISC;
-  }
 
   void execute(VPTransformState &State) override {
     llvm_unreachable(
@@ -3588,21 +3551,6 @@ public:
     VPBB->setPlan(this);
   }
 
-  /// Create initial VPlan, having an "entry" VPBasicBlock (wrapping
-  /// original scalar pre-header) which contains SCEV expansions that need
-  /// to happen before the CFG is modified (when executing a VPlan for the
-  /// epilogue vector loop, the original entry needs to be replaced by a new
-  /// one); a VPBasicBlock for the vector pre-header, followed by a region for
-  /// the vector loop, followed by the middle VPBasicBlock. If a check is needed
-  /// to guard executing the scalar epilogue loop, it will be added to the
-  /// middle block, together with VPBasicBlocks for the scalar preheader and
-  /// exit blocks. \p InductionTy is the type of the canonical induction and
-  /// used for related values, like the trip count expression.
-  static VPlanPtr createInitialVPlan(Type *InductionTy,
-                                     PredicatedScalarEvolution &PSE,
-                                     bool RequiresScalarEpilogueCheck,
-                                     bool TailFolded, Loop *TheLoop);
-
   /// Prepare the plan for execution, setting up the required live-in values.
   void prepareToExecute(Value *TripCount, Value *VectorTripCount,
                         VPTransformState &State);
@@ -3664,11 +3612,18 @@ public:
     return TripCount;
   }
 
+  /// Set the trip count assuming it is currently null; if it is not - use
+  /// resetTripCount().
+  void setTripCount(VPValue *NewTripCount) {
+    assert(!TripCount && NewTripCount && "TripCount should not be set yet.");
+    TripCount = NewTripCount;
+  }
+
   /// Resets the trip count for the VPlan. The caller must make sure all uses of
   /// the original trip count have been replaced.
   void resetTripCount(VPValue *NewTripCount) {
     assert(TripCount && NewTripCount && TripCount->getNumUsers() == 0 &&
-           "TripCount always must be set");
+           "TripCount must be set when resetting");
     TripCount = NewTripCount;
   }
 

@@ -12,6 +12,7 @@ declare ptr @llvm.call.preallocated.arg(token, i32)
 @ConstPtr = constant i32 0, align 4
 @ConstWeakPtr = weak constant i32 0, align 4
 @ConstWeakODRPtr = weak_odr constant i32 0, align 4
+@ExtInitZeroInit = externally_initialized constant i32 zeroinitializer, align 4
 
 ;.
 ; CHECK: @str = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
@@ -19,6 +20,7 @@ declare ptr @llvm.call.preallocated.arg(token, i32)
 ; CHECK: @ConstPtr = constant i32 0, align 4
 ; CHECK: @ConstWeakPtr = weak constant i32 0, align 4
 ; CHECK: @ConstWeakODRPtr = weak_odr constant i32 0, align 4
+; CHECK: @ExtInitZeroInit = externally_initialized constant i32 0, align 4
 ; CHECK: @S = external global %struct.X
 ; CHECK: @g = internal constant { [2 x ptr] } { [2 x ptr] [ptr @f1, ptr @f2] }
 ; CHECK: @x = external global i32
@@ -1648,6 +1650,23 @@ define i32 @readWeakOdrConst() {
 ; CGSCC-NEXT:    ret i32 0
 ;
   %l = load i32, ptr @ConstWeakODRPtr
+  ret i32 %l
+}
+
+define i32 @readExtInitZeroInit() {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@readExtInitZeroInit
+; TUNIT-SAME: () #[[ATTR2]] {
+; TUNIT-NEXT:    [[L:%.*]] = load i32, ptr @ExtInitZeroInit, align 4
+; TUNIT-NEXT:    ret i32 [[L]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@readExtInitZeroInit
+; CGSCC-SAME: () #[[ATTR1]] {
+; CGSCC-NEXT:    [[L:%.*]] = load i32, ptr @ExtInitZeroInit, align 4
+; CGSCC-NEXT:    ret i32 [[L]]
+;
+  %l = load i32, ptr @ExtInitZeroInit
   ret i32 %l
 }
 

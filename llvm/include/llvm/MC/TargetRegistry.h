@@ -453,14 +453,24 @@ public:
   /// either the target triple from the module, or the target triple of the
   /// host if that does not exist.
   TargetMachine *createTargetMachine(
-      StringRef TT, StringRef CPU, StringRef Features,
+      const Triple &TT, StringRef CPU, StringRef Features,
       const TargetOptions &Options, std::optional<Reloc::Model> RM,
       std::optional<CodeModel::Model> CM = std::nullopt,
       CodeGenOptLevel OL = CodeGenOptLevel::Default, bool JIT = false) const {
     if (!TargetMachineCtorFn)
       return nullptr;
-    return TargetMachineCtorFn(*this, Triple(TT), CPU, Features, Options, RM,
-                               CM, OL, JIT);
+    return TargetMachineCtorFn(*this, TT, CPU, Features, Options, RM, CM, OL,
+                               JIT);
+  }
+
+  [[deprecated("Use overload accepting Triple instead")]]
+  TargetMachine *createTargetMachine(
+      StringRef TT, StringRef CPU, StringRef Features,
+      const TargetOptions &Options, std::optional<Reloc::Model> RM,
+      std::optional<CodeModel::Model> CM = std::nullopt,
+      CodeGenOptLevel OL = CodeGenOptLevel::Default, bool JIT = false) const {
+    return createTargetMachine(Triple(TT), CPU, Features, Options, RM, CM, OL,
+                               JIT);
   }
 
   /// createMCAsmBackend - Create a target specific assembly parser.
@@ -695,10 +705,21 @@ struct TargetRegistry {
 
   /// lookupTarget - Lookup a target based on a target triple.
   ///
+  /// \param TripleStr - The triple to use for finding a target.
+  /// \param Error - On failure, an error string describing why no target was
+  /// found.
+  // TODO: Drop this in favor of the method accepting Triple.
+  static const Target *lookupTarget(StringRef TripleStr, std::string &Error) {
+    return lookupTarget(Triple(TripleStr), Error);
+  }
+
+  /// lookupTarget - Lookup a target based on a target triple.
+  ///
   /// \param Triple - The triple to use for finding a target.
   /// \param Error - On failure, an error string describing why no target was
   /// found.
-  static const Target *lookupTarget(StringRef Triple, std::string &Error);
+  static const Target *lookupTarget(const Triple &TheTriple,
+                                    std::string &Error);
 
   /// lookupTarget - Lookup a target based on an architecture name
   /// and a target triple.  If the architecture name is non-empty,

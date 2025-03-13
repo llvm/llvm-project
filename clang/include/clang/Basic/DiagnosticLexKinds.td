@@ -392,7 +392,10 @@ def pp_macro_not_used : Warning<"macro is not used">, DefaultIgnore,
   InGroup<DiagGroup<"unused-macros">>;
 def warn_pp_undef_identifier : Warning<
   "%0 is not defined, evaluates to 0">,
-  InGroup<DiagGroup<"undef">>, DefaultIgnore;
+  InGroup<UndefinedIdentifier>, DefaultIgnore;
+def warn_pp_undef_true_identifier : Warning<
+  "'true' is not defined, evaluates to 0">,
+  InGroup<UndefinedTrueIdentifier>;
 def warn_pp_undef_prefix : Warning<
   "%0 is not defined, evaluates to 0">,
   InGroup<DiagGroup<"undef-prefix">>, DefaultIgnore;
@@ -715,6 +718,8 @@ def warn_pragma_debug_unexpected_command : Warning<
   "unexpected debug command '%0'">, InGroup<IgnoredPragmas>;
 def warn_pragma_debug_unknown_module : Warning<
   "unknown module '%0'">, InGroup<IgnoredPragmas>;
+def warn_pragma_debug_unable_to_find_module : Warning<
+  "unable to find module '%0'">, InGroup<IgnoredPragmas>;
 // #pragma module
 def err_pp_expected_module_name : Error<
   "expected %select{identifier after '.' in |}0module name">;

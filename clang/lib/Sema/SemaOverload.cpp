@@ -8147,17 +8147,14 @@ void Sema::AddConversionCandidate(
 
   ExprValueKind VK = Expr::getValueKindForType(ConversionType);
 
-  // Note that it is safe to allocate CallExpr on the stack here because
-  // there are 0 arguments (i.e., nothing is allocated using ASTContext's
-  // allocator).
   QualType CallResultType = ConversionType.getNonLValueExprType(Context);
 
-  alignas(CallExpr) char Buffer[sizeof(CallExpr) + sizeof(Stmt *)];
-  CallExpr *TheTemporaryCall = CallExpr::CreateTemporary(
-      Buffer, &ConversionFn, CallResultType, VK, From->getBeginLoc());
+  // Introduce a temporary expression with the right type and value category
+  // that we can use for deduction purposes.
+  OpaqueValueExpr FakeCall(From->getBeginLoc(), CallResultType, VK);
 
   ImplicitConversionSequence ICS =
-      TryCopyInitialization(*this, TheTemporaryCall, ToType,
+      TryCopyInitialization(*this, &FakeCall, ToType,
                             /*SuppressUserConversions=*/true,
                             /*InOverloadResolution=*/false,
                             /*AllowObjCWritebackConversion=*/false);
@@ -10429,7 +10426,8 @@ getMorePartialOrderingConstrained(Sema &S, FunctionDecl *Fn1, FunctionDecl *Fn2,
 /// candidate is a better candidate than the second (C++ 13.3.3p1).
 bool clang::isBetterOverloadCandidate(
     Sema &S, const OverloadCandidate &Cand1, const OverloadCandidate &Cand2,
-    SourceLocation Loc, OverloadCandidateSet::CandidateSetKind Kind) {
+    SourceLocation Loc, OverloadCandidateSet::CandidateSetKind Kind,
+    bool PartialOverloading) {
   // Define viable functions to be better candidates than non-viable
   // functions.
   if (!Cand2.Viable)
@@ -10666,7 +10664,7 @@ bool clang::isBetterOverloadCandidate(
                         : QualType{},
             Obj2Context ? QualType(Obj2Context->getTypeForDecl(), 0)
                         : QualType{},
-            Cand1.isReversed() ^ Cand2.isReversed())) {
+            Cand1.isReversed() ^ Cand2.isReversed(), PartialOverloading)) {
       return BetterTemplate == Cand1.Function->getPrimaryTemplate();
     }
   }

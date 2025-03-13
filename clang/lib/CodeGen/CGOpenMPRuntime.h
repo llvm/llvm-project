@@ -386,10 +386,6 @@ protected:
   /// Map for SourceLocation and OpenMP runtime library debug locations.
   typedef llvm::DenseMap<SourceLocation, llvm::Value *> OpenMPDebugLocMapTy;
   OpenMPDebugLocMapTy OpenMPDebugLocMap;
-  /// The type for a microtask which gets passed to __kmpc_fork_call().
-  /// Original representation is:
-  /// typedef void (kmpc_micro)(kmp_int32 global_tid, kmp_int32 bound_tid,...);
-  llvm::FunctionType *Kmpc_MicroTy = nullptr;
   /// Stores debug location and ThreadID for the function.
   struct DebugLocThreadIdTy {
     llvm::Value *DebugLoc;
@@ -529,9 +525,6 @@ protected:
 
   /// Build type kmp_routine_entry_t (if not built yet).
   void emitKmpRoutineEntryT(QualType KmpInt32Ty);
-
-  /// Returns pointer to kmpc_micro type.
-  llvm::Type *getKmpc_MicroPointerTy();
 
   /// If the specified mangled name is not in the module, create and
   /// return threadprivate cache object. This object is a pointer's worth of

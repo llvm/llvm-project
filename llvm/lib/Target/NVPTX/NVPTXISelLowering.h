@@ -273,6 +273,8 @@ public:
 
 private:
   const NVPTXSubtarget &STI; // cache the subtarget here
+  mutable unsigned GlobalUniqueCallSite;
+
   SDValue getParamSymbol(SelectionDAG &DAG, int idx, EVT) const;
 
   SDValue LowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;

@@ -170,6 +170,112 @@ static unsigned getUnidirectionalFenceProxyID(NVVM::ProxyKind fromProxy,
   llvm_unreachable("Unsupported proxy kinds");
 }
 
+#define TCGEN05LD(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_ld_##SHAPE##_##NUM
+
+static llvm::Intrinsic::ID
+getTcgen05LdIntrinsicID(mlir::NVVM::Tcgen05LdStShape shape, uint32_t num) {
+  llvm::Intrinsic::ID Shape16x64b[] = {
+      TCGEN05LD(16x64b, x1),  TCGEN05LD(16x64b, x2),   TCGEN05LD(16x64b, x4),
+      TCGEN05LD(16x64b, x8),  TCGEN05LD(16x64b, x16),  TCGEN05LD(16x64b, x32),
+      TCGEN05LD(16x64b, x64), TCGEN05LD(16x64b, x128),
+  };
+
+  llvm::Intrinsic::ID Shape16x128b[] = {
+      TCGEN05LD(16x128b, x1),  TCGEN05LD(16x128b, x2),  TCGEN05LD(16x128b, x4),
+      TCGEN05LD(16x128b, x8),  TCGEN05LD(16x128b, x16), TCGEN05LD(16x128b, x32),
+      TCGEN05LD(16x128b, x64),
+  };
+
+  llvm::Intrinsic::ID Shape16x256b[] = {
+      TCGEN05LD(16x256b, x1), TCGEN05LD(16x256b, x2),  TCGEN05LD(16x256b, x4),
+      TCGEN05LD(16x256b, x8), TCGEN05LD(16x256b, x16), TCGEN05LD(16x256b, x32),
+  };
+
+  llvm::Intrinsic::ID Shape16x32bx2[] = {
+      TCGEN05LD(16x32bx2, x1),  TCGEN05LD(16x32bx2, x2),
+      TCGEN05LD(16x32bx2, x4),  TCGEN05LD(16x32bx2, x8),
+      TCGEN05LD(16x32bx2, x16), TCGEN05LD(16x32bx2, x32),
+      TCGEN05LD(16x32bx2, x64), TCGEN05LD(16x32bx2, x128),
+  };
+
+  llvm::Intrinsic::ID Shape32x32b[] = {
+      TCGEN05LD(32x32b, x1),  TCGEN05LD(32x32b, x2),   TCGEN05LD(32x32b, x4),
+      TCGEN05LD(32x32b, x8),  TCGEN05LD(32x32b, x16),  TCGEN05LD(32x32b, x32),
+      TCGEN05LD(32x32b, x64), TCGEN05LD(32x32b, x128),
+  };
+
+  // `num` contains the length of vector and log2 of `num` returns the index
+  // into the shape array
+  unsigned Idx = std::log2(num);
+
+  switch (shape) {
+  case NVVM::Tcgen05LdStShape::SHAPE_16X64B:
+    return Shape16x64b[Idx];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X128B:
+    return Shape16x128b[Idx - 1];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X256B:
+    return Shape16x256b[Idx - 2];
+  case NVVM::Tcgen05LdStShape::SHAPE_32X32B:
+    return Shape32x32b[Idx];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X32BX2:
+    return Shape16x32bx2[Idx];
+  }
+  llvm_unreachable("unhandled tcgen05.ld lowering");
+}
+
+#define TCGEN05ST(SHAPE, NUM) llvm::Intrinsic::nvvm_tcgen05_st_##SHAPE##_##NUM
+
+static llvm::Intrinsic::ID
+getTcgen05StIntrinsicID(mlir::NVVM::Tcgen05LdStShape shape, uint32_t num) {
+  llvm::Intrinsic::ID Shape16x64b[] = {
+      TCGEN05ST(16x64b, x1),  TCGEN05ST(16x64b, x2),   TCGEN05ST(16x64b, x4),
+      TCGEN05ST(16x64b, x8),  TCGEN05ST(16x64b, x16),  TCGEN05ST(16x64b, x32),
+      TCGEN05ST(16x64b, x64), TCGEN05ST(16x64b, x128),
+  };
+
+  llvm::Intrinsic::ID Shape16x128b[] = {
+      TCGEN05ST(16x128b, x1),  TCGEN05ST(16x128b, x2),  TCGEN05ST(16x128b, x4),
+      TCGEN05ST(16x128b, x8),  TCGEN05ST(16x128b, x16), TCGEN05ST(16x128b, x32),
+      TCGEN05ST(16x128b, x64),
+  };
+
+  llvm::Intrinsic::ID Shape16x256b[] = {
+      TCGEN05ST(16x256b, x1), TCGEN05ST(16x256b, x2),  TCGEN05ST(16x256b, x4),
+      TCGEN05ST(16x256b, x8), TCGEN05ST(16x256b, x16), TCGEN05ST(16x256b, x32),
+  };
+
+  llvm::Intrinsic::ID Shape16x32bx2[] = {
+      TCGEN05ST(16x32bx2, x1),  TCGEN05ST(16x32bx2, x2),
+      TCGEN05ST(16x32bx2, x4),  TCGEN05ST(16x32bx2, x8),
+      TCGEN05ST(16x32bx2, x16), TCGEN05ST(16x32bx2, x32),
+      TCGEN05ST(16x32bx2, x64), TCGEN05ST(16x32bx2, x128),
+  };
+
+  llvm::Intrinsic::ID Shape32x32b[] = {
+      TCGEN05ST(32x32b, x1),  TCGEN05ST(32x32b, x2),   TCGEN05ST(32x32b, x4),
+      TCGEN05ST(32x32b, x8),  TCGEN05ST(32x32b, x16),  TCGEN05ST(32x32b, x32),
+      TCGEN05ST(32x32b, x64), TCGEN05ST(32x32b, x128),
+  };
+
+  // `num` contains the length of vector and log2 of `num` returns the index
+  // into the shape array
+  unsigned Idx = std::log2(num);
+
+  switch (shape) {
+  case NVVM::Tcgen05LdStShape::SHAPE_16X64B:
+    return Shape16x64b[Idx];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X128B:
+    return Shape16x128b[Idx - 1];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X256B:
+    return Shape16x256b[Idx - 2];
+  case NVVM::Tcgen05LdStShape::SHAPE_32X32B:
+    return Shape32x32b[Idx];
+  case NVVM::Tcgen05LdStShape::SHAPE_16X32BX2:
+    return Shape16x32bx2[Idx];
+  }
+  llvm_unreachable("unhandled tcgen05.st lowering");
+}
+
 namespace {
 /// Implementation of the dialect interface that converts operations belonging
 /// to the NVVM dialect to LLVM IR.

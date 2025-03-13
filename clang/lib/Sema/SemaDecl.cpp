@@ -50,6 +50,7 @@
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
+#include "clang/Sema/SemaOpenACC.h"
 #include "clang/Sema/SemaOpenMP.h"
 #include "clang/Sema/SemaPPC.h"
 #include "clang/Sema/SemaRISCV.h"
@@ -60,6 +61,7 @@
 #include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstring>
@@ -136,6 +138,26 @@ class TypeNameValidatorCCC final : public CorrectionCandidateCallback {
 };
 
 } // end anonymous namespace
+
+QualType Sema::getTypeDeclType(DeclContext *LookupCtx, DiagCtorKind DCK,
+                               TypeDecl *TD, SourceLocation NameLoc) {
+  auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(LookupCtx);
+  auto *FoundRD = dyn_cast<CXXRecordDecl>(TD);
+  if (DCK != DiagCtorKind::None && LookupRD && FoundRD &&
+      FoundRD->isInjectedClassName() &&
+      declaresSameEntity(LookupRD, cast<Decl>(FoundRD->getParent()))) {
+    Diag(NameLoc,
+         DCK == DiagCtorKind::Typename
+             ? diag::ext_out_of_line_qualified_id_type_names_constructor
+             : diag::err_out_of_line_qualified_id_type_names_constructor)
+        << TD->getIdentifier() << /*Type=*/1
+        << 0 /*if any keyword was present, it was 'typename'*/;
+  }
+
+  DiagnoseUseOfDecl(TD, NameLoc);
+  MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
+  return Context.getTypeDeclType(TD);
+}
 
 namespace {
 enum class UnqualifiedTypeNameLookupResult {
@@ -293,10 +315,11 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
                              bool IsClassTemplateDeductionContext,
                              ImplicitTypenameContext AllowImplicitTypename,
                              IdentifierInfo **CorrectedII) {
+  bool IsImplicitTypename = !isClassName && !IsCtorOrDtorName;
   // FIXME: Consider allowing this outside C++1z mode as an extension.
   bool AllowDeducedTemplate = IsClassTemplateDeductionContext &&
-                              getLangOpts().CPlusPlus17 && !IsCtorOrDtorName &&
-                              !isClassName && !HasTrailingDot;
+                              getLangOpts().CPlusPlus17 && IsImplicitTypename &&
+                              !HasTrailingDot;
 
   // Determine where we will perform name lookup.
   DeclContext *LookupCtx = nullptr;
@@ -320,17 +343,15 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
         // refer to a member of an unknown specialization.
         // In C++2a, in several contexts a 'typename' is not required. Also
         // allow this as an extension.
-        if (AllowImplicitTypename == ImplicitTypenameContext::No &&
-            !isClassName && !IsCtorOrDtorName)
-          return nullptr;
-        bool IsImplicitTypename = !isClassName && !IsCtorOrDtorName;
         if (IsImplicitTypename) {
+          if (AllowImplicitTypename == ImplicitTypenameContext::No)
+            return nullptr;
           SourceLocation QualifiedLoc = SS->getRange().getBegin();
           if (getLangOpts().CPlusPlus20)
             Diag(QualifiedLoc, diag::warn_cxx17_compat_implicit_typename);
           else
             Diag(QualifiedLoc, diag::ext_implicit_typename)
-                << SS->getScopeRep() << II.getName()
+                << NestedNameSpecifier::Create(Context, SS->getScopeRep(), &II)
                 << FixItHint::CreateInsertion(QualifiedLoc, "typename ");
         }
 
@@ -513,18 +534,10 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
     // C++ [class.qual]p2: A lookup that would find the injected-class-name
     // instead names the constructors of the class, except when naming a class.
     // This is ill-formed when we're not actually forming a ctor or dtor name.
-    auto *LookupRD = dyn_cast_or_null<CXXRecordDecl>(LookupCtx);
-    auto *FoundRD = dyn_cast<CXXRecordDecl>(TD);
-    if (!isClassName && !IsCtorOrDtorName && LookupRD && FoundRD &&
-        FoundRD->isInjectedClassName() &&
-        declaresSameEntity(LookupRD, cast<Decl>(FoundRD->getParent())))
-      Diag(NameLoc, diag::err_out_of_line_qualified_id_type_names_constructor)
-          << &II << /*Type*/1;
-
-    DiagnoseUseOfDecl(IIDecl, NameLoc);
-
-    T = Context.getTypeDeclType(TD);
-    MarkAnyDeclReferenced(TD->getLocation(), TD, /*OdrUse=*/false);
+    T = getTypeDeclType(LookupCtx,
+                        IsImplicitTypename ? DiagCtorKind::Implicit
+                                           : DiagCtorKind::None,
+                        TD, NameLoc);
   } else if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(IIDecl)) {
     (void)DiagnoseUseOfDecl(IDecl, NameLoc);
     if (!HasTrailingDot)
@@ -782,9 +795,9 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
       DiagID = diag::ext_typename_missing;
 
     Diag(SS->getRange().getBegin(), DiagID)
-      << SS->getScopeRep() << II->getName()
-      << SourceRange(SS->getRange().getBegin(), IILoc)
-      << FixItHint::CreateInsertion(SS->getRange().getBegin(), "typename ");
+        << NestedNameSpecifier::Create(Context, SS->getScopeRep(), II)
+        << SourceRange(SS->getRange().getBegin(), IILoc)
+        << FixItHint::CreateInsertion(SS->getRange().getBegin(), "typename ");
     SuggestedType = ActOnTypenameType(S, SourceLocation(),
                                       *SS, *II, IILoc).get();
   } else {
@@ -2551,18 +2564,7 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
       // Make the old tag definition visible.
       makeMergedDefinitionVisible(Hidden);
 
-      // If this was an unscoped enumeration, yank all of its enumerators
-      // out of the scope.
-      if (isa<EnumDecl>(NewTag)) {
-        Scope *EnumScope = getNonFieldDeclScope(S);
-        for (auto *D : NewTag->decls()) {
-          auto *ED = cast<EnumConstantDecl>(D);
-          assert(EnumScope->isDeclScope(ED));
-          EnumScope->RemoveDecl(ED);
-          IdResolver.RemoveDecl(ED);
-          ED->getLexicalDeclContext()->removeDecl(ED);
-        }
-      }
+      CleanupMergedEnum(S, NewTag);
     }
   }
 
@@ -2637,6 +2639,19 @@ void Sema::MergeTypedefNameDecl(Scope *S, TypedefNameDecl *New,
   Diag(New->getLocation(), diag::ext_redefinition_of_typedef)
     << New->getDeclName();
   notePreviousDefinition(Old, New->getLocation());
+}
+
+void Sema::CleanupMergedEnum(Scope *S, Decl *New) {
+  // If this was an unscoped enumeration, yank all of its enumerators
+  // out of the scope.
+  if (auto *ED = dyn_cast<EnumDecl>(New); ED && !ED->isScoped()) {
+    Scope *EnumScope = getNonFieldDeclScope(S);
+    for (auto *ECD : ED->enumerators()) {
+      assert(EnumScope->isDeclScope(ECD));
+      EnumScope->RemoveDecl(ECD);
+      IdResolver.RemoveDecl(ECD);
+    }
+  }
 }
 
 /// DeclhasAttr - returns true if decl Declaration already has the target
@@ -3814,11 +3829,9 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
   // If this redeclaration makes the function inline, we may need to add it to
   // UndefinedButUsed.
-  if (!Old->isInlined() && New->isInlined() &&
-      !New->hasAttr<GNUInlineAttr>() &&
-      !getLangOpts().GNUInline &&
-      Old->isUsed(false) &&
-      !Old->isDefined() && !New->isThisDeclarationADefinition())
+  if (!Old->isInlined() && New->isInlined() && !New->hasAttr<GNUInlineAttr>() &&
+      !getLangOpts().GNUInline && Old->isUsed(false) && !Old->isDefined() &&
+      !New->isThisDeclarationADefinition() && !Old->isInAnotherModuleUnit())
     UndefinedButUsed.insert(std::make_pair(Old->getCanonicalDecl(),
                                            SourceLocation()));
 
@@ -4685,7 +4698,8 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   // If this redeclaration makes the variable inline, we may need to add it to
   // UndefinedButUsed.
   if (!Old->isInline() && New->isInline() && Old->isUsed(false) &&
-      !Old->getDefinition() && !New->isThisDeclarationADefinition())
+      !Old->getDefinition() && !New->isThisDeclarationADefinition() &&
+      !Old->isInAnotherModuleUnit())
     UndefinedButUsed.insert(std::make_pair(Old->getCanonicalDecl(),
                                            SourceLocation()));
 
@@ -7966,6 +7980,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
 
   if (getLangOpts().HLSL)
     HLSL().ActOnVariableDeclarator(NewVD);
+  if (getLangOpts().OpenACC)
+    OpenACC().ActOnVariableDeclarator(NewVD);
 
   // FIXME: This is probably the wrong location to be doing this and we should
   // probably be doing this for more attributes (especially for function
@@ -8148,7 +8164,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
               (D.getCXXScopeSpec().isSet() && DC && DC->isRecord() &&
                DC->isDependentContext())
                   ? TPC_ClassTemplateMember
-                  : TPC_VarTemplate))
+                  : TPC_Other))
         NewVD->setInvalidDecl();
 
       // If we are providing an explicit specialization of a static variable
@@ -12597,6 +12613,7 @@ namespace {
     bool isRecordType;
     bool isPODType;
     bool isReferenceType;
+    bool isInCXXOperatorCall;
 
     bool isInitList;
     llvm::SmallVector<unsigned, 4> InitFieldIndex;
@@ -12609,6 +12626,7 @@ namespace {
       isPODType = false;
       isRecordType = false;
       isReferenceType = false;
+      isInCXXOperatorCall = false;
       isInitList = false;
       if (ValueDecl *VD = dyn_cast<ValueDecl>(OrigDecl)) {
         isPODType = VD->getType().isPODType(S.Context);
@@ -12796,6 +12814,7 @@ namespace {
     }
 
     void VisitCXXOperatorCallExpr(CXXOperatorCallExpr *E) {
+      llvm::SaveAndRestore CxxOpCallScope(isInCXXOperatorCall, true);
       Expr *Callee = E->getCallee();
 
       if (isa<UnresolvedLookupExpr>(Callee))
@@ -12804,6 +12823,19 @@ namespace {
       Visit(Callee);
       for (auto Arg: E->arguments())
         HandleValue(Arg->IgnoreParenImpCasts());
+    }
+
+    void VisitLambdaExpr(LambdaExpr *E) {
+      if (!isInCXXOperatorCall) {
+        Inherited::VisitLambdaExpr(E);
+        return;
+      }
+
+      for (Expr *Init : E->capture_inits())
+        if (DeclRefExpr *DRE = dyn_cast_if_present<DeclRefExpr>(Init))
+          HandleDeclRefExpr(DRE);
+        else if (Init)
+          Visit(Init);
     }
 
     void VisitUnaryOperator(UnaryOperator *E) {
@@ -18316,12 +18348,14 @@ void Sema::ActOnTagStartDefinition(Scope *S, Decl *TagD) {
   AddPushedVisibilityAttribute(Tag);
 }
 
-bool Sema::ActOnDuplicateDefinition(Decl *Prev, SkipBodyInfo &SkipBody) {
+bool Sema::ActOnDuplicateDefinition(Scope *S, Decl *Prev,
+                                    SkipBodyInfo &SkipBody) {
   if (!hasStructuralCompatLayout(Prev, SkipBody.New))
     return false;
 
   // Make the previous decl visible.
   makeMergedDefinitionVisible(SkipBody.Previous);
+  CleanupMergedEnum(S, SkipBody.New);
   return true;
 }
 
