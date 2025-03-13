@@ -207,6 +207,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <tuple>
 
@@ -3315,14 +3316,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Extend the return type back to its original width if necessary.
     Value *FullShadow = getCleanShadow(&I);
 
-    if (Shadow->getType() == FullShadow->getType())
+    if (Shadow->getType() == FullShadow->getType()) {
       FullShadow = Shadow;
-    else {
-      SmallVector<int, 8> ShadowMask;
-      for (unsigned X = 0;
-           X < cast<FixedVectorType>(FullShadow->getType())->getNumElements();
-           ++X)
-        ShadowMask.push_back(X);
+    } else {
+      SmallVector<int, 8> ShadowMask(
+          cast<FixedVectorType>(FullShadow->getType())->getNumElements());
+      std::iota(ShadowMask.begin(), ShadowMask.end(), 0);
 
       // Append zeros
       FullShadow =
