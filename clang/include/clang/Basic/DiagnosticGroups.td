@@ -372,6 +372,8 @@ def CXX11WarnInconsistentOverrideMethod :
 def CXX11WarnSuggestOverrideDestructor : DiagGroup<"suggest-destructor-override">;
 def CXX11WarnSuggestOverride : DiagGroup<"suggest-override">;
 
+def WarnUnnecessaryVirtualSpecifier : DiagGroup<"unnecessary-virtual-specifier">;
+
 // Original name of this warning in Clang
 def : DiagGroup<"c++0x-narrowing", [CXX11Narrowing]>;
 
