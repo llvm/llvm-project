@@ -1065,6 +1065,13 @@ public:
                            {Src, Exp}, FMFSource, Name);
   }
 
+  /// Create call to the fma intrinsic.
+  Value *CreateFMA(Value *Factor1, Value *Factor2, Value *Summand,
+                   FMFSource FMFSource = {}, const Twine &Name = "") {
+    return CreateIntrinsic(Intrinsic::fma, {Factor1->getType()},
+                           {Factor1, Factor2, Summand}, FMFSource, Name);
+  }
+
   /// Create a call to the arithmetic_fence intrinsic.
   CallInst *CreateArithmeticFence(Value *Val, Type *DstType,
                                   const Twine &Name = "") {

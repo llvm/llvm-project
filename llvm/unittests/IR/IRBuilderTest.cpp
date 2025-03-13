@@ -109,21 +109,13 @@ TEST_F(IRBuilderTest, Intrinsics) {
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Result = Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V});
+  Result = Builder.CreateFMA(V, V, V);
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_FALSE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  Result =
-      Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V}, I);
-  II = cast<IntrinsicInst>(Result);
-  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
-  EXPECT_TRUE(II->hasNoInfs());
-  EXPECT_FALSE(II->hasNoNaNs());
-
-  Result =
-      Builder.CreateIntrinsic(Intrinsic::fma, {V->getType()}, {V, V, V}, I);
+  Result = Builder.CreateFMA(V, V, V, I);
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_TRUE(II->hasNoInfs());
