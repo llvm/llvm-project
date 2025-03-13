@@ -24,13 +24,26 @@ LIBC_INLINE OutType fma(InType x, InType y, InType z) {
 }
 
 #ifdef LIBC_TARGET_CPU_HAS_FMA
-template <> LIBC_INLINE float fma(float x, float y, float z) {
-  return __builtin_fmaf(x, y, z);
-}
 
-template <> LIBC_INLINE double fma(double x, double y, double z) {
-  return __builtin_fma(x, y, z);
+#ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
+template <> LIBC_INLINE float fma(float x, float y, float z) {
+#if __has_builtin(__builtin_elementwise_fma)
+  return __builtin_elementwise_fma(x, y, z);
+#else
+  return __builtin_fmaf(x, y, z);
+#endif
 }
+#endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
+
+#ifdef LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+template <> LIBC_INLINE double fma(double x, double y, double z) {
+#if __has_builtin(__builtin_elementwise_fma)
+  return __builtin_elementwise_fma(x, y, z);
+#else
+  return __builtin_fma(x, y, z);
+#endif
+}
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
 #endif // LIBC_TARGET_CPU_HAS_FMA
 
 } // namespace fputil

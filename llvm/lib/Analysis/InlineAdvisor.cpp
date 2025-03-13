@@ -338,7 +338,7 @@ static raw_ostream &operator<<(raw_ostream &R, const ore::NV &Arg) {
 }
 
 template <class RemarkT>
-RemarkT &operator<<(RemarkT &&R, const InlineCost &IC) {
+decltype(auto) operator<<(RemarkT &&R, const InlineCost &IC) {
   using namespace ore;
   if (IC.isAlways()) {
     R << "(cost=always)";
@@ -350,7 +350,7 @@ RemarkT &operator<<(RemarkT &&R, const InlineCost &IC) {
   }
   if (const char *Reason = IC.getReason())
     R << ": " << ore::NV("Reason", Reason);
-  return R;
+  return std::forward<RemarkT>(R);
 }
 } // namespace llvm
 

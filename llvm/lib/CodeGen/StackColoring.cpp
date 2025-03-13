@@ -1115,9 +1115,10 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
   if (WinEHFuncInfo *EHInfo = MF->getWinEHFuncInfo())
     for (WinEHTryBlockMapEntry &TBME : EHInfo->TryBlockMap)
       for (WinEHHandlerType &H : TBME.HandlerArray)
-        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max() &&
-            SlotRemap.count(H.CatchObj.FrameIndex))
-          H.CatchObj.FrameIndex = SlotRemap[H.CatchObj.FrameIndex];
+        if (H.CatchObj.FrameIndex != std::numeric_limits<int>::max())
+          if (auto It = SlotRemap.find(H.CatchObj.FrameIndex);
+              It != SlotRemap.end())
+            H.CatchObj.FrameIndex = It->second;
 
   LLVM_DEBUG(dbgs() << "Fixed " << FixedMemOp << " machine memory operands.\n");
   LLVM_DEBUG(dbgs() << "Fixed " << FixedDbg << " debug locations.\n");

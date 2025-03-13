@@ -43,8 +43,9 @@ static inline bool isVRegClass(uint64_t TSFlags) {
 }
 
 /// \returns the LMUL for the register class.
-static inline RISCVII::VLMUL getLMul(uint64_t TSFlags) {
-  return static_cast<RISCVII::VLMUL>((TSFlags & VLMulShiftMask) >> VLMulShift);
+static inline RISCVVType::VLMUL getLMul(uint64_t TSFlags) {
+  return static_cast<RISCVVType::VLMUL>((TSFlags & VLMulShiftMask) >>
+                                        VLMulShift);
 }
 
 /// \returns the NF for the register class.
@@ -128,6 +129,8 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
                         SmallVectorImpl<uint64_t> &Ops) const override;
 
   unsigned getRegisterCostTableIndex(const MachineFunction &MF) const override;
+
+  float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const override;
 
   bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
                              SmallVectorImpl<MCPhysReg> &Hints,

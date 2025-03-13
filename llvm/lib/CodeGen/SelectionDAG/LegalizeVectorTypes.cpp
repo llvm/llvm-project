@@ -136,6 +136,7 @@ void DAGTypeLegalizer::ScalarizeVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMODF:
   case ISD::FFREXP:
   case ISD::FSINCOS:
+  case ISD::FSINCOSPI:
     R = ScalarizeVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;
   case ISD::ADD:
@@ -774,6 +775,10 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   case ISD::LLRINT:
     Res = ScalarizeVecOp_UnaryOp(N);
     break;
+  case ISD::FP_TO_SINT_SAT:
+  case ISD::FP_TO_UINT_SAT:
+    Res = ScalarizeVecOp_UnaryOpWithExtraInput(N);
+    break;
   case ISD::STRICT_SINT_TO_FP:
   case ISD::STRICT_UINT_TO_FP:
   case ISD::STRICT_FP_TO_SINT:
@@ -876,6 +881,20 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_UnaryOp(SDNode *N) {
   SDValue Elt = GetScalarizedVector(N->getOperand(0));
   SDValue Op = DAG.getNode(N->getOpcode(), SDLoc(N),
                            N->getValueType(0).getScalarType(), Elt);
+  // Revectorize the result so the types line up with what the uses of this
+  // expression expect.
+  return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Op);
+}
+
+/// Same as ScalarizeVecOp_UnaryOp with an extra operand (for example a
+/// typesize).
+SDValue DAGTypeLegalizer::ScalarizeVecOp_UnaryOpWithExtraInput(SDNode *N) {
+  assert(N->getValueType(0).getVectorNumElements() == 1 &&
+         "Unexpected vector type!");
+  SDValue Elt = GetScalarizedVector(N->getOperand(0));
+  SDValue Op =
+      DAG.getNode(N->getOpcode(), SDLoc(N), N->getValueType(0).getScalarType(),
+                  Elt, N->getOperand(1));
   // Revectorize the result so the types line up with what the uses of this
   // expression expect.
   return DAG.getNode(ISD::SCALAR_TO_VECTOR, SDLoc(N), N->getValueType(0), Op);
@@ -1265,6 +1284,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   case ISD::FMODF:
   case ISD::FFREXP:
   case ISD::FSINCOS:
+  case ISD::FSINCOSPI:
     SplitVecRes_UnaryOpWithTwoResults(N, ResNo, Lo, Hi);
     break;
 
@@ -1374,6 +1394,10 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::EXPERIMENTAL_VP_REVERSE:
     SplitVecRes_VP_REVERSE(N, Lo, Hi);
+    break;
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+    SplitVecRes_PARTIAL_REDUCE_MLA(N, Lo, Hi);
     break;
   }
 
@@ -3193,6 +3217,13 @@ void DAGTypeLegalizer::SplitVecRes_VP_REVERSE(SDNode *N, SDValue &Lo,
   std::tie(Lo, Hi) = DAG.SplitVector(Load, DL);
 }
 
+void DAGTypeLegalizer::SplitVecRes_PARTIAL_REDUCE_MLA(SDNode *N, SDValue &Lo,
+                                                      SDValue &Hi) {
+  SDLoc DL(N);
+  SDValue Expanded = TLI.expandPartialReduceMLA(N, DAG);
+  std::tie(Lo, Hi) = DAG.SplitVector(Expanded, DL);
+}
+
 void DAGTypeLegalizer::SplitVecRes_VECTOR_DEINTERLEAVE(SDNode *N) {
   unsigned Factor = N->getNumOperands();
 
@@ -3410,6 +3441,10 @@ bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
     break;
   case ISD::EXPERIMENTAL_VECTOR_HISTOGRAM:
     Res = SplitVecOp_VECTOR_HISTOGRAM(N);
+    break;
+  case ISD::PARTIAL_REDUCE_UMLA:
+  case ISD::PARTIAL_REDUCE_SMLA:
+    Res = SplitVecOp_PARTIAL_REDUCE_MLA(N);
     break;
   }
 
@@ -4465,6 +4500,10 @@ SDValue DAGTypeLegalizer::SplitVecOp_VECTOR_HISTOGRAM(SDNode *N) {
                                 MMO, IndexType);
 }
 
+SDValue DAGTypeLegalizer::SplitVecOp_PARTIAL_REDUCE_MLA(SDNode *N) {
+  return TLI.expandPartialReduceMLA(N, DAG);
+}
+
 //===----------------------------------------------------------------------===//
 //  Result Vector Widening
 //===----------------------------------------------------------------------===//
@@ -4815,7 +4854,8 @@ void DAGTypeLegalizer::WidenVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::FMODF:
   case ISD::FFREXP:
-  case ISD::FSINCOS: {
+  case ISD::FSINCOS:
+  case ISD::FSINCOSPI: {
     if (!unrollExpandedOp())
       Res = WidenVecRes_UnaryOpWithTwoResults(N, ResNo);
     break;

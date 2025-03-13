@@ -252,7 +252,7 @@ private:
   std::pair<bool /*Changed*/, bool /*CFGChanged*/> runOnAlloca(AllocaInst &AI);
   void clobberUse(Use &U);
   bool deleteDeadInstructions(SmallPtrSetImpl<AllocaInst *> &DeletedAllocas);
-  bool promoteAllocas(Function &F);
+  bool promoteAllocas();
 };
 
 } // end anonymous namespace
@@ -1397,10 +1397,10 @@ private:
   void visitInstruction(Instruction &I) { PI.setAborted(&I); }
 
   void visitCallBase(CallBase &CB) {
-    // If the call operand is NoCapture ReadOnly, then we mark it as
-    // EscapedReadOnly.
+    // If the call operand is read-only and only does a read-only or address
+    // capture, then we mark it as EscapedReadOnly.
     if (CB.isDataOperand(U) &&
-        CB.doesNotCapture(U->getOperandNo()) &&
+        !capturesFullProvenance(CB.getCaptureInfo(U->getOperandNo())) &&
         CB.onlyReadsMemory(U->getOperandNo())) {
       PI.setEscapedReadOnly(&CB);
       return;
@@ -5154,7 +5154,7 @@ insertNewDbgInst(DIBuilder &DIB, DbgDeclareInst *Orig, AllocaInst *NewAddr,
     return;
 
   DIB.insertDeclare(NewAddr, Orig->getVariable(), NewAddrExpr,
-                    Orig->getDebugLoc(), BeforeInst);
+                    Orig->getDebugLoc(), BeforeInst->getIterator());
 }
 
 /// Insert a new dbg.assign.
@@ -5693,7 +5693,7 @@ bool SROA::deleteDeadInstructions(
 /// This attempts to promote whatever allocas have been identified as viable in
 /// the PromotableAllocas list. If that list is empty, there is nothing to do.
 /// This function returns whether any promotion occurred.
-bool SROA::promoteAllocas(Function &F) {
+bool SROA::promoteAllocas() {
   if (PromotableAllocas.empty())
     return false;
 
@@ -5750,7 +5750,7 @@ std::pair<bool /*Changed*/, bool /*CFGChanged*/> SROA::runSROA(Function &F) {
       }
     }
 
-    Changed |= promoteAllocas(F);
+    Changed |= promoteAllocas();
 
     Worklist = PostPromotionWorklist;
     PostPromotionWorklist.clear();

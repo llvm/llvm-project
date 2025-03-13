@@ -65,44 +65,13 @@ define void @widen_fdiv_v2f32_v8f32(ptr %a0, ptr %b0, ptr %c0) {
 ; SSE-NEXT:    movlps %xmm3, 24(%rdx)
 ; SSE-NEXT:    retq
 ;
-; AVX1OR2-LABEL: widen_fdiv_v2f32_v8f32:
-; AVX1OR2:       # %bb.0:
-; AVX1OR2-NEXT:    vmovups (%rdi), %ymm0
-; AVX1OR2-NEXT:    vdivps (%rsi), %ymm0, %ymm0
-; AVX1OR2-NEXT:    vmovups %ymm0, (%rdx)
-; AVX1OR2-NEXT:    vzeroupper
-; AVX1OR2-NEXT:    retq
-;
-; AVX512F-LABEL: widen_fdiv_v2f32_v8f32:
-; AVX512F:       # %bb.0:
-; AVX512F-NEXT:    vmovups (%rdi), %ymm0
-; AVX512F-NEXT:    vdivps (%rsi), %ymm0, %ymm0
-; AVX512F-NEXT:    vmovups %ymm0, (%rdx)
-; AVX512F-NEXT:    vzeroupper
-; AVX512F-NEXT:    retq
-;
-; AVX512VL-LABEL: widen_fdiv_v2f32_v8f32:
-; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm4 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX512VL-NEXT:    vdivps %xmm5, %xmm1, %xmm1
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm5 = mem[0],zero
-; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm6 = mem[0],zero
-; AVX512VL-NEXT:    vdivps %xmm6, %xmm3, %xmm3
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm3
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm1
-; AVX512VL-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm1[2,3],ymm3[2,3]
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm5, %ymm4, %ymm3
-; AVX512VL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
-; AVX512VL-NEXT:    vdivps %ymm3, %ymm0, %ymm0
-; AVX512VL-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[2],ymm1[2]
-; AVX512VL-NEXT:    vmovups %ymm0, (%rdx)
-; AVX512VL-NEXT:    vzeroupper
-; AVX512VL-NEXT:    retq
+; AVX-LABEL: widen_fdiv_v2f32_v8f32:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovups (%rdi), %ymm0
+; AVX-NEXT:    vdivps (%rsi), %ymm0, %ymm0
+; AVX-NEXT:    vmovups %ymm0, (%rdx)
+; AVX-NEXT:    vzeroupper
+; AVX-NEXT:    retq
   %a2 = getelementptr inbounds i8, ptr %a0, i64 8
   %b2 = getelementptr inbounds i8, ptr %b0, i64 8
   %c2 = getelementptr inbounds i8, ptr %c0, i64 8

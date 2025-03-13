@@ -7143,8 +7143,6 @@ static void __kmp_do_serial_initialize(void) {
   __kmp_stats_init();
 #endif
   __kmp_init_lock(&__kmp_global_lock);
-  __kmp_init_queuing_lock(&__kmp_dispatch_lock);
-  __kmp_init_lock(&__kmp_debug_lock);
   __kmp_init_atomic_lock(&__kmp_atomic_lock);
   __kmp_init_atomic_lock(&__kmp_atomic_lock_1i);
   __kmp_init_atomic_lock(&__kmp_atomic_lock_2i);

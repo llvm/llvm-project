@@ -26,7 +26,7 @@ loop:
   %v3 = phi float [0.0, %entry], [%fma.3, %loop]
 
   ; Try to get the 0 constant to get coalesced into a wide register
-  %blup = insertelement <4 x float> undef, float %v0, i32 0
+  %blup = insertelement <4 x float> poison, float %v0, i32 0
   store <4 x float> %blup, ptr addrspace(1) %out
 
   %load = load <4 x float>, ptr addrspace(1) %in
@@ -48,7 +48,7 @@ exit:
   %ev1 = phi float [0.0, %entry], [%fma.1, %loop]
   %ev2 = phi float [0.0, %entry], [%fma.2, %loop]
   %ev3 = phi float [0.0, %entry], [%fma.3, %loop]
-  %dst.0 = insertelement <4 x float> undef,  float %ev0, i32 0
+  %dst.0 = insertelement <4 x float> poison,  float %ev0, i32 0
   %dst.1 = insertelement <4 x float> %dst.0, float %ev1, i32 1
   %dst.2 = insertelement <4 x float> %dst.1, float %ev2, i32 2
   %dst.3 = insertelement <4 x float> %dst.2, float %ev3, i32 3

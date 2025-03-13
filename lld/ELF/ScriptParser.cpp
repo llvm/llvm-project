@@ -988,20 +988,8 @@ OutputDesc *ScriptParser::readOverlaySectionDescription() {
       ctx.script->createOutputSection(readName(), getCurrentLocation());
   osd->osec.inOverlay = true;
   expect("{");
-  while (auto tok = till("}")) {
-    uint64_t withFlags = 0;
-    uint64_t withoutFlags = 0;
-    if (tok == "INPUT_SECTION_FLAGS") {
-      std::tie(withFlags, withoutFlags) = readInputSectionFlags();
-      tok = till("");
-    }
-    if (tok == "CLASS")
-      osd->osec.commands.push_back(make<InputSectionDescription>(
-          StringRef{}, withFlags, withoutFlags, readSectionClassName()));
-    else
-      osd->osec.commands.push_back(
-          readInputSectionRules(tok, withFlags, withoutFlags));
-  }
+  while (auto tok = till("}"))
+    osd->osec.commands.push_back(readInputSectionDescription(tok));
   osd->osec.phdrs = readOutputSectionPhdrs();
   return osd;
 }
@@ -1411,6 +1399,7 @@ static std::optional<uint64_t> parseFlag(StringRef tok) {
       .Case(CASE_ENT(SHF_COMPRESSED))
       .Case(CASE_ENT(SHF_EXCLUDE))
       .Case(CASE_ENT(SHF_ARM_PURECODE))
+      .Case(CASE_ENT(SHF_AARCH64_PURECODE))
       .Default(std::nullopt);
 #undef CASE_ENT
 }

@@ -131,7 +131,7 @@
 /bolt/ @aaupov @maksfb @rafaelauler @ayermolo @dcci @yota9
 
 # Bazel build system.
-/utils/bazel/ @rupprecht @keith
+/utils/bazel/ @rupprecht @keith @aaronmondal
 
 # InstallAPI and TextAPI
 /llvm/**/TextAPI/ @cyndyishida

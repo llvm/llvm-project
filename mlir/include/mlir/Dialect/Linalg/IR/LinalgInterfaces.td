@@ -863,11 +863,6 @@ def LinalgStructuredInterface
     /// `createFlatListOfOperandDims`.
     SmallVector<Range, 4> createLoopRanges(OpBuilder &b, Location loc);
 
-    /// Compute the static loop sizes necessary to vectorize the computation.
-    /// This is done by applying `getShapesToLoopsMap` to
-    /// `createFlatListOfOperandStaticDims`.
-    SmallVector<int64_t, 4> computeStaticLoopSizes();
-
     /// Returns the value that expresses the shape of the output in terms of
     /// shape of the input operands where possible
     LogicalResult reifyResultShapes(OpBuilder &b,

@@ -73,14 +73,32 @@ recent commit:
 
   % git clang-format HEAD~1
 
-Note that this modifies the files, but doesn't commit them -- you'll likely want
-to run
+.. note::
+  For some patches, formatting them may add changes that obscure the intent of
+  the patch. For example, adding to an enum that was not previously formatted
+  may result in the entire enum being reformatted. This happens because not all
+  of the LLVM Project conforms to LLVM's clang-format style at this time.
+
+  If you think that this might be the case for your changes, or are unsure, we
+  recommend that you add the formatting changes as a **separate commit** within
+  the Pull Request.
+
+  Reviewers may request that this formatting commit be made into a separate Pull
+  Request that will be merged before your actual changes.
+
+  This means that if the formatting changes are the first commit, you will have
+  an easier time doing this. If they are not, that is ok too, but you will have
+  to do a bit more work to separate it out.
+
+Note that ``git clang-format`` modifies the files, but does not commit them --
+you will likely want to run one of the following to add the changes to a commit:
 
 .. code-block:: console
 
+  # To create a new commit.
+  % git commit -a
+  # To add to the most recent commit.
   % git commit --amend -a
-
-in order to update the last commit with all pending changes.
 
 .. note::
   If you don't already have ``clang-format`` or ``git clang-format`` installed
@@ -111,16 +129,10 @@ review by 'ping'ing the GitHub PR with "Ping" in a comment. The common courtesy 
 is once a week. Please remember that you are asking for valuable time from
 other professional developers.
 
-After your PR is approved, ensure that:
-
-  * The PR title and description describe the final changes. These will be used
-    as the title and message of the final squashed commit. The titles and
-    messages of commits in the PR will **not** be used.
-  * You have set a valid email address in your GitHub account, see :ref:`github-email-address`.
-
-Now you can merge your PR. If you do not have the ability to merge the PR, ask your
-reviewers to merge it on your behalf. You must do this explicitly, as reviewers'
-default assumption is that you are able to merge your own PR.
+After your PR is approved, you can merge it. If you do not have the ability to
+merge the PR, ask your reviewers to merge it on your behalf. You must do this
+explicitly, as reviewers' default assumption is that you are able to merge your
+own PR.
 
 For more information on LLVM's code-review process, please see
 :doc:`CodeReview`.
@@ -129,6 +141,10 @@ For more information on LLVM's code-review process, please see
 
 For developers to commit changes from Git
 -----------------------------------------
+
+.. note::
+   See also :ref:`GitHub <github-reviews>` for more details on merging your changes
+   into LLVM project monorepo.
 
 Once a patch is reviewed, you can select the "Squash and merge" button in the
 GitHub web interface.

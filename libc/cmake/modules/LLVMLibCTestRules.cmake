@@ -36,8 +36,9 @@ function(_get_common_test_compile_options output_var c_test flags)
     if(NOT LIBC_WNO_ERROR)
       # list(APPEND compile_options "-Werror")
     endif()
-    # list(APPEND compile_options "-Wconversion")
-    # list(APPEND compile_options "-Wno-sign-conversion")
+    list(APPEND compile_options "-Wconversion")
+    # FIXME: convert to -Wsign-conversion
+    list(APPEND compile_options "-Wno-sign-conversion")
     list(APPEND compile_options "-Wimplicit-fallthrough")
     list(APPEND compile_options "-Wwrite-strings")
     # Silence this warning because _Complex is a part of C99.
@@ -560,14 +561,12 @@ function(add_integration_test test_name)
   if(LIBC_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
-      -Wno-multi-gpu -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto
-      "-Wl,-mllvm,-amdgpu-lower-global-ctor-dtor=0" -nostdlib -static
+      -Wno-multi-gpu -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto -nostdlib -static
       "-Wl,-mllvm,-amdhsa-code-object-version=${LIBC_GPU_CODE_OBJECT_VERSION}")
   elseif(LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} ${INTEGRATION_TEST_COMPILE_OPTIONS}
       "-Wl,--suppress-stack-size-warning" -Wno-multi-gpu
-      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")
@@ -753,7 +752,6 @@ function(add_libc_hermetic test_name)
     target_link_options(${fq_build_target_name} PRIVATE
       ${LIBC_COMPILE_OPTIONS_DEFAULT} -Wno-multi-gpu
       "-Wl,--suppress-stack-size-warning"
-      "-Wl,-mllvm,-nvptx-lower-global-ctor-dtor=1"
       "-Wl,-mllvm,-nvptx-emit-init-fini-kernel"
       -march=${LIBC_GPU_TARGET_ARCHITECTURE} -nostdlib -static
       "--cuda-path=${LIBC_CUDA_ROOT}")

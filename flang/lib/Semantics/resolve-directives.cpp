@@ -352,7 +352,7 @@ public:
   }
 
   bool Pre(const parser::OmpDirectiveSpecification &x) {
-    PushContext(x.source, std::get<llvm::omp::Directive>(x.t));
+    PushContext(x.source, x.DirId());
     return true;
   }
   void Post(const parser::OmpDirectiveSpecification &) { PopContext(); }
@@ -445,6 +445,9 @@ public:
 
   bool Pre(const parser::OpenMPDeclareMapperConstruct &);
   void Post(const parser::OpenMPDeclareMapperConstruct &) { PopContext(); }
+
+  bool Pre(const parser::OpenMPDeclareReductionConstruct &);
+  void Post(const parser::OpenMPDeclareReductionConstruct &) { PopContext(); }
 
   bool Pre(const parser::OpenMPThreadprivate &);
   void Post(const parser::OpenMPThreadprivate &) { PopContext(); }
@@ -1976,6 +1979,12 @@ bool OmpAttributeVisitor::Pre(const parser::OpenMPDeclareMapperConstruct &x) {
   return true;
 }
 
+bool OmpAttributeVisitor::Pre(
+    const parser::OpenMPDeclareReductionConstruct &x) {
+  PushContext(x.source, llvm::omp::Directive::OMPD_declare_reduction);
+  return true;
+}
+
 bool OmpAttributeVisitor::Pre(const parser::OpenMPThreadprivate &x) {
   PushContext(x.source, llvm::omp::Directive::OMPD_threadprivate);
   const auto &list{std::get<parser::OmpObjectList>(x.t)};
@@ -2309,7 +2318,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
     }
 
     if (Symbol * found{currScope().FindSymbol(name.source)}) {
-      if (found->test(semantics::Symbol::Flag::OmpThreadprivate))
+      if (found->GetUltimate().test(semantics::Symbol::Flag::OmpThreadprivate))
         return;
     }
 
@@ -2395,6 +2404,24 @@ void OmpAttributeVisitor::ResolveOmpObjectList(
   }
 }
 
+/// True if either symbol is in a namelist or some other symbol in the same
+/// equivalence set as symbol is in a namelist.
+static bool SymbolOrEquivalentIsInNamelist(const Symbol &symbol) {
+  auto isInNamelist{[](const Symbol &sym) {
+    const Symbol &ultimate{sym.GetUltimate()};
+    return ultimate.test(Symbol::Flag::InNamelist);
+  }};
+
+  const EquivalenceSet *eqv{FindEquivalenceSet(symbol)};
+  if (!eqv) {
+    return isInNamelist(symbol);
+  }
+
+  return llvm::any_of(*eqv, [isInNamelist](const EquivalenceObject &obj) {
+    return isInNamelist(obj.symbol);
+  });
+}
+
 void OmpAttributeVisitor::ResolveOmpObject(
     const parser::OmpObject &ompObject, Symbol::Flag ompFlag) {
   common::visit(
@@ -2459,7 +2486,6 @@ void OmpAttributeVisitor::ResolveOmpObject(
                               .str()));
                 }
                 if (ompFlag == Symbol::Flag::OmpReduction) {
-                  const Symbol &ultimateSymbol{symbol->GetUltimate()};
                   // Using variables inside of a namelist in OpenMP reductions
                   // is allowed by the standard, but is not allowed for
                   // privatisation. This looks like an oversight. If the
@@ -2467,7 +2493,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
                   // mapping for the reduction variable: resulting in incorrect
                   // results. Disabling this hoisting could make some real
                   // production code go slower. See discussion in #109303
-                  if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
+                  if (SymbolOrEquivalentIsInNamelist(*symbol)) {
                     context_.Say(name->source,
                         "Variable '%s' in NAMELIST cannot be in a REDUCTION clause"_err_en_US,
                         name->ToString());
@@ -2829,7 +2855,7 @@ void OmpAttributeVisitor::CheckObjectIsPrivatizable(
     clauseName = "LASTPRIVATE";
   }
 
-  if (ultimateSymbol.test(Symbol::Flag::InNamelist)) {
+  if (SymbolOrEquivalentIsInNamelist(symbol)) {
     context_.Say(name.source,
         "Variable '%s' in NAMELIST cannot be in a %s clause"_err_en_US,
         name.ToString(), clauseName.str());

@@ -367,15 +367,17 @@ private:
   struct DepDistanceStrideAndSizeInfo {
     const SCEV *Dist;
 
-    /// Strides could either be scaled (in bytes, taking the size of the
-    /// underlying type into account), or unscaled (in indexing units; unscaled
-    /// stride = scaled stride / size of underlying type). Here, strides are
-    /// unscaled.
+    /// Strides here are scaled; i.e. in bytes, taking the size of the
+    /// underlying type into account.
     uint64_t MaxStride;
     std::optional<uint64_t> CommonStride;
 
     bool ShouldRetryWithRuntimeCheck;
+
+    /// TypeByteSize is either the common store size of both accesses, or 0 when
+    /// store sizes mismatch.
     uint64_t TypeByteSize;
+
     bool AIsWrite;
     bool BIsWrite;
 
@@ -394,8 +396,9 @@ private:
   /// there's no dependence or the analysis fails. Outlined to lambda to limit
   /// he scope of various temporary variables, like A/BPtr, StrideA/BPtr and
   /// others. Returns either the dependence result, if it could already be
-  /// determined, or a struct containing (Distance, Stride, TypeSize, AIsWrite,
-  /// BIsWrite).
+  /// determined, or a DepDistanceStrideAndSizeInfo struct, noting that
+  /// TypeByteSize could be 0 when store sizes mismatch, and this should be
+  /// checked in the caller.
   std::variant<Dependence::DepType, DepDistanceStrideAndSizeInfo>
   getDependenceDistanceStrideAndSize(const MemAccessInfo &A, Instruction *AInst,
                                      const MemAccessInfo &B,
@@ -497,6 +500,7 @@ public:
     Pointers.clear();
     Checks.clear();
     DiffChecks.clear();
+    CheckingGroups.clear();
   }
 
   /// Insert a pointer and calculate the start and end SCEVs.

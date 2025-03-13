@@ -571,7 +571,7 @@ private:
   std::pair<ASTFileSignature, ASTFileSignature> createSignature() const;
   ASTFileSignature createSignatureForNamedModule() const;
 
-  void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
+  void WriteInputFiles(SourceManager &SourceMgr);
   void WriteSourceManagerBlock(SourceManager &SourceMgr);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);
   void WriteHeaderSearch(const HeaderSearch &HS);
@@ -750,9 +750,6 @@ public:
 
   /// Get the unique number used to refer to the given macro.
   serialization::MacroID getMacroRef(MacroInfo *MI, const IdentifierInfo *Name);
-
-  /// Determine the ID of an already-emitted macro.
-  serialization::MacroID getMacroID(MacroInfo *MI);
 
   uint32_t getMacroDirectivesOffset(const IdentifierInfo *Name);
 

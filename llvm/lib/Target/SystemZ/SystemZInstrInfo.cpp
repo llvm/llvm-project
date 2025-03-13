@@ -857,8 +857,8 @@ bool SystemZInstrInfo::PredicateInstruction(
 
 void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    MachineBasicBlock::iterator MBBI,
-                                   const DebugLoc &DL, MCRegister DestReg,
-                                   MCRegister SrcReg, bool KillSrc,
+                                   const DebugLoc &DL, Register DestReg,
+                                   Register SrcReg, bool KillSrc,
                                    bool RenamableDest,
                                    bool RenamableSrc) const {
   // Split 128-bit GPR moves into two 64-bit moves. Add implicit uses of the
@@ -906,7 +906,7 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
         RI.getMatchingSuperReg(RI.getSubReg(DestReg, SystemZ::subreg_l64),
                                SystemZ::subreg_h64, &SystemZ::VR128BitRegClass);
 
-    if (DestRegHi != SrcReg)
+    if (DestRegHi != SrcReg.asMCReg())
       copyPhysReg(MBB, MBBI, DL, DestRegHi, SrcReg, false);
     BuildMI(MBB, MBBI, DL, get(SystemZ::VREPG), DestRegLo)
       .addReg(SrcReg, getKillRegState(KillSrc)).addImm(1);

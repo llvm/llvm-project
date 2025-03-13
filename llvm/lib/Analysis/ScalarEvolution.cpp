@@ -11632,8 +11632,9 @@ bool ScalarEvolution::isBasicBlockEntryGuardedByCond(const BasicBlock *BB,
   // non-strict comparison is known from ranges and non-equality is known from
   // dominating predicates. If we are proving strict comparison, we always try
   // to prove non-equality and non-strict comparison separately.
-  auto NonStrictPredicate = ICmpInst::getNonStrictPredicate(Pred);
-  const bool ProvingStrictComparison = (Pred != NonStrictPredicate);
+  CmpPredicate NonStrictPredicate = ICmpInst::getNonStrictCmpPredicate(Pred);
+  const bool ProvingStrictComparison =
+      (Pred != static_cast<CmpInst::Predicate>(NonStrictPredicate));
   bool ProvedNonStrictComparison = false;
   bool ProvedNonEquality = false;
 
@@ -11860,13 +11861,15 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
   }
 
   // Check whether the found predicate is the same as the desired predicate.
-  if (auto P = CmpPredicate::getMatching(FoundPred, Pred))
-    return isImpliedCondOperands(*P, LHS, RHS, FoundLHS, FoundRHS, CtxI);
+  // FIXME: use CmpPredicate::getMatching here.
+  if (FoundPred == static_cast<CmpInst::Predicate>(Pred))
+    return isImpliedCondOperands(Pred, LHS, RHS, FoundLHS, FoundRHS, CtxI);
 
   // Check whether swapping the found predicate makes it the same as the
   // desired predicate.
-  if (auto P = CmpPredicate::getMatching(
-          ICmpInst::getSwappedCmpPredicate(FoundPred), Pred)) {
+  // FIXME: use CmpPredicate::getMatching here.
+  if (ICmpInst::getSwappedCmpPredicate(FoundPred) ==
+      static_cast<CmpInst::Predicate>(Pred)) {
     // We can write the implication
     // 0.  LHS Pred      RHS  <-   FoundLHS SwapPred  FoundRHS
     // using one of the following ways:
@@ -11877,23 +11880,22 @@ bool ScalarEvolution::isImpliedCondBalancedTypes(
     // Forms 1. and 2. require swapping the operands of one condition. Don't
     // do this if it would break canonical constant/addrec ordering.
     if (!isa<SCEVConstant>(RHS) && !isa<SCEVAddRecExpr>(LHS))
-      return isImpliedCondOperands(ICmpInst::getSwappedCmpPredicate(*P), RHS,
-                                   LHS, FoundLHS, FoundRHS, CtxI);
+      return isImpliedCondOperands(FoundPred, RHS, LHS, FoundLHS, FoundRHS,
+                                   CtxI);
     if (!isa<SCEVConstant>(FoundRHS) && !isa<SCEVAddRecExpr>(FoundLHS))
-      return isImpliedCondOperands(*P, LHS, RHS, FoundRHS, FoundLHS, CtxI);
+      return isImpliedCondOperands(Pred, LHS, RHS, FoundRHS, FoundLHS, CtxI);
 
     // There's no clear preference between forms 3. and 4., try both.  Avoid
     // forming getNotSCEV of pointer values as the resulting subtract is
     // not legal.
     if (!LHS->getType()->isPointerTy() && !RHS->getType()->isPointerTy() &&
-        isImpliedCondOperands(ICmpInst::getSwappedCmpPredicate(*P),
-                              getNotSCEV(LHS), getNotSCEV(RHS), FoundLHS,
-                              FoundRHS, CtxI))
+        isImpliedCondOperands(FoundPred, getNotSCEV(LHS), getNotSCEV(RHS),
+                              FoundLHS, FoundRHS, CtxI))
       return true;
 
     if (!FoundLHS->getType()->isPointerTy() &&
         !FoundRHS->getType()->isPointerTy() &&
-        isImpliedCondOperands(*P, LHS, RHS, getNotSCEV(FoundLHS),
+        isImpliedCondOperands(Pred, LHS, RHS, getNotSCEV(FoundLHS),
                               getNotSCEV(FoundRHS), CtxI))
       return true;
 
@@ -12400,6 +12402,12 @@ bool ScalarEvolution::isImpliedViaMerge(CmpPredicate Pred, const SCEV *LHS,
       // iteration of a loop.
       if (!properlyDominates(L, LBB))
         return false;
+      // Addrecs are considered to properly dominate their loop, so are missed
+      // by the previous check. Discard any values that have computable
+      // evolution in this loop.
+      if (auto *Loop = LI.getLoopFor(LBB))
+        if (hasComputableLoopEvolution(L, Loop))
+          return false;
       if (!ProvedEasily(L, RHS))
         return false;
     }
@@ -12563,16 +12571,14 @@ bool ScalarEvolution::isImpliedViaOperations(CmpPredicate Pred, const SCEV *LHS,
     return false;
 
   // We only want to work with GT comparison so far.
-  if (ICmpInst::isLT(Pred)) {
+  if (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_SLT) {
     Pred = ICmpInst::getSwappedCmpPredicate(Pred);
     std::swap(LHS, RHS);
     std::swap(FoundLHS, FoundRHS);
   }
 
-  CmpInst::Predicate P = Pred.getPreferredSignedPredicate();
-
   // For unsigned, try to reduce it to corresponding signed comparison.
-  if (P == ICmpInst::ICMP_UGT)
+  if (Pred == ICmpInst::ICMP_UGT)
     // We can replace unsigned predicate with its signed counterpart if all
     // involved values are non-negative.
     // TODO: We could have better support for unsigned.
@@ -12585,10 +12591,10 @@ bool ScalarEvolution::isImpliedViaOperations(CmpPredicate Pred, const SCEV *LHS,
                                 FoundRHS) &&
           isImpliedCondOperands(ICmpInst::ICMP_SGT, RHS, MinusOne, FoundLHS,
                                 FoundRHS))
-        P = ICmpInst::ICMP_SGT;
+        Pred = ICmpInst::ICMP_SGT;
     }
 
-  if (P != ICmpInst::ICMP_SGT)
+  if (Pred != ICmpInst::ICMP_SGT)
     return false;
 
   auto GetOpFromSExt = [&](const SCEV *S) {

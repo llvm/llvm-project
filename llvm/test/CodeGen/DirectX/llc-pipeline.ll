@@ -22,9 +22,8 @@
 ; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT:     Scalarize vector operations
 ; CHECK-NEXT:   DXIL Resource Binding Analysis
-; CHECK-NEXT:   DXIL resource Information
-; CHECK-NEXT:   DXIL Shader Flag Analysis
 ; CHECK-NEXT:   DXIL Module Metadata analysis
+; CHECK-NEXT:   DXIL Shader Flag Analysis
 ; CHECK-NEXT:   DXIL Translate Metadata
 ; CHECK-NEXT:   DXIL Op Lowering
 ; CHECK-NEXT:   DXIL Prepare Module
@@ -33,6 +32,7 @@
 ; CHECK-ASM-NEXT: Print Module IR
 
 ; CHECK-OBJ-NEXT: DXIL Embedder
+; CHECK-OBJ-NEXT: DXIL Root Signature Analysis
 ; CHECK-OBJ-NEXT: DXContainer Global Emitter
 ; CHECK-OBJ-NEXT: FunctionPass Manager
 ; CHECK-OBJ-NEXT:   Lazy Machine Block Frequency Analysis

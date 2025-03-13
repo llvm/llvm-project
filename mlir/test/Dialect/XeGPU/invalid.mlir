@@ -78,10 +78,10 @@ func.func @test_load_nd_vc_3(%src: memref<8x16xf16>) {
 }
 
 // -----
-func.func @test_load_nd_vc_4(%src: memref<24x32xf32>) {
+func.func @test_load_nd_sg_map(%src: memref<24x32xf32>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
     !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
-  // expected-error@+1 {{Result shape doesn't match TensorDesc shape.}}
+  // expected-error@+1 {{Result shape [8, 2] is not consistent with distributed vector shape [8, 1]}}
   %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>,
       l2_hint = #xegpu.cache_hint<uncached>}>
     : !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
@@ -90,10 +90,10 @@ func.func @test_load_nd_vc_4(%src: memref<24x32xf32>) {
 }
 
 // -----
-func.func @test_load_nd_vc_5(%src: memref<24x32xf32>) {
+func.func @test_load_nd_sg_map(%src: memref<24x32xf32>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
     !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
-  // expected-error@+1 {{Result shape doesn't match TensorDesc shape.}}
+  // expected-error@+1 {{Result shape [8] is not consistent with distributed vector shape [1, 1]}}
   %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>,
       l2_hint = #xegpu.cache_hint<uncached>}>
     : !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
@@ -105,7 +105,7 @@ func.func @test_load_nd_vc_5(%src: memref<24x32xf32>) {
 func.func @test_load_nd_vc_6(%src: memref<24x32xf32>) {
   %1 = xegpu.create_nd_tdesc %src[0, 0] : memref<24x32xf32> ->
     !xegpu.tensor_desc<8x16xf32>
-  // expected-error@+1 {{Result shape doesn't match TensorDesc shape.}}
+  // expected-error@+1 {{Value shape [8, 1] is not consistent with tensor descriptor}}
   %2 = xegpu.load_nd %1 <{l1_hint = #xegpu.cache_hint<cached>,
       l2_hint = #xegpu.cache_hint<uncached>}>
     : !xegpu.tensor_desc<8x16xf32> -> vector<8x1xf32>
@@ -134,20 +134,20 @@ func.func @test_store_nd_vc_2(%dst: memref<16xf16>) {
 }
 
 // -----
-func.func @test_store_nd_vc_3(%dst: memref<24x32xf32>, %data: vector<8x2xf32>) {
+func.func @test_store_nd_sg_map(%dst: memref<24x32xf32>, %data: vector<8x2xf32>) {
   %1 = xegpu.create_nd_tdesc %dst[0, 0] : memref<24x32xf32> ->
     !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
-  // expected-error@+1 {{Result shape doesn't match TensorDesc shape.}}
+  // expected-error@+1 {{Result shape [8, 2] is not consistent with distributed vector shape [8, 1] for tensor descriptor}}
   xegpu.store_nd %data, %1
     : vector<8x2xf32>, !xegpu.tensor_desc<8x16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
   return
 }
 
 // -----
-func.func @test_store_nd_vc_4(%dst: memref<24x32xf32>, %data: vector<2xf32>) {
+func.func @test_store_nd_sg_map(%dst: memref<24x32xf32>, %data: vector<2xf32>) {
   %1 = xegpu.create_nd_tdesc %dst[0, 0] : memref<24x32xf32> ->
     !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
-  // expected-error@+1 {{Result shape doesn't match TensorDesc shape.}}
+  // expected-error@+1 {{Result shape [2] is not consistent with distributed vector shape [1, 1] for tensor descriptor}}
   xegpu.store_nd %data, %1
     : vector<2xf32>, !xegpu.tensor_desc<16xf32, #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>>
   return
@@ -157,7 +157,7 @@ func.func @test_store_nd_vc_4(%dst: memref<24x32xf32>, %data: vector<2xf32>) {
 func.func @test_store_nd_vc_5(%dst: memref<24x32xf32>, %data: vector<8x1xf32>) {
   %1 = xegpu.create_nd_tdesc %dst[0, 0] : memref<24x32xf32> ->
     !xegpu.tensor_desc<8x16xf32>
-  // expected-error@+1 {{Result shape doesn't match TensorDesc shape.}}
+  // expected-error@+1 {{Value shape [8, 1] is not consistent with tensor descriptor}}
   xegpu.store_nd %data, %1 : vector<8x1xf32>, !xegpu.tensor_desc<8x16xf32>
   return
 }
@@ -190,13 +190,41 @@ func.func @test_create_tdesc_vc_2(%src: ui64) {
 }
 
 // -----
-func.func @test_create_tdesc_vc_1(%src: memref<?xf32>) {
+func.func @test_create_tdesc_vc_3(%src: memref<?xf32>) {
   %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   // expected-error@+1 {{Memory space mismatch}}
   %1 = xegpu.create_tdesc %src, %0 : memref<?xf32>, vector<4xindex>
           -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<memory_space = slm, chunk_size = 2>>
   return
 }
+
+// -----
+func.func @test_create_tdesc_vc_4(%src: memref<?xf32>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = xegpu.create_tdesc %src, %0 : memref<?xf32>, vector<4xindex>
+  // expected-error@+1 {{invalid chunk size}}
+          -> !xegpu.tensor_desc<4x5xf32, #xegpu.scatter_tdesc_attr<chunk_size = 5>>
+  return
+}
+
+// -----
+func.func @test_create_tdesc_vc_5(%src: memref<?xf32>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = xegpu.create_tdesc %src, %0 : memref<?xf32>, vector<4xindex>
+  // expected-error@+1 {{expected tensor shape[1] to match chunk size}}
+          -> !xegpu.tensor_desc<4x5xf32, #xegpu.scatter_tdesc_attr<chunk_size = 4>>
+  return
+}
+
+// -----
+func.func @test_create_tdesc_vc_6(%src: memref<?xf16>) {
+  %0 = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
+  %1 = xegpu.create_tdesc %src, %0 : memref<?xf16>, vector<4xindex>
+  // expected-error@+1 {{tensor shape[1] to be a multiple of packing factor 2}}
+          -> !xegpu.tensor_desc<4x3xf16, #xegpu.scatter_tdesc_attr<chunk_size = 3>>
+  return
+}
+
 
 // -----
 func.func @test_prefetch_vc_1(%src: memref<24x32xf16>) {
@@ -244,9 +272,9 @@ func.func @test_create_tdesc_sg_map_3(%src: ui64) {
 func.func @test_load_gather_sg_map_1(%src: ui64) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
-  // expected-error@+1 {{Unexpected result shape(Expected shape: [2, 1], Given shape: [1, 2])}}
-  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>, vector<4xi1> -> vector<1x2xf32>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  // expected-error@+1 {{Result shape [1, 2] is not consistent with distributed vector shape [2, 1] for tensor descriptor}}
+  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xi1> -> vector<1x2xf32>
   return
 }
 
@@ -254,19 +282,9 @@ func.func @test_load_gather_sg_map_1(%src: ui64) {
 func.func @test_load_gather_sg_map_2(%src: ui64) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
-  // expected-error@+1 {{Unexpected result shape(Expected shape: [2, 1], Given shape: [2])}}
-  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>, vector<4xi1> -> vector<2xf32>
-  return
-}
-
-// -----
-func.func @test_load_gather_sg_map_3(%src: ui64) {
-  %0 = arith.constant dense<1>: vector<4xi1>
-  %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
-  // expected-error@+1 {{Chunk size, vector size and wi_data must match}}
-  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>, vector<4xi1> -> vector<1xf32>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  // expected-error@+1 {{esult shape [2] is not consistent with distributed vector shape [2, 1] for tensor descriptor}}
+  %2 = xegpu.load %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xi1> -> vector<2xf32>
   return
 }
 
@@ -276,9 +294,9 @@ func.func @test_store_scatter_sg_map_1(%src: ui64) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %val = arith.constant dense<2.9>: vector<1x2xf32>
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
-  // expected-error@+1 {{Unexpected value shape(Expected shape: [2, 1], Given shape: [1, 2])}}
-  xegpu.store %val, %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : vector<1x2xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>, vector<4xi1>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  // expected-error@+1 {{Result shape [1, 2] is not consistent with distributed vector shape [2, 1] for tensor descriptor}}
+  xegpu.store %val, %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : vector<1x2xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xi1>
   return
 }
 
@@ -287,9 +305,9 @@ func.func @test_store_scatter_sg_map_2(%src: ui64) {
   %0 = arith.constant dense<1>: vector<4xi1>
   %cst = arith.constant dense<[0, 8, 16, 24]> : vector<4xindex>
   %val = arith.constant dense<2.9>: vector<2xf32>
-  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>
-  // expected-error@+1 {{Unexpected value shape(Expected shape: [2, 1], Given shape: [2])}}
-  xegpu.store %val, %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : vector<2xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 2]>>, vector<4xi1>
+  %1 = xegpu.create_tdesc %src, %cst : ui64, vector<4xindex> -> !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>
+  // expected-error@+1 {{esult shape [2] is not consistent with distributed vector shape [2, 1] for tensor descriptor}}
+  xegpu.store %val, %1, %0 <{l1_hint = #xegpu.cache_hint<cached>, transpose}> : vector<2xf32>, !xegpu.tensor_desc<4x2xf32, #xegpu.scatter_tdesc_attr<chunk_size = 2>, #xegpu.sg_map<wi_layout = [4, 1], wi_data = [1, 1]>>, vector<4xi1>
   return
 }
 
@@ -349,8 +367,46 @@ func.func @test_dpas_vc_1(%a : vector<8x8xf16>, %b: vector<8x16x2xf16>) {
 
 // -----
 func.func @test_dpas_vc_2(%a : vector<8x8x2xf16>, %b: vector<8x16x2xf16>) {
-  // expected-error@+1 {{expecting lhs to be a 2D vector, and rhs to be either 2D or 3D (packed) vector}}
+  // expected-error@+1 {{expecting lhs and result to be a 2D vector, and rhs to be either 2D or 3D (packed) vector}}
   %1 = xegpu.dpas %a, %b : vector<8x8x2xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @test_dpas_3(%a : vector<8x8xf16>, %b: vector<8x16x2xf16>) {
+  // expected-error@+1 {{K-dimension mismatch}}
+  %1 = xegpu.dpas %a, %b : vector<8x8xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @test_dpas_4(%a : vector<16x16xf16>, %b: vector<8x16x2xf16>) {
+  // expected-error@+1 {{M-dimension mismatch}}
+  %1 = xegpu.dpas %a, %b : vector<16x16xf16>, vector<8x16x2xf16> -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @test_dpas_4(%a : vector<8x16xf16>, %b: vector<8x8x2xf16>) {
+  // expected-error@+1 {{N-dimension mismatch}}
+  %1 = xegpu.dpas %a, %b : vector<8x16xf16>, vector<8x8x2xf16> -> vector<8x16xf32>
+  return
+}
+
+// -----
+func.func @test_dpas_sg_map_1(%a : vector<8x1xf16>, %b: vector<8x2xf16>) {
+  // expected-error@+1 {{sg_map attributes for all operands and outputs are expected in SIMT xegpu::Dpas operation}}
+  %1 = xegpu.dpas %a, %b {sg_map_a = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>} : vector<8x1xf16>, vector<8x2xf16> -> vector<8x1xf32>
+  return
+}
+
+// -----
+func.func @test_dpas_sg_map_2(%a : vector<8x1xf16>, %b: vector<4x2xf16>) {
+  // expected-error@+1 {{K-dimension mismatch}}
+  %1 = xegpu.dpas %a, %b {sg_map_a = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>,
+                          sg_map_b = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [2, 1]>,
+                          sg_map_c = #xegpu.sg_map<wi_layout = [1, 16], wi_data = [1, 1]>}
+                          : vector<8x1xf16>, vector<4x2xf16> -> vector<8x1xf32>
   return
 }
 

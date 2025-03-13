@@ -1035,6 +1035,17 @@ def Builtin_RankedTensor : Builtin_Type<"RankedTensor", "tensor", [
     RankedTensorType clone(::mlir::Type elementType) {
       return ::llvm::cast<RankedTensorType>(cloneWith(getShape(), elementType));
     }
+
+    /// Return a clone of this type without the encoding.
+    RankedTensorType dropEncoding() {
+      return RankedTensorType::get(getShape(), getElementType());
+    }
+
+    /// Return a clone of this type with the given new encoding and the same
+    /// shape and element type as this type.
+    RankedTensorType cloneWithEncoding(::mlir::Attribute encoding) {
+      return RankedTensorType::get(getShape(), getElementType(), encoding);
+    }
   }];
   let skipDefaultBuilders = 1;
   let genVerifyDecl = 1;

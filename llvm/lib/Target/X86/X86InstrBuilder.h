@@ -40,27 +40,20 @@ namespace llvm {
 /// with BP or SP and Disp being offsetted accordingly.  The displacement may
 /// also include the offset of a global value.
 struct X86AddressMode {
-  enum {
-    RegBase,
-    FrameIndexBase
-  } BaseType;
+  enum { RegBase, FrameIndexBase } BaseType = RegBase;
 
-  union {
-    unsigned Reg;
+  union BaseUnion {
+    Register Reg;
     int FrameIndex;
+
+    BaseUnion() : Reg() {}
   } Base;
 
-  unsigned Scale;
-  unsigned IndexReg;
-  int Disp;
-  const GlobalValue *GV;
-  unsigned GVOpFlags;
-
-  X86AddressMode()
-    : BaseType(RegBase), Scale(1), IndexReg(0), Disp(0), GV(nullptr),
-      GVOpFlags(0) {
-    Base.Reg = 0;
-  }
+  unsigned Scale = 1;
+  Register IndexReg;
+  int Disp = 0;
+  const GlobalValue *GV = nullptr;
+  unsigned GVOpFlags = 0;
 
   void getFullAddress(SmallVectorImpl<MachineOperand> &MO) {
     assert(Scale == 1 || Scale == 2 || Scale == 4 || Scale == 8);
@@ -121,7 +114,7 @@ static inline X86AddressMode getAddressFromInstr(const MachineInstr *MI,
 /// with no scale, index or displacement. An example is: DWORD PTR [EAX].
 ///
 static inline const MachineInstrBuilder &
-addDirectMem(const MachineInstrBuilder &MIB, unsigned Reg) {
+addDirectMem(const MachineInstrBuilder &MIB, Register Reg) {
   // Because memory references are always represented with five
   // values, this adds: Reg, 1, NoReg, 0, NoReg to the instruction.
   return MIB.addReg(Reg).addImm(1).addReg(0).addImm(0).addReg(0);
@@ -130,7 +123,7 @@ addDirectMem(const MachineInstrBuilder &MIB, unsigned Reg) {
 /// Replace the address used in the instruction with the direct memory
 /// reference.
 static inline void setDirectAddressInInstr(MachineInstr *MI, unsigned Operand,
-                                           unsigned Reg) {
+                                           Register Reg) {
   // Direct memory address is in a form of: Reg/FI, 1 (Scale), NoReg, 0, NoReg.
   MI->getOperand(Operand).ChangeToRegister(Reg, /*isDef=*/false);
   MI->getOperand(Operand + 1).setImm(1);
@@ -154,18 +147,21 @@ addOffset(const MachineInstrBuilder &MIB, const MachineOperand& Offset) {
 /// displacement. An example is: DWORD PTR [EAX + 4].
 ///
 static inline const MachineInstrBuilder &
-addRegOffset(const MachineInstrBuilder &MIB,
-             unsigned Reg, bool isKill, int Offset) {
+addRegOffset(const MachineInstrBuilder &MIB, Register Reg, bool isKill,
+             int Offset) {
   return addOffset(MIB.addReg(Reg, getKillRegState(isKill)), Offset);
 }
 
 /// addRegReg - This function is used to add a memory reference of the form:
 /// [Reg + Reg].
-static inline const MachineInstrBuilder &addRegReg(const MachineInstrBuilder &MIB,
-                                            unsigned Reg1, bool isKill1,
-                                            unsigned Reg2, bool isKill2) {
-  return MIB.addReg(Reg1, getKillRegState(isKill1)).addImm(1)
-    .addReg(Reg2, getKillRegState(isKill2)).addImm(0).addReg(0);
+static inline const MachineInstrBuilder &
+addRegReg(const MachineInstrBuilder &MIB, Register Reg1, bool isKill1,
+          unsigned SubReg1, Register Reg2, bool isKill2, unsigned SubReg2) {
+  return MIB.addReg(Reg1, getKillRegState(isKill1), SubReg1)
+      .addImm(1)
+      .addReg(Reg2, getKillRegState(isKill2), SubReg2)
+      .addImm(0)
+      .addReg(0);
 }
 
 static inline const MachineInstrBuilder &
@@ -221,7 +217,7 @@ addFrameReference(const MachineInstrBuilder &MIB, int FI, int Offset = 0) {
 ///
 static inline const MachineInstrBuilder &
 addConstantPoolReference(const MachineInstrBuilder &MIB, unsigned CPI,
-                         unsigned GlobalBaseReg, unsigned char OpFlags) {
+                         Register GlobalBaseReg, unsigned char OpFlags) {
   //FIXME: factor this
   return MIB.addReg(GlobalBaseReg).addImm(1).addReg(0)
     .addConstantPoolIndex(CPI, 0, OpFlags).addReg(0);

@@ -3,8 +3,7 @@
 !CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.type<[[ONE_LAYER_TY:_QFdtype_alloca_map_op_blockTone_layer{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<\?xi32>>>,k:i32}]]> {{.*}}
 !CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {{{.*}}} : (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>) -> (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>, !fir.ref<!fir.type<[[ONE_LAYER_TY]]>>)
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}}) {stride_in_bytes = true}
-!CHECK: %[[MEMBER_INDEX:.*]] = arith.constant 4 : index
-!CHECK: %[[MEMBER_COORD:.*]] = fir.coordinate_of %[[DECLARE]]#0, %[[MEMBER_INDEX]] : (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>, index) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!CHECK: %[[MEMBER_COORD:.*]] = fir.coordinate_of %[[DECLARE]]#0, array_j : (!fir.ref<!fir.type<[[ONE_LAYER_TY]]>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !CHECK: %[[MEMBER_BASE_ADDR:.*]] = fir.box_offset %[[MEMBER_COORD]] base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !CHECK: %[[MAP_MEMBER_BASE_ADDR:.*]] = omp.map.info var_ptr(%[[MEMBER_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, i32) var_ptr_ptr(%[[MEMBER_BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {{.*}}
 !CHECK: %[[MAP_MEMBER_DESCRIPTOR:.*]] = omp.map.info var_ptr(%[[MEMBER_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(to) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {{.*}}
@@ -34,14 +33,12 @@ end subroutine
 !CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {{{.*}}} : (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>)
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}}) {stride_in_bytes = true}
 !CHECK: %[[LOAD_DTYPE:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>
-!CHECK: %[[MEMBER_INDEX:.*]] = arith.constant 4 : index
-!CHECK: %[[MEMBER_COORD:.*]] = fir.coordinate_of %[[LOAD_DTYPE]], %[[MEMBER_INDEX]] : (!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>, index) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!CHECK: %[[MEMBER_COORD:.*]] = fir.coordinate_of %[[LOAD_DTYPE]], array_j : (!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !CHECK: %[[MEMBER_BASE_ADDR:.*]] = fir.box_offset %[[MEMBER_COORD]] base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !CHECK: %[[MAP_MEMBER_BASE_ADDR:.*]] = omp.map.info var_ptr(%[[MEMBER_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, i32) var_ptr_ptr(%[[MEMBER_BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {{.*}}
 !CHECK: %[[MAP_MEMBER_DESC:.*]] = omp.map.info var_ptr(%[[MEMBER_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(to) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {{.*}}
 !CHECK: %[[LOAD_DTYPE:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>
-!CHECK: %[[MEMBER_COORD:.*]] = arith.constant 5 : index
-!CHECK: %[[REGULAR_MEMBER:.*]] = fir.coordinate_of %[[LOAD_DTYPE]], %[[MEMBER_COORD]] : (!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>, index) -> !fir.ref<i32>
+!CHECK: %[[REGULAR_MEMBER:.*]] = fir.coordinate_of %[[LOAD_DTYPE]], k : (!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>) -> !fir.ref<i32>
 !CHECK: %[[MAP_REGULAR_MEMBER:.*]] = omp.map.info var_ptr(%[[REGULAR_MEMBER]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {{.*}}
 !CHECK: %[[DTYPE_BASE_ADDR:.*]] = fir.box_offset %[[DECLARE]]#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.type<[[REC_TY]]>>>
 !CHECK: %[[MAP_DTYPE_BASE_ADDR:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>>>>, !fir.type<[[REC_TY]]>) var_ptr_ptr(%[[DTYPE_BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.type<[[REC_TY]]>>>) map_clauses(tofrom) capture(ByRef) -> !fir.llvm_ptr<!fir.ref<!fir.type<[[REC_TY]]>>> {{.*}}
@@ -73,18 +70,14 @@ end subroutine
 !CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA]] {{.*}} : (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>}>>>>) -> (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>}>>>>, !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>}>>>>)
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}}) {stride_in_bytes = true}
 !CHECK: %[[LOAD:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>}>>>>
-!CHECK: %[[NESTED_DTYPE_INDEX:.*]] = arith.constant 6 : index
-!CHECK: %[[NESTED_DTYPE_COORD:.*]] = fir.coordinate_of %[[LOAD]], %[[NESTED_DTYPE_INDEX]] : (!fir.box<!fir.heap<!fir.type<[[REC_TY]]>}>>>, index) -> !fir.ref<!fir.type<[[REC_TY2:_QFalloca_nest_dype_map_op_block_addTmiddle_layer{i:f32,array_i:!fir.array<10xi32>,array_k:!fir.box<!fir.heap<!fir.array<\?xi32>>>,k:i32}]]>>
-!CHECK: %[[NESTED_MEMBER_INDEX:.*]] = arith.constant 2 : index
-!CHECK: %[[NESTED_MEMBER_COORD:.*]] = fir.coordinate_of %[[NESTED_DTYPE_COORD]], %[[NESTED_MEMBER_INDEX]] : (!fir.ref<!fir.type<[[REC_TY2]]>>, index) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!CHECK: %[[NESTED_DTYPE_COORD:.*]] = fir.coordinate_of %[[LOAD]], nest : (!fir.box<!fir.heap<!fir.type<[[REC_TY]]>}>>>) -> !fir.ref<!fir.type<[[REC_TY2:_QFalloca_nest_dype_map_op_block_addTmiddle_layer{i:f32,array_i:!fir.array<10xi32>,array_k:!fir.box<!fir.heap<!fir.array<\?xi32>>>,k:i32}]]>>
+!CHECK: %[[NESTED_MEMBER_COORD:.*]] = fir.coordinate_of %[[NESTED_DTYPE_COORD]], array_k : (!fir.ref<!fir.type<[[REC_TY2]]>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !CHECK: %[[NESTED_MEMBER_BASE_ADDR:.*]] = fir.box_offset %[[NESTED_MEMBER_COORD]] base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !CHECK: %[[MAP_NESTED_MEMBER_BASE_ADDR:.*]] = omp.map.info var_ptr(%[[NESTED_MEMBER_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, i32) var_ptr_ptr(%[[NESTED_MEMBER_BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {{.*}}
 !CHECK: %[[MAP_NESTED_MEMBER_COORD:.*]] = omp.map.info var_ptr(%[[NESTED_MEMBER_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(to) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {{.*}}
 !CHECK: %[[LOAD:.*]] = fir.load %[[DECLARE]]#0 : !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>}>>>>
-!CHECK: %[[NESTED_DTYPE_INDEX:.*]] = arith.constant 6 : index
-!CHECK: %[[NESTED_DTYPE_COORD:.*]] = fir.coordinate_of %[[LOAD]], %[[NESTED_DTYPE_INDEX]] : (!fir.box<!fir.heap<!fir.type<[[REC_TY]]>}>>>, index) -> !fir.ref<!fir.type<[[REC_TY2]]>>
-!CHECK: %[[NESTED_MEMBER_INDEX:.*]] = arith.constant 3 : index
-!CHECK: %[[REGULAR_NESTED_MEMBER_COORD:.*]] = fir.coordinate_of %[[NESTED_DTYPE_COORD]], %[[NESTED_MEMBER_INDEX]] : (!fir.ref<!fir.type<[[REC_TY2]]>>, index) -> !fir.ref<i32>
+!CHECK: %[[NESTED_DTYPE_COORD:.*]] = fir.coordinate_of %[[LOAD]], nest : (!fir.box<!fir.heap<!fir.type<[[REC_TY]]>}>>>) -> !fir.ref<!fir.type<[[REC_TY2]]>>
+!CHECK: %[[REGULAR_NESTED_MEMBER_COORD:.*]] = fir.coordinate_of %[[NESTED_DTYPE_COORD]], k : (!fir.ref<!fir.type<[[REC_TY2]]>>) -> !fir.ref<i32>
 !CHECK: %[[MAP_REGULAR_NESTED_MEMBER:.*]] = omp.map.info var_ptr(%[[REGULAR_NESTED_MEMBER_COORD]] : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {{.*}}
 !CHECK: %[[DTYPE_BASE_ADDR:.*]] = fir.box_offset %[[DECLARE]]#1 base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>}>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.type<[[REC_TY]]>}>>>
 !CHECK: %[[MAP_DTYPE_BASE_ADDR:.*]] = omp.map.info var_ptr(%[[DECLARE]]#1 : !fir.ref<!fir.box<!fir.heap<!fir.type<[[REC_TY]]>}>>>>, !fir.type<[[REC_TY]]>}>) var_ptr_ptr(%[[DTYPE_BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.type<[[REC_TY]]>}>>>) map_clauses(tofrom) capture(ByRef) -> !fir.llvm_ptr<!fir.ref<!fir.type<[[REC_TY]]>}>>> {{.*}}
@@ -123,10 +116,8 @@ end subroutine
 !CHECK: %[[ALLOCA]] = fir.alloca !fir.type<[[REC_TY:_QFnest_dtype_alloca_map_op_block_addTtop_layer{i:f32,scalar:!fir.box<!fir.heap<i32>>,array_i:!fir.array<10xi32>,j:f32,array_j:!fir.box<!fir.heap<!fir.array<\?xi32>>>,k:i32,nest:!fir.type<_QFnest_dtype_alloca_map_op_block_addTmiddle_layer{i:f32,array_i:!fir.array<10xi32>,array_k:!fir.box<!fir.heap<!fir.array<\?xi32>>>,k:i32}>}]]> {{.*}}
 !CHECK: %[[DECLARE:.*]]:2 = hlfir.declare %[[ALLOCA:.*]] {{.*}} : (!fir.ref<!fir.type<[[REC_TY]]>>) -> (!fir.ref<!fir.type<[[REC_TY]]>>, !fir.ref<!fir.type<[[REC_TY]]>>)
 !CHECK: %[[BOUNDS:.*]] = omp.map.bounds lower_bound({{.*}}) upper_bound({{.*}}) extent({{.*}}) stride({{.*}}) start_idx({{.*}}) {stride_in_bytes = true}
-!CHECK: %[[NESTED_DTYPE_INDEX:.*]] = arith.constant 6 : index
-!CHECK: %[[NESTED_DTYPE_COORD:.*]] = fir.coordinate_of %[[DECLARE]]#0, %[[NESTED_DTYPE_INDEX]] : (!fir.ref<!fir.type<[[REC_TY]]>>, index) -> !fir.ref<!fir.type<[[REC_TY2:_QFnest_dtype_alloca_map_op_block_addTmiddle_layer{i:f32,array_i:!fir.array<10xi32>,array_k:!fir.box<!fir.heap<!fir.array<\?xi32>>>,k:i32}]]>>
-!CHECK: %[[NESTED_MEMBER_INDEX:.*]] = arith.constant 2 : index
-!CHECK: %[[NESTED_MEMBER_COORD:.*]] = fir.coordinate_of %[[NESTED_DTYPE_COORD]], %[[NESTED_MEMBER_INDEX]] : (!fir.ref<!fir.type<[[REC_TY2]]>>, index) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+!CHECK: %[[NESTED_DTYPE_COORD:.*]] = fir.coordinate_of %[[DECLARE]]#0, nest : (!fir.ref<!fir.type<[[REC_TY]]>>) -> !fir.ref<!fir.type<[[REC_TY2:_QFnest_dtype_alloca_map_op_block_addTmiddle_layer{i:f32,array_i:!fir.array<10xi32>,array_k:!fir.box<!fir.heap<!fir.array<\?xi32>>>,k:i32}]]>>
+!CHECK: %[[NESTED_MEMBER_COORD:.*]] = fir.coordinate_of %[[NESTED_DTYPE_COORD]], array_k : (!fir.ref<!fir.type<[[REC_TY2]]>>) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
 !CHECK: %[[NESTED_MEMBER_BASE_ADDR:.*]] = fir.box_offset %[[NESTED_MEMBER_COORD]] base_addr : (!fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>
 !CHECK: %[[MAP_NESTED_MEMBER_BASE_ADDR:.*]] = omp.map.info var_ptr(%[[NESTED_MEMBER_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, i32) var_ptr_ptr(%[[NESTED_MEMBER_BASE_ADDR]] : !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>>) map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS]]) -> !fir.llvm_ptr<!fir.ref<!fir.array<?xi32>>> {{.*}}
 !CHECK: %[[MAP_NESTED_MEMBER_DESC:.*]] = omp.map.info var_ptr(%[[NESTED_MEMBER_COORD]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>, !fir.box<!fir.heap<!fir.array<?xi32>>>) map_clauses(to) capture(ByRef) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>> {{.*}}

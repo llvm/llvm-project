@@ -36,7 +36,7 @@ Function overloading also applies to operators. Using ``&user_object`` may call 
       ...
     }
 
-This is mostly enforced by the clang-tidy checks ``libcpp-robust-against-adl`` and ``libcpp-qualify-declval``.
+This is mostly enforced by the clang-tidy check ``libcpp-robust-against-adl``.
 
 Avoid including public headers
 ==============================

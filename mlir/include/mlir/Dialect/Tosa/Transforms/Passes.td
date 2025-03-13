@@ -71,16 +71,6 @@ def TosaOptionalDecompositions
   let constructor = "tosa::createTosaOptionalDecompositions()";
 }
 
-def TosaProfileType : I32EnumAttr<"TosaProfileEnum", "Tosa profile",
-    [
-      I32EnumAttrCase<"BaseInference", 0, "bi">,
-      I32EnumAttrCase<"MainInference", 1, "mi">,
-      I32EnumAttrCase<"MainTraining", 2, "mt">,
-      I32EnumAttrCase<"Undefined", 3, "none">
-    ]>{
-  let cppNamespace = "mlir::tosa";
-}
-
 def TosaLevelType : I32EnumAttr<"TosaLevelEnum", "Tosa level",
     [
       I32EnumAttrCase<"None", 0, "none">,
@@ -99,7 +89,9 @@ def TosaValidation : Pass<"tosa-validate", "mlir::ModuleOp"> {
   let options = [
       ListOption<"profile", "profile", "std::string",
              "Validate if operations match for the given profile set">,
-      Option<"StrictOperationSpecAlignment", "strict-op-spec-alignment", "bool",
+      ListOption<"extension", "extension", "std::string",
+             "Validate if operations match for the given extension set">,
+      Option<"strictOpSpecAlignment", "strict-op-spec-alignment", "bool",
              /*default=*/"false",
              "Verify if the properties of certain operations align the spec requirement">,
       Option<"level", "level", "mlir::tosa::TosaLevelEnum",
