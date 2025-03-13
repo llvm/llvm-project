@@ -19,7 +19,6 @@
 #include "VPlan.h"
 #include "LoopVectorizationPlanner.h"
 #include "VPlanCFG.h"
-#include "VPlanDominatorTree.h"
 #include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
@@ -222,7 +221,7 @@ VPTransformState::VPTransformState(const TargetTransformInfo *TTI,
                                    Loop *CurrentParentLoop, Type *CanonicalIVTy)
     : TTI(TTI), VF(VF), CFG(DT), LI(LI), Builder(Builder), ILV(ILV), Plan(Plan),
       CurrentParentLoop(CurrentParentLoop), LVer(nullptr),
-      TypeAnalysis(CanonicalIVTy), VPDT(*Plan) {}
+      TypeAnalysis(CanonicalIVTy) {}
 
 Value *VPTransformState::get(const VPValue *Def, const VPLane &Lane) {
   if (Def->isLiveIn())
@@ -265,11 +264,7 @@ Value *VPTransformState::get(const VPValue *Def, bool NeedsScalar) {
     return Data.VPV2Vector[Def];
 
   auto GetBroadcastInstrs = [this, Def](Value *V) {
-    bool SafeToHoist =
-        !Def->hasDefiningRecipe() ||
-        VPDT.properlyDominates(Def->getDefiningRecipe()->getParent(),
-                               Plan->getVectorPreheader());
-
+    bool SafeToHoist = Def->isDefinedOutsideLoopRegions();
     if (VF.isScalar())
       return V;
     // Place the code for broadcasting invariant variables in the new preheader.
@@ -933,10 +928,6 @@ void VPlan::execute(VPTransformState *State) {
   // Initialize CFG state.
   State->CFG.PrevVPBB = nullptr;
   State->CFG.ExitBB = State->CFG.PrevBB->getSingleSuccessor();
-
-  // Update VPDominatorTree since VPBasicBlock may be removed after State was
-  // constructed.
-  State->VPDT.recalculate(*this);
 
   // Disconnect VectorPreHeader from ExitBB in both the CFG and DT.
   BasicBlock *VectorPreHeader = State->CFG.PrevBB;
