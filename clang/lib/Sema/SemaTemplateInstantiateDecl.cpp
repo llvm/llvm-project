@@ -2176,7 +2176,7 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
       // Do some additional validation, then merge default arguments
       // from the existing declarations.
       if (SemaRef.CheckTemplateParameterList(InstParams, PrevParams,
-                                             Sema::TPC_ClassTemplate))
+                                             Sema::TPC_Other))
         return nullptr;
 
       Inst->setAccess(PrevClassTemplate->getAccess());
