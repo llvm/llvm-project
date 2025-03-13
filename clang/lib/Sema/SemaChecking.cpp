@@ -4876,18 +4876,17 @@ bool Sema::BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
   if (checkVAStartIsInVariadicFunction(*this, Fn, &LastParam))
     return true;
 
-  // Verify that the second argument to the builtin is the last argument of the
-  // current function or method. In C23 mode and the call is not to
-  // __builtin_c23_va_start, if the second argument is an integer constant
-  // expression with value 0, then we don't bother with this check. For
-  // __builtin_c23_va_start, we only perform the check for the second argument
-  // being the last argument to the current function if there is a second
-  // argument present.
+  // Verify that the second argument to the builtin is the last non-variadic
+  // argument of the current function or method. In C23 mode and the call is
+  // not to __builtin_c23_va_start, if the second argument is an integer
+  // constant expression with value 0, then we don't bother with this check.
+  // For __builtin_c23_va_start, we only perform the check for the second
+  // argument being the last argument to the current function if there is a
+  // second argument present.
   if (BuiltinID == Builtin::BI__builtin_c23_va_start &&
       TheCall->getNumArgs() < 2)
     return false;
 
-  bool SecondArgIsLastNamedArgument = false;
   const Expr *Arg = TheCall->getArg(1)->IgnoreParenCasts();
   if (std::optional<llvm::APSInt> Val =
           TheCall->getArg(1)->getIntegerConstantExpr(Context);
@@ -4900,7 +4899,7 @@ bool Sema::BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
   QualType Type;
   SourceLocation ParamLoc;
   bool IsCRegister = false;
-
+  bool SecondArgIsLastNamedArgument = false;
   if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(Arg)) {
     if (const ParmVarDecl *PV = dyn_cast<ParmVarDecl>(DR->getDecl())) {
       SecondArgIsLastNamedArgument = PV == LastParam;
