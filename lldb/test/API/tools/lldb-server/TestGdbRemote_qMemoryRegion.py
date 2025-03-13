@@ -1,14 +1,7 @@
-import binascii
-import itertools
-import struct
-
 import gdbremote_testcase
-import lldbgdbserverutils
-from lldbsuite.support import seven
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbdwarf import *
-from lldbsuite.test import lldbutil, lldbplatformutil
 
 
 class TestGdbRemote_qMemoryRegion(gdbremote_testcase.GdbRemoteTestCaseBase):
