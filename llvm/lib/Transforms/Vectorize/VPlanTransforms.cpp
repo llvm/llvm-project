@@ -2084,6 +2084,19 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_depth_first_deep(Plan.getEntry()))) {
     for (VPRecipeBase &R : make_early_inc_range(VPBB->phis())) {
+      if (auto *IVR = dyn_cast<VPWidenIntOrFpInductionRecipe>(&R)) {
+        Type *Ty = IVR->getTruncInst() ? IVR->getTruncInst()->getType()
+                                       : IVR->getPHINode()->getType();
+        if (Ty->isFloatingPointTy())
+          Ty = IntegerType::get(Ty->getContext(), Ty->getScalarSizeInBits());
+        VPValue *TyVal = Plan.getOrAddLiveIn(Constant::getNullValue(Ty));
+
+        VPInstruction *StepVector =
+            new VPInstruction(VPInstruction::StepVector, {TyVal});
+        Plan.getVectorPreheader()->appendRecipe(StepVector);
+        IVR->setStepVector(StepVector);
+      }
+
       if (!isa<VPCanonicalIVPHIRecipe, VPEVLBasedIVPHIRecipe>(&R))
         continue;
       auto *PhiR = cast<VPHeaderPHIRecipe>(&R);

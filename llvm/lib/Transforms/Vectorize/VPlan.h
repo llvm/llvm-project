@@ -882,6 +882,9 @@ public:
     // Extracts the first active lane of a vector, where the first operand is
     // the predicate, and the second operand is the vector to extract.
     ExtractFirstActive,
+    // Creates a step vector starting from 0 with a step of 1. The first operand
+    // is a dummy constant that should be used to specify the element type.
+    StepVector,
   };
 
 private:
@@ -1772,6 +1775,7 @@ public:
                                Step, IndDesc, DL),
         Trunc(nullptr) {
     addOperand(VF);
+    addOperand(VF); // Dummy StepVector replaced in convertToConcreteRecipes
   }
 
   VPWidenIntOrFpInductionRecipe(PHINode *IV, VPValue *Start, VPValue *Step,
@@ -1781,6 +1785,7 @@ public:
                                Step, IndDesc, DL),
         Trunc(Trunc) {
     addOperand(VF);
+    addOperand(VF); // Dummy StepVector replaced in convertToConcreteRecipes
   }
 
   ~VPWidenIntOrFpInductionRecipe() override = default;
@@ -1806,10 +1811,14 @@ public:
   VPValue *getVFValue() { return getOperand(2); }
   const VPValue *getVFValue() const { return getOperand(2); }
 
+  VPValue *getStepVector() { return getOperand(3); }
+  const VPValue *getStepVector() const { return getOperand(3); }
+  void setStepVector(VPValue *V) { setOperand(3, V); }
+
   VPValue *getSplatVFValue() {
     // If the recipe has been unrolled (4 operands), return the VPValue for the
     // induction increment.
-    return getNumOperands() == 5 ? getOperand(3) : nullptr;
+    return getNumOperands() == 6 ? getOperand(4) : nullptr;
   }
 
   /// Returns the first defined value as TruncInst, if it is one or nullptr
@@ -1831,7 +1840,7 @@ public:
   /// the last unrolled part, if it exists. Returns itself if unrolling did not
   /// take place.
   VPValue *getLastUnrolledPartOperand() {
-    return getNumOperands() == 5 ? getOperand(4) : this;
+    return getNumOperands() == 6 ? getOperand(5) : this;
   }
 };
 
