@@ -13,25 +13,13 @@
 /// can legally use SCF dialect and generate Fortran runtime calls.
 //===----------------------------------------------------------------------===//
 
-#include "flang/Optimizer/Builder/BoxValue.h"
-#include "flang/Optimizer/Builder/CUFCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Builder/LowLevelIntrinsics.h"
+#include "flang/Optimizer/Builder/Runtime/Inquiry.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
-#include "flang/Optimizer/Dialect/FIRType.h"
-#include "flang/Optimizer/Dialect/Support/FIRContext.h"
-#include "flang/Optimizer/HLFIR/HLFIRDialect.h"
 #include "flang/Optimizer/Transforms/Passes.h"
-#include "flang/Optimizer/Transforms/Utils.h"
-#include "flang/Runtime/entry-names.h"
-#include "flang/Support/Fortran.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
-#include "mlir/Transforms/DialectConversion.h"
-
-#include "flang/Optimizer/Builder/Runtime/Inquiry.h"
+#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace fir {
 #define GEN_PASS_DEF_SIMPLIFYFIROPERATIONS
@@ -105,7 +93,7 @@ mlir::LogicalResult IsContiguousBoxCoversion::matchAndRewrite(
 
   // Generate inline implementation.
   TODO(loc, "inline IsContiguousBoxOp");
-  return mlir::success();
+  return mlir::failure();
 }
 
 /// Generate a call to Size runtime function or an inline
@@ -131,20 +119,20 @@ mlir::LogicalResult BoxTotalElementsConversion::matchAndRewrite(
 
   // Generate inline implementation.
   TODO(loc, "inline BoxTotalElementsOp");
-  return mlir::success();
+  return mlir::failure();
 }
 
 void SimplifyFIROperationsPass::runOnOperation() {
   mlir::ModuleOp module = getOperation();
   mlir::MLIRContext &context = getContext();
-  mlir::ConversionTarget target(context);
-  target.addIllegalOp<fir::IsContiguousBoxOp>();
-  target.addIllegalOp<fir::BoxTotalElementsOp>();
   mlir::RewritePatternSet patterns(&context);
   fir::populateSimplifyFIROperationsPatterns(patterns,
                                              preferInlineImplementation);
+  mlir::GreedyRewriteConfig config;
+  config.enableRegionSimplification = mlir::GreedySimplifyRegionLevel::Disabled;
+
   if (mlir::failed(
-          mlir::applyPartialConversion(module, target, std::move(patterns)))) {
+          mlir::applyPatternsGreedily(module, std::move(patterns), config))) {
     mlir::emitError(module.getLoc(), DEBUG_TYPE " pass failed");
     signalPassFailure();
   }

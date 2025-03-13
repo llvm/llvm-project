@@ -87,9 +87,8 @@ func.func @test_none(%arg0: !fir.box<none>) -> i16 {
 }
 // CHECK-LABEL:   func.func @test_none(
 // CHECK-SAME:                         %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<none>) -> i16 {
-// CHECK:           %[[VAL_1:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
-// CHECK:           %[[VAL_2:.*]] = arith.constant {{.*}} : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant {{.*}} : i32
+// CHECK:           %[[VAL_1:.*]] = fir.address_of(@{{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:           %[[VAL_5:.*]] = fir.call @_FortranASize(%[[VAL_0]], %[[VAL_4]], %[[VAL_3]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> i64
 // CHECK:           %[[VAL_6:.*]] = fir.convert %[[VAL_5]] : (i64) -> i16
@@ -104,9 +103,8 @@ func.func @test_array(%arg0: !fir.box<!fir.array<?x?xf32>>) -> i32 {
 }
 // CHECK-LABEL:   func.func @test_array(
 // CHECK-SAME:                          %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?x?xf32>>) -> i32 {
-// CHECK:           %[[VAL_1:.*]] = fir.address_of({{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
-// CHECK:           %[[VAL_2:.*]] = arith.constant {{.*}} : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant {{.*}} : i32
+// CHECK:           %[[VAL_1:.*]] = fir.address_of({{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:           %[[VAL_6:.*]] = fir.call @_FortranASize(%[[VAL_4]], %[[VAL_5]], %[[VAL_3]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> i64
@@ -122,9 +120,8 @@ func.func @test_assumed_rank(%arg0: !fir.box<!fir.array<*:f32>>) -> index {
 }
 // CHECK-LABEL:   func.func @test_assumed_rank(
 // CHECK-SAME:                                 %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<*:f32>>) -> index {
-// CHECK:           %[[VAL_1:.*]] = fir.address_of({{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
-// CHECK:           %[[VAL_2:.*]] = arith.constant {{.*}} : index
 // CHECK:           %[[VAL_3:.*]] = arith.constant {{.*}} : i32
+// CHECK:           %[[VAL_1:.*]] = fir.address_of({{.*}}) : !fir.ref<!fir.char<1,{{.*}}>>
 // CHECK:           %[[VAL_4:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
 // CHECK:           %[[VAL_5:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
 // CHECK:           %[[VAL_6:.*]] = fir.call @_FortranASize(%[[VAL_4]], %[[VAL_5]], %[[VAL_3]]) : (!fir.box<none>, !fir.ref<i8>, i32) -> i64
