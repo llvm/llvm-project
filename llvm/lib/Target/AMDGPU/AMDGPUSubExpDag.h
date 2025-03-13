@@ -28,17 +28,17 @@ struct SubExp {
   llvm::DenseSet<unsigned> TopRegs;
   llvm::DenseSet<llvm::MachineInstr *> BottomRoots;
   llvm::DenseSet<unsigned> BottomRegs;
-  bool bMultiDefOutput = false;
-  bool bHasTerminatorInst = false;
-  bool bUseIncomingReg = false;
-  bool bMoveIntoLoop = false;
-  bool bNotSafeToCopy = false;
-  bool bHasMemInst = false;
-  bool bHoist = false;
+  bool IsMultiDefOutput = false;
+  bool IsHasTerminatorInst = false;
+  bool IsUseIncomingReg = false;
+  bool IsMoveIntoLoop = false;
+  bool IsNotSafeToCopy = false;
+  bool IsHasMemInst = false;
+  bool IsHoist = false;
   // If temp/out reg is used by inst not in the subExp, cannot move since not
   // all users will be move. But OK to clone.
-  bool bCloneOnly = false;
-  bool bTouchSCC = false;
+  bool IsCloneOnly = false;
+  bool IsTouchSCC = false;
   llvm::MachineBasicBlock *FromBB;
   llvm::MachineBasicBlock *ToBB;
   unsigned sInputSize;
@@ -49,7 +49,7 @@ struct SubExp {
   unsigned vMaxSize;
   LiveSet inputLive;
   LiveSet outputLive;
-  bool isSafeToMove(const llvm::MachineRegisterInfo &MRI, bool bMoveUp) const;
+  bool isSafeToMove(const llvm::MachineRegisterInfo &MRI, bool IsMoveUp) const;
   void calcMaxPressure(const llvm::MachineRegisterInfo &MRI,
                        const llvm::SIRegisterInfo *SIRI);
   void dump(const llvm::MachineRegisterInfo &MRI,
@@ -59,11 +59,11 @@ struct SubExp {
 
 struct ExpDag {
   ExpDag(const llvm::MachineRegisterInfo &MRI, const llvm::SIRegisterInfo *SIRI,
-         const llvm::SIInstrInfo *SIII, const bool bJoinInput);
+         const llvm::SIInstrInfo *SIII, const bool IsJoinInput);
   const llvm::MachineRegisterInfo &MRI;
   const llvm::SIRegisterInfo *SIRI;
   const llvm::SIInstrInfo *SIII;
-  const bool bJoinInputToSubExp;
+  const bool IsJoinInputToSubExp;
 
   std::vector<llvm::SUnit> SUnits; ///< The scheduling units.
   llvm::DenseMap<llvm::MachineInstr *, llvm::SUnit *> MISUnitMap;
@@ -181,7 +181,7 @@ private:
 
   llvm::DenseSet<llvm::SUnit *> ChainedNodes;
   llvm::DenseMap<llvm::SUnit *, llvm::DenseSet<llvm::SUnit *>> ReachMap;
-  bool bRecomputeHeight = false;
+  bool IsRecomputeHeight = false;
   std::vector<Lineage> Lineages;
   ColorResult Color;
   const llvm::MachineRegisterInfo &MRI;

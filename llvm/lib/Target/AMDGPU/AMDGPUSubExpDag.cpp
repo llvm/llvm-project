@@ -102,7 +102,7 @@ void SubExp::calcMaxPressure(const MachineRegisterInfo &MRI,
       Register Reg = MO.getReg();
       if (!Reg.isVirtual()) {
         if (Reg == AMDGPU::SCC)
-          bTouchSCC = true;
+          IsTouchSCC = true;
         continue;
       }
 
@@ -132,12 +132,12 @@ void SubExp::calcMaxPressure(const MachineRegisterInfo &MRI,
   }
 }
 
-bool SubExp::isSafeToMove(const MachineRegisterInfo &MRI, bool bMoveUp) const {
-  if (bMultiDefOutput)
+bool SubExp::isSafeToMove(const MachineRegisterInfo &MRI, bool IsMoveUp) const {
+  if (IsMultiDefOutput)
     return false;
-  if (bHasTerminatorInst)
+  if (IsHasTerminatorInst)
     return false;
-  if (bUseIncomingReg)
+  if (IsUseIncomingReg)
     return false;
 
   // Input should be single def.
@@ -150,8 +150,8 @@ bool SubExp::isSafeToMove(const MachineRegisterInfo &MRI, bool bMoveUp) const {
 
 ExpDag::ExpDag(const llvm::MachineRegisterInfo &MRI,
                const llvm::SIRegisterInfo *SIRI, const SIInstrInfo *SIII,
-               const bool bJoinInput)
-    : MRI(MRI), SIRI(SIRI), SIII(SIII), bJoinInputToSubExp(bJoinInput) {}
+               const bool IsJoinInput)
+    : MRI(MRI), SIRI(SIRI), SIII(SIII), IsJoinInputToSubExp(IsJoinInput) {}
 
 template <typename T>
 void ExpDag::initNodes(const LiveSet &InputLiveReg, T &insts) {
@@ -209,12 +209,12 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
       passThruInputs.emplace_back(SU.NodeNum);
       continue;
     }
-    if (!bJoinInputToSubExp && !SU.isInstr())
+    if (!IsJoinInputToSubExp && !SU.isInstr())
       continue;
     // Join prev.
     for (SDep &PreDep : SU.Preds) {
       SUnit *PreSU = PreDep.getSUnit();
-      if (!bJoinInputToSubExp && !PreSU->isInstr())
+      if (!IsJoinInputToSubExp && !PreSU->isInstr())
         continue;
       SubtreeClasses.join(SU.NodeNum, PreSU->NodeNum);
     }
@@ -266,7 +266,7 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
           continue;
         unsigned Reg = MO.getReg();
         if (MRI.getLiveInPhysReg(Reg) || MRI.getLiveInVirtReg(Reg)) {
-          Exp.bUseIncomingReg = true;
+          Exp.IsUseIncomingReg = true;
         }
       }
 
@@ -274,13 +274,13 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
       if (SU.NumSuccsLeft == 0) {
         Exp.BottomRoots.insert(MI);
         if (MI->isTerminator())
-          Exp.bHasTerminatorInst = true;
+          Exp.IsHasTerminatorInst = true;
       }
       if (MI->isNotDuplicable())
-        Exp.bNotSafeToCopy = true;
+        Exp.IsNotSafeToCopy = true;
       // Skip Scalar mem access since no scalar store.
       if (MI->mayLoadOrStore() && !SIII->isSMRD(*MI)) {
-        Exp.bHasMemInst = true;
+        Exp.IsHasMemInst = true;
       }
       // Add bottom regs.
       for (MachineOperand &MO : MI->operands()) {
@@ -295,16 +295,16 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
         if (SU.NumSuccsLeft) {
           // For SU which has used in current blk.
           // Check if used in other blks or subExps.
-          bool bUsedInOtherBlk = false;
+          bool IsUsedInOtherBlk = false;
           for (auto &UserMI : MRI.use_nodbg_instructions(Reg)) {
             if (UserMI.getParent() != MBB) {
-              bUsedInOtherBlk = true;
+              IsUsedInOtherBlk = true;
               break;
             }
             auto suIt = MISUnitMap.find(&UserMI);
             // When UserMI is not in dag, treat it as other block.
             if (suIt == MISUnitMap.end()) {
-              bUsedInOtherBlk = true;
+              IsUsedInOtherBlk = true;
               break;
             }
             SUnit *UseSU = suIt->second;
@@ -318,12 +318,12 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
               break;
             }
           }
-          if (!bUsedInOtherBlk)
+          if (!IsUsedInOtherBlk)
             continue;
         }
         Exp.BottomRegs.insert(Reg);
         if (!MRI.getUniqueVRegDef(Reg)) {
-          Exp.bMultiDefOutput = true;
+          Exp.IsMultiDefOutput = true;
         }
       }
     }
@@ -435,7 +435,7 @@ BlockExpDag::BlockExpDag(llvm::MachineBasicBlock *B, llvm::LiveIntervals *LIS,
                          const llvm::MachineRegisterInfo &MRI,
                          const llvm::SIRegisterInfo *SIRI,
                          const llvm::SIInstrInfo *SIII)
-    : ExpDag(MRI, SIRI, SIII, /*bJoinInput*/ true), LIS(LIS), MBB(B) {}
+    : ExpDag(MRI, SIRI, SIII, /*IsJoinInput*/ true), LIS(LIS), MBB(B) {}
 
 void BlockExpDag::build() {
   auto *SlotIndexes = LIS->getSlotIndexes();
@@ -503,7 +503,7 @@ void BlockExpDag::buildAvail(const LiveSet &passThruSet,
     }
   }
   while (!WorkList.empty()) {
-    bool bUpdated = false;
+    bool IsUpdated = false;
     SmallVector<SUnit *, 4> ReadyNodes;
     for (SUnit *SU : WorkList) {
       if (SU->NumPredsLeft > 0)
@@ -511,7 +511,7 @@ void BlockExpDag::buildAvail(const LiveSet &passThruSet,
       ReadyNodes.emplace_back(SU);
       // Ready, move it to Processed.
       Processed.insert(SU);
-      bUpdated = true;
+      IsUpdated = true;
       // Only update 1 node once.
       // Order of schedle here should not affect pressure.
       break;
@@ -613,7 +613,7 @@ void BlockExpDag::buildPressure(const LiveSet &StartLiveReg,
   }
 
   while (!WorkList.empty()) {
-    bool bUpdated = false;
+    bool IsUpdated = false;
     SmallVector<SUnit *, 4> ReadyNodes;
     for (SUnit *SU : WorkList) {
       if (SU->NumSuccsLeft > 0)
@@ -621,7 +621,7 @@ void BlockExpDag::buildPressure(const LiveSet &StartLiveReg,
       ReadyNodes.emplace_back(SU);
       // Ready, move it to Processed.
       Processed.insert(SU);
-      bUpdated = true;
+      IsUpdated = true;
       // Only update 1 node once.
       // Order of schedle here should not affect pressure.
       break;
@@ -977,7 +977,7 @@ void HRB::buildLinear(std::vector<llvm::SUnit> &SUnits) {
       continue;
     if (ChainedNodes.count(SU) > 0)
       continue;
-    bRecomputeHeight = false;
+    IsRecomputeHeight = false;
     Lineage lineage = buildChain(SU, SUnits);
 
     // Remove chained nodes from worklist.
@@ -992,7 +992,7 @@ void HRB::buildLinear(std::vector<llvm::SUnit> &SUnits) {
 
     Lineages.emplace_back(lineage);
 
-    if (bRecomputeHeight) {
+    if (IsRecomputeHeight) {
       // Update height from tail.
       SUnit *tail = lineage.Nodes.back();
       tail->setDepthDirty();
@@ -1111,7 +1111,7 @@ SUnit *HRB::findHeir(SUnit *SU, std::vector<llvm::SUnit> &SUnits) {
     // Update height if need.
     unsigned Height = Succ->getHeight();
     if (Height <= HeriHeight) {
-      bRecomputeHeight = true;
+      IsRecomputeHeight = true;
     }
   }
   return Heir;
@@ -1345,9 +1345,9 @@ bool HRB::tryFuse(Lineage &a, Lineage &b, std::vector<llvm::SUnit> &SUnits) {
 void HRB::fusionLineages(std::vector<llvm::SUnit> &SUnits) {
   if (Lineages.empty())
     return;
-  bool bUpdated = true;
-  while (bUpdated) {
-    bUpdated = false;
+  bool IsUpdated = true;
+  while (IsUpdated) {
+    IsUpdated = false;
     int size = Lineages.size();
     for (int i = 0; i < size; i++) {
       Lineage &a = Lineages[i];
@@ -1359,7 +1359,7 @@ void HRB::fusionLineages(std::vector<llvm::SUnit> &SUnits) {
         if (b.length() == 0)
           continue;
         if (tryFuse(a, b, SUnits)) {
-          bUpdated = true;
+          IsUpdated = true;
           if (a.length() == 0)
             break;
         }
