@@ -1,6 +1,6 @@
-# Test MIR printer and parser to NOT have `typeId` field in callSites. `typeId` is used
-# for propogating call site type identifiers to emit in the call graph section for
-# indirect targets only. This test do not contain any indirect targets.
+# Test MIR printer and parser to NOT have `typeId` field in callSites.
+# `typeId` is used for propogating call site type identifiers for
+# indirect targets only. This test does not contain any indirect targets.
 
 # RUN: llc --call-graph-section %s -run-pass=none -o - | FileCheck %s
 # CHECK-NOT: - { bb: {{.*}}, offset: {{.*}}, fwdArgRegs: [], typeId:
