@@ -550,7 +550,6 @@ class LldbGdbServerTestCase(
         read_contents = seven.unhexlify(context.get("read_contents"))
         self.assertEqual(read_contents, MEMORY_CONTENTS)
 
-
     def breakpoint_set_and_remove_work(self, want_hardware):
         # Start up the inferior.
         procs = self.prep_debug_monitor_and_inferior(
@@ -722,7 +721,6 @@ class LldbGdbServerTestCase(
             self.build()
         self.set_inferior_startup_launch()
         self.breakpoint_set_and_remove_work(want_hardware=True)
-
 
     @skipIfWindows  # No pty support to test any inferior output
     def test_written_M_content_reads_back_correctly(self):
