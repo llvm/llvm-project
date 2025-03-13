@@ -13,8 +13,8 @@ Arguments:
 The script does the following:
     1. Prints the supplied CLI arguments.
     2. Loads the JSON file.
-    3. Validates the structure and required fields.
-    4. Pretty prints the JSON.
+    3. Pretty prints the JSON.
+    4. Validates the structure and required fields.
 """
 
 import sys

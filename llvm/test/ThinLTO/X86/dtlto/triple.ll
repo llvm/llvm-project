@@ -13,7 +13,6 @@ RUN: opt t2.ll -o t2.o
 # Perform DTLTO. mock.py does not do any compilation, instead it emits the
 # object files supplied using -thinlto-distributor-arg in job order.
 RUN: not llvm-lto2 run t1.bc t2.bc -o t.o -save-temps \
-RUN:   -dtlto \
 RUN:   -dtlto-distributor=%python \
 RUN:   -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
 RUN:   -thinlto-distributor-arg=t1.o \

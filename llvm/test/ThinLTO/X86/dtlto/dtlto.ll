@@ -15,7 +15,6 @@ RUN: mkdir %t/out && cd %t/out
 
 # Define a substitution to share the common DTLTO arguments.
 DEFINE: %{command} = llvm-lto2 run ../t1.bc ../t2.bc -o t.o \
-DEFINE:   -dtlto \
 DEFINE:   -dtlto-distributor=%python \
 DEFINE:   -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
 DEFINE:   -thinlto-distributor-arg=../t1.o \

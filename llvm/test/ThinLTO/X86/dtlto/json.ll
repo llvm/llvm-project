@@ -10,7 +10,6 @@ RUN: opt -thinlto-bc t2.ll -o t2.bc
 # Perform DTLTO.
 RUN: not llvm-lto2 run t1.bc t2.bc -o my.output \
 RUN:     -r=t1.bc,t1,px -r=t2.bc,t2,px \
-RUN:     -dtlto \
 RUN:     -dtlto-distributor=%python \
 RUN:     -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
 RUN:     -thinlto-remote-compiler=my_clang.exe \

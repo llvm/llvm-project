@@ -27,7 +27,7 @@ import validate
 
 if __name__ == "__main__":
     json_arg = sys.argv[-1]
-    distributor_args = sys.argv[1:-1]
+    input_files = sys.argv[1:-1]
 
     # Load the DTLTO information from the input JSON file.
     with Path(json_arg).open() as f:
@@ -36,7 +36,7 @@ if __name__ == "__main__":
     # Iterate over the jobs and create the output
     # files by copying over the supplied input files.
     for job_index, job in enumerate(data["jobs"]):
-        shutil.copy(distributor_args[job_index], job["primary_output"][0])
+        shutil.copy(input_files[job_index], job["primary_output"][0])
 
     # Check the format of the JSON.
     validate.validate(data)

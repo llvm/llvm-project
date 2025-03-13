@@ -9,7 +9,6 @@ RUN: opt -thinlto-bc 1.ll -o 1.bc -O2
 # Define a substitution to share the common DTLTO arguments. Note that the use
 # of validate.py will cause a failure as it does not create output files.
 DEFINE: %{command} = llvm-lto2 run 0.bc 1.bc -o t.o \
-DEFINE:    -dtlto \
 DEFINE:    -dtlto-distributor=%python \
 DEFINE:    -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
 DEFINE:    -thinlto-distributor-arg=0.bc \

@@ -19,7 +19,7 @@ DEFINE:     -r=t2.bc,t1 \
 DEFINE:     -thinlto-emit-indexes
 
 # Perform DTLTO.
-RUN: %{command} -dtlto \
+RUN: %{command} \
 RUN:     -dtlto-distributor=%python \
 RUN:     -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/mock.py \
 RUN:     -thinlto-distributor-arg=t1.o \
