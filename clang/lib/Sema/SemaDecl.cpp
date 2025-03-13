@@ -351,7 +351,7 @@ ParsedType Sema::getTypeName(const IdentifierInfo &II, SourceLocation NameLoc,
             Diag(QualifiedLoc, diag::warn_cxx17_compat_implicit_typename);
           else
             Diag(QualifiedLoc, diag::ext_implicit_typename)
-                << SS->getScopeRep() << II.getName()
+                << NestedNameSpecifier::Create(Context, SS->getScopeRep(), &II)
                 << FixItHint::CreateInsertion(QualifiedLoc, "typename ");
         }
 
@@ -795,9 +795,9 @@ void Sema::DiagnoseUnknownTypeName(IdentifierInfo *&II,
       DiagID = diag::ext_typename_missing;
 
     Diag(SS->getRange().getBegin(), DiagID)
-      << SS->getScopeRep() << II->getName()
-      << SourceRange(SS->getRange().getBegin(), IILoc)
-      << FixItHint::CreateInsertion(SS->getRange().getBegin(), "typename ");
+        << NestedNameSpecifier::Create(Context, SS->getScopeRep(), II)
+        << SourceRange(SS->getRange().getBegin(), IILoc)
+        << FixItHint::CreateInsertion(SS->getRange().getBegin(), "typename ");
     SuggestedType = ActOnTypenameType(S, SourceLocation(),
                                       *SS, *II, IILoc).get();
   } else {
@@ -3829,11 +3829,9 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
   // If this redeclaration makes the function inline, we may need to add it to
   // UndefinedButUsed.
-  if (!Old->isInlined() && New->isInlined() &&
-      !New->hasAttr<GNUInlineAttr>() &&
-      !getLangOpts().GNUInline &&
-      Old->isUsed(false) &&
-      !Old->isDefined() && !New->isThisDeclarationADefinition())
+  if (!Old->isInlined() && New->isInlined() && !New->hasAttr<GNUInlineAttr>() &&
+      !getLangOpts().GNUInline && Old->isUsed(false) && !Old->isDefined() &&
+      !New->isThisDeclarationADefinition() && !Old->isInAnotherModuleUnit())
     UndefinedButUsed.insert(std::make_pair(Old->getCanonicalDecl(),
                                            SourceLocation()));
 
@@ -4700,7 +4698,8 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
   // If this redeclaration makes the variable inline, we may need to add it to
   // UndefinedButUsed.
   if (!Old->isInline() && New->isInline() && Old->isUsed(false) &&
-      !Old->getDefinition() && !New->isThisDeclarationADefinition())
+      !Old->getDefinition() && !New->isThisDeclarationADefinition() &&
+      !Old->isInAnotherModuleUnit())
     UndefinedButUsed.insert(std::make_pair(Old->getCanonicalDecl(),
                                            SourceLocation()));
 
@@ -8165,7 +8164,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
               (D.getCXXScopeSpec().isSet() && DC && DC->isRecord() &&
                DC->isDependentContext())
                   ? TPC_ClassTemplateMember
-                  : TPC_VarTemplate))
+                  : TPC_Other))
         NewVD->setInvalidDecl();
 
       // If we are providing an explicit specialization of a static variable

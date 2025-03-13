@@ -38,15 +38,15 @@ namespace {
 
 class GCNCreateVOPD : public MachineFunctionPass {
 private:
-    class VOPDCombineInfo {
-    public:
-      VOPDCombineInfo() = default;
-      VOPDCombineInfo(MachineInstr *First, MachineInstr *Second)
-          : FirstMI(First), SecondMI(Second) {}
+  class VOPDCombineInfo {
+  public:
+    VOPDCombineInfo() = default;
+    VOPDCombineInfo(MachineInstr *First, MachineInstr *Second)
+        : FirstMI(First), SecondMI(Second) {}
 
-      MachineInstr *FirstMI;
-      MachineInstr *SecondMI;
-    };
+    MachineInstr *FirstMI;
+    MachineInstr *SecondMI;
+  };
 
 public:
   static char ID;

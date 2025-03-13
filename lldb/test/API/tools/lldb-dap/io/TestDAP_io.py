@@ -2,6 +2,8 @@
 Test lldb-dap IO handling.
 """
 
+import sys
+
 from lldbsuite.test.decorators import *
 import lldbdap_testcase
 import dap_server
@@ -19,18 +21,18 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
             if process.poll() is None:
                 process.terminate()
                 process.wait()
-            stdout_data = process.stdout.read()
-            stderr_data = process.stderr.read()
-            print("========= STDOUT =========")
-            print(stdout_data)
-            print("========= END =========")
-            print("========= STDERR =========")
-            print(stderr_data)
-            print("========= END =========")
-            print("========= DEBUG ADAPTER PROTOCOL LOGS =========")
+            stdout_data = process.stdout.read().decode()
+            stderr_data = process.stderr.read().decode()
+            print("========= STDOUT =========", file=sys.stderr)
+            print(stdout_data, file=sys.stderr)
+            print("========= END =========", file=sys.stderr)
+            print("========= STDERR =========", file=sys.stderr)
+            print(stderr_data, file=sys.stderr)
+            print("========= END =========", file=sys.stderr)
+            print("========= DEBUG ADAPTER PROTOCOL LOGS =========", file=sys.stderr)
             with open(log_file_path, "r") as file:
-                print(file.read())
-            print("========= END =========")
+                print(file.read(), file=sys.stderr)
+            print("========= END =========", file=sys.stderr)
 
         # Execute the cleanup function during test case tear down.
         self.addTearDownHook(cleanup)
@@ -45,6 +47,15 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process.stdin.close()
         self.assertEqual(process.wait(timeout=5.0), 0)
 
+    def test_invalid_header(self):
+        """
+        lldb-dap handles invalid message headers.
+        """
+        process = self.launch()
+        process.stdin.write(b"not the corret message header")
+        process.stdin.close()
+        self.assertEqual(process.wait(timeout=5.0), 1)
+
     def test_partial_header(self):
         """
         lldb-dap handles parital message headers.
@@ -52,7 +63,7 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"Content-Length: ")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 0)
+        self.assertEqual(process.wait(timeout=5.0), 1)
 
     def test_incorrect_content_length(self):
         """
@@ -61,13 +72,13 @@ class TestDAP_io(lldbdap_testcase.DAPTestCaseBase):
         process = self.launch()
         process.stdin.write(b"Content-Length: abc")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 0)
+        self.assertEqual(process.wait(timeout=5.0), 1)
 
     def test_partial_content_length(self):
         """
         lldb-dap handles partial messages.
         """
         process = self.launch()
-        process.stdin.write(b"Content-Length: 10{")
+        process.stdin.write(b"Content-Length: 10\r\n\r\n{")
         process.stdin.close()
-        self.assertEqual(process.wait(timeout=5.0), 0)
+        self.assertEqual(process.wait(timeout=5.0), 1)

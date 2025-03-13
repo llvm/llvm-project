@@ -27,14 +27,14 @@ def libc_test(name, srcs, libc_function_deps = [], copts = [], deps = [], local_
       local_defines: The list of target local_defines if any.
       **kwargs: Attributes relevant for a libc_test. For example, name, srcs.
     """
-    all_function_deps = libc_function_deps + ["//libc:errno"]
     native.cc_test(
         name = name,
         srcs = srcs,
         local_defines = local_defines + LIBC_CONFIGURE_OPTIONS,
-        deps = [libc_internal_target(d) for d in all_function_deps] + [
+        deps = [libc_internal_target(d) for d in libc_function_deps] + [
             "//libc/test/UnitTest:LibcUnitTest",
             "//libc:__support_macros_config",
+            "//libc:errno",
             "//libc:func_aligned_alloc",
             "//libc:func_free",
             "//libc:func_malloc",

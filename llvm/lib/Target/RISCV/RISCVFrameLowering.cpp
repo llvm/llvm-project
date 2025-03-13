@@ -1008,10 +1008,9 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     // The frame pointer does need to be reserved from register allocation.
     assert(MF.getRegInfo().isReserved(FPReg) && "FP not reserved");
 
-    // Xqccmp with hasFP will update FP using `qc.cm.pushfp`, so we don't need
-    // to update it again, but we do need to emit the `.cfi_def_cfa` below.
-    if (RVFI->getPushPopKind(MF) !=
-        RISCVMachineFunctionInfo::PushPopKind::VendorXqccmp) {
+    // Some stack management variants automatically keep FP updated, so we don't
+    // need an instruction to do so.
+    if (!RVFI->hasImplicitFPUpdates(MF)) {
       RI->adjustReg(
           MBB, MBBI, DL, FPReg, SPReg,
           StackOffset::getFixed(RealStackSize - RVFI->getVarArgsSaveSize()),

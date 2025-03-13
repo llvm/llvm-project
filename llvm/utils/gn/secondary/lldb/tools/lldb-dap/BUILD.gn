@@ -83,7 +83,6 @@ executable("lldb-dap") {
     "Handler/TestGetTargetBreakpointsRequestHandler.cpp",
     "Handler/ThreadsRequestHandler.cpp",
     "Handler/VariablesRequestHandler.cpp",
-    "IOStream.cpp",
     "InstructionBreakpoint.cpp",
     "JSONUtils.cpp",
     "LLDBUtils.cpp",
@@ -92,6 +91,7 @@ executable("lldb-dap") {
     "Protocol.cpp",
     "RunInTerminal.cpp",
     "SourceBreakpoint.cpp",
+    "Transport.cpp",
     "Watchpoint.cpp",
     "lldb-dap.cpp",
   ]

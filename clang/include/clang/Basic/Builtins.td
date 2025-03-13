@@ -1340,6 +1340,12 @@ def ElementwiseExp2 : Builtin {
   let Prototype = "void(...)";
 }
 
+def ElementwiseExp10 : Builtin {
+  let Spellings = ["__builtin_elementwise_exp10"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def ElementwiseFloor : Builtin {
   let Spellings = ["__builtin_elementwise_floor"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];

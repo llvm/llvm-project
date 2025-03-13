@@ -12,7 +12,7 @@ entry:
   br label %if.end
 
 if.end:                                           ; preds = %entry
-  %0 = load i32, ptr undef, align 4
+  %0 = load i32, ptr poison, align 4
   %mul = mul i32 %0, 3
   %cmp13 = icmp eq i32 %mul, 989619
   br i1 %cmp13, label %cleanup.cont, label %if.end15
@@ -125,7 +125,7 @@ if.end5.i400:                                     ; preds = %if.then3.i394, %if.
   %conv612.i397 = sext i8 %7 to i32
   %sub13.i398 = add nsw i32 %conv612.i397, -48
   %cmp714.i399 = icmp ugt i32 %sub13.i398, 9
-  %8 = load i8, ptr undef, align 1
+  %8 = load i8, ptr poison, align 1
   %cmp9.not.i500 = icmp eq i8 0, %8
   br label %land.lhs.true402.critedge
 

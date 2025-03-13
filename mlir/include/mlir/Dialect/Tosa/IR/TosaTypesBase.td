@@ -247,6 +247,13 @@ def Tosa_NanPropagationAttr : StringBasedAttr<
           "::llvm::cast<StringAttr>($_self).getValue() == \"IGNORE\"">,
     "Supported NaN propagation strategies">;
 
+// Rounding mode for tosa.rescale
+def Tosa_RoundingTypeAttr : StringBasedAttr<
+    CPred<"::llvm::cast<StringAttr>($_self).getValue() == \"SINGLE_ROUND\"  || " #
+          "::llvm::cast<StringAttr>($_self).getValue() == \"INEXACT_ROUND\" || " #
+          "::llvm::cast<StringAttr>($_self).getValue() == \"DOUBLE_ROUND\"">,
+    "Supported rounding modes">;
+
 def Tosa_TensorTypeAttr : TypeAttrBase<"TensorType", "Tensor type attribute">;
 
 // Tensor to buffer types.

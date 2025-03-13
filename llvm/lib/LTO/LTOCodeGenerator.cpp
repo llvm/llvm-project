@@ -420,8 +420,8 @@ bool LTOCodeGenerator::determineTarget() {
 std::unique_ptr<TargetMachine> LTOCodeGenerator::createTargetMachine() {
   assert(MArch && "MArch is not set!");
   return std::unique_ptr<TargetMachine>(MArch->createTargetMachine(
-      TripleStr, Config.CPU, FeatureStr, Config.Options, Config.RelocModel,
-      std::nullopt, Config.CGOptLevel));
+      Triple(TripleStr), Config.CPU, FeatureStr, Config.Options,
+      Config.RelocModel, std::nullopt, Config.CGOptLevel));
 }
 
 // If a linkonce global is present in the MustPreserveSymbols, we need to make

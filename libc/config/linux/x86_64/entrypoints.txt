@@ -938,6 +938,10 @@ if(LLVM_LIBC_FULL_BUILD)
     libc.src.string.strcoll_l
     libc.src.string.strxfrm_l
 
+    # strings.h entrypoints
+    libc.src.strings.strcasecmp_l
+    libc.src.strings.strncasecmp_l
+
     # assert.h entrypoints
     libc.src.assert.__assert_fail
 

@@ -261,10 +261,14 @@ public:
       SmallVector<OpenACCGangKind> GangKinds;
       SmallVector<Expr *> IntExprs;
     };
+    struct BindDetails {
+      std::variant<std::monostate, clang::StringLiteral *, IdentifierInfo *>
+          Argument;
+    };
 
     std::variant<std::monostate, DefaultDetails, ConditionDetails,
                  IntExprDetails, VarListDetails, WaitDetails, DeviceTypeDetails,
-                 ReductionDetails, CollapseDetails, GangDetails>
+                 ReductionDetails, CollapseDetails, GangDetails, BindDetails>
         Details = std::monostate{};
 
   public:
@@ -468,6 +472,13 @@ public:
       return std::get<DeviceTypeDetails>(Details).Archs;
     }
 
+    std::variant<std::monostate, clang::StringLiteral *, IdentifierInfo *>
+    getBindDetails() const {
+      assert(ClauseKind == OpenACCClauseKind::Bind &&
+             "Only 'bind' has bind details");
+      return std::get<BindDetails>(Details).Argument;
+    }
+
     void setLParenLoc(SourceLocation EndLoc) { LParenLoc = EndLoc; }
     void setEndLoc(SourceLocation EndLoc) { ClauseRange.setEnd(EndLoc); }
 
@@ -651,6 +662,14 @@ public:
       assert(ClauseKind == OpenACCClauseKind::Collapse &&
              "Only 'collapse' has collapse details");
       Details = CollapseDetails{IsForce, LoopCount};
+    }
+
+    void setBindDetails(
+        std::variant<std::monostate, clang::StringLiteral *, IdentifierInfo *>
+            Arg) {
+      assert(ClauseKind == OpenACCClauseKind::Bind &&
+             "Only 'bind' has bind details");
+      Details = BindDetails{Arg};
     }
   };
 

@@ -48,7 +48,7 @@ endif:
   ret void
 }
 
-@lds = internal addrspace(3) global [64 x float] undef
+@lds = internal addrspace(3) global [64 x float] poison
 
 ; m0 is killed, so it isn't necessary during the entry block spill to preserve it
 ; GCN-LABEL: {{^}}spill_kill_m0_lds:
@@ -114,11 +114,11 @@ main_body:
    br i1 %cmp, label %if, label %else
 
 if:                                               ; preds = %main_body
-  store volatile i32 8, ptr addrspace(1) undef
+  store volatile i32 8, ptr addrspace(1) poison
   br label %endif
 
 else:                                             ; preds = %main_body
-  store volatile i32 11, ptr addrspace(1) undef
+  store volatile i32 11, ptr addrspace(1) poison
   br label %endif
 
 endif:
@@ -174,7 +174,7 @@ define amdgpu_kernel void @restore_m0_lds(i32 %arg) {
   br i1 %cmp, label %ret, label %bb
 
 bb:
-  store volatile i64 %sval, ptr addrspace(3) undef
+  store volatile i64 %sval, ptr addrspace(3) poison
   call void asm sideeffect "; use $0", "{m0}"(i32 %m0) #0
   br label %ret
 

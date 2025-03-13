@@ -126,9 +126,8 @@ void PGOCtxProfileWriter::writeContextual(const ContextNode &RootNode) {
   writeImpl(std::nullopt, RootNode);
 }
 
-void PGOCtxProfileWriter::writeFlatSection(ctx_profile::GUID Guid,
-                                           const uint64_t *Buffer,
-                                           size_t Size) {
+void PGOCtxProfileWriter::writeFlat(ctx_profile::GUID Guid,
+                                    const uint64_t *Buffer, size_t Size) {
   Writer.EnterSubblock(PGOCtxProfileBlockIDs::FlatProfileBlockID, CodeLen);
   writeGuid(Guid);
   writeCounters({Buffer, Size});
@@ -240,7 +239,7 @@ Error llvm::createCtxProfFromYAML(StringRef Profile, raw_ostream &Out) {
   if (!SPR.FlatProfiles.empty()) {
     Writer.startFlatSection();
     for (const auto &[Guid, Counters] : SPR.FlatProfiles)
-      Writer.writeFlatSection(Guid, Counters.data(), Counters.size());
+      Writer.writeFlat(Guid, Counters.data(), Counters.size());
     Writer.endFlatSection();
   }
   if (EC)

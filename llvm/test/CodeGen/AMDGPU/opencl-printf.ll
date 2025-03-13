@@ -36,7 +36,7 @@
 @printed.str.float.neg0 = private addrspace(4) constant float -0.0, align 4
 @printed.str.float.0 = private addrspace(4) constant float 0.0, align 4
 @printed.str.ptr.null = private addrspace(4) constant ptr null, align 4
-@printed.str.ptr.undef = private addrspace(4) constant ptr undef, align 4
+@printed.str.ptr.undef = private addrspace(4) constant ptr poison, align 4
 @format.str.f = private unnamed_addr addrspace(4) constant [33 x i8] c"%f %f %f %f %f %f %f %f %f %f %f\00", align 1
 @format.str.p = private unnamed_addr addrspace(4) constant [15 x i8] c"%p %p %p %p %p\00", align 1
 @format.str.d = private unnamed_addr addrspace(4) constant [30 x i8] c"%d %d %d %d %d %d %d %d %d %d\00", align 1

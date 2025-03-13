@@ -1286,13 +1286,7 @@ void BCP1();
   // expected-error@+1{{expected identifier or string literal}}
 #pragma acc routine(BCP1) seq bind()
 
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
   // expected-warning@+1{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
 #pragma acc routine seq bind("ReductionClauseParsing")
-void BCP2();
 
-  // expected-warning@+1{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-#pragma acc routine(BCP1) seq bind(BCP2)
-
-  // expected-error@+1{{use of undeclared identifier 'unknown_thing'}}
 #pragma acc routine(BCP1) seq bind(unknown_thing)

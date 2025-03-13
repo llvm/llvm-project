@@ -78,8 +78,8 @@ bb31:                                             ; preds = %bb31, %bb26
   %tmp32 = phi i32 [ %tmp9, %bb26 ], [ poison, %bb31 ]
   %tmp33 = getelementptr inbounds [462 x float], ptr addrspace(3) @0, i32 0, i32 %tmp32
   %tmp34 = load float, ptr addrspace(3) %tmp33, align 4
-  %tmp35 = tail call float @llvm.fmuladd.f32(float %tmp34, float undef, float undef)
-  %tmp36 = tail call float @llvm.fmuladd.f32(float undef, float undef, float %tmp35)
+  %tmp35 = tail call float @llvm.fmuladd.f32(float %tmp34, float poison, float poison)
+  %tmp36 = tail call float @llvm.fmuladd.f32(float poison, float poison, float %tmp35)
   br i1 %c5, label %bb30, label %bb31
 
 bb37:                                             ; preds = %bb11

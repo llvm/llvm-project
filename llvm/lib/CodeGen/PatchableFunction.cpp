@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/PatchableFunction.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -23,21 +24,37 @@
 using namespace llvm;
 
 namespace {
-struct PatchableFunction : public MachineFunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  PatchableFunction() : MachineFunctionPass(ID) {
-    initializePatchableFunctionPass(*PassRegistry::getPassRegistry());
+struct PatchableFunction {
+  bool run(MachineFunction &F);
+};
+
+struct PatchableFunctionLegacy : public MachineFunctionPass {
+  static char ID;
+  PatchableFunctionLegacy() : MachineFunctionPass(ID) {
+    initializePatchableFunctionLegacyPass(*PassRegistry::getPassRegistry());
+  }
+  bool runOnMachineFunction(MachineFunction &F) override {
+    return PatchableFunction().run(F);
   }
 
-  bool runOnMachineFunction(MachineFunction &F) override;
-   MachineFunctionProperties getRequiredProperties() const override {
+  MachineFunctionProperties getRequiredProperties() const override {
     return MachineFunctionProperties().set(
         MachineFunctionProperties::Property::NoVRegs);
   }
 };
+
+} // namespace
+
+PreservedAnalyses
+PatchableFunctionPass::run(MachineFunction &MF,
+                           MachineFunctionAnalysisManager &MFAM) {
+  MFPropsModifier _(*this, MF);
+  if (!PatchableFunction().run(MF))
+    return PreservedAnalyses::all();
+  return getMachineFunctionPassPreservedAnalyses();
 }
 
-bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
+bool PatchableFunction::run(MachineFunction &MF) {
   MachineBasicBlock &FirstMBB = *MF.begin();
 
   if (MF.getFunction().hasFnAttribute("patchable-function-entry")) {
@@ -62,7 +79,7 @@ bool PatchableFunction::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
 
-char PatchableFunction::ID = 0;
-char &llvm::PatchableFunctionID = PatchableFunction::ID;
-INITIALIZE_PASS(PatchableFunction, "patchable-function",
+char PatchableFunctionLegacy::ID = 0;
+char &llvm::PatchableFunctionID = PatchableFunctionLegacy::ID;
+INITIALIZE_PASS(PatchableFunctionLegacy, "patchable-function",
                 "Implement the 'patchable-function' attribute", false, false)

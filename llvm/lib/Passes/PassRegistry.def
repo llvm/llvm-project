@@ -88,7 +88,6 @@ MODULE_PASS("inliner-wrapper", ModuleInlinerWrapperPass())
 MODULE_PASS("inliner-wrapper-no-mandatory-first",
             ModuleInlinerWrapperPass(getInlineParams(), false))
 MODULE_PASS("insert-gcov-profiling", GCOVProfilerPass())
-MODULE_PASS("instrorderfile", InstrOrderFilePass())
 MODULE_PASS("instrprof", InstrProfilingLoweringPass())
 MODULE_PASS("ctx-instr-lower", PGOCtxProfLoweringPass())
 MODULE_PASS("print<ctx-prof-analysis>", CtxProfAnalysisPrinterPass(errs()))

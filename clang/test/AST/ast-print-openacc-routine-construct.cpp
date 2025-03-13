@@ -1,11 +1,11 @@
 // RUN: %clang_cc1 -fopenacc -ast-print %s -o - | FileCheck %s
 
 auto Lambda = [](){};
-// CHECK: #pragma acc routine(Lambda) worker
-#pragma acc routine(Lambda) worker
+// CHECK: #pragma acc routine(Lambda) worker bind(identifier)
+#pragma acc routine(Lambda) worker bind(identifier)
 int function();
-// CHECK: #pragma acc routine(function) vector nohost
-#pragma acc routine (function) vector nohost
+// CHECK: #pragma acc routine(function) vector nohost bind("string")
+#pragma acc routine (function) vector nohost bind("string")
 
 // CHECK: #pragma acc routine(function) device_type(Something) seq
 #pragma acc routine(function) device_type(Something) seq
@@ -82,20 +82,20 @@ struct DepS {
 #pragma acc routine (MemFunc) device_type(Lambda) vector
 };
 
-// CHECK: #pragma acc routine(DepS<int>::Lambda) gang
-#pragma acc routine(DepS<int>::Lambda) gang
+// CHECK: #pragma acc routine(DepS<int>::Lambda) gang bind("string")
+#pragma acc routine(DepS<int>::Lambda) gang bind("string")
 // CHECK: #pragma acc routine(DepS<int>::MemFunc) gang(dim: 1)
 #pragma acc routine(DepS<int>::MemFunc) gang(dim:1)
-// CHECK: #pragma acc routine(DepS<int>::StaticMemFunc) vector
-#pragma acc routine(DepS<int>::StaticMemFunc) vector
+// CHECK: #pragma acc routine(DepS<int>::StaticMemFunc) vector bind(identifier)
+#pragma acc routine(DepS<int>::StaticMemFunc) vector bind(identifier)
 
 
 template<typename T>
 void TemplFunc() {
 // CHECK: #pragma acc routine(T::MemFunc) gang(dim: T::SomethingElse())
 #pragma acc routine(T::MemFunc) gang(dim:T::SomethingElse())
-// CHECK: #pragma acc routine(T::StaticMemFunc) worker nohost
-#pragma acc routine(T::StaticMemFunc) worker nohost
-// CHECK: #pragma acc routine(T::Lambda) nohost seq
-#pragma acc routine(T::Lambda) nohost seq
+// CHECK: #pragma acc routine(T::StaticMemFunc) worker nohost bind(identifier)
+#pragma acc routine(T::StaticMemFunc) worker nohost bind(identifier)
+// CHECK: #pragma acc routine(T::Lambda) nohost seq bind("string")
+#pragma acc routine(T::Lambda) nohost seq bind("string")
 }

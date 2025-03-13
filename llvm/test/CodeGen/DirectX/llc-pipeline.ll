@@ -22,7 +22,6 @@
 ; CHECK-NEXT:     Dominator Tree Construction
 ; CHECK-NEXT:     Scalarize vector operations
 ; CHECK-NEXT:   DXIL Resource Binding Analysis
-; CHECK-NEXT:   DXIL resource Information
 ; CHECK-NEXT:   DXIL Module Metadata analysis
 ; CHECK-NEXT:   DXIL Shader Flag Analysis
 ; CHECK-NEXT:   DXIL Translate Metadata

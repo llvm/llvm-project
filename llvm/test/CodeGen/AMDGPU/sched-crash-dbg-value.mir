@@ -101,12 +101,12 @@
     %tmp = fmul fast float %tmp67, undef
     %tmp71 = fsub fast float %tmp, %tmp70
     %tmp73 = fadd fast float %tmp, undef
-    %tmp74 = insertelement <4 x float> <float undef, float undef, float undef, float 0.000000e+00>, float %tmp69, i32 0
+    %tmp74 = insertelement <4 x float> <float poison, float poison, float poison, float 0.000000e+00>, float %tmp69, i32 0
     %tmp75 = insertelement <4 x float> %tmp74, float %tmp71, i32 1
     %tmp76 = insertelement <4 x float> %tmp75, float %tmp73, i32 2
     store <4 x float> %tmp76, ptr addrspace(5) %tmp24, align 16
-    %tmp77 = fsub float undef, %tmp60
-    %tmp78 = fsub float undef, %tmp61
+    %tmp77 = fsub float poison, %tmp60
+    %tmp78 = fsub float poison, %tmp61
     %tmp79 = extractelement <4 x float> %tmp66, i32 2
     %tmp80 = extractelement <4 x float> %tmp59, i32 2
     %tmp81 = fsub float %tmp79, %tmp80
@@ -124,7 +124,7 @@
     %tmp92 = fsub float %tmp91, %tmp90
     %tmp93 = fmul float %tmp42, %tmp87
     %tmp94 = call float @llvm.fmuladd.f32(float %tmp92, float %tmp36, float %tmp93)
-    %tmp95 = call float @llvm.fmuladd.f32(float %tmp48, float undef, float %tmp94)
+    %tmp95 = call float @llvm.fmuladd.f32(float %tmp48, float poison, float %tmp94)
     %fmul = fmul <2 x float> undef, undef
     %fadd = fadd <2 x float> %fmul, undef
     %extractelement = extractelement <2 x float> %fadd, i64 1

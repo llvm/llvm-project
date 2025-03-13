@@ -29,7 +29,7 @@ define amdgpu_kernel void @addrspacecast_requires_queue_ptr(ptr addrspace(5) %pt
 define amdgpu_kernel void @is_shared_requires_queue_ptr(ptr %ptr) {
   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   %zext = zext i1 %is.shared to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 
@@ -40,7 +40,7 @@ define amdgpu_kernel void @is_shared_requires_queue_ptr(ptr %ptr) {
 define amdgpu_kernel void @is_private_requires_queue_ptr(ptr %ptr) {
   %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %zext = zext i1 %is.private to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 

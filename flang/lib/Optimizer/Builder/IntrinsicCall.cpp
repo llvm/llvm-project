@@ -3688,8 +3688,9 @@ IntrinsicLibrary::genCUDALDXXFunc(mlir::Type resultType,
   mlir::Value res = builder.create<fir::AllocaOp>(loc, resTy);
   if (mlir::isa<fir::BaseBoxType>(arg.getType()))
     arg = builder.create<fir::BoxAddrOp>(loc, arg);
+  mlir::Type refResTy = fir::ReferenceType::get(resTy);
   mlir::FunctionType ftype =
-      mlir::FunctionType::get(arg.getContext(), {resTy, resTy}, {});
+      mlir::FunctionType::get(arg.getContext(), {refResTy, refResTy}, {});
   auto funcOp = builder.createFunction(loc, fctName, ftype);
   llvm::SmallVector<mlir::Value> funcArgs;
   funcArgs.push_back(res);

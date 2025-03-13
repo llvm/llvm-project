@@ -62,6 +62,9 @@ Changes to the LLVM IR
 
   * `mul`
 
+* Updated semantics of `llvm.type.checked.load.relative` to match that of
+  `llvm.load.relative`.
+
 Changes to LLVM infrastructure
 ------------------------------
 
@@ -107,6 +110,8 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* Adds experimental assembler support for the Qualcomm uC 'Xqcili` (Load Large Immediate)
+  extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcilia` (Large Immediate Arithmetic)
   extension.
 * Adds experimental assembler support for the Qualcomm uC 'Xqcibm` (Bit Manipulation)
@@ -160,6 +165,7 @@ Changes to the LLVM tools
 
 * llvm-objcopy now supports the `--update-section` flag for intermediate Mach-O object files.
 * llvm-strip now supports continuing to process files on encountering an error.
+* In llvm-objcopy's ELF port, `--discard-locals` and `--discard-all` now allow and preserve symbols referenced by relocations.
 
 Changes to LLDB
 ---------------------------------

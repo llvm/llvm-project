@@ -40,15 +40,16 @@ define amdgpu_kernel void @negated_cond(ptr addrspace(1) %arg1) {
 ; GCN-NEXT:    s_lshl_b32 s12, s12, 5
 ; GCN-NEXT:    s_cbranch_vccz .LBB0_6
 ; GCN-NEXT:  ; %bb.5: ; in Loop: Header=BB0_4 Depth=2
-; GCN-NEXT:    s_mov_b64 s[14:15], s[2:3]
+; GCN-NEXT:    s_mov_b64 s[16:17], s[2:3]
 ; GCN-NEXT:    s_branch .LBB0_7
 ; GCN-NEXT:  .LBB0_6: ; %bb3
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2
 ; GCN-NEXT:    s_add_i32 s12, s12, 1
-; GCN-NEXT:    s_mov_b64 s[14:15], -1
+; GCN-NEXT:    s_mov_b64 s[16:17], -1
 ; GCN-NEXT:  .LBB0_7: ; %Flow
 ; GCN-NEXT:    ; in Loop: Header=BB0_4 Depth=2
-; GCN-NEXT:    s_andn2_b64 vcc, exec, s[14:15]
+; GCN-NEXT:    s_mov_b64 s[14:15], -1
+; GCN-NEXT:    s_andn2_b64 vcc, exec, s[16:17]
 ; GCN-NEXT:    s_mov_b64 s[16:17], -1
 ; GCN-NEXT:    s_cbranch_vccnz .LBB0_3
 ; GCN-NEXT:  ; %bb.8: ; %bb4

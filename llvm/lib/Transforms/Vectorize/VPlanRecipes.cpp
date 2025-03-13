@@ -27,7 +27,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorBuilder.h"
@@ -278,6 +277,12 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
   llvm_unreachable("subclasses should implement computeCost");
 }
 
+bool VPRecipeBase::isPhi() const {
+  return (getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC) ||
+         (isa<VPInstruction>(this) &&
+          cast<VPInstruction>(this)->getOpcode() == Instruction::PHI);
+}
+
 InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
@@ -419,6 +424,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
     return true;
   switch (Opcode) {
   case Instruction::ICmp:
+  case Instruction::PHI:
   case Instruction::Select:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
@@ -467,6 +473,17 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
     Value *B = State.get(getOperand(1), OnlyFirstLaneUsed);
     return Builder.CreateCmp(getPredicate(), A, B, Name);
+  }
+  case Instruction::PHI: {
+    assert(getParent() ==
+               getParent()->getPlan()->getVectorLoopRegion()->getEntry() &&
+           "VPInstructions with PHI opcodes must be used for header phis only "
+           "at the moment");
+    BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+    Value *Start = State.get(getOperand(0), VPLane(0));
+    PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
+    Phi->addIncoming(Start, VectorPH);
+    return Phi;
   }
   case Instruction::Select: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
@@ -743,6 +760,18 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Ctx.TTI.getArithmeticReductionCost(
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
+  case VPInstruction::ExtractFirstActive: {
+    // Calculate the cost of determining the lane index.
+    auto *PredTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(1)), VF);
+    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
+                                  Type::getInt64Ty(Ctx.LLVMCtx),
+                                  {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
+    InstructionCost Cost = Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+    // Add on the cost of extracting the element.
+    auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
+    return Cost + Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
+                                             Ctx.CostKind);
+  }
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
@@ -760,7 +789,8 @@ bool VPInstruction::isVectorToScalar() const {
 }
 
 bool VPInstruction::isSingleScalar() const {
-  return getOpcode() == VPInstruction::ResumePhi;
+  return getOpcode() == VPInstruction::ResumePhi ||
+         getOpcode() == Instruction::PHI;
 }
 
 #if !defined(NDEBUG)
@@ -838,6 +868,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   switch (getOpcode()) {
   default:
     return false;
+  case Instruction::PHI:
+    return true;
   case Instruction::ICmp:
   case Instruction::Select:
   case Instruction::Or:
@@ -3281,11 +3313,12 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
-    auto *IVR = cast<VPHeaderPHIRecipe>(&getParent()
-                                             ->getPlan()
-                                             ->getVectorLoopRegion()
-                                             ->getEntryBasicBlock()
-                                             ->front());
+    auto *IVR = getParent()
+                    ->getPlan()
+                    ->getVectorLoopRegion()
+                    ->getEntryBasicBlock()
+                    ->front()
+                    .getVPSingleValue();
     PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, /*IsScalar*/ true));
     NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
                                     CanonicalIV->getIterator());
@@ -3615,16 +3648,6 @@ void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-PHI ";
 
-  auto *OriginalPhi = cast<PHINode>(getUnderlyingValue());
-  // Unless all incoming values are modeled in VPlan  print the original PHI
-  // directly.
-  // TODO: Remove once all VPWidenPHIRecipe instances keep all relevant incoming
-  // values as VPValues.
-  if (getNumOperands() != OriginalPhi->getNumOperands()) {
-    O << VPlanIngredient(OriginalPhi);
-    return;
-  }
-
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);
@@ -3659,25 +3682,6 @@ void VPEVLBasedIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent << "EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI ";
 
-  printAsOperand(O, SlotTracker);
-  O << " = phi ";
-  printOperands(O, SlotTracker);
-}
-#endif
-
-void VPScalarPHIRecipe::execute(VPTransformState &State) {
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Value *Start = State.get(getStartValue(), VPLane(0));
-  PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
-  Phi->addIncoming(Start, VectorPH);
-  Phi->setDebugLoc(getDebugLoc());
-  State.set(this, Phi, /*IsScalar=*/true);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPScalarPHIRecipe::print(raw_ostream &O, const Twine &Indent,
-                              VPSlotTracker &SlotTracker) const {
-  O << Indent << "SCALAR-PHI ";
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);

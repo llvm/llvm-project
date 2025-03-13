@@ -4031,8 +4031,7 @@ define void @sub_vi_v16i8(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vle8.v v8, (a0)
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vsub.vx v8, v8, a1
+; CHECK-NEXT:    vadd.vi v8, v8, 1
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <16 x i8>, ptr %x
@@ -4046,8 +4045,7 @@ define void @sub_vi_v8i16(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
 ; CHECK-NEXT:    vle16.v v8, (a0)
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vsub.vx v8, v8, a1
+; CHECK-NEXT:    vadd.vi v8, v8, 1
 ; CHECK-NEXT:    vse16.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <8 x i16>, ptr %x
@@ -4061,8 +4059,7 @@ define void @sub_vi_v4i32(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v8, (a0)
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vsub.vx v8, v8, a1
+; CHECK-NEXT:    vadd.vi v8, v8, 1
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
@@ -4076,8 +4073,7 @@ define void @sub_vi_v2i64(ptr %x) {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-NEXT:    vle64.v v8, (a0)
-; CHECK-NEXT:    li a1, -1
-; CHECK-NEXT:    vsub.vx v8, v8, a1
+; CHECK-NEXT:    vadd.vi v8, v8, 1
 ; CHECK-NEXT:    vse64.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <2 x i64>, ptr %x

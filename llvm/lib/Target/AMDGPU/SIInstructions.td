@@ -2268,7 +2268,7 @@ foreach pred = [NotHasTrue16BitInsts, UseFakeTrue16Insts] in {
 
   foreach vt = [f16, bf16] in {
     def : GCNPat <
-      (VGPRImm<(f16 fpimm)>:$imm),
+      (VGPRImm<(vt fpimm)>:$imm),
       (V_MOV_B32_e32 (vt (bitcast_fpimm_to_i32 $imm)))
     >;
   }

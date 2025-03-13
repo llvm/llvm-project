@@ -1059,8 +1059,11 @@ Parser::OpenACCClauseParseResult Parser::ParseOpenACCClauseParams(
       break;
     }
     case OpenACCClauseKind::Bind: {
-      ExprResult BindArg = ParseOpenACCBindClauseArgument();
-      if (BindArg.isInvalid()) {
+      ParsedClause.setBindDetails(ParseOpenACCBindClauseArgument());
+
+      // We can create an 'empty' bind clause in the event of an error
+      if (std::holds_alternative<std::monostate>(
+              ParsedClause.getBindDetails())) {
         Parens.skipToEnd();
         return OpenACCCanContinue();
       }
@@ -1334,7 +1337,8 @@ ExprResult Parser::ParseOpenACCIDExpression() {
   return getActions().CorrectDelayedTyposInExpr(Res);
 }
 
-ExprResult Parser::ParseOpenACCBindClauseArgument() {
+std::variant<std::monostate, clang::StringLiteral *, IdentifierInfo *>
+Parser::ParseOpenACCBindClauseArgument() {
   // OpenACC 3.3 section 2.15:
   // The bind clause specifies the name to use when calling the procedure on a
   // device other than the host. If the name is specified as an identifier, it
@@ -1343,14 +1347,21 @@ ExprResult Parser::ParseOpenACCBindClauseArgument() {
   // name unmodified.
   if (getCurToken().is(tok::r_paren)) {
     Diag(getCurToken(), diag::err_acc_incorrect_bind_arg);
-    return ExprError();
+    return std::monostate{};
   }
 
-  if (tok::isStringLiteral(getCurToken().getKind()))
-    return getActions().CorrectDelayedTyposInExpr(ParseStringLiteralExpression(
-        /*AllowUserDefinedLiteral=*/false, /*Unevaluated=*/true));
+  if (getCurToken().is(tok::identifier)) {
+    IdentifierInfo *II = getCurToken().getIdentifierInfo();
+    ConsumeToken();
+    return II;
+  }
 
-  return ParseOpenACCIDExpression();
+  ExprResult Res =
+      getActions().CorrectDelayedTyposInExpr(ParseStringLiteralExpression(
+          /*AllowUserDefinedLiteral=*/false, /*Unevaluated=*/true));
+  if (!Res.isUsable())
+    return std::monostate{};
+  return cast<StringLiteral>(Res.get());
 }
 
 /// OpenACC 3.3, section 1.6:

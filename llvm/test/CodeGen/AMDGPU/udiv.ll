@@ -2246,7 +2246,7 @@ define amdgpu_kernel void @test_udiv2(i32 %p) {
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, 1,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
   %i = udiv i32 %p, 2
-  store volatile i32 %i, ptr addrspace(1) undef
+  store volatile i32 %i, ptr addrspace(1) poison
   ret void
 }
 
@@ -2312,7 +2312,7 @@ define amdgpu_kernel void @test_udiv_3_mulhu(i32 %p) {
 ; EG-NEXT:     MOV * T1.X, literal.x,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
    %i = udiv i32 %p, 3
-   store volatile i32 %i, ptr addrspace(1) undef
+   store volatile i32 %i, ptr addrspace(1) poison
    ret void
 }
 

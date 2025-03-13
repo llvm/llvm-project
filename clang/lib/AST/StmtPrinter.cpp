@@ -2659,10 +2659,8 @@ void StmtPrinter::VisitCXXFoldExpr(CXXFoldExpr *E) {
 }
 
 void StmtPrinter::VisitCXXParenListInitExpr(CXXParenListInitExpr *Node) {
-  OS << "(";
-  llvm::interleaveComma(Node->getInitExprs(), OS,
+  llvm::interleaveComma(Node->getUserSpecifiedInitExprs(), OS,
                         [&](Expr *E) { PrintExpr(E); });
-  OS << ")";
 }
 
 void StmtPrinter::VisitConceptSpecializationExpr(ConceptSpecializationExpr *E) {
