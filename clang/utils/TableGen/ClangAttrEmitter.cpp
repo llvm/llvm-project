@@ -4940,6 +4940,9 @@ void EmitClangAttrParsedAttrKinds(const RecordKeeper &Records,
           Matches = &Pragma;
         } else if (Variety == "HLSLAnnotation") {
           Matches = &HLSLAnnotation;
+          if (RawSpelling.compare(RawSpelling.lower()) != 0)
+            PrintError(S.getSpellingRecord().getLoc(),
+                       "HLSLAnnotation Attribute must be lower case.");
         }
 
         assert(Matches && "Unsupported spelling variety found");
