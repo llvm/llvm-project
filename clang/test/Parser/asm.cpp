@@ -14,6 +14,10 @@ void f() {
 }
 
 
+#if !__has_extension(gnu_asm_constexpr_strings)
+#error Extension 'gnu_asm_constexpr_strings' should be available by default
+#endif
+
 struct string_view {
   int S;
   const char* D;

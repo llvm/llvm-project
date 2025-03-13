@@ -1958,6 +1958,24 @@ references can be used instead of numeric references.
       return -1;
   }
 
+
+Constexpr strings in GNU ASM statememts
+=======================================
+
+In C++11 mode (and greater), Clang supports specifying the template,
+constraints, and clobber strings with a parenthesized constant expression
+producing an object with ``data`` and ``size`` member functions,
+such as ``std::string``.
+
+Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
+
+.. code-block:: c++
+
+   int foo() {
+      asm((std::string_view("nop")) ::: (std::string_view("memory")));
+   }
+
+
 Objective-C Features
 ====================
 
