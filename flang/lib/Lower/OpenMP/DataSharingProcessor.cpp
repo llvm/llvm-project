@@ -548,6 +548,7 @@ void DataSharingProcessor::doPrivatize(const semantics::Symbol *sym,
   }
 
   mlir::Type argType = privVal.getType();
+
   mlir::omp::PrivateClauseOp privatizerOp = [&]() {
     auto moduleOp = firOpBuilder.getModule();
     auto uniquePrivatizerName = fir::getTypeAsString(
