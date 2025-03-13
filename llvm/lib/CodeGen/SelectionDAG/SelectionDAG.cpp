@@ -2635,22 +2635,6 @@ bool SelectionDAG::expandMultipleResultFPLibCall(
     Results.push_back(LoadResult);
   }
 
-  if (CallRetResNo && !Node->hasAnyUseOfValue(*CallRetResNo)) {
-    // FIXME: Find a way to avoid updating the root. This is needed for x86,
-    // which uses a floating-point stack. If (for example) the node to be
-    // expanded has two results one floating-point which is returned by the
-    // call, and one integer result, returned via an output pointer. If only the
-    // integer result is used then the `CopyFromReg` for the FP result may be
-    // optimized out. This prevents an FP stack pop from being emitted for it.
-    // Setting the root like this ensures there will be a use of the
-    // `CopyFromReg` chain, and ensures the FP pop will be emitted.
-    SDValue NewRoot =
-        getNode(ISD::TokenFactor, DL, MVT::Other, getRoot(), CallChain);
-    setRoot(NewRoot);
-    // Ensure the new root is reachable from the results.
-    Results[0] = getMergeValues({Results[0], NewRoot}, DL);
-  }
-
   return true;
 }
 
@@ -11345,7 +11329,7 @@ SDDbgValue *SelectionDAG::getFrameIndexDbgValue(DIVariable *Var,
 
 /// VReg
 SDDbgValue *SelectionDAG::getVRegDbgValue(DIVariable *Var, DIExpression *Expr,
-                                          unsigned VReg, bool IsIndirect,
+                                          Register VReg, bool IsIndirect,
                                           const DebugLoc &DL, unsigned O) {
   assert(cast<DILocalVariable>(Var)->isValidLocationForIntrinsic(DL) &&
          "Expected inlined-at fields to agree");
@@ -12442,25 +12426,6 @@ const EVT *SDNode::getValueTypeList(MVT VT) {
 
   assert(VT < MVT::VALUETYPE_SIZE && "Value type out of range!");
   return &SimpleVTArray.VTs[VT.SimpleTy];
-}
-
-/// hasNUsesOfValue - Return true if there are exactly NUSES uses of the
-/// indicated value.  This method ignores uses of other values defined by this
-/// operation.
-bool SDNode::hasNUsesOfValue(unsigned NUses, unsigned Value) const {
-  assert(Value < getNumValues() && "Bad value!");
-
-  // TODO: Only iterate over uses of a given value of the node
-  for (SDUse &U : uses()) {
-    if (U.getResNo() == Value) {
-      if (NUses == 0)
-        return false;
-      --NUses;
-    }
-  }
-
-  // Found exactly the right number of uses?
-  return NUses == 0;
 }
 
 /// hasAnyUseOfValue - Return true if there are any use of the indicated

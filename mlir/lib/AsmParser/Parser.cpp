@@ -839,8 +839,8 @@ private:
 };
 } // namespace
 
-MLIR_DECLARE_EXPLICIT_TYPE_ID(OperationParser::DeferredLocInfo *)
-MLIR_DEFINE_EXPLICIT_TYPE_ID(OperationParser::DeferredLocInfo *)
+MLIR_DECLARE_EXPLICIT_SELF_OWNING_TYPE_ID(OperationParser::DeferredLocInfo *)
+MLIR_DEFINE_EXPLICIT_SELF_OWNING_TYPE_ID(OperationParser::DeferredLocInfo *)
 
 OperationParser::OperationParser(ParserState &state, ModuleOp topLevelOp)
     : Parser(state), opBuilder(topLevelOp.getRegion()), topLevelOp(topLevelOp) {

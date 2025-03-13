@@ -791,6 +791,8 @@ def ReservedIdAsMacroAlias : DiagGroup<"reserved-id-macro", [ReservedIdAsMacro]>
 def ReservedAttributeIdentifier : DiagGroup<"reserved-attribute-identifier">;
 def RestrictExpansionMacro : DiagGroup<"restrict-expansion">;
 def FinalMacro : DiagGroup<"final-macro">;
+def UndefinedTrueIdentifier : DiagGroup<"undef-true">;
+def UndefinedIdentifier : DiagGroup<"undef", [UndefinedTrueIdentifier]>;
 
 // Just silence warnings about -Wstrict-aliasing for now.
 def : DiagGroup<"strict-aliasing=0">;
@@ -1156,6 +1158,7 @@ def ThreadSafetyPrecise    : DiagGroup<"thread-safety-precise">;
 def ThreadSafetyReferenceReturn  : DiagGroup<"thread-safety-reference-return">;
 def ThreadSafetyReference  : DiagGroup<"thread-safety-reference",
                                              [ThreadSafetyReferenceReturn]>;
+def ThreadSafetyPointer    : DiagGroup<"thread-safety-pointer">;
 def ThreadSafetyNegative   : DiagGroup<"thread-safety-negative">;
 def ThreadSafety : DiagGroup<"thread-safety",
                              [ThreadSafetyAttributes,

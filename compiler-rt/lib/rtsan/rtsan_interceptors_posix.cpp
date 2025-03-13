@@ -285,43 +285,31 @@ INTERCEPTOR(int, unlinkat, int fd, const char *pathname, int flag) {
   return REAL(unlinkat)(fd, pathname, flag);
 }
 
-INTERCEPTOR(int, stat, const char *pathname, struct stat *s) {
-  __rtsan_notify_intercepted_call("stat");
-  return REAL(stat)(pathname, s);
+INTERCEPTOR(int, truncate, const char *pathname, off_t length) {
+  __rtsan_notify_intercepted_call("truncate");
+  return REAL(truncate)(pathname, length);
 }
 
-INTERCEPTOR(int, lstat, const char *pathname, struct stat *s) {
-  __rtsan_notify_intercepted_call("lstat");
-  return REAL(lstat)(pathname, s);
+INTERCEPTOR(int, ftruncate, int fd, off_t length) {
+  __rtsan_notify_intercepted_call("ftruncate");
+  return REAL(ftruncate)(fd, length);
 }
 
-INTERCEPTOR(int, fstat, int fd, struct stat *s) {
-  __rtsan_notify_intercepted_call("fstat");
-  return REAL(fstat)(fd, s);
+#if SANITIZER_LINUX && !SANITIZER_MUSL
+INTERCEPTOR(int, truncate64, const char *pathname, off64_t length) {
+  __rtsan_notify_intercepted_call("truncate64");
+  return REAL(truncate64)(pathname, length);
 }
 
-#if !SANITIZER_APPLE // deprecated for darwin
-INTERCEPTOR(int, stat64, const char *pathname, struct stat64 *s) {
-  __rtsan_notify_intercepted_call("stat64");
-  return REAL(stat64)(pathname, s);
+INTERCEPTOR(int, ftruncate64, int fd, off64_t length) {
+  __rtsan_notify_intercepted_call("ftruncate64");
+  return REAL(ftruncate64)(fd, length);
 }
-
-INTERCEPTOR(int, lstat64, const char *pathname, struct stat64 *s) {
-  __rtsan_notify_intercepted_call("lstat64");
-  return REAL(lstat64)(pathname, s);
-}
-
-INTERCEPTOR(int, fstat64, int fd, struct stat64 *s) {
-  __rtsan_notify_intercepted_call("fstat64");
-  return REAL(fstat64)(fd, s);
-}
-#define RTSAN_MAYBE_INTERCEPT_STAT64 INTERCEPT_FUNCTION(stat64)
-#define RTSAN_MAYBE_INTERCEPT_LSTAT64 INTERCEPT_FUNCTION(lstat64)
-#define RTSAN_MAYBE_INTERCEPT_FSTAT64 INTERCEPT_FUNCTION(fstat64)
+#define RTSAN_MAYBE_INTERCEPT_TRUNCATE64 INTERCEPT_FUNCTION(truncate64)
+#define RTSAN_MAYBE_INTERCEPT_FTRUNCATE64 INTERCEPT_FUNCTION(ftruncate64)
 #else
-#define RTSAN_MAYBE_INTERCEPT_STAT64
-#define RTSAN_MAYBE_INTERCEPT_LSTAT64
-#define RTSAN_MAYBE_INTERCEPT_FSTAT64
+#define RTSAN_MAYBE_INTERCEPT_TRUNCATE64
+#define RTSAN_MAYBE_INTERCEPT_FTRUNCATE64
 #endif
 
 // Streams
@@ -1476,12 +1464,10 @@ void __rtsan::InitializeInterceptors() {
   RTSAN_MAYBE_INTERCEPT_READLINKAT;
   INTERCEPT_FUNCTION(unlink);
   INTERCEPT_FUNCTION(unlinkat);
-  INTERCEPT_FUNCTION(stat);
-  INTERCEPT_FUNCTION(lstat);
-  INTERCEPT_FUNCTION(fstat);
-  RTSAN_MAYBE_INTERCEPT_STAT64;
-  RTSAN_MAYBE_INTERCEPT_LSTAT64;
-  RTSAN_MAYBE_INTERCEPT_FSTAT64;
+  INTERCEPT_FUNCTION(truncate);
+  INTERCEPT_FUNCTION(ftruncate);
+  RTSAN_MAYBE_INTERCEPT_TRUNCATE64;
+  RTSAN_MAYBE_INTERCEPT_FTRUNCATE64;
   INTERCEPT_FUNCTION(fopen);
   RTSAN_MAYBE_INTERCEPT_FOPEN64;
   RTSAN_MAYBE_INTERCEPT_FREOPEN64;

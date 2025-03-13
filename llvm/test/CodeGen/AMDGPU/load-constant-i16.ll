@@ -759,7 +759,7 @@ define amdgpu_kernel void @constant_load_v16i16_align2(ptr addrspace(4) %ptr0) #
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ld =  load <16 x i16>, ptr addrspace(4) %ptr0, align 2
-  store <16 x i16> %ld, ptr addrspace(1) undef, align 32
+  store <16 x i16> %ld, ptr addrspace(1) poison, align 32
   ret void
 }
 

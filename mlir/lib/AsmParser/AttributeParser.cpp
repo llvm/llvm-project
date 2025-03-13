@@ -680,6 +680,11 @@ DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc, ShapedType type,
   stringRefValues.reserve(storage.size());
 
   for (auto val : storage) {
+    if (!val.second.is(Token::string)) {
+      p.emitError(loc) << "expected string token, got "
+                       << val.second.getSpelling();
+      return nullptr;
+    }
     stringValues.push_back(val.second.getStringValue());
     stringRefValues.emplace_back(stringValues.back());
   }

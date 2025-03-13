@@ -875,30 +875,15 @@ TEST_F(RtsanOpenedFileTest, UnlinkatDiesWhenRealtime) {
   ExpectNonRealtimeSurvival(Func);
 }
 
-TEST_F(RtsanOpenedFileTest, StatDiesWhenRealtime) {
-  auto Func = [&]() {
-    struct stat s{};
-    stat(GetTemporaryFilePath(), &s);
-  };
-  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("stat"));
+TEST_F(RtsanOpenedFileTest, TruncateDiesWhenRealtime) {
+  auto Func = [&]() { truncate(GetTemporaryFilePath(), 16); };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("truncate"));
   ExpectNonRealtimeSurvival(Func);
 }
 
-TEST_F(RtsanOpenedFileTest, LstatDiesWhenRealtime) {
-  auto Func = [&]() {
-    struct stat s{};
-    lstat(GetTemporaryFilePath(), &s);
-  };
-  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("lstat"));
-  ExpectNonRealtimeSurvival(Func);
-}
-
-TEST_F(RtsanOpenedFileTest, FstatDiesWhenRealtime) {
-  auto Func = [&]() {
-    struct stat s{};
-    fstat(GetOpenFd(), &s);
-  };
-  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("fstat"));
+TEST_F(RtsanOpenedFileTest, FtruncateDiesWhenRealtime) {
+  auto Func = [&]() { ftruncate(GetOpenFd(), 16); };
+  ExpectRealtimeDeath(Func, MAYBE_APPEND_64("ftruncate"));
   ExpectNonRealtimeSurvival(Func);
 }
 

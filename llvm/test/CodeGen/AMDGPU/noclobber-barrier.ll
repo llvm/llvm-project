@@ -5,7 +5,7 @@
 ; Check that barrier or fence in between of loads is not considered a clobber
 ; for the purpose of converting vector loads into scalar.
 
-@LDS = linkonce_odr hidden local_unnamed_addr addrspace(3) global i32 undef
+@LDS = linkonce_odr hidden local_unnamed_addr addrspace(3) global i32 poison
 
 ; GCN-LABEL: {{^}}simple_barrier:
 ; GCN: s_load_dword s

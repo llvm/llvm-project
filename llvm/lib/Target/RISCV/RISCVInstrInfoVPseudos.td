@@ -554,6 +554,7 @@ class RISCVVPseudo {
   Instruction BaseInstr = !cast<Instruction>(PseudoToVInst<NAME>.VInst);
   // SEW = 0 is used to denote that the Pseudo is not SEW specific (or unknown).
   bits<8> SEW = 0;
+  bit IncludeInInversePseudoTable = 1;
 }
 
 // The actual table.
@@ -568,6 +569,7 @@ def RISCVVPseudosTable : GenericTable {
 
 def RISCVVInversePseudosTable : GenericTable {
   let FilterClass = "RISCVVPseudo";
+  let FilterClassField = "IncludeInInversePseudoTable";
   let CppTypeName = "PseudoInfo";
   let Fields = [ "Pseudo", "BaseInstr", "VLMul", "SEW"];
   let PrimaryKey = [ "BaseInstr", "VLMul", "SEW"];
@@ -810,6 +812,7 @@ class VPseudoUSLoadMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoUSLoadFFNoMask<VReg RetClass,
@@ -844,6 +847,7 @@ class VPseudoUSLoadFFMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoSLoadNoMask<VReg RetClass,
@@ -878,6 +882,7 @@ class VPseudoSLoadMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoILoadNoMask<VReg RetClass,
@@ -924,6 +929,7 @@ class VPseudoILoadMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoUSStoreNoMask<VReg StClass,
@@ -952,6 +958,7 @@ class VPseudoUSStoreMask<VReg StClass,
   let hasSideEffects = 0;
   let HasVLOp = 1;
   let HasSEWOp = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoSStoreNoMask<VReg StClass,
@@ -980,6 +987,7 @@ class VPseudoSStoreMask<VReg StClass,
   let hasSideEffects = 0;
   let HasVLOp = 1;
   let HasSEWOp = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoNullaryNoMask<VReg RegClass> :
@@ -1009,6 +1017,7 @@ class VPseudoNullaryMask<VReg RegClass> :
   let HasSEWOp = 1;
   let UsesMaskPolicy = 1;
   let HasVecPolicyOp = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 // Nullary for pseudo instructions. They are expanded in
@@ -1022,6 +1031,7 @@ class VPseudoNullaryPseudoM<string BaseInst> :
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let BaseInstr = !cast<Instruction>(BaseInst);
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoUnaryNoMask<DAGOperand RetClass,
@@ -1097,6 +1107,7 @@ class VPseudoUnaryMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoUnaryMaskRoundingMode<VReg RetClass,
@@ -1120,6 +1131,7 @@ class VPseudoUnaryMaskRoundingMode<VReg RetClass,
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
   let hasPostISelHook = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoUnaryMask_NoExcept<VReg RetClass,
@@ -1159,6 +1171,7 @@ class VPseudoUnaryMaskGPROut :
   let hasSideEffects = 0;
   let HasVLOp = 1;
   let HasSEWOp = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 // Mask can be V0~V31
@@ -1258,6 +1271,7 @@ class VPseudoBinaryMaskPolicyRoundingMode<VReg RetClass,
   let HasRoundModeOp = 1;
   let UsesVXRM = UsesVXRM_;
   let hasPostISelHook = !not(UsesVXRM_);
+  let IncludeInInversePseudoTable = 0;
 }
 
 // Special version of VPseudoBinaryNoMask where we pretend the first source is
@@ -1281,6 +1295,7 @@ class VPseudoTiedBinaryNoMask<VReg RetClass,
   let HasVecPolicyOp = 1;
   let isConvertibleToThreeAddress = 1;
   let IsTiedPseudo = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoTiedBinaryNoMaskRoundingMode<VReg RetClass,
@@ -1306,6 +1321,7 @@ class VPseudoTiedBinaryNoMaskRoundingMode<VReg RetClass,
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
   let hasPostISelHook = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoIStoreNoMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
@@ -1334,6 +1350,7 @@ class VPseudoIStoreMask<VReg StClass, VReg IdxClass, int EEW, bits<3> LMUL,
   let hasSideEffects = 0;
   let HasVLOp = 1;
   let HasSEWOp = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoBinaryMaskPolicy<VReg RetClass,
@@ -1355,6 +1372,7 @@ class VPseudoBinaryMaskPolicy<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoTernaryMaskPolicy<VReg RetClass,
@@ -1372,6 +1390,7 @@ class VPseudoTernaryMaskPolicy<VReg RetClass,
   let HasVLOp = 1;
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
@@ -1394,6 +1413,7 @@ class VPseudoTernaryMaskPolicyRoundingMode<VReg RetClass,
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
   let hasPostISelHook = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 // Like VPseudoBinaryMaskPolicy, but output can be V0.
@@ -1416,6 +1436,7 @@ class VPseudoBinaryMOutMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 // Special version of VPseudoBinaryMaskPolicy where we pretend the first source
@@ -1440,6 +1461,7 @@ class VPseudoTiedBinaryMask<VReg RetClass,
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
   let IsTiedPseudo = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoTiedBinaryMaskRoundingMode<VReg RetClass,
@@ -1466,6 +1488,7 @@ class VPseudoTiedBinaryMaskRoundingMode<VReg RetClass,
   let HasRoundModeOp = 1;
   let UsesVXRM = 0;
   let hasPostISelHook = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoBinaryCarry<VReg RetClass,
@@ -1602,6 +1625,7 @@ class VPseudoUSSegLoadMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoUSSegLoadFFNoMask<VReg RetClass,
@@ -1637,6 +1661,7 @@ class VPseudoUSSegLoadFFMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoSSegLoadNoMask<VReg RetClass,
@@ -1673,6 +1698,7 @@ class VPseudoSSegLoadMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoISegLoadNoMask<VReg RetClass,
@@ -1719,6 +1745,7 @@ class VPseudoISegLoadMask<VReg RetClass,
   let HasSEWOp = 1;
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoUSSegStoreNoMask<VReg ValClass,
@@ -1748,6 +1775,7 @@ class VPseudoUSSegStoreMask<VReg ValClass,
   let hasSideEffects = 0;
   let HasVLOp = 1;
   let HasSEWOp = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoSSegStoreNoMask<VReg ValClass,
@@ -1778,6 +1806,7 @@ class VPseudoSSegStoreMask<VReg ValClass,
   let hasSideEffects = 0;
   let HasVLOp = 1;
   let HasSEWOp = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 class VPseudoISegStoreNoMask<VReg ValClass,
@@ -1814,6 +1843,7 @@ class VPseudoISegStoreMask<VReg ValClass,
   let hasSideEffects = 0;
   let HasVLOp = 1;
   let HasSEWOp = 1;
+  let IncludeInInversePseudoTable = 0;
 }
 
 multiclass VPseudoUSLoad {
