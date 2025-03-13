@@ -23,7 +23,7 @@ bb3:                                              ; preds = %bb
   %tmp8 = load <8 x i32>, ptr addrspace(4) %tmp7, align 32, !tbaa !0
   %tmp9 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float bitcast (i32 1061158912 to float), float bitcast (i32 1048576000 to float), <8 x i32> %tmp8, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp10 = extractelement <4 x float> %tmp9, i32 0
-  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp10, float undef)
+  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp10, float poison)
   call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> undef, i1 true, i1 true) #0
   ret void
 }
