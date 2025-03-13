@@ -1,21 +1,20 @@
-//===--- ExpandLargeFpConvert.cpp - Expand large fp convert----------------===//
+//===--- ExpandFp.cpp - Expand fp instructions ----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+// This pass expands certain floating point instructions at the IR level.
 //
-// This pass expands ‘fptoui .. to’, ‘fptosi .. to’, ‘uitofp .. to’,
-// ‘sitofp .. to’ instructions with a bitwidth above a threshold into
-// auto-generated functions. This is useful for targets like x86_64 that cannot
-// lower fp convertions with more than 128 bits.
-// Furthermore, the pass can expand FRem instructions if requested in the
-// TargetLowering for the current target.
+// It expands ‘fptoui .. to’, ‘fptosi .. to’, ‘uitofp ..  to’, ‘sitofp
+// .. to’ instructions with a bitwidth above a threshold.  This is
+// useful for targets like x86_64 that cannot lower fp convertions
+// with more than 128 bits.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/CodeGen/ExpandLargeFpConvert.h"
+#include "llvm/CodeGen/ExpandFp.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/CodeGen/Passes.h"
@@ -38,7 +37,7 @@ using namespace llvm;
 static cl::opt<unsigned>
     ExpandFpConvertBits("expand-fp-convert-bits", cl::Hidden,
                      cl::init(llvm::IntegerType::MAX_INT_BITS),
-                     cl::desc("fp convert instructions on integers with "
+                     cl::desc("fp  convert instructions on integers with "
                               "more than <N> bits are expanded."));
 
 namespace {
@@ -1048,12 +1047,12 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
 }
 
 namespace {
-class ExpandLargeFpConvertLegacyPass : public FunctionPass {
+class ExpandFpLegacyPass : public FunctionPass {
 public:
   static char ID;
 
-  ExpandLargeFpConvertLegacyPass() : FunctionPass(ID) {
-    initializeExpandLargeFpConvertLegacyPassPass(
+  ExpandFpLegacyPass() : FunctionPass(ID) {
+    initializeExpandFpLegacyPassPass(
         *PassRegistry::getPassRegistry());
   }
 
@@ -1071,19 +1070,19 @@ public:
 };
 } // namespace
 
-PreservedAnalyses ExpandLargeFpConvertPass::run(Function &F,
+PreservedAnalyses ExpandFpPass::run(Function &F,
                                                 FunctionAnalysisManager &FAM) {
   const TargetSubtargetInfo *STI = TM->getSubtargetImpl(F);
   return runImpl(F, *STI->getTargetLowering()) ? PreservedAnalyses::none()
                                                : PreservedAnalyses::all();
 }
 
-char ExpandLargeFpConvertLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(ExpandLargeFpConvertLegacyPass, "expand-large-fp-convert",
-                      "Expand large fp convert", false, false)
-INITIALIZE_PASS_END(ExpandLargeFpConvertLegacyPass, "expand-large-fp-convert",
-                    "Expand large fp convert", false, false)
+char ExpandFpLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(ExpandFpLegacyPass, "expand-fp",
+                      "Expand certain fp instructions", false, false)
+INITIALIZE_PASS_END(ExpandFpLegacyPass, "expand-fp",
+                    "Expand fp", false, false)
 
-FunctionPass *llvm::createExpandLargeFpConvertPass() {
-  return new ExpandLargeFpConvertLegacyPass();
+FunctionPass *llvm::createExpandFpPass() {
+  return new ExpandFpLegacyPass();
 }
