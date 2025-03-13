@@ -17,18 +17,35 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace scanf_core {
 
-template <typename Derived> struct ReadBuffer {
-  LIBC_INLINE char getc() { return static_cast<Derived *>(this)->getc(); }
-  LIBC_INLINE void ungetc(int c) { static_cast<Derived *>(this)->ungetc(c); }
+template <typename Derived> class Reader {
+  size_t cur_chars_read = 0;
+
+public:
+  // This returns the next character from the input and advances it by one
+  // character. When it hits the end of the string or file it returns '\0' to
+  // signal to stop parsing.
+  LIBC_INLINE char getc() {
+    ++cur_chars_read;
+    return static_cast<Derived *>(this)->getc();
+  }
+
+  // This moves the input back by one character, placing c into the buffer if
+  // this is a file reader, else c is ignored.
+  LIBC_INLINE void ungetc(int c) {
+    --cur_chars_read;
+    static_cast<Derived *>(this)->ungetc(c);
+  }
+
+  LIBC_INLINE size_t chars_read() { return cur_chars_read; }
 };
 
-class StringBuffer : public ReadBuffer<StringBuffer> {
+class StringReader : public Reader<StringReader> {
   const char *buffer;
   [[maybe_unused]] size_t buff_len;
   size_t buff_cur = 0;
 
 public:
-  LIBC_INLINE StringBuffer(const char *buffer, size_t buff_len)
+  LIBC_INLINE StringReader(const char *buffer, size_t buff_len)
       : buffer(buffer), buff_len(buff_len) {}
 
   LIBC_INLINE char getc() {
@@ -45,32 +62,6 @@ public:
       --buff_cur;
     }
   }
-};
-
-// TODO: We should be able to fold ReadBuffer into Reader.
-template <typename T> class Reader {
-  ReadBuffer<T> *buffer;
-  size_t cur_chars_read = 0;
-
-public:
-  LIBC_INLINE Reader(ReadBuffer<T> *buffer) : buffer(buffer) {}
-
-  // This returns the next character from the input and advances it by one
-  // character. When it hits the end of the string or file it returns '\0' to
-  // signal to stop parsing.
-  LIBC_INLINE char getc() {
-    ++cur_chars_read;
-    return buffer->getc();
-  }
-
-  // This moves the input back by one character, placing c into the buffer if
-  // this is a file reader, else c is ignored.
-  LIBC_INLINE void ungetc(char c) {
-    --cur_chars_read;
-    buffer->ungetc(c);
-  }
-
-  LIBC_INLINE size_t chars_read() { return cur_chars_read; }
 };
 
 } // namespace scanf_core

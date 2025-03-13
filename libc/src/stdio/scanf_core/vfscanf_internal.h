@@ -91,11 +91,11 @@ LIBC_INLINE void ungetc(int c, ::FILE *f) { ::ungetc(c, f); }
 
 namespace scanf_core {
 
-class StreamBuffer : public ReadBuffer<StreamBuffer> {
+class StreamReader : public Reader<StreamReader> {
   ::FILE *stream;
 
 public:
-  LIBC_INLINE StreamBuffer(::FILE *stream) : stream(stream) {}
+  LIBC_INLINE StreamReader(::FILE *stream) : stream(stream) {}
 
   LIBC_INLINE char getc() {
     return static_cast<char>(internal::getc(static_cast<FILE *>(stream)));
@@ -109,8 +109,7 @@ LIBC_INLINE int vfscanf_internal(::FILE *__restrict stream,
                                  const char *__restrict format,
                                  internal::ArgList &args) {
   internal::flockfile(stream);
-  scanf_core::StreamBuffer buffer(stream);
-  scanf_core::Reader<scanf_core::StreamBuffer> reader(&buffer);
+  scanf_core::StreamReader reader(stream);
   int retval = scanf_core::scanf_main(&reader, format, args);
   if (retval == 0 && internal::ferror_unlocked(stream))
     retval = EOF;
