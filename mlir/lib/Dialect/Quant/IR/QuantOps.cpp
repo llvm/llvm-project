@@ -167,16 +167,19 @@ LogicalResult verifyQuantizationOp(Operation *op, QuantizedType quantizedType,
     return op->emitError(
         "expressed type in quantized type expected to match float type");
 
-  // Veriy integrity of per-axis quantization information, if present.
+  // Verify integrity of per-axis quantization information, if present.
   if (auto quantizedPerAxisType =
           dyn_cast<UniformQuantizedPerAxisType>(quantizedType)) {
     return verifyPerAxisQuantization(op, quantizedPerAxisType, containerType);
-  } else if (auto quantizedSubChannelType =
-                 dyn_cast<UniformQuantizedSubChannelType>(quantizedType)) {
+  }
+
+  if (auto quantizedSubChannelType =
+          dyn_cast<UniformQuantizedSubChannelType>(quantizedType)) {
     return verifySubChannelQuantization(op, quantizedSubChannelType,
                                         containerType);
   }
 
+  // At this point the type is UniformQuantizedType
   return success();
 }
 
@@ -268,14 +271,18 @@ LogicalResult StorageCastOp::verify() {
   // the quantization type may appear in the input or the result, their tensor
   // shapes are guaranteed to be identical at this point.
   if (auto quantizedPerAxisType =
-          dyn_cast<UniformQuantizedPerAxisType>(quantizedType))
+          dyn_cast<UniformQuantizedPerAxisType>(quantizedType)) {
     return verifyPerAxisQuantization(*this, quantizedPerAxisType,
                                      getInput().getType());
-  else if (auto quantizedSunChannelType =
-               dyn_cast<UniformQuantizedSubChannelType>(quantizedType))
+  }
+
+  if (auto quantizedSunChannelType =
+          dyn_cast<UniformQuantizedSubChannelType>(quantizedType)) {
     return verifySubChannelQuantization(*this, quantizedSunChannelType,
                                         getInput().getType());
+  }
 
+  // At this point the type is UniformQuantizedType
   return success();
 }
 

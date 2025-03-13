@@ -518,12 +518,10 @@ static void
 printBlockSizeInfo(ArrayRef<std::pair<int32_t, int64_t>> blockSizeInfo,
                    DialectAsmPrinter &out) {
   out << "{";
-  llvm::interleave(
-      llvm::seq<size_t>(0, blockSizeInfo.size()), out,
-      [&](size_t index) {
+  llvm::interleaveComma(
+      llvm::seq<size_t>(0, blockSizeInfo.size()), out, [&](size_t index) {
         out << blockSizeInfo[index].first << ":" << blockSizeInfo[index].second;
-      },
-      ",");
+      });
   out << "}";
 }
 
@@ -593,7 +591,7 @@ void printDenseQuantizationParameters(ArrayRef<APFloat> scales,
   SmallVector<unsigned, 4> counter(rank, 0);
   unsigned openBrackets = 0;
 
-  auto bumpCounter = [&]() {
+  auto incrementCounterAndDelimit = [&]() {
     ++counter[rank - 1];
     for (unsigned i = rank - 1; i > 0; --i) {
       if (counter[i] >= shape[i]) {
@@ -605,7 +603,7 @@ void printDenseQuantizationParameters(ArrayRef<APFloat> scales,
     }
   };
 
-  for (unsigned idx = 0, e = scales.size(); idx != e; ++idx) {
+  for (unsigned idx = 0, e = scales.size(); idx < e; ++idx) {
     if (idx != 0)
       out << ", ";
     while (openBrackets++ < rank)
@@ -615,7 +613,7 @@ void printDenseQuantizationParameters(ArrayRef<APFloat> scales,
     if (zeroPoints[idx] != 0) {
       out << ":" << zeroPoints[idx];
     }
-    bumpCounter();
+    incrementCounterAndDelimit();
   }
   while (openBrackets-- > 0)
     out << '}';

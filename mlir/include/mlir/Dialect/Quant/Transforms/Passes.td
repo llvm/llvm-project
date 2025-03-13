@@ -31,7 +31,7 @@ def LowerQuantOps : Pass<"lower-quant-ops", "func::FuncOp"> {
   ];
 }
 
-def NormalizeQuantTypes : Pass<"normalize-quant-types"> {
+def NormalizeQuantTypes : Pass<"normalize-quant-types", "func::FuncOp"> {
   let summary = "Normalize generic quantized types to specific quantized types";
   let description = [{
     This pass converts generic quantized types in the `quant` dialect to more
@@ -60,6 +60,11 @@ def NormalizeQuantTypes : Pass<"normalize-quant-types"> {
           -> `!quant.uniform<i8:f32, 2.0>`
        * `tensor<?x?x!quant.uniform<i8:f32:{0:1, 0:4}, {{2.0}}>>`
           -> `tensor<?x?x!quant.uniform<i8:f32, 2.0>>`
+
+    The rationale for these conversions is that the decompositions / handling of
+    more precise quantized types tends to be more efficient than treating
+    everything as subchannel type.
+
   }];
   let dependentDialects = ["func::FuncDialect", "quant::QuantDialect"];
 }

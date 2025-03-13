@@ -210,7 +210,7 @@ void testUniformSubChannelType(MlirContext ctx) {
 
   MlirType subChannelParsed =
       mlirTypeParseGet(ctx, mlirStringRefCreateFromCString(
-                                "!quant.uniform<i8:f32:{0:1,1:2}, "
+                                "!quant.uniform<i8:f32:{0:1, 1:2}, "
                                 "{{2.0:10, 3.0:20}, {4.0:30, 5.0:40}}>"));
 
   MlirType i8 = mlirIntegerTypeGet(ctx, 8);
@@ -321,7 +321,7 @@ void testUniformSubChannelType(MlirContext ctx) {
   // CHECK: equal: 1
   fprintf(stderr, "equal: %d\n", mlirTypeEqual(subChannel, subChannelParsed));
 
-  // CHECK: !quant.uniform<i8:f32:{0:1,1:2},
+  // CHECK: !quant.uniform<i8:f32:{0:1, 1:2},
   // {{.*}}2.000000e+00:10, 3.000000e+00:20},
   // {4.000000e+00:30, 5.000000e+00:40{{.*}}}}>
   mlirTypeDump(subChannel);

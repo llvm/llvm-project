@@ -145,7 +145,6 @@ class NormalizeQuantTypes
 public:
   void runOnOperation() override {
 
-    auto moduleOp = cast<ModuleOp>(getOperation());
     auto *context = &getContext();
 
     NormalizedQuantTypesConverter typeConverter;
@@ -168,7 +167,8 @@ public:
     patterns.add<ConvertGenericOpwithSubChannelType>(typeConverter, context);
 
     // Apply conversion
-    if (failed(applyFullConversion(moduleOp, target, std::move(patterns))))
+    if (failed(
+            applyFullConversion(getOperation(), target, std::move(patterns))))
       signalPassFailure();
   }
 };

@@ -20,7 +20,7 @@ def test_type_hierarchy():
         uniform = Type.parse("!quant.uniform<i8<-8:7>:f32, 0.99872:127>")
         per_axis = Type.parse("!quant.uniform<i8:f32:1, {2.0e+2,0.99872:120}>")
         sub_channel = Type.parse(
-            "!quant.uniform<i8:f32:{0:1,1:2}, {{2.0:10, 3.0:20}, {4.0:30, 5.0:40}}>"
+            "!quant.uniform<i8:f32:{0:1, 1:2}, {{2.0:10, 3.0:20}, {4.0:30, 5.0:40}}>"
         )
         calibrated = Type.parse("!quant.calibrated<f32<-0.998:1.2321>>")
 
@@ -163,10 +163,10 @@ def test_uniform_sub_channel_type():
         # CHECK: zero-points: {{\[}}[10 20]
         # CHECK:                    [30 40]]
         print(f"zero-points: {np.asarray(sub_channel.zero_points)}")
-        # CHECK: !quant.uniform<i8:f32:{0:1,1:2}, {{\{}}{2.000000e+00:10, 3.000000e+00:20}, {4.000000e+00:30, 5.000000e+00:40}}>
+        # CHECK: !quant.uniform<i8:f32:{0:1, 1:2}, {{\{}}{2.000000e+00:10, 3.000000e+00:20}, {4.000000e+00:30, 5.000000e+00:40}}>
         print(sub_channel)
         assert sub_channel == Type.parse(
-            "!quant.uniform<i8:f32:{0:1,1:2},{{2.0:10, 3.0:20}, {4.0:30, 5.0:40}}>"
+            "!quant.uniform<i8:f32:{0:1, 1:2},{{2.0:10, 3.0:20}, {4.0:30, 5.0:40}}>"
         )
 
 

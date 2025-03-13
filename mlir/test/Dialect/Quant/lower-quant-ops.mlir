@@ -535,7 +535,7 @@ func.func @qcast_per_channel_unranked(%arg0: tensor<*xf32>) -> tensor<*x!qalias>
 // CHECK:   linalg.yield %[[STORED_INT]] : i8
 // CHECK: } -> tensor<2x?x?x4xi8>
 
-// CHECK: %[[STORED_QUANT:.*]] = quant.scast %[[GENERIC]] : tensor<2x?x?x4xi8> to tensor<2x?x?x4x!quant.uniform<i8:f32:{0:1,3:2}, {{.*}}2.000000e+00:10, 3.000000e+00:20{{.*}}, {{.*}}4.000000e+00:30, 5.000000e+00:40{{.*}}>>
+// CHECK: %[[STORED_QUANT:.*]] = quant.scast %[[GENERIC]] : tensor<2x?x?x4xi8> to tensor<2x?x?x4x!quant.uniform<i8:f32:{0:1, 3:2}, {{.*}}2.000000e+00:10, 3.000000e+00:20{{.*}}, {{.*}}4.000000e+00:30, 5.000000e+00:40{{.*}}>>
 // CHECK: return %[[STORED_QUANT]]
 
 !qalias = !quant.uniform<i8:f32:{0:1, 3:2}, {{{{2.0:10, 3.0:20}}}, {{{4.0:30, 5.0:40}}}}>
@@ -565,7 +565,7 @@ func.func @qcast_sub_channel_ranked(%arg0: tensor<2x?x?x4xf32>) -> tensor<2x?x?x
 // CHECK:   linalg.yield %[[STORED_INT]] : i8
 // CHECK: } -> tensor<2x3x5x4xi8>
 
-// CHECK: %[[STORED_QUANT:.*]] = quant.scast %[[GENERIC]] : tensor<2x3x5x4xi8> to tensor<2x3x5x4x!quant.uniform<i8:f32:{0:1,3:2}, {{.*}}2.000000e+00:10, 3.000000e+00:20{{.*}}, {{.*}}4.000000e+00:30, 5.000000e+00:40{{.*}}>>
+// CHECK: %[[STORED_QUANT:.*]] = quant.scast %[[GENERIC]] : tensor<2x3x5x4xi8> to tensor<2x3x5x4x!quant.uniform<i8:f32:{0:1, 3:2}, {{.*}}2.000000e+00:10, 3.000000e+00:20{{.*}}, {{.*}}4.000000e+00:30, 5.000000e+00:40{{.*}}>>
 // CHECK: return %[[STORED_QUANT]]
 
 !qalias = !quant.uniform<i8:f32:{0:1, 3:2}, {{{{2.0:10, 3.0:20}}}, {{{4.0:30, 5.0:40}}}}>
