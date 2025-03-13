@@ -1373,10 +1373,7 @@ libc_support_library(
 
 libc_support_library(
     name = "__support_osutil_exit",
-    srcs = select({
-        "@platforms//os:linux": ["src/__support/OSUtil/linux/exit.cpp"],
-	"//condition:default": [],
-    }),
+    srcs = ["src/__support/OSUtil/linux/exit.cpp"],
     hdrs = ["src/__support/OSUtil/exit.h"],
     target_compatible_with = select({
         "@platforms//os:linux": [],
