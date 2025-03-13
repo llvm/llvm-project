@@ -55,9 +55,6 @@ struct Relocation {
   /// Used to validate relocation correctness.
   uint64_t Value;
 
-  /// Relocations added by optimizations can be optional.
-  bool Optional = false;
-
   /// Return size in bytes of the given relocation \p Type.
   static size_t getSizeForType(uint32_t Type);
 
