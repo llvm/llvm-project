@@ -118,7 +118,7 @@ public:
 
   void emitFunctionBodyStart() override;
 
-  void emitFunctionBodyEnd() override;
+  void endFunction(const MachineFunction *MF);
 
   void emitImplicitDef(const MachineInstr *MI) const override;
 
