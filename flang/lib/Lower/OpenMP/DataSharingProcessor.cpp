@@ -25,7 +25,6 @@
 #include "flang/Semantics/attr.h"
 #include "flang/Semantics/tools.h"
 
-#define DEBUG_TYPE "flang-data-sharing"
 namespace Fortran {
 namespace lower {
 namespace omp {

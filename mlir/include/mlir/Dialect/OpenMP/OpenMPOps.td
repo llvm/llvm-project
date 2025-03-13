@@ -162,7 +162,7 @@ def PrivateClauseOp : OpenMP_Op<"private", [IsolatedFromAbove, RecipeInterface]>
     /// be mapped to the target region using a MapInfoOp. This is most common
     /// when an allocatable is privatized. In such cases, the descriptor is used
     /// in privatization and needs to be mapped on to the device. The use of
-    /// firstprivate also causes the need to map the host variable to the device.
+    /// firstprivate also creates the need to map the host variable to the device.
     bool needsMap() {
       return readsFromMold();
     }
