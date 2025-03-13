@@ -287,6 +287,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  struct_sockaddr_un
+  HDRS
+    struct_sockaddr_un.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-types.struct_sockaddr_un
+    libc.include.sys_socket #TODO: move this to sys/un.h
+)
+
+add_proxy_header_library(
   socklen_t
   HDRS
     socklen_t.h
