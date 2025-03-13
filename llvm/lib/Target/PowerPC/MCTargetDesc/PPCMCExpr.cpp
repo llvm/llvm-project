@@ -24,38 +24,7 @@ const PPCMCExpr *PPCMCExpr::create(VariantKind Kind, const MCExpr *Expr,
 
 void PPCMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   getSubExpr()->print(OS, MAI);
-
-  switch (Kind) {
-  default:
-    llvm_unreachable("Invalid kind!");
-  case VK_PPC_LO:
-    OS << "@l";
-    break;
-  case VK_PPC_HI:
-    OS << "@h";
-    break;
-  case VK_PPC_HA:
-    OS << "@ha";
-    break;
-  case VK_PPC_HIGH:
-    OS << "@high";
-    break;
-  case VK_PPC_HIGHA:
-    OS << "@higha";
-    break;
-  case VK_PPC_HIGHER:
-    OS << "@higher";
-    break;
-  case VK_PPC_HIGHERA:
-    OS << "@highera";
-    break;
-  case VK_PPC_HIGHEST:
-    OS << "@highest";
-    break;
-  case VK_PPC_HIGHESTA:
-    OS << "@highesta";
-    break;
-  }
+  OS << '@' << MAI->getVariantKindName(Kind);
 }
 
 bool
