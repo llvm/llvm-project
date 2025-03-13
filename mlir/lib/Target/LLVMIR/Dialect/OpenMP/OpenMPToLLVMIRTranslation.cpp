@@ -45,7 +45,6 @@
 #include <optional>
 #include <utility>
 
-#define DEBUG_TYPE "openmp-to-llvmir"
 using namespace mlir;
 
 namespace {
@@ -209,7 +208,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
   };
   auto checkPrivate = [&todo](auto op, LogicalResult &result) {
     if constexpr (std::is_same_v<std::decay_t<decltype(op)>, omp::TargetOp>) {
-      // Privatization is supported only for include target tasks.
+      // Privatization is supported only for included target tasks.
       if (!op.getPrivateVars().empty() && op.getNowait())
         result = todo("privatization for deferred target tasks");
     } else {
