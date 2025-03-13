@@ -378,7 +378,7 @@ _LIBCPP_EXPORTED_FROM_ABI string __to_string(float __val) { return std::format("
 _LIBCPP_EXPORTED_FROM_ABI string __to_string(double __val) { return std::format("{}", __val); }
 _LIBCPP_EXPORTED_FROM_ABI string __to_string(long double __val) { return std::format("{}", __val); }
 
-#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(float __val) { return std::format(L"{}", __val); }
 _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(double __val) { return std::format(L"{}", __val); }
 _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(long double __val) { return std::format(L"{}", __val); }

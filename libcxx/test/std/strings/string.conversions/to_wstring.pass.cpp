@@ -21,6 +21,7 @@
 // wstring to_wstring(long double val);
 
 #include <cassert>
+#include <clocale>
 #include <format>
 #include <string>
 #include <limits>

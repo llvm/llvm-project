@@ -19,6 +19,7 @@
 // string to_string(long double val);
 
 #include <cassert>
+#include <clocale>
 #include <format>
 #include <string>
 #include <limits>
