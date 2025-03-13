@@ -45,56 +45,82 @@ adds `FOO=1` and `bar` to the environment:
 
 ### Attaching to a process
 
-When attaching to a process using LLDB, you can attach in multiple ways:
+You can attach to a running process on the system in one of two ways:
 
-1. Attach to an existing process using the process ID
-2. Attach to an existing process by name
-3. Attach by name by waiting for the next instance of a process to launch
+1. Using the `LLDB DAP: Attach to Process...` command
+2. Creating a launch configuration with `"request"` set to `"attach"`
 
-#### Attach using PID
+#### Using the Attach to Process Command
 
-This will attach to a process `a.out` whose process ID is 123:
+The `LLDB DAP: Attach to Process...` command can be accessed from the command
+palette. It will show a list of available processes running on the system. 
+Choosing one of these processes will start a debugging session where `lldb-dap`
+will attach to the chosen process.
 
-```javascript
+#### Creating a Launch Configuration
+
+Sometimes you will want to rename an attach debug session or configure lldb-dap
+on a per-session basis. For this you can create a new launch configuration
+with the `"request"` property set to `"attach"`:
+
+```jsonc
 {
   "type": "lldb-dap",
   "request": "attach",
-  "name": "Attach to PID",
-  "program": "/tmp/a.out",
-  "pid": 123
+  "name": "My Custom Attach",
+  "pid": "${command:pickProcess}" // optional: the process picker is used by default
 }
 ```
 
-#### Attach by Name
+These launch configurations can be accessed from the Run and Debug view in the
+VS Code side panel. You will once again be shown a process picker upon launching
+this debug session. Selecting a process will start a debugging session where
+`lldb-dap` will attach to the specified process.
 
-This will attach to an existing process whose base
-name matches `a.out`. All we have to do is leave the `pid` value out of the
-above configuration:
+Specifying the pid as a number will attach to that specific process ID and avoid
+the process picker entirely:
 
-```javascript
+```jsonc
 {
-  "name": "Attach to Name",
   "type": "lldb-dap",
   "request": "attach",
-  "program": "/tmp/a.out",
+  "name": "My Custom Attach",
+  "pid": 123 // Will attach to the process with ID 123
 }
 ```
 
-If you want to ignore any existing a.out processes and wait for the next instance
-to be launched you can add the "waitFor" key value pair:
+#### Filtering by Program Name
 
-```javascript
+The process picker allows for fuzzy matching of program name, arguments, and
+process ID. However, you can also provide an optional `"program"` property to 
+your launch configuration in order to filter the process picker by the basename
+of the program by default:
+
+```jsonc
+{
+  "type": "lldb-dap",
+  "request": "attach",
+  "name": "My Custom Attach",
+  "program": "${workspaceFolder}/build/a.out" // Will show only processes that match "a.out"
+}
+```
+
+If you want to ignore any existing `a.out` processes and wait for the next instance
+to be launched you can set the `"waitFor"` property:
+
+```jsonc
 {
   "name": "Attach to Name (wait)",
   "type": "lldb-dap",
   "request": "attach",
-  "program": "/tmp/a.out",
-  "waitFor": true
+  "program": "${workspaceFolder}/build/a.out",
+  "waitFor": true // Forces lldb-dap to wait for a new process to launch
 }
 ```
 
 This will work as long as the architecture, vendor and OS supports waiting
 for processes. Currently MacOS is the only platform that supports this.
+Additionally, the process picker will not be used in this case.
 
 ### Loading a Core File
 
@@ -224,8 +250,8 @@ the following `lldb-dap` specific key/value pairs:
 | Parameter                         | Type        | Req |         |
 |-----------------------------------|-------------|:---:|---------|
 | **program**                       | string      |     | Path to the executable to attach to. This value is optional but can help to resolve breakpoints prior the attaching to the program.
-| **pid**                           | number      |     | The process id of the process you wish to attach to. If **pid** is omitted, the debugger will attempt to attach to the program by finding a process whose file name matches the file name from **porgram**. Setting this value to `${command:pickMyProcess}` will allow interactive process selection in the IDE.
-| **waitFor**                       | boolean     |     | Wait for the process to launch.
+| **pid**                           | number      |     | The process id of the process you wish to attach to. If **pid** is omitted or set to `"${command:pickProcess}"` then the extension will show a process picker with a list of running processes on the system. Choosing one of these process will launch a new debug session where `lldb-dap` will attach to the chosen process.
+| **waitFor**                       | boolean     |     | Wait for a new process that matches the **program** basename to launch. The process picker will not be shown in this case.
 | **attachCommands**                | [string]    |     | LLDB commands that will be executed after **preRunCommands** which take place of the code that normally does the attach. The commands can create a new target and attach or launch it however desired. This allows custom launch and attach configurations. Core files can use `target create --core /path/to/core` to attach to core files.
 
 ## Debug Console
