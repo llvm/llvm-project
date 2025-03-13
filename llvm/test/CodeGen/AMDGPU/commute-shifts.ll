@@ -38,7 +38,7 @@ bb:
   %tmp5 = and i32 %tmp2, %tmp4
   %tmp6 = icmp eq i32 %tmp5, 0
   %tmp7 = select i1 %tmp6, float 0.000000e+00, float %arg1
-  %tmp8 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float %tmp7)
+  %tmp8 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float poison, float %tmp7)
   %tmp9 = bitcast <2 x half> %tmp8 to float
   ret float %tmp9
 }
