@@ -4502,15 +4502,16 @@ struct OmpClauseList {
 // --- Directives and constructs
 
 struct OmpDirectiveSpecification {
-  CharBlock source;
+  ENUM_CLASS(Flags, None, DeprecatedSyntax);
   TUPLE_CLASS_BOILERPLATE(OmpDirectiveSpecification);
   llvm::omp::Directive DirId() const { //
     return std::get<OmpDirectiveName>(t).v;
   }
   const OmpClauseList &Clauses() const;
 
+  CharBlock source;
   std::tuple<OmpDirectiveName, std::optional<std::list<OmpArgument>>,
-      std::optional<OmpClauseList>>
+      std::optional<OmpClauseList>, Flags>
       t;
 };
 
