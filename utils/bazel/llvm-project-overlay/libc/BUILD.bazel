@@ -4924,7 +4924,6 @@ libc_support_library(
 
 libc_support_library(
     name = "printf_writer",
-    srcs = ["src/stdio/printf_core/writer.cpp"],
     hdrs = ["src/stdio/printf_core/writer.h"],
     deps = [
         ":__support_cpp_string_view",
@@ -4936,7 +4935,6 @@ libc_support_library(
 
 libc_support_library(
     name = "printf_converter",
-    srcs = ["src/stdio/printf_core/converter.cpp"],
     hdrs = [
         "src/stdio/printf_core/char_converter.h",
         "src/stdio/printf_core/converter.h",
@@ -4974,7 +4972,6 @@ libc_support_library(
 
 libc_support_library(
     name = "printf_main",
-    srcs = ["src/stdio/printf_core/printf_main.cpp"],
     hdrs = ["src/stdio/printf_core/printf_main.h"],
     deps = [
         ":__support_arg_list",
