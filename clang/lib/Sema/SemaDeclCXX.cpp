@@ -17300,12 +17300,10 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
     return false;
   }
 
-  auto FindMember = [&](StringRef Member, bool &Empty,
-                        bool Diag = false) -> std::optional<LookupResult> {
+  auto FindMember = [&](StringRef Member) -> std::optional<LookupResult> {
     DeclarationName DN = SemaRef.PP.getIdentifierInfo(Member);
     LookupResult MemberLookup(SemaRef, DN, Loc, Sema::LookupMemberName);
     SemaRef.LookupQualifiedName(MemberLookup, RD);
-    Empty = MemberLookup.empty();
     OverloadCandidateSet Candidates(MemberLookup.getNameLoc(),
                                     OverloadCandidateSet::CSK_Normal);
     if (MemberLookup.empty())
@@ -17313,23 +17311,14 @@ static bool EvaluateAsStringImpl(Sema &SemaRef, Expr *Message,
     return std::move(MemberLookup);
   };
 
-  bool SizeNotFound, DataNotFound;
-  std::optional<LookupResult> SizeMember = FindMember("size", SizeNotFound);
-  std::optional<LookupResult> DataMember = FindMember("data", DataNotFound);
-  if (SizeNotFound || DataNotFound) {
+  std::optional<LookupResult> SizeMember = FindMember("size");
+  std::optional<LookupResult> DataMember = FindMember("data");
+  if (!SizeMember || !DataMember) {
     SemaRef.Diag(Loc, diag::err_user_defined_msg_missing_member_function)
         << EvalContext
-        << ((SizeNotFound && DataNotFound) ? 2
-            : SizeNotFound                 ? 0
-                                           : 1);
-    return false;
-  }
-
-  if (!SizeMember || !DataMember) {
-    if (!SizeMember)
-      FindMember("size", SizeNotFound, /*Diag=*/true);
-    if (!DataMember)
-      FindMember("data", DataNotFound, /*Diag=*/true);
+        << ((!SizeMember && !DataMember) ? 2
+            : !SizeMember                ? 0
+                                         : 1);
     return false;
   }
 
