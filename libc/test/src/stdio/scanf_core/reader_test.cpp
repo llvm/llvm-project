@@ -15,12 +15,14 @@ TEST(LlvmLibcScanfStringReaderTest, Constructor) {
   char str[10];
   // buff_len justneeds to be a big number. The specific value isn't important
   // in the real world.
-  LIBC_NAMESPACE::scanf_core::StringReader reader(const_cast<char *>(str), 1000000);
+  LIBC_NAMESPACE::scanf_core::StringReader reader(const_cast<char *>(str),
+                                                  1000000);
 }
 
 TEST(LlvmLibcScanfStringReaderTest, SimpleRead) {
   const char *str = "abc";
-  LIBC_NAMESPACE::scanf_core::StringReader reader(const_cast<char *>(str), 1000000);
+  LIBC_NAMESPACE::scanf_core::StringReader reader(const_cast<char *>(str),
+                                                  1000000);
 
   for (size_t i = 0; i < sizeof("abc"); ++i) {
     ASSERT_EQ(str[i], reader.getc());
@@ -29,7 +31,8 @@ TEST(LlvmLibcScanfStringReaderTest, SimpleRead) {
 
 TEST(LlvmLibcScanfStringReaderTest, ReadAndReverse) {
   const char *str = "abcDEF123";
-  LIBC_NAMESPACE::scanf_core::StringReader reader(const_cast<char *>(str), 1000000);
+  LIBC_NAMESPACE::scanf_core::StringReader reader(const_cast<char *>(str),
+                                                  1000000);
 
   for (size_t i = 0; i < 5; ++i) {
     ASSERT_EQ(str[i], reader.getc());
