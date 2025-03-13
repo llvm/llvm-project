@@ -1888,14 +1888,23 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         return I;
     }
 
-    // umax(nuw_shl(base, x), nuw_shl(base, y)) -> nuw_shl(base, umax(x, y))
-    // umin(nuw_shl(base, x), nuw_shl(base, y)) -> nuw_shl(base, umin(x, y))
-    Value *Base;
-    Value *Shamt1, *Shamt2;
-    if (match(I0, m_OneUse(m_NUWShl(m_Value(Base), m_Value(Shamt1)))) &&
-        match(I1, m_OneUse(m_NUWShl(m_Deferred(Base), m_Value(Shamt2))))) {
-      Value *MaxMin = Builder.CreateBinaryIntrinsic(IID, Shamt1, Shamt2);
-      auto *NewShl = BinaryOperator::CreateNUWShl(Base, MaxMin);
+    Value *CommonShlOperand;
+    BinaryOperator *NewShl = nullptr;
+    // umax(nuw_shl(z, x), nuw_shl(z, y)) -> nuw_shl(z, umax(x, y))
+    // umin(nuw_shl(z, x), nuw_shl(z, y)) -> nuw_shl(z, umin(x, y))
+    if (match(I0, m_OneUse(m_NUWShl(m_Value(CommonShlOperand), m_Value(X)))) &&
+        match(I1,
+              m_OneUse(m_NUWShl(m_Deferred(CommonShlOperand), m_Value(Y))))) {
+      Value *MaxMin = Builder.CreateBinaryIntrinsic(IID, X, Y);
+      NewShl = BinaryOperator::CreateNUWShl(CommonShlOperand, MaxMin);
+    } else if (match(I0, m_OneUse(m_NUWShl(m_Value(X),
+                                           m_Value(CommonShlOperand)))) &&
+               match(I1, m_OneUse(m_NUWShl(m_Value(Y),
+                                           m_Deferred(CommonShlOperand))))) {
+      Value *MaxMin = Builder.CreateBinaryIntrinsic(IID, X, Y);
+      NewShl = BinaryOperator::CreateNUWShl(MaxMin, CommonShlOperand);
+    }
+    if (NewShl) {
       if (cast<BinaryOperator>(I0)->hasNoSignedWrap() &&
           cast<BinaryOperator>(I1)->hasNoSignedWrap())
         NewShl->setHasNoSignedWrap();
