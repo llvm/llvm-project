@@ -1132,6 +1132,7 @@ diagnoseUnwrapCall(const Expr *ObjectExpr, const Environment &Env) {
   }
 
   // Record that this unwrap is *not* provably safe.
+  // FIXME: include the name of the optional (if applicable).
   auto Range = CharSourceRange::getTokenRange(ObjectExpr->getSourceRange());
   return {UncheckedOptionalAccessDiagnostic{Range}};
 }
