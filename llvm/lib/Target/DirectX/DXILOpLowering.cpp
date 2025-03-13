@@ -75,6 +75,27 @@ static SmallVector<Value *> argVectorFlatten(CallInst *Orig,
   return NewOperands;
 }
 
+static SmallVector<Value *> argVectorFlattenExcludeLastElement(CallInst *Orig,
+                                                               IRBuilder<> &Builder) {
+  // Note: arg[NumOperands-1] is a pointer and is not needed by our flattening.
+  unsigned NumOperands = Orig->getNumOperands() - 2;
+  assert(NumOperands > 0);
+  Value *Arg0 = Orig->getOperand(0);
+  [[maybe_unused]] auto *VecArg0 = dyn_cast<FixedVectorType>(Arg0->getType());
+  assert(VecArg0);
+  SmallVector<Value *> NewOperands = populateOperands(Arg0, Builder);
+  for (unsigned I = 1; I < NumOperands; ++I) {
+    Value *Arg = Orig->getOperand(I);
+    [[maybe_unused]] auto *VecArg = dyn_cast<FixedVectorType>(Arg->getType());
+    assert(VecArg);
+    assert(VecArg0->getElementType() == VecArg->getElementType());
+    assert(VecArg0->getNumElements() == VecArg->getNumElements());
+    auto NextOperandList = populateOperands(Arg, Builder);
+    NewOperands.append(NextOperandList.begin(), NextOperandList.end());
+  }
+  return NewOperands;
+}
+
 namespace {
 class OpLowerer {
   Module &M;
@@ -168,6 +189,18 @@ public:
         }
       } else if (IsVectorArgExpansion) {
         Args = argVectorFlatten(CI, OpBuilder.getIRB());
+      } else if (F.getIntrinsicID() == Intrinsic::dx_dot2add) {
+        unsigned NumOperands = CI->getNumOperands() - 1;
+        assert(NumOperands > 0);
+        Value *LastArg = CI->getOperand(NumOperands - 1);
+        
+        Args.push_back(LastArg);
+        
+        //dbgs() << "Value of LastArg" << LastArg->getName() << "\n";
+        
+        
+        //Args = populateOperands(LastArg, OpBuilder.getIRB());
+        Args.append(argVectorFlattenExcludeLastElement(CI, OpBuilder.getIRB()));
       } else {
         Args.append(CI->arg_begin(), CI->arg_end());
       }
