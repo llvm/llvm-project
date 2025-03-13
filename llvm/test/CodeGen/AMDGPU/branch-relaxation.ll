@@ -264,7 +264,6 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GFX11-NEXT:    s_load_b32 s0, s[4:5], 0x2c
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_cmp_eq_f32_e64 s[2:3], s0, 0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    s_and_b64 vcc, exec, s[2:3]
 ; GFX11-NEXT:    s_cbranch_vccz .LBB2_1
 ; GFX11-NEXT:  ; %bb.3: ; %bb0
@@ -727,7 +726,7 @@ bb0:
   br i1 %tmp, label %bb2, label %bb3
 
 bb2:
-  store volatile i32 17, ptr addrspace(1) undef
+  store volatile i32 17, ptr addrspace(1) poison
   br label %bb4
 
 bb3:
@@ -1258,7 +1257,7 @@ loop_body:
   br label %loop
 
 ret:
-  store volatile i32 7, ptr addrspace(1) undef
+  store volatile i32 7, ptr addrspace(1) poison
   ret void
 }
 

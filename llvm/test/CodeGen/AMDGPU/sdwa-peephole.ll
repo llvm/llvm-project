@@ -1992,13 +1992,13 @@ entry:
   %tmp7 = extractelement <8 x i8> %tmp, i32 6
   %tmp8 = extractelement <8 x i8> %tmp, i32 7
 
-  %tmp9 = insertelement <2 x i8> undef, i8 %tmp1, i32 0
+  %tmp9 = insertelement <2 x i8> poison, i8 %tmp1, i32 0
   %tmp10 = insertelement <2 x i8> %tmp9, i8 %tmp2, i32 1
-  %tmp11 = insertelement <2 x i8> undef, i8 %tmp3, i32 0
+  %tmp11 = insertelement <2 x i8> poison, i8 %tmp3, i32 0
   %tmp12 = insertelement <2 x i8> %tmp11, i8 %tmp4, i32 1
-  %tmp13 = insertelement <2 x i8> undef, i8 %tmp5, i32 0
+  %tmp13 = insertelement <2 x i8> poison, i8 %tmp5, i32 0
   %tmp14 = insertelement <2 x i8> %tmp13, i8 %tmp6, i32 1
-  %tmp15 = insertelement <2 x i8> undef, i8 %tmp7, i32 0
+  %tmp15 = insertelement <2 x i8> poison, i8 %tmp7, i32 0
   %tmp16 = insertelement <2 x i8> %tmp15, i8 %tmp8, i32 1
 
   %tmp17 = shufflevector <2 x i8> %tmp10, <2 x i8> %tmp12, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -2086,14 +2086,14 @@ bb1:                                              ; preds = %bb11, %bb
   br i1 true, label %bb2, label %bb11
 
 bb2:                                              ; preds = %bb1
-  %tmp3 = call i32 asm "v_and_b32_e32 $0, $1, $2", "=v,s,v"(i32 65535, i32 undef) #1
+  %tmp3 = call i32 asm "v_and_b32_e32 $0, $1, $2", "=v,s,v"(i32 65535, i32 poison) #1
   %tmp5 = or i32 %tmp3, 65536
   %tmp6 = insertelement <2 x i32> %tmp, i32 %tmp5, i64 0
   br label %bb11
 
 bb11:                                             ; preds = %bb10, %bb2
   %tmp12 = phi <2 x i32> [ %tmp6, %bb2 ], [ %tmp, %bb1 ]
-  store volatile <2 x i32> %tmp12, ptr addrspace(1) undef
+  store volatile <2 x i32> %tmp12, ptr addrspace(1) poison
   br label %bb1
 }
 

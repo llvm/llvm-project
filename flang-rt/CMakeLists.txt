@@ -223,7 +223,6 @@ check_cxx_source_compiles(
   "
   HAVE_DECL_STRERROR_S)
 
-
 # Search for clang_rt.builtins library. Need in addition to msvcrt.
 if (WIN32)
   find_compiler_rt_library(builtins FLANG_RT_BUILTINS_LIBRARY)
@@ -293,8 +292,6 @@ elseif (FLANG_RT_GCC_RESOURCE_DIR)
     set(FLANG_RT_INCLUDE_QUADMATH_H "\"${FLANG_RT_GCC_RESOURCE_DIR}/include/quadmath.h\"")
   endif ()
 endif ()
-
-
 
 #####################
 # Build Preparation #

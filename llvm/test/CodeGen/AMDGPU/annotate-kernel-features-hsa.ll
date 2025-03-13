@@ -530,19 +530,19 @@ define amdgpu_kernel void @use_is_shared(ptr %ptr) #1 {
 ; AKF_HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[PTR]])
 ; AKF_HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_SHARED]] to i32
-; AKF_HSA-NEXT:    store i32 [[EXT]], ptr addrspace(1) undef, align 4
+; AKF_HSA-NEXT:    store i32 [[EXT]], ptr addrspace(1) poison, align 4
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_is_shared
 ; ATTRIBUTOR_HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR12]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[IS_SHARED:%.*]] = call i1 @llvm.amdgcn.is.shared(ptr [[PTR]])
 ; ATTRIBUTOR_HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_SHARED]] to i32
-; ATTRIBUTOR_HSA-NEXT:    store i32 [[EXT]], ptr addrspace(1) undef, align 4
+; ATTRIBUTOR_HSA-NEXT:    store i32 [[EXT]], ptr addrspace(1) poison, align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   %ext = zext i1 %is.shared to i32
-  store i32 %ext, ptr addrspace(1) undef
+  store i32 %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -551,19 +551,19 @@ define amdgpu_kernel void @use_is_private(ptr %ptr) #1 {
 ; AKF_HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR1]] {
 ; AKF_HSA-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
 ; AKF_HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_PRIVATE]] to i32
-; AKF_HSA-NEXT:    store i32 [[EXT]], ptr addrspace(1) undef, align 4
+; AKF_HSA-NEXT:    store i32 [[EXT]], ptr addrspace(1) poison, align 4
 ; AKF_HSA-NEXT:    ret void
 ;
 ; ATTRIBUTOR_HSA-LABEL: define {{[^@]+}}@use_is_private
 ; ATTRIBUTOR_HSA-SAME: (ptr [[PTR:%.*]]) #[[ATTR12]] {
 ; ATTRIBUTOR_HSA-NEXT:    [[IS_PRIVATE:%.*]] = call i1 @llvm.amdgcn.is.private(ptr [[PTR]])
 ; ATTRIBUTOR_HSA-NEXT:    [[EXT:%.*]] = zext i1 [[IS_PRIVATE]] to i32
-; ATTRIBUTOR_HSA-NEXT:    store i32 [[EXT]], ptr addrspace(1) undef, align 4
+; ATTRIBUTOR_HSA-NEXT:    store i32 [[EXT]], ptr addrspace(1) poison, align 4
 ; ATTRIBUTOR_HSA-NEXT:    ret void
 ;
   %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %ext = zext i1 %is.private to i32
-  store i32 %ext, ptr addrspace(1) undef
+  store i32 %ext, ptr addrspace(1) poison
   ret void
 }
 
