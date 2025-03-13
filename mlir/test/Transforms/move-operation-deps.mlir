@@ -27,6 +27,33 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// Check that `moved_op` gets moved even if `foo` is defined by `before`.
+func.func @move_with_direct_use() -> f32 {
+  %0 = "before"() : () -> (f32)
+  %1 = "moved_op"() : () -> (f32)
+  %2 = "foo"(%0, %1) : (f32, f32) -> (f32)
+  return %2 : f32
+}
+// CHECK-LABEL: func @move_with_direct_use()
+//       CHECK:   %[[MOVED:.+]] = "moved_op"
+//       CHECK:   %[[BEFORE:.+]] = "before"
+//       CHECK:   %[[FOO:.+]] = "foo"(%[[BEFORE]], %[[MOVED]])
+//       CHECK:   return %[[FOO]]
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0 : !transform.any_op {transform.readonly}) {
+    %op1 = transform.structured.match ops{["foo"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    %op2 = transform.structured.match ops{["before"]} in %arg0
+        : (!transform.any_op) -> !transform.any_op
+    transform.test.move_operand_deps %op1 before %op2
+        : !transform.any_op, !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // Move operands that are implicitly captured by the op
 func.func @move_region_dependencies() -> f32 {
   %0 = "before"() : () -> (f32)
