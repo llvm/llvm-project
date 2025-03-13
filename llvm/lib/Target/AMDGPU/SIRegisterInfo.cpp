@@ -2804,8 +2804,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                                  /*AllowSpill=*/false);
           DstReg = TmpReg;
         }
-        // Avoid clobbering framereg if scavenger could not find a free sgpr.
-        if (DstReg) {
+
+        if (TmpReg) {
           auto AddI32 = BuildMI(*MBB, *MI, DL, MI->getDesc())
                             .addDef(DstReg, RegState::Renamable)
                             .addReg(MaterializedReg, RegState::Kill)
