@@ -71,7 +71,7 @@ bb:
   %tmp1 = load volatile i32, ptr addrspace(1) poison, align 4
   %tmp2 = insertelement <4 x i32> poison, i32 %tmp1, i32 0
   %tmp3 = bitcast i32 %tmp1 to float
-  %tmp4 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %tmp3, float %tmp3, <8 x i32> undef, <4 x i32> poison, i1 0, i32 0, i32 0)
+  %tmp4 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %tmp3, float %tmp3, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp5 = extractelement <4 x float> %tmp4, i32 0
   %tmp6 = fmul float %tmp5, undef
   %tmp7 = fadd float %tmp6, %tmp6

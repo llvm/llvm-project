@@ -41,7 +41,7 @@ if:
 
 else:
   %c = fmul float %v, 3.0
-  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c, <8 x i32> undef, <4 x i32> poison, i1 0, i32 0, i32 0)
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %v.else = extractelement <4 x float> %tex, i32 0
   br label %end
 
