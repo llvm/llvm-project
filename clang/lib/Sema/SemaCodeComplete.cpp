@@ -6749,7 +6749,7 @@ void SemaCodeCompletion::CodeCompleteInitializer(Scope *S, Decl *D) {
   CodeCompleteExpression(S, Data);
 }
 
-void SemaCodeCompletion::CodeCompleteIfConst(bool AfterExclaim) const {
+void SemaCodeCompletion::CodeCompleteKeywordAfterIf(bool AfterExclaim) const {
   ResultBuilder Results(SemaRef, CodeCompleter->getAllocator(),
                         CodeCompleter->getCodeCompletionTUInfo(),
                         CodeCompletionContext::CCC_Other);
