@@ -152,13 +152,24 @@ namespace llvm {
     /// source and destination of the dependence.
     virtual unsigned getLevels() const { return 0; }
 
+    /// getSeparateLevels - Returns the number of separate loops surrounding
+    /// the source and destination of the dependence.
+    virtual unsigned getSeparateLevels() const { return 0; }
+
     /// getDirection - Returns the direction associated with a particular
-    /// level.
-    virtual unsigned getDirection(unsigned Level) const { return DVEntry::ALL; }
+    /// level. If Separate is set to true, information about a separate
+    /// level is provided.
+    virtual unsigned getDirection(unsigned Level, bool Separate = false) const {
+      return DVEntry::ALL;
+    }
 
     /// getDistance - Returns the distance (or NULL) associated with a
-    /// particular level.
-    virtual const SCEV *getDistance(unsigned Level) const { return nullptr; }
+    /// particular level. If Separate is set to true, information about
+    /// a separate level is provided.
+    virtual const SCEV *getDistance(unsigned Level,
+                                    bool Separate = false) const {
+      return nullptr;
+    }
 
     /// Check if the direction vector is negative. A negative direction
     /// vector means Src and Dst are reversed in the actual program.
@@ -171,21 +182,35 @@ namespace llvm {
     virtual bool normalize(ScalarEvolution *SE) { return false; }
 
     /// isPeelFirst - Returns true if peeling the first iteration from
-    /// this loop will break this dependence.
-    virtual bool isPeelFirst(unsigned Level) const { return false; }
+    /// this loop will break this dependence. If Separate is set to true,
+    /// information about a separate level is provided.
+    virtual bool isPeelFirst(unsigned Level, bool Separate = false) const {
+      return false;
+    }
 
     /// isPeelLast - Returns true if peeling the last iteration from
-    /// this loop will break this dependence.
-    virtual bool isPeelLast(unsigned Level) const { return false; }
+    /// this loop will break this dependence. If Separate is set to true,
+    /// information about a separate level is provided.
+    virtual bool isPeelLast(unsigned Level, bool Separate = false) const {
+      return false;
+    }
 
     /// isSplitable - Returns true if splitting this loop will break
-    /// the dependence.
-    virtual bool isSplitable(unsigned Level) const { return false; }
+    /// the dependence. If Separate is set to true, information about a
+    /// separate level is provided.
+    virtual bool isSplitable(unsigned Level, bool Separate = false) const {
+      return false;
+    }
+
+    /// inSeparateLoops - Returns true if this level is performed across
+    /// two separate loop nests.
+    virtual bool inSeparateLoops(unsigned Level) const { return false; }
 
     /// isScalar - Returns true if a particular level is scalar; that is,
     /// if no subscript in the source or destination mention the induction
-    /// variable associated with the loop at this level.
-    virtual bool isScalar(unsigned Level) const;
+    /// variable associated with the loop at this level. If Separate is
+    /// set to true, information about a separate level is provided.
+    virtual bool isScalar(unsigned Level, bool Separate = false) const;
 
     /// getNextPredecessor - Returns the value of the NextPredecessor
     /// field.
@@ -245,13 +270,20 @@ namespace llvm {
     /// source and destination of the dependence.
     unsigned getLevels() const override { return Levels; }
 
+    /// getSeparateLevels - Returns the number of separate loops surrounding
+    /// the source and destination of the dependence.
+    unsigned getSeparateLevels() const override { return SeparateLevels; }
+
     /// getDirection - Returns the direction associated with a particular
-    /// level.
-    unsigned getDirection(unsigned Level) const override;
+    /// level. If Separate is set to true, information about a separate
+    /// level is provided.
+    unsigned getDirection(unsigned Level, bool Separate = false) const override;
 
     /// getDistance - Returns the distance (or NULL) associated with a
-    /// particular level.
-    const SCEV *getDistance(unsigned Level) const override;
+    /// particular level. If Separate is set to true, information about
+    /// a separate level is provided.
+    const SCEV *getDistance(unsigned Level,
+                            bool Separate = false) const override;
 
     /// Check if the direction vector is negative. A negative direction
     /// vector means Src and Dst are reversed in the actual program.
@@ -264,27 +296,37 @@ namespace llvm {
     bool normalize(ScalarEvolution *SE) override;
 
     /// isPeelFirst - Returns true if peeling the first iteration from
-    /// this loop will break this dependence.
-    bool isPeelFirst(unsigned Level) const override;
+    /// this loop will break this dependence. If Separate is set to true,
+    /// information about a separate level is provided.
+    bool isPeelFirst(unsigned Level, bool Separate = false) const override;
 
     /// isPeelLast - Returns true if peeling the last iteration from
-    /// this loop will break this dependence.
-    bool isPeelLast(unsigned Level) const override;
+    /// this loop will break this dependence. If Separate is set to true,
+    /// information about a separate level is provided.
+    bool isPeelLast(unsigned Level, bool Separate = false) const override;
 
     /// isSplitable - Returns true if splitting the loop will break
-    /// the dependence.
-    bool isSplitable(unsigned Level) const override;
+    /// the dependence. If Separate is set to true, information about a
+    /// separate level is provided.
+    bool isSplitable(unsigned Level, bool Separate = false) const override;
+
+    /// inSeparateLoops - Returns true if this level is performed across
+    /// two separate loop nests.
+    bool inSeparateLoops(unsigned Level) const override;
 
     /// isScalar - Returns true if a particular level is scalar; that is,
     /// if no subscript in the source or destination mention the induction
-    /// variable associated with the loop at this level.
-    bool isScalar(unsigned Level) const override;
+    /// variable associated with the loop at this level. If Separate is
+    /// set to true, information about a separate level is provided.
+    bool isScalar(unsigned Level, bool Separate = false) const override;
 
   private:
     unsigned short Levels;
+    unsigned short SeparateLevels;
     bool LoopIndependent;
     bool Consistent; // Init to true, then refine.
     std::unique_ptr<DVEntry[]> DV;
+    std::unique_ptr<DVEntry[]> DVSeparate;
     friend class DependenceInfo;
   };
 
@@ -405,7 +447,8 @@ namespace llvm {
       const SCEV *A;
       const SCEV *B;
       const SCEV *C;
-      const Loop *AssociatedLoop;
+      const Loop *AssociatedSrcLoop;
+      const Loop *AssociatedDstLoop;
 
     public:
       /// isEmpty - Return true if the constraint is of kind Empty.
@@ -449,18 +492,25 @@ namespace llvm {
       /// Otherwise assert.
       const SCEV *getD() const;
 
-      /// getAssociatedLoop - Returns the loop associated with this constraint.
-      const Loop *getAssociatedLoop() const;
+      /// getAssociatedSrcLoop - Returns the source loop associated with this
+      /// constraint.
+      const Loop *getAssociatedSrcLoop() const;
+
+      /// getAssociatedDstLoop - Returns the destination loop associated with
+      /// this constraint.
+      const Loop *getAssociatedDstLoop() const;
 
       /// setPoint - Change a constraint to Point.
-      void setPoint(const SCEV *X, const SCEV *Y, const Loop *CurrentLoop);
+      void setPoint(const SCEV *X, const SCEV *Y, const Loop *CurrentSrcLoop,
+                    const Loop *CurrentDstLoop);
 
       /// setLine - Change a constraint to Line.
-      void setLine(const SCEV *A, const SCEV *B,
-                   const SCEV *C, const Loop *CurrentLoop);
+      void setLine(const SCEV *A, const SCEV *B, const SCEV *C,
+                   const Loop *CurrentSrcLoop, const Loop *CurrentDstLoop);
 
       /// setDistance - Change a constraint to Distance.
-      void setDistance(const SCEV *D, const Loop *CurrentLoop);
+      void setDistance(const SCEV *D, const Loop *CurrentSrcLoop,
+                       const Loop *CurrentDstLoop);
 
       /// setEmpty - Change a constraint to Empty.
       void setEmpty();
@@ -472,6 +522,10 @@ namespace llvm {
       /// out to OS.
       void dump(raw_ostream &OS) const;
     };
+
+    /// Returns true if two loops are the same or they have the same tripcount
+    /// and depth
+    bool areLoopsSimilar(const Loop *SrcLoop, const Loop *DstLoop) const;
 
     /// establishNestingLevels - Examines the loop nesting of the Src and Dst
     /// instructions and establishes their shared loops. Sets the variables
@@ -523,10 +577,30 @@ namespace llvm {
     ///     e - 5
     ///     f - 6
     ///     g - 7 = MaxLevels
-    void establishNestingLevels(const Instruction *Src,
-                                const Instruction *Dst);
+    /// If ConsiderSeparateLoops is true then we also want to consider similar
+    /// seperate loops. Assume that loop nests at level c and e are similar,
+    /// meaning that they have the same tripcount and depth. Then we consider
+    /// them as a separate common level.
+    ///     a      - 1
+    ///     b      - 2
+    ///     <c, e> - 3 = CommonLevels
+    ///     d      - 4 = SrcLevels
+    ///     f      - 5
+    ///     g      - 6 = MaxLevels
+    /// Initially similar separate levels are included in common levels. After
+    /// the separate level extraction at the end of the depends api we have
+    ///     a      - 1
+    ///     b      - 2 = CommonLevels
+    ///     <c, e> - 3 : A SeparateLevel
+    ///     d      - 4 = SrcLevels
+    ///     f      - 6
+    ///     g      - 7 = MaxLevels
+    /// SeparateLevels is the number of levels after CommonLevels that are
+    /// similar, which is 1 in this case.
+    void establishNestingLevels(const Instruction *Src, const Instruction *Dst,
+                                bool ConsiderSeparateLoops = false);
 
-    unsigned CommonLevels, SrcLevels, MaxLevels;
+    unsigned CommonLevels, SrcLevels, MaxLevels, SeparateLevels;
 
     /// mapSrcLoop - Given one of the loops containing the source, return
     /// its level index in our numbering scheme.
@@ -668,7 +742,8 @@ namespace llvm {
     bool strongSIVtest(const SCEV *Coeff,
                        const SCEV *SrcConst,
                        const SCEV *DstConst,
-                       const Loop *CurrentLoop,
+                       const Loop *CurrentSrcLoop,
+                       const Loop *CurrentDstLoop,
                        unsigned Level,
                        FullDependence &Result,
                        Constraint &NewConstraint) const;
@@ -686,7 +761,8 @@ namespace llvm {
     bool weakCrossingSIVtest(const SCEV *SrcCoeff,
                              const SCEV *SrcConst,
                              const SCEV *DstConst,
-                             const Loop *CurrentLoop,
+                             const Loop *CurrentSrcLoop,
+                             const Loop *CurrentDstLoop,
                              unsigned Level,
                              FullDependence &Result,
                              Constraint &NewConstraint,
@@ -705,7 +781,8 @@ namespace llvm {
                       const SCEV *DstCoeff,
                       const SCEV *SrcConst,
                       const SCEV *DstConst,
-                      const Loop *CurrentLoop,
+                      const Loop *CurrentSrcLoop,
+                      const Loop *CurrentDstLoop,
                       unsigned Level,
                       FullDependence &Result,
                       Constraint &NewConstraint) const;
@@ -723,7 +800,8 @@ namespace llvm {
     bool weakZeroSrcSIVtest(const SCEV *DstCoeff,
                             const SCEV *SrcConst,
                             const SCEV *DstConst,
-                            const Loop *CurrentLoop,
+                            const Loop *CurrentSrcLoop,
+                            const Loop *CurrentDstLoop,
                             unsigned Level,
                             FullDependence &Result,
                             Constraint &NewConstraint) const;
@@ -741,7 +819,8 @@ namespace llvm {
     bool weakZeroDstSIVtest(const SCEV *SrcCoeff,
                             const SCEV *SrcConst,
                             const SCEV *DstConst,
-                            const Loop *CurrentLoop,
+                            const Loop *CurrentSrcLoop,
+                            const Loop *CurrentDstLoop,
                             unsigned Level,
                             FullDependence &Result,
                             Constraint &NewConstraint) const;
