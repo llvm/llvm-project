@@ -763,7 +763,6 @@ queue deque
 queue initializer_list
 queue iosfwd
 queue limits
-queue optional
 queue stdexcept
 queue string
 queue string_view
@@ -830,7 +829,6 @@ regex deque
 regex initializer_list
 regex iosfwd
 regex limits
-regex optional
 regex stdexcept
 regex string
 regex string_view
@@ -1075,7 +1073,6 @@ thread iosfwd
 thread istream
 thread limits
 thread locale
-thread optional
 thread ratio
 thread sstream
 thread stdexcept
@@ -1147,7 +1144,6 @@ vector cwctype
 vector initializer_list
 vector iosfwd
 vector limits
-vector optional
 vector stdexcept
 vector string
 vector string_view

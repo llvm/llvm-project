@@ -258,11 +258,11 @@ __fwrite_unlocked(const void* __buffer, [[maybe_unused]] size_t __size, size_t _
 #    if defined(_LIBCPP_WIN32API)
   return ::_fwrite_nolock(__buffer, __size, __n, __stream);
 #    elif defined(__PICOLIBC__) || defined(_AIX) || defined(__ANDROID__)
-  // There is no fwrite_unlocked on these systems.
-  // This funcion is not part of POSIX.
+  // The function fwrite_unlocked is not part of POSIX and not available on
+  // these systems.
   auto __b = static_cast<const char*>(__buffer);
   for (size_t __i = 0; __i < __n; ++__i, ++__b)
-    // Unqualified since  putc_unlocked is a macro on AIX.
+    // Unqualified since putc_unlocked is a macro on AIX.
     if (putc_unlocked(*__b, __stream) == EOF)
       return __i;
   return __n;
@@ -273,17 +273,37 @@ __fwrite_unlocked(const void* __buffer, [[maybe_unused]] size_t __size, size_t _
 #    endif
 }
 
-// This "buffer" is not a typical buffer but an adaptor for FILE*
+enum class __lock_policy {
+  // The locking is done manually, which allows calling the *_unlocked functions.
+  //
+  // These are used in the *_buffered overloads.
+  __manual,
+  // The locking is done inside the stdio library.
+  __stdio,
+
+};
+
+template <__lock_policy __policy>
+_LIBCPP_HIDE_FROM_ABI int __fflush(FILE* __stream) {
+  if constexpr (__policy == __lock_policy::__manual)
+    return __print ::__fflush_unlocked(__stream);
+  else if constexpr (__policy == __lock_policy::__stdio)
+    return std::fflush(__stream);
+  else
+#    if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+    sizeof(__lock_policy) == 0
+#    else
+    static_assert(false, "Unsupported policy");
+#    endif
+}
+
+// This "buffer" is not a typical buffer but an buffered adaptor for FILE*
 //
-// This adaptor locks the file stream, allowing it to use unlocked I/O.
-// This is used by the *_buffered functions in <print>. The print functions have
-// no wchar_t support so char is hard-coded. Since the underlaying I/O functions
-// encode narrow or wide in their name this avoids some `if constexpr` branches.
-//
-// The underlying functions for unlocked I/O are not in the C Standard, and
-// their names differ between POSIX and Windows, therefore the functions are
-// wrapped in this class.
-class __file_stream_buffer : public __format::__output_buffer<char> {
+// Based on the __lock_policy it will leave the locking to stdio or manually
+// locks the stream and then uses unlocked stdio functions. This policy makes
+// the print functions "foo" and "foo_buffered" to be templated.
+template <__lock_policy __policy>
+class _LIBCPP_TEMPLATE_VIS __file_stream_buffer : public __format::__output_buffer<char> {
 public:
   using value_type = char;
 
@@ -292,10 +312,26 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI explicit __file_stream_buffer(FILE* __stream)
       : __output_buffer<char>{__small_buffer_, __buffer_size, __prepare_write, nullptr}, __stream_(__stream) {
-    __print::__flockfile(__stream_);
+    if constexpr (__policy == __lock_policy::__manual)
+      __print::__flockfile(__stream_);
+    else if constexpr (__policy != __lock_policy::__stdio)
+#    if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+      sizeof(__lock_policy) == 0
+#    else
+      static_assert(false, "Unsupported policy");
+#    endif
   }
 
-  _LIBCPP_HIDE_FROM_ABI ~__file_stream_buffer() { __print::__funlockfile(__stream_); }
+  _LIBCPP_HIDE_FROM_ABI ~__file_stream_buffer() {
+    if constexpr (__policy == __lock_policy::__manual)
+      __print::__funlockfile(__stream_);
+    else if constexpr (__policy != __lock_policy::__stdio)
+#    if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+      sizeof(__lock_policy) == 0
+#    else
+      static_assert(false, "Unsupported policy");
+#    endif
+  }
 
   // In order to ensure all data is written this function needs to be called.
   //
@@ -316,7 +352,19 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI void __write_buffer() {
     size_t __n    = this->__size();
-    size_t __size = __print::__fwrite_unlocked(__small_buffer_, 1, __n, __stream_);
+    size_t __size = [&] {
+      if constexpr (__policy == __lock_policy::__manual)
+        return __print::__fwrite_unlocked(__small_buffer_, 1, __n, __stream_);
+      else if constexpr (__policy == __lock_policy::__stdio)
+        return std::fwrite(__small_buffer_, 1, __n, __stream_);
+      else
+#    if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
+        sizeof(__lock_policy) == 0
+#    else
+        static_assert(false, "Unsupported policy");
+#    endif
+    }();
+
     if (__size < __n) {
       if (std::feof(__stream_))
         std::__throw_system_error(EIO, "EOF while writing the formatted output");
@@ -331,42 +379,19 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI static void
   __prepare_write(__output_buffer<char>& __buffer, [[maybe_unused]] size_t __size_hint) {
-    static_cast<__file_stream_buffer&>(__buffer).__prepare_write();
+    static_cast<__file_stream_buffer<__policy>&>(__buffer).__prepare_write();
   }
 };
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void
-__vprint_nonunicode(FILE* __stream, string_view __fmt, format_args __args, bool __write_nl) {
+template <__lock_policy __policy>
+_LIBCPP_HIDE_FROM_ABI void __vprint_nonunicode(FILE* __stream, string_view __fmt, format_args __args, bool __write_nl) {
   _LIBCPP_ASSERT_NON_NULL(__stream, "__stream must be a valid pointer to an output C stream");
-  string __str = std::vformat(__fmt, __args);
-  if (__write_nl)
-    __str.push_back('\n');
+  __print::__file_stream_buffer<__policy> __buffer(__stream);
 
-  size_t __size = fwrite(__str.data(), 1, __str.size(), __stream);
-  if (__size < __str.size()) {
-    if (std::feof(__stream))
-      std::__throw_system_error(EIO, "EOF while writing the formatted output");
-    std::__throw_system_error(std::ferror(__stream), "failed to write formatted output");
-  }
-}
-
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void __vprint_nonunicode_buffered(
-    __print::__file_stream_buffer& __buffer, string_view __fmt, format_args __args, bool __write_nl) {
   std::__format::__vformat_to(basic_format_parse_context{__fmt, __args.__size()},
                               std::__format_context_create(__buffer.__make_output_iterator(), __args));
   if (__write_nl)
     __buffer.push_back('\n');
-}
-
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void
-__vprint_nonunicode_buffered(FILE* __stream, string_view __fmt, format_args __args, bool __write_nl) {
-  _LIBCPP_ASSERT_NON_NULL(__stream, "__stream must be a valid pointer to an output C stream");
-  __print::__file_stream_buffer __buffer(__stream);
-
-  __print::__vprint_nonunicode_buffered(__buffer, __fmt, __args, __write_nl);
 
   std::move(__buffer).__write_internal_buffer();
 }
@@ -378,84 +403,33 @@ __vprint_nonunicode_buffered(FILE* __stream, string_view __fmt, format_args __ar
 // terminal when the output is redirected. Typically during testing the
 // output is redirected to be able to capture it. This makes it hard to
 // test this code path.
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void
+
+template <__lock_policy __policy>
+_LIBCPP_HIDE_FROM_ABI void
 __vprint_unicode_posix(FILE* __stream, string_view __fmt, format_args __args, bool __write_nl, bool __is_terminal) {
-  // TODO PRINT Should flush errors throw too?
-  if (__is_terminal)
-    std::fflush(__stream);
-
-  __print::__vprint_nonunicode(__stream, __fmt, __args, __write_nl);
-}
-
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void __vprint_unicode_buffered_posix(
-    FILE* __stream, string_view __fmt, format_args __args, bool __write_nl, bool __is_terminal) {
   _LIBCPP_ASSERT_NON_NULL(__stream, "__stream must be a valid pointer to an output C stream");
-  __print::__file_stream_buffer __buffer(__stream);
 
   // TODO PRINT Should flush errors throw too?
   if (__is_terminal)
-    __print::__fflush_unlocked(__stream);
+    __print::__fflush<__policy>(__stream);
 
-  __print::__vprint_nonunicode_buffered(__buffer, __fmt, __args, __write_nl);
-
-  std::move(__buffer).__write_internal_buffer();
+  __print::__vprint_nonunicode<__policy>(__stream, __fmt, __args, __write_nl);
 }
+
 #      if _LIBCPP_HAS_WIDE_CHARACTERS
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void
+template <__lock_policy __policy>
+_LIBCPP_HIDE_FROM_ABI void
 __vprint_unicode_windows(FILE* __stream, string_view __fmt, format_args __args, bool __write_nl, bool __is_terminal) {
   _LIBCPP_ASSERT_NON_NULL(__stream, "__stream must be a valid pointer to an output C stream");
 
   if (!__is_terminal)
-    return __print::__vprint_nonunicode(__stream, __fmt, __args, __write_nl);
+    return __print::__vprint_nonunicode<__policy>(__stream, __fmt, __args, __write_nl);
+
+  [[maybe_unused]] __print::__file_stream_buffer<__policy> __b(__stream);
 
   // TODO PRINT Should flush errors throw too?
-  std::fflush(__stream);
-
-  string __str = std::vformat(__fmt, __args);
-  // UTF-16 uses the same number or less code units than UTF-8.
-  // However the size of the code unit is 16 bits instead of 8 bits.
-  //
-  // The buffer uses the worst-case estimate and should never resize.
-  // However when the string is large this could lead to OOM. Using a
-  // smaller size might work, but since the buffer uses a grow factor
-  // the final size might be larger when the estimate is wrong.
-  //
-  // TODO PRINT profile and improve the speed of this code.
-  __format::__retarget_buffer<wchar_t> __buffer{__str.size()};
-  __unicode::__transcode(__str.begin(), __str.end(), __buffer.__make_output_iterator());
-  if (__write_nl)
-    __buffer.push_back(L'\n');
-
-  [[maybe_unused]] wstring_view __view = __buffer.__view();
-
-  // The macro _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION is used to change
-  // the behavior in the test. This is not part of the public API.
-#        ifdef _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION
-  _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION(__stream, __view);
-#        elif defined(_LIBCPP_WIN32API)
-  std::__write_to_windows_console(__stream, __view);
-#        else
-  std::__throw_runtime_error("No defintion of _LIBCPP_TESTING_PRINT_WRITE_TO_WINDOWS_CONSOLE_FUNCTION and "
-                             "__write_to_windows_console is not available.");
-#        endif
-}
-
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void __vprint_unicode_buffered_windows(
-    FILE* __stream, string_view __fmt, format_args __args, bool __write_nl, bool __is_terminal) {
-  _LIBCPP_ASSERT_NON_NULL(__stream, "__stream must be a valid pointer to an output C stream");
-
-  if (!__is_terminal)
-    return __print::__vprint_nonunicode_buffered(__stream, __fmt, __args, __write_nl);
-
-  [[maybe_unused]] __print::__file_stream_buffer __b(__stream);
-
-  // TODO PRINT Should flush errors throw too?
-  __print::__fflush_unlocked(__stream);
+  __print::__fflush<__policy>(__stream);
 
   string __str = std::vformat(__fmt, __args);
   // UTF-16 uses the same number or less code units than UTF-8.
@@ -488,8 +462,8 @@ _LIBCPP_HIDE_FROM_ABI inline void __vprint_unicode_buffered_windows(
 
 #      endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void
+template <__lock_policy __policy>
+_LIBCPP_HIDE_FROM_ABI void
 __vprint_unicode([[maybe_unused]] FILE* __stream,
                  [[maybe_unused]] string_view __fmt,
                  [[maybe_unused]] format_args __args,
@@ -518,31 +492,13 @@ __vprint_unicode([[maybe_unused]] FILE* __stream,
   // Windows there is a different API. This API requires transcoding.
 
 #      ifndef _LIBCPP_WIN32API
-  __print::__vprint_unicode_posix(__stream, __fmt, __args, __write_nl, __print::__is_terminal(__stream));
+  __print::__vprint_unicode_posix<__policy>(__stream, __fmt, __args, __write_nl, __print::__is_terminal(__stream));
 #      elif _LIBCPP_HAS_WIDE_CHARACTERS
-  __print::__vprint_unicode_windows(__stream, __fmt, __args, __write_nl, __print::__is_terminal(__stream));
+  __print::__vprint_unicode_windows<__policy>(__stream, __fmt, __args, __write_nl, __print::__is_terminal(__stream));
 #      else
 #        error "Windows builds with wchar_t disabled are not supported."
 #      endif
 }
-
-template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void __vprint_unicode_buffered(
-    [[maybe_unused]] FILE* __stream,
-    [[maybe_unused]] string_view __fmt,
-    [[maybe_unused]] format_args __args,
-    [[maybe_unused]] bool __write_nl) {
-  _LIBCPP_ASSERT_NON_NULL(__stream, "__stream must be a valid pointer to an output C stream");
-
-#      ifndef _LIBCPP_WIN32API
-  __print::__vprint_unicode_buffered_posix(__stream, __fmt, __args, __write_nl, __print::__is_terminal(__stream));
-#      elif !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
-  __print::__vprint_unicode_buffered_windows(__stream, __fmt, __args, __write_nl, __print::__is_terminal(__stream));
-#      else
-#        error "Windows builds with wchar_t disabled are not supported."
-#      endif
-}
-
 #    endif // _LIBCPP_HAS_UNICODE
 
 } // namespace __print
@@ -556,17 +512,13 @@ _LIBCPP_HIDE_FROM_ABI void print(FILE* __stream, format_string<_Args...> __fmt, 
 #    endif // _LIBCPP_HAS_UNICODE
   constexpr bool __locksafe = (enable_nonlocking_formatter_optimization<remove_cvref_t<_Args>> && ...);
 
-  if constexpr (__use_unicode) {
-    if constexpr (__locksafe)
-      __print::__vprint_unicode_buffered(__stream, __fmt.get(), std::make_format_args(__args...), false);
-    else
-      __print::__vprint_unicode(__stream, __fmt.get(), std::make_format_args(__args...), false);
-  } else {
-    if constexpr (__locksafe)
-      __print::__vprint_nonunicode_buffered(__stream, __fmt.get(), std::make_format_args(__args...), false);
-    else
-      __print::__vprint_nonunicode(__stream, __fmt.get(), std::make_format_args(__args...), false);
-  }
+  using enum __print::__lock_policy;
+  if constexpr (__use_unicode)
+    __print::__vprint_unicode<__locksafe ? __manual : __stdio>(
+        __stream, __fmt.get(), std::make_format_args(__args...), false);
+  else
+    __print::__vprint_nonunicode<__locksafe ? __manual : __stdio>(
+        __stream, __fmt.get(), std::make_format_args(__args...), false);
 }
 
 template <class... _Args>
@@ -586,17 +538,13 @@ _LIBCPP_HIDE_FROM_ABI void println(FILE* __stream, format_string<_Args...> __fmt
   // Note the wording in the Standard is inefficient. The output of
   // std::format is a std::string which is then copied. This solution
   // just appends a newline at the end of the output.
-  if constexpr (__use_unicode) {
-    if constexpr (__locksafe)
-      __print::__vprint_unicode_buffered(__stream, __fmt.get(), std::make_format_args(__args...), true);
-    else
-      __print::__vprint_unicode(__stream, __fmt.get(), std::make_format_args(__args...), true);
-  } else {
-    if constexpr (__locksafe)
-      __print::__vprint_nonunicode_buffered(__stream, __fmt.get(), std::make_format_args(__args...), true);
-    else
-      __print::__vprint_nonunicode(__stream, __fmt.get(), std::make_format_args(__args...), true);
-  }
+  using enum __print::__lock_policy;
+  if constexpr (__use_unicode)
+    __print::__vprint_unicode<__locksafe ? __manual : __stdio>(
+        __stream, __fmt.get(), std::make_format_args(__args...), true);
+  else
+    __print::__vprint_nonunicode<__locksafe ? __manual : __stdio>(
+        __stream, __fmt.get(), std::make_format_args(__args...), true);
 }
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
@@ -617,12 +565,12 @@ _LIBCPP_HIDE_FROM_ABI void println(format_string<_Args...> __fmt, _Args&&... __a
 #    if _LIBCPP_HAS_UNICODE
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(FILE* __stream, string_view __fmt, format_args __args) {
-  __print::__vprint_unicode(__stream, __fmt, __args, false);
+  __print::__vprint_unicode<__print::__lock_policy::__stdio>(__stream, __fmt, __args, false);
 }
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void vprint_unicode_buffered(FILE* __stream, string_view __fmt, format_args __args) {
-  __print::__vprint_unicode_buffered(__stream, __fmt, __args, false);
+  __print::__vprint_unicode<__print::__lock_policy::__manual>(__stream, __fmt, __args, false);
 }
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
@@ -634,7 +582,12 @@ _LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(string_view __fmt, format_args 
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
 _LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(FILE* __stream, string_view __fmt, format_args __args) {
-  __print::__vprint_nonunicode(__stream, __fmt, __args, false);
+  __print::__vprint_nonunicode< __print::__lock_policy::__stdio >(__stream, __fmt, __args, false);
+}
+
+template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
+_LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode_buffered(FILE* __stream, string_view __fmt, format_args __args) {
+  __print::__vprint_nonunicode<__print::__lock_policy::__manual>(__stream, __fmt, __args, false);
 }
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
