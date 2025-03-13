@@ -42,8 +42,6 @@ public:
     llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
     Attach(lldb::pid_t pid, NativeDelegate &native_delegate) override;
 
-    Extension GetSupportedExtensions() const override;
-
     void AddProcess(NativeProcessAIX &process) { m_processes.insert(&process); }
 
     void RemoveProcess(NativeProcessAIX &process) {
@@ -57,6 +55,9 @@ public:
     MainLoop::SignalHandleUP m_sigchld_handle;
 
     llvm::SmallPtrSet<NativeProcessAIX *, 2> m_processes;
+
+    // Threads (events) which haven't been claimed by any process.
+    llvm::DenseSet<::pid_t> m_unowned_threads;
 
     void SigchldHandler();
   };
@@ -112,10 +113,6 @@ public:
 
   bool SupportHardwareSingleStepping() const;
 
-  /// Writes a siginfo_t structure corresponding to the given thread ID to the
-  /// memory region pointed to by \p siginfo.
-  Status GetSignalInfo(lldb::tid_t tid, void *siginfo) const;
-
 private:
   Manager &m_manager;
   ArchSpec m_arch;
@@ -124,6 +121,8 @@ private:
   NativeProcessAIX(::pid_t pid, int terminal_fd, NativeDelegate &delegate,
                    const ArchSpec &arch, Manager &manager,
                    llvm::ArrayRef<::pid_t> tids);
+
+  bool TryHandleWaitStatus(lldb::pid_t pid, WaitStatus status);
 
   // Returns a list of process threads that we have attached to.
   static llvm::Expected<std::vector<::pid_t>> Attach(::pid_t pid);

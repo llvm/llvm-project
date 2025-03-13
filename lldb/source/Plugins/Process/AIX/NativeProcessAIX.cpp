@@ -1,4 +1,4 @@
-//===-- NativeProcessAIX.cpp --------------------------------------------===//
+//===-- NativeProcessAIX.cpp ----------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -37,7 +37,7 @@ static_assert(sizeof(long) >= k_ptrace_word_size,
 
 // Simple helper function to ensure flags are enabled on the given file
 // descriptor.
-static llvm::Error EnsureFDFlags(int fd, int flags) {
+static llvm::Error SetFDFlags(int fd, int flags) {
   int status = fcntl(fd, F_GETFL);
   if (status == -1)
     return errorCodeToError(errnoAsErrorCode());
@@ -122,16 +122,84 @@ lldb::addr_t NativeProcessAIX::GetSharedLibraryInfoAddress() {
   return LLDB_INVALID_ADDRESS;
 }
 
-NativeProcessAIX::Extension
-NativeProcessAIX::Manager::GetSupportedExtensions() const {
-  NativeProcessAIX::Extension supported = {};
+static std::optional<std::pair<lldb::pid_t, WaitStatus>> WaitPid() {
+  Log *log = GetLog(POSIXLog::Process);
 
-  return supported;
+  int status;
+  ::pid_t wait_pid =
+      llvm::sys::RetryAfterSignal(-1, ::waitpid, -1, &status, WNOHANG);
+
+  if (wait_pid == 0)
+    return std::nullopt;
+
+  if (wait_pid == -1) {
+    Status error(errno, eErrorTypePOSIX);
+    LLDB_LOG(log, "waitpid(-1, &status, _) failed: {0}", error);
+    return std::nullopt;
+  }
+
+  WaitStatus wait_status = WaitStatus::Decode(status);
+
+  LLDB_LOG(log, "waitpid(-1, &status, _) = {0}, status = {1}", wait_pid,
+           wait_status);
+  return std::make_pair(wait_pid, wait_status);
 }
 
-void NativeProcessAIX::Manager::SigchldHandler() {}
+void NativeProcessAIX::Manager::SigchldHandler() {
+  Log *log = GetLog(POSIXLog::Process);
+  while (true) {
+    auto wait_result = WaitPid();
+    if (!wait_result)
+      return;
+    lldb::pid_t pid = wait_result->first;
+    WaitStatus status = wait_result->second;
 
-void NativeProcessAIX::Manager::CollectThread(::pid_t tid) {}
+    // Ask each process whether it wants to handle the event. Each event should
+    // be handled by exactly one process, but thread creation events require
+    // special handling.
+    // Thread creation consists of two events (one on the parent and one on the
+    // child thread) and they can arrive in any order nondeterministically. The
+    // parent event carries the information about the child thread, but not
+    // vice-versa. This means that if the child event arrives first, it may not
+    // be handled by any process (because it doesn't know the thread belongs to
+    // it).
+    bool handled = llvm::any_of(m_processes, [&](NativeProcessAIX *process) {
+      return process->TryHandleWaitStatus(pid, status);
+    });
+    if (!handled) {
+      if (status.type == WaitStatus::Stop && status.status == SIGSTOP) {
+        // Store the thread creation event for later collection.
+        m_unowned_threads.insert(pid);
+      } else {
+        LLDB_LOG(log, "Ignoring waitpid event {0} for pid {1}", status, pid);
+      }
+    }
+  }
+}
+
+void NativeProcessAIX::Manager::CollectThread(::pid_t tid) {
+  Log *log = GetLog(POSIXLog::Process);
+
+  if (m_unowned_threads.erase(tid))
+    return; // We've encountered this thread already.
+
+  // The TID is not tracked yet, let's wait for it to appear.
+  int status = -1;
+  LLDB_LOG(log,
+           "received clone event for tid {0}. tid not tracked yet, "
+           "waiting for it to appear...",
+           tid);
+  ::pid_t wait_pid =
+      llvm::sys::RetryAfterSignal(-1, ::waitpid, tid, &status, P_ALL);
+
+  // It's theoretically possible to get other events if the entire process was
+  // SIGKILLed before we got a chance to check this. In that case, we'll just
+  // clean everything up when we get the process exit event.
+
+  LLDB_LOG(log,
+           "waitpid({0}, &status, __WALL) => {1} (errno: {2}, status = {3})",
+           tid, wait_pid, errno, WaitStatus::Decode(status));
+}
 
 // Public Instance Methods
 
@@ -143,7 +211,7 @@ NativeProcessAIX::NativeProcessAIX(::pid_t pid, int terminal_fd,
       m_arch(arch) {
   manager.AddProcess(*this);
   if (m_terminal_fd != -1)
-    cantFail(EnsureFDFlags(m_terminal_fd, O_NONBLOCK));
+    cantFail(SetFDFlags(m_terminal_fd, O_NONBLOCK));
 
   // Let our process instance know the thread has stopped.
   SetCurrentThreadID(tids[0]);
@@ -157,38 +225,47 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
     return errorCodeToError(errnoAsErrorCode());
 
   int wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, nullptr, WNOHANG);
-  if (wpid <= 0) {
+  if (wpid <= 0)
     return llvm::errorCodeToError(errnoAsErrorCode());
-  }
   LLDB_LOG(log, "adding pid = {0}", pid);
 
   return std::vector<::pid_t>{pid};
 }
 
+bool NativeProcessAIX::TryHandleWaitStatus(lldb::pid_t pid, WaitStatus status) {
+  if (pid == GetID() &&
+      (status.type == WaitStatus::Exit || status.type == WaitStatus::Signal)) {
+    // The process exited.  We're done monitoring.  Report to delegate.
+    SetExitStatus(status, true);
+    return true;
+  }
+  return false;
+}
+
 bool NativeProcessAIX::SupportHardwareSingleStepping() const { return false; }
 
 Status NativeProcessAIX::Resume(const ResumeActionList &resume_actions) {
-  return Status();
+  return Status("unsupported");
 }
 
-Status NativeProcessAIX::Halt() { return Status(); }
+Status NativeProcessAIX::Halt() { return Status("unsupported"); }
 
-Status NativeProcessAIX::Detach() { return Status(); }
+Status NativeProcessAIX::Detach() { return Status("unsupported"); }
 
-Status NativeProcessAIX::Signal(int signo) { return Status(); }
+Status NativeProcessAIX::Signal(int signo) { return Status("unsupported"); }
 
-Status NativeProcessAIX::Interrupt() { return Status(); }
+Status NativeProcessAIX::Interrupt() { return Status("unsupported"); }
 
-Status NativeProcessAIX::Kill() { return Status(); }
+Status NativeProcessAIX::Kill() { return Status("unsupported"); }
 
 Status NativeProcessAIX::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                                     size_t &bytes_read) {
-  return Status();
+  return Status("unsupported");
 }
 
 Status NativeProcessAIX::WriteMemory(lldb::addr_t addr, const void *buf,
                                      size_t size, size_t &bytes_written) {
-  return Status();
+  return Status("unsupported");
 }
 
 size_t NativeProcessAIX::UpdateThreads() {
@@ -200,7 +277,7 @@ size_t NativeProcessAIX::UpdateThreads() {
 
 Status NativeProcessAIX::GetLoadedModuleFileSpec(const char *module_path,
                                                  FileSpec &file_spec) {
-  return Status();
+  return Status("unsupported");
 }
 
 Status NativeProcessAIX::SetBreakpoint(lldb::addr_t addr, uint32_t size,
@@ -214,10 +291,6 @@ Status NativeProcessAIX::RemoveBreakpoint(lldb::addr_t addr, bool hardware) {
   if (hardware)
     return RemoveHardwareBreakpoint(addr);
   return NativeProcessProtocol::RemoveBreakpoint(addr);
-}
-
-Status NativeProcessAIX::GetSignalInfo(lldb::tid_t tid, void *siginfo) const {
-  return Status();
 }
 
 llvm::Error NativeProcessAIX::Detach(lldb::tid_t tid) {
