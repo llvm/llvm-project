@@ -411,9 +411,11 @@ This structure serves as a contract between the application and the GPU,
 establishing a layout for resource binding that both the shader compiler and 
 the runtime can understand.
 
-The Root Signature consists of a header followed by a collection of root parameters 
-and static samplers. The structure uses a versioned design with offset-based references 
-to allow for flexible serialization and deserialization.
+The Root Signature consists of a header followed by an array of root parameters 
+and an array of static samplers. The structure uses a versioned design with 
+offset-based references to allow for flexible serialization and deserialization. 
+One consequence of using an offset-based reference is that root parameters and 
+static samplers don't need to follow any specific ordering logic.
 
 Root Signature Header
 ~~~~~~~~~~~~~~~~~~~~~
@@ -445,8 +447,17 @@ The `RootSignatureHeader` structure contains the top-level information about a r
 This header allows readers to navigate the binary representation of the root signature by 
 providing counts and offsets to locate each component within the serialized data.
 
+Root Parameters
+~~~~~~~~~~~~~~~
+
+Root signatures parameters are split into a header section containing the parameter type, 
+shader visibility and its offset, and a data section. The parameters don't need to follow 
+any specific order. Root parameters define the interface elements that shaders can access. 
+Each parameter can be one of several types, including descriptor tables, constants, or 
+descriptors for different resource types.
+
 Root Parameter Header
-~~~~~~~~~~~~~~~~~~~~~
+'''''''''''''''''''''
 
 .. code-block:: c
 
@@ -470,17 +481,14 @@ the parameter's basic attributes:
 The header uses a parameter type field rather than encoding the version of the parameter through 
 size, allowing for a more explicit representation of the parameter's nature.
 
-Root Parameters
-~~~~~~~~~~~~~~~
-
-The Root Parameters section contains structured definitions for each type of root parameter that can 
-be included in a root signature. Each structure corresponds to a specific parameter type as identified 
-by the ``ParameterType`` field in the ``RootParameterHeader``.
+Root Parameter Types
+''''''''''''''''''''
+This section describes the representation of each root parameter type.
 
 Root Constants
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 
-.. code-block:: cpp
+.. code-block:: c
 
   struct RootConstants {
     uint32_t ShaderRegister;
@@ -499,12 +507,12 @@ Root constants provide a fast way to pass small amounts of data directly to the 
 overhead of creating and binding a constant buffer resource.
 
 Root Descriptor
-~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^
 
 Root descriptors provide a mechanism for binding individual resources to shader stages in the Direct3D 12 
 rendering pipeline. They allow applications to specify how shader stages access specific GPU resources.
 
-.. code-block:: cpp
+.. code-block:: c
 
    enum RootDescriptorFlags {
       None = 0,
@@ -532,25 +540,24 @@ performing further code optimizations. For details, check
 `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signature-version-1-1#static-and-volatile-flags>`_.
 
 Version 1.0 Root Descriptor
-'''''''''''''''''''''''''''
+"""""""""""""""""""""""""""
 The Version 1.0 RootDescriptor_V1_0 provides basic resource binding:
 
 #. **ShaderRegister**: The shader register where the descriptor is bound.
 #. **RegisterSpace**: The register space used for the binding.
 
 Version 1.1 Root Descriptor
-'''''''''''''''''''''''''''
+"""""""""""""""""""""""""""
 The Version 1.1 RootDescriptor_V1_1 extends the base structure with the following additional fields:
 
 #. **Flags**: Provides additional metadata about the descriptor's usage pattern.
 
 Root Descriptor Table
-~~~~~~~~~~~~~~~~~~~~~
-
+^^^^^^^^^^^^^^^^^^^^^
 Descriptor tables function as containers that hold references to descriptors in descriptor heaps. 
 They allow multiple descriptors to be bound to the pipeline through a single root signature parameter.
 
-.. code-block:: cpp
+.. code-block:: c
 
    struct DescriptorRange_V1_0 {
       dxbc::DescriptorRangeType RangeType;
@@ -588,7 +595,7 @@ They allow multiple descriptors to be bound to the pipeline through a single roo
 
 
 Descriptor Range Version 1.0
-''''''''''''''''''''''''''''
+""""""""""""""""""""""""""""
 The Version 1.0 ``DescriptorRange_V1_0`` provides basic descriptor range definition:
 
 #. **RangeType**: Type of descriptors (CBV, SRV, UAV, or Sampler)
@@ -598,14 +605,14 @@ The Version 1.0 ``DescriptorRange_V1_0`` provides basic descriptor range definit
 #. **OffsetInDescriptorsFromTableStart**: Offset from the descriptor heap start
 
 Descriptor Range Version 1.1
-''''''''''''''''''''''''''''
+""""""""""""""""""""""""""""
 The Version 1.1 DescriptorRange_V1_1 extends the base structure with performance optimization flags.
 
 #. **Flags**: Provide additional information about the descriptors and enable further driver optimizations.
    For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signature-version-1-1#static-and-volatile-flags>`_.
 
-Root Descriptor Table
-'''''''''''''''''''''
+Root Descriptor Table Structure
+"""""""""""""""""""""""""""""""
 RootDescriptorTable provides basic table structure:
 
 #. **NumDescriptorRanges**: Number of descriptor ranges
@@ -616,7 +623,7 @@ Static Samplers
 
 Static samplers provide a way to define fixed sampler states within the root signature itself.
 
-.. code-block:: cpp
+.. code-block:: c
 
    struct StaticSamplerDesc {
       FilterMode Filter;
@@ -637,21 +644,21 @@ Static samplers provide a way to define fixed sampler states within the root sig
 
 The StaticSamplerDesc structure defines all properties of a static sampler:
 
-#. Filter: The filtering mode (e.g., point, linear, anisotropic) used for texture sampling. 
+#. **Filter**: The filtering mode (e.g., point, linear, anisotropic) used for texture sampling. 
    For details, check `Static Sampler Fileters definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_filter#syntax>`_. 
-#. AddressU: The addressing mode for the U texture coordinate.
+#. **AddressU**: The addressing mode for the U texture coordinate.
    For details, check `Texture address mode definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_texture_address_mode>`_. 
-#. AddressV: The addressing mode for the V texture coordinate.
-#. AddressW: The addressing mode for the W texture coordinate.
-#. MipLODBias: Bias value applied to mipmap level of detail calculations.
-#. MaxAnisotropy: Maximum anisotropy level when using anisotropic filtering.
-#. ComparisonFunc: Comparison function used for comparison samplers.
+#. **AddressV**: The addressing mode for the V texture coordinate.
+#. **AddressW**: The addressing mode for the W texture coordinate.
+#. **MipLODBias**: Bias value applied to mipmap level of detail calculations.
+#. **MaxAnisotropy**: Maximum anisotropy level when using anisotropic filtering.
+#. **ComparisonFunc**: Comparison function used for comparison samplers.
    For details, check `Comparison Function definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_comparison_func>`_. 
-#. BorderColor: Predefined border color used when address mode is set to border.
+#. **BorderColor**: Predefined border color used when address mode is set to border.
    For details, check `Static border color <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_static_border_color>`_. 
-#. MinLOD: Minimum level of detail to use for sampling.
-#. MaxLOD: Maximum level of detail to use for sampling.
-#. ShaderRegister: The shader sampler register (s#) where this sampler is bound.
-#. RegisterSpace: The register space used for the binding.
-#. ShaderVisibility: Specifies which shader stages can access this sampler.
-   For details, check `Sahder Visibility definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shader_visibility>`_. 
+#. **MinLOD**: Minimum level of detail to use for sampling.
+#. **MaxLOD**: Maximum level of detail to use for sampling.
+#. **ShaderRegister**: The shader sampler register (s#) where this sampler is bound.
+#. **RegisterSpace**: The register space used for the binding.
+#. **ShaderVisibility**: Specifies which shader stages can access this sampler.
+   For details, check `Shader Visibility definition. <https://learn.microsoft.com/en-us/windows/win32/api/d3d12/ne-d3d12-d3d12_shader_visibility>`_.
