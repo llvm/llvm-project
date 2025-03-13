@@ -1514,8 +1514,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
     if (MIA) {
       if (Disassembled) {
         uint64_t Target;
-        bool TargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
-        if (TargetKnown && (Target >= Start && Target < End) &&
+        bool BranchTargetKnown = MIA->evaluateBranch(Inst, Index, Size, Target);
+        if (BranchTargetKnown && (Target >= Start && Target < End) &&
             !Labels.count(Target)) {
           // On PowerPC and AIX, a function call is encoded as a branch to 0.
           // On other PowerPC platforms (ELF), a function call is encoded as
@@ -2325,8 +2325,9 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
             llvm::raw_ostream *TargetOS = &FOS;
             uint64_t Target;
             bool PrintTarget = DT->InstrAnalysis->evaluateBranch(
-                Inst, SectionAddr + Index, Size, Target);
-
+                                   Inst, SectionAddr + Index, Size, Target) ||
+                               DT->InstrAnalysis->evaluateInstruction(
+                                   Inst, SectionAddr + Index, Size, Target);
             if (!PrintTarget) {
               if (std::optional<uint64_t> MaybeTarget =
                       DT->InstrAnalysis->evaluateMemoryOperandAddress(
@@ -2361,14 +2362,20 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                     [=](const std::pair<uint64_t, SectionRef> &O) {
                       return O.first <= Target;
                     });
-                uint64_t TargetSecAddr = 0;
+                uint64_t TargetSecAddr = It == SectionAddresses.end() ? 0 : It->first;
+                bool FoundSymbols = false;
                 while (It != SectionAddresses.begin()) {
                   --It;
-                  if (TargetSecAddr == 0)
-                    TargetSecAddr = It->first;
-                  if (It->first != TargetSecAddr)
-                    break;
+                  if (It->first != TargetSecAddr) {
+                    if (!FoundSymbols) {
+                      TargetSecAddr = It->first;
+                    } else {
+                      break;
+                    }
+                  }
                   TargetSectionSymbols.push_back(&AllSymbols[It->second]);
+                  if (!AllSymbols[It->second].empty())
+                    FoundSymbols = true;
                 }
               } else {
                 TargetSectionSymbols.push_back(&Symbols);
@@ -2399,7 +2406,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
                   break;
               }
 
-              // Branch targets are printed just after the instructions.
+              // Branch and instruction targets are printed just after the instructions.
               // Print the labels corresponding to the target if there's any.
               bool BBAddrMapLabelAvailable = BBAddrMapLabels.count(Target);
               bool LabelAvailable = AllLabels.count(Target);
