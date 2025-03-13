@@ -1471,13 +1471,9 @@ simplifySVEIntrinsic(InstCombiner &IC, IntrinsicInst &II,
           II, II.getOperand(IInfo.getOperandIdxInactiveLanesTakenFrom()));
 
     if (IInfo.inactiveLanesAreUnused()) {
-      if (IInfo.resultIsZeroInitialized()) {
+      if (IInfo.resultIsZeroInitialized())
         IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
-        // Ensure intrinsics with side effects (e.g. ld1ff) are removed.
-        return IC.eraseInstFromFunction(II);
-      }
 
-      assert(II.getType()->isVoidTy() && "Unexpected result type!");
       return IC.eraseInstFromFunction(II);
     }
   }
