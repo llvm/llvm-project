@@ -222,26 +222,15 @@ public:
              StringRef GroupDescription) {
     sys::SmartScopedLock<true> L(timerLock());
 
-    std::pair<TimerGroup *, Name2TimerMap> &GroupEntry =
-        getGroupEntry(GroupName, GroupDescription);
+    std::pair<TimerGroup*, Name2TimerMap> &GroupEntry = Map[GroupName];
+
+    if (!GroupEntry.first)
+      GroupEntry.first = new TimerGroup(GroupName, GroupDescription);
+
     Timer &T = GroupEntry.second[Name];
     if (!T.isInitialized())
       T.init(Name, Description, *GroupEntry.first);
     return T;
-  }
-
-  TimerGroup &getTimerGroup(StringRef GroupName, StringRef GroupDescription) {
-    return *getGroupEntry(GroupName, GroupDescription).first;
-  }
-
-private:
-  std::pair<TimerGroup *, Name2TimerMap> &
-  getGroupEntry(StringRef GroupName, StringRef GroupDescription) {
-    std::pair<TimerGroup *, Name2TimerMap> &GroupEntry = Map[GroupName];
-    if (!GroupEntry.first)
-      GroupEntry.first = new TimerGroup(GroupName, GroupDescription);
-
-    return GroupEntry;
   }
 };
 
@@ -254,11 +243,6 @@ NamedRegionTimer::NamedRegionTimer(StringRef Name, StringRef Description,
                      ? nullptr
                      : &namedGroupedTimers().get(Name, Description, GroupName,
                                                  GroupDescription)) {}
-
-TimerGroup &NamedRegionTimer::getNamedTimerGroup(StringRef GroupName,
-                                                 StringRef GroupDescription) {
-  return namedGroupedTimers().getTimerGroup(GroupName, GroupDescription);
-}
 
 //===----------------------------------------------------------------------===//
 //   TimerGroup Implementation

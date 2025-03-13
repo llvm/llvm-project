@@ -169,11 +169,6 @@ struct NamedRegionTimer : public TimeRegion {
   explicit NamedRegionTimer(StringRef Name, StringRef Description,
                             StringRef GroupName,
                             StringRef GroupDescription, bool Enabled = true);
-
-  // Create or get a TimerGroup stored in the same global map owned by
-  // NamedRegionTimer.
-  static TimerGroup &getNamedTimerGroup(StringRef GroupName,
-                                        StringRef GroupDescription);
 };
 
 /// The TimerGroup class is used to group together related timers into a single
