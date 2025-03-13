@@ -706,7 +706,7 @@ void LogUnimplementedTypeKind(const char *function, CompilerType type) {
   HEALTH_LOG("{0}: unimplemented type info in {1}", type.GetMangledTypeName(),
              function);
 #ifndef NDEBUG
-  llvm::dbgs() << function << ": unimplemented type info in"
+  llvm::dbgs() << function << ": unimplemented type info in "
                << type.GetMangledTypeName() << "\n";
   if (ModuleList::GetGlobalModuleListProperties().GetSwiftValidateTypeSystem())
     assert(false && "not implemented");
