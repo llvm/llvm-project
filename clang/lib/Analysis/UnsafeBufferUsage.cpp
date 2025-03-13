@@ -27,6 +27,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
+#include <cstddef>
 #include <optional>
 #include <queue>
 #include <set>
@@ -83,7 +84,10 @@ static std::string getDREAncestorString(const DeclRefExpr *DRE,
 #endif /* NDEBUG */
 
 namespace {
-// Using a custom matcher instead of ASTMatchers to achieve better performance.
+// Using a custom `FastMatcher` instead of ASTMatchers to achieve better
+// performance. FastMatcher uses simple function `matches` to find if a node
+// is a match, avoiding the dependency on the ASTMatchers framework which
+// provide a nice abstraction, but incur big performance costs.
 class FastMatcher {
 public:
   virtual bool matches(const DynTypedNode &DynNode, ASTContext &Ctx,
@@ -116,11 +120,12 @@ public:
   // Creates an AST visitor that matches `Matcher` on all
   // descendants of a given node "n" except for the ones
   // belonging to a different callable of "n".
-  MatchDescendantVisitor(FastMatcher &Matcher, bool FindAll,
-                         const bool ignoreUnevaluatedContext)
+  MatchDescendantVisitor(ASTContext &Context, FastMatcher &Matcher,
+                         bool FindAll, bool ignoreUnevaluatedContext,
+                         const UnsafeBufferUsageHandler &NewHandler)
       : Matcher(&Matcher), FindAll(FindAll), Matches(false),
         ignoreUnevaluatedContext(ignoreUnevaluatedContext),
-        ActiveASTContext(nullptr), Handler(nullptr) {
+        ActiveASTContext(&Context), Handler(&NewHandler) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false; // TODO: let's ignore implicit code for now
   }
@@ -212,12 +217,6 @@ public:
     return DynamicRecursiveASTVisitor::TraverseStmt(Node);
   }
 
-  void setASTContext(ASTContext &Context) { ActiveASTContext = &Context; }
-
-  void setHandler(const UnsafeBufferUsageHandler &NewHandler) {
-    Handler = &NewHandler;
-  }
-
 private:
   // Sets 'Matched' to true if 'Matcher' matches 'Node'
   //
@@ -255,20 +254,16 @@ static void
 forEachDescendantEvaluatedStmt(const Stmt *S, ASTContext &Ctx,
                                const UnsafeBufferUsageHandler &Handler,
                                FastMatcher &Matcher) {
-  MatchDescendantVisitor Visitor(Matcher, /*FindAll=*/true,
-                                 /*ignoreUnevaluatedContext=*/true);
-  Visitor.setASTContext(Ctx);
-  Visitor.setHandler(Handler);
+  MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
+                                 /*ignoreUnevaluatedContext=*/true, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
 
 static void forEachDescendantStmt(const Stmt *S, ASTContext &Ctx,
                                   const UnsafeBufferUsageHandler &Handler,
                                   FastMatcher &Matcher) {
-  MatchDescendantVisitor Visitor(Matcher, /*FindAll=*/true,
-                                 /*ignoreUnevaluatedContext=*/false);
-  Visitor.setASTContext(Ctx);
-  Visitor.setHandler(Handler);
+  MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
+                                 /*ignoreUnevaluatedContext=*/false, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
 
@@ -916,7 +911,7 @@ static bool isNormalPrintfFunc(const FunctionDecl &Node) {
 // least one string argument is unsafe. If the format is not a string literal,
 // this matcher matches when at least one pointer type argument is unsafe.
 static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
-                                     MatchResult &Result, llvm::StringRef Op) {
+                                     MatchResult &Result, llvm::StringRef Tag) {
   // Determine what printf it is by examining formal parameters:
   const FunctionDecl *FD = Node.getDirectCallee();
 
@@ -941,7 +936,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
     const Expr *UnsafeArg;
 
     if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 1, Ctx, false)) {
-      Result.addNode(Op, DynTypedNode::create(*UnsafeArg));
+      Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
       return true;
     }
     return false;
@@ -955,7 +950,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
     if (auto *II = FD->getIdentifier())
       isKprintf = II->getName() == "kprintf";
     if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 0, Ctx, isKprintf)) {
-      Result.addNode(Op, DynTypedNode::create(*UnsafeArg));
+      Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
       return true;
     }
     return false;
@@ -970,7 +965,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
       const Expr *UnsafeArg;
 
       if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 2, Ctx, false)) {
-        Result.addNode(Op, DynTypedNode::create(*UnsafeArg));
+        Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
         return true;
       }
       return false;
@@ -980,7 +975,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
   // can do is to require all pointers to be null-terminated:
   for (const auto *Arg : Node.arguments())
     if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
-      Result.addNode(Op, DynTypedNode::create(*Arg));
+      Result.addNode(Tag, DynTypedNode::create(*Arg));
       return true;
     }
   return false;
@@ -1292,11 +1287,10 @@ public:
     const auto *const Base = ASE->getBase()->IgnoreParenImpCasts();
     if (!hasPointerType(*Base) && !hasArrayType(*Base))
       return false;
-    bool IsSafeIndex =
-        (isa<IntegerLiteral>(ASE->getIdx()) &&
-         cast<IntegerLiteral>(ASE->getIdx())->getValue().isZero()) ||
-        isa<ArrayInitIndexExpr>(ASE->getIdx());
-    if (isSafeArraySubscript(*ASE, Ctx) || IsSafeIndex)
+    const auto *Idx = dyn_cast<IntegerLiteral>(ASE->getIdx());
+    bool IsSafeIndex = (Idx && Idx->getValue().isZero()) ||
+                       isa<ArrayInitIndexExpr>(ASE->getIdx());
+    if (IsSafeIndex || isSafeArraySubscript(*ASE, Ctx))
       return false;
     Result.addNode(ArraySubscrTag, DynTypedNode::create(*ASE));
     return true;
@@ -1523,8 +1517,8 @@ public:
 
   static bool matches(const Stmt *S,
                       llvm::SmallVectorImpl<MatchResult> &Results) {
-    bool Found = false;
-    findStmtsInUnspecifiedUntypedContext(S, [&Found, &Results](const Stmt *S) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedUntypedContext(S, [&Results](const Stmt *S) {
       const auto *BO = dyn_cast<BinaryOperator>(S);
       if (!BO || BO->getOpcode() != BO_Assign)
         return;
@@ -1544,9 +1538,8 @@ public:
       R.addNode(PointerAssignLHSTag, DynTypedNode::create(*LHS));
       R.addNode(PointerAssignRHSTag, DynTypedNode::create(*RHS));
       Results.emplace_back(std::move(R));
-      Found = true;
     });
-    return Found;
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -1588,8 +1581,8 @@ public:
 
   static bool matches(const Stmt *S,
                       llvm::SmallVectorImpl<MatchResult> &Results) {
-    bool Found = false;
-    findStmtsInUnspecifiedUntypedContext(S, [&Found, &Results](const Stmt *S) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedUntypedContext(S, [&Results](const Stmt *S) {
       const auto *BO = dyn_cast<BinaryOperator>(S);
       if (!BO || BO->getOpcode() != BO_Assign)
         return;
@@ -1610,9 +1603,8 @@ public:
       R.addNode(PointerAssignLHSTag, DynTypedNode::create(*LHS));
       R.addNode(PointerAssignRHSTag, DynTypedNode::create(*RHS));
       Results.emplace_back(std::move(R));
-      Found = true;
     });
-    return Found;
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -1904,8 +1896,8 @@ public:
 
   static bool matches(const Stmt *S,
                       llvm::SmallVectorImpl<MatchResult> &Results) {
-    bool Found = false;
-    findStmtsInUnspecifiedLvalueContext(S, [&Found, &Results](const Expr *E) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedLvalueContext(S, [&Results](const Expr *E) {
       const auto *ASE = dyn_cast<ArraySubscriptExpr>(E);
       if (!ASE)
         return;
@@ -1917,9 +1909,8 @@ public:
       MatchResult R;
       R.addNode(ULCArraySubscriptTag, DynTypedNode::create(*ASE));
       Results.emplace_back(std::move(R));
-      Found = true;
     });
-    return Found;
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -1956,8 +1947,8 @@ public:
 
   static bool matches(const Stmt *S,
                       llvm::SmallVectorImpl<MatchResult> &Results) {
-    bool Found = false;
-    findStmtsInUnspecifiedPointerContext(S, [&Found, &Results](const Stmt *S) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedPointerContext(S, [&Results](const Stmt *S) {
       auto *E = dyn_cast<Expr>(S);
       if (!E)
         return;
@@ -1968,9 +1959,8 @@ public:
       MatchResult R;
       R.addNode(DeclRefExprTag, DynTypedNode::create(*DRE));
       Results.emplace_back(std::move(R));
-      Found = true;
     });
-    return Found;
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -1999,8 +1989,8 @@ public:
 
   static bool matches(const Stmt *S,
                       llvm::SmallVectorImpl<MatchResult> &Results) {
-    bool Found = false;
-    findStmtsInUnspecifiedLvalueContext(S, [&Found, &Results](const Stmt *S) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedLvalueContext(S, [&Results](const Stmt *S) {
       const auto *UO = dyn_cast<UnaryOperator>(S);
       if (!UO || UO->getOpcode() != UO_Deref)
         return;
@@ -2015,9 +2005,8 @@ public:
       R.addNode(BaseDeclRefExprTag, DynTypedNode::create(*DRE));
       R.addNode(OperatorTag, DynTypedNode::create(*UO));
       Results.emplace_back(std::move(R));
-      Found = true;
     });
-    return Found;
+    return SizeBefore != Results.size();
   }
 
   DeclUseList getClaimedVarUseSites() const override {
@@ -2051,8 +2040,8 @@ public:
 
   static bool matches(const Stmt *S,
                       llvm::SmallVectorImpl<MatchResult> &Results) {
-    bool Found = false;
-    findStmtsInUnspecifiedPointerContext(S, [&Found, &Results](const Stmt *S) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedPointerContext(S, [&Results](const Stmt *S) {
       auto *E = dyn_cast<Expr>(S);
       if (!E)
         return;
@@ -2069,9 +2058,8 @@ public:
       MatchResult R;
       R.addNode(UPCAddressofArraySubscriptTag, DynTypedNode::create(*UO));
       Results.emplace_back(std::move(R));
-      Found = true;
     });
-    return Found;
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -2178,8 +2166,8 @@ public:
     // Although currently we can only provide fix-its when `Ptr` is a DRE, we
     // can have the matcher be general, so long as `getClaimedVarUseSites` does
     // things right.
-    bool Found = false;
-    findStmtsInUnspecifiedPointerContext(S, [&Found, &Results](const Stmt *S) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedPointerContext(S, [&Results](const Stmt *S) {
       auto *E = dyn_cast<Expr>(S);
       if (!E)
         return;
@@ -2192,9 +2180,8 @@ public:
       MatchResult R;
       R.addNode(UPCPreIncrementTag, DynTypedNode::create(*UO));
       Results.emplace_back(std::move(R));
-      Found = true;
     });
-    return Found;
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -2231,8 +2218,8 @@ public:
 
   static bool matches(const Stmt *S,
                       llvm::SmallVectorImpl<MatchResult> &Results) {
-    bool Found = false;
-    findStmtsInUnspecifiedUntypedContext(S, [&Found, &Results](const Stmt *S) {
+    size_t SizeBefore = Results.size();
+    findStmtsInUnspecifiedUntypedContext(S, [&Results](const Stmt *S) {
       const auto *E = dyn_cast<Expr>(S);
       if (!E)
         return;
@@ -2246,9 +2233,8 @@ public:
       R.addNode(UUCAddAssignTag, DynTypedNode::create(*BO));
       R.addNode(OffsetTag, DynTypedNode::create(*BO->getRHS()));
       Results.emplace_back(std::move(R));
-      Found = true;
     });
-    return Found;
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
@@ -2283,7 +2269,6 @@ public:
 
   static bool matches(const Stmt *S,
                       llvm::SmallVectorImpl<MatchResult> &Results) {
-    bool Found = false;
     auto IsPtr = [](const Expr *E, MatchResult &R) {
       if (!E || !hasPointerType(*E))
         return false;
@@ -2313,7 +2298,8 @@ public:
       }
       return false;
     };
-    const auto InnerMatcher = [&IsPlusOverPtrAndInteger, &Found,
+    size_t SizeBefore = Results.size();
+    const auto InnerMatcher = [&IsPlusOverPtrAndInteger,
                                &Results](const Expr *E) {
       const auto *UO = dyn_cast<UnaryOperator>(E);
       if (!UO || UO->getOpcode() != UO_Deref)
@@ -2324,11 +2310,10 @@ public:
       if (IsPlusOverPtrAndInteger(Operand, R)) {
         R.addNode(DerefOpTag, DynTypedNode::create(*UO));
         Results.emplace_back(std::move(R));
-        Found = true;
       }
     };
     findStmtsInUnspecifiedLvalueContext(S, InnerMatcher);
-    return Found;
+    return SizeBefore != Results.size();
   }
 
   virtual std::optional<FixItList>
