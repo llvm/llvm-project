@@ -501,7 +501,7 @@ define amdgpu_kernel void @test_class_0_f64(ptr addrspace(1) %out, double %a) #0
 ; SI: buffer_store_dword [[RESULT]]
 ; SI: s_endpgm
 define amdgpu_kernel void @test_class_undef_f32(ptr addrspace(1) %out, float %a, i32 %b) #0 {
-  %result = call i1 @llvm.amdgcn.class.f32(float undef, i32 %b) #1
+  %result = call i1 @llvm.amdgcn.class.f32(float poison, i32 %b) #1
   %sext = sext i1 %result to i32
   store i32 %sext, ptr addrspace(1) %out, align 4
   ret void

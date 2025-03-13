@@ -2721,11 +2721,15 @@ public:
     Walk(std::get<std::list<ActualArgSpec>>(x.t));
     Put(")");
   }
-  void Unparse(const OmpInitializerExpr &x) {
-    Word("OMP_PRIV = ");
-    Walk(x.v);
+  void Unparse(const OmpInitializerClause &x) {
+    // Don't let the visitor go to the normal AssignmentStmt Unparse function,
+    // it adds an extra newline that we don't want.
+    if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
+      Walk(assignment->t, "=");
+    } else {
+      Walk(x.u);
+    }
   }
-  void Unparse(const OmpInitializerClause &x) { Walk(x.u); }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
     Word("!$OMP DECLARE REDUCTION ");
