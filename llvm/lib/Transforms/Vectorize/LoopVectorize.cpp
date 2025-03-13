@@ -2616,10 +2616,6 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
 }
 
 BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
-  // VPlan-native path does not do any analysis for runtime checks currently.
-  if (EnableVPlanNativePath)
-    return nullptr;
-
   BasicBlock *const MemCheckBlock =
       RTChecks.emitMemRuntimeChecks(Bypass, LoopVectorPreHeader);
 
@@ -2628,6 +2624,10 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
   // elements faster.
   if (!MemCheckBlock)
     return nullptr;
+
+  // VPlan-native path does not do any analysis for runtime checks currently.
+  assert((!EnableVPlanNativePath || OrigLoop->begin() == OrigLoop->end()) &&
+         "Runtime checks are not supported for outer loops yet");
 
   if (MemCheckBlock->getParent()->hasOptSize() || OptForSizeBasedOnProfile) {
     assert(Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
