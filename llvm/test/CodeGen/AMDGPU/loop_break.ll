@@ -169,7 +169,7 @@ bb9:                                              ; preds = %Flow
 }
 
 ; FIXME: ConstantExpr compare of address to null folds away
-@lds = addrspace(3) global i32 undef
+@lds = addrspace(3) global i32 poison
 
 define amdgpu_kernel void @constexpr_phi_cond_break_loop(i32 %arg) #0 {
 ; OPT-LABEL: define amdgpu_kernel void @constexpr_phi_cond_break_loop(
