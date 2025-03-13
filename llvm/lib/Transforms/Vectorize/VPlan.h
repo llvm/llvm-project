@@ -519,7 +519,6 @@ public:
     case VPRecipeBase::VPReverseVectorPointerSC:
     case VPRecipeBase::VPWidenCallSC:
     case VPRecipeBase::VPWidenCanonicalIVSC:
-    case VPRecipeBase::VPWidenCastSC:
     case VPRecipeBase::VPWidenGEPSC:
     case VPRecipeBase::VPWidenIntrinsicSC:
     case VPRecipeBase::VPWidenSC:
@@ -533,7 +532,6 @@ public:
     case VPRecipeBase::VPWidenIntOrFpInductionSC:
     case VPRecipeBase::VPWidenPointerInductionSC:
     case VPRecipeBase::VPReductionPHISC:
-    case VPRecipeBase::VPScalarCastSC:
     case VPRecipeBase::VPScalarPHISC:
     case VPRecipeBase::VPPartialReductionSC:
       return true;
@@ -599,12 +597,14 @@ public:
     DisjointFlagsTy(bool IsDisjoint) : IsDisjoint(IsDisjoint) {}
   };
 
+  struct NonNegFlagsTy {
+    char NonNeg : 1;
+    NonNegFlagsTy(bool IsNonNeg = false) : NonNeg(IsNonNeg) {}
+  };
+
 private:
   struct ExactFlagsTy {
     char IsExact : 1;
-  };
-  struct NonNegFlagsTy {
-    char NonNeg : 1;
   };
   struct FastMathFlagsTy {
     char AllowReassoc : 1;
@@ -699,6 +699,12 @@ public:
       : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::DisjointOp),
         DisjointFlags(DisjointFlags) {}
 
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                      NonNegFlagsTy NonNegFlags, DebugLoc DL = {})
+      : VPSingleDefRecipe(SC, Operands, DL), OpType(OperationType::NonNegOp),
+        NonNegFlags(NonNegFlags) {}
+
 protected:
   template <typename IterT>
   VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
@@ -711,7 +717,6 @@ public:
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
-           R->getVPDefID() == VPRecipeBase::VPWidenCastSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenIntrinsicSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC ||
            R->getVPDefID() == VPRecipeBase::VPReverseVectorPointerSC ||
@@ -954,6 +959,12 @@ public:
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
 
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                NonNegFlagsTy NonNegFlags, DebugLoc DL = {},
+                const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, NonNegFlags, DL),
+        Opcode(Opcode), Name(Name.str()) {}
+
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
   VPInstruction *clone() override {
@@ -1024,6 +1035,60 @@ public:
 
   /// Returns the symbolic name assigned to the VPInstruction.
   StringRef getName() const { return Name; }
+};
+
+/// A specialization of VPInstruction augmenting it with a dedicated result
+/// type, to be used when the opcode and operands of the VPInstruction don't
+/// directly determine the result type.
+class VPInstructionWithType : public VPInstruction {
+  /// Scalar result type produced by the recipe.
+  Type *ResultTy;
+
+  Value *generate(VPTransformState &State);
+
+public:
+  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                        Type *ResultTy, DebugLoc DL, const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, DL, Name), ResultTy(ResultTy) {}
+
+  VPInstructionWithType(unsigned Opcode, ArrayRef<VPValue *> Operands,
+                        Type *ResultTy, NonNegFlagsTy Flags, DebugLoc DL,
+                        const Twine &Name = "")
+      : VPInstruction(Opcode, Operands, Flags, DL, Name), ResultTy(ResultTy) {}
+
+  static inline bool classof(const VPRecipeBase *R) {
+    auto *VPI = dyn_cast<VPInstruction>(R);
+    return VPI && Instruction::isCast(VPI->getOpcode());
+  }
+
+  static inline bool classof(const VPUser *R) {
+    return isa<VPInstructionWithType>(cast<VPRecipeBase>(R));
+  }
+
+  VPInstruction *clone() override {
+    auto *New =
+        new VPInstructionWithType(getOpcode(), {getOperand(0)}, getResultType(),
+                                  {}, getDebugLoc(), getName());
+    New->setUnderlyingValue(getUnderlyingValue());
+    New->transferFlags(*this);
+    return New;
+  }
+
+  void execute(VPTransformState &State) override;
+
+  /// Return the cost of this VPIRInstruction.
+  InstructionCost computeCost(ElementCount VF,
+                              VPCostContext &Ctx) const override;
+
+  Type *getResultType() const { return ResultTy; }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the recipe.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+#endif
+
+  bool onlyFirstLaneUsed(const VPValue *Op) const override;
 };
 
 /// A recipe to wrap on original IR instruction not to be modified during
@@ -1129,106 +1194,6 @@ public:
   void print(raw_ostream &O, const Twine &Indent,
              VPSlotTracker &SlotTracker) const override;
 #endif
-};
-
-/// VPWidenCastRecipe is a recipe to create vector cast instructions.
-class VPWidenCastRecipe : public VPRecipeWithIRFlags {
-  /// Cast instruction opcode.
-  Instruction::CastOps Opcode;
-
-  /// Result type for the cast.
-  Type *ResultTy;
-
-public:
-  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                    CastInst &UI)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op, UI), Opcode(Opcode),
-        ResultTy(ResultTy) {
-    assert(UI.getOpcode() == Opcode &&
-           "opcode of underlying cast doesn't match");
-  }
-
-  VPWidenCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy)
-      : VPRecipeWithIRFlags(VPDef::VPWidenCastSC, Op), Opcode(Opcode),
-        ResultTy(ResultTy) {}
-
-  ~VPWidenCastRecipe() override = default;
-
-  VPWidenCastRecipe *clone() override {
-    if (auto *UV = getUnderlyingValue())
-      return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy,
-                                   *cast<CastInst>(UV));
-
-    return new VPWidenCastRecipe(Opcode, getOperand(0), ResultTy);
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPWidenCastSC)
-
-  /// Produce widened copies of the cast.
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPWidenCastRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  Instruction::CastOps getOpcode() const { return Opcode; }
-
-  /// Returns the result type of the cast.
-  Type *getResultType() const { return ResultTy; }
-};
-
-/// VPScalarCastRecipe is a recipe to create scalar cast instructions.
-class VPScalarCastRecipe : public VPSingleDefRecipe {
-  Instruction::CastOps Opcode;
-
-  Type *ResultTy;
-
-  Value *generate(VPTransformState &State);
-
-public:
-  VPScalarCastRecipe(Instruction::CastOps Opcode, VPValue *Op, Type *ResultTy,
-                     DebugLoc DL)
-      : VPSingleDefRecipe(VPDef::VPScalarCastSC, {Op}, DL), Opcode(Opcode),
-        ResultTy(ResultTy) {}
-
-  ~VPScalarCastRecipe() override = default;
-
-  VPScalarCastRecipe *clone() override {
-    return new VPScalarCastRecipe(Opcode, getOperand(0), ResultTy,
-                                  getDebugLoc());
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPScalarCastSC)
-
-  void execute(VPTransformState &State) override;
-
-  /// Return the cost of this VPScalarCastRecipe.
-  InstructionCost computeCost(ElementCount VF,
-                              VPCostContext &Ctx) const override {
-    // TODO: Compute accurate cost after retiring the legacy cost model.
-    return 0;
-  }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-
-  /// Returns the result type of the cast.
-  Type *getResultType() const { return ResultTy; }
-
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    // At the moment, only uniform codegen is implemented.
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
-  }
 };
 
 /// A recipe for widening vector intrinsics.

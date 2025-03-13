@@ -204,7 +204,7 @@ using UnaryVPInstruction_match =
 template <typename Op0_t, unsigned Opcode>
 using AllUnaryRecipe_match =
     UnaryRecipe_match<Op0_t, Opcode, VPWidenRecipe, VPReplicateRecipe,
-                      VPWidenCastRecipe, VPInstruction>;
+                      VPInstruction>;
 
 template <typename Op0_t, typename Op1_t, unsigned Opcode, bool Commutative,
           typename... RecipeTys>
@@ -220,7 +220,7 @@ template <typename Op0_t, typename Op1_t, unsigned Opcode,
           bool Commutative = false>
 using AllBinaryRecipe_match =
     BinaryRecipe_match<Op0_t, Op1_t, Opcode, Commutative, VPWidenRecipe,
-                       VPReplicateRecipe, VPWidenCastRecipe, VPInstruction>;
+                       VPReplicateRecipe, VPInstruction>;
 
 template <unsigned Opcode, typename Op0_t>
 inline UnaryVPInstruction_match<Op0_t, Opcode>
