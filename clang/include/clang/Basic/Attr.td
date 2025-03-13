@@ -5190,4 +5190,7 @@ def OpenACCRoutineAnnot : InheritableAttr {
   let Spellings = [];
   let Subjects = SubjectList<[Function]>;
   let Documentation = [InternalOnly];
+  let AdditionalMembers = [{
+    SourceLocation BindClause;
+  }];
 }
