@@ -219,7 +219,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseRegReg(OperandVector &Operands);
   ParseStatus parseRetval(OperandVector &Operands);
   ParseStatus parseZcmpStackAdj(OperandVector &Operands,
-                                bool ExpectNegative = false);                       
+                                bool ExpectNegative = false);
   ParseStatus parseZcmpNegStackAdj(OperandVector &Operands) {
     return parseZcmpStackAdj(Operands, /*ExpectNegative*/ true);
   }
