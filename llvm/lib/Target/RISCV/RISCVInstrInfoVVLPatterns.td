@@ -598,6 +598,8 @@ def SplatPat_uimm5 : ComplexPattern<vAny, 1, "selectVSplatUimmBits<5>", [], [], 
 def SplatPat_uimm6 : ComplexPattern<vAny, 1, "selectVSplatUimmBits<6>", [], [], 3>;
 def SplatPat_simm5_plus1
     : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1", [], [], 3>;
+def SplatPat_simm5_plus1_nodec
+    : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NoDec", [], [], 3>;
 def SplatPat_simm5_plus1_nonzero
     : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NonZero", [], [], 3>;
 
@@ -1992,10 +1994,10 @@ multiclass VPatAVGADDVL_VV_VX_RM<SDNode vop, int vxrm, string suffix = ""> {
 // 11.1. Vector Single-Width Integer Add and Subtract
 defm : VPatBinaryVL_VV_VX_VI<riscv_add_vl, "PseudoVADD">;
 defm : VPatBinaryVL_VV_VX<riscv_sub_vl, "PseudoVSUB">;
-// Handle VRSUB specially since it's the only integer binary op with reversed
-// pattern operands
 foreach vti = AllIntegerVectors in {
   let Predicates = GetVTypePredicates<vti>.Predicates in {
+    // Handle VRSUB specially since it's the only integer binary op with
+    // reversed pattern operands
     def : Pat<(riscv_sub_vl (vti.Vector (SplatPat (XLenVT GPR:$rs2))),
                             (vti.Vector vti.RegClass:$rs1),
                             vti.RegClass:$passthru, (vti.Mask VMV0:$vm), VLOpFrag),
@@ -2008,6 +2010,15 @@ foreach vti = AllIntegerVectors in {
               (!cast<Instruction>("PseudoVRSUB_VI_"# vti.LMul.MX#"_MASK")
                    vti.RegClass:$passthru, vti.RegClass:$rs1, simm5:$rs2,
                    (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    // Match VSUB with a small immediate to vadd.vi by negating the immediate.
+    def : Pat<(riscv_sub_vl (vti.Vector vti.RegClass:$rs1),
+                            (vti.Vector (SplatPat_simm5_plus1_nodec simm5_plus1:$rs2)),
+                            vti.RegClass:$passthru, (vti.Mask VMV0:$vm), VLOpFrag),
+              (!cast<Instruction>("PseudoVADD_VI_"#vti.LMul.MX#"_MASK")
+                     vti.RegClass:$passthru, vti.RegClass:$rs1,
+                     (NegImm simm5_plus1:$rs2), (vti.Mask VMV0:$vm),
+                     GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   }
 }
 
