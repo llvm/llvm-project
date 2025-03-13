@@ -542,6 +542,10 @@ public:
     return AttributeSets.getParamNoFPClass(ArgNo);
   }
 
+  CaptureInfo getCaptureInfo(unsigned ArgNo) const {
+    return AttributeSets.getParamAttrs(ArgNo).getCaptureInfo();
+  }
+
   /// Determine if the function is presplit coroutine.
   bool isPresplitCoroutine() const {
     return hasFnAttribute(Attribute::PresplitCoroutine);
