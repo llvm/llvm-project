@@ -40,7 +40,7 @@
   }
 
   define amdgpu_ps float @si_return() {
-    ret float undef
+    ret float poison
   }
 
 ...
