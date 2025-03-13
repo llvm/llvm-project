@@ -758,8 +758,7 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     assert(VF.isVector() && "Scalar FirstOrderRecurrenceSplice?");
     SmallVector<int> Mask(VF.getKnownMinValue());
     std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
-    Type *VectorTy =
-        toVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
+    Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
 
     return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
                                   cast<VectorType>(VectorTy), Mask,
