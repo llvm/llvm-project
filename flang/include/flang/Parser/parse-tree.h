@@ -4871,8 +4871,8 @@ struct OmpLoopDirective {
 
 // 2.14.2 cancellation-point -> CANCELLATION POINT construct-type-clause
 struct OpenMPCancellationPointConstruct {
-  WRAPPER_CLASS_BOILERPLATE(OpenMPCancellationPointConstruct,
-      OmpDirectiveSpecification);
+  WRAPPER_CLASS_BOILERPLATE(
+      OpenMPCancellationPointConstruct, OmpDirectiveSpecification);
   CharBlock source;
 };
 
