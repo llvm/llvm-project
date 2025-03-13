@@ -496,16 +496,23 @@ signature and passed to the shader without requiring a constant buffer resource:
 #. **RegisterSpace**: The register space used for the binding.
 #. **Num32BitValues**: The number of 32-bit values included in this constant buffer.
 
-Root constants provide a fast way to pass small amounts of data directly to the shader without the overhead of creating and binding a constant buffer resource.
+Root constants provide a fast way to pass small amounts of data directly to the shader without the 
+overhead of creating and binding a constant buffer resource.
 
 Root Descriptor
 ~~~~~~~~~~~~~~~
 
-Root descriptors provide a direct mechanism for binding individual resources to shader stages in the Direct3D 12 
-rendering pipeline. They represent a critical interface for efficient resource management, allowing applications 
-to specify how shader stages access specific GPU resources.
+Root descriptors provide a mechanism for binding individual resources to shader stages in the Direct3D 12 
+rendering pipeline. They allow applications to specify how shader stages access specific GPU resources.
 
 .. code-block:: cpp
+
+   enum RootDescriptorFlags {
+      None = 0,
+      DataVolatile = 0x2,
+      DataStaticWhileSetAtExecute = 0x4,
+      DataStatic = 0x8,
+   }
 
    // Version 1.0 Root Descriptor
    struct RootDescriptor_V1_0 {
@@ -516,21 +523,14 @@ to specify how shader stages access specific GPU resources.
    // Version 1.1 Root Descriptor
    struct RootDescriptor_V1_1 {
       uint32_t ShaderRegister;
-      uint32_t RegisterSpace;
-      // New flags for Version 1.1
-      enum Flags {
-        None                = 0x0,
-        DATA_STATIC         = 0x1,
-        DATA_STATIC_WHILE_SET_AT_EXECUTE = 0x2,
-        DATA_VOLATILE       = 0x4
-      };
-      
+      uint32_t RegisterSpace;      
       // Bitfield of flags from the Flags enum
       uint32_t Flags;
    };
 
-The Root Descriptor structure has evolved to support two versions, providing enhanced flexibility and 
-performance optimization capabilities.
+Version 1.1 of Root Descriptors has introduced some flags that can hint the drivers into
+performing further code optimizations. For details, check
+`Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signature-version-1-1#static-and-volatile-flags>`_.
 
 Version 1.0 Root Descriptor
 '''''''''''''''''''''''''''
