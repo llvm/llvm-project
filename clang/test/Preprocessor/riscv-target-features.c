@@ -927,9 +927,6 @@
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32i_zclsd1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZCLSD-EXT %s
-// RUN: %clang --target=riscv32-unknown-linux-gnu \
-// RUN:   -march=rv32i_zclsd1p0 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-ZCLSD-EXT %s
 // CHECK-ZCLSD-EXT: __riscv_zclsd  1000000{{$}}
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
@@ -1130,9 +1127,6 @@
 
 // RUN: %clang --target=riscv32-unknown-linux-gnu \
 // RUN:   -march=rv32i_zilsd1p0 -E -dM %s \
-// RUN:   -o - | FileCheck --check-prefix=CHECK-ZILSD-EXT %s
-// RUN: %clang --target=riscv64-unknown-linux-gnu \
-// RUN:   -march=rv64i_zilsd1p0 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZILSD-EXT %s
 // CHECK-ZILSD-EXT: __riscv_zilsd  1000000{{$}}
 
