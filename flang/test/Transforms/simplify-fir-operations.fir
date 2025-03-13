@@ -8,8 +8,8 @@ func.func @test_none_innermost(%arg0: !fir.box<none>) -> i1 {
 }
 // CHECK-LABEL:   func.func @test_none_innermost(
 // CHECK-SAME:                                   %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<none>) -> i1 {
-// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i8
-// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAIsContiguousUpTo(%[[VAL_0]], %[[VAL_1]]) : (!fir.box<none>, i8) -> i1
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i32
+// CHECK:           %[[VAL_2:.*]] = fir.call @_FortranAIsContiguousUpTo(%[[VAL_0]], %[[VAL_1]]) : (!fir.box<none>, i32) -> i1
 // CHECK:           return %[[VAL_2]] : i1
 // CHECK:         }
 
@@ -33,9 +33,9 @@ func.func @test_array_innermost(%arg0: !fir.box<!fir.array<?xf32>>) -> i1 {
 }
 // CHECK-LABEL:   func.func @test_array_innermost(
 // CHECK-SAME:                                    %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<?xf32>>) -> i1 {
-// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i8
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<none>
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAIsContiguousUpTo(%[[VAL_2]], %[[VAL_1]]) : (!fir.box<none>, i8) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAIsContiguousUpTo(%[[VAL_2]], %[[VAL_1]]) : (!fir.box<none>, i32) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
 
@@ -60,9 +60,9 @@ func.func @test_assumed_rank_innermost(%arg0: !fir.box<!fir.array<*:f32>>) -> i1
 }
 // CHECK-LABEL:   func.func @test_assumed_rank_innermost(
 // CHECK-SAME:                                           %[[VAL_0:[0-9]+|[a-zA-Z$._-][a-zA-Z0-9$._-]*]]: !fir.box<!fir.array<*:f32>>) -> i1 {
-// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i8
+// CHECK:           %[[VAL_1:.*]] = arith.constant 1 : i32
 // CHECK:           %[[VAL_2:.*]] = fir.convert %[[VAL_0]] : (!fir.box<!fir.array<*:f32>>) -> !fir.box<none>
-// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAIsContiguousUpTo(%[[VAL_2]], %[[VAL_1]]) : (!fir.box<none>, i8) -> i1
+// CHECK:           %[[VAL_3:.*]] = fir.call @_FortranAIsContiguousUpTo(%[[VAL_2]], %[[VAL_1]]) : (!fir.box<none>, i32) -> i1
 // CHECK:           return %[[VAL_3]] : i1
 // CHECK:         }
 

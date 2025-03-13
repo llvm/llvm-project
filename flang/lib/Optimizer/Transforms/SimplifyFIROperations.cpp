@@ -92,7 +92,7 @@ mlir::LogicalResult IsContiguousBoxCoversion::matchAndRewrite(
     mlir::Value result;
     if (op.getInnermost()) {
       mlir::Value one =
-          builder.createIntegerConstant(loc, builder.getI8Type(), 1);
+          builder.createIntegerConstant(loc, builder.getI32Type(), 1);
       result =
           fir::runtime::genIsContiguousUpTo(builder, loc, op.getBox(), one);
     } else {
