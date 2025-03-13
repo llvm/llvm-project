@@ -121,14 +121,11 @@ TEST_F(IRBuilderTest, Intrinsics) {
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_FALSE(II->hasNoNaNs());
 
-  FastMathFlags SavedFMF = Builder.getFastMathFlags();
-  Builder.setFastMathFlags(FastMathFlags::getFast());
-  Result = Builder.CreateFMA(V, V, V);
+  Result = Builder.CreateFMA(V, V, V, FastMathFlags::getFast());
   II = cast<IntrinsicInst>(Result);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::fma);
   EXPECT_TRUE(II->hasNoInfs());
   EXPECT_TRUE(II->hasNoNaNs());
-  Builder.setFastMathFlags(SavedFMF);
 
   Result = Builder.CreateUnaryIntrinsic(Intrinsic::roundeven, V);
   II = cast<IntrinsicInst>(Result);
