@@ -1887,6 +1887,19 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       if (Instruction *I = foldMaxMulShift(I1, I0))
         return I;
     }
+
+    // umax(nuw_shl(C0, x), nuw_shl(C0, y)) -> nuw_shl(C0, umax(x, y))
+    // umin(nuw_shl(C0, x), nuw_shl(C0, y)) -> nuw_shl(C0, umin(x, y))
+    const APInt *C1, *C2;
+    if (match(I0, m_OneUse(m_NUWShl(m_APInt(C1), m_Value()))) &&
+        match(I1, m_OneUse(m_NUWShl(m_APInt(C2), m_Value()))) && *C1 == *C2) {
+      Value *X = cast<ShlOperator>(I0)->getOperand(1);
+      Value *Y = cast<ShlOperator>(I1)->getOperand(1);
+      Value *MaxMin = Builder.CreateBinaryIntrinsic(IID, X, Y);
+      return BinaryOperator::CreateNUWShl(ConstantInt::get(I0->getType(), *C1),
+                                          MaxMin);
+    }
+
     // If both operands of unsigned min/max are sign-extended, it is still ok
     // to narrow the operation.
     [[fallthrough]];
