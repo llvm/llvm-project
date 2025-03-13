@@ -33,6 +33,10 @@ _Pragma("omp begin declare variant match(device = {arch(amdgcn)})");
 // Attribute to declare a function as a kernel.
 #define __gpu_kernel __attribute__((amdgpu_kernel, visibility("protected")))
 
+// Defined in gpuintrin.h, used later in this file.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x);
+
 // Returns the number of workgroups in the 'x' dimension of the grid.
 _DEFAULT_FN_ATTRS static __inline__ uint32_t __gpu_num_blocks_x(void) {
   return __builtin_amdgcn_grid_size_x() / __builtin_amdgcn_workgroup_size_x();
@@ -115,15 +119,6 @@ __gpu_read_first_lane_u32(uint64_t __lane_mask, uint32_t __x) {
   return __builtin_amdgcn_readfirstlane(__x);
 }
 
-// Copies the value from the first active thread in the wavefront to the rest.
-_DEFAULT_FN_ATTRS __inline__ uint64_t
-__gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x) {
-  uint32_t __hi = (uint32_t)(__x >> 32ull);
-  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
-  return ((uint64_t)__builtin_amdgcn_readfirstlane(__hi) << 32ull) |
-         ((uint64_t)__builtin_amdgcn_readfirstlane(__lo) & 0xFFFFFFFF);
-}
-
 // Returns a bitmask of threads in the current lane for which \p x is true.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t __gpu_ballot(uint64_t __lane_mask,
                                                           bool __x) {
@@ -203,7 +198,7 @@ __gpu_match_any_u64(uint64_t __lane_mask, uint64_t __x) {
 // Returns the current lane mask if every lane contains __x.
 _DEFAULT_FN_ATTRS static __inline__ uint64_t
 __gpu_match_all_u32(uint64_t __lane_mask, uint32_t __x) {
-  uint32_t __first = __gpu_read_first_lane_u64(__lane_mask, __x);
+  uint32_t __first = __gpu_read_first_lane_u32(__lane_mask, __x);
   uint64_t __ballot = __gpu_ballot(__lane_mask, __x == __first);
   __gpu_sync_lane(__lane_mask);
   return __ballot == __gpu_lane_mask() ? __gpu_lane_mask() : 0ull;

@@ -8,10 +8,13 @@
 
 #include "PPCMCExpr.h"
 #include "PPCFixupKinds.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectStreamer.h"
+#include "llvm/MC/MCSymbolELF.h"
+#include "llvm/Support/Casting.h"
 
 using namespace llvm;
 
@@ -24,38 +27,7 @@ const PPCMCExpr *PPCMCExpr::create(VariantKind Kind, const MCExpr *Expr,
 
 void PPCMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
   getSubExpr()->print(OS, MAI);
-
-  switch (Kind) {
-  default:
-    llvm_unreachable("Invalid kind!");
-  case VK_PPC_LO:
-    OS << "@l";
-    break;
-  case VK_PPC_HI:
-    OS << "@h";
-    break;
-  case VK_PPC_HA:
-    OS << "@ha";
-    break;
-  case VK_PPC_HIGH:
-    OS << "@high";
-    break;
-  case VK_PPC_HIGHA:
-    OS << "@higha";
-    break;
-  case VK_PPC_HIGHER:
-    OS << "@higher";
-    break;
-  case VK_PPC_HIGHERA:
-    OS << "@highera";
-    break;
-  case VK_PPC_HIGHEST:
-    OS << "@highest";
-    break;
-  case VK_PPC_HIGHESTA:
-    OS << "@highesta";
-    break;
-  }
+  OS << '@' << MAI->getVariantKindName(Kind);
 }
 
 bool
@@ -76,27 +48,27 @@ PPCMCExpr::evaluateAsConstant(int64_t &Res) const {
 
 std::optional<int64_t> PPCMCExpr::evaluateAsInt64(int64_t Value) const {
   switch (Kind) {
-    case VK_PPC_LO:
-      return Value & 0xffff;
-    case VK_PPC_HI:
-      return (Value >> 16) & 0xffff;
-    case VK_PPC_HA:
-      return ((Value + 0x8000) >> 16) & 0xffff;
-    case VK_PPC_HIGH:
-      return (Value >> 16) & 0xffff;
-    case VK_PPC_HIGHA:
-      return ((Value + 0x8000) >> 16) & 0xffff;
-    case VK_PPC_HIGHER:
-      return (Value >> 32) & 0xffff;
-    case VK_PPC_HIGHERA:
-      return ((Value + 0x8000) >> 32) & 0xffff;
-    case VK_PPC_HIGHEST:
-      return (Value >> 48) & 0xffff;
-    case VK_PPC_HIGHESTA:
-      return ((Value + 0x8000) >> 48) & 0xffff;
-    default:
-      return {};
-    }
+  case VK_LO:
+    return Value & 0xffff;
+  case VK_HI:
+    return (Value >> 16) & 0xffff;
+  case VK_HA:
+    return ((Value + 0x8000) >> 16) & 0xffff;
+  case VK_HIGH:
+    return (Value >> 16) & 0xffff;
+  case VK_HIGHA:
+    return ((Value + 0x8000) >> 16) & 0xffff;
+  case VK_HIGHER:
+    return (Value >> 32) & 0xffff;
+  case VK_HIGHERA:
+    return ((Value + 0x8000) >> 32) & 0xffff;
+  case VK_HIGHEST:
+    return (Value >> 48) & 0xffff;
+  case VK_HIGHESTA:
+    return ((Value + 0x8000) >> 48) & 0xffff;
+  default:
+    return {};
+  }
 }
 
 bool PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,

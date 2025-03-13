@@ -863,7 +863,7 @@ bb16:                                             ; preds = %bb58, %bb14
   %i34 = getelementptr inbounds [16 x half], ptr addrspace(1) null, i64 %i24, i64 14
   %i36 = load volatile <2 x half>, ptr addrspace(1) %i34, align 4
   %i43 = load volatile <2 x float>, ptr addrspace(3) null, align 8
-  %i46 = load volatile <2 x float>, ptr addrspace(3) undef, align 32
+  %i46 = load volatile <2 x float>, ptr addrspace(3) poison, align 32
   fence syncscope("workgroup") acquire
   br i1 %i11, label %bb58, label %bb51
 

@@ -83,6 +83,7 @@ struct MissingFeatures {
   static bool emitNullabilityCheck() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool stackSaveOp() { return false; }
+  static bool aggValueSlot() { return false; }
 };
 
 } // namespace cir

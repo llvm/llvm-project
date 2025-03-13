@@ -84,6 +84,8 @@ bool tryToFindPtrOrigin(
           if (isCtorOfSafePtr(ConversionFunc))
             return callback(E, true);
         }
+        if (isa<CXXFunctionalCastExpr>(E) && isSafePtrType(cast->getType()))
+          return callback(E, true);
       }
       // FIXME: This can give false "origin" that would lead to false negatives
       // in checkers. See https://reviews.llvm.org/D37023 for reference.

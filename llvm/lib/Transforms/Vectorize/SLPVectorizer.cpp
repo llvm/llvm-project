@@ -14104,9 +14104,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
             TEUseEI.UserTE->getOpcode() == Instruction::PHI &&
             UseEI.UserTE->State == TreeEntry::Vectorize &&
             UseEI.UserTE->getOpcode() == Instruction::PHI &&
-            TEUseEI.UserTE != UseEI.UserTE &&
-            TEUseEI.UserTE->getMainOp()->getParent() ==
-                UseEI.UserTE->getMainOp()->getParent())
+            TEUseEI.UserTE != UseEI.UserTE)
           continue;
         // If 2 gathers are operands of the same entry (regardless of whether
         // user is PHI or else), compare operands indices, use the earlier one

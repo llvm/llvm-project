@@ -191,10 +191,10 @@ define amdgpu_kernel void @scalar_to_vector_v4i16() {
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 bb:
-  %tmp = load <2 x i8>, ptr addrspace(1) undef, align 1
+  %tmp = load <2 x i8>, ptr addrspace(1) poison, align 1
   %tmp1 = shufflevector <2 x i8> %tmp, <2 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> poison, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
-  store <8 x i8> %tmp2, ptr addrspace(1) undef, align 8
+  store <8 x i8> %tmp2, ptr addrspace(1) poison, align 8
   ret void
 }
 
@@ -259,11 +259,11 @@ define amdgpu_kernel void @scalar_to_vector_v4f16() {
 ; GFX9-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 bb:
-  %load = load half, ptr addrspace(1) undef, align 1
+  %load = load half, ptr addrspace(1) poison, align 1
   %tmp = bitcast half %load to <2 x i8>
   %tmp1 = shufflevector <2 x i8> %tmp, <2 x i8> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
   %tmp2 = shufflevector <8 x i8> %tmp1, <8 x i8> poison, <8 x i32> <i32 0, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9, i32 9>
-  store <8 x i8> %tmp2, ptr addrspace(1) undef, align 8
+  store <8 x i8> %tmp2, ptr addrspace(1) poison, align 8
   ret void
 }
 

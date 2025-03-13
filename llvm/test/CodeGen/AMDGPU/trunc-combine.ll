@@ -43,7 +43,7 @@ define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 4, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
-  %load0 = load i32, ptr addrspace(1) undef
+  %load0 = load i32, ptr addrspace(1) poison
   %load1 = load i32, ptr addrspace(1) null
   %insert.0 = insertelement <2 x i32> poison, i32 %load0, i32 0
   %insert.1 = insertelement <2 x i32> %insert.0, i32 99, i32 1
@@ -72,7 +72,7 @@ define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, 4, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
-  %load0 = load float, ptr addrspace(1) undef
+  %load0 = load float, ptr addrspace(1) poison
   %load1 = load float, ptr addrspace(1) null
   %insert.0 = insertelement <2 x float> poison, float %load0, i32 0
   %insert.1 = insertelement <2 x float> %insert.0, float 4.0, i32 1

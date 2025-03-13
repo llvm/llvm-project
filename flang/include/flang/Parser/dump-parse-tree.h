@@ -639,7 +639,6 @@ public:
   NODE(parser, OmpTaskReductionClause)
   NODE(OmpTaskReductionClause, Modifier)
   NODE(parser, OmpInitializerProc)
-  NODE(parser, OmpInitializerExpr)
   NODE(parser, OmpInitializerClause)
   NODE(parser, OmpReductionIdentifier)
   NODE(parser, OmpAllocateClause)

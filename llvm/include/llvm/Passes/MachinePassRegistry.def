@@ -196,6 +196,15 @@ MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifi
                                           PARAMS)
 #endif
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
+    "branch-folder", "BranchFolderPass",
+    [](bool EnableTailMerge) { return BranchFolderPass(EnableTailMerge); },
+    [](StringRef Params) {
+      return parseSinglePassOption(Params, "enable-tail-merge",
+                                   "BranchFolderPass");
+    },
+    "enable-tail-merge")
+
+MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "machine-sink", "MachineSinkingPass",
     [](bool EnableSinkAndFold) {
       return MachineSinkingPass(EnableSinkAndFold);
@@ -246,7 +255,6 @@ DUMMY_MACHINE_FUNCTION_PASS("bbsections-prepare", BasicBlockSectionsPass)
 DUMMY_MACHINE_FUNCTION_PASS("bbsections-profile-reader", BasicBlockSectionsProfileReaderPass)
 DUMMY_MACHINE_FUNCTION_PASS("block-placement", MachineBlockPlacementPass)
 DUMMY_MACHINE_FUNCTION_PASS("block-placement-stats", MachineBlockPlacementStatsPass)
-DUMMY_MACHINE_FUNCTION_PASS("branch-folder", BranchFolderPass)
 DUMMY_MACHINE_FUNCTION_PASS("break-false-deps", BreakFalseDepsPass)
 DUMMY_MACHINE_FUNCTION_PASS("cfguard-longjmp", CFGuardLongjmpPass)
 DUMMY_MACHINE_FUNCTION_PASS("cfi-fixup", CFIFixupPass)

@@ -639,7 +639,7 @@ define protected amdgpu_kernel void @nested_waterfalls(ptr addrspace(1) %tex.coe
   ; SI-NEXT: {{  $}}
   ; SI-NEXT: bb.7:
   ; SI-NEXT:   $exec_lo = S_MOV_B32 killed [[S_MOV_B32_]]
-  ; SI-NEXT:   GLOBAL_STORE_DWORD undef %34:vreg_64, killed [[IMAGE_SAMPLE_V1_V2_nsa_gfx10_]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) undef`, addrspace 1)
+  ; SI-NEXT:   GLOBAL_STORE_DWORD undef %34:vreg_64, killed [[IMAGE_SAMPLE_V1_V2_nsa_gfx10_]], 0, 0, implicit $exec :: (store (s32) into `ptr addrspace(1) poison`, addrspace 1)
   ; SI-NEXT:   S_ENDPGM 0
 entry:
   %0 = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -655,7 +655,7 @@ if.then:                                          ; preds = %entry
   %5 = load <8 x i32>, ptr addrspace(4) %4, align 32
   %6 = load <4 x i32>, ptr addrspace(4) %add.ptr.i, align 16
   %7 = tail call float @llvm.amdgcn.image.sample.2d.f32.f32(i32 1, float undef, float undef, <8 x i32> %5, <4 x i32> %6, i1 false, i32 0, i32 0)
-  store float %7, ptr addrspace(1) undef, align 4
+  store float %7, ptr addrspace(1) poison, align 4
   ret void
 }
 

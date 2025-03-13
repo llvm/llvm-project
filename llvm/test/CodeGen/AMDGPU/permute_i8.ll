@@ -2724,7 +2724,7 @@ entry:
   %ext1 = zext i16 %byte1 to i32
   %shifted = shl i32 %ext1, 16
   %result = or i32 %shifted, %ext0
-  store i32 %result, ptr addrspace(1) undef
+  store i32 %result, ptr addrspace(1) poison
   ret void
 }
 

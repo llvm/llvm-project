@@ -75,7 +75,8 @@ class RetainTypeChecker {
 public:
   void visitTranslationUnitDecl(const TranslationUnitDecl *);
   void visitTypedef(const TypedefDecl *);
-  bool isUnretained(const QualType);
+  bool isUnretained(const QualType, bool ignoreARC = false);
+  bool isARCEnabled() const { return IsARCEnabled; }
 };
 
 /// \returns true if \p Class is NS or CF objects AND not retained, false if

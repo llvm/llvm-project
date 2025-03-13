@@ -27,6 +27,8 @@ using dxil::ResourceClass;
 using dxil::ElementType;
 using dxil::ResourceKind;
 
+const unsigned CBufferRowSizeInBytes = 16U;
+
 class FrontendResource {
   MDNode *Entry;
 

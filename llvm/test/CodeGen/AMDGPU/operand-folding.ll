@@ -115,12 +115,12 @@ entry:
 ; CHECK: v_madmk_f32 v[[RES:[0-9]+]], v[[HI]], 0x41200000, v[[LO]]
 ; CHECK: buffer_store_dword v[[RES]]
 define amdgpu_kernel void @no_fold_tied_subregister() #1 {
-  %tmp1 = load volatile <2 x float>, ptr addrspace(1) undef
+  %tmp1 = load volatile <2 x float>, ptr addrspace(1) poison
   %tmp2 = extractelement <2 x float> %tmp1, i32 0
   %tmp3 = extractelement <2 x float> %tmp1, i32 1
   %tmp4 = fmul float %tmp3, 10.0
   %tmp5 = fadd float %tmp4, %tmp2
-  store volatile float %tmp5, ptr addrspace(1) undef
+  store volatile float %tmp5, ptr addrspace(1) poison
   ret void
 }
 
@@ -135,7 +135,7 @@ entry:
   br label %for.body.i.i
 
 for.body.i.i:
-  %s1 = load i32, ptr addrspace(1) undef, align 8
+  %s1 = load i32, ptr addrspace(1) poison, align 8
   %s1.i64 = sext i32 %s1 to i64
   %xor = xor i64 %s1.i64, %s0.i64
   %flag = icmp ult i64 %xor, 8

@@ -2180,7 +2180,7 @@ void VPlanTransforms::handleUncountableEarlyExit(
   LatchExitingBranch->eraseFromParent();
 }
 
-void VPlanTransforms::materializeLiveInBroadcasts(VPlan &Plan) {
+void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return;
 
@@ -2189,18 +2189,25 @@ void VPlanTransforms::materializeLiveInBroadcasts(VPlan &Plan) {
   VPDT.recalculate(Plan);
 #endif
 
+  SmallVector<VPValue *> VPValues;
+  append_range(VPValues, Plan.getLiveIns());
+  for (VPRecipeBase &R : *Plan.getEntry())
+    append_range(VPValues, R.definedValues());
+
   auto *VectorPreheader = Plan.getVectorPreheader();
-  for (VPValue *LiveIn : Plan.getLiveIns()) {
-    if (all_of(LiveIn->users(),
-               [LiveIn](VPUser *U) { return U->usesScalars(LiveIn); }) ||
-        !LiveIn->getLiveInIRValue() ||
-        isa<Constant>(LiveIn->getLiveInIRValue()))
+  for (VPValue *VPV : VPValues) {
+    if (all_of(VPV->users(),
+               [VPV](VPUser *U) { return U->usesScalars(VPV); }) ||
+        (VPV->isLiveIn() &&
+         (!VPV->getLiveInIRValue() || isa<Constant>(VPV->getLiveInIRValue()))))
       continue;
 
     // Add explicit broadcast at the insert point that dominates all users.
     VPBasicBlock *HoistBlock = VectorPreheader;
     VPBasicBlock::iterator HoistPoint = VectorPreheader->end();
-    for (VPUser *User : LiveIn->users()) {
+    for (VPUser *User : VPV->users()) {
+      if (User->usesScalars(VPV))
+        continue;
       if (cast<VPRecipeBase>(User)->getParent() == VectorPreheader)
         HoistPoint = HoistBlock->begin();
       else
@@ -2210,10 +2217,10 @@ void VPlanTransforms::materializeLiveInBroadcasts(VPlan &Plan) {
     }
 
     VPBuilder Builder(cast<VPBasicBlock>(HoistBlock), HoistPoint);
-    auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {LiveIn});
-    LiveIn->replaceUsesWithIf(
-        Broadcast, [LiveIn, Broadcast](VPUser &U, unsigned Idx) {
-          return Broadcast != &U && !U.usesScalars(LiveIn);
-        });
+    auto *Broadcast = Builder.createNaryOp(VPInstruction::Broadcast, {VPV});
+    VPV->replaceUsesWithIf(Broadcast,
+                           [VPV, Broadcast](VPUser &U, unsigned Idx) {
+                             return Broadcast != &U && !U.usesScalars(VPV);
+                           });
   }
 }
