@@ -8,6 +8,14 @@
 declare float @llvm.amdgcn.rcp.f32(float) nounwind readnone
 declare double @llvm.amdgcn.rcp.f64(double) nounwind readnone
 
+define float @test_constant_fold_rcp_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_rcp_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.rcp.f32(float poison) nounwind readnone
+  ret float %val
+}
+
 define float @test_constant_fold_rcp_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_undef(
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
