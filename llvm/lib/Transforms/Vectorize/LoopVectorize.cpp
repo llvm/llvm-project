@@ -2502,13 +2502,13 @@ void InnerLoopVectorizer::introduceCheckBlockInVPlan(BasicBlock *CheckIRBB) {
   PreVectorPH->swapSuccessors();
 
   // We just connected a new block to the scalar preheader. Update all
-  // ResumePhis by adding an incoming value for it.
+  // ResumePhis by adding an incoming value for it, replacing the last value.
   for (VPRecipeBase &R : *cast<VPBasicBlock>(ScalarPH)) {
     auto *ResumePhi = dyn_cast<VPInstruction>(&R);
     if (!ResumePhi || ResumePhi->getOpcode() != VPInstruction::ResumePhi)
       continue;
     ResumePhi->addOperand(
-        ResumePhi->getOperand(ScalarPH->getNumPredecessors() == 1 ? 0 : 1));
+        ResumePhi->getOperand(ResumePhi->getNumOperands() - 1));
   }
 }
 
@@ -7570,9 +7570,8 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   // properly model costs for such loops.
   auto ExitBlocks = BestPlan.getExitBlocks();
   bool PlanForEarlyExitLoop =
-      std::distance(ExitBlocks.begin(), ExitBlocks.end()) > 2 ||
-      (std::distance(ExitBlocks.begin(), ExitBlocks.end()) == 1 &&
-       (*ExitBlocks.begin())->getNumPredecessors() > 1);
+      ExitBlocks.size() > 1 ||
+      (ExitBlocks.size() == 1 && ExitBlocks[0]->getNumPredecessors() > 1);
   assert((BestFactor.Width == LegacyVF.Width || PlanForEarlyExitLoop ||
           planContainsAdditionalSimplifications(getPlanFor(BestFactor.Width),
                                                 CostCtx, OrigLoop) ||

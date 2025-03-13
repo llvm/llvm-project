@@ -48,9 +48,7 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT: Successor(s): middle.block
 ; IF-EVL-EMPTY:
 ; IF-EVL: middle.block:
-; IF-EVL-NEXT:   EMIT vp<[[RESUME_EXTRACT:%.+]]> = extract-from-end ir<[[LD]]>, ir<1>
-; IF-EVL-NEXT:   EMIT branch-on-cond ir<true>
-; IF-EVL-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
+; IF-EVL-NEXT: Successor(s): ir-bb<for.end>
 
 entry:
   br label %for.body
