@@ -22690,8 +22690,41 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
           if (NodeI1 != NodeI2)
             return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
           InstructionsState S = getSameOpcode({I1, I2}, *TLI);
-          if (S && !S.isAltShuffle())
+          if (S && !S.isAltShuffle()) {
+            if (!isa<ExtractElementInst>(I1) || !isa<ExtractElementInst>(I2))
+              continue;
+
+            auto E1 = cast<ExtractElementInst>(I1);
+            auto E2 = cast<ExtractElementInst>(I2);
+            // Sort on ExtractElementInsts primarily by vector operands. Prefer
+            // program order of the vector operands
+            if (E1->getVectorOperand() != E2->getVectorOperand()) {
+              Instruction *V1 = dyn_cast<Instruction>(E1->getVectorOperand());
+              Instruction *V2 = dyn_cast<Instruction>(E2->getVectorOperand());
+              if (!V1 || !V2)
+                continue;
+              if (V1->getParent() != V2->getParent())
+                continue;
+              return V1->comesBefore(V2);
+            }
+            // If we have the same vector operand, try to sort by constant index
+            auto Id1 = E1->getIndexOperand();
+            auto Id2 = E2->getIndexOperand();
+            // Bring constants to the top
+            if (isa<ConstantInt>(Id1) && !isa<ConstantInt>(Id2))
+              return true;
+            if (!isa<ConstantInt>(Id1) && isa<ConstantInt>(Id2))
+              return false;
+            if (isa<ConstantInt>(Id1) && isa<ConstantInt>(Id2)) {
+              auto C1 = cast<ConstantInt>(Id1);
+              auto C2 = cast<ConstantInt>(Id2);
+              // First elements first
+              return C1->getValue().getZExtValue() <
+                     C2->getValue().getZExtValue();
+            }
+
             continue;
+          }
           return I1->getOpcode() < I2->getOpcode();
         }
         if (I1)
