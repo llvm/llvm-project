@@ -115,7 +115,7 @@ def buildkite_fetch_page_build_list(
         pipelines(search: "Github pull requests", first: 1) {{
           edges {{
             node {{
-              builds (state: [RUNNING, SCHEDULED, CREATING], first: {PAGE_SIZE}, after: {AFTER}) {{
+              builds (state: [CANCELING, CREATING, FAILING, RUNNING], first: {PAGE_SIZE}, after: {AFTER}) {{
                 edges {{
                   cursor
                   node {{
@@ -215,27 +215,25 @@ def buildkite_get_metrics(
             if job["name"] not in BUILDKITE_WORKFLOW_TO_TRACK:
                 continue
 
-            # Note: BuildKite API can return empty dates for some fields
-            # depending on the completion scenario. Example, a job cancelled
-            # before even starting will get an None date for 'started_at'.
-            # For this reason, if a timestamp is missing, we consider it
-            # skipped and keep the last event value.
             created_at = dateutil.parser.isoparse(job["created_at"])
             scheduled_at = (
-                dateutil.parser.isoparse(job["scheduled_at"])
-                if "scheduled_at" in job
-                else created_at
+                created_at
+                if job["scheduled_at"] is None
+                else dateutil.parser.isoparse(job["scheduled_at"])
             )
             started_at = (
-                dateutil.parser.isoparse(job["started_at"])
-                if "started_at" in job
-                else scheduled_at
+                scheduled_at
+                if job["started_at"] is None
+                else dateutil.parser.isoparse(job["started_at"])
             )
-            finished_at = (
-                dateutil.parser.isoparse(job["finished_at"])
-                if "finished_at" in job
-                else started_at
-            )
+            if job["canceled_at"] is None:
+                finished_at = (
+                    started_at
+                    if job["finished_at"] is None
+                    else dateutil.parser.isoparse(job["finished_at"])
+                )
+            else:
+                finished_at = dateutil.parser.isoparse(job["canceled_at"])
 
             job_name = BUILDKITE_WORKFLOW_TO_TRACK[job["name"]]
             queue_time = (started_at - scheduled_at).seconds
