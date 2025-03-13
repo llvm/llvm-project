@@ -87,14 +87,17 @@ def buildkite_fetch_page_build_list(
     buildkite_token: str, after_cursor: str = None
 ) -> list[dict[str, str]]:
     """Fetches a page of the build list using the GraphQL BuildKite API.
+
     Returns the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE last running/queued builds,
     or the BUILDKITE_GRAPHQL_BUILDS_PER_PAGE running/queued builds
     older than the one pointer by |after_cursor| if provided.
     The |after_cursor| value is taken from the previous page returned by the
     API.
+
     Args:
       buildkite_token: the secret token to authenticate GraphQL requests.
       after_cursor: cursor after which to start the page fetch.
+
     Returns:
       The most recent builds after cursor (if set) with the following format:
       [
@@ -130,7 +133,7 @@ def buildkite_fetch_page_build_list(
         AFTER="null" if after_cursor is None else '"{}"'.format(after_cursor),
     )
     data = data.replace("\n", "").replace('"', '\\"')
-    data = '{ "query": "' + data + '" }'
+    data = json.dumps({"query": data})  #'{ "query": "' + data + '" }'
     url = "https://graphql.buildkite.com/v1"
     headers = {
         "Authorization": "Bearer " + buildkite_token,
@@ -151,12 +154,15 @@ def buildkite_fetch_page_build_list(
 
 def buildkite_get_build_info(build_number: str) -> dict:
     """Returns all the info associated with the provided build number.
+
     Note: for unknown reasons, graphql returns no jobs for a given build,
     while this endpoint does, hence why this uses this API instead of graphql.
-      Args:
-        build_number: which build number to fetch info for.
-      Returns:
-        The info for the target build, a JSON dictionnary.
+
+    Args:
+      build_number: which build number to fetch info for.
+
+    Returns:
+      The info for the target build, a JSON dictionnary.
     """
 
     URL = "https://buildkite.com/llvm-project/github-pull-requests/builds/{}.json"
@@ -165,6 +171,7 @@ def buildkite_get_build_info(build_number: str) -> dict:
 
 def buildkite_get_incomplete_tasks(buildkite_token: str) -> list:
     """Returns all the running/pending BuildKite builds.
+
     Args:
      buildkite_token: the secret token to authenticate GraphQL requests.
      last_cursor: the cursor to stop at if set. If None, a full page is fetched.
@@ -184,13 +191,14 @@ def buildkite_get_metrics(
     buildkite_token: str, previously_incomplete: set[int]
 ) -> (list[JobMetrics], set[int]):
     """Returns a tuple with:
+
     - the metrics recorded for newly completed workflow jobs.
     - the set of workflow still running now.
 
     Args:
-     buildkite_token: the secret token to authenticate GraphQL requests.
-     previously_incomplete: the set of running workflows the last time this
-     function was called.
+      buildkite_token: the secret token to authenticate GraphQL requests.
+        previously_incomplete: the set of running workflows the last time this
+        function was called.
     """
 
     running_builds = buildkite_get_incomplete_tasks(buildkite_token)
@@ -204,14 +212,31 @@ def buildkite_get_metrics(
         info = buildkite_get_build_info(build_id)
         metric_timestamp = dateutil.parser.isoparse(info["finished_at"])
         for job in info["jobs"]:
-            # Skip this job.
+            # This workflow is not interesting to us.
             if job["name"] not in BUILDKITE_WORKFLOW_TO_TRACK:
                 continue
 
+            # Note: BuildKite API can return empty dates for some fields
+            # depending on the completion scenario. Example, a job cancelled
+            # before even starting will get an None date for 'started_at'.
+            # For this reason, if a timestamp is missing, we consider it
+            # skipped and keep the last event value.
             created_at = dateutil.parser.isoparse(job["created_at"])
-            scheduled_at = dateutil.parser.isoparse(job["scheduled_at"])
-            started_at = dateutil.parser.isoparse(job["started_at"])
-            finished_at = dateutil.parser.isoparse(job["finished_at"])
+            scheduled_at = (
+                dateutil.parser.isoparse(job["scheduled_at"])
+                if "scheduled_at" in job
+                else created_at
+            )
+            started_at = (
+                dateutil.parser.isoparse(job["started_at"])
+                if "started_at" in job
+                else scheduled_at
+            )
+            finished_at = (
+                dateutil.parser.isoparse(job["finished_at"])
+                if "finished_at" in job
+                else started_at
+            )
 
             job_name = BUILDKITE_WORKFLOW_TO_TRACK[job["name"]]
             queue_time = (started_at - scheduled_at).seconds
@@ -224,7 +249,7 @@ def buildkite_get_metrics(
                 datetime.datetime.now(datetime.timezone.utc) - metric_timestamp
             ).total_seconds() / 60
             if metric_age_mn > GRAFANA_METRIC_MAX_AGE_MN:
-                logging.info(
+                logging.warning(
                     f"Job {job['name']} from workflow {build_id} dropped due"
                     + f" to staleness: {metric_age_mn}mn old."
                 )
@@ -372,7 +397,7 @@ def github_get_metrics(
                 datetime.datetime.now(datetime.timezone.utc) - completed_at
             ).total_seconds() / 60
             if metric_age_mn > GRAFANA_METRIC_MAX_AGE_MN:
-                logging.info(
+                logging.warning(
                     f"Job {job.id} from workflow {task.id} dropped due"
                     + f" to staleness: {metric_age_mn}mn old."
                 )
