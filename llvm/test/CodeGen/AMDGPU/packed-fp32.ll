@@ -540,7 +540,7 @@ define amdgpu_kernel void @shuffle_neg_add_f32(ptr addrspace(1) %out, ptr addrsp
 bb:
   %vec0 = load volatile <2 x float>, ptr addrspace(3) %lds, align 8
   %lds.gep1 = getelementptr inbounds <2 x float>, ptr addrspace(3) %lds, i32 1
-  %f32 = load volatile float, ptr addrspace(3) undef, align 8
+  %f32 = load volatile float, ptr addrspace(3) poison, align 8
   %vec1 = load volatile <2 x float>, ptr addrspace(3) %lds.gep1, align 8
   %vec1.neg = fsub <2 x float> <float -0.0, float -0.0>, %vec1
   %vec1.neg.swap = shufflevector <2 x float> %vec1.neg, <2 x float> poison, <2 x i32> <i32 1, i32 0>

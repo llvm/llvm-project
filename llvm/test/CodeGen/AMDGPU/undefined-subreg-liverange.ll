@@ -34,7 +34,7 @@ B30.1:
 B30.2:
   %v3 = phi <4 x float> [ %sub, %B30.1 ], [ %v0, %B2 ]
   %ve0 = extractelement <4 x float> %v3, i32 0
-  store float %ve0, ptr addrspace(3) undef, align 4
+  store float %ve0, ptr addrspace(3) poison, align 4
   ret void
 }
 

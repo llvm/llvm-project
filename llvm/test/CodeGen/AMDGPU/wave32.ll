@@ -1626,7 +1626,7 @@ Flow:                                             ; preds = %bb4, %bb1
   br i1 %tmp3, label %bb1, label %bb9
 
 bb9:                                              ; preds = %Flow
-  store volatile i32 7, ptr addrspace(3) undef
+  store volatile i32 7, ptr addrspace(3) poison
   ret void
 }
 

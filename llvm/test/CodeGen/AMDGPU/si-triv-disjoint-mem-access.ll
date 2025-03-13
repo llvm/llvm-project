@@ -3,7 +3,7 @@
 
 %struct.lds = type { [64 x ptr], [16 x i8] }
 @stored_lds_struct = addrspace(3) global %struct.lds undef, align 16
-@stored_lds_ptr = addrspace(3) global ptr addrspace(3) undef, align 4
+@stored_lds_ptr = addrspace(3) global ptr addrspace(3) poison, align 4
 @stored_constant_ptr = addrspace(3) global ptr addrspace(4) undef, align 8
 @stored_global_ptr = addrspace(3) global ptr addrspace(1) poison, align 8
 

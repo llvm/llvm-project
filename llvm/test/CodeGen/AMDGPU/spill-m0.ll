@@ -174,7 +174,7 @@ define amdgpu_kernel void @restore_m0_lds(i32 %arg) {
   br i1 %cmp, label %ret, label %bb
 
 bb:
-  store volatile i64 %sval, ptr addrspace(3) undef
+  store volatile i64 %sval, ptr addrspace(3) poison
   call void asm sideeffect "; use $0", "{m0}"(i32 %m0) #0
   br label %ret
 
