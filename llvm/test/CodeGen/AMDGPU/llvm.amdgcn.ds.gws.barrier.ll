@@ -98,7 +98,9 @@ define amdgpu_kernel void @gws_barrier_sgpr_offset_add1(i32 %val, i32 %offset.ba
 ; NOLOOP-SDAG-DAG: s_lshl_b32 [[SHL:s[0-9]+]], [[READLANE]], 16
 ; NOLOOP-SDAG-DAG: s_mov_b32 m0, [[SHL]]{{$}}
 
-; NOLOOP-GISEL-DAG: s_lshl_b32 m0, [[READLANE]], 16
+
+; FIXME: check exact reg, GFX11 has an added s_and
+; NOLOOP-GISEL-DAG: s_lshl_b32 m0, {{s[0-9]+}}, 16
 
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], [[BAR_NUM]]
 ; NOLOOP: ds_gws_barrier [[GWS_VAL]] gds{{$}}
@@ -116,7 +118,8 @@ define amdgpu_kernel void @gws_barrier_vgpr_offset(i32 %val) #0 {
 ; NOLOOP-SDAG-DAG: s_lshl_b32 [[SHL:s[0-9]+]], [[READLANE]], 16
 ; NOLOOP-SDAG-DAG: s_mov_b32 m0, [[SHL]]{{$}}
 
-; NOLOOP-GISEL-DAG: s_lshl_b32 m0, [[READLANE]], 16
+; FIXME: check exact reg, GFX11 has an added s_and
+; NOLOOP-GISEL-DAG: s_lshl_b32 m0, {{s[0-9]+}}, 16
 
 ; NOLOOP-DAG: v_mov_b32_e32 [[GWS_VAL:v[0-9]+]], [[BAR_NUM]]
 ; NOLOOP: ds_gws_barrier [[GWS_VAL]] offset:3 gds{{$}}
