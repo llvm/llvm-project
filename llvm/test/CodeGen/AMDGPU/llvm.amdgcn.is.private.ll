@@ -104,7 +104,7 @@ define amdgpu_kernel void @is_private_vgpr(ptr addrspace(1) %ptr.ptr) {
   %ptr = load volatile ptr, ptr addrspace(1) %gep
   %val = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %ext = zext i1 %val to i32
-  store i32 %ext, ptr addrspace(1) undef
+  store i32 %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -221,7 +221,7 @@ define amdgpu_kernel void @is_private_sgpr(ptr %ptr) {
   br i1 %val, label %bb0, label %bb1
 
 bb0:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %bb1
 
 bb1:
