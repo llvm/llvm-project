@@ -394,7 +394,7 @@ static MCRelocationInfo *createARMMCRelocationInfo(const Triple &TT,
 
 template <typename T, size_t N>
 static bool instructionsMatch(const T (&Insns)[N], const uint8_t *Buf,
-                             llvm::endianness E) {
+                              llvm::endianness E) {
   for (size_t I = 0; I < N; ++I) {
     T Val = support::endian::read<T>(Buf + I * sizeof(T), E);
     if (Val != Insns[I]) {
@@ -502,7 +502,7 @@ public:
         };
 
         if (instructionsMatch(Insns, PltContents.data() + Byte + 8,
-                                    InstrEndianness)) {
+                              InstrEndianness)) {
           // add ip, pc at Byte + 8 + thumb-pc-bias = 12
           uint64_t Offset =
               (PltSectionVA + Byte + 12) + OffsetLower + OffsetHigher;
@@ -520,7 +520,7 @@ public:
            Byte += 4) {
         // Is it a long entry?
         if (instructionsMatch(LongEntryInsns, PltContents.data() + Byte,
-                                    InstrEndianness)) {
+                              InstrEndianness)) {
           // Expected instruction sequence:
           //
           //     ldr ip, L2
