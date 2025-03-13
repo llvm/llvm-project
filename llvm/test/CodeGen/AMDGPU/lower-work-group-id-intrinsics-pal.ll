@@ -68,7 +68,7 @@ define amdgpu_cs void @_amdgpu_cs_main() {
   %ielemx = insertelement <3 x i32> poison, i32 %idx, i64 0
   %ielemy = insertelement <3 x i32> %ielemx, i32 %idy, i64 1
   %ielemz = insertelement <3 x i32> %ielemy, i32 %idz, i64 2
-  call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> %ielemz, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> %ielemz, ptr addrspace(8) poison, i32 0, i32 0, i32 0)
   ret void
 }
 

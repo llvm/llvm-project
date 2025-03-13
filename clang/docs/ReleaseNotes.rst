@@ -292,6 +292,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now diagnoses copy constructors taking the class by value in template instantiations. (#GH130866)
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - Clang now prints the correct instantiation context for diagnostics suppressed
   by template argument deduction.
@@ -356,6 +357,10 @@ Android Support
 
 Windows Support
 ^^^^^^^^^^^^^^^
+
+- Clang now defines ``_CRT_USE_BUILTIN_OFFSETOF`` macro in MSVC-compatible mode,
+  which makes ``offsetof`` provided by Microsoft's ``<stddef.h>`` to be defined
+  correctly. (#GH59689)
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
