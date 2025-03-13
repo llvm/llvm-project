@@ -840,7 +840,6 @@ ELFObjectFileBase::getPltEntries(const MCSubtargetInfo &STI) const {
         consumeError(PltContents.takeError());
         return {};
       }
-
       llvm::append_range(
           PltEntries,
           MIA->findPltEntries(Section.getAddress(),

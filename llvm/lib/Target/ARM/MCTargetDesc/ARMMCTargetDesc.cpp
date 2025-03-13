@@ -393,9 +393,9 @@ static MCRelocationInfo *createARMMCRelocationInfo(const Triple &TT,
 }
 
 template <typename T, size_t N>
-bool instructionsAreMatching(const T (&Insns)[N], const uint8_t *Buf,
+static bool instructionsMatch(const T (&Insns)[N], const uint8_t *Buf,
                              llvm::endianness E) {
-  for (unsigned I = 0; I < N; ++I) {
+  for (size_t I = 0; I < N; ++I) {
     T Val = support::endian::read<T>(Buf + I * sizeof(T), E);
     if (Val != Insns[I]) {
       return false;
@@ -467,7 +467,6 @@ public:
         // ldr.w pc, [ip]
         // b . -4
 
-        // Check for movw.
         uint32_t MovwPart1 =
             support::endian::read16(PltContents.data() + Byte, InstrEndianness);
         if ((MovwPart1 & 0xffb0) != 0xf200)
@@ -482,7 +481,6 @@ public:
             (MovwPart2 & 0xff) + ((MovwPart2 & 0x7000) >> 4) +
             ((MovwPart1 & 0x400) << 1) + ((MovwPart1 & 0xf) << 12);
 
-        // Check for movt.
         uint32_t MovtPart1 = support::endian::read16(
             PltContents.data() + Byte + 4, InstrEndianness);
         if ((MovtPart1 & 0xfbf0) != 0xf2c0)
@@ -503,8 +501,9 @@ public:
             0xe7fc,         // b . -4
         };
 
-        if (instructionsAreMatching(Insns, PltContents.data() + Byte + 8,
+        if (instructionsMatch(Insns, PltContents.data() + Byte + 8,
                                     InstrEndianness)) {
+          // add ip, pc at Byte + 8 + thumb-pc-bias = 12
           uint64_t Offset =
               (PltSectionVA + Byte + 12) + OffsetLower + OffsetHigher;
           Result.emplace_back(PltSectionVA + Byte, Offset);
@@ -520,7 +519,7 @@ public:
       for (uint64_t Byte = 0, End = PltContents.size(); Byte + 12 < End;
            Byte += 4) {
         // Is it a long entry?
-        if (instructionsAreMatching(LongEntryInsns, PltContents.data() + Byte,
+        if (instructionsMatch(LongEntryInsns, PltContents.data() + Byte,
                                     InstrEndianness)) {
           // Expected instruction sequence:
           //
@@ -541,22 +540,20 @@ public:
           //     add ip, ip,  #0x000NN000  Offset(&(.got.plt) - L1 - 8
           //     ldr pc, [ip, #0x00000NNN] Offset(&(.got.plt) - L1 - 8
 
-          // Check for first add.
           uint32_t Add1 = support::endian::read32(PltContents.data() + Byte,
                                                   InstrEndianness);
           if ((Add1 & 0xe28fc600) != 0xe28fc600)
             continue;
           uint32_t Add2 = support::endian::read32(PltContents.data() + Byte + 4,
                                                   InstrEndianness);
-          // Check for second add.
           if ((Add2 & 0xe28cca00) != 0xe28cca00)
             continue;
           uint32_t Ldr = support::endian::read32(PltContents.data() + Byte + 8,
                                                  InstrEndianness);
-          // Check for ldr.
           if ((Ldr & 0xe5bcf000) != 0xe5bcf000)
             continue;
 
+          // add ip, pc, #offset at Byte + 0 + arm-pc-bias = 8
           uint64_t Offset = (PltSectionVA + Byte + 8) + ((Add1 & 0xff) << 20) +
                             ((Add2 & 0xff) << 12) + (Ldr & 0xfff);
           Result.emplace_back(PltSectionVA + Byte, Offset);
