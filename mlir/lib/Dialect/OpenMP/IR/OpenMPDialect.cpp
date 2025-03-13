@@ -2726,14 +2726,6 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
                     makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
 }
 
-SmallVector<Value> TaskloopOp::getAllReductionVars() {
-  SmallVector<Value> allReductionNvars(getInReductionVars().begin(),
-                                       getInReductionVars().end());
-  allReductionNvars.insert(allReductionNvars.end(), getReductionVars().begin(),
-                           getReductionVars().end());
-  return allReductionNvars;
-}
-
 LogicalResult TaskloopOp::verify() {
   if (getAllocateVars().size() != getAllocatorVars().size())
     return emitError(
