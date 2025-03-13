@@ -49,7 +49,7 @@ class TestDAP_gotoTargets(lldbdap_testcase.DAPTestCaseBase):
         )
 
         self.assertEqual(
-            response["success"], True, "expects success when request for targets"
+            response["success"], True, "request for gotoTargets should be successful"
         )
         target = response["body"]["targets"][0]
         self.assertGreaterEqual(
