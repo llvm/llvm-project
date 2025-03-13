@@ -52,7 +52,7 @@ class TimePassesHandler {
   TimerGroup &AnalysisTG = NamedRegionTimer::getNamedTimerGroup(
       AnalysisGroupName, AnalysisGroupDesc);
 
-  using TimerVector = llvm::SmallVector<Timer *, 4>;
+  using TimerVector = llvm::SmallVector<std::unique_ptr<Timer>, 4>;
   /// Map of timers for pass invocations
   StringMap<TimerVector> TimingData;
 

@@ -164,7 +164,7 @@ Timer &TimePassesHandler::getPassTimer(StringRef PassID, bool IsPass) {
   if (!PerRun) {
     TimerVector &Timers = TimingData[PassID];
     if (Timers.size() == 0)
-      Timers.push_back(new Timer(PassID, PassID, TG));
+      Timers.emplace_back(new Timer(PassID, PassID, TG));
     return *Timers.front();
   }
 
@@ -176,7 +176,7 @@ Timer &TimePassesHandler::getPassTimer(StringRef PassID, bool IsPass) {
   std::string FullDesc = formatv("{0} #{1}", PassID, Count).str();
 
   Timer *T = new Timer(PassID, FullDesc, TG);
-  Timers.push_back(T);
+  Timers.emplace_back(T);
   assert(Count == Timers.size() && "Timers vector not adjusted correctly.");
 
   return *T;
@@ -203,7 +203,6 @@ void TimePassesHandler::print() {
     MaybeCreated = CreateInfoOutputFile();
     OS = &*MaybeCreated;
   }
-
   PassTG.print(*OS, true);
   AnalysisTG.print(*OS, true);
 }
@@ -215,7 +214,7 @@ LLVM_DUMP_METHOD void TimePassesHandler::dump() const {
     StringRef PassID = I.getKey();
     const TimerVector& MyTimers = I.getValue();
     for (unsigned idx = 0; idx < MyTimers.size(); idx++) {
-      const Timer *MyTimer = MyTimers[idx];
+      const Timer* MyTimer = MyTimers[idx].get();
       if (MyTimer && MyTimer->isRunning())
         dbgs() << "\tTimer " << MyTimer << " for pass " << PassID << "(" << idx << ")\n";
     }
@@ -225,7 +224,7 @@ LLVM_DUMP_METHOD void TimePassesHandler::dump() const {
     StringRef PassID = I.getKey();
     const TimerVector& MyTimers = I.getValue();
     for (unsigned idx = 0; idx < MyTimers.size(); idx++) {
-      const Timer *MyTimer = MyTimers[idx];
+      const Timer* MyTimer = MyTimers[idx].get();
       if (MyTimer && MyTimer->hasTriggered() && !MyTimer->isRunning())
         dbgs() << "\tTimer " << MyTimer << " for pass " << PassID << "(" << idx << ")\n";
     }
