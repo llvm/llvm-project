@@ -2627,7 +2627,7 @@ public:
           }
           bool IsInverseOperation = !isCommutative(cast<Instruction>(VL[Lane]));
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          Instruction *Inst = cast<Instruction>(VL[Lane]);
+          auto *Inst = cast<Instruction>(VL[Lane]);
           if (Inst->getOpcode() != MainOp->getOpcode() &&
               OpIdx > (Inst->getNumOperands() - 1)) {
             OpsVec[OpIdx][Lane] = {
