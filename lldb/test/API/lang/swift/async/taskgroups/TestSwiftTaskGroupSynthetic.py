@@ -7,12 +7,24 @@ from lldbsuite.test import lldbutil
 class TestCase(TestBase):
 
     @swiftTest
-    def test_value_printing(self):
+    def test_print_task_group(self):
         """Print a TaskGroup and verify its children."""
         self.build()
         lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.swift")
+            self, "break here TaskGroup", lldb.SBFileSpec("main.swift")
         )
+        self.do_test_print()
+
+    @swiftTest
+    def test_print_throwing_task_group(self):
+        """Print a ThrowingTaskGroup and verify its children."""
+        self.build()
+        lldbutil.run_to_source_breakpoint(
+            self, "break here ThrowingTaskGroup", lldb.SBFileSpec("main.swift")
+        )
+        self.do_test_print()
+
+    def do_test_print(self):
         self.expect(
             "v group",
             substrs=[
@@ -32,12 +44,24 @@ class TestCase(TestBase):
         )
 
     @swiftTest
-    def test_value_api(self):
+    def test_api_task_group(self):
         """Verify a TaskGroup contains its expected children."""
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(
-            self, "break here", lldb.SBFileSpec("main.swift")
+            self, "break here TaskGroup", lldb.SBFileSpec("main.swift")
         )
+        self.do_test_api(process)
+
+    @swiftTest
+    def test_api_task_group(self):
+        """Verify a ThrowingTaskGroup contains its expected children."""
+        self.build()
+        _, process, _, _ = lldbutil.run_to_source_breakpoint(
+            self, "break here ThrowingTaskGroup", lldb.SBFileSpec("main.swift")
+        )
+        self.do_test_api(process)
+
+    def do_test_api(self, process):
         thread = process.GetSelectedThread()
         frame = thread.GetSelectedFrame()
         group = frame.FindVariable("group")

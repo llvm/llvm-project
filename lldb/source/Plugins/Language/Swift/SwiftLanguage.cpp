@@ -432,7 +432,7 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       swift_category_sp,
       lldb_private::formatters::swift::TaskGroupSyntheticFrontEndCreator,
       "Swift.TaskGroup synthetic children",
-      ConstString("^Swift\\.TaskGroup<.+>"), synth_flags, true);
+      ConstString("^Swift\\.(Throwing)?TaskGroup<.+>"), synth_flags, true);
 
   AddCXXSummary(
       swift_category_sp, lldb_private::formatters::swift::Bool_SummaryProvider,
