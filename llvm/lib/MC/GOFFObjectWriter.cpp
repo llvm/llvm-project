@@ -225,6 +225,7 @@ void GOFFOstream::finalizeRecord() {
 namespace {
 class GOFFWriter {
   GOFFOstream OS;
+  [[maybe_unused]] MCAssembler &Asm;
 
   void writeHeader();
   void writeEnd();
