@@ -176,7 +176,7 @@ void AMDGPUConditionalDiscard::optimizeBlock(BasicBlock &BB, bool ConvertToDemot
       auto *NewKill = cast<CallInst>(KillCand->clone());
 
       NewKill->setArgOperand(0, Cond);
-      NewKill->insertBefore(PredBranchInst);
+      NewKill->insertBefore(PredBranchInst->getIterator());
 
       if (ConvertToDemote) {
         NewKill->setCalledFunction(Intrinsic::getOrInsertDeclaration(
