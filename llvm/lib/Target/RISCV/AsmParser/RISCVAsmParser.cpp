@@ -219,7 +219,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
   ParseStatus parseRegReg(OperandVector &Operands);
   ParseStatus parseRetval(OperandVector &Operands);
   ParseStatus parseZcmpStackAdj(OperandVector &Operands,
-                                bool ExpectNegative = false);
+                                bool ExpectNegative = false);                       
   ParseStatus parseZcmpNegStackAdj(OperandVector &Operands) {
     return parseZcmpStackAdj(Operands, /*ExpectNegative*/ true);
   }
@@ -484,6 +484,18 @@ public:
   bool isGPRPair() const {
     return Kind == KindTy::Register &&
            RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(
+               Reg.RegNum);
+  }
+
+  bool isGPRPairC() const {
+    return Kind == KindTy::Register &&
+           RISCVMCRegisterClasses[RISCV::GPRPairCRegClassID].contains(
+               Reg.RegNum);
+  }
+
+  bool isGPRPairNoX0() const {
+    return Kind == KindTy::Register &&
+           RISCVMCRegisterClasses[RISCV::GPRPairNoX0RegClassID].contains(
                Reg.RegNum);
   }
 
