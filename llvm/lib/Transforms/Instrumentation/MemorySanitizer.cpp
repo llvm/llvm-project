@@ -207,6 +207,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <numeric>
 #include <string>
 #include <tuple>
 
@@ -3273,6 +3274,64 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     setOriginForNaryOp(I);
   }
 
+  /// Handle x86 SSE single-precision to half-precision conversion.
+  ///
+  /// e.g.,
+  ///      <8 x i16> @llvm.x86.vcvtps2ph.256(<8 x float> %a0, i32 0)
+  ///      <8 x i16> @llvm.x86.vcvtps2ph.128(<4 x float> %a0, i32 0)
+  /// Note: if the output has more elements, they are zero-initialized (and
+  /// therefore the shadow will also be initialized).
+  ///
+  /// This differs from handleSSEVectorConvertIntrinsic() because it
+  /// propagates uninitialized shadow (instead of checking the shadow).
+  void handleSSEVectorConvertIntrinsicByProp(IntrinsicInst &I) {
+    assert(I.arg_size() == 2);
+    Value *Src = I.getArgOperand(0);
+    assert(Src->getType()->isVectorTy());
+    [[maybe_unused]] Value *RoundingMode = I.getArgOperand(1);
+    assert(RoundingMode->getType()->isIntegerTy());
+
+    // The return type might have more elements than the input.
+    // Temporarily shrink the return type's number of elements.
+    VectorType *ShadowType = cast<VectorType>(getShadowTy(&I));
+    if (ShadowType->getElementCount() ==
+        cast<VectorType>(Src->getType())->getElementCount() * 2)
+      ShadowType = VectorType::getHalfElementsVectorType(ShadowType);
+
+    assert(ShadowType->getElementCount() ==
+           cast<VectorType>(Src->getType())->getElementCount());
+
+    IRBuilder<> IRB(&I);
+    Value *S0 = getShadow(&I, 0);
+
+    /// For scalars:
+    /// Since they are converting from floating-point to integer, the output is
+    /// - fully uninitialized if *any* bit of the input is uninitialized
+    /// - fully ininitialized if all bits of the input are ininitialized
+    /// We apply the same principle on a per-field basis for vectors.
+    Value *Shadow =
+        IRB.CreateSExt(IRB.CreateICmpNE(S0, getCleanShadow(S0)), ShadowType);
+
+    // The return type might have more elements than the input.
+    // Extend the return type back to its original width if necessary.
+    Value *FullShadow = getCleanShadow(&I);
+
+    if (Shadow->getType() == FullShadow->getType()) {
+      FullShadow = Shadow;
+    } else {
+      SmallVector<int, 8> ShadowMask(
+          cast<FixedVectorType>(FullShadow->getType())->getNumElements());
+      std::iota(ShadowMask.begin(), ShadowMask.end(), 0);
+
+      // Append zeros
+      FullShadow =
+          IRB.CreateShuffleVector(Shadow, getCleanShadow(Shadow), ShadowMask);
+    }
+
+    setShadow(&I, FullShadow);
+    setOriginForNaryOp(I);
+  }
+
   // Instrument x86 SSE vector convert intrinsic.
   //
   // This function instruments intrinsics like cvtsi2ss:
@@ -4865,6 +4924,12 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       [[maybe_unused]] bool Success =
           maybeHandleSimpleNomemIntrinsic(I, /*trailingFlags=*/1);
       assert(Success);
+      break;
+    }
+
+    case Intrinsic::x86_vcvtps2ph_128:
+    case Intrinsic::x86_vcvtps2ph_256: {
+      handleSSEVectorConvertIntrinsicByProp(I);
       break;
     }
 
