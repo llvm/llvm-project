@@ -656,11 +656,20 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
   for (StringRef Input :
        {"rv64i_xqcisls0p2", "rv64i_xqcia0p4", "rv64i_xqciac0p3",
         "rv64i_xqcicsr0p2", "rv64i_xqcilsm0p2", "rv64i_xqcicm0p2",
-        "rv64i_xqcics0p2", "rv64i_xqcicli0p2", "rv64i_xqciint0p2",
-        "rv64i_xqcilo0p2", "rv64i_xqcilia0p2", "rv64i_xqcibm0p4"}) {
+        "rv64i_xqcics0p2", "rv64i_xqcicli0p2", "rv64i_xqciint0p4",
+        "rv64i_xqcilo0p2", "rv64i_xqcili0p2", "rv64i_xqcilia0p2",
+        "rv64i_xqcibm0p4"}) {
     EXPECT_THAT(
         toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
         ::testing::EndsWith(" is only supported for 'rv32'"));
+  }
+
+  for (StringRef Input :
+       {"rv32idc_xqciac0p3", "rv32i_zcd_xqciac0p3", "rv32idc_xqcicm0p2",
+        "rv32i_zcd_xqcicm0p2", "rv32idc_xqccmp0p1", "rv32i_zcd_xqccmp0p1"}) {
+    EXPECT_THAT(
+        toString(RISCVISAInfo::parseArchString(Input, true).takeError()),
+        ::testing::EndsWith("extension when 'd' extension is enabled"));
   }
 
   for (StringRef Input : {"rv32i_zcmp_xqccmp0p1", "rv64i_zcmp_xqccmp0p1"}) {
@@ -1132,7 +1141,8 @@ Experimental extensions
     xqcicm               0.2
     xqcics               0.2
     xqcicsr              0.2
-    xqciint              0.2
+    xqciint              0.4
+    xqcili               0.2
     xqcilia              0.2
     xqcilo               0.2
     xqcilsm              0.2

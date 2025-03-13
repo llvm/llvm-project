@@ -7,16 +7,31 @@
 #ifndef PCH_HELPER
 #define PCH_HELPER
 auto Lambda = [](){};
-#pragma acc routine(Lambda) worker nohost
+#pragma acc routine(Lambda) worker nohost bind("string")
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' '(lambda at
 // CHECK-NEXT: worker clause
 // CHECK-NEXT: nohost clause
+// CHECK-NEXT: bind clause
+// CHECK-NEXT: StringLiteral{{.*}} "string"
 int function();
-#pragma acc routine (function) nohost vector
+#pragma acc routine (function) nohost vector bind(identifier)
 // CHECK: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'function' 'int ()'
 // CHECK-NEXT: nohost clause
+// CHECK-NEXT: vector clause
+// CHECK-NEXT: bind clause identifier 'identifier'
+
+#pragma acc routine(function) device_type(Something) seq
+// CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
+// CHECK-NEXT: DeclRefExpr{{.*}} 'function' 'int ()'
+// CHECK-NEXT: device_type(Something)
+// CHECK-NEXT: seq clause
+#pragma acc routine(function) nohost dtype(Something) vector
+// CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
+// CHECK-NEXT: DeclRefExpr{{.*}} 'function' 'int ()'
+// CHECK-NEXT: nohost clause
+// CHECK-NEXT: dtype(Something)
 // CHECK-NEXT: vector clause
 
 namespace NS {
@@ -77,6 +92,16 @@ struct S {
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const S::(lambda at
 // CHECK-NEXT: worker clause
+#pragma acc routine(Lambda) worker device_type(Lambda)
+// CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
+// CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const S::(lambda at
+// CHECK-NEXT: worker clause
+// CHECK-NEXT: device_type(Lambda)
+#pragma acc routine(Lambda) dtype(Lambda) vector
+// CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
+// CHECK-NEXT: DeclRefExpr{{.*}} 'Lambda' 'const S::(lambda at
+// CHECK-NEXT: dtype(Lambda)
+// CHECK-NEXT: vector clause
 };
 
 #pragma acc routine(S::MemFunc) gang(dim: 1)
@@ -150,6 +175,12 @@ struct DepS {
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'T ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<T>'
 // CHECK-NEXT: worker clause
+#pragma acc routine(DepS<T>::StaticMemFunc) worker device_type(T)
+// CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
+// CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'T ()'
+// CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<T>'
+// CHECK-NEXT: worker clause
+// CHECK-NEXT: device_type(T)
 
 // Instantiation:
 // CHECK: ClassTemplateSpecializationDecl{{.*}}struct DepS
@@ -200,6 +231,12 @@ struct DepS {
 // CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'int ()'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
 // CHECK-NEXT: worker clause
+
+// CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
+// CHECK-NEXT: DeclRefExpr{{.*}} 'StaticMemFunc' 'int ()'
+// CHECK-NEXT: NestedNameSpecifier{{.*}} 'DepS<int>'
+// CHECK-NEXT: worker clause
+// CHECK-NEXT: device_type(T)
 };
 
 #pragma acc routine(DepS<int>::Lambda) gang(dim:1)
@@ -229,20 +266,23 @@ void TemplFunc() {
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
 // CHECK-NEXT: gang clause
 // CHECK-NEXT: CallExpr{{.*}}'<dependent type>'
-#pragma acc routine(T::StaticMemFunc) nohost worker
+#pragma acc routine(T::StaticMemFunc) nohost worker bind("string")
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}}'<dependent type>'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
 // CHECK-NEXT: nohost clause
 // CHECK-NEXT: worker clause
-#pragma acc routine(T::Lambda) seq nohost
+// CHECK-NEXT: bind clause
+// CHECK-NEXT: StringLiteral{{.*}} "string"
+#pragma acc routine(T::Lambda) seq nohost bind(identifier)
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
 // CHECK-NEXT: DependentScopeDeclRefExpr{{.*}}'<dependent type>'
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'T'
 // CHECK-NEXT: seq clause
 // CHECK-NEXT: nohost clause
+// CHECK-NEXT: bind clause identifier 'identifier'
 
 // Instantiation:
 // CHECK: FunctionDecl{{.*}} TemplFunc 'void ()' implicit_instantiation
@@ -260,6 +300,8 @@ void TemplFunc() {
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
 // CHECK-NEXT: nohost clause
 // CHECK-NEXT: worker clause
+// CHECK-NEXT: bind clause
+// CHECK-NEXT: StringLiteral{{.*}} "string"
 
 // CHECK-NEXT: DeclStmt
 // CHECK-NEXT: OpenACCRoutineDecl{{.*}} routine name_specified
@@ -267,6 +309,7 @@ void TemplFunc() {
 // CHECK-NEXT: NestedNameSpecifier{{.*}} 'S'
 // CHECK-NEXT: seq clause
 // CHECK-NEXT: nohost clause
+// CHECK-NEXT: bind clause identifier 'identifier'
 }
 
 void usage() {

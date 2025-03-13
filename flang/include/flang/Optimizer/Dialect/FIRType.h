@@ -498,6 +498,13 @@ inline bool isBoxProcAddressType(mlir::Type t) {
   return t && mlir::isa<fir::BoxProcType>(t);
 }
 
+inline bool isRefOfConstantSizeAggregateType(mlir::Type t) {
+  t = fir::dyn_cast_ptrEleTy(t);
+  return t &&
+         mlir::isa<fir::CharacterType, fir::RecordType, fir::SequenceType>(t) &&
+         !hasDynamicSize(t);
+}
+
 /// Return a string representation of `ty`.
 ///
 /// fir.array<10x10xf32> -> prefix_10x10xf32

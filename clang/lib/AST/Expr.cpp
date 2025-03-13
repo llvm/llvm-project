@@ -1509,16 +1509,6 @@ CallExpr *CallExpr::Create(const ASTContext &Ctx, Expr *Fn,
                             RParenLoc, FPFeatures, MinNumArgs, UsesADL);
 }
 
-CallExpr *CallExpr::CreateTemporary(void *Mem, Expr *Fn, QualType Ty,
-                                    ExprValueKind VK, SourceLocation RParenLoc,
-                                    ADLCallKind UsesADL) {
-  assert(!(reinterpret_cast<uintptr_t>(Mem) % alignof(CallExpr)) &&
-         "Misaligned memory in CallExpr::CreateTemporary!");
-  return new (Mem) CallExpr(CallExprClass, Fn, /*PreArgs=*/{}, /*Args=*/{}, Ty,
-                            VK, RParenLoc, FPOptionsOverride(),
-                            /*MinNumArgs=*/0, UsesADL);
-}
-
 CallExpr *CallExpr::CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
                                 bool HasFPFeatures, EmptyShell Empty) {
   unsigned SizeOfTrailingObjects =
@@ -1655,12 +1645,8 @@ SourceLocation CallExpr::getBeginLoc() const {
   if (!isTypeDependent()) {
     if (const auto *Method =
             dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
-        Method && Method->isExplicitObjectMemberFunction()) {
-      bool HasFirstArg = getNumArgs() > 0 && getArg(0);
-      assert(HasFirstArg);
-      if (HasFirstArg)
-        return getArg(0)->getBeginLoc();
-    }
+        Method && Method->isExplicitObjectMemberFunction())
+      return getArg(0)->getBeginLoc();
   }
 
   SourceLocation begin = getCallee()->getBeginLoc();

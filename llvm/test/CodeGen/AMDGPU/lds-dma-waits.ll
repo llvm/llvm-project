@@ -32,7 +32,7 @@ main_body:
   %val.0 = load float, ptr addrspace(3) %gep.0, align 4
   call void @llvm.amdgcn.wave.barrier()
   %val.1 = load float, ptr addrspace(3) %gep.1, align 4
-  %tmp.0 = insertelement <2 x float> undef, float %val.0, i32 0
+  %tmp.0 = insertelement <2 x float> poison, float %val.0, i32 0
   %res = insertelement <2 x float> %tmp.0, float %val.1, i32 1
   store <2 x float> %res, ptr addrspace(1) %out
   ret void
@@ -60,7 +60,7 @@ main_body:
   %val.0 = load float, ptr addrspace(3) %gep.0, align 4
   call void @llvm.amdgcn.wave.barrier()
   %val.1 = load float, ptr addrspace(3) %gep.1, align 4
-  %tmp.0 = insertelement <2 x float> undef, float %val.0, i32 0
+  %tmp.0 = insertelement <2 x float> poison, float %val.0, i32 0
   %res = insertelement <2 x float> %tmp.0, float %val.1, i32 1
   store <2 x float> %res, ptr addrspace(1) %out
   ret void
