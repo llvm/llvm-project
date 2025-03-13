@@ -137,7 +137,7 @@ public:
 
   llvm::Type *
   convertHLSLSpecificType(const Type *T,
-                          SmallVector<unsigned> *Packoffsets = nullptr);
+                          SmallVector<int32_t> *Packoffsets = nullptr);
 
   void generateGlobalCtorDtorCalls();
 

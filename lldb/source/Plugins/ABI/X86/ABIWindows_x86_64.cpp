@@ -675,7 +675,10 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
       uint32_t count;
 
       CompilerType field_compiler_type = aggregate_compiler_types[idx];
-      uint32_t field_byte_width = (uint32_t) (*field_compiler_type.GetByteSize(&thread));
+      uint32_t field_byte_width =
+          (uint32_t)(llvm::expectedToOptional(
+                         field_compiler_type.GetByteSize(&thread))
+                         .value_or(0));
       uint32_t field_byte_offset = aggregate_field_offsets[idx];
 
       // this is unlikely w/o the overall size being greater than 8 bytes

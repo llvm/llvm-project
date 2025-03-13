@@ -26,7 +26,7 @@ main_body:
   %tmp9 = insertelement <4 x i32> %tmp8, i32 %tmp7, i32 1
   %tmp10 = insertelement <4 x i32> %tmp9, i32 poison, i32 2
   %tmp11 = insertelement <4 x i32> %tmp10, i32 poison, i32 3
-  call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4i32(<4 x i32> %tmp11, ptr addrspace(8) undef, i32 0, i32 0, i32 %arg, i32 78, i32 3) #2
+  call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4i32(<4 x i32> %tmp11, ptr addrspace(8) poison, i32 0, i32 0, i32 %arg, i32 78, i32 3) #2
   ret void
 }
 

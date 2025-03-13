@@ -7543,6 +7543,20 @@ static bool isFoldableUseOfShuffle(SDNode *N) {
   return false;
 }
 
+// If the node has a single use by a VSELECT then AVX512 targets may be able to
+// fold as a predicated instruction.
+static bool isMaskableNode(SDValue V, const X86Subtarget &Subtarget) {
+  unsigned SizeInBits = V.getValueSizeInBits();
+  if ((SizeInBits == 512 && Subtarget.hasAVX512()) ||
+      (SizeInBits >= 128 && Subtarget.hasVLX())) {
+    if (V.hasOneUse() && V->user_begin()->getOpcode() == ISD::VSELECT &&
+        V->user_begin()->getOperand(0).getScalarValueSizeInBits() == 1) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Attempt to use the vbroadcast instruction to generate a splat value
 /// from a splat BUILD_VECTOR which uses:
 ///  a. A single scalar load, or a constant.
@@ -41259,13 +41273,7 @@ static SDValue combineX86ShufflesRecursively(
 
   // If we are a AVX512/EVEX target the mask element size should match the root
   // element size to allow writemasks to be reused.
-  bool IsMaskedShuffle = false;
-  if (RootSizeInBits == 512 || (Subtarget.hasVLX() && RootSizeInBits >= 128)) {
-    if (Root.hasOneUse() && Root->user_begin()->getOpcode() == ISD::VSELECT &&
-        Root->user_begin()->getOperand(0).getScalarValueSizeInBits() == 1) {
-      IsMaskedShuffle = true;
-    }
-  }
+  bool IsMaskedShuffle = isMaskableNode(Root, Subtarget);
 
   // We can only combine unary and binary shuffle mask cases.
   if (Ops.size() <= 2) {

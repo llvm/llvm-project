@@ -204,7 +204,7 @@ void llvm::CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
                                      RemapFlags RemapFlag,
                                      ValueMapTypeRemapper *TypeMapper,
                                      ValueMaterializer *Materializer,
-                                     const MetadataSetTy *IdentityMD) {
+                                     const MetadataPredicate *IdentityMD) {
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
   OldFunc.getAllMetadata(MDs);
   for (auto MD : MDs) {
@@ -221,7 +221,7 @@ void llvm::CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
                                  ClonedCodeInfo *CodeInfo,
                                  ValueMapTypeRemapper *TypeMapper,
                                  ValueMaterializer *Materializer,
-                                 const MetadataSetTy *IdentityMD) {
+                                 const MetadataPredicate *IdentityMD) {
   if (OldFunc.isDeclaration())
     return;
 
@@ -328,8 +328,10 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   DISubprogram *SPClonedWithinModule =
       CollectDebugInfoForCloning(*OldFunc, Changes, DIFinder);
 
-  MetadataSetTy IdentityMD =
-      FindDebugInfoToIdentityMap(Changes, DIFinder, SPClonedWithinModule);
+  MetadataPredicate IdentityMD =
+      [MDSet =
+           FindDebugInfoToIdentityMap(Changes, DIFinder, SPClonedWithinModule)](
+          const Metadata *MD) { return MDSet.contains(MD); };
 
   // Cloning is always a Module level operation, since Metadata needs to be
   // cloned.
