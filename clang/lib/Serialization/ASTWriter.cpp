@@ -1802,7 +1802,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   AddFileID(SourceMgr.getMainFileID(), Record);
   Stream.EmitRecord(ORIGINAL_FILE_ID, Record);
 
-  WriteInputFiles(SourceMgr, PP.getHeaderSearchInfo().getHeaderSearchOpts());
+  WriteInputFiles(SourceMgr);
   Stream.ExitBlock();
 }
 
@@ -1835,8 +1835,7 @@ SourceLocation ASTWriter::getAffectingIncludeLoc(const SourceManager &SourceMgr,
   return IncludeLoc;
 }
 
-void ASTWriter::WriteInputFiles(SourceManager &SourceMgr,
-                                HeaderSearchOptions &HSOpts) {
+void ASTWriter::WriteInputFiles(SourceManager &SourceMgr) {
   using namespace llvm;
 
   Stream.EnterSubblock(INPUT_FILES_BLOCK_ID, 4);
