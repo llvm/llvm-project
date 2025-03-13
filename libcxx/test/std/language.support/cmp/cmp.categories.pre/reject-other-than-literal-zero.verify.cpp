@@ -22,22 +22,33 @@
 
 #include "test_macros.h"
 
+struct AnyType {
+  operator int() const { return 0; }
+};
+
 #define TEST_FAIL(v, op)                                                                                               \
   do {                                                                                                                 \
     /* invalid types */                                                                                                \
+    constexpr AnyType t;                                                                                               \
     void(v op 0L);                                                                                                     \
     void(0L op v);                                                                                                     \
     void(v op 0.0);                                                                                                    \
     void(0.0 op v);                                                                                                    \
     void(v op nullptr);                                                                                                \
     void(nullptr op v);                                                                                                \
+    void(v op t);                                                                                                      \
+    void(t op v);                                                                                                      \
     /* invalid value */                                                                                                \
     void(v op 1);                                                                                                      \
     void(1 op v);                                                                                                      \
-    /* value not known at compile-time */                                                                              \
+    /* lvalue reference (also, value is not known at compile-time) */                                                  \
     int i = 0;                                                                                                         \
     void(v op i);                                                                                                      \
     void(i op v);                                                                                                      \
+    /* value known at compile time, but still a lvalue */                                                              \
+    constexpr int j = 0;                                                                                               \
+    void(v op j);                                                                                                      \
+    void(j op v);                                                                                                      \
   } while (false)
 
 #define TEST_PASS(v, op)                                                                                               \
@@ -50,13 +61,33 @@
 
 template <typename T>
 void test_category(T v) {
-  TEST_FAIL(v, ==);  // expected-error 30 {{invalid operands to binary expression}}
-  TEST_FAIL(v, !=);  // expected-error 30 {{invalid operands to binary expression}}
-  TEST_FAIL(v, <);   // expected-error 30 {{invalid operands to binary expression}}
-  TEST_FAIL(v, <=);  // expected-error 30 {{invalid operands to binary expression}}
-  TEST_FAIL(v, >);   // expected-error 30 {{invalid operands to binary expression}}
-  TEST_FAIL(v, >=);  // expected-error 30 {{invalid operands to binary expression}}
-  TEST_FAIL(v, <=>); // expected-error 30 {{invalid operands to binary expression}}
+  TEST_FAIL(v, ==);
+  // expected-error-re@-1 36 {{conversion function from '{{.+}}' to '_CmpUnspecifiedParam' invokes a deleted function}}
+  // expected-error-re@-2 6 {{conversion from '{{.+}}' to '_CmpUnspecifiedParam' is ambiguous}}
+
+  TEST_FAIL(v, !=);
+  // expected-error-re@-1 36 {{conversion function from '{{.+}}' to '_CmpUnspecifiedParam' invokes a deleted function}}
+  // expected-error-re@-2 6 {{conversion from '{{.+}}' to '_CmpUnspecifiedParam' is ambiguous}}
+
+  TEST_FAIL(v, <);
+  // expected-error-re@-1 36 {{conversion function from '{{.+}}' to '_CmpUnspecifiedParam' invokes a deleted function}}
+  // expected-error-re@-2 6 {{conversion from '{{.+}}' to '_CmpUnspecifiedParam' is ambiguous}}
+
+  TEST_FAIL(v, <=);
+  // expected-error-re@-1 36 {{conversion function from '{{.+}}' to '_CmpUnspecifiedParam' invokes a deleted function}}
+  // expected-error-re@-2 6 {{conversion from '{{.+}}' to '_CmpUnspecifiedParam' is ambiguous}}
+
+  TEST_FAIL(v, >);
+  // expected-error-re@-1 36 {{conversion function from '{{.+}}' to '_CmpUnspecifiedParam' invokes a deleted function}}
+  // expected-error-re@-2 6 {{conversion from '{{.+}}' to '_CmpUnspecifiedParam' is ambiguous}}
+
+  TEST_FAIL(v, >=);
+  // expected-error-re@-1 36 {{conversion function from '{{.+}}' to '_CmpUnspecifiedParam' invokes a deleted function}}
+  // expected-error-re@-2 6 {{conversion from '{{.+}}' to '_CmpUnspecifiedParam' is ambiguous}}
+
+  TEST_FAIL(v, <=>);
+  // expected-error-re@-1 36 {{conversion function from '{{.+}}' to '_CmpUnspecifiedParam' invokes a deleted function}}
+  // expected-error-re@-2 6 {{conversion from '{{.+}}' to '_CmpUnspecifiedParam' is ambiguous}}
 
   TEST_PASS(v, ==);
   TEST_PASS(v, !=);
