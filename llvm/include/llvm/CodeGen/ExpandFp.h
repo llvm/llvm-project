@@ -15,8 +15,7 @@ namespace llvm {
 
 class TargetMachine;
 
-class ExpandFpPass
-    : public PassInfoMixin<ExpandFpPass> {
+class ExpandFpPass : public PassInfoMixin<ExpandFpPass> {
 private:
   const TargetMachine *TM;
 
