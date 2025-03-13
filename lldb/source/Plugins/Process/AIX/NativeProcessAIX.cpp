@@ -85,17 +85,6 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
   }
   LLDB_LOG(log, "inferior started, now in stopped state");
 
-  ProcessInstanceInfo Info;
-  if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architectrue",
-                                         llvm::inconvertibleErrorCode());
-  }
-
-  // Set the architecture to the exe architecture.
-  LLDB_LOG(
-      log, "pid = {0}, detected architecture {1}", pid,
-      HostInfo::GetArchitecture(HostInfo::eArchKind64).GetArchitectureName());
-
   return std::unique_ptr<NativeProcessAIX>(new NativeProcessAIX(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
       HostInfo::GetArchitecture(HostInfo::eArchKind64), *this, {pid}));
@@ -107,11 +96,6 @@ NativeProcessAIX::Manager::Attach(
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid = {0:x}", pid);
 
-  ProcessInstanceInfo Info;
-  if (!Host::GetProcessInfo(pid, Info)) {
-    return llvm::make_error<StringError>("Cannot get process architectrue",
-                                         llvm::inconvertibleErrorCode());
-  }
   auto tids_or = NativeProcessAIX::Attach(pid);
   if (!tids_or)
     return tids_or.takeError();
@@ -154,29 +138,6 @@ void NativeProcessAIX::Manager::SigchldHandler() {
     auto wait_result = WaitPid();
     if (!wait_result)
       return;
-    lldb::pid_t pid = wait_result->first;
-    WaitStatus status = wait_result->second;
-
-    // Ask each process whether it wants to handle the event. Each event should
-    // be handled by exactly one process, but thread creation events require
-    // special handling.
-    // Thread creation consists of two events (one on the parent and one on the
-    // child thread) and they can arrive in any order nondeterministically. The
-    // parent event carries the information about the child thread, but not
-    // vice-versa. This means that if the child event arrives first, it may not
-    // be handled by any process (because it doesn't know the thread belongs to
-    // it).
-    bool handled = llvm::any_of(m_processes, [&](NativeProcessAIX *process) {
-      return process->TryHandleWaitStatus(pid, status);
-    });
-    if (!handled) {
-      if (status.type == WaitStatus::Stop && status.status == SIGSTOP) {
-        // Store the thread creation event for later collection.
-        m_unowned_threads.insert(pid);
-      } else {
-        LLDB_LOG(log, "Ignoring waitpid event {0} for pid {1}", status, pid);
-      }
-    }
   }
 }
 
@@ -224,7 +185,7 @@ NativeProcessAIX::NativeProcessAIX(::pid_t pid, int terminal_fd,
 llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
   Log *log = GetLog(POSIXLog::Process);
   Status status;
-  if (PtraceWrapper(PT_ATTACH, pid))
+  if (!PtraceWrapper(PT_ATTACH, pid))
     return errorCodeToError(errnoAsErrorCode());
 
   int wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, nullptr, WNOHANG);
@@ -233,16 +194,6 @@ llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
   LLDB_LOG(log, "adding pid = {0}", pid);
 
   return std::vector<::pid_t>{pid};
-}
-
-bool NativeProcessAIX::TryHandleWaitStatus(lldb::pid_t pid, WaitStatus status) {
-  if (pid == GetID() &&
-      (status.type == WaitStatus::Exit || status.type == WaitStatus::Signal)) {
-    // The process exited.  We're done monitoring.  Report to delegate.
-    SetExitStatus(status, true);
-    return true;
-  }
-  return false;
 }
 
 bool NativeProcessAIX::SupportHardwareSingleStepping() const { return false; }
@@ -297,15 +248,14 @@ Status NativeProcessAIX::RemoveBreakpoint(lldb::addr_t addr, bool hardware) {
 }
 
 llvm::Error NativeProcessAIX::Detach(lldb::tid_t tid) {
-  if (tid == LLDB_INVALID_THREAD_ID)
+  if (PtraceWrapper(PT_DETACH, tid))
     return llvm::Error::success();
-
-  return PtraceWrapper(PT_DETACH, tid);
+  return errorCodeToError(errnoAsErrorCode());
 }
 
-llvm::Error NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
-                                            void *addr, void *data,
-                                            size_t data_size, long *result) {
+llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
+                                                    void *addr, void *data,
+                                                    size_t data_size) {
   long int ret;
 
   Log *log = GetLog(POSIXLog::Ptrace);
@@ -319,12 +269,13 @@ llvm::Error NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
     llvm_unreachable("PT_ request not supported yet.");
   }
 
-  if (errno) {
-    *result = -1;
-    LLDB_LOG(log, "ptrace() failed");
-  }
   LLDB_LOG(log, "ptrace({0}, {1}, {2}, {3}, {4})={5:x}", req, pid, addr, data,
            data_size, ret);
 
-  return Error::success();
+  if (errno)
+    LLDB_LOG(log, "ptrace() failed");
+
+  if (ret == -1)
+    return llvm::errorCodeToError(errnoAsErrorCode());
+  return ret;
 }

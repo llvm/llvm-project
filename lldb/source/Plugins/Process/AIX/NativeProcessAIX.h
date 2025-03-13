@@ -106,10 +106,10 @@ public:
   Status GetFileLoadAddress(const llvm::StringRef &file_name,
                             lldb::addr_t &load_addr) override;
 
-  static llvm::Error PtraceWrapper(int req, lldb::pid_t pid,
-                                   void *addr = nullptr, void *data = nullptr,
-                                   size_t data_size = 0,
-                                   long *result = nullptr);
+  static llvm::Expected<int> PtraceWrapper(int req, lldb::pid_t pid,
+                                           void *addr = nullptr,
+                                           void *data = nullptr,
+                                           size_t data_size = 0);
 
   bool SupportHardwareSingleStepping() const;
 
