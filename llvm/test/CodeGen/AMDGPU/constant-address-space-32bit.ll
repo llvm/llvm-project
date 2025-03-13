@@ -228,9 +228,6 @@ define amdgpu_vs i32 @load_i32_hifffffff0(ptr addrspace(6) inreg %p) #4 {
 ; GCN: v_readfirstlane_b32
 ; SI: s_nop
 ; GCN: s_load_dwordx8
-; GCN-NEXT: v_readfirstlane_b32
-; SI-NEXT: v_mov_b32_e32
-; SI-NEXT: s_nop
 ; GCN-NEXT: s_load_dwordx4
 ; GCN: image_sample
 define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @load_sampler(ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, i32, i32, float, i32) #5 {
@@ -241,8 +238,8 @@ main_body:
   %25 = getelementptr inbounds [0 x <8 x i32>], ptr addrspace(6) %1, i32 0, i32 %24, !amdgpu.uniform !0
   %26 = load <8 x i32>, ptr addrspace(6) %25, align 32, !invariant.load !0
   %27 = shl i32 %23, 2
-  %28 = or disjoint i32 %27, 3
-  %29 = getelementptr inbounds [0 x <4 x i32>], ptr addrspace(6) %1, i32 0, i32 %28, !amdgpu.uniform !0
+  %28 = getelementptr [0 x <4 x i32>], ptr addrspace(6) %1, i32 0, i32 %27, !amdgpu.uniform !0
+  %29 = getelementptr inbounds [0 x <4 x i32>], ptr addrspace(6) %28, i32 0, i32 3, !amdgpu.uniform !0
   %30 = load <4 x i32>, ptr addrspace(6) %29, align 16, !invariant.load !0
   %31 = call nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> %26, <4 x i32> %30, i1 0, i32 0, i32 0) #8
   %32 = extractelement <4 x float> %31, i32 0
@@ -263,9 +260,6 @@ main_body:
 ; GCN: v_readfirstlane_b32
 ; SI: s_nop
 ; GCN: s_load_dwordx8
-; GCN-NEXT: v_readfirstlane_b32
-; SI-NEXT: v_mov_b32_e32
-; SI-NEXT: s_nop
 ; GCN-NEXT: s_load_dwordx4
 ; GCN: image_sample
 define amdgpu_ps <{ i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @load_sampler_nouniform(ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), ptr addrspace(6) inreg noalias dereferenceable(18446744073709551615), float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, i32, i32, float, i32) #5 {
@@ -276,8 +270,8 @@ main_body:
   %25 = getelementptr inbounds [0 x <8 x i32>], ptr addrspace(6) %1, i32 0, i32 %24
   %26 = load <8 x i32>, ptr addrspace(6) %25, align 32, !invariant.load !0
   %27 = shl i32 %23, 2
-  %28 = or disjoint i32 %27, 3
-  %29 = getelementptr inbounds [0 x <4 x i32>], ptr addrspace(6) %1, i32 0, i32 %28
+  %28 = getelementptr [0 x <4 x i32>], ptr addrspace(6) %1, i32 0, i32 %27
+  %29 = getelementptr inbounds [0 x <4 x i32>], ptr addrspace(6) %28, i32 0, i32 3
   %30 = load <4 x i32>, ptr addrspace(6) %29, align 16, !invariant.load !0
   %31 = call nsz <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> %26, <4 x i32> %30, i1 0, i32 0, i32 0) #8
   %32 = extractelement <4 x float> %31, i32 0
