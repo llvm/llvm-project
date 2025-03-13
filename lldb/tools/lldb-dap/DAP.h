@@ -246,6 +246,7 @@ struct DAP {
   // Serialize the JSON value into a string and send the JSON packet to
   // the "out" stream.
   void SendJSON(const llvm::json::Value &json);
+  void Send(const protocol::Message &message);
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 

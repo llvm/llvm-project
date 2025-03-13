@@ -237,6 +237,10 @@ void DAP::SendJSON(const llvm::json::Value &json) {
                   transport.GetClientName());
     return;
   }
+  Send(message);
+}
+
+void DAP::Send(const protocol::Message &message) {
   if (llvm::Error err = transport.Write(message))
     DAP_LOG_ERROR(log, std::move(err), "({1}) write failed: {0}",
                   transport.GetClientName());

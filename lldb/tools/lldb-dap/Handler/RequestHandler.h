@@ -10,11 +10,20 @@
 #define LLDB_TOOLS_LLDB_DAP_HANDLER_HANDLER_H
 
 #include "DAP.h"
+#include "DAPLog.h"
 #include "Protocol.h"
 #include "lldb/API/SBError.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
+#include <optional>
+#include <type_traits>
+
+template <typename T> struct is_optional : std::false_type {};
+
+template <typename T> struct is_optional<std::optional<T>> : std::true_type {};
+
+template <typename T>
+inline constexpr bool is_optional_v = is_optional<T>::value;
 
 namespace lldb_dap {
 struct DAP;
@@ -86,6 +95,20 @@ class RequestHandler : public BaseRequestHandler {
     protocol::Response response;
     response.request_seq = request.seq;
     response.command = request.command;
+
+    if (!is_optional_v<Args> && !request.rawArguments) {
+      DAP_LOG(dap.log,
+              "({0}) malformed request {1}, expected arguments but got none",
+              dap.transport.GetClientName(), request.command);
+      response.success = false;
+      response.message = llvm::formatv("arguments required for command '{0}' "
+                                       "but none received",
+                                       request.command)
+                             .str();
+      dap.Send(response);
+      return;
+    }
+
     Args arguments;
     llvm::json::Path::Root root;
     if (request.rawArguments &&
@@ -95,7 +118,7 @@ class RequestHandler : public BaseRequestHandler {
       root.printErrorContext(request.rawArguments, OS);
       response.success = false;
       response.message = parseFailure;
-      dap.SendJSON(std::move(response));
+      dap.Send(response);
       return;
     }
 
@@ -109,10 +132,11 @@ class RequestHandler : public BaseRequestHandler {
       response.message = llvm::toString(std::move(Err));
     } else {
       response.success = true;
-      response.rawBody = std::move(*ResponseBody);
+      if constexpr (!std::is_same_v<Body, std::monostate>)
+        response.rawBody = std::move(*ResponseBody);
     }
 
-    dap.SendJSON(std::move(response));
+    dap.Send(response);
   };
 
   virtual llvm::Expected<Body> Run(const Args &) const = 0;
@@ -153,11 +177,14 @@ public:
   void operator()(const llvm::json::Object &request) const override;
 };
 
-class DisconnectRequestHandler : public BaseRequestHandler {
+class DisconnectRequestHandler
+    : public RequestHandler<std::optional<protocol::DisconnectArguments>,
+                            protocol::DisconnectResponse> {
 public:
-  using BaseRequestHandler::BaseRequestHandler;
+  using RequestHandler::RequestHandler;
   static llvm::StringLiteral getCommand() { return "disconnect"; }
-  void operator()(const llvm::json::Object &request) const override;
+  llvm::Expected<protocol::DisconnectResponse>
+  Run(const std::optional<protocol::DisconnectArguments> &args) const override;
 };
 
 class EvaluateRequestHandler : public BaseRequestHandler {

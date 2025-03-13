@@ -170,6 +170,34 @@ bool fromJSON(const llvm::json::Value &, Source &, llvm::json::Path);
 
 // MARK: Requests
 
+/// This is just an acknowledgement, so no body field is required.
+using VoidResponse = std::monostate;
+
+/// Arguments for `disconnect` request.
+struct DisconnectArguments {
+  /// A value of true indicates that this `disconnect` request is part of a
+  /// restart sequence.
+  std::optional<bool> restart;
+
+  /// Indicates whether the debuggee should be terminated when the debugger is
+  /// disconnected. If unspecified, the debug adapter is free to do whatever it
+  /// thinks is best. The attribute is only honored by a debug adapter if the
+  /// corresponding capability `supportTerminateDebuggee` is true.
+  std::optional<bool> terminateDebuggee;
+
+  /// Indicates whether the debuggee should stay suspended when the debugger is
+  /// disconnected. If unspecified, the debuggee should resume execution. The
+  /// attribute is only honored by a debug adapter if the corresponding
+  /// capability `supportSuspendDebuggee` is true.
+  std::optional<bool> suspendDebuggee;
+};
+bool fromJSON(const llvm::json::Value &, DisconnectArguments &,
+              llvm::json::Path);
+
+/// Response to `disconnect` request. This is just an acknowledgement, so no
+/// body field is required.
+using DisconnectResponse = VoidResponse;
+
 /// Arguments for `source` request.
 struct SourceArguments {
   /// Specifies the source content to load. Either `source.path` or

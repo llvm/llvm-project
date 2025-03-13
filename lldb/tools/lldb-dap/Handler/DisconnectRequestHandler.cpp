@@ -7,70 +7,36 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
-#include "EventHelper.h"
-#include "JSONUtils.h"
+#include "Protocol.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBError.h"
+#include "llvm/Support/Error.h"
+#include <optional>
+#include <system_error>
+#include <variant>
+
+llvm::Error takeError(lldb::SBError error) {
+  if (error.Success())
+    return llvm::Error::success();
+
+  return llvm::createStringError(
+      std::error_code(error.GetError(), std::generic_category()),
+      error.GetCString());
+}
 
 namespace lldb_dap {
 
-// "DisconnectRequest": {
-//   "allOf": [ { "$ref": "#/definitions/Request" }, {
-//     "type": "object",
-//     "description": "Disconnect request; value of command field is
-//                     'disconnect'.",
-//     "properties": {
-//       "command": {
-//         "type": "string",
-//         "enum": [ "disconnect" ]
-//       },
-//       "arguments": {
-//         "$ref": "#/definitions/DisconnectArguments"
-//       }
-//     },
-//     "required": [ "command" ]
-//   }]
-// },
-// "DisconnectArguments": {
-//   "type": "object",
-//   "description": "Arguments for 'disconnect' request.",
-//   "properties": {
-//     "terminateDebuggee": {
-//       "type": "boolean",
-//       "description": "Indicates whether the debuggee should be terminated
-//                       when the debugger is disconnected. If unspecified,
-//                       the debug adapter is free to do whatever it thinks
-//                       is best. A client can only rely on this attribute
-//                       being properly honored if a debug adapter returns
-//                       true for the 'supportTerminateDebuggee' capability."
-//     },
-//     "restart": {
-//       "type": "boolean",
-//       "description": "Indicates whether the debuggee should be restart
-//                       the process."
-//     }
-//   }
-// },
-// "DisconnectResponse": {
-//   "allOf": [ { "$ref": "#/definitions/Response" }, {
-//     "type": "object",
-//     "description": "Response to 'disconnect' request. This is just an
-//                     acknowledgement, so no body field is required."
-//   }]
-// }
-void DisconnectRequestHandler::operator()(
-    const llvm::json::Object &request) const {
-  llvm::json::Object response;
-  FillResponse(request, response);
-  const auto *arguments = request.getObject("arguments");
+/// Disconnect request; value of command field is 'disconnect'.
+llvm::Expected<protocol::DisconnectResponse> DisconnectRequestHandler::Run(
+    const std::optional<protocol::DisconnectArguments> &arguments) const {
+  bool terminateDebuggee = dap.is_attach ? false : true;
 
-  bool defaultTerminateDebuggee = dap.is_attach ? false : true;
-  bool terminateDebuggee = GetBoolean(arguments, "terminateDebuggee")
-                               .value_or(defaultTerminateDebuggee);
+  if (arguments && arguments->terminateDebuggee)
+    terminateDebuggee = *arguments->terminateDebuggee;
 
   lldb::SBError error = dap.Disconnect(terminateDebuggee);
-  if (error.Fail())
-    EmplaceSafeString(response, "error", error.GetCString());
-
-  dap.SendJSON(llvm::json::Value(std::move(response)));
+  if (llvm::Error wrappedError = takeError(error))
+    return wrappedError;
+  return std::monostate{};
 }
 } // namespace lldb_dap

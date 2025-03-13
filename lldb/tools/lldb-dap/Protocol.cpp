@@ -287,15 +287,15 @@ json::Value toJSON(const Message &M) {
   return std::visit([](auto &M) { return toJSON(M); }, M);
 }
 
-bool fromJSON(const llvm::json::Value &Params, Source::PresentationHint &PH,
-              llvm::json::Path P) {
+bool fromJSON(const json::Value &Params, Source::PresentationHint &PH,
+              json::Path P) {
   auto rawHint = Params.getAsString();
   if (!rawHint) {
     P.report("expected a string");
     return false;
   }
   std::optional<Source::PresentationHint> hint =
-      llvm::StringSwitch<std::optional<Source::PresentationHint>>(*rawHint)
+      StringSwitch<std::optional<Source::PresentationHint>>(*rawHint)
           .Case("normal", Source::PresentationHint::normal)
           .Case("emphasize", Source::PresentationHint::emphasize)
           .Case("deemphasize", Source::PresentationHint::deemphasize)
@@ -308,22 +308,29 @@ bool fromJSON(const llvm::json::Value &Params, Source::PresentationHint &PH,
   return true;
 }
 
-bool fromJSON(const llvm::json::Value &Params, Source &S, llvm::json::Path P) {
-  llvm::json::ObjectMapper O(Params, P);
+bool fromJSON(const json::Value &Params, Source &S, json::Path P) {
+  json::ObjectMapper O(Params, P);
   return O && O.mapOptional("name", S.name) && O.mapOptional("path", S.path) &&
          O.mapOptional("presentationHint", S.presentationHint) &&
          O.mapOptional("sourceReference", S.sourceReference);
 }
 
-bool fromJSON(const llvm::json::Value &Params, SourceArguments &SA,
-              llvm::json::Path P) {
-  llvm::json::ObjectMapper O(Params, P);
+bool fromJSON(const json::Value &Params, DisconnectArguments &DA,
+              json::Path P) {
+  json::ObjectMapper O(Params, P);
+  return O && O.mapOptional("restart", DA.restart) &&
+         O.mapOptional("terminateDebuggee", DA.terminateDebuggee) &&
+         O.mapOptional("suspendDebuggee", DA.suspendDebuggee);
+}
+
+bool fromJSON(const json::Value &Params, SourceArguments &SA, json::Path P) {
+  json::ObjectMapper O(Params, P);
   return O && O.mapOptional("source", SA.source) &&
          O.map("sourceReference", SA.sourceReference);
 }
 
-llvm::json::Value toJSON(const SourceResponseBody &SA) {
-  llvm::json::Object Result{{"content", SA.content}};
+json::Value toJSON(const SourceResponseBody &SA) {
+  json::Object Result{{"content", SA.content}};
 
   if (SA.mimeType)
     Result.insert({"mimeType", SA.mimeType});
