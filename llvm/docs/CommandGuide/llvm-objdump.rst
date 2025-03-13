@@ -217,7 +217,7 @@ OPTIONS
 
 .. option:: --offloading
 
-  Display the content of the LLVM offloading section.
+  Display the content of the LLVM offloading sections including Clang Fat Binaries.
 
 .. option:: --prefix=<prefix>
 
