@@ -23,7 +23,7 @@ namespace llvm {
 
 class GCNSubtarget;
 class MachineFunction;
-class TargetMachine;
+class GCNTargetMachine;
 
 struct AMDGPUResourceUsageAnalysisImpl {
 public:
@@ -74,13 +74,13 @@ class AMDGPUResourceUsageAnalysis
   friend AnalysisInfoMixin<AMDGPUResourceUsageAnalysis>;
   static AnalysisKey Key;
 
-  const TargetMachine *TM;
+  const GCNTargetMachine &TM;
 
 public:
   using Result = AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo;
   Result run(MachineFunction &MF, MachineFunctionAnalysisManager &MFAM);
 
-  AMDGPUResourceUsageAnalysis(const TargetMachine *TM_) : TM(TM_) {}
+  AMDGPUResourceUsageAnalysis(const GCNTargetMachine &TM_) : TM(TM_) {}
 };
 
 } // namespace llvm

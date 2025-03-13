@@ -97,7 +97,7 @@ FUNCTION_PASS_WITH_PARAMS(
 #define MACHINE_FUNCTION_ANALYSIS(NAME, CREATE_PASS)
 #endif
 
-MACHINE_FUNCTION_ANALYSIS("amdgpu-resource-usage", AMDGPUResourceUsageAnalysis(static_cast<const GCNTargetMachine *>(this)))
+MACHINE_FUNCTION_ANALYSIS("amdgpu-resource-usage", AMDGPUResourceUsageAnalysis(*static_cast<const GCNTargetMachine *>(this)))
 #undef MACHINE_FUNCTION_ANALYSIS
 
 #ifndef MACHINE_FUNCTION_PASS

@@ -103,7 +103,7 @@ AnalysisKey AMDGPUResourceUsageAnalysis::Key;
 AMDGPUResourceUsageAnalysis::Result
 AMDGPUResourceUsageAnalysis::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
-  const MCSubtargetInfo &STI = *TM->getMCSubtargetInfo();
+  const MCSubtargetInfo &STI = *TM.getMCSubtargetInfo();
 
   // By default, for code object v5 and later, track only the minimum scratch
   // size
