@@ -1261,14 +1261,6 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   switch (Kind) {
   default:
     break;
-  // The .odp creation emits a relocation against the symbol ".TOC." which
-  // create a R_PPC64_TOC relocation. However the relocation symbol name
-  // in final object creation should be NULL, since the symbol does not
-  // really exist, it is just the reference to TOC base for the current
-  // object file. Since the symbol is undefined, returning false results
-  // in a relocation with a null section which is the desired result.
-  case MCSymbolRefExpr::VK_PPC_TOCBASE:
-    return false;
 
   // These VariantKind cause the relocation to refer to something other than
   // the symbol itself, like a linker generated table. Since the address of
@@ -1278,17 +1270,22 @@ bool ELFObjectWriter::shouldRelocateWithSymbol(const MCAssembler &Asm,
   case MCSymbolRefExpr::VK_PLT:
   case MCSymbolRefExpr::VK_GOTPCREL:
   case MCSymbolRefExpr::VK_GOTPCREL_NORELAX:
-  case MCSymbolRefExpr::VK_PPC_GOT_LO:
-  case MCSymbolRefExpr::VK_PPC_GOT_HI:
-  case MCSymbolRefExpr::VK_PPC_GOT_HA:
     return true;
   }
 
   // An undefined symbol is not in any section, so the relocation has to point
   // to the symbol itself.
   assert(Sym && "Expected a symbol");
-  if (Sym->isUndefined())
-    return true;
+  if (Sym->isUndefined()) {
+    // The .odp creation emits a relocation against the symbol ".TOC." which
+    // create a R_PPC64_TOC relocation. However the relocation symbol name
+    // in final object creation should be NULL, since the symbol does not
+    // really exist, it is just the reference to TOC base for the current
+    // object file. Since the symbol is undefined, returning false results
+    // in a relocation with a null section which is the desired result.
+    return !(Type == ELF::R_PPC64_TOC &&
+             TargetObjectWriter->getEMachine() == ELF::EM_PPC64);
+  }
 
   // For memory-tagged symbols, ensure that the relocation uses the symbol. For
   // tagged symbols, we emit an empty relocation (R_AARCH64_NONE) in a special
@@ -1539,45 +1536,6 @@ void ELFObjectWriter::fixSymbolsInTLSFixups(MCAssembler &Asm,
     case MCSymbolRefExpr::VK_TPREL:
     case MCSymbolRefExpr::VK_DTPOFF:
     case MCSymbolRefExpr::VK_DTPREL:
-    case MCSymbolRefExpr::VK_PPC_DTPMOD:
-    case MCSymbolRefExpr::VK_PPC_TPREL_LO:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HI:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HA:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGH:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGHA:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGHER:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGHERA:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGHEST:
-    case MCSymbolRefExpr::VK_PPC_TPREL_HIGHESTA:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_LO:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HI:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HA:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGH:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHA:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHER:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHERA:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHEST:
-    case MCSymbolRefExpr::VK_PPC_DTPREL_HIGHESTA:
-    case MCSymbolRefExpr::VK_PPC_GOT_TPREL:
-    case MCSymbolRefExpr::VK_PPC_GOT_TPREL_LO:
-    case MCSymbolRefExpr::VK_PPC_GOT_TPREL_HI:
-    case MCSymbolRefExpr::VK_PPC_GOT_TPREL_HA:
-    case MCSymbolRefExpr::VK_PPC_GOT_TPREL_PCREL:
-    case MCSymbolRefExpr::VK_PPC_GOT_DTPREL:
-    case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_LO:
-    case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HI:
-    case MCSymbolRefExpr::VK_PPC_GOT_DTPREL_HA:
-    case MCSymbolRefExpr::VK_PPC_TLS:
-    case MCSymbolRefExpr::VK_PPC_TLS_PCREL:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSGD:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_LO:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HI:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_HA:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSGD_PCREL:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSLD:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_LO:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HI:
-    case MCSymbolRefExpr::VK_PPC_GOT_TLSLD_HA:
       break;
     }
     Asm.registerSymbol(symRef.getSymbol());
