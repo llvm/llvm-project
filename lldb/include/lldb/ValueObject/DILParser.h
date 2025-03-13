@@ -28,8 +28,12 @@ enum class ErrorCode : unsigned char {
   kUnknown,
 };
 
-std::string FormatDiagnostics(llvm::StringRef input_expr,
-                              const std::string &message, uint32_t loc);
+std::string NewFormatDiagnostics(llvm::StringRef input_expr,
+                                 const std::string &message, uint32_t loc,
+                                 uint16_t err_len);
+
+std::string OldFormatDiagnostics(llvm::StringRef input_expr,
+                                 const std::string &message, uint32_t loc);
 
 /// Pure recursive descent parser for C++ like expressions.
 /// EBNF grammar for the parser is described in lldb/docs/dil-expr-lang.ebnf

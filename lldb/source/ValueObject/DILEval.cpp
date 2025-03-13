@@ -237,7 +237,8 @@ Interpreter::Visit(const IdentifierNode *node) {
         llvm::formatv("use of undeclared identifier '{0}'", node->GetName());
     Status error = Status(
         (uint32_t)ErrorCode::kUndeclaredIdentifier, lldb::eErrorTypeGeneric,
-        FormatDiagnostics(m_expr, errMsg, node->GetLocation()));
+        NewFormatDiagnostics(m_expr, errMsg, node->GetLocation(),
+                             node->GetName().size()));
     return error.ToError();
   }
   lldb::ValueObjectSP val;

@@ -13,26 +13,49 @@
 
 #include "lldb/ValueObject/DILParser.h"
 #include "lldb/Target/ExecutionContextScope.h"
+#include "lldb/Utility/DiagnosticsRendering.h"
 #include "lldb/ValueObject/DILAST.h"
 #include "lldb/ValueObject/DILEval.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatAdapters.h"
+#include <cstdlib>
 #include <limits.h>
 #include <memory>
 #include <sstream>
-#include <cstdlib>
 #include <string>
 
 namespace lldb_private::dil {
 
-std::string FormatDiagnostics(llvm::StringRef text, const std::string &message,
-                              uint32_t loc) {
+std::string NewFormatDiagnostics(llvm::StringRef text,
+                                 const std::string &message, uint32_t loc,
+                                 uint16_t err_len) {
+  DiagnosticDetail::SourceLocation sloc = {
+      FileSpec{}, /*line=*/1, loc + 1, err_len, false, /*in_user_input=*/true};
+  std::string arrow_str = "^";
+  std::string rendered_msg =
+      llvm::formatv("<user expression 0>:1:{0}: {1}\n    1 | {2}\n     | ^",
+                    loc + 1, message, text);
+  DiagnosticDetail detail;
+  detail.source_location = sloc;
+  detail.severity = lldb::eSeverityError;
+  detail.message = message;
+  detail.rendered = rendered_msg;
+  std::vector<DiagnosticDetail> diagnostics;
+  diagnostics.push_back(detail);
+  StreamString diag_stream(true);
+  RenderDiagnosticDetails(diag_stream, 7, true, diagnostics);
+  std::string ret_str = text.str() + "\n" + diag_stream.GetString().str();
+  return ret_str;
+}
+
+std::string OldFormatDiagnostics(llvm::StringRef text,
+                                 const std::string &message, uint32_t loc) {
   // Get the position, in the current line of text, of the diagnostics pointer.
   // ('loc' is the location of the start of the current token/error within the
   // overall text line).
   int32_t arrow = loc + 1; // Column offset starts at 1, not 0.
 
-  return llvm::formatv("<expr:1:{0}>: {1}\n{2}\n{3}", loc, message,
+  return llvm::formatv("<expr:1:{0}>: {1}\n{2}\n{3}", loc + 1, message,
                        llvm::fmt_pad(text, 0, 0),
                        llvm::fmt_pad("^", arrow - 1, 0));
 }
@@ -234,7 +257,8 @@ void DILParser::BailOut(ErrorCode code, const std::string &error,
   }
 
   m_error = Status((uint32_t)code, lldb::eErrorTypeGeneric,
-                   FormatDiagnostics(m_input_expr, error, loc));
+                   NewFormatDiagnostics(m_input_expr, error, loc,
+                                        CurToken().GetSpelling().length()));
   // Advance the lexer token index to the end of the lexed tokens vector.
   m_dil_lexer.ResetTokenIdx(m_dil_lexer.NumLexedTokens() - 1);
 }
