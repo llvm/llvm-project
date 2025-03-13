@@ -69,7 +69,7 @@ TEST_F(ContextTest, Callsite) {
   __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress;
   __llvm_ctx_profile_callsite[0] = &Ctx->subContexts()[2];
   // This is what the callee does
-  FunctionData FData = {0};
+  FunctionData FData;
   auto *Subctx =
       __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
   // This should not have required creating a flat context.
@@ -93,7 +93,7 @@ TEST_F(ContextTest, ScratchNoCollectionProfilingNotStarted) {
   int FakeCalleeAddress = 0;
   // this would be the very first function executing this. the TLS is empty,
   // too.
-  FunctionData FData = {0};
+  FunctionData FData;
   auto *Ctx =
       __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
   // We never entered a context (_start_context was never called) - so the
@@ -111,7 +111,7 @@ TEST_F(ContextTest, ScratchNoCollectionProfilingStarted) {
   __llvm_ctx_profile_start_collection();
   // this would be the very first function executing this. the TLS is empty,
   // too.
-  FunctionData FData = {0};
+  FunctionData FData;
   auto *Ctx =
       __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
   // We never entered a context (_start_context was never called) - so the
@@ -130,7 +130,7 @@ TEST_F(ContextTest, ScratchDuringCollection) {
   int OtherFakeCalleeAddress = 0;
   __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress;
   __llvm_ctx_profile_callsite[0] = &Ctx->subContexts()[2];
-  FunctionData FData[3] = {0};
+  FunctionData FData[3];
   auto *Subctx = __llvm_ctx_profile_get_context(
       &FData[0], &OtherFakeCalleeAddress, 2, 3, 1);
   // We expected a different callee - so return scratch. It mimics what happens
@@ -175,7 +175,7 @@ TEST_F(ContextTest, NeedMoreMemory) {
   const auto *CurrentMem = Root.CurrentMem;
   __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress;
   __llvm_ctx_profile_callsite[0] = &Ctx->subContexts()[2];
-  FunctionData FData = {0};
+  FunctionData FData;
   // Allocate a massive subcontext to force new arena allocation
   auto *Subctx =
       __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 3, 1 << 20, 1);
@@ -216,7 +216,7 @@ TEST_F(ContextTest, Dump) {
   int FakeCalleeAddress = 0;
   __llvm_ctx_profile_expected_callee[0] = &FakeCalleeAddress;
   __llvm_ctx_profile_callsite[0] = &Ctx->subContexts()[2];
-  FunctionData FData = {0};
+  FunctionData FData;
   auto *Subctx =
       __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
   (void)Subctx;
@@ -267,7 +267,7 @@ TEST_F(ContextTest, Dump) {
     void writeFlat(GUID Guid, const uint64_t *Buffer,
                    size_t BufferSize) override {
       ++FlatsWritten;
-      EXPECT_EQ(BufferSize, 3);
+      EXPECT_EQ(BufferSize, 3U);
       EXPECT_EQ(Buffer[0], 15U);
       EXPECT_EQ(Buffer[1], 0U);
       EXPECT_EQ(Buffer[2], 0U);
@@ -284,6 +284,7 @@ TEST_F(ContextTest, Dump) {
   __llvm_ctx_profile_start_collection();
   auto *Flat =
       __llvm_ctx_profile_get_context(&FData, &FakeCalleeAddress, 2, 3, 1);
+  (void)Flat;
   EXPECT_NE(FData.FlatCtx, nullptr);
   FData.FlatCtx->counters()[0] = 15U;
   TestProfileWriter W2(&Root, 0);
