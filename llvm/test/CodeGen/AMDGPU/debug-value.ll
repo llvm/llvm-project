@@ -4,8 +4,8 @@
 
 define amdgpu_kernel void @wobble(ptr addrspace(1) nocapture readonly %arg) #0 !dbg !4 {
 bb:
-  %tmp = load i32, ptr addrspace(1) undef, align 4
-  %tmp1 = load <4 x float>, ptr addrspace(1) undef, align 16
+  %tmp = load i32, ptr addrspace(1) poison, align 4
+  %tmp1 = load <4 x float>, ptr addrspace(1) poison, align 16
   %tmp2 = sext i32 %tmp to i64
   %tmp3 = shufflevector <4 x float> poison, <4 x float> %tmp1, <2 x i32> <i32 3, i32 7>
   %tmp4 = call float @barney() #2
@@ -41,11 +41,11 @@ bb28:                                             ; preds = %bb25, %bb21
   %tmp32 = sext i32 %tmp31 to i64
   %tmp33 = getelementptr inbounds <2 x float>, ptr addrspace(1) %arg, i64 %tmp32
   %tmp35 = load i64, ptr addrspace(1) %tmp33, align 8
-  %tmp36 = load i32, ptr addrspace(1) undef, align 4
+  %tmp36 = load i32, ptr addrspace(1) poison, align 4
   %tmp37 = sext i32 %tmp36 to i64
   %tmp38 = getelementptr inbounds <4 x float>, ptr addrspace(1) null, i64 %tmp37
   %tmp39 = load <4 x float>, ptr addrspace(1) %tmp38, align 16
-  %tmp40 = load <4 x float>, ptr addrspace(1) undef, align 16
+  %tmp40 = load <4 x float>, ptr addrspace(1) poison, align 16
   %tmp41 = fsub <4 x float> zeroinitializer, %tmp40
   %tmp42 = fsub <4 x float> %tmp39, %tmp40
   %tmp43 = extractelement <4 x float> %tmp40, i32 1
@@ -76,8 +76,8 @@ bb28:                                             ; preds = %bb25, %bb21
   %tmp63 = fsub <2 x float> %tmp62, %tmp59
   %tmp64 = extractelement <2 x float> %tmp63, i64 0
   call void @eggs(float %tmp64) #2
-  store <2 x float> %tmp3, ptr addrspace(1) undef, align 8
-  store float 0.000000e+00, ptr addrspace(1) undef, align 4
+  store <2 x float> %tmp3, ptr addrspace(1) poison, align 8
+  store float 0.000000e+00, ptr addrspace(1) poison, align 4
   ret void
 }
 

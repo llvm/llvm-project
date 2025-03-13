@@ -264,7 +264,7 @@ define amdgpu_kernel void @v_min_max_i32_user(ptr addrspace(1) %out0, ptr addrsp
 
   store volatile i32 %sel0, ptr addrspace(1) %out0, align 4
   store volatile i32 %sel1, ptr addrspace(1) %out1, align 4
-  store volatile i1 %cond0, ptr addrspace(1) undef
+  store volatile i1 %cond0, ptr addrspace(1) poison
   ret void
 }
 
