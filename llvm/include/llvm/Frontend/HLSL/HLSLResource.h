@@ -22,6 +22,8 @@ namespace hlsl {
 using dxil::ResourceClass;
 using dxil::ResourceKind;
 
+const unsigned CBufferRowSizeInBytes = 16U;
+
 } // namespace hlsl
 } // namespace llvm
 
