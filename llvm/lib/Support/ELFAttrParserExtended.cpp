@@ -32,9 +32,9 @@ ELFExtendedAttrParser::getAttributeValue(unsigned Tag) const {
 std::optional<unsigned>
 ELFExtendedAttrParser::getAttributeValue(StringRef BuildAttrSubsectionName,
                                          unsigned Tag) const {
-  for (auto SubSection : SubSectionVec) {
+  for (const auto &SubSection : SubSectionVec) {
     if (BuildAttrSubsectionName == SubSection.Name)
-      for (auto BAItem : SubSection.Content) {
+      for (const auto &BAItem : SubSection.Content) {
         if (Tag == BAItem.Tag)
           return std::optional<unsigned>(BAItem.IntValue);
       }
