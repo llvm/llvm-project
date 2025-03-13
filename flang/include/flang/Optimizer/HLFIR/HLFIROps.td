@@ -1864,7 +1864,8 @@ def hlfir_EvaluateInMemoryOp : hlfir_Op<"eval_in_mem", [AttrSizedOperandSegments
   let hasVerifier = 1;
 }
 
-def hlfir_DoConcurrentOp : hlfir_Op<"do_concurrent", [SingleBlock]> {
+def hlfir_DoConcurrentOp : hlfir_Op<"do_concurrent", 
+    [SingleBlock, AutomaticAllocationScope]> {
   let summary = "do concurrent loop wrapper";
 
   let description = [{
