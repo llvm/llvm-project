@@ -89,12 +89,28 @@ declare half @llvm.amdgcn.sqrt.f16(half) nounwind readnone
 declare float @llvm.amdgcn.sqrt.f32(float) nounwind readnone
 declare double @llvm.amdgcn.sqrt.f64(double) nounwind readnone
 
+define half @test_constant_fold_sqrt_f16_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f16_poison(
+; CHECK-NEXT:    ret half poison
+;
+  %val = call half @llvm.amdgcn.sqrt.f16(half poison) nounwind readnone
+  ret half %val
+}
+
 define half @test_constant_fold_sqrt_f16_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f16_undef(
 ; CHECK-NEXT:    ret half 0xH7E00
 ;
   %val = call half @llvm.amdgcn.sqrt.f16(half undef) nounwind readnone
   ret half %val
+}
+
+define float @test_constant_fold_sqrt_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.sqrt.f32(float poison) nounwind readnone
+  ret float %val
 }
 
 define float @test_constant_fold_sqrt_f32_undef() nounwind {
@@ -233,6 +249,14 @@ define double @test_amdgcn_sqrt_f64(double %arg) {
 ; --------------------------------------------------------------------
 
 declare float @llvm.amdgcn.rsq.f32(float) nounwind readnone
+
+define float @test_constant_fold_rsq_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_rsq_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.rsq.f32(float poison) nounwind readnone
+  ret float %val
+}
 
 define float @test_constant_fold_rsq_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rsq_f32_undef(
