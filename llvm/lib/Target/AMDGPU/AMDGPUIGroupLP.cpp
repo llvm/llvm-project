@@ -1927,8 +1927,6 @@ private:
         return FitsInGroup;
       }
 
-      assert(Cache->size());
-
       // Does the VALU have a DS_WRITE successor that is the same as other
       // VALU already in the group. The V_PERMs will all share 1 DS_W succ
       return llvm::any_of(*Cache, [&SU](SUnit *Elt) {
