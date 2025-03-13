@@ -8562,9 +8562,9 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
 
   auto RebuildString = [&](Expr *E) {
     ExprResult Result = getDerived().TransformExpr(E);
-    if (Result.isInvalid())
+    if (!Result.isUsable())
       return Result;
-    if (!Result.isInvalid() && Result.get() != E) {
+    if (Result.get() != E) {
       ExprsChanged = true;
       Result = SemaRef.ActOnGCCAsmStmtString(Result.get(), /*ForLabel=*/false);
     }

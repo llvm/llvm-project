@@ -17945,11 +17945,13 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
 
   uint64_t Size = SizeValue.getZExtValue();
 
+  // FIXME: better protect against invalid or excessive sizes
   if constexpr (std::is_same_v<APValue, T>)
     Result = APValue(APValue::UninitArray{}, Size, Size);
-  // else
-  //     Result.reserve(Size);
-
+  else {
+    if (Size < Result.max_size())
+      Result.reserve(Size);
+  }
   if (!::EvaluatePointer(PtrExpression, String, Info))
     return false;
 
@@ -17964,19 +17966,16 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
       Result.getArrayInitializedElt(I) = std::move(Char);
     } else {
       APSInt C = Char.getInt();
+      assert(C.getBitWidth() <= 8 &&
+             "string element not representable in char");
       Result.push_back(static_cast<char>(C.getExtValue()));
     }
 
     if (!HandleLValueArrayAdjustment(Info, PtrExpression, String, CharTy, 1))
       return false;
   }
-  if (!Scope.destroy())
-    return false;
 
-  if (!CheckMemoryLeaks(Info))
-    return false;
-
-  return true;
+  return Scope.destroy() && CheckMemoryLeaks(Info);
 }
 
 bool Expr::EvaluateCharRangeAsString(std::string &Result,
