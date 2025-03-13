@@ -5679,7 +5679,7 @@ entry:
   br i1 %cmp, label %bb1, label %bb2
 
 bb1:
-  store volatile i32 %live.out.reg, ptr addrspace(1) undef
+  store volatile i32 %live.out.reg, ptr addrspace(1) poison
   br label %bb2
 
 bb2:
@@ -6616,7 +6616,7 @@ entry:
   br i1 %cmp, label %bb1, label %bb2
 
 bb1:
-  store volatile i32 %live.out.val, ptr addrspace(1) undef
+  store volatile i32 %live.out.val, ptr addrspace(1) poison
   br label %bb2
 
 bb2:
@@ -7450,20 +7450,20 @@ bb:
   br i1 %tmp, label %bb1, label %bb4
 
 bb1:
-  %tmp2 = load volatile <4 x float>, ptr addrspace(1) undef
+  %tmp2 = load volatile <4 x float>, ptr addrspace(1) poison
   %tmp3 = extractelement <4 x float> %tmp2, i32 undef
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp2) ; Prevent block optimize out
   br label %bb7
 
 bb4:
-  %tmp5 = load volatile <4 x float>, ptr addrspace(1) undef
+  %tmp5 = load volatile <4 x float>, ptr addrspace(1) poison
   %tmp6 = extractelement <4 x float> %tmp5, i32 undef
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp5) ; Prevent block optimize out
   br label %bb7
 
 bb7:
   %tmp8 = phi float [ %tmp3, %bb1 ], [ %tmp6, %bb4 ]
-  store volatile float %tmp8, ptr addrspace(1) undef
+  store volatile float %tmp8, ptr addrspace(1) poison
   ret void
 }
 
@@ -7698,20 +7698,20 @@ bb:
   br i1 %tmp, label %bb1, label %bb4
 
 bb1:
-  %tmp2 = load volatile <4 x float>, ptr addrspace(1) undef
+  %tmp2 = load volatile <4 x float>, ptr addrspace(1) poison
   %tmp3 = insertelement <4 x float> %tmp2, float %val0, i32 poison
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp3) ; Prevent block optimize out
   br label %bb7
 
 bb4:
-  %tmp5 = load volatile <4 x float>, ptr addrspace(1) undef
+  %tmp5 = load volatile <4 x float>, ptr addrspace(1) poison
   %tmp6 = insertelement <4 x float> %tmp5, float %val0, i32 poison
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp6) ; Prevent block optimize out
   br label %bb7
 
 bb7:
   %tmp8 = phi <4 x float> [ %tmp3, %bb1 ], [ %tmp6, %bb4 ]
-  store volatile <4 x float> %tmp8, ptr addrspace(1) undef
+  store volatile <4 x float> %tmp8, ptr addrspace(1) poison
   ret void
 }
 
@@ -9458,7 +9458,7 @@ bb2:
   br i1 %tmp3, label %bb4, label %bb8
 
 bb4:
-  %vgpr = load volatile i32, ptr addrspace(1) undef
+  %vgpr = load volatile i32, ptr addrspace(1) poison
   %tmp5 = insertelement <16 x i32> poison, i32 poison, i32 %vgpr
   %tmp6 = insertelement <16 x i32> %tmp5, i32 %arg1, i32 %vgpr
   %tmp7 = extractelement <16 x i32> %tmp6, i32 0

@@ -595,8 +595,8 @@ define amdgpu_kernel void @v_extract_fneg_fold_v2f16(ptr addrspace(1) %in) #0 {
 
   %fmul0 = fmul half %elt0, 4.0
   %fadd1 = fadd half %elt1, 2.0
-  store volatile half %fmul0, ptr addrspace(1) undef
-  store volatile half %fadd1, ptr addrspace(1) undef
+  store volatile half %fmul0, ptr addrspace(1) poison
+  store volatile half %fadd1, ptr addrspace(1) poison
   ret void
 }
 
@@ -648,8 +648,8 @@ define amdgpu_kernel void @v_extract_fneg_no_fold_v2f16(ptr addrspace(1) %in) #0
   %fneg = fsub <2 x half> <half -0.0, half -0.0>, %val
   %elt0 = extractelement <2 x half> %fneg, i32 0
   %elt1 = extractelement <2 x half> %fneg, i32 1
-  store volatile half %elt0, ptr addrspace(1) undef
-  store volatile half %elt1, ptr addrspace(1) undef
+  store volatile half %elt0, ptr addrspace(1) poison
+  store volatile half %elt1, ptr addrspace(1) poison
   ret void
 }
 

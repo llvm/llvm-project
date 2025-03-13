@@ -1801,4 +1801,8 @@ def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
   HelpText<"Check unretained local variables.">,
   Documentation<HasDocumentation>;
 
+def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,
+  HelpText<"Check for correct use of RetainPtr constructor, adoptNS, and adoptCF">,
+  Documentation<HasDocumentation>;
+
 } // end alpha.webkit
