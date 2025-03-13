@@ -216,22 +216,6 @@ def MapClauseOwningOpInterface : OpInterface<"MapClauseOwningOpInterface"> {
   ];
 }
 
-def ReductionClauseInterface : OpInterface<"ReductionClauseInterface"> {
-  let description = [{
-    OpenMP operations that support reduction clause have this interface.
-  }];
-
-  let cppNamespace = "::mlir::omp";
-
-  let methods = [
-    InterfaceMethod<
-      "Get reduction vars", "::mlir::SmallVector<::mlir::Value>",
-      "getAllReductionVars", (ins), [{}], [{
-        return $_op.getReductionVars();
-      }]>,
-  ];
-}
-
 def LoopWrapperInterface : OpInterface<"LoopWrapperInterface"> {
   let description = [{
     OpenMP operations that wrap a single loop nest. They must only contain a
