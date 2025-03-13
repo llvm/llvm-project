@@ -4004,9 +4004,10 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         }
       }
     } else if (Op.getResNo() == 0) {
-      KnownBits Known0(!LD->getMemoryVT().isScalableVT()
-                           ? LD->getMemoryVT().getFixedSizeInBits()
-                           : BitWidth);
+      unsigned MemorySize = !LD->getMemoryVT().isScalableVT()
+                                ? LD->getMemoryVT().getFixedSizeInBits()
+                                : BitWidth;
+      KnownBits Known0(MemorySize);
       EVT VT = Op.getValueType();
       // Fill in any known bits from range information. There are 3 types being
       // used. The results VT (same vector elt size as BitWidth), the loaded
@@ -4019,7 +4020,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
         KnownBits KnownMetadata(Lower->getBitWidth());
         computeKnownBitsFromRangeMetadata(*MD, KnownMetadata);
-        Known0 = KnownMetadata;
+        Known0 = KnownMetadata.anyextOrTrunc(MemorySize);
         if (VT.isVector()) {
           if (!getDataLayout().isLittleEndian())
             break;
