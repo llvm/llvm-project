@@ -57973,24 +57973,28 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       // TODO: Relax VBMI requirement for repeated shuffle ops - currently
       // limited to targets that should always have good cross lane shuffles.
       if (!IsSplat && NumOps == 2 && VT.is256BitVector() &&
-          (EltSizeInBits >= 32 || Subtarget.hasInt256()) &&
-          (IsConcatFree(VT, Ops, 0) || IsConcatFree(VT, Ops, 1) ||
-           (Ops[0].getOperand(0) == Ops[1].getOperand(0) &&
-            Ops[0].getOperand(1) == Ops[1].getOperand(1) &&
-            Subtarget.hasVBMI()))) {
-        int NumSubElts = Op0.getValueType().getVectorNumElements();
-        SmallVector<int> NewMask;
-        for (int M : cast<ShuffleVectorSDNode>(Ops[0])->getMask()) {
-          M = M >= NumSubElts ? M + NumSubElts : M;
-          NewMask.push_back(M);
+          (EltSizeInBits >= 32 || Subtarget.hasInt256())) {
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1 ||
+            (Ops[0].getOperand(0) == Ops[1].getOperand(0) &&
+             Ops[0].getOperand(1) == Ops[1].getOperand(1) &&
+             Subtarget.hasVBMI())) {
+          int NumSubElts = Op0.getValueType().getVectorNumElements();
+          SmallVector<int> NewMask;
+          for (int M : cast<ShuffleVectorSDNode>(Ops[0])->getMask()) {
+            M = M >= NumSubElts ? M + NumSubElts : M;
+            NewMask.push_back(M);
+          }
+          for (int M : cast<ShuffleVectorSDNode>(Ops[1])->getMask()) {
+            if (0 <= M)
+              M = (M >= NumSubElts ? M + NumSubElts : M) + NumSubElts;
+            NewMask.push_back(M);
+          }
+          Concat0 = Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0);
+          Concat1 = Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1);
+          return DAG.getVectorShuffle(VT, DL, Concat0, Concat1, NewMask);
         }
-        for (int M : cast<ShuffleVectorSDNode>(Ops[1])->getMask()) {
-          if (0 <= M)
-            M = (M >= NumSubElts ? M + NumSubElts : M) + NumSubElts;
-          NewMask.push_back(M);
-        }
-        return DAG.getVectorShuffle(VT, DL, ConcatSubOperand(VT, Ops, 0),
-                                    ConcatSubOperand(VT, Ops, 1), NewMask);
       }
       break;
     }
