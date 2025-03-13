@@ -1576,10 +1576,9 @@ bool MachProcess::Kill(const struct timespec *timeout_abstime) {
 }
 
 bool MachProcess::Interrupt() {
-  PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
-
   nub_state_t state = GetState();
   if (IsRunning(state)) {
+    PTHREAD_MUTEX_LOCKER(locker, m_exception_and_signal_mutex);
     if (m_sent_interrupt_signo == 0) {
       m_sent_interrupt_signo = SIGSTOP;
       if (Signal(m_sent_interrupt_signo)) {
