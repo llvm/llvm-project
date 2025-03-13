@@ -100,6 +100,12 @@ New checks
   Finds unintended character output from ``unsigned char`` and ``signed char`` to an
   ``ostream``.
 
+- New :doc:`readability-ambiguous-smartptr-reset-call
+  <clang-tidy/checks/readability/ambiguous-smartptr-reset-call>` check.
+
+  Finds potentially erroneous calls to ``reset`` method on smart pointers when
+  the pointee type also has a ``reset`` method.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
