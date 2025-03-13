@@ -257,7 +257,7 @@ static void emitVGPRBlockComment(const MachineInstr *MI, const SIInstrInfo *TII,
   uint32_t Mask = MFI->getMaskForVGPRBlockOps(RegBlock);
 
   SmallString<512> TransferredRegs;
-  for (unsigned I = 0; I < 32; ++I) {
+  for (unsigned I = 0; I < sizeof(Mask) * 8; ++I) {
     if (Mask & (1 << I)) {
       (llvm::Twine(" ") + TRI->getRegAsmName(FirstRegInBlock + I))
           .toVector(TransferredRegs);
