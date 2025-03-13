@@ -83,6 +83,7 @@ class RegBankSelectHelper {
   MachineRegisterInfo &MRI;
   AMDGPU::IntrinsicLaneMaskAnalyzer &ILMA;
   const MachineUniformityInfo &MUI;
+  const SIRegisterInfo &TRI;
   const RegisterBank *SgprRB;
   const RegisterBank *VgprRB;
   const RegisterBank *VccRB;
@@ -91,14 +92,29 @@ public:
   RegBankSelectHelper(MachineIRBuilder &B,
                       AMDGPU::IntrinsicLaneMaskAnalyzer &ILMA,
                       const MachineUniformityInfo &MUI,
-                      const RegisterBankInfo &RBI)
-      : B(B), MRI(*B.getMRI()), ILMA(ILMA), MUI(MUI),
+                      const SIRegisterInfo &TRI, const RegisterBankInfo &RBI)
+      : B(B), MRI(*B.getMRI()), ILMA(ILMA), MUI(MUI), TRI(TRI),
         SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
         VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
         VccRB(&RBI.getRegBank(AMDGPU::VCCRegBankID)) {}
 
+  // Temporal divergence copy: COPY to vgpr with implicit use of $exec inside of
+  // the cycle
+  // Note: uniformity analysis does not consider that registers with vgpr def
+  // are divergent (you can have uniform value in vgpr).
+  // - TODO: implicit use of $exec could be implemented as indicator that
+  //   instruction is divergent
+  bool isTemporalDivergenceCopy(Register Reg) {
+    MachineInstr *MI = MRI.getVRegDef(Reg);
+    if (!MI->isCopy() || MI->getNumImplicitOperands() != 1)
+      return false;
+
+    return MI->implicit_operands().begin()->getReg() == TRI.getExec();
+  }
+
   const RegisterBank *getRegBankToAssign(Register Reg) {
-    if (MUI.isUniform(Reg) || ILMA.isS32S64LaneMask(Reg))
+    if (!isTemporalDivergenceCopy(Reg) &&
+        (MUI.isUniform(Reg) || ILMA.isS32S64LaneMask(Reg)))
       return SgprRB;
     if (MRI.getType(Reg) == LLT::scalar(1))
       return VccRB;
@@ -209,7 +225,8 @@ bool AMDGPURegBankSelect::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<MachineUniformityAnalysisPass>().getUniformityInfo();
   MachineRegisterInfo &MRI = *B.getMRI();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  RegBankSelectHelper RBSHelper(B, ILMA, MUI, *ST.getRegBankInfo());
+  RegBankSelectHelper RBSHelper(B, ILMA, MUI, *ST.getRegisterInfo(),
+                                *ST.getRegBankInfo());
   // Virtual registers at this point don't have register banks.
   // Virtual registers in def and use operands of already inst-selected
   // instruction have register class.

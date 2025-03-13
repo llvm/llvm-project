@@ -450,19 +450,20 @@ define amdgpu_ps void @divergent_because_of_temporal_divergent_use(float %val, p
 ;
 ; NEW_RBS-LABEL: divergent_because_of_temporal_divergent_use:
 ; NEW_RBS:       ; %bb.0: ; %entry
-; NEW_RBS-NEXT:    s_mov_b32 s0, -1
-; NEW_RBS-NEXT:    s_mov_b32 s1, 0
+; NEW_RBS-NEXT:    s_mov_b32 s1, -1
+; NEW_RBS-NEXT:    s_mov_b32 s0, 0
 ; NEW_RBS-NEXT:  .LBB15_1: ; %loop
 ; NEW_RBS-NEXT:    ; =>This Inner Loop Header: Depth=1
-; NEW_RBS-NEXT:    s_add_i32 s0, s0, 1
-; NEW_RBS-NEXT:    v_cvt_f32_u32_e32 v3, s0
+; NEW_RBS-NEXT:    s_add_i32 s1, s1, 1
+; NEW_RBS-NEXT:    v_cvt_f32_u32_e32 v3, s1
 ; NEW_RBS-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v3, v0
-; NEW_RBS-NEXT:    s_or_b32 s1, vcc_lo, s1
-; NEW_RBS-NEXT:    s_andn2_b32 exec_lo, exec_lo, s1
+; NEW_RBS-NEXT:    v_mov_b32_e32 v3, s1
+; NEW_RBS-NEXT:    s_or_b32 s0, vcc_lo, s0
+; NEW_RBS-NEXT:    s_andn2_b32 exec_lo, exec_lo, s0
 ; NEW_RBS-NEXT:    s_cbranch_execnz .LBB15_1
 ; NEW_RBS-NEXT:  ; %bb.2: ; %exit
-; NEW_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; NEW_RBS-NEXT:    v_mul_lo_u32 v0, s0, 10
+; NEW_RBS-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; NEW_RBS-NEXT:    v_mul_lo_u32 v0, v3, 10
 ; NEW_RBS-NEXT:    global_store_dword v[1:2], v0, off
 ; NEW_RBS-NEXT:    s_endpgm
 entry:
