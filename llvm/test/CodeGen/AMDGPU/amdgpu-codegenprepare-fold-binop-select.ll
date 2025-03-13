@@ -384,7 +384,7 @@ define i32 @select_mul_rhs_const_i32(i1 %cond) {
   ret i32 %op
 }
 
-define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
+define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) #1 {
 ; IR-LABEL: @select_add_lhs_const_i16(
 ; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i16 128, i16 131
 ; IR-NEXT:    store i16 [[OP]], ptr addrspace(1) poison, align 2
@@ -393,9 +393,6 @@ define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; GCN-LABEL: select_add_lhs_const_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s0, s[8:9], 0x0
-; GCN-NEXT:    s_add_i32 s12, s12, s17
-; GCN-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
-; GCN-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    s_bitcmp1_b32 s0, 0
 ; GCN-NEXT:    s_movk_i32 s0, 0x80
@@ -513,3 +510,4 @@ define <2 x half> @multi_use_cast_regression(i1 %cond) {
 declare <2 x half> @llvm.amdgcn.cvt.pkrtz(float, float) #0
 
 attributes #0 = { nounwind readnone speculatable }
+attributes #1 = { "amdgpu-no-flat-scratch-init" }

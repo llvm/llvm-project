@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefixes=GCN,GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1100 < %s | FileCheck -check-prefixes=GFX11 %s
 
-define i32 @fneg_xor_select_i32(i1 %cond, i32 %arg0, i32 %arg1) {
+define i32 @fneg_xor_select_i32(i1 %cond, i32 %arg0, i32 %arg1) #1 {
 ; GCN-LABEL: fneg_xor_select_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -25,7 +25,7 @@ define i32 @fneg_xor_select_i32(i1 %cond, i32 %arg0, i32 %arg1) {
   ret i32 %fneg
 }
 
-define <2 x i32> @fneg_xor_select_v2i32(<2 x i1> %cond, <2 x i32> %arg0, <2 x i32> %arg1) {
+define <2 x i32> @fneg_xor_select_v2i32(<2 x i1> %cond, <2 x i32> %arg0, <2 x i32> %arg1) #1 {
 ; GCN-LABEL: fneg_xor_select_v2i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -53,7 +53,7 @@ define <2 x i32> @fneg_xor_select_v2i32(<2 x i1> %cond, <2 x i32> %arg0, <2 x i3
   ret <2 x i32> %fneg
 }
 
-define i32 @fneg_xor_select_i32_multi_use(i1 %cond, i32 %arg0, i32 %arg1, ptr addrspace(1) %ptr) {
+define i32 @fneg_xor_select_i32_multi_use(i1 %cond, i32 %arg0, i32 %arg1, ptr addrspace(1) %ptr) #1 {
 ; GFX7-LABEL: fneg_xor_select_i32_multi_use:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -92,7 +92,7 @@ define i32 @fneg_xor_select_i32_multi_use(i1 %cond, i32 %arg0, i32 %arg1, ptr ad
   ret i32 %fneg
 }
 
-define i64 @fneg_xor_select_i64(i1 %cond, i64 %arg0, i64 %arg1) {
+define i64 @fneg_xor_select_i64(i1 %cond, i64 %arg0, i64 %arg1) #1 {
 ; GCN-LABEL: fneg_xor_select_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -116,7 +116,7 @@ define i64 @fneg_xor_select_i64(i1 %cond, i64 %arg0, i64 %arg1) {
   ret i64 %fneg
 }
 
-define <2 x i64> @fneg_xor_select_v2i64(<2 x i1> %cond, <2 x i64> %arg0, <2 x i64> %arg1) {
+define <2 x i64> @fneg_xor_select_v2i64(<2 x i1> %cond, <2 x i64> %arg0, <2 x i64> %arg1) #1 {
 ; GCN-LABEL: fneg_xor_select_v2i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -148,7 +148,7 @@ define <2 x i64> @fneg_xor_select_v2i64(<2 x i1> %cond, <2 x i64> %arg0, <2 x i6
   ret <2 x i64> %fneg
 }
 
-define i16 @fneg_xor_select_i16(i1 %cond, i16 %arg0, i16 %arg1) {
+define i16 @fneg_xor_select_i16(i1 %cond, i16 %arg0, i16 %arg1) #1 {
 ; GCN-LABEL: fneg_xor_select_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -172,7 +172,7 @@ define i16 @fneg_xor_select_i16(i1 %cond, i16 %arg0, i16 %arg1) {
   ret i16 %fneg
 }
 
-define <2 x i16> @fneg_xor_select_v2i16(<2 x i1> %cond, <2 x i16> %arg0, <2 x i16> %arg1) {
+define <2 x i16> @fneg_xor_select_v2i16(<2 x i1> %cond, <2 x i16> %arg0, <2 x i16> %arg1) #1 {
 ; GFX7-LABEL: fneg_xor_select_v2i16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -227,7 +227,7 @@ define <2 x i16> @fneg_xor_select_v2i16(<2 x i1> %cond, <2 x i16> %arg0, <2 x i1
   ret <2 x i16> %fneg
 }
 
-define i16 @fneg_xor_select_i16_multi_use(i1 %cond, i16 %arg0, i16 %arg1, ptr addrspace(1) %ptr) {
+define i16 @fneg_xor_select_i16_multi_use(i1 %cond, i16 %arg0, i16 %arg1, ptr addrspace(1) %ptr) #1 {
 ; GFX7-LABEL: fneg_xor_select_i16_multi_use:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -266,7 +266,7 @@ define i16 @fneg_xor_select_i16_multi_use(i1 %cond, i16 %arg0, i16 %arg1, ptr ad
   ret i16 %fneg
 }
 
-define i64 @fneg_xor_select_i64_multi_user(i1 %cond, i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) {
+define i64 @fneg_xor_select_i64_multi_user(i1 %cond, i64 %arg0, i64 %arg1, ptr addrspace(1) %ptr) #1 {
 ; GFX7-LABEL: fneg_xor_select_i64_multi_user:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -310,7 +310,7 @@ define i64 @fneg_xor_select_i64_multi_user(i1 %cond, i64 %arg0, i64 %arg1, ptr a
   ret i64 %fneg
 }
 
-define i32 @select_fneg_xor_select_i32(i1 %cond0, i1 %cond1, i32 %arg0, i32 %arg1) {
+define i32 @select_fneg_xor_select_i32(i1 %cond0, i1 %cond1, i32 %arg0, i32 %arg1) #1 {
 ; GCN-LABEL: select_fneg_xor_select_i32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -346,7 +346,7 @@ define i32 @select_fneg_xor_select_i32(i1 %cond0, i1 %cond1, i32 %arg0, i32 %arg
   ret i32 %select1
 }
 
-define float @select_fneg_select_f32(i1 %cond0, i1 %cond1, float %arg0, float %arg1) {
+define float @select_fneg_select_f32(i1 %cond0, i1 %cond1, float %arg0, float %arg1) #1 {
 ; GCN-LABEL: select_fneg_select_f32:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -377,7 +377,7 @@ define float @select_fneg_select_f32(i1 %cond0, i1 %cond1, float %arg0, float %a
   ret float %select1
 }
 
-define double @fneg_xor_select_f64(i1 %cond, double %arg0, double %arg1) {
+define double @fneg_xor_select_f64(i1 %cond, double %arg0, double %arg1) #1 {
 ; GCN-LABEL: fneg_xor_select_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -401,7 +401,7 @@ define double @fneg_xor_select_f64(i1 %cond, double %arg0, double %arg1) {
   ret double %fneg
 }
 
-define double @fneg_xor_select_f64_multi_user(i1 %cond, double %arg0, double %arg1, ptr addrspace(1) %ptr) {
+define double @fneg_xor_select_f64_multi_user(i1 %cond, double %arg0, double %arg1, ptr addrspace(1) %ptr) #1 {
 ; GFX7-LABEL: fneg_xor_select_f64_multi_user:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -446,7 +446,7 @@ define double @fneg_xor_select_f64_multi_user(i1 %cond, double %arg0, double %ar
   ret double %fneg
 }
 
-define double @fneg_xor_select_i64_user_with_srcmods(i1 %cond, i64 %arg0, i64 %arg1) {
+define double @fneg_xor_select_i64_user_with_srcmods(i1 %cond, i64 %arg0, i64 %arg1) #1 {
 ; GCN-LABEL: fneg_xor_select_i64_user_with_srcmods:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -473,7 +473,7 @@ define double @fneg_xor_select_i64_user_with_srcmods(i1 %cond, i64 %arg0, i64 %a
   ret double %add
 }
 
-define double @select_fneg_select_fneg_f64(i1 %cond0, i1 %cond1, double %arg0, double %arg1) {
+define double @select_fneg_select_fneg_f64(i1 %cond0, i1 %cond1, double %arg0, double %arg1) #1 {
 ; GCN-LABEL: select_fneg_select_fneg_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -511,7 +511,7 @@ define double @select_fneg_select_fneg_f64(i1 %cond0, i1 %cond1, double %arg0, d
   ret double %select1
 }
 
-define i64 @select_fneg_xor_select_i64(i1 %cond0, i1 %cond1, i64 %arg0, i64 %arg1) {
+define i64 @select_fneg_xor_select_i64(i1 %cond0, i1 %cond1, i64 %arg0, i64 %arg1) #1 {
 ; GCN-LABEL: select_fneg_xor_select_i64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -549,7 +549,7 @@ define i64 @select_fneg_xor_select_i64(i1 %cond0, i1 %cond1, i64 %arg0, i64 %arg
   ret i64 %select1
 }
 
-define half @select_fneg_select_f16(i1 %cond0, i1 %cond1, half %arg0, half %arg1) {
+define half @select_fneg_select_f16(i1 %cond0, i1 %cond1, half %arg0, half %arg1) #1 {
 ; GFX7-LABEL: select_fneg_select_f16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -600,7 +600,7 @@ define half @select_fneg_select_f16(i1 %cond0, i1 %cond1, half %arg0, half %arg1
   ret half %select1
 }
 
-define i16 @select_fneg_xor_select_i16(i1 %cond0, i1 %cond1, i16 %arg0, i16 %arg1) {
+define i16 @select_fneg_xor_select_i16(i1 %cond0, i1 %cond1, i16 %arg0, i16 %arg1) #1 {
 ; GCN-LABEL: select_fneg_xor_select_i16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -636,7 +636,7 @@ define i16 @select_fneg_xor_select_i16(i1 %cond0, i1 %cond1, i16 %arg0, i16 %arg
   ret i16 %select1
 }
 
-define <2 x half> @select_fneg_select_v2f16(<2 x i1> %cond0, <2 x i1> %cond1, <2 x half> %arg0, <2 x half> %arg1) {
+define <2 x half> @select_fneg_select_v2f16(<2 x i1> %cond0, <2 x i1> %cond1, <2 x half> %arg0, <2 x half> %arg1) #1 {
 ; GFX7-LABEL: select_fneg_select_v2f16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -733,7 +733,7 @@ define <2 x half> @select_fneg_select_v2f16(<2 x i1> %cond0, <2 x i1> %cond1, <2
   ret <2 x half> %select1
 }
 
-define <2 x i16> @select_fneg_xor_select_v2i16(<2 x i1> %cond0, <2 x i1> %cond1, <2 x i16> %arg0, <2 x i16> %arg1) {
+define <2 x i16> @select_fneg_xor_select_v2i16(<2 x i1> %cond0, <2 x i1> %cond1, <2 x i16> %arg0, <2 x i16> %arg1) #1 {
 ; GFX7-LABEL: select_fneg_xor_select_v2i16:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -820,7 +820,7 @@ define <2 x i16> @select_fneg_xor_select_v2i16(<2 x i1> %cond0, <2 x i1> %cond1,
 
 ; pattern that appeared in rocm-device-libs to manually operate on the
 ; sign bit of the high half of a double
-define double @cospiD_pattern0(i32 %arg, double %arg1, double %arg2) {
+define double @cospiD_pattern0(i32 %arg, double %arg1, double %arg2) #1 {
 ; GCN-LABEL: cospiD_pattern0:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -861,7 +861,7 @@ define double @cospiD_pattern0(i32 %arg, double %arg1, double %arg2) {
   ret double %i11
 }
 
-define double @cospiD_pattern1(i32 %arg, double %arg1, double %arg2) {
+define double @cospiD_pattern1(i32 %arg, double %arg1, double %arg2) #1 {
 ; GCN-LABEL: cospiD_pattern1:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -899,7 +899,7 @@ define double @cospiD_pattern1(i32 %arg, double %arg1, double %arg2) {
 }
 
 ; artifical example, scaled to operation on 16-bit halves of a float.
-define float @cospiD_pattern0_half(i16 %arg, float %arg1, float %arg2) {
+define float @cospiD_pattern0_half(i16 %arg, float %arg1, float %arg2) #1 {
 ; GFX7-LABEL: cospiD_pattern0_half:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -958,7 +958,7 @@ define float @cospiD_pattern0_half(i16 %arg, float %arg1, float %arg2) {
   ret float %i11
 }
 
-define float @cospiD_pattern1_half(i16 %arg, float %arg1, float %arg2) {
+define float @cospiD_pattern1_half(i16 %arg, float %arg1, float %arg2) #1 {
 ; GFX7-LABEL: cospiD_pattern1_half:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -999,7 +999,7 @@ define float @cospiD_pattern1_half(i16 %arg, float %arg1, float %arg2) {
   ret float %i7
 }
 
-define double @fneg_f64_bitcast_vector_i64_to_f64(i64 %arg) {
+define double @fneg_f64_bitcast_vector_i64_to_f64(i64 %arg) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_vector_i64_to_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1016,7 +1016,7 @@ define double @fneg_f64_bitcast_vector_i64_to_f64(i64 %arg) {
   ret double %fneg
 }
 
-define double @fneg_f64_bitcast_vector_v2i32_to_f64(<2 x i32> %arg) {
+define double @fneg_f64_bitcast_vector_v2i32_to_f64(<2 x i32> %arg) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_vector_v2i32_to_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1033,7 +1033,7 @@ define double @fneg_f64_bitcast_vector_v2i32_to_f64(<2 x i32> %arg) {
   ret double %fneg
 }
 
-define double @fneg_f64_bitcast_vector_v2f32_to_f64(<2 x float> %arg) {
+define double @fneg_f64_bitcast_vector_v2f32_to_f64(<2 x float> %arg) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_vector_v2f32_to_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1050,7 +1050,7 @@ define double @fneg_f64_bitcast_vector_v2f32_to_f64(<2 x float> %arg) {
   ret double %fneg
 }
 
-define double @fneg_f64_bitcast_vector_v4i16_to_f64(<4 x i16> %arg) {
+define double @fneg_f64_bitcast_vector_v4i16_to_f64(<4 x i16> %arg) #1 {
 ; GFX7-LABEL: fneg_f64_bitcast_vector_v4i16_to_f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1079,7 +1079,7 @@ define double @fneg_f64_bitcast_vector_v4i16_to_f64(<4 x i16> %arg) {
   ret double %fneg
 }
 
-define double @fneg_f64_bitcast_vector_v4f16_to_f64(<4 x half> %arg) {
+define double @fneg_f64_bitcast_vector_v4f16_to_f64(<4 x half> %arg) #1 {
 ; GFX7-LABEL: fneg_f64_bitcast_vector_v4f16_to_f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1110,7 +1110,7 @@ define double @fneg_f64_bitcast_vector_v4f16_to_f64(<4 x half> %arg) {
   ret double %fneg
 }
 
-define double @fneg_f64_bitcast_build_vector_v2i32_to_f64(i32 %elt0, i32 %elt1) {
+define double @fneg_f64_bitcast_build_vector_v2i32_to_f64(i32 %elt0, i32 %elt1) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1129,7 +1129,7 @@ define double @fneg_f64_bitcast_build_vector_v2i32_to_f64(i32 %elt0, i32 %elt1) 
   ret double %fneg
 }
 
-define double @fneg_f64_bitcast_build_vector_v2f32_to_f64(float %elt0, float %elt1) {
+define double @fneg_f64_bitcast_build_vector_v2f32_to_f64(float %elt0, float %elt1) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1148,7 +1148,7 @@ define double @fneg_f64_bitcast_build_vector_v2f32_to_f64(float %elt0, float %el
   ret double %fneg
 }
 
-define double @fneg_f64_bitcast_build_vector_v4i16_to_f64(i16 %elt0, i16 %elt1, i16 %elt2, i16 %elt3) {
+define double @fneg_f64_bitcast_build_vector_v4i16_to_f64(i16 %elt0, i16 %elt1, i16 %elt2, i16 %elt3) #1 {
 ; GFX7-LABEL: fneg_f64_bitcast_build_vector_v4i16_to_f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1187,7 +1187,7 @@ define double @fneg_f64_bitcast_build_vector_v4i16_to_f64(i16 %elt0, i16 %elt1, 
   ret double %fneg
 }
 
-define double @fneg_f64_bitcast_build_vector_v4f16_to_f64(half %elt0, half %elt1, half %elt2, half %elt3) {
+define double @fneg_f64_bitcast_build_vector_v4f16_to_f64(half %elt0, half %elt1, half %elt2, half %elt3) #1 {
 ; GFX7-LABEL: fneg_f64_bitcast_build_vector_v4f16_to_f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1228,7 +1228,7 @@ define double @fneg_f64_bitcast_build_vector_v4f16_to_f64(half %elt0, half %elt1
   ret double %fneg
 }
 
-define double @fneg_f64_bitcast_build_vector_v4bf16_to_f64(bfloat %elt0, bfloat %elt1, bfloat %elt2, bfloat %elt3) {
+define double @fneg_f64_bitcast_build_vector_v4bf16_to_f64(bfloat %elt0, bfloat %elt1, bfloat %elt2, bfloat %elt3) #1 {
 ; GFX7-LABEL: fneg_f64_bitcast_build_vector_v4bf16_to_f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1269,7 +1269,7 @@ define double @fneg_f64_bitcast_build_vector_v4bf16_to_f64(bfloat %elt0, bfloat 
   ret double %fneg
 }
 
-define double @fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user(i32 %elt0, i32 %elt1, double %fp.val) {
+define double @fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user(i32 %elt0, i32 %elt1, double %fp.val) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1289,7 +1289,7 @@ define double @fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user(i32 %elt
   ret double %fmul
 }
 
-define { double, double } @fneg_f64_bitcast_build_vector_v2i32_to_f64_multi_modifier_user(i32 %elt0, i32 %elt1, double %fp.val0, double %fp.val1) {
+define { double, double } @fneg_f64_bitcast_build_vector_v2i32_to_f64_multi_modifier_user(i32 %elt0, i32 %elt1, double %fp.val0, double %fp.val1) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_multi_modifier_user:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1318,7 +1318,7 @@ define { double, double } @fneg_f64_bitcast_build_vector_v2i32_to_f64_multi_modi
   ret { double, double } %ret.1
 }
 
-define double @fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user_integer_neg_source(i32 %elt0, i32 %elt1, double %fp.val) {
+define double @fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user_integer_neg_source(i32 %elt0, i32 %elt1, double %fp.val) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user_integer_neg_source:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1342,7 +1342,7 @@ define double @fneg_f64_bitcast_build_vector_v2i32_to_f64_modifier_user_integer_
   ret double %fmul
 }
 
-define double @fneg_f64_bitcast_build_vector_v2f32_foldable_sources_to_f64(float %elt0, float %elt1) {
+define double @fneg_f64_bitcast_build_vector_v2f32_foldable_sources_to_f64(float %elt0, float %elt1) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_build_vector_v2f32_foldable_sources_to_f64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1362,7 +1362,7 @@ define double @fneg_f64_bitcast_build_vector_v2f32_foldable_sources_to_f64(float
   ret double %fneg
 }
 
-define double @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_user(float %elt0, float %elt1, ptr addrspace(1) %ptr) {
+define double @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_user(float %elt0, float %elt1, ptr addrspace(1) %ptr) #1 {
 ; GFX7-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_user:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1394,7 +1394,7 @@ define double @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_user(fl
   ret double %fneg
 }
 
-define { double, <2 x float> } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_foldable_user(float %elt0, float %elt1, <2 x float> %arg.v2f32) {
+define { double, <2 x float> } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_foldable_user(float %elt0, float %elt1, <2 x float> %arg.v2f32) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_source_foldable_user:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1421,7 +1421,7 @@ define { double, <2 x float> } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitca
   ret { double, <2 x float> } %ret.1
 }
 
-define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_user(float %elt0, float %elt1) {
+define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_user(float %elt0, float %elt1) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_user:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1446,7 +1446,7 @@ define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_us
   ret { double, double } %ret.1
 }
 
-define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_foldable_user(float %elt0, float %elt1, double %arg.f64) {
+define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_foldable_user(float %elt0, float %elt1, double %arg.f64) #1 {
 ; GCN-LABEL: fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_foldable_user:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -1471,14 +1471,12 @@ define { double, double } @fneg_f64_bitcast_build_vector_v2f32_to_f64_bitcast_fo
 }
 
 ; Check for correct bitcasting back when there are multiple uses
-define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i1 %z, ptr addrspace(1) %dst) {
+define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i1 %z, ptr addrspace(1) %dst) #1 {
 ; GFX7-LABEL: multiple_uses_fneg_select_f64:
 ; GFX7:       ; %bb.0:
 ; GFX7-NEXT:    s_load_dword s6, s[8:9], 0x4
 ; GFX7-NEXT:    s_load_dwordx4 s[0:3], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x6
-; GFX7-NEXT:    s_add_i32 s12, s12, s17
-; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_bitcmp1_b32 s6, 0
 ; GFX7-NEXT:    s_cselect_b64 vcc, -1, 0
@@ -1490,7 +1488,6 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
 ; GFX7-NEXT:    s_cselect_b32 s0, s0, s2
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s1
 ; GFX7-NEXT:    v_mov_b32_e32 v2, s4
-; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
 ; GFX7-NEXT:    v_cndmask_b32_e64 v1, v1, -v0, vcc
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX7-NEXT:    v_mov_b32_e32 v3, s5
@@ -1546,7 +1543,7 @@ define amdgpu_kernel void @multiple_uses_fneg_select_f64(double %x, double %y, i
   ret void
 }
 
-define amdgpu_kernel void @fnge_select_f32_multi_use_regression(float %.i2369) {
+define amdgpu_kernel void @fnge_select_f32_multi_use_regression(float %.i2369) #1 {
 ; GCN-LABEL: fnge_select_f32_multi_use_regression:
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    s_load_dword s0, s[8:9], 0x0
@@ -1601,3 +1598,5 @@ bb5:                                              ; preds = %bb, %.entry
 declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32 immarg) #0
 
 attributes #0 = { nocallback nofree nosync nounwind willreturn memory(none) }
+
+attributes #1 = { "amdgpu-no-flat-scratch-init" }

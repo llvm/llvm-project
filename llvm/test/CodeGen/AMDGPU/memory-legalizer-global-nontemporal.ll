@@ -36,9 +36,6 @@ define amdgpu_kernel void @global_nontemporal_load_0(
 ;
 ; GFX7-LABEL: global_nontemporal_load_0:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GFX7-NEXT:    s_add_i32 s12, s12, s17
-; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -189,7 +186,7 @@ define amdgpu_kernel void @global_nontemporal_load_0(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-CU-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load i32, ptr addrspace(1) %in, align 4, !nontemporal !0
   store i32 %val, ptr addrspace(1) %out
@@ -230,9 +227,6 @@ define amdgpu_kernel void @global_nontemporal_load_1(
 ;
 ; GFX7-LABEL: global_nontemporal_load_1:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GFX7-NEXT:    s_add_i32 s12, s12, s17
-; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_mov_b64 s[4:5], s[8:9]
 ; GFX7-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x2
@@ -448,7 +442,7 @@ define amdgpu_kernel void @global_nontemporal_load_1(
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-CU-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %val.gep = getelementptr inbounds i32, ptr addrspace(1) %in, i32 %tid
@@ -480,9 +474,6 @@ define amdgpu_kernel void @global_nontemporal_store_0(
 ;
 ; GFX7-LABEL: global_nontemporal_store_0:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GFX7-NEXT:    s_add_i32 s12, s12, s17
-; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -633,7 +624,7 @@ define amdgpu_kernel void @global_nontemporal_store_0(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1] th:TH_STORE_NT
 ; GFX12-CU-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load i32, ptr addrspace(1) %in, align 4
   store i32 %val, ptr addrspace(1) %out, !nontemporal !0
@@ -667,9 +658,6 @@ define amdgpu_kernel void @global_nontemporal_store_1(
 ;
 ; GFX7-LABEL: global_nontemporal_store_1:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GFX7-NEXT:    s_add_i32 s12, s12, s17
-; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[8:9], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -866,7 +854,7 @@ define amdgpu_kernel void @global_nontemporal_store_1(
 ; GFX12-CU-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1] th:TH_STORE_NT
 ; GFX12-CU-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %val = load i32, ptr addrspace(1) %in, align 4
@@ -903,9 +891,6 @@ define amdgpu_kernel void @global_nontemporal_volatile_load(
 ;
 ; GFX7-LABEL: global_nontemporal_volatile_load:
 ; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_mov_b32 flat_scratch_lo, s13
-; GFX7-NEXT:    s_add_i32 s12, s12, s17
-; GFX7-NEXT:    s_lshr_b32 flat_scratch_hi, s12, 8
 ; GFX7-NEXT:    s_load_dwordx2 s[6:7], s[8:9], 0x0
 ; GFX7-NEXT:    s_load_dwordx2 s[4:5], s[8:9], 0x2
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1056,7 +1041,7 @@ define amdgpu_kernel void @global_nontemporal_volatile_load(
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v0, v1, s[0:1]
 ; GFX12-CU-NEXT:    s_endpgm
-    ptr addrspace(1) %in, ptr addrspace(1) %out) {
+    ptr addrspace(1) %in, ptr addrspace(1) %out) #0 {
 entry:
   %val = load volatile i32, ptr addrspace(1) %in, align 4, !nontemporal !0
   store i32 %val, ptr addrspace(1) %out
@@ -1065,3 +1050,5 @@ entry:
 
 !0 = !{i32 1}
 declare i32 @llvm.amdgcn.workitem.id.x()
+
+attributes #0 = { "amdgpu-no-flat-scratch-init" }
