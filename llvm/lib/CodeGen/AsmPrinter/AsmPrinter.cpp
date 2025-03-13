@@ -1706,16 +1706,17 @@ void AsmPrinter::emitCallGraphSection(const MachineFunction &MF,
   // Can be optimized to occupy 2 bits instead.
   // Emit function kind, and type id if available.
   if (!IsIndirectTarget) {
-    OutStreamer->emitInt64(FunctionInfo::FunctionKind::NOT_INDIRECT_TARGET);
+    OutStreamer->emitInt64(
+        static_cast<uint64_t>(FunctionInfo::FunctionKind::NOT_INDIRECT_TARGET));
   } else {
     const auto *TypeId = extractNumericCGTypeId(F);
     if (TypeId) {
-      OutStreamer->emitInt64(
-          FunctionInfo::FunctionKind::INDIRECT_TARGET_KNOWN_TID);
+      OutStreamer->emitInt64(static_cast<uint64_t>(
+          FunctionInfo::FunctionKind::INDIRECT_TARGET_KNOWN_TID));
       OutStreamer->emitInt64(TypeId->getZExtValue());
     } else {
-      OutStreamer->emitInt64(
-          FunctionInfo::FunctionKind::INDIRECT_TARGET_UNKNOWN_TID);
+      OutStreamer->emitInt64(static_cast<uint64_t>(
+          FunctionInfo::FunctionKind::INDIRECT_TARGET_UNKNOWN_TID));
     }
   }
 

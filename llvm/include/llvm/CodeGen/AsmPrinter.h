@@ -184,7 +184,7 @@ private:
     /// Enumeration of function kinds, and their mapping to function kind values
     /// stored in call graph section entries.
     /// Must match the enum in llvm/tools/llvm-objdump/llvm-objdump.cpp.
-    enum FunctionKind {
+    enum class FunctionKind : uint64_t {
       /// Function cannot be target to indirect calls.
       NOT_INDIRECT_TARGET = 0,
 
