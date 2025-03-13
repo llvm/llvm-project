@@ -25,19 +25,19 @@
 #endif
 #endif
 
+#include <stdint.h>
+
+#if !defined(__cplusplus)
+_Pragma("push_macro(\"bool\")");
+#define bool _Bool
+#endif
+
 #if defined(__NVPTX__)
 #include <nvptxintrin.h>
 #elif defined(__AMDGPU__)
 #include <amdgpuintrin.h>
 #elif !defined(_OPENMP)
 #error "This header is only meant to be used on GPU architectures."
-#endif
-
-#include <stdint.h>
-
-#if !defined(__cplusplus)
-_Pragma("push_macro(\"bool\")");
-#define bool _Bool
 #endif
 
 _Pragma("omp begin declare target device_type(nohost)");
@@ -139,6 +139,18 @@ __gpu_read_first_lane_f64(uint64_t __lane_mask, double __x) {
   return __builtin_bit_cast(
       double, __gpu_read_first_lane_u64(__lane_mask,
                                         __builtin_bit_cast(uint64_t, __x)));
+}
+
+// Shuffles the the lanes according to the given index.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_shuffle_idx_u64(uint64_t __lane_mask, uint32_t __idx, uint64_t __x,
+                      uint32_t __width) {
+  uint32_t __hi = (uint32_t)(__x >> 32ull);
+  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFF);
+  uint32_t __mask = (uint32_t)__lane_mask;
+  return ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __hi, __width)
+          << 32ull) |
+         ((uint64_t)__gpu_shuffle_idx_u32(__mask, __idx, __lo, __width));
 }
 
 // Shuffles the the lanes according to the given index.

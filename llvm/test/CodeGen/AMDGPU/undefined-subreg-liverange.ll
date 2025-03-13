@@ -24,7 +24,7 @@ B1:
   br label %B2
 
 B2:
-  %v0 = phi <4 x float> [ zeroinitializer, %B1 ], [ <float 0.0, float 0.0, float 0.0, float undef>, %B0 ]
+  %v0 = phi <4 x float> [ zeroinitializer, %B1 ], [ <float 0.0, float 0.0, float 0.0, float poison>, %B0 ]
   br i1 undef, label %B30.1, label %B30.2
 
 B30.1:
@@ -86,7 +86,7 @@ bb9:                                              ; preds = %bb9, %bb
 
 bb11:                                             ; preds = %bb9
   store <4 x i32> %tmp2, ptr addrspace(1) poison, align 16
-  ret float undef
+  ret float poison
 }
 
 ; FIXME: Should be able to remove the undef copies
