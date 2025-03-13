@@ -127,8 +127,8 @@ static std::string OptLLVM(const std::string &IR, CodeGenOptLevel OLvl) {
     ErrorAndExit(E);
 
   std::unique_ptr<TargetMachine> TM(TheTarget->createTargetMachine(
-      M->getTargetTriple().str(), codegen::getCPUStr(),
-      codegen::getFeaturesStr(), Options, codegen::getExplicitRelocModel(),
+      M->getTargetTriple(), codegen::getCPUStr(), codegen::getFeaturesStr(),
+      Options, codegen::getExplicitRelocModel(),
       codegen::getExplicitCodeModel(), OLvl));
   if (!TM)
     ErrorAndExit("Could not create target machine");

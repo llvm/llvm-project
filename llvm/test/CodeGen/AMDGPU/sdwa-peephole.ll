@@ -1992,13 +1992,13 @@ entry:
   %tmp7 = extractelement <8 x i8> %tmp, i32 6
   %tmp8 = extractelement <8 x i8> %tmp, i32 7
 
-  %tmp9 = insertelement <2 x i8> undef, i8 %tmp1, i32 0
+  %tmp9 = insertelement <2 x i8> poison, i8 %tmp1, i32 0
   %tmp10 = insertelement <2 x i8> %tmp9, i8 %tmp2, i32 1
-  %tmp11 = insertelement <2 x i8> undef, i8 %tmp3, i32 0
+  %tmp11 = insertelement <2 x i8> poison, i8 %tmp3, i32 0
   %tmp12 = insertelement <2 x i8> %tmp11, i8 %tmp4, i32 1
-  %tmp13 = insertelement <2 x i8> undef, i8 %tmp5, i32 0
+  %tmp13 = insertelement <2 x i8> poison, i8 %tmp5, i32 0
   %tmp14 = insertelement <2 x i8> %tmp13, i8 %tmp6, i32 1
-  %tmp15 = insertelement <2 x i8> undef, i8 %tmp7, i32 0
+  %tmp15 = insertelement <2 x i8> poison, i8 %tmp7, i32 0
   %tmp16 = insertelement <2 x i8> %tmp15, i8 %tmp8, i32 1
 
   %tmp17 = shufflevector <2 x i8> %tmp10, <2 x i8> %tmp12, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

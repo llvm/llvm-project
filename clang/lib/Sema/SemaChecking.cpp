@@ -2723,6 +2723,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_cosh:
   case Builtin::BI__builtin_elementwise_exp:
   case Builtin::BI__builtin_elementwise_exp2:
+  case Builtin::BI__builtin_elementwise_exp10:
   case Builtin::BI__builtin_elementwise_floor:
   case Builtin::BI__builtin_elementwise_log:
   case Builtin::BI__builtin_elementwise_log2:
@@ -14054,23 +14055,6 @@ void Sema::CheckCastAlign(Expr *Op, QualType T, SourceRange TRange) {
     << TRange << Op->getSourceRange();
 }
 
-void Sema::CheckVectorAccess(const Expr *BaseExpr, const Expr *IndexExpr) {
-  const auto *VTy = BaseExpr->getType()->getAs<VectorType>();
-  if (!VTy)
-    return;
-
-  Expr::EvalResult Result;
-  if (!IndexExpr->EvaluateAsInt(Result, Context, Expr::SE_AllowSideEffects))
-    return;
-
-  unsigned DiagID = diag::err_vector_index_out_of_range;
-
-  llvm::APSInt index = Result.Val.getInt();
-  if (index.isNegative() || index >= VTy->getNumElements())
-    Diag(BaseExpr->getBeginLoc(), DiagID) << toString(index, 10, true);
-  return;
-}
-
 void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
                             const ArraySubscriptExpr *ASE,
                             bool AllowOnePastEnd, bool IndexNegated) {
@@ -14085,12 +14069,6 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
   const Type *EffectiveType =
       BaseExpr->getType()->getPointeeOrArrayElementType();
   BaseExpr = BaseExpr->IgnoreParenCasts();
-
-  if (BaseExpr->getType()->isVectorType()) {
-    CheckVectorAccess(BaseExpr, IndexExpr);
-    return;
-  }
-
   const ConstantArrayType *ArrayTy =
       Context.getAsConstantArrayType(BaseExpr->getType());
 

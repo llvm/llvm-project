@@ -44,7 +44,7 @@ main_body:
   %tmp50 = bitcast float %tmp27 to i32
   %tmp51 = bitcast float %tmp48 to i32
   %tmp52 = bitcast float %tmp49 to i32
-  %tmp53 = insertelement <4 x i32> undef, i32 %tmp50, i32 0
+  %tmp53 = insertelement <4 x i32> poison, i32 %tmp50, i32 0
   %tmp54 = insertelement <4 x i32> %tmp53, i32 %tmp51, i32 1
   %tmp55 = insertelement <4 x i32> %tmp54, i32 %tmp52, i32 2
   %tmp55.cast = bitcast <4 x i32> %tmp55 to <4 x float>
@@ -63,7 +63,7 @@ main_body:
 
 IF26:                                             ; preds = %main_body
   %tmp71 = bitcast float %tmp27 to i32
-  %tmp72 = insertelement <4 x i32> undef, i32 %tmp71, i32 0
+  %tmp72 = insertelement <4 x i32> poison, i32 %tmp71, i32 0
   br label %LOOP
 
 ENDIF25:                                          ; preds = %IF29, %main_body
@@ -74,11 +74,11 @@ ENDIF25:                                          ; preds = %IF29, %main_body
   %tmp75 = fmul float %clamp.i, %clamp.i
   %tmp76 = fmul float %tmp75, %tmp75
   %tmp77 = fadd float %tmp76, %tmp76
-  %tmp78 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> undef, float %tmp77, 11
-  %tmp79 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp78, float undef, 12
-  %tmp80 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp79, float undef, 13
+  %tmp78 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> poison, float %tmp77, 11
+  %tmp79 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp78, float poison, 12
+  %tmp80 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp79, float poison, 13
   %tmp81 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp80, float %tmp25, 14
-  %tmp82 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp81, float undef, 15
+  %tmp82 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp81, float poison, 15
   %tmp83 = insertvalue <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp82, float %arg21, 24
   ret <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> %tmp83
 
