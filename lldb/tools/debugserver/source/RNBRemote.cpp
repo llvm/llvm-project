@@ -1122,17 +1122,16 @@ void RNBRemote::CommDataReceived(const std::string &new_data) {
         // We have a valid packet...
         m_rx_packets.push_back(data.substr(idx, end_idx - idx));
         DNBLogThreadedIf(LOG_RNB_PACKETS, "getpkt: %s",
-                          m_rx_packets.back().c_str());
+                         m_rx_packets.back().c_str());
       }
       idx = end_idx;
     } else {
-      DNBLogThreadedIf(LOG_RNB_MAX,
-                        "%8d RNBRemote::%s tossing junk byte at %c",
-                        (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
-                        __FUNCTION__, data[idx]);
+      DNBLogThreadedIf(LOG_RNB_MAX, "%8d RNBRemote::%s tossing junk byte at %c",
+                       (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true),
+                       __FUNCTION__, data[idx]);
       idx = idx + 1;
     }
-}
+  }
 
   if (!m_rx_packets.empty()) {
     // Let the main thread know we have received a packet
