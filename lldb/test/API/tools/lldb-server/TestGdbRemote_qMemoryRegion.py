@@ -5,7 +5,6 @@ from lldbsuite.test.lldbdwarf import *
 
 
 class TestGdbRemote_qMemoryRegion(gdbremote_testcase.GdbRemoteTestCaseBase):
-
     def test_qMemoryRegionInfo_is_supported(self):
         self.build()
         self.set_inferior_startup_launch()
