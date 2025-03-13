@@ -4700,6 +4700,9 @@ mlir::LogicalResult SimplifyIsContiguousBoxOp::matchAndRewrite(
     return mlir::success();
   }
 
+  // TODO: support more patterns, e.g. a result of fir.embox without
+  // the slice is contiguous. We can add fir::isSimplyContiguous(box)
+  // that walks def-use to figure it out.
   return mlir::failure();
 }
 
@@ -4736,6 +4739,7 @@ mlir::LogicalResult SimplifyBoxTotalElementsOp::matchAndRewrite(
     return mlir::success();
   }
 
+  // TODO: support more cases, e.g. !fir.box<!fir.array<10xi32>>.
   return mlir::failure();
 }
 
