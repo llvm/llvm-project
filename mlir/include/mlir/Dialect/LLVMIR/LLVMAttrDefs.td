@@ -1307,7 +1307,7 @@ def ModuleFlagAttr
 
     Example:
     ```mlir
-      #llvm.mlir.module_flag<1 : i64, "wchar_size", 4 : i32>
+      #llvm.mlir.module_flag<error, "wchar_size", 4>
     ```
   }];
   let parameters = (ins "ModFlagBehavior":$behavior,
