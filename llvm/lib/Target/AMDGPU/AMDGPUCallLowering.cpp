@@ -1240,7 +1240,7 @@ bool AMDGPUCallLowering::lowerTailCall(
       IsDynamicVGPRChainCall = true;
 
       if (Info.OrigArgs.size() != 8) {
-        LLVM_DEBUG(dbgs() << "Expected 3 additional args");
+        LLVM_DEBUG(dbgs() << "Expected 3 additional args\n");
         return false;
       }
 
