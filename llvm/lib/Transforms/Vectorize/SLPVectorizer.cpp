@@ -1035,16 +1035,15 @@ public:
   }
 };
 
-static std::optional<InterchangeableBinOp> isConvertible(Instruction *From,
-                                                         Instruction *To) {
+std::optional<InterchangeableBinOp> isConvertible(Instruction *From,
+                                                  Instruction *To) {
   InterchangeableBinOp Converter(From);
   if (Converter.add(From) && Converter.add(To))
     return Converter;
   return {};
 }
 
-static bool isConvertible(Instruction *I, Instruction *MainOp,
-                          Instruction *AltOp) {
+bool isConvertible(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
   assert(MainOp && "MainOp cannot be nullptr.");
   if (I->getOpcode() == MainOp->getOpcode())
     return true;
@@ -1056,7 +1055,7 @@ static bool isConvertible(Instruction *I, Instruction *MainOp,
   return isConvertible(I, MainOp) || isConvertible(I, AltOp);
 }
 
-static std::pair<Instruction *, SmallVector<Value *>>
+std::pair<Instruction *, SmallVector<Value *>>
 convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
   assert(isConvertible(I, MainOp, AltOp) && "Cannot convert the instruction.");
   if (I->getOpcode() == MainOp->getOpcode())
