@@ -27,7 +27,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Triple.h"
 
@@ -393,6 +392,18 @@ static MCRelocationInfo *createARMMCRelocationInfo(const Triple &TT,
   return llvm::createMCRelocationInfo(TT, Ctx);
 }
 
+template <typename T, size_t N>
+bool instructionsAreMatching(const T (&Insns)[N], const uint8_t *Buf,
+                             llvm::endianness E) {
+  for (unsigned I = 0; I < N; ++I) {
+    T Val = support::endian::read<T>(Buf + I * sizeof(T), E);
+    if (Val != Insns[I]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 namespace {
 
 class ARMMCInstrAnalysis : public MCInstrAnalysis {
@@ -433,24 +444,21 @@ public:
   evaluateMemoryOperandAddress(const MCInst &Inst, const MCSubtargetInfo *STI,
                                uint64_t Addr, uint64_t Size) const override;
 
-  std::vector<std::pair<uint64_t, uint64_t>> findPltEntries(
-      uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-      const Triple &TargetTriple,
-      std::optional<llvm::endianness> InstrEndiannessHint) const override {
-    llvm::endianness DataEndianness =
-        TargetTriple.isLittleEndian() ? endianness::little : endianness::big;
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 const MCSubtargetInfo &STI) const override {
+    llvm::endianness DataEndianness = STI.getTargetTriple().isLittleEndian()
+                                          ? endianness::little
+                                          : endianness::big;
     llvm::endianness InstrEndianness =
-        InstrEndiannessHint.value_or(DataEndianness);
+        STI.checkFeatures("+big-endian-instructions") ? endianness::big
+                                                      : endianness::little;
 
-    std::vector<std::pair<uint64_t, uint64_t>> Result;
     // Do a lightweight parsing of PLT entries.
-    for (uint64_t Byte = 0, End = PltContents.size(); Byte + 12 < End;
-         Byte += 4) {
-      uint32_t InsnPart1 =
-          support::endian::read16(PltContents.data() + Byte, InstrEndianness);
-
-      // Is Thumb? Check for movw.
-      if ((InsnPart1 & 0xffb0) == 0xf200) {
+    std::vector<std::pair<uint64_t, uint64_t>> Result;
+    if (STI.checkFeatures("+thumb-mode")) {
+      for (uint64_t Byte = 0, End = PltContents.size(); Byte + 12 < End;
+           Byte += 16) {
         // Expected instruction sequence:
         //
         // movw ip, #lower16
@@ -459,54 +467,61 @@ public:
         // ldr.w pc, [ip]
         // b . -4
 
-        uint32_t MovwPart1 = InsnPart1;
+        // Check for movw.
+        uint32_t MovwPart1 =
+            support::endian::read16(PltContents.data() + Byte, InstrEndianness);
+        if ((MovwPart1 & 0xffb0) != 0xf200)
+          continue;
+
         uint32_t MovwPart2 = support::endian::read16(
             PltContents.data() + Byte + 2, InstrEndianness);
         if ((MovwPart2 & 0x8f00) != 0xc00)
           continue;
+
         uint64_t OffsetLower =
             (MovwPart2 & 0xff) + ((MovwPart2 & 0x7000) >> 4) +
             ((MovwPart1 & 0x400) << 1) + ((MovwPart1 & 0xf) << 12);
+
         // Check for movt.
         uint32_t MovtPart1 = support::endian::read16(
             PltContents.data() + Byte + 4, InstrEndianness);
         if ((MovtPart1 & 0xfbf0) != 0xf2c0)
           continue;
+
         uint32_t MovtPart2 = support::endian::read16(
             PltContents.data() + Byte + 6, InstrEndianness);
         if ((MovtPart2 & 0x8f00) != 0xc00)
           continue;
+
         uint64_t OffsetHigher =
             ((MovtPart2 & 0xff) << 16) + ((MovtPart2 & 0x7000) << 12) +
             ((MovtPart1 & 0x400) << 17) + ((MovtPart1 & 0xf) << 28);
 
-        auto CheckInsns = [](const uint8_t *Buf, llvm::endianness E) {
-          const uint16_t Insns[] = {
-              0x44fc,         // add ip, pc
-              0xf8dc, 0xf000, // ldr.w pc, [ip]
-              0xe7fc,         // b . -4
-          };
-
-          for (unsigned I = 0; I < std::size(Insns); ++I) {
-            uint16_t Val = support::endian::read16(Buf + I * sizeof(*Insns), E);
-            if (Val != Insns[I]) {
-              return false;
-            }
-          }
-          return true;
+        const uint16_t Insns[] = {
+            0x44fc,         // add ip, pc
+            0xf8dc, 0xf000, // ldr.w pc, [ip]
+            0xe7fc,         // b . -4
         };
 
-        if (CheckInsns(PltContents.data() + Byte + 8, InstrEndianness)) {
+        if (instructionsAreMatching(Insns, PltContents.data() + Byte + 8,
+                                    InstrEndianness)) {
           uint64_t Offset =
               (PltSectionVA + Byte + 12) + OffsetLower + OffsetHigher;
           Result.emplace_back(PltSectionVA + Byte, Offset);
         }
-        Byte += 12;
-      } else {
-        uint32_t Insn =
-            support::endian::read32(PltContents.data() + Byte, InstrEndianness);
+      }
+    } else {
+      const uint32_t LongEntryInsns[] = {
+          0xe59fc004, //     ldr ip, L2
+          0xe08cc00f, // L1: add ip, ip, pc
+          0xe59cf000, // ldr pc, [ip]
+      };
+
+      for (uint64_t Byte = 0, End = PltContents.size(); Byte + 12 < End;
+           Byte += 4) {
         // Is it a long entry?
-        if (Insn == 0xe59fc004) {
+        if (instructionsAreMatching(LongEntryInsns, PltContents.data() + Byte,
+                                    InstrEndianness)) {
           // Expected instruction sequence:
           //
           //     ldr ip, L2
@@ -514,14 +529,6 @@ public:
           //     ldr pc, [ip]
           // L2: .word   Offset(&(.got.plt) - L1 - 8
 
-          // Check for add.
-          if (support::endian::read32(PltContents.data() + Byte + 4,
-                                      InstrEndianness) != 0xe08cc00f)
-            continue;
-          // Check for ldr.
-          if (support::endian::read32(PltContents.data() + Byte + 8,
-                                      InstrEndianness) != 0xe59cf000)
-            continue;
           uint64_t Offset = (PltSectionVA + Byte + 12) +
                             support::endian::read32(
                                 PltContents.data() + Byte + 12, DataEndianness);
@@ -535,7 +542,8 @@ public:
           //     ldr pc, [ip, #0x00000NNN] Offset(&(.got.plt) - L1 - 8
 
           // Check for first add.
-          uint32_t Add1 = Insn;
+          uint32_t Add1 = support::endian::read32(PltContents.data() + Byte,
+                                                  InstrEndianness);
           if ((Add1 & 0xe28fc600) != 0xe28fc600)
             continue;
           uint32_t Add2 = support::endian::read32(PltContents.data() + Byte + 4,

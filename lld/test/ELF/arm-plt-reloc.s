@@ -323,7 +323,7 @@ _start:
 // RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t6.be | FileCheck --check-prefix=CHECKMIX-EB %s
 // RUN: llvm-readobj -S -r %t6.be | FileCheck --check-prefix=DSORELMIX %s
 // RUN: ld.lld --be8 --hash-style=sysv --script %t3.script -shared %t1.be %t2.be -o %t6.be
-// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi -d --no-show-raw-insn %t6.be | FileCheck --check-prefix=CHECKMIX-EB %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7aeb-none-linux-gnueabi -d --no-show-raw-insn %t6.be | FileCheck --check-prefix=CHECKMIX-EB %s
 // RUN: llvm-readobj -S -r %t6.be | FileCheck --check-prefix=DSORELMIX %s
 
 // CHECKMIX: Disassembly of section .text:
