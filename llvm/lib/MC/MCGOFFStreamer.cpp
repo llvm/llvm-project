@@ -15,11 +15,16 @@
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCGOFFObjectWriter.h"
 #include "llvm/MC/TargetRegistry.h"
 
 using namespace llvm;
 
 MCGOFFStreamer::~MCGOFFStreamer() {}
+
+GOFFObjectWriter &MCGOFFStreamer::getWriter() {
+  return static_cast<GOFFObjectWriter &>(getAssembler().getWriter());
+}
 
 MCStreamer *llvm::createGOFFStreamer(MCContext &Context,
                                      std::unique_ptr<MCAsmBackend> &&MAB,
