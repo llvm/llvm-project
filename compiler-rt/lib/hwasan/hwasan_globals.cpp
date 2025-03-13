@@ -84,7 +84,7 @@ ArrayRef<const hwasan_global> HwasanGlobalsFor(ElfW(Addr) base,
       //
       // There is always a HWASan globals note ("Create the note even if we
       // aren't instrumenting globals." - HWAddressSanitizer.cpp), but we can
-      // elide the code model check if there are no real globals.
+      // elide the code model check if there are no globals.
       if (globals_begin != globals_end)
         CheckCodeModel(base, phdr, phnum);
 
