@@ -2,7 +2,7 @@
 
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx1100 < %s | FileCheck %s
 
-define i64 @narrow_add(i64 noundef %a, i64 noundef %b) {
+define i64 @narrow_add(i64 %a, i64 %b) {
 ; CHECK-LABEL: narrow_add:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -17,7 +17,7 @@ define i64 @narrow_add(i64 noundef %a, i64 noundef %b) {
   ret i64 %add
 }
 
-define i64 @narrow_add_1(i64 noundef %a, i64 noundef %b) {
+define i64 @narrow_add_1(i64 %a, i64 %b) {
 ; CHECK-LABEL: narrow_add_1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -73,7 +73,7 @@ define <2 x i32> @narrow_add_vec_1(<2 x i32> %a, <2 x i32> %b) #0 {
   ret <2 x i32> %add
 }
 
-define i64 @narrow_mul(i64 noundef %a, i64 noundef %b) {
+define i64 @narrow_mul(i64 %a, i64 %b) {
 ; CHECK-LABEL: narrow_mul:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -88,7 +88,7 @@ define i64 @narrow_mul(i64 noundef %a, i64 noundef %b) {
   ret i64 %mul
 }
 
-define i64 @narrow_mul_1(i64 noundef %a, i64 noundef %b) {
+define i64 @narrow_mul_1(i64 %a, i64 %b) {
 ; CHECK-LABEL: narrow_mul_1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -142,7 +142,7 @@ define <2 x i32> @narrow_add_mul_1(<2 x i32> %a, <2 x i32> %b) #0 {
   ret <2 x i32> %mul
 }
 
-define i64 @no_narrow_add(i64 noundef %a, i64 noundef %b) {
+define i64 @no_narrow_add(i64 %a, i64 %b) {
 ; CHECK-LABEL: no_narrow_add:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -158,7 +158,7 @@ define i64 @no_narrow_add(i64 noundef %a, i64 noundef %b) {
   ret i64 %add
 }
 
-define i64 @no_narrow_add_1(i64 noundef %a, i64 noundef %b) {
+define i64 @no_narrow_add_1(i64 %a, i64 %b) {
 ; CHECK-LABEL: no_narrow_add_1:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -194,7 +194,7 @@ define <2 x i64> @no_narrow_add_vec(<2 x i64> %a, <2 x i64> %b) #0 {
   ret <2 x i64> %add
 }
 
-define i64 @no_narrow_mul(i64 noundef %a, i64 noundef %b) {
+define i64 @no_narrow_mul(i64 %a, i64 %b) {
 ; CHECK-LABEL: no_narrow_mul:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
