@@ -806,6 +806,22 @@ define <32 x i8> @concat_packsr_unnecessary(<8 x i16> %a0, <8 x i16> %a1, <8 x i
 }
 declare <16 x i8> @llvm.x86.sse2.packsswb.128(<8 x i16>, <8 x i16>)
 
+; TODO: Not beneficial to concatenate both inputs just to create a 256-bit pshufb
+define <32 x i8> @concat_pshufb_unnecessary(<16 x i8> %a0, <16 x i8> %a1, <16 x i8> %a2) nounwind {
+; CHECK-LABEL: concat_pshufb_unnecessary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    ret{{[l|q]}}
+  %lo = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> %a1)
+  %hi = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> %a2)
+  %res = shufflevector <16 x i8> %lo, <16 x i8> %hi, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <32 x i8> %res
+}
+
 define <8 x i32> @constant_fold_permd() {
 ; AVX2-LABEL: constant_fold_permd:
 ; AVX2:       # %bb.0:
