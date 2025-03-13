@@ -775,6 +775,22 @@ define <32 x i8> @combine_pshufb_pshufb_or_pshufb(<32 x i8> %a0) {
   ret <32 x i8> %4
 }
 
+; TODO: Not beneficial to concatenate both inputs just to create a 256-bit palignr
+define <32 x i8> @concat_alignr_unnecessary(<16 x i8> %a0, <16 x i8> noundef %a1, <16 x i8> %a2) nounwind {
+; CHECK-LABEL: concat_alignr_unnecessary:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; CHECK-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
+; CHECK-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpalignr {{.*#+}} ymm0 = ymm1[3,4,5,6,7,8,9,10,11,12,13,14,15],ymm0[0,1,2],ymm1[19,20,21,22,23,24,25,26,27,28,29,30,31],ymm0[16,17,18]
+; CHECK-NEXT:    ret{{[l|q]}}
+  %lo = shufflevector <16 x i8> %a1, <16 x i8> %a0, <16 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18>
+  %hi = shufflevector <16 x i8> %a2, <16 x i8> %a0, <16 x i32> <i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18>
+  %res = shufflevector <16 x i8> %lo, <16 x i8> %hi, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
+  ret <32 x i8> %res
+}
+
 define <8 x i32> @constant_fold_permd() {
 ; AVX2-LABEL: constant_fold_permd:
 ; AVX2:       # %bb.0:
