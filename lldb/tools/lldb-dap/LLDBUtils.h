@@ -10,9 +10,9 @@
 #define LLDB_TOOLS_LLDB_DAP_LLDBUTILS_H
 
 #include "DAPForward.h"
-#include "lldb/API/SBError.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
+#include "lldb/API/SBError.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
