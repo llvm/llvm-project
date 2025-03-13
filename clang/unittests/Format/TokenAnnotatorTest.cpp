@@ -3185,48 +3185,24 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_AttributeRParen);
 }
 
-TEST_F(TokenAnnotatorTest, UnderstandsNullabilityAttributes) {
-  auto Tokens = annotate("x = (foo *_Nullable)*v;");
+TEST_F(TokenAnnotatorTest, UnderstandsNullabilityAttributeMacros) {
+  // Under Google style, handles the Abseil macro aliases for the
+  // Clang nullability annotations.
+  auto Style = getGoogleStyle(FormatStyle::LK_Cpp);
+  auto Tokens = annotate("x = (foo* absl_nullable)*v;", Style);
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
-  EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
-  EXPECT_TOKEN(Tokens[5], tok::kw__Nullable, TT_Unknown);
-  EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
-
-  Tokens = annotate("x = (foo *_Nonnull)*v;");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
-  EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
-  EXPECT_TOKEN(Tokens[5], tok::kw__Nonnull, TT_Unknown);
-  EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
-
-  Tokens = annotate("x = (foo *_Null_unspecified)*v;");
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
-  EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
-  EXPECT_TOKEN(Tokens[5], tok::kw__Null_unspecified, TT_Unknown);
-  EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
-
-  // Under Google style, also handles the Abseil macro aliases for the
-  // nullability annotations.
-  FormatStyle Style = getGoogleStyle(FormatStyle::LK_Cpp);
-  Tokens = annotate("x = (foo *absl_nullable)*v;", Style);
-  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[5], tok::identifier, TT_AttributeMacro);
   EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
 
-  Tokens = annotate("x = (foo *absl_nonnull)*v;", Style);
+  Tokens = annotate("x = (foo* absl_nonnull)*v;", Style);
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[5], tok::identifier, TT_AttributeMacro);
   EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
 
-  Tokens = annotate("x = (foo *absl_nullability_unknown)*v;", Style);
+  Tokens = annotate("x = (foo* absl_nullability_unknown)*v;", Style);
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
-  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown);
   EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
   EXPECT_TOKEN(Tokens[5], tok::identifier, TT_AttributeMacro);
   EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);

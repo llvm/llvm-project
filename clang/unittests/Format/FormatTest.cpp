@@ -12375,9 +12375,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyFormat("vector<a *_Nonnull> v;");
   verifyFormat("vector<a *_Nullable> v;");
   verifyFormat("vector<a *_Null_unspecified> v;");
-  verifyGoogleFormat("vector<a *absl_nonnull> v;");
-  verifyGoogleFormat("vector<a *absl_nullable> v;");
-  verifyGoogleFormat("vector<a *absl_nullability_unknown> v;");
+  verifyGoogleFormat("vector<a* absl_nonnull> v;");
+  verifyGoogleFormat("vector<a* absl_nullable> v;");
+  verifyGoogleFormat("vector<a* absl_nullability_unknown> v;");
   verifyFormat("vector<a *__ptr32> v;");
   verifyFormat("vector<a *__ptr64> v;");
   verifyFormat("vector<a *__capability> v;");
@@ -12523,9 +12523,9 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("MACRO(A *_Null_unspecified a);");
 
   Style = getGoogleStyle();
-  verifyIndependentOfContext("MACRO(A *absl_nonnull a);", Style);
-  verifyIndependentOfContext("MACRO(A *absl_nullable a);", Style);
-  verifyIndependentOfContext("MACRO(A *absl_nullability_unknown a);", Style);
+  verifyIndependentOfContext("MACRO(A* absl_nonnull a);", Style);
+  verifyIndependentOfContext("MACRO(A* absl_nullable a);", Style);
+  verifyIndependentOfContext("MACRO(A* absl_nullability_unknown a);", Style);
 
   verifyIndependentOfContext("MACRO(A *__attribute__((foo)) a);");
   verifyIndependentOfContext("MACRO(A *__attribute((foo)) a);");
@@ -12685,12 +12685,12 @@ TEST_F(FormatTest, UnderstandsAttributes) {
   verifyFormat("SomeType s __unused{InitValue};", CustomAttrs);
   verifyFormat("SomeType *__capability s(InitValue);", CustomAttrs);
   verifyFormat("SomeType *__capability s{InitValue};", CustomAttrs);
-  verifyGoogleFormat("SomeType *absl_nonnull s(InitValue);");
-  verifyGoogleFormat("SomeType *absl_nonnull s{InitValue};");
-  verifyGoogleFormat("SomeType *absl_nullable s(InitValue);");
-  verifyGoogleFormat("SomeType *absl_nullable s{InitValue};");
-  verifyGoogleFormat("SomeType *absl_nullability_unknown s(InitValue);");
-  verifyGoogleFormat("SomeType *absl_nullability_unknown s{InitValue};");
+  verifyGoogleFormat("SomeType* absl_nonnull s(InitValue);");
+  verifyGoogleFormat("SomeType* absl_nonnull s{InitValue};");
+  verifyGoogleFormat("SomeType* absl_nullable s(InitValue);");
+  verifyGoogleFormat("SomeType* absl_nullable s{InitValue};");
+  verifyGoogleFormat("SomeType* absl_nullability_unknown s(InitValue);");
+  verifyGoogleFormat("SomeType* absl_nullability_unknown s{InitValue};");
 }
 
 TEST_F(FormatTest, UnderstandsPointerQualifiersInCast) {
