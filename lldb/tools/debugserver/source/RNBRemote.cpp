@@ -1054,7 +1054,7 @@ rnb_err_t RNBRemote::HandleReceivedPacket(PacketEnum *type) {
 void RNBRemote::CommDataReceived(const std::string &new_data) {
   //  DNBLogThreadedIf (LOG_RNB_REMOTE, "%8d RNBRemote::%s called",
   //  (uint32_t)m_comm.Timer().ElapsedMicroSeconds(true), __FUNCTION__);
-  {
+
     // Put the packet data into the buffer in a thread safe fashion
     PThreadMutex::Locker locker(m_mutex);
 
@@ -1132,7 +1132,6 @@ void RNBRemote::CommDataReceived(const std::string &new_data) {
                          __FUNCTION__, data[idx]);
         idx = idx + 1;
       }
-    }
   }
 
   if (!m_rx_packets.empty()) {
