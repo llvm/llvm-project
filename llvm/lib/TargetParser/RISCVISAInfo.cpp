@@ -744,9 +744,9 @@ Error RISCVISAInfo::checkDependency() {
   bool HasXqccmp = Exts.count("xqccmp") != 0;
 
   static constexpr StringLiteral XqciExts[] = {
-      {"xqcia"},   {"xqciac"}, {"xqcibm"},  {"xqcicli"},
-      {"xqcicm"},  {"xqcics"}, {"xqcicsr"}, {"xqciint"},
-      {"xqcilia"}, {"xqcilo"}, {"xqcilsm"}, {"xqcisls"}};
+      {"xqcia"},  {"xqciac"},  {"xqcibm"},  {"xqcicli"}, {"xqcicm"},
+      {"xqcics"}, {"xqcicsr"}, {"xqciint"}, {"xqcili"},  {"xqcilia"},
+      {"xqcilo"}, {"xqcilsm"}, {"xqcisls"}};
   static constexpr StringLiteral ZcdOverlaps[] = {
       {"zcmt"}, {"zcmp"}, {"xqccmp"}, {"xqciac"}, {"xqcicm"}};
 
