@@ -536,16 +536,16 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
              << diagMD(val, llvmModule.get())
              << ", only constant integer currently supported";
     }
-    auto valAttr = builder.getIntegerAttr(
-        IntegerType::get(context, constInt->getType()->getIntegerBitWidth()),
-        constInt->getValue());
+    // auto valAttr = builder.getIntegerAttr(
+    //     IntegerType::get(context, constInt->getType()->getIntegerBitWidth()),
+    //     constInt->getValue());
 
-    ModFlagBehaviorAttr behaviorAttr = ModFlagBehaviorAttr::get(
-        builder.getContext(), (ModFlagBehavior)behavior);
+    // ModFlagBehaviorAttr behaviorAttr = ModFlagBehaviorAttr::get(
+    //     builder.getContext(), (ModFlagBehavior)behavior);
 
-    moduleFlags.push_back(
-        builder.getAttr<ModuleFlagAttr>(behaviorAttr, builder.getStringAttr(key->getString()),
-                                                                valAttr));
+    moduleFlags.push_back(builder.getAttr<ModuleFlagAttr>(
+        (ModFlagBehavior)behavior, builder.getStringAttr(key->getString()),
+        constInt->getZExtValue()));
   }
 
   if (!moduleFlags.empty()) {

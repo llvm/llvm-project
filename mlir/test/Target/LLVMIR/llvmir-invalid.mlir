@@ -350,7 +350,7 @@ llvm.func @foo() {
 
 llvm.func @foo() {
   // expected-error @below{{must appear at the module level}}
-  llvm.module_flags [#llvm.mlir.module_flag<1 : i64, "wchar_size", 4 : i32>]
+  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", 4>]
 }
 
 // -----

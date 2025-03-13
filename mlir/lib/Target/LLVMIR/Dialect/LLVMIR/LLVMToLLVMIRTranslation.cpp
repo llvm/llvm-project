@@ -273,14 +273,10 @@ static void convertLinkerOptionsOp(ArrayAttr options,
 static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
                                  LLVM::ModuleTranslation &moduleTranslation) {
   llvm::Module *llvmModule = moduleTranslation.getLLVMModule();
-  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>()) {
-    auto flag = cast<ModuleFlagAttr>(attr);
-    auto intVal = dyn_cast<IntegerAttr>(flag.getValue());
-    assert(intVal && "expected integer attribute");
+  for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>())
     llvmModule->addModuleFlag(
-        static_cast<llvm::Module::ModFlagBehavior>(flag.getBehavior().getValue()),
-        flag.getKey().getValue(), (uint32_t)intVal.getUInt());
-  }
+        static_cast<llvm::Module::ModFlagBehavior>(flagAttr.getBehavior()),
+        flagAttr.getKey().getValue(), flagAttr.getValue());
 }
 
 static LogicalResult
