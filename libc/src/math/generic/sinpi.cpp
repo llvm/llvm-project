@@ -24,6 +24,21 @@
 #include "src/__support/FPUtil/nearest_integer.h"
 #include "src/math/generic/range_reduction_double_common.h"
 
+#if defined(LIBC_TARGET_CPU_HAS_FMA_DOUBLE)
+#include "range_reduction_fma.h"
+// using namespace LIBC_NAMESPACE::fma;
+using LIBC_NAMESPACE::fma::FAST_PASS_BOUND;
+using LIBC_NAMESPACE::fma::large_range_reduction;
+using LIBC_NAMESPACE::fma::small_range_reduction;
+
+#else
+#include "range_reduction.h"
+// using namespace LIBC_NAMESPACE::generic;
+using LIBC_NAMESPACE::generic::FAST_PASS_BOUND;
+using LIBC_NAMESPACE::generic::large_range_reduction;
+using LIBC_NAMESPACE::generic::small_range_reduction;
+#endif // LIBC_TARGET_CPU_HAS_FMA_DOUBLE
+
 namespace LIBC_NAMESPACE_DECL {
 
 const double SIN_K_PI_OVER_128[256] = {
@@ -77,17 +92,21 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   // Range reduction:
   // x = (k + y) * 1/128
 
-  // From x find k and y such that
+  // find k and y such that
   //   k = round(x * 128)
   //   y = x * 128 - k
 
+  /*
   double kd = fputil::nearest_integer(x * 128);
   double yy = fputil::multiply_add<double>(x, 128.0, -kd);
+  */
 
   using FPBits = typename fputil::FPBits<double>;
   
   using DoubleDouble = fputil::DoubleDouble;
-  // DoubleDouble y;
+  DoubleDouble y;
+  LargeRangeReduction range_reduction_large{};
+  unsigned k = range_reduction_large.fast(x, y);
   //y.hi = yy;
   //y.lo = 0.0;
   using FPBits = typename fputil::FPBits<double>;
