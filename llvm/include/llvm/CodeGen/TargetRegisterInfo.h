@@ -593,7 +593,7 @@ public:
 
   /// Returns true if PhysReg cannot be written to in inline asm statements.
   virtual bool isInlineAsmReadOnlyReg(const MachineFunction &MF,
-                                      unsigned PhysReg) const {
+                                      MCRegister PhysReg) const {
     return false;
   }
 
@@ -957,6 +957,9 @@ public:
   /// Get the dimensions of register pressure impacted by this register unit.
   /// Returns a -1 terminated array of pressure set IDs.
   virtual const int *getRegUnitPressureSets(unsigned RegUnit) const = 0;
+
+  /// Get the scale factor of spill weight for this register class.
+  virtual float getSpillWeightScaleFactor(const TargetRegisterClass *RC) const;
 
   /// Get a list of 'hint' registers that the register allocator should try
   /// first when allocating a physical register for the virtual register

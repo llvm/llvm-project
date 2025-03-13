@@ -1618,7 +1618,7 @@ define amdgpu_ps float @global_load_saddr_i8_zext_vgpr_ptrtoint_commute_add_imm_
 ; Uniformity edge cases
 ; --------------------------------------------------------------------------------
 
-@ptr.in.lds = internal addrspace(3) global ptr addrspace(1) undef
+@ptr.in.lds = internal addrspace(3) global ptr addrspace(1) poison
 
 ; Base pointer is uniform, but also in VGPRs
 define amdgpu_ps float @global_load_saddr_uniform_ptr_in_vgprs(i32 %voffset) {
@@ -3849,7 +3849,7 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16lo_undef_hi(ptr addrspace(
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %load = load i16, ptr addrspace(1) %gep0
-  %build = insertelement <2 x i16> undef, i16 %load, i32 0
+  %build = insertelement <2 x i16> poison, i16 %load, i32 0
   %cast = bitcast <2 x i16> %build to <2 x half>
   ret <2 x half> %cast
 }
@@ -3882,7 +3882,7 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16lo_undef_hi_immneg128(ptr 
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
   %load = load i16, ptr addrspace(1) %gep1
-  %build = insertelement <2 x i16> undef, i16 %load, i32 0
+  %build = insertelement <2 x i16> poison, i16 %load, i32 0
   %cast = bitcast <2 x i16> %build to <2 x half>
   ret <2 x half> %cast
 }
@@ -4225,7 +4225,7 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_undef_hi(ptr addrspace(
   %zext.offset = zext i32 %voffset to i64
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %load = load i16, ptr addrspace(1) %gep0
-  %build = insertelement <2 x i16> undef, i16 %load, i32 1
+  %build = insertelement <2 x i16> poison, i16 %load, i32 1
   %cast = bitcast <2 x i16> %build to <2 x half>
   ret <2 x half> %cast
 }
@@ -4259,7 +4259,7 @@ define amdgpu_ps <2 x half> @global_load_saddr_i16_d16hi_undef_hi_immneg128(ptr 
   %gep0 = getelementptr inbounds i8, ptr addrspace(1) %sbase, i64 %zext.offset
   %gep1 = getelementptr inbounds i8, ptr addrspace(1) %gep0, i64 -128
   %load = load i16, ptr addrspace(1) %gep1
-  %build = insertelement <2 x i16> undef, i16 %load, i32 1
+  %build = insertelement <2 x i16> poison, i16 %load, i32 1
   %cast = bitcast <2 x i16> %build to <2 x half>
   ret <2 x half> %cast
 }

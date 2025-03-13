@@ -33,7 +33,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeCodeGenPrepareLegacyPassPass(Registry);
   initializeDeadMachineInstructionElimPass(Registry);
   initializeDebugifyMachineModulePass(Registry);
-  initializeDetectDeadLanesPass(Registry);
+  initializeDetectDeadLanesLegacyPass(Registry);
   initializeDwarfEHPrepareLegacyPassPass(Registry);
   initializeEarlyIfConverterLegacyPass(Registry);
   initializeEarlyIfPredicatorPass(Registry);
@@ -42,11 +42,11 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeExpandLargeDivRemLegacyPassPass(Registry);
   initializeExpandLargeFpConvertLegacyPassPass(Registry);
   initializeExpandMemCmpLegacyPassPass(Registry);
-  initializeExpandPostRAPass(Registry);
+  initializeExpandPostRALegacyPass(Registry);
   initializeFEntryInserterPass(Registry);
   initializeFinalizeISelPass(Registry);
   initializeFinalizeMachineBundlesPass(Registry);
-  initializeFixupStatepointCallerSavedPass(Registry);
+  initializeFixupStatepointCallerSavedLegacyPass(Registry);
   initializeFuncletLayoutPass(Registry);
   initializeGCMachineCodeAnalysisPass(Registry);
   initializeGCModuleInfoPass(Registry);
@@ -103,7 +103,7 @@ void llvm::initializeCodeGen(PassRegistry &Registry) {
   initializeOptimizePHIsLegacyPass(Registry);
   initializePEIPass(Registry);
   initializePHIEliminationPass(Registry);
-  initializePatchableFunctionPass(Registry);
+  initializePatchableFunctionLegacyPass(Registry);
   initializePeepholeOptimizerLegacyPass(Registry);
   initializePostMachineSchedulerLegacyPass(Registry);
   initializePostRAHazardRecognizerPass(Registry);

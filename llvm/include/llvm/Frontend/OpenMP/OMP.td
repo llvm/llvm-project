@@ -105,6 +105,7 @@ def OMPC_CancellationConstructType : Clause<"cancellation_construct_type"> {
     OMP_CANCELLATION_CONSTRUCT_Taskgroup,
     OMP_CANCELLATION_CONSTRUCT_None
   ];
+  let flangClass = "OmpCancellationConstructTypeClause";
 }
 def OMPC_Contains : Clause<"contains"> {
   let clangClass = "OMPContainsClause";
@@ -243,6 +244,9 @@ def OMPC_Indirect : Clause<"indirect"> {
 }
 def OMPC_Init : Clause<"init"> {
   let clangClass = "OMPInitClause";
+}
+def OMPC_Initializer : Clause<"initializer"> {
+  let flangClass = "OmpInitializerClause";
 }
 def OMPC_InReduction : Clause<"in_reduction"> {
   let clangClass = "OMPInReductionClause";
@@ -502,6 +506,9 @@ def OMPC_UnifiedAddress : Clause<"unified_address"> {
 def OMPC_UnifiedSharedMemory : Clause<"unified_shared_memory"> {
   let clangClass = "OMPUnifiedSharedMemoryClause";
 }
+def OMPC_SelfMaps : Clause<"self_maps"> {
+  let clangClass = "OMPSelfMapsClause";
+}
 def OMPC_Uniform : Clause<"uniform"> {
   let flangClass = "Name";
   let isValueList = true;
@@ -644,12 +651,16 @@ def OMP_BeginDeclareVariant : Directive<"begin declare variant"> {
 }
 def OMP_Cancel : Directive<"cancel"> {
   let allowedOnceClauses = [
+    VersionedClause<OMPC_CancellationConstructType>,
     VersionedClause<OMPC_If>,
   ];
   let association = AS_None;
   let category = CA_Executable;
 }
 def OMP_CancellationPoint : Directive<"cancellation point"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_CancellationConstructType>,
+  ];
   let association = AS_None;
   let category = CA_Executable;
 }
@@ -668,6 +679,9 @@ def OMP_DeclareMapper : Directive<"declare mapper"> {
   let category = CA_Declarative;
 }
 def OMP_DeclareReduction : Directive<"declare reduction"> {
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_Initializer>,
+  ];
   let association = AS_None;
   let category = CA_Declarative;
 }
@@ -929,7 +943,7 @@ def OMP_Requires : Directive<"requires"> {
     // TODO: Correct this supprted version number whenever complete
     // implementation of reverse_offload is available.
     VersionedClause<OMPC_AtomicDefaultMemOrder>,
-    VersionedClause<OMPC_DynamicAllocators>,
+    VersionedClause<OMPC_DynamicAllocators>, VersionedClause<OMPC_SelfMaps>,
     VersionedClause<OMPC_ReverseOffload, 99>,
   ];
   let association = AS_None;
@@ -1017,8 +1031,10 @@ def OMP_Single : Directive<"single"> {
     VersionedClause<OMPC_Allocate>,
     VersionedClause<OMPC_CopyPrivate>,
     VersionedClause<OMPC_FirstPrivate>,
-    VersionedClause<OMPC_NoWait>,
     VersionedClause<OMPC_Private>,
+  ];
+  let allowedOnceClauses = [
+    VersionedClause<OMPC_NoWait>,
   ];
   let association = AS_Block;
   let category = CA_Executable;

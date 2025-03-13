@@ -345,7 +345,7 @@ def AArch64fclamp : PatFrags<(ops node:$Zd, node:$Zn, node:$Zm),
 
 def SDT_AArch64FCVT : SDTypeProfile<1, 3, [
   SDTCisVec<0>, SDTCisVec<1>, SDTCisVec<2>, SDTCisVec<3>,
-  SDTCVecEltisVT<1,i1>
+  SDTCVecEltisVT<1,i1>, SDTCisSameNumEltsAs<0,1>, SDTCisSameAs<0,3>
 ]>;
 
 def SDT_AArch64FCVTR : SDTypeProfile<1, 4, [
@@ -931,6 +931,13 @@ let Predicates = [HasSVE_or_SME] in {
               (FDUP_ZI_S fpimm32:$imm8)>;
     def : Pat<(nxv2f64 (splat_vector fpimm64:$imm8)),
               (FDUP_ZI_D fpimm64:$imm8)>;
+    // Some half precision immediates alias with bfloat (e.g. f16(1.875) == bf16(1.0)).
+    def : Pat<(nxv8bf16 (splat_vector fpimmbf16:$imm8)),
+              (FDUP_ZI_H (fpimm16XForm bf16:$imm8))>;
+    def : Pat<(nxv4bf16 (splat_vector fpimmbf16:$imm8)),
+              (FDUP_ZI_H (fpimm16XForm bf16:$imm8))>;
+    def : Pat<(nxv2bf16 (splat_vector fpimmbf16:$imm8)),
+              (FDUP_ZI_H (fpimm16XForm bf16:$imm8))>;
   }
 
   // Select elements from either vector (predicated)
@@ -2370,9 +2377,9 @@ let Predicates = [HasSVE_or_SME] in {
   def : Pat<(nxv2f16 (AArch64fcvtr_mt (nxv2i1 (SVEAllActive:$Pg)), nxv2f32:$Zs, (i64 timm0_1), nxv2f16:$Zd)),
             (FCVT_ZPmZ_StoH_UNDEF ZPR:$Zd, PPR:$Pg, ZPR:$Zs)>;
 
-  def : Pat<(nxv4f32 (fpextend nxv4bf16:$op)),
+  def : Pat<(nxv4f32 (AArch64fcvte_mt (SVEAnyPredicate), nxv4bf16:$op, undef)),
             (LSL_ZZI_S $op, (i32 16))>;
-  def : Pat<(nxv2f32 (fpextend nxv2bf16:$op)),
+  def : Pat<(nxv2f32 (AArch64fcvte_mt (SVEAnyPredicate), nxv2bf16:$op, undef)),
             (LSL_ZZI_S $op, (i32 16))>;
 
   // Signed integer -> Floating-point
