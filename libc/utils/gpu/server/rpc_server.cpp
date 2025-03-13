@@ -22,7 +22,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 namespace LIBC_NAMESPACE {
 
@@ -325,7 +324,7 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     });
     port.send_n(data, sizes);
     port.send([&](rpc::Buffer *buffer, uint32_t id) {
-      memcpy(buffer->data, &sizes[id], sizeof(uint64_t));
+      __builtin_memcpy(buffer->data, &sizes[id], sizeof(uint64_t));
     });
     break;
   }
@@ -336,7 +335,7 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
       data[id] = temp_storage.alloc(buffer->data[0]);
       const char *str = fgets(reinterpret_cast<char *>(data[id]),
                               buffer->data[0], to_stream(buffer->data[1]));
-      sizes[id] = !str ? 0 : strlen(str) + 1;
+      sizes[id] = !str ? 0 : __builtin_strlen(str) + 1;
     });
     port.send_n(data, sizes);
     break;
@@ -365,7 +364,7 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     port.recv_and_send([](rpc::Buffer *, uint32_t) {});
     port.recv([](rpc::Buffer *buffer, uint32_t) {
       int status = 0;
-      memcpy(&status, buffer->data, sizeof(int));
+      __builtin_memcpy(&status, buffer->data, sizeof(int));
       exit(status);
     });
     break;
