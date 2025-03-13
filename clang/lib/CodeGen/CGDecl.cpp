@@ -49,7 +49,7 @@ using namespace CodeGen;
 static_assert(clang::Sema::MaximumAlignment <= llvm::Value::MaximumAlignment,
               "Clang max alignment greater than what LLVM supports?");
 
-void CodeGenFunction::EmitDecl(const Decl &D) {
+void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
   switch (D.getKind()) {
   case Decl::BuiltinTemplate:
   case Decl::TranslationUnit:
@@ -153,7 +153,7 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
     return;
   case Decl::UsingPack:
     for (auto *Using : cast<UsingPackDecl>(D).expansions())
-      EmitDecl(*Using);
+      EmitDecl(*Using, /*EvaluateConditionDecl=*/EvaluateConditionDecl);
     return;
   case Decl::UsingDirective: // using namespace X; [C++]
     if (CGDebugInfo *DI = getDebugInfo())
@@ -165,10 +165,8 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
     assert(VD.isLocalVarDecl() &&
            "Should not see file-scope variables inside a function!");
     EmitVarDecl(VD);
-    if (auto *DD = dyn_cast<DecompositionDecl>(&VD))
-      for (auto *B : DD->flat_bindings())
-        if (auto *HD = B->getHoldingVar())
-          EmitVarDecl(*HD);
+    if (EvaluateConditionDecl)
+      MaybeEmitDeferredVarDeclInit(&VD);
 
     return;
   }
@@ -2193,6 +2191,14 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   emitStoresForConstant(CGM, D, Loc.withElementType(CGM.Int8Ty),
                         type.isVolatileQualified(), Builder, constant,
                         /*IsAutoInit=*/false);
+}
+
+void CodeGenFunction::MaybeEmitDeferredVarDeclInit(const VarDecl *VD) {
+  if (auto *DD = dyn_cast_if_present<DecompositionDecl>(VD)) {
+    for (auto *B : DD->flat_bindings())
+      if (auto *HD = B->getHoldingVar())
+        EmitVarDecl(*HD);
+  }
 }
 
 /// Emit an expression as an initializer for an object (variable, field, etc.)
