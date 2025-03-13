@@ -1095,9 +1095,9 @@ template <typename RecipeTy> class VPPhiAccessors {
   }
 
 public:
-  /// Returns the \p I th incoming VPValue.
-  VPValue *getIncomingValue(unsigned I) const {
-    return getAsRecipe()->getOperand(I);
+  /// Returns the incoming VPValue with index \p Idx.
+  VPValue *getIncomingValue(unsigned Idx) const {
+    return getAsRecipe()->getOperand(Idx);
   }
 
   /// Returns an interator range over the incoming values
@@ -1105,7 +1105,7 @@ public:
     return getAsRecipe()->operands();
   }
 
-  /// Returns the \p I th incoming block.
+  /// Returns the incoming block with index \p Idx.
   const VPBasicBlock *getIncomingBlock(unsigned Idx) const;
 
   using const_incoming_block_iterator =
@@ -1121,10 +1121,7 @@ public:
   }
   const_incoming_block_iterator incoming_block_end() const {
     return const_incoming_block_iterator(
-        detail::index_iterator(getAsRecipe()->getVPDefID() ==
-                                       VPDef::VPWidenIntOrFpInductionSC
-                                   ? 2
-                                   : getAsRecipe()->getNumOperands()),
+        detail::index_iterator(getAsRecipe()->getNumOperands()),
         [this](size_t Idx) { return getIncomingBlock(Idx); });
   }
 
@@ -1133,7 +1130,7 @@ public:
     return make_range(incoming_block_begin(), incoming_block_end());
   }
 
-  /// Returns an iterator range over pairs of incoming values and corrsponding
+  /// Returns an iterator range over pairs of incoming values and correspondingx
   /// incoming blocks.
   detail::zippy<llvm::detail::zip_shortest, VPUser::const_operand_range,
                 const_incoming_blocks_range>
