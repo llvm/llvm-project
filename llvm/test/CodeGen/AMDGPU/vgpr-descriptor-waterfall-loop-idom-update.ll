@@ -76,7 +76,7 @@ entry:
 
 bb0:
   %desc = load ptr addrspace(8), ptr %arg, align 8
-  tail call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float poison, ptr addrspace(8) %desc, i32 undef, i32 0, i32 0)
+  tail call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float poison, ptr addrspace(8) %desc, i32 poison, i32 0, i32 0)
   br label %bb0
 }
 

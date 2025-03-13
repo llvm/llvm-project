@@ -30,7 +30,7 @@ define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
 ; VI-NEXT:    ; return to shader part epilog
 bb:
   %tmp = fptosi float %arg0 to i32
-  %tmp1 = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 undef, <8 x i32> poison, i32 0, i32 0)
+  %tmp1 = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 poison, <8 x i32> poison, i32 0, i32 0)
   %tmp2.f = extractelement <4 x float> %tmp1, i32 0
   %tmp2 = bitcast float %tmp2.f to i32
   %tmp3 = and i32 %tmp, 7
