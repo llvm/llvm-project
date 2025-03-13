@@ -110,7 +110,7 @@ public:
   /// Write zeroes, up to a maximum of 16 bytes.
   void write_zeros(unsigned NumZeros);
 
-  /// Support for endian specific data.
+  /// Support for endian-specific data.
   template <typename value_type> void writebe(value_type Value) {
     Value =
         support::endian::byte_swap<value_type>(Value, llvm::endianness::big);
