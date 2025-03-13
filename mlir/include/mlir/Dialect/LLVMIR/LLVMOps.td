@@ -2198,8 +2198,8 @@ def LLVM_ModuleFlagsOp
     Example:
     ```mlir
     llvm.module.flags [
-      #llvm.mlir.module_flag<1 : i64, "wchar_size", 4 : i32>,
-      #llvm.mlir.module_flag<8 : i64, "PIC Level", 2 : i32>
+      #llvm.mlir.module_flag<error, "wchar_size", 4>,
+      #llvm.mlir.module_flag<max, "PIC Level", 2>
     ]
     ```
   }];
