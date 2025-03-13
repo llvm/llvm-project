@@ -3345,15 +3345,24 @@ const Assignment *ExpressionAnalyzer::Analyze(const parser::AssignmentStmt &x) {
             "in a non-pointer intrinsic assignment statement");
         analyzer.CheckForAssumedRank("in an assignment statement");
         const Expr<SomeType> &lhs{analyzer.GetExpr(0)};
-        if (auto dyType{lhs.GetType()};
-            dyType && dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
-          const Symbol *lastWhole0{UnwrapWholeSymbolOrComponentDataRef(lhs)};
-          const Symbol *lastWhole{
-              lastWhole0 ? &ResolveAssociations(*lastWhole0) : nullptr};
-          if (!lastWhole || !IsAllocatable(*lastWhole)) {
-            Say("Left-hand side of assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
-          } else if (evaluate::IsCoarray(*lastWhole)) {
-            Say("Left-hand side of assignment may not be polymorphic if it is a coarray"_err_en_US);
+        if (auto dyType{lhs.GetType()}) {
+          if (dyType->IsPolymorphic()) { // 10.2.1.2p1(1)
+            const Symbol *lastWhole0{UnwrapWholeSymbolOrComponentDataRef(lhs)};
+            const Symbol *lastWhole{
+                lastWhole0 ? &ResolveAssociations(*lastWhole0) : nullptr};
+            if (!lastWhole || !IsAllocatable(*lastWhole)) {
+              Say("Left-hand side of assignment may not be polymorphic unless assignment is to an entire allocatable"_err_en_US);
+            } else if (evaluate::IsCoarray(*lastWhole)) {
+              Say("Left-hand side of assignment may not be polymorphic if it is a coarray"_err_en_US);
+            }
+          }
+          if (auto *derived{GetDerivedTypeSpec(*dyType)}) {
+            if (auto iter{FindAllocatableUltimateComponent(*derived)}) {
+              if (ExtractCoarrayRef(lhs)) {
+                Say("Left-hand side of assignment must not be coindexed due to allocatable ultimate component '%s'"_err_en_US,
+                    iter.BuildResultDesignatorName());
+              }
+            }
           }
         }
       }
