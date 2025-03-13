@@ -1852,19 +1852,109 @@ SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
   return mangled_name;
 }
 
-void SwiftLanguage::FilterForLineBreakpoints(
-    llvm::SmallVectorImpl<SymbolContext> &sc_list) const {
-  llvm::erase_if(sc_list, [](const SymbolContext &sc) {
-    // If we don't have a function, conservatively keep this sc.
-    if (!sc.function)
-      return false;
+namespace {
+using namespace swift::Demangle;
+struct AsyncInfo {
+  const Function *function;
+  NodePointer demangle_node;
+  std::optional<uint64_t> funclet_number;
+};
 
-    // In async functions, ignore await resume ("Q") funclets, these only
-    // deallocate the async context and task_switch back to user code.
+std::string to_string(const AsyncInfo &async_info) {
+  StreamString stream_str;
+  llvm::raw_ostream &str = stream_str.AsRawOstream();
+  str << "function = ";
+  if (async_info.function)
+    str << async_info.function->GetMangled().GetMangledName();
+  else
+    str << "nullptr";
+  str << ", demangle_node: " << async_info.demangle_node;
+  str << ", funclet_number = ";
+  if (async_info.funclet_number)
+    str << *async_info.funclet_number;
+  else
+    str << "nullopt";
+  return stream_str.GetString().str();
+}
+
+/// Map each unique Function in sc_list to a Demangle::NodePointer, or null if
+/// demangling is not possible.
+llvm::SmallVector<AsyncInfo> GetAsyncInfo(llvm::ArrayRef<SymbolContext> sc_list,
+                                          swift::Demangle::Context &ctx) {
+  Log *log(GetLog(LLDBLog::Demangle));
+  llvm::SmallSet<Function *, 8> seen_functions;
+  llvm::SmallVector<AsyncInfo> async_infos;
+  for (const SymbolContext &sc : sc_list) {
+    if (!sc.function || seen_functions.contains(sc.function))
+      continue;
+    seen_functions.insert(sc.function);
     llvm::StringRef name =
         sc.function->GetMangled().GetMangledName().GetStringRef();
-    return SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
-        name);
+    NodePointer node = SwiftLanguageRuntime::DemangleSymbolAsNode(name, ctx);
+    async_infos.push_back(
+        {sc.function, node, SwiftLanguageRuntime::GetFuncletNumber(node)});
+
+    if (log) {
+      std::string as_str = to_string(async_infos.back());
+      LLDB_LOGF(log, "%s: %s", __FUNCTION__, as_str.c_str());
+    }
+  }
+  return async_infos;
+}
+} // namespace
+
+void SwiftLanguage::FilterForLineBreakpoints(
+    llvm::SmallVectorImpl<SymbolContext> &sc_list) const {
+  using namespace swift::Demangle;
+  Context ctx;
+
+  llvm::SmallVector<AsyncInfo> async_infos = GetAsyncInfo(sc_list, ctx);
+
+  // Vector containing one representative funclet of each unique async function
+  // in sc_list. The representative is always the one with the smallest funclet
+  // number seen so far.
+  llvm::SmallVector<AsyncInfo> unique_async_funcs;
+
+  // Note the subtlety: this deletes based on functions, not SymbolContexts, as
+  // there might be multiple SCs with the same Function at this point.
+  llvm::SmallPtrSet<const Function *, 4> to_delete;
+
+  for (const auto &async_info : async_infos) {
+    // If we can't find a funclet number, don't delete this.
+    if (!async_info.funclet_number)
+      continue;
+
+    // Have we found other funclets of the same async function?
+    auto *representative =
+        llvm::find_if(unique_async_funcs, [&](AsyncInfo &other_info) {
+          // This looks quadratic, but in practice it is not. We should have at
+          // most 2 different async functions in the same line, unless a user
+          // writes many closures on the same line.
+          return SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(
+                     async_info.demangle_node, other_info.demangle_node) ==
+                 SwiftLanguageRuntime::FuncletComparisonResult::
+                     SameAsyncFunction;
+        });
+
+    // We found a new async function.
+    if (representative == unique_async_funcs.end()) {
+      unique_async_funcs.push_back(async_info);
+      continue;
+    }
+
+    // This is another funclet of the same async function. Keep the one with the
+    // smallest number, erase the other. If they have the same number, don't
+    // erase it.
+    if (async_info.funclet_number > representative->funclet_number)
+      to_delete.insert(async_info.function);
+    else if (async_info.funclet_number < representative->funclet_number) {
+      to_delete.insert(representative->function);
+      *representative = async_info;
+    }
+  }
+
+  llvm::erase_if(sc_list, [&](const SymbolContext &sc) {
+    return to_delete.contains(sc.function);
   });
 }
 

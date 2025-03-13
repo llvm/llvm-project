@@ -18,9 +18,15 @@ class TestSwiftAsyncBreakpoints(lldbtest.TestBase):
         )
         breakpoint2 = target.BreakpointCreateBySourceRegex("Breakpoint2", filespec)
         breakpoint3 = target.BreakpointCreateBySourceRegex("Breakpoint3", filespec)
+        breakpoint4 = target.BreakpointCreateBySourceRegex("Breakpoint4", filespec)
+        breakpoint5 = target.BreakpointCreateBySourceRegex("Breakpoint5", filespec)
         self.assertEquals(breakpoint1.GetNumLocations(), 1)
         self.assertEquals(breakpoint2.GetNumLocations(), 1)
         self.assertEquals(breakpoint3.GetNumLocations(), 1)
+        # FIXME: there should be two breakpoints here, but the "entry" funclet of the
+        # implicit closure is mangled slightly differently. rdar://147035260
+        self.assertEquals(breakpoint4.GetNumLocations(), 3)
+        self.assertEquals(breakpoint5.GetNumLocations(), 1)
 
         location11 = breakpoint1.GetLocationAtIndex(0)
         self.assertEquals(location11.GetHitCount(), 1)
