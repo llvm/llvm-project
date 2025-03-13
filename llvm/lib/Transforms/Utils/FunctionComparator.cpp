@@ -185,8 +185,13 @@ int FunctionComparator::cmpAttrs(const AttributeList L,
   return 0;
 }
 
-int FunctionComparator::cmpMetadata(const Metadata *L,
-                                    const Metadata *R) const {
+int FunctionComparator::cmpMetadata(
+    const Metadata *L, const Metadata *R,
+    SmallPtrSetImpl<const MDNode *> &SeenL,
+    SmallPtrSetImpl<const MDNode *> &SeenR) const {
+  if (L == R)
+    return 0;
+
   // TODO: the following routine coerce the metadata contents into constants
   // or MDStrings before comparison.
   // It ignores any other cases, so that the metadata nodes are considered
@@ -207,22 +212,51 @@ int FunctionComparator::cmpMetadata(const Metadata *L,
 
   auto *CL = dyn_cast<ConstantAsMetadata>(L);
   auto *CR = dyn_cast<ConstantAsMetadata>(R);
-  if (CL == CR)
-    return 0;
-  if (!CL)
+  if (CL && CR) {
+    if (!CL)
+      return -1;
+    if (!CR)
+      return 1;
+    return cmpConstants(CL->getValue(), CR->getValue());
+  }
+
+  auto *NodeL = dyn_cast<const MDNode>(L);
+  auto *NodeR = dyn_cast<const MDNode>(R);
+  if (NodeL && NodeR)
+    return cmpMDNode(NodeL, NodeR, SeenL, SeenR);
+
+  if (NodeR)
     return -1;
-  if (!CR)
+
+  if (NodeL)
     return 1;
-  return cmpConstants(CL->getValue(), CR->getValue());
+
+  assert(false);
+
+  return 0;
 }
 
-int FunctionComparator::cmpMDNode(const MDNode *L, const MDNode *R) const {
+int FunctionComparator::cmpMDNode(
+    const MDNode *L, const MDNode *R, SmallPtrSetImpl<const MDNode *> &SeenL,
+    SmallPtrSetImpl<const MDNode *> &SeenR) const {
   if (L == R)
     return 0;
   if (!L)
     return -1;
   if (!R)
     return 1;
+
+  // Check if we already checked either L or R previosuly. This can be the case
+  // for metadata nodes with cycles.
+  bool AlreadySeenL = !SeenL.insert(L).second;
+  bool AlreadySeenR = !SeenR.insert(R).second;
+  if (AlreadySeenL && AlreadySeenR)
+    return 0;
+  if (AlreadySeenR)
+    return -1;
+  if (AlreadySeenL)
+    return 1;
+
   // TODO: Note that as this is metadata, it is possible to drop and/or merge
   // this data when considering functions to merge. Thus this comparison would
   // return 0 (i.e. equivalent), but merging would become more complicated
@@ -232,7 +266,7 @@ int FunctionComparator::cmpMDNode(const MDNode *L, const MDNode *R) const {
   if (int Res = cmpNumbers(L->getNumOperands(), R->getNumOperands()))
     return Res;
   for (size_t I = 0; I < L->getNumOperands(); ++I)
-    if (int Res = cmpMetadata(L->getOperand(I), R->getOperand(I)))
+    if (int Res = cmpMetadata(L->getOperand(I), R->getOperand(I), SeenL, SeenR))
       return Res;
   return 0;
 }
@@ -254,7 +288,10 @@ int FunctionComparator::cmpInstMetadata(Instruction const *L,
     auto const [KeyR, MR] = MDR[I];
     if (int Res = cmpNumbers(KeyL, KeyR))
       return Res;
-    if (int Res = cmpMDNode(ML, MR))
+
+    SmallPtrSet<const MDNode *, 4> SeenL;
+    SmallPtrSet<const MDNode *, 4> SeenR;
+    if (int Res = cmpMDNode(ML, MR, SeenL, SeenR))
       return Res;
   }
   return 0;
@@ -721,8 +758,11 @@ int FunctionComparator::cmpOperations(const Instruction *L,
       if (int Res = cmpNumbers(CI->getTailCallKind(),
                                cast<CallInst>(R)->getTailCallKind()))
         return Res;
+
+    SmallPtrSet<const MDNode *, 4> SeenL;
+    SmallPtrSet<const MDNode *, 4> SeenR;
     return cmpMDNode(L->getMetadata(LLVMContext::MD_range),
-                     R->getMetadata(LLVMContext::MD_range));
+                     R->getMetadata(LLVMContext::MD_range), SeenL, SeenR);
   }
   if (const InsertValueInst *IVI = dyn_cast<InsertValueInst>(L)) {
     ArrayRef<unsigned> LIndices = IVI->getIndices();
@@ -895,11 +935,10 @@ int FunctionComparator::cmpValues(const Value *L, const Value *R) const {
   const MetadataAsValue *MetadataValueL = dyn_cast<MetadataAsValue>(L);
   const MetadataAsValue *MetadataValueR = dyn_cast<MetadataAsValue>(R);
   if (MetadataValueL && MetadataValueR) {
-    if (MetadataValueL == MetadataValueR)
-      return 0;
-
+    SmallPtrSet<const MDNode *, 4> SeenL;
+    SmallPtrSet<const MDNode *, 4> SeenR;
     return cmpMetadata(MetadataValueL->getMetadata(),
-                       MetadataValueR->getMetadata());
+                       MetadataValueR->getMetadata(), SeenL, SeenR);
   }
 
   if (MetadataValueL)
