@@ -681,28 +681,21 @@ getIndexingMapInExpandedOp(OpBuilder &builder, AffineMap indexingMap,
                         builder.getContext());
 }
 
-/// Return the type of the operand/result to use in the expanded op given the
-/// type in the original op.
+/// Return the shape and type of the operand/result to use in the expanded op
+/// given the type in the original op.
 static std::tuple<SmallVector<OpFoldResult>, RankedTensorType>
 getExpandedShapeAndType(RankedTensorType originalType, AffineMap indexingMap,
                         const ExpansionInfo &expansionInfo) {
-  SmallVector<int64_t> expandedStaticShape;
   SmallVector<OpFoldResult> expandedShape;
   for (AffineExpr expr : indexingMap.getResults()) {
     unsigned dim = cast<AffineDimExpr>(expr).getPosition();
     ArrayRef<OpFoldResult> dimExpansion =
         expansionInfo.getExpandedShapeOfDim(dim);
-    llvm::append_range(expandedStaticShape,
-                       llvm::map_range(dimExpansion, [](OpFoldResult ofr) {
-                         std::optional<int64_t> staticShape =
-                             getConstantIntValue(ofr);
-                         if (staticShape) {
-                           return staticShape.value();
-                         }
-                         return ShapedType::kDynamic;
-                       }));
     expandedShape.append(dimExpansion.begin(), dimExpansion.end());
   }
+  SmallVector<int64_t> expandedStaticShape;
+  std::tie(expandedStaticShape, std::ignore) =
+      decomposeMixedValues(expandedShape);
   return {expandedShape, RankedTensorType::get(expandedStaticShape,
                                                originalType.getElementType())};
 }
@@ -761,13 +754,14 @@ static void updateExpandedGenericOpRegion(PatternRewriter &rewriter,
         [&](int64_t dim) { return rewriter.create<IndexOp>(loc, dim); });
     OpFoldResult newIndex =
         rewriter.create<IndexOp>(loc, expandedDims.front()).getResult();
-    for (auto it : llvm::zip(expandedDimsShape, expandedIndices)) {
+    for (auto [expandedShape, expandedIndex] :
+         llvm::zip(expandedDimsShape, expandedIndices)) {
       AffineExpr idx, acc, shape;
       bindDims(rewriter.getContext(), idx, acc);
       bindSymbols(rewriter.getContext(), shape);
       newIndex = affine::makeComposedFoldedAffineApply(
           rewriter, indexOp.getLoc(), idx + acc * shape,
-          ArrayRef<OpFoldResult>{std::get<1>(it), newIndex, std::get<0>(it)});
+          ArrayRef<OpFoldResult>{expandedIndex, newIndex, expandedShape});
     }
     Value newIndexVal =
         getValueOrCreateConstantIndexOp(rewriter, indexOp.getLoc(), newIndex);
@@ -890,6 +884,9 @@ fuseWithReshapeByExpansion(LinalgOp linalgOp, Operation *reshapeOp,
     src = expandingReshapeOp.getSrc();
   } else {
     auto collapsingReshapeOp = dyn_cast<tensor::CollapseShapeOp>(reshapeOp);
+    if (!collapsingReshapeOp)
+      return std::nullopt;
+
     expandedShape = tensor::getMixedSizes(
         rewriter, collapsingReshapeOp->getLoc(), collapsingReshapeOp.getSrc());
     reassociationIndices = collapsingReshapeOp.getReassociationMaps();
