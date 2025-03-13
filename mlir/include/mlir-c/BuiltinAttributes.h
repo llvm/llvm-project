@@ -158,6 +158,22 @@ MLIR_CAPI_EXPORTED uint64_t mlirIntegerAttrGetValueUInt(MlirAttribute attr);
 /// Returns the typeID of an Integer attribute.
 MLIR_CAPI_EXPORTED MlirTypeID mlirIntegerAttrGetTypeID(void);
 
+typedef struct {
+  size_t numbits;
+  union {
+    uint64_t *pVAL;
+    uint64_t VAL;
+  } data;
+} apint_interop_t;
+
+// Creates an APInt interop from an IntegerAttr
+MLIR_CAPI_EXPORTED int mlirIntegerAttrGetValueInterop(MlirAttribute attr,
+                                                      apint_interop_t *interop);
+
+// Creates an integer attribute of the given type from an APInt interop
+MLIR_CAPI_EXPORTED MlirAttribute
+mlirIntegerAttrFromInterop(MlirType type, apint_interop_t *interop);
+
 //===----------------------------------------------------------------------===//
 // Bool attribute.
 //===----------------------------------------------------------------------===//
