@@ -207,7 +207,7 @@ static DecodeStatus DecodeGPRCRegisterClass(MCInst &Inst, uint32_t RegNo,
   Inst.addOperand(MCOperand::createReg(Reg));
   return MCDisassembler::Success;
 }
-                     
+
 static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
                                                uint64_t Address,
                                                const MCDisassembler *Decoder) {
