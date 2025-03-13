@@ -357,12 +357,10 @@ def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
 def GPRPairNoX0 : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
 } // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairRegisterClass"
 
-let RegInfos = XLenPairRI,
-    DecoderMethod = "DecodeGPRPairCRegisterClass" in {
+let RegInfos = XLenPairRI in
 def GPRPairC : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
   X10_X11, X12_X13, X14_X15, X8_X9
 )>;
-} // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairCRegisterClass"
 
 //===----------------------------------------------------------------------===//
 // Floating Point registers
