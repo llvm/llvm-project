@@ -41,10 +41,20 @@ const std::vector<std::string> &ModuleDeps::getBuildArguments() const {
   return std::get<std::vector<std::string>>(BuildInfo);
 }
 
+void PrebuiltModuleASTAttrs::updateDependentsNotInStableDirs(
+    PrebuiltModulesAttrsMap &PrebuiltModulesMap) {
+  setInStableDir();
+  for (const auto Dep : ModuleFileDependents) {
+    if (!PrebuiltModulesMap[Dep].isInStableDir())
+      return;
+    PrebuiltModulesMap[Dep].updateDependentsNotInStableDirs(PrebuiltModulesMap);
+  }
+}
+
 static void
 optimizeHeaderSearchOpts(HeaderSearchOptions &Opts, ASTReader &Reader,
                          const serialization::ModuleFile &MF,
-                         const PrebuiltModuleVFSMapT &PrebuiltModuleVFSMap,
+                         const PrebuiltModulesAttrsMap &PrebuiltModulesASTMap,
                          ScanningOptimizations OptimizeArgs) {
   if (any(OptimizeArgs & ScanningOptimizations::HeaderSearch)) {
     // Only preserve search paths that were used during the dependency scan.
@@ -89,11 +99,13 @@ optimizeHeaderSearchOpts(HeaderSearchOptions &Opts, ASTReader &Reader,
           } else {
             // This is not an implicitly built module, so it may have different
             // VFS options. Fall back to a string comparison instead.
-            auto VFSMap = PrebuiltModuleVFSMap.find(MF->FileName);
-            if (VFSMap == PrebuiltModuleVFSMap.end())
+            auto PrebuiltModulePropIt =
+                PrebuiltModulesASTMap.find(MF->FileName);
+            if (PrebuiltModulePropIt == PrebuiltModulesASTMap.end())
               return;
             for (std::size_t I = 0, E = VFSOverlayFiles.size(); I != E; ++I) {
-              if (VFSMap->second.contains(VFSOverlayFiles[I]))
+              if (PrebuiltModulePropIt->second.getVFS().contains(
+                      VFSOverlayFiles[I]))
                 VFSUsage[I] = true;
             }
           }
@@ -157,32 +169,6 @@ static void optimizeCWD(CowCompilerInvocation &BuildInvocation, StringRef CWD) {
     BuildInvocation.getMutCodeGenOpts().DebugCompilationDir =
         llvm::sys::path::root_path(CWD);
   }
-}
-
-/// Check a subset of invocation options to determine whether the current
-/// context can safely be considered as stable.
-static bool areOptionsInStableDir(CowCompilerInvocation &BuildInvocation,
-                                  const ArrayRef<StringRef> StableDirs) {
-  const auto &HSOpts = BuildInvocation.getHeaderSearchOpts();
-  assert(isPathInStableDir(StableDirs, HSOpts.Sysroot) &&
-         "Sysroots differ between module dependencies and current TU");
-
-  assert(isPathInStableDir(StableDirs, HSOpts.ResourceDir) &&
-         "ResourceDirs differ between module dependencies and current TU");
-
-  for (const auto &Entry : HSOpts.UserEntries) {
-    if (!Entry.IgnoreSysRoot)
-      continue;
-    if (!isPathInStableDir(StableDirs, Entry.Path))
-      return false;
-  }
-
-  for (const auto &SysPrefix : HSOpts.SystemHeaderPrefixes) {
-    if (!isPathInStableDir(StableDirs, SysPrefix.Prefix))
-      return false;
-  }
-
-  return true;
 }
 
 static std::vector<std::string> splitString(std::string S, char Separator) {
@@ -257,6 +243,29 @@ bool dependencies::isPathInStableDir(const ArrayRef<StringRef> Directories,
   return any_of(Directories, [&](StringRef Dir) {
     return !Dir.empty() && PathStartsWith(Dir, Input);
   });
+}
+
+bool dependencies::areOptionsInStableDir(const ArrayRef<StringRef> Directories,
+                                         const HeaderSearchOptions &HSOpts) {
+  assert(isPathInStableDir(Directories, HSOpts.Sysroot) &&
+         "Sysroots differ between module dependencies and current TU");
+
+  assert(isPathInStableDir(Directories, HSOpts.ResourceDir) &&
+         "ResourceDirs differ between module dependencies and current TU");
+
+  for (const auto &Entry : HSOpts.UserEntries) {
+    if (!Entry.IgnoreSysRoot)
+      continue;
+    if (!isPathInStableDir(Directories, Entry.Path))
+      return false;
+  }
+
+  for (const auto &SysPrefix : HSOpts.SystemHeaderPrefixes) {
+    if (!isPathInStableDir(Directories, SysPrefix.Prefix))
+      return false;
+  }
+
+  return true;
 }
 
 static CowCompilerInvocation
@@ -827,7 +836,7 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
                      ScanningOptimizations::VFS)))
               optimizeHeaderSearchOpts(BuildInvocation.getMutHeaderSearchOpts(),
                                        *MDC.ScanInstance.getASTReader(), *MF,
-                                       MDC.PrebuiltModuleVFSMap,
+                                       MDC.PrebuiltModulesASTMap,
                                        MDC.Service.getOptimizeArgs());
 
             if (any(MDC.Service.getOptimizeArgs() &
@@ -851,7 +860,8 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   // Check provided input paths from the invocation for determining
   // IsInStableDirectories.
   if (MD.IsInStableDirectories)
-    MD.IsInStableDirectories = areOptionsInStableDir(CI, StableDirs);
+    MD.IsInStableDirectories =
+        areOptionsInStableDir(StableDirs, CI.getHeaderSearchOpts());
 
   MDC.associateWithContextHash(CI, IgnoreCWD, MD);
 
@@ -896,10 +906,13 @@ void ModuleDepCollectorPP::addModulePrebuiltDeps(
       if (MDC.isPrebuiltModule(Import->getTopLevelModule()))
         if (SeenSubmodules.insert(Import->getTopLevelModule()).second) {
           MD.PrebuiltModuleDeps.emplace_back(Import->getTopLevelModule());
-          // Conservatively consider the module as not coming from stable
-          // directories, as transitive dependencies from the prebuilt module
-          // have not been determined.
-          MD.IsInStableDirectories = false;
+          if (MD.IsInStableDirectories) {
+            auto PrebuiltModulePropIt = MDC.PrebuiltModulesASTMap.find(
+                MD.PrebuiltModuleDeps.back().PCMFile);
+            MD.IsInStableDirectories =
+                (PrebuiltModulePropIt != MDC.PrebuiltModulesASTMap.end()) &&
+                PrebuiltModulePropIt->second.isInStableDir();
+          }
         }
 }
 
@@ -962,10 +975,10 @@ ModuleDepCollector::ModuleDepCollector(
     std::unique_ptr<DependencyOutputOptions> Opts,
     CompilerInstance &ScanInstance, DependencyConsumer &C,
     DependencyActionController &Controller, CompilerInvocation OriginalCI,
-    PrebuiltModuleVFSMapT PrebuiltModuleVFSMap)
+    const PrebuiltModulesAttrsMap PrebuiltModulesASTMap)
     : Service(Service), ScanInstance(ScanInstance), Consumer(C),
       Controller(Controller),
-      PrebuiltModuleVFSMap(std::move(PrebuiltModuleVFSMap)),
+      PrebuiltModulesASTMap(std::move(PrebuiltModulesASTMap)),
       Opts(std::move(Opts)),
       CommonInvocation(
           makeCommonInvocationForModuleBuild(std::move(OriginalCI))) {}
