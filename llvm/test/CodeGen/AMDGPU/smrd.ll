@@ -125,7 +125,7 @@ entry:
 ; GCN-NEXT: s_buffer_load_dword s0, s[0:3], 0x0
 define amdgpu_ps float @smrd_hazard(<4 x i32> inreg %desc) #0 {
 main_body:
-  %d0 = insertelement <4 x i32> undef, i32 0, i32 0
+  %d0 = insertelement <4 x i32> poison, i32 0, i32 0
   %d1 = insertelement <4 x i32> %d0, i32 1, i32 1
   %d2 = insertelement <4 x i32> %d1, i32 2, i32 2
   %d3 = insertelement <4 x i32> %d2, i32 3, i32 3
@@ -419,7 +419,7 @@ main_body:
   %v0.y = call nsz float @llvm.amdgcn.interp.p2(float %v0.y1, float %v, i32 0, i32 1, i32 %prim)
   %v0.z1 = call nsz float @llvm.amdgcn.interp.p1(float %u, i32 0, i32 2, i32 %prim)
   %v0.z = call nsz float @llvm.amdgcn.interp.p2(float %v0.z1, float %v, i32 0, i32 2, i32 %prim)
-  %v0.tmp0 = insertelement <3 x float> undef, float %v0.x, i32 0
+  %v0.tmp0 = insertelement <3 x float> poison, float %v0.x, i32 0
   %v0.tmp1 = insertelement <3 x float> %v0.tmp0, float %v0.y, i32 1
   %v0 = insertelement <3 x float> %v0.tmp1, float %v0.z, i32 2
   %a = extractelement <3 x float> %v0, i32 %idx1
@@ -430,7 +430,7 @@ main_body:
   %v1.y = call nsz float @llvm.amdgcn.interp.p2(float %v1.y1, float %v, i32 1, i32 1, i32 %prim)
   %v1.z1 = call nsz float @llvm.amdgcn.interp.p1(float %u, i32 1, i32 2, i32 %prim)
   %v1.z = call nsz float @llvm.amdgcn.interp.p2(float %v1.z1, float %v, i32 1, i32 2, i32 %prim)
-  %v1.tmp0 = insertelement <3 x float> undef, float %v0.x, i32 0
+  %v1.tmp0 = insertelement <3 x float> poison, float %v0.x, i32 0
   %v1.tmp1 = insertelement <3 x float> %v0.tmp0, float %v0.y, i32 1
   %v1 = insertelement <3 x float> %v0.tmp1, float %v0.z, i32 2
 

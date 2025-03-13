@@ -490,7 +490,7 @@ class CheckerBase : public ProgramPointTag {
 
 public:
   StringRef getTagDescription() const override;
-  CheckerNameRef getCheckerName() const;
+  CheckerNameRef getName() const;
 
   /// See CheckerManager::runCheckersForPrintState.
   virtual void printState(raw_ostream &Out, ProgramStateRef State,
