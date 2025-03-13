@@ -326,6 +326,10 @@ inline bool capturesFullProvenance(CaptureComponents CC) {
   return (CC & CaptureComponents::Provenance) == CaptureComponents::Provenance;
 }
 
+inline bool capturesAnyProvenance(CaptureComponents CC) {
+  return (CC & CaptureComponents::Provenance) != CaptureComponents::None;
+}
+
 inline bool capturesAll(CaptureComponents CC) {
   return CC == CaptureComponents::All;
 }
