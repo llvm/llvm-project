@@ -929,48 +929,6 @@ void ClauseProcessor::processMapObjects(
     llvm::StringRef mapperIdNameRef) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  // Create the mapper symbol from its name, if specified.
-  mlir::FlatSymbolRefAttr mapperId;
-  if (!mapperIdNameRef.empty() && !objects.empty()) {
-    std::string mapperIdName = mapperIdNameRef.str();
-    if (mapperIdName == "implicit") {
-      if (!mlir::isa<mlir::omp::DeclareMapperOp>(
-              firOpBuilder.getRegion().getParentOp())) {
-        const omp::Object &object = objects.front();
-        const semantics::DerivedTypeSpec *typeSpec = nullptr;
-
-        if (object.sym()->owner().IsDerivedType())
-          typeSpec = object.sym()->owner().derivedTypeSpec();
-        else if (object.sym()->GetType() &&
-                 object.sym()->GetType()->category() ==
-                     semantics::DeclTypeSpec::TypeDerived)
-          typeSpec = &object.sym()->GetType()->derivedTypeSpec();
-
-        if (typeSpec) {
-          mapperIdName = typeSpec->name().ToString() + ".default";
-          mapperIdName =
-              converter.mangleName(mapperIdName, *typeSpec->GetScope());
-          if (converter.getModuleOp().lookupSymbol(mapperIdName))
-            mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                                    mapperIdName);
-        }
-      }
-    } else {
-      if (mapperIdName == "default") {
-        const omp::Object &object = objects.front();
-        auto &typeSpec = object.sym()->owner().IsDerivedType()
-                             ? *object.sym()->owner().derivedTypeSpec()
-                             : object.sym()->GetType()->derivedTypeSpec();
-        mapperIdName = typeSpec.name().ToString() + ".default";
-        mapperIdName = converter.mangleName(mapperIdName, *typeSpec.GetScope());
-      }
-      assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
-             "mapper not found");
-      mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                              mapperIdName);
-    }
-  }
-
   for (const omp::Object &object : objects) {
     llvm::SmallVector<mlir::Value> bounds;
     std::stringstream asFortran;
@@ -999,6 +957,42 @@ void ClauseProcessor::processMapObjects(
             clauseLocation, converter, semaCtx, stmtCtx, objectList, indices,
             parentMemberIndices[parentObj.value()], asFortran.str(),
             mapTypeBits);
+      }
+    }
+
+    // Create the mapper symbol from its name, if specified.
+    mlir::FlatSymbolRefAttr mapperId;
+    if (!mapperIdNameRef.empty()) {
+      std::string mapperIdName = mapperIdNameRef.str();
+      if (mapperIdNameRef == "implicit" || mapperIdNameRef == "default") {
+        if (!mlir::isa<mlir::omp::DeclareMapperOp>(
+                firOpBuilder.getRegion().getParentOp())) {
+          const semantics::DerivedTypeSpec *typeSpec = nullptr;
+
+          if (object.sym()->owner().IsDerivedType())
+            typeSpec = object.sym()->owner().derivedTypeSpec();
+          else if (object.sym()->GetType() &&
+                   object.sym()->GetType()->category() ==
+                       semantics::DeclTypeSpec::TypeDerived)
+            typeSpec = &object.sym()->GetType()->derivedTypeSpec();
+
+          if (typeSpec) {
+            mapperIdName = typeSpec->name().ToString() + ".default";
+            mapperIdName =
+                converter.mangleName(mapperIdName, *typeSpec->GetScope());
+          }
+        }
+      }
+      if (mapperIdNameRef == "implicit") {
+        mapperId = converter.getModuleOp().lookupSymbol(mapperIdName)
+                       ? mlir::FlatSymbolRefAttr::get(
+                             &converter.getMLIRContext(), mapperIdName)
+                       : mlir::FlatSymbolRefAttr();
+      } else {
+        assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
+               "mapper not found");
+        mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
+                                                mapperIdName);
       }
     }
 

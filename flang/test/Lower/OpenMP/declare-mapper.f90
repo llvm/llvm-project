@@ -153,18 +153,21 @@ subroutine declare_mapper_4
    !$omp declare mapper (my_type :: var) map (var%num)
 
    type(my_type) :: a
+   integer :: b
    !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) mapper(@[[MY_TYPE_MAPPER]]) map_clauses(tofrom) capture(ByRef) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
-   !$omp target map(a)
+   !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<i32>, i32) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "b"}
+   !$omp target map(a, b)
    a%num = 10
+   b = 20
    !$omp end target
 
    !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}} : !fir.ref<i32>, i32) mapper(@[[MY_TYPE_MAPPER]]) map_clauses(tofrom) capture(ByRef) -> !fir.ref<i32> {name = "a%{{.*}}"}
    !$omp target map(a%num)
-   a%num = 20
+   a%num = 30
    !$omp end target
 
    !CHECK: %{{.*}} = omp.map.info var_ptr(%{{.*}}#1 : !fir.ref<[[MY_TYPE]]>, [[MY_TYPE]]) mapper(@[[MY_TYPE_MAPPER]]) map_clauses(implicit, tofrom) capture(ByRef) -> !fir.ref<[[MY_TYPE]]> {name = "a"}
    !$omp target
-   a%num = 30
+   a%num = 40
    !$omp end target
 end subroutine declare_mapper_4
