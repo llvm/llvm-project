@@ -1761,6 +1761,10 @@ def UncountedLambdaCapturesChecker : Checker<"UncountedLambdaCapturesChecker">,
 
 let ParentPackage = WebKitAlpha in {
 
+def ForwardDeclChecker : Checker<"ForwardDeclChecker">,
+  HelpText<"Check for forward declared local or member variables and function arguments">,
+  Documentation<HasDocumentation>;
+
 def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
   HelpText<"Check for memory unsafe casts from base type to derived type.">,
   Documentation<HasDocumentation>;
