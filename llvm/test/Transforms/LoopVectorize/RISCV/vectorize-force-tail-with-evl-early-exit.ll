@@ -2,8 +2,6 @@
 ; RUN: opt -passes=loop-vectorize -force-tail-folding-style=data-with-evl -prefer-predicate-over-epilogue=predicate-dont-vectorize \
 ; RUN: -mtriple=riscv64 -mattr=+v -S -enable-early-exit-vectorization  %s | FileCheck %s
 
-; REQUIRES: asserts
-
 declare void @init(ptr)
 
 define i64 @multi_exiting_to_different_exits_live_in_exit_values() {
