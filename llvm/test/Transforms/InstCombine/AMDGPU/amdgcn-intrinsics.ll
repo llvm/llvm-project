@@ -274,6 +274,14 @@ declare float @llvm.amdgcn.frexp.mant.f32(float) nounwind readnone
 declare double @llvm.amdgcn.frexp.mant.f64(double) nounwind readnone
 
 
+define float @test_constant_fold_frexp_mant_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.frexp.mant.f32(float poison)
+  ret float %val
+}
+
 define float @test_constant_fold_frexp_mant_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_undef(
 ; CHECK-NEXT:    ret float undef
@@ -441,6 +449,14 @@ define double @test_constant_fold_frexp_mant_f64_min_num() nounwind {
 
 declare i32 @llvm.amdgcn.frexp.exp.f32(float) nounwind readnone
 declare i32 @llvm.amdgcn.frexp.exp.f64(double) nounwind readnone
+
+define i32 @test_constant_fold_frexp_exp_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_poison(
+; CHECK-NEXT:    ret i32 poison
+;
+  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float poison)
+  ret i32 %val
+}
 
 define i32 @test_constant_fold_frexp_exp_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_undef(
