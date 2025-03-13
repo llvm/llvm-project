@@ -1994,7 +1994,7 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 entry:
-  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %in, i32 15, i32 undef, <8 x i32> poison, i32 0, i32 0)
+  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %in, i32 15, i32 poison, <8 x i32> poison, i32 0, i32 0)
   br label %loop
 
 loop:
