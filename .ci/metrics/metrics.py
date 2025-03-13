@@ -168,8 +168,24 @@ def github_get_metrics(
             created_at = job.created_at
             started_at = job.started_at
             completed_at = job.completed_at
-            queue_time = started_at - created_at
-            run_time = completed_at - started_at
+
+            # GitHub API can return results where the started_at is slightly
+            # later then the created_at (or completed earlier than started).
+            # This would cause a -23h59mn delta, which will show up as +24h
+            # queue/run time on grafana.
+            if started_at < created_at:
+                logging.info(
+                    "Workflow {} started before being created.".format(task.id)
+                )
+                queue_time = datetime.timedelta(seconds=0)
+            else:
+                queue_time = started_at - created_at
+            if completed_at < started_at:
+                logging.info("Workflow {} finished before starting.".format(task.id))
+                run_time = datetime.timedelta(seconds=0)
+            else:
+                run_time = completed_at - started_at
+
             if run_time.seconds == 0:
                 continue
 

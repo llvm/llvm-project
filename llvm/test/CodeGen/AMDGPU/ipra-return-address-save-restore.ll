@@ -113,7 +113,7 @@ bsdf_alloc.exit2188:                              ; preds = %if.end.i2186, %clos
   br i1 false, label %common.ret, label %if.then534
 
 if.then534:                                       ; preds = %bsdf_alloc.exit2188
-  %.op7 = fmul nsz float undef, 0.000000e+00
+  %.op7 = fmul nsz float poison, 0.000000e+00
   %mul558 = select i1 %cmp440, float 0.000000e+00, float %1
   %15 = tail call float @llvm.amdgcn.fmed3.f32(float 0.000000e+00, float 0.000000e+00, float 0.000000e+00)
   store float %mul558, ptr addrspace(1) null, align 4
@@ -185,7 +185,7 @@ sw.bb10:
 ; GCN-DAG: v_readlane_b32 s30, [[CSR_VGPR]],
 ; GCN: s_waitcnt vmcnt(0)
 ; GCN: s_setpc_b64 s[30:31]
-  call fastcc void @svm_node_closure_bsdf(ptr addrspace(1) null, ptr null, <4 x i32> zeroinitializer, ptr null, i32 undef, i8 undef, float undef, float undef, float undef, i1 undef, <4 x i32> undef, float undef, i32 undef, i1 undef, i1 undef, i1 undef, float undef, ptr addrspace(1) undef, ptr addrspace(1) undef, ptr addrspace(1) undef, i1 undef, ptr addrspace(1) undef, i32 undef, i1 undef, i32 undef, i64 undef, i32 undef)
+  call fastcc void @svm_node_closure_bsdf(ptr addrspace(1) null, ptr null, <4 x i32> zeroinitializer, ptr null, i32 poison, i8 undef, float poison, float poison, float poison, i1 undef, <4 x i32> poison, float poison, i32 poison, i1 undef, i1 undef, i1 undef, float poison, ptr addrspace(1) poison, ptr addrspace(1) poison, ptr addrspace(1) poison, i1 undef, ptr addrspace(1) poison, i32 poison, i1 undef, i32 poison, i64 undef, i32 poison)
   ret void
 }
 

@@ -21,7 +21,7 @@
 ; GCN: ds_write_b32 v0, v0
 define void @func_mov_fi_i32() #0 {
   %alloca = alloca i32, addrspace(5)
-  store volatile ptr addrspace(5) %alloca, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %alloca, ptr addrspace(3) poison
   ret void
 }
 
@@ -47,8 +47,8 @@ define void @func_mov_fi_i32() #0 {
 define void @func_mov_fi_i32_offset() #0 {
   %alloca0 = alloca i32, addrspace(5)
   %alloca1 = alloca i32, addrspace(5)
-  store volatile ptr addrspace(5) %alloca0, ptr addrspace(3) undef
-  store volatile ptr addrspace(5) %alloca1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %alloca0, ptr addrspace(3) poison
+  store volatile ptr addrspace(5) %alloca1, ptr addrspace(3) poison
   ret void
 }
 
@@ -72,7 +72,7 @@ define void @func_mov_fi_i32_offset() #0 {
 define void @func_add_constant_to_fi_i32() #0 {
   %alloca = alloca [2 x i32], align 4, addrspace(5)
   %gep0 = getelementptr inbounds [2 x i32], ptr addrspace(5) %alloca, i32 0, i32 1
-  store volatile ptr addrspace(5) %gep0, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep0, ptr addrspace(3) poison
   ret void
 }
 
@@ -95,7 +95,7 @@ define void @func_other_fi_user_i32() #0 {
   %alloca = alloca [2 x i32], align 4, addrspace(5)
   %ptrtoint = ptrtoint ptr addrspace(5) %alloca to i32
   %mul = mul i32 %ptrtoint, 9
-  store volatile i32 %mul, ptr addrspace(3) undef
+  store volatile i32 %mul, ptr addrspace(3) poison
   ret void
 }
 
@@ -134,7 +134,7 @@ define void @void_func_byval_struct_i8_i32_ptr(ptr addrspace(5) byval({ i8, i32 
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   %load1 = load i32, ptr addrspace(5) %gep1
-  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) poison
   ret void
 }
 
@@ -149,8 +149,8 @@ define void @void_func_byval_struct_i8_i32_ptr_value(ptr addrspace(5) byval({ i8
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   %load0 = load i8, ptr addrspace(5) %gep0
   %load1 = load i32, ptr addrspace(5) %gep1
-  store volatile i8 %load0, ptr addrspace(3) undef
-  store volatile i32 %load1, ptr addrspace(3) undef
+  store volatile i8 %load0, ptr addrspace(3) poison
+  store volatile i32 %load1, ptr addrspace(3) poison
   ret void
 }
 
@@ -179,7 +179,7 @@ bb:
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %arg0, i32 0, i32 1
   %load1 = load volatile i32, ptr addrspace(5) %gep1
-  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) poison
   br label %ret
 
 ret:
@@ -207,7 +207,7 @@ define void @func_other_fi_user_non_inline_imm_offset_i32() #0 {
   store volatile i32 7, ptr addrspace(5) %gep0
   %ptrtoint = ptrtoint ptr addrspace(5) %alloca1 to i32
   %mul = mul i32 %ptrtoint, 9
-  store volatile i32 %mul, ptr addrspace(3) undef
+  store volatile i32 %mul, ptr addrspace(3) poison
   ret void
 }
 
@@ -232,7 +232,7 @@ define void @func_other_fi_user_non_inline_imm_offset_i32_vcc_live() #0 {
   call void asm sideeffect "; use $0", "{vcc}"(i64 %vcc)
   %ptrtoint = ptrtoint ptr addrspace(5) %alloca1 to i32
   %mul = mul i32 %ptrtoint, 9
-  store volatile i32 %mul, ptr addrspace(3) undef
+  store volatile i32 %mul, ptr addrspace(3) poison
   ret void
 }
 
@@ -292,7 +292,7 @@ bb:
   %gep0 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %alloca0, i32 0, i32 0
   %gep1 = getelementptr inbounds { i8, i32 }, ptr addrspace(5) %alloca0, i32 0, i32 1
   %load1 = load volatile i32, ptr addrspace(5) %gep1
-  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) undef
+  store volatile ptr addrspace(5) %gep1, ptr addrspace(3) poison
   br label %ret
 
 ret:
