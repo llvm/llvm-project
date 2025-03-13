@@ -58388,9 +58388,12 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       if (!IsSplat && ((VT.is256BitVector() && Subtarget.hasInt256()) ||
                        (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
                         (EltSizeInBits >= 32 || Subtarget.useBWIRegs())))) {
-        return DAG.getNode(Op0.getOpcode(), DL, VT,
-                           ConcatSubOperand(VT, Ops, 0),
-                           ConcatSubOperand(VT, Ops, 1));
+        SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
+        SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
+        if (Concat0 || Concat1)
+          return DAG.getNode(Op0.getOpcode(), DL, VT,
+                             Concat0 ? Concat0 : ConcatSubOperand(VT, Ops, 0),
+                             Concat1 ? Concat1 : ConcatSubOperand(VT, Ops, 1));
       }
       break;
     // Due to VADD, VSUB, VMUL can executed on more ports than VINSERT and
