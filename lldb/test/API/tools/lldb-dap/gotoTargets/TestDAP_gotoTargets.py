@@ -61,7 +61,7 @@ class TestDAP_gotoTargets(lldbdap_testcase.DAPTestCaseBase):
         self.assertIsNotNone(thread_id, "threadId should not be none")
 
         response = self.dap_server.request_goto(thread_id, target_id)
-        self.assertEqual(response["success"], True, "expects success to go to targetId")
+        self.assertEqual(response["success"], True, "goto request with targetId should be successful")
 
         stopped_events = self.dap_server.wait_for_stopped()
         is_goto = lambda event: event["body"]["reason"] == "goto"
