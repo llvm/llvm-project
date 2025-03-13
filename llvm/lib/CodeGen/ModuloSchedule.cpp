@@ -610,8 +610,9 @@ void ModuloScheduleExpander::generateExistingPhis(
     // Check if we need to rename a Phi that has been eliminated due to
     // scheduling.
     if (NumStages == 0 && IsLast) {
-      auto It = VRMap[CurStageNum].find(LoopVal);
-      if (It != VRMap[CurStageNum].end()) {
+      auto &CurStageMap = VRMap[CurStageNum];
+      auto It = CurStageMap.find(LoopVal);
+      if (It != CurStageMap.end()) {
         replaceRegUsesAfterLoop(Def, It->second, BB, MRI);
         NoIntervalRegs.push_back(It->second);
       }
