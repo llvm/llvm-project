@@ -576,41 +576,6 @@ static GcsPolicy getZGcs(Ctx &ctx, opt::InputArgList &args) {
   return ret;
 }
 
-static void getZGcsReport(Ctx &ctx, opt::InputArgList &args) {
-  bool reportDynamicDefined = false;
-  for (auto *arg : args.filtered(OPT_z)) {
-    std::pair<StringRef, StringRef> kv = StringRef(arg->getValue()).split('=');
-    if (kv.first != "gcs-report" && kv.first != "gcs-report-dynamic")
-      continue;
-    arg->claim();
-    ReportPolicy value;
-    if (kv.second == "none")
-      value = ReportPolicy::None;
-    else if (kv.second == "warning")
-      value = ReportPolicy::Warning;
-    else if (kv.second == "error")
-      value = ReportPolicy::Error;
-    else {
-      ErrAlways(ctx) << "unknown -z " << kv.first << "= value: " << kv.second;
-      continue;
-    }
-    if (kv.first == "gcs-report") {
-      ctx.arg.zGcsReport = value;
-    } else if (kv.first == "gcs-report-dynamic") {
-      ctx.arg.zGcsReportDynamic = value;
-      reportDynamicDefined = true;
-    }
-  }
-
-  // When -zgcs-report is set to `warning` or `error`, -zgcs-report-dynamic will
-  // inherit this value if unspecified, matching GNU ld. This detects shared
-  // libraries without the GCS property but does not the shared-libraries to be
-  // rebuilt for successful linking
-  if (!reportDynamicDefined && ctx.arg.zGcsReport != ReportPolicy::None &&
-      ctx.arg.zGcsReportDynamic == ReportPolicy::None)
-    ctx.arg.zGcsReportDynamic = ReportPolicy::Warning;
-}
-
 // Report a warning for an unknown -z option.
 static void checkZOptions(Ctx &ctx, opt::InputArgList &args) {
   // This function is called before getTarget(), when certain options are not
@@ -1585,7 +1550,6 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zForceBti = hasZOption(args, "force-bti");
   ctx.arg.zForceIbt = hasZOption(args, "force-ibt");
   ctx.arg.zGcs = getZGcs(ctx, args);
-  getZGcsReport(ctx, args);
   ctx.arg.zGlobal = hasZOption(args, "global");
   ctx.arg.zGnustack = getZGnuStack(args);
   ctx.arg.zHazardplt = hasZOption(args, "hazardplt");
@@ -1662,7 +1626,10 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       std::make_pair("bti-report", &ctx.arg.zBtiReport),
       std::make_pair("cet-report", &ctx.arg.zCetReport),
       std::make_pair("execute-only-report", &ctx.arg.zExecuteOnlyReport),
+      std::make_pair("gcs-report", &ctx.arg.zGcsReport),
+      std::make_pair("gcs-report-dynamic", &ctx.arg.zGcsReportDynamic),
       std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
+  bool zGcsReportDynamicDefined = false;
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -1672,17 +1639,30 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       arg->claim();
       if (option.second == "none")
         *reportArg.second = ReportPolicy::None;
-      else if (option.second == "warning")
+      else if (option.second == "warning") {
         *reportArg.second = ReportPolicy::Warning;
-      else if (option.second == "error")
+        // To be able to match the GNU ld inheritance rules for -zgcs-report
+        // and -zgcs-report-dynamic, we need to know if -zgcs-report-dynamic
+        // has been defined by the user.
+        if (option.first == "gcs-report-dynamic")
+          zGcsReportDynamicDefined = true;
+      } else if (option.second == "error") {
         *reportArg.second = ReportPolicy::Error;
-      else {
+        if (option.first == "gcs-report-dynamic")
+          zGcsReportDynamicDefined = true;
+      } else {
         ErrAlways(ctx) << "unknown -z " << reportArg.first
                        << "= value: " << option.second;
         continue;
       }
     }
   }
+
+  if (!zGcsReportDynamicDefined && ctx.arg.zGcsReport != ReportPolicy::None &&
+      ctx.arg.zGcsReportDynamic == ReportPolicy::None)
+    // When inheriting the -zgcs-report option, it is capped at a `warning` to
+    // avoid needing to rebuild the shared library with GCS enabled.
+    ctx.arg.zGcsReportDynamic = ReportPolicy::Warning;
 
   for (opt::Arg *arg : args.filtered(OPT_compress_sections)) {
     SmallVector<StringRef, 0> fields;
