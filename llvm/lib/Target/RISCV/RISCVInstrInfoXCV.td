@@ -555,8 +555,8 @@ class CVLoad_rr<bits<7> funct7, bits<3> funct3, string opcodestr>
   let DecoderNamespace = "XCV";
 }
 
-let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0,
-                 mayLoad = 1, mayStore = 0, Constraints = "$rs1_wb = $rs1" in {
+let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0, mayLoad = 1,
+    mayStore = 0 in {
   // Register-Immediate load with post-increment
   def CV_LB_ri_inc  : CVLoad_ri_inc<0b000, "cv.lb">;
   def CV_LBU_ri_inc : CVLoad_ri_inc<0b100, "cv.lbu">;
@@ -570,10 +570,7 @@ let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0,
   def CV_LH_rr_inc  : CVLoad_rr_inc<0b0000001, 0b011, "cv.lh">;
   def CV_LHU_rr_inc : CVLoad_rr_inc<0b0001001, 0b011, "cv.lhu">;
   def CV_LW_rr_inc  : CVLoad_rr_inc<0b0000010, 0b011, "cv.lw">;
-}
 
-let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0, 
-                 mayLoad = 1, mayStore = 0 in {
   // Register-Register load
   def CV_LB_rr  : CVLoad_rr<0b0000100, 0b011, "cv.lb">;
   def CV_LBU_rr : CVLoad_rr<0b0001100, 0b011, "cv.lbu">;
@@ -583,16 +580,16 @@ let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0,
 }
 
 class CVStore_ri_inc<bits<3> funct3, string opcodestr>
-    : RVInstS<funct3, OPC_CUSTOM_1, (outs GPR:$rs1_wb), 
+    : RVInstS<funct3, OPC_CUSTOM_1, (outs GPR:$rs1_wb),
               (ins GPR:$rs2, GPR:$rs1, simm12:$imm12),
               opcodestr, "$rs2, (${rs1}), ${imm12}"> {
   let Constraints = "$rs1_wb = $rs1";
   let DecoderNamespace = "XCV";
 }
 
-class CVStore_rr_inc<bits<3> funct3, bits<7> funct7, dag outs, dag ins,
-                     string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatOther> {
+class CVStore_rr_inc<bits<3> funct3, bits<7> funct7, string opcodestr>
+    : RVInst<(outs GPR:$rs1_wb), (ins GPR:$rs2, GPR:$rs1, GPR:$rs3), opcodestr,
+             "$rs2, (${rs1}), ${rs3}", [], InstFormatOther> {
   bits<5> rs3;
   bits<5> rs2;
   bits<5> rs1;
@@ -603,13 +600,14 @@ class CVStore_rr_inc<bits<3> funct3, bits<7> funct7, dag outs, dag ins,
   let Inst{14-12} = funct3;
   let Inst{11-7} = rs3;
   let Inst{6-0} = OPC_CUSTOM_1.Value;
+  let Constraints = "$rs1_wb = $rs1";
   let DecoderNamespace = "XCV";
 }
 
 
-class CVStore_rr<bits<3> funct3, bits<7> funct7, dag outs, dag ins,
-                     string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatOther> {
+class CVStore_rr<bits<3> funct3, bits<7> funct7, string opcodestr>
+    : RVInst<(outs), (ins GPR:$rs2, CVrr:$cvrr), opcodestr, "$rs2, $cvrr", [],
+             InstFormatOther> {
   bits<5> rs2;
   bits<10> cvrr;
 
@@ -622,39 +620,23 @@ class CVStore_rr<bits<3> funct3, bits<7> funct7, dag outs, dag ins,
   let DecoderNamespace = "XCV";
 }
 
-let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0, 
-                 mayLoad = 0, mayStore = 1, Constraints = "$rs1_wb = $rs1" in {
+let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0, mayLoad = 0,
+    mayStore = 1  in {
   // Register-Immediate store with post-increment
   def CV_SB_ri_inc : CVStore_ri_inc<0b000, "cv.sb">;
   def CV_SH_ri_inc : CVStore_ri_inc<0b001, "cv.sh">;
   def CV_SW_ri_inc : CVStore_ri_inc<0b010, "cv.sw">;
 
   // Register-Register store with post-increment
-  def CV_SB_rr_inc : CVStore_rr_inc<0b011, 0b0010000, 
-                     (outs GPR:$rs1_wb), (ins GPR:$rs2, GPR:$rs1, GPR:$rs3),
-                      "cv.sb", "$rs2, (${rs1}), ${rs3}">;
-  def CV_SH_rr_inc : CVStore_rr_inc<0b011, 0b0010001, 
-                     (outs GPR:$rs1_wb), (ins GPR:$rs2, GPR:$rs1, GPR:$rs3),
-                      "cv.sh", "$rs2, (${rs1}), ${rs3}">;
-  def CV_SW_rr_inc : CVStore_rr_inc<0b011, 0b0010010, 
-                     (outs GPR:$rs1_wb), (ins GPR:$rs2, GPR:$rs1, GPR:$rs3),
-                      "cv.sw", "$rs2, (${rs1}), ${rs3}">;
-}
+  def CV_SB_rr_inc : CVStore_rr_inc<0b011, 0b0010000, "cv.sb">;
+  def CV_SH_rr_inc : CVStore_rr_inc<0b011, 0b0010001, "cv.sh">;
+  def CV_SW_rr_inc : CVStore_rr_inc<0b011, 0b0010010, "cv.sw">;
 
-
-let Predicates = [HasVendorXCVmem, IsRV32], hasSideEffects = 0, 
-                  mayLoad = 0, mayStore = 1 in {
   // Register-Register store
-  def CV_SB_rr : CVStore_rr<0b011, 0b0010100,
-                 (outs), (ins GPR:$rs2, CVrr:$cvrr),
-                 "cv.sb", "$rs2, $cvrr">;
-  def CV_SH_rr : CVStore_rr<0b011, 0b0010101,
-                 (outs), (ins GPR:$rs2, CVrr:$cvrr),
-                 "cv.sh", "$rs2, $cvrr">;
-  def CV_SW_rr : CVStore_rr<0b011, 0b0010110,
-                 (outs), (ins GPR:$rs2, CVrr:$cvrr),
-                 "cv.sw", "$rs2, $cvrr">;
-} 
+  def CV_SB_rr : CVStore_rr<0b011, 0b0010100, "cv.sb">;
+  def CV_SH_rr : CVStore_rr<0b011, 0b0010101, "cv.sh">;
+  def CV_SW_rr : CVStore_rr<0b011, 0b0010110, "cv.sw">;
+}
 
 let DecoderNamespace = "XCV" in
 class CVLoad_ri<bits<3> funct3, string opcodestr>
