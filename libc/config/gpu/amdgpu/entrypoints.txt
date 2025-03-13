@@ -562,6 +562,7 @@ if(LIBC_TYPES_HAS_FLOAT16)
     libc.src.math.frexpf16
     libc.src.math.fromfpf16
     libc.src.math.fromfpxf16
+    libc.src.math.fsqrtf16
     libc.src.math.getpayloadf16
     libc.src.math.ilogbf16
     libc.src.math.ldexpf16

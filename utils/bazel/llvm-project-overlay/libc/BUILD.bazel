@@ -3023,6 +3023,13 @@ libc_math_function(
     ],
 )
 
+libc_math_function(
+    name = "fsqrtf16",
+    additional_deps = [
+        ":__support_fputil_sqrt",
+    ],
+)
+
 libc_math_function(name = "fsub")
 
 libc_math_function(name = "fsubl")

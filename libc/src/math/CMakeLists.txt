@@ -170,6 +170,7 @@ add_math_entrypoint_object(f16sqrtf128)
 
 add_math_entrypoint_object(fsqrt)
 add_math_entrypoint_object(fsqrtl)
+add_math_entrypoint_object(fsqrtf16)
 add_math_entrypoint_object(fsqrtf128)
 
 add_math_entrypoint_object(f16sub)

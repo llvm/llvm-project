@@ -258,6 +258,11 @@ math_test(
 )
 
 math_test(
+    name = "fsqrtf16",
+    hdrs = ["SqrtTest.h"],
+)
+
+math_test(
     name = "dsqrtl",
     hdrs = ["SqrtTest.h"],
 )

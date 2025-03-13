@@ -4878,6 +4878,17 @@ add_fp_unittest(
     libc.src.math.fsqrt
 )
 
+add_fp_unittest(
+  fsqrtf16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    fsqrtf16_test.cpp
+  HDRS
+    SqrtTest.h
+  DEPENDS
+    libc.src.math.fsqrtf16
+)
 
 add_fp_unittest(
   fsqrtl_test
