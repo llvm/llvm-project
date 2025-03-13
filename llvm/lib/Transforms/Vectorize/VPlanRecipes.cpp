@@ -820,7 +820,7 @@ void VPInstruction::execute(VPTransformState &State) {
 }
 
 bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
-  if (Instruction::isBinaryOp(getOpcode()))
+  if (Instruction::isBinaryOp(getOpcode()) || Instruction::isCast(getOpcode()))
     return false;
   switch (getOpcode()) {
   case Instruction::ICmp:
