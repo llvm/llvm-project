@@ -565,7 +565,7 @@ bb:
   %i13 = fadd <2 x float> zeroinitializer, %shift8
   %i14 = shufflevector <2 x float> %arg, <2 x float> %i13, <2 x i32> <i32 0, i32 2>
   %i15 = fsub <2 x float> %i14, zeroinitializer
-  store <2 x float> %i15, ptr undef
+  store <2 x float> %i15, ptr poison
   ret void
 }
 
