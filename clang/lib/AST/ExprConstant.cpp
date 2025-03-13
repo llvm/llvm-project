@@ -17966,8 +17966,10 @@ static bool EvaluateCharRangeAsStringImpl(const Expr *, T &Result,
       Result.getArrayInitializedElt(I) = std::move(Char);
     } else {
       APSInt C = Char.getInt();
+
       assert(C.getBitWidth() <= 8 &&
              "string element not representable in char");
+
       Result.push_back(static_cast<char>(C.getExtValue()));
     }
 
