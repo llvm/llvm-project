@@ -190,11 +190,11 @@ def relpath():
 
 
 def generate_store_opt_test(featname, ordering, op, alignval):
-  if featname != 'lsfe' or op == 'fsub' or alignval == 1:
-    return False
-  if ordering not in [AtomicOrder.monotonic, AtomicOrder.release]:
-    return False
-  return True;
+    if featname != "lsfe" or op == "fsub" or alignval == 1:
+        return False
+    if ordering not in [AtomicOrder.monotonic, AtomicOrder.release]:
+        return False
+    return True
 
 
 def align(val, aligned: bool) -> int:
@@ -222,14 +222,14 @@ def all_atomicrmw(f, datatype, atomicrmw_ops, featname):
                     if generate_store_opt_test(featname, ordering, op, alignval):
                         name = f"atomicrmw_{op}_{ty}_{aligned}_{ordering}_to_store"
                         f.write(
-                           textwrap.dedent(
-                               f"""
+                            textwrap.dedent(
+                                f"""
                            define dso_local void @{name}(ptr %ptr, {ty} %value) {{
                                %r = {instr} {op} ptr %ptr, {ty} %value {ordering}, align {alignval}
                                ret void
                            }}
                         """
-                           )
+                            )
                         )
 
 
