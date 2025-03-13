@@ -36,6 +36,9 @@
 extern "C" {
 void *_FortranAioBeginExternalListOutput(uint32_t a1, const char *a2,
                                          uint32_t a3);
+void *_FortranAioBeginExternalFormattedOutput(const char *ptr1, uint64_t x1,
+                                              void *ptr2, uint32_t x2,
+                                              const char *ptr3, uint32_t x3);
 bool _FortranAioOutputAscii(void *a1, char *a2, uint64_t a3);
 bool _FortranAioOutputInteger32(void *a1, uint32_t a2);
 uint32_t _FortranAioEndIoStatement(void *a1);
@@ -60,6 +63,21 @@ extern void *V_FortranAioBeginExternalListOutput(void *fnptr, ...) {
   int32_t v2 = va_arg(args, int32_t);
   va_end(args);
   void *cookie = _FortranAioBeginExternalListOutput(v0, v1, v2);
+  _list_started_cookie = cookie;
+  return cookie;
+}
+extern void *V_FortranAioBeginExternalFormattedOutput(void *fnptr, ...) {
+  va_list args;
+  va_start(args, fnptr);
+  const char *p0 = va_arg(args, const char *);
+  int64_t v0 = va_arg(args, int64_t);
+  void *p1 = va_arg(args, void *);
+  int32_t v1 = va_arg(args, int32_t);
+  const char *p2 = va_arg(args, const char *);
+  int32_t v2 = va_arg(args, int32_t);
+  va_end(args);
+  void *cookie =
+      _FortranAioBeginExternalFormattedOutput(p0, v0, p1, v1, p2, v2);
   _list_started_cookie = cookie;
   return cookie;
 }
@@ -211,6 +229,7 @@ typedef struct {
   uint32_t dfnid;      // The dvoideferred function id, in order received
   uint64_t *arg_array; // ptr to malloced arg_array
   char *c_ptr;         // ptr to null terminated char string
+  char *c_ptr2;        // ptr to null terminated char string
   uint64_t thread_num;
   uint64_t num_threads;
   uint64_t team_num;
@@ -242,6 +261,7 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
     _deferred_fns_ptr = new std::vector<deferred_entry_t *>;
 
   char *c_ptr = nullptr;
+  char *c_ptr2 = nullptr;
   bool defer_for_reorder = true;
   bool run_deferred_functions = false;
   switch (ab->emisfnid) {
@@ -255,6 +275,26 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
     std::strncpy(c_ptr, (char *)a[5], slen - 1);
     c_ptr[slen - 1] = (char)0;
     a[5] = (emis_argptr_t *)c_ptr;
+    break;
+  }
+  case _FortranAioBeginExternalFormattedOutput_idx: {
+    _deferred_begin_statements++;
+    fnptr = (void *)V_FortranAioBeginExternalFormattedOutput;
+    size_t slen = std::strlen((char *)a[8]) + 1;
+    c_ptr = (char *)aligned_alloc(sizeof(uint64_t *), slen);
+    if (!c_ptr)
+      fprintf(stderr, "MALLOC FAILED for c_ptr size:%ld \n", slen);
+    std::strncpy(c_ptr, (char *)a[8], slen - 1);
+    c_ptr[slen - 1] = (char)0;
+    a[8] = (emis_argptr_t *)c_ptr;
+
+    slen = std::strlen((char *)a[4]) + 1;
+    c_ptr2 = (char *)aligned_alloc(sizeof(uint64_t *), slen);
+    if (!c_ptr2)
+      fprintf(stderr, "MALLOC FAILED for c_ptr2 size:%ld \n", slen);
+    std::strncpy(c_ptr2, (char *)a[4], slen - 1);
+    c_ptr2[slen - 1] = (char)0;
+    a[4] = (emis_argptr_t *)c_ptr2;
     break;
   }
   case _FortranAioOutputAscii_idx: {
@@ -362,6 +402,7 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
     q->arg_array = arg_array;
     q->return_value = (emis_return_t)0;
     q->c_ptr = c_ptr;
+    q->c_ptr2 = c_ptr2;
     _deferred_fns_ptr->push_back(q);
   } else {
     // execute a non deferred function
@@ -392,6 +433,8 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
     for (auto q : *_deferred_fns_ptr) {
       if (q->c_ptr)
         free(q->c_ptr);
+      if (q->c_ptr2)
+        free(q->c_ptr2);
       free(q->arg_array);
       delete q;
     }
@@ -402,7 +445,7 @@ extern "C" emis_return_t EmissaryFortrt(char *data, emisArgBuf_t *ab) {
     _max_num_threads = 0;
     _max_num_teams = 0;
     delete _deferred_fns_ptr;
-    _deferred_fns_ptr=nullptr;
+    _deferred_fns_ptr = nullptr;
   } // end run_deferred_functions
 
   return return_value;

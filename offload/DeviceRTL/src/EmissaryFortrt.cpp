@@ -44,6 +44,19 @@ void *_FortranAioBeginExternalListOutput(uint32_t a1, const char *a2,
       _EXTRA_ARGS, a1, a2, a3);
   return cookie;
 }
+
+void *_FortranAioBeginExternalFormattedOutput(char *fmt, uint64_t fmtlen,
+                                              void *ptr, uint32_t val1,
+                                              char *source_name,
+                                              uint32_t val2) {
+  fmt[fmtlen - 1] = (char)0;
+  void *cookie = (void *)_emissary_exec(
+      _PACK_EMIS_IDS(EMIS_ID_FORTRT,
+                     _FortranAioBeginExternalFormattedOutput_idx),
+      _EXTRA_ARGS, fmt, fmtlen, ptr, val1, source_name, val2);
+  return cookie;
+}
+
 bool _FortranAioOutputAscii(void *a1, char *a2, uint64_t a3) {
   // insert null terminating char so  _emissary_exec can correctly
   // calculate runtime str length
