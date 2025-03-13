@@ -743,9 +743,9 @@ void DAP::SendTerminatedEvent() {
   });
 }
 
-lldb::SBError DAP::Disconnect() { return Disconnect(is_attach); }
+llvm::Error DAP::Disconnect() { return Disconnect(is_attach); }
 
-lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
+llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   lldb::SBError error;
   lldb::SBProcess process = target.GetProcess();
   auto state = process.GetState();
@@ -773,7 +773,7 @@ lldb::SBError DAP::Disconnect(bool terminateDebuggee) {
 
   disconnecting = true;
 
-  return error;
+  return takeError(error);
 }
 
 llvm::Error DAP::Loop() {

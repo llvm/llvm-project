@@ -323,10 +323,10 @@ struct DAP {
   bool HandleObject(const protocol::Message &M);
 
   /// Disconnect the DAP session.
-  lldb::SBError Disconnect();
+  llvm::Error Disconnect();
 
   /// Disconnect the DAP session and optionally terminate the debuggee.
-  lldb::SBError Disconnect(bool terminateDebuggee);
+  llvm::Error Disconnect(bool terminateDebuggee);
 
   /// Send a "terminated" event to indicate the process is done being debugged.
   void SendTerminatedEvent();
