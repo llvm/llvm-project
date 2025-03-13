@@ -381,12 +381,10 @@ define void @v8i32(ptr %ldptr, ptr %stptr) {
 ; CHECK-256-LABEL: v8i32:
 ; CHECK-256:       // %bb.0:
 ; CHECK-256-NEXT:    ptrue p0.s
-; CHECK-256-NEXT:    mov x8, #16 // =0x10
-; CHECK-256-NEXT:    mov x9, #8 // =0x8
-; CHECK-256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
-; CHECK-256-NEXT:    ld1w { z1.s }, p0/z, [x0, x9, lsl #2]
-; CHECK-256-NEXT:    st1w { z0.s }, p0, [x1, x8, lsl #2]
-; CHECK-256-NEXT:    st1w { z1.s }, p0, [x1, x9, lsl #2]
+; CHECK-256-NEXT:    ld1w { z0.s }, p0/z, [x0, #2, mul vl]
+; CHECK-256-NEXT:    ld1w { z1.s }, p0/z, [x0, #1, mul vl]
+; CHECK-256-NEXT:    st1w { z0.s }, p0, [x1, #2, mul vl]
+; CHECK-256-NEXT:    st1w { z1.s }, p0, [x1, #1, mul vl]
 ; CHECK-256-NEXT:    ret
 ;
 ; CHECK-512-LABEL: v8i32:
@@ -419,7 +417,6 @@ define void @v8i32(ptr %ldptr, ptr %stptr) {
   ret void
 }
 
-; FIXME: This is wrong for VLS.
 define void @v8i32_vscale(ptr %0) {
 ; CHECK-LABEL: v8i32_vscale:
 ; CHECK:       // %bb.0:
@@ -441,28 +438,28 @@ define void @v8i32_vscale(ptr %0) {
 ; CHECK-256:       // %bb.0:
 ; CHECK-256-NEXT:    mov z0.s, #1 // =0x1
 ; CHECK-256-NEXT:    ptrue p0.s
-; CHECK-256-NEXT:    st1w { z0.s }, p0, [x0, #1, mul vl]
+; CHECK-256-NEXT:    st1w { z0.s }, p0, [x0, #2, mul vl]
 ; CHECK-256-NEXT:    ret
 ;
 ; CHECK-512-LABEL: v8i32_vscale:
 ; CHECK-512:       // %bb.0:
 ; CHECK-512-NEXT:    mov z0.s, #1 // =0x1
 ; CHECK-512-NEXT:    ptrue p0.s, vl8
-; CHECK-512-NEXT:    st1w { z0.s }, p0, [x0, #1, mul vl]
+; CHECK-512-NEXT:    st1w { z0.s }, p0, [x0, #2, mul vl]
 ; CHECK-512-NEXT:    ret
 ;
 ; CHECK-1024-LABEL: v8i32_vscale:
 ; CHECK-1024:       // %bb.0:
 ; CHECK-1024-NEXT:    mov z0.s, #1 // =0x1
 ; CHECK-1024-NEXT:    ptrue p0.s, vl8
-; CHECK-1024-NEXT:    st1w { z0.s }, p0, [x0, #1, mul vl]
+; CHECK-1024-NEXT:    st1w { z0.s }, p0, [x0, #2, mul vl]
 ; CHECK-1024-NEXT:    ret
 ;
 ; CHECK-2048-LABEL: v8i32_vscale:
 ; CHECK-2048:       // %bb.0:
 ; CHECK-2048-NEXT:    mov z0.s, #1 // =0x1
 ; CHECK-2048-NEXT:    ptrue p0.s, vl8
-; CHECK-2048-NEXT:    st1w { z0.s }, p0, [x0, #1, mul vl]
+; CHECK-2048-NEXT:    st1w { z0.s }, p0, [x0, #2, mul vl]
 ; CHECK-2048-NEXT:    ret
   %vl = call i64 @llvm.vscale()
   %vlx = shl i64 %vl, 5
