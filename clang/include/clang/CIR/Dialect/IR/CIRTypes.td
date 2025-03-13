@@ -281,6 +281,25 @@ def CIR_BoolType :
 }
 
 //===----------------------------------------------------------------------===//
+// ArrayType
+//===----------------------------------------------------------------------===//
+
+def CIR_ArrayType : CIR_Type<"Array", "array",
+    [DeclareTypeInterfaceMethods<DataLayoutTypeInterface>]> {
+
+  let summary = "CIR array type";
+  let description = [{
+    `CIR.array` represents C/C++ constant arrays.
+  }];
+
+  let parameters = (ins "mlir::Type":$eltType, "uint64_t":$size);
+
+  let assemblyFormat = [{
+    `<` $eltType `x` $size `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // FuncType
 //===----------------------------------------------------------------------===//
 
@@ -386,8 +405,8 @@ def VoidPtr : Type<
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_IntType, CIR_AnyFloat, CIR_PointerType,
-  CIR_FuncType
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_IntType, CIR_AnyFloat,
+  CIR_PointerType, CIR_FuncType
 ]>;
 
 #endif // MLIR_CIR_DIALECT_CIR_TYPES
