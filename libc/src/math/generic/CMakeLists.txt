@@ -512,6 +512,8 @@ add_entrypoint_object(
     libc.src.__support.macros.optimization
     libc.src.__support.FPUtil.basic_operations
     libc.src.math.generic.sincos_eval
+    libc.src.__support.FPUtil.double_double
+    libc.src.__support.FPUtil.multiply_add
 )
 
 add_entrypoint_object(
