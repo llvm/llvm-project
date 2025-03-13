@@ -9,6 +9,7 @@
 #include "NativeProcessAIX.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Host/posix/ProcessLauncherPosixFork.h"
@@ -91,12 +92,13 @@ NativeProcessAIX::Manager::Launch(ProcessLaunchInfo &launch_info,
   }
 
   // Set the architecture to the exe architecture.
-  LLDB_LOG(log, "pid = {0}, detected architecture {1}", pid,
-           Info.GetArchitecture().GetArchitectureName());
+  LLDB_LOG(
+      log, "pid = {0}, detected architecture {1}", pid,
+      HostInfo::GetArchitecture(HostInfo::eArchKind64).GetArchitectureName());
 
   return std::unique_ptr<NativeProcessAIX>(new NativeProcessAIX(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      Info.GetArchitecture(), *this, {pid}));
+      HostInfo::GetArchitecture(HostInfo::eArchKind64), *this, {pid}));
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
@@ -115,7 +117,8 @@ NativeProcessAIX::Manager::Attach(
     return tids_or.takeError();
 
   return std::unique_ptr<NativeProcessAIX>(new NativeProcessAIX(
-      pid, -1, native_delegate, Info.GetArchitecture(), *this, *tids_or));
+      pid, -1, native_delegate,
+      HostInfo::GetArchitecture(HostInfo::eArchKind64), *this, *tids_or));
 }
 
 lldb::addr_t NativeProcessAIX::GetSharedLibraryInfoAddress() {
@@ -300,8 +303,6 @@ llvm::Error NativeProcessAIX::Detach(lldb::tid_t tid) {
   return PtraceWrapper(PT_DETACH, tid);
 }
 
-// Wrapper for ptrace to catch errors and log calls. Note that ptrace sets
-// errno on error because -1 can be a valid result (i.e. for PTRACE_PEEK*)
 llvm::Error NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
                                             void *addr, void *data,
                                             size_t data_size, long *result) {
@@ -315,7 +316,7 @@ llvm::Error NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
     ret = ptrace64(req, pid, 0, 0, nullptr);
     break;
   default:
-    assert(0 && "PT_ request not supported yet.");
+    llvm_unreachable("PT_ request not supported yet.");
   }
 
   if (errno) {
