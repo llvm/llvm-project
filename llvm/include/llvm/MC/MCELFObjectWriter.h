@@ -189,6 +189,8 @@ public:
   bool checkRelocation(MCContext &Ctx, SMLoc Loc, const MCSectionELF *From,
                        const MCSectionELF *To);
 
+  void fixSymbolsInTLSFixups(MCAssembler &Asm, const MCExpr *Expr);
+
   unsigned getELFHeaderEFlags() const { return ELFHeaderEFlags; }
   void setELFHeaderEFlags(unsigned Flags) { ELFHeaderEFlags = Flags; }
 

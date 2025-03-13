@@ -253,6 +253,7 @@ protected:
   const char *MCountName;
   unsigned char RegParmMax, SSERegParmMax;
   TargetCXXABI TheCXXABI;
+  bool UseMicrosoftManglingForC = false;
   const LangASMap *AddrSpaceMap;
 
   mutable StringRef PlatformName;
@@ -1344,6 +1345,11 @@ public:
     return TheCXXABI;
   }
 
+  /// Should the Microsoft mangling scheme be used for C Calling Convention.
+  bool shouldUseMicrosoftCCforMangling() const {
+    return UseMicrosoftManglingForC;
+  }
+
   /// Target the specified CPU.
   ///
   /// \return  False on error (invalid CPU name).
@@ -1669,7 +1675,7 @@ public:
   // access target-specific GPU grid values that must be consistent between
   // host RTL (plugin), deviceRTL and clang.
   virtual const llvm::omp::GV &getGridValue() const {
-    return llvm::omp::SPIRVGridValues;
+    llvm_unreachable("getGridValue not implemented on this target");
   }
 
   /// Retrieve the name of the platform as it is used in the

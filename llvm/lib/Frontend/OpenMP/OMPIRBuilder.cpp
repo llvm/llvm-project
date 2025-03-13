@@ -1602,14 +1602,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   SmallVector<BasicBlock *, 32> Blocks;
   OI.collectBlocks(ParallelRegionBlockSet, Blocks);
 
-  // Ensure a single exit node for the outlined region by creating one.
-  // We might have multiple incoming edges to the exit now due to finalizations,
-  // e.g., cancel calls that cause the control flow to leave the region.
-  BasicBlock *PRegOutlinedExitBB = PRegExitBB;
-  PRegExitBB = SplitBlock(PRegExitBB, &*PRegExitBB->getFirstInsertionPt());
-  PRegOutlinedExitBB->setName("omp.par.outlined.exit");
-  Blocks.push_back(PRegOutlinedExitBB);
-
   CodeExtractorAnalysisCache CEAC(*OuterFn);
   CodeExtractor Extractor(Blocks, /* DominatorTree */ nullptr,
                           /* AggregateArgs */ false,
@@ -3779,6 +3771,8 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
 
   // Emit a call to the runtime function that orchestrates the reduction.
   // Declare the reduction function in the process.
+  Type *IndexTy = Builder.getIndexTy(
+      M.getDataLayout(), M.getDataLayout().getDefaultGlobalsAddressSpace());
   Function *Func = Builder.GetInsertBlock()->getParent();
   Module *Module = Func->getParent();
   uint32_t SrcLocStrSize;
@@ -3794,7 +3788,7 @@ OpenMPIRBuilder::createReductions(const LocationDescription &Loc,
   Constant *NumVariables = Builder.getInt32(NumReductions);
   const DataLayout &DL = Module->getDataLayout();
   unsigned RedArrayByteSize = DL.getTypeStoreSize(RedArrayTy);
-  Constant *RedArraySize = Builder.getInt64(RedArrayByteSize);
+  Constant *RedArraySize = ConstantInt::get(IndexTy, RedArrayByteSize);
   Function *ReductionFunc = getFreshReductionFunc(*Module);
   Value *Lock = getOMPCriticalRegionLock(".reduction");
   Function *ReduceFunc = getOrCreateRuntimeFunctionPtr(
@@ -5511,7 +5505,7 @@ createTargetMachine(Function *F, CodeGenOptLevel OptLevel) {
 
   StringRef CPU = F->getFnAttribute("target-cpu").getValueAsString();
   StringRef Features = F->getFnAttribute("target-features").getValueAsString();
-  const std::string &Triple = M->getTargetTriple();
+  const llvm::Triple &Triple = M->getTargetTriple();
 
   std::string Error;
   const llvm::Target *TheTarget = TargetRegistry::lookupTarget(Triple, Error);
@@ -7762,7 +7756,7 @@ OpenMPIRBuilder::getOrCreateInternalVariable(Type *Ty, const StringRef &Name,
     // variable for possibly changing that to internal or private, or maybe
     // create different versions of the function for different OMP internal
     // variables.
-    auto Linkage = this->M.getTargetTriple().rfind("wasm32") == 0
+    auto Linkage = this->M.getTargetTriple().getArch() == Triple::wasm32
                        ? GlobalValue::InternalLinkage
                        : GlobalValue::CommonLinkage;
     auto *GV = new GlobalVariable(M, Ty, /*IsConstant=*/false, Linkage,

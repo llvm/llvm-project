@@ -10,7 +10,7 @@ define amdgpu_vs void @test_f32_inreg(float inreg %arg0) {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
-  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float undef, float undef, float undef, i1 false, i1 false) #0
+  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float poison, float poison, float poison, i1 false, i1 false) #0
   ret void
 }
 
@@ -23,7 +23,7 @@ define amdgpu_vs void @test_f32(float %arg0) {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
-  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float undef, float undef, float undef, i1 false, i1 false) #0
+  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float poison, float poison, float poison, i1 false, i1 false) #0
   ret void
 }
 
@@ -55,7 +55,7 @@ define amdgpu_vs void @test_sgpr_alignment0(float inreg %arg0, ptr addrspace(4) 
   ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.exp), 32, 15, [[COPY]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), 0, 0
   ; CHECK-NEXT:   S_ENDPGM 0
   %tmp0 = load volatile i32, ptr addrspace(4) %arg1
-  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float undef, float undef, float undef, i1 false, i1 false) #0
+  call void @llvm.amdgcn.exp.f32(i32 32, i32 15, float %arg0, float poison, float poison, float poison, i1 false, i1 false) #0
   ret void
 }
 
@@ -88,7 +88,7 @@ define amdgpu_vs <{ i32, i32 }> @ret_struct(i32 inreg %arg0, i32 inreg %arg1) {
   ; CHECK-NEXT:   $sgpr1 = COPY [[INTRINSIC_CONVERGENT1]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
 main_body:
-  %tmp0 = insertvalue <{ i32, i32 }> undef, i32 %arg0, 0
+  %tmp0 = insertvalue <{ i32, i32 }> poison, i32 %arg0, 0
   %tmp1 = insertvalue <{ i32, i32 }> %tmp0, i32 %arg1, 1
   ret <{ i32, i32 }> %tmp1
 }

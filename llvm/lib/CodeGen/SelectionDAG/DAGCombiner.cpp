@@ -149,10 +149,6 @@ static cl::opt<bool> EnableShrinkLoadReplaceStoreWithStore(
     cl::desc("DAG combiner enable load/<replace bytes>/store with "
              "a narrower store"));
 
-static cl::opt<bool> EnableVectorFCopySignExtendRound(
-    "combiner-vector-fcopysign-extend-round", cl::Hidden, cl::init(false),
-    cl::desc(
-        "Enable merging extends and rounds into FCOPYSIGN on vector types"));
 namespace {
 
   class DAGCombiner {
@@ -5392,6 +5388,12 @@ SDValue DAGCombiner::visitAVG(SDNode *N) {
       if (!IsSigned && Add->getFlags().hasNoUnsignedWrap())
         return DAG.getNode(ISD::AVGCEILU, DL, VT, X, Y);
     }
+  }
+
+  // Fold avgfloors(x,y) -> avgflooru(x,y) if both x and y are non-negative
+  if (Opcode == ISD::AVGFLOORS && hasOperation(ISD::AVGFLOORU, VT)) {
+    if (DAG.SignBitIsZero(N0) && DAG.SignBitIsZero(N1))
+      return DAG.getNode(ISD::AVGFLOORU, DL, VT, N0, N1);
   }
 
   return SDValue();
@@ -14955,12 +14957,37 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   AddToWorklist(NewPtr.getNode());
 
   SDValue Load;
-  if (ExtType == ISD::NON_EXTLOAD)
-    Load = DAG.getLoad(VT, DL, LN0->getChain(), NewPtr,
-                       LN0->getPointerInfo().getWithOffset(PtrOff),
-                       LN0->getOriginalAlign(),
-                       LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
-  else
+  if (ExtType == ISD::NON_EXTLOAD) {
+    const MDNode *OldRanges = LN0->getRanges();
+    const MDNode *NewRanges = nullptr;
+    // If LSBs are loaded and the truncated ConstantRange for the OldRanges
+    // metadata is not the full-set for the new width then create a NewRanges
+    // metadata for the truncated load
+    if (ShAmt == 0 && OldRanges) {
+      ConstantRange CR = getConstantRangeFromMetadata(*OldRanges);
+      unsigned BitSize = VT.getScalarSizeInBits();
+
+      // It is possible for an 8-bit extending load with 8-bit range
+      // metadata to be narrowed to an 8-bit load.  This guard is necessary to
+      // ensure that truncation is strictly smaller.
+      if (CR.getBitWidth() > BitSize) {
+        ConstantRange TruncatedCR = CR.truncate(BitSize);
+        if (!TruncatedCR.isFullSet()) {
+          Metadata *Bounds[2] = {
+              ConstantAsMetadata::get(
+                  ConstantInt::get(*DAG.getContext(), TruncatedCR.getLower())),
+              ConstantAsMetadata::get(
+                  ConstantInt::get(*DAG.getContext(), TruncatedCR.getUpper()))};
+          NewRanges = MDNode::get(*DAG.getContext(), Bounds);
+        }
+      } else if (CR.getBitWidth() == BitSize)
+        NewRanges = OldRanges;
+    }
+    Load = DAG.getLoad(
+        VT, DL, LN0->getChain(), NewPtr,
+        LN0->getPointerInfo().getWithOffset(PtrOff), LN0->getOriginalAlign(),
+        LN0->getMemOperand()->getFlags(), LN0->getAAInfo(), NewRanges);
+  } else
     Load = DAG.getExtLoad(ExtType, DL, VT, LN0->getChain(), NewPtr,
                           LN0->getPointerInfo().getWithOffset(PtrOff), ExtVT,
                           LN0->getOriginalAlign(),
@@ -18011,7 +18038,8 @@ static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(EVT XTy, EVT YTy) {
   if (YTy == MVT::f128)
     return false;
 
-  return !YTy.isVector() || EnableVectorFCopySignExtendRound;
+  // Avoid mismatched vector operand types, for better instruction selection.
+  return !YTy.isVector();
 }
 
 static inline bool CanCombineFCOPYSIGN_EXTEND_ROUND(SDNode *N) {

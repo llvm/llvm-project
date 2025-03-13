@@ -103,6 +103,10 @@ def TEST_TestType : DialectType<Test_Dialect,
     CPred<"::llvm::isa<::test::TestType>($_self)">, "test">,
     BuildableType<"$_builder.getType<::test::TestType>()">;
 
+def SignlessLikeVariadic : TEST_Op<"signless_like_variadic"> {
+  let arguments = (ins Variadic<SignlessIntegerLike>:$x);
+}
+
 //===----------------------------------------------------------------------===//
 // Test Symbols
 //===----------------------------------------------------------------------===//
@@ -2502,6 +2506,13 @@ def TableGenBuildOp5 : TableGenBuildInferReturnTypeBaseOp<
 def TableGenBuildOp6 : TEST_Op<"tblgen_build_6", [AttrSizedOperandSegments]> {
   let arguments = (ins Variadic<AnyType>:$a, Variadic<AnyType>:$b);
   let results = (outs F32:$result);
+}
+
+// An inherent attribute. Test collective builders, both those that take properties as
+// properties structs and those that take an attribute dictionary.
+def TableGenBuildOp7 : TEST_Op<"tblgen_build_7", []> {
+  let arguments = (ins BoolAttr:$attr0);
+  let results = (outs);
 }
 
 //===----------------------------------------------------------------------===//

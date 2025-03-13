@@ -3418,8 +3418,8 @@ void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
                                   PathDiagnosticLocation Loc,
                                   ArrayRef<SourceRange> Ranges,
                                   ArrayRef<FixItHint> Fixits) {
-  EmitBasicReport(DeclWithIssue, Checker->getCheckerName(), Name, Category, Str,
-                  Loc, Ranges, Fixits);
+  EmitBasicReport(DeclWithIssue, Checker->getName(), Name, Category, Str, Loc,
+                  Ranges, Fixits);
 }
 
 void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
@@ -3442,8 +3442,8 @@ void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
 BugType *BugReporter::getBugTypeForName(CheckerNameRef CheckName,
                                         StringRef name, StringRef category) {
   SmallString<136> fullDesc;
-  llvm::raw_svector_ostream(fullDesc) << CheckName.getName() << ":" << name
-                                      << ":" << category;
+  llvm::raw_svector_ostream(fullDesc)
+      << CheckName << ":" << name << ":" << category;
   std::unique_ptr<BugType> &BT = StrBugTypes[fullDesc];
   if (!BT)
     BT = std::make_unique<BugType>(CheckName, name, category);
