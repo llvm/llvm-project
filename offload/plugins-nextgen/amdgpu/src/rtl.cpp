@@ -3385,6 +3385,7 @@ Error AMDGPUKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
   if (auto Err = AMDGPUDevice.getStream(AsyncInfoWrapper, Stream))
     return Err;
 
+  // Set the COV5+ implicit arguments to the appropriate values.
   ImplArgs->BlockCountX = NumBlocks[0];
   ImplArgs->BlockCountY = NumBlocks[1];
   ImplArgs->BlockCountZ = NumBlocks[2];
