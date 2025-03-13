@@ -344,6 +344,28 @@ static void collectCallOps(iterator_range<Region::iterator> blocks,
     }
   }
 }
+//===----------------------------------------------------------------------===//
+// Inliner
+//===----------------------------------------------------------------------===//
+// Initialize doClone function with the default implementation
+Inliner::CloneCallbackTy &Inliner::doClone() {
+  static Inliner::CloneCallbackTy doWork =
+      [](OpBuilder &builder, Region *src, Block *inlineBlock,
+         Block *postInsertBlock, IRMapping &mapper,
+         bool shouldCloneInlinedRegion) {
+        // Check to see if the region is being cloned, or moved inline. In
+        // either case, move the new blocks after the 'insertBlock' to improve
+        // IR readability.
+        Region *insertRegion = inlineBlock->getParent();
+        if (shouldCloneInlinedRegion)
+          src->cloneInto(insertRegion, postInsertBlock->getIterator(), mapper);
+        else
+          insertRegion->getBlocks().splice(postInsertBlock->getIterator(),
+                                           src->getBlocks(), src->begin(),
+                                           src->end());
+      };
+  return doWork;
+}
 
 //===----------------------------------------------------------------------===//
 // InlinerInterfaceImpl
@@ -729,19 +751,22 @@ bool Inliner::Impl::shouldInline(ResolvedCall &resolvedCall) {
 
   // Don't allow inlining if the callee has multiple blocks (unstructured
   // control flow) but we cannot be sure that the caller region supports that.
-  bool calleeHasMultipleBlocks =
-      llvm::hasNItemsOrMore(*callableRegion, /*N=*/2);
-  // If both parent ops have the same type, it is safe to inline. Otherwise,
-  // decide based on whether the op has the SingleBlock trait or not.
-  // Note: This check does currently not account for SizedRegion/MaxSizedRegion.
-  auto callerRegionSupportsMultipleBlocks = [&]() {
-    return callableRegion->getParentOp()->getName() ==
-               resolvedCall.call->getParentOp()->getName() ||
-           !resolvedCall.call->getParentOp()
-                ->mightHaveTrait<OpTrait::SingleBlock>();
-  };
-  if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
-    return false;
+  if (!inliner.canHandleMultipleBlocks()) {
+    bool calleeHasMultipleBlocks =
+        llvm::hasNItemsOrMore(*callableRegion, /*N=*/2);
+    // If both parent ops have the same type, it is safe to inline. Otherwise,
+    // decide based on whether the op has the SingleBlock trait or not.
+    // Note: This check does currently not account for
+    // SizedRegion/MaxSizedRegion.
+    auto callerRegionSupportsMultipleBlocks = [&]() {
+      return callableRegion->getParentOp()->getName() ==
+                 resolvedCall.call->getParentOp()->getName() ||
+             !resolvedCall.call->getParentOp()
+                  ->mightHaveTrait<OpTrait::SingleBlock>();
+    };
+    if (calleeHasMultipleBlocks && !callerRegionSupportsMultipleBlocks())
+      return false;
+  }
 
   if (!inliner.isProfitableToInline(resolvedCall))
     return false;
