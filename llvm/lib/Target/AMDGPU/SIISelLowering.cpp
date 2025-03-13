@@ -3732,6 +3732,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
         return lowerUnhandledCall(CLI, InVals, "Expected 3 additional args");
       }
 
+      if (!Subtarget->isWave32()) {
+        return lowerUnhandledCall(
+            CLI, InVals, "Dynamic VGPR mode is only supported for wave32");
+      }
+
       UsesDynamicVGPRs = true;
       std::for_each(CLI.Args.begin() + ChainCallArgIdx::NumVGPRs,
                     CLI.Args.end(), PushNodeOrTargetConstant);
