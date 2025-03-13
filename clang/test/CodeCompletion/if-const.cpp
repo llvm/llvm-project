@@ -12,12 +12,16 @@ void test() {
   // CHECK-PATTERN-CXX17: <#statements#>
   // CHECK-PATTERN-CXX17: }
   // CHECK-CXX23: COMPLETION: consteval
+  // CHECK-CXX23: COMPLETION: constexpr
   // CHECK-PATTERN-CXX23: COMPLETION: Pattern : consteval {
   // CHECK-PATTERN-CXX23: <#statements#>
   // CHECK-PATTERN-CXX23: }
+  // CHECK-PATTERN-CXX23: COMPLETION: Pattern : constexpr (<#condition#>) {
+  // CHECK-PATTERN-CXX23: <#statements#>
+  // CHECK-PATTERN-CXX23: }
   if !c
-  // RUN: %clang_cc1 -fsyntax-only -std=c++23 -code-completion-at=%s:18:8 %s -o - | FileCheck -check-prefix=CHECK-CXX23-EXCLAIM %s
-  // RUN: %clang_cc1 -fsyntax-only -std=c++23 -code-completion-patterns -code-completion-at=%s:18:8 %s -o - | FileCheck -check-prefix=CHECK-PATTERN-CXX23-EXCLAIM %s
+  // RUN: %clang_cc1 -fsyntax-only -std=c++23 -code-completion-at=%s:22:8 %s -o - | FileCheck -check-prefix=CHECK-CXX23-EXCLAIM %s
+  // RUN: %clang_cc1 -fsyntax-only -std=c++23 -code-completion-patterns -code-completion-at=%s:22:8 %s -o - | FileCheck -check-prefix=CHECK-PATTERN-CXX23-EXCLAIM %s
   // CHECK-CXX23-EXCLAIM: COMPLETION: consteval
   // CHECK-CXX23-EXCLAIM-NOT: constexpr
   // CHECK-PATTERN-CXX23-EXCLAIM: COMPLETION: Pattern : consteval {
