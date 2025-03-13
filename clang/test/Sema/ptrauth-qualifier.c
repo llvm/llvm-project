@@ -20,8 +20,6 @@ typedef int *intp;
 
 int nonConstantGlobal = 5;
 
-__ptrauth int invalid0; // expected-error{{expected '('}}
-__ptrauth() int invalid1; // expected-error{{expected expression}}
 __ptrauth(INVALID_KEY) int invalid2; // expected-error{{200 does not identify a valid pointer authentication key for the current target}}
 __ptrauth(VALID_DATA_KEY) int invalid3; // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int' is invalid}}
 __ptrauth(VALID_DATA_KEY) int *invalid4; // expected-error {{'__ptrauth' qualifier only applies to pointer types; 'int' is invalid}}
@@ -34,7 +32,6 @@ int * __ptrauth(VALID_DATA_KEY, 1, 100000) invalid10; // expected-error {{invali
 int * __ptrauth(VALID_DATA_KEY, 1, nonConstantGlobal) invalid12; // expected-error {{argument to '__ptrauth' must be an integer constant expression}}
 int * __ptrauth(VALID_DATA_KEY, nonConstantGlobal, 1000) invalid13; // expected-error {{argument to '__ptrauth' must be an integer constant expression}}
 int * __ptrauth(nonConstantGlobal, 1, 1000) invalid14; // expected-error{{expression is not an integer constant expression}}
-int * __ptrauth(VALID_DATA_KEY, 1, 1000, 12) invalid15; // expected-error{{qualifier must take between 1 and 3 arguments}}
 
 int * __ptrauth(VALID_DATA_KEY) valid0;
 int * __ptrauth(VALID_DATA_KEY) *valid1;

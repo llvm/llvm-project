@@ -8413,12 +8413,9 @@ static void HandleNeonVectorTypeAttr(QualType &CurType, const ParsedAttr &Attr,
 /// Handle the __ptrauth qualifier.
 static void HandlePtrAuthQualifier(ASTContext &Ctx, QualType &T,
                                    const ParsedAttr &Attr, Sema &S) {
-  if (Attr.getNumArgs() < 1 || Attr.getNumArgs() > 3) {
-    S.Diag(Attr.getLoc(), diag::err_ptrauth_qualifier_bad_arg_count);
-    Attr.setInvalid();
-    return;
-  }
 
+  assert((Attr.getNumArgs() > 0 && Attr.getNumArgs() <= 3) &&
+         "__ptrauth qualifier takes between 1 and 3 arguments");
   Expr *KeyArg = Attr.getArgAsExpr(0);
   Expr *IsAddressDiscriminatedArg =
       Attr.getNumArgs() >= 2 ? Attr.getArgAsExpr(1) : nullptr;

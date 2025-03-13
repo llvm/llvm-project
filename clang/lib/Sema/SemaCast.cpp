@@ -72,6 +72,9 @@ namespace {
       //   Preceding an expression by a parenthesized type name converts the
       //   value of the expression to the unqualified, non-atomic version of
       //   the named type.
+      // Don't drop __ptrauth qualifiers. We want to treat casting to a
+      // __ptrauth-qualified type as an error instead of implicitly ignoring
+      // the qualifier.
       if (!S.Context.getLangOpts().ObjC && !DestType->isRecordType() &&
           !DestType->isArrayType() && !DestType.getPointerAuth()) {
         DestType = DestType.getAtomicUnqualifiedType();

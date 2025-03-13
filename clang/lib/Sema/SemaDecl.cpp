@@ -19379,10 +19379,10 @@ void Sema::ActOnFields(Scope *S, SourceLocation RecLoc, Decl *EnclosingDecl,
       } else if (FT.getQualifiers().getObjCLifetime() == Qualifiers::OCL_Weak) {
         Record->setArgPassingRestrictions(
             RecordArgPassingKind::CanNeverPassInRegs);
-      } else if (PointerAuthQualifier Q = FT.getPointerAuth()) {
-        if (Q.isAddressDiscriminated())
-          Record->setArgPassingRestrictions(
-              RecordArgPassingKind::CanNeverPassInRegs);
+      } else if (PointerAuthQualifier Q = FT.getPointerAuth();
+                 Q && Q.isAddressDiscriminated()) {
+        Record->setArgPassingRestrictions(
+            RecordArgPassingKind::CanNeverPassInRegs);
       }
     }
 

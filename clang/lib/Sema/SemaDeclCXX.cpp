@@ -9363,7 +9363,7 @@ struct SpecialMemberDeletionInfo
 
   bool shouldDeleteForVariantObjCPtrMember(FieldDecl *FD, QualType FieldType);
 
-  bool shouldDeleteForVariantPtrAuthMember(FieldDecl *FD, QualType FieldType);
+  bool shouldDeleteForVariantPtrAuthMember(const FieldDecl *FD);
 
   bool visitBase(CXXBaseSpecifier *Base) { return shouldDeleteForBase(Base); }
   bool visitField(FieldDecl *Field) { return shouldDeleteForField(Field); }
@@ -9534,7 +9534,8 @@ bool SpecialMemberDeletionInfo::shouldDeleteForVariantObjCPtrMember(
 }
 
 bool SpecialMemberDeletionInfo::shouldDeleteForVariantPtrAuthMember(
-    FieldDecl *FD, QualType FieldType) {
+    const FieldDecl *FD) {
+  QualType FieldType = S.Context.getBaseElementType(FD->getType());
   // Copy/move constructors/assignment operators are deleted if the field has an
   // address-discriminated ptrauth qualifier.
   PointerAuthQualifier Q = FieldType.getPointerAuth();
@@ -9594,7 +9595,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
   if (inUnion() && shouldDeleteForVariantObjCPtrMember(FD, FieldType))
     return true;
 
-  if (inUnion() && shouldDeleteForVariantPtrAuthMember(FD, FieldType))
+  if (inUnion() && shouldDeleteForVariantPtrAuthMember(FD))
     return true;
 
   if (CSM == CXXSpecialMemberKind::DefaultConstructor) {
@@ -9660,7 +9661,7 @@ bool SpecialMemberDeletionInfo::shouldDeleteForField(FieldDecl *FD) {
         if (shouldDeleteForVariantObjCPtrMember(&*UI, UnionFieldType))
           return true;
 
-        if (shouldDeleteForVariantPtrAuthMember(&*UI, UnionFieldType))
+        if (shouldDeleteForVariantPtrAuthMember(&*UI))
           return true;
 
         if (!UnionFieldType.isConstQualified())

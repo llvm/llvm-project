@@ -13,6 +13,7 @@ template <typename T> struct Indirect {
 };
 
 void f3() {
+  // FIXME: consider loosening the restrictions so that the first two cases are accepted.
   Indirect<void* __ptrauth(0,0,1234)> one;
   // expected-note@-1{{in instantiation of template class 'Indirect<void *__ptrauth(0,0,1234)>' requested here}}
   Indirect<void* __ptrauth(0,0,1235)> two;

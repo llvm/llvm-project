@@ -3405,7 +3405,7 @@ void Parser::DistributeCLateParsedAttrs(Decl *Dcl,
 ///    ('__ptrauth') '(' constant-expression
 ///                   (',' constant-expression)[opt]
 ///                   (',' constant-expression)[opt] ')'
-void Parser::ParsePtrauthQualifier(ParsedAttributes &attrs) {
+void Parser::ParsePtrauthQualifier(ParsedAttributes &Attrs) {
   assert(Tok.is(tok::kw___ptrauth));
 
   IdentifierInfo *KwName = Tok.getIdentifierInfo();
@@ -3428,7 +3428,12 @@ void Parser::ParsePtrauthQualifier(ParsedAttributes &attrs) {
   T.consumeClose();
   SourceLocation EndLoc = T.getCloseLocation();
 
-  attrs.addNew(KwName, SourceRange(KwLoc, EndLoc),
+  if (ArgExprs.empty() || ArgExprs.size() > 3) {
+    Diag(KwLoc, diag::err_ptrauth_qualifier_bad_arg_count);
+    return;
+  }
+
+  Attrs.addNew(KwName, SourceRange(KwLoc, EndLoc),
                /*scope*/ nullptr, SourceLocation(), ArgExprs.data(),
                ArgExprs.size(),
                ParsedAttr::Form::Keyword(/*IsAlignAs=*/false,

@@ -1577,18 +1577,12 @@ bool Sema::checkPointerAuthDiscriminatorArg(Expr *Arg,
   };
 
   if (*Result < 0 || *Result > Max) {
-    llvm::SmallString<32> Value;
-    {
-      llvm::raw_svector_ostream str(Value);
-      str << *Result;
-    }
-
     if (IsAddrDiscArg)
       Diag(Arg->getExprLoc(), diag::err_ptrauth_address_discrimination_invalid)
-          << Value;
+          << Result->getExtValue();
     else
       Diag(Arg->getExprLoc(), diag::err_ptrauth_extra_discriminator_invalid)
-          << Value << Max;
+          << Result->getExtValue() << Max;
 
     return false;
   };
