@@ -49,6 +49,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ConstraintManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CoreEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/DynamicExtent.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopWidening.h"
@@ -67,7 +68,6 @@
 #include "llvm/ADT/ImmutableSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
@@ -90,16 +90,18 @@ using namespace ento;
 
 #define DEBUG_TYPE "ExprEngine"
 
-STATISTIC(NumRemoveDeadBindings,
-            "The # of times RemoveDeadBindings is called");
-STATISTIC(NumMaxBlockCountReached,
-            "The # of aborted paths due to reaching the maximum block count in "
-            "a top level function");
-STATISTIC(NumMaxBlockCountReachedInInlined,
-            "The # of aborted paths due to reaching the maximum block count in "
-            "an inlined function");
-STATISTIC(NumTimesRetriedWithoutInlining,
-            "The # of times we re-evaluated a call without inlining");
+STAT_COUNTER(NumRemoveDeadBindings,
+             "The # of times RemoveDeadBindings is called");
+STAT_COUNTER(
+    NumMaxBlockCountReached,
+    "The # of aborted paths due to reaching the maximum block count in "
+    "a top level function");
+STAT_COUNTER(
+    NumMaxBlockCountReachedInInlined,
+    "The # of aborted paths due to reaching the maximum block count in "
+    "an inlined function");
+STAT_COUNTER(NumTimesRetriedWithoutInlining,
+             "The # of times we re-evaluated a call without inlining");
 
 //===----------------------------------------------------------------------===//
 // Internal program state traits.

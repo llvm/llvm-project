@@ -39,6 +39,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/CheckerRegistryData.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExplodedGraph.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
@@ -54,7 +55,6 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
@@ -82,19 +82,19 @@ using namespace llvm;
 
 #define DEBUG_TYPE "BugReporter"
 
-STATISTIC(MaxBugClassSize,
-          "The maximum number of bug reports in the same equivalence class");
-STATISTIC(MaxValidBugClassSize,
-          "The maximum number of bug reports in the same equivalence class "
-          "where at least one report is valid (not suppressed)");
+STAT_MAX(MaxBugClassSize,
+         "The maximum number of bug reports in the same equivalence class");
+STAT_MAX(MaxValidBugClassSize,
+         "The maximum number of bug reports in the same equivalence class "
+         "where at least one report is valid (not suppressed)");
 
-STATISTIC(NumTimesReportPassesZ3, "Number of reports passed Z3");
-STATISTIC(NumTimesReportRefuted, "Number of reports refuted by Z3");
-STATISTIC(NumTimesReportEQClassAborted,
-          "Number of times a report equivalence class was aborted by the Z3 "
-          "oracle heuristic");
-STATISTIC(NumTimesReportEQClassWasExhausted,
-          "Number of times all reports of an equivalence class was refuted");
+STAT_COUNTER(NumTimesReportPassesZ3, "Number of reports passed Z3");
+STAT_COUNTER(NumTimesReportRefuted, "Number of reports refuted by Z3");
+STAT_COUNTER(NumTimesReportEQClassAborted,
+             "Number of times a report equivalence class was aborted by the Z3 "
+             "oracle heuristic");
+STAT_COUNTER(NumTimesReportEQClassWasExhausted,
+             "Number of times all reports of an equivalence class was refuted");
 
 BugReporterVisitor::~BugReporterVisitor() = default;
 
