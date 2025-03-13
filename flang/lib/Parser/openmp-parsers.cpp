@@ -64,6 +64,11 @@ constexpr auto operator>=(PA checker, PB parser) {
   return lookAhead(checker) >> parser;
 }
 
+// This parser succeeds if the given parser succeeds, and the result
+// satisfies the given condition. Specifically, it succeeds if:
+// 1. The parser given as the argument succeeds, and
+// 2. The condition function (called with PA::resultType) returns true
+//    for the result.
 template <typename PA, typename CF> struct PredicatedParser {
   using resultType = typename PA::resultType;
 
