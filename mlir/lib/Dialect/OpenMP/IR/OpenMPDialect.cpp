@@ -2248,12 +2248,12 @@ LogicalResult TeamsOp::verify() {
 // SectionOp
 //===----------------------------------------------------------------------===//
 
-unsigned SectionOp::numPrivateBlockArgs() {
-  return getParentOp().numPrivateBlockArgs();
+OperandRange SectionOp::getPrivateVars() {
+  return getParentOp().getPrivateVars();
 }
 
-unsigned SectionOp::numReductionBlockArgs() {
-  return getParentOp().numReductionBlockArgs();
+OperandRange SectionOp::getReductionVars() {
+  return getParentOp().getReductionVars();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2724,14 +2724,6 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
                     clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                     makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
-}
-
-SmallVector<Value> TaskloopOp::getAllReductionVars() {
-  SmallVector<Value> allReductionNvars(getInReductionVars().begin(),
-                                       getInReductionVars().end());
-  allReductionNvars.insert(allReductionNvars.end(), getReductionVars().begin(),
-                           getReductionVars().end());
-  return allReductionNvars;
 }
 
 LogicalResult TaskloopOp::verify() {
