@@ -2202,10 +2202,10 @@ define { <3 x i32>, i32 } @v3i32_struct_func_void_wasted_reg() #0 {
 ; GFX11-NEXT:    ds_load_b32 v3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load0 = load volatile i32, ptr addrspace(3) undef
-  %load1 = load volatile i32, ptr addrspace(3) undef
-  %load2 = load volatile i32, ptr addrspace(3) undef
-  %load3 = load volatile i32, ptr addrspace(3) undef
+  %load0 = load volatile i32, ptr addrspace(3) poison
+  %load1 = load volatile i32, ptr addrspace(3) poison
+  %load2 = load volatile i32, ptr addrspace(3) poison
+  %load3 = load volatile i32, ptr addrspace(3) poison
 
   %insert.0 = insertelement <3 x i32> poison, i32 %load0, i32 0
   %insert.1 = insertelement <3 x i32> %insert.0, i32 %load1, i32 1
@@ -2261,10 +2261,10 @@ define { <3 x float>, i32 } @v3f32_struct_func_void_wasted_reg() #0 {
 ; GFX11-NEXT:    ds_load_b32 v3, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %load0 = load volatile float, ptr addrspace(3) undef
-  %load1 = load volatile float, ptr addrspace(3) undef
-  %load2 = load volatile float, ptr addrspace(3) undef
-  %load3 = load volatile i32, ptr addrspace(3) undef
+  %load0 = load volatile float, ptr addrspace(3) poison
+  %load1 = load volatile float, ptr addrspace(3) poison
+  %load2 = load volatile float, ptr addrspace(3) poison
+  %load3 = load volatile i32, ptr addrspace(3) poison
 
   %insert.0 = insertelement <3 x float> poison, float %load0, i32 0
   %insert.1 = insertelement <3 x float> %insert.0, float %load1, i32 1
@@ -2327,9 +2327,9 @@ define void @void_func_sret_max_known_zero_bits(ptr addrspace(5) sret(i8) %arg0)
   %lshr1 = lshr i32 %arg0.int, 17
   %lshr2 = lshr i32 %arg0.int, 18
 
-  store volatile i32 %lshr0, ptr addrspace(3) undef
-  store volatile i32 %lshr1, ptr addrspace(3) undef
-  store volatile i32 %lshr2, ptr addrspace(3) undef
+  store volatile i32 %lshr0, ptr addrspace(3) poison
+  store volatile i32 %lshr1, ptr addrspace(3) poison
+  store volatile i32 %lshr2, ptr addrspace(3) poison
   ret void
 }
 
