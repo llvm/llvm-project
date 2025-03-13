@@ -71,6 +71,9 @@ class TestDAP_gotoTargets(lldbdap_testcase.DAPTestCaseBase):
         self.dap_server.request_next(thread_id)
         self.continue_to_next_stop()
 
+        # Verify that `var_1=10` and `var_2=40`. This combination is only possible by
+        # skipping execution of a line from the original program. Observing this combination
+        # hence proves that our `goto` request actually skipped execution of the code line.
         var1_variable = self.dap_server.get_local_variable("var_1")
         var_1_expected = {
             "name": "var_1",
