@@ -124,6 +124,54 @@ void PositiveInsideConditional() {
   }
 }
 
+void PositiveLambda() {
+  std::mutex m;
+  std::lock_guard<std::mutex> l1(m);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
+  // CHECK-FIXES: std::scoped_lock l1(m);
+  auto lambda1 = [&]() {
+    std::lock_guard<std::mutex> l1(m);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
+    // CHECK-FIXES: std::scoped_lock l1(m);
+  };
+
+  std::lock_guard<std::mutex> l3(m);
+  std::lock_guard<std::mutex> l4(m);
+  // CHECK-MESSAGES: :[[@LINE-2]]:3: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+  // CHECK-MESSAGES: :[[@LINE-2]]:31: note: additional 'std::lock_guard' declared here
+  auto lamda2 = [&]() {
+    std::lock_guard<std::mutex> l3(m);
+    std::lock_guard<std::mutex> l4(m);
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:33: note: additional 'std::lock_guard' declared here
+  };
+
+  auto lamda3 = [&]() {
+    std::lock(m, m);
+    std::lock_guard<std::mutex> l1(m, std::adopt_lock);
+    std::lock_guard<std::mutex> l2(m, std::adopt_lock);
+    // CHECK-MESSAGES: :[[@LINE-2]]:5: warning: use single 'std::scoped_lock' instead of multiple 'std::lock_guard'
+    // CHECK-MESSAGES: :[[@LINE-2]]:33: note: additional 'std::lock_guard' declared here
+    int a = 0;
+    std::lock_guard<std::mutex> l3(m);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
+    // CHECK-FIXES: std::scoped_lock l3(m);
+    int b = 0;
+    std::lock_guard<std::mutex> l4(m, std::adopt_lock);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
+    // CHECK-FIXES: std::scoped_lock l4(std::adopt_lock, m);
+  };
+
+  auto lamda4 = [&]() {
+    std::lock_guard<std::mutex> l1(m);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
+    // CHECK-FIXES: std::scoped_lock l1(m);
+    int a = 0;
+    std::lock_guard<std::mutex> l2(m);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: use 'std::scoped_lock' instead of 'std::lock_guard'
+    // CHECK-FIXES: std::scoped_lock l2(m);
+  };
+}
 
 template <typename T>
 void PositiveTemplated() {
