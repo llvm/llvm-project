@@ -80,47 +80,13 @@ ARMBaseRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
                                        ? CSR_ATPCS_SplitPush_SwiftTail_SaveList
                                        : CSR_AAPCS_SwiftTail_SaveList);
   } else if (F.hasFnAttribute("interrupt")) {
-
-    // Don't bother saving the floating point registers if target is not hard
-    // float. This will prevent the Thumb1FrameLowering (cortex-m0) from
-    // crashing due to an llvm_unreachable being triggered when a D-class
-    // register is in the calling convention.
-    if (STI.isTargetHardFloat() && F.hasFnAttribute("save-fp")) {
-      bool HasNEON = STI.hasNEON();
-
-      if (STI.isMClass()) {
-        assert(!HasNEON && "NEON is only for Cortex-R/A");
-        return UseSplitPush ? CSR_ATPCS_SplitPush_FP_SaveList
-                            : CSR_AAPCS_FP_SaveList;
-      }
-      if (F.getFnAttribute("interrupt").getValueAsString() == "FIQ") {
-        return HasNEON ? CSR_FIQ_FP_NEON_SaveList : CSR_FIQ_FP_SaveList;
-      }
-      return HasNEON ? CSR_GenericInt_FP_NEON_SaveList
-                     : CSR_GenericInt_FP_SaveList;
-    }
-
     if (STI.isMClass()) {
       // M-class CPUs have hardware which saves the registers needed to allow a
       // function conforming to the AAPCS to function as a handler.
-      // Additionally, M Class has hardware support for saving VFP registers,
-      // but the option can be disabled
-      if (SaveFP) {
-        if (HasNEON) {
-          return UseSplitPush ? CSR_AAPCS_SplitPush_FP_NEON_SaveList
-                              : CSR_AAPCS_FP_NEON_SaveList;
-        } else {
-          return UseSplitPush ? CSR_AAPCS_SplitPush_FP_SaveList
-                              : CSR_AAPCS_FP_SaveList;
-        }
-      } else {
-        return PushPopSplit == ARMSubtarget::SplitR7
-          ? CSR_ATPCS_SplitPush_SaveList
-          : CSR_AAPCS_SaveList;
-      }
-    }
-
-    if (F.getFnAttribute("interrupt").getValueAsString() == "FIQ") {
+      return PushPopSplit == ARMSubtarget::SplitR7
+                 ? CSR_ATPCS_SplitPush_SaveList
+                 : CSR_AAPCS_SaveList;
+    } else if (F.getFnAttribute("interrupt").getValueAsString() == "FIQ") {
       // Fast interrupt mode gives the handler a private copy of R8-R14, so less
       // need to be saved to restore user-mode state.
       return CSR_FIQ_SaveList;
