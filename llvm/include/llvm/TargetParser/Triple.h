@@ -463,6 +463,9 @@ public:
 
   const std::string &getTriple() const { return Data; }
 
+  /// Whether the triple is empty / default constructed.
+  bool empty() const { return Data.empty(); }
+
   /// Get the architecture (first) component of the triple.
   StringRef getArchName() const;
 

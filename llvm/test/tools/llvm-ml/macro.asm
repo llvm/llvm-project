@@ -100,6 +100,25 @@ substitution_test_uppercase PROC
   ret
 substitution_test_uppercase ENDP
 
+substitution_test_with_parentheses PROC
+; CHECK-LABEL: substitution_test_with_parentheses:
+
+  SubstitutionMacro(2, 8)
+; CHECK: mov eax, 2
+; CHECK-NEXT: mov eax, 2
+; CHECK-NEXT: mov eax, 2
+; CHECK-NEXT: mov eax, 2
+; CHECK: mov eax, dword ptr [rip + xa1]
+; CHECK-NEXT: mov eax, dword ptr [rip + x2]
+; CHECK-NEXT: mov eax, dword ptr [rip + x2]
+; CHECK: mov eax, 8
+; CHECK-NEXT: mov eax, 8
+; CHECK-NEXT: mov eax, 8
+; CHECK-NEXT: mov eax, 8
+
+  ret
+substitution_test_with_parentheses ENDP
+
 AmbiguousSubstitutionMacro MACRO x, y
   x&y BYTE 0
 ENDM

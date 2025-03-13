@@ -35,6 +35,7 @@
 ; CHECK:   h                                - 'H' (Hypervisor).
 ; CHECK:   i                                - 'I' (Base Integer Instruction Set).
 ; CHECK:   ld-add-fusion                    - Enable LD+ADD macrofusion.
+; CHECK:   log-vrgather                     - Has vrgather.vv with LMUL*log2(LMUL) latency
 ; CHECK:   lui-addi-fusion                  - Enable LUI+ADDI macro fusion.
 ; CHECK:   m                                - 'M' (Integer Multiplication and Division).
 ; CHECK:   mips-p8700                       - MIPS p8700 processor.

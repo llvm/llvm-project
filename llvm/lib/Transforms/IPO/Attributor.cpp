@@ -259,11 +259,15 @@ AA::getInitialValueForObj(Attributor &A, const AbstractAttribute &QueryingAA,
     if (!Initializer)
       return nullptr;
   } else {
-    if (!GV->hasLocalLinkage() &&
-        (GV->isInterposable() || !(GV->isConstant() && GV->hasInitializer())))
-      return nullptr;
-    if (!GV->hasInitializer())
-      return UndefValue::get(&Ty);
+    if (!GV->hasLocalLinkage()) {
+      // Externally visible global that's either non-constant,
+      // or a constant with an uncertain initializer.
+      if (!GV->hasDefinitiveInitializer() || !GV->isConstant())
+        return nullptr;
+    }
+
+    // Globals with local linkage are always initialized.
+    assert(!GV->hasLocalLinkage() || GV->hasInitializer());
 
     if (!Initializer)
       Initializer = GV->getInitializer();
@@ -1478,7 +1482,8 @@ bool Attributor::getAssumedSimplifiedValues(
       // AAPotentialValues.
       const auto *PotentialValuesAA =
           getOrCreateAAFor<AAPotentialValues>(IRP, AA, DepClassTy::OPTIONAL);
-      if (PotentialValuesAA && PotentialValuesAA->getAssumedSimplifiedValues(*this, Values, S)) {
+      if (PotentialValuesAA &&
+          PotentialValuesAA->getAssumedSimplifiedValues(*this, Values, S)) {
         UsedAssumedInformation |= !PotentialValuesAA->isAtFixpoint();
       } else if (IRP.getPositionKind() != IRPosition::IRP_RETURNED) {
         Values.push_back({IRP.getAssociatedValue(), IRP.getCtxI()});

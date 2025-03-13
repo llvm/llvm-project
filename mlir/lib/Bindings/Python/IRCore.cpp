@@ -1291,8 +1291,9 @@ void PyOperation::checkValid() const {
 void PyOperationBase::print(std::optional<int64_t> largeElementsLimit,
                             bool enableDebugInfo, bool prettyDebugInfo,
                             bool printGenericOpForm, bool useLocalScope,
-                            bool assumeVerified, nb::object fileObject,
-                            bool binary, bool skipRegions) {
+                            bool useNameLocAsPrefix, bool assumeVerified,
+                            nb::object fileObject, bool binary,
+                            bool skipRegions) {
   PyOperation &operation = getOperation();
   operation.checkValid();
   if (fileObject.is_none())
@@ -1314,6 +1315,8 @@ void PyOperationBase::print(std::optional<int64_t> largeElementsLimit,
     mlirOpPrintingFlagsAssumeVerified(flags);
   if (skipRegions)
     mlirOpPrintingFlagsSkipRegions(flags);
+  if (useNameLocAsPrefix)
+    mlirOpPrintingFlagsPrintNameLocAsPrefix(flags);
 
   PyFileAccumulator accum(fileObject, binary);
   mlirOperationPrintWithFlags(operation, flags, accum.getCallback(),
@@ -1390,7 +1393,8 @@ nb::object PyOperationBase::getAsm(bool binary,
                                    std::optional<int64_t> largeElementsLimit,
                                    bool enableDebugInfo, bool prettyDebugInfo,
                                    bool printGenericOpForm, bool useLocalScope,
-                                   bool assumeVerified, bool skipRegions) {
+                                   bool useNameLocAsPrefix, bool assumeVerified,
+                                   bool skipRegions) {
   nb::object fileObject;
   if (binary) {
     fileObject = nb::module_::import_("io").attr("BytesIO")();
@@ -1402,6 +1406,7 @@ nb::object PyOperationBase::getAsm(bool binary,
         /*prettyDebugInfo=*/prettyDebugInfo,
         /*printGenericOpForm=*/printGenericOpForm,
         /*useLocalScope=*/useLocalScope,
+        /*useNameLocAsPrefix=*/useNameLocAsPrefix,
         /*assumeVerified=*/assumeVerified,
         /*fileObject=*/fileObject,
         /*binary=*/binary,
@@ -2738,6 +2743,13 @@ void mlir::python::populateIRCore(nb::module_ &m) {
   // __init__.py will subclass it with site-specific functionality and set a
   // "Context" attribute on this module.
   //----------------------------------------------------------------------------
+
+  // Expose DefaultThreadPool to python
+  nb::class_<PyThreadPool>(m, "ThreadPool")
+      .def("__init__", [](PyThreadPool &self) { new (&self) PyThreadPool(); })
+      .def("get_max_concurrency", &PyThreadPool::getMaxConcurrency)
+      .def("_mlir_thread_pool_ptr", &PyThreadPool::_mlir_thread_pool_ptr);
+
   nb::class_<PyMlirContext>(m, "_BaseContext")
       .def("__init__",
            [](PyMlirContext &self) {
@@ -2809,6 +2821,25 @@ void mlir::python::populateIRCore(nb::module_ &m) {
             mlirContextEnableMultithreading(self.get(), enable);
           },
           nb::arg("enable"))
+      .def("set_thread_pool",
+           [](PyMlirContext &self, PyThreadPool &pool) {
+             // we should disable multi-threading first before setting
+             // new thread pool otherwise the assert in
+             // MLIRContext::setThreadPool will be raised.
+             mlirContextEnableMultithreading(self.get(), false);
+             mlirContextSetThreadPool(self.get(), pool.get());
+           })
+      .def("get_num_threads",
+           [](PyMlirContext &self) {
+             return mlirContextGetNumThreads(self.get());
+           })
+      .def("_mlir_thread_pool_ptr",
+           [](PyMlirContext &self) {
+             MlirLlvmThreadPool pool = mlirContextGetThreadPool(self.get());
+             std::stringstream ss;
+             ss << pool.ptr;
+             return ss.str();
+           })
       .def(
           "is_registered_operation",
           [](PyMlirContext &self, std::string &name) {
@@ -2938,6 +2969,9 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("callee"), nb::arg("frames"),
           nb::arg("context").none() = nb::none(),
           kContextGetCallSiteLocationDocstring)
+      .def("is_a_callsite", mlirLocationIsACallSite)
+      .def_prop_ro("callee", mlirLocationCallSiteGetCallee)
+      .def_prop_ro("caller", mlirLocationCallSiteGetCaller)
       .def_static(
           "file",
           [](std::string filename, int line, int col,
@@ -2962,6 +2996,16 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("filename"), nb::arg("start_line"), nb::arg("start_col"),
           nb::arg("end_line"), nb::arg("end_col"),
           nb::arg("context").none() = nb::none(), kContextGetFileRangeDocstring)
+      .def("is_a_file", mlirLocationIsAFileLineColRange)
+      .def_prop_ro("filename",
+                   [](MlirLocation loc) {
+                     return mlirIdentifierStr(
+                         mlirLocationFileLineColRangeGetFilename(loc));
+                   })
+      .def_prop_ro("start_line", mlirLocationFileLineColRangeGetStartLine)
+      .def_prop_ro("start_col", mlirLocationFileLineColRangeGetStartColumn)
+      .def_prop_ro("end_line", mlirLocationFileLineColRangeGetEndLine)
+      .def_prop_ro("end_col", mlirLocationFileLineColRangeGetEndColumn)
       .def_static(
           "fused",
           [](const std::vector<PyLocation> &pyLocations,
@@ -2979,6 +3023,16 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("locations"), nb::arg("metadata").none() = nb::none(),
           nb::arg("context").none() = nb::none(),
           kContextGetFusedLocationDocstring)
+      .def("is_a_fused", mlirLocationIsAFused)
+      .def_prop_ro("locations",
+                   [](MlirLocation loc) {
+                     unsigned numLocations =
+                         mlirLocationFusedGetNumLocations(loc);
+                     std::vector<MlirLocation> locations(numLocations);
+                     if (numLocations)
+                       mlirLocationFusedGetLocations(loc, locations.data());
+                     return locations;
+                   })
       .def_static(
           "name",
           [](std::string name, std::optional<PyLocation> childLoc,
@@ -2993,6 +3047,12 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("name"), nb::arg("childLoc").none() = nb::none(),
           nb::arg("context").none() = nb::none(),
           kContextGetNameLocationDocString)
+      .def("is_a_name", mlirLocationIsAName)
+      .def_prop_ro("name_str",
+                   [](MlirLocation loc) {
+                     return mlirIdentifierStr(mlirLocationNameGetName(loc));
+                   })
+      .def_prop_ro("child_loc", mlirLocationNameGetChildLoc)
       .def_static(
           "from_attr",
           [](PyAttribute &attribute, DefaultingPyMlirContext context) {
@@ -3143,9 +3203,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                      auto &concreteOperation = self.getOperation();
                      concreteOperation.checkValid();
                      MlirOperation operation = concreteOperation.get();
-                     MlirStringRef name =
-                         mlirIdentifierStr(mlirOperationGetName(operation));
-                     return nb::str(name.data, name.length);
+                     return mlirIdentifierStr(mlirOperationGetName(operation));
                    })
       .def_prop_ro("operands",
                    [](PyOperationBase &self) {
@@ -3195,6 +3253,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
                                /*prettyDebugInfo=*/false,
                                /*printGenericOpForm=*/false,
                                /*useLocalScope=*/false,
+                               /*useNameLocAsPrefix=*/false,
                                /*assumeVerified=*/false,
                                /*skipRegions=*/false);
           },
@@ -3206,7 +3265,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
            nb::arg("binary") = false, kOperationPrintStateDocstring)
       .def("print",
            nb::overload_cast<std::optional<int64_t>, bool, bool, bool, bool,
-                             bool, nb::object, bool, bool>(
+                             bool, bool, nb::object, bool, bool>(
                &PyOperationBase::print),
            // Careful: Lots of arguments must match up with print method.
            nb::arg("large_elements_limit").none() = nb::none(),
@@ -3214,6 +3273,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
            nb::arg("pretty_debug_info") = false,
            nb::arg("print_generic_op_form") = false,
            nb::arg("use_local_scope") = false,
+           nb::arg("use_name_loc_as_prefix") = false,
            nb::arg("assume_verified") = false,
            nb::arg("file").none() = nb::none(), nb::arg("binary") = false,
            nb::arg("skip_regions") = false, kOperationPrintDocstring)
@@ -3228,6 +3288,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
            nb::arg("pretty_debug_info") = false,
            nb::arg("print_generic_op_form") = false,
            nb::arg("use_local_scope") = false,
+           nb::arg("use_name_loc_as_prefix") = false,
            nb::arg("assume_verified") = false, nb::arg("skip_regions") = false,
            kOperationGetAsmDocstring)
       .def("verify", &PyOperationBase::verify,
@@ -3730,8 +3791,7 @@ void mlir::python::populateIRCore(nb::module_ &m) {
       .def_prop_ro(
           "name",
           [](PyNamedAttribute &self) {
-            return nb::str(mlirIdentifierStr(self.namedAttr.name).data,
-                           mlirIdentifierStr(self.namedAttr.name).length);
+            return mlirIdentifierStr(self.namedAttr.name);
           },
           "The name of the NamedAttribute binding")
       .def_prop_ro(
@@ -3964,7 +4024,16 @@ void mlir::python::populateIRCore(nb::module_ &m) {
           nb::arg("with"), nb::arg("exceptions"),
           kValueReplaceAllUsesExceptDocstring)
       .def(MLIR_PYTHON_MAYBE_DOWNCAST_ATTR,
-           [](PyValue &self) { return self.maybeDownCast(); });
+           [](PyValue &self) { return self.maybeDownCast(); })
+      .def_prop_ro(
+          "location",
+          [](MlirValue self) {
+            return PyLocation(
+                PyMlirContext::forContext(mlirValueGetContext(self)),
+                mlirValueGetLocation(self));
+          },
+          "Returns the source location the value");
+
   PyBlockArgument::bind(m);
   PyOpResult::bind(m);
   PyOpOperand::bind(m);

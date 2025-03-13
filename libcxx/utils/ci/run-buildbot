@@ -127,6 +127,8 @@ function clean() {
 
 function generate-cmake-base() {
     step "Generating CMake"
+
+    # We can remove -DCMAKE_INSTALL_MESSAGE=NEVER once https://gitlab.kitware.com/cmake/cmake/-/issues/26085 is fixed.
     ${CMAKE} \
           -S "${MONOREPO_ROOT}/runtimes" \
           -B "${BUILD_DIR}" \
@@ -136,6 +138,7 @@ function generate-cmake-base() {
           -DLIBCXX_ENABLE_WERROR=YES \
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
+          -DCMAKE_INSTALL_MESSAGE=NEVER \
           -DLLVM_LIT_ARGS="-sv --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }

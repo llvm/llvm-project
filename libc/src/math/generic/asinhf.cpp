@@ -49,6 +49,7 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
   double x_sign = SIGN[x_u >> 31];
   double x_d = x;
 
+#ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
   // Helper functions to set results for exceptional cases.
   auto round_result_slightly_down = [x_sign](float r) -> float {
     return fputil::multiply_add(static_cast<float>(x_sign), r,
@@ -95,6 +96,10 @@ LLVM_LIBC_FUNCTION(float, asinhf, (float x)) {
       return round_result_slightly_down(0x1.e1b92p3f);
     }
   }
+#else
+  if (LIBC_UNLIKELY(xbits.is_inf_or_nan()))
+    return x;
+#endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
   // asinh(x) = log(x + sqrt(x^2 + 1))
   return static_cast<float>(

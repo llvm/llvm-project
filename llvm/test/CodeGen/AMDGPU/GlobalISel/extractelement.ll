@@ -483,7 +483,7 @@ define amdgpu_ps void @dyn_extract_v8i64_const_s_s(i32 inreg %sel) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x i64> <i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7, i64 8>, i32 %sel
-  store i64 %ext, ptr addrspace(1) undef
+  store i64 %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -628,7 +628,7 @@ define amdgpu_ps void @dyn_extract_v8i64_s_v(<8 x i64> inreg %vec, i32 %sel) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x i64> %vec, i32 %sel
-  store i64 %ext, ptr addrspace(1) undef
+  store i64 %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -744,7 +744,7 @@ define amdgpu_ps void @dyn_extract_v8i64_v_s(<8 x i64> %vec, i32 inreg %sel) {
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x i64> %vec, i32 %sel
-  store i64 %ext, ptr addrspace(1) undef
+  store i64 %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -849,7 +849,7 @@ define amdgpu_ps void @dyn_extract_v8i64_s_s(<8 x i64> inreg %vec, i32 inreg %se
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x i64> %vec, i32 %sel
-  store i64 %ext, ptr addrspace(1) undef
+  store i64 %ext, ptr addrspace(1) poison
   ret void
 }
 
@@ -1800,7 +1800,7 @@ define amdgpu_ps void @dyn_extract_v8p1_s_s(<8 x ptr addrspace(1)> inreg %vec, i
 ; GFX11-NEXT:    s_endpgm
 entry:
   %ext = extractelement <8 x ptr addrspace(1)> %vec, i32 %idx
-  store ptr addrspace(1) %ext, ptr addrspace(1) undef
+  store ptr addrspace(1) %ext, ptr addrspace(1) poison
   ret void
 }
 

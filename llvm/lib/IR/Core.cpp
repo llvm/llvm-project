@@ -321,11 +321,11 @@ void LLVMSetDataLayout(LLVMModuleRef M, const char *DataLayoutStr) {
 
 /*--.. Target triple .......................................................--*/
 const char * LLVMGetTarget(LLVMModuleRef M) {
-  return unwrap(M)->getTargetTriple().c_str();
+  return unwrap(M)->getTargetTriple().str().c_str();
 }
 
-void LLVMSetTarget(LLVMModuleRef M, const char *Triple) {
-  unwrap(M)->setTargetTriple(Triple);
+void LLVMSetTarget(LLVMModuleRef M, const char *TripleStr) {
+  unwrap(M)->setTargetTriple(Triple(TripleStr));
 }
 
 /*--.. Module flags ........................................................--*/

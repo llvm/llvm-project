@@ -67,7 +67,7 @@ extern cl::opt<unsigned> Verbosity;
 
 extern bool processAllFunctions();
 
-cl::opt<bool> CheckEncoding(
+static cl::opt<bool> CheckEncoding(
     "check-encoding",
     cl::desc("perform verification of LLVM instruction encoding/decoding. "
              "Every instruction in the input is decoded and re-encoded. "
@@ -144,14 +144,11 @@ cl::opt<bool>
               cl::desc("print time spent constructing binary functions"),
               cl::Hidden, cl::cat(BoltCategory));
 
-cl::opt<bool>
-TrapOnAVX512("trap-avx512",
-  cl::desc("in relocation mode trap upon entry to any function that uses "
-            "AVX-512 instructions"),
-  cl::init(false),
-  cl::ZeroOrMore,
-  cl::Hidden,
-  cl::cat(BoltCategory));
+static cl::opt<bool> TrapOnAVX512(
+    "trap-avx512",
+    cl::desc("in relocation mode trap upon entry to any function that uses "
+             "AVX-512 instructions"),
+    cl::init(false), cl::ZeroOrMore, cl::Hidden, cl::cat(BoltCategory));
 
 bool shouldPrint(const BinaryFunction &Function) {
   if (Function.isIgnored())
@@ -1333,6 +1330,22 @@ Error BinaryFunction::disassemble() {
         BC.printInstruction(BC.errs(), Instruction, AbsoluteInstrAddr);
         BC.errs() << '\n';
       }
+
+      // Verify that we've symbolized an operand if the instruction has a
+      // relocation against it.
+      if (getRelocationInRange(Offset, Offset + Size)) {
+        bool HasSymbolicOp = false;
+        for (MCOperand &Op : Instruction) {
+          if (Op.isExpr()) {
+            HasSymbolicOp = true;
+            break;
+          }
+        }
+        if (!HasSymbolicOp)
+          return createFatalBOLTError(
+              "expected symbolized operand for instruction at 0x" +
+              Twine::utohexstr(AbsoluteInstrAddr));
+      }
     }
 
     // Special handling for AVX-512 instructions.
@@ -1440,9 +1453,8 @@ Error BinaryFunction::disassemble() {
         if (BC.isAArch64())
           handleAArch64IndirectCall(Instruction, Offset);
       }
-    } else if (BC.isAArch64() || BC.isRISCV()) {
+    } else if (BC.isRISCV()) {
       // Check if there's a relocation associated with this instruction.
-      bool UsedReloc = false;
       for (auto Itr = Relocations.lower_bound(Offset),
                 ItrE = Relocations.lower_bound(Offset + Size);
            Itr != ItrE; ++Itr) {
@@ -1467,24 +1479,6 @@ Error BinaryFunction::disassemble() {
             Relocation.Type);
         (void)Result;
         assert(Result && "cannot replace immediate with relocation");
-
-        // For aarch64, if we replaced an immediate with a symbol from a
-        // relocation, we mark it so we do not try to further process a
-        // pc-relative operand. All we need is the symbol.
-        UsedReloc = true;
-      }
-
-      if (!BC.isRISCV() && MIB->hasPCRelOperand(Instruction) && !UsedReloc) {
-        if (auto NewE = handleErrors(
-                handlePCRelOperand(Instruction, AbsoluteInstrAddr, Size),
-                [&](const BOLTError &E) -> Error {
-                  if (E.isFatal())
-                    return Error(std::make_unique<BOLTError>(std::move(E)));
-                  if (!E.getMessage().empty())
-                    E.log(BC.errs());
-                  return Error::success();
-                }))
-          return Error(std::move(NewE));
       }
     }
 
@@ -1544,15 +1538,11 @@ MCSymbol *BinaryFunction::registerBranch(uint64_t Src, uint64_t Dst) {
 }
 
 void BinaryFunction::analyzeInstructionForFuncReference(const MCInst &Inst) {
-  for (const MCOperand &Op : MCPlus::primeOperands(Inst)) {
-    if (!Op.isExpr())
+  for (unsigned OpNum = 0; OpNum < MCPlus::getNumPrimeOperands(Inst); ++OpNum) {
+    const MCSymbol *Symbol = BC.MIB->getTargetSymbol(Inst, OpNum);
+    if (!Symbol)
       continue;
-    const MCExpr &Expr = *Op.getExpr();
-    if (Expr.getKind() != MCExpr::SymbolRef)
-      continue;
-    const MCSymbol &Symbol = cast<MCSymbolRefExpr>(Expr).getSymbol();
-    // Set HasAddressTaken for a function regardless of the ICF level.
-    if (BinaryFunction *BF = BC.getFunctionForSymbol(&Symbol))
+    if (BinaryFunction *BF = BC.getFunctionForSymbol(Symbol))
       BF->setHasAddressTaken(true);
   }
 }
@@ -1584,8 +1574,9 @@ bool BinaryFunction::scanExternalRefs() {
   assert(FunctionData.size() == getMaxSize() &&
          "function size does not match raw data size");
 
-  BC.SymbolicDisAsm->setSymbolizer(
-      BC.MIB->createTargetSymbolizer(*this, /*CreateSymbols*/ false));
+  if (BC.isX86())
+    BC.SymbolicDisAsm->setSymbolizer(
+        BC.MIB->createTargetSymbolizer(*this, /*CreateSymbols*/ false));
 
   // Disassemble contents of the function. Detect code entry points and create
   // relocations for references to code that will be moved.

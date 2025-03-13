@@ -397,9 +397,9 @@ define amdgpu_kernel void @v_sad_u32_i16_pat2(ptr addrspace(1) %out) {
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    flat_store_short v[0:1], v2
 ; GCN-NEXT:    s_endpgm
-  %a = load volatile i16, ptr addrspace(1) undef
-  %b = load volatile i16, ptr addrspace(1) undef
-  %c = load volatile i16, ptr addrspace(1) undef
+  %a = load volatile i16, ptr addrspace(1) poison
+  %b = load volatile i16, ptr addrspace(1) poison
+  %c = load volatile i16, ptr addrspace(1) poison
   %icmp0 = icmp ugt i16 %a, %b
   %sub0 = sub i16 %a, %b
   %sub1 = sub i16 %b, %a
@@ -456,9 +456,9 @@ define amdgpu_kernel void @v_sad_u32_i8_pat2(ptr addrspace(1) %out) {
 ; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    flat_store_byte v[0:1], v2
 ; GCN-NEXT:    s_endpgm
-  %a = load volatile i8, ptr addrspace(1) undef
-  %b = load volatile i8, ptr addrspace(1) undef
-  %c = load volatile i8, ptr addrspace(1) undef
+  %a = load volatile i8, ptr addrspace(1) poison
+  %b = load volatile i8, ptr addrspace(1) poison
+  %c = load volatile i8, ptr addrspace(1) poison
   %icmp0 = icmp ugt i8 %a, %b
   %sub0 = sub i8 %a, %b
   %sub1 = sub i8 %b, %a

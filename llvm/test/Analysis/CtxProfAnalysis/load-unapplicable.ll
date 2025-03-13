@@ -16,15 +16,16 @@
 ; the GUID present in the module, which is otherwise present in the profile, but not
 ; as a root.
 ;--- profile.yaml
-- Guid: 12341
-  Counters: [9]
-- Guid: 1000
-  Counters: [5]
-- Guid: 34234
-  Counters: [1]
-  Callsites:  -
-                - Guid: 1000
-                  Counters: [6, 7]
+Contexts:
+  - Guid: 12341
+    Counters: [9]
+  - Guid: 1000
+    Counters: [5]
+  - Guid: 34234
+    Counters: [1]
+    Callsites:  -
+                  - Guid: 1000
+                    Counters: [6, 7]
 ;--- example.ll
 declare void @bar()
 

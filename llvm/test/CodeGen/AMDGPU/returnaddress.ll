@@ -73,10 +73,10 @@ declare void @callee()
 define void @multi_use() nounwind {
 entry:
   %ret0 = tail call ptr @llvm.returnaddress(i32 0)
-  store volatile ptr %ret0, ptr addrspace(1) undef
+  store volatile ptr %ret0, ptr addrspace(1) poison
   call void @callee()
   %ret1 = tail call ptr @llvm.returnaddress(i32 0)
-  store volatile ptr %ret1, ptr addrspace(1) undef
+  store volatile ptr %ret1, ptr addrspace(1) poison
   ret void
 }
 

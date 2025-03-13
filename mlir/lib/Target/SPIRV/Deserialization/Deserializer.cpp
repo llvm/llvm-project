@@ -155,7 +155,7 @@ LogicalResult spirv::Deserializer::processHeader() {
 LogicalResult
 spirv::Deserializer::processCapability(ArrayRef<uint32_t> operands) {
   if (operands.size() != 1)
-    return emitError(unknownLoc, "OpMemoryModel must have one parameter");
+    return emitError(unknownLoc, "OpCapability must have one parameter");
 
   auto cap = spirv::symbolizeCapability(operands[0]);
   if (!cap)

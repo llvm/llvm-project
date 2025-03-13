@@ -436,12 +436,11 @@ class OpenMP_GrainsizeClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-  let arguments = (ins
-    Optional<IntLikeType>:$grainsize
-  );
+  let arguments = (ins OptionalAttr<GrainsizeTypeAttr>:$grainsize_mod,
+      Optional<IntLikeType>:$grainsize);
 
   let optAssemblyFormat = [{
-    `grainsize` `(` $grainsize `:` type($grainsize) `)`
+    `grainsize` `(` custom<GrainsizeClause>($grainsize_mod , $grainsize, type($grainsize)) `)`
   }];
 
   let description = [{
@@ -463,14 +462,13 @@ class OpenMP_HasDeviceAddrClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
+  let traits = [
+    BlockArgOpenMPOpInterface
+  ];
+
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$has_device_addr_vars
   );
-
-  let optAssemblyFormat = [{
-    `has_device_addr` `(` $has_device_addr_vars `:` type($has_device_addr_vars)
-                      `)`
-  }];
 
   let description = [{
     The optional `has_device_addr_vars` indicates that list items already have
@@ -561,12 +559,6 @@ class OpenMP_HostEvalClauseSkip<
     Variadic<AnyType>:$host_eval_vars
   );
 
-  let extraClassDeclaration = [{
-    unsigned numHostEvalBlockArgs() {
-      return getHostEvalVars().size();
-    }
-  }];
-
   let description = [{
     The optional `host_eval_vars` holds values defined outside of the region of
     the `IsolatedFromAbove` operation for which a corresponding entry block
@@ -625,12 +617,10 @@ class OpenMP_InReductionClauseSkip<
 
   let extraClassDeclaration = [{
     /// Returns the reduction variables.
-    SmallVector<Value> getReductionVars() {
+    SmallVector<Value> getAllReductionVars() {
       return SmallVector<Value>(getInReductionVars().begin(),
                                 getInReductionVars().end());
     }
-
-    unsigned numInReductionBlockArgs() { return getInReductionVars().size(); }
   }];
 
   // Description varies depending on the operation. Assembly format not defined
@@ -745,6 +735,9 @@ class OpenMP_MapClauseSkip<
     Variadic<OpenMP_PointerLikeType>:$map_vars
   );
 
+  // This assembly format should only be used by operations where `map` does not
+  // define entry block arguments. Otherwise, it must be printed and parsed
+  // together with the corresponding region.
   let optAssemblyFormat = [{
     `map_entries` `(` $map_vars `:` type($map_vars) `)`
   }];
@@ -895,12 +888,11 @@ class OpenMP_NumTasksClauseSkip<
     bit description = false, bit extraClassDeclaration = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
-  let arguments = (ins
-    Optional<IntLikeType>:$num_tasks
-  );
+  let arguments = (ins OptionalAttr<NumTasksTypeAttr>:$num_tasks_mod,
+      Optional<IntLikeType>:$num_tasks);
 
   let optAssemblyFormat = [{
-    `num_tasks` `(` $num_tasks `:` type($num_tasks) `)`
+    `num_tasks` `(` custom<NumTasksClause>($num_tasks_mod , $num_tasks, type($num_tasks)) `)`
   }];
 
   let description = [{
@@ -1057,8 +1049,6 @@ class OpenMP_DetachClauseSkip<
     : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
 
-  let traits = [BlockArgOpenMPOpInterface];
-
   let arguments = (ins Optional<OpenMP_PointerLikeType>:$event_handle);
 
   let optAssemblyFormat = [{
@@ -1123,10 +1113,6 @@ class OpenMP_PrivateClauseSkip<
     OptionalAttr<SymbolRefArrayAttr>:$private_syms
   );
 
-  let extraClassDeclaration = [{
-    unsigned numPrivateBlockArgs() { return getPrivateVars().size(); }
-  }];
-
   // TODO: Add description.
   // Assembly format not defined because this clause must be processed together
   // with the first region of the operation, as it defines entry block
@@ -1183,7 +1169,6 @@ class OpenMP_ReductionClauseSkip<
   let extraClassDeclaration = [{
     /// Returns the number of reduction variables.
     unsigned getNumReductionVars() { return getReductionVars().size(); }
-    unsigned numReductionBlockArgs() { return getReductionVars().size(); }
   }];
 
   // Description varies depending on the operation.
@@ -1313,13 +1298,9 @@ class OpenMP_TaskReductionClauseSkip<
 
   let extraClassDeclaration = [{
     /// Returns the reduction variables.
-    SmallVector<Value> getReductionVars() {
+    SmallVector<Value> getAllReductionVars() {
       return SmallVector<Value>(getTaskReductionVars().begin(),
                                 getTaskReductionVars().end());
-    }
-
-    unsigned numTaskReductionBlockArgs() {
-      return getTaskReductionVars().size();
     }
   }];
 
@@ -1410,12 +1391,6 @@ class OpenMP_UseDeviceAddrClauseSkip<
     Variadic<OpenMP_PointerLikeType>:$use_device_addr_vars
   );
 
-  let extraClassDeclaration = [{
-    unsigned numUseDeviceAddrBlockArgs() {
-      return getUseDeviceAddrVars().size();
-    }
-  }];
-
   let description = [{
     The optional `use_device_addr_vars` specifies the address of the objects in
     the device data environment.
@@ -1444,12 +1419,6 @@ class OpenMP_UseDevicePtrClauseSkip<
   let arguments = (ins
     Variadic<OpenMP_PointerLikeType>:$use_device_ptr_vars
   );
-
-  let extraClassDeclaration = [{
-    unsigned numUseDevicePtrBlockArgs() {
-      return getUseDevicePtrVars().size();
-    }
-  }];
 
   let description = [{
     The optional `use_device_ptr_vars` specifies the device pointers to the

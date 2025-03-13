@@ -94,7 +94,8 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
     Bits ElemSize = Bits(Ctx.getASTContext().getTypeSize(ElemType));
     PrimType ElemT = *Ctx.classify(ElemType);
     // Special case, since the bools here are packed.
-    bool PackedBools = FieldDesc->getType()->isExtVectorBoolType();
+    bool PackedBools =
+        FieldDesc->getType()->isPackedVectorBoolType(Ctx.getASTContext());
     unsigned NumElems = FieldDesc->getNumElems();
     bool Ok = true;
     for (unsigned I = P.getIndex(); I != NumElems; ++I) {
@@ -227,7 +228,7 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
     QualType EltTy = VT->getElementType();
     unsigned NElts = VT->getNumElements();
     unsigned EltSize =
-        VT->isExtVectorBoolType() ? 1 : ASTCtx.getTypeSize(EltTy);
+        VT->isPackedVectorBoolType(ASTCtx) ? 1 : ASTCtx.getTypeSize(EltTy);
 
     if ((NElts * EltSize) % ASTCtx.getCharWidth() != 0) {
       // The vector's size in bits is not a multiple of the target's byte size,

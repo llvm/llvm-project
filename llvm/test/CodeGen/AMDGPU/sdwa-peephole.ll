@@ -1992,13 +1992,13 @@ entry:
   %tmp7 = extractelement <8 x i8> %tmp, i32 6
   %tmp8 = extractelement <8 x i8> %tmp, i32 7
 
-  %tmp9 = insertelement <2 x i8> undef, i8 %tmp1, i32 0
+  %tmp9 = insertelement <2 x i8> poison, i8 %tmp1, i32 0
   %tmp10 = insertelement <2 x i8> %tmp9, i8 %tmp2, i32 1
-  %tmp11 = insertelement <2 x i8> undef, i8 %tmp3, i32 0
+  %tmp11 = insertelement <2 x i8> poison, i8 %tmp3, i32 0
   %tmp12 = insertelement <2 x i8> %tmp11, i8 %tmp4, i32 1
-  %tmp13 = insertelement <2 x i8> undef, i8 %tmp5, i32 0
+  %tmp13 = insertelement <2 x i8> poison, i8 %tmp5, i32 0
   %tmp14 = insertelement <2 x i8> %tmp13, i8 %tmp6, i32 1
-  %tmp15 = insertelement <2 x i8> undef, i8 %tmp7, i32 0
+  %tmp15 = insertelement <2 x i8> poison, i8 %tmp7, i32 0
   %tmp16 = insertelement <2 x i8> %tmp15, i8 %tmp8, i32 1
 
   %tmp17 = shufflevector <2 x i8> %tmp10, <2 x i8> %tmp12, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -2016,7 +2016,6 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; NOSDWA:       ; %bb.0: ; %bb
 ; NOSDWA-NEXT:    s_mov_b32 s0, 0xffff
 ; NOSDWA-NEXT:    s_and_b64 vcc, exec, -1
-; NOSDWA-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; NOSDWA-NEXT:  .LBB21_1: ; %bb1
 ; NOSDWA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; NOSDWA-NEXT:    ;;#ASMSTART
@@ -2034,7 +2033,6 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX89:       ; %bb.0: ; %bb
 ; GFX89-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX89-NEXT:    s_and_b64 vcc, exec, -1
-; GFX89-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX89-NEXT:  .LBB21_1: ; %bb1
 ; GFX89-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX89-NEXT:    ;;#ASMSTART
@@ -2052,7 +2050,6 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX9:       ; %bb.0: ; %bb
 ; GFX9-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX9-NEXT:    s_and_b64 vcc, exec, -1
-; GFX9-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX9-NEXT:  .LBB21_1: ; %bb1
 ; GFX9-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX9-NEXT:    ;;#ASMSTART
@@ -2070,7 +2067,6 @@ define amdgpu_kernel void @sdwa_crash_inlineasm_def() #0 {
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_mov_b32 s0, 0xffff
 ; GFX10-NEXT:    s_mov_b32 vcc_lo, exec_lo
-; GFX10-NEXT:    ; implicit-def: $vgpr0_vgpr1
 ; GFX10-NEXT:  .LBB21_1: ; %bb1
 ; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    ;;#ASMSTART
@@ -2086,7 +2082,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb11, %bb
-  %tmp = phi <2 x i32> [ %tmp12, %bb11 ], [ undef, %bb ]
+  %tmp = phi <2 x i32> [ %tmp12, %bb11 ], [ poison, %bb ]
   br i1 true, label %bb2, label %bb11
 
 bb2:                                              ; preds = %bb1
@@ -2097,7 +2093,7 @@ bb2:                                              ; preds = %bb1
 
 bb11:                                             ; preds = %bb10, %bb2
   %tmp12 = phi <2 x i32> [ %tmp6, %bb2 ], [ %tmp, %bb1 ]
-  store volatile <2 x i32> %tmp12, ptr addrspace(1) undef
+  store volatile <2 x i32> %tmp12, ptr addrspace(1) poison
   br label %bb1
 }
 

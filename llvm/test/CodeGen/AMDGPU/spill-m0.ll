@@ -114,11 +114,11 @@ main_body:
    br i1 %cmp, label %if, label %else
 
 if:                                               ; preds = %main_body
-  store volatile i32 8, ptr addrspace(1) undef
+  store volatile i32 8, ptr addrspace(1) poison
   br label %endif
 
 else:                                             ; preds = %main_body
-  store volatile i32 11, ptr addrspace(1) undef
+  store volatile i32 11, ptr addrspace(1) poison
   br label %endif
 
 endif:

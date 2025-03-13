@@ -30,6 +30,21 @@ static cl::opt<AsmWriterVariantTy> AsmWriterVariant(
     cl::values(clEnumValN(Generic, "generic", "Emit generic NEON assembly"),
                clEnumValN(Apple, "apple", "Emit Apple-style NEON assembly")));
 
+const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+    {MCSymbolRefExpr::VK_COFF_IMGREL32, "IMGREL"},
+    {MCSymbolRefExpr::VK_GOT, "GOT"},
+    {MCSymbolRefExpr::VK_GOTPAGE, "GOTPAGE"},
+    {MCSymbolRefExpr::VK_GOTPAGEOFF, "GOTPAGEOFF"},
+    {MCSymbolRefExpr::VK_GOTPCREL, "GOTPCREL"},
+    {MCSymbolRefExpr::VK_PAGE, "PAGE"},
+    {MCSymbolRefExpr::VK_PAGEOFF, "PAGEOFF"},
+    {MCSymbolRefExpr::VK_PLT, "PLT"},
+    {MCSymbolRefExpr::VK_TLVP, "TLVP"},
+    {MCSymbolRefExpr::VK_TLVPPAGE, "TLVPPAGE"},
+    {MCSymbolRefExpr::VK_TLVPPAGEOFF, "TLVPPAGEOFF"},
+    {MCSymbolRefExpr::VK_WEAKREF, "WEAKREF"},
+};
+
 AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
   // We prefer NEON instructions to be printed in the short, Apple-specific
   // form when targeting Darwin.
@@ -48,6 +63,8 @@ AArch64MCAsmInfoDarwin::AArch64MCAsmInfoDarwin(bool IsILP32) {
   UseDataRegionDirectives = true;
 
   ExceptionsType = ExceptionHandling::DwarfCFI;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 const MCExpr *AArch64MCAsmInfoDarwin::getExprForPersonalitySymbol(
@@ -97,6 +114,8 @@ AArch64MCAsmInfoELF::AArch64MCAsmInfoELF(const Triple &T) {
   ExceptionsType = ExceptionHandling::DwarfCFI;
 
   HasIdentDirective = true;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
@@ -114,6 +133,8 @@ AArch64MCAsmInfoMicrosoftCOFF::AArch64MCAsmInfoMicrosoftCOFF() {
   CommentString = "//";
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
+
+  initializeVariantKinds(variantKindDescs);
 }
 
 AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
@@ -131,4 +152,6 @@ AArch64MCAsmInfoGNUCOFF::AArch64MCAsmInfoGNUCOFF() {
   CommentString = "//";
   ExceptionsType = ExceptionHandling::WinEH;
   WinEHEncodingType = WinEH::EncodingType::Itanium;
+
+  initializeVariantKinds(variantKindDescs);
 }

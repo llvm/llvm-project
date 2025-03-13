@@ -1495,7 +1495,7 @@ def note_previous_map_type_specified_here
     : Note<"map type '%0' is previous specified here">;
 def err_omp_unknown_map_type_modifier : Error<
   "incorrect map type modifier, expected one of: 'always', 'close', 'mapper'"
-  "%select{|, 'present'|, 'present', 'iterator'}0%select{|, 'ompx_hold'}1">;
+  "%select{|, 'present'|, 'present', 'iterator'}0%select{|, 'ompx_hold'}1%select{|, 'self'}2">;
 def err_omp_map_type_missing : Error<
   "missing map type">;
 def err_omp_map_type_modifier_missing : Error<
@@ -1817,5 +1817,9 @@ def ext_hlsl_access_specifiers : ExtWarn<
   InGroup<HLSLExtension>;
 def err_hlsl_unsupported_component : Error<"invalid component '%0' used; expected 'x', 'y', 'z', or 'w'">;
 def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%0' for packoffset, expected 'c'">;
+def err_hlsl_virtual_function
+    : Error<"virtual functions are unsupported in HLSL">;
+def err_hlsl_virtual_inheritance
+    : Error<"virtual inheritance is unsupported in HLSL">;
 
 } // end of Parser diagnostics

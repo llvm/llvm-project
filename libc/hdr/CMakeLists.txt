@@ -184,6 +184,15 @@ add_proxy_header_library(
 )
 
 add_proxy_header_library(
+  locale_macros
+  HDRS
+    locale_macros.h
+  FULL_BUILD_DEPENDS
+    libc.include.llvm-libc-macros.locale_macros
+    libc.include.locale
+)
+
+add_proxy_header_library(
   sys_auxv_macros
   HDRS
     sys_auxv_macros.h

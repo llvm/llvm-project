@@ -136,6 +136,8 @@ public:
     switch (ext) {
     case Extension::int16:
     case Extension::int4:
+    case Extension::doubleround:
+    case Extension::inexactround:
       return {Profile::pro_int};
     case Extension::bf16:
     case Extension::fp8e4m3:
@@ -148,6 +150,7 @@ public:
     case Extension::none:
       return {};
     };
+    llvm_unreachable("bad Extension type");
   }
 
   // Debug utilites.

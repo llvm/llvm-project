@@ -349,8 +349,8 @@ struct FunctionResult {
 
 // 15.3.1
 struct Procedure {
-  ENUM_CLASS(
-      Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer, Subroutine)
+  ENUM_CLASS(Attr, Pure, Elemental, BindC, ImplicitInterface, NullPointer,
+      NullAllocatable, Subroutine)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
   Procedure(){};
   Procedure(FunctionResult &&, DummyArguments &&, Attrs);

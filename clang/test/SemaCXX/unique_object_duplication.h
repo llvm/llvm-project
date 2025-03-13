@@ -165,81 +165,17 @@ namespace GlobalTest {
 
 namespace TemplateTest {
 
-template <typename T>
-int disallowedTemplate1 = 0; // hidden-warning {{'disallowedTemplate1<int>' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
-
-template int disallowedTemplate1<int>; // hidden-note {{in instantiation of}}
-
-
-// Should work for implicit instantiation as well
-template <typename T>
-int disallowedTemplate2 = 0; // hidden-warning {{'disallowedTemplate2<int>' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
-
-int implicit_instantiate() {
-  return disallowedTemplate2<int>; // hidden-note {{in instantiation of}}
-}
-
-
-// Ensure we only get warnings for templates that are actually instantiated
-template <typename T>
-int maybeAllowedTemplate = 0; // Not instantiated, so no warning here
+// We never warn inside templates because it's frequently infeasible to actually
+// fix the warning.
 
 template <typename T>
-int maybeAllowedTemplate<T*> = 1; // hidden-warning {{'maybeAllowedTemplate<int *>' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
+int allowedTemplate1 = 0;
 
-template <>
-int maybeAllowedTemplate<bool> = 2; // hidden-warning {{'maybeAllowedTemplate<bool>' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
-
-template int maybeAllowedTemplate<int*>; // hidden-note {{in instantiation of}}
-
-
-
-// Should work the same for static class members
-template <typename T>
-struct S {
-  static int staticMember;
-};
+template int allowedTemplate1<int>;
 
 template <typename T>
-int S<T>::staticMember = 0; // Never instantiated
+inline int allowedTemplate2 = 0;
 
-// T* specialization
-template <typename T>
-struct S<T*> {
-  static int staticMember;
-};
+template int allowedTemplate2<int>;
 
-template <typename T>
-int S<T*>::staticMember = 1; // hidden-warning {{'staticMember' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
-
-template class S<int*>; // hidden-note {{in instantiation of}}
-
-// T& specialization, implicitly instantiated
-template <typename T>
-struct S<T&> {
-  static int staticMember;
-};
-
-template <typename T>
-int S<T&>::staticMember = 2; // hidden-warning {{'staticMember' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
-
-int implicit_instantiate2() {
-  return S<bool&>::staticMember; // hidden-note {{in instantiation of}}
-}
-
-
-// Should work for static locals as well
-template <typename T>
-int* wrapper() {
-  static int staticLocal; // hidden-warning {{'staticLocal' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
-  return &staticLocal;
-}
-
-template <>
-int* wrapper<int*>() {
-  static int staticLocal; // hidden-warning {{'staticLocal' may be duplicated when built into a shared library: it is mutable, has hidden visibility, and external linkage}}
-  return &staticLocal;
-}
-
-auto dummy = wrapper<bool>(); // hidden-note {{in instantiation of}}
 } // namespace TemplateTest

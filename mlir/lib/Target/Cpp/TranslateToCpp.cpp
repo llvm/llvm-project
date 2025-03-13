@@ -613,8 +613,10 @@ static LogicalResult printOperation(CppEmitter &emitter,
   Block &trueSuccessor = *condBranchOp.getTrueDest();
   Block &falseSuccessor = *condBranchOp.getFalseDest();
 
-  os << "if (" << emitter.getOrCreateName(condBranchOp.getCondition())
-     << ") {\n";
+  os << "if (";
+  if (failed(emitter.emitOperand(condBranchOp.getCondition())))
+    return failure();
+  os << ") {\n";
 
   os.indent();
 

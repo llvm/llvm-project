@@ -215,9 +215,9 @@ define amdgpu_kernel void @s_abs_v2i16_2(ptr addrspace(1) %out, <2 x i16> %val) 
 ; CI-NEXT:    v_mov_b32_e32 v0, s4
 ; CI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
-  %z0 = insertelement <2 x i16> undef, i16 0, i16 0
+  %z0 = insertelement <2 x i16> poison, i16 0, i16 0
   %z1 = insertelement <2 x i16> %z0, i16 0, i16 1
-  %t0 = insertelement <2 x i16> undef, i16 2, i16 0
+  %t0 = insertelement <2 x i16> poison, i16 2, i16 0
   %t1 = insertelement <2 x i16> %t0, i16 2, i16 1
   %neg = sub <2 x i16> %z1, %val
   %cond = icmp sgt <2 x i16> %val, %neg
@@ -297,9 +297,9 @@ define amdgpu_kernel void @v_abs_v2i16_2(ptr addrspace(1) %out, ptr addrspace(1)
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, 0x20000, v0
 ; CI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; CI-NEXT:    s_endpgm
-  %z0 = insertelement <2 x i16> undef, i16 0, i16 0
+  %z0 = insertelement <2 x i16> poison, i16 0, i16 0
   %z1 = insertelement <2 x i16> %z0, i16 0, i16 1
-  %t0 = insertelement <2 x i16> undef, i16 2, i16 0
+  %t0 = insertelement <2 x i16> poison, i16 2, i16 0
   %t1 = insertelement <2 x i16> %t0, i16 2, i16 1
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds <2 x i16>, ptr addrspace(1) %src, i32 %tid
@@ -406,11 +406,11 @@ define amdgpu_kernel void @s_abs_v4i16(ptr addrspace(1) %out, <4 x i16> %val) #0
 ; CI-NEXT:    v_mov_b32_e32 v1, s0
 ; CI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; CI-NEXT:    s_endpgm
-  %z0 = insertelement <4 x i16> undef, i16 0, i16 0
+  %z0 = insertelement <4 x i16> poison, i16 0, i16 0
   %z1 = insertelement <4 x i16> %z0, i16 0, i16 1
   %z2 = insertelement <4 x i16> %z1, i16 0, i16 2
   %z3 = insertelement <4 x i16> %z2, i16 0, i16 3
-  %t0 = insertelement <4 x i16> undef, i16 2, i16 0
+  %t0 = insertelement <4 x i16> poison, i16 2, i16 0
   %t1 = insertelement <4 x i16> %t0, i16 2, i16 1
   %t2 = insertelement <4 x i16> %t1, i16 2, i16 2
   %t3 = insertelement <4 x i16> %t2, i16 2, i16 3
@@ -518,11 +518,11 @@ define amdgpu_kernel void @v_abs_v4i16(ptr addrspace(1) %out, ptr addrspace(1) %
 ; CI-NEXT:    v_add_i32_e32 v0, vcc, 0x20000, v0
 ; CI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[0:3], 0
 ; CI-NEXT:    s_endpgm
-  %z0 = insertelement <4 x i16> undef, i16 0, i16 0
+  %z0 = insertelement <4 x i16> poison, i16 0, i16 0
   %z1 = insertelement <4 x i16> %z0, i16 0, i16 1
   %z2 = insertelement <4 x i16> %z1, i16 0, i16 2
   %z3 = insertelement <4 x i16> %z2, i16 0, i16 3
-  %t0 = insertelement <4 x i16> undef, i16 2, i16 0
+  %t0 = insertelement <4 x i16> poison, i16 2, i16 0
   %t1 = insertelement <4 x i16> %t0, i16 2, i16 1
   %t2 = insertelement <4 x i16> %t1, i16 2, i16 2
   %t3 = insertelement <4 x i16> %t2, i16 2, i16 3
@@ -995,7 +995,7 @@ define amdgpu_kernel void @v_min_max_v2i16_user(ptr addrspace(1) %out0, ptr addr
 
   store volatile <2 x i16> %sel0, ptr addrspace(1) %out0, align 4
   store volatile <2 x i16> %sel1, ptr addrspace(1) %out1, align 4
-  store volatile <2 x i1> %cond0, ptr addrspace(1) undef
+  store volatile <2 x i1> %cond0, ptr addrspace(1) poison
   ret void
 }
 

@@ -115,6 +115,16 @@ __gpu_is_first_in_lane(uint64_t __lane_mask) {
   return __gpu_lane_id() == __gpu_first_lane_id(__lane_mask);
 }
 
+// Copies the value from the first active thread in the wavefront to the rest.
+_DEFAULT_FN_ATTRS static __inline__ uint64_t
+__gpu_read_first_lane_u64(uint64_t __lane_mask, uint64_t __x) {
+  uint32_t __hi = (uint32_t)(__x >> 32ull);
+  uint32_t __lo = (uint32_t)(__x & 0xFFFFFFFFull);
+  return ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __hi) << 32ull) |
+         ((uint64_t)__gpu_read_first_lane_u32(__lane_mask, __lo) &
+          0xFFFFFFFFull);
+}
+
 // Gets the first floating point value from the active lanes.
 _DEFAULT_FN_ATTRS static __inline__ float
 __gpu_read_first_lane_f32(uint64_t __lane_mask, float __x) {

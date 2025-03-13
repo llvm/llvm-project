@@ -66,12 +66,12 @@ define i32 @combine_add_zext_xor() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %.2.0.in = xor i1 %.2.0.in.in, true
   %.2.0 = zext i1 %.2.0.in to i32
   %i11 = add i32 %.2, %.2.0
@@ -146,12 +146,12 @@ define i32 @combine_sub_zext_xor() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %.2.0.in = xor i1 %.2.0.in.in, true
   %.2.0 = zext i1 %.2.0.in to i32
   %i11 = sub i32 %.2, %.2.0
@@ -229,12 +229,12 @@ define i32 @combine_add_zext_or() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = or i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32
@@ -313,12 +313,12 @@ define i32 @combine_sub_zext_or() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = or i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32
@@ -392,12 +392,12 @@ define i32 @combine_add_zext_and() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = and i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32
@@ -471,12 +471,12 @@ define i32 @combine_sub_zext_and() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = and i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32

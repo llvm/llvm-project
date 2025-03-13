@@ -98,12 +98,12 @@ class PPCFastISel final : public FastISel {
     // Backend specific FastISel code.
   private:
     bool fastSelectInstruction(const Instruction *I) override;
-    unsigned fastMaterializeConstant(const Constant *C) override;
-    unsigned fastMaterializeAlloca(const AllocaInst *AI) override;
+    Register fastMaterializeConstant(const Constant *C) override;
+    Register fastMaterializeAlloca(const AllocaInst *AI) override;
     bool tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
                              const LoadInst *LI) override;
     bool fastLowerArguments() override;
-    unsigned fastEmit_i(MVT Ty, MVT RetTy, unsigned Opc, uint64_t Imm) override;
+    Register fastEmit_i(MVT Ty, MVT RetTy, unsigned Opc, uint64_t Imm) override;
     unsigned fastEmitInst_ri(unsigned MachineInstOpcode,
                              const TargetRegisterClass *RC,
                              unsigned Op0, uint64_t Imm);
@@ -2242,11 +2242,12 @@ unsigned PPCFastISel::PPCMaterializeInt(const ConstantInt *CI, MVT VT,
 
 // Materialize a constant into a register, and return the register
 // number (or zero if we failed to handle it).
-unsigned PPCFastISel::fastMaterializeConstant(const Constant *C) {
+Register PPCFastISel::fastMaterializeConstant(const Constant *C) {
   EVT CEVT = TLI.getValueType(DL, C->getType(), true);
 
   // Only handle simple types.
-  if (!CEVT.isSimple()) return 0;
+  if (!CEVT.isSimple())
+    return Register();
   MVT VT = CEVT.getSimpleVT();
 
   if (const ConstantFP *CFP = dyn_cast<ConstantFP>(C))
@@ -2261,17 +2262,19 @@ unsigned PPCFastISel::fastMaterializeConstant(const Constant *C) {
     // instruction selection.
     return PPCMaterializeInt(CI, VT, false);
 
-  return 0;
+  return Register();
 }
 
 // Materialize the address created by an alloca into a register, and
 // return the register number (or zero if we failed to handle it).
-unsigned PPCFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
+Register PPCFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
   // Don't handle dynamic allocas.
-  if (!FuncInfo.StaticAllocaMap.count(AI)) return 0;
+  if (!FuncInfo.StaticAllocaMap.count(AI))
+    return Register();
 
   MVT VT;
-  if (!isLoadTypeLegal(AI->getType(), VT)) return 0;
+  if (!isLoadTypeLegal(AI->getType(), VT))
+    return Register();
 
   DenseMap<const AllocaInst*, int>::iterator SI =
     FuncInfo.StaticAllocaMap.find(AI);
@@ -2283,7 +2286,7 @@ unsigned PPCFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
     return ResultReg;
   }
 
-  return 0;
+  return Register();
 }
 
 // Fold loads into extends when possible.
@@ -2379,10 +2382,10 @@ bool PPCFastISel::fastLowerArguments() {
 
 // Handle materializing integer constants into a register.  This is not
 // automatically generated for PowerPC, so must be explicitly created here.
-unsigned PPCFastISel::fastEmit_i(MVT Ty, MVT VT, unsigned Opc, uint64_t Imm) {
+Register PPCFastISel::fastEmit_i(MVT Ty, MVT VT, unsigned Opc, uint64_t Imm) {
 
   if (Opc != ISD::Constant)
-    return 0;
+    return Register();
 
   // If we're using CR bit registers for i1 values, handle that as a special
   // case first.
@@ -2395,7 +2398,7 @@ unsigned PPCFastISel::fastEmit_i(MVT Ty, MVT VT, unsigned Opc, uint64_t Imm) {
 
   if (VT != MVT::i64 && VT != MVT::i32 && VT != MVT::i16 && VT != MVT::i8 &&
       VT != MVT::i1)
-    return 0;
+    return Register();
 
   const TargetRegisterClass *RC = ((VT == MVT::i64) ? &PPC::G8RCRegClass :
                                    &PPC::GPRCRegClass);

@@ -511,18 +511,8 @@ struct LoopInterchange {
     for (unsigned j = SelecLoopId; j > 0; j--) {
       bool ChangedPerIter = false;
       for (unsigned i = SelecLoopId; i > SelecLoopId - j; i--) {
-        bool Interchanged = processLoop(LoopList[i], LoopList[i - 1], i, i - 1,
-                                        DependencyMatrix, CostMap);
-        if (!Interchanged)
-          continue;
-        // Loops interchanged, update LoopList accordingly.
-        std::swap(LoopList[i - 1], LoopList[i]);
-        // Update the DependencyMatrix
-        interChangeDependencies(DependencyMatrix, i, i - 1);
-
-        LLVM_DEBUG(dbgs() << "Dependency matrix after interchange:\n";
-                   printDepMatrix(DependencyMatrix));
-
+        bool Interchanged =
+            processLoop(LoopList, i, i - 1, DependencyMatrix, CostMap);
         ChangedPerIter |= Interchanged;
         Changed |= Interchanged;
       }
@@ -534,10 +524,12 @@ struct LoopInterchange {
     return Changed;
   }
 
-  bool processLoop(Loop *InnerLoop, Loop *OuterLoop, unsigned InnerLoopId,
+  bool processLoop(SmallVectorImpl<Loop *> &LoopList, unsigned InnerLoopId,
                    unsigned OuterLoopId,
                    std::vector<std::vector<char>> &DependencyMatrix,
                    const DenseMap<const Loop *, unsigned> &CostMap) {
+    Loop *OuterLoop = LoopList[OuterLoopId];
+    Loop *InnerLoop = LoopList[InnerLoopId];
     LLVM_DEBUG(dbgs() << "Processing InnerLoopId = " << InnerLoopId
                       << " and OuterLoopId = " << OuterLoopId << "\n");
     LoopInterchangeLegality LIL(OuterLoop, InnerLoop, SE, ORE);
@@ -566,6 +558,15 @@ struct LoopInterchange {
     LoopsInterchanged++;
 
     llvm::formLCSSARecursively(*OuterLoop, *DT, LI, SE);
+
+    // Loops interchanged, update LoopList accordingly.
+    std::swap(LoopList[OuterLoopId], LoopList[InnerLoopId]);
+    // Update the DependencyMatrix
+    interChangeDependencies(DependencyMatrix, InnerLoopId, OuterLoopId);
+
+    LLVM_DEBUG(dbgs() << "Dependency matrix after interchange:\n";
+               printDepMatrix(DependencyMatrix));
+
     return true;
   }
 };
@@ -1133,21 +1134,24 @@ LoopInterchangeProfitability::isProfitablePerLoopCacheAnalysis(
   // This is the new cost model returned from loop cache analysis.
   // A smaller index means the loop should be placed an outer loop, and vice
   // versa.
-  if (CostMap.contains(InnerLoop) && CostMap.contains(OuterLoop)) {
-    unsigned InnerIndex = 0, OuterIndex = 0;
-    InnerIndex = CostMap.find(InnerLoop)->second;
-    OuterIndex = CostMap.find(OuterLoop)->second;
-    LLVM_DEBUG(dbgs() << "InnerIndex = " << InnerIndex
-                      << ", OuterIndex = " << OuterIndex << "\n");
-    if (InnerIndex < OuterIndex)
-      return std::optional<bool>(true);
-    assert(InnerIndex != OuterIndex && "CostMap should assign unique "
-                                       "numbers to each loop");
-    if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
-      return std::nullopt;
-    return std::optional<bool>(false);
-  }
-  return std::nullopt;
+  auto InnerLoopIt = CostMap.find(InnerLoop);
+  if (InnerLoopIt == CostMap.end())
+    return std::nullopt;
+  auto OuterLoopIt = CostMap.find(OuterLoop);
+  if (OuterLoopIt == CostMap.end())
+    return std::nullopt;
+
+  unsigned InnerIndex = InnerLoopIt->second;
+  unsigned OuterIndex = OuterLoopIt->second;
+  LLVM_DEBUG(dbgs() << "InnerIndex = " << InnerIndex
+                    << ", OuterIndex = " << OuterIndex << "\n");
+  if (InnerIndex < OuterIndex)
+    return std::optional<bool>(true);
+  assert(InnerIndex != OuterIndex && "CostMap should assign unique "
+                                     "numbers to each loop");
+  if (CC->getLoopCost(*OuterLoop) == CC->getLoopCost(*InnerLoop))
+    return std::nullopt;
+  return std::optional<bool>(false);
 }
 
 std::optional<bool>

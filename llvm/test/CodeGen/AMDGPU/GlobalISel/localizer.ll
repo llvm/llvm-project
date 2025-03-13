@@ -64,21 +64,21 @@ entry:
   br i1 %cond, label %bb0, label %bb1
 
 bb0:
-  store volatile i32 123, ptr addrspace(1) undef
-  store volatile i32 456, ptr addrspace(1) undef
-  store volatile i32 999, ptr addrspace(1) undef
-  store volatile i32 1000, ptr addrspace(1) undef
-  store volatile i32 455, ptr addrspace(1) undef
-  store volatile i32 23526, ptr addrspace(1) undef
+  store volatile i32 123, ptr addrspace(1) poison
+  store volatile i32 456, ptr addrspace(1) poison
+  store volatile i32 999, ptr addrspace(1) poison
+  store volatile i32 1000, ptr addrspace(1) poison
+  store volatile i32 455, ptr addrspace(1) poison
+  store volatile i32 23526, ptr addrspace(1) poison
   br label %bb2
 
 bb1:
-  store volatile i32 23526, ptr addrspace(1) undef
-  store volatile i32 455, ptr addrspace(1) undef
-  store volatile i32 1000, ptr addrspace(1) undef
-  store volatile i32 456, ptr addrspace(1) undef
-  store volatile i32 999, ptr addrspace(1) undef
-  store volatile i32 123, ptr addrspace(1) undef
+  store volatile i32 23526, ptr addrspace(1) poison
+  store volatile i32 455, ptr addrspace(1) poison
+  store volatile i32 1000, ptr addrspace(1) poison
+  store volatile i32 456, ptr addrspace(1) poison
+  store volatile i32 999, ptr addrspace(1) poison
+  store volatile i32 123, ptr addrspace(1) poison
   br label %bb2
 
 bb2:

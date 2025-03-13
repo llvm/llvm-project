@@ -387,7 +387,7 @@ define i32 @select_mul_rhs_const_i32(i1 %cond) {
 define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; IR-LABEL: @select_add_lhs_const_i16(
 ; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i16 128, i16 131
-; IR-NEXT:    store i16 [[OP]], ptr addrspace(1) undef, align 2
+; IR-NEXT:    store i16 [[OP]], ptr addrspace(1) poison, align 2
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: select_add_lhs_const_i16:
@@ -402,7 +402,7 @@ define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; GCN-NEXT:    s_endpgm
   %select = select i1 %cond, i16 5, i16 8
   %op = add i16 %select, 123
-  store i16 %op, ptr addrspace(1) undef
+  store i16 %op, ptr addrspace(1) poison
   ret void
 }
 
