@@ -76,7 +76,6 @@
 #include "llvm/Transforms/InstCombine/InstCombine.h"
 #include "llvm/Transforms/Instrumentation/CGProfile.h"
 #include "llvm/Transforms/Instrumentation/ControlHeightReduction.h"
-#include "llvm/Transforms/Instrumentation/InstrOrderFile.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/MemProfiler.h"
 #include "llvm/Transforms/Instrumentation/PGOCtxProfFlattening.h"
@@ -266,10 +265,6 @@ static cl::opt<bool> FlattenedProfileUsed(
     "flattened-profile-used", cl::init(false), cl::Hidden,
     cl::desc("Indicate the sample profile being used is flattened, i.e., "
              "no inline hierarchy exists in the profile"));
-
-static cl::opt<bool> EnableOrderFileInstrumentation(
-    "enable-order-file-instrumentation", cl::init(false), cl::Hidden,
-    cl::desc("Enable order file instrumentation (default = off)"));
 
 static cl::opt<bool>
     EnableMatrix("enable-matrix", cl::init(false), cl::Hidden,
@@ -1465,9 +1460,6 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   // preserved during prelinking for link-time inlining decisions.
   if (!LTOPreLink)
     MPM.addPass(EliminateAvailableExternallyPass());
-
-  if (EnableOrderFileInstrumentation)
-    MPM.addPass(InstrOrderFilePass());
 
   // Do RPO function attribute inference across the module to forward-propagate
   // attributes where applicable.

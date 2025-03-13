@@ -514,6 +514,9 @@ void Flang::addTargetOptions(const ArgList &Args,
     else
       CmdArgs.push_back(A->getValue());
   }
+
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_fverbose_asm, options::OPT_fno_verbose_asm});
 }
 
 void Flang::addOffloadOptions(Compilation &C, const InputInfoList &Inputs,
