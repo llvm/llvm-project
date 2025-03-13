@@ -19,8 +19,7 @@ using namespace llvm;
 using namespace llvm::orc;
 using namespace llvm::orc::shared;
 
-static llvm::orc::shared::CWrapperFunctionResult addWrapper(const char *ArgData,
-                                                            size_t ArgSize) {
+static CWrapperFunctionResult addWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<int32_t(int32_t, int32_t)>::handle(
              ArgData, ArgSize, [](int32_t X, int32_t Y) { return X + Y; })
       .release();
@@ -31,8 +30,7 @@ static void addAsyncWrapper(unique_function<void(int32_t)> SendResult,
   SendResult(X + Y);
 }
 
-static llvm::orc::shared::CWrapperFunctionResult
-voidWrapper(const char *ArgData, size_t ArgSize) {
+static CWrapperFunctionResult voidWrapper(const char *ArgData, size_t ArgSize) {
   return WrapperFunction<void()>::handle(ArgData, ArgSize, []() {}).release();
 }
 

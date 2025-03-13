@@ -105,7 +105,7 @@ define amdgpu_kernel void @s_trig_preop_f64(double %a, i32 %b) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_endpgm
   %result = call double @llvm.amdgcn.trig.preop.f64(double %a, i32 %b)
-  store volatile double %result, ptr undef
+  store volatile double %result, ptr poison
   ret void
 }
 
@@ -167,7 +167,7 @@ define amdgpu_kernel void @s_trig_preop_f64_imm(double %a, i32 %b) {
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_endpgm
   %result = call double @llvm.amdgcn.trig.preop.f64(double %a, i32 7)
-  store volatile double %result, ptr undef
+  store volatile double %result, ptr poison
   ret void
 }
 

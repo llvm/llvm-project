@@ -94,7 +94,7 @@ SPIRVTranslate(Module *M, std::string &SpirvObj, std::string &ErrMsg,
   std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;
   std::unique_ptr<TargetMachine> Target(TheTarget->createTargetMachine(
-      TargetTriple.getTriple(), "", "", Options, RM, CM, OLevel));
+      TargetTriple, "", "", Options, RM, CM, OLevel));
   if (!Target) {
     ErrMsg = "Could not allocate target machine!";
     return false;

@@ -275,7 +275,7 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
   %val = call float @coldcc(float 1.0)
-  store float %val, ptr addrspace(1) undef
+  store float %val, ptr addrspace(1) poison
   ret void
 }
 
@@ -386,7 +386,7 @@ define amdgpu_kernel void @call_fastcc() #0 {
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
   %val = call float @fastcc(float 1.0)
-  store float %val, ptr addrspace(1) undef
+  store float %val, ptr addrspace(1) poison
   ret void
 }
 
@@ -627,7 +627,7 @@ define amdgpu_ps void @ps_mesa_v2i16(<2 x i16> %arg0) {
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
   %add = add <2 x i16> %arg0, <i16 1, i16 1>
-  store <2 x i16> %add, ptr addrspace(1) undef
+  store <2 x i16> %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -668,7 +668,7 @@ define amdgpu_ps void @ps_mesa_inreg_v2i16(<2 x i16> inreg %arg0) {
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
   %add = add <2 x i16> %arg0, <i16 1, i16 1>
-  store <2 x i16> %add, ptr addrspace(1) undef
+  store <2 x i16> %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -813,7 +813,7 @@ define amdgpu_ps void @ps_mesa_inreg_v3i32(<3 x i32> inreg %arg0) {
 ; GFX1250-NEXT:    global_store_b96 v[0:1], v[0:2], off
 ; GFX1250-NEXT:    s_endpgm
   %add = add <3 x i32> %arg0, <i32 1, i32 2, i32 3>
-  store <3 x i32> %add, ptr addrspace(1) undef
+  store <3 x i32> %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -856,7 +856,7 @@ define amdgpu_ps void @ps_mesa_inreg_v3f32(<3 x float> inreg %arg0) {
 ; GFX1250-NEXT:    global_store_b96 v[0:1], v[0:2], off
 ; GFX1250-NEXT:    s_endpgm
   %add = fadd <3 x float> %arg0, <float 1.0, float 2.0, float 4.0>
-  store <3 x float> %add, ptr addrspace(1) undef
+  store <3 x float> %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -927,7 +927,7 @@ define amdgpu_ps void @ps_mesa_inreg_v5i32(<5 x i32> inreg %arg0) {
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[0:3], off
 ; GFX1250-NEXT:    s_endpgm
   %add = add <5 x i32> %arg0, <i32 1, i32 2, i32 3, i32 4, i32 5>
-  store <5 x i32> %add, ptr addrspace(1) undef
+  store <5 x i32> %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -984,7 +984,7 @@ define amdgpu_ps void @ps_mesa_inreg_v5f32(<5 x float> inreg %arg0) {
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[0:3], off
 ; GFX1250-NEXT:    s_endpgm
   %add = fadd <5 x float> %arg0, <float 1.0, float 2.0, float 4.0, float -1.0, float 0.5>
-  store <5 x float> %add, ptr addrspace(1) undef
+  store <5 x float> %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -1023,7 +1023,7 @@ define amdgpu_ps void @ps_mesa_v3i32(<3 x i32> %arg0) {
 ; GFX1250-NEXT:    global_store_b96 v[0:1], v[0:2], off
 ; GFX1250-NEXT:    s_endpgm
   %add = add <3 x i32> %arg0, <i32 1, i32 2, i32 3>
-  store <3 x i32> %add, ptr addrspace(1) undef
+  store <3 x i32> %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -1061,7 +1061,7 @@ define amdgpu_ps void @ps_mesa_v3f32(<3 x float> %arg0) {
 ; GFX1250-NEXT:    global_store_b96 v[0:1], v[0:2], off
 ; GFX1250-NEXT:    s_endpgm
   %add = fadd <3 x float> %arg0, <float 1.0, float 2.0, float 4.0>
-  store <3 x float> %add, ptr addrspace(1) undef
+  store <3 x float> %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -1112,7 +1112,7 @@ define amdgpu_ps void @ps_mesa_v5i32(<5 x i32> %arg0) {
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[0:3], off
 ; GFX1250-NEXT:    s_endpgm
   %add = add <5 x i32> %arg0, <i32 1, i32 2, i32 3, i32 4, i32 5>
-  store <5 x i32> %add, ptr addrspace(1) undef
+  store <5 x i32> %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -1161,7 +1161,7 @@ define amdgpu_ps void @ps_mesa_v5f32(<5 x float> %arg0) {
 ; GFX1250-NEXT:    global_store_b128 v[0:1], v[0:3], off
 ; GFX1250-NEXT:    s_endpgm
   %add = fadd <5 x float> %arg0, <float 1.0, float 2.0, float 4.0, float -1.0, float 0.5>
-  store <5 x float> %add, ptr addrspace(1) undef
+  store <5 x float> %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -1192,7 +1192,7 @@ define amdgpu_ps void @ps_mesa_i16(i16 %arg0) {
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
   %add = add i16 %arg0, %arg0
-  store i16 %add, ptr addrspace(1) undef
+  store i16 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -1232,7 +1232,7 @@ define amdgpu_ps void @ps_mesa_inreg_i16(i16 inreg %arg0) {
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
   %add = add i16 %arg0, %arg0
-  store i16 %add, ptr addrspace(1) undef
+  store i16 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -1286,7 +1286,7 @@ define amdgpu_kernel void @amd_kernel_i8(i8 %arg0) {
 ; GFX1250-NEXT:    s_endpgm
 entry:
   %add = add i8 %arg0, %arg0
-  store i8 %add, ptr addrspace(1) undef
+  store i8 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -2797,7 +2797,7 @@ define amdgpu_cs void @amdgpu_cs_i1(i1 %arg0) {
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX1250-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  store i1 %arg0, ptr addrspace(1) undef
+  store i1 %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2910,7 +2910,7 @@ define amdgpu_cs void @amdgpu_cs_v8i1(<8 x i1> %arg0) {
 ; GFX1250-NEXT:    v_bitop3_b16 v0, v0, v1, 15 bitop3:0xec
 ; GFX1250-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  store <8 x i1> %arg0, ptr addrspace(1) undef
+  store <8 x i1> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -3114,7 +3114,7 @@ define amdgpu_cs void @amdgpu_cs_v16i1(<16 x i1> %arg0) {
 ; GFX1250-NEXT:    v_bitop3_b16 v0, v0, v1, 0xff bitop3:0xec
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  store <16 x i1> %arg0, ptr addrspace(1) undef
+  store <16 x i1> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -3496,7 +3496,7 @@ define amdgpu_cs void @amdgpu_cs_v32i1(<32 x i1> %arg0) {
 ; GFX1250-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  store <32 x i1> %arg0, ptr addrspace(1) undef
+  store <32 x i1> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -3532,7 +3532,7 @@ define amdgpu_cs void @amdgpu_cs_inreg_i1(i1 inreg %arg0) {
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  store i1 %arg0, ptr addrspace(1) undef
+  store i1 %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -3648,7 +3648,7 @@ define amdgpu_cs void @amdgpu_cs_inreg_v8i1(<8 x i1> inreg %arg0) {
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  store <8 x i1> %arg0, ptr addrspace(1) undef
+  store <8 x i1> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -3860,7 +3860,7 @@ define amdgpu_cs void @amdgpu_cs_inreg_v16i1(<16 x i1> inreg %arg0) {
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    global_store_b16 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  store <16 x i1> %arg0, ptr addrspace(1) undef
+  store <16 x i1> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -4264,7 +4264,7 @@ define amdgpu_cs void @amdgpu_cs_inreg_v32i1(<32 x i1> inreg %arg0) {
 ; GFX1250-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX1250-NEXT:    global_store_b32 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  store <32 x i1> %arg0, ptr addrspace(1) undef
+  store <32 x i1> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -4294,7 +4294,7 @@ define amdgpu_cs void @amdgpu_cs_i1_sext(i1 signext %arg0) {
 ; GFX1250-NEXT:    v_and_b32_e32 v0, 1, v0
 ; GFX1250-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  store i1 %arg0, ptr addrspace(1) undef
+  store i1 %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -4320,7 +4320,7 @@ define amdgpu_cs void @amdgpu_cs_i1_zext(i1 zeroext %arg0) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    global_store_b8 v[0:1], v0, off
 ; GFX1250-NEXT:    s_endpgm
-  store i1 %arg0, ptr addrspace(1) undef
+  store i1 %arg0, ptr addrspace(1) poison
   ret void
 }
 
