@@ -799,7 +799,7 @@ Error LTO::addModule(InputFile &Input, unsigned ModI,
                        LTOInfo->HasSummary);
 
   if (IsThinLTO)
-    return addThinLTO(BM, ModSyms, ResI, ResE, Input.getTargetTriple());
+    return addThinLTO(BM, ModSyms, ResI, ResE);
 
   RegularLTO.EmptyCombinedModule = false;
   Expected<RegularLTOState::AddedModule> ModOrErr =
@@ -1046,7 +1046,7 @@ Error LTO::linkRegularLTO(RegularLTOState::AddedModule Mod,
 // Add a ThinLTO module to the link.
 Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
                       const SymbolResolution *&ResI,
-                      const SymbolResolution *ResE, StringRef Triple) {
+                      const SymbolResolution *ResE) {
   const SymbolResolution *ResITmp = ResI;
   for (const InputFile::Symbol &Sym : Syms) {
     assert(ResITmp != ResE);
@@ -1105,8 +1105,6 @@ Error LTO::addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
     return make_error<StringError>(
         "Expected at most one ThinLTO module per bitcode file",
         inconvertibleErrorCode());
-
-  ThinLTO.ModuleTriples.insert({BM.getModuleIdentifier(), Triple.str()});
 
   if (!Conf.ThinLTOModulesToCompile.empty()) {
     if (!ThinLTO.ModulesToCompile)
@@ -1543,8 +1541,7 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap,
-      DenseMap<StringRef, std::string> & /*ModuleTriples*/) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
     StringRef ModulePath = BM.getModuleIdentifier();
     assert(ModuleToDefinedGVSummaries.count(ModulePath));
     const GVSummaryMapTy &DefinedGlobals =
@@ -1824,8 +1821,7 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap,
-      DenseMap<StringRef, std::string> & /*ModuleTriples*/) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
     StringRef ModulePath = BM.getModuleIdentifier();
 
     // The contents of this file may be used as input to a native link, and must
@@ -2063,11 +2059,12 @@ Error LTO::runThinLTO(AddStreamFn AddStream, AddBufferFn AddBuffer,
       return BackendProcess->start(
           RegularLTO.ParallelCodeGenParallelismLevel + I, Mod.second,
           ImportLists[Mod.first], ExportLists[Mod.first],
-          ResolvedODR[Mod.first], ThinLTO.ModuleMap, ThinLTO.ModuleTriples);
+          ResolvedODR[Mod.first], ThinLTO.ModuleMap);
     };
 
     BackendProcess->setup(ModuleMap.size(),
-                          RegularLTO.ParallelCodeGenParallelismLevel);
+                          RegularLTO.ParallelCodeGenParallelismLevel,
+                          RegularLTO.CombinedModule->getTargetTriple());
 
     if (BackendProcess->getThreadCount() == 1 ||
         BackendProcess->isSensitiveToInputOrder()) {
@@ -2221,7 +2218,6 @@ class OutOfProcessThinBackend : public CGThinBackend {
   struct Job {
     unsigned Task;
     StringRef ModuleID;
-    StringRef Triple;
     StringRef NativeObjectPath;
     StringRef SummaryIndexPath;
     ImportsFilesContainer ImportFiles;
@@ -2232,8 +2228,11 @@ class OutOfProcessThinBackend : public CGThinBackend {
   // A unique string to identify the current link.
   SmallString<8> UID;
 
-  // The first ReservedTasks entries in the task range are used for Full LTO.
-  unsigned ReservedTasks;
+  // The offset to the first ThinLTO task.
+  unsigned ThinLTOTaskOffset;
+
+  // The target triple to supply for backend compilations.
+  StringRef Triple;
 
 public:
   OutOfProcessThinBackend(
@@ -2250,10 +2249,12 @@ public:
         AddBuffer(std::move(AddBuffer)), LinkerOutputFile(LinkerOutputFile),
         DistributorPath(Distributor), SaveTemps(SaveTemps) {}
 
-  virtual void setup(unsigned MaxTasks, unsigned ReservedTasks) override {
+  virtual void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
+                     StringRef Triple) override {
     UID = itostr(sys::Process::getProcessId());
-    Jobs.resize((size_t)MaxTasks);
-    this->ReservedTasks = ReservedTasks;
+    Jobs.resize((size_t)ThinLTONumTasks);
+    this->ThinLTOTaskOffset = ThinLTOTaskOffset;
+    this->Triple = Triple;
   }
 
   Error start(
@@ -2261,8 +2262,7 @@ public:
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap,
-      DenseMap<StringRef, std::string> &ModuleTriples) override {
+      MapVector<StringRef, BitcodeModule> &ModuleMap) override {
 
     StringRef ModulePath = BM.getModuleIdentifier();
 
@@ -2270,10 +2270,9 @@ public:
     sys::path::append(ObjFilePath, sys::path::stem(ModulePath) + "." +
                                        itostr(Task) + "." + UID + ".native.o");
 
-    Job &J = Jobs[Task - ReservedTasks];
+    Job &J = Jobs[Task - ThinLTOTaskOffset];
     J = {Task,
          ModulePath,
-         ModuleTriples[ModulePath],
          Saver.save(ObjFilePath.str()),
          Saver.save(ObjFilePath.str() + ".thinlto.bc"),
          {}};
@@ -2311,7 +2310,7 @@ public:
   void buildCommonRemoteCompilerOptions() {
     const lto::Config &C = Conf;
     auto &Ops = CodegenOptions;
-    llvm::Triple TT{Jobs.front().Triple};
+    llvm::Triple TT{Triple};
 
     Ops.push_back(Saver.save("-O" + Twine(C.OptLevel)));
 
@@ -2385,7 +2384,7 @@ public:
 
           // Reference to Job::SummaryIndexPath.
           JOS.value(Array{"summary_index", "-fthinlto-index=", 0});
-          JOS.value(Saver.save("--target=" + Twine(Jobs.front().Triple)));
+          JOS.value(Saver.save("--target=" + Twine(Triple)));
 
           for (const auto &A : CodegenOptions)
             JOS.value(A);
@@ -2441,15 +2440,6 @@ public:
     });
 
     const StringRef BCError = "DTLTO backend compilation: ";
-
-    // TODO: If we move to using an optimisation tool that does not require an
-    // explicit triple to be passed then the triple handling can be removed
-    // entirely.
-    if (!llvm::all_of(Jobs, [&](const auto &Job) {
-          return Job.Triple == Jobs.front().Triple;
-        }))
-      return make_error<StringError>(BCError + "all triples must be consistent",
-                                     inconvertibleErrorCode());
 
     buildCommonRemoteCompilerOptions();
 

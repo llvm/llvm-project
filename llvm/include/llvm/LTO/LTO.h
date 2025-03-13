@@ -225,14 +225,14 @@ public:
         BackendThreadPool(ThinLTOParallelism) {}
 
   virtual ~ThinBackendProc() = default;
-  virtual void setup(unsigned MaxTasks, unsigned ReservedTasks) {}
+  virtual void setup(unsigned ThinLTONumTasks, unsigned ThinLTOTaskOffset,
+                     StringRef Triple) {}
   virtual Error start(
       unsigned Task, BitcodeModule BM,
       const FunctionImporter::ImportMapTy &ImportList,
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
-      MapVector<StringRef, BitcodeModule> &ModuleMap,
-      DenseMap<StringRef, std::string> &ModuleTriples) = 0;
+      MapVector<StringRef, BitcodeModule> &ModuleMap) = 0;
   virtual Error wait() {
     BackendThreadPool.wait();
     if (Err)
@@ -460,7 +460,6 @@ private:
     // The bitcode modules to compile, if specified by the LTO Config.
     std::optional<ModuleMapType> ModulesToCompile;
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
-    DenseMap<StringRef, std::string> ModuleTriples;
   } ThinLTO;
 
   // The global resolution for a particular (mangled) symbol name. This is in
@@ -552,8 +551,7 @@ private:
                        bool LivenessFromIndex);
 
   Error addThinLTO(BitcodeModule BM, ArrayRef<InputFile::Symbol> Syms,
-                   const SymbolResolution *&ResI, const SymbolResolution *ResE,
-                   StringRef Triple);
+                   const SymbolResolution *&ResI, const SymbolResolution *ResE);
 
   Error runRegularLTO(AddStreamFn AddStream);
   Error runThinLTO(AddStreamFn AddStream, AddBufferFn AddBuffer,

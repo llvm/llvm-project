@@ -1,13 +1,13 @@
-# Check that DTLTO creates imports lists correctly.
+; Check that DTLTO creates imports lists correctly.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
-# Compile bitcode.
+; Compile bitcode.
 RUN: opt -thinlto-bc 0.ll -o 0.bc -O2
 RUN: opt -thinlto-bc 1.ll -o 1.bc -O2
 
-# Define a substitution to share the common DTLTO arguments. Note that the use
-# of validate.py will cause a failure as it does not create output files.
+; Define a substitution to share the common DTLTO arguments. Note that the use
+; of validate.py will cause a failure as it does not create output files.
 DEFINE: %{command} = llvm-lto2 run 0.bc 1.bc -o t.o \
 DEFINE:    -dtlto-distributor=%python \
 DEFINE:    -thinlto-distributor-arg=%llvm_src_root/utils/dtlto/validate.py \
@@ -18,10 +18,9 @@ DEFINE:    -r=0.bc,g,px \
 DEFINE:    -r=1.bc,f,px \
 DEFINE:    -r=1.bc,g
 
-# We expect an import from 0.o into 1.o but no imports into 0.o. Check that the
-# expected input files have been added to the JSON.
-RUN: not %{command} >out.log 2>&1
-RUN: FileCheck --input-file=out.log %s --check-prefixes=INPUTS,ERR
+; We expect an import from 0.o into 1.o but no imports into 0.o. Check that the
+; expected input files have been added to the JSON.
+RUN: not %{command} 2>&1 | FileCheck %s --check-prefixes=INPUTS,ERR
 
 INPUTS:      "primary_input": [
 INPUTS-NEXT:   "0.bc"
@@ -34,23 +33,23 @@ INPUTS:      "imports": [
 INPUTS-NEXT:   "0.bc"
 INPUTS-NEXT: ]
 
-# This check ensures that we have failed for the expected reason.
+; This check ensures that we have failed for the expected reason.
 ERR: failed: DTLTO backend compilation: cannot open native object file:
 
-# Check that imports files are not created even if -save-temps is active.
+; Check that imports files are not created even if -save-temps is active.
 RUN: not %{command} -save-temps 2>&1 \ 
 RUN:   | FileCheck %s --check-prefixes=ERR
 RUN: ls | FileCheck %s --check-prefix=NOIMPORTFILES
 NOIMPORTFILES-NOT: imports
 
-# Check that imports files are created with -thinlto-emit-imports.
+; Check that imports files are created with -thinlto-emit-imports.
 RUN: not %{command} -thinlto-emit-imports 2>&1 \ 
 RUN:   | FileCheck %s --check-prefixes=ERR
 RUN: ls | FileCheck %s --check-prefix=IMPORTFILES
 IMPORTFILES: 0.bc.imports
 IMPORTFILES: 1.bc.imports
 
-#--- 0.ll
+;--- 0.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -59,7 +58,7 @@ entry:
   ret void
 }
 
-#--- 1.ll
+;--- 1.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

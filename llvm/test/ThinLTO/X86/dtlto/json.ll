@@ -1,13 +1,13 @@
-# Check that the JSON output from DTLTO is as expected. Note that validate.py
-# checks the JSON structure so we just check the field contents in this test.
+; Check that the JSON output from DTLTO is as expected. Note that validate.py
+; checks the JSON structure so we just check the field contents in this test.
 
 RUN: rm -rf %t && split-file %s %t && cd %t
 
-# Generate bitcode files with summary.
+; Generate bitcode files with summary.
 RUN: opt -thinlto-bc t1.ll -o t1.bc
 RUN: opt -thinlto-bc t2.ll -o t2.bc
 
-# Perform DTLTO.
+; Perform DTLTO.
 RUN: not llvm-lto2 run t1.bc t2.bc -o my.output \
 RUN:     -r=t1.bc,t1,px -r=t2.bc,t2,px \
 RUN:     -dtlto-distributor=%python \
@@ -21,7 +21,7 @@ RUN:   2>&1 | FileCheck %s
 
 CHECK: distributor_args=['--da1=10', '--da2=10']
 
-# Check the common object.
+; Check the common object.
 CHECK:      "linker_output": "my.output"
 CHECK:      "args":
 CHECK:      "my_clang.exe"
@@ -48,7 +48,7 @@ CHECK:      "-Wno-unused-command-line-argument"
 CHECK:      "--rota1=10"
 CHECK:      "--rota2=20"
 
-# Check the first job entry.
+; Check the first job entry.
 CHECK: "jobs":
 CHECK:      "primary_input": [
 CHECK-NEXT: "t1.bc"
@@ -63,7 +63,7 @@ CHECK:      "imports": [],
 CHECK:      "additional_inputs": []
 CHECK-NEXT: }
 
-# Check the second job entry.
+; Check the second job entry.
 CHECK-NEXT: {
 CHECK-NEXT: "primary_input": [
 CHECK-NEXT: "t2.bc"
@@ -79,10 +79,10 @@ CHECK-NEXT: "additional_inputs": []
 CHECK-NEXT: }
 CHECK-NEXT: ]
 
-# This check ensures that we have failed for the expected reason.
+; This check ensures that we have failed for the expected reason.
 CHECK: failed: DTLTO backend compilation: cannot open native object file:
 
-#--- t1.ll
+;--- t1.ll
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -91,7 +91,7 @@ entry:
   ret void
 }
 
-#--- t2.ll
+;--- t2.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 

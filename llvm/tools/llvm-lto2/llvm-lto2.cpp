@@ -97,9 +97,10 @@ static cl::opt<bool>
                                 "specified with -thinlto-emit-indexes or "
                                 "-thinlto-distributed-indexes"));
 
-static cl::opt<std::string>
-    DTLTODistributor("dtlto-distributor",
-                     cl::desc("Distributor to use for ThinLTO backend compilations. Specifying this activates DTLTO."));
+static cl::opt<std::string> DTLTODistributor(
+    "dtlto-distributor",
+    cl::desc("Distributor to use for ThinLTO backend compilations. Specifying "
+             "this activates DTLTO."));
 
 // Default to using all available threads in the system, but using only one
 // thread per core (no SMT).
