@@ -23,7 +23,7 @@ namespace Fortran::parser {
 // other types of line comments from fixed form.
 constexpr auto startAccLine{skipStuffBeforeStatement >>
     withMessage(
-        "expected OpenACC comment '!$ACC' (free-form), 'C$ACC', or '*$ACC' (fixed-form)"_err_en_US,
+        "expected OpenACC directive sentinal: '!$ACC' (free-form), 'C$ACC', or '*$ACC' (fixed-form)"_err_en_US,
         "!$ACC "_sptok)};
 constexpr auto endAccLine{space >> endOfLine};
 

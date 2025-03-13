@@ -98,7 +98,7 @@ constexpr auto progUnitEndStmt{
                  "PROCEDURE"_tok || "MODULE"_tok || "SUBMODULE"_tok ||
                  "PROGRAM"_tok || "BLOCK DATA"_tok)};
 constexpr auto constructEndStmtErrorRecovery{
-    !progUnitEndStmt >> ("END"_tok >> SkipTo<'\n'>{} || ok)};
+    !progUnitEndStmt >> (("!$ACC "_sptok >> "END"_tok) || "END"_tok >> SkipTo<'\n'>{} || ok)};
 constexpr auto namedConstructEndStmtErrorRecovery{
     constructEndStmtErrorRecovery >> missingOptionalName};
 
