@@ -95,7 +95,7 @@ int64_t3 test_clamp_long3(int64_t3 p0, int64_t3 p1) { return clamp(p0, p1,p1); }
 int64_t4 test_clamp_long4(int64_t4 p0, int64_t4 p1) { return clamp(p0, p1,p1); }
 // CHECK: define [[FNATTRS]] <4 x i64> {{.*}}test_clamp_long4_mismatch
 // CHECK: call <4 x i64> @llvm.[[TARGET]].sclamp.v4i64
-int64_t4 test_clamp_long4_mismatch(int64_t4 p0, int64_t4 p1) { return clamp(p0, p0,p1); }
+int64_t4 test_clamp_long4_mismatch(int64_t4 p0, int64_t p1) { return clamp(p0, p0,p1); }
 
 // CHECK: define [[FNATTRS]] i64 @_Z16test_clamp_ulong
 // CHECK: call i64 @llvm.[[TARGET]].uclamp.i64(
@@ -111,7 +111,7 @@ uint64_t3 test_clamp_ulong3(uint64_t3 p0, uint64_t3 p1) { return clamp(p0, p1,p1
 uint64_t4 test_clamp_ulong4(uint64_t4 p0, uint64_t4 p1) { return clamp(p0, p1,p1); }
 // CHECK: define [[FNATTRS]] <4 x i64> {{.*}}test_clamp_ulong4_mismatch
 // CHECK: call <4 x i64> @llvm.[[TARGET]].uclamp.v4i64
-uint64_t4 test_clamp_ulong4_mismatch(uint64_t4 p0, uint64_t4 p1) { return clamp(p0, p0,p1); }
+uint64_t4 test_clamp_ulong4_mismatch(uint64_t4 p0, uint64_t p1) { return clamp(p0, p0,p1); }
 
 // NATIVE_HALF: define [[FNATTRS]] [[FFNATTRS]] half @_Z15test_clamp_half
 // NATIVE_HALF: call reassoc nnan ninf nsz arcp afn half @llvm.[[TARGET]].nclamp.f16(
