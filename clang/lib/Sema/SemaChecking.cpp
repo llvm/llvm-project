@@ -4877,8 +4877,8 @@ bool Sema::BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
     return true;
 
   // Verify that the second argument to the builtin is the last non-variadic
-  // argument of the current function or method. In C23 mode and the call is
-  // not to __builtin_c23_va_start, if the second argument is an integer
+  // argument of the current function or method. In C23 mode, if the call is
+  // not to __builtin_c23_va_start, and the second argument is an integer
   // constant expression with value 0, then we don't bother with this check.
   // For __builtin_c23_va_start, we only perform the check for the second
   // argument being the last argument to the current function if there is a
