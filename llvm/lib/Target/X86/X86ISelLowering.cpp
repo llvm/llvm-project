@@ -56379,6 +56379,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   SDValue Index = GorS->getIndex();
   SDValue Base = GorS->getBasePtr();
   SDValue Scale = GorS->getScale();
+  EVT IndexVT = Index.getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   if (DCI.isBeforeLegalize()) {
@@ -56394,7 +56395,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     if (auto *BV = dyn_cast<BuildVectorSDNode>(Index)) {
       if (BV->isConstant() && IndexWidth > 32 &&
           DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
-        EVT NewVT = Index.getValueType().changeVectorElementType(MVT::i32);
+        EVT NewVT = IndexVT.changeVectorElementType(MVT::i32);
         Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
         return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
       }
@@ -56408,7 +56409,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
         IndexWidth > 32 &&
         Index.getOperand(0).getScalarValueSizeInBits() <= 32 &&
         DAG.ComputeNumSignBits(Index) > (IndexWidth - 32)) {
-      EVT NewVT = Index.getValueType().changeVectorElementType(MVT::i32);
+      EVT NewVT = IndexVT.changeVectorElementType(MVT::i32);
       Index = DAG.getNode(ISD::TRUNCATE, DL, NewVT, Index);
       return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
     }
@@ -56420,8 +56421,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
   // this when index element type is the same as the pointer type.
   // Otherwise we need to be sure the math doesn't wrap before the scale.
   if (Index.getOpcode() == ISD::ADD &&
-      Index.getValueType().getVectorElementType() == PtrVT &&
-      isa<ConstantSDNode>(Scale)) {
+      IndexVT.getVectorElementType() == PtrVT && isa<ConstantSDNode>(Scale)) {
     uint64_t ScaleAmt = Scale->getAsZExtVal();
     if (auto *BV = dyn_cast<BuildVectorSDNode>(Index.getOperand(1))) {
       BitVector UndefElts;
@@ -56442,13 +56442,11 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
       // replace it with 0 and move the displacement into the index.
       if (BV->isConstant() && isa<ConstantSDNode>(Base) &&
           isOneConstant(Scale)) {
-        SDValue Splat = DAG.getSplatBuildVector(Index.getValueType(), DL, Base);
+        SDValue Splat = DAG.getSplatBuildVector(IndexVT, DL, Base);
         // Combine the constant build_vector and the constant base.
-        Splat = DAG.getNode(ISD::ADD, DL, Index.getValueType(),
-                            Index.getOperand(1), Splat);
+        Splat = DAG.getNode(ISD::ADD, DL, IndexVT, Index.getOperand(1), Splat);
         // Add to the LHS of the original Index add.
-        Index = DAG.getNode(ISD::ADD, DL, Index.getValueType(),
-                            Index.getOperand(0), Splat);
+        Index = DAG.getNode(ISD::ADD, DL, IndexVT, Index.getOperand(0), Splat);
         Base = DAG.getConstant(0, DL, Base.getValueType());
         return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
       }
@@ -56461,7 +56459,7 @@ static SDValue combineGatherScatter(SDNode *N, SelectionDAG &DAG,
     // Make sure the index is either i32 or i64
     if (IndexWidth != 32 && IndexWidth != 64) {
       MVT EltVT = IndexWidth > 32 ? MVT::i64 : MVT::i32;
-      EVT IndexVT = Index.getValueType().changeVectorElementType(EltVT);
+      IndexVT = IndexVT.changeVectorElementType(EltVT);
       Index = DAG.getSExtOrTrunc(Index, DL, IndexVT);
       return rebuildGatherScatter(GorS, Index, Base, Scale, DAG);
     }
