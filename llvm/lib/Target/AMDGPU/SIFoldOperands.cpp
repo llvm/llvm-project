@@ -1900,8 +1900,9 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
     return false;
 
   // Look through COPY. COPY only observed with True16.
-  MachineOperand *DefSrc = TRI->lookThruCopyLike(ClampSrc->getReg(), MRI);
-  MachineInstr *Def = MRI->getVRegDef(DefSrc && DefSrc->isReg() ? DefSrc->getReg() : ClampSrc->getReg());
+  MachineOperand *DefSrc = lookUpCopyChain(*TII, *MRI, ClampSrc->getReg());
+  MachineInstr *Def = MRI->getVRegDef(
+      DefSrc && DefSrc->isReg() ? DefSrc->getReg() : ClampSrc->getReg());
 
   // The type of clamp must be compatible.
   if (TII->getClampMask(*Def) != TII->getClampMask(MI))
