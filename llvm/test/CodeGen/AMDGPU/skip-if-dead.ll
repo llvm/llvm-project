@@ -745,13 +745,13 @@ bb:
   %cmp.var = fcmp olt float %var, 0.0
   ; TODO: We could do an early-exit here (the branch above is uniform!)
   call void @llvm.amdgcn.kill(i1 %cmp.var)
-  store volatile float %live.across, ptr addrspace(1) undef
+  store volatile float %live.across, ptr addrspace(1) poison
   %live.out = call float asm sideeffect "v_mov_b32_e64 v9, -2", "={v9}"()
   br label %exit
 
 exit:
   %phi = phi float [ 0.0, %entry ], [ %live.out, %bb ]
-  store float %phi, ptr addrspace(1) undef
+  store float %phi, ptr addrspace(1) poison
   ret void
 }
 
@@ -1124,12 +1124,12 @@ bb:
     v_nop_e64", "={v7}"()
   %cmp.var = fcmp olt float %var, 0.0
   call void @llvm.amdgcn.kill(i1 %cmp.var)
-  %vgpr = load volatile i32, ptr addrspace(1) undef
+  %vgpr = load volatile i32, ptr addrspace(1) poison
   %loop.cond = icmp eq i32 %vgpr, 0
   br i1 %loop.cond, label %bb, label %exit
 
 exit:
-  store volatile i32 8, ptr addrspace(1) undef
+  store volatile i32 8, ptr addrspace(1) poison
   ret void
 }
 
@@ -1273,11 +1273,11 @@ phibb:
   br i1 %tmp6, label %bb10, label %end
 
 bb8:
-  store volatile i32 8, ptr addrspace(1) undef
+  store volatile i32 8, ptr addrspace(1) poison
   br label %phibb
 
 bb10:
-  store volatile i32 9, ptr addrspace(1) undef
+  store volatile i32 9, ptr addrspace(1) poison
   br label %end
 
 end:
@@ -1538,7 +1538,7 @@ bb4:                                              ; preds = %bb3, %bb
   br i1 %tmp7, label %bb8, label %bb9
 
 bb8:                                              ; preds = %bb9, %bb4
-  store volatile i32 9, ptr addrspace(1) undef
+  store volatile i32 9, ptr addrspace(1) poison
   ret void
 
 bb9:                                              ; preds = %bb4

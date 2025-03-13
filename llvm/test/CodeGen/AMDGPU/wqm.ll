@@ -729,7 +729,7 @@ define amdgpu_ps float @test_wwm6_then() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -737,7 +737,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
   br label %endif
@@ -810,7 +810,7 @@ define amdgpu_ps float @test_wwm6_loop() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -818,7 +818,7 @@ main_body:
 
 loop:
   %counter = phi i32 [ %hi, %main_body ], [ %counter.1, %loop ]
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
   %counter.1 = sub i32 %counter, 1
@@ -1194,7 +1194,7 @@ define amdgpu_ps float @test_strict_wqm6_then() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -1202,7 +1202,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wqm.f32(float %out)
   br label %endif
@@ -1281,7 +1281,7 @@ define amdgpu_ps float @test_strict_wqm6_loop() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -1289,7 +1289,7 @@ main_body:
 
 loop:
   %counter = phi i32 [ %hi, %main_body ], [ %counter.1, %loop ]
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wqm.f32(float %out)
   %counter.1 = sub i32 %counter, 1
@@ -2162,7 +2162,7 @@ entry:
   br i1 %cc, label %if, label %else
 
 if:
-  store volatile <4 x float> %dtex, ptr addrspace(1) undef
+  store volatile <4 x float> %dtex, ptr addrspace(1) poison
   unreachable
 
 else:
@@ -2630,7 +2630,7 @@ define amdgpu_ps float @test_strict_wwm6_then() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -2638,7 +2638,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
   br label %endif
@@ -2707,7 +2707,7 @@ define amdgpu_ps float @test_strict_wwm6_loop() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -2715,7 +2715,7 @@ main_body:
 
 loop:
   %counter = phi i32 [ %hi, %main_body ], [ %counter.1, %loop ]
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
   %counter.1 = sub i32 %counter, 1

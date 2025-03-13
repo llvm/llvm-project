@@ -1521,7 +1521,7 @@ bb0:
   br i1 %tmp9, label %bb1, label %bb2
 
 bb1:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %bb2
 
 bb2:
@@ -1616,7 +1616,7 @@ bb1:                                              ; preds = %Flow, %bb
   br i1 %cmp0, label %bb4, label %Flow
 
 bb4:                                              ; preds = %bb1
-  %load = load volatile i32, ptr addrspace(1) undef, align 4
+  %load = load volatile i32, ptr addrspace(1) poison, align 4
   %cmp1 = icmp sge i32 %tmp, %load
   br label %Flow
 
