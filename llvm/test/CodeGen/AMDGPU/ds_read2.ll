@@ -331,7 +331,7 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_f32(ptr addrspace(1) %out, <2
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
+  %index.0 = insertelement <2 x i32> poison, i32 %x.i, i32 0
   %index.1 = insertelement <2 x i32> %index.0, i32 8, i32 0
   %gep = getelementptr inbounds float, <2 x ptr addrspace(3)> %lds.ptr, <2 x i32> %index.1
   %gep.0 = extractelement <2 x ptr addrspace(3)> %gep, i32 0
@@ -382,7 +382,7 @@ define amdgpu_kernel void @read2_ptr_is_subreg_arg_offset_f32(ptr addrspace(1) %
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %index.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
+  %index.0 = insertelement <2 x i32> poison, i32 %x.i, i32 0
   %index.1 = insertelement <2 x i32> %index.0, i32 8, i32 0
   %gep = getelementptr inbounds float, <2 x ptr addrspace(3)> %lds.ptr, <2 x i32> %index.1
   %gep.0 = extractelement <2 x ptr addrspace(3)> %gep, i32 0
@@ -425,9 +425,9 @@ define amdgpu_kernel void @read2_ptr_is_subreg_f32(ptr addrspace(1) %out) #0 {
 ; GFX9-NEXT:    global_store_dword v2, v0, s[0:1]
 ; GFX9-NEXT:    s_endpgm
   %x.i = tail call i32 @llvm.amdgcn.workitem.id.x() #1
-  %ptr.0 = insertelement <2 x ptr addrspace(3)> undef, ptr addrspace(3) @lds, i32 0
+  %ptr.0 = insertelement <2 x ptr addrspace(3)> poison, ptr addrspace(3) @lds, i32 0
   %ptr.1 = insertelement <2 x ptr addrspace(3)> %ptr.0, ptr addrspace(3) @lds, i32 1
-  %x.i.v.0 = insertelement <2 x i32> undef, i32 %x.i, i32 0
+  %x.i.v.0 = insertelement <2 x i32> poison, i32 %x.i, i32 0
   %x.i.v.1 = insertelement <2 x i32> %x.i.v.0, i32 %x.i, i32 1
   %idx = add <2 x i32> %x.i.v.1, <i32 0, i32 8>
   %gep = getelementptr inbounds [512 x float], <2 x ptr addrspace(3)> %ptr.1, <2 x i32> <i32 0, i32 0>, <2 x i32> %idx
@@ -1435,7 +1435,7 @@ define amdgpu_ps <2 x float> @ds_read_interp_read(i32 inreg %prims, ptr addrspac
   %ptr1 = getelementptr float, ptr addrspace(3) %inptr, i32 4
   %v1 = load float, ptr addrspace(3) %ptr1, align 4
   %v1b = fadd float %v1, %intrp
-  %r0 = insertelement <2 x float> undef, float %v0, i32 0
+  %r0 = insertelement <2 x float> poison, float %v0, i32 0
   %r1 = insertelement <2 x float> %r0, float %v1b, i32 1
   ret <2 x float> %r1
 }

@@ -852,8 +852,8 @@ bb:
   br i1 %tmp1, label %bb2, label %bb9
 
 bb2:                                              ; preds = %bb
-  %tmp3 = load volatile i32, ptr addrspace(1) undef
-  store volatile i32 0, ptr addrspace(1) undef
+  %tmp3 = load volatile i32, ptr addrspace(1) poison
+  store volatile i32 0, ptr addrspace(1) poison
   %tmp9 = icmp sle i32 %cond, 0
   br i1 %tmp9, label %bb9, label %bb7
 
