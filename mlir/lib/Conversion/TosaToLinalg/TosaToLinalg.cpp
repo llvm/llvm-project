@@ -193,18 +193,29 @@ static Value createLinalgBodyCalculationForElementwiseOp(
 
   // tosa::NegateOp
   if (isa<tosa::NegateOp>(op)) {
+    auto negate = cast<tosa::NegateOp>(op);
+
+    FailureOr<int64_t> maybeInZp = negate.getInput1ZeroPoint();
+    if (failed(maybeInZp)) {
+      (void)rewriter.notifyMatchFailure(
+          op, "input1 zero point cannot be statically determined");
+      return nullptr;
+    }
+
+    FailureOr<int64_t> maybeOutZp = negate.getOutputZeroPoint();
+    if (failed(maybeOutZp)) {
+      (void)rewriter.notifyMatchFailure(
+          op, "output zero point cannot be statically determined");
+      return nullptr;
+    }
+
+    int64_t inZp = *maybeInZp;
+    int64_t outZp = *maybeOutZp;
+
     if (isa<FloatType>(elementTy))
-      return rewriter.create<arith::NegFOp>(loc, resultTypes, args);
+      return rewriter.create<arith::NegFOp>(loc, resultTypes, args[0]);
 
     if (isa<IntegerType>(elementTy)) {
-      auto inputZpAttr = cast<tosa::NegateOp>(op).getInput1ZpAttr();
-      auto outputZpAttr = cast<tosa::NegateOp>(op).getOutputZpAttr();
-
-      const int64_t inZp =
-          inputZpAttr ? inputZpAttr.getValue().getSExtValue() : 0;
-      const int64_t outZp =
-          outputZpAttr ? outputZpAttr.getValue().getSExtValue() : 0;
-
       if (!inZp && !outZp) {
         auto constant = rewriter.create<arith::ConstantOp>(
             loc, IntegerAttr::get(elementTy, 0));
