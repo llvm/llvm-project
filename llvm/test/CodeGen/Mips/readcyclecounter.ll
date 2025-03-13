@@ -7,8 +7,6 @@
 ;RUN: llc -mtriple=mipsel -mcpu=mips2 < %s | FileCheck %s --check-prefix=MIPSEL_NOT_SUPPORTED
 ;RUN: llc -mtriple=mips64el -mcpu=mips3 < %s | FileCheck %s --check-prefix=MIPS64EL_NOT_SUPPORTED
 
-; XFAIL: expensive_checks
-
 declare i64 @llvm.readcyclecounter() nounwind readnone
 
 define i64 @test_readcyclecounter() nounwind {

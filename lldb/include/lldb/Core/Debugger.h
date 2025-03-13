@@ -156,9 +156,9 @@ public:
 
   void RestoreInputTerminalState();
 
-  lldb::StreamSP GetAsyncOutputStream();
+  lldb::StreamUP GetAsyncOutputStream();
 
-  lldb::StreamSP GetAsyncErrorStream();
+  lldb::StreamUP GetAsyncErrorStream();
 
   CommandInterpreter &GetCommandInterpreter() {
     assert(m_command_interpreter_up.get());

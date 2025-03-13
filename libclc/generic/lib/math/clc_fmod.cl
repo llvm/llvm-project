@@ -25,6 +25,7 @@
 #include <clc/clcmacro.h>
 #include <clc/integer/clc_clz.h>
 #include <clc/math/clc_floor.h>
+#include <clc/math/clc_fma.h>
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/clc_trunc.h>
 #include <clc/math/math.h>
@@ -124,7 +125,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
 
     // Compute w * t in quad precision
     p = w * t;
-    pp = fma(w, t, -p);
+    pp = __clc_fma(w, t, -p);
 
     // Subtract w * t from dx
     v = dx - p;
@@ -144,7 +145,7 @@ _CLC_DEF _CLC_OVERLOAD double __clc_fmod(double x, double y) {
   int todd = lt & 1;
 
   p = w * t;
-  pp = fma(w, t, -p);
+  pp = __clc_fma(w, t, -p);
   v = dx - p;
   dx = v + (((dx - v) - p) - pp);
   i = dx < 0.0;

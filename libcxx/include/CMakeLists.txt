@@ -256,6 +256,7 @@ set(files
   __chrono/exception.h
   __chrono/file_clock.h
   __chrono/formatter.h
+  __chrono/gps_clock.h
   __chrono/hh_mm_ss.h
   __chrono/high_resolution_clock.h
   __chrono/leap_second.h
@@ -512,6 +513,7 @@ set(files
   __locale_dir/support/bsd_like.h
   __locale_dir/support/freebsd.h
   __locale_dir/support/fuchsia.h
+  __locale_dir/support/linux.h
   __locale_dir/support/no_locale/characters.h
   __locale_dir/support/no_locale/strtonum.h
   __locale_dir/support/windows.h
@@ -865,6 +867,8 @@ set(files
   __type_traits/negation.h
   __type_traits/promote.h
   __type_traits/rank.h
+  __type_traits/reference_constructs_from_temporary.h
+  __type_traits/reference_converts_from_temporary.h
   __type_traits/remove_all_extents.h
   __type_traits/remove_const.h
   __type_traits/remove_const_ref.h

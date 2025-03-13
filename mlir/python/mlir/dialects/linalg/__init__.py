@@ -58,7 +58,11 @@ from .._linalg_enum_gen import _iteratortypeenum
 from .opdsl.ops.core_named_ops import *
 
 from ...ir import *
-from .._ods_common import get_op_result_or_value as _get_op_result_or_value
+from .._ods_common import (
+    get_op_result_or_value as _get_op_result_or_value,
+    get_op_result_or_op_results as _get_op_result_or_op_results,
+    _dispatch_mixed_values,
+)
 from ...extras.meta import region_op
 
 
@@ -149,7 +153,7 @@ class GenericOp_(GenericOp):
 generic = region_op(GenericOp_, terminator=YieldOp)
 
 
-def create_op(
+def _create_matmul_like_op(
     op_type,
     *ins: Union[Operation, OpView, Value],
     outs: Sequence[Union[Operation, OpView, Value]],
@@ -179,7 +183,11 @@ def matmul(
     indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
     cast: Optional[Union[TypeFn, Attribute]] = None,
 ):
-    return create_op(MatmulOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast)
+    return _get_op_result_or_op_results(
+        _create_matmul_like_op(
+            MatmulOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast
+        )
+    )
 
 
 def batch_matmul(
@@ -188,8 +196,10 @@ def batch_matmul(
     indexing_maps: Optional[Sequence[AffineMapAttr]] = None,
     cast: Optional[Union[TypeFn, Attribute]] = None,
 ):
-    return create_op(
-        BatchMatmulOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast
+    return _get_op_result_or_op_results(
+        _create_matmul_like_op(
+            BatchMatmulOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast
+        )
     )
 
 
@@ -199,6 +209,72 @@ def contract(
     indexing_maps: Sequence[AffineMapAttr],
     cast: Optional[Union[TypeFn, Attribute]] = None,
 ):
-    return create_op(
-        ContractOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast
+    return _get_op_result_or_op_results(
+        _create_matmul_like_op(
+            ContractOp, *ins, outs=outs, indexing_maps=indexing_maps, cast=cast
+        )
+    )
+
+
+def pack(
+    source,
+    dest,
+    inner_dims_pos,
+    inner_tiles,
+    *,
+    padding_value=None,
+    outer_dims_perm=None,
+    loc=None,
+    ip=None,
+) -> ir.Value:
+    (
+        dynamic_inner_tiles,
+        # packed here means %1:2 packing (results packing)
+        _inner_tiles,
+        static_inner_tiles,
+    ) = _dispatch_mixed_values(inner_tiles)
+
+    return _get_op_result_or_op_results(
+        PackOp(
+            source=source,
+            dest=dest,
+            inner_dims_pos=inner_dims_pos,
+            inner_tiles=dynamic_inner_tiles,
+            static_inner_tiles=static_inner_tiles,
+            padding_value=padding_value,
+            outer_dims_perm=outer_dims_perm,
+            loc=loc,
+            ip=ip,
+        )
+    )
+
+
+def unpack(
+    source,
+    dest,
+    inner_dims_pos,
+    inner_tiles,
+    *,
+    outer_dims_perm=None,
+    loc=None,
+    ip=None,
+) -> ir.Value:
+    (
+        dynamic_inner_tiles,
+        # packed here means %1:2 packing (results packing)
+        _inner_tiles,
+        static_inner_tiles,
+    ) = _dispatch_mixed_values(inner_tiles)
+
+    return _get_op_result_or_op_results(
+        UnPackOp(
+            source=source,
+            dest=dest,
+            inner_dims_pos=inner_dims_pos,
+            inner_tiles=dynamic_inner_tiles,
+            static_inner_tiles=static_inner_tiles,
+            outer_dims_perm=outer_dims_perm,
+            loc=loc,
+            ip=ip,
+        )
     )

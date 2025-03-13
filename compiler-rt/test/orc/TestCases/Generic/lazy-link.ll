@@ -9,8 +9,9 @@
 ; RUN: %clang -c -o %t/bar.o %S/Inputs/bar-ret-void-weak.ll
 ; RUN: %clang -c -o %t/baz.o %S/Inputs/baz-ret-void-hidden.ll
 ; RUN: %clang -c -o %t/main.o %s
-; RUN: %llvm_jitlink -noexec -show-linked-files %t/main.o -lazy %t/foo.o \
-; RUN:     -lazy %t/x.o -lazy %t/bar.o -lazy %t/baz.o | FileCheck %s
+; RUN: %llvm_jitlink -num-threads=0 -noexec -show-linked-files %t/main.o \
+; RUN:               -lazy %t/foo.o -lazy %t/x.o -lazy %t/bar.o -lazy %t/baz.o \
+; RUN:     | FileCheck %s
 ;
 ; UNSUPPORTED: system-windows
 ; REQUIRES: target={{(arm|aarch|x86_)64.*}}

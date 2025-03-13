@@ -231,6 +231,7 @@ inline bool NeedCUDAAlloc(const Symbol &sym) {
         (*details->cudaDataAttr() == common::CUDADataAttr::Device ||
             *details->cudaDataAttr() == common::CUDADataAttr::Managed ||
             *details->cudaDataAttr() == common::CUDADataAttr::Unified ||
+            *details->cudaDataAttr() == common::CUDADataAttr::Shared ||
             *details->cudaDataAttr() == common::CUDADataAttr::Pinned)) {
       return true;
     }
@@ -630,6 +631,8 @@ using PotentialAndPointerComponentIterator =
 // dereferenced.
 PotentialComponentIterator::const_iterator FindEventOrLockPotentialComponent(
     const DerivedTypeSpec &, bool ignoreCoarrays = false);
+PotentialComponentIterator::const_iterator FindCoarrayPotentialComponent(
+    const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindCoarrayUltimateComponent(
     const DerivedTypeSpec &);
 UltimateComponentIterator::const_iterator FindPointerUltimateComponent(

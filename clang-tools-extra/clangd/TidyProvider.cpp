@@ -210,6 +210,7 @@ TidyProvider disableUnusableChecks(llvm::ArrayRef<std::string> ExtraBadChecks) {
       // Check relies on seeing ifndef/define/endif directives,
       // clangd doesn't replay those when using a preamble.
       "-llvm-header-guard", "-modernize-macro-to-enum",
+      "-cppcoreguidelines-macro-to-enum",
 
       // ----- Crashing Checks -----
 

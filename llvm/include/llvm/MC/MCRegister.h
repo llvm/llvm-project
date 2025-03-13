@@ -51,13 +51,12 @@ public:
                 "Reg isn't large enough to hold full range.");
   static constexpr unsigned NoRegister = 0u;
   static constexpr unsigned FirstPhysicalReg = 1u;
-  static constexpr unsigned FirstStackSlot = 1u << 30;
-  static constexpr unsigned VirtualRegFlag = 1u << 31;
+  static constexpr unsigned LastPhysicalReg = (1u << 30) - 1;
 
   /// Return true if the specified register number is in
   /// the physical register namespace.
   static constexpr bool isPhysicalRegister(unsigned Reg) {
-    return FirstPhysicalReg <= Reg && Reg < FirstStackSlot;
+    return FirstPhysicalReg <= Reg && Reg <= LastPhysicalReg;
   }
 
   /// Return true if the specified register number is in the physical register
