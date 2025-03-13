@@ -3,6 +3,7 @@
 void t() {
   int x = 10;
   bool y = true;
+  int z = 1;
 
   bool a = y << x;
   bool b = y >> x; // expected-warning {{right shifting a 'bool' implicitly converts it to 'int'}}
@@ -19,6 +20,8 @@ void t() {
 
   bool i = y << 0;
   bool j = y >> 0; // expected-warning {{right shifting a 'bool' implicitly converts it to 'int'}}
+
+  bool k = (x < z) >> 1; // expected-warning {{right shifting a 'bool' implicitly converts it to 'int'}}
 
   if ((y << 1) != 0) { }
   if ((y >> 1) != 0) { } // expected-warning {{right shifting a 'bool' implicitly converts it to 'int'}}

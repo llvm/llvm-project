@@ -156,7 +156,7 @@ F:
 
 exit:
   %m = phi <8 x i16> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <8 x i16> %m, <8 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
+  %v2 = shufflevector <8 x i16> %m, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
   %b2 = icmp sgt <4 x i16> %v2, <i16 -1, i16 -1, i16 -1, i16 -1>
   %r2 = select <4 x i1> %b2, <4 x i16> <i16 -32768, i16 -32768, i16 -32768, i16 -32768>, <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>
   ret <4 x i16> %r2
@@ -317,7 +317,7 @@ F:
 
 exit:
   %m = phi <8 x i16> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <8 x i16> %m, <8 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <8 x i16> %m, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %b2 = icmp sgt <4 x i16> %v2, <i16 -1, i16 -1, i16 -1, i16 -1>
   %r2 = select <4 x i1> %b2, <4 x i16> <i16 -32768, i16 -32768, i16 -32768, i16 -32768>, <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>
   ret <4 x i16> %r2
@@ -482,7 +482,7 @@ F:
 
 exit:
   %m = phi <8 x half> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <8 x half> %m, <8 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
+  %v2 = shufflevector <8 x half> %m, <8 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
   %b2 = fcmp ugt <4 x half> %v2, <half 0xH3800, half 0xH3800, half 0xH3800, half 0xH3800>
   %r2 = select <4 x i1> %b2, <4 x half> <half 0xH3900, half 0xH3900, half 0xH3900, half 0xH3900>, <4 x half> <half 0xH3D00, half 0xH3D00, half 0xH3D00, half 0xH3D00>
   ret <4 x half> %r2
@@ -685,7 +685,7 @@ F:
 
 exit:
   %m = phi <16 x i16> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <16 x i16> %m, <16 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
+  %v2 = shufflevector <16 x i16> %m, <16 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
   %b2 = icmp sgt <4 x i16> %v2, <i16 -1, i16 -1, i16 -1, i16 -1>
   %r2 = select <4 x i1> %b2, <4 x i16> <i16 -32768, i16 -32768, i16 -32768, i16 -32768>, <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>
   ret <4 x i16> %r2
@@ -890,7 +890,7 @@ F:
 
 exit:
   %m = phi <16 x i16> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <16 x i16> %m, <16 x i16> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <16 x i16> %m, <16 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
   %b2 = icmp sgt <4 x i16> %v2, <i16 -1, i16 -1, i16 -1, i16 -1>
   %r2 = select <4 x i1> %b2, <4 x i16> <i16 -32768, i16 -32768, i16 -32768, i16 -32768>, <4 x i16> <i16 -1, i16 -1, i16 -1, i16 -1>
   ret <4 x i16> %r2
@@ -1099,7 +1099,7 @@ F:
 
 exit:
   %m = phi <16 x half> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <16 x half> %m, <16 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
+  %v2 = shufflevector <16 x half> %m, <16 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 2>
   %b2 = fcmp ugt <4 x half> %v2, <half 0xH3800, half 0xH3800, half 0xH3800, half 0xH3800>
   %r2 = select <4 x i1> %b2, <4 x half> <half 0xH3900, half 0xH3900, half 0xH3900, half 0xH3900>, <4 x half> <half 0xH3D00, half 0xH3D00, half 0xH3D00, half 0xH3D00>
   ret <4 x half> %r2
@@ -1184,8 +1184,8 @@ define <8 x i16> @large_vector(ptr addrspace(3) %p, i32 %idxp) {
   %x.7 = load i16, ptr addrspace(3) %p.7, align 2
   %v3 = insertelement <8 x i16> %v3p, i16 %x.7, i32 1
 
-  %z.1 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 undef, i32 undef, i32 undef, i32 undef>
-  %z.2 = shufflevector <8 x i16> %z.1, <8 x i16> %v2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 undef, i32 undef>
+  %z.1 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
+  %z.2 = shufflevector <8 x i16> %z.1, <8 x i16> %v2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
   %z.3 = shufflevector <8 x i16> %z.2, <8 x i16> %v3, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
   ret <8 x i16> %z.3
 }
@@ -1464,7 +1464,7 @@ F:
 
 exit:
   %m = phi <16 x i16> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <16 x i16> %m, <16 x i16> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <16 x i16> %m, <16 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %b2 = icmp ugt <8 x i16> %v2, <i16 u0x3800, i16 u0x3800, i16 u0x3800, i16 u0x3800, i16 u0x3800, i16 u0x3800, i16 u0x3800, i16 u0x3800>
   %r2 = select <8 x i1> %b2, <8 x i16> <i16 u0x3900, i16 u0x3900, i16 u0x3900, i16 u0x3900, i16 u0x3900, i16 u0x3900, i16 u0x3900, i16 u0x3900>, <8 x i16> <i16 u0x3D00, i16 u0x3D00, i16 u0x3D00, i16 u0x3D00, i16 u0x3D00, i16 u0x3D00, i16 u0x3D00, i16 u0x3D00>
   ret <8 x i16> %r2
@@ -1755,7 +1755,7 @@ F:
 
 exit:
   %m = phi <16 x half> [ %t, %T ], [ %f, %F ]
-  %v2 = shufflevector <16 x half> %m, <16 x half> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %v2 = shufflevector <16 x half> %m, <16 x half> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %b2 = fcmp ugt <8 x half> %v2, <half 0xH3800, half 0xH3800, half 0xH3800, half 0xH3800, half 0xH3800, half 0xH3800, half 0xH3800, half 0xH3800>
   %r2 = select <8 x i1> %b2, <8 x half> <half 0xH3900, half 0xH3900, half 0xH3900, half 0xH3900, half 0xH3900, half 0xH3900, half 0xH3900, half 0xH3900>, <8 x half> <half 0xH3D00, half 0xH3D00, half 0xH3D00, half 0xH3D00, half 0xH3D00, half 0xH3D00, half 0xH3D00, half 0xH3D00>
   ret <8 x half> %r2

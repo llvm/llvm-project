@@ -385,7 +385,7 @@ def TrustReturnsNonnullChecker : Checker<"TrustReturnsNonnull">,
 } // end "apiModeling"
 
 //===----------------------------------------------------------------------===//
-// Evaluate "builtin" functions.
+// Evaluate "builtin" functions and assumptions.
 //===----------------------------------------------------------------------===//
 
 let ParentPackage = CoreBuiltin in {
@@ -397,6 +397,10 @@ def NoReturnFunctionChecker : Checker<"NoReturnFunctions">,
 
 def BuiltinFunctionChecker : Checker<"BuiltinFunctions">,
   HelpText<"Evaluate compiler builtin functions (e.g., alloca())">,
+  Documentation<NotDocumented>;
+
+def AssumeModeling : Checker<"AssumeModeling">,
+  HelpText<"Model compiler builtin assume functions and the assume attribute">,
   Documentation<NotDocumented>;
 
 } // end "core.builtin"
@@ -1785,6 +1789,10 @@ def UncheckedCallArgsChecker : Checker<"UncheckedCallArgsChecker">,
   HelpText<"Check unchecked call arguments.">,
   Documentation<HasDocumentation>;
 
+def UnretainedCallArgsChecker : Checker<"UnretainedCallArgsChecker">,
+  HelpText<"Check unretained call arguments.">,
+  Documentation<HasDocumentation>;
+
 def UncountedLocalVarsChecker : Checker<"UncountedLocalVarsChecker">,
   HelpText<"Check uncounted local variables.">,
   Documentation<HasDocumentation>;
@@ -1795,6 +1803,10 @@ def UncheckedLocalVarsChecker : Checker<"UncheckedLocalVarsChecker">,
 
 def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
   HelpText<"Check unretained local variables.">,
+  Documentation<HasDocumentation>;
+
+def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,
+  HelpText<"Check for correct use of RetainPtr constructor, adoptNS, and adoptCF">,
   Documentation<HasDocumentation>;
 
 } // end alpha.webkit

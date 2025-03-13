@@ -849,14 +849,34 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
 }
 
 bool ClauseProcessor::processHasDeviceAddr(
-    mlir::omp::HasDeviceAddrClauseOps &result,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const {
-  return findRepeatableClause<omp::clause::HasDeviceAddr>(
-      [&](const omp::clause::HasDeviceAddr &devAddrClause,
-          const parser::CharBlock &) {
-        addUseDeviceClause(converter, devAddrClause.v, result.hasDeviceAddrVars,
-                           isDeviceSyms);
+    lower::StatementContext &stmtCtx, mlir::omp::HasDeviceAddrClauseOps &result,
+    llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const {
+  // For HAS_DEVICE_ADDR objects, implicitly map the top-level entities.
+  // Their address (or the whole descriptor, if the entity had one) will be
+  // passed to the target region.
+  std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
+  bool clauseFound = findRepeatableClause<omp::clause::HasDeviceAddr>(
+      [&](const omp::clause::HasDeviceAddr &clause,
+          const parser::CharBlock &source) {
+        mlir::Location location = converter.genLocation(source);
+        llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TO |
+            llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+        omp::ObjectList baseObjects;
+        llvm::transform(clause.v, std::back_inserter(baseObjects),
+                        [&](const omp::Object &object) {
+                          if (auto maybeBase = getBaseObject(object, semaCtx))
+                            return *maybeBase;
+                          return object;
+                        });
+        processMapObjects(stmtCtx, location, baseObjects, mapTypeBits,
+                          parentMemberIndices, result.hasDeviceAddrVars,
+                          hasDeviceSyms);
       });
+
+  insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
+                               result.hasDeviceAddrVars, hasDeviceSyms);
+  return clauseFound;
 }
 
 bool ClauseProcessor::processIf(
@@ -908,8 +928,24 @@ void ClauseProcessor::processMapObjects(
     llvm::SmallVectorImpl<const semantics::Symbol *> &mapSyms,
     llvm::StringRef mapperIdNameRef) const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+
+  // Create the mapper symbol from its name, if specified.
   mlir::FlatSymbolRefAttr mapperId;
-  std::string mapperIdName = mapperIdNameRef.str();
+  if (!mapperIdNameRef.empty() && !objects.empty()) {
+    std::string mapperIdName = mapperIdNameRef.str();
+    if (mapperIdName == "default") {
+      const omp::Object &object = objects.front();
+      auto &typeSpec = object.sym()->owner().IsDerivedType()
+                           ? *object.sym()->owner().derivedTypeSpec()
+                           : object.sym()->GetType()->derivedTypeSpec();
+      mapperIdName = typeSpec.name().ToString() + ".default";
+      mapperIdName = converter.mangleName(mapperIdName, *typeSpec.GetScope());
+    }
+    assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
+           "mapper not found");
+    mapperId =
+        mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(), mapperIdName);
+  }
 
   for (const omp::Object &object : objects) {
     llvm::SmallVector<mlir::Value> bounds;
@@ -942,20 +978,6 @@ void ClauseProcessor::processMapObjects(
       }
     }
 
-    if (!mapperIdName.empty()) {
-      if (mapperIdName == "default") {
-        auto &typeSpec = object.sym()->owner().IsDerivedType()
-                             ? *object.sym()->owner().derivedTypeSpec()
-                             : object.sym()->GetType()->derivedTypeSpec();
-        mapperIdName = typeSpec.name().ToString() + ".default";
-        mapperIdName = converter.mangleName(mapperIdName, *typeSpec.GetScope());
-      }
-      assert(converter.getModuleOp().lookupSymbol(mapperIdName) &&
-             "mapper not found");
-      mapperId = mlir::FlatSymbolRefAttr::get(&converter.getMLIRContext(),
-                                              mapperIdName);
-      mapperIdName.clear();
-    }
     // Explicit map captures are captured ByRef by default,
     // optimisation passes may alter this to ByCopy or other capture
     // types to optimise

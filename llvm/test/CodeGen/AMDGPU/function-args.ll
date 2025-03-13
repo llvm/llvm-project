@@ -23,7 +23,7 @@ define void @void_func_i1(i1 %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store i1 %arg0, ptr addrspace(1) undef
+  store i1 %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -48,7 +48,7 @@ define void @void_func_i1_zeroext(i1 zeroext %arg0) #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ext = zext i1 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, ptr addrspace(1) undef
+  store i32 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -93,7 +93,7 @@ define void @void_func_i1_signext(i1 signext %arg0) #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ext = sext i1 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, ptr addrspace(1) undef
+  store i32 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -138,7 +138,7 @@ bb:
   br i1 %arg, label %bb2, label %bb1
 
 bb1:
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %bb2
 
 bb2:
@@ -162,7 +162,7 @@ define void @void_func_i8(i8 %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store i8 %arg0, ptr addrspace(1) undef
+  store i8 %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -207,7 +207,7 @@ define void @void_func_i8_zeroext(i8 zeroext %arg0) #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ext = zext i8 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, ptr addrspace(1) undef
+  store i32 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -252,7 +252,7 @@ define void @void_func_i8_signext(i8 signext %arg0) #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ext = sext i8 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, ptr addrspace(1) undef
+  store i32 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -273,7 +273,7 @@ define void @void_func_i16(i16 %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store i16 %arg0, ptr addrspace(1) undef
+  store i16 %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -318,7 +318,7 @@ define void @void_func_i16_zeroext(i16 zeroext %arg0) #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ext = zext i16 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, ptr addrspace(1) undef
+  store i32 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -363,7 +363,7 @@ define void @void_func_i16_signext(i16 signext %arg0) #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %ext = sext i16 %arg0 to i32
   %add = add i32 %ext, 12
-  store i32 %add, ptr addrspace(1) undef
+  store i32 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -384,7 +384,7 @@ define void @void_func_i32(i32 %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store i32 %arg0, ptr addrspace(1) undef
+  store i32 %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -405,7 +405,7 @@ define void @void_func_i64(i64 %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store i64 %arg0, ptr addrspace(1) undef
+  store i64 %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -436,7 +436,7 @@ define void @void_func_f16(half %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store half %arg0, ptr addrspace(1) undef
+  store half %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -457,7 +457,7 @@ define void @void_func_f32(float %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store float %arg0, ptr addrspace(1) undef
+  store float %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -478,7 +478,7 @@ define void @void_func_f64(double %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store double %arg0, ptr addrspace(1) undef
+  store double %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -499,7 +499,7 @@ define void @void_func_v2i32(<2 x i32> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <2 x i32> %arg0, ptr addrspace(1) undef
+  store <2 x i32> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -520,7 +520,7 @@ define void @void_func_v3i32(<3 x i32> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <3 x i32> %arg0, ptr addrspace(1) undef
+  store <3 x i32> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -541,7 +541,7 @@ define void @void_func_v4i32(<4 x i32> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <4 x i32> %arg0, ptr addrspace(1) undef
+  store <4 x i32> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -565,7 +565,7 @@ define void @void_func_v5i32(<5 x i32> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b32 v4, off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <5 x i32> %arg0, ptr addrspace(1) undef
+  store <5 x i32> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -589,7 +589,7 @@ define void @void_func_v8i32(<8 x i32> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <8 x i32> %arg0, ptr addrspace(1) undef
+  store <8 x i32> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -617,7 +617,7 @@ define void @void_func_v16i32(<16 x i32> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <16 x i32> %arg0, ptr addrspace(1) undef
+  store <16 x i32> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -658,7 +658,7 @@ define void @void_func_v32i32(<32 x i32> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <32 x i32> %arg0, ptr addrspace(1) undef
+  store <32 x i32> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -751,7 +751,7 @@ define void @void_func_v33i32(<33 x i32> %arg0) #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_store_b32 v32, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <33 x i32> %arg0, ptr addrspace(1) undef
+  store <33 x i32> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -772,7 +772,7 @@ define void @void_func_v2i64(<2 x i64> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <2 x i64> %arg0, ptr addrspace(1) undef
+  store <2 x i64> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -796,7 +796,7 @@ define void @void_func_v3i64(<3 x i64> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b64 v[4:5], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <3 x i64> %arg0, ptr addrspace(1) undef
+  store <3 x i64> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -820,7 +820,7 @@ define void @void_func_v4i64(<4 x i64> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <4 x i64> %arg0, ptr addrspace(1) undef
+  store <4 x i64> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -846,7 +846,7 @@ define void @void_func_v5i64(<5 x i64> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b64 v[8:9], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <5 x i64> %arg0, ptr addrspace(1) undef
+  store <5 x i64> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -874,7 +874,7 @@ define void @void_func_v8i64(<8 x i64> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <8 x i64> %arg0, ptr addrspace(1) undef
+  store <8 x i64> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -915,7 +915,7 @@ define void @void_func_v16i64(<16 x i64> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <16 x i64> %arg0, ptr addrspace(1) undef
+  store <16 x i64> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -990,7 +990,7 @@ define void @void_func_v2i16(<2 x i16> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <2 x i16> %arg0, ptr addrspace(1) undef
+  store <2 x i16> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -1632,7 +1632,7 @@ define void @void_func_v3i16(<3 x i16> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b16 v1, off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <3 x i16> %arg0, ptr addrspace(1) undef
+  store <3 x i16> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -1668,7 +1668,7 @@ define void @void_func_v4i16(<4 x i16> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <4 x i16> %arg0, ptr addrspace(1) undef
+  store <4 x i16> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -1708,7 +1708,7 @@ define void @void_func_v5i16(<5 x i16> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b16 v2, off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <5 x i16> %arg0, ptr addrspace(1) undef
+  store <5 x i16> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -1750,7 +1750,7 @@ define void @void_func_v8i16(<8 x i16> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <8 x i16> %arg0, ptr addrspace(1) undef
+  store <8 x i16> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -1808,7 +1808,7 @@ define void @void_func_v16i16(<16 x i16> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <16 x i16> %arg0, ptr addrspace(1) undef
+  store <16 x i16> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -1864,7 +1864,7 @@ define void @void_func_v2i24(<2 x i24> %arg0) #0 {
   %elt0 = extractelement <2 x i24> %arg0, i32 0
   %elt1 = extractelement <2 x i24> %arg0, i32 1
   %add = add i24 %elt0, %elt1
-  store i24 %add, ptr addrspace(1) undef
+  store i24 %add, ptr addrspace(1) poison
   ret void
 }
 
@@ -1885,7 +1885,7 @@ define void @void_func_v2f32(<2 x float> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <2 x float> %arg0, ptr addrspace(1) undef
+  store <2 x float> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -1906,7 +1906,7 @@ define void @void_func_v3f32(<3 x float> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b96 v[0:2], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <3 x float> %arg0, ptr addrspace(1) undef
+  store <3 x float> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -1927,7 +1927,7 @@ define void @void_func_v4f32(<4 x float> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <4 x float> %arg0, ptr addrspace(1) undef
+  store <4 x float> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -1951,7 +1951,7 @@ define void @void_func_v8f32(<8 x float> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <8 x float> %arg0, ptr addrspace(1) undef
+  store <8 x float> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -1979,7 +1979,7 @@ define void @void_func_v16f32(<16 x float> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <16 x float> %arg0, ptr addrspace(1) undef
+  store <16 x float> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2000,7 +2000,7 @@ define void @void_func_v2f64(<2 x double> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <2 x double> %arg0, ptr addrspace(1) undef
+  store <2 x double> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2024,7 +2024,7 @@ define void @void_func_v3f64(<3 x double> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b64 v[4:5], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <3 x double> %arg0, ptr addrspace(1) undef
+  store <3 x double> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2048,7 +2048,7 @@ define void @void_func_v4f64(<4 x double> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <4 x double> %arg0, ptr addrspace(1) undef
+  store <4 x double> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2076,7 +2076,7 @@ define void @void_func_v8f64(<8 x double> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <8 x double> %arg0, ptr addrspace(1) undef
+  store <8 x double> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2117,7 +2117,7 @@ define void @void_func_v16f64(<16 x double> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <16 x double> %arg0, ptr addrspace(1) undef
+  store <16 x double> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2151,7 +2151,7 @@ define void @void_func_v2f16(<2 x half> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <2 x half> %arg0, ptr addrspace(1) undef
+  store <2 x half> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2191,7 +2191,7 @@ define void @void_func_v3f16(<3 x half> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b16 v1, off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <3 x half> %arg0, ptr addrspace(1) undef
+  store <3 x half> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2229,7 +2229,7 @@ define void @void_func_v4f16(<4 x half> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <4 x half> %arg0, ptr addrspace(1) undef
+  store <4 x half> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2275,7 +2275,7 @@ define void @void_func_v8f16(<8 x half> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <8 x half> %arg0, ptr addrspace(1) undef
+  store <8 x half> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2341,7 +2341,7 @@ define void @void_func_v16f16(<16 x half> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <16 x half> %arg0, ptr addrspace(1) undef
+  store <16 x half> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2372,9 +2372,9 @@ define void @void_func_i32_i64_i32(i32 %arg0, i64 %arg1, i32 %arg2) #0 {
 ; GFX11-NEXT:    buffer_store_b32 v3, off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store volatile i32 %arg0, ptr addrspace(1) undef
-  store volatile i64 %arg1, ptr addrspace(1) undef
-  store volatile i32 %arg2, ptr addrspace(1) undef
+  store volatile i32 %arg0, ptr addrspace(1) poison
+  store volatile i64 %arg1, ptr addrspace(1) poison
+  store volatile i32 %arg2, ptr addrspace(1) poison
   ret void
 }
 
@@ -2395,7 +2395,7 @@ define void @void_func_struct_i32({ i32 } %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store { i32 } %arg0, ptr addrspace(1) undef
+  store { i32 } %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2419,7 +2419,7 @@ define void @void_func_struct_i8_i32({ i8, i32 } %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b32 v1, off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b8 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store { i8, i32 } %arg0, ptr addrspace(1) undef
+  store { i8, i32 } %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -2452,7 +2452,7 @@ define void @void_func_byval_struct_i8_i32(ptr addrspace(5) byval({ i8, i32 }) %
 ; GFX11-NEXT:    buffer_store_b8 v1, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %arg0.load = load { i8, i32 }, ptr addrspace(5) %arg0
-  store { i8, i32 } %arg0.load, ptr addrspace(1) undef
+  store { i8, i32 } %arg0.load, ptr addrspace(1) poison
   ret void
 }
 
@@ -2560,8 +2560,8 @@ define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %arg0.load = load volatile { i8, i32 }, ptr addrspace(5) %arg0
   %arg1.load = load volatile { i8, i32 }, ptr addrspace(5) %arg1
-  store volatile { i8, i32 } %arg0.load, ptr addrspace(1) undef
-  store volatile { i8, i32 } %arg1.load, ptr addrspace(1) undef
+  store volatile { i8, i32 } %arg0.load, ptr addrspace(1) poison
+  store volatile { i8, i32 } %arg1.load, ptr addrspace(1) poison
   store volatile i32 %arg2, ptr addrspace(3) undef
   ret void
 }
@@ -2597,8 +2597,8 @@ define void @void_func_byval_i32_byval_i64(ptr addrspace(5) byval(i32) %arg0, pt
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %arg0.load = load i32, ptr addrspace(5) %arg0
   %arg1.load = load i64, ptr addrspace(5) %arg1
-  store i32 %arg0.load, ptr addrspace(1) undef
-  store i64 %arg1.load, ptr addrspace(1) undef
+  store i32 %arg0.load, ptr addrspace(1) poison
+  store i64 %arg1.load, ptr addrspace(1) poison
   ret void
 }
 
@@ -2669,9 +2669,9 @@ define void @void_func_v32i32_i32_i64(<32 x i32> %arg0, i32 %arg1, i64 %arg2) #0
 ; GFX11-NEXT:    buffer_store_b64 v[32:33], off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
-  store volatile i32 %arg1, ptr addrspace(1) undef
-  store volatile i64 %arg2, ptr addrspace(1) undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) poison
+  store volatile i32 %arg1, ptr addrspace(1) poison
+  store volatile i64 %arg2, ptr addrspace(1) poison
   ret void
 }
 
@@ -2808,12 +2808,12 @@ define void @void_func_v32i32_i1_i8_i16_bf16(<32 x i32> %arg0, i1 %arg1, i8 %arg
 ; GFX11-NEXT:    buffer_store_b16 v36, off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
-  store volatile i1 %arg1, ptr addrspace(1) undef
-  store volatile i8 %arg2, ptr addrspace(1) undef
-  store volatile i16 %arg3, ptr addrspace(1) undef
-  store volatile half %arg4, ptr addrspace(1) undef
-  store volatile bfloat %arg5, ptr addrspace(1) undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) poison
+  store volatile i1 %arg1, ptr addrspace(1) poison
+  store volatile i8 %arg2, ptr addrspace(1) poison
+  store volatile i16 %arg3, ptr addrspace(1) poison
+  store volatile half %arg4, ptr addrspace(1) poison
+  store volatile bfloat %arg5, ptr addrspace(1) poison
   ret void
 }
 
@@ -2886,9 +2886,9 @@ define void @void_func_v32i32_v2i32_v2f32(<32 x i32> %arg0, <2 x i32> %arg1, <2 
 ; GFX11-NEXT:    buffer_store_b64 v[34:35], off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
-  store volatile <2 x i32> %arg1, ptr addrspace(1) undef
-  store volatile <2 x float> %arg2, ptr addrspace(1) undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) poison
+  store volatile <2 x i32> %arg1, ptr addrspace(1) poison
+  store volatile <2 x float> %arg2, ptr addrspace(1) poison
   ret void
 }
 
@@ -3042,11 +3042,11 @@ define void @void_func_v32i32_v2i16_v2f16_v2bf16_v4bf16(<32 x i32> %arg0, <2 x i
 ; GFX11-NEXT:    buffer_store_b64 v[32:33], off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
-  store volatile <2 x i16> %arg1, ptr addrspace(1) undef
-  store volatile <2 x half> %arg2, ptr addrspace(1) undef
-  store volatile <2 x bfloat> %arg3, ptr addrspace(1) undef
-  store volatile <4 x bfloat> %arg4, ptr addrspace(1) undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) poison
+  store volatile <2 x i16> %arg1, ptr addrspace(1) poison
+  store volatile <2 x half> %arg2, ptr addrspace(1) poison
+  store volatile <2 x bfloat> %arg3, ptr addrspace(1) poison
+  store volatile <4 x bfloat> %arg4, ptr addrspace(1) poison
   ret void
 }
 
@@ -3127,9 +3127,9 @@ define void @void_func_v32i32_v2i64_v2f64(<32 x i32> %arg0, <2 x i64> %arg1, <2 
 ; GFX11-NEXT:    buffer_store_b128 v[32:35], off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
-  store volatile <2 x i64> %arg1, ptr addrspace(1) undef
-  store volatile <2 x double> %arg2, ptr addrspace(1) undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) poison
+  store volatile <2 x i64> %arg1, ptr addrspace(1) poison
+  store volatile <2 x double> %arg2, ptr addrspace(1) poison
   ret void
 }
 
@@ -3210,9 +3210,9 @@ define void @void_func_v32i32_v4i32_v4f32(<32 x i32> %arg0, <4 x i32> %arg1, <4 
 ; GFX11-NEXT:    buffer_store_b128 v[36:39], off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
-  store volatile <4 x i32> %arg1, ptr addrspace(1) undef
-  store volatile <4 x float> %arg2, ptr addrspace(1) undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) poison
+  store volatile <4 x i32> %arg1, ptr addrspace(1) poison
+  store volatile <4 x float> %arg2, ptr addrspace(1) poison
   ret void
 }
 
@@ -3418,9 +3418,9 @@ define void @void_func_v32i32_v8i32_v8f32(<32 x i32> %arg0, <8 x i32> %arg1, <8 
 ; GFX11-NEXT:    buffer_store_b128 v[32:35], off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
-  store volatile <8 x i32> %arg1, ptr addrspace(1) undef
-  store volatile <8 x float> %arg2, ptr addrspace(1) undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) poison
+  store volatile <8 x i32> %arg1, ptr addrspace(1) poison
+  store volatile <8 x float> %arg2, ptr addrspace(1) poison
   ret void
 }
 
@@ -3728,9 +3728,9 @@ define void @void_func_v32i32_v16i32_v16f32(<32 x i32> %arg0, <16 x i32> %arg1, 
 ; GFX11-NEXT:    buffer_store_b128 v[32:35], off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
-  store volatile <16 x i32> %arg1, ptr addrspace(1) undef
-  store volatile <16 x float> %arg2, ptr addrspace(1) undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) poison
+  store volatile <16 x i32> %arg1, ptr addrspace(1) poison
+  store volatile <16 x float> %arg2, ptr addrspace(1) poison
   ret void
 }
 
@@ -3918,7 +3918,7 @@ define void @void_func_volatile_v16i8(<16 x i8> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b8 v0, off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store volatile <16 x i8> %arg0, ptr addrspace(1) undef
+  store volatile <16 x i8> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -4234,8 +4234,8 @@ define void @void_func_v32i32_v16i8(<32 x i32> %arg0, <16 x i8> %arg1) #0 {
 ; GFX11-NEXT:    buffer_store_b8 v55, off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store volatile <32 x i32> %arg0, ptr addrspace(1) undef
-  store volatile <16 x i8> %arg1, ptr addrspace(1) undef
+  store volatile <32 x i32> %arg0, ptr addrspace(1) poison
+  store volatile <16 x i8> %arg1, ptr addrspace(1) poison
   ret void
 }
 
@@ -4268,7 +4268,7 @@ define void @void_func_bf16(bfloat %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store bfloat %arg0, ptr addrspace(1) undef
+  store bfloat %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -4302,7 +4302,7 @@ define void @void_func_v2bf16(<2 x bfloat> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <2 x bfloat> %arg0, ptr addrspace(1) undef
+  store <2 x bfloat> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -4342,7 +4342,7 @@ define void @void_func_v3bf16(<3 x bfloat> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b16 v1, off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <3 x bfloat> %arg0, ptr addrspace(1) undef
+  store <3 x bfloat> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -4380,7 +4380,7 @@ define void @void_func_v4bf16(<4 x bfloat> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b64 v[0:1], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <4 x bfloat> %arg0, ptr addrspace(1) undef
+  store <4 x bfloat> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -4426,7 +4426,7 @@ define void @void_func_v8bf16(<8 x bfloat> %arg0) #0 {
 ; GFX11-NEXT:    s_mov_b32 s2, -1
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <8 x bfloat> %arg0, ptr addrspace(1) undef
+  store <8 x bfloat> %arg0, ptr addrspace(1) poison
   ret void
 }
 
@@ -4492,7 +4492,7 @@ define void @void_func_v16bf16(<16 x bfloat> %arg0) #0 {
 ; GFX11-NEXT:    buffer_store_b128 v[4:7], off, s[0:3], 0
 ; GFX11-NEXT:    buffer_store_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  store <16 x bfloat> %arg0, ptr addrspace(1) undef
+  store <16 x bfloat> %arg0, ptr addrspace(1) poison
   ret void
 }
 

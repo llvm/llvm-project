@@ -55,11 +55,160 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   if (mlir::succeeded(emitSimpleStmt(s, useCurrentScope)))
     return mlir::success();
 
-  // Only a subset of simple statements are supported at the moment.  When more
-  // kinds of statements are supported, a
-  //     switch (s->getStmtClass()) {
-  // will be added here.
-  return mlir::failure();
+  switch (s->getStmtClass()) {
+
+#define STMT(Type, Base)
+#define ABSTRACT_STMT(Op)
+#define EXPR(Type, Base) case Stmt::Type##Class:
+#include "clang/AST/StmtNodes.inc"
+    {
+      // Remember the block we came in on.
+      mlir::Block *incoming = builder.getInsertionBlock();
+      assert(incoming && "expression emission must have an insertion point");
+
+      emitIgnoredExpr(cast<Expr>(s));
+
+      mlir::Block *outgoing = builder.getInsertionBlock();
+      assert(outgoing && "expression emission cleared block!");
+      return mlir::success();
+    }
+
+  case Stmt::OMPScopeDirectiveClass:
+  case Stmt::OMPErrorDirectiveClass:
+  case Stmt::NoStmtClass:
+  case Stmt::CXXCatchStmtClass:
+  case Stmt::SEHExceptStmtClass:
+  case Stmt::SEHFinallyStmtClass:
+  case Stmt::MSDependentExistsStmtClass:
+  case Stmt::NullStmtClass:
+  case Stmt::CompoundStmtClass:
+  case Stmt::DeclStmtClass:
+  case Stmt::LabelStmtClass:
+  case Stmt::AttributedStmtClass:
+  case Stmt::GotoStmtClass:
+  case Stmt::BreakStmtClass:
+  case Stmt::ContinueStmtClass:
+  case Stmt::DefaultStmtClass:
+  case Stmt::CaseStmtClass:
+  case Stmt::SEHLeaveStmtClass:
+  case Stmt::SYCLKernelCallStmtClass:
+  case Stmt::IfStmtClass:
+  case Stmt::SwitchStmtClass:
+  case Stmt::ForStmtClass:
+  case Stmt::WhileStmtClass:
+  case Stmt::DoStmtClass:
+  case Stmt::CoroutineBodyStmtClass:
+  case Stmt::CoreturnStmtClass:
+  case Stmt::CXXTryStmtClass:
+  case Stmt::CXXForRangeStmtClass:
+  case Stmt::IndirectGotoStmtClass:
+  case Stmt::ReturnStmtClass:
+  case Stmt::GCCAsmStmtClass:
+  case Stmt::MSAsmStmtClass:
+  case Stmt::OMPParallelDirectiveClass:
+  case Stmt::OMPTaskwaitDirectiveClass:
+  case Stmt::OMPTaskyieldDirectiveClass:
+  case Stmt::OMPBarrierDirectiveClass:
+  case Stmt::CapturedStmtClass:
+  case Stmt::ObjCAtTryStmtClass:
+  case Stmt::ObjCAtThrowStmtClass:
+  case Stmt::ObjCAtSynchronizedStmtClass:
+  case Stmt::ObjCForCollectionStmtClass:
+  case Stmt::ObjCAutoreleasePoolStmtClass:
+  case Stmt::SEHTryStmtClass:
+  case Stmt::OMPMetaDirectiveClass:
+  case Stmt::OMPCanonicalLoopClass:
+  case Stmt::OMPSimdDirectiveClass:
+  case Stmt::OMPTileDirectiveClass:
+  case Stmt::OMPUnrollDirectiveClass:
+  case Stmt::OMPForDirectiveClass:
+  case Stmt::OMPForSimdDirectiveClass:
+  case Stmt::OMPSectionsDirectiveClass:
+  case Stmt::OMPSectionDirectiveClass:
+  case Stmt::OMPSingleDirectiveClass:
+  case Stmt::OMPMasterDirectiveClass:
+  case Stmt::OMPCriticalDirectiveClass:
+  case Stmt::OMPParallelForDirectiveClass:
+  case Stmt::OMPParallelForSimdDirectiveClass:
+  case Stmt::OMPParallelMasterDirectiveClass:
+  case Stmt::OMPParallelSectionsDirectiveClass:
+  case Stmt::OMPTaskDirectiveClass:
+  case Stmt::OMPTaskgroupDirectiveClass:
+  case Stmt::OMPFlushDirectiveClass:
+  case Stmt::OMPDepobjDirectiveClass:
+  case Stmt::OMPScanDirectiveClass:
+  case Stmt::OMPOrderedDirectiveClass:
+  case Stmt::OMPAtomicDirectiveClass:
+  case Stmt::OMPTargetDirectiveClass:
+  case Stmt::OMPTeamsDirectiveClass:
+  case Stmt::OMPCancellationPointDirectiveClass:
+  case Stmt::OMPCancelDirectiveClass:
+  case Stmt::OMPTargetDataDirectiveClass:
+  case Stmt::OMPTargetEnterDataDirectiveClass:
+  case Stmt::OMPTargetExitDataDirectiveClass:
+  case Stmt::OMPTargetParallelDirectiveClass:
+  case Stmt::OMPTargetParallelForDirectiveClass:
+  case Stmt::OMPTaskLoopDirectiveClass:
+  case Stmt::OMPTaskLoopSimdDirectiveClass:
+  case Stmt::OMPMaskedTaskLoopDirectiveClass:
+  case Stmt::OMPMaskedTaskLoopSimdDirectiveClass:
+  case Stmt::OMPMasterTaskLoopDirectiveClass:
+  case Stmt::OMPMasterTaskLoopSimdDirectiveClass:
+  case Stmt::OMPParallelGenericLoopDirectiveClass:
+  case Stmt::OMPParallelMaskedDirectiveClass:
+  case Stmt::OMPParallelMaskedTaskLoopDirectiveClass:
+  case Stmt::OMPParallelMaskedTaskLoopSimdDirectiveClass:
+  case Stmt::OMPParallelMasterTaskLoopDirectiveClass:
+  case Stmt::OMPParallelMasterTaskLoopSimdDirectiveClass:
+  case Stmt::OMPDistributeDirectiveClass:
+  case Stmt::OMPDistributeParallelForDirectiveClass:
+  case Stmt::OMPDistributeParallelForSimdDirectiveClass:
+  case Stmt::OMPDistributeSimdDirectiveClass:
+  case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
+  case Stmt::OMPTargetParallelForSimdDirectiveClass:
+  case Stmt::OMPTargetSimdDirectiveClass:
+  case Stmt::OMPTargetTeamsGenericLoopDirectiveClass:
+  case Stmt::OMPTargetUpdateDirectiveClass:
+  case Stmt::OMPTeamsDistributeDirectiveClass:
+  case Stmt::OMPTeamsDistributeSimdDirectiveClass:
+  case Stmt::OMPTeamsDistributeParallelForSimdDirectiveClass:
+  case Stmt::OMPTeamsDistributeParallelForDirectiveClass:
+  case Stmt::OMPTeamsGenericLoopDirectiveClass:
+  case Stmt::OMPTargetTeamsDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeParallelForDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeParallelForSimdDirectiveClass:
+  case Stmt::OMPTargetTeamsDistributeSimdDirectiveClass:
+  case Stmt::OMPInteropDirectiveClass:
+  case Stmt::OMPDispatchDirectiveClass:
+  case Stmt::OMPGenericLoopDirectiveClass:
+  case Stmt::OMPReverseDirectiveClass:
+  case Stmt::OMPInterchangeDirectiveClass:
+  case Stmt::OMPAssumeDirectiveClass:
+  case Stmt::OMPMaskedDirectiveClass:
+  case Stmt::OMPStripeDirectiveClass:
+  case Stmt::OpenACCComputeConstructClass:
+  case Stmt::OpenACCLoopConstructClass:
+  case Stmt::OpenACCCombinedConstructClass:
+  case Stmt::OpenACCDataConstructClass:
+  case Stmt::OpenACCEnterDataConstructClass:
+  case Stmt::OpenACCExitDataConstructClass:
+  case Stmt::OpenACCHostDataConstructClass:
+  case Stmt::OpenACCWaitConstructClass:
+  case Stmt::OpenACCInitConstructClass:
+  case Stmt::OpenACCShutdownConstructClass:
+  case Stmt::OpenACCSetConstructClass:
+  case Stmt::OpenACCUpdateConstructClass:
+  case Stmt::OpenACCCacheConstructClass:
+  case Stmt::OpenACCAtomicConstructClass:
+  case Stmt::ObjCAtCatchStmtClass:
+  case Stmt::ObjCAtFinallyStmtClass:
+    cgm.errorNYI(s->getSourceRange(),
+                 std::string("emitStmt: ") + s->getStmtClassName());
+    return mlir::failure();
+  }
+
+  llvm_unreachable("Unexpected statement class");
 }
 
 mlir::LogicalResult CIRGenFunction::emitSimpleStmt(const Stmt *s,
@@ -106,16 +255,11 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
     // this section will do nothing.  But for now a ReturnOp is necessary.
     builder.create<ReturnOp>(loc);
   } else if (rv->getType()->isVoidType()) {
-    // No return value. Emit the return expression for its side effects.
-    // TODO(CIR): Once emitAnyExpr(e) has been upstreamed, get rid of the check
-    // and just call emitAnyExpr(rv) here.
-    if (CIRGenFunction::hasScalarEvaluationKind(rv->getType())) {
-      emitScalarExpr(rv);
-    } else {
-      getCIRGenModule().errorNYI(s.getSourceRange(),
-                                 "non-scalar function return type");
+    // Make sure not to return anything, but evaluate the expression
+    // for side effects.
+    if (rv) {
+      emitAnyExpr(rv);
     }
-    builder.create<ReturnOp>(loc);
   } else if (fnRetTy->isReferenceType()) {
     getCIRGenModule().errorNYI(s.getSourceRange(),
                                "function return type that is a reference");

@@ -88,7 +88,7 @@ define amdgpu_vs <{ i32, i32 }> @ret_struct(i32 inreg %arg0, i32 inreg %arg1) {
   ; CHECK-NEXT:   $sgpr1 = COPY [[INTRINSIC_CONVERGENT1]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
 main_body:
-  %tmp0 = insertvalue <{ i32, i32 }> undef, i32 %arg0, 0
+  %tmp0 = insertvalue <{ i32, i32 }> poison, i32 %arg0, 0
   %tmp1 = insertvalue <{ i32, i32 }> %tmp0, i32 %arg1, 1
   ret <{ i32, i32 }> %tmp1
 }

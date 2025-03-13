@@ -75,7 +75,8 @@ class RetainTypeChecker {
 public:
   void visitTranslationUnitDecl(const TranslationUnitDecl *);
   void visitTypedef(const TypedefDecl *);
-  bool isUnretained(const QualType);
+  bool isUnretained(const QualType, bool ignoreARC = false);
+  bool isARCEnabled() const { return IsARCEnabled; }
 };
 
 /// \returns true if \p Class is NS or CF objects AND not retained, false if
@@ -130,6 +131,9 @@ bool isRefType(const std::string &Name);
 
 /// \returns true if \p Name is CheckedRef or CheckedPtr, false if not.
 bool isCheckedPtr(const std::string &Name);
+
+/// \returns true if \p Name is RetainPtr or its variant, false if not.
+bool isRetainPtr(const std::string &Name);
 
 /// \returns true if \p M is getter of a ref-counted class, false if not.
 std::optional<bool> isGetterOfSafePtr(const clang::CXXMethodDecl *Method);

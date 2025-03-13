@@ -17,6 +17,7 @@ static_library("Checkers") {
     "AnalysisOrderChecker.cpp",
     "AnalyzerStatsChecker.cpp",
     "ArrayBoundChecker.cpp",
+    "AssumeModeling.cpp",
     "BasicObjCFoundationChecks.cpp",
     "BitwiseShiftChecker.cpp",
     "BlockInCriticalSectionChecker.cpp",
@@ -144,6 +145,7 @@ static_library("Checkers") {
     "WebKit/RawPtrRefLocalVarsChecker.cpp",
     "WebKit/RawPtrRefMemberChecker.cpp",
     "WebKit/RefCntblBaseVirtualDtorChecker.cpp",
+    "WebKit/RetainPtrCtorAdoptChecker.cpp",
     "cert/InvalidPtrChecker.cpp",
   ]
 }
