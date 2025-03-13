@@ -62,8 +62,8 @@ static cl::opt<unsigned>
 ///   br i1 %cmp6.not, label %if.end12, label %if.then8
 ///
 /// if.then8:                                         ; preds = %if.end
-///   %cond11 = select i1 %tobool.not, i64 9223372036854775807, i64
-///   -9223372036854775808 br label %cleanup
+///   %cond11 = select i1 %tobool.not, i64 9223372036854775807, i64 -9223372036854775808
+///   br label %cleanup
 ///
 /// if.end12:                                         ; preds = %if.end
 ///   %cmp13 = icmp ult i64 %shr, 150
@@ -81,10 +81,9 @@ static cl::opt<unsigned>
 ///   %mul19 = mul nsw i64 %shl, %conv
 ///   br label %cleanup
 ///
-/// cleanup:                                          ; preds = %entry,
-/// %if.else, %if.then15, %if.then8
-///   %retval.0 = phi i64 [ %cond11, %if.then8 ], [ %mul, %if.then15 ], [
-///   %mul19, %if.else ], [ 0, %entry ] ret i64 %retval.0
+/// cleanup:                                          ; preds = %entry, %if.else, %if.then15, %if.then8
+///   %retval.0 = phi i64 [ %cond11, %if.then8 ], [ %mul, %if.then15 ], [ %mul19, %if.else ], [ 0, %entry ]
+///   ret i64 %retval.0
 /// }
 ///
 /// Replace fp to integer with generated code.
@@ -268,11 +267,13 @@ static void expandFPToI(Instruction *FPToI) {
 ///   %or = or i64 %shr6, %conv11
 ///   br label %sw.epilog
 ///
-/// sw.epilog:                                        ; preds = %sw.default,
-/// %if.then4, %sw.bb
-///   %a.addr.0 = phi i64 [ %or, %sw.default ], [ %sub, %if.then4 ], [ %shl,
-///   %sw.bb ] %1 = lshr i64 %a.addr.0, 2 %2 = and i64 %1, 1 %or16 = or i64 %2,
-///   %a.addr.0 %inc = add nsw i64 %or16, 1 %3 = and i64 %inc, 67108864
+/// sw.epilog:                                        ; preds = %sw.default, %if.then4, %sw.bb
+///   %a.addr.0 = phi i64 [ %or, %sw.default ], [ %sub, %if.then4 ], [ %shl, %sw.bb ]
+///   %1 = lshr i64 %a.addr.0, 2
+///   %2 = and i64 %1, 1
+///   %or16 = or i64 %2, %a.addr.0
+///   %inc = add nsw i64 %or16, 1
+///   %3 = and i64 %inc, 67108864
 ///   %tobool.not = icmp eq i64 %3, 0
 ///   %spec.select.v = select i1 %tobool.not, i64 2, i64 3
 ///   %spec.select = ashr i64 %inc, %spec.select.v
@@ -285,8 +286,7 @@ static void expandFPToI(Instruction *FPToI) {
 ///   %shl25 = shl i64 %sub, %sh_prom24
 ///   br label %if.end26
 ///
-/// if.end26:                                         ; preds = %sw.epilog,
-/// %if.else
+/// if.end26:                                         ; preds = %sw.epilog, %if.else
 ///   %a.addr.1 = phi i64 [ %shl25, %if.else ], [ %spec.select, %sw.epilog ]
 ///   %e.0 = phi i32 [ %sub2, %if.else ], [ %spec.select56, %sw.epilog ]
 ///   %conv27 = trunc i64 %shr to i32
@@ -300,8 +300,7 @@ static void expandFPToI(Instruction *FPToI) {
 ///   %4 = bitcast i32 %or33 to float
 ///   br label %return
 ///
-/// return:                                           ; preds = %entry,
-/// %if.end26
+/// return:                                           ; preds = %entry, %if.end26
 ///   %retval.0 = phi float [ %4, %if.end26 ], [ 0.000000e+00, %entry ]
 ///   ret float %retval.0
 /// }
