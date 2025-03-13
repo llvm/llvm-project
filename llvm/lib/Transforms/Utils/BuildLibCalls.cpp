@@ -802,6 +802,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 2);
+    Changed |= setOnlyWritesMemory(F, 0);
     break;
   case LibFunc_fread:
   case LibFunc_fread_unlocked:
@@ -809,6 +810,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 3);
+    Changed |= setOnlyWritesMemory(F, 0);
     break;
   case LibFunc_fwrite:
   case LibFunc_fwrite_unlocked:
@@ -816,7 +818,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setDoesNotThrow(F);
     Changed |= setDoesNotCapture(F, 0);
     Changed |= setDoesNotCapture(F, 3);
-    // FIXME: readonly #1?
+    Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_fputs:
   case LibFunc_fputs_unlocked:
@@ -1150,6 +1152,8 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     break;
   case LibFunc_abort:
     Changed |= setIsCold(F);
+    Changed |= setNoReturn(F);
+    Changed |= setDoesNotThrow(F);
     break;
   case LibFunc_terminate:
     Changed |= setIsCold(F);
@@ -1165,12 +1169,6 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setRetAndArgsNoUndef(F);
     Changed |= setDoesNotAccessMemory(F);
     Changed |= setDoesNotThrow(F);
-    break;
-  case LibFunc_ldexp:
-  case LibFunc_ldexpf:
-  case LibFunc_ldexpl:
-    Changed |= setOnlyWritesErrnoMemory(F);
-    Changed |= setWillReturn(F);
     break;
   case LibFunc_acos:
   case LibFunc_acosf:
@@ -1228,6 +1226,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   case LibFunc_hypot:
   case LibFunc_hypotf:
   case LibFunc_hypotl:
+  case LibFunc_ldexp:
+  case LibFunc_ldexpf:
+  case LibFunc_ldexpl:
   case LibFunc_log:
   case LibFunc_log10:
   case LibFunc_log10f:
