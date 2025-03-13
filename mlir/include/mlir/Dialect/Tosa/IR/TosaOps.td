@@ -2360,7 +2360,7 @@ def Tosa_RescaleOp : Tosa_InferShapedTypeOp<"rescale"> {
     I32Attr:$input_zp,
     I32Attr:$output_zp,
     BoolAttr:$scale32,
-    BoolAttr:$double_round,
+    Tosa_RoundingTypeAttr:$rounding_mode,
     BoolAttr:$per_channel,
     BoolAttr: $input_unsigned,
     BoolAttr: $output_unsigned
