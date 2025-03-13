@@ -413,6 +413,10 @@ public:
 
   StringRef getTrapFillValue() const override { return StringRef("\314", 1); }
 
+  StringRef getUndefFillValue() const override {
+    return StringRef("\x0f\x0b", 2); // UD2
+  }
+
   struct IndJmpMatcherFrag1 : MCInstMatcher {
     std::unique_ptr<MCInstMatcher> Base;
     std::unique_ptr<MCInstMatcher> Scale;

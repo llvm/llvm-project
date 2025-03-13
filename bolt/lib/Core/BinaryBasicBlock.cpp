@@ -44,6 +44,11 @@ const JumpTable *BinaryBasicBlock::getJumpTable() const {
   return JT;
 }
 
+void BinaryBasicBlock::undefineInstLabel(const llvm::MCInst &Inst) {
+  BinaryContext &BC = Function->getBinaryContext();
+  BC.undefineInstLabel(Inst);
+}
+
 void BinaryBasicBlock::adjustNumPseudos(const MCInst &Inst, int Sign) {
   BinaryContext &BC = Function->getBinaryContext();
   if (BC.MIB->isPseudo(Inst))

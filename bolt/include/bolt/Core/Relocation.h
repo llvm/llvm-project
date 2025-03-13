@@ -92,6 +92,9 @@ struct Relocation {
   /// Return true if relocation type is RELATIVE
   static bool isRelative(uint64_t Type);
 
+  /// Return true if relocation type is GLOB_DAT
+  static bool isGlobDat(uint64_t Type);
+
   /// Return true if relocation type is IRELATIVE
   static bool isIRelative(uint64_t Type);
 
@@ -123,6 +126,10 @@ struct Relocation {
   /// Return true if this relocation is R_*_RELATIVE type. Return false
   /// otherwise.
   bool isRelative() const { return isRelative(Type); }
+
+  /// Return true if this relocation is R_*_GLOB_DAT type. Return false
+  /// otherwise.
+  bool isGlobDat() const { return isGlobDat(Type); }
 
   /// Return true if this relocation is R_*_IRELATIVE type. Return false
   /// otherwise.

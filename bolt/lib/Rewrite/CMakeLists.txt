@@ -20,6 +20,7 @@ add_llvm_library(LLVMBOLTRewrite
   LinuxKernelRewriter.cpp
   MachORewriteInstance.cpp
   MetadataManager.cpp
+  MetadataRewriter.cpp
   BuildIDRewriter.cpp
   PseudoProbeRewriter.cpp
   RewriteInstance.cpp

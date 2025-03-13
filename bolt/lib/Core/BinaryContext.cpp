@@ -320,7 +320,7 @@ bool BinaryContext::forceSymbolRelocations(StringRef SymbolName) const {
       (SymbolName == "__hot_data_start" || SymbolName == "__hot_data_end"))
     return true;
 
-  if (SymbolName == "_end")
+  if (SymbolName == "_end" && !IsLinuxKernel)
     return true;
 
   return false;
@@ -2107,6 +2107,23 @@ ErrorOr<BinarySection &> BinaryContext::getSectionForAddress(uint64_t Address) {
       UpperBound += 1;
     if (UpperBound > Address)
       return *SI->second;
+  }
+  return std::make_error_code(std::errc::bad_address);
+}
+
+ErrorOr<BinarySection &>
+BinaryContext::getSectionForOutputAddress(uint64_t Address) {
+  for (auto &Sec : allocatableSections()) {
+    // Skip pseudo sections that serve a purpose of creating a corresponding
+    // entry in section header table
+    if (Sec.getOutputContents().empty())
+      continue;
+
+    uint64_t OutputAddress = Sec.getOutputAddress();
+    uint64_t OutputSize = Sec.getOutputSize();
+    if (OutputAddress && OutputAddress <= Address &&
+        Address < OutputAddress + OutputSize)
+      return Sec;
   }
   return std::make_error_code(std::errc::bad_address);
 }
