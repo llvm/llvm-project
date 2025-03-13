@@ -147,8 +147,10 @@ void llvm::CloneFunctionAttributesInto(Function *NewFunc,
 DISubprogram *llvm::CollectDebugInfoForCloning(const Function &F,
                                                CloneFunctionChangeType Changes,
                                                DebugInfoFinder &DIFinder) {
-  // CloneModule takes care of cloning debug info.
-  if (Changes == CloneFunctionChangeType::ClonedModule)
+  // CloneModule takes care of cloning debug info for ClonedModule. Cloning into
+  // DifferentModule is taken care of separately in ClonedFunctionInto as part
+  // of llvm.dbg.cu update.
+  if (Changes >= CloneFunctionChangeType::DifferentModule)
     return nullptr;
 
   DISubprogram *SPClonedWithinModule = nullptr;
@@ -202,7 +204,7 @@ void llvm::CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
                                      RemapFlags RemapFlag,
                                      ValueMapTypeRemapper *TypeMapper,
                                      ValueMaterializer *Materializer,
-                                     const MetadataSetTy *IdentityMD) {
+                                     const MetadataPredicate *IdentityMD) {
   SmallVector<std::pair<unsigned, MDNode *>, 1> MDs;
   OldFunc.getAllMetadata(MDs);
   for (auto MD : MDs) {
@@ -219,7 +221,7 @@ void llvm::CloneFunctionBodyInto(Function &NewFunc, const Function &OldFunc,
                                  ClonedCodeInfo *CodeInfo,
                                  ValueMapTypeRemapper *TypeMapper,
                                  ValueMaterializer *Materializer,
-                                 const MetadataSetTy *IdentityMD) {
+                                 const MetadataPredicate *IdentityMD) {
   if (OldFunc.isDeclaration())
     return;
 
@@ -326,8 +328,10 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   DISubprogram *SPClonedWithinModule =
       CollectDebugInfoForCloning(*OldFunc, Changes, DIFinder);
 
-  MetadataSetTy IdentityMD =
-      FindDebugInfoToIdentityMap(Changes, DIFinder, SPClonedWithinModule);
+  MetadataPredicate IdentityMD =
+      [MDSet =
+           FindDebugInfoToIdentityMap(Changes, DIFinder, SPClonedWithinModule)](
+          const Metadata *MD) { return MDSet.contains(MD); };
 
   // Cloning is always a Module level operation, since Metadata needs to be
   // cloned.
@@ -362,6 +366,10 @@ void llvm::CloneFunctionInto(Function *NewFunc, const Function *OldFunc,
   SmallPtrSet<const void *, 8> Visited;
   for (auto *Operand : NMD->operands())
     Visited.insert(Operand);
+
+  // Collect and clone all the compile units referenced from the instructions in
+  // the function (e.g. as a scope).
+  collectDebugInfoFromInstructions(*OldFunc, DIFinder);
   for (auto *Unit : DIFinder.compile_units()) {
     MDNode *MappedUnit =
         MapMetadata(Unit, VMap, RF_None, TypeMapper, Materializer);

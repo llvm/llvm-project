@@ -1552,7 +1552,6 @@ PreservedAnalyses AMDGPUSplitModulePass::run(Module &M,
         LLVM_DEBUG(
             dbgs() << "[amdgpu-split-module] unable to acquire lockfile, debug "
                       "output may be mangled by other processes\n");
-        Lock.unsafeRemoveLockFile();
       } else if (!Owned) {
         switch (Lock.waitForUnlock()) {
         case LockFileManager::Res_Success:
