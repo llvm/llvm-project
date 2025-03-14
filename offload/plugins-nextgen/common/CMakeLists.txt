@@ -31,7 +31,7 @@ if (NOT LLVM_LINK_LLVM_DYLIB)
   endforeach()
 endif()
 
-# Include the RPC server from the `libc` project.
+# Include the RPC server from the `libc` project if available.
 include(FindLibcCommonUtils)
 target_link_libraries(PluginCommon PRIVATE llvm-libc-common-utilities)
 if(OFFLOAD_ENABLE_EMISSARY_APIS)

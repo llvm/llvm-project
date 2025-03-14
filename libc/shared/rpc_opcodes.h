@@ -50,4 +50,10 @@ typedef enum {
 
 #undef LLVM_LIBC_OPCODE
 
+namespace rpc {
+// The implementation of this function currently lives in the utility directory
+// at 'utils/gpu/server/rpc_server.cpp'.
+rpc::Status handle_libc_opcodes(rpc::Server::Port &port, uint32_t num_lanes);
+} // namespace rpc
+
 #endif // LLVM_LIBC_SHARED_RPC_OPCODES_H

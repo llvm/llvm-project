@@ -15,7 +15,6 @@
 
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
-#include "shared/rpc_server.h"
 
 using namespace llvm;
 using namespace omp;
@@ -142,9 +141,10 @@ static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer) {
       handleOffloadOpcodes(Device, *Port, Device.getWarpSize());
 
   // Let the `libc` library handle any other unhandled opcodes.
+#ifdef LIBOMPTARGET_RPC_SUPPORT
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
-    Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port,
-                                                         Device.getWarpSize());
+    Status = handle_libc_opcodes(*Port, Device.getWarpSize());
+#endif
 
   Port->close();
 
