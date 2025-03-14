@@ -1891,7 +1891,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         unwrapOrError(Section.getContents(), Obj.getFileName()));
 
     std::vector<std::unique_ptr<std::string>> SynthesizedLabelNames;
-    if (Obj.isELF() && Obj.getArch() == Triple::amdgcn) {
+    if (Obj.isELF() && Obj.isAMDGCN()) {
       // AMDGPU disassembler uses symbolizer for printing labels
       addSymbolizer(*DT->Context, DT->TheTarget, TripleName, DT->DisAsm.get(),
                     SectionAddr, Bytes, Symbols, SynthesizedLabelNames);

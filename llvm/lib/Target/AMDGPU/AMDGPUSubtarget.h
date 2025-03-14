@@ -162,7 +162,7 @@ public:
   }
 
   bool isGCN() const {
-    return TargetTriple.getArch() == Triple::amdgcn;
+    return TargetTriple.isAMDGCN();
   }
 
   bool isGCN3Encoding() const {
