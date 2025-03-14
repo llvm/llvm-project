@@ -8,14 +8,14 @@ unsigned char cxxstaticcast_0(unsigned int x) {
 }
 
 // CIR: cir.func @cxxstaticcast_0
-// CIR:    %0 = cir.alloca !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>, ["x", init] {alignment = 4 : i64}
-// CIR:    cir.store %arg0, %0 : !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>
-// CIR:    %1 = cir.load %0 : !cir.ptr<!cir.int<u, 32>>, !cir.int<u, 32>
-// CIR:    %2 = cir.cast(integral, %1 : !cir.int<u, 32>), !cir.int<u, 8>
-// CIR:    cir.return %2 : !cir.int<u, 8>
+// CIR:    %[[XPTR:[0-9]+]] = cir.alloca !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>, ["x", init] {alignment = 4 : i64}
+// CIR:    cir.store %arg0, %[[XPTR]] : !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>
+// CIR:    %[[XVAL:[0-9]+]] = cir.load %[[XPTR]] : !cir.ptr<!cir.int<u, 32>>, !cir.int<u, 32>
+// CIR:    %[[CASTED:[0-9]+]] = cir.cast(integral, %[[XVAL]] : !cir.int<u, 32>), !cir.int<u, 8>
+// CIR:    cir.return %[[CASTED]] : !cir.int<u, 8>
 // CIR:  }
 
-// LLVM: define i8 @cxxstaticcast_0(i32 %0)
+// LLVM: define i8 @cxxstaticcast_0(i32 %{{[0-9]+}})
 // LLVM: %[[LOAD:[0-9]+]] = load i32, ptr %{{[0-9]+}}, align 4
 // LLVM: %[[TRUNC:[0-9]+]] = trunc i32 %[[LOAD]] to i8
 // LLVM: ret i8 %[[TRUNC]]
@@ -79,10 +79,10 @@ bool cptr(void *d) {
 }
 
 // CIR: cir.func @cptr(%arg0: !cir.ptr<!cir.void>
-// CIR:   %0 = cir.alloca !cir.ptr<!cir.void>, !cir.ptr<!cir.ptr<!cir.void>>, ["d", init] {alignment = 8 : i64}
+// CIR:   %[[DPTR:[0-9]+]] = cir.alloca !cir.ptr<!cir.void>, !cir.ptr<!cir.ptr<!cir.void>>, ["d", init] {alignment = 8 : i64}
 
-// CIR:   %2 = cir.load %0 : !cir.ptr<!cir.ptr<!cir.void>>, !cir.ptr<!cir.void>
-// CIR:   %3 = cir.cast(ptr_to_bool, %2 : !cir.ptr<!cir.void>), !cir.bool
+// CIR:   %[[DVAL:[0-9]+]] = cir.load %[[DPTR]] : !cir.ptr<!cir.ptr<!cir.void>>, !cir.ptr<!cir.void>
+// CIR:   %{{[0-9]+}} = cir.cast(ptr_to_bool, %[[DVAL]] : !cir.ptr<!cir.void>), !cir.bool
 #endif
 
 void should_not_cast() {
