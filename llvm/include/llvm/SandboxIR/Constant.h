@@ -424,7 +424,19 @@ class ConstantVector final : public ConstantAggregate {
   friend class Context; // For constructor.
 
 public:
-  // TODO: Missing functions: getSplat(), getType(), getSplatValue(), get().
+  static Constant *get(ArrayRef<Constant *> V);
+  /// Return a ConstantVector with the specified constant in each element.
+  /// Note that this might not return an instance of ConstantVector
+  static Constant *getSplat(ElementCount EC, Constant *Elt);
+  /// Specialize the getType() method to always return a FixedVectorType,
+  /// which reduces the amount of casting needed in parts of the compiler.
+  inline FixedVectorType *getType() const {
+    return cast<FixedVectorType>(Value::getType());
+  }
+  /// If all elements of the vector constant have the same value, return that
+  /// value. Otherwise, return nullptr. Ignore poison elements by setting
+  /// AllowPoison to true.
+  Constant *getSplatValue(bool AllowPoison = false) const;
 
   /// For isa/dyn_cast.
   static bool classof(const Value *From) {
