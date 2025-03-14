@@ -1103,16 +1103,20 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
 //   4. `std::span<T>{a, n}`, where `a` is of an array-of-T with constant size
 //   `n`
 //   5. `std::span<T>{any, 0}`
-//   6. `std::span<T>{p, n}`, where `p` is a __counted_by(`n`)/__sized_by(`n`)
-//   pointer OR `std::span<char>{(char*)p, n}`, where `p` is a __sized_by(`n`)
-//   pointer.
-//   7. `std::span<char>{p, strlen(p)}` or `std::span<wchar_t>{p, wcslen(p)}`
-//   8. `std::span<T>{ (char *)f(args), args[N] * arg*[M]}`, where
+//   6. `std::span<char>{p, strlen(p)}` or `std::span<wchar_t>{p, wcslen(p)}`
+//   7. `std::span<T>{ (char *)f(args), args[N] * arg*[M]}`, where
 //       `f` is a function with attribute `alloc_size(N, M)`;
 //       `args` represents the list of arguments;
 //       `N, M` are parameter indexes to the allocating element number and size.
 //        Sometimes, there is only one parameter index representing the total
 //        size.
+// TO_UPSTREAM(BoundsSafetyInterop) ON
+//   Interop Pattern:
+//      `std::span<T>{p, n}`, where `p` is a __counted_by(`n`)/__sized_by(`n`)
+//      pointer OR `std::span<char>{(char*)p, n}`, where `p` is a
+//      __sized_by(`n`) pointer. (This pattern is not in upstream, so try it
+//      last to avoid possible conflicts.)
+// // TO_UPSTREAM(BoundsSafetyInterop) OFF
 AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
   assert(Node.getNumArgs() == 2 &&
          "expecting a two-parameter std::span constructor");
@@ -1184,6 +1188,52 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
   }
 
   // Check form 6:
+  if (const auto *Call = dyn_cast<CallExpr>(Arg1);
+      Call && Call->getNumArgs() == 1) {
+    if (const FunctionDecl *FD = Call->getDirectCallee();
+        FD && FD->getIdentifier()) {
+      StringRef FName = FD->getName();
+      const Expr *CallArg = Call->getArg(0)->IgnoreParenImpCasts();
+
+      // TODO: we can re-use `LibcFunNamePrefixSuffixParser` to support more
+      // variants, e.g., `strlen_s`
+      return (FName == "strlen" || FName == "wcslen") &&
+             AreSameDRE(Arg0, CallArg);
+    }
+  }
+
+  // Check form 7:
+  if (auto CCast = dyn_cast<CStyleCastExpr>(Arg0)) {
+    if (!CCast->getType()->isPointerType())
+      return false;
+
+    QualType PteTy = CCast->getType()->getPointeeType();
+
+    if (!(PteTy->isConstantSizeType() && Ctx.getTypeSizeInChars(PteTy).isOne()))
+      return false;
+
+    if (const auto *Call = dyn_cast<CallExpr>(CCast->getSubExpr())) {
+      if (const FunctionDecl *FD = Call->getDirectCallee())
+        if (auto *AllocAttr = FD->getAttr<AllocSizeAttr>()) {
+          const Expr *EleSizeExpr =
+              Call->getArg(AllocAttr->getElemSizeParam().getASTIndex());
+          // NumElemIdx is invalid if AllocSizeAttr has 1 argument:
+          ParamIdx NumElemIdx = AllocAttr->getNumElemsParam();
+
+          if (!NumElemIdx.isValid())
+            return areEqualIntegers(Arg1, EleSizeExpr, Ctx);
+
+          const Expr *NumElesExpr = Call->getArg(NumElemIdx.getASTIndex());
+
+          if (auto BO = dyn_cast<BinaryOperator>(Arg1))
+            return areEqualIntegralBinaryOperators(BO, NumElesExpr, BO_Mul,
+                                                   EleSizeExpr, Ctx);
+        }
+    }
+  }
+
+  /* TO_UPSTREAM(BoundsSafetyInterop) ON */
+  // Check interop pattern:
   bool isArg0CastToBytePtrType = false;
 
   if (auto *CE = dyn_cast<CastExpr>(Arg0)) {
@@ -1229,50 +1279,7 @@ AST_MATCHER(CXXConstructExpr, isSafeSpanTwoParamConstruct) {
                                      /*DependentValues=*/nullptr,
                                      Finder->getASTContext());
   }
-  // Check form 7:
-  if (const auto *Call = dyn_cast<CallExpr>(Arg1);
-      Call && Call->getNumArgs() == 1) {
-    if (const FunctionDecl *FD = Call->getDirectCallee();
-        FD && FD->getIdentifier()) {
-      StringRef FName = FD->getName();
-      const Expr *CallArg = Call->getArg(0)->IgnoreParenImpCasts();
-
-      // TODO: we can re-use `LibcFunNamePrefixSuffixParser` to support more
-      // variants, e.g., `strlen_s`
-      return (FName == "strlen" || FName == "wcslen") &&
-             AreSameDRE(Arg0, CallArg);
-    }
-  }
-
-  // Check form 8:
-  if (auto CCast = dyn_cast<CStyleCastExpr>(Arg0)) {
-    if (!CCast->getType()->isPointerType())
-      return false;
-
-    QualType PteTy = CCast->getType()->getPointeeType();
-
-    if (!(PteTy->isConstantSizeType() && Ctx.getTypeSizeInChars(PteTy).isOne()))
-      return false;
-
-    if (const auto *Call = dyn_cast<CallExpr>(CCast->getSubExpr())) {
-      if (const FunctionDecl *FD = Call->getDirectCallee())
-        if (auto *AllocAttr = FD->getAttr<AllocSizeAttr>()) {
-          const Expr *EleSizeExpr =
-              Call->getArg(AllocAttr->getElemSizeParam().getASTIndex());
-          // NumElemIdx is invalid if AllocSizeAttr has 1 argument:
-          ParamIdx NumElemIdx = AllocAttr->getNumElemsParam();
-
-          if (!NumElemIdx.isValid())
-            return areEqualIntegers(Arg1, EleSizeExpr, Ctx);
-
-          const Expr *NumElesExpr = Call->getArg(NumElemIdx.getASTIndex());
-
-          if (auto BO = dyn_cast<BinaryOperator>(Arg1))
-            return areEqualIntegralBinaryOperators(BO, NumElesExpr, BO_Mul,
-                                                   EleSizeExpr, Ctx);
-        }
-    }
-  }
+  /* TO_UPSTREAM(BoundsSafetyInterop) OFF */
   return false;
 }
 
