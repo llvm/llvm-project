@@ -2,7 +2,6 @@
 ; RUN: opt < %s -passes=instcombine -S | FileCheck %s
 ; RUN: opt -passes=debugify,instcombine -S < %s | FileCheck %s -check-prefix DBGINFO
 
-; RUN: opt -passes=debugify,instcombine -S < %s --try-experimental-debuginfo-iterators | FileCheck %s -check-prefix DBGINFO
 
 ; RUN: opt -passes=debugify,instcombine --debugify-diop-diexprs --experimental-debuginfo-iterators=true  -S < %s | FileCheck %s -check-prefix DIOP-DBGINFO
 ; RUN: opt -passes=debugify,instcombine --debugify-diop-diexprs --experimental-debuginfo-iterators=false -S < %s | FileCheck %s -check-prefix DIOP-DBGINFO

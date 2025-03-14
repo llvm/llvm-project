@@ -14874,7 +14874,9 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   bool IsPHI = isa<PHINode>(LastInst);
   if (IsPHI)
     LastInstIt = LastInst->getParent()->getFirstNonPHIIt();
-  if (IsPHI || (!E->isGather() && doesNotNeedToSchedule(E->Scalars)) ||
+  if (IsPHI ||
+      (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
+       doesNotNeedToSchedule(E->Scalars)) ||
       (GatheredLoadsEntriesFirst.has_value() &&
        E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
        E->getOpcode() == Instruction::Load)) {
