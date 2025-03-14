@@ -86,6 +86,35 @@ TEST(TestSwiftDemangleAsyncNames, BasicAsync) {
   CheckFuncletNumbersAreARange(generic_funclets);
 }
 
+// The funclets below are created from this program:
+// swiftc -g -Onone test.swift -o - -emit-ir -module-name a \
+// | grep "define.*sayHello"
+// func work() async {}
+// func sayHello() async {
+//   let closure: (Any) async -> () = { _ in
+//     print("hello")
+//     await work()
+//     print("hello")
+//
+//     let inner_closure: (Any) async -> () = { _ in
+//       print("hello")
+//       await work()
+//       print("hello")
+//     }
+//     await inner_closure(10)
+//     print("hello")
+//
+//     let inner_closure2: (Any) async -> () = { _ in
+//       print("hello")
+//       await work()
+//       print("hello")
+//     }
+//
+//     await inner_closure2(10)
+//     print("hello")
+//   }
+//   await closure(10)
+// }
 TEST(TestSwiftDemangleAsyncNames, ClosureAsync) {
   // These are all async closures
   SmallVector<StringRef> nested1_funclets = {
@@ -116,34 +145,30 @@ TEST(TestSwiftDemangleAsyncNames, ClosureAsync) {
       "$s1a18myNonAsyncFunctionyyFyyYacfU_SiypYacfU_SSypYacfU0_TQ1_",
       "$s1a18myNonAsyncFunctionyyFyyYacfU_SiypYacfU_SSypYacfU0_TY2_"};
 
-  for (StringRef async_name : llvm::concat<StringRef>(
-           nested1_funclets, nested2_funclets1, nested2_funclets2,
-           nested2_funclets_top_not_async)) {
-    EXPECT_TRUE(IsSwiftMangledName(async_name)) << async_name;
-    EXPECT_TRUE(IsAnySwiftAsyncFunctionSymbol(async_name)) << async_name;
-  }
+  SmallVector<ArrayRef<StringRef>, 0> funclet_groups = {
+      nested1_funclets,
+      nested2_funclets1,
+      nested2_funclets2,
+      nested2_funclets_top_not_async,
+  };
 
-  CheckGroupOfFuncletsFromSameFunction(nested1_funclets);
-  CheckGroupOfFuncletsFromSameFunction(nested2_funclets1);
-  CheckGroupOfFuncletsFromSameFunction(nested2_funclets2);
-  CheckGroupOfFuncletsFromSameFunction(nested2_funclets_top_not_async);
+  for (ArrayRef<StringRef> funclet_group : funclet_groups)
+    for (StringRef async_name : funclet_group) {
+      EXPECT_TRUE(IsSwiftMangledName(async_name)) << async_name;
+      EXPECT_TRUE(IsAnySwiftAsyncFunctionSymbol(async_name)) << async_name;
+    }
 
-  CheckGroupOfFuncletsFromDifferentFunctions(nested1_funclets,
-                                             nested2_funclets1);
-  CheckGroupOfFuncletsFromDifferentFunctions(nested1_funclets,
-                                             nested2_funclets2);
-  CheckGroupOfFuncletsFromDifferentFunctions(nested1_funclets,
-                                             nested2_funclets_top_not_async);
-  CheckGroupOfFuncletsFromDifferentFunctions(nested2_funclets1,
-                                             nested2_funclets2);
-  CheckGroupOfFuncletsFromDifferentFunctions(nested2_funclets1,
-                                             nested2_funclets_top_not_async);
-  CheckGroupOfFuncletsFromDifferentFunctions(nested2_funclets2,
-                                             nested2_funclets_top_not_async);
-  CheckFuncletNumbersAreARange(nested1_funclets);
-  CheckFuncletNumbersAreARange(nested2_funclets1);
-  CheckFuncletNumbersAreARange(nested2_funclets2);
-  CheckFuncletNumbersAreARange(nested2_funclets_top_not_async);
+  for (ArrayRef<StringRef> funclet_group : funclet_groups)
+    CheckGroupOfFuncletsFromSameFunction(funclet_group);
+
+  for (ArrayRef<StringRef> funclet_group1 : funclet_groups)
+    for (ArrayRef<StringRef> funclet_group2 : funclet_groups)
+      if (funclet_group1.data() != funclet_group2.data())
+        CheckGroupOfFuncletsFromDifferentFunctions(funclet_group1,
+                                                   funclet_group2);
+
+  for (ArrayRef<StringRef> funclet_group : funclet_groups)
+    CheckFuncletNumbersAreARange(funclet_group);
 }
 
 TEST(TestSwiftDemangleAsyncNames, StaticAsync) {

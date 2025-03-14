@@ -96,12 +96,17 @@ static bool IsSwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node) {
     return childAtPath(node, Node::Kind::ExplicitClosure);
   }();
 
-  return childAtPath(func_node, {Node::Kind::Type, Node::Kind::FunctionType,
-                                 Node::Kind::AsyncAnnotation}) ||
-         childAtPath(func_node,
-                     {Node::Kind::Type, Node::Kind::DependentGenericType,
-                      Node::Kind::Type, Node::Kind::FunctionType,
-                      Node::Kind::AsyncAnnotation});
+  using Kind = Node::Kind;
+  static const llvm::SmallVector<llvm::SmallVector<Kind>>
+      async_annotation_paths = {
+          {Kind::Type, Kind::FunctionType, Kind::AsyncAnnotation},
+          {Kind::Type, Kind::DependentGenericType, Kind::Type,
+           Kind::FunctionType, Kind::AsyncAnnotation},
+      };
+  return llvm::any_of(async_annotation_paths,
+                      [func_node](llvm::ArrayRef<Kind> path) {
+                        return childAtPath(func_node, path);
+                      });
 }
 
 /// Returns true if closure1 and closure2 have the same number, type, and
