@@ -1,4 +1,3 @@
-// REQUIRES: static-libs
 
 // RUN: %clangxx %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
