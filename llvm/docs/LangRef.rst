@@ -24003,7 +24003,7 @@ second return value must be at least 1, even if the first lane is masked-off.
 
 The second result is usually less than ``evl`` when an exception would occur
 for reading that lane, but it can be reduced for any reason. This facilitates
-emulating this intrinsic when the hardware has only supports narrower vector
+emulating this intrinsic when the hardware only supports narrower vector
 types natively or when when hardware does not support fault-only-first loads.
 
 Masked-on lanes that are not inbounds of the allocation that contains the first
