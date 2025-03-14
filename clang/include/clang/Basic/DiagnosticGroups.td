@@ -791,6 +791,8 @@ def ReservedIdAsMacroAlias : DiagGroup<"reserved-id-macro", [ReservedIdAsMacro]>
 def ReservedAttributeIdentifier : DiagGroup<"reserved-attribute-identifier">;
 def RestrictExpansionMacro : DiagGroup<"restrict-expansion">;
 def FinalMacro : DiagGroup<"final-macro">;
+def UndefinedTrueIdentifier : DiagGroup<"undef-true">;
+def UndefinedIdentifier : DiagGroup<"undef", [UndefinedTrueIdentifier]>;
 
 // Just silence warnings about -Wstrict-aliasing for now.
 def : DiagGroup<"strict-aliasing=0">;

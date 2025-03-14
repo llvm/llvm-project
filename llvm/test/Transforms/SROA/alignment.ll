@@ -23,8 +23,8 @@ define void @test1(ptr %a, ptr %b) {
 ;
 ; CHECK-DEBUGLOC-LABEL: @test1(
 ; CHECK-DEBUGLOC-NEXT:  entry:
-; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META9:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 8), [[META14:![0-9]+]])
-; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META9]], !DIExpression(DW_OP_LLVM_fragment, 8, 8), [[META14]])
+; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr poison, [[META9:![0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 8), [[META14:![0-9]+]])
+; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr poison, [[META9]], !DIExpression(DW_OP_LLVM_fragment, 8, 8), [[META14]])
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META9]], !DIExpression(), [[META14]])
 ; CHECK-DEBUGLOC-NEXT:    [[GEP_A:%.*]] = getelementptr { i8, i8 }, ptr [[A:%.*]], i32 0, i32 0, !dbg [[DBG15:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr [[GEP_A]], [[META11:![0-9]+]], !DIExpression(), [[DBG15]])
@@ -102,7 +102,7 @@ define void @PR13920(ptr %a, ptr %b) {
 ;
 ; CHECK-DEBUGLOC-LABEL: @PR13920(
 ; CHECK-DEBUGLOC-NEXT:  entry:
-; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META37:![0-9]+]], !DIExpression(), [[META38:![0-9]+]])
+; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr poison, [[META37:![0-9]+]], !DIExpression(), [[META38:![0-9]+]])
 ; CHECK-DEBUGLOC-NEXT:    [[AA_0_COPYLOAD:%.*]] = load <2 x i64>, ptr [[A:%.*]], align 2, !dbg [[DBG39:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:    store <2 x i64> [[AA_0_COPYLOAD]], ptr [[B:%.*]], align 2, !dbg [[DBG40:![0-9]+]]
 ; CHECK-DEBUGLOC-NEXT:    ret void, !dbg [[DBG41:![0-9]+]]
@@ -261,7 +261,7 @@ define void @test7(ptr %out) {
 ;
 ; CHECK-DEBUGLOC-LABEL: @test7(
 ; CHECK-DEBUGLOC-NEXT:  entry:
-; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META86:![0-9]+]], !DIExpression(), [[META90:![0-9]+]])
+; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr poison, [[META86:![0-9]+]], !DIExpression(), [[META90:![0-9]+]])
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META86]], !DIExpression(), [[META90]])
 ; CHECK-DEBUGLOC-NEXT:      #dbg_value(ptr undef, [[META87:![0-9]+]], !DIExpression(), [[META91:![0-9]+]])
 ; CHECK-DEBUGLOC-NEXT:    [[A_SROA_0_0_COPYLOAD:%.*]] = load double, ptr [[OUT:%.*]], align 1, !dbg [[DBG92:![0-9]+]]

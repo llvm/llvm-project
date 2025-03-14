@@ -69,12 +69,14 @@ void StepInRequestHandler::operator()(const llvm::json::Object &request) const {
   const auto *arguments = request.getObject("arguments");
 
   std::string step_in_target;
-  uint64_t target_id = GetUnsigned(arguments, "targetId", 0);
+  const auto target_id =
+      GetInteger<uint64_t>(arguments, "targetId").value_or(0);
   auto it = dap.step_in_targets.find(target_id);
   if (it != dap.step_in_targets.end())
     step_in_target = it->second;
 
-  const bool single_thread = GetBoolean(arguments, "singleThread", false);
+  const bool single_thread =
+      GetBoolean(arguments, "singleThread").value_or(false);
   lldb::RunMode run_mode =
       single_thread ? lldb::eOnlyThisThread : lldb::eOnlyDuringStepping;
   lldb::SBThread thread = dap.GetLLDBThread(*arguments);

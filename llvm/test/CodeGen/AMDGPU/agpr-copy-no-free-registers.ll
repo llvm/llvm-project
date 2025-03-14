@@ -646,13 +646,13 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_add_f32_e32 v9, v9, v15
 ; GFX908-NEXT:    v_add_f32_e32 v10, v10, v12
 ; GFX908-NEXT:    v_add_f32_e32 v11, v11, v13
-; GFX908-NEXT:    s_mov_b64 s[20:21], -1
 ; GFX908-NEXT:    s_branch .LBB3_4
 ; GFX908-NEXT:  .LBB3_7: ; in Loop: Header=BB3_5 Depth=2
 ; GFX908-NEXT:    s_mov_b64 s[20:21], s[16:17]
 ; GFX908-NEXT:    s_andn2_b64 vcc, exec, s[20:21]
 ; GFX908-NEXT:    s_cbranch_vccz .LBB3_4
 ; GFX908-NEXT:  ; %bb.8: ; in Loop: Header=BB3_2 Depth=1
+; GFX908-NEXT:    s_mov_b64 s[20:21], -1
 ; GFX908-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX908-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GFX908-NEXT:  .LBB3_9: ; %loop.exit.guard
@@ -798,13 +798,13 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[26:27]
 ; GFX90A-NEXT:    v_pk_add_f32 v[10:11], v[10:11], v[16:17]
 ; GFX90A-NEXT:    v_pk_add_f32 v[12:13], v[12:13], v[14:15]
-; GFX90A-NEXT:    s_mov_b64 s[20:21], -1
 ; GFX90A-NEXT:    s_branch .LBB3_4
 ; GFX90A-NEXT:  .LBB3_7: ; in Loop: Header=BB3_5 Depth=2
 ; GFX90A-NEXT:    s_mov_b64 s[20:21], s[16:17]
 ; GFX90A-NEXT:    s_andn2_b64 vcc, exec, s[20:21]
 ; GFX90A-NEXT:    s_cbranch_vccz .LBB3_4
 ; GFX90A-NEXT:  ; %bb.8: ; in Loop: Header=BB3_2 Depth=1
+; GFX90A-NEXT:    s_mov_b64 s[20:21], -1
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX90A-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GFX90A-NEXT:  .LBB3_9: ; %loop.exit.guard
@@ -826,7 +826,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:  .LBB3_12: ; %DummyReturnBlock
 ; GFX90A-NEXT:    s_endpgm
 bb:
-  %i = load volatile i16, ptr addrspace(4) undef, align 2
+  %i = load volatile i16, ptr addrspace(4) poison, align 2
   %i6 = zext i16 %i to i64
   %i7 = udiv i32 %arg1, %arg2
   %i8 = zext i32 %i7 to i64
@@ -863,7 +863,7 @@ bb16:                                             ; preds = %bb58, %bb14
   %i34 = getelementptr inbounds [16 x half], ptr addrspace(1) null, i64 %i24, i64 14
   %i36 = load volatile <2 x half>, ptr addrspace(1) %i34, align 4
   %i43 = load volatile <2 x float>, ptr addrspace(3) null, align 8
-  %i46 = load volatile <2 x float>, ptr addrspace(3) undef, align 32
+  %i46 = load volatile <2 x float>, ptr addrspace(3) poison, align 32
   fence syncscope("workgroup") acquire
   br i1 %i11, label %bb58, label %bb51
 
@@ -1144,6 +1144,6 @@ declare i32 @llvm.amdgcn.workitem.id.x() #2
 attributes #0 = { "amdgpu-waves-per-eu"="6,6" }
 attributes #1 = { convergent nounwind readnone willreturn }
 attributes #2 = { nounwind readnone willreturn }
-attributes #3 = { "amdgpu-waves-per-eu"="7,7" "amdgpu-no-agpr" }
+attributes #3 = { "amdgpu-waves-per-eu"="7,7" "amdgpu-agpr-alloc"="0" }
 attributes #4 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-flat-work-group-size"="1024,1024" }
-attributes #5 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-no-agpr" }
+attributes #5 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-agpr-alloc"="0" }

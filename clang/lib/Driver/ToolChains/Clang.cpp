@@ -762,8 +762,7 @@ static void addPGOAndCoverageFlags(const ToolChain &TC, Compilation &C,
     else {
       CmdArgs.push_back("-fprofile-continuous");
       // Platforms that require a bias variable:
-      if (T.isOSBinFormatELF() || T.isOSAIX() ||
-          T.isKnownWindowsMSVCEnvironment()) {
+      if (T.isOSBinFormatELF() || T.isOSAIX() || T.isOSWindows()) {
         CmdArgs.push_back("-mllvm");
         CmdArgs.push_back("-runtime-counter-relocation");
       }
@@ -4250,10 +4249,18 @@ static bool RenderModulesOptions(Compilation &C, const Driver &D,
 
     if (Args.hasArg(options::OPT_fmodule_output_EQ))
       Args.AddLastArg(CmdArgs, options::OPT_fmodule_output_EQ);
-    else
+    else {
+      if (Args.hasArg(options::OPT__precompile) &&
+          (!Args.hasArg(options::OPT_o) ||
+           Args.getLastArg(options::OPT_o)->getValue() ==
+               getCXX20NamedModuleOutputPath(Args, Input.getBaseInput()))) {
+        D.Diag(diag::err_drv_reduced_module_output_overrided);
+      }
+
       CmdArgs.push_back(Args.MakeArgString(
           "-fmodule-output=" +
           getCXX20NamedModuleOutputPath(Args, Input.getBaseInput())));
+    }
   }
 
   // Noop if we see '-fmodules-reduced-bmi' with other translation
@@ -8020,21 +8027,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       }
     } else {
       CmdArgs.push_back("-global-isel=0");
-    }
-  }
-
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_forder_file_instrumentation)) {
-    D.Diag(diag::warn_drv_deprecated_arg)
-        << A->getAsString(Args) << /*hasReplacement=*/true
-        << "-ftemporal-profile";
-    CmdArgs.push_back("-forder-file-instrumentation");
-    // Enable order file instrumentation when ThinLTO is not on. When ThinLTO is
-    // on, we need to pass these flags as linker flags and that will be handled
-    // outside of the compiler.
-    if (!IsUsingLTO) {
-      CmdArgs.push_back("-mllvm");
-      CmdArgs.push_back("-enable-order-file-instrumentation");
     }
   }
 

@@ -58,11 +58,10 @@ STATISTIC(NumNoAlias,   "Number of NoAlias results");
 STATISTIC(NumMayAlias,  "Number of MayAlias results");
 STATISTIC(NumMustAlias, "Number of MustAlias results");
 
-namespace llvm {
 /// Allow disabling BasicAA from the AA results. This is particularly useful
 /// when testing to isolate a single AA implementation.
-cl::opt<bool> DisableBasicAA("disable-basic-aa", cl::Hidden, cl::init(false));
-} // namespace llvm
+static cl::opt<bool> DisableBasicAA("disable-basic-aa", cl::Hidden,
+                                    cl::init(false));
 
 #ifndef NDEBUG
 /// Print a trace of alias analysis queries and their results.
@@ -623,8 +622,9 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
   if (!Call || Call == Object)
     return ModRefInfo::ModRef;
 
-  if (PointerMayBeCapturedBefore(Object, /* ReturnCaptures */ true, I, DT,
-                                 /* include Object */ true))
+  if (capturesAnything(PointerMayBeCapturedBefore(
+          Object, /* ReturnCaptures */ true, I, DT,
+          /* include Object */ true, CaptureComponents::Provenance)))
     return ModRefInfo::ModRef;
 
   unsigned ArgNo = 0;
@@ -638,10 +638,11 @@ ModRefInfo AAResults::callCapturesBefore(const Instruction *I,
     if (!(*CI)->getType()->isPointerTy())
       continue;
 
-    // Make sure we still check captures(ret: address, provenance) arguments,
-    // as these wouldn't be treated as a capture at the call-site.
+    // Make sure we still check captures(ret: address, provenance) and
+    // captures(address) arguments, as these wouldn't be treated as a capture
+    // at the call-site.
     CaptureInfo Captures = Call->getCaptureInfo(ArgNo);
-    if (!capturesNothing(Captures.getOtherComponents()))
+    if (capturesAnyProvenance(Captures.getOtherComponents()))
       continue;
 
     AliasResult AR =

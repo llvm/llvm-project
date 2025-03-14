@@ -343,9 +343,6 @@ private:
   /// True if the function uses ORC format for stack unwinding.
   bool HasORC{false};
 
-  /// True if the original entry point was patched.
-  bool IsPatched{false};
-
   /// True if the function contains explicit or implicit indirect branch to its
   /// split fragments, e.g., split jump table, landing pad in split fragment
   bool HasIndirectTargetToSplitFragment{false};
@@ -1376,9 +1373,6 @@ public:
   /// Return true if the function uses ORC format for stack unwinding.
   bool hasORC() const { return HasORC; }
 
-  /// Return true if the original entry point was patched.
-  bool isPatched() const { return IsPatched; }
-
   const JumpTable *getJumpTable(const MCInst &Inst) const {
     const uint64_t Address = BC.MIB->getJumpTable(Inst);
     return getJumpTableContainingAddress(Address);
@@ -1728,8 +1722,6 @@ public:
 
   /// Mark function that should not be emitted.
   void setIgnored();
-
-  void setIsPatched(bool V) { IsPatched = V; }
 
   void setHasIndirectTargetToSplitFragment(bool V) {
     HasIndirectTargetToSplitFragment = V;

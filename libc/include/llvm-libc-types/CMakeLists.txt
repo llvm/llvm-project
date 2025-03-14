@@ -157,3 +157,127 @@ DEPENDS
 add_header(locale_t HDR locale_t.h)
 add_header(struct_lconv HDR struct_lconv.h)
 add_header(stdfix-types HDR stdfix-types.h)
+
+# UEFI
+add_header(EFI_GUID HDR EFI_GUID.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_header(EFI_CONFIGURATION_TABLE HDR EFI_CONFIGURATION_TABLE.h DEPENDS .EFI_GUID)
+
+add_header(EFI_PHYSICAL_ADDRESS HDR EFI_PHYSICAL_ADDRESS.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_header(EFI_VIRTUAL_ADDRESS HDR EFI_VIRTUAL_ADDRESS.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+
+add_header(EFI_MEMORY_DESCRIPTOR
+  HDR
+    EFI_MEMORY_DESCRIPTOR.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdint_macros
+    .EFI_PHYSICAL_ADDRESS
+    .EFI_VIRTUAL_ADDRESS
+)
+
+add_header(EFI_ALLOCATE_TYPE HDR EFI_ALLOCATE_TYPE.h)
+add_header(EFI_EVENT HDR EFI_EVENT.h)
+add_header(EFI_INTERFACE_TYPE HDR EFI_INTERFACE_TYPE.h)
+add_header(EFI_LOCATE_SEARCH_TYPE HDR EFI_LOCATE_SEARCH_TYPE.h)
+add_header(EFI_MEMORY_TYPE HDR EFI_MEMORY_TYPE.h)
+add_header(EFI_HANDLE HDR EFI_HANDLE.h)
+add_header(EFI_TIME HDR EFI_TIME.h DEPENDS libc.include.llvm-libc-macros.stdint_macros)
+add_header(EFI_TIMER_DELAY HDR EFI_TIMER_DELAY.h)
+add_header(EFI_TPL HDR EFI_TPL.h DEPENDS .size_t)
+add_header(EFI_STATUS HDR EFI_STATUS.h DEPENDS .size_t)
+
+add_header(EFI_OPEN_PROTOCOL_INFORMATION_ENTRY
+  HDR
+    EFI_OPEN_PROTOCOL_INFORMATION_ENTRY.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdint_macros
+    .EFI_HANDLE
+)
+
+add_header(EFI_CAPSULE
+  HDR
+    EFI_CAPSULE.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdint_macros
+    .EFI_GUID
+)
+
+add_header(EFI_TABLE_HEADER
+  HDR
+    EFI_TABLE_HEADER.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdint_macros
+)
+
+add_header(EFI_DEVICE_PATH_PROTOCOL
+  HDR
+    EFI_DEVICE_PATH_PROTOCOL.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdint_macros
+)
+
+add_header(EFI_SIMPLE_TEXT_INPUT_PROTOCOL
+  HDR
+    EFI_SIMPLE_TEXT_INPUT_PROTOCOL.h
+  DEPENDS
+    libc.include.llvm-libc-macros.EFIAPI_macros
+    libc.include.llvm-libc-macros.stdint_macros
+    .EFI_EVENT
+    .EFI_STATUS
+    .char16_t
+)
+
+add_header(EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
+  HDR
+    EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL.h
+  DEPENDS
+    libc.include.llvm-libc-macros.stdint_macros
+    .EFI_STATUS
+    .size_t
+)
+
+add_header(EFI_BOOT_SERVICES
+  HDR
+    EFI_BOOT_SERVICES.h
+  DEPENDS
+    libc.include.llvm-libc-macros.EFIAPI_macros
+    .EFI_ALLOCATE_TYPE
+    .EFI_DEVICE_PATH_PROTOCOL
+    .EFI_EVENT
+    .EFI_INTERFACE_TYPE
+    .EFI_LOCATE_SEARCH_TYPE
+    .EFI_MEMORY_DESCRIPTOR
+    .EFI_MEMORY_TYPE
+    .EFI_OPEN_PROTOCOL_INFORMATION_ENTRY
+    .EFI_PHYSICAL_ADDRESS
+    .EFI_STATUS
+    .EFI_TABLE_HEADER
+    .EFI_TIMER_DELAY
+    .EFI_TPL
+    .char16_t
+)
+
+add_header(EFI_RUNTIME_SERVICES
+  HDR
+    EFI_RUNTIME_SERVICES.h
+  DEPENDS
+    .EFI_CAPSULE
+    .EFI_STATUS
+    .EFI_TABLE_HEADER
+    .EFI_TIME
+    .char16_t
+)
+
+add_header(EFI_SYSTEM_TABLE
+  HDR
+    EFI_SYSTEM_TABLE.h
+  DEPENDS
+    .EFI_BOOT_SERVICES
+    .EFI_CONFIGURATION_TABLE
+    .EFI_HANDLE
+    .EFI_RUNTIME_SERVICES
+    .EFI_SIMPLE_TEXT_INPUT_PROTOCOL
+    .EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL
+    .EFI_STATUS
+    .EFI_TABLE_HEADER
+    .char16_t
+)

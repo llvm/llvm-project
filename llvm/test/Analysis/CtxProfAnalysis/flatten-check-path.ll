@@ -39,8 +39,9 @@ exit:
 !0 = !{i64 1234}
 
 ;--- profile_ok.yaml
-- Guid: 1234 
-  Counters: [2, 2, 1, 2]
+Contexts:
+  - Guid: 1234 
+    Counters: [2, 2, 1, 2]
 
 ;--- message_pump.ll
 ; This is a message pump: the loop never exits. This should result in an
@@ -61,8 +62,9 @@ exit:
 !0 = !{i64 1234}
 
 ;--- profile_pump.yaml
-- Guid: 1234
-  Counters: [2, 10, 0]
+Contexts:
+  - Guid: 1234
+    Counters: [2, 10, 0]
 
 ;--- unreachable.ll
 ; An unreachable block is reached, that's an error
@@ -84,5 +86,6 @@ exit:
 !0 = !{i64 1234}
 
 ;--- profile_unreachable.yaml
-- Guid: 1234
-  Counters: [2, 1, 1, 2]
+Contexts:
+  - Guid: 1234
+    Counters: [2, 1, 1, 2]

@@ -247,8 +247,10 @@ ENUM_CLASS(Optionality, required,
 )
 
 ENUM_CLASS(ArgFlag, none,
-    canBeNull, // actual argument can be NULL(with or without MOLD=)
-    canBeMoldNull, // actual argument can be NULL(with MOLD=)
+    canBeNullPointer, // actual argument can be NULL(with or without
+                      // MOLD=pointer)
+    canBeMoldNull, // actual argument can be NULL(MOLD=any)
+    canBeNullAllocatable, // actual argument can be NULL(MOLD=allocatable)
     defaultsToSameKind, // for MatchingDefaultKIND
     defaultsToSizeKind, // for SizeDefaultKIND
     defaultsToDefaultForResult, // for DefaultingKIND
@@ -343,8 +345,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
         Rank::dimReduced, IntrinsicClass::transformationalFunction},
     {"allocated", {{"scalar", AnyData, Rank::scalar}}, DefaultLogical,
         Rank::elemental, IntrinsicClass::inquiryFunction},
-    {"allocated", {{"array", AnyData, Rank::anyOrAssumedRank}}, DefaultLogical,
-        Rank::elemental, IntrinsicClass::inquiryFunction},
+    {"allocated",
+        {{"array", AnyData, Rank::anyOrAssumedRank, Optionality::required,
+            common::Intent::In, {ArgFlag::canBeNullAllocatable}}},
+        DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"anint", {{"a", SameReal}, MatchingDefaultKIND}, KINDReal},
     {"any", {{"mask", SameLogical, Rank::array}, OptionalDIM}, SameLogical,
         Rank::dimReduced, IntrinsicClass::transformationalFunction},
@@ -353,10 +357,10 @@ static const IntrinsicInterface genericIntrinsicFunction[]{
     {"asinh", {{"x", SameFloating}}, SameFloating},
     {"associated",
         {{"pointer", AnyPointer, Rank::anyOrAssumedRank, Optionality::required,
-             common::Intent::In, {ArgFlag::canBeNull}},
+             common::Intent::In, {ArgFlag::canBeNullPointer}},
             {"target", Addressable, Rank::anyOrAssumedRank,
                 Optionality::optional, common::Intent::In,
-                {ArgFlag::canBeNull}}},
+                {ArgFlag::canBeNullPointer}}},
         DefaultLogical, Rank::elemental, IntrinsicClass::inquiryFunction},
     {"atan", {{"x", SameFloating}}, SameFloating},
     {"atan", {{"y", OperandReal}, {"x", OperandReal}}, OperandReal},
@@ -1440,6 +1444,17 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::collectiveSubroutine},
+    {"co_reduce",
+        {{"a", AnyData, Rank::known, Optionality::required,
+             common::Intent::InOut},
+            {"operation", SameType, Rank::reduceOperation},
+            {"result_image", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::In},
+            {"stat", AnyInt, Rank::scalar, Optionality::optional,
+                common::Intent::Out},
+            {"errmsg", DefaultChar, Rank::scalar, Optionality::optional,
+                common::Intent::InOut}},
+        {}, Rank::elemental, IntrinsicClass::collectiveSubroutine},
     {"co_sum",
         {{"a", AnyNumeric, Rank::anyOrAssumedRank, Optionality::required,
              common::Intent::InOut},
@@ -1597,8 +1612,6 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             common::Intent::In}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
 };
-
-// TODO: Collective intrinsic subroutines: co_reduce
 
 // Finds a built-in derived type and returns it as a DynamicType.
 static DynamicType GetBuiltinDerivedType(
@@ -1883,9 +1896,9 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           d.keyword);
       return std::nullopt;
     }
-    if (!d.flags.test(ArgFlag::canBeNull)) {
-      if (const auto *expr{arg->UnwrapExpr()}; expr && IsNullPointer(*expr)) {
-        if (!IsBareNullPointer(expr) && IsNullObjectPointer(*expr) &&
+    if (!d.flags.test(ArgFlag::canBeNullPointer)) {
+      if (const auto *expr{arg->UnwrapExpr()}; IsNullPointer(expr)) {
+        if (!IsBareNullPointer(expr) && IsNullObjectPointer(expr) &&
             d.flags.test(ArgFlag::canBeMoldNull)) {
           // ok
         } else {
@@ -1895,6 +1908,14 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           return std::nullopt;
         }
       }
+    }
+    if (!d.flags.test(ArgFlag::canBeNullAllocatable) &&
+        IsNullAllocatable(arg->UnwrapExpr()) &&
+        !d.flags.test(ArgFlag::canBeMoldNull)) {
+      messages.Say(arg->sourceLocation(),
+          "A NULL() allocatable is not allowed for '%s=' intrinsic argument"_err_en_US,
+          d.keyword);
+      return std::nullopt;
     }
     if (d.flags.test(ArgFlag::notAssumedSize)) {
       if (auto named{ExtractNamedEntity(*arg)}) {
@@ -2853,14 +2874,15 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
             "MOLD= argument to NULL() must not be assumed-rank"_err_en_US);
       }
       bool isProcPtrTarget{
-          IsProcedurePointerTarget(*mold) && !IsNullObjectPointer(*mold)};
+          IsProcedurePointerTarget(*mold) && !IsNullObjectPointer(mold)};
       if (isProcPtrTarget || IsAllocatableOrPointerObject(*mold)) {
         characteristics::DummyArguments args;
         std::optional<characteristics::FunctionResult> fResult;
+        bool isAllocatableMold{false};
         if (isProcPtrTarget) {
           // MOLD= procedure pointer
           std::optional<characteristics::Procedure> procPointer;
-          if (IsNullProcedurePointer(*mold)) {
+          if (IsNullProcedurePointer(mold)) {
             procPointer =
                 characteristics::Procedure::Characterize(*mold, context);
           } else {
@@ -2876,12 +2898,13 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
             fResult.emplace(std::move(*procPointer));
           }
         } else if (auto type{mold->GetType()}) {
-          // MOLD= object pointer
+          // MOLD= object pointer or allocatable
           characteristics::TypeAndShape typeAndShape{
               *type, GetShape(context, *mold)};
           args.emplace_back(
               "mold"s, characteristics::DummyDataObject{typeAndShape});
           fResult.emplace(std::move(typeAndShape));
+          isAllocatableMold = IsAllocatableDesignator(*mold);
         } else {
           context.messages().Say(arguments[0]->sourceLocation(),
               "MOLD= argument to NULL() lacks type"_err_en_US);
@@ -2889,7 +2912,9 @@ SpecificCall IntrinsicProcTable::Implementation::HandleNull(
         if (fResult) {
           fResult->attrs.set(characteristics::FunctionResult::Attr::Pointer);
           characteristics::Procedure::Attrs attrs;
-          attrs.set(characteristics::Procedure::Attr::NullPointer);
+          attrs.set(isAllocatableMold
+                  ? characteristics::Procedure::Attr::NullAllocatable
+                  : characteristics::Procedure::Attr::NullPointer);
           characteristics::Procedure chars{
               std::move(*fResult), std::move(args), attrs};
           return SpecificCall{SpecificIntrinsic{"null"s, std::move(chars)},
@@ -3248,7 +3273,7 @@ static bool ApplySpecificChecks(SpecificCall &call, FoldingContext &context) {
     const auto &arg{call.arguments[0]};
     if (arg) {
       if (const auto *expr{arg->UnwrapExpr()}) {
-        ok = evaluate::IsAllocatableDesignator(*expr);
+        ok = IsAllocatableDesignator(*expr) || IsNullAllocatable(expr);
       }
     }
     if (!ok) {

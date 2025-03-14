@@ -118,13 +118,13 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
       MachineBasicBlock *Root, SmallPtrSet<MachineInstr *, 16> &Spills,
       SmallVectorImpl<MachineDomTreeNode *> &Orders,
       SmallVectorImpl<MachineInstr *> &SpillsToRm,
-      DenseMap<MachineDomTreeNode *, unsigned> &SpillsToKeep,
+      DenseMap<MachineDomTreeNode *, Register> &SpillsToKeep,
       DenseMap<MachineDomTreeNode *, MachineInstr *> &SpillBBToSpill);
 
   void runHoistSpills(LiveInterval &OrigLI, VNInfo &OrigVNI,
                       SmallPtrSet<MachineInstr *, 16> &Spills,
                       SmallVectorImpl<MachineInstr *> &SpillsToRm,
-                      DenseMap<MachineBasicBlock *, unsigned> &SpillsToIns);
+                      DenseMap<MachineBasicBlock *, Register> &SpillsToIns);
 
 public:
   HoistSpillHelper(const Spiller::RequiredAnalyses &Analyses,
@@ -135,7 +135,7 @@ public:
         IPA(LIS, mf.getNumBlockIDs()) {}
 
   void addToMergeableSpills(MachineInstr &Spill, int StackSlot,
-                            unsigned Original);
+                            Register Original);
   bool rmFromMergeableSpills(MachineInstr &Spill, int StackSlot);
   void hoistAllSpills();
   void LRE_DidCloneVirtReg(Register, Register) override;
@@ -815,7 +815,7 @@ void InlineSpiller::reMaterializeAll() {
 bool InlineSpiller::coalesceStackAccess(MachineInstr *MI, Register Reg) {
   int FI = 0;
   Register InstrReg = TII.isLoadFromStackSlot(*MI, FI);
-  bool IsLoad = InstrReg;
+  bool IsLoad = InstrReg.isValid();
   if (!IsLoad)
     InstrReg = TII.isStoreToStackSlot(*MI, FI);
 
@@ -1314,7 +1314,7 @@ void InlineSpiller::postOptimization() { HSpiller.hoistAllSpills(); }
 
 /// When a spill is inserted, add the spill to MergeableSpills map.
 void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
-                                            unsigned Original) {
+                                            Register Original) {
   BumpPtrAllocator &Allocator = LIS.getVNInfoAllocator();
   LiveInterval &OrigLI = LIS.getInterval(Original);
   // save a copy of LiveInterval in StackSlotToOrigLI because the original
@@ -1412,7 +1412,7 @@ void HoistSpillHelper::getVisitOrders(
     MachineBasicBlock *Root, SmallPtrSet<MachineInstr *, 16> &Spills,
     SmallVectorImpl<MachineDomTreeNode *> &Orders,
     SmallVectorImpl<MachineInstr *> &SpillsToRm,
-    DenseMap<MachineDomTreeNode *, unsigned> &SpillsToKeep,
+    DenseMap<MachineDomTreeNode *, Register> &SpillsToKeep,
     DenseMap<MachineDomTreeNode *, MachineInstr *> &SpillBBToSpill) {
   // The set contains all the possible BB nodes to which we may hoist
   // original spills.
@@ -1460,7 +1460,7 @@ void HoistSpillHelper::getVisitOrders(
       // containing original spills is set to 0, in order to descriminate
       // with BBs containing hoisted spills which will be inserted to
       // SpillsToKeep later during hoisting.
-      SpillsToKeep[MDT[Block]] = 0;
+      SpillsToKeep[MDT[Block]] = Register();
       WorkSet.insert(NodesOnPath.begin(), NodesOnPath.end());
     }
     NodesOnPath.clear();
@@ -1496,7 +1496,7 @@ void HoistSpillHelper::runHoistSpills(
     LiveInterval &OrigLI, VNInfo &OrigVNI,
     SmallPtrSet<MachineInstr *, 16> &Spills,
     SmallVectorImpl<MachineInstr *> &SpillsToRm,
-    DenseMap<MachineBasicBlock *, unsigned> &SpillsToIns) {
+    DenseMap<MachineBasicBlock *, Register> &SpillsToIns) {
   // Visit order of dominator tree nodes.
   SmallVector<MachineDomTreeNode *, 32> Orders;
   // SpillsToKeep contains all the nodes where spills are to be inserted
@@ -1504,7 +1504,7 @@ void HoistSpillHelper::runHoistSpills(
   // (not a hoisted one), the value of the map entry is 0. If the spill
   // is a hoisted spill, the value of the map entry is the VReg to be used
   // as the source of the spill.
-  DenseMap<MachineDomTreeNode *, unsigned> SpillsToKeep;
+  DenseMap<MachineDomTreeNode *, Register> SpillsToKeep;
   // Map from BB to the first spill inside of it.
   DenseMap<MachineDomTreeNode *, MachineInstr *> SpillBBToSpill;
 
@@ -1658,7 +1658,7 @@ void HoistSpillHelper::hoistAllSpills() {
     // SpillsToRm is the spill set to be removed from EqValSpills.
     SmallVector<MachineInstr *, 16> SpillsToRm;
     // SpillsToIns is the spill set to be newly inserted after hoisting.
-    DenseMap<MachineBasicBlock *, unsigned> SpillsToIns;
+    DenseMap<MachineBasicBlock *, Register> SpillsToIns;
 
     runHoistSpills(OrigLI, *OrigVNI, EqValSpills, SpillsToRm, SpillsToIns);
 

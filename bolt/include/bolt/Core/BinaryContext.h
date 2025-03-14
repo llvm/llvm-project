@@ -537,6 +537,17 @@ public:
   BinaryFunction *createInjectedBinaryFunction(const std::string &Name,
                                                bool IsSimple = true);
 
+  /// Patch the original binary contents at address \p Address with a sequence
+  /// of instructions from the \p Instructions list. The callee is responsible
+  /// for checking that the sequence doesn't cross any function or section
+  /// boundaries.
+  ///
+  /// Optional \p Name can be assigned to the patch. The name will be emitted to
+  /// the symbol table at \p Address.
+  BinaryFunction *createInstructionPatch(uint64_t Address,
+                                         InstructionListType &Instructions,
+                                         const Twine &Name = "");
+
   std::vector<BinaryFunction *> &getInjectedBinaryFunctions() {
     return InjectedBinaryFunctions;
   }

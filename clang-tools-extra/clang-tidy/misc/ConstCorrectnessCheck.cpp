@@ -136,16 +136,14 @@ void ConstCorrectnessCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   VariableCategory VC = VariableCategory::Value;
-  if (Variable->getType()->isReferenceType())
+  const QualType VT = Variable->getType();
+  if (VT->isReferenceType())
     VC = VariableCategory::Reference;
-  if (Variable->getType()->isPointerType())
+  else if (VT->isPointerType())
     VC = VariableCategory::Pointer;
-  if (Variable->getType()->isArrayType()) {
-    if (const auto *ArrayT = dyn_cast<ArrayType>(Variable->getType())) {
-      if (ArrayT->getElementType()->isPointerType())
-        VC = VariableCategory::Pointer;
-    }
-  }
+  else if (const auto *ArrayT = dyn_cast<ArrayType>(VT))
+    if (ArrayT->getElementType()->isPointerType())
+      VC = VariableCategory::Pointer;
 
   // Each variable can only be in one category: Value, Pointer, Reference.
   // Analysis can be controlled for every category.

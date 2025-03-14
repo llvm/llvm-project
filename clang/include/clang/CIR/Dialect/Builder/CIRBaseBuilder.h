@@ -26,6 +26,10 @@ public:
   CIRBaseBuilderTy(mlir::MLIRContext &mlirContext)
       : mlir::OpBuilder(&mlirContext) {}
 
+  cir::ConstantOp getConstant(mlir::Location loc, mlir::TypedAttr attr) {
+    return create<cir::ConstantOp>(loc, attr.getType(), attr);
+  }
+
   cir::ConstantOp getBool(bool state, mlir::Location loc) {
     return create<cir::ConstantOp>(loc, getBoolTy(), getCIRBoolAttr(state));
   }
@@ -67,6 +71,11 @@ public:
           mlir::IntegerType::get(ptr.getContext(), 64), alignment);
 
     return create<cir::LoadOp>(loc, ptr);
+  }
+
+  cir::StoreOp createStore(mlir::Location loc, mlir::Value val,
+                           mlir::Value dst) {
+    return create<cir::StoreOp>(loc, val, dst);
   }
 
   //

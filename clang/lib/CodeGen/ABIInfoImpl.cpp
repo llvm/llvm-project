@@ -430,7 +430,7 @@ Address CodeGen::EmitVAArgInstr(CodeGenFunction &CGF, Address VAListAddr,
     CharUnits TyAlignForABI = TyInfo.Align;
 
     llvm::Type *ElementTy = CGF.ConvertTypeForMem(Ty);
-    llvm::Type *BaseTy = llvm::PointerType::getUnqual(ElementTy);
+    llvm::Type *BaseTy = llvm::PointerType::getUnqual(CGF.getLLVMContext());
     llvm::Value *Addr =
         CGF.Builder.CreateVAArg(VAListAddr.emitRawPointer(CGF), BaseTy);
     return Address(Addr, ElementTy, TyAlignForABI);

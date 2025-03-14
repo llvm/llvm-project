@@ -199,6 +199,11 @@ translateDataLayout(DataLayoutSpecInterface attribute,
       layoutStream << "-" << (isLittleEndian ? "e" : "E");
       continue;
     }
+    if (key.getValue() == DLTIDialect::kDataLayoutManglingModeKey) {
+      auto value = cast<StringAttr>(entry.getValue());
+      layoutStream << "-m:" << value.getValue();
+      continue;
+    }
     if (key.getValue() == DLTIDialect::kDataLayoutProgramMemorySpaceKey) {
       auto value = cast<IntegerAttr>(entry.getValue());
       uint64_t space = value.getValue().getZExtValue();
@@ -1258,16 +1263,35 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
     auto dtorOp = dyn_cast<GlobalDtorsOp>(op);
     if (!ctorOp && !dtorOp)
       continue;
-    auto range = ctorOp ? llvm::zip(ctorOp.getCtors(), ctorOp.getPriorities())
-                        : llvm::zip(dtorOp.getDtors(), dtorOp.getPriorities());
-    auto appendGlobalFn =
-        ctorOp ? llvm::appendToGlobalCtors : llvm::appendToGlobalDtors;
-    for (auto symbolAndPriority : range) {
-      llvm::Function *f = lookupFunction(
-          cast<FlatSymbolRefAttr>(std::get<0>(symbolAndPriority)).getValue());
-      appendGlobalFn(*llvmModule, f,
-                     cast<IntegerAttr>(std::get<1>(symbolAndPriority)).getInt(),
-                     /*Data=*/nullptr);
+
+    // The empty / zero initialized version of llvm.global_(c|d)tors cannot be
+    // handled by appendGlobalFn logic below, which just ignores empty (c|d)tor
+    // lists. Make sure it gets emitted.
+    if ((ctorOp && ctorOp.getCtors().empty()) ||
+        (dtorOp && dtorOp.getDtors().empty())) {
+      llvm::IRBuilder<llvm::TargetFolder> builder(
+          llvmModule->getContext(),
+          llvm::TargetFolder(llvmModule->getDataLayout()));
+      llvm::Type *eltTy = llvm::StructType::get(
+          builder.getInt32Ty(), builder.getPtrTy(), builder.getPtrTy());
+      llvm::ArrayType *at = llvm::ArrayType::get(eltTy, 0);
+      llvm::Constant *zeroInit = llvm::Constant::getNullValue(at);
+      (void)new llvm::GlobalVariable(
+          *llvmModule, zeroInit->getType(), false,
+          llvm::GlobalValue::AppendingLinkage, zeroInit,
+          ctorOp ? "llvm.global_ctors" : "llvm.global_dtors");
+    } else {
+      auto range = ctorOp
+                       ? llvm::zip(ctorOp.getCtors(), ctorOp.getPriorities())
+                       : llvm::zip(dtorOp.getDtors(), dtorOp.getPriorities());
+      auto appendGlobalFn =
+          ctorOp ? llvm::appendToGlobalCtors : llvm::appendToGlobalDtors;
+      for (const auto &[sym, prio] : range) {
+        llvm::Function *f =
+            lookupFunction(cast<FlatSymbolRefAttr>(sym).getValue());
+        appendGlobalFn(*llvmModule, f, cast<IntegerAttr>(prio).getInt(),
+                       /*Data=*/nullptr);
+      }
     }
   }
 
@@ -1470,9 +1494,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
   if (auto tuneCpu = func.getTuneCpu())
     llvmFunc->addFnAttr("tune-cpu", *tuneCpu);
 
-  if (auto targetFeatures = func.getTargetFeatures())
-    llvmFunc->addFnAttr("target-features", targetFeatures->getFeaturesString());
-
   if (auto attr = func.getVscaleRange())
     llvmFunc->addFnAttr(llvm::Attribute::getWithVScaleRangeArgs(
         getLLVMContext(), attr->getMinRange().getInt(),
@@ -1503,12 +1524,6 @@ LogicalResult ModuleTranslation::convertOneFunction(LLVMFuncOp func) {
 
   if (auto fpContract = func.getFpContract())
     llvmFunc->addFnAttr("fp-contract", *fpContract);
-
-  // Add function attribute frame-pointer, if found.
-  if (FramePointerKindAttr attr = func.getFramePointerAttr())
-    llvmFunc->addFnAttr("frame-pointer",
-                        LLVM::framePointerKind::stringifyFramePointerKind(
-                            (attr.getFramePointerKind())));
 
   // First, create all blocks so we can jump to them.
   llvm::LLVMContext &llvmContext = llvmFunc->getContext();
@@ -1582,6 +1597,11 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::NoUnwind);
   if (func.getWillReturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
+  if (TargetFeaturesAttr targetFeatAttr = func.getTargetFeaturesAttr())
+    llvmFunc->addFnAttr("target-features", targetFeatAttr.getFeaturesString());
+  if (FramePointerKindAttr fpAttr = func.getFramePointerAttr())
+    llvmFunc->addFnAttr("frame-pointer", stringifyFramePointerKind(
+                                             fpAttr.getFramePointerKind()));
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
@@ -1677,10 +1697,9 @@ ModuleTranslation::convertParameterAttrs(LLVMFuncOp func, int argIdx,
 }
 
 FailureOr<llvm::AttrBuilder>
-ModuleTranslation::convertParameterAttrs(CallOpInterface callOp,
+ModuleTranslation::convertParameterAttrs(Location loc,
                                          DictionaryAttr paramAttrs) {
   llvm::AttrBuilder attrBuilder(llvmModule->getContext());
-  Location loc = callOp.getLoc();
   auto attrNameToKindMapping = getAttrNameToKindMapping();
 
   for (auto namedAttr : paramAttrs) {
@@ -2120,7 +2139,8 @@ prepareLLVMModule(Operation *m, llvm::LLVMContext &llvmContext,
   }
   if (auto targetTripleAttr =
           m->getDiscardableAttr(LLVM::LLVMDialect::getTargetTripleAttrName()))
-    llvmModule->setTargetTriple(cast<StringAttr>(targetTripleAttr).getValue());
+    llvmModule->setTargetTriple(
+        llvm::Triple(cast<StringAttr>(targetTripleAttr).getValue()));
 
   return llvmModule;
 }

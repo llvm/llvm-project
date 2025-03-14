@@ -42,9 +42,14 @@ namespace Fortran::tools {
     targetCharacteristics.set_hasSubnormalFlushingControl(/*kind=*/8);
   }
 
-  if (targetTriple.getArch() != llvm::Triple::ArchType::x86_64) {
+  switch (targetTriple.getArch()) {
+  case llvm::Triple::ArchType::amdgcn:
+  case llvm::Triple::ArchType::x86_64:
+    break;
+  default:
     targetCharacteristics.DisableType(
         Fortran::common::TypeCategory::Real, /*kind=*/10);
+    break;
   }
 
   // Check for kind=16 support. See flang/runtime/Float128Math/math-entries.h.

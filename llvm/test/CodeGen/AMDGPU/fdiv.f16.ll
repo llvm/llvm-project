@@ -1538,7 +1538,7 @@ define amdgpu_kernel void @div_afn_2_x_pat_f16(ptr addrspace(1) %out) #0 {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %x = load half, ptr addrspace(1) undef
+  %x = load half, ptr addrspace(1) poison
   %rcp = fdiv afn half %x, 2.0
   store half %rcp, ptr addrspace(1) %out, align 4
   ret void
@@ -1603,7 +1603,7 @@ define amdgpu_kernel void @div_afn_k_x_pat_f16(ptr addrspace(1) %out) #0 {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %x = load half, ptr addrspace(1) undef
+  %x = load half, ptr addrspace(1) poison
   %rcp = fdiv afn half %x, 10.0
   store half %rcp, ptr addrspace(1) %out, align 4
   ret void
@@ -1668,7 +1668,7 @@ define amdgpu_kernel void @div_afn_neg_k_x_pat_f16(ptr addrspace(1) %out) #0 {
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %x = load half, ptr addrspace(1) undef
+  %x = load half, ptr addrspace(1) poison
   %rcp = fdiv afn half %x, -10.0
   store half %rcp, ptr addrspace(1) %out, align 4
   ret void

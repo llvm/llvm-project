@@ -709,7 +709,6 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   moduleToObjectTimer.stopTimer();
   llvmToISATimeInMs = moduleToObjectTimer.getTotalTime().getWallTime() * 1000;
   moduleToObjectTimer.clear();
-  moduleToObjectTimer.startTimer();
   if (isaCallback)
     isaCallback(serializedISA.value());
 
@@ -730,6 +729,7 @@ NVPTXSerializer::moduleToObject(llvm::Module &llvmModule) {
   }
 
   std::optional<SmallVector<char, 0>> result;
+  moduleToObjectTimer.startTimer();
   // Compile to binary.
 #if MLIR_ENABLE_NVPTXCOMPILER
   result = compileToBinaryNVPTX(*serializedISA);

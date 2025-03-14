@@ -659,8 +659,7 @@ void coro::BaseCloner::salvageDebugInfo() {
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
   // Only 64-bit ABIs have a register we can refer to with the entry value.
-  bool UseEntryValue =
-      llvm::Triple(OrigF.getParent()->getTargetTriple()).isArch64Bit();
+  bool UseEntryValue = OrigF.getParent()->getTargetTriple().isArch64Bit();
   for (DbgVariableIntrinsic *DVI : Worklist)
     coro::salvageDebugInfo(ArgToAllocaMap, *DVI, UseEntryValue);
   for (DbgVariableRecord *DVR : DbgVariableRecords)
@@ -922,11 +921,14 @@ void coro::BaseCloner::create() {
   auto savedLinkage = NewF->getLinkage();
   NewF->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
+  MetadataPredicate IdentityMD = [&](const Metadata *MD) {
+    return CommonDebugInfo.contains(MD);
+  };
   CloneFunctionAttributesInto(NewF, &OrigF, VMap, false);
   CloneFunctionMetadataInto(*NewF, OrigF, VMap, RF_None, nullptr, nullptr,
-                            &CommonDebugInfo);
+                            &IdentityMD);
   CloneFunctionBodyInto(*NewF, OrigF, VMap, RF_None, Returns, "", nullptr,
-                        nullptr, nullptr, &CommonDebugInfo);
+                        nullptr, nullptr, &IdentityMD);
 
   auto &Context = NewF->getContext();
 

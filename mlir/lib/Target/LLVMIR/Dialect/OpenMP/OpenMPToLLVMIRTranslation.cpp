@@ -168,10 +168,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
     if (op.getDistScheduleChunkSize())
       result = todo("dist_schedule with chunk_size");
   };
-  auto checkHasDeviceAddr = [&todo](auto op, LogicalResult &result) {
-    if (!op.getHasDeviceAddrVars().empty())
-      result = todo("has_device_addr");
-  };
   auto checkHint = [](auto op, LogicalResult &) {
     if (op.getHint())
       op.emitWarning("hint clause discarded");
@@ -311,7 +307,6 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkBare(op, result);
         checkDevice(op, result);
-        checkHasDeviceAddr(op, result);
         checkInReduction(op, result);
         checkIsDevicePtr(op, result);
         checkPrivate(op, result);
@@ -555,18 +550,16 @@ convertIgnoredWrapper(omp::LoopWrapperInterface opInst,
   // corresponding operand. This is semantically equivalent to this wrapper not
   // being present.
   auto forwardArgs =
-      [&moduleTranslation](llvm::ArrayRef<BlockArgument> blockArgs,
-                           OperandRange operands) {
-        for (auto [arg, var] : llvm::zip_equal(blockArgs, operands))
+      [&moduleTranslation](omp::BlockArgOpenMPOpInterface blockArgIface) {
+        llvm::SmallVector<std::pair<Value, BlockArgument>> blockArgsPairs;
+        blockArgIface.getBlockArgsPairs(blockArgsPairs);
+        for (auto [var, arg] : blockArgsPairs)
           moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
       };
 
   return llvm::TypeSwitch<Operation *, LogicalResult>(opInst)
       .Case([&](omp::SimdOp op) {
-        auto blockArgIface = cast<omp::BlockArgOpenMPOpInterface>(*op);
-        forwardArgs(blockArgIface.getPrivateBlockArgs(), op.getPrivateVars());
-        forwardArgs(blockArgIface.getReductionBlockArgs(),
-                    op.getReductionVars());
+        forwardArgs(cast<omp::BlockArgOpenMPOpInterface>(*op));
         op.emitWarning() << "simd information on composite construct discarded";
         return success();
       })
@@ -1452,6 +1445,12 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
 
   llvm::BasicBlock *afterAllocas = allocaTerminator->getSuccessor(0);
 
+  unsigned int allocaAS =
+      moduleTranslation.getLLVMModule()->getDataLayout().getAllocaAddrSpace();
+  unsigned int defaultAS = moduleTranslation.getLLVMModule()
+                               ->getDataLayout()
+                               .getProgramAddressSpace();
+
   for (auto [privDecl, mlirPrivVar, blockArg] :
        llvm::zip_equal(privateDecls, mlirPrivateVars, privateBlockArgs)) {
     llvm::Type *llvmAllocType =
@@ -1459,6 +1458,10 @@ allocatePrivateVars(llvm::IRBuilderBase &builder,
     builder.SetInsertPoint(allocaIP.getBlock()->getTerminator());
     llvm::Value *llvmPrivateVar = builder.CreateAlloca(
         llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
+    if (allocaAS != defaultAS)
+      llvmPrivateVar = builder.CreateAddrSpaceCast(llvmPrivateVar,
+                                                   builder.getPtrTy(defaultAS));
+
     llvmPrivateVars.push_back(llvmPrivateVar);
   }
 
@@ -3173,8 +3176,9 @@ llvm::Value *getSizeInBytes(DataLayout &dl, const mlir::Type &type,
 static void collectMapDataFromMapOperands(
     MapInfoData &mapData, SmallVectorImpl<Value> &mapVars,
     LLVM::ModuleTranslation &moduleTranslation, DataLayout &dl,
-    llvm::IRBuilderBase &builder, const ArrayRef<Value> &useDevPtrOperands = {},
-    const ArrayRef<Value> &useDevAddrOperands = {}) {
+    llvm::IRBuilderBase &builder, ArrayRef<Value> useDevPtrOperands = {},
+    ArrayRef<Value> useDevAddrOperands = {},
+    ArrayRef<Value> hasDevAddrOperands = {}) {
   auto checkIsAMember = [](const auto &mapVars, auto mapOp) {
     // Check if this is a member mapping and correctly assign that it is, if
     // it is a member of a larger object.
@@ -3280,6 +3284,52 @@ static void collectMapDataFromMapOperands(
 
   addDevInfos(useDevAddrOperands, llvm::OpenMPIRBuilder::DeviceInfoTy::Address);
   addDevInfos(useDevPtrOperands, llvm::OpenMPIRBuilder::DeviceInfoTy::Pointer);
+
+  for (Value mapValue : hasDevAddrOperands) {
+    auto mapOp = cast<omp::MapInfoOp>(mapValue.getDefiningOp());
+    Value offloadPtr =
+        mapOp.getVarPtrPtr() ? mapOp.getVarPtrPtr() : mapOp.getVarPtr();
+    llvm::Value *origValue = moduleTranslation.lookupValue(offloadPtr);
+    auto mapType = static_cast<llvm::omp::OpenMPOffloadMappingFlags>(
+        mapOp.getMapType().value());
+    auto mapTypeAlways = llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_ALWAYS;
+
+    mapData.OriginalValue.push_back(origValue);
+    mapData.BasePointers.push_back(origValue);
+    mapData.Pointers.push_back(origValue);
+    mapData.IsDeclareTarget.push_back(false);
+    mapData.BaseType.push_back(
+        moduleTranslation.convertType(mapOp.getVarType()));
+    mapData.Sizes.push_back(
+        builder.getInt64(dl.getTypeSize(mapOp.getVarType())));
+    mapData.MapClause.push_back(mapOp.getOperation());
+    if (llvm::to_underlying(mapType & mapTypeAlways)) {
+      // Descriptors are mapped with the ALWAYS flag, since they can get
+      // rematerialized, so the address of the decriptor for a given object
+      // may change from one place to another.
+      mapData.Types.push_back(mapType);
+      // Technically it's possible for a non-descriptor mapping to have
+      // both has-device-addr and ALWAYS, so lookup the mapper in case it
+      // exists.
+      if (mapOp.getMapperId()) {
+        mapData.Mappers.push_back(
+            SymbolTable::lookupNearestSymbolFrom<omp::DeclareMapperOp>(
+                mapOp, mapOp.getMapperIdAttr()));
+      } else {
+        mapData.Mappers.push_back(nullptr);
+      }
+    } else {
+      mapData.Types.push_back(
+          llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_LITERAL);
+      mapData.Mappers.push_back(nullptr);
+    }
+    mapData.Names.push_back(LLVM::createMappingInformation(
+        mapOp.getLoc(), *moduleTranslation.getOpenMPBuilder()));
+    mapData.DevicePointers.push_back(
+        llvm::OpenMPIRBuilder::DeviceInfoTy::Address);
+    mapData.IsAMapping.push_back(false);
+    mapData.IsAMember.push_back(checkIsAMember(hasDevAddrOperands, mapOp));
+  }
 }
 
 static int getMapDataMemberIdx(MapInfoData &mapData, omp::MapInfoOp memberOp) {
@@ -3982,7 +4032,6 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
     return failure();
 
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
-
   MapInfoData mapData;
   collectMapDataFromMapOperands(mapData, mapVars, moduleTranslation, DL,
                                 builder, useDevicePtrVars, useDeviceAddrVars);
@@ -4233,7 +4282,7 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
   return success();
 }
 
-static bool getTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
+static void getTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
                                      omp::TargetOp targetOp,
                                      llvm::StringRef parentName = "") {
   auto fileLoc = targetOp.getLoc()->findInstanceOf<FileLineColLoc>();
@@ -4242,15 +4291,16 @@ static bool getTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
   StringRef fileName = fileLoc.getFilename().getValue();
 
   llvm::sys::fs::UniqueID id;
-  if (auto ec = llvm::sys::fs::getUniqueID(fileName, id)) {
-    targetOp.emitError("Unable to get unique ID for file");
-    return false;
-  }
-
   uint64_t line = fileLoc.getLine();
-  targetInfo = llvm::TargetRegionEntryInfo(parentName, id.getDevice(),
-                                           id.getFile(), line);
-  return true;
+  if (auto ec = llvm::sys::fs::getUniqueID(fileName, id)) {
+    size_t fileHash = llvm::hash_value(fileName.str());
+    size_t deviceId = 0xdeadf17e;
+    targetInfo =
+        llvm::TargetRegionEntryInfo(parentName, deviceId, fileHash, line);
+  } else {
+    targetInfo = llvm::TargetRegionEntryInfo(parentName, id.getDevice(),
+                                             id.getFile(), line);
+  }
 }
 
 static void
@@ -4695,7 +4745,9 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
   llvm::DenseMap<Value, Value> mappedPrivateVars;
   DataLayout dl = DataLayout(opInst.getParentOfType<ModuleOp>());
   SmallVector<Value> mapVars = targetOp.getMapVars();
+  SmallVector<Value> hdaVars = targetOp.getHasDeviceAddrVars();
   ArrayRef<BlockArgument> mapBlockArgs = argIface.getMapBlockArgs();
+  ArrayRef<BlockArgument> hdaBlockArgs = argIface.getHasDeviceAddrBlockArgs();
   llvm::Function *llvmOutlinedFn = nullptr;
 
   // TODO: It can also be false if a compile-time constant `false` IF clause is
@@ -4780,6 +4832,12 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupValue(mapInfoOp.getVarPtr());
       moduleTranslation.mapValue(arg, mapOpValue);
     }
+    for (auto [arg, mapOp] : llvm::zip_equal(hdaBlockArgs, hdaVars)) {
+      auto mapInfoOp = cast<omp::MapInfoOp>(mapOp.getDefiningOp());
+      llvm::Value *mapOpValue =
+          moduleTranslation.lookupValue(mapInfoOp.getVarPtr());
+      moduleTranslation.mapValue(arg, mapOpValue);
+    }
 
     // Do privatization after moduleTranslation has already recorded
     // mapped values.
@@ -4832,6 +4890,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
             "failed to inline `dealloc` region of `omp.private` "
             "op in the target region");
       }
+      return builder.saveIP();
     }
 
     return InsertPointTy(exitBlock.get(), exitBlock.get()->end());
@@ -4841,12 +4900,12 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::TargetRegionEntryInfo entryInfo;
 
-  if (!getTargetEntryUniqueInfo(entryInfo, targetOp, parentName))
-    return failure();
+  getTargetEntryUniqueInfo(entryInfo, targetOp, parentName);
 
   MapInfoData mapData;
   collectMapDataFromMapOperands(mapData, mapVars, moduleTranslation, dl,
-                                builder);
+                                builder, /*useDevPtrOperands=*/{},
+                                /*useDevAddrOperands=*/{}, hdaVars);
 
   MapInfosTy combinedInfos;
   auto genMapInfoCB =
@@ -4900,7 +4959,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       kernelInput.push_back(value);
   }
 
-  for (size_t i = 0; i < mapVars.size(); ++i) {
+  for (size_t i = 0, e = mapData.OriginalValue.size(); i != e; ++i) {
     // declare target arguments are not passed to kernels as arguments
     // TODO: We currently do not handle cases where a member is explicitly
     // passed in as an argument, this will likley need to be handled in

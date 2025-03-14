@@ -119,6 +119,12 @@ def FeatureUnalignedDSAccess : SubtargetFeature<"unaligned-ds-access",
   "Hardware supports unaligned local and region loads and stores"
 >;
 
+def FeatureRelaxedBufferOOBMode : SubtargetFeature<"relaxed-buffer-oob-mode",
+  "RelaxedBufferOOBMode",
+  "true",
+  "Disable strict out-of-bounds buffer guarantees. An OOB access may potentially cause an adjacent access to be treated as if it were also OOB"
+>;
+
 def FeatureApertureRegs : SubtargetFeature<"aperture-regs",
   "HasApertureRegs",
   "true",
@@ -236,6 +242,12 @@ def FeatureInstFwdPrefetchBug : SubtargetFeature<"inst-fwd-prefetch-bug",
   "HasInstFwdPrefetchBug",
   "true",
   "S_INST_PREFETCH instruction causes shader to hang"
+>;
+
+def FeatureSafeSmemPrefetch : SubtargetFeature<"safe-smem-prefetch",
+  "HasSafeSmemPrefetch",
+  "true",
+  "SMEM prefetches do not fail on illegal address"
 >;
 
 def FeatureVcmpxExecWARHazard : SubtargetFeature<"vcmpx-exec-war-hazard",

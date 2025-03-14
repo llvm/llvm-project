@@ -63,6 +63,10 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    PrintMIAddrs("print-mi-addrs", cl::Hidden,
+                 cl::desc("Print addresses of MachineInstrs when dumping"));
+
 static const MachineFunction *getMFIfAvailable(const MachineInstr &MI) {
   if (const MachineBasicBlock *MBB = MI.getParent())
     if (const MachineFunction *MF = MBB->getParent())
@@ -2075,6 +2079,9 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     }
   }
   // TODO: DBG_LABEL
+
+  if (PrintMIAddrs)
+    OS << " ; " << this;
 
   if (AddNewLine)
     OS << '\n';

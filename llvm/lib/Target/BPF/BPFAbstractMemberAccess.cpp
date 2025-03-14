@@ -1113,8 +1113,9 @@ bool BPFAbstractMemberAccess::transformGEPChain(CallInst *Call,
                               Call->getIterator());
 
   // Generate a BitCast
-  auto *BCInst =
-      new BitCastInst(Base, PointerType::getUnqual(BB->getContext()));
+  auto *BCInst = new BitCastInst(
+      Base, PointerType::get(BB->getContext(),
+                             Base->getType()->getPointerAddressSpace()));
   BCInst->insertBefore(Call->getIterator());
 
   // Generate a GetElementPtr

@@ -75,3 +75,36 @@ DeletionKind cir::LoadOp::removeBlockingUses(
   getResult().replaceAllUsesWith(reachingDefinition);
   return DeletionKind::Delete;
 }
+
+//===----------------------------------------------------------------------===//
+// Interfaces for StoreOp
+//===----------------------------------------------------------------------===//
+
+bool cir::StoreOp::loadsFrom(const MemorySlot &slot) { return false; }
+
+bool cir::StoreOp::storesTo(const MemorySlot &slot) {
+  return getAddr() == slot.ptr;
+}
+
+Value cir::StoreOp::getStored(const MemorySlot &slot, OpBuilder &builder,
+                              Value reachingDef, const DataLayout &dataLayout) {
+  return getValue();
+}
+
+bool cir::StoreOp::canUsesBeRemoved(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses,
+    const DataLayout &dataLayout) {
+  if (blockingUses.size() != 1)
+    return false;
+  Value blockingUse = (*blockingUses.begin())->get();
+  return blockingUse == slot.ptr && getAddr() == slot.ptr &&
+         getValue() != slot.ptr && slot.elemType == getValue().getType();
+}
+
+DeletionKind cir::StoreOp::removeBlockingUses(
+    const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    OpBuilder &builder, Value reachingDefinition,
+    const DataLayout &dataLayout) {
+  return DeletionKind::Delete;
+}

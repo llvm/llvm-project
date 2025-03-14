@@ -745,6 +745,26 @@ public:
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  bool isUImm5Plus1() const {
+    if (!isImm())
+      return false;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    int64_t Imm;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && ((isUInt<5>(Imm) && (Imm != 0)) || (Imm == 32)) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isUImm5GE6Plus1() const {
+    if (!isImm())
+      return false;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    int64_t Imm;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && ((isUInt<5>(Imm) && (Imm >= 6)) || (Imm == 32)) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
   bool isUImm8GE32() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
@@ -937,6 +957,16 @@ public:
     return SignExtend64<32>(Imm);
   }
 
+  bool isSImm11() const {
+    if (!isImm())
+      return false;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    int64_t Imm;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isInt<11>(fixImmediateForRV32(Imm, isRV64Imm())) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
   bool isSImm12() const {
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
@@ -1054,6 +1084,16 @@ public:
     return IsConstantImm &&
            isInt<5>(fixImmediateForRV32(Imm, isRV64Imm()) - 1) &&
            VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isSImm20() const {
+    if (!isImm())
+      return false;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    int64_t Imm;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && (VK == RISCVMCExpr::VK_RISCV_None) &&
+           isInt<20>(fixImmediateForRV32(Imm, isRV64Imm()));
   }
 
   bool isSImm26() const {
@@ -1572,6 +1612,10 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5) - 1);
   case Match_InvalidUImm5GT3:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 4, (1 << 5) - 1);
+  case Match_InvalidUImm5Plus1:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, (1 << 5));
+  case Match_InvalidUImm5GE6Plus1:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 6, (1 << 5));
   case Match_InvalidUImm6:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
   case Match_InvalidUImm7:
@@ -1633,6 +1677,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 9), (1 << 9) - 16,
         "immediate must be a multiple of 16 bytes and non-zero in the range");
+  case Match_InvalidSImm11:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 10),
+                                      (1 << 10) - 1);
   case Match_InvalidUImm10:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 10) - 1);
   case Match_InvalidUImm11:
@@ -1688,6 +1735,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm26:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 25),
                                       (1 << 25) - 1);
+  case Match_InvalidSImm20:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 19),
+                                      (1 << 19) - 1);
   case Match_InvalidSImm32:
     return generateImmOutOfRangeError(Operands, ErrorInfo,
                                       std::numeric_limits<int32_t>::min(),
@@ -1697,14 +1747,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   }
   case Match_InvalidStackAdj: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    StringRef SpecName = "Zc";
-    if (getSTI().hasFeature(RISCV::FeatureVendorXqccmp))
-      SpecName = "Xqccmp";
-
-    return Error(ErrorLoc,
-                 Twine("stack adjustment is invalid for this instruction") +
-                     " and register list; refer to " + SpecName +
-                     " spec for a detailed range of stack adjustment");
+    return Error(
+        ErrorLoc,
+        "stack adjustment is invalid for this instruction and register list");
   }
   }
 
@@ -2169,7 +2214,7 @@ ParseStatus RISCVAsmParser::parseBareSymbol(OperandVector &Operands) {
     }
     Res = V;
   } else
-    Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    Res = MCSymbolRefExpr::create(Sym, getContext());
 
   MCBinaryExpr::Opcode Opcode;
   switch (getLexer().getKind()) {
@@ -2215,7 +2260,7 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
   (void)Identifier.consume_back("@plt");
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
-  Res = MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+  Res = MCSymbolRefExpr::create(Sym, getContext());
   Res = RISCVMCExpr::create(Res, Kind, getContext());
   Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
   return ParseStatus::Success;
@@ -2771,8 +2816,7 @@ ParseStatus RISCVAsmParser::parseReglist(OperandVector &Operands) {
     RegEnd = RegStart;
 
   auto Encode = RISCVZC::encodeRlist(RegEnd, IsEABI);
-  if (Encode == RISCVZC::INVALID_RLIST)
-    return Error(S, "invalid register list");
+  assert(Encode != RISCVZC::INVALID_RLIST);
   Operands.push_back(RISCVOperand::createRlist(Encode, S));
 
   return ParseStatus::Success;
@@ -2784,12 +2828,25 @@ ParseStatus RISCVAsmParser::parseZcmpStackAdj(OperandVector &Operands,
 
   SMLoc S = getLoc();
   int64_t StackAdjustment = getLexer().getTok().getIntVal();
-  unsigned Spimm = 0;
   unsigned RlistVal = static_cast<RISCVOperand *>(Operands[1].get())->Rlist.Val;
 
-  if (Negative != ExpectNegative ||
-      !RISCVZC::getSpimm(RlistVal, Spimm, StackAdjustment, isRV64()))
-    return ParseStatus::NoMatch;
+  assert(RlistVal != RISCVZC::INVALID_RLIST);
+  unsigned StackAdjBase = RISCVZC::getStackAdjBase(RlistVal, isRV64());
+  if (Negative != ExpectNegative || StackAdjustment % 16 != 0 ||
+      StackAdjustment < StackAdjBase || (StackAdjustment - StackAdjBase) > 48) {
+    int64_t Lower = StackAdjBase;
+    int64_t Upper = StackAdjBase + 48;
+    if (ExpectNegative) {
+      Lower = -Lower;
+      Upper = -Upper;
+      std::swap(Lower, Upper);
+    }
+    return generateImmOutOfRangeError(S, Lower, Upper,
+                                      "stack adjustment for register list must "
+                                      "be a multiple of 16 bytes in the range");
+  }
+
+  unsigned Spimm = (StackAdjustment - StackAdjBase) / 16;
   Operands.push_back(RISCVOperand::createSpimm(Spimm << 4, S));
   getLexer().Lex();
   return ParseStatus::Success;
