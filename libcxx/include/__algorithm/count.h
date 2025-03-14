@@ -62,7 +62,7 @@ __count_bool(__bit_iterator<_Cp, _IsConst> __first, typename __size_difference_t
   }
   // do middle whole words
   for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word)
-    __r += std::__popcount(__storage_type(std::__invert_if<!_ToCount>(*__first.__seg_)));
+    __r += std::__popcount(std::__invert_if<!_ToCount>(*__first.__seg_));
   // do last partial word
   if (__n > 0) {
     __storage_type __m = std::__trailing_mask<__storage_type>(__bits_per_word - __n);
