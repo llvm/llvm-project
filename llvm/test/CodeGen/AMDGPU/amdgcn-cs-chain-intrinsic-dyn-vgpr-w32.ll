@@ -62,16 +62,16 @@ define amdgpu_cs_chain void @constants(<3 x i32> inreg %sgpr, { i32, ptr addrspa
 ; GISEL-GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GISEL-GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GISEL-GFX12-NEXT:    s_wait_kmcnt 0x0
-; GISEL-GFX12-NEXT:    s_mov_b32 s4, callee@abs32@lo
-; GISEL-GFX12-NEXT:    s_mov_b32 s5, callee@abs32@hi
-; GISEL-GFX12-NEXT:    s_mov_b32 s6, retry_vgpr_alloc@abs32@lo
-; GISEL-GFX12-NEXT:    s_mov_b32 s7, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s4, retry_vgpr_alloc@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s5, retry_vgpr_alloc@abs32@hi
+; GISEL-GFX12-NEXT:    s_mov_b32 s6, callee@abs32@lo
+; GISEL-GFX12-NEXT:    s_mov_b32 s7, callee@abs32@hi
 ; GISEL-GFX12-NEXT:    s_alloc_vgpr 64
 ; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
-; GISEL-GFX12-NEXT:    s_cselect_b64 s[4:5], s[4:5], s[6:7]
+; GISEL-GFX12-NEXT:    s_cselect_b64 s[6:7], s[6:7], s[4:5]
 ; GISEL-GFX12-NEXT:    s_cselect_b32 exec_lo, 7, -1
 ; GISEL-GFX12-NEXT:    s_wait_alu 0xfffe
-; GISEL-GFX12-NEXT:    s_setpc_b64 s[4:5]
+; GISEL-GFX12-NEXT:    s_setpc_b64 s[6:7]
 ;
 ; DAGISEL-GFX12-LABEL: constants:
 ; DAGISEL-GFX12:       ; %bb.0:
