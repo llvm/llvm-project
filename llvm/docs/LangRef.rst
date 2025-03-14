@@ -23963,7 +23963,8 @@ Overview:
 """""""""
 
 The '``llvm.vp.load.ff.*``' intrinsic is similar to '``llvm.vp.load.*``', but
-will not trap if there are not ``evl`` readable elements at the pointer.
+will not trap if there are not ``evl`` readable elements at the pointer. '``ff``'
+stands for fault-first or fault-only-first.
 
 Arguments:
 """"""""""
@@ -23979,16 +23980,44 @@ argument.
 Semantics:
 """"""""""
 
-The '``llvm.vp.load.ff``' intrinsic reads a vector from memory similar to
-'``llvm.vp.load``, but will only trap if the first lane is unreadable. If
-any other lane is unreadable, the number of successfully read lanes will
-be returned in the second return value. The result in the first return value
-for the lanes that were not successfully read is
-:ref:`poison value <poisonvalues>`. If ``evl`` is 0, no read occurs and thus no
-trap can occur for the first lane. If ``mask`` is 0 for the first lane, no
-trap occurs. This intrinsic is allowed to read fewer than ``evl`` lanes even
-if no trap would occur. If ``evl`` is non-zero, the result in the second result
-must be at least 1 even if the first lane is disabled by ``mask``.
+The '``llvm.vp.load.ff``' is designed for reading vector lanes in a single
+IR operation where the number of lanes that can be read is not known and can
+only be determined by looking at the data. This is useful for vectorizing
+strcmp or strlen like loops where the data contains a null terminator. This is
+useful for targets that have a fault-only-first load instruction. Other targets
+may support this intrinsic differently, for example by lowering to a single
+scalar load guarded by ``evl!=0`` and ``mask[0]==1`` and indicating only 1
+lane could be read.
+
+Like '``llvm.vp.load``', this intrinsic reads memory based on a ``mask`` and an
+``evl``. If ``evl`` is non-zero and the first lane is masked-on, then the
+first lane of the vector needs to be inbounds of an allocation. The remaining
+masked-on lanes with index less than ``evl`` do not need to be inbounds of
+an the same allocation or any allocation.
+
+The second return value from the intrinsic indicates the index of the first
+lane that could not be read for some reason or ``evl`` if all lanes could be
+be read. Lanes at this index or higher in the first return value are
+:ref:`poison value <poisonvalues>`. If ``evl`` is non-zero, the result in the
+second return value must be at least 1, even if the first lane is masked-off.
+
+The second result is usually less than ``evl`` when an exception would occur
+for reading that lane, but it can be reduced for any reason. This facilitates
+emulating this intrinsic when the hardware has only supports narrower vector
+types natively or when when hardware does not support fault-only-first loads.
+
+Masked-on lanes that are not inbounds of the allocation that contains the first
+lane are :ref:`poison value <poisonvalues>`. There should be a marker in the
+allocation that indicates where valid data stops such as a null terminator. The
+terminator should be checked for after calling this intrinsic to prevent using
+any lanes past the terminator. Even if second return value is less than
+``evl``, the terminator value may not have been read.
+
+This intrinsic will typically be called in a loop until a terminator is
+found. The second result should be used to indicates how many elements are
+valid to look for the null terminator. If the terminator is not found, the
+pointer should be advanced by the number of elements in the second result and
+the intrinsic called again.
 
 The default alignment is taken as the ABI alignment of the first return
 type as specified by the :ref:`datalayout string<langref_datalayout>`.
