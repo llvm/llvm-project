@@ -28,6 +28,7 @@ namespace llvm {
 class Module;
 class GlobalVariable;
 class DXILResourceTypeMap;
+class DXILBindingMap;
 
 namespace dxil {
 
@@ -85,11 +86,15 @@ struct ComputedShaderFlags {
 
 struct ModuleShaderFlags {
   void initialize(Module &, DXILResourceTypeMap &DRTM,
-                  const ModuleMetadataInfo &MMDI);
+                  DXILBindingMap &DBM, const ModuleMetadataInfo &MMDI);
   const ComputedShaderFlags &getFunctionFlags(const Function *) const;
   const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
 
 private:
+  // A bool to indicate if the -res-may-alias flag was passed to clang-dxc.
+  // A module flag "dx.resmayalias" is set to 1 if true.
+  // This bool is used in the logic for setting the flag ResMayNotAlias.
+  bool ResMayAlias = false;
   /// Map of Function-Shader Flag Mask pairs representing properties of each of
   /// the functions in the module. Shader Flags of each function represent both
   /// module-level and function-level flags
@@ -97,7 +102,7 @@ private:
   /// Combined Shader Flag Mask of all functions of the module
   ComputedShaderFlags CombinedSFMask{};
   void updateFunctionFlags(ComputedShaderFlags &, const Instruction &,
-                           DXILResourceTypeMap &);
+                           DXILResourceTypeMap &, const ModuleMetadataInfo &);
 };
 
 class ShaderFlagsAnalysis : public AnalysisInfoMixin<ShaderFlagsAnalysis> {
