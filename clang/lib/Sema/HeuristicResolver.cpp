@@ -11,6 +11,7 @@
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 
 namespace clang {
@@ -124,6 +125,20 @@ TagDecl *HeuristicResolverImpl::resolveTypeToTagDecl(QualType QT) {
   const Type *T = QT.getTypePtrOrNull();
   if (!T)
     return nullptr;
+
+  // If T is the type of a template parameter, we can't get a useful TagDecl
+  // out of it. However, if the template parameter has a default argument,
+  // as a heuristic we can replace T with the default argument type.
+  if (const auto *TTPT = dyn_cast<TemplateTypeParmType>(T)) {
+    if (const auto *TTPD = TTPT->getDecl()) {
+      if (TTPD->hasDefaultArgument()) {
+        const auto &DefaultArg = TTPD->getDefaultArgument().getArgument();
+        if (DefaultArg.getKind() == TemplateArgument::Type) {
+          T = DefaultArg.getAsType().getTypePtrOrNull();
+        }
+      }
+    }
+  }
 
   // Unwrap type sugar such as type aliases.
   T = T->getCanonicalTypeInternal().getTypePtr();
