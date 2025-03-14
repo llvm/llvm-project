@@ -2257,6 +2257,9 @@ public:
 
     /// Return the function that contains the region to be outlined.
     Function *getFunction() const { return EntryBB->getParent(); }
+
+    /// Dump the info in a somewhat readable way
+    void dump();
   };
 
   /// Collection of regions that need to be outlined during finalization.
@@ -2276,6 +2279,9 @@ public:
 
   /// Add a new region that will be outlined later.
   void addOutlineInfo(OutlineInfo &&OI) { OutlineInfos.emplace_back(OI); }
+
+  /// Dump outline infos
+  void dumpOutlineInfos();
 
   /// An ordered map of auto-generated variables to their unique names.
   /// It stores variables with the following names: 1) ".gomp_critical_user_" +
@@ -3910,6 +3916,9 @@ public:
   /// Invalidate this loop. That is, the underlying IR does not fulfill the
   /// requirements of an OpenMP canonical loop anymore.
   LLVM_ABI void invalidate();
+
+  /// Dump the info in a somewhat readable way
+  void dump();
 };
 
 /// ScanInfo holds the information to assist in lowering of Scan reduction.
