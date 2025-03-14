@@ -13,7 +13,8 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 
-// Use a noinline + disable_tail_calls wrapper function to suppress to stabilize test.
+// Disable optimizations to ensure that this function appears on the stack trace so our
+// configured suppressions `interceptor_via_fun:createCFString` can take effect.
 __attribute__((noinline, disable_tail_calls)) CFStringRef
 createCFString(const unsigned char *bytes, CFIndex length) {
   return CFStringCreateWithBytes(kCFAllocatorDefault, bytes, length,
