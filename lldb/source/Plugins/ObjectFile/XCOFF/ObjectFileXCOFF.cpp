@@ -267,48 +267,48 @@ void ObjectFileXCOFF::CreateSections(SectionList &unified_section_list) {
     }
   }
 }
-  void ObjectFileXCOFF::Dump(Stream * s) {}
+void ObjectFileXCOFF::Dump(Stream *s) {}
 
-  ArchSpec ObjectFileXCOFF::GetArchitecture() {
-    ArchSpec arch_spec =
-        ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
-    return arch_spec;
-  }
+ArchSpec ObjectFileXCOFF::GetArchitecture() {
+  ArchSpec arch_spec =
+      ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
+  return arch_spec;
+}
 
-  UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
+UUID ObjectFileXCOFF::GetUUID() { return UUID(); }
 
-  uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList & files) {
-    return 0;
-  }
+uint32_t ObjectFileXCOFF::GetDependentModules(FileSpecList &files) { return 0; }
 
-  ObjectFile::Type ObjectFileXCOFF::CalculateType() {
-    if (m_binary->fileHeader64()->Flags & XCOFF::F_EXEC)
-      return eTypeExecutable;
-    else if (m_binary->fileHeader64()->Flags & XCOFF::F_SHROBJ)
-      return eTypeSharedLibrary;
-    return eTypeUnknown;
-  }
+ObjectFile::Type ObjectFileXCOFF::CalculateType() {
+  if (m_binary->fileHeader64()->Flags & XCOFF::F_EXEC)
+    return eTypeExecutable;
+  else if (m_binary->fileHeader64()->Flags & XCOFF::F_SHROBJ)
+    return eTypeSharedLibrary;
+  return eTypeUnknown;
+}
 
-  ObjectFile::Strata ObjectFileXCOFF::CalculateStrata() {
-    return eStrataUnknown;
-  }
+ObjectFile::Strata ObjectFileXCOFF::CalculateStrata() { return eStrataUnknown; }
 
-  lldb::WritableDataBufferSP ObjectFileXCOFF::MapFileDataWritable(
-      const FileSpec &file, uint64_t Size, uint64_t Offset) {
-    return FileSystem::Instance().CreateWritableDataBuffer(file.GetPath(), Size,
-                                                           Offset);
-  }
+lldb::WritableDataBufferSP
+ObjectFileXCOFF::MapFileDataWritable(const FileSpec &file, uint64_t Size,
+                                     uint64_t Offset) {
+  return FileSystem::Instance().CreateWritableDataBuffer(file.GetPath(), Size,
+                                                         Offset);
+}
 
-  ObjectFileXCOFF::ObjectFileXCOFF(
-      const lldb::ModuleSP &module_sp, DataBufferSP data_sp,
-      lldb::offset_t data_offset, const FileSpec *file,
-      lldb::offset_t file_offset, lldb::offset_t length)
-      : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset) {
-    if (file)
-      m_file = *file;
-  }
+ObjectFileXCOFF::ObjectFileXCOFF(const lldb::ModuleSP &module_sp,
+                                 DataBufferSP data_sp,
+                                 lldb::offset_t data_offset,
+                                 const FileSpec *file,
+                                 lldb::offset_t file_offset,
+                                 lldb::offset_t length)
+    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset) {
+  if (file)
+    m_file = *file;
+}
 
-  ObjectFileXCOFF::ObjectFileXCOFF(
-      const lldb::ModuleSP &module_sp, DataBufferSP header_data_sp,
-      const lldb::ProcessSP &process_sp, addr_t header_addr)
-      : ObjectFile(module_sp, process_sp, header_addr, header_data_sp) {}
+ObjectFileXCOFF::ObjectFileXCOFF(const lldb::ModuleSP &module_sp,
+                                 DataBufferSP header_data_sp,
+                                 const lldb::ProcessSP &process_sp,
+                                 addr_t header_addr)
+    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp) {}
