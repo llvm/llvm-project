@@ -69,9 +69,30 @@ struct __size_difference_type_traits<_Cp, __void_t<typename _Cp::difference_type
   using size_type       = typename _Cp::size_type;
 };
 
+// The `__x_mask` functions are designed to work exclusively with any unsigned `_StorageType`s, including small
+// integral types such as unsigned char/short, `uint8_t`, and `uint16_t`. To prevent undefined behavior or
+// ambiguities due to integral promotions for the small integral types, all intermediate bitwise operations are
+// explicitly cast back to the unsigned `_StorageType`.
+
+// Creates a mask of type `_StorageType` with a specified number of leading zeros (__clz) and sets all remaining
+// bits to one.
+template <class _StorageType>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __trailing_mask(unsigned __clz) {
+  static_assert(is_unsigned<_StorageType>::value, "__trailing_mask only works with unsigned types");
+  return static_cast<_StorageType>(~static_cast<_StorageType>(0)) >> __clz;
+}
+
+// Creates a mask of type `_StorageType` with a specified number of leading zeros (__clz), a specified number of
+// trailing zeros (__ctz), and sets all bits in between to one.
+template <class _StorageType>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _StorageType __middle_mask(unsigned __clz, unsigned __ctz) {
+  static_assert(is_unsigned<_StorageType>::value, "__middle_mask only works with unsigned types");
+  return (static_cast<_StorageType>(~static_cast<_StorageType>(0)) << __ctz) &
+         std::__trailing_mask<_StorageType>(__clz);
+}
+
 // This function is designed to operate correctly even for smaller integral types like `uint8_t`, `uint16_t`,
-// or `unsigned short`. Casting back to _StorageType is crucial to prevent undefined behavior that can arise
-// from integral promotions.
+// or `unsigned short`.
 // See https://github.com/llvm/llvm-project/pull/122410.
 template <class _StoragePointer>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void
@@ -81,12 +102,11 @@ __fill_masked_range(_StoragePointer __word, unsigned __clz, unsigned __ctz, bool
   using _StorageType = typename pointer_traits<_StoragePointer>::element_type;
   _LIBCPP_ASSERT_VALID_INPUT_RANGE(
       __ctz + __clz < sizeof(_StorageType) * CHAR_BIT, "__fill_masked_range called with invalid range");
-  _StorageType __m = static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) >> __clz) &
-                     static_cast<_StorageType>(static_cast<_StorageType>(~static_cast<_StorageType>(0)) << __ctz);
+  _StorageType __m = std::__middle_mask<_StorageType>(__clz, __ctz);
   if (__fill_val)
     *__word |= __m;
   else
-    *__word &= static_cast<_StorageType>(~__m);
+    *__word &= ~__m;
 }
 
 template <class _Cp, bool = __has_storage_type<_Cp>::value>
