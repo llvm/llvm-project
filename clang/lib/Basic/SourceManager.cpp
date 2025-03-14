@@ -2382,14 +2382,20 @@ size_t SourceManager::getDataStructureSizes() const {
 
 SourceManagerForFile::SourceManagerForFile(StringRef FileName,
                                            StringRef Content) {
+  // We copy to `std::string` for Context instead of StringRef because the
+  // SourceManager::getBufferData() works only with null-terminated buffers.
+  // And we still want to keep the API convenient.
+  ContentBuffer = Content.str();
+
   // This is referenced by `FileMgr` and will be released by `FileMgr` when it
   // is deleted.
   IntrusiveRefCntPtr<llvm::vfs::InMemoryFileSystem> InMemoryFileSystem(
       new llvm::vfs::InMemoryFileSystem);
+
   InMemoryFileSystem->addFile(
       FileName, 0,
-      llvm::MemoryBuffer::getMemBuffer(Content, FileName,
-                                       /*RequiresNullTerminator=*/false));
+      llvm::MemoryBuffer::getMemBuffer(ContentBuffer, FileName,
+                                       /*RequiresNullTerminator=*/true));
   // This is passed to `SM` as reference, so the pointer has to be referenced
   // in `Environment` so that `FileMgr` can out-live this function scope.
   FileMgr =
