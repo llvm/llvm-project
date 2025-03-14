@@ -160,6 +160,7 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC64-NEXT:    .register %g3, #scratch
 ; SPARC64-NEXT:  ! %bb.0: ! %start
 ; SPARC64-NEXT:    save %sp, -176, %sp
+; SPARC64-NEXT:    mov %i0, %l1
 ; SPARC64-NEXT:    mov %g0, %o0
 ; SPARC64-NEXT:    mov %i2, %o1
 ; SPARC64-NEXT:    mov %g0, %o2
@@ -173,30 +174,29 @@ define { i128, i8 } @muloti_test(i128 %l, i128 %r) nounwind {
 ; SPARC64-NEXT:    call __multi3
 ; SPARC64-NEXT:    mov %i3, %o3
 ; SPARC64-NEXT:    mov %o0, %l0
-; SPARC64-NEXT:    add %o1, %i5, %i5
+; SPARC64-NEXT:    add %o1, %i5, %i0
 ; SPARC64-NEXT:    mov %g0, %o0
 ; SPARC64-NEXT:    mov %i1, %o1
 ; SPARC64-NEXT:    mov %g0, %o2
 ; SPARC64-NEXT:    call __multi3
 ; SPARC64-NEXT:    mov %i3, %o3
+; SPARC64-NEXT:    mov %g0, %i1
 ; SPARC64-NEXT:    mov %g0, %i3
+; SPARC64-NEXT:    mov %g0, %i5
 ; SPARC64-NEXT:    mov %g0, %g2
 ; SPARC64-NEXT:    mov %g0, %g3
-; SPARC64-NEXT:    mov %g0, %g4
-; SPARC64-NEXT:    mov %g0, %g5
-; SPARC64-NEXT:    add %o0, %i5, %i1
-; SPARC64-NEXT:    cmp %i1, %o0
-; SPARC64-NEXT:    movrnz %l0, 1, %g2
-; SPARC64-NEXT:    movrnz %i2, 1, %g3
-; SPARC64-NEXT:    movrnz %i0, 1, %g4
-; SPARC64-NEXT:    movcs %xcc, 1, %i3
-; SPARC64-NEXT:    and %g4, %g3, %i0
-; SPARC64-NEXT:    or %i0, %g2, %i0
-; SPARC64-NEXT:    movrnz %i4, 1, %g5
-; SPARC64-NEXT:    or %i0, %g5, %i0
-; SPARC64-NEXT:    or %i0, %i3, %i0
-; SPARC64-NEXT:    srl %i0, 0, %i2
-; SPARC64-NEXT:    mov %i1, %i0
+; SPARC64-NEXT:    add %o0, %i0, %i0
+; SPARC64-NEXT:    cmp %i0, %o0
+; SPARC64-NEXT:    movrnz %l0, 1, %i3
+; SPARC64-NEXT:    movrnz %i2, 1, %i5
+; SPARC64-NEXT:    movrnz %l1, 1, %g2
+; SPARC64-NEXT:    movcs %xcc, 1, %i1
+; SPARC64-NEXT:    and %g2, %i5, %i2
+; SPARC64-NEXT:    or %i2, %i3, %i2
+; SPARC64-NEXT:    movrnz %i4, 1, %g3
+; SPARC64-NEXT:    or %i2, %g3, %i2
+; SPARC64-NEXT:    or %i2, %i1, %i1
+; SPARC64-NEXT:    srl %i1, 0, %i2
 ; SPARC64-NEXT:    ret
 ; SPARC64-NEXT:    restore %g0, %o1, %o1
 start:
