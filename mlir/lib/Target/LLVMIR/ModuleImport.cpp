@@ -2527,6 +2527,31 @@ ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
   return loopAnnotationImporter->translateLoopAnnotation(node, loc);
 }
 
+FailureOr<DereferenceableAttr>
+ModuleImport::translateDereferenceableAttr(const llvm::MDNode *node,
+                                           unsigned kindID) {
+  Location loc = mlirModule.getLoc();
+
+  // The only operand should be a constant integer representing the number of
+  // dereferenceable bytes.
+  if (node->getNumOperands() != 1)
+    return emitError(loc) << "dereferenceable metadata must have one operand: "
+                          << diagMD(node, llvmModule.get());
+
+  auto *numBytesMD = dyn_cast<llvm::ConstantAsMetadata>(node->getOperand(0));
+  auto *numBytesCst = dyn_cast<llvm::ConstantInt>(numBytesMD->getValue());
+  if (!numBytesCst || !numBytesCst->getValue().isNonNegative())
+    return emitError(loc) << "dereferenceable metadata operand must be a "
+                             "non-negative constant integer: "
+                          << diagMD(node, llvmModule.get());
+
+  bool mayBeNull = kindID == llvm::LLVMContext::MD_dereferenceable_or_null;
+  auto derefAttr = builder.getAttr<DereferenceableAttr>(
+      numBytesCst->getZExtValue(), mayBeNull);
+
+  return derefAttr;
+}
+
 OwningOpRef<ModuleOp>
 mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
                               MLIRContext *context, bool emitExpensiveWarnings,
