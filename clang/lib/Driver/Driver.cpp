@@ -158,8 +158,7 @@ getHIPOffloadTargetTriple(const Driver &D, const ArgList &Args) {
   auto TT = getOffloadTargetTriple(D, Args);
   if (!TT)
     return std::nullopt;
-  if (TT->getArch() == llvm::Triple::amdgcn &&
-      TT->getVendor() == llvm::Triple::AMD &&
+  if (TT->isAMDGCN() && TT->getVendor() == llvm::Triple::AMD &&
       TT->getOS() == llvm::Triple::AMDHSA)
     return TT;
   if (TT->getArch() == llvm::Triple::spirv64)
@@ -3409,8 +3408,7 @@ class OffloadingActionBuilder final {
 
       const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
       assert(HostTC && "No toolchain for host compilation.");
-      if (HostTC->getTriple().isNVPTX() ||
-          HostTC->getTriple().getArch() == llvm::Triple::amdgcn) {
+      if (HostTC->getTriple().isNVPTX() || HostTC->getTriple().isAMDGCN()) {
         // We do not support targeting NVPTX/AMDGCN for host compilation. Throw
         // an error and abort pipeline construction early so we don't trip
         // asserts that assume device-side compilation.
