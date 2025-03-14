@@ -357,8 +357,6 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
-- Clang now supports MSVC vector deleting destructors (GH19772).
-
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
