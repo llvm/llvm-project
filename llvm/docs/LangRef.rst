@@ -23954,17 +23954,17 @@ This is an overloaded intrinsic.
 
 ::
 
-    declare {<4 x float>, i32} @llvm.vp.load.ff.v4f32.p0(ptr %ptr, <4 x i1> %mask, i32 %evl)
-    declare {<vscale x 2 x i16>, i32} @llvm.vp.load.ff.nxv2i16.p0(ptr %ptr, <vscale x 2 x i1> %mask, i32 %evl)
-    declare {<8 x float>, i32} @llvm.vp.load.ff.v8f32.p1(ptr addrspace(1) %ptr, <8 x i1> %mask, i32 %evl)
-    declare {<vscale x 1 x i64>, i32} @llvm.vp.load.ff.nxv1i64.p6(ptr addrspace(6) %ptr, <vscale x 1 x i1> %mask, i32 %evl)
+    declare {<4 x float>, i32} @llvm.experimental.vp.load.ff.v4f32.p0(ptr %ptr, <4 x i1> %mask, i32 %evl)
+    declare {<vscale x 2 x i16>, i32} @llvm.experimental.vp.load.ff.nxv2i16.p0(ptr %ptr, <vscale x 2 x i1> %mask, i32 %evl)
+    declare {<8 x float>, i32} @llvm.experimental.vp.load.ff.v8f32.p1(ptr addrspace(1) %ptr, <8 x i1> %mask, i32 %evl)
+    declare {<vscale x 1 x i64>, i32} @llvm.experimental.vp.load.ff.nxv1i64.p6(ptr addrspace(6) %ptr, <vscale x 1 x i1> %mask, i32 %evl)
 
 Overview:
 """""""""
 
-The '``llvm.vp.load.ff.*``' intrinsic is similar to '``llvm.vp.load.*``', but
-will not trap if there are not ``evl`` readable elements at the pointer. '``ff``'
-stands for fault-first or fault-only-first.
+The '``llvm.experimental.vp.load.ff.*``' intrinsic is similar to
+'``llvm.vp.load.*``', but will not trap if there are not ``evl`` readable
+lanes at the pointer. '``ff``' stands for fault-first or fault-only-first.
 
 Arguments:
 """"""""""
@@ -23980,7 +23980,7 @@ argument.
 Semantics:
 """"""""""
 
-The '``llvm.vp.load.ff``' is designed for reading vector lanes in a single
+The '``llvm.experimental.vp.load.ff``' is designed for reading vector lanes in a single
 IR operation where the number of lanes that can be read is not known and can
 only be determined by looking at the data. This is useful for vectorizing
 strcmp or strlen like loops where the data contains a null terminator. This is
@@ -24027,7 +24027,7 @@ Examples:
 
 .. code-block:: text
 
-     %r = call {<8 x i8>, i32} @llvm.vp.load.ff.v8i8.p0(ptr align 2 %ptr, <8 x i1> %mask, i32 %evl)
+     %r = call {<8 x i8>, i32} @llvm.experimental.vp.load.ff.v8i8.p0(ptr align 2 %ptr, <8 x i1> %mask, i32 %evl)
 
 .. _int_vp_store:
 

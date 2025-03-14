@@ -2246,11 +2246,6 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo,
   Align Alignment = LD->getOriginalAlign();
   SDValue Mask = LD->getMask();
   SDValue EVL = LD->getVectorLength();
-  EVT MemoryVT = LD->getMemoryVT();
-
-  bool HiIsEmpty = false;
-  auto [LoMemVT, HiMemVT] =
-      DAG.GetDependentSplitDestVTs(MemoryVT, LoVT, &HiIsEmpty);
 
   // Split Mask operand
   SDValue MaskLo, MaskHi;
