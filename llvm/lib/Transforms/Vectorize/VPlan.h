@@ -2238,7 +2238,7 @@ public:
 /// a vector operand into a scalar value, and adding the result to a chain.
 /// The Operands are {ChainOp, VecOp, [Condition]}.
 class VPReductionRecipe : public VPRecipeWithIRFlags {
-  /// The recurrence decriptor for the reduction in question.
+  /// The recurrence kind for the reduction in question.
   RecurKind RdxKind;
   bool IsOrdered;
   /// Whether the reduction is conditional.
