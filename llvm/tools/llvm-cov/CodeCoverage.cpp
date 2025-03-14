@@ -190,6 +190,8 @@ private:
   std::unique_ptr<object::BuildIDFetcher> BIDFetcher;
 
   bool CheckBinaryIDs;
+
+  bool IgnoreHashMismatch;
 };
 }
 
@@ -462,7 +464,8 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   auto FS = vfs::getRealFileSystem();
   auto CoverageOrErr = CoverageMapping::load(
       ObjectFilenames, PGOFilename, *FS, CoverageArches,
-      ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs);
+      ViewOpts.CompilationDirectory, BIDFetcher.get(), CheckBinaryIDs, 
+      IgnoreHashMismatch);
   if (Error E = CoverageOrErr.takeError()) {
     error("failed to load coverage: " + toString(std::move(E)));
     return nullptr;
@@ -795,6 +798,9 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "check-binary-ids", cl::desc("Fail if an object couldn't be found for a "
                                    "binary ID in the profile"));
 
+  cl::opt<bool> IgnoreHashMismatch(
+      "ignore-hash-mismatch", cl::desc("Ignore hash mismatches."));
+
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
@@ -805,6 +811,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       BIDFetcher = std::make_unique<object::BuildIDFetcher>(DebugFileDirectory);
     }
     this->CheckBinaryIDs = CheckBinaryIDs;
+    this->IgnoreHashMismatch = IgnoreHashMismatch;
 
     if (!CovFilename.empty())
       ObjectFilenames.emplace_back(CovFilename);
