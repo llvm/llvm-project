@@ -142,7 +142,8 @@ Changes in existing checks
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
   checking and fixing false positives when modifying variant by ``operator[]``
-  with template in parameters.
+  with template in parameters and supporting to check pointee mutation by
+  `AnalyzePointers` option.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
