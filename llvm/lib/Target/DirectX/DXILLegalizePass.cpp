@@ -48,10 +48,14 @@ static bool fixI8TruncUseChain(Instruction &I,
     Type *InstrType = IntegerType::get(I.getContext(), 32);
     for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
       Value *Op = I.getOperand(OpIdx);
-      if (ReplacedValues.count(Op)) {
+      if (ReplacedValues.count(Op))
         InstrType = ReplacedValues[Op]->getType();
+    }
+    for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
+      Value *Op = I.getOperand(OpIdx);
+      if (ReplacedValues.count(Op))
         NewOperands.push_back(ReplacedValues[Op]);
-      } else if (auto *Imm = dyn_cast<ConstantInt>(Op)) {
+      else if (auto *Imm = dyn_cast<ConstantInt>(Op)) {
         APInt Value = Imm->getValue();
         unsigned NewBitWidth = InstrType->getIntegerBitWidth();
         // Note: options here are sext or sextOrTrunc.
@@ -142,7 +146,7 @@ public:
     bool MadeChanges = false;
     for (auto &I : instructions(F)) {
       for (auto &LegalizationFn : LegalizationPipeline) {
-        MadeChanges = LegalizationFn(I, ToRemove, ReplacedValues);
+        MadeChanges |= LegalizationFn(I, ToRemove, ReplacedValues);
       }
     }
     while (!ToRemove.empty()) {
