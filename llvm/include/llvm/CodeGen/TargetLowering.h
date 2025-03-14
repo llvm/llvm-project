@@ -4750,6 +4750,8 @@ public:
     // shouldExtendTypeInLibCall can get the original type before soften.
     ArrayRef<EVT> OpsVTBeforeSoften;
     EVT RetVTBeforeSoften;
+    ArrayRef<Type *> OpsTypeOverrides;
+
     bool IsSigned : 1;
     bool DoesNotReturn : 1;
     bool IsReturnValueUsed : 1;
@@ -4785,6 +4787,13 @@ public:
       OpsVTBeforeSoften = OpsVT;
       RetVTBeforeSoften = RetVT;
       IsSoften = Value;
+      return *this;
+    }
+
+    /// Override the argument type for an operand. Leave the type as null to use
+    /// the type from the operand's node.
+    MakeLibCallOptions &setOpsTypeOverrides(ArrayRef<Type *> OpsTypes) {
+      OpsTypeOverrides = OpsTypes;
       return *this;
     }
   };
