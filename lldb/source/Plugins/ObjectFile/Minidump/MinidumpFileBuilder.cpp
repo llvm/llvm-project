@@ -986,8 +986,13 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
   *bytes_read = 0;
 
   uint64_t bytes_remaining = size;
+  // This is our flag to control if we had a partial read
+  // if we read less than our expected number of bytes without
+  // getting an error, we should add those bytes and discountine
+  // trying to read.
+  bool partialReadEncountered = false;
   Status error;
-  while (bytes_remaining > 0) {
+  while (bytes_remaining > 0 && !partialReadEncountered) {
     // Get the next read chunk size as the minimum of the remaining bytes and
     // the write chunk max size.
     const size_t bytes_to_read =
@@ -1000,22 +1005,22 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
                 "Failed to read memory region at: %" PRIx64
                 ". Bytes read: %zu, error: %s",
                 addr, bytes_read_for_chunk, error.AsCString());
-      // If we've read nothing, and get an error or fail to read
-      // we can just give up early.
-      if (*bytes_read == 0)
-        return Status();
 
-      // If we've read some bytes, we stop trying to read more and return
-      // this best effort attempt
-      bytes_remaining = 0;
+      // If we failed to read memory and got an error, we return and skip
+      // the rest of the region. We need to return a non-error status here
+      // because the caller can't differentiate between this skippable
+      // error, and an error appending data to the file, which is fatal.
+      return Status();
     } else if (bytes_read_for_chunk != bytes_to_read) {
-      LLDB_LOGF(
-          log, "Memory region at: %" PRIx64 " failed to read %" PRIx64 " bytes",
-          addr, size);
+      LLDB_LOGF(log,
+                "Memory region at: %" PRIx64 " partiall read %" PRIx64
+                " bytes out of %" PRIx64 " bytes.",
+                addr, bytes_read_for_chunk,
+                bytes_to_read - bytes_read_for_chunk);
 
       // If we've read some bytes, we stop trying to read more and return
       // this best effort attempt
-      bytes_remaining = 0;
+      partialReadEncountered = true;
     }
 
     // Write to the minidump file with the chunk potentially flushing to disk.
@@ -1026,20 +1031,15 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
     if (error.Fail())
       return error;
 
-    // If the bytes read in this chunk would cause us to overflow, set the
-    // remaining bytes to 0 so we exit. This is a safety check so we don't
-    // get stuck building a bigger file forever.
+    // If the bytes read in this chunk would cause us to overflow, something
+    // went wrong and we should fail out of creating the Minidump.
     if (bytes_read_for_chunk > bytes_remaining)
-      bytes_remaining = 0;
-
-    // This check is so we don't overflow when the error above sets the
-    // bytes to read to 0 (the graceful exit condition).
-    if (bytes_remaining > 0)
+      return Status::FromErrorString("Unexpected number of bytes read.");
+    else
       bytes_remaining -= bytes_read_for_chunk;
 
-    // If the caller wants a tally back of the bytes_read, update it as we
-    // write. We do this in the loop so if we encounter an error we can
-    // report the accurate total.
+    // Update the caller with the number of bytes read, but also written to the
+    // underlying buffer.
     *bytes_read += bytes_read_for_chunk;
   }
 
