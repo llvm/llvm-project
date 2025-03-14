@@ -178,6 +178,11 @@ Changes in existing checks
   <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
   on ``operator""`` with template parameters.
 
+- Improved :doc:`modernize-use-ranges
+  <clang-tidy/checks/modernize/use-ranges>` check by correctly recognizes 
+  const member functions returning lvalues as side-effect-free, preventing 
+  missed transformations.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
