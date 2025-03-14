@@ -10,12 +10,14 @@
 #include "mlir/Analysis/DataFlow/SparseAnalysis.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/Transforms.h"
 #include "mlir/IR/Builders.h"
+#include "mlir/Interfaces/FunctionInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
@@ -490,7 +492,7 @@ void SGMapPropagation::visitLoadGatherOp(
   if (!valueLayout.isAssigned())
     return;
 
-  SGMap tensorDescLayout;
+  SGMap tensorDescLayout = valueLayout;
   if (load.getTranspose()) {
     /// LoadGatherOp has the transpose effect. However, at the stage of this
     /// analyis this effect is not expected and should be abstracted away. Emit
@@ -498,8 +500,7 @@ void SGMapPropagation::visitLoadGatherOp(
     load.emitWarning("Transpose effect is not expected for LoadGatherOp at "
                      "SGMapPropagation stage.");
     tensorDescLayout = valueLayout.getTransposedLayout({1, 0});
-  } else
-    tensorDescLayout = valueLayout;
+  }
   /// Mask operand should have 1D default layout.
   auto maskLayout = getDefaultSgMap(1);
   /// Propagate the new layout to the tensor descriptor operand.
@@ -590,38 +591,53 @@ SGMap RunSGMapPropagation::getSGMap(Value val) {
 }
 
 void RunSGMapPropagation::printAnalysisResult(llvm::raw_ostream &os) {
-  if (auto modOp = dyn_cast<ModuleOp>(target)) {
-    for (auto funcOp : modOp.getOps<func::FuncOp>()) {
-      os << "function: " << funcOp.getName() << ":\n";
-      // Function arguments
-      for (auto arg : funcOp.getArguments()) {
-        auto layout = getSGMap(arg);
-        os << "argument: " << arg << "\n";
-        os << "sg_map  : ";
+  auto printFunctionResult = [&](FunctionOpInterface funcOp) {
+    os << "function: " << funcOp.getName() << ":\n";
+    // Function arguments
+    for (auto arg : funcOp.getArguments()) {
+      auto layout = getSGMap(arg);
+      os << "argument: " << arg << "\n";
+      os << "sg_map  : ";
+      layout.print(os);
+      os << "\n";
+    }
+    // Function ops
+    funcOp.walk([&](Operation *op) {
+      // Skip ops that do not have results
+      if (op->getResults().empty())
+        return;
+      os << "op    : ";
+      /// For control-flow ops, print the op name only.
+      if (isa<BranchOpInterface>(op) || isa<RegionBranchOpInterface>(op))
+        os << op->getName();
+      else
+        op->print(os);
+      os << "\n";
+      /// Print the sg_map for each result.
+      for (auto [i, r] : llvm::enumerate(op->getResults())) {
+        auto layout = getSGMap(r);
+        os << "sg_map for result #" << i << ": ";
         layout.print(os);
         os << "\n";
       }
-      // Function ops
-      funcOp.walk([&](Operation *op) {
-        // Skip ops that do not have results
-        if (op->getResults().empty())
-          return;
-        os << "op    : ";
-        /// For control-flow ops, print the op name only.
-        if (isa<BranchOpInterface>(op) || isa<RegionBranchOpInterface>(op))
-          os << op->getName();
-        else
-          op->print(os);
-        os << "\n";
-        /// Print the sg_map for each result.
-        for (auto [i, r] : llvm::enumerate(op->getResults())) {
-          auto layout = getSGMap(r);
-          os << "sg_map for result #" << i << ": ";
-          layout.print(os);
-          os << "\n";
-        }
-      });
+    });
+  };
+
+  SmallVector<FunctionOpInterface> funcOps;
+  if (auto modOp = dyn_cast<ModuleOp>(target)) {
+    for (auto funcOp : modOp.getOps<FunctionOpInterface>()) {
+      funcOps.push_back(funcOp);
     }
+    /// Collect all GpuFuncOps in the module.
+    for (auto gpuModOp : modOp.getOps<gpu::GPUModuleOp>()) {
+      for (auto gpuFuncOp : gpuModOp.getOps<FunctionOpInterface>()) {
+        funcOps.push_back(gpuFuncOp);
+      }
+    }
+  }
+  /// Print the analysis result for each function.
+  for (auto funcOp : funcOps) {
+    printFunctionResult(funcOp);
   }
 }
 
