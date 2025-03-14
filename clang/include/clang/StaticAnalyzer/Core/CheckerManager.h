@@ -216,8 +216,8 @@ public:
   /// \returns a pointer to the checker object.
   template <typename CHECKER, CheckerPartIdx Idx = DefaultPart, typename... AT>
   CHECKER *registerChecker(AT &&...Args) {
-    // This assert could be removed but then need to make sure that calls that
-    // register different parts of the same checker pass the same arguments.
+    // This assert could be removed but then we need to make sure that calls
+    // registering different parts of the same checker pass the same arguments.
     static_assert(
         Idx == DefaultPart || !sizeof...(AT),
         "Argument forwarding isn't supported with multi-part checkers!");
