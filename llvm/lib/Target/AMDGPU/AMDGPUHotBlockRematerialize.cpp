@@ -2308,7 +2308,7 @@ void applySubExpCloneNearUser(SubExp &Exp, std::vector<HotBlock> &HotBlocks,
   }
   // Build dag for SubExp to help remove unused inst when clone.
   ExpDag Dag(MRI, SIRI, SIII, /*IsJoinInput*/ true);
-  Dag.build(Exp.inputLive, Exp.outputLive, Exp.SUnits);
+  Dag.build(Exp.InputLive, Exp.OutputLive, Exp.SUnits);
   DenseSet<SUnit *> DagBottoms;
   for (SUnit &SU : Dag.SUnits) {
     if (!SU.isInstr())
@@ -3141,10 +3141,10 @@ bool tryRemat(MachineBasicBlock &MBB, MachineInstr *HotMi,
     if (SubExp.IsNotSafeToCopy)
       continue;
     if (IsVGPR) {
-      if (SubExp.vOutputSize == 0)
+      if (SubExp.VOutputSize == 0)
         continue;
     } else {
-      if (SubExp.sOutputSize == 0)
+      if (SubExp.SOutputSize == 0)
         continue;
     }
     if (!SubExp.isSafeToMove(MRI, /*IsMoveUp*/ false))
@@ -3158,9 +3158,9 @@ bool tryRemat(MachineBasicBlock &MBB, MachineInstr *HotMi,
     if (SubExp.IsHasMemInst && MemWriteMBBSet.count(&MBB))
       continue;
     if (IsVGPR) {
-      Distance -= SubExp.vOutputSize;
+      Distance -= SubExp.VOutputSize;
     } else {
-      Distance -= SubExp.sOutputSize;
+      Distance -= SubExp.SOutputSize;
     }
     CloneSubExps.emplace_back(SubExp);
     if (Distance <= 0)
@@ -3256,8 +3256,8 @@ bool tryRematInHotSpot(
 // When apply subExp1 before subExp0, new clone of subExp0 which use result of
 // subExp1 will have old reg of subExp1. And reg pressure will not be reduced.
 void sortSubExpCandidates(std::vector<SubExp> &SubExpCandidates) {
-  MapVector<unsigned, SetVector<SubExp *>> InputMap;
-  MapVector<unsigned, SetVector<SubExp *>> OutputMap;
+  MapVector<Register, SetVector<SubExp *>> InputMap;
+  MapVector<Register, SetVector<SubExp *>> OutputMap;
   struct SortNode {
     SubExp Exp;
     unsigned Depth;
@@ -3288,7 +3288,7 @@ void sortSubExpCandidates(std::vector<SubExp> &SubExpCandidates) {
   MapVector<SubExp *, SortNode> SortMap;
   for (auto It : InputMap) {
     unsigned Reg = It.first;
-    auto OutIt = OutputMap.find(Reg);
+    MapVector<Register, SetVector<SubExp *>>::iterator OutIt = OutputMap.find(Reg);
     if (OutIt == OutputMap.end())
       continue;
     auto &InExps = It.second;
@@ -3302,8 +3302,8 @@ void sortSubExpCandidates(std::vector<SubExp> &SubExpCandidates) {
             continue;
           // Canot input(use) move up, output(def) move down.
           // Choose the exp which save more.
-          int InExpGain = InExp->vOutputSize - InExp->vInputSize;
-          int OutExpGain = OutExp->vInputSize - InExp->vOutputSize;
+          int InExpGain = InExp->VOutputSize - InExp->VInputSize;
+          int OutExpGain = OutExp->VInputSize - InExp->VOutputSize;
           if (InExpGain >= OutExpGain) {
             OutExp->SUnits.clear();
           } else {
@@ -3415,26 +3415,26 @@ bool canHelpPressureWhenSink(SubExp &SubExp,
 
   // Update input size to ignore lives in which already in
   // passThrus.
-  for (auto It : SubExp.inputLive) {
+  for (auto It : SubExp.InputLive) {
     unsigned Reg = It.first;
     if (PassThrus.count(Reg) == 0)
       continue;
     unsigned Size = getRegSize(Reg, It.second, MRI, SIRI);
     if (SIRI->isVGPR(MRI, Reg)) {
-      SubExp.vInputSize -= Size;
+      SubExp.VInputSize -= Size;
     } else {
-      SubExp.sInputSize -= Size;
+      SubExp.SInputSize -= Size;
     }
   }
 
-  if (SubExp.vInputSize > SubExp.vOutputSize)
+  if (SubExp.VInputSize > SubExp.VOutputSize)
     return false;
 
-  if (SubExp.sInputSize > SubExp.sOutputSize && IsSgprBound)
+  if (SubExp.SInputSize > SubExp.SOutputSize && IsSgprBound)
     return false;
 
-  if (SubExp.sInputSize >= SubExp.sOutputSize &&
-      SubExp.vInputSize == SubExp.vOutputSize)
+  if (SubExp.SInputSize >= SubExp.SOutputSize &&
+      SubExp.VInputSize == SubExp.VOutputSize)
     return false;
 
   // Try to find a Insert Block.
@@ -3479,13 +3479,13 @@ bool canHelpPressureWhenHoist(SubExp &SubExp, const MachineRegisterInfo &MRI,
                               const MachineLoopInfo *MLI, bool IsSgprBound) {
   if (!SubExp.isSafeToMove(MRI, /*IsMoveUp*/ true))
     return false;
-  if (SubExp.vInputSize < SubExp.vOutputSize)
+  if (SubExp.VInputSize < SubExp.VOutputSize)
     return false;
-  if (SubExp.sInputSize < SubExp.sOutputSize && IsSgprBound)
+  if (SubExp.SInputSize < SubExp.SOutputSize && IsSgprBound)
     return false;
 
-  if (SubExp.sInputSize <= SubExp.sOutputSize &&
-      SubExp.vInputSize == SubExp.vOutputSize)
+  if (SubExp.SInputSize <= SubExp.SOutputSize &&
+      SubExp.VInputSize == SubExp.VOutputSize)
     return false;
 
   // Try to find a Insert Block.
@@ -3715,17 +3715,17 @@ SubExp buildFreeSubExp(SubExp &Exp,
 
   // Calc reg for freeExp.
   for (unsigned Reg : FreeExp.TopRegs) {
-    FreeExp.inputLive[Reg];
+    FreeExp.InputLive[Reg];
   }
 
   for (unsigned Reg : FreeExp.BottomRegs) {
-    FreeExp.outputLive[Reg];
+    FreeExp.OutputLive[Reg];
   }
 
-  CollectLiveSetPressure(FreeExp.inputLive, MRI, SIRI, FreeExp.vInputSize,
-                         FreeExp.sInputSize);
-  CollectLiveSetPressure(FreeExp.outputLive, MRI, SIRI, FreeExp.vOutputSize,
-                         FreeExp.sOutputSize);
+  CollectLiveSetPressure(FreeExp.InputLive, MRI, SIRI, FreeExp.VInputSize,
+                         FreeExp.SInputSize);
+  CollectLiveSetPressure(FreeExp.OutputLive, MRI, SIRI, FreeExp.VOutputSize,
+                         FreeExp.SOutputSize);
   return FreeExp;
 }
 
@@ -3817,14 +3817,14 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
         continue;
       // When subExp is from hotBB, check output instead of input.
       if (Exp.FromBB == MBB) {
-        if (IsVOutBound && Exp.vOutputSize < Exp.vInputSize)
+        if (IsVOutBound && Exp.VOutputSize < Exp.VInputSize)
           continue;
-        if (IsSOutBound && Exp.sOutputSize < Exp.sInputSize)
+        if (IsSOutBound && Exp.SOutputSize < Exp.SInputSize)
           continue;
-        Vgpr += Exp.vInputSize;
-        Vgpr -= Exp.vOutputSize;
-        Sgpr += Exp.sInputSize;
-        Sgpr -= Exp.sOutputSize;
+        Vgpr += Exp.VInputSize;
+        Vgpr -= Exp.VOutputSize;
+        Sgpr += Exp.SInputSize;
+        Sgpr -= Exp.SOutputSize;
         continue;
       }
     }
@@ -3852,7 +3852,7 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
         }
       }
 
-      for (auto OutIt : Exp.outputLive) {
+      for (auto OutIt : Exp.OutputLive) {
         unsigned Reg = OutIt.first;
         LaneBitmask OutMask = OutIt.second;
         LaneBitmask MBBBeginMask;
@@ -3887,7 +3887,7 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
         }
       }
 
-      for (auto InIt : Exp.inputLive) {
+      for (auto InIt : Exp.InputLive) {
         unsigned Reg = InIt.first;
         LaneBitmask InMask = InIt.second;
         LaneBitmask MBBBeginMask;
@@ -3929,7 +3929,7 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
       // If MBB dominate any user of output live reg, It will still live in
       // MBB. So cannot count that output live reg as profit.
       // Hoist into loop is not supported now.
-      for (auto OutIt : Exp.outputLive) {
+      for (auto OutIt : Exp.OutputLive) {
         unsigned Reg = OutIt.first;
         bool IsDomUser = false;
         for (MachineInstr &MI : MRI.use_nodbg_instructions(Reg)) {
@@ -3963,7 +3963,7 @@ calculateSaving(HotBlock &HotBb, std::vector<SubExp> &SubExpCandidates,
         }
       }
 
-      for (auto InIt : Exp.inputLive) {
+      for (auto InIt : Exp.InputLive) {
         unsigned Reg = InIt.first;
         LaneBitmask InMask = InIt.second;
         LaneBitmask MBBBeginMask;
