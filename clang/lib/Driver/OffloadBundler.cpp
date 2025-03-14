@@ -1175,7 +1175,7 @@ static size_t getHeaderSize(uint16_t Version) {
 
 Expected<CompressedOffloadBundle::CompressedBundleHeader>
 CompressedOffloadBundle::CompressedBundleHeader::tryParse(StringRef Blob) {
-  assert(Blob.size() > sizeof(RawCompressedBundleHeader::CommonFields));
+  assert(Blob.size() >= sizeof(RawCompressedBundleHeader::CommonFields));
   assert(llvm::identify_magic(Blob) ==
          llvm::file_magic::offload_bundle_compressed);
 
