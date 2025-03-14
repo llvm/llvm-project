@@ -2175,6 +2175,18 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
+
+add_fp_unittest(
+  asinhf16_test
+  NEED_MPFR
+  SUITE
+    libc-math-unittests
+  SRCS
+    asinhf16_test.cpp
+  DEPENDS
+    libc.src.math.asinhf16
+)
+
 add_fp_unittest(
   acoshf_test
   NEED_MPFR
