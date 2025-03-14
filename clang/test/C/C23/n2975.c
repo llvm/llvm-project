@@ -30,7 +30,7 @@ typedef void (*fp)(...); // expected-warning {{'...' as the only parameter of a 
 // Passing something other than the argument before the ... is still not valid.
 void diag(int a, int b, ...) {
   va_list list;
-  va_start(list, a); // expected-warning {{second argument to 'va_start' is not the last named parameter}}
+  va_start(list, a); // expected-warning {{second argument to 'va_start' is not the last non-variadic parameter}}
   // However, the builtin itself is under no such constraints regarding
   // expanding or evaluating the second argument, so it can still diagnose.
   __builtin_va_start(list, a); // expected-warning {{second argument to 'va_start' is not the last non-variadic parameter}}

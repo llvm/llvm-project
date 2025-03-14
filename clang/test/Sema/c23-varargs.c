@@ -10,8 +10,8 @@ void foo(int x, int y, ...) {
   // Note, the unknown builtin diagnostic is only issued once per function,
   // which is why the rest of the lines do not get the same diagonstic.
   __builtin_c23_va_start(list);       // ok
-  __builtin_c23_va_start(list, 0);    // expected-warning {{second argument to 'va_start' is not the last named parameter}}
-  __builtin_c23_va_start(list, x);    // expected-warning {{second argument to 'va_start' is not the last named parameter}}
+  __builtin_c23_va_start(list, 0);    // expected-warning {{second argument to 'va_start' is not the last non-variadic parameter}}
+  __builtin_c23_va_start(list, x);    // expected-warning {{second argument to 'va_start' is not the last non-variadic parameter}}
   __builtin_c23_va_start(list, y);    // ok
   __builtin_c23_va_start(list, 0, 1); // expected-error {{too many arguments to function call, expected at most 2, have 3}}
   __builtin_c23_va_start(list, y, y); // expected-error {{too many arguments to function call, expected at most 2, have 3}}
@@ -30,8 +30,8 @@ void bar(int x, int y, ...) {
                            expected-error{{too few arguments to function call, expected 1, have 0}}
   va_start(list);       // pre-c23-error {{too few arguments provided to function-like macro invocation}} \
                            pre-c23-error {{use of undeclared identifier 'va_start'}}
-  va_start(list, 0);    // both-warning {{second argument to 'va_start' is not the last named parameter}}
-  va_start(list, x);    // both-warning {{second argument to 'va_start' is not the last named parameter}}
+  va_start(list, 0);    // both-warning {{second argument to 'va_start' is not the last non-variadic parameter}}
+  va_start(list, x);    // both-warning {{second argument to 'va_start' is not the last non-variadic parameter}}
   va_start(list, y);    // ok
   va_start(list, 0, 1); // pre-c23-error {{too many arguments provided to function-like macro invocation}} \
                            pre-c23-error {{use of undeclared identifier 'va_start'}} \
