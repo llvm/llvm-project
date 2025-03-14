@@ -248,6 +248,13 @@ public:
   LoopAnnotationAttr translateLoopAnnotationAttr(const llvm::MDNode *node,
                                                  Location loc) const;
 
+  /// Returns the dereferenceable attribute that corresponds to the given LLVM
+  /// dereferenceable or dereferenceable_or_null metadata `node`. `kindID`
+  /// specifies the kind of the metadata node (dereferenceable or
+  /// dereferenceable_or_null).
+  FailureOr<DereferenceableAttr>
+  translateDereferenceableAttr(const llvm::MDNode *node, unsigned kindID);
+
   /// Returns the alias scope attributes that map to the alias scope nodes
   /// starting from the metadata `node`. Returns failure, if any of the
   /// attributes cannot be found.
