@@ -275,14 +275,16 @@ def NVGPU_DeviceAsyncCreateGroupOp : NVGPU_Op<"device_async_create_group", []> {
 def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
   let summary = "Wait for async gpu ops to complete.";
   let description = [{
-    The `nvgpu.device_async_wait` op will block the execution thread until the group
-    associated with the source token is fully completed.
+    The `nvgpu.device_async_wait` op will block the execution thread until the till
+    only `$numGroups` or fewer of the most recent async copy groups are pending and
+    all the prior async copy groups committed by the executing threads are complete.
 
     The optional `$numGroups` attribute gives an upper bound of the number of
     groups uncompleted when the wait can unblock the thread. For example,  if
     16 async groups are pushe and `$numGroups` is set to 12, then the thread
-    will unblock when 12 groups or fewer are in flight (4 groups have
-    completed).
+    will unblock when 12 groups or fewer are in flight (4 groups have completed).
+    Its default value is 0, This means waiting for all previously committed groups
+    to complete.
 
     Example:
 
@@ -302,7 +304,7 @@ def NVGPU_DeviceAsyncWaitOp : NVGPU_Op<"device_async_wait", []> {
   }];
   let arguments = (ins OptionalAttr<I32Attr>:$numGroups);
   let assemblyFormat = [{
-    attr-dict
+    prop-dict attr-dict
   }];
 }
 

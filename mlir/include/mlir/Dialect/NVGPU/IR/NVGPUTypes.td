@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef MLIR_DIALECT_NVGPU_IR_NVGPUTYPES_TD
 #define MLIR_DIALECT_NVGPU_IR_NVGPUTYPES_TD
 

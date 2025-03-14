@@ -98,7 +98,7 @@ func.func @async_depth_2_predicated(%global: memref<?xf32>, %alloc_size: index) 
   scf.for %i = %c0 to %c98 step %c4 {
     // Condition for the predication "select" below.
     // CHECK:   %[[CMP0:.+]] = arith.cmpi slt, %[[I]], %[[C90]]
-    // CHECK:   nvgpu.device_async_wait {numGroups = 1
+    // CHECK:   nvgpu.device_async_wait <{numGroups = 1 : i32}>
     // Original "select" with updated induction variable.
     // CHECK:   %[[I_PLUS_8:.+]] = arith.addi %[[I]], %[[C8]]
     // CHECK:   %[[CMP1:.+]] = arith.cmpi slt, %[[I_PLUS_8]], %[[C96]]
@@ -152,11 +152,11 @@ func.func @async_depth_2_peeled(%global: memref<?xf32>) {
   // CHECK: nvgpu.device_async_copy
   // CHECK: nvgpu.device_async_copy
   // CHECK: scf.for
-  // CHECK:   nvgpu.device_async_wait {numGroups = 1
+  // CHECK:   nvgpu.device_async_wait <{numGroups = 1 : i32}>
   // CHECK:   arith.select
   // CHECK:   nvgpu.device_async_copy
-  // CHECK: nvgpu.device_async_wait {numGroups = 1
-  // CHECK: nvgpu.device_async_wait {numGroups = 0
+  // CHECK: nvgpu.device_async_wait <{numGroups = 1 : i32}>
+  // CHECK: nvgpu.device_async_wait <{numGroups = 0 : i32}>
   scf.for %i = %c0 to %c98 step %c4 {
     %c96 = arith.constant 96 : index
     %cond = arith.cmpi slt, %i, %c96 : index
