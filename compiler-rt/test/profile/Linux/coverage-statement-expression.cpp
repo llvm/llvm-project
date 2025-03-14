@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 
+// clang-format off
 __attribute__ ((__noreturn__))
 void foo(void) { while (1); }                   // CHECK:  [[@LINE]]| 0|void foo(void)
 _Noreturn void bar(void) { while (1); }         // CHECK:  [[@LINE]]| 0|_Noreturn void bar(void)
@@ -17,3 +18,4 @@ int main(int argc, char **argv) {               // CHECK:  [[@LINE]]| 1|int main
   printf("coverage after bar is present\n");    // CHECK:  [[@LINE]]| 1|  printf(
   return rc + rc2;                              // CHECK:  [[@LINE]]| 1|  return rc
 }                                               // CHECK:  [[@LINE]]| 1|}
+// clang-format on
