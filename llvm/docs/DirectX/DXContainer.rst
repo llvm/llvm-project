@@ -556,6 +556,26 @@ Root Descriptor Table
 ^^^^^^^^^^^^^^^^^^^^^
 Descriptor tables function as containers that hold references to descriptors in descriptor heaps. 
 They allow multiple descriptors to be bound to the pipeline through a single root signature parameter.
+Tables are split in a Header and Data Section. The Header contains information that helps locate the data,
+which will contain a collection of descriptor ranges.
+
+Root Descriptor Table Header
+"""""""""""""""""""""""""""""""
+
+.. code-block:: c
+
+   struct RootDescriptorTable {
+      uint32_t NumDescriptorRanges;      
+      uint32_t DescriptorRangesOffset;  
+   };
+
+RootDescriptorTable provides basic table structure:
+
+#. **NumDescriptorRanges**: Number of descriptor ranges
+#. **DescriptorRangesOffset**: Offset to descriptor range array
+
+Descriptor Range Version 1.0
+""""""""""""""""""""""""""""
 
 .. code-block:: c
 
@@ -566,6 +586,19 @@ They allow multiple descriptors to be bound to the pipeline through a single roo
       uint32_t RegisterSpace;
       uint32_t OffsetInDescriptorsFromTableStart;
    };
+
+The Version 1.0 ``DescriptorRange_V1_0`` provides basic descriptor range definition:
+
+#. **RangeType**: Type of descriptors (CBV, SRV, UAV, or Sampler)
+#. **NumDescriptors**: Number of descriptors in the range
+#. **BaseShaderRegister**: First shader register in the range
+#. **RegisterSpace**: Register space for the range
+#. **OffsetInDescriptorsFromTableStart**: Offset from the descriptor heap start
+
+Descriptor Range Version 1.1
+""""""""""""""""""""""""""""
+
+.. code-block:: c
 
    struct DescriptorRange_V1_1 {
       dxbc::DescriptorRangeType RangeType;
@@ -588,35 +621,10 @@ They allow multiple descriptors to be bound to the pipeline through a single roo
       uint32_t Flags;
    };
 
-   struct RootDescriptorTable {
-      uint32_t NumDescriptorRanges;      
-      uint32_t DescriptorRangesOffset;  
-   };
-
-
-Descriptor Range Version 1.0
-""""""""""""""""""""""""""""
-The Version 1.0 ``DescriptorRange_V1_0`` provides basic descriptor range definition:
-
-#. **RangeType**: Type of descriptors (CBV, SRV, UAV, or Sampler)
-#. **NumDescriptors**: Number of descriptors in the range
-#. **BaseShaderRegister**: First shader register in the range
-#. **RegisterSpace**: Register space for the range
-#. **OffsetInDescriptorsFromTableStart**: Offset from the descriptor heap start
-
-Descriptor Range Version 1.1
-""""""""""""""""""""""""""""
 The Version 1.1 DescriptorRange_V1_1 extends the base structure with performance optimization flags.
 
 #. **Flags**: Provide additional information about the descriptors and enable further driver optimizations.
    For details, check `Direct X documentation <https://learn.microsoft.com/en-us/windows/win32/direct3d12/root-signature-version-1-1#static-and-volatile-flags>`_.
-
-Root Descriptor Table Structure
-"""""""""""""""""""""""""""""""
-RootDescriptorTable provides basic table structure:
-
-#. **NumDescriptorRanges**: Number of descriptor ranges
-#. **DescriptorRangesOffset**: Offset to descriptor range array
 
 Static Samplers
 ~~~~~~~~~~~~~~~
