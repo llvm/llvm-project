@@ -1695,6 +1695,7 @@ protected:
 /// The private implementation backing SBLock.
 struct APILock {
   APILock(std::recursive_mutex &mutex) : lock(mutex) {}
+  virtual ~APILock() = default;
   std::lock_guard<std::recursive_mutex> lock;
 };
 
@@ -1703,6 +1704,7 @@ struct APILock {
 struct TargetAPILock : public APILock {
   TargetAPILock(std::recursive_mutex &mutex, lldb::TargetSP target_sp)
       : APILock(mutex), target_sp(target_sp) {}
+  ~TargetAPILock() override = default;
   lldb::TargetSP target_sp;
 };
 

@@ -7,11 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTarget.h"
-#include "lldb/API/SBLock.h"
-#include "lldb/Utility/Instrumentation.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/lldb-public.h"
-
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
@@ -60,11 +55,14 @@
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/ProcessInfo.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/ValueObject/ValueObjectConstResult.h"
 #include "lldb/ValueObject/ValueObjectList.h"
 #include "lldb/ValueObject/ValueObjectVariable.h"
+#include "lldb/lldb-public.h"
 
 #include "Commands/CommandObjectBreakpoint.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
@@ -2437,7 +2435,7 @@ lldb::SBTrace SBTarget::CreateTrace(lldb::SBError &error) {
 }
 
 #ifndef SWIG
-lldb::SBLock SBTarget::GetAPILock() const {
+lldb::SBLock SBTarget::AcquireAPILock() const {
   LLDB_INSTRUMENT_VA(this);
 
   if (TargetSP target_sp = GetSP())

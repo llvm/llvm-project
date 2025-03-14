@@ -19,11 +19,6 @@ using namespace lldb_private;
 
 #ifndef SWIG
 
-SBLock::SBLock(std::recursive_mutex &mutex)
-    : m_opaque_up(std::make_unique<APILock>(mutex)) {
-  LLDB_INSTRUMENT_VA(this);
-}
-
 SBLock::SBLock(std::recursive_mutex &mutex, lldb::TargetSP target_sp)
     : m_opaque_up(std::make_unique<TargetAPILock>(mutex, target_sp)) {
   LLDB_INSTRUMENT_VA(this);

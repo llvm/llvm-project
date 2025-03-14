@@ -40,7 +40,7 @@ TEST(SBLockTest, LockTest) {
 
   // Take the API lock.
   {
-    lldb::SBLock lock = target.GetAPILock();
+    lldb::SBLock lock = target.AcquireAPILock();
     ASSERT_FALSE(locked.exchange(true));
 
     // Wake up the test thread.

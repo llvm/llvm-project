@@ -947,7 +947,7 @@ public:
   lldb::SBTrace CreateTrace(SBError &error);
 
 #ifndef SWIG
-  lldb::SBLock GetAPILock() const;
+  lldb::SBLock AcquireAPILock() const;
 #endif
 
 protected:

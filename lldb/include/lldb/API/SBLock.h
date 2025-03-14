@@ -28,11 +28,13 @@ public:
   bool IsValid() const;
 
 private:
+  SBLock() = default;
+
+  // Private constructor used by SBTarget to create the Target API lock.
+  // Requires a friend declaration.
+  SBLock(std::recursive_mutex &mutex, lldb::TargetSP target_sp);
   friend class SBTarget;
 
-  SBLock() = default;
-  SBLock(std::recursive_mutex &mutex);
-  SBLock(std::recursive_mutex &mutex, lldb::TargetSP target_sp);
   SBLock(const SBLock &rhs) = delete;
   const SBLock &operator=(const SBLock &rhs) = delete;
 
