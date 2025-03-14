@@ -941,17 +941,15 @@ define amdgpu_kernel void @half_v7bfloat_kernel_preload_arg(ptr addrspace(1) inr
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB23_0:
-; GFX90a-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x20
 ; GFX90a-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX90a-NEXT:    global_store_short v3, v0, s[6:7]
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, s13
-; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NEXT:    global_store_short v3, v0, s[0:1] offset:12
+; GFX90a-NEXT:    global_store_short v3, v0, s[14:15] offset:12
 ; GFX90a-NEXT:    v_mov_b32_e32 v2, s12
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s11
-; GFX90a-NEXT:    global_store_dwordx3 v3, v[0:2], s[0:1]
+; GFX90a-NEXT:    global_store_dwordx3 v3, v[0:2], s[14:15]
 ; GFX90a-NEXT:    s_endpgm
   store half %in, ptr addrspace(1) %out
   store <7 x bfloat> %in2, ptr addrspace(1) %out2
@@ -1191,15 +1189,13 @@ define amdgpu_kernel void @i16_v3i32_kernel_preload_arg(ptr addrspace(1) inreg %
 ; GFX90a-NEXT:    .p2align 8
 ; GFX90a-NEXT:  ; %bb.2:
 ; GFX90a-NEXT:  .LBB29_0:
-; GFX90a-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x20
 ; GFX90a-NEXT:    v_mov_b32_e32 v3, 0
 ; GFX90a-NEXT:    v_mov_b32_e32 v4, s8
 ; GFX90a-NEXT:    v_mov_b32_e32 v0, s10
 ; GFX90a-NEXT:    v_mov_b32_e32 v1, s11
 ; GFX90a-NEXT:    v_mov_b32_e32 v2, s12
 ; GFX90a-NEXT:    global_store_short v3, v4, s[6:7]
-; GFX90a-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX90a-NEXT:    global_store_dwordx3 v3, v[0:2], s[0:1]
+; GFX90a-NEXT:    global_store_dwordx3 v3, v[0:2], s[14:15]
 ; GFX90a-NEXT:    s_endpgm
   store i16 %in, ptr addrspace(1) %out
   store <3 x i32> %in2, ptr addrspace(1) %out2
