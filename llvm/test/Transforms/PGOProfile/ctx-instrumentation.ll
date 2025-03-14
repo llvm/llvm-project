@@ -13,11 +13,11 @@ declare void @bar()
 ; LOWERING: @another_entrypoint_no_callees_ctx_root = global { ptr, ptr, ptr, i8 } zeroinitializer
 ; LOWERING: @__llvm_ctx_profile_callsite = external hidden thread_local global ptr
 ; LOWERING: @__llvm_ctx_profile_expected_callee = external hidden thread_local global ptr
-; LOWERING: @[[GLOB0:[0-9]+]] = internal global { ptr, i8 } zeroinitializer
-; LOWERING: @[[GLOB1:[0-9]+]] = internal global { ptr, i8 } zeroinitializer
-; LOWERING: @[[GLOB2:[0-9]+]] = internal global { ptr, i8 } zeroinitializer
-; LOWERING: @[[GLOB3:[0-9]+]] = internal global { ptr, i8 } zeroinitializer
-; LOWERING: @[[GLOB4:[0-9]+]] = internal global { ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB0:[0-9]+]] = internal global { ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB1:[0-9]+]] = internal global { ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB2:[0-9]+]] = internal global { ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB3:[0-9]+]] = internal global { ptr, ptr, i8 } zeroinitializer
+; LOWERING: @[[GLOB4:[0-9]+]] = internal global { ptr, ptr, i8 } zeroinitializer
 ;.
 define void @foo(i32 %a, ptr %fct) {
 ; INSTRUMENT-LABEL: define void @foo(

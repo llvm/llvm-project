@@ -7894,8 +7894,8 @@ bb:
   %tmp6 = extractelement <9 x i32> %tmp5, i32 1
   %tmp7 = bitcast <9 x float> %tmp4 to <9 x i32>
   %tmp8 = extractelement <9 x i32> %tmp7, i32 5
-  store volatile i32 %tmp6, ptr addrspace(3) undef, align 4
-  store volatile i32 %tmp8, ptr addrspace(3) undef, align 4
+  store volatile i32 %tmp6, ptr addrspace(3) poison, align 4
+  store volatile i32 %tmp8, ptr addrspace(3) poison, align 4
   ret void
 }
 

@@ -130,7 +130,7 @@ define amdgpu_kernel void @no_fold_tied_subregister() #1 {
 ; CHECK: v_xor_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
 define void @no_extra_fold_on_same_opnd() #1 {
 entry:
-  %s0 = load i32, ptr addrspace(5) undef, align 4
+  %s0 = load i32, ptr addrspace(5) poison, align 4
   %s0.i64= zext i32 %s0 to i64
   br label %for.body.i.i
 

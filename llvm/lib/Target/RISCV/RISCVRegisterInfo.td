@@ -226,10 +226,11 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
   int NF = 1;
 
   let Size = !if(IsVRegClass, !mul(VLMul, NF, 64), 0);
+  let CopyCost = !if(IsVRegClass, !mul(VLMul, NF), 1);
 
   let TSFlags{0} = IsVRegClass;
-  let TSFlags{3-1} = !logtwo(VLMul);
-  let TSFlags{6-4} = !sub(NF, 1);
+  let TSFlags{2-1} = !logtwo(VLMul);
+  let TSFlags{5-3} = !sub(NF, 1);
 }
 
 class GPRRegisterClass<dag regList>
@@ -343,7 +344,7 @@ let RegAltNameIndices = [ABIRegAltName] in {
   }
 }
 
-let RegInfos = XLenPairRI,
+let RegInfos = XLenPairRI, CopyCost = 2,
     DecoderMethod = "DecodeGPRPairRegisterClass" in {
 def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
     X10_X11, X12_X13, X14_X15, X16_X17,
@@ -357,7 +358,7 @@ def GPRPair : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
 def GPRPairNoX0 : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (sub GPRPair, X0_Pair)>;
 } // let RegInfos = XLenPairRI, DecoderMethod = "DecodeGPRPairRegisterClass"
 
-let RegInfos = XLenPairRI in
+let RegInfos = XLenPairRI, CopyCost = 2 in
 def GPRPairC : RISCVRegisterClass<[XLenPairVT, XLenPairFVT], 64, (add
   X10_X11, X12_X13, X14_X15, X8_X9
 )>;

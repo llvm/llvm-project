@@ -244,7 +244,7 @@ bb:
 ; GCN-LABEL: {{^}}ret_return_to_epilog_pseudo_size:
 ; GCN: codeLenInByte = 0{{$}}
 define amdgpu_ps float @ret_return_to_epilog_pseudo_size() #0 {
-  ret float undef
+  ret float poison
 }
 
 declare void @llvm.amdgcn.exp.f32(i32, i32, float, float, float, float, i1, i1) #0
