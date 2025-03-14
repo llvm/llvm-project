@@ -3063,8 +3063,8 @@ static SPIRVType *getInlineSpirvType(const TargetExtType *ExtensionType,
         auto OperandValue = ParamEType->getIntParameter(0);
         auto *OperandType = ParamEType->getTypeParameter(0);
 
-        const SPIRVType *OperandSPIRVType =
-            GR->getOrCreateSPIRVType(OperandType, MIRBuilder);
+        const SPIRVType *OperandSPIRVType = GR->getOrCreateSPIRVType(
+            OperandType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
 
         Operands.push_back(MCOperand::createReg(GR->buildConstantInt(
             OperandValue, MIRBuilder, OperandSPIRVType, true)));
@@ -3083,7 +3083,8 @@ static SPIRVType *getInlineSpirvType(const TargetExtType *ExtensionType,
         continue;
       }
     }
-    const SPIRVType *TypeOperand = GR->getOrCreateSPIRVType(Param, MIRBuilder);
+    const SPIRVType *TypeOperand = GR->getOrCreateSPIRVType(
+        Param, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
     Operands.push_back(MCOperand::createReg(GR->getSPIRVTypeID(TypeOperand)));
   }
 
