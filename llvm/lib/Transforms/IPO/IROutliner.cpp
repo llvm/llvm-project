@@ -1478,8 +1478,9 @@ CallInst *replaceCalledFunction(Module &M, OutlinableRegion &Region) {
     }
 
     // If it is a constant, we simply add it to the argument list as a value.
-    if (Region.AggArgToConstant.contains(AggArgIdx)) {
-      Constant *CST = Region.AggArgToConstant.find(AggArgIdx)->second;
+    if (auto It = Region.AggArgToConstant.find(AggArgIdx);
+        It != Region.AggArgToConstant.end()) {
+      Constant *CST = It->second;
       LLVM_DEBUG(dbgs() << "Setting argument " << AggArgIdx << " to value "
                         << *CST << "\n");
       NewCallArgs.push_back(CST);
@@ -1612,9 +1613,10 @@ getPassedArgumentAndAdjustArgumentLocation(const Argument *A,
   
   // If it is a constant, we can look at our mapping from when we created
   // the outputs to figure out what the constant value is.
-  if (Region.AggArgToConstant.count(ArgNum))
-    return Region.AggArgToConstant.find(ArgNum)->second;
-  
+  if (auto It = Region.AggArgToConstant.find(ArgNum);
+      It != Region.AggArgToConstant.end())
+    return It->second;
+
   // If it is not a constant, and we are not looking at the overall function, we
   // need to adjust which argument we are looking at.
   ArgNum = Region.AggArgToExtracted.find(ArgNum)->second;
@@ -2693,12 +2695,13 @@ void IROutliner::updateOutputMapping(OutlinableRegion &Region,
   if (!OutputIdx)
     return;
 
-  if (!OutputMappings.contains(Outputs[*OutputIdx])) {
+  auto It = OutputMappings.find(Outputs[*OutputIdx]);
+  if (It == OutputMappings.end()) {
     LLVM_DEBUG(dbgs() << "Mapping extracted output " << *LI << " to "
                       << *Outputs[*OutputIdx] << "\n");
     OutputMappings.insert(std::make_pair(LI, Outputs[*OutputIdx]));
   } else {
-    Value *Orig = OutputMappings.find(Outputs[*OutputIdx])->second;
+    Value *Orig = It->second;
     LLVM_DEBUG(dbgs() << "Mapping extracted output " << *Orig << " to "
                       << *Outputs[*OutputIdx] << "\n");
     OutputMappings.insert(std::make_pair(LI, Orig));

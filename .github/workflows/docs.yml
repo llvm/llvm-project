@@ -51,7 +51,7 @@ on:
 jobs:
   check-docs-build:
     name: "Test documentation build"
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.repository == 'llvm/llvm-project'
     steps:
       # Don't fetch before checking for file changes to force the file changes

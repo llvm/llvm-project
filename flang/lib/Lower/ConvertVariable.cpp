@@ -19,6 +19,7 @@
 #include "flang/Lower/ConvertExpr.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/ConvertProcedureDesignator.h"
+#include "flang/Lower/Cuda.h"
 #include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
@@ -851,9 +852,8 @@ void Fortran::lower::defaultInitializeAtRuntime(
       }
       auto addrOf = builder.create<fir::AddrOfOp>(loc, global.resultType(),
                                                   global.getSymbol());
-      fir::LoadOp load = builder.create<fir::LoadOp>(loc, addrOf.getResult());
-      // FIXME: Use memcpy instead of store.
-      builder.create<fir::StoreOp>(loc, load, fir::getBase(exv));
+      builder.create<fir::CopyOp>(loc, addrOf, fir::getBase(exv),
+                                  /*noOverlap=*/true);
     } else {
       mlir::Value box = builder.createBox(loc, exv);
       fir::runtime::genDerivedTypeInitialize(builder, loc, box);
@@ -1577,17 +1577,6 @@ static bool lowerToBoxValue(const Fortran::semantics::Symbol &sym,
   return false;
 }
 
-/// Compute extent from lower and upper bound.
-static mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
-                                 mlir::Value lb, mlir::Value ub) {
-  mlir::IndexType idxTy = builder.getIndexType();
-  // Let the folder deal with the common `ub - <const> + 1` case.
-  auto diff = builder.create<mlir::arith::SubIOp>(loc, idxTy, ub, lb);
-  mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
-  auto rawExtent = builder.create<mlir::arith::AddIOp>(loc, idxTy, diff, one);
-  return fir::factory::genMaxWithZero(builder, loc, rawExtent);
-}
-
 /// Lower explicit lower bounds into \p result. Does nothing if this is not an
 /// array, or if the lower bounds are deferred, or all implicit or one.
 static void lowerExplicitLowerBounds(
@@ -1651,8 +1640,8 @@ lowerExplicitExtents(Fortran::lower::AbstractConverter &converter,
       if (lowerBounds.empty())
         result.emplace_back(fir::factory::genMaxWithZero(builder, loc, ub));
       else
-        result.emplace_back(
-            computeExtent(builder, loc, lowerBounds[spec.index()], ub));
+        result.emplace_back(fir::factory::computeExtent(
+            builder, loc, lowerBounds[spec.index()], ub));
     } else if (spec.value()->ubound().isStar()) {
       result.emplace_back(getAssumedSizeExtent(loc, builder));
     }
@@ -1901,7 +1890,7 @@ void Fortran::lower::genDeclareSymbol(
     bool force) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       (!Fortran::semantics::IsProcedure(sym) ||
-       Fortran::semantics::IsPointer(sym)) &&
+       Fortran::semantics::IsPointer(sym.GetUltimate())) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);
@@ -1983,22 +1972,6 @@ static void genBoxDeclare(Fortran::lower::AbstractConverter &converter,
   }
   symMap.addBoxSymbol(sym, box, lbounds, explicitParams, explicitExtents,
                       replace);
-}
-
-static unsigned getAllocatorIdx(const Fortran::semantics::Symbol &sym) {
-  std::optional<Fortran::common::CUDADataAttr> cudaAttr =
-      Fortran::semantics::GetCUDADataAttr(&sym.GetUltimate());
-  if (cudaAttr) {
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Pinned)
-      return kPinnedAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Device)
-      return kDeviceAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Managed)
-      return kManagedAllocatorPos;
-    if (*cudaAttr == Fortran::common::CUDADataAttr::Unified)
-      return kUnifiedAllocatorPos;
-  }
-  return kDefaultAllocator;
 }
 
 /// Lower specification expressions and attributes of variable \p var and
@@ -2091,7 +2064,7 @@ void Fortran::lower::mapSymbolAttributes(
         converter, loc, var, boxAlloc, nonDeferredLenParams,
         /*alwaysUseBox=*/
         converter.getLoweringOptions().getLowerToHighLevelFIR(),
-        getAllocatorIdx(var.getSymbol()));
+        Fortran::lower::getAllocatorIdx(var.getSymbol()));
     genAllocatableOrPointerDeclare(converter, symMap, var.getSymbol(), box,
                                    replace);
     return;
@@ -2288,7 +2261,8 @@ void Fortran::lower::mapSymbolAttributes(
         if (auto high = spec->ubound().GetExplicit()) {
           auto expr = Fortran::lower::SomeExpr{*high};
           ub = builder.createConvert(loc, idxTy, genValue(expr));
-          extents.emplace_back(computeExtent(builder, loc, lb, ub));
+          extents.emplace_back(
+              fir::factory::computeExtent(builder, loc, lb, ub));
         } else {
           // An assumed size array. The extent is not computed.
           assert(spec->ubound().isStar() && "expected assumed size");

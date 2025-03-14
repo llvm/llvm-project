@@ -203,8 +203,7 @@ contains
 ! CHECK-LABEL: func.func @_QMderived_type_finalizationPtest_avoid_double_finalization(
 ! CHECK: %[[b:.*]] = fir.alloca !fir.type<_QMderived_type_finalizationTt3{t:!fir.type<_QMderived_type_finalizationTt2{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>}> {bindc_name = "b", uniq_name = "_QMderived_type_finalizationFtest_avoid_double_finalizationEb"}
 ! CHECK: %[[ADDR:.*]] = fir.address_of(@_QQ_QMderived_type_finalizationTt3.DerivedInit) : !fir.ref<!fir.type<_QMderived_type_finalizationTt3{t:!fir.type<_QMderived_type_finalizationTt2{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>}>>
-! CHECK: %[[LOAD:.*]] = fir.load %[[ADDR]] : !fir.ref<!fir.type<_QMderived_type_finalizationTt3{t:!fir.type<_QMderived_type_finalizationTt2{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>}>>
-! CHECK: fir.store %[[LOAD]] to %[[b]] : !fir.ref<!fir.type<_QMderived_type_finalizationTt3{t:!fir.type<_QMderived_type_finalizationTt2{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>}>>
+! CHECK: fir.copy %[[ADDR]] to %[[b]] no_overlap : !fir.ref<!fir.type<_QMderived_type_finalizationTt3{t:!fir.type<_QMderived_type_finalizationTt2{a:!fir.box<!fir.heap<!fir.array<?xi32>>>}>}>>
 ! CHECK-NOT: fir.call @_FortranADestroy
 ! CHECK: fir.call @_FortranAAssign(
 ! CHECK: fir.call @_FortranADestroy(

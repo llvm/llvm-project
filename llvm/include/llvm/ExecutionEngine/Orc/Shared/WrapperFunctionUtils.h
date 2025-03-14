@@ -527,7 +527,7 @@ public:
   /// Handle a call to an async wrapper function.
   template <typename HandlerT, typename SendResultT>
   static void handleAsync(const char *ArgData, size_t ArgSize,
-                          HandlerT &&Handler, SendResultT &&SendResult) {
+                          SendResultT &&SendResult, HandlerT &&Handler) {
     using WFAHH = detail::WrapperFunctionAsyncHandlerHelper<
         std::remove_reference_t<HandlerT>, ResultSerializer, SPSTagTs...>;
     WFAHH::applyAsync(std::forward<HandlerT>(Handler),

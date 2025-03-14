@@ -52,7 +52,7 @@
 ! CHECK-DAG:           %[[PRIV_I_DECL:.*]]:2 = hlfir.declare %[[PRIV_I]] {uniq_name = "_QFmultiple_private_fixEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-DAG:           %[[PRIV_J_DECL:.*]]:2 = hlfir.declare %[[PRIV_J]] {uniq_name = "_QFmultiple_private_fixEj"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK-DAG:           %[[PRIV_X_DECL:.*]]:2 = hlfir.declare %[[PRIV_X]] {uniq_name = "_QFmultiple_private_fixEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-! CHECK:               fir.store %[[VAL_6]] to %[[PRIV_I_DECL]]#1 : !fir.ref<i32>
+! CHECK:               hlfir.assign %[[VAL_6]] to %[[PRIV_I_DECL]]#1 : i32, !fir.ref<i32>
 ! CHECK:               %[[VAL_7:.*]] = arith.constant 1 : i32
 ! CHECK:               %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i32) -> index
 ! CHECK:               %[[VAL_9:.*]] = fir.load %[[GAMA_DECL]]#0 : !fir.ref<i32>

@@ -28,7 +28,7 @@ const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
 
 AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
                                  const MCTargetOptions &Options) {
-  CodePointerSize = (TT.getArch() == Triple::amdgcn) ? 8 : 4;
+  CodePointerSize = (TT.isAMDGCN()) ? 8 : 4;
   StackGrowsUp = true;
   HasSingleParameterDotFile = false;
   //===------------------------------------------------------------------===//
@@ -36,7 +36,7 @@ AMDGPUMCAsmInfo::AMDGPUMCAsmInfo(const Triple &TT,
 
   // This is the maximum instruction encoded size for gfx10. With a known
   // subtarget, it can be reduced to 8 bytes.
-  MaxInstLength = (TT.getArch() == Triple::amdgcn) ? 20 : 16;
+  MaxInstLength = (TT.isAMDGCN()) ? 20 : 16;
   SeparatorString = "\n";
   CommentString = ";";
   InlineAsmStart = ";#ASMSTART";

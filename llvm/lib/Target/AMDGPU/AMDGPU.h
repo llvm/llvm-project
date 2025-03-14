@@ -156,8 +156,8 @@ private:
   const TargetMachine &TM;
 };
 
-void initializeAMDGPUReserveWWMRegsPass(PassRegistry &);
-extern char &AMDGPUReserveWWMRegsID;
+void initializeAMDGPUReserveWWMRegsLegacyPass(PassRegistry &);
+extern char &AMDGPUReserveWWMRegsLegacyID;
 
 void initializeAMDGPURewriteOutArgumentsPass(PassRegistry &);
 extern char &AMDGPURewriteOutArgumentsID;
@@ -358,6 +358,19 @@ public:
   PreservedAnalyses run(MachineFunction &F, MachineFunctionAnalysisManager &AM);
 };
 
+class SIMemoryLegalizerPass : public PassInfoMixin<SIMemoryLegalizerPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+  static bool isRequired() { return true; }
+};
+
+class GCNCreateVOPDPass : public PassInfoMixin<GCNCreateVOPDPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &AM);
+};
+
 FunctionPass *createAMDGPUAnnotateUniformValuesLegacy();
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
@@ -422,7 +435,7 @@ public:
 void initializeSIAnnotateControlFlowLegacyPass(PassRegistry &);
 extern char &SIAnnotateControlFlowLegacyPassID;
 
-void initializeSIMemoryLegalizerPass(PassRegistry&);
+void initializeSIMemoryLegalizerLegacyPass(PassRegistry &);
 extern char &SIMemoryLegalizerID;
 
 void initializeSIModeRegisterLegacyPass(PassRegistry &);
@@ -443,7 +456,7 @@ extern char &SIFormMemoryClausesID;
 void initializeSIPostRABundlerLegacyPass(PassRegistry &);
 extern char &SIPostRABundlerLegacyID;
 
-void initializeGCNCreateVOPDPass(PassRegistry &);
+void initializeGCNCreateVOPDLegacyPass(PassRegistry &);
 extern char &GCNCreateVOPDID;
 
 void initializeAMDGPUUnifyDivergentExitNodesPass(PassRegistry&);
@@ -456,9 +469,9 @@ void initializeAMDGPUExternalAAWrapperPass(PassRegistry&);
 
 void initializeAMDGPUArgumentUsageInfoPass(PassRegistry &);
 
-ModulePass *createAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass();
-void initializeAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass(PassRegistry &);
-extern char &AMDGPUOpenCLEnqueuedBlockLoweringLegacyID;
+ModulePass *createAMDGPUExportKernelRuntimeHandlesLegacyPass();
+void initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(PassRegistry &);
+extern char &AMDGPUExportKernelRuntimeHandlesLegacyID;
 
 void initializeGCNNSAReassignLegacyPass(PassRegistry &);
 extern char &GCNNSAReassignID;

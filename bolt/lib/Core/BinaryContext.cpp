@@ -46,9 +46,10 @@ using namespace llvm;
 
 namespace opts {
 
-cl::opt<bool> NoHugePages("no-huge-pages",
-                          cl::desc("use regular size pages for code alignment"),
-                          cl::Hidden, cl::cat(BoltCategory));
+static cl::opt<bool>
+    NoHugePages("no-huge-pages",
+                cl::desc("use regular size pages for code alignment"),
+                cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
 PrintDebugInfo("print-debug-info",
@@ -2283,7 +2284,7 @@ ErrorOr<int64_t> BinaryContext::getSignedValueAtAddress(uint64_t Address,
 }
 
 void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
-                                  uint64_t Type, uint64_t Addend,
+                                  uint32_t Type, uint64_t Addend,
                                   uint64_t Value) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");
@@ -2292,7 +2293,7 @@ void BinaryContext::addRelocation(uint64_t Address, MCSymbol *Symbol,
 }
 
 void BinaryContext::addDynamicRelocation(uint64_t Address, MCSymbol *Symbol,
-                                         uint64_t Type, uint64_t Addend,
+                                         uint32_t Type, uint64_t Addend,
                                          uint64_t Value) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot find section for address");

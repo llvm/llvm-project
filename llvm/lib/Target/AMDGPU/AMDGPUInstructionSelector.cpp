@@ -1478,10 +1478,21 @@ bool AMDGPUInstructionSelector::selectG_ICMP_or_FCMP(MachineInstr &I) const {
   if (Opcode == -1)
     return false;
 
-  MachineInstr *ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode),
-            I.getOperand(0).getReg())
-            .add(I.getOperand(2))
-            .add(I.getOperand(3));
+  MachineInstrBuilder ICmp;
+  // t16 instructions
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0_modifiers)) {
+    ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), I.getOperand(0).getReg())
+               .addImm(0)
+               .add(I.getOperand(2))
+               .addImm(0)
+               .add(I.getOperand(3))
+               .addImm(0); // op_sel
+  } else {
+    ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), I.getOperand(0).getReg())
+               .add(I.getOperand(2))
+               .add(I.getOperand(3));
+  }
+
   RBI.constrainGenericRegister(ICmp->getOperand(0).getReg(),
                                *TRI.getBoolRC(), *MRI);
   bool Ret = constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI);
@@ -3567,7 +3578,8 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
-bool AMDGPUInstructionSelector::selectBVHIntrinsic(MachineInstr &MI) const{
+bool AMDGPUInstructionSelector::selectBVHIntersectRayIntrinsic(
+    MachineInstr &MI) const {
   MI.setDesc(TII.get(MI.getOperand(1).getImm()));
   MI.removeOperand(1);
   MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
@@ -4085,8 +4097,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     assert(Intr && "not an image intrinsic with image pseudo");
     return selectImageIntrinsic(I, Intr);
   }
-  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
-    return selectBVHIntrinsic(I);
+  case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
+    return selectBVHIntersectRayIntrinsic(I);
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
     return selectG_SBFX_UBFX(I);
@@ -4595,6 +4607,7 @@ AMDGPUInstructionSelector::selectVOP3OpSelMods(MachineOperand &Root) const {
   }};
 }
 
+// FIXME-TRUE16 remove when fake16 is removed
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVINTERPMods(MachineOperand &Root) const {
   Register Src;

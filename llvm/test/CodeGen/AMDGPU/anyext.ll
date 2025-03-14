@@ -186,8 +186,8 @@ define amdgpu_kernel void @anyext_v2i16_to_v2i32() #0 {
 ; GFX9-NEXT:    buffer_store_byte v0, off, s[0:3], 0
 ; GFX9-NEXT:    s_endpgm
 bb:
-  %tmp = load i16, ptr addrspace(1) undef, align 2
-  %tmp2 = insertelement <2 x i16> undef, i16 %tmp, i32 1
+  %tmp = load i16, ptr addrspace(1) poison, align 2
+  %tmp2 = insertelement <2 x i16> poison, i16 %tmp, i32 1
   %tmp4 = and <2 x i16> %tmp2, <i16 -32767, i16 -32767>
   %tmp5 = zext <2 x i16> %tmp4 to <2 x i32>
   %tmp6 = shl nuw <2 x i32> %tmp5, <i32 16, i32 16>
@@ -196,7 +196,7 @@ bb:
   %tmp10 = fcmp oeq <2 x float> %tmp8, zeroinitializer
   %tmp11 = zext <2 x i1> %tmp10 to <2 x i8>
   %tmp12 = extractelement <2 x i8> %tmp11, i32 1
-  store i8 %tmp12, ptr addrspace(1) undef, align 1
+  store i8 %tmp12, ptr addrspace(1) poison, align 1
   ret void
 }
 

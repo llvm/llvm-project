@@ -601,6 +601,7 @@ struct ReductionParseArgs {
 };
 
 struct AllRegionParseArgs {
+  std::optional<MapParseArgs> hasDeviceAddrArgs;
   std::optional<MapParseArgs> hostEvalArgs;
   std::optional<ReductionParseArgs> inReductionArgs;
   std::optional<MapParseArgs> mapArgs;
@@ -759,6 +760,11 @@ static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
                                        AllRegionParseArgs args) {
   llvm::SmallVector<OpAsmParser::Argument> entryBlockArgs;
 
+  if (failed(parseBlockArgClause(parser, entryBlockArgs, "has_device_addr",
+                                 args.hasDeviceAddrArgs)))
+    return parser.emitError(parser.getCurrentLocation())
+           << "invalid `has_device_addr` format";
+
   if (failed(parseBlockArgClause(parser, entryBlockArgs, "host_eval",
                                  args.hostEvalArgs)))
     return parser.emitError(parser.getCurrentLocation())
@@ -802,8 +808,12 @@ static ParseResult parseBlockArgRegion(OpAsmParser &parser, Region &region,
   return parser.parseRegion(region, entryBlockArgs);
 }
 
-static ParseResult parseHostEvalInReductionMapPrivateRegion(
+// These parseXyz functions correspond to the custom<Xyz> definitions
+// in the .td file(s).
+static ParseResult parseTargetOpRegion(
     OpAsmParser &parser, Region &region,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &hasDeviceAddrVars,
+    SmallVectorImpl<Type> &hasDeviceAddrTypes,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &hostEvalVars,
     SmallVectorImpl<Type> &hostEvalTypes,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &inReductionVars,
@@ -815,6 +825,7 @@ static ParseResult parseHostEvalInReductionMapPrivateRegion(
     llvm::SmallVectorImpl<Type> &privateTypes, ArrayAttr &privateSyms,
     DenseI64ArrayAttr &privateMaps) {
   AllRegionParseArgs args;
+  args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
   args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
@@ -935,6 +946,7 @@ struct ReductionPrintArgs {
       : vars(vars), types(types), byref(byref), syms(syms), modifier(mod) {}
 };
 struct AllRegionPrintArgs {
+  std::optional<MapPrintArgs> hasDeviceAddrArgs;
   std::optional<MapPrintArgs> hostEvalArgs;
   std::optional<ReductionPrintArgs> inReductionArgs;
   std::optional<MapPrintArgs> mapArgs;
@@ -1028,6 +1040,9 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
   auto iface = llvm::cast<mlir::omp::BlockArgOpenMPOpInterface>(op);
   MLIRContext *ctx = op->getContext();
 
+  printBlockArgClause(p, ctx, "has_device_addr",
+                      iface.getHasDeviceAddrBlockArgs(),
+                      args.hasDeviceAddrArgs);
   printBlockArgClause(p, ctx, "host_eval", iface.getHostEvalBlockArgs(),
                       args.hostEvalArgs);
   printBlockArgClause(p, ctx, "in_reduction", iface.getInReductionBlockArgs(),
@@ -1050,14 +1065,20 @@ static void printBlockArgRegion(OpAsmPrinter &p, Operation *op, Region &region,
   p.printRegion(region, /*printEntryBlockArgs=*/false);
 }
 
-static void printHostEvalInReductionMapPrivateRegion(
-    OpAsmPrinter &p, Operation *op, Region &region, ValueRange hostEvalVars,
-    TypeRange hostEvalTypes, ValueRange inReductionVars,
-    TypeRange inReductionTypes, DenseBoolArrayAttr inReductionByref,
-    ArrayAttr inReductionSyms, ValueRange mapVars, TypeRange mapTypes,
-    ValueRange privateVars, TypeRange privateTypes, ArrayAttr privateSyms,
-    DenseI64ArrayAttr privateMaps) {
+// These parseXyz functions correspond to the custom<Xyz> definitions
+// in the .td file(s).
+static void
+printTargetOpRegion(OpAsmPrinter &p, Operation *op, Region &region,
+                    ValueRange hasDeviceAddrVars, TypeRange hasDeviceAddrTypes,
+                    ValueRange hostEvalVars, TypeRange hostEvalTypes,
+                    ValueRange inReductionVars, TypeRange inReductionTypes,
+                    DenseBoolArrayAttr inReductionByref,
+                    ArrayAttr inReductionSyms, ValueRange mapVars,
+                    TypeRange mapTypes, ValueRange privateVars,
+                    TypeRange privateTypes, ArrayAttr privateSyms,
+                    DenseI64ArrayAttr privateMaps) {
   AllRegionPrintArgs args;
+  args.hasDeviceAddrArgs.emplace(hasDeviceAddrVars, hasDeviceAddrTypes);
   args.hostEvalArgs.emplace(hostEvalVars, hostEvalTypes);
   args.inReductionArgs.emplace(inReductionVars, inReductionTypes,
                                inReductionByref, inReductionSyms);
@@ -1458,8 +1479,8 @@ uint64_t mapTypeToBitFlag(uint64_t value,
 /// Parses a map_entries map type from a string format back into its numeric
 /// value.
 ///
-/// map-clause = `map_clauses (  ( `(` `always, `? `close, `? `present, `? (
-/// `to` | `from` | `delete` `)` )+ `)` )
+/// map-clause = `map_clauses (  ( `(` `always, `? `implicit, `? `ompx_hold, `?
+/// `close, `? `present, `? ( `to` | `from` | `delete` `)` )+ `)` )
 static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
   llvm::omp::OpenMPOffloadMappingFlags mapTypeBits =
       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
@@ -1476,6 +1497,9 @@ static ParseResult parseMapClause(OpAsmParser &parser, IntegerAttr &mapType) {
 
     if (mapTypeMod == "implicit")
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT;
+
+    if (mapTypeMod == "ompx_hold")
+      mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD;
 
     if (mapTypeMod == "close")
       mapTypeBits |= llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE;
@@ -1526,6 +1550,9 @@ static void printMapClause(OpAsmPrinter &p, Operation *op,
   if (mapTypeToBitFlag(mapTypeBits,
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_IMPLICIT))
     mapTypeStrs.push_back("implicit");
+  if (mapTypeToBitFlag(mapTypeBits,
+                       llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_OMPX_HOLD))
+    mapTypeStrs.push_back("ompx_hold");
   if (mapTypeToBitFlag(mapTypeBits,
                        llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_CLOSE))
     mapTypeStrs.push_back("close");
@@ -1878,7 +1905,8 @@ LogicalResult TargetOp::verifyRegions() {
     return emitError("target containing multiple 'omp.teams' nested ops");
 
   // Check that host_eval values are only used in legal ways.
-  llvm::omp::OMPTgtExecModeFlags execFlags = getKernelExecFlags();
+  llvm::omp::OMPTgtExecModeFlags execFlags =
+      getKernelExecFlags(getInnermostCapturedOmpOp());
   for (Value hostEvalArg :
        cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs()) {
     for (Operation *user : hostEvalArg.getUsers()) {
@@ -1998,12 +2026,20 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
   return capturedOp;
 }
 
-llvm::omp::OMPTgtExecModeFlags TargetOp::getKernelExecFlags() {
+llvm::omp::OMPTgtExecModeFlags
+TargetOp::getKernelExecFlags(Operation *capturedOp) {
   using namespace llvm::omp;
+
+  // A non-null captured op is only valid if it resides inside of a TargetOp
+  // and is the result of calling getInnermostCapturedOmpOp() on it.
+  TargetOp targetOp =
+      capturedOp ? capturedOp->getParentOfType<TargetOp>() : nullptr;
+  assert((!capturedOp ||
+          (targetOp && targetOp.getInnermostCapturedOmpOp() == capturedOp)) &&
+         "unexpected captured op");
 
   // Make sure this region is capturing a loop. Otherwise, it's a generic
   // kernel.
-  Operation *capturedOp = getInnermostCapturedOmpOp();
   if (!isa_and_present<LoopNestOp>(capturedOp))
     return OMP_TGT_EXEC_MODE_GENERIC;
 
@@ -2027,7 +2063,7 @@ llvm::omp::OMPTgtExecModeFlags TargetOp::getKernelExecFlags() {
     if (!isa_and_present<TeamsOp>(teamsOp))
       return OMP_TGT_EXEC_MODE_GENERIC;
 
-    if (teamsOp->getParentOp() == *this)
+    if (teamsOp->getParentOp() == targetOp.getOperation())
       return OMP_TGT_EXEC_MODE_GENERIC_SPMD;
   }
 
@@ -2048,7 +2084,7 @@ llvm::omp::OMPTgtExecModeFlags TargetOp::getKernelExecFlags() {
     if (!isa_and_present<TeamsOp>(teamsOp))
       return OMP_TGT_EXEC_MODE_GENERIC;
 
-    if (teamsOp->getParentOp() == *this)
+    if (teamsOp->getParentOp() == targetOp.getOperation())
       return OMP_TGT_EXEC_MODE_SPMD;
   }
 
@@ -2221,12 +2257,12 @@ LogicalResult TeamsOp::verify() {
 // SectionOp
 //===----------------------------------------------------------------------===//
 
-unsigned SectionOp::numPrivateBlockArgs() {
-  return getParentOp().numPrivateBlockArgs();
+OperandRange SectionOp::getPrivateVars() {
+  return getParentOp().getPrivateVars();
 }
 
-unsigned SectionOp::numReductionBlockArgs() {
-  return getParentOp().numReductionBlockArgs();
+OperandRange SectionOp::getReductionVars() {
+  return getParentOp().getReductionVars();
 }
 
 //===----------------------------------------------------------------------===//
@@ -2697,14 +2733,6 @@ void TaskloopOp::build(OpBuilder &builder, OperationState &state,
                     clauses.reductionVars,
                     makeDenseBoolArrayAttr(ctx, clauses.reductionByref),
                     makeArrayAttr(ctx, clauses.reductionSyms), clauses.untied);
-}
-
-SmallVector<Value> TaskloopOp::getAllReductionVars() {
-  SmallVector<Value> allReductionNvars(getInReductionVars().begin(),
-                                       getInReductionVars().end());
-  allReductionNvars.insert(allReductionNvars.end(), getReductionVars().begin(),
-                           getReductionVars().end());
-  return allReductionNvars;
 }
 
 LogicalResult TaskloopOp::verify() {

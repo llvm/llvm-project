@@ -780,5 +780,8 @@ bool SIMachineFunctionInfo::initializeBaseYamlFields(
 }
 
 bool SIMachineFunctionInfo::mayUseAGPRs(const Function &F) const {
-  return !F.hasFnAttribute("amdgpu-no-agpr");
+  auto [MinNumAGPR, MaxNumAGPR] =
+      AMDGPU::getIntegerPairAttribute(F, "amdgpu-agpr-alloc", {~0u, ~0u},
+                                      /*OnlyFirstRequired=*/true);
+  return MinNumAGPR != 0u;
 }

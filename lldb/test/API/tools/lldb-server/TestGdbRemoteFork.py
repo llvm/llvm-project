@@ -191,52 +191,6 @@ class TestGdbRemoteFork(GdbRemoteForkTestBase):
         self.vkill_test(kill_parent=True, kill_child=True)
 
     @add_test_categories(["fork"])
-    def test_c_parent(self):
-        self.resume_one_test(run_order=["parent", "parent"])
-
-    @add_test_categories(["fork"])
-    def test_c_child(self):
-        self.resume_one_test(run_order=["child", "child"])
-
-    @add_test_categories(["fork"])
-    def test_c_parent_then_child(self):
-        self.resume_one_test(run_order=["parent", "parent", "child", "child"])
-
-    @add_test_categories(["fork"])
-    def test_c_child_then_parent(self):
-        self.resume_one_test(run_order=["child", "child", "parent", "parent"])
-
-    @add_test_categories(["fork"])
-    def test_c_interspersed(self):
-        self.resume_one_test(run_order=["parent", "child", "parent", "child"])
-
-    @add_test_categories(["fork"])
-    def test_vCont_parent(self):
-        self.resume_one_test(run_order=["parent", "parent"], use_vCont=True)
-
-    @add_test_categories(["fork"])
-    def test_vCont_child(self):
-        self.resume_one_test(run_order=["child", "child"], use_vCont=True)
-
-    @add_test_categories(["fork"])
-    def test_vCont_parent_then_child(self):
-        self.resume_one_test(
-            run_order=["parent", "parent", "child", "child"], use_vCont=True
-        )
-
-    @add_test_categories(["fork"])
-    def test_vCont_child_then_parent(self):
-        self.resume_one_test(
-            run_order=["child", "child", "parent", "parent"], use_vCont=True
-        )
-
-    @add_test_categories(["fork"])
-    def test_vCont_interspersed(self):
-        self.resume_one_test(
-            run_order=["parent", "child", "parent", "child"], use_vCont=True
-        )
-
-    @add_test_categories(["fork"])
     def test_vCont_two_processes(self):
         parent_pid, parent_tid, child_pid, child_tid = self.start_fork_test(
             ["fork", "stop"]

@@ -590,7 +590,7 @@ subroutine omp_target_parallel_do
          !CHECK-NEXT: omp.loop_nest (%[[I_VAL:.*]]) : i32
          do i = 1, 1024
          !CHECK:     %[[I_PVT_DECL:.*]]:2 = hlfir.declare %[[I_PVT_ALLOCA]] {uniq_name = "_QFomp_target_parallel_doEi"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-           !CHECK:   fir.store %[[I_VAL]] to %[[I_PVT_DECL]]#1 : !fir.ref<i32>
+           !CHECK:   hlfir.assign %[[I_VAL]] to %[[I_PVT_DECL]]#1 : i32, !fir.ref<i32>
            !CHECK:   %[[C10:.*]] = arith.constant 10 : i32
            !CHECK:   %[[I_PVT_VAL:.*]] = fir.load %[[I_PVT_DECL]]#0 : !fir.ref<i32>
            !CHECK:   %[[I_VAL:.*]] = fir.convert %[[I_PVT_VAL]] : (i32) -> i64
