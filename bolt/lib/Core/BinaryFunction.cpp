@@ -4614,7 +4614,7 @@ bool BinaryFunction::isAArch64Veneer() const {
 }
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
-                                   uint64_t RelType, uint64_t Addend,
+                                   uint32_t RelType, uint64_t Addend,
                                    uint64_t Value) {
   assert(Address >= getAddress() && Address < getAddress() + getMaxSize() &&
          "address is outside of the function");
