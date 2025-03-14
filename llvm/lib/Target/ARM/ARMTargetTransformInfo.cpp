@@ -1460,15 +1460,16 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
 
   // When targets have both DSP and MVE we find that the
   // the compiler will attempt to vectorize as well as using
-  // scalar SMLAL operations. This is in cases where we have
+  // scalar (S/U)MLAL operations. This is in cases where we have
   // the pattern ext(mul(ext(i16), ext(i16))) we find
-  // that generated codegen performs better when only using SMLAL scalar
-  // ops instead of trying to mix vector ops with SMLAL ops. We therefore
+  // that generated codegen performs better when only using (S/U)MLAL scalar
+  // ops instead of trying to mix vector ops with (S/U)MLAL ops. We therefore
   // check if a mul instruction is used in a SMLAL pattern.
-  auto MulInSMLALPattern = [&](const Instruction *I, unsigned Opcode,
-                               Type *Ty) -> bool {
-    if (!ST->hasDSP() || !ST->hasMVEIntegerOps())
+  auto MulInDSPMLALPattern = [&](const Instruction *I, unsigned Opcode,
+                                 Type *Ty) -> bool {
+    if (!ST->hasDSP())
       return false;
+
     if (!I)
       return false;
 
@@ -1478,30 +1479,43 @@ InstructionCost ARMTTIImpl::getArithmeticInstrCost(
     if (Ty->isVectorTy())
       return false;
 
-    auto IsSExtInst = [](const Value *V) -> bool {
-      return (dyn_cast<SExtInst>(V)) ? true : false;
+    auto IsSExtInst = [](const Value *V) -> bool { return isa<SExtInst>(V); };
+    auto IsZExtInst = [](const Value *V) -> bool { return isa<ZExtInst>(V); };
+    auto IsExtInst = [&, IsSExtInst, IsZExtInst](const Value *V) -> bool {
+      return IsSExtInst(V) || IsZExtInst(V);
+    };
+    auto IsExtensionFromHalf = [&, IsSExtInst,
+                                IsZExtInst](const Value *V) -> bool {
+      if (IsSExtInst(V))
+        return dyn_cast<SExtInst>(V)->getOperand(0)->getType()->isIntegerTy(16);
+      if (IsZExtInst(V))
+        return dyn_cast<ZExtInst>(V)->getOperand(0)->getType()->isIntegerTy(16);
+      return false;
     };
 
-    // We check the arguments of the function to see if they're extends
+    // We check the arguments of the instruction to see if they're extends
     auto *BinOp = dyn_cast<BinaryOperator>(I);
     if (!BinOp)
       return false;
-    auto *Op0 = BinOp->getOperand(0);
-    auto *Op1 = BinOp->getOperand(1);
-    if (Op0 && Op1 && IsSExtInst(Op0) && IsSExtInst(Op1)) {
-      // In this case we're interested in an ext of an i16
-      if (!Op0->getType()->isIntegerTy(32) || !Op1->getType()->isIntegerTy(32))
+    Value *Op0 = BinOp->getOperand(0);
+    Value *Op1 = BinOp->getOperand(1);
+    if (IsExtInst(Op0) && IsExtInst(Op1)) {
+      // We're interested in an ext of an i16
+      if (!I->getType()->isIntegerTy(32) || !IsExtensionFromHalf(Op0) ||
+          !IsExtensionFromHalf(Op1))
         return false;
       // We need to check if this result will be further extended to i64
+      // and that all these uses are SExt
       for (auto *U : I->users())
-        if (IsSExtInst(dyn_cast<Value>(U)))
-          return true;
+        if (!IsExtInst(dyn_cast<Value>(U)))
+          return false;
+      return true;
     }
 
     return false;
   };
 
-  if (MulInSMLALPattern(CxtI, Opcode, Ty))
+  if (MulInDSPMLALPattern(CxtI, Opcode, Ty))
     return 0;
 
   // Default to cheap (throughput/size of 1 instruction) but adjust throughput
