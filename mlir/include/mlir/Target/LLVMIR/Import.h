@@ -42,8 +42,10 @@ class ModuleOp;
 /// The `loadAllDialects` flag (default on) will load all dialects in the
 /// context.
 /// The `preferUnregisteredIntrinsics` flag (default off) controls whether to
-/// prefer generic version of imported intrinsics with `llvm.intrinsic_call`
-/// than using versions supported by a dialects.
+/// import all intrinsics using `llvm.intrinsic_call` even if a dialect
+/// registered an explicit intrinsic operation. Warning: passes that rely on
+/// matching explicit intrinsic operations may not work properly if this flag is
+/// enabled.
 OwningOpRef<ModuleOp> translateLLVMIRToModule(
     std::unique_ptr<llvm::Module> llvmModule, MLIRContext *context,
     bool emitExpensiveWarnings = true, bool dropDICompositeTypeElements = false,
