@@ -612,6 +612,10 @@ public:
     return MaskForVGPRBlockOps[RegisterBlock];
   }
 
+  bool hasMaskForVGPRBlockOps(Register RegisterBlock) const {
+    return MaskForVGPRBlockOps.inBounds(RegisterBlock);
+  }
+
 public:
   SIMachineFunctionInfo(const SIMachineFunctionInfo &MFI) = default;
   SIMachineFunctionInfo(const Function &F, const GCNSubtarget *STI);

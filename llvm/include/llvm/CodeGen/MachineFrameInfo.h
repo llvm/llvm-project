@@ -53,9 +53,6 @@ class CalleeSavedInfo {
   /// Flag indicating whether the register is spilled to stack or another
   /// register.
   bool SpilledToReg = false;
-  /// Flag indicating whether this CSI has been handled by the target and can be
-  /// skipped by the generic code in the prolog/epilog inserter.
-  bool IsHandledByTarget = false;
 
 public:
   explicit CalleeSavedInfo(MCRegister R, int FI = 0) : Reg(R), FrameIdx(FI) {}
@@ -76,9 +73,6 @@ public:
   bool isRestored()                        const { return Restored; }
   void setRestored(bool R)                       { Restored = R; }
   bool isSpilledToReg()                    const { return SpilledToReg; }
-
-  bool isHandledByTarget() const { return IsHandledByTarget; }
-  void setHandledByTarget() { IsHandledByTarget = true; }
 };
 
 /// The MachineFrameInfo class represents an abstract stack frame until
