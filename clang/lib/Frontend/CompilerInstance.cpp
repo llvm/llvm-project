@@ -1664,8 +1664,6 @@ static bool compileModuleAndReadASTBehindLock(
       // related errors.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_failure)
           << Module->Name << toString(std::move(Err));
-      // Clear out any potential leftover.
-      Lock.unsafeRemoveLockFile();
       return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
                                          ModuleNameLoc, Module, ModuleFileName);
     }
