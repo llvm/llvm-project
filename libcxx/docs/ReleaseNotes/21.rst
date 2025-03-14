@@ -40,6 +40,7 @@ Implemented Papers
 
 - N4258: Cleaning-up noexcept in the Library (`Github <https://github.com/llvm/llvm-project/issues/99937>`__)
 - P1361R2: Integration of chrono with text formatting (`Github <https://github.com/llvm/llvm-project/issues/100014>`__)
+- P3107R5 - Permit an efficient implementation of ``std::print`` (`Github <https://github.com/llvm/llvm-project/issues/105435>`__)
 
 Improvements and New Features
 -----------------------------

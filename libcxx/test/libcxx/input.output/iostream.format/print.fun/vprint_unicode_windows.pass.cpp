@@ -20,6 +20,7 @@
 // <print>
 
 // Tests the implementation of
+//   template <__print::__lock_policy __policy>
 //   void __print::__vprint_unicode_windows(FILE* __stream, string_view __fmt,
 //                                          format_args __args, bool __write_nl,
 //                                          bool __is_terminal);
@@ -47,8 +48,8 @@ TEST_GCC_DIAGNOSTIC_IGNORED("-Wuse-after-free")
 
 #define SV(S) MAKE_STRING_VIEW(wchar_t, S)
 
-bool calling               = false;
-std::wstring_view expected = L" world";
+bool calling = true;
+std::wstring_view expected;
 
 void write_to_console(FILE*, std::wstring_view data) {
   assert(calling);
@@ -58,29 +59,35 @@ void write_to_console(FILE*, std::wstring_view data) {
 scoped_test_env env;
 std::string filename = env.create_file("output.txt");
 
+template <std::__print::__lock_policy policy>
 static void test_basics() {
   FILE* file = std::fopen(filename.c_str(), "wb");
   assert(file);
 
+  calling  = false;
+  expected = L" world";
+
   // Test writing to a "non-terminal" stream does not call WriteConsoleW.
-  std::__print::__vprint_unicode_windows(file, "Hello", std::make_format_args(), false, false);
+  std::__print::__vprint_unicode_windows<policy>(file, "Hello", std::make_format_args(), false, false);
   assert(std::ftell(file) == 5);
 
   // It's not possible to reliably test whether writing to a "terminal" stream
   // flushes before writing. Testing flushing a closed stream worked on some
   // platforms, but was unreliable.
   calling = true;
-  std::__print::__vprint_unicode_windows(file, " world", std::make_format_args(), false, true);
+  std::__print::__vprint_unicode_windows<policy>(file, " world", std::make_format_args(), false, true);
+  std::fclose(file);
 }
 
 // When the output is a file the data is written as-is.
 // When the output is a "terminal" invalid UTF-8 input is flagged.
+template <std::__print::__lock_policy policy>
 static void test(std::wstring_view output, std::string_view input) {
   // *** File ***
   FILE* file = std::fopen(filename.c_str(), "wb");
   assert(file);
 
-  std::__print::__vprint_unicode_windows(file, input, std::make_format_args(), false, false);
+  std::__print::__vprint_unicode_windows<policy>(file, input, std::make_format_args(), false, false);
   assert(std::ftell(file) == static_cast<long>(input.size()));
   std::fclose(file);
 
@@ -95,12 +102,13 @@ static void test(std::wstring_view output, std::string_view input) {
 
   // *** Terminal ***
   expected = output;
-  std::__print::__vprint_unicode_windows(file, input, std::make_format_args(), false, true);
+  std::__print::__vprint_unicode_windows<policy>(file, input, std::make_format_args(), false, true);
 }
 
+template <std::__print::__lock_policy policy>
 static void test() {
   // *** Test valid UTF-8 ***
-#define TEST(S) test(SV(S), S)
+#define TEST(S) test<policy>(SV(S), S)
   TEST("hello world");
 
   // copied from benchmarks/std_format_spec_string_unicode.bench.cpp
@@ -112,24 +120,29 @@ static void test() {
 #undef TEST
 
   // *** Test invalid utf-8 ***
-  test(SV("\ufffd"), "\xc3");
-  test(SV("\ufffd("), "\xc3\x28");
+  test<policy>(SV("\ufffd"), "\xc3");
+  test<policy>(SV("\ufffd("), "\xc3\x28");
 
   // surrogate range
-  test(SV("\ufffd"), "\xed\xa0\x80"); // U+D800
-  test(SV("\ufffd"), "\xed\xaf\xbf"); // U+DBFF
-  test(SV("\ufffd"), "\xed\xbf\x80"); // U+DC00
-  test(SV("\ufffd"), "\xed\xbf\xbf"); // U+DFFF
+  test<policy>(SV("\ufffd"), "\xed\xa0\x80"); // U+D800
+  test<policy>(SV("\ufffd"), "\xed\xaf\xbf"); // U+DBFF
+  test<policy>(SV("\ufffd"), "\xed\xbf\x80"); // U+DC00
+  test<policy>(SV("\ufffd"), "\xed\xbf\xbf"); // U+DFFF
 
   // beyond valid values
-  test(SV("\ufffd"), "\xf4\x90\x80\x80"); // U+110000
-  test(SV("\ufffd"), "\xf4\xbf\xbf\xbf"); // U+11FFFF
+  test<policy>(SV("\ufffd"), "\xf4\x90\x80\x80"); // U+110000
+  test<policy>(SV("\ufffd"), "\xf4\xbf\xbf\xbf"); // U+11FFFF
 
   // Validates  http://unicode.org/review/pr-121.html option 3.
-  test(SV("\u0061\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\u0062"), "\x61\xf1\x80\x80\xe1\x80\xc2\x62");
+  test<policy>(SV("\u0061\ufffd\ufffd\ufffd\ufffd\ufffd\ufffd\u0062"), "\x61\xf1\x80\x80\xe1\x80\xc2\x62");
 }
 
 int main(int, char**) {
-  test_basics();
-  test();
+  test_basics<std::__print::__lock_policy::__manual>();
+  test<std::__print::__lock_policy::__manual>();
+
+  test_basics<std::__print::__lock_policy::__stdio>();
+  test<std::__print::__lock_policy::__stdio>();
+
+  return 0;
 }

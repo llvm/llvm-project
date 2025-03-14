@@ -21,6 +21,7 @@
 // <print>
 
 // Tests the implementation of
+//   template <__print::__lock_policy __policy>
 //   void __print::__vprint_unicode_posix(FILE* __stream, string_view __fmt,
 //                                        format_args __args, bool __write_nl,
 //                                        bool __is_terminal);
@@ -39,7 +40,8 @@
 
 #include "test_macros.h"
 
-int main(int, char**) {
+template <std::__print::__lock_policy policy>
+static void test() {
   std::array<char, 100> buffer;
   std::ranges::fill(buffer, '*');
 
@@ -55,7 +57,7 @@ int main(int, char**) {
 #endif
 
   // Test writing to a "non-terminal" stream does not flush.
-  std::__print::__vprint_unicode_posix(file, " world", std::make_format_args(), false, false);
+  std::__print::__vprint_unicode_posix<policy>(file, " world", std::make_format_args(), false, false);
   assert(std::ftell(file) == 11);
 #if defined(TEST_HAS_GLIBC) &&                                                                                         \
     !(__has_feature(address_sanitizer) || __has_feature(thread_sanitizer) || __has_feature(memory_sanitizer))
@@ -63,7 +65,7 @@ int main(int, char**) {
 #endif
 
   // Test writing to a "terminal" stream flushes before writing.
-  std::__print::__vprint_unicode_posix(file, "!", std::make_format_args(), false, true);
+  std::__print::__vprint_unicode_posix<policy>(file, "!", std::make_format_args(), false, true);
   assert(std::ftell(file) == 12);
   assert(std::string_view(buffer.data(), buffer.data() + 11) == "Hello world");
 #if defined(TEST_HAS_GLIBC)
@@ -74,6 +76,11 @@ int main(int, char**) {
   // Test everything is written when closing the stream.
   std::fclose(file);
   assert(std::string_view(buffer.data(), buffer.data() + 12) == "Hello world!");
+}
+
+int main(int, char**) {
+  test<std::__print::__lock_policy::__manual>();
+  test<std::__print::__lock_policy::__stdio>();
 
   return 0;
 }
