@@ -39,6 +39,17 @@ int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
   int bi = (int)ib; // bool to int
   // CHECK: %{{[0-9]+}} = cir.cast(bool_to_int, %{{[0-9]+}} : !cir.bool), !cir.int<s, 32>
 
+  bool b2 = x2; // int to bool
+  // CHECK: %{{[0-9]+}} = cir.cast(int_to_bool, %{{[0-9]+}} : !cir.int<s, 32>), !cir.bool
+  
+  void *p;
+  bool b3 = p; // ptr to bool
+  // CHECK: %{{[0-9]+}} = cir.cast(ptr_to_bool, %{{[0-9]+}} : !cir.ptr<!cir.void>), !cir.bool
+
+  float f;
+  bool b4 = f; // float to bool
+  // CHECK: %{{[0-9]+}} = cir.cast(float_to_bool, %{{[0-9]+}} : !cir.float), !cir.bool
+
   return 0;
 }
 
@@ -58,7 +69,8 @@ void should_not_cast() {
 
   unsigned uu = (unsigned)x1;
   bool ib = (bool)x1;
-  (void) ib;
+  
+  (void) ib; // void cast
 }
 
 // CHECK:     cir.func @should_not_cast
