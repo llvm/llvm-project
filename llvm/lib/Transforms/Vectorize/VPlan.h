@@ -792,7 +792,7 @@ public:
 
   /// Set fast-math flags for this recipe.
   void setFastMathFlags(FastMathFlags FMFs) {
-    OpType = OperationType::FPMathOp;
+    assert(OpType == OperationType::FPMathOp);
     this->FMFs = FMFs;
   }
 
@@ -2314,7 +2314,8 @@ protected:
     // The inloop reduction may across multiple scalar instruction and the
     // underlying instruction may not contains the corresponding flags. Set the
     // flags explicit from the redurrence descriptor.
-    setFastMathFlags(R.getFastMathFlags());
+    if (isa<FPMathOperator>(I))
+      setFastMathFlags(R.getFastMathFlags());
   }
 
 public:

@@ -2351,8 +2351,7 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " +";
-  if (isa_and_nonnull<FPMathOperator>(getUnderlyingValue()))
-    printFlags(O);
+  printFlags(O);
   O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (isConditional()) {
@@ -2373,8 +2372,7 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " +";
-  if (isa_and_nonnull<FPMathOperator>(getUnderlyingValue()))
-    printFlags(O);
+  printFlags(O);
   O << " vp.reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   O << ", ";
