@@ -82,26 +82,30 @@ void CrossDSOCFI::buildCFICheck(Module &M) {
   }
 
   LLVMContext &Ctx = M.getContext();
-  FunctionCallee C = M.getOrInsertFunction(
-      "__cfi_check", Type::getVoidTy(Ctx), Type::getInt64Ty(Ctx),
-      PointerType::getUnqual(Ctx), PointerType::getUnqual(Ctx));
+  FunctionType *CFICheckTy =
+      FunctionType::get(Type::getVoidTy(Ctx),
+                        {Type::getInt64Ty(Ctx), PointerType::getUnqual(Ctx),
+                         PointerType::getUnqual(Ctx)},
+                        false);
+  FunctionCallee C = Function::createWithDefaultAttr(
+      CFICheckTy, GlobalValue::ExternalLinkage, 0, "__cfi_check", &M);
   Function *F = cast<Function>(C.getCallee());
-  // Take over the existing function. The frontend emits a weak stub so that the
-  // linker knows about the symbol; this pass replaces the function body.
-  F->deleteBody();
   F->setAlignment(Align(4096));
+  if (F->getName() != "__cfi_check") {
+    // The frontend might have already created a function named __cfi_check;
+    // delete it.
+    GlobalValue *G = M.getNamedValue("__cfi_check");
+    assert(G && "cfi_check must exist after we constructed it");
+    if (G->getAddressSpace() != F->getAddressSpace())
+      report_fatal_error("__cfi_check with unexpected address space");
+    G->replaceAllUsesWith(F);
+    F->takeName(G);
+    G->eraseFromParent();
+  }
 
   Triple T(M.getTargetTriple());
   if (T.isARM() || T.isThumb())
     F->addFnAttr("target-features", "+thumb-mode");
-  if (T.isAArch64()) {
-    if (const auto *BTE = mdconst::extract_or_null<ConstantInt>(
-            M.getModuleFlag("branch-target-enforcement"))) {
-      if (BTE->getZExtValue() != 0) {
-        F->addFnAttr("branch-target-enforcement");
-      }
-    }
-  }
 
   auto args = F->arg_begin();
   Value &CallSiteTypeId = *(args++);
