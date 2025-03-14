@@ -1613,7 +1613,6 @@
 {'is_defined': True, 'name': '_ZTINSt3__112codecvt_baseE', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__112ctype_bynameIcEE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__112ctype_bynameIwEE', 'size': 24, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTINSt3__112format_errorE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__112future_errorE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__112strstreambufE', 'size': 24, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTINSt3__112system_errorE', 'size': 24, 'type': 'OBJECT'}
@@ -1747,7 +1746,6 @@
 {'is_defined': True, 'name': '_ZTSNSt3__112codecvt_baseE', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__112ctype_bynameIcEE', 'size': 26, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__112ctype_bynameIwEE', 'size': 26, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTSNSt3__112format_errorE', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__112future_errorE', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__112strstreambufE', 'size': 23, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTSNSt3__112system_errorE', 'size': 23, 'type': 'OBJECT'}
@@ -1885,7 +1883,6 @@
 {'is_defined': True, 'name': '_ZTVNSt3__112bad_weak_ptrE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112ctype_bynameIcEE', 'size': 104, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112ctype_bynameIwEE', 'size': 136, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTVNSt3__112format_errorE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112future_errorE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112strstreambufE', 'size': 128, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZTVNSt3__112system_errorE', 'size': 40, 'type': 'OBJECT'}
