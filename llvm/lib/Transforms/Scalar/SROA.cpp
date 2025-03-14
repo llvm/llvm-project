@@ -1397,10 +1397,10 @@ private:
   void visitInstruction(Instruction &I) { PI.setAborted(&I); }
 
   void visitCallBase(CallBase &CB) {
-    // If the call operand is NoCapture ReadOnly, then we mark it as
-    // EscapedReadOnly.
+    // If the call operand is read-only and only does a read-only or address
+    // capture, then we mark it as EscapedReadOnly.
     if (CB.isDataOperand(U) &&
-        CB.doesNotCapture(U->getOperandNo()) &&
+        !capturesFullProvenance(CB.getCaptureInfo(U->getOperandNo())) &&
         CB.onlyReadsMemory(U->getOperandNo())) {
       PI.setEscapedReadOnly(&CB);
       return;
