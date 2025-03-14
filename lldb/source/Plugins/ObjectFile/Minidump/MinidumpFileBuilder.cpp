@@ -970,64 +970,44 @@ Status MinidumpFileBuilder::DumpDirectories() const {
 }
 
 Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
-    const std::unique_ptr<lldb_private::DataBufferHeap> &data_up,
-    const lldb_private::CoreFileMemoryRange &range, uint64_t *bytes_read) {
-  if (!data_up)
-    return Status::FromErrorString("No buffer supplied to read memory.");
+    lldb_private::DataBufferHeap &data_buffer,
+    const lldb_private::CoreFileMemoryRange &range, uint64_t &bytes_read) {
 
-  if (!bytes_read)
-    return Status::FromErrorString("Bytes read pointer cannot be null.");
   Log *log = GetLog(LLDBLog::Object);
   const lldb::addr_t addr = range.range.start();
   const lldb::addr_t size = range.range.size();
-  // First we set the byte tally to 0, so if we do exit gracefully
-  // the caller doesn't think the random garbage on the stack is a
-  // success.
-  *bytes_read = 0;
 
   uint64_t bytes_remaining = size;
-  // This is our flag to control if we had a partial read
-  // if we read less than our expected number of bytes without
-  // getting an error, we should add those bytes and discountine
-  // trying to read.
-  bool partialReadEncountered = false;
   Status error;
-  while (bytes_remaining > 0 && !partialReadEncountered) {
+  while (bytes_remaining > 0) {
     // Get the next read chunk size as the minimum of the remaining bytes and
     // the write chunk max size.
     const size_t bytes_to_read =
-        std::min(bytes_remaining, data_up->GetByteSize());
+        std::min(bytes_remaining, data_buffer.GetByteSize());
     const size_t bytes_read_for_chunk =
-        m_process_sp->ReadMemory(range.range.start() + *bytes_read,
-                                 data_up->GetBytes(), bytes_to_read, error);
+        m_process_sp->ReadMemory(range.range.start() + bytes_read,
+                                 data_buffer.GetBytes(), bytes_to_read, error);
     if (error.Fail() || bytes_read_for_chunk == 0) {
       LLDB_LOGF(log,
                 "Failed to read memory region at: %" PRIx64
                 ". Bytes read: %zu, error: %s",
                 addr, bytes_read_for_chunk, error.AsCString());
 
-      // If we failed to read memory and got an error, we return and skip
-      // the rest of the region. We need to return a non-error status here
-      // because the caller can't differentiate between this skippable
-      // error, and an error appending data to the file, which is fatal.
+      // If we failed in a memory read, we would normally want to skip
+      // this entire region, if we had already written to the minidump
+      // file, we can't easily rewind the state.
+      //
+      // So if we do encounter an error while reading, we just return
+      // immediately, any prior bytes read will still be included but
+      // any bytes partially read before the error are ignored.
       return Status();
-    } else if (bytes_read_for_chunk != bytes_to_read) {
-      LLDB_LOGF(log,
-                "Memory region at: %" PRIx64 " partiall read %" PRIx64
-                " bytes out of %" PRIx64 " bytes.",
-                addr, bytes_read_for_chunk,
-                bytes_to_read - bytes_read_for_chunk);
-
-      // If we've read some bytes, we stop trying to read more and return
-      // this best effort attempt
-      partialReadEncountered = true;
     }
 
     // Write to the minidump file with the chunk potentially flushing to disk.
     // this is the only place we want to return a true error, so that we can
     // fail. If we get an error writing to disk we can't easily gaurauntee
     // that we won't corrupt the minidump.
-    error = AddData(data_up->GetBytes(), bytes_read_for_chunk);
+    error = AddData(data_buffer.GetBytes(), bytes_read_for_chunk);
     if (error.Fail())
       return error;
 
@@ -1040,7 +1020,19 @@ Status MinidumpFileBuilder::ReadWriteMemoryInChunks(
 
     // Update the caller with the number of bytes read, but also written to the
     // underlying buffer.
-    *bytes_read += bytes_read_for_chunk;
+    bytes_read += bytes_read_for_chunk;
+
+    if (bytes_read_for_chunk != bytes_to_read) {
+      LLDB_LOGF(log,
+                "Memory region at: %" PRIx64 " partiall read %" PRIx64
+                " bytes out of %" PRIx64 " bytes.",
+                addr, bytes_read_for_chunk,
+                bytes_to_read - bytes_read_for_chunk);
+
+      // If we've read some bytes, we stop trying to read more and return
+      // this best effort attempt
+      break;
+    }
   }
 
   return error;
@@ -1064,7 +1056,7 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
 
   Log *log = GetLog(LLDBLog::Object);
   size_t region_index = 0;
-  auto data_up = std::make_unique<DataBufferHeap>(
+  lldb_private::DataBufferHeap data_buffer(
       std::min(GetLargestRangeSize(ranges), MAX_WRITE_CHUNK_SIZE), 0);
   for (const auto &core_range : ranges) {
     // Take the offset before we write.
@@ -1080,8 +1072,8 @@ MinidumpFileBuilder::AddMemoryList_32(std::vector<CoreFileMemoryRange> &ranges,
     ++region_index;
 
     progress.Increment(1, "Adding Memory Range " + core_range.Dump());
-    uint64_t bytes_read;
-    error = ReadWriteMemoryInChunks(data_up, core_range, &bytes_read);
+    uint64_t bytes_read = 0;
+    error = ReadWriteMemoryInChunks(data_buffer, core_range, bytes_read);
     if (error.Fail())
       return error;
 
@@ -1157,7 +1149,7 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
   list_header.BaseRVA = memory_ranges_base_rva;
   m_data.AppendData(&list_header, sizeof(llvm::minidump::Memory64ListHeader));
 
-  auto data_up = std::make_unique<DataBufferHeap>(
+  lldb_private::DataBufferHeap data_buffer(
       std::min(GetLargestRangeSize(ranges), MAX_WRITE_CHUNK_SIZE), 0);
   bool cleanup_required = false;
   std::vector<MemoryDescriptor_64> descriptors;
@@ -1189,8 +1181,8 @@ MinidumpFileBuilder::AddMemoryList_64(std::vector<CoreFileMemoryRange> &ranges,
     ++region_index;
 
     progress.Increment(1, "Adding Memory Range " + core_range.Dump());
-    uint64_t bytes_read;
-    error = ReadWriteMemoryInChunks(data_up, core_range, &bytes_read);
+    uint64_t bytes_read = 0;
+    error = ReadWriteMemoryInChunks(data_buffer, core_range, bytes_read);
     if (error.Fail())
       return error;
 
