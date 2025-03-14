@@ -23,15 +23,7 @@ private:
 
   unsigned Flags = 0;
 
-  FastMathFlags(unsigned F) : Flags(F) { setAllBitsIfNeeded(); }
-
-  void setAllBitsIfNeeded() {
-    // If all 7 bits are set, turn this into -1. If the number of bits grows,
-    // this must be updated. This is intended to provide some forward binary
-    // compatibility insurance for the meaning of 'fast' in case bits are added.
-    if (Flags == 0x7F)
-      Flags = ~0U;
-  }
+  FastMathFlags(unsigned F) : Flags(F) {}
 
 public:
   // This is how the bits are used in Value::SubclassOptionalData so they
@@ -45,8 +37,11 @@ public:
     NoSignedZeros   = (1 << 3),
     AllowReciprocal = (1 << 4),
     AllowContract   = (1 << 5),
-    ApproxFunc      = (1 << 6)
+    ApproxFunc      = (1 << 6),
+    FlagEnd         = (1 << 7)
   };
+
+  constexpr static unsigned AllFlagsMask = FlagEnd - 1;
 
   FastMathFlags() = default;
 
@@ -58,10 +53,10 @@ public:
 
   bool any() const { return Flags != 0; }
   bool none() const { return Flags == 0; }
-  bool all() const { return Flags == ~0U; }
+  bool all() const { return Flags == AllFlagsMask; }
 
   void clear() { Flags = 0; }
-  void set()   { Flags = ~0U; }
+  void set() { Flags = AllFlagsMask; }
 
   /// Flag queries
   bool allowReassoc() const    { return 0 != (Flags & AllowReassoc); }
@@ -77,31 +72,24 @@ public:
   /// Flag setters
   void setAllowReassoc(bool B = true) {
     Flags = (Flags & ~AllowReassoc) | B * AllowReassoc;
-    setAllBitsIfNeeded();
   }
   void setNoNaNs(bool B = true) {
     Flags = (Flags & ~NoNaNs) | B * NoNaNs;
-    setAllBitsIfNeeded();
   }
   void setNoInfs(bool B = true) {
     Flags = (Flags & ~NoInfs) | B * NoInfs;
-    setAllBitsIfNeeded();
   }
   void setNoSignedZeros(bool B = true) {
     Flags = (Flags & ~NoSignedZeros) | B * NoSignedZeros;
-    setAllBitsIfNeeded();
   }
   void setAllowReciprocal(bool B = true) {
     Flags = (Flags & ~AllowReciprocal) | B * AllowReciprocal;
-    setAllBitsIfNeeded();
   }
   void setAllowContract(bool B = true) {
     Flags = (Flags & ~AllowContract) | B * AllowContract;
-    setAllBitsIfNeeded();
   }
   void setApproxFunc(bool B = true) {
     Flags = (Flags & ~ApproxFunc) | B * ApproxFunc;
-    setAllBitsIfNeeded();
   }
   void setFast(bool B = true) { B ? set() : clear(); }
 
