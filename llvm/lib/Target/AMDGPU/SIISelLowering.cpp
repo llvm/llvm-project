@@ -3726,15 +3726,15 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
     if (FlagsValue.isZero()) {
       if (CLI.Args.size() > ChainCallArgIdx::Flags + 1)
         return lowerUnhandledCall(CLI, InVals,
-                                  "No additional args allowed if flags == 0");
+                                  "no additional args allowed if flags == 0");
     } else if (FlagsValue.isOneBitSet(0)) {
       if (CLI.Args.size() != ChainCallArgIdx::FallbackCallee + 1) {
-        return lowerUnhandledCall(CLI, InVals, "Expected 3 additional args");
+        return lowerUnhandledCall(CLI, InVals, "expected 3 additional args");
       }
 
       if (!Subtarget->isWave32()) {
         return lowerUnhandledCall(
-            CLI, InVals, "Dynamic VGPR mode is only supported for wave32");
+            CLI, InVals, "dynamic VGPR mode is only supported for wave32");
       }
 
       UsesDynamicVGPRs = true;
