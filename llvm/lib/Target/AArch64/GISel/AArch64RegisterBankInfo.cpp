@@ -568,6 +568,7 @@ bool AArch64RegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
     default:
       break;
     }
+    break;
   default:
     break;
   }
