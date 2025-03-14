@@ -70,9 +70,9 @@ LLVM_LIBC_FUNCTION(float16, acoshf16, (float16 x)) {
     float delta = xf32 - 1.0f;
     float sqrt_2_delta = fputil::sqrt<float>(2.0 * delta);
     float x2 = delta;
-    float pe = fputil::polyeval(x2, 0x1.0000000000000p+0f,
-                                -0x1.55551a83a9472p-4f, 0x1.331601c4b8ecfp-6f,
-                                -0x1.6890f49eb0acbp-8f, 0x1.8f3a617040a6ap-10f);
+    float pe =
+        fputil::polyeval(x2, 0x1.000000p+0f, -0x1.55551ap-4f, 0x1.33160cp-6f,
+                         -0x1.6890f4p-8f, 0x1.8f3a62p-10f);
     float approx = sqrt_2_delta * pe;
     return fputil::cast<float16>(approx);
   }
