@@ -1603,8 +1603,12 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
 
   // Attempts to swap variables such that A equals C or B equals D,
   // if the inner operation is commutative.
-  if (Op0->isCommutative() && A != C && B != D && A == D)
-    std::swap(C, D);
+  if (Op0->isCommutative() && A != C && B != D) {
+    if (A == D || B == C)
+      std::swap(C, D);
+    else
+      return nullptr;
+  }
 
   BinaryOperator *NewBinop;
   if (A == C) {
