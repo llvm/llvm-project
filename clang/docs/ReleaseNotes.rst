@@ -408,6 +408,11 @@ AST Matchers
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
+- Move ``ast_matchers::MatchFinder::MatchFinderOptions`` to
+  ``ast_matchers::MatchFinderOptions``.
+- Add a boolean member ``SkipSystemHeaders`` to ``MatchFinderOptions``, and make
+  ``MatchASTConsumer`` receive a reference to ``MatchFinderOptions`` in the
+  constructor. This allows it to skip system headers when traversing the AST.
 
 clang-format
 ------------
