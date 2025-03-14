@@ -90,7 +90,9 @@ static const std::map<std::string, SPIRV::Extension::Extension, std::less<>>
         {"SPV_KHR_non_semantic_info",
          SPIRV::Extension::Extension::SPV_KHR_non_semantic_info},
         {"SPV_INTEL_long_composites",
-         SPIRV::Extension::Extension::SPV_INTEL_long_composites}};
+         SPIRV::Extension::Extension::SPV_INTEL_long_composites},
+        {"SPV_INTEL_runtime_aligned",
+         SPIRV::Extension::Extension::SPV_INTEL_runtime_aligned}};
 
 bool SPIRVExtensionsParser::parse(cl::Option &O, llvm::StringRef ArgName,
                                   llvm::StringRef ArgValue,
