@@ -36,6 +36,7 @@ program test
   call c_f_pointer(scalarC, scalarIntF, [1_8])
   !ERROR: FPTR= argument to C_F_POINTER() may not have a deferred type parameter
   call c_f_pointer(scalarC, charDeferredF)
+  !ERROR: cosubscript 0 is less than lower cobound 1 for codimension 1 of array
   !ERROR: FPTR= argument to C_F_POINTER() may not be a coindexed object
   !ERROR: A coindexed object may not be a pointer target
   call c_f_pointer(scalarC, coindexed[0]%p)

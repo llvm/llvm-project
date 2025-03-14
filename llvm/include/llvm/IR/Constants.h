@@ -1143,8 +1143,6 @@ public:
                           bool HasNSW = false);
   static Constant *getSub(Constant *C1, Constant *C2, bool HasNUW = false,
                           bool HasNSW = false);
-  static Constant *getMul(Constant *C1, Constant *C2, bool HasNUW = false,
-                          bool HasNSW = false);
   static Constant *getXor(Constant *C1, Constant *C2);
   static Constant *getTrunc(Constant *C, Type *Ty, bool OnlyIfReduced = false);
   static Constant *getPtrToInt(Constant *C, Type *Ty,
@@ -1172,14 +1170,6 @@ public:
 
   static Constant *getNUWSub(Constant *C1, Constant *C2) {
     return getSub(C1, C2, true, false);
-  }
-
-  static Constant *getNSWMul(Constant *C1, Constant *C2) {
-    return getMul(C1, C2, false, true);
-  }
-
-  static Constant *getNUWMul(Constant *C1, Constant *C2) {
-    return getMul(C1, C2, true, false);
   }
 
   /// If C is a scalar/fixed width vector of known powers of 2, then this

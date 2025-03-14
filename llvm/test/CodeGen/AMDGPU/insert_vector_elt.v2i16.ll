@@ -2063,7 +2063,7 @@ define amdgpu_kernel void @v_insertelement_v4i16_dynamic_vgpr(ptr addrspace(1) %
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x i16>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds <4 x i16>, ptr addrspace(1) %out, i64 %tid.ext
-  %idx.val = load volatile i32, ptr addrspace(1) undef
+  %idx.val = load volatile i32, ptr addrspace(1) poison
   %vec = load <4 x i16>, ptr addrspace(1) %in.gep
   %val.trunc = trunc i32 %val to i16
   %val.cvt = bitcast i16 %val.trunc to i16

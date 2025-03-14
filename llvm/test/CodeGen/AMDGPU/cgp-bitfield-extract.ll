@@ -35,19 +35,19 @@
 
 ; GCN: buffer_store_dword
 ; GCN: s_endpgm
-define amdgpu_kernel void @sink_ubfe_i32(ptr addrspace(1) %out, i32 %arg1) #0 {
+define amdgpu_kernel void @sink_ubfe_i32(ptr addrspace(1) %out, i32 %arg1, i1 %arg) #0 {
 entry:
   %shr = lshr i32 %arg1, 8
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
   %val0 = and i32 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i32 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -75,19 +75,19 @@ ret:
 ; OPT: ret
 
 ; GCN-LABEL: {{^}}sink_sbfe_i32:
-define amdgpu_kernel void @sink_sbfe_i32(ptr addrspace(1) %out, i32 %arg1) #0 {
+define amdgpu_kernel void @sink_sbfe_i32(ptr addrspace(1) %out, i32 %arg1, i1 %arg) #0 {
 entry:
   %shr = ashr i32 %arg1, 8
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
   %val0 = and i32 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i32 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -139,12 +139,12 @@ entry:
 
 bb0:
   %val0 = and i16 %shr, 255
-  store volatile i16 0, ptr addrspace(1) undef
+  store volatile i16 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i16 %shr, 127
-  store volatile i16 0, ptr addrspace(1) undef
+  store volatile i16 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -183,19 +183,19 @@ ret:
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 0xff, v[[LO]]
 
 ; GCN: buffer_store_dwordx2
-define amdgpu_kernel void @sink_ubfe_i64_span_midpoint(ptr addrspace(1) %out, i64 %arg1) #0 {
+define amdgpu_kernel void @sink_ubfe_i64_span_midpoint(ptr addrspace(1) %out, i64 %arg1, i1 %arg) #0 {
 entry:
   %shr = lshr i64 %arg1, 30
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
   %val0 = and i64 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i64 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -231,19 +231,19 @@ ret:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x8000f
 
 ; GCN: buffer_store_dwordx2
-define amdgpu_kernel void @sink_ubfe_i64_low32(ptr addrspace(1) %out, i64 %arg1) #0 {
+define amdgpu_kernel void @sink_ubfe_i64_low32(ptr addrspace(1) %out, i64 %arg1, i1 %arg) #0 {
 entry:
   %shr = lshr i64 %arg1, 15
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
   %val0 = and i64 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i64 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:
@@ -277,19 +277,19 @@ ret:
 ; GCN: s_bfe_u32 s{{[0-9]+}}, s{{[0-9]+}}, 0x80003
 
 ; GCN: buffer_store_dwordx2
-define amdgpu_kernel void @sink_ubfe_i64_high32(ptr addrspace(1) %out, i64 %arg1) #0 {
+define amdgpu_kernel void @sink_ubfe_i64_high32(ptr addrspace(1) %out, i64 %arg1, i1 %arg) #0 {
 entry:
   %shr = lshr i64 %arg1, 35
-  br i1 undef, label %bb0, label %bb1
+  br i1 %arg, label %bb0, label %bb1
 
 bb0:
   %val0 = and i64 %shr, 255
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 bb1:
   %val1 = and i64 %shr, 127
-  store volatile i32 0, ptr addrspace(1) undef
+  store volatile i32 0, ptr addrspace(1) poison
   br label %ret
 
 ret:

@@ -21,7 +21,9 @@
  */
 
 #include <clc/clc.h>
+#include <clc/clc_convert.h>
 #include <clc/clcmacro.h>
+#include <clc/math/clc_fma.h>
 #include <clc/math/clc_mad.h>
 #include <clc/math/clc_subnormal_config.h>
 #include <clc/math/math.h>
@@ -70,7 +72,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_exp10(float x) {
   int return_inf = x > X_MAX;
   int return_zero = x < X_MIN;
 
-  int n = convert_int(x * R_64_BY_LOG10_2);
+  int n = __clc_convert_int(x * R_64_BY_LOG10_2);
 
   float fn = (float)n;
   int j = n & 0x3f;
@@ -89,11 +91,11 @@ _CLC_DEF _CLC_OVERLOAD float __clc_exp10(float x) {
   float two_to_jby64 = USE_TABLE(exp_tbl, j);
   z2 = __clc_mad(two_to_jby64, z2, two_to_jby64);
 
-  float z2s = z2 * as_float(0x1 << (m + 149));
-  float z2n = as_float(as_int(z2) + m2);
+  float z2s = z2 * __clc_as_float(0x1 << (m + 149));
+  float z2n = __clc_as_float(__clc_as_int(z2) + m2);
   z2 = m <= -126 ? z2s : z2n;
 
-  z2 = return_inf ? as_float(PINFBITPATT_SP32) : z2;
+  z2 = return_inf ? __clc_as_float(PINFBITPATT_SP32) : z2;
   z2 = return_zero ? 0.0f : z2;
   z2 = return_nan ? x : z2;
   return z2;
@@ -115,44 +117,46 @@ _CLC_DEF _CLC_OVERLOAD double __clc_exp10(double x) {
   // ln(10)
   const double R_LN10 = 0x1.26bb1bbb55516p+1;
 
-  int n = convert_int(x * R_64_BY_LOG10_2);
+  int n = __clc_convert_int(x * R_64_BY_LOG10_2);
 
   double dn = (double)n;
 
   int j = n & 0x3f;
   int m = n >> 6;
 
-  double r =
-      R_LN10 * fma(-R_LOG10_2_BY_64_TL, dn, fma(-R_LOG10_2_BY_64_LD, dn, x));
+  double r = R_LN10 * __clc_fma(-R_LOG10_2_BY_64_TL, dn,
+                                __clc_fma(-R_LOG10_2_BY_64_LD, dn, x));
 
   // 6 term tail of Taylor expansion of e^r
   double z2 =
-      r *
-      fma(r,
-          fma(r,
-              fma(r,
-                  fma(r, fma(r, 0x1.6c16c16c16c17p-10, 0x1.1111111111111p-7),
-                      0x1.5555555555555p-5),
-                  0x1.5555555555555p-3),
-              0x1.0000000000000p-1),
-          1.0);
+      r * __clc_fma(
+              r,
+              __clc_fma(r,
+                        __clc_fma(r,
+                                  __clc_fma(r,
+                                            __clc_fma(r, 0x1.6c16c16c16c17p-10,
+                                                      0x1.1111111111111p-7),
+                                            0x1.5555555555555p-5),
+                                  0x1.5555555555555p-3),
+                        0x1.0000000000000p-1),
+              1.0);
 
   double2 tv = USE_TABLE(two_to_jby64_ep_tbl, j);
-  z2 = fma(tv.s0 + tv.s1, z2, tv.s1) + tv.s0;
+  z2 = __clc_fma(tv.s0 + tv.s1, z2, tv.s1) + tv.s0;
 
   int small_value = (m < -1022) || ((m == -1022) && (z2 < 1.0));
 
   int n1 = m >> 2;
   int n2 = m - n1;
-  double z3 = z2 * as_double(((long)n1 + 1023) << 52);
-  z3 *= as_double(((long)n2 + 1023) << 52);
+  double z3 = z2 * __clc_as_double(((long)n1 + 1023) << 52);
+  z3 *= __clc_as_double(((long)n2 + 1023) << 52);
 
   z2 = ldexp(z2, m);
   z2 = small_value ? z3 : z2;
 
   z2 = __clc_isnan(x) ? x : z2;
 
-  z2 = x > X_MAX ? as_double(PINFBITPATT_DP64) : z2;
+  z2 = x > X_MAX ? __clc_as_double(PINFBITPATT_DP64) : z2;
   z2 = x < X_MIN ? 0.0 : z2;
 
   return z2;

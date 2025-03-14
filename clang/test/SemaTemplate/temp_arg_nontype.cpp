@@ -255,6 +255,7 @@ namespace test8 {
 namespace PR8372 {
   template <int I> void foo() { } // expected-note{{template parameter is declared here}}
   void bar() { foo <0x80000000> (); } // expected-warning{{non-type template argument value '2147483648' truncated to '-2147483648' for template parameter of type 'int'}}
+  // expected-note@-1 {{while substituting explicitly-specified template arguments}}
 }
 
 namespace PR9227 {

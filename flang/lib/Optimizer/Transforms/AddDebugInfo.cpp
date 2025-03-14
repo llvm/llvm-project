@@ -118,7 +118,10 @@ bool AddDebugInfoPass::createCommonBlockGlobal(
     op = conOp.getValue().getDefiningOp();
 
   if (auto cordOp = mlir::dyn_cast_if_present<fir::CoordinateOp>(op)) {
-    optint = fir::getIntIfConstant(cordOp.getOperand(1));
+    auto coors = cordOp.getCoor();
+    if (coors.size() != 1)
+      return false;
+    optint = fir::getIntIfConstant(coors[0]);
     if (!optint)
       return false;
     op = cordOp.getRef().getDefiningOp();
@@ -503,11 +506,7 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
   funcOp->setLoc(builder.getFusedLoc({l}, spAttr));
 
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-    // FIXME: We currently dont handle variables that are not in the entry
-    // blocks of the fuctions. These may be variable or arguments used in the
-    // OpenMP target regions.
-    if (&funcOp.front() == declOp->getBlock())
-      handleDeclareOp(declOp, fileAttr, spAttr, typeGen, symbolTable);
+    handleDeclareOp(declOp, fileAttr, spAttr, typeGen, symbolTable);
   });
   // commonBlockMap ensures that we don't create multiple DICommonBlockAttr of
   // the same name in one function. But it is ok (rather required) to create

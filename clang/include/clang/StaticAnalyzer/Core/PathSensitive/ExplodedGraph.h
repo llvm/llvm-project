@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 //  This file defines the template classes ExplodedNode and ExplodedGraph,
-//  which represent a path-sensitive, intra-procedural "exploded graph."
+//  which represent a path-sensitive, intra-procedural "exploded graph".
 //  See "Precise interprocedural dataflow analysis via graph reachability"
 //  by Reps, Horwitz, and Sagiv
 //  (http://portal.acm.org/citation.cfm?id=199462) for the definition of an
@@ -426,8 +426,8 @@ public:
   ///
   /// \param Nodes The nodes which must appear in the final graph. Presumably
   ///              these are end-of-path nodes (i.e. they have no successors).
-  /// \param[out] ForwardMap A optional map from nodes in this graph to nodes in
-  ///                        the returned graph.
+  /// \param[out] ForwardMap An optional map from nodes in this graph to nodes
+  ///                        in the returned graph.
   /// \param[out] InverseMap An optional map from nodes in the returned graph to
   ///                        nodes in this graph.
   /// \returns The trimmed graph

@@ -38,12 +38,12 @@ define i32 @combine_add_zext_xor() {
 ; GFX1100-NEXT:    s_branch .LBB0_2
 ; GFX1100-NEXT:  .LBB0_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB0_2 Depth=1
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    s_xor_b32 s0, s0, -1
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0xfffffbe6, v1
 ; GFX1100-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_add_nc_u32_e32 v2, v1, v0
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB0_4
 ; GFX1100-NEXT:  .LBB0_2: ; %.a
@@ -66,12 +66,12 @@ define i32 @combine_add_zext_xor() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %.2.0.in = xor i1 %.2.0.in.in, true
   %.2.0 = zext i1 %.2.0.in to i32
   %i11 = add i32 %.2, %.2.0
@@ -118,12 +118,12 @@ define i32 @combine_sub_zext_xor() {
 ; GFX1100-NEXT:    s_branch .LBB1_2
 ; GFX1100-NEXT:  .LBB1_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB1_2 Depth=1
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    s_xor_b32 s0, s0, -1
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0xfffffbe6, v1
 ; GFX1100-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_sub_nc_u32_e32 v2, v1, v0
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-NEXT:    v_mov_b32_e32 v1, v2
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB1_4
 ; GFX1100-NEXT:  .LBB1_2: ; %.a
@@ -146,12 +146,12 @@ define i32 @combine_sub_zext_xor() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %.2.0.in = xor i1 %.2.0.in.in, true
   %.2.0 = zext i1 %.2.0.in to i32
   %i11 = sub i32 %.2, %.2.0
@@ -229,12 +229,12 @@ define i32 @combine_add_zext_or() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = or i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32
@@ -313,12 +313,12 @@ define i32 @combine_sub_zext_or() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = or i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32
@@ -365,11 +365,11 @@ define i32 @combine_add_zext_and() {
 ; GFX1100-NEXT:    s_branch .LBB4_2
 ; GFX1100-NEXT:  .LBB4_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB4_2 Depth=1
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1100-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0xfffffbe6, v1
 ; GFX1100-NEXT:    s_and_b32 s0, s0, vcc_lo
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-NEXT:    v_add_nc_u32_e32 v1, v1, v0
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB4_4
 ; GFX1100-NEXT:  .LBB4_2: ; %.a
@@ -392,12 +392,12 @@ define i32 @combine_add_zext_and() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = and i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32
@@ -444,11 +444,11 @@ define i32 @combine_sub_zext_and() {
 ; GFX1100-NEXT:    s_branch .LBB5_2
 ; GFX1100-NEXT:  .LBB5_1: ; %bb9
 ; GFX1100-NEXT:    ; in Loop: Header=BB5_2 Depth=1
-; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX1100-NEXT:    v_cmp_lt_i32_e32 vcc_lo, 0xfffffbe6, v1
 ; GFX1100-NEXT:    s_and_b32 s0, s0, vcc_lo
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1100-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; GFX1100-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1100-NEXT:    v_sub_nc_u32_e32 v1, v1, v0
 ; GFX1100-NEXT:    s_cbranch_vccz .LBB5_4
 ; GFX1100-NEXT:  .LBB5_2: ; %.a
@@ -471,12 +471,12 @@ define i32 @combine_sub_zext_and() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
 bb9:                                              ; preds = %bb, %.a
-  %.2.0.in.in = phi i1 [ %i5, %bb ], [ undef, %.a ]
+  %.2.0.in.in = phi i1 [ %i5, %bb ], [ poison, %.a ]
   %t = icmp sgt i32 %.2, -1050
   %.2.0.in = and i1 %.2.0.in.in, %t
   %.2.0 = zext i1 %.2.0.in to i32

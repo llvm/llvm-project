@@ -2135,23 +2135,6 @@ define half @maxnum_f16(half %a, half %b) nounwind {
   ret half %1
 }
 
-; TODO: FMINNAN and FMAXNAN aren't handled in
-; SelectionDAGLegalize::ExpandNode.
-
-; declare half @llvm.minimum.f16(half, half)
-
-; define half @fminimum_f16(half %a, half %b) nounwind {
-;   %1 = call half @llvm.minimum.f16(half %a, half %b)
-;   ret half %1
-; }
-
-; declare half @llvm.maximum.f16(half, half)
-
-; define half @fmaximum_f16(half %a, half %b) nounwind {
-;   %1 = call half @llvm.maximum.f16(half %a, half %b)
-;   ret half %1
-; }
-
 declare half @llvm.copysign.f16(half, half)
 
 define half @copysign_f16(half %a, half %b) nounwind {

@@ -66,7 +66,7 @@ bb26:                                             ; preds = %.loopexit
   br label %bb31
 
 .preheader:                                       ; preds = %.preheader, %bb12
-  %tmp27 = phi i32 [ %tmp28, %.preheader ], [ undef, %bb12 ]
+  %tmp27 = phi i32 [ %tmp28, %.preheader ], [ poison, %bb12 ]
   %tmp28 = add nuw i32 %tmp27, 128
   %tmp29 = icmp ult i32 %tmp28, 1568
   br i1 %tmp29, label %.preheader, label %.loopexit145
@@ -75,11 +75,11 @@ bb30:                                             ; preds = %bb31
   br i1 %c4, label %bb11, label %bb12
 
 bb31:                                             ; preds = %bb31, %bb26
-  %tmp32 = phi i32 [ %tmp9, %bb26 ], [ undef, %bb31 ]
+  %tmp32 = phi i32 [ %tmp9, %bb26 ], [ poison, %bb31 ]
   %tmp33 = getelementptr inbounds [462 x float], ptr addrspace(3) @0, i32 0, i32 %tmp32
   %tmp34 = load float, ptr addrspace(3) %tmp33, align 4
-  %tmp35 = tail call float @llvm.fmuladd.f32(float %tmp34, float undef, float undef)
-  %tmp36 = tail call float @llvm.fmuladd.f32(float undef, float undef, float %tmp35)
+  %tmp35 = tail call float @llvm.fmuladd.f32(float %tmp34, float poison, float poison)
+  %tmp36 = tail call float @llvm.fmuladd.f32(float poison, float poison, float %tmp35)
   br i1 %c5, label %bb30, label %bb31
 
 bb37:                                             ; preds = %bb11

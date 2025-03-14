@@ -34,6 +34,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include <cctype>
+#include <deque>
 using namespace llvm;
 
 /// NOTE: The TargetMachine owns TLOF.
@@ -156,10 +157,13 @@ TargetLowering::makeLibCall(SelectionDAG &DAG, RTLIB::Libcall LC, EVT RetVT,
   Args.reserve(Ops.size());
 
   TargetLowering::ArgListEntry Entry;
+  ArrayRef<Type *> OpsTypeOverrides = CallOptions.OpsTypeOverrides;
   for (unsigned i = 0; i < Ops.size(); ++i) {
     SDValue NewOp = Ops[i];
     Entry.Node = NewOp;
-    Entry.Ty = Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
+    Entry.Ty = i < OpsTypeOverrides.size() && OpsTypeOverrides[i]
+                   ? OpsTypeOverrides[i]
+                   : Entry.Node.getValueType().getTypeForEVT(*DAG.getContext());
     Entry.IsSExt =
         shouldSignExtendTypeInLibCall(Entry.Ty, CallOptions.IsSigned);
     Entry.IsZExt = !Entry.IsSExt;
@@ -446,23 +450,12 @@ unsigned TargetLowering::getJumpTableEncoding() const {
   if (!isPositionIndependent())
     return MachineJumpTableInfo::EK_BlockAddress;
 
-  // In PIC mode, if the target supports a GPRel32 directive, use it.
-  if (getTargetMachine().getMCAsmInfo()->getGPRel32Directive() != nullptr)
-    return MachineJumpTableInfo::EK_GPRel32BlockAddress;
-
   // Otherwise, use a label difference.
   return MachineJumpTableInfo::EK_LabelDifference32;
 }
 
 SDValue TargetLowering::getPICJumpTableRelocBase(SDValue Table,
                                                  SelectionDAG &DAG) const {
-  // If our PIC model is GP relative, use the global offset table as the base.
-  unsigned JTEncoding = getJumpTableEncoding();
-
-  if ((JTEncoding == MachineJumpTableInfo::EK_GPRel64BlockAddress) ||
-      (JTEncoding == MachineJumpTableInfo::EK_GPRel32BlockAddress))
-    return DAG.getGLOBAL_OFFSET_TABLE(getPointerTy(DAG.getDataLayout()));
-
   return Table;
 }
 
@@ -11888,6 +11881,57 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
   }
 
   return DAG.getLoad(VecVT, DL, Chain, StackPtr, PtrInfo);
+}
+
+SDValue TargetLowering::expandPartialReduceMLA(SDNode *N,
+                                               SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  SDValue Acc = N->getOperand(0);
+  SDValue MulLHS = N->getOperand(1);
+  SDValue MulRHS = N->getOperand(2);
+  EVT AccVT = Acc.getValueType();
+  EVT MulOpVT = MulLHS.getValueType();
+
+  EVT ExtMulOpVT =
+      EVT::getVectorVT(*DAG.getContext(), AccVT.getVectorElementType(),
+                       MulOpVT.getVectorElementCount());
+  unsigned ExtOpc = N->getOpcode() == ISD::PARTIAL_REDUCE_SMLA
+                        ? ISD::SIGN_EXTEND
+                        : ISD::ZERO_EXTEND;
+
+  if (ExtMulOpVT != MulOpVT) {
+    MulLHS = DAG.getNode(ExtOpc, DL, ExtMulOpVT, MulLHS);
+    MulRHS = DAG.getNode(ExtOpc, DL, ExtMulOpVT, MulRHS);
+  }
+  SDValue Input = MulLHS;
+  APInt ConstantOne;
+  if (!ISD::isConstantSplatVector(MulRHS.getNode(), ConstantOne) ||
+      !ConstantOne.isOne())
+    Input = DAG.getNode(ISD::MUL, DL, ExtMulOpVT, MulLHS, MulRHS);
+
+  unsigned Stride = AccVT.getVectorMinNumElements();
+  unsigned ScaleFactor = MulOpVT.getVectorMinNumElements() / Stride;
+
+  // Collect all of the subvectors
+  std::deque<SDValue> Subvectors = {Acc};
+  for (unsigned I = 0; I < ScaleFactor; I++) {
+    auto SourceIndex = DAG.getVectorIdxConstant(I * Stride, DL);
+    Subvectors.push_back(
+        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, AccVT, {Input, SourceIndex}));
+  }
+
+  // Flatten the subvector tree
+  while (Subvectors.size() > 1) {
+    Subvectors.push_back(
+        DAG.getNode(ISD::ADD, DL, AccVT, {Subvectors[0], Subvectors[1]}));
+    Subvectors.pop_front();
+    Subvectors.pop_front();
+  }
+
+  assert(Subvectors.size() == 1 &&
+         "There should only be one subvector after tree flattening");
+
+  return Subvectors[0];
 }
 
 bool TargetLowering::LegalizeSetCCCondCode(SelectionDAG &DAG, EVT VT,

@@ -387,7 +387,7 @@ void LazyReexportsManager::emitRedirectableSymbols(
   SymbolMap Redirs;
   size_t I = 0;
   for (auto &[Name, AI] : Reexports)
-    Redirs[Name] = (*ReentryPoints)[I++];
+    Redirs[Name] = {(*ReentryPoints)[I++].getAddress(), AI.AliasFlags};
 
   I = 0;
   if (!Reexports.empty()) {

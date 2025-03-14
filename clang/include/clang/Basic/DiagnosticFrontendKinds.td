@@ -175,11 +175,11 @@ def err_verify_invalid_content : Error<
 def err_verify_missing_regex : Error<
     "cannot find start of regex ('{{') in %0">;
 def err_verify_inconsistent_diags : Error<
-    "'%0' diagnostics %select{expected|seen}1 but not %select{seen|expected}1: "
-    "%2">;
+    "%select{|'%1-%2' }0diagnostics %select{with '%2' severity |}0"
+    "%select{expected|seen}3 but not %select{seen|expected}3: "
+    "%4">;
 def err_verify_invalid_no_diags : Error<
-    "%select{expected|'%0-no-diagnostics'}1 directive cannot follow "
-    "%select{'%0-no-diagnostics' directive|other expected directives}1">;
+    "'%0' directive cannot follow %select{'%2' directive|other expected directives}1">;
 def err_verify_no_directives : Error<
     "no expected directives found: consider use of '%0-no-diagnostics'">;
 def err_verify_nonconst_addrspace : Error<

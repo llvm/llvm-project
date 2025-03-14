@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ReportRetriever.h"
+#include "Utility.h"
 
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
 #include "lldb/Core/Debugger.h"
@@ -81,6 +82,12 @@ ReportRetriever::RetrieveReportData(const ProcessSP process_sp) {
   options.SetPrefix(address_sanitizer_retrieve_report_data_prefix);
   options.SetAutoApplyFixIts(false);
   options.SetLanguage(eLanguageTypeObjC_plus_plus);
+
+  if (auto m = GetPreferredAsanModule(process_sp->GetTarget())) {
+    SymbolContextList sc_list;
+    sc_list.Append(SymbolContext(std::move(m)));
+    options.SetPreferredSymbolContexts(std::move(sc_list));
+  }
 
   ValueObjectSP return_value_sp;
   ExecutionContext exe_ctx;
@@ -210,8 +217,8 @@ bool ReportRetriever::NotifyBreakpointHit(ProcessSP process_sp,
         InstrumentationRuntimeStopInfo::CreateStopReasonWithInstrumentationData(
             *thread_sp, description, report));
 
-  if (StreamFileSP stream_sp = StreamFileSP(
-          process_sp->GetTarget().GetDebugger().GetOutputStreamSP()))
+  if (StreamSP stream_sp =
+          process_sp->GetTarget().GetDebugger().GetAsyncOutputStream())
     stream_sp->Printf("AddressSanitizer report breakpoint hit. Use 'thread "
                       "info -s' to get extended information about the "
                       "report.\n");

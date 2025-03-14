@@ -289,8 +289,8 @@ define amdgpu_kernel void @test_concat_v16i16(ptr addrspace(1) %out, <16 x i16> 
 define amdgpu_kernel void @concat_vector_crash(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 bb:
   %tmp = load <2 x float>, ptr addrspace(1) %in, align 4
-  %tmp1 = shufflevector <2 x float> %tmp, <2 x float> undef, <8 x i32> <i32 0, i32 1, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef>
-  %tmp2 = shufflevector <8 x float> undef, <8 x float> %tmp1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
+  %tmp1 = shufflevector <2 x float> %tmp, <2 x float> poison, <8 x i32> <i32 0, i32 1, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
+  %tmp2 = shufflevector <8 x float> poison, <8 x float> %tmp1, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 8, i32 9>
   store <8 x float> %tmp2, ptr addrspace(1) %out, align 32
   ret void
 }
@@ -301,8 +301,8 @@ define amdgpu_kernel void @concat_vector_crash2(ptr addrspace(1) %out, ptr addrs
   %tmp = load i32, ptr addrspace(1) %in, align 1
   %tmp1 = trunc i32 %tmp to i24
   %tmp2 = bitcast i24 %tmp1 to <3 x i8>
-  %tmp3 = shufflevector <3 x i8> %tmp2, <3 x i8> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 1, i32 undef, i32 undef>
-  %tmp4 = shufflevector <8 x i8> %tmp3, <8 x i8> <i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 7, i8 8>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 14, i32 15>
+  %tmp3 = shufflevector <3 x i8> %tmp2, <3 x i8> poison, <8 x i32> <i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 1, i32 poison, i32 poison>
+  %tmp4 = shufflevector <8 x i8> %tmp3, <8 x i8> <i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 7, i8 8>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 14, i32 15>
   store <8 x i8> %tmp4, ptr addrspace(1) %out, align 8
   ret void
 }
@@ -313,7 +313,7 @@ define amdgpu_kernel void @concat_vector_crash2(ptr addrspace(1) %out, ptr addrs
 ; VI: ds_write_b128
 define amdgpu_kernel void @build_vector_splat_concat_v8i16() {
 entry:
-  store <8 x i16> zeroinitializer, ptr addrspace(3) undef, align 16
+  store <8 x i16> zeroinitializer, ptr addrspace(3) poison, align 16
   store <8 x i16> zeroinitializer, ptr addrspace(3) null, align 16
   ret void
 }

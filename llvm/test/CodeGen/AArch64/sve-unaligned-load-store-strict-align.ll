@@ -21,9 +21,8 @@ define void @unaligned_nxv16i1(ptr %ldptr, ptr %stptr) {
 define void @unaligned_nxv2i64(ptr %ldptr, ptr %stptr) {
 ; CHECK-LABEL: unaligned_nxv2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ptrue p0.d
-; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
-; CHECK-NEXT:    st1d { z0.d }, p0, [x1]
+; CHECK-NEXT:    ldr z0, [x0]
+; CHECK-NEXT:    str z0, [x1]
 ; CHECK-NEXT:    ret
   %l3 = load <vscale x 2 x i64>, ptr %ldptr, align 4
   store <vscale x 2 x i64> %l3, ptr %stptr, align 4

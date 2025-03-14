@@ -36,7 +36,7 @@ cl::opt<bool>
                          cl::ReallyHidden,
                          cl::desc("disable outlining indirect calls."));
 
-cl::opt<bool>
+static cl::opt<bool>
     MatchCallsByName("ir-sim-calls-by-name", cl::init(false), cl::ReallyHidden,
                      cl::desc("only allow matching call instructions if the "
                               "name and type signature match."));

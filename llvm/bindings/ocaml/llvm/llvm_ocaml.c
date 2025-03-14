@@ -1211,24 +1211,6 @@ value llvm_const_nuw_sub(value LHS, value RHS) {
 }
 
 /* llvalue -> llvalue -> llvalue */
-value llvm_const_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nsw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNSWMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
-value llvm_const_nuw_mul(value LHS, value RHS) {
-  LLVMValueRef Value = LLVMConstNUWMul(Value_val(LHS), Value_val(RHS));
-  return to_val(Value);
-}
-
-/* llvalue -> llvalue -> llvalue */
 value llvm_const_xor(value LHS, value RHS) {
   LLVMValueRef Value = LLVMConstXor(Value_val(LHS), Value_val(RHS));
   return to_val(Value);

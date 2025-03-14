@@ -263,7 +263,7 @@ define amdgpu_kernel void @basic_smax_smin_sgpr(ptr addrspace(1) %out, i32 inreg
   %src0.clamp = call i16 @llvm.smin.i16(i16 %src0.max, i16 255)
   %src1.max = call i16 @llvm.smax.i16(i16 %src1, i16 0)
   %src1.clamp = call i16 @llvm.smin.i16(i16 %src1.max, i16 255)
-  %insert.0 = insertelement <2 x i16> undef, i16 %src0.clamp, i32 0
+  %insert.0 = insertelement <2 x i16> poison, i16 %src0.clamp, i32 0
   %vec = insertelement <2 x i16> %insert.0, i16 %src1.clamp, i32 1
   store <2 x i16> %vec, ptr addrspace(1) %out
   ret void
@@ -362,7 +362,7 @@ define <2 x i16> @basic_smin_smax(i16 %src0, i16 %src1) {
   %src0.clamp = call i16 @llvm.smax.i16(i16 %src0.min, i16 0)
   %src1.min = call i16 @llvm.smin.i16(i16 %src1, i16 255)
   %src1.clamp = call i16 @llvm.smax.i16(i16 %src1.min, i16 0)
-  %insert.0 = insertelement <2 x i16> undef, i16 %src0.clamp, i32 0
+  %insert.0 = insertelement <2 x i16> poison, i16 %src0.clamp, i32 0
   %vec = insertelement <2 x i16> %insert.0, i16 %src1.clamp, i32 1
   ret <2 x i16> %vec
 }
@@ -460,7 +460,7 @@ define <2 x i16> @basic_smin_smax_combined(i16 %src0, i16 %src1) {
   %src0.clamp = call i16 @llvm.smax.i16(i16 %src0.min, i16 0)
   %src1.max = call i16 @llvm.smax.i16(i16 %src1, i16 0)
   %src1.clamp = call i16 @llvm.smin.i16(i16 %src1.max, i16 255)
-  %insert.0 = insertelement <2 x i16> undef, i16 %src0.clamp, i32 0
+  %insert.0 = insertelement <2 x i16> poison, i16 %src0.clamp, i32 0
   %vec = insertelement <2 x i16> %insert.0, i16 %src1.clamp, i32 1
   ret <2 x i16> %vec
 }
@@ -1066,7 +1066,7 @@ define i16 @basic_smax_smin_vec_cast(i16 %src0, i16 %src1) {
   %src0.clamp = call i16 @llvm.smin.i16(i16 %src0.max, i16 255)
   %src1.max = call i16 @llvm.smax.i16(i16 %src1, i16 0)
   %src1.clamp = call i16 @llvm.smin.i16(i16 %src1.max, i16 255)
-  %insert.0 = insertelement <2 x i16> undef, i16 %src0.clamp, i32 0
+  %insert.0 = insertelement <2 x i16> poison, i16 %src0.clamp, i32 0
   %vec = insertelement <2 x i16> %insert.0, i16 %src1.clamp, i32 1
   %vec.trunc = trunc <2 x i16> %vec to <2 x i8>
   %cast = bitcast <2 x i8> %vec.trunc to i16
@@ -1230,8 +1230,7 @@ define i16 @basic_smax_smin_vec_input(<2 x i16> %src) {
 ; GISEL-GFX9-NEXT:    v_pk_min_i16 v0, v1, v0
 ; GISEL-GFX9-NEXT:    v_pk_max_i16 v0, 0, v0
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0xff
-; GISEL-GFX9-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GISEL-GFX9-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
+; GISEL-GFX9-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -1346,8 +1345,7 @@ define i16 @basic_smax_smin_vec_input_rev(<2 x i16> %src) {
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0xff00ff
 ; GISEL-GFX9-NEXT:    v_pk_min_i16 v0, v1, v0
 ; GISEL-GFX9-NEXT:    v_mov_b32_e32 v1, 0xff
-; GISEL-GFX9-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
-; GISEL-GFX9-NEXT:    v_lshlrev_b16_e32 v1, 8, v1
+; GISEL-GFX9-NEXT:    v_and_b32_sdwa v1, v0, v1 dst_sel:BYTE_1 dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_0 src1_sel:DWORD
 ; GISEL-GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;

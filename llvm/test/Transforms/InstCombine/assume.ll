@@ -581,6 +581,23 @@ not_taken:
   ret i1 %control
 }
 
+define void @nonnull_only_ephemeral_use(ptr %p) {
+; DEFAULT-LABEL: @nonnull_only_ephemeral_use(
+; DEFAULT-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; DEFAULT-NEXT:    [[CMP:%.*]] = icmp ne ptr [[A]], null
+; DEFAULT-NEXT:    tail call void @llvm.assume(i1 [[CMP]])
+; DEFAULT-NEXT:    ret void
+;
+; BUNDLES-LABEL: @nonnull_only_ephemeral_use(
+; BUNDLES-NEXT:    [[A:%.*]] = load ptr, ptr [[P:%.*]], align 8
+; BUNDLES-NEXT:    call void @llvm.assume(i1 true) [ "nonnull"(ptr [[A]]) ]
+; BUNDLES-NEXT:    ret void
+;
+  %a = load ptr, ptr %p
+  %cmp = icmp ne ptr %a, null
+  tail call void @llvm.assume(i1 %cmp)
+  ret void
+}
 
 define void @always_true_assumption() {
 ; CHECK-LABEL: @always_true_assumption(
@@ -977,6 +994,24 @@ define i32 @range_15_31_top27(i32 %x) {
   ret i32 %res
 }
 
+define i1 @not_cond_use(i8 %x) {
+; CHECK-LABEL: @not_cond_use(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], 0
+; CHECK-NEXT:    tail call void @use(i1 [[CMP]])
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
+; CHECK-NEXT:    tail call void @llvm.assume(i1 [[NOT]])
+; CHECK-NEXT:    [[RVAL:%.*]] = icmp eq i8 [[X]], 0
+; CHECK-NEXT:    ret i1 [[RVAL]]
+;
+  %cmp = icmp eq i8 %x, 0
+  tail call void @use(i1 %cmp)
+  %not = xor i1 %cmp, true
+  tail call void @llvm.assume(i1 %not)
+  %rval = icmp eq i8 %x, 0
+  ret i1 %rval
+}
+
+declare void @use(i1)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

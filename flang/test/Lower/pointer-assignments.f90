@@ -76,7 +76,7 @@ subroutine test_pointer_component(temp, temp_ptr)
   end type mytype
   type(mytype) :: temp
   real, pointer :: temp_ptr(:)
-  ! CHECK: %[[ptr_addr:.*]] = fir.coordinate_of %[[temp]], %{{.*}} : (!fir.ref<!fir.type<_QFtest_pointer_componentTmytype{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  ! CHECK: %[[ptr_addr:.*]] = fir.coordinate_of %[[temp]], ptr : (!fir.ref<!fir.type<_QFtest_pointer_componentTmytype{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[ptr:.*]] = fir.load %[[ptr_addr]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   ! CHECK: %[[dims:.*]]:3 = fir.box_dims %[[ptr]], %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
   ! CHECK: %[[shift:.*]] = fir.shift %[[dims]]#0 : (index) -> !fir.shift<1>

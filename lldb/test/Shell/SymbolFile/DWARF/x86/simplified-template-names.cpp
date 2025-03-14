@@ -11,12 +11,23 @@
 // Test that we following DW_AT_signature correctly. If not, lldb might confuse the types of v1 and v2.
 // RUN: %clangxx --target=x86_64-pc-linux -g -gsimple-template-names -fdebug-types-section %s -c -o %t2.o
 // RUN: ld.lld %t2.o -o %t2
-// RUN: %lldb %t2 -o "target variable v1 v2" -o exit | FileCheck %s --check-prefix=TYPE
+// RUN: %lldb %t2 -o "target variable v1 v2" \
+// RUN:   -o "type lookup t2<outer_struct1>" -o "type lookup t2<outer_struct2>" \
+// RUN:   -o exit | FileCheck %s --check-prefix=TYPE
 
 // LOG: unique name: t3<t2<int> >::t4
 
-// TYPE:      (t2<outer_struct1::t1<int> >) v1 = {}
-// TYPE-NEXT: (t2<outer_struct2::t1<int> >) v2 = {}
+// TYPE-LABEL: target variable v1 v2
+// TYPE:       (t2<outer_struct1::t1<int> >) v1 = {}
+// TYPE:       (t2<outer_struct2::t1<int> >) v2 = {}
+
+// TYPE-LABEL: type lookup t2<outer_struct1>
+// TYPE:       template<> struct t2<outer_struct1> {
+// TYPE-NEXT:  }
+
+// TYPE-LABEL: type lookup t2<outer_struct2>
+// TYPE:       template<> struct t2<outer_struct2> {
+// TYPE-NEXT:  }
 
 struct outer_struct1 {
   template <typename> struct t1 {};
@@ -29,6 +40,9 @@ struct outer_struct2 {
 template <typename> struct t2 {};
 t2<outer_struct1::t1<int>> v1;
 t2<outer_struct2::t1<int>> v2;
+
+t2<outer_struct1> v1_1;
+t2<outer_struct2> v1_2;
 
 template <typename> struct t3 {
   struct t4 {};

@@ -613,6 +613,9 @@ private:
 } // namespace
 
 void EncodingEmitter::writeTo(raw_ostream &os) const {
+  // Reserve space in the ostream for the encoded contents.
+  os.reserveExtraSpace(size());
+
   for (auto &prevResult : prevResultList)
     os.write((const char *)prevResult.data(), prevResult.size());
   os.write((const char *)currentResult.data(), currentResult.size());

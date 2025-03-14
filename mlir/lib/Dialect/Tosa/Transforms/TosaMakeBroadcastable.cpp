@@ -169,9 +169,9 @@ struct ConvertTosaOp<tosa::SelectOp> : public OpRewritePattern<tosa::SelectOp> {
   LogicalResult matchAndRewrite(tosa::SelectOp tosaOp,
                                 PatternRewriter &rewriter) const override {
 
-    Value input1 = tosaOp.getPred();
-    Value input2 = tosaOp.getOnTrue();
-    Value input3 = tosaOp.getOnFalse();
+    Value input1 = tosaOp.getInput1();
+    Value input2 = tosaOp.getInput2();
+    Value input3 = tosaOp.getInput3();
     Value output = tosaOp.getResult();
 
     auto outputType = dyn_cast<RankedTensorType>(output.getType());

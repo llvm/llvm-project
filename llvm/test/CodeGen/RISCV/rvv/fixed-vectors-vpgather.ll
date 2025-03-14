@@ -298,11 +298,11 @@ define <32 x i8> @vpgather_baseidx_v32i8(ptr %base, <32 x i8> %idxs, <32 x i1> %
 ; RV64-NEXT:    addi a2, a1, -16
 ; RV64-NEXT:    vsetivli zero, 16, e8, m2, ta, ma
 ; RV64-NEXT:    vslidedown.vi v8, v8, 16
-; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
-; RV64-NEXT:    vslidedown.vi v0, v0, 2
 ; RV64-NEXT:    sltu a1, a1, a2
 ; RV64-NEXT:    vsetivli zero, 16, e64, m8, ta, ma
 ; RV64-NEXT:    vsext.vf8 v16, v8
+; RV64-NEXT:    vsetivli zero, 2, e8, mf4, ta, ma
+; RV64-NEXT:    vslidedown.vi v0, v0, 2
 ; RV64-NEXT:    addi a1, a1, -1
 ; RV64-NEXT:    and a1, a1, a2
 ; RV64-NEXT:    vsetvli zero, a1, e8, m1, ta, ma

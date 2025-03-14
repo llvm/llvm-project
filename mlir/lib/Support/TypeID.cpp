@@ -80,7 +80,8 @@ struct ImplicitTypeIDRegistry {
 };
 } // end namespace
 
-TypeID detail::FallbackTypeIDResolver::registerImplicitTypeID(StringRef name) {
+LLVM_ALWAYS_EXPORT TypeID
+detail::FallbackTypeIDResolver::registerImplicitTypeID(StringRef name) {
   static ImplicitTypeIDRegistry registry;
   return registry.lookupOrInsert(name);
 }
@@ -89,4 +90,4 @@ TypeID detail::FallbackTypeIDResolver::registerImplicitTypeID(StringRef name) {
 // Builtin TypeIDs
 //===----------------------------------------------------------------------===//
 
-MLIR_DEFINE_EXPLICIT_TYPE_ID(void)
+MLIR_DEFINE_EXPLICIT_SELF_OWNING_TYPE_ID(void)

@@ -2702,10 +2702,10 @@ void SubViewOp::getAsmResultNames(
 /// A subview result type can be fully inferred from the source type and the
 /// static representation of offsets, sizes and strides. Special sentinels
 /// encode the dynamic case.
-Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
-                                ArrayRef<int64_t> staticOffsets,
-                                ArrayRef<int64_t> staticSizes,
-                                ArrayRef<int64_t> staticStrides) {
+MemRefType SubViewOp::inferResultType(MemRefType sourceMemRefType,
+                                      ArrayRef<int64_t> staticOffsets,
+                                      ArrayRef<int64_t> staticSizes,
+                                      ArrayRef<int64_t> staticStrides) {
   unsigned rank = sourceMemRefType.getRank();
   (void)rank;
   assert(staticOffsets.size() == rank && "staticOffsets length mismatch");
@@ -2744,10 +2744,10 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
                          sourceMemRefType.getMemorySpace());
 }
 
-Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
-                                ArrayRef<OpFoldResult> offsets,
-                                ArrayRef<OpFoldResult> sizes,
-                                ArrayRef<OpFoldResult> strides) {
+MemRefType SubViewOp::inferResultType(MemRefType sourceMemRefType,
+                                      ArrayRef<OpFoldResult> offsets,
+                                      ArrayRef<OpFoldResult> sizes,
+                                      ArrayRef<OpFoldResult> strides) {
   SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
   SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
@@ -2763,13 +2763,12 @@ Type SubViewOp::inferResultType(MemRefType sourceMemRefType,
                                     staticSizes, staticStrides);
 }
 
-Type SubViewOp::inferRankReducedResultType(ArrayRef<int64_t> resultShape,
-                                           MemRefType sourceRankedTensorType,
-                                           ArrayRef<int64_t> offsets,
-                                           ArrayRef<int64_t> sizes,
-                                           ArrayRef<int64_t> strides) {
-  auto inferredType = llvm::cast<MemRefType>(
-      inferResultType(sourceRankedTensorType, offsets, sizes, strides));
+MemRefType SubViewOp::inferRankReducedResultType(
+    ArrayRef<int64_t> resultShape, MemRefType sourceRankedTensorType,
+    ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes,
+    ArrayRef<int64_t> strides) {
+  MemRefType inferredType =
+      inferResultType(sourceRankedTensorType, offsets, sizes, strides);
   assert(inferredType.getRank() >= static_cast<int64_t>(resultShape.size()) &&
          "expected ");
   if (inferredType.getRank() == static_cast<int64_t>(resultShape.size()))
@@ -2795,11 +2794,10 @@ Type SubViewOp::inferRankReducedResultType(ArrayRef<int64_t> resultShape,
                          inferredType.getMemorySpace());
 }
 
-Type SubViewOp::inferRankReducedResultType(ArrayRef<int64_t> resultShape,
-                                           MemRefType sourceRankedTensorType,
-                                           ArrayRef<OpFoldResult> offsets,
-                                           ArrayRef<OpFoldResult> sizes,
-                                           ArrayRef<OpFoldResult> strides) {
+MemRefType SubViewOp::inferRankReducedResultType(
+    ArrayRef<int64_t> resultShape, MemRefType sourceRankedTensorType,
+    ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
+    ArrayRef<OpFoldResult> strides) {
   SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
   SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
   dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
@@ -2826,8 +2824,8 @@ void SubViewOp::build(OpBuilder &b, OperationState &result,
   auto sourceMemRefType = llvm::cast<MemRefType>(source.getType());
   // Structuring implementation this way avoids duplication between builders.
   if (!resultType) {
-    resultType = llvm::cast<MemRefType>(SubViewOp::inferResultType(
-        sourceMemRefType, staticOffsets, staticSizes, staticStrides));
+    resultType = SubViewOp::inferResultType(sourceMemRefType, staticOffsets,
+                                            staticSizes, staticStrides);
   }
   result.addAttributes(attrs);
   build(b, result, resultType, source, dynamicOffsets, dynamicSizes,
@@ -2992,8 +2990,8 @@ LogicalResult SubViewOp::verify() {
 
   // Compute the expected result type, assuming that there are no rank
   // reductions.
-  auto expectedType = cast<MemRefType>(SubViewOp::inferResultType(
-      baseType, getStaticOffsets(), getStaticSizes(), getStaticStrides()));
+  MemRefType expectedType = SubViewOp::inferResultType(
+      baseType, getStaticOffsets(), getStaticSizes(), getStaticStrides());
 
   // Verify all properties of a shaped type: rank, element type and dimension
   // sizes. This takes into account potential rank reductions.
@@ -3075,8 +3073,8 @@ static MemRefType getCanonicalSubViewResultType(
     MemRefType currentResultType, MemRefType currentSourceType,
     MemRefType sourceType, ArrayRef<OpFoldResult> mixedOffsets,
     ArrayRef<OpFoldResult> mixedSizes, ArrayRef<OpFoldResult> mixedStrides) {
-  auto nonRankReducedType = llvm::cast<MemRefType>(SubViewOp::inferResultType(
-      sourceType, mixedOffsets, mixedSizes, mixedStrides));
+  MemRefType nonRankReducedType = SubViewOp::inferResultType(
+      sourceType, mixedOffsets, mixedSizes, mixedStrides);
   FailureOr<llvm::SmallBitVector> unusedDims = computeMemRefRankReductionMask(
       currentSourceType, currentResultType, mixedSizes);
   if (failed(unusedDims))
@@ -3110,9 +3108,8 @@ Value mlir::memref::createCanonicalRankReducingSubViewOp(
   SmallVector<OpFoldResult> offsets(rank, b.getIndexAttr(0));
   SmallVector<OpFoldResult> sizes = getMixedSizes(b, loc, memref);
   SmallVector<OpFoldResult> strides(rank, b.getIndexAttr(1));
-  auto targetType =
-      llvm::cast<MemRefType>(SubViewOp::inferRankReducedResultType(
-          targetShape, memrefType, offsets, sizes, strides));
+  MemRefType targetType = SubViewOp::inferRankReducedResultType(
+      targetShape, memrefType, offsets, sizes, strides);
   return b.createOrFold<memref::SubViewOp>(loc, targetType, memref, offsets,
                                            sizes, strides);
 }
@@ -3256,11 +3253,11 @@ struct SubViewReturnTypeCanonicalizer {
                         ArrayRef<OpFoldResult> mixedSizes,
                         ArrayRef<OpFoldResult> mixedStrides) {
     // Infer a memref type without taking into account any rank reductions.
-    auto resTy = SubViewOp::inferResultType(op.getSourceType(), mixedOffsets,
-                                            mixedSizes, mixedStrides);
+    MemRefType resTy = SubViewOp::inferResultType(
+        op.getSourceType(), mixedOffsets, mixedSizes, mixedStrides);
     if (!resTy)
       return {};
-    MemRefType nonReducedType = cast<MemRefType>(resTy);
+    MemRefType nonReducedType = resTy;
 
     // Directly return the non-rank reduced type if there are no dropped dims.
     llvm::SmallBitVector droppedDims = op.getDroppedDims();

@@ -2246,7 +2246,7 @@ define amdgpu_kernel void @test_udiv2(i32 %p) {
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, 1,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
   %i = udiv i32 %p, 2
-  store volatile i32 %i, ptr addrspace(1) undef
+  store volatile i32 %i, ptr addrspace(1) poison
   ret void
 }
 
@@ -2312,17 +2312,16 @@ define amdgpu_kernel void @test_udiv_3_mulhu(i32 %p) {
 ; EG-NEXT:     MOV * T1.X, literal.x,
 ; EG-NEXT:    0(0.000000e+00), 0(0.000000e+00)
    %i = udiv i32 %p, 3
-   store volatile i32 %i, ptr addrspace(1) undef
+   store volatile i32 %i, ptr addrspace(1) poison
    ret void
 }
 
 define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readonly %arg) {
 ; SI-LABEL: fdiv_test_denormals:
 ; SI:       ; %bb.0: ; %bb
-; SI-NEXT:    s_mov_b32 s0, 0
+; SI-NEXT:    s_mov_b64 s[0:1], 0
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    s_mov_b32 s1, s0
 ; SI-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
 ; SI-NEXT:    buffer_load_sbyte v1, off, s[0:3], 0
 ; SI-NEXT:    s_waitcnt vmcnt(1)
@@ -2345,10 +2344,9 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ;
 ; VI-LABEL: fdiv_test_denormals:
 ; VI:       ; %bb.0: ; %bb
-; VI-NEXT:    s_mov_b32 s0, 0
+; VI-NEXT:    s_mov_b64 s[0:1], 0
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
-; VI-NEXT:    s_mov_b32 s1, s0
 ; VI-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
 ; VI-NEXT:    buffer_load_sbyte v1, off, s[0:3], 0
 ; VI-NEXT:    s_waitcnt vmcnt(1)

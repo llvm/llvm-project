@@ -236,4 +236,42 @@ define void @f18(ptr %ptr) #0 {
   ret void
 }
 
+; Test roundeven for f32.
+declare float @llvm.experimental.constrained.roundeven.f32(float, metadata)
+define float @f19(float %f) #0 {
+; CHECK-LABEL: f19:
+; CHECK: brasl %r14, roundevenf@PLT
+; CHECK: br %r14
+  %res = call float @llvm.experimental.constrained.roundeven.f32(
+                        float %f,
+                        metadata !"fpexcept.strict") #0
+  ret float %res
+}
+
+; Test roundeven for f64.
+declare double @llvm.experimental.constrained.roundeven.f64(double, metadata)
+define double @f20(double %f) #0 {
+; CHECK-LABEL: f20:
+; CHECK: brasl %r14, roundeven@PLT
+; CHECK: br %r14
+  %res = call double @llvm.experimental.constrained.roundeven.f64(
+                        double %f,
+                        metadata !"fpexcept.strict") #0
+  ret double %res
+}
+
+; Test roundeven for f128.
+declare fp128 @llvm.experimental.constrained.roundeven.f128(fp128, metadata)
+define void @f21(ptr %ptr) #0 {
+; CHECK-LABEL: f21:
+; CHECK: brasl %r14, roundevenl@PLT
+; CHECK: br %r14
+  %src = load fp128, ptr %ptr
+  %res = call fp128 @llvm.experimental.constrained.roundeven.f128(
+                        fp128 %src,
+                        metadata !"fpexcept.strict") #0
+  store fp128 %res, ptr %ptr
+  ret void
+}
+
 attributes #0 = { strictfp }

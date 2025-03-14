@@ -1,8 +1,8 @@
 ! FIXME: https://github.com/llvm/llvm-project/issues/123668
 !
 ! DEFINE: %{triple} =
-! DEFINE: %{check-unroll} = %flang_fc1 -emit-llvm -O1 -funroll-loops -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,UNROLL
-! DEFINE: %{check-nounroll} = %flang_fc1 -emit-llvm -O1 -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
+! DEFINE: %{check-unroll} = %flang_fc1 -emit-llvm -O1 -vectorize-loops -funroll-loops -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,UNROLL
+! DEFINE: %{check-nounroll} = %flang_fc1 -emit-llvm -O1 -vectorize-loops -mllvm -force-vector-width=2 -triple %{triple} -o- %s | FileCheck %s --check-prefixes=CHECK,NO-UNROLL
 !
 ! REDEFINE: %{triple} = aarch64-unknown-linux-gnu
 ! RUN: %if aarch64-registered-target %{ %{check-unroll} %}

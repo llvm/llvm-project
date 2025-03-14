@@ -13,6 +13,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/IR/Constant.h"
@@ -32,6 +33,8 @@
 #define DEBUG_TYPE "cgscc"
 
 using namespace llvm;
+
+STATISTIC(LargestCGSCC, "Number of functions in the largest SCC");
 
 // Explicit template instantiations and specialization definitions for core
 // template typedefs.
@@ -81,6 +84,8 @@ PassManager<LazyCallGraph::SCC, CGSCCAnalysisManager, LazyCallGraph &,
     // pass, skip its execution completely if asked to (callback returns false).
     if (!PI.runBeforePass(*Pass, *C))
       continue;
+
+    LargestCGSCC.updateMax(C->size());
 
     PreservedAnalyses PassPA = Pass->run(*C, AM, G, UR);
 
