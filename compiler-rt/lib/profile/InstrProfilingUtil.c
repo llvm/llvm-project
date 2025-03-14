@@ -319,8 +319,9 @@ static int isMmapSafe(int Fd) {
   (void)&is_local_filesystem; // a fake reference to satisfy -Wunused-function
 #ifdef _AIX
   return is_local_filesystem(Fd);
-#endif
+#else
   return 1;
+#endif
 }
 
 COMPILER_RT_VISIBILITY void lprofGetFileContentBuffer(FILE *F, uint64_t Length,
