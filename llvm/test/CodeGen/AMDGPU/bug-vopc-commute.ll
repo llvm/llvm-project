@@ -8,8 +8,8 @@
 ; of which were in SGPRs.
 define amdgpu_vs float @main(i32 %v) {
 main_body:
-  %d1 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 960, i32 0)
-  %d2 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 976, i32 0)
+  %d1 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 960, i32 0)
+  %d2 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 976, i32 0)
   br i1 undef, label %ENDIF56, label %IF57
 
 IF57:                                             ; preds = %ENDIF

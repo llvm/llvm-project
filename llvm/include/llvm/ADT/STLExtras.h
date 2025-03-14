@@ -376,8 +376,7 @@ inline mapped_iterator<ItTy, FuncTy> map_iterator(ItTy I, FuncTy F) {
 
 template <class ContainerTy, class FuncTy>
 auto map_range(ContainerTy &&C, FuncTy F) {
-  return make_range(map_iterator(std::begin(C), F),
-                    map_iterator(std::end(C), F));
+  return make_range(map_iterator(adl_begin(C), F), map_iterator(adl_end(C), F));
 }
 
 /// A base type of mapped iterator, that is useful for building derived
@@ -1435,7 +1434,7 @@ public:
 
 /// Given a container of pairs, return a range over the first elements.
 template <typename ContainerTy> auto make_first_range(ContainerTy &&c) {
-  using EltTy = decltype((*std::begin(c)));
+  using EltTy = decltype(*adl_begin(c));
   return llvm::map_range(std::forward<ContainerTy>(c),
                          [](EltTy elt) -> typename detail::first_or_second_type<
                                            EltTy, decltype((elt.first))>::type {
@@ -1445,7 +1444,7 @@ template <typename ContainerTy> auto make_first_range(ContainerTy &&c) {
 
 /// Given a container of pairs, return a range over the second elements.
 template <typename ContainerTy> auto make_second_range(ContainerTy &&c) {
-  using EltTy = decltype((*std::begin(c)));
+  using EltTy = decltype(*adl_begin(c));
   return llvm::map_range(
       std::forward<ContainerTy>(c),
       [](EltTy elt) ->

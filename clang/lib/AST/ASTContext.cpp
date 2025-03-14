@@ -11832,8 +11832,8 @@ bool ASTContext::mergeExtParameterInfo(
 }
 
 void ASTContext::ResetObjCLayout(const ObjCInterfaceDecl *D) {
-  if (ObjCLayouts.count(D)) {
-    ObjCLayouts[D] = nullptr;
+  if (auto It = ObjCLayouts.find(D); It != ObjCLayouts.end()) {
+    It->second = nullptr;
     for (auto *SubClass : ObjCSubClasses[D])
       ResetObjCLayout(SubClass);
   }

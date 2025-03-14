@@ -11,7 +11,7 @@ define amdgpu_kernel void @spam(ptr addrspace(1) noalias %arg) {
   %tmp2 = getelementptr inbounds double, ptr addrspace(1) %arg, i64 %tmp1
   %tmp3 = load double, ptr addrspace(1) %tmp2, align 8
   %tmp4 = fadd double undef, 0.000000e+00
-  %tmp5 = insertelement <2 x double> undef, double %tmp4, i64 0
+  %tmp5 = insertelement <2 x double> poison, double %tmp4, i64 0
   %tmp6 = insertelement <2 x double> %tmp5, double %tmp3, i64 1
   %tmp7 = insertelement <2 x double> %tmp6, double 0.000000e+00, i64 1
   %tmp8 = fadd <2 x double> zeroinitializer, undef

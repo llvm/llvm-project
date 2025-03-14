@@ -14,11 +14,12 @@
 #include "FunctionBreakpoint.h"
 #include "Handler/RequestHandler.h"
 #include "Handler/ResponseHandler.h"
-#include "IOStream.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
+#include "Protocol.h"
 #include "SourceBreakpoint.h"
+#include "Transport.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
@@ -39,7 +40,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
-#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -145,11 +145,9 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 };
 
 struct DAP {
-  llvm::StringRef client_name;
   llvm::StringRef debug_adapter_path;
   std::ofstream *log;
-  InputStream input;
-  OutputStream output;
+  Transport &transport;
   lldb::SBFile in;
   OutputRedirector out;
   OutputRedirector err;
@@ -210,12 +208,30 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP(llvm::StringRef client_name, llvm::StringRef path, std::ofstream *log,
-      lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
-      std::vector<std::string> pre_init_commands);
+  /// Creates a new DAP sessions.
+  ///
+  /// \param[in] path
+  ///     Path to the lldb-dap binary.
+  /// \param[in] log
+  ///     Log file stream, if configured.
+  /// \param[in] default_repl_mode
+  ///     Default repl mode behavior, as configured by the binary.
+  /// \param[in] pre_init_commands
+  ///     LLDB commands to execute as soon as the debugger instance is allocaed.
+  /// \param[in] transport
+  ///     Transport for this debug session.
+  DAP(llvm::StringRef path, std::ofstream *log,
+      const ReplMode default_repl_mode,
+      std::vector<std::string> pre_init_commands, Transport &transport);
+
   ~DAP();
+
+  /// DAP is not copyable.
+  /// @{
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
+  /// @}
+
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
   ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
 
@@ -232,8 +248,6 @@ struct DAP {
   // Serialize the JSON value into a string and send the JSON packet to
   // the "out" stream.
   void SendJSON(const llvm::json::Value &json);
-
-  std::string ReadJSON();
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 
@@ -307,8 +321,7 @@ struct DAP {
   /// listeing for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
-  PacketStatus GetNextObject(llvm::json::Object &object);
-  bool HandleObject(const llvm::json::Object &object);
+  bool HandleObject(const protocol::Message &M);
 
   /// Disconnect the DAP session.
   lldb::SBError Disconnect();
@@ -382,12 +395,6 @@ struct DAP {
   InstructionBreakpoint *GetInstructionBreakpoint(const lldb::break_id_t bp_id);
 
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
-
-private:
-  // Send the JSON in "json_str" to the "out" stream. Correctly send the
-  // "Content-Length:" field followed by the length, followed by the raw
-  // JSON bytes.
-  void SendJSON(const std::string &json_str);
 };
 
 } // namespace lldb_dap

@@ -120,3 +120,21 @@ define i1 @global_array() {
   %1 = call i1 @llvm.is.constant.i64(i64 ptrtoint (ptr @real_mode_blob_end to i64))
   ret i1 %1
 }
+
+;; Ensure that is.constant of undef gets lowered reasonably to "false" in
+;; optimized codegen: specifically that the "true" branch is eliminated.
+;; CHECK-NOT: tail call i32 @subfun_1()
+;; CHECK:     tail call i32 @subfun_2()
+;; CHECK-NOT: tail call i32 @subfun_1()
+define i32 @test_undef_branch() nounwind {
+  %v = call i1 @llvm.is.constant.i32(i32 undef)
+  br i1 %v, label %True, label %False
+
+True:
+  %call1 = tail call i32 @subfun_1()
+  ret i32 %call1
+
+False:
+  %call2 = tail call i32 @subfun_2()
+  ret i32 %call2
+}

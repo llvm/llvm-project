@@ -6404,7 +6404,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
       if (i == OpIdx)
         continue;
       const MachineOperand &Op = MI.getOperand(i);
-      if (!Op.isReg() && !Op.isFI() &&
+      if (!Op.isReg() && !Op.isFI() && !Op.isRegMask() &&
           !isInlineConstant(Op, InstDesc.operands()[i]) &&
           !Op.isIdenticalTo(*MO))
         return false;

@@ -331,7 +331,7 @@ if:
 
 endif:
   %r = phi <3 x i32> [ %v, %entry ], [ %u, %if ]
-  %r.ext = shufflevector <3 x i32> %r, <3 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %r.ext = shufflevector <3 x i32> %r, <3 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   call void asm sideeffect "; reg use $0", "s"(<4 x i32> %r.ext) #0
   ret void
 }

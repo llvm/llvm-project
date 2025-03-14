@@ -6502,10 +6502,9 @@ void BoUpSLP::reorderTopToBottom() {
         inversePermutation(CurrentOrder, NewReuses);
         addMask(NewReuses, TE->ReuseShuffleIndices);
         TE->ReuseShuffleIndices.swap(NewReuses);
-      }
-      // Update orders in user split vectorize nodes.
-      if (TE->UserTreeIndex &&
-          TE->UserTreeIndex.UserTE->State == TreeEntry::SplitVectorize)
+      } else if (TE->UserTreeIndex &&
+                 TE->UserTreeIndex.UserTE->State == TreeEntry::SplitVectorize)
+        // Update orders in user split vectorize nodes.
         TE->UserTreeIndex.UserTE->reorderSplitNode(TE->UserTreeIndex.EdgeIdx,
                                                    Mask, MaskOrder);
     }
@@ -14105,9 +14104,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
             TEUseEI.UserTE->getOpcode() == Instruction::PHI &&
             UseEI.UserTE->State == TreeEntry::Vectorize &&
             UseEI.UserTE->getOpcode() == Instruction::PHI &&
-            TEUseEI.UserTE != UseEI.UserTE &&
-            TEUseEI.UserTE->getMainOp()->getParent() ==
-                UseEI.UserTE->getMainOp()->getParent())
+            TEUseEI.UserTE != UseEI.UserTE)
           continue;
         // If 2 gathers are operands of the same entry (regardless of whether
         // user is PHI or else), compare operands indices, use the earlier one

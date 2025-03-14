@@ -40,7 +40,7 @@ define dllexport amdgpu_cs void @atomic_add_in_wf(ptr addrspace(1) %arg, i32 inr
 ; GFX11-NEXT:  .LBB0_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s[4:5], s0, v0
 ; GFX11-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
 ; GFX11-NEXT:    s_ashr_i32 s3, s0, 31
@@ -149,7 +149,7 @@ define dllexport amdgpu_cs void @atomic_add_before(ptr addrspace(1) %arg, i32 in
 ; GFX11-NEXT:    s_mov_b64 s[4:5], exec
 ; GFX11-NEXT:  .LBB1_3: ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s[4:5], s0, v1
 ; GFX11-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
 ; GFX11-NEXT:    s_ashr_i32 s3, s0, 31
@@ -241,7 +241,7 @@ define dllexport amdgpu_cs void @atomic_add_after(ptr addrspace(1) %arg, i32 inr
 ; GFX11-NEXT:  .LBB2_1: ; =>This Inner Loop Header: Depth=1
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s[6:7], s0, v1
 ; GFX11-NEXT:    s_and_saveexec_b64 s[6:7], s[6:7]
 ; GFX11-NEXT:    s_ashr_i32 s9, s0, 31
@@ -358,8 +358,8 @@ define dllexport amdgpu_cs void @atomic_add_in_wf_partial(ptr addrspace(1) %arg,
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s[4:5], s0, v0
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s[6:7], s3, v1
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b64 s[4:5], s[4:5], s[6:7]
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b64 s[8:9], s[4:5]
 ; GFX11-NEXT:    s_ashr_i32 s3, s0, 31
 ; GFX11-NEXT:    s_add_u32 s4, s1, s0
