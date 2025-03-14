@@ -770,6 +770,7 @@ public:
     }
 
   public:
+    using size_type = size_t;
     using iterator_category = std::input_iterator_tag;
     using value_type = NameTableEntry;
     using difference_type = uint32_t;
@@ -792,6 +793,14 @@ public:
       NameIterator I = *this;
       next();
       return I;
+    }
+    reference operator[](size_type idx) {
+      return CurrentIndex->getNameTableEntry(idx + 1);
+    }
+
+    difference_type operator-(const NameIterator &other) const {
+      assert(CurrentIndex == other.CurrentIndex);
+      return this->CurrentName - other.CurrentName;
     }
 
     friend bool operator==(const NameIterator &A, const NameIterator &B) {
