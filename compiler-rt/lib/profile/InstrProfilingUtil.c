@@ -354,7 +354,7 @@ COMPILER_RT_VISIBILITY void lprofGetFileContentBuffer(FILE *F, uint64_t Length,
   size_t BytesRead = fread(Buffer, 1, Length, F);
   if (BytesRead != (size_t)Length) {
     PROF_ERR("%s: fread failed%s\n", __func__,
-             feof(F) ? ", end of file reached" : "");
+             feof(F) ? ": end of file reached" : "");
     free(Buffer);
     return;
   }
