@@ -687,10 +687,8 @@ void Liveness::computePhiInfo() {
 
         if (MidDefs.hasCoverOf(UR))
           continue;
-        if (Subs.find(MidDefs) == Subs.end()) {
-          Subs.insert({MidDefs, SubMap(1, RefHash(), RefEqual(PRI))});
-        }
-        SubMap &SM = Subs.at(MidDefs);
+        SubMap &SM = Subs.try_emplace(MidDefs, 1, RefHash(), RefEqual(PRI))
+                         .first->second;
 
         // General algorithm:
         //   for each (R,U) : U is use node of R, U is reached by PA
