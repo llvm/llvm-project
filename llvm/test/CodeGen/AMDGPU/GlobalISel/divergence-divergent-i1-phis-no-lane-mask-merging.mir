@@ -471,7 +471,7 @@ body: |
   ; GFX10-NEXT: bb.2:
   ; GFX10-NEXT:   successors: %bb.5(0x40000000), %bb.6(0x40000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[COPY3]](s1), %bb.0, %56(s1), %bb.4
+  ; GFX10-NEXT:   [[PHI:%[0-9]+]]:sreg_32(s1) = PHI [[COPY3]](s1), %bb.0, %57(s1), %bb.4
   ; GFX10-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI %29(s32), %bb.4, [[DEF]](s32), %bb.0
   ; GFX10-NEXT:   [[COPY4:%[0-9]+]]:sreg_32(s1) = COPY [[PHI]](s1)
   ; GFX10-NEXT:   G_BRCOND [[COPY4]](s1), %bb.5
@@ -486,6 +486,7 @@ body: |
   ; GFX10-NEXT:   [[C7:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
   ; GFX10-NEXT:   [[AMDGPU_BUFFER_LOAD1:%[0-9]+]]:_(s32) = G_AMDGPU_BUFFER_LOAD [[UV]](<4 x s32>), [[C7]](s32), [[PHI2]], [[C7]], 0, 0, 0 :: (dereferenceable load (s32), align 1, addrspace 8)
   ; GFX10-NEXT:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[AMDGPU_BUFFER_LOAD1]], [[PHI4]]
+  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[ADD]](s32), implicit $exec_lo
   ; GFX10-NEXT:   [[C8:%[0-9]+]]:_(s32) = G_CONSTANT i32 -1
   ; GFX10-NEXT:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[PHI3]], [[C8]]
   ; GFX10-NEXT:   [[C9:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
@@ -497,11 +498,11 @@ body: |
   ; GFX10-NEXT: bb.4:
   ; GFX10-NEXT:   successors: %bb.2(0x80000000)
   ; GFX10-NEXT: {{  $}}
-  ; GFX10-NEXT:   [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[ADD]](s32), [[AMDGPU_BUFFER_LOAD]]
+  ; GFX10-NEXT:   [[ICMP2:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY5]](s32), [[AMDGPU_BUFFER_LOAD]]
   ; GFX10-NEXT:   [[OR1:%[0-9]+]]:_(s1) = G_OR [[ICMP]], [[ICMP2]]
   ; GFX10-NEXT:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[OR1]](s1)
   ; GFX10-NEXT:   [[C10:%[0-9]+]]:_(s1) = G_CONSTANT i1 false
-  ; GFX10-NEXT:   [[COPY5:%[0-9]+]]:sreg_32(s1) = COPY [[C10]](s1)
+  ; GFX10-NEXT:   [[COPY6:%[0-9]+]]:sreg_32(s1) = COPY [[C10]](s1)
   ; GFX10-NEXT:   G_BR %bb.2
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT: bb.5:
