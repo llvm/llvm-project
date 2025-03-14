@@ -17,6 +17,16 @@ gpu.module @check_valid_SM_arch_acc [#nvvm.target<chip = "sm_90a">] {
   test.nvvm_requires_sm_90a
 }
 
+gpu.module @disable_verify_target1 [#nvvm.target<chip = "sm_90", verifyTarget = false>] {
+  test.nvvm_requires_sm_90a
+}
+
+gpu.module @disable_verify_target2 [#nvvm.target<chip = "sm_70", verifyTarget = false>] {
+  test.nvvm_requires_sm_80
+}
+
+
+
 // -----
 
 gpu.module @check_invalid_SM_lesser_1 [#nvvm.target<chip = "sm_70">] {
