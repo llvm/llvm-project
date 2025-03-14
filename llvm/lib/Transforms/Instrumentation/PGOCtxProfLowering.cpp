@@ -124,6 +124,7 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                       });
   FunctionDataTy =
       StructType::get(M.getContext(), {
+                                          PointerTy,          /*Next*/
                                           PointerTy,          /*FlatCtx*/
                                           SanitizerMutexType, /*Mutex*/
                                       });
