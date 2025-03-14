@@ -636,6 +636,9 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       return IC.replaceInstUsesWith(II, ConstantInt::get(II.getType(), Exp));
     }
 
+    if (isa<PoisonValue>(Src))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+
     if (isa<UndefValue>(Src)) {
       return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
     }
