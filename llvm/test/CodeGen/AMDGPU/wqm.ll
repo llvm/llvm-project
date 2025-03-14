@@ -1338,7 +1338,7 @@ define amdgpu_ps void @test_set_inactive2(i32 inreg %idx0, i32 inreg %idx1) {
 main_body:
   %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %src1.0 = bitcast float %src1 to i32
-  %src1.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src1.0, i32 undef)
+  %src1.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src1.0, i32 poison)
   %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
   %src0.0 = bitcast float %src0 to i32
   %src0.1 = call i32 @llvm.amdgcn.wqm.i32(i32 %src0.0)
