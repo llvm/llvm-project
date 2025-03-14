@@ -886,10 +886,10 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   switch (getOpcode()) {
   default:
     return false;
-  case Instruction::PHI:
-    return true;
   case Instruction::ExtractElement:
     return Op == getOperand(1);
+  case Instruction::PHI:
+    return true;
   case Instruction::ICmp:
   case Instruction::Select:
   case Instruction::Or:
