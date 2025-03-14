@@ -46,7 +46,7 @@ void diag(int a, int b, ...) {
   va_start(list, a);
   // However, the builtin itself is under no such constraints regarding
   // expanding or evaluating the second argument, so it can still diagnose.
-  __builtin_va_start(list, a); // expected-warning {{second argument to 'va_start' is not the last named parameter}}
+  __builtin_va_start(list, a); // expected-warning {{second argument to 'va_start' is not the last non-variadic parameter}}
   va_end(list);
 }
 
