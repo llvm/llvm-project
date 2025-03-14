@@ -296,7 +296,7 @@ void stripTokenBefore(SmallVectorImpl<Token> &Tokens, size_t Idx,
   StringRef Unindented = PrevTokenBody.rtrim(" \r\t\v");
   size_t Indentation = PrevTokenBody.size() - Unindented.size();
   if (CurrentType != Token::Type::Partial)
-    PrevToken.TokenBody = std::move(Unindented.str());
+    PrevToken.TokenBody = Unindented.str();
   CurrentToken.setIndentation(Indentation);
 }
 
