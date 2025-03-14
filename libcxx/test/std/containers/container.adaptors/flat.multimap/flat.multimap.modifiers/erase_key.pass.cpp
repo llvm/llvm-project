@@ -34,7 +34,7 @@ void test() {
   auto make = [](std::initializer_list<int> il) {
     M m;
     for (int i : il) {
-      m.emplace(i, i);
+      m.emplace(i, static_cast<char>(i));
     }
     return m;
   };
