@@ -23,10 +23,7 @@ module attributes {llvm.target_triple = "amdgcn-amd-amdhsa", omp.is_target_devic
 #loc3 = loc(fused<#sp>[#loc1])
 
 // CHECK: define{{.*}}@add(ptr %[[ARG:[0-9]+]]){{.*}}!dbg ![[SP:[0-9]+]] {
-// CHECK:   %[[AL:[0-9]+]] = alloca{{.*}}
-// CHECK:   %[[CAST:[0-9]+]] = addrspacecast ptr addrspace(5) %[[AL]]
-// CHECK:   store ptr %[[ARG]], ptr %[[CAST]]{{.*}}
-// CHECK: #dbg_declare(ptr %[[CAST]], ![[A:[0-9]+]], !DIExpression(DIOpArg(0, ptr addrspace(5)), DIOpDeref(ptr), DIOpDeref(ptr)), !{{.*}})
+// CHECK: #dbg_declare(ptr %[[ARG]], ![[A:[0-9]+]], !DIExpression(DIOpArg(0, ptr), DIOpDeref(ptr)), !{{.*}})
 // CHECK: }
 // CHECK: ![[SP]] = {{.*}}!DISubprogram(name: "add"{{.*}})
 // CHECK: ![[A]] = !DILocalVariable(name: "a", arg: 1, scope: ![[SP]]{{.*}})

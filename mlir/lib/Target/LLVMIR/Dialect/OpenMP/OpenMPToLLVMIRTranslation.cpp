@@ -5464,54 +5464,24 @@ static void updateDebugInfoForDeclareTargetVariables(
   }
 }
 
-// This function handle any adjustments needed in declare target function to
-// generate valid debug info for AMDGPU. It does 2 main things:
-// 1. Add DIOp based expressions
-// 2. If a debug reocrd points to function Argument as location then change it
-// to use an alloca instead.
+// This function adds DIOp based expressions in declare target function to
+// generate valid debug info for AMDGPU.
+
 static void updateDebugInfoForDeclareTargetFunctions(
     llvm::Function *Fn, LLVM::ModuleTranslation &moduleTranslation) {
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::Module &M = ompBuilder->M;
 
-  if (!((llvm::Triple(M.getTargetTriple())).isAMDGPU()))
+  if (!llvm::Triple(M.getTargetTriple()).isAMDGPU())
     return;
 
-  llvm::IRBuilderBase &builder = ompBuilder->Builder;
-  llvm::OpenMPIRBuilder::InsertPointTy curInsert = builder.saveIP();
-  unsigned int allocaAS = M.getDataLayout().getAllocaAddrSpace();
-  unsigned int defaultAS = M.getDataLayout().getProgramAddressSpace();
-
-  // In most cases, function argument are passed by reference in Fortran. In
-  // such cases, flang does not generate an alloca for such arguments. The
-  // debug record also point to the Argument* as the location. The AMDGPU
-  // backend drops the debug record in such cases. To side step this issue,
-  // we generate an alloca and store the Argument pointer in it. Then we can
-  // use that alloca as variable location and it works fine. Note that the
-  // expression used in the debug record has doubel indirection now. One for
-  // reading Argument* from the alloca and then reading the variable value from
-  //  the Argument*.
-  auto genAlloca = [&](llvm::Value *Arg) {
-    builder.SetInsertPoint(Fn->getEntryBlock().getFirstInsertionPt());
-    llvm::Value *V = builder.CreateAlloca(Arg->getType(), allocaAS, nullptr);
-    if (allocaAS != defaultAS && Arg->getType()->isPointerTy())
-      V = ompBuilder->Builder.CreateAddrSpaceCast(V,
-                                                  builder.getPtrTy(defaultAS));
-    builder.CreateStore(Arg, V);
-    builder.restoreIP(curInsert);
-    return V;
-  };
   auto UpdateDebugRecord = [&](auto *DR) {
     for (auto Loc : DR->location_ops()) {
       llvm::DIExprBuilder ExprBuilder(Fn->getContext());
-      ExprBuilder.append<llvm::DIOp::Arg>(
-          0u, ompBuilder->Builder.getPtrTy(allocaAS));
-      if (auto *Arg = dyn_cast<llvm::Argument>(Loc)) {
-        ExprBuilder.append<llvm::DIOp::Deref>(
-            ompBuilder->Builder.getPtrTy(defaultAS));
-        llvm::Value *newLoc = genAlloca(Arg);
-        DR->replaceVariableLocationOp(Arg, newLoc);
-      }
+      llvm::Type *Ty = Loc->getType();
+      if (auto *Ref = dyn_cast<llvm::AddrSpaceCastInst>(Loc))
+        Ty = Ref->getPointerOperand()->getType();
+      ExprBuilder.append<llvm::DIOp::Arg>(0u, Ty);
       ExprBuilder.append<llvm::DIOp::Deref>(Loc->getType());
       DR->setExpression(ExprBuilder.intoExpression());
     }
