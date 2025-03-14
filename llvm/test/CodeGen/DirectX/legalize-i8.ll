@@ -12,7 +12,7 @@ define i32 @removal_only_test(i32 %a) {
 define i32 @i8trunc(float %0) #0 {
   ; CHECK-LABEL: define i32 @i8trunc(
   ; CHECK-NOT: %4 = trunc nsw i32 %3 to i8
-  ; CHECK: add i32
+  ; CHECK: add nsw i32
   ; CHECK-NEXT: srem i32
   ; CHECK-NEXT: sub i32
   ; CHECK-NEXT: mul i32

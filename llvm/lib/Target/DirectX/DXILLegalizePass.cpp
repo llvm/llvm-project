@@ -70,15 +70,21 @@ static bool fixI8TruncUseChain(Instruction &I,
     }
 
     Value *NewInst = nullptr;
-    if (auto *BO = dyn_cast<BinaryOperator>(&I))
+    if (auto *BO = dyn_cast<BinaryOperator>(&I)) {
       NewInst =
           Builder.CreateBinOp(BO->getOpcode(), NewOperands[0], NewOperands[1]);
-    else if (Cmp) {
+
+      if (auto *OBO = dyn_cast<OverflowingBinaryOperator>(&I)) {
+        if (OBO->hasNoSignedWrap())
+          cast<BinaryOperator>(NewInst)->setHasNoSignedWrap();
+        if (OBO->hasNoUnsignedWrap())
+          cast<BinaryOperator>(NewInst)->setHasNoUnsignedWrap();
+      }
+    } else if (Cmp) {
       NewInst = Builder.CreateCmp(Cmp->getPredicate(), NewOperands[0],
                                   NewOperands[1]);
       Cmp->replaceAllUsesWith(NewInst);
-    } else if (auto *UnaryOp = dyn_cast<UnaryOperator>(&I))
-      NewInst = Builder.CreateUnOp(UnaryOp->getOpcode(), NewOperands[0]);
+    }
 
     if (NewInst) {
       ReplacedValues[&I] = NewInst;
