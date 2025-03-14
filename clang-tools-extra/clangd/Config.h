@@ -156,6 +156,15 @@ struct Config {
     ArgumentListsPolicy ArgumentLists = ArgumentListsPolicy::FullPlaceholders;
   } Completion;
 
+  enum class HeaderInsertionPolicy {
+    IWYU,       // Include what you use
+    NeverInsert // Never insert headers as part of code completion
+  };
+
+  struct {
+    HeaderInsertionPolicy Policy = HeaderInsertionPolicy::IWYU;
+  } HeaderInsertion;
+
   /// Configures hover feature.
   struct {
     /// Whether hover show a.k.a type.
