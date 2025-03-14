@@ -9247,9 +9247,10 @@ def ValueTypeDocs : Documentation {
   let Category = DocCatDecl;
   let Content = [{
 The ``value_type`` attribute can be used to mark user-defined types as 'value
-types'. When objects of value types are passed by-value to functions, the
-argument must be the only value referencing the passed object. This allows the
-optimizer to assume that no other pointers may alias the object when it is
-passed indirectly to a function..
+types'. When objects of value types are passed value to functions, the objects
+are always considered to be formally copied into a new object. This means the
+argument itself must be the only value referencing the passed object. This
+allows the optimizer to assume that no other pointers may alias the object when
+it is passed indirectly to a function..
   }];
 }
