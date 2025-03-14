@@ -363,6 +363,10 @@ Windows Support
   which makes ``offsetof`` provided by Microsoft's ``<stddef.h>`` to be defined
   correctly. (#GH59689)
 
+- Clang now can process the `i128` and `ui128` integeral suffixes when MSVC
+  extensions are enabled. This allows for properly processing ``intsafe.h`` in
+  the Windows SDK.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
