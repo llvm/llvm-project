@@ -54,6 +54,21 @@ int __ompt_get_task_info_internal(int ancestor_level, int *type,
 
 ompt_data_t *__ompt_get_thread_data_internal();
 
+// __ompt_task_init:
+//   Initialize OMPT fields maintained by a task. This will only be called after
+//   ompt_start_tool, so we already know whether ompt is enabled or not.
+
+static inline void __ompt_task_init(kmp_taskdata_t *task, int tid) {
+  // The calls to __ompt_task_init already have the ompt_enabled condition.
+  task->ompt_task_info.task_data.value = 0;
+  task->ompt_task_info.frame.exit_frame = ompt_data_none;
+  task->ompt_task_info.frame.enter_frame = ompt_data_none;
+  task->ompt_task_info.frame.exit_frame_flags =
+      task->ompt_task_info.frame.enter_frame_flags = OMPT_FRAME_FLAGS_RUNTIME;
+  task->ompt_task_info.dispatch_chunk.start = 0;
+  task->ompt_task_info.dispatch_chunk.iterations = 0;
+}
+
 /*
  * Unused currently
 static uint64_t __ompt_get_get_unique_id_internal();

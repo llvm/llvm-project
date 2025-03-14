@@ -2582,9 +2582,9 @@ the configuration (without a prefix: ``Auto``).
 
 .. _BracedInitializerIndentWidth:
 
-**BracedInitializerIndentWidth** (``Unsigned``) :versionbadge:`clang-format 17` :ref:`¶ <BracedInitializerIndentWidth>`
+**BracedInitializerIndentWidth** (``Integer``) :versionbadge:`clang-format 17` :ref:`¶ <BracedInitializerIndentWidth>`
   The number of columns to use to indent the contents of braced init lists.
-  If unset, ``ContinuationIndentWidth`` is used.
+  If unset or negative, ``ContinuationIndentWidth`` is used.
 
   .. code-block:: c++
 

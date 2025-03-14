@@ -3185,6 +3185,29 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
   EXPECT_TOKEN(Tokens[5], tok::r_paren, TT_AttributeRParen);
 }
 
+TEST_F(TokenAnnotatorTest, UnderstandsNullabilityAttributeMacros) {
+  // Under Google style, handles the Abseil macro aliases for the Clang
+  // nullability annotations.
+  auto Style = getGoogleStyle(FormatStyle::LK_Cpp);
+  auto Tokens = annotate("x = (foo* absl_nullable)*v;", Style);
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
+
+  Tokens = annotate("x = (foo* absl_nonnull)*v;", Style);
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
+
+  Tokens = annotate("x = (foo* absl_nullability_unknown)*v;", Style);
+  ASSERT_EQ(Tokens.size(), 11u) << Tokens;
+  EXPECT_TOKEN(Tokens[4], tok::star, TT_PointerOrReference);
+  EXPECT_TOKEN(Tokens[5], tok::identifier, TT_AttributeMacro);
+  EXPECT_TOKEN(Tokens[7], tok::star, TT_UnaryOperator);
+}
+
 TEST_F(TokenAnnotatorTest, UnderstandsControlStatements) {
   auto Tokens = annotate("while (true) {}");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
@@ -3677,6 +3700,11 @@ TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::pipepipe, TT_BinaryOperator);
 
+  Tokens = annotate("return segment < *this or *this < segment;");
+  ASSERT_EQ(Tokens.size(), 12u) << Tokens;
+  EXPECT_TOKEN(Tokens[5], tok::pipepipe, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[6], tok::star, TT_UnaryOperator);
+
   Tokens = annotate("a = b or_eq c;");
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::pipeequal, TT_BinaryOperator);
@@ -3689,13 +3717,24 @@ TEST_F(TokenAnnotatorTest, CppAltOperatorKeywords) {
   ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::caretequal, TT_BinaryOperator);
 
-  Tokens = annotate("xor = foo;");
+  const auto StyleC = getLLVMStyle(FormatStyle::LK_C);
+
+  Tokens = annotate("xor = foo;", StyleC);
   ASSERT_EQ(Tokens.size(), 5u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::identifier, TT_Unknown);
 
-  Tokens = annotate("int xor = foo;");
+  Tokens = annotate("int xor = foo;", StyleC);
   ASSERT_EQ(Tokens.size(), 6u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::identifier, TT_StartOfName);
+}
+
+TEST_F(TokenAnnotatorTest, CppOnlyKeywordInC) {
+  auto Tokens = annotate("int maximized = new & STATE_MAXIMIZED;",
+                         getLLVMStyle(FormatStyle::LK_C));
+  ASSERT_EQ(Tokens.size(), 8u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown); // Not tok::kw_new
+  EXPECT_TOKEN(Tokens[4], tok::amp, TT_BinaryOperator);
+  EXPECT_TOKEN(Tokens[3], tok::identifier, TT_Unknown); // Not TT_StartOfName
 }
 
 TEST_F(TokenAnnotatorTest, FunctionTryBlock) {

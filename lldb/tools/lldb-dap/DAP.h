@@ -13,11 +13,13 @@
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "Handler/RequestHandler.h"
-#include "IOStream.h"
+#include "Handler/ResponseHandler.h"
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
+#include "Protocol.h"
 #include "SourceBreakpoint.h"
+#include "Transport.h"
 #include "lldb/API/SBBroadcaster.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
@@ -29,6 +31,7 @@
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -37,7 +40,6 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Threading.h"
-#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -67,8 +69,6 @@ enum DAPBroadcasterBits {
   eBroadcastBitStopEventThread = 1u << 0,
   eBroadcastBitStopProgressThread = 1u << 1
 };
-
-typedef void (*ResponseCallback)(llvm::Expected<llvm::json::Value> value);
 
 enum class PacketStatus {
   Success = 0,
@@ -145,11 +145,9 @@ struct SendEventRequestHandler : public lldb::SBCommandPluginInterface {
 };
 
 struct DAP {
-  std::string name;
-  llvm::StringRef debug_adaptor_path;
+  llvm::StringRef debug_adapter_path;
   std::ofstream *log;
-  InputStream input;
-  OutputStream output;
+  Transport &transport;
   lldb::SBFile in;
   OutputRedirector out;
   OutputRedirector err;
@@ -197,7 +195,7 @@ struct DAP {
   llvm::DenseSet<lldb::tid_t> thread_ids;
   uint32_t reverse_request_seq;
   std::mutex call_mutex;
-  std::map<int /* request_seq */, ResponseCallback /* reply handler */>
+  llvm::SmallDenseMap<int64_t, std::unique_ptr<ResponseHandler>>
       inflight_reverse_requests;
   ReplMode repl_mode;
   std::string command_escape_prefix = "`";
@@ -210,12 +208,30 @@ struct DAP {
   // will contain that expression.
   std::string last_nonempty_var_expression;
 
-  DAP(std::string name, llvm::StringRef path, std::ofstream *log,
-      StreamDescriptor input, StreamDescriptor output, ReplMode repl_mode,
-      std::vector<std::string> pre_init_commands);
+  /// Creates a new DAP sessions.
+  ///
+  /// \param[in] path
+  ///     Path to the lldb-dap binary.
+  /// \param[in] log
+  ///     Log file stream, if configured.
+  /// \param[in] default_repl_mode
+  ///     Default repl mode behavior, as configured by the binary.
+  /// \param[in] pre_init_commands
+  ///     LLDB commands to execute as soon as the debugger instance is allocaed.
+  /// \param[in] transport
+  ///     Transport for this debug session.
+  DAP(llvm::StringRef path, std::ofstream *log,
+      const ReplMode default_repl_mode,
+      std::vector<std::string> pre_init_commands, Transport &transport);
+
   ~DAP();
+
+  /// DAP is not copyable.
+  /// @{
   DAP(const DAP &rhs) = delete;
   void operator=(const DAP &rhs) = delete;
+  /// @}
+
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
   ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
 
@@ -232,8 +248,6 @@ struct DAP {
   // Serialize the JSON value into a string and send the JSON packet to
   // the "out" stream.
   void SendJSON(const llvm::json::Value &json);
-
-  std::string ReadJSON();
 
   void SendOutput(OutputType o, const llvm::StringRef output);
 
@@ -307,8 +321,7 @@ struct DAP {
   /// listeing for its breakpoint events.
   void SetTarget(const lldb::SBTarget target);
 
-  PacketStatus GetNextObject(llvm::json::Object &object);
-  bool HandleObject(const llvm::json::Object &object);
+  bool HandleObject(const protocol::Message &M);
 
   /// Disconnect the DAP session.
   lldb::SBError Disconnect();
@@ -327,12 +340,24 @@ struct DAP {
   ///   The reverse request command.
   ///
   /// \param[in] arguments
-  ///   The reverse request arguements.
-  ///
-  /// \param[in] callback
-  ///   A callback to execute when the response arrives.
-  void SendReverseRequest(llvm::StringRef command, llvm::json::Value arguments,
-                          ResponseCallback callback);
+  ///   The reverse request arguments.
+  template <typename Handler>
+  void SendReverseRequest(llvm::StringRef command,
+                          llvm::json::Value arguments) {
+    int64_t id;
+    {
+      std::lock_guard<std::mutex> locker(call_mutex);
+      id = ++reverse_request_seq;
+      inflight_reverse_requests[id] = std::make_unique<Handler>(command, id);
+    }
+
+    SendJSON(llvm::json::Object{
+        {"type", "request"},
+        {"seq", id},
+        {"command", command},
+        {"arguments", std::move(arguments)},
+    });
+  }
 
   /// Registers a request handler.
   template <typename Handler> void RegisterRequest() {
@@ -370,12 +395,6 @@ struct DAP {
   InstructionBreakpoint *GetInstructionBreakpoint(const lldb::break_id_t bp_id);
 
   InstructionBreakpoint *GetInstructionBPFromStopReason(lldb::SBThread &thread);
-
-private:
-  // Send the JSON in "json_str" to the "out" stream. Correctly send the
-  // "Content-Length:" field followed by the length, followed by the raw
-  // JSON bytes.
-  void SendJSON(const std::string &json_str);
 };
 
 } // namespace lldb_dap

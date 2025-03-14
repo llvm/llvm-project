@@ -1478,10 +1478,21 @@ bool AMDGPUInstructionSelector::selectG_ICMP_or_FCMP(MachineInstr &I) const {
   if (Opcode == -1)
     return false;
 
-  MachineInstr *ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode),
-            I.getOperand(0).getReg())
-            .add(I.getOperand(2))
-            .add(I.getOperand(3));
+  MachineInstrBuilder ICmp;
+  // t16 instructions
+  if (AMDGPU::hasNamedOperand(Opcode, AMDGPU::OpName::src0_modifiers)) {
+    ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), I.getOperand(0).getReg())
+               .addImm(0)
+               .add(I.getOperand(2))
+               .addImm(0)
+               .add(I.getOperand(3))
+               .addImm(0); // op_sel
+  } else {
+    ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode), I.getOperand(0).getReg())
+               .add(I.getOperand(2))
+               .add(I.getOperand(3));
+  }
+
   RBI.constrainGenericRegister(ICmp->getOperand(0).getReg(),
                                *TRI.getBoolRC(), *MRI);
   bool Ret = constrainSelectedInstRegOperands(*ICmp, TII, TRI, RBI);
@@ -2003,9 +2014,9 @@ static bool parseTexFail(uint64_t TexFailCtrl, bool &TFE, bool &LWE,
   if (TexFailCtrl)
     IsTexFail = true;
 
-  TFE = (TexFailCtrl & 0x1) ? true : false;
+  TFE = TexFailCtrl & 0x1;
   TexFailCtrl &= ~(uint64_t)0x1;
-  LWE = (TexFailCtrl & 0x2) ? true : false;
+  LWE = TexFailCtrl & 0x2;
   TexFailCtrl &= ~(uint64_t)0x2;
 
   return TexFailCtrl == 0;
@@ -2322,10 +2333,8 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     break;
   case Intrinsic::amdgcn_ds_bvh_stack_rtn:
     return selectDSBvhStackIntrinsic(I);
-  case Intrinsic::amdgcn_s_barrier_init:
   case Intrinsic::amdgcn_s_barrier_signal_var:
     return selectNamedBarrierInit(I, IntrinsicID);
-  case Intrinsic::amdgcn_s_barrier_join:
   case Intrinsic::amdgcn_s_get_named_barrier_state:
     return selectNamedBarrierInst(I, IntrinsicID);
   case Intrinsic::amdgcn_s_get_barrier_state:
@@ -3569,7 +3578,8 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
   return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
 }
 
-bool AMDGPUInstructionSelector::selectBVHIntrinsic(MachineInstr &MI) const{
+bool AMDGPUInstructionSelector::selectBVHIntersectRayIntrinsic(
+    MachineInstr &MI) const {
   MI.setDesc(TII.get(MI.getOperand(1).getImm()));
   MI.removeOperand(1);
   MI.addImplicitDefUseOperands(*MI.getParent()->getParent());
@@ -4087,8 +4097,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     assert(Intr && "not an image intrinsic with image pseudo");
     return selectImageIntrinsic(I, Intr);
   }
-  case AMDGPU::G_AMDGPU_INTRIN_BVH_INTERSECT_RAY:
-    return selectBVHIntrinsic(I);
+  case AMDGPU::G_AMDGPU_BVH_INTERSECT_RAY:
+    return selectBVHIntersectRayIntrinsic(I);
   case AMDGPU::G_SBFX:
   case AMDGPU::G_UBFX:
     return selectG_SBFX_UBFX(I);
@@ -4597,6 +4607,7 @@ AMDGPUInstructionSelector::selectVOP3OpSelMods(MachineOperand &Root) const {
   }};
 }
 
+// FIXME-TRUE16 remove when fake16 is removed
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVINTERPMods(MachineOperand &Root) const {
   Register Src;
@@ -5928,8 +5939,6 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
     switch (IntrID) {
     default:
       llvm_unreachable("not a named barrier op");
-    case Intrinsic::amdgcn_s_barrier_join:
-      return AMDGPU::S_BARRIER_JOIN_IMM;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_IMM;
     };
@@ -5937,8 +5946,6 @@ unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
     switch (IntrID) {
     default:
       llvm_unreachable("not a named barrier op");
-    case Intrinsic::amdgcn_s_barrier_join:
-      return AMDGPU::S_BARRIER_JOIN_M0;
     case Intrinsic::amdgcn_s_get_named_barrier_state:
       return AMDGPU::S_GET_BARRIER_STATE_M0;
     };
@@ -5989,11 +5996,8 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
       BuildMI(*MBB, &I, DL, TII.get(AMDGPU::COPY), AMDGPU::M0).addReg(TmpReg4);
   constrainSelectedInstRegOperands(*CopyMIB, TII, TRI, RBI);
 
-  unsigned Opc = IntrID == Intrinsic::amdgcn_s_barrier_init
-                     ? AMDGPU::S_BARRIER_INIT_M0
-                     : AMDGPU::S_BARRIER_SIGNAL_M0;
   MachineInstrBuilder MIB;
-  MIB = BuildMI(*MBB, &I, DL, TII.get(Opc));
+  MIB = BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_M0));
 
   I.eraseFromParent();
   return true;

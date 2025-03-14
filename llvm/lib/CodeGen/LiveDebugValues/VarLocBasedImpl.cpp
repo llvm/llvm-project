@@ -1359,10 +1359,9 @@ void VarLocBasedLDV::removeEntryValue(const MachineInstr &MI,
     return;
 
   // Try to get non-debug instruction responsible for the DBG_VALUE.
-  const MachineInstr *TransferInst = nullptr;
   Register Reg = MI.getDebugOperand(0).getReg();
-  if (Reg.isValid() && RegSetInstrs.contains(Reg))
-    TransferInst = RegSetInstrs.find(Reg)->second;
+  const MachineInstr *TransferInst =
+      Reg.isValid() ? RegSetInstrs.lookup(Reg) : nullptr;
 
   // Case of the parameter's DBG_VALUE at the start of entry MBB.
   if (!TransferInst && !LastNonDbgMI && MI.getParent()->isEntryBlock())

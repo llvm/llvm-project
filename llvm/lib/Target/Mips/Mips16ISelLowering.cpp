@@ -435,9 +435,8 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
         Mips16IntrinsicHelperType IntrinsicFind = { Symbol, "" };
         const Mips16HardFloatInfo::FuncSignature *Signature =
             Mips16HardFloatInfo::findFuncSignature(Symbol);
-        if (!IsPICCall && (Signature && (FuncInfo->StubsNeeded.find(Symbol) ==
-                                         FuncInfo->StubsNeeded.end()))) {
-          FuncInfo->StubsNeeded[Symbol] = Signature;
+        if (!IsPICCall && Signature &&
+            FuncInfo->StubsNeeded.try_emplace(Symbol, Signature).second) {
           //
           // S2 is normally saved if the stub is for a function which
           // returns a float or double value and is not otherwise. This is

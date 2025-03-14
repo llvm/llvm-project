@@ -18,6 +18,8 @@ include "clang/CIR/Dialect/IR/CIRDialect.td"
 include "clang/CIR/Dialect/IR/CIRTypes.td"
 include "clang/CIR/Dialect/IR/CIRAttrs.td"
 
+include "clang/CIR/Interfaces/CIROpInterfaces.td"
+
 include "mlir/IR/BuiltinAttributeInterfaces.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/SymbolInterfaces.td"
@@ -113,6 +115,158 @@ def ConstantOp : CIR_Op<"const",
   }];
 
   let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// AllocaOp
+//===----------------------------------------------------------------------===//
+
+class AllocaTypesMatchWith<string summary, string lhsArg, string rhsArg,
+                     string transform, string comparator = "std::equal_to<>()">
+  : PredOpTrait<summary, CPred<
+      comparator # "(" #
+      !subst("$_self", "$" # lhsArg # ".getType()", transform) #
+             ", $" # rhsArg # ")">> {
+  string lhs = lhsArg;
+  string rhs = rhsArg;
+  string transformer = transform;
+}
+
+def AllocaOp : CIR_Op<"alloca", [
+  AllocaTypesMatchWith<"'allocaType' matches pointee type of 'addr'",
+                 "addr", "allocaType",
+                 "cast<PointerType>($_self).getPointee()">,
+                 DeclareOpInterfaceMethods<PromotableAllocationOpInterface>]> {
+  let summary = "Defines a scope-local variable";
+  let description = [{
+    The `cir.alloca` operation defines a scope-local variable.
+
+    The presence of the `const` attribute indicates that the local variable is
+    declared with C/C++ `const` keyword.
+
+    The result type is a pointer to the input's type.
+
+    Example:
+
+    ```mlir
+    // int count;
+    %0 = cir.alloca i32, !cir.ptr<i32>, ["count"] {alignment = 4 : i64}
+
+    // int *ptr;
+    %1 = cir.alloca !cir.ptr<i32>, !cir.ptr<!cir.ptr<i32>>, ["ptr"] {alignment = 8 : i64}
+    ...
+    ```
+  }];
+
+  let arguments = (ins
+    TypeAttr:$allocaType,
+    StrAttr:$name,
+    UnitAttr:$init,
+    UnitAttr:$constant,
+    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment,
+    OptionalAttr<ArrayAttr>:$annotations
+  );
+
+  let results = (outs Res<CIR_PointerType, "",
+                      [MemAlloc<AutomaticAllocationScopeResource>]>:$addr);
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins "mlir::Type":$addr,
+                   "mlir::Type":$allocaType,
+                   "llvm::StringRef":$name,
+                   "mlir::IntegerAttr":$alignment)>
+  ];
+
+  let extraClassDeclaration = [{
+    // Whether the alloca input type is a pointer.
+    bool isPointerType() { return ::mlir::isa<::cir::PointerType>(getAllocaType()); }
+  }];
+
+  let assemblyFormat = [{
+    $allocaType `,` qualified(type($addr)) `,`
+    `[` $name
+       (`,` `init` $init^)?
+       (`,` `const` $constant^)?
+    `]`
+    ($annotations^)? attr-dict
+  }];
+
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// LoadOp
+//===----------------------------------------------------------------------===//
+
+def LoadOp : CIR_Op<"load", [
+  TypesMatchWith<"type of 'result' matches pointee type of 'addr'",
+                 "addr", "result",
+                 "cast<PointerType>($_self).getPointee()">,
+                 DeclareOpInterfaceMethods<PromotableMemOpInterface>]> {
+
+  let summary = "Load value from memory adddress";
+  let description = [{
+    `cir.load` reads a value (lvalue to rvalue conversion) given an address
+    backed up by a `cir.ptr` type.
+
+    Example:
+
+    ```mlir
+
+    // Read from local variable, address in %0.
+    %1 = cir.load %0 : !cir.ptr<i32>, i32
+    ```
+  }];
+
+  let arguments = (ins Arg<CIR_PointerType, "the address to load from",
+                           [MemRead]>:$addr);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $addr `:` qualified(type($addr)) `,` type($result) attr-dict
+  }];
+
+  // FIXME: add verifier.
+}
+
+//===----------------------------------------------------------------------===//
+// StoreOp
+//===----------------------------------------------------------------------===//
+
+def StoreOp : CIR_Op<"store", [
+  TypesMatchWith<"type of 'value' matches pointee type of 'addr'",
+                 "addr", "value",
+                 "cast<PointerType>($_self).getPointee()">,
+                 DeclareOpInterfaceMethods<PromotableMemOpInterface>]> {
+
+  let summary = "Store value to memory address";
+  let description = [{
+    `cir.store` stores a value (first operand) to the memory address specified
+    in the second operand. A unit attribute `volatile` can be used to indicate
+    a volatile store. Store's can be marked atomic by using
+    `atomic(<mem_order>)`.
+
+    `align` can be used to specify an alignment that's different from the
+    default, which is computed from `result`'s type ABI data layout.
+
+    Example:
+
+    ```mlir
+    // Store a function argument to local storage, address in %0.
+    cir.store %arg0, %0 : i32, !cir.ptr<i32>
+    ```
+  }];
+
+  let arguments = (ins CIR_AnyType:$value,
+                       Arg<CIR_PointerType, "the address to store the value",
+                           [MemWrite]>:$addr);
+
+  let assemblyFormat = [{
+    $value `,` $addr attr-dict `:` type($value) `,` qualified(type($addr))
+  }];
+
+  // FIXME: add verifier.
 }
 
 //===----------------------------------------------------------------------===//
@@ -275,8 +429,101 @@ def ScopeOp : CIR_Op<"scope", [
 }
 
 //===----------------------------------------------------------------------===//
+// BrOp
+//===----------------------------------------------------------------------===//
+
+def BrOp : CIR_Op<"br",
+      [DeclareOpInterfaceMethods<BranchOpInterface, ["getSuccessorForOperands"]>,
+     Pure, Terminator]> {
+  let summary = "Unconditional branch";
+  let description = [{
+    The `cir.br` branches unconditionally to a block. Used to represent C/C++
+    goto's and general block branching.
+
+    Note that for source level `goto`'s crossing scope boundaries, those are
+    usually represented with the "symbolic" `cir.goto` operation.
+
+    Example:
+
+    ```mlir
+      ...
+        cir.br ^bb3
+      ^bb3:
+        cir.return
+    ```
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Block *":$dest,
+              CArg<"mlir::ValueRange", "{}">:$destOperands), [{
+      $_state.addSuccessors(dest);
+      $_state.addOperands(destOperands);
+    }]>
+  ];
+
+  let arguments = (ins Variadic<CIR_AnyType>:$destOperands);
+  let successors = (successor AnySuccessor:$dest);
+  let assemblyFormat = [{
+    $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
+
+// Linkage types. This is currently a replay of llvm/IR/GlobalValue.h, this is
+// currently handy as part of forwarding appropriate linkage types for LLVM
+// lowering, specially useful for C++ support.
+
+// Externally visible function
+def Global_ExternalLinkage :
+  I32EnumAttrCase<"ExternalLinkage", 0, "external">;
+// Available for inspection, not emission.
+def Global_AvailableExternallyLinkage :
+  I32EnumAttrCase<"AvailableExternallyLinkage", 1, "available_externally">;
+// Keep one copy of function when linking (inline)
+def Global_LinkOnceAnyLinkage :
+  I32EnumAttrCase<"LinkOnceAnyLinkage", 2, "linkonce">;
+// Same, but only replaced by something equivalent.
+def Global_LinkOnceODRLinkage :
+  I32EnumAttrCase<"LinkOnceODRLinkage", 3, "linkonce_odr">;
+// Keep one copy of named function when linking (weak)
+def Global_WeakAnyLinkage :
+  I32EnumAttrCase<"WeakAnyLinkage", 4, "weak">;
+// Same, but only replaced by something equivalent.
+def Global_WeakODRLinkage :
+  I32EnumAttrCase<"WeakODRLinkage", 5, "weak_odr">;
+// TODO: should we add something like appending linkage too?
+// Special purpose, only applies to global arrays
+// def Global_AppendingLinkage :
+//   I32EnumAttrCase<"AppendingLinkage", 6, "appending">;
+// Rename collisions when linking (static functions).
+def Global_InternalLinkage :
+  I32EnumAttrCase<"InternalLinkage", 7, "internal">;
+// Like Internal, but omit from symbol table, prefix it with
+// "cir_" to prevent clash with MLIR's symbol "private".
+def Global_PrivateLinkage :
+  I32EnumAttrCase<"PrivateLinkage", 8, "cir_private">;
+// ExternalWeak linkage description.
+def Global_ExternalWeakLinkage :
+  I32EnumAttrCase<"ExternalWeakLinkage", 9, "extern_weak">;
+// Tentative definitions.
+def Global_CommonLinkage :
+  I32EnumAttrCase<"CommonLinkage", 10, "common">;
+
+/// An enumeration for the kinds of linkage for global values.
+def GlobalLinkageKind : I32EnumAttr<
+    "GlobalLinkageKind",
+    "Linkage type/kind",
+    [Global_ExternalLinkage, Global_AvailableExternallyLinkage,
+     Global_LinkOnceAnyLinkage, Global_LinkOnceODRLinkage,
+     Global_WeakAnyLinkage, Global_WeakODRLinkage,
+     Global_InternalLinkage, Global_PrivateLinkage,
+     Global_ExternalWeakLinkage, Global_CommonLinkage
+     ]> {
+  let cppNamespace = "::cir";
+}
 
 // TODO(CIR): For starters, cir.global has only name and type.  The other
 // properties of a global variable will be added over time as more of ClangIR
@@ -289,12 +536,19 @@ def GlobalOp : CIR_Op<"global"> {
 
     The backing memory for the variable is allocated statically and is
     described by the type of the variable.
+
+    The `linkage` tracks C/C++ linkage types, currently very similar to LLVM's.
   }];
 
-  let arguments = (ins SymbolNameAttr:$sym_name, TypeAttr:$sym_type,
-                       OptionalAttr<AnyAttr>:$initial_value);
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       TypeAttr:$sym_type,
+                       Arg<GlobalLinkageKind, "linkage type">:$linkage,
+                       OptionalAttr<AnyAttr>:$initial_value,
+                       UnitAttr:$dsolocal);
 
   let assemblyFormat = [{
+    $linkage
+    (`dsolocal` $dsolocal^)?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
     attr-dict
@@ -307,8 +561,12 @@ def GlobalOp : CIR_Op<"global"> {
 
   let skipDefaultBuilders = 1;
 
-  let builders = [OpBuilder<(ins "llvm::StringRef":$sym_name,
-                                 "mlir::Type":$sym_type)>];
+  let builders = [OpBuilder<(ins
+    "llvm::StringRef":$sym_name,
+    "mlir::Type":$sym_type,
+    // CIR defaults to external linkage.
+    CArg<"cir::GlobalLinkageKind",
+    "cir::GlobalLinkageKind::ExternalLinkage">:$linkage)>];
 
   let hasVerifier = 1;
 }
@@ -364,12 +622,6 @@ def FuncOp : CIR_Op<"func", [
     llvm::ArrayRef<mlir::Type> getResultTypes() {
        return getFunctionType().getReturnTypes();
     }
-
-    /// Hook for OpTrait::FunctionOpInterfaceTrait, called after verifying that
-    /// the 'type' attribute is present and checks if it holds a function type.
-    /// Ensures getType, getNumFuncArguments, and getNumFuncResults can be
-    /// called safely.
-    llvm::LogicalResult verifyType();
 
     //===------------------------------------------------------------------===//
     // SymbolOpInterface Methods

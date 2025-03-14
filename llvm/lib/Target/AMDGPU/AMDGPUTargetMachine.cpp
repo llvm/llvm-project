@@ -19,12 +19,13 @@
 #include "AMDGPUAliasAnalysis.h"
 #include "AMDGPUCtorDtorLowering.h"
 #include "AMDGPUExportClustering.h"
+#include "AMDGPUExportKernelRuntimeHandles.h"
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUISelDAGToDAG.h"
 #include "AMDGPUMacroFusion.h"
-#include "AMDGPUOpenCLEnqueuedBlockLowering.h"
 #include "AMDGPUPerfHintAnalysis.h"
 #include "AMDGPURemoveIncompatibleFunctions.h"
+#include "AMDGPUReserveWWMRegs.h"
 #include "AMDGPUSplitModule.h"
 #include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
@@ -517,7 +518,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerKernelArgumentsPass(*PR);
   initializeAMDGPUPromoteKernelArgumentsPass(*PR);
   initializeAMDGPULowerKernelAttributesPass(*PR);
-  initializeAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass(*PR);
+  initializeAMDGPUExportKernelRuntimeHandlesLegacyPass(*PR);
   initializeAMDGPUPostLegalizerCombinerPass(*PR);
   initializeAMDGPUPreLegalizerCombinerPass(*PR);
   initializeAMDGPURegBankCombinerPass(*PR);
@@ -528,25 +529,25 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPURemoveIncompatibleFunctionsLegacyPass(*PR);
   initializeAMDGPULowerModuleLDSLegacyPass(*PR);
   initializeAMDGPULowerBufferFatPointersPass(*PR);
-  initializeAMDGPUReserveWWMRegsPass(*PR);
+  initializeAMDGPUReserveWWMRegsLegacyPass(*PR);
   initializeAMDGPURewriteOutArgumentsPass(*PR);
   initializeAMDGPURewriteUndefForPHILegacyPass(*PR);
   initializeAMDGPUUnifyMetadataPass(*PR);
   initializeSIAnnotateControlFlowLegacyPass(*PR);
-  initializeAMDGPUInsertDelayAluPass(*PR);
+  initializeAMDGPUInsertDelayAluLegacyPass(*PR);
   initializeSIInsertHardClausesPass(*PR);
   initializeSIInsertWaitcntsPass(*PR);
-  initializeSIModeRegisterPass(*PR);
+  initializeSIModeRegisterLegacyPass(*PR);
   initializeSIWholeQuadModeLegacyPass(*PR);
   initializeSILowerControlFlowLegacyPass(*PR);
   initializeSIPreEmitPeepholePass(*PR);
   initializeSILateBranchLoweringPass(*PR);
-  initializeSIMemoryLegalizerPass(*PR);
+  initializeSIMemoryLegalizerLegacyPass(*PR);
   initializeSIOptimizeExecMaskingLegacyPass(*PR);
   initializeSIPreAllocateWWMRegsLegacyPass(*PR);
   initializeSIFormMemoryClausesLegacyPass(*PR);
   initializeSIPostRABundlerLegacyPass(*PR);
-  initializeGCNCreateVOPDPass(*PR);
+  initializeGCNCreateVOPDLegacyPass(*PR);
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
   initializeAMDGPUExternalAAWrapperPass(*PR);
@@ -1225,8 +1226,8 @@ void AMDGPUPassConfig::addIRPasses() {
   if (Arch == Triple::r600)
     addPass(createR600OpenCLImageTypeLoweringPass());
 
-  // Replace OpenCL enqueued block function pointers with global variables.
-  addPass(createAMDGPUOpenCLEnqueuedBlockLoweringLegacyPass());
+  // Make enqueued block runtime handles externally visible.
+  addPass(createAMDGPUExportKernelRuntimeHandlesLegacyPass());
 
   // Lower LDS accesses to global memory pass if address sanitizer is enabled.
   if (EnableSwLowerLDS)
@@ -1382,7 +1383,11 @@ bool GCNPassConfig::addPreISel() {
   // control flow modifications.
   addPass(createAMDGPURewriteUndefForPHILegacyPass());
 
-  addPass(createLCSSAPass());
+  // SDAG requires LCSSA, GlobalISel does not. Disable LCSSA for -global-isel
+  // with -new-reg-bank-select and without any of the fallback options.
+  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
+      !isGlobalISelAbortEnabled() || !NewRegBankSelect)
+    addPass(createLCSSAPass());
 
   if (TM->getOptLevel() > CodeGenOptLevel::Less)
     addPass(&AMDGPUPerfHintAnalysisLegacyID);
@@ -1599,7 +1604,7 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(createWWMRegAllocPass(false));
 
   addPass(&SILowerWWMCopiesLegacyID);
-  addPass(&AMDGPUReserveWWMRegsID);
+  addPass(&AMDGPUReserveWWMRegsLegacyID);
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(false));
@@ -1636,7 +1641,7 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createWWMRegAllocPass(true));
   addPass(&SILowerWWMCopiesLegacyID);
   addPass(createVirtRegRewriter(false));
-  addPass(&AMDGPUReserveWWMRegsID);
+  addPass(&AMDGPUReserveWWMRegsLegacyID);
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(true));
@@ -1972,7 +1977,7 @@ void AMDGPUCodeGenPassBuilder::addIRPasses(AddIRPass &addPass) const {
   addPass(AMDGPUAlwaysInlinePass());
   addPass(AlwaysInlinerPass());
 
-  addPass(AMDGPUOpenCLEnqueuedBlockLoweringPass());
+  addPass(AMDGPUExportKernelRuntimeHandlesPass());
 
   if (EnableSwLowerLDS)
     addPass(AMDGPUSwLowerLDSPass(TM));
@@ -2086,7 +2091,9 @@ void AMDGPUCodeGenPassBuilder::addPreISel(AddIRPass &addPass) const {
   // control flow modifications.
   addPass(AMDGPURewriteUndefForPHIPass());
 
-  addPass(LCSSAPass());
+  if (!getCGPassBuilderOption().EnableGlobalISelOption ||
+      !isGlobalISelAbortEnabled() || !NewRegBankSelect)
+    addPass(LCSSAPass());
 
   if (TM.getOptLevel() > CodeGenOptLevel::Less)
     addPass(AMDGPUPerfHintAnalysisPass(TM));
@@ -2145,6 +2152,47 @@ void AMDGPUCodeGenPassBuilder::addPostRegAlloc(AddMachinePass &addPass) const {
   if (TM.getOptLevel() > CodeGenOptLevel::None)
     addPass(SIOptimizeExecMaskingPass());
   Base::addPostRegAlloc(addPass);
+}
+
+void AMDGPUCodeGenPassBuilder::addPreEmitPass(AddMachinePass &addPass) const {
+  if (isPassEnabled(EnableVOPD, CodeGenOptLevel::Less)) {
+    addPass(GCNCreateVOPDPass());
+  }
+
+  addPass(SIMemoryLegalizerPass());
+  // TODO: addPass(SIInsertWaitcntsPass());
+
+  // TODO: addPass(SIModeRegisterPass());
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+    // TODO: addPass(SIInsertHardClausesPass());
+  }
+
+  // addPass(SILateBranchLoweringPass());
+  if (isPassEnabled(EnableSetWavePriority, CodeGenOptLevel::Less)) {
+    // TODO: addPass(AMDGPUSetWavePriorityPass());
+  }
+
+  if (TM.getOptLevel() > CodeGenOptLevel::None) {
+    // TODO: addPass(SIPreEmitPeepholePass());
+  }
+
+  // The hazard recognizer that runs as part of the post-ra scheduler does not
+  // guarantee to be able handle all hazards correctly. This is because if there
+  // are multiple scheduling regions in a basic block, the regions are scheduled
+  // bottom up, so when we begin to schedule a region we don't know what
+  // instructions were emitted directly before it.
+  //
+  // Here we add a stand-alone hazard recognizer pass which can handle all
+  // cases.
+  // TODO: addPass(PostRAHazardRecognizerPass());
+  addPass(AMDGPUWaitSGPRHazardsPass());
+
+  if (isPassEnabled(EnableInsertDelayAlu, CodeGenOptLevel::Less)) {
+    addPass(AMDGPUInsertDelayAluPass());
+  }
+
+  // TODO: addPass(BranchRelaxationPass());
 }
 
 bool AMDGPUCodeGenPassBuilder::isPassEnabled(const cl::opt<bool> &Opt,

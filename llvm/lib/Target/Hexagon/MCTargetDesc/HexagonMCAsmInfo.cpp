@@ -11,8 +11,24 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonMCAsmInfo.h"
+#include "llvm/MC/MCExpr.h"
 
 using namespace llvm;
+
+const MCAsmInfo::VariantKindDesc variantKindDescs[] = {
+    {MCSymbolRefExpr::VK_DTPREL, "DTPREL"},
+    {MCSymbolRefExpr::VK_Hexagon_GD_GOT, "GDGOT"},
+    {MCSymbolRefExpr::VK_Hexagon_GD_PLT, "GDPLT"},
+    {MCSymbolRefExpr::VK_GOT, "GOT"},
+    {MCSymbolRefExpr::VK_GOTREL, "GOTREL"},
+    {MCSymbolRefExpr::VK_Hexagon_IE, "IE"},
+    {MCSymbolRefExpr::VK_Hexagon_IE_GOT, "IEGOT"},
+    {MCSymbolRefExpr::VK_Hexagon_LD_GOT, "LDGOT"},
+    {MCSymbolRefExpr::VK_Hexagon_LD_PLT, "LDPLT"},
+    {MCSymbolRefExpr::VK_PCREL, "PCREL"},
+    {MCSymbolRefExpr::VK_PLT, "PLT"},
+    {MCSymbolRefExpr::VK_TPREL, "TPREL"},
+};
 
 // Pin the vtable to this file.
 void HexagonMCAsmInfo::anchor() {}
@@ -34,4 +50,6 @@ HexagonMCAsmInfo::HexagonMCAsmInfo(const Triple &TT) {
   UsesELFSectionDirectiveForBSS  = true;
   ExceptionsType = ExceptionHandling::DwarfCFI;
   UseLogicalShr = false;
+
+  initializeVariantKinds(variantKindDescs);
 }

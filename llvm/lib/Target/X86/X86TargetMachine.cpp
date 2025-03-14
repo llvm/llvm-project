@@ -647,7 +647,7 @@ void X86PassConfig::addPreEmitPass2() {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
-    addPass(createEHContGuardCatchretPass());
+    addPass(createEHContGuardTargetsPass());
   }
   addPass(createX86LoadValueInjectionRetHardeningPass());
 

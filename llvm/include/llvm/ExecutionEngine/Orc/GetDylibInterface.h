@@ -16,7 +16,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_GETDYLIBINTERFACE_H
 
 #include "llvm/ExecutionEngine/Orc/Core.h"
-#include "llvm/Object/TapiUniversal.h"
 
 namespace llvm::orc {
 

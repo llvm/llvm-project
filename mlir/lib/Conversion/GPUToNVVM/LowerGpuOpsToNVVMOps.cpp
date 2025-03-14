@@ -540,6 +540,8 @@ void mlir::populateLibDeviceConversionPatterns(
                                    "__nv_cosh");
   populateOpPatterns<math::ErfOp>(converter, patterns, benefit, "__nv_erff",
                                   "__nv_erf");
+  populateOpPatterns<math::ErfcOp>(converter, patterns, benefit, "__nv_erfcf",
+                                   "__nv_erfc");
   populateOpPatterns<math::ExpOp>(converter, patterns, benefit, "__nv_expf",
                                   "__nv_exp", "__nv_fast_expf");
   populateOpPatterns<math::Exp2Op>(converter, patterns, benefit, "__nv_exp2f",

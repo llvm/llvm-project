@@ -452,6 +452,11 @@ public:
     for (const RowSP &row_sp : rhs.m_row_list)
       m_row_list.emplace_back(new Row(*row_sp));
   }
+  UnwindPlan(UnwindPlan &&rhs) = default;
+  UnwindPlan &operator=(const UnwindPlan &rhs) {
+    return *this = UnwindPlan(rhs); // NB: moving from a temporary (deep) copy
+  }
+  UnwindPlan &operator=(UnwindPlan &&) = default;
 
   ~UnwindPlan() = default;
 

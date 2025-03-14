@@ -31,7 +31,7 @@ def uimm2_lsb0 : RISCVOp,
 
 def uimm8ge32 : RISCVOp {
   let ParserMatchClass = UImmAsmOperand<8, "GE32">;
-  let DecoderMethod = "decodeUImmOperand<8>";
+  let DecoderMethod = "decodeUImmOperandGE<8, 32>";
   let OperandType = "OPERAND_UIMM8_GE32";
 }
 
@@ -46,8 +46,6 @@ def StackAdjAsmOperand : AsmOperandClass {
   let Name = "StackAdj";
   let ParserMethod = "parseZcmpStackAdj";
   let DiagnosticType = "InvalidStackAdj";
-  let DiagnosticString = "stack adjustment is invalid for this instruction and register list; "
-        "refer to Zc spec for a detailed range of stack adjustment";
   let PredicateMethod = "isSpimm";
   let RenderMethod = "addSpimmOperands";
 }
@@ -218,7 +216,7 @@ def C_SH_INX : CStoreH_rri<0b100011, 0b0, "c.sh", GPRF16C>,
 } // Predicates = [HasStdExtZcb]
 
 // Zcmp
-let DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp],
+let DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp],
     hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 let Defs = [X10, X11] in
 def CM_MVA01S : RVInst16CA<0b101011, 0b11, 0b10, (outs),
@@ -229,9 +227,9 @@ let Uses = [X10, X11] in
 def CM_MVSA01 : RVInst16CA<0b101011, 0b01, 0b10, (outs SR07:$rs1, SR07:$rs2),
                             (ins), "cm.mvsa01", "$rs1, $rs2">,
                 Sched<[WriteIALU, WriteIALU, ReadIALU, ReadIALU]>;
-} // DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp]...
+} // DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp]...
 
-let DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp] in {
+let DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1, Uses = [X2], Defs = [X2] in
 def CM_PUSH : RVInstZcCPPP<0b11000, "cm.push", negstackadj>,
               Sched<[WriteIALU, ReadIALU, ReadStoreData, ReadStoreData,
@@ -260,9 +258,9 @@ def CM_POP : RVInstZcCPPP<0b11010, "cm.pop">,
              Sched<[WriteIALU, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
                     WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW, WriteLDW,
                     WriteLDW, WriteLDW, WriteLDW, ReadIALU]>;
-} // DecoderNamespace = "RVZcmp", Predicates = [HasStdExtZcmp]...
+} // DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmp]...
 
-let DecoderNamespace = "RVZcmt", Predicates = [HasStdExtZcmt],
+let DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmt],
     hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 def CM_JT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm5:$index),
                        "cm.jt", "$index">{
@@ -280,7 +278,7 @@ def CM_JALT : RVInst16CJ<0b101, 0b10, (outs), (ins uimm8ge32:$index),
   let Inst{12-10} = 0b000;
   let Inst{9-2} = index;
 }
-} // DecoderNamespace = "RVZcmt", Predicates = [HasStdExtZcmt]...
+} // DecoderNamespace = "ZcOverlap", Predicates = [HasStdExtZcmt]...
 
 
 let Predicates = [HasStdExtZcb, HasStdExtZmmul] in{

@@ -16,8 +16,8 @@ define void @hang_when_merging_stores_after_legalisation(ptr %a, <2 x i32> %b) v
 ; CHECK-NEXT:    ext z1.b, z1.b, z1.b, #16
 ; CHECK-NEXT:    st2 { v0.4s, v1.4s }, [x0]
 ; CHECK-NEXT:    ret
-  %splat = shufflevector <2 x i32> %b, <2 x i32> undef, <8 x i32> zeroinitializer
-  %interleaved.vec = shufflevector <8 x i32> %splat, <8 x i32> undef, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
+  %splat = shufflevector <2 x i32> %b, <2 x i32> poison, <8 x i32> zeroinitializer
+  %interleaved.vec = shufflevector <8 x i32> %splat, <8 x i32> poison, <8 x i32> <i32 0, i32 4, i32 1, i32 5, i32 2, i32 6, i32 3, i32 7>
   store <8 x i32> %interleaved.vec, ptr %a, align 4
   ret void
 }

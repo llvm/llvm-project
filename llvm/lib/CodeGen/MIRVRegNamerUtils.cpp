@@ -20,7 +20,7 @@ static cl::opt<bool>
                        cl::Hidden,
                        cl::desc("Use Stable Hashing for MIR VReg Renaming"));
 
-using VRegRenameMap = std::map<unsigned, unsigned>;
+using VRegRenameMap = std::map<Register, Register>;
 
 bool VRegRenamer::doVRegRenaming(const VRegRenameMap &VRM) {
   bool Changed = false;
@@ -45,7 +45,7 @@ VRegRenamer::getVRegRenameMap(const std::vector<NamedVReg> &VRegs) {
 
   VRegRenameMap VRM;
   for (const auto &VReg : VRegs) {
-    const unsigned Reg = VReg.getReg();
+    const Register Reg = VReg.getReg();
     VRM[Reg] = createVirtualRegisterWithLowerName(Reg, GetUniqueVRegName(VReg));
   }
   return VRM;
@@ -77,7 +77,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
     case MachineOperand::MO_Register:
       if (MO.getReg().isVirtual())
         return MRI.getVRegDef(MO.getReg())->getOpcode();
-      return MO.getReg();
+      return MO.getReg().id();
     case MachineOperand::MO_Immediate:
       return MO.getImm();
     case MachineOperand::MO_TargetIndex:
@@ -136,8 +136,8 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
   return OS.str();
 }
 
-unsigned VRegRenamer::createVirtualRegister(unsigned VReg) {
-  assert(Register::isVirtualRegister(VReg) && "Expected Virtual Registers");
+Register VRegRenamer::createVirtualRegister(Register VReg) {
+  assert(VReg.isVirtual() && "Expected Virtual Registers");
   std::string Name = getInstructionOpcodeHash(*MRI.getVRegDef(VReg));
   return createVirtualRegisterWithLowerName(VReg, Name);
 }
@@ -160,10 +160,10 @@ bool VRegRenamer::renameInstsInMBB(MachineBasicBlock *MBB) {
         NamedVReg(MO.getReg(), Prefix + getInstructionOpcodeHash(Candidate)));
   }
 
-  return VRegs.size() ? doVRegRenaming(getVRegRenameMap(VRegs)) : false;
+  return !VRegs.empty() ? doVRegRenaming(getVRegRenameMap(VRegs)) : false;
 }
 
-unsigned VRegRenamer::createVirtualRegisterWithLowerName(unsigned VReg,
+Register VRegRenamer::createVirtualRegisterWithLowerName(Register VReg,
                                                          StringRef Name) {
   std::string LowerName = Name.lower();
   const TargetRegisterClass *RC = MRI.getRegClassOrNull(VReg);

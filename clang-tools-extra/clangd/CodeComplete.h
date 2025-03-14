@@ -274,7 +274,6 @@ struct SpeculativeFuzzyFind {
   /// Set by `codeComplete()`. This can be used by callers to update cache.
   std::optional<FuzzyFindRequest> NewReq;
   /// The result is consumed by `codeComplete()` if speculation succeeded.
-  /// NOTE: the destructor will wait for the async call to finish.
   std::future<std::pair<bool /*Incomplete*/, SymbolSlab>> Result;
 };
 

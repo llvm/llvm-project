@@ -2214,7 +2214,11 @@ enum CXCursorKind {
    */
   CXCursor_OpenACCAtomicConstruct = 332,
 
-  CXCursor_LastStmt = CXCursor_OpenACCAtomicConstruct,
+  /** OpenACC cache Construct.
+   */
+  CXCursor_OpenACCCacheConstruct = 333,
+
+  CXCursor_LastStmt = CXCursor_OpenACCCacheConstruct,
 
   /**
    * Cursor that represents the translation unit itself.
@@ -3061,6 +3065,18 @@ enum CXCallingConv {
   CXCallingConv_M68kRTD = 19,
   CXCallingConv_PreserveNone = 20,
   CXCallingConv_RISCVVectorCall = 21,
+  CXCallingConv_RISCVVLSCall_32 = 22,
+  CXCallingConv_RISCVVLSCall_64 = 23,
+  CXCallingConv_RISCVVLSCall_128 = 24,
+  CXCallingConv_RISCVVLSCall_256 = 25,
+  CXCallingConv_RISCVVLSCall_512 = 26,
+  CXCallingConv_RISCVVLSCall_1024 = 27,
+  CXCallingConv_RISCVVLSCall_2048 = 28,
+  CXCallingConv_RISCVVLSCall_4096 = 29,
+  CXCallingConv_RISCVVLSCall_8192 = 30,
+  CXCallingConv_RISCVVLSCall_16384 = 31,
+  CXCallingConv_RISCVVLSCall_32768 = 32,
+  CXCallingConv_RISCVVLSCall_65536 = 33,
 
   CXCallingConv_Invalid = 100,
   CXCallingConv_Unexposed = 200
@@ -6627,6 +6643,28 @@ CINDEX_LINKAGE unsigned clang_Type_visitFields(CXType T, CXFieldVisitor visitor,
 CINDEX_LINKAGE unsigned clang_visitCXXBaseClasses(CXType T,
                                                   CXFieldVisitor visitor,
                                                   CXClientData client_data);
+
+/**
+ * Visit the class methods of a type.
+ *
+ * This function visits all the methods of the given cursor,
+ * invoking the given \p visitor function with the cursors of each
+ * visited method. The traversal may be ended prematurely, if
+ * the visitor returns \c CXFieldVisit_Break.
+ *
+ * \param T The record type whose field may be visited.
+ *
+ * \param visitor The visitor function that will be invoked for each
+ * field of \p T.
+ *
+ * \param client_data Pointer data supplied by the client, which will
+ * be passed to the visitor each time it is invoked.
+ *
+ * \returns A non-zero value if the traversal was terminated
+ * prematurely by the visitor returning \c CXFieldVisit_Break.
+ */
+CINDEX_LINKAGE unsigned clang_visitCXXMethods(CXType T, CXFieldVisitor visitor,
+                                              CXClientData client_data);
 
 /**
  * Describes the kind of binary operators.

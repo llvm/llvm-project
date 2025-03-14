@@ -641,7 +641,7 @@ protected:
       MachineInstr &Root, unsigned Pattern,
       SmallVectorImpl<MachineInstr *> &InsInstrs,
       SmallVectorImpl<MachineInstr *> &DelInstrs,
-      DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const override;
+      DenseMap<Register, unsigned> &InstrIdxForVirtReg) const override;
 
   /// When calculate the latency of the root instruction, accumulate the
   /// latency of the sequence to the root latency.

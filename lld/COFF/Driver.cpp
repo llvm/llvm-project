@@ -487,7 +487,7 @@ void LinkerDriver::parseDirectives(InputFile *file) {
   for (auto *arg : directives.args) {
     switch (arg->getOption().getID()) {
     case OPT_aligncomm:
-      parseAligncomm(arg->getValue());
+      file->symtab.parseAligncomm(arg->getValue());
       break;
     case OPT_alternatename:
       file->symtab.parseAlternateName(arg->getValue());
@@ -786,6 +786,13 @@ void LinkerDriver::addWinSysRootLibSearchPaths() {
                                       path))
       searchPaths.push_back(saver().save(path));
   }
+
+  // Libraries specified by `/nodefaultlib:` may not be found in incomplete
+  // search paths before lld infers a machine type from input files.
+  std::set<std::string> noDefaultLibs;
+  for (const std::string &path : ctx.config.noDefaultLibs)
+    noDefaultLibs.insert(findLib(path).lower());
+  ctx.config.noDefaultLibs = noDefaultLibs;
 }
 
 // Parses LIB environment which contains a list of search paths.
@@ -2050,7 +2057,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /aligncomm
   for (auto *arg : args.filtered(OPT_aligncomm))
-    parseAligncomm(arg->getValue());
+    mainSymtab.parseAligncomm(arg->getValue());
 
   // Handle /manifestdependency.
   for (auto *arg : args.filtered(OPT_manifestdependency))
@@ -2568,7 +2575,8 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
 
   // Handle /includeglob
   for (StringRef pat : args::getStrings(args, OPT_incl_glob))
-    ctx.symtab.addUndefinedGlob(pat);
+    ctx.forEachSymtab(
+        [&](SymbolTable &symtab) { symtab.addUndefinedGlob(pat); });
 
   // Create wrapped symbols for -wrap option.
   ctx.forEachSymtab([&](SymbolTable &symtab) {
@@ -2600,7 +2608,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     // If it ends up pulling in more object files from static libraries,
     // (and maybe doing more stdcall fixups along the way), this would need
     // to loop these two calls.
-    ctx.symtab.loadMinGWSymbols();
+    ctx.forEachSymtab([](SymbolTable &symtab) { symtab.loadMinGWSymbols(); });
     run();
   }
 
@@ -2700,25 +2708,27 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
     writeDefFile(ctx, arg->getValue(), mainSymtab.exports);
 
   // Set extra alignment for .comm symbols
-  for (auto pair : config->alignComm) {
-    StringRef name = pair.first;
-    uint32_t alignment = pair.second;
+  ctx.forEachSymtab([&](SymbolTable &symtab) {
+    for (auto pair : symtab.alignComm) {
+      StringRef name = pair.first;
+      uint32_t alignment = pair.second;
 
-    Symbol *sym = ctx.symtab.find(name);
-    if (!sym) {
-      Warn(ctx) << "/aligncomm symbol " << name << " not found";
-      continue;
+      Symbol *sym = symtab.find(name);
+      if (!sym) {
+        Warn(ctx) << "/aligncomm symbol " << name << " not found";
+        continue;
+      }
+
+      // If the symbol isn't common, it must have been replaced with a regular
+      // symbol, which will carry its own alignment.
+      auto *dc = dyn_cast<DefinedCommon>(sym);
+      if (!dc)
+        continue;
+
+      CommonChunk *c = dc->getChunk();
+      c->setAlignment(std::max(c->getAlignment(), alignment));
     }
-
-    // If the symbol isn't common, it must have been replaced with a regular
-    // symbol, which will carry its own alignment.
-    auto *dc = dyn_cast<DefinedCommon>(sym);
-    if (!dc)
-      continue;
-
-    CommonChunk *c = dc->getChunk();
-    c->setAlignment(std::max(c->getAlignment(), alignment));
-  }
+  });
 
   // Windows specific -- Create an embedded or side-by-side manifest.
   // /manifestdependency: enables /manifest unless an explicit /manifest:no is
@@ -2766,14 +2776,16 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
       // For now, just manually try to retain the known possible personality
       // functions. This doesn't bring in more object files, but only marks
       // functions that already have been included to be retained.
-      for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0",
-                            "rust_eh_personality"}) {
-        Defined *d = dyn_cast_or_null<Defined>(ctx.symtab.findUnderscore(n));
-        if (d && !d->isGCRoot) {
-          d->isGCRoot = true;
-          config->gcroot.push_back(d);
+      ctx.forEachSymtab([&](SymbolTable &symtab) {
+        for (const char *n : {"__gxx_personality_v0", "__gcc_personality_v0",
+                              "rust_eh_personality"}) {
+          Defined *d = dyn_cast_or_null<Defined>(symtab.findUnderscore(n));
+          if (d && !d->isGCRoot) {
+            d->isGCRoot = true;
+            config->gcroot.push_back(d);
+          }
         }
-      }
+      });
     }
 
     markLive(ctx);

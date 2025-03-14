@@ -18,6 +18,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 
 using namespace mlir;
 using namespace cir;
@@ -25,6 +26,23 @@ using namespace cir;
 //===----------------------------------------------------------------------===//
 // CIR Dialect
 //===----------------------------------------------------------------------===//
+namespace {
+struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
+  using OpAsmDialectInterface::OpAsmDialectInterface;
+
+  AliasResult getAlias(Type type, raw_ostream &os) const final {
+    return AliasResult::NoAlias;
+  }
+
+  AliasResult getAlias(Attribute attr, raw_ostream &os) const final {
+    if (auto boolAttr = mlir::dyn_cast<cir::BoolAttr>(attr)) {
+      os << (boolAttr.getValue() ? "true" : "false");
+      return AliasResult::FinalAlias;
+    }
+    return AliasResult::NoAlias;
+  }
+};
+} // namespace
 
 void cir::CIRDialect::initialize() {
   registerTypes();
@@ -33,6 +51,7 @@ void cir::CIRDialect::initialize() {
 #define GET_OP_LIST
 #include "clang/CIR/Dialect/IR/CIROps.cpp.inc"
       >();
+  addInterfaces<CIROpAsmDialectInterface>();
 }
 
 //===----------------------------------------------------------------------===//
@@ -100,6 +119,24 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
 }
 
 //===----------------------------------------------------------------------===//
+// AllocaOp
+//===----------------------------------------------------------------------===//
+
+void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
+                          mlir::OperationState &odsState, mlir::Type addr,
+                          mlir::Type allocaType, llvm::StringRef name,
+                          mlir::IntegerAttr alignment) {
+  odsState.addAttribute(getAllocaTypeAttrName(odsState.name),
+                        mlir::TypeAttr::get(allocaType));
+  odsState.addAttribute(getNameAttrName(odsState.name),
+                        odsBuilder.getStringAttr(name));
+  if (alignment) {
+    odsState.addAttribute(getAlignmentAttrName(odsState.name), alignment);
+  }
+  odsState.addTypes(addr);
+}
+
+//===----------------------------------------------------------------------===//
 // ConstantOp
 //===----------------------------------------------------------------------===//
 
@@ -109,6 +146,13 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
     if (!mlir::isa<cir::PointerType>(opType))
       return op->emitOpError(
           "pointer constant initializing a non-pointer type");
+    return success();
+  }
+
+  if (mlir::isa<cir::BoolAttr>(attrType)) {
+    if (!mlir::isa<cir::BoolType>(opType))
+      return op->emitOpError("result type (")
+             << opType << ") must be '!cir.bool' for '" << attrType << "'";
     return success();
   }
 
@@ -225,6 +269,19 @@ LogicalResult cir::ScopeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// BrOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
+  assert(index == 0 && "invalid successor index");
+  return mlir::SuccessorOperands(getDestOperandsMutable());
+}
+
+Block *cir::BrOp::getSuccessorForOperands(ArrayRef<Attribute>) {
+  return getDest();
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
@@ -254,11 +311,16 @@ mlir::LogicalResult cir::GlobalOp::verify() {
 }
 
 void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                          llvm::StringRef sym_name, mlir::Type sym_type) {
+                          llvm::StringRef sym_name, mlir::Type sym_type,
+                          cir::GlobalLinkageKind linkage) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         mlir::TypeAttr::get(sym_type));
+
+  cir::GlobalLinkageKindAttr linkageAttr =
+      cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
+  odsState.addAttribute(getLinkageAttrName(odsState.name), linkageAttr);
 }
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,
@@ -389,17 +451,6 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p.printRegion(body, /*printEntryBlockArgs=*/false,
                   /*printBlockTerminators=*/true);
   }
-}
-
-// Hook for OpTrait::FunctionLike, called after verifying that the 'type'
-// attribute is present.  This can check for preconditions of the
-// getNumArguments hook not failing.
-LogicalResult cir::FuncOp::verifyType() {
-  auto type = getFunctionType();
-  if (!isa<cir::FuncType>(type))
-    return emitOpError("requires '" + getFunctionTypeAttrName().str() +
-                       "' attribute of function type");
-  return success();
 }
 
 // TODO(CIR): The properties of functions that require verification haven't

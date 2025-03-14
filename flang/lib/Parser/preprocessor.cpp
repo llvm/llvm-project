@@ -842,6 +842,15 @@ bool Preprocessor::IsNameDefined(const CharBlock &token) {
   return definitions_.find(token) != definitions_.end();
 }
 
+bool Preprocessor::IsNameDefinedEmpty(const CharBlock &token) {
+  if (auto it{definitions_.find(token)}; it != definitions_.end()) {
+    const Definition &def{it->second};
+    return !def.isFunctionLike() && def.replacement().SizeInChars() == 0;
+  } else {
+    return false;
+  }
+}
+
 bool Preprocessor::IsFunctionLikeDefinition(const CharBlock &token) {
   auto it{definitions_.find(token)};
   return it != definitions_.end() && it->second.isFunctionLike();

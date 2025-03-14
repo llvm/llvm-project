@@ -167,11 +167,19 @@ constexpr void run_tests() {
   }
   test(std::ranges::unique, in);
   test(std::ranges::partition, in, unary_pred);
+#if TEST_STD_VER < 26
   if (!std::is_constant_evaluated())
+#endif
+  {
     test(std::ranges::stable_partition, in, unary_pred);
+  }
   test(std::ranges::sort, in);
+#if TEST_STD_VER < 26
   if (!std::is_constant_evaluated())
+#endif
+  {
     test(std::ranges::stable_sort, in);
+  }
   test_mid(std::ranges::partial_sort, in, mid);
   test_mid(std::ranges::nth_element, in, mid);
   if (!std::is_constant_evaluated())

@@ -1903,19 +1903,14 @@ define <16 x half> @v_vselect_v16f16(<16 x half> %a, <16 x half> %b, <16 x i32> 
 ; VI-LABEL: v_vselect_v16f16:
 ; VI:       ; %bb.0:
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; VI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
-; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    v_writelane_b32 v31, s30, 0
-; VI-NEXT:    v_writelane_b32 v31, s31, 1
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v16
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[18:19], 0, v17
-; VI-NEXT:    v_cmp_eq_u32_e64 s[30:31], 0, v29
+; VI-NEXT:    v_cmp_eq_u32_e64 s[40:41], 0, v29
 ; VI-NEXT:    v_lshrrev_b32_e32 v16, 16, v6
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v14
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v18
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[28:29], 0, v27
-; VI-NEXT:    v_cndmask_b32_e64 v16, v17, v16, s[30:31]
+; VI-NEXT:    v_cndmask_b32_e64 v16, v17, v16, s[40:41]
 ; VI-NEXT:    v_lshrrev_b32_e32 v17, 16, v5
 ; VI-NEXT:    v_lshrrev_b32_e32 v18, 16, v13
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[20:21], 0, v19
@@ -1957,8 +1952,6 @@ define <16 x half> @v_vselect_v16f16(<16 x half> %a, <16 x half> %b, <16 x i32> 
 ; VI-NEXT:    v_cmp_eq_u32_e64 s[16:17], 0, v28
 ; VI-NEXT:    v_cndmask_b32_e64 v5, v13, v5, s[14:15]
 ; VI-NEXT:    v_cndmask_b32_e64 v6, v14, v6, s[16:17]
-; VI-NEXT:    v_readlane_b32 s31, v31, 1
-; VI-NEXT:    v_readlane_b32 s30, v31, 0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v8
 ; VI-NEXT:    v_cndmask_b32_e32 v8, v10, v9, vcc
@@ -1976,10 +1969,6 @@ define <16 x half> @v_vselect_v16f16(<16 x half> %a, <16 x half> %b, <16 x i32> 
 ; VI-NEXT:    v_lshlrev_b32_e32 v8, 16, v8
 ; VI-NEXT:    v_or_b32_sdwa v6, v6, v9 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
 ; VI-NEXT:    v_or_b32_sdwa v7, v7, v8 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
-; VI-NEXT:    s_mov_b64 exec, s[4:5]
-; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: v_vselect_v16f16:

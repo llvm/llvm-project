@@ -571,7 +571,7 @@ private:
   std::pair<ASTFileSignature, ASTFileSignature> createSignature() const;
   ASTFileSignature createSignatureForNamedModule() const;
 
-  void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
+  void WriteInputFiles(SourceManager &SourceMgr);
   void WriteSourceManagerBlock(SourceManager &SourceMgr);
   void WritePreprocessor(const Preprocessor &PP, bool IsModule);
   void WriteHeaderSearch(const HeaderSearch &HS);

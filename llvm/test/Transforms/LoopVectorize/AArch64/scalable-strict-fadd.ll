@@ -1041,8 +1041,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-UNORDERED-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[A]], i64 [[TMP6]]
 ; CHECK-UNORDERED-NEXT:    [[TMP11:%.*]] = getelementptr float, ptr [[TMP10]], i32 0
 ; CHECK-UNORDERED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP11]], i32 4, <vscale x 4 x i1> [[TMP9]], <vscale x 4 x float> poison)
-; CHECK-UNORDERED-NEXT:    [[TMP12:%.*]] = xor <vscale x 4 x i1> [[TMP9]], splat (i1 true)
-; CHECK-UNORDERED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> [[WIDE_MASKED_LOAD]]
+; CHECK-UNORDERED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00)
 ; CHECK-UNORDERED-NEXT:    [[TMP13]] = fadd <vscale x 4 x float> [[VEC_PHI]], [[PREDPHI]]
 ; CHECK-UNORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-UNORDERED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
@@ -1102,8 +1101,7 @@ define float @fadd_conditional(ptr noalias nocapture readonly %a, ptr noalias no
 ; CHECK-ORDERED-NEXT:    [[TMP10:%.*]] = getelementptr float, ptr [[A]], i64 [[TMP6]]
 ; CHECK-ORDERED-NEXT:    [[TMP11:%.*]] = getelementptr float, ptr [[TMP10]], i32 0
 ; CHECK-ORDERED-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <vscale x 4 x float> @llvm.masked.load.nxv4f32.p0(ptr [[TMP11]], i32 4, <vscale x 4 x i1> [[TMP9]], <vscale x 4 x float> poison)
-; CHECK-ORDERED-NEXT:    [[TMP12:%.*]] = xor <vscale x 4 x i1> [[TMP9]], splat (i1 true)
-; CHECK-ORDERED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP12]], <vscale x 4 x float> splat (float 3.000000e+00), <vscale x 4 x float> [[WIDE_MASKED_LOAD]]
+; CHECK-ORDERED-NEXT:    [[PREDPHI:%.*]] = select <vscale x 4 x i1> [[TMP9]], <vscale x 4 x float> [[WIDE_MASKED_LOAD]], <vscale x 4 x float> splat (float 3.000000e+00)
 ; CHECK-ORDERED-NEXT:    [[TMP13]] = call float @llvm.vector.reduce.fadd.nxv4f32(float [[VEC_PHI]], <vscale x 4 x float> [[PREDPHI]])
 ; CHECK-ORDERED-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP5]]
 ; CHECK-ORDERED-NEXT:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

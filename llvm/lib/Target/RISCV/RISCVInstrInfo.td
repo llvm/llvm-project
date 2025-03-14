@@ -66,6 +66,8 @@ def riscv_sret_glue : SDNode<"RISCVISD::SRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mret_glue : SDNode<"RISCVISD::MRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mileaveret_glue : SDNode<"RISCVISD::QC_C_MILEAVERET_GLUE", SDTNone,
+                                   [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_selectcc  : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC>;
 def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
                              [SDNPHasChain]>;
@@ -521,7 +523,6 @@ include "RISCVInstrFormats.td"
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class BranchCC_rri<bits<3> funct3, string opcodestr>
     : RVInstB<funct3, OPC_BRANCH, (outs),
               (ins GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12),
@@ -529,6 +530,9 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
       Sched<[WriteJmp, ReadJmp, ReadJmp]> {
   let isBranch = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
@@ -2033,6 +2037,12 @@ def : PatGprImm<binop_allwusers<and>, ANDI, u32simm12>;
 def : PatGprImm<binop_allwusers<or>,  ORI,  u32simm12>;
 def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
 
+// Select 'or' as ADDIW if the immediate bits are known to be 0 in $rs1 and
+// $rs1 is sign extended. This can improve compressibility. Using ADDIW gives
+// more power to RISCVOptWInstrs.
+def : Pat<(or_is_add 33signbits_node:$rs1, simm12:$imm),
+          (ADDIW $rs1, simm12:$imm)>;
+
 /// Loads
 
 def : LdPat<sextloadi32, LW, i64>;
@@ -2147,6 +2157,7 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
+include "RISCVInstrInfoXqccmp.td"
 include "RISCVInstrInfoXMips.td"
 include "RISCVInstrInfoXRivos.td"
 

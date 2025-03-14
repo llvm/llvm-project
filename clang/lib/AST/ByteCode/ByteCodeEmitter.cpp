@@ -367,6 +367,16 @@ bool ByteCodeEmitter::fallthrough(const LabelTy &Label) {
   return true;
 }
 
+bool ByteCodeEmitter::speculate(const CallExpr *E, const LabelTy &EndLabel) {
+  const Expr *Arg = E->getArg(0);
+  PrimType T = Ctx.classify(Arg->getType()).value_or(PT_Ptr);
+  if (!this->emitBCP(getOffset(EndLabel), T, E))
+    return false;
+  if (!this->visit(Arg))
+    return false;
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // Opcode emitters
 //===----------------------------------------------------------------------===//

@@ -590,33 +590,24 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
-// CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
-// CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxntid"="1,23,32" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.reqntid = array<i32: 1, 23, 32>} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"reqntidx", i32 1}
-// CHECK:     {ptr @kernel_func, !"reqntidy", i32 23}
-// CHECK:     {ptr @kernel_func, !"reqntidz", i32 32}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.reqntid"="1,23,32" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_dim = array<i32: 3, 5, 7>} {
   llvm.return
 }
 
-// CHECK: define ptx_kernel void @kernel_func
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"cluster_dim_x", i32 3}
-// CHECK:     {ptr @kernel_func, !"cluster_dim_y", i32 5}
-// CHECK:     {ptr @kernel_func, !"cluster_dim_z", i32 7}
+// CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
+// CHECK: attributes #[[ATTR0]] = { "nvvm.cluster_dim"="3,5,7" }
 // -----
 
 llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.cluster_max_blocks = 8} {
@@ -650,11 +641,7 @@ llvm.func @kernel_func() attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1, 2
 }
 
 // CHECK: define ptx_kernel void @kernel_func() #[[ATTR0:[0-9]+]]
-// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="32" "nvvm.minctasm"="16" }
-// CHECK:     !nvvm.annotations =
-// CHECK:     {ptr @kernel_func, !"maxntidx", i32 1}
-// CHECK:     {ptr @kernel_func, !"maxntidy", i32 23}
-// CHECK:     {ptr @kernel_func, !"maxntidz", i32 32}
+// CHECK: attributes #[[ATTR0]] = { "nvvm.maxnreg"="32" "nvvm.maxntid"="1,23,32" "nvvm.minctasm"="16" }
 
 // -----
 // CHECK: define ptx_kernel void @kernel_func

@@ -57,8 +57,10 @@ Block *DynamicAllocator::allocate(const Descriptor *ElementDesc,
   assert(ElementDesc->getMetadataSize() == 0);
   // Create a new descriptor for an array of the specified size and
   // element type.
+  // FIXME: Pass proper element type.
   const Descriptor *D = allocateDescriptor(
-      ElementDesc->asExpr(), ElementDesc, Descriptor::InlineDescMD, NumElements,
+      ElementDesc->asExpr(), nullptr, ElementDesc, Descriptor::InlineDescMD,
+      NumElements,
       /*IsConst=*/false, /*IsTemporary=*/false, /*IsMutable=*/false);
   return allocate(D, EvalID, AllocForm);
 }
