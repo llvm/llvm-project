@@ -8,7 +8,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/IR/ModuleSplitter.h"
+#include "llvm/ModuleSplitter/ModuleSplitter.h"
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/MapVector.h"
