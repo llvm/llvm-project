@@ -10527,12 +10527,11 @@ void ASTImporter::CompleteDecl (Decl *D) {
 }
 
 Decl *ASTImporter::MapImported(Decl *From, Decl *To) {
-  llvm::DenseMap<Decl *, Decl *>::iterator Pos = ImportedDecls.find(From);
-  assert((Pos == ImportedDecls.end() || Pos->second == To) &&
-      "Try to import an already imported Decl");
-  if (Pos != ImportedDecls.end())
+  auto [Pos, Inserted] = ImportedDecls.try_emplace(From, To);
+  assert((Inserted || Pos->second == To) &&
+         "Try to import an already imported Decl");
+  if (!Inserted)
     return Pos->second;
-  ImportedDecls[From] = To;
   // This mapping should be maintained only in this function. Therefore do not
   // check for additional consistency.
   ImportedFromDecls[To] = From;
