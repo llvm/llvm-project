@@ -1175,7 +1175,7 @@ static bool parseOpenMPArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             tt.getArch() == llvm::Triple::systemz ||
             tt.getArch() == llvm::Triple::nvptx ||
             tt.getArch() == llvm::Triple::nvptx64 ||
-            tt.getArch() == llvm::Triple::amdgcn ||
+            tt.isAMDGCN() ||
             tt.getArch() == llvm::Triple::x86 ||
             tt.getArch() == llvm::Triple::x86_64))
         diags.Report(clang::diag::err_drv_invalid_omp_target)

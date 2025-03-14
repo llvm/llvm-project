@@ -454,8 +454,7 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
   // 1 = Vector Register Class
   SmallVector<SDValue, 32 * 2 + 1> RegSeqArgs(NumVectorElts * 2 + 1);
 
-  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().getArch() ==
-               Triple::amdgcn;
+  bool IsGCN = CurDAG->getSubtarget().getTargetTriple().isAMDGCN();
   RegSeqArgs[0] = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
   bool IsRegSeq = true;
   unsigned NOps = N->getNumOperands();
