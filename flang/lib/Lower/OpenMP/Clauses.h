@@ -143,6 +143,9 @@ inline ObjectList makeObjects(const parser::OmpObjectList &objects,
   return makeList(objects.v, makeObjectFn(semaCtx));
 }
 
+ObjectList makeObjects(const parser::OmpArgumentList &objects,
+                       semantics::SemanticsContext &semaCtx);
+
 template <typename FuncTy, //
           typename ArgTy,  //
           typename ResultTy = std::invoke_result_t<FuncTy, ArgTy>>
