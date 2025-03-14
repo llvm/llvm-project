@@ -23983,11 +23983,11 @@ Semantics:
 The '``llvm.experimental.vp.load.ff``' is designed for reading vector lanes in a single
 IR operation where the number of lanes that can be read is not known and can
 only be determined by looking at the data. This is useful for vectorizing
-strcmp or strlen like loops where the data contains a null terminator. This is
-useful for targets that have a fault-only-first load instruction. Other targets
-may support this intrinsic differently, for example by lowering to a single
-scalar load guarded by ``evl!=0`` and ``mask[0]==1`` and indicating only 1
-lane could be read.
+strcmp or strlen like loops where the data contains a null terminator. Some
+targets have a fault-only-first load instruction that this intrinsic can be
+lowered to. Other targets may support this intrinsic differently, for example by
+lowering to a single scalar load guarded by ``evl!=0`` and ``mask[0]==1`` and
+indicating only 1 lane could be read.
 
 Like '``llvm.vp.load``', this intrinsic reads memory based on a ``mask`` and an
 ``evl``. If ``evl`` is non-zero and the first lane is masked-on, then the
