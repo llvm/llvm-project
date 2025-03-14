@@ -5416,7 +5416,7 @@ static CapturedStmt *buildDistanceFunc(Sema &Actions, QualType LogicalTy,
     // Get the LValue expression for the result.
     ImplicitParamDecl *DistParam = CS->getParam(0);
     DeclRefExpr *DistRef = Actions.BuildDeclRefExpr(
-        DistParam, LogicalTy, VK_LValue, {}, nullptr, nullptr, {}, nullptr);
+        DistParam, LogicalTy, VK_LValue, SourceLocation());
 
     SmallVector<Stmt *, 4> BodyStmts;
 
@@ -5571,10 +5571,10 @@ static CapturedStmt *buildLoopVarFunc(Sema &Actions, QualType LoopVarTy,
 
     ImplicitParamDecl *TargetParam = CS->getParam(0);
     DeclRefExpr *TargetRef = Actions.BuildDeclRefExpr(
-        TargetParam, LoopVarTy, VK_LValue, {}, nullptr, nullptr, {}, nullptr);
+        TargetParam, LoopVarTy, VK_LValue, SourceLocation());
     ImplicitParamDecl *IndvarParam = CS->getParam(1);
     DeclRefExpr *LogicalRef = Actions.BuildDeclRefExpr(
-        IndvarParam, LogicalTy, VK_LValue, {}, nullptr, nullptr, {}, nullptr);
+        IndvarParam, LogicalTy, VK_LValue, SourceLocation());
 
     // Capture the Start expression.
     CaptureVars Recap(Actions);
@@ -5747,9 +5747,8 @@ StmtResult SemaOpenMP::ActOnOpenMPCanonicalLoop(Stmt *AStmt) {
       buildDistanceFunc(SemaRef, LogicalTy, CondRel, LHS, RHS, Step);
   CapturedStmt *LoopVarFunc = buildLoopVarFunc(
       SemaRef, LVTy, LogicalTy, CounterRef, Step, isa<CXXForRangeStmt>(AStmt));
-  DeclRefExpr *LVRef =
-      SemaRef.BuildDeclRefExpr(LUVDecl, LUVDecl->getType(), VK_LValue, {},
-                               nullptr, nullptr, {}, nullptr);
+  DeclRefExpr *LVRef = SemaRef.BuildDeclRefExpr(LUVDecl, LUVDecl->getType(),
+                                                VK_LValue, SourceLocation());
   return OMPCanonicalLoop::create(getASTContext(), AStmt, DistanceFunc,
                                   LoopVarFunc, LVRef);
 }

@@ -696,6 +696,7 @@ void ASTStmtWriter::VisitDeclRefExpr(DeclRefExpr *E) {
   CurrentPackingBits.addBit(E->getDecl() != E->getFoundDecl());
   CurrentPackingBits.addBit(E->hasQualifier());
   CurrentPackingBits.addBit(E->hasTemplateKWAndArgsInfo());
+  CurrentPackingBits.addBit(E->HasResugaredDeclType());
 
   if (E->hasTemplateKWAndArgsInfo()) {
     unsigned NumTemplateArgs = E->getNumTemplateArgs();
@@ -707,7 +708,7 @@ void ASTStmtWriter::VisitDeclRefExpr(DeclRefExpr *E) {
   if ((!E->hasTemplateKWAndArgsInfo()) && (!E->hasQualifier()) &&
       (E->getDecl() == E->getFoundDecl()) &&
       nk == DeclarationName::Identifier && E->getObjectKind() == OK_Ordinary &&
-      !E->getConvertedArgs()) {
+      !E->getConvertedArgs() && !E->HasResugaredDeclType()) {
     AbbrevToUse = Writer.getDeclRefExprAbbrev();
   }
 
@@ -720,6 +721,9 @@ void ASTStmtWriter::VisitDeclRefExpr(DeclRefExpr *E) {
   if (E->hasTemplateKWAndArgsInfo())
     AddTemplateKWAndArgsInfo(*E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
                              E->getTrailingObjects<TemplateArgumentLoc>());
+
+  if (E->HasResugaredDeclType())
+    Record.writeQualType(E->getDeclType());
 
   Record.AddDeclRef(E->getDecl());
   if (E->ConvertedArgs)

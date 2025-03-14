@@ -399,7 +399,7 @@ public:
         return DeclRefExpr::Create(
             SemaRef.getASTContext(), DRE->getQualifierLoc(),
             DRE->getTemplateKeywordLoc(), VD, false, DRE->getNameInfo(),
-            DRE->getType(), DRE->getValueKind());
+            DRE->getType(), DRE->getValueKind(), DRE->getDeclType());
       }
     }
     return DRE;

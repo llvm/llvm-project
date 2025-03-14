@@ -4920,11 +4920,9 @@ BuildImplicitBaseInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
     ParmVarDecl *Param = Constructor->getParamDecl(0);
     QualType ParamType = Param->getType().getNonReferenceType();
 
-    Expr *CopyCtorArg =
-      DeclRefExpr::Create(SemaRef.Context, NestedNameSpecifierLoc(),
-                          SourceLocation(), Param, false,
-                          Constructor->getLocation(), ParamType,
-                          VK_LValue, nullptr);
+    Expr *CopyCtorArg = DeclRefExpr::Create(
+        SemaRef.Context, NestedNameSpecifierLoc(), SourceLocation(), Param,
+        false, Constructor->getLocation(), ParamType, VK_LValue);
 
     SemaRef.MarkDeclRefReferenced(cast<DeclRefExpr>(CopyCtorArg));
 
@@ -4994,10 +4992,9 @@ BuildImplicitMemberInitializer(Sema &SemaRef, CXXConstructorDecl *Constructor,
     if (Field->isZeroLengthBitField())
       return false;
 
-    Expr *MemberExprBase =
-      DeclRefExpr::Create(SemaRef.Context, NestedNameSpecifierLoc(),
-                          SourceLocation(), Param, false,
-                          Loc, ParamType, VK_LValue, nullptr);
+    Expr *MemberExprBase = DeclRefExpr::Create(
+        SemaRef.Context, NestedNameSpecifierLoc(), SourceLocation(), Param,
+        false, Loc, ParamType, VK_LValue);
 
     SemaRef.MarkDeclRefReferenced(cast<DeclRefExpr>(MemberExprBase));
 
@@ -14676,8 +14673,8 @@ buildMemcpyForAssignmentOp(Sema &S, SourceLocation Loc, QualType T,
     // about it.
     return StmtError();
 
-  ExprResult MemCpyRef = S.BuildDeclRefExpr(MemCpy, S.Context.BuiltinFnTy,
-                                            VK_PRValue, Loc, nullptr);
+  ExprResult MemCpyRef =
+      S.BuildDeclRefExpr(MemCpy, S.Context.BuiltinFnTy, VK_PRValue, Loc);
   assert(MemCpyRef.isUsable() && "Builtin reference cannot fail");
 
   Expr *CallArgs[] = {

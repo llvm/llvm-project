@@ -4632,7 +4632,8 @@ ExprResult Sema::BuiltinAtomicOverloaded(ExprResult TheCallResult) {
   DeclRefExpr *NewDRE = DeclRefExpr::Create(
       Context, DRE->getQualifierLoc(), SourceLocation(), NewBuiltinDecl,
       /*enclosing*/ false, DRE->getLocation(), Context.BuiltinFnTy,
-      DRE->getValueKind(), nullptr, nullptr, nullptr, DRE->isNonOdrUse());
+      DRE->getValueKind(), QualType(), nullptr, nullptr, nullptr,
+      DRE->isNonOdrUse());
 
   // Set the callee in the CallExpr.
   // FIXME: This loses syntactic information.
