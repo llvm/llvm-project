@@ -75,8 +75,6 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   // used during frame layout, and we may need to ensure that if we
   // split the offset internally that the DestReg is always aligned,
   // assuming that source reg was.
-  // If IsPrologueOrEpilogue is true, the function is called during prologue
-  // or epilogue generation.
   void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator II,
                  const DebugLoc &DL, Register DestReg, Register SrcReg,
                  StackOffset Offset, MachineInstr::MIFlag Flag,
