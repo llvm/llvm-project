@@ -2025,6 +2025,9 @@
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__114basic_iostreamIcNS_11char_traitsIcEEED1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__19strstreamD0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZTv0_n24_NSt3__19strstreamD1Ev', 'type': 'FUNC'}
+{'is_defined': True, 'name': '_ZTINSt3__112format_errorE', 'size': 24, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTSNSt3__112format_errorE', 'size': 23, 'type': 'OBJECT'}
+{'is_defined': True, 'name': '_ZTVNSt3__112format_errorE', 'size': 40, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__17__cpp2612__to_wstringEd', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__17__cpp2612__to_wstringEe', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__17__cpp2612__to_wstringEf', 'type': 'FUNC'}
