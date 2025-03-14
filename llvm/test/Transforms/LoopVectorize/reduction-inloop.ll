@@ -1138,13 +1138,13 @@ define float @reduction_fmuladd_blend(ptr %a, ptr %b, i64 %n, i1 %c) {
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi float [ [[TMP7]], [[MIDDLE_BLOCK]] ], [ 0.000000e+00, [[ENTRY]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
-; CHECK:       for.body:
+; CHECK:       loop.header:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi float [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SUM_NEXT:%.*]], [[LATCH]] ]
 ; CHECK-NEXT:    br i1 [[C]], label [[FOO:%.*]], label [[BAR:%.*]]
-; CHECK:       foo:
+; CHECK:       if:
 ; CHECK-NEXT:    br label [[LATCH]]
-; CHECK:       bar:
+; CHECK:       else:
 ; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[B]], i64 [[IV]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A]], i64 [[IV]]
@@ -1156,37 +1156,36 @@ define float @reduction_fmuladd_blend(ptr %a, ptr %b, i64 %n, i1 %c) {
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
 ; CHECK-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP39:![0-9]+]]
-; CHECK:       for.end:
+; CHECK:       exit:
 ; CHECK-NEXT:    [[SUM_NEXT_LCSSA:%.*]] = phi float [ [[SUM_NEXT]], [[LATCH]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret float [[SUM_NEXT_LCSSA]]
 ;
 entry:
-  br label %for.body
+  br label %loop.header
 
-for.body:
+loop.header:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
   %sum = phi float [ 0.000000e+00, %entry ], [ %sum.next, %latch ]
   %arrayidx = getelementptr inbounds float, ptr %a, i64 %iv
   %0 = load float, ptr %arrayidx, align 4
   %arrayidx2 = getelementptr inbounds float, ptr %b, i64 %iv
   %1 = load float, ptr %arrayidx2, align 4
+  br i1 %c, label %if, label %else
 
-  br i1 %c, label %foo, label %bar
-
-foo:
+if:
   br label %latch
 
-bar:
+else:
   %muladd = tail call float @llvm.fmuladd.f32(float %0, float %1, float %sum)
   br label %latch
 
 latch:
-  %sum.next = phi float [ %sum, %foo ], [ %muladd, %bar ]
+  %sum.next = phi float [ %sum, %if ], [ %muladd, %else ]
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, %n
-  br i1 %exitcond.not, label %for.end, label %for.body
+  br i1 %exitcond.not, label %exit, label %loop.header
 
-for.end:
+exit:
   ret float %sum.next
 }
 
