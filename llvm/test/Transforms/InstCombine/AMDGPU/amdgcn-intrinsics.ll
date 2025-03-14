@@ -2960,6 +2960,22 @@ define i32 @ballot_one_32() {
   ret i32 %b
 }
 
+define i64 @ballot_poison_64() {
+; CHECK-LABEL: @ballot_poison_64(
+; CHECK-NEXT:    ret i64 poison
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 poison)
+  ret i64 %b
+}
+
+define i32 @ballot_poison_32() {
+; CHECK-LABEL: @ballot_poison_32(
+; CHECK-NEXT:    ret i32 poison
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 poison)
+  ret i32 %b
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.wqm.vote
 ; --------------------------------------------------------------------
