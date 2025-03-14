@@ -104,7 +104,7 @@ if.end5.i362:                                     ; preds = %if.then3.i356, %if.
   %conv612.i359 = sext i8 %5 to i32
   %sub13.i360 = add nsw i32 %conv612.i359, -48
   %cmp714.i361 = icmp ugt i32 %sub13.i360, 9
-  store i8 0, ptr addrspace(5) undef, align 16
+  store i8 0, ptr addrspace(5) poison, align 16
   %6 = load i8, ptr addrspace(1) getelementptr inbounds ([4096 x i8], ptr addrspace(1) @_RSENC_gDcd_______________________________, i64 0, i64 1153), align 1
   %arrayidx232250.1 = getelementptr inbounds [128 x i8], ptr addrspace(5) %pD10, i32 0, i32 1
   store i8 %6, ptr addrspace(5) %arrayidx232250.1, align 1

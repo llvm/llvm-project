@@ -229,8 +229,8 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
   let CopyCost = !if(IsVRegClass, !mul(VLMul, NF), 1);
 
   let TSFlags{0} = IsVRegClass;
-  let TSFlags{3-1} = !logtwo(VLMul);
-  let TSFlags{6-4} = !sub(NF, 1);
+  let TSFlags{2-1} = !logtwo(VLMul);
+  let TSFlags{5-3} = !sub(NF, 1);
 }
 
 class GPRRegisterClass<dag regList>
