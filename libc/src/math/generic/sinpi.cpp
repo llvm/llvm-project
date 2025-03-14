@@ -55,7 +55,7 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
 
   uint64_t abs_u = xbits.uintval();
 
-  uint64_t x_abs = abs_u & 0x7fff;
+  uint64_t x_abs = abs_u & 0xFFFFFFFFFFFFFFFF;
 
   if (LIBC_UNLIKELY(x_abs == 0U))
     return x;
