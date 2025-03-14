@@ -1939,7 +1939,7 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
       return ExprError(Diag(Chunk.Loc, diag::err_array_new_needs_size)
         << D.getSourceRange());
 
-    ArraySize = static_cast<Expr*>(Chunk.Arr.NumElts);
+    ArraySize = Chunk.Arr.NumElts;
     D.DropFirstTypeObject();
   }
 
@@ -1950,7 +1950,7 @@ Sema::ActOnCXXNew(SourceLocation StartLoc, bool UseGlobal,
         break;
 
       DeclaratorChunk::ArrayTypeInfo &Array = D.getTypeObject(I).Arr;
-      if (Expr *NumElts = (Expr *)Array.NumElts) {
+      if (Expr *NumElts = Array.NumElts) {
         if (!NumElts->isTypeDependent() && !NumElts->isValueDependent()) {
           // FIXME: GCC permits constant folding here. We should either do so consistently
           // or not do so at all, rather than changing behavior in C++14 onwards.
@@ -1996,13 +1996,15 @@ static bool isLegalArrayNewInitializer(CXXNewInitializationStyle Style,
   if (!Init)
     return true;
   if (ParenListExpr *PLE = dyn_cast<ParenListExpr>(Init))
-    return IsCPlusPlus20 || PLE->getNumExprs() == 0;
+    return IsCPlusPlus20 || PLE->getNumExprs() == 0 ||
+           (PLE->getNumExprs() == 1 &&
+            isa<StringLiteral>(PLE->getExpr(0)->IgnoreParens()));
   if (isa<ImplicitValueInitExpr>(Init))
     return true;
-  else if (CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(Init))
+  if (CXXConstructExpr *CCE = dyn_cast<CXXConstructExpr>(Init))
     return !CCE->isListInitialization() &&
            CCE->getConstructor()->isDefaultConstructor();
-  else if (Style == CXXNewInitializationStyle::Braces) {
+  if (Style == CXXNewInitializationStyle::Braces) {
     assert(isa<InitListExpr>(Init) &&
            "Shouldn't create list CXXConstructExprs for arrays.");
     return true;
@@ -2159,12 +2161,15 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
   // typedef of an array type.
   // Dependent case will be handled separately.
   if (!ArraySize && !AllocType->isDependentType()) {
-    if (const ConstantArrayType *Array
-                              = Context.getAsConstantArrayType(AllocType)) {
-      ArraySize = IntegerLiteral::Create(Context, Array->getSize(),
-                                         Context.getSizeType(),
-                                         TypeRange.getEnd());
-      AllocType = Array->getElementType();
+    if (auto *Array = Context.getAsArrayType(AllocType)) {
+      auto *CAT = dyn_cast<ConstantArrayType>(Array);
+      if (CAT || isa<IncompleteArrayType>(Array)) {
+        ArraySize = CAT ? IntegerLiteral::Create(Context, CAT->getSize(),
+                                                 Context.getSizeType(),
+                                                 TypeRange.getEnd())
+                        : nullptr;
+        AllocType = Array->getElementType();
+      }
     }
   }
 
@@ -2497,8 +2502,10 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
     // initializer is no greater than that constant value.
 
     if (ArraySize && !*ArraySize) {
-      auto *CAT = Context.getAsConstantArrayType(Initializer->getType());
-      if (CAT) {
+      if (!Initializer)
+        Diag(TypeRange.getEnd(), diag::err_array_new_needs_size) << TypeRange;
+      else if (auto *CAT =
+                   Context.getAsConstantArrayType(Initializer->getType())) {
         // FIXME: Track that the array size was inferred rather than explicitly
         // specified.
         ArraySize = IntegerLiteral::Create(
