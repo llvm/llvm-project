@@ -49,8 +49,8 @@ define <8 x i32> @concat_extract_subvectors_poison(<8 x i32> %x) {
 define  <4 x double> @blend_broadcasts_v4f64(ptr %p0, ptr %p1)  {
 ; CHECK-LABEL: define <4 x double> @blend_broadcasts_v4f64(
 ; CHECK-SAME: ptr [[P0:%.*]], ptr [[P1:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x double>, ptr [[P0]], align 8
-; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x double>, ptr [[P1]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <1 x double>, ptr [[P0]], align 32
+; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x double>, ptr [[P1]], align 32
 ; CHECK-NEXT:    [[BLEND:%.*]] = shufflevector <1 x double> [[TMP1]], <1 x double> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 1, i32 0>
 ; CHECK-NEXT:    ret <4 x double> [[BLEND]]
 ;

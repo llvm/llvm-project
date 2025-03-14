@@ -3736,10 +3736,11 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
           OutputRange.second = std::max(Index, OutputRange.second);
         }
       }
-
-      if (OutputRange.second < OutputRange.first)
-        return {};
     }
+
+    if (OutputRange.second < OutputRange.first)
+      return {};
+
     return OutputRange;
   };
 
@@ -3754,11 +3755,12 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
       // Create new load of smaller vector.
       auto *ElemTy = VecTy->getElementType();
       auto *NewVecTy = FixedVectorType::get(ElemTy, NewSize);
+      auto *PtrOp = OldLoad->getPointerOperand();
       auto *NewLoad = cast<LoadInst>(
-          Builder.CreateLoad(NewVecTy, OldLoad->getPointerOperand()));
+          Builder.CreateAlignedLoad(NewVecTy, PtrOp, OldLoad->getAlign()));
       NewLoad->copyMetadata(I);
 
-      // Compare cost of old and new loads.
+      // Compare cost of old and new ops.
       auto OldCost = TTI.getMemoryOpCost(
           Instruction::Load, OldLoad->getType(), OldLoad->getAlign(),
           OldLoad->getPointerAddressSpace(), CostKind);
@@ -3766,8 +3768,20 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
           Instruction::Load, NewLoad->getType(), NewLoad->getAlign(),
           NewLoad->getPointerAddressSpace(), CostKind);
 
-      if (OldCost < NewCost || !NewCost.isValid())
+      for (auto &Use : I.uses()) {
+        auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
+        auto Mask = Shuffle->getShuffleMask();
+
+        OldCost += TTI.getShuffleCost(
+            TTI::SK_PermuteSingleSrc, VecTy, Mask, CostKind);
+        NewCost += TTI.getShuffleCost(
+            TTI::SK_PermuteSingleSrc, NewVecTy, Mask, CostKind);
+      }
+
+      if (OldCost < NewCost || !NewCost.isValid()) {
+        NewLoad->eraseFromParent();
         return false;
+      }
 
       // Replace all users.
       for (auto &Use : I.uses()) {
