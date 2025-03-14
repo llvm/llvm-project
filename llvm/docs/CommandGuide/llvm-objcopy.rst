@@ -179,6 +179,10 @@ multiple file formats.
  specified ``<flag>`` values. Can be specified multiple times to update multiple
  sections.
 
+.. option:: --verbose
+
+  List all object files modified.
+
  Supported flag names are `alloc`, `load`, `noload`, `readonly`, `exclude`,
  `debug`, `code`, `data`, `rom`, `share`, `contents`, `merge`, `strings`, and
  `large`. Not all flags are meaningful for all object file formats or target
