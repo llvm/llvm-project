@@ -10,7 +10,7 @@
   %struct.wombat = type { <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, <4 x float>, [2 x i16], [2 x i16] }
   %struct.wombat.1 = type { [4 x i32], [4 x i32], [4 x i32], [4 x i32], i32, i32, i32, i32 }
 
-  @sched_dbg_value_crash.tmp6 = internal unnamed_addr addrspace(3) global [256 x [16 x i8]] undef, align 16
+  @sched_dbg_value_crash.tmp6 = internal unnamed_addr addrspace(3) global [256 x [16 x i8]] poison, align 16
 
   define amdgpu_kernel void @sched_dbg_value_crash(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture readonly %arg1, ptr addrspace(1) nocapture readonly %arg2, ptr addrspace(1) nocapture readonly %arg3, ptr addrspace(1) nocapture %arg4) local_unnamed_addr #2 {
   bb:
@@ -98,9 +98,9 @@
     %tmp67 = extractelement <4 x float> %tmp16, i64 0
     %tmp69 = fsub fast float -0.000000e+00, %tmp67
     %tmp70 = fmul float %tmp67, 0.000000e+00
-    %tmp = fmul fast float %tmp67, undef
+    %tmp = fmul fast float %tmp67, poison
     %tmp71 = fsub fast float %tmp, %tmp70
-    %tmp73 = fadd fast float %tmp, undef
+    %tmp73 = fadd fast float %tmp, poison
     %tmp74 = insertelement <4 x float> <float poison, float poison, float poison, float 0.000000e+00>, float %tmp69, i32 0
     %tmp75 = insertelement <4 x float> %tmp74, float %tmp71, i32 1
     %tmp76 = insertelement <4 x float> %tmp75, float %tmp73, i32 2
@@ -110,10 +110,10 @@
     %tmp79 = extractelement <4 x float> %tmp66, i32 2
     %tmp80 = extractelement <4 x float> %tmp59, i32 2
     %tmp81 = fsub float %tmp79, %tmp80
-    %tmp82 = fmul fast float %tmp81, undef
-    %tmp83 = fmul fast float %tmp78, undef
+    %tmp82 = fmul fast float %tmp81, poison
+    %tmp83 = fmul fast float %tmp78, poison
     %tmp84 = fadd fast float %tmp83, %tmp77
-    %tmp85 = fadd fast float %tmp84, undef
+    %tmp85 = fadd fast float %tmp84, poison
     %tmp86 = fmul float %tmp82, %tmp82
     %tmp87 = fdiv float 1.000000e+00, %tmp86
     tail call void @llvm.dbg.value(metadata float %tmp87, metadata !5, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #3, !dbg !8
@@ -125,8 +125,8 @@
     %tmp93 = fmul float %tmp42, %tmp87
     %tmp94 = call float @llvm.fmuladd.f32(float %tmp92, float %tmp36, float %tmp93)
     %tmp95 = call float @llvm.fmuladd.f32(float %tmp48, float poison, float %tmp94)
-    %fmul = fmul <2 x float> undef, undef
-    %fadd = fadd <2 x float> %fmul, undef
+    %fmul = fmul <2 x float> poison, poison
+    %fadd = fadd <2 x float> %fmul, poison
     %extractelement = extractelement <2 x float> %fadd, i64 1
     %tmp96 = fsub float %extractelement, %tmp95
     %tmp97 = getelementptr inbounds %struct.wombat, ptr addrspace(5) %tmp5, i32 0, i32 8, i32 1
