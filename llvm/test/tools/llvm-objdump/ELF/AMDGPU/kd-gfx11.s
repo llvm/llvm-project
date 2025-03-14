@@ -13,7 +13,7 @@
 ; CHECK-NEXT: .amdhsa_private_segment_fixed_size 0
 ; CHECK-NEXT: .amdhsa_kernarg_size 0
 ; CHECK-NEXT: ; SHARED_VGPR_COUNT 0
-; CHECK-NEXT: ; INST_PREF_SIZE 0
+; CHECK-NEXT: .amdhsa_inst_pref_size 0
 ; CHECK-NEXT: ; TRAP_ON_START 0
 ; CHECK-NEXT: ; TRAP_ON_END 0
 ; CHECK-NEXT: ; IMAGE_OP 0
@@ -70,7 +70,7 @@
 ; CHECK-NEXT: .amdhsa_private_segment_fixed_size 0
 ; CHECK-NEXT: .amdhsa_kernarg_size 0
 ; CHECK-NEXT: .amdhsa_shared_vgpr_count 0
-; CHECK-NEXT: ; INST_PREF_SIZE 0
+; CHECK-NEXT: .amdhsa_inst_pref_size 0
 ; CHECK-NEXT: ; TRAP_ON_START 0
 ; CHECK-NEXT: ; TRAP_ON_END 0
 ; CHECK-NEXT: ; IMAGE_OP 0
@@ -114,6 +114,7 @@
   .amdhsa_next_free_vgpr 32
   .amdhsa_next_free_sgpr 32
   .amdhsa_shared_vgpr_count 0
+  .amdhsa_inst_pref_size 0
 .end_amdhsa_kernel
 
 ;--- 3.s
@@ -127,7 +128,7 @@
 ; CHECK-NEXT: .amdhsa_private_segment_fixed_size 0
 ; CHECK-NEXT: .amdhsa_kernarg_size 0
 ; CHECK-NEXT: .amdhsa_shared_vgpr_count 1
-; CHECK-NEXT: ; INST_PREF_SIZE 0
+; CHECK-NEXT: .amdhsa_inst_pref_size 63
 ; CHECK-NEXT: ; TRAP_ON_START 0
 ; CHECK-NEXT: ; TRAP_ON_END 0
 ; CHECK-NEXT: ; IMAGE_OP 0
@@ -171,6 +172,7 @@
   .amdhsa_next_free_vgpr 32
   .amdhsa_next_free_sgpr 32
   .amdhsa_shared_vgpr_count 1
+  .amdhsa_inst_pref_size 63
 .end_amdhsa_kernel
 
 ;--- 4.s
@@ -184,7 +186,7 @@
 ; CHECK-NEXT: .amdhsa_private_segment_fixed_size 0
 ; CHECK-NEXT: .amdhsa_kernarg_size 0
 ; CHECK-NEXT: .amdhsa_shared_vgpr_count 1
-; CHECK-NEXT: ; INST_PREF_SIZE 0
+; CHECK-NEXT: .amdhsa_inst_pref_size 63
 ; CHECK-NEXT: ; TRAP_ON_START 0
 ; CHECK-NEXT: ; TRAP_ON_END 0
 ; CHECK-NEXT: ; IMAGE_OP 0
@@ -228,5 +230,6 @@
   .amdhsa_next_free_vgpr 32
   .amdhsa_next_free_sgpr 32
   .amdhsa_shared_vgpr_count 1
+  .amdhsa_inst_pref_size 63
   .amdhsa_wavefront_size32 0
 .end_amdhsa_kernel

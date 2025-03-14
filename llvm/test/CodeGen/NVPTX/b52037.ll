@@ -39,7 +39,7 @@ declare %int3 @hoge(i32, i32, i32) local_unnamed_addr
 
 declare i64 @foo() local_unnamed_addr
 
-define void @barney(ptr nocapture readonly %arg) local_unnamed_addr {
+define ptx_kernel void @barney(ptr nocapture readonly %arg) local_unnamed_addr {
 bb:
   tail call void asm sideeffect "// KEEP", ""() #1
   %tmp = alloca %struct.zot, align 16
@@ -210,9 +210,6 @@ bb14:                                             ; preds = %bb49.i.lr.ph, %bb49
 attributes #0 = { argmemonly mustprogress nofree nounwind willreturn }
 attributes #1 = { nounwind }
 
-!nvvm.annotations = !{!0}
-
-!0 = !{ptr @barney, !"kernel", i32 1}
 !1 = !{!2, !11, i64 64}
 !2 = !{!"_ZTSN7cuneibs22neiblist_iterator_coreE", !3, i64 0, !3, i64 8, !6, i64 16, !8, i64 32, !9, i64 44, !10, i64 48, !11, i64 64, !9, i64 72, !4, i64 76, !9, i64 80}
 !3 = !{!"any pointer", !4, i64 0}

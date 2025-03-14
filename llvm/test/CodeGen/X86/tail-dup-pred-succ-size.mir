@@ -538,42 +538,46 @@ body:             |
   ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG]], %jump-table.0, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.2:
-  ; LIMIT-NEXT:   successors: %bb.7(0x80000000)
+  ; LIMIT-NEXT:   successors: %bb.9(0x20000000), %bb.10(0x20000000), %bb.11(0x20000000), %bb.12(0x20000000)
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT:   [[MOV32rm:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
-  ; LIMIT-NEXT:   JMP_1 %bb.7
+  ; LIMIT-NEXT:   [[SHR32ri1:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
+  ; LIMIT-NEXT:   [[AND32ri1:%[0-9]+]]:gr32 = AND32ri [[SHR32ri1]], 7, implicit-def dead $eflags
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri1]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG1]], %jump-table.1, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.3:
-  ; LIMIT-NEXT:   successors: %bb.7(0x80000000)
+  ; LIMIT-NEXT:   successors: %bb.9(0x20000000), %bb.10(0x20000000), %bb.11(0x20000000), %bb.12(0x20000000)
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT:   [[MOV32rm1:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
-  ; LIMIT-NEXT:   [[SHR32ri1:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm1]], 1, implicit-def dead $eflags
-  ; LIMIT-NEXT:   JMP_1 %bb.7
+  ; LIMIT-NEXT:   [[SHR32ri2:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm1]], 1, implicit-def dead $eflags
+  ; LIMIT-NEXT:   [[SHR32ri3:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
+  ; LIMIT-NEXT:   [[AND32ri2:%[0-9]+]]:gr32 = AND32ri [[SHR32ri3]], 7, implicit-def dead $eflags
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG2:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri2]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG2]], %jump-table.1, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.4:
-  ; LIMIT-NEXT:   successors: %bb.7(0x80000000)
+  ; LIMIT-NEXT:   successors: %bb.9(0x20000000), %bb.10(0x20000000), %bb.11(0x20000000), %bb.12(0x20000000)
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT:   [[MOV32rm2:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
-  ; LIMIT-NEXT:   [[SHR32ri2:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm2]], 2, implicit-def dead $eflags
-  ; LIMIT-NEXT:   JMP_1 %bb.7
+  ; LIMIT-NEXT:   [[SHR32ri4:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm2]], 2, implicit-def dead $eflags
+  ; LIMIT-NEXT:   [[SHR32ri5:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
+  ; LIMIT-NEXT:   [[AND32ri3:%[0-9]+]]:gr32 = AND32ri [[SHR32ri5]], 7, implicit-def dead $eflags
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG3:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri3]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG3]], %jump-table.1, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.5:
-  ; LIMIT-NEXT:   successors: %bb.7(0x80000000)
+  ; LIMIT-NEXT:   successors: %bb.9(0x20000000), %bb.10(0x20000000), %bb.11(0x20000000), %bb.12(0x20000000)
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT:   [[MOV32rm3:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
-  ; LIMIT-NEXT:   [[SHR32ri3:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm3]], 3, implicit-def dead $eflags
-  ; LIMIT-NEXT:   JMP_1 %bb.7
+  ; LIMIT-NEXT:   [[SHR32ri6:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm3]], 3, implicit-def dead $eflags
+  ; LIMIT-NEXT:   [[SHR32ri7:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
+  ; LIMIT-NEXT:   [[AND32ri4:%[0-9]+]]:gr32 = AND32ri [[SHR32ri7]], 7, implicit-def dead $eflags
+  ; LIMIT-NEXT:   [[SUBREG_TO_REG4:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, [[AND32ri4]], %subreg.sub_32bit
+  ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG4]], %jump-table.1, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.6:
   ; LIMIT-NEXT:   successors:
-  ; LIMIT-NEXT: {{  $}}
-  ; LIMIT-NEXT: bb.7:
-  ; LIMIT-NEXT:   successors: %bb.9(0x20000000), %bb.10(0x20000000), %bb.11(0x20000000), %bb.12(0x20000000)
-  ; LIMIT-NEXT: {{  $}}
-  ; LIMIT-NEXT:   [[SHR32ri4:%[0-9]+]]:gr32 = SHR32ri [[COPY]], 2, implicit-def dead $eflags
-  ; LIMIT-NEXT:   [[AND32ri1:%[0-9]+]]:gr32 = AND32ri [[SHR32ri4]], 7, implicit-def dead $eflags
-  ; LIMIT-NEXT:   [[SUBREG_TO_REG1:%[0-9]+]]:gr64_nosp = SUBREG_TO_REG 0, killed [[AND32ri1]], %subreg.sub_32bit
-  ; LIMIT-NEXT:   JMP64m $noreg, 8, [[SUBREG_TO_REG1]], %jump-table.1, $noreg
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.9:
   ; LIMIT-NEXT:   [[MOV32rm4:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
@@ -583,23 +587,23 @@ body:             |
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.10:
   ; LIMIT-NEXT:   [[MOV32rm5:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
-  ; LIMIT-NEXT:   [[SHR32ri5:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm5]], 1, implicit-def dead $eflags
-  ; LIMIT-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, [[SHR32ri5]] :: (store (s32))
-  ; LIMIT-NEXT:   $eax = COPY [[SHR32ri5]]
+  ; LIMIT-NEXT:   [[SHR32ri8:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm5]], 1, implicit-def dead $eflags
+  ; LIMIT-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, [[SHR32ri8]] :: (store (s32))
+  ; LIMIT-NEXT:   $eax = COPY [[SHR32ri8]]
   ; LIMIT-NEXT:   RET 0, $eax
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.11:
   ; LIMIT-NEXT:   [[MOV32rm6:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
-  ; LIMIT-NEXT:   [[SHR32ri6:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm6]], 2, implicit-def dead $eflags
-  ; LIMIT-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, [[SHR32ri6]] :: (store (s32))
-  ; LIMIT-NEXT:   $eax = COPY [[SHR32ri6]]
+  ; LIMIT-NEXT:   [[SHR32ri9:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm6]], 2, implicit-def dead $eflags
+  ; LIMIT-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, [[SHR32ri9]] :: (store (s32))
+  ; LIMIT-NEXT:   $eax = COPY [[SHR32ri9]]
   ; LIMIT-NEXT:   RET 0, $eax
   ; LIMIT-NEXT: {{  $}}
   ; LIMIT-NEXT: bb.12:
   ; LIMIT-NEXT:   [[MOV32rm7:%[0-9]+]]:gr32 = MOV32rm [[COPY1]], 1, $noreg, 0, $noreg
-  ; LIMIT-NEXT:   [[SHR32ri7:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm7]], 6, implicit-def dead $eflags
-  ; LIMIT-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, [[SHR32ri7]] :: (store (s32))
-  ; LIMIT-NEXT:   $eax = COPY [[SHR32ri7]]
+  ; LIMIT-NEXT:   [[SHR32ri10:%[0-9]+]]:gr32 = SHR32ri [[MOV32rm7]], 6, implicit-def dead $eflags
+  ; LIMIT-NEXT:   MOV32mr [[COPY1]], 1, $noreg, 0, $noreg, [[SHR32ri10]] :: (store (s32))
+  ; LIMIT-NEXT:   $eax = COPY [[SHR32ri10]]
   ; LIMIT-NEXT:   RET 0, $eax
   ;
   ; NOLIMIT-LABEL: name: foo_no_phis

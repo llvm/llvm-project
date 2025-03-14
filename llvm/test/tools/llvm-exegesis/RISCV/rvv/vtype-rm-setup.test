@@ -1,0 +1,13 @@
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency --opcode-name=PseudoVFWREDUSUM_VS_M1_E32 \
+# RUN:    --max-configs-per-opcode=1 --min-instructions=100 --dump-object-to-disk=%t.o > %t.txt
+# RUN: llvm-objdump --triple=riscv64 -d %t.o | FileCheck %s --check-prefix=VFWREDUSUM
+# RUN: llvm-exegesis -mtriple=riscv64 -mcpu=sifive-x280 -benchmark-phase=assemble-measured-code --mode=latency --opcode-name=PseudoVSSRL_VX_MF4 \
+# RUN:    --max-configs-per-opcode=1 --min-instructions=100 --dump-object-to-disk=%t.o > %t.txt
+# RUN: llvm-objdump --triple=riscv64 -d %t.o | FileCheck %s --check-prefix=VSSRL
+
+# Make sure the correct VSETVL / VXRM write / FRM write instructions are generated
+# VFWREDUSUM: vsetvli {{.*}}, zero, e32, m1, tu, ma
+# VFWREDUSUM: fsrmi   {{.*}}, 0x0
+
+# VSSRL: vsetvli {{.*}}, zero, e8, mf4, tu, ma
+# VSSRL: csrwi   vxrm, 0x0

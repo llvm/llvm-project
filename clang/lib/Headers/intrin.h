@@ -94,8 +94,8 @@ void __outwordstring(unsigned short, unsigned short *, unsigned long);
 unsigned long __readcr0(void);
 unsigned long __readcr2(void);
 unsigned __LPTRINT_TYPE__ __readcr3(void);
-unsigned long __readcr4(void);
-unsigned long __readcr8(void);
+unsigned __LPTRINT_TYPE__ __readcr4(void);
+unsigned __int64 __readcr8(void);
 unsigned int __readdr(unsigned int);
 #ifdef __i386__
 unsigned char __readfsbyte(unsigned long);
@@ -124,8 +124,8 @@ void __vmx_vmptrst(unsigned __int64 *);
 void __wbinvd(void);
 void __writecr0(unsigned int);
 void __writecr3(unsigned __INTPTR_TYPE__);
-void __writecr4(unsigned int);
-void __writecr8(unsigned int);
+void __writecr4(unsigned __INTPTR_TYPE__);
+void __writecr8(unsigned __int64);
 void __writedr(unsigned int, unsigned int);
 void __writefsbyte(unsigned long, unsigned char);
 void __writefsdword(unsigned long, unsigned long);
@@ -162,8 +162,6 @@ void _Store_HLERelease(long volatile *, long);
 void _Store64_HLERelease(__int64 volatile *, __int64);
 void _StorePointer_HLERelease(void *volatile *, void *);
 void _WriteBarrier(void);
-unsigned __int32 xbegin(void);
-void _xend(void);
 
 /* These additional intrinsics are turned on in x64/amd64/x86_64 mode. */
 #if defined(__x86_64__) && !defined(__arm64ec__)

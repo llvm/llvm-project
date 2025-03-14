@@ -1,4 +1,5 @@
 header: errno.h
+header_template: errno.h.def
 standards:
   - stdc
   - Linux

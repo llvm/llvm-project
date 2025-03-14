@@ -151,23 +151,18 @@ PreservedAnalyses AMDGPUAtomicOptimizerPass::run(Function &F,
 }
 
 bool AMDGPUAtomicOptimizerImpl::run() {
-
   // Scan option None disables the Pass
-  if (ScanImpl == ScanOptions::None) {
+  if (ScanImpl == ScanOptions::None)
     return false;
-  }
 
   visit(F);
+  if (ToReplace.empty())
+    return false;
 
-  const bool Changed = !ToReplace.empty();
-
-  for (ReplacementInfo &Info : ToReplace) {
-    optimizeAtomic(*Info.I, Info.Op, Info.ValIdx, Info.ValDivergent);
-  }
-
+  for (auto &[I, Op, ValIdx, ValDivergent] : ToReplace)
+    optimizeAtomic(*I, Op, ValIdx, ValDivergent);
   ToReplace.clear();
-
-  return Changed;
+  return true;
 }
 
 static bool isLegalCrossLaneType(Type *Ty) {
@@ -247,9 +242,7 @@ void AMDGPUAtomicOptimizerImpl::visitAtomicRMWInst(AtomicRMWInst &I) {
   // If we get here, we can optimize the atomic using a single wavefront-wide
   // atomic operation to do the calculation for the entire wavefront, so
   // remember the instruction so we can come back to it.
-  const ReplacementInfo Info = {&I, Op, ValIdx, ValDivergent};
-
-  ToReplace.push_back(Info);
+  ToReplace.push_back({&I, Op, ValIdx, ValDivergent});
 }
 
 void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
@@ -333,17 +326,14 @@ void AMDGPUAtomicOptimizerImpl::visitIntrinsicInst(IntrinsicInst &I) {
   // If any of the other arguments to the intrinsic are divergent, we can't
   // optimize the operation.
   for (unsigned Idx = 1; Idx < I.getNumOperands(); Idx++) {
-    if (UA.isDivergentUse(I.getOperandUse(Idx))) {
+    if (UA.isDivergentUse(I.getOperandUse(Idx)))
       return;
-    }
   }
 
   // If we get here, we can optimize the atomic using a single wavefront-wide
   // atomic operation to do the calculation for the entire wavefront, so
   // remember the instruction so we can come back to it.
-  const ReplacementInfo Info = {&I, Op, ValIdx, ValDivergent};
-
-  ToReplace.push_back(Info);
+  ToReplace.push_back({&I, Op, ValIdx, ValDivergent});
 }
 
 // Use the builder to create the non-atomic counterpart of the specified
@@ -683,7 +673,7 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
     // Record I's new position as the exit block.
     PixelExitBB = I.getParent();
 
-    I.moveBefore(NonHelperTerminator);
+    I.moveBefore(NonHelperTerminator->getIterator());
     B.SetInsertPoint(&I);
   }
 
@@ -898,8 +888,15 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
 
     // We need to broadcast the value who was the lowest active lane (the first
     // lane) to all other lanes in the wavefront.
-    Value *BroadcastI = nullptr;
-    BroadcastI = B.CreateIntrinsic(Ty, Intrinsic::amdgcn_readfirstlane, PHI);
+
+    Value *ReadlaneVal = PHI;
+    if (TyBitWidth < 32)
+      ReadlaneVal = B.CreateZExt(PHI, B.getInt32Ty());
+
+    Value *BroadcastI = B.CreateIntrinsic(
+        ReadlaneVal->getType(), Intrinsic::amdgcn_readfirstlane, ReadlaneVal);
+    if (TyBitWidth < 32)
+      BroadcastI = B.CreateTrunc(BroadcastI, Ty);
 
     // Now that we have the result of our single atomic operation, we need to
     // get our individual lane's slice into the result. We use the lane offset

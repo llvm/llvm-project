@@ -136,7 +136,7 @@ struct PipeliningOption {
   /// The callback passes the operation created along with the part of the
   /// pipeline and the iteration index. The iteration index is always 0 for the
   /// kernel. For the prologue and epilogue, it corresponds to the iteration
-  /// peeled out of the loop in the range [0, maxStage[.
+  /// peeled out of the loop in the range [0, maxStage].
   using AnnotationlFnType =
       std::function<void(Operation *, PipelinerPart, unsigned)>;
   AnnotationlFnType annotateFn = nullptr;

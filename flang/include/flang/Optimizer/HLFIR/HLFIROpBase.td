@@ -91,10 +91,9 @@ def IsFortranVariablePred
 def AnyFortranVariable : Type<IsFortranVariablePred, "any HLFIR variable type">;
 
 
-def AnyFortranValue : TypeConstraint<Or<[AnyLogicalLike.predicate,
-    AnyIntegerLike.predicate, AnyRealLike.predicate,
-    AnyFirComplexLike.predicate,
-    hlfir_ExprType.predicate]>, "any Fortran value type">;
+def IsFortranValuePred : CPred<"::hlfir::isFortranValueType($_self)">;
+def AnyFortranValue
+        : TypeConstraint<IsFortranValuePred, "any Fortran value type">;
 
 
 def AnyFortranEntity : TypeConstraint<Or<[AnyFortranVariable.predicate,
@@ -125,6 +124,11 @@ def IsFortranNumericalArrayObjectPred
 def AnyFortranNumericalArrayObject : Type<IsFortranNumericalArrayObjectPred,
     "any array-like object containing a numerical type">;
 
+def AnyFortranNumericalArrayEntity
+    : Type<And<[AnyFortranNumericalArrayObject.predicate,
+                AnyFortranEntity.predicate]>,
+           "any array-like entity containing a numerical type">;
+
 def IsFortranNumericalOrLogicalArrayObjectPred
         : CPred<"::hlfir::isFortranNumericalOrLogicalArrayObject($_self)">;
 def AnyFortranNumericalOrLogicalArrayObject : Type<IsFortranNumericalOrLogicalArrayObjectPred,
@@ -134,6 +138,10 @@ def IsFortranArrayObjectPred
         : CPred<"::hlfir::isFortranArrayObject($_self)">;
 def AnyFortranArrayObject : Type<IsFortranArrayObjectPred,
     "any array-like object">;
+
+def AnyFortranArrayEntity
+    : Type<And<[AnyFortranArrayObject.predicate, AnyFortranEntity.predicate]>,
+           "any array-like entity">;
 
 def IsPassByRefOrIntegerTypePred
         : CPred<"::hlfir::isPassByRefOrIntegerType($_self)">;

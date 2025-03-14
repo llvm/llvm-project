@@ -1943,11 +1943,6 @@ protected:
     LLVM_PREFERRED_TYPE(TypeBitfields)
     unsigned : NumTypeBits;
 
-    /// Extra information which affects how the function is called, like
-    /// regparm and the calling convention.
-    LLVM_PREFERRED_TYPE(CallingConv)
-    unsigned ExtInfo : 13;
-
     /// The ref-qualifier associated with a \c FunctionProtoType.
     ///
     /// This is a value of type \c RefQualifierKind.
@@ -1965,12 +1960,6 @@ protected:
     /// Whether this function has extended Qualifiers.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasExtQuals : 1;
-
-    /// The number of parameters this function has, not counting '...'.
-    /// According to [implimits] 8 bits should be enough here but this is
-    /// somewhat easy to exceed with metaprogramming and so we would like to
-    /// keep NumParams as wide as reasonably possible.
-    unsigned NumParams : FunctionTypeNumParamsWidth;
 
     /// The type of exception specification this function has.
     LLVM_PREFERRED_TYPE(ExceptionSpecificationType)
@@ -1991,6 +1980,17 @@ protected:
     /// Whether this function has a trailing return type.
     LLVM_PREFERRED_TYPE(bool)
     unsigned HasTrailingReturn : 1;
+
+    /// Extra information which affects how the function is called, like
+    /// regparm and the calling convention.
+    LLVM_PREFERRED_TYPE(CallingConv)
+    unsigned ExtInfo : 14;
+
+    /// The number of parameters this function has, not counting '...'.
+    /// According to [implimits] 8 bits should be enough here but this is
+    /// somewhat easy to exceed with metaprogramming and so we would like to
+    /// keep NumParams as wide as reasonably possible.
+    unsigned NumParams : FunctionTypeNumParamsWidth;
   };
 
   class ObjCObjectTypeBitfields {
@@ -2518,6 +2518,7 @@ public:
   bool isFloat32Type() const;
   bool isDoubleType() const;
   bool isBFloat16Type() const;
+  bool isMFloat8Type() const;
   bool isFloat128Type() const;
   bool isIbm128Type() const;
   bool isRealType() const;         // C99 6.2.5p17 (real floating + integer)
@@ -2567,6 +2568,9 @@ public:
   bool isVectorType() const;                    // GCC vector type.
   bool isExtVectorType() const;                 // Extended vector type.
   bool isExtVectorBoolType() const;             // Extended vector type with bool element.
+  // Extended vector type with bool element that is packed. HLSL doesn't pack
+  // its bool vectors.
+  bool isPackedVectorBoolType(const ASTContext &ctx) const;
   bool isSubscriptableVectorType() const;
   bool isMatrixType() const;                    // Matrix type.
   bool isConstantMatrixType() const;            // Constant matrix type.
@@ -2660,6 +2664,7 @@ public:
   bool isHLSLSpecificType() const; // Any HLSL specific type
   bool isHLSLBuiltinIntangibleType() const; // Any HLSL builtin intangible type
   bool isHLSLAttributedResourceType() const;
+  bool isHLSLResourceRecord() const;
   bool isHLSLIntangibleType()
       const; // Any HLSL intangible type (builtin, array, class)
 
@@ -4437,19 +4442,16 @@ public:
     // Type::FunctionTypeBitfields::ExtInfo as well.
 
     // |  CC  |noreturn|produces|nocallersavedregs|regparm|nocfcheck|cmsenscall|
-    // |0 .. 4|   5    |    6   |       7         |8 .. 10|    11   |    12    |
+    // |0 .. 5|   6    |    7   |       8         |9 .. 11|    12   |    13    |
     //
     // regparm is either 0 (no regparm attribute) or the regparm value+1.
-    enum { CallConvMask = 0x1F };
-    enum { NoReturnMask = 0x20 };
-    enum { ProducesResultMask = 0x40 };
-    enum { NoCallerSavedRegsMask = 0x80 };
-    enum {
-      RegParmMask =  0x700,
-      RegParmOffset = 8
-    };
-    enum { NoCfCheckMask = 0x800 };
-    enum { CmseNSCallMask = 0x1000 };
+    enum { CallConvMask = 0x3F };
+    enum { NoReturnMask = 0x40 };
+    enum { ProducesResultMask = 0x80 };
+    enum { NoCallerSavedRegsMask = 0x100 };
+    enum { RegParmMask = 0xe00, RegParmOffset = 9 };
+    enum { NoCfCheckMask = 0x1000 };
+    enum { CmseNSCallMask = 0x2000 };
     uint16_t Bits = CC_C;
 
     ExtInfo(unsigned Bits) : Bits(static_cast<uint16_t>(Bits)) {}
@@ -4593,9 +4595,14 @@ public:
     SME_ZT0Shift = 5,
     SME_ZT0Mask = 0b111 << SME_ZT0Shift,
 
+    // A bit to tell whether a function is agnostic about sme ZA state.
+    SME_AgnosticZAStateShift = 8,
+    SME_AgnosticZAStateMask = 1 << SME_AgnosticZAStateShift,
+
     SME_AttributeMask =
-        0b111'111'11 // We can't support more than 8 bits because of
-                     // the bitmask in FunctionTypeExtraBitfields.
+        0b1'111'111'11 // We can't support more than 9 bits because of
+                       // the bitmask in FunctionTypeArmAttributes
+                       // and ExtProtoInfo.
   };
 
   enum ArmStateValue : unsigned {
@@ -4620,7 +4627,7 @@ public:
   struct alignas(void *) FunctionTypeArmAttributes {
     /// Any AArch64 SME ACLE type attributes that need to be propagated
     /// on declarations and function pointers.
-    unsigned AArch64SMEAttributes : 8;
+    unsigned AArch64SMEAttributes : 9;
 
     FunctionTypeArmAttributes() : AArch64SMEAttributes(SME_NormalFunction) {}
   };
@@ -5188,7 +5195,7 @@ public:
     FunctionType::ExtInfo ExtInfo;
     unsigned Variadic : 1;
     unsigned HasTrailingReturn : 1;
-    unsigned AArch64SMEAttributes : 8;
+    unsigned AArch64SMEAttributes : 9;
     Qualifiers TypeQuals;
     RefQualifierKind RefQualifier = RQ_None;
     ExceptionSpecInfo ExceptionSpec;
@@ -6260,8 +6267,8 @@ public:
     LLVM_PREFERRED_TYPE(bool)
     uint8_t RawBuffer : 1;
 
-    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV,
-               bool RawBuffer)
+    Attributes(llvm::dxil::ResourceClass ResourceClass, bool IsROV = false,
+               bool RawBuffer = false)
         : ResourceClass(ResourceClass), IsROV(IsROV), RawBuffer(RawBuffer) {}
 
     Attributes() : Attributes(llvm::dxil::ResourceClass::UAV, false, false) {}
@@ -7035,17 +7042,17 @@ class DependentNameType : public TypeWithKeyword, public llvm::FoldingSetNode {
       : TypeWithKeyword(Keyword, DependentName, CanonType,
                         TypeDependence::DependentInstantiation |
                             toTypeDependence(NNS->getDependence())),
-        NNS(NNS), Name(Name) {}
+        NNS(NNS), Name(Name) {
+    assert(NNS);
+    assert(Name);
+  }
 
 public:
   /// Retrieve the qualification on this type.
   NestedNameSpecifier *getQualifier() const { return NNS; }
 
-  /// Retrieve the type named by the typename specifier as an identifier.
-  ///
-  /// This routine will return a non-NULL identifier pointer when the
-  /// form of the original typename was terminated by an identifier,
-  /// e.g., "typename T::type".
+  /// Retrieve the identifier that terminates this type name.
+  /// For example, "type" in "typename T::type".
   const IdentifierInfo *getIdentifier() const {
     return Name;
   }
@@ -8532,6 +8539,10 @@ inline bool Type::isBFloat16Type() const {
   return isSpecificBuiltinType(BuiltinType::BFloat16);
 }
 
+inline bool Type::isMFloat8Type() const {
+  return isSpecificBuiltinType(BuiltinType::MFloat8);
+}
+
 inline bool Type::isFloat128Type() const {
   return isSpecificBuiltinType(BuiltinType::Float128);
 }
@@ -8836,13 +8847,16 @@ void FixedPointValueToString(SmallVectorImpl<char> &Str, llvm::APSInt Val,
                              unsigned Scale);
 
 inline FunctionEffectsRef FunctionEffectsRef::get(QualType QT) {
+  const Type *TypePtr = QT.getTypePtr();
   while (true) {
-    QualType Pointee = QT->getPointeeType();
-    if (Pointee.isNull())
+    if (QualType Pointee = TypePtr->getPointeeType(); !Pointee.isNull())
+      TypePtr = Pointee.getTypePtr();
+    else if (TypePtr->isArrayType())
+      TypePtr = TypePtr->getBaseElementTypeUnsafe();
+    else
       break;
-    QT = Pointee;
   }
-  if (const auto *FPT = QT->getAs<FunctionProtoType>())
+  if (const auto *FPT = TypePtr->getAs<FunctionProtoType>())
     return FPT->getFunctionEffects();
   return {};
 }

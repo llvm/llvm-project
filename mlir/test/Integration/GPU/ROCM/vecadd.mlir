@@ -3,7 +3,7 @@
 // RUN: | mlir-opt -gpu-kernel-outlining \
 // RUN: | mlir-opt -pass-pipeline='builtin.module(gpu.module(strip-debuginfo,convert-gpu-to-rocdl{use-bare-ptr-memref-call-conv=true}),rocdl-attach-target{chip=%chip})' \
 // RUN: | mlir-opt -gpu-to-llvm=use-bare-pointers-for-kernels=true -reconcile-unrealized-casts -gpu-module-to-binary \
-// RUN: | mlir-cpu-runner \
+// RUN: | mlir-runner \
 // RUN:   --shared-libs=%mlir_rocm_runtime \
 // RUN:   --shared-libs=%mlir_runner_utils \
 // RUN:   --entry-point-result=void \

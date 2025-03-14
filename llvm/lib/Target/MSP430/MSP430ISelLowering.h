@@ -171,7 +171,7 @@ namespace llvm {
                         MachineFunction &MF,
                         bool IsVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,
-                        LLVMContext &Context) const override;
+                        LLVMContext &Context, const Type *RetTy) const override;
 
     SDValue LowerReturn(SDValue Chain, CallingConv::ID CallConv, bool isVarArg,
                         const SmallVectorImpl<ISD::OutputArg> &Outs,

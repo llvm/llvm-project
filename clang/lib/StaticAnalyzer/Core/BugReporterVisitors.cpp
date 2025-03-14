@@ -1192,13 +1192,17 @@ static bool isInitializationOfVar(const ExplodedNode *N, const VarRegion *VR) {
   if (DS->getSingleDecl() != VR->getDecl())
     return false;
 
-  const MemSpaceRegion *VarSpace = VR->getMemorySpace();
-  const auto *FrameSpace = dyn_cast<StackSpaceRegion>(VarSpace);
+  const auto *FrameSpace =
+      VR->getMemorySpaceAs<StackSpaceRegion>(N->getState());
+
   if (!FrameSpace) {
     // If we ever directly evaluate global DeclStmts, this assertion will be
     // invalid, but this still seems preferable to silently accepting an
     // initialization that may be for a path-sensitive variable.
-    assert(VR->getDecl()->isStaticLocal() && "non-static stackless VarRegion");
+    [[maybe_unused]] bool IsLocalStaticOrLocalExtern =
+        VR->getDecl()->isStaticLocal() || VR->getDecl()->isLocalExternDecl();
+    assert(IsLocalStaticOrLocalExtern &&
+           "Declared a variable on the stack without Stack memspace?");
     return true;
   }
 

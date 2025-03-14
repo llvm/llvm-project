@@ -177,7 +177,7 @@ Available checks are:
      problems at higher optimization levels.
   -  ``-fsanitize=pointer-overflow``: Performing pointer arithmetic which
      overflows, or where either the old or new pointer value is a null pointer
-     (or in C, when they both are).
+     (excluding the case where both are null pointers).
   -  ``-fsanitize=return``: In C++, reaching the end of a
      value-returning function without returning a value.
   -  ``-fsanitize=returns-nonnull-attribute``: Returning null pointer
@@ -214,13 +214,14 @@ Available checks are:
      the wrong dynamic type, or that its lifetime has not begun or has ended.
      Incompatible with ``-fno-rtti``. Link must be performed by ``clang++``, not
      ``clang``, to make sure C++-specific parts of the runtime library and C++
-     standard libraries are present.
+     standard libraries are present. The check is not a part of the ``undefined``
+     group. Also it does not support ``-fsanitize-trap=vptr``.
 
 You can also use the following check groups:
   -  ``-fsanitize=undefined``: All of the checks listed above other than
      ``float-divide-by-zero``, ``unsigned-integer-overflow``,
-     ``implicit-conversion``, ``local-bounds`` and the ``nullability-*`` group
-     of checks.
+     ``implicit-conversion``, ``local-bounds``, ``vptr`` and the
+     ``nullability-*`` group of checks.
   -  ``-fsanitize=undefined-trap``: Deprecated alias of
      ``-fsanitize=undefined``.
   -  ``-fsanitize=implicit-integer-truncation``: Catches lossy integral

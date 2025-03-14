@@ -1060,7 +1060,8 @@ SDValue M68kTargetLowering::LowerFormalArguments(
 
 bool M68kTargetLowering::CanLowerReturn(
     CallingConv::ID CCID, MachineFunction &MF, bool IsVarArg,
-    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context) const {
+    const SmallVectorImpl<ISD::OutputArg> &Outs, LLVMContext &Context,
+    const Type *RetTy) const {
   SmallVector<CCValAssign, 16> RVLocs;
   CCState CCInfo(CCID, IsVarArg, MF, RVLocs, Context);
   return CCInfo.CheckReturn(Outs, RetCC_M68k);
@@ -1593,13 +1594,13 @@ static void lowerOverflowArithmetic(SDValue Op, SelectionDAG &DAG,
   case ISD::UMULO:
     PromoteMULO(ISD::ZERO_EXTEND);
     NoOverflow = VT != MVT::i32;
-    BaseOp = NoOverflow ? ISD::MUL : M68kISD::UMUL;
+    BaseOp = NoOverflow ? (unsigned)ISD::MUL : (unsigned)M68kISD::UMUL;
     CC = M68k::COND_VS;
     break;
   case ISD::SMULO:
     PromoteMULO(ISD::SIGN_EXTEND);
     NoOverflow = VT != MVT::i32;
-    BaseOp = NoOverflow ? ISD::MUL : M68kISD::SMUL;
+    BaseOp = NoOverflow ? (unsigned)ISD::MUL : (unsigned)M68kISD::SMUL;
     CC = M68k::COND_VS;
     break;
   }

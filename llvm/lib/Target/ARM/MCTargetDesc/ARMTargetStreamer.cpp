@@ -52,7 +52,7 @@ void ARMTargetStreamer::reset() {}
 void ARMTargetStreamer::emitInst(uint32_t Inst, char Suffix) {
   unsigned Size;
   char Buffer[4];
-  const bool LittleEndian = getStreamer().getContext().getAsmInfo()->isLittleEndian();
+  const bool LittleEndian = getContext().getAsmInfo()->isLittleEndian();
 
   switch (Suffix) {
   case '\0':
@@ -115,6 +115,7 @@ void ARMTargetStreamer::emitFPU(ARM::FPUKind FPU) {}
 void ARMTargetStreamer::finishAttributeSection() {}
 void ARMTargetStreamer::annotateTLSDescriptorSequence(
     const MCSymbolRefExpr *SRE) {}
+void ARMTargetStreamer::emitThumbFunc(MCSymbol *Symbol) {}
 void ARMTargetStreamer::emitThumbSet(MCSymbol *Symbol, const MCExpr *Value) {}
 
 void ARMTargetStreamer::emitARMWinCFIAllocStack(unsigned Size, bool Wide) {}
@@ -329,5 +330,7 @@ llvm::createARMObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
     return createARMObjectTargetELFStreamer(S);
   if (TT.isOSBinFormatCOFF())
     return createARMObjectTargetWinCOFFStreamer(S);
+  if (TT.isOSBinFormatMachO())
+    return createARMObjectTargetMachOStreamer(S);
   return new ARMTargetStreamer(S);
 }

@@ -11,21 +11,19 @@ define void @foo(ptr %i7, i32 %0, i1 %tobool62.not) {
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i32> poison, i32 [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP4:%.*]] = sitofp <2 x i32> [[TMP3]] to <2 x float>
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
 ; CHECK-NEXT:    [[Y0:%.*]] = getelementptr i8, ptr [[RC21]], i64 8
 ; CHECK-NEXT:    [[TMP6:%.*]] = load float, ptr [[Y0]], align 4
 ; CHECK-NEXT:    [[TMP7:%.*]] = load float, ptr [[I7]], align 4
 ; CHECK-NEXT:    [[TMP8:%.*]] = load <2 x float>, ptr [[RC21]], align 4
-; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x float> [[TMP8]], <2 x float> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> poison, float [[TMP7]], i32 2
-; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> [[TMP9]], float [[TMP6]], i32 3
-; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP10]], <2 x float> [[TMP11]], i64 0)
+; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x float> poison, float [[TMP6]], i32 2
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> [[TMP10]], float [[TMP7]], i32 3
+; CHECK-NEXT:    [[TMP13:%.*]] = call <4 x float> @llvm.vector.insert.v4f32.v2f32(<4 x float> [[TMP9]], <2 x float> [[TMP8]], i64 0)
 ; CHECK-NEXT:    [[TMP12:%.*]] = fcmp olt <4 x float> [[TMP13]], zeroinitializer
 ; CHECK-NEXT:    [[TMP14:%.*]] = fcmp olt <4 x float> [[TMP5]], zeroinitializer
 ; CHECK-NEXT:    [[TMP15:%.*]] = select <4 x i1> [[TMP14]], <4 x float> [[TMP5]], <4 x float> zeroinitializer
 ; CHECK-NEXT:    [[TMP16:%.*]] = select <4 x i1> [[TMP12]], <4 x float> zeroinitializer, <4 x float> [[TMP15]]
-; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <4 x float> [[TMP16]], <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
-; CHECK-NEXT:    store <4 x float> [[TMP27]], ptr [[RC21]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP16]], ptr [[RC21]], align 4
 ; CHECK-NEXT:    br label [[IF_END:%.*]]
 ; CHECK:       entry.if.end72_crit_edge:
 ; CHECK-NEXT:    br label [[IF_END72:%.*]]
@@ -48,7 +46,8 @@ define void @foo(ptr %i7, i32 %0, i1 %tobool62.not) {
 ; CHECK-NEXT:    [[TMP24:%.*]] = shufflevector <2 x i32> [[TMP3]], <2 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP25:%.*]] = mul <4 x i32> [[TMP23]], [[TMP24]]
 ; CHECK-NEXT:    [[TMP26:%.*]] = sitofp <4 x i32> [[TMP25]] to <4 x float>
-; CHECK-NEXT:    store <4 x float> [[TMP26]], ptr [[RC21]], align 4
+; CHECK-NEXT:    [[TMP27:%.*]] = shufflevector <4 x float> [[TMP26]], <4 x float> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+; CHECK-NEXT:    store <4 x float> [[TMP27]], ptr [[RC21]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

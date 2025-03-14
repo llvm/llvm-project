@@ -6,7 +6,7 @@ target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:1
 define internal i32 @test(ptr %X, ptr %Y) {
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: read)
 ; CGSCC-LABEL: define {{[^@]+}}@test
-; CGSCC-SAME: (i32 [[TMP0:%.*]], ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
+; CGSCC-SAME: (i32 [[TMP0:%.*]], ptr nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:    [[X_PRIV:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[X_PRIV]], align 4
 ; CGSCC-NEXT:    [[A:%.*]] = load i32, ptr [[X_PRIV]], align 4
@@ -26,7 +26,7 @@ define internal i32 @caller(ptr %B) {
 ; CGSCC-SAME: (i32 [[TMP0:%.*]]) #[[ATTR1:[0-9]+]] {
 ; CGSCC-NEXT:    [[B_PRIV:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 [[TMP0]], ptr [[B_PRIV]], align 4
-; CGSCC-NEXT:    [[C:%.*]] = call i32 @test(i32 noundef 1, ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B_PRIV]]) #[[ATTR2:[0-9]+]]
+; CGSCC-NEXT:    [[C:%.*]] = call i32 @test(i32 noundef 1, ptr noalias nofree noundef nonnull readonly align 4 captures(none) dereferenceable(4) [[B_PRIV]]) #[[ATTR2:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[C]]
 ;
   %A = alloca i32

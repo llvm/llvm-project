@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "check-coarray.h"
+#include "definable.h"
 #include "flang/Common/indirection.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Parser/message.h"
@@ -96,34 +97,37 @@ static void CheckCoindexedStatOrErrmsg(SemanticsContext &context,
   Fortran::common::visit(CoindexedCheck, statOrErrmsg.u);
 }
 
+static void CheckSyncStat(SemanticsContext &context,
+    const parser::StatOrErrmsg &statOrErrmsg, bool &gotStat, bool &gotMsg) {
+  common::visit(
+      common::visitors{
+          [&](const parser::StatVariable &stat) {
+            if (gotStat) {
+              context.Say( // C1172
+                  "The stat-variable in a sync-stat-list may not be repeated"_err_en_US);
+            }
+            gotStat = true;
+          },
+          [&](const parser::MsgVariable &var) {
+            WarnOnDeferredLengthCharacterScalar(context, GetExpr(context, var),
+                var.v.thing.thing.GetSource(), "ERRMSG=");
+            if (gotMsg) {
+              context.Say( // C1172
+                  "The errmsg-variable in a sync-stat-list may not be repeated"_err_en_US);
+            }
+            gotMsg = true;
+          },
+      },
+      statOrErrmsg.u);
+
+  CheckCoindexedStatOrErrmsg(context, statOrErrmsg, "sync-stat-list");
+}
+
 static void CheckSyncStatList(
     SemanticsContext &context, const std::list<parser::StatOrErrmsg> &list) {
   bool gotStat{false}, gotMsg{false};
-
   for (const parser::StatOrErrmsg &statOrErrmsg : list) {
-    common::visit(
-        common::visitors{
-            [&](const parser::StatVariable &stat) {
-              if (gotStat) {
-                context.Say( // C1172
-                    "The stat-variable in a sync-stat-list may not be repeated"_err_en_US);
-              }
-              gotStat = true;
-            },
-            [&](const parser::MsgVariable &var) {
-              WarnOnDeferredLengthCharacterScalar(context,
-                  GetExpr(context, var), var.v.thing.thing.GetSource(),
-                  "ERRMSG=");
-              if (gotMsg) {
-                context.Say( // C1172
-                    "The errmsg-variable in a sync-stat-list may not be repeated"_err_en_US);
-              }
-              gotMsg = true;
-            },
-        },
-        statOrErrmsg.u);
-
-    CheckCoindexedStatOrErrmsg(context, statOrErrmsg, "sync-stat-list");
+    CheckSyncStat(context, statOrErrmsg, gotStat, gotMsg);
   }
 }
 
@@ -133,9 +137,6 @@ static void CheckEventVariable(
     if (!IsEventType(evaluate::GetDerivedTypeSpec(expr->GetType()))) { // C1176
       context.Say(parser::FindSourceLocation(eventVar),
           "The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
-    } else if (!evaluate::IsCoarray(*expr)) { // C1604
-      context.Say(parser::FindSourceLocation(eventVar),
-          "The event-variable must be a coarray"_err_en_US);
     }
   }
 }
@@ -263,7 +264,51 @@ void CoarrayChecker::Leave(const parser::EventWaitStmt &x) {
       context_, std::get<std::list<parser::EventWaitSpec>>(x.t));
 }
 
+static void CheckLockVariable(
+    SemanticsContext &context, const parser::LockVariable &lockVar) {
+  if (const SomeExpr * expr{GetExpr(lockVar)}) {
+    if (auto dyType{expr->GetType()}) {
+      auto at{parser::FindSourceLocation(lockVar)};
+      if (dyType->category() != TypeCategory::Derived ||
+          dyType->IsUnlimitedPolymorphic() ||
+          !IsLockType(&dyType->GetDerivedTypeSpec())) {
+        context.Say(at,
+            "Lock variable must have type LOCK_TYPE from ISO_FORTRAN_ENV"_err_en_US);
+      } else if (auto whyNot{WhyNotDefinable(at, context.FindScope(at),
+                     {DefinabilityFlag::DoNotNoteDefinition,
+                         DefinabilityFlag::AllowEventLockOrNotifyType},
+                     *expr)}) {
+        whyNot->set_severity(parser::Severity::Because);
+        context.Say(at, "Lock variable is not definable"_err_en_US)
+            .Attach(std::move(*whyNot));
+      }
+    }
+  }
+}
+
+void CoarrayChecker::Leave(const parser::LockStmt &x) {
+  CheckLockVariable(context_, std::get<parser::LockVariable>(x.t));
+  bool gotAcquired{false}, gotStat{false}, gotMsg{false};
+  for (const parser::LockStmt::LockStat &lockStat :
+      std::get<std::list<parser::LockStmt::LockStat>>(x.t)) {
+    if (const auto *statOrErrmsg{
+            std::get_if<parser::StatOrErrmsg>(&lockStat.u)}) {
+      CheckSyncStat(context_, *statOrErrmsg, gotStat, gotMsg);
+    } else {
+      CHECK(std::holds_alternative<
+          parser::Scalar<parser::Logical<parser::Variable>>>(lockStat.u));
+      if (gotAcquired) {
+        context_.Say(parser::FindSourceLocation(lockStat),
+            "Multiple ACQUIRED_LOCK specifiers"_err_en_US);
+      } else {
+        gotAcquired = true;
+      }
+    }
+  }
+}
+
 void CoarrayChecker::Leave(const parser::UnlockStmt &x) {
+  CheckLockVariable(context_, std::get<parser::LockVariable>(x.t));
   CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
 }
 

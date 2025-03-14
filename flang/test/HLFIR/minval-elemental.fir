@@ -82,9 +82,9 @@ func.func @_QPtest_float(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "a
 // CHECK-NEXT:  %[[V6:.*]] = fir.do_loop %arg1 = %c1 to %c4 step %c1 iter_args(%arg2 = %cst) -> (f32) {
 // CHECK-NEXT:      %[[V7:.*]] = hlfir.designate %[[V5]] (%arg1)  : (!fir.box<!fir.array<4xf32>>, index) -> !fir.ref<f32>
 // CHECK-NEXT:      %[[V8:.*]] = fir.load %[[V7]] : !fir.ref<f32>
-// CHECK-NEXT:      %[[V9:.*]] = arith.cmpf olt, %[[V8]], %arg2 : f32
-// CHECK-NEXT:      %[[V10:.*]] = arith.cmpf une, %arg2, %arg2 : f32
-// CHECK-NEXT:      %[[V11:.*]] = arith.cmpf oeq, %[[V8]], %[[V8]] : f32
+// CHECK-NEXT:      %[[V9:.*]] = arith.cmpf olt, %[[V8]], %arg2 fastmath<contract> : f32
+// CHECK-NEXT:      %[[V10:.*]] = arith.cmpf une, %arg2, %arg2 fastmath<contract> : f32
+// CHECK-NEXT:      %[[V11:.*]] = arith.cmpf oeq, %[[V8]], %[[V8]] fastmath<contract> : f32
 // CHECK-NEXT:      %[[V12:.*]] = arith.andi %[[V10]], %[[V11]] : i1
 // CHECK-NEXT:      %[[V13:.*]] = arith.ori %[[V9]], %[[V12]] : i1
 // CHECK-NEXT:      %[[V14:.*]] = arith.select %[[V13]], %[[V8]], %arg2 : f32

@@ -722,11 +722,8 @@ void CompilerInstance::createCodeCompletionConsumer() {
 }
 
 void CompilerInstance::createFrontendTimer() {
-  FrontendTimerGroup.reset(
-      new llvm::TimerGroup("frontend", "Clang front-end time report"));
-  FrontendTimer.reset(
-      new llvm::Timer("frontend", "Clang front-end timer",
-                      *FrontendTimerGroup));
+  timerGroup.reset(new llvm::TimerGroup("clang", "Clang time report"));
+  FrontendTimer.reset(new llvm::Timer("frontend", "Front end", *timerGroup));
 }
 
 CodeCompleteConsumer *
@@ -1040,9 +1037,6 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
     OS << "clang -cc1 version " CLANG_VERSION_STRING << " based upon LLVM "
        << LLVM_VERSION_STRING << " default target "
        << llvm::sys::getDefaultTargetTriple() << "\n";
-
-  if (getCodeGenOpts().TimePasses)
-    createFrontendTimer();
 
   if (getFrontendOpts().ShowStats || !getFrontendOpts().StatsFile.empty())
     llvm::EnableStatistics(false);
@@ -1412,7 +1406,7 @@ static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
                                       SourceLocation ImportLoc,
                                       SourceLocation ModuleNameLoc,
                                       Module *Module, StringRef ModuleFileName,
-                                      bool *OutOfDate) {
+                                      bool *OutOfDate, bool *Missing) {
   DiagnosticsEngine &Diags = ImportingInstance.getDiagnostics();
 
   unsigned ModuleLoadCapabilities = ASTReader::ARR_Missing;
@@ -1430,6 +1424,12 @@ static bool readASTAfterCompileModule(CompilerInstance &ImportingInstance,
   // The caller wants to handle out-of-date failures.
   if (OutOfDate && ReadResult == ASTReader::OutOfDate) {
     *OutOfDate = true;
+    return false;
+  }
+
+  // The caller wants to handle missing module files.
+  if (Missing && ReadResult == ASTReader::Missing) {
+    *Missing = true;
     return false;
   }
 
@@ -1458,7 +1458,7 @@ static bool compileModuleAndReadASTImpl(CompilerInstance &ImportingInstance,
 
   return readASTAfterCompileModule(ImportingInstance, ImportLoc, ModuleNameLoc,
                                    Module, ModuleFileName,
-                                   /*OutOfDate=*/nullptr);
+                                   /*OutOfDate=*/nullptr, /*Missing=*/nullptr);
 }
 
 /// Compile a module in a separate compiler instance and read the AST,
@@ -1483,55 +1483,54 @@ static bool compileModuleAndReadASTBehindLock(
   llvm::sys::fs::create_directories(Dir);
 
   while (true) {
-    llvm::LockFileManager Locked(ModuleFileName);
-    switch (Locked) {
-    case llvm::LockFileManager::LFS_Error:
+    llvm::LockFileManager Lock(ModuleFileName);
+    bool Owned;
+    if (llvm::Error Err = Lock.tryLock().moveInto(Owned)) {
       // ModuleCache takes care of correctness and locks are only necessary for
       // performance. Fallback to building the module in case of any lock
       // related errors.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_failure)
-          << Module->Name << Locked.getErrorMessage();
-      // Clear out any potential leftover.
-      Locked.unsafeRemoveLockFile();
-      [[fallthrough]];
-    case llvm::LockFileManager::LFS_Owned:
+          << Module->Name << toString(std::move(Err));
+      return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
+                                         ModuleNameLoc, Module, ModuleFileName);
+    }
+    if (Owned) {
       // We're responsible for building the module ourselves.
       return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
                                          ModuleNameLoc, Module, ModuleFileName);
-
-    case llvm::LockFileManager::LFS_Shared:
-      break; // The interesting case.
     }
 
     // Someone else is responsible for building the module. Wait for them to
     // finish.
-    switch (Locked.waitForUnlock()) {
-    case llvm::LockFileManager::Res_Success:
+    switch (Lock.waitForUnlockFor(std::chrono::seconds(90))) {
+    case llvm::WaitForUnlockResult::Success:
       break; // The interesting case.
-    case llvm::LockFileManager::Res_OwnerDied:
+    case llvm::WaitForUnlockResult::OwnerDied:
       continue; // try again to get the lock.
-    case llvm::LockFileManager::Res_Timeout:
+    case llvm::WaitForUnlockResult::Timeout:
       // Since ModuleCache takes care of correctness, we try waiting for
       // another process to complete the build so clang does not do it done
       // twice. If case of timeout, build it ourselves.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
           << Module->Name;
       // Clear the lock file so that future invocations can make progress.
-      Locked.unsafeRemoveLockFile();
+      Lock.unsafeMaybeUnlock();
       continue;
     }
 
     // Read the module that was just written by someone else.
     bool OutOfDate = false;
+    bool Missing = false;
     if (readASTAfterCompileModule(ImportingInstance, ImportLoc, ModuleNameLoc,
-                                  Module, ModuleFileName, &OutOfDate))
+                                  Module, ModuleFileName, &OutOfDate, &Missing))
       return true;
-    if (!OutOfDate)
+    if (!OutOfDate && !Missing)
       return false;
 
-    // The module may be out of date in the presence of file system races,
-    // or if one of its imports depends on header search paths that are not
-    // consistent with this ImportingInstance.  Try again...
+    // The module may be missing or out of date in the presence of file system
+    // races. It may also be out of date if one of its imports depends on header
+    // search paths that are not consistent with this ImportingInstance.
+    // Try again...
   }
 }
 
@@ -1726,10 +1725,9 @@ void CompilerInstance::createASTReader() {
   const FrontendOptions &FEOpts = getFrontendOpts();
   std::unique_ptr<llvm::Timer> ReadTimer;
 
-  if (FrontendTimerGroup)
+  if (timerGroup)
     ReadTimer = std::make_unique<llvm::Timer>("reading_modules",
-                                                "Reading modules",
-                                                *FrontendTimerGroup);
+                                              "Reading modules", *timerGroup);
   TheASTReader = new ASTReader(
       getPreprocessor(), getModuleCache(), &getASTContext(),
       getPCHContainerReader(), getFrontendOpts().ModuleFileExtensions,
@@ -1758,10 +1756,10 @@ void CompilerInstance::createASTReader() {
 bool CompilerInstance::loadModuleFile(
     StringRef FileName, serialization::ModuleFile *&LoadedModuleFile) {
   llvm::Timer Timer;
-  if (FrontendTimerGroup)
+  if (timerGroup)
     Timer.init("preloading." + FileName.str(), "Preloading " + FileName.str(),
-               *FrontendTimerGroup);
-  llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
+               *timerGroup);
+  llvm::TimeRegion TimeLoading(timerGroup ? &Timer : nullptr);
 
   // If we don't already have an ASTReader, create one now.
   if (!TheASTReader)
@@ -1892,10 +1890,10 @@ ModuleLoadResult CompilerInstance::findOrCompileModuleAndReadAST(
 
   // Time how long it takes to load the module.
   llvm::Timer Timer;
-  if (FrontendTimerGroup)
+  if (timerGroup)
     Timer.init("loading." + ModuleFilename, "Loading " + ModuleFilename,
-               *FrontendTimerGroup);
-  llvm::TimeRegion TimeLoading(FrontendTimerGroup ? &Timer : nullptr);
+               *timerGroup);
+  llvm::TimeRegion TimeLoading(timerGroup ? &Timer : nullptr);
   llvm::TimeTraceScope TimeScope("Module Load", ModuleName);
 
   // Try to load the module file. If we are not trying to load from the

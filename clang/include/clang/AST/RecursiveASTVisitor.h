@@ -20,6 +20,7 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclFriend.h"
 #include "clang/AST/DeclObjC.h"
+#include "clang/AST/DeclOpenACC.h"
 #include "clang/AST/DeclOpenMP.h"
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DeclarationName.h"
@@ -37,6 +38,7 @@
 #include "clang/AST/StmtObjC.h"
 #include "clang/AST/StmtOpenACC.h"
 #include "clang/AST/StmtOpenMP.h"
+#include "clang/AST/StmtSYCL.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/TemplateName.h"
 #include "clang/AST/Type.h"
@@ -1581,6 +1583,11 @@ DEF_TRAVERSE_DECL(BlockDecl, {
   ShouldVisitChildren = false;
 })
 
+DEF_TRAVERSE_DECL(OutlinedFunctionDecl, {
+  TRY_TO(TraverseStmt(D->getBody()));
+  ShouldVisitChildren = false;
+})
+
 DEF_TRAVERSE_DECL(CapturedDecl, {
   TRY_TO(TraverseStmt(D->getBody()));
   ShouldVisitChildren = false;
@@ -1813,6 +1820,14 @@ DEF_TRAVERSE_DECL(OMPAllocateDecl, {
     TRY_TO(TraverseStmt(I));
   for (auto *C : D->clauselists())
     TRY_TO(TraverseOMPClause(C));
+})
+
+DEF_TRAVERSE_DECL(OpenACCDeclareDecl,
+                  { TRY_TO(VisitOpenACCClauseList(D->clauses())); })
+
+DEF_TRAVERSE_DECL(OpenACCRoutineDecl, {
+  TRY_TO(TraverseStmt(D->getFunctionReference()));
+  TRY_TO(VisitOpenACCClauseList(D->clauses()));
 })
 
 // A helper method for TemplateDecl's children.
@@ -2904,6 +2919,14 @@ DEF_TRAVERSE_STMT(SEHFinallyStmt, {})
 DEF_TRAVERSE_STMT(SEHLeaveStmt, {})
 DEF_TRAVERSE_STMT(CapturedStmt, { TRY_TO(TraverseDecl(S->getCapturedDecl())); })
 
+DEF_TRAVERSE_STMT(SYCLKernelCallStmt, {
+  if (getDerived().shouldVisitImplicitCode()) {
+    TRY_TO(TraverseStmt(S->getOriginalStmt()));
+    TRY_TO(TraverseDecl(S->getOutlinedFunctionDecl()));
+    ShouldVisitChildren = false;
+  }
+})
+
 DEF_TRAVERSE_STMT(CXXOperatorCallExpr, {})
 DEF_TRAVERSE_STMT(CXXRewrittenBinaryOperator, {
   if (!getDerived().shouldVisitImplicitCode()) {
@@ -3039,6 +3062,9 @@ DEF_TRAVERSE_STMT(OMPSimdDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPTileDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
+DEF_TRAVERSE_STMT(OMPStripeDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
 DEF_TRAVERSE_STMT(OMPUnrollDirective,
@@ -3418,6 +3444,11 @@ bool RecursiveASTVisitor<Derived>::VisitOMPAtomicDefaultMemOrderClause(
 }
 
 template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPSelfMapsClause(OMPSelfMapsClause *) {
+  return true;
+}
+
+template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPAtClause(OMPAtClause *) {
   return true;
 }
@@ -3526,6 +3557,12 @@ bool RecursiveASTVisitor<Derived>::VisitOMPNoOpenMPClause(OMPNoOpenMPClause *) {
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::VisitOMPNoOpenMPRoutinesClause(
     OMPNoOpenMPRoutinesClause *) {
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPNoOpenMPConstructsClause(
+    OMPNoOpenMPConstructsClause *) {
   return true;
 }
 
@@ -4080,6 +4117,16 @@ DEF_TRAVERSE_STMT(OpenACCInitConstruct,
                   { TRY_TO(VisitOpenACCClauseList(S->clauses())); })
 DEF_TRAVERSE_STMT(OpenACCShutdownConstruct,
                   { TRY_TO(VisitOpenACCClauseList(S->clauses())); })
+DEF_TRAVERSE_STMT(OpenACCSetConstruct,
+                  { TRY_TO(VisitOpenACCClauseList(S->clauses())); })
+DEF_TRAVERSE_STMT(OpenACCUpdateConstruct,
+                  { TRY_TO(VisitOpenACCClauseList(S->clauses())); })
+DEF_TRAVERSE_STMT(OpenACCAtomicConstruct,
+                  { TRY_TO(TraverseOpenACCAssociatedStmtConstruct(S)); })
+DEF_TRAVERSE_STMT(OpenACCCacheConstruct, {
+  for (auto *E : S->getVarList())
+    TRY_TO(TraverseStmt(E));
+})
 
 // Traverse HLSL: Out argument expression
 DEF_TRAVERSE_STMT(HLSLOutArgExpr, {})

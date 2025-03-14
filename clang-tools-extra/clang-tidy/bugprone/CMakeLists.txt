@@ -27,6 +27,12 @@ add_clang_library(clangTidyBugproneModule STATIC
   ForwardingReferenceOverloadCheck.cpp
   ImplicitWideningOfMultiplicationResultCheck.cpp
   InaccurateEraseCheck.cpp
+  IncorrectEnableIfCheck.cpp
+  IncorrectEnableSharedFromThisCheck.cpp
+  UnintendedCharOstreamOutputCheck.cpp
+  ReturnConstRefFromParameterCheck.cpp
+  SuspiciousStringviewDataUsageCheck.cpp
+  SwitchMissingDefaultCaseCheck.cpp
   IncDecInConditionsCheck.cpp
   IncorrectEnableIfCheck.cpp
   IncorrectRoundingsCheck.cpp
@@ -112,6 +118,7 @@ clang_target_link_libraries(clangTidyBugproneModule
   clangASTMatchers
   clangBasic
   clangLex
+  clangSema
   clangTooling
   clangTransformer
   )

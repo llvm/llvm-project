@@ -177,7 +177,7 @@ public:
 /// column number. This is similar to the type of location that you get from
 /// most source languages.
 ///
-/// FileLineColLoc is a FileLineColRange with exactly one line and column.
+/// FileLineColLoc is a view to FileLineColRange with one line and column.
 class FileLineColLoc : public FileLineColRange {
 public:
   using FileLineColRange::FileLineColRange;
@@ -190,10 +190,11 @@ public:
   StringAttr getFilename() const;
   unsigned getLine() const;
   unsigned getColumn() const;
-
-  /// Methods for support type inquiry through isa, cast, and dyn_cast.
-  static bool classof(Attribute attr);
 };
+
+/// Returns true iff the given location is a FileLineColRange with exactly one
+/// line and column.
+bool isStrictFileLineColLoc(Location loc);
 
 //===----------------------------------------------------------------------===//
 // OpaqueLoc

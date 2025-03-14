@@ -15,33 +15,33 @@ target triple = "amdgcn--"
 
 define amdgpu_gs void @main(i32 inreg %arg) #0 {
 main_body:
-  %tmp = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 20, i32 0)
-  %tmp1 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 24, i32 0)
-  %tmp2 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 48, i32 0)
+  %tmp = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 20, i32 0)
+  %tmp1 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 24, i32 0)
+  %tmp2 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> poison, i32 48, i32 0)
   %array_vector3 = insertelement <4 x float> zeroinitializer, float %tmp2, i32 3
-  %array_vector5 = insertelement <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, float %tmp, i32 1
-  %array_vector6 = insertelement <4 x float> %array_vector5, float undef, i32 2
-  %array_vector9 = insertelement <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, float %tmp1, i32 1
+  %array_vector5 = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float %tmp, i32 1
+  %array_vector6 = insertelement <4 x float> %array_vector5, float poison, i32 2
+  %array_vector9 = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float %tmp1, i32 1
   %array_vector10 = insertelement <4 x float> %array_vector9, float 0.000000e+00, i32 2
-  %array_vector11 = insertelement <4 x float> %array_vector10, float undef, i32 3
-  %tmp3 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> undef, i32 undef, i32 4864, i32 0)
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp3, <4 x i32> undef, i32 36, i32 %arg, i32 68, i32 3)
+  %array_vector11 = insertelement <4 x float> %array_vector10, float poison, i32 3
+  %tmp3 = call i32 @llvm.amdgcn.raw.buffer.load.i32(<4 x i32> poison, i32 poison, i32 4864, i32 0)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp3, <4 x i32> poison, i32 36, i32 %arg, i32 68, i32 3)
   %bc = bitcast <4 x float> %array_vector3 to <4 x i32>
   %tmp4 = extractelement <4 x i32> %bc, i32 undef
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp4, <4 x i32> undef, i32 48, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp4, <4 x i32> poison, i32 48, i32 %arg, i32 68, i32 3)
   %bc49 = bitcast <4 x float> %array_vector11 to <4 x i32>
   %tmp5 = extractelement <4 x i32> %bc49, i32 undef
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp5, <4 x i32> undef, i32 72, i32 %arg, i32 68, i32 3)
-  %array_vector21 = insertelement <4 x float> <float 0.000000e+00, float undef, float undef, float undef>, float %tmp, i32 1
-  %array_vector22 = insertelement <4 x float> %array_vector21, float undef, i32 2
-  %array_vector23 = insertelement <4 x float> %array_vector22, float undef, i32 3
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 28, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp5, <4 x i32> poison, i32 72, i32 %arg, i32 68, i32 3)
+  %array_vector21 = insertelement <4 x float> <float 0.000000e+00, float poison, float poison, float poison>, float %tmp, i32 1
+  %array_vector22 = insertelement <4 x float> %array_vector21, float poison, i32 2
+  %array_vector23 = insertelement <4 x float> %array_vector22, float poison, i32 3
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 poison, <4 x i32> poison, i32 28, i32 %arg, i32 68, i32 3)
   %bc52 = bitcast <4 x float> %array_vector23 to <4 x i32>
   %tmp6 = extractelement <4 x i32> %bc52, i32 undef
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp6, <4 x i32> undef, i32 64, i32 %arg, i32 68, i32 3)
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 20, i32 %arg, i32 68, i32 3)
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 56, i32 %arg, i32 68, i32 3)
-  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 undef, <4 x i32> undef, i32 92, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 %tmp6, <4 x i32> poison, i32 64, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 poison, <4 x i32> poison, i32 20, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 poison, <4 x i32> poison, i32 56, i32 %arg, i32 68, i32 3)
+  call void @llvm.amdgcn.raw.tbuffer.store.i32(i32 poison, <4 x i32> poison, i32 92, i32 %arg, i32 68, i32 3)
   ret void
 }
 

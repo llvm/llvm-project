@@ -425,11 +425,8 @@ static bool foldSqrt(CallInst *Call, LibFunc Func, TargetTransformInfo &TTI,
            Arg, 0,
            SimplifyQuery(Call->getDataLayout(), &TLI, &DT, &AC, Call)))) {
     IRBuilder<> Builder(Call);
-    IRBuilderBase::FastMathFlagGuard Guard(Builder);
-    Builder.setFastMathFlags(Call->getFastMathFlags());
-
-    Value *NewSqrt = Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg,
-                                             /*FMFSource=*/nullptr, "sqrt");
+    Value *NewSqrt =
+        Builder.CreateIntrinsic(Intrinsic::sqrt, Ty, Arg, Call, "sqrt");
     Call->replaceAllUsesWith(NewSqrt);
 
     // Explicitly erase the old call because a call with side effects is not
@@ -678,14 +675,15 @@ static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
       Load2Ptr->stripAndAccumulateConstantOffsets(DL, Offset2,
                                                   /* AllowNonInbounds */ true);
 
-  // Verify if both loads have same base pointers and load sizes are same.
+  // Verify if both loads have same base pointers
   uint64_t LoadSize1 = LI1->getType()->getPrimitiveSizeInBits();
   uint64_t LoadSize2 = LI2->getType()->getPrimitiveSizeInBits();
-  if (Load1Ptr != Load2Ptr || LoadSize1 != LoadSize2)
+  if (Load1Ptr != Load2Ptr)
     return false;
 
-  // Support Loadsizes greater or equal to 8bits and only power of 2.
-  if (LoadSize1 < 8 || !isPowerOf2_64(LoadSize1))
+  // Make sure that there are no padding bits.
+  if (!DL.typeSizeEqualsStoreSize(LI1->getType()) ||
+      !DL.typeSizeEqualsStoreSize(LI2->getType()))
     return false;
 
   // Alias Analysis to check for stores b/w the loads.

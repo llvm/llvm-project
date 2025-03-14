@@ -732,8 +732,8 @@ static llvm::Value *EmitCXXNewAllocSize(CodeGenFunction &CGF,
   // Emit the array size expression.
   // We multiply the size of all dimensions for NumElements.
   // e.g for 'int[2][3]', ElemType is 'int' and NumElements is 6.
-  numElements =
-    ConstantEmitter(CGF).tryEmitAbstract(*e->getArraySize(), e->getType());
+  numElements = ConstantEmitter(CGF).tryEmitAbstract(
+      *e->getArraySize(), (*e->getArraySize())->getType());
   if (!numElements)
     numElements = CGF.EmitScalarExpr(*e->getArraySize());
   assert(isa<llvm::IntegerType>(numElements->getType()));

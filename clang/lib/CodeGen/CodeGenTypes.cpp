@@ -107,11 +107,20 @@ llvm::Type *CodeGenTypes::ConvertTypeForMem(QualType T) {
                                 MT->getNumRows() * MT->getNumColumns());
   }
 
+  if (T->isMFloat8Type())
+    return llvm::Type::getInt8Ty(getLLVMContext());
+
   llvm::Type *R = ConvertType(T);
 
   // Check for the boolean vector case.
   if (T->isExtVectorBoolType()) {
     auto *FixedVT = cast<llvm::FixedVectorType>(R);
+
+    if (Context.getLangOpts().HLSL) {
+      llvm::Type *IRElemTy = ConvertTypeForMem(Context.BoolTy);
+      return llvm::FixedVectorType::get(IRElemTy, FixedVT->getNumElements());
+    }
+
     // Pad to at least one byte.
     uint64_t BytePadded = std::max<uint64_t>(FixedVT->getNumElements(), 8);
     return llvm::IntegerType::get(FixedVT->getContext(), BytePadded);
@@ -505,15 +514,18 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case BuiltinType::Id:
 #define SVE_PREDICATE_TYPE(Name, MangledName, Id, SingletonId)                 \
   case BuiltinType::Id:
-#define AARCH64_VECTOR_TYPE(Name, MangledName, Id, SingletonId)                \
-  case BuiltinType::Id:
-#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)
+#define SVE_TYPE(Name, Id, SingletonId)
 #include "clang/Basic/AArch64SVEACLETypes.def"
       {
         ASTContext::BuiltinVectorTypeInfo Info =
             Context.getBuiltinVectorTypeInfo(cast<BuiltinType>(Ty));
-        auto VTy =
-            llvm::VectorType::get(ConvertType(Info.ElementType), Info.EC);
+        // The `__mfp8` type maps to `<1 x i8>` which can't be used to build
+        // a <N x i8> vector type, hence bypass the call to `ConvertType` for
+        // the element type and create the vector type directly.
+        auto *EltTy = Info.ElementType->isMFloat8Type()
+                          ? llvm::Type::getInt8Ty(getLLVMContext())
+                          : ConvertType(Info.ElementType);
+        auto *VTy = llvm::VectorType::get(EltTy, Info.EC);
         switch (Info.NumVectors) {
         default:
           llvm_unreachable("Expected 1, 2, 3 or 4 vectors!");
@@ -529,6 +541,9 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
       }
     case BuiltinType::SveCount:
       return llvm::TargetExtType::get(getLLVMContext(), "aarch64.svcount");
+    case BuiltinType::MFloat8:
+      return llvm::VectorType::get(llvm::Type::getInt8Ty(getLLVMContext()), 1,
+                                   false);
 #define PPC_VECTOR_TYPE(Name, Id, Size) \
     case BuiltinType::Id: \
       ResultType = \
@@ -648,8 +663,10 @@ llvm::Type *CodeGenTypes::ConvertType(QualType T) {
   case Type::Vector: {
     const auto *VT = cast<VectorType>(Ty);
     // An ext_vector_type of Bool is really a vector of bits.
-    llvm::Type *IRElemTy = VT->isExtVectorBoolType()
+    llvm::Type *IRElemTy = VT->isPackedVectorBoolType(Context)
                                ? llvm::Type::getInt1Ty(getLLVMContext())
+                           : VT->getElementType()->isMFloat8Type()
+                               ? llvm::Type::getInt8Ty(getLLVMContext())
                                : ConvertType(VT->getElementType());
     ResultType = llvm::FixedVectorType::get(IRElemTy, VT->getNumElements());
     break;

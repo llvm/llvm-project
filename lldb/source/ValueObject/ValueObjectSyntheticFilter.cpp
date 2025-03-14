@@ -133,7 +133,7 @@ bool ValueObjectSynthetic::MightHaveChildren() {
   return (m_might_have_children != eLazyBoolNo);
 }
 
-std::optional<uint64_t> ValueObjectSynthetic::GetByteSize() {
+llvm::Expected<uint64_t> ValueObjectSynthetic::GetByteSize() {
   return m_parent->GetByteSize();
 }
 

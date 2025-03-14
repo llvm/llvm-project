@@ -94,14 +94,16 @@ void SystemZPostRASchedStrategy::enterMBB(MachineBasicBlock *NextMBB) {
   // scheduled. If this is not possible, we are done.
   MachineBasicBlock *SinglePredMBB =
     getSingleSchedPred(MBB, MLI->getLoopFor(MBB));
-  if (SinglePredMBB == nullptr ||
-      SchedStates.find(SinglePredMBB) == SchedStates.end())
+  if (SinglePredMBB == nullptr)
+    return;
+  auto It = SchedStates.find(SinglePredMBB);
+  if (It == SchedStates.end())
     return;
 
   LLVM_DEBUG(dbgs() << "** Continued scheduling from "
                     << printMBBReference(*SinglePredMBB) << "\n";);
 
-  HazardRec->copyState(SchedStates[SinglePredMBB]);
+  HazardRec->copyState(It->second);
   LLVM_DEBUG(HazardRec->dumpState(););
 
   // Emit incoming terminator(s). Be optimistic and assume that branch

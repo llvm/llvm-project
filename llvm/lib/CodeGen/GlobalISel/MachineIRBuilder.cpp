@@ -698,6 +698,15 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(LLT Res,
   return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildUnmerge(MachineRegisterInfo::VRegAttrs Attrs,
+                               const SrcOp &Op) {
+  LLT OpTy = Op.getLLTTy(*getMRI());
+  unsigned NumRegs = OpTy.getSizeInBits() / Attrs.Ty.getSizeInBits();
+  SmallVector<DstOp, 8> TmpVec(NumRegs, Attrs);
+  return buildInstr(TargetOpcode::G_UNMERGE_VALUES, TmpVec, Op);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<Register> Res,
                                                    const SrcOp &Op) {
   // Unfortunately to convert from ArrayRef<Register> to ArrayRef<DstOp>,
@@ -862,7 +871,7 @@ MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
                                  ArrayRef<Register> ResultRegs,
                                  bool HasSideEffects, bool isConvergent) {
   auto MIB = buildInstr(getIntrinsicOpcode(HasSideEffects, isConvergent));
-  for (unsigned ResultReg : ResultRegs)
+  for (Register ResultReg : ResultRegs)
     MIB.addDef(ResultReg);
   MIB.addIntrinsicID(ID);
   return MIB;

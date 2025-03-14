@@ -1,13 +1,14 @@
 header: dlfcn.h
+header_template: dlfcn.h.def
 macros:
   - macro_name: RTLD_LAZY
-    macro_value: null
+    macro_header: dlfcn-macros.h
   - macro_name: RTLD_NOW
-    macro_value: null
+    macro_header: dlfcn-macros.h
   - macro_name: RTLD_GLOBAL
-    macro_value: null
+    macro_header: dlfcn-macros.h
   - macro_name: RTLD_LOCAL
-    macro_value: null
+    macro_header: dlfcn-macros.h
 types: []
 enums: []
 objects: []

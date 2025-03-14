@@ -291,7 +291,7 @@ public:
 class PointerType : public Type {
 public:
   // TODO: add missing functions
-  static PointerType *get(Type *ElementType, unsigned AddressSpace);
+
   static PointerType *get(Context &Ctx, unsigned AddressSpace);
 
   static bool classof(const Type *From) {

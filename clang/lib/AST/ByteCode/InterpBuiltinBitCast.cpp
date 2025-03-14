@@ -94,7 +94,8 @@ static bool enumerateData(const Pointer &P, const Context &Ctx, Bits Offset,
     Bits ElemSize = Bits(Ctx.getASTContext().getTypeSize(ElemType));
     PrimType ElemT = *Ctx.classify(ElemType);
     // Special case, since the bools here are packed.
-    bool PackedBools = FieldDesc->getType()->isExtVectorBoolType();
+    bool PackedBools =
+        FieldDesc->getType()->isPackedVectorBoolType(Ctx.getASTContext());
     unsigned NumElems = FieldDesc->getNumElems();
     bool Ok = true;
     for (unsigned I = P.getIndex(); I != NumElems; ++I) {
@@ -227,7 +228,7 @@ static bool CheckBitcastType(InterpState &S, CodePtr OpPC, QualType T,
     QualType EltTy = VT->getElementType();
     unsigned NElts = VT->getNumElements();
     unsigned EltSize =
-        VT->isExtVectorBoolType() ? 1 : ASTCtx.getTypeSize(EltTy);
+        VT->isPackedVectorBoolType(ASTCtx) ? 1 : ASTCtx.getTypeSize(EltTy);
 
     if ((NElts * EltSize) % ASTCtx.getCharWidth() != 0) {
       // The vector's size in bits is not a multiple of the target's byte size,
@@ -269,7 +270,7 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
         Bits BitWidth = FullBitWidth;
 
         if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
-          BitWidth = Bits(std::min(FD->getBitWidthValue(ASTCtx),
+          BitWidth = Bits(std::min(FD->getBitWidthValue(),
                                    (unsigned)FullBitWidth.getQuantity()));
         else if (T == PT_Bool && PackedBools)
           BitWidth = Bits(1);
@@ -301,8 +302,8 @@ bool clang::interp::readPointerToBuffer(const Context &Ctx,
           assert(NumBits.isFullByte());
           assert(NumBits.getQuantity() <= FullBitWidth.getQuantity());
           F.bitcastToMemory(Buff.get());
-          // Now, only (maybe) swap the actual size of the float, excluding the
-          // padding bits.
+          // Now, only (maybe) swap the actual size of the float, excluding
+          // the padding bits.
           if (llvm::sys::IsBigEndianHost)
             swapBytes(Buff.get(), NumBits.roundToBytes());
 
@@ -406,7 +407,7 @@ bool clang::interp::DoBitCastPtr(InterpState &S, CodePtr OpPC,
 
         Bits BitWidth;
         if (const FieldDecl *FD = P.getField(); FD && FD->isBitField())
-          BitWidth = Bits(std::min(FD->getBitWidthValue(ASTCtx),
+          BitWidth = Bits(std::min(FD->getBitWidthValue(),
                                    (unsigned)FullBitWidth.getQuantity()));
         else if (T == PT_Bool && PackedBools)
           BitWidth = Bits(1);

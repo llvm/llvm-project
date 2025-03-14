@@ -825,7 +825,7 @@ def LLVM_MemoryEffectsAttr : LLVM_Attr<"MemoryEffects", "memory_effects"> {
 def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
                                           "alias_scope_domain"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    "Attribute":$id,
     OptionalParameter<"StringAttr">:$description
   );
 
@@ -853,7 +853,7 @@ def LLVM_AliasScopeDomainAttr : LLVM_Attr<"AliasScopeDomain",
 
 def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
   let parameters = (ins
-    "DistinctAttr":$id,
+    "Attribute":$id,
     "AliasScopeDomainAttr":$domain,
     OptionalParameter<"StringAttr">:$description
   );
@@ -891,6 +891,8 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
     }
     ```
 
+    The first attribute can either be a DistinctAttr or a StringAttr.
+
     See the following link for more details:
     https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
   }];
@@ -898,6 +900,8 @@ def LLVM_AliasScopeAttr : LLVM_Attr<"AliasScope", "alias_scope"> {
   let summary = "LLVM dialect alias scope";
 
   let assemblyFormat = "`<` struct(params) `>`";
+
+  let genVerifyDecl = 1;
 }
 
 def LLVM_AliasScopeArrayAttr
@@ -1261,6 +1265,30 @@ def WorkgroupAttributionAttr
   let parameters = (ins "IntegerAttr":$num_elements,
                         "TypeAttr":$element_type);
   let assemblyFormat = "`<` $num_elements `,` $element_type `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// DereferenceableAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DereferenceableAttr : LLVM_Attr<"Dereferenceable", "dereferenceable"> {
+  let summary = "LLVM dereferenceable attribute";
+  let description = [{
+    Defines `dereferenceable` or `dereferenceable_or_null` metadata that can
+    be set via the `DereferenceableOpInterface` on an `inttoptr` operation or
+    on a `load` operation which loads a pointer. The attribute is used to
+    denote that the result of these operations is dereferenceable up to a
+    certain number of bytes, represented by `$bytes`. The optional `$mayBeNull`
+    parameter is set to true if the attribute defines `dereferenceable_or_null`
+    metadata.
+
+    See the following links for more details:
+    https://llvm.org/docs/LangRef.html#dereferenceable-metadata
+    https://llvm.org/docs/LangRef.html#dereferenceable-or-null-metadata
+  }];
+  let parameters = (ins "uint64_t":$bytes,
+                        DefaultValuedParameter<"bool", "false">:$mayBeNull);
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 #endif // LLVMIR_ATTRDEFS

@@ -39,3 +39,14 @@ func.func @bitcast_i8_to_i32(%input: vector<16xi8>) -> vector<4xi32> {
 // CHECK: %[[CAST3:.+]] = vector.bitcast %[[EXTRACT3]] : vector<4xi8> to vector<1xi32>
 // CHECK: %[[INSERT3:.+]] = vector.insert_strided_slice %[[CAST3]], %[[INSERT2]] {offsets = [3], strides = [1]} : vector<1xi32> into vector<4xi32>
 // CHECK: return %[[INSERT3]]
+
+// -----
+
+// Scalable vectors are not supported!
+
+// CHECK-LABEL: func.func @bitcast_scalable_negative
+// CHECK: vector.bitcast
+func.func @bitcast_scalable_negative(%input: vector<[8]xf16>) -> vector<[4]xf32> {
+  %0 = vector.bitcast %input : vector<[8]xf16> to vector<[4]xf32>
+  return %0: vector<[4]xf32>
+}

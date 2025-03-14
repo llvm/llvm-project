@@ -38,9 +38,12 @@ std::optional<MCFixupKind> RISCVAsmBackend::getFixupKind(StringRef Name) const {
   if (STI.getTargetTriple().isOSBinFormatELF()) {
     unsigned Type;
     Type = llvm::StringSwitch<unsigned>(Name)
-#define ELF_RELOC(X, Y) .Case(#X, Y)
+#define ELF_RELOC(NAME, ID) .Case(#NAME, ID)
 #include "llvm/BinaryFormat/ELFRelocs/RISCV.def"
 #undef ELF_RELOC
+#define ELF_RISCV_NONSTANDARD_RELOC(_VENDOR, NAME, ID) .Case(#NAME, ID)
+#include "llvm/BinaryFormat/ELFRelocs/RISCV_nonstandard.def"
+#undef ELF_RISCV_NONSTANDARD_RELOC
                .Case("BFD_RELOC_NONE", ELF::R_RISCV_NONE)
                .Case("BFD_RELOC_32", ELF::R_RISCV_32)
                .Case("BFD_RELOC_64", ELF::R_RISCV_64)
@@ -112,6 +115,7 @@ RISCVAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 bool RISCVAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                             const MCFixup &Fixup,
                                             const MCValue &Target,
+                                            const uint64_t,
                                             const MCSubtargetInfo *STI) {
   if (Fixup.getKind() >= FirstLiteralRelocationKind)
     return true;
@@ -567,7 +571,7 @@ bool RISCVAsmBackend::evaluateTargetFixup(const MCAssembler &Asm,
   Value = Asm.getSymbolOffset(SA) + AUIPCTarget.getConstant();
   Value -= Asm.getFragmentOffset(*AUIPCDF) + AUIPCFixup->getOffset();
 
-  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, STI)) {
+  if (shouldForceRelocation(Asm, *AUIPCFixup, AUIPCTarget, Value, STI)) {
     WasForced = true;
     return false;
   }

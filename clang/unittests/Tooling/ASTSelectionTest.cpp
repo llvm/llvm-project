@@ -384,7 +384,7 @@ TEST(ASTSelectionFinder, SelectionInFunctionInObjCImplementation) {
 @end
 @implementation I
 
-int notSelected() { }
+int notSelected() { return 0; }
 
 int selected(int x) {
   return x;

@@ -48,7 +48,7 @@ define amdgpu_kernel void @float4_inselt_undef(ptr addrspace(1) %out, i32 %sel) 
 ; GCN-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; GCN-NEXT:    s_endpgm
 entry:
-  %v = insertelement <4 x float> undef, float 1.000000e+00, i32 %sel
+  %v = insertelement <4 x float> poison, float 1.000000e+00, i32 %sel
   store <4 x float> %v, ptr addrspace(1) %out
   ret void
 }
@@ -452,11 +452,11 @@ define amdgpu_kernel void @byte8_inselt(ptr addrspace(1) %out, <8 x i8> %vec, i3
 ; GCN-NEXT:    s_and_b32 s6, s4, 0x1010101
 ; GCN-NEXT:    s_andn2_b64 s[2:3], s[2:3], s[4:5]
 ; GCN-NEXT:    s_or_b64 s[2:3], s[6:7], s[2:3]
-; GCN-NEXT:    v_mov_b32_e32 v3, s1
-; GCN-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-NEXT:    v_mov_b32_e32 v1, s3
-; GCN-NEXT:    v_mov_b32_e32 v2, s0
-; GCN-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v2, s2
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
+; GCN-NEXT:    v_mov_b32_e32 v3, s3
+; GCN-NEXT:    flat_store_dwordx2 v[0:1], v[2:3]
 ; GCN-NEXT:    s_endpgm
 entry:
   %v = insertelement <8 x i8> %vec, i8 1, i32 %sel

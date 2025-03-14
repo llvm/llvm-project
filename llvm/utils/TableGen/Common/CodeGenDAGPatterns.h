@@ -354,10 +354,11 @@ typedef StringSet<> MultipleUseVarSet;
 /// SDTypeConstraint - This is a discriminated union of constraints,
 /// corresponding to the SDTypeConstraint tablegen class in Target.td.
 struct SDTypeConstraint {
+  SDTypeConstraint() = default;
   SDTypeConstraint(const Record *R, const CodeGenHwModes &CGH);
 
   unsigned OperandNo; // The operand # this constraint applies to.
-  enum {
+  enum KindTy {
     SDTCisVT,
     SDTCisPtrTy,
     SDTCisInt,
@@ -373,29 +374,7 @@ struct SDTypeConstraint {
     SDTCisSameSizeAs
   } ConstraintType;
 
-  union { // The discriminated union.
-    struct {
-      unsigned OtherOperandNum;
-    } SDTCisSameAs_Info;
-    struct {
-      unsigned OtherOperandNum;
-    } SDTCisVTSmallerThanOp_Info;
-    struct {
-      unsigned BigOperandNum;
-    } SDTCisOpSmallerThanOp_Info;
-    struct {
-      unsigned OtherOperandNum;
-    } SDTCisEltOfVec_Info;
-    struct {
-      unsigned OtherOperandNum;
-    } SDTCisSubVecOfVec_Info;
-    struct {
-      unsigned OtherOperandNum;
-    } SDTCisSameNumEltsAs_Info;
-    struct {
-      unsigned OtherOperandNum;
-    } SDTCisSameSizeAs_Info;
-  } x;
+  unsigned OtherOperandNo;
 
   // The VT for SDTCisVT and SDTCVecEltisVT.
   // Must not be in the union because it has a non-trivial destructor.
@@ -407,7 +386,15 @@ struct SDTypeConstraint {
   /// is flagged.
   bool ApplyTypeConstraint(TreePatternNode &N, const SDNodeInfo &NodeInfo,
                            TreePattern &TP) const;
+
+  friend bool operator==(const SDTypeConstraint &LHS,
+                         const SDTypeConstraint &RHS);
+  friend bool operator<(const SDTypeConstraint &LHS,
+                        const SDTypeConstraint &RHS);
 };
+
+bool operator==(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS);
+bool operator<(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS);
 
 /// ScopedName - A name of a node associated with a "scope" that indicates
 /// the context (e.g. instance of Pattern or PatFrag) in which the name was
@@ -438,9 +425,11 @@ class SDNodeInfo {
   const Record *Def;
   StringRef EnumName;
   StringRef SDClassName;
-  unsigned Properties;
   unsigned NumResults;
   int NumOperands;
+  unsigned Properties;
+  bool IsStrictFP;
+  uint32_t TSFlags;
   std::vector<SDTypeConstraint> TypeConstraints;
 
 public:
@@ -465,9 +454,15 @@ public:
   /// MVT::SimpleValueType.  Otherwise, return MVT::Other.
   MVT::SimpleValueType getKnownType(unsigned ResNo) const;
 
+  unsigned getProperties() const { return Properties; }
+
   /// hasProperty - Return true if this node has the specified property.
   ///
   bool hasProperty(enum SDNP Prop) const { return Properties & (1 << Prop); }
+
+  bool isStrictFP() const { return IsStrictFP; }
+
+  uint32_t getTSFlags() const { return TSFlags; }
 
   /// ApplyTypeConstraints - Given a node in a pattern, apply the type
   /// constraints for this node to the operands of the node.  This returns

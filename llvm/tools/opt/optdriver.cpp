@@ -373,7 +373,7 @@ static bool shouldPinPassToLegacyPM(StringRef Pass) {
       "expand-large-div-rem",
       "structurizecfg",
       "fix-irreducible",
-      "expand-large-fp-convert",
+      "expand-fp",
       "callbrprepare",
       "scalarizer",
   };
@@ -425,7 +425,7 @@ extern "C" int optMain(
   // For codegen passes, only passes that do IR to IR transformation are
   // supported.
   initializeExpandLargeDivRemLegacyPassPass(Registry);
-  initializeExpandLargeFpConvertLegacyPassPass(Registry);
+  initializeExpandFpLegacyPassPass(Registry);
   initializeExpandMemCmpLegacyPassPass(Registry);
   initializeScalarizeMaskedMemIntrinLegacyPassPass(Registry);
   initializeSelectOptimizePass(Registry);
@@ -577,7 +577,7 @@ extern "C" int optMain(
 
   // If we are supposed to override the target triple, do so now.
   if (!TargetTriple.empty())
-    M->setTargetTriple(Triple::normalize(TargetTriple));
+    M->setTargetTriple(Triple(Triple::normalize(TargetTriple)));
 
   // Immediately run the verifier to catch any problems before starting up the
   // pass pipelines.  Otherwise we can crash on broken code during

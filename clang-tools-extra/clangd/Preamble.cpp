@@ -622,8 +622,8 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   PreambleDiagnostics.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                            const clang::Diagnostic &Info) {
     if (Cfg.Diagnostics.SuppressAll ||
-        isBuiltinDiagnosticSuppressed(Info.getID(), Cfg.Diagnostics.Suppress,
-                                      CI.getLangOpts()))
+        isDiagnosticSuppressed(Info, Cfg.Diagnostics.Suppress,
+                               CI.getLangOpts()))
       return DiagnosticsEngine::Ignored;
     switch (Info.getID()) {
     case diag::warn_no_newline_eof:
@@ -673,7 +673,6 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   // Reset references to ref-counted-ptrs before executing the callbacks, to
   // prevent resetting them concurrently.
   PreambleDiagsEngine.reset();
-  CI.DiagnosticOpts.reset();
 
   // When building the AST for the main file, we do want the function
   // bodies.

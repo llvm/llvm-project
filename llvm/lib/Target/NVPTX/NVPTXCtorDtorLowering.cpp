@@ -14,6 +14,7 @@
 #include "MCTargetDesc/NVPTXBaseInfo.h"
 #include "NVPTX.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/IR/CallingConv.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalVariable.h"
@@ -49,43 +50,10 @@ static std::string getHash(StringRef Str) {
   return llvm::utohexstr(Hash.low(), /*LowerCase=*/true);
 }
 
-static void addKernelMetadata(Module &M, GlobalValue *GV) {
-  llvm::LLVMContext &Ctx = M.getContext();
-
-  // Get "nvvm.annotations" metadata node.
-  llvm::NamedMDNode *MD = M.getOrInsertNamedMetadata("nvvm.annotations");
-
-  llvm::Metadata *KernelMDVals[] = {
-      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "kernel"),
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-
-  // This kernel is only to be called single-threaded.
-  llvm::Metadata *ThreadXMDVals[] = {
-      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "maxntidx"),
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-  llvm::Metadata *ThreadYMDVals[] = {
-      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "maxntidy"),
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-  llvm::Metadata *ThreadZMDVals[] = {
-      llvm::ConstantAsMetadata::get(GV), llvm::MDString::get(Ctx, "maxntidz"),
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-
-  llvm::Metadata *BlockMDVals[] = {
-      llvm::ConstantAsMetadata::get(GV),
-      llvm::MDString::get(Ctx, "maxclusterrank"),
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt32Ty(Ctx), 1))};
-
-  // Append metadata to nvvm.annotations.
-  MD->addOperand(llvm::MDNode::get(Ctx, KernelMDVals));
-  MD->addOperand(llvm::MDNode::get(Ctx, ThreadXMDVals));
-  MD->addOperand(llvm::MDNode::get(Ctx, ThreadYMDVals));
-  MD->addOperand(llvm::MDNode::get(Ctx, ThreadZMDVals));
-  MD->addOperand(llvm::MDNode::get(Ctx, BlockMDVals));
+static void addKernelAttrs(Function *F) {
+  F->addFnAttr("nvvm.maxclusterrank", "1");
+  F->addFnAttr("nvvm.maxntid", "1");
+  F->setCallingConv(CallingConv::PTX_Kernel);
 }
 
 static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
@@ -97,7 +65,7 @@ static Function *createInitOrFiniKernelFunction(Module &M, bool IsCtor) {
   Function *InitOrFiniKernel = Function::createWithDefaultAttr(
       FunctionType::get(Type::getVoidTy(M.getContext()), false),
       GlobalValue::WeakODRLinkage, 0, InitOrFiniKernelName, &M);
-  addKernelMetadata(M, InitOrFiniKernel);
+  addKernelAttrs(InitOrFiniKernel);
 
   return InitOrFiniKernel;
 }

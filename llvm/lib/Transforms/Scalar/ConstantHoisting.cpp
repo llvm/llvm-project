@@ -274,8 +274,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
   InsertPtsMap.reserve(Orders.size() + 1);
   for (BasicBlock *Node : llvm::reverse(Orders)) {
     bool NodeInBBs = BBs.count(Node);
-    auto &InsertPts = InsertPtsMap[Node].first;
-    BlockFrequency &InsertPtsFreq = InsertPtsMap[Node].second;
+    auto &[InsertPts, InsertPtsFreq] = InsertPtsMap[Node];
 
     // Return the optimal insert points in BBs.
     if (Node == Entry) {
@@ -291,8 +290,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
     BasicBlock *Parent = DT.getNode(Node)->getIDom()->getBlock();
     // Initially, ParentInsertPts is empty and ParentPtsFreq is 0. Every child
     // will update its parent's ParentInsertPts and ParentPtsFreq.
-    auto &ParentInsertPts = InsertPtsMap[Parent].first;
-    BlockFrequency &ParentPtsFreq = InsertPtsMap[Parent].second;
+    auto &[ParentInsertPts, ParentPtsFreq] = InsertPtsMap[Parent];
     // Choose to insert in Node or in subtree of Node.
     // Don't hoist to EHPad because we may not find a proper place to insert
     // in EHPad.
@@ -776,7 +774,7 @@ void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
     if (!ClonedCastInst) {
       ClonedCastInst = CastInst->clone();
       ClonedCastInst->setOperand(0, Mat);
-      ClonedCastInst->insertAfter(CastInst);
+      ClonedCastInst->insertAfter(CastInst->getIterator());
       // Use the same debug location as the original cast instruction.
       ClonedCastInst->setDebugLoc(CastInst->getDebugLoc());
       LLVM_DEBUG(dbgs() << "Clone instruction: " << *CastInst << '\n'
