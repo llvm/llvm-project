@@ -96,30 +96,32 @@ define i32 @b() !guid !2 {
 !1 = !{i64 1001}
 !2 = !{i64 1002}
 ;--- profile.yaml
-- Guid: 1000
-  Counters: [10, 2, 8]
-  Callsites:  -
-                - Guid: 1001
-                  Counters: [2, 100]
-                  Callsites:  -
-                                - Guid: 1002
-                                  Counters: [100]
-              -
-                - Guid: 1001
-                  Counters: [8, 500]
-                  Callsites:  -
-                                - Guid: 1002
-                                  Counters: [500]
+Contexts:
+  - Guid: 1000
+    Counters: [10, 2, 8]
+    Callsites:  -
+                  - Guid: 1001
+                    Counters: [2, 100]
+                    Callsites:  -
+                                  - Guid: 1002
+                                    Counters: [100]
+                -
+                  - Guid: 1001
+                    Counters: [8, 500]
+                    Callsites:  -
+                                  - Guid: 1002
+                                    Counters: [500]
 ;--- expected.yaml
 
-- Guid:            1000
-  Counters:        [ 10, 2, 8, 100 ]
-  Callsites:
-    - [  ]
-    - - Guid:            1001
-        Counters:        [ 8, 500 ]
-        Callsites:
-          - - Guid:            1002
-              Counters:        [ 500 ]
-    - - Guid:            1002
-        Counters:        [ 100 ]
+Contexts:
+  - Guid:            1000
+    Counters:        [ 10, 2, 8, 100 ]
+    Callsites:
+      - [  ]
+      - - Guid:            1001
+          Counters:        [ 8, 500 ]
+          Callsites:
+            - - Guid:            1002
+                Counters:        [ 500 ]
+      - - Guid:            1002
+          Counters:        [ 100 ]

@@ -21,12 +21,14 @@ class SM<string version, list<SMFeatures> newer_list> : SMFeatures {
                         !strconcat(f, "|", newer.Features));
 }
 
+let Features = "sm_120a" in def SM_120a : SMFeatures;
+let Features = "sm_101a" in def SM_101a : SMFeatures;
 let Features = "sm_100a" in def SM_100a : SMFeatures;
-
-def SM_100 : SM<"100", [SM_100a]>;
-
 let Features = "sm_90a" in def SM_90a : SMFeatures;
 
+def SM_120 : SM<"120", [SM_120a]>;
+def SM_101 : SM<"101", [SM_101a, SM_120]>;
+def SM_100 : SM<"100", [SM_100a, SM_101]>;
 def SM_90 : SM<"90", [SM_90a, SM_100]>;
 def SM_89 : SM<"89", [SM_90]>;
 def SM_87 : SM<"87", [SM_89]>;
@@ -669,6 +671,14 @@ def __nvvm_redux_sync_umax : NVPTXBuiltinSMAndPTX<"unsigned int(unsigned int, in
 def __nvvm_redux_sync_and : NVPTXBuiltinSMAndPTX<"int(int, int)", SM_80, PTX70>;
 def __nvvm_redux_sync_xor : NVPTXBuiltinSMAndPTX<"int(int, int)", SM_80, PTX70>;
 def __nvvm_redux_sync_or : NVPTXBuiltinSMAndPTX<"int(int, int)", SM_80, PTX70>;
+def __nvvm_redux_sync_fmin : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmin_abs : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmin_NaN : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmin_abs_NaN : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmax : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmax_abs : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmax_NaN : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
+def __nvvm_redux_sync_fmax_abs_NaN : NVPTXBuiltinSMAndPTX<"float(float, int)", SM_100a, PTX86>;
 
 // Membar
 

@@ -341,6 +341,46 @@ def DotBF16Ps512IntrOp : AVX512_IntrOp<"dpbf16ps.512", 1, [Pure,
   let results = (outs VectorOfLengthAndType<[16], [F32]>:$res);
 }
 
+//----------------------------------------------------------------------------//
+// Convert packed F32 to packed BF16
+//----------------------------------------------------------------------------//
+
+def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
+  AllElementCountsMatch<["a", "dst"]>]> {
+  let summary = "Convert packed F32 to packed BF16 Data.";
+  let description = [{
+    The `convert_f32_to_bf16` op is an AVX512-BF16 specific op that can lower
+    to the proper LLVMAVX512BF16 operation `llvm.cvtneps2bf16` depending on
+    the width of MLIR vectors it is applied to.
+
+    #### From the Intel Intrinsics Guide:
+
+    Convert packed single-precision (32-bit) floating-point elements in `a` to
+    packed BF16 (16-bit) floating-point elements, and store the results in `dst`.
+
+    Example:
+    ```mlir
+    %dst = x86vector.avx512.cvt.packed.f32_to_bf16 %a : vector<8xf32> -> vector<8xbf16>
+    ```
+  }];
+  let arguments = (ins VectorOfLengthAndType<[8, 16], [F32]>:$a);
+  let results = (outs VectorOfLengthAndType<[8, 16], [BF16]>:$dst);
+  let assemblyFormat =
+    "$a attr-dict `:` type($a) `->` type($dst)";
+}
+
+def CvtNeF32ToBF16Ps256IntrOp : AVX512_IntrOp<"cvtneps2bf16.256", 1, [Pure],
+    /*extension=*/"bf16"> {
+  let arguments = (ins VectorOfLengthAndType<[8], [F32]>:$a);
+  let results = (outs VectorOfLengthAndType<[8], [BF16]>:$res);
+}
+
+def CvtNeF32ToBF16Ps512IntrOp : AVX512_IntrOp<"cvtneps2bf16.512", 1, [Pure],
+    /*extension=*/"bf16"> {
+  let arguments = (ins VectorOfLengthAndType<[16], [F32]>:$a);
+  let results = (outs VectorOfLengthAndType<[16], [BF16]>:$res);
+}
+
 //===----------------------------------------------------------------------===//
 // AVX op definitions
 //===----------------------------------------------------------------------===//

@@ -111,3 +111,5 @@ def Empty : DeclNode<Decl>;
 def RequiresExprBody : DeclNode<Decl>, DeclContext;
 def LifetimeExtendedTemporary : DeclNode<Decl>;
 def HLSLBuffer : DeclNode<Named, "HLSLBuffer">, DeclContext;
+def OpenACCDeclare : DeclNode<Decl, "#pragma acc declare">;
+def OpenACCRoutine : DeclNode<Decl, "#pragma acc routine">;

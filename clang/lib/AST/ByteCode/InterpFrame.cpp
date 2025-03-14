@@ -31,7 +31,7 @@ InterpFrame::InterpFrame(InterpState &S, const Function *Func,
                          InterpFrame *Caller, CodePtr RetPC, unsigned ArgSize)
     : Caller(Caller), S(S), Depth(Caller ? Caller->Depth + 1 : 0), Func(Func),
       RetPC(RetPC), ArgSize(ArgSize), Args(static_cast<char *>(S.Stk.top())),
-      FrameOffset(S.Stk.size()) {
+      FrameOffset(S.Stk.size()), IsBottom(!Caller) {
   if (!Func)
     return;
 
@@ -77,11 +77,15 @@ InterpFrame::~InterpFrame() {
   // When destroying the InterpFrame, call the Dtor for all block
   // that haven't been destroyed via a destroy() op yet.
   // This happens when the execution is interruped midway-through.
-  if (Func) {
-    for (auto &Scope : Func->scopes()) {
-      for (auto &Local : Scope.locals()) {
-        S.deallocate(localBlock(Local.Offset));
-      }
+  destroyScopes();
+}
+
+void InterpFrame::destroyScopes() {
+  if (!Func)
+    return;
+  for (auto &Scope : Func->scopes()) {
+    for (auto &Local : Scope.locals()) {
+      S.deallocate(localBlock(Local.Offset));
     }
   }
 }
@@ -95,7 +99,7 @@ void InterpFrame::initScope(unsigned Idx) {
 }
 
 void InterpFrame::destroy(unsigned Idx) {
-  for (auto &Local : Func->getScope(Idx).locals()) {
+  for (auto &Local : Func->getScope(Idx).locals_reverse()) {
     S.deallocate(localBlock(Local.Offset));
   }
 }

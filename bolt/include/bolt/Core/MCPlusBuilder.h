@@ -27,6 +27,7 @@
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -550,6 +551,22 @@ public:
     return Analysis->isReturn(Inst);
   }
 
+  virtual ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
+  virtual bool isAuthenticationOfReg(const MCInst &Inst,
+                                     MCPhysReg AuthenticatedReg) const {
+    llvm_unreachable("not implemented");
+    return false;
+  }
+
+  virtual ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const {
+    llvm_unreachable("not implemented");
+    return getNoRegister();
+  }
+
   virtual bool isTerminator(const MCInst &Inst) const;
 
   virtual bool isNoop(const MCInst &Inst) const {
@@ -618,10 +635,6 @@ public:
   virtual bool isADR(const MCInst &Inst) const {
     llvm_unreachable("not implemented");
     return false;
-  }
-
-  virtual void getADRReg(const MCInst &Inst, MCPhysReg &RegName) const {
-    llvm_unreachable("not implemented");
   }
 
   virtual bool isMoveMem2Reg(const MCInst &Inst) const { return false; }
@@ -1518,6 +1531,13 @@ public:
 
   virtual void createShortJmp(InstructionListType &Seq, const MCSymbol *Target,
                               MCContext *Ctx, bool IsTailCall = false) {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Undo the linker's ADRP+ADD to ADR relaxation. Take \p ADRInst and return
+  /// ADRP+ADD instruction sequence.
+  virtual InstructionListType undoAdrpAddRelaxation(const MCInst &ADRInst,
+                                                    MCContext *Ctx) const {
     llvm_unreachable("not implemented");
   }
 

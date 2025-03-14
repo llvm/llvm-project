@@ -12,6 +12,7 @@
 #include "CIRGenTypeCache.h"
 
 #include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
+#include "clang/CIR/MissingFeatures.h"
 
 namespace clang::CIRGen {
 
@@ -32,6 +33,15 @@ public:
     if (&format == &llvm::APFloat::PPCDoubleDouble())
       llvm_unreachable("NYI: PPC double-double format for long double");
     llvm_unreachable("Unsupported format for long double");
+  }
+
+  bool isSized(mlir::Type ty) {
+    if (mlir::isa<cir::PointerType, cir::ArrayType, cir::BoolType,
+                  cir::IntType>(ty))
+      return true;
+
+    assert(!cir::MissingFeatures::unsizedTypes());
+    return false;
   }
 };
 

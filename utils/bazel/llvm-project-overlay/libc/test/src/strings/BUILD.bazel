@@ -4,7 +4,6 @@
 
 # Tests for LLVM libc strings.h functions.
 
-load("//libc:libc_build_rules.bzl", "libc_support_library")
 load("//libc/test:libc_test_rules.bzl", "libc_test")
 
 package(default_visibility = ["//visibility:public"])

@@ -45,6 +45,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/TimeProfiler.h"
+#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -95,7 +96,7 @@ cl::opt<unsigned> WindowDiffLimit(
 
 // WindowIILimit serves as an indicator of abnormal scheduling results and could
 // potentially be referenced by the derived target window scheduler.
-cl::opt<unsigned>
+static cl::opt<unsigned>
     WindowIILimit("window-ii-limit",
                   cl::desc("The upper limit of II in the window algorithm."),
                   cl::Hidden, cl::init(1000));
@@ -167,7 +168,7 @@ WindowScheduler::createMachineScheduler(bool OnlyBuildGraph) {
              ? new ScheduleDAGMI(
                    Context, std::make_unique<PostGenericScheduler>(Context),
                    true)
-             : Context->PassConfig->createMachineScheduler(Context);
+             : Context->TM->createMachineScheduler(Context);
 }
 
 bool WindowScheduler::initialize() {

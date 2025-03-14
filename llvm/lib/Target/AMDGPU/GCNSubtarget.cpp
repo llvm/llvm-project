@@ -422,10 +422,10 @@ unsigned GCNSubtarget::getBaseMaxNumSGPRs(
 
   // Check if maximum number of SGPRs was explicitly requested using
   // "amdgpu-num-sgpr" attribute.
-  if (F.hasFnAttribute("amdgpu-num-sgpr")) {
-    unsigned Requested =
-        F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
+  unsigned Requested =
+      F.getFnAttributeAsParsedInteger("amdgpu-num-sgpr", MaxNumSGPRs);
 
+  if (Requested != MaxNumSGPRs) {
     // Make sure requested value does not violate subtarget's specifications.
     if (Requested && (Requested <= ReservedNumSGPRs))
       Requested = 0;
@@ -504,10 +504,9 @@ unsigned GCNSubtarget::getBaseMaxNumVGPRs(
 
   // Check if maximum number of VGPRs was explicitly requested using
   // "amdgpu-num-vgpr" attribute.
-  if (F.hasFnAttribute("amdgpu-num-vgpr")) {
-    unsigned Requested =
-        F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
-
+  unsigned Requested =
+      F.getFnAttributeAsParsedInteger("amdgpu-num-vgpr", MaxNumVGPRs);
+  if (Requested != MaxNumVGPRs) {
     if (hasGFX90AInsts())
       Requested *= 2;
 

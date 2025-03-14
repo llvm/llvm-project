@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
@@ -23,6 +24,7 @@
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Debug.h"
@@ -133,6 +135,12 @@ class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
 
+  std::unique_ptr<MCSymbolizer>
+  createTargetSymbolizer(BinaryFunction &Function,
+                         bool CreateNewSymbols) const override {
+    return std::make_unique<AArch64MCSymbolizer>(Function, CreateNewSymbols);
+  }
+
   MCPhysReg getStackPointer() const override { return AArch64::SP; }
   MCPhysReg getFramePointer() const override { return AArch64::FP; }
 
@@ -183,6 +191,88 @@ public:
     return false;
   }
 
+  ErrorOr<MCPhysReg> getAuthenticatedReg(const MCInst &Inst) const override {
+    switch (Inst.getOpcode()) {
+    case AArch64::AUTIAZ:
+    case AArch64::AUTIBZ:
+    case AArch64::AUTIASP:
+    case AArch64::AUTIBSP:
+    case AArch64::AUTIASPPCi:
+    case AArch64::AUTIBSPPCi:
+    case AArch64::AUTIASPPCr:
+    case AArch64::AUTIBSPPCr:
+    case AArch64::RETAA:
+    case AArch64::RETAB:
+    case AArch64::RETAASPPCi:
+    case AArch64::RETABSPPCi:
+    case AArch64::RETAASPPCr:
+    case AArch64::RETABSPPCr:
+      return AArch64::LR;
+
+    case AArch64::AUTIA1716:
+    case AArch64::AUTIB1716:
+    case AArch64::AUTIA171615:
+    case AArch64::AUTIB171615:
+      return AArch64::X17;
+
+    case AArch64::ERETAA:
+    case AArch64::ERETAB:
+      // The ERETA{A,B} instructions use either register ELR_EL1, ELR_EL2 or
+      // ELR_EL3, depending on the current Exception Level at run-time.
+      //
+      // Furthermore, these registers are not modelled by LLVM as a regular
+      // MCPhysReg.... So there is no way to indicate that through the current
+      // API.
+      //
+      // Therefore, return an error to indicate that LLVM/BOLT cannot model
+      // this.
+      return make_error_code(std::errc::result_out_of_range);
+
+    case AArch64::AUTIA:
+    case AArch64::AUTIB:
+    case AArch64::AUTDA:
+    case AArch64::AUTDB:
+    case AArch64::AUTIZA:
+    case AArch64::AUTIZB:
+    case AArch64::AUTDZA:
+    case AArch64::AUTDZB:
+      return Inst.getOperand(0).getReg();
+
+      // FIXME: BL?RA(A|B)Z? and LDRA(A|B) should probably be handled here too.
+
+    default:
+      return getNoRegister();
+    }
+  }
+
+  bool isAuthenticationOfReg(const MCInst &Inst, MCPhysReg Reg) const override {
+    if (Reg == getNoRegister())
+      return false;
+    ErrorOr<MCPhysReg> AuthenticatedReg = getAuthenticatedReg(Inst);
+    return AuthenticatedReg.getError() ? false : *AuthenticatedReg == Reg;
+  }
+
+  ErrorOr<MCPhysReg> getRegUsedAsRetDest(const MCInst &Inst) const override {
+    assert(isReturn(Inst));
+    switch (Inst.getOpcode()) {
+    case AArch64::RET:
+      return Inst.getOperand(0).getReg();
+    case AArch64::RETAA:
+    case AArch64::RETAB:
+    case AArch64::RETAASPPCi:
+    case AArch64::RETABSPPCi:
+    case AArch64::RETAASPPCr:
+    case AArch64::RETABSPPCr:
+      return AArch64::LR;
+    case AArch64::ERET:
+    case AArch64::ERETAA:
+    case AArch64::ERETAB:
+      return make_error_code(std::errc::result_out_of_range);
+    default:
+      llvm_unreachable("Unhandled return instruction");
+    }
+  }
+
   bool isADRP(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADRP;
   }
@@ -195,13 +285,23 @@ public:
     return Inst.getOpcode() == AArch64::ADDXri;
   }
 
-  void getADRReg(const MCInst &Inst, MCPhysReg &RegName) const override {
+  MCPhysReg getADRReg(const MCInst &Inst) const {
     assert((isADR(Inst) || isADRP(Inst)) && "Not an ADR instruction");
     assert(MCPlus::getNumPrimeOperands(Inst) != 0 &&
            "No operands for ADR instruction");
     assert(Inst.getOperand(0).isReg() &&
            "Unexpected operand in ADR instruction");
-    RegName = Inst.getOperand(0).getReg();
+    return Inst.getOperand(0).getReg();
+  }
+
+  InstructionListType undoAdrpAddRelaxation(const MCInst &ADRInst,
+                                            MCContext *Ctx) const override {
+    assert(isADR(ADRInst) && "ADR instruction expected");
+
+    const MCPhysReg Reg = getADRReg(ADRInst);
+    const MCSymbol *Target = getTargetSymbol(ADRInst);
+    const uint64_t Addend = getTargetAddend(ADRInst);
+    return materializeAddress(Target, Ctx, Reg, Addend);
   }
 
   bool isTB(const MCInst &Inst) const {

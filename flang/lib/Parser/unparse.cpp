@@ -10,13 +10,13 @@
 // traversal templates in parse-tree-visitor.h.
 
 #include "flang/Parser/unparse.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Common/indirection.h"
 #include "flang/Parser/characters.h"
 #include "flang/Parser/parse-tree-visitor.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Parser/tools.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cinttypes>
@@ -1851,6 +1851,10 @@ public:
               Word("!DIR$ UNROLL");
               Walk(" ", unroll.v);
             },
+            [&](const CompilerDirective::UnrollAndJam &unrollAndJam) {
+              Word("!DIR$ UNROLL_AND_JAM");
+              Walk(" ", unrollAndJam.v);
+            },
             [&](const CompilerDirective::Unrecognized &) {
               Word("!DIR$ ");
               Word(x.source.ToString());
@@ -2071,12 +2075,49 @@ public:
   }
 
   // OpenMP Clauses & Directives
+  void Unparse(const OmpTypeNameList &x) { //
+    Walk(x.v, ",");
+  }
+  void Unparse(const OmpMapperSpecifier &x) {
+    Walk(std::get<std::optional<Name>>(x.t), ":");
+    Walk(std::get<TypeSpec>(x.t));
+    Put("::");
+    Walk(std::get<Name>(x.t));
+  }
+  void Unparse(const OmpReductionSpecifier &x) {
+    Walk(std::get<OmpReductionIdentifier>(x.t));
+    Put(":");
+    Walk(std::get<OmpTypeNameList>(x.t));
+    Walk(":", std::get<std::optional<OmpReductionCombiner>>(x.t));
+  }
   void Unparse(const llvm::omp::Directive &x) {
     Word(llvm::omp::getOpenMPDirectiveName(x).str());
   }
   void Unparse(const OmpDirectiveSpecification &x) {
-    Walk(std::get<llvm::omp::Directive>(x.t));
-    Walk(std::get<std::optional<common::Indirection<OmpClauseList>>>(x.t));
+    auto unparseArgs{[&]() {
+      using ArgList = std::list<parser::OmpArgument>;
+      if (auto &args{std::get<std::optional<ArgList>>(x.t)}) {
+        Put("(");
+        Walk(*args);
+        Put(")");
+      }
+    }};
+    auto unparseClauses{[&]() { //
+      Walk(std::get<std::optional<OmpClauseList>>(x.t));
+    }};
+
+    Walk(std::get<OmpDirectiveName>(x.t));
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.t)};
+    if (flags == OmpDirectiveSpecification::Flags::DeprecatedSyntax) {
+      if (x.DirId() == llvm::omp::Directive::OMPD_flush) {
+        // FLUSH clause arglist
+        unparseClauses();
+        unparseArgs();
+      }
+    } else {
+      unparseArgs();
+      unparseClauses();
+    }
   }
   void Unparse(const OmpTraitScore &x) {
     Word("SCORE(");
@@ -2154,6 +2195,8 @@ public:
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
     Walk(std::get<ScalarIntExpr>(x.t));
   }
+  void Unparse(const OmpAbsentClause &x) { Walk("", x.v, ","); }
+  void Unparse(const OmpContainsClause &x) { Walk("", x.v, ","); }
   void Unparse(const OmpAffinityClause &x) {
     using Modifier = OmpAffinityClause::Modifier;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
@@ -2301,8 +2344,9 @@ public:
   }
   void Unparse(const OmpWhenClause &x) {
     using Modifier = OmpWhenClause::Modifier;
+    using Directive = common::Indirection<OmpDirectiveSpecification>;
     Walk(std::get<std::optional<std::list<Modifier>>>(x.t), ": ");
-    Walk(std::get<std::optional<OmpDirectiveSpecification>>(x.t));
+    Walk(std::get<std::optional<Directive>>(x.t));
   }
 #define GEN_FLANG_CLAUSE_UNPARSE
 #include "llvm/Frontend/OpenMP/OMP.inc"
@@ -2636,6 +2680,18 @@ public:
       Walk(*end);
     }
   }
+  void Unparse(const OmpAssumeDirective &x) {
+    BeginOpenMP();
+    Word("!$OMP ASSUME");
+    Walk(" ", std::get<OmpClauseList>(x.t).v);
+    Put("\n");
+    EndOpenMP();
+  }
+  void Unparse(const OmpEndAssumeDirective &x) {
+    BeginOpenMP();
+    Word("!$OMP END ASSUME\n");
+    EndOpenMP();
+  }
   void Unparse(const OmpCriticalDirective &x) {
     BeginOpenMP();
     Word("!$OMP CRITICAL");
@@ -2659,39 +2715,42 @@ public:
   void Unparse(const OmpDeclareTargetWithList &x) {
     Put("("), Walk(x.v), Put(")");
   }
-  void Unparse(const OmpReductionInitializerClause &x) {
-    Word(" INITIALIZER(OMP_PRIV = ");
-    Walk(x.v);
+  void Unparse(const OmpInitializerProc &x) {
+    Walk(std::get<ProcedureDesignator>(x.t));
+    Put("(");
+    Walk(std::get<std::list<ActualArgSpec>>(x.t));
     Put(")");
   }
-  void Unparse(const OmpReductionCombiner::FunctionCombiner &x) {
-    const auto &pd = std::get<ProcedureDesignator>(x.v.t);
-    const auto &args = std::get<std::list<ActualArgSpec>>(x.v.t);
-    Walk(pd);
-    if (args.empty()) {
-      if (std::holds_alternative<ProcComponentRef>(pd.u)) {
-        Put("()");
-      }
+  void Unparse(const OmpInitializerClause &x) {
+    // Don't let the visitor go to the normal AssignmentStmt Unparse function,
+    // it adds an extra newline that we don't want.
+    if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
+      Walk(assignment->t, "=");
     } else {
-      Walk("(", args, ", ", ")");
+      Walk(x.u);
     }
   }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
     Word("!$OMP DECLARE REDUCTION ");
     Put("(");
-    Walk(std::get<OmpReductionIdentifier>(x.t)), Put(" : ");
-    Walk(std::get<std::list<DeclarationTypeSpec>>(x.t), ","), Put(" : ");
-    Walk(std::get<OmpReductionCombiner>(x.t));
+    Walk(std::get<common::Indirection<OmpReductionSpecifier>>(x.t));
     Put(")");
-    Walk(std::get<std::optional<OmpReductionInitializerClause>>(x.t));
+    Walk(std::get<std::optional<OmpClauseList>>(x.t));
+    Put("\n");
     EndOpenMP();
   }
-
+  void Unparse(const OpenMPDeclarativeAssumes &x) {
+    BeginOpenMP();
+    Word("!$OMP ASSUMES ");
+    Walk(std::get<OmpClauseList>(x.t));
+    Put("\n");
+    EndOpenMP();
+  }
   void Unparse(const OpenMPDeclareMapperConstruct &z) {
     BeginOpenMP();
     Word("!$OMP DECLARE MAPPER (");
-    const auto &spec{std::get<OmpDeclareMapperSpecifier>(z.t)};
+    const auto &spec{std::get<OmpMapperSpecifier>(z.t)};
     if (auto mapname{std::get<std::optional<Name>>(spec.t)}) {
       Walk(mapname);
       Put(":");
@@ -2796,15 +2855,14 @@ public:
   void Unparse(const OpenMPCancellationPointConstruct &x) {
     BeginOpenMP();
     Word("!$OMP CANCELLATION POINT ");
-    Walk(std::get<OmpCancelType>(x.t));
+    Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
     EndOpenMP();
   }
   void Unparse(const OpenMPCancelConstruct &x) {
     BeginOpenMP();
     Word("!$OMP CANCEL ");
-    Walk(std::get<OmpCancelType>(x.t));
-    Walk(std::get<std::optional<OpenMPCancelConstruct::If>>(x.t));
+    Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
     EndOpenMP();
   }
@@ -2841,9 +2899,14 @@ public:
   }
   void Unparse(const OpenMPFlushConstruct &x) {
     BeginOpenMP();
-    Word("!$OMP FLUSH ");
-    Walk(std::get<std::optional<std::list<OmpMemoryOrderClause>>>(x.t));
-    Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    Word("!$OMP FLUSH");
+    if (std::get</*ClausesTrailing=*/bool>(x.t)) {
+      Walk("(", std::get<std::optional<OmpObjectList>>(x.t), ")");
+      Walk(" ", std::get<std::optional<OmpClauseList>>(x.t));
+    } else {
+      Walk(" ", std::get<std::optional<OmpClauseList>>(x.t));
+      Walk(" (", std::get<std::optional<OmpObjectList>>(x.t), ")");
+    }
     Put("\n");
     EndOpenMP();
   }
@@ -2855,7 +2918,9 @@ public:
     Put("\n");
     EndOpenMP();
   }
-  void Unparse(const OmpClauseList &x) { Walk(" ", x.v, " "); }
+  void Unparse(const OmpClauseList &x, const char *sep = " ") {
+    Walk(" ", x.v, sep);
+  }
   void Unparse(const OpenMPSimpleStandaloneConstruct &x) {
     BeginOpenMP();
     Word("!$OMP ");
@@ -2972,7 +3037,6 @@ public:
       OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
-  WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Ordering) // OMP ordering
   WALK_NESTED_ENUM(OmpOrderModifier, Value) // OMP order-modifier
   WALK_NESTED_ENUM(OmpPrescriptiveness, Value) // OMP prescriptiveness

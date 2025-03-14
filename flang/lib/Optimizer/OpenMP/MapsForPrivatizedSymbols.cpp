@@ -91,6 +91,7 @@ class MapsForPrivatizedSymbolsPass
         /*bounds=*/ValueRange{},
         builder.getIntegerAttr(builder.getIntegerType(64, /*isSigned=*/false),
                                mapTypeTo),
+        /*mapperId*/ mlir::FlatSymbolRefAttr(),
         builder.getAttr<omp::VariableCaptureKindAttr>(
             omp::VariableCaptureKind::ByRef),
         StringAttr(), builder.getBoolAttr(false));

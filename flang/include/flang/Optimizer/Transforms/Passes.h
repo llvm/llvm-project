@@ -60,6 +60,9 @@ namespace fir {
 #define GEN_PASS_DECL_FUNCTIONATTR
 #define GEN_PASS_DECL_CONSTANTARGUMENTGLOBALISATIONOPT
 #define GEN_PASS_DECL_COMPILERGENERATEDNAMESCONVERSION
+#define GEN_PASS_DECL_SETRUNTIMECALLATTRIBUTES
+#define GEN_PASS_DECL_GENRUNTIMECALLSFORTEST
+#define GEN_PASS_DECL_SIMPLIFYFIROPERATIONS
 
 #include "flang/Optimizer/Transforms/Passes.h.inc"
 
@@ -83,6 +86,9 @@ createVScaleAttrPass(std::pair<unsigned, unsigned> vscaleAttr);
 void populateCfgConversionRewrites(mlir::RewritePatternSet &patterns,
                                    bool forceLoopToExecuteOnce = false,
                                    bool setNSW = true);
+
+void populateSimplifyFIROperationsPatterns(mlir::RewritePatternSet &patterns,
+                                           bool preferInlineImplementation);
 
 // declarative passes
 #define GEN_PASS_REGISTRATION

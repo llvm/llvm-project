@@ -72,6 +72,7 @@ DECLARE_DESCRIPTOR(parser::OmpAlignModifier);
 DECLARE_DESCRIPTOR(parser::OmpAllocatorComplexModifier);
 DECLARE_DESCRIPTOR(parser::OmpAllocatorSimpleModifier);
 DECLARE_DESCRIPTOR(parser::OmpChunkModifier);
+DECLARE_DESCRIPTOR(parser::OmpContextSelector);
 DECLARE_DESCRIPTOR(parser::OmpDependenceType);
 DECLARE_DESCRIPTOR(parser::OmpDeviceModifier);
 DECLARE_DESCRIPTOR(parser::OmpDirectiveNameModifier);

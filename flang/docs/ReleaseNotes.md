@@ -36,6 +36,19 @@ page](https://llvm.org/releases/).
 
 ## Build System Changes
 
+ * The FortranRuntime library has been renamed to `flang_rt.runtime`.
+
+ * The FortranFloat128Math library has been renamed to `flang_rt.quadmath`.
+
+ * The CufRuntime_cuda_${version} library has been renamed to
+   `flang_rt.cuda_${version}`.
+
+ * The Fortran Runtime library has been move to a new top-level directory
+   named "flang-rt". It now supports the LLVM_ENABLE_RUNTIMES mechanism to
+   build Flang-RT for multiple target triples. libflang_rt.runtime.{a|so} will
+   now be emitted into Clang's per-target resource directory
+   (next to libclang_rt.*.*) where it is also found by Flang's driver.
+
 ## New Issues Found
 
 
