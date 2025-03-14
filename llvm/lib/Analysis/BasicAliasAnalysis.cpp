@@ -220,7 +220,7 @@ bool EarliestEscapeAnalysis::isNotCapturedBefore(const Value *Object,
   if (Iter.second) {
     Instruction *EarliestCapture = FindEarliestCapture(
         Object, *const_cast<Function *>(DT.getRoot()->getParent()),
-        /*ReturnCaptures=*/false, DT);
+        /*ReturnCaptures=*/false, DT, CaptureComponents::Provenance);
     if (EarliestCapture)
       Inst2Obj[EarliestCapture].push_back(Object);
     Iter.first->second = EarliestCapture;
