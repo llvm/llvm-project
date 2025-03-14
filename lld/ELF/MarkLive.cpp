@@ -45,7 +45,7 @@ using namespace lld::elf;
 
 namespace {
 
-using SecOffset = std::pair<InputSectionBase*, unsigned>;
+using SecOffset = std::pair<InputSectionBase *, unsigned>;
 
 // Something that can have an independent reason for being live.
 using LiveObject = std::variant<InputSectionBase *, Symbol *, SecOffset>;
