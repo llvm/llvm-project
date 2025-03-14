@@ -40,8 +40,8 @@ struct SchedScore {
   float computeScore() const;
   float computeScore2() const;
 
-  void sum(const SchedScore &s, unsigned loopDepth = 0);
-  bool isBetter(const SchedScore &s) const;
+  void sum(const SchedScore &S, unsigned LoopDepth = 0);
+  bool isBetter(const SchedScore &S) const;
   bool isMemBound(unsigned TargetOccupancy, unsigned ExtraOcc = 1) const;
   // More latency can be hiden with ExtraOcc.
   unsigned latencyGain(unsigned TargetOccupancy, unsigned ExtraOcc) const;
@@ -53,23 +53,23 @@ struct AMDGPULatencyTracker {
   const llvm::InstrItineraryData *ItinerayData;
   // Latency MI dst reg to cycle map.
   llvm::DenseMap<unsigned, int> LatencyMIs;
-  SchedScore score;
+  SchedScore Score;
   // Low latency MI not wait.
-  unsigned hideLatency = 0;
-  unsigned memLatency = 0;
+  unsigned HideLatency = 0;
+  unsigned MemLatency = 0;
   // For simple, only consider mixture as one valu one salu.
   // Not group now.
-  unsigned prevSAlu = 0;
-  unsigned prevVAlu = 0;
+  unsigned PrevSAlu = 0;
+  unsigned PrevVAlu = 0;
   enum class AluStatus {
     Nothing,
     Vector,
     Scalar,
-  } prevStatus = AluStatus::Nothing;
+  } PrevStatus = AluStatus::Nothing;
   void scan(const llvm::MachineInstr &MI);
 };
 
-SchedScore CollectLatency(llvm::MachineFunction &MF,
+SchedScore collectLatency(llvm::MachineFunction &MF,
                           const llvm::GCNSubtarget &ST,
                           const llvm::MachineLoopInfo *MLI = nullptr);
 } // namespace llvm

@@ -32,40 +32,39 @@ float SchedScore::computeScore() const {
          LatencyHide;
 }
 float SchedScore::computeScore2() const {
-  float cycles = 0;
-  cycles = (MixAlu * Occupancy + MemLatency);
-  cycles /= Occupancy;
-  return cycles;
+  float Cycles = 0;
+  Cycles = (MixAlu * Occupancy + MemLatency);
+  Cycles /= Occupancy;
+  return Cycles;
 }
 
-void SchedScore::sum(const SchedScore &s, unsigned loopDepth) {
-  unsigned loopCount = loopDepth > 0 ? std::pow(3, loopDepth) : 1;
-  LatencyHide += loopCount * s.LatencyHide;
-  MemLatency += loopCount * s.MemLatency;
-  MixAlu += loopCount * s.MixAlu;
-  Alu += loopCount * s.Alu;
-  Lds += loopCount * s.Lds;
-  SgprSpill |= s.SgprSpill;
+void SchedScore::sum(const SchedScore &S, unsigned LoopDepth) {
+  unsigned LoopCount = LoopDepth > 0 ? std::pow(3, LoopDepth) : 1;
+  LatencyHide += LoopCount * S.LatencyHide;
+  MemLatency += LoopCount * S.MemLatency;
+  MixAlu += LoopCount * S.MixAlu;
+  Alu += LoopCount * S.Alu;
+  Lds += LoopCount * S.Lds;
+  SgprSpill |= S.SgprSpill;
 }
-bool SchedScore::isBetter(const SchedScore &s) const {
-  float score = computeScore();
-  float newScore = s.computeScore();
-  bool spillBetter = !SgprSpill && s.SgprSpill;
-  return spillBetter ? true : newScore >= score;
+bool SchedScore::isBetter(const SchedScore &S) const {
+  float Score = computeScore();
+  float NewScore = S.computeScore();
+  bool SpillBetter = !SgprSpill && S.SgprSpill;
+  return SpillBetter ? true : NewScore >= Score;
 }
 // Does more occupancy give more perf.
 bool SchedScore::isMemBound(unsigned TargetOccupancy, unsigned ExtraOcc) const {
-  unsigned gain = latencyGain(TargetOccupancy, ExtraOcc);
+  unsigned Gain = latencyGain(TargetOccupancy, ExtraOcc);
   // 10% is good enough.
-  if ((10 * gain) >= Alu)
+  if ((10 * Gain) >= Alu)
     return true;
-  else
-    return false;
+  return false;
 }
 
 unsigned SchedScore::latencyGain(unsigned TgtOcc, unsigned ExtraOcc) const {
-  unsigned latency = MemLatency;
-  return (latency / (TgtOcc)) - (latency / (TgtOcc + ExtraOcc));
+  unsigned Latency = MemLatency;
+  return (Latency / (TgtOcc)) - (Latency / (TgtOcc + ExtraOcc));
 }
 
 // AMDGPULatencyTracker
@@ -75,113 +74,113 @@ AMDGPULatencyTracker::AMDGPULatencyTracker(const GCNSubtarget &ST)
 void AMDGPULatencyTracker::scan(const MachineInstr &MI) {
   if (MI.isDebugInstr())
     return;
-  int latency = SIII->getInstrLatency(ItinerayData, MI);
+  int Latency = SIII->getInstrLatency(ItinerayData, MI);
   // If inside latency hide.
   if (!LatencyMIs.empty()) {
-    bool bWaitCnt = false;
+    bool IsWaitCnt = false;
     for (auto &MO : MI.operands()) {
       if (MO.isReg()) {
-        unsigned reg = MO.getReg();
-        auto it = LatencyMIs.find(reg);
-        if (it != LatencyMIs.end()) {
-          bWaitCnt = true;
+        Register Reg = MO.getReg();
+        auto It = LatencyMIs.find(Reg);
+        if (It != LatencyMIs.end()) {
+          IsWaitCnt = true;
           // If MI use mem result, update latency to mem latency.
-          int cycle = it->second;
-          if (cycle > latency)
-            latency = cycle;
+          int Cycle = It->second;
+          if (Cycle > Latency)
+            Latency = Cycle;
         }
       }
     }
     // Update latency for each mem latency inst.
-    for (auto it = LatencyMIs.begin(); it != LatencyMIs.end();) {
-      auto prev = it;
-      auto l = (it++);
-      int cycle = l->second;
-      if (cycle <= latency) {
+    for (auto It = LatencyMIs.begin(); It != LatencyMIs.end();) {
+      auto Prev = It;
+      auto L = (It++);
+      int Cycle = L->second;
+      if (Cycle <= Latency) {
         // Only left cycles.
         // Remove the reg.
-        LatencyMIs.erase(prev);
-        if (bWaitCnt && cycle == latency) {
-          score.MemLatency += cycle;
+        LatencyMIs.erase(Prev);
+        if (IsWaitCnt && Cycle == Latency) {
+          Score.MemLatency += Cycle;
           // Only count memLatency once, the rest is hide.
-          bWaitCnt = false;
+          IsWaitCnt = false;
         } else {
           // Hide cycle or count mem latency?
-          score.LatencyHide += cycle;
+          Score.LatencyHide += Cycle;
         }
       } else {
-        l->second -= latency;
+        L->second -= Latency;
         // Hide latency.
-        score.LatencyHide += latency;
+        Score.LatencyHide += Latency;
       }
     }
 
   } else {
     // TODO: check branch/lds?
     // TODO: check prevVAlu?
-    auto getAluStatus = [](const MachineInstr &MI,
+    auto GetAluStatus = [](const MachineInstr &MI,
                            const llvm::SIInstrInfo *SIII) {
-      AluStatus status = AluStatus::Nothing;
+      AluStatus Status = AluStatus::Nothing;
       if (SIII->isVALU(MI.getOpcode())) {
-        status = AluStatus::Vector;
+        Status = AluStatus::Vector;
       } else if (SIII->isSALU(MI.getOpcode())) {
-        status = AluStatus::Scalar;
+        Status = AluStatus::Scalar;
       }
-      return status;
+      return Status;
     };
-    AluStatus status = getAluStatus(MI, SIII);
+    AluStatus Status = GetAluStatus(MI, SIII);
 
-    switch (prevStatus) {
+    switch (PrevStatus) {
     case AluStatus::Nothing: {
-      score.Alu += latency;
-      score.MixAlu += latency;
-      prevStatus = status;
+      Score.Alu += Latency;
+      Score.MixAlu += Latency;
+      PrevStatus = Status;
     } break;
     case AluStatus::Vector:
     case AluStatus::Scalar: {
-      score.Alu += latency;
+      Score.Alu += Latency;
       // Ignore mix alu.
-      if (prevStatus != status) {
-        prevStatus = AluStatus::Nothing;
+      if (PrevStatus != Status) {
+        PrevStatus = AluStatus::Nothing;
       } else {
-        score.MixAlu += latency;
+        Score.MixAlu += Latency;
       }
     } break;
     }
   }
   // Update latency inst.
   if (SIII->isHighLatencyInstruction(MI) && MI.mayLoad()) {
-    unsigned reg = MI.getOperand(0).getReg();
+    Register Reg = MI.getOperand(0).getReg();
     // TODO: get correct latency.
     // SIII->getInstrLatency(ItinerayData, MI);
     constexpr unsigned kHighLetency = 180;
-    LatencyMIs[reg] = kHighLetency;
+    LatencyMIs[Reg] = kHighLetency;
   } else if (SIII->isLowLatencyInstruction(MI) && MI.mayLoad()) {
-    unsigned reg = MI.getOperand(0).getReg();
+    Register Reg = MI.getOperand(0).getReg();
     // TODO: get correct latency.
     // SIII->getInstrLatency(ItinerayData, MI);
     constexpr unsigned kLowLetency = 35;
-    LatencyMIs[reg] = kLowLetency;
+    LatencyMIs[Reg] = kLowLetency;
   }
 }
 
-SchedScore CollectLatency(MachineFunction &MF, const llvm::GCNSubtarget &ST,
+SchedScore collectLatency(MachineFunction &MF, const llvm::GCNSubtarget &ST,
                           const llvm::MachineLoopInfo *MLI) {
-  SchedScore totalScore;
+  SchedScore TotalScore;
   for (auto &MFI : MF) {
     MachineBasicBlock &MBB = MFI;
     MachineBasicBlock::iterator Next;
-    AMDGPULatencyTracker latencyTracker(ST);
+    AMDGPULatencyTracker LatencyTracker(ST);
     for (auto &MI : MBB) {
-      latencyTracker.scan(MI);
+      LatencyTracker.scan(MI);
     }
-    unsigned loopDepth = 0;
+    unsigned LoopDepth = 0;
     if (MLI) {
-      loopDepth = MLI->getLoopDepth(&MBB);
+      LoopDepth = MLI->getLoopDepth(&MBB);
     }
-    totalScore.sum(latencyTracker.score, loopDepth);
+    TotalScore.sum(LatencyTracker.Score, LoopDepth);
   }
-  return totalScore;
+  return TotalScore;
 }
 
 } // namespace llvm

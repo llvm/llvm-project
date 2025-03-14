@@ -453,7 +453,7 @@ bool reduceChannel(unsigned offset, MachineInstr &MI, const MCInstrDesc &desc,
                              .addImm(offset * LaneSize);
         MachineInstr *OffsetAddMI = OffsetAdd.getInstr();
         MachineBasicBlock::iterator InsertPoint =
-            llvm::FindOrCreateInsertionPointForSccDef(MI.getParent(), MI, SIRI,
+            llvm::findOrCreateInsertionPointForSccDef(MI.getParent(), MI, SIRI,
                                                       SIII, &MRI);
         MI.getParent()->insert(InsertPoint, OffsetAddMI);
         SIII->legalizeOperands(*OffsetAddMI);

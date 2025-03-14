@@ -1,3 +1,6 @@
+#ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUMIRUTILS_H
+#define LLVM_LIB_TARGET_AMDGPU_AMDGPUMIRUTILS_H
+
 #pragma once
 
 #include "llvm/ADT/DenseMap.h"
@@ -37,14 +40,14 @@ using LiveSet = llvm::DenseMap<unsigned, llvm::LaneBitmask>;
 unsigned getRegSize(unsigned Reg, llvm::LaneBitmask &Mask,
                     const llvm::MachineRegisterInfo &MRI,
                     const llvm::SIRegisterInfo *SIRI);
-void CollectLiveSetPressure(const LiveSet &liveSet,
+void collectLiveSetPressure(const LiveSet &liveSet,
                             const llvm::MachineRegisterInfo &MRI,
                             const llvm::SIRegisterInfo *SIRI,
                             unsigned &VPressure, unsigned &SPressure);
 
 bool isExecUpdateForControlFlow(llvm::MachineInstr &MI);
 
-bool IsSub0Sub1SingleDef(unsigned Reg, const llvm::MachineRegisterInfo &MRI);
+bool isSub0Sub1SingleDef(unsigned Reg, const llvm::MachineRegisterInfo &MRI);
 
 llvm::LaneBitmask getRegMask(const llvm::MachineOperand &MO,
                              const llvm::MachineRegisterInfo &MRI);
@@ -68,40 +71,40 @@ bool reach_block(llvm::MachineBasicBlock *FromBB,
 void viewCFGWithPhi(llvm::MachineFunction &MF);
 void write_contribution_list(llvm::MachineFunction &MF, const char *Filename);
 
-llvm::MachineBasicBlock *CreateNullExportBlock(llvm::MachineFunction &MF,
+llvm::MachineBasicBlock *createNullExportBlock(llvm::MachineFunction &MF,
                                                const llvm::SIInstrInfo *TII);
 
-bool GetNonDebugMBBEnd(llvm::MachineBasicBlock::reverse_iterator &BBEnd,
+bool getNonDebugMBBEnd(llvm::MachineBasicBlock::reverse_iterator &BBEnd,
                        llvm::MachineBasicBlock &MBB);
 
-void UpdatePhysRegLiveInForBlock(llvm::MachineBasicBlock *NewBB,
+void updatePhysRegLiveInForBlock(llvm::MachineBasicBlock *NewBB,
                                  const llvm::MachineRegisterInfo *MRI);
 
-void BuildPhysRegLiveInForBlock(llvm::MachineBasicBlock *NewBB,
+void buildPhysRegLiveInForBlock(llvm::MachineBasicBlock *NewBB,
                                 llvm::SmallDenseSet<unsigned, 8> &LiveOutSet,
                                 const llvm::MachineRegisterInfo *MRI);
 
-MachineReg CreateVirtualRegForOperand(MachineOpcode Opcode, unsigned Operand,
+MachineReg createVirtualRegForOperand(MachineOpcode Opcode, unsigned Operand,
                                       llvm::MachineFunction &MF);
 
-MachineReg CreateVirtualDstReg(MachineOpcode Opcode, llvm::MachineFunction &MF);
+MachineReg createVirtualDstReg(MachineOpcode Opcode, llvm::MachineFunction &MF);
 
-bool IsExecCopy(const llvm::MachineInstr &MI, MachineReg Exec,
+bool isExecCopy(const llvm::MachineInstr &MI, MachineReg Exec,
                 MachineReg *pDst);
 struct MachineRegWithSubReg {
   MachineReg Reg = /*NoRegister*/ 0;
   unsigned SubReg = /*NoSubRegister*/ 0;
 };
-MachineRegWithSubReg GetWqmEntryActiveMask(llvm::MachineFunction &MF);
-llvm::MachineInstr *GetWqmEntryActiveMaskInst(llvm::MachineFunction &MF);
+MachineRegWithSubReg getWqmEntryActiveMask(llvm::MachineFunction &MF);
+llvm::MachineInstr *getWqmEntryActiveMaskInst(llvm::MachineFunction &MF);
 
 // Return true if this machine instruction represents a call to the fetch
 // shader. We curently have two mechanisims for calling fetch shader:
 // 1. The AMDGPU_CALL_FETCH_SHADER pseudo-instruction
 // 2. A CALL instruction with the `FetchShaderCall` flag set to true.
-bool IsFetchShaderCall(const llvm::MachineInstr *MI);
+bool isFetchShaderCall(const llvm::MachineInstr *MI);
 
-bool IsSccLiveAt(llvm::MachineBasicBlock *MBB,
+bool isSccLiveAt(llvm::MachineBasicBlock *MBB,
                  llvm::MachineBasicBlock::iterator MI);
 
 // An enum used to pass additional constraints to
@@ -126,7 +129,7 @@ enum SccDefInsertPointConstraintFlags {
 // scc around BeforeInst. This way BeforeInst can safely be used
 // as the new insert location.
 //
-llvm::MachineBasicBlock::iterator FindOrCreateInsertionPointForSccDef(
+llvm::MachineBasicBlock::iterator findOrCreateInsertionPointForSccDef(
     llvm::MachineBasicBlock *MBB, llvm::MachineBasicBlock::iterator BeforeInst,
     const llvm::TargetRegisterInfo *TRI, const llvm::SIInstrInfo *TII,
     llvm::MachineRegisterInfo *MRI,
@@ -149,9 +152,9 @@ void buildEndLiveMap(
 
 void dumpLiveSet(const LiveSet &LiveSet, const llvm::SIRegisterInfo *SIRI);
 
-unsigned GetCurrentVGPRCount(llvm::MachineFunction &MF,
+unsigned getCurrentVGPRCount(llvm::MachineFunction &MF,
                              const llvm::SIRegisterInfo *SIRI);
-unsigned GetCurrentSGPRCount(llvm::MachineFunction &MF,
+unsigned getCurrentSGPRCount(llvm::MachineFunction &MF,
                              const llvm::SIRegisterInfo *SIRI);
 
 bool isFastMathInst(llvm::MachineInstr &MI);
@@ -169,7 +172,7 @@ void write_pressure(llvm::MachineFunction &MF, llvm::LiveIntervals *LIS,
 // Look for the successor `Succ` of the given `MBB`.
 // Returns MBB->succ_end() if `Succ` is not a successor of MBB.
 llvm::MachineBasicBlock::succ_iterator
-FindSuccessor(llvm::MachineBasicBlock *MBB, llvm::MachineBasicBlock *Succ);
+findSuccessor(llvm::MachineBasicBlock *MBB, llvm::MachineBasicBlock *Succ);
 
 // The enum and helper function for v_perm selection mask.
 //
@@ -210,3 +213,5 @@ constexpr int buildVPermSelectMask(V_PERM_IN_BYTE_POS Sel_0,
           (int)Sel_0);
 }
 } // namespace llvm
+
+#endif

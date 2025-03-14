@@ -31,12 +31,12 @@ void SubExp::dump(const MachineRegisterInfo &MRI,
                   const SIRegisterInfo *SIRI) const {
   dbgs() << "\nSubExp:\n";
   dbgs() << "input regs:\n";
-  for (auto &input : inputLive) {
+  for (auto &input : InputLive) {
     pressure::print_reg(input.first, MRI, SIRI, llvm::dbgs());
     dbgs() << "\n";
   }
   dbgs() << "output regs:\n";
-  for (auto &output : outputLive) {
+  for (auto &output : OutputLive) {
     pressure::print_reg(output.first, MRI, SIRI, llvm::dbgs());
     dbgs() << "\n";
   }
@@ -60,8 +60,8 @@ bool SubExp::modifiesRegister(unsigned Reg, const SIRegisterInfo *SIRI) const {
 
 void SubExp::calcMaxPressure(const MachineRegisterInfo &MRI,
                              const SIRegisterInfo *SIRI) {
-  sMaxSize = std::max(sInputSize, sOutputSize);
-  vMaxSize = std::max(vInputSize, vOutputSize);
+  SMaxSize = std::max(SInputSize, SOutputSize);
+  VMaxSize = std::max(VInputSize, VOutputSize);
 
   DenseMap<unsigned, LaneBitmask> LiveRegs;
   GCNRegPressure CurPressure;
@@ -125,10 +125,10 @@ void SubExp::calcMaxPressure(const MachineRegisterInfo &MRI,
 
     unsigned sSize = CurPressure.getSGPRNum();
     unsigned vSize = CurPressure.getVGPRNum(ST->hasGFX90AInsts());
-    if (sSize > sMaxSize)
-      sMaxSize = sSize;
-    if (vSize > vMaxSize)
-      vMaxSize = vSize;
+    if (sSize > SMaxSize)
+      SMaxSize = sSize;
+    if (vSize > VMaxSize)
+      VMaxSize = vSize;
   }
 }
 
@@ -185,8 +185,8 @@ template void ExpDag::initNodes<std::vector<MachineInstr *>>(
 
 template <typename T>
 void ExpDag::build(const LiveSet &InputLiveReg, const LiveSet &OutputLiveReg,
-                   T &insts) {
-  initNodes(InputLiveReg, insts);
+                   T &Insts) {
+  initNodes(InputLiveReg, Insts);
   addDataDep(SIRI);
   addCtrlDep();
   buildSubExp(InputLiveReg, OutputLiveReg, SIRI, SIII);
@@ -336,7 +336,7 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
       auto it = StartLiveReg.find(Reg);
       assert(it != StartLiveReg.end() &&
              "cannot find input reg in block start live");
-      Exp.inputLive[Reg] |= it->second;
+      Exp.InputLive[Reg] |= it->second;
     }
 
     for (unsigned Reg : Exp.BottomRegs) {
@@ -349,13 +349,13 @@ void ExpDag::buildSubExp(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg,
         // outputLive which will affect profit count.
         continue;
       }
-      Exp.outputLive[Reg] |= it->second;
+      Exp.OutputLive[Reg] |= it->second;
     }
 
-    CollectLiveSetPressure(Exp.inputLive, MRI, SIRI, Exp.vInputSize,
-                           Exp.sInputSize);
-    CollectLiveSetPressure(Exp.outputLive, MRI, SIRI, Exp.vOutputSize,
-                           Exp.sOutputSize);
+    CollectLiveSetPressure(Exp.InputLive, MRI, SIRI, Exp.VInputSize,
+                           Exp.SInputSize);
+    CollectLiveSetPressure(Exp.OutputLive, MRI, SIRI, Exp.VOutputSize,
+                           Exp.SOutputSize);
   }
 }
 
@@ -415,8 +415,8 @@ void ExpDag::addDataDep(const SIRegisterInfo *SIRI) {
         auto curDefIt = curDefMI.find(Reg);
         // Check def inst first.
         if (curDefIt != curDefMI.end()) {
-          MachineInstr *curDef = curDefIt->second;
-          DefSU = MISUnitMap[curDef];
+          MachineInstr *CurDef = curDefIt->second;
+          DefSU = MISUnitMap[CurDef];
           // Add link between different defs.
           SU.addPred(SDep(DefSU, SDep::Data, Reg));
         }
@@ -445,12 +445,12 @@ void BlockExpDag::build() {
   const auto EndIdx = SlotIndexes->getMBBEndIdx(MBB);
   const auto EndLiveReg = llvm::getLiveRegs(EndIdx, *LIS, MRI);
 
-  std::vector<MachineInstr *> insts;
+  std::vector<MachineInstr *> Insts;
   for (MachineInstr &MI : *MBB) {
-    insts.emplace_back(&MI);
+    Insts.emplace_back(&MI);
   }
 
-  ExpDag::build(StartLiveReg, EndLiveReg, insts);
+  ExpDag::build(StartLiveReg, EndLiveReg, Insts);
 }
 
 void BlockExpDag::buildWithPressure() {
@@ -461,17 +461,17 @@ void BlockExpDag::buildWithPressure() {
   const auto EndIdx = SlotIndexes->getMBBEndIdx(MBB);
   const auto EndLiveReg = llvm::getLiveRegs(EndIdx, *LIS, MRI);
 
-  std::vector<MachineInstr *> insts;
+  std::vector<MachineInstr *> Insts;
   for (MachineInstr &MI : *MBB) {
-    insts.emplace_back(&MI);
+    Insts.emplace_back(&MI);
   }
 
-  ExpDag::build(StartLiveReg, EndLiveReg, insts);
+  ExpDag::build(StartLiveReg, EndLiveReg, Insts);
   // Build pressure.
   buildPressure(StartLiveReg, EndLiveReg);
 }
 
-void BlockExpDag::buildAvail(const LiveSet &passThruSet,
+void BlockExpDag::buildAvail(const LiveSet &PassThruSet,
                              DenseMap<SUnit *, LiveSet> &DagAvailRegMap) {
   DenseSet<SUnit *> Processed;
 
@@ -485,10 +485,10 @@ void BlockExpDag::buildAvail(const LiveSet &passThruSet,
   for (SUnit &SU : SUnits) {
     if (SU.NumPredsLeft == 0) {
       GCNDownwardRPTracker RP(*LIS);
-      RP.reset(BeginMI, &passThruSet);
+      RP.reset(BeginMI, &PassThruSet);
       MachineInstr *MI = SU.getInstr();
       if (MI) {
-        RP.reset(*MI, &passThruSet);
+        RP.reset(*MI, &PassThruSet);
         RP.advance();
       }
       DagAvailRegMap[&SU] = RP.getLiveRegs();
@@ -503,7 +503,6 @@ void BlockExpDag::buildAvail(const LiveSet &passThruSet,
     }
   }
   while (!WorkList.empty()) {
-    bool IsUpdated = false;
     SmallVector<SUnit *, 4> ReadyNodes;
     for (SUnit *SU : WorkList) {
       if (SU->NumPredsLeft > 0)
@@ -511,7 +510,6 @@ void BlockExpDag::buildAvail(const LiveSet &passThruSet,
       ReadyNodes.emplace_back(SU);
       // Ready, move it to Processed.
       Processed.insert(SU);
-      IsUpdated = true;
       // Only update 1 node once.
       // Order of schedle here should not affect pressure.
       break;

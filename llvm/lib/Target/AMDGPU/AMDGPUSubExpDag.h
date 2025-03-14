@@ -41,14 +41,14 @@ struct SubExp {
   bool IsTouchSCC = false;
   llvm::MachineBasicBlock *FromBB;
   llvm::MachineBasicBlock *ToBB;
-  unsigned sInputSize;
-  unsigned vInputSize;
-  unsigned sOutputSize;
-  unsigned vOutputSize;
-  unsigned sMaxSize;
-  unsigned vMaxSize;
-  LiveSet inputLive;
-  LiveSet outputLive;
+  unsigned SInputSize;
+  unsigned VInputSize;
+  unsigned SOutputSize;
+  unsigned VOutputSize;
+  unsigned SMaxSize;
+  unsigned VMaxSize;
+  LiveSet InputLive;
+  LiveSet OutputLive;
   bool isSafeToMove(const llvm::MachineRegisterInfo &MRI, bool IsMoveUp) const;
   void calcMaxPressure(const llvm::MachineRegisterInfo &MRI,
                        const llvm::SIRegisterInfo *SIRI);
@@ -73,7 +73,7 @@ struct ExpDag {
   std::vector<SubExp> SubExps;
   template <typename T>
   void build(const LiveSet &InputLiveReg, const LiveSet &OutputLiveReg,
-             T &insts);
+             T &Insts);
   void dump();
   void viewGraph(const llvm::Twine &Name, const llvm::Twine &Title) const;
   /// Returns a label for an SUnit node in a visualization of the ScheduleDAG.
@@ -104,7 +104,7 @@ struct BlockExpDag : public ExpDag {
   void buildWithPressure();
 
 private:
-  void buildAvail(const LiveSet &passThruSet,
+  void buildAvail(const LiveSet &PassThruSet,
                   llvm::DenseMap<llvm::SUnit *, LiveSet> &DagAvailRegMap);
   void buildPressure(const LiveSet &StartLiveReg, const LiveSet &EndLiveReg);
 };
