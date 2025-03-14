@@ -18,11 +18,8 @@
 #include "llvm/Pass.h"
 using namespace llvm;
 
-extern bool WriteNewDbgInfoFormatToBitcode;
-
 PreservedAnalyses BitcodeWriterPass::run(Module &M, ModuleAnalysisManager &AM) {
-  ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat &&
-                                                WriteNewDbgInfoFormatToBitcode);
+  ScopedDbgInfoFormatSetter FormatSetter(M, M.IsNewDbgInfoFormat);
   if (M.IsNewDbgInfoFormat)
     M.removeDebugIntrinsicDeclarations();
 
@@ -55,7 +52,7 @@ namespace {
 
     bool runOnModule(Module &M) override {
       ScopedDbgInfoFormatSetter FormatSetter(
-          M, M.IsNewDbgInfoFormat && WriteNewDbgInfoFormatToBitcode);
+          M, M.IsNewDbgInfoFormat);
       if (M.IsNewDbgInfoFormat)
         M.removeDebugIntrinsicDeclarations();
 
