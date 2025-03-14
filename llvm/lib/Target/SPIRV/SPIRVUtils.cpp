@@ -186,7 +186,8 @@ MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I) {
     if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
       IsHeader = true;
     } else if (IsHeader &&
-               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
+               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::TYPEREF ||
+                 Opcode == SPIRV::OpLabel)) {
       ++It;
       break;
     }
@@ -303,20 +304,7 @@ SPIRV::Scope::Scope getMemScope(LLVMContext &Ctx, SyncScope::ID Id) {
     return SPIRV::Scope::Device;
   return SPIRV::Scope::CrossDevice;
 }
-/*
-MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
-                                       const MachineRegisterInfo *MRI) {
-  MachineInstr *MI = MRI->getVRegDef(ConstReg);
-  //if (MI->getOpcode() == SPIRV::G_TRUNC || MI->getOpcode() == SPIRV::G_ZEXT)
-  //  return getDefInstrMaybeConstant(ConstReg = MI->getOperand(1).getReg(), MRI);
-  if (MI->getOpcode() == SPIRV::ASSIGN_TYPE)
-    return getDefInstrMaybeConstant(ConstReg = MI->getOperand(1).getReg(), MRI);
-  if (auto *GI = dyn_cast<GIntrinsic>(MI))
-    if (GI->is(Intrinsic::spv_track_constant))
-      return MRI->getVRegDef(ConstReg = MI->getOperand(2).getReg());
-  return MI;
-}
-*/
+
 MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
                                        const MachineRegisterInfo *MRI) {
   MachineInstr *MI = MRI->getVRegDef(ConstReg);
@@ -865,6 +853,84 @@ createContinuedInstructions(MachineIRBuilder &MIRBuilder, unsigned Opcode,
     Instructions.push_back(MIB.getInstr());
   }
   return Instructions;
+}
+
+const std::set<unsigned> &getTypeFoldingSupportedOpcodes() {
+  // clang-format off
+  static const std::set<unsigned> TypeFoldingSupportingOpcs = {
+    TargetOpcode::G_ADD,
+    TargetOpcode::G_FADD,
+    TargetOpcode::G_STRICT_FADD,
+    TargetOpcode::G_SUB,
+    TargetOpcode::G_FSUB,
+    TargetOpcode::G_STRICT_FSUB,
+    TargetOpcode::G_MUL,
+    TargetOpcode::G_FMUL,
+    TargetOpcode::G_STRICT_FMUL,
+    TargetOpcode::G_SDIV,
+    TargetOpcode::G_UDIV,
+    TargetOpcode::G_FDIV,
+    TargetOpcode::G_STRICT_FDIV,
+    TargetOpcode::G_SREM,
+    TargetOpcode::G_UREM,
+    TargetOpcode::G_FREM,
+    TargetOpcode::G_STRICT_FREM,
+    TargetOpcode::G_FNEG,
+    TargetOpcode::G_CONSTANT,
+    TargetOpcode::G_FCONSTANT,
+    TargetOpcode::G_AND,
+    TargetOpcode::G_OR,
+    TargetOpcode::G_XOR,
+    TargetOpcode::G_SHL,
+    TargetOpcode::G_ASHR,
+    TargetOpcode::G_LSHR,
+    TargetOpcode::G_SELECT,
+    TargetOpcode::G_EXTRACT_VECTOR_ELT,
+  };
+  // clang-format on
+  return TypeFoldingSupportingOpcs;
+}
+
+bool isTypeFoldingSupported(unsigned Opcode) {
+  return getTypeFoldingSupportedOpcodes().count(Opcode) > 0;
+}
+
+// Traversing [g]MIR accounting for pseudo-instructions.
+MachineInstr *passCopy(MachineInstr *Def, const MachineRegisterInfo *MRI) {
+  return (Def->getOpcode() == SPIRV::ASSIGN_TYPE ||
+          Def->getOpcode() == TargetOpcode::COPY)
+             ? MRI->getVRegDef(Def->getOperand(1).getReg())
+             : Def;
+}
+
+MachineInstr *getDef(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+  if (MachineInstr *Def = MRI->getVRegDef(MO.getReg()))
+    return passCopy(Def, MRI);
+  return nullptr;
+}
+
+MachineInstr *getImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+  if (MachineInstr *Def = getDef(MO, MRI)) {
+    if (Def->getOpcode() == TargetOpcode::G_CONSTANT ||
+        Def->getOpcode() == SPIRV::OpConstantI)
+      return Def;
+  }
+  return nullptr;
+}
+
+int64_t foldImm(const MachineOperand &MO, const MachineRegisterInfo *MRI) {
+  if (MachineInstr *Def = getImm(MO, MRI)) {
+    if (Def->getOpcode() == SPIRV::OpConstantI)
+      return Def->getOperand(2).getImm();
+    if (Def->getOpcode() == TargetOpcode::G_CONSTANT)
+      return Def->getOperand(1).getCImm()->getZExtValue();
+  }
+  llvm_unreachable("Unexpected integer constant pattern");
+}
+
+unsigned getArrayComponentCount(const MachineRegisterInfo *MRI,
+                                const MachineInstr *ResType) {
+  return foldImm(ResType->getOperand(2), MRI);
 }
 
 } // namespace llvm

@@ -15,6 +15,7 @@ include "SPIRVSymbolicOperands.td"
 
 // Codegen only metadata instructions
 let isCodeGenOnly=1 in {
+  def TYPEREF: Pseudo<(outs), (ins ID:$src_id, TYPE:$src_ty)>;
   def ASSIGN_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
   def DECL_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
   def GET_ID: Pseudo<(outs iID:$dst_id), (ins iID:$src)>;
@@ -31,8 +32,10 @@ def UNKNOWN_type
 def SPVTypeBin : SDTypeProfile<1, 2, []>;
 
 def assigntype : SDNode<"SPIRVISD::AssignType", SPVTypeBin>;
+def typeref : SDNode<"SPIRVISD::TypeRef", SPVTypeBin>;
 
 def : GINodeEquiv<ASSIGN_TYPE, assigntype>;
+def : GINodeEquiv<TYPEREF, typeref>;
 
 class BinOp<string name, bits<16> opCode, list<dag> pattern=[]>
                 : Op<opCode, (outs ID:$dst), (ins TYPE:$src_ty, ID:$src, ID:$src2),
@@ -475,11 +478,8 @@ def OpConvertBF16ToFINTEL : UnOp<"OpConvertBF16ToFINTEL", 6117>;
 
 // 3.42.12 Composite Instructions
 
-//def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
-//                  "$res = OpVectorExtractDynamic $type $vec $idx", [(set ID:$res, (assigntype (extractelt vID:$vec, ID:$idx), TYPE:$type))]>;
 def OpVectorExtractDynamic: Op<77, (outs ID:$res), (ins TYPE:$type, vID:$vec, ID:$idx),
                   "$res = OpVectorExtractDynamic $type $vec $idx">;
-
 def OpVectorInsertDynamic: Op<78, (outs ID:$res), (ins TYPE:$ty, ID:$vec, ID:$comp, ID:$idx),
                   "$res = OpVectorInsertDynamic $ty $vec $comp $idx">;
 def OpVectorShuffle: Op<79, (outs ID:$res), (ins TYPE:$ty, ID:$v1, ID:$v2, variable_ops),

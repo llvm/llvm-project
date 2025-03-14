@@ -535,7 +535,7 @@ static Register buildBuiltinVariableLoad(
 /// assign SPIRVType to both registers. If SpirvTy is provided, use it as
 /// SPIRVType in ASSIGN_TYPE, otherwise create it from \p Ty. Defined in
 /// SPIRVPreLegalizer.cpp.
-extern Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
+extern void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
                                   SPIRVGlobalRegistry *GR,
                                   MachineIRBuilder &MIB,
                                   MachineRegisterInfo &MRI);

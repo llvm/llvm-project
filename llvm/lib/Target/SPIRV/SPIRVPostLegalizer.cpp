@@ -41,15 +41,11 @@ public:
 };
 } // namespace
 
-// Defined in SPIRVLegalizerInfo.cpp.
-extern bool isTypeFoldingSupported(unsigned Opcode);
-
 namespace llvm {
 //  Defined in SPIRVPreLegalizer.cpp.
-extern Register insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
-                                  SPIRVGlobalRegistry *GR,
-                                  MachineIRBuilder &MIB,
-                                  MachineRegisterInfo &MRI);
+extern void insertAssignInstr(Register Reg, Type *Ty, SPIRVType *SpirvTy,
+                              SPIRVGlobalRegistry *GR, MachineIRBuilder &MIB,
+                              MachineRegisterInfo &MRI);
 extern void processInstr(MachineInstr &MI, MachineIRBuilder &MIB,
                          MachineRegisterInfo &MRI, SPIRVGlobalRegistry *GR);
 } // namespace llvm
