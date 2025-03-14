@@ -111,7 +111,7 @@ void initializeEarlyMachineLICMPass(PassRegistry &);
 void initializeEarlyTailDuplicateLegacyPass(PassRegistry &);
 void initializeEdgeBundlesWrapperLegacyPass(PassRegistry &);
 void initializeEHContGuardTargetsPass(PassRegistry &);
-void initializeExpandLargeFpConvertLegacyPassPass(PassRegistry &);
+void initializeExpandFpLegacyPassPass(PassRegistry &);
 void initializeExpandLargeDivRemLegacyPassPass(PassRegistry &);
 void initializeExpandMemCmpLegacyPassPass(PassRegistry &);
 void initializeExpandPostRALegacyPass(PassRegistry &);
