@@ -118,7 +118,7 @@ async function getDAPArguments(
   workspaceFolder: vscode.WorkspaceFolder | undefined,
   configuration: vscode.DebugConfiguration,
 ): Promise<string[]> {
-  // Check the debug configuration for arguments first
+  // Check the debug configuration for arguments first.
   const debugConfigArgs = configuration.debugAdapterArgs;
   if (debugConfigArgs) {
     if (
@@ -132,7 +132,7 @@ async function getDAPArguments(
     }
     return debugConfigArgs;
   }
-  // Fall back on the workspace configuration
+  // Fall back on the workspace configuration.
   return vscode.workspace
     .getConfiguration("lldb-dap", workspaceFolder)
     .get<string[]>("arguments", []);
