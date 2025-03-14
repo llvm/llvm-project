@@ -24,5 +24,6 @@ struct Bar final : BarBase {
   void virt() override {};
   // `virtual ... override;` is a common pattern, so don't warn
   virtual int virt(int) override;
+  virtual int virt(bool);                        // expected-warning {{virtual method}}
   int nonvirt();
 };
