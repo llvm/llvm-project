@@ -179,8 +179,7 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
                                   const DebugLoc &DL, Register DestReg,
                                   Register SrcReg, StackOffset Offset,
                                   MachineInstr::MIFlag Flag,
-                                  MaybeAlign RequiredAlign,
-                                  bool IsPrologueOrEpilogue) const {
+                                  MaybeAlign RequiredAlign) const {
 
   if (DestReg == SrcReg && !Offset.getFixed() && !Offset.getScalable())
     return;
@@ -228,7 +227,9 @@ void RISCVRegisterInfo::adjustReg(MachineBasicBlock &MBB,
            "Expect the number of vector registers within 32-bits.");
     uint32_t NumOfVReg = ScalableValue / (RISCV::RVVBitsPerBlock / 8);
     // Only use vsetvli rather than vlenb if adjusting in the prologue or
-    // epilogue, otherwise it may distrube the VTYPE and VL status.
+    // epilogue, otherwise it may disturb the VTYPE and VL status.
+    bool IsPrologueOrEpilogue =
+        Flag == MachineInstr::FrameSetup || Flag == MachineInstr::FrameDestroy;
     bool UseVsetvliRatherThanVlenb =
         IsPrologueOrEpilogue && ST.preferVsetvliOverReadVLENB();
     if (UseVsetvliRatherThanVlenb && (NumOfVReg == 1 || NumOfVReg == 2 ||
@@ -557,8 +558,7 @@ bool RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     else
       DestReg = MRI.createVirtualRegister(&RISCV::GPRRegClass);
     adjustReg(*II->getParent(), II, DL, DestReg, FrameReg, Offset,
-              MachineInstr::NoFlags, std::nullopt,
-              /*IsPrologueOrEpilogue*/ false);
+              MachineInstr::NoFlags, std::nullopt);
     MI.getOperand(FIOperandNum).ChangeToRegister(DestReg, /*IsDef*/false,
                                                  /*IsImp*/false,
                                                  /*IsKill*/true);

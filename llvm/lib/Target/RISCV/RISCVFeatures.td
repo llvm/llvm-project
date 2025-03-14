@@ -1538,7 +1538,7 @@ def TunePreferVsetvliOverReadVLENB
     : SubtargetFeature<"prefer-vsetvli-over-read-vlenb",
                        "PreferVsetvliOverReadVLENB",
                        "true",
-                       "Prefer vsetvli over read vlenb CSR when calculate VLEN">;
+                       "Prefer vsetvli over read vlenb CSR to calculate VLEN">;
 
 // Assume that lock-free native-width atomics are available, even if the target
 // and operating system combination would not usually provide them. The user

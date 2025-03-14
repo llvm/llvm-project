@@ -80,7 +80,7 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator II,
                  const DebugLoc &DL, Register DestReg, Register SrcReg,
                  StackOffset Offset, MachineInstr::MIFlag Flag,
-                 MaybeAlign RequiredAlign, bool IsPrologueOrEpilogue) const;
+                 MaybeAlign RequiredAlign) const;
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,

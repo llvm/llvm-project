@@ -669,8 +669,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   // Simply allocate the stack if it's not big enough to require a probe.
   if (!NeedProbe || Offset <= ProbeSize) {
     RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(-Offset),
-                  MachineInstr::FrameSetup, getStackAlign(),
-                  /*IsPrologueOrEpilogue*/ true);
+                  MachineInstr::FrameSetup, getStackAlign());
 
     if (EmitCFI) {
       // Emit ".cfi_def_cfa_offset RealStackSize"
@@ -699,7 +698,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
     while (CurrentOffset + ProbeSize <= Offset) {
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
                     StackOffset::getFixed(-ProbeSize), MachineInstr::FrameSetup,
-                    getStackAlign(), /*IsPrologueOrEpilogue*/ true);
+                    getStackAlign());
       // s[d|w] zero, 0(sp)
       BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
           .addReg(RISCV::X0)
@@ -722,7 +721,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
     if (Residual) {
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
                     StackOffset::getFixed(-Residual), MachineInstr::FrameSetup,
-                    getStackAlign(), /*IsPrologueOrEpilogue*/ true);
+                    getStackAlign());
       if (EmitCFI) {
         // Emit ".cfi_def_cfa_offset Offset"
         unsigned CFIIndex =
@@ -753,7 +752,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
   // SUB TargetReg, SP, RoundedSize
   RI->adjustReg(MBB, MBBI, DL, TargetReg, SPReg,
                 StackOffset::getFixed(-RoundedSize), MachineInstr::FrameSetup,
-                getStackAlign(), /*IsPrologueOrEpilogue*/ true);
+                getStackAlign());
 
   if (EmitCFI) {
     // Set the CFA register to TargetReg.
@@ -782,8 +781,7 @@ void RISCVFrameLowering::allocateStack(MachineBasicBlock &MBB,
 
   if (Residual) {
     RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(-Residual),
-                  MachineInstr::FrameSetup, getStackAlign(),
-                  /*IsPrologueOrEpilogue*/ true);
+                  MachineInstr::FrameSetup, getStackAlign());
     if (DynAllocation) {
       // s[d|w] zero, 0(sp)
       BuildMI(MBB, MBBI, DL, TII->get(IsRV64 ? RISCV::SD : RISCV::SW))
@@ -1016,8 +1014,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
       RI->adjustReg(
           MBB, MBBI, DL, FPReg, SPReg,
           StackOffset::getFixed(RealStackSize - RVFI->getVarArgsSaveSize()),
-          MachineInstr::FrameSetup, getStackAlign(),
-          /*IsPrologueOrEpilogue*/ true);
+          MachineInstr::FrameSetup, getStackAlign());
     }
 
     // Emit ".cfi_def_cfa $fp, RVFI->getVarArgsSaveSize()"
@@ -1050,8 +1047,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
       // updates.
       RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg,
                     StackOffset::getScalable(-RVVStackSize),
-                    MachineInstr::FrameSetup, getStackAlign(),
-                    /*IsPrologueOrEpilogue*/ true);
+                    MachineInstr::FrameSetup, getStackAlign());
     }
 
     if (!hasFP(MF)) {
@@ -1129,8 +1125,7 @@ void RISCVFrameLowering::deallocateStack(MachineFunction &MF,
   const RISCVInstrInfo *TII = STI.getInstrInfo();
 
   RI->adjustReg(MBB, MBBI, DL, SPReg, SPReg, StackOffset::getFixed(StackSize),
-                MachineInstr::FrameDestroy, getStackAlign(),
-                /*IsPrologueOrEpilogue*/ true);
+                MachineInstr::FrameDestroy, getStackAlign());
   StackSize = 0;
 
   unsigned CFIIndex =
@@ -1194,8 +1189,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     if (!RestoreSPFromFP)
       RI->adjustReg(MBB, FirstScalarCSRRestoreInsn, DL, SPReg, SPReg,
                     StackOffset::getScalable(RVVStackSize),
-                    MachineInstr::FrameDestroy, getStackAlign(),
-                    /*IsPrologueOrEpilogue*/ true);
+                    MachineInstr::FrameDestroy, getStackAlign());
 
     if (!hasFP(MF)) {
       unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::cfiDefCfa(
@@ -1220,8 +1214,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     if (!RestoreSPFromFP)
       RI->adjustReg(MBB, FirstScalarCSRRestoreInsn, DL, SPReg, SPReg,
                     StackOffset::getFixed(SecondSPAdjustAmount),
-                    MachineInstr::FrameDestroy, getStackAlign(),
-                    /*IsPrologueOrEpilogue*/ true);
+                    MachineInstr::FrameDestroy, getStackAlign());
 
     if (!hasFP(MF)) {
       unsigned CFIIndex = MF.addFrameInst(
@@ -1247,7 +1240,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
     assert(hasFP(MF) && "frame pointer should not have been eliminated");
     RI->adjustReg(MBB, FirstScalarCSRRestoreInsn, DL, SPReg, FPReg,
                   StackOffset::getFixed(-FPOffset), MachineInstr::FrameDestroy,
-                  getStackAlign(), /*IsPrologueOrEpilogue*/ true);
+                  getStackAlign());
   }
 
   if (hasFP(MF)) {
@@ -1778,8 +1771,7 @@ MachineBasicBlock::iterator RISCVFrameLowering::eliminateCallFramePseudoInstr(
 
       const RISCVRegisterInfo &RI = *STI.getRegisterInfo();
       RI.adjustReg(MBB, MI, DL, SPReg, SPReg, StackOffset::getFixed(Amount),
-                   MachineInstr::NoFlags, getStackAlign(),
-                   /*IsPrologueOrEpilogue*/ true);
+                   MachineInstr::NoFlags, getStackAlign());
     }
   }
 
@@ -2206,10 +2198,10 @@ bool RISCVFrameLowering::canUseAsPrologue(const MachineBasicBlock &MBB) const {
   // Make sure VTYPE and VL are not live-in since we will use vsetvli in the
   // prologue to get the VLEN, and that will clobber these registers.
   //
-  // We may do also check the stack has contain for the object with the
-  // scalable vector type, but this will require iterating over all the stack
-  // objects, but this may not worth since the situation is rare, we could do
-  // further check in future if we find it is necessary.
+  // We may do also check the stack contains objects with scalable vector type,
+  // but this will require iterating over all the stack objects, but this may
+  // not worth since the situation is rare, we could do further check in future
+  // if we find it is necessary.
   if (STI.preferVsetvliOverReadVLENB() &&
       (MBB.isLiveIn(RISCV::VTYPE) || MBB.isLiveIn(RISCV::VL)))
     return false;

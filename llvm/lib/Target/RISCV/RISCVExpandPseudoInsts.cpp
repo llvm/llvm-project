@@ -424,25 +424,9 @@ bool RISCVExpandPseudo::expandPseudoReadMulVLENB(
   DebugLoc DL = MBBI->getDebugLoc();
   Register Dst = MBBI->getOperand(0).getReg();
   unsigned Mul = MBBI->getOperand(1).getImm();
-  RISCVVType::VLMUL VLMUL = RISCVVType::VLMUL::LMUL_1;
-  switch (Mul) {
-  case 1:
-    VLMUL = RISCVVType::VLMUL::LMUL_1;
-    break;
-  case 2:
-    VLMUL = RISCVVType::VLMUL::LMUL_2;
-    break;
-  case 4:
-    VLMUL = RISCVVType::VLMUL::LMUL_4;
-    break;
-  case 8:
-    VLMUL = RISCVVType::VLMUL::LMUL_8;
-    break;
-  default:
-    llvm_unreachable("Unexpected VLENB value");
-  }
+  RISCVVType::VLMUL VLMUL = RISCVVType::encodeLMUL(Mul, /*Fractional=*/false);
   unsigned VTypeImm = RISCVVType::encodeVTYPE(
-      VLMUL, /*SEW*/ 8, /*TailAgnostic*/ true, /*MaskAgnostic*/ true);
+      VLMUL, /*SEW=*/8, /*TailAgnostic=*/true, /*MaskAgnostic=*/true);
 
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::VSETVLI), Dst)
       .addReg(RISCV::X0)
