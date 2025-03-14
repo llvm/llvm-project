@@ -73,6 +73,10 @@ bool AMDGPUResourceUsageAnalysis::runOnMachineFunction(MachineFunction &MF) {
   if (!TPC)
     return false;
 
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  if (MFI->ResourceInfo.has_value())
+    return false;
+
   const TargetMachine &TM = TPC->getTM<TargetMachine>();
   const MCSubtargetInfo &STI = *TM.getMCSubtargetInfo();
 
@@ -90,17 +94,18 @@ bool AMDGPUResourceUsageAnalysis::runOnMachineFunction(MachineFunction &MF) {
       AssumedStackSizeForExternalCall = 0;
   }
 
-  ResourceInfo = analyzeResourceUsage(MF, AssumedStackSizeForDynamicSizeObjects,
-                                      AssumedStackSizeForExternalCall);
+  MFI->ResourceInfo =
+      analyzeResourceUsage(MF, AssumedStackSizeForDynamicSizeObjects,
+                           AssumedStackSizeForExternalCall);
 
   return false;
 }
 
-AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo
+SIMachineFunctionInfo::SIFunctionResourceInfo
 AMDGPUResourceUsageAnalysis::analyzeResourceUsage(
     const MachineFunction &MF, uint32_t AssumedStackSizeForDynamicSizeObjects,
     uint32_t AssumedStackSizeForExternalCall) const {
-  SIFunctionResourceInfo Info;
+  SIMachineFunctionInfo::SIFunctionResourceInfo Info;
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
