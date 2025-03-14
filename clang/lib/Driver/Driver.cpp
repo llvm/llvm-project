@@ -1090,16 +1090,13 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       std::string NormalizedName = TT.normalize();
 
       // Make sure we don't have a duplicate triple.
-      auto Duplicate = FoundNormalizedTriples.find(NormalizedName);
-      if (Duplicate != FoundNormalizedTriples.end()) {
+      auto [TripleIt, Inserted] =
+          FoundNormalizedTriples.try_emplace(NormalizedName, Val);
+      if (!Inserted) {
         Diag(clang::diag::warn_drv_omp_offload_target_duplicate)
-            << Val << Duplicate->second;
+            << Val << TripleIt->second;
         continue;
       }
-
-      // Store the current triple so that we can check for duplicates in the
-      // following iterations.
-      FoundNormalizedTriples[NormalizedName] = Val;
 
       // If the specified target is invalid, emit a diagnostic.
       if (TT.getArch() == llvm::Triple::UnknownArch) {
