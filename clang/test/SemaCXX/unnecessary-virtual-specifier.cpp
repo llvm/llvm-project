@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -Wunnecessary-virtual-specifier %s
+// RUN: %clang_cc1 -fsyntax-only -verify -Wunnecessary-virtual-specifier -Wno-inconsistent-missing-override %s
 
 struct Foo final {
   Foo() = default;
@@ -15,15 +15,17 @@ struct Foo final {
 struct BarBase {
   virtual ~BarBase() = delete;
   virtual void virt() {}
-  virtual int virt(int);
+  virtual int  virt2(int);
+  virtual bool virt3(bool);
   int nonvirt();
 };
 
 struct Bar final : BarBase {
   ~Bar() override = delete;
-  void virt() override {};
-  // `virtual ... override;` is a common pattern, so don't warn
-  virtual int virt(int) override;
-  virtual int virt(bool);                        // expected-warning {{virtual method}}
+          void virt() override {};
+  virtual int  virt2(int) override;               // `virtual ... override;` is a common pattern, so don't warn
+  virtual bool virt3(bool);                       // Already virtual in the base class; triggers
+                                                  // -Winconsistent-missing-override or -Wsuggest-override instead
+  virtual int  new_virt(bool);                    // expected-warning {{virtual method}}
   int nonvirt();
 };
