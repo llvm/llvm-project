@@ -215,19 +215,25 @@ public:
   ///
   /// This API assumes that drilling into a struct like this is always an
   /// inbounds and nuw operation.
+  /// Specifically, inbounds flag will not be set if \p IsBaseConstantNull is
+  /// true.
   using CGBuilderBaseTy::CreateStructGEP;
   Address CreateStructGEP(Address Addr, unsigned Index,
-                          const llvm::Twine &Name = "") {
+                          const llvm::Twine &Name = "",
+                          bool IsBaseConstantNull = false) {
     llvm::StructType *ElTy = cast<llvm::StructType>(Addr.getElementType());
     const llvm::DataLayout &DL = BB->getDataLayout();
     const llvm::StructLayout *Layout = DL.getStructLayout(ElTy);
     auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
 
-    return Address(CreateStructGEP(Addr.getElementType(), Addr.getBasePointer(),
-                                   Index, Name),
-                   ElTy->getElementType(Index),
-                   Addr.getAlignment().alignmentAtOffset(Offset),
-                   Addr.isKnownNonNull());
+    llvm::GEPNoWrapFlags NWFlags = llvm::GEPNoWrapFlags::noUnsignedWrap();
+    if (!IsBaseConstantNull)
+      NWFlags |= llvm::GEPNoWrapFlags::inBounds();
+    return Address(
+        CreateConstGEP2_32(Addr.getElementType(), Addr.getBasePointer(), 0,
+                           Index, Name, NWFlags),
+        ElTy->getElementType(Index),
+        Addr.getAlignment().alignmentAtOffset(Offset), Addr.isKnownNonNull());
   }
 
   /// Given

@@ -4738,6 +4738,9 @@ LValue CodeGenFunction::EmitMemberExpr(const MemberExpr *E) {
   }
 
   Expr *BaseExpr = E->getBase();
+  // Check whether the underlying base pointer is a constant null.
+  // If so, we do not set inbounds flag for GEP to avoid breaking some old-style
+  // offsetof idioms.
   Expr *UnderlyingBaseExpr = BaseExpr;
   while (auto *BaseMemberExpr = dyn_cast<MemberExpr>(UnderlyingBaseExpr))
     UnderlyingBaseExpr = BaseMemberExpr->getBase();
@@ -4876,9 +4879,8 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   unsigned idx =
     CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
 
-  if (IsBaseConstantNull)
-    return CGF.Builder.CreateConstGEP(base, idx, field->getName());
-  return CGF.Builder.CreateStructGEP(base, idx, field->getName());
+  return CGF.Builder.CreateStructGEP(base, idx, field->getName(),
+                                     IsBaseConstantNull);
 }
 
 static Address emitPreserveStructAccess(CodeGenFunction &CGF, LValue base,
