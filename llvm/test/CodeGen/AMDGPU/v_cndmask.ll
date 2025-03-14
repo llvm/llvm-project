@@ -1625,10 +1625,9 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v1
 ; GFX11-NEXT:    v_and_b32_e32 v2, 1, v2
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v2
 ; GFX11-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GFX11-NEXT:    global_store_b8 v0, v1, s[8:9]
 ; GFX11-NEXT:    s_endpgm
@@ -1648,10 +1647,9 @@ define amdgpu_kernel void @icmp_vgprX_k0_select_k1_vgprZ_i1(ptr addrspace(1) %ou
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    v_cmp_gt_i32_e32 vcc, 0, v1
 ; GFX12-NEXT:    v_and_b32_e32 v2, 1, v2
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_cmp_eq_u32_e64 s[0:1], 1, v2
 ; GFX12-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
-; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX12-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[0:1]
 ; GFX12-NEXT:    global_store_b8 v0, v1, s[8:9]
 ; GFX12-NEXT:    s_endpgm
