@@ -1,0 +1,175 @@
+# Test llvm-symbolizer always uses line info from debug info if present.
+# RUN: yaml2obj %s -o %t
+# RUN: llvm-symbolizer --obj=%t 0x1 | FileCheck %s
+
+# CHECK:      foo(bool)
+# CHECK-NEXT: ??:0:0
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_X86_64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x10
+    Content:         50E80000000031C059C3
+  - Name:            .debug_abbrev
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         01110025251305032572171017111B12067317000000
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         1E000000050001080000000001002100010000000000000000000A00000000000000
+  - Name:            .debug_str_offsets
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         0C000000050000000000000000000000
+  - Name:            .debug_line
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         5C0000000500080037000000010101FB0E0D00010101010000000100000101011F010000000003011F020F051E0100000000009C5BB3AA3D0567AB9CB3F5A35C9F9B230400000902000000000000000013061E0505060A5F060B2E0202000101
+  - Name:            .debug_line_str
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         003C696E76616C69643E00
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x2
+        Symbol:          _Z3barv
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            .rela.debug_info
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x8
+        Symbol:          .debug_abbrev
+        Type:            R_X86_64_32
+      - Offset:          0x11
+        Symbol:          .debug_str_offsets
+        Type:            R_X86_64_32
+        Addend:          8
+      - Offset:          0x15
+        Symbol:          .debug_line
+        Type:            R_X86_64_32
+      - Offset:          0x1E
+        Symbol:          .debug_addr
+        Type:            R_X86_64_32
+        Addend:          8
+  - Name:            .rela.debug_str_offsets
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_str_offsets
+    Relocations:
+      - Offset:          0x8
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+      - Offset:          0xC
+        Symbol:          .debug_str
+        Type:            R_X86_64_32
+        Addend:          24
+  - Name:            .rela.debug_addr
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_addr
+    Relocations:
+      - Offset:          0x8
+        Symbol:          .text
+        Type:            R_X86_64_64
+  - Name:            .rela.debug_line
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .debug_line
+    Relocations:
+      - Offset:          0x22
+        Symbol:          .debug_line_str
+        Type:            R_X86_64_32
+      - Offset:          0x2E
+        Symbol:          .debug_line_str
+        Type:            R_X86_64_32
+        Addend:          1
+      - Offset:          0x48
+        Symbol:          .text
+        Type:            R_X86_64_64
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .debug_abbrev
+      - Name:            .debug_info
+      - Name:            .rela.debug_info
+      - Name:            .debug_str_offsets
+      - Name:            .rela.debug_str_offsets
+      - Name:            .debug_str
+      - Name:            .debug_addr
+      - Name:            .rela.debug_addr
+      - Name:            .debug_line
+      - Name:            .rela.debug_line
+      - Name:            .debug_line_str
+      - Name:            .symtab
+Symbols:
+  - Name:            main.cpp
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+  - Name:            .debug_abbrev
+    Type:            STT_SECTION
+    Section:         .debug_abbrev
+  - Name:            .debug_str_offsets
+    Type:            STT_SECTION
+    Section:         .debug_str_offsets
+  - Name:            .debug_str
+    Type:            STT_SECTION
+    Section:         .debug_str
+  - Name:            .debug_addr
+    Type:            STT_SECTION
+    Section:         .debug_addr
+  - Name:            .debug_line
+    Type:            STT_SECTION
+    Section:         .debug_line
+  - Name:            .debug_line_str
+    Type:            STT_SECTION
+    Section:         .debug_line_str
+  - Name:            _Z3foob
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_LOCAL
+    Size:            0xA
+  - Name:            _Z3barv
+    Binding:         STB_LOCAL
+DWARF:
+  debug_str:
+    - clang version 21.0.0git
+    - '<invalid>'
+  debug_addr:
+    - Length:          0xC
+      Version:         0x5
+      AddressSize:     0x8
+      Entries:
+        - {}
+...
