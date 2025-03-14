@@ -4893,7 +4893,7 @@ bool Sema::BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
 
   if (!SecondArgIsLastNamedArgument)
     Diag(TheCall->getArg(1)->getBeginLoc(),
-         diag::warn_second_arg_of_va_start_not_last_named_param);
+         diag::warn_second_arg_of_va_start_not_last_non_variadic_param);
   else if (IsCRegister || Type->isReferenceType() ||
            Type->isSpecificBuiltinType(BuiltinType::Float) || [=] {
              // Promotable integers are UB, but enumerations need a bit of
