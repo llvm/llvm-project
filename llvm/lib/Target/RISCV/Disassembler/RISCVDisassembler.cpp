@@ -224,6 +224,12 @@ static DecodeStatus DecodeGPRPairRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeRVPGPRPair(MCInst &Inst, uint32_t RegNo,
+                                     uint64_t Address,
+                                     const MCDisassembler *Decoder) {
+  return DecodeGPRPairRegisterClass(Inst, RegNo << 1, Address, Decoder);
+}
+
 static DecodeStatus DecodeSR07RegisterClass(MCInst &Inst, uint32_t RegNo,
                                             uint64_t Address,
                                             const void *Decoder) {
@@ -692,6 +698,7 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXRivos32, XRivosFeatureGroup, "Rivos"},
     {DecoderTable32, {}, "RISCV32"},
     {DecoderTableRV32GPRPair32, {}, "RV32GPRPair (rv32 and GPR pairs)"},
+    {DecoderTablePOverlap32, {}, "POverlap (32-bit Instructions overlapping with P extension itself)"},
     {DecoderTableZfinx32, {}, "Zfinx (Float in Integer)"},
     {DecoderTableZdinxRV32GPRPair32,
      {},
