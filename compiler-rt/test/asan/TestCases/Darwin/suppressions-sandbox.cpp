@@ -4,7 +4,7 @@
 
 // Check that suppressing a function name works within a no-fork sandbox
 // RUN: echo "interceptor_via_fun:createCFString" > %t.supp
-// RUN: %env_asan_opts=suppressions='"%t.supp"':verbosity=1:detect_leaks=0 \
+// RUN: %env_asan_opts=suppressions='"%t.supp"' \
 // RUN:   sandbox-exec -p '(version 1)(allow default)(deny process-fork)' \
 // RUN:   %run %t 2>&1 | FileCheck --check-prefix=CHECK-IGNORE %s
 
