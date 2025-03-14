@@ -23943,9 +23943,9 @@ Examples:
      %also.r = call <8 x i8> @llvm.masked.load.v8i8.p0(ptr %ptr, i32 2, <8 x i1> %mask, <8 x i8> poison)
 
 
-.. _int_vp_ff_load:
+.. _int_experimental_vp_ff_load:
 
-'``llvm.vp.ff.load``' Intrinsic
+'``llvm.experimental.vp.ff.load``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:

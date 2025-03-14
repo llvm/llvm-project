@@ -2237,9 +2237,8 @@ void DAGTypeLegalizer::SplitVecRes_VP_LOAD(VPLoadSDNode *LD, SDValue &Lo,
 
 void DAGTypeLegalizer::SplitVecRes_VP_LOAD_FF(VPLoadFFSDNode *LD, SDValue &Lo,
                                               SDValue &Hi) {
-  EVT LoVT, HiVT;
   SDLoc dl(LD);
-  std::tie(LoVT, HiVT) = DAG.GetSplitDestVTs(LD->getValueType(0));
+  auto [LoVT, HiVT] = DAG.GetSplitDestVTs(LD->getValueType(0));
 
   SDValue Ch = LD->getChain();
   SDValue Ptr = LD->getBasePtr();
