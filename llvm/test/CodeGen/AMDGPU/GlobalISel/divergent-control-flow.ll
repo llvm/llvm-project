@@ -183,7 +183,7 @@ bb8:
   br i1 %tmp10, label %bb11, label %bb12
 
 bb11:
-  store float 4.0, ptr addrspace(5) undef, align 4
+  store float 4.0, ptr addrspace(5) poison, align 4
   br label %bb12
 
 bb12:

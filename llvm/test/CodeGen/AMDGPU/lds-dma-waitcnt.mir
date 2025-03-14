@@ -77,7 +77,7 @@ name: scratch_load_lds_dword_ds_read
 body:             |
   bb.0:
     $m0 = S_MOV_B32 0
-    SCRATCH_LOAD_LDS_DWORD $vgpr0, 4, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(5) undef` + 4), (store (s32) into `ptr addrspace(3) undef` + 4)
+    SCRATCH_LOAD_LDS_DWORD $vgpr0, 4, 0, implicit $exec, implicit $m0 :: (load (s32) from `ptr addrspace(5) poison` + 4), (store (s32) into `ptr addrspace(3) undef` + 4)
     $vgpr0 = DS_READ_B32_gfx9 $vgpr1, 0, 0, implicit $m0, implicit $exec :: (load (s32) from `ptr addrspace(3) undef`)
     S_ENDPGM 0
 
