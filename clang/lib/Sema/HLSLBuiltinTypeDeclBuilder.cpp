@@ -71,39 +71,43 @@ struct TemplateParameterListBuilder {
 //   BuiltinTypeMethodBuilder(RecordBuilder, "MethodName", ReturnType)
 //       .addParam("param_name", Type, InOutModifier)
 //       .callBuiltin("builtin_name", BuiltinParams...)
-//       .finalizeMethod();
+//       .finalize();
 //
 // The builder needs to have all of the method parameters before it can create
 // a CXXMethodDecl. It collects them in addParam calls and when a first
 // method that builds the body is called or when access to 'this` is needed it
 // creates the CXXMethodDecl and ParmVarDecls instances. These can then be
 // referenced from the body building methods. Destructor or an explicit call to
-// finalizeMethod() will complete the method definition.
+// finalize() will complete the method definition.
 //
 // The callBuiltin helper method accepts constants via `Expr *` or placeholder
 // value arguments to indicate which function arguments to forward to the
 // builtin.
 //
 // If the method that is being built has a non-void return type the
-// finalizeMethod will create a return statent with the value of the last
-// statement (unless the last statement is already a ReturnStmt).
+// finalize() will create a return statement with the value of the last
+// statement (unless the last statement is already a ReturnStmt or the return
+// value is void).
 struct BuiltinTypeMethodBuilder {
 private:
-  struct MethodParam {
+  struct Param {
     const IdentifierInfo &NameII;
     QualType Ty;
     HLSLParamModifierAttr::Spelling Modifier;
-    MethodParam(const IdentifierInfo &NameII, QualType Ty,
-                HLSLParamModifierAttr::Spelling Modifier)
+    Param(const IdentifierInfo &NameII, QualType Ty,
+          HLSLParamModifierAttr::Spelling Modifier)
         : NameII(NameII), Ty(Ty), Modifier(Modifier) {}
   };
 
   BuiltinTypeDeclBuilder &DeclBuilder;
-  DeclarationNameInfo NameInfo;
+  DeclarationName Name;
   QualType ReturnTy;
+  // method or constructor declaration (CXXConstructorDecl derives from
+  // CXXMethodDecl)
   CXXMethodDecl *Method;
   bool IsConst;
-  llvm::SmallVector<MethodParam> Params;
+  bool IsConstructor;
+  llvm::SmallVector<Param> Params;
   llvm::SmallVector<Stmt *> StmtsList;
 
   // Argument placeholders, inspired by std::placeholder. These are the indices
@@ -122,15 +126,17 @@ public:
   friend BuiltinTypeDeclBuilder;
 
   BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, DeclarationName &Name,
-                           QualType ReturnTy, bool IsConst = false)
-      : DeclBuilder(DB), NameInfo(DeclarationNameInfo(Name, SourceLocation())),
-        ReturnTy(ReturnTy), Method(nullptr), IsConst(IsConst) {}
+                           QualType ReturnTy, bool IsConst = false,
+                           bool IsConstructor = false)
+      : DeclBuilder(DB), Name(Name), ReturnTy(ReturnTy), Method(nullptr),
+        IsConst(IsConst), IsConstructor(IsConstructor) {}
 
-  BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, StringRef Name,
-                           QualType ReturnTy, bool IsConst = false);
+  BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB, StringRef NameStr,
+                           QualType ReturnTy, bool IsConst = false,
+                           bool IsConstructor = false);
   BuiltinTypeMethodBuilder(const BuiltinTypeMethodBuilder &Other) = delete;
 
-  ~BuiltinTypeMethodBuilder() { finalizeMethod(); }
+  ~BuiltinTypeMethodBuilder() { finalize(); }
 
   BuiltinTypeMethodBuilder &
   operator=(const BuiltinTypeMethodBuilder &Other) = delete;
@@ -144,11 +150,18 @@ public:
   template <typename TLHS, typename TRHS>
   BuiltinTypeMethodBuilder &assign(TLHS LHS, TRHS RHS);
   template <typename T> BuiltinTypeMethodBuilder &dereference(T Ptr);
-  BuiltinTypeDeclBuilder &finalizeMethod();
+  BuiltinTypeDeclBuilder &finalize();
   Expr *getResourceHandleExpr();
 
 private:
-  void createMethodDecl();
+  void createDecl();
+
+  // Makes sure the declaration is created; should be called before any
+  // statement added or when access to 'this' is needed.
+  void ensureCompleteDecl() {
+    if (!Method)
+      createDecl();
+  }
 };
 
 TemplateParameterListBuilder::~TemplateParameterListBuilder() {
@@ -323,13 +336,26 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(PlaceHolder PH) {
 }
 
 BuiltinTypeMethodBuilder::BuiltinTypeMethodBuilder(BuiltinTypeDeclBuilder &DB,
-                                                   StringRef Name,
+                                                   StringRef NameStr,
                                                    QualType ReturnTy,
-                                                   bool IsConst)
-    : DeclBuilder(DB), ReturnTy(ReturnTy), Method(nullptr), IsConst(IsConst) {
-  const IdentifierInfo &II =
-      DB.SemaRef.getASTContext().Idents.get(Name, tok::TokenKind::identifier);
-  NameInfo = DeclarationNameInfo(DeclarationName(&II), SourceLocation());
+                                                   bool IsConst,
+                                                   bool IsConstructor)
+    : DeclBuilder(DB), ReturnTy(ReturnTy), Method(nullptr), IsConst(IsConst),
+      IsConstructor(IsConstructor) {
+
+  assert((!NameStr.empty() || IsConstructor) && "method needs a name");
+  assert(((IsConstructor && !IsConst) || !IsConstructor) &&
+         "constructor cannot be const");
+
+  ASTContext &AST = DB.SemaRef.getASTContext();
+  if (IsConstructor) {
+    Name = AST.DeclarationNames.getCXXConstructorName(
+        DB.Record->getTypeForDecl()->getCanonicalTypeUnqualified());
+  } else {
+    const IdentifierInfo &II =
+        AST.Idents.get(NameStr, tok::TokenKind::identifier);
+    Name = DeclarationName(&II);
+  }
 }
 
 BuiltinTypeMethodBuilder &
@@ -342,13 +368,13 @@ BuiltinTypeMethodBuilder::addParam(StringRef Name, QualType Ty,
   return *this;
 }
 
-void BuiltinTypeMethodBuilder::createMethodDecl() {
-  assert(Method == nullptr && "Method already created");
+void BuiltinTypeMethodBuilder::createDecl() {
+  assert(Method == nullptr && "Method or constructor is already created");
 
-  // create method type
+  // create method or constructor type
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   SmallVector<QualType> ParamTypes;
-  for (MethodParam &MP : Params)
+  for (Param &MP : Params)
     ParamTypes.emplace_back(MP.Ty);
 
   FunctionProtoType::ExtProtoInfo ExtInfo;
@@ -357,18 +383,26 @@ void BuiltinTypeMethodBuilder::createMethodDecl() {
 
   QualType MethodTy = AST.getFunctionType(ReturnTy, ParamTypes, ExtInfo);
 
-  // create method decl
+  // create method or constructor decl
   auto *TSInfo = AST.getTrivialTypeSourceInfo(MethodTy, SourceLocation());
-  Method = CXXMethodDecl::Create(
-      AST, DeclBuilder.Record, SourceLocation(), NameInfo, MethodTy, TSInfo,
-      SC_None, false, false, ConstexprSpecKind::Unspecified, SourceLocation());
+  DeclarationNameInfo NameInfo = DeclarationNameInfo(Name, SourceLocation());
+  if (IsConstructor)
+    Method = CXXConstructorDecl::Create(
+        AST, DeclBuilder.Record, SourceLocation(), NameInfo, MethodTy, TSInfo,
+        ExplicitSpecifier(), false, true, false,
+        ConstexprSpecKind::Unspecified);
+  else
+    Method =
+        CXXMethodDecl::Create(AST, DeclBuilder.Record, SourceLocation(),
+                              NameInfo, MethodTy, TSInfo, SC_None, false, false,
+                              ConstexprSpecKind::Unspecified, SourceLocation());
 
   // create params & set them to the function prototype
   SmallVector<ParmVarDecl *> ParmDecls;
   auto FnProtoLoc =
       Method->getTypeSourceInfo()->getTypeLoc().getAs<FunctionProtoTypeLoc>();
   for (int I = 0, E = Params.size(); I != E; I++) {
-    MethodParam &MP = Params[I];
+    Param &MP = Params[I];
     ParmVarDecl *Parm = ParmVarDecl::Create(
         AST, Method->getDeclContext(), SourceLocation(), SourceLocation(),
         &MP.NameII, MP.Ty,
@@ -386,10 +420,7 @@ void BuiltinTypeMethodBuilder::createMethodDecl() {
 }
 
 Expr *BuiltinTypeMethodBuilder::getResourceHandleExpr() {
-  // The first statement added to a method or access to 'this' creates the
-  // declaration.
-  if (!Method)
-    createMethodDecl();
+  ensureCompleteDecl();
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   CXXThisExpr *This = CXXThisExpr::Create(
@@ -407,10 +438,7 @@ BuiltinTypeMethodBuilder::callBuiltin(StringRef BuiltinName,
   std::array<Expr *, sizeof...(ArgSpecs)> Args{
       convertPlaceholder(std::forward<Ts>(ArgSpecs))...};
 
-  // The first statement added to a method or access to 'this` creates the
-  // declaration.
-  if (!Method)
-    createMethodDecl();
+  ensureCompleteDecl();
 
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   FunctionDecl *FD = lookupBuiltinFunction(DeclBuilder.SemaRef, BuiltinName);
@@ -451,11 +479,11 @@ BuiltinTypeMethodBuilder &BuiltinTypeMethodBuilder::dereference(T Ptr) {
   return *this;
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalizeMethod() {
+BuiltinTypeDeclBuilder &BuiltinTypeMethodBuilder::finalize() {
   assert(!DeclBuilder.Record->isCompleteDefinition() &&
          "record is already complete");
-  assert(Method != nullptr &&
-         "method decl not created; are you missing a call to build the body?");
+
+  ensureCompleteDecl();
 
   if (!Method->hasBody()) {
     ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
@@ -600,27 +628,18 @@ BuiltinTypeDeclBuilder::addHandleMember(ResourceClass RC, ResourceKind RK,
   return *this;
 }
 
+// Adds default constructor to the resource class:
+// Resource::Resource()
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDefaultHandleConstructor() {
   if (Record->isCompleteDefinition())
     return *this;
-  ASTContext &AST = Record->getASTContext();
 
-  QualType ConstructorType =
-      AST.getFunctionType(AST.VoidTy, {}, FunctionProtoType::ExtProtoInfo());
-
-  CanQualType CanTy = Record->getTypeForDecl()->getCanonicalTypeUnqualified();
-  DeclarationName Name = AST.DeclarationNames.getCXXConstructorName(CanTy);
-  CXXConstructorDecl *Constructor = CXXConstructorDecl::Create(
-      AST, Record, SourceLocation(),
-      DeclarationNameInfo(Name, SourceLocation()), ConstructorType,
-      AST.getTrivialTypeSourceInfo(ConstructorType, SourceLocation()),
-      ExplicitSpecifier(), false, true, false, ConstexprSpecKind::Unspecified);
-
-  Constructor->setBody(CompoundStmt::Create(
-      AST, {}, FPOptionsOverride(), SourceLocation(), SourceLocation()));
-  Constructor->setAccess(AccessSpecifier::AS_public);
-  Record->addDecl(Constructor);
-  return *this;
+  // FIXME: initialize handle to poison value; this can be added after
+  // resource constructor from binding is implemented, otherwise the handle
+  // value will get overwritten.
+  return BuiltinTypeMethodBuilder(*this, "", SemaRef.getASTContext().VoidTy,
+                                  false, true)
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addArraySubscriptOperators() {
@@ -714,7 +733,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addIncrementCounterMethod() {
                                   SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
                    PH::Handle, getConstantIntExpr(1))
-      .finalizeMethod();
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
@@ -723,7 +742,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addDecrementCounterMethod() {
                                   SemaRef.getASTContext().UnsignedIntTy)
       .callBuiltin("__builtin_hlsl_buffer_update_counter", QualType(),
                    PH::Handle, getConstantIntExpr(-1))
-      .finalizeMethod();
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &
@@ -747,7 +766,7 @@ BuiltinTypeDeclBuilder::addHandleAccessFunction(DeclarationName &Name,
       .callBuiltin("__builtin_hlsl_resource_getpointer", ElemPtrTy, PH::Handle,
                    PH::_0)
       .dereference(PH::LastStmt)
-      .finalizeMethod();
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addAppendMethod() {
@@ -762,7 +781,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addAppendMethod() {
                    AST.getPointerType(ElemTy), PH::Handle, PH::LastStmt)
       .dereference(PH::LastStmt)
       .assign(PH::LastStmt, PH::_0)
-      .finalizeMethod();
+      .finalize();
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addConsumeMethod() {
@@ -775,7 +794,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addConsumeMethod() {
       .callBuiltin("__builtin_hlsl_resource_getpointer",
                    AST.getPointerType(ElemTy), PH::Handle, PH::LastStmt)
       .dereference(PH::LastStmt)
-      .finalizeMethod();
+      .finalize();
 }
 
 } // namespace hlsl
