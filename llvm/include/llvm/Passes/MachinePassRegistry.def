@@ -195,6 +195,15 @@ MACHINE_FUNCTION_PASS("verify<machine-trace-metrics>", MachineTraceMetricsVerifi
 #define MACHINE_FUNCTION_PASS_WITH_PARAMS(NAME, CLASS, CREATE_PASS, PARSER,    \
                                           PARAMS)
 #endif
+
+MACHINE_FUNCTION_PASS_WITH_PARAMS(
+    "block-placement", "MachineBlockPlacementPass",
+    [](bool AllowTailMerge) {
+      // Default is true.
+      return MachineBlockPlacementPass(AllowTailMerge);
+    },
+    parseMachineBlockPlacementPassOptions, "no-tail-merge;tail-merge")
+
 MACHINE_FUNCTION_PASS_WITH_PARAMS(
     "branch-folder", "BranchFolderPass",
     [](bool EnableTailMerge) { return BranchFolderPass(EnableTailMerge); },
@@ -253,7 +262,6 @@ DUMMY_MACHINE_MODULE_PASS("mir-strip-debug", StripDebugMachineModulePass)
 #endif
 DUMMY_MACHINE_FUNCTION_PASS("bbsections-prepare", BasicBlockSectionsPass)
 DUMMY_MACHINE_FUNCTION_PASS("bbsections-profile-reader", BasicBlockSectionsProfileReaderPass)
-DUMMY_MACHINE_FUNCTION_PASS("block-placement", MachineBlockPlacementPass)
 DUMMY_MACHINE_FUNCTION_PASS("block-placement-stats", MachineBlockPlacementStatsPass)
 DUMMY_MACHINE_FUNCTION_PASS("break-false-deps", BreakFalseDepsPass)
 DUMMY_MACHINE_FUNCTION_PASS("cfguard-longjmp", CFGuardLongjmpPass)
