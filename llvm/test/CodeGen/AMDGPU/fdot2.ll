@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX900
-; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX906-DL-UNSAFE
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 -denormal-fp-math-f32=preserve-sign -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1012 -denormal-fp-math-f32=preserve-sign -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign -fp-contract=fast -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX900
+; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -fp-contract=fast -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX906-DL-UNSAFE
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1011 -denormal-fp-math-f32=preserve-sign -fp-contract=fast -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1012 -denormal-fp-math-f32=preserve-sign -fp-contract=fast -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GCN-DL-UNSAFE,GFX10-DL-UNSAFE,GFX10-CONTRACT
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math-f32=preserve-sign -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math=preserve-sign -fp-contract=fast -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906-CONTRACT
 ; RUN: llc -mtriple=amdgcn -mcpu=gfx906 -denormal-fp-math=ieee -fp-contract=fast -verify-machineinstrs < %s | FileCheck %s  -check-prefixes=GCN,GFX906-DENORM-CONTRACT
