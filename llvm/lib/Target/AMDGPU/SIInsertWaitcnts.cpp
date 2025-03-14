@@ -1696,7 +1696,8 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(MachineInstr &MI,
 
     // GFX11 must wait for any pending GDS instruction to complete before
     // any "Always GDS" instruction.
-    if (AMDGPU::isGFX11(*ST) && TII->isAlwaysGDS(MI.getOpcode()) && ScoreBrackets.hasPendingGDS())
+    if (AMDGPU::isGFX11(*ST) && TII->isAlwaysGDS(MI.getOpcode()) &&
+        ScoreBrackets.hasPendingGDS())
       addWait(Wait, DS_CNT, ScoreBrackets.getPendingGDSWait());
 
     if (MI.isCall() && callWaitsOnFunctionEntry(MI)) {
