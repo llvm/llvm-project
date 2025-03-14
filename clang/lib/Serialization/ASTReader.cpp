@@ -10478,6 +10478,37 @@ void ASTReader::finishPendingActions() {
   for (Decl *D : PendingIncompleteDeclChains)
     markIncompleteDeclChain(D);
   PendingIncompleteDeclChains.clear();
+
+  assert(PendingIdentifierInfos.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingDeducedFunctionTypes.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingDeducedVarTypes.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingDeclChains.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingMacroIDs.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingDeclContextInfos.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingUpdateRecords.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingObjCExtensionIvarRedeclarations.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingFakeDefinitionData.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingDefinitions.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingWarningForDuplicatedDefsInModuleUnits.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingBodies.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingAddedClassMembers.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingMergedDefinitionsToDeduplicate.empty() &&
+         "Should be empty at the end of finishPendingActions");
+  assert(PendingIncompleteDeclChains.empty() &&
+         "Should be empty at the end of finishPendingActions");
 }
 
 void ASTReader::diagnoseOdrViolations() {
