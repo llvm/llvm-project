@@ -223,7 +223,7 @@ public:
   std::optional<bool>
   isPtrCompatible(const clang::QualType,
                   const clang::CXXRecordDecl *R) const final {
-    return R && isRefCountable(R);
+    return R ? isRefCountable(R) : std::nullopt;
   }
 
   bool isPtrCls(const clang::CXXRecordDecl *R) const final {
@@ -246,7 +246,7 @@ public:
   std::optional<bool>
   isPtrCompatible(const clang::QualType,
                   const clang::CXXRecordDecl *R) const final {
-    return R && isCheckedPtrCapable(R);
+    return R ? isCheckedPtrCapable(R) : std::nullopt;
   }
 
   bool isPtrCls(const clang::CXXRecordDecl *R) const final {
