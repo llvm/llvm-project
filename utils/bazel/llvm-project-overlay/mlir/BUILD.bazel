@@ -8775,6 +8775,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ConversionPassIncGen",
+        ":DialectUtils",
         ":IR",
         ":MemRefDialect",
         ":Pass",

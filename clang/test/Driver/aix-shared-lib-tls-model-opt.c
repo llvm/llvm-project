@@ -6,12 +6,11 @@
 // RUN: %clang -target powerpc64-unknown-aix -maix-shared-lib-tls-model-opt -S -emit-llvm \
 // RUN:    %s -o - | FileCheck %s --check-prefixes=CHECK-AIX,CHECK-AIX-ON
 
-// FIXME: Clang driver diagnostic not implemented.
-// RUN: true || not %clang -target powerpc-unknown-aix -maix-shared-lib-tls-model-opt \
+// RUN: not %clang -target powerpc-unknown-aix -maix-shared-lib-tls-model-opt \
 // RUN:    -fsyntax-only %s 2>&1 | FileCheck --check-prefix=CHECK-UNSUPPORTED-TARGET %s
-// RUN: true || not %clang -target powerpc64le-unknown-linux-gnu -maix-shared-lib-tls-model-opt \
+// RUN: not %clang -target powerpc64le-unknown-linux-gnu -maix-shared-lib-tls-model-opt \
 // RUN:    -fsyntax-only %s 2>&1 | FileCheck --check-prefix=CHECK-UNSUPPORTED-TARGET %s
-// RUN: true || not %clang -target powerpc64-unknown-linux-gnu -maix-shared-lib-tls-model-opt \
+// RUN: not %clang -target powerpc64-unknown-linux-gnu -maix-shared-lib-tls-model-opt \
 // RUN:    -fsyntax-only %s 2>&1 | FileCheck --check-prefix=CHECK-UNSUPPORTED-TARGET %s
 
 int test(void) {
