@@ -585,7 +585,7 @@ define <8 x i32> @v8i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[4:7], off, s[0:3], 0 offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <8 x i32>, ptr addrspace(1) %ptr
   ret <8 x i32> %val
 }
@@ -619,7 +619,7 @@ define <16 x i32> @v16i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[12:15], off, s[0:3], 0 offset:48
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i32>, ptr addrspace(1) %ptr
   ret <16 x i32> %val
 }
@@ -661,7 +661,7 @@ define <32 x i32> @v32i32_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[28:31], off, s[0:3], 0 offset:112
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <32 x i32>, ptr addrspace(1) %ptr
   ret <32 x i32> %val
 }
@@ -713,7 +713,7 @@ define <3 x i64> @v3i64_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[4:5], off, s[0:3], 0 offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <3 x i64>, ptr addrspace(1) %ptr
   ret <3 x i64> %val
 }
@@ -743,7 +743,7 @@ define <4 x i64> @v4i64_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[4:7], off, s[0:3], 0 offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <4 x i64>, ptr addrspace(1) %ptr
   ret <4 x i64> %val
 }
@@ -775,7 +775,7 @@ define <5 x i64> @v5i64_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b64 v[8:9], off, s[0:3], 0 offset:32
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <5 x i64>, ptr addrspace(1) %ptr
   ret <5 x i64> %val
 }
@@ -809,7 +809,7 @@ define <8 x i64> @v8i64_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[12:15], off, s[0:3], 0 offset:48
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <8 x i64>, ptr addrspace(1) %ptr
   ret <8 x i64> %val
 }
@@ -851,7 +851,7 @@ define <16 x i64> @v16i64_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[28:31], off, s[0:3], 0 offset:112
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i64>, ptr addrspace(1) %ptr
   ret <16 x i64> %val
 }
@@ -1035,7 +1035,7 @@ define <5 x i16> @v5i16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <5 x i16>, ptr addrspace(1) %ptr
   ret <5 x i16> %val
 }
@@ -1081,7 +1081,7 @@ define <8 x i16> @v8i16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], 0
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <8 x i16>, ptr addrspace(1) %ptr
   ret <8 x i16> %val
 }
@@ -1140,7 +1140,7 @@ define <16 x i16> @v16i16_func_void() #0 {
 ; GFX11-NEXT:    buffer_load_b128 v[4:7], off, s[0:3], 0 offset:16
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i16>, ptr addrspace(1) %ptr
   ret <16 x i16> %val
 }
@@ -1202,7 +1202,7 @@ define <16 x i8> @v16i8_func_void() #0 {
 ; GFX11-NEXT:    v_dual_mov_b32 v12, v3 :: v_dual_mov_b32 v3, v18
 ; GFX11-NEXT:    v_mov_b32_e32 v2, v17
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i8>, ptr addrspace(1) %ptr
   ret <16 x i8> %val
 }
@@ -1236,7 +1236,7 @@ define <4  x i8> @v4i8_func_void() #0 {
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v2, 16, v0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 24, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <4  x i8>, ptr addrspace(1) %ptr
   ret <4  x i8> %val
 }
@@ -1584,7 +1584,7 @@ define <33 x i32> @v33i32_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    scratch_store_b32 v0, v33, off offset:128
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load <33 x i32>, ptr addrspace(1) %ptr
   ret <33 x i32> %val
 }
@@ -1867,7 +1867,7 @@ define { <32 x i32>, i32 } @struct_v32i32_i32_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    scratch_store_b32 v0, v33, off offset:128
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load { <32 x i32>, i32 }, ptr addrspace(1) %ptr
   ret { <32 x i32>, i32 }%val
 }
@@ -2150,7 +2150,7 @@ define { i32, <32 x i32> } @struct_i32_v32i32_func_void() #0 {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    scratch_store_b32 v0, v33, off
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load volatile ptr addrspace(1), ptr addrspace(4) poison
   %val = load { i32, <32 x i32> }, ptr addrspace(1) %ptr
   ret { i32, <32 x i32> }%val
 }
