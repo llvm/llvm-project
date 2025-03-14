@@ -1744,6 +1744,7 @@ buildDependData(std::optional<ArrayAttr> dependKinds, OperandRange dependVars,
     return;
   for (auto dep : llvm::zip(dependVars, dependKinds->getValue())) {
     llvm::omp::RTLDependenceKindTy type;
+    bool isTypeDepObj = false;
     switch (
         cast<mlir::omp::ClauseTaskDependAttr>(std::get<1>(dep)).getValue()) {
     case mlir::omp::ClauseTaskDepend::taskdependin:
@@ -1762,9 +1763,13 @@ buildDependData(std::optional<ArrayAttr> dependKinds, OperandRange dependVars,
     case mlir::omp::ClauseTaskDepend::taskdependinoutset:
       type = llvm::omp::RTLDependenceKindTy::DepInOutSet;
       break;
+    case mlir::omp::ClauseTaskDepend::taskdependdepobj:
+      isTypeDepObj = true;
+      break;
     };
     llvm::Value *depVal = moduleTranslation.lookupValue(std::get<0>(dep));
-    llvm::OpenMPIRBuilder::DependData dd(type, depVal->getType(), depVal);
+    llvm::OpenMPIRBuilder::DependData dd(type, depVal->getType(), depVal,
+                                         isTypeDepObj);
     dds.emplace_back(dd);
   }
 }
