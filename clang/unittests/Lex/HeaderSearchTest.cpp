@@ -16,7 +16,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Lex/HeaderSearchOptions.h"
-#include "clang/Serialization/InMemoryModuleCache.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "gtest/gtest.h"
 #include <memory>
