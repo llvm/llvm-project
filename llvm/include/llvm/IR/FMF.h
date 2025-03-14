@@ -23,16 +23,16 @@ private:
 
   unsigned Flags = 0;
 
-  FastMathFlags(unsigned F) : Flags(F) {
-    setAllBitsIfNeeded();
-  }
+  FastMathFlags(unsigned F) : Flags(F) { setAllBitsIfNeeded(); }
 
   void setAllBitsIfNeeded() {
     // If all 7 bits are set, turn this into -1. If the number of bits grows,
     // this must be updated. This is intended to provide some forward binary
     // compatibility insurance for the meaning of 'fast' in case bits are added.
-    if (Flags == 0x7F) Flags = ~0U;
+    if (Flags == 0x7F)
+      Flags = ~0U;
   }
+
 public:
   // This is how the bits are used in Value::SubclassOptionalData so they
   // should fit there too.
