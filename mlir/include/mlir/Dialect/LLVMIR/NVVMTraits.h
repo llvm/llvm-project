@@ -24,41 +24,32 @@ namespace NVVM {
 struct NVVMCheckSMVersion {
   int archVersion;
   bool archAccelerated;
-  std::string archString;
 
   NVVMCheckSMVersion() {}
-  NVVMCheckSMVersion(StringRef SMVersion) : archString(SMVersion) {
-    parse(SMVersion);
-  }
+  NVVMCheckSMVersion(StringRef smVersion) { parse(smVersion); }
   NVVMCheckSMVersion(int archVersion, bool archAccelerated)
-      : archVersion(archVersion), archAccelerated(archAccelerated) {
-    archString = (llvm::Twine("sm_") + llvm::Twine(archVersion) +
-                  (archAccelerated ? "a" : "\0"))
-                     .str();
-  }
-
-  const StringRef getArchString() const { return archString; }
+      : archVersion(archVersion), archAccelerated(archAccelerated) {}
 
   // Parses the SM version string and sets the archVersion (integer) and
   // the archAccelerated flag.
-  void parse(StringRef SMVersion) {
-    archAccelerated = (SMVersion.back() == 'a');
-    SMVersion.drop_front(3)
+  void parse(StringRef smVersion) {
+    archAccelerated = (smVersion.back() == 'a');
+    smVersion.drop_front(3)
         .take_while([](char c) { return llvm::isDigit(c); })
         .getAsInteger(10, archVersion);
   }
 
-  bool isCompatible(const NVVMCheckSMVersion &TargetSM) const {
+  bool isCompatible(const NVVMCheckSMVersion &targetSM) const {
     // for arch-conditional SMs, they should exactly match to be valid
-    if (archAccelerated || TargetSM.archAccelerated)
-      return (*this) == TargetSM;
+    if (archAccelerated || targetSM.archAccelerated)
+      return (*this) == targetSM;
 
-    return archVersion <= TargetSM.archVersion;
+    return archVersion <= targetSM.archVersion;
   }
 
-  bool operator==(const NVVMCheckSMVersion &Other) const {
-    return archVersion == Other.archVersion &&
-           archAccelerated == Other.archAccelerated;
+  bool operator==(const NVVMCheckSMVersion &other) const {
+    return archVersion == other.archVersion &&
+           archAccelerated == other.archAccelerated;
   }
 };
 } // namespace NVVM

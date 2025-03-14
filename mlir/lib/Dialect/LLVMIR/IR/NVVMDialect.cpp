@@ -1738,17 +1738,19 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
   if (!gpuModuleOp)
     return emitError(gpuModule->getLoc(),
                      "NVVM target attribute must be attached to a GPU module");
+
+  NVVMCheckSMVersion targetSMVersion(getChip());
   gpuModuleOp->walk([&](Operation *op) {
     if (auto reqOp = llvm::dyn_cast<NVVM::RequiresSMInterface>(op)) {
-      auto requirement = reqOp.getRequiredMinSMVersion();
-      if (!requirement.isCompatible(NVVMCheckSMVersion(getChip()))) {
+      NVVMCheckSMVersion requirement = reqOp.getRequiredMinSMVersion();
+      if (!requirement.isCompatible(targetSMVersion)) {
         op->emitOpError() << "is not supported on " << getChip();
         return WalkResult::interrupt();
       }
     }
     return WalkResult::advance();
   });
-  
+
   return success();
 }
 
