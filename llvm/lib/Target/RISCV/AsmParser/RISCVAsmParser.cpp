@@ -1076,6 +1076,16 @@ public:
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  bool isSImm20() const {
+    if (!isImm())
+      return false;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    int64_t Imm;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && (VK == RISCVMCExpr::VK_RISCV_None) &&
+           isInt<20>(fixImmediateForRV32(Imm, isRV64Imm()));
+  }
+
   bool isSImm26() const {
     if (!isImm())
       return false;
@@ -1712,6 +1722,9 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   case Match_InvalidSImm26:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 25),
                                       (1 << 25) - 1);
+  case Match_InvalidSImm20:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 19),
+                                      (1 << 19) - 1);
   case Match_InvalidSImm32:
     return generateImmOutOfRangeError(Operands, ErrorInfo,
                                       std::numeric_limits<int32_t>::min(),
