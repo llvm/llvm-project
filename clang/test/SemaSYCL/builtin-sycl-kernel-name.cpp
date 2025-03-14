@@ -4,6 +4,8 @@ class kernel_name_1;
 class kernel_name_2;
 class kernel_name_3;
 typedef kernel_name_3 kernel_name_TD;
+class kernel_name_4;
+struct constexpr_kernel_name;
 
 template<typename KN>
 struct kernel_id_1 {
@@ -28,6 +30,19 @@ struct SYCLKernel {
   public:
   void operator()() const {}
 };
+
+void testBuiltinBeforeKernelInvocation2();
+void testBuiltinBeforeKernelInvocation1() {
+  const char* testBefore1 = __builtin_sycl_kernel_name(kernel_id_1<kernel_name_4>()); // Valid
+  constexpr const char* testBefore2 = __builtin_sycl_kernel_name(kernel_id_1<constexpr_kernel_name>()); // expected-error {{constexpr variable 'testBefore2' must be initialized by a constant expression}}
+}
+
+void testBuiltinBeforeKernelInvocation2() {
+  SYCLKernel Obj;
+  kernel_single_task<kernel_name_4>(Obj);
+  kernel_single_task<constexpr_kernel_name>(Obj);
+  testBuiltinBeforeKernelInvocation2();
+}
 
 void test() {
   SYCLKernel Obj;

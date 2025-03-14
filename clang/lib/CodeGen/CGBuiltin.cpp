@@ -2527,17 +2527,61 @@ static RValue EmitHipStdParUnsupportedBuiltin(CodeGenFunction *CGF,
   return RValue::get(CGF->Builder.CreateCall(UBF, Args));
 }
 
-static const SYCLKernelInfo *GetSYCLKernelInfo(ASTContext &Ctx,
-                                               const CallExpr *E) {
-  // Argument to the builtin is a type trait which is used to retrieve the
-  // kernel name type.
-  // FIXME: Improve the comment.
+static const CanQualType GetKernelNameType(ASTContext &Ctx, const CallExpr *E) {
+  // The first argument to the builtin is an object that designates
+  // the SYCL kernel. The argument is evaluated and its value is
+  // discarded; the SYCL kernel is identified based on the argument
+  // type. The argument type is required to be a class or structure
+  // with a member typedef or type alias named 'type'. The target
+  // type of the 'type' member is the SYCL kernel name type.
   RecordDecl *RD = E->getArg(0)->getType()->castAs<RecordType>()->getDecl();
   IdentifierTable &IdentTable = Ctx.Idents;
   auto Name = DeclarationName(&(IdentTable.get("type")));
   NamedDecl *ND = (RD->lookup(Name)).front();
   TypedefNameDecl *TD = cast<TypedefNameDecl>(ND);
-  CanQualType KernelNameType = Ctx.getCanonicalType(TD->getUnderlyingType());
+  return Ctx.getCanonicalType(TD->getUnderlyingType());
+}
+
+static llvm::GlobalVariable *
+EmitKernelNameGlobal(CodeGenModule &CGM, ASTContext &Ctx, const CallExpr *E) {
+  CanQualType KernelNameType = GetKernelNameType(Ctx, E);
+
+  // SmallString<256> KernelNameSymbol;
+  // llvm::raw_svector_ostream Out(KernelNameSymbol);
+  // The mangling used for the name of the global variable storing the offload
+  // kernel name is identical to the mangling of the offload kernel name.
+  // CGM.getCXXABI().getMangleContext().mangleSYCLKernelCallerName(KernelNameType,
+  //                                                               Out);
+  //
+
+  auto DeviceDiscriminatorOverrider =
+      [](ASTContext &Ctx, const NamedDecl *ND) -> UnsignedOrNone {
+    if (const auto *RD = dyn_cast<CXXRecordDecl>(ND))
+      if (RD->isLambda())
+        return RD->getDeviceLambdaManglingNumber();
+    return std::nullopt;
+  };
+  std::unique_ptr<MangleContext> MC{ItaniumMangleContext::create(
+      Ctx, Ctx.getDiagnostics(), DeviceDiscriminatorOverrider)};
+
+  SmallString<256> KernelNameSymbol;
+  llvm::raw_svector_ostream Out(KernelNameSymbol);
+  //llvm::raw_string_ostream Out(KernelNameSymbol);
+  MC->mangleCanonicalTypeName(KernelNameType, Out);
+
+  llvm::GlobalVariable *GV = new llvm::GlobalVariable(
+      CGM.getModule(), CGM.GlobalsInt8PtrTy,
+      /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, nullptr,
+      KernelNameSymbol);
+
+  CGM.AddSYCLKernelNameSymbol(KernelNameType, GV);
+
+  return GV;
+}
+
+static const SYCLKernelInfo *GetSYCLKernelInfo(ASTContext &Ctx,
+                                               const CallExpr *E) {
+  CanQualType KernelNameType = GetKernelNameType(Ctx, E);
 
   // Retrieve KernelInfo using the kernel name.
   return Ctx.findSYCLKernelInfo(KernelNameType);
@@ -6237,21 +6281,18 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Str.getPointer());
   }
   case Builtin::BI__builtin_sycl_kernel_name: {
-    ASTContext &Ctx = getContext();
-    // Argument to the builtin is a kernel_id_t type trait which is used
-    // to retrieve the kernel name type.
-    RecordDecl *RD = E->getArg(0)->getType()->castAs<RecordType>()->getDecl();
-    IdentifierTable &IdentTable = Ctx.Idents;
-    auto Name = DeclarationName(&(IdentTable.get("type")));
-    NamedDecl *ND = (RD->lookup(Name)).front();
-    TypeAliasDecl *TD = cast<TypeAliasDecl>(ND);
-    QualType KernelNameType = TD->getUnderlyingType().getCanonicalType();
+    // Retrieve the kernel info corresponding to kernel name type.
+    const SYCLKernelInfo *KernelInfo = GetSYCLKernelInfo(getContext(), E);
 
-    // Retrieve the mangled name corresponding to kernel name type.
-    const SYCLKernelInfo *KernelInfo = Ctx.findSYCLKernelInfo(KernelNameType);
-    assert(KernelInfo && "Type does not correspond to a SYCL kernel name.");
-    
-    // Emit the mangled name.
+    // This indicates that the builtin was called before the kernel was
+    // invoked. In this case, a global variable is declared, and returned
+    // as the result of the call to the builtin. This global variable is
+    // later initialized to hold the name of the offload kernel when kernel
+    // invocation is processed.
+    if (!KernelInfo)
+      return RValue::get(EmitKernelNameGlobal(CGM, getContext(), E));
+
+    // Emit the mangled name from KernelInfo if available.
     auto Str = CGM.GetAddrOfConstantCString(KernelInfo->GetKernelName(), "");
     return RValue::get(Str.getPointer());
   }

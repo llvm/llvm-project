@@ -3319,16 +3319,20 @@ void CodeGenModule::EmitDeferred() {
     // a SYCL kernel caller offload entry point function is generated and
     // emitted in place of each of these functions.
     if (const auto *FD = D.getDecl()->getAsFunction()) {
-      if (LangOpts.SYCLIsDevice && FD->hasAttr<SYCLKernelEntryPointAttr>() &&
-          FD->isDefined()) {
+      if (FD->hasAttr<SYCLKernelEntryPointAttr>() && FD->isDefined()) {
         // Functions with an invalid sycl_kernel_entry_point attribute are
         // ignored during device compilation.
-        if (!FD->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr()) {
+        if (LangOpts.SYCLIsDevice &&
+            !FD->getAttr<SYCLKernelEntryPointAttr>()->isInvalidAttr()) {
           // Generate and emit the SYCL kernel caller function.
           EmitSYCLKernelCaller(FD, getContext());
           // Recurse to emit any symbols directly or indirectly referenced
           // by the SYCL kernel caller function.
           EmitDeferred();
+        } else {
+          // Initialize the global variables corresponding to SYCL Builtins
+          // used to obtain information about the offload kernel.
+          InitSYCLKernelInfoSymbolsForBuiltins(FD, getContext());
         }
         // Do not emit the sycl_kernel_entry_point attributed function.
         continue;

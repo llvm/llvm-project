@@ -25,6 +25,24 @@ static void SetSYCLKernelAttributes(llvm::Function *Fn, CodeGenFunction &CGF) {
     Fn->addFnAttr(llvm::Attribute::MustProgress);
 }
 
+static CanQualType GetKernelNameType(const FunctionDecl *KernelEntryPointFn,
+                                     ASTContext &Ctx) {
+  const auto *KernelEntryPointAttr =
+      KernelEntryPointFn->getAttr<SYCLKernelEntryPointAttr>();
+  assert(KernelEntryPointAttr && "Missing sycl_kernel_entry_point attribute");
+  CanQualType KernelNameType =
+      Ctx.getCanonicalType(KernelEntryPointAttr->getKernelName());
+  return KernelNameType;
+}
+
+static const SYCLKernelInfo *
+GetKernelInfo(const FunctionDecl *KernelEntryPointFn, ASTContext &Ctx) {
+  CanQualType KernelNameType = GetKernelNameType(KernelEntryPointFn, Ctx);
+  const SYCLKernelInfo *KernelInfo = Ctx.findSYCLKernelInfo(KernelNameType);
+  assert(KernelInfo && "Type does not correspond to a kernel name");
+  return KernelInfo;
+}
+
 void CodeGenModule::EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
                                          ASTContext &Ctx) {
   assert(Ctx.getLangOpts().SYCLIsDevice &&
@@ -52,12 +70,10 @@ void CodeGenModule::EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
       getTypes().arrangeSYCLKernelCallerDeclaration(Ctx.VoidTy, Args);
   llvm::FunctionType *FnTy = getTypes().GetFunctionType(FnInfo);
 
-  // Retrieve the generated name for the SYCL kernel caller function.
-  CanQualType KernelNameType =
-      Ctx.getCanonicalType(KernelEntryPointAttr->getKernelName());
-  const SYCLKernelInfo &KernelInfo = Ctx.getSYCLKernelInfo(KernelNameType);
-  auto *Fn = llvm::Function::Create(FnTy, llvm::Function::ExternalLinkage,
-                                    KernelInfo.GetKernelName(), &getModule());
+  // Retrieve the generated name for the SYCL kernel caller function
+  const SYCLKernelInfo *KernelInfo = GetKernelInfo(KernelEntryPointFn, Ctx);
+  auto *Fn = llvm::Function::Create(FnTy, llvm::GlobalVariable::ExternalLinkage,
+                                    KernelInfo->GetKernelName(), &getModule());
 
   // Emit the SYCL kernel caller function.
   CodeGenFunction CGF(*this);
@@ -69,4 +85,35 @@ void CodeGenModule::EmitSYCLKernelCaller(const FunctionDecl *KernelEntryPointFn,
   setDSOLocal(Fn);
   SetLLVMFunctionAttributesForDefinition(cast<Decl>(OutlinedFnDecl), Fn);
   CGF.FinishFunction();
+}
+
+void CodeGenModule::AddSYCLKernelNameSymbol(CanQualType KernelNameType,
+                                            llvm::GlobalVariable *GV) {
+  SYCLKernelNameSymbols[KernelNameType] = GV;
+}
+
+llvm::GlobalVariable *
+CodeGenModule::GetSYCLKernelNameSymbol(CanQualType KernelNameType) {
+  auto it = SYCLKernelNameSymbols.find(KernelNameType);
+  if (it != SYCLKernelNameSymbols.end())
+    return it->second;
+  return nullptr;
+}
+
+void CodeGenModule::InitSYCLKernelInfoSymbolsForBuiltins(
+    const FunctionDecl *KernelEntryPointFn, ASTContext &Ctx) {
+  CanQualType KernelNameType = GetKernelNameType(KernelEntryPointFn, Ctx);
+  llvm::GlobalVariable *GV = GetSYCLKernelNameSymbol(KernelNameType);
+  if (GV && !GV->hasInitializer()) {
+    const SYCLKernelInfo *KernelInfo = GetKernelInfo(KernelEntryPointFn, Ctx);
+    ConstantAddress KernelNameStrConstantAddr =
+        GetAddrOfConstantCString(KernelInfo->GetKernelName(), "");
+    llvm::Constant *KernelNameStr = KernelNameStrConstantAddr.getPointer();
+    // FIXME: It is unclear to me whether the right API here is
+    // replaceInitializer or setInitializer. Unfortunately since the branch I am
+    // working on is outdated, my workspace does not have replaceInitializer
+    // Hopefully the person continuing to work on builtins can check this out.
+    GV->setInitializer(KernelNameStr);
+    GV->setLinkage(llvm::GlobalValue::PrivateLinkage);
+  }
 }
