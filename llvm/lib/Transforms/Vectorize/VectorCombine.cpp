@@ -3772,10 +3772,10 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
         auto Mask = Shuffle->getShuffleMask();
 
-        OldCost += TTI.getShuffleCost(
-            TTI::SK_PermuteSingleSrc, VecTy, Mask, CostKind);
-        NewCost += TTI.getShuffleCost(
-            TTI::SK_PermuteSingleSrc, NewVecTy, Mask, CostKind);
+        OldCost +=
+            TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, VecTy, Mask, CostKind);
+        NewCost += TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, NewVecTy, Mask,
+                                      CostKind);
       }
 
       if (OldCost < NewCost || !NewCost.isValid()) {
