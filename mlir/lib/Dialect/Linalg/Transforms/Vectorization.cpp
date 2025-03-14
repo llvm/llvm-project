@@ -2027,6 +2027,7 @@ static LogicalResult vectorizeConvOpPrecondition(linalg::LinalgOp convOp) {
   ShapedType resShapedType = getOperandType(convOp.getDpsInitOperand(0));
   // (LHS has dimension NCW/NWC and RES has dimension NFW/NCW/NWF/NWC) OR
   // (non-channeled convolution -> LHS and RHS both have single dimensions).
+  // Note that this also ensures 2D and 3D convolutions are rejected.
   if ((lhsShapedType.getRank() != 3 || resShapedType.getRank() != 3) &&
       (lhsShapedType.getRank() != 1 || resShapedType.getRank() != 1))
     return failure();
