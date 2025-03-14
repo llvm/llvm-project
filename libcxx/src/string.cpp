@@ -373,7 +373,6 @@ wstring to_wstring(unsigned long val) { return i_to_string<wstring>(val); }
 wstring to_wstring(unsigned long long val) { return i_to_string<wstring>(val); }
 #endif
 
-namespace __cpp26 {
 _LIBCPP_EXPORTED_FROM_ABI string __to_string(float __val) { return std::format("{}", __val); }
 _LIBCPP_EXPORTED_FROM_ABI string __to_string(double __val) { return std::format("{}", __val); }
 _LIBCPP_EXPORTED_FROM_ABI string __to_string(long double __val) { return std::format("{}", __val); }
@@ -383,7 +382,6 @@ _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(float __val) { return std::format
 _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(double __val) { return std::format(L"{}", __val); }
 _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(long double __val) { return std::format(L"{}", __val); }
 #endif
-} // namespace __cpp26
 
 string to_string(float val) { return as_string(snprintf, initial_string< string>()(), "%f", val); }
 string to_string(double val) { return as_string(snprintf, initial_string< string>()(), "%f", val); }

@@ -1386,12 +1386,6 @@
 {'is_defined': True, 'name': '_ZNSt3__16thread6detachEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16threadD1Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__16threadD2Ev', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__17__cpp2611__to_stringEd', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__17__cpp2611__to_stringEe', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__17__cpp2611__to_stringEf', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__17__cpp2612__to_wstringEd', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__17__cpp2612__to_wstringEe', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt3__17__cpp2612__to_wstringEf', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__17codecvtIDiDu11__mbstate_tE2idE', 'size': 16, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '_ZNSt3__17codecvtIDiDu11__mbstate_tED0Ev', 'type': 'FUNC'}
 {'is_defined': True, 'name': '_ZNSt3__17codecvtIDiDu11__mbstate_tED1Ev', 'type': 'FUNC'}

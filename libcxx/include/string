@@ -3941,20 +3941,18 @@ _LIBCPP_EXPORTED_FROM_ABI string to_string(long long __val);
 _LIBCPP_EXPORTED_FROM_ABI string to_string(unsigned long long __val);
 
 #  if _LIBCPP_STD_VER >= 26
-inline namespace __cpp26 {
 _LIBCPP_EXPORTED_FROM_ABI string __to_string(float __val);
 _LIBCPP_EXPORTED_FROM_ABI string __to_string(double __val);
 _LIBCPP_EXPORTED_FROM_ABI string __to_string(long double __val);
 
-inline _LIBCPP_HIDE_FROM_ABI string to_string(float __val) { return std::__to_string(__val); }
-inline _LIBCPP_HIDE_FROM_ABI string to_string(double __val) { return std::__to_string(__val); }
-inline _LIBCPP_HIDE_FROM_ABI string to_string(long double __val) { return std::__to_string(__val); }
-} // namespace __cpp26
+_LIBCPP_HIDE_FROM_ABI string to_string(float __val) { return std::__to_string(__val); }
+_LIBCPP_HIDE_FROM_ABI string to_string(double __val) { return std::__to_string(__val); }
+_LIBCPP_HIDE_FROM_ABI string to_string(long double __val) { return std::__to_string(__val); }
 #  else
 _LIBCPP_EXPORTED_FROM_ABI string to_string(float __val);
 _LIBCPP_EXPORTED_FROM_ABI string to_string(double __val);
 _LIBCPP_EXPORTED_FROM_ABI string to_string(long double __val);
-#  endif
+#  endif // _LIBCPP_STD_VER >= 26
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
 _LIBCPP_EXPORTED_FROM_ABI int stoi(const wstring& __str, size_t* __idx = nullptr, int __base = 10);
@@ -3975,15 +3973,13 @@ _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(long long __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(unsigned long long __val);
 
 #    if _LIBCPP_STD_VER >= 26
-inline namespace __cpp26 {
 _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(float __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(double __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring __to_wstring(long double __val);
 
-inline _LIBCPP_HIDE_FROM_ABI wstring to_wstring(float __val) { return std::__to_wstring(__val); }
-inline _LIBCPP_HIDE_FROM_ABI wstring to_wstring(double __val) { return std::__to_wstring(__val); }
-inline _LIBCPP_HIDE_FROM_ABI wstring to_wstring(long double __val) { return std::__to_wstring(__val); }
-} // namespace __cpp26
+_LIBCPP_HIDE_FROM_ABI wstring to_wstring(float __val) { return std::__to_wstring(__val); }
+_LIBCPP_HIDE_FROM_ABI wstring to_wstring(double __val) { return std::__to_wstring(__val); }
+_LIBCPP_HIDE_FROM_ABI wstring to_wstring(long double __val) { return std::__to_wstring(__val); }
 #    else
 _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(float __val);
 _LIBCPP_EXPORTED_FROM_ABI wstring to_wstring(double __val);

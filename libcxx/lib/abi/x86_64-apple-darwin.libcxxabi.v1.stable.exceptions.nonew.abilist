@@ -2678,9 +2678,3 @@
 {'is_defined': True, 'name': '___cxa_vec_new3', 'type': 'I'}
 {'is_defined': True, 'name': '___dynamic_cast', 'type': 'I'}
 {'is_defined': True, 'name': '___gxx_personality_v0', 'type': 'I'}
-{'is_defined': True, 'name': '__ZNSt3__17__cpp2611__to_stringEd', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__17__cpp2611__to_stringEe', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__17__cpp2611__to_stringEf', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__17__cpp2612__to_wstringEd', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__17__cpp2612__to_wstringEe', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__17__cpp2612__to_wstringEf', 'type': 'FUNC'}

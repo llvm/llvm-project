@@ -2330,12 +2330,3 @@
 {'is_defined': True, 'name': '__cxa_vec_new', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_vec_new2', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__cxa_vec_new3', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZTVNSt6__ndk112format_errorE', 'size': 20, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZNSt6__ndk17__cpp2611__to_stringEd', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk17__cpp2611__to_stringEe', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk17__cpp2611__to_stringEf', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk17__cpp2612__to_wstringEd', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk17__cpp2612__to_wstringEe', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZNSt6__ndk17__cpp2612__to_wstringEf', 'type': 'FUNC'}
-{'is_defined': True, 'name': '_ZTINSt6__ndk112format_errorE', 'size': 12, 'type': 'OBJECT'}
-{'is_defined': True, 'name': '_ZTSNSt6__ndk112format_errorE', 'size': 26, 'type': 'OBJECT'}
