@@ -1,3 +1,8 @@
+add_entrypoint_object(
+  mulifx
+  SRCS mulifx.cpp
+  HDRS ../mulifx.h
+)
 
 
 add_entrypoint_object(
