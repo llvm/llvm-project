@@ -4,7 +4,7 @@ Analysis Statistics
 
 CSA enjoys two facilities to collect statistics: per translation unit and per entry point.
 We use llvm/ADT/Statistic.h for numbers describing the entire translation unit (TU).
-We use clang/StatisCnalyzer/Core/PathSensitive/EntryPointStats.h to collect data for each symbolic-execution entry point.
+We use clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h to collect data for each symbolic-execution entry point.
 
 In many cases, it makes sense to collect statistics on both translation-unit level and entry-point level. You can use the two macros defined in EntryPointStats.h for that:
 
