@@ -1223,27 +1223,26 @@ static bool isObjCPointer(const ValueDecl *D) {
   return D->getType()->isObjCObjectPointerType();
 }
 
-static std::string getDestTypeValueStr(const StoreInfo &SI,
-                                       loc::ConcreteInt CV) {
-  std::string Ret;
-  if (auto *TyR = SI.Dest->getAs<TypedRegion>()) {
+namespace {
+using DestTypeValue = std::pair<const StoreInfo &, loc::ConcreteInt>;
+
+llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const DestTypeValue &Val) {
+  if (auto *TyR = Val.first.Dest->getAs<TypedRegion>()) {
     QualType LocTy = TyR->getLocationType();
     if (!LocTy.isNull()) {
       if (auto *PtrTy = LocTy->getAs<PointerType>()) {
         std::string PStr = PtrTy->getPointeeType().getAsString();
-        if (!PStr.empty()) {
-          Ret.append("(");
-          Ret.append(PStr);
-          Ret.append(")");
-        }
+        if (!PStr.empty())
+          OS << "(" << PStr << ")";
       }
     }
   }
   SmallString<16> ValStr;
-  CV.getValue()->toString(ValStr, 10, true);
-  Ret.append(ValStr.c_str());
-  return Ret;
+  Val.second.getValue()->toString(ValStr, 10, true);
+  OS << ValStr;
+  return OS;
 }
+} // namespace
 
 /// Show diagnostics for initializing or declaring a region \p R with a bad value.
 static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
@@ -1271,7 +1270,7 @@ static void showBRDiagnostics(llvm::raw_svector_ostream &OS, StoreInfo SI) {
     if (!*CVal->getValue())
       OS << Action << (isObjCPointer(SI.Dest) ? "nil" : "a null pointer value");
     else
-      OS << Action << getDestTypeValueStr(SI, *CVal);
+      OS << Action << DestTypeValue(SI, *CVal);
 
   } else if (auto CVal = SI.Value.getAs<nonloc::ConcreteInt>()) {
     OS << Action << CVal->getValue();
@@ -1318,7 +1317,7 @@ static void showBRParamDiagnostics(llvm::raw_svector_ostream &OS,
       OS << (isObjCPointer(D) ? "nil object reference" : "null pointer value");
     else
       OS << (isObjCPointer(D) ? "object reference of value " : "pointer value ")
-         << getDestTypeValueStr(SI, *CI);
+         << DestTypeValue(SI, *CI);
 
   } else if (SI.Value.isUndef()) {
     OS << "uninitialized value";
@@ -1361,14 +1360,14 @@ static void showBRDefaultDiagnostics(llvm::raw_svector_ostream &OS,
                  : (HasSuffix ? "Null pointer value stored"
                               : "Storing null pointer value"));
     else {
-      std::string TVStr = getDestTypeValueStr(SI, *CV);
       if (isObjCPointer(SI.Dest)) {
-        OS << "object reference of value " << TVStr << " stored";
+        OS << "object reference of value " << DestTypeValue(SI, *CV)
+           << " stored";
       } else {
         if (HasSuffix)
-          OS << "Pointer value of " << TVStr << " stored";
+          OS << "Pointer value of " << DestTypeValue(SI, *CV) << " stored";
         else
-          OS << "Storing pointer value of " << TVStr;
+          OS << "Storing pointer value of " << DestTypeValue(SI, *CV);
       }
     }
   } else if (SI.Value.isUndef()) {
