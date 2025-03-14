@@ -325,11 +325,12 @@ static int isMmapSafe(int Fd) {
 COMPILER_RT_VISIBILITY void lprofGetFileContentBuffer(FILE *F, uint64_t Length,
                                                       ManagedMemory *Buf) {
   Buf->Status = MM_INVALID;
-
-  if (!F || isMmapSafe(fileno(F))) {
-    Buf->Addr = mmap(NULL, Length, PROT_READ, MAP_SHARED | MAP_FILE,
-                     F ? fileno(F) : -1, 0);
-    if (Buf->Addr != MAP_FAILED)
+  if (isMmapSafe(fileno(F))) {
+    Buf->Addr =
+        mmap(NULL, Length, PROT_READ, MAP_SHARED | MAP_FILE, fileno(F), 0);
+    if (Buf->Addr == MAP_FAILED)
+      PROF_ERR("%s: mmap failed: %s\n", __func__, strerror(errno))
+    else
       Buf->Status = MM_MMAP;
     return;
   }
@@ -338,20 +339,22 @@ COMPILER_RT_VISIBILITY void lprofGetFileContentBuffer(FILE *F, uint64_t Length,
     PROF_NOTE("Could not use mmap; using fread instead.%s\n", "");
 
   void *Buffer = malloc(Length);
-
   if (!Buffer) {
     PROF_ERR("%s: malloc failed: %s\n", __func__, strerror(errno));
     return;
   }
-  if (fseek(F, 0L, SEEK_SET) != 0) {
-    PROF_ERR("%s: fseek(0, SEEK_SET) failed: %s\n", __func__, strerror(errno));
+  if (ftell(F) != 0) {
+    PROF_ERR("%s: expecting ftell to return zero\n", __func__);
+    free(Buffer);
     return;
   }
 
   // Read the entire file into memory.
   size_t BytesRead = fread(Buffer, 1, Length, F);
-  if (BytesRead != (size_t)Length || ferror(F)) {
-    PROF_ERR("%s: fread failed: %s\n", __func__, strerror(errno));
+  if (BytesRead != (size_t)Length) {
+    PROF_ERR("%s: fread failed%s\n", __func__,
+             feof(F) ? ", end of file reached" : "");
+    free(Buffer);
     return;
   }
 
@@ -372,6 +375,8 @@ void lprofReleaseBuffer(ManagedMemory *Buf, size_t Length) {
     PROF_ERR("%s: Buffer has invalid state: %d", __func__, Buf->Status);
     break;
   }
+  Buf->Addr = NULL;
+  Buf->Status = MM_INVALID;
 }
 
 COMPILER_RT_VISIBILITY const char *lprofGetPathPrefix(int *PrefixStrip,

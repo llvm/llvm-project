@@ -432,8 +432,7 @@ static int mmapProfileForMerging(FILE *ProfileFile, uint64_t ProfileFileSize,
   lprofGetFileContentBuffer(ProfileFile, ProfileFileSize, ProfileBuffer);
 
   if (ProfileBuffer->Status == MM_INVALID) {
-    PROF_ERR("Unable to merge profile data, mmap failed: %s\n",
-             strerror(errno));
+    PROF_ERR("Unable to merge profile data: %s\n", "reading file failed");
     return -1;
   }
 
