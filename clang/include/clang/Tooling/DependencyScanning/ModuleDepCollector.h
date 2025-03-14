@@ -114,8 +114,12 @@ struct ModuleDeps {
   /// Whether this is a "system" module.
   bool IsSystem;
 
-  /// Whether this is a module where it's dependencies resolve within the
-  /// sysroot.
+  /// Whether this module is fully composed of file & module inputs from the
+  /// sysroot. External paths, as opposed to virtual file paths, are always used
+  /// for computing this value.
+  ///
+  /// This attribute is useful for identifying modules that are unlikely to
+  /// change under an active development and build cycle.
   bool IsInSysroot;
 
   /// The path to the modulemap file which defines this module.

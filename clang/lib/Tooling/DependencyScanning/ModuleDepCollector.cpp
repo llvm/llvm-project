@@ -748,11 +748,12 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
-        auto FullFilePath = ASTReader::ResolveImportedPath(
-            PathBuf, IFI.UnresolvedImportedFilename, MF->BaseDirectory);
-        if (MD.IsInSysroot)
+        if (MD.IsInSysroot) {
+          auto FullFilePath = ASTReader::ResolveImportedPath(
+              PathBuf, IFI.UnresolvedImportedFilename, MF->BaseDirectory);
           MD.IsInSysroot = FullFilePath->starts_with(CurrSysroot);
-        PathBuf.resize_for_overwrite(256);
+          PathBuf.resize_for_overwrite(256);
+        }
         if (!(IFI.TopLevel && IFI.ModuleMap))
           return;
         if (IFI.UnresolvedImportedFilenameAsRequested.ends_with(
