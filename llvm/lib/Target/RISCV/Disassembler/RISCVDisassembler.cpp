@@ -698,6 +698,7 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXRivos32, XRivosFeatureGroup, "Rivos"},
     {DecoderTable32, {}, "RISCV32"},
     {DecoderTableRV32GPRPair32, {}, "RV32GPRPair (rv32 and GPR pairs)"},
+    {DecoderTablePOverlap32, {}, "POverlap (32-bit Instructions overlapping with P extension itself)"},
     {DecoderTableZfinx32, {}, "Zfinx (Float in Integer)"},
     {DecoderTableZdinxRV32GPRPair32,
      {},
