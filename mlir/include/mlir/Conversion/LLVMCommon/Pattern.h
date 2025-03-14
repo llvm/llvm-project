@@ -40,11 +40,6 @@ LogicalResult oneToOneRewrite(
 /// during the entire pattern lifetime.
 class ConvertToLLVMPattern : public ConversionPattern {
 public:
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite =
-      detail::ConversionSplitMatchAndRewriteImpl<ConvertToLLVMPattern>;
-
   ConvertToLLVMPattern(StringRef rootOpName, MLIRContext *context,
                        const LLVMTypeConverter &typeConverter,
                        PatternBenefit benefit = 1);
@@ -147,15 +142,9 @@ protected:
 template <typename SourceOp>
 class ConvertOpToLLVMPattern : public ConvertToLLVMPattern {
 public:
-  using OperationT = SourceOp;
   using OpAdaptor = typename SourceOp::Adaptor;
   using OneToNOpAdaptor =
       typename SourceOp::template GenericAdaptor<ArrayRef<ValueRange>>;
-
-  /// `SplitMatchAndRewrite` is deprecated. Use `matchAndRewrite` instead of
-  /// separate `match` and `rewrite`.
-  using SplitMatchAndRewrite = detail::ConversionSplitMatchAndRewriteImpl<
-      ConvertOpToLLVMPattern<SourceOp>>;
 
   explicit ConvertOpToLLVMPattern(const LLVMTypeConverter &typeConverter,
                                   PatternBenefit benefit = 1)
