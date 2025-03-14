@@ -9,7 +9,7 @@
 void func(...) { // expected-warning {{'...' as the only parameter of a function is incompatible with C standards before C23}}
   // Show that va_start doesn't require the second argument in C23 mode.
   va_list list;
-  va_start(list);
+  va_start(list); // expected-warning {{passing only one argument to 'va_start' is incompatible with C standards before C23}}
   va_end(list);
 
   va_start(list, 1, 2); // expected-error {{too many arguments to function call, expected at most 2, have 3}}
@@ -19,8 +19,8 @@ void func(...) { // expected-warning {{'...' as the only parameter of a function
   __builtin_va_start(list); // expected-error {{too few arguments to function call, expected 2, have 1}}
 
   // Verify that the return type of a call to va_start is 'void'.
-  _Static_assert(__builtin_types_compatible_p(__typeof__(va_start(list)), void), "");
-  _Static_assert(__builtin_types_compatible_p(__typeof__(__builtin_va_start(list, 0)), void), "");
+  _Static_assert(__builtin_types_compatible_p(__typeof__(va_start(list)), void), ""); // expected-warning {{passing only one argument to 'va_start' is incompatible with C standards before C23}}
+  _Static_assert(__builtin_types_compatible_p(__typeof__(__builtin_va_start(list, 0)), void), ""); // expected-warning {{passing only one argument to 'va_start' is incompatible with C standards before C23}}
 }
 
 // Show that function pointer types also don't need an argument before the

@@ -4884,15 +4884,19 @@ bool Sema::BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
   // argument being the last argument to the current function if there is a
   // second argument present.
   if (BuiltinID == Builtin::BI__builtin_c23_va_start &&
-      TheCall->getNumArgs() < 2)
+      TheCall->getNumArgs() < 2) {
+    Diag(TheCall->getExprLoc(), diag::warn_c17_compat_va_start_one_arg);
     return false;
+  }
 
   const Expr *Arg = TheCall->getArg(1)->IgnoreParenCasts();
   if (std::optional<llvm::APSInt> Val =
           TheCall->getArg(1)->getIntegerConstantExpr(Context);
       Val && LangOpts.C23 && *Val == 0 &&
-      BuiltinID != Builtin::BI__builtin_c23_va_start)
+      BuiltinID != Builtin::BI__builtin_c23_va_start) {
+    Diag(TheCall->getExprLoc(), diag::warn_c17_compat_va_start_one_arg);
     return false;
+  }
 
   // These are valid if SecondArgIsLastNamedArgument is false after the next
   // block.
