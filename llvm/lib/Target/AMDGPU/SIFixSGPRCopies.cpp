@@ -68,6 +68,7 @@
 #include "AMDGPU.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
+#include "SIRegisterInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Target/TargetMachine.h"
@@ -257,7 +258,13 @@ static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
       return false;
   }
   // Change VGPR to SGPR destination.
-  MRI.setRegClass(DstReg, TRI->getEquivalentSGPRClass(MRI.getRegClass(DstReg)));
+  const auto *RC = MRI.getRegClass(DstReg);
+  const auto *TRC = TRI->getEquivalentSGPRClass(RC);
+  // 16-bit SGPRs are not legal operands in True16 instructions. Convert them to
+  // 32-bit SGPRs
+  if (RC == &AMDGPU::VGPR_16RegClass)
+    TRC = &AMDGPU::SGPR_32RegClass;
+  MRI.setRegClass(DstReg, TRC);
   return true;
 }
 
@@ -1080,10 +1087,25 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
         TRI->getRegClassForOperandReg(*MRI, MI->getOperand(1));
     size_t SrcSize = TRI->getRegSizeInBits(*SrcRC);
     if (SrcSize == 16) {
-      // HACK to handle possible 16bit VGPR source
-      auto MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
-                         TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg);
-      MIB.addReg(SrcReg, 0, AMDGPU::NoSubRegister);
+      assert(MF.getSubtarget<GCNSubtarget>().useRealTrue16Insts() &&
+             "We do not expect to see 16-bit copies from VGPR to SGPR unless "
+             "we have 16-bit VGPRs");
+      assert(MRI->getRegClass(DstReg) == &AMDGPU::SGPR_LO16RegClass ||
+             MRI->getRegClass(DstReg) == &AMDGPU::SReg_32RegClass);
+      // There is no V_READFIRSTLANE_B16, so widen the destination scalar
+      // value to 32 bits
+      MRI->setRegClass(DstReg, &AMDGPU::SGPR_32RegClass);
+      Register TmpReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      const DebugLoc &DL = MI->getDebugLoc();
+      Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), Undef);
+      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), TmpReg)
+          .addReg(SrcReg, 0, SubReg)
+          .addImm(AMDGPU::lo16)
+          .addReg(Undef)
+          .addImm(AMDGPU::hi16);
+      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+          .addReg(TmpReg);
     } else if (SrcSize == 32) {
       auto MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
                          TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg);
