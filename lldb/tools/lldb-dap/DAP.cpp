@@ -630,9 +630,11 @@ DAP::CreateTargetFromArguments(const llvm::json::Object &arguments,
   // enough information to determine correct arch and platform (or ELF can be
   // omitted at all), so it is good to leave the user an apportunity to specify
   // those. Any of those three can be left empty.
-  llvm::StringRef target_triple = GetString(arguments, "targetTriple");
-  llvm::StringRef platform_name = GetString(arguments, "platformName");
-  llvm::StringRef program = GetString(arguments, "program");
+  const llvm::StringRef target_triple =
+      GetString(arguments, "targetTriple").value_or("");
+  const llvm::StringRef platform_name =
+      GetString(arguments, "platformName").value_or("");
+  const llvm::StringRef program = GetString(arguments, "program").value_or("");
   auto target = this->debugger.CreateTarget(
       program.data(), target_triple.data(), platform_name.data(),
       true, // Add dependent modules.
@@ -668,7 +670,7 @@ bool DAP::HandleObject(const protocol::Message &M) {
   llvm::json::Object object = *v.getAsObject();
   const auto packet_type = GetString(object, "type");
   if (packet_type == "request") {
-    const auto command = GetString(object, "command");
+    const auto command = GetString(object, "command").value_or("");
 
     auto new_handler_pos = request_handlers.find(command);
     if (new_handler_pos != request_handlers.end()) {
@@ -704,7 +706,7 @@ bool DAP::HandleObject(const protocol::Message &M) {
         Result = std::move(*B);
       (*response_handler)(Result);
     } else {
-      llvm::StringRef message = GetString(object, "message");
+      llvm::StringRef message = GetString(object, "message").value_or("");
       if (message.empty()) {
         message = "Unknown error, response failed";
       }
