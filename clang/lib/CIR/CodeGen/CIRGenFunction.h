@@ -154,6 +154,12 @@ public:
 
   const clang::LangOptions &getLangOpts() const { return cgm.getLangOpts(); }
 
+  /// Emit code to compute the specified expression which can have any type. The
+  /// result is returned as an RValue struct. If this is an aggregate
+  /// expression, the aggloc/agglocvolatile arguments indicate where the result
+  /// should be returned.
+  RValue emitAnyExpr(const clang::Expr *e);
+
   void finishFunction(SourceLocation endLoc);
   mlir::LogicalResult emitFunctionBody(const clang::Stmt *body);
 
@@ -169,6 +175,10 @@ public:
   void emitCompoundStmt(const clang::CompoundStmt &s);
 
   void emitCompoundStmtWithoutScope(const clang::CompoundStmt &s);
+
+  /// Emit code to compute the specified expression,
+  /// ignoring the result.
+  void emitIgnoredExpr(const clang::Expr *e);
 
   mlir::LogicalResult emitDeclStmt(const clang::DeclStmt &s);
 

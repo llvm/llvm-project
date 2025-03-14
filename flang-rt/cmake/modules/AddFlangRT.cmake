@@ -198,7 +198,7 @@ function (add_flangrt_library name)
     # Use compiler-specific options to disable exceptions and RTTI.
     if (LLVM_COMPILER_IS_GCC_COMPATIBLE)
       target_compile_options(${tgtname} PRIVATE
-          $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -fno-unwind-tables -fno-asynchronous-unwind-tables>
+          $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions -fno-rtti -funwind-tables -fno-asynchronous-unwind-tables>
         )
     elseif (MSVC)
       target_compile_options(${tgtname} PRIVATE

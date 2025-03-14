@@ -523,7 +523,6 @@ include "RISCVInstrFormats.td"
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class BranchCC_rri<bits<3> funct3, string opcodestr>
     : RVInstB<funct3, OPC_BRANCH, (outs),
               (ins GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12),
@@ -531,6 +530,9 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
       Sched<[WriteJmp, ReadJmp, ReadJmp]> {
   let isBranch = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {

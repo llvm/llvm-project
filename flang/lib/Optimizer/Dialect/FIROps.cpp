@@ -380,11 +380,16 @@ llvm::LogicalResult fir::AllocMemOp::verify() {
 
 // CHARACTERs and derived types with LEN PARAMETERs are dependent types that
 // require runtime values to fully define the type of an object.
-static bool validTypeParams(mlir::Type dynTy, mlir::ValueRange typeParams) {
+static bool validTypeParams(mlir::Type dynTy, mlir::ValueRange typeParams,
+                            bool allowParamsForBox = false) {
   dynTy = fir::unwrapAllRefAndSeqType(dynTy);
-  // A box value will contain type parameter values itself.
-  if (mlir::isa<fir::BoxType>(dynTy))
-    return typeParams.size() == 0;
+  if (mlir::isa<fir::BaseBoxType>(dynTy)) {
+    // A box value will contain type parameter values itself.
+    if (!allowParamsForBox)
+      return typeParams.size() == 0;
+
+    dynTy = fir::getFortranElementType(dynTy);
+  }
   // Derived type must have all type parameters satisfied.
   if (auto recTy = mlir::dyn_cast<fir::RecordType>(dynTy))
     return typeParams.size() == recTy.getNumLenParams();
@@ -4559,6 +4564,111 @@ llvm::LogicalResult fir::DeclareOp::verify() {
   auto fortranVar =
       mlir::cast<fir::FortranVariableOpInterface>(this->getOperation());
   return fortranVar.verifyDeclareLikeOpImpl(getMemref());
+}
+
+//===----------------------------------------------------------------------===//
+// PackArrayOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult fir::PackArrayOp::verify() {
+  mlir::Type arrayType = getArray().getType();
+  if (!validTypeParams(arrayType, getTypeparams(), /*allowParamsForBox=*/true))
+    return emitOpError("invalid type parameters");
+
+  if (getInnermost() && fir::getBoxRank(arrayType) == 1)
+    return emitOpError(
+        "'innermost' is invalid for 1D arrays, use 'whole' instead");
+  return mlir::success();
+}
+
+void fir::PackArrayOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  if (getStack())
+    effects.emplace_back(
+        mlir::MemoryEffects::Allocate::get(),
+        mlir::SideEffects::AutomaticAllocationScopeResource::get());
+  else
+    effects.emplace_back(mlir::MemoryEffects::Allocate::get(),
+                         mlir::SideEffects::DefaultResource::get());
+
+  if (!getNoCopy())
+    effects.emplace_back(mlir::MemoryEffects::Read::get(),
+                         mlir::SideEffects::DefaultResource::get());
+}
+
+static mlir::ParseResult
+parsePackArrayConstraints(mlir::OpAsmParser &parser, mlir::IntegerAttr &maxSize,
+                          mlir::IntegerAttr &maxElementSize,
+                          mlir::IntegerAttr &minStride) {
+  mlir::OperationName opName = mlir::OperationName(
+      fir::PackArrayOp::getOperationName(), parser.getContext());
+  struct {
+    llvm::StringRef name;
+    mlir::IntegerAttr &ref;
+  } attributes[] = {
+      {fir::PackArrayOp::getMaxSizeAttrName(opName), maxSize},
+      {fir::PackArrayOp::getMaxElementSizeAttrName(opName), maxElementSize},
+      {fir::PackArrayOp::getMinStrideAttrName(opName), minStride}};
+
+  mlir::NamedAttrList parsedAttrs;
+  if (succeeded(parser.parseOptionalAttrDict(parsedAttrs))) {
+    for (auto parsedAttr : parsedAttrs) {
+      for (auto opAttr : attributes) {
+        if (parsedAttr.getName() == opAttr.name)
+          opAttr.ref = mlir::cast<mlir::IntegerAttr>(parsedAttr.getValue());
+      }
+    }
+    return mlir::success();
+  }
+  return mlir::failure();
+}
+
+static void printPackArrayConstraints(mlir::OpAsmPrinter &p,
+                                      fir::PackArrayOp &op,
+                                      const mlir::IntegerAttr &maxSize,
+                                      const mlir::IntegerAttr &maxElementSize,
+                                      const mlir::IntegerAttr &minStride) {
+  llvm::SmallVector<mlir::NamedAttribute> attributes;
+  if (maxSize)
+    attributes.emplace_back(op.getMaxSizeAttrName(), maxSize);
+  if (maxElementSize)
+    attributes.emplace_back(op.getMaxElementSizeAttrName(), maxElementSize);
+  if (minStride)
+    attributes.emplace_back(op.getMinStrideAttrName(), minStride);
+
+  p.printOptionalAttrDict(attributes);
+}
+
+//===----------------------------------------------------------------------===//
+// UnpackArrayOp
+//===----------------------------------------------------------------------===//
+
+llvm::LogicalResult fir::UnpackArrayOp::verify() {
+  if (auto packOp = getTemp().getDefiningOp<fir::PackArrayOp>())
+    if (getStack() != packOp.getStack())
+      return emitOpError() << "the pack operation uses different memory for "
+                              "the temporary (stack vs heap): "
+                           << *packOp.getOperation() << "\n";
+  return mlir::success();
+}
+
+void fir::UnpackArrayOp::getEffects(
+    llvm::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  if (getStack())
+    effects.emplace_back(
+        mlir::MemoryEffects::Free::get(),
+        mlir::SideEffects::AutomaticAllocationScopeResource::get());
+  else
+    effects.emplace_back(mlir::MemoryEffects::Free::get(),
+                         mlir::SideEffects::DefaultResource::get());
+
+  if (!getNoCopy())
+    effects.emplace_back(mlir::MemoryEffects::Write::get(),
+                         mlir::SideEffects::DefaultResource::get());
 }
 
 //===----------------------------------------------------------------------===//

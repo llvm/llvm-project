@@ -8,6 +8,14 @@
 declare float @llvm.amdgcn.rcp.f32(float) nounwind readnone
 declare double @llvm.amdgcn.rcp.f64(double) nounwind readnone
 
+define float @test_constant_fold_rcp_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_rcp_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.rcp.f32(float poison) nounwind readnone
+  ret float %val
+}
+
 define float @test_constant_fold_rcp_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rcp_f32_undef(
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
@@ -81,12 +89,28 @@ declare half @llvm.amdgcn.sqrt.f16(half) nounwind readnone
 declare float @llvm.amdgcn.sqrt.f32(float) nounwind readnone
 declare double @llvm.amdgcn.sqrt.f64(double) nounwind readnone
 
+define half @test_constant_fold_sqrt_f16_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f16_poison(
+; CHECK-NEXT:    ret half poison
+;
+  %val = call half @llvm.amdgcn.sqrt.f16(half poison) nounwind readnone
+  ret half %val
+}
+
 define half @test_constant_fold_sqrt_f16_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_sqrt_f16_undef(
 ; CHECK-NEXT:    ret half 0xH7E00
 ;
   %val = call half @llvm.amdgcn.sqrt.f16(half undef) nounwind readnone
   ret half %val
+}
+
+define float @test_constant_fold_sqrt_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_sqrt_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.sqrt.f32(float poison) nounwind readnone
+  ret float %val
 }
 
 define float @test_constant_fold_sqrt_f32_undef() nounwind {
@@ -226,6 +250,14 @@ define double @test_amdgcn_sqrt_f64(double %arg) {
 
 declare float @llvm.amdgcn.rsq.f32(float) nounwind readnone
 
+define float @test_constant_fold_rsq_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_rsq_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.rsq.f32(float poison) nounwind readnone
+  ret float %val
+}
+
 define float @test_constant_fold_rsq_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_rsq_f32_undef(
 ; CHECK-NEXT:    ret float 0x7FF8000000000000
@@ -241,6 +273,14 @@ define float @test_constant_fold_rsq_f32_undef() nounwind {
 declare float @llvm.amdgcn.frexp.mant.f32(float) nounwind readnone
 declare double @llvm.amdgcn.frexp.mant.f64(double) nounwind readnone
 
+
+define float @test_constant_fold_frexp_mant_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_poison(
+; CHECK-NEXT:    ret float poison
+;
+  %val = call float @llvm.amdgcn.frexp.mant.f32(float poison)
+  ret float %val
+}
 
 define float @test_constant_fold_frexp_mant_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_mant_f32_undef(
@@ -409,6 +449,14 @@ define double @test_constant_fold_frexp_mant_f64_min_num() nounwind {
 
 declare i32 @llvm.amdgcn.frexp.exp.f32(float) nounwind readnone
 declare i32 @llvm.amdgcn.frexp.exp.f64(double) nounwind readnone
+
+define i32 @test_constant_fold_frexp_exp_f32_poison() nounwind {
+; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_poison(
+; CHECK-NEXT:    ret i32 poison
+;
+  %val = call i32 @llvm.amdgcn.frexp.exp.f32(float poison)
+  ret i32 %val
+}
 
 define i32 @test_constant_fold_frexp_exp_f32_undef() nounwind {
 ; CHECK-LABEL: @test_constant_fold_frexp_exp_f32_undef(
@@ -1272,6 +1320,32 @@ define <2 x i16> @undef_cvt_pknorm_i16() {
   ret <2 x i16> %cvt
 }
 
+define <2 x i16> @poison_lhs_cvt_pknorm_i16(float %y) {
+; CHECK-LABEL: @poison_lhs_cvt_pknorm_i16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float poison, float [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float poison, float %y)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_rhs_cvt_pknorm_i16(float %x) {
+; CHECK-LABEL: @poison_rhs_cvt_pknorm_i16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float [[X:%.*]], float poison)
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float %x, float poison)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_cvt_pknorm_i16() {
+; CHECK-LABEL: @poison_cvt_pknorm_i16(
+; CHECK-NEXT:    ret <2 x i16> poison
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float poison, float poison)
+  ret <2 x i16> %cvt
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.cvt.pknorm.u16
 ; --------------------------------------------------------------------
@@ -1301,6 +1375,32 @@ define <2 x i16> @undef_cvt_pknorm_u16() {
 ; CHECK-NEXT:    ret <2 x i16> undef
 ;
   %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float undef, float undef)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_lhs_cvt_pknorm_u16(float %y) {
+; CHECK-LABEL: @poison_lhs_cvt_pknorm_u16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float poison, float [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float poison, float %y)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_rhs_cvt_pknorm_u16(float %x) {
+; CHECK-LABEL: @poison_rhs_cvt_pknorm_u16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float [[X:%.*]], float poison)
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float %x, float poison)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_cvt_pknorm_u16() {
+; CHECK-LABEL: @poison_cvt_pknorm_u16(
+; CHECK-NEXT:    ret <2 x i16> poison
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float poison, float poison)
   ret <2 x i16> %cvt
 }
 
@@ -1336,6 +1436,32 @@ define <2 x i16> @undef_cvt_pk_i16() {
   ret <2 x i16> %cvt
 }
 
+define <2 x i16> @poison_lhs_cvt_pk_i16(i32 %y) {
+; CHECK-LABEL: @poison_lhs_cvt_pk_i16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 poison, i32 [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 poison, i32 %y)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_rhs_cvt_pk_i16(i32 %x) {
+; CHECK-LABEL: @poison_rhs_cvt_pk_i16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 [[X:%.*]], i32 poison)
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 %x, i32 poison)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_cvt_pk_i16() {
+; CHECK-LABEL: @poison_cvt_pk_i16(
+; CHECK-NEXT:    ret <2 x i16> poison
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 poison, i32 poison)
+  ret <2 x i16> %cvt
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.cvt.pk.u16
 ; --------------------------------------------------------------------
@@ -1365,6 +1491,32 @@ define <2 x i16> @undef_cvt_pk_u16() {
 ; CHECK-NEXT:    ret <2 x i16> undef
 ;
   %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 undef, i32 undef)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_lhs_cvt_pk_u16(i32 %y) {
+; CHECK-LABEL: @poison_lhs_cvt_pk_u16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 poison, i32 [[Y:%.*]])
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 poison, i32 %y)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_rhs_cvt_pk_u16(i32 %x) {
+; CHECK-LABEL: @poison_rhs_cvt_pk_u16(
+; CHECK-NEXT:    [[CVT:%.*]] = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 [[X:%.*]], i32 poison)
+; CHECK-NEXT:    ret <2 x i16> [[CVT]]
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 %x, i32 poison)
+  ret <2 x i16> %cvt
+}
+
+define <2 x i16> @poison_cvt_pk_u16() {
+; CHECK-LABEL: @poison_cvt_pk_u16(
+; CHECK-NEXT:    ret <2 x i16> poison
+;
+  %cvt = call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 poison, i32 poison)
   ret <2 x i16> %cvt
 }
 
@@ -1967,6 +2119,30 @@ define float @fmed3_0_1_undef_f32() {
 ;
   %med = call float @llvm.amdgcn.fmed3.f32(float 0.0, float 1.0, float undef)
   ret float %med
+}
+
+define float @fmed3_poison_x_y_f32(float %x, float %y) {
+; CHECK-LABEL: @fmed3_poison_x_y_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float poison, float %x, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_poison_y_f32(float %x, float %y) {
+; CHECK-LABEL: @fmed3_x_poison_y_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float poison, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_y_poison_f32(float %x, float %y) {
+; CHECK-LABEL: @fmed3_x_y_poison_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float poison)
+  ret float %med3
 }
 
 ; --------------------------------------------------------------------
@@ -2781,6 +2957,22 @@ define i32 @ballot_one_32() {
 ; CHECK-NEXT:    ret i32 [[B]]
 ;
   %b = call i32 @llvm.amdgcn.ballot.i32(i1 1)
+  ret i32 %b
+}
+
+define i64 @ballot_poison_64() {
+; CHECK-LABEL: @ballot_poison_64(
+; CHECK-NEXT:    ret i64 poison
+;
+  %b = call i64 @llvm.amdgcn.ballot.i64(i1 poison)
+  ret i64 %b
+}
+
+define i32 @ballot_poison_32() {
+; CHECK-LABEL: @ballot_poison_32(
+; CHECK-NEXT:    ret i32 poison
+;
+  %b = call i32 @llvm.amdgcn.ballot.i32(i1 poison)
   ret i32 %b
 }
 

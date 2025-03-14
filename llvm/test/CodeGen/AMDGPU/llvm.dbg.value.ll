@@ -29,7 +29,7 @@ entry:
 ; OPT: s_endpgm
 define amdgpu_kernel void @only_undef_dbg_value() #1 {
 bb:
-  call void @llvm.dbg.value(metadata <4 x float> undef, metadata !10, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !14
+  call void @llvm.dbg.value(metadata <4 x float> poison, metadata !10, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)) #2, !dbg !14
   ret void, !dbg !14
 }
 

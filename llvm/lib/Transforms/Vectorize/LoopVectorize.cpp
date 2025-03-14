@@ -494,12 +494,7 @@ public:
         MinProfitableTripCount(MinProfitableTripCount), UF(UnrollFactor),
         Builder(PSE.getSE()->getContext()), Legal(LVL), Cost(CM), BFI(BFI),
         PSI(PSI), RTChecks(RTChecks), Plan(Plan),
-        VectorPHVPB(Plan.getEntry()->getSingleSuccessor()) {
-    // Query this against the original loop and save it here because the profile
-    // of the original loop header may change as the transformation happens.
-    OptForSizeBasedOnProfile = llvm::shouldOptimizeForSize(
-        OrigLoop->getHeader(), PSI, BFI, PGSOQueryType::IRPass);
-  }
+        VectorPHVPB(Plan.getEntry()->getSingleSuccessor()) {}
 
   virtual ~InnerLoopVectorizer() = default;
 
@@ -671,10 +666,6 @@ protected:
   /// BFI and PSI are used to check for profile guided size optimizations.
   BlockFrequencyInfo *BFI;
   ProfileSummaryInfo *PSI;
-
-  // Whether this loop should be optimized for size based on profile guided size
-  // optimizatios.
-  bool OptForSizeBasedOnProfile;
 
   /// Structure to hold information about generated runtime checks, responsible
   /// for cleaning the checks, if vectorization turns out unprofitable.
@@ -987,13 +978,18 @@ public:
                              AssumptionCache *AC,
                              OptimizationRemarkEmitter *ORE, const Function *F,
                              const LoopVectorizeHints *Hints,
-                             InterleavedAccessInfo &IAI)
+                             InterleavedAccessInfo &IAI,
+                             ProfileSummaryInfo *PSI, BlockFrequencyInfo *BFI)
       : ScalarEpilogueStatus(SEL), TheLoop(L), PSE(PSE), LI(LI), Legal(Legal),
         TTI(TTI), TLI(TLI), DB(DB), AC(AC), ORE(ORE), TheFunction(F),
         Hints(Hints), InterleaveInfo(IAI) {
     if (TTI.supportsScalableVectors() || ForceTargetSupportsScalableVectors)
       initializeVScaleForTuning();
     CostKind = F->hasMinSize() ? TTI::TCK_CodeSize : TTI::TCK_RecipThroughput;
+    // Query this against the original loop and save it here because the profile
+    // of the original loop header may change as the transformation happens.
+    OptForSize = llvm::shouldOptimizeForSize(L->getHeader(), PSI, BFI,
+                                             PGSOQueryType::IRPass);
   }
 
   /// \return An upper bound for the vectorization factors (both fixed and
@@ -1830,6 +1826,10 @@ public:
 
   /// The kind of cost that we are calculating
   TTI::TargetCostKind CostKind;
+
+  /// Whether this loop should be optimized for size based on function attribute
+  /// or profile information.
+  bool OptForSize;
 };
 } // end namespace llvm
 
@@ -2602,9 +2602,8 @@ BasicBlock *InnerLoopVectorizer::emitSCEVChecks(BasicBlock *Bypass) {
   if (!SCEVCheckBlock)
     return nullptr;
 
-  assert(!(SCEVCheckBlock->getParent()->hasOptSize() ||
-           (OptForSizeBasedOnProfile &&
-            Cost->Hints->getForce() != LoopVectorizeHints::FK_Enabled)) &&
+  assert((!Cost->OptForSize ||
+          Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled) &&
          "Cannot SCEV check stride or overflow when optimizing for size");
   assert(!LoopBypassBlocks.empty() &&
          "Should already be a bypass block due to iteration count check");
@@ -2629,7 +2628,7 @@ BasicBlock *InnerLoopVectorizer::emitMemRuntimeChecks(BasicBlock *Bypass) {
   assert((!EnableVPlanNativePath || OrigLoop->begin() == OrigLoop->end()) &&
          "Runtime checks are not supported for outer loops yet");
 
-  if (MemCheckBlock->getParent()->hasOptSize() || OptForSizeBasedOnProfile) {
+  if (Cost->OptForSize) {
     assert(Cost->Hints->getForce() == LoopVectorizeHints::FK_Enabled &&
            "Cannot emit memory checks when optimizing for size, unless forced "
            "to vectorize.");
@@ -4394,10 +4393,7 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
   sort(InvalidCosts, [&Numbering](RecipeVFPair &A, RecipeVFPair &B) {
     if (Numbering[A.first] != Numbering[B.first])
       return Numbering[A.first] < Numbering[B.first];
-    const auto &LHS = A.second;
-    const auto &RHS = B.second;
-    return std::make_tuple(LHS.isScalable(), LHS.getKnownMinValue()) <
-           std::make_tuple(RHS.isScalable(), RHS.getKnownMinValue());
+    return ElementCount::isKnownLT(A.second, B.second);
   });
 
   // For a list of ordered recipe-VF pairs:
@@ -7695,11 +7691,11 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
       ((VectorizingEpilogue && ExpandedSCEVs) ||
        (!VectorizingEpilogue && !ExpandedSCEVs)) &&
       "expanded SCEVs to reuse can only be used during epilogue vectorization");
-  VPlanTransforms::materializeLiveInBroadcasts(BestVPlan);
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
   VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF,
                            OrigLoop->getHeader()->getContext());
+  VPlanTransforms::materializeBroadcasts(BestVPlan);
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
   VPlanTransforms::removeDeadRecipes(BestVPlan);
@@ -9717,6 +9713,19 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
     // condition directly.
     VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
     for (VPSingleDefRecipe *CurrentLink : Worklist.getArrayRef().drop_front()) {
+      if (auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink)) {
+        assert(Blend->getNumIncomingValues() == 2 &&
+               "Blend must have 2 incoming values");
+        if (Blend->getIncomingValue(0) == PhiR) {
+          Blend->replaceAllUsesWith(Blend->getIncomingValue(1));
+        } else {
+          assert(Blend->getIncomingValue(1) == PhiR &&
+                 "PhiR must be an operand of the blend");
+          Blend->replaceAllUsesWith(Blend->getIncomingValue(0));
+        }
+        continue;
+      }
+
       Instruction *CurrentLinkI = CurrentLink->getUnderlyingInstr();
 
       // Index of the first operand which holds a non-mask vector operand.
@@ -9745,20 +9754,6 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
         VecOp = FMulRecipe;
       } else {
-        auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink);
-        if (PhiR->isInLoop() && Blend) {
-          assert(Blend->getNumIncomingValues() == 2 &&
-                 "Blend must have 2 incoming values");
-          if (Blend->getIncomingValue(0) == PhiR)
-            Blend->replaceAllUsesWith(Blend->getIncomingValue(1));
-          else {
-            assert(Blend->getIncomingValue(1) == PhiR &&
-                   "PhiR must be an operand of the blend");
-            Blend->replaceAllUsesWith(Blend->getIncomingValue(0));
-          }
-          continue;
-        }
-
         if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
           if (isa<VPWidenRecipe>(CurrentLink)) {
             assert(isa<CmpInst>(CurrentLinkI) &&
@@ -10083,7 +10078,7 @@ static bool processLoopInVPlanNativePath(
       getScalarEpilogueLowering(F, L, Hints, PSI, BFI, TTI, TLI, *LVL, &IAI);
 
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, LVL, *TTI, TLI, DB, AC, ORE, F,
-                                &Hints, IAI);
+                                &Hints, IAI, PSI, BFI);
   // Use the planner for outer loop vectorization.
   // TODO: CM is not used at this point inside the planner. Turn CM into an
   // optional argument if we don't need it in the future.
@@ -10659,7 +10654,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   // Use the cost model.
   LoopVectorizationCostModel CM(SEL, L, PSE, LI, &LVL, *TTI, TLI, DB, AC, ORE,
-                                F, &Hints, IAI);
+                                F, &Hints, IAI, PSI, BFI);
   // Use the planner for vectorization.
   LoopVectorizationPlanner LVP(L, LI, DT, TLI, *TTI, &LVL, CM, IAI, PSE, Hints,
                                ORE);

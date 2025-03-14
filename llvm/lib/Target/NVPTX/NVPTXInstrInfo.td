@@ -3267,68 +3267,19 @@ def : Pat<(i32 (int_nvvm_fshr_clamp i32:$hi, i32:$lo, i32:$amt)),
 def : Pat<(i32 (int_nvvm_fshr_clamp i32:$hi, i32:$lo, (i32 imm:$amt))),
           (SHF_R_CLAMP_i $lo, $hi, imm:$amt)>;
 
-// Count leading zeros
 let hasSideEffects = false in {
-  def CLZr32 : NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
-                         "clz.b32 \t$d, $a;", []>;
-  def CLZr64 : NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
-                         "clz.b64 \t$d, $a;", []>;
+  foreach RT = [I32RT, I64RT] in {
+    // Count leading zeros
+    def CLZr # RT.Size : NVPTXInst<(outs Int32Regs:$d), (ins RT.RC:$a),
+                                   "clz.b" # RT.Size # " \t$d, $a;",
+                                   [(set i32:$d, (ctlz RT.Ty:$a))]>;
+
+    // Population count
+    def POPCr # RT.Size : NVPTXInst<(outs Int32Regs:$d), (ins RT.RC:$a),
+                                    "popc.b" # RT.Size # " \t$d, $a;",
+                                    [(set i32:$d, (ctpop RT.Ty:$a))]>;
+  }
 }
-
-// 32-bit has a direct PTX instruction
-def : Pat<(i32 (ctlz i32:$a)), (CLZr32 $a)>;
-
-// The return type of the ctlz ISD node is the same as its input, but the PTX
-// ctz instruction always returns a 32-bit value.  For ctlz.i64, convert the
-// ptx value to 64 bits to match the ISD node's semantics, unless we know we're
-// truncating back down to 32 bits.
-def : Pat<(i64 (ctlz i64:$a)), (CVT_u64_u32 (CLZr64 $a), CvtNONE)>;
-def : Pat<(i32 (trunc (i64 (ctlz i64:$a)))), (CLZr64 $a)>;
-
-// For 16-bit ctlz, we zero-extend to 32-bit, perform the count, then trunc the
-// result back to 16-bits if necessary.  We also need to subtract 16 because
-// the high-order 16 zeros were counted.
-//
-// TODO: NVPTX has a mov.b32 b32reg, {imm, b16reg} instruction, which we could
-// use to save one SASS instruction (on sm_35 anyway):
-//
-//   mov.b32 $tmp, {0xffff, $a}
-//   ctlz.b32 $result, $tmp
-//
-// That is, instead of zero-extending the input to 32 bits, we'd "one-extend"
-// and then ctlz that value.  This way we don't have to subtract 16 from the
-// result.  Unfortunately today we don't have a way to generate
-// "mov b32reg, {b16imm, b16reg}", so we don't do this optimization.
-def : Pat<(i16 (ctlz i16:$a)),
-          (SUBi16ri (CVT_u16_u32
-           (CLZr32 (CVT_u32_u16 $a, CvtNONE)), CvtNONE), 16)>;
-def : Pat<(i32 (zext (i16 (ctlz i16:$a)))),
-          (SUBi32ri (CLZr32 (CVT_u32_u16 $a, CvtNONE)), 16)>;
-
-// Population count
-let hasSideEffects = false in {
-  def POPCr32 : NVPTXInst<(outs Int32Regs:$d), (ins Int32Regs:$a),
-                          "popc.b32 \t$d, $a;", []>;
-  def POPCr64 : NVPTXInst<(outs Int32Regs:$d), (ins Int64Regs:$a),
-                          "popc.b64 \t$d, $a;", []>;
-}
-
-// 32-bit has a direct PTX instruction
-def : Pat<(i32 (ctpop i32:$a)), (POPCr32 $a)>;
-
-// For 64-bit, the result in PTX is actually 32-bit so we zero-extend to 64-bit
-// to match the LLVM semantics.  Just as with ctlz.i64, we provide a second
-// pattern that avoids the type conversion if we're truncating the result to
-// i32 anyway.
-def : Pat<(ctpop i64:$a), (CVT_u64_u32 (POPCr64 $a), CvtNONE)>;
-def : Pat<(i32 (trunc (i64 (ctpop i64:$a)))), (POPCr64 $a)>;
-
-// For 16-bit, we zero-extend to 32-bit, then trunc the result back to 16-bits.
-// If we know that we're storing into an i32, we can avoid the final trunc.
-def : Pat<(ctpop i16:$a),
-          (CVT_u16_u32 (POPCr32 (CVT_u32_u16 $a, CvtNONE)), CvtNONE)>;
-def : Pat<(i32 (zext (i16 (ctpop i16:$a)))),
-          (POPCr32 (CVT_u32_u16 $a, CvtNONE))>;
 
 // fpround f32 -> f16
 def : Pat<(f16 (fpround f32:$a)),

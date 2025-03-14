@@ -136,6 +136,12 @@ def DataLayoutSpecInterface : AttrInterface<"DataLayoutSpecInterface", [DLTIQuer
       /*args=*/(ins "::mlir::MLIRContext *":$context)
     >,
     InterfaceMethod<
+      /*description=*/"Returns the default memory space identifier.",
+      /*retTy=*/"::mlir::StringAttr",
+      /*methodName=*/"getDefaultMemorySpaceIdentifier",
+      /*args=*/(ins "::mlir::MLIRContext *":$context)
+    >,
+    InterfaceMethod<
       /*description=*/"Returns the alloca memory space identifier.",
       /*retTy=*/"::mlir::StringAttr",
       /*methodName=*/"getAllocaMemorySpaceIdentifier",
@@ -480,6 +486,18 @@ def DataLayoutOpInterface : OpInterface<"DataLayoutOpInterface"> {
                       "using the relevant entries. The data layout object "
                       "can be used for recursive queries.",
       /*retTy=*/"::mlir::Attribute",
+      /*methodName=*/"getDefaultMemorySpace",
+      /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::detail::getDefaultMemorySpace(entry);
+      }]
+    >,
+    StaticInterfaceMethod<
+      /*description=*/"Returns the memory space used by the ABI computed "
+                      "using the relevant entries. The data layout object "
+                      "can be used for recursive queries.",
+      /*retTy=*/"::mlir::Attribute",
       /*methodName=*/"getAllocaMemorySpace",
       /*args=*/(ins "::mlir::DataLayoutEntryInterface":$entry),
       /*methodBody=*/"",
@@ -637,11 +655,16 @@ def DataLayoutTypeInterface : TypeInterface<"DataLayoutTypeInterface"> {
     InterfaceMethod<
       /*desc=*/"Returns true if the two lists of entries are compatible, that "
                "is, that `newLayout` spec entries can be nested in an op with "
-               "`oldLayout` spec entries.",
+               "`oldLayout` spec entries. `newSpec` and `identified` are"
+               "provided to further query data from the combined spec, e.g.,"
+               "the default address space. TODO: Revisit this method once"
+               "https://github.com/llvm/llvm-project/issues/130321 gets solved",
       /*retTy=*/"bool",
       /*methodName=*/"areCompatible",
       /*args=*/(ins "::mlir::DataLayoutEntryListRef":$oldLayout,
-                    "::mlir::DataLayoutEntryListRef":$newLayout),
+                    "::mlir::DataLayoutEntryListRef":$newLayout,
+                    "::mlir::DataLayoutSpecInterface":$newSpec,
+                    "const ::mlir::DataLayoutIdentifiedEntryMap&":$identified),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{ return true; }]
     >,

@@ -84,10 +84,9 @@ materializeBinaryNanCheckIfRequired(OpTy op, PatternRewriter &rewriter,
 
 template <typename T>
 static arith::ConstantOp
-createConstFromIntAttribute(Operation *op, const std::string &attrName,
-                            Type requiredAttrType, OpBuilder &rewriter) {
-  auto castedN = static_cast<T>(
-      cast<IntegerAttr>(op->getAttr(attrName)).getValue().getSExtValue());
+createConstOpFromZpVal(Operation *op, const int64_t &zp, Type requiredAttrType,
+                       OpBuilder &rewriter) {
+  auto castedN = static_cast<T>(zp);
   return rewriter.create<arith::ConstantOp>(
       op->getLoc(), IntegerAttr::get(requiredAttrType, castedN));
 }
@@ -1510,11 +1509,26 @@ public:
           // later.
           int32_t inBitwidth = valueTy.getIntOrFloatBitWidth() > 32 ? 48 : 32;
 
-          auto inputZp = createConstFromIntAttribute<int32_t>(
-              op, "input_zp", nestedBuilder.getIntegerType(inBitwidth),
+          FailureOr<int64_t> maybeIZp = op.getInputZeroPoint();
+          if (failed(maybeIZp)) {
+            (void)rewriter.notifyMatchFailure(
+                op, "input zero point cannot be statically determined");
+            return;
+          }
+
+          auto inputZp = createConstOpFromZpVal<int32_t>(
+              op, *maybeIZp, nestedBuilder.getIntegerType(inBitwidth),
               nestedBuilder);
-          auto outputZp = createConstFromIntAttribute<int32_t>(
-              op, "output_zp", nestedBuilder.getI32Type(), nestedBuilder);
+
+          FailureOr<int64_t> maybeOZp = op.getOutputZeroPoint();
+          if (failed(maybeOZp)) {
+            (void)rewriter.notifyMatchFailure(
+                op, "output zero point cannot be statically determined");
+            return;
+          };
+
+          auto outputZp = createConstOpFromZpVal<int32_t>(
+              op, *maybeOZp, nestedBuilder.getI32Type(), nestedBuilder);
 
           Value multiplier = multiplierConstant ? multiplierConstant
                                                 : blockArgs[multiplierArg];
