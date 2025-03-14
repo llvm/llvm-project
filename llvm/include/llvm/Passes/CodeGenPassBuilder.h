@@ -48,6 +48,7 @@
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -1226,7 +1227,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addBlockPlacement(
     AddMachinePass &addPass) const {
-  addPass(MachineBlockPlacementPass());
+  addPass(MachineBlockPlacementPass(Opt.EnableTailMerge));
   // Run a separate pass to collect block placement statistics.
   if (Opt.EnableBlockPlacementStats)
     addPass(MachineBlockPlacementStatsPass());
