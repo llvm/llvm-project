@@ -370,7 +370,7 @@ bb:
   %tmp8 = load <8 x i32>, ptr addrspace(4) %tmp7, align 32, !tbaa !0
   %tmp = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 7.500000e-01, float 2.500000e-01, <8 x i32> %tmp8, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp10 = extractelement <4 x float> %tmp, i32 0
-  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float %tmp10)
+  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float poison, float %tmp10)
   call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> undef, i1 true, i1 true) #0
   ret void
 }
@@ -385,7 +385,7 @@ bb:
   %tmp8 = load <4 x i32>, ptr addrspace(4) %tmp7, align 16, !tbaa !0
   %tmp = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 7.500000e-01, float 2.500000e-01, <8 x i32> poison, <4 x i32> %tmp8, i1 0, i32 0, i32 0)
   %tmp10 = extractelement <4 x float> %tmp, i32 0
-  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp10, float undef)
+  %tmp12 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %tmp10, float poison)
   call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> %tmp12, <2 x half> undef, i1 true, i1 true) #0
   ret void
 }
