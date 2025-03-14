@@ -49,8 +49,8 @@ define void @_Z3foov() local_unnamed_addr #0 !dbg !6 {
 ;LOOPUNROLL_5: discriminator: 21
 ; When unrolling after loop vectorize, both vec_body and remainder loop
 ; are unrolled.
-;LOOPVEC_UNROLL: discriminator: 9
 ;LOOPVEC_UNROLL: discriminator: 385
+;LOOPVEC_UNROLL: discriminator: 9
 ;DBG_VALUE: ![[DBG]] = {{.*}}, scope: ![[TOP]]
 ; Pseudo probe should not have duplication factor assigned.
 ;PSEUDO_PROBE: ![[TOP:[0-9]*]] = distinct !DISubprogram(name: "foo"
