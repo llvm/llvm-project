@@ -2121,6 +2121,30 @@ define float @fmed3_0_1_undef_f32() {
   ret float %med
 }
 
+define float @fmed3_poison_x_y_f32(float %x, float %y) {
+; CHECK-LABEL: @fmed3_poison_x_y_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float poison, float %x, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_poison_y_f32(float %x, float %y) {
+; CHECK-LABEL: @fmed3_x_poison_y_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float poison, float %y)
+  ret float %med3
+}
+
+define float @fmed3_x_y_poison_f32(float %x, float %y) {
+; CHECK-LABEL: @fmed3_x_y_poison_f32(
+; CHECK-NEXT:    ret float poison
+;
+  %med3 = call float @llvm.amdgcn.fmed3.f32(float %x, float %y, float poison)
+  ret float %med3
+}
+
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.icmp
 ; --------------------------------------------------------------------
