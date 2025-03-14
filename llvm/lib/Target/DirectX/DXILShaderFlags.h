@@ -85,8 +85,8 @@ struct ComputedShaderFlags {
 };
 
 struct ModuleShaderFlags {
-  void initialize(Module &, DXILResourceTypeMap &DRTM,
-                  DXILBindingMap &DBM, const ModuleMetadataInfo &MMDI);
+  void initialize(Module &, DXILResourceTypeMap &DRTM, DXILBindingMap &DBM,
+                  const ModuleMetadataInfo &MMDI);
   const ComputedShaderFlags &getFunctionFlags(const Function *) const;
   const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
 
