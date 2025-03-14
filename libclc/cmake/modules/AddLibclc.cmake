@@ -107,9 +107,13 @@ function(link_bc)
     set( LINK_INPUT_ARG "@${RSP_FILE}" )
   endif()
 
+  if( ARG_INTERNALIZE )
+    set( link_flags --internalize --only-needed )
+  endif()
+
   add_custom_command(
     OUTPUT ${ARG_TARGET}.bc
-    COMMAND ${llvm-link_exe} $<$<BOOL:${ARG_INTERNALIZE}>:--internalize> -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
+    COMMAND ${llvm-link_exe} ${link_flags} -o ${ARG_TARGET}.bc ${LINK_INPUT_ARG}
     DEPENDS ${llvm-link_target} ${ARG_DEPENDENCIES} ${ARG_INPUTS} ${RSP_FILE}
   )
 
