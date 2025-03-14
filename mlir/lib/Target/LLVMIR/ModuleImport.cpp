@@ -530,11 +530,12 @@ LogicalResult ModuleImport::convertModuleFlagsMetadata() {
   for (const auto [behavior, key, val] : llvmModuleFlags) {
     // Currently only supports most common: int constant values.
     auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(val);
-    if (!constInt)
-      return emitWarning(mlirModule.getLoc())
-             << "unsupported module flag value: "
-             << diagMD(val, llvmModule.get())
-             << ", only constant integer currently supported";
+    if (!constInt) {
+      emitWarning(mlirModule.getLoc())
+          << "unsupported module flag value: " << diagMD(val, llvmModule.get())
+          << ", only constant integer currently supported";
+      continue;
+    }
 
     moduleFlags.push_back(builder.getAttr<ModuleFlagAttr>(
         convertModFlagBehaviorFromLLVM(behavior),
