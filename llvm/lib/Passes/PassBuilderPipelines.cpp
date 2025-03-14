@@ -307,8 +307,7 @@ static cl::opt<std::string> InstrumentColdFuncOnlyPath(
     cl::Hidden);
 
 static cl::opt<MitigationAnalysisSummary> EnableMitigationSummary(
-    "mitigation-summary", cl::Hidden,
-    cl::init(MitigationAnalysisSummary::SHORT),
+    "mitigation-summary", cl::Hidden, cl::init(MitigationAnalysisSummary::NONE),
     cl::desc("Enable the MitigationAnalysis Pass"),
     cl::values(
         clEnumValN(MitigationAnalysisSummary::NONE, "none",
