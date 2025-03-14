@@ -216,22 +216,6 @@ void mlir::tosa::printTypeOrAttr(OpAsmPrinter &p, Operation *op, TypeAttr type,
   }
 }
 
-// Create a pad-const const tensor with value of `val` of required data-type
-Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
-                                       Value src, int32_t val) {
-  const auto srcType = getElementTypeOrSelf(src);
-  const auto srcElemType = getElementTypeOrSelf(src);
-  const auto padConstType = mlir::RankedTensorType::get({1}, srcType);
-  const auto padConstEType = mlir::RankedTensorType::get({1}, srcElemType);
-  const auto padConstAttr{
-      llvm::isa<FloatType>(srcElemType)
-          ? DenseElementsAttr::get(padConstEType,
-                                   builder.getFloatAttr(srcElemType, val))
-          : DenseElementsAttr::get(padConstEType,
-                                   builder.getIntegerAttr(srcElemType, val))};
-  return builder.create<tosa::ConstOp>(loc, padConstType, padConstAttr);
-}
-
 //===----------------------------------------------------------------------===//
 // Tosa utilities.
 //===----------------------------------------------------------------------===//
@@ -242,16 +226,15 @@ std::optional<int64_t> idivCheck(const int64_t lhs, const int64_t rhs) {
   return lhs / rhs;
 }
 
-//===----------------------------------------------------------------------===//
-// Tosa utilities.
-//===----------------------------------------------------------------------===//
+Type getStorageElementTypeOrSelf(Type type) {
+  auto srcType = getElementTypeOrSelf(type);
+  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(srcType))
+    srcType = quantType.getStorageType();
+  return srcType;
+}
 
-static Type getStorageElementTypeOrSelf(Type type) {
-  auto elementType = getElementTypeOrSelf(type);
-  if (auto quantType = llvm::dyn_cast<mlir::quant::QuantizedType>(elementType))
-    elementType = quantType.getStorageType();
-
-  return elementType;
+Type getStorageElementTypeOrSelf(Value value) {
+  return getStorageElementTypeOrSelf(value.getType());
 }
 
 static LogicalResult verifyRescaleValueAndZpTypes(Operation *op, Value val,
@@ -271,6 +254,22 @@ static LogicalResult verifyRescaleValueAndZpTypes(Operation *op, Value val,
            << " vs. " << eZpType;
   }
   return success();
+}
+
+// Create a pad-const const tensor with value of `val` of required data-type
+Value mlir::tosa::createPadConstTensor(OpBuilder &builder, Location loc,
+                                       Value src, int32_t val) {
+  const auto srcType = getElementTypeOrSelf(src);
+  const auto srcElemType = getStorageElementTypeOrSelf(src);
+  const auto padConstType = mlir::RankedTensorType::get({1}, srcType);
+  const auto padConstEType = mlir::RankedTensorType::get({1}, srcElemType);
+  const auto padConstAttr{
+      llvm::isa<FloatType>(srcElemType)
+          ? DenseElementsAttr::get(padConstEType,
+                                   builder.getFloatAttr(srcElemType, val))
+          : DenseElementsAttr::get(padConstEType,
+                                   builder.getIntegerAttr(srcElemType, val))};
+  return builder.create<tosa::ConstOp>(loc, padConstType, padConstAttr);
 }
 
 //===----------------------------------------------------------------------===//
