@@ -190,21 +190,14 @@ void LoopVectorizeHints::setAlreadyVectorized() {
 }
 
 void LoopVectorizeHints::setVectorizedTailFoldingStyle(TailFoldingKind Kind) {
-  LLVMContext &Context = TheLoop->getHeader()->getContext();
-  Metadata *ValueMD = nullptr;
-
-  switch (Kind) {
-  case TFK_Unspecified:
+  if (Kind == TFK_Unspecified)
     return;
-  case TFK_EVL:
-    ValueMD = MDString::get(Context, "evl");
-    break;
-  }
 
+  LLVMContext &Context = TheLoop->getHeader()->getContext();
   MDNode *TailFoldingMD = MDNode::get(
       Context,
       {MDString::get(Context, "llvm.loop.isvectorized.tailfoldingstyle"),
-       ValueMD});
+       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(32, Kind)))});
   MDNode *LoopID = TheLoop->getLoopID();
   MDNode *NewLoopID =
       makePostTransformationMetadata(Context, LoopID, {}, {TailFoldingMD});

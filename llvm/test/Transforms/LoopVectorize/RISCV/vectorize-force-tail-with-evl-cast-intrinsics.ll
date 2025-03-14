@@ -1056,7 +1056,7 @@ exit:
 ; IF-EVL: [[META4]] = distinct !{[[META4]], [[META2]]}
 ; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META6:![0-9]+]], [[META7:![0-9]+]], [[META8:![0-9]+]]}
 ; IF-EVL: [[META6]] = !{!"llvm.loop.isvectorized", i32 1}
-; IF-EVL: [[META7]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
+; IF-EVL: [[META7]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", i32 0}
 ; IF-EVL: [[META8]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; IF-EVL: [[LOOP9]] = distinct !{[[LOOP9]], [[META6]]}
 ; IF-EVL: [[META10]] = !{[[META11:![0-9]+]]}
