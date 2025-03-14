@@ -48,5 +48,5 @@ TEST(LlvmLibcReadlinkatTest, ReadlinkInNonExistentPath) {
   char buf[LEN];
   ASSERT_THAT(
       LIBC_NAMESPACE::readlinkat(AT_FDCWD, "non-existent-link", buf, LEN),
-      Fails(ENOENT));
+      Fails<ssize_t>(ENOENT));
 }
