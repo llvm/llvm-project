@@ -120,10 +120,9 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
     case Intrinsic::dx_resource_handlefrombinding: {
       dxil::ResourceTypeInfo &RTI = DRTM[cast<TargetExtType>(II->getType())];
 
-      // If -res-may-alias is NOT specified, and DXIL Ver > 1.7.
-      // Then set ResMayNotAlias if function uses UAVs.
-      if (!CSF.ResMayNotAlias && !ResMayAlias &&
-          MMDI.DXILVersion > VersionTuple(1, 7) && RTI.isUAV()) {
+      // Set ResMayNotAlias if DXIL version >= 1.8 and function uses UAVs
+      if (!CSF.ResMayNotAlias && CanSetResMayNotAlias &&
+          MMDI.DXILVersion >= VersionTuple(1, 8) && RTI.isUAV()) {
         CSF.ResMayNotAlias = true;
       }
 
@@ -165,12 +164,14 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
                                    DXILBindingMap &DBM,
                                    const ModuleMetadataInfo &MMDI) {
 
+  CanSetResMayNotAlias = MMDI.DXILVersion >= VersionTuple(1, 7);
+
   // Check if -res-may-alias was provided on the command line.
   // The command line option will set the dx.resmayalias module flag to 1.
   if (auto *RMA = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("dx.resmayalias"))) {
     if (RMA->getValue() != 0)
-      ResMayAlias = true;
+      CanSetResMayNotAlias = false;
   }
 
   CallGraph CG(M);
@@ -197,9 +198,9 @@ void ModuleShaderFlags::initialize(Module &M, DXILResourceTypeMap &DRTM,
         continue;
       }
 
-      // If -res-may-alias is NOT specified, and DXIL Ver <= 1.7.
-      // Then set ResMayNotAlias to true if there are UAVs present globally.
-      if (!ResMayAlias && MMDI.DXILVersion <= VersionTuple(1, 7)) {
+      // Set ResMayNotAlias to true if DXIL version < 1.8 and there are UAVs
+      // present globally.
+      if (CanSetResMayNotAlias && MMDI.DXILVersion < VersionTuple(1, 8)) {
         SCCSF.ResMayNotAlias = !DBM.uavs().empty();
       }
 

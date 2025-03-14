@@ -91,10 +91,7 @@ struct ModuleShaderFlags {
   const ComputedShaderFlags &getCombinedFlags() const { return CombinedSFMask; }
 
 private:
-  // A bool to indicate if the -res-may-alias flag was passed to clang-dxc.
-  // A module flag "dx.resmayalias" is set to 1 if true.
-  // This bool is used in the logic for setting the flag ResMayNotAlias.
-  bool ResMayAlias = false;
+  bool CanSetResMayNotAlias;
   /// Map of Function-Shader Flag Mask pairs representing properties of each of
   /// the functions in the module. Shader Flags of each function represent both
   /// module-level and function-level flags
