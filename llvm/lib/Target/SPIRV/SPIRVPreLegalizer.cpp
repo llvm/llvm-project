@@ -564,8 +564,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
         if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE &&
-            Def->getOpcode() != SPIRV::ASSIGN_TYPE &&
-            Def->getOpcode() != SPIRV::TYPEREF)
+            Def->getOpcode() != SPIRV::ASSIGN_TYPE)
           insertAssignInstr(Reg, nullptr, AssignedPtrType, GR, MIB,
                             MF.getRegInfo());
         ToErase.push_back(&MI);
@@ -576,8 +575,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
         assert(Def && "Expecting an instruction that defines the register");
         // G_GLOBAL_VALUE already has type info.
         if (Def->getOpcode() != TargetOpcode::G_GLOBAL_VALUE &&
-            Def->getOpcode() != SPIRV::ASSIGN_TYPE &&
-            Def->getOpcode() != SPIRV::TYPEREF)
+            Def->getOpcode() != SPIRV::ASSIGN_TYPE)
           insertAssignInstr(Reg, Ty, nullptr, GR, MIB, MF.getRegInfo());
         ToErase.push_back(&MI);
       } else if (MIOp == TargetOpcode::FAKE_USE && MI.getNumOperands() > 0) {
@@ -614,8 +612,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
           if (isSpvIntrinsic(UseMI, Intrinsic::spv_assign_type) ||
               isSpvIntrinsic(UseMI, Intrinsic::spv_assign_name))
             continue;
-          if (UseMI.getOpcode() == SPIRV::ASSIGN_TYPE ||
-              UseMI.getOpcode() == SPIRV::TYPEREF)
+          if (UseMI.getOpcode() == SPIRV::ASSIGN_TYPE)
             NeedAssignType = false;
         }
         Type *Ty = nullptr;
@@ -665,9 +662,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
             if (!ElemTy) {
               // There may be a case when we already know Reg's type.
               MachineInstr *NextMI = MI.getNextNode();
-              if (!NextMI ||
-                  (NextMI->getOpcode() != SPIRV::ASSIGN_TYPE &&
-                   NextMI->getOpcode() != SPIRV::TYPEREF) ||
+              if (!NextMI || NextMI->getOpcode() != SPIRV::ASSIGN_TYPE ||
                   NextMI->getOperand(1).getReg() != Reg)
                 llvm_unreachable("Unexpected opcode");
             }
