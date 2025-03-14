@@ -24,3 +24,7 @@ breaks flang build quadmath_wrapper.h
 [Flang-RT] Environment introspection for quadmath.h (#130411)  
 Kruse, palermo
 --
+breaks build of offload
+libc] Make RPC server handling header only (#131205)  
+huber
+---

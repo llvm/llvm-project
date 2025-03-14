@@ -130,6 +130,10 @@ struct ContextRoot {
 // The current design trades off a bit of overhead at the first time a function
 // is encountered *for flat profiling* for avoiding size penalties.
 struct FunctionData {
+  // Constructor for test only - since this is expected to be
+  // initialized by the compiler.
+  FunctionData() { Mutex.Init(); }
+
   FunctionData *Next = nullptr;
   ContextNode *volatile FlatCtx = nullptr;
   ::__sanitizer::StaticSpinMutex Mutex;
