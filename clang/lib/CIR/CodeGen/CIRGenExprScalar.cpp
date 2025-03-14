@@ -207,7 +207,7 @@ public:
         castKind = cir::CastKind::float_to_int;
       } else if (mlir::isa<cir::CIRFPTypeInterface>(dstTy)) {
         cgf.getCIRGenModule().errorNYI("floating point casts");
-        return builder.getNullPtr(dstTy, src.getLoc());
+        return cgf.createDummyValue(src.getLoc(), dstType);
       } else {
         llvm_unreachable("Internal error: Cast to unexpected type");
       }

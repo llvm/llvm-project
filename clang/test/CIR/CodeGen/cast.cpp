@@ -1,68 +1,89 @@
-// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --input-file=%t.cir %s
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir -DCIR_ONLY %s -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -emit-llvm %s -o %t-cir.ll
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 
 unsigned char cxxstaticcast_0(unsigned int x) {
   return static_cast<unsigned char>(x);
 }
 
-// CHECK: cir.func @cxxstaticcast_0
-// CHECK:    %0 = cir.alloca !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>, ["x", init] {alignment = 4 : i64}
-// CHECK:    cir.store %arg0, %0 : !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>
-// CHECK:    %1 = cir.load %0 : !cir.ptr<!cir.int<u, 32>>, !cir.int<u, 32>
-// CHECK:    %2 = cir.cast(integral, %1 : !cir.int<u, 32>), !cir.int<u, 8>
-// CHECK:    cir.return %2 : !cir.int<u, 8>
-// CHECK:  }
+// CIR: cir.func @cxxstaticcast_0
+// CIR:    %0 = cir.alloca !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>, ["x", init] {alignment = 4 : i64}
+// CIR:    cir.store %arg0, %0 : !cir.int<u, 32>, !cir.ptr<!cir.int<u, 32>>
+// CIR:    %1 = cir.load %0 : !cir.ptr<!cir.int<u, 32>>, !cir.int<u, 32>
+// CIR:    %2 = cir.cast(integral, %1 : !cir.int<u, 32>), !cir.int<u, 8>
+// CIR:    cir.return %2 : !cir.int<u, 8>
+// CIR:  }
+
+// LLVM: define i8 @cxxstaticcast_0(i32 %0)
+// LLVM: %[[LOAD:[0-9]+]] = load i32, ptr %{{[0-9]+}}, align 4
+// LLVM: %[[TRUNC:[0-9]+]] = trunc i32 %[[LOAD]] to i8
+// LLVM: ret i8 %[[TRUNC]]
 
 
 int cStyleCasts_0(unsigned x1, int x2, float x3, short x4, double x5) {
-// CHECK: cir.func @cStyleCasts_0
+// CIR: cir.func @cStyleCasts_0
+// LLVM: define i32 @cStyleCasts_0
 
   char a = (char)x1; // truncate
-  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<u, 32>), !cir.int<s, 8>
+  // CIR: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<u, 32>), !cir.int<s, 8>
+  // LLVM: %{{[0-9]+}} = trunc i32 %{{[0-9]+}} to i8
 
   short b = (short)x2; // truncate with sign
-  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<s, 32>), !cir.int<s, 16>
+  // CIR: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<s, 32>), !cir.int<s, 16>
+  // LLVM: %{{[0-9]+}} = trunc i32 %{{[0-9]+}} to i16
 
   long long c = (long long)x1; // zero extend
-  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<u, 32>), !cir.int<s, 64>
+  // CIR: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<u, 32>), !cir.int<s, 64>
+  // LLVM: %{{[0-9]+}} = zext i32 %{{[0-9]+}} to i64
 
   long long d = (long long)x2; // sign extend
-  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<s, 32>), !cir.int<s, 64>
+  // CIR: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<s, 32>), !cir.int<s, 64>
+  // LLVM: %{{[0-9]+}} = sext i32 %{{[0-9]+}} to i64
 
   unsigned ui = (unsigned)x2; // sign drop
-  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<s, 32>), !cir.int<u, 32>
+  // CIR: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<s, 32>), !cir.int<u, 32>
 
   int si = (int)x1; // sign add
-  // CHECK: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<u, 32>), !cir.int<s, 32>
+  // CIR: %{{[0-9]+}} = cir.cast(integral, %{{[0-9]+}} : !cir.int<u, 32>), !cir.int<s, 32>
 
   bool ib;
   int bi = (int)ib; // bool to int
-  // CHECK: %{{[0-9]+}} = cir.cast(bool_to_int, %{{[0-9]+}} : !cir.bool), !cir.int<s, 32>
+  // CIR: %{{[0-9]+}} = cir.cast(bool_to_int, %{{[0-9]+}} : !cir.bool), !cir.int<s, 32>
+  // LLVM: %{{[0-9]+}} = zext i1 %{{[0-9]+}} to i32
 
+  #ifdef CIR_ONLY
   bool b2 = x2; // int to bool
-  // CHECK: %{{[0-9]+}} = cir.cast(int_to_bool, %{{[0-9]+}} : !cir.int<s, 32>), !cir.bool
-  
+  // CIR: %{{[0-9]+}} = cir.cast(int_to_bool, %{{[0-9]+}} : !cir.int<s, 32>), !cir.bool
+  #endif
+
+  #ifdef CIR_ONLY
   void *p;
-  bool b3 = p; // ptr to bool
-  // CHECK: %{{[0-9]+}} = cir.cast(ptr_to_bool, %{{[0-9]+}} : !cir.ptr<!cir.void>), !cir.bool
+   bool b3 = p; // ptr to bool
+  // CIR: %{{[0-9]+}} = cir.cast(ptr_to_bool, %{{[0-9]+}} : !cir.ptr<!cir.void>), !cir.bool
+  #endif
 
   float f;
   bool b4 = f; // float to bool
-  // CHECK: %{{[0-9]+}} = cir.cast(float_to_bool, %{{[0-9]+}} : !cir.float), !cir.bool
+  // CIR: %{{[0-9]+}} = cir.cast(float_to_bool, %{{[0-9]+}} : !cir.float), !cir.bool
+  // LLVM: %{{[0-9]+}} = fcmp une float %{{[0-9]+}}, 0.000000e+00
+  // LLVM: %{{[0-9]+}} = zext i1 %{{[0-9]+}} to i8
 
   return 0;
 }
 
+#ifdef CIR_ONLY
 bool cptr(void *d) {
   bool x = d;
   return x;
 }
 
-// CHECK: cir.func @cptr(%arg0: !cir.ptr<!cir.void>
-// CHECK:   %0 = cir.alloca !cir.ptr<!cir.void>, !cir.ptr<!cir.ptr<!cir.void>>, ["d", init] {alignment = 8 : i64}
+// CIR: cir.func @cptr(%arg0: !cir.ptr<!cir.void>
+// CIR:   %0 = cir.alloca !cir.ptr<!cir.void>, !cir.ptr<!cir.ptr<!cir.void>>, ["d", init] {alignment = 8 : i64}
 
-// CHECK:   %2 = cir.load %0 : !cir.ptr<!cir.ptr<!cir.void>>, !cir.ptr<!cir.void>
-// CHECK:   %3 = cir.cast(ptr_to_bool, %2 : !cir.ptr<!cir.void>), !cir.bool
+// CIR:   %2 = cir.load %0 : !cir.ptr<!cir.ptr<!cir.void>>, !cir.ptr<!cir.void>
+// CIR:   %3 = cir.cast(ptr_to_bool, %2 : !cir.ptr<!cir.void>), !cir.bool
+#endif
 
 void should_not_cast() {
   unsigned x1;
@@ -74,6 +95,6 @@ void should_not_cast() {
   (void) ib; // void cast
 }
 
-// CHECK:     cir.func @should_not_cast
-// CHECK-NOT:   cir.cast
-// CHECK:     cir.return
+// CIR:     cir.func @should_not_cast
+// CIR-NOT:   cir.cast
+// CIR:     cir.return
