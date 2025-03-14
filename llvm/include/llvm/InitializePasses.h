@@ -185,7 +185,7 @@ void initializeMIRCanonicalizerPass(PassRegistry &);
 void initializeMIRNamerPass(PassRegistry &);
 void initializeMIRPrintingPassPass(PassRegistry &);
 void initializeMachineBlockFrequencyInfoWrapperPassPass(PassRegistry &);
-void initializeMachineBlockPlacementPass(PassRegistry &);
+void initializeMachineBlockPlacementLegacyPass(PassRegistry &);
 void initializeMachineBlockPlacementStatsPass(PassRegistry &);
 void initializeMachineBranchProbabilityInfoWrapperPassPass(PassRegistry &);
 void initializeMachineCFGPrinterPass(PassRegistry &);
