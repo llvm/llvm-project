@@ -133,7 +133,6 @@ static std::optional<std::pair<lldb::pid_t, WaitStatus>> WaitPid() {
 }
 
 void NativeProcessAIX::Manager::SigchldHandler() {
-  Log *log = GetLog(POSIXLog::Process);
   while (true) {
     auto wait_result = WaitPid();
     if (!wait_result)
@@ -141,29 +140,7 @@ void NativeProcessAIX::Manager::SigchldHandler() {
   }
 }
 
-void NativeProcessAIX::Manager::CollectThread(::pid_t tid) {
-  Log *log = GetLog(POSIXLog::Process);
-
-  if (m_unowned_threads.erase(tid))
-    return; // We've encountered this thread already.
-
-  // The TID is not tracked yet, let's wait for it to appear.
-  int status = -1;
-  LLDB_LOG(log,
-           "received clone event for tid {0}. tid not tracked yet, "
-           "waiting for it to appear...",
-           tid);
-  ::pid_t wait_pid =
-      llvm::sys::RetryAfterSignal(-1, ::waitpid, tid, &status, P_ALL);
-
-  // It's theoretically possible to get other events if the entire process was
-  // SIGKILLed before we got a chance to check this. In that case, we'll just
-  // clean everything up when we get the process exit event.
-
-  LLDB_LOG(log,
-           "waitpid({0}, &status, __WALL) => {1} (errno: {2}, status = {3})",
-           tid, wait_pid, errno, WaitStatus::Decode(status));
-}
+void NativeProcessAIX::Manager::CollectThread(::pid_t tid) {}
 
 // Public Instance Methods
 
@@ -185,8 +162,8 @@ NativeProcessAIX::NativeProcessAIX(::pid_t pid, int terminal_fd,
 llvm::Expected<std::vector<::pid_t>> NativeProcessAIX::Attach(::pid_t pid) {
   Log *log = GetLog(POSIXLog::Process);
   Status status;
-  if (!PtraceWrapper(PT_ATTACH, pid))
-    return errorCodeToError(errnoAsErrorCode());
+  if (llvm::Error err = PtraceWrapper(PT_ATTACH, pid).takeError())
+    return err;
 
   int wpid = llvm::sys::RetryAfterSignal(-1, ::waitpid, pid, nullptr, WNOHANG);
   if (wpid <= 0)
@@ -248,18 +225,15 @@ Status NativeProcessAIX::RemoveBreakpoint(lldb::addr_t addr, bool hardware) {
 }
 
 llvm::Error NativeProcessAIX::Detach(lldb::tid_t tid) {
-  if (PtraceWrapper(PT_DETACH, tid))
-    return llvm::Error::success();
-  return errorCodeToError(errnoAsErrorCode());
+  return PtraceWrapper(PT_DETACH, tid).takeError();
 }
 
 llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
                                                     void *addr, void *data,
                                                     size_t data_size) {
-  long int ret;
+  int ret;
 
   Log *log = GetLog(POSIXLog::Ptrace);
-  errno = 0;
   switch (req) {
   case PT_ATTACH:
   case PT_DETACH:
@@ -272,10 +246,9 @@ llvm::Expected<int> NativeProcessAIX::PtraceWrapper(int req, lldb::pid_t pid,
   LLDB_LOG(log, "ptrace({0}, {1}, {2}, {3}, {4})={5:x}", req, pid, addr, data,
            data_size, ret);
 
-  if (errno)
+  if (ret == -1) {
     LLDB_LOG(log, "ptrace() failed");
-
-  if (ret == -1)
     return llvm::errorCodeToError(errnoAsErrorCode());
+  }
   return ret;
 }

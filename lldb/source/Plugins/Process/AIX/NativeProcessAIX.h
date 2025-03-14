@@ -56,9 +56,6 @@ public:
 
     llvm::SmallPtrSet<NativeProcessAIX *, 2> m_processes;
 
-    // Threads (events) which haven't been claimed by any process.
-    llvm::DenseSet<::pid_t> m_unowned_threads;
-
     void SigchldHandler();
   };
 
