@@ -101,7 +101,7 @@ struct CUFComputeSharedMemoryOffsetsAndSize
         init = mlir::DenseElementsAttr::get(vecTy, llvm::ArrayRef(zero));
       }
 
-      // Create the shared memory global where each shared variables will point
+      // Create the shared memory global where each shared variable will point
       // to.
       auto sharedMemType = fir::SequenceType::get(sharedMemSize, i8Ty);
       std::string sharedMemGlobalName =
