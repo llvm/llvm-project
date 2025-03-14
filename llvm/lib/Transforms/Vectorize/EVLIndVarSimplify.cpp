@@ -16,6 +16,7 @@
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -28,6 +29,7 @@
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include "llvm/Transforms/Vectorize/LoopVectorizationLegality.h"
 
 #define DEBUG_TYPE "evl-iv-simplify"
 
@@ -97,8 +99,9 @@ bool EVLIndVarSimplifyImpl::run(Loop &L) {
   if (!EnableEVLIndVarSimplify)
     return false;
 
-  if (!getBooleanLoopAttribute(&L, "llvm.loop.isvectorized") ||
-      !getBooleanLoopAttribute(&L, "llvm.loop.isvectorized.withevl"))
+  OptimizationRemarkEmitter ORE(L.getHeader()->getParent());
+  const LoopVectorizeHints Hints(&L, true, ORE);
+  if (!Hints.isEVLVectorized())
     return false;
 
   BasicBlock *LatchBlock = L.getLoopLatch();
