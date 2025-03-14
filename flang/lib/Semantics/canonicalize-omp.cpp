@@ -11,6 +11,7 @@
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
 
+# include <stack>
 // After Loop Canonicalization, rewrite OpenMP parse tree to make OpenMP
 // Constructs more structured which provide explicit scopes for later
 // structural checks and semantic analysis.
@@ -117,15 +118,17 @@ private:
     // in the same iteration
     //
     // Original:
-    //   ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-    //     OmpBeginLoopDirective
+    //   ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct t->
+    //     OmpBeginLoopDirective t-> OmpLoopDirective
+    //   [ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct u->
+    ///    OmpBeginLoopDirective t-> OmpLoopDirective t-> Tile v-> OMP_tile]
     //   ExecutableConstruct -> DoConstruct
+    //   [ExecutableConstruct -> OmpEndLoopDirective]
     //   ExecutableConstruct -> OmpEndLoopDirective (if available)
     //
     // After rewriting:
-    //   ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct
-    //     OmpBeginLoopDirective
-    //     DoConstruct
+    //   ExecutableConstruct -> OpenMPConstruct -> OpenMPLoopConstruct t->
+    //     OmpBeginLoopDirective t -> OmpLoopDirective -> DoConstruct
     //     OmpEndLoopDirective (if available)
     parser::Block::iterator nextIt;
     auto &beginDir{std::get<parser::OmpBeginLoopDirective>(x.t)};
@@ -147,20 +150,41 @@ private:
       if (GetConstructIf<parser::CompilerDirective>(*nextIt))
         continue;
 
+      // Keep track of the loops to handle the end loop directives
+      std::stack<parser::OpenMPLoopConstruct *> loops;
+      loops.push(&x);
+      while (auto *innerConstruct{
+          GetConstructIf<parser::OpenMPConstruct>(*nextIt)}) {
+        if (auto *innerOmpLoop{
+                std::get_if<parser::OpenMPLoopConstruct>(&innerConstruct->u)}) {
+          std::get<
+              std::optional<common::Indirection<parser::OpenMPLoopConstruct>>>(
+              loops.top()->t) = std::move(*innerOmpLoop);
+          // Retrieveing the address so that DoConstruct or inner loop can be
+          // set later.
+          loops.push(&(std::get<std::optional<
+                           common::Indirection<parser::OpenMPLoopConstruct>>>(
+              loops.top()->t)
+                           .value()
+                           .value()));
+          nextIt = block.erase(nextIt);
+        }
+      }
       if (auto *doCons{GetConstructIf<parser::DoConstruct>(*nextIt)}) {
         if (doCons->GetLoopControl()) {
           // move DoConstruct
           std::get<std::optional<std::variant<parser::DoConstruct,
-              common::Indirection<parser::OpenMPLoopConstruct>>>>(x.t) =
-              std::move(*doCons);
+              common::Indirection<parser::OpenMPLoopConstruct>>>>(
+              loops.top()->t) = std::move(*doCons);
           nextIt = block.erase(nextIt);
           // try to match OmpEndLoopDirective
-          if (nextIt != block.end()) {
+          while (nextIt != block.end() && !loops.empty()) {
             if (auto *endDir{
                     GetConstructIf<parser::OmpEndLoopDirective>(*nextIt)}) {
-              std::get<std::optional<parser::OmpEndLoopDirective>>(x.t) =
-                  std::move(*endDir);
+              std::get<std::optional<parser::OmpEndLoopDirective>>(
+                  loops.top()->t) = std::move(*endDir);
               nextIt = block.erase(nextIt);
+              loops.pop();
             }
           }
         } else {
