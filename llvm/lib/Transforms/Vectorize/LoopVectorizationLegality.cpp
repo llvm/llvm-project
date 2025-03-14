@@ -94,6 +94,8 @@ bool LoopVectorizeHints::Hint::validate(unsigned Val) {
     return isPowerOf2_32(Val) && Val <= MaxInterleaveFactor;
   case HK_FORCE:
     return (Val <= 1);
+  case HK_TAILFOLDING:
+    return Val == 0;
   case HK_ISVECTORIZED:
   case HK_PREDICATE:
   case HK_SCALABLE:
@@ -110,6 +112,8 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
       Interleave("interleave.count", InterleaveOnlyWhenForced, HK_INTERLEAVE),
       Force("vectorize.enable", FK_Undefined, HK_FORCE),
       IsVectorized("isvectorized", 0, HK_ISVECTORIZED),
+      TailFoldingStyle("isvectorized.tailfoldingstyle", TFK_Unspecified,
+                       HK_TAILFOLDING),
       Predicate("vectorize.predicate.enable", FK_Undefined, HK_PREDICATE),
       Scalable("vectorize.scalable.enable", SK_Unspecified, HK_SCALABLE),
       TheLoop(L), ORE(ORE) {
@@ -154,6 +158,14 @@ LoopVectorizeHints::LoopVectorizeHints(const Loop *L,
     // nothing more that we can do.
     IsVectorized.Value =
         getWidth() == ElementCount::getFixed(1) && getInterleave() == 1;
+
+  if ((LoopVectorizeHints::TailFoldingKind)TailFoldingStyle.Value !=
+          TFK_Unspecified &&
+      !IsVectorized.Value)
+    // If the loop is not vectorized, do not attach the tail folding style
+    // metadata.
+    TailFoldingStyle.Value = TFK_Unspecified;
+
   LLVM_DEBUG(if (InterleaveOnlyWhenForced && getInterleave() == 1) dbgs()
              << "LV: Interleaving disabled by the pass manager\n");
 }
@@ -175,6 +187,31 @@ void LoopVectorizeHints::setAlreadyVectorized() {
 
   // Update internal cache.
   IsVectorized.Value = 1;
+}
+
+void LoopVectorizeHints::setVectorizedTailFoldingStyle(TailFoldingKind Kind) {
+  LLVMContext &Context = TheLoop->getHeader()->getContext();
+  Metadata *ValueMD = nullptr;
+
+  switch (Kind) {
+  case TFK_Unspecified:
+    return;
+  case TFK_EVL:
+    ValueMD = MDString::get(Context, "evl");
+    break;
+  }
+
+  MDNode *TailFoldingMD = MDNode::get(
+      Context,
+      {MDString::get(Context, "llvm.loop.isvectorized.tailfoldingstyle"),
+       ValueMD});
+  MDNode *LoopID = TheLoop->getLoopID();
+  MDNode *NewLoopID =
+      makePostTransformationMetadata(Context, LoopID, {}, {TailFoldingMD});
+  TheLoop->setLoopID(NewLoopID);
+
+  // Update internal cache.
+  TailFoldingStyle.Value = Kind;
 }
 
 bool LoopVectorizeHints::allowVectorization(
@@ -300,8 +337,9 @@ void LoopVectorizeHints::setHint(StringRef Name, Metadata *Arg) {
     return;
   unsigned Val = C->getZExtValue();
 
-  Hint *Hints[] = {&Width,        &Interleave, &Force,
-                   &IsVectorized, &Predicate,  &Scalable};
+  Hint *Hints[] = {&Width,        &Interleave,       &Force,
+                   &IsVectorized, &TailFoldingStyle, &Predicate,
+                   &Scalable};
   for (auto *H : Hints) {
     if (Name == H->Name) {
       if (H->validate(Val))
