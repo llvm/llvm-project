@@ -31,6 +31,7 @@ import csv
 import sys
 import json
 
+
 def csv_to_json_dict(csv_filepath):
     """
     Args:
@@ -42,7 +43,7 @@ def csv_to_json_dict(csv_filepath):
         Exception: For any other unexpected errors.
     """
     try:
-        with open(csv_filepath, 'r', encoding='utf-8') as csvfile:
+        with open(csv_filepath, "r", encoding="utf-8") as csvfile:
             reader = csv.reader(csvfile)
 
             # Read the header row (column names)
@@ -52,7 +53,8 @@ def csv_to_json_dict(csv_filepath):
                 json.dumps({}, indent=2)  # write an empty dict
                 return
 
-            if not header: #handle a csv file that contains no rows, not even a header row.
+            # handle a csv file that contains no rows, not even a header row.
+            if not header:
                 json.dumps({}, indent=2)
                 return
 
@@ -69,7 +71,8 @@ def csv_to_json_dict(csv_filepath):
                 value_map = {}
 
                 for i, col_name in enumerate(other_column_names):
-                    value_map[col_name] = row[i + 1].strip()  # +1 to skip the first column
+                    # +1 to skip the first column
+                    value_map[col_name] = row[i + 1].strip()
 
                 data_dict[key] = value_map
 
@@ -94,5 +97,6 @@ def main():
     except:
         print("An error occured")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -186,9 +186,7 @@ if config.clang_staticanalyzer:
         )
     )
 
-    csv2json_path = os.path.join(
-        config.test_source_root, "Analysis", "csv2json.py"
-    )
+    csv2json_path = os.path.join(config.test_source_root, "Analysis", "csv2json.py")
     config.substitutions.append(
         (
             "%csv2json",
