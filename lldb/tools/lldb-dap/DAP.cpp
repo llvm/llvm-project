@@ -12,6 +12,7 @@
 #include "JSONUtils.h"
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
+#include "Transport.h"
 #include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBCommandReturnObject.h"
@@ -63,11 +64,10 @@ const char DEV_NULL[] = "/dev/null";
 
 namespace lldb_dap {
 
-DAP::DAP(llvm::StringRef client_name, llvm::StringRef path, std::ofstream *log,
-         lldb::IOObjectSP input, lldb::IOObjectSP output, ReplMode repl_mode,
-         std::vector<std::string> pre_init_commands)
-    : client_name(client_name), debug_adapter_path(path), log(log),
-      input(std::move(input)), output(std::move(output)),
+DAP::DAP(llvm::StringRef path, std::ofstream *log,
+         const ReplMode default_repl_mode,
+         std::vector<std::string> pre_init_commands, Transport &transport)
+    : debug_adapter_path(path), log(log), transport(transport),
       broadcaster("lldb-dap"), exception_breakpoints(),
       pre_init_commands(std::move(pre_init_commands)),
       focus_tid(LLDB_INVALID_THREAD_ID), stop_at_entry(false), is_attach(false),
@@ -78,7 +78,7 @@ DAP::DAP(llvm::StringRef client_name, llvm::StringRef path, std::ofstream *log,
       configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
           [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
-      reverse_request_seq(0), repl_mode(repl_mode) {}
+      reverse_request_seq(0), repl_mode(default_repl_mode) {}
 
 DAP::~DAP() = default;
 
@@ -221,52 +221,21 @@ void DAP::StopEventHandlers() {
   }
 }
 
-// Send the JSON in "json_str" to the "out" stream. Correctly send the
-// "Content-Length:" field followed by the length, followed by the raw
-// JSON bytes.
-void DAP::SendJSON(const std::string &json_str) {
-  output.write_full("Content-Length: ");
-  output.write_full(llvm::utostr(json_str.size()));
-  output.write_full("\r\n\r\n");
-  output.write_full(json_str);
-}
-
 // Serialize the JSON value into a string and send the JSON packet to
 // the "out" stream.
 void DAP::SendJSON(const llvm::json::Value &json) {
-  std::string json_str;
-  llvm::raw_string_ostream strm(json_str);
-  strm << json;
-  static std::mutex mutex;
-  std::lock_guard<std::mutex> locker(mutex);
-  SendJSON(json_str);
-
-  DAP_LOG(log, "({0}) <-- {1}", client_name, json_str);
-}
-
-// Read a JSON packet from the "in" stream.
-std::string DAP::ReadJSON() {
-  std::string length_str;
-  std::string json_str;
-  int length;
-
-  if (!input.read_expected(log, "Content-Length: "))
-    return json_str;
-
-  if (!input.read_line(log, length_str))
-    return json_str;
-
-  if (!llvm::to_integer(length_str, length))
-    return json_str;
-
-  if (!input.read_expected(log, "\r\n"))
-    return json_str;
-
-  if (!input.read_full(log, length, json_str))
-    return json_str;
-
-  DAP_LOG(log, "({0}) --> {1}", client_name, json_str);
-  return json_str;
+  // FIXME: Instead of parsing the output message from JSON, pass the `Message`
+  // as parameter to `SendJSON`.
+  protocol::Message message;
+  llvm::json::Path::Root root;
+  if (!fromJSON(json, message, root)) {
+    DAP_LOG_ERROR(log, root.getError(), "({1}) encoding failed: {0}",
+                  transport.GetClientName());
+    return;
+  }
+  if (llvm::Error err = transport.Write(message))
+    DAP_LOG_ERROR(log, std::move(err), "({1}) write failed: {0}",
+                  transport.GetClientName());
 }
 
 // "OutputEvent": {
@@ -693,29 +662,10 @@ void DAP::SetTarget(const lldb::SBTarget target) {
   }
 }
 
-PacketStatus DAP::GetNextObject(llvm::json::Object &object) {
-  std::string json = ReadJSON();
-  if (json.empty())
-    return PacketStatus::EndOfFile;
-
-  llvm::StringRef json_sref(json);
-  llvm::Expected<llvm::json::Value> json_value = llvm::json::parse(json_sref);
-  if (!json_value) {
-    DAP_LOG_ERROR(log, json_value.takeError(),
-                  "({1}) failed to parse JSON: {0}", client_name);
-    return PacketStatus::JSONMalformed;
-  }
-
-  llvm::json::Object *object_ptr = json_value->getAsObject();
-  if (!object_ptr) {
-    DAP_LOG(log, "({0}) error: json packet isn't a object", client_name);
-    return PacketStatus::JSONNotObject;
-  }
-  object = *object_ptr;
-  return PacketStatus::Success;
-}
-
-bool DAP::HandleObject(const llvm::json::Object &object) {
+bool DAP::HandleObject(const protocol::Message &M) {
+  // FIXME: Directly handle `Message` instead of serializing to JSON.
+  llvm::json::Value v = toJSON(M);
+  llvm::json::Object object = *v.getAsObject();
   const auto packet_type = GetString(object, "type");
   if (packet_type == "request") {
     const auto command = GetString(object, "command");
@@ -726,7 +676,8 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
       return true; // Success
     }
 
-    DAP_LOG(log, "({0}) error: unhandled command '{1}'", client_name, command);
+    DAP_LOG(log, "({0}) error: unhandled command '{1}'",
+            transport.GetClientName(), command);
     return false; // Fail
   }
 
@@ -749,9 +700,8 @@ bool DAP::HandleObject(const llvm::json::Object &object) {
     // Result should be given, use null if not.
     if (GetBoolean(object, "success").value_or(false)) {
       llvm::json::Value Result = nullptr;
-      if (auto *B = object.get("body")) {
+      if (auto *B = object.get("body"))
         Result = std::move(*B);
-      }
       (*response_handler)(Result);
     } else {
       llvm::StringRef message = GetString(object, "message");
@@ -818,19 +768,15 @@ llvm::Error DAP::Loop() {
     StopEventHandlers();
   });
   while (!disconnecting) {
-    llvm::json::Object object;
-    lldb_dap::PacketStatus status = GetNextObject(object);
+    llvm::Expected<std::optional<protocol::Message>> next = transport.Read();
+    if (!next)
+      return next.takeError();
 
-    if (status == lldb_dap::PacketStatus::EndOfFile) {
+    // nullopt on EOF
+    if (!*next)
       break;
-    }
 
-    if (status != lldb_dap::PacketStatus::Success) {
-      return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                     "failed to send packet");
-    }
-
-    if (!HandleObject(object)) {
+    if (!HandleObject(**next)) {
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "unhandled packet");
     }

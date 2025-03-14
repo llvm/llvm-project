@@ -16,8 +16,8 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x()
 
-@local_var32 = addrspace(3) global i32 undef, align 4
-@local_var64 = addrspace(3) global i64 undef, align 8
+@local_var32 = addrspace(3) global i32 poison, align 4
+@local_var64 = addrspace(3) global i64 poison, align 8
 
 ; Show what the atomic optimization pass will do for local pointers.
 

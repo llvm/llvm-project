@@ -150,7 +150,7 @@ define amdgpu_kernel void @v_clamp_multi_use_src_f32(ptr addrspace(1) %out, ptr 
   %max = call float @llvm.maxnum.f32(float %add, float 0.0)
   %clamp = call float @llvm.minnum.f32(float %max, float 1.0)
   store float %clamp, ptr addrspace(1) %out.gep
-  store volatile float %add, ptr addrspace(1) undef
+  store volatile float %add, ptr addrspace(1) poison
   ret void
 }
 

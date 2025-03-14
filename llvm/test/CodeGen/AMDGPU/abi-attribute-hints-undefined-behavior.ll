@@ -340,7 +340,7 @@ define void @is_shared_requires_queue_ptr(ptr %ptr) #0 {
 ; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
   %is.shared = call i1 @llvm.amdgcn.is.shared(ptr %ptr)
   %zext = zext i1 %is.shared to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 
@@ -358,7 +358,7 @@ define void @is_private_requires_queue_ptr(ptr %ptr) #0 {
 ; FIXEDABI-NEXT:    s_setpc_b64 s[30:31]
   %is.private = call i1 @llvm.amdgcn.is.private(ptr %ptr)
   %zext = zext i1 %is.private to i32
-  store volatile i32 %zext, ptr addrspace(1) undef
+  store volatile i32 %zext, ptr addrspace(1) poison
   ret void
 }
 

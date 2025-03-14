@@ -66,7 +66,7 @@ define i32 @combine_add_zext_xor() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
@@ -146,7 +146,7 @@ define i32 @combine_sub_zext_xor() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
@@ -229,7 +229,7 @@ define i32 @combine_add_zext_or() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
@@ -313,7 +313,7 @@ define i32 @combine_sub_zext_or() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
@@ -392,7 +392,7 @@ define i32 @combine_add_zext_and() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 
@@ -471,7 +471,7 @@ define i32 @combine_sub_zext_and() {
   br i1 undef, label %bb9, label %bb
 
 bb:                                               ; preds = %.a
-  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) undef, i32 %.2, i32 64, i32 1)
+  %.i3 = call i32 @llvm.amdgcn.raw.ptr.buffer.load.i32(ptr addrspace(8) poison, i32 %.2, i32 64, i32 1)
   %i5 = icmp eq i32 %.i3, 0
   br label %bb9
 

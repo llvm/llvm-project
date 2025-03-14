@@ -3755,7 +3755,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = Intrinsic::x86_avx512_vfmadd_f32;
       Rep = Builder.CreateIntrinsic(IID, {}, Ops);
     } else {
-      Rep = Builder.CreateIntrinsic(Intrinsic::fma, A->getType(), {A, B, C});
+      Rep = Builder.CreateFMA(A, B, C);
     }
 
     Value *PassThru = IsMaskZ   ? Constant::getNullValue(Rep->getType())
@@ -3808,7 +3808,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
 
       Rep = Builder.CreateIntrinsic(IID, {}, {A, B, C, CI->getArgOperand(4)});
     } else {
-      Rep = Builder.CreateIntrinsic(Intrinsic::fma, A->getType(), {A, B, C});
+      Rep = Builder.CreateFMA(A, B, C);
     }
 
     Value *PassThru = IsMaskZ   ? llvm::Constant::getNullValue(CI->getType())

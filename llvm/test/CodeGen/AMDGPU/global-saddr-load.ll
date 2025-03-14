@@ -1618,7 +1618,7 @@ define amdgpu_ps float @global_load_saddr_i8_zext_vgpr_ptrtoint_commute_add_imm_
 ; Uniformity edge cases
 ; --------------------------------------------------------------------------------
 
-@ptr.in.lds = internal addrspace(3) global ptr addrspace(1) undef
+@ptr.in.lds = internal addrspace(3) global ptr addrspace(1) poison
 
 ; Base pointer is uniform, but also in VGPRs
 define amdgpu_ps float @global_load_saddr_uniform_ptr_in_vgprs(i32 %voffset) {

@@ -995,7 +995,7 @@ define amdgpu_kernel void @v_min_max_v2i16_user(ptr addrspace(1) %out0, ptr addr
 
   store volatile <2 x i16> %sel0, ptr addrspace(1) %out0, align 4
   store volatile <2 x i16> %sel1, ptr addrspace(1) %out1, align 4
-  store volatile <2 x i1> %cond0, ptr addrspace(1) undef
+  store volatile <2 x i1> %cond0, ptr addrspace(1) poison
   ret void
 }
 

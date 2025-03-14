@@ -293,17 +293,6 @@ elseif (FLANG_RT_GCC_RESOURCE_DIR)
   endif ()
 endif ()
 
-# Check if 128-bit float computations can be done via long double.
-check_cxx_source_compiles(
-  "#include <cfloat>
-   #if LDBL_MANT_DIG != 113
-   #error LDBL_MANT_DIG != 113
-   #endif
-   int main() { return 0; }
-  "
-  HAVE_LDBL_MANT_DIG_113)
-
-
 #####################
 # Build Preparation #
 #####################
