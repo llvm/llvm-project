@@ -58155,12 +58155,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             ConcatMask.push_back(M);
           }
         }
-        if (ConcatMask.size() == (NumOps * NumSrcElts)) {
-          SDValue Src = concatSubVectors(Ops[0].getOperand(1),
-                                         Ops[1].getOperand(1), DAG, DL);
-          return lowerShuffleWithPERMV(DL, VT, ConcatMask, Src,
+        if (ConcatMask.size() == (NumOps * NumSrcElts))
+          return lowerShuffleWithPERMV(DL, VT, ConcatMask,
+                                       ConcatSubOperand(VT, Ops, 1),
                                        DAG.getUNDEF(VT), Subtarget, DAG);
-        }
       }
       break;
     case X86ISD::VPERMV3:
