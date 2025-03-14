@@ -1,4 +1,4 @@
-//===-- Half-precision asinhf16(x) function --------------------------------===//
+//===-- Half-precision asinhf16(x) function--------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -8,30 +8,29 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/asinhf16.h"
-#include "src/math/generic/explogxf.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/generic/sqrt.h"
 #include "src/__support/FPUtil/multiply_add.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/properties/types.h"
+#include "src/math/generic/explogxf.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 #ifndef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 static constexpr size_t N_EXCEPTS = 8;
 
-static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ASINHF16_EXCEPTS{{
-    // (input, RZ output, RU offset, RD offset, RN offset)
-    {0x3769, 0x372A, 1, 0, 1},
-    {0x3B5B, 0x3A96, 1, 0, 0},
-    {0x4B1F, 0x42B3, 1, 0, 0},
-    {0x4C9B, 0x4336, 1, 0, 1},
-    {0xB769, 0xB72A, 0, 1, 1},
-    {0xBB5B, 0xBA96, 0, 1, 0},
-    {0xCB1F, 0xC2B3, 0, 1, 0},
-    {0xCC9B, 0xC336, 0, 1, 1}
-}};
+static constexpr fputil::ExceptValues<float16, N_EXCEPTS> ASINHF16_EXCEPTS{
+    {// (input, RZ output, RU offset, RD offset, RN offset)
+     {0x3769, 0x372A, 1, 0, 1},
+     {0x3B5B, 0x3A96, 1, 0, 0},
+     {0x4B1F, 0x42B3, 1, 0, 0},
+     {0x4C9B, 0x4336, 1, 0, 1},
+     {0xB769, 0xB72A, 0, 1, 1},
+     {0xBB5B, 0xBA96, 0, 1, 0},
+     {0xCB1F, 0xC2B3, 0, 1, 0},
+     {0xCC9B, 0xC336, 0, 1, 1}}};
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
 LLVM_LIBC_FUNCTION(float16, asinhf16, (float16 x)) {
@@ -64,8 +63,8 @@ LLVM_LIBC_FUNCTION(float16, asinhf16, (float16 x)) {
   if (LIBC_UNLIKELY(x_abs <= 0x3400)) {
     if (LIBC_UNLIKELY(x_abs == 0))
       return x;
-    if (LIBC_UNLIKELY((fputil::get_round() == FE_UPWARD) &&
-                      (x_u >= 0x8401) && (x_u <= 0x90E6)))
+    if (LIBC_UNLIKELY((fputil::get_round() == FE_UPWARD) && (x_u >= 0x8401) &&
+                      (x_u <= 0x90E6)))
       return static_cast<float16>(x_d + 0x1p-24f);
 
     float x_sq = x_d * x_d;
@@ -79,7 +78,7 @@ LLVM_LIBC_FUNCTION(float16, asinhf16, (float16 x)) {
 
   // General case: asinh(x) = ln(x + sqrt(x^2 + 1))
   float sqrt_term = fputil::sqrt<float>(fputil::multiply_add(x_d, x_d, 1.0f));
-  return fputil::cast<float16>(x_sign * log_eval(
-    fputil::multiply_add(x_d, x_sign, sqrt_term)));
+  return fputil::cast<float16>(
+      x_sign * log_eval(fputil::multiply_add(x_d, x_sign, sqrt_term)));
 }
-}
+} // namespace LIBC_NAMESPACE_DECL
