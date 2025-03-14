@@ -357,3 +357,22 @@ ThroughAlias<int, 1> e(42);
 // beforecxx20-warning@-1 {{aggregate initialization of type 'ThroughAlias<int, 1>' (aka 'int[1]') from a parenthesized list of values is a C++20 extension}} 
 
 }
+
+namespace CXXParenListInitExpr {
+
+struct S {
+  int a, b;
+  bool flag = false;
+
+  constexpr bool operator==(S rhs) {
+    return a == rhs.a && b == rhs.b;
+  }
+};
+
+static_assert(S(1, 2) == S(1, 2)); // beforecxx20-warning 2{{C++20 extension}}
+
+static_assert(S(1, 2) == S(3, 4));
+// expected-error@-1 {{failed due to requirement 'CXXParenListInitExpr::S(1, 2) == CXXParenListInitExpr::S(3, 4)'}} \
+// beforecxx20-warning@-1 2{{C++20 extension}}
+
+}
