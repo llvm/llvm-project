@@ -1,6 +1,7 @@
 // REQUIRES: disable_symbolizer_path_search
 
 // RUN: %clangxx %s -o %t
+// env ASAN_SYMBOLIZER_PATH = 
 // RUN: %run %t 2>&1 | FileCheck %s
 
 // CHECK: Symbolizer path search is disabled in the runtime build configuration"
