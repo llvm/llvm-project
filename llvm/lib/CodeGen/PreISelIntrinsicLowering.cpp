@@ -254,10 +254,18 @@ static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
   if (!isLibFuncEmittable(M, &TLI, LibFunc_memset_pattern16))
     return nullptr;
 
+  // Look through a ptrtoint cast for a candidate constant. This could be
+  // extended to look through other casts, but the assumption is earlier
+  // passes that introduced memset.pattern intrinsic would have just emitted
+  // the integer argument directly for CosntantFP or ConstantInt cases.
+  if (auto *PI = dyn_cast<PtrToIntInst>(V))
+    V = PI->getPointerOperand();
+
+  Constant *C = dyn_cast<Constant>(V);
+
   // If the value isn't a constant, we can't promote it to being in a constant
   // array.  We could theoretically do a store to an alloca or something, but
   // that doesn't seem worthwhile.
-  Constant *C = dyn_cast<Constant>(V);
   if (!C || isa<ConstantExpr>(C))
     return nullptr;
 
@@ -284,7 +292,7 @@ static Constant *getMemSetPattern16Value(MemSetPatternInst *Inst,
 
   // Otherwise, we'll use an array of the constants.
   uint64_t ArraySize = 16 / Size;
-  ArrayType *AT = ArrayType::get(V->getType(), ArraySize);
+  ArrayType *AT = ArrayType::get(C->getType(), ArraySize);
   return ConstantArray::get(AT, std::vector<Constant *>(ArraySize, C));
 }
 
