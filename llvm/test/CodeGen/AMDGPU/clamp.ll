@@ -3066,8 +3066,8 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_elt(ptr addrspace(1) %out, ptr ad
   %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
   %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %a = load <2 x half>, ptr addrspace(1) %gep0
-  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half undef, half 0.0>)
-  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half undef>)
+  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half poison, half 0.0>)
+  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half poison>)
 
   store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
@@ -3827,8 +3827,8 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts0(ptr addrspace(1) %out
   %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
   %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %a = load <2 x half>, ptr addrspace(1) %gep0
-  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half 0.0, half undef>)
-  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half undef, half 1.0>)
+  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half 0.0, half poison>)
+  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half poison, half 1.0>)
 
   store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
@@ -3925,8 +3925,8 @@ define amdgpu_kernel void @v_clamp_v2f16_undef_limit_elts1(ptr addrspace(1) %out
   %gep0 = getelementptr <2 x half>, ptr addrspace(1) %aptr, i32 %tid
   %out.gep = getelementptr <2 x half>, ptr addrspace(1) %out, i32 %tid
   %a = load <2 x half>, ptr addrspace(1) %gep0
-  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half undef, half 0.0>)
-  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half undef>)
+  %max = call <2 x half> @llvm.maxnum.v2f16(<2 x half> %a, <2 x half> <half poison, half 0.0>)
+  %med = call <2 x half> @llvm.minnum.v2f16(<2 x half> %max, <2 x half> <half 1.0, half poison>)
 
   store <2 x half> %med, ptr addrspace(1) %out.gep
   ret void
