@@ -10857,7 +10857,7 @@ static void
 genAlternativeDpCodeSequence(MachineInstr &Root, const TargetInstrInfo &TII,
                              SmallVectorImpl<MachineInstr *> &InsInstrs,
                              SmallVectorImpl<MachineInstr *> &DelInstrs,
-                             DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) {
+                             DenseMap<Register, unsigned> &InstrIdxForVirtReg) {
   MachineFunction *MF = Root.getMF();
   MachineRegisterInfo &RegInfo = MF->getRegInfo();
 
@@ -10947,7 +10947,7 @@ void X86InstrInfo::genAlternativeCodeSequence(
     MachineInstr &Root, unsigned Pattern,
     SmallVectorImpl<MachineInstr *> &InsInstrs,
     SmallVectorImpl<MachineInstr *> &DelInstrs,
-    DenseMap<unsigned, unsigned> &InstrIdxForVirtReg) const {
+    DenseMap<Register, unsigned> &InstrIdxForVirtReg) const {
   switch (Pattern) {
   default:
     // Reassociate instructions.
