@@ -258,6 +258,14 @@ def sext_trunc_sextload : GICombineRule<
          [{ return Helper.matchSextTruncSextLoad(*${d}); }]),
   (apply [{ Helper.applySextTruncSextLoad(*${d}); }])>;
 
+def sext_trunc_sextinreg : GICombineRule<
+  (defs root:$dst),
+  (match (G_SEXT_INREG $sir, $src, $width),
+         (G_TRUNC $trunc, $sir),
+         (G_SEXT $dst, $trunc),
+         [{ return (MRI.getType(${trunc}.getReg()).getScalarSizeInBits() >= ${width}.getImm()); }]),
+  (apply (GIReplaceReg $dst, $sir))>;
+
 def sext_inreg_of_load_matchdata : GIDefMatchData<"std::tuple<Register, unsigned>">;
 def sext_inreg_of_load : GICombineRule<
   (defs root:$root, sext_inreg_of_load_matchdata:$matchinfo),
@@ -1896,7 +1904,9 @@ def cast_of_cast_combines: GICombineGroup<[
   sext_of_anyext,
   anyext_of_anyext,
   anyext_of_zext,
-  anyext_of_sext
+  anyext_of_sext,
+
+  sext_trunc_sextinreg
 ]>;
 
 def cast_combines: GICombineGroup<[
