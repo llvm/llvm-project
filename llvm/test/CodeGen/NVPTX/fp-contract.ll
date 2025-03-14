@@ -47,29 +47,37 @@ define float @t0(float %a, float %b, float %c) {
 define float @t1(float %a, float %b) {
 ; FAST-LABEL: t1(
 ; FAST:       {
-; FAST-NEXT:    .reg .f32 %f<4>;
+; FAST-NEXT:    .reg .f32 %f<6>;
 ; FAST-EMPTY:
 ; FAST-NEXT:  // %bb.0:
 ; FAST-NEXT:    ld.param.f32 %f1, [t1_param_0];
 ; FAST-NEXT:    ld.param.f32 %f2, [t1_param_1];
 ; FAST-NEXT:    add.f32 %f3, %f1, %f2;
-; FAST-NEXT:    st.param.f32 [func_retval0], %f3;
+; FAST-NEXT:    sub.f32 %f4, %f1, %f2;
+; FAST-NEXT:    mul.f32 %f5, %f3, %f4;
+; FAST-NEXT:    st.param.f32 [func_retval0], %f5;
 ; FAST-NEXT:    ret;
 ;
 ; DEFAULT-LABEL: t1(
 ; DEFAULT:       {
-; DEFAULT-NEXT:    .reg .f32 %f<4>;
+; DEFAULT-NEXT:    .reg .f32 %f<6>;
 ; DEFAULT-EMPTY:
 ; DEFAULT-NEXT:  // %bb.0:
 ; DEFAULT-NEXT:    ld.param.f32 %f1, [t1_param_0];
 ; DEFAULT-NEXT:    ld.param.f32 %f2, [t1_param_1];
 ; DEFAULT-NEXT:    add.rn.f32 %f3, %f1, %f2;
-; DEFAULT-NEXT:    st.param.f32 [func_retval0], %f3;
+; DEFAULT-NEXT:    sub.rn.f32 %f4, %f1, %f2;
+; DEFAULT-NEXT:    mul.rn.f32 %f5, %f3, %f4;
+; DEFAULT-NEXT:    st.param.f32 [func_retval0], %f5;
 ; DEFAULT-NEXT:    ret;
   %v1 = fadd float %a, %b
-  ret float %v1
+  %v2 = fsub float %a, %b
+  %v3 = fmul float %v1, %v2
+  ret float %v3
 }
 
+;; Make sure we generate the non ".rn" version when the "contract" flag is
+;; present on the instructions
 define float @t2(float %a, float %b) {
 ; CHECK-LABEL: t2(
 ; CHECK:       {
@@ -87,4 +95,22 @@ define float @t2(float %a, float %b) {
   %v2 = fsub contract float %a, %b
   %v3 = fmul contract float %v1, %v2
   ret float %v3
+}
+
+;; Make sure we always fold to fma when the "contract" flag is present
+define float @t3(float %a, float %b, float %c) {
+; CHECK-LABEL: t3(
+; CHECK:       {
+; CHECK-NEXT:    .reg .f32 %f<5>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.f32 %f1, [t3_param_0];
+; CHECK-NEXT:    ld.param.f32 %f2, [t3_param_1];
+; CHECK-NEXT:    ld.param.f32 %f3, [t3_param_2];
+; CHECK-NEXT:    fma.rn.f32 %f4, %f1, %f2, %f3;
+; CHECK-NEXT:    st.param.f32 [func_retval0], %f4;
+; CHECK-NEXT:    ret;
+  %v0 = fmul contract float %a, %b
+  %v1 = fadd contract float %v0, %c
+  ret float %v1
 }
