@@ -374,11 +374,11 @@ serveConnection(const Socket::SocketProtocol &protocol, const std::string &name,
   {
     std::scoped_lock<std::mutex> lock(dap_sessions_mutex);
     for (auto [sock, dap] : dap_sessions) {
-      auto error = dap->Disconnect();
-      if (error.Fail()) {
+      if (llvm::Error error = dap->Disconnect()) {
         client_failed = true;
         llvm::errs() << "DAP client " << dap->transport.GetClientName()
-                     << " disconnected failed: " << error.GetCString() << "\n";
+                     << " disconnected failed: "
+                     << llvm::toString(std::move(error)) << "\n";
       }
       // Close the socket to ensure the DAP::Loop read finishes.
       sock->Close();
