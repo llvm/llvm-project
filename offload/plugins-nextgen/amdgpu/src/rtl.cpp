@@ -1097,17 +1097,16 @@ private:
       int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
       // CU mulitiplier from envar.
       uint32_t EnvarCUMultiplier = GenericDevice.getXTeamRedTeamsPerCU();
-      // Disabled if the value is 0.
-      if (EnvarCUMultiplier == 0) {
-        EnvarCUMultiplier = UINT_MAX;
-      }
 
       if (GenericDevice.isFastReductionEnabled()) {
         // When fast reduction is enabled, the number of teams is capped by
         // the MaxCUMultiplier constant.
-        MaxNumGroups =
-            DeviceNumCUs * std::min(llvm::omp::xteam_red::MaxCUMultiplier,
-                                    static_cast<int16_t>(EnvarCUMultiplier));
+        // When envar is enabled, use it for computing MaxNumGroup.
+        if (EnvarCUMultiplier > 0) {
+          MaxNumGroups = DeviceNumCUs * EnvarCUMultiplier;
+        } else {
+          MaxNumGroups = DeviceNumCUs * llvm::omp::xteam_red::MaxCUMultiplier;
+        }
       } else {
         // When fast reduction is not enabled, the number of teams is capped
         // by the metadata that clang CodeGen created. The number of teams
@@ -1118,7 +1117,13 @@ private:
         // ConstWGSize is the block size that CodeGen used.
         uint32_t CUMultiplier =
             llvm::omp::xteam_red::getXteamRedCUMultiplier(ConstWGSize);
-        MaxNumGroups = DeviceNumCUs * std::min(CUMultiplier, EnvarCUMultiplier);
+
+        if (EnvarCUMultiplier > 0) {
+          MaxNumGroups =
+              DeviceNumCUs * std::min(CUMultiplier, EnvarCUMultiplier);
+        } else {
+          MaxNumGroups = DeviceNumCUs * CUMultiplier;
+        }
       }
 
       // If envar OMPX_XTEAMREDUCTION_OCCUPANCY_BASED_OPT is set and no
