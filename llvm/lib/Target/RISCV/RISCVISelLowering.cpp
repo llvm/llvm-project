@@ -11987,29 +11987,24 @@ SDValue RISCVTargetLowering::lowerLoadFF(SDValue Op, SelectionDAG &DAG) const {
   SDValue Mask = VPLoadFF->getMask();
   SDValue VL = VPLoadFF->getVectorLength();
 
-  bool IsUnmasked = ISD::isConstantSplatVectorAllOnes(Mask.getNode());
-
   MVT XLenVT = Subtarget.getXLenVT();
 
   MVT ContainerVT = VT;
   if (VT.isFixedLengthVector()) {
     ContainerVT = getContainerForFixedLengthVector(VT);
-    if (!IsUnmasked) {
-      MVT MaskVT = getMaskTypeFor(ContainerVT);
-      Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
-    }
+    MVT MaskVT = getMaskTypeFor(ContainerVT);
+    Mask = convertToScalableVector(MaskVT, Mask, DAG, Subtarget);
   }
 
-  unsigned IntID =
-      IsUnmasked ? Intrinsic::riscv_vleff : Intrinsic::riscv_vleff_mask;
-  SmallVector<SDValue, 8> Ops{Chain, DAG.getTargetConstant(IntID, DL, XLenVT)};
-  Ops.push_back(DAG.getUNDEF(ContainerVT));
-  Ops.push_back(BasePtr);
-  if (!IsUnmasked)
-    Ops.push_back(Mask);
-  Ops.push_back(VL);
-  if (!IsUnmasked)
-    Ops.push_back(DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT));
+  unsigned IntID = Intrinsic::riscv_vleff_mask;
+  SDValue Ops[] = {
+      Chain,
+      DAG.getTargetConstant(IntID, DL, XLenVT),
+      DAG.getUNDEF(ContainerVT),
+      BasePtr,
+      Mask,
+      VL,
+      DAG.getTargetConstant(RISCVVType::TAIL_AGNOSTIC, DL, XLenVT)};
 
   SDVTList VTs = DAG.getVTList({ContainerVT, Op->getValueType(1), MVT::Other});
 
