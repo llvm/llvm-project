@@ -2183,21 +2183,21 @@ public:
   void Unparse(const OmpInitClause &x) {
     using Modifier = OmpInitClause::Modifier;
     auto &modifiers{std::get<std::optional<std::list<Modifier>>>(x.t)};
-    bool is_type_start = true;
+    bool isTypeStart = true;
     for (const Modifier &m : *modifiers) {
-      if (auto *interop_preference_mod{
+      if (auto *interopPreferenceMod{
               std::get_if<parser::OmpInteropPreference>(&m.u)}) {
         Put("PREFER_TYPE(");
-        Walk(*interop_preference_mod);
+        Walk(*interopPreferenceMod);
         Put("),");
-      } else if (auto *interop_type_mod{
+      } else if (auto *interopTypeMod{
                      std::get_if<parser::OmpInteropType>(&m.u)}) {
-        if (is_type_start) {
-          is_type_start = false;
+        if (isTypeStart) {
+          isTypeStart = false;
         } else {
           Put(",");
         }
-        Walk(*interop_type_mod);
+        Walk(*interopTypeMod);
       }
     }
     Put(": ");

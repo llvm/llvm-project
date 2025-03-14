@@ -5642,86 +5642,80 @@ void OmpStructureChecker::Enter(const parser::OpenMPInteropConstruct &x) {
   bool isDependClauseOccured{false};
   int targetCount{0}, targetSyncCount{0};
   const auto &dir{std::get<parser::Verbatim>(x.t)};
-  std::list<std::string> ObjectNameList;
+  std::set<const Symbol *> objectSymbolList;
   PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_interop);
   const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
   for (const auto &clause : clauseList.v) {
     common::visit(
         common::visitors{
-            [&](const parser::OmpClause::Init &InitClause) {
-              if (OmpVerifyModifiers(InitClause.v, llvm::omp::OMPC_init,
-                      GetContext().directiveSource, context_)) {
+            [&](const parser::OmpClause::Init &initClause) {
+              if (OmpVerifyModifiers(initClause.v, llvm::omp::OMPC_init,
+                                     GetContext().directiveSource, context_)) {
 
-                auto &modifiers{OmpGetModifiers(InitClause.v)};
+                auto &modifiers{OmpGetModifiers(initClause.v)};
                 auto &&interopTypeModifier{
                     OmpGetRepeatableModifier<parser::OmpInteropType>(
                         modifiers)};
-                for (auto it{interopTypeModifier.begin()},
-                     end{interopTypeModifier.end()};
-                     it != end; ++it) {
-                  if (parser::ToUpperCaseLetters(
-                          parser::OmpInteropType::EnumToString((*it)->v)) ==
-                      "TARGETSYNC") {
+                for (const auto &it : interopTypeModifier) {
+                  if (it->v == parser::OmpInteropType::Value::TargetSync) {
                     ++targetSyncCount;
                   } else {
                     ++targetCount;
                   }
-                  if (targetCount > 1 || targetSyncCount > 1) {
-                    context_.Say(GetContext().directiveSource,
-                        "Each interop-type may be speciﬁed at most once."_err_en_US);
-                  }
                 }
               }
-              const auto &InteropVar{parser::Unwrap<parser::OmpObject>(
-                  std::get<parser::OmpObject>(InitClause.v.t))};
-              const auto *name{parser::Unwrap<parser::Name>(InteropVar)};
-              const auto ObjectName{name->ToString()};
-              if (ObjectNameList.end() !=
-                  std::find(ObjectNameList.begin(), ObjectNameList.end(),
-                      ObjectName)) {
-                context_.Say(GetContext().directiveSource,
+              const auto &interopVar{parser::Unwrap<parser::OmpObject>(
+                  std::get<parser::OmpObject>(initClause.v.t))};
+              const auto *name{parser::Unwrap<parser::Name>(interopVar)};
+              const auto *objectSymbol{name->symbol};
+              if (llvm::is_contained(objectSymbolList, objectSymbol)) {
+                context_.Say(
+                    GetContext().directiveSource,
                     "Each interop-var may be speciﬁed for at most one action-clause of each interop construct."_err_en_US);
               } else {
-                ObjectNameList.push_back(ObjectName);
+                objectSymbolList.insert(objectSymbol);
               }
             },
-            [&](const parser::OmpClause::Depend &DependClause) {
+            [&](const parser::OmpClause::Depend &dependClause) {
               isDependClauseOccured = true;
             },
-            [&](const parser::OmpClause::Destroy &DestroyClause) {
-              const auto &InteropVar{
-                  parser::Unwrap<parser::OmpObject>(DestroyClause.v)};
-              const auto *name{parser::Unwrap<parser::Name>(InteropVar)};
-              const auto ObjectName{name->ToString()};
-              if (ObjectNameList.end() !=
-                  std::find(ObjectNameList.begin(), ObjectNameList.end(),
-                      ObjectName)) {
-                context_.Say(GetContext().directiveSource,
+            [&](const parser::OmpClause::Destroy &destroyClause) {
+              const auto &interopVar{
+                  parser::Unwrap<parser::OmpObject>(destroyClause.v)};
+              const auto *name{parser::Unwrap<parser::Name>(interopVar)};
+              const auto *objectSymbol{name->symbol};
+              if (llvm::is_contained(objectSymbolList, objectSymbol)) {
+                context_.Say(
+                    GetContext().directiveSource,
                     "Each interop-var may be speciﬁed for at most one action-clause of each interop construct."_err_en_US);
               } else {
-                ObjectNameList.push_back(ObjectName);
+                objectSymbolList.insert(objectSymbol);
               }
             },
-            [&](const parser::OmpClause::Use &UseClause) {
-              const auto &InteropVar{
-                  parser::Unwrap<parser::OmpObject>(UseClause.v)};
-              const auto *name{parser::Unwrap<parser::Name>(InteropVar)};
-              const auto ObjectName{name->ToString()};
-              if (ObjectNameList.end() !=
-                  std::find(ObjectNameList.begin(), ObjectNameList.end(),
-                      ObjectName)) {
-                context_.Say(GetContext().directiveSource,
+            [&](const parser::OmpClause::Use &useClause) {
+              const auto &interopVar{
+                  parser::Unwrap<parser::OmpObject>(useClause.v)};
+              const auto *name{parser::Unwrap<parser::Name>(interopVar)};
+              const auto *objectSymbol{name->symbol};
+              if (llvm::is_contained(objectSymbolList, objectSymbol)) {
+                context_.Say(
+                    GetContext().directiveSource,
                     "Each interop-var may be speciﬁed for at most one action-clause of each interop construct."_err_en_US);
               } else {
-                ObjectNameList.push_back(ObjectName);
+                objectSymbolList.insert(objectSymbol);
               }
             },
             [&](const auto &) {},
         },
         clause.u);
   }
-  if (isDependClauseOccured && !targetSyncCount) {
+  if (targetCount > 1 || targetSyncCount > 1) {
     context_.Say(GetContext().directiveSource,
+                 "Each interop-type may be speciﬁed at most once."_err_en_US);
+  }
+  if (isDependClauseOccured && !targetSyncCount) {
+    context_.Say(
+        GetContext().directiveSource,
         "A depend clause can only appear on the directive if the interop-type includes targetsync"_err_en_US);
   }
 }
