@@ -24,4 +24,4 @@ If you want to define a statistic only for entry point, EntryPointStats.h has fo
 - ``CounterEPStat`` - an additive statistic. It starts with 0 and you can add to it as many times as needed. For example: "the number of bugs discovered".
 - ``UnsignedMaxEPStat`` - a maximizing statistic. It starts with 0 and when you join it with a value, it picks the maximum of the previous value and the new one. For example, "the longest execution path of a bug".
 
-To produce a CSV file with all the statistics collected per entry point, use the `dump-se-metrics-to-csv=<file>.csv` parameter.
+To produce a CSV file with all the statistics collected per entry point, use the `dump-entry-point-stats-to-csv=<file>.csv` parameter.

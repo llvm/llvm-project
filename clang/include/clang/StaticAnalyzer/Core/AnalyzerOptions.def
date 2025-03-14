@@ -354,7 +354,7 @@ ANALYZER_OPTION(bool, DisplayCTUProgress, "display-ctu-progress",
                 false)
 
 ANALYZER_OPTION(
-    StringRef, DumpSEStatsToCSV, "dump-se-stats-to-csv",
+    StringRef, DumpEntryPointStatsToCSV, "dump-entry-point-stats-to-csv",
     "If provided, the analyzer will dump statistics per entry point "
     "into the specified CSV file.",
     "")

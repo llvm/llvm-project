@@ -657,8 +657,8 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
         (FunctionSummaries.getTotalNumVisitedBasicBlocks() * 100) /
         NumBlocksInAnalyzedFunctions;
 
-  if (!Opts.DumpSEStatsToCSV.empty()) {
-    EntryPointStat::dumpStatsAsCSV(Opts.DumpSEStatsToCSV);
+  if (!Opts.DumpEntryPointStatsToCSV.empty()) {
+    EntryPointStat::dumpStatsAsCSV(Opts.DumpEntryPointStatsToCSV);
   }
 }
 
