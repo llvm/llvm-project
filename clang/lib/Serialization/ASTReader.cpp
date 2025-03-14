@@ -10791,47 +10791,54 @@ void ASTReader::FinishedDeserializing() {
   --NumCurrentElementsDeserializing;
 
   if (NumCurrentElementsDeserializing == 0) {
-    // Propagate exception specification and deduced type updates along
-    // redeclaration chains.
-    //
-    // We do this now rather than in finishPendingActions because we want to
-    // be able to walk the complete redeclaration chains of the updated decls.
-    while (!PendingExceptionSpecUpdates.empty() ||
-           !PendingDeducedTypeUpdates.empty() ||
-           !PendingUndeducedFunctionDecls.empty()) {
-      auto ESUpdates = std::move(PendingExceptionSpecUpdates);
-      PendingExceptionSpecUpdates.clear();
-      for (auto Update : ESUpdates) {
-        ProcessingUpdatesRAIIObj ProcessingUpdates(*this);
-        auto *FPT = Update.second->getType()->castAs<FunctionProtoType>();
-        auto ESI = FPT->getExtProtoInfo().ExceptionSpec;
-        if (auto *Listener = getContext().getASTMutationListener())
-          Listener->ResolvedExceptionSpec(cast<FunctionDecl>(Update.second));
-        for (auto *Redecl : Update.second->redecls())
-          getContext().adjustExceptionSpec(cast<FunctionDecl>(Redecl), ESI);
+    {
+      // Guard variable to avoid recursively entering the process of passing
+      // decls to consumer.
+      SaveAndRestore GuardPassingDeclsToConsumer(CanPassDeclsToConsumer, false);
+
+      // Propagate exception specification and deduced type updates along
+      // redeclaration chains.
+      //
+      // We do this now rather than in finishPendingActions because we want to
+      // be able to walk the complete redeclaration chains of the updated decls.
+      while (!PendingExceptionSpecUpdates.empty() ||
+             !PendingDeducedTypeUpdates.empty() ||
+             !PendingUndeducedFunctionDecls.empty()) {
+        auto ESUpdates = std::move(PendingExceptionSpecUpdates);
+        PendingExceptionSpecUpdates.clear();
+        for (auto Update : ESUpdates) {
+          ProcessingUpdatesRAIIObj ProcessingUpdates(*this);
+          auto *FPT = Update.second->getType()->castAs<FunctionProtoType>();
+          auto ESI = FPT->getExtProtoInfo().ExceptionSpec;
+          if (auto *Listener = getContext().getASTMutationListener())
+            Listener->ResolvedExceptionSpec(cast<FunctionDecl>(Update.second));
+          for (auto *Redecl : Update.second->redecls())
+            getContext().adjustExceptionSpec(cast<FunctionDecl>(Redecl), ESI);
+        }
+
+        auto DTUpdates = std::move(PendingDeducedTypeUpdates);
+        PendingDeducedTypeUpdates.clear();
+        for (auto Update : DTUpdates) {
+          ProcessingUpdatesRAIIObj ProcessingUpdates(*this);
+          // FIXME: If the return type is already deduced, check that it
+          // matches.
+          getContext().adjustDeducedFunctionResultType(Update.first,
+                                                       Update.second);
+        }
+
+        auto UDTUpdates = std::move(PendingUndeducedFunctionDecls);
+        PendingUndeducedFunctionDecls.clear();
+        // We hope we can find the deduced type for the functions by iterating
+        // redeclarations in other modules.
+        for (FunctionDecl *UndeducedFD : UDTUpdates)
+          (void)UndeducedFD->getMostRecentDecl();
       }
 
-      auto DTUpdates = std::move(PendingDeducedTypeUpdates);
-      PendingDeducedTypeUpdates.clear();
-      for (auto Update : DTUpdates) {
-        ProcessingUpdatesRAIIObj ProcessingUpdates(*this);
-        // FIXME: If the return type is already deduced, check that it matches.
-        getContext().adjustDeducedFunctionResultType(Update.first,
-                                                     Update.second);
-      }
+      if (ReadTimer)
+        ReadTimer->stopTimer();
 
-      auto UDTUpdates = std::move(PendingUndeducedFunctionDecls);
-      PendingUndeducedFunctionDecls.clear();
-      // We hope we can find the deduced type for the functions by iterating
-      // redeclarations in other modules.
-      for (FunctionDecl *UndeducedFD : UDTUpdates)
-        (void)UndeducedFD->getMostRecentDecl();
+      diagnoseOdrViolations();
     }
-
-    if (ReadTimer)
-      ReadTimer->stopTimer();
-
-    diagnoseOdrViolations();
 
     // We are not in recursive loading, so it's safe to pass the "interesting"
     // decls to the consumer.
