@@ -215,6 +215,42 @@ namespace llvm {
                                  DINode::DIFlags Flags = DINode::FlagZero,
                                  uint32_t NumExtraInhabitants = 0);
 
+    /// Create debugging information entry for a binary fixed-point type.
+    /// \param Name        Type name.
+    /// \param Encoding    DWARF encoding code, either
+    ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
+    /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
+    /// \param Factor      Binary scale factor.
+    DIFixedPointType *
+    createBinaryFixedPointType(StringRef Name, uint64_t SizeInBits,
+                               uint32_t AlignInBits, unsigned Encoding,
+                               DINode::DIFlags Flags, int Factor);
+
+    /// Create debugging information entry for a decimal fixed-point type.
+    /// \param Name        Type name.
+    /// \param Encoding    DWARF encoding code, either
+    ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
+    /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
+    /// \param Factor      Decimal scale factor.
+    DIFixedPointType *
+    createDecimalFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                uint32_t AlignInBits, unsigned Encoding,
+                                DINode::DIFlags Flags, int Factor);
+
+    /// Create debugging information entry for an arbitrary rational
+    /// fixed-point type.
+    /// \param Name        Type name.
+    /// \param Encoding    DWARF encoding code, either
+    ///                    dwarf::DW_ATE_signed_fixed or DW_ATE_unsigned_fixed.
+    /// \param Flags       Optional DWARF attributes, e.g., DW_AT_endianity.
+    /// \param Numerator   Numerator of scale factor.
+    /// \param Denominator Denominator of scale factor.
+    DIFixedPointType *
+    createRationalFixedPointType(StringRef Name, uint64_t SizeInBits,
+                                 uint32_t AlignInBits, unsigned Encoding,
+                                 DINode::DIFlags Flags, APInt Numerator,
+                                 APInt Denominator);
+
     /// Create debugging information entry for a string
     /// type.
     /// \param Name        Type name.

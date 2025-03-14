@@ -721,13 +721,56 @@ std::optional<DIBasicType::Signedness> DIBasicType::getSignedness() const {
   switch (getEncoding()) {
   case dwarf::DW_ATE_signed:
   case dwarf::DW_ATE_signed_char:
+  case dwarf::DW_ATE_signed_fixed:
     return Signedness::Signed;
   case dwarf::DW_ATE_unsigned:
   case dwarf::DW_ATE_unsigned_char:
+  case dwarf::DW_ATE_unsigned_fixed:
     return Signedness::Unsigned;
   default:
     return std::nullopt;
   }
+}
+
+DIFixedPointType *
+DIFixedPointType::getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+                          uint64_t SizeInBits, uint32_t AlignInBits,
+                          unsigned Encoding, DIFlags Flags, unsigned Kind,
+                          int Factor, APInt Numerator, APInt Denominator,
+                          StorageType Storage, bool ShouldCreate) {
+  DEFINE_GETIMPL_LOOKUP(DIFixedPointType,
+                        (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags,
+                         Kind, Factor, Numerator, Denominator));
+  Metadata *Ops[] = {nullptr, nullptr, Name};
+  DEFINE_GETIMPL_STORE(DIFixedPointType,
+                       (Tag, SizeInBits, AlignInBits, Encoding, Flags, Kind,
+                        Factor, Numerator, Denominator),
+                       Ops);
+}
+
+bool DIFixedPointType::isSigned() const {
+  return getEncoding() == dwarf::DW_ATE_signed_fixed;
+}
+
+std::optional<DIFixedPointType::FixedPointKind>
+DIFixedPointType::getFixedPointKind(StringRef Str) {
+  return StringSwitch<std::optional<FixedPointKind>>(Str)
+      .Case("Binary", FixedPointBinary)
+      .Case("Decimal", FixedPointDecimal)
+      .Case("Rational", FixedPointRational)
+      .Default(std::nullopt);
+}
+
+const char *DIFixedPointType::fixedPointKindString(FixedPointKind V) {
+  switch (V) {
+  case FixedPointBinary:
+    return "Binary";
+  case FixedPointDecimal:
+    return "Decimal";
+  case FixedPointRational:
+    return "Rational";
+  }
+  return nullptr;
 }
 
 DIStringType *DIStringType::getImpl(LLVMContext &Context, unsigned Tag,

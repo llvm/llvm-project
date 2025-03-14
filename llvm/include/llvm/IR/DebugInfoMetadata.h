@@ -199,6 +199,7 @@ public:
     case DISubrangeKind:
     case DIEnumeratorKind:
     case DIBasicTypeKind:
+    case DIFixedPointTypeKind:
     case DIStringTypeKind:
     case DISubrangeTypeKind:
     case DIDerivedTypeKind:
@@ -547,6 +548,7 @@ public:
     default:
       return false;
     case DIBasicTypeKind:
+    case DIFixedPointTypeKind:
     case DIStringTypeKind:
     case DISubrangeTypeKind:
     case DIDerivedTypeKind:
@@ -806,6 +808,7 @@ public:
     default:
       return false;
     case DIBasicTypeKind:
+    case DIFixedPointTypeKind:
     case DIStringTypeKind:
     case DISubrangeTypeKind:
     case DIDerivedTypeKind:
@@ -826,11 +829,19 @@ class DIBasicType : public DIType {
 
   unsigned Encoding;
 
+protected:
   DIBasicType(LLVMContext &C, StorageType Storage, unsigned Tag,
               uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
               uint32_t NumExtraInhabitants, DIFlags Flags,
               ArrayRef<Metadata *> Ops)
       : DIType(C, DIBasicTypeKind, Storage, Tag, 0, SizeInBits, AlignInBits, 0,
+               NumExtraInhabitants, Flags, Ops),
+        Encoding(Encoding) {}
+  DIBasicType(LLVMContext &C, unsigned ID, StorageType Storage, unsigned Tag,
+              uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+              uint32_t NumExtraInhabitants, DIFlags Flags,
+              ArrayRef<Metadata *> Ops)
+      : DIType(C, ID, Storage, Tag, 0, SizeInBits, AlignInBits, 0,
                NumExtraInhabitants, Flags, Ops),
         Encoding(Encoding) {}
   ~DIBasicType() = default;
@@ -897,7 +908,132 @@ public:
   std::optional<Signedness> getSignedness() const;
 
   static bool classof(const Metadata *MD) {
-    return MD->getMetadataID() == DIBasicTypeKind;
+    return MD->getMetadataID() == DIBasicTypeKind ||
+           MD->getMetadataID() == DIFixedPointTypeKind;
+  }
+};
+
+/// Fixed-point type.
+class DIFixedPointType : public DIBasicType {
+  friend class LLVMContextImpl;
+  friend class MDNode;
+
+  // Actually FixedPointKind.
+  unsigned Kind;
+  // Used for binary and decimal.
+  int Factor;
+  // Used for rational.
+  APInt Numerator;
+  APInt Denominator;
+
+  DIFixedPointType(LLVMContext &C, StorageType Storage, unsigned Tag,
+                   uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+                   DIFlags Flags, unsigned Kind, int Factor,
+                   ArrayRef<Metadata *> Ops)
+      : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, SizeInBits,
+                    AlignInBits, Encoding, 0, Flags, Ops),
+        Kind(Kind), Factor(Factor) {
+    assert(Kind == FixedPointBinary || Kind == FixedPointDecimal);
+  }
+  DIFixedPointType(LLVMContext &C, StorageType Storage, unsigned Tag,
+                   uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+                   DIFlags Flags, unsigned Kind, APInt Numerator,
+                   APInt Denominator, ArrayRef<Metadata *> Ops)
+      : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, SizeInBits,
+                    AlignInBits, Encoding, 0, Flags, Ops),
+        Kind(Kind), Factor(0), Numerator(Numerator), Denominator(Denominator) {
+    assert(Kind == FixedPointRational);
+  }
+  DIFixedPointType(LLVMContext &C, StorageType Storage, unsigned Tag,
+                   uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+                   DIFlags Flags, unsigned Kind, int Factor, APInt Numerator,
+                   APInt Denominator, ArrayRef<Metadata *> Ops)
+      : DIBasicType(C, DIFixedPointTypeKind, Storage, Tag, SizeInBits,
+                    AlignInBits, Encoding, 0, Flags, Ops),
+        Kind(Kind), Factor(Factor), Numerator(Numerator),
+        Denominator(Denominator) {}
+  ~DIFixedPointType() = default;
+
+  static DIFixedPointType *
+  getImpl(LLVMContext &Context, unsigned Tag, StringRef Name,
+          uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+          DIFlags Flags, unsigned Kind, int Factor, APInt Numerator,
+          APInt Denominator, StorageType Storage, bool ShouldCreate = true) {
+    return getImpl(Context, Tag, getCanonicalMDString(Context, Name),
+                   SizeInBits, AlignInBits, Encoding, Flags, Kind, Factor,
+                   Numerator, Denominator, Storage, ShouldCreate);
+  }
+  static DIFixedPointType *
+  getImpl(LLVMContext &Context, unsigned Tag, MDString *Name,
+          uint64_t SizeInBits, uint32_t AlignInBits, unsigned Encoding,
+          DIFlags Flags, unsigned Kind, int Factor, APInt Numerator,
+          APInt Denominator, StorageType Storage, bool ShouldCreate = true);
+
+  TempDIFixedPointType cloneImpl() const {
+    return getTemporary(getContext(), getTag(), getName(), getSizeInBits(),
+                        getAlignInBits(), getEncoding(), getFlags(), Kind,
+                        Factor, Numerator, Denominator);
+  }
+
+public:
+  enum FixedPointKind : unsigned {
+    /// Scale factor 2^Factor.
+    FixedPointBinary,
+    /// Scale factor 10^Factor.
+    FixedPointDecimal,
+    /// Arbitrary rational scale factor.
+    FixedPointRational,
+    LastFixedPointKind = FixedPointRational,
+  };
+
+  static std::optional<FixedPointKind> getFixedPointKind(StringRef Str);
+  static const char *fixedPointKindString(FixedPointKind);
+
+  DEFINE_MDNODE_GET(DIFixedPointType,
+                    (unsigned Tag, MDString *Name, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
+                     unsigned Kind, int Factor, APInt Numerator,
+                     APInt Denominator),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags, Kind,
+                     Factor, Numerator, Denominator))
+  DEFINE_MDNODE_GET(DIFixedPointType,
+                    (unsigned Tag, StringRef Name, uint64_t SizeInBits,
+                     uint32_t AlignInBits, unsigned Encoding, DIFlags Flags,
+                     unsigned Kind, int Factor, APInt Numerator,
+                     APInt Denominator),
+                    (Tag, Name, SizeInBits, AlignInBits, Encoding, Flags, Kind,
+                     Factor, Numerator, Denominator))
+
+  TempDIFixedPointType clone() const { return cloneImpl(); }
+
+  bool isBinary() const { return Kind == FixedPointBinary; }
+  bool isDecimal() const { return Kind == FixedPointDecimal; }
+  bool isRational() const { return Kind == FixedPointRational; }
+
+  bool isSigned() const;
+
+  FixedPointKind getKind() const { return static_cast<FixedPointKind>(Kind); }
+
+  int getFactorRaw() const { return Factor; }
+  int getFactor() const {
+    assert(Kind == FixedPointBinary || Kind == FixedPointDecimal);
+    return Factor;
+  }
+
+  const APInt &getNumeratorRaw() const { return Numerator; }
+  const APInt &getNumerator() const {
+    assert(Kind == FixedPointRational);
+    return Numerator;
+  }
+
+  const APInt &getDenominatorRaw() const { return Denominator; }
+  const APInt &getDenominator() const {
+    assert(Kind == FixedPointRational);
+    return Denominator;
+  }
+
+  static bool classof(const Metadata *MD) {
+    return MD->getMetadataID() == DIFixedPointTypeKind;
   }
 };
 
