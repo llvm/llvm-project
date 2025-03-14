@@ -341,7 +341,7 @@ SGMapPropagation::visitOperation(Operation *op,
           }
         }
       });
-  /// Add a dependency from each reult to program point after the operation.
+  /// Add a dependency from each result to program point after the operation.
   for (const SGMapLattice *r : results) {
     addDependency(const_cast<SGMapLattice *>(r), getProgramPointAfter(op));
   }
