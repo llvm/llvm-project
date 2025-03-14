@@ -7,31 +7,31 @@ entry:
   br i1 undef, label %for.inc.1, label %do.body.preheader
 
 do.body.preheader:                                ; preds = %entry
-  %tmp = insertelement <4 x i32> zeroinitializer, i32 undef, i32 1
+  %tmp = insertelement <4 x i32> zeroinitializer, i32 poison, i32 1
   br i1 undef, label %do.body56.1, label %do.body90
 
 do.body90:                                        ; preds = %do.body56.2, %do.body56.1, %do.body.preheader
   %tmp1 = phi <4 x i32> [ %tmp6, %do.body56.2 ], [ %tmp5, %do.body56.1 ], [ %tmp, %do.body.preheader ]
-  %tmp2 = insertelement <4 x i32> %tmp1, i32 undef, i32 2
-  %tmp3 = insertelement <4 x i32> %tmp2, i32 undef, i32 3
+  %tmp2 = insertelement <4 x i32> %tmp1, i32 poison, i32 2
+  %tmp3 = insertelement <4 x i32> %tmp2, i32 poison, i32 3
   br i1 undef, label %do.body124.1, label %do.body.1562.preheader
 
 do.body.1562.preheader:                           ; preds = %do.body124.1, %do.body90
   %storemerge = phi <4 x i32> [ %tmp3, %do.body90 ], [ %tmp7, %do.body124.1 ]
-  %tmp4 = insertelement <4 x i32> undef, i32 undef, i32 1
+  %tmp4 = insertelement <4 x i32> poison, i32 poison, i32 1
   br label %for.inc.1
 
 do.body56.1:                                      ; preds = %do.body.preheader
-  %tmp5 = insertelement <4 x i32> %tmp, i32 undef, i32 1
+  %tmp5 = insertelement <4 x i32> %tmp, i32 poison, i32 1
   %or.cond472.1 = or i1 undef, undef
   br i1 %or.cond472.1, label %do.body56.2, label %do.body90
 
 do.body56.2:                                      ; preds = %do.body56.1
-  %tmp6 = insertelement <4 x i32> %tmp5, i32 undef, i32 1
+  %tmp6 = insertelement <4 x i32> %tmp5, i32 poison, i32 1
   br label %do.body90
 
 do.body124.1:                                     ; preds = %do.body90
-  %tmp7 = insertelement <4 x i32> %tmp3, i32 undef, i32 3
+  %tmp7 = insertelement <4 x i32> %tmp3, i32 poison, i32 3
   br label %do.body.1562.preheader
 
 for.inc.1:                                        ; preds = %do.body.1562.preheader, %entry

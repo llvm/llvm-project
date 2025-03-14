@@ -23,7 +23,7 @@ bb:
   %vec1 = load volatile <2 x half>, ptr addrspace(3) %lds.gep1, align 4
   %scalar0 = load volatile half, ptr addrspace(3) %arg2, align 2
 
-  %scalar0.vec = insertelement <2 x half> undef, half %scalar0, i32 0
+  %scalar0.vec = insertelement <2 x half> poison, half %scalar0, i32 0
   %scalar0.broadcast = shufflevector <2 x half> %scalar0.vec, <2 x half> undef, <2 x i32> zeroinitializer
 
   %result = tail call <2 x half> @llvm.fma.v2f16(<2 x half> %vec0, <2 x half> %vec1, <2 x half> %scalar0.broadcast)
@@ -54,7 +54,7 @@ bb:
   %vec1 = load volatile <2 x half>, ptr addrspace(3) %lds.gep1, align 4
   %scalar0 = load volatile half, ptr addrspace(3) %arg2, align 2
 
-  %scalar0.vec = insertelement <2 x half> undef, half %scalar0, i32 0
+  %scalar0.vec = insertelement <2 x half> poison, half %scalar0, i32 0
   %scalar0.broadcast = shufflevector <2 x half> %scalar0.vec, <2 x half> undef, <2 x i32> zeroinitializer
   %neg.scalar0.broadcast = fsub <2 x half> <half -0.0, half -0.0>, %scalar0.broadcast
 
@@ -87,7 +87,7 @@ bb:
   %scalar0 = load volatile half, ptr addrspace(3) %arg2, align 2
 
   %neg.scalar0 = fsub half -0.0, %scalar0
-  %neg.scalar0.vec = insertelement <2 x half> undef, half %neg.scalar0, i32 0
+  %neg.scalar0.vec = insertelement <2 x half> poison, half %neg.scalar0, i32 0
   %neg.scalar0.broadcast = shufflevector <2 x half> %neg.scalar0.vec, <2 x half> undef, <2 x i32> zeroinitializer
 
   %result = tail call <2 x half> @llvm.fma.v2f16(<2 x half> %vec0, <2 x half> %vec1, <2 x half> %neg.scalar0.broadcast)
@@ -119,7 +119,7 @@ bb:
   %scalar0 = load volatile half, ptr addrspace(3) %arg2, align 2
 
   %neg.scalar0 = fsub half -0.0, %scalar0
-  %neg.scalar0.vec = insertelement <2 x half> undef, half %neg.scalar0, i32 0
+  %neg.scalar0.vec = insertelement <2 x half> poison, half %neg.scalar0, i32 0
   %neg.scalar0.broadcast = shufflevector <2 x half> %neg.scalar0.vec, <2 x half> undef, <2 x i32> zeroinitializer
   %neg.neg.scalar0.broadcast = fsub <2 x half> <half -0.0, half -0.0>, %neg.scalar0.broadcast
 
@@ -152,7 +152,7 @@ bb:
   %scalar0 = load volatile half, ptr addrspace(3) %arg2, align 2
 
   %neg.scalar0 = fsub half -0.0, %scalar0
-  %neg.scalar0.vec = insertelement <2 x half> undef, half %neg.scalar0, i32 0
+  %neg.scalar0.vec = insertelement <2 x half> poison, half %neg.scalar0, i32 0
   %neg.scalar0.scalar0 = insertelement <2 x half> %neg.scalar0.vec, half %scalar0, i32 1
   %result = tail call <2 x half> @llvm.fma.v2f16(<2 x half> %vec0, <2 x half> %vec1, <2 x half> %neg.scalar0.scalar0)
   store <2 x half> %result, ptr addrspace(1) %out, align 4
@@ -183,7 +183,7 @@ bb:
   %scalar0 = load volatile half, ptr addrspace(3) %arg2, align 2
 
   %neg.scalar0 = fsub half -0.0, %scalar0
-  %neg.scalar0.vec = insertelement <2 x half> undef, half %scalar0, i32 0
+  %neg.scalar0.vec = insertelement <2 x half> poison, half %scalar0, i32 0
   %scalar0.neg.scalar0 = insertelement <2 x half> %neg.scalar0.vec, half %neg.scalar0, i32 1
   %result = tail call <2 x half> @llvm.fma.v2f16(<2 x half> %vec0, <2 x half> %vec1, <2 x half> %scalar0.neg.scalar0)
   store <2 x half> %result, ptr addrspace(1) %out, align 4
@@ -211,7 +211,7 @@ bb:
   %neg.scalar0 = fsub half -0.0, %scalar0
   %neg.scalar0.bc = bitcast half %neg.scalar0 to i16
 
-  %neg.scalar0.vec = insertelement <2 x i16> undef, i16 %neg.scalar0.bc, i32 0
+  %neg.scalar0.vec = insertelement <2 x i16> poison, i16 %neg.scalar0.bc, i32 0
   %neg.scalar0.broadcast = shufflevector <2 x i16> %neg.scalar0.vec, <2 x i16> undef, <2 x i32> zeroinitializer
 
   %result = add <2 x i16> %vec0, %neg.scalar0.broadcast
@@ -250,7 +250,7 @@ bb:
   %scalar1 = load volatile half, ptr addrspace(3) %arg2.gep, align 2
 
   %neg.scalar1 = fsub half -0.0, %scalar1
-  %vec.ins0 = insertelement <2 x half> undef, half %scalar0, i32 0
+  %vec.ins0 = insertelement <2 x half> poison, half %scalar0, i32 0
   %vec2 = insertelement <2 x half> %vec.ins0, half %neg.scalar1, i32 1
   %result = tail call <2 x half> @llvm.fma.v2f16(<2 x half> %vec0, <2 x half> %vec1, <2 x half> %vec2)
   store <2 x half> %result, ptr addrspace(1) %out, align 4
@@ -285,7 +285,7 @@ bb:
   %scalar0 = load volatile half, ptr addrspace(3) %arg2, align 2
   %scalar1 = load volatile half, ptr addrspace(3) %arg2.gep, align 2
 
-  %vec.ins0 = insertelement <2 x half> undef, half %scalar0, i32 0
+  %vec.ins0 = insertelement <2 x half> poison, half %scalar0, i32 0
   %vec2 = insertelement <2 x half> %vec.ins0, half %scalar1, i32 1
   %neg.vec2 = fsub <2 x half> <half -0.0, half -0.0>, %vec2
 
@@ -710,7 +710,7 @@ bb:
   %hi = lshr i64 %i64, 16
   %elt1 = trunc i64 %hi to i16
 
-  %ins0 = insertelement <2 x i16> undef, i16 %elt1, i32 0
+  %ins0 = insertelement <2 x i16> poison, i16 %elt1, i32 0
   %ins1 = insertelement <2 x i16> %ins0, i16 %elt0, i32 1
   %result = add <2 x i16> %vec0, %ins1
   store <2 x i16> %result, ptr addrspace(1) %out, align 4
@@ -791,7 +791,7 @@ bb:
   %shl = shl i16 %scalar0, 1
   %shl.bc = bitcast i16 %shl to half
 
-  %insert0 = insertelement <2 x half> undef, half %shl.bc, i32 0
+  %insert0 = insertelement <2 x half> poison, half %shl.bc, i32 0
 
   %fadd = fadd <2 x half> %vec2, <half 2.0, half 2.0>
   %insert1 = shufflevector <2 x half> %fadd, <2 x half> %insert0, <2 x i32> <i32 1, i32 0>

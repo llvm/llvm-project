@@ -44,7 +44,7 @@ main_body:
   %tmp50 = bitcast float %tmp27 to i32
   %tmp51 = bitcast float %tmp48 to i32
   %tmp52 = bitcast float %tmp49 to i32
-  %tmp53 = insertelement <4 x i32> undef, i32 %tmp50, i32 0
+  %tmp53 = insertelement <4 x i32> poison, i32 %tmp50, i32 0
   %tmp54 = insertelement <4 x i32> %tmp53, i32 %tmp51, i32 1
   %tmp55 = insertelement <4 x i32> %tmp54, i32 %tmp52, i32 2
   %tmp55.cast = bitcast <4 x i32> %tmp55 to <4 x float>
@@ -63,7 +63,7 @@ main_body:
 
 IF26:                                             ; preds = %main_body
   %tmp71 = bitcast float %tmp27 to i32
-  %tmp72 = insertelement <4 x i32> undef, i32 %tmp71, i32 0
+  %tmp72 = insertelement <4 x i32> poison, i32 %tmp71, i32 0
   br label %LOOP
 
 ENDIF25:                                          ; preds = %IF29, %main_body
