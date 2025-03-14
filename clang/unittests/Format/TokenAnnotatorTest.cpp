@@ -3186,8 +3186,8 @@ TEST_F(TokenAnnotatorTest, UnderstandsAttributes) {
 }
 
 TEST_F(TokenAnnotatorTest, UnderstandsNullabilityAttributeMacros) {
-  // Under Google style, handles the Abseil macro aliases for the
-  // Clang nullability annotations.
+  // Under Google style, handles the Abseil macro aliases for the Clang
+  // nullability annotations.
   auto Style = getGoogleStyle(FormatStyle::LK_Cpp);
   auto Tokens = annotate("x = (foo* absl_nullable)*v;", Style);
   ASSERT_EQ(Tokens.size(), 11u) << Tokens;
