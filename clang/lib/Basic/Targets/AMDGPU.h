@@ -62,9 +62,7 @@ class LLVM_LIBRARY_VISIBILITY AMDGPUTargetInfo final : public TargetInfo {
   }
 
   /// Has fast fma f64
-  bool hasFastFMA() const {
-    return getTriple().isAMDGCN();
-  }
+  bool hasFastFMA() const { return getTriple().isAMDGCN(); }
 
   bool hasFMAF() const {
     return getTriple().isAMDGCN() ||

@@ -3408,8 +3408,7 @@ class OffloadingActionBuilder final {
 
       const ToolChain *HostTC = C.getSingleOffloadToolChain<Action::OFK_Host>();
       assert(HostTC && "No toolchain for host compilation.");
-      if (HostTC->getTriple().isNVPTX() ||
-          HostTC->getTriple().isAMDGCN()) {
+      if (HostTC->getTriple().isNVPTX() || HostTC->getTriple().isAMDGCN()) {
         // We do not support targeting NVPTX/AMDGCN for host compilation. Throw
         // an error and abort pipeline construction early so we don't trip
         // asserts that assume device-side compilation.
