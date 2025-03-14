@@ -1764,3 +1764,18 @@ llvm.mlir.alias external @y5 : i32 {
   llvm.return %0 : !llvm.ptr<4>
 }
 
+// -----
+
+llvm.func @invalid_match_sync_all(%val32: i32, %thread_mask: i32) {
+  // expected-error @below {{match.sync 'all' returns a two element struct with first element as i32 and second element as i1}}
+  %0 = nvvm.match.sync all %thread_mask, %val32 : i32 -> !llvm.struct<(i32, i8)>
+  llvm.return
+}
+
+// -----
+
+llvm.func @invalid_match_sync_any(%val32: i32, %thread_mask: i32) {
+  // expected-error @below {{match.sync 'any' returns an i32}}
+  %0 = nvvm.match.sync any %thread_mask, %val32 : i32 -> !llvm.struct<(i32, i1)>
+  llvm.return
+}
