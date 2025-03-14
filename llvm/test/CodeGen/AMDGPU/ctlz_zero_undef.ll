@@ -1827,7 +1827,7 @@ define amdgpu_kernel void @v_ctlz_zero_undef_i32_sel_eq_neg1_two_use(ptr addrspa
   %cmp = icmp eq i32 %val, 0
   %sel = select i1 %cmp, i32 -1, i32 %ctlz
   store volatile i32 %sel, ptr addrspace(1) %out
-  store volatile i1 %cmp, ptr addrspace(1) undef
+  store volatile i1 %cmp, ptr addrspace(1) poison
   ret void
 }
 

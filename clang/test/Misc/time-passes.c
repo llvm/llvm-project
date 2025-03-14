@@ -19,6 +19,5 @@
 // NPM:       InstCombinePass{{$}}
 // NPM-NOT:   InstCombinePass #
 // TIME: Total{{$}}
-// NPM: Pass execution timing report
 
 int foo(int x, int y) { return x + y; }

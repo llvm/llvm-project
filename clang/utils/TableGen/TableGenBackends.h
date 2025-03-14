@@ -88,6 +88,8 @@ void EmitClangAttrDocTable(const llvm::RecordKeeper &Records,
 
 void EmitClangBuiltins(const llvm::RecordKeeper &Records,
                        llvm::raw_ostream &OS);
+void EmitClangBuiltinTemplates(const llvm::RecordKeeper &Records,
+                               llvm::raw_ostream &OS);
 
 void EmitClangDiagsDefs(const llvm::RecordKeeper &Records,
                         llvm::raw_ostream &OS, const std::string &Component);

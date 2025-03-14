@@ -74,6 +74,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include "llvm/Transforms/Utils/LockstepReverseIterator.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
 #include <cassert>
@@ -421,11 +422,11 @@ static InstructionCost computeSpeculationCost(const User *I,
 /// After this function returns, Cost is increased by the cost of
 /// V plus its non-dominating operands.  If that cost is greater than
 /// Budget, false is returned and Cost is undefined.
-static bool dominatesMergePoint(Value *V, BasicBlock *BB, Instruction *InsertPt,
-                                SmallPtrSetImpl<Instruction *> &AggressiveInsts,
-                                InstructionCost &Cost, InstructionCost Budget,
-                                const TargetTransformInfo &TTI,
-                                AssumptionCache *AC, unsigned Depth = 0) {
+static bool dominatesMergePoint(
+    Value *V, BasicBlock *BB, Instruction *InsertPt,
+    SmallPtrSetImpl<Instruction *> &AggressiveInsts, InstructionCost &Cost,
+    InstructionCost Budget, const TargetTransformInfo &TTI, AssumptionCache *AC,
+    SmallPtrSetImpl<Instruction *> &ZeroCostInstructions, unsigned Depth = 0) {
   // It is possible to hit a zero-cost cycle (phi/gep instructions for example),
   // so limit the recursion depth.
   // TODO: While this recursion limit does prevent pathological behavior, it
@@ -463,7 +464,17 @@ static bool dominatesMergePoint(Value *V, BasicBlock *BB, Instruction *InsertPt,
   if (!isSafeToSpeculativelyExecute(I, InsertPt, AC))
     return false;
 
-  Cost += computeSpeculationCost(I, TTI);
+  // Overflow arithmetic instruction plus extract value are usually generated
+  // when a division is being replaced. But, in this case, the zero check may
+  // still be kept in the code. In that case it would be worth to hoist these
+  // two instruction out of the basic block. Let's treat this pattern as one
+  // single cheap instruction here!
+  WithOverflowInst *OverflowInst;
+  if (match(I, m_ExtractValue<1>(m_OneUse(m_WithOverflowInst(OverflowInst))))) {
+    ZeroCostInstructions.insert(OverflowInst);
+    Cost += 1;
+  } else if (!ZeroCostInstructions.contains(I))
+    Cost += computeSpeculationCost(I, TTI);
 
   // Allow exactly one instruction to be speculated regardless of its cost
   // (as long as it is safe to do so).
@@ -480,7 +491,7 @@ static bool dominatesMergePoint(Value *V, BasicBlock *BB, Instruction *InsertPt,
   // not take us over the cost threshold.
   for (Use &Op : I->operands())
     if (!dominatesMergePoint(Op, BB, InsertPt, AggressiveInsts, Cost, Budget,
-                             TTI, AC, Depth + 1))
+                             TTI, AC, ZeroCostInstructions, Depth + 1))
       return false;
   // Okay, it's safe to do this!  Remember this instruction.
   AggressiveInsts.insert(I);
@@ -1773,77 +1784,6 @@ static bool isSafeCheapLoadStore(const Instruction *I,
          getLoadStoreAlignment(I) < Value::MaximumAlignment;
 }
 
-namespace {
-
-// LockstepReverseIterator - Iterates through instructions
-// in a set of blocks in reverse order from the first non-terminator.
-// For example (assume all blocks have size n):
-//   LockstepReverseIterator I([B1, B2, B3]);
-//   *I-- = [B1[n], B2[n], B3[n]];
-//   *I-- = [B1[n-1], B2[n-1], B3[n-1]];
-//   *I-- = [B1[n-2], B2[n-2], B3[n-2]];
-//   ...
-class LockstepReverseIterator {
-  ArrayRef<BasicBlock *> Blocks;
-  SmallVector<Instruction *, 4> Insts;
-  bool Fail;
-
-public:
-  LockstepReverseIterator(ArrayRef<BasicBlock *> Blocks) : Blocks(Blocks) {
-    reset();
-  }
-
-  void reset() {
-    Fail = false;
-    Insts.clear();
-    for (auto *BB : Blocks) {
-      Instruction *Inst = BB->getTerminator();
-      for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-        Inst = Inst->getPrevNode();
-      if (!Inst) {
-        // Block wasn't big enough.
-        Fail = true;
-        return;
-      }
-      Insts.push_back(Inst);
-    }
-  }
-
-  bool isValid() const { return !Fail; }
-
-  void operator--() {
-    if (Fail)
-      return;
-    for (auto *&Inst : Insts) {
-      for (Inst = Inst->getPrevNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-        Inst = Inst->getPrevNode();
-      // Already at beginning of block.
-      if (!Inst) {
-        Fail = true;
-        return;
-      }
-    }
-  }
-
-  void operator++() {
-    if (Fail)
-      return;
-    for (auto *&Inst : Insts) {
-      for (Inst = Inst->getNextNode(); Inst && isa<DbgInfoIntrinsic>(Inst);)
-        Inst = Inst->getNextNode();
-      // Already at end of block.
-      if (!Inst) {
-        Fail = true;
-        return;
-      }
-    }
-  }
-
-  ArrayRef<Instruction *> operator*() const { return Insts; }
-};
-
-} // end anonymous namespace
-
 /// Hoist any common code in the successor blocks up into the block. This
 /// function guarantees that BB dominates all successors. If AllInstsEqOnly is
 /// given, only perform hoisting in case all successors blocks contain matching
@@ -1895,7 +1835,7 @@ bool SimplifyCFGOpt::hoistCommonCodeFromSuccessors(Instruction *TI,
     if (!AllSame)
       return false;
     if (AllSame) {
-      LockstepReverseIterator LRI(Succs);
+      LockstepReverseIterator<true> LRI(Succs);
       while (LRI.isValid()) {
         Instruction *I0 = (*LRI)[0];
         if (any_of(*LRI, [I0](Instruction *I) {
@@ -2499,7 +2439,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
 
   int ScanIdx = 0;
   SmallPtrSet<Value*,4> InstructionsToSink;
-  LockstepReverseIterator LRI(UnconditionalPreds);
+  LockstepReverseIterator<true> LRI(UnconditionalPreds);
   while (LRI.isValid() &&
          canSinkInstructions(*LRI, PHIOperands)) {
     LLVM_DEBUG(dbgs() << "SINK: instruction can be sunk: " << *(*LRI)[0]
@@ -2529,7 +2469,7 @@ static bool sinkCommonCodeFromPredecessors(BasicBlock *BB,
     // Okay, we *could* sink last ScanIdx instructions. But how many can we
     // actually sink before encountering instruction that is unprofitable to
     // sink?
-    auto ProfitableToSinkInstruction = [&](LockstepReverseIterator &LRI) {
+    auto ProfitableToSinkInstruction = [&](LockstepReverseIterator<true> &LRI) {
       unsigned NumPHIInsts = 0;
       for (Use &U : (*LRI)[0]->operands()) {
         auto It = PHIOperands.find(&U);
@@ -3106,8 +3046,7 @@ static Value *isSafeToSpeculateStore(Instruction *I, BasicBlock *BrBB,
         Value *Obj = getUnderlyingObject(StorePtr);
         bool ExplicitlyDereferenceableOnly;
         if (isWritableObject(Obj, ExplicitlyDereferenceableOnly) &&
-            !PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false,
-                                  /*StoreCaptures=*/true) &&
+            !PointerMayBeCaptured(Obj, /*ReturnCaptures=*/false) &&
             (!ExplicitlyDereferenceableOnly ||
              isDereferenceablePointer(StorePtr, StoreTy,
                                       LI->getDataLayout()))) {
@@ -3796,6 +3735,7 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
   // instructions.  While we are at it, keep track of the instructions
   // that need to be moved to the dominating block.
   SmallPtrSet<Instruction *, 4> AggressiveInsts;
+  SmallPtrSet<Instruction *, 2> ZeroCostInstructions;
   InstructionCost Cost = 0;
   InstructionCost Budget =
       TwoEntryPHINodeFoldingThreshold * TargetTransformInfo::TCC_Basic;
@@ -3813,9 +3753,11 @@ static bool foldTwoEntryPHINode(PHINode *PN, const TargetTransformInfo &TTI,
     }
 
     if (!dominatesMergePoint(PN->getIncomingValue(0), BB, DomBI,
-                             AggressiveInsts, Cost, Budget, TTI, AC) ||
+                             AggressiveInsts, Cost, Budget, TTI, AC,
+                             ZeroCostInstructions) ||
         !dominatesMergePoint(PN->getIncomingValue(1), BB, DomBI,
-                             AggressiveInsts, Cost, Budget, TTI, AC))
+                             AggressiveInsts, Cost, Budget, TTI, AC,
+                             ZeroCostInstructions))
       return Changed;
   }
 
@@ -5904,9 +5846,10 @@ static bool eliminateDeadSwitchCases(SwitchInst *SI, DomTreeUpdater *DTU,
   for (const auto &Case : SI->cases()) {
     auto *Successor = Case.getCaseSuccessor();
     if (DTU) {
-      if (!NumPerSuccessorCases.count(Successor))
+      auto [It, Inserted] = NumPerSuccessorCases.try_emplace(Successor);
+      if (Inserted)
         UniqueSuccessors.push_back(Successor);
-      ++NumPerSuccessorCases[Successor];
+      ++It->second;
     }
     const APInt &CaseVal = Case.getCaseValue()->getValue();
     if (Known.Zero.intersects(CaseVal) || !Known.One.isSubsetOf(CaseVal) ||
@@ -6953,9 +6896,10 @@ static bool switchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
     for (const auto &I : Results) {
       PHINode *PHI = I.first;
       Constant *Value = I.second;
-      if (!ResultLists.count(PHI))
+      auto [It, Inserted] = ResultLists.try_emplace(PHI);
+      if (Inserted)
         PHIs.push_back(PHI);
-      ResultLists[PHI].push_back(std::make_pair(CaseVal, Value));
+      It->second.push_back(std::make_pair(CaseVal, Value));
     }
   }
 
@@ -7611,10 +7555,10 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   // SwitchSuccWrapper.
   PhiPredIVs.reserve(Phis.size());
   for (PHINode *Phi : Phis) {
-    PhiPredIVs[Phi] =
-        SmallDenseMap<BasicBlock *, Value *, 8>(Phi->getNumIncomingValues());
+    auto &IVs =
+        PhiPredIVs.try_emplace(Phi, Phi->getNumIncomingValues()).first->second;
     for (auto &IV : Phi->incoming_values())
-      PhiPredIVs[Phi].insert({Phi->getIncomingBlock(IV), IV.get()});
+      IVs.insert({Phi->getIncomingBlock(IV), IV.get()});
   }
 
   // Build a set such that if the SwitchSuccWrapper exists in the set and

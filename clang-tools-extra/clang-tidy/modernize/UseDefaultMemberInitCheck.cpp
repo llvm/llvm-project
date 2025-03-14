@@ -194,6 +194,8 @@ void UseDefaultMemberInitCheck::storeOptions(
 }
 
 void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
+  auto ConstExpRef = varDecl(anyOf(isConstexpr(), isStaticStorageClass()));
+
   auto InitBase =
       anyOf(stringLiteral(), characterLiteral(), integerLiteral(),
             unaryOperator(hasAnyOperatorName("+", "-"),
@@ -202,7 +204,7 @@ void UseDefaultMemberInitCheck::registerMatchers(MatchFinder *Finder) {
             unaryOperator(hasAnyOperatorName("+", "-"),
                           hasUnaryOperand(floatLiteral())),
             cxxBoolLiteral(), cxxNullPtrLiteralExpr(), implicitValueInitExpr(),
-            declRefExpr(to(enumConstantDecl())));
+            declRefExpr(to(anyOf(enumConstantDecl(), ConstExpRef))));
 
   auto Init =
       anyOf(initListExpr(anyOf(allOf(initCountIs(1), hasInit(0, InitBase)),

@@ -5495,8 +5495,7 @@ public:
       if (process) {
         StreamSP output_stream_sp = result.GetImmediateOutputStream();
         if (!output_stream_sp)
-          output_stream_sp =
-              StreamSP(m_interpreter.GetDebugger().GetAsyncOutputStream());
+          output_stream_sp = m_interpreter.GetDebugger().GetAsyncOutputStream();
         result.SetImmediateOutputStream(output_stream_sp);
 
         const uint32_t num_packets =

@@ -412,8 +412,8 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; PPC32-NEXT:    not 4, 4
 ; PPC32-NEXT:    not 3, 3
 ; PPC32-NEXT:    subc 4, 8, 4
-; PPC32-NEXT:    subfe 3, 3, 7
 ; PPC32-NEXT:    not 6, 6
+; PPC32-NEXT:    subfe 3, 3, 7
 ; PPC32-NEXT:    not 5, 5
 ; PPC32-NEXT:    subc 6, 10, 6
 ; PPC32-NEXT:    subfe 5, 5, 9

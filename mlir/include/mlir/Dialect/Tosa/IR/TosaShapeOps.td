@@ -30,6 +30,10 @@ def TosaShapeOperator : NativeOpTrait<"TosaShapeOperator"> {
 
 class Tosa_ShapeOp<string mnemonic, list<Trait> traits = []>
     : Tosa_Op<mnemonic, !listconcat(traits, [TosaShapeOperator, Pure])> {
+  list<Availability> availability = [
+    Profile<[Tosa_PRO_INT, Tosa_PRO_FP]>,
+    Extension<[]>,
+  ];
 
   let assemblyFormat =
       "operands attr-dict `:` functional-type(operands, results)";
@@ -63,11 +67,11 @@ def Tosa_ConstShapeOp : Tosa_ShapeOp<"const_shape", [ConstantLike, Pure]> {
 
     ```mlir
     // Generic form
-    %out = "tosa.const_shape"() {value = dense<0> : tensor<4xindex>} : () -> !tosa.shape<4>
+    %out = "tosa.const_shape"() {values = dense<0> : tensor<4xindex>} : () -> !tosa.shape<4>
     ```
   }];
 
-  let arguments = (ins IndexElementsAttr : $value);
+  let arguments = (ins IndexElementsAttr : $values);
 
   let results = (outs Tosa_Shape : $output);
 

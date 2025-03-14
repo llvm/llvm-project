@@ -10,8 +10,7 @@
 ! CHECK:         %[[VAL_3:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK-DAG:         %[[VAL_4:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<i32>) -> !fir.ref<i32>
 ! CHECK-DAG:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<i32>) -> i64
-! CHECK-DAG:         %[[VAL_6:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_6]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK-DAG:         %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_3]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         fir.store %[[VAL_5]] to %[[VAL_7]] : !fir.ref<i64>
 ! CHECK:       }
 
@@ -29,8 +28,7 @@ end
 ! CHECK:         %[[VAL_3:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK-DAG:         %[[VAL_4:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.char<1,5>>) -> !fir.ref<!fir.char<1,5>>
 ! CHECK-DAG:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.char<1,5>>) -> i64
-! CHECK-DAG:         %[[VAL_6:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_3]], %[[VAL_6]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK-DAG:         %[[VAL_7:.*]] = fir.coordinate_of %[[VAL_3]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         fir.store %[[VAL_5]] to %[[VAL_7]] : !fir.ref<i64>
 ! CHECK:       }
 
@@ -62,8 +60,7 @@ end
 ! CHECK:         %[[VAL_17:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK-DAG:         %[[VAL_18:.*]] = fir.box_addr %[[VAL_16]] : (!fir.box<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
 ! CHECK-DAG:         %[[VAL_19:.*]] = fir.convert %[[VAL_18]] : (!fir.ref<!fir.char<1,?>>) -> i64
-! CHECK-DAG:         %[[VAL_20:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_21:.*]] = fir.coordinate_of %[[VAL_17]], %[[VAL_20]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK-DAG:         %[[VAL_21:.*]] = fir.coordinate_of %[[VAL_17]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         fir.store %[[VAL_19]] to %[[VAL_21]] : !fir.ref<i64>
 ! CHECK:       }
 
@@ -83,8 +80,7 @@ end
 ! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK-DAG:         %[[VAL_6:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.array<10xi32>>) -> !fir.ref<!fir.array<10xi32>>
 ! CHECK-DAG:         %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.array<10xi32>>) -> i64
-! CHECK-DAG:         %[[VAL_8:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_5]], %[[VAL_8]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK-DAG:         %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_5]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         fir.store %[[VAL_7]] to %[[VAL_9]] : !fir.ref<i64>
 ! CHECK:       }
 
@@ -104,8 +100,7 @@ end
 ! CHECK:         %[[VAL_5:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK-DAG:         %[[VAL_6:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<!fir.array<2x!fir.char<1,5>>>) -> !fir.ref<!fir.array<2x!fir.char<1,5>>>
 ! CHECK-DAG:         %[[VAL_7:.*]] = fir.convert %[[VAL_6]] : (!fir.ref<!fir.array<2x!fir.char<1,5>>>) -> i64
-! CHECK-DAG:         %[[VAL_8:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_5]], %[[VAL_8]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK-DAG:         %[[VAL_9:.*]] = fir.coordinate_of %[[VAL_5]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         fir.store %[[VAL_7]] to %[[VAL_9]] : !fir.ref<i64>
 ! CHECK:       }
 
@@ -127,8 +122,7 @@ end
 ! CHECK:         %[[VAL_7:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK-DAG:         %[[VAL_8:.*]] = fir.box_addr %[[VAL_6]] : (!fir.box<i32>) -> !fir.ref<i32>
 ! CHECK-DAG:         %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<i32>) -> i64
-! CHECK-DAG:         %[[VAL_10:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_11:.*]] = fir.coordinate_of %[[VAL_7]], %[[VAL_10]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK-DAG:         %[[VAL_11:.*]] = fir.coordinate_of %[[VAL_7]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         fir.store %[[VAL_9]] to %[[VAL_11]] : !fir.ref<i64>
 ! CHECK:       }
 
@@ -158,8 +152,7 @@ end
 ! CHECK:         %[[VAL_15:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK-DAG:         %[[VAL_16:.*]] = fir.box_addr %[[VAL_14]] : (!fir.box<!fir.array<?xi32>>) -> !fir.ref<!fir.array<?xi32>>
 ! CHECK-DAG:         %[[VAL_17:.*]] = fir.convert %[[VAL_16]] : (!fir.ref<!fir.array<?xi32>>) -> i64
-! CHECK-DAG:         %[[VAL_18:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_19:.*]] = fir.coordinate_of %[[VAL_15]], %[[VAL_18]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK-DAG:         %[[VAL_19:.*]] = fir.coordinate_of %[[VAL_15]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         fir.store %[[VAL_17]] to %[[VAL_19]] : !fir.ref<i64>
 ! CHECK:       }
 
@@ -196,15 +189,12 @@ end
 ! CHECK:         %[[VAL_14:.*]] = fir.load %[[VAL_1:.*]] : !fir.ref<!fir.ptr<i32>>
 ! CHECK:         %[[VAL_15:.*]] = fir.embox %[[VAL_14:.*]] : (!fir.ptr<i32>) -> !fir.box<i32>
 ! CHECK:         %[[VAL_16:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:         %[[VAL_17:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:         %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_16:.*]], %[[VAL_17:.*]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:         %[[VAL_18:.*]] = fir.coordinate_of %[[VAL_16:.*]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_19:.*]] = fir.box_addr %[[VAL_15:.*]] : (!fir.box<i32>) -> !fir.ref<i32>
 ! CHECK:         %[[VAL_20:.*]] = fir.convert %[[VAL_19:.*]] : (!fir.ref<i32>) -> i64
 ! CHECK:         fir.store %[[VAL_20:.*]] to %[[VAL_18:.*]] : !fir.ref<i64>
-! CHECK:         %[[VAL_21:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:         %[[VAL_22:.*]] = fir.coordinate_of %[[VAL_16:.*]], %[[VAL_21:.*]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
-! CHECK:         %[[VAL_23:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK:         %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_3:.*]], %[[VAL_23:.*]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK:         %[[VAL_22:.*]] = fir.coordinate_of %[[VAL_16:.*]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
+! CHECK:         %[[VAL_24:.*]] = fir.coordinate_of %[[VAL_3:.*]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         %[[VAL_25:.*]] = fir.load %[[VAL_22:.*]] : !fir.ref<i64>
 ! CHECK:         fir.store %[[VAL_25:.*]] to %[[VAL_24:.*]] : !fir.ref<i64>
 ! CHECK:         return
@@ -227,8 +217,7 @@ end
 ! CHECK:         %[[VAL_10:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK-DAG:         %[[VAL_11:.*]] = fir.box_addr %[[VAL_9]] : (!fir.box<i32>) -> !fir.ref<i32>
 ! CHECK-DAG:         %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (!fir.ref<i32>) -> i64
-! CHECK-DAG:         %[[VAL_13:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_10]], %[[VAL_13]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK-DAG:         %[[VAL_14:.*]] = fir.coordinate_of %[[VAL_10]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         fir.store %[[VAL_12]] to %[[VAL_14]] : !fir.ref<i64>
 ! CHECK:       }
 
@@ -247,8 +236,7 @@ end
 ! CHECK:         %[[VAL_9:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK-DAG:         %[[VAL_10:.*]] = fir.box_addr %[[VAL_8:.*]] : (!fir.box<!fir.type<_QFc_loc_derived_typeTt{i:i32}>>) -> !fir.ref<!fir.type<_QFc_loc_derived_typeTt{i:i32}>>
 ! CHECK-DAG:         %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (!fir.ref<!fir.type<_QFc_loc_derived_typeTt{i:i32}>>) -> i64
-! CHECK-DAG:         %[[VAL_12:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_9]], %[[VAL_12]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK-DAG:         %[[VAL_13:.*]] = fir.coordinate_of %[[VAL_9]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         fir.store %[[VAL_11]] to %[[VAL_13]] : !fir.ref<i64>
 ! CHECK:       }
 
@@ -268,8 +256,7 @@ end
 ! CHECK:         %[[VAL_31:.*]] = fir.alloca !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
 ! CHECK-DAG:         %[[VAL_32:.*]] = fir.box_addr %[[VAL_30:.*]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>) -> !fir.ptr<!fir.array<?xi32>>
 ! CHECK-DAG:         %[[VAL_33:.*]] = fir.convert %[[VAL_32]] : (!fir.ptr<!fir.array<?xi32>>) -> i64
-! CHECK-DAG:         %[[VAL_34:.*]] = fir.field_index __address, !fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>
-! CHECK-DAG:         %[[VAL_35:.*]] = fir.coordinate_of %[[VAL_31]], %[[VAL_34]] : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>, !fir.field) -> !fir.ref<i64>
+! CHECK-DAG:         %[[VAL_35:.*]] = fir.coordinate_of %[[VAL_31]], __address : (!fir.ref<!fir.type<_QM__fortran_builtinsT__builtin_c_ptr{__address:i64}>>) -> !fir.ref<i64>
 ! CHECK:         fir.store %[[VAL_33]] to %[[VAL_35]] : !fir.ref<i64>
 ! CHECK:       }
 

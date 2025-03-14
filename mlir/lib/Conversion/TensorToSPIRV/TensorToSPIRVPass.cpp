@@ -29,7 +29,7 @@ namespace {
 /// A pass converting MLIR Tensor operations into the SPIR-V dialect.
 class ConvertTensorToSPIRVPass
     : public impl::ConvertTensorToSPIRVPassBase<ConvertTensorToSPIRVPass> {
-  using ConvertTensorToSPIRVPassBase::ConvertTensorToSPIRVPassBase;
+  using Base::Base;
 
   void runOnOperation() override {
     MLIRContext *context = &getContext();

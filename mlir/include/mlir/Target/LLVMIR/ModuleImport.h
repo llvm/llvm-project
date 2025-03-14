@@ -248,6 +248,13 @@ public:
   LoopAnnotationAttr translateLoopAnnotationAttr(const llvm::MDNode *node,
                                                  Location loc) const;
 
+  /// Returns the dereferenceable attribute that corresponds to the given LLVM
+  /// dereferenceable or dereferenceable_or_null metadata `node`. `kindID`
+  /// specifies the kind of the metadata node (dereferenceable or
+  /// dereferenceable_or_null).
+  FailureOr<DereferenceableAttr>
+  translateDereferenceableAttr(const llvm::MDNode *node, unsigned kindID);
+
   /// Returns the alias scope attributes that map to the alias scope nodes
   /// starting from the metadata `node`. Returns failure, if any of the
   /// attributes cannot be found.
@@ -271,6 +278,11 @@ public:
                             ArrayRef<StringLiteral> immArgAttrNames,
                             SmallVectorImpl<Value> &valuesOut,
                             SmallVectorImpl<NamedAttribute> &attrsOut);
+
+  /// Converts the parameter and result attributes in `argsAttr` and `resAttr`
+  /// and add them to the `callOp`.
+  void convertParameterAttributes(llvm::CallBase *call, ArrayAttr &argsAttr,
+                                  ArrayAttr &resAttr, OpBuilder &builder);
 
 private:
   /// Clears the accumulated state before processing a new region.
@@ -350,7 +362,8 @@ private:
   DictionaryAttr convertParameterAttribute(llvm::AttributeSet llvmParamAttrs,
                                            OpBuilder &builder);
   /// Converts the parameter and result attributes attached to `call` and adds
-  /// them to the `callOp`.
+  /// them to the `callOp`. Implemented in terms of the the public definition of
+  /// convertParameterAttributes.
   void convertParameterAttributes(llvm::CallBase *call, CallOpInterface callOp,
                                   OpBuilder &builder);
   /// Converts the attributes attached to `inst` and adds them to the `op`.

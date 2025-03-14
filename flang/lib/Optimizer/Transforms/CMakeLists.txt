@@ -29,6 +29,9 @@ add_flang_library(FIRTransforms
   VScaleAttr.cpp
   FunctionAttr.cpp
   DebugTypeGenerator.cpp
+  SetRuntimeCallAttributes.cpp
+  GenRuntimeCallsForTest.cpp
+  SimplifyFIROperations.cpp
 
   DEPENDS
   CUFAttrs

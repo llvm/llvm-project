@@ -12,6 +12,7 @@ set(LLVM_LINK_COMPONENTS
   MCDisassembler
   Support
   Target
+  TargetParser
   )
 
 set(SOURCES

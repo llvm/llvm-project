@@ -661,8 +661,7 @@ createRegInfo(const object::ObjectFile &Obj) {
   TT.setVendor(Triple::UnknownVendor);
   TT.setOS(Triple::UnknownOS);
   std::string TargetLookupError;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(TT.str(), TargetLookupError);
+  const Target *TheTarget = TargetRegistry::lookupTarget(TT, TargetLookupError);
   if (!TargetLookupError.empty())
     return nullptr;
   MCRegInfo.reset(TheTarget->createMCRegInfo(TT.str()));

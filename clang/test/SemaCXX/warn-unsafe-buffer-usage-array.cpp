@@ -18,7 +18,9 @@ void foo2(unsigned idx) {
 
 struct Foo {
   int member_buffer[10];
+  int x;
 };
+
 void foo2(Foo& f, unsigned idx) {
   f.member_buffer[idx] = 0; // expected-warning{{unsafe buffer access}}
 }
@@ -31,6 +33,37 @@ void constant_idx_safe(unsigned idx) {
 void constant_idx_safe0(unsigned idx) {
   int buffer[10];
   buffer[0] = 0;
+}
+
+int array[10]; // expected-warning {{'array' is an unsafe buffer that does not perform bounds checks}}
+
+void masked_idx1(unsigned long long idx, Foo f) {
+  // Bitwise and operation
+  array[idx & 5] = 10; // no-warning
+  array[5 &idx] = 12; // no-warning
+  array[idx & 11 & 5] = 3; // no warning
+  array[idx & 11] = 20; // expected-note{{used in buffer access here}}
+  array[idx &=5]; // expected-note{{used in buffer access here}}
+  array[f.x & 5]; // no-warning
+  array[5 & f.x]; // no-warning
+  array[f.x & (-5)]; // expected-note{{used in buffer access here}}
+}
+
+typedef unsigned long long uint64_t;
+typedef unsigned int uint32_t;
+typedef unsigned char uint8_t;
+
+void type_conversions(uint64_t idx1, uint32_t idx2, uint8_t idx3) {
+  array[(uint32_t)idx1 & 3];
+  array[idx2 & 3];
+  array[idx3 & 3];
+}
+
+int array2[5]; // expected-warning {{'array2' is an unsafe buffer that does not perform bounds checks}}
+
+void masked_idx_safe(unsigned long long idx) {
+  array2[6 & 5]; // no warning
+  array2[6 & idx & (idx + 1) & 5]; // expected-note{{used in buffer access here}}
 }
 
 void constant_idx_unsafe(unsigned idx) {

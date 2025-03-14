@@ -28,7 +28,7 @@ namespace {
 class ConvertControlFlowToSPIRVPass final
     : public impl::ConvertControlFlowToSPIRVPassBase<
           ConvertControlFlowToSPIRVPass> {
-  using ConvertControlFlowToSPIRVPassBase::ConvertControlFlowToSPIRVPassBase;
+  using Base::Base;
   void runOnOperation() override;
 };
 } // namespace

@@ -88,9 +88,7 @@ void VirtRegMap::assignVirt2Phys(Register virtReg, MCRegister physReg) {
   assert(!Virt2PhysMap[virtReg] &&
          "attempt to assign physical register to already mapped "
          "virtual register");
-  assert((!getRegInfo().isReserved(physReg) ||
-          MF->getProperties().hasProperty(
-              MachineFunctionProperties::Property::FailedRegAlloc)) &&
+  assert(!getRegInfo().isReserved(physReg) &&
          "Attempt to map virtReg to a reserved physReg");
   Virt2PhysMap[virtReg] = physReg;
 }
@@ -617,10 +615,7 @@ void VirtRegRewriter::rewrite() {
         assert(Register(PhysReg).isPhysical());
 
         RewriteRegs.insert(PhysReg);
-        assert((!MRI->isReserved(PhysReg) ||
-                MF->getProperties().hasProperty(
-                    MachineFunctionProperties::Property::FailedRegAlloc)) &&
-               "Reserved register assignment");
+        assert(!MRI->isReserved(PhysReg) && "Reserved register assignment");
 
         // Preserve semantics of sub-register operands.
         unsigned SubReg = MO.getSubReg();

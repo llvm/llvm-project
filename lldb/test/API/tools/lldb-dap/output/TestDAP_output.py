@@ -16,6 +16,7 @@ class TestDAP_output(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(
             program,
+            disconnectAutomatically=False,
             exitCommands=[
                 # Ensure that output produced by lldb itself is not consumed by the OutputRedirector.
                 "?script print('out\\0\\0', end='\\r\\n', file=sys.stdout)",
@@ -32,6 +33,9 @@ class TestDAP_output(lldbdap_testcase.DAPTestCaseBase):
         self.assertTrue(output and len(output) > 0, "expect program stdout")
 
         self.continue_to_exit()
+
+        # Disconnecting from the server to ensure any pending IO is flushed.
+        self.dap_server.request_disconnect()
 
         output += self.get_stdout(timeout=lldbdap_testcase.DAPTestCaseBase.timeoutval)
         self.assertTrue(output and len(output) > 0, "expect program stdout")

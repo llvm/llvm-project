@@ -31,6 +31,7 @@ REGION_PASS("bottom-up-vec", ::llvm::sandboxir::BottomUpVec)
 #endif
 
 FUNCTION_PASS_WITH_PARAMS("seed-collection", ::llvm::sandboxir::SeedCollection)
+FUNCTION_PASS_WITH_PARAMS("regions-from-bbs", ::llvm::sandboxir::RegionsFromBBs)
 FUNCTION_PASS_WITH_PARAMS("regions-from-metadata", ::llvm::sandboxir::RegionsFromMetadata)
 
 #undef FUNCTION_PASS_WITH_PARAMS

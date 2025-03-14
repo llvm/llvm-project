@@ -1263,20 +1263,17 @@ void Intrinsic::emitReverseVariable(Variable &Dest, Variable &Src) {
 
     for (unsigned K = 0; K < Dest.getType().getNumVectors(); ++K) {
       OS << "  " << Dest.getName() << ".val[" << K << "] = "
-         << "__builtin_shufflevector("
-         << Src.getName() << ".val[" << K << "], "
-         << Src.getName() << ".val[" << K << "]";
-      for (int J = Dest.getType().getNumElements() - 1; J >= 0; --J)
-        OS << ", " << J;
-      OS << ");";
+         << "__builtin_shufflevector(" << Src.getName() << ".val[" << K << "], "
+         << Src.getName() << ".val[" << K << "], __lane_reverse_"
+         << Dest.getType().getSizeInBits() << "_"
+         << Dest.getType().getElementSizeInBits() << ");";
       emitNewLine();
     }
   } else {
-    OS << "  " << Dest.getName()
-       << " = __builtin_shufflevector(" << Src.getName() << ", " << Src.getName();
-    for (int J = Dest.getType().getNumElements() - 1; J >= 0; --J)
-      OS << ", " << J;
-    OS << ");";
+    OS << "  " << Dest.getName() << " = __builtin_shufflevector("
+       << Src.getName() << ", " << Src.getName() << ", __lane_reverse_"
+       << Dest.getType().getSizeInBits() << "_"
+       << Dest.getType().getElementSizeInBits() << ");";
     emitNewLine();
   }
 }
@@ -1877,10 +1874,11 @@ std::string Intrinsic::generate() {
 
   OS << "#else\n";
 
-  // Big endian intrinsics are more complex. The user intended these
-  // intrinsics to operate on a vector "as-if" loaded by (V)LDR,
-  // but we load as-if (V)LD1. So we should swap all arguments and
-  // swap the return value too.
+  // Big endian intrinsics are more complex. The user intended these intrinsics
+  // to operate on a vector "as-if" loaded by LDR (for AArch64), VLDR (for
+  // 64-bit vectors on AArch32), or VLDM (for 128-bit vectors on AArch32) but
+  // we load as-if LD1 (for AArch64) or VLD1 (for AArch32). So we should swap
+  // all arguments and swap the return value too.
   //
   // If we call sub-intrinsics, we should call a version that does
   // not re-swap the arguments!
@@ -2433,6 +2431,31 @@ void NeonEmitter::run(raw_ostream &OS) {
 
   OS << "#define __ai static __inline__ __attribute__((__always_inline__, "
         "__nodebug__))\n\n";
+
+  // Shufflevector arguments lists for endian-swapping vectors for big-endian
+  // targets. For AArch64, we need to reverse every lane in the vector, but for
+  // AArch32 we need to reverse the lanes within each 64-bit chunk of the
+  // vector. The naming convention here is __lane_reverse_<n>_<m>, where <n> is
+  // the length of the vector in bits, and <m> is length of each lane in bits.
+  OS << "#if !defined(__LITTLE_ENDIAN__)\n";
+  OS << "#if defined(__aarch64__) || defined(__arm64ec__)\n";
+  OS << "#define __lane_reverse_64_32 1,0\n";
+  OS << "#define __lane_reverse_64_16 3,2,1,0\n";
+  OS << "#define __lane_reverse_64_8 7,6,5,4,3,2,1,0\n";
+  OS << "#define __lane_reverse_128_64 1,0\n";
+  OS << "#define __lane_reverse_128_32 3,2,1,0\n";
+  OS << "#define __lane_reverse_128_16 7,6,5,4,3,2,1,0\n";
+  OS << "#define __lane_reverse_128_8 15,14,13,12,11,10,9,8,7,6,5,4,3,2,1,0\n";
+  OS << "#else\n";
+  OS << "#define __lane_reverse_64_32 1,0\n";
+  OS << "#define __lane_reverse_64_16 3,2,1,0\n";
+  OS << "#define __lane_reverse_64_8 7,6,5,4,3,2,1,0\n";
+  OS << "#define __lane_reverse_128_64 0,1\n";
+  OS << "#define __lane_reverse_128_32 1,0,3,2\n";
+  OS << "#define __lane_reverse_128_16 3,2,1,0,7,6,5,4\n";
+  OS << "#define __lane_reverse_128_8 7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8\n";
+  OS << "#endif\n";
+  OS << "#endif\n";
 
   SmallVector<Intrinsic *, 128> Defs;
   for (const Record *R : Records.getAllDerivedDefinitions("Inst"))
