@@ -47,7 +47,7 @@ else:
 
 end:
   %r = phi float [ %v.if, %if ], [ %v.else, %else ]
-  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %r, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %r, ptr addrspace(8) poison, i32 0, i32 0, i32 0)
   ret void
 }
 
