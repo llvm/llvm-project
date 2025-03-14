@@ -719,6 +719,9 @@ class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
                          regList> {
   let IsVRegClass = 1;
   let VLMul = Vlmul;
+
+  // Prefer to allocate high LMUL registers first.
+  let AllocationPriority = !if(!gt(Vlmul, 1), Vlmul, 0);
 }
 
 defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
