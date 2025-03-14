@@ -534,8 +534,10 @@ for.cond.cleanup:
 ; equal to the increment of the %i.
 ;
 ; int j = 0;
-; for (unsigned int i=1; i<N; i++)
+; for (int i=1; i<N; i++) {
 ;   a[j] = 10;
+;   j = i;
+; }
 ;
 define void @induction_undesirable_peel2(ptr noundef %a) {
 ; CHECK-LABEL: @induction_undesirable_peel2(
