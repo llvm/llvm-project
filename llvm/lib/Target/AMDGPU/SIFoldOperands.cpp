@@ -1484,7 +1484,7 @@ static bool getBitsReadByInst(unsigned Opc, unsigned &NumBitsRead,
 }
 
 static bool isAndBitMaskRedundant(MachineInstr &MI, unsigned BitsNeeded,
-                                        unsigned &SrcOp) {
+                                  unsigned &SrcOp) {
   MachineOperand *RegOp = &MI.getOperand(1);
   MachineOperand *ImmOp = &MI.getOperand(2);
 
@@ -1517,9 +1517,10 @@ bool SIFoldOperandsImpl::tryFoldBitMask(MachineInstr &MI) const {
 
   MachineInstr *OpDef = MRI->getVRegDef(OpReg);
   if (!OpDef)
-    return false ;
+    return false;
 
-  LLVM_DEBUG(dbgs() << "tryFoldBitMask: " << MI << "\tOpIdx:" << OpIdx << ", NumBitsRead:" << NumBitsRead << "\n");
+  LLVM_DEBUG(dbgs() << "tryFoldBitMask: " << MI << "\tOpIdx:" << OpIdx
+                    << ", NumBitsRead:" << NumBitsRead << "\n");
 
   unsigned ReplaceWith;
   switch (OpDef->getOpcode()) {
