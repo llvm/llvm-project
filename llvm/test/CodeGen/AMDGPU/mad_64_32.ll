@@ -382,6 +382,7 @@ define i128 @mad_i64_i32_sextops_i32_i128(i32 %arg0, i32 %arg1, i128 %arg2) #0 {
 ; GFX12-NEXT:    v_mad_co_u64_u32 v[8:9], null, v13, v14, v[8:9]
 ; GFX12-NEXT:    v_add_co_u32 v8, vcc_lo, v8, v0
 ; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v9, vcc_lo, v9, v1, vcc_lo
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v6, v2
 ; GFX12-NEXT:    s_wait_alu 0xfffd
@@ -1157,7 +1158,7 @@ define i64 @mad_i64_i32_thrice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3, i64 %
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mad_co_i64_i32 v[0:1], null, v0, v1, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
 ; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v1, v3, vcc_lo
@@ -1248,10 +1249,11 @@ define i64 @mad_i64_i32_secondary_use(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_mad_co_i64_i32 v[0:1], null, v0, v1, 0
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_3) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_u32 v2, vcc_lo, v0, v2
 ; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v3, vcc_lo, v1, v3, vcc_lo
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_xor_b32_e32 v0, v2, v0
 ; GFX12-NEXT:    v_xor_b32_e32 v1, v3, v1
 ; GFX12-NEXT:    s_wait_alu 0xfffd
@@ -1796,9 +1798,11 @@ define i64 @lshr_mad_i64_negative_3(i64 %arg0) #0 {
 ; GFX12-NEXT:    v_and_b32_e32 v2, 0xfffffc00, v2
 ; GFX12-NEXT:    v_sub_co_u32 v0, vcc_lo, v0, v2
 ; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-NEXT:    v_sub_co_ci_u32_e32 v1, vcc_lo, v1, v3, vcc_lo
 ; GFX12-NEXT:    v_add_co_u32 v0, vcc_lo, v0, 1
 ; GFX12-NEXT:    s_wait_alu 0xfffd
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, 0, v1, vcc_lo
 ; GFX12-NEXT:    s_wait_alu 0xfffd
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]

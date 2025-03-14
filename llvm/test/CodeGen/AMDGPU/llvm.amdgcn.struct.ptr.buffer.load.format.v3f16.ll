@@ -97,8 +97,8 @@ define amdgpu_gs void @main(ptr addrspace(8) %arg, i32 %arg1) {
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX11-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX11-NEXT:    buffer_load_d16_format_xyz v[5:6], v4, s[4:7], 0 idxen
 ; GFX11-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
