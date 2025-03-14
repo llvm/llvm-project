@@ -1,5 +1,4 @@
 // REQUIRES: static-libs
-// REQUIRES: disable_symbolizer_path_search
 
 // RUN: %clangxx %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
