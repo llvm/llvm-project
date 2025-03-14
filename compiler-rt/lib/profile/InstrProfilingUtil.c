@@ -283,6 +283,7 @@ static int is_local_filesystem(int Fd) {
   int Tries = 3;
   while (Tries--) {
     Buf = malloc(BufSize);
+    // mntctl returns -1 if `Buf` is `NULL`.
     Ret = mntctl(MCTL_QUERY, BufSize, Buf);
     if (Ret != 0)
       break;
