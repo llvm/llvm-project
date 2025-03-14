@@ -3418,8 +3418,8 @@ void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,
                                   PathDiagnosticLocation Loc,
                                   ArrayRef<SourceRange> Ranges,
                                   ArrayRef<FixItHint> Fixits) {
-  EmitBasicReport(DeclWithIssue, Checker->getCheckerName(), Name, Category, Str,
-                  Loc, Ranges, Fixits);
+  EmitBasicReport(DeclWithIssue, Checker->getName(), Name, Category, Str, Loc,
+                  Ranges, Fixits);
 }
 
 void BugReporter::EmitBasicReport(const Decl *DeclWithIssue,

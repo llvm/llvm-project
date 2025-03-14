@@ -277,6 +277,12 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
   llvm_unreachable("subclasses should implement computeCost");
 }
 
+bool VPRecipeBase::isPhi() const {
+  return (getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC) ||
+         (isa<VPInstruction>(this) &&
+          cast<VPInstruction>(this)->getOpcode() == Instruction::PHI);
+}
+
 InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
@@ -418,6 +424,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
     return true;
   switch (Opcode) {
   case Instruction::ICmp:
+  case Instruction::PHI:
   case Instruction::Select:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
@@ -466,6 +473,17 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
     Value *B = State.get(getOperand(1), OnlyFirstLaneUsed);
     return Builder.CreateCmp(getPredicate(), A, B, Name);
+  }
+  case Instruction::PHI: {
+    assert(getParent() ==
+               getParent()->getPlan()->getVectorLoopRegion()->getEntry() &&
+           "VPInstructions with PHI opcodes must be used for header phis only "
+           "at the moment");
+    BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+    Value *Start = State.get(getOperand(0), VPLane(0));
+    PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
+    Phi->addIncoming(Start, VectorPH);
+    return Phi;
   }
   case Instruction::Select: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
@@ -771,7 +789,8 @@ bool VPInstruction::isVectorToScalar() const {
 }
 
 bool VPInstruction::isSingleScalar() const {
-  return getOpcode() == VPInstruction::ResumePhi;
+  return getOpcode() == VPInstruction::ResumePhi ||
+         getOpcode() == Instruction::PHI;
 }
 
 #if !defined(NDEBUG)
@@ -849,6 +868,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   switch (getOpcode()) {
   default:
     return false;
+  case Instruction::PHI:
+    return true;
   case Instruction::ICmp:
   case Instruction::Select:
   case Instruction::Or:
@@ -3292,11 +3313,12 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
-    auto *IVR = cast<VPHeaderPHIRecipe>(&getParent()
-                                             ->getPlan()
-                                             ->getVectorLoopRegion()
-                                             ->getEntryBasicBlock()
-                                             ->front());
+    auto *IVR = getParent()
+                    ->getPlan()
+                    ->getVectorLoopRegion()
+                    ->getEntryBasicBlock()
+                    ->front()
+                    .getVPSingleValue();
     PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, /*IsScalar*/ true));
     NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
                                     CanonicalIV->getIterator());
@@ -3660,25 +3682,6 @@ void VPEVLBasedIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent << "EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI ";
 
-  printAsOperand(O, SlotTracker);
-  O << " = phi ";
-  printOperands(O, SlotTracker);
-}
-#endif
-
-void VPScalarPHIRecipe::execute(VPTransformState &State) {
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Value *Start = State.get(getStartValue(), VPLane(0));
-  PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
-  Phi->addIncoming(Start, VectorPH);
-  Phi->setDebugLoc(getDebugLoc());
-  State.set(this, Phi, /*IsScalar=*/true);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPScalarPHIRecipe::print(raw_ostream &O, const Twine &Indent,
-                              VPSlotTracker &SlotTracker) const {
-  O << Indent << "SCALAR-PHI ";
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);

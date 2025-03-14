@@ -2468,7 +2468,6 @@ private:
                         const ArraySubscriptExpr *ASE = nullptr,
                         bool AllowOnePastEnd = true, bool IndexNegated = false);
   void CheckArrayAccess(const Expr *E);
-  void CheckVectorAccess(const Expr *BaseExpr, const Expr *IndexExpr);
 
   bool CheckPointerCall(NamedDecl *NDecl, CallExpr *TheCall,
                         const FunctionProtoType *Proto);
@@ -5458,7 +5457,8 @@ public:
   /// destructor is referenced.
   void MarkVirtualBaseDestructorsReferenced(
       SourceLocation Location, CXXRecordDecl *ClassDecl,
-      llvm::SmallPtrSetImpl<const RecordType *> *DirectVirtualBases = nullptr);
+      llvm::SmallPtrSetImpl<const CXXRecordDecl *> *DirectVirtualBases =
+          nullptr);
 
   /// Do semantic checks to allow the complete destructor variant to be emitted
   /// when the destructor is defined in another translation unit. In the Itanium

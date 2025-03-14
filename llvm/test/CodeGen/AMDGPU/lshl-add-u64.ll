@@ -42,20 +42,20 @@ define i64 @lshl_add_u64_vvv(i64 %v, i64 %s, i64 %a) {
 define amdgpu_kernel void @lshl_add_u64_s2v(i64 %v) {
 ; GCN-LABEL: lshl_add_u64_s2v:
 ; GCN: v_lshl_add_u64 v[{{[0-9:]+}}], s[{{[0-9:]+}}], 2, v[{{[0-9:]+}}]
-  %a = load i64, ptr undef
+  %a = load i64, ptr poison
   %shl = shl i64 %v, 2
   %add = add i64 %shl, %a
-  store i64 %add, ptr undef
+  store i64 %add, ptr poison
   ret void
 }
 
 define amdgpu_kernel void @lshl_add_u64_v2s(i64 %a) {
 ; GCN-LABEL: lshl_add_u64_v2s:
 ; GCN: v_lshl_add_u64 v[{{[0-9:]+}}], v[{{[0-9:]+}}], 2, s[{{[0-9:]+}}]
-  %v = load i64, ptr undef
+  %v = load i64, ptr poison
   %shl = shl i64 %v, 2
   %add = add i64 %shl, %a
-  store i64 %add, ptr undef
+  store i64 %add, ptr poison
   ret void
 }
 
@@ -67,7 +67,7 @@ define amdgpu_kernel void @lshl_add_u64_s2s(i64 %v, i64 %a) {
 ; GFX1250: s_add_nc_u64
   %shl = shl i64 %v, 2
   %add = add i64 %shl, %a
-  store i64 %add, ptr undef
+  store i64 %add, ptr poison
   ret void
 }
 
@@ -83,9 +83,9 @@ define amdgpu_kernel void @add_u64_sv(i64 %v) {
 ; GCN-LABEL: add_u64_sv:
 ; GFX942: v_lshl_add_u64 v[0:1], s[0:1], 0, v[0:1]
 ; GFX1250: v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
-  %a = load i64, ptr undef
+  %a = load i64, ptr poison
   %add = add i64 %v, %a
-  store i64 %add, ptr undef
+  store i64 %add, ptr poison
   ret void
 }
 
@@ -93,9 +93,9 @@ define amdgpu_kernel void @add_u64_vs(i64 %a) {
 ; GCN-LABEL: add_u64_vs:
 ; GFX942: v_lshl_add_u64 v[0:1], v[0:1], 0, s[0:1]
 ; GFX1250: v_add_nc_u64_e32 v[0:1], s[0:1], v[0:1]
-  %v = load i64, ptr undef
+  %v = load i64, ptr poison
   %add = add i64 %v, %a
-  store i64 %add, ptr undef
+  store i64 %add, ptr poison
   ret void
 }
 
@@ -105,7 +105,7 @@ define amdgpu_kernel void @add_u64_ss(i64 %v, i64 %a) {
 ; GFX942: s_addc_u32 s1, s1, s3
 ; GFX1250: s_add_nc_u64 s[0:1], s[0:1], s[2:3]
   %add = add i64 %v, %a
-  store i64 %add, ptr undef
+  store i64 %add, ptr poison
   ret void
 }
 

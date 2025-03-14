@@ -165,6 +165,34 @@ LValue CIRGenFunction::emitDeclRefLValue(const DeclRefExpr *e) {
   return LValue();
 }
 
+/// Emit code to compute the specified expression which
+/// can have any type.  The result is returned as an RValue struct.
+RValue CIRGenFunction::emitAnyExpr(const Expr *e) {
+  switch (CIRGenFunction::getEvaluationKind(e->getType())) {
+  case cir::TEK_Scalar:
+    return RValue::get(emitScalarExpr(e));
+  case cir::TEK_Complex:
+    cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: complex type");
+    return RValue::get(nullptr);
+  case cir::TEK_Aggregate:
+    cgm.errorNYI(e->getSourceRange(), "emitAnyExpr: aggregate type");
+    return RValue::get(nullptr);
+  }
+  llvm_unreachable("bad evaluation kind");
+}
+
+/// Emit code to compute the specified expression, ignoring the result.
+void CIRGenFunction::emitIgnoredExpr(const Expr *e) {
+  if (e->isPRValue()) {
+    assert(!cir::MissingFeatures::aggValueSlot());
+    emitAnyExpr(e);
+    return;
+  }
+
+  // Just emit it as an l-value and drop the result.
+  emitLValue(e);
+}
+
 mlir::Value CIRGenFunction::emitAlloca(StringRef name, mlir::Type ty,
                                        mlir::Location loc,
                                        CharUnits alignment) {

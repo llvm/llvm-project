@@ -103,6 +103,10 @@ def TEST_TestType : DialectType<Test_Dialect,
     CPred<"::llvm::isa<::test::TestType>($_self)">, "test">,
     BuildableType<"$_builder.getType<::test::TestType>()">;
 
+def SignlessLikeVariadic : TEST_Op<"signless_like_variadic"> {
+  let arguments = (ins Variadic<SignlessIntegerLike>:$x);
+}
+
 //===----------------------------------------------------------------------===//
 // Test Symbols
 //===----------------------------------------------------------------------===//

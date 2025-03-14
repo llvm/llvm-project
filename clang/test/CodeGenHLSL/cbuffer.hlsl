@@ -20,6 +20,14 @@
 // CHECK: %anon = type <{ float }>
 // CHECK: %anon.0 = type <{ <2 x i32> }>
 
+// CHECK: %__cblayout_CB_A = type <{ [2 x double], [3 x <3 x float>], float, [3 x double], half, [1 x <2 x double>], float, [2 x <3 x half>], <3 x half> }>
+// CHECK: %__cblayout_CB_B = type <{ [3 x <3 x double>], <3 x half> }>
+// CHECK: %__cblayout_CB_C = type <{ i32, target("dx.Layout", %F, 96, 0, 16, 28, 32, 56, 64, 80, 84, 90), half, target("dx.Layout", %G, 258, 0, 48, 64, 256), double }>
+
+// CHECK: %F = type <{ double, <3 x float>, float, <3 x double>, half, <2 x double>, float, <3 x half>, <3 x half> }>
+// CHECK: %G = type <{ target("dx.Layout", %E, 36, 0, 8, 16, 20, 22, 24, 32), [1 x float], [2 x target("dx.Layout", %F, 96, 0, 16, 28, 32, 56, 64, 80, 84, 90)], half }>
+// CHECK: %E = type <{ float, double, float, half, i16, i64, i32 }>
+
 cbuffer CBScalars : register(b1, space5) {
   float a1;
   double a2;
@@ -155,6 +163,64 @@ cbuffer CBMix {
     uint16_t f9;
 };  
 
+// CHECK: @CB_A.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_A, 188, 0, 32, 76, 80, 120, 128, 144, 160, 182))
+
+cbuffer CB_A {
+  double B0[2];
+  float3 B1[3];
+  float B2;
+  double B3[3];
+  half B4;
+  double2 B5[1];
+  float B6;
+  half3 B7[2];
+  half3 B8;
+}
+
+// CHECK: @CB_B.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_B, 94, 0, 88))
+cbuffer CB_B {
+  double3 B9[3];
+  half3 B10;
+}
+
+struct E {
+  float A0;
+  double A1;
+  float A2;
+  half A3;
+  int16_t A4;
+  int64_t A5;
+  int A6;
+};
+
+struct F {
+  double B0;
+  float3 B1;
+  float B2;
+  double3 B3;
+  half B4;
+  double2 B5;
+  float B6;
+  half3 B7;
+  half3 B8;
+};
+
+struct G {
+  E C0;
+  float C1[1];
+  F C2[2];
+  half C3;
+};
+
+// CHECK: @CB_C.cb = external constant target("dx.CBuffer", target("dx.Layout", %__cblayout_CB_C, 400, 0, 16, 112, 128, 392))
+cbuffer CB_C {
+  int D0;
+  F D1;
+  half D2;
+  G D3;
+  double D4;
+}
+
 // CHECK: define internal void @_init_resource_CBScalars.cb()
 // CHECK-NEXT: entry:
 // CHECK-NEXT: %[[HANDLE1:.*]] = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CBScalars, 56, 0, 8, 16, 24, 32, 36, 40, 48))
@@ -171,7 +237,7 @@ RWBuffer<float> Buf;
 
 [numthreads(4,1,1)]
 void main() {
-  Buf[0] = a1 + b1.z + c1[2] + a.f1.y + f1;
+  Buf[0] = a1 + b1.z + c1[2] + a.f1.y + f1 + B1[0].x + B10.z + D1.B2;
 }
 
 // CHECK: define internal void @_GLOBAL__sub_I_cbuffer.hlsl()
@@ -179,7 +245,8 @@ void main() {
 // CHECK-NEXT: call void @_init_resource_CBScalars.cb()
 // CHECK-NEXT: call void @_init_resource_CBArrays.cb()
 
-// CHECK: !hlsl.cbs = !{![[CBSCALARS:[0-9]+]], ![[CBVECTORS:[0-9]+]], ![[CBARRAYS:[0-9]+]], ![[CBSTRUCTS:[0-9]+]], ![[CBMIX:[0-9]+]]}
+// CHECK: !hlsl.cbs = !{![[CBSCALARS:[0-9]+]], ![[CBVECTORS:[0-9]+]], ![[CBARRAYS:[0-9]+]], ![[CBSTRUCTS:[0-9]+]], ![[CBMIX:[0-9]+]],
+// CHECK-SAME: ![[CB_A:[0-9]+]], ![[CB_B:[0-9]+]], ![[CB_C:[0-9]+]]}
 
 // CHECK: ![[CBSCALARS]] = !{ptr @CBScalars.cb, ptr addrspace(2) @a1, ptr addrspace(2) @a2, ptr addrspace(2) @a3, ptr addrspace(2) @a4,
 // CHECK-SAME: ptr addrspace(2) @a5, ptr addrspace(2) @a6, ptr addrspace(2) @a7, ptr addrspace(2) @a8}
@@ -195,3 +262,10 @@ void main() {
 
 // CHECK: ![[CBMIX]] = !{ptr @CBMix.cb, ptr addrspace(2) @test, ptr addrspace(2) @f1, ptr addrspace(2) @f2, ptr addrspace(2) @f3,
 // CHECK-SAME: ptr addrspace(2) @f4, ptr addrspace(2) @f5, ptr addrspace(2) @f6, ptr addrspace(2) @f7, ptr addrspace(2) @f8, ptr addrspace(2) @f9}
+
+// CHECK: ![[CB_A]] = !{ptr @CB_A.cb, ptr addrspace(2) @B0, ptr addrspace(2) @B1, ptr addrspace(2) @B2, ptr addrspace(2) @B3, ptr addrspace(2) @B4,
+// CHECK-SAME: ptr addrspace(2) @B5, ptr addrspace(2) @B6, ptr addrspace(2) @B7, ptr addrspace(2) @B8}
+
+// CHECK: ![[CB_B]] = !{ptr @CB_B.cb, ptr addrspace(2) @B9, ptr addrspace(2) @B10}
+
+// CHECK: ![[CB_C]] = !{ptr @CB_C.cb, ptr addrspace(2) @D0, ptr addrspace(2) @D1, ptr addrspace(2) @D2, ptr addrspace(2) @D3, ptr addrspace(2) @D4}

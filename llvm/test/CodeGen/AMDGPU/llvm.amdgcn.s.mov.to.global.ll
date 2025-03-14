@@ -68,7 +68,6 @@ define amdgpu_cs void @test32_divergent_all(i32 %m0, i32 %x) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    s_mov_to_global_b32 s9, s1
 ; CHECK-NEXT:    s_endpgm
@@ -85,7 +84,6 @@ define amdgpu_cs void @test64_divergent_all(i32 %m0, i64 %x) {
 ; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
 ; SDAG-NEXT:    v_readfirstlane_b32 s1, v3
 ; SDAG-NEXT:    v_readfirstlane_b32 s0, v2
-; SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; SDAG-NEXT:    s_mov_b32 m0, s2
 ; SDAG-NEXT:    s_mov_to_global_b64 s[8:9], s[0:1]
 ; SDAG-NEXT:    s_endpgm
@@ -95,7 +93,6 @@ define amdgpu_cs void @test64_divergent_all(i32 %m0, i64 %x) {
 ; GISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; GISEL-NEXT:    v_readfirstlane_b32 s0, v1
 ; GISEL-NEXT:    v_readfirstlane_b32 s1, v2
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-NEXT:    s_mov_b32 m0, s2
 ; GISEL-NEXT:    s_mov_to_global_b64 s[8:9], s[0:1]
 ; GISEL-NEXT:    s_endpgm

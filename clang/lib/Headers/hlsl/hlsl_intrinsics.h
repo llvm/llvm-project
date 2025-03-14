@@ -118,6 +118,34 @@ const inline float distance(__detail::HLSL_FIXED_VECTOR<float, N> X,
 }
 
 //===----------------------------------------------------------------------===//
+// fmod builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn T fmod(T x, T y)
+/// \brief Returns the linear interpolation of x to y.
+/// \param x [in] The dividend.
+/// \param y [in] The divisor.
+///
+/// Return the floating-point remainder of the x parameter divided by the y
+/// parameter.
+
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline half fmod(half X, half Y) { return __detail::fmod_impl(X, Y); }
+
+const inline float fmod(float X, float Y) { return __detail::fmod_impl(X, Y); }
+
+template <int N>
+_HLSL_16BIT_AVAILABILITY(shadermodel, 6.2)
+const inline vector<half, N> fmod(vector<half, N> X, vector<half, N> Y) {
+  return __detail::fmod_vec_impl(X, Y);
+}
+
+template <int N>
+const inline vector<float, N> fmod(vector<float, N> X, vector<float, N> Y) {
+  return __detail::fmod_vec_impl(X, Y);
+}
+
+//===----------------------------------------------------------------------===//
 // length builtins
 //===----------------------------------------------------------------------===//
 

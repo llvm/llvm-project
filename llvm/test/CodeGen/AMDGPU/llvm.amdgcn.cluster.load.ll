@@ -10,7 +10,6 @@ define amdgpu_ps void @cluster_load_b32_vaddr(ptr addrspace(1) %addr, ptr addrsp
 ; GFX1250-LABEL: cluster_load_b32_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    s_mov_b32 m0, s0
 ; GFX1250-NEXT:    cluster_load_b32 v0, v[0:1], off offset:32 th:TH_LOAD_NT
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -74,7 +73,6 @@ define amdgpu_ps void @cluster_load_b64_vaddr(ptr addrspace(1) %addr, ptr addrsp
 ; GFX1250-LABEL: cluster_load_b64_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    s_mov_b32 m0, s0
 ; GFX1250-NEXT:    cluster_load_b64 v[0:1], v[0:1], off offset:32 th:TH_LOAD_NT
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
@@ -138,7 +136,6 @@ define amdgpu_ps void @cluster_load_b128_vaddr(ptr addrspace(1) %addr, ptr addrs
 ; GFX1250-LABEL: cluster_load_b128_vaddr:
 ; GFX1250:       ; %bb.0: ; %entry
 ; GFX1250-NEXT:    v_readfirstlane_b32 s0, v4
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1250-NEXT:    s_mov_b32 m0, s0
 ; GFX1250-NEXT:    cluster_load_b128 v[4:7], v[0:1], off offset:32 th:TH_LOAD_NT
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0

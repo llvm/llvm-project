@@ -130,8 +130,8 @@ define amdgpu_ps void @struct_ptr_buffer_discard_waterfall_rsrc_vgpr(ptr addrspa
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX13-SDAG-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX13-SDAG-NEXT:    buffer_discard_b32 v4, s[4:7], null idxen
 ; GFX13-SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -155,8 +155,8 @@ define amdgpu_ps void @struct_ptr_buffer_discard_waterfall_rsrc_vgpr(ptr addrspa
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[4:5]
 ; GFX13-GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX13-GISEL-NEXT:    buffer_discard_b32 v6, s[4:7], null idxen
 ; GFX13-GISEL-NEXT:    ; implicit-def: $vgpr4
@@ -183,8 +183,8 @@ define amdgpu_ps void @raw_ptr_buffer_discard_waterfall_rsrc_vgpr(ptr addrspace(
 ; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-SDAG-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[0:1]
 ; GFX13-SDAG-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX13-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX13-SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-SDAG-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX13-SDAG-NEXT:    buffer_discard_b32 off, s[4:7], null
 ; GFX13-SDAG-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
@@ -206,8 +206,8 @@ define amdgpu_ps void @raw_ptr_buffer_discard_waterfall_rsrc_vgpr(ptr addrspace(
 ; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX13-GISEL-NEXT:    v_cmp_eq_u64_e32 vcc_lo, s[4:5], v[4:5]
 ; GFX13-GISEL-NEXT:    v_cmp_eq_u64_e64 s0, s[6:7], v[2:3]
-; GFX13-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
+; GFX13-GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX13-GISEL-NEXT:    s_and_saveexec_b32 s0, s0
 ; GFX13-GISEL-NEXT:    buffer_discard_b32 off, s[4:7], null
 ; GFX13-GISEL-NEXT:    ; implicit-def: $vgpr4

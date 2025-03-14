@@ -17,7 +17,6 @@
 #define MODULE_ANALYSIS(NAME, CREATE_PASS)
 #endif
 MODULE_ANALYSIS("dx-shader-flags", dxil::ShaderFlagsAnalysis())
-MODULE_ANALYSIS("dxil-resource-md", DXILResourceMDAnalysis())
 MODULE_ANALYSIS("dxil-root-signature-analysis", dxil::RootSignatureAnalysis())
 #undef MODULE_ANALYSIS
 

@@ -171,7 +171,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1
 ; GFX13-FAKE16-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %canonicalized = call half @llvm.canonicalize.f16(half %val)
-  store half %canonicalized, ptr addrspace(1) undef
+  store half %canonicalized, ptr addrspace(1) poison
   ret void
 }
 
@@ -324,7 +324,7 @@ define <2 x half> @v_test_canonicalize_build_vector_v2f16(half %lo, half %hi) #1
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-FAKE16-NEXT:    v_pk_max_num_f16 v0, v0, v0
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-  %ins0 = insertelement <2 x half> undef, half %lo, i32 0
+  %ins0 = insertelement <2 x half> poison, half %lo, i32 0
   %ins1 = insertelement <2 x half> %ins0, half %hi, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %ins1)
   ret <2 x half> %canonicalized
@@ -3292,7 +3292,7 @@ define <2 x half> @v_test_canonicalize_reg_undef_v2f16(half %val) #1 {
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 0
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-  %vec = insertelement <2 x half> undef, half %val, i32 0
+  %vec = insertelement <2 x half> poison, half %val, i32 0
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
 }
@@ -3357,7 +3357,7 @@ define <2 x half> @v_test_canonicalize_undef_reg_v2f16(half %val) #1 {
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-FAKE16-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-  %vec = insertelement <2 x half> undef, half %val, i32 1
+  %vec = insertelement <2 x half> poison, half %val, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec)
   ret <2 x half> %canonicalized
 }
@@ -3584,7 +3584,7 @@ define <2 x half> @v_test_canonicalize_reg_k_v2f16(half %val) #1 {
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 2.0
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-  %vec0 = insertelement <2 x half> undef, half %val, i32 0
+  %vec0 = insertelement <2 x half> poison, half %val, i32 0
   %vec1 = insertelement <2 x half> %vec0, half 2.0, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec1)
   ret <2 x half> %canonicalized
@@ -3652,7 +3652,7 @@ define <2 x half> @v_test_canonicalize_k_reg_v2f16(half %val) #1 {
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v0, 2.0, v0
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-  %vec0 = insertelement <2 x half> undef, half 2.0, i32 0
+  %vec0 = insertelement <2 x half> poison, half 2.0, i32 0
   %vec1 = insertelement <2 x half> %vec0, half %val, i32 1
   %canonicalized = call <2 x half> @llvm.canonicalize.v2f16(<2 x half> %vec1)
   ret <2 x half> %canonicalized
@@ -3784,7 +3784,7 @@ define <4 x half> @v_test_canonicalize_reg_undef_undef_undef_v4f16(half %val) #1
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 0
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-  %vec = insertelement <4 x half> undef, half %val, i32 0
+  %vec = insertelement <4 x half> poison, half %val, i32 0
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec)
   ret <4 x half> %canonicalized
 }
@@ -3862,7 +3862,7 @@ define <4 x half> @v_test_canonicalize_reg_reg_undef_undef_v4f16(half %val0, hal
 ; GFX13-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX13-FAKE16-NEXT:    v_pk_max_num_f16 v0, v0, v0
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-  %vec0 = insertelement <4 x half> undef, half %val0, i32 0
+  %vec0 = insertelement <4 x half> poison, half %val0, i32 0
   %vec1 = insertelement <4 x half> %vec0, half %val1, i32 1
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec1)
   ret <4 x half> %canonicalized
@@ -3948,7 +3948,7 @@ define <4 x half> @v_test_canonicalize_reg_undef_reg_reg_v4f16(half %val0, half 
 ; GFX13-FAKE16-NEXT:    v_pack_b32_f16 v0, v0, 0
 ; GFX13-FAKE16-NEXT:    v_pk_max_num_f16 v1, v1, v1
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
-  %vec0 = insertelement <4 x half> undef, half %val0, i32 0
+  %vec0 = insertelement <4 x half> poison, half %val0, i32 0
   %vec1 = insertelement <4 x half> %vec0, half %val1, i32 2
   %vec2 = insertelement <4 x half> %vec1, half %val2, i32 3
   %canonicalized = call <4 x half> @llvm.canonicalize.v4f16(<4 x half> %vec2)
@@ -4016,12 +4016,14 @@ define <6 x half> @v_test_canonicalize_var_v6f16(<6 x half> %val) #1 {
 ; GFX13-TRUE16-NEXT:    v_pk_max_num_f16 v1, v1, v1
 ; GFX13-TRUE16-NEXT:    v_pk_max_num_f16 v0, v0, v0
 ; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX13-TRUE16-NEXT:    v_pk_max_num_f16 v4, v3, v3
-; GFX13-TRUE16-NEXT:    v_max_num_f16_e32 v3.l, v2.l, v2.l
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_3)
-; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
-; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v1, v1.l, v4.l
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v2.h, v3.l
+; GFX13-TRUE16-NEXT:    v_pk_max_num_f16 v3, v3, v3
+; GFX13-TRUE16-NEXT:    v_max_num_f16_e32 v2.l, v2.l, v2.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX13-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
+; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v4.h, v2.l
+; GFX13-TRUE16-NEXT:    v_pack_b32_f16 v1, v1.l, v3.l
+; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2)
+; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, v4
 ; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-FAKE16-LABEL: v_test_canonicalize_var_v6f16:

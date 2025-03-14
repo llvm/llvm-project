@@ -38,7 +38,6 @@ define amdgpu_cs i64 @test64_divergent_m0(i32 %m0) {
 ; CHECK-LABEL: test64_divergent_m0:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    v_readfirstlane_b32 s0, v0
-; CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; CHECK-NEXT:    s_mov_b32 m0, s0
 ; CHECK-NEXT:    s_mov_from_global_b64 s[0:1], s[10:11]
 ; CHECK-NEXT:    ; return to shader part epilog

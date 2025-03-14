@@ -30,6 +30,13 @@ class MachineInstrBuilder;
 class RegisterBank;
 struct SGPRSpillBuilder;
 
+/// Register allocation hint types. Helps eliminate unneeded COPY with True16
+namespace AMDGPURI {
+
+enum { Size16 = 1, Size32 = 2 };
+
+} // end namespace AMDGPURI
+
 class SIRegisterInfo final : public AMDGPUGenRegisterInfo {
 private:
   const GCNSubtarget &ST;
@@ -347,6 +354,11 @@ public:
 
   unsigned getRegPressureSetLimit(const MachineFunction &MF,
                                   unsigned Idx) const override;
+
+  bool getRegAllocationHints(Register VirtReg, ArrayRef<MCPhysReg> Order,
+                             SmallVectorImpl<MCPhysReg> &Hints,
+                             const MachineFunction &MF, const VirtRegMap *VRM,
+                             const LiveRegMatrix *Matrix) const override;
 
   const int *getRegUnitPressureSets(unsigned RegUnit) const override;
 
