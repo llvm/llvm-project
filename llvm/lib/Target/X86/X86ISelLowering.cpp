@@ -58079,9 +58079,11 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::PSHUFHW:
     case X86ISD::PSHUFLW:
     case X86ISD::PSHUFD:
-      // TODO: 512-bit PSHUFD/LW/HW handling
-      if (!IsSplat && NumOps == 2 && VT.is256BitVector() &&
-          Subtarget.hasInt256() && llvm::all_of(Ops, [Op0](SDValue Op) {
+      if (!IsSplat &&
+          ((VT.is256BitVector() && Subtarget.hasInt256()) ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
+            (EltSizeInBits >= 32 || Subtarget.useBWIRegs()))) &&
+          llvm::all_of(Ops, [Op0](SDValue Op) {
             return Op.getOperand(1) == Op0.getOperand(1);
           })) {
         return DAG.getNode(Op0.getOpcode(), DL, VT,
