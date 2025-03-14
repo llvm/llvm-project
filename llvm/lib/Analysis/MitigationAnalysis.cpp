@@ -8,8 +8,6 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
-#include <string>
-#include <unordered_map>
 
 using namespace llvm;
 
@@ -18,8 +16,7 @@ AnalysisKey MitigationAnalysis::Key;
 // Add a command line flag for the module name
 static cl::opt<std::string>
     ClOutputModuleName("mitigation-analysis-dso-name", cl::Optional,
-                       cl::desc("DSO name for the module"),
-                       cl::init("unknown"));
+                       cl::desc("DSO name for the module"), cl::init(""));
 
 enum class MitigationState { Ineligible, EligibleDisabled, EligibleEnabled };
 
@@ -28,6 +25,37 @@ static const std::unordered_map<MitigationState, std::string> mapStateToString =
         {MitigationState::Ineligible, "N/A"},
         {MitigationState::EligibleDisabled, "Disabled"},
         {MitigationState::EligibleEnabled, "Enabled"},
+};
+
+struct ModuleMitigationInfo {
+  std::size_t eligable_auto_var_init = 0;
+  std::size_t enabled_auto_var_init = 0;
+
+  std::size_t eligable_cfi_icall = 0;
+  std::size_t enabled_cfi_icall = 0;
+
+  std::size_t eligable_cfi_vcall = 0;
+  std::size_t enabled_cfi_vcall = 0;
+
+  std::size_t eligable_cfi_nvcall = 0;
+  std::size_t enabled_cfi_nvcall = 0;
+
+  std::size_t eligable_stack_clash_protection = 0;
+  std::size_t enabled_stack_clash_protection = 0;
+
+  std::size_t eligable_stack_protector = 0;
+  std::size_t enabled_stack_protector = 0;
+
+  std::size_t eligable_stack_protector_strong = 0;
+  std::size_t enabled_stack_protector_strong = 0;
+
+  std::size_t eligable_stack_protector_all = 0;
+  std::size_t enabled_stack_protector_all = 0;
+
+  std::size_t eligable_libcpp_hardening_mode = 0;
+  std::size_t enabled_libcpp_hardening_mode = 0;
+
+  std::size_t total_functions = 0;
 };
 
 struct MitigationInfo {
@@ -57,6 +85,56 @@ static inline MitigationState valToState(int value) {
   default:
     return MitigationState::Ineligible;
   }
+}
+
+static void updateModuleInfo(ModuleMitigationInfo &moduleInfo,
+                             const MitigationInfo &info) {
+  moduleInfo.total_functions++;
+
+  moduleInfo.eligable_auto_var_init +=
+      (info.auto_var_init != MitigationState::Ineligible);
+  moduleInfo.enabled_auto_var_init +=
+      (info.auto_var_init == MitigationState::EligibleEnabled);
+
+  moduleInfo.eligable_cfi_icall +=
+      (info.cfi_icall != MitigationState::Ineligible);
+  moduleInfo.enabled_cfi_icall +=
+      (info.cfi_icall == MitigationState::EligibleEnabled);
+
+  moduleInfo.eligable_cfi_vcall +=
+      (info.cfi_vcall != MitigationState::Ineligible);
+  moduleInfo.enabled_cfi_vcall +=
+      (info.cfi_vcall == MitigationState::EligibleEnabled);
+
+  moduleInfo.eligable_cfi_nvcall +=
+      (info.cfi_nvcall != MitigationState::Ineligible);
+  moduleInfo.enabled_cfi_nvcall +=
+      (info.cfi_nvcall == MitigationState::EligibleEnabled);
+
+  moduleInfo.eligable_stack_clash_protection +=
+      (info.stack_clash_protection != MitigationState::Ineligible);
+  moduleInfo.enabled_stack_clash_protection +=
+      (info.stack_clash_protection == MitigationState::EligibleEnabled);
+
+  moduleInfo.eligable_stack_protector +=
+      (info.stack_protector != MitigationState::Ineligible);
+  moduleInfo.enabled_stack_protector +=
+      (info.stack_protector == MitigationState::EligibleEnabled);
+
+  moduleInfo.eligable_stack_protector_strong +=
+      (info.stack_protector_strong != MitigationState::Ineligible);
+  moduleInfo.enabled_stack_protector_strong +=
+      (info.stack_protector_strong == MitigationState::EligibleEnabled);
+
+  moduleInfo.eligable_stack_protector_all +=
+      (info.stack_protector_all != MitigationState::Ineligible);
+  moduleInfo.enabled_stack_protector_all +=
+      (info.stack_protector_all == MitigationState::EligibleEnabled);
+
+  moduleInfo.eligable_libcpp_hardening_mode +=
+      (info.libcpp_hardening_mode != MitigationState::Ineligible);
+  moduleInfo.enabled_libcpp_hardening_mode +=
+      (info.libcpp_hardening_mode == MitigationState::EligibleEnabled);
 }
 
 /// Print out fields in MitigationInfo for debugging/verification purposes.
@@ -131,9 +209,10 @@ static void writeJsonToFile(const std::string &jsonString,
                             const std::string &fileName,
                             const std::string &errorMsg) {
   std::error_code errCode;
-  raw_fd_ostream OutputStream(fileName, errCode, sys::fs::CD_CreateAlways,
+  raw_fd_ostream OutputStream(fileName, errCode, sys::fs::CD_OpenAlways,
                               sys::fs::FA_Read | sys::fs::FA_Write,
-                              sys::fs::OF_Text | sys::fs::OF_UpdateAtime);
+                              sys::fs::OF_Text | sys::fs::OF_UpdateAtime |
+                                  sys::fs::OF_Append);
   if (errCode) {
     errs() << errorMsg << "\n";
     errs() << errCode.message() << "\n";
@@ -172,6 +251,42 @@ static json::Object infoToJson(const MitigationInfo &info) {
   object["type_signature"] = info.type_signature;
   object["type_id"] = (uint64_t)info.type_id;
   object["module"] = info.gmodule;
+  return object;
+}
+
+/// Convert a ModuleMitigationInfo struct to a JSON object.
+static json::Object moduleInfoToJson(const ModuleMitigationInfo &moduleInfo) {
+  json::Object object;
+
+  object["enabled_auto_var_init"] = moduleInfo.enabled_auto_var_init;
+  object["eligable_cfi_icall"] = moduleInfo.eligable_cfi_icall;
+  object["enabled_cfi_icall"] = moduleInfo.enabled_cfi_icall;
+  object["eligable_cfi_vcall"] = moduleInfo.eligable_cfi_vcall;
+  object["enabled_cfi_vcall"] = moduleInfo.enabled_cfi_vcall;
+  object["eligable_cfi_nvcall"] = moduleInfo.eligable_cfi_nvcall;
+  object["enabled_cfi_nvcall"] = moduleInfo.enabled_cfi_nvcall;
+  object["eligable_stack_clash_protection"] =
+      moduleInfo.eligable_stack_clash_protection;
+  object["enabled_stack_clash_protection"] =
+      moduleInfo.enabled_stack_clash_protection;
+  object["eligable_stack_protector"] = moduleInfo.eligable_stack_protector;
+  object["enabled_stack_protector"] = moduleInfo.enabled_stack_protector;
+  object["eligable_stack_protector_strong"] =
+      moduleInfo.eligable_stack_protector_strong;
+  object["enabled_stack_protector_strong"] =
+      moduleInfo.enabled_stack_protector_strong;
+  object["eligable_stack_protector_all"] =
+      moduleInfo.eligable_stack_protector_all;
+  object["enabled_stack_protector_all"] =
+      moduleInfo.enabled_stack_protector_all;
+  object["eligable_libcpp_hardening_mode"] =
+      moduleInfo.eligable_libcpp_hardening_mode;
+  object["enabled_libcpp_hardening_mode"] =
+      moduleInfo.enabled_libcpp_hardening_mode;
+
+  object["total_functions"] = moduleInfo.total_functions;
+  object["module"] =
+      ClOutputModuleName.empty() ? std::string("unknown") : ClOutputModuleName;
   return object;
 }
 
@@ -250,9 +365,13 @@ static MitigationState detectLibcppHardeningMode(Function &F) {
   return MitigationState::Ineligible;
 }
 
+MitigationAnalysis::MitigationAnalysis(MitigationAnalysisSummary Summary)
+    : summary_(std::move(Summary)) {}
+
 PreservedAnalyses MitigationAnalysis::run(Module &M,
                                           ModuleAnalysisManager &AM) {
   json::Array jsonArray;
+  ModuleMitigationInfo moduleInfo;
 
   for (Function &F : M) {
     LLVMContext &Context = F.getContext();
@@ -262,7 +381,8 @@ PreservedAnalyses MitigationAnalysis::run(Module &M,
       continue;
 
     MitigationInfo info;
-    info.gmodule = ClOutputModuleName;
+    info.gmodule = ClOutputModuleName.empty() ? std::string("unknown")
+                                              : ClOutputModuleName;
     info.function = F.getName();
 
     for (unsigned i = 0; i < ExistingMD->getNumOperands(); ++i) {
@@ -283,20 +403,36 @@ PreservedAnalyses MitigationAnalysis::run(Module &M,
 
     info.libcpp_hardening_mode = detectLibcppHardeningMode(F);
 
-    info.source_mapping = getFunctionSourcePath(F);
-    info.type_signature = getFirstFunctionTypeSignature(F);
-    info.type_id = getFunctionTypeId(F);
+    if (summary_ == MitigationAnalysisSummary::FUNCTION) {
+      info.source_mapping = getFunctionSourcePath(F);
+      info.type_signature = getFirstFunctionTypeSignature(F);
+      info.type_id = getFunctionTypeId(F);
 
-    DEBUG_WITH_TYPE(kMitigationAnalysisDebugType, printInfo(info));
-    jsonArray.push_back(infoToJson(info));
+      DEBUG_WITH_TYPE(kMitigationAnalysisDebugType, printInfo(info));
+      jsonArray.push_back(infoToJson(info));
+    } else {
+      // Start aggregating mitigations for entire module
+      updateModuleInfo(moduleInfo, info);
+    }
   }
 
+  std::string fileName =
+      ClOutputModuleName.empty()
+          ? std::string("mitigation_info.json")
+          : formatv("mitigation_info-{0}.json", ClOutputModuleName);
   if (!jsonArray.empty()) {
     std::string jsonString =
         formatv("{0}", json::Value(std::move(jsonArray))).str();
     if (!jsonString.empty()) {
-      writeJsonToFile(jsonString, "mitigation_info.json",
-                      "Couldn't write to mitigation_info.json!");
+      writeJsonToFile(jsonString, fileName,
+                      formatv("Couldn't write to {0}!", fileName));
+    }
+  } else if (moduleInfo.total_functions > 0) {
+    std::string jsonString =
+        formatv("{0}", json::Value(moduleInfoToJson(moduleInfo))).str();
+    if (!jsonString.empty()) {
+      writeJsonToFile(jsonString, fileName,
+                      formatv("Couldn't write to {0}!", fileName));
     }
   }
 

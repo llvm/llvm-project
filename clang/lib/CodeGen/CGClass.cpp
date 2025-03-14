@@ -2849,7 +2849,8 @@ void CodeGenFunction::EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
     Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::assume), TypeTest);
   }
 
-  AttachMitigationMetadataToFunction(*this, MitigationKey::CFI_VCALL, false);
+  AttachMitigationMetadataToFunction(*this, MitigationKey::CFI_VCALL,
+                                     SanOpts.has(SanitizerKind::CFIVCall));
 }
 
 void CodeGenFunction::EmitVTablePtrCheckForCall(const CXXRecordDecl *RD,

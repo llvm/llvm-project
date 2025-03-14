@@ -306,10 +306,18 @@ static cl::opt<std::string> InstrumentColdFuncOnlyPath(
              "with --pgo-instrument-cold-function-only)"),
     cl::Hidden);
 
-static cl::opt<bool>
-    EnableMitigationAnalysis("enable-mitigation-analysis", cl::init(false),
-                             cl::Hidden,
-                             cl::desc("Enable the MitigationAnalysis Pass"));
+static cl::opt<MitigationAnalysisSummary> EnableMitigationSummary(
+    "mitigation-summary", cl::Hidden,
+    cl::init(MitigationAnalysisSummary::SHORT),
+    cl::desc("Enable the MitigationAnalysis Pass"),
+    cl::values(
+        clEnumValN(MitigationAnalysisSummary::NONE, "none",
+                   "Disable generating mitigation analysis information"),
+        clEnumValN(
+            MitigationAnalysisSummary::SHORT, "short",
+            "Generate summary of mitigation coverage for the current module"),
+        clEnumValN(MitigationAnalysisSummary::FUNCTION, "function",
+                   "Generate per-function mitigation coverage information")));
 
 extern cl::opt<std::string> UseCtxProfile;
 extern cl::opt<bool> PGOInstrumentColdFunctionOnly;
@@ -1858,8 +1866,8 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level,
   // in the current module.
   MPM.addPass(CrossDSOCFIPass());
 
-  if (EnableMitigationAnalysis)
-    MPM.addPass(MitigationAnalysis());
+  if (EnableMitigationSummary != llvm::MitigationAnalysisSummary::NONE)
+    MPM.addPass(MitigationAnalysis(EnableMitigationSummary));
 
   if (Level == OptimizationLevel::O0) {
     // The WPD and LowerTypeTest passes need to run at -O0 to lower type

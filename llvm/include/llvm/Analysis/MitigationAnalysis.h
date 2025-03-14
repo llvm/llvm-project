@@ -10,6 +10,12 @@
 
 namespace llvm {
 
+enum class MitigationAnalysisSummary {
+  NONE = 0,
+  SHORT = 1 << 0,
+  FUNCTION = 1 << 1,
+};
+
 class MitigationAnalysis : public AnalysisInfoMixin<MitigationAnalysis> {
   friend AnalysisInfoMixin<MitigationAnalysis>;
   static AnalysisKey Key;
@@ -18,8 +24,14 @@ class MitigationAnalysis : public AnalysisInfoMixin<MitigationAnalysis> {
       "mitigation_analysis";
 
 public:
+  MitigationAnalysis(
+      MitigationAnalysisSummary Summary = MitigationAnalysisSummary::NONE);
+
   using Result = PreservedAnalyses;
   Result run(Module &M, ModuleAnalysisManager &AM);
+
+private:
+  MitigationAnalysisSummary summary_;
 };
 
 } // end namespace llvm
