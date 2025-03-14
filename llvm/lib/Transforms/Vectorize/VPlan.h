@@ -2311,9 +2311,10 @@ protected:
       IsConditional = true;
       addOperand(CondOp);
     }
-    // The inloop reduction may across multiple scalar instruction and the
-    // underlying instruction may not contains the corresponding flags. Set the
-    // flags explicit from the redurrence descriptor.
+
+    // In-loop reductions may comprise of multiple scalar instructions, and the
+    // underlying instruction may not contain the same flags as the
+    // recurrence descriptor, so set the flags explicitly.
     if (isa<FPMathOperator>(I))
       setFastMathFlags(R.getFastMathFlags());
   }
