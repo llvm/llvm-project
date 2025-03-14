@@ -465,7 +465,7 @@ Error OnDiskOutputFile::keep() {
       if (Error Err = Lock.tryLock().moveInto(Owned)) {
         // If we error acquiring a lock, we cannot ensure appends
         // to the trace file are atomic - cannot ensure output correctness.
-        Lock.unsafeRemoveLockFile();
+        Lock.unsafeMaybeUnlock();
         return convertToOutputError(
             OutputPath, std::make_error_code(std::errc::no_lock_available));
       }
@@ -477,7 +477,7 @@ Error OnDiskOutputFile::keep() {
           return convertToOutputError(OutputPath, EC);
         Out << (*Content)->getBuffer();
         Out.close();
-        Lock.unsafeRemoveLockFile();
+        Lock.unsafeMaybeUnlock();
         if (Out.has_error())
           return convertToOutputError(OutputPath, Out.error());
         // Remove temp file and done.
@@ -485,19 +485,19 @@ Error OnDiskOutputFile::keep() {
         return Error::success();
       }
       // Someone else owns the lock on this file, wait.
-      switch (Lock.waitForUnlock(256)) {
-      case llvm::LockFileManager::Res_Success:
+      switch (Lock.waitForUnlockFor(std::chrono::seconds(256))) {
+      case WaitForUnlockResult::Success:
         LLVM_FALLTHROUGH;
-      case llvm::LockFileManager::Res_OwnerDied: {
+      case WaitForUnlockResult::OwnerDied: {
         continue; // try again to get the lock.
       }
-      case llvm::LockFileManager::Res_Timeout: {
+      case WaitForUnlockResult::Timeout: {
         // We could error on timeout to avoid potentially hanging forever, but
         // it may be more likely that an interrupted process failed to clear
         // the lock, causing other waiting processes to time-out. Let's clear
         // the lock and try again right away. If we do start seeing compiler
         // hangs in this location, we will need to re-consider.
-        Lock.unsafeRemoveLockFile();
+        Lock.unsafeMaybeUnlock();
         continue;
       }
       }
