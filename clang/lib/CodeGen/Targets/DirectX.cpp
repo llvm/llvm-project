@@ -29,14 +29,14 @@ public:
   DirectXTargetCodeGenInfo(CodeGen::CodeGenTypes &CGT)
       : TargetCodeGenInfo(std::make_unique<DefaultABIInfo>(CGT)) {}
 
-  llvm::Type *getHLSLType(
-      CodeGenModule &CGM, const Type *T,
-      const SmallVector<unsigned> *Packoffsets = nullptr) const override;
+  llvm::Type *
+  getHLSLType(CodeGenModule &CGM, const Type *T,
+              const SmallVector<int32_t> *Packoffsets = nullptr) const override;
 };
 
 llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
     CodeGenModule &CGM, const Type *Ty,
-    const SmallVector<unsigned> *Packoffsets) const {
+    const SmallVector<int32_t> *Packoffsets) const {
   auto *ResType = dyn_cast<HLSLAttributedResourceType>(Ty);
   if (!ResType)
     return nullptr;

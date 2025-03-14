@@ -19,6 +19,6 @@ entry:
   %load = load i16, ptr addrspace(1) %gep
   %build0 = insertelement <2 x i16> poison, i16 %reg, i32 0
   %build1 = insertelement <2 x i16> %build0, i16 %load, i32 1
-  store <2 x i16> %build1, ptr addrspace(1) undef
+  store <2 x i16> %build1, ptr addrspace(1) poison
   ret void
 }

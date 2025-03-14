@@ -29561,9 +29561,10 @@ The ``llvm.type.checked.load.relative`` intrinsic loads a relative pointer to a
 function from a virtual table pointer using metadata. Otherwise, its semantic is
 identical to the ``llvm.type.checked.load`` intrinsic.
 
-A relative pointer is a pointer to an offset to the pointed to value. The
-address of the underlying pointer of the relative pointer is obtained by adding
-the offset to the address of the offset value.
+A relative pointer is a pointer to an offset. This is the offset between the destination
+pointer and the original pointer. The address of the destination pointer is obtained
+by loading this offset and adding it to the original pointer. This calculation is the
+same as that of the ``llvm.load.relative`` intrinsic.
 
 '``llvm.arithmetic.fence``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

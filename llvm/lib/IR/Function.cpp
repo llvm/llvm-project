@@ -904,7 +904,7 @@ void Function::setOnlyWritesMemory() {
   setMemoryEffects(getMemoryEffects() & MemoryEffects::writeOnly());
 }
 
-/// Determine if the call can access memmory only using pointers based
+/// Determine if the call can access memory only using pointers based
 /// on its arguments.
 bool Function::onlyAccessesArgMemory() const {
   return getMemoryEffects().onlyAccessesArgPointees();

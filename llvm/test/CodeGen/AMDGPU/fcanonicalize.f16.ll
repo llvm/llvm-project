@@ -129,7 +129,7 @@ define amdgpu_kernel void @v_test_canonicalize_var_f16(ptr addrspace(1) %out) #1
 ; GFX11-FAKE16-NEXT:    s_endpgm
   %val = load half, ptr addrspace(1) %out
   %canonicalized = call half @llvm.canonicalize.f16(half %val)
-  store half %canonicalized, ptr addrspace(1) undef
+  store half %canonicalized, ptr addrspace(1) poison
   ret void
 }
 

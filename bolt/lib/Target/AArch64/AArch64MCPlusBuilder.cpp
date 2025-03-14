@@ -780,7 +780,7 @@ public:
 
   const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
                                  MCContext &Ctx,
-                                 uint64_t RelType) const override {
+                                 uint32_t RelType) const override {
 
     if (isADR(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_LO21 ||
         RelType == ELF::R_AARCH64_TLSDESC_ADR_PREL21) {
@@ -1885,7 +1885,7 @@ public:
 
   bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
                                int64_t Addend, MCContext *Ctx, int64_t &Value,
-                               uint64_t RelType) const override {
+                               uint32_t RelType) const override {
     unsigned ImmOpNo = -1U;
     for (unsigned Index = 0; Index < MCPlus::getNumPrimeOperands(Inst);
          ++Index) {
@@ -1913,7 +1913,7 @@ public:
         *Ctx, 0)));
   }
 
-  bool shouldRecordCodeRelocation(uint64_t RelType) const override {
+  bool shouldRecordCodeRelocation(uint32_t RelType) const override {
     switch (RelType) {
     case ELF::R_AARCH64_ABS64:
     case ELF::R_AARCH64_ABS32:
@@ -2236,7 +2236,7 @@ public:
     assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
     const uint64_t RelOffset = Fixup.getOffset();
 
-    uint64_t RelType;
+    uint32_t RelType;
     if (Fixup.getKind() == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
       RelType = ELF::R_AARCH64_CALL26;
     else if (Fixup.getKind() ==

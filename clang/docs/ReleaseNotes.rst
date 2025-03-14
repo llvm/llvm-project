@@ -292,6 +292,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang now diagnoses copy constructors taking the class by value in template instantiations. (#GH130866)
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
 - Clang now prints the correct instantiation context for diagnostics suppressed
   by template argument deduction.
@@ -308,6 +309,8 @@ Bug Fixes to C++ Support
   not in the last position.
 - Clang now correctly parses ``if constexpr`` expressions in immediate function context. (#GH123524)
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
+- Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
+- Correctly diagnoses if unresolved using declarations shadows template paramters (#GH129411)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -357,6 +360,14 @@ Android Support
 Windows Support
 ^^^^^^^^^^^^^^^
 
+- Clang now defines ``_CRT_USE_BUILTIN_OFFSETOF`` macro in MSVC-compatible mode,
+  which makes ``offsetof`` provided by Microsoft's ``<stddef.h>`` to be defined
+  correctly. (#GH59689)
+
+- Clang now can process the `i128` and `ui128` integeral suffixes when MSVC
+  extensions are enabled. This allows for properly processing ``intsafe.h`` in
+  the Windows SDK.
+
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
@@ -398,6 +409,11 @@ AST Matchers
 - Ensure ``isDerivedFrom`` matches the correct base in case more than one alias exists.
 - Extend ``templateArgumentCountIs`` to support function and variable template
   specialization.
+- Move ``ast_matchers::MatchFinder::MatchFinderOptions`` to
+  ``ast_matchers::MatchFinderOptions``.
+- Add a boolean member ``SkipSystemHeaders`` to ``MatchFinderOptions``, and make
+  ``MatchASTConsumer`` receive a reference to ``MatchFinderOptions`` in the
+  constructor. This allows it to skip system headers when traversing the AST.
 
 clang-format
 ------------

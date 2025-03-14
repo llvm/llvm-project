@@ -3476,6 +3476,24 @@ Limitations:
 alpha.WebKit
 ^^^^^^^^^^^^
 
+alpha.webkit.ForwardDeclChecker
+"""""""""""""""""""""""""""""""
+Check for local variables, member variables, and function arguments that are forward declared.
+
+.. code-block:: cpp
+
+ struct Obj;
+ Obj* provide();
+
+ struct Foo {
+   Obj* ptr; // warn
+ };
+
+  void foo() {
+    Obj* obj = provide(); // warn
+    consume(obj); // warn
+  }
+
 .. _alpha-webkit-NoUncheckedPtrMemberChecker:
 
 alpha.webkit.MemoryUnsafeCastChecker
@@ -3778,6 +3796,26 @@ Here are some examples of situations that we warn about as they *might* be poten
       // The scope of unretained is not EMBEDDED in the scope of retained.
       NSObject* unretained = retained.get(); // warn
     }
+
+webkit.RetainPtrCtorAdoptChecker
+""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure the constructor of RetainPtr as well as adoptNS and adoptCF are used correctly.
+When creating a RetainPtr with +1 semantics, adoptNS or adoptCF should be used, and in +0 semantics, RetainPtr constructor should be used.
+Warn otherwise.
+
+These are examples of cases that we consider correct:
+
+  .. code-block:: cpp
+
+    RetainPtr ptr = adoptNS([[NSObject alloc] init]); // ok
+    RetainPtr ptr = CGImageGetColorSpace(image); // ok
+
+Here are some examples of cases that we consider incorrect use of RetainPtr constructor and adoptCF
+
+  .. code-block:: cpp
+
+    RetainPtr ptr = [[NSObject alloc] init]; // warn
+    auto ptr = adoptCF(CGImageGetColorSpace(image)); // warn
 
 Debug Checkers
 ---------------
