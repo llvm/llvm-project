@@ -5095,19 +5095,11 @@ SDValue AArch64TargetLowering::LowerVectorINT_TO_FP(SDValue Op,
   uint64_t VTSize = VT.getFixedSizeInBits();
   uint64_t InVTSize = InVT.getFixedSizeInBits();
   if (VTSize < InVTSize) {
-    MVT CastVT =
-        MVT::getVectorVT(MVT::getFloatingPointVT(InVT.getScalarSizeInBits()),
-                         InVT.getVectorNumElements());
-    if (IsStrict) {
-      In = DAG.getNode(Opc, dl, {CastVT, MVT::Other},
-                       {Op.getOperand(0), In});
-      return DAG.getNode(ISD::STRICT_FP_ROUND, dl, {VT, MVT::Other},
-                         {In.getValue(1), In.getValue(0),
-                          DAG.getIntPtrConstant(0, dl, /*isTarget=*/true)});
-    }
-    In = DAG.getNode(Opc, dl, CastVT, In);
-    return DAG.getNode(ISD::FP_ROUND, dl, VT, In,
-                       DAG.getIntPtrConstant(0, dl, /*isTarget=*/true));
+    // Due to the absence of any vector instructions to directly convert
+    // larger fixed point to lower floating point, we end up using intermediate
+    // representation before finally getting VTSize-d floating point. This extra
+    // rounding can lead to subtly incorrect results.
+    return SDValue();
   }
 
   if (VTSize > InVTSize) {
