@@ -848,6 +848,27 @@ bool ClauseProcessor::processDepend(mlir::omp::DependClauseOps &result) const {
   return findRepeatableClause<omp::clause::Depend>(process);
 }
 
+bool ClauseProcessor::processGrainsize(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::GrainsizeClauseOps &result) const {
+  using grainsize = omp::clause::Grainsize;
+  if (auto *clause = findUniqueClause<grainsize>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::MLIRContext *context = firOpBuilder.getContext();
+    const auto &modifier =
+        std::get<std::optional<grainsize::Prescriptiveness>>(clause->t);
+    if (modifier) {
+      result.grainsizeMod = mlir::omp::ClauseGrainsizeTypeAttr::get(
+          context, mlir::omp::ClauseGrainsizeType::Strict);
+    }
+    const auto &grainsizeExpr = std::get<omp::SomeExpr>(clause->t);
+    result.grainsize =
+        fir::getBase(converter.genExprValue(grainsizeExpr, stmtCtx));
+    return true;
+  }
+  return false;
+}
+
 bool ClauseProcessor::processHasDeviceAddr(
     lower::StatementContext &stmtCtx, mlir::omp::HasDeviceAddrClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &hasDeviceSyms) const {
@@ -1133,6 +1154,27 @@ bool ClauseProcessor::processNontemporal(
           result.nontemporalVars.push_back(symVal);
         }
       });
+}
+
+bool ClauseProcessor::processNumTasks(
+    lower::StatementContext &stmtCtx,
+    mlir::omp::NumTasksClauseOps &result) const {
+  using numtasks = omp::clause::NumTasks;
+  if (auto *clause = findUniqueClause<numtasks>()) {
+    fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+    mlir::MLIRContext *context = firOpBuilder.getContext();
+    const auto &modifier =
+        std::get<std::optional<numtasks::Prescriptiveness>>(clause->t);
+    if (modifier) {
+      result.numTasksMod = mlir::omp::ClauseNumTasksTypeAttr::get(
+          context, mlir::omp::ClauseNumTasksType::Strict);
+    }
+    const auto &numtasksExpr = std::get<omp::SomeExpr>(clause->t);
+    result.numTasks =
+        fir::getBase(converter.genExprValue(numtasksExpr, stmtCtx));
+    return true;
+  }
+  return false;
 }
 
 bool ClauseProcessor::processReduction(
