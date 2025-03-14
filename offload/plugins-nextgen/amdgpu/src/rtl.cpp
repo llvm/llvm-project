@@ -1095,11 +1095,18 @@ private:
       // Honor OMP_NUM_TEAMS environment variable for XteamReduction kernel
       // type, if possible.
       int32_t NumTeamsEnvVar = GenericDevice.getOMPNumTeams();
+      // CU mulitiplier from envar.
+      uint32_t EnvarCUMultiplier = GenericDevice.getXTeamRedTeamsPerCU();
 
       if (GenericDevice.isFastReductionEnabled()) {
         // When fast reduction is enabled, the number of teams is capped by
         // the MaxCUMultiplier constant.
-        MaxNumGroups = DeviceNumCUs * llvm::omp::xteam_red::MaxCUMultiplier;
+        // When envar is enabled, use it for computing MaxNumGroup.
+        if (EnvarCUMultiplier > 0)
+          MaxNumGroups = DeviceNumCUs * EnvarCUMultiplier;
+        else
+          MaxNumGroups = DeviceNumCUs * llvm::omp::xteam_red::MaxCUMultiplier;
+
       } else {
         // When fast reduction is not enabled, the number of teams is capped
         // by the metadata that clang CodeGen created. The number of teams
@@ -1110,7 +1117,13 @@ private:
         // ConstWGSize is the block size that CodeGen used.
         uint32_t CUMultiplier =
             llvm::omp::xteam_red::getXteamRedCUMultiplier(ConstWGSize);
-        MaxNumGroups = DeviceNumCUs * CUMultiplier;
+
+        if (EnvarCUMultiplier > 0) {
+          MaxNumGroups =
+              DeviceNumCUs * std::min(CUMultiplier, EnvarCUMultiplier);
+        } else {
+          MaxNumGroups = DeviceNumCUs * CUMultiplier;
+        }
       }
 
       // If envar OMPX_XTEAMREDUCTION_OCCUPANCY_BASED_OPT is set and no
@@ -2915,6 +2928,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
             "LIBOMPTARGET_AMDGPU_GENERIC_SPMD_TEAMS_PER_CU", 6),
         OMPX_BigJumpLoopTeamsPerCU(
             "LIBOMPTARGET_AMDGPU_BIG_JUMP_LOOP_TEAMS_PER_CU", 0),
+        OMPX_XTeamRedTeamsPerCU("LIBOMPTARGET_AMDGPU_XTEAM_RED_TEAMS_PER_CU",
+                                0),
         OMPX_BigJumpLoopMaxTotalTeams(
             "LIBOMPTARGET_AMDGPU_BIG_JUMP_LOOP_MAX_TOTAL_TEAMS", 1024 * 1024),
         OMPX_LowTripCount("LIBOMPTARGET_AMDGPU_LOW_TRIPCOUNT", 9000),
@@ -2979,6 +2994,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
   virtual uint32_t getOMPXBigJumpLoopTeamsPerCU() const override {
     return OMPX_BigJumpLoopTeamsPerCU;
+  }
+  virtual uint32_t getXTeamRedTeamsPerCU() const override {
+    return OMPX_XTeamRedTeamsPerCU;
   }
   virtual uint32_t getOMPXBigJumpLoopMaxTotalTeams() const override {
     return OMPX_BigJumpLoopMaxTotalTeams;
@@ -4426,6 +4444,12 @@ private:
   /// is not specified. If non-zero, the number of teams =
   /// OMPX_BigJumpLoopTeamsPerCU * #CUs.
   UInt32Envar OMPX_BigJumpLoopTeamsPerCU;
+
+  /// Envar for controlling the number of teams relative to the number of
+  /// compute units (CUs) for cross-team-reduction kernels. 0 indicates that
+  /// this value is not specified. If non-zero, the number of teams =
+  /// OMPX_XTeamRedTeamsPerCU * #CUs.
+  UInt32Envar OMPX_XTeamRedTeamsPerCU;
 
   /// Envar controlling the maximum number of teams per device for
   /// Big-Jump-Loop kernels.

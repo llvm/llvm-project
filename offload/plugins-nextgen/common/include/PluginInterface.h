@@ -1017,6 +1017,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual uint32_t getOMPXBigJumpLoopTeamsPerCU() const {
     llvm_unreachable("Unimplemented");
   }
+  virtual uint32_t getXTeamRedTeamsPerCU() const {
+    llvm_unreachable("Unimplemented");
+  }
   virtual uint32_t getOMPXBigJumpLoopMaxTotalTeams() const {
     llvm_unreachable("Unimplemented");
   }
