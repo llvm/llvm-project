@@ -133,14 +133,14 @@ public:
   }
 };
 
-class UnsignedMaxEtryPointTranslationUnitStatistic {
+class UnsignedMaxEntryPointTranslationUnitStatistic {
   UnsignedMaxEPStat M;
   llvm::TrackingStatistic S;
 
 public:
-  UnsignedMaxEtryPointTranslationUnitStatistic(const char *DebugType,
-                                               llvm::StringLiteral Name,
-                                               llvm::StringLiteral Desc)
+  UnsignedMaxEntryPointTranslationUnitStatistic(const char *DebugType,
+                                                llvm::StringLiteral Name,
+                                                llvm::StringLiteral Desc)
       : M(Name), S(DebugType, Name.data(), Desc.data()) {}
   void updateMax(uint64_t Value) {
     M.updateMax(static_cast<unsigned>(Value));
@@ -153,8 +153,8 @@ public:
       DEBUG_TYPE, #VARNAME, DESC}
 
 #define STAT_MAX(VARNAME, DESC)                                                \
-  static clang::ento::UnsignedMaxEtryPointTranslationUnitStatistic VARNAME = { \
-      DEBUG_TYPE, #VARNAME, DESC}
+  static clang::ento::UnsignedMaxEntryPointTranslationUnitStatistic VARNAME =  \
+      {DEBUG_TYPE, #VARNAME, DESC}
 
 } // namespace ento
 } // namespace clang
