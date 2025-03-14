@@ -99,6 +99,12 @@ URL of repository that hosts code.
 Used for links to definition locations.)"),
                   llvm::cl::cat(ClangDocCategory));
 
+static llvm::cl::opt<std::string>
+    RepositoryCodeLinePrefix("repository-line-prefix", llvm::cl::desc(R"(
+Prefix of line code for repository.
+)"),
+                             llvm::cl::cat(ClangDocCategory));
+
 enum OutputFormatTy {
   md,
   yaml,
@@ -141,8 +147,7 @@ llvm::Error getAssetFiles(clang::doc::ClangDocContext &CDCtx) {
   using DirIt = llvm::sys::fs::directory_iterator;
   std::error_code FileErr;
   llvm::SmallString<128> FilePath(UserAssetPath);
-  for (DirIt DirStart = DirIt(UserAssetPath, FileErr),
-                   DirEnd;
+  for (DirIt DirStart = DirIt(UserAssetPath, FileErr), DirEnd;
        !FileErr && DirStart != DirEnd; DirStart.increment(FileErr)) {
     FilePath = DirStart->path();
     if (llvm::sys::fs::is_regular_file(FilePath)) {
@@ -268,8 +273,8 @@ Example usage for a project using a compile commands database:
       OutDirectory,
       SourceRoot,
       RepositoryUrl,
-      {UserStylesheets.begin(), UserStylesheets.end()}
-  };
+      RepositoryCodeLinePrefix,
+      {UserStylesheets.begin(), UserStylesheets.end()}};
 
   if (Format == "html") {
     if (auto Err = getHtmlAssetFiles(argv[0], CDCtx)) {

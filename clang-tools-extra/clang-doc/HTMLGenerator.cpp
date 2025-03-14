@@ -491,9 +491,9 @@ genReferencesBlock(const std::vector<Reference> &References,
   return Out;
 }
 
-static std::unique_ptr<TagNode>
-writeFileDefinition(const Location &L,
-                    std::optional<StringRef> RepositoryUrl = std::nullopt) {
+static std::unique_ptr<TagNode> writeFileDefinition(
+    const Location &L, std::optional<StringRef> RepositoryUrl = std::nullopt,
+    std::optional<StringRef> RepositoryLinePrefix = std::nullopt) {
   if (!L.IsFileInRootDir && !RepositoryUrl)
     return std::make_unique<TagNode>(
         HTMLTag::TAG_P, "Defined at line " + std::to_string(L.LineNumber) +
@@ -514,17 +514,21 @@ writeFileDefinition(const Location &L,
   Node->Children.emplace_back(std::make_unique<TextNode>("Defined at line "));
   auto LocNumberNode =
       std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.LineNumber));
-  // The links to a specific line in the source code use the github /
-  // googlesource notation so it won't work for all hosting pages.
-  // FIXME: we probably should have a configuration setting for line number
-  // rendering in the HTML. For example, GitHub uses #L22, while googlesource
-  // uses #22 for line numbers.
-  LocNumberNode->Attributes.emplace_back(
-      "href", (FileURL + "#" + std::to_string(L.LineNumber)).str());
+
+  std::string LineAnchor = "#";
+
+  if (RepositoryLinePrefix)
+    LineAnchor += RepositoryLinePrefix.value().str();
+
+  LineAnchor += std::to_string(L.LineNumber);
+
+  LocNumberNode->Attributes.emplace_back("href", (FileURL + LineAnchor).str());
   Node->Children.emplace_back(std::move(LocNumberNode));
   Node->Children.emplace_back(std::make_unique<TextNode>(" of file "));
+
   auto LocFileNode = std::make_unique<TagNode>(
       HTMLTag::TAG_A, llvm::sys::path::filename(FileURL));
+
   LocFileNode->Attributes.emplace_back("href", std::string(FileURL));
   Node->Children.emplace_back(std::move(LocFileNode));
   return Node;
@@ -750,11 +754,15 @@ genHTML(const EnumInfo &I, const ClangDocContext &CDCtx) {
   Out.emplace_back(std::move(Table));
 
   if (I.DefLoc) {
-    if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(*I.DefLoc));
-    else
-      Out.emplace_back(
-          writeFileDefinition(*I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
+    std::optional<StringRef> RepoUrl;
+    std::optional<StringRef> RepoLinePrefix;
+
+    if (CDCtx.RepositoryUrl)
+      RepoUrl = StringRef{*CDCtx.RepositoryUrl};
+    if (CDCtx.RepositoryLinePrefix)
+      RepoLinePrefix = StringRef{*CDCtx.RepositoryLinePrefix};
+
+    Out.emplace_back(writeFileDefinition(*I.DefLoc, RepoUrl, RepoLinePrefix));
   }
 
   std::string Description;
@@ -799,11 +807,15 @@ genHTML(const FunctionInfo &I, const ClangDocContext &CDCtx,
   FunctionHeader->Children.emplace_back(std::make_unique<TextNode>(")"));
 
   if (I.DefLoc) {
-    if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(*I.DefLoc));
-    else
-      Out.emplace_back(writeFileDefinition(
-          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
+    std::optional<StringRef> RepoUrl;
+    std::optional<StringRef> RepoLinePrefix;
+
+    if (CDCtx.RepositoryUrl)
+      RepoUrl = StringRef{*CDCtx.RepositoryUrl};
+    if (CDCtx.RepositoryLinePrefix)
+      RepoLinePrefix = StringRef{*CDCtx.RepositoryLinePrefix};
+
+    Out.emplace_back(writeFileDefinition(*I.DefLoc, RepoUrl, RepoLinePrefix));
   }
 
   std::string Description;
@@ -866,11 +878,15 @@ genHTML(const RecordInfo &I, Index &InfoIndex, const ClangDocContext &CDCtx,
   Out.emplace_back(std::make_unique<TagNode>(HTMLTag::TAG_H1, InfoTitle));
 
   if (I.DefLoc) {
-    if (!CDCtx.RepositoryUrl)
-      Out.emplace_back(writeFileDefinition(*I.DefLoc));
-    else
-      Out.emplace_back(writeFileDefinition(
-          *I.DefLoc, StringRef{*CDCtx.RepositoryUrl}));
+    std::optional<StringRef> RepoUrl;
+    std::optional<StringRef> RepoLinePrefix;
+
+    if (CDCtx.RepositoryUrl)
+      RepoUrl = StringRef{*CDCtx.RepositoryUrl};
+    if (CDCtx.RepositoryLinePrefix)
+      RepoLinePrefix = StringRef{*CDCtx.RepositoryLinePrefix};
+
+    Out.emplace_back(writeFileDefinition(*I.DefLoc, RepoUrl, RepoLinePrefix));
   }
 
   std::string Description;

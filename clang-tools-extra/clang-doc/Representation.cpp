@@ -368,6 +368,7 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
                                  StringRef ProjectName, bool PublicOnly,
                                  StringRef OutDirectory, StringRef SourceRoot,
                                  StringRef RepositoryUrl,
+                                 StringRef RepositoryLinePrefix,
                                  std::vector<std::string> UserStylesheets)
     : ECtx(ECtx), ProjectName(ProjectName), PublicOnly(PublicOnly),
       OutDirectory(OutDirectory), UserStylesheets(UserStylesheets) {
@@ -381,6 +382,9 @@ ClangDocContext::ClangDocContext(tooling::ExecutionContext *ECtx,
     if (!RepositoryUrl.empty() && !RepositoryUrl.starts_with("http://") &&
         !RepositoryUrl.starts_with("https://"))
       this->RepositoryUrl->insert(0, "https://");
+
+    if (!RepositoryLinePrefix.empty())
+      this->RepositoryLinePrefix = std::string(RepositoryLinePrefix);
   }
 }
 
