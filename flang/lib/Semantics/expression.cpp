@@ -634,6 +634,13 @@ MaybeExpr ExpressionAnalyzer::FixMisparsedSubstring(
 }
 
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::Designator &d) {
+  const auto &name = GetFirstName(d);
+  if (name.symbol) {
+    if (auto *detail =
+            name.symbol->detailsIf<Fortran::semantics::ObjectEntityDetails>()) {
+      detail->set_isUsed();
+    }
+  }
   auto restorer{GetContextualMessages().SetLocation(d.source)};
   if (auto substringInquiry{FixMisparsedSubstring(d)}) {
     return substringInquiry;
