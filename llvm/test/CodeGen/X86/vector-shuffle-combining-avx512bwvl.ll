@@ -102,9 +102,9 @@ declare <4 x i32> @llvm.fshl.v4i32(<4 x i32>, <4 x i32>, <4 x i32>)
 define <8 x i32> @concat_vrotli_v4i32(<4 x i32> %a0, <4 x i32> %a1) {
 ; CHECK-LABEL: concat_vrotli_v4i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vprold $3, %xmm0, %xmm0
-; CHECK-NEXT:    vprold $3, %xmm1, %xmm1
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; CHECK-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; CHECK-NEXT:    vprold $3, %ymm0, %ymm0
 ; CHECK-NEXT:    ret{{[l|q]}}
   %r0 = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a0, <4 x i32> %a0, <4 x i32> splat (i32 3))
   %r1 = tail call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %a1, <4 x i32> %a1, <4 x i32> splat (i32 3))
