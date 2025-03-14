@@ -10,9 +10,8 @@
 define i32 @umax_shl_common_lhs(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @umax_shl_common_lhs(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 [[Z]], [[X]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 [[Z]], [[Y]]
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[SHL_X]], i32 [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = shl nuw i32 [[Z]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %shl_x = shl nuw i32 %z, %x
@@ -24,9 +23,8 @@ define i32 @umax_shl_common_lhs(i32 %x, i32 %y, i32 %z) {
 define i32 @umax_shl_common_rhs(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @umax_shl_common_rhs(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 [[Y]], [[Z]]
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[SHL_X]], i32 [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = shl nuw i32 [[TMP1]], [[Z]]
 ; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %shl_x = shl nuw i32 %x, %z
@@ -38,9 +36,8 @@ define i32 @umax_shl_common_rhs(i32 %x, i32 %y, i32 %z) {
 define i32 @umin_shl_common_lhs(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @umin_shl_common_lhs(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 [[Z]], [[X]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 [[Z]], [[Y]]
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SHL_X]], i32 [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = shl nuw i32 [[Z]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %shl_x = shl nuw i32 %z, %x
@@ -52,9 +49,8 @@ define i32 @umin_shl_common_lhs(i32 %x, i32 %y, i32 %z) {
 define i32 @umin_shl_common_rhs(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @umin_shl_common_rhs(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 [[Y]], [[Z]]
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SHL_X]], i32 [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = shl nuw i32 [[TMP1]], [[Z]]
 ; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %shl_x = shl nuw i32 %x, %z
@@ -66,9 +62,8 @@ define i32 @umin_shl_common_rhs(i32 %x, i32 %y, i32 %z) {
 define i32 @umax_shl_common_lhs_const1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @umax_shl_common_lhs_const1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 1, [[X]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 1, [[Y]]
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[SHL_X]], i32 [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = shl nuw i32 1, [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %shl_x = shl nuw i32 1, %x
@@ -80,9 +75,8 @@ define i32 @umax_shl_common_lhs_const1(i32 %x, i32 %y) {
 define i32 @umax_shl_common_rhs_const1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @umax_shl_common_rhs_const1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 [[X]], 1
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 [[Y]], 1
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[SHL_X]], i32 [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = shl nuw i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %shl_x = shl nuw i32 %x, 1
@@ -94,9 +88,8 @@ define i32 @umax_shl_common_rhs_const1(i32 %x, i32 %y) {
 define i32 @umin_shl_common_lhs_const1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @umin_shl_common_lhs_const1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 1, [[X]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 1, [[Y]]
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SHL_X]], i32 [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = shl nuw i32 1, [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %shl_x = shl nuw i32 1, %x
@@ -108,9 +101,8 @@ define i32 @umin_shl_common_lhs_const1(i32 %x, i32 %y) {
 define i32 @umin_shl_common_rhs_const1(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i32 @umin_shl_common_rhs_const1(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 [[X]], 1
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 [[Y]], 1
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SHL_X]], i32 [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = shl nuw i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %shl_x = shl nuw i32 %x, 1
@@ -196,9 +188,8 @@ define i32 @umin_shl_common_rhs_multi_use(i32 %x, i32 %y, i32 %z) {
 define i32 @umax_shl_common_lhs_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @umax_shl_common_lhs_commuted(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 [[Z]], [[X]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 [[Z]], [[Y]]
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[SHL_Y]], i32 [[SHL_X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[Y]], i32 [[X]])
+; CHECK-NEXT:    [[MAX:%.*]] = shl nuw i32 [[Z]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %shl_x = shl nuw i32 %z, %x
@@ -210,9 +201,8 @@ define i32 @umax_shl_common_lhs_commuted(i32 %x, i32 %y, i32 %z) {
 define i32 @umax_shl_common_rhs_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @umax_shl_common_rhs_commuted(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 [[Y]], [[Z]]
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[SHL_Y]], i32 [[SHL_X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[Y]], i32 [[X]])
+; CHECK-NEXT:    [[MAX:%.*]] = shl nuw i32 [[TMP1]], [[Z]]
 ; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %shl_x = shl nuw i32 %x, %z
@@ -224,9 +214,8 @@ define i32 @umax_shl_common_rhs_commuted(i32 %x, i32 %y, i32 %z) {
 define i32 @umin_shl_common_lhs_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @umin_shl_common_lhs_commuted(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 [[Z]], [[X]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 [[Z]], [[Y]]
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SHL_Y]], i32 [[SHL_X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[Y]], i32 [[X]])
+; CHECK-NEXT:    [[MIN:%.*]] = shl nuw i32 [[Z]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %shl_x = shl nuw i32 %z, %x
@@ -238,9 +227,8 @@ define i32 @umin_shl_common_lhs_commuted(i32 %x, i32 %y, i32 %z) {
 define i32 @umin_shl_common_rhs_commuted(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @umin_shl_common_rhs_commuted(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw i32 [[X]], [[Z]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw i32 [[Y]], [[Z]]
-; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.umin.i32(i32 [[SHL_Y]], i32 [[SHL_X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[Y]], i32 [[X]])
+; CHECK-NEXT:    [[MIN:%.*]] = shl nuw i32 [[TMP1]], [[Z]]
 ; CHECK-NEXT:    ret i32 [[MIN]]
 ;
   %shl_x = shl nuw i32 %x, %z
@@ -252,9 +240,8 @@ define i32 @umin_shl_common_rhs_commuted(i32 %x, i32 %y, i32 %z) {
 define <2 x i32> @umax_shl_common_lhs_vector(<2 x i32> %z, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i32> @umax_shl_common_lhs_vector(
 ; CHECK-SAME: <2 x i32> [[Z:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw <2 x i32> [[Z]], [[X]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw <2 x i32> [[Z]], [[Y]]
-; CHECK-NEXT:    [[MAX:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[SHL_X]], <2 x i32> [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[X]], <2 x i32> [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = shl nuw <2 x i32> [[Z]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i32> [[MAX]]
 ;
   %shl_x = shl nuw <2 x i32> %z, %x
@@ -266,9 +253,8 @@ define <2 x i32> @umax_shl_common_lhs_vector(<2 x i32> %z, <2 x i32> %x, <2 x i3
 define <2 x i32> @umax_shl_common_rhs_vector(<2 x i32> %z, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i32> @umax_shl_common_rhs_vector(
 ; CHECK-SAME: <2 x i32> [[Z:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw <2 x i32> [[X]], [[Z]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw <2 x i32> [[Y]], [[Z]]
-; CHECK-NEXT:    [[MAX:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[SHL_X]], <2 x i32> [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umax.v2i32(<2 x i32> [[X]], <2 x i32> [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = shl nuw <2 x i32> [[TMP1]], [[Z]]
 ; CHECK-NEXT:    ret <2 x i32> [[MAX]]
 ;
   %shl_x = shl nuw <2 x i32> %x, %z
@@ -281,9 +267,8 @@ define <2 x i32> @umax_shl_common_rhs_vector(<2 x i32> %z, <2 x i32> %x, <2 x i3
 define <2 x i32> @umin_shl_common_lhs_vector(<2 x i32> %z, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i32> @umin_shl_common_lhs_vector(
 ; CHECK-SAME: <2 x i32> [[Z:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw <2 x i32> [[Z]], [[X]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw <2 x i32> [[Z]], [[Y]]
-; CHECK-NEXT:    [[MIN:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[SHL_X]], <2 x i32> [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[X]], <2 x i32> [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = shl nuw <2 x i32> [[Z]], [[TMP1]]
 ; CHECK-NEXT:    ret <2 x i32> [[MIN]]
 ;
   %shl_x = shl nuw <2 x i32> %z, %x
@@ -295,9 +280,8 @@ define <2 x i32> @umin_shl_common_lhs_vector(<2 x i32> %z, <2 x i32> %x, <2 x i3
 define <2 x i32> @umin_shl_common_rhs_vector(<2 x i32> %z, <2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x i32> @umin_shl_common_rhs_vector(
 ; CHECK-SAME: <2 x i32> [[Z:%.*]], <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw <2 x i32> [[X]], [[Z]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw <2 x i32> [[Y]], [[Z]]
-; CHECK-NEXT:    [[MIN:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[SHL_X]], <2 x i32> [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.umin.v2i32(<2 x i32> [[X]], <2 x i32> [[Y]])
+; CHECK-NEXT:    [[MIN:%.*]] = shl nuw <2 x i32> [[TMP1]], [[Z]]
 ; CHECK-NEXT:    ret <2 x i32> [[MIN]]
 ;
   %shl_x = shl nuw <2 x i32> %x, %z
@@ -423,9 +407,8 @@ define i32 @umax_shl_common_rhs_no_nuw_flag(i32 %x, i32 %y) {
 define i32 @umax_shl_common_lhs_preserve_nsw(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: define i32 @umax_shl_common_lhs_preserve_nsw(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]]) {
-; CHECK-NEXT:    [[SHL_X:%.*]] = shl nuw nsw i32 [[Z]], [[X]]
-; CHECK-NEXT:    [[SHL_Y:%.*]] = shl nuw nsw i32 [[Z]], [[Y]]
-; CHECK-NEXT:    [[MAX:%.*]] = call i32 @llvm.umax.i32(i32 [[SHL_X]], i32 [[SHL_Y]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[MAX:%.*]] = shl nuw nsw i32 [[Z]], [[TMP1]]
 ; CHECK-NEXT:    ret i32 [[MAX]]
 ;
   %shl_x = shl nuw nsw i32 %z, %x

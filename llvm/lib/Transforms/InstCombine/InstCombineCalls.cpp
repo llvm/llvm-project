@@ -1606,18 +1606,17 @@ foldIntrinsicUsingDistributiveLaws(IntrinsicInst *II,
   if (Op0->isCommutative() && A != C && B != D && A == D)
     std::swap(C, D);
 
-  if (A != C && B != D)
-    return nullptr;
-
   BinaryOperator *NewBinop;
   if (A == C) {
     Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, B, D);
     NewBinop =
         cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, A, NewIntrinsic));
-  } else { // B == D
+  } else if (B == D) {
     Value *NewIntrinsic = Builder.CreateBinaryIntrinsic(TopLevelOpcode, A, C);
     NewBinop =
         cast<BinaryOperator>(Builder.CreateBinOp(InnerOpcode, NewIntrinsic, B));
+  } else {
+    return nullptr;
   }
 
   NewBinop->setHasNoUnsignedWrap(HasNUW);
