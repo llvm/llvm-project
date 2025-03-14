@@ -37,6 +37,10 @@
 #include "GDBRemoteCommunicationClient.h"
 #include "GDBRemoteRegisterContext.h"
 
+#if defined(_AIX)
+struct ld_xinfo;
+#endif
+
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 
@@ -422,6 +426,10 @@ protected:
 
   Status DoGetMemoryRegionInfo(lldb::addr_t load_addr,
                                MemoryRegionInfo &region_info) override;
+
+#if defined(_AIX)
+  Status DoGetLDXINFO(struct ld_xinfo *info_ptr) override;
+#endif
 
 private:
   // For ProcessGDBRemote only
