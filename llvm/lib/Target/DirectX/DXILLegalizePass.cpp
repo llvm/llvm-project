@@ -33,16 +33,19 @@ static bool fixI8TruncUseChain(Instruction &I,
                                std::stack<Instruction *> &ToRemove,
                                std::map<Value *, Value *> &ReplacedValues) {
 
+  auto *Cmp = dyn_cast<CmpInst>(&I);
+
   if (auto *Trunc = dyn_cast<TruncInst>(&I)) {
     if (Trunc->getDestTy()->isIntegerTy(8)) {
       ReplacedValues[Trunc] = Trunc->getOperand(0);
       ToRemove.push(Trunc);
     }
-  } else if (I.getType()->isIntegerTy(8)) {
+  } else if (I.getType()->isIntegerTy(8) ||
+             (Cmp && Cmp->getOperand(0)->getType()->isIntegerTy(8))) {
     IRBuilder<> Builder(&I);
 
     std::vector<Value *> NewOperands;
-    Type *InstrType = nullptr;
+    Type *InstrType = IntegerType::get(I.getContext(), 32);
     for (unsigned OpIdx = 0; OpIdx < I.getNumOperands(); ++OpIdx) {
       Value *Op = I.getOperand(OpIdx);
       if (ReplacedValues.count(Op)) {
@@ -66,23 +69,21 @@ static bool fixI8TruncUseChain(Instruction &I,
     if (auto *BO = dyn_cast<BinaryOperator>(&I))
       NewInst =
           Builder.CreateBinOp(BO->getOpcode(), NewOperands[0], NewOperands[1]);
-    else if (auto *Cmp = dyn_cast<CmpInst>(&I))
+    else if (Cmp) {
       NewInst = Builder.CreateCmp(Cmp->getPredicate(), NewOperands[0],
                                   NewOperands[1]);
-    else if (auto *Cast = dyn_cast<CastInst>(&I))
-      NewInst = Builder.CreateCast(Cast->getOpcode(), NewOperands[0],
-                                   Cast->getDestTy());
-    else if (auto *UnaryOp = dyn_cast<UnaryOperator>(&I))
+      Cmp->replaceAllUsesWith(NewInst);
+    } else if (auto *UnaryOp = dyn_cast<UnaryOperator>(&I))
       NewInst = Builder.CreateUnOp(UnaryOp->getOpcode(), NewOperands[0]);
 
     if (NewInst) {
       ReplacedValues[&I] = NewInst;
       ToRemove.push(&I);
     }
-  } else if (auto *Sext = dyn_cast<SExtInst>(&I)) {
-    if (Sext->getSrcTy()->isIntegerTy(8)) {
-      ToRemove.push(Sext);
-      Sext->replaceAllUsesWith(ReplacedValues[Sext->getOperand(0)]);
+  } else if (auto *Cast = dyn_cast<CastInst>(&I)) {
+    if (Cast->getSrcTy()->isIntegerTy(8)) {
+      ToRemove.push(Cast);
+      Cast->replaceAllUsesWith(ReplacedValues[Cast->getOperand(0)]);
     }
   }
 
