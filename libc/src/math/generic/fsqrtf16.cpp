@@ -14,7 +14,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(float16, fsqrtf16, (float16 x)) {
+LLVM_LIBC_FUNCTION(float16, fsqrtf16, (float x)) {
   return fputil::sqrt<float16>(x);
 }
 

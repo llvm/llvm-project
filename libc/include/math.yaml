@@ -1296,7 +1296,7 @@ functions:
       - stdc
     return_type: _Float16
     arguments:
-      - type: _Float16
+      - type: float
     guard: LIBC_TYPES_HAS_FLOAT16
   - name: fsqrtf128
     standards:
