@@ -12,32 +12,42 @@ define i32 @cdotp_i8_rot0(<vscale x 32 x i8> %a0, <vscale x 32 x i8> %b0, <vscal
 ; CHECK-SVE2-NEXT:  [[ENTRY:.*]]:
 ; CHECK-SVE2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-SVE2:       [[VECTOR_BODY]]:
-; CHECK-SVE2-NEXT:    [[TMP0:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP11:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-SVE2-NEXT:    [[TMP1:%.*]] = phi <vscale x 8 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP21:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-SVE2-NEXT:    [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[A0]], i64 0)
-; CHECK-SVE2-NEXT:    [[TMP3:%.*]] = call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[B0]], i64 0)
-; CHECK-SVE2-NEXT:    [[TMP4:%.*]] = call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[A0]], i64 16)
-; CHECK-SVE2-NEXT:    [[TMP5:%.*]] = call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[B0]], i64 16)
-; CHECK-SVE2-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[TMP0]], i64 0)
-; CHECK-SVE2-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[TMP0]], i64 4)
-; CHECK-SVE2-NEXT:    [[TMP8:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cdot.nxv4i32(<vscale x 4 x i32> [[TMP6]], <vscale x 16 x i8> [[TMP2]], <vscale x 16 x i8> [[TMP3]], i32 0)
-; CHECK-SVE2-NEXT:    [[TMP9:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cdot.nxv4i32(<vscale x 4 x i32> [[TMP7]], <vscale x 16 x i8> [[TMP4]], <vscale x 16 x i8> [[TMP5]], i32 0)
-; CHECK-SVE2-NEXT:    [[TMP10:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP8]], i64 0)
-; CHECK-SVE2-NEXT:    [[TMP11]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP10]], <vscale x 4 x i32> [[TMP9]], i64 4)
-; CHECK-SVE2-NEXT:    [[TMP12:%.*]] = call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[A1]], i64 0)
-; CHECK-SVE2-NEXT:    [[TMP13:%.*]] = call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[B1]], i64 0)
-; CHECK-SVE2-NEXT:    [[TMP14:%.*]] = call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[A1]], i64 16)
-; CHECK-SVE2-NEXT:    [[TMP15:%.*]] = call <vscale x 16 x i8> @llvm.vector.extract.nxv16i8.nxv32i8(<vscale x 32 x i8> [[B1]], i64 16)
-; CHECK-SVE2-NEXT:    [[TMP16:%.*]] = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[TMP1]], i64 0)
-; CHECK-SVE2-NEXT:    [[TMP17:%.*]] = call <vscale x 4 x i32> @llvm.vector.extract.nxv4i32.nxv8i32(<vscale x 8 x i32> [[TMP1]], i64 4)
-; CHECK-SVE2-NEXT:    [[TMP18:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cdot.nxv4i32(<vscale x 4 x i32> [[TMP16]], <vscale x 16 x i8> [[TMP12]], <vscale x 16 x i8> [[TMP13]], i32 0)
-; CHECK-SVE2-NEXT:    [[TMP19:%.*]] = call <vscale x 4 x i32> @llvm.aarch64.sve.cdot.nxv4i32(<vscale x 4 x i32> [[TMP17]], <vscale x 16 x i8> [[TMP14]], <vscale x 16 x i8> [[TMP15]], i32 0)
-; CHECK-SVE2-NEXT:    [[TMP20:%.*]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> poison, <vscale x 4 x i32> [[TMP18]], i64 0)
-; CHECK-SVE2-NEXT:    [[TMP21]] = call <vscale x 8 x i32> @llvm.vector.insert.nxv8i32.nxv4i32(<vscale x 8 x i32> [[TMP20]], <vscale x 4 x i32> [[TMP19]], i64 4)
+; CHECK-SVE2-NEXT:    [[VEC_PHI:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE33:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-SVE2-NEXT:    [[VEC_PHI25:%.*]] = phi <vscale x 4 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[PARTIAL_REDUCE34:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-SVE2-NEXT:    [[A0_DEINTERLEAVED:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[A0]])
+; CHECK-SVE2-NEXT:    [[A0_REAL:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A0_DEINTERLEAVED]], 0
+; CHECK-SVE2-NEXT:    [[A0_IMAG:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A0_DEINTERLEAVED]], 1
+; CHECK-SVE2-NEXT:    [[A1_DEINTERLEAVED:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[A1]])
+; CHECK-SVE2-NEXT:    [[A1_REAL:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A1_DEINTERLEAVED]], 0
+; CHECK-SVE2-NEXT:    [[A1_IMAG:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[A1_DEINTERLEAVED]], 1
+; CHECK-SVE2-NEXT:    [[A0_REAL_EXT:%.*]] = sext <vscale x 16 x i8> [[A0_REAL]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[A1_REAL_EXT:%.*]] = sext <vscale x 16 x i8> [[A1_REAL]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[B0_DEINTERLEAVED:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[B0]])
+; CHECK-SVE2-NEXT:    [[B0_REAL:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[B0_DEINTERLEAVED]], 0
+; CHECK-SVE2-NEXT:    [[B0_IMAG:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[B0_DEINTERLEAVED]], 1
+; CHECK-SVE2-NEXT:    [[B1_DEINTERLEAVED:%.*]] = tail call { <vscale x 16 x i8>, <vscale x 16 x i8> } @llvm.vector.deinterleave2.nxv32i8(<vscale x 32 x i8> [[B1]])
+; CHECK-SVE2-NEXT:    [[B1_REAL:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[B1_DEINTERLEAVED]], 0
+; CHECK-SVE2-NEXT:    [[B1_IMAG:%.*]] = extractvalue { <vscale x 16 x i8>, <vscale x 16 x i8> } [[B1_DEINTERLEAVED]], 1
+; CHECK-SVE2-NEXT:    [[B0_REAL_EXT:%.*]] = sext <vscale x 16 x i8> [[B0_REAL]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[B1_REAL_EXT:%.*]] = sext <vscale x 16 x i8> [[B1_REAL]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[TMP0:%.*]] = mul nsw <vscale x 16 x i32> [[B0_REAL_EXT]], [[A0_REAL_EXT]]
+; CHECK-SVE2-NEXT:    [[TMP1:%.*]] = mul nsw <vscale x 16 x i32> [[B1_REAL_EXT]], [[A1_REAL_EXT]]
+; CHECK-SVE2-NEXT:    [[A0_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[A0_IMAG]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[A1_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[A1_IMAG]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[B0_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[B0_IMAG]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[B1_IMAG_EXT:%.*]] = sext <vscale x 16 x i8> [[B1_IMAG]] to <vscale x 16 x i32>
+; CHECK-SVE2-NEXT:    [[TMP2:%.*]] = mul nsw <vscale x 16 x i32> [[B0_IMAG_EXT]], [[A0_IMAG_EXT]]
+; CHECK-SVE2-NEXT:    [[TMP3:%.*]] = mul nsw <vscale x 16 x i32> [[B1_IMAG_EXT]], [[A1_IMAG_EXT]]
+; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI]], <vscale x 16 x i32> [[TMP0]])
+; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE32:%.*]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[VEC_PHI25]], <vscale x 16 x i32> [[TMP1]])
+; CHECK-SVE2-NEXT:    [[TMP4:%.*]] = sub nsw <vscale x 16 x i32> zeroinitializer, [[TMP2]]
+; CHECK-SVE2-NEXT:    [[TMP5:%.*]] = sub nsw <vscale x 16 x i32> zeroinitializer, [[TMP3]]
+; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE33]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE]], <vscale x 16 x i32> [[TMP4]])
+; CHECK-SVE2-NEXT:    [[PARTIAL_REDUCE34]] = tail call <vscale x 4 x i32> @llvm.experimental.vector.partial.reduce.add.nxv4i32.nxv16i32(<vscale x 4 x i32> [[PARTIAL_REDUCE32]], <vscale x 16 x i32> [[TMP5]])
 ; CHECK-SVE2-NEXT:    br i1 true, label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]]
 ; CHECK-SVE2:       [[MIDDLE_BLOCK]]:
-; CHECK-SVE2-NEXT:    [[TMP22:%.*]] = add <vscale x 8 x i32> [[TMP21]], [[TMP11]]
-; CHECK-SVE2-NEXT:    [[TMP23:%.*]] = call i32 @llvm.vector.reduce.add.nxv8i32(<vscale x 8 x i32> [[TMP22]])
+; CHECK-SVE2-NEXT:    [[BIN_RDX:%.*]] = add <vscale x 4 x i32> [[PARTIAL_REDUCE34]], [[PARTIAL_REDUCE33]]
+; CHECK-SVE2-NEXT:    [[TMP23:%.*]] = tail call i32 @llvm.vector.reduce.add.nxv4i32(<vscale x 4 x i32> [[BIN_RDX]])
 ; CHECK-SVE2-NEXT:    ret i32 [[TMP23]]
 ;
 ; CHECK-SVE-LABEL: define i32 @cdotp_i8_rot0(
