@@ -112,6 +112,7 @@
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
+#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineBranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
@@ -1441,6 +1442,19 @@ parseRegAllocGreedyFilterFunc(PassBuilder &PB, StringRef Params) {
 Expected<bool> parseMachineSinkingPassOptions(StringRef Params) {
   return PassBuilder::parseSinglePassOption(Params, "enable-sink-fold",
                                             "MachineSinkingPass");
+}
+
+Expected<bool> parseMachineBlockPlacementPassOptions(StringRef Params) {
+  bool AllowTailMerge = true;
+  if (!Params.empty()) {
+    AllowTailMerge = !Params.consume_front("no-");
+    if (Params != "tail-merge")
+      return make_error<StringError>(
+          formatv("invalid MachineBlockPlacementPass parameter '{0}' ", Params)
+              .str(),
+          inconvertibleErrorCode());
+  }
+  return AllowTailMerge;
 }
 
 } // namespace

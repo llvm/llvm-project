@@ -57984,10 +57984,14 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
 
     switch (Op0.getOpcode()) {
     case ISD::VECTOR_SHUFFLE: {
-      // TODO: Relax VBMI requirement for repeated shuffle ops - currently
-      // limited to targets that should always have good cross lane shuffles.
-      if (!IsSplat && NumOps == 2 && VT.is256BitVector() &&
-          (EltSizeInBits >= 32 || Subtarget.hasInt256())) {
+      // TODO: Generalize NumOps support.
+      if (!IsSplat && NumOps == 2 &&
+          ((VT.is256BitVector() &&
+            (EltSizeInBits >= 32 || Subtarget.hasInt256())) ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
+            (EltSizeInBits >= 32 || Subtarget.hasVBMI2())))) {
+        // TODO: Relax VBMI requirement for repeated shuffle ops - currently
+        // limited to targets that should always have good cross lane shuffles.
         SDValue Concat0 = CombineSubOperand(VT, Ops, 0);
         SDValue Concat1 = CombineSubOperand(VT, Ops, 1);
         if (Concat0 || Concat1 ||

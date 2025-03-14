@@ -403,9 +403,9 @@ public:
                 continue;
               }
             } else if (subs.ubound().isStar()) {
-              assert(Fortran::semantics::IsNamedConstant(sym) ||
-                     Fortran::semantics::IsCUDAShared(sym) &&
-                         "expect implied shape constant");
+              assert((Fortran::semantics::IsNamedConstant(sym) ||
+                      Fortran::semantics::IsCUDAShared(sym)) &&
+                     "expect implied shape constant");
               shapes.push_back(fir::SequenceType::getUnknownExtent());
               continue;
             }
