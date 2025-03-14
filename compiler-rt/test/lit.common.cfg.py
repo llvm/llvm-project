@@ -330,6 +330,10 @@ if config.have_zlib:
 if config.have_internal_symbolizer:
     config.available_features.add("internal_symbolizer")
 
+if config.have_disable_symbolizer_path_search:
+    config.available_features.add("disable_symbolizer_path_search")
+
+
 # Use ugly construction to explicitly prohibit "clang", "clang++" etc.
 # in RUN lines.
 config.substitutions.append(
@@ -382,9 +386,6 @@ tool_symbolizer_path_map = {
     "lsan": "LSAN_SYMBOLIZER_PATH",
     "ubsan": "UBSAN_SYMBOLIZER_PATH"
 }
-
-if config.have_disable_symbolizer_path_search:
-    config.available_features.add("disable_symbolizer_path_search")
 
 if config.have_disable_symbolizer_path_search:
     symbolizer_path = os.path.join(config.llvm_tools_dir, "llvm-symbolizer")
