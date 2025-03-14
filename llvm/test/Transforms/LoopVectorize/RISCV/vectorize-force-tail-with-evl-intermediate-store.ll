@@ -285,7 +285,7 @@ for.end:
 ; IF-EVL-OUTLOOP: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
 ; IF-EVL-OUTLOOP: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]], [[META6:![0-9]+]]}
 ; IF-EVL-OUTLOOP: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
-; IF-EVL-OUTLOOP: [[META5]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
+; IF-EVL-OUTLOOP: [[META5]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", i32 0}
 ; IF-EVL-OUTLOOP: [[META6]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; IF-EVL-OUTLOOP: [[META7]] = !{[[META8:![0-9]+]]}
 ; IF-EVL-OUTLOOP: [[META8]] = distinct !{[[META8]], [[META2]]}
@@ -296,7 +296,7 @@ for.end:
 ; IF-EVL-INLOOP: [[META2]] = distinct !{[[META2]], !"LVerDomain"}
 ; IF-EVL-INLOOP: [[LOOP3]] = distinct !{[[LOOP3]], [[META4:![0-9]+]], [[META5:![0-9]+]], [[META6:![0-9]+]]}
 ; IF-EVL-INLOOP: [[META4]] = !{!"llvm.loop.isvectorized", i32 1}
-; IF-EVL-INLOOP: [[META5]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
+; IF-EVL-INLOOP: [[META5]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", i32 0}
 ; IF-EVL-INLOOP: [[META6]] = !{!"llvm.loop.unroll.runtime.disable"}
 ; IF-EVL-INLOOP: [[META7]] = !{[[META8:![0-9]+]]}
 ; IF-EVL-INLOOP: [[META8]] = distinct !{[[META8]], [[META2]]}
