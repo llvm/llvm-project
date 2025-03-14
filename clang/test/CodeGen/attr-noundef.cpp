@@ -35,7 +35,7 @@ struct Huge {
 Huge ret_huge() { return {}; }
 void pass_huge(Huge h) {}
 // CHECK: [[DEF]] void @{{.*}}ret_huge{{.*}}(ptr dead_on_unwind noalias writable sret({{[^)]+}}) align 4 %
-// CHECK: [[DEF]] void @{{.*}}pass_huge{{.*}}(ptr noundef
+// CHECK: [[DEF]] void @{{.*}}pass_huge{{.*}}(ptr noalias noundef
 } // namespace check_structs
 
 //************ Passing unions by value
