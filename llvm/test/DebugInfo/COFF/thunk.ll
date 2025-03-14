@@ -2,8 +2,6 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 ; RUN: opt -S -debugger-tune=lldb %s | FileCheck -check-prefix=OPT %s
 
-; Do the same for experimental debuginfo iterators.
-
 ; -- "thunk.cpp" begin --------------------------------------------------------
 ; class A { public: virtual bool MyMethod() { return true; } }; 
 ; class B { public: virtual bool MyMethod() { return true; } }; 

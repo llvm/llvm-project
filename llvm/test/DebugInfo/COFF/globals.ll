@@ -5,9 +5,6 @@
 ; RUN: llc < %s -filetype=obj -o %t
 ; RUN: obj2yaml < %t | FileCheck %s --check-prefixes=YAML,YAML-FILE
 
-; Repeat with experimental debuginfo iterators:
-; RUN: obj2yaml < %t | FileCheck %s --check-prefixes=YAML,YAML-FILE
-
 ; C++ source to regenerate:
 ; $ cat a.cpp
 ; int first;
