@@ -3,7 +3,8 @@
 
 ;; Verify the exact typeId value to ensure it is not garbage but the value
 ;; computed as the type id from the type operand bundle.
-; RUN: llc --call-graph-section -mtriple=mips-linux-gnu < %s -stop-before=finalize-isel -o - | FileCheck %s
+; RUN: llc --call-graph-section -mtriple riscv64 < %s -stop-before=finalize-isel -o - | FileCheck %s
+; RUN: llc --call-graph-section -mtriple riscv32 < %s -stop-before=finalize-isel -o - | FileCheck %s
 
 define dso_local void @foo(i8 signext %a) !type !0 {
 entry:
