@@ -131,7 +131,8 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
                                               bool IsROV, bool RawBuffer) {
   return BuiltinTypeDeclBuilder(S, Decl)
       .addHandleMember(RC, RK, IsROV, RawBuffer)
-      .addDefaultHandleConstructor();
+      .addDefaultHandleConstructor()
+      .addHandleConstructorFromBinding();
 }
 
 // This function is responsible for constructing the constraint expression for

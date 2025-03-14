@@ -19579,6 +19579,24 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
         ArrayRef<Value *>{HandleOp, IndexOp});
   }
+  case Builtin::BI__builtin_hlsl_resource_createpoisonhandle: {
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    return llvm::PoisonValue::get(HandleTy);
+  }
+  case Builtin::BI__builtin_hlsl_resource_createhandlefrombinding: {
+    llvm::Type *HandleTy = CGM.getTypes().ConvertType(E->getType());
+    Value *SpaceNoOp = EmitScalarExpr(E->getArg(1));
+    Value *RegisterNoOp = EmitScalarExpr(E->getArg(2));
+    Value *RangeOp = EmitScalarExpr(E->getArg(3));
+    Value *IndexOp = EmitScalarExpr(E->getArg(4));
+    // FIXME: NonUniformResourceIndex bit is not yet implemented
+    Value *NonUniform =
+        llvm::ConstantInt::get(llvm::Type::getInt1Ty(getLLVMContext()), false);
+    return Builder.CreateIntrinsic(
+        HandleTy, CGM.getHLSLRuntime().getCreateHandleFromBindingIntrinsic(),
+        ArrayRef<Value *>{SpaceNoOp, RegisterNoOp, RangeOp, IndexOp,
+                          NonUniform});
+  }
   case Builtin::BI__builtin_hlsl_all: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     return Builder.CreateIntrinsic(

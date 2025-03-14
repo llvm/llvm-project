@@ -19,6 +19,7 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -306,6 +307,10 @@ static bool isResourceRecordTypeOrArrayOf(const Type *Ty) {
   while (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
     Ty = CAT->getArrayElementTypeNoTypeQual();
   return HLSLAttributedResourceType::findHandleTypeOnResource(Ty) != nullptr;
+}
+
+static bool isResourceRecordTypeOrArrayOf(VarDecl *VD) {
+  return isResourceRecordTypeOrArrayOf(VD->getType().getTypePtr());
 }
 
 // Returns true if the type is a leaf element type that is not valid to be
@@ -2359,6 +2364,29 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_createpoisonhandle: {
+    if (SemaRef.checkArgCount(TheCall, 1) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0))
+      return true;
+    // use the type of the handle (arg0) as a return type
+    QualType ResourceTy = TheCall->getArg(0)->getType();
+    TheCall->setType(ResourceTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_resource_createhandlefrombinding: {
+    ASTContext &AST = SemaRef.getASTContext();
+    if (SemaRef.checkArgCount(TheCall, 5) ||
+        CheckResourceHandle(&SemaRef, TheCall, 0) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(1), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(2), AST.UnsignedIntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(3), AST.IntTy) ||
+        CheckArgTypeMatches(&SemaRef, TheCall->getArg(4), AST.UnsignedIntTy))
+      return true;
+    // use the type of the handle (arg0) as a return type
+    QualType ResourceTy = TheCall->getArg(0)->getType();
+    TheCall->setType(ResourceTy);
+    break;
+  }
   case Builtin::BI__builtin_hlsl_and:
   case Builtin::BI__builtin_hlsl_or: {
     if (SemaRef.checkArgCount(TheCall, 2))
@@ -3145,6 +3173,65 @@ void SemaHLSL::ActOnVariableDeclarator(VarDecl *VD) {
     // process explicit bindings
     processExplicitBindingsOnDecl(VD);
   }
+}
+
+bool SemaHLSL::initResourceVarFromBinding(VarDecl *VD, unsigned SpaceNo,
+                                          unsigned RegisterNo, int32_t Range,
+                                          unsigned Index) {
+  InitializedEntity Entity = InitializedEntity::InitializeVariable(VD);
+  InitializationKind Kind = InitializationKind::CreateDirect(
+      VD->getLocation(), SourceLocation(), SourceLocation());
+
+  ASTContext &AST = SemaRef.getASTContext();
+  uint64_t UIntTySize = AST.getTypeSize(AST.UnsignedIntTy);
+  uint64_t IntTySize = AST.getTypeSize(AST.IntTy);
+  Expr *Args[] = {IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, SpaceNo),
+                                         AST.UnsignedIntTy, SourceLocation()),
+                  IntegerLiteral::Create(AST,
+                                         llvm::APInt(UIntTySize, RegisterNo),
+                                         AST.UnsignedIntTy, SourceLocation()),
+                  IntegerLiteral::Create(AST, llvm::APInt(IntTySize, Range),
+                                         AST.IntTy, SourceLocation()),
+                  IntegerLiteral::Create(AST, llvm::APInt(UIntTySize, Index),
+                                         AST.UnsignedIntTy, SourceLocation())};
+
+  InitializationSequence InitSeq(SemaRef, Entity, Kind, Args);
+  ExprResult Init = InitSeq.Perform(SemaRef, Entity, Kind, Args);
+
+  if (!Init.get())
+    return false;
+
+  VD->setInit(SemaRef.MaybeCreateExprWithCleanups(Init.get()));
+  VD->setInitStyle(VarDecl::CallInit);
+  SemaRef.CheckCompleteVariableDeclaration(VD);
+  return true;
+}
+
+// Returns true in the initialization has been handled;
+// Return false to let Clang handle the default initializaton.
+bool SemaHLSL::ActOnUninitializedVarDecl(VarDecl *VD) {
+  // Objects in the hlsl_constant address space are initialized
+  // externally, so don't synthesize an implicit initializer.
+  if (VD->getType().getAddressSpace() == LangAS::hlsl_constant)
+    return true;
+
+  // Initialize resources (explicit binding)
+  // NOTE: it would probably be best to do this for all resources at the end
+  // of the translation unit after implicit bindings are assigned.
+  if (!isResourceRecordTypeOrArrayOf(VD))
+    return false;
+
+  // FIXME: We currectly support only simple resources - no arrays of resources
+  // or resources in user defined structs).
+  if (!VD->getType()->isHLSLResourceRecord())
+    return false;
+
+  HLSLResourceBindingAttr *RBA = VD->getAttr<HLSLResourceBindingAttr>();
+  if (!RBA)
+    return false;
+
+  return initResourceVarFromBinding(VD, RBA->getSpaceNumber(),
+                                    RBA->getSlotNumber(), 1, 0);
 }
 
 // Walks though the global variable declaration, collects all resource binding
