@@ -2062,7 +2062,7 @@ static LogicalResult generateCopy(
 
     // Set copy start location for this dimension in the lower memory space
     // memref.
-    if (auto caf = lbs[d].isSingleConstant()) {
+    if (lbs[d].isSingleConstant()) {
       auto indexVal = lbs[d].getSingleConstantResult();
       if (indexVal == 0) {
         memIndices.push_back(zeroIndex);

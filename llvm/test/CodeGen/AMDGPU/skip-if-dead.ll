@@ -1899,7 +1899,7 @@ latch:
 ._crit_edge:
   %tmp = phi i32 [ -1, %.entry ], [ %ctr.next, %latch ]
   %out = bitcast i32 %tmp to float
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %out, float %out, float undef, float undef, i1 true, i1 true)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 15, float %out, float %out, float poison, float poison, i1 true, i1 true)
   ret void
 }
 

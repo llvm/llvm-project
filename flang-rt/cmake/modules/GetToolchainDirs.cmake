@@ -32,16 +32,16 @@
 # added unconditionally to the library search path by
 # ToolChain::getArchSpecificLibPaths(...).
 function (get_toolchain_library_subdir outvar)
-  if (NOT APPLE)
-    set(outval "lib")
-  else ()
+  set(outval "lib")
+
+  if (APPLE)
     # Required to be "darwin" for MachO toolchain.
     get_toolchain_os_dirname(os_dirname)
-    set(outval "lib/${os_dirname}")
+    set(outval "${outval}/${os_dirname}")
+  else ()
+    get_toolchain_arch_dirname(arch_dirname)
+    set(outval "${outval}/${arch_dirname}")
   endif ()
-
-  get_toolchain_arch_dirname(arch_dirname)
-  set(outval "lib/${arch_dirname}")
 
   set(${outvar} "${outval}" PARENT_SCOPE)
 endfunction ()

@@ -20,8 +20,8 @@ define dllexport amdgpu_ps void @_amdgpu_ps_main(i32 inreg %arg) local_unnamed_a
   %tmp5 = getelementptr [4 x <4 x float>], ptr addrspace(4) @0, i64 0, i64 %tmp4
   %tmp6 = load <4 x float>, ptr addrspace(4) %tmp5, align 16
   %tmp7 = extractelement <4 x float> %tmp6, i32 3
-  %tmp8 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float undef, float %tmp7) #1
-  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> undef, <2 x half> %tmp8, i1 true, i1 true) #2
+  %tmp8 = call <2 x half> @llvm.amdgcn.cvt.pkrtz(float poison, float %tmp7) #1
+  call void @llvm.amdgcn.exp.compr.v2f16(i32 0, i32 15, <2 x half> poison, <2 x half> %tmp8, i1 true, i1 true) #2
   ret void
 }
 

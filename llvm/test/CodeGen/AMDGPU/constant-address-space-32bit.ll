@@ -306,7 +306,7 @@ define amdgpu_vs float @load_addr_no_fold(ptr addrspace(6) inreg noalias %p0) #0
 define amdgpu_vs float @vgpr_arg_src(ptr addrspace(6) %arg) {
 main_body:
   %tmp9 = load ptr addrspace(8), ptr addrspace(6) %arg
-  %tmp10 = call nsz float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %tmp9, i32 undef, i32 0, i32 0, i32 0) #1
+  %tmp10 = call nsz float @llvm.amdgcn.struct.ptr.buffer.load.format.f32(ptr addrspace(8) %tmp9, i32 poison, i32 0, i32 0, i32 0) #1
   ret float %tmp10
 }
 

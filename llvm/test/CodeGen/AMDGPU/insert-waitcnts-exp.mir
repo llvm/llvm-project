@@ -2,10 +2,10 @@
 --- |
   define amdgpu_ps <4 x float> @exp_done_waitcnt(<4 x i32> inreg, <4 x
   i32> inreg, i32 inreg %w, float %v) #0 {
-    %a = load volatile float, ptr addrspace(1) undef
-    %b = load volatile float, ptr addrspace(1) undef
-    %c = load volatile float, ptr addrspace(1) undef
-    %d = load volatile float, ptr addrspace(1) undef
+    %a = load volatile float, ptr addrspace(1) poison
+    %b = load volatile float, ptr addrspace(1) poison
+    %c = load volatile float, ptr addrspace(1) poison
+    %d = load volatile float, ptr addrspace(1) poison
     call void @llvm.amdgcn.exp.f32(i32 15, i32 1, float %a, float %b, float %c, float %d, i1 true, i1 false)
     ret <4 x float> <float 5.000000e-01, float 1.000000e+00, float 2.000000e+00, float 4.000000e+00>
   }
@@ -49,10 +49,10 @@ body:             |
   bb.0 (%ir-block.2):
     $sgpr3 = S_MOV_B32 61440
     $sgpr2 = S_MOV_B32 -1
-    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
-    $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
-    $vgpr3 = BUFFER_LOAD_DWORD_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) undef`)
+    $vgpr0 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
+    $vgpr2 = BUFFER_LOAD_DWORD_OFFSET $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
+    $vgpr3 = BUFFER_LOAD_DWORD_OFFSET killed $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (volatile load (s32) from `ptr addrspace(1) poison`)
     EXP_DONE 0, killed $vgpr0, killed $vgpr1, killed $vgpr2, killed $vgpr3, -1, -1, 15, implicit $exec
     $vgpr0 = V_MOV_B32_e32 1056964608, implicit $exec
     $vgpr1 = V_MOV_B32_e32 1065353216, implicit $exec
