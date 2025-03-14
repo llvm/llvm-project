@@ -14,7 +14,7 @@ body:             |
     renamable $vgpr2 = FLAT_LOAD_DWORD killed renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr :: (volatile load syncscope("one-as") seq_cst (s32) from `ptr addrspace(42) undef`)
     $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec, implicit-def $vgpr0_vgpr1, implicit $sgpr0_sgpr1
     $vgpr1 = V_MOV_B32_e32 killed $sgpr1, implicit $exec, implicit $sgpr0_sgpr1, implicit $exec
-    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr undef`)
+    FLAT_STORE_DWORD killed renamable $vgpr0_vgpr1, killed renamable $vgpr2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s32) into `ptr poison`)
     S_ENDPGM 0
 
 ...
