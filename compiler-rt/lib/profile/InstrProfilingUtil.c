@@ -337,7 +337,7 @@ COMPILER_RT_VISIBILITY void lprofGetFileContentBuffer(FILE *F, uint64_t Length,
   }
 
   if (getenv("LLVM_PROFILE_VERBOSE"))
-    PROF_NOTE("Could not use mmap; using fread instead.%s\n", "");
+    PROF_NOTE("%s\n", "Could not use mmap; using fread instead.");
 
   void *Buffer = malloc(Length);
   if (!Buffer) {
