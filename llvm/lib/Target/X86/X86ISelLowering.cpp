@@ -57937,11 +57937,14 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       // Attempt to peek through bitcasts and concat the original subvectors.
       EVT SubVT = peekThroughBitcasts(Subs[0]).getValueType();
       if (SubVT.isSimple() && SubVT.isVector()) {
-        EVT ConcatVT =
-            EVT::getVectorVT(Ctx, SubVT.getScalarType(),
+        MVT ConcatVT =
+            MVT::getVectorVT(SubVT.getSimpleVT().getScalarType(),
                              SubVT.getVectorElementCount() * Subs.size());
         for (SDValue &Sub : Subs)
           Sub = DAG.getBitcast(SubVT, Sub);
+        if (SDValue ConcatSrc = combineConcatVectorOps(DL, ConcatVT, Subs, DAG,
+                                                       Subtarget, Depth + 1))
+          return DAG.getBitcast(VT, ConcatSrc);
         return DAG.getBitcast(
             VT, DAG.getNode(ISD::CONCAT_VECTORS, DL, ConcatVT, Subs));
       }
