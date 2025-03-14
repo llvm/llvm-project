@@ -40,7 +40,7 @@ void registerFromLLVMIRTranslation() {
   static llvm::cl::opt<bool> preferUnregisteredIntrinsics(
       "prefer-unregistered-intrinsics",
       llvm::cl::desc(
-          "Prefer translation all intrinsics into llvm.call_intrinsic instead "
+          "Prefer translating all intrinsics into llvm.call_intrinsic instead "
           "of using dialect supported intrinsics"),
       llvm::cl::init(false));
 

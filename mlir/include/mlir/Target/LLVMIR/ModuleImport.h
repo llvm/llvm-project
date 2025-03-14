@@ -489,8 +489,8 @@ private:
   /// metadata that otherwise dominate the translation time for large inputs.
   bool emitExpensiveWarnings;
 
-  /// An option to control whether to disable supported intrinsic support in
-  /// favor a more generic version via `llvm.intrinsic_call`.
+  /// An option to control whether the importer should try to convert all
+  /// intrinsics to llvm.call_intrinsic instead of dialect supported operations.
   bool preferUnregisteredIntrinsics;
 };
 
