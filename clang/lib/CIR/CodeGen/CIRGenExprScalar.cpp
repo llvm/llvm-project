@@ -662,9 +662,7 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 
   case CK_NullToPointer: {
     if (MustVisitNullValue(subExpr))
-      cgf.getCIRGenModule().errorNYI(
-          subExpr->getSourceRange(),
-          "ignored expression on null to pointer cast");
+      cgf.emitIgnoredExpr(subExpr);
 
     // Note that DestTy is used as the MLIR type instead of a custom
     // nullptr type.
