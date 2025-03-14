@@ -298,8 +298,9 @@ static int is_local_filesystem(int Fd) {
       _Static_assert(sizeof(Vfs.f_fsid) == sizeof(Vp->vmt_fsid),
                      "fsid length mismatch");
       if (memcmp(&Vfs.f_fsid, &Vp->vmt_fsid, sizeof Vfs.f_fsid) == 0) {
+        int Answer = (Vp->vmt_flags & MNT_REMOTE) == 0;
         free(Buf);
-        return (Vp->vmt_flags & MNT_REMOTE) == 0;
+        return Answer;
       }
       CurObjPtr += Vp->vmt_length;
     }
