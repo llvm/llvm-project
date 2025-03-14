@@ -65,7 +65,7 @@ bb7:                                              ; preds = %bb6
   br label %bb4
 
 bb9:                                              ; preds = %bb2
-  %tmp10 = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float undef, <8 x i32> undef, <4 x i32> poison, i1 0, i32 0, i32 0)
+  %tmp10 = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float undef, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp11 = extractelement <4 x float> %tmp10, i32 1
   %tmp12 = extractelement <4 x float> %tmp10, i32 3
   br label %bb14
