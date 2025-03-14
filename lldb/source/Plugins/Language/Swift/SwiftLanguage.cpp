@@ -1852,16 +1852,20 @@ SwiftLanguage::GetDemangledFunctionNameWithoutArguments(Mangled mangled) const {
   return mangled_name;
 }
 
-bool SwiftLanguage::IgnoreForLineBreakpoints(const SymbolContext &sc) const {
-  // If we don't have a function, conservatively return false.
-  if (!sc.function)
-    return false;
-  llvm::StringRef name =
-      sc.function->GetMangled().GetMangledName().GetStringRef();
-  // In async functions, ignore await resume ("Q") funclets, these only
-  // deallocate the async context and task_switch back to user code.
-  return SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
-      name);
+void SwiftLanguage::FilterForLineBreakpoints(
+    llvm::SmallVectorImpl<SymbolContext> &sc_list) const {
+  llvm::erase_if(sc_list, [](const SymbolContext &sc) {
+    // If we don't have a function, conservatively keep this sc.
+    if (!sc.function)
+      return false;
+
+    // In async functions, ignore await resume ("Q") funclets, these only
+    // deallocate the async context and task_switch back to user code.
+    llvm::StringRef name =
+        sc.function->GetMangled().GetMangledName().GetStringRef();
+    return SwiftLanguageRuntime::IsSwiftAsyncAwaitResumePartialFunctionSymbol(
+        name);
+  });
 }
 
 std::optional<bool>

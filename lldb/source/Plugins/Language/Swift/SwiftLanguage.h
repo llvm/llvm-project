@@ -97,7 +97,8 @@ public:
   llvm::StringRef GetInstanceVariableName() override { return "self"; }
 
   /// Override that skips breakpoints inside await resume ("Q") async funclets.
-  bool IgnoreForLineBreakpoints(const SymbolContext &sc) const override;
+  void FilterForLineBreakpoints(
+      llvm::SmallVectorImpl<SymbolContext> &) const override;
 
   //------------------------------------------------------------------
   // PluginInterface protocol
