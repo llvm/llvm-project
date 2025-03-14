@@ -1875,7 +1875,7 @@ loop:
 
 body:
   %c.iv0 = extractelement <4 x float> %c.iv, i32 0
-  %c.next = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.iv0, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
+  %c.next = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.iv0, <8 x i32> undef, <4 x i32> poison, i1 0, i32 0, i32 0)
   %ctr.next = fadd float %ctr.iv, 2.0
   br label %loop
 

@@ -6,7 +6,7 @@
 ; CHECK-LABEL: foobar:
 ; CHECK: s_endpgm
 define amdgpu_kernel void @foobar() {
-  %v0 = icmp eq <4 x i32> undef, <i32 0, i32 1, i32 2, i32 3>
+  %v0 = icmp eq <4 x i32> poison, <i32 0, i32 1, i32 2, i32 3>
   %v3 = sext <4 x i1> %v0 to <4 x i32>
   %v4 = extractelement <4 x i32> %v3, i32 1
   %v5 = icmp ne i32 %v4, 0
