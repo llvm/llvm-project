@@ -1,4 +1,4 @@
-//===--- CapturingThisByFieldCheck.cpp - clang-tidy -----------------------===//
+//===--- CapturingThisInMemberVariableCheck.cpp - clang-tidy --------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "CapturingThisByFieldCheck.h"
+#include "CapturingThisInMemberVariableCheck.h"
 #include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/DeclCXX.h"
@@ -49,6 +49,8 @@ AST_MATCHER(CXXRecordDecl, correctHandleCaptureThisLambda) {
       return false;
   }
   for (CXXMethodDecl const *M : Node.methods()) {
+    if (M->isCopyAssignmentOperator())
+      llvm::errs() << M->isDeleted() << "\n";
     if (M->isCopyAssignmentOperator() && M->isDefaulted() && !M->isDeleted())
       return false;
     if (M->isMoveAssignmentOperator() && M->isDefaulted() && !M->isDeleted())
@@ -63,18 +65,18 @@ AST_MATCHER(CXXRecordDecl, correctHandleCaptureThisLambda) {
 constexpr const char *DefaultFunctionWrapperTypes =
     "::std::function;::std::move_only_function;::boost::function";
 
-CapturingThisByFieldCheck::CapturingThisByFieldCheck(StringRef Name,
-                                                     ClangTidyContext *Context)
+CapturingThisInMemberVariableCheck::CapturingThisInMemberVariableCheck(
+    StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       FunctionWrapperTypes(utils::options::parseStringList(
           Options.get("FunctionWrapperTypes", DefaultFunctionWrapperTypes))) {}
-void CapturingThisByFieldCheck::storeOptions(
+void CapturingThisInMemberVariableCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "FunctionWrapperTypes",
                 utils::options::serializeStringList(FunctionWrapperTypes));
 }
 
-void CapturingThisByFieldCheck::registerMatchers(MatchFinder *Finder) {
+void CapturingThisInMemberVariableCheck::registerMatchers(MatchFinder *Finder) {
   auto IsStdFunctionField =
       fieldDecl(hasType(cxxRecordDecl(
                     matchers::matchesAnyListedName(FunctionWrapperTypes))))
@@ -102,7 +104,8 @@ void CapturingThisByFieldCheck::registerMatchers(MatchFinder *Finder) {
       this);
 }
 
-void CapturingThisByFieldCheck::check(const MatchFinder::MatchResult &Result) {
+void CapturingThisInMemberVariableCheck::check(
+    const MatchFinder::MatchResult &Result) {
   const auto *Capture = Result.Nodes.getNodeAs<LambdaCapture>("capture");
   const auto *Lambda = Result.Nodes.getNodeAs<LambdaExpr>("lambda");
   const auto *Field = Result.Nodes.getNodeAs<FieldDecl>("field");

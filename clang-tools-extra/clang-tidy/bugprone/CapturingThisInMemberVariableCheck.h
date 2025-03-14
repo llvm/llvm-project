@@ -1,4 +1,4 @@
-//===--- CapturingThisByFieldCheck.h - clang-tidy ---------------*- C++ -*-===//
+//===--- CapturingThisInMemberVariableCheck.h - clang-tidy ------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CAPTURINGTHISBYFIELDCHECK_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CAPTURINGTHISBYFIELDCHECK_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CAPTURINGTHISINMEMBERVARIABLECHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CAPTURINGTHISINMEMBERVARIABLECHECK_H
 
 #include "../ClangTidyCheck.h"
 #include "clang/AST/ASTTypeTraits.h"
@@ -20,10 +20,10 @@ namespace clang::tidy::bugprone {
 /// assignments.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/capturing-this-by-field.html
-class CapturingThisByFieldCheck : public ClangTidyCheck {
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/capturing-this-in-member-variable.html
+class CapturingThisInMemberVariableCheck : public ClangTidyCheck {
 public:
-  CapturingThisByFieldCheck(StringRef Name, ClangTidyContext *Context);
+  CapturingThisInMemberVariableCheck(StringRef Name, ClangTidyContext *Context);
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
@@ -41,4 +41,4 @@ private:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CAPTURINGTHISBYFIELDCHECK_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_CAPTURINGTHISINMEMBERVARIABLECHECK_H

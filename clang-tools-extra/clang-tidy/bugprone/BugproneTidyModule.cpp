@@ -16,7 +16,7 @@
 #include "BitwisePointerCastCheck.h"
 #include "BoolPointerImplicitConversionCheck.h"
 #include "BranchCloneCheck.h"
-#include "CapturingThisByFieldCheck.h"
+#include "CapturingThisInMemberVariableCheck.h"
 #include "CastingThroughVoidCheck.h"
 #include "ChainedComparisonCheck.h"
 #include "ComparePointerToMemberVirtualFunctionCheck.h"
@@ -119,8 +119,8 @@ public:
     CheckFactories.registerCheck<BoolPointerImplicitConversionCheck>(
         "bugprone-bool-pointer-implicit-conversion");
     CheckFactories.registerCheck<BranchCloneCheck>("bugprone-branch-clone");
-    CheckFactories.registerCheck<CapturingThisByFieldCheck>(
-        "bugprone-capturing-this-by-field");
+    CheckFactories.registerCheck<CapturingThisInMemberVariableCheck>(
+        "bugprone-capturing-this-in-member-variable");
     CheckFactories.registerCheck<CastingThroughVoidCheck>(
         "bugprone-casting-through-void");
     CheckFactories.registerCheck<ChainedComparisonCheck>(

@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-capturing-this-by-field %t -- -config="{CheckOptions: {bugprone-capturing-this-by-field.FunctionWrapperTypes: '::std::function;::Fn'}}" --
+// RUN: %check_clang_tidy -std=c++11-or-later %s bugprone-capturing-this-in-member-variable %t -- -config="{CheckOptions: {bugprone-capturing-this-in-member-variable.FunctionWrapperTypes: '::std::function;::Fn'}}" --
 
 namespace std {
 
@@ -132,6 +132,20 @@ struct InheritDeleteMove : DeleteMoveBase {
 };
 struct InheritDeleteCopyMove : DeleteCopyMoveBase {
   InheritDeleteCopyMove() : DeleteCopyMoveBase{}, Captured([this]() { static_cast<void>(this); }) {}
+  std::function<void()> Captured;
+};
+
+struct PrivateCopyMoveBase {
+// It is how to disable copy and move in C++03
+  PrivateCopyMoveBase() = default;
+private:
+  PrivateCopyMoveBase(PrivateCopyMoveBase const&) = default;
+  PrivateCopyMoveBase(PrivateCopyMoveBase &&) = default;
+  PrivateCopyMoveBase& operator=(PrivateCopyMoveBase const&) = default;
+  PrivateCopyMoveBase& operator=(PrivateCopyMoveBase &&) = default;
+};
+struct InheritPrivateCopyMove : PrivateCopyMoveBase {
+  InheritPrivateCopyMove() : PrivateCopyMoveBase{}, Captured([this]() { static_cast<void>(this); }) {}
   std::function<void()> Captured;
 };
 

@@ -91,8 +91,8 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
-- New :doc:`bugprone-capturing-this-by-field
-  <clang-tidy/checks/bugprone/capturing-this-by-field>` check.
+- New :doc:`bugprone-capturing-this-in-member-variable
+  <clang-tidy/checks/bugprone/capturing-this-in-member-variable>` check.
 
   Finds lambda captures that capture the ``this`` pointer and store it as class
   members without handle the copy and move constructors and the assignments.
