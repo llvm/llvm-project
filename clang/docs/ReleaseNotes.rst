@@ -1058,6 +1058,7 @@ Bug Fixes to C++ Support
 - Fixed a substitution bug in transforming CTAD aliases when the type alias contains a non-pack template argument
   corresponding to a pack parameter (#GH124715)
 - Clang is now better at keeping track of friend function template instance contexts. (#GH55509)
+- Fixed an integer overflow bug in computing template parameter depths when synthesizing CTAD guides. (#GH128691)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

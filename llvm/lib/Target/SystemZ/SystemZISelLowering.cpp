@@ -10231,6 +10231,11 @@ static void printFunctionArgExts(const Function *F, raw_fd_ostream &OS) {
 void SystemZTargetLowering::
 verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
                              const Function *F, SDValue Callee) const {
+  // Temporarily only do the check when explicitly requested, until it can be
+  // enabled by default.
+  if (!EnableIntArgExtCheck)
+    return;
+
   bool IsInternal = false;
   const Function *CalleeFn = nullptr;
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
@@ -10252,6 +10257,11 @@ verifyNarrowIntegerArgs_Call(const SmallVectorImpl<ISD::OutputArg> &Outs,
 void SystemZTargetLowering::
 verifyNarrowIntegerArgs_Ret(const SmallVectorImpl<ISD::OutputArg> &Outs,
                             const Function *F) const {
+  // Temporarily only do the check when explicitly requested, until it can be
+  // enabled by default.
+  if (!EnableIntArgExtCheck)
+    return;
+
   if (!verifyNarrowIntegerArgs(Outs, isFullyInternal(F))) {
     errs() << "ERROR: Missing extension attribute of returned "
            << "value from function:\n";
@@ -10266,11 +10276,6 @@ bool SystemZTargetLowering::
 verifyNarrowIntegerArgs(const SmallVectorImpl<ISD::OutputArg> &Outs,
                         bool IsInternal) const {
   if (IsInternal || !Subtarget.isTargetELF())
-    return true;
-
-  // Temporarily only do the check when explicitly requested, until it can be
-  // enabled by default.
-  if (!EnableIntArgExtCheck)
     return true;
 
   if (EnableIntArgExtCheck.getNumOccurrences()) {

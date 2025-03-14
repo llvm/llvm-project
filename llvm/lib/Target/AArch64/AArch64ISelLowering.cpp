@@ -498,8 +498,10 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::BR_CC, MVT::f64, Custom);
   setOperationAction(ISD::SELECT, MVT::i32, Custom);
   setOperationAction(ISD::SELECT, MVT::i64, Custom);
-  setOperationAction(ISD::SELECT, MVT::f16, Custom);
-  setOperationAction(ISD::SELECT, MVT::bf16, Custom);
+  if (Subtarget->hasFPARMv8()) {
+    setOperationAction(ISD::SELECT, MVT::f16, Custom);
+    setOperationAction(ISD::SELECT, MVT::bf16, Custom);
+  }
   setOperationAction(ISD::SELECT, MVT::f32, Custom);
   setOperationAction(ISD::SELECT, MVT::f64, Custom);
   setOperationAction(ISD::SELECT_CC, MVT::i32, Custom);
@@ -10783,7 +10785,10 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
     if (VT == MVT::i32)
       AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, AddV,
                          DAG.getConstant(0, DL, MVT::i64));
-    AddV = DAG.getNode(ISD::BITCAST, DL, VT, AddV);
+    else
+      AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT,
+                         DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v1i64, AddV),
+                         DAG.getConstant(0, DL, MVT::i64));
     if (IsParity)
       AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
     return AddV;
@@ -10792,7 +10797,10 @@ SDValue AArch64TargetLowering::LowerCTPOP_PARITY(SDValue Op,
 
     SDValue CtPop = DAG.getNode(ISD::CTPOP, DL, MVT::v16i8, Val);
     SDValue AddV = DAG.getNode(AArch64ISD::UADDV, DL, MVT::v16i8, CtPop);
-    AddV = DAG.getNode(ISD::BITCAST, DL, VT, AddV);
+    AddV = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i64,
+                       DAG.getNode(AArch64ISD::NVCAST, DL, MVT::v2i64, AddV),
+                       DAG.getConstant(0, DL, MVT::i64));
+    AddV = DAG.getZExtOrTrunc(AddV, DL, VT);
     if (IsParity)
       AddV = DAG.getNode(ISD::AND, DL, VT, AddV, DAG.getConstant(1, DL, VT));
     return AddV;
