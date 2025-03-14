@@ -380,6 +380,8 @@ cannot be overridden, and hence the ``virtual`` specifier is useless.
 
 The warning also detects virtual methods in classes whose destructor is
 ``final``, for the same reason.
+
+The warning does not fire on virtual methods which are also marked ``override``.
   }];
 }
 
