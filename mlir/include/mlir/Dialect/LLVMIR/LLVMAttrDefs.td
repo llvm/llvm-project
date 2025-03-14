@@ -1302,8 +1302,8 @@ def ModuleFlagAttr
     Represents a single entry of llvm.module.flags metadata
     (llvm::Module::ModuleFlagEntry in LLVM). The first element is a behavior
     flag described by `ModFlagBehaviorAttr`, the second is a string ID
-    and third is the value of the flag (currently only integer constant
-    supported).
+    and third is the value of the flag (currently only integer constants
+    are supported).
 
     Example:
     ```mlir

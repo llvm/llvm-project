@@ -518,15 +518,10 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
 }
 
 LogicalResult ModuleImport::convertModuleFlagsMetadata() {
-  SmallVector<llvm::Module::ModuleFlagEntry, 4> llvmModuleFlags;
-  for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
-    if (named.getName() != LLVMDialect::getModuleFlags())
-      continue;
-    llvmModule->getModuleFlagsMetadata(llvmModuleFlags);
-    break; // there can only be one module flags.
-  }
+  SmallVector<llvm::Module::ModuleFlagEntry> llvmModuleFlags;
+  llvmModule->getModuleFlagsMetadata(llvmModuleFlags);
 
-  SmallVector<Attribute, 4> moduleFlags;
+  SmallVector<Attribute> moduleFlags;
   for (const auto [behavior, key, val] : llvmModuleFlags) {
     // Currently only supports most common: int constant values.
     auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(val);
