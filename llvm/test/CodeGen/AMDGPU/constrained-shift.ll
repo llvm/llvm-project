@@ -45,7 +45,6 @@ define i32 @csh_32(i32 %a, i32 %b) {
 ; GISEL-LABEL: csh_32:
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-NEXT:    v_and_b32_e32 v1, 31, v1
 ; GISEL-NEXT:    v_lshlrev_b32_e32 v2, v1, v0
 ; GISEL-NEXT:    v_lshrrev_b32_e32 v3, v1, v0
 ; GISEL-NEXT:    v_ashrrev_i32_e32 v0, v1, v0
