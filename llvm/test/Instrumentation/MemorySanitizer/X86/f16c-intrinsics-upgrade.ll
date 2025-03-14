@@ -116,7 +116,7 @@ define <4 x float> @test_x86_vcvtph2ps_128_scalar(ptr %ptr) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i64> splat (i64 -1), i64 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[INS1:%.*]] = insertelement <2 x i64> undef, i64 [[LOAD]], i32 0
+; CHECK-NEXT:    [[INS1:%.*]] = insertelement <2 x i64> poison, i64 [[LOAD]], i32 0
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = insertelement <2 x i64> [[_MSPROP]], i64 0, i32 1
 ; CHECK-NEXT:    [[INS2:%.*]] = insertelement <2 x i64> [[INS1]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[_MSPROP1]] to <8 x i16>
@@ -130,7 +130,7 @@ define <4 x float> @test_x86_vcvtph2ps_128_scalar(ptr %ptr) #0 {
 ; CHECK-NEXT:    ret <4 x float> [[CVTPH2PS]]
 ;
   %load = load i64, ptr %ptr
-  %ins1 = insertelement <2 x i64> undef, i64 %load, i32 0
+  %ins1 = insertelement <2 x i64> poison, i64 %load, i32 0
   %ins2 = insertelement <2 x i64> %ins1, i64 0, i32 1
   %bc = bitcast <2 x i64> %ins2 to <8 x i16>
   %res = tail call <4 x float> @llvm.x86.vcvtph2ps.128(<8 x i16> %bc) #2
@@ -154,7 +154,7 @@ define <4 x float> @test_x86_vcvtph2ps_128_scalar2(ptr %ptr) #0 {
 ; CHECK-NEXT:    [[TMP6:%.*]] = inttoptr i64 [[TMP5]] to ptr
 ; CHECK-NEXT:    [[_MSLD:%.*]] = load i64, ptr [[TMP6]], align 8
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = insertelement <2 x i64> splat (i64 -1), i64 [[_MSLD]], i32 0
-; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[LOAD]], i32 0
+; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i64> poison, i64 [[LOAD]], i32 0
 ; CHECK-NEXT:    [[TMP7:%.*]] = bitcast <2 x i64> [[_MSPROP]] to <8 x i16>
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <2 x i64> [[INS]] to <8 x i16>
 ; CHECK-NEXT:    [[_MSPROP1:%.*]] = shufflevector <8 x i16> [[TMP7]], <8 x i16> [[TMP7]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -166,7 +166,7 @@ define <4 x float> @test_x86_vcvtph2ps_128_scalar2(ptr %ptr) #0 {
 ; CHECK-NEXT:    ret <4 x float> [[CVTPH2PS]]
 ;
   %load = load i64, ptr %ptr
-  %ins = insertelement <2 x i64> undef, i64 %load, i32 0
+  %ins = insertelement <2 x i64> poison, i64 %load, i32 0
   %bc = bitcast <2 x i64> %ins to <8 x i16>
   %res = tail call <4 x float> @llvm.x86.vcvtph2ps.128(<8 x i16> %bc)
   ret <4 x float> %res
