@@ -1,0 +1,22 @@
+{
+  /* Do not use extern "C++" matcher for C++ functions,                     */
+  /* because vtable and typeinfo symbols make extern "C++" patterns more    */
+  /* complicated than patterns against mangled names.                       */
+  /*                                                                        */
+  /* With extern "C++" we have to match for "vtable for sycl::foo", but */
+  /* not match for "vtable for std::__internal<sycl::foo>".             */
+
+  global:
+    /* Export everything from sycl namespace */
+    _ZNK4sycl*;  /* function */
+    _ZN4sycl*;   /* function */
+    _ZTIN4sycl*; /* typeinfo */
+    _ZTSN4sycl*; /* typeinfo name */
+    _ZTVN4sycl*; /* vtable */
+
+    /* Some functions are also in __host_std, export them as well */
+    _ZN10__host_std*;
+
+  local:
+    *;
+};
