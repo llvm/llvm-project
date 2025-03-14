@@ -35,6 +35,7 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -1274,6 +1275,39 @@ public:
                                            bool Invert = false) const {
     return false;
   }
+
+  /// Find chains of accumulations that can be rewritten as a tree for increased
+  /// ILP.
+  bool getAccumulatorReassociationPatterns(
+      MachineInstr &Root, SmallVectorImpl<unsigned> &Patterns) const;
+
+  /// Find the chain of accumulator instructions in \P MBB and return them in
+  /// \P Chain.
+  void getAccumulatorChain(MachineInstr *CurrentInstr,
+                           SmallVectorImpl<Register> &Chain) const;
+
+  /// Return true when \P OpCode is an instruction which performs
+  /// accumulation into one of its operand registers.
+  virtual bool isAccumulationOpcode(unsigned Opcode) const { return false; }
+
+  /// Returns an opcode which defines the accumulator used by \P Opcode.
+  virtual std::optional<unsigned>
+  getAccumulationStartOpcode(unsigned Opcode) const {
+    return std::nullopt;
+  }
+
+  virtual std::optional<unsigned>
+  getReduceOpcodeForAccumulator(unsigned int AccumulatorOpCode) const {
+    return std::nullopt;
+  }
+
+  /// Reduces branches of the accumulator tree into a single register.
+  void reduceAccumulatorTree(SmallVectorImpl<Register> &RegistersToReduce,
+                             SmallVectorImpl<MachineInstr *> &InsInstrs,
+                             MachineFunction &MF, MachineInstr &Root,
+                             MachineRegisterInfo &MRI,
+                             DenseMap<unsigned, unsigned> &InstrIdxForVirtReg,
+                             Register ResultReg) const;
 
   /// Return the inverse operation opcode if it exists for \P Opcode (e.g. add
   /// for sub and vice versa).
