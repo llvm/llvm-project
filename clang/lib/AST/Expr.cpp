@@ -1656,9 +1656,11 @@ SourceLocation CallExpr::getBeginLoc() const {
     if (const auto *Method =
             dyn_cast_if_present<const CXXMethodDecl>(getCalleeDecl());
         Method && Method->isExplicitObjectMemberFunction()) {
-      bool HasFirstArg = getNumArgs() > 0 && getArg(0);
-      assert(HasFirstArg);
-      if (HasFirstArg)
+      // Note: while we typically expect the call to have a first argument
+      // here, we can't assert it because in some cases it does not, e.g.
+      // calls created with CallExpr::CreateTemporary() during overload
+      // resolution.
+      if (getNumArgs() > 0 && getArg(0))
         return getArg(0)->getBeginLoc();
     }
   }
