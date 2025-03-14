@@ -204,7 +204,7 @@ define amdgpu_ps float @_amdgpu_ps_main() #0 {
   %40 = fmul reassoc nnan nsz arcp contract afn float %39, 0x3F847AE140000000
   %41 = fadd reassoc nnan nsz arcp contract afn float %40, 0x3F947AE140000000
   %.i2415 = fmul reassoc nnan nsz arcp contract afn float %.i2407, %41
-  %42 = call <3 x float> @llvm.amdgcn.image.load.mip.2d.v3f32.i32(i32 7, i32 undef, i32 undef, i32 0, <8 x i32> poison, i32 0, i32 0)
+  %42 = call <3 x float> @llvm.amdgcn.image.load.mip.2d.v3f32.i32(i32 7, i32 poison, i32 poison, i32 0, <8 x i32> poison, i32 0, i32 0)
   %.i2521 = extractelement <3 x float> %42, i32 2
   %43 = call reassoc nnan nsz arcp contract afn float @llvm.amdgcn.fmed3.f32(float poison, float 0.000000e+00, float 1.000000e+00)
   %44 = call <3 x float> @llvm.amdgcn.image.sample.2d.v3f32.f32(i32 7, float poison, float poison, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0)
