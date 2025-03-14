@@ -19,14 +19,20 @@ namespace clang::tidy::bugprone {
 
 namespace {
 
-AST_MATCHER(EnumDecl, isCompleteAndHasNoZeroValue) {
+AST_MATCHER(EnumDecl, isCompleteNonEmptyAndHasNoZeroValue) {
   const EnumDecl *Definition = Node.getDefinition();
   return Definition && Node.isComplete() &&
+         Definition->enumerator_begin() != Definition->enumerator_end() &&
          std::none_of(Definition->enumerator_begin(),
                       Definition->enumerator_end(),
                       [](const EnumConstantDecl *Value) {
                         return Value->getInitVal().isZero();
                       });
+}
+
+AST_MATCHER(EnumDecl, hasBoolAsUnderlyingType) {
+  const QualType UnderlyingType = Node.getIntegerType();
+  return !UnderlyingType.isNull() && UnderlyingType->isBooleanType();
 }
 
 } // namespace
@@ -59,7 +65,8 @@ void NonZeroEnumToBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                unless(isExpansionInSystemHeader()), hasType(booleanType()),
                hasSourceExpression(
                    expr(hasType(qualType(hasCanonicalType(hasDeclaration(
-                            enumDecl(isCompleteAndHasNoZeroValue(),
+                            enumDecl(isCompleteNonEmptyAndHasNoZeroValue(),
+                                     unless(hasBoolAsUnderlyingType()),
                                      unless(matchers::matchesAnyListedName(
                                          EnumIgnoreList)))
                                 .bind("enum"))))),
