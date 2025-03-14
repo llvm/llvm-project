@@ -34,11 +34,14 @@ class DivZeroChecker : public Checker<check::PreStmt<BinaryOperator>> {
 
 public:
   /// This checker class implements several user facing checkers
-  enum : CheckerPartIdx { DivideZeroChecker, TaintedDivChecker, NumCheckerParts };
+  enum : CheckerPartIdx {
+    DivideZeroChecker,
+    TaintedDivChecker,
+    NumCheckerParts
+  };
   BugType BugTypes[NumCheckerParts] = {
       {this, DivideZeroChecker, "Division by zero"},
-      {this, TaintedDivChecker, "Division by zero",
-       categories::TaintedData}};
+      {this, TaintedDivChecker, "Division by zero", categories::TaintedData}};
 
   void checkPreStmt(const BinaryOperator *B, CheckerContext &C) const;
 };
@@ -56,8 +59,8 @@ void DivZeroChecker::reportBug(StringRef Msg, ProgramStateRef StateZero,
   if (!isPartEnabled(DivideZeroChecker))
     return;
   if (ExplodedNode *N = C.generateErrorNode(StateZero)) {
-    auto R = std::make_unique<PathSensitiveBugReport>(BugTypes[DivideZeroChecker],
-                                                      Msg, N);
+    auto R = std::make_unique<PathSensitiveBugReport>(
+        BugTypes[DivideZeroChecker], Msg, N);
     bugreporter::trackExpressionValue(N, getDenomExpr(N), *R);
     C.emitReport(std::move(R));
   }
