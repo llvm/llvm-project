@@ -487,6 +487,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
   switch (IID) {
   case Intrinsic::amdgcn_rcp: {
     Value *Src = II.getArgOperand(0);
+    if (isa<PoisonValue>(Src))
+      return IC.replaceInstUsesWith(II, Src);
 
     // TODO: Move to ConstantFolding/InstSimplify?
     if (isa<UndefValue>(Src)) {
