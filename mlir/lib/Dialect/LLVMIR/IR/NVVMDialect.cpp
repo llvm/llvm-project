@@ -1711,7 +1711,7 @@ LogicalResult
 NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                        int optLevel, StringRef triple, StringRef chip,
                        StringRef features, DictionaryAttr flags,
-                       ArrayAttr files) {
+                       ArrayAttr files, bool verifyTarget) {
   if (optLevel < 0 || optLevel > 3) {
     emitError() << "The optimization level must be a number between 0 and 3.";
     return failure();
@@ -1734,6 +1734,9 @@ NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
+  if (!getVerifyTarget())
+    return success();
+
   auto gpuModuleOp = llvm::dyn_cast<gpu::GPUModuleOp>(gpuModule);
   if (!gpuModuleOp)
     return emitError(gpuModule->getLoc(),
