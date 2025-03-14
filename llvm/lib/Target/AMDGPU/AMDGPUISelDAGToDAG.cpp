@@ -634,6 +634,61 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   case ISD::BUILD_VECTOR: {
     EVT VT = N->getValueType(0);
     unsigned NumVectorElts = VT.getVectorNumElements();
+
+    auto IsSplatAllZeros = [this](SDNode *N) -> bool {
+      if (ISD::isConstantSplatVectorAllZeros(N))
+        return true;
+
+      // Types may have legalized by stripping the 16 bit multi-element vector
+      // into multiple BUILD_VECTORs. Peek through and see if it is all zeros
+      // regardless of what the legalizer did. Assumes cases along the lines of:
+      //   v8i16 build_vector 0, 0, 0, 0, 0, 0, 0, 0
+      //     -> legalizer ->
+      //   t0 = v2i16 build_vector 0, 0
+      //   t1 = bitcast t0 to i32
+      //   v4i32 build_vector t1, t1, t1, t1
+      if (CurDAG->isSplatValue(SDValue(N, 0))) {
+        SDValue Op = peekThroughBitcasts(N->getOperand(0));
+        EVT InnerVT = Op.getValueType();
+        if (InnerVT.isVector() && Op.getOpcode() == ISD::BUILD_VECTOR &&
+            InnerVT.getVectorNumElements() == 2)
+          return ISD::isConstantSplatVectorAllZeros(Op.getNode());
+      }
+      return false;
+    };
+    if (IsSplatAllZeros(N)) {
+      unsigned FixedBitSize = VT.getFixedSizeInBits();
+      SDLoc DL(N);
+      if (FixedBitSize == 64) {
+        SDValue Set0 = {
+            CurDAG->getMachineNode(AMDGPU::S_MOV_B64_IMM_PSEUDO, DL, MVT::i64,
+                                   CurDAG->getTargetConstant(0, DL, MVT::i64)),
+            0};
+        CurDAG->SelectNodeTo(N, AMDGPU::COPY, VT, Set0);
+        return;
+      } else if (NumVectorElts <= 32 && (FixedBitSize % 64 == 0)) {
+        SmallVector<SDValue, 32 * 2 + 1> Ops((FixedBitSize / 64) * 2 + 1);
+        SDValue Set0 = {
+            CurDAG->getMachineNode(AMDGPU::S_MOV_B64_IMM_PSEUDO, DL, MVT::i64,
+                                   CurDAG->getTargetConstant(0, DL, MVT::i64)),
+            0};
+        unsigned RCID =
+            SIRegisterInfo::getSGPRClassForBitWidth(FixedBitSize)->getID();
+        Ops[0] = CurDAG->getTargetConstant(RCID, DL, MVT::i32);
+
+        for (unsigned i = 0, CurrentBitSize = FixedBitSize; CurrentBitSize != 0;
+             ++i, CurrentBitSize -= 64) {
+          unsigned SubRegs =
+              SIRegisterInfo::getSubRegFromChannel(i * 2, /*NumRegs=*/2);
+          Ops[i * 2 + 1] = Set0;
+          Ops[i * 2 + 2] = CurDAG->getTargetConstant(SubRegs, DL, MVT::i32);
+        }
+
+        CurDAG->SelectNodeTo(N, AMDGPU::REG_SEQUENCE, VT, Ops);
+        return;
+      }
+    }
+
     if (VT.getScalarSizeInBits() == 16) {
       if (Opc == ISD::BUILD_VECTOR && NumVectorElts == 2) {
         if (SDNode *Packed = packConstantV2I16(N, *CurDAG)) {

@@ -9,38 +9,32 @@ declare void @llvm.amdgcn.exp.compr.v2f16(i32 immarg, i32 immarg, <2 x half>, <2
 define amdgpu_ps void @_amdgpu_ps_main(float %arg) {
 ; GFX900-LABEL: _amdgpu_ps_main:
 ; GFX900:       ; %bb.0: ; %bb
-; GFX900-NEXT:    s_mov_b64 s[4:5], exec
+; GFX900-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX900-NEXT:    s_wqm_b64 exec, exec
 ; GFX900-NEXT:    v_mov_b32_e32 v1, v0
-; GFX900-NEXT:    s_mov_b32 s0, 0
 ; GFX900-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v1
 ; GFX900-NEXT:    ; implicit-def: $vgpr0
 ; GFX900-NEXT:    s_and_saveexec_b64 s[2:3], vcc
-; GFX900-NEXT:    s_xor_b64 s[6:7], exec, s[2:3]
+; GFX900-NEXT:    s_xor_b64 s[2:3], exec, s[2:3]
 ; GFX900-NEXT:    s_cbranch_execz .LBB0_2
 ; GFX900-NEXT:  ; %bb.1: ; %bb1
+; GFX900-NEXT:    s_mov_b64 s[12:13], 0
 ; GFX900-NEXT:    v_mov_b32_e32 v0, 0
-; GFX900-NEXT:    s_mov_b32 s1, s0
-; GFX900-NEXT:    s_mov_b32 s2, s0
-; GFX900-NEXT:    s_mov_b32 s3, s0
-; GFX900-NEXT:    s_mov_b32 s8, s0
-; GFX900-NEXT:    s_mov_b32 s9, s0
-; GFX900-NEXT:    s_mov_b32 s10, s0
-; GFX900-NEXT:    s_mov_b32 s11, s0
-; GFX900-NEXT:    s_mov_b32 s12, s0
-; GFX900-NEXT:    s_mov_b32 s13, s0
-; GFX900-NEXT:    s_mov_b32 s14, s0
-; GFX900-NEXT:    s_mov_b32 s15, s0
-; GFX900-NEXT:    image_sample v[0:1], v[0:1], s[8:15], s[0:3] dmask:0x3
+; GFX900-NEXT:    s_mov_b64 s[14:15], s[12:13]
+; GFX900-NEXT:    s_mov_b64 s[4:5], s[12:13]
+; GFX900-NEXT:    s_mov_b64 s[6:7], s[12:13]
+; GFX900-NEXT:    s_mov_b64 s[8:9], s[12:13]
+; GFX900-NEXT:    s_mov_b64 s[10:11], s[12:13]
+; GFX900-NEXT:    image_sample v[0:1], v[0:1], s[4:11], s[12:15] dmask:0x3
 ; GFX900-NEXT:  .LBB0_2: ; %Flow
-; GFX900-NEXT:    s_or_saveexec_b64 s[0:1], s[6:7]
-; GFX900-NEXT:    s_and_b64 exec, exec, s[4:5]
-; GFX900-NEXT:    s_and_b64 s[0:1], exec, s[0:1]
+; GFX900-NEXT:    s_or_saveexec_b64 s[2:3], s[2:3]
+; GFX900-NEXT:    s_and_b64 exec, exec, s[0:1]
+; GFX900-NEXT:    s_and_b64 s[2:3], exec, s[2:3]
 ; GFX900-NEXT:    v_mov_b32_e32 v2, 1.0
-; GFX900-NEXT:    s_xor_b64 exec, exec, s[0:1]
+; GFX900-NEXT:    s_xor_b64 exec, exec, s[2:3]
 ; GFX900-NEXT:    s_cbranch_execz .LBB0_5
 ; GFX900-NEXT:  ; %bb.3: ; %bb5
-; GFX900-NEXT:    s_andn2_b64 s[4:5], s[4:5], exec
+; GFX900-NEXT:    s_andn2_b64 s[0:1], s[0:1], exec
 ; GFX900-NEXT:    s_cbranch_scc0 .LBB0_6
 ; GFX900-NEXT:  ; %bb.4: ; %bb5
 ; GFX900-NEXT:    s_mov_b64 exec, 0
@@ -48,7 +42,7 @@ define amdgpu_ps void @_amdgpu_ps_main(float %arg) {
 ; GFX900-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX900-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX900-NEXT:  .LBB0_5: ; %bb6
-; GFX900-NEXT:    s_or_b64 exec, exec, s[0:1]
+; GFX900-NEXT:    s_or_b64 exec, exec, s[2:3]
 ; GFX900-NEXT:    s_waitcnt vmcnt(0)
 ; GFX900-NEXT:    v_cvt_pkrtz_f16_f32 v1, 0, v1
 ; GFX900-NEXT:    v_cvt_pkrtz_f16_f32 v0, v2, v0

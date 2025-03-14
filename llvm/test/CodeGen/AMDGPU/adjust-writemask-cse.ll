@@ -4,15 +4,14 @@
 define float @test() {
   ; GFX10-LABEL: name: test
   ; GFX10: bb.0.bb:
-  ; GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_256 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_]], %subreg.sub1, [[S_MOV_B32_]], %subreg.sub2, [[S_MOV_B32_]], %subreg.sub3, [[S_MOV_B32_]], %subreg.sub4, [[S_MOV_B32_]], %subreg.sub5, [[S_MOV_B32_]], %subreg.sub6, [[S_MOV_B32_]], %subreg.sub7
-  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-  ; GFX10-NEXT:   [[IMAGE_LOAD_V2_V2_nsa_gfx10_:%[0-9]+]]:vreg_64 = IMAGE_LOAD_V2_V2_nsa_gfx10 [[COPY]], [[COPY1]], killed [[REG_SEQUENCE]], 3, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 8)
-  ; GFX10-NEXT:   [[COPY2:%[0-9]+]]:vgpr_32 = COPY [[IMAGE_LOAD_V2_V2_nsa_gfx10_]].sub1
-  ; GFX10-NEXT:   [[COPY3:%[0-9]+]]:vgpr_32 = COPY [[IMAGE_LOAD_V2_V2_nsa_gfx10_]].sub0
-  ; GFX10-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[COPY2]], 0, killed [[COPY3]], 0, 0, implicit $mode, implicit $exec
-  ; GFX10-NEXT:   [[V_ADD_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[V_ADD_F32_e64_]], 0, [[COPY2]], 0, 0, implicit $mode, implicit $exec
+  ; GFX10-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64_IMM_PSEUDO 0
+  ; GFX10-NEXT:   [[REG_SEQUENCE:%[0-9]+]]:sgpr_256 = REG_SEQUENCE [[S_MOV_B64_]], %subreg.sub0_sub1, [[S_MOV_B64_]], %subreg.sub2_sub3, [[S_MOV_B64_]], %subreg.sub4_sub5, [[S_MOV_B64_]], %subreg.sub6_sub7
+  ; GFX10-NEXT:   [[V_MOV_B32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0
+  ; GFX10-NEXT:   [[IMAGE_LOAD_V2_V2_nsa_gfx10_:%[0-9]+]]:vreg_64 = IMAGE_LOAD_V2_V2_nsa_gfx10 [[V_MOV_B32_]], [[V_MOV_B32_]], killed [[REG_SEQUENCE]], 3, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 8)
+  ; GFX10-NEXT:   [[COPY:%[0-9]+]]:vgpr_32 = COPY [[IMAGE_LOAD_V2_V2_nsa_gfx10_]].sub1
+  ; GFX10-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[IMAGE_LOAD_V2_V2_nsa_gfx10_]].sub0
+  ; GFX10-NEXT:   [[V_ADD_F32_e64_:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, [[COPY]], 0, killed [[COPY1]], 0, 0, implicit $mode, implicit $exec
+  ; GFX10-NEXT:   [[V_ADD_F32_e64_1:%[0-9]+]]:vgpr_32 = nofpexcept V_ADD_F32_e64 0, killed [[V_ADD_F32_e64_]], 0, [[COPY]], 0, 0, implicit $mode, implicit $exec
   ; GFX10-NEXT:   $vgpr0 = COPY [[V_ADD_F32_e64_1]]
   ; GFX10-NEXT:   SI_RETURN implicit $vgpr0
 bb:
