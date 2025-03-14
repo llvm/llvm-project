@@ -160,16 +160,13 @@ public:
 
         // TODO(cir): Currently, we store bitwidths in CIR types only for
         // integers. This might also be required for other types.
-        auto srcCirTy = mlir::dyn_cast<cir::IntType>(cgf.convertType(type));
-        auto promotedCirTy =
-            mlir::dyn_cast<cir::IntType>(cgf.convertType(type));
-        assert(srcCirTy && promotedCirTy && "Expected integer type");
 
         assert(
             (!canPerformLossyDemotionCheck ||
              type->isSignedIntegerOrEnumerationType() ||
              promotedType->isSignedIntegerOrEnumerationType() ||
-             srcCirTy.getWidth() == promotedCirTy.getWidth()) &&
+             mlir::cast<cir::IntType>(cgf.convertType(type)).getWidth() ==
+                 mlir::cast<cir::IntType>(cgf.convertType(type)).getWidth()) &&
             "The following check expects that if we do promotion to different "
             "underlying canonical type, at least one of the types (either "
             "base or promoted) will be signed, or the bitwidths will match.");
@@ -261,18 +258,8 @@ public:
     if (!promotionType.isNull())
       cgf.cgm.errorNYI(e->getSourceRange(), "VisitUnaryPlus: promotionType");
     assert(!cir::MissingFeatures::opUnaryPromotionType());
-    mlir::Value result = VisitPlus(e);
+    mlir::Value result = emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Plus);
     return result;
-  }
-
-  mlir::Value VisitPlus(const UnaryOperator *e) {
-    // This differs from gcc, though, most likely due to a bug in gcc.
-    ignoreResultAssign = false;
-
-    assert(!cir::MissingFeatures::opUnaryPromotionType());
-    mlir::Value operand = Visit(e->getSubExpr());
-
-    return emitUnaryOp(e, cir::UnaryOpKind::Plus, operand);
   }
 
   mlir::Value VisitUnaryMinus(const UnaryOperator *e,
@@ -280,11 +267,12 @@ public:
     if (!promotionType.isNull())
       cgf.cgm.errorNYI(e->getSourceRange(), "VisitUnaryMinus: promotionType");
     assert(!cir::MissingFeatures::opUnaryPromotionType());
-    mlir::Value result = VisitMinus(e);
+    mlir::Value result = emitUnaryPlusOrMinus(e, cir::UnaryOpKind::Minus);
     return result;
   }
 
-  mlir::Value VisitMinus(const UnaryOperator *e) {
+  mlir::Value emitUnaryPlusOrMinus(const UnaryOperator *e,
+                                   cir::UnaryOpKind kind) {
     ignoreResultAssign = false;
 
     assert(!cir::MissingFeatures::opUnaryPromotionType());
@@ -294,7 +282,7 @@ public:
 
     // NOTE: LLVM codegen will lower this directly to either a FNeg
     // or a Sub instruction.  In CIR this will be handled later in LowerToLLVM.
-    return emitUnaryOp(e, cir::UnaryOpKind::Minus, operand);
+    return emitUnaryOp(e, kind, operand);
   }
 
   mlir::Value emitUnaryOp(const UnaryOperator *e, cir::UnaryOpKind kind,
