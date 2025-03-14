@@ -236,7 +236,7 @@ def TerminatorOp : OpenMP_Op<"terminator", [Terminator, Pure]> {
 // 2.7 teams Construct
 //===----------------------------------------------------------------------===//
 def TeamsOp : OpenMP_Op<"teams", traits = [
-    AttrSizedOperandSegments, RecursiveMemoryEffects
+    AttrSizedOperandSegments, RecursiveMemoryEffects, OutlineableOpenMPOpInterface
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_IfClause, OpenMP_NumTeamsClause,
     OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_ThreadLimitClause
@@ -751,11 +751,9 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
     OpenMP_AllocateClause, OpenMP_FinalClause, OpenMP_GrainsizeClause,
-    OpenMP_IfClause, OpenMP_InReductionClauseSkip<extraClassDeclaration = true>,
-    OpenMP_MergeableClause, OpenMP_NogroupClause, OpenMP_NumTasksClause,
-    OpenMP_PriorityClause, OpenMP_PrivateClause,
-    OpenMP_ReductionClauseSkip<extraClassDeclaration = true>,
-    OpenMP_UntiedClause
+    OpenMP_IfClause, OpenMP_InReductionClause, OpenMP_MergeableClause,
+    OpenMP_NogroupClause, OpenMP_NumTasksClause, OpenMP_PriorityClause,
+    OpenMP_PrivateClause, OpenMP_ReductionClause, OpenMP_UntiedClause
   ], singleRegion = true> {
   let summary = "taskloop construct";
   let description = [{
@@ -821,9 +819,6 @@ def TaskloopOp : OpenMP_Op<"taskloop", traits = [
   }];
 
   let extraClassDeclaration = [{
-    /// Returns the reduction variables
-    SmallVector<Value> getAllReductionVars();
-
     void getEffects(SmallVectorImpl<MemoryEffects::EffectInstance> &effects);
   }] # clausesExtraClassDeclaration;
 

@@ -1332,6 +1332,7 @@ public:
     enum class StopHookResult : uint32_t {
       KeepStopped = 0,
       RequestContinue,
+      NoPreference,
       AlreadyContinued
     };
 

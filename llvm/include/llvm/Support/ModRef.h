@@ -161,6 +161,16 @@ public:
     return FRMB;
   }
 
+  /// Create MemoryEffectsBase that can only access argument or errno memory.
+  static MemoryEffectsBase
+  argumentOrErrnoMemOnly(ModRefInfo ArgMR = ModRefInfo::ModRef,
+                         ModRefInfo ErrnoMR = ModRefInfo::ModRef) {
+    MemoryEffectsBase FRMB = none();
+    FRMB.setModRef(Location::ArgMem, ArgMR);
+    FRMB.setModRef(Location::ErrnoMem, ErrnoMR);
+    return FRMB;
+  }
+
   /// Create MemoryEffectsBase from an encoded integer value (used by memory
   /// attribute).
   static MemoryEffectsBase createFromIntValue(uint32_t Data) {

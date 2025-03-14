@@ -3033,15 +3033,9 @@ bool Target::RunStopHooks() {
   if (m_stop_hooks.empty())
     return false;
 
-  // If there aren't any active stop hooks, don't bother either.
-  bool any_active_hooks = false;
-  for (auto hook : m_stop_hooks) {
-    if (hook.second->IsActive()) {
-      any_active_hooks = true;
-      break;
-    }
-  }
-  if (!any_active_hooks)
+  bool no_active_hooks =
+      llvm::none_of(m_stop_hooks, [](auto &p) { return p.second->IsActive(); });
+  if (no_active_hooks)
     return false;
 
   // Make sure we check that we are not stopped because of us running a user
@@ -3075,13 +3069,13 @@ bool Target::RunStopHooks() {
     return false;
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
+  auto on_exit = llvm::make_scope_exit([output_sp] { output_sp->Flush(); });
 
-  bool auto_continue = false;
-  bool hooks_ran = false;
   bool print_hook_header = (m_stop_hooks.size() != 1);
   bool print_thread_header = (num_exe_ctx != 1);
+  bool auto_continue = false;
   bool should_stop = false;
-  bool somebody_restarted = false;
+  bool requested_continue = false;
 
   for (auto stop_entry : m_stop_hooks) {
     StopHookSP cur_hook_sp = stop_entry.second;
@@ -3090,20 +3084,12 @@ bool Target::RunStopHooks() {
 
     bool any_thread_matched = false;
     for (auto exc_ctx : exc_ctx_with_reasons) {
-      // We detect somebody restarted in the stop-hook loop, and broke out of
-      // that loop back to here.  So break out of here too.
-      if (somebody_restarted)
-        break;
-
       if (!cur_hook_sp->ExecutionContextPasses(exc_ctx))
         continue;
 
       // We only consult the auto-continue for a stop hook if it matched the
       // specifier.
       auto_continue |= cur_hook_sp->GetAutoContinue();
-
-      if (!hooks_ran)
-        hooks_ran = true;
 
       if (print_hook_header && !any_thread_matched) {
         StreamString s;
@@ -3120,59 +3106,38 @@ bool Target::RunStopHooks() {
         output_sp->Printf("-- Thread %d\n",
                           exc_ctx.GetThreadPtr()->GetIndexID());
 
-      StopHook::StopHookResult this_result =
-          cur_hook_sp->HandleStop(exc_ctx, output_sp);
-      bool this_should_stop = true;
-
-      switch (this_result) {
+      auto result = cur_hook_sp->HandleStop(exc_ctx, output_sp);
+      switch (result) {
       case StopHook::StopHookResult::KeepStopped:
-        // If this hook is set to auto-continue that should override the
-        // HandleStop result...
-        if (cur_hook_sp->GetAutoContinue())
-          this_should_stop = false;
-        else
-          this_should_stop = true;
-
+        should_stop = true;
         break;
       case StopHook::StopHookResult::RequestContinue:
-        this_should_stop = false;
+        requested_continue = true;
+        break;
+      case StopHook::StopHookResult::NoPreference:
+        // Do nothing
         break;
       case StopHook::StopHookResult::AlreadyContinued:
         // We don't have a good way to prohibit people from restarting the
         // target willy nilly in a stop hook.  If the hook did so, give a
-        // gentle suggestion here and bag out if the hook processing.
+        // gentle suggestion here and back out of the hook processing.
         output_sp->Printf("\nAborting stop hooks, hook %" PRIu64
                           " set the program running.\n"
                           "  Consider using '-G true' to make "
                           "stop hooks auto-continue.\n",
                           cur_hook_sp->GetID());
-        somebody_restarted = true;
-        break;
+        // FIXME: if we are doing non-stop mode for real, we would have to
+        // check that OUR thread was restarted, otherwise we should keep
+        // processing stop hooks.
+        return true;
       }
-      // If we're already restarted, stop processing stop hooks.
-      // FIXME: if we are doing non-stop mode for real, we would have to
-      // check that OUR thread was restarted, otherwise we should keep
-      // processing stop hooks.
-      if (somebody_restarted)
-        break;
-
-      // If anybody wanted to stop, we should all stop.
-      if (!should_stop)
-        should_stop = this_should_stop;
     }
   }
 
-  output_sp->Flush();
-
-  // If one of the commands in the stop hook already restarted the target,
-  // report that fact.
-  if (somebody_restarted)
-    return true;
-
-  // Finally, if auto-continue was requested, do it now:
-  // We only compute should_stop against the hook results if a hook got to run
-  // which is why we have to do this conjoint test.
-  if ((hooks_ran && !should_stop) || auto_continue) {
+  // Resume iff:
+  // 1) At least one hook requested to continue and no hook asked to stop, or
+  // 2) at least one hook had auto continue on.
+  if ((requested_continue && !should_stop) || auto_continue) {
     Log *log = GetLog(LLDBLog::Process);
     Status error = m_process_sp->PrivateResume();
     if (error.Success()) {
