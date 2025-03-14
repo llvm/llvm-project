@@ -3476,6 +3476,24 @@ Limitations:
 alpha.WebKit
 ^^^^^^^^^^^^
 
+alpha.webkit.ForwardDeclChecker
+"""""""""""""""""""""""""""""""
+Check for local variables, member variables, and function arguments that are forward declared.
+
+.. code-block:: cpp
+
+ struct Obj;
+ Obj* provide();
+
+ struct Foo {
+   Obj* ptr; // warn
+ };
+
+  void foo() {
+    Obj* obj = provide(); // warn
+    consume(obj); // warn
+  }
+
 .. _alpha-webkit-NoUncheckedPtrMemberChecker:
 
 alpha.webkit.MemoryUnsafeCastChecker
