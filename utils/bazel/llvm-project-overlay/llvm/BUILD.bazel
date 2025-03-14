@@ -2085,6 +2085,24 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "ModuleSplitter",
+    srcs = glob([
+        "lib/ModuleSplitter/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/llvm/ModuleSplitter/*.h",
+    ]),
+    copts = llvm_copts,
+    deps = [
+        ":BitReader",
+        ":BitWriter",
+        ":Core",
+        ":IRReader",
+        ":Support",
+    ],
+)
+
 llvm_target_lib_list = [lib for lib in [
     {
         "name": "AArch64",
@@ -5300,6 +5318,21 @@ cc_library(
         ":llvm-installnametool-opts",
         ":llvm-objcopy-opts",
         ":llvm-strip-opts",
+    ],
+)
+
+cc_binary(
+    name = "llvm-module-splitter",
+    srcs = glob([
+        "tools/llvm-module-splitter/*.cpp",
+    ]),
+    copts = llvm_copts,
+    stamp = 0,
+    deps = [
+        ":Core",
+        ":IRReader",
+        ":ModuleSplitter",
+        ":Support",
     ],
 )
 
