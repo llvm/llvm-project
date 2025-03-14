@@ -67,8 +67,8 @@ define amdgpu_ps float @valley_partially_undef_copy() #0 {
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
 bb:
-  %tmp = load volatile i32, ptr addrspace(1) undef, align 4
-  %tmp1 = load volatile i32, ptr addrspace(1) undef, align 4
+  %tmp = load volatile i32, ptr addrspace(1) poison, align 4
+  %tmp1 = load volatile i32, ptr addrspace(1) poison, align 4
   %tmp2 = insertelement <4 x i32> poison, i32 %tmp1, i32 0
   %tmp3 = bitcast i32 %tmp1 to float
   %tmp4 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %tmp3, float %tmp3, <8 x i32> undef, <4 x i32> undef, i1 0, i32 0, i32 0)
@@ -76,8 +76,8 @@ bb:
   %tmp6 = fmul float %tmp5, undef
   %tmp7 = fadd float %tmp6, %tmp6
   %tmp8 = insertelement <4 x i32> %tmp2, i32 %tmp, i32 1
-  store <4 x i32> %tmp8, ptr addrspace(1) undef, align 16
-  store float %tmp7, ptr addrspace(1) undef, align 4
+  store <4 x i32> %tmp8, ptr addrspace(1) poison, align 16
+  store float %tmp7, ptr addrspace(1) poison, align 4
   br label %bb9
 
 bb9:                                              ; preds = %bb9, %bb
@@ -85,7 +85,7 @@ bb9:                                              ; preds = %bb9, %bb
   br i1 %tmp10, label %bb9, label %bb11
 
 bb11:                                             ; preds = %bb9
-  store <4 x i32> %tmp2, ptr addrspace(1) undef, align 16
+  store <4 x i32> %tmp2, ptr addrspace(1) poison, align 16
   ret float undef
 }
 
@@ -118,7 +118,7 @@ define amdgpu_kernel void @partially_undef_copy() #0 {
   %partially.undef.0 = insertelement <4 x i32> poison, i32 %tmp0, i32 0
   %partially.undef.1 = insertelement <4 x i32> %partially.undef.0, i32 %tmp1, i32 0
 
-  store volatile <4 x i32> %partially.undef.1, ptr addrspace(1) undef, align 16
+  store volatile <4 x i32> %partially.undef.1, ptr addrspace(1) poison, align 16
   tail call void asm sideeffect "v_nop", "v={v[5:8]}"(<4 x i32> %partially.undef.0)
   ret void
 }
