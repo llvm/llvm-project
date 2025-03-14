@@ -26,7 +26,7 @@
 
 namespace llvm {
 namespace SPIRV {
-
+/*
 inline size_t to_hash(const MachineInstr *MI,
                       std::unordered_set<const MachineInstr *> &Visited) {
   if (!MI || !Visited.insert(MI).second)
@@ -46,6 +46,21 @@ inline size_t to_hash(const MachineInstr *MI,
 inline size_t to_hash(const MachineInstr *MI) {
   std::unordered_set<const MachineInstr *> Visited;
   return to_hash(MI, Visited);
+}
+*/
+
+inline size_t to_hash(const MachineInstr *MI) {
+  hash_code H = llvm::hash_combine(MI->getOpcode(), MI->getNumOperands());
+  for (unsigned I = MI->getNumDefs(); I < MI->getNumOperands(); ++I) {
+    const MachineOperand &MO = MI->getOperand(I);
+    if (MO.getType() == MachineOperand::MO_CImmediate)
+      H = llvm::hash_combine(H, MO.getType(), MO.getCImm());
+    else if (MO.getType() == MachineOperand::MO_FPImmediate)
+      H = llvm::hash_combine(H, MO.getType(), MO.getFPImm());
+    else
+      H = llvm::hash_combine(H, MO.getType());
+  }
+  return H;
 }
 
 using MIHandle = std::pair<const MachineInstr *, size_t>;
@@ -169,46 +184,54 @@ inline IRHandle handle(const MachineInstr *KeyMI) {
 // per an LLVM/GlobalISel entity (e.g., Type, Constant, Machine Instruction).
 class SPIRVIRMapping {
   DenseMap<SPIRV::IRHandleMF, SPIRV::MIHandle> Vregs;
-  DenseMap<SPIRV::MIHandle, SPIRV::IRHandle> Defs;
+  DenseMap<const MachineInstr *, SPIRV::IRHandleMF> Defs;
 
 public:
   bool add(SPIRV::IRHandle Handle, const MachineInstr *MI) {
-    if (std::get<1>(Handle) == 17 && std::get<2>(Handle) == 8) {
-      const Value *Ptr = (const Value *)std::get<0>(Handle);
-      if (const ConstantInt *CI = dyn_cast_or_null<ConstantInt>(Ptr)) {
-        if (CI->getZExtValue() == 8 || CI->getZExtValue() == 5) {
-          [[maybe_unused]] uint64_t v = CI->getZExtValue();
-        }
-      }
+    if (auto DefIt = Defs.find(MI); DefIt != Defs.end()) {
+      auto [ExistHandle, ExistMF] = DefIt->second;
+      if (Handle == ExistHandle && MI->getMF() == ExistMF)
+        return false; // already exists
+      // invalidate the record
+      Vregs.erase(DefIt->second);
+      Defs.erase(DefIt);
     }
-    auto MIKey = SPIRV::getMIKey(MI);
-    auto [It, Inserted] =
-        Vregs.try_emplace(std::make_pair(Handle, MI->getMF()), MIKey);
-    if (Inserted) {
-      [[maybe_unused]] auto [_, IsConsistent] =
-          Defs.insert_or_assign(MIKey, Handle);
-      assert(IsConsistent);
+    SPIRV::IRHandleMF HandleMF = SPIRV::getIRHandleMF(Handle, MI->getMF());
+    SPIRV::MIHandle MIKey = SPIRV::getMIKey(MI);
+    auto It1 = Vregs.try_emplace(HandleMF, MIKey);
+    if (!It1.second) {
+      // there is an expired record
+      auto [ExistMI, _] = It1.first->second;
+      // invalidate the record
+      Defs.erase(ExistMI);
+      // update the record
+      It1.first->second = MIKey;
     }
-    return Inserted;
+    [[maybe_unused]] auto It2 = Defs.try_emplace(MI, HandleMF);
+    assert(It2.second);
+    return true;
   }
   bool erase(const MachineInstr *MI) {
     bool Res = false;
-    if (auto It = Defs.find(SPIRV::getMIKey(MI)); It != Defs.end()) {
-      Res = Vregs.erase(SPIRV::getIRHandleMF(It->second, MI->getMF()));
+    if (auto It = Defs.find(MI); It != Defs.end()) {
+      Res = Vregs.erase(It->second);
       Defs.erase(It);
     }
     return Res;
   }
   const MachineInstr *findMI(SPIRV::IRHandle Handle,
                              const MachineFunction *MF) {
-    auto It = Vregs.find(SPIRV::getIRHandleMF(Handle, MF));
+    SPIRV::IRHandleMF HandleMF = SPIRV::getIRHandleMF(Handle, MF);
+    auto It = Vregs.find(HandleMF);
     if (It == Vregs.end())
       return nullptr;
     auto [MI, Hash] = It->second;
-    if (SPIRV::to_hash(MI) != Hash) {
+    assert(SPIRV::to_hash(MI) == Hash);
+    assert(Defs.find(MI) != Defs.end() && Defs.find(MI)->second == HandleMF);
+    /*if (SPIRV::to_hash(MI) != Hash) {
       erase(MI);
       return nullptr;
-    }
+    }*/
     return MI;
   }
   Register find(SPIRV::IRHandle Handle, const MachineFunction *MF) {

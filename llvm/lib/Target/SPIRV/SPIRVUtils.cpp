@@ -186,8 +186,7 @@ MachineBasicBlock::iterator getOpVariableMBBIt(MachineInstr &I) {
     if (Opcode == SPIRV::OpFunction || Opcode == SPIRV::OpFunctionParameter) {
       IsHeader = true;
     } else if (IsHeader &&
-               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::TYPEREF ||
-                 Opcode == SPIRV::OpLabel)) {
+               !(Opcode == SPIRV::ASSIGN_TYPE || Opcode == SPIRV::OpLabel)) {
       ++It;
       break;
     }

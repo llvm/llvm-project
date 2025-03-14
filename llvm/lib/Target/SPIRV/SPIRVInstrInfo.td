@@ -15,7 +15,6 @@ include "SPIRVSymbolicOperands.td"
 
 // Codegen only metadata instructions
 let isCodeGenOnly=1 in {
-  def TYPEREF: Pseudo<(outs), (ins ID:$src_id, TYPE:$src_ty)>;
   def ASSIGN_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
   def DECL_TYPE: Pseudo<(outs ID:$dst_id), (ins ID:$src_id, TYPE:$src_ty)>;
   def GET_ID: Pseudo<(outs iID:$dst_id), (ins iID:$src)>;
@@ -32,10 +31,8 @@ def UNKNOWN_type
 def SPVTypeBin : SDTypeProfile<1, 2, []>;
 
 def assigntype : SDNode<"SPIRVISD::AssignType", SPVTypeBin>;
-def typeref : SDNode<"SPIRVISD::TypeRef", SPVTypeBin>;
 
 def : GINodeEquiv<ASSIGN_TYPE, assigntype>;
-def : GINodeEquiv<TYPEREF, typeref>;
 
 class BinOp<string name, bits<16> opCode, list<dag> pattern=[]>
                 : Op<opCode, (outs ID:$dst), (ins TYPE:$src_ty, ID:$src, ID:$src2),

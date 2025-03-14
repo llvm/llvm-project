@@ -396,26 +396,21 @@ void SPIRVInstructionSelector::resetVRegsType(MachineFunction &MF) {
   }
   for (const auto &MBB : MF) {
     for (const auto &MI : MBB) {
-      if (MI.getOpcode() == SPIRV::ASSIGN_TYPE) {
-        Register DstReg = MI.getOperand(0).getReg();
-        LLT DstType = MRI.getType(DstReg);
-        Register SrcReg = MI.getOperand(1).getReg();
-        LLT SrcType = MRI.getType(SrcReg);
-        if (DstType != SrcType)
-          MRI.setType(DstReg, MRI.getType(SrcReg));
+      //GR.invalidateMachineInstr(&I);
+      if (MI.getOpcode() != SPIRV::ASSIGN_TYPE)
+        continue;
 
-        const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(DstReg);
-        const TargetRegisterClass *SrcRC = MRI.getRegClassOrNull(SrcReg);
-        if (DstRC != SrcRC && SrcRC)
-          MRI.setRegClass(DstReg, SrcRC);
-      } else if (MI.getOpcode() == SPIRV::TYPEREF) {
-        Register DstReg = MI.getOperand(0).getReg();
-        LLT DstType = MRI.getType(DstReg);
-        Register SrcReg = MI.getOperand(1).getReg();
-        LLT SrcType = MRI.getType(SrcReg);
-        if (DstType != SrcType)
-          MRI.setType(DstReg, MRI.getType(SrcReg));
-      }
+      Register DstReg = MI.getOperand(0).getReg();
+      LLT DstType = MRI.getType(DstReg);
+      Register SrcReg = MI.getOperand(1).getReg();
+      LLT SrcType = MRI.getType(SrcReg);
+      if (DstType != SrcType)
+        MRI.setType(DstReg, MRI.getType(SrcReg));
+
+      const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(DstReg);
+      const TargetRegisterClass *SrcRC = MRI.getRegClassOrNull(SrcReg);
+      if (DstRC != SrcRC && SrcRC)
+        MRI.setRegClass(DstReg, SrcRC);
     }
   }
 }
@@ -523,27 +518,6 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       }
       MRI->setRegClass(SrcReg, MRI->getRegClass(DstReg));
       MRI->replaceRegWith(SrcReg, DstReg);
-      GR.invalidateMachineInstr(&I);
-      I.removeFromParent();
-      return true;
-    } else if (Opcode == SPIRV::TYPEREF) {
-      Register SrcReg = I.getOperand(0).getReg();
-      auto *Def = MRI->getVRegDef(SrcReg);
-      if (isTypeFoldingSupported(Def->getOpcode())) {
-        bool Res = selectImpl(I, *CoverageInfo);
-        LLVM_DEBUG({
-          if (!Res && Def->getOpcode() != TargetOpcode::G_CONSTANT) {
-            dbgs() << "Unexpected pattern in ASSIGN_TYPE.\nInstruction: ";
-            I.print(dbgs());
-          }
-        });
-        assert(Res || Def->getOpcode() == TargetOpcode::G_CONSTANT);
-        if (Res) {
-          if (!isTriviallyDead(*Def, *MRI) && isDead(*Def, *MRI))
-            DeadMIs.insert(Def);
-          return Res;
-        }
-      }
       GR.invalidateMachineInstr(&I);
       I.removeFromParent();
       return true;
