@@ -5,25 +5,45 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file is intended to be used externally as part of the `shared/`
+// interface. For that purpose, we manually define a few options normally
+// handled by the libc build system.
+//
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_LIBC_SRC___SUPPORT_RPC_RPC_SERVER_H
+#define LLVM_LIBC_SRC___SUPPORT_RPC_RPC_SERVER_H
 
 // Workaround for missing __has_builtin in < GCC 10.
 #ifndef __has_builtin
 #define __has_builtin(x) 0
 #endif
 
+// Configs for using the LLVM libc writer interface.
+#define LIBC_COPT_USE_C_ASSERT
+#define LIBC_COPT_MEMCPY_USE_EMBEDDED_TINY
+#define LIBC_COPT_ARRAY_ARG_LIST
+#define LIBC_COPT_PRINTF_DISABLE_WRITE_INT
+#define LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
+#define LIBC_COPT_PRINTF_DISABLE_STRERROR
+
+// The 'long double' type is 8 byte
+#define LIBC_TYPES_LONG_DOUBLE_IS_FLOAT64
+
 #include "shared/rpc.h"
 #include "shared/rpc_opcodes.h"
 
-#include "src/__support/CPP/type_traits.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/converter.h"
 #include "src/stdio/printf_core/parser.h"
 #include "src/stdio/printf_core/writer.h"
 
-#include <stdio.h>
-#include <stdlib.h>
+#include "hdr/stdio_overlay.h"
+#include "hdr/stdlib_overlay.h"
 
-namespace LIBC_NAMESPACE {
+namespace LIBC_NAMESPACE_DECL {
+namespace internal {
 
 // Minimal replacement for 'std::vector' that works for trivial types.
 template <typename T> class TempVector {
@@ -35,52 +55,50 @@ template <typename T> class TempVector {
   size_t capacity;
 
 public:
-  TempVector() : data(nullptr), current(0), capacity(0) {}
+  LIBC_INLINE TempVector() : data(nullptr), current(0), capacity(0) {}
 
-  ~TempVector() { free(data); }
+  LIBC_INLINE ~TempVector() { free(data); }
 
-  void push_back(const T &value) {
+  LIBC_INLINE void push_back(const T &value) {
     if (current == capacity)
       grow();
     data[current] = T(value);
     ++current;
   }
 
-  void push_back(T &&value) {
+  LIBC_INLINE void push_back(T &&value) {
     if (current == capacity)
       grow();
     data[current] = T(static_cast<T &&>(value));
     ++current;
   }
 
-  void pop_back() { --current; }
+  LIBC_INLINE void pop_back() { --current; }
 
-  bool empty() { return current == 0; }
+  LIBC_INLINE bool empty() { return current == 0; }
 
-  size_t size() { return current; }
+  LIBC_INLINE size_t size() { return current; }
 
-  T &operator[](size_t index) { return data[index]; }
+  LIBC_INLINE T &operator[](size_t index) { return data[index]; }
 
-  T &back() { return data[current - 1]; }
+  LIBC_INLINE T &back() { return data[current - 1]; }
 
 private:
-  void grow() {
+  LIBC_INLINE void grow() {
     size_t new_capacity = capacity ? capacity * 2 : 1;
     void *new_data = realloc(data, new_capacity * sizeof(T));
-    if (!new_data)
-      abort();
     data = static_cast<T *>(new_data);
     capacity = new_capacity;
   }
 };
 
 struct TempStorage {
-  char *alloc(size_t size) {
+  LIBC_INLINE char *alloc(size_t size) {
     storage.push_back(reinterpret_cast<char *>(malloc(size)));
     return storage.back();
   }
 
-  ~TempStorage() {
+  LIBC_INLINE ~TempStorage() {
     for (size_t i = 0; i < storage.size(); ++i)
       free(storage[i]);
   }
@@ -88,15 +106,15 @@ struct TempStorage {
   TempVector<char *> storage;
 };
 
-enum Stream {
-  File = 0,
-  Stdin = 1,
-  Stdout = 2,
-  Stderr = 3,
-};
-
 // Get the associated stream out of an encoded number.
-LIBC_INLINE ::FILE *to_stream(uintptr_t f) {
+LIBC_INLINE static ::FILE *to_stream(uintptr_t f) {
+  enum Stream {
+    File = 0,
+    Stdin = 1,
+    Stdout = 2,
+    Stderr = 3,
+  };
+
   ::FILE *stream = reinterpret_cast<FILE *>(f & ~0x3ull);
   Stream type = static_cast<Stream>(f & 0x3ull);
   if (type == Stdin)
@@ -109,7 +127,8 @@ LIBC_INLINE ::FILE *to_stream(uintptr_t f) {
 }
 
 template <bool packed, uint32_t num_lanes>
-static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
+LIBC_INLINE static void handle_printf(rpc::Server::Port &port,
+                                      TempStorage &temp_storage) {
   FILE *files[num_lanes] = {nullptr};
   // Get the appropriate output stream to use.
   if (port.get_opcode() == LIBC_PRINTF_TO_STREAM ||
@@ -268,7 +287,8 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
       }
     }
 
-    results[lane] = fwrite(buffer, 1, writer.get_chars_written(), files[lane]);
+    results[lane] = static_cast<int>(
+        fwrite(buffer, 1, writer.get_chars_written(), files[lane]));
     if (results[lane] != writer.get_chars_written() || ret == -1)
       results[lane] = -1;
   }
@@ -282,7 +302,7 @@ static void handle_printf(rpc::Server::Port &port, TempStorage &temp_storage) {
 }
 
 template <uint32_t num_lanes>
-rpc::Status handle_port_impl(rpc::Server::Port &port) {
+LIBC_INLINE static rpc::Status handle_port_impl(rpc::Server::Port &port) {
   TempStorage temp_storage;
 
   switch (port.get_opcode()) {
@@ -333,8 +353,9 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     void *data[num_lanes] = {nullptr};
     port.recv([&](rpc::Buffer *buffer, uint32_t id) {
       data[id] = temp_storage.alloc(buffer->data[0]);
-      const char *str = fgets(reinterpret_cast<char *>(data[id]),
-                              buffer->data[0], to_stream(buffer->data[1]));
+      const char *str = ::fgets(reinterpret_cast<char *>(data[id]),
+                                static_cast<int>(buffer->data[0]),
+                                to_stream(buffer->data[1]));
       sizes[id] = !str ? 0 : __builtin_strlen(str) + 1;
     });
     port.send_n(data, sizes);
@@ -353,9 +374,9 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
     break;
   }
   case LIBC_CLOSE_FILE: {
-    port.recv_and_send([&](rpc::Buffer *buffer, uint32_t id) {
+    port.recv_and_send([&](rpc::Buffer *buffer, uint32_t) {
       FILE *file = reinterpret_cast<FILE *>(buffer->data[0]);
-      buffer->data[0] = fclose(file);
+      buffer->data[0] = ::fclose(file);
     });
     break;
   }
@@ -498,21 +519,28 @@ rpc::Status handle_port_impl(rpc::Server::Port &port) {
   return rpc::RPC_SUCCESS;
 }
 
-} // namespace LIBC_NAMESPACE
+} // namespace internal
+} // namespace LIBC_NAMESPACE_DECL
 
+namespace LIBC_NAMESPACE_DECL {
 namespace rpc {
-// The implementation of this function currently lives in the utility directory
-// at 'utils/gpu/server/rpc_server.cpp'.
-rpc::Status handle_libc_opcodes(rpc::Server::Port &port, uint32_t num_lanes) {
+
+// Handles any opcode generated from the 'libc' client code.
+LIBC_INLINE ::rpc::Status handle_libc_opcodes(::rpc::Server::Port &port,
+                                              uint32_t num_lanes) {
   switch (num_lanes) {
   case 1:
-    return LIBC_NAMESPACE::handle_port_impl<1>(port);
+    return internal::handle_port_impl<1>(port);
   case 32:
-    return LIBC_NAMESPACE::handle_port_impl<32>(port);
+    return internal::handle_port_impl<32>(port);
   case 64:
-    return LIBC_NAMESPACE::handle_port_impl<64>(port);
+    return internal::handle_port_impl<64>(port);
   default:
-    return rpc::RPC_ERROR;
+    return ::rpc::RPC_ERROR;
   }
 }
+
 } // namespace rpc
+} // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SRC___SUPPORT_RPC_RPC_SERVER_H
