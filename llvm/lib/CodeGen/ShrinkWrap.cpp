@@ -355,7 +355,7 @@ bool ShrinkWrap::useOrDefCSROrFI(const MachineInstr &MI, RegScavenger *RS,
                     RCI.getLastCalleeSavedAlias(PhysReg) ||
                     (!MI.isReturn() &&
                      TRI->isNonallocatableRegisterCalleeSave(PhysReg)) ||
-                     TRI->isVirtualFrameRegister(PhysReg);
+                    TRI->isVirtualFrameRegister(PhysReg);
     } else if (MO.isRegMask()) {
       // Check if this regmask clobbers any of the CSRs.
       for (unsigned Reg : getCurrentCSRs(RS)) {
