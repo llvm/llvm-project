@@ -3,6 +3,8 @@
 // RUN: %clangxx %s -o %t
 // RUN: %run %t 2>&1 | FileCheck %s
 
+// CHECK: Symbolizer path search is disabled in the runtime build configuration"
+
 // REQUIRES: shell
 
 // Mobile device will not have symbolizer in provided path.
@@ -22,4 +24,3 @@ int main() {
   Symbolize();
 }
 
-// CHECK: Symbolizer path search is disabled in the runtime build configuration"
