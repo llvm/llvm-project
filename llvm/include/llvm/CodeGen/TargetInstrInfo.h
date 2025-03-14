@@ -298,6 +298,11 @@ public:
     return isLoadFromStackSlot(MI, FrameIndex);
   }
 
+  virtual const MachineOperand *isLoadFromStackSlotMO(const MachineInstr &MI,
+                                                      int &FrameIndex) const {
+    llvm_unreachable("target did not implement");
+  }
+
   /// Check for post-frame ptr elimination stack locations as well.
   /// This uses a heuristic so it isn't reliable for correctness.
   virtual Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
@@ -323,6 +328,11 @@ public:
   virtual Register isStoreToStackSlot(const MachineInstr &MI,
                                       int &FrameIndex) const {
     return 0;
+  }
+
+  virtual const MachineOperand *isStoreToStackSlotMO(const MachineInstr &MI,
+                                                     int &FrameIndex) const {
+    llvm_unreachable("target did not implement");
   }
 
   /// Optional extension of isStoreToStackSlot that returns the number of
@@ -2288,6 +2298,32 @@ public:
   virtual void getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
                                      int FI) const {
     llvm_unreachable("unknown number of operands necessary");
+  }
+
+  /// \Returns true if it is profitable to perform spill2reg on \p MI.
+  virtual bool isSpill2RegProfitable(const MachineInstr *MI,
+                                     const TargetRegisterInfo *TRI,
+                                     const MachineRegisterInfo *MRI) const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::isSpill2RegProfitable!");
+  }
+
+  /// Inserts \p SrcReg into the destination Spill2Reg register \p DstReg.
+  virtual MachineInstr *spill2RegInsertToS2RReg(
+      Register S2RReg, Register SrcReg, int OperationBits,
+      MachineBasicBlock *MBB, MachineBasicBlock::iterator InsertBeforeIt,
+      const TargetRegisterInfo *TRI, const TargetSubtargetInfo *STI) const {
+    llvm_unreachable(
+        "Target didn't implement TargetInstrInfo::spill2RegInsertToS2RReg!");
+  }
+
+  /// Extracts from \p S2RReg into \p DstReg.
+  virtual MachineInstr *spill2RegExtractFromS2RReg(
+      Register DstReg, Register S2RReg, int OperationBits,
+      MachineBasicBlock *InsertMBB, MachineBasicBlock::iterator InsertBeforeIt,
+      const TargetRegisterInfo *TRI, const TargetSubtargetInfo *STI) const {
+    llvm_unreachable("Target didn't implement "
+                     "TargetInstrInfo::spill2RegExtractFromS2RReg!");
   }
 
 private:

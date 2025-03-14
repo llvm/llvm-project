@@ -78,6 +78,22 @@ static cl::opt<unsigned> UndefRegClearance(
              "certain undef register reads"),
     cl::init(128), cl::Hidden);
 
+// A value of 2 was empirically found to work on Skylake.
+static cl::opt<int> Spill2RegMemInstrsThreshold(
+    "spill2reg-mem-instrs", cl::Hidden, cl::init(80),
+    cl::desc("Apply spill2reg if we find at least this much percentage of "
+             "memory nstrs within the explored distance."));
+
+static cl::opt<int> Spill2RegVecInstrsThreshold(
+    "spill2reg-vec-instrs", cl::Hidden, cl::init(1),
+    cl::desc("Apply spill2reg if we find fewer than this many vector instrs "
+             "within the explored distance."));
+
+static cl::opt<int> Spill2RegExplorationDst(
+    "spill2reg-exploration-distance", cl::Hidden, cl::init(4),
+    cl::desc("When checking for profitability, explore nearby instructions "
+             "at this maximum distance."));
+
 // Pin the vtable to this file.
 void X86InstrInfo::anchor() {}
 
@@ -691,13 +707,27 @@ Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   return X86InstrInfo::isLoadFromStackSlot(MI, FrameIndex, Dummy);
 }
 
+const MachineOperand *
+X86InstrInfo::isLoadFromStackSlotMO(const MachineInstr &MI, int &FrameIndex,
+                                    unsigned &MemBytes) const {
+  if (isFrameLoadOpcode(MI.getOpcode(), MemBytes))
+    if (MI.getOperand(0).getSubReg() == 0 && isFrameOperand(MI, 1, FrameIndex))
+      return &MI.getOperand(0);
+  return nullptr;
+}
+
+const MachineOperand *
+X86InstrInfo::isLoadFromStackSlotMO(const MachineInstr &MI,
+                                    int &FrameIndex) const {
+  unsigned UnusedMemBytes;
+  return isLoadFromStackSlotMO(MI, FrameIndex, UnusedMemBytes);
+}
+
 Register X86InstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex,
                                            unsigned &MemBytes) const {
-  if (isFrameLoadOpcode(MI.getOpcode(), MemBytes))
-    if (MI.getOperand(0).getSubReg() == 0 && isFrameOperand(MI, 1, FrameIndex))
-      return MI.getOperand(0).getReg();
-  return 0;
+  const MachineOperand *MO = isLoadFromStackSlotMO(MI, FrameIndex, MemBytes);
+  return MO != nullptr ? (unsigned)MO->getReg() : 0;
 }
 
 Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
@@ -719,10 +749,30 @@ Register X86InstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
   return 0;
 }
 
+const MachineOperand *
+X86InstrInfo::isStoreToStackSlotMO(const MachineInstr &MI, int &FrameIndex,
+                                   unsigned &MemBytes) const {
+  if (isFrameStoreOpcode(MI.getOpcode(), MemBytes))
+    if (MI.getOperand(X86::AddrNumOperands).getSubReg() == 0 &&
+        isFrameOperand(MI, 0, FrameIndex))
+      return &MI.getOperand(X86::AddrNumOperands);
+  return nullptr;
+}
+
+const MachineOperand *
+X86InstrInfo::isStoreToStackSlotMO(const MachineInstr &MI,
+                                   int &FrameIndex) const {
+  unsigned UnusedMemBytes;
+  return isStoreToStackSlotMO(MI, FrameIndex, UnusedMemBytes);
+}
+
 Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
   unsigned Dummy;
-  return X86InstrInfo::isStoreToStackSlot(MI, FrameIndex, Dummy);
+  const auto *MO = X86InstrInfo::isStoreToStackSlotMO(MI, FrameIndex, Dummy);
+  if (MO != nullptr)
+    return MO->getReg();
+  return 0;
 }
 
 Register X86InstrInfo::isStoreToStackSlot(const MachineInstr &MI,
@@ -10968,6 +11018,173 @@ void X86InstrInfo::getFrameIndexOperands(SmallVectorImpl<MachineOperand> &Ops,
   M.BaseType = X86AddressMode::FrameIndexBase;
   M.Base.FrameIndex = FI;
   M.getFullAddress(Ops);
+}
+
+bool X86InstrInfo::isSpill2RegProfitable(const MachineInstr *MI,
+                                         const TargetRegisterInfo *TRI,
+                                         const MachineRegisterInfo *MRI) const {
+  auto IsVecMO = [TRI, MI](const MachineOperand &MO) {
+    const MachineFunction *MF = MI->getParent()->getParent();
+    if (MO.isReg() && MO.getReg().isPhysical()) {
+      for (auto ClassID :
+           {X86::VR128RegClassID, X86::VR256RegClassID, X86::VR512RegClassID})
+        if (TRI->getRegClass(ClassID)->contains(MO.getReg()))
+          return true;
+    }
+    if (MO.isFI()) {
+      const unsigned MinVecBits =
+          TRI->getRegSizeInBits(*TRI->getRegClass(X86::VR128RegClassID));
+      if (MF->getFrameInfo().getObjectSize(MO.getIndex()) >= MinVecBits)
+        // TODO: Is this needed? Is there any such instruction?
+        return true;
+    }
+    return false;
+  };
+
+  /// \Returns the previous instruction, skipping debug instrs.
+  auto GetPrevNonDebug = [](const MachineInstr *MI) {
+    do {
+      MI = MI->getPrevNode();
+    } while (MI != nullptr && MI->isDebugInstr());
+    return MI;
+  };
+  /// \Returns the next instruction, skipping debug instrs.
+  auto GetNextNonDebug = [](const MachineInstr *MI) {
+    do {
+      MI = MI->getNextNode();
+    } while (MI != nullptr && MI->isDebugInstr());
+    return MI;
+  };
+
+  // This is a simple heuristic. We count the number of memory and vector
+  // instructions both above and below `MI` with a radius of
+  // Spill2RegExplorationDst, and check against threshold values.
+  int CntMem = 0;
+  int CntAll = 0;
+  int CntVec = 0;
+  const MachineInstr *TopMI = MI;
+  const MachineInstr *BotMI = GetNextNonDebug(MI);
+  for (int Radius = 0, MaxRadius = Spill2RegExplorationDst;
+       (TopMI != nullptr || BotMI != nullptr) && Radius < MaxRadius; ++Radius) {
+    if (TopMI != nullptr && !TopMI->memoperands_empty())
+      ++CntMem;
+    if (BotMI != nullptr && !BotMI->memoperands_empty())
+      ++CntMem;
+    if (TopMI != nullptr && llvm::any_of(TopMI->operands(), IsVecMO))
+      ++CntVec;
+    if (BotMI != nullptr && llvm::any_of(BotMI->operands(), IsVecMO))
+      ++CntVec;
+
+    if (TopMI != nullptr) {
+      TopMI = GetPrevNonDebug(TopMI);
+      ++CntAll;
+    }
+    if (BotMI != nullptr) {
+      BotMI = GetNextNonDebug(BotMI);
+      ++CntAll;
+    }
+  }
+  // Return false if exploration ended early because we reached the end of BB.
+  if (Spill2RegMemInstrsThreshold != 0 && CntAll < 2 * Spill2RegExplorationDst)
+    return false;
+  // Else check against the thresholds.
+  bool MemHeuristic = Spill2RegMemInstrsThreshold == 0 ||
+                      (CntMem * 100) / CntAll >= Spill2RegMemInstrsThreshold;
+  bool VecHeuristic =
+      Spill2RegVecInstrsThreshold == 0 || CntVec < Spill2RegVecInstrsThreshold;
+  return MemHeuristic && VecHeuristic;
+}
+
+extern bool useAVX(const TargetSubtargetInfo *STI);
+
+static unsigned getInsertOrExtractOpcode(unsigned Bits, bool Insert,
+                                         const TargetSubtargetInfo *STI) {
+  bool UseAVX = useAVX(STI);
+  switch (Bits) {
+  case 8:
+  case 16:
+  case 32:
+    if (UseAVX)
+      return Insert ? X86::VMOVDI2PDIZrr : X86::VMOVPDI2DIZrr;
+    else
+      return Insert ? X86::MOVDI2PDIrr : X86::MOVPDI2DIrr;
+  case 64:
+    if (UseAVX)
+      return Insert ? X86::VMOV64toPQIZrr : X86::VMOVPQIto64Zrr;
+    else
+      return Insert ? X86::MOV64toPQIrr : X86::MOVPQIto64rr;
+  default:
+    llvm_unreachable("Unsupported bits");
+  }
+}
+
+/// \Returns the subreg index for a getting a subregister of \p SubregBits from
+/// a register of \p RegBits.
+static unsigned spill2RegGetSubregIdx(unsigned RegBits, unsigned SubregBits) {
+  assert(RegBits > SubregBits && "From expected to cover To");
+  switch (SubregBits) {
+  case 32:
+    return X86::sub_32bit;
+  case 16:
+    return X86::sub_16bit;
+  case 8:
+    return X86::sub_8bit;
+  default:
+    llvm_unreachable("FIXME");
+  }
+}
+
+std::optional<MCRegister>
+X86InstrInfo::getMovdCompatibleReg(MCRegister OldReg, uint32_t OldRegBits,
+                                   const TargetRegisterInfo *TRI) const {
+  if (OldRegBits != 8 && OldRegBits != 16)
+    return std::nullopt;
+  // The register class of the register that movd can handle.
+  const TargetRegisterClass *NewRegClass =
+      TRI->getRegClass(X86::GR32RegClassID);
+  unsigned NewRegBits = TRI->getRegSizeInBits(*NewRegClass);
+  unsigned SubIdx = spill2RegGetSubregIdx(NewRegBits, OldRegBits);
+  MCRegister NewReg = TRI->getMatchingSuperReg(OldReg, SubIdx, NewRegClass);
+  return NewReg;
+}
+
+MachineInstr *X86InstrInfo::spill2RegInsertToS2RReg(
+    Register S2RReg, Register SrcReg, int OperationBits, MachineBasicBlock *MBB,
+    MachineBasicBlock::iterator InsertBeforeIt, const TargetRegisterInfo *TRI,
+    const TargetSubtargetInfo *STI) const {
+  DebugLoc DL;
+  unsigned InsertOpcode =
+      getInsertOrExtractOpcode(OperationBits, true /*insert*/, STI);
+  const MCInstrDesc &InsertMCID = get(InsertOpcode);
+  // `movd` does not support 8/16 bit operands. Instead, we use a 32-bit
+  // register. For example:
+  //   $al = ...
+  //   $xmm0 = MOVPDI2DIrr $eax
+  if (auto NewReg = getMovdCompatibleReg(SrcReg, OperationBits, TRI))
+    SrcReg = *NewReg;
+  MachineInstr *InsertMI =
+      BuildMI(*MBB, InsertBeforeIt, DL, InsertMCID, S2RReg).addReg(SrcReg);
+  return InsertMI;
+}
+
+MachineInstr *X86InstrInfo::spill2RegExtractFromS2RReg(
+    Register DstReg, Register S2RReg, int OperationBits,
+    MachineBasicBlock *InsertMBB, MachineBasicBlock::iterator InsertBeforeIt,
+    const TargetRegisterInfo *TRI, const TargetSubtargetInfo *STI) const {
+  DebugLoc DL;
+  unsigned ExtractOpcode =
+      getInsertOrExtractOpcode(OperationBits, false /*extract*/, STI);
+  const MCInstrDesc &ExtractMCID = get(ExtractOpcode);
+  // `movd` does not support 8/16 bit operands. Instead, we use a 32-bit
+  // register. For example:
+  //   $eax = MOVPDI2DIrr $xmm0
+  //   ... = $al
+  if (auto NewReg = getMovdCompatibleReg(DstReg, OperationBits, TRI))
+    DstReg = *NewReg;
+  MachineInstr *ExtractMI =
+      BuildMI(*InsertMBB, InsertBeforeIt, DL, ExtractMCID, DstReg)
+          .addReg(S2RReg);
+  return ExtractMI;
 }
 
 #define GET_INSTRINFO_HELPERS

@@ -272,10 +272,16 @@ public:
   /// FIXME: This should become part of our instruction tables.
   static bool isDataInvariantLoad(MachineInstr &MI);
 
+  const MachineOperand *isLoadFromStackSlotMO(const MachineInstr &MI,
+                                              int &FrameIndex,
+                                              unsigned &MemBytes) const;
+
+  const MachineOperand *isLoadFromStackSlotMO(const MachineInstr &MI,
+                                              int &FrameIndex) const override;
+
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  Register isLoadFromStackSlot(const MachineInstr &MI,
-                               int &FrameIndex,
+  Register isLoadFromStackSlot(const MachineInstr &MI, int &FrameIndex,
                                unsigned &MemBytes) const override;
   /// isLoadFromStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
@@ -283,10 +289,16 @@ public:
   Register isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                      int &FrameIndex) const override;
 
+  const MachineOperand *isStoreToStackSlotMO(const MachineInstr &MI,
+                                             int &FrameIndex,
+                                             unsigned &MemBytes) const;
+
+  const MachineOperand *isStoreToStackSlotMO(const MachineInstr &MI,
+                                             int &FrameIndex) const override;
+
   Register isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-  Register isStoreToStackSlot(const MachineInstr &MI,
-                              int &FrameIndex,
+  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               unsigned &MemBytes) const override;
   /// isStoreToStackSlotPostFE - Check for post-frame ptr elimination
   /// stack locations as well.  This uses a heuristic so it isn't
@@ -448,12 +460,12 @@ public:
   /// is likely that the referenced instruction has been changed.
   ///
   /// \returns true on success.
-  MachineInstr *
-  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
-                        ArrayRef<unsigned> Ops,
-                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
-                        LiveIntervals *LIS = nullptr,
-                        VirtRegMap *VRM = nullptr) const override;
+  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                                      ArrayRef<unsigned> Ops,
+                                      MachineBasicBlock::iterator InsertPt,
+                                      int FrameIndex,
+                                      LiveIntervals *LIS = nullptr,
+                                      VirtRegMap *VRM = nullptr) const override;
 
   /// Same as the previous version except it allows folding of any load and
   /// store from / to any address, not just from a specific stack slot.
@@ -701,8 +713,7 @@ private:
   ///
   /// If IsIntrinsic is set, operand 1 will be ignored for commuting.
   bool findThreeSrcCommutedOpIndices(const MachineInstr &MI,
-                                     unsigned &SrcOpIdx1,
-                                     unsigned &SrcOpIdx2,
+                                     unsigned &SrcOpIdx1, unsigned &SrcOpIdx2,
                                      bool IsIntrinsic = false) const;
 
   /// Returns true when instruction \p FlagI produces the same flags as \p OI.
@@ -728,6 +739,28 @@ private:
   /// \returns the index of operand that is commuted with \p Idx1. If the method
   /// fails to commute the operands, it will return \p Idx1.
   unsigned commuteOperandsForFold(MachineInstr &MI, unsigned Idx1) const;
+
+  bool isSpill2RegProfitable(const MachineInstr *MI,
+                             const TargetRegisterInfo *TRI,
+                             const MachineRegisterInfo *MRI) const override;
+
+  std::optional<MCRegister>
+  getMovdCompatibleReg(MCRegister OldReg, uint32_t OldRegBits,
+                       const TargetRegisterInfo *TRI) const;
+
+  MachineInstr *
+  spill2RegInsertToS2RReg(Register S2RReg, Register SrcReg, int OperationBits,
+                          MachineBasicBlock *MBB,
+                          MachineBasicBlock::iterator InsertBeforeIt,
+                          const TargetRegisterInfo *TRI,
+                          const TargetSubtargetInfo *STI) const override;
+
+  MachineInstr *
+  spill2RegExtractFromS2RReg(Register DstReg, Register S2RReg,
+                             int OperationBits, MachineBasicBlock *InsertMBB,
+                             MachineBasicBlock::iterator InsertBeforeIt,
+                             const TargetRegisterInfo *TRI,
+                             const TargetSubtargetInfo *STI) const override;
 };
 } // namespace llvm
 
