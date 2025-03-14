@@ -828,7 +828,7 @@ void FastISelMap::printFunctionDefinitions(raw_ostream &OS) {
       for (unsigned i = 0, e = MI->second.size(); i != e; ++i) {
         OS << "  if (";
         MI->second[i].emitImmediatePredicate(OS, ImmediatePredicates);
-        OS << ")\n    if (unsigned Reg = fastEmit_";
+        OS << ")\n    if (Register Reg = fastEmit_";
         MI->second[i].PrintManglingSuffix(OS, ImmediatePredicates);
         OS << "(VT, RetVT, Opcode";
         if (!MI->second[i].empty())

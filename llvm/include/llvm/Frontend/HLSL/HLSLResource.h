@@ -21,6 +21,8 @@ namespace hlsl {
 // For now we use DXIL ABI enum values directly. This may change in the future.
 using dxil::ResourceClass;
 
+const unsigned CBufferRowSizeInBytes = 16U;
+
 } // namespace hlsl
 } // namespace llvm
 

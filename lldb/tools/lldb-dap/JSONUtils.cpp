@@ -1526,7 +1526,8 @@ static void addStatistic(lldb::SBTarget &target, llvm::json::Object &event) {
     const char *key = keys.GetStringAtIndex(i);
     FilterAndGetValueForKey(statistics, key, stats_body);
   }
-  event.try_emplace("statistics", std::move(stats_body));
+  llvm::json::Object body{{"$__lldb_statistics", std::move(stats_body)}};
+  event.try_emplace("body", std::move(body));
 }
 
 llvm::json::Object CreateTerminatedEventObject(lldb::SBTarget &target) {

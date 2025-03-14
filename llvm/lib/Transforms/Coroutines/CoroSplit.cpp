@@ -921,11 +921,8 @@ void coro::BaseCloner::create() {
   auto savedLinkage = NewF->getLinkage();
   NewF->setLinkage(llvm::GlobalValue::ExternalLinkage);
 
-  CloneFunctionAttributesInto(NewF, &OrigF, VMap, false);
-  CloneFunctionMetadataInto(*NewF, OrigF, VMap, RF_None, nullptr, nullptr,
-                            &CommonDebugInfo);
-  CloneFunctionBodyInto(*NewF, OrigF, VMap, RF_None, Returns, "", nullptr,
-                        nullptr, nullptr, &CommonDebugInfo);
+  CloneFunctionInto(NewF, &OrigF, VMap,
+                    CloneFunctionChangeType::LocalChangesOnly, Returns);
 
   auto &Context = NewF->getContext();
 

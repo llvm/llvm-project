@@ -772,17 +772,16 @@ private:
 /// `vector.extract` and `vector.extract_element`.
 template <class VectorExtractOp>
 class RewriteScalarExtractOfTransferReadBase
-    : public OpRewritePattern<VectorExtractOp>::SplitMatchAndRewrite {
-  using Base = typename OpRewritePattern<VectorExtractOp>::SplitMatchAndRewrite;
+    : public OpRewritePattern<VectorExtractOp> {
+  using Base = OpRewritePattern<VectorExtractOp>;
 
 public:
   RewriteScalarExtractOfTransferReadBase(MLIRContext *context,
                                          PatternBenefit benefit,
                                          bool allowMultipleUses)
-      : Base::SplitMatchAndRewrite(context, benefit),
-        allowMultipleUses(allowMultipleUses) {}
+      : Base(context, benefit), allowMultipleUses(allowMultipleUses) {}
 
-  LogicalResult match(VectorExtractOp extractOp) const override {
+  LogicalResult match(VectorExtractOp extractOp) const {
     auto xferOp =
         extractOp.getVector().template getDefiningOp<vector::TransferReadOp>();
     if (!xferOp)
@@ -828,8 +827,11 @@ class RewriteScalarExtractElementOfTransferRead
   using RewriteScalarExtractOfTransferReadBase::
       RewriteScalarExtractOfTransferReadBase;
 
-  void rewrite(vector::ExtractElementOp extractOp,
-               PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::ExtractElementOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(match(extractOp)))
+      return failure();
+
     // Construct scalar load.
     auto loc = extractOp.getLoc();
     auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
@@ -856,6 +858,8 @@ class RewriteScalarExtractElementOfTransferRead
       rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
           extractOp, xferOp.getSource(), newIndices);
     }
+
+    return success();
   }
 };
 
@@ -872,8 +876,11 @@ class RewriteScalarExtractOfTransferRead
   using RewriteScalarExtractOfTransferReadBase::
       RewriteScalarExtractOfTransferReadBase;
 
-  void rewrite(vector::ExtractOp extractOp,
-               PatternRewriter &rewriter) const override {
+  LogicalResult matchAndRewrite(vector::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    if (failed(match(extractOp)))
+      return failure();
+
     // Construct scalar load.
     auto xferOp = extractOp.getVector().getDefiningOp<vector::TransferReadOp>();
     SmallVector<Value> newIndices(xferOp.getIndices().begin(),
@@ -899,6 +906,8 @@ class RewriteScalarExtractOfTransferRead
       rewriter.replaceOpWithNewOp<tensor::ExtractOp>(
           extractOp, xferOp.getSource(), newIndices);
     }
+
+    return success();
   }
 };
 

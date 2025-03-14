@@ -31,8 +31,7 @@ define void @test() #0 {
   ;   int2 d;
   ; }
   %CB1.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB1, 24, 0, 4, 8, 16))
-            @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB1s_24_0_4_8_16tt(
-                i32 0, i32 0, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 0, i32 1, i32 0, i1 false)
   store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB1, 24, 0, 4, 8, 16)) %CB1.cb_h, ptr @CB1.cb, align 4
 
   ; cbuffer CB2 : register(b0) {
@@ -46,8 +45,7 @@ define void @test() #0 {
   ;}
 
   %CB2.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB2, 36, 0, 8, 16, 20, 22, 24, 32))
-            @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB2s_36_0_8_16_20_22_24_32tt(
-                i32 0, i32 1, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 0, i32 1, i32 1, i32 0, i1 false)
   store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB2, 36, 0, 8, 16, 20, 22, 24, 32)) %CB2.cb_h, ptr @CB2.cb, align 4
 
   ; cbuffer CB3 : register(b5) {
@@ -62,8 +60,7 @@ define void @test() #0 {
   ;   half3 B8;
   ; }
   %CB3.cb_h = call target("dx.CBuffer", target("dx.Layout", %__cblayout_CB3, 96, 0, 16, 28, 32, 56, 64, 80, 84, 90))
-            @llvm.dx.resource.handlefrombinding.tdx.CBuffer_tdx.Layout_s___cblayout_CB3s_96_0_16_28_32_56_64_80_84_90tt(
-                i32 15, i32 5, i32 1, i32 0, i1 false)
+            @llvm.dx.resource.handlefrombinding(i32 15, i32 5, i32 1, i32 0, i1 false)
   store target("dx.CBuffer", target("dx.Layout", %__cblayout_CB3, 96, 0, 16, 28, 32, 56, 64, 80, 84, 90)) %CB3.cb_h, ptr @CB3.cb, align 4
 
   ret void

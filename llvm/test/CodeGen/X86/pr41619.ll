@@ -6,8 +6,6 @@ define void @foo(double %arg) {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %bb
 ; CHECK-NEXT:    vmovq %xmm0, %rax
-; CHECK-NEXT:    vmovd %eax, %xmm0
-; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    movl %eax, (%rax)
 ; CHECK-NEXT:    movq $0, (%rax)
 ; CHECK-NEXT:    retq

@@ -94,9 +94,8 @@ static NamedMDNode *emitResourceMetadata(Module &M, DXILBindingMap &DBM,
   Metadata *UAVMD = UAVs.empty() ? nullptr : MDNode::get(Context, UAVs);
   Metadata *CBufMD = CBufs.empty() ? nullptr : MDNode::get(Context, CBufs);
   Metadata *SmpMD = Smps.empty() ? nullptr : MDNode::get(Context, Smps);
-  bool HasResources = !DBM.empty();
 
-  if (!HasResources)
+  if (DBM.empty())
     return nullptr;
 
   NamedMDNode *ResourceMD = M.getOrInsertNamedMetadata("dx.resources");

@@ -1783,15 +1783,11 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
     return ValueObjectSP();
   }
 
-  AddressRange pc_range = function->GetAddressRange();
-
-  if (GetFrameCodeAddress().GetFileAddress() <
-          pc_range.GetBaseAddress().GetFileAddress() ||
-      GetFrameCodeAddress().GetFileAddress() -
-              pc_range.GetBaseAddress().GetFileAddress() >=
-          pc_range.GetByteSize()) {
+  AddressRange unused_range;
+  if (!function->GetRangeContainingLoadAddress(
+          GetFrameCodeAddress().GetLoadAddress(target_sp.get()), *target_sp,
+          unused_range))
     return ValueObjectSP();
-  }
 
   const char *plugin_name = nullptr;
   const char *flavor = nullptr;
@@ -1799,8 +1795,8 @@ lldb::ValueObjectSP StackFrame::GuessValueForRegisterAndOffset(ConstString reg,
   const char *features = nullptr;
   const bool force_live_memory = true;
   DisassemblerSP disassembler_sp = Disassembler::DisassembleRange(
-      target_arch, plugin_name, flavor, cpu, features, *target_sp, pc_range,
-      force_live_memory);
+      target_arch, plugin_name, flavor, cpu, features, *target_sp,
+      function->GetAddressRanges(), force_live_memory);
 
   if (!disassembler_sp || !disassembler_sp->GetInstructionList().GetSize()) {
     return ValueObjectSP();

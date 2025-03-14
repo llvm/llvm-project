@@ -2094,14 +2094,30 @@ public:
     Word(llvm::omp::getOpenMPDirectiveName(x).str());
   }
   void Unparse(const OmpDirectiveSpecification &x) {
-    using ArgList = std::list<parser::OmpArgument>;
-    Walk(std::get<llvm::omp::Directive>(x.t));
-    if (auto &args{std::get<std::optional<ArgList>>(x.t)}) {
-      Put("(");
-      Walk(*args);
-      Put(")");
+    auto unparseArgs{[&]() {
+      using ArgList = std::list<parser::OmpArgument>;
+      if (auto &args{std::get<std::optional<ArgList>>(x.t)}) {
+        Put("(");
+        Walk(*args);
+        Put(")");
+      }
+    }};
+    auto unparseClauses{[&]() { //
+      Walk(std::get<std::optional<OmpClauseList>>(x.t));
+    }};
+
+    Walk(std::get<OmpDirectiveName>(x.t));
+    auto flags{std::get<OmpDirectiveSpecification::Flags>(x.t)};
+    if (flags == OmpDirectiveSpecification::Flags::DeprecatedSyntax) {
+      if (x.DirId() == llvm::omp::Directive::OMPD_flush) {
+        // FLUSH clause arglist
+        unparseClauses();
+        unparseArgs();
+      }
+    } else {
+      unparseArgs();
+      unparseClauses();
     }
-    Walk(std::get<std::optional<OmpClauseList>>(x.t));
   }
   void Unparse(const OmpTraitScore &x) {
     Word("SCORE(");
@@ -2705,11 +2721,15 @@ public:
     Walk(std::get<std::list<ActualArgSpec>>(x.t));
     Put(")");
   }
-  void Unparse(const OmpInitializerExpr &x) {
-    Word("OMP_PRIV = ");
-    Walk(x.v);
+  void Unparse(const OmpInitializerClause &x) {
+    // Don't let the visitor go to the normal AssignmentStmt Unparse function,
+    // it adds an extra newline that we don't want.
+    if (const auto *assignment{std::get_if<AssignmentStmt>(&x.u)}) {
+      Walk(assignment->t, "=");
+    } else {
+      Walk(x.u);
+    }
   }
-  void Unparse(const OmpInitializerClause &x) { Walk(x.u); }
   void Unparse(const OpenMPDeclareReductionConstruct &x) {
     BeginOpenMP();
     Word("!$OMP DECLARE REDUCTION ");
@@ -2835,15 +2855,14 @@ public:
   void Unparse(const OpenMPCancellationPointConstruct &x) {
     BeginOpenMP();
     Word("!$OMP CANCELLATION POINT ");
-    Walk(std::get<OmpCancelType>(x.t));
+    Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
     EndOpenMP();
   }
   void Unparse(const OpenMPCancelConstruct &x) {
     BeginOpenMP();
     Word("!$OMP CANCEL ");
-    Walk(std::get<OmpCancelType>(x.t));
-    Walk(std::get<std::optional<OpenMPCancelConstruct::If>>(x.t));
+    Walk(std::get<OmpClauseList>(x.t));
     Put("\n");
     EndOpenMP();
   }
@@ -3018,7 +3037,6 @@ public:
       OmpDeviceTypeClause, DeviceTypeDescription) // OMP device_type
   WALK_NESTED_ENUM(OmpReductionModifier, Value) // OMP reduction-modifier
   WALK_NESTED_ENUM(OmpExpectation, Value) // OMP motion-expectation
-  WALK_NESTED_ENUM(OmpCancelType, Type) // OMP cancel-type
   WALK_NESTED_ENUM(OmpOrderClause, Ordering) // OMP ordering
   WALK_NESTED_ENUM(OmpOrderModifier, Value) // OMP order-modifier
   WALK_NESTED_ENUM(OmpPrescriptiveness, Value) // OMP prescriptiveness

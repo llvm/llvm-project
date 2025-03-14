@@ -38,7 +38,7 @@ end subroutine
 ! CHECK:         %[[IDO2_PRIV_DECL:.*]]:2 = hlfir.declare %[[IDO2_PRIV_ARG]] {uniq_name = "{{.*}}Eido2"}
 ! CHECK:         %[[IDO3_PRIV_DECL:.*]]:2 = hlfir.declare %[[IDO3_PRIV_ARG]] {uniq_name = "{{.*}}Eido3"}
 
-! CHECK:         fir.if %33 {
+! CHECK:         fir.if %{{.*}} {
 ! CHECK:           hlfir.assign %{{.*}} to %[[IDO1_PRIV_DECL]]#1
 ! CHECK:           hlfir.assign %{{.*}} to %[[IDO2_PRIV_DECL]]#1
 ! CHECK:           hlfir.assign %{{.*}} to %[[IDO3_PRIV_DECL]]#1

@@ -174,6 +174,7 @@ using CtxProfContextualProfiles =
     std::map<GlobalValue::GUID, PGOCtxProfContext>;
 struct PGOCtxProfile {
   CtxProfContextualProfiles Contexts;
+  CtxProfFlatProfile FlatProfiles;
 
   PGOCtxProfile() = default;
   PGOCtxProfile(const PGOCtxProfile &) = delete;
@@ -192,10 +193,12 @@ class PGOCtxProfileReader final {
   Expected<std::pair<std::optional<uint32_t>, PGOCtxProfContext>>
   readProfile(PGOCtxProfileBlockIDs Kind);
 
+  bool tryGetNextKnownBlockID(PGOCtxProfileBlockIDs &ID);
   bool canEnterBlockWithID(PGOCtxProfileBlockIDs ID);
   Error enterBlockWithID(PGOCtxProfileBlockIDs ID);
 
   Error loadContexts(CtxProfContextualProfiles &P);
+  Error loadFlatProfiles(CtxProfFlatProfile &P);
 
 public:
   PGOCtxProfileReader(StringRef Buffer)

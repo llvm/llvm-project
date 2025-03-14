@@ -32,6 +32,7 @@
 // CHECK-NEXT: core.StackAddressEscape
 // CHECK-NEXT: core.UndefinedBinaryOperatorResult
 // CHECK-NEXT: core.VLASize
+// CHECK-NEXT: core.builtin.AssumeModeling
 // CHECK-NEXT: core.builtin.BuiltinFunctions
 // CHECK-NEXT: core.builtin.NoReturnFunctions
 // CHECK-NEXT: core.uninitialized.ArraySubscript

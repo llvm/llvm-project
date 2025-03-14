@@ -2263,10 +2263,15 @@ LogicalResult ModuleImport::convertInvokeAttributes(llvm::InvokeInst *inst,
 LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
                                                   CallOp op) {
   setFastmathFlagsAttr(inst, op.getOperation());
+  // Query the attributes directly instead of using `inst->getFnAttr(Kind)`, the
+  // latter does additional lookup to the parent and inherits, changing the
+  // semantics too early.
+  llvm::AttributeList callAttrs = inst->getAttributes();
+
   op.setTailCallKind(convertTailCallKindFromLLVM(inst->getTailCallKind()));
-  op.setConvergent(inst->isConvergent());
-  op.setNoUnwind(inst->doesNotThrow());
-  op.setWillReturn(inst->hasFnAttr(llvm::Attribute::WillReturn));
+  op.setConvergent(callAttrs.getFnAttr(llvm::Attribute::Convergent).isValid());
+  op.setNoUnwind(callAttrs.getFnAttr(llvm::Attribute::NoUnwind).isValid());
+  op.setWillReturn(callAttrs.getFnAttr(llvm::Attribute::WillReturn).isValid());
 
   llvm::MemoryEffects memEffects = inst->getMemoryEffects();
   ModRefInfo othermem = convertModRefInfoFromLLVM(
@@ -2520,6 +2525,31 @@ LoopAnnotationAttr
 ModuleImport::translateLoopAnnotationAttr(const llvm::MDNode *node,
                                           Location loc) const {
   return loopAnnotationImporter->translateLoopAnnotation(node, loc);
+}
+
+FailureOr<DereferenceableAttr>
+ModuleImport::translateDereferenceableAttr(const llvm::MDNode *node,
+                                           unsigned kindID) {
+  Location loc = mlirModule.getLoc();
+
+  // The only operand should be a constant integer representing the number of
+  // dereferenceable bytes.
+  if (node->getNumOperands() != 1)
+    return emitError(loc) << "dereferenceable metadata must have one operand: "
+                          << diagMD(node, llvmModule.get());
+
+  auto *numBytesMD = dyn_cast<llvm::ConstantAsMetadata>(node->getOperand(0));
+  auto *numBytesCst = dyn_cast<llvm::ConstantInt>(numBytesMD->getValue());
+  if (!numBytesCst || !numBytesCst->getValue().isNonNegative())
+    return emitError(loc) << "dereferenceable metadata operand must be a "
+                             "non-negative constant integer: "
+                          << diagMD(node, llvmModule.get());
+
+  bool mayBeNull = kindID == llvm::LLVMContext::MD_dereferenceable_or_null;
+  auto derefAttr = builder.getAttr<DereferenceableAttr>(
+      numBytesCst->getZExtValue(), mayBeNull);
+
+  return derefAttr;
 }
 
 OwningOpRef<ModuleOp>

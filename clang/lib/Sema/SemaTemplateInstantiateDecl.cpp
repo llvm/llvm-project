@@ -1056,7 +1056,6 @@ CLAUSE_NOT_ON_DECLS(Delete)
 CLAUSE_NOT_ON_DECLS(Detach)
 CLAUSE_NOT_ON_DECLS(Device)
 CLAUSE_NOT_ON_DECLS(DeviceNum)
-CLAUSE_NOT_ON_DECLS(DeviceType)
 CLAUSE_NOT_ON_DECLS(Finalize)
 CLAUSE_NOT_ON_DECLS(FirstPrivate)
 CLAUSE_NOT_ON_DECLS(Host)
@@ -1108,6 +1107,21 @@ void OpenACCDeclClauseInstantiator::VisitSeqClause(const OpenACCSeqClause &C) {
   NewClause = OpenACCSeqClause::Create(SemaRef.getASTContext(),
                                        ParsedClause.getBeginLoc(),
                                        ParsedClause.getEndLoc());
+}
+void OpenACCDeclClauseInstantiator::VisitNoHostClause(
+    const OpenACCNoHostClause &C) {
+  NewClause = OpenACCNoHostClause::Create(SemaRef.getASTContext(),
+                                          ParsedClause.getBeginLoc(),
+                                          ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitDeviceTypeClause(
+    const OpenACCDeviceTypeClause &C) {
+  // Nothing to transform here, just create a new version of 'C'.
+  NewClause = OpenACCDeviceTypeClause::Create(
+      SemaRef.getASTContext(), C.getClauseKind(), ParsedClause.getBeginLoc(),
+      ParsedClause.getLParenLoc(), C.getArchitectures(),
+      ParsedClause.getEndLoc());
 }
 
 void OpenACCDeclClauseInstantiator::VisitWorkerClause(
@@ -1233,6 +1247,21 @@ void OpenACCDeclClauseInstantiator::VisitDevicePtrClause(
       SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
       ParsedClause.getLParenLoc(), ParsedClause.getVarList(),
       ParsedClause.getEndLoc());
+}
+
+void OpenACCDeclClauseInstantiator::VisitBindClause(
+    const OpenACCBindClause &C) {
+  // Nothing to instantiate, we support only string literal or identifier.
+  if (C.isStringArgument())
+    NewClause = OpenACCBindClause::Create(
+        SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), C.getStringArgument(),
+        ParsedClause.getEndLoc());
+  else
+    NewClause = OpenACCBindClause::Create(
+        SemaRef.getASTContext(), ParsedClause.getBeginLoc(),
+        ParsedClause.getLParenLoc(), C.getIdentifierArgument(),
+        ParsedClause.getEndLoc());
 }
 
 llvm::SmallVector<OpenACCClause *> InstantiateOpenACCClauseList(
@@ -2162,7 +2191,7 @@ Decl *TemplateDeclInstantiator::VisitClassTemplateDecl(ClassTemplateDecl *D) {
       // Do some additional validation, then merge default arguments
       // from the existing declarations.
       if (SemaRef.CheckTemplateParameterList(InstParams, PrevParams,
-                                             Sema::TPC_ClassTemplate))
+                                             Sema::TPC_Other))
         return nullptr;
 
       Inst->setAccess(PrevClassTemplate->getAccess());

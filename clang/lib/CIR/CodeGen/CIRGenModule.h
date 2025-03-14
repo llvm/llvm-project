@@ -147,6 +147,20 @@ public:
     return diags.Report(loc, diagID) << feature << name;
   }
 
+  DiagnosticBuilder errorNYI(mlir::Location loc, llvm::StringRef feature) {
+    // TODO: Convert the location to a SourceLocation
+    unsigned diagID = diags.getCustomDiagID(
+        DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");
+    return diags.Report(diagID) << feature;
+  }
+
+  DiagnosticBuilder errorNYI(llvm::StringRef feature) {
+    // TODO: Make a default location? currSrcLoc?
+    unsigned diagID = diags.getCustomDiagID(
+        DiagnosticsEngine::Error, "ClangIR code gen Not Yet Implemented: %0");
+    return diags.Report(diagID) << feature;
+  }
+
   DiagnosticBuilder errorNYI(SourceRange, llvm::StringRef);
 
   template <typename T>

@@ -14,7 +14,11 @@ math_test(name = "acosf")
 
 math_test(name = "acoshf")
 
+math_test(name = "acosf16")
+
 math_test(name = "asinf")
+
+math_test(name = "asinf16")
 
 math_test(name = "asinhf")
 

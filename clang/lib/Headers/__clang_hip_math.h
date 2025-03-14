@@ -639,8 +639,11 @@ float rsqrtf(float __x) { return __ocml_rsqrt_f32(__x); }
 
 __DEVICE__
 float scalblnf(float __x, long int __n) {
-  return (__n < INT_MAX) ? __builtin_amdgcn_ldexpf(__x, __n)
-                         : __ocml_scalb_f32(__x, __n);
+  if (__n > INT_MAX)
+    __n = INT_MAX;
+  else if (__n < INT_MIN)
+    __n = INT_MIN;
+  return __builtin_ldexpf(__x, (int)__n);
 }
 
 __DEVICE__
@@ -1044,8 +1047,11 @@ double rsqrt(double __x) { return __ocml_rsqrt_f64(__x); }
 
 __DEVICE__
 double scalbln(double __x, long int __n) {
-  return (__n < INT_MAX) ? __builtin_amdgcn_ldexp(__x, __n)
-                         : __ocml_scalb_f64(__x, __n);
+  if (__n > INT_MAX)
+    __n = INT_MAX;
+  else if (__n < INT_MIN)
+    __n = INT_MIN;
+  return __builtin_ldexp(__x, (int)__n);
 }
 __DEVICE__
 double scalbn(double __x, int __n) { return __builtin_amdgcn_ldexp(__x, __n); }

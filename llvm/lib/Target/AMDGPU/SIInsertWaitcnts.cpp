@@ -130,10 +130,10 @@ enum WaitEventType {
 // We reserve a fixed number of VGPR slots in the scoring tables for
 // special tokens like SCMEM_LDS (needed for buffer load to LDS).
 enum RegisterMapping {
-  SQ_MAX_PGM_VGPRS = 512, // Maximum programmable VGPRs across all targets.
-  AGPR_OFFSET = 256,      // Maximum programmable ArchVGPRs across all targets.
-  SQ_MAX_PGM_SGPRS = 128, // Maximum programmable SGPRs across all targets.
-  NUM_EXTRA_VGPRS = 9,    // Reserved slots for DS.
+  SQ_MAX_PGM_VGPRS = 1024, // Maximum programmable VGPRs across all targets.
+  AGPR_OFFSET = 512,       // Maximum programmable ArchVGPRs across all targets.
+  SQ_MAX_PGM_SGPRS = 128,  // Maximum programmable SGPRs across all targets.
+  NUM_EXTRA_VGPRS = 9,     // Reserved slots for DS.
   // Artificial register slots to track LDS writes into specific LDS locations
   // if a location is known. When slots are exhausted or location is
   // unknown use the first slot. The first slot is also always updated in
@@ -748,26 +748,31 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   RegInterval Result;
 
-  unsigned Reg = TRI->getEncodingValue(AMDGPU::getMCReg(Op.getReg(), *ST)) &
-                 AMDGPU::HWEncoding::REG_IDX_MASK;
+  MCRegister MCReg = AMDGPU::getMCReg(Op.getReg(), *ST);
+  unsigned RegIdx = TRI->getHWRegIndex(MCReg);
+  assert(isUInt<8>(RegIdx));
 
+  const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
+  unsigned Size = TRI->getRegSizeInBits(*RC);
+
+  // AGPRs/VGPRs are tracked every 16 bits, SGPRs by 32 bits
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
-    assert(Reg <= SQ_MAX_PGM_VGPRS);
+    unsigned Reg = RegIdx << 1 | (AMDGPU::isHi16Reg(MCReg, *TRI) ? 1 : 0);
+    assert(Reg < AGPR_OFFSET);
     Result.first = Reg;
     if (TRI->isAGPR(*MRI, Op.getReg()))
       Result.first += AGPR_OFFSET;
     assert(Result.first >= 0 && Result.first < SQ_MAX_PGM_VGPRS);
-  } else if (TRI->isSGPRReg(*MRI, Op.getReg()) && Reg < SQ_MAX_PGM_SGPRS) {
+    assert(Size % 16 == 0);
+    Result.second = Result.first + (Size / 16);
+  } else if (TRI->isSGPRReg(*MRI, Op.getReg()) && RegIdx < SQ_MAX_PGM_SGPRS) {
     // SGPRs including VCC, TTMPs and EXEC but excluding read-only scalar
     // sources like SRC_PRIVATE_BASE.
-    Result.first = Reg + NUM_ALL_VGPRS;
+    Result.first = RegIdx + NUM_ALL_VGPRS;
+    Result.second = Result.first + divideCeil(Size, 32);
   } else {
     return {-1, -1};
   }
-
-  const TargetRegisterClass *RC = TRI->getPhysRegBaseClass(Op.getReg());
-  unsigned Size = TRI->getRegSizeInBits(*RC);
-  Result.second = Result.first + ((Size + 16) / 32);
 
   return Result;
 }
