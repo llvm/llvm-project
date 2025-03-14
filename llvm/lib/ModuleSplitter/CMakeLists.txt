@@ -5,9 +5,11 @@ add_llvm_component_library(LLVMModuleSplitter
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/ModuleSplitter
 
   LINK_COMPONENTS
-  Bitcode
   Core
-  IR
   IRReader
+  LLVMBitReader
+  LLVMBitWriter
+  LLVMModuleSplitter
   Support
-  )
+  TransformUtils
+)
