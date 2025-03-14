@@ -7229,25 +7229,21 @@ bool AMDGPULegalizerInfo::legalizeBVHDualIntrinsic(MachineInstr &MI,
                                      NumVAddrDwords);
   assert(Opcode != -1);
 
-  SmallVector<Register, 12> Ops;
-  Ops.push_back(NodePtr);
-  Ops.push_back(B.buildMergeLikeInstr(
-                     V2S32, {RayExtent, B.buildAnyExt(S32, InstanceMask)})
-                    .getReg(0));
-  Ops.push_back(RayOrigin);
-  Ops.push_back(RayDir);
-  Ops.push_back(Offsets);
+  auto RayExtentInstanceMaskVec = B.buildMergeLikeInstr(
+      V2S32, {RayExtent, B.buildAnyExt(S32, InstanceMask)});
 
-  auto MIB = B.buildInstr(AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
-                 .addDef(DstReg)
-                 .addDef(DstOrigin)
-                 .addDef(DstDir)
-                 .addImm(Opcode);
-
-  for (Register R : Ops)
-    MIB.addUse(R);
-
-  MIB.addUse(TDescr).cloneMemRefs(MI);
+  B.buildInstr(AMDGPU::G_AMDGPU_BVH_DUAL_INTERSECT_RAY)
+      .addDef(DstReg)
+      .addDef(DstOrigin)
+      .addDef(DstDir)
+      .addImm(Opcode)
+      .addUse(NodePtr)
+      .addUse(RayExtentInstanceMaskVec.getReg(0))
+      .addUse(RayOrigin)
+      .addUse(RayDir)
+      .addUse(Offsets)
+      .addUse(TDescr)
+      .cloneMemRefs(MI);
 
   MI.eraseFromParent();
   return true;

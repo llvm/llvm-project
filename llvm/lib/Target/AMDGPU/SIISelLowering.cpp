@@ -9468,7 +9468,7 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                        NumVAddrDwords);
     assert(Opcode != -1);
 
-    SmallVector<SDValue, 16> Ops;
+    SmallVector<SDValue, 7> Ops;
     Ops.push_back(NodePtr);
     Ops.push_back(DAG.getBuildVector(
         MVT::v2i32, DL,
