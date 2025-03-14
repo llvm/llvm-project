@@ -55,7 +55,8 @@ class SDTRewriter final : public MetadataRewriter {
   void printSDTMarkers() const;
 
 public:
-  SDTRewriter(StringRef Name, BinaryContext &BC) : MetadataRewriter(Name, BC) {}
+  SDTRewriter(StringRef Name, RewriteInstance &RI)
+      : MetadataRewriter(Name, RI) {}
 
   Error preCFGInitializer() override;
 
@@ -173,6 +174,6 @@ void SDTRewriter::printSDTMarkers() const {
 } // namespace
 
 std::unique_ptr<MetadataRewriter>
-llvm::bolt::createSDTRewriter(BinaryContext &BC) {
-  return std::make_unique<SDTRewriter>("sdt-rewriter", BC);
+llvm::bolt::createSDTRewriter(RewriteInstance &RI) {
+  return std::make_unique<SDTRewriter>("sdt-rewriter", RI);
 }

@@ -56,14 +56,6 @@
 
   Allow processing of stripped binaries
 
-- `--alt-inst-feature-size=<uint>`
-
-  Size of feature field in .altinstructions
-
-- `--alt-inst-has-padlen`
-
-  Specify that .altinstructions has padlen field
-
 - `--asm-dump[=<dump folder>]`
 
   Dump function into assembly
@@ -253,10 +245,6 @@
 - `--log-file=<string>`
 
   Redirect journaling to a file instead of stdout/stderr
-
-- `--long-jump-labels`
-
-  Always use long jumps/nops for Linux kernel static keys
 
 - `--match-profile-with-function-hash`
 

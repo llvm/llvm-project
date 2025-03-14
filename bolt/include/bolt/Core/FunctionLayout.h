@@ -117,6 +117,10 @@ public:
   uint64_t getFileOffset() const { return FileOffset; }
   void setFileOffset(uint64_t Offset) { FileOffset = Offset; }
 
+  uint8_t *getOutputData() const {
+    return reinterpret_cast<uint8_t *>(getImageAddress());
+  }
+
   unsigned size() const { return Size; };
   bool empty() const { return size() == 0; };
   iterator begin();

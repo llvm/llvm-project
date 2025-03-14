@@ -542,9 +542,17 @@ Error RewriteInstance::discoverStorage() {
       BC->SegmentMapInfo[Phdr.p_vaddr] = SegmentInfo{
           Phdr.p_vaddr,  Phdr.p_memsz, Phdr.p_offset,
           Phdr.p_filesz, Phdr.p_align, ((Phdr.p_flags & ELF::PF_X) != 0)};
-      if (BC->TheTriple->getArch() == llvm::Triple::x86_64 &&
-          Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
-        BC->IsLinuxKernel = true;
+      switch (BC->TheTriple->getArch()) {
+      case llvm::Triple::x86_64:
+        if (Phdr.p_vaddr >= BinaryContext::KernelStartX86_64)
+          BC->IsLinuxKernel = true;
+        break;
+      case llvm::Triple::aarch64:
+        if (Phdr.p_vaddr >= BinaryContext::KernelStartAArch64)
+          BC->IsLinuxKernel = true;
+        break;
+      default:;
+      }
       break;
     case ELF::PT_INTERP:
       BC->HasInterpHeader = true;
@@ -1042,12 +1050,11 @@ void RewriteInstance::discoverFileObjects() {
     LLVM_DEBUG(dbgs() << "BOLT-DEBUG: considering symbol " << UniqueName
                       << " for function\n");
 
-    if (SymbolAddress == Section->getAddress() + Section->getSize()) {
+    if (SymbolAddress >= Section->getAddress() + Section->getSize()) {
       assert(SymbolSize == 0 &&
-             "unexpect non-zero sized symbol at end of section");
+             "unexpect non-zero sized symbol outside section");
       LLVM_DEBUG(
-          dbgs()
-          << "BOLT-DEBUG: rejecting as symbol points to end of its section\n");
+          dbgs() << "BOLT-DEBUG: rejecting as symbol is outside its section\n");
       registerName(SymbolSize);
       continue;
     }
@@ -3221,13 +3228,13 @@ void RewriteInstance::preprocessProfileData() {
 
 void RewriteInstance::initializeMetadataManager() {
   if (BC->IsLinuxKernel)
-    MetadataManager.registerRewriter(createLinuxKernelRewriter(*BC));
+    MetadataManager.registerRewriter(createLinuxKernelRewriter(*this));
 
-  MetadataManager.registerRewriter(createBuildIDRewriter(*BC));
+  MetadataManager.registerRewriter(createBuildIDRewriter(*this));
 
-  MetadataManager.registerRewriter(createPseudoProbeRewriter(*BC));
+  MetadataManager.registerRewriter(createPseudoProbeRewriter(*this));
 
-  MetadataManager.registerRewriter(createSDTRewriter(*BC));
+  MetadataManager.registerRewriter(createSDTRewriter(*this));
 }
 
 void RewriteInstance::processSectionMetadata() {
@@ -3893,6 +3900,7 @@ void RewriteInstance::mapCodeSections(BOLTLinker::SectionMapper MapSection) {
                       << " to 0x" << Twine::utohexstr(Function.getAddress())
                       << '\n');
     MapSection(*FuncSection, Function.getAddress());
+    Function.getLayout().getMainFragment().setAddress(Function.getAddress());
     Function.setImageAddress(FuncSection->getAllocAddress());
     Function.setImageSize(FuncSection->getOutputSize());
     assert(Function.getImageSize() <= Function.getMaxSize() &&
@@ -5770,8 +5778,18 @@ void RewriteInstance::rewriteFile() {
     OS.pwrite(reinterpret_cast<char *>(Function->getImageAddress()),
               Function->getImageSize(), Function->getFileOffset());
 
+    bool ShouldWriteNops = true;
+
+    // For AArch64, Linux kernel alternative instruction replacement sequences
+    // are not in a seperate section as for X86, but reside in gaps between
+    // functions.
+    // Avoid overwriting them by skipping writing nops here.
+    if (BC->IsLinuxKernel && BC->isAArch64() && !BC->HasRelocations)
+      ShouldWriteNops = false;
+
     // Write nops at the end of the function.
-    if (Function->getMaxSize() != std::numeric_limits<uint64_t>::max()) {
+    if (ShouldWriteNops &&
+        Function->getMaxSize() != std::numeric_limits<uint64_t>::max()) {
       uint64_t Pos = OS.tell();
       OS.seek(Function->getFileOffset() + Function->getImageSize());
       BC->MAB->writeNopData(
