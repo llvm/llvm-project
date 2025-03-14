@@ -66,13 +66,14 @@ bool cptr(void *d) {
 
 void should_not_cast() {
   unsigned x1;
+  unsigned uu = (unsigned)x1; // identity
 
-  unsigned uu = (unsigned)x1;
-  bool ib = (bool)x1;
+  bool x2;
+  bool ib = (bool)x2; // identity
   
   (void) ib; // void cast
 }
 
 // CHECK:     cir.func @should_not_cast
 // CHECK-NOT:   cir.cast
-// CHECK:     }
+// CHECK:     cir.return
