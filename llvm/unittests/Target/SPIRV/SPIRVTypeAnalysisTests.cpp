@@ -707,7 +707,31 @@ TEST_F(SPIRVTypeAnalysisTest, DeduceFromCallPartial) {
   EXPECT_EQ(TI.getType(getValue("bpar2")), TypedPointerType::get(IntTy, 0));
 }
 
-TEST_F(SPIRVTypeAnalysisTest, DeduceRecursive) {
+TEST_F(SPIRVTypeAnalysisTest, DeduceFromCallPartialWithLoad) {
+  StringRef Assembly = R"(
+    define ptr @foo(ptr %fpar1, ptr %fpar2) {
+      %val = load i32, ptr %fpar2
+      ret ptr %fpar2
+    }
+
+    define void @bar(ptr %bpar1, ptr %bpar2) {
+      %res = call ptr @foo(ptr %bpar1, ptr %bpar2)
+      ret void
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("fpar1")),
+            PointerType::get(M->getContext(), /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("bpar1")),
+            PointerType::get(M->getContext(), /* AS= */ 0));
+  EXPECT_EQ(TI.getType(getValue("res")), TypedPointerType::get(IntTy, 0));
+  EXPECT_EQ(TI.getType(getValue("fpar2")), TypedPointerType::get(IntTy, 0));
+  EXPECT_EQ(TI.getType(getValue("bpar2")), TypedPointerType::get(IntTy, 0));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceRecursiveFromStore) {
   StringRef Assembly = R"(
     define ptr @foo(ptr %par) {
       store i32 0, ptr %par
@@ -717,6 +741,36 @@ TEST_F(SPIRVTypeAnalysisTest, DeduceRecursive) {
   )";
 
   auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("tmp")), TypedPointerType::get(IntTy, 0));
+  EXPECT_EQ(TI.getType(getValue("par")), TypedPointerType::get(IntTy, 0));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceRecursiveFromLoad) {
+  StringRef Assembly = R"(
+    define ptr @foo(ptr %par) {
+      %val = load i32, ptr %par
+      %tmp = call ptr @foo(ptr %par)
+      ret ptr %par
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
+  EXPECT_EQ(TI.getType(getValue("tmp")), TypedPointerType::get(IntTy, 0));
+  EXPECT_EQ(TI.getType(getValue("par")), TypedPointerType::get(IntTy, 0));
+}
+
+TEST_F(SPIRVTypeAnalysisTest, DeduceRecursiveFromLoadingReturn) {
+  StringRef Assembly = R"(
+    define ptr @foo(ptr %par) {
+      %tmp = call ptr @foo(ptr %par)
+      %val = load i32, ptr %tmp
+      ret ptr %par
+    }
+  )";
+
+  auto TI = runAnalysis(Assembly);
+  EXPECT_EQ(TI.getType(getValue("val")), IntTy);
   EXPECT_EQ(TI.getType(getValue("tmp")), TypedPointerType::get(IntTy, 0));
   EXPECT_EQ(TI.getType(getValue("par")), TypedPointerType::get(IntTy, 0));
 }

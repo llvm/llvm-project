@@ -216,6 +216,25 @@ private:
     TypeMap->try_emplace(I, DeducedType);
   }
 
+#if 0
+  Type* walkTypeForward(const Type *T, const SmallVectorImpl<unsigned>& Indices) {
+    const Type *Output = T;
+    for (unsigned I : Indices) {
+      if (ArrayType *AT = dyn_cast<ArrayType>(T))
+        Output = AT->getElementType();
+      else if (VectorType *VT = dyn_cast<VectorType>(T))
+        Output = VT->getElementType();
+      else if (StructType *ST = dyn_cast<StructType>(T))
+        Output = ST->getElementType(I);
+      else
+        llvm_unreachable("Cannot index into this type.");
+    }
+    return Output;
+  }
+
+  Type* build
+
+#endif
   void propagateTypeDetails(Type *DeducedType, const GetElementPtrInst *GEP) {
     if (!TypeInfo::isOpaqueType(GEP->getSourceElementType())) {
       // If the source is non-opaque, the result must be non-opaque (subset of
@@ -395,13 +414,33 @@ private:
   }
 
   bool deduceType(const GetElementPtrInst *I) {
-    if (TypeInfo::isOpaqueType(I->getResultElementType()))
-      return false;
+    if (!TypeInfo::isOpaqueType(I->getResultElementType())) {
+      Type *T = TypedPointerType::get(I->getResultElementType(), 0);
+      TypeMap->try_emplace(I, T);
 
+      assert(!TypeInfo::isOpaqueType(I->getSourceElementType()));
+      propagateType(TypedPointerType::get(I->getSourceElementType(), 0), I->getPointerOperand());
+      return true;
+    }
+
+    Type *DeducedBase = getDeducedType(I->getPointerOperand());
+    if (!DeducedBase)
+      return false;
+    DeducedBase = cast<TypedPointerType>(DeducedBase)->getElementType();
+
+    return false;
+
+#if 0
     Type *T = TypedPointerType::get(I->getResultElementType(), 0);
+
+    ReturnType = TypeInfo::isOpaqueType(ReturnType)
+                     ? getDeducedType(CI->getCalledFunction())
+                     : ReturnType;
+
     // TypeMap->try_emplace(I, T);
     propagateType(T, I);
     return true;
+#endif
   }
 
   bool deduceType(const CallInst *CI) {
