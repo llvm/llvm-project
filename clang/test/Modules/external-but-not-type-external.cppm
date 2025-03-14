@@ -28,4 +28,4 @@ void *use() {
     return a.external_but_not_type_external(nullptr);
 }
 
-// CHECK-NOT: define {{.*}}@_ZNW1a1A30external_but_not_type_externalEPN12_GLOBAL__N_15LocalE
+// CHECK: define {{.*}}internal {{.*}}@_ZNW1a1A30external_but_not_type_externalEPN12_GLOBAL__N_15LocalE
