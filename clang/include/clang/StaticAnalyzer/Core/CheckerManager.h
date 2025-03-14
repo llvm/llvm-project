@@ -127,7 +127,7 @@ using CheckerPartIdx = unsigned;
 
 /// If a checker doesn't have multiple parts, then its single part is
 /// represented by this index.
-constexpr CheckerPartIdx DefaultPart = 0;
+constexpr inline CheckerPartIdx DefaultPart = 0;
 
 enum class ObjCMessageVisitKind {
   Pre,
