@@ -666,8 +666,17 @@ Value *VPInstruction::generate(VPTransformState &State) {
          RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
          RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) &&
         !PhiR->isInLoop()) {
-      ReducedPartRdx =
-          createReduction(Builder, RdxDesc, ReducedPartRdx, OrigPhi);
+      IRBuilderBase::FastMathFlagGuard FMFG(Builder);
+      Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
+        ReducedPartRdx =
+            createAnyOfReduction(Builder, ReducedPartRdx, RdxDesc, OrigPhi);
+      else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
+        ReducedPartRdx =
+            createFindLastIVReduction(Builder, ReducedPartRdx, RdxDesc);
+      else
+        ReducedPartRdx = createSimpleReduction(Builder, ReducedPartRdx, RK);
+
       // If the reduction can be performed in a smaller type, we need to extend
       // the reduction to the wider type before we branch to the original loop.
       if (PhiTy != RdxDesc.getRecurrenceType())
@@ -2263,12 +2272,13 @@ void VPBlendRecipe::print(raw_ostream &O, const Twine &Indent,
 void VPReductionRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "Reduction being replicated.");
   Value *PrevInChain = State.get(getChainOp(), /*IsScalar*/ true);
-  RecurKind Kind = RdxDesc.getRecurrenceKind();
+  RecurKind Kind = getRecurrenceKind();
   assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
          "In-loop AnyOf reductions aren't currently supported");
+
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
-  State.Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+  State.Builder.setFastMathFlags(getFastMathFlags());
   State.setDebugLocFrom(getDebugLoc());
   Value *NewVecOp = State.get(getVecOp());
   if (VPValue *Cond = getCondOp()) {
@@ -2276,8 +2286,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
     Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
 
-    Value *Start =
-        getRecurrenceIdentity(Kind, ElementTy, RdxDesc.getFastMathFlags());
+    Value *Start = getRecurrenceIdentity(Kind, ElementTy, getFastMathFlags());
     if (State.VF.isVector())
       Start = State.Builder.CreateVectorSplat(VecTy->getElementCount(), Start);
 
@@ -2289,21 +2298,20 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   if (IsOrdered) {
     if (State.VF.isVector())
       NewRed =
-          createOrderedReduction(State.Builder, RdxDesc, NewVecOp, PrevInChain);
+          createOrderedReduction(State.Builder, Kind, NewVecOp, PrevInChain);
     else
-      NewRed = State.Builder.CreateBinOp(
-          (Instruction::BinaryOps)RdxDesc.getOpcode(), PrevInChain, NewVecOp);
+      NewRed = State.Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(),
+                                         PrevInChain, NewVecOp);
     PrevInChain = NewRed;
     NextInChain = NewRed;
   } else {
     PrevInChain = State.get(getChainOp(), /*IsScalar*/ true);
-    NewRed = createReduction(State.Builder, RdxDesc, NewVecOp);
+    NewRed = createSimpleReduction(State.Builder, NewVecOp, Kind);
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
-      NextInChain = createMinMaxOp(State.Builder, RdxDesc.getRecurrenceKind(),
-                                   NewRed, PrevInChain);
+      NextInChain = createMinMaxOp(State.Builder, Kind, NewRed, PrevInChain);
     else
       NextInChain = State.Builder.CreateBinOp(
-          (Instruction::BinaryOps)RdxDesc.getOpcode(), NewRed, PrevInChain);
+          (Instruction::BinaryOps)getOpcode(), NewRed, PrevInChain);
   }
   State.set(this, NextInChain, /*IsScalar*/ true);
 }
@@ -2314,10 +2322,9 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(Builder);
-  const RecurrenceDescriptor &RdxDesc = getRecurrenceDescriptor();
-  Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+  Builder.setFastMathFlags(getFastMathFlags());
 
-  RecurKind Kind = RdxDesc.getRecurrenceKind();
+  RecurKind Kind = getRecurrenceKind();
   Value *Prev = State.get(getChainOp(), /*IsScalar*/ true);
   Value *VecOp = State.get(getVecOp());
   Value *EVL = State.get(getEVL(), VPLane(0));
@@ -2334,24 +2341,23 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
 
   Value *NewRed;
   if (isOrdered()) {
-    NewRed = createOrderedReduction(VBuilder, RdxDesc, VecOp, Prev);
+    NewRed = createOrderedReduction(VBuilder, Kind, VecOp, Prev);
   } else {
-    NewRed = createSimpleReduction(VBuilder, VecOp, RdxDesc);
+    NewRed = createSimpleReduction(VBuilder, VecOp, Kind, getFastMathFlags());
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
       NewRed = createMinMaxOp(Builder, Kind, NewRed, Prev);
     else
-      NewRed = Builder.CreateBinOp((Instruction::BinaryOps)RdxDesc.getOpcode(),
-                                   NewRed, Prev);
+      NewRed = Builder.CreateBinOp((Instruction::BinaryOps)getOpcode(), NewRed,
+                                   Prev);
   }
   State.set(this, NewRed, /*IsScalar*/ true);
 }
 
 InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
-  RecurKind RdxKind = RdxDesc.getRecurrenceKind();
+  RecurKind RdxKind = getRecurrenceKind();
   Type *ElementTy = Ctx.Types.inferScalarType(this);
   auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
-  unsigned Opcode = RdxDesc.getOpcode();
 
   // TODO: Support any-of and in-loop reductions.
   assert(
@@ -2363,20 +2369,17 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
        ForceTargetInstructionCost.getNumOccurrences() > 0) &&
       "In-loop reduction not implemented in VPlan-based cost model currently.");
 
-  assert(ElementTy->getTypeID() == RdxDesc.getRecurrenceType()->getTypeID() &&
-         "Inferred type and recurrence type mismatch.");
-
   // Cost = Reduction cost + BinOp cost
   InstructionCost Cost =
-      Ctx.TTI.getArithmeticInstrCost(Opcode, ElementTy, Ctx.CostKind);
+      Ctx.TTI.getArithmeticInstrCost(getOpcode(), ElementTy, Ctx.CostKind);
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RdxKind)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RdxKind);
     return Cost + Ctx.TTI.getMinMaxReductionCost(
-                      Id, VectorTy, RdxDesc.getFastMathFlags(), Ctx.CostKind);
+                      Id, VectorTy, getFastMathFlags(), Ctx.CostKind);
   }
 
   return Cost + Ctx.TTI.getArithmeticReductionCost(
-                    Opcode, VectorTy, RdxDesc.getFastMathFlags(), Ctx.CostKind);
+                    getOpcode(), VectorTy, getFastMathFlags(), Ctx.CostKind);
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -2389,21 +2392,21 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " +";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
+  O << " reduce."
+    << Instruction::getOpcodeName(
+           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
+    << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (isConditional()) {
     O << ", ";
     getCondOp()->printAsOperand(O, SlotTracker);
   }
   O << ")";
-  if (RdxDesc.IntermediateStore)
-    O << " (with final reduction value stored in invariant address sank "
-         "outside of loop)";
 }
 
 void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
                                  VPSlotTracker &SlotTracker) const {
-  const RecurrenceDescriptor &RdxDesc = getRecurrenceDescriptor();
+  RecurKind Kind = getRecurrenceKind();
   O << Indent << "REDUCE ";
   printAsOperand(O, SlotTracker);
   O << " = ";
@@ -2411,7 +2414,9 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " +";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  O << " vp.reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
+  O << " vp.reduce."
+    << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(Kind))
+    << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   O << ", ";
   getEVL()->printAsOperand(O, SlotTracker);
@@ -2420,9 +2425,6 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
     getCondOp()->printAsOperand(O, SlotTracker);
   }
   O << ")";
-  if (RdxDesc.IntermediateStore)
-    O << " (with final reduction value stored in invariant address sank "
-         "outside of loop)";
 }
 #endif
 
