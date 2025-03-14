@@ -772,6 +772,16 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
     return Cost + Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
                                              Ctx.CostKind);
   }
+  case VPInstruction::FirstOrderRecurrenceSplice: {
+    assert(VF.isVector() && "Scalar FirstOrderRecurrenceSplice?");
+    SmallVector<int> Mask(VF.getKnownMinValue());
+    std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
+    Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
+
+    return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
+                                  cast<VectorType>(VectorTy), Mask,
+                                  Ctx.CostKind, VF.getKnownMinValue() - 1);
+  }
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
     // been retired.
@@ -3494,14 +3504,7 @@ VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
   if (VF.isScalable() && VF.getKnownMinValue() == 1)
     return InstructionCost::getInvalid();
 
-  SmallVector<int> Mask(VF.getKnownMinValue());
-  std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
-  Type *VectorTy =
-      toVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
-
-  return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
-                                cast<VectorType>(VectorTy), Mask, Ctx.CostKind,
-                                VF.getKnownMinValue() - 1);
+  return 0;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
