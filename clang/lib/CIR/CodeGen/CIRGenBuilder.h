@@ -44,7 +44,7 @@ public:
     assert(!cir::MissingFeatures::unsizedTypes());
     return false;
   }
-  
+
   bool isInt(mlir::Type i) { return mlir::isa<cir::IntType>(i); }
 
   // Creates constant nullptr for pointer type ty.
