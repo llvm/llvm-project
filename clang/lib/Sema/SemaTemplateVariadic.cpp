@@ -759,19 +759,6 @@ ExprResult Sema::CheckPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
     PackExpansionExpr(Context.DependentTy, Pattern, EllipsisLoc, NumExpansions);
 }
 
-static bool IsUnexpandedPackExpansion(const TemplateArgument &TA) {
-  if (!TA.isPackExpansion())
-    return false;
-
-  if (TA.getKind() == TemplateArgument::Type)
-    return !TA.getAsType()->getAs<PackExpansionType>()->getNumExpansions();
-
-  if (TA.getKind() == TemplateArgument::Expression)
-    return !cast<PackExpansionExpr>(TA.getAsExpr())->getNumExpansions();
-
-  return !TA.getNumTemplateExpansions();
-}
-
 bool Sema::CheckParameterPacksForExpansion(
     SourceLocation EllipsisLoc, SourceRange PatternRange,
     ArrayRef<UnexpandedParameterPack> Unexpanded,
@@ -782,6 +769,22 @@ bool Sema::CheckParameterPacksForExpansion(
   std::pair<const IdentifierInfo *, SourceLocation> FirstPack;
   std::optional<std::pair<unsigned, SourceLocation>> PartialExpansion;
   std::optional<unsigned> CurNumExpansions, CurMaximumOfLeastExpansions;
+  typedef LocalInstantiationScope::DeclArgumentPack DeclArgumentPack;
+
+  // Determine if a pack expansion type contains an unresolved pack expansion.
+  // (i.e. the length of the expanded size is unknown at this point.)
+  static auto IsUnexpandedPackExpansion = [](const TemplateArgument &TA) {
+    if (!TA.isPackExpansion())
+      return false;
+
+    if (TA.getKind() == TemplateArgument::Type)
+      return !TA.getAsType()->getAs<PackExpansionType>()->getNumExpansions();
+
+    if (TA.getKind() == TemplateArgument::Expression)
+      return !cast<PackExpansionExpr>(TA.getAsExpr())->getNumExpansions();
+
+    return !TA.getNumTemplateExpansions();
+  };
 
   for (auto [P, Loc] : Unexpanded) {
     // Compute the depth and index for this parameter pack.
@@ -790,7 +793,7 @@ bool Sema::CheckParameterPacksForExpansion(
     const auto *ND = dyn_cast_if_present<const NamedDecl *>(P);
     if (ND) {
       if (isa<VarDecl>(ND)) {
-        auto *DAP = dyn_cast<LocalInstantiationScope::DeclArgumentPack *>(
+        auto *DAP = dyn_cast<DeclArgumentPack *>(
             *CurrentInstantiationScope->findInstantiationOf(ND));
         if (!DAP) {
           // We can't expand this function parameter pack, so we can't expand
@@ -801,8 +804,8 @@ bool Sema::CheckParameterPacksForExpansion(
         NewPackSize = DAP->size();
       } else if (isa<BindingDecl>(ND)) {
         // Find the instantiated BindingDecl and check it for a resolved pack.
-        llvm::PointerUnion<Decl *, LocalInstantiationScope::DeclArgumentPack *>
-            *Instantiation = CurrentInstantiationScope->findInstantiationOf(ND);
+        llvm::PointerUnion<Decl *, DeclArgumentPack *> *Instantiation =
+            CurrentInstantiationScope->findInstantiationOf(ND);
         Decl *B = cast<Decl *>(*Instantiation);
         Expr *BindingExpr = cast<BindingDecl>(B)->getBinding();
         auto *BindingPack = cast_if_present<FunctionParmPackExpr>(BindingExpr);
@@ -863,6 +866,9 @@ bool Sema::CheckParameterPacksForExpansion(
     }
 
     unsigned LeastNewPackSize = NewPackSize - PendingPackExpansionSize;
+    // This maintains the maximum length of the least pack expansion at the
+    // current level, where the least pack expansion contains only resolvable
+    // packs at this point.
     if (PendingPackExpansionSize)
       CurMaximumOfLeastExpansions =
           CurMaximumOfLeastExpansions
@@ -872,8 +878,8 @@ bool Sema::CheckParameterPacksForExpansion(
     // FIXME: Workaround for Canonical TTP.
     const IdentifierInfo *Name = ND ? ND->getIdentifier() : nullptr;
     if (!CurNumExpansions) {
-      // This is the first pack we've seen for which we have an argument.
-      // Record it.
+      // This is the first pack we've seen at this level for which it has a
+      // length. Record it.
       CurNumExpansions = NewPackSize;
       FirstPack = {Name, Loc};
     } else if (NewPackSize != *CurNumExpansions) {
@@ -912,8 +918,15 @@ bool Sema::CheckParameterPacksForExpansion(
     }
   }
 
+  // We have tried our best in the for loop to find out which outer pack
+  // expansion has a different length than the current one (by checking those
+  // Subst* nodes). However, if we fail to determine that, we'll have to
+  // complain the difference in a vague manner.
   if (NumExpansions && CurNumExpansions &&
       *NumExpansions != *CurNumExpansions) {
+    // If the current pack expansion contains any unresolved packs, and since
+    // they might eventually expand to match the outer expansion, we don't
+    // complain it too early.
     if (CurMaximumOfLeastExpansions &&
         *CurMaximumOfLeastExpansions <= *NumExpansions) {
       ShouldExpand = false;
