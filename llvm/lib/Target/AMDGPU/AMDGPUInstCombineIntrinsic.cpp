@@ -806,8 +806,8 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
       if ((!IsCompr && (EnBits & (1 << I)) == 0) ||
           (IsCompr && ((EnBits & (0x3 << (2 * I))) == 0))) {
         Value *Src = II.getArgOperand(I + 2);
-        if (!isa<UndefValue>(Src)) {
-          IC.replaceOperand(II, I + 2, UndefValue::get(Src->getType()));
+        if (!isa<PoisonValue>(Src)) {
+          IC.replaceOperand(II, I + 2, PoisonValue::get(Src->getType()));
           Changed = true;
         }
       }
