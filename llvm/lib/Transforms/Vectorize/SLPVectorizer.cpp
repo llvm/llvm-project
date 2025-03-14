@@ -813,6 +813,302 @@ static std::optional<unsigned> getExtractIndex(Instruction *E) {
 }
 
 namespace {
+/// \returns true if \p Opcode is allowed as part of the main/alternate
+/// instruction for SLP vectorization.
+///
+/// Example of unsupported opcode is SDIV that can potentially cause UB if the
+/// "shuffled out" lane would result in division by zero.
+bool isValidForAlternation(unsigned Opcode) {
+  if (Instruction::isIntDivRem(Opcode))
+    return false;
+
+  return true;
+}
+
+/// Helper class that determines VL can use the same opcode.
+/// Alternate instruction is supported. In addition, it supports interchangeable
+/// instruction. An interchangeable instruction is an instruction that can be
+/// converted to another instruction with same semantics. For example, x << 1 is
+/// equal to x * 2. x * 1 is equal to x | 0.
+class BinOpSameOpcodeHelper {
+  using MaskType = std::uint_fast16_t;
+  // Sort SupportedOp because it is used by binary_search.
+  constexpr static std::initializer_list<unsigned> SupportedOp = {
+      Instruction::Add,  Instruction::Sub, Instruction::Mul, Instruction::Shl,
+      Instruction::AShr, Instruction::And, Instruction::Or,  Instruction::Xor};
+  enum : MaskType {
+    ShlBIT = 0b1,
+    AShrBIT = 0b10,
+    MulBIT = 0b100,
+    AddBIT = 0b1000,
+    SubBIT = 0b10000,
+    AndBIT = 0b100000,
+    OrBIT = 0b1000000,
+    XorBIT = 0b10000000,
+    MainOpBIT = 0b100000000,
+    LLVM_MARK_AS_BITMASK_ENUM(MainOpBIT)
+  };
+  // Return a non-nullptr if either operand of I is a ConstantInt.
+  // The second return value represents the operand position. We check the
+  // right-hand side first (1). If the right hand side is not a ConstantInt and
+  // the instruction is neither Sub, Shl, nor AShr, we then check the left hand
+  // side (0).
+  static std::pair<ConstantInt *, unsigned>
+  isBinOpWithConstantInt(Instruction *I) {
+    unsigned Opcode = I->getOpcode();
+    assert(binary_search(SupportedOp, Opcode) && "Unsupported opcode.");
+    auto *BinOp = cast<BinaryOperator>(I);
+    if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(1)))
+      return {CI, 1};
+    if (Opcode == Instruction::Sub || Opcode == Instruction::Shl ||
+        Opcode == Instruction::AShr)
+      return {nullptr, 0};
+    if (auto *CI = dyn_cast<ConstantInt>(BinOp->getOperand(0)))
+      return {CI, 0};
+    return {nullptr, 0};
+  }
+  struct InterchangeableInfo {
+    Instruction *I = nullptr;
+    // The bit it sets represents whether MainOp can be converted to.
+    MaskType Mask = MainOpBIT | XorBIT | OrBIT | AndBIT | SubBIT | AddBIT |
+                    MulBIT | AShrBIT | ShlBIT;
+    // We cannot create an interchangeable instruction that does not exist in
+    // VL. For example, VL [x + 0, y * 1] can be converted to [x << 0, y << 0],
+    // but << does not exist in VL. In the end, we convert VL to [x * 1, y * 1].
+    // SeenBefore is used to know what operations have been seen before.
+    MaskType SeenBefore = 0;
+    InterchangeableInfo(Instruction *I) : I(I) {}
+    // Return false allows BinOpSameOpcodeHelper to find an alternate
+    // instruction. Directly setting the mask will destroy the mask state,
+    // preventing us from determining which instruction it should convert to.
+    bool trySet(MaskType OpcodeInMaskForm, MaskType InterchangeableMask) {
+      if (Mask & InterchangeableMask) {
+        SeenBefore |= OpcodeInMaskForm;
+        Mask &= InterchangeableMask;
+        return true;
+      }
+      return false;
+    }
+    bool equal(unsigned Opcode) {
+      if (Opcode == I->getOpcode())
+        return trySet(MainOpBIT, MainOpBIT);
+      return false;
+    }
+    unsigned getOpcode() const {
+      MaskType Candidate = Mask & SeenBefore;
+      if (Candidate & MainOpBIT)
+        return I->getOpcode();
+      if (Candidate & ShlBIT)
+        return Instruction::Shl;
+      if (Candidate & AShrBIT)
+        return Instruction::AShr;
+      if (Candidate & MulBIT)
+        return Instruction::Mul;
+      if (Candidate & AddBIT)
+        return Instruction::Add;
+      if (Candidate & SubBIT)
+        return Instruction::Sub;
+      if (Candidate & AndBIT)
+        return Instruction::And;
+      if (Candidate & OrBIT)
+        return Instruction::Or;
+      if (Candidate & XorBIT)
+        return Instruction::Xor;
+      llvm_unreachable("Cannot find interchangeable instruction.");
+    }
+    SmallVector<Value *> getOperand(Instruction *To) const {
+      unsigned ToOpcode = To->getOpcode();
+      unsigned FromOpcode = I->getOpcode();
+      if (FromOpcode == ToOpcode)
+        return SmallVector<Value *>(I->operands());
+      assert(binary_search(SupportedOp, ToOpcode) && "Unsupported opcode.");
+      auto [CI, Pos] = isBinOpWithConstantInt(I);
+      const APInt &FromCIValue = CI->getValue();
+      unsigned FromCIValueBitWidth = FromCIValue.getBitWidth();
+      APInt ToCIValue;
+      switch (FromOpcode) {
+      case Instruction::Shl:
+        if (ToOpcode == Instruction::Mul) {
+          ToCIValue = APInt::getOneBitSet(FromCIValueBitWidth,
+                                          FromCIValue.getZExtValue());
+        } else {
+          assert(FromCIValue.isZero() && "Cannot convert the instruction.");
+          ToCIValue = ToOpcode == Instruction::And
+                          ? APInt::getAllOnes(FromCIValueBitWidth)
+                          : APInt::getZero(FromCIValueBitWidth);
+        }
+        break;
+      case Instruction::Mul:
+        assert(FromCIValue.isPowerOf2() && "Cannot convert the instruction.");
+        if (ToOpcode == Instruction::Shl) {
+          ToCIValue = APInt(FromCIValueBitWidth, FromCIValue.logBase2());
+        } else {
+          assert(FromCIValue.isOne() && "Cannot convert the instruction.");
+          ToCIValue = ToOpcode == Instruction::And
+                          ? APInt::getAllOnes(FromCIValueBitWidth)
+                          : APInt::getZero(FromCIValueBitWidth);
+        }
+        break;
+      case Instruction::Add:
+      case Instruction::Sub:
+        if (FromCIValue.isZero()) {
+          ToCIValue = APInt::getZero(FromCIValueBitWidth);
+        } else {
+          assert(is_contained({Instruction::Add, Instruction::Sub}, ToOpcode) &&
+                 "Cannot convert the instruction.");
+          ToCIValue = FromCIValue;
+          ToCIValue.negate();
+        }
+        break;
+      case Instruction::And:
+        assert(FromCIValue.isAllOnes() && "Cannot convert the instruction.");
+        ToCIValue = ToOpcode == Instruction::Mul
+                        ? APInt::getOneBitSet(FromCIValueBitWidth, 0)
+                        : APInt::getZero(FromCIValueBitWidth);
+        break;
+      default:
+        assert(FromCIValue.isZero() && "Cannot convert the instruction.");
+        ToCIValue = APInt::getZero(FromCIValueBitWidth);
+        break;
+      }
+      Value *LHS = I->getOperand(1 - Pos);
+      Constant *RHS =
+          ConstantInt::get(I->getOperand(Pos)->getType(), ToCIValue);
+      if (Pos == 1)
+        return SmallVector<Value *>({LHS, RHS});
+      return SmallVector<Value *>({RHS, LHS});
+    }
+  };
+  InterchangeableInfo MainOp;
+  InterchangeableInfo AltOp;
+  bool isValidForAlternation(Instruction *I) const {
+    return ::isValidForAlternation(MainOp.I->getOpcode()) &&
+           ::isValidForAlternation(I->getOpcode());
+  }
+  bool initializeAltOp(Instruction *I) {
+    if (!AltOp.I) {
+      if (!isValidForAlternation(I))
+        return false;
+      AltOp.I = I;
+    }
+    return true;
+  }
+
+public:
+  BinOpSameOpcodeHelper(Instruction *MainOp, Instruction *AltOp = nullptr)
+      : MainOp(MainOp), AltOp(AltOp) {
+    assert(is_sorted(SupportedOp) && "SupportedOp is not sorted.");
+  }
+  bool add(Instruction *I) {
+    assert(isa<BinaryOperator>(I));
+    unsigned Opcode = I->getOpcode();
+    MaskType OpcodeInMaskForm;
+    // Prefer Shl, AShr, Mul, Add, Sub, And, Or and Xor over MainOp.
+    switch (Opcode) {
+    case Instruction::Shl:
+      OpcodeInMaskForm = ShlBIT;
+      break;
+    case Instruction::AShr:
+      OpcodeInMaskForm = AShrBIT;
+      break;
+    case Instruction::Mul:
+      OpcodeInMaskForm = MulBIT;
+      break;
+    case Instruction::Add:
+      OpcodeInMaskForm = AddBIT;
+      break;
+    case Instruction::Sub:
+      OpcodeInMaskForm = SubBIT;
+      break;
+    case Instruction::And:
+      OpcodeInMaskForm = AndBIT;
+      break;
+    case Instruction::Or:
+      OpcodeInMaskForm = OrBIT;
+      break;
+    case Instruction::Xor:
+      OpcodeInMaskForm = XorBIT;
+      break;
+    default:
+      return MainOp.equal(Opcode) ||
+             (initializeAltOp(I) && AltOp.equal(Opcode));
+    }
+    MaskType InterchangeableMask = OpcodeInMaskForm;
+    ConstantInt *CI = isBinOpWithConstantInt(I).first;
+    if (CI) {
+      constexpr MaskType CanBeAll =
+          XorBIT | OrBIT | AndBIT | SubBIT | AddBIT | MulBIT | AShrBIT | ShlBIT;
+      const APInt &CIValue = CI->getValue();
+      switch (Opcode) {
+      case Instruction::Shl:
+        InterchangeableMask = CIValue.isZero() ? CanBeAll : MulBIT | ShlBIT;
+        break;
+      case Instruction::Mul:
+        if (CIValue.isOne()) {
+          InterchangeableMask = CanBeAll;
+          break;
+        }
+        if (CIValue.isPowerOf2())
+          InterchangeableMask = MulBIT | ShlBIT;
+        break;
+      case Instruction::Add:
+      case Instruction::Sub:
+        InterchangeableMask = CIValue.isZero() ? CanBeAll : SubBIT | AddBIT;
+        break;
+      case Instruction::And:
+        if (CIValue.isAllOnes())
+          InterchangeableMask = CanBeAll;
+        break;
+      default:
+        if (CIValue.isZero())
+          InterchangeableMask = CanBeAll;
+        break;
+      }
+    }
+    return MainOp.trySet(OpcodeInMaskForm, InterchangeableMask) ||
+           (initializeAltOp(I) &&
+            AltOp.trySet(OpcodeInMaskForm, InterchangeableMask));
+  }
+  unsigned getMainOpcode() const { return MainOp.getOpcode(); }
+  bool hasAltOp() const { return AltOp.I; }
+  unsigned getAltOpcode() const {
+    return hasAltOp() ? AltOp.getOpcode() : getMainOpcode();
+  }
+  SmallVector<Value *> getMainOperand(Instruction *I) const {
+    return MainOp.getOperand(I);
+  }
+  SmallVector<Value *> getAltOperand(Instruction *I) const {
+    return AltOp.getOperand(I);
+  }
+};
+
+bool isConvertible(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
+  assert(MainOp && "MainOp cannot be nullptr.");
+  if (I->getOpcode() == MainOp->getOpcode())
+    return true;
+  assert(AltOp && "AltOp cannot be nullptr.");
+  if (I->getOpcode() == AltOp->getOpcode())
+    return true;
+  if (!I->isBinaryOp())
+    return false;
+  BinOpSameOpcodeHelper Converter(MainOp, AltOp);
+  return Converter.add(I) && Converter.add(MainOp) && Converter.add(AltOp);
+}
+
+std::pair<Instruction *, SmallVector<Value *>>
+convertTo(Instruction *I, Instruction *MainOp, Instruction *AltOp) {
+  assert(isConvertible(I, MainOp, AltOp) && "Cannot convert the instruction.");
+  if (I->getOpcode() == MainOp->getOpcode())
+    return std::make_pair(MainOp, SmallVector<Value *>(I->operands()));
+  // Prefer AltOp instead of interchangeable instruction of MainOp.
+  if (I->getOpcode() == AltOp->getOpcode())
+    return std::make_pair(AltOp, SmallVector<Value *>(I->operands()));
+  assert(I->isBinaryOp() && "Cannot convert the instruction.");
+  BinOpSameOpcodeHelper Converter(I);
+  if (Converter.add(I) && Converter.add(MainOp) && !Converter.hasAltOp())
+    return std::make_pair(MainOp, Converter.getMainOperand(MainOp));
+  return std::make_pair(AltOp, Converter.getAltOperand(AltOp));
+}
 
 /// Main data required for vectorization of instructions.
 class InstructionsState {
@@ -840,8 +1136,7 @@ public:
   bool isAltShuffle() const { return getMainOp() != getAltOp(); }
 
   bool isOpcodeOrAlt(Instruction *I) const {
-    unsigned CheckedOpcode = I->getOpcode();
-    return getOpcode() == CheckedOpcode || getAltOpcode() == CheckedOpcode;
+    return isConvertible(I, MainOp, AltOp);
   }
 
   /// Checks if main/alt instructions are shift operations.
@@ -885,18 +1180,6 @@ public:
 };
 
 } // end anonymous namespace
-
-/// \returns true if \p Opcode is allowed as part of the main/alternate
-/// instruction for SLP vectorization.
-///
-/// Example of unsupported opcode is SDIV that can potentially cause UB if the
-/// "shuffled out" lane would result in division by zero.
-static bool isValidForAlternation(unsigned Opcode) {
-  if (Instruction::isIntDivRem(Opcode))
-    return false;
-
-  return true;
-}
 
 static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
                                        const TargetLibraryInfo &TLI);
@@ -955,6 +1238,17 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       (VL.size() == 2 && InstCnt < 2))
     return InstructionsState::invalid();
 
+  auto FindInstructionWithOpcode = [&](unsigned Opcode) {
+    for (Value *V : VL) {
+      if (isa<PoisonValue>(V))
+        continue;
+      auto *Inst = cast<Instruction>(V);
+      if (Inst->getOpcode() == Opcode)
+        return Inst;
+    }
+    llvm_unreachable("Opcode not found.");
+  };
+
   bool IsCastOp = isa<CastInst>(MainOp);
   bool IsBinOp = isa<BinaryOperator>(MainOp);
   bool IsCmpOp = isa<CmpInst>(MainOp);
@@ -964,6 +1258,7 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
   unsigned Opcode = MainOp->getOpcode();
   unsigned AltOpcode = Opcode;
 
+  BinOpSameOpcodeHelper BinOpHelper(MainOp);
   bool SwappedPredsCompatible = IsCmpOp && [&]() {
     SetVector<unsigned> UniquePreds, UniqueNonSwappedPreds;
     UniquePreds.insert(BasePred);
@@ -1010,14 +1305,8 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
       return InstructionsState::invalid();
     unsigned InstOpcode = I->getOpcode();
     if (IsBinOp && isa<BinaryOperator>(I)) {
-      if (InstOpcode == Opcode || InstOpcode == AltOpcode)
+      if (BinOpHelper.add(I))
         continue;
-      if (Opcode == AltOpcode && isValidForAlternation(InstOpcode) &&
-          isValidForAlternation(Opcode)) {
-        AltOpcode = InstOpcode;
-        AltOp = I;
-        continue;
-      }
     } else if (IsCastOp && isa<CastInst>(I)) {
       Value *Op0 = MainOp->getOperand(0);
       Type *Ty0 = Op0->getType();
@@ -1118,6 +1407,10 @@ static InstructionsState getSameOpcode(ArrayRef<Value *> VL,
     return InstructionsState::invalid();
   }
 
+  if (IsBinOp) {
+    MainOp = FindInstructionWithOpcode(BinOpHelper.getMainOpcode());
+    AltOp = FindInstructionWithOpcode(BinOpHelper.getAltOpcode());
+  }
   return InstructionsState(MainOp, AltOp);
 }
 
@@ -2489,29 +2782,29 @@ public:
       ArgSize = isa<IntrinsicInst>(MainOp) ? IntrinsicNumOperands : NumOperands;
       OpsVec.resize(NumOperands);
       unsigned NumLanes = VL.size();
-      for (unsigned OpIdx = 0; OpIdx != NumOperands; ++OpIdx) {
-        OpsVec[OpIdx].resize(NumLanes);
-        for (unsigned Lane = 0; Lane != NumLanes; ++Lane) {
-          assert((isa<Instruction>(VL[Lane]) || isa<PoisonValue>(VL[Lane])) &&
-                 "Expected instruction or poison value");
-          // Our tree has just 3 nodes: the root and two operands.
-          // It is therefore trivial to get the APO. We only need to check the
-          // opcode of VL[Lane] and whether the operand at OpIdx is the LHS or
-          // RHS operand. The LHS operand of both add and sub is never attached
-          // to an inversese operation in the linearized form, therefore its APO
-          // is false. The RHS is true only if VL[Lane] is an inverse operation.
+      for (OperandDataVec &Ops : OpsVec)
+        Ops.resize(NumLanes);
+      for (unsigned Lane : seq<unsigned>(NumLanes)) {
+        assert((isa<Instruction>(VL[Lane]) || isa<PoisonValue>(VL[Lane])) &&
+               "Expected instruction or poison value");
+        // Our tree has just 3 nodes: the root and two operands.
+        // It is therefore trivial to get the APO. We only need to check the
+        // opcode of VL[Lane] and whether the operand at OpIdx is the LHS or RHS
+        // operand. The LHS operand of both add and sub is never attached to an
+        // inversese operation in the linearized form, therefore its APO is
+        // false. The RHS is true only if VL[Lane] is an inverse operation.
 
-          // Since operand reordering is performed on groups of commutative
-          // operations or alternating sequences (e.g., +, -), we can safely
-          // tell the inverse operations by checking commutativity.
-          if (isa<PoisonValue>(VL[Lane])) {
-            if (auto *EI = dyn_cast<ExtractElementInst>(MainOp)) {
-              if (OpIdx == 0) {
+        // Since operand reordering is performed on groups of commutative
+        // operations or alternating sequences (e.g., +, -), we can safely tell
+        // the inverse operations by checking commutativity.
+        if (isa<PoisonValue>(VL[Lane])) {
+          for (unsigned OpIdx : seq<unsigned>(NumOperands)) {
+            if (OpIdx == 0) {
+              if (auto *EI = dyn_cast<ExtractElementInst>(MainOp)) {
                 OpsVec[OpIdx][Lane] = {EI->getVectorOperand(), true, false};
                 continue;
               }
-            } else if (auto *EV = dyn_cast<ExtractValueInst>(MainOp)) {
-              if (OpIdx == 0) {
+              if (auto *EV = dyn_cast<ExtractValueInst>(MainOp)) {
                 OpsVec[OpIdx][Lane] = {EV->getAggregateOperand(), true, false};
                 continue;
               }
@@ -2519,12 +2812,15 @@ public:
             OpsVec[OpIdx][Lane] = {
                 PoisonValue::get(MainOp->getOperand(OpIdx)->getType()), true,
                 false};
-            continue;
           }
-          bool IsInverseOperation = !isCommutative(cast<Instruction>(VL[Lane]));
+          continue;
+        }
+        auto [SelectedOp, Ops] =
+            convertTo(cast<Instruction>(VL[Lane]), MainOp, S.getAltOp());
+        bool IsInverseOperation = !isCommutative(SelectedOp);
+        for (unsigned OpIdx : seq<unsigned>(NumOperands)) {
           bool APO = (OpIdx == 0) ? false : IsInverseOperation;
-          OpsVec[OpIdx][Lane] = {cast<Instruction>(VL[Lane])->getOperand(OpIdx),
-                                 APO, false};
+          OpsVec[OpIdx][Lane] = {Ops[OpIdx], APO, false};
         }
       }
     }
@@ -4405,7 +4701,7 @@ private:
                       const InstructionsState &S);
 
     /// Un-bundles a group of instructions.
-    void cancelScheduling(ArrayRef<Value *> VL, Value *OpValue);
+    void cancelScheduling(ArrayRef<Value *> VL, Value *Inst);
 
     /// Allocates schedule data chunk.
     ScheduleData *allocateScheduleDataChunks();
@@ -16805,7 +17101,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       Value *V = Builder.CreateBinOp(
           static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS,
           RHS);
-      propagateIRFlags(V, E->Scalars, VL0, It == MinBWs.end());
+      propagateIRFlags(V, E->Scalars, nullptr, It == MinBWs.end());
       if (auto *I = dyn_cast<Instruction>(V)) {
         V = ::propagateMetadata(I, E->Scalars);
         // Drop nuw flags for abs(sub(commutative), true).
@@ -18132,21 +18428,21 @@ BoUpSLP::BlockScheduling::tryScheduleBundle(ArrayRef<Value *> VL, BoUpSLP *SLP,
   auto *Bundle = buildBundle(VL);
   TryScheduleBundleImpl(ReSchedule, Bundle);
   if (!Bundle->isReady()) {
-    cancelScheduling(VL, S.getMainOp());
+    cancelScheduling(VL, Bundle->Inst);
     return std::nullopt;
   }
   return Bundle;
 }
 
 void BoUpSLP::BlockScheduling::cancelScheduling(ArrayRef<Value *> VL,
-                                                Value *OpValue) {
-  if (isa<PHINode>(OpValue) || isVectorLikeInstWithConstOps(OpValue) ||
+                                                Value *Inst) {
+  if (isa<PHINode>(Inst) || isVectorLikeInstWithConstOps(Inst) ||
       doesNotNeedToSchedule(VL))
     return;
 
-  if (doesNotNeedToBeScheduled(OpValue))
-    OpValue = *find_if_not(VL, doesNotNeedToBeScheduled);
-  ScheduleData *Bundle = getScheduleData(OpValue);
+  if (doesNotNeedToBeScheduled(Inst))
+    Inst = *find_if_not(VL, doesNotNeedToBeScheduled);
+  ScheduleData *Bundle = getScheduleData(Inst);
   LLVM_DEBUG(dbgs() << "SLP:  cancel scheduling of " << *Bundle << "\n");
   assert(!Bundle->IsScheduled &&
          "Can't cancel bundle which is already scheduled");
