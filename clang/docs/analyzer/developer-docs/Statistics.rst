@@ -11,8 +11,8 @@ In many cases, it makes sense to collect statistics on both translation-unit lev
 - ``STAT_COUNTER`` for additive statistics, for example, "the number of steps executed", "the number of functions inlined".
 - ``STAT_MAX`` for maximizing statistics, for example, "the maximum environment size", or "the longest execution path".
 
-If you want to define a statistic that makes sense only for the entire translation unit, for example, "the number of entry points", Statistic.h defines two macros: ``STATISTIC`` and ``ALLWAYS_ENABLED_STATISTIC``.
-You should prefer ``ALLWAYS_ENABLED_STATISTIC`` unless you have a good reason not to.
+If you want to define a statistic that makes sense only for the entire translation unit, for example, "the number of entry points", Statistic.h defines two macros: ``STATISTIC`` and ``ALWAYS_ENABLED_STATISTIC``.
+You should prefer ``ALWAYS_ENABLED_STATISTIC`` unless you have a good reason not to.
 ``STATISTIC`` is controlled by ``LLVM_ENABLE_STATS`` / ``LLVM_FORCE_ENABLE_STATS``.
 However, note that with ``LLVM_ENABLE_STATS`` disabled, only storage of the values is disabled, the computations producing those values still carry on unless you took an explicit precaution to make them conditional too.
 
