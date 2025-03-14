@@ -77,7 +77,9 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     if (isa<VPActiveLaneMaskPHIRecipe>(RecipeI))
       NumActiveLaneMaskPhiRecipes++;
 
-    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI)) {
+    if (IsHeaderVPBB && !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe>(*RecipeI) &&
+        !isa<VPInstruction>(*RecipeI) &&
+        cast<VPInstruction>(RecipeI)->getOpcode() == Instruction::PHI) {
       errs() << "Found non-header PHI recipe in header VPBB";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
@@ -143,12 +145,13 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         })
         .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe>(
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
-        .Case<VPWidenLoadEVLRecipe, VPReverseVectorPointerRecipe,
-              VPScalarPHIRecipe>(
+        .Case<VPWidenLoadEVLRecipe, VPReverseVectorPointerRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
         .Case<VPScalarCastRecipe>(
             [&](const VPScalarCastRecipe *S) { return VerifyEVLUse(*S, 0); })
         .Case<VPInstruction>([&](const VPInstruction *I) {
+          if (I->getOpcode() == Instruction::PHI)
+            return VerifyEVLUse(*I, 1);
           if (I->getOpcode() != Instruction::Add) {
             errs() << "EVL is used as an operand in non-VPInstruction::Add\n";
             return false;
@@ -208,7 +211,9 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         if (!UI ||
             isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPredInstPHIRecipe>(UI) ||
             (isa<VPIRInstruction>(UI) &&
-             isa<PHINode>(cast<VPIRInstruction>(UI)->getInstruction())))
+             isa<PHINode>(cast<VPIRInstruction>(UI)->getInstruction())) ||
+            (isa<VPInstruction>(UI) &&
+             cast<VPInstruction>(UI)->getOpcode() == Instruction::PHI))
           continue;
 
         // If the user is in the same block, check it comes after R in the
