@@ -792,7 +792,8 @@ public:
 
   /// Set fast-math flags for this recipe.
   void setFastMathFlags(FastMathFlags FMFs) {
-    assert(OpType == OperationType::FPMathOp);
+    assert(OpType == OperationType::FPMathOp &&
+           "We should only set the FastMathFlags when the recipes is FPFathOP");
     this->FMFs = FMFs;
   }
 
