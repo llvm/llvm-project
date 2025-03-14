@@ -18,7 +18,7 @@
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 
@@ -27,7 +27,39 @@
 namespace llvm {
 namespace SPIRV {
 
+inline size_t to_hash(const MachineInstr *MI,
+                      std::unordered_set<const MachineInstr *> &Visited) {
+  if (!MI || !Visited.insert(MI).second)
+    return 0;
+  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
+  SmallVector<size_t, 16> Codes{MI->getOpcode()};
+  size_t H;
+  for (unsigned I = MI->getNumDefs(); I < MI->getNumOperands(); ++I) {
+    const MachineOperand &MO = MI->getOperand(I);
+    H = MO.isReg() ? to_hash(getDef(MO, &MRI), Visited)
+                   : size_t(llvm::hash_value(MO));
+    Codes.push_back(H);
+  }
+  return llvm::hash_combine(Codes.begin(), Codes.end());
+}
+
+inline size_t to_hash(const MachineInstr *MI) {
+  std::unordered_set<const MachineInstr *> Visited;
+  return to_hash(MI, Visited);
+}
+
+using MIHandle = std::pair<const MachineInstr *, size_t>;
+
+inline MIHandle getMIKey(const MachineInstr *MI) {
+  return std::make_pair(MI, SPIRV::to_hash(MI));
+}
+
 using IRHandle = std::tuple<const void *, unsigned, unsigned>;
+using IRHandleMF = std::pair<IRHandle, const MachineFunction *>;
+
+inline IRHandleMF getIRHandleMF(IRHandle Handle, const MachineFunction *MF) {
+  return std::make_pair(Handle, MF);
+}
 
 enum SpecialTypeKind {
   STK_Empty = 0,
@@ -37,7 +69,9 @@ enum SpecialTypeKind {
   STK_Pipe,
   STK_DeviceEvent,
   STK_ElementPointer,
-  STK_Pointer,
+  STK_Type,
+  STK_Value,
+  STK_MachineInstr,
   STK_Last = -1
 };
 
@@ -66,18 +100,18 @@ union ImageAttrs {
   }
 };
 
-inline IRHandle make_descr_image(const Type *SampledTy, unsigned Dim,
-                                 unsigned Depth, unsigned Arrayed, unsigned MS,
-                                 unsigned Sampled, unsigned ImageFormat,
-                                 unsigned AQ = 0) {
+inline IRHandle irhandle_image(const Type *SampledTy, unsigned Dim,
+                               unsigned Depth, unsigned Arrayed, unsigned MS,
+                               unsigned Sampled, unsigned ImageFormat,
+                               unsigned AQ = 0) {
   return std::make_tuple(
       SampledTy,
       ImageAttrs(Dim, Depth, Arrayed, MS, Sampled, ImageFormat, AQ).Val,
       SpecialTypeKind::STK_Image);
 }
 
-inline IRHandle make_descr_sampled_image(const Type *SampledTy,
-                                         const MachineInstr *ImageTy) {
+inline IRHandle irhandle_sampled_image(const Type *SampledTy,
+                                       const MachineInstr *ImageTy) {
   assert(ImageTy->getOpcode() == SPIRV::OpTypeImage);
   unsigned AC = AccessQualifier::AccessQualifier::None;
   if (ImageTy->getNumOperands() > 8)
@@ -92,61 +126,90 @@ inline IRHandle make_descr_sampled_image(const Type *SampledTy,
       SpecialTypeKind::STK_SampledImage);
 }
 
-inline IRHandle make_descr_sampler() {
+inline IRHandle irhandle_sampler() {
   return std::make_tuple(nullptr, 0U, SpecialTypeKind::STK_Sampler);
 }
 
-inline IRHandle make_descr_pipe(uint8_t AQ) {
+inline IRHandle irhandle_pipe(uint8_t AQ) {
   return std::make_tuple(nullptr, AQ, SpecialTypeKind::STK_Pipe);
 }
 
-inline IRHandle make_descr_event() {
+inline IRHandle irhandle_event() {
   return std::make_tuple(nullptr, 0U, SpecialTypeKind::STK_DeviceEvent);
 }
 
-inline IRHandle make_descr_pointee(const Type *ElementType,
-                                   unsigned AddressSpace) {
-  return std::make_tuple(ElementType, AddressSpace,
+inline IRHandle irhandle_pointee(const Type *ElementType,
+                                 unsigned AddressSpace) {
+  return std::make_tuple(unifyPtrType(ElementType), AddressSpace,
                          SpecialTypeKind::STK_ElementPointer);
 }
 
-inline IRHandle make_descr_ptr(const void *Ptr, unsigned Arg = 0U) {
-  return std::make_tuple(Ptr, Arg, SpecialTypeKind::STK_Pointer);
+inline IRHandle irhandle_ptr(const void *Ptr, unsigned Arg,
+                             enum SpecialTypeKind STK) {
+  return std::make_tuple(Ptr, Arg, STK);
 }
+
+inline IRHandle handle(const Type *Ty) {
+  const Type *WrpTy = unifyPtrType(Ty);
+  return irhandle_ptr(WrpTy, Ty->getTypeID(), STK_Type);
+}
+
+inline IRHandle handle(const Value *V) {
+  return irhandle_ptr(V, V->getValueID(), STK_Value);
+}
+
+inline IRHandle handle(const MachineInstr *KeyMI) {
+  return irhandle_ptr(KeyMI, SPIRV::to_hash(KeyMI), STK_MachineInstr);
+}
+
 } // namespace SPIRV
 
 // Bi-directional mappings between LLVM entities and (v-reg, machine function)
 // pairs support management of unique SPIR-V definitions per machine function
 // per an LLVM/GlobalISel entity (e.g., Type, Constant, Machine Instruction).
 class SPIRVIRMapping {
-  DenseMap<std::pair<SPIRV::IRHandle, const MachineFunction *>,
-           const MachineInstr *>
-      Vregs;
-  DenseMap<const MachineInstr *, SPIRV::IRHandle> Defs;
+  DenseMap<SPIRV::IRHandleMF, SPIRV::MIHandle> Vregs;
+  DenseMap<SPIRV::MIHandle, SPIRV::IRHandle> Defs;
 
 public:
   bool add(SPIRV::IRHandle Handle, const MachineInstr *MI) {
+    if (std::get<1>(Handle) == 17 && std::get<2>(Handle) == 8) {
+      const Value *Ptr = (const Value *)std::get<0>(Handle);
+      if (const ConstantInt *CI = dyn_cast_or_null<ConstantInt>(Ptr)) {
+        if (CI->getZExtValue() == 8 || CI->getZExtValue() == 5) {
+          [[maybe_unused]] uint64_t v = CI->getZExtValue();
+        }
+      }
+    }
+    auto MIKey = SPIRV::getMIKey(MI);
     auto [It, Inserted] =
-        Vregs.try_emplace(std::make_pair(Handle, MI->getMF()), MI);
+        Vregs.try_emplace(std::make_pair(Handle, MI->getMF()), MIKey);
     if (Inserted) {
-      auto [_, IsConsistent] = Defs.insert_or_assign(MI, Handle);
+      [[maybe_unused]] auto [_, IsConsistent] =
+          Defs.insert_or_assign(MIKey, Handle);
       assert(IsConsistent);
     }
     return Inserted;
   }
   bool erase(const MachineInstr *MI) {
     bool Res = false;
-    if (auto It = Defs.find(MI); It != Defs.end()) {
-      Res = Vregs.erase(std::make_pair(It->second, MI->getMF()));
+    if (auto It = Defs.find(SPIRV::getMIKey(MI)); It != Defs.end()) {
+      Res = Vregs.erase(SPIRV::getIRHandleMF(It->second, MI->getMF()));
       Defs.erase(It);
     }
     return Res;
   }
   const MachineInstr *findMI(SPIRV::IRHandle Handle,
                              const MachineFunction *MF) {
-    if (auto It = Vregs.find(std::make_pair(Handle, MF)); It != Vregs.end())
-      return It->second;
-    return nullptr;
+    auto It = Vregs.find(SPIRV::getIRHandleMF(Handle, MF));
+    if (It == Vregs.end())
+      return nullptr;
+    auto [MI, Hash] = It->second;
+    if (SPIRV::to_hash(MI) != Hash) {
+      erase(MI);
+      return nullptr;
+    }
+    return MI;
   }
   Register find(SPIRV::IRHandle Handle, const MachineFunction *MF) {
     const MachineInstr *MI = findMI(Handle, MF);
@@ -154,38 +217,28 @@ public:
   }
 
   // helpers
-  bool add(const Type *Ty, const MachineInstr *MI) {
-    return add(SPIRV::make_descr_ptr(unifyPtrType(Ty)), MI);
-  }
-  bool add(const void *Key, const MachineInstr *MI) {
-    return add(SPIRV::make_descr_ptr(Key), MI);
-  }
   bool add(const Type *PointeeTy, unsigned AddressSpace,
            const MachineInstr *MI) {
-    return add(SPIRV::make_descr_pointee(unifyPtrType(PointeeTy), AddressSpace),
-               MI);
-  }
-  Register find(const Type *Ty, const MachineFunction *MF) {
-    return find(SPIRV::make_descr_ptr(unifyPtrType(Ty)), MF);
-  }
-  const MachineInstr *findMI(const Type *Ty, const MachineFunction *MF) {
-    return findMI(SPIRV::make_descr_ptr(unifyPtrType(Ty)), MF);
-  }
-  Register find(const void *Key, const MachineFunction *MF) {
-    return find(SPIRV::make_descr_ptr(Key), MF);
-  }
-  const MachineInstr *findMI(const void *Key, const MachineFunction *MF) {
-    return findMI(SPIRV::make_descr_ptr(Key), MF);
+    return add(SPIRV::irhandle_pointee(PointeeTy, AddressSpace), MI);
   }
   Register find(const Type *PointeeTy, unsigned AddressSpace,
                 const MachineFunction *MF) {
-    return find(
-        SPIRV::make_descr_pointee(unifyPtrType(PointeeTy), AddressSpace), MF);
+    return find(SPIRV::irhandle_pointee(PointeeTy, AddressSpace), MF);
   }
   const MachineInstr *findMI(const Type *PointeeTy, unsigned AddressSpace,
                              const MachineFunction *MF) {
-    return findMI(
-        SPIRV::make_descr_pointee(unifyPtrType(PointeeTy), AddressSpace), MF);
+    return findMI(SPIRV::irhandle_pointee(PointeeTy, AddressSpace), MF);
+  }
+
+  template <typename T> bool add(const T *Obj, const MachineInstr *MI) {
+    return add(SPIRV::handle(Obj), MI);
+  }
+  template <typename T> Register find(const T *Obj, const MachineFunction *MF) {
+    return find(SPIRV::handle(Obj), MF);
+  }
+  template <typename T>
+  const MachineInstr *findMI(const T *Obj, const MachineFunction *MF) {
+    return findMI(SPIRV::handle(Obj), MF);
   }
 };
 } // namespace llvm
