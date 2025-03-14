@@ -719,6 +719,10 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Src0 = II.getArgOperand(0);
     Value *Src1 = II.getArgOperand(1);
 
+    // TODO: Replace call with scalar operation if only one element is poison.
+    if (isa<PoisonValue>(Src0) && isa<PoisonValue>(Src1))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+
     if (isa<UndefValue>(Src0) && isa<UndefValue>(Src1)) {
       return IC.replaceInstUsesWith(II, UndefValue::get(II.getType()));
     }
