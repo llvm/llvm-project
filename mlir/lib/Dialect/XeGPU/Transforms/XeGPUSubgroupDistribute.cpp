@@ -31,7 +31,7 @@ using namespace mlir;
 using namespace mlir::dataflow;
 
 /// HW dependent constants.
-/// TODO: These constants should be queried from the uArch interface.
+/// TODO: These constants should be queried from the target information.
 constexpr unsigned subgroupSize = 16; // How many work items in a subgroup.
 /// If DPAS A or B operands have low precision element types they must be packed
 /// according to the following sizes.
@@ -342,8 +342,6 @@ SGMapPropagation::visitOperation(Operation *op,
         }
       });
   /// Add a dependency from each reult to program point after the operation.
-  /// NOTE: not sure if this is required, but all other similar analysis do
-  /// this.
   for (const SGMapLattice *r : results) {
     addDependency(const_cast<SGMapLattice *>(r), getProgramPointAfter(op));
   }
