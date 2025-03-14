@@ -2392,10 +2392,7 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " +";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  O << " reduce."
-    << Instruction::getOpcodeName(
-           RecurrenceDescriptor::getOpcode(getRecurrenceKind()))
-    << " (";
+  O << " reduce." << Instruction::getOpcodeName(getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (isConditional()) {
     O << ", ";
@@ -2406,7 +2403,6 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
 
 void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
                                  VPSlotTracker &SlotTracker) const {
-  RecurKind Kind = getRecurrenceKind();
   O << Indent << "REDUCE ";
   printAsOperand(O, SlotTracker);
   O << " = ";
@@ -2414,9 +2410,7 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " +";
   if (isa<FPMathOperator>(getUnderlyingInstr()))
     O << getUnderlyingInstr()->getFastMathFlags();
-  O << " vp.reduce."
-    << Instruction::getOpcodeName(RecurrenceDescriptor::getOpcode(Kind))
-    << " (";
+  O << " vp.reduce." << Instruction::getOpcodeName(getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   O << ", ";
   getEVL()->printAsOperand(O, SlotTracker);
