@@ -127,7 +127,7 @@ using CheckerPartIdx = unsigned;
 
 /// If a checker doesn't have multiple parts, then its single part is
 /// represented by this index.
-constexpr inline CheckerPartIdx DefaultPart = 0;
+constexpr CheckerPartIdx DefaultPart = 0;
 
 enum class ObjCMessageVisitKind {
   Pre,
@@ -226,8 +226,10 @@ public:
 
     std::unique_ptr<CheckerBase> &Ref = CheckerTags[Tag];
     if (!Ref) {
-      Ref = std::make_unique<CHECKER>(std::forward<AT>(Args)...);
-      CHECKER::_register(Ref.get(), *this);
+      std::unique_ptr<CHECKER> Checker =
+          std::make_unique<CHECKER>(std::forward<AT>(Args)...);
+      CHECKER::_register(Checker.get(), *this);
+      Ref = std::move(Checker);
     }
 
     CHECKER *Result = static_cast<CHECKER *>(Ref.get());
