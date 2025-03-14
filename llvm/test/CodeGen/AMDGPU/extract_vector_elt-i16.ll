@@ -145,8 +145,8 @@ define amdgpu_kernel void @reduce_load_vector_v8i16_extract_01(ptr addrspace(4) 
   %load = load <16 x i16>, ptr addrspace(4) %ptr
   %elt0 = extractelement <16 x i16> %load, i32 0
   %elt1 = extractelement <16 x i16> %load, i32 1
-  store volatile i16 %elt0, ptr addrspace(1) undef, align 2
-  store volatile i16 %elt1, ptr addrspace(1) undef, align 2
+  store volatile i16 %elt0, ptr addrspace(1) poison, align 2
+  store volatile i16 %elt1, ptr addrspace(1) poison, align 2
   ret void
 }
 
@@ -160,8 +160,8 @@ define amdgpu_kernel void @reduce_load_vector_v8i16_extract_23(ptr addrspace(4) 
   %load = load <16 x i16>, ptr addrspace(4) %ptr
   %elt2 = extractelement <16 x i16> %load, i32 2
   %elt3 = extractelement <16 x i16> %load, i32 3
-  store volatile i16 %elt2, ptr addrspace(1) undef, align 2
-  store volatile i16 %elt3, ptr addrspace(1) undef, align 2
+  store volatile i16 %elt2, ptr addrspace(1) poison, align 2
+  store volatile i16 %elt3, ptr addrspace(1) poison, align 2
   ret void
 }
 

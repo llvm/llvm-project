@@ -282,15 +282,31 @@ public:
         do {
           if (auto *BTE = dyn_cast<CXXBindTemporaryExpr>(Arg))
             Arg = BTE->getSubExpr()->IgnoreParenCasts();
-          if (auto *CE = dyn_cast_or_null<CXXConstructExpr>(Arg)) {
+          if (auto *CE = dyn_cast<CXXConstructExpr>(Arg)) {
             auto *Ctor = CE->getConstructor();
             if (!Ctor)
               return false;
             auto clsName = safeGetName(Ctor->getParent());
-            if (!isRefType(clsName) || !CE->getNumArgs())
-              return false;
-            Arg = CE->getArg(0)->IgnoreParenCasts();
-            continue;
+            if (isRefType(clsName) && CE->getNumArgs()) {
+              Arg = CE->getArg(0)->IgnoreParenCasts();
+              continue;
+            }
+            if (auto *Type = ClsType.getTypePtrOrNull()) {
+              if (auto *CXXR = Type->getPointeeCXXRecordDecl()) {
+                if (CXXR == Ctor->getParent() && Ctor->isMoveConstructor() &&
+                    CE->getNumArgs() == 1) {
+                  Arg = CE->getArg(0)->IgnoreParenCasts();
+                  continue;
+                }
+              }
+            }
+            return false;
+          }
+          if (auto *CE = dyn_cast<CallExpr>(Arg)) {
+            if (CE->isCallToStdMove() && CE->getNumArgs() == 1) {
+              Arg = CE->getArg(0)->IgnoreParenCasts();
+              continue;
+            }
           }
           if (auto *OpCE = dyn_cast<CXXOperatorCallExpr>(Arg)) {
             auto OpCode = OpCE->getOperator();

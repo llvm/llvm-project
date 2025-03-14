@@ -32,7 +32,7 @@ bb6:                                              ; preds = %bb6, %bb3
   br i1 %tmp14, label %bb6, label %bb4
 
 bb15:                                             ; preds = %bb4
-  store <2 x i32> %tmp5, ptr addrspace(3) undef, align 8
+  store <2 x i32> %tmp5, ptr addrspace(3) poison, align 8
   br label %bb16
 
 bb16:                                             ; preds = %bb15, %bb4

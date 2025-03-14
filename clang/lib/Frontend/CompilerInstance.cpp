@@ -1491,8 +1491,6 @@ static bool compileModuleAndReadASTBehindLock(
       // related errors.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_failure)
           << Module->Name << toString(std::move(Err));
-      // Clear out any potential leftover.
-      Lock.unsafeRemoveLockFile();
       return compileModuleAndReadASTImpl(ImportingInstance, ImportLoc,
                                          ModuleNameLoc, Module, ModuleFileName);
     }
@@ -1504,19 +1502,19 @@ static bool compileModuleAndReadASTBehindLock(
 
     // Someone else is responsible for building the module. Wait for them to
     // finish.
-    switch (Lock.waitForUnlock()) {
-    case llvm::LockFileManager::Res_Success:
+    switch (Lock.waitForUnlockFor(std::chrono::seconds(90))) {
+    case llvm::WaitForUnlockResult::Success:
       break; // The interesting case.
-    case llvm::LockFileManager::Res_OwnerDied:
+    case llvm::WaitForUnlockResult::OwnerDied:
       continue; // try again to get the lock.
-    case llvm::LockFileManager::Res_Timeout:
+    case llvm::WaitForUnlockResult::Timeout:
       // Since ModuleCache takes care of correctness, we try waiting for
       // another process to complete the build so clang does not do it done
       // twice. If case of timeout, build it ourselves.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
           << Module->Name;
       // Clear the lock file so that future invocations can make progress.
-      Lock.unsafeRemoveLockFile();
+      Lock.unsafeMaybeUnlock();
       continue;
     }
 

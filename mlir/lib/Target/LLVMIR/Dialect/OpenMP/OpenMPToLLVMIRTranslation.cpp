@@ -550,18 +550,16 @@ convertIgnoredWrapper(omp::LoopWrapperInterface opInst,
   // corresponding operand. This is semantically equivalent to this wrapper not
   // being present.
   auto forwardArgs =
-      [&moduleTranslation](llvm::ArrayRef<BlockArgument> blockArgs,
-                           OperandRange operands) {
-        for (auto [arg, var] : llvm::zip_equal(blockArgs, operands))
+      [&moduleTranslation](omp::BlockArgOpenMPOpInterface blockArgIface) {
+        llvm::SmallVector<std::pair<Value, BlockArgument>> blockArgsPairs;
+        blockArgIface.getBlockArgsPairs(blockArgsPairs);
+        for (auto [var, arg] : blockArgsPairs)
           moduleTranslation.mapValue(arg, moduleTranslation.lookupValue(var));
       };
 
   return llvm::TypeSwitch<Operation *, LogicalResult>(opInst)
       .Case([&](omp::SimdOp op) {
-        auto blockArgIface = cast<omp::BlockArgOpenMPOpInterface>(*op);
-        forwardArgs(blockArgIface.getPrivateBlockArgs(), op.getPrivateVars());
-        forwardArgs(blockArgIface.getReductionBlockArgs(),
-                    op.getReductionVars());
+        forwardArgs(cast<omp::BlockArgOpenMPOpInterface>(*op));
         op.emitWarning() << "simd information on composite construct discarded";
         return success();
       })
@@ -4284,7 +4282,7 @@ LogicalResult convertFlagsAttr(Operation *op, mlir::omp::FlagsAttr attribute,
   return success();
 }
 
-static bool getTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
+static void getTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
                                      omp::TargetOp targetOp,
                                      llvm::StringRef parentName = "") {
   auto fileLoc = targetOp.getLoc()->findInstanceOf<FileLineColLoc>();
@@ -4293,15 +4291,16 @@ static bool getTargetEntryUniqueInfo(llvm::TargetRegionEntryInfo &targetInfo,
   StringRef fileName = fileLoc.getFilename().getValue();
 
   llvm::sys::fs::UniqueID id;
-  if (auto ec = llvm::sys::fs::getUniqueID(fileName, id)) {
-    targetOp.emitError("Unable to get unique ID for file");
-    return false;
-  }
-
   uint64_t line = fileLoc.getLine();
-  targetInfo = llvm::TargetRegionEntryInfo(parentName, id.getDevice(),
-                                           id.getFile(), line);
-  return true;
+  if (auto ec = llvm::sys::fs::getUniqueID(fileName, id)) {
+    size_t fileHash = llvm::hash_value(fileName.str());
+    size_t deviceId = 0xdeadf17e;
+    targetInfo =
+        llvm::TargetRegionEntryInfo(parentName, deviceId, fileHash, line);
+  } else {
+    targetInfo = llvm::TargetRegionEntryInfo(parentName, id.getDevice(),
+                                             id.getFile(), line);
+  }
 }
 
 static void
@@ -4901,8 +4900,7 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::TargetRegionEntryInfo entryInfo;
 
-  if (!getTargetEntryUniqueInfo(entryInfo, targetOp, parentName))
-    return failure();
+  getTargetEntryUniqueInfo(entryInfo, targetOp, parentName);
 
   MapInfoData mapData;
   collectMapDataFromMapOperands(mapData, mapVars, moduleTranslation, dl,

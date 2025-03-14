@@ -226,15 +226,16 @@ void RetainTypeChecker::visitTypedef(const TypedefDecl *TD) {
     return;
 
   for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
-    if (Redecl->getAttr<ObjCBridgeAttr>()) {
+    if (Redecl->getAttr<ObjCBridgeAttr>() ||
+        Redecl->getAttr<ObjCBridgeMutableAttr>()) {
       CFPointees.insert(RT);
       return;
     }
   }
 }
 
-bool RetainTypeChecker::isUnretained(const QualType QT) {
-  if (ento::cocoa::isCocoaObjectRef(QT) && !IsARCEnabled)
+bool RetainTypeChecker::isUnretained(const QualType QT, bool ignoreARC) {
+  if (ento::cocoa::isCocoaObjectRef(QT) && (!IsARCEnabled || ignoreARC))
     return true;
   auto CanonicalType = QT.getCanonicalType();
   auto PointeeType = CanonicalType->getPointeeType();
@@ -372,7 +373,8 @@ std::optional<bool> isGetterOfSafePtr(const CXXMethodDecl *M) {
       if (auto *maybeRefToRawOperator = dyn_cast<CXXConversionDecl>(M)) {
         auto QT = maybeRefToRawOperator->getConversionType();
         auto *T = QT.getTypePtrOrNull();
-        return T && (T->isPointerType() || T->isReferenceType());
+        return T && (T->isPointerType() || T->isReferenceType() ||
+                     T->isObjCObjectPointerType());
       }
     }
   }
@@ -415,7 +417,8 @@ bool isPtrConversion(const FunctionDecl *F) {
   if (FunctionName == "getPtr" || FunctionName == "WeakPtr" ||
       FunctionName == "dynamicDowncast" || FunctionName == "downcast" ||
       FunctionName == "checkedDowncast" ||
-      FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast")
+      FunctionName == "uncheckedDowncast" || FunctionName == "bitwise_cast" ||
+      FunctionName == "bridge_cast")
     return true;
 
   return false;

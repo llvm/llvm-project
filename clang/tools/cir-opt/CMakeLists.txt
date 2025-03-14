@@ -24,6 +24,7 @@ clang_target_link_libraries(cir-opt
   clangCIR
   clangCIRLoweringDirectToLLVM
   MLIRCIR
+  MLIRCIRTransforms
 )
 
 target_link_libraries(cir-opt
