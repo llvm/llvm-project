@@ -343,6 +343,8 @@ inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
   return isKnownNeverNaN(Val, MRI, true);
 }
 
+bool isKnownNeverZeroFloat(Register Val, const MachineRegisterInfo &MRI);
+
 Align inferAlignFromPtrInfo(MachineFunction &MF, const MachinePointerInfo &MPO);
 
 /// Return a virtual register corresponding to the incoming argument register \p

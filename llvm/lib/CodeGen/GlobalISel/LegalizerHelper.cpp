@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
@@ -32,6 +33,7 @@
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
@@ -4594,6 +4596,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
   case G_FMINNUM:
   case G_FMAXNUM:
     return lowerFMinNumMaxNum(MI);
+  case G_FMINIMUM:
+  case G_FMAXIMUM:
+    return lowerFMinimum_FMaximum(MI);
   case G_MERGE_VALUES:
     return lowerMergeValues(MI);
   case G_UNMERGE_VALUES:
@@ -8161,6 +8166,62 @@ LegalizerHelper::lowerFMinNumMaxNum(MachineInstr &MI) {
   // If there are no nans, it's safe to simply replace this with the non-IEEE
   // version.
   MIRBuilder.buildInstr(NewOp, {Dst}, {Src0, Src1}, MI.getFlags());
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFMinimum_FMaximum(MachineInstr &MI) {
+  auto [Dst, Src0, Src1] = MI.getFirst3Regs();
+  LLT Ty = MRI.getType(Dst);
+  unsigned Opc = MI.getOpcode();
+  bool IsMax = Opc == TargetOpcode::G_FMAXIMUM;
+
+  Register MinMax;
+  unsigned CompOpcIeee = IsMax ? TargetOpcode::G_FMAXNUM_IEEE : TargetOpcode::G_FMINNUM_IEEE;
+  unsigned CompOpc = IsMax ? TargetOpcode::G_FMAXNUM : TargetOpcode::G_FMINNUM;
+  CmpInst::Predicate CompPred = IsMax ? CmpInst::FCMP_OGT : CmpInst::FCMP_OLT;
+  LLT S1 = LLT::scalar(1);
+  const fltSemantics &FPSem = getFltSemanticForLLT(Ty);
+
+  bool MinMaxMustRespectOrderedZero = false;
+
+  if (LI.isLegalOrCustom({CompOpcIeee, Ty})) {
+    MinMax = MIRBuilder.buildInstr(CompOpcIeee, {Ty}, {Src0, Src1}).getReg(0);
+    MinMaxMustRespectOrderedZero = true;
+  } else if (LI.isLegalOrCustom({CompOpc, Ty})) {
+    MinMax = MIRBuilder.buildInstr(CompOpc, {Ty}, {Src0, Src1}).getReg(0);
+  } else {
+    // NaN (if exists) will be propagated later, so orderness doesn't matter.
+    auto Comp = MIRBuilder.buildFCmp(CompPred, S1, Src0, Src1);
+    MinMax = MIRBuilder.buildSelect(Ty, Comp,Src0, Src1).getReg(0);
+  }
+
+  // Propagate any NaN of both operands
+  if (!MI.getFlag(MachineInstr::FmNoNans) && (!isKnownNeverNaN(Src0, MRI) || !isKnownNeverNaN(Src1, MRI))) {
+    auto FPNaN = MIRBuilder.buildFConstant(Ty, APFloat::getNaN(FPSem));
+    auto Comp = MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_UNO, S1, Src0, Src1);
+    MinMax = MIRBuilder.buildSelect(Ty, Comp, FPNaN, MinMax).getReg(0);
+  }
+
+  // fminimum/fmaximum requires -0.0 less than +0.0
+  if (!MinMaxMustRespectOrderedZero && !MI.getFlag(MachineInstr::FmNsz) &&
+      !isKnownNeverZeroFloat(Src0, MRI) && !isKnownNeverZeroFloat(Src1, MRI)) {
+    auto Zero = MIRBuilder.buildFConstant(Ty, APFloat::getZero(FPSem));
+    auto IsZero = MIRBuilder.buildFCmp(CmpInst::Predicate::FCMP_OEQ, S1,MinMax, Zero);
+
+    unsigned TestZeroMask = IsMax ? fcPosZero : fcNegZero;
+    
+    auto Src0Zero = MIRBuilder.buildIsFPClass(S1, Src0, TestZeroMask);
+    auto Src0Comp = MIRBuilder.buildSelect(Ty, Src0Zero, Src0, MinMax);
+    
+    auto Src1Zero = MIRBuilder.buildIsFPClass(S1, Src1, TestZeroMask);
+    auto Src1Comp = MIRBuilder.buildSelect(Ty, Src1Zero, Src1, Src0Comp);
+
+    MinMax = MIRBuilder.buildSelect(Ty, IsZero, Src1Comp, MinMax).getReg(0);
+  }
+
+  MRI.replaceRegWith(Dst, MinMax);
   MI.eraseFromParent();
   return Legalized;
 }
