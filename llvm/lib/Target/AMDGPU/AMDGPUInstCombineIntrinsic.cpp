@@ -1050,7 +1050,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     break;
   }
   case Intrinsic::amdgcn_ballot: {
-    if (auto *Src = dyn_cast<ConstantInt>(II.getArgOperand(0))) {
+    Value *Arg = II.getArgOperand(0);
+    if (isa<PoisonValue>(Arg))
+      return IC.replaceInstUsesWith(II, PoisonValue::get(II.getType()));
+
+    if (auto *Src = dyn_cast<ConstantInt>(Arg)) {
       if (Src->isZero()) {
         // amdgcn.ballot(i1 0) is zero.
         return IC.replaceInstUsesWith(II, Constant::getNullValue(II.getType()));
