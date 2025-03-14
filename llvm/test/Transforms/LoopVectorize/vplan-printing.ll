@@ -800,7 +800,7 @@ define void @print_fast_math_flags(i64 %n, ptr noalias %y, ptr noalias %x, ptr %
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.y>
 ; CHECK-NEXT:   WIDEN ir<%lv> = load vp<[[VEC_PTR]]>
 ; CHECK-NEXT:   WIDEN ir<%add> = fadd nnan ir<%lv>, ir<1.000000e+00>
-; CHECK-NEXT:   WIDEN ir<%mul> = fmul reassoc nnan ninf nsz arcp contract afn ir<%add>, ir<2.000000e+00>
+; CHECK-NEXT:   WIDEN ir<%mul> = fmul fast ir<%add>, ir<2.000000e+00>
 ; CHECK-NEXT:   WIDEN ir<%div> = fdiv reassoc nsz contract ir<%mul>, ir<2.000000e+00>
 ; CHECK-NEXT:   CLONE ir<%gep.x> = getelementptr inbounds ir<%x>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%gep.x>

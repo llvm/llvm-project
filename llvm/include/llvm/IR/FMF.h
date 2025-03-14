@@ -23,14 +23,16 @@ private:
 
   unsigned Flags = 0;
 
-  FastMathFlags(unsigned F) {
+  FastMathFlags(unsigned F) : Flags(F) {
+    setAllBitsIfNeeded();
+  }
+
+  void setAllBitsIfNeeded() {
     // If all 7 bits are set, turn this into -1. If the number of bits grows,
     // this must be updated. This is intended to provide some forward binary
     // compatibility insurance for the meaning of 'fast' in case bits are added.
-    if (F == 0x7F) Flags = ~0U;
-    else Flags = F;
+    if (Flags == 0x7F) Flags = ~0U;
   }
-
 public:
   // This is how the bits are used in Value::SubclassOptionalData so they
   // should fit there too.
@@ -75,24 +77,31 @@ public:
   /// Flag setters
   void setAllowReassoc(bool B = true) {
     Flags = (Flags & ~AllowReassoc) | B * AllowReassoc;
+    setAllBitsIfNeeded();
   }
   void setNoNaNs(bool B = true) {
     Flags = (Flags & ~NoNaNs) | B * NoNaNs;
+    setAllBitsIfNeeded();
   }
   void setNoInfs(bool B = true) {
     Flags = (Flags & ~NoInfs) | B * NoInfs;
+    setAllBitsIfNeeded();
   }
   void setNoSignedZeros(bool B = true) {
     Flags = (Flags & ~NoSignedZeros) | B * NoSignedZeros;
+    setAllBitsIfNeeded();
   }
   void setAllowReciprocal(bool B = true) {
     Flags = (Flags & ~AllowReciprocal) | B * AllowReciprocal;
+    setAllBitsIfNeeded();
   }
   void setAllowContract(bool B = true) {
     Flags = (Flags & ~AllowContract) | B * AllowContract;
+    setAllBitsIfNeeded();
   }
   void setApproxFunc(bool B = true) {
     Flags = (Flags & ~ApproxFunc) | B * ApproxFunc;
+    setAllBitsIfNeeded();
   }
   void setFast(bool B = true) { B ? set() : clear(); }
 
