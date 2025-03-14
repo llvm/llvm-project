@@ -164,7 +164,7 @@ struct Source {
   /// skipped on stepping.
   std::optional<PresentationHint> presentationHint;
 
-  // unsupported keys origin, sources, adapterData, checksums
+  // unsupported keys: origin, sources, adapterData, checksums
 };
 bool fromJSON(const llvm::json::Value &, Source &, llvm::json::Path);
 

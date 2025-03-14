@@ -243,9 +243,10 @@ struct DAP {
   /// Stop event handler threads.
   void StopEventHandlers();
 
-  // Serialize the JSON value into a string and send the JSON packet to
-  // the "out" stream.
+  /// Serialize the JSON value into a string and send the JSON packet to the
+  /// "out" stream.
   void SendJSON(const llvm::json::Value &json);
+  /// Send the given message to the client
   void Send(const protocol::Message &message);
 
   void SendOutput(OutputType o, const llvm::StringRef output);

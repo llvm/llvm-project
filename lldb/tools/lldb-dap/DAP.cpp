@@ -672,9 +672,9 @@ void DAP::SetTarget(const lldb::SBTarget target) {
 
 bool DAP::HandleObject(const protocol::Message &M) {
   if (const auto *req = std::get_if<protocol::Request>(&M)) {
-    auto new_handler_pos = request_handlers.find(req->command);
-    if (new_handler_pos != request_handlers.end()) {
-      (*new_handler_pos->second)(*req);
+    auto handler_pos = request_handlers.find(req->command);
+    if (handler_pos != request_handlers.end()) {
+      (*handler_pos->second)(*req);
       return true; // Success
     }
 
@@ -727,8 +727,7 @@ bool DAP::HandleObject(const protocol::Message &M) {
     return true;
   }
 
-  if (log)
-    *log << "Unsupported protocol message" << std::endl;
+  DAP_LOG(log, "Unsupported protocol message");
 
   return false;
 }
