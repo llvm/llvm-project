@@ -551,7 +551,7 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
 
   MF.setCallsEHReturn(YamlMF.CallsEHReturn);
   MF.setCallsUnwindInit(YamlMF.CallsUnwindInit);
-  MF.setHasEHCatchret(YamlMF.HasEHCatchret);
+  MF.setHasEHContTarget(YamlMF.HasEHContTarget);
   MF.setHasEHScopes(YamlMF.HasEHScopes);
   MF.setHasEHFunclets(YamlMF.HasEHFunclets);
   MF.setIsOutlined(YamlMF.IsOutlined);

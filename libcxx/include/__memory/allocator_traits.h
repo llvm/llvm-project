@@ -138,6 +138,7 @@ template <class _Alloc>
 using __propagate_on_container_swap _LIBCPP_NODEBUG =
     __detected_or_t<false_type, __propagate_on_container_swap_member, _Alloc>;
 
+_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 // __is_always_equal
 template <class _Tp>
 using __is_always_equal_member _LIBCPP_NODEBUG = typename _Tp::is_always_equal;
@@ -147,7 +148,6 @@ using __is_always_equal _LIBCPP_NODEBUG =
     __detected_or_t<typename is_empty<_Alloc>::type, __is_always_equal_member, _Alloc>;
 
 // __allocator_traits_rebind
-_LIBCPP_SUPPRESS_DEPRECATED_PUSH
 template <class _Tp, class _Up, class = void>
 struct __has_rebind_other : false_type {};
 template <class _Tp, class _Up>

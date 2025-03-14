@@ -179,7 +179,7 @@ entry:
   br i1 %4, label %header, label %exit
 
 header:
-  %h.fabs.phi = phi float [ undef, %entry ], [ %l.fabs, %l ]
+  %h.fabs.phi = phi float [ poison, %entry ], [ %l.fabs, %l ]
   %h.fmul = fmul reassoc nnan nsz arcp contract afn float %h.fabs.phi, 2.000000e+00
   %l.1 = fmul reassoc nnan nsz arcp contract afn float %h.fabs.phi, 3.000000e+00
   br label %l

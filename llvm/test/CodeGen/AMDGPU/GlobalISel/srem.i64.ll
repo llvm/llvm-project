@@ -358,7 +358,7 @@ define amdgpu_ps i64 @s_srem_i64(i64 inreg %num, i64 inreg %den) {
   %elt.1 = extractelement <2 x i32> %cast, i32 1
   %res.0 = call i32 @llvm.amdgcn.readfirstlane(i32 %elt.0)
   %res.1 = call i32 @llvm.amdgcn.readfirstlane(i32 %elt.1)
-  %ins.0 = insertelement <2 x i32> undef, i32 %res.0, i32 0
+  %ins.0 = insertelement <2 x i32> poison, i32 %res.0, i32 0
   %ins.1 = insertelement <2 x i32> %ins.0, i32 %res.0, i32 1
   %cast.back = bitcast <2 x i32> %ins.1 to i64
   ret i64 %cast.back

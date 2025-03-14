@@ -738,12 +738,11 @@ func.func @with_inner_ops(%arg0: memref<?xf64>, %arg1: memref<?xf64>, %arg2: i1)
   return
 }
 
-// CHECK:  %[[pi:.+]] = arith.constant 3.140000e+00 : f64
-// CHECK:  %{{.*}} = scf.if %arg2 -> (f64) {
-// CHECK:        scf.yield %{{.*}} : f64
+// Semantics of non-affine region ops would be unknown.
+
 // CHECK:      } else {
-// CHECK:        scf.yield %[[pi]] : f64
-// CHECK:      }
+// CHECK-NEXT:   %[[Y:.*]] = affine.load
+// CHECK-NEXT:   scf.yield %[[Y]] : f64
 
 // Check if scalar replacement works correctly when affine memory ops are in the
 // body of an scf.for.
@@ -951,4 +950,36 @@ func.func @consecutive_store() {
     }
   }
   return
+}
+
+// CHECK-LABEL: func @scf_for_if
+func.func @scf_for_if(%arg0: memref<?xi32>, %arg1: i32) -> i32 attributes {llvm.linkage = #llvm.linkage<external>} {
+  %c1 = arith.constant 1 : index
+  %c0 = arith.constant 0 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c5_i32 = arith.constant 5 : i32
+  %c10_i32 = arith.constant 10 : i32
+  %0 = memref.alloca() : memref<1xi32>
+  %1 = llvm.mlir.undef : i32
+  affine.store %1, %0[0] : memref<1xi32>
+  affine.store %c0_i32, %0[0] : memref<1xi32>
+  %2 = arith.index_cast %arg1 : i32 to index
+  scf.for %arg2 = %c0 to %2 step %c1 {
+    %4 = memref.load %arg0[%arg2] : memref<?xi32>
+    %5 = arith.muli %4, %c5_i32 : i32
+    %6 = arith.cmpi sgt, %5, %c10_i32 : i32
+    // CHECK: scf.if
+    scf.if %6 {
+      // No forwarding should happen here since we have an scf.for around and we
+      // can't analyze the flow of values.
+      // CHECK: affine.load
+      %7 = affine.load %0[0] : memref<1xi32>
+      %8 = arith.addi %5, %7 : i32
+      // CHECK: affine.store
+      affine.store %8, %0[0] : memref<1xi32>
+    }
+  }
+  // CHECK: affine.load
+  %3 = affine.load %0[0] : memref<1xi32>
+  return %3 : i32
 }

@@ -44,7 +44,7 @@ def Tosa_ApplyScaleOp :
     Tosa_IntLike:$value,
     Tosa_IntLike:$multiplier,
     Tosa_Int8Like:$shift,
-    BoolAttr:$double_round
+    Tosa_RoundingTypeAttr:$rounding_mode
   );
 
   let results = (outs

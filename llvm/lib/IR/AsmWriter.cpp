@@ -96,6 +96,10 @@ static cl::opt<bool> PrintInstDebugLocs(
     "print-inst-debug-locs", cl::Hidden,
     cl::desc("Pretty print debug locations of instructions when dumping"));
 
+static cl::opt<bool> PrintProfData(
+    "print-prof-data", cl::Hidden,
+    cl::desc("Pretty print perf data (branch weights, etc) when dumping"));
+
 // Make virtual table appear in this compilation unit.
 AssemblyAnnotationWriter::~AssemblyAnnotationWriter() = default;
 
@@ -4161,6 +4165,13 @@ void AssemblyWriter::printFunction(const Function *F) {
     writeOperand(F->getPersonalityFn(), /*PrintType=*/true);
   }
 
+  if (PrintProfData) {
+    if (auto *MDProf = F->getMetadata(LLVMContext::MD_prof)) {
+      Out << " ";
+      MDProf->print(Out, TheModule, /*IsForDebug=*/true);
+    }
+  }
+
   if (F->isDeclaration()) {
     Out << '\n';
   } else {
@@ -4284,6 +4295,14 @@ void AssemblyWriter::printInfoComment(const Value &V) {
       if (I->getDebugLoc()) {
         Out << " ; ";
         I->getDebugLoc().print(Out);
+      }
+    }
+  }
+  if (PrintProfData) {
+    if (auto *I = dyn_cast<Instruction>(&V)) {
+      if (auto *MD = I->getMetadata(LLVMContext::MD_prof)) {
+        Out << " ; ";
+        MD->print(Out, TheModule, /*IsForDebug=*/true);
       }
     }
   }

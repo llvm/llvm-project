@@ -120,8 +120,9 @@ addConstantsToTrack(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
   for (MachineInstr *MI : ToErase) {
     Register Reg = MI->getOperand(2).getReg();
-    if (RegsAlreadyAddedToDT.contains(MI))
-      Reg = RegsAlreadyAddedToDT[MI];
+    auto It = RegsAlreadyAddedToDT.find(MI);
+    if (It != RegsAlreadyAddedToDT.end())
+      Reg = It->second;
     auto *RC = MRI.getRegClassOrNull(MI->getOperand(0).getReg());
     if (!MRI.getRegClassOrNull(Reg) && RC)
       MRI.setRegClass(Reg, RC);
@@ -652,7 +653,7 @@ generateAssignInstrs(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   }
   for (MachineInstr *MI : ToErase) {
     auto It = RegsAlreadyAddedToDT.find(MI);
-    if (RegsAlreadyAddedToDT.contains(MI))
+    if (It != RegsAlreadyAddedToDT.end())
       MRI.replaceRegWith(MI->getOperand(0).getReg(), It->second);
     MI->eraseFromParent();
   }
@@ -819,15 +820,24 @@ static void insertInlineAsm(MachineFunction &MF, SPIRVGlobalRegistry *GR,
   insertInlineAsmProcess(MF, GR, ST, MIRBuilder, ToProcess);
 }
 
-static void insertSpirvDecorations(MachineFunction &MF, MachineIRBuilder MIB) {
+static void insertSpirvDecorations(MachineFunction &MF, SPIRVGlobalRegistry *GR,
+                                   MachineIRBuilder MIB) {
   SmallVector<MachineInstr *, 10> ToErase;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration))
+      if (!isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration) &&
+          !isSpvIntrinsic(MI, Intrinsic::spv_assign_aliasing_decoration))
         continue;
       MIB.setInsertPt(*MI.getParent(), MI.getNextNode());
-      buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
-                              MI.getOperand(2).getMetadata());
+      if (isSpvIntrinsic(MI, Intrinsic::spv_assign_decoration)) {
+        buildOpSpirvDecorations(MI.getOperand(1).getReg(), MIB,
+                                MI.getOperand(2).getMetadata());
+      } else {
+        GR->buildMemAliasingOpDecorate(MI.getOperand(1).getReg(), MIB,
+                                       MI.getOperand(2).getImm(),
+                                       MI.getOperand(3).getMetadata());
+      }
+
       ToErase.push_back(&MI);
     }
   }
@@ -1043,7 +1053,7 @@ bool SPIRVPreLegalizer::runOnMachineFunction(MachineFunction &MF) {
 
   processInstrsWithTypeFolding(MF, GR, MIB);
   removeImplicitFallthroughs(MF, MIB);
-  insertSpirvDecorations(MF, MIB);
+  insertSpirvDecorations(MF, GR, MIB);
   insertInlineAsm(MF, GR, ST, MIB);
   selectOpBitcasts(MF, GR, MIB);
 

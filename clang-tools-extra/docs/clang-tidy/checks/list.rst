@@ -353,6 +353,7 @@ Clang-Tidy Checks
    :doc:`portability-simd-intrinsics <portability/simd-intrinsics>`,
    :doc:`portability-std-allocator-const <portability/std-allocator-const>`,
    :doc:`portability-template-virtual-member-function <portability/template-virtual-member-function>`,
+   :doc:`readability-ambiguous-smartptr-reset-call <readability/ambiguous-smartptr-reset-call>`, "Yes"
    :doc:`readability-avoid-const-params-in-decls <readability/avoid-const-params-in-decls>`, "Yes"
    :doc:`readability-avoid-nested-conditional-operator <readability/avoid-nested-conditional-operator>`,
    :doc:`readability-avoid-return-with-void-value <readability/avoid-return-with-void-value>`, "Yes"

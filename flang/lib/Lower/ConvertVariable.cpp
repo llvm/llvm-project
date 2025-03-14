@@ -852,9 +852,8 @@ void Fortran::lower::defaultInitializeAtRuntime(
       }
       auto addrOf = builder.create<fir::AddrOfOp>(loc, global.resultType(),
                                                   global.getSymbol());
-      fir::LoadOp load = builder.create<fir::LoadOp>(loc, addrOf.getResult());
-      // FIXME: Use memcpy instead of store.
-      builder.create<fir::StoreOp>(loc, load, fir::getBase(exv));
+      builder.create<fir::CopyOp>(loc, addrOf, fir::getBase(exv),
+                                  /*noOverlap=*/true);
     } else {
       mlir::Value box = builder.createBox(loc, exv);
       fir::runtime::genDerivedTypeInitialize(builder, loc, box);
@@ -1902,7 +1901,7 @@ void Fortran::lower::genDeclareSymbol(
     bool force) {
   if (converter.getLoweringOptions().getLowerToHighLevelFIR() &&
       (!Fortran::semantics::IsProcedure(sym) ||
-       Fortran::semantics::IsPointer(sym)) &&
+       Fortran::semantics::IsPointer(sym.GetUltimate())) &&
       !sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
     const mlir::Location loc = genLocation(converter, sym);

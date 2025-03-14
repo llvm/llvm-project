@@ -550,9 +550,9 @@ namespace llvm {
   /// \see CFGuardLongjmp.cpp
   FunctionPass *createCFGuardLongjmpPass();
 
-  /// Creates EHContGuard catchret target identification pass.
-  /// \see EHContGuardCatchret.cpp
-  FunctionPass *createEHContGuardCatchretPass();
+  /// Creates Windows EH Continuation Guard target identification pass.
+  /// \see EHContGuardTargets.cpp
+  FunctionPass *createEHContGuardTargetsPass();
 
   /// Create Hardware Loop pass. \see HardwareLoops.cpp
   FunctionPass *createHardwareLoopsLegacyPass();

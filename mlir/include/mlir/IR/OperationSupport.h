@@ -1039,11 +1039,23 @@ public:
     assert(!properties &&
            "Can't provide a properties struct when one has been allocated");
     properties = &newProperties;
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic push
+// https://github.com/llvm/llvm-project/issues/126600
+#pragma clang diagnostic ignored "-Wdangling-assignment-gsl"
+#endif
+#endif
     propertiesDeleter = [](OpaqueProperties) {};
     propertiesSetter = [](OpaqueProperties newProp,
                           const OpaqueProperties prop) {
       *newProp.as<T *>() = *prop.as<const T *>();
     };
+#if defined(__clang__)
+#if __has_warning("-Wdangling-assignment-gsl")
+#pragma clang diagnostic pop
+#endif
+#endif
     propertiesId = TypeID::get<T>();
   }
 
