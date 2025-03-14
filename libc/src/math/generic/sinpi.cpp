@@ -80,4 +80,4 @@ LLVM_LIBC_FUNCTION(double, sinpi, (double x)) {
   return static_cast<double>(fputil::multiply_add(
       sin_yy, cos_kk, fputil::multiply_add(cos_yy, sin_kk, sin_kk)));
 }
-} //
+} // namespace LIBC_NAMESPACE_DECL
