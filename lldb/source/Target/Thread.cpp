@@ -362,11 +362,10 @@ void Thread::FrameSelectedCallback(StackFrame *frame) {
     Status error;
     ExecutionContext exe_ctx;
     frame->CalculateExecutionContext(exe_ctx);
-    if (auto *exe_scope = exe_ctx.GetBestExecutionContextScope())
-      if (auto target = frame->CalculateTarget())
-        if (auto swift_ast_ctx =
-                TypeSystemSwiftTypeRefForExpressions::GetForTarget(*target))
-          swift_ast_ctx->DiagnoseWarnings(*GetProcess(), msc);
+    if (auto target = frame->CalculateTarget())
+      if (auto swift_ast_ctx =
+              TypeSystemSwiftTypeRefForExpressions::GetForTarget(*target))
+        swift_ast_ctx->DiagnoseWarnings(*GetProcess(), msc);
   }
 #endif
 }
