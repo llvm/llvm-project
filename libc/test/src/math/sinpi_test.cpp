@@ -23,9 +23,9 @@ TEST_F(LlvmLibcSinpiTest, PositiveRange) {
   for (uint64_t v = POS_START; v <= 30; ++v) {
     double x = FPBits(v).get_val();
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinpi, x,
-				   LIBC_NAMESPACE::sinpi(x), 0.5);
-    
+                                   LIBC_NAMESPACE::sinpi(x), 0.5);
+
     EXPECT_MPFR_MATCH_ALL_ROUNDING(mpfr::Operation::Sinpi, -x,
-				   LIBC_NAMESPACE::sinpi(-x), 0.5);
+                                   LIBC_NAMESPACE::sinpi(-x), 0.5);
   }
 }
