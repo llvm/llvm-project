@@ -1845,6 +1845,8 @@ void RegAllocFastImpl::handleDebugValue(MachineInstr &MI) {
     Register Reg = MO.getReg();
     if (!Reg.isVirtual())
       continue;
+    if (!shouldAllocateRegister(Reg))
+      continue;
 
     // Already spilled to a stackslot?
     int SS = StackSlotForVirtReg[Reg];
