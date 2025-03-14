@@ -14,8 +14,8 @@
 #
 # Compiler-RT has two mechanisms for the path (simplified):
 #
-# * LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=1: lib/${oslibname}/libclang_rt.builtins-${arch}.a
-# * LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=0: lib/${triple}/libclang_rt.builtins.a
+# * LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=0: lib/${oslibname}/libclang_rt.builtins-${arch}.a
+# * LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=1: lib/${triple}/libclang_rt.builtins.a
 #
 # LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON is the newer scheme, but the old one is
 # currently still used for some platforms such as Windows. Clang looks for which
