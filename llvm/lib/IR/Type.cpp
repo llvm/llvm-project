@@ -975,7 +975,7 @@ static TargetTypeInfo getTargetTypeInfo(const TargetExtType *Ty) {
     auto Size = Ty->getIntParameter(1);
     auto Alignment = Ty->getIntParameter(2);
 
-    llvm::Type *LayoutType;
+    llvm::Type *LayoutType = nullptr;
     if (Size > 0 && Alignment > 0) {
       LayoutType =
           ArrayType::get(Type::getIntNTy(C, Alignment), Size * 8 / Alignment);

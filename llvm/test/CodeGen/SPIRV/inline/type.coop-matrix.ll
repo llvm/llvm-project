@@ -1,5 +1,7 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv-unknown-unknown %s -o - | FileCheck %s
 
+; TODO: enable spirv-val once we can add cooperative matrix capability and extension
+
 ; CHECK: [[float_t:%[0-9]+]] = OpTypeFloat 32
 ; CHECK: [[uint32_t:%[0-9]+]] = OpTypeInt 32 0
 
