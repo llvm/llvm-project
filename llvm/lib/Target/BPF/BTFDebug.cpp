@@ -1026,7 +1026,7 @@ void BTFDebug::constructLineInfo(MCSymbol *Label, const DIFile *File,
   LineInfo.Label = Label;
   LineInfo.FileNameOff = addString(FileName);
   // If file content is not available, let LineOff = 0.
-  auto &Content = FileContent[FileName];
+  const auto &Content = FileContent[FileName];
   if (Line < Content.size())
     LineInfo.LineOff = addString(Content[Line]);
   else
