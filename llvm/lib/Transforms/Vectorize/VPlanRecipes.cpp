@@ -469,8 +469,9 @@ Value *VPInstruction::generate(VPTransformState &State) {
     return Builder.CreateNot(A, Name);
   }
   case Instruction::ExtractElement: {
+    assert(State.VF.isVector() && "Only extract elements from vectors");
     Value *Vec = State.get(getOperand(0));
-    Value *Idx = State.get(getOperand(1), true);
+    Value *Idx = State.get(getOperand(1), /*IsScalar=*/true);
     return Builder.CreateExtractElement(Vec, Idx, Name);
   }
   case Instruction::ICmp: {
@@ -887,6 +888,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
     return false;
   case Instruction::PHI:
     return true;
+  case Instruction::ExtractElement:
+    return Op == getOperand(1);
   case Instruction::ICmp:
   case Instruction::Select:
   case Instruction::Or:
