@@ -393,7 +393,7 @@ void SGMapPropagation::visitDpasOp(xegpu::DpasOp dpas,
     propagateIfChanged(operands[2],
                        operands[2]->meet(getSGMapForDPASOperand(cTy, 2)));
   }
-};
+}
 
 /// Set the layout for the value and tensor descriptor operands in StoreNdOp.
 void SGMapPropagation::visitStoreNdOp(xegpu::StoreNdOp store,
