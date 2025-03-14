@@ -1102,11 +1102,11 @@ private:
         // When fast reduction is enabled, the number of teams is capped by
         // the MaxCUMultiplier constant.
         // When envar is enabled, use it for computing MaxNumGroup.
-        if (EnvarCUMultiplier > 0) {
+        if (EnvarCUMultiplier > 0)
           MaxNumGroups = DeviceNumCUs * EnvarCUMultiplier;
-        } else {
+        else
           MaxNumGroups = DeviceNumCUs * llvm::omp::xteam_red::MaxCUMultiplier;
-        }
+
       } else {
         // When fast reduction is not enabled, the number of teams is capped
         // by the metadata that clang CodeGen created. The number of teams
