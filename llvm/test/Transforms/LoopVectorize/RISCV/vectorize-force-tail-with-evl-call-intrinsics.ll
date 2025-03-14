@@ -1047,24 +1047,24 @@ declare i64 @llvm.llrint.i64.f64(double)
 declare i32 @llvm.abs.i32(i32, i1 immarg)
 ;.
 ; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
-; IF-EVL: [[META1]] = !{!"llvm.loop.isvectorized.withevl", i32 1}
-; IF-EVL: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
+; IF-EVL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; IF-EVL: [[META2]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
 ; IF-EVL: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META2]]}
+; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META1]]}
 ; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META2]]}
+; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META1]]}
 ; IF-EVL: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP8]] = distinct !{[[LOOP8]], [[META2]]}
+; IF-EVL: [[LOOP8]] = distinct !{[[LOOP8]], [[META1]]}
 ; IF-EVL: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP10]] = distinct !{[[LOOP10]], [[META2]]}
+; IF-EVL: [[LOOP10]] = distinct !{[[LOOP10]], [[META1]]}
 ; IF-EVL: [[LOOP11]] = distinct !{[[LOOP11]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP12]] = distinct !{[[LOOP12]], [[META2]]}
+; IF-EVL: [[LOOP12]] = distinct !{[[LOOP12]], [[META1]]}
 ; IF-EVL: [[LOOP13]] = distinct !{[[LOOP13]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP14]] = distinct !{[[LOOP14]], [[META2]]}
+; IF-EVL: [[LOOP14]] = distinct !{[[LOOP14]], [[META1]]}
 ; IF-EVL: [[LOOP15]] = distinct !{[[LOOP15]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP16]] = distinct !{[[LOOP16]], [[META2]]}
+; IF-EVL: [[LOOP16]] = distinct !{[[LOOP16]], [[META1]]}
 ; IF-EVL: [[LOOP17]] = distinct !{[[LOOP17]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP18]] = distinct !{[[LOOP18]], [[META2]]}
+; IF-EVL: [[LOOP18]] = distinct !{[[LOOP18]], [[META1]]}
 ; IF-EVL: [[LOOP19]] = distinct !{[[LOOP19]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP20]] = distinct !{[[LOOP20]], [[META2]]}
+; IF-EVL: [[LOOP20]] = distinct !{[[LOOP20]], [[META1]]}
 ;.

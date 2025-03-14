@@ -7991,6 +7991,18 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
 
       LoopVectorizeHints Hints(L, true, *ORE);
       Hints.setAlreadyVectorized();
+
+      // Check if it's EVL-vectorized and mark the corresponding metadata.
+      // Note that we could have done this during the codegen of
+      // ExplictVectorLength, but the enclosing vector loop was not in a good
+      // shape for us to attach the metadata.
+      if (any_of(*HeaderVPBB, [](const VPRecipeBase &Recipe) {
+            // Looking for the ExplictVectorLength VPInstruction.
+            if (const auto *VI = dyn_cast<VPInstruction>(&Recipe))
+              return VI->getOpcode() == VPInstruction::ExplicitVectorLength;
+            return false;
+          }))
+        Hints.setEVLVectorized();
     }
     TargetTransformInfo::UnrollingPreferences UP;
     TTI.getUnrollingPreferences(L, *PSE.getSE(), UP, ORE);

@@ -391,14 +391,14 @@ exit:
 }
 ;.
 ; IF-EVL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]], [[META3:![0-9]+]]}
-; IF-EVL: [[META1]] = !{!"llvm.loop.isvectorized.withevl", i32 1}
-; IF-EVL: [[META2]] = !{!"llvm.loop.isvectorized", i32 1}
+; IF-EVL: [[META1]] = !{!"llvm.loop.isvectorized", i32 1}
+; IF-EVL: [[META2]] = !{!"llvm.loop.isvectorized.tailfoldingstyle", !"evl"}
 ; IF-EVL: [[META3]] = !{!"llvm.loop.unroll.runtime.disable"}
-; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META2]]}
+; IF-EVL: [[LOOP4]] = distinct !{[[LOOP4]], [[META3]], [[META1]]}
 ; IF-EVL: [[LOOP5]] = distinct !{[[LOOP5]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META3]], [[META2]]}
+; IF-EVL: [[LOOP6]] = distinct !{[[LOOP6]], [[META3]], [[META1]]}
 ; IF-EVL: [[LOOP7]] = distinct !{[[LOOP7]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP8]] = distinct !{[[LOOP8]], [[META3]], [[META2]]}
+; IF-EVL: [[LOOP8]] = distinct !{[[LOOP8]], [[META3]], [[META1]]}
 ; IF-EVL: [[LOOP9]] = distinct !{[[LOOP9]], [[META1]], [[META2]], [[META3]]}
-; IF-EVL: [[LOOP10]] = distinct !{[[LOOP10]], [[META3]], [[META2]]}
+; IF-EVL: [[LOOP10]] = distinct !{[[LOOP10]], [[META3]], [[META1]]}
 ;.
