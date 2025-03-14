@@ -774,9 +774,19 @@ mlir::Value createZeroValue(fir::FirOpBuilder &builder, mlir::Location loc,
 std::optional<std::int64_t> getExtentFromTriplet(mlir::Value lb, mlir::Value ub,
                                                  mlir::Value stride);
 
+/// Compute the extent value given the lower bound \lb and upper bound \ub.
+/// All inputs must have the same SSA integer type.
+mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::Value lb, mlir::Value ub);
+mlir::Value computeExtent(fir::FirOpBuilder &builder, mlir::Location loc,
+                          mlir::Value lb, mlir::Value ub, mlir::Value zero,
+                          mlir::Value one);
+
 /// Generate max(\p value, 0) where \p value is a scalar integer.
 mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
                            mlir::Value value);
+mlir::Value genMaxWithZero(fir::FirOpBuilder &builder, mlir::Location loc,
+                           mlir::Value value, mlir::Value zero);
 
 /// The type(C_PTR/C_FUNPTR) is defined as the derived type with only one
 /// component of integer 64, and the component is the C address. Get the C
