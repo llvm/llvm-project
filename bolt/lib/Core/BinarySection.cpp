@@ -130,6 +130,18 @@ void BinarySection::emitAsData(MCStreamer &Streamer,
       }
 #endif
 
+      if (!BC.isRISCV() && std::distance(ROI, ROE) > 1) {
+        errs() << "BOLT-WARNING: multiple relocations at the same offset:\n";
+        for (const auto &Relocation : make_range(ROI, ROE)) {
+          errs() << "  "
+                 << (Relocation.Symbol ? Relocation.Symbol->getName()
+                                       : StringRef("<none>"))
+                 << " at offset 0x" << Twine::utohexstr(Relocation.Offset)
+                 << " with type " << Relocation.Type << '\n';
+        }
+        ROI = std::prev(ROE);
+      }
+
       size_t RelocationSize = Relocation::emit(ROI, ROE, &Streamer);
       SectionOffset += RelocationSize;
     }

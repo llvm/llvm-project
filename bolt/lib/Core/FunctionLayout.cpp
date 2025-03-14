@@ -150,6 +150,10 @@ void FunctionLayout::eraseBasicBlocks(
     FF.StartIndex -= TotalErased;
     TotalErased += Erased;
   }
+  for (BinaryBasicBlock *BB : Blocks) {
+    if (IsErased(BB))
+      BB->undefineLabels();
+  }
   llvm::erase_if(Blocks, IsErased);
 
   // Remove empty fragments at the end

@@ -238,6 +238,10 @@ public:
     return StringRef("\0\0\0\0", 4);
   }
 
+  StringRef getUndefFillValue() const override {
+    return StringRef("\x73\x10\x00\xc0", 4); // UNIMP
+  }
+
   void createCall(unsigned Opcode, MCInst &Inst, const MCSymbol *Target,
                   MCContext *Ctx) {
     Inst.setOpcode(Opcode);

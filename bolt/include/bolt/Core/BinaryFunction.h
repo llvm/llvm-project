@@ -294,6 +294,12 @@ private:
   /// Pseudo functions should not be disassembled or emitted.
   bool IsPseudo{false};
 
+  // True if address of this function can not be changed
+  bool KeepAddress{false};
+
+  // True if code of this function might be changed at run time
+  bool MayChange{false};
+
   /// True if the original function code has all necessary relocations to track
   /// addresses of functions emitted to new locations. Typically set for
   /// functions that we are not going to emit.
@@ -1195,6 +1201,21 @@ public:
   /// Return true if all callbacks returned true, false otherwise.
   bool forEachEntryPoint(EntryPointCallbackTy Callback) const;
 
+  void undefineLabels() {
+    for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
+      BC.UndefinedSymbols.insert(LI.second);
+
+    for (MCSymbol *const EndLabel : FunctionEndLabels)
+      if (EndLabel)
+        BC.UndefinedSymbols.insert(EndLabel);
+
+    for (const std::pair<const uint32_t, MCInst> &II : Instructions)
+      BC.undefineInstLabel(II.second);
+
+    for (BinaryBasicBlock *BB : BasicBlocks)
+      BB->undefineLabels();
+  }
+
   /// Return MC symbol associated with the end of the function.
   MCSymbol *
   getFunctionEndLabel(const FragmentNum Fragment = FragmentNum::main()) const {
@@ -1238,6 +1259,17 @@ public:
           BC.Ctx->getOrCreateSymbol("func_cold_const_island@" + getOneName());
     }
     return Islands->FunctionColdConstantIslandLabel;
+  }
+
+  const FunctionFragment *
+  getFunctionFragmentForOutputAddress(uint64_t OutputAddress) const {
+    for (const FunctionFragment &FF : Layout.fragments()) {
+      uint64_t Address = FF.getAddress();
+      uint64_t Size = FF.getImageSize();
+      if (Address <= OutputAddress && OutputAddress < Address + Size)
+        return &FF;
+    }
+    return nullptr;
   }
 
   /// Return true if this is a function representing a PLT entry.
@@ -1314,6 +1346,12 @@ public:
   /// Return true if the function should not be disassembled, emitted, or
   /// otherwise processed.
   bool isPseudo() const { return IsPseudo; }
+
+  /// Return true if address of this function can not be changed
+  bool mustKeepAddress() const { return KeepAddress; }
+
+  /// Return true if code of this function might be changed at run time
+  bool mayChange() const { return MayChange; }
 
   /// Return true if the function contains explicit or implicit indirect branch
   /// to its split fragments, e.g., split jump table, landing pad in split
@@ -1738,6 +1776,8 @@ public:
 
   /// Mark the function as using ORC format for stack unwinding.
   void setHasORC(bool V) { HasORC = V; }
+
+  void setMayChange() { MayChange = true; }
 
   BinaryFunction &setPersonalityFunction(uint64_t Addr) {
     assert(!PersonalityFunction && "can't set personality function twice");

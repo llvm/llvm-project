@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Core/BinaryFunction.h"
+#include "bolt/Passes/PatchEntries.h"
 #include "bolt/Rewrite/MetadataRewriter.h"
 #include "bolt/Rewrite/MetadataRewriters.h"
 #include "bolt/Utils/CommandLineOpts.h"
@@ -30,16 +31,6 @@ using namespace llvm;
 using namespace bolt;
 
 namespace opts {
-
-static cl::opt<bool>
-    AltInstHasPadLen("alt-inst-has-padlen",
-                     cl::desc("specify that .altinstructions has padlen field"),
-                     cl::init(false), cl::Hidden, cl::cat(BoltCategory));
-
-static cl::opt<uint32_t>
-    AltInstFeatureSize("alt-inst-feature-size",
-                       cl::desc("size of feature field in .altinstructions"),
-                       cl::init(2), cl::Hidden, cl::cat(BoltCategory));
 
 static cl::opt<bool>
     DumpAltInstructions("dump-alt-instructions",
@@ -79,11 +70,6 @@ static cl::opt<bool>
                    cl::desc("dump Linux kernel static keys jump table"),
                    cl::init(false), cl::Hidden, cl::cat(BoltCategory));
 
-static cl::opt<bool> LongJumpLabels(
-    "long-jump-labels",
-    cl::desc("always use long jumps/nops for Linux kernel static keys"),
-    cl::init(false), cl::Hidden, cl::cat(BoltCategory));
-
 static cl::opt<bool>
     PrintORC("print-orc",
              cl::desc("print ORC unwind information for instructions"),
@@ -94,7 +80,7 @@ static cl::opt<bool>
 /// Linux kernel version
 struct LKVersion {
   LKVersion() {}
-  LKVersion(unsigned Major, unsigned Minor, unsigned Rev)
+  LKVersion(unsigned Major, unsigned Minor, unsigned Rev = 0)
       : Major(Major), Minor(Minor), Rev(Rev) {}
 
   bool operator<(const LKVersion &Other) const {
@@ -229,13 +215,18 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   static constexpr size_t STATIC_KEYS_JUMP_ENTRY_SIZE = 8;
 
   struct JumpInfoEntry {
-    bool Likely;
-    bool InitValue;
+    bool Likely{false};
+    bool InitValue{false};
+    bool Nop{false};
+    MCSymbol *JumpInstLabel{nullptr};
+    BinarySection *Sec{nullptr};
+    uint64_t JumpAddress{0};
+    BinaryFunction *BF{nullptr};
   };
-  SmallVector<JumpInfoEntry, 16> JumpInfo;
+  std::vector<JumpInfoEntry> JumpInfo;
 
-  /// Static key entries that need nop conversion.
-  DenseSet<uint32_t> NopIDs;
+  // Use long jumps/nops for Linux kernel static keys
+  bool LongJumpLabels{false};
 
   /// Section containing static call table.
   ErrorOr<BinarySection &> StaticCallSection = std::errc::bad_address;
@@ -249,11 +240,6 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   };
   using StaticCallListType = std::vector<StaticCallInfo>;
   StaticCallListType StaticCallEntries;
-
-  /// Section containing the Linux exception table.
-  ErrorOr<BinarySection &> ExceptionsSection = std::errc::bad_address;
-  static constexpr size_t EXCEPTION_TABLE_ENTRY_SIZE = 12;
-
   /// Functions with exception handling code.
   DenseSet<BinaryFunction *> FunctionsWithExceptions;
 
@@ -265,6 +251,15 @@ class LinuxKernelRewriter final : public MetadataRewriter {
 
   /// .altinstructions section.
   ErrorOr<BinarySection &> AltInstrSection = std::errc::bad_address;
+
+  struct AltInstrEntry {
+    uint64_t Offset{0};
+    uint64_t OrgInstrAddr{0};
+    uint64_t AltInstrAddr{0};
+    uint8_t Instrlen{0};
+    uint8_t Replacementlen{0};
+  };
+  std::vector<AltInstrEntry> AltInstrEntries;
 
   /// Section containing Linux bug table.
   ErrorOr<BinarySection &> BugTableSection = std::errc::bad_address;
@@ -314,7 +309,7 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   Error readStaticCalls();
   Error rewriteStaticCalls();
 
-  Error readExceptionTable();
+  Error readExceptionTable(StringRef SectionName);
   Error rewriteExceptionTable();
 
   /// Paravirtual instruction patch sites.
@@ -332,8 +327,6 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   /// Handle alternative instruction info from .altinstructions.
   Error readAltInstructions();
   void processAltInstructionsPostCFG();
-  Error tryReadAltInstructions(uint32_t AltInstFeatureSize,
-                               bool AltInstHasPadLen, bool ParseOnly);
 
   /// Read .pci_fixup
   Error readPCIFixupTable();
@@ -344,12 +337,39 @@ class LinuxKernelRewriter final : public MetadataRewriter {
   Error updateStaticKeysJumpTablePostEmit();
 
 public:
-  LinuxKernelRewriter(BinaryContext &BC)
-      : MetadataRewriter("linux-kernel-rewriter", BC) {}
+  LinuxKernelRewriter(RewriteInstance &RI)
+      : MetadataRewriter("linux-kernel-rewriter", RI) {}
 
   Error preCFGInitializer() override {
     if (Error E = detectLinuxKernelVersion())
       return E;
+
+    auto ShouldIgnore = [this](const BinaryFunction &Function) {
+      std::optional<StringRef> SectionName = Function.getOriginSectionName();
+      if (!SectionName || *SectionName != ".text")
+        return true;
+
+      uint64_t Address = Function.getAddress();
+
+      if (BC.isX86()) {
+        BinaryData *BDStart = BC.getBinaryDataByName("irq_entries_start");
+        if (BDStart && BDStart->containsAddress(Address))
+          return true;
+
+        if (BC.isInRange("__static_call_text_start", "__static_call_text_end",
+                         Address))
+          return true;
+      }
+
+      if (BC.isInRange("__noinstr_text_start", "__noinstr_text_end", Address))
+        return true;
+
+      return false;
+    };
+
+    for (BinaryFunction *Function : BC.getAllBinaryFunctions())
+      if (ShouldIgnore(*Function))
+        Function->setIgnored();
 
     processLKSections();
 
@@ -359,7 +379,10 @@ public:
     if (Error E = readStaticCalls())
       return E;
 
-    if (Error E = readExceptionTable())
+    if (Error E = readExceptionTable("__ex_table"))
+      return E;
+
+    if (Error E = readExceptionTable("__kvm_ex_table"))
       return E;
 
     if (Error E = readParaInstructions())
@@ -446,6 +469,8 @@ Error LinuxKernelRewriter::detectLinuxKernelVersion() {
       LinuxKernelVersion = LKVersion(Major, Minor, Rev);
       BC.outs() << "BOLT-INFO: Linux kernel version is " << Match[1].str()
                 << "\n";
+      if (LinuxKernelVersion < LKVersion(5, 0))
+        return createStringError("Unsupported Linux kernel version");
       return Error::success();
     }
   }
@@ -557,8 +582,8 @@ void LinuxKernelRewriter::processInstructionFixups() {
       continue;
 
     Fixup.Section.addRelocation(Fixup.Offset, &Fixup.Label,
-                                Fixup.IsPCRelative ? ELF::R_X86_64_PC32
-                                                   : ELF::R_X86_64_64,
+                                Fixup.IsPCRelative ? Relocation::getPC32()
+                                                   : Relocation::getAbs64(),
                                 /*Addend*/ 0);
   }
 }
@@ -1074,7 +1099,7 @@ Error LinuxKernelRewriter::rewriteStaticCalls() {
                                  StaticCallSection->getAddress() +
                                  (Entry.ID - 1) * STATIC_CALL_ENTRY_SIZE;
     StaticCallSection->addRelocation(EntryOffset, Entry.Label,
-                                     ELF::R_X86_64_PC32, /*Addend*/ 0);
+                                     Relocation::getPC32(), /*Addend*/ 0);
   }
 
   return Error::success();
@@ -1094,12 +1119,31 @@ Error LinuxKernelRewriter::rewriteStaticCalls() {
 ///
 /// More info at:
 /// https://www.kernel.org/doc/Documentation/x86/exception-tables.txt
-Error LinuxKernelRewriter::readExceptionTable() {
-  ExceptionsSection = BC.getUniqueSectionByName("__ex_table");
+Error LinuxKernelRewriter::readExceptionTable(StringRef SectionName) {
+  ErrorOr<BinarySection &> ExceptionsSection =
+      BC.getUniqueSectionByName(SectionName);
   if (!ExceptionsSection)
     return Error::success();
 
-  if (ExceptionsSection->getSize() % EXCEPTION_TABLE_ENTRY_SIZE)
+  size_t ExceptionTableEntrySize = 0;
+  switch (BC.TheTriple->getArch()) {
+  case llvm::Triple::x86_64:
+    ExceptionTableEntrySize = 12;
+    break;
+
+  case llvm::Triple::aarch64:
+    if (LinuxKernelVersion >= LKVersion(5, 16))
+      ExceptionTableEntrySize = 12;
+    else
+      ExceptionTableEntrySize = 8;
+    break;
+
+  default:
+    llvm_unreachable("Unsupported architecture");
+  }
+  assert(ExceptionTableEntrySize && "exception table entry size is unknown");
+
+  if (ExceptionsSection->getSize() % ExceptionTableEntrySize)
     return createStringError(errc::executable_format_error,
                              "exception table size error");
 
@@ -1111,7 +1155,7 @@ Error LinuxKernelRewriter::readExceptionTable() {
   while (Cursor && Cursor.tell() < ExceptionsSection->getSize()) {
     const uint64_t InstAddress = AE.getPCRelAddress32(Cursor);
     const uint64_t FixupAddress = AE.getPCRelAddress32(Cursor);
-    const uint64_t Data = AE.getU32(Cursor);
+    Cursor.seek(Cursor.tell() + ExceptionTableEntrySize - 8);
 
     // Consume the status of the cursor.
     if (!Cursor)
@@ -1125,8 +1169,7 @@ Error LinuxKernelRewriter::readExceptionTable() {
     if (opts::DumpExceptions) {
       BC.outs() << "Exception Entry: " << EntryID << '\n';
       BC.outs() << "\tInsn:  0x" << Twine::utohexstr(InstAddress) << '\n'
-                << "\tFixup: 0x" << Twine::utohexstr(FixupAddress) << '\n'
-                << "\tData:  0x" << Twine::utohexstr(Data) << '\n';
+                << "\tFixup: 0x" << Twine::utohexstr(FixupAddress) << '\n';
     }
 
     MCInst *Inst = nullptr;
@@ -1174,8 +1217,13 @@ Error LinuxKernelRewriter::readExceptionTable() {
   }
 
   BC.outs() << "BOLT-INFO: parsed "
-            << ExceptionsSection->getSize() / EXCEPTION_TABLE_ENTRY_SIZE
+            << ExceptionsSection->getSize() / ExceptionTableEntrySize
             << " exception table entries\n";
+
+  // Disable output of functions with exceptions before rewrite support is
+  // added.
+  for (BinaryFunction *BF : FunctionsWithExceptions)
+    BF->setIgnored();
 
   return Error::success();
 }
@@ -1183,14 +1231,7 @@ Error LinuxKernelRewriter::readExceptionTable() {
 /// Depending on the value of CONFIG_BUILDTIME_TABLE_SORT, the kernel expects
 /// the exception table to be sorted. Hence we have to sort it after code
 /// reordering.
-Error LinuxKernelRewriter::rewriteExceptionTable() {
-  // Disable output of functions with exceptions before rewrite support is
-  // added.
-  for (BinaryFunction *BF : FunctionsWithExceptions)
-    BF->setSimple(false);
-
-  return Error::success();
-}
+Error LinuxKernelRewriter::rewriteExceptionTable() { return Error::success(); }
 
 /// .parainsrtuctions section contains information for patching parvirtual call
 /// instructions during runtime. The entries in the section are in the form:
@@ -1257,6 +1298,10 @@ Error LinuxKernelRewriter::readParaInstructions() {
     }
   }
 
+  // Disable output of functions with paravirtual instructions before the
+  // rewrite support is complete.
+  skipFunctionsWithAnnotation("ParaSite");
+
   BC.outs() << "BOLT-INFO: parsed " << EntryID << " paravirtual patch sites\n";
 
   return Error::success();
@@ -1272,7 +1317,7 @@ void LinuxKernelRewriter::skipFunctionsWithAnnotation(
         return BC.MIB->hasAnnotation(Inst, Annotation);
       });
       if (HasAnnotation) {
-        BF.setSimple(false);
+        BF.setIgnored();
         break;
       }
     }
@@ -1280,10 +1325,6 @@ void LinuxKernelRewriter::skipFunctionsWithAnnotation(
 }
 
 Error LinuxKernelRewriter::rewriteParaInstructions() {
-  // Disable output of functions with paravirtual instructions before the
-  // rewrite support is complete.
-  skipFunctionsWithAnnotation("ParaSite");
-
   return Error::success();
 }
 
@@ -1377,7 +1418,8 @@ Error LinuxKernelRewriter::rewriteBugTable() {
         MCSymbol *Label =
             BC.MIB->getOrCreateInstLabel(Inst, "__BUG_", BC.Ctx.get());
         const uint64_t EntryOffset = (ID - 1) * BUG_TABLE_ENTRY_SIZE;
-        BugTableSection->addRelocation(EntryOffset, Label, ELF::R_X86_64_PC32,
+        BugTableSection->addRelocation(EntryOffset, Label,
+                                       Relocation::getPC32(),
                                        /*Addend*/ 0);
       }
     }
@@ -1387,7 +1429,8 @@ Error LinuxKernelRewriter::rewriteBugTable() {
     for (const uint32_t ID : FunctionBugList[&BF]) {
       if (!EmittedIDs.count(ID)) {
         const uint64_t EntryOffset = (ID - 1) * BUG_TABLE_ENTRY_SIZE;
-        BugTableSection->addRelocation(EntryOffset, nullptr, ELF::R_X86_64_PC32,
+        BugTableSection->addRelocation(EntryOffset, nullptr,
+                                       Relocation::getPC32(),
                                        /*Addend*/ 0);
       }
     }
@@ -1399,95 +1442,73 @@ Error LinuxKernelRewriter::rewriteBugTable() {
 /// The kernel can replace certain instruction sequences depending on hardware
 /// it is running on and features specified during boot time. The information
 /// about alternative instruction sequences is stored in .altinstructions
-/// section. The format of entries in this section is defined in
-/// arch/x86/include/asm/alternative.h:
-///
+/// section. The format of entries in this section is defined as
 ///   struct alt_instr {
 ///     s32 instr_offset;
 ///     s32 repl_offset;
-///     uXX feature;
+///     ...
 ///     u8  instrlen;
 ///     u8  replacementlen;
-///	    u8  padlen;         // present in older kernels
+///     ...
 ///   } __packed;
 ///
-/// Note that the structure is packed.
+/// Note that the structure is packed and field names may not be exactly the
+/// same.
 ///
-/// Since the size of the "feature" field could be either u16 or u32, and
-/// "padlen" presence is unknown, we attempt to parse .altinstructions section
-/// using all possible combinations (four at this time). Since we validate the
-/// contents of the section and its size, the detection works quite well.
-/// Still, we leave the user the opportunity to specify these features on the
-/// command line and skip the guesswork.
+/// To parse entries we only need to know the entry size and offset of
+/// the field 'instrlen'.
 Error LinuxKernelRewriter::readAltInstructions() {
   AltInstrSection = BC.getUniqueSectionByName(".altinstructions");
   if (!AltInstrSection)
     return Error::success();
 
-  // Presence of "padlen" field.
-  std::vector<bool> PadLenVariants;
-  if (opts::AltInstHasPadLen.getNumOccurrences())
-    PadLenVariants.push_back(opts::AltInstHasPadLen);
-  else
-    PadLenVariants = {false, true};
+  unsigned AltInstrEntrySize{0};
+  unsigned AltInstrEntryInstrlenOffset{0};
 
-  // Size (in bytes) variants of "feature" field.
-  std::vector<uint32_t> FeatureSizeVariants;
-  if (opts::AltInstFeatureSize.getNumOccurrences())
-    FeatureSizeVariants.push_back(opts::AltInstFeatureSize);
-  else
-    FeatureSizeVariants = {2, 4};
-
-  for (bool AltInstHasPadLen : PadLenVariants) {
-    for (uint32_t AltInstFeatureSize : FeatureSizeVariants) {
-      LLVM_DEBUG({
-        dbgs() << "BOLT-DEBUG: trying AltInstHasPadLen = " << AltInstHasPadLen
-               << "; AltInstFeatureSize = " << AltInstFeatureSize << ";\n";
-      });
-      if (Error E = tryReadAltInstructions(AltInstFeatureSize, AltInstHasPadLen,
-                                           /*ParseOnly*/ true)) {
-        consumeError(std::move(E));
-        continue;
-      }
-
-      LLVM_DEBUG(dbgs() << "Matched .altinstructions format\n");
-
-      if (!opts::AltInstHasPadLen.getNumOccurrences())
-        BC.outs() << "BOLT-INFO: setting --" << opts::AltInstHasPadLen.ArgStr
-                  << '=' << AltInstHasPadLen << '\n';
-
-      if (!opts::AltInstFeatureSize.getNumOccurrences())
-        BC.outs() << "BOLT-INFO: setting --" << opts::AltInstFeatureSize.ArgStr
-                  << '=' << AltInstFeatureSize << '\n';
-
-      return tryReadAltInstructions(AltInstFeatureSize, AltInstHasPadLen,
-                                    /*ParseOnly*/ false);
+  switch (BC.TheTriple->getArch()) {
+  case llvm::Triple::x86_64:
+    if (LinuxKernelVersion >= LKVersion(6, 3)) {
+      AltInstrEntrySize = 18;
+      AltInstrEntryInstrlenOffset = 16;
+    } else if (LinuxKernelVersion >= LKVersion(5, 10, 133)) {
+      AltInstrEntrySize = 12;
+      AltInstrEntryInstrlenOffset = 10;
+    } else {
+      AltInstrEntrySize = 13;
+      AltInstrEntryInstrlenOffset = 10;
     }
+    break;
+  case llvm::Triple::aarch64:
+    AltInstrEntrySize = 12;
+    AltInstrEntryInstrlenOffset = 10;
+    break;
+  default:
+    llvm_unreachable("Unsupported architecture");
   }
 
-  // We couldn't match the format. Read again to properly propagate the error
-  // to the user.
-  return tryReadAltInstructions(opts::AltInstFeatureSize,
-                                opts::AltInstHasPadLen, /*ParseOnly*/ false);
-}
+  BC.outs() << "BOLT-INFO: AltInstrEntrySize = " << AltInstrEntrySize
+            << ", AltInstrEntryInstrlenOffset = " << AltInstrEntryInstrlenOffset
+            << "\n";
 
-Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
-                                                  bool AltInstHasPadLen,
-                                                  bool ParseOnly) {
   AddressExtractor AE(
       AltInstrSection->getContents(), AltInstrSection->getAddress(),
       BC.AsmInfo->isLittleEndian(), BC.AsmInfo->getCodePointerSize());
   AddressExtractor::Cursor Cursor(0);
   uint64_t EntryID = 0;
   while (Cursor && !AE.eof(Cursor)) {
-    const uint64_t OrgInstAddress = AE.getPCRelAddress32(Cursor);
-    const uint64_t AltInstAddress = AE.getPCRelAddress32(Cursor);
-    const uint64_t Feature = AE.getUnsigned(Cursor, AltInstFeatureSize);
-    const uint8_t OrgSize = AE.getU8(Cursor);
-    const uint8_t AltSize = AE.getU8(Cursor);
+    ++EntryID;
+    AltInstrEntries.push_back(AltInstrEntry());
+    AltInstrEntry &Entry = AltInstrEntries.back();
 
-    // Older kernels may have the padlen field.
-    const uint8_t PadLen = AltInstHasPadLen ? AE.getU8(Cursor) : 0;
+    Entry.Offset = Cursor.tell();
+    Entry.OrgInstrAddr = AE.getPCRelAddress32(Cursor);
+    Entry.AltInstrAddr = AE.getPCRelAddress32(Cursor);
+    Cursor.seek(Cursor.tell() + AltInstrEntryInstrlenOffset - 8);
+
+    Entry.Instrlen = AE.getU8(Cursor);
+    Entry.Replacementlen = AE.getU8(Cursor);
+    Cursor.seek(Cursor.tell() + AltInstrEntrySize -
+                (AltInstrEntryInstrlenOffset + 2));
 
     if (!Cursor)
       return createStringError(
@@ -1495,57 +1516,51 @@ Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
           "out of bounds while reading .altinstructions: %s",
           toString(Cursor.takeError()).c_str());
 
-    ++EntryID;
-
     if (opts::DumpAltInstructions) {
       BC.outs() << "Alternative instruction entry: " << EntryID
-                << "\n\tOrg:     0x" << Twine::utohexstr(OrgInstAddress)
-                << "\n\tAlt:     0x" << Twine::utohexstr(AltInstAddress)
-                << "\n\tFeature: 0x" << Twine::utohexstr(Feature)
-                << "\n\tOrgSize: " << (int)OrgSize
-                << "\n\tAltSize: " << (int)AltSize << '\n';
-      if (AltInstHasPadLen)
-        BC.outs() << "\tPadLen:  " << (int)PadLen << '\n';
+                << "\n\tOrg:     0x" << Twine::utohexstr(Entry.OrgInstrAddr)
+                << "\n\tAlt:     0x" << Twine::utohexstr(Entry.AltInstrAddr)
+                << "\n\tInstrlen: " << (int)Entry.Instrlen
+                << "\n\tReplacementlen: " << (int)Entry.Replacementlen << '\n';
     }
 
-    if (AltSize > OrgSize)
+    if (Entry.Replacementlen > Entry.Instrlen)
       return createStringError(errc::executable_format_error,
                                "error reading .altinstructions");
 
-    BinaryFunction *BF = BC.getBinaryFunctionContainingAddress(OrgInstAddress);
+    BinaryFunction *BF =
+        BC.getBinaryFunctionContainingAddress(Entry.OrgInstrAddr);
     if (!BF && opts::Verbosity) {
       BC.outs() << "BOLT-INFO: no function matches address 0x"
-                << Twine::utohexstr(OrgInstAddress)
+                << Twine::utohexstr(Entry.OrgInstrAddr)
                 << " of instruction from .altinstructions\n";
     }
 
     BinaryFunction *AltBF =
-        BC.getBinaryFunctionContainingAddress(AltInstAddress);
-    if (!ParseOnly && AltBF && BC.shouldEmit(*AltBF)) {
-      BC.errs()
-          << "BOLT-WARNING: alternative instruction sequence found in function "
-          << *AltBF << '\n';
+        BC.getBinaryFunctionContainingAddress(Entry.AltInstrAddr);
+    if (AltBF) {
+      if (BC.isX86() &&
+          !AltBF->getOneName().starts_with(".altinstr_replacement"))
+        BC.errs() << "BOLT-WARNING: alternative instruction sequence found in "
+                     "function "
+                  << *AltBF << '\n';
       AltBF->setIgnored();
     }
 
     if (!BF || !BF->hasInstructions())
       continue;
 
-    if (OrgInstAddress + OrgSize > BF->getAddress() + BF->getSize())
+    if (Entry.OrgInstrAddr + Entry.Instrlen > BF->getAddress() + BF->getSize())
       return createStringError(errc::executable_format_error,
                                "error reading .altinstructions");
 
     MCInst *Inst =
-        BF->getInstructionAtOffset(OrgInstAddress - BF->getAddress());
+        BF->getInstructionAtOffset(Entry.OrgInstrAddr - BF->getAddress());
     if (!Inst)
       return createStringError(errc::executable_format_error,
                                "no instruction at address 0x%" PRIx64
                                " referenced by .altinstructions entry %d",
-                               OrgInstAddress, EntryID);
-
-    if (ParseOnly)
-      continue;
-
+                               Entry.OrgInstrAddr, EntryID);
     // There could be more than one alternative instruction sequences for the
     // same original instruction. Annotate each alternative separately.
     std::string AnnotationName = "AltInst";
@@ -1558,18 +1573,15 @@ Error LinuxKernelRewriter::tryReadAltInstructions(uint32_t AltInstFeatureSize,
     // Annotate all instructions from the original sequence. Note that it's not
     // the most efficient way to look for instructions in the address range,
     // but since alternative instructions are uncommon, it will do for now.
-    for (uint32_t Offset = 1; Offset < OrgSize; ++Offset) {
-      Inst = BF->getInstructionAtOffset(OrgInstAddress + Offset -
+    for (uint32_t Offset = 1; Offset < Entry.Instrlen; ++Offset) {
+      Inst = BF->getInstructionAtOffset(Entry.OrgInstrAddr + Offset -
                                         BF->getAddress());
       if (Inst)
         BC.MIB->addAnnotation(*Inst, AnnotationName, EntryID);
     }
   }
-
-  if (!ParseOnly)
-    BC.outs() << "BOLT-INFO: parsed " << EntryID
-              << " alternative instruction entries\n";
-
+  BC.outs() << "BOLT-INFO: parsed " << EntryID
+            << " alternative instruction entries\n";
   return Error::success();
 }
 
@@ -1647,7 +1659,7 @@ Error LinuxKernelRewriter::readPCIFixupTable() {
     if (const uint64_t Offset = HookAddress - BF->getAddress()) {
       BC.errs() << "BOLT-WARNING: PCI fixup detected in the middle of function "
                 << *BF << " at offset 0x" << Twine::utohexstr(Offset) << '\n';
-      BF->setSimple(false);
+      BF->setIgnored();
     }
   }
 
@@ -1691,6 +1703,8 @@ Error LinuxKernelRewriter::readPCIFixupTable() {
 /// byte of the sequence with int3 before proceeding with actual code
 /// replacement.
 Error LinuxKernelRewriter::readStaticKeysJumpTable() {
+  LongJumpLabels = BC.isX86() && LinuxKernelVersion < LKVersion(5, 14);
+
   const BinaryData *StaticKeysJumpTable =
       BC.getBinaryDataByName("__start___jump_table");
   if (!StaticKeysJumpTable)
@@ -1743,6 +1757,7 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
     JumpInfo.push_back(JumpInfoEntry());
     JumpInfoEntry &Info = JumpInfo.back();
     Info.Likely = KeyAddress & 1;
+    Info.JumpAddress = JumpAddress;
 
     if (opts::DumpStaticKeys) {
       BC.outs() << "Static key jump entry: " << EntryID
@@ -1762,6 +1777,12 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
 
     if (!BF || !BC.shouldEmit(*BF))
       continue;
+    assert(BF->getOriginSection() &&
+           "the function did not originate from the file");
+    Info.BF = BF;
+    Info.Sec = BF->getOriginSection();
+
+    BF->setMayChange();
 
     MCInst *Inst = BF->getInstructionAtOffset(JumpAddress - BF->getAddress());
     if (!Inst)
@@ -1783,7 +1804,21 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
                                JumpAddress);
 
     const uint64_t Size = BC.computeInstructionSize(*Inst);
-    if (Size != 2 && Size != 5) {
+
+    auto checkSize = [this, Size]() {
+      switch (BC.TheTriple->getArch()) {
+      case llvm::Triple::x86_64:
+        if (LongJumpLabels)
+          return Size == 5;
+        return Size == 2 || Size == 5;
+      case llvm::Triple::aarch64:
+        return Size == 4;
+      default:
+        return false;
+      }
+    };
+
+    if (!checkSize()) {
       return createStringError(
           errc::executable_format_error,
           "unexpected static keys jump size at address 0x%" PRIx64,
@@ -1805,7 +1840,7 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
     //     by the kernel patching code. Newer kernels can work with both short
     //     and long branches. The code for long conditional branch is larger
     //     than unconditional one, so we are pessimistic in our estimations.
-    if (opts::LongJumpLabels)
+    if (LongJumpLabels)
       BC.MIB->createLongCondBranch(StaticKeyBranch, Target, 0, BC.Ctx.get());
     else
       BC.MIB->createCondBranch(StaticKeyBranch, Target, 0, BC.Ctx.get());
@@ -1832,7 +1867,7 @@ Error LinuxKernelRewriter::readStaticKeysJumpTable() {
     if (!BC.MIB->getOffset(*Inst))
       BC.MIB->setOffset(*Inst, JumpAddress - BF->getAddress());
 
-    if (opts::LongJumpLabels)
+    if (LongJumpLabels)
       BC.MIB->setSize(*Inst, 5);
   }
 
@@ -1865,21 +1900,33 @@ Error LinuxKernelRewriter::rewriteStaticKeysJumpTable() {
             const_cast<MCSymbol *>(BC.MIB->getTargetSymbol(Inst));
         assert(Target && "Target symbol should be set.");
 
-        const JumpInfoEntry &Info = JumpInfo[EntryID - 1];
+        JumpInfoEntry &Info = JumpInfo[EntryID - 1];
         const bool IsBranch = Info.Likely ^ Info.InitValue;
 
         uint32_t Size = *BC.MIB->getSize(Inst);
-        if (Size == 2)
-          ++NumShort;
-        else if (Size == 5)
-          ++NumLong;
-        else
-          llvm_unreachable("Wrong size for static keys jump instruction.");
+        switch (BC.TheTriple->getArch()) {
+        case llvm::Triple::x86_64:
+          if (Size == 2)
+            ++NumShort;
+          else if (Size == 5)
+            ++NumLong;
+          else
+            llvm_unreachable("Wrong size for static keys jump instruction.");
+          break;
+        case llvm::Triple::aarch64:
+          if (Size == 4)
+            ++NumLong;
+          else
+            llvm_unreachable("Wrong size for static keys jump instruction.");
+          break;
+        default:
+          llvm_unreachable("Unsupported architecture");
+        }
 
         MCInst NewInst;
         // Replace the instruction with unconditional jump even if it needs to
         // be nop in the binary.
-        if (opts::LongJumpLabels) {
+        if (LongJumpLabels) {
           BC.MIB->createLongUncondBranch(NewInst, Target, BC.Ctx.get());
         } else {
           // Newer kernels can handle short and long jumps for static keys.
@@ -1893,20 +1940,21 @@ Error LinuxKernelRewriter::rewriteStaticKeysJumpTable() {
 
         // Mark the instruction for nop conversion.
         if (!IsBranch)
-          NopIDs.insert(EntryID);
+          Info.Nop = true;
 
-        MCSymbol *Label =
-            BC.MIB->getOrCreateInstLabel(Inst, "__SK_", BC.Ctx.get());
+        Info.JumpInstLabel = BC.MIB->getOrCreateInstLabel(
+            Inst, formatv("__bolt.static_key_{0:X+8}_", EntryID), BC.Ctx.get(),
+            false);
 
         // Create a relocation against the label.
         const uint64_t EntryOffset = StaticKeysJumpTableAddress -
                                      StaticKeysJumpSection->getAddress() +
                                      (EntryID - 1) * 16;
-        StaticKeysJumpSection->addRelocation(EntryOffset, Label,
-                                             ELF::R_X86_64_PC32,
+        StaticKeysJumpSection->addRelocation(EntryOffset, Info.JumpInstLabel,
+                                             Relocation::getPC32(),
                                              /*Addend*/ 0);
-        StaticKeysJumpSection->addRelocation(EntryOffset + 4, Target,
-                                             ELF::R_X86_64_PC32, /*Addend*/ 0);
+        StaticKeysJumpSection->addRelocation(
+            EntryOffset + 4, Target, Relocation::getPC32(), /*Addend*/ 0);
       }
     }
   }
@@ -1922,69 +1970,98 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
   if (!StaticKeysJumpSection || !StaticKeysJumpSection->isFinalized())
     return Error::success();
 
-  const uint64_t SectionAddress = StaticKeysJumpSection->getAddress();
-  AddressExtractor AE(StaticKeysJumpSection->getOutputContents(),
-                      SectionAddress, BC.AsmInfo->isLittleEndian(),
-                      BC.AsmInfo->getCodePointerSize());
-  AddressExtractor::Cursor Cursor(StaticKeysJumpTableAddress - SectionAddress);
-  const BinaryData *Stop = BC.getBinaryDataByName("__stop___jump_table");
-  uint32_t EntryID = 0;
   uint64_t NumShort = 0;
   uint64_t NumLong = 0;
-  while (Cursor && Cursor.tell() < Stop->getAddress() - SectionAddress) {
-    const uint64_t JumpAddress = AE.getPCRelAddress32(Cursor);
-    const uint64_t TargetAddress = AE.getPCRelAddress32(Cursor);
-    const uint64_t KeyAddress = AE.getPCRelAddress64(Cursor);
-
-    // Consume the status of the cursor.
-    if (!Cursor)
-      return createStringError(errc::executable_format_error,
-                               "out of bounds while updating static keys: %s",
-                               toString(Cursor.takeError()).c_str());
-
-    ++EntryID;
-
-    LLVM_DEBUG({
-      dbgs() << "\n\tJumpAddress:   0x" << Twine::utohexstr(JumpAddress)
-             << "\n\tTargetAddress: 0x" << Twine::utohexstr(TargetAddress)
-             << "\n\tKeyAddress:    0x" << Twine::utohexstr(KeyAddress) << '\n';
-    });
-    (void)TargetAddress;
-    (void)KeyAddress;
-
-    BinaryFunction *BF =
-        BC.getBinaryFunctionContainingAddress(JumpAddress,
-                                              /*CheckPastEnd*/ false,
-                                              /*UseMaxSize*/ true);
-    assert(BF && "Cannot get function for modified static key.");
-
-    if (!BF->isEmitted())
+  for (JumpInfoEntry &Info : JumpInfo) {
+    MCSymbol *Label = Info.JumpInstLabel;
+    if (!Label)
       continue;
 
-    // Disassemble instruction to collect stats even if nop-conversion is
-    // unnecessary.
-    MutableArrayRef<uint8_t> Contents = MutableArrayRef<uint8_t>(
-        reinterpret_cast<uint8_t *>(BF->getImageAddress()), BF->getImageSize());
-    assert(Contents.size() && "Non-empty function image expected.");
+    BinaryFunction *BF = Info.BF;
+    if (!BF || !BF->isEmitted())
+      continue;
+
+    std::optional<uint64_t> JumpAddress = lookupSymbol(Label->getName());
+    assert(JumpAddress && "missing static key jump instruction label");
+
+    uint64_t ContentsAddress{0};
+    uint64_t ContentsSize{0};
+    MutableArrayRef<uint8_t> Contents;
+
+    if (!BC.HasRelocations) {
+      const FunctionFragment *FF =
+          BF->getFunctionFragmentForOutputAddress(*JumpAddress);
+      assert(FF && "Can not get fragment for jump address");
+
+      ContentsAddress = FF->getAddress();
+      ContentsSize = FF->getImageSize();
+      Contents = MutableArrayRef<uint8_t>(FF->getOutputData(), ContentsSize);
+    } else {
+      ErrorOr<BinarySection &> Sec =
+          BC.getSectionForOutputAddress(*JumpAddress);
+      assert(Sec && "Can not get section for jump address.");
+
+      ContentsAddress = Sec->getOutputAddress();
+      ContentsSize = Sec->getOutputSize();
+      Contents = MutableArrayRef<uint8_t>(Sec->getOutputData(), ContentsSize);
+    }
 
     MCInst Inst;
     uint64_t Size;
-    const uint64_t JumpOffset = JumpAddress - BF->getAddress();
+    const uint64_t JumpOffset = *JumpAddress - ContentsAddress;
     if (!BC.DisAsm->getInstruction(Inst, Size, Contents.slice(JumpOffset), 0,
                                    nulls())) {
       llvm_unreachable("Unable to disassemble jump instruction.");
     }
     assert(BC.MIB->isBranch(Inst) && "Branch instruction expected.");
+    assert(JumpOffset + Size <= ContentsAddress + ContentsSize);
 
-    if (Size == 2)
-      ++NumShort;
-    else if (Size == 5)
-      ++NumLong;
-    else
-      llvm_unreachable("Unexpected size for static keys jump instruction.");
+    switch (BC.TheTriple->getArch()) {
+    case llvm::Triple::x86_64:
+      if (Size == 2)
+        ++NumShort;
+      else if (Size == 5)
+        ++NumLong;
+      else
+        llvm_unreachable("Unexpected size for static keys jump instruction.");
+      break;
+    case llvm::Triple::aarch64:
+      if (Size == 4)
+        ++NumLong;
+      else
+        llvm_unreachable("Unexpected size for static keys jump instruction.");
+      break;
+    default:
+      llvm_unreachable("Unsupported architecture");
+    }
+
+    if (BC.HasRelocations) {
+      // To avoid undefined behaviors, fill the jump address with Undef
+
+      size_t PatchSize = PatchEntries::getPatchSize(BC);
+      assert(BF->isPatched());
+      assert(Info.JumpAddress != JumpAddress);
+
+      bool NotOverlap =
+          BF->forEachEntryPoint([&](uint64_t EntryOffset, const MCSymbol *) {
+            uint64_t EntryAddress = EntryOffset + BF->getAddress();
+            return Info.JumpAddress >= EntryAddress + PatchSize ||
+                   Info.JumpAddress + Size <= EntryAddress;
+          });
+
+      if (NotOverlap)
+        Info.Sec->addPatch(Info.JumpAddress - Info.Sec->getAddress(),
+                           BC.MIB->getUndefFillValue());
+      else
+        BC.errs()
+            << "BOLT-WARNING: Skip writing an undefined instruction at static "
+               "key jump address 0x"
+            << Twine::utohexstr(Info.JumpAddress)
+            << " since that address is overlapping an entry point patch\n";
+    }
 
     // Check if we need to convert jump instruction into a nop.
-    if (!NopIDs.contains(EntryID))
+    if (!Info.Nop)
       continue;
 
     SmallString<15> NopCode;
@@ -2003,6 +2080,6 @@ Error LinuxKernelRewriter::updateStaticKeysJumpTablePostEmit() {
 } // namespace
 
 std::unique_ptr<MetadataRewriter>
-llvm::bolt::createLinuxKernelRewriter(BinaryContext &BC) {
-  return std::make_unique<LinuxKernelRewriter>(BC);
+llvm::bolt::createLinuxKernelRewriter(RewriteInstance &RI) {
+  return std::make_unique<LinuxKernelRewriter>(RI);
 }

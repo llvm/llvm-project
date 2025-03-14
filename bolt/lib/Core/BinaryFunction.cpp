@@ -3038,17 +3038,11 @@ uint64_t BinaryFunction::getInstructionCount() const {
 }
 
 void BinaryFunction::clearDisasmState() {
+  undefineLabels();
+
   clearList(Instructions);
   clearList(IgnoredBranches);
   clearList(TakenBranches);
-
-  if (BC.HasRelocations) {
-    for (std::pair<const uint32_t, MCSymbol *> &LI : Labels)
-      BC.UndefinedSymbols.insert(LI.second);
-    for (MCSymbol *const EndLabel : FunctionEndLabels)
-      if (EndLabel)
-        BC.UndefinedSymbols.insert(EndLabel);
-  }
 }
 
 void BinaryFunction::setTrapOnEntry() {

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/PatchEntries.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "bolt/Utils/NameResolver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
@@ -32,29 +33,10 @@ namespace llvm {
 namespace bolt {
 
 Error PatchEntries::runOnFunctions(BinaryContext &BC) {
-  if (!opts::ForcePatch) {
-    // Mark the binary for patching if we did not create external references
-    // for original code in any of functions we are not going to emit.
-    bool NeedsPatching = llvm::any_of(
-        llvm::make_second_range(BC.getBinaryFunctions()),
-        [&](BinaryFunction &BF) {
-          return !BC.shouldEmit(BF) && !BF.hasExternalRefRelocations();
-        });
+  BC.outs() << "BOLT-INFO: patching entries in original code\n";
 
-    if (!NeedsPatching)
-      return Error::success();
-  }
-
-  if (opts::Verbosity >= 1)
-    BC.outs() << "BOLT-INFO: patching entries in original code\n";
-
-  // Calculate the size of the patch.
-  static size_t PatchSize = 0;
-  if (!PatchSize) {
-    InstructionListType Seq;
-    BC.MIB->createLongTailCall(Seq, BC.Ctx->createTempSymbol(), BC.Ctx.get());
-    PatchSize = BC.computeCodeSize(Seq.begin(), Seq.end());
-  }
+  static size_t PatchSize = getPatchSize(BC);
+  BC.outs() << "BOLT-INFO: patch size is " << PatchSize << "\n";
 
   for (auto &BFI : BC.getBinaryFunctions()) {
     BinaryFunction &Function = BFI.second;
@@ -63,8 +45,16 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     if (!BC.shouldEmit(Function))
       continue;
 
+    bool MustPatch = opts::ForcePatch;
+
+    // In relocation mode, a copy will be created and only the copy can be
+    // changed. To avoid undefined behaviors, we must make the original function
+    // jump to the copy.
+    if (BC.HasRelocations && Function.mayChange())
+      MustPatch = true;
+
     // Check if we can skip patching the function.
-    if (!opts::ForcePatch && !Function.hasEHRanges() &&
+    if (!MustPatch && !Function.hasEHRanges() && !opts::Instrument &&
         Function.getSize() < PatchThreshold)
       continue;
 
@@ -99,7 +89,7 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
     if (!Success) {
       // We can't change output layout for AArch64 due to LongJmp pass
       if (BC.isAArch64()) {
-        if (opts::ForcePatch) {
+        if (MustPatch) {
           BC.errs() << "BOLT-ERROR: unable to patch entries in " << Function
                     << "\n";
           return createFatalBOLTError("");

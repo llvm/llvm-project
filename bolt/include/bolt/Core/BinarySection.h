@@ -385,6 +385,10 @@ public:
     Patches.emplace_back(BinaryPatch(Offset, Bytes));
   }
 
+  void addPatch(uint64_t Offset, StringRef Bytes) {
+    addPatch(Offset, SmallVector<char>(Bytes.begin(), Bytes.end()));
+  }
+
   /// Register patcher for this section.
   void registerPatcher(std::unique_ptr<BinaryPatcher> BPatcher) {
     Patcher = std::move(BPatcher);
