@@ -51,7 +51,8 @@ define void @first_order_recurrence(ptr noalias %A, ptr noalias %B, i64 %TC) {
 ; IF-EVL-NEXT:   EMIT vp<[[RESUME_EXTRACT:%.+]]> = extract-from-end ir<[[LD]]>, ir<1>
 ; IF-EVL-NEXT:   EMIT branch-on-cond ir<true>
 ; IF-EVL-NEXT: Successor(s): ir-bb<for.end>, scalar.ph
-
+; IF-EVL: Cost of 0 for VF vscale x 4: FIRST-ORDER-RECURRENCE-PHI ir<[[FOR_PHI]]> = phi ir<33>, ir<[[LD]]>
+; IF-EVL: Cost of 4 for VF vscale x 4: WIDEN-INTRINSIC vp<[[SPLICE]]> = call llvm.experimental.vp.splice(ir<[[FOR_PHI]]>, ir<[[LD]]>, ir<-1>, ir<true>, vp<[[PREV_EVL]]>, vp<[[EVL]]>)
 entry:
   br label %for.body
 
