@@ -158,11 +158,54 @@ public:
 
 // TODO(cir): this can be shared with LLVM's codegen
 static QualType getNonMemoryType(CIRGenModule &cgm, QualType type) {
-  if (auto at = type->getAs<AtomicType>()) {
+  if (const auto *at = type->getAs<AtomicType>()) {
     return cgm.getASTContext().getQualifiedType(at->getValueType(),
                                                 type.getQualifiers());
   }
   return type;
+}
+
+static mlir::Attribute
+emitArrayConstant(CIRGenModule &cgm, mlir::Type desiredType,
+                  mlir::Type commonElementType, unsigned arrayBound,
+                  SmallVectorImpl<mlir::TypedAttr> &elements,
+                  mlir::TypedAttr filter) {
+  const auto &builder = cgm.getBuilder();
+
+  unsigned nonzeroLength = arrayBound;
+  if (elements.size() < nonzeroLength && builder.isNullValue(filter))
+    nonzeroLength = elements.size();
+
+  if (nonzeroLength == elements.size()) {
+    while (nonzeroLength > 0 &&
+           builder.isNullValue(elements[nonzeroLength - 1]))
+      --nonzeroLength;
+  }
+
+  if (nonzeroLength == 0)
+    return cir::ZeroAttr::get(builder.getContext(), desiredType);
+
+  const unsigned trailingZeroes = arrayBound - nonzeroLength;
+  if (trailingZeroes >= 8) {
+    if (elements.size() < nonzeroLength)
+      cgm.errorNYI("missing initializer for non-zero element");
+  } else if (elements.size() != arrayBound) {
+    elements.resize(arrayBound, filter);
+
+    if (filter.getType() != commonElementType)
+      cgm.errorNYI(
+          "array filter type should always be the same as element type");
+  }
+
+  SmallVector<mlir::Attribute, 4> eles;
+  eles.reserve(elements.size());
+
+  for (const auto &element : elements)
+    eles.push_back(element);
+
+  return cir::ConstArrayAttr::get(
+      cir::ArrayType::get(builder.getContext(), commonElementType, arrayBound),
+      mlir::ArrayAttr::get(builder.getContext(), eles));
 }
 
 //===----------------------------------------------------------------------===//
@@ -271,16 +314,61 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
         cgm.getASTContext().getTargetInfo().useFP16ConversionIntrinsics()) {
       cgm.errorNYI("ConstExprEmitter::tryEmitPrivate half");
       return {};
-    } else {
-      mlir::Type ty = cgm.convertType(destType);
-      assert(mlir::isa<cir::CIRFPTypeInterface>(ty) &&
-             "expected floating-point type");
-      return cgm.getBuilder().getAttr<cir::FPAttr>(ty, init);
     }
+
+    mlir::Type ty = cgm.convertType(destType);
+    assert(mlir::isa<cir::CIRFPTypeInterface>(ty) &&
+           "expected floating-point type");
+    return cgm.getBuilder().getAttr<cir::FPAttr>(ty, init);
   }
   case APValue::Array: {
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate array");
-    return {};
+    const ArrayType *arrayTy = cgm.getASTContext().getAsArrayType(destType);
+    const QualType arrayElementTy = arrayTy->getElementType();
+    const unsigned numElements = value.getArraySize();
+    const unsigned numInitElts = value.getArrayInitializedElts();
+
+    mlir::Attribute filter;
+    if (value.hasArrayFiller()) {
+      filter =
+          tryEmitPrivate(value.getArrayFiller(), arrayTy->getElementType());
+      if (!filter)
+        return {};
+    }
+
+    SmallVector<mlir::TypedAttr, 16> elements;
+    if (filter && builder.isNullValue(filter))
+      elements.reserve(numInitElts + 1);
+    else
+      elements.reserve(numInitElts);
+
+    mlir::Type commonElementType;
+    for (unsigned i = 0; i < numInitElts; ++i) {
+      const APValue &arrayElement = value.getArrayInitializedElt(i);
+      const mlir::Attribute element =
+          tryEmitPrivateForMemory(arrayElement, arrayElementTy);
+      if (!element)
+        return {};
+
+      const mlir::TypedAttr elementTyped = mlir::cast<mlir::TypedAttr>(element);
+      if (i == 0)
+        commonElementType = elementTyped.getType();
+      else if (elementTyped.getType() != commonElementType) {
+        cgm.errorNYI("ConstExprEmitter::tryEmitPrivate Array without common "
+                     "element type");
+        return {};
+      }
+
+      elements.push_back(elementTyped);
+    }
+
+    mlir::TypedAttr typedFilter =
+        llvm::dyn_cast_or_null<mlir::TypedAttr>(filter);
+    if (filter && !typedFilter)
+      cgm.errorNYI("array filter should always be typed");
+
+    mlir::Type desiredType = cgm.convertType(destType);
+    return emitArrayConstant(cgm, desiredType, commonElementType, numElements,
+                             elements, typedFilter);
   }
   case APValue::Vector: {
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate vector");
@@ -290,9 +378,23 @@ mlir::Attribute ConstantEmitter::tryEmitPrivate(const APValue &value,
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate member pointer");
     return {};
   }
-  case APValue::LValue:
-    cgm.errorNYI("ConstExprEmitter::tryEmitPrivate lvalue");
+  case APValue::LValue: {
+
+    if (value.getLValueBase()) {
+      cgm.errorNYI("non-null pointer initialization");
+    } else {
+
+      mlir::Type desiredType = cgm.convertType(destType);
+      if (const cir::PointerType ptrType =
+              mlir::dyn_cast<cir::PointerType>(desiredType)) {
+        return builder.getConstPtrAttr(ptrType,
+                                       value.getLValueOffset().getQuantity());
+      } else {
+        llvm_unreachable("non-pointer variable initialized with a pointer");
+      }
+    }
     return {};
+  }
   case APValue::Struct:
   case APValue::Union:
     cgm.errorNYI("ConstExprEmitter::tryEmitPrivate struct or union");

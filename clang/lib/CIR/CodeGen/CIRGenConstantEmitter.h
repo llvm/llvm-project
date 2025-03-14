@@ -20,7 +20,6 @@
 
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
-#include "llvm/ADT/SmallVector.h"
 
 namespace clang::CIRGen {
 
@@ -40,6 +39,9 @@ public:
   /// Use this if the expression might contain contextual references like
   /// block addresses or PredefinedExprs.
   ConstantEmitter(CIRGenFunction &cgf) : cgm(cgf.cgm), cgf(&cgf) {}
+
+  ConstantEmitter(CIRGenModule &cgm, CIRGenFunction *cgf = nullptr)
+      : cgm(cgm), cgf(cgf) {}
 
   ConstantEmitter(const ConstantEmitter &other) = delete;
   ConstantEmitter &operator=(const ConstantEmitter &other) = delete;
@@ -66,7 +68,7 @@ public:
   mlir::Attribute emitAbstract(SourceLocation loc, const APValue &value,
                                QualType t);
 
-  mlir::Attribute tryEmitConstantExpr(const ConstantExpr *CE);
+  mlir::Attribute tryEmitConstantExpr(const ConstantExpr *ce);
 
   // These are private helper routines of the constant emitter that
   // can't actually be private because things are split out into helper
