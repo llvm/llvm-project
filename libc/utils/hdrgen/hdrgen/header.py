@@ -43,6 +43,7 @@ LIBRARY_DESCRIPTIONS = {
     "bsd": "BSD",
     "gnu": "GNU",
     "linux": "Linux",
+    "uefi": "UEFI",
 }
 
 HEADER_TEMPLATE = """\
