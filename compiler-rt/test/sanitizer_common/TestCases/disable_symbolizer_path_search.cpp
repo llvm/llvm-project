@@ -5,6 +5,7 @@
 // RUN: export ASAN_SYMBOLIZER_PATH= TSAN_SYMBOLIZER_PATH= MSAN_SYMBOLIZER_PATH= UBSAN_SYMBOLIZER_PATH= 
 // RUN: echo $ASAN_SYMBOLIZER_PATH
 // RUN: %run %t 2>&1 | FileCheck %s
+// RUN: echo $ASAN_SYMBOLIZER_PATH
 
 // CHECK: Symbolizer path search is disabled in the runtime build configuration
 
