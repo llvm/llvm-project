@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBTarget.h"
+#include "lldb/API/SBLock.h"
 #include "lldb/Utility/Instrumentation.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/lldb-public.h"
@@ -18,6 +19,7 @@
 #include "lldb/API/SBExpressionOptions.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
+#include "lldb/API/SBLock.h"
 #include "lldb/API/SBModule.h"
 #include "lldb/API/SBModuleSpec.h"
 #include "lldb/API/SBProcess.h"
@@ -544,9 +546,8 @@ lldb::SBProcess SBTarget::ConnectRemote(SBListener &listener, const char *url,
   if (target_sp) {
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     if (listener.IsValid())
-      process_sp =
-          target_sp->CreateProcess(listener.m_opaque_sp, plugin_name, nullptr,
-                                   true);
+      process_sp = target_sp->CreateProcess(listener.m_opaque_sp, plugin_name,
+                                            nullptr, true);
     else
       process_sp = target_sp->CreateProcess(
           target_sp->GetDebugger().GetListener(), plugin_name, nullptr, true);
@@ -1040,7 +1041,7 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     const bool hardware = false;
     sb_bp = target_sp->CreateExceptionBreakpoint(language, catch_bp, throw_bp,
-                                                  hardware);
+                                                 hardware);
   }
 
   return sb_bp;
@@ -1060,14 +1061,9 @@ lldb::SBBreakpoint SBTarget::BreakpointCreateFromScript(
     Status error;
 
     StructuredData::ObjectSP obj_sp = extra_args.m_impl_up->GetObjectSP();
-    sb_bp =
-        target_sp->CreateScriptedBreakpoint(class_name,
-                                            module_list.get(),
-                                            file_list.get(),
-                                            false, /* internal */
-                                            request_hardware,
-                                            obj_sp,
-                                            &error);
+    sb_bp = target_sp->CreateScriptedBreakpoint(
+        class_name, module_list.get(), file_list.get(), false, /* internal */
+        request_hardware, obj_sp, &error);
   }
 
   return sb_bp;
@@ -1692,8 +1688,8 @@ uint32_t SBTarget::GetMaximumNumberOfChildrenToDisplay() const {
   LLDB_INSTRUMENT_VA(this);
 
   TargetSP target_sp(GetSP());
-  if(target_sp){
-     return target_sp->GetMaximumNumberOfChildrenToDisplay();
+  if (target_sp) {
+    return target_sp->GetMaximumNumberOfChildrenToDisplay();
   }
   return 0;
 }
@@ -2193,7 +2189,7 @@ SBError SBTarget::SetModuleLoadAddress(lldb::SBModule module,
 }
 
 SBError SBTarget::SetModuleLoadAddress(lldb::SBModule module,
-                                               uint64_t slide_offset) {
+                                       uint64_t slide_offset) {
 
   SBError sb_error;
 
@@ -2439,3 +2435,13 @@ lldb::SBTrace SBTarget::CreateTrace(lldb::SBError &error) {
   }
   return SBTrace();
 }
+
+#ifndef SWIG
+lldb::SBLock SBTarget::GetAPILock() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (TargetSP target_sp = GetSP())
+    return lldb::SBLock(target_sp->GetAPIMutex(), target_sp);
+  return lldb::SBLock();
+}
+#endif

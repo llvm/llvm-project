@@ -1327,7 +1327,7 @@ public:
     StopHook(const StopHook &rhs);
     virtual ~StopHook() = default;
 
-    enum class StopHookKind  : uint32_t { CommandBased = 0, ScriptBased };
+    enum class StopHookKind : uint32_t { CommandBased = 0, ScriptBased };
     enum class StopHookResult : uint32_t {
       KeepStopped = 0,
       RequestContinue,
@@ -1690,6 +1690,20 @@ protected:
   SectionLoadList &GetSectionLoadList() {
     return m_section_load_history.GetCurrentSectionLoadList();
   }
+};
+
+/// The private implementation backing SBLock.
+struct APILock {
+  APILock(std::recursive_mutex &mutex) : lock(mutex) {}
+  std::lock_guard<std::recursive_mutex> lock;
+};
+
+/// The private implementation used by SBLock to hand out the target API mutex.
+/// It has a TargetSP to ensure the lock cannot outlive the target.
+struct TargetAPILock : public APILock {
+  TargetAPILock(std::recursive_mutex &mutex, lldb::TargetSP target_sp)
+      : APILock(mutex), target_sp(target_sp) {}
+  lldb::TargetSP target_sp;
 };
 
 } // namespace lldb_private
