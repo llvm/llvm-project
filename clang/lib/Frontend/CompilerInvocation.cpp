@@ -4964,6 +4964,12 @@ bool CompilerInvocation::CreateFromArgsImpl(
   llvm::Triple T(Res.getTargetOpts().Triple);
   ParseHeaderSearchArgs(Res.getHeaderSearchOpts(), Args, Diags,
                         Res.getFileSystemOpts().WorkingDir);
+  if (Res.getFrontendOpts().GenReducedBMI ||
+      Res.getFrontendOpts().ProgramAction ==
+          frontend::GenerateReducedModuleInterface) {
+    Res.getHeaderSearchOpts().ModulesSkipDiagnosticOptions = true;
+    Res.getHeaderSearchOpts().ModulesSkipHeaderSearchPaths = true;
+  }
   ParseAPINotesArgs(Res.getAPINotesOpts(), Args, Diags);
 
   ParsePointerAuthArgs(LangOpts, Args, Diags);
