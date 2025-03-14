@@ -7,36 +7,36 @@
 define void @foo(ptr noundef readnone %parent_frame_pointer) {
 ; POWERPC64-LABEL:      foo
 ; POWERPC64:            # %bb.0:
-; POWERPC64:                mflr [[LR:[0-9]+]]
+; POWERPC64:                mflr [[REG1:[0-9]+]]
 ; POWERPC64-NEXT:           stdu 1, -32(1)
-; POWERPC64-NEXT:           std [[LR]], 48(1)
-; POWERPC64:                cmpld [[REG1:[0-9]+]], 1
+; POWERPC64-NEXT:           std [[REG1]], 48(1)
+; POWERPC64:                cmpld [[REG2:[0-9]+]], 1
 ; POWERPC64:            # %bb.1:
 ; POWERPC64-NEXT:           addi 1, 1, 32
-; POWERPC64-NEXT:           ld [[LR]], 16(1)
-; POWERPC64-NEXT:           mtlr [[LR]]
+; POWERPC64-NEXT:           ld [[REG1]], 16(1)
+; POWERPC64-NEXT:           mtlr [[REG1]]
 ; POWERPC64-NEXT:           blr
 
 ; POWERPC32-AIX-LABEL:  .foo:
 ; POWERPC32-AIX:        # %bb.0:
-; POWERPC32-AIX-NEXT:       mflr [[LR:[0-9]+]]
+; POWERPC32-AIX-NEXT:       mflr [[REG1:[0-9]+]]
 ; POWERPC32-AIX-NEXT:       stwu 1, -64(1)
-; POWERPC32-AIX-NEXT:       cmplw [[REG1:[0-9]+]], 1
+; POWERPC32-AIX-NEXT:       cmplw [[REG2:[0-9]+]], 1
 ; POWERPC32-AIX:        # %bb.1:
 ; POWERPC32-AIX-NEXT:       addi 1, 1, 64
-; POWERPC32-AIX-NEXT:       lwz [[LR]], 8(1)
-; POWERPC32-AIX-NEXT:       mtlr [[LR]]
+; POWERPC32-AIX-NEXT:       lwz [[REG1]], 8(1)
+; POWERPC32-AIX-NEXT:       mtlr [[REG1]]
 ; POWERPC32-AIX-NEXT:       blr
 
 ; POWERPC64-AIX-LABEL:  .foo:
 ; POWERPC64-AIX:        # %bb.0:
-; POWERPC64-AIX-NEXT:       mflr [[LR:[0-9]+]]
+; POWERPC64-AIX-NEXT:       mflr [[REG1:[0-9]+]]
 ; POWERPC64-AIX-NEXT:       stdu 1, -112(1)
-; POWERPC64-AIX-NEXT:       cmpld [[REG1:[0-9]+]], 1
+; POWERPC64-AIX-NEXT:       cmpld [[REG2:[0-9]+]], 1
 ; POWERPC64-AIX:        # %bb.1:
 ; POWERPC64-AIX-NEXT:       addi 1, 1, 112
-; POWERPC64-AIX-NEXT:       ld [[LR]], 16(1)
-; POWERPC64-AIX-NEXT:       mtlr [[LR]]
+; POWERPC64-AIX-NEXT:       ld [[REG1]], 16(1)
+; POWERPC64-AIX-NEXT:       mtlr [[REG1]]
 ; POWERPC64-AIX-NEXT:       blr
 
 entry:
@@ -58,35 +58,35 @@ declare void @abort()
 define noundef i32 @main() {
 ; POWERPC64-LABEL:      main
 ; POWERPC64:            # %bb.0:
-; POWERPC64-NEXT:           mflr [[LR:[0-9]+]]
+; POWERPC64-NEXT:           mflr [[REG1:[0-9]+]]
 ; POWERPC64-NEXT:           stdu 1, -32(1)
-; POWERPC64-NEXT:           std [[LR]], 48(1)
+; POWERPC64-NEXT:           std [[REG1]], 48(1)
 ; POWERPC64:                mr [[REG2:[0-9]+]], 1
 ; POWERPC64:                addi 1, 1, 32
-; POWERPC64-NEXT:           ld [[LR]], 16(1)
-; POWERPC64-NEXT:           mtlr [[LR]]
+; POWERPC64-NEXT:           ld [[REG1]], 16(1)
+; POWERPC64-NEXT:           mtlr [[REG1]]
 ; POWERPC64-NEXT:           blr
 
 ; POWERPC32-AIX-LABEL:  .main:
 ; POWERPC32-AIX:        # %bb.0:
-; POWERPC32-AIX-NEXT:       mflr [[LR:[0-9]+]]
+; POWERPC32-AIX-NEXT:       mflr [[REG1:[0-9]+]]
 ; POWERPC32-AIX-NEXT:       stwu 1, -64(1)
 ; POWERPC32-AIX-NEXT:       mr [[REG2:[0-9]+]], 1
-; POWERPC32-AIX-NEXT:       stw [[LR]], 72(1)
+; POWERPC32-AIX-NEXT:       stw [[REG1]], 72(1)
 ; POWERPC32-AIX:            addi 1, 1, 64
-; POWERPC32-AIX-NEXT:       lwz [[LR]], 8(1)
-; POWERPC32-AIX-NEXT:       mtlr [[LR]]
+; POWERPC32-AIX-NEXT:       lwz [[REG1]], 8(1)
+; POWERPC32-AIX-NEXT:       mtlr [[REG1]]
 ; POWERPC32-AIX-NEXT:       blr
 
 ; POWERPC64-AIX-LABEL: .main:
 ; POWERPC64-AIX:       # %bb.0:
-; POWERPC64-AIX-NEXT:       mflr [[LR:[0-9]+]]
+; POWERPC64-AIX-NEXT:       mflr [[REG1:[0-9]+]]
 ; POWERPC64-AIX-NEXT:       stdu 1, -112(1)
 ; POWERPC64-AIX-NEXT:       mr [[REG2:[0-9]+]], 1
-; POWERPC64-AIX-NEXT:       std [[LR]], 128(1)
+; POWERPC64-AIX-NEXT:       std [[REG1]], 128(1)
 ; POWERPC64-AIX:            addi 1, 1, 112
-; POWERPC64-AIX-NEXT:       ld [[LR]], 16(1)
-; POWERPC64-AIX-NEXT:       mtlr [[LR]]
+; POWERPC64-AIX-NEXT:       ld [[REG1]], 16(1)
+; POWERPC64-AIX-NEXT:       mtlr [[REG1]]
 ; POWERPC64-AIX-NEXT:       blr
 
 entry:
