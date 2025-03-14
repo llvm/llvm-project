@@ -19,7 +19,8 @@ class AdvisoryLock;
 namespace clang {
 class InMemoryModuleCache;
 
-/// The module cache used by implicitly-built modules.
+/// The module cache used for compiling modules implicitly. This centralizes the
+/// operations the compiler might want to perform on the cache.
 class ModuleCache : public RefCountedBase<ModuleCache> {
 public:
   /// May perform any work that only needs to be performed once for multiple
@@ -34,12 +35,16 @@ public:
   virtual InMemoryModuleCache &getInMemoryModuleCache() = 0;
   virtual const InMemoryModuleCache &getInMemoryModuleCache() const = 0;
 
-  // TODO: Virtualize writing/reading PCM files, timestamp files, etc.
+  // TODO: Virtualize writing/reading PCM files, timestamping, pruning, etc.
 
   virtual ~ModuleCache() = default;
 };
 
-IntrusiveRefCntPtr<ModuleCache> getCrossProcessModuleCache();
+/// Creates new \c ModuleCache backed by a file system directory that may be
+/// operated on by multiple processes. This instance must be used across all
+/// \c CompilerInstance instances participating in building modules for single
+/// translation unit in order to share the same \c InMemoryModuleCache.
+IntrusiveRefCntPtr<ModuleCache> createCrossProcessModuleCache();
 } // namespace clang
 
 #endif

@@ -829,7 +829,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
   AST->SourceMgr = new SourceManager(AST->getDiagnostics(),
                                      AST->getFileManager(),
                                      UserFilesAreVolatile);
-  AST->ModCache = getCrossProcessModuleCache();
+  AST->ModCache = createCrossProcessModuleCache();
   AST->HSOpts = HSOpts ? HSOpts : std::make_shared<HeaderSearchOptions>();
   AST->HSOpts->ModuleFormat = std::string(PCHContainerRdr.getFormats().front());
   AST->HeaderInfo.reset(new HeaderSearch(AST->HSOpts,
@@ -1545,7 +1545,7 @@ ASTUnit::create(std::shared_ptr<CompilerInvocation> CI,
   AST->UserFilesAreVolatile = UserFilesAreVolatile;
   AST->SourceMgr = new SourceManager(AST->getDiagnostics(), *AST->FileMgr,
                                      UserFilesAreVolatile);
-  AST->ModCache = getCrossProcessModuleCache();
+  AST->ModCache = createCrossProcessModuleCache();
 
   return AST;
 }
@@ -1832,7 +1832,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromCommandLine(
   AST->FileMgr = new FileManager(AST->FileSystemOpts, VFS);
   AST->StorePreamblesInMemory = StorePreamblesInMemory;
   AST->PreambleStoragePath = PreambleStoragePath;
-  AST->ModCache = getCrossProcessModuleCache();
+  AST->ModCache = createCrossProcessModuleCache();
   AST->OnlyLocalDecls = OnlyLocalDecls;
   AST->CaptureDiagnostics = CaptureDiagnostics;
   AST->TUKind = TUKind;
@@ -2378,7 +2378,7 @@ bool ASTUnit::serialize(raw_ostream &OS) {
 
   SmallString<128> Buffer;
   llvm::BitstreamWriter Stream(Buffer);
-  IntrusiveRefCntPtr<ModuleCache> ModCache = getCrossProcessModuleCache();
+  IntrusiveRefCntPtr<ModuleCache> ModCache = createCrossProcessModuleCache();
   ASTWriter Writer(Stream, Buffer, *ModCache, {});
   return serializeUnit(Writer, Buffer, getSema(), OS);
 }

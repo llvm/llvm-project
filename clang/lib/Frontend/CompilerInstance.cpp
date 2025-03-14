@@ -70,7 +70,7 @@ CompilerInstance::CompilerInstance(
     ModuleCache *ModCache)
     : ModuleLoader(/*BuildingModule=*/ModCache),
       Invocation(new CompilerInvocation()),
-      ModCache(ModCache ? ModCache : getCrossProcessModuleCache()),
+      ModCache(ModCache ? ModCache : createCrossProcessModuleCache()),
       ThePCHContainerOperations(std::move(PCHContainerOps)) {}
 
 CompilerInstance::~CompilerInstance() {

@@ -39,6 +39,6 @@ public:
 };
 } // namespace
 
-IntrusiveRefCntPtr<ModuleCache> clang::getCrossProcessModuleCache() {
+IntrusiveRefCntPtr<ModuleCache> clang::createCrossProcessModuleCache() {
   return llvm::makeIntrusiveRefCnt<CrossProcessModuleCache>();
 }
