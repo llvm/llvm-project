@@ -7555,10 +7555,10 @@ bool SimplifyCFGOpt::simplifyDuplicateSwitchArms(SwitchInst *SI,
   // SwitchSuccWrapper.
   PhiPredIVs.reserve(Phis.size());
   for (PHINode *Phi : Phis) {
-    PhiPredIVs[Phi] =
-        SmallDenseMap<BasicBlock *, Value *, 8>(Phi->getNumIncomingValues());
+    auto &IVs =
+        PhiPredIVs.try_emplace(Phi, Phi->getNumIncomingValues()).first->second;
     for (auto &IV : Phi->incoming_values())
-      PhiPredIVs[Phi].insert({Phi->getIncomingBlock(IV), IV.get()});
+      IVs.insert({Phi->getIncomingBlock(IV), IV.get()});
   }
 
   // Build a set such that if the SwitchSuccWrapper exists in the set and
