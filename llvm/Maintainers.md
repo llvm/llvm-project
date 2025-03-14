@@ -391,7 +391,9 @@ cyndyishida@gmail.com (email), [cyndyishida](https://github.com/cyndyishida) (Gi
 #### llvm-mca and MCA library
 
 Andrea Di Biagio \
-andrea.dibiagio@sony.com, andrea.dibiagio@gmail.com (email), [adibiagio](https://github.com/adibiagio) (GitHub)
+andrea.dibiagio@sony.com, andrea.dibiagio@gmail.com (email), [adibiagio](https://github.com/adibiagio) (GitHub) \
+Min-Yih Hsu \
+min.hsu@sifive.com, min@myhsu.dev (email), [mshockwave](https://github.com/mshockwave) (GitHub)
 
 #### Binary Utilities
 

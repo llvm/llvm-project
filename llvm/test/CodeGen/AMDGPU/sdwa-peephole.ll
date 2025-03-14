@@ -2086,7 +2086,7 @@ bb1:                                              ; preds = %bb11, %bb
   br i1 true, label %bb2, label %bb11
 
 bb2:                                              ; preds = %bb1
-  %tmp3 = call i32 asm "v_and_b32_e32 $0, $1, $2", "=v,s,v"(i32 65535, i32 undef) #1
+  %tmp3 = call i32 asm "v_and_b32_e32 $0, $1, $2", "=v,s,v"(i32 65535, i32 poison) #1
   %tmp5 = or i32 %tmp3, 65536
   %tmp6 = insertelement <2 x i32> %tmp, i32 %tmp5, i64 0
   br label %bb11

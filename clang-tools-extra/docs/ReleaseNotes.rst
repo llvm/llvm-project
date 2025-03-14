@@ -91,6 +91,12 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- :program:`clang-tidy` no longer processes declarations from system headers
+  by default, greatly improving performance. This behavior is disabled if the
+  `SystemHeaders` option is enabled.
+  Note: this may lead to false negatives; downstream users may need to adjust
+  their checks to preserve existing behavior.
+
 New checks
 ^^^^^^^^^^
 
@@ -136,7 +142,8 @@ Changes in existing checks
   <clang-tidy/checks/misc/const-correctness>` check by adding the option
   `AllowedTypes`, that excludes specified types from const-correctness
   checking and fixing false positives when modifying variant by ``operator[]``
-  with template in parameters.
+  with template in parameters and supporting to check pointee mutation by
+  `AnalyzePointers` option.
 
 - Improved :doc:`misc-redundant-expression
   <clang-tidy/checks/misc/redundant-expression>` check by providing additional
