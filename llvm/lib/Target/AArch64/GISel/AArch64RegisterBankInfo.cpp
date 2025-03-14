@@ -466,8 +466,6 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
   case Intrinsic::aarch64_neon_fminv:
   case Intrinsic::aarch64_neon_fmaxnmv:
   case Intrinsic::aarch64_neon_fminnmv:
-  case Intrinsic::aarch64_neon_fmax:
-  case Intrinsic::aarch64_neon_fmin:
   case Intrinsic::aarch64_neon_fmulx:
   case Intrinsic::aarch64_neon_frecpe:
   case Intrinsic::aarch64_neon_frecps:
@@ -1117,11 +1115,13 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     case Intrinsic::aarch64_neon_vcvtfxu2fp:
     case Intrinsic::aarch64_neon_vcvtfp2fxs:
     case Intrinsic::aarch64_neon_vcvtfp2fxu:
-      // Override these two intrinsics, because they would have a partial
+      // Override these intrinsics, because they would have a partial
       // mapping. This is needed for 'half' types, which otherwise don't
       // get legalised correctly.
       OpRegBankIdx[0] = PMI_FirstFPR;
       OpRegBankIdx[2] = PMI_FirstFPR;
+      // OpRegBankIdx[1] is the intrinsic ID.
+      // OpRegBankIdx[3] is an integer immediate.
       break;
     default: {
       // Check if we know that the intrinsic has any constraints on its register
