@@ -16,7 +16,6 @@ static_library("Host") {
   ]
   public_deps = [ "//llvm/utils/gn/build/libs/xml" ]
   sources = [
-    "aix/HostInfoAIX.cpp",
     "common/File.cpp",
     "common/FileAction.cpp",
     "common/FileCache.cpp",
@@ -88,6 +87,10 @@ static_library("Host") {
       "posix/PipePosix.cpp",
       "posix/ProcessLauncherPosixFork.cpp",
     ]
+  }
+
+  if (current_os == "aix") {
+    sources += [ "aix/HostInfoAIX.cpp" ]
   }
 
   if (current_os == "mac") {
