@@ -85,3 +85,25 @@ define i32 @first_operand_imm_test(i32 %a) {
   %3 = sext i8 %2 to i32
   ret i32 %3
 }
+
+define i16 @i16_test(i16 %a) {
+  ; CHECK-LABEL: define i16 @i16_test(
+  ; CHECK-SAME: i16 [[A:%.*]]) {
+  ; CHECK-NOT: trunc
+  ; CHECK: sub i16 0, [[A]]
+  ; CHECK-NOT: sext i8
+  %1 = trunc nsw i16 %a to i8
+  %2 = sub i8 0, %1
+  %3 = sext i8 %2 to i16
+  ret i16 %3
+}
+
+define i32 @all_imm() {
+  ; CHECK-LABEL: define i32 @all_imm(
+  ; CHECK-NOT: trunc
+  ; CHECK-NOT: sext i8
+  ; CHECK: ret i32 -1
+  %1 = sub i8 0, 1
+  %2 = sext i8 %1 to i32
+  ret i32 %2
+}
