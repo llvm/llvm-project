@@ -116,9 +116,9 @@ void SetVariableRequestHandler::operator()(
   // This is a reference to the containing variable/scope
   const auto variablesReference =
       GetInteger<uint64_t>(arguments, "variablesReference").value_or(0);
-  llvm::StringRef name = GetString(arguments, "name");
+  llvm::StringRef name = GetString(arguments, "name").value_or("");
 
-  const auto value = GetString(arguments, "value");
+  const auto value = GetString(arguments, "value").value_or("");
   // Set success to false just in case we don't find the variable by name
   response.try_emplace("success", false);
 
