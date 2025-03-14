@@ -372,7 +372,7 @@ void lprofReleaseBuffer(ManagedMemory *Buf, size_t Length) {
     free(Buf->Addr);
     break;
   case MM_MMAP:
-    munmap(Buf->Addr, Length);
+    (void)munmap(Buf->Addr, Length);
     break;
   default:
     PROF_ERR("%s: Buffer has invalid state: %d\n", __func__, Buf->Status);
