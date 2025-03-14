@@ -10,19 +10,21 @@
 // Load/Store pair instructions extension.
 //
 //===----------------------------------------------------------------------===//
+
+//===----------------------------------------------------------------------===//
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
-class ld_r<string opcodestr, DAGOperand RC>
+class PairLoad_ri<string opcodestr, DAGOperand RC>
     : RVInstI<0b011, OPC_LOAD, (outs RC:$rd), 
-            (ins GPRMem:$rs1, simm12:$imm12),
+              (ins GPRMem:$rs1, simm12:$imm12),
               opcodestr, "${rd}, ${imm12}(${rs1})">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
-class sd_r<string opcodestr, DAGOperand RC>
+class PairStore_rri<string opcodestr, DAGOperand RC>
     : RVInstS<0b011, OPC_STORE, (outs),
-             (ins RC:$rs2, GPRMem:$rs1, simm12:$imm12),
+              (ins RC:$rs2, GPRMem:$rs1, simm12:$imm12),
               opcodestr, "${rs2}, ${imm12}(${rs1})">;
 
 //===----------------------------------------------------------------------===//
@@ -30,7 +32,6 @@ class sd_r<string opcodestr, DAGOperand RC>
 //===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZilsd, IsRV32], DecoderNamespace = "RV32GPRPair" in {
-def LD_RV32 : ld_r<"ld", GPRPairRV32>, Sched<[WriteLDD, ReadMemBase]>;
-def SD_RV32 : sd_r<"sd", GPRPairRV32>, Sched<[WriteSTD, ReadStoreData, ReadMemBase]>;
+def LD_RV32 : PairLoad_ri<"ld", GPRPairRV32>, Sched<[WriteLDD, ReadMemBase]>;
+def SD_RV32 : PairStore_rri<"sd", GPRPairRV32>, Sched<[WriteSTD, ReadStoreData, ReadMemBase]>;
 } // Predicates = [HasStdExtZilsd, IsRV32]
-
