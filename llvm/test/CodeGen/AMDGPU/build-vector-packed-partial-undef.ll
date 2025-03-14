@@ -168,7 +168,7 @@ define void @undef_lo2_v4i16(<2 x i16> %arg0) {
 ; GFX8-NEXT:    ; use v[0:1]
 ; GFX8-NEXT:    ;;#ASMEND
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %undef.lo = shufflevector <2 x i16> %arg0, <2 x i16> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
+  %undef.lo = shufflevector <2 x i16> %arg0, <2 x i16> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
   call void asm sideeffect "; use $0", "v"(<4 x i16> %undef.lo);
   ret void
 }
@@ -193,7 +193,7 @@ define void @undef_lo2_v4f16(<2 x half> %arg0) {
 ; GFX8-NEXT:    ; use v[0:1]
 ; GFX8-NEXT:    ;;#ASMEND
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %undef.lo = shufflevector <2 x half> %arg0, <2 x half> undef, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
+  %undef.lo = shufflevector <2 x half> %arg0, <2 x half> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 3>
   call void asm sideeffect "; use $0", "v"(<4 x half> %undef.lo);
   ret void
 }
@@ -348,7 +348,7 @@ define void @undef_hi2_v4i16(<2 x i16> %arg0) {
 ; GFX8-NEXT:    ; use v[0:1]
 ; GFX8-NEXT:    ;;#ASMEND
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %undef.hi = shufflevector <2 x i16> %arg0, <2 x i16> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %undef.hi = shufflevector <2 x i16> %arg0, <2 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   call void asm sideeffect "; use $0", "v"(<4 x i16> %undef.hi);
   ret void
 }
@@ -369,7 +369,7 @@ define void @undef_hi2_v4f16(<2 x half> %arg0) {
 ; GFX8-NEXT:    ; use v[0:1]
 ; GFX8-NEXT:    ;;#ASMEND
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
-  %undef.hi = shufflevector <2 x half> %arg0, <2 x half> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %undef.hi = shufflevector <2 x half> %arg0, <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   call void asm sideeffect "; use $0", "v"(<4 x half> %undef.hi);
   ret void
 }

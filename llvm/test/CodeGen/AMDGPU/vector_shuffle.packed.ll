@@ -27,7 +27,7 @@ define <4 x half> @shuffle_v4f16_23uu(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, ptr addrspace(1) %arg0
   %val1 = load <4 x half>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   ret <4 x half> %shuffle
 }
 
@@ -74,7 +74,7 @@ define <4 x half> @shuffle_v4f16_234u(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, ptr addrspace(1) %arg0
   %val1 = load <4 x half>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 4, i32 undef>
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 2, i32 3, i32 4, i32 poison>
   ret <4 x half> %shuffle
 }
 
@@ -101,7 +101,7 @@ define <4 x half> @shuffle_v4f16_u1u3(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, ptr addrspace(1) %arg0
   %val1 = load <4 x half>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 undef, i32 1, i32 undef, i32 3>
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 poison, i32 1, i32 poison, i32 3>
   ret <4 x half> %shuffle
 }
 
@@ -140,7 +140,7 @@ define <4 x half> @shuffle_v4f16_u3u1(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, ptr addrspace(1) %arg0
   %val1 = load <4 x half>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 undef, i32 3, i32 undef, i32 1>
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 poison, i32 3, i32 poison, i32 1>
   ret <4 x half> %shuffle
 }
 
@@ -167,7 +167,7 @@ define <4 x half> @shuffle_v4f16_u3uu(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, ptr addrspace(1) %arg0
   %val1 = load <4 x half>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 undef, i32 3, i32 undef, i32 undef>
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
   ret <4 x half> %shuffle
 }
 
@@ -216,7 +216,7 @@ define <4 x half> @shuffle_v4f16_3u6u(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, ptr addrspace(1) %arg0
   %val1 = load <4 x half>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 3, i32 undef, i32 6, i32 undef>
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 3, i32 poison, i32 6, i32 poison>
   ret <4 x half> %shuffle
 }
 
@@ -265,7 +265,7 @@ define <4 x half> @shuffle_v4f16_3uu7(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, ptr addrspace(1) %arg0
   %val1 = load <4 x half>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 3, i32 undef, i32 undef, i32 7>
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 3, i32 poison, i32 poison, i32 7>
   ret <4 x half> %shuffle
 }
 
@@ -312,7 +312,7 @@ define <4 x half> @shuffle_v4f16_35u5(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, ptr addrspace(1) %arg0
   %val1 = load <4 x half>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 3, i32 5, i32 undef, i32 5>
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 3, i32 5, i32 poison, i32 5>
   ret <4 x half> %shuffle
 }
 
@@ -364,7 +364,7 @@ define <4 x half> @shuffle_v4f16_357u(ptr addrspace(1) %arg0, ptr addrspace(1) %
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x half>, ptr addrspace(1) %arg0
   %val1 = load <4 x half>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 3, i32 5, i32 7, i32 undef>
+  %shuffle = shufflevector <4 x half> %val0, <4 x half> %val1, <4 x i32> <i32 3, i32 5, i32 7, i32 poison>
   ret <4 x half> %shuffle
 }
 
@@ -1881,21 +1881,21 @@ entry:
   %tmp15 = load <4 x half>, ptr addrspace(1) %arrayidx1, align 8
   %arrayidx2 = getelementptr inbounds <4 x half>, ptr addrspace(1) %C, i64 %tmp12
   %tmp16 = load <4 x half>, ptr addrspace(1) %arrayidx2, align 8
-  %tmp17 = shufflevector <4 x half> %tmp14, <4 x half> undef, <2 x i32> zeroinitializer
-  %tmp18 = shufflevector <4 x half> %tmp15, <4 x half> undef, <2 x i32> <i32 0, i32 1>
-  %tmp19 = shufflevector <4 x half> %tmp16, <4 x half> undef, <2 x i32> <i32 0, i32 1>
+  %tmp17 = shufflevector <4 x half> %tmp14, <4 x half> poison, <2 x i32> zeroinitializer
+  %tmp18 = shufflevector <4 x half> %tmp15, <4 x half> poison, <2 x i32> <i32 0, i32 1>
+  %tmp19 = shufflevector <4 x half> %tmp16, <4 x half> poison, <2 x i32> <i32 0, i32 1>
   %tmp20 = tail call <2 x half> @llvm.fma.v2f16(<2 x half> %tmp17, <2 x half> %tmp18, <2 x half> %tmp19)
-  %tmp21 = shufflevector <4 x half> %tmp14, <4 x half> undef, <2 x i32> <i32 1, i32 1>
-  %tmp22 = shufflevector <4 x half> %tmp15, <4 x half> undef, <2 x i32> <i32 2, i32 3>
+  %tmp21 = shufflevector <4 x half> %tmp14, <4 x half> poison, <2 x i32> <i32 1, i32 1>
+  %tmp22 = shufflevector <4 x half> %tmp15, <4 x half> poison, <2 x i32> <i32 2, i32 3>
   %tmp23 = tail call <2 x half> @llvm.fma.v2f16(<2 x half> %tmp21, <2 x half> %tmp22, <2 x half> %tmp20)
-  %tmp24 = shufflevector <2 x half> %tmp23, <2 x half> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %tmp24 = shufflevector <2 x half> %tmp23, <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %tmp25 = shufflevector <4 x half> %tmp24, <4 x half> %tmp16, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-  %tmp26 = shufflevector <4 x half> %tmp14, <4 x half> undef, <2 x i32> <i32 2, i32 2>
-  %tmp27 = shufflevector <4 x half> %tmp25, <4 x half> undef, <2 x i32> <i32 2, i32 3>
+  %tmp26 = shufflevector <4 x half> %tmp14, <4 x half> poison, <2 x i32> <i32 2, i32 2>
+  %tmp27 = shufflevector <4 x half> %tmp25, <4 x half> poison, <2 x i32> <i32 2, i32 3>
   %tmp28 = tail call <2 x half> @llvm.fma.v2f16(<2 x half> %tmp26, <2 x half> %tmp18, <2 x half> %tmp27)
-  %tmp29 = shufflevector <4 x half> %tmp14, <4 x half> undef, <2 x i32> <i32 3, i32 3>
+  %tmp29 = shufflevector <4 x half> %tmp14, <4 x half> poison, <2 x i32> <i32 3, i32 3>
   %tmp30 = tail call <2 x half> @llvm.fma.v2f16(<2 x half> %tmp29, <2 x half> %tmp22, <2 x half> %tmp28)
-  %tmp31 = shufflevector <2 x half> %tmp30, <2 x half> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %tmp31 = shufflevector <2 x half> %tmp30, <2 x half> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %tmp32 = shufflevector <4 x half> %tmp25, <4 x half> %tmp31, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   store <4 x half> %tmp32, ptr addrspace(1) %arrayidx2, align 8
   ret void
@@ -2006,7 +2006,7 @@ define amdgpu_kernel void @shuffle_scalar_load_v8i32_0123(ptr addrspace(4) %in, 
 ; GFX11-NEXT:    global_store_b128 v4, v[0:3], s[2:3]
 ; GFX11-NEXT:    s_endpgm
   %ld8 = load <8 x i32>, ptr addrspace(4) %in, align 16
-  %id = shufflevector <8 x i32> %ld8, <8 x i32> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %id = shufflevector <8 x i32> %ld8, <8 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   store <4 x i32> %id, ptr addrspace(1) %out, align 8
   ret void
 }
@@ -2052,7 +2052,7 @@ define <2 x half> @low16bits_v2f16(ptr addrspace(1) %x0, ptr addrspace(1) %x1) {
 entry:
   %0 = load <2 x half>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x half>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 0, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 0, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x half> %vy1.0.vec.insert, <2 x half> %1, <2 x i32> <i32 0, i32 2>
   ret <2 x half> %vy1.2.vec.insert
 }
@@ -2098,7 +2098,7 @@ define <2 x half> @hi16bits_v2f16(ptr addrspace(1) %x0, ptr addrspace(1) %x1) {
 entry:
   %0 = load <2 x half>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x half>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 1, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 1, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x half> %vy1.0.vec.insert, <2 x half> %1, <2 x i32> <i32 0, i32 3>
   ret <2 x half> %vy1.2.vec.insert
 }
@@ -2144,7 +2144,7 @@ define <2 x half> @low16hi16bits_v2f16(ptr addrspace(1) %x0, ptr addrspace(1) %x
 entry:
   %0 = load <2 x half>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x half>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 0, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 0, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x half> %vy1.0.vec.insert, <2 x half> %1, <2 x i32> <i32 0, i32 3>
   ret <2 x half> %vy1.2.vec.insert
 }
@@ -2179,7 +2179,7 @@ define <2 x half> @hi16low16bits_v2bf16(ptr addrspace(1) %x0, ptr addrspace(1) %
 entry:
   %0 = load <2 x half>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x half>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 1, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x half> %0, <2 x half> poison, <2 x i32> <i32 1, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x half> %vy1.0.vec.insert, <2 x half> %1, <2 x i32> <i32 0, i32 2>
   ret <2 x half> %vy1.2.vec.insert
 }
@@ -2225,7 +2225,7 @@ define <2 x i16> @i16_low16bits(ptr addrspace(1) %x0, ptr addrspace(1) %x1) {
 entry:
   %0 = load <2 x i16>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x i16>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 0, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 0, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x i16> %vy1.0.vec.insert, <2 x i16> %1, <2 x i32> <i32 0, i32 2>
   ret <2 x i16> %vy1.2.vec.insert
 }
@@ -2271,7 +2271,7 @@ define <2 x i16> @i16_low16hi16bits(ptr addrspace(1) %x0, ptr addrspace(1) %x1) 
 entry:
   %0 = load <2 x i16>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x i16>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 0, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 0, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x i16> %vy1.0.vec.insert, <2 x i16> %1, <2 x i32> <i32 0, i32 3>
   ret <2 x i16> %vy1.2.vec.insert
 }
@@ -2306,7 +2306,7 @@ define <2 x i16> @i16_hi16low16bits(ptr addrspace(1) %x0, ptr addrspace(1) %x1) 
 entry:
   %0 = load <2 x i16>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x i16>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 1, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 1, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x i16> %vy1.0.vec.insert, <2 x i16> %1, <2 x i32> <i32 0, i32 2>
   ret <2 x i16> %vy1.2.vec.insert
 }
@@ -2352,7 +2352,7 @@ define <2 x i16> @i16_hi16bits(ptr addrspace(1) %x0, ptr addrspace(1) %x1) {
 entry:
   %0 = load <2 x i16>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x i16>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 1, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x i16> %0, <2 x i16> poison, <2 x i32> <i32 1, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x i16> %vy1.0.vec.insert, <2 x i16> %1, <2 x i32> <i32 0, i32 3>
   ret <2 x i16> %vy1.2.vec.insert
 }
@@ -3020,7 +3020,7 @@ define <4 x bfloat> @shuffle_v4bf16_23uu(ptr addrspace(1) %arg0, ptr addrspace(1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x bfloat>, ptr addrspace(1) %arg0
   %val1 = load <4 x bfloat>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
+  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 2, i32 3, i32 poison, i32 poison>
   ret <4 x bfloat> %shuffle
 }
 
@@ -3067,7 +3067,7 @@ define <4 x bfloat> @shuffle_v4bf16_234u(ptr addrspace(1) %arg0, ptr addrspace(1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x bfloat>, ptr addrspace(1) %arg0
   %val1 = load <4 x bfloat>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 2, i32 3, i32 4, i32 undef>
+  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 2, i32 3, i32 4, i32 poison>
   ret <4 x bfloat> %shuffle
 }
 
@@ -3094,7 +3094,7 @@ define <4 x bfloat> @shuffle_v4bf16_u1u3(ptr addrspace(1) %arg0, ptr addrspace(1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x bfloat>, ptr addrspace(1) %arg0
   %val1 = load <4 x bfloat>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 undef, i32 1, i32 undef, i32 3>
+  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 poison, i32 1, i32 poison, i32 3>
   ret <4 x bfloat> %shuffle
 }
 
@@ -3133,7 +3133,7 @@ define <4 x bfloat> @shuffle_v4bf16_u3u1(ptr addrspace(1) %arg0, ptr addrspace(1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x bfloat>, ptr addrspace(1) %arg0
   %val1 = load <4 x bfloat>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 undef, i32 3, i32 undef, i32 1>
+  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 poison, i32 3, i32 poison, i32 1>
   ret <4 x bfloat> %shuffle
 }
 
@@ -3160,7 +3160,7 @@ define <4 x bfloat> @shuffle_v4bf16_u3uu(ptr addrspace(1) %arg0, ptr addrspace(1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x bfloat>, ptr addrspace(1) %arg0
   %val1 = load <4 x bfloat>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 undef, i32 3, i32 undef, i32 undef>
+  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 poison, i32 3, i32 poison, i32 poison>
   ret <4 x bfloat> %shuffle
 }
 
@@ -3209,7 +3209,7 @@ define <4 x bfloat> @shuffle_v4bf16_3u6u(ptr addrspace(1) %arg0, ptr addrspace(1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x bfloat>, ptr addrspace(1) %arg0
   %val1 = load <4 x bfloat>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 3, i32 undef, i32 6, i32 undef>
+  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 3, i32 poison, i32 6, i32 poison>
   ret <4 x bfloat> %shuffle
 }
 
@@ -3258,7 +3258,7 @@ define <4 x bfloat> @shuffle_v4bf16_3uu7(ptr addrspace(1) %arg0, ptr addrspace(1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x bfloat>, ptr addrspace(1) %arg0
   %val1 = load <4 x bfloat>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 3, i32 undef, i32 undef, i32 7>
+  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 3, i32 poison, i32 poison, i32 7>
   ret <4 x bfloat> %shuffle
 }
 
@@ -3305,7 +3305,7 @@ define <4 x bfloat> @shuffle_v4bf16_35u5(ptr addrspace(1) %arg0, ptr addrspace(1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x bfloat>, ptr addrspace(1) %arg0
   %val1 = load <4 x bfloat>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 3, i32 5, i32 undef, i32 5>
+  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 3, i32 5, i32 poison, i32 5>
   ret <4 x bfloat> %shuffle
 }
 
@@ -3357,7 +3357,7 @@ define <4 x bfloat> @shuffle_v4bf16_357u(ptr addrspace(1) %arg0, ptr addrspace(1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %val0 = load <4 x bfloat>, ptr addrspace(1) %arg0
   %val1 = load <4 x bfloat>, ptr addrspace(1) %arg1
-  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 3, i32 5, i32 7, i32 undef>
+  %shuffle = shufflevector <4 x bfloat> %val0, <4 x bfloat> %val1, <4 x i32> <i32 3, i32 5, i32 7, i32 poison>
   ret <4 x bfloat> %shuffle
 }
 
@@ -5059,21 +5059,21 @@ entry:
   %tmp15 = load <4 x bfloat>, ptr addrspace(1) %arrayidx1, align 8
   %arrayidx2 = getelementptr inbounds <4 x bfloat>, ptr addrspace(1) %C, i64 %tmp12
   %tmp16 = load <4 x bfloat>, ptr addrspace(1) %arrayidx2, align 8
-  %tmp17 = shufflevector <4 x bfloat> %tmp14, <4 x bfloat> undef, <2 x i32> zeroinitializer
-  %tmp18 = shufflevector <4 x bfloat> %tmp15, <4 x bfloat> undef, <2 x i32> <i32 0, i32 1>
-  %tmp19 = shufflevector <4 x bfloat> %tmp16, <4 x bfloat> undef, <2 x i32> <i32 0, i32 1>
+  %tmp17 = shufflevector <4 x bfloat> %tmp14, <4 x bfloat> poison, <2 x i32> zeroinitializer
+  %tmp18 = shufflevector <4 x bfloat> %tmp15, <4 x bfloat> poison, <2 x i32> <i32 0, i32 1>
+  %tmp19 = shufflevector <4 x bfloat> %tmp16, <4 x bfloat> poison, <2 x i32> <i32 0, i32 1>
   %tmp20 = tail call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %tmp17, <2 x bfloat> %tmp18, <2 x bfloat> %tmp19)
-  %tmp21 = shufflevector <4 x bfloat> %tmp14, <4 x bfloat> undef, <2 x i32> <i32 1, i32 1>
-  %tmp22 = shufflevector <4 x bfloat> %tmp15, <4 x bfloat> undef, <2 x i32> <i32 2, i32 3>
+  %tmp21 = shufflevector <4 x bfloat> %tmp14, <4 x bfloat> poison, <2 x i32> <i32 1, i32 1>
+  %tmp22 = shufflevector <4 x bfloat> %tmp15, <4 x bfloat> poison, <2 x i32> <i32 2, i32 3>
   %tmp23 = tail call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %tmp21, <2 x bfloat> %tmp22, <2 x bfloat> %tmp20)
-  %tmp24 = shufflevector <2 x bfloat> %tmp23, <2 x bfloat> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %tmp24 = shufflevector <2 x bfloat> %tmp23, <2 x bfloat> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %tmp25 = shufflevector <4 x bfloat> %tmp24, <4 x bfloat> %tmp16, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
-  %tmp26 = shufflevector <4 x bfloat> %tmp14, <4 x bfloat> undef, <2 x i32> <i32 2, i32 2>
-  %tmp27 = shufflevector <4 x bfloat> %tmp25, <4 x bfloat> undef, <2 x i32> <i32 2, i32 3>
+  %tmp26 = shufflevector <4 x bfloat> %tmp14, <4 x bfloat> poison, <2 x i32> <i32 2, i32 2>
+  %tmp27 = shufflevector <4 x bfloat> %tmp25, <4 x bfloat> poison, <2 x i32> <i32 2, i32 3>
   %tmp28 = tail call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %tmp26, <2 x bfloat> %tmp18, <2 x bfloat> %tmp27)
-  %tmp29 = shufflevector <4 x bfloat> %tmp14, <4 x bfloat> undef, <2 x i32> <i32 3, i32 3>
+  %tmp29 = shufflevector <4 x bfloat> %tmp14, <4 x bfloat> poison, <2 x i32> <i32 3, i32 3>
   %tmp30 = tail call <2 x bfloat> @llvm.fma.v2bf16(<2 x bfloat> %tmp29, <2 x bfloat> %tmp22, <2 x bfloat> %tmp28)
-  %tmp31 = shufflevector <2 x bfloat> %tmp30, <2 x bfloat> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+  %tmp31 = shufflevector <2 x bfloat> %tmp30, <2 x bfloat> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
   %tmp32 = shufflevector <4 x bfloat> %tmp25, <4 x bfloat> %tmp31, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   store <4 x bfloat> %tmp32, ptr addrspace(1) %arrayidx2, align 8
   ret void
@@ -5172,7 +5172,7 @@ define <2 x bfloat> @low16bits(ptr addrspace(1) %x0, ptr addrspace(1) %x1) {
 entry:
   %0 = load <2 x bfloat>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x bfloat>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x bfloat> %0, <2 x bfloat> poison, <2 x i32> <i32 0, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x bfloat> %0, <2 x bfloat> poison, <2 x i32> <i32 0, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x bfloat> %vy1.0.vec.insert, <2 x bfloat> %1, <2 x i32> <i32 0, i32 2>
   ret <2 x bfloat> %vy1.2.vec.insert
 }
@@ -5218,7 +5218,7 @@ define <2 x bfloat> @hi16bits_v2bf16(ptr addrspace(1) %x0, ptr addrspace(1) %x1)
 entry:
   %0 = load <2 x bfloat>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x bfloat>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x bfloat> %0, <2 x bfloat> poison, <2 x i32> <i32 1, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x bfloat> %0, <2 x bfloat> poison, <2 x i32> <i32 1, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x bfloat> %vy1.0.vec.insert, <2 x bfloat> %1, <2 x i32> <i32 0, i32 3>
   ret <2 x bfloat> %vy1.2.vec.insert
 }
@@ -5264,7 +5264,7 @@ define <2 x bfloat> @low16hi16bits_v2bf16(ptr addrspace(1) %x0, ptr addrspace(1)
 entry:
   %0 = load <2 x bfloat>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x bfloat>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x bfloat> %0, <2 x bfloat> poison, <2 x i32> <i32 0, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x bfloat> %0, <2 x bfloat> poison, <2 x i32> <i32 0, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x bfloat> %vy1.0.vec.insert, <2 x bfloat> %1, <2 x i32> <i32 0, i32 3>
   ret <2 x bfloat> %vy1.2.vec.insert
 }
@@ -5299,7 +5299,7 @@ define <2 x bfloat> @hi16low16bits(ptr addrspace(1) %x0, ptr addrspace(1) %x1) {
 entry:
   %0 = load <2 x bfloat>, ptr addrspace(1) %x0, align 4
   %1 = load <2 x bfloat>, ptr addrspace(1) %x1, align 4
-  %vy1.0.vec.insert = shufflevector <2 x bfloat> %0, <2 x bfloat> poison, <2 x i32> <i32 1, i32 undef>
+  %vy1.0.vec.insert = shufflevector <2 x bfloat> %0, <2 x bfloat> poison, <2 x i32> <i32 1, i32 poison>
   %vy1.2.vec.insert = shufflevector <2 x bfloat> %vy1.0.vec.insert, <2 x bfloat> %1, <2 x i32> <i32 0, i32 2>
   ret <2 x bfloat> %vy1.2.vec.insert
 }

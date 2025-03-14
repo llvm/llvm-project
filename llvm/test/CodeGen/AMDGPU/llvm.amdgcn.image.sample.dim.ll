@@ -2394,7 +2394,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_01(<8 x i32> inreg %rsrc, 
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 0, i32 1>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 0, i32 1>
   ret <2 x float> %out
 }
 
@@ -2436,7 +2436,7 @@ define amdgpu_ps <3 x float> @adjust_writemask_sample_012(<8 x i32> inreg %rsrc,
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <3 x i32> <i32 0, i32 1, i32 2>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <3 x i32> <i32 0, i32 1, i32 2>
   ret <3 x float> %out
 }
 
@@ -2478,7 +2478,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_12(<8 x i32> inreg %rsrc, 
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 1, i32 2>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 1, i32 2>
   ret <2 x float> %out
 }
 
@@ -2520,7 +2520,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_03(<8 x i32> inreg %rsrc, 
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 0, i32 3>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 0, i32 3>
   ret <2 x float> %out
 }
 
@@ -2562,7 +2562,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_13(<8 x i32> inreg %rsrc, 
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 1, i32 3>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 1, i32 3>
   ret <2 x float> %out
 }
 
@@ -2604,7 +2604,7 @@ define amdgpu_ps <3 x float> @adjust_writemask_sample_123(<8 x i32> inreg %rsrc,
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <3 x i32> <i32 1, i32 2, i32 3>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <3 x i32> <i32 1, i32 2, i32 3>
   ret <3 x float> %out
 }
 
@@ -2667,7 +2667,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_123_to_12(<8 x i32> inreg 
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 14, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 0, i32 1>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 0, i32 1>
   ret <2 x float> %out
 }
 
@@ -2709,7 +2709,7 @@ define amdgpu_ps <2 x float> @adjust_writemask_sample_013_to_13(<8 x i32> inreg 
 ; GFX12-NEXT:    ; return to shader part epilog
 main_body:
   %r = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 11, float %s, <8 x i32> %rsrc, <4 x i32> %samp, i1 0, i32 0, i32 0)
-  %out = shufflevector <4 x float> %r, <4 x float> undef, <2 x i32> <i32 1, i32 2>
+  %out = shufflevector <4 x float> %r, <4 x float> poison, <2 x i32> <i32 1, i32 2>
   ret <2 x float> %out
 }
 

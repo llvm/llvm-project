@@ -27,7 +27,7 @@ define amdgpu_hs void @main(ptr addrspace(6) inreg %arg) {
 main_body:
   %tmp25 = call <4 x float> @llvm.amdgcn.raw.ptr.buffer.load.v4f32(ptr addrspace(8) undef, i32 undef, i32 0, i32 0)
   %tmp27 = bitcast <4 x float> %tmp25 to <16 x i8>
-  %tmp28 = shufflevector <16 x i8> %tmp27, <16 x i8> undef, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
+  %tmp28 = shufflevector <16 x i8> %tmp27, <16 x i8> poison, <12 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11>
   %tmp29 = bitcast <12 x i8> %tmp28 to <3 x i32>
   call void @llvm.amdgcn.raw.ptr.buffer.store.v3i32(<3 x i32> %tmp29, ptr addrspace(8) undef, i32 undef, i32 0, i32 0) #3
   ret void
