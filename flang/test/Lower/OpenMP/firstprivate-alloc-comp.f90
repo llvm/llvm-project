@@ -13,7 +13,7 @@ end
 
   call firstprivate_alloc_comp()
 end
-! CHECK-LABEL:   omp.private {type = firstprivate} @_QFfirstprivate_alloc_compEx_firstprivate_ref_rec__QFfirstprivate_alloc_compTt1 : !fir.ref<!fir.type<_QFfirstprivate_alloc_compTt1{c:!fir.box<!fir.heap<!fir.array<?xi32>>>}>> alloc {
+! CHECK-LABEL:   omp.private {type = firstprivate} @_QFfirstprivate_alloc_compEx_firstprivate_rec__QFfirstprivate_alloc_compTt1 : !fir.type<_QFfirstprivate_alloc_compTt1{c:!fir.box<!fir.heap<!fir.array<?xi32>>>}> init {
 ! CHECK:     fir.call @_FortranAInitialize(
 ! CHECK:   } copy {
 ! ...

@@ -10,11 +10,10 @@
 ; Regular functions mus still make a copy. `cvta.param` does not always work there.
 define dso_local noundef i32 @non_kernel_function(ptr nocapture noundef readonly byval(%struct.uint4) align 16 %a, i1 noundef zeroext %b, i32 noundef %c) local_unnamed_addr #0 {
 ; OPT-LABEL: define dso_local noundef i32 @non_kernel_function(
-; OPT-SAME: ptr nocapture noundef readonly byval([[STRUCT_UINT4:%.*]]) align 16 [[A:%.*]], i1 noundef zeroext [[B:%.*]], i32 noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
+; OPT-SAME: ptr noundef readonly byval([[STRUCT_UINT4:%.*]]) align 16 captures(none) [[A:%.*]], i1 noundef zeroext [[B:%.*]], i32 noundef [[C:%.*]]) local_unnamed_addr #[[ATTR0:[0-9]+]] {
 ; OPT-NEXT:  [[ENTRY:.*:]]
-; OPT-NEXT:    [[A1:%.*]] = alloca [[STRUCT_UINT4]], align 16
-; OPT-NEXT:    [[A2:%.*]] = addrspacecast ptr [[A]] to ptr addrspace(101)
-; OPT-NEXT:    call void @llvm.memcpy.p0.p101.i64(ptr align 16 [[A1]], ptr addrspace(101) align 16 [[A2]], i64 16, i1 false)
+; OPT-NEXT:    [[A2:%.*]] = addrspacecast ptr [[A]] to ptr addrspace(5)
+; OPT-NEXT:    [[A1:%.*]] = addrspacecast ptr addrspace(5) [[A2]] to ptr
 ; OPT-NEXT:    [[A_:%.*]] = select i1 [[B]], ptr [[A1]], ptr addrspacecast (ptr addrspace(1) @gi to ptr)
 ; OPT-NEXT:    [[IDX_EXT:%.*]] = sext i32 [[C]] to i64
 ; OPT-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[A_]], i64 [[IDX_EXT]]
@@ -23,37 +22,29 @@ define dso_local noundef i32 @non_kernel_function(ptr nocapture noundef readonly
 ;
 ; PTX-LABEL: non_kernel_function(
 ; PTX:       {
-; PTX-NEXT:    .local .align 16 .b8 __local_depot0[16];
-; PTX-NEXT:    .reg .b64 %SP;
-; PTX-NEXT:    .reg .b64 %SPL;
 ; PTX-NEXT:    .reg .pred %p<2>;
 ; PTX-NEXT:    .reg .b16 %rs<3>;
 ; PTX-NEXT:    .reg .b32 %r<11>;
-; PTX-NEXT:    .reg .b64 %rd<9>;
+; PTX-NEXT:    .reg .b64 %rd<8>;
 ; PTX-EMPTY:
 ; PTX-NEXT:  // %bb.0: // %entry
-; PTX-NEXT:    mov.u64 %SPL, __local_depot0;
-; PTX-NEXT:    cvta.local.u64 %SP, %SPL;
+; PTX-NEXT:    mov.b64 %rd1, non_kernel_function_param_0;
+; PTX-NEXT:    cvta.local.u64 %rd2, %rd1;
 ; PTX-NEXT:    ld.param.u8 %rs1, [non_kernel_function_param_1];
 ; PTX-NEXT:    and.b16 %rs2, %rs1, 1;
 ; PTX-NEXT:    setp.eq.b16 %p1, %rs2, 1;
-; PTX-NEXT:    ld.param.s32 %rd1, [non_kernel_function_param_2];
-; PTX-NEXT:    ld.param.u64 %rd2, [non_kernel_function_param_0+8];
-; PTX-NEXT:    st.u64 [%SP+8], %rd2;
-; PTX-NEXT:    ld.param.u64 %rd3, [non_kernel_function_param_0];
-; PTX-NEXT:    st.u64 [%SP], %rd3;
-; PTX-NEXT:    mov.u64 %rd4, gi;
-; PTX-NEXT:    cvta.global.u64 %rd5, %rd4;
-; PTX-NEXT:    add.u64 %rd6, %SP, 0;
-; PTX-NEXT:    selp.b64 %rd7, %rd6, %rd5, %p1;
-; PTX-NEXT:    add.s64 %rd8, %rd7, %rd1;
-; PTX-NEXT:    ld.u8 %r1, [%rd8];
-; PTX-NEXT:    ld.u8 %r2, [%rd8+1];
+; PTX-NEXT:    mov.u64 %rd3, gi;
+; PTX-NEXT:    cvta.global.u64 %rd4, %rd3;
+; PTX-NEXT:    selp.b64 %rd5, %rd2, %rd4, %p1;
+; PTX-NEXT:    ld.param.s32 %rd6, [non_kernel_function_param_2];
+; PTX-NEXT:    add.s64 %rd7, %rd5, %rd6;
+; PTX-NEXT:    ld.u8 %r1, [%rd7];
+; PTX-NEXT:    ld.u8 %r2, [%rd7+1];
 ; PTX-NEXT:    shl.b32 %r3, %r2, 8;
 ; PTX-NEXT:    or.b32 %r4, %r3, %r1;
-; PTX-NEXT:    ld.u8 %r5, [%rd8+2];
+; PTX-NEXT:    ld.u8 %r5, [%rd7+2];
 ; PTX-NEXT:    shl.b32 %r6, %r5, 16;
-; PTX-NEXT:    ld.u8 %r7, [%rd8+3];
+; PTX-NEXT:    ld.u8 %r7, [%rd7+3];
 ; PTX-NEXT:    shl.b32 %r8, %r7, 24;
 ; PTX-NEXT:    or.b32 %r9, %r8, %r6;
 ; PTX-NEXT:    or.b32 %r10, %r9, %r4;

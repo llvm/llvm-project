@@ -52,5 +52,6 @@ exit:
 !0 = !{i64 1234}
 
 ;--- profile.yaml
-- Guid: 1234
-  Counters: [6,0,0,0]
+Contexts:
+  - Guid: 1234
+    Counters: [6,0,0,0]

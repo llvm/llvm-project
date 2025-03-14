@@ -12,6 +12,7 @@ write_cmake_config("version") {
     "CLANG_VERSION_MAJOR=$llvm_version_major",
     "CLANG_VERSION_MINOR=$llvm_version_minor",
     "CLANG_VERSION_PATCHLEVEL=$llvm_version_patch",
+    "MAX_CLANG_ABI_COMPAT_VERSION=$llvm_version_major",
   ]
 }
 
@@ -134,6 +135,10 @@ clang_tablegen("BuiltinsX86") {
 
 clang_tablegen("BuiltinsX86_64") {
   args = [ "-gen-clang-builtins" ]
+}
+
+clang_tablegen("BuiltinTemplates") {
+  args = [ "-gen-clang-builtin-templates" ]
 }
 
 # ARM CDE, MVE, and NEON.

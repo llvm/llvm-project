@@ -738,9 +738,13 @@
 // RUN:     -fno-modules-search-all \
 // RUN:     -fimplicit-modules \
 // RUN:     -fno-implicit-modules \
+// RUN:     -fstrict-overflow \
+// RUN:     -fno-strict-overflow \
 // RUN:     -ftrivial-auto-var-init=zero \
 // RUN:     -fwrapv \
 // RUN:     -fno-wrapv \
+// RUN:     -fwrapv-pointer \
+// RUN:     -fno-wrapv-pointer \
 // RUN:     --version \
 // RUN:     -Werror /Zs -- %s 2>&1
 

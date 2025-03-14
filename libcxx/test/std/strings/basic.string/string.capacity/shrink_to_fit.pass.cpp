@@ -61,28 +61,25 @@ TEST_CONSTEXPR_CXX20 bool test() {
   test_string<std::basic_string<char, std::char_traits<char>, safe_allocator<char>>>();
 #endif
 
+#if TEST_STD_VER >= 23
+  { // Make sure shrink_to_fit never increases capacity
+    // See: https://github.com/llvm/llvm-project/issues/95161
+    std::basic_string<char, std::char_traits<char>, increasing_allocator<char>> s{
+        "String does not fit in the internal buffer"};
+    std::size_t capacity = s.capacity();
+    std::size_t size     = s.size();
+    s.shrink_to_fit();
+    assert(s.capacity() <= capacity);
+    assert(s.size() == size);
+    LIBCPP_ASSERT(is_string_asan_correct(s));
+  }
+#endif
+
   return true;
 }
 
-#if TEST_STD_VER >= 23
-// https://github.com/llvm/llvm-project/issues/95161
-void test_increasing_allocator() {
-  std::basic_string<char, std::char_traits<char>, increasing_allocator<char>> s{
-      "String does not fit in the internal buffer"};
-  std::size_t capacity = s.capacity();
-  std::size_t size     = s.size();
-  s.shrink_to_fit();
-  assert(s.capacity() <= capacity);
-  assert(s.size() == size);
-  LIBCPP_ASSERT(is_string_asan_correct(s));
-}
-#endif // TEST_STD_VER >= 23
-
 int main(int, char**) {
   test();
-#if TEST_STD_VER >= 23
-  test_increasing_allocator();
-#endif
 #if TEST_STD_VER > 17
   static_assert(test());
 #endif

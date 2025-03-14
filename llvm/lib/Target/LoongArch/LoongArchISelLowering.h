@@ -281,6 +281,7 @@ public:
                               Align &PrefAlign) const override;
 
   bool isFPImmVLDILegal(const APFloat &Imm, EVT VT) const;
+  LegalizeTypeAction getPreferredVectorAction(MVT VT) const override;
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.

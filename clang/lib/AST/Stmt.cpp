@@ -708,6 +708,13 @@ unsigned GCCAsmStmt::AnalyzeAsmString(SmallVectorImpl<AsmStringPiece>&Pieces,
         DiagOffs = CurPtr-StrStart-1;
         return diag::err_asm_invalid_escape;
       }
+
+      // Specifically handle `cc` which we will alias to `c`.
+      // Note this is the only operand modifier that exists which has two
+      // characters.
+      if (EscapedChar == 'c' && *CurPtr == 'c')
+        CurPtr++;
+
       EscapedChar = *CurPtr++;
     }
 

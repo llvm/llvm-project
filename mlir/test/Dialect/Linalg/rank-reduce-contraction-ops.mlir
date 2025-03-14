@@ -35,6 +35,23 @@ func.func @singleton_batch_matmul_memref(%arg0 : memref<1x?x?xf32>, %arg1 : memr
 
 // -----
 
+func.func @negative_singleton_batch_matmul_to_matmul_memref(%arg0 : memref<1x?x?xf32>, %arg1 : memref<1x?x?xf32>, %arg2: memref<1x?x?xf32>) {
+  // CHECK-LABEL: @negative_singleton_batch_matmul_to_matmul_memref
+  // CHECK-NOT:   collapse_shape
+  // CHECK-NOT:   linalg.matmul
+  // CHECK-NOT:   expand_shape
+  linalg.batch_matmul indexing_maps = [
+                          affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>,
+                          affine_map<(d0, d1, d2, d3) -> (d0, d2, d3)>,
+                          affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+                          ]
+      ins(%arg0, %arg1 : memref<1x?x?xf32>, memref<1x?x?xf32>)
+      outs(%arg2 : memref<1x?x?xf32>)
+  return
+}
+
+// -----
+
 func.func @singleton_batch_matvec(%arg0 : tensor<1x128x512xf32>, %arg1 : tensor<1x512xf32>, %arg2: tensor<1x128xf32>) -> tensor<1x128xf32> {
   // CHECK-LABEL: @singleton_batch_matvec
   //  CHECK-SAME:     %[[LHS:[a-zA-Z0-9]+]]: tensor<1x128x512xf32>
@@ -130,6 +147,20 @@ func.func @matmul_to_matvec(%arg0: memref<?x?xf32>, %arg1: memref<?x1xf32>, %arg
   // CHECK-LABEL: @matmul_to_matvec
   // CHECK: linalg.matvec
     linalg.matmul ins(%arg0, %arg1: memref<?x?xf32>, memref<?x1xf32>) outs(%arg2: memref<?x1xf32>)
+    return
+}
+
+// -----
+
+func.func @negative_matmul_to_matvec(%arg0: memref<?xf32>, %arg1: memref<?x1xf32>, %arg2: memref<?x1xf32>) {
+  // CHECK-LABEL: @negative_matmul_to_matvec
+  // CHECK-NOT: linalg.matvec
+    linalg.matmul indexing_maps = [
+                          affine_map<(d0, d1, d2) -> (d2)>,
+                          affine_map<(d0, d1, d2) -> (d2, d1)>,
+                          affine_map<(d0, d1, d2) -> (d0, d1)>
+                          ]
+                          ins(%arg0, %arg1: memref<?xf32>, memref<?x1xf32>) outs(%arg2: memref<?x1xf32>)
     return
 }
 

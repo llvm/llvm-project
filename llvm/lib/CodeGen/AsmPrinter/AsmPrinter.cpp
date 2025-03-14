@@ -760,7 +760,7 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
       OutContext.reportError(SMLoc(),
                              "tagged symbols (-fsanitize=memtag-globals) are "
                              "only supported on AArch64 Android");
-    OutStreamer->emitSymbolAttribute(EmittedSym, MAI->getMemtagAttr());
+    OutStreamer->emitSymbolAttribute(EmittedSym, MCSA_Memtag);
   }
 
   if (!GV->hasInitializer())   // External globals require no extra code.
@@ -1084,11 +1084,9 @@ void AsmPrinter::emitFunctionEntryLabel() {
   if (TM.getTargetTriple().isOSBinFormatELF()) {
     MCSymbol *Sym = getSymbolPreferLocal(MF->getFunction());
     if (Sym != CurrentFnSym) {
-      cast<MCSymbolELF>(Sym)->setType(ELF::STT_FUNC);
       CurrentFnBeginLocal = Sym;
       OutStreamer->emitLabel(Sym);
-      if (MAI->hasDotTypeDotSizeDirective())
-        OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
+      OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
     }
   }
 }
@@ -2868,11 +2866,26 @@ void AsmPrinter::emitJumpTableInfo() {
           MJTI->getEntryKind() == MachineJumpTableInfo::EK_LabelDifference64,
       F);
 
-  SmallVector<unsigned> JumpTableIndices;
-  for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI) {
-    JumpTableIndices.push_back(JTI);
+  if (!TM.Options.EnableStaticDataPartitioning) {
+    emitJumpTableImpl(*MJTI, llvm::to_vector(llvm::seq<unsigned>(JT.size())),
+                      JTInDiffSection);
+    return;
   }
-  emitJumpTableImpl(*MJTI, JumpTableIndices, JTInDiffSection);
+
+  SmallVector<unsigned> HotJumpTableIndices, ColdJumpTableIndices;
+  // When static data partitioning is enabled, collect jump table entries that
+  // go into the same section together to reduce the amount of section switch
+  // statements.
+  for (unsigned JTI = 0, JTSize = JT.size(); JTI < JTSize; ++JTI) {
+    if (JT[JTI].Hotness == MachineFunctionDataHotness::Cold) {
+      ColdJumpTableIndices.push_back(JTI);
+    } else {
+      HotJumpTableIndices.push_back(JTI);
+    }
+  }
+
+  emitJumpTableImpl(*MJTI, HotJumpTableIndices, JTInDiffSection);
+  emitJumpTableImpl(*MJTI, ColdJumpTableIndices, JTInDiffSection);
 }
 
 void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
@@ -2884,7 +2897,13 @@ void AsmPrinter::emitJumpTableImpl(const MachineJumpTableInfo &MJTI,
   const TargetLoweringObjectFile &TLOF = getObjFileLowering();
   const Function &F = MF->getFunction();
   const std::vector<MachineJumpTableEntry> &JT = MJTI.getJumpTables();
-  MCSection *JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
+  MCSection *JumpTableSection = nullptr;
+  if (TM.Options.EnableStaticDataPartitioning) {
+    JumpTableSection =
+        TLOF.getSectionForJumpTable(F, TM, &JT[JumpTableIndices.front()]);
+  } else {
+    JumpTableSection = TLOF.getSectionForJumpTable(F, TM);
+  }
 
   const DataLayout &DL = MF->getDataLayout();
   if (JTInDiffSection) {
@@ -3010,6 +3029,9 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
   switch (MJTI.getEntryKind()) {
   case MachineJumpTableInfo::EK_Inline:
     llvm_unreachable("Cannot emit EK_Inline jump table entry");
+  case MachineJumpTableInfo::EK_GPRel32BlockAddress:
+  case MachineJumpTableInfo::EK_GPRel64BlockAddress:
+    llvm_unreachable("MIPS specific");
   case MachineJumpTableInfo::EK_Custom32:
     Value = MF->getSubtarget().getTargetLowering()->LowerCustomJumpTableEntry(
         &MJTI, MBB, UID, OutContext);
@@ -3019,23 +3041,6 @@ void AsmPrinter::emitJumpTableEntry(const MachineJumpTableInfo &MJTI,
     //     .word LBB123
     Value = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
     break;
-  case MachineJumpTableInfo::EK_GPRel32BlockAddress: {
-    // EK_GPRel32BlockAddress - Each entry is an address of block, encoded
-    // with a relocation as gp-relative, e.g.:
-    //     .gprel32 LBB123
-    MCSymbol *MBBSym = MBB->getSymbol();
-    OutStreamer->emitGPRel32Value(MCSymbolRefExpr::create(MBBSym, OutContext));
-    return;
-  }
-
-  case MachineJumpTableInfo::EK_GPRel64BlockAddress: {
-    // EK_GPRel64BlockAddress - Each entry is an address of block, encoded
-    // with a relocation as gp-relative, e.g.:
-    //     .gpdword LBB123
-    MCSymbol *MBBSym = MBB->getSymbol();
-    OutStreamer->emitGPRel64Value(MCSymbolRefExpr::create(MBBSym, OutContext));
-    return;
-  }
 
   case MachineJumpTableInfo::EK_LabelDifference32:
   case MachineJumpTableInfo::EK_LabelDifference64: {
@@ -4283,9 +4288,9 @@ void AsmPrinter::emitBasicBlockStart(const MachineBasicBlock &MBB) {
     }
   }
 
-  if (MBB.isEHCatchretTarget() &&
+  if (MBB.isEHContTarget() &&
       MAI->getExceptionHandlingType() == ExceptionHandling::WinEH) {
-    OutStreamer->emitLabel(MBB.getEHCatchretSymbol());
+    OutStreamer->emitLabel(MBB.getEHContSymbol());
   }
 
   // With BB sections, each basic block must handle CFI information on its own

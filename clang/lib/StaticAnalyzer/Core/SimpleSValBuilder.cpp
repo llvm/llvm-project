@@ -948,8 +948,8 @@ SVal SimpleSValBuilder::evalBinOpLL(ProgramStateRef state,
 
     const MemRegion *LeftBase = LeftMR->getBaseRegion();
     const MemRegion *RightBase = RightMR->getBaseRegion();
-    const MemSpaceRegion *LeftMS = LeftBase->getMemorySpace();
-    const MemSpaceRegion *RightMS = RightBase->getMemorySpace();
+    const MemSpaceRegion *LeftMS = LeftBase->getMemorySpace(state);
+    const MemSpaceRegion *RightMS = RightBase->getMemorySpace(state);
     const MemSpaceRegion *UnknownMS = MemMgr.getUnknownRegion();
 
     // If the two regions are from different known memory spaces they cannot be

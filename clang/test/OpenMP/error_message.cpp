@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=51 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=60 -ferror-limit 100 %s -Wuninitialized
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=51 -ferror-limit 100 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=60 -ferror-limit 100 %s -Wuninitialized
 
 template <class T>
 T tmain(T argc) {

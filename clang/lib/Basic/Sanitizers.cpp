@@ -18,6 +18,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cmath>
 #include <optional>
 
 using namespace clang;
@@ -42,6 +43,27 @@ std::optional<double> SanitizerMaskCutoffs::operator[](unsigned Kind) const {
 }
 
 void SanitizerMaskCutoffs::clear(SanitizerMask K) { set(K, 0); }
+
+std::optional<std::vector<unsigned>>
+SanitizerMaskCutoffs::getAllScaled(unsigned ScalingFactor) const {
+  std::vector<unsigned> ScaledCutoffs;
+
+  bool AnyCutoff = false;
+  for (unsigned int i = 0; i < SanitizerKind::SO_Count; ++i) {
+    auto C = (*this)[i];
+    if (C.has_value()) {
+      ScaledCutoffs.push_back(lround(std::clamp(*C, 0.0, 1.0) * ScalingFactor));
+      AnyCutoff = true;
+    } else {
+      ScaledCutoffs.push_back(0);
+    }
+  }
+
+  if (AnyCutoff)
+    return ScaledCutoffs;
+
+  return std::nullopt;
+}
 
 // Once LLVM switches to C++17, the constexpr variables can be inline and we
 // won't need this.

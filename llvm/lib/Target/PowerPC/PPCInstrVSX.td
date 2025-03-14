@@ -1659,8 +1659,6 @@ let Predicates = [HasVSX, HasP9Vector] in {
                         RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
 
   // Vector Splat Immediate Byte
-  // FIXME: Setting the hasSideEffects flag here to match current behaviour.
-  let hasSideEffects = 1 in
   def XXSPLTIB : X_RD6_IMM8<60, 360, (outs vsrc:$XT), (ins u8imm:$IMM8),
                             "xxspltib $XT, $IMM8", IIC_VecPerm, []>;
 

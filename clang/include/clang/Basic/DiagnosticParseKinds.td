@@ -1099,6 +1099,16 @@ def err_lambda_capture_misplaced_ellipsis : Error<
   "the name of the capture">;
 def err_lambda_capture_multiple_ellipses : Error<
   "multiple ellipses in pack capture">;
+def err_binding_multiple_ellipses : Error<
+  "multiple packs in structured binding declaration">;
+def note_previous_ellipsis : Note<
+  "previous binding pack specified here">;
+def ext_cxx_binding_pack : ExtWarn<
+  "structured binding packs are a C++2c extension ">,
+  InGroup<CXX26>;
+def warn_cxx23_compat_binding_pack : Warning<
+  "structured binding packs are incompatible with C++ standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
 def err_capture_default_first : Error<
   "capture default must be first">;
 def ext_decl_attrs_on_lambda : ExtWarn<
@@ -1485,7 +1495,7 @@ def note_previous_map_type_specified_here
     : Note<"map type '%0' is previous specified here">;
 def err_omp_unknown_map_type_modifier : Error<
   "incorrect map type modifier, expected one of: 'always', 'close', 'mapper'"
-  "%select{|, 'present'|, 'present', 'iterator'}0%select{|, 'ompx_hold'}1">;
+  "%select{|, 'present'|, 'present', 'iterator'}0%select{|, 'ompx_hold'}1%select{|, 'self'}2">;
 def err_omp_map_type_missing : Error<
   "missing map type">;
 def err_omp_map_type_modifier_missing : Error<
@@ -1807,5 +1817,9 @@ def ext_hlsl_access_specifiers : ExtWarn<
   InGroup<HLSLExtension>;
 def err_hlsl_unsupported_component : Error<"invalid component '%0' used; expected 'x', 'y', 'z', or 'w'">;
 def err_hlsl_packoffset_invalid_reg : Error<"invalid resource class specifier '%0' for packoffset, expected 'c'">;
+def err_hlsl_virtual_function
+    : Error<"virtual functions are unsupported in HLSL">;
+def err_hlsl_virtual_inheritance
+    : Error<"virtual inheritance is unsupported in HLSL">;
 
 } // end of Parser diagnostics

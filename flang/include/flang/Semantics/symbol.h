@@ -10,11 +10,11 @@
 #define FORTRAN_SEMANTICS_SYMBOL_H_
 
 #include "type.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Common/reference.h"
 #include "flang/Common/visit.h"
 #include "flang/Semantics/module-dependences.h"
+#include "flang/Support/Fortran.h"
 #include "llvm/ADT/DenseMapInfo.h"
 
 #include <array>
@@ -329,9 +329,11 @@ public:
   }
   bool IsAssumedSize() const { return rank_.value_or(0) == isAssumedSize; }
   bool IsAssumedRank() const { return rank_.value_or(0) == isAssumedRank; }
+  bool isTypeGuard() const { return isTypeGuard_; }
   void set_rank(int rank);
   void set_IsAssumedSize();
   void set_IsAssumedRank();
+  void set_isTypeGuard(bool yes = true);
 
 private:
   MaybeExpr expr_;
@@ -340,6 +342,7 @@ private:
   static constexpr int isAssumedSize{-1}; // RANK(*)
   static constexpr int isAssumedRank{-2}; // RANK DEFAULT
   std::optional<int> rank_;
+  bool isTypeGuard_{false}; // TYPE IS or CLASS IS, but not CLASS(DEFAULT)
 };
 llvm::raw_ostream &operator<<(llvm::raw_ostream &, const AssocEntityDetails &);
 

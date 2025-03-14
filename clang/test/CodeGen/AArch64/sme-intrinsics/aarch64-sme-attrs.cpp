@@ -300,12 +300,12 @@ int test_variadic_template() __arm_inout("za") {
               preserves_za_decl);
 }
 
-// CHECK: attributes #[[SM_ENABLED]] = { mustprogress noinline nounwind "aarch64_pstate_sm_enabled" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[SM_ENABLED]] = { mustprogress noinline nounwind vscale_range(1,16) "aarch64_pstate_sm_enabled" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[NORMAL_DECL]] = { "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[SM_ENABLED_DECL]] = { "aarch64_pstate_sm_enabled" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[SM_COMPATIBLE]] = { mustprogress noinline nounwind "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[SM_COMPATIBLE_DECL]] = { "aarch64_pstate_sm_compatible" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
-// CHECK: attributes #[[SM_BODY]] = { mustprogress noinline nounwind "aarch64_pstate_sm_body" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
+// CHECK: attributes #[[SM_BODY]] = { mustprogress noinline nounwind vscale_range(1,16) "aarch64_pstate_sm_body" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[ZA_SHARED]] = { mustprogress noinline nounwind "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[ZA_SHARED_DECL]] = { "aarch64_inout_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }
 // CHECK: attributes #[[ZA_PRESERVED]] = { mustprogress noinline nounwind "aarch64_preserves_za" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-features"="+bf16,+sme" }

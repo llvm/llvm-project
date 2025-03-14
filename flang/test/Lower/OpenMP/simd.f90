@@ -16,7 +16,7 @@ subroutine simd
   ! CHECK-NEXT: omp.simd private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i=1, 9
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -36,7 +36,7 @@ subroutine simd_with_if_clause(n, threshold)
   ! CHECK: omp.simd if(%[[COND:.*]]) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -55,7 +55,7 @@ subroutine simd_with_simdlen_clause(n, threshold)
   ! CHECK: omp.simd simdlen(2) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -75,7 +75,7 @@ subroutine simd_with_simdlen_clause_from_param(n, threshold)
   ! CHECK: omp.simd simdlen(2) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -95,7 +95,7 @@ subroutine simd_with_simdlen_clause_from_expr_from_param(n, threshold)
   ! CHECK: omp.simd simdlen(6) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -114,7 +114,7 @@ subroutine simd_with_safelen_clause(n, threshold)
   ! CHECK: omp.simd safelen(2) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -134,7 +134,7 @@ subroutine simd_with_safelen_clause_from_expr_from_param(n, threshold)
   ! CHECK: omp.simd safelen(6) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -153,7 +153,7 @@ subroutine simd_with_simdlen_safelen_clause(n, threshold)
   ! CHECK: omp.simd safelen(2) simdlen(1) private({{.*}}) {
   ! CHECK-NEXT: omp.loop_nest (%[[I:.*]]) : i32 = (%[[LB]]) to (%[[UB]]) inclusive step (%[[STEP]]) {
   do i = 1, n
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
     ! CHECK: %[[LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: fir.call @_FortranAioOutputInteger32({{.*}}, %[[LD]]) {{.*}}: (!fir.ref<i8>, i32) -> i1
     print*, i
@@ -254,7 +254,7 @@ subroutine lastprivate_with_simd
   real :: sum
 
   
-!CHECK: omp.simd private(@_QFlastprivate_with_simdEsum_private_ref_f32 %[[VAR_SUM_DECLARE]]#0 -> %[[VAR_SUM_PINNED:.*]], @{{.*}}) {
+!CHECK: omp.simd private(@_QFlastprivate_with_simdEsum_private_f32 %[[VAR_SUM_DECLARE]]#0 -> %[[VAR_SUM_PINNED:.*]], @{{.*}}) {
 !CHECK: omp.loop_nest (%[[ARG:.*]]) : i32 = ({{.*}} to ({{.*}}) inclusive step ({{.*}}) {
 !CHECK: %[[VAR_SUM_PINNED_DECLARE:.*]]:2 = hlfir.declare %[[VAR_SUM_PINNED]] {{.*}}
 !CHECK: %[[ADD_RESULT:.*]] = arith.addi {{.*}}
@@ -286,7 +286,7 @@ subroutine simd_with_reduction_clause
   !$omp simd reduction(+:x)
   do i=1, 9
     ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X_RED]] {uniq_name = "_QFsimd_with_reduction_clauseEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
-    ! CHECK: fir.store %[[I]] to %[[LOCAL:.*]]#1 : !fir.ref<i32>
+    ! CHECK: hlfir.assign %[[I]] to %[[LOCAL:.*]]#1 : i32, !fir.ref<i32>
     ! CHECK: %[[X_LD:.*]] = fir.load %[[X_DECL]]#0 : !fir.ref<i32>
     ! CHECK: %[[I_LD:.*]] = fir.load %[[LOCAL]]#0 : !fir.ref<i32>
     ! CHECK: %[[SUM:.*]] = arith.addi %[[X_LD]], %[[I_LD]] : i32

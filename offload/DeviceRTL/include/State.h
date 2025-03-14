@@ -22,8 +22,6 @@
 // Forward declaration.
 struct KernelEnvironmentTy;
 
-#pragma omp begin declare target device_type(nohost)
-
 namespace ompx {
 
 namespace memory {
@@ -33,7 +31,7 @@ namespace memory {
 /// Note: See the restrictions on __kmpc_alloc_shared for proper usage.
 void *allocShared(uint64_t Size, const char *Reason);
 
-/// Free \p Ptr, alloated via allocShared, for \p Reason.
+/// Free \p Ptr, allocated via allocShared, for \p Reason.
 ///
 /// Note: See the restrictions on __kmpc_free_shared for proper usage.
 void freeShared(void *Ptr, uint64_t Bytes, const char *Reason);
@@ -44,7 +42,7 @@ void *allocGlobal(uint64_t Size, const char *Reason);
 /// Return a pointer to the dynamic shared memory buffer.
 void *getDynamicBuffer();
 
-/// Free \p Ptr, alloated via allocGlobal, for \p Reason.
+/// Free \p Ptr, allocated via allocGlobal, for \p Reason.
 void freeGlobal(void *Ptr, const char *Reason);
 
 } // namespace memory
@@ -88,8 +86,7 @@ struct TeamStateTy {
   ParallelRegionFnTy ParallelRegionFnVar;
 };
 
-extern TeamStateTy TeamState;
-#pragma omp allocate(TeamState) allocator(omp_pteam_mem_alloc)
+extern Local<TeamStateTy> TeamState;
 
 struct ThreadStateTy {
 
@@ -115,8 +112,7 @@ struct ThreadStateTy {
   }
 };
 
-extern ThreadStateTy **ThreadStates;
-#pragma omp allocate(ThreadStates) allocator(omp_pteam_mem_alloc)
+extern Local<ThreadStateTy **> ThreadStates;
 
 /// Initialize the state machinery. Must be called by all threads.
 void init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment,
@@ -365,7 +361,7 @@ inline state::Value<uint32_t, state::VK_Level> Level;
 /// The `active-level` describes which of the parallel level counted with the
 /// `level-var` is active. There can only be one.
 ///
-/// active-level-var is 1, if ActiveLevelVar is not 0, otherweise it is 0.
+/// active-level-var is 1, if ActiveLevelVar is not 0, otherwise it is 0.
 inline state::Value<uint32_t, state::VK_ActiveLevel> ActiveLevel;
 
 /// TODO
@@ -377,7 +373,5 @@ inline state::Value<uint32_t, state::VK_RunSched> RunSched;
 } // namespace icv
 
 } // namespace ompx
-
-#pragma omp end declare target
 
 #endif

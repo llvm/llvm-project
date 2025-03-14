@@ -3,6 +3,7 @@
 import gc
 import io
 import itertools
+from tempfile import NamedTemporaryFile
 from mlir.ir import *
 from mlir.dialects.builtin import ModuleOp
 from mlir.dialects import arith
@@ -583,14 +584,24 @@ def testOperationPrint():
         r"""
     func.func @f1(%arg0: i32) -> i32 {
       %0 = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
+      %1 = arith.constant dense_resource<resource1> : tensor<3xi64>
       return %arg0 : i32
     }
+
+    {-#
+      dialect_resources: {
+          builtin: {
+            resource1: "0x08000000010000000000000002000000000000000300000000000000"
+          }
+        }
+      #-}
   """,
         ctx,
     )
 
     # Test print to stdout.
     # CHECK: return %arg0 : i32
+    # CHECK: resource1: "0x08
     module.operation.print()
 
     # Test print to text file.
@@ -607,7 +618,14 @@ def testOperationPrint():
     module.operation.write_bytecode(bytecode_stream, desired_version=1)
     bytecode = bytecode_stream.getvalue()
     assert bytecode.startswith(b"ML\xefR"), "Expected bytecode to start with MLïR"
-    module_roundtrip = Module.parse(bytecode, ctx)
+    with NamedTemporaryFile() as tmpfile:
+        module.operation.write_bytecode(str(tmpfile.name), desired_version=1)
+        tmpfile.seek(0)
+        assert tmpfile.read().startswith(
+            b"ML\xefR"
+        ), "Expected bytecode to start with MLïR"
+    ctx2 = Context()
+    module_roundtrip = Module.parse(bytecode, ctx2)
     f = io.StringIO()
     module_roundtrip.operation.print(file=f)
     roundtrip_value = f.getvalue()
@@ -625,6 +643,8 @@ def testOperationPrint():
     # Test print local_scope.
     # CHECK: constant dense<[1, 2, 3, 4]> : tensor<4xi32> loc("nom")
     module.operation.print(enable_debug_info=True, use_local_scope=True)
+    # CHECK: %nom = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
+    module.operation.print(use_name_loc_as_prefix=True, use_local_scope=True)
 
     # Test printing using state.
     state = AsmState(module.operation)
@@ -633,7 +653,8 @@ def testOperationPrint():
 
     # Test print with options.
     # CHECK: value = dense_resource<__elided__> : tensor<4xi32>
-    # CHECK: "func.return"(%arg0) : (i32) -> () -:4:7
+    # CHECK: "func.return"(%arg0) : (i32) -> () -:5:7
+    # CHECK-NOT: resource1: "0x08
     module.operation.print(
         large_elements_limit=2,
         enable_debug_info=True,

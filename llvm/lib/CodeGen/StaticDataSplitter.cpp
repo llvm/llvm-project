@@ -35,31 +35,24 @@ using namespace llvm;
 
 #define DEBUG_TYPE "static-data-splitter"
 
-STATISTIC(NumHotJumpTables, "Number of hot jump tables seen");
-STATISTIC(NumColdJumpTables, "Number of cold jump tables seen");
+STATISTIC(NumHotJumpTables, "Number of hot jump tables seen.");
+STATISTIC(NumColdJumpTables, "Number of cold jump tables seen.");
 STATISTIC(NumUnknownJumpTables,
-          "Number of jump tables with unknown hotness. Option "
-          "-static-data-default-hotness specifies the hotness.");
-
-static cl::opt<MachineFunctionDataHotness> StaticDataDefaultHotness(
-    "static-data-default-hotness", cl::Hidden,
-    cl::desc("This option specifies the hotness of static data when profile "
-             "information is unavailable"),
-    cl::init(MachineFunctionDataHotness::Hot),
-    cl::values(clEnumValN(MachineFunctionDataHotness::Hot, "hot", "Hot"),
-               clEnumValN(MachineFunctionDataHotness::Cold, "cold", "Cold")));
+          "Number of jump tables with unknown hotness. They are from functions "
+          "without profile information.");
 
 class StaticDataSplitter : public MachineFunctionPass {
   const MachineBranchProbabilityInfo *MBPI = nullptr;
   const MachineBlockFrequencyInfo *MBFI = nullptr;
   const ProfileSummaryInfo *PSI = nullptr;
 
-  // Returns true iff any jump table is hot-cold categorized.
-  bool splitJumpTables(MachineFunction &MF);
+  // Update LLVM statistics for a machine function without profiles.
+  void updateStatsWithoutProfiles(const MachineFunction &MF);
+  // Update LLVM statistics for a machine function with profiles.
+  void updateStatsWithProfiles(const MachineFunction &MF);
 
-  // Same as above but works on functions with profile information.
-  bool splitJumpTablesWithProfiles(const MachineFunction &MF,
-                                   MachineJumpTableInfo &MJTI);
+  // Use profiles to partition static data.
+  bool partitionStaticDataWithProfiles(MachineFunction &MF);
 
 public:
   static char ID;
@@ -85,12 +78,24 @@ bool StaticDataSplitter::runOnMachineFunction(MachineFunction &MF) {
   MBFI = &getAnalysis<MachineBlockFrequencyInfoWrapperPass>().getMBFI();
   PSI = &getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI();
 
-  return splitJumpTables(MF);
+  const bool ProfileAvailable = PSI && PSI->hasProfileSummary() && MBFI &&
+                                MF.getFunction().hasProfileData();
+
+  if (!ProfileAvailable) {
+    updateStatsWithoutProfiles(MF);
+    return false;
+  }
+
+  bool Changed = partitionStaticDataWithProfiles(MF);
+
+  updateStatsWithProfiles(MF);
+  return Changed;
 }
 
-bool StaticDataSplitter::splitJumpTablesWithProfiles(
-    const MachineFunction &MF, MachineJumpTableInfo &MJTI) {
+bool StaticDataSplitter::partitionStaticDataWithProfiles(MachineFunction &MF) {
   int NumChangedJumpTables = 0;
+
+  MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
 
   // Jump table could be used by either terminating instructions or
   // non-terminating ones, so we walk all instructions and use
@@ -100,70 +105,55 @@ bool StaticDataSplitter::splitJumpTablesWithProfiles(
   for (const auto &MBB : MF) {
     for (const MachineInstr &I : MBB) {
       for (const MachineOperand &Op : I.operands()) {
-        if (!Op.isJTI())
-          continue;
-        const int JTI = Op.getIndex();
-        // This is not a source block of jump table.
-        if (JTI == -1)
-          continue;
+        if (Op.isJTI()) {
+          assert(MJTI != nullptr && "Jump table info is not available.");
+          const int JTI = Op.getIndex();
+          // This is not a source block of jump table.
+          if (JTI == -1)
+            continue;
 
-        auto Hotness = MachineFunctionDataHotness::Hot;
+          auto Hotness = MachineFunctionDataHotness::Hot;
 
-        // Hotness is based on source basic block hotness.
-        // TODO: PSI APIs are about instruction hotness. Introduce API for data
-        // access hotness.
-        if (PSI->isColdBlock(&MBB, MBFI))
-          Hotness = MachineFunctionDataHotness::Cold;
+          // Hotness is based on source basic block hotness.
+          // TODO: PSI APIs are about instruction hotness. Introduce API for
+          // data access hotness.
+          if (PSI->isColdBlock(&MBB, MBFI))
+            Hotness = MachineFunctionDataHotness::Cold;
 
-        if (MJTI.updateJumpTableEntryHotness(JTI, Hotness))
-          ++NumChangedJumpTables;
+          if (MJTI->updateJumpTableEntryHotness(JTI, Hotness))
+            ++NumChangedJumpTables;
+        }
       }
     }
   }
   return NumChangedJumpTables > 0;
 }
 
-bool StaticDataSplitter::splitJumpTables(MachineFunction &MF) {
-  MachineJumpTableInfo *MJTI = MF.getJumpTableInfo();
-  if (!MJTI || MJTI->getJumpTables().empty())
-    return false;
+void StaticDataSplitter::updateStatsWithProfiles(const MachineFunction &MF) {
+  if (!AreStatisticsEnabled())
+    return;
 
-  const bool ProfileAvailable = PSI && PSI->hasProfileSummary() && MBFI &&
-                                MF.getFunction().hasProfileData();
-  auto statOnExit = llvm::make_scope_exit([&] {
-    if (!AreStatisticsEnabled())
-      return;
-
-    if (!ProfileAvailable) {
-      NumUnknownJumpTables += MJTI->getJumpTables().size();
-      return;
-    }
-
-    for (size_t JTI = 0; JTI < MJTI->getJumpTables().size(); JTI++) {
-      auto Hotness = MJTI->getJumpTables()[JTI].Hotness;
-      if (Hotness == MachineFunctionDataHotness::Hot) {
+  if (const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo()) {
+    for (const auto &JumpTable : MJTI->getJumpTables()) {
+      if (JumpTable.Hotness == MachineFunctionDataHotness::Hot) {
         ++NumHotJumpTables;
       } else {
-        assert(Hotness == MachineFunctionDataHotness::Cold &&
+        assert(JumpTable.Hotness == MachineFunctionDataHotness::Cold &&
                "A jump table is either hot or cold when profile information is "
                "available.");
         ++NumColdJumpTables;
       }
     }
-  });
+  }
+}
 
-  // Place jump tables according to block hotness if function has profile data.
-  if (ProfileAvailable)
-    return splitJumpTablesWithProfiles(MF, *MJTI);
+void StaticDataSplitter::updateStatsWithoutProfiles(const MachineFunction &MF) {
+  if (!AreStatisticsEnabled())
+    return;
 
-  // If function profile is unavailable (e.g., module not instrumented, or new
-  // code paths lacking samples), -static-data-default-hotness specifies the
-  // hotness.
-  for (size_t JTI = 0; JTI < MJTI->getJumpTables().size(); JTI++)
-    MF.getJumpTableInfo()->updateJumpTableEntryHotness(
-        JTI, StaticDataDefaultHotness);
-
-  return true;
+  if (const MachineJumpTableInfo *MJTI = MF.getJumpTableInfo()) {
+    NumUnknownJumpTables += MJTI->getJumpTables().size();
+  }
 }
 
 char StaticDataSplitter::ID = 0;

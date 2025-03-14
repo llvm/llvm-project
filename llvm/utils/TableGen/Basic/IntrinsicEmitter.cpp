@@ -472,7 +472,7 @@ struct AttributeComparator {
 static StringRef getArgAttrEnumName(CodeGenIntrinsic::ArgAttrKind Kind) {
   switch (Kind) {
   case CodeGenIntrinsic::NoCapture:
-    return "NoCapture";
+    llvm_unreachable("Handled separately");
   case CodeGenIntrinsic::NoAlias:
     return "NoAlias";
   case CodeGenIntrinsic::NoUndef:
@@ -525,6 +525,11 @@ static AttributeSet getIntrinsicArgAttributeSet(LLVMContext &C, unsigned ID) {
 )",
                     ID);
       for (const CodeGenIntrinsic::ArgAttribute &Attr : Attrs) {
+        if (Attr.Kind == CodeGenIntrinsic::NoCapture) {
+          OS << "      Attribute::getWithCaptureInfo(C, "
+                "CaptureInfo::none()),\n";
+          continue;
+        }
         StringRef AttrName = getArgAttrEnumName(Attr.Kind);
         if (Attr.Kind == CodeGenIntrinsic::Alignment ||
             Attr.Kind == CodeGenIntrinsic::Dereferenceable)

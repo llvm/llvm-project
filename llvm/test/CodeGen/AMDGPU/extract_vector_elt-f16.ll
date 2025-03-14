@@ -414,7 +414,7 @@ define amdgpu_kernel void @v_insertelement_v4f16_dynamic_vgpr(ptr addrspace(1) %
   %tid.ext = sext i32 %tid to i64
   %in.gep = getelementptr inbounds <4 x half>, ptr addrspace(1) %in, i64 %tid.ext
   %out.gep = getelementptr inbounds half, ptr addrspace(1) %out, i64 %tid.ext
-  %idx.val = load volatile i32, ptr addrspace(1) undef
+  %idx.val = load volatile i32, ptr addrspace(1) poison
   %vec = load <4 x half>, ptr addrspace(1) %in.gep
   %vec.extract = extractelement <4 x half> %vec, i32 %idx.val
   store half %vec.extract, ptr addrspace(1) %out.gep
@@ -475,8 +475,8 @@ define amdgpu_kernel void @reduce_load_vector_v8f16_extract_01(ptr addrspace(4) 
   %load = load <16 x half>, ptr addrspace(4) %ptr
   %elt0 = extractelement <16 x half> %load, i32 0
   %elt1 = extractelement <16 x half> %load, i32 1
-  store volatile half %elt0, ptr addrspace(1) undef, align 2
-  store volatile half %elt1, ptr addrspace(1) undef, align 2
+  store volatile half %elt0, ptr addrspace(1) poison, align 2
+  store volatile half %elt1, ptr addrspace(1) poison, align 2
   ret void
 }
 
@@ -534,8 +534,8 @@ define amdgpu_kernel void @reduce_load_vector_v8f16_extract_23(ptr addrspace(4) 
   %load = load <16 x half>, ptr addrspace(4) %ptr
   %elt2 = extractelement <16 x half> %load, i32 2
   %elt3 = extractelement <16 x half> %load, i32 3
-  store volatile half %elt2, ptr addrspace(1) undef, align 2
-  store volatile half %elt3, ptr addrspace(1) undef, align 2
+  store volatile half %elt2, ptr addrspace(1) poison, align 2
+  store volatile half %elt3, ptr addrspace(1) poison, align 2
   ret void
 }
 

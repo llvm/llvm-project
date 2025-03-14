@@ -82,6 +82,12 @@
 #    include <sys/personality.h>
 #  endif
 
+#  if SANITIZER_ANDROID && __ANDROID_API__ < 35
+// The weak `strerrorname_np` (introduced in API level 35) definition,
+// allows for checking the API level at runtime.
+extern "C" SANITIZER_WEAK_ATTRIBUTE const char *strerrorname_np(int);
+#  endif
+
 #  if SANITIZER_LINUX && defined(__loongarch__)
 #    include <sys/sysmacros.h>
 #  endif
@@ -1240,6 +1246,16 @@ uptr GetPageSize() {
   CHECK_EQ(rv, 0);
   return (uptr)pz;
 #    elif SANITIZER_USE_GETAUXVAL
+#      if SANITIZER_ANDROID && __ANDROID_API__ < 35
+  // The 16 KB page size was introduced in Android 15 (API level 35), while
+  // earlier versions of Android always used a 4 KB page size.
+  // We are checking the weak definition of `strerrorname_np` (introduced in API
+  // level 35) because some earlier API levels crashed when
+  // `getauxval(AT_PAGESZ)` was called from the `.preinit_array`.
+  if (!strerrorname_np)
+    return 4096;
+#      endif
+
   return getauxval(AT_PAGESZ);
 #    else
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.

@@ -60,13 +60,8 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/raw_ostream.h"
-#include <cassert>
-#include <cstdint>
-#include <iterator>
 
 using namespace llvm;
 
@@ -84,7 +79,7 @@ namespace {
 
   raw_ostream &operator<< (raw_ostream &OS, const printv &PV) {
     if (PV.R)
-      OS << 'v' << Register::virtReg2Index(PV.R);
+      OS << 'v' << Register(PV.R).virtRegIndex();
     else
       OS << 's';
     return OS;

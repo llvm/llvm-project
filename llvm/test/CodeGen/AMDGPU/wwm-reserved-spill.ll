@@ -416,10 +416,10 @@ define amdgpu_gfx void @strict_wwm_call(ptr addrspace(8) inreg %tmp14, i32 inreg
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v0, s8
 ; GFX9-O3-NEXT:    s_or_saveexec_b64 s[34:35], -1
 ; GFX9-O3-NEXT:    v_cndmask_b32_e64 v2, 0, v0, s[34:35]
-; GFX9-O3-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9-O3-NEXT:    s_getpc_b64 s[36:37]
 ; GFX9-O3-NEXT:    s_add_u32 s36, s36, strict_wwm_called@rel32@lo+4
 ; GFX9-O3-NEXT:    s_addc_u32 s37, s37, strict_wwm_called@rel32@hi+12
+; GFX9-O3-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9-O3-NEXT:    s_swappc_b64 s[30:31], s[36:37]
 ; GFX9-O3-NEXT:    v_mov_b32_e32 v1, v0
 ; GFX9-O3-NEXT:    v_add_u32_e32 v1, v1, v2

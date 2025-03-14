@@ -84,7 +84,11 @@ struct SPIRVInlinerInterface : public DialectInlinerInterface {
     // TODO: we need to filter OpKill here to avoid inlining it to
     // a loop continue construct:
     // https://github.com/KhronosGroup/SPIRV-Headers/issues/86
-    // However OpKill is fragment shader specific and we don't support it yet.
+    // For now, we just disallow inlining OpKill anywhere in the code,
+    // but this restriction should be relaxed, as pointed above.
+    if (isa<spirv::KillOp>(op))
+      return false;
+
     return true;
   }
 

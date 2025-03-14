@@ -13,7 +13,6 @@
 #define DEBUG_TYPE "flang-type-conversion"
 
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
-#include "flang/Common/Fortran.h"
 #include "flang/Optimizer/Builder/Todo.h" // remove when TODO's are done
 #include "flang/Optimizer/CodeGen/DescriptorModel.h"
 #include "flang/Optimizer/CodeGen/TBAABuilder.h"
@@ -22,16 +21,34 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InternalNames.h"
+#include "flang/Support/Fortran.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Debug.h"
 
 namespace fir {
 
+static mlir::LowerToLLVMOptions MakeLowerOptions(mlir::ModuleOp module) {
+  llvm::StringRef dataLayoutString;
+  auto dataLayoutAttr = module->template getAttrOfType<mlir::StringAttr>(
+      mlir::LLVM::LLVMDialect::getDataLayoutAttrName());
+  if (dataLayoutAttr)
+    dataLayoutString = dataLayoutAttr.getValue();
+
+  auto options = mlir::LowerToLLVMOptions(module.getContext());
+  auto llvmDL = llvm::DataLayout(dataLayoutString);
+  if (llvmDL.getPointerSizeInBits(0) == 32) {
+    // FIXME: Should translateDataLayout in the MLIR layer be doing this?
+    options.overrideIndexBitwidth(32);
+  }
+  options.dataLayout = llvmDL;
+  return options;
+}
+
 LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA,
                                      bool forceUnifiedTBAATree,
                                      const mlir::DataLayout &dl)
-    : mlir::LLVMTypeConverter(module.getContext()),
+    : mlir::LLVMTypeConverter(module.getContext(), MakeLowerOptions(module)),
       kindMapping(getKindMapping(module)),
       specifics(CodeGenSpecifics::get(
           module.getContext(), getTargetTriple(module), getKindMapping(module),

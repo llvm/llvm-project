@@ -19,8 +19,6 @@
 #include "Mapping.h"
 #include "State.h"
 
-#pragma omp begin declare target device_type(nohost)
-
 using namespace ompx;
 
 namespace impl {
@@ -28,34 +26,12 @@ namespace impl {
 /// Atomics
 ///
 ///{
-/// NOTE: This function needs to be implemented by every target.
-uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
-                   atomic::MemScopeTy MemScope);
 ///}
-
-// Forward declarations defined to be defined for AMDGCN and NVPTX.
-uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
-                   atomic::MemScopeTy MemScope);
-void namedBarrierInit();
-void namedBarrier();
-void fenceTeam(atomic::OrderingTy Ordering);
-void fenceKernel(atomic::OrderingTy Ordering);
-void fenceSystem(atomic::OrderingTy Ordering);
-void syncWarp(__kmpc_impl_lanemask_t);
-void syncThreads(atomic::OrderingTy Ordering);
-void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
-void unsetLock(omp_lock_t *);
-int testLock(omp_lock_t *);
-void initLock(omp_lock_t *);
-void destroyLock(omp_lock_t *);
-void setLock(omp_lock_t *);
-void unsetCriticalLock(omp_lock_t *);
-void setCriticalLock(omp_lock_t *);
 
 /// AMDGCN Implementation
 ///
 ///{
-#pragma omp begin declare variant match(device = {arch(amdgcn)})
+#ifdef __AMDGPU__
 
 uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
                    atomic::MemScopeTy MemScope) {
@@ -84,7 +60,7 @@ uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
   default:
     __builtin_unreachable();
     Case(atomic::relaxed);
-    Case(atomic::aquire);
+    Case(atomic::acquire);
     Case(atomic::release);
     Case(atomic::acq_rel);
     Case(atomic::seq_cst);
@@ -93,7 +69,7 @@ uint32_t atomicInc(uint32_t *A, uint32_t V, atomic::OrderingTy Ordering,
   }
 }
 
-uint32_t SHARED(namedBarrierTracker);
+[[clang::loader_uninitialized]] Local<uint32_t> namedBarrierTracker;
 
 void namedBarrierInit() {
   // Don't have global ctors, and shared memory is not zero init
@@ -107,7 +83,7 @@ void namedBarrier() {
   uint32_t WarpSize = mapping::getWarpSize();
   uint32_t NumWaves = NumThreads / WarpSize;
 
-  fence::team(atomic::aquire);
+  fence::team(atomic::acquire);
 
   // named barrier implementation for amdgcn.
   // Uses two 16 bit unsigned counters. One for the number of waves to have
@@ -172,7 +148,7 @@ void syncThreads(atomic::OrderingTy Ordering) {
   __builtin_amdgcn_s_barrier();
 
   if (Ordering != atomic::relaxed)
-    fenceTeam(Ordering == atomic::acq_rel ? atomic::aquire : atomic::seq_cst);
+    fenceTeam(Ordering == atomic::acq_rel ? atomic::acquire : atomic::seq_cst);
 }
 void syncThreadsAligned(atomic::OrderingTy Ordering) { syncThreads(Ordering); }
 
@@ -198,19 +174,17 @@ void setCriticalLock(omp_lock_t *Lock) {
         !cas((uint32_t *)Lock, UNSET, SET, atomic::relaxed, atomic::relaxed)) {
       __builtin_amdgcn_s_sleep(32);
     }
-    fenceKernel(atomic::aquire);
+    fenceKernel(atomic::acquire);
   }
 }
 
-#pragma omp end declare variant
+#endif
 ///}
 
 /// NVPTX Implementation
 ///
 ///{
-#pragma omp begin declare variant match(                                       \
-        device = {arch(nvptx, nvptx64)},                                       \
-            implementation = {extension(match_any)})
+#ifdef __NVPTX__
 
 uint32_t atomicInc(uint32_t *Address, uint32_t Val, atomic::OrderingTy Ordering,
                    atomic::MemScopeTy MemScope) {
@@ -283,7 +257,7 @@ void unsetCriticalLock(omp_lock_t *Lock) { unsetLock(Lock); }
 
 void setCriticalLock(omp_lock_t *Lock) { setLock(Lock); }
 
-#pragma omp end declare variant
+#endif
 ///}
 
 } // namespace impl
@@ -401,5 +375,3 @@ void ompx_sync_block_divergent(int Ordering) {
   impl::syncThreads(atomic::OrderingTy(Ordering));
 }
 } // extern "C"
-
-#pragma omp end declare target

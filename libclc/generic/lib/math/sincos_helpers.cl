@@ -22,6 +22,9 @@
 
 #include "sincos_helpers.h"
 #include <clc/clc.h>
+#include <clc/integer/clc_clz.h>
+#include <clc/integer/clc_mul_hi.h>
+#include <clc/math/clc_fma.h>
 #include <clc/math/clc_mad.h>
 #include <clc/math/clc_trunc.h>
 #include <clc/math/math.h>
@@ -117,12 +120,12 @@ _CLC_DEF float __clc_tanf_piby4(float x, int regn) {
   return regn & 1 ? tr : t;
 }
 
-_CLC_DEF void __clc_fullMulS(float *hi, float *lo, float a, float b, float bh,
-                             float bt) {
-  if (HAVE_HW_FMA32()) {
+_CLC_DEF void __clc_fullMulS(private float *hi, private float *lo, float a,
+                             float b, float bh, float bt) {
+  if (__CLC_HAVE_HW_FMA32()) {
     float ph = a * b;
     *hi = ph;
-    *lo = fma(a, b, -ph);
+    *lo = __clc_fma(a, b, -ph);
   } else {
     float ah = as_float(as_uint(a) & 0xfffff000U);
     float at = a - ah;
@@ -134,7 +137,7 @@ _CLC_DEF void __clc_fullMulS(float *hi, float *lo, float a, float b, float bh,
   }
 }
 
-_CLC_DEF float __clc_removePi2S(float *hi, float *lo, float x) {
+_CLC_DEF float __clc_removePi2S(private float *hi, private float *lo, float x) {
   // 72 bits of pi/2
   const float fpiby2_1 = (float)0xC90FDA / 0x1.0p+23f;
   const float fpiby2_1_h = (float)0xC90 / 0x1.0p+11f;
@@ -172,21 +175,23 @@ _CLC_DEF float __clc_removePi2S(float *hi, float *lo, float x) {
   return fnpi2;
 }
 
-_CLC_DEF int __clc_argReductionSmallS(float *r, float *rr, float x) {
+_CLC_DEF int __clc_argReductionSmallS(private float *r, private float *rr,
+                                      float x) {
   float fnpi2 = __clc_removePi2S(r, rr, x);
   return (int)fnpi2 & 0x3;
 }
 
 #define FULL_MUL(A, B, HI, LO)                                                 \
   LO = A * B;                                                                  \
-  HI = mul_hi(A, B)
+  HI = __clc_mul_hi(A, B)
 
 #define FULL_MAD(A, B, C, HI, LO)                                              \
   LO = ((A) * (B) + (C));                                                      \
-  HI = mul_hi(A, B);                                                           \
+  HI = __clc_mul_hi(A, B);                                                     \
   HI += LO < C
 
-_CLC_DEF int __clc_argReductionLargeS(float *r, float *rr, float x) {
+_CLC_DEF int __clc_argReductionLargeS(private float *r, private float *rr,
+                                      float x) {
   int xe = (int)(as_uint(x) >> 23) - 127;
   uint xm = 0x00800000U | (as_uint(x) & 0x7fffffU);
 
@@ -277,7 +282,7 @@ _CLC_DEF int __clc_argReductionLargeS(float *r, float *rr, float x) {
   p5 = p5 ^ flip;
 
   // Find exponent and shift away leading zeroes and hidden bit
-  xe = clz(p7) + 1;
+  xe = __clc_clz(p7) + 1;
   shift = 32 - xe;
   p7 = bitalign(p7, p6, shift);
   p6 = bitalign(p6, p5, shift);
@@ -290,7 +295,7 @@ _CLC_DEF int __clc_argReductionLargeS(float *r, float *rr, float x) {
 
   // Get 24 more bits of fraction in another float, there are not long strings
   // of zeroes here
-  int xxe = clz(p7) + 1;
+  int xxe = __clc_clz(p7) + 1;
   p7 = bitalign(p7, p6, 32 - xxe);
   float q0 = as_float(sign | ((127 - (xe + 23 + xxe)) << 23) | (p7 >> 9));
 
@@ -306,9 +311,9 @@ _CLC_DEF int __clc_argReductionLargeS(float *r, float *rr, float x) {
 
   float rh, rt;
 
-  if (HAVE_HW_FMA32()) {
+  if (__CLC_HAVE_HW_FMA32()) {
     rh = q1 * pio2h;
-    rt = fma(q0, pio2h, fma(q1, pio2t, fma(q1, pio2h, -rh)));
+    rt = __clc_fma(q0, pio2h, __clc_fma(q1, pio2t, __clc_fma(q1, pio2h, -rh)));
   } else {
     float q1h = as_float(as_uint(q1) & 0xfffff000);
     float q1t = q1 - q1h;
@@ -328,7 +333,7 @@ _CLC_DEF int __clc_argReductionLargeS(float *r, float *rr, float x) {
   return ((i >> 1) + (i & 1)) & 0x3;
 }
 
-_CLC_DEF int __clc_argReductionS(float *r, float *rr, float x) {
+_CLC_DEF int __clc_argReductionS(private float *r, private float *rr, float x) {
   if (x < 0x1.0p+23f)
     return __clc_argReductionSmallS(r, rr, x);
   else
@@ -340,11 +345,12 @@ _CLC_DEF int __clc_argReductionS(float *r, float *rr, float x) {
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
 
 // Reduction for medium sized arguments
-_CLC_DEF void __clc_remainder_piby2_medium(double x, double *r, double *rr,
-                                           int *regn) {
+_CLC_DEF void __clc_remainder_piby2_medium(double x, private double *r,
+                                           private double *rr,
+                                           private int *regn) {
   // How many pi/2 is x a multiple of?
   const double two_by_pi = 0x1.45f306dc9c883p-1;
-  double dnpi2 = __clc_trunc(fma(x, two_by_pi, 0.5));
+  double dnpi2 = __clc_trunc(__clc_fma(x, two_by_pi, 0.5));
 
   const double piby2_h = -7074237752028440.0 / 0x1.0p+52;
   const double piby2_m = -2483878800010755.0 / 0x1.0p+105;
@@ -352,11 +358,11 @@ _CLC_DEF void __clc_remainder_piby2_medium(double x, double *r, double *rr,
 
   // Compute product of npi2 with 159 bits of 2/pi
   double p_hh = piby2_h * dnpi2;
-  double p_ht = fma(piby2_h, dnpi2, -p_hh);
+  double p_ht = __clc_fma(piby2_h, dnpi2, -p_hh);
   double p_mh = piby2_m * dnpi2;
-  double p_mt = fma(piby2_m, dnpi2, -p_mh);
+  double p_mt = __clc_fma(piby2_m, dnpi2, -p_mh);
   double p_th = piby2_t * dnpi2;
-  double p_tt = fma(piby2_t, dnpi2, -p_th);
+  double p_tt = __clc_fma(piby2_t, dnpi2, -p_th);
 
   // Reduce to 159 bits
   double ph = p_hh;
@@ -385,8 +391,9 @@ _CLC_DEF void __clc_remainder_piby2_medium(double x, double *r, double *rr,
 // Return value "regn" tells how many lots of pi/2 were subtracted
 // from x to put it in the range [-pi/4,pi/4], mod 4.
 
-_CLC_DEF void __clc_remainder_piby2_large(double x, double *r, double *rr,
-                                          int *regn) {
+_CLC_DEF void __clc_remainder_piby2_large(double x, private double *r,
+                                          private double *rr,
+                                          private int *regn) {
 
   long ux = as_long(x);
   int e = (int)(ux >> 52) - 1023;
@@ -463,13 +470,13 @@ _CLC_DEF void __clc_remainder_piby2_large(double x, double *r, double *rr,
 
   // Exact multiply
   double f0h = p0 * x;
-  double f0l = fma(p0, x, -f0h);
+  double f0l = __clc_fma(p0, x, -f0h);
   double f1h = p1 * x;
-  double f1l = fma(p1, x, -f1h);
+  double f1l = __clc_fma(p1, x, -f1h);
   double f2h = p2 * x;
-  double f2l = fma(p2, x, -f2h);
+  double f2l = __clc_fma(p2, x, -f2h);
   double f3h = p3 * x;
-  double f3l = fma(p3, x, -f3h);
+  double f3l = __clc_fma(p3, x, -f3h);
 
   // Accumulate product into 4 doubles
   double s, t;
@@ -527,7 +534,7 @@ _CLC_DEF void __clc_remainder_piby2_large(double x, double *r, double *rr,
   const double p2t = 4967757600021510.0 / 0x1.0p+106;
 
   double rhi = f3 * p2h;
-  double rlo = fma(f2, p2h, fma(f3, p2t, fma(f3, p2h, -rhi)));
+  double rlo = __clc_fma(f2, p2h, __clc_fma(f3, p2t, __clc_fma(f3, p2h, -rhi)));
 
   *r = rhi + rlo;
   *rr = rlo - (*r - rhi);
@@ -575,15 +582,21 @@ _CLC_DEF double2 __clc_sincos_piby4(double x, double xx) {
   double r = 0.5 * x2;
   double t = 1.0 - r;
 
-  double sp = fma(fma(fma(fma(sc6, x2, sc5), x2, sc4), x2, sc3), x2, sc2);
+  double sp = __clc_fma(
+      __clc_fma(__clc_fma(__clc_fma(sc6, x2, sc5), x2, sc4), x2, sc3), x2, sc2);
 
   double cp =
-      t + fma(fma(fma(fma(fma(fma(cc6, x2, cc5), x2, cc4), x2, cc3), x2, cc2),
-                  x2, cc1),
-              x2 * x2, fma(x, xx, (1.0 - t) - r));
+      t +
+      __clc_fma(__clc_fma(__clc_fma(__clc_fma(__clc_fma(__clc_fma(cc6, x2, cc5),
+                                                        x2, cc4),
+                                              x2, cc3),
+                                    x2, cc2),
+                          x2, cc1),
+                x2 * x2, __clc_fma(x, xx, (1.0 - t) - r));
 
   double2 ret;
-  ret.lo = x - fma(-x3, sc1, fma(fma(-x3, sp, 0.5 * xx), x2, -xx));
+  ret.lo =
+      x - __clc_fma(-x3, sc1, __clc_fma(__clc_fma(-x3, sp, 0.5 * xx), x2, -xx));
   ret.hi = cp;
 
   return ret;

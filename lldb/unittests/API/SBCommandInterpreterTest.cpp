@@ -8,9 +8,8 @@
 
 #include "gtest/gtest.h"
 
-#include "lldb/API/SBCommandInterpreter.h"
-#include "lldb/API/SBCommandReturnObject.h"
-#include "lldb/API/SBDebugger.h"
+// Use the umbrella header for -Wdocumentation.
+#include "lldb/API/LLDB.h"
 
 #include <cstring>
 #include <string>

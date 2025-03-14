@@ -66,6 +66,8 @@ def riscv_sret_glue : SDNode<"RISCVISD::SRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_mret_glue : SDNode<"RISCVISD::MRET_GLUE", SDTNone,
                              [SDNPHasChain, SDNPOptInGlue]>;
+def riscv_mileaveret_glue : SDNode<"RISCVISD::QC_C_MILEAVERET_GLUE", SDTNone,
+                                   [SDNPHasChain, SDNPOptInGlue]>;
 def riscv_selectcc  : SDNode<"RISCVISD::SELECT_CC", SDT_RISCVSelectCC>;
 def riscv_brcc      : SDNode<"RISCVISD::BR_CC", SDT_RISCVBrCC,
                              [SDNPHasChain]>;
@@ -125,6 +127,7 @@ def ImmZeroAsmOperand : AsmOperandClass {
   let Name = "ImmZero";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = !strconcat("Invalid", Name);
+  let DiagnosticString = "immediate must be zero";
 }
 
 // A parse method for (${gpr}) or 0(${gpr}), where the 0 is be silently ignored.
@@ -323,6 +326,7 @@ def BareSymbol : AsmOperandClass {
   let Name = "BareSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidBareSymbol";
+  let DiagnosticString = "operand must be a bare symbol name";
   let ParserMethod = "parseBareSymbol";
 }
 
@@ -335,6 +339,7 @@ def CallSymbol : AsmOperandClass {
   let Name = "CallSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidCallSymbol";
+  let DiagnosticString = "operand must be a bare symbol name";
   let ParserMethod = "parseCallSymbol";
 }
 
@@ -347,6 +352,7 @@ def PseudoJumpSymbol : AsmOperandClass {
   let Name = "PseudoJumpSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidPseudoJumpSymbol";
+  let DiagnosticString = "operand must be a valid jump target";
   let ParserMethod = "parsePseudoJumpSymbol";
 }
 
@@ -359,6 +365,7 @@ def TPRelAddSymbol : AsmOperandClass {
   let Name = "TPRelAddSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTPRelAddSymbol";
+  let DiagnosticString = "operand must be a symbol with %tprel_add modifier";
   let ParserMethod = "parseOperandWithModifier";
 }
 
@@ -516,7 +523,6 @@ include "RISCVInstrFormats.td"
 // Instruction Class Templates
 //===----------------------------------------------------------------------===//
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class BranchCC_rri<bits<3> funct3, string opcodestr>
     : RVInstB<funct3, OPC_BRANCH, (outs),
               (ins GPR:$rs1, GPR:$rs2, simm13_lsb0:$imm12),
@@ -524,6 +530,9 @@ class BranchCC_rri<bits<3> funct3, string opcodestr>
       Sched<[WriteJmp, ReadJmp, ReadJmp]> {
   let isBranch = 1;
   let isTerminator = 1;
+  let hasSideEffects = 0;
+  let mayLoad = 0;
+  let mayStore = 0;
 }
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
@@ -1779,6 +1788,7 @@ def TLSDESCCallSymbol : AsmOperandClass {
   let Name = "TLSDESCCallSymbol";
   let RenderMethod = "addImmOperands";
   let DiagnosticType = "InvalidTLSDESCCallSymbol";
+  let DiagnosticString = "operand must be a symbol with %tlsdesc_call modifier";
   let ParserMethod = "parseOperandWithModifier";
 }
 
@@ -1949,15 +1959,19 @@ class binop_allhusers<SDPatternOperator operator>
     : PatFrag<(ops node:$lhs, node:$rhs),
               (XLenVT (operator node:$lhs, node:$rhs)), [{
   return hasAllHUsers(Node);
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return hasAllHUsers(MI); }];
+}
 
 // PatFrag to allow ADDW/SUBW/MULW/SLLW to be selected from i64 add/sub/mul/shl
 // if only the lower 32 bits of their result is used.
 class binop_allwusers<SDPatternOperator operator>
-    : PatFrag<(ops node:$lhs, node:$rhs),
-              (i64 (operator node:$lhs, node:$rhs)), [{
+    : PatFrag<(ops node:$lhs, node:$rhs), (i64 (operator node:$lhs, node:$rhs)),
+              [{
   return hasAllWUsers(Node);
-}]>;
+}]> {
+  let GISelPredicateCode = [{ return hasAllWUsers(MI); }];
+}
 
 def sexti32_allwusers : PatFrag<(ops node:$src),
                                 (sext_inreg node:$src, i32), [{
@@ -2022,6 +2036,12 @@ def : Pat<(binop_allwusers<and> GPR:$rs1, 0xffffffff),
 def : PatGprImm<binop_allwusers<and>, ANDI, u32simm12>;
 def : PatGprImm<binop_allwusers<or>,  ORI,  u32simm12>;
 def : PatGprImm<binop_allwusers<xor>, XORI, u32simm12>;
+
+// Select 'or' as ADDIW if the immediate bits are known to be 0 in $rs1 and
+// $rs1 is sign extended. This can improve compressibility. Using ADDIW gives
+// more power to RISCVOptWInstrs.
+def : Pat<(or_is_add 33signbits_node:$rs1, simm12:$imm),
+          (ADDIW $rs1, simm12:$imm)>;
 
 /// Loads
 
@@ -2137,7 +2157,9 @@ include "RISCVInstrInfoSFB.td"
 include "RISCVInstrInfoXCV.td"
 include "RISCVInstrInfoXwch.td"
 include "RISCVInstrInfoXqci.td"
+include "RISCVInstrInfoXqccmp.td"
 include "RISCVInstrInfoXMips.td"
+include "RISCVInstrInfoXRivos.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel
