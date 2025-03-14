@@ -106,7 +106,7 @@ class TestSwiftOptionalType(TestBase):
             self,
             optTrue,
             use_dynamic=False,
-            num_children=1,
+            num_children=0,
             summary='true')
 
         optFalse = self.frame().FindVariable("optFalse")
@@ -114,7 +114,7 @@ class TestSwiftOptionalType(TestBase):
             self,
             optFalse,
             use_dynamic=False,
-            num_children=1,
+            num_children=0,
             summary='false')
 
         optNil = self.frame().FindVariable("optNil")

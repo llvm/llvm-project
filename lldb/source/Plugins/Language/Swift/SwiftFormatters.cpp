@@ -623,7 +623,8 @@ bool lldb_private::formatters::swift::SwiftStringStorage_SummaryProvider(
 bool lldb_private::formatters::swift::Bool_SummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
   static ConstString g_value("_value");
-  ValueObjectSP value_child(valobj.GetChildMemberWithName(g_value, true));
+  ValueObjectSP value_child(
+      valobj.GetNonSyntheticValue()->GetChildMemberWithName(g_value, true));
   if (!value_child)
     return false;
 

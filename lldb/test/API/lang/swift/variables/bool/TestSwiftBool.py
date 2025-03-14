@@ -29,17 +29,21 @@ class TestSwiftBool(TestBase):
 
         self.assertGreater(thread.GetNumFrames(), 0)
         frame = thread.GetSelectedFrame()
-        
+
         true_vars = ["reg_true", "odd_true", "odd_true_works", "odd_false_works"]
         for name in true_vars:
             var = frame.FindVariable(name)
             summary = var.GetSummary()
-            self.assertTrue(summary == "true", "%s should be true, was: %s"%(name, summary))
+            self.assertEqual(
+                summary, "true", "%s should be true, was: %s" % (name, summary)
+            )
+            self.assertEqual(var.unsigned & 1, 1)
 
         false_vars = ["reg_false", "odd_false"]
         for name in false_vars:
             var = frame.FindVariable(name)
             summary = var.GetSummary()
-            self.assertTrue(summary == "false", "%s should be false, was: %s"%(name, summary))
-
-
+            self.assertEqual(
+                summary, "false", "%s should be false, was: %s" % (name, summary)
+            )
+            self.assertEqual(var.unsigned & 1, 0)
