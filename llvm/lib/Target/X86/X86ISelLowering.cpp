@@ -58155,12 +58155,10 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
             ConcatMask.push_back(M);
           }
         }
-        if (ConcatMask.size() == (NumOps * NumSrcElts)) {
-          SDValue Src = concatSubVectors(Ops[0].getOperand(1),
-                                         Ops[1].getOperand(1), DAG, DL);
-          return lowerShuffleWithPERMV(DL, VT, ConcatMask, Src,
+        if (ConcatMask.size() == (NumOps * NumSrcElts))
+          return lowerShuffleWithPERMV(DL, VT, ConcatMask,
+                                       ConcatSubOperand(VT, Ops, 1),
                                        DAG.getUNDEF(VT), Subtarget, DAG);
-        }
       }
       break;
     case X86ISD::VPERMV3:
@@ -58330,11 +58328,15 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::VPERMI:
     case X86ISD::VROTLI:
     case X86ISD::VROTRI:
-      // TODO: 256-bit VROT?I handling
-      if (VT.is512BitVector() && Subtarget.useAVX512Regs() &&
+      if (!IsSplat &&
+          ((VT.is256BitVector() && Subtarget.hasVLX()) ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
           llvm::all_of(Ops, [Op0](SDValue Op) {
             return Op0.getOperand(1) == Op.getOperand(1);
           })) {
+        assert(!(Opcode == X86ISD::VPERMI &&
+                 Op0.getValueType().is128BitVector()) &&
+               "Illegal 128-bit X86ISD::VPERMI nodes");
         return DAG.getNode(Opcode, DL, VT, ConcatSubOperand(VT, Ops, 0),
                            Op0.getOperand(1));
       }
