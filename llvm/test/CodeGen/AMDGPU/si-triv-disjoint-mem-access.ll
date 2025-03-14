@@ -2,9 +2,9 @@
 ; RUN: llc -amdgpu-scalarize-global-loads=false  -mtriple=amdgcn -mcpu=gfx900 -enable-amdgpu-aa=0 -verify-machineinstrs -enable-misched -enable-aa-sched-mi < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 %struct.lds = type { [64 x ptr], [16 x i8] }
-@stored_lds_struct = addrspace(3) global %struct.lds undef, align 16
+@stored_lds_struct = addrspace(3) global %struct.lds poison, align 16
 @stored_lds_ptr = addrspace(3) global ptr addrspace(3) poison, align 4
-@stored_constant_ptr = addrspace(3) global ptr addrspace(4) undef, align 8
+@stored_constant_ptr = addrspace(3) global ptr addrspace(4) poison, align 8
 @stored_global_ptr = addrspace(3) global ptr addrspace(1) poison, align 8
 
 ; GCN-LABEL: {{^}}no_reorder_flat_load_local_store_local_load:
