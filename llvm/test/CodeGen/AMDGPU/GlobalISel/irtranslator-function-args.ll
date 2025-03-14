@@ -1699,13 +1699,13 @@ define void @void_func_byval_struct_i8_i32_x2(ptr addrspace(5) byval({ i8, i32 }
   ; CHECK-NEXT:   G_STORE [[LOAD2]](s8), [[DEF]](p1) :: (volatile store (s8) into `ptr addrspace(1) poison`, align 4, addrspace 1)
   ; CHECK-NEXT:   [[PTR_ADD3:%[0-9]+]]:_(p1) = G_PTR_ADD [[DEF]], [[C1]](s64)
   ; CHECK-NEXT:   G_STORE [[LOAD3]](s32), [[PTR_ADD3]](p1) :: (volatile store (s32) into `ptr addrspace(1) poison` + 4, addrspace 1)
-  ; CHECK-NEXT:   G_STORE [[COPY2]](s32), [[DEF1]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[COPY2]](s32), [[DEF1]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   SI_RETURN
   %arg0.load = load volatile { i8, i32 }, ptr addrspace(5) %arg0
   %arg1.load = load volatile { i8, i32 }, ptr addrspace(5) %arg1
   store volatile { i8, i32 } %arg0.load, ptr addrspace(1) poison
   store volatile { i8, i32 } %arg1.load, ptr addrspace(1) poison
-  store volatile i32 %arg2, ptr addrspace(3) undef
+  store volatile i32 %arg2, ptr addrspace(3) poison
   ret void
 }
 
@@ -2540,18 +2540,18 @@ define void @void_func_v3f32_wasted_reg(<3 x float> %arg0, i32 %arg1) #0 {
   ; CHECK-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C]](s32)
   ; CHECK-NEXT:   [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C1]](s32)
   ; CHECK-NEXT:   [[EVEC2:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C2]](s32)
-  ; CHECK-NEXT:   G_STORE [[EVEC]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   G_STORE [[EVEC1]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   G_STORE [[EVEC2]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   G_STORE [[COPY3]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[EVEC]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[EVEC1]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[EVEC2]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[COPY3]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   SI_RETURN
   %arg0.0 = extractelement <3 x float> %arg0, i32 0
   %arg0.1 = extractelement <3 x float> %arg0, i32 1
   %arg0.2 = extractelement <3 x float> %arg0, i32 2
-  store volatile float %arg0.0, ptr addrspace(3) undef
-  store volatile float %arg0.1, ptr addrspace(3) undef
-  store volatile float %arg0.2, ptr addrspace(3) undef
-  store volatile i32 %arg1, ptr addrspace(3) undef
+  store volatile float %arg0.0, ptr addrspace(3) poison
+  store volatile float %arg0.1, ptr addrspace(3) poison
+  store volatile float %arg0.2, ptr addrspace(3) poison
+  store volatile i32 %arg1, ptr addrspace(3) poison
   ret void
 }
 
@@ -2572,18 +2572,18 @@ define void @void_func_v3i32_wasted_reg(<3 x i32> %arg0, i32 %arg1) #0 {
   ; CHECK-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C]](s32)
   ; CHECK-NEXT:   [[EVEC1:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C1]](s32)
   ; CHECK-NEXT:   [[EVEC2:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[BUILD_VECTOR]](<3 x s32>), [[C2]](s32)
-  ; CHECK-NEXT:   G_STORE [[EVEC]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   G_STORE [[EVEC1]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   G_STORE [[EVEC2]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
-  ; CHECK-NEXT:   G_STORE [[COPY3]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) undef`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[EVEC]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[EVEC1]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[EVEC2]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
+  ; CHECK-NEXT:   G_STORE [[COPY3]](s32), [[DEF]](p3) :: (volatile store (s32) into `ptr addrspace(3) poison`, addrspace 3)
   ; CHECK-NEXT:   SI_RETURN
   %arg0.0 = extractelement <3 x i32> %arg0, i32 0
   %arg0.1 = extractelement <3 x i32> %arg0, i32 1
   %arg0.2 = extractelement <3 x i32> %arg0, i32 2
-  store volatile i32 %arg0.0, ptr addrspace(3) undef
-  store volatile i32 %arg0.1, ptr addrspace(3) undef
-  store volatile i32 %arg0.2, ptr addrspace(3) undef
-  store volatile i32 %arg1, ptr addrspace(3) undef
+  store volatile i32 %arg0.0, ptr addrspace(3) poison
+  store volatile i32 %arg0.1, ptr addrspace(3) poison
+  store volatile i32 %arg0.2, ptr addrspace(3) poison
+  store volatile i32 %arg1, ptr addrspace(3) poison
   ret void
 }
 
