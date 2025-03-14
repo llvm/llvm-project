@@ -14,7 +14,6 @@ namespace lldb_dap {
 
 /// Creates an \p StoppedEvent with the reason \a goto
 static void SendThreadGotoEvent(DAP &dap, lldb::tid_t thread_id) {
-
   llvm::json::Object event(CreateEventObject("stopped"));
   llvm::json::Object body;
   body.try_emplace("reason", "goto");
