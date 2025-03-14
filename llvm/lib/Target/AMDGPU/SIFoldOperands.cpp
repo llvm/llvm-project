@@ -131,6 +131,7 @@ public:
   std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
+  bool tryFoldBitMask(MachineInstr &MI) const;
   bool tryFoldZeroHighBits(MachineInstr &MI) const;
   bool foldInstOperand(MachineInstr &MI, MachineOperand &OpToFold) const;
 
@@ -1447,6 +1448,99 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   return true;
 }
 
+static bool getBitsReadByInst(unsigned Opc, unsigned &NumBitsRead,
+                              unsigned &OpIdx) {
+  switch (Opc) {
+  case AMDGPU::V_ASHR_I32_e64:
+  case AMDGPU::V_ASHR_I32_e32:
+  case AMDGPU::V_LSHR_B32_e64:
+  case AMDGPU::V_LSHR_B32_e32:
+  case AMDGPU::V_LSHL_B32_e64:
+  case AMDGPU::V_LSHL_B32_e32:
+  case AMDGPU::S_LSHL_B32:
+  case AMDGPU::S_LSHR_B32:
+  case AMDGPU::S_ASHR_I32:
+    NumBitsRead = 5;
+    OpIdx = 2;
+    return true;
+  case AMDGPU::S_LSHL_B64:
+  case AMDGPU::S_LSHR_B64:
+  case AMDGPU::S_ASHR_I64:
+    NumBitsRead = 6;
+    OpIdx = 2;
+    return true;
+  case AMDGPU::V_LSHLREV_B32_e64:
+  case AMDGPU::V_LSHLREV_B32_e32:
+  case AMDGPU::V_LSHRREV_B32_e64:
+  case AMDGPU::V_LSHRREV_B32_e32:
+  case AMDGPU::V_ASHRREV_I32_e64:
+  case AMDGPU::V_ASHRREV_I32_e32:
+    NumBitsRead = 5;
+    OpIdx = 1;
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isAndBitMaskRedundant(MachineInstr &MI, unsigned BitsNeeded,
+                                        unsigned &SrcOp) {
+  MachineOperand *RegOp = &MI.getOperand(1);
+  MachineOperand *ImmOp = &MI.getOperand(2);
+
+  if (!RegOp->isReg() || !ImmOp->isImm()) {
+    if (ImmOp->isReg() && RegOp->isImm())
+      std::swap(RegOp, ImmOp);
+    else
+      return false;
+  }
+
+  SrcOp = RegOp->getOperandNo();
+
+  const unsigned BitMask = maskTrailingOnes<unsigned>(BitsNeeded);
+  return (ImmOp->getImm() & BitMask) == BitMask;
+}
+
+bool SIFoldOperandsImpl::tryFoldBitMask(MachineInstr &MI) const {
+  unsigned NumBitsRead = 0;
+  unsigned OpIdx = 0;
+  if (!getBitsReadByInst(MI.getOpcode(), NumBitsRead, OpIdx))
+    return false;
+
+  MachineOperand &Op = MI.getOperand(OpIdx);
+  if (!Op.isReg())
+    return false;
+
+  Register OpReg = Op.getReg();
+  if (OpReg.isPhysical())
+    return false;
+
+  MachineInstr *OpDef = MRI->getVRegDef(OpReg);
+  if (!OpDef)
+    return false ;
+
+  LLVM_DEBUG(dbgs() << "tryFoldBitMask: " << MI << "\tOpIdx:" << OpIdx << ", NumBitsRead:" << NumBitsRead << "\n");
+
+  unsigned ReplaceWith;
+  switch (OpDef->getOpcode()) {
+  // TODO: add more opcodes?
+  case AMDGPU::S_AND_B32:
+  case AMDGPU::V_AND_B32_e32:
+  case AMDGPU::V_AND_B32_e64:
+    if (!isAndBitMaskRedundant(*OpDef, NumBitsRead, ReplaceWith))
+      return false;
+    break;
+  default:
+    return false;
+  }
+
+  MachineOperand &ReplaceWithOp = OpDef->getOperand(ReplaceWith);
+  LLVM_DEBUG(dbgs() << "\treplacing operand with:" << ReplaceWithOp << "\n");
+
+  MI.getOperand(OpIdx).setReg(ReplaceWithOp.getReg());
+  return true;
+}
+
 bool SIFoldOperandsImpl::tryFoldZeroHighBits(MachineInstr &MI) const {
   if (MI.getOpcode() != AMDGPU::V_AND_B32_e64 &&
       MI.getOpcode() != AMDGPU::V_AND_B32_e32)
@@ -1458,7 +1552,7 @@ bool SIFoldOperandsImpl::tryFoldZeroHighBits(MachineInstr &MI) const {
 
   Register Src1 = MI.getOperand(2).getReg();
   MachineInstr *SrcDef = MRI->getVRegDef(Src1);
-  if (!ST->zeroesHigh16BitsOfDest(SrcDef->getOpcode()))
+  if (!SrcDef || !ST->zeroesHigh16BitsOfDest(SrcDef->getOpcode()))
     return false;
 
   Register Dst = MI.getOperand(0).getReg();
@@ -2451,6 +2545,7 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
     MachineOperand *CurrentKnownM0Val = nullptr;
     for (auto &MI : make_early_inc_range(*MBB)) {
       Changed |= tryFoldCndMask(MI);
+      Changed |= tryFoldBitMask(MI);
 
       if (tryFoldZeroHighBits(MI)) {
         Changed = true;

@@ -96,7 +96,6 @@ define i24 @v_lshr_i24(i24 %value, i24 %amount) {
 ; GFX10PLUS-LABEL: v_lshr_i24:
 ; GFX10PLUS:       ; %bb.0:
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    v_and_b32_e32 v1, 0xffffff, v1
 ; GFX10PLUS-NEXT:    v_and_b32_e32 v0, 0xffffff, v0
 ; GFX10PLUS-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
@@ -663,7 +662,6 @@ define amdgpu_ps half @lshr_i16_sv(i16 inreg %value, i16 %amount) {
 define amdgpu_ps half @lshr_i16_vs(i16 %value, i16 inreg %amount) {
 ; GFX6-LABEL: lshr_i16_vs:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX6-NEXT:    v_lshrrev_b32_e32 v0, s0, v0
 ; GFX6-NEXT:    ; return to shader part epilog
@@ -840,12 +838,10 @@ define amdgpu_ps float @lshr_v2i16_sv(<2 x i16> inreg %value, <2 x i16> %amount)
 define amdgpu_ps float @lshr_v2i16_vs(<2 x i16> %value, <2 x i16> inreg %amount) {
 ; GFX6-LABEL: lshr_v2i16_vs:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_and_b32 s0, s0, 0xffff
-; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX6-NEXT:    v_lshrrev_b32_e32 v0, s0, v0
-; GFX6-NEXT:    s_and_b32 s0, s1, 0xffff
 ; GFX6-NEXT:    v_and_b32_e32 v1, 0xffff, v1
-; GFX6-NEXT:    v_lshrrev_b32_e32 v1, s0, v1
+; GFX6-NEXT:    v_and_b32_e32 v0, 0xffff, v0
+; GFX6-NEXT:    v_lshrrev_b32_e32 v1, s1, v1
+; GFX6-NEXT:    v_lshrrev_b32_e32 v0, s0, v0
 ; GFX6-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX6-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GFX6-NEXT:    ; return to shader part epilog
