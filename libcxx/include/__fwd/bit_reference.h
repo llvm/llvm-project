@@ -23,6 +23,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Cp, bool _IsConst, typename _Cp::__storage_type = 0>
 class __bit_iterator;
 
+template <class _Cp>
+struct __bit_array;
+
 template <class, class = void>
 struct __size_difference_type_traits;
 

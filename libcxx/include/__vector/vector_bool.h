@@ -14,6 +14,7 @@
 #include <__algorithm/fill_n.h>
 #include <__algorithm/iterator_operations.h>
 #include <__algorithm/max.h>
+#include <__algorithm/rotate.h>
 #include <__assert>
 #include <__bit_reference>
 #include <__config>
