@@ -14335,11 +14335,11 @@ static bool checkAddiForShift(SDValue AddI, int64_t &AddConst,
   if (!ShiftNode)
     return false;
 
-  if (ShlConst < 1 || ShlConst > 3)
+  if (ShiftNode->getSExtValue() < 1 || ShiftNode->getSExtValue() > 3)
     return false;
 
-  AddConst = AddConstNode->getSExtValue();
   ShlConst = ShiftNode->getSExtValue();
+  AddConst = AddConstNode->getSExtValue();
   return true;
 }
 
