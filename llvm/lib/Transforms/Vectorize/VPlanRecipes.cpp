@@ -468,6 +468,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *A = State.get(getOperand(0));
     return Builder.CreateNot(A, Name);
   }
+  case Instruction::ExtractElement: {
+    assert(State.VF.isVector() && "Only extract elements from vectors");
+    Value *Vec = State.get(getOperand(0));
+    Value *Idx = State.get(getOperand(1), /*IsScalar=*/true);
+    return Builder.CreateExtractElement(Vec, Idx, Name);
+  }
   case Instruction::ICmp: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
     Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
@@ -723,12 +729,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *A = State.get(getOperand(0));
     return Builder.CreateOrReduce(A);
   }
-  case VPInstruction::ExtractFirstActive: {
-    Value *Vec = State.get(getOperand(0));
-    Value *Mask = State.get(getOperand(1));
-    Value *Ctz = Builder.CreateCountTrailingZeroElems(
-        Builder.getInt64Ty(), Mask, true, "first.active.lane");
-    return Builder.CreateExtractElement(Vec, Ctz, "early.exit.value");
+  case VPInstruction::FirstActiveLane: {
+    Value *Mask = State.get(getOperand(0));
+    return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
+                                                true, Name);
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -755,22 +759,24 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
 
   switch (getOpcode()) {
+  case Instruction::ExtractElement: {
+    // Add on the cost of extracting the element.
+    auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
+    return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
+                                      Ctx.CostKind);
+  }
   case VPInstruction::AnyOf: {
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticReductionCost(
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
   }
-  case VPInstruction::ExtractFirstActive: {
+  case VPInstruction::FirstActiveLane: {
     // Calculate the cost of determining the lane index.
-    auto *PredTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(1)), VF);
+    auto *PredTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
     IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
                                   Type::getInt64Ty(Ctx.LLVMCtx),
                                   {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
-    InstructionCost Cost = Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
-    // Add on the cost of extracting the element.
-    auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
-    return Cost + Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
-                                             Ctx.CostKind);
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
   }
   case VPInstruction::FirstOrderRecurrenceSplice: {
     assert(VF.isVector() && "Scalar FirstOrderRecurrenceSplice?");
@@ -793,7 +799,8 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
-         getOpcode() == VPInstruction::ExtractFirstActive ||
+         getOpcode() == Instruction::ExtractElement ||
+         getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
 }
@@ -853,13 +860,14 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   if (Instruction::isBinaryOp(getOpcode()))
     return false;
   switch (getOpcode()) {
+  case Instruction::ExtractElement:
   case Instruction::ICmp:
   case Instruction::Select:
   case VPInstruction::AnyOf:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExtractFromEnd:
-  case VPInstruction::ExtractFirstActive:
+  case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::Not:
@@ -878,6 +886,8 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   switch (getOpcode()) {
   default:
     return false;
+  case Instruction::ExtractElement:
+    return Op == getOperand(1);
   case Instruction::PHI:
     return true;
   case Instruction::ICmp:
@@ -970,7 +980,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::Broadcast:
     O << "broadcast";
     break;
-
   case VPInstruction::ExtractFromEnd:
     O << "extract-from-end";
     break;
@@ -986,8 +995,8 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::AnyOf:
     O << "any-of";
     break;
-  case VPInstruction::ExtractFirstActive:
-    O << "extract-first-active";
+  case VPInstruction::FirstActiveLane:
+    O << "first-active-lane";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
