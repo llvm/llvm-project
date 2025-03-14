@@ -145,6 +145,18 @@ AliasResult AAResults::alias(const MemoryLocation &LocA,
   return Result;
 }
 
+AliasResult AAResults::aliasErrno(const MemoryLocation &Loc, const Module *M) {
+  AliasResult Result = AliasResult::MayAlias;
+
+  for (const auto &AA : AAs) {
+    Result = AA->aliasErrno(Loc, M);
+    if (Result != AliasResult::MayAlias)
+      break;
+  }
+
+  return Result;
+}
+
 ModRefInfo AAResults::getModRefInfoMask(const MemoryLocation &Loc,
                                         bool IgnoreLocals) {
   SimpleAAQueryInfo AAQIP(*this);
@@ -231,7 +243,7 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
     return ModRefInfo::NoModRef;
 
   ModRefInfo ArgMR = ME.getModRef(IRMemLocation::ArgMem);
-  ModRefInfo OtherMR = ME.getWithoutLoc(IRMemLocation::ArgMem).getModRef();
+  ModRefInfo OtherMR = ME.getModRef(IRMemLocation::Other);
   if ((ArgMR | OtherMR) != OtherMR) {
     // Refine the modref info for argument memory. We only bother to do this
     // if ArgMR is not a subset of OtherMR, otherwise this won't have an impact
@@ -250,7 +262,14 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
     ArgMR &= AllArgsMask;
   }
 
-  Result &= ArgMR | OtherMR;
+  // Refine modref for errno memory. If TBAA proves the given memory location
+  // does not alias errno, we can mask out the location.
+  ModRefInfo ErrnoMR = ME.getModRef(IRMemLocation::ErrnoMem);
+  if (isModOrRefSet(ErrnoMR) &&
+      aliasErrno(Loc, Call->getModule()) == AliasResult::NoAlias)
+    ErrnoMR = ModRefInfo::NoModRef;
+
+  Result &= ArgMR | ErrnoMR | OtherMR;
 
   // Apply the ModRef mask. This ensures that if Loc is a constant memory
   // location, we take into account the fact that the call definitely could not
