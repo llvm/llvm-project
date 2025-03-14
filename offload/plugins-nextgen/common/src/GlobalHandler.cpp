@@ -16,6 +16,7 @@
 
 #include "Shared/Utils.h"
 
+#include "llvm/ProfileData/InstrProfData.inc"
 #include "llvm/Support/Error.h"
 
 #include <cstring>
@@ -214,6 +215,13 @@ GenericGlobalHandlerTy::readProfilingGlobals(GenericDeviceTy &Device,
       if (auto Err = readGlobalFromDevice(Device, Image, DataGlobal))
         return Err;
       DeviceProfileData.Data.push_back(std::move(Data));
+    } else if (*NameOrErr == INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR)) {
+      uint64_t RawVersionData;
+      GlobalTy RawVersionGlobal(NameOrErr->str(), Sym.getSize(),
+                                &RawVersionData);
+      if (auto Err = readGlobalFromDevice(Device, Image, RawVersionGlobal))
+        return Err;
+      DeviceProfileData.Version = RawVersionData;
     }
   }
   return DeviceProfileData;
@@ -265,7 +273,7 @@ void GPUProfGlobals::dump() const {
 }
 
 Error GPUProfGlobals::write() const {
-  if (!__llvm_write_custom_profile)
+  if (__llvm_write_custom_profile == nullptr)
     return Plugin::error("Could not find symbol __llvm_write_custom_profile. "
                          "The compiler-rt profiling library must be linked for "
                          "GPU PGO to work.");
@@ -274,6 +282,8 @@ Error GPUProfGlobals::write() const {
          CountsSize = Counts.size() * sizeof(int64_t);
   __llvm_profile_data *DataBegin, *DataEnd;
   char *CountersBegin, *CountersEnd, *NamesBegin, *NamesEnd;
+  const uint64_t *VersionOverride =
+      Version.has_value() ? &Version.value() : nullptr;
 
   // Initialize array of contiguous data. We need to make sure each section is
   // contiguous so that the PGO library can compute deltas properly
@@ -295,9 +305,9 @@ Error GPUProfGlobals::write() const {
   memcpy(NamesBegin, NamesData.data(), NamesData.size());
 
   // Invoke compiler-rt entrypoint
-  int result = __llvm_write_custom_profile(TargetTriple.str().c_str(),
-                                           DataBegin, DataEnd, CountersBegin,
-                                           CountersEnd, NamesBegin, NamesEnd);
+  int result = __llvm_write_custom_profile(
+      TargetTriple.str().c_str(), DataBegin, DataEnd, CountersBegin,
+      CountersEnd, NamesBegin, NamesEnd, VersionOverride);
   if (result != 0)
     return Plugin::error("Error writing GPU PGO data to file");
 
