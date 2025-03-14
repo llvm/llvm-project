@@ -198,7 +198,7 @@ TEST(AstPolymorphicMatcherPMacro, Works) {
 }
 
 TEST(MatchFinder, CheckProfiling) {
-  MatchFinder::MatchFinderOptions Options;
+  MatchFinderOptions Options;
   llvm::StringMap<llvm::TimeRecord> Records;
   Options.CheckProfiling.emplace(Records);
   MatchFinder Finder(std::move(Options));
