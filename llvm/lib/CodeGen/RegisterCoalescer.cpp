@@ -477,8 +477,9 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     Flipped = true;
   }
 
-  const MachineRegisterInfo &MRI = MI->getMF()->getRegInfo();
-  const TargetRegisterClass *SrcRC = MRI.getRegClass(Src);
+  MachineRegisterInfo *MRI =
+      const_cast<MachineRegisterInfo *>(&MI->getMF()->getRegInfo());
+  const TargetRegisterClass *SrcRC = MRI->getRegClass(Src);
 
   if (Dst.isPhysical()) {
     // Eliminate DstSub on a physreg.
@@ -499,7 +500,14 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
     }
   } else {
     // Both registers are virtual.
-    const TargetRegisterClass *DstRC = MRI.getRegClass(Dst);
+    const TargetRegisterClass *DstRC = MRI->getRegClass(Dst);
+
+    auto recomputeRegClasses = [&MRI](Register &Src, Register &Dst) {
+      bool Success = false;
+      Success = MRI->recomputeRegClass(Src);
+      Success |= MRI->recomputeRegClass(Dst);
+      return Success;
+    };
 
     // Both registers have subreg indices.
     if (SrcSub && DstSub) {
@@ -509,19 +517,42 @@ bool CoalescerPair::setRegisters(const MachineInstr *MI) {
 
       NewRC = TRI.getCommonSuperRegClass(SrcRC, SrcSub, DstRC, DstSub, SrcIdx,
                                          DstIdx);
-      if (!NewRC)
-        return false;
+      if (!NewRC) {
+        if (recomputeRegClasses(Src, Dst)) {
+          SrcRC = MRI->getRegClass(Src);
+          DstRC = MRI->getRegClass(Dst);
+          NewRC = TRI.getCommonSuperRegClass(SrcRC, SrcSub, DstRC, DstSub,
+                                             SrcIdx, DstIdx);
+        }
+        if (!NewRC)
+          return false;
+      }
     } else if (DstSub) {
       // SrcReg will be merged with a sub-register of DstReg.
       SrcIdx = DstSub;
       NewRC = TRI.getMatchingSuperRegClass(DstRC, SrcRC, DstSub);
+      if (!NewRC && recomputeRegClasses(Src, Dst)) {
+        SrcRC = MRI->getRegClass(Src);
+        DstRC = MRI->getRegClass(Dst);
+        NewRC = TRI.getMatchingSuperRegClass(SrcRC, DstRC, DstSub);
+      }
     } else if (SrcSub) {
       // DstReg will be merged with a sub-register of SrcReg.
       DstIdx = SrcSub;
       NewRC = TRI.getMatchingSuperRegClass(SrcRC, DstRC, SrcSub);
+      if (!NewRC && recomputeRegClasses(Src, Dst)) {
+        SrcRC = MRI->getRegClass(Src);
+        DstRC = MRI->getRegClass(Dst);
+        NewRC = TRI.getMatchingSuperRegClass(SrcRC, DstRC, SrcSub);
+      }
     } else {
       // This is a straight copy without sub-registers.
       NewRC = TRI.getCommonSubClass(DstRC, SrcRC);
+      if (!NewRC && recomputeRegClasses(Src, Dst)) {
+        SrcRC = MRI->getRegClass(Src);
+        DstRC = MRI->getRegClass(Dst);
+        NewRC = TRI.getCommonSubClass(DstRC, SrcRC);
+      }
     }
 
     // The combined constraint may be impossible to satisfy.
