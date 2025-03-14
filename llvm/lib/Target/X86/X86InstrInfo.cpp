@@ -1283,11 +1283,14 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
 
   MachineInstrBuilder MIB =
       BuildMI(MBB, MBBI, MI.getDebugLoc(), get(Opcode), OutRegLEA);
+#define CASE_NF(OP)                                                            \
+  case X86::OP:                                                                \
+  case X86::OP##_NF:
   switch (MIOpc) {
   default:
     llvm_unreachable("Unreachable!");
-  case X86::SHL8ri:
-  case X86::SHL16ri: {
+  CASE_NF(SHL8ri)
+  CASE_NF(SHL16ri) {
     unsigned ShAmt = MI.getOperand(2).getImm();
     MIB.addReg(0)
         .addImm(1LL << ShAmt)
@@ -1296,23 +1299,23 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(unsigned MIOpc,
         .addReg(0);
     break;
   }
-  case X86::INC8r:
-  case X86::INC16r:
+  CASE_NF(INC8r)
+  CASE_NF(INC16r)
     addRegOffset(MIB, InRegLEA, true, 1);
     break;
-  case X86::DEC8r:
-  case X86::DEC16r:
+  CASE_NF(DEC8r)
+  CASE_NF(DEC16r)
     addRegOffset(MIB, InRegLEA, true, -1);
     break;
-  case X86::ADD8ri:
+  CASE_NF(ADD8ri)
+  CASE_NF(ADD16ri)
   case X86::ADD8ri_DB:
-  case X86::ADD16ri:
   case X86::ADD16ri_DB:
     addRegOffset(MIB, InRegLEA, true, MI.getOperand(2).getImm());
     break;
-  case X86::ADD8rr:
+  CASE_NF(ADD8rr)
+  CASE_NF(ADD16rr)
   case X86::ADD8rr_DB:
-  case X86::ADD16rr:
   case X86::ADD16rr_DB: {
     Src2 = MI.getOperand(2).getReg();
     Src2SubReg = MI.getOperand(2).getSubReg();
@@ -1449,7 +1452,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
   switch (MIOpc) {
   default:
     llvm_unreachable("Unreachable!");
-  case X86::SHL64ri: {
+  CASE_NF(SHL64ri) {
     assert(MI.getNumOperands() >= 3 && "Unknown shift instruction!");
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
     if (!isTruncatedShiftCountForLEA(ShAmt))
@@ -1469,7 +1472,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
                 .addReg(0);
     break;
   }
-  case X86::SHL32ri: {
+  CASE_NF(SHL32ri) {
     assert(MI.getNumOperands() >= 3 && "Unknown shift instruction!");
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
     if (!isTruncatedShiftCountForLEA(ShAmt))
@@ -1501,20 +1504,20 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
-  case X86::SHL8ri:
+  CASE_NF(SHL8ri)
     Is8BitOp = true;
     [[fallthrough]];
-  case X86::SHL16ri: {
+  CASE_NF(SHL16ri) {
     assert(MI.getNumOperands() >= 3 && "Unknown shift instruction!");
     unsigned ShAmt = getTruncatedShiftCount(MI, 2);
     if (!isTruncatedShiftCountForLEA(ShAmt))
       return nullptr;
     return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
   }
-  case X86::INC64r:
-  case X86::INC32r: {
+  CASE_NF(INC64r)
+  CASE_NF(INC32r) {
     assert(MI.getNumOperands() >= 2 && "Unknown inc instruction!");
-    unsigned Opc = MIOpc == X86::INC64r
+    unsigned Opc = (MIOpc == X86::INC64r || MIOpc == X86::INC64r_NF)
                        ? X86::LEA64r
                        : (Is64Bit ? X86::LEA64_32r : X86::LEA32r);
     bool isKill;
@@ -1536,10 +1539,10 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
-  case X86::DEC64r:
-  case X86::DEC32r: {
+  CASE_NF(DEC64r)
+  CASE_NF(DEC32r) {
     assert(MI.getNumOperands() >= 2 && "Unknown dec instruction!");
-    unsigned Opc = MIOpc == X86::DEC64r
+    unsigned Opc = (MIOpc == X86::DEC64r || MIOpc == X86::DEC64r_NF)
                        ? X86::LEA64r
                        : (Is64Bit ? X86::LEA64_32r : X86::LEA32r);
 
@@ -1562,20 +1565,21 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
-  case X86::DEC8r:
-  case X86::INC8r:
+  CASE_NF(DEC8r)
+  CASE_NF(INC8r)
     Is8BitOp = true;
     [[fallthrough]];
-  case X86::DEC16r:
-  case X86::INC16r:
+  CASE_NF(DEC16r)
+  CASE_NF(INC16r)
     return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
-  case X86::ADD64rr:
+  CASE_NF(ADD64rr)
+  CASE_NF(ADD32rr)
   case X86::ADD64rr_DB:
-  case X86::ADD32rr:
   case X86::ADD32rr_DB: {
     assert(MI.getNumOperands() >= 3 && "Unknown add instruction!");
     unsigned Opc;
-    if (MIOpc == X86::ADD64rr || MIOpc == X86::ADD64rr_DB)
+    if (MIOpc == X86::ADD64rr || MIOpc == X86::ADD64rr_NF ||
+        MIOpc == X86::ADD64rr_DB)
       Opc = X86::LEA64r;
     else
       Opc = Is64Bit ? X86::LEA64_32r : X86::LEA32r;
@@ -1620,21 +1624,21 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     NumRegOperands = 3;
     break;
   }
-  case X86::ADD8rr:
+  CASE_NF(ADD8rr)
   case X86::ADD8rr_DB:
     Is8BitOp = true;
     [[fallthrough]];
-  case X86::ADD16rr:
+  CASE_NF(ADD16rr)
   case X86::ADD16rr_DB:
     return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
-  case X86::ADD64ri32:
+  CASE_NF(ADD64ri32)
   case X86::ADD64ri32_DB:
     assert(MI.getNumOperands() >= 3 && "Unknown add instruction!");
     NewMI = addOffset(
         BuildMI(MF, MI.getDebugLoc(), get(X86::LEA64r)).add(Dest).add(Src),
         MI.getOperand(2));
     break;
-  case X86::ADD32ri:
+  CASE_NF(ADD32ri)
   case X86::ADD32ri_DB: {
     assert(MI.getNumOperands() >= 3 && "Unknown add instruction!");
     unsigned Opc = Is64Bit ? X86::LEA64_32r : X86::LEA32r;
@@ -1659,18 +1663,18 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
       LV->getVarInfo(SrcReg).Kills.push_back(NewMI);
     break;
   }
-  case X86::ADD8ri:
+  CASE_NF(ADD8ri)
   case X86::ADD8ri_DB:
     Is8BitOp = true;
     [[fallthrough]];
-  case X86::ADD16ri:
+  CASE_NF(ADD16ri)
   case X86::ADD16ri_DB:
     return convertToThreeAddressWithLEA(MIOpc, MI, LV, LIS, Is8BitOp);
-  case X86::SUB8ri:
-  case X86::SUB16ri:
+  CASE_NF(SUB8ri)
+  CASE_NF(SUB16ri)
     /// FIXME: Support these similar to ADD8ri/ADD16ri*.
     return nullptr;
-  case X86::SUB32ri: {
+  CASE_NF(SUB32ri) {
     if (!MI.getOperand(2).isImm())
       return nullptr;
     int64_t Imm = MI.getOperand(2).getImm();
@@ -1701,7 +1705,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     break;
   }
 
-  case X86::SUB64ri32: {
+  CASE_NF(SUB64ri32) {
     if (!MI.getOperand(2).isImm())
       return nullptr;
     int64_t Imm = MI.getOperand(2).getImm();
@@ -2034,6 +2038,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddress(MachineInstr &MI,
     break;
   }
   }
+#undef CASE_NF
 
   if (!NewMI)
     return nullptr;

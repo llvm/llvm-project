@@ -14957,12 +14957,37 @@ SDValue DAGCombiner::reduceLoadWidth(SDNode *N) {
   AddToWorklist(NewPtr.getNode());
 
   SDValue Load;
-  if (ExtType == ISD::NON_EXTLOAD)
-    Load = DAG.getLoad(VT, DL, LN0->getChain(), NewPtr,
-                       LN0->getPointerInfo().getWithOffset(PtrOff),
-                       LN0->getOriginalAlign(),
-                       LN0->getMemOperand()->getFlags(), LN0->getAAInfo());
-  else
+  if (ExtType == ISD::NON_EXTLOAD) {
+    const MDNode *OldRanges = LN0->getRanges();
+    const MDNode *NewRanges = nullptr;
+    // If LSBs are loaded and the truncated ConstantRange for the OldRanges
+    // metadata is not the full-set for the new width then create a NewRanges
+    // metadata for the truncated load
+    if (ShAmt == 0 && OldRanges) {
+      ConstantRange CR = getConstantRangeFromMetadata(*OldRanges);
+      unsigned BitSize = VT.getScalarSizeInBits();
+
+      // It is possible for an 8-bit extending load with 8-bit range
+      // metadata to be narrowed to an 8-bit load.  This guard is necessary to
+      // ensure that truncation is strictly smaller.
+      if (CR.getBitWidth() > BitSize) {
+        ConstantRange TruncatedCR = CR.truncate(BitSize);
+        if (!TruncatedCR.isFullSet()) {
+          Metadata *Bounds[2] = {
+              ConstantAsMetadata::get(
+                  ConstantInt::get(*DAG.getContext(), TruncatedCR.getLower())),
+              ConstantAsMetadata::get(
+                  ConstantInt::get(*DAG.getContext(), TruncatedCR.getUpper()))};
+          NewRanges = MDNode::get(*DAG.getContext(), Bounds);
+        }
+      } else if (CR.getBitWidth() == BitSize)
+        NewRanges = OldRanges;
+    }
+    Load = DAG.getLoad(
+        VT, DL, LN0->getChain(), NewPtr,
+        LN0->getPointerInfo().getWithOffset(PtrOff), LN0->getOriginalAlign(),
+        LN0->getMemOperand()->getFlags(), LN0->getAAInfo(), NewRanges);
+  } else
     Load = DAG.getExtLoad(ExtType, DL, VT, LN0->getChain(), NewPtr,
                           LN0->getPointerInfo().getWithOffset(PtrOff), ExtVT,
                           LN0->getOriginalAlign(),

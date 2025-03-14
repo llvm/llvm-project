@@ -1747,7 +1747,7 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
 
   // Create a scalar phi to track the previous EVL if fixed-order recurrence is
   // contained.
-  VPScalarPHIRecipe *PrevEVL = nullptr;
+  VPInstruction *PrevEVL = nullptr;
   bool ContainsFORs =
       any_of(Header->phis(), IsaPred<VPFirstOrderRecurrencePHIRecipe>);
   if (ContainsFORs) {
@@ -1762,7 +1762,8 @@ static void transformRecipestoEVLRecipes(VPlan &Plan, VPValue &EVL) {
           VFSize > 32 ? Instruction::Trunc : Instruction::ZExt, MaxEVL,
           Type::getInt32Ty(Ctx), DebugLoc());
     }
-    PrevEVL = new VPScalarPHIRecipe(MaxEVL, &EVL, DebugLoc(), "prev.evl");
+    PrevEVL = new VPInstruction(Instruction::PHI, {MaxEVL, &EVL}, DebugLoc(),
+                                "prev.evl");
     PrevEVL->insertBefore(*Header, Header->getFirstNonPhi());
   }
 
@@ -2089,9 +2090,9 @@ void VPlanTransforms::convertToConcreteRecipes(VPlan &Plan) {
       auto *PhiR = cast<VPHeaderPHIRecipe>(&R);
       StringRef Name =
           isa<VPCanonicalIVPHIRecipe>(PhiR) ? "index" : "evl.based.iv";
-      auto *ScalarR =
-          new VPScalarPHIRecipe(PhiR->getStartValue(), PhiR->getBackedgeValue(),
-                                PhiR->getDebugLoc(), Name);
+      auto *ScalarR = new VPInstruction(
+          Instruction::PHI, {PhiR->getStartValue(), PhiR->getBackedgeValue()},
+          PhiR->getDebugLoc(), Name);
       ScalarR->insertBefore(PhiR);
       PhiR->replaceAllUsesWith(ScalarR);
       PhiR->eraseFromParent();

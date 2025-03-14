@@ -23,6 +23,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/AssignmentTrackingAnalysis.h"
+#include "llvm/CodeGen/BranchFoldingPass.h"
 #include "llvm/CodeGen/CallBrPrepare.h"
 #include "llvm/CodeGen/CodeGenPrepare.h"
 #include "llvm/CodeGen/DeadMachineInstructionElim.h"
@@ -47,6 +48,7 @@
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
 #include "llvm/CodeGen/MIRPrinter.h"
+#include "llvm/CodeGen/MachineBlockPlacement.h"
 #include "llvm/CodeGen/MachineCSE.h"
 #include "llvm/CodeGen/MachineCopyPropagation.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
@@ -1205,7 +1207,7 @@ template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
     AddMachinePass &addPass) const {
   // Branch folding must be run after regalloc and prolog/epilog insertion.
-  addPass(BranchFolderPass());
+  addPass(BranchFolderPass(Opt.EnableTailMerge));
 
   // Tail duplication.
   // Note that duplicating tail just increases code size and degrades
@@ -1225,7 +1227,7 @@ void CodeGenPassBuilder<Derived, TargetMachineT>::addMachineLateOptimization(
 template <typename Derived, typename TargetMachineT>
 void CodeGenPassBuilder<Derived, TargetMachineT>::addBlockPlacement(
     AddMachinePass &addPass) const {
-  addPass(MachineBlockPlacementPass());
+  addPass(MachineBlockPlacementPass(Opt.EnableTailMerge));
   // Run a separate pass to collect block placement statistics.
   if (Opt.EnableBlockPlacementStats)
     addPass(MachineBlockPlacementStatsPass());
