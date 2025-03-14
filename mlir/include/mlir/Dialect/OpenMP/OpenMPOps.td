@@ -1342,7 +1342,11 @@ def TargetOp : OpenMP_Op<"target", traits = [
 
     /// Infers the kernel type (Generic, SPMD or Generic-SPMD) based on the
     /// contents of the target region.
-    llvm::omp::OMPTgtExecModeFlags getKernelExecFlags();
+    ///
+    /// \param capturedOp result of a still valid (no modifications made to any
+    /// nested operations) previous call to `getInnermostCapturedOmpOp()`.
+    static llvm::omp::OMPTgtExecModeFlags
+    getKernelExecFlags(Operation *capturedOp);
   }] # clausesExtraClassDeclaration;
 
   let assemblyFormat = clausesAssemblyFormat # [{
