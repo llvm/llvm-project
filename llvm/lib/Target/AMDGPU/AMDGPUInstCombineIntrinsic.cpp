@@ -827,6 +827,11 @@ GCNTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
     Value *Src1 = II.getArgOperand(1);
     Value *Src2 = II.getArgOperand(2);
 
+    for (Value *Src : {Src0, Src1, Src2}) {
+      if (isa<PoisonValue>(Src))
+        return IC.replaceInstUsesWith(II, Src);
+    }
+
     // Checking for NaN before canonicalization provides better fidelity when
     // mapping other operations onto fmed3 since the order of operands is
     // unchanged.
