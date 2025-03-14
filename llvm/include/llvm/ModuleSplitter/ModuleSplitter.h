@@ -64,14 +64,13 @@ forwardModule(LLVMModuleAndContext &&Module) {
 /// Support for splitting an LLVM module into multiple parts using anchored
 /// functions (e.g. exported functions), and pull in all dependency on the
 // call stack into one module.
-void splitPerAnchored(LLVMModuleAndContext Module,
-                      LLVMSplitProcessFn ProcessFn,
-                      llvm::SmallVectorImpl<llvm::Function>& Anchors);
+void splitPerAnchored(LLVMModuleAndContext Module, LLVMSplitProcessFn ProcessFn,
+                      llvm::SmallVectorImpl<llvm::Function> &Anchors);
 
 /// Support for splitting an LLVM module into multiple parts with each part
 /// contains only one function.
-void splitPerFunction(
-    LLVMModuleAndContext Module, LLVMSplitProcessFn ProcessFn);
+void splitPerFunction(LLVMModuleAndContext Module,
+                      LLVMSplitProcessFn ProcessFn);
 
 } // namespace llvm
 

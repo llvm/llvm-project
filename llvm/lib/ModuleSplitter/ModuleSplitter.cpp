@@ -228,8 +228,8 @@ static LLVMModuleAndContext readAndMaterializeDependencies(
   SmallVector<unsigned> SortIndices =
       llvm::to_vector(llvm::make_second_range(Set));
   llvm::sort(SortIndices, std::less<unsigned>());
-  auto* IdxIt = SortIndices.begin();
-  auto* IdxEnd = SortIndices.end();
+  auto *IdxIt = SortIndices.begin();
+  auto *IdxEnd = SortIndices.end();
 
   // The global value indices go from globals, functions, then aliases. This
   // mirrors the order in which global values are deleted by LLVM's GlobalDCE.
@@ -354,8 +354,7 @@ void LLVMModuleSplitterImpl::split(
       // If this value depends on another value that is going to be split, we
       // don't want to duplicate the symbol. Keep all the users together.
       if (It != Value) {
-        if (auto* DepIt = TransDeps.find(It);
-            DepIt != TransDeps.end()) {
+        if (auto *DepIt = TransDeps.find(It); DepIt != TransDeps.end()) {
           auto &Users = SplitAnchorUsers[It];
           Users.insert(&Deps);
           // Make sure to include the other value in its own user list.
@@ -493,7 +492,7 @@ namespace {
 class LLVMModulePerFunctionSplitterImpl {
 public:
   LLVMModulePerFunctionSplitterImpl(LLVMModuleAndContext Module)
-      : mainModule(std::move(Module)) {}
+      : MainModule(std::move(Module)) {}
 
   /// Split the LLVM module into multiple modules using the provided process
   /// function.
