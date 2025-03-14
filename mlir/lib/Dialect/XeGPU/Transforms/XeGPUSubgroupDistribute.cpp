@@ -320,8 +320,7 @@ SGMapPropagation::visitOperation(Operation *op,
       })
       /// No need to propagate the layout to operands in CreateNdDescOp because
       /// they are scalars (offsets, sizes, etc.).
-      .Case<xegpu::CreateNdDescOp>(
-          [&](auto createNdDescOp) { return success(); })
+      .Case<xegpu::CreateNdDescOp>([&](auto createNdDescOp) {})
       .Case<vector::TransposeOp>([&](auto transposeOp) {
         visitTransposeOp(transposeOp, operands, results);
       })
