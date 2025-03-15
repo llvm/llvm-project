@@ -2,8 +2,8 @@
 Analysis Statistics
 ===================
 
-CSA enjoys two facilities to collect statistics: per translation unit and per entry point.
-We use `llvm/ADT/Statistic.h`_ for numbers describing the entire translation unit (TU).
+Clang Static Analyzer enjoys two facilities to collect statistics: per translation unit and per entry point.
+We use `llvm/ADT/Statistic.h`_ for numbers describing the entire translation unit.
 We use `clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h`_ to collect data for each symbolic-execution entry point.
 
 .. _llvm/ADT/Statistic.h: https://github.com/llvm/llvm-project/blob/main/llvm/include/llvm/ADT/Statistic.h#L171
