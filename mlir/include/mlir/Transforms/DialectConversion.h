@@ -95,8 +95,8 @@ public:
     /// used if the new types are not intended to remap an existing input.
     void addInputs(ArrayRef<Type> types);
 
-    /// Remap an input of the original signature to another `replacements`
-    /// value. This drops the original argument.
+    /// Remap an input of the original signature to `replacements`
+    /// values. This drops the original argument.
     void remapInput(unsigned origInputNo, ArrayRef<Value> replacements);
 
   private:
