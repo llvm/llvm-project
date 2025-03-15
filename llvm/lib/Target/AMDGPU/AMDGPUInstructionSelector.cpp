@@ -4293,30 +4293,331 @@ AMDGPUInstructionSelector::selectVOP3NoMods(MachineOperand &Root) const {
   }};
 }
 
-std::pair<Register, unsigned>
-AMDGPUInstructionSelector::selectVOP3PModsImpl(
-  Register Src, const MachineRegisterInfo &MRI, bool IsDOT) const {
-  unsigned Mods = 0;
-  MachineInstr *MI = MRI.getVRegDef(Src);
+enum srcStatus {
+  IS_SAME,
+  IS_UPPER_HALF,
+  IS_LOWER_HALF,
+  IS_NEG,
+  IS_UPPER_HALF_NEG,
+  IS_LOWER_HALF_NEG
+};
 
-  if (MI->getOpcode() == AMDGPU::G_FNEG &&
-      // It's possible to see an f32 fneg here, but unlikely.
-      // TODO: Treat f32 fneg as only high bit.
-      MRI.getType(Src) == LLT::fixed_vector(2, 16)) {
-    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
-    Src = MI->getOperand(1).getReg();
-    MI = MRI.getVRegDef(Src);
+static bool isTruncHalf(const MachineInstr *MI,
+                        const MachineRegisterInfo &MRI) {
+  if (MI->getOpcode() != AMDGPU::G_TRUNC) {
+    return false;
+  }
+  unsigned dstSize = MRI.getType(MI->getOperand(0).getReg()).getSizeInBits();
+  unsigned srcSize = MRI.getType(MI->getOperand(1).getReg()).getSizeInBits();
+  return dstSize * 2 == srcSize;
+}
+
+static bool isLshrHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
+  if (MI->getOpcode() != AMDGPU::G_LSHR) {
+    return false;
+  }
+  Register ShiftSrc;
+  std::optional<ValueAndVReg> ShiftAmt;
+  if (mi_match(MI->getOperand(0).getReg(), MRI,
+               m_GLShr(m_Reg(ShiftSrc), m_GCst(ShiftAmt)))) {
+    unsigned srcSize = MRI.getType(MI->getOperand(1).getReg()).getSizeInBits();
+    unsigned shift = ShiftAmt->Value.getZExtValue();
+    return shift * 2 == srcSize;
+  }
+  return false;
+}
+
+static bool isShlHalf(const MachineInstr *MI, const MachineRegisterInfo &MRI) {
+  if (MI->getOpcode() != AMDGPU::G_SHL) {
+    return false;
+  }
+  Register ShiftSrc;
+  std::optional<ValueAndVReg> ShiftAmt;
+  if (mi_match(MI->getOperand(0).getReg(), MRI,
+               m_GShl(m_Reg(ShiftSrc), m_GCst(ShiftAmt)))) {
+    unsigned srcSize = MRI.getType(MI->getOperand(1).getReg()).getSizeInBits();
+    unsigned shift = ShiftAmt->Value.getZExtValue();
+    return shift * 2 == srcSize;
+  }
+  return false;
+}
+
+static bool retOpStat(const MachineOperand *Op, srcStatus stat,
+                      std::pair<const MachineOperand *, srcStatus> &curr) {
+  if ((Op->isReg() && !(Op->getReg().isPhysical())) || Op->isImm() ||
+      Op->isCImm() || Op->isFPImm()) {
+    curr = {Op, stat};
+    return true;
+  }
+  return false;
+}
+
+srcStatus getNegStatus(srcStatus S) {
+  switch (S) {
+  case IS_SAME:
+    return IS_NEG;
+  case IS_UPPER_HALF:
+    return IS_UPPER_HALF_NEG;
+  case IS_LOWER_HALF:
+    return IS_LOWER_HALF_NEG;
+  case IS_NEG:
+    return IS_SAME;
+  case IS_UPPER_HALF_NEG:
+    return IS_UPPER_HALF;
+  case IS_LOWER_HALF_NEG:
+    return IS_LOWER_HALF;
+  }
+  llvm_unreachable("unexpected srcStatus");
+}
+
+static bool calcNextStatus(std::pair<const MachineOperand *, srcStatus> &curr,
+                           const MachineRegisterInfo &MRI) {
+  if (!curr.first->isReg()) {
+    return false;
+  }
+  const MachineInstr *MI = nullptr;
+
+  if (!curr.first->isDef()) {
+    MI = MRI.getVRegDef(curr.first->getReg());
+  } else {
+    MI = curr.first->getParent();
+  }
+  if (!MI) {
+    return false;
   }
 
-  // TODO: Handle G_FSUB 0 as fneg
+  unsigned Opc = MI->getOpcode();
 
-  // TODO: Match op_sel through g_build_vector_trunc and g_shuffle_vector.
-  (void)IsDOT; // DOTs do not use OPSEL on gfx942+, check ST.hasDOTOpSelHazard()
+  // Handle general Opc cases
+  switch (Opc) {
+  case AMDGPU::G_BITCAST:
+  case AMDGPU::G_CONSTANT:
+  case AMDGPU::G_FCONSTANT:
+  case AMDGPU::COPY:
+    return retOpStat(&MI->getOperand(1), curr.second, curr);
+  case AMDGPU::G_FNEG:
+    // XXXX + 3 = XXXX_NEG, (XXXX_NEG + 3) mod 3 = XXXX
+    return retOpStat(&MI->getOperand(1), getNegStatus(curr.second), curr);
+  }
 
+  // Calc next stat from current stat
+  switch (curr.second) {
+  case IS_SAME:
+    if (isTruncHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF, curr);
+    }
+    break;
+  case IS_NEG:
+    if (isTruncHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF_NEG, curr);
+    }
+    break;
+  case IS_UPPER_HALF:
+    if (isShlHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF, curr);
+    }
+    break;
+  case IS_LOWER_HALF:
+    if (isLshrHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_UPPER_HALF, curr);
+    }
+    break;
+  case IS_UPPER_HALF_NEG:
+    if (isShlHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_LOWER_HALF_NEG, curr);
+    }
+    break;
+  case IS_LOWER_HALF_NEG:
+    if (isLshrHalf(MI, MRI)) {
+      return retOpStat(&MI->getOperand(1), IS_UPPER_HALF_NEG, curr);
+    }
+    break;
+  }
+  return false;
+}
+
+SmallVector<std::pair<const MachineOperand *, srcStatus>>
+getSrcStats(const MachineOperand *Op, const MachineRegisterInfo &MRI,
+            bool onlyLastSameOrNeg = false, int maxDepth = 6) {
+  int depth = 0;
+  std::pair<const MachineOperand *, srcStatus> curr = {Op, IS_SAME};
+  SmallVector<std::pair<const MachineOperand *, srcStatus>> statList;
+
+  while (depth <= maxDepth && calcNextStatus(curr, MRI)) {
+    depth++;
+    if ((onlyLastSameOrNeg &&
+         (curr.second != IS_SAME && curr.second != IS_NEG))) {
+      break;
+    } else if (!onlyLastSameOrNeg) {
+      statList.push_back(curr);
+    }
+  }
+  if (onlyLastSameOrNeg) {
+    statList.push_back(curr);
+  }
+  return statList;
+}
+
+static bool isInlinableConstant(const MachineOperand &Op,
+                                const SIInstrInfo &TII) {
+  if (Op.isFPImm()) {
+    return TII.isInlineConstant(Op.getFPImm()->getValueAPF());
+  }
+  return false;
+}
+
+static bool isSameBitWidth(const MachineOperand *Op1, const MachineOperand *Op2,
+                           const MachineRegisterInfo &MRI) {
+  unsigned width1 = MRI.getType(Op1->getReg()).getSizeInBits();
+  unsigned width2 = MRI.getType(Op2->getReg()).getSizeInBits();
+  return width1 == width2;
+}
+
+static bool isSameOperand(const MachineOperand *Op1,
+                          const MachineOperand *Op2) {
+  if (Op1->isReg()) {
+    if (Op2->isReg()) {
+      return Op1->getReg() == Op2->getReg();
+    }
+    return false;
+  }
+  return Op1->isIdenticalTo(*Op2);
+}
+
+static bool validToPack(srcStatus HiStat, srcStatus LoStat, unsigned int &Mods,
+                        const MachineOperand *newOp,
+                        const MachineOperand *RootOp, const SIInstrInfo &TII,
+                        const MachineRegisterInfo &MRI) {
+  if (newOp->isReg()) {
+    if (isSameBitWidth(newOp, RootOp, MRI)) {
+      // IS_LOWER_HALF remain 0
+      if (HiStat == IS_UPPER_HALF_NEG) {
+        Mods ^= SISrcMods::NEG_HI;
+        Mods |= SISrcMods::OP_SEL_1;
+      } else if (HiStat == IS_UPPER_HALF) {
+        Mods |= SISrcMods::OP_SEL_1;
+      } else if (HiStat == IS_LOWER_HALF_NEG) {
+        Mods ^= SISrcMods::NEG_HI;
+      }
+      if (LoStat == IS_UPPER_HALF_NEG) {
+        Mods ^= SISrcMods::NEG;
+        Mods |= SISrcMods::OP_SEL_0;
+      } else if (LoStat == IS_UPPER_HALF) {
+        Mods |= SISrcMods::OP_SEL_0;
+      } else if (LoStat == IS_UPPER_HALF_NEG) {
+        Mods |= SISrcMods::NEG;
+      }
+      return true;
+    }
+  } else {
+    if ((HiStat == IS_SAME || HiStat == IS_NEG) &&
+        (LoStat == IS_SAME || LoStat == IS_NEG) &&
+        isInlinableConstant(*newOp, TII)) {
+      if (HiStat == IS_NEG) {
+        Mods ^= SISrcMods::NEG_HI;
+      }
+      if (LoStat == IS_NEG) {
+        Mods ^= SISrcMods::NEG;
+      }
+      // opsel = opsel_hi = 0, since the upper half and lower half both
+      // the same as the target inlinable constant
+      return true;
+    }
+  }
+  return false;
+}
+
+std::pair<const MachineOperand *, unsigned>
+AMDGPUInstructionSelector::selectVOP3PModsImpl(const MachineOperand *Op,
+                                               const MachineRegisterInfo &MRI,
+                                               bool IsDOT) const {
+  unsigned Mods = 0;
+  const MachineOperand *RootOp = Op;
+  std::pair<const MachineOperand *, srcStatus> stat =
+      getSrcStats(Op, MRI, true)[0];
+  if (!stat.first->isReg()) {
+    Mods |= SISrcMods::OP_SEL_1;
+    return {Op, Mods};
+  }
+  if (stat.second == IS_NEG) {
+    Mods ^= (SISrcMods::NEG | SISrcMods::NEG_HI);
+  }
+  Op = stat.first;
+  MachineInstr *MI = MRI.getVRegDef(Op->getReg());
+  if (MI->getOpcode() == AMDGPU::G_BUILD_VECTOR && MI->getNumOperands() == 3 &&
+      (!IsDOT || !Subtarget->hasDOTOpSelHazard())) {
+    SmallVector<std::pair<const MachineOperand *, srcStatus>> statList_Hi;
+    SmallVector<std::pair<const MachineOperand *, srcStatus>> statList_Lo;
+    statList_Hi = getSrcStats(&MI->getOperand(2), MRI);
+    if (statList_Hi.size() != 0) {
+      statList_Lo = getSrcStats(&MI->getOperand(1), MRI);
+      if (statList_Lo.size() != 0) {
+        for (int i = statList_Hi.size() - 1; i >= 0; i--) {
+          for (int j = statList_Lo.size() - 1; j >= 0; j--) {
+            if (isSameOperand(statList_Hi[i].first, statList_Lo[j].first)) {
+              if (validToPack(statList_Hi[i].second, statList_Lo[j].second,
+                              Mods, statList_Hi[i].first, RootOp, TII, MRI)) {
+                return {statList_Hi[i].first, Mods};
+              }
+            }
+          }
+        }
+      }
+    }
+  }
   // Packed instructions do not have abs modifiers.
   Mods |= SISrcMods::OP_SEL_1;
 
-  return std::pair(Src, Mods);
+  return {Op, Mods};
+}
+
+int64_t getAllKindImm(const MachineOperand *Op) {
+  switch (Op->getType()) {
+  case MachineOperand::MachineOperandType::MO_Immediate:
+    return Op->getImm();
+  case MachineOperand::MachineOperandType::MO_CImmediate:
+    return Op->getCImm()->getSExtValue();
+  case MachineOperand::MachineOperandType::MO_FPImmediate:
+    return Op->getFPImm()->getValueAPF().bitcastToAPInt().getSExtValue();
+  }
+  llvm_unreachable("not an imm type");
+}
+
+bool checkRB(const MachineOperand *Op, int RBNo,
+             const AMDGPURegisterBankInfo &RBI, const MachineRegisterInfo &MRI,
+             const TargetRegisterInfo &TRI) {
+  const RegisterBank *RB = RBI.getRegBank(Op->getReg(), MRI, TRI);
+  return RB->getID() == RBNo;
+}
+
+const MachineOperand *
+getVReg(const MachineOperand *newOp, const MachineOperand *RootOp,
+        const AMDGPURegisterBankInfo &RBI, MachineRegisterInfo &MRI,
+        const TargetRegisterInfo &TRI, const SIInstrInfo &TII) {
+  // RootOp can only be VGPR or SGPR (some hand written cases such as
+  // inst-select-ashr.v2s16.mir::ashr_v2s16_vs)
+  if (checkRB(RootOp, AMDGPU::SGPRRegBankID, RBI, MRI, TRI) ||
+      checkRB(newOp, AMDGPU::VGPRRegBankID, RBI, MRI, TRI)) {
+    return newOp;
+  }
+  MachineInstr *MI = MRI.getVRegDef(RootOp->getReg());
+  if (MI->getOpcode() == AMDGPU::COPY &&
+      isSameOperand(newOp, &MI->getOperand(1))) {
+    // RootOp is VGPR, newOp is not VGPR, but RootOp = COPY newOp
+    return RootOp;
+  }
+
+  MachineBasicBlock *BB = MI->getParent();
+  const TargetRegisterClass *DstRC =
+      TRI.getConstrainedRegClassForOperand(*RootOp, MRI);
+  Register dstReg = MRI.createVirtualRegister(DstRC);
+
+  MachineInstrBuilder MIB =
+      BuildMI(*BB, MI, MI->getDebugLoc(), TII.get(AMDGPU::COPY), dstReg)
+          .addReg(newOp->getReg());
+
+  // only accept VGPR
+  return &MIB->getOperand(0);
 }
 
 InstructionSelector::ComplexRendererFns
@@ -4324,13 +4625,18 @@ AMDGPUInstructionSelector::selectVOP3PMods(MachineOperand &Root) const {
   MachineRegisterInfo &MRI
     = Root.getParent()->getParent()->getParent()->getRegInfo();
 
-  Register Src;
-  unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI);
-
+  std::pair<const MachineOperand *, unsigned> res =
+      selectVOP3PModsImpl(&Root, MRI);
+  if (!(res.first->isReg())) {
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(getAllKindImm(res.first)); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(res.second); } // src_mods
+    }};
+  }
+  res.first = getVReg(res.first, &Root, RBI, MRI, TRI, TII);
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }  // src_mods
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(res.first->getReg()); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(res.second); } // src_mods
   }};
 }
 
@@ -4339,13 +4645,18 @@ AMDGPUInstructionSelector::selectVOP3PModsDOT(MachineOperand &Root) const {
   MachineRegisterInfo &MRI
     = Root.getParent()->getParent()->getParent()->getRegInfo();
 
-  Register Src;
-  unsigned Mods;
-  std::tie(Src, Mods) = selectVOP3PModsImpl(Root.getReg(), MRI, true);
-
+  std::pair<const MachineOperand *, unsigned> res =
+      selectVOP3PModsImpl(&Root, MRI, true);
+  if (!(res.first->isReg())) {
+    return {{
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(getAllKindImm(res.first)); },
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(res.second); } // src_mods
+    }};
+  }
+  res.first = getVReg(res.first, &Root, RBI, MRI, TRI, TII);
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }  // src_mods
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(res.first->getReg()); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(res.second); } // src_mods
   }};
 }
 
