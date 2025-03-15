@@ -261,12 +261,9 @@ TargetSchedModel::computeInstrLatency(const MachineInstr *MI,
       (!hasInstrSchedModel() && !UseDefaultDefLatency))
     return TII->getInstrLatency(&InstrItins, *MI);
 
-  if (hasInstrSchedModel()) {
-    const MCSchedClassDesc *SCDesc = resolveSchedClass(MI);
-    if (SCDesc->isValid())
-      return computeInstrLatency(*SCDesc);
-  }
-  return TII->defaultDefLatency(SchedModel, *MI);
+  // This is used by targets that define an InstrSchedModel or want to use the
+  // default def latency.
+  return TII->getInstrLatency(*this, *MI);
 }
 
 unsigned TargetSchedModel::
