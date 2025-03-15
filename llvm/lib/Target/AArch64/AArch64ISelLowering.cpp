@@ -23938,6 +23938,20 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
   return Chain;
 }
 
+static int getFPSubregForVT(EVT VT) {
+  assert(VT.isSimple() && "Expected simple VT");
+  switch (VT.getSimpleVT().SimpleTy) {
+  case MVT::f16:
+    return AArch64::hsub;
+  case MVT::f32:
+    return AArch64::ssub;
+  case MVT::f64:
+    return AArch64::dsub;
+  default:
+    llvm_unreachable("Unexpected VT!");
+  }
+}
+
 static SDValue performSTORECombine(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    SelectionDAG &DAG,
@@ -23998,15 +24012,47 @@ static SDValue performSTORECombine(SDNode *N,
   if (SDValue Store = combineBoolVectorAndTruncateStore(DAG, ST))
     return Store;
 
-  if (ST->isTruncatingStore()) {
-    EVT StoreVT = ST->getMemoryVT();
-    if (!isHalvingTruncateOfLegalScalableType(ValueVT, StoreVT))
-      return SDValue();
+  if (ST->isTruncatingStore() &&
+      isHalvingTruncateOfLegalScalableType(ValueVT, MemVT)) {
     if (SDValue Rshrnb =
             trySimplifySrlAddToRshrnb(ST->getOperand(1), DAG, Subtarget)) {
       return DAG.getTruncStore(ST->getChain(), ST, Rshrnb, ST->getBasePtr(),
-                               StoreVT, ST->getMemOperand());
+                               MemVT, ST->getMemOperand());
     }
+  }
+
+  // This is an integer vector_extract_elt followed by a (possibly truncating)
+  // store. We may be able to replace this with a store of an FP subregister.
+  if (DCI.isAfterLegalizeDAG() && ST->isUnindexed() &&
+      Value.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+    SDValue Vector = Value.getOperand(0);
+    SDValue ExtIdx = Value.getOperand(1);
+    EVT VectorVT = Vector.getValueType();
+    EVT ElemVT = VectorVT.getVectorElementType();
+    // TODO: Consider allowing Neon (a lot of churn, not necessarily better).
+    if (!VectorVT.isScalableVector())
+      return SDValue();
+    if (!ValueVT.isInteger() || ElemVT == MVT::i8 || MemVT == MVT::i8)
+      return SDValue();
+    if (ValueVT != MemVT && !ST->isTruncatingStore())
+      return SDValue();
+
+    EVT FPElemVT = EVT::getFloatingPointVT(ElemVT.getSizeInBits());
+    EVT FPVectorVT = VectorVT.changeVectorElementType(FPElemVT);
+    SDValue Cast = DAG.getNode(ISD::BITCAST, DL, FPVectorVT, Vector);
+    SDValue Ext =
+        DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, FPElemVT, Cast, ExtIdx);
+
+    EVT FPMemVT = EVT::getFloatingPointVT(MemVT.getSizeInBits());
+    if (ST->isTruncatingStore() && FPMemVT != FPElemVT) {
+      SDValue Trunc = DAG.getTargetExtractSubreg(getFPSubregForVT(FPMemVT), DL,
+                                                 FPMemVT, Ext);
+      return DAG.getStore(ST->getChain(), DL, Trunc, ST->getBasePtr(),
+                          ST->getMemOperand());
+    }
+
+    return DAG.getStore(ST->getChain(), DL, Ext, ST->getBasePtr(),
+                        ST->getMemOperand());
   }
 
   return SDValue();
