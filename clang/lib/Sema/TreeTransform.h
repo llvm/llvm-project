@@ -8556,21 +8556,34 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
   SmallVector<Expr*, 8> Exprs;
   SmallVector<IdentifierInfo *, 4> Names;
 
-  ExprResult AsmString;
   SmallVector<Expr*, 8> Clobbers;
 
   bool ExprsChanged = false;
+
+  auto RebuildString = [&](Expr *E) {
+    ExprResult Result = getDerived().TransformExpr(E);
+    if (!Result.isUsable())
+      return Result;
+    if (Result.get() != E) {
+      ExprsChanged = true;
+      Result = SemaRef.ActOnGCCAsmStmtString(Result.get(), /*ForLabel=*/false);
+    }
+    return Result;
+  };
 
   // Go through the outputs.
   for (unsigned I = 0, E = S->getNumOutputs(); I != E; ++I) {
     Names.push_back(S->getOutputIdentifier(I));
 
-    // No need to transform the constraint literal.
-    Constraints.push_back(S->getOutputConstraintLiteral(I));
+    ExprResult Result = RebuildString(S->getOutputConstraintExpr(I));
+    if (Result.isInvalid())
+      return StmtError();
+
+    Constraints.push_back(Result.get());
 
     // Transform the output expr.
     Expr *OutputExpr = S->getOutputExpr(I);
-    ExprResult Result = getDerived().TransformExpr(OutputExpr);
+    Result = getDerived().TransformExpr(OutputExpr);
     if (Result.isInvalid())
       return StmtError();
 
@@ -8583,12 +8596,15 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
   for (unsigned I = 0, E = S->getNumInputs(); I != E; ++I) {
     Names.push_back(S->getInputIdentifier(I));
 
-    // No need to transform the constraint literal.
-    Constraints.push_back(S->getInputConstraintLiteral(I));
+    ExprResult Result = RebuildString(S->getInputConstraintExpr(I));
+    if (Result.isInvalid())
+      return StmtError();
+
+    Constraints.push_back(Result.get());
 
     // Transform the input expr.
     Expr *InputExpr = S->getInputExpr(I);
-    ExprResult Result = getDerived().TransformExpr(InputExpr);
+    Result = getDerived().TransformExpr(InputExpr);
     if (Result.isInvalid())
       return StmtError();
 
@@ -8607,15 +8623,22 @@ TreeTransform<Derived>::TransformGCCAsmStmt(GCCAsmStmt *S) {
     ExprsChanged |= Result.get() != S->getLabelExpr(I);
     Exprs.push_back(Result.get());
   }
+
+  // Go through the clobbers.
+  for (unsigned I = 0, E = S->getNumClobbers(); I != E; ++I) {
+    ExprResult Result = RebuildString(S->getClobberExpr(I));
+    if (Result.isInvalid())
+      return StmtError();
+    Clobbers.push_back(Result.get());
+  }
+
+  ExprResult AsmString = RebuildString(S->getAsmStringExpr());
+  if (AsmString.isInvalid())
+    return StmtError();
+
   if (!getDerived().AlwaysRebuild() && !ExprsChanged)
     return S;
 
-  // Go through the clobbers.
-  for (unsigned I = 0, E = S->getNumClobbers(); I != E; ++I)
-    Clobbers.push_back(S->getClobberStringLiteral(I));
-
-  // No need to transform the asm string literal.
-  AsmString = S->getAsmString();
   return getDerived().RebuildGCCAsmStmt(S->getAsmLoc(), S->isSimple(),
                                         S->isVolatile(), S->getNumOutputs(),
                                         S->getNumInputs(), Names.data(),

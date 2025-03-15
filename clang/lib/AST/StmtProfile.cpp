@@ -328,20 +328,20 @@ void StmtProfiler::VisitGCCAsmStmt(const GCCAsmStmt *S) {
   VisitStmt(S);
   ID.AddBoolean(S->isVolatile());
   ID.AddBoolean(S->isSimple());
-  VisitStringLiteral(S->getAsmString());
+  VisitExpr(S->getAsmStringExpr());
   ID.AddInteger(S->getNumOutputs());
   for (unsigned I = 0, N = S->getNumOutputs(); I != N; ++I) {
     ID.AddString(S->getOutputName(I));
-    VisitStringLiteral(S->getOutputConstraintLiteral(I));
+    VisitExpr(S->getOutputConstraintExpr(I));
   }
   ID.AddInteger(S->getNumInputs());
   for (unsigned I = 0, N = S->getNumInputs(); I != N; ++I) {
     ID.AddString(S->getInputName(I));
-    VisitStringLiteral(S->getInputConstraintLiteral(I));
+    VisitExpr(S->getInputConstraintExpr(I));
   }
   ID.AddInteger(S->getNumClobbers());
   for (unsigned I = 0, N = S->getNumClobbers(); I != N; ++I)
-    VisitStringLiteral(S->getClobberStringLiteral(I));
+    VisitExpr(S->getClobberExpr(I));
   ID.AddInteger(S->getNumLabels());
   for (auto *L : S->labels())
     VisitDecl(L->getLabel());
