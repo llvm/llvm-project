@@ -86,9 +86,9 @@ public:
             "//" + Line.str()));
       }
 
-      if (NewlinePos == StringRef::npos) {
+      if (NewlinePos == StringRef::npos)
         break;
-      }
+
       CommentText = CommentText.substr(NewlinePos + 1);
       LineNo++;
     }
@@ -108,9 +108,9 @@ public:
                          CommentEnd = Range.getEnd();
     const std::optional<Token> NextTok =
         Lexer::findNextToken(CommentStart, SM, PP.getLangOpts());
-    if (!NextTok.has_value()) {
+    if (!NextTok.has_value())
       return false;
-    }
+
     const std::string tokenSpelling =
         Lexer::getSpelling(*NextTok, SM, PP.getLangOpts());
     const unsigned lineNo = SM.getSpellingLineNumber(CommentEnd);
@@ -122,9 +122,8 @@ public:
   bool HandleComment(Preprocessor &PP, SourceRange Range) override {
     const SourceManager &SM = PP.getSourceManager();
 
-    if (Range.getBegin().isMacroID() || SM.isInSystemHeader(Range.getBegin())) {
+    if (Range.getBegin().isMacroID() || SM.isInSystemHeader(Range.getBegin()))
       return false;
-    }
 
     const StringRef Text = Lexer::getSourceText(
         CharSourceRange::getCharRange(Range), SM, PP.getLangOpts());
@@ -135,18 +134,15 @@ public:
     } else if (ExcludedCommentMatch.match(Text)) {
       return false;
     }
-    if (ExcludeDoxygen && isDoxygenStyleComment(Text)) {
+    if (ExcludeDoxygen && isDoxygenStyleComment(Text))
       return false;
-    }
 
     SmallVector<StringRef> Matches;
-    if (!CStyleCommentMatch.match(Text, &Matches)) {
+    if (!CStyleCommentMatch.match(Text, &Matches))
       return false;
-    }
 
-    if (CheckForCodeAfterComment(PP, Range)) {
+    if (CheckForCodeAfterComment(PP, Range))
       return false;
-    }
 
     SmallVector<FixItHint, 4> FixIts;
     convertToCppStyleCommentFixes(SM, Range, FixIts);
@@ -155,9 +151,8 @@ public:
         Range.getBegin(),
         "use C++ style comments '//' instead of C style comments '/*...*/'");
 
-    for (const auto &Fix : FixIts) {
+    for (const auto &Fix : FixIts)
       D << Fix;
-    }
 
     return false;
   }

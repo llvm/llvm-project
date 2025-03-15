@@ -53,5 +53,5 @@ Options
 .. option:: ExcludedComments
 
    A regex pattern that allows specifying certain comments to exclude from transformation.
-   By default, this option is set to "^$", which means no comments are excluded.
+   By default, this option is set to `^$`, which means no comments are excluded.
    You can provide a custom regex to exclude specific comments based on your needs.

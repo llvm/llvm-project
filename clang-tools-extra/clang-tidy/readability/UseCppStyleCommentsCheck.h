@@ -21,8 +21,6 @@ class UseCppStyleCommentsCheck : public ClangTidyCheck {
 public:
   UseCppStyleCommentsCheck(StringRef Name, ClangTidyContext *Context);
 
-  ~UseCppStyleCommentsCheck() override;
-
   bool isLanguageVersionSupported(const LangOptions &LangOpts) const override {
     return LangOpts.CPlusPlus;
   }
