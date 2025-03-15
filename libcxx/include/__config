@@ -556,6 +556,13 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++2b-extensions")
 #  endif
 
+#  if __has_warning("-Wc++23-lambda-attributes")
+#    define _LIBCPP_CLANG_DIANGOSTIC_INGORED_CXX23_LAMBDA_ATTRIBUTES                                                   \
+      _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++23-lambda-attributes")
+#  else
+#    define _LIBCPP_CLANG_DIANGOSTIC_INGORED_CXX23_LAMBDA_ATTRIBUTES
+#  endif
+
 // Clang modules take a significant compile time hit when pushing and popping diagnostics.
 // Since all the headers are marked as system headers in the modulemap, we can simply disable this
 // pushing and popping when building with clang modules.
@@ -567,6 +574,7 @@ typedef __char32_t char32_t;
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                           \
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                           \
       _LIBCPP_CLANG_DIAGNOSTIC_IGNORED_CXX23_EXTENSION                                                                 \
+      _LIBCPP_CLANG_DIANGOSTIC_INGORED_CXX23_LAMBDA_ATTRIBUTES                                                         \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++14-extensions")                                                             \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++17-extensions")                                                             \
       _LIBCPP_GCC_DIAGNOSTIC_IGNORED("-Wc++20-extensions")                                                             \
