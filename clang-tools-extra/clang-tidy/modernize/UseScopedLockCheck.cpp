@@ -125,6 +125,42 @@ SourceRange getLockGuardNameRange(const TypeSourceInfo *SourceInfo) {
                      TemplateLoc.getLAngleLoc().getLocWithOffset(-1));
 }
 
+AST_MATCHER_P(CompoundStmt, hasMultiple, ast_matchers::internal::Matcher<Stmt>,
+              InnerMatcher) {
+  size_t Count = 0;
+
+  for (const Stmt *Stmt : Node.body()) {
+    if (InnerMatcher.matches(*Stmt, Finder, Builder))
+      Count++;
+  }
+
+  return Count > 1;
+}
+
+AST_MATCHER_P(CompoundStmt, hasSingle, ast_matchers::internal::Matcher<Stmt>,
+              InnerMatcher) {
+  size_t Count = 0;
+  ast_matchers::internal::BoundNodesTreeBuilder Result;
+
+  for (const Stmt *Stmt : Node.body()) {
+    ast_matchers::internal::BoundNodesTreeBuilder TB(*Builder);
+    if (InnerMatcher.matches(*Stmt, Finder, &TB)) {
+      Count++;
+      if (Count == 1)
+        Result.addMatch(TB);
+    }
+  }
+
+  if (Count > 1) {
+    Builder->removeBindings(
+        [](const ast_matchers::internal::BoundNodesMap &) { return true; });
+    return false;
+  }
+
+  *Builder = std::move(Result);
+  return true;
+}
+
 const StringRef UseScopedLockMessage =
     "use 'std::scoped_lock' instead of 'std::lock_guard'";
 
@@ -154,25 +190,17 @@ void UseScopedLockCheck::registerMatchers(MatchFinder *Finder) {
   const auto LockVarDecl = varDecl(hasType(LockGuardType));
 
   if (WarnOnSingleLocks) {
-    // Match CompoundStmt with only one 'std::lock_guard'
     Finder->addMatcher(
-        compoundStmt(unless(isExpansionInSystemHeader()),
-                     has(declStmt(has(LockVarDecl.bind("lock-decl-single")))),
-                     unless(hasDescendant(declStmt(has(varDecl(
-                         hasType(LockGuardType),
-                         unless(equalsBoundNode("lock-decl-single")))))))),
+        compoundStmt(
+            unless(isExpansionInSystemHeader()),
+            hasSingle(declStmt(has(LockVarDecl.bind("lock-decl-single"))))),
         this);
   }
 
-  // Match CompoundStmt with multiple 'std::lock_guard'
-  Finder->addMatcher(
-      compoundStmt(unless(isExpansionInSystemHeader()),
-                   has(declStmt(has(LockVarDecl.bind("lock-decl-multiple")))),
-                   hasDescendant(declStmt(has(varDecl(
-                       hasType(LockGuardType),
-                       unless(equalsBoundNode("lock-decl-multiple")))))))
-          .bind("block-multiple"),
-      this);
+  Finder->addMatcher(compoundStmt(unless(isExpansionInSystemHeader()),
+                                  hasMultiple(declStmt(has(LockVarDecl))))
+                         .bind("block-multiple"),
+                     this);
 
   if (WarnOnUsingAndTypedef) {
     // Match 'typedef std::lock_guard<std::mutex> Lock'
