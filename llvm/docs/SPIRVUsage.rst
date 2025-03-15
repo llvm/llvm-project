@@ -405,6 +405,10 @@ SPIR-V backend, along with their descriptions and argument details.
      - 32-bit Integer
      - `[32-bit Integer]`
      - Retrieves the thread ID within a workgroup. Essential for identifying execution context in parallel compute operations.
+   * - `int_spv_flattened_thread_id_in_group`
+     - 32-bit Integer
+     - `[32-bit Integer]`
+     - Provides a flattened index for a given thread within a given group (SV_GroupIndex)
    * - `int_spv_create_handle`
      - Pointer
      - `[8-bit Integer]`
