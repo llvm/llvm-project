@@ -120,6 +120,7 @@ CtxInstrumentationLowerer::CtxInstrumentationLowerer(Module &M,
                                           PointerTy,          /*FirstNode*/
                                           PointerTy,          /*FirstMemBlock*/
                                           PointerTy,          /*CurrentMem*/
+                                          I64Ty,              /*TotalEntries*/
                                           SanitizerMutexType, /*Taken*/
                                       });
   FunctionDataTy =

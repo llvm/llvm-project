@@ -10619,6 +10619,9 @@ def warn_second_arg_of_va_start_not_last_non_variadic_param : Warning<
 def warn_c17_compat_ellipsis_only_parameter : Warning<
   "'...' as the only parameter of a function is incompatible with C standards "
   "before C23">, DefaultIgnore, InGroup<CPre23Compat>;
+def warn_c17_compat_va_start_one_arg : Warning<
+  "passing only one argument to 'va_start' is incompatible with C standards "
+  "before C23">, DefaultIgnore, InGroup<CPre23Compat>;
 def warn_va_start_type_is_undefined : Warning<
   "passing %select{an object that undergoes default argument promotion|"
   "an object of reference type|a parameter declared with the 'register' "

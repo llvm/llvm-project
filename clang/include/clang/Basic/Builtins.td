@@ -833,6 +833,12 @@ def BuiltinVaStart : Builtin {
   let Prototype = "void(__builtin_va_list_ref, ...)";
 }
 
+def BuiltinC23VaStart : LangBuiltin<"C23_LANG"> {
+  let Spellings = ["__builtin_c23_va_start"];
+  let Attributes = [NoThrow, CustomTypeChecking];
+  let Prototype = "void(__builtin_va_list_ref, ...)";
+}
+
 def BuiltinStdargStart : Builtin {
   let Spellings = ["__builtin_stdarg_start"];
   let Attributes = [NoThrow, CustomTypeChecking];

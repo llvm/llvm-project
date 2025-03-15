@@ -91,10 +91,7 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
 bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
                                             const MCAssembler *Asm,
                                             const MCFixup *Fixup) const {
-  // Explicitly drop the layout and assembler to prevent any symbolic folding in
-  // the expression handling.  This is required to preserve symbolic difference
-  // expressions to emit the paired relocations.
-  if (!getSubExpr()->evaluateAsRelocatable(Res, nullptr, nullptr))
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
     return false;
 
   Res =
@@ -167,49 +164,6 @@ StringRef RISCVMCExpr::getVariantKindName(VariantKind Kind) {
     return "32_pcrel";
   }
   llvm_unreachable("Invalid ELF symbol kind");
-}
-
-static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
-  switch (Expr->getKind()) {
-  case MCExpr::Target:
-    llvm_unreachable("Can't handle nested target expression");
-    break;
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
-    fixELFSymbolsInTLSFixupsImpl(BE->getLHS(), Asm);
-    fixELFSymbolsInTLSFixupsImpl(BE->getRHS(), Asm);
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    // We're known to be under a TLS fixup, so any symbol should be
-    // modified. There should be only one.
-    const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
-    cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
-    break;
-  }
-}
-
-void RISCVMCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  switch (getKind()) {
-  default:
-    return;
-  case VK_RISCV_TPREL_HI:
-  case VK_RISCV_TLS_GOT_HI:
-  case VK_RISCV_TLS_GD_HI:
-  case VK_RISCV_TLSDESC_HI:
-    break;
-  }
-
-  fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
 }
 
 bool RISCVMCExpr::evaluateAsConstant(int64_t &Res) const {

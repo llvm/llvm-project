@@ -1764,3 +1764,10 @@ llvm.mlir.alias external @y5 : i32 {
   llvm.return %0 : !llvm.ptr<4>
 }
 
+// -----
+
+module {
+  // expected-error@+2 {{expected integer value}}
+  // expected-error@+1 {{failed to parse ModuleFlagAttr parameter 'value' which is to be a `uint32_t`}}
+  llvm.module_flags [#llvm.mlir.module_flag<error, "wchar_size", "yolo">]
+}

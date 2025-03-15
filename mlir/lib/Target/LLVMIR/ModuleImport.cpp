@@ -162,7 +162,8 @@ getTopologicallySortedBlocks(ArrayRef<llvm::BasicBlock *> basicBlocks) {
 ModuleImport::ModuleImport(ModuleOp mlirModule,
                            std::unique_ptr<llvm::Module> llvmModule,
                            bool emitExpensiveWarnings,
-                           bool importEmptyDICompositeTypes)
+                           bool importEmptyDICompositeTypes,
+                           bool preferUnregisteredIntrinsics)
     : builder(mlirModule->getContext()), context(mlirModule->getContext()),
       mlirModule(mlirModule), llvmModule(std::move(llvmModule)),
       iface(mlirModule->getContext()),
@@ -171,7 +172,8 @@ ModuleImport::ModuleImport(ModuleOp mlirModule,
           mlirModule, importEmptyDICompositeTypes)),
       loopAnnotationImporter(
           std::make_unique<LoopAnnotationImporter>(*this, builder)),
-      emitExpensiveWarnings(emitExpensiveWarnings) {
+      emitExpensiveWarnings(emitExpensiveWarnings),
+      preferUnregisteredIntrinsics(preferUnregisteredIntrinsics) {
   builder.setInsertionPointToStart(mlirModule.getBody());
 }
 
@@ -517,6 +519,33 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
   debugIntrinsics.insert(intrinsic);
 }
 
+LogicalResult ModuleImport::convertModuleFlagsMetadata() {
+  SmallVector<llvm::Module::ModuleFlagEntry> llvmModuleFlags;
+  llvmModule->getModuleFlagsMetadata(llvmModuleFlags);
+
+  SmallVector<Attribute> moduleFlags;
+  for (const auto [behavior, key, val] : llvmModuleFlags) {
+    // Currently only supports most common: int constant values.
+    auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(val);
+    if (!constInt) {
+      emitWarning(mlirModule.getLoc())
+          << "unsupported module flag value: " << diagMD(val, llvmModule.get())
+          << ", only constant integer currently supported";
+      continue;
+    }
+
+    moduleFlags.push_back(builder.getAttr<ModuleFlagAttr>(
+        convertModFlagBehaviorFromLLVM(behavior),
+        builder.getStringAttr(key->getString()), constInt->getZExtValue()));
+  }
+
+  if (!moduleFlags.empty())
+    builder.create<LLVM::ModuleFlagsOp>(mlirModule.getLoc(),
+                                        builder.getArrayAttr(moduleFlags));
+
+  return success();
+}
+
 LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
   for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
     if (named.getName() != "llvm.linker.options")
@@ -595,6 +624,8 @@ LogicalResult ModuleImport::convertMetadata() {
     }
   }
   if (failed(convertLinkerOptionsMetadata()))
+    return failure();
+  if (failed(convertModuleFlagsMetadata()))
     return failure();
   if (failed(convertIdentMetadata()))
     return failure();
@@ -2552,11 +2583,10 @@ ModuleImport::translateDereferenceableAttr(const llvm::MDNode *node,
   return derefAttr;
 }
 
-OwningOpRef<ModuleOp>
-mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
-                              MLIRContext *context, bool emitExpensiveWarnings,
-                              bool dropDICompositeTypeElements,
-                              bool loadAllDialects) {
+OwningOpRef<ModuleOp> mlir::translateLLVMIRToModule(
+    std::unique_ptr<llvm::Module> llvmModule, MLIRContext *context,
+    bool emitExpensiveWarnings, bool dropDICompositeTypeElements,
+    bool loadAllDialects, bool preferUnregisteredIntrinsics) {
   // Preload all registered dialects to allow the import to iterate the
   // registered LLVMImportDialectInterface implementations and query the
   // supported LLVM IR constructs before starting the translation. Assumes the
@@ -2573,7 +2603,8 @@ mlir::translateLLVMIRToModule(std::unique_ptr<llvm::Module> llvmModule,
       /*column=*/0)));
 
   ModuleImport moduleImport(module.get(), std::move(llvmModule),
-                            emitExpensiveWarnings, dropDICompositeTypeElements);
+                            emitExpensiveWarnings, dropDICompositeTypeElements,
+                            preferUnregisteredIntrinsics);
   if (failed(moduleImport.initializeImportInterface()))
     return {};
   if (failed(moduleImport.convertDataLayout()))

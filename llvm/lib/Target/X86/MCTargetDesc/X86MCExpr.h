@@ -67,9 +67,6 @@ public:
   void visitUsedExpr(MCStreamer &Streamer) const override {}
   MCFragment *findAssociatedFragment() const override { return nullptr; }
 
-  // There are no TLS X86MCExprs at the moment.
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
-
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }

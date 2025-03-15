@@ -2161,6 +2161,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_ms_va_start:
   case Builtin::BI__builtin_stdarg_start:
   case Builtin::BI__builtin_va_start:
+  case Builtin::BI__builtin_c23_va_start:
     if (BuiltinVAStart(BuiltinID, TheCall))
       return ExprError();
     break;
@@ -4844,15 +4845,27 @@ static bool checkVAStartIsInVariadicFunction(Sema &S, Expr *Fn,
 
 bool Sema::BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
   Expr *Fn = TheCall->getCallee();
-
   if (checkVAStartABI(*this, BuiltinID, Fn))
     return true;
 
-  // In C23 mode, va_start only needs one argument. However, the builtin still
-  // requires two arguments (which matches the behavior of the GCC builtin),
-  // <stdarg.h> passes `0` as the second argument in C23 mode.
-  if (checkArgCount(TheCall, 2))
-    return true;
+  if (BuiltinID == Builtin::BI__builtin_c23_va_start) {
+    // This builtin requires one argument (the va_list), allows two arguments,
+    // but diagnoses more than two arguments. e.g.,
+    //   __builtin_c23_va_start(); // error
+    //   __builtin_c23_va_start(list); // ok
+    //   __builtin_c23_va_start(list, param); // ok
+    //   __builtin_c23_va_start(list, anything, anything); // error
+    // This differs from the GCC behavior in that they accept the last case
+    // with a warning, but it doesn't seem like a useful behavior to allow.
+    if (checkArgCountRange(TheCall, 1, 2))
+      return true;
+  } else {
+    // In C23 mode, va_start only needs one argument. However, the builtin still
+    // requires two arguments (which matches the behavior of the GCC builtin),
+    // <stdarg.h> passes `0` as the second argument in C23 mode.
+    if (checkArgCount(TheCall, 2))
+      return true;
+  }
 
   // Type-check the first argument normally.
   if (checkBuiltinArgument(*this, TheCall, 0))
@@ -4863,23 +4876,34 @@ bool Sema::BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall) {
   if (checkVAStartIsInVariadicFunction(*this, Fn, &LastParam))
     return true;
 
-  // Verify that the second argument to the builtin is the last argument of the
-  // current function or method. In C23 mode, if the second argument is an
-  // integer constant expression with value 0, then we don't bother with this
-  // check.
-  bool SecondArgIsLastNamedArgument = false;
+  // Verify that the second argument to the builtin is the last non-variadic
+  // argument of the current function or method. In C23 mode, if the call is
+  // not to __builtin_c23_va_start, and the second argument is an integer
+  // constant expression with value 0, then we don't bother with this check.
+  // For __builtin_c23_va_start, we only perform the check for the second
+  // argument being the last argument to the current function if there is a
+  // second argument present.
+  if (BuiltinID == Builtin::BI__builtin_c23_va_start &&
+      TheCall->getNumArgs() < 2) {
+    Diag(TheCall->getExprLoc(), diag::warn_c17_compat_va_start_one_arg);
+    return false;
+  }
+
   const Expr *Arg = TheCall->getArg(1)->IgnoreParenCasts();
   if (std::optional<llvm::APSInt> Val =
           TheCall->getArg(1)->getIntegerConstantExpr(Context);
-      Val && LangOpts.C23 && *Val == 0)
+      Val && LangOpts.C23 && *Val == 0 &&
+      BuiltinID != Builtin::BI__builtin_c23_va_start) {
+    Diag(TheCall->getExprLoc(), diag::warn_c17_compat_va_start_one_arg);
     return false;
+  }
 
   // These are valid if SecondArgIsLastNamedArgument is false after the next
   // block.
   QualType Type;
   SourceLocation ParamLoc;
   bool IsCRegister = false;
-
+  bool SecondArgIsLastNamedArgument = false;
   if (const DeclRefExpr *DR = dyn_cast<DeclRefExpr>(Arg)) {
     if (const ParmVarDecl *PV = dyn_cast<ParmVarDecl>(DR->getDecl())) {
       SecondArgIsLastNamedArgument = PV == LastParam;

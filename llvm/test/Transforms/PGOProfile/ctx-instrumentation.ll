@@ -9,8 +9,8 @@
 declare void @bar()
 
 ;.
-; LOWERING: @an_entrypoint_ctx_root = global { ptr, ptr, ptr, i8 } zeroinitializer
-; LOWERING: @another_entrypoint_no_callees_ctx_root = global { ptr, ptr, ptr, i8 } zeroinitializer
+; LOWERING: @an_entrypoint_ctx_root = global { ptr, ptr, ptr, i64, i8 } zeroinitializer
+; LOWERING: @another_entrypoint_no_callees_ctx_root = global { ptr, ptr, ptr, i64, i8 } zeroinitializer
 ; LOWERING: @__llvm_ctx_profile_callsite = external hidden thread_local global ptr
 ; LOWERING: @__llvm_ctx_profile_expected_callee = external hidden thread_local global ptr
 ; LOWERING: @[[GLOB0:[0-9]+]] = internal global { ptr, ptr, i8 } zeroinitializer

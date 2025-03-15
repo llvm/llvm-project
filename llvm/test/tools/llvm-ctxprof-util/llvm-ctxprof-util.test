@@ -33,15 +33,16 @@
 
 ; EMPTY: <BLOCKINFO_BLOCK/>
 ; EMPTY-NEXT: <Metadata NumWords=1 BlockCodeSize=2>
-; EMPTY-NEXT:   <Version op0=2/>
+; EMPTY-NEXT:   <Version op0=3/>
 ; EMPTY-NEXT: </Metadata>
 
 ; VALID:      <BLOCKINFO_BLOCK/>
-; VALID-NEXT: <Metadata NumWords=45 BlockCodeSize=2>
-; VALID-NEXT:   <Version op0=2/>
-; VALID-NEXT:   <Contexts NumWords=29 BlockCodeSize=2>
+; VALID-NEXT: <Metadata NumWords=46 BlockCodeSize=2>
+; VALID-NEXT:   <Version op0=3/>
+; VALID-NEXT:   <Contexts NumWords=30 BlockCodeSize=2>
 ; VALID-NEXT:     <Root NumWords=20 BlockCodeSize=2>
 ; VALID-NEXT:       <GUID op0=1000/>
+; VALID-NEXT:       <TotalRootEntryCount op0=5/>
 ; VALID-NEXT:       <Counters op0=1 op1=2 op2=3/>
 ; VALID-NEXT:       <Context NumWords=5 BlockCodeSize=2>
 ; VALID-NEXT:         <GUID op0=-3/>
@@ -59,8 +60,9 @@
 ; VALID-NEXT:         <Counters op0=40 op1=50/>
 ; VALID-NEXT:       </Context>
 ; VALID-NEXT:     </Root>
-; VALID-NEXT:     <Root NumWords=4 BlockCodeSize=2>
+; VALID-NEXT:     <Root NumWords=5 BlockCodeSize=2>
 ; VALID-NEXT:       <GUID op0=-4/>
+; VALID-NEXT:       <TotalRootEntryCount op0=45/>
 ; VALID-NEXT:       <Counters op0=5 op1=9 op2=10/>
 ; VALID-NEXT:     </Root>
 ; VALID-NEXT:   </Contexts>

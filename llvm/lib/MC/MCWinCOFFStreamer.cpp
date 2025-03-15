@@ -82,10 +82,6 @@ public:
   MCFragment *findAssociatedFragment() const override {
     return SectionSymbol.getFragment();
   }
-
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override {
-    llvm_unreachable("Not supported for ELF");
-  }
 };
 
 /// MCExpr that represents the offset to a symbol from the beginning of its
@@ -122,10 +118,6 @@ public:
 
   MCFragment *findAssociatedFragment() const override {
     return Symbol.getFragment();
-  }
-
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override {
-    llvm_unreachable("Not supported for ELF");
   }
 };
 
