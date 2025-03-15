@@ -20,6 +20,7 @@
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
 #include "EHScopeStack.h"
+#include "MitigationTagging.h"
 #include "PatternInit.h"
 #include "TargetInfo.h"
 #include "clang/AST/ASTContext.h"
@@ -1974,6 +1975,9 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
            ? LangOptions::TrivialAutoVarInitKind::Uninitialized
            : getContext().getLangOpts().getTrivialAutoVarInit());
 
+  AttachMitigationMetadataToFunction(
+      *this, MitigationKey::AUTO_VAR_INIT,
+      trivialAutoVarInit != LangOptions::TrivialAutoVarInitKind::Uninitialized);
   auto initializeWhatIsTechnicallyUninitialized = [&](Address Loc) {
     if (trivialAutoVarInit ==
         LangOptions::TrivialAutoVarInitKind::Uninitialized)
