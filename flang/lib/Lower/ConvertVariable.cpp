@@ -738,9 +738,11 @@ static mlir::Value createNewLocal(Fortran::lower::AbstractConverter &converter,
     auto idxTy = builder.getIndexType();
     for (mlir::Value sh : elidedShape)
       indices.push_back(builder.createConvert(loc, idxTy, sh));
-    mlir::Value alloc = builder.create<cuf::AllocOp>(
-        loc, ty, nm, symNm, dataAttr, lenParams, indices);
-    return alloc;
+    if (dataAttr.getValue() == cuf::DataAttribute::Shared)
+      return builder.create<cuf::SharedMemoryOp>(loc, ty, nm, symNm, lenParams,
+                                                 indices);
+    return builder.create<cuf::AllocOp>(loc, ty, nm, symNm, dataAttr, lenParams,
+                                        indices);
   }
 
   // Let the builder do all the heavy lifting.
@@ -1032,12 +1034,16 @@ static void instantiateLocal(Fortran::lower::AbstractConverter &converter,
                                                symMap);
   if (Fortran::semantics::NeedCUDAAlloc(var.getSymbol())) {
     auto *builder = &converter.getFirOpBuilder();
+    cuf::DataAttributeAttr dataAttr =
+        Fortran::lower::translateSymbolCUFDataAttribute(builder->getContext(),
+                                                        var.getSymbol());
     mlir::Location loc = converter.getCurrentLocation();
     fir::ExtendedValue exv =
         converter.getSymbolExtendedValue(var.getSymbol(), &symMap);
     auto *sym = &var.getSymbol();
     const Fortran::semantics::Scope &owner = sym->owner();
-    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram) {
+    if (owner.kind() != Fortran::semantics::Scope::Kind::MainProgram &&
+        dataAttr.getValue() != cuf::DataAttribute::Shared) {
       converter.getFctCtx().attachCleanup([builder, loc, exv, sym]() {
         cuf::DataAttributeAttr dataAttr =
             Fortran::lower::translateSymbolCUFDataAttribute(
