@@ -40,6 +40,10 @@ function(add_math_entrypoint_object name)
   )
 endfunction()
 
+add_math_entrypoint_object(fxdivi)
+
+add_math_entrypoint_object(mulifx)
+
 add_math_entrypoint_object(acos)
 add_math_entrypoint_object(acosf)
 add_math_entrypoint_object(acosf16)
