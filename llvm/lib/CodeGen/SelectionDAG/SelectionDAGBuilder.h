@@ -225,7 +225,7 @@ public:
   static const unsigned LowestSDNodeOrder = 1;
 
   SelectionDAG &DAG;
-  AAResults *AA = nullptr;
+  BatchAAResults *BatchAA = nullptr;
   AssumptionCache *AC = nullptr;
   const TargetLibraryInfo *LibInfo = nullptr;
 
@@ -254,7 +254,7 @@ public:
 
   // Emit PHI-node-operand constants only once even if used by multiple
   // PHI nodes.
-  DenseMap<const Constant *, unsigned> ConstantsOut;
+  DenseMap<const Constant *, Register> ConstantsOut;
 
   /// Information about the function as a whole.
   FunctionLoweringInfo &FuncInfo;
@@ -280,7 +280,7 @@ public:
         SL(std::make_unique<SDAGSwitchLowering>(this, funcinfo)),
         FuncInfo(funcinfo), SwiftError(swifterror) {}
 
-  void init(GCFunctionInfo *gfi, AAResults *AA, AssumptionCache *AC,
+  void init(GCFunctionInfo *gfi, BatchAAResults *BatchAA, AssumptionCache *AC,
             const TargetLibraryInfo *li);
 
   /// Clear out the current SelectionDAG and the associated state and prepare
@@ -320,7 +320,7 @@ public:
     return CurInst ? CurInst->getDebugLoc() : DebugLoc();
   }
 
-  void CopyValueToVirtualRegister(const Value *V, unsigned Reg,
+  void CopyValueToVirtualRegister(const Value *V, Register Reg,
                                   ISD::NodeType ExtendType = ISD::ANY_EXTEND);
 
   void visit(const Instruction &I);
@@ -659,8 +659,8 @@ private:
   void visitVectorReduce(const CallInst &I, unsigned Intrinsic);
   void visitVectorReverse(const CallInst &I);
   void visitVectorSplice(const CallInst &I);
-  void visitVectorInterleave(const CallInst &I);
-  void visitVectorDeinterleave(const CallInst &I);
+  void visitVectorInterleave(const CallInst &I, unsigned Factor);
+  void visitVectorDeinterleave(const CallInst &I, unsigned Factor);
   void visitStepVector(const CallInst &I);
 
   void visitUserOp1(const Instruction &I) {
@@ -704,9 +704,6 @@ private:
   SDDbgValue *getDbgValue(SDValue N, DILocalVariable *Variable,
                           DIExpression *Expr, const DebugLoc &dl,
                           unsigned DbgSDNodeOrder);
-
-  /// Lowers CallInst to an external symbol.
-  void lowerCallToExternalSymbol(const CallInst &I, const char *FunctionName);
 
   SDValue lowerStartEH(SDValue Chain, const BasicBlock *EHPadBB,
                        MCSymbol *&BeginLabel);

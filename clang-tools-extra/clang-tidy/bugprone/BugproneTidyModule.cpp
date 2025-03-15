@@ -33,6 +33,7 @@
 #include "InaccurateEraseCheck.h"
 #include "IncDecInConditionsCheck.h"
 #include "IncorrectEnableIfCheck.h"
+#include "IncorrectEnableSharedFromThisCheck.h"
 #include "IncorrectRoundingsCheck.h"
 #include "InfiniteLoopCheck.h"
 #include "IntegerDivisionCheck.h"
@@ -89,6 +90,7 @@
 #include "UndelegatedConstructorCheck.h"
 #include "UnhandledExceptionAtNewCheck.h"
 #include "UnhandledSelfAssignmentCheck.h"
+#include "UnintendedCharOstreamOutputCheck.h"
 #include "UniquePtrArrayMismatchCheck.h"
 #include "UnsafeFunctionsCheck.h"
 #include "UnusedLocalNonTrivialVariableCheck.h"
@@ -144,6 +146,10 @@ public:
         "bugprone-inaccurate-erase");
     CheckFactories.registerCheck<IncorrectEnableIfCheck>(
         "bugprone-incorrect-enable-if");
+    CheckFactories.registerCheck<IncorrectEnableSharedFromThisCheck>(
+        "bugprone-incorrect-enable-shared-from-this");
+    CheckFactories.registerCheck<UnintendedCharOstreamOutputCheck>(
+        "bugprone-unintended-char-ostream-output");
     CheckFactories.registerCheck<ReturnConstRefFromParameterCheck>(
         "bugprone-return-const-ref-from-parameter");
     CheckFactories.registerCheck<SwitchMissingDefaultCaseCheck>(

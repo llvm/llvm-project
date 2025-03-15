@@ -85,6 +85,9 @@ public:
               LoopExitKind,
               EpsilonKind};
 
+  static StringRef getProgramPointKindName(Kind K);
+  std::optional<SourceLocation> getSourceLocation() const;
+
 private:
   const void *Data1;
   llvm::PointerIntPair<const void *, 2, unsigned> Data2;

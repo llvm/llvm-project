@@ -21,9 +21,11 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaARM.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaOpenMP.h"
+#include "clang/Sema/SemaSYCL.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/STLExtras.h"
 #include <optional>
@@ -290,7 +292,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     DataMember,
     InlineVariable,
     TemplatedVariable,
-    Concept
+    Concept,
+    NonInlineInModulePurview
   } Kind = Normal;
 
   bool IsInNonspecializedTemplate =
@@ -299,29 +302,50 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
-  if (ManglingContextDecl) {
+  Kind = [&]() {
+    if (!ManglingContextDecl)
+      return Normal;
+
+    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl)) {
+      // See discussion in https://github.com/itanium-cxx-abi/cxx-abi/issues/186
+      //
+      // zygoloid:
+      //    Yeah, I think the only cases left where lambdas don't need a
+      //    mangling are when they have (effectively) internal linkage or appear
+      //    in a non-inline function in a non-module translation unit.
+      Module *M = ManglingContextDecl->getOwningModule();
+      if (M && M->getTopLevelModule()->isNamedModuleUnit() &&
+          ND->isExternallyVisible())
+        return NonInlineInModulePurview;
+    }
+
     if (ParmVarDecl *Param = dyn_cast<ParmVarDecl>(ManglingContextDecl)) {
       if (const DeclContext *LexicalDC
           = Param->getDeclContext()->getLexicalParent())
         if (LexicalDC->isRecord())
-          Kind = DefaultArgument;
+          return DefaultArgument;
     } else if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl)) {
       if (Var->getMostRecentDecl()->isInline())
-        Kind = InlineVariable;
-      else if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
-        Kind = TemplatedVariable;
-      else if (Var->getDescribedVarTemplate())
-        Kind = TemplatedVariable;
-      else if (auto *VTS = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
+        return InlineVariable;
+
+      if (Var->getDeclContext()->isRecord() && IsInNonspecializedTemplate)
+        return TemplatedVariable;
+
+      if (Var->getDescribedVarTemplate())
+        return TemplatedVariable;
+
+      if (auto *VTS = dyn_cast<VarTemplateSpecializationDecl>(Var)) {
         if (!VTS->isExplicitSpecialization())
-          Kind = TemplatedVariable;
+          return TemplatedVariable;
       }
     } else if (isa<FieldDecl>(ManglingContextDecl)) {
-      Kind = DataMember;
+      return DataMember;
     } else if (isa<ImplicitConceptSpecializationDecl>(ManglingContextDecl)) {
-      Kind = Concept;
+      return Concept;
     }
-  }
+
+    return Normal;
+  }();
 
   // Itanium ABI [5.1.7]:
   //   In the following contexts [...] the one-definition rule requires closure
@@ -340,6 +364,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     return std::make_tuple(nullptr, nullptr);
   }
 
+  case NonInlineInModulePurview:
   case Concept:
     // Concept definitions aren't code generated and thus aren't mangled,
     // however the ManglingContextDecl is important for the purposes of
@@ -1454,6 +1479,9 @@ void Sema::ActOnStartOfLambdaDefinition(LambdaIntroducer &Intro,
   // Attributes on the lambda apply to the method.
   ProcessDeclAttributes(CurScope, Method, ParamInfo);
 
+  if (Context.getTargetInfo().getTriple().isAArch64())
+    ARM().CheckSMEFunctionDefAttributes(Method);
+
   // CUDA lambdas get implicit host and device attributes.
   if (getLangOpts().CUDA)
     CUDA().SetLambdaAttrs(Method);
@@ -1948,6 +1976,10 @@ ExprResult Sema::BuildCaptureInit(const Capture &Cap,
 
 ExprResult Sema::ActOnLambdaExpr(SourceLocation StartLoc, Stmt *Body) {
   LambdaScopeInfo LSI = *cast<LambdaScopeInfo>(FunctionScopes.back());
+
+  if (LSI.CallOperator->hasAttr<SYCLKernelEntryPointAttr>())
+    SYCL().CheckSYCLEntryPointFunctionDecl(LSI.CallOperator);
+
   ActOnFinishFunctionBody(LSI.CallOperator, Body);
 
   return BuildLambdaExpr(StartLoc, Body->getEndLoc(), &LSI);
@@ -2230,18 +2262,18 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
 
   Cleanup.mergeFrom(LambdaCleanup);
 
-  LambdaExpr *Lambda = LambdaExpr::Create(Context, Class, IntroducerRange,
-                                          CaptureDefault, CaptureDefaultLoc,
-                                          ExplicitParams, ExplicitResultType,
-                                          CaptureInits, EndLoc,
-                                          ContainsUnexpandedParameterPack);
+  LambdaExpr *Lambda =
+      LambdaExpr::Create(Context, Class, IntroducerRange, CaptureDefault,
+                         CaptureDefaultLoc, ExplicitParams, ExplicitResultType,
+                         CaptureInits, EndLoc, ContainsUnexpandedParameterPack);
+
   // If the lambda expression's call operator is not explicitly marked constexpr
-  // and we are not in a dependent context, analyze the call operator to infer
+  // and is not dependent, analyze the call operator to infer
   // its constexpr-ness, suppressing diagnostics while doing so.
   if (getLangOpts().CPlusPlus17 && !CallOperator->isInvalidDecl() &&
       !CallOperator->isConstexpr() &&
       !isa<CoroutineBodyStmt>(CallOperator->getBody()) &&
-      !Class->getDeclContext()->isDependentContext()) {
+      !Class->isDependentContext()) {
     CallOperator->setConstexprKind(
         CheckConstexprFunctionDefinition(CallOperator,
                                          CheckConstexprKind::CheckValid)
@@ -2399,35 +2431,31 @@ Sema::LambdaScopeForCallOperatorInstantiationRAII::
   if (!ShouldAddDeclsFromParentScope)
     return;
 
-  FunctionDecl *InnermostFD = FD, *InnermostFDPattern = FDPattern;
   llvm::SmallVector<std::pair<FunctionDecl *, FunctionDecl *>, 4>
-      ParentInstantiations;
-  while (true) {
+      InstantiationAndPatterns;
+  while (FDPattern && FD) {
+    InstantiationAndPatterns.emplace_back(FDPattern, FD);
+
     FDPattern =
         dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FDPattern));
     FD = dyn_cast<FunctionDecl>(getLambdaAwareParentOfDeclContext(FD));
-
-    if (!FDPattern || !FD)
-      break;
-
-    ParentInstantiations.emplace_back(FDPattern, FD);
   }
 
   // Add instantiated parameters and local vars to scopes, starting from the
   // outermost lambda to the innermost lambda. This ordering ensures that
-  // parameters in inner lambdas can correctly depend on those defined
-  // in outer lambdas, e.g. auto L = [](auto... x) {
-  //   return [](decltype(x)... y) { }; // `y` depends on `x`
-  // };
+  // the outer instantiations can be found when referenced from within inner
+  // lambdas.
+  //
+  //   auto L = [](auto... x) {
+  //     return [](decltype(x)... y) { }; // Instantiating y needs x
+  //   };
+  //
 
-  for (const auto &[FDPattern, FD] : llvm::reverse(ParentInstantiations)) {
+  for (auto [FDPattern, FD] : llvm::reverse(InstantiationAndPatterns)) {
     SemaRef.addInstantiatedParametersToScope(FD, FDPattern, Scope, MLTAL);
     SemaRef.addInstantiatedLocalVarsToScope(FD, FDPattern, Scope);
 
     if (isLambdaCallOperator(FD))
       SemaRef.addInstantiatedCapturesToScope(FD, FDPattern, Scope, MLTAL);
   }
-
-  SemaRef.addInstantiatedCapturesToScope(InnermostFD, InnermostFDPattern, Scope,
-                                         MLTAL);
 }

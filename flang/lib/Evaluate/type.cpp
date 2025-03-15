@@ -293,11 +293,13 @@ using SetOfDerivedTypePairs =
 
 static bool AreSameDerivedType(const semantics::DerivedTypeSpec &,
     const semantics::DerivedTypeSpec &, bool ignoreTypeParameterValues,
-    bool ignoreLenParameters, SetOfDerivedTypePairs &inProgress);
+    bool ignoreLenParameters, bool ignoreSequence,
+    SetOfDerivedTypePairs &inProgress);
 
 // F2023 7.5.3.2
 static bool AreSameComponent(const semantics::Symbol &x,
-    const semantics::Symbol &y, SetOfDerivedTypePairs &inProgress) {
+    const semantics::Symbol &y, bool ignoreSequence,
+    SetOfDerivedTypePairs &inProgress) {
   if (x.attrs() != y.attrs()) {
     return false;
   }
@@ -325,7 +327,8 @@ static bool AreSameComponent(const semantics::Symbol &x,
               !yType->IsUnlimitedPolymorphic() ||
           (!xType->IsUnlimitedPolymorphic() &&
               !AreSameDerivedType(xType->GetDerivedTypeSpec(),
-                  yType->GetDerivedTypeSpec(), false, false, inProgress))) {
+                  yType->GetDerivedTypeSpec(), false, false, ignoreSequence,
+                  inProgress))) {
         return false;
       }
     } else if (!xType->IsTkLenCompatibleWith(*yType)) {
@@ -449,7 +452,8 @@ static bool AreTypeParamCompatible(const semantics::DerivedTypeSpec &x,
 // F2023 7.5.3.2
 static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
     const semantics::DerivedTypeSpec &y, bool ignoreTypeParameterValues,
-    bool ignoreLenParameters, SetOfDerivedTypePairs &inProgress) {
+    bool ignoreLenParameters, bool ignoreSequence,
+    SetOfDerivedTypePairs &inProgress) {
   if (&x == &y) {
     return true;
   }
@@ -472,7 +476,12 @@ static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
   inProgress.insert(thisQuery);
   const auto &xDetails{xSymbol.get<semantics::DerivedTypeDetails>()};
   const auto &yDetails{ySymbol.get<semantics::DerivedTypeDetails>()};
-  if (!(xDetails.sequence() && yDetails.sequence()) &&
+  if (xDetails.sequence() != yDetails.sequence() ||
+      xSymbol.attrs().test(semantics::Attr::BIND_C) !=
+          ySymbol.attrs().test(semantics::Attr::BIND_C)) {
+    return false;
+  }
+  if (!ignoreSequence && !(xDetails.sequence() && yDetails.sequence()) &&
       !(xSymbol.attrs().test(semantics::Attr::BIND_C) &&
           ySymbol.attrs().test(semantics::Attr::BIND_C))) {
     // PGI does not enforce this requirement; all other Fortran
@@ -493,7 +502,8 @@ static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
     const auto yLookup{ySymbol.scope()->find(*yComponentName)};
     if (xLookup == xSymbol.scope()->end() ||
         yLookup == ySymbol.scope()->end() ||
-        !AreSameComponent(*xLookup->second, *yLookup->second, inProgress)) {
+        !AreSameComponent(
+            *xLookup->second, *yLookup->second, ignoreSequence, inProgress)) {
       return false;
     }
   }
@@ -503,13 +513,19 @@ static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
 bool AreSameDerivedType(
     const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
   SetOfDerivedTypePairs inProgress;
-  return AreSameDerivedType(x, y, false, false, inProgress);
+  return AreSameDerivedType(x, y, false, false, false, inProgress);
 }
 
 bool AreSameDerivedTypeIgnoringTypeParameters(
     const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
   SetOfDerivedTypePairs inProgress;
-  return AreSameDerivedType(x, y, true, true, inProgress);
+  return AreSameDerivedType(x, y, true, true, false, inProgress);
+}
+
+bool AreSameDerivedTypeIgnoringSequence(
+    const semantics::DerivedTypeSpec &x, const semantics::DerivedTypeSpec &y) {
+  SetOfDerivedTypePairs inProgress;
+  return AreSameDerivedType(x, y, false, false, true, inProgress);
 }
 
 static bool AreSameDerivedType(
@@ -536,7 +552,7 @@ static bool AreCompatibleDerivedTypes(const semantics::DerivedTypeSpec *x,
   } else {
     SetOfDerivedTypePairs inProgress;
     if (AreSameDerivedType(*x, *y, ignoreTypeParameterValues,
-            ignoreLenTypeParameters, inProgress)) {
+            ignoreLenTypeParameters, false, inProgress)) {
       return true;
     } else {
       return isPolymorphic &&

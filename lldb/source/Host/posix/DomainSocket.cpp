@@ -20,14 +20,6 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#ifdef __ANDROID__
-// Android does not have SUN_LEN
-#ifndef SUN_LEN
-#define SUN_LEN(ptr)                                                           \
-  (offsetof(struct sockaddr_un, sun_path) + strlen((ptr)->sun_path))
-#endif
-#endif // #ifdef __ANDROID__
-
 static const int kDomain = AF_UNIX;
 static const int kType = SOCK_STREAM;
 

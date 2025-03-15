@@ -40,8 +40,6 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  bool MightHaveChildren() override;
-
   size_t GetIndexOfChildWithName(ConstString name) override;
 
 private:
@@ -69,8 +67,6 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override;
 
   lldb::ChildCacheState Update() override;
-
-  bool MightHaveChildren() override;
 
   size_t GetIndexOfChildWithName(ConstString name) override;
 
@@ -111,7 +107,8 @@ CompilerType lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
   // that wraps a std::pair. Peel away the internal wrapper type - whose
   // structure is of no value to users, to expose the std::pair. This
   // matches the structure returned by the std::map synthetic provider.
-  if (isUnorderedMap(m_backend.GetTypeName())) {
+  if (isUnorderedMap(
+          m_backend.GetCompilerType().GetCanonicalType().GetTypeName())) {
     std::string name;
     CompilerType field_type =
         element_type.GetFieldAtIndex(0, name, nullptr, nullptr, nullptr);
@@ -294,11 +291,6 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-bool lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
-}
-
 size_t lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
   return ExtractIndexFromString(name.GetCString());
@@ -404,11 +396,6 @@ lldb::ValueObjectSP lldb_private::formatters::
   if (m_pair_sp)
     return m_pair_sp->GetChildAtIndex(idx);
   return lldb::ValueObjectSP();
-}
-
-bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
-    MightHaveChildren() {
-  return true;
 }
 
 size_t lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::

@@ -172,6 +172,7 @@ OPENMP_MAP_MODIFIER_KIND(close)
 OPENMP_MAP_MODIFIER_KIND(mapper)
 OPENMP_MAP_MODIFIER_KIND(iterator)
 OPENMP_MAP_MODIFIER_KIND(present)
+OPENMP_MAP_MODIFIER_KIND(self)
 // This is an OpenMP extension for the sake of OpenACC support.
 OPENMP_MAP_MODIFIER_KIND(ompx_hold)
 
@@ -219,6 +220,7 @@ OPENMP_NUMTASKS_MODIFIER(strict)
 
 // Modifiers for 'allocate' clause.
 OPENMP_ALLOCATE_MODIFIER(allocator)
+OPENMP_ALLOCATE_MODIFIER(align)
 
 // Modifiers for the 'doacross' clause.
 OPENMP_DOACROSS_MODIFIER(source)

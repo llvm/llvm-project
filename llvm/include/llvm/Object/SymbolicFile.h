@@ -71,7 +71,7 @@ template <class content_type> class content_iterator {
 
 public:
   using iterator_category = std::forward_iterator_tag;
-  using value_type = content_type;
+  using value_type = const content_type;
   using difference_type = std::ptrdiff_t;
   using pointer = value_type *;
   using reference = value_type &;

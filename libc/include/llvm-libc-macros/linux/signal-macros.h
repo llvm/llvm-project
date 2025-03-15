@@ -86,9 +86,9 @@
 #error "Signal stack sizes not defined for your platform."
 #endif
 
-#define SIG_DFL ((__sighandler_t)0)
-#define SIG_IGN ((__sighandler_t)1)
-#define SIG_ERR ((__sighandler_t)-1)
+#define SIG_DFL ((void (*)(int))0)
+#define SIG_IGN ((void (*)(int))1)
+#define SIG_ERR ((void (*)(int))(-1))
 
 // SIGCHLD si_codes
 #define CLD_EXITED 1    // child has exited

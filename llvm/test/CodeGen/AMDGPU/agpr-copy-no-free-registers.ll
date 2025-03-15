@@ -104,13 +104,12 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; copy
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v39, a1
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a16, v39
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX908-NEXT:    v_accvgpr_read_b32 v32, a1
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v39 ; Reload Reuse
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX908-NEXT:    v_accvgpr_write_b32 a16, v32
 ; GFX908-NEXT:    v_accvgpr_write_b32 a11, v38 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a12, v37 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a13, v36 ; Reload Reuse
@@ -241,7 +240,7 @@ define void @no_free_vgprs_at_agpr_to_agpr_copy(float %v0, float %v1) #0 {
 }
 
 ; Check that we do make use of v32 if there are no AGPRs present in the function
-define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #0 {
+define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #5 {
 ; GFX908-LABEL: no_agpr_no_reserve:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
@@ -369,7 +368,7 @@ define amdgpu_kernel void @no_agpr_no_reserve(ptr addrspace(1) %arg) #0 {
 ; FIXME: This case is broken. The asm value passed in v32 is live
 ; through the range where the reserved def for the copy is introduced,
 ; clobbering the user value.
-define void @v32_asm_def_use(float %v0, float %v1) #0 {
+define void @v32_asm_def_use(float %v0, float %v1) #4 {
 ; GFX908-LABEL: v32_asm_def_use:
 ; GFX908:       ; %bb.0:
 ; GFX908-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -647,13 +646,13 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX908-NEXT:    v_add_f32_e32 v9, v9, v15
 ; GFX908-NEXT:    v_add_f32_e32 v10, v10, v12
 ; GFX908-NEXT:    v_add_f32_e32 v11, v11, v13
-; GFX908-NEXT:    s_mov_b64 s[20:21], -1
 ; GFX908-NEXT:    s_branch .LBB3_4
 ; GFX908-NEXT:  .LBB3_7: ; in Loop: Header=BB3_5 Depth=2
 ; GFX908-NEXT:    s_mov_b64 s[20:21], s[16:17]
 ; GFX908-NEXT:    s_andn2_b64 vcc, exec, s[20:21]
 ; GFX908-NEXT:    s_cbranch_vccz .LBB3_4
 ; GFX908-NEXT:  ; %bb.8: ; in Loop: Header=BB3_2 Depth=1
+; GFX908-NEXT:    s_mov_b64 s[20:21], -1
 ; GFX908-NEXT:    ; implicit-def: $vgpr2_vgpr3
 ; GFX908-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GFX908-NEXT:  .LBB3_9: ; %loop.exit.guard
@@ -799,13 +798,13 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:    v_pk_add_f32 v[8:9], v[8:9], v[26:27]
 ; GFX90A-NEXT:    v_pk_add_f32 v[10:11], v[10:11], v[16:17]
 ; GFX90A-NEXT:    v_pk_add_f32 v[12:13], v[12:13], v[14:15]
-; GFX90A-NEXT:    s_mov_b64 s[20:21], -1
 ; GFX90A-NEXT:    s_branch .LBB3_4
 ; GFX90A-NEXT:  .LBB3_7: ; in Loop: Header=BB3_5 Depth=2
 ; GFX90A-NEXT:    s_mov_b64 s[20:21], s[16:17]
 ; GFX90A-NEXT:    s_andn2_b64 vcc, exec, s[20:21]
 ; GFX90A-NEXT:    s_cbranch_vccz .LBB3_4
 ; GFX90A-NEXT:  ; %bb.8: ; in Loop: Header=BB3_2 Depth=1
+; GFX90A-NEXT:    s_mov_b64 s[20:21], -1
 ; GFX90A-NEXT:    ; implicit-def: $vgpr4_vgpr5
 ; GFX90A-NEXT:    ; implicit-def: $sgpr18_sgpr19
 ; GFX90A-NEXT:  .LBB3_9: ; %loop.exit.guard
@@ -827,7 +826,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:  .LBB3_12: ; %DummyReturnBlock
 ; GFX90A-NEXT:    s_endpgm
 bb:
-  %i = load volatile i16, ptr addrspace(4) undef, align 2
+  %i = load volatile i16, ptr addrspace(4) poison, align 2
   %i6 = zext i16 %i to i64
   %i7 = udiv i32 %arg1, %arg2
   %i8 = zext i32 %i7 to i64
@@ -864,7 +863,7 @@ bb16:                                             ; preds = %bb58, %bb14
   %i34 = getelementptr inbounds [16 x half], ptr addrspace(1) null, i64 %i24, i64 14
   %i36 = load volatile <2 x half>, ptr addrspace(1) %i34, align 4
   %i43 = load volatile <2 x float>, ptr addrspace(3) null, align 8
-  %i46 = load volatile <2 x float>, ptr addrspace(3) undef, align 32
+  %i46 = load volatile <2 x float>, ptr addrspace(3) poison, align 32
   fence syncscope("workgroup") acquire
   br i1 %i11, label %bb58, label %bb51
 
@@ -1002,13 +1001,12 @@ define void @no_free_vgprs_at_sgpr_to_agpr_copy(float %v0, float %v1) #0 {
 ; GFX908-NEXT:    ;;#ASMSTART
 ; GFX908-NEXT:    ; copy
 ; GFX908-NEXT:    ;;#ASMEND
-; GFX908-NEXT:    v_accvgpr_read_b32 v39, a1
-; GFX908-NEXT:    s_nop 1
-; GFX908-NEXT:    v_accvgpr_write_b32 a32, v39
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX908-NEXT:    v_accvgpr_read_b32 v33, a1
 ; GFX908-NEXT:    s_waitcnt vmcnt(0)
 ; GFX908-NEXT:    v_accvgpr_write_b32 a0, v39 ; Reload Reuse
 ; GFX908-NEXT:    buffer_load_dword v39, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
+; GFX908-NEXT:    v_accvgpr_write_b32 a32, v33
 ; GFX908-NEXT:    v_accvgpr_write_b32 a11, v38 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a12, v37 ; Reload Reuse
 ; GFX908-NEXT:    v_accvgpr_write_b32 a13, v36 ; Reload Reuse
@@ -1146,4 +1144,6 @@ declare i32 @llvm.amdgcn.workitem.id.x() #2
 attributes #0 = { "amdgpu-waves-per-eu"="6,6" }
 attributes #1 = { convergent nounwind readnone willreturn }
 attributes #2 = { nounwind readnone willreturn }
-attributes #3 = { "amdgpu-waves-per-eu"="7,7" }
+attributes #3 = { "amdgpu-waves-per-eu"="7,7" "amdgpu-agpr-alloc"="0" }
+attributes #4 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-flat-work-group-size"="1024,1024" }
+attributes #5 = { "amdgpu-waves-per-eu"="6,6" "amdgpu-agpr-alloc"="0" }

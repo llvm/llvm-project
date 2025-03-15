@@ -208,11 +208,11 @@ namespace Comparison {
 
   constexpr bool u13 = pf < pg; // both-warning {{ordered comparison of function pointers}} \
                                 // both-error {{must be initialized by a constant expression}} \
-                                // both-note {{comparison between '&f' and '&g' has unspecified value}}
+                                // both-note {{comparison between pointers to unrelated objects '&f' and '&g' has unspecified value}}
 
   constexpr bool u14 = pf < (void(*)())nullptr; // both-warning {{ordered comparison of function pointers}} \
                                                 // both-error {{must be initialized by a constant expression}} \
-                                                // both-note {{comparison between '&f' and 'nullptr' has unspecified value}}
+                                                // both-note {{comparison between pointers to unrelated objects '&f' and 'nullptr' has unspecified value}}
 
 
 
@@ -484,6 +484,18 @@ namespace AddressOf {
   void testAddressof(int x) {
     static_assert(&x == __builtin_addressof(x), "");
   }
+
+  struct TS {
+    constexpr bool f(TS s) const {
+      /// The addressof call has a CXXConstructExpr as a parameter.
+      return this != __builtin_addressof(s);
+    }
+  };
+  constexpr bool exprAddressOf() {
+    TS s;
+    return s.f(s);
+  }
+  static_assert(exprAddressOf(), "");
 }
 
 namespace std {
@@ -669,3 +681,16 @@ namespace StableAddress {
   static_assert(sum<str{"$hello $world."}>() == 1234, "");
 }
 #endif
+
+namespace NoDiags {
+  void huh();
+  template <unsigned>
+  constexpr void hd_fun() {
+    huh();
+  }
+
+  constexpr bool foo() {
+    hd_fun<1>();
+    return true;
+  }
+}

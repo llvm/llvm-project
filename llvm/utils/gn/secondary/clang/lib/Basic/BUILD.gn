@@ -22,13 +22,17 @@ static_library("Basic") {
   public_deps = [
     # public_dep because public header Version.h includes generated Version.inc.
     "//clang/include/clang/Basic:AttrList",
+    "//clang/include/clang/Basic:AttrParsedAttrList",
     "//clang/include/clang/Basic:AttrSubMatchRulesList",
     "//clang/include/clang/Basic:Builtins",
     "//clang/include/clang/Basic:BuiltinsBPF",
+    "//clang/include/clang/Basic:BuiltinsHexagon",
+    "//clang/include/clang/Basic:BuiltinsNVPTX",
     "//clang/include/clang/Basic:BuiltinsRISCV",
     "//clang/include/clang/Basic:BuiltinsSPIRV",
     "//clang/include/clang/Basic:BuiltinsX86",
     "//clang/include/clang/Basic:BuiltinsX86_64",
+    "//clang/include/clang/Basic:BuiltinTemplates",
     "//clang/include/clang/Basic:DiagnosticGroups",
     "//clang/include/clang/Basic:RegularKeywordAttrInfo",
     "//clang/include/clang/Basic:arm_cde_builtins",
@@ -42,10 +46,6 @@ static_library("Basic") {
     "//clang/include/clang/Basic:riscv_vector_builtins",
     "//clang/include/clang/Basic:version",
 
-    # public_dep because public header AttributeCommonInfo.h includes generated
-    # AttrParsedAttrList.inc.
-    "//clang/include/clang/Sema:AttrParsedAttrList",
-
     # public_dep because public header OpenMPKinds.h includes generated
     # OMP.h.inc.
     "//llvm/include/llvm/Frontend/OpenMP:public_tablegen",
@@ -53,6 +53,7 @@ static_library("Basic") {
   deps = [
     ":write_vcsversion",
     "//clang/include/clang/Basic:AttrHasAttributeImpl",
+    "//clang/include/clang/Basic:CXX11AttributeInfo",
     "//clang/include/clang/Basic:arm_fp16",
     "//clang/include/clang/Basic:arm_neon",
     "//clang/include/clang/Config",

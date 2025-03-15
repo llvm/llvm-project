@@ -687,10 +687,8 @@ void Liveness::computePhiInfo() {
 
         if (MidDefs.hasCoverOf(UR))
           continue;
-        if (Subs.find(MidDefs) == Subs.end()) {
-          Subs.insert({MidDefs, SubMap(1, RefHash(), RefEqual(PRI))});
-        }
-        SubMap &SM = Subs.at(MidDefs);
+        SubMap &SM = Subs.try_emplace(MidDefs, 1, RefHash(), RefEqual(PRI))
+                         .first->second;
 
         // General algorithm:
         //   for each (R,U) : U is use node of R, U is reached by PA
@@ -895,7 +893,7 @@ void Liveness::computeLiveIns() {
 void Liveness::resetLiveIns() {
   for (auto &B : DFG.getMF()) {
     // Remove all live-ins.
-    std::vector<unsigned> T;
+    std::vector<MCRegister> T;
     for (const MachineBasicBlock::RegisterMaskPair &LI : B.liveins())
       T.push_back(LI.PhysReg);
     for (auto I : T)
@@ -917,7 +915,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
     for (auto I : B->liveins()) {
       MCSubRegIndexIterator S(I.PhysReg, &TRI);
       if (!S.isValid()) {
-        LV.set(I.PhysReg);
+        LV.set(I.PhysReg.id());
         continue;
       }
       do {
@@ -960,7 +958,7 @@ void Liveness::resetKills(MachineBasicBlock *B) {
         continue;
       bool IsLive = false;
       for (MCRegAliasIterator AR(R, &TRI, true); AR.isValid(); ++AR) {
-        if (!Live[*AR])
+        if (!Live[(*AR).id()])
           continue;
         IsLive = true;
         break;

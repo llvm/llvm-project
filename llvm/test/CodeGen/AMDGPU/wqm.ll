@@ -94,7 +94,7 @@ main_body:
   %tex.1 = bitcast <4 x float> %tex to <4 x i32>
   %tex.2 = extractelement <4 x i32> %tex.1, i32 0
 
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %tex, <4 x i32> undef, i32 %tex.2, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %tex, <4 x i32> poison, i32 %tex.2, i32 0, i32 0, i32 0)
 
   ret <4 x float> %tex
 }
@@ -125,7 +125,7 @@ main_body:
   %tex.1 = bitcast <4 x float> %tex to <4 x i32>
   %tex.2 = extractelement <4 x i32> %tex.1, i32 0
 
-  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %tex, ptr addrspace(8) undef, i32 %tex.2, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> %tex, ptr addrspace(8) poison, i32 %tex.2, i32 0, i32 0, i32 0)
 
   ret <4 x float> %tex
 }
@@ -209,7 +209,7 @@ define amdgpu_ps <4 x float> @test4(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp
 main_body:
   %c.1 = mul i32 %c, %d
 
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> undef, <4 x i32> undef, i32 %c.1, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> poison, <4 x i32> poison, i32 %c.1, i32 0, i32 0, i32 0)
   %c.1.bc = bitcast i32 %c.1 to float
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.1.bc, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
   %tex0 = extractelement <4 x float> %tex, i32 0
@@ -247,7 +247,7 @@ define amdgpu_ps <4 x float> @test4_ptr_buf(<8 x i32> inreg %rsrc, <4 x i32> inr
 main_body:
   %c.1 = mul i32 %c, %d
 
-  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> undef, ptr addrspace(8) undef, i32 %c.1, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.v4f32(<4 x float> poison, ptr addrspace(8) poison, i32 %c.1, i32 0, i32 0, i32 0)
   %c.1.bc = bitcast i32 %c.1 to float
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.1.bc, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
   %tex0 = extractelement <4 x float> %tex, i32 0
@@ -289,8 +289,8 @@ define amdgpu_ps float @test5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> poison, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.wqm.f32(float %out)
   ret float %out.0
@@ -327,8 +327,8 @@ define amdgpu_ps float @test5_ptr_buf(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.wqm.f32(float %out)
   ret float %out.0
@@ -366,8 +366,8 @@ define amdgpu_ps float @test6(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.buffer.load.f32(<4 x i32> poison, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %out.0 = bitcast float %out to i32
   %out.1 = call i32 @llvm.amdgcn.wqm.i32(i32 %out.0)
@@ -406,8 +406,8 @@ define amdgpu_ps float @test6_ptr_buf(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %out.0 = bitcast float %out to i32
   %out.1 = call i32 @llvm.amdgcn.wqm.i32(i32 %out.0)
@@ -447,8 +447,8 @@ define amdgpu_ps float @test_wwm1(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
   ret float %out.0
@@ -484,8 +484,8 @@ define amdgpu_ps float @test_wwm2(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %src0.0 = bitcast float %src0 to i32
   %src1.0 = bitcast float %src1 to i32
   %out = add i32 %src0.0, %src1.0
@@ -549,7 +549,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   %out = fadd float %src, %src
   %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
   %out.1 = fadd float %src, %out.0
@@ -612,7 +612,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   %out = fadd float %src, %src
   %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
   br label %endif
@@ -666,9 +666,9 @@ define amdgpu_ps float @test_wwm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %src0, ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %src0, ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %temp = fadd float %src1, %src1
   %temp.0 = call float @llvm.amdgcn.wwm.f32(float %temp)
   %out = fadd float %temp.0, %temp.0
@@ -729,7 +729,7 @@ define amdgpu_ps float @test_wwm6_then() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -737,7 +737,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
   br label %endif
@@ -810,7 +810,7 @@ define amdgpu_ps float @test_wwm6_loop() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -818,7 +818,7 @@ main_body:
 
 loop:
   %counter = phi i32 [ %hi, %main_body ], [ %counter.1, %loop ]
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.wwm.f32(float %out)
   %counter.1 = sub i32 %counter, 1
@@ -857,13 +857,13 @@ define amdgpu_ps void @test_wwm_set_inactive1(i32 inreg %idx) {
 ; GFX10-W32-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 idxen
 ; GFX10-W32-NEXT:    s_endpgm
 main_body:
-  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   %src.0 = bitcast float %src to i32
   %src.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src.0, i32 0)
   %out = add i32 %src.1, %src.1
   %out.0 = call i32 @llvm.amdgcn.wwm.i32(i32 %out)
   %out.1 = bitcast i32 %out.0 to float
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %out.1, ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %out.1, ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   ret void
 }
 
@@ -899,8 +899,8 @@ define amdgpu_ps float @test_strict_wqm1(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wqm.f32(float %out)
   ret float %out.0
@@ -938,8 +938,8 @@ define amdgpu_ps float @test_strict_wqm2(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %src0.0 = bitcast float %src0 to i32
   %src1.0 = bitcast float %src1 to i32
   %out = add i32 %src0.0, %src1.0
@@ -1005,7 +1005,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   %out = fadd float %src, %src
   %out.0 = call float @llvm.amdgcn.strict.wqm.f32(float %out)
   %out.1 = fadd float %src, %out.0
@@ -1070,7 +1070,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   %out = fadd float %src, %src
   %out.0 = call float @llvm.amdgcn.strict.wqm.f32(float %out)
   br label %endif
@@ -1127,9 +1127,9 @@ define amdgpu_ps float @test_strict_wqm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %src0, ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %src0, ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %temp = fadd float %src1, %src1
   %temp.0 = call float @llvm.amdgcn.strict.wqm.f32(float %temp)
   %out = fadd float %temp.0, %temp.0
@@ -1194,7 +1194,7 @@ define amdgpu_ps float @test_strict_wqm6_then() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -1202,7 +1202,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wqm.f32(float %out)
   br label %endif
@@ -1281,7 +1281,7 @@ define amdgpu_ps float @test_strict_wqm6_loop() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -1289,7 +1289,7 @@ main_body:
 
 loop:
   %counter = phi i32 [ %hi, %main_body ], [ %counter.1, %loop ]
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wqm.f32(float %out)
   %counter.1 = sub i32 %counter, 1
@@ -1336,15 +1336,15 @@ define amdgpu_ps void @test_set_inactive2(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    buffer_store_dword v1, v0, s[0:3], 0 idxen
 ; GFX10-W32-NEXT:    s_endpgm
 main_body:
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %src1.0 = bitcast float %src1 to i32
-  %src1.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src1.0, i32 undef)
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src1.0, i32 poison)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
   %src0.0 = bitcast float %src0 to i32
   %src0.1 = call i32 @llvm.amdgcn.wqm.i32(i32 %src0.0)
   %out = add i32 %src0.1, %src1.1
   %out.0 = bitcast i32 %out to float
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %out.0, ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %out.0, ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   ret void
 }
 
@@ -1420,7 +1420,7 @@ IF:
   br label %END
 
 ELSE:
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data, ptr addrspace(8) undef, i32 %c, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data, ptr addrspace(8) poison, i32 %c, i32 0, i32 0, i32 0)
   br label %END
 
 END:
@@ -1498,7 +1498,7 @@ IF:
   br label %END
 
 ELSE:
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data, ptr addrspace(8) undef, i32 %c, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data, ptr addrspace(8) poison, i32 %c, i32 0, i32 0, i32 0)
   br label %END
 
 END:
@@ -1570,16 +1570,16 @@ define amdgpu_ps <4 x float> @test_control_flow_2(<8 x i32> inreg %rsrc, <4 x i3
 main_body:
   %idx.1 = extractelement <3 x i32> %idx, i32 0
   %data.1 = extractelement <2 x float> %data, i32 0
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data.1, ptr addrspace(8) undef, i32 %idx.1, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data.1, ptr addrspace(8) poison, i32 %idx.1, i32 0, i32 0, i32 0)
 
   ; The load that determines the branch (and should therefore be WQM) is
   ; surrounded by stores that require disabled WQM.
   %idx.2 = extractelement <3 x i32> %idx, i32 1
-  %z = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx.2, i32 0, i32 0, i32 0)
+  %z = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx.2, i32 0, i32 0, i32 0)
 
   %idx.3 = extractelement <3 x i32> %idx, i32 2
   %data.3 = extractelement <2 x float> %data, i32 1
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data.3, ptr addrspace(8) undef, i32 %idx.3, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data.3, ptr addrspace(8) poison, i32 %idx.3, i32 0, i32 0, i32 0)
 
   %cc = fcmp ogt float %z, 0.0
   br i1 %cc, label %IF, label %ELSE
@@ -1671,7 +1671,7 @@ main_body:
   %tex0 = extractelement <4 x float> %tex, i32 0
   %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
   %dtex.1 = extractelement <4 x float> %dtex, i32 0
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %dtex.1, ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %dtex.1, ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
 
   %cc = fcmp ogt float %dtex.1, 0.0
   br i1 %cc, label %IF, label %ELSE
@@ -1741,8 +1741,8 @@ main_body:
   br i1 %cond, label %IF, label %END
 
 IF:
-  %data = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 0, i32 0, i32 0)
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data, ptr addrspace(8) undef, i32 1, i32 0, i32 0, i32 0)
+  %data = call float @llvm.amdgcn.raw.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data, ptr addrspace(8) poison, i32 1, i32 0, i32 0, i32 0)
   br label %END
 
 END:
@@ -1821,14 +1821,14 @@ main_body:
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
   %idx.0 = extractelement <2 x i32> %idx, i32 0
   %data.0 = extractelement <2 x float> %data, i32 0
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data.0, ptr addrspace(8) undef, i32 %idx.0, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data.0, ptr addrspace(8) poison, i32 %idx.0, i32 0, i32 0, i32 0)
 
   %z.cmp = fcmp olt float %z, 0.0
   call void @llvm.amdgcn.kill(i1 %z.cmp)
 
   %idx.1 = extractelement <2 x i32> %idx, i32 1
   %data.1 = extractelement <2 x float> %data, i32 1
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data.1, ptr addrspace(8) undef, i32 %idx.1, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data.1, ptr addrspace(8) poison, i32 %idx.1, i32 0, i32 0, i32 0)
   %tex2 = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %coord2, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
   %tex2.0 = extractelement <4 x float> %tex2, i32 0
   %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex2.0, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
@@ -1842,10 +1842,10 @@ define amdgpu_ps <4 x float> @test_kill_1(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX9-W64-LABEL: test_kill_1:
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    s_mov_b64 s[12:13], exec
-; GFX9-W64-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
 ; GFX9-W64-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX9-W64-NEXT:    image_sample v0, v1, s[0:7], s[8:11] dmask:0x1
+; GFX9-W64-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX9-W64-NEXT:    s_and_b64 exec, exec, s[12:13]
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf
@@ -1866,10 +1866,10 @@ define amdgpu_ps <4 x float> @test_kill_1(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX10-W32-LABEL: test_kill_1:
 ; GFX10-W32:       ; %bb.0: ; %main_body
 ; GFX10-W32-NEXT:    s_mov_b32 s12, exec_lo
-; GFX10-W32-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v5, v0
 ; GFX10-W32-NEXT:    image_sample v0, v1, s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D
+; GFX10-W32-NEXT:    v_mov_b32_e32 v4, v2
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
@@ -1891,7 +1891,7 @@ main_body:
   %tex0 = extractelement <4 x float> %tex, i32 0
   %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
 
-  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %data, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %data, ptr addrspace(8) poison, i32 0, i32 0, i32 0)
 
   %z.cmp = fcmp olt float %z, 0.0
   call void @llvm.amdgcn.kill(i1 %z.cmp)
@@ -1994,7 +1994,7 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v3, v7
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 entry:
-  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %in, i32 15, i32 undef, <8 x i32> undef, i32 0, i32 0)
+  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %in, i32 15, i32 poison, <8 x i32> poison, i32 0, i32 0)
   br label %loop
 
 loop:
@@ -2005,7 +2005,7 @@ loop:
 
 body:
   %c.iv0 = extractelement <4 x float> %c.iv, i32 0
-  %c.next = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.iv0, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0) #0
+  %c.next = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.iv0, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   %ctr.next = fadd float %ctr.iv, 2.0
   br label %loop
 
@@ -2071,17 +2071,17 @@ define amdgpu_ps void @test_alloca(float %data, i32 %a, i32 %idx) nounwind {
 entry:
   %array = alloca [32 x i32], align 4, addrspace(5)
 
-  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %data, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.raw.ptr.buffer.store.f32(float %data, ptr addrspace(8) poison, i32 0, i32 0, i32 0)
 
   store volatile i32 %a, ptr addrspace(5) %array, align 4
 
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data, ptr addrspace(8) undef, i32 1, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %data, ptr addrspace(8) poison, i32 1, i32 0, i32 0, i32 0)
 
   %c.gep = getelementptr [32 x i32], ptr addrspace(5) %array, i32 0, i32 %idx
   %c = load i32, ptr addrspace(5) %c.gep, align 4
   %c.bc = bitcast i32 %c to float
-  %t = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.bc, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0) #0
-  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %t, ptr addrspace(8) undef, i32 0, i32 0, i32 0)
+  %t = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c.bc, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v4f32(<4 x float> %t, ptr addrspace(8) poison, i32 0, i32 0, i32 0)
 
   ret void
 }
@@ -2112,9 +2112,9 @@ define amdgpu_ps <4 x float> @test_nonvoid_return() nounwind {
 ; GFX10-W32-NEXT:    image_sample v[0:3], v0, s[0:7], s[0:3] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    ; return to shader part epilog
-  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float undef, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0) #0
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float poison, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   %tex0 = extractelement <4 x float> %tex, i32 0
-  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0) #0
+  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   ret <4 x float> %dtex
 }
 
@@ -2155,14 +2155,14 @@ define amdgpu_ps <4 x float> @test_nonvoid_return_unreachable(i32 inreg %c) noun
 ; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:  .LBB38_3:
 entry:
-  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float undef, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0) #0
+  %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float poison, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   %tex0 = extractelement <4 x float> %tex, i32 0
-  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0) #0
+  %dtex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %tex0, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   %cc = icmp sgt i32 %c, 0
   br i1 %cc, label %if, label %else
 
 if:
-  store volatile <4 x float> %dtex, ptr addrspace(1) undef
+  store volatile <4 x float> %dtex, ptr addrspace(1) poison
   unreachable
 
 else:
@@ -2174,8 +2174,8 @@ define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
 ; GFX9-W64-LABEL: test_scc:
 ; GFX9-W64:       ; %bb.0: ; %main_body
 ; GFX9-W64-NEXT:    s_mov_b64 s[2:3], exec
-; GFX9-W64-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX9-W64-NEXT:    s_wqm_b64 exec, exec
+; GFX9-W64-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX9-W64-NEXT:    s_cmp_lt_i32 s0, 1
 ; GFX9-W64-NEXT:    s_cbranch_scc0 .LBB39_2
 ; GFX9-W64-NEXT:  ; %bb.1: ; %else
@@ -2199,9 +2199,9 @@ define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
 ;
 ; GFX10-W32-LABEL: test_scc:
 ; GFX10-W32:       ; %bb.0: ; %main_body
-; GFX10-W32-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-W32-NEXT:    s_mov_b32 s1, exec_lo
 ; GFX10-W32-NEXT:    s_wqm_b32 exec_lo, exec_lo
+; GFX10-W32-NEXT:    v_mov_b32_e32 v4, v0
 ; GFX10-W32-NEXT:    s_cmp_lt_i32 s0, 1
 ; GFX10-W32-NEXT:    s_cbranch_scc0 .LBB39_2
 ; GFX10-W32-NEXT:  ; %bb.1: ; %else
@@ -2227,16 +2227,16 @@ main_body:
   br i1 %cc, label %if, label %else
 
 if:
-  %r.if = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0) #0
+  %r.if = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float 0.0, <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   br label %end
 
 else:
-  %r.else = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.0, float bitcast (i32 1 to float), <8 x i32> undef, <4 x i32> undef, i1 false, i32 0, i32 0) #0
+  %r.else = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float 0.0, float bitcast (i32 1 to float), <8 x i32> poison, <4 x i32> poison, i1 false, i32 0, i32 0) #0
   br label %end
 
 end:
   %r = phi <4 x float> [ %r.if, %if ], [ %r.else, %else ]
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float 1.0, ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float 1.0, ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   ret <4 x float> %r
 }
 
@@ -2348,8 +2348,8 @@ define amdgpu_ps float @test_strict_wwm1(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
   ret float %out.0
@@ -2385,8 +2385,8 @@ define amdgpu_ps float @test_strict_wwm2(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %src0.0 = bitcast float %src0 to i32
   %src1.0 = bitcast float %src1 to i32
   %out = add i32 %src0.0, %src1.0
@@ -2450,7 +2450,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   %out = fadd float %src, %src
   %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
   %out.1 = fadd float %src, %out.0
@@ -2513,7 +2513,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   %out = fadd float %src, %src
   %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
   br label %endif
@@ -2567,9 +2567,9 @@ define amdgpu_ps float @test_strict_wwm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %src0, ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
-  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx1, i32 0, i32 0, i32 0)
+  %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %src0, ptr addrspace(8) poison, i32 %idx0, i32 0, i32 0, i32 0)
+  %src1 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx1, i32 0, i32 0, i32 0)
   %temp = fadd float %src1, %src1
   %temp.0 = call float @llvm.amdgcn.strict.wwm.f32(float %temp)
   %out = fadd float %temp.0, %temp.0
@@ -2630,7 +2630,7 @@ define amdgpu_ps float @test_strict_wwm6_then() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -2638,7 +2638,7 @@ main_body:
   br i1 %cc, label %endif, label %if
 
 if:
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
   br label %endif
@@ -2707,7 +2707,7 @@ define amdgpu_ps float @test_strict_wwm6_loop() {
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
-  %src0 = load volatile float, ptr addrspace(1) undef
+  %src0 = load volatile float, ptr addrspace(1) poison
   ; use mbcnt to make sure the branch is divergent
   %lo = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %hi = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %lo)
@@ -2715,7 +2715,7 @@ main_body:
 
 loop:
   %counter = phi i32 [ %hi, %main_body ], [ %counter.1, %loop ]
-  %src1 = load volatile float, ptr addrspace(1) undef
+  %src1 = load volatile float, ptr addrspace(1) poison
   %out = fadd float %src0, %src1
   %out.0 = call float @llvm.amdgcn.strict.wwm.f32(float %out)
   %counter.1 = sub i32 %counter, 1
@@ -2754,13 +2754,13 @@ define amdgpu_ps void @test_strict_wwm_set_inactive1(i32 inreg %idx) {
 ; GFX10-W32-NEXT:    buffer_store_dword v2, v1, s[0:3], 0 idxen
 ; GFX10-W32-NEXT:    s_endpgm
 main_body:
-  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  %src = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   %src.0 = bitcast float %src to i32
   %src.1 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %src.0, i32 0)
   %out = add i32 %src.1, %src.1
   %out.0 = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %out)
   %out.1 = bitcast i32 %out.0 to float
-  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %out.1, ptr addrspace(8) undef, i32 %idx, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %out.1, ptr addrspace(8) poison, i32 %idx, i32 0, i32 0, i32 0)
   ret void
 }
 
@@ -2938,7 +2938,7 @@ define amdgpu_ps float @test_strict_wqm_within_wqm_with_kill(<8 x i32> inreg %rs
 ; GFX9-W64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GFX9-W64-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-W64-NEXT:    image_sample v0, v0, s[0:7], s[8:11] dmask:0x1
-; GFX9-W64-NEXT:    s_xor_b64 s[0:1], vcc, exec
+; GFX9-W64-NEXT:    s_andn2_b64 s[0:1], exec, vcc
 ; GFX9-W64-NEXT:    s_andn2_b64 s[12:13], s[12:13], s[0:1]
 ; GFX9-W64-NEXT:    s_cbranch_scc0 .LBB51_2
 ; GFX9-W64-NEXT:  ; %bb.1: ; %main_body
@@ -2973,7 +2973,7 @@ define amdgpu_ps float @test_strict_wqm_within_wqm_with_kill(<8 x i32> inreg %rs
 ; GFX10-W32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v1
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    image_sample v0, v0, s[0:7], s[8:11] dmask:0x1 dim:SQ_RSRC_IMG_1D
-; GFX10-W32-NEXT:    s_xor_b32 s0, vcc_lo, exec_lo
+; GFX10-W32-NEXT:    s_andn2_b32 s0, exec_lo, vcc_lo
 ; GFX10-W32-NEXT:    s_andn2_b32 s12, s12, s0
 ; GFX10-W32-NEXT:    s_cbranch_scc0 .LBB51_2
 ; GFX10-W32-NEXT:  ; %bb.1: ; %main_body
@@ -3588,7 +3588,7 @@ if:
   %idx2 = call i32 @llvm.amdgcn.readfirstlane.i32(i32 %idx1)
   %idx3 = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %sampler, i32 %idx2, i32 0)
 
-  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %tex1, <4 x i32> undef, i32 %idx3, i32 0, i32 0, i32 0)
+  call void @llvm.amdgcn.struct.buffer.store.v4f32(<4 x float> %tex1, <4 x i32> poison, i32 %idx3, i32 0, i32 0, i32 0)
   br label %endif
 
 endif:

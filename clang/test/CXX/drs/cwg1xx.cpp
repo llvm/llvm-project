@@ -96,7 +96,7 @@ namespace cwg108 { // cwg108: 2.9
   template<typename T> struct A {
     struct B { typedef int X; };
     B::X x;
-    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name B::X; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'B::X'; implicit 'typename' is a C++20 extension}}
     struct C : B { X x; };
     // expected-error@-1 {{unknown type name 'X'}}
   };
@@ -321,7 +321,7 @@ namespace cwg121 { // cwg121: 2.7
     X::Y<T> x;
     T::Y<T> y;
     // expected-error@-1 {{use 'template' keyword to treat 'Y' as a dependent template name}}
-    // cxx98-17-error@-2 {{missing 'typename' prior to dependent type name T::Y; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-2 {{missing 'typename' prior to dependent type name 'T::Y'; implicit 'typename' is a C++20 extension}}
   };
   Z<X> z;
 } // namespace cwg121
@@ -1075,6 +1075,26 @@ namespace cwg169 { // cwg169: 3.4
     // expected-error@-1 {{using declaration cannot refer to a template specialization}}
   };
 } // namespace cwg169
+
+namespace cwg170 { // cwg170: 3.1
+#if __cplusplus >= 201103L
+struct A {};
+struct B : A { int i; };
+struct C : A {};
+struct D : C {};
+
+constexpr int f(int A::*) { return 0; }
+constexpr int g(int C::*) { return 0; }
+constexpr int h(int D::*) { return 0; }
+
+constexpr auto p = static_cast<int A::*>(&B::i);
+constexpr auto q = f(p);
+constexpr auto r = g(p);
+// since-cxx11-error@-1 {{constexpr variable 'r' must be initialized by a constant expression}}
+constexpr auto s = h(p);
+// since-cxx11-error@-1 {{constexpr variable 's' must be initialized by a constant expression}}
+#endif
+} // namespace cwg170
 
 namespace { // cwg171: 3.4
   int cwg171a;

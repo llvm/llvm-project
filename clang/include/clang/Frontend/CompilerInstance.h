@@ -51,8 +51,8 @@ class DiagnosticsEngine;
 class DiagnosticConsumer;
 class FileManager;
 class FrontendAction;
-class InMemoryModuleCache;
 class Module;
+class ModuleCache;
 class Preprocessor;
 class Sema;
 class SourceManager;
@@ -97,7 +97,7 @@ class CompilerInstance : public ModuleLoader {
   IntrusiveRefCntPtr<SourceManager> SourceMgr;
 
   /// The cache of PCM files.
-  IntrusiveRefCntPtr<InMemoryModuleCache> ModuleCache;
+  IntrusiveRefCntPtr<ModuleCache> ModCache;
 
   /// The preprocessor.
   std::shared_ptr<Preprocessor> PP;
@@ -118,7 +118,7 @@ class CompilerInstance : public ModuleLoader {
   std::unique_ptr<Sema> TheSema;
 
   /// The frontend timer group.
-  std::unique_ptr<llvm::TimerGroup> FrontendTimerGroup;
+  std::unique_ptr<llvm::TimerGroup> timerGroup;
 
   /// The frontend timer.
   std::unique_ptr<llvm::Timer> FrontendTimer;
@@ -209,7 +209,7 @@ public:
   explicit CompilerInstance(
       std::shared_ptr<PCHContainerOperations> PCHContainerOps =
           std::make_shared<PCHContainerOperations>(),
-      InMemoryModuleCache *SharedModuleCache = nullptr);
+      ModuleCache *ModCache = nullptr);
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
@@ -630,7 +630,7 @@ public:
   /// @name Frontend timer
   /// @{
 
-  bool hasFrontendTimer() const { return (bool)FrontendTimer; }
+  llvm::TimerGroup &getTimerGroup() const { return *timerGroup; }
 
   llvm::Timer &getFrontendTimer() const {
     assert(FrontendTimer && "Compiler instance has no frontend timer!");
@@ -746,9 +746,8 @@ public:
   static IntrusiveRefCntPtr<ASTReader> createPCHExternalASTSource(
       StringRef Path, StringRef Sysroot,
       DisableValidationForModuleKind DisableValidation,
-      bool AllowPCHWithCompilerErrors, Preprocessor &PP,
-      InMemoryModuleCache &ModuleCache, ASTContext &Context,
-      const PCHContainerReader &PCHContainerRdr,
+      bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
+      ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
@@ -896,7 +895,7 @@ public:
 
   void setExternalSemaSource(IntrusiveRefCntPtr<ExternalSemaSource> ESS);
 
-  InMemoryModuleCache &getModuleCache() const { return *ModuleCache; }
+  ModuleCache &getModuleCache() const { return *ModCache; }
 };
 
 } // end namespace clang

@@ -235,6 +235,7 @@ unsigned clang::getOpenMPSimpleClauseType(OpenMPClauseKind Kind, StringRef Str,
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_self_maps:
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_destroy:
@@ -569,6 +570,7 @@ const char *clang::getOpenMPSimpleClauseTypeName(OpenMPClauseKind Kind,
   case OMPC_unified_shared_memory:
   case OMPC_reverse_offload:
   case OMPC_dynamic_allocators:
+  case OMPC_self_maps:
   case OMPC_match:
   case OMPC_nontemporal:
   case OMPC_destroy:
@@ -700,7 +702,7 @@ bool clang::isOpenMPLoopBoundSharingDirective(OpenMPDirectiveKind Kind) {
 
 bool clang::isOpenMPLoopTransformationDirective(OpenMPDirectiveKind DKind) {
   return DKind == OMPD_tile || DKind == OMPD_unroll || DKind == OMPD_reverse ||
-         DKind == OMPD_interchange;
+         DKind == OMPD_interchange || DKind == OMPD_stripe;
 }
 
 bool clang::isOpenMPCombinedParallelADirective(OpenMPDirectiveKind DKind) {
@@ -765,6 +767,12 @@ bool clang::isOpenMPCapturingDirective(OpenMPDirectiveKind DKind) {
   return false;
 }
 
+bool clang::isOpenMPOrderConcurrentNestableDirective(
+    OpenMPDirectiveKind DKind) {
+  return DKind == OMPD_atomic || DKind == OMPD_loop || DKind == OMPD_simd ||
+         DKind == OMPD_parallel || isOpenMPLoopTransformationDirective(DKind);
+}
+
 void clang::getOpenMPCaptureRegions(
     SmallVectorImpl<OpenMPDirectiveKind> &CaptureRegions,
     OpenMPDirectiveKind DKind) {
@@ -821,6 +829,7 @@ void clang::getOpenMPCaptureRegions(
     case OMPD_single:
     case OMPD_target_data:
     case OMPD_taskgroup:
+    case OMPD_stripe:
       // These directives (when standalone) use OMPD_unknown as the region,
       // but when they're constituents of a compound directive, and other
       // leafs from that directive have specific regions, then these directives

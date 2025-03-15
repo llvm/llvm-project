@@ -25,6 +25,7 @@
 #include "lldb/Core/UserSettingsController.h"
 #include "lldb/Expression/Expression.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
+#include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/Target/PathMappingList.h"
@@ -332,6 +333,14 @@ public:
     m_language = SourceLanguage(language_type);
   }
 
+  void SetPreferredSymbolContexts(SymbolContextList contexts) {
+    m_preferred_lookup_contexts = std::move(contexts);
+  }
+
+  const SymbolContextList &GetPreferredSymbolContexts() const {
+    return m_preferred_lookup_contexts;
+  }
+
   /// Set the language using a pair of language code and version as
   /// defined by the DWARF 6 specification.
   /// WARNING: These codes may change until DWARF 6 is finalized.
@@ -500,6 +509,11 @@ private:
   // originates
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
+
+  ///< During expression evaluation, any SymbolContext in this list will be
+  ///< used for symbol/function lookup before any other context (except for
+  ///< the module corresponding to the current frame).
+  SymbolContextList m_preferred_lookup_contexts;
 };
 
 // Target
@@ -1151,9 +1165,13 @@ public:
                              Address &pointer_addr,
                              bool force_live_memory = false);
 
-  SectionLoadList &GetSectionLoadList() {
-    return m_section_load_history.GetCurrentSectionLoadList();
-  }
+  bool HasLoadedSections();
+
+  lldb::addr_t GetSectionLoadAddress(const lldb::SectionSP &section_sp);
+
+  void ClearSectionLoadList();
+
+  void DumpSectionLoadList(Stream &s);
 
   static Target *GetTargetFromContexts(const ExecutionContext *exe_ctx_ptr,
                                        const SymbolContext *sc_ptr);
@@ -1218,7 +1236,8 @@ public:
   bool ResolveFileAddress(lldb::addr_t load_addr, Address &so_addr);
 
   bool ResolveLoadAddress(lldb::addr_t load_addr, Address &so_addr,
-                          uint32_t stop_id = SectionLoadHistory::eStopIDNow);
+                          uint32_t stop_id = SectionLoadHistory::eStopIDNow,
+                          bool allow_section_end = false);
 
   bool SetSectionLoadAddress(const lldb::SectionSP &section,
                              lldb::addr_t load_addr,
@@ -1312,6 +1331,7 @@ public:
     enum class StopHookResult : uint32_t {
       KeepStopped = 0,
       RequestContinue,
+      NoPreference,
       AlreadyContinued
     };
 
@@ -1666,6 +1686,10 @@ protected:
 
   Target(const Target &) = delete;
   const Target &operator=(const Target &) = delete;
+
+  SectionLoadList &GetSectionLoadList() {
+    return m_section_load_history.GetCurrentSectionLoadList();
+  }
 };
 
 } // namespace lldb_private

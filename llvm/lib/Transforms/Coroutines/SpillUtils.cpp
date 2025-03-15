@@ -226,9 +226,8 @@ struct AllocaUseVisitor : PtrUseVisitor<AllocaUseVisitor> {
           if (auto *S = dyn_cast<StoreInst>(U))
             if (S->getPointerOperand() == I)
               continue;
-          if (auto *II = dyn_cast<IntrinsicInst>(U))
-            if (II->isLifetimeStartOrEnd())
-              continue;
+          if (isa<LifetimeIntrinsic>(U))
+            continue;
           // BitCastInst creats aliases of the memory location being stored
           // into.
           if (auto *BI = dyn_cast<BitCastInst>(U)) {
@@ -580,7 +579,7 @@ void sinkSpillUsesAfterCoroBegin(const DominatorTree &Dom,
 
   Instruction *InsertPt = CoroBegin->getNextNode();
   for (Instruction *Inst : InsertionList)
-    Inst->moveBefore(InsertPt);
+    Inst->moveBefore(InsertPt->getIterator());
 }
 
 BasicBlock::iterator getSpillInsertionPt(const coro::Shape &Shape, Value *Def,
@@ -591,9 +590,9 @@ BasicBlock::iterator getSpillInsertionPt(const coro::Shape &Shape, Value *Def,
     // the coroutine frame pointer instruction, i.e. coro.begin.
     InsertPt = Shape.getInsertPtAfterFramePtr();
 
-    // If we're spilling an Argument, make sure we clear 'nocapture'
+    // If we're spilling an Argument, make sure we clear 'captures'
     // from the coroutine function.
-    Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::NoCapture);
+    Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::Captures);
   } else if (auto *CSI = dyn_cast<AnyCoroSuspendInst>(Def)) {
     // Don't spill immediately after a suspend; splitting assumes
     // that the suspend will be followed by a branch.

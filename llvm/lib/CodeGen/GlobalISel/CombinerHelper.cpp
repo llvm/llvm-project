@@ -5641,6 +5641,7 @@ bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) const {
   Register RHS = MI.getOperand(2).getReg();
   Register Dst = MI.getOperand(0).getReg();
   LLT Ty = MRI.getType(Dst);
+  LLT RHSTy = MRI.getType(RHS);
   LLT ShiftAmtTy = getTargetLowering().getPreferredShiftAmountTy(Ty);
   auto MatchPow2ExceptOne = [&](const Constant *C) {
     if (auto *CI = dyn_cast<ConstantInt>(C))
@@ -5649,7 +5650,10 @@ bool CombinerHelper::matchUMulHToLShr(MachineInstr &MI) const {
   };
   if (!matchUnaryPredicate(MRI, RHS, MatchPow2ExceptOne, false))
     return false;
-  return isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {Ty, ShiftAmtTy}});
+  // We need to check both G_LSHR and G_CTLZ because the combine uses G_CTLZ to
+  // get log base 2, and it is not always legal for on a target.
+  return isLegalOrBeforeLegalizer({TargetOpcode::G_LSHR, {Ty, ShiftAmtTy}}) &&
+         isLegalOrBeforeLegalizer({TargetOpcode::G_CTLZ, {RHSTy, RHSTy}});
 }
 
 void CombinerHelper::applyUMulHToLShr(MachineInstr &MI) const {
@@ -6590,12 +6594,58 @@ bool CombinerHelper::matchRedundantBinOpInEquality(MachineInstr &MI,
   return CmpInst::isEquality(Pred) && Y.isValid();
 }
 
-bool CombinerHelper::matchShiftsTooBig(MachineInstr &MI) const {
+/// Return the minimum useless shift amount that results in complete loss of the
+/// source value. Return std::nullopt when it cannot determine a value.
+static std::optional<unsigned>
+getMinUselessShift(KnownBits ValueKB, unsigned Opcode,
+                   std::optional<int64_t> &Result) {
+  assert((Opcode == TargetOpcode::G_SHL || Opcode == TargetOpcode::G_LSHR ||
+          Opcode == TargetOpcode::G_ASHR) &&
+         "Expect G_SHL, G_LSHR or G_ASHR.");
+  auto SignificantBits = 0;
+  switch (Opcode) {
+  case TargetOpcode::G_SHL:
+    SignificantBits = ValueKB.countMinTrailingZeros();
+    Result = 0;
+    break;
+  case TargetOpcode::G_LSHR:
+    Result = 0;
+    SignificantBits = ValueKB.countMinLeadingZeros();
+    break;
+  case TargetOpcode::G_ASHR:
+    if (ValueKB.isNonNegative()) {
+      SignificantBits = ValueKB.countMinLeadingZeros();
+      Result = 0;
+    } else if (ValueKB.isNegative()) {
+      SignificantBits = ValueKB.countMinLeadingOnes();
+      Result = -1;
+    } else {
+      // Cannot determine shift result.
+      Result = std::nullopt;
+    }
+    break;
+  default:
+    break;
+  }
+  return ValueKB.getBitWidth() - SignificantBits;
+}
+
+bool CombinerHelper::matchShiftsTooBig(
+    MachineInstr &MI, std::optional<int64_t> &MatchInfo) const {
+  Register ShiftVal = MI.getOperand(1).getReg();
   Register ShiftReg = MI.getOperand(2).getReg();
   LLT ResTy = MRI.getType(MI.getOperand(0).getReg());
   auto IsShiftTooBig = [&](const Constant *C) {
     auto *CI = dyn_cast<ConstantInt>(C);
-    return CI && CI->uge(ResTy.getScalarSizeInBits());
+    if (!CI)
+      return false;
+    if (CI->uge(ResTy.getScalarSizeInBits())) {
+      MatchInfo = std::nullopt;
+      return true;
+    }
+    auto OptMaxUsefulShift = getMinUselessShift(KB->getKnownBits(ShiftVal),
+                                                MI.getOpcode(), MatchInfo);
+    return OptMaxUsefulShift && CI->uge(*OptMaxUsefulShift);
   };
   return matchUnaryPredicate(MRI, ShiftReg, IsShiftTooBig);
 }

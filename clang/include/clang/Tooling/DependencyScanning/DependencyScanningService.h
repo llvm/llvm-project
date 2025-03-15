@@ -55,16 +55,23 @@ enum class ScanningOptimizations {
   HeaderSearch = 1,
 
   /// Remove warnings from system modules.
-  SystemWarnings = 2,
+  SystemWarnings = (1 << 1),
 
   /// Remove unused -ivfsoverlay arguments.
-  VFS = 4,
+  VFS = (1 << 2),
 
   /// Canonicalize -D and -U options.
-  Macros = 8,
+  Macros = (1 << 3),
 
-  DSS_LAST_BITMASK_ENUM(Macros),
-  Default = All
+  /// Ignore the compiler's working directory if it is safe.
+  IgnoreCWD = (1 << 4),
+
+  DSS_LAST_BITMASK_ENUM(IgnoreCWD),
+
+  // The build system needs to be aware that the current working
+  // directory is ignored. Without a good way of notifying the build
+  // system, it is less risky to default to off.
+  Default = All & (~IgnoreCWD)
 };
 
 #undef DSS_LAST_BITMASK_ENUM

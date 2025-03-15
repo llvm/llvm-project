@@ -230,9 +230,10 @@ void FunctionVarLocs::init(FunctionVarLocsBuilder &Builder) {
     for (const DbgVariableRecord &DVR : filterDbgVars(I->getDbgRecordRange())) {
       // Even though DVR defines a variable location, VarLocsBeforeInst can
       // still be empty if that VarLoc was redundant.
-      if (!Builder.VarLocsBeforeInst.count(&DVR))
+      auto It = Builder.VarLocsBeforeInst.find(&DVR);
+      if (It == Builder.VarLocsBeforeInst.end())
         continue;
-      for (const VarLocInfo &VarLoc : Builder.VarLocsBeforeInst[&DVR])
+      for (const VarLocInfo &VarLoc : It->second)
         VarLocRecords.emplace_back(VarLoc);
     }
     for (const VarLocInfo &VarLoc : P.second)
@@ -341,8 +342,7 @@ static bool shouldCoalesceFragments(Function &F) {
   // has not been explicitly set and instruction-referencing is turned on.
   switch (CoalesceAdjacentFragmentsOpt) {
   case cl::boolOrDefault::BOU_UNSET:
-    return debuginfoShouldUseDebugInstrRef(
-        Triple(F.getParent()->getTargetTriple()));
+    return debuginfoShouldUseDebugInstrRef(F.getParent()->getTargetTriple());
   case cl::boolOrDefault::BOU_TRUE:
     return true;
   case cl::boolOrDefault::BOU_FALSE:
@@ -599,12 +599,12 @@ class MemLocFragmentFill {
         break;
     }
 
-    auto CurrentLiveInEntry = LiveIn.find(&BB);
     // If there's no LiveIn entry for the block yet, add it.
-    if (CurrentLiveInEntry == LiveIn.end()) {
+    auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB);
+    if (Inserted) {
       LLVM_DEBUG(dbgs() << "change=true (first) on meet on " << BB.getName()
                         << "\n");
-      LiveIn[&BB] = std::move(BBLiveIn);
+      CurrentLiveInEntry->second = std::move(BBLiveIn);
       return /*Changed=*/true;
     }
 
@@ -2053,17 +2053,17 @@ bool AssignmentTrackingLowering::join(
   // Exactly one visited pred. Copy the LiveOut from that pred into BB LiveIn.
   if (VisitedPreds.size() == 1) {
     const BlockInfo &PredLiveOut = LiveOut.find(VisitedPreds[0])->second;
-    auto CurrentLiveInEntry = LiveIn.find(&BB);
 
     // Check if there isn't an entry, or there is but the LiveIn set has
     // changed (expensive check).
-    if (CurrentLiveInEntry == LiveIn.end())
-      LiveIn.insert(std::make_pair(&BB, PredLiveOut));
-    else if (PredLiveOut != CurrentLiveInEntry->second)
+    auto [CurrentLiveInEntry, Inserted] = LiveIn.try_emplace(&BB, PredLiveOut);
+    if (Inserted)
+      return /*Changed*/ true;
+    if (PredLiveOut != CurrentLiveInEntry->second) {
       CurrentLiveInEntry->second = PredLiveOut;
-    else
-      return /*Changed*/ false;
-    return /*Changed*/ true;
+      return /*Changed*/ true;
+    }
+    return /*Changed*/ false;
   }
 
   // More than one pred. Join LiveOuts of blocks 1 and 2.

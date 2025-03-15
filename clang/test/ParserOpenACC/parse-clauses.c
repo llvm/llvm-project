@@ -343,23 +343,16 @@ struct HasMembersArray {
 void SelfUpdate() {
   struct Members s;
 
-  // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
-#pragma acc update self
+  // expected-error@+1{{expected '('}}
+#pragma acc update host(s) self
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+6{{use of undeclared identifier 'zero'}}
-  // expected-error@+5{{expected ','}}
-  // expected-error@+4{{expected expression}}
-  // expected-warning@+3{{OpenACC clause 'self' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
+  // expected-error@+3{{use of undeclared identifier 'zero'}}
+  // expected-error@+2{{expected ','}}
+  // expected-error@+1{{expected expression}}
 #pragma acc update self(zero : s.array[s.value : 5], s.value), if_present
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+3{{OpenACC clause 'self' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'if_present' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'update' not yet implemented, pragma ignored}}
 #pragma acc update self(s.array[s.value : 5], s.value), if_present
   for(int i = 0; i < 5;++i) {}
 }
@@ -527,40 +520,38 @@ void VarListClauses() {
 #pragma acc exit data delete(s.array[s.value : 5], s.value),async
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented, clause ignored}}
-#pragma acc serial device_resident(s.array[s.value] s.array[s.value :5] ), self
+  // expected-error@+3{{expected ','}}
+  // expected-error@+2{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+  // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+#pragma acc declare device_resident(s.array[s.value] s.array[s.value :5] ), copy(s)
+
+  int CopyRef1, CopyRef2, CopyRef3;
+
+  // expected-error@+2{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+  // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+#pragma acc declare device_resident(s.array[s.value : 5], s.value), copy(CopyRef1)
+
+  // expected-error@+3{{expected ','}}
+  // expected-error@+2{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+  // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+#pragma acc declare link(s.array[s.value] s.array[s.value :5] ), copy(CopyRef2)
+
+  // expected-error@+2{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+  // expected-error@+1{{OpenACC variable on 'declare' construct is not a valid variable name or array name}}
+#pragma acc declare link(s.array[s.value : 5], s.value), copy(CopyRef3)
+
+  // expected-error@+1{{expected ','}}
+#pragma acc update host(s.array[s.value] s.array[s.value :5] )
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+1{{OpenACC clause 'device_resident' not yet implemented, clause ignored}}
-#pragma acc serial device_resident(s.array[s.value : 5], s.value), self
+#pragma acc update host(s.array[s.value : 5], s.value)
   for(int i = 0; i < 5;++i) {}
 
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'link' not yet implemented, clause ignored}}
-#pragma acc serial link(s.array[s.value] s.array[s.value :5] ), self
+  // expected-error@+1{{expected ','}}
+#pragma acc update device(s.array[s.value] s.array[s.value :5] )
   for(int i = 0; i < 5;++i) {}
 
-  // expected-warning@+1{{OpenACC clause 'link' not yet implemented, clause ignored}}
-#pragma acc serial link(s.array[s.value : 5], s.value), self
-  for(int i = 0; i < 5;++i) {}
-
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented, clause ignored}}
-#pragma acc serial host(s.array[s.value] s.array[s.value :5] ), self
-  for(int i = 0; i < 5;++i) {}
-
-  // expected-warning@+1{{OpenACC clause 'host' not yet implemented, clause ignored}}
-#pragma acc serial host(s.array[s.value : 5], s.value), self
-  for(int i = 0; i < 5;++i) {}
-
-  // expected-error@+2{{expected ','}}
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented, clause ignored}}
-#pragma acc serial device(s.array[s.value] s.array[s.value :5] ), self
-  for(int i = 0; i < 5;++i) {}
-
-  // expected-warning@+1{{OpenACC clause 'device' not yet implemented, clause ignored}}
-#pragma acc serial device(s.array[s.value : 5], s.value), self
+#pragma acc update device(s.array[s.value : 5], s.value)
   for(int i = 0; i < 5;++i) {}
 
   // expected-error@+1{{expected ','}}
@@ -1270,42 +1261,32 @@ void Gang() {
 
 }
 
-  // expected-warning@+5{{OpenACC clause 'worker' not yet implemented, clause ignored}}
-  // expected-warning@+4{{OpenACC clause 'vector' not yet implemented, clause ignored}}
-  // expected-warning@+3{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'nohost' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+  // expected-warning@+5{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
+  // expected-error@+4{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
+  // expected-note@+3{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc routine worker, vector, seq, nohost
 void bar();
 
-  // expected-warning@+5{{OpenACC clause 'worker' not yet implemented, clause ignored}}
-  // expected-warning@+4{{OpenACC clause 'vector' not yet implemented, clause ignored}}
-  // expected-warning@+3{{OpenACC clause 'seq' not yet implemented, clause ignored}}
-  // expected-warning@+2{{OpenACC clause 'nohost' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
+  // expected-error@+4{{OpenACC clause 'seq' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
+  // expected-note@+3{{previous clause is here}}
+  // expected-error@+2{{OpenACC clause 'vector' may not appear on the same construct as a 'worker' clause on a 'routine' construct}}
+  // expected-note@+1{{previous clause is here}}
 #pragma acc routine(bar) worker, vector, seq, nohost
 
 
 // Bind Clause Parsing.
 
   // expected-error@+2{{expected '('}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine bind
+  // expected-warning@+1{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
+#pragma acc routine seq bind
 void BCP1();
 
-  // expected-error@+2{{expected identifier or string literal}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(BCP1) bind()
+  // expected-error@+1{{expected identifier or string literal}}
+#pragma acc routine(BCP1) seq bind()
 
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine bind("ReductionClauseParsing")
-void BCP2();
+  // expected-warning@+1{{OpenACC construct 'routine' with implicit function not yet implemented, pragma ignored}}
+#pragma acc routine seq bind("ReductionClauseParsing")
 
-  // expected-warning@+2{{OpenACC clause 'bind' not yet implemented, clause ignored}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(BCP1) bind(BCP2)
-
-  // expected-error@+2{{use of undeclared identifier 'unknown_thing'}}
-  // expected-warning@+1{{OpenACC construct 'routine' not yet implemented, pragma ignored}}
-#pragma acc routine(BCP1) bind(unknown_thing)
+#pragma acc routine(BCP1) seq bind(unknown_thing)

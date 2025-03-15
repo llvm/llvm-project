@@ -33,13 +33,17 @@ namespace llvm {
 struct Session {
 
   struct LazyLinkingSupport {
-    LazyLinkingSupport(std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
-                       std::unique_ptr<orc::LazyReexportsManager> LRMgr,
-                       orc::ObjectLinkingLayer &ObjLinkingLayer)
-        : RSMgr(std::move(RSMgr)), LRMgr(std::move(LRMgr)),
+    LazyLinkingSupport(
+        std::unique_ptr<orc::RedirectableSymbolManager> RSMgr,
+        std::shared_ptr<orc::SimpleLazyReexportsSpeculator> Speculator,
+        std::unique_ptr<orc::LazyReexportsManager> LRMgr,
+        orc::ObjectLinkingLayer &ObjLinkingLayer)
+        : RSMgr(std::move(RSMgr)), Speculator(std::move(Speculator)),
+          LRMgr(std::move(LRMgr)),
           LazyObjLinkingLayer(ObjLinkingLayer, *this->LRMgr) {}
 
     std::unique_ptr<orc::RedirectableSymbolManager> RSMgr;
+    std::shared_ptr<orc::SimpleLazyReexportsSpeculator> Speculator;
     std::unique_ptr<orc::LazyReexportsManager> LRMgr;
     orc::LazyObjectLinkingLayer LazyObjLinkingLayer;
   };
@@ -52,6 +56,7 @@ struct Session {
   std::unique_ptr<LazyLinkingSupport> LazyLinking;
   orc::JITDylibSearchOrder JDSearchOrder;
   SubtargetFeatures Features;
+  std::vector<std::pair<std::string, orc::SymbolStringPtr>> LazyFnExecOrder;
 
   ~Session();
 
@@ -130,6 +135,8 @@ struct Session {
   StringSet<> HarnessExternals;
   StringSet<> HarnessDefinitions;
   DenseMap<StringRef, StringRef> CanonicalWeakDefs;
+
+  StringSet<> HiddenArchives;
 
   std::optional<Regex> ShowGraphsRegex;
 

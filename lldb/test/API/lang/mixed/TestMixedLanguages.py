@@ -22,12 +22,12 @@ class MixedLanguagesTestCase(TestBase):
 
         self.addTearDownHook(cleanup)
         self.runCmd("settings show frame-format")
-        m = re.match('^frame-format \(format-string\) = "(.*)"$', self.res.GetOutput())
+        m = re.match(r'^frame-format \(format-string\) = "(.*)"$', self.res.GetOutput())
         self.assertTrue(m, "Bad settings string")
         self.format_string = m.group(1)
 
         # Change the default format to print the language.
-        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}\`${function.name}{${function.pc-offset}}}{, lang=${language}}\n"
+        format_string = "frame #${frame.index}: ${frame.pc}{ ${module.file.basename}\\`${function.name}{${function.pc-offset}}}{, lang=${language}}\n"
         self.runCmd("settings set frame-format %s" % format_string)
         self.expect(
             "settings show frame-format",

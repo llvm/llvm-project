@@ -38,7 +38,7 @@ bool Operand::isExplicit() const { return Info; }
 
 bool Operand::isImplicit() const { return !Info; }
 
-bool Operand::isImplicitReg() const { return ImplicitReg; }
+bool Operand::isImplicitReg() const { return ImplicitReg.isValid(); }
 
 bool Operand::isDef() const { return IsDef; }
 
@@ -49,6 +49,8 @@ bool Operand::isReg() const { return Tracker; }
 bool Operand::isTied() const { return TiedToIndex.has_value(); }
 
 bool Operand::isVariable() const { return VariableIndex.has_value(); }
+
+bool Operand::isEarlyClobber() const { return IsEarlyClobber; }
 
 bool Operand::isMemory() const {
   return isExplicit() &&
@@ -64,7 +66,7 @@ unsigned Operand::getTiedToIndex() const { return *TiedToIndex; }
 
 unsigned Operand::getVariableIndex() const { return *VariableIndex; }
 
-unsigned Operand::getImplicitReg() const {
+MCRegister Operand::getImplicitReg() const {
   assert(ImplicitReg);
   return ImplicitReg;
 }
@@ -115,6 +117,8 @@ Instruction::create(const MCInstrInfo &InstrInfo,
     Operand Operand;
     Operand.Index = OpIndex;
     Operand.IsDef = (OpIndex < Description->getNumDefs());
+    Operand.IsEarlyClobber =
+        (Description->getOperandConstraint(OpIndex, MCOI::EARLY_CLOBBER) != -1);
     // TODO(gchatelet): Handle isLookupPtrRegClass.
     if (OpInfo.RegClass >= 0)
       Operand.Tracker = &RATC.getRegisterClass(OpInfo.RegClass);

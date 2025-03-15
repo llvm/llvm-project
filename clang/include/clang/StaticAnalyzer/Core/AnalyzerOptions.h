@@ -126,11 +126,18 @@ enum class CTUPhase1InliningKind { None, Small, All };
 
 class PositiveAnalyzerOption {
 public:
-  PositiveAnalyzerOption() = default;
-  PositiveAnalyzerOption(const PositiveAnalyzerOption &) = default;
-  PositiveAnalyzerOption &operator=(const PositiveAnalyzerOption &) = default;
+  constexpr PositiveAnalyzerOption() = default;
+  constexpr PositiveAnalyzerOption(unsigned Value) : Value(Value) {
+    assert(Value > 0 && "only positive values are accepted");
+  }
+  constexpr PositiveAnalyzerOption(const PositiveAnalyzerOption &) = default;
+  constexpr PositiveAnalyzerOption &
+  operator=(const PositiveAnalyzerOption &Other) {
+    Value = Other.Value;
+    return *this;
+  }
 
-  static std::optional<PositiveAnalyzerOption> create(unsigned Val) {
+  static constexpr std::optional<PositiveAnalyzerOption> create(unsigned Val) {
     if (Val == 0)
       return std::nullopt;
     return PositiveAnalyzerOption{Val};
@@ -141,11 +148,9 @@ public:
       return std::nullopt;
     return PositiveAnalyzerOption::create(Parsed);
   }
-  operator unsigned() const { return Value; }
+  constexpr operator unsigned() const { return Value; }
 
 private:
-  explicit constexpr PositiveAnalyzerOption(unsigned Value) : Value(Value) {}
-
   unsigned Value = 1;
 };
 

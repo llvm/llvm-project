@@ -235,7 +235,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // I32: [[ADDRC2:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
   // I32: fir.store [[C]] to [[ADDRC2]] : !fir.ref<complex<f32>>
   // I32: [[T:%[0-9A-Za-z]+]] = fir.convert [[ADDRC2]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
-  // I32: fir.call @paramcomplex4([[T]]) : (!fir.ref<tuple<f32, f32>>) -> ()
+  // I32: fir.call @paramcomplex4([[T]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> ()
 
   // I32_MINGW: [[ADDRI64:%[0-9A-Za-z]+]] = fir.alloca i64
   // I32_MINGW: fir.store [[RES]] to [[ADDRI64]] : !fir.ref<i64>
@@ -244,7 +244,7 @@ func.func @callcomplex4(%arg0 : !fir.class<!fir.type<_QMpolymorphic_testTp1{a:i3
   // I32_MINGW: [[ADDRC2:%[0-9A-Za-z]+]] = fir.alloca complex<f32>
   // I32_MINGW: fir.store [[C]] to [[ADDRC2]] : !fir.ref<complex<f32>>
   // I32_MINGW: [[T:%[0-9A-Za-z]+]] = fir.convert [[ADDRC2]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
-  // I32_MINGW: fir.call @paramcomplex4([[T]]) : (!fir.ref<tuple<f32, f32>>) -> ()
+  // I32_MINGW: fir.call @paramcomplex4([[T]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> ()
 
   // X64: [[ADDRV:%[0-9A-Za-z]+]] = fir.alloca !fir.vector<2:f32>
   // X64: fir.store [[RES]] to [[ADDRV]] : !fir.ref<!fir.vector<2:f32>>
@@ -442,12 +442,12 @@ func.func private @paramcomplex8(complex<f64>) -> ()
 // LOONGARCH64-LABEL: func @callcomplex8()
 func.func @callcomplex8() {
   // I32: [[RES:%[0-9A-Za-z]+]] = fir.alloca tuple<f64, f64>
-  // I32: fir.call @returncomplex8([[RES]]) : (!fir.ref<tuple<f64, f64>>) -> ()
+  // I32: fir.call @returncomplex8([[RES]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 4 : i32, llvm.sret = tuple<f64, f64>}) -> ()
   // I32_MINGW: [[RES:%[0-9A-Za-z]+]] = fir.alloca tuple<f64, f64>
-  // I32_MINGW: fir.call @returncomplex8([[RES]]) : (!fir.ref<tuple<f64, f64>>) -> ()
+  // I32_MINGW: fir.call @returncomplex8([[RES]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32, llvm.sret = tuple<f64, f64>}) -> ()
   // X64: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex8() : () -> tuple<f64, f64>
   // X64_MINGW: [[RES:%[0-9A-Za-z]+]] = fir.alloca tuple<f64, f64>
-  // X64_MINGW: fir.call @returncomplex8([[RES]]) : (!fir.ref<tuple<f64, f64>>) -> ()
+  // X64_MINGW: fir.call @returncomplex8([[RES]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32, llvm.sret = tuple<f64, f64>}) -> ()
   // AARCH64: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex8() : () -> tuple<f64, f64>
   // PPC64le: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex8() : () -> tuple<f64, f64>
   // SPARCV9: [[RES:%[0-9A-Za-z]+]] = fir.call @returncomplex8() : () -> tuple<f64, f64>
@@ -461,14 +461,14 @@ func.func @callcomplex8() {
   // I32: [[ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f64>
   // I32: fir.store [[V]] to [[ADDRC]] : !fir.ref<complex<f64>>
   // I32: [[ADDRT:%[0-9A-Za-z]+]] = fir.convert [[ADDRC]] : (!fir.ref<complex<f64>>) -> !fir.ref<tuple<f64, f64>>
-  // I32: fir.call @paramcomplex8([[ADDRT]]) : (!fir.ref<tuple<f64, f64>>) -> ()
+  // I32: fir.call @paramcomplex8([[ADDRT]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 4 : i32, llvm.byval = tuple<f64, f64>}) -> ()
 
   // I32_MINGW: [[RESC:%[0-9A-Za-z]+]] = fir.convert [[RES]] : (!fir.ref<tuple<f64, f64>>) -> !fir.ref<complex<f64>>
   // I32_MINGW: [[V:%[0-9A-Za-z]+]]  = fir.load [[RESC]] : !fir.ref<complex<f64>>
   // I32_MINGW: [[ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f64>
   // I32_MINGW: fir.store [[V]] to [[ADDRC]] : !fir.ref<complex<f64>>
   // I32_MINGW: [[ADDRT:%[0-9A-Za-z]+]] = fir.convert [[ADDRC]] : (!fir.ref<complex<f64>>) -> !fir.ref<tuple<f64, f64>>
-  // I32_MINGW: fir.call @paramcomplex8([[ADDRT]]) : (!fir.ref<tuple<f64, f64>>) -> ()
+  // I32_MINGW: fir.call @paramcomplex8([[ADDRT]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 4 : i32, llvm.byval = tuple<f64, f64>}) -> ()
 
   // X64: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f64, f64>
   // X64: fir.store [[RES]] to [[ADDRT]] : !fir.ref<tuple<f64, f64>>
@@ -483,7 +483,7 @@ func.func @callcomplex8() {
   // X64_MINGW: [[ADDRC:%[0-9A-Za-z]+]] = fir.alloca complex<f64>
   // X64_MINGW: fir.store [[V]] to [[ADDRC]] : !fir.ref<complex<f64>>
   // X64_MINGW: [[ADDRT:%[0-9A-Za-z]+]] = fir.convert [[ADDRC]] : (!fir.ref<complex<f64>>) -> !fir.ref<tuple<f64, f64>>
-  // X64_MINGW: fir.call @paramcomplex8([[ADDRT]]) : (!fir.ref<tuple<f64, f64>>) -> ()
+  // X64_MINGW: fir.call @paramcomplex8([[ADDRT]]) : (!fir.ref<tuple<f64, f64>> {llvm.align = 8 : i32, llvm.byval = tuple<f64, f64>}) -> ()
 
   // AARCH64: [[ADDRT:%[0-9A-Za-z]+]] = fir.alloca tuple<f64, f64>
   // AARCH64: fir.store [[RES]] to [[ADDRT]] : !fir.ref<tuple<f64, f64>>
@@ -590,7 +590,7 @@ func.func @multipleparamscomplex4(%z1 : complex<f32>, %z2 : complex<f32>, %z3 : 
   // I32-DAG: fir.store [[Z3_VAL]] to [[Z3_ADDRC]] : !fir.ref<complex<f32>>
   // I32-DAG: [[Z3_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z3_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
 
-  // I32: fir.call @calleemultipleparamscomplex4([[Z1_ADDRT]], [[Z2_ADDRT]], [[Z3_ADDRT]]) : (!fir.ref<tuple<f32, f32>>, !fir.ref<tuple<f32, f32>>, !fir.ref<tuple<f32, f32>>) -> ()
+  // I32: fir.call @calleemultipleparamscomplex4([[Z1_ADDRT]], [[Z2_ADDRT]], [[Z3_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> ()
 
   // I32_MINGW-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
   // I32_MINGW-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<complex<f32>>
@@ -609,7 +609,7 @@ func.func @multipleparamscomplex4(%z1 : complex<f32>, %z2 : complex<f32>, %z3 : 
   // I32_MINGW-DAG: fir.store [[Z3_VAL]] to [[Z3_ADDRC]] : !fir.ref<complex<f32>>
   // I32_MINGW-DAG: [[Z3_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z3_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
 
-  // I32_MINGW: fir.call @calleemultipleparamscomplex4([[Z1_ADDRT]], [[Z2_ADDRT]], [[Z3_ADDRT]]) : (!fir.ref<tuple<f32, f32>>, !fir.ref<tuple<f32, f32>>, !fir.ref<tuple<f32, f32>>) -> ()
+  // I32_MINGW: fir.call @calleemultipleparamscomplex4([[Z1_ADDRT]], [[Z2_ADDRT]], [[Z3_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> ()
 
   // X64-DAG: [[Z3_ADDR:%[0-9A-Za-z]+]] = fir.alloca !fir.vector<2:f32>
   // X64-DAG: fir.store [[Z3]] to [[Z3_ADDR]] : !fir.ref<!fir.vector<2:f32>>
@@ -838,7 +838,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // I32-DAG: fir.store [[Z2_VAL]] to [[Z2_ADDRC]] : !fir.ref<complex<f32>>
   // I32-DAG: [[Z2_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z2_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
 
-  // I32: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[Z1_ADDRT]], [[Z2_ADDRT]]) : (!fir.ref<tuple<f32, f32>>, !fir.ref<tuple<f32, f32>>) -> i64
+  // I32: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[Z1_ADDRT]], [[Z2_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> i64
 
   // I32_MINGW-DAG: [[Z1_ADDR:%[0-9A-Za-z]+]] = fir.convert [[Z1]] : (!fir.ref<tuple<f32, f32>>) -> !fir.ref<complex<f32>>
   // I32_MINGW-DAG: [[Z1_VAL:%[0-9A-Za-z]+]] = fir.load [[Z1_ADDR]] : !fir.ref<complex<f32>>
@@ -852,7 +852,7 @@ func.func private @mlircomplexf32(%z1: complex<f32>, %z2: complex<f32>) -> compl
   // I32_MINGW-DAG: fir.store [[Z2_VAL]] to [[Z2_ADDRC]] : !fir.ref<complex<f32>>
   // I32_MINGW-DAG: [[Z2_ADDRT:%[0-9A-Za-z]+]] = fir.convert [[Z2_ADDRC]] : (!fir.ref<complex<f32>>) -> !fir.ref<tuple<f32, f32>>
 
-  // I32_MINGW: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[Z1_ADDRT]], [[Z2_ADDRT]]) : (!fir.ref<tuple<f32, f32>>, !fir.ref<tuple<f32, f32>>) -> i64
+  // I32_MINGW: [[VAL:%[0-9A-Za-z]+]] = fir.call @mlircomplexf32([[Z1_ADDRT]], [[Z2_ADDRT]]) : (!fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}, !fir.ref<tuple<f32, f32>> {llvm.align = 4 : i32, llvm.byval = tuple<f32, f32>}) -> i64
 
   // X64-DAG: [[Z2_ADDR:%[0-9A-Za-z]+]] = fir.alloca !fir.vector<2:f32>
   // X64-DAG: fir.store [[Z2]] to [[Z2_ADDR]] : !fir.ref<!fir.vector<2:f32>>

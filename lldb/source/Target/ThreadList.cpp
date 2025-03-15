@@ -191,20 +191,6 @@ ThreadSP ThreadList::GetThreadSPForThreadPtr(Thread *thread_ptr) {
   return thread_sp;
 }
 
-ThreadSP ThreadList::GetBackingThread(const ThreadSP &real_thread) {
-  std::lock_guard<std::recursive_mutex> guard(GetMutex());
-
-  ThreadSP thread_sp;
-  const uint32_t num_threads = m_threads.size();
-  for (uint32_t idx = 0; idx < num_threads; ++idx) {
-    if (m_threads[idx]->GetBackingThread() == real_thread) {
-      thread_sp = m_threads[idx];
-      break;
-    }
-  }
-  return thread_sp;
-}
-
 ThreadSP ThreadList::FindThreadByIndexID(uint32_t index_id, bool can_update) {
   std::lock_guard<std::recursive_mutex> guard(GetMutex());
 
@@ -518,29 +504,87 @@ bool ThreadList::WillResume() {
 
   collection::iterator pos, end = m_threads.end();
 
-  // See if any thread wants to run stopping others.  If it does, then we won't
-  // setup the other threads for resume, since they aren't going to get a
-  // chance to run.  This is necessary because the SetupForResume might add
-  // "StopOthers" plans which would then get to be part of the who-gets-to-run
-  // negotiation, but they're coming in after the fact, and the threads that
-  // are already set up should take priority.
+  // Go through the threads and see if any thread wants to run just itself.
+  // if so then pick one and run it.
 
-  bool wants_solo_run = false;
+  ThreadList run_me_only_list(m_process);
 
+  run_me_only_list.SetStopID(m_process.GetStopID());
+
+  // One or more threads might want to "Stop Others".  We want to handle all
+  // those requests first.  And if there is a thread that wanted to "resume
+  // before a public stop", let it get the first crack:
+  // There are two special kinds of thread that have priority for "StopOthers":
+  // a "ShouldRunBeforePublicStop thread, or the currently selected thread.  If
+  // we find one satisfying that critereon, put it here.
+  ThreadSP thread_to_run;
   for (pos = m_threads.begin(); pos != end; ++pos) {
-    lldbassert((*pos)->GetCurrentPlan() &&
-               "thread should not have null thread plan");
-    if ((*pos)->GetResumeState() != eStateSuspended &&
-        (*pos)->GetCurrentPlan()->StopOthers()) {
-      if ((*pos)->IsOperatingSystemPluginThread() &&
-          !(*pos)->GetBackingThread())
+    ThreadSP thread_sp(*pos);
+    if (thread_sp->GetResumeState() != eStateSuspended &&
+        thread_sp->GetCurrentPlan()->StopOthers()) {
+      if (thread_sp->IsOperatingSystemPluginThread() &&
+          !thread_sp->GetBackingThread())
         continue;
-      wants_solo_run = true;
-      break;
+
+      // You can't say "stop others" and also want yourself to be suspended.
+      assert(thread_sp->GetCurrentPlan()->RunState() != eStateSuspended);
+      run_me_only_list.AddThread(thread_sp);
+
+      if (thread_sp == GetSelectedThread())
+        thread_to_run = thread_sp;
+
+      if (thread_sp->ShouldRunBeforePublicStop()) {
+        // This takes precedence, so if we find one of these, service it:
+        thread_to_run = thread_sp;
+        break;
+      }
     }
   }
 
-  if (wants_solo_run) {
+  if (run_me_only_list.GetSize(false) > 0 && !thread_to_run) {
+    if (run_me_only_list.GetSize(false) == 1) {
+      thread_to_run = run_me_only_list.GetThreadAtIndex(0);
+    } else {
+      int random_thread =
+          (int)((run_me_only_list.GetSize(false) * (double)rand()) /
+                (RAND_MAX + 1.0));
+      thread_to_run = run_me_only_list.GetThreadAtIndex(random_thread);
+    }
+  }
+
+  // Give all the threads that are likely to run a last chance to set up their
+  // state before we negotiate who is actually going to get a chance to run...
+  // Don't set to resume suspended threads, and if any thread wanted to stop
+  // others, only call setup on the threads that request StopOthers...
+  if (thread_to_run != nullptr) {
+    // See if any thread wants to run stopping others.  If it does, then we
+    // won't setup the other threads for resume, since they aren't going to get
+    // a chance to run.  This is necessary because the SetupForResume might add
+    // "StopOthers" plans which would then get to be part of the who-gets-to-run
+    // negotiation, but they're coming in after the fact, and the threads that
+    // are already set up should take priority.
+    thread_to_run->SetupForResume();
+  } else {
+    for (pos = m_threads.begin(); pos != end; ++pos) {
+      ThreadSP thread_sp(*pos);
+      if (thread_sp->GetResumeState() != eStateSuspended) {
+        if (thread_sp->IsOperatingSystemPluginThread() &&
+            !thread_sp->GetBackingThread())
+          continue;
+        if (thread_sp->SetupForResume()) {
+          // You can't say "stop others" and also want yourself to be suspended.
+          assert(thread_sp->GetCurrentPlan()->RunState() != eStateSuspended);
+          thread_to_run = thread_sp;
+          if (thread_sp->ShouldRunBeforePublicStop()) {
+            // This takes precedence, so if we find one of these, service it:
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  if (thread_to_run != nullptr) {
     Log *log = GetLog(LLDBLog::Step);
     if (log && log->GetVerbose())
       LLDB_LOGF(log, "Turning on notification of new threads while single "
@@ -554,62 +598,9 @@ bool ThreadList::WillResume() {
     m_process.StopNoticingNewThreads();
   }
 
-  // Give all the threads that are likely to run a last chance to set up their
-  // state before we negotiate who is actually going to get a chance to run...
-  // Don't set to resume suspended threads, and if any thread wanted to stop
-  // others, only call setup on the threads that request StopOthers...
-
-  for (pos = m_threads.begin(); pos != end; ++pos) {
-    if ((*pos)->GetResumeState() != eStateSuspended &&
-        (!wants_solo_run || (*pos)->GetCurrentPlan()->StopOthers())) {
-      if ((*pos)->IsOperatingSystemPluginThread() &&
-          !(*pos)->GetBackingThread())
-        continue;
-      (*pos)->SetupForResume();
-    }
-  }
-
-  // Now go through the threads and see if any thread wants to run just itself.
-  // if so then pick one and run it.
-
-  ThreadList run_me_only_list(m_process);
-
-  run_me_only_list.SetStopID(m_process.GetStopID());
-
-  // One or more threads might want to "Stop Others".  We want to handle all
-  // those requests first.  And if there is a thread that wanted to "resume
-  // before a public stop", let it get the first crack:
-  // There are two special kinds of thread that have priority for "StopOthers":
-  // a "ShouldRunBeforePublicStop thread, or the currently selected thread.  If
-  // we find one satisfying that critereon, put it here.
-  ThreadSP stop_others_thread_sp;
-
-  for (pos = m_threads.begin(); pos != end; ++pos) {
-    ThreadSP thread_sp(*pos);
-    if (thread_sp->GetResumeState() != eStateSuspended &&
-        thread_sp->GetCurrentPlan()->StopOthers()) {
-      if ((*pos)->IsOperatingSystemPluginThread() &&
-          !(*pos)->GetBackingThread())
-        continue;
-
-      // You can't say "stop others" and also want yourself to be suspended.
-      assert(thread_sp->GetCurrentPlan()->RunState() != eStateSuspended);
-      run_me_only_list.AddThread(thread_sp);
-
-      if (thread_sp == GetSelectedThread())
-        stop_others_thread_sp = thread_sp;
-        
-      if (thread_sp->ShouldRunBeforePublicStop()) {
-        // This takes precedence, so if we find one of these, service it:
-        stop_others_thread_sp = thread_sp;
-        break;
-      }
-    }
-  }
-
   bool need_to_resume = true;
 
-  if (run_me_only_list.GetSize(false) == 0) {
+  if (thread_to_run == nullptr) {
     // Everybody runs as they wish:
     for (pos = m_threads.begin(); pos != end; ++pos) {
       ThreadSP thread_sp(*pos);
@@ -622,19 +613,6 @@ bool ThreadList::WillResume() {
         need_to_resume = false;
     }
   } else {
-    ThreadSP thread_to_run;
-
-    if (stop_others_thread_sp) {
-      thread_to_run = stop_others_thread_sp;
-    } else if (run_me_only_list.GetSize(false) == 1) {
-      thread_to_run = run_me_only_list.GetThreadAtIndex(0);
-    } else {
-      int random_thread =
-          (int)((run_me_only_list.GetSize(false) * (double)rand()) /
-                (RAND_MAX + 1.0));
-      thread_to_run = run_me_only_list.GetThreadAtIndex(random_thread);
-    }
-
     for (pos = m_threads.begin(); pos != end; ++pos) {
       ThreadSP thread_sp(*pos);
       if (thread_sp == thread_to_run) {

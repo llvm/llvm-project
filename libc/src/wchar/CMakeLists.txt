@@ -1,3 +1,14 @@
+add_entrypoint_object(
+  wcslen
+  SRCS
+    wcslen.cpp
+  HDRS
+    wcslen.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.hdr.types.wchar_t
+    libc.src.string.string_utils
+)
 
 add_entrypoint_object(
   wctob

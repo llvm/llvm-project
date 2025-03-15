@@ -825,7 +825,7 @@ CountValue *HexagonHardwareLoops::computeCount(MachineLoop *Loop,
   // a computation of it into the preheader.
 
   // If the induction variable bump is not a power of 2, quit.
-  // Othwerise we'd need a general integer division.
+  // Otherwise we'd need a general integer division.
   if (!isPowerOf2_64(std::abs(IVBump)))
     return nullptr;
 
@@ -1398,10 +1398,10 @@ bool HexagonHardwareLoops::phiMayWrapOrUnderflow(
 /// counter if it is <= 1. We only need to perform this analysis if the
 /// initial value is a register.
 ///
-/// This function assumes the initial value may underfow unless proven
+/// This function assumes the initial value may underflow unless proven
 /// otherwise. If the type is signed, then we don't care because signed
 /// underflow is undefined. We attempt to prove the initial value is not
-/// zero by perfoming a crude analysis of the loop counter. This function
+/// zero by performing a crude analysis of the loop counter. This function
 /// checks if the initial value is used in any comparison prior to the loop
 /// and, if so, assumes the comparison is a range check. This is inexact,
 /// but will catch the simple cases.

@@ -346,6 +346,12 @@ def fir_RecordType : FIR_Type<"Record", "type"> {
     void finalize(llvm::ArrayRef<TypePair> lenPList,
                   llvm::ArrayRef<TypePair> typeList);
 
+    // fir.type is unpacked by default. If the flag is set, the packed fir.type
+    // is generated and the alignment is enforced by explicit padding by i8
+    // array fields.
+    bool isPacked() const;
+    void pack(bool);
+
     detail::RecordTypeStorage const *uniqueKey() const;
   }];
 }
@@ -573,7 +579,7 @@ def IsBaseBoxTypePred
 def fir_BaseBoxType : Type<IsBaseBoxTypePred, "fir.box or fir.class type">;
 
 // Generalized FIR and standard dialect types representing intrinsic types
-def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerLike.predicate,
+def AnyIntegerLike : TypeConstraint<Or<[SignlessIntegerOrIndexLike.predicate,
     AnySignedInteger.predicate, AnyUnsignedInteger.predicate,
     fir_IntegerType.predicate, fir_UnsignedType.predicate]>, "any integer">;
 def AnyLogicalLike : TypeConstraint<Or<[BoolLike.predicate,
@@ -652,5 +658,12 @@ def ArrayOrBoxOrRecord : TypeConstraint<Or<[fir_SequenceType.predicate,
     IsBaseBoxTypePred, fir_RecordType.predicate]>,
     "fir.box, fir.array or fir.type">;
 
+// Returns true iff the type is an array box or a reference to such type.
+def IsArrayBoxPred : CPred<"::fir::getBoxRank($_self) != 0">;
+
+// Any boxed array type (not a reference to a boxed array type).
+def AnyBoxedArray
+    : TypeConstraint<And<[BoxOrClassType.predicate, IsArrayBoxPred]>,
+                     "any boxed array">;
 
 #endif // FIR_DIALECT_FIR_TYPES

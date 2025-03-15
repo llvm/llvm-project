@@ -5,20 +5,20 @@
 
 #include <immintrin.h>
 
-__m128bh test_mm_minmaxne_pbh(__m128bh __A, __m128bh __B) {
-  return _mm_minmaxne_pbh(__A, __B, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
+__m128bh test_mm_minmax_pbh(__m128bh __A, __m128bh __B) {
+  return _mm_minmax_pbh(__A, __B, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
 }
 
-__m128bh test_mm_mask_minmaxne_pbh(__m128bh __A, __mmask8 __B, __m128bh __C, __m128bh __D) {
-  return _mm_mask_minmaxne_pbh(__A, __B, __C, __D, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
+__m128bh test_mm_mask_minmax_pbh(__m128bh __A, __mmask8 __B, __m128bh __C, __m128bh __D) {
+  return _mm_mask_minmax_pbh(__A, __B, __C, __D, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
 }
 
-__m256bh test_mm256_minmaxne_pbh(__m256bh __A, __m256bh __B) {
-  return _mm256_minmaxne_pbh(__A, __B, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
+__m256bh test_mm256_minmax_pbh(__m256bh __A, __m256bh __B) {
+  return _mm256_minmax_pbh(__A, __B, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
 }
 
-__m256bh test_mm256_mask_minmaxne_pbh(__m256bh __A, __mmask16 __B, __m256bh __C, __m256bh __D) {
-  return _mm256_mask_minmaxne_pbh(__A, __B, __C, __D, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
+__m256bh test_mm256_mask_minmax_pbh(__m256bh __A, __mmask16 __B, __m256bh __C, __m256bh __D) {
+  return _mm256_mask_minmax_pbh(__A, __B, __C, __D, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
 }
 
 __m128d test_mm_minmax_pd(__m128d __A, __m128d __B) {
@@ -69,12 +69,12 @@ __m256 test_mm256_mask_minmax_ps(__m256 __A, __mmask8 __B, __m256 __C, __m256 __
   return _mm256_mask_minmax_ps(__A, __B, __C, __D, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
 }
 
-__m512bh test_mm512_minmaxne_pbh(__m512bh __A, __m512bh __B) {
-  return _mm512_minmaxne_pbh(__A, __B, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
+__m512bh test_mm512_minmax_pbh(__m512bh __A, __m512bh __B) {
+  return _mm512_minmax_pbh(__A, __B, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
 }
 
-__m512bh test_mm512_mask_minmaxne_pbh(__m512bh __A, __mmask32 __B, __m512bh __C, __m512bh __D) {
-  return _mm512_mask_minmaxne_pbh(__A, __B, __C, __D, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
+__m512bh test_mm512_mask_minmax_pbh(__m512bh __A, __mmask32 __B, __m512bh __C, __m512bh __D) {
+  return _mm512_mask_minmax_pbh(__A, __B, __C, __D, 256); // expected-error {{argument value 256 is outside the valid range [0, 255]}}
 }
 
 __m512d test_mm512_minmax_pd(__m512d __A, __m512d __B) {

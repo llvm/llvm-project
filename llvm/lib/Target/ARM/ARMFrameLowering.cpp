@@ -952,13 +952,13 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   SpillArea FramePtrSpillArea = SpillArea::GPRCS1;
   bool BeforeFPPush = true;
   for (const CalleeSavedInfo &I : CSI) {
-    Register Reg = I.getReg();
+    MCRegister Reg = I.getReg();
     int FI = I.getFrameIdx();
 
     SpillArea Area = getSpillArea(Reg, PushPopSplit,
                                   AFI->getNumAlignedDPRCS2Regs(), RegInfo);
 
-    if (Reg == FramePtr) {
+    if (Reg == FramePtr.asMCReg()) {
       FramePtrSpillFI = FI;
       FramePtrSpillArea = Area;
     }
@@ -1280,7 +1280,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // recording where each register ended up:
   if (!NeedsWinCFI) {
     for (const auto &Entry : reverse(CSI)) {
-      Register Reg = Entry.getReg();
+      MCRegister Reg = Entry.getReg();
       int FI = Entry.getFrameIdx();
       MachineBasicBlock::iterator CFIPos;
       switch (getSpillArea(Reg, PushPopSplit, AFI->getNumAlignedDPRCS2Regs(),
@@ -1668,7 +1668,7 @@ void ARMFrameLowering::emitPushInst(MachineBasicBlock &MBB,
   while (i != 0) {
     unsigned LastReg = 0;
     for (; i != 0; --i) {
-      Register Reg = CSI[i-1].getReg();
+      MCRegister Reg = CSI[i-1].getReg();
       if (!Func(Reg))
         continue;
 
@@ -1761,7 +1761,7 @@ void ARMFrameLowering::emitPopInst(MachineBasicBlock &MBB,
     bool DeleteRet = false;
     for (; i != 0; --i) {
       CalleeSavedInfo &Info = CSI[i-1];
-      Register Reg = Info.getReg();
+      MCRegister Reg = Info.getReg();
       if (!Func(Reg))
         continue;
 
@@ -1917,8 +1917,8 @@ static void emitAlignedDPRCS2Spills(MachineBasicBlock &MBB,
   // 16-byte aligned vst1.64 with 4 d-regs and address writeback.
   // The writeback is only needed when emitting two vst1.64 instructions.
   if (NumAlignedDPRCS2Regs >= 6) {
-    unsigned SupReg = TRI->getMatchingSuperReg(NextReg, ARM::dsub_0,
-                                               &ARM::QQPRRegClass);
+    MCRegister SupReg =
+        TRI->getMatchingSuperReg(NextReg, ARM::dsub_0, &ARM::QQPRRegClass);
     MBB.addLiveIn(SupReg);
     BuildMI(MBB, MI, DL, TII.get(ARM::VST1d64Qwb_fixed), ARM::R4)
         .addReg(ARM::R4, RegState::Kill)
@@ -1936,8 +1936,8 @@ static void emitAlignedDPRCS2Spills(MachineBasicBlock &MBB,
 
   // 16-byte aligned vst1.64 with 4 d-regs, no writeback.
   if (NumAlignedDPRCS2Regs >= 4) {
-    unsigned SupReg = TRI->getMatchingSuperReg(NextReg, ARM::dsub_0,
-                                               &ARM::QQPRRegClass);
+    MCRegister SupReg =
+        TRI->getMatchingSuperReg(NextReg, ARM::dsub_0, &ARM::QQPRRegClass);
     MBB.addLiveIn(SupReg);
     BuildMI(MBB, MI, DL, TII.get(ARM::VST1d64Q))
         .addReg(ARM::R4)
@@ -1951,8 +1951,8 @@ static void emitAlignedDPRCS2Spills(MachineBasicBlock &MBB,
 
   // 16-byte aligned vst1.64 with 2 d-regs.
   if (NumAlignedDPRCS2Regs >= 2) {
-    unsigned SupReg = TRI->getMatchingSuperReg(NextReg, ARM::dsub_0,
-                                               &ARM::QPRRegClass);
+    MCRegister SupReg =
+        TRI->getMatchingSuperReg(NextReg, ARM::dsub_0, &ARM::QPRRegClass);
     MBB.addLiveIn(SupReg);
     BuildMI(MBB, MI, DL, TII.get(ARM::VST1q64))
         .addReg(ARM::R4)
@@ -2049,8 +2049,8 @@ static void emitAlignedDPRCS2Restores(MachineBasicBlock &MBB,
 
   // 16-byte aligned vld1.64 with 4 d-regs and writeback.
   if (NumAlignedDPRCS2Regs >= 6) {
-    unsigned SupReg = TRI->getMatchingSuperReg(NextReg, ARM::dsub_0,
-                                               &ARM::QQPRRegClass);
+    MCRegister SupReg =
+        TRI->getMatchingSuperReg(NextReg, ARM::dsub_0, &ARM::QQPRRegClass);
     BuildMI(MBB, MI, DL, TII.get(ARM::VLD1d64Qwb_fixed), NextReg)
         .addReg(ARM::R4, RegState::Define)
         .addReg(ARM::R4, RegState::Kill)
@@ -2067,8 +2067,8 @@ static void emitAlignedDPRCS2Restores(MachineBasicBlock &MBB,
 
   // 16-byte aligned vld1.64 with 4 d-regs, no writeback.
   if (NumAlignedDPRCS2Regs >= 4) {
-    unsigned SupReg = TRI->getMatchingSuperReg(NextReg, ARM::dsub_0,
-                                               &ARM::QQPRRegClass);
+    MCRegister SupReg =
+        TRI->getMatchingSuperReg(NextReg, ARM::dsub_0, &ARM::QQPRRegClass);
     BuildMI(MBB, MI, DL, TII.get(ARM::VLD1d64Q), NextReg)
         .addReg(ARM::R4)
         .addImm(16)
@@ -2080,8 +2080,8 @@ static void emitAlignedDPRCS2Restores(MachineBasicBlock &MBB,
 
   // 16-byte aligned vld1.64 with 2 d-regs.
   if (NumAlignedDPRCS2Regs >= 2) {
-    unsigned SupReg = TRI->getMatchingSuperReg(NextReg, ARM::dsub_0,
-                                               &ARM::QPRRegClass);
+    MCRegister SupReg =
+        TRI->getMatchingSuperReg(NextReg, ARM::dsub_0, &ARM::QPRRegClass);
     BuildMI(MBB, MI, DL, TII.get(ARM::VLD1q64), SupReg)
         .addReg(ARM::R4)
         .addImm(16)
@@ -2925,7 +2925,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
         unsigned Size = TRI->getSpillSize(RC);
         Align Alignment = TRI->getSpillAlign(RC);
         RS->addScavengingFrameIndex(
-            MFI.CreateStackObject(Size, Alignment, false));
+            MFI.CreateSpillStackObject(Size, Alignment));
         --RegsNeeded;
       }
     }
@@ -3003,7 +3003,7 @@ bool ARMFrameLowering::assignCalleeSavedSpillSlots(
       // LR, R7, R6, R5, R4, <R12>, R11, R10,  R9,  R8, D15-D8
       CSI.insert(find_if(CSI,
                          [=](const auto &CS) {
-                           Register Reg = CS.getReg();
+                           MCRegister Reg = CS.getReg();
                            return Reg == ARM::R10 || Reg == ARM::R11 ||
                                   Reg == ARM::R8 || Reg == ARM::R9 ||
                                   ARM::DPRRegClass.contains(Reg);
@@ -3021,7 +3021,7 @@ bool ARMFrameLowering::assignCalleeSavedSpillSlots(
              "address.");
       CSI.insert(find_if(CSI,
                          [=](const auto &CS) {
-                           Register Reg = CS.getReg();
+                           MCRegister Reg = CS.getReg();
                            return Reg != ARM::LR;
                          }),
                  CalleeSavedInfo(ARM::R12));
