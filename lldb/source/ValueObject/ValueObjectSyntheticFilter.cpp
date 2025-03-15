@@ -362,7 +362,8 @@ lldb::ValueObjectSP ValueObjectSynthetic::GetNonSyntheticValue() {
 }
 
 void ValueObjectSynthetic::CopyValueData(ValueObject *source) {
-  source->UpdateValueIfNeeded();
+  if (!source->UpdateValueIfNeeded())
+    return;
   m_value = source->GetValue();
   ExecutionContext exe_ctx(GetExecutionContextRef());
   m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
