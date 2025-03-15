@@ -278,6 +278,9 @@ Bug Fixes in This Version
   considered an error in C23 mode and are allowed as an extension in earlier language modes.
 
 - Remove the ``static`` specifier for the value of ``_FUNCTION_`` for static functions, in MSVC compatibility mode.
+- Fixed a modules crash where exception specifications were not propagated properly (#GH121245, relanded in #GH129982)
+- Fixed a problematic case with recursive deserialization within ``FinishedDeserializing()`` where
+  ``PassInterestingDeclsToConsumer()`` was called before the declarations were safe to be passed. (#GH129982)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
