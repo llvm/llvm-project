@@ -5613,8 +5613,13 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
   //  A constexpr specifier used in an object declaration declares the object
   //  as const.
   if (D.getDeclSpec().getConstexprSpecifier() == ConstexprSpecKind::Constexpr &&
-      T->isObjectType())
+      T->isObjectType()) {
     T.addConst();
+    // C++ 9.3.3.4p3: Any type of the form "cv-qualifier-seq array of N U" is
+    // adjusted to "array of N cv-qualifier-seq U".
+    if (const ArrayType *AType = Context.getAsArrayType(T))
+      T = QualType(AType, 0);
+  }
 
   // C++2a [dcl.fct]p4:
   //   A parameter with volatile-qualified type is deprecated
