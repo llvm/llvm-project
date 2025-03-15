@@ -1287,6 +1287,23 @@ let Predicates = [FeatureVectorEnhancements3] in {
             (VMNLQ VR128:$x, VR128:$y)>;
 }
 
+// Instantiate comparison patterns to recognize VACC/VSCBI for TYPE.
+multiclass IntegerComputeCarryOrBorrow<ValueType type,
+                                       Instruction vacc, Instruction vscbi> {
+  let Predicates = [FeatureVector] in {
+    def : Pat<(z_vzext1 (type (z_vicmphl VR128:$x, (add VR128:$x, VR128:$y)))),
+              (vacc VR128:$x, VR128:$y)>;
+    def : Pat<(z_vzext1 (type (z_vicmphl VR128:$y, (add VR128:$x, VR128:$y)))),
+              (vacc VR128:$x, VR128:$y)>;
+    def : Pat<(z_vzext1 (z_vnot (type (z_vicmphl VR128:$y, VR128:$x)))),
+              (vscbi VR128:$x, VR128:$y)>;
+  }
+}
+defm : IntegerComputeCarryOrBorrow<v16i8, VACCB, VSCBIB>;
+defm : IntegerComputeCarryOrBorrow<v8i16, VACCH, VSCBIH>;
+defm : IntegerComputeCarryOrBorrow<v4i32, VACCF, VSCBIF>;
+defm : IntegerComputeCarryOrBorrow<v2i64, VACCG, VSCBIG>;
+
 // Instantiate full-vector shifts.
 multiclass FullVectorShiftOps<SDPatternOperator shift,
                               Instruction sbit, Instruction sbyte> {
