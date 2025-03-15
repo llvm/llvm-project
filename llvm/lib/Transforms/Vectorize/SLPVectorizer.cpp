@@ -6665,6 +6665,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           // Clear ordering of the operand.
           if (!OpTE.ReorderIndices.empty()) {
             OpTE.ReorderIndices.clear();
+          } else if (!OpTE.ReuseShuffleIndices.empty()) {
+            reorderReuses(OpTE.ReuseShuffleIndices, Mask);
           } else {
             assert(OpTE.isGather() && "Expected only gather/buildvector node.");
             reorderScalars(OpTE.Scalars, Mask);
