@@ -136,7 +136,7 @@ if (LLVM_INCLUDE_TESTS)
 endif()
 
 if (BOLT_ENABLE_RUNTIME)
-  message(STATUS "Building BOLT runtime libraries for X86")
+  message(STATUS "Building BOLT runtime libraries for ${CMAKE_SYSTEM_PROCESSOR}")
   set(extra_args "")
   if(CMAKE_SYSROOT)
     list(APPEND extra_args -DCMAKE_SYSROOT=${CMAKE_SYSROOT})
