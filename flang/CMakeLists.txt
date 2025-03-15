@@ -446,6 +446,11 @@ if (APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_POSIX_C_SOURCE=200809")
 endif()
 
+# Clang requires this flag in order for precompiled headers to work with ccache.
+if (CMAKE_CXX_COMPILER_ID MATCHES Clang)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Xclang -fno-pch-timestamp")
+endif()
+
 list(REMOVE_DUPLICATES CMAKE_CXX_FLAGS)
 
 # Determine HOST_LINK_VERSION on Darwin.
