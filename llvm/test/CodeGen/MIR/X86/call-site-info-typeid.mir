@@ -19,41 +19,20 @@
     %fp = alloca ptr, align 8
     store i32 0, ptr %retval, align 4
     store ptr @foo, ptr %fp, align 8
-    %0 = load ptr, ptr %fp, align 8
-    call void %0(i8 signext 97)
+    %fp_val = load ptr, ptr %fp, align 8
+    call void %fp_val(i8 signext 97)
     ret i32 0
   }
 
 ...
 ---
-name:            foo
-tracksRegLiveness: true
-body:             |
-  bb.0.entry:
-    RET 0
-
-...
----
 name:            main
-tracksRegLiveness: true
-stack:
-  - { id: 0, name: retval, size: 4, alignment: 4 }
-  - { id: 1, name: fp, size: 8, alignment: 8 }
 callSites:
-  - { bb: 0, offset: 6, fwdArgRegs: [], typeId: 
+  - { bb: 0, offset: 1, fwdArgRegs: [], typeId: 
     123456789 }
 body:             |
-  bb.0.entry:
-    MOV32mi %stack.0.retval, 1, $noreg, 0, $noreg, 0 :: (store (s32) into %ir.retval)
-    MOV64mi32 %stack.1.fp, 1, $noreg, 0, $noreg, @foo :: (store (s64) into %ir.fp)
-    %0:gr64 = MOV32ri64 @foo
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    %1:gr32 = MOV32ri 97
-    $edi = COPY %1
+  bb.0.entry:    
+    %0:gr64 = MOV32ri64 @foo    
     CALL64r killed %0, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    %2:gr32 = MOV32r0 implicit-def dead $eflags
-    $eax = COPY %2
-    RET 0, $eax
 
 ...
