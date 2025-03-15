@@ -29,6 +29,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/SDPatternMatch.h"
 #include "llvm/CodeGen/SelectionDAGAddressAnalysis.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -50,6 +51,7 @@
 #include <optional>
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 #define DEBUG_TYPE "riscv-lower"
 
@@ -78,6 +80,12 @@ static cl::opt<int>
               cl::desc("Give the maximum number of instructions that we will "
                        "use for creating a floating-point immediate value"),
               cl::init(2));
+
+static cl::opt<bool>
+    ReassocShlAddiAdd("reassoc-shl-addi-add", cl::Hidden,
+                      cl::desc("Swap add and addi in cases where the add may "
+                               "be combined with a shift"),
+                      cl::init(true));
 
 RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
                                          const RISCVSubtarget &STI)
@@ -14306,6 +14314,86 @@ static SDValue transformAddShlImm(SDNode *N, SelectionDAG &DAG,
   return DAG.getNode(ISD::SHL, DL, VT, SHADD, DAG.getConstant(Bits, DL, VT));
 }
 
+// Check if this SDValue is an add immediate that is fed by a shift of 1, 2,
+// or 3.
+static bool checkAddiForShift(SDValue AddI, int64_t &AddConst,
+                              int64_t &ShlConst) {
+  // Based on testing it seems that performance degrades if the ADDI has
+  // more than 2 uses.
+  if (AddI->use_size() > 2)
+    return false;
+
+  auto *AddConstNode = dyn_cast<ConstantSDNode>(AddI->getOperand(1));
+  if (!AddConstNode)
+    return false;
+
+  SDValue SHLVal = AddI->getOperand(0);
+  if (SHLVal->getOpcode() != ISD::SHL)
+    return false;
+
+  auto *ShiftNode = dyn_cast<ConstantSDNode>(SHLVal->getOperand(1));
+  if (!ShiftNode)
+    return false;
+
+  if (ShiftNode->getSExtValue() < 1 || ShiftNode->getSExtValue() > 3)
+    return false;
+
+  ShlConst = ShiftNode->getSExtValue();
+  AddConst = AddConstNode->getSExtValue();
+  return true;
+}
+
+// Optimize (add (add (shl x, c0),  c1), y) ->
+//          (ADDI (SH*ADD y, x), c1), if c0 equals to [1|2|3].
+static SDValue combineShlAddIAdd(SDNode *N, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+  // Perform this optimization only in the zba extension.
+  if (!ReassocShlAddiAdd || !Subtarget.hasStdExtZba())
+    return SDValue();
+
+  // Skip for vector types and larger types.
+  EVT VT = N->getValueType(0);
+  if (VT != Subtarget.getXLenVT())
+    return SDValue();
+
+  // Looking for a reg-reg add and not an addi.
+  if (isa<ConstantSDNode>(N->getOperand(1)))
+    return SDValue();
+
+  SDValue AddI = N->getOperand(0);
+  SDValue Other = N->getOperand(1);
+  bool LHSIsAddI = SDPatternMatch::sd_match(
+      AddI, SDPatternMatch::m_Add(SDPatternMatch::m_Value(),
+                                  SDPatternMatch::m_ConstInt()));
+  bool RHSIsAddI = SDPatternMatch::sd_match(
+      Other, SDPatternMatch::m_Add(SDPatternMatch::m_Value(),
+                                   SDPatternMatch::m_ConstInt()));
+  int64_t AddConst = 0;
+  int64_t ShlConst = 0;
+
+  // At least one addi is required.
+  if (!LHSIsAddI && !RHSIsAddI)
+    return SDValue();
+
+  // If the LHS is not the result of an add or both sides are results of an add,
+  // but the LHS does not have the desired structure with a shift, swap the
+  // operands.
+  if (!LHSIsAddI || (RHSIsAddI && !checkAddiForShift(AddI, AddConst, ShlConst)))
+    std::swap(AddI, Other);
+
+  // We simply need to ensure AddI has the desired structure.
+  if (!checkAddiForShift(AddI, AddConst, ShlConst))
+    return SDValue();
+
+  SDValue SHLVal = AddI->getOperand(0);
+  SDLoc DL(N);
+
+  SDValue SHADD = DAG.getNode(RISCVISD::SHL_ADD, DL, VT, SHLVal->getOperand(0),
+                              DAG.getConstant(ShlConst, DL, VT), Other);
+  return DAG.getNode(ISD::ADD, DL, VT, SHADD,
+                     DAG.getConstant(AddConst, DL, VT));
+}
+
 // Combine a constant select operand into its use:
 //
 // (and (select cond, -1, c), x)
@@ -14547,9 +14635,12 @@ static SDValue performADDCombine(SDNode *N,
     return V;
   if (SDValue V = transformAddImmMulImm(N, DAG, Subtarget))
     return V;
-  if (!DCI.isBeforeLegalize() && !DCI.isCalledByLegalizer())
+  if (!DCI.isBeforeLegalize() && !DCI.isCalledByLegalizer()) {
     if (SDValue V = transformAddShlImm(N, DAG, Subtarget))
       return V;
+    if (SDValue V = combineShlAddIAdd(N, DAG, Subtarget))
+      return V;
+  }
   if (SDValue V = combineBinOpToReduce(N, DAG, Subtarget))
     return V;
   if (SDValue V = combineBinOpOfExtractToReduceTree(N, DAG, Subtarget))
