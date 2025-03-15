@@ -14081,6 +14081,17 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     }
     return true;
   };
+  auto CheckParentNodes = [&](const TreeEntry *User1, const TreeEntry *User2,
+                              unsigned EdgeIdx) {
+    const TreeEntry *Ptr1 = User1;
+    while (Ptr1) {
+      unsigned Idx = Ptr1->UserTreeIndex.EdgeIdx;
+      Ptr1 = Ptr1->UserTreeIndex.UserTE;
+      if (Ptr1 == User2)
+        return Idx < EdgeIdx;
+    }
+    return false;
+  };
   for (Value *V : VL) {
     if (isConstant(V) || !VisitedValue.insert(V).second)
       continue;
@@ -14120,6 +14131,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         if (TEUseEI.UserTE != UseEI.UserTE &&
             (TEUseEI.UserTE->Idx < UseEI.UserTE->Idx ||
              HasGatherUser(TEUseEI.UserTE)))
+          continue;
+        // If the user node is the operand of the other user node - skip.
+        if (CheckParentNodes(TEUseEI.UserTE, UseEI.UserTE, UseEI.EdgeIdx))
           continue;
       }
 
