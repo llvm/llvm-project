@@ -120,50 +120,6 @@ bool AArch64MCExpr::evaluateAsRelocatableImpl(MCValue &Res,
   return true;
 }
 
-static void fixELFSymbolsInTLSFixupsImpl(const MCExpr *Expr, MCAssembler &Asm) {
-  switch (Expr->getKind()) {
-  case MCExpr::Target:
-    llvm_unreachable("Can't handle nested target expression");
-    break;
-  case MCExpr::Constant:
-    break;
-
-  case MCExpr::Binary: {
-    const MCBinaryExpr *BE = cast<MCBinaryExpr>(Expr);
-    fixELFSymbolsInTLSFixupsImpl(BE->getLHS(), Asm);
-    fixELFSymbolsInTLSFixupsImpl(BE->getRHS(), Asm);
-    break;
-  }
-
-  case MCExpr::SymbolRef: {
-    // We're known to be under a TLS fixup, so any symbol should be
-    // modified. There should be only one.
-    const MCSymbolRefExpr &SymRef = *cast<MCSymbolRefExpr>(Expr);
-    cast<MCSymbolELF>(SymRef.getSymbol()).setType(ELF::STT_TLS);
-    break;
-  }
-
-  case MCExpr::Unary:
-    fixELFSymbolsInTLSFixupsImpl(cast<MCUnaryExpr>(Expr)->getSubExpr(), Asm);
-    break;
-  }
-}
-
-void AArch64MCExpr::fixELFSymbolsInTLSFixups(MCAssembler &Asm) const {
-  switch (getSymbolLoc(Kind)) {
-  default:
-    return;
-  case VK_DTPREL:
-  case VK_GOTTPREL:
-  case VK_TPREL:
-  case VK_TLSDESC:
-  case VK_TLSDESC_AUTH:
-    break;
-  }
-
-  fixELFSymbolsInTLSFixupsImpl(getSubExpr(), Asm);
-}
-
 const AArch64AuthMCExpr *AArch64AuthMCExpr::create(const MCExpr *Expr,
                                                    uint16_t Discriminator,
                                                    AArch64PACKey::ID Key,
