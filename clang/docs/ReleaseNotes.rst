@@ -415,6 +415,9 @@ AST Matchers
   ``MatchASTConsumer`` receive a reference to ``MatchFinderOptions`` in the
   constructor. This allows it to skip system headers when traversing the AST.
 
+- Fixed `isStaticStorageClass` not matching the definition if the definition was
+  not marked `static` as well.
+
 clang-format
 ------------
 
