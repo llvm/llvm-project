@@ -114,13 +114,13 @@ struct ModuleDeps {
   /// Whether this is a "system" module.
   bool IsSystem;
 
-  /// Whether this module is fully composed of file & module inputs from the
-  /// sysroot. External paths, as opposed to virtual file paths, are always used
-  /// for computing this value.
+  /// Whether this module is fully composed of file & module inputs from
+  /// locations likely to stay the same across the active development and build
+  /// cycle. For example, when all those input paths only resolve in Sysroot.
   ///
-  /// This attribute is useful for identifying modules that are unlikely to
-  /// change under an active development and build cycle.
-  bool IsInSysroot;
+  /// External paths, as opposed to virtual file paths, are always used
+  /// for computing this value.
+  bool IsShareable;
 
   /// The path to the modulemap file which defines this module.
   ///
@@ -229,7 +229,7 @@ private:
                           llvm::DenseSet<const Module *> &AddedModules);
 
   /// Add discovered module dependency for the given module.
-  void addClangModule(const Module *M, const ModuleID ID, ModuleDeps &MD);
+  void addOneModuleDep(const Module *M, const ModuleID ID, ModuleDeps &MD);
 };
 
 /// Collects modular and non-modular dependencies of the main file by attaching
@@ -330,6 +330,12 @@ private:
 void resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
                                const LangOptions &LangOpts,
                                CodeGenOptions &CGOpts);
+
+/// Determine if \c Input can be resolved within a shared location.
+///
+/// \param Directories Paths known to be in a shared location. e.g. Sysroot.
+/// \param Input Path to evaluate.
+bool isPathInSharedDir(ArrayRef<StringRef> Directories, const StringRef Input);
 
 } // end namespace dependencies
 } // end namespace tooling

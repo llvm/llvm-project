@@ -157,6 +157,32 @@ static void optimizeCWD(CowCompilerInvocation &BuildInvocation, StringRef CWD) {
   }
 }
 
+/// Check a subset of invocation options to determine whether the current
+/// context can safely be considered as shareable.
+static bool areOptionsInSharedDir(CowCompilerInvocation &BuildInvocation,
+                                  const ArrayRef<StringRef> SharedDirs) {
+  const auto &HSOpts = BuildInvocation.getHeaderSearchOpts();
+  if (!isPathInSharedDir(SharedDirs, HSOpts.Sysroot))
+    return false;
+
+  if (!isPathInSharedDir(SharedDirs, HSOpts.ResourceDir))
+    return false;
+
+  for (const auto &Entry : HSOpts.UserEntries) {
+    if (!Entry.IgnoreSysRoot)
+      continue;
+    if (!isPathInSharedDir(SharedDirs, Entry.Path))
+      return false;
+  }
+
+  for (const auto &SysPrefix : HSOpts.SystemHeaderPrefixes) {
+    if (!isPathInSharedDir(SharedDirs, SysPrefix.Prefix))
+      return false;
+  }
+
+  return true;
+}
+
 static std::vector<std::string> splitString(std::string S, char Separator) {
   SmallVector<StringRef> Segments;
   StringRef(S).split(Segments, Separator, /*MaxSplit=*/-1, /*KeepEmpty=*/false);
@@ -210,6 +236,25 @@ void dependencies::resetBenignCodeGenOptions(frontend::ActionKind ProgramAction,
     CGOpts.SampleProfileFile.clear();
     CGOpts.ProfileRemappingFile.clear();
   }
+}
+
+bool dependencies::isPathInSharedDir(ArrayRef<StringRef> Directories,
+                                     const StringRef Input) {
+  auto PathStartsWith = [](StringRef Prefix, StringRef Path) {
+    auto PrefixIt = llvm::sys::path::begin(Prefix),
+         PrefixEnd = llvm::sys::path::end(Prefix);
+    for (auto PathIt = llvm::sys::path::begin(Path),
+              PathEnd = llvm::sys::path::end(Path);
+         PrefixIt != PrefixEnd && PathIt != PathEnd; ++PrefixIt, ++PathIt) {
+      if (*PrefixIt != *PathIt)
+        return false;
+    }
+    return PrefixIt == PrefixEnd;
+  };
+
+  return any_of(Directories, [&](StringRef Dir) {
+    return !Dir.empty() && PathStartsWith(Dir, Input);
+  });
 }
 
 static CowCompilerInvocation
@@ -699,13 +744,15 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MD.ID.ModuleName = M->getFullModuleName();
   MD.IsSystem = M->IsSystem;
 
-  // Start off with the assumption that this module is in the sysroot when there
+  // Start off with the assumption that this module is shareable when there
   // is a sysroot provided. As more dependencies are discovered, check if those
-  // come from the provided sysroot.
-  const StringRef CurrSysroot = MDC.ScanInstance.getHeaderSearchOpts().Sysroot;
-  MD.IsInSysroot =
-      !CurrSysroot.empty() &&
-      (llvm::sys::path::root_directory(CurrSysroot) != CurrSysroot);
+  // come from the provided shared directories.
+  const llvm::SmallVector<StringRef> SharedDirs = {
+      MDC.ScanInstance.getHeaderSearchOpts().Sysroot,
+      MDC.ScanInstance.getHeaderSearchOpts().ResourceDir};
+  MD.IsShareable =
+      !SharedDirs[0].empty() &&
+      (llvm::sys::path::root_directory(SharedDirs[0]) != SharedDirs[0]);
 
   // For modules which use export_as link name, the linked product that of the
   // corresponding export_as-named module.
@@ -748,10 +795,10 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
   MDC.ScanInstance.getASTReader()->visitInputFileInfos(
       *MF, /*IncludeSystem=*/true,
       [&](const serialization::InputFileInfo &IFI, bool IsSystem) {
-        if (MD.IsInSysroot) {
+        if (MD.IsShareable) {
           auto FullFilePath = ASTReader::ResolveImportedPath(
               PathBuf, IFI.UnresolvedImportedFilename, MF->BaseDirectory);
-          MD.IsInSysroot = FullFilePath->starts_with(CurrSysroot);
+          MD.IsShareable = isPathInSharedDir(SharedDirs, *FullFilePath);
           PathBuf.resize_for_overwrite(256);
         }
         if (!(IFI.TopLevel && IFI.ModuleMap))
@@ -795,6 +842,10 @@ ModuleDepCollectorPP::handleTopLevelModule(const Module *M) {
             }
           });
 
+  // Check provided input paths from the invocation for determining IsShareable.
+  if (MD.IsShareable)
+    MD.IsShareable = areOptionsInSharedDir(CI, SharedDirs);
+
   MDC.associateWithContextHash(CI, IgnoreCWD, MD);
 
   // Finish the compiler invocation. Requires dependencies and the context hash.
@@ -836,8 +887,13 @@ void ModuleDepCollectorPP::addModulePrebuiltDeps(
   for (const Module *Import : M->Imports)
     if (Import->getTopLevelModule() != M->getTopLevelModule())
       if (MDC.isPrebuiltModule(Import->getTopLevelModule()))
-        if (SeenSubmodules.insert(Import->getTopLevelModule()).second)
+        if (SeenSubmodules.insert(Import->getTopLevelModule()).second) {
           MD.PrebuiltModuleDeps.emplace_back(Import->getTopLevelModule());
+          // Conservatively consider the module as not shareable,
+          // as transitive dependencies from the prebuilt module have not been
+          // determined.
+          MD.IsShareable = false;
+        }
 }
 
 void ModuleDepCollectorPP::addAllSubmoduleDeps(
@@ -850,11 +906,11 @@ void ModuleDepCollectorPP::addAllSubmoduleDeps(
   });
 }
 
-void ModuleDepCollectorPP::addClangModule(const Module *M, const ModuleID ID,
-                                          ModuleDeps &MD) {
+void ModuleDepCollectorPP::addOneModuleDep(const Module *M, const ModuleID ID,
+                                           ModuleDeps &MD) {
   MD.ClangModuleDeps.push_back(ID);
-  if (MD.IsInSysroot)
-    MD.IsInSysroot = MDC.ModularDeps[M]->IsInSysroot;
+  if (MD.IsShareable)
+    MD.IsShareable = MDC.ModularDeps[M]->IsShareable;
 }
 
 void ModuleDepCollectorPP::addModuleDep(
@@ -865,7 +921,7 @@ void ModuleDepCollectorPP::addModuleDep(
         !MDC.isPrebuiltModule(Import)) {
       if (auto ImportID = handleTopLevelModule(Import->getTopLevelModule()))
         if (AddedModules.insert(Import->getTopLevelModule()).second)
-          addClangModule(Import->getTopLevelModule(), *ImportID, MD);
+          addOneModuleDep(Import->getTopLevelModule(), *ImportID, MD);
     }
   }
 }
@@ -889,7 +945,7 @@ void ModuleDepCollectorPP::addAffectingClangModule(
         !MDC.isPrebuiltModule(Affecting)) {
       if (auto ImportID = handleTopLevelModule(Affecting))
         if (AddedModules.insert(Affecting).second)
-          addClangModule(Affecting, *ImportID, MD);
+          addOneModuleDep(Affecting, *ImportID, MD);
     }
   }
 }

@@ -1,8 +1,9 @@
-// This test verifies modules that are entirely comprised from sysroot inputs are captured in
+// This test verifies modules that are entirely comprised from shared directory inputs are captured in
 // dependency information.
 
-// The first compilation verifies that transitive dependencies on non-sysroot input are captured.
-// The second compilation verifies that external paths are resolved when a vfsoverlay is applied when considering sysroot-ness.
+// The first compilation verifies that transitive dependencies on local input are captured.
+// The second compilation verifies that external paths are resolved when a 
+// vfsoverlay for determining is-shareable.
 
 // REQUIRES: shell
 // RUN: rm -rf %t
@@ -15,11 +16,11 @@
 
 // CHECK:   "modules": [
 // CHECK-NEXT:     {
-// CHECK:            "is-in-sysroot": true,
+// CHECK:            "is-shareable": true,
 // CHECK:            "name": "A"
 
 // Verify that there are no more occurances of sysroot.
-// CHECK-NOT:            "is-in-sysroot"
+// CHECK-NOT:            "is-shareable"
 
 // CHECK:            "name": "A"
 // CHECK:            "USE_VFS"
@@ -32,12 +33,12 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -c DIR/client.c -isysroot DIR/MacOSX.sdk -IDIR/MacOSX.sdk/usr/include -IDIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
+  "command": "clang -c DIR/client.c -isysroot DIR/Sysroot -IDIR/Sysroot/usr/include -IDIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
   "file": "DIR/client.c"
 },
 {
   "directory": "DIR",
-  "command": "clang -c DIR/client.c -isysroot DIR/MacOSX.sdk -IDIR/MacOSX.sdk/usr/include -ivfsoverlay DIR/overlay.json -DUSE_VFS -IDIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
+  "command": "clang -c DIR/client.c -isysroot DIR/Sysroot -IDIR/Sysroot/usr/include -ivfsoverlay DIR/overlay.json -DUSE_VFS -IDIR/BuildDir -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-module-maps",
   "file": "DIR/client.c"
 }
 ]
@@ -48,51 +49,51 @@
   "case-sensitive": "false",
   "roots": [
     {
-          "external-contents": "DIR/local/A/A_vfs.h",
-          "name": "DIR/MacOSX.sdk/usr/include/A/A_vfs.h",
+          "external-contents": "DIR/SysrootButNotReally/A/A_vfs.h",
+          "name": "DIR/Sysroot/usr/include/A/A_vfs.h",
           "type": "file"
     }
   ]
 }
 
-//--- MacOSX.sdk/usr/include/A/module.modulemap
+//--- Sysroot/usr/include/A/module.modulemap
 module A {
   umbrella "."
 }
 
-//--- MacOSX.sdk/usr/include/A/A.h
+//--- Sysroot/usr/include/A/A.h
 #ifdef USE_VFS
 #include <A/A_vfs.h>
 #endif 
 typedef int A_t;
 
-//--- local/A/A_vfs.h
+//--- SysrootButNotReally/A/A_vfs.h
 typedef int typeFromVFS;
 
-//--- MacOSX.sdk/usr/include/B/module.modulemap
+//--- Sysroot/usr/include/B/module.modulemap
 module B [system] {
   umbrella "."
 }
 
-//--- MacOSX.sdk/usr/include/B/B.h
+//--- Sysroot/usr/include/B/B.h
 #include <C/C.h>
 typedef int B_t;
 
-//--- MacOSX.sdk/usr/include/C/module.modulemap
+//--- Sysroot/usr/include/C/module.modulemap
 module C [system] {
   umbrella "."
 }
 
-//--- MacOSX.sdk/usr/include/C/C.h
+//--- Sysroot/usr/include/C/C.h
 #include <D/D.h>
 
-//--- MacOSX.sdk/usr/include/D/module.modulemap
+//--- Sysroot/usr/include/D/module.modulemap
 module D [system] {
   umbrella "."
 }
 
 // Simulate a header that will be resolved in a local directory, from a sysroot header.
-//--- MacOSX.sdk/usr/include/D/D.h
+//--- Sysroot/usr/include/D/D.h
 #include <HeaderNotFoundInSDK.h>
 
 //--- BuildDir/module.modulemap
