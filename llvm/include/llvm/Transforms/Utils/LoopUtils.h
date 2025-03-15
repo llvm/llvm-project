@@ -427,11 +427,6 @@ Value *createAnyOfReduction(IRBuilderBase &B, Value *Src,
 Value *createFindLastIVReduction(IRBuilderBase &B, Value *Src,
                                  const RecurrenceDescriptor &Desc);
 
-/// Create a generic reduction using a recurrence descriptor \p Desc
-/// Fast-math-flags are propagated using the RecurrenceDescriptor.
-Value *createReduction(IRBuilderBase &B, const RecurrenceDescriptor &Desc,
-                       Value *Src, PHINode *OrigPhi = nullptr);
-
 /// Create an ordered reduction intrinsic using the given recurrence
 /// descriptor \p Desc.
 Value *createOrderedReduction(IRBuilderBase &B,

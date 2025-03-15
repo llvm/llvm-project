@@ -672,8 +672,21 @@ Value *VPInstruction::generate(VPTransformState &State) {
          RecurrenceDescriptor::isAnyOfRecurrenceKind(RK) ||
          RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK)) &&
         !PhiR->isInLoop()) {
-      ReducedPartRdx =
-          createReduction(Builder, RdxDesc, ReducedPartRdx, OrigPhi);
+      // TODO: Support in-order reductions based on the recurrence descriptor.
+      // All ops in the reduction inherit fast-math-flags from the recurrence
+      // descriptor.
+      IRBuilderBase::FastMathFlagGuard FMFG(Builder);
+      Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
+
+      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
+        ReducedPartRdx =
+            createAnyOfReduction(Builder, ReducedPartRdx, RdxDesc, OrigPhi);
+      else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
+        ReducedPartRdx =
+            createFindLastIVReduction(Builder, ReducedPartRdx, RdxDesc);
+      else
+        ReducedPartRdx = createSimpleReduction(Builder, ReducedPartRdx, RK);
+
       // If the reduction can be performed in a smaller type, we need to extend
       // the reduction to the wider type before we branch to the original loop.
       if (PhiTy != RdxDesc.getRecurrenceType())
@@ -2306,7 +2319,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     NextInChain = NewRed;
   } else {
     PrevInChain = State.get(getChainOp(), /*IsScalar*/ true);
-    NewRed = createReduction(State.Builder, RdxDesc, NewVecOp);
+    NewRed = createSimpleReduction(State.Builder, NewVecOp, Kind);
     if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind))
       NextInChain = createMinMaxOp(State.Builder, RdxDesc.getRecurrenceKind(),
                                    NewRed, PrevInChain);
