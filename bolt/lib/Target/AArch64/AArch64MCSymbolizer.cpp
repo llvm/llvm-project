@@ -125,7 +125,7 @@ AArch64MCSymbolizer::adjustRelocation(const Relocation &Rel,
     // instruction pairs and will perform necessary adjustments.
     ErrorOr<uint64_t> SymbolValue = BC.getSymbolValue(*Rel.Symbol);
     assert(SymbolValue && "Symbol value should be set");
-    const uint64_t SymbolPageAddr = *SymbolValue & ~0xfffULL;
+    (void)SymbolValue;
 
     AdjustedRel.Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
     AdjustedRel.Addend = Rel.Value;
