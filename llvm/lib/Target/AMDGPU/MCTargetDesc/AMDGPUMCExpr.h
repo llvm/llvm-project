@@ -100,7 +100,6 @@ public:
   bool isSymbolUsedInExpression(const MCSymbol *Sym) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override{};
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
