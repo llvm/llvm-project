@@ -585,6 +585,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // FIXME - use subtarget debug flags
   if (!Subtarget.isTargetDarwin() && !Subtarget.isTargetELF() &&
       !Subtarget.isTargetCygMing() && !Subtarget.isTargetWin64() &&
+      !Subtarget.isTargetUEFI64() &&
       TM.Options.ExceptionModel != ExceptionHandling::SjLj) {
     setOperationAction(ISD::EH_LABEL, MVT::Other, Expand);
   }
@@ -2595,7 +2596,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FSINCOS, MVT::f32, Custom);
   }
 
-  if (Subtarget.isTargetWin64()) {
+  if (Subtarget.isTargetWin64() || Subtarget.isTargetUEFI64()) {
     setOperationAction(ISD::SDIV, MVT::i128, Custom);
     setOperationAction(ISD::UDIV, MVT::i128, Custom);
     setOperationAction(ISD::SREM, MVT::i128, Custom);
@@ -19860,7 +19861,8 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   else if (isLegalConversion(SrcVT, true, Subtarget))
     return Op;
 
-  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
+  if ((Subtarget.isTargetWin64() || Subtarget.isTargetUEFI64()) &&
+      SrcVT == MVT::i128)
     return LowerWin64_INT128_TO_FP(Op, DAG);
 
   if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
@@ -20367,7 +20369,8 @@ SDValue X86TargetLowering::LowerUINT_TO_FP(SDValue Op,
   if (DstVT.isVector())
     return lowerUINT_TO_FP_vec(Op, dl, DAG, Subtarget);
 
-  if (Subtarget.isTargetWin64() && SrcVT == MVT::i128)
+  if ((Subtarget.isTargetWin64() || Subtarget.isTargetUEFI64()) &&
+      SrcVT == MVT::i128)
     return LowerWin64_INT128_TO_FP(Op, DAG);
 
   if (SDValue Extract = vectorizeExtractedCast(Op, dl, DAG, Subtarget))
@@ -28087,7 +28090,6 @@ Register X86TargetLowering::getRegisterByName(const char* RegName, LLT VT,
                      .Case("r14", X86::R14)
                      .Case("r15", X86::R15)
                      .Default(0);
-
   if (Reg == X86::EBP || Reg == X86::RBP) {
     if (!TFI.hasFP(MF))
       report_fatal_error("register " + StringRef(RegName) +
@@ -28131,7 +28133,7 @@ Register X86TargetLowering::getExceptionSelectorRegister(
 }
 
 bool X86TargetLowering::needsFixedCatchObjects() const {
-  return Subtarget.isTargetWin64();
+  return Subtarget.isTargetWin64() || Subtarget.isTargetUEFI64();
 }
 
 SDValue X86TargetLowering::LowerEH_RETURN(SDValue Op, SelectionDAG &DAG) const {
@@ -29753,7 +29755,8 @@ static SDValue LowerMULO(SDValue Op, const X86Subtarget &Subtarget,
 }
 
 SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) const {
-  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  assert((Subtarget.isTargetWin64() || Subtarget.isTargetUEFI64()) &&
+         "Unexpected target");
   EVT VT = Op.getValueType();
   assert(VT.isInteger() && VT.getSizeInBits() == 128 &&
          "Unexpected return type for lowering");
@@ -29819,7 +29822,8 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
 SDValue X86TargetLowering::LowerWin64_FP_TO_INT128(SDValue Op,
                                                    SelectionDAG &DAG,
                                                    SDValue &Chain) const {
-  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  assert((Subtarget.isTargetWin64() || Subtarget.isTargetUEFI64()) &&
+         "Unexpected target");
   EVT VT = Op.getValueType();
   bool IsStrict = Op->isStrictFPOpcode();
 
@@ -29852,7 +29856,8 @@ SDValue X86TargetLowering::LowerWin64_FP_TO_INT128(SDValue Op,
 
 SDValue X86TargetLowering::LowerWin64_INT128_TO_FP(SDValue Op,
                                                    SelectionDAG &DAG) const {
-  assert(Subtarget.isTargetWin64() && "Unexpected target");
+  assert((Subtarget.isTargetWin64() || Subtarget.isTargetUEFI64()) &&
+         "Unexpected target");
   EVT VT = Op.getValueType();
   bool IsStrict = Op->isStrictFPOpcode();
 
@@ -34114,7 +34119,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       return;
     }
 
-    if (VT == MVT::i128 && Subtarget.isTargetWin64()) {
+    if (VT == MVT::i128 &&
+        (Subtarget.isTargetWin64() || Subtarget.isTargetUEFI64())) {
       SDValue Chain;
       SDValue V = LowerWin64_FP_TO_INT128(SDValue(N, 0), DAG, Chain);
       Results.push_back(V);
@@ -61606,8 +61612,8 @@ bool X86TargetLowering::hasStackProbeSymbol(const MachineFunction &MF) const {
 /// Returns true if stack probing through inline assembly is requested.
 bool X86TargetLowering::hasInlineStackProbe(const MachineFunction &MF) const {
 
-  // No inline stack probe for Windows, they have their own mechanism.
-  if (Subtarget.isOSWindows() ||
+  // No inline stack probe for Windows and UEFI, they have their own mechanism.
+  if (Subtarget.isOSWindowsOrUEFI() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return false;
 
@@ -61631,9 +61637,9 @@ X86TargetLowering::getStackProbeSymbolName(const MachineFunction &MF) const {
   if (MF.getFunction().hasFnAttribute("probe-stack"))
     return MF.getFunction().getFnAttribute("probe-stack").getValueAsString();
 
-  // Generally, if we aren't on Windows, the platform ABI does not include
-  // support for stack probes, so don't emit them.
-  if (!Subtarget.isOSWindows() || Subtarget.isTargetMachO() ||
+  // Generally, if we aren't on Windows or UEFI, the platform ABI does not
+  // include support for stack probes, so don't emit them.
+  if (!(Subtarget.isOSWindowsOrUEFI()) || Subtarget.isTargetMachO() ||
       MF.getFunction().hasFnAttribute("no-stack-arg-probe"))
     return "";
 

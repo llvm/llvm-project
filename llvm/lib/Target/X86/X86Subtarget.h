@@ -327,11 +327,13 @@ public:
 
   bool isTargetCygMing() const { return TargetTriple.isOSCygMing(); }
 
-  bool isUEFI() const { return TargetTriple.isUEFI(); }
-
   bool isOSWindows() const { return TargetTriple.isOSWindows(); }
 
-  bool isOSWindowsOrUEFI() const { return isOSWindows() || isUEFI(); }
+  bool isUEFI() const { return TargetTriple.isUEFI(); }
+
+  bool isOSWindowsOrUEFI() const { return TargetTriple.isOSWindowsOrUEFI(); }
+
+  bool isTargetUEFI64() const { return Is64Bit && isUEFI(); }
 
   bool isTargetWin64() const { return Is64Bit && isOSWindows(); }
 
@@ -348,7 +350,8 @@ public:
 
   bool isCallingConvWin64(CallingConv::ID CC) const {
     switch (CC) {
-    // On Win64, all these conventions just use the default convention.
+    // On Win64 and UEFI64, all these conventions just use the default
+    // convention.
     case CallingConv::C:
     case CallingConv::Fast:
     case CallingConv::Tail:
@@ -359,7 +362,7 @@ public:
     case CallingConv::X86_ThisCall:
     case CallingConv::X86_VectorCall:
     case CallingConv::Intel_OCL_BI:
-      return isTargetWin64();
+      return isTargetWin64() || isTargetUEFI64();
     // This convention allows using the Win64 convention on other targets.
     case CallingConv::Win64:
       return true;
