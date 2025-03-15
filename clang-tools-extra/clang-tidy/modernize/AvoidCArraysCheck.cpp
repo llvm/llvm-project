@@ -21,12 +21,12 @@ AST_MATCHER(clang::TypeLoc, hasValidBeginLoc) {
   return Node.getBeginLoc().isValid();
 }
 
-AST_MATCHER_P(clang::TypeLoc, hasType,
-              clang::ast_matchers::internal::Matcher<clang::Type>,
-              InnerMatcher) {
+AST_MATCHER_P(clang::TypeLoc, hasArrayType, bool, CheckSugaredTypes) {
   const clang::Type *TypeNode = Node.getTypePtr();
-  return TypeNode != nullptr &&
-         InnerMatcher.matches(*TypeNode, Finder, Builder);
+  if (CheckSugaredTypes && TypeNode != nullptr) {
+    TypeNode = TypeNode->getUnqualifiedDesugaredType();
+  }
+  return TypeNode != nullptr && arrayType().matches(*TypeNode, Finder, Builder);
 }
 
 AST_MATCHER(clang::RecordDecl, isExternCContext) {
@@ -43,7 +43,8 @@ AST_MATCHER(clang::ParmVarDecl, isArgvOfMain) {
 
 AvoidCArraysCheck::AvoidCArraysCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
-      AllowStringArrays(Options.get("AllowStringArrays", false)) {}
+      AllowStringArrays(Options.get("AllowStringArrays", false)),
+      CheckSugaredTypes(Options.get("CheckSugaredTypes", false)) {}
 
 void AvoidCArraysCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "AllowStringArrays", AllowStringArrays);
@@ -60,7 +61,7 @@ void AvoidCArraysCheck::registerMatchers(MatchFinder *Finder) {
                                          unless(parmVarDecl())))));
 
   Finder->addMatcher(
-      typeLoc(hasValidBeginLoc(), hasType(arrayType()),
+      typeLoc(hasValidBeginLoc(), hasArrayType(CheckSugaredTypes),
               optionally(hasParent(parmVarDecl().bind("param_decl"))),
               unless(anyOf(hasParent(parmVarDecl(isArgvOfMain())),
                            hasParent(varDecl(isExternC())),
@@ -96,6 +97,26 @@ void AvoidCArraysCheck::check(const MatchFinder::MatchResult &Result) {
   diag(ArrayType->getBeginLoc(),
        "do not declare %select{C-style|C VLA}0 arrays, use %1 instead")
       << IsVLA << llvm::join(RecommendTypes, " or ");
+
+  if (CheckSugaredTypes) {
+    PrintingPolicy PrintPolicy{getLangOpts()};
+    PrintPolicy.SuppressTagKeyword = true;
+
+    const auto TypeName = ArrayType->getType().getAsString(PrintPolicy);
+    const auto DesugaredTypeName = ArrayType->getType()
+                                       ->getUnqualifiedDesugaredType()
+                                       ->getCanonicalTypeInternal()
+                                       .getAsString(PrintPolicy);
+    if (TypeName != DesugaredTypeName) {
+      diag(ArrayType->getBeginLoc(), "declared type '%0' resolves to '%1'",
+           DiagnosticIDs::Note)
+          << TypeName << DesugaredTypeName;
+    } else {
+      diag(ArrayType->getBeginLoc(), "array type '%0' here",
+           DiagnosticIDs::Note)
+          << TypeName;
+    }
+  }
 }
 
 } // namespace clang::tidy::modernize

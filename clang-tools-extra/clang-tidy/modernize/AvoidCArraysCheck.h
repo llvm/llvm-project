@@ -32,6 +32,7 @@ public:
 
 private:
   const bool AllowStringArrays;
+  const bool CheckSugaredTypes;
 };
 
 } // namespace clang::tidy::modernize
