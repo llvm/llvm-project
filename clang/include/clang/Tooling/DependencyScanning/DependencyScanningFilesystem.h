@@ -247,16 +247,13 @@ public:
   insertEntryForFilename(StringRef Filename,
                          const CachedFileSystemEntry &Entry) {
     assert(llvm::sys::path::is_absolute_gnu(Filename));
-
-      auto &[CachedEntry, CachedRealPath] = Cache.try_emplace(
+    auto &[CachedEntry, CachedRealPath] = Cache.try_emplace(
           Filename, &Entry, nullptr).first->getValue();
-    
-      if (!CachedEntry) {
-        assert((!CachedEntry && CachedRealPath) && "entry already present");
-        CachedEntry = &Entry;
-      }
-    
-      return *CachedEntry;
+    if (!CachedEntry) {
+      assert((!CachedEntry && CachedRealPath) && "entry already present");
+      CachedEntry = &Entry;
+    }
+    return *CachedEntry;
   }
 
   /// Returns real path associated with the filename or nullptr if none is
@@ -275,12 +272,10 @@ public:
     assert(llvm::sys::path::is_absolute_gnu(Filename));
     auto &[CachedEntry, CachedRealPath] = Cache.try_emplace(
           Filename, nullptr, &RealPath).first->getValue();
-    
     if (!CachedRealPath) {
       assert((!CachedRealPath && CachedEntry) && "real path already present");
       CachedRealPath = &RealPath;
     }
-    
     return *CachedRealPath;
   }
 };
