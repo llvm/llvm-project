@@ -774,6 +774,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                        ISD::UINT_TO_FP,
                        ISD::STRICT_FP_EXTEND,
                        ISD::BSWAP,
+                       ISD::SETCC,
                        ISD::SDIV,
                        ISD::UDIV,
                        ISD::SREM,
@@ -3260,6 +3261,43 @@ static void adjustICmp128(SelectionDAG &DAG, const SDLoc &DL,
     return;
   if (C.Op0.getValueType() != MVT::i128)
     return;
+
+  // Recognize vector comparison reductions.
+  if ((C.CCMask == SystemZ::CCMASK_CMP_EQ ||
+       C.CCMask == SystemZ::CCMASK_CMP_NE) &&
+      (isNullConstant(C.Op1) || isAllOnesConstant(C.Op1))) {
+    bool CmpEq = C.CCMask == SystemZ::CCMASK_CMP_EQ;
+    bool CmpNull = isNullConstant(C.Op1);
+    SDValue Src = peekThroughBitcasts(C.Op0);
+    if (Src.hasOneUse() && isBitwiseNot(Src)) {
+      Src = Src.getOperand(0);
+      CmpNull = !CmpNull;
+    }
+    unsigned Opcode = 0;
+    if (Src.hasOneUse()) {
+      switch (Src.getOpcode()) {
+      case SystemZISD::VICMPE: Opcode = SystemZISD::VICMPES; break;
+      case SystemZISD::VICMPH: Opcode = SystemZISD::VICMPHS; break;
+      case SystemZISD::VICMPHL: Opcode = SystemZISD::VICMPHLS; break;
+      case SystemZISD::VFCMPE: Opcode = SystemZISD::VFCMPES; break;
+      case SystemZISD::VFCMPH: Opcode = SystemZISD::VFCMPHS; break;
+      case SystemZISD::VFCMPHE: Opcode = SystemZISD::VFCMPHES; break;
+      default: break;
+      }
+    }
+    if (Opcode) {
+      C.Opcode = Opcode;
+      C.Op0 = Src->getOperand(0);
+      C.Op1 = Src->getOperand(1);
+      C.CCValid = SystemZ::CCMASK_VCMP;
+      C.CCMask = CmpNull ? SystemZ::CCMASK_VCMP_NONE : SystemZ::CCMASK_VCMP_ALL;
+      if (!CmpEq)
+        C.CCMask ^= C.CCValid;
+      return;
+    }
+  }
+
+  // Everything below here is not useful if we have native i128 compares.
   if (DAG.getSubtarget<SystemZSubtarget>().hasVectorEnhancements3())
     return;
 
@@ -3443,8 +3481,14 @@ static SDValue emitCmp(SelectionDAG &DAG, const SDLoc &DL, Comparison &C) {
     return DAG.getNode(SystemZISD::TM, DL, MVT::i32, C.Op0, C.Op1,
                        DAG.getTargetConstant(RegisterOnly, DL, MVT::i32));
   }
-  if (C.Opcode == SystemZISD::VICMPES) {
-    SDVTList VTs = DAG.getVTList(C.Op0.getValueType(), MVT::i32);
+  if (C.Opcode == SystemZISD::VICMPES ||
+      C.Opcode == SystemZISD::VICMPHS ||
+      C.Opcode == SystemZISD::VICMPHLS ||
+      C.Opcode == SystemZISD::VFCMPES ||
+      C.Opcode == SystemZISD::VFCMPHS ||
+      C.Opcode == SystemZISD::VFCMPHES) {
+    EVT IntVT = C.Op0.getValueType().changeVectorElementTypeToInteger();
+    SDVTList VTs = DAG.getVTList(IntVT, MVT::i32);
     SDValue Val = DAG.getNode(C.Opcode, DL, VTs, C.Op0, C.Op1);
     return SDValue(Val.getNode(), 1);
   }
@@ -8036,6 +8080,42 @@ SDValue SystemZTargetLowering::combineBSWAP(
   return SDValue();
 }
 
+SDValue SystemZTargetLowering::combineSETCC(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  const ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+  const SDValue LHS = N->getOperand(0);
+  const SDValue RHS = N->getOperand(1);
+  bool CmpNull = isNullConstant(RHS);
+  bool CmpAllOnes = isAllOnesConstant(RHS);
+  EVT VT = N->getValueType(0);
+  SDLoc DL(N);
+
+  // Match icmp_eq/ne(bitcast(icmp(X,Y)),0/-1) reduction patterns, and
+  // change the outer compare to a i128 compare.  This will normally
+  // allow the reduction to be recognized in adjustICmp128, and even if
+  // not, the i128 compare will still generate better code.
+  if ((CC == ISD::SETNE || CC == ISD::SETEQ) && (CmpNull || CmpAllOnes)) {
+    SDValue Src = peekThroughBitcasts(LHS);
+    if (Src.getOpcode() == ISD::SETCC &&
+        Src.getValueType().isFixedLengthVector() &&
+        Src.getValueType().getScalarType() == MVT::i1) {
+      EVT CmpVT = Src.getOperand(0).getValueType();
+      if (CmpVT.getSizeInBits() == 128) {
+        EVT IntVT = CmpVT.changeVectorElementTypeToInteger();
+        SDValue LHS =
+            DAG.getBitcast(MVT::i128, DAG.getSExtOrTrunc(Src, DL, IntVT));
+        SDValue RHS = CmpNull ? DAG.getConstant(0, DL, MVT::i128)
+                              : DAG.getAllOnesConstant(DL, MVT::i128);
+        return DAG.getNode(ISD::SETCC, DL, VT, LHS, RHS, N->getOperand(2),
+                           N->getFlags());
+      }
+    }
+  }
+
+  return SDValue();
+}
+
 static bool combineCCMask(SDValue &CCReg, int &CCValid, int &CCMask) {
   // We have a SELECT_CCMASK or BR_CCMASK comparing the condition code
   // set by the CCReg instruction using the CCValid / CCMask masks,
@@ -8286,6 +8366,7 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::SINT_TO_FP:
   case ISD::UINT_TO_FP:         return combineINT_TO_FP(N, DCI);
   case ISD::BSWAP:              return combineBSWAP(N, DCI);
+  case ISD::SETCC:              return combineSETCC(N, DCI);
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
   case SystemZISD::SELECT_CCMASK: return combineSELECT_CCMASK(N, DCI);
   case SystemZISD::GET_CCMASK:  return combineGET_CCMASK(N, DCI);
