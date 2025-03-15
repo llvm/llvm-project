@@ -6740,16 +6740,18 @@ static void emitOMPAtomicCompareExpr(
               R->getType().isVolatileQualified()};
   }
 
+  llvm::OpenMPIRBuilder::InsertPointTy AllocaIP(
+      CGF.AllocaInsertPt->getParent(), CGF.AllocaInsertPt->getIterator());
   if (FailAO == llvm::AtomicOrdering::NotAtomic) {
     // fail clause was not mentioned on the
     // "#pragma omp atomic compare" construct.
-    CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
-        CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
-        IsPostfixUpdate, IsFailOnly));
+    CGF.Builder.restoreIP(cantFail(OMPBuilder.createAtomicCompare(
+        CGF.Builder, AllocaIP, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op,
+        IsXBinopExpr, IsPostfixUpdate, IsFailOnly)));
   } else
-    CGF.Builder.restoreIP(OMPBuilder.createAtomicCompare(
-        CGF.Builder, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op, IsXBinopExpr,
-        IsPostfixUpdate, IsFailOnly, FailAO));
+    CGF.Builder.restoreIP(cantFail(OMPBuilder.createAtomicCompare(
+        CGF.Builder, AllocaIP, XOpVal, VOpVal, ROpVal, EVal, DVal, AO, Op,
+        IsXBinopExpr, IsPostfixUpdate, IsFailOnly, FailAO)));
 }
 
 static void emitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
