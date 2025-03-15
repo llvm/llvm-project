@@ -12,8 +12,11 @@
 
 #include "llvm/ObjectYAML/CovMap.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/ProfileData/Coverage/CoverageMapping.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ProfileData/Coverage/CoverageMappingWriter.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -24,8 +27,10 @@
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -41,10 +46,15 @@ bool Decoder::enabled;
 Decoder::~Decoder() {}
 
 // DataExtractor w/ single Cursor
-struct coverage::yaml::DecoderContext : DataExtractor, DataExtractor::Cursor {
-  DecoderContext(const ArrayRef<uint8_t> Content, bool IsLE)
+struct coverage::yaml::DecoderContext : DataExtractor,
+                                        DataExtractor::Cursor,
+                                        DecoderParam {
+  uint64_t LineStart = 0;
+
+  DecoderContext(const ArrayRef<uint8_t> Content, bool IsLE,
+                 const DecoderParam &Param)
       : DataExtractor(Content, IsLE, /*AddressSize=*/0),
-        DataExtractor::Cursor(0) {}
+        DataExtractor::Cursor(0), DecoderParam(Param) {}
 
   bool eof() { return DataExtractor::eof(*this); }
   uint32_t getU32() { return DataExtractor::getU32(*this); }
@@ -59,15 +69,52 @@ struct coverage::yaml::DecoderContext : DataExtractor, DataExtractor::Cursor {
 };
 
 void CounterTy::encode(raw_ostream &OS) const {
-  encodeULEB128(Tag | (Val << 2), OS);
+  std::pair<unsigned, uint64_t> C;
+  if (RefOpt)
+    C = {Ref, *RefOpt};
+  else if (SubOpt)
+    C = {Sub, *SubOpt};
+  else if (AddOpt)
+    C = {Add, *AddOpt};
+  else if (Tag && Val)
+    C = {*Tag, *Val};
+  else if (Tag && *Tag == Zero)
+    C = {Zero, 0u};
+  else
+    llvm_unreachable("Null value cannot be met");
+
+  encodeULEB128(C.first | (C.second << 2), OS);
 }
 
 Error CounterTy::decodeOrTag(DecoderContext &Data) {
   auto COrErr = Data.getULEB128();
   if (!COrErr)
     return COrErr.takeError();
-  Tag = static_cast<TagTy>(*COrErr & 0x03);
-  Val = (*COrErr >> 2);
+  auto T = static_cast<TagTy>(*COrErr & 0x03);
+  auto V = (*COrErr >> 2);
+  if (Data.Raw) {
+    Tag = T;
+    Val = V;
+  } else {
+    switch (T) {
+    case Zero:
+      if (V)
+        Val = V;
+      else
+        Tag = Zero;
+      break;
+    case Ref:
+      RefOpt = V;
+      break;
+    case Sub:
+      SubOpt = V;
+      break;
+    case Add:
+      AddOpt = V;
+      break;
+    }
+  }
+
   return Error::success();
 }
 
@@ -100,7 +147,7 @@ Error DecisionTy::decode(DecoderContext &Data) {
   return Error::success();
 }
 
-void RecTy::encode(raw_ostream &OS) const {
+void RecTy::encode(uint64_t &StartLoc, raw_ostream &OS) const {
   if (Expansion) {
     encodeULEB128(4 + (*Expansion << 3), OS);
   } else if (ExtTag && *ExtTag == Skip) {
@@ -130,10 +177,18 @@ void RecTy::encode(raw_ostream &OS) const {
 
   assert((!isGap || *isGap) && "Don't set isGap=false");
   uint32_t Gap = (isGap ? (1u << 31) : 0u);
-  encodeULEB128(dLoc[0], OS);
-  encodeULEB128(dLoc[1], OS);
-  encodeULEB128(dLoc[2], OS);
-  encodeULEB128(dLoc[3] | Gap, OS);
+  if (Loc) {
+    encodeULEB128((*Loc)[0] - StartLoc, OS);
+    encodeULEB128((*Loc)[1], OS);
+    encodeULEB128((*Loc)[2] - (*Loc)[0], OS);
+    encodeULEB128((*Loc)[3] | Gap, OS);
+    StartLoc = (*Loc)[0];
+  } else {
+    encodeULEB128((*dLoc)[0], OS);
+    encodeULEB128((*dLoc)[1], OS);
+    encodeULEB128((*dLoc)[2], OS);
+    encodeULEB128((*dLoc)[3] | Gap, OS);
+  }
 }
 
 Error RecTy::decode(DecoderContext &Data) {
@@ -165,8 +220,18 @@ Error RecTy::decode(DecoderContext &Data) {
     // Compatible to CounterTy
   } else if (V & 1u) {
     Expansion = (V >> 1);
+    if (!Data.Raw) {
+      assert(!this->Tag || *this->Tag == Zero);
+      this->Tag.reset();
+      this->Val.reset();
+    }
   } else {
     auto Tag = (V >> 1);
+    if (!Data.Raw) {
+      assert(!this->Tag || *this->Tag == Zero);
+      this->Tag.reset();
+      this->Val.reset();
+    }
     switch (Tag) {
     case Skip:
       ExtTag = Skip; // w/o Val
@@ -174,12 +239,14 @@ Error RecTy::decode(DecoderContext &Data) {
     case Decision:
       if (auto E = DecisionOpt.emplace().decode(Data))
         return E;
-      ExtTag = Decision;
+      if (Data.Raw)
+        ExtTag = Decision;
       break;
     case Branch:
       if (auto E = decodeBranch())
         return E;
-      ExtTag = Branch;
+      if (Data.Raw)
+        ExtTag = Branch;
       break;
     case MCDCBranch: {
       if (auto E = decodeBranch())
@@ -194,7 +261,8 @@ Error RecTy::decode(DecoderContext &Data) {
       if (!I2OrErr)
         return I2OrErr.takeError();
       MCDC = {*I0OrErr, *I1OrErr, *I2OrErr};
-      ExtTag = MCDCBranch;
+      if (Data.Raw)
+        ExtTag = MCDCBranch;
       break;
     }
     default:
@@ -208,6 +276,7 @@ Error RecTy::decode(DecoderContext &Data) {
   auto LSDeltaOrErr = Data.getULEB128();
   if (!LSDeltaOrErr)
     return LSDeltaOrErr.takeError();
+  Data.LineStart += *LSDeltaOrErr;
 
   auto CSOrErr = Data.getULEB128();
   if (!CSOrErr)
@@ -216,6 +285,7 @@ Error RecTy::decode(DecoderContext &Data) {
   auto NLOrErr = Data.getULEB128();
   if (!NLOrErr)
     return NLOrErr.takeError();
+  auto LineEnd = Data.LineStart + *NLOrErr;
 
   auto CEOrErr = Data.getULEB128();
   if (!CEOrErr)
@@ -228,6 +298,7 @@ Error RecTy::decode(DecoderContext &Data) {
   ColumnEnd &= ((1u << 31) - 1);
 
   dLoc = {*LSDeltaOrErr, *CSOrErr, *NLOrErr, ColumnEnd};
+  Loc = {Data.LineStart, *CSOrErr, LineEnd, ColumnEnd};
 
   return Error::success();
 }
@@ -237,6 +308,8 @@ void CovFunTy::encode(raw_ostream &OS, endianness Endianness) const {
   std::string Body;
   raw_string_ostream SS(Body);
 
+  assert(this->FileIDs);
+  auto &FileIDs = *this->FileIDs;
   encodeULEB128(FileIDs.size(), SS);
   for (auto I : FileIDs)
     encodeULEB128(I, SS);
@@ -249,12 +322,14 @@ void CovFunTy::encode(raw_ostream &OS, endianness Endianness) const {
 
   for (const auto &File : Files) {
     encodeULEB128(File.Recs.size(), SS);
+    uint64_t StartLoc = 0;
     for (const auto &Rec : File.Recs)
-      Rec.encode(SS);
+      Rec.encode(StartLoc, SS);
   }
 
   // Emit the Header
-  uint64_t NameRef = this->NameRef;
+  uint64_t NameRef = (this->NameRef ? static_cast<uint64_t>(*this->NameRef)
+                                    : MD5Hash(*this->FuncName));
   uint32_t DataSize = Body.size();
   uint64_t FuncHash = this->FuncHash;
   char CoverageMapping = 0; // dummy
@@ -271,18 +346,60 @@ void CovFunTy::encode(raw_ostream &OS, endianness Endianness) const {
   OS << std::move(Body);
 }
 
+std::vector<std::string> CovMapTy::generateAccFilenames(
+    const std::optional<ArrayRef<StringRef>> &AccFilesOpt) const {
+  std::vector<std::string> Result;
+  if (useWD())
+    Result.push_back(getWD().str());
+  // Returns {WD} if AccFiles is None.
+  if (AccFilesOpt) {
+    for (auto &Filename : *AccFilesOpt)
+      Result.push_back(Filename.str());
+  }
+  return Result;
+}
+
+void CovMapTy::regenerateFilenames(
+    const std::optional<ArrayRef<StringRef>> &AccFilesOpt) {
+  assert(!this->Filenames);
+  if (this->Files) {
+    auto &CovMapFilenames = this->Filenames.emplace(generateAccFilenames());
+    assert(CovMapFilenames.size() <= 1);
+    for (auto &&File : *this->Files)
+      CovMapFilenames.push_back(std::move(File));
+  } else {
+    // Encode Accfiles, that comes from CovFun.
+    this->Filenames = generateAccFilenames(AccFilesOpt);
+  }
+}
+
 std::pair<uint64_t, std::string>
-CovMapTy::encodeFilenames(bool Compress) const {
+CovMapTy::encodeFilenames(const std::optional<ArrayRef<StringRef>> &AccFilesOpt,
+                          bool Compress) const {
+  ArrayRef<std::string> TempFilenames;
+  std::vector<std::string> AccFilenames; // Storage
+
+  if (AccFilesOpt) {
+    AccFilenames = generateAccFilenames(AccFilesOpt);
+    TempFilenames = AccFilenames;
+  } else {
+    assert(this->Filenames);
+    TempFilenames = ArrayRef(*this->Filenames);
+  }
+
   std::string FilenamesBlob;
   llvm::raw_string_ostream OS(FilenamesBlob);
-  CoverageFilenamesSectionWriter(this->Filenames).write(OS, Compress);
+  CoverageFilenamesSectionWriter(TempFilenames).write(OS, Compress);
 
   return {llvm::IndexedInstrProf::ComputeHash(FilenamesBlob), FilenamesBlob};
 }
 
 Expected<uint64_t> CovFunTy::decode(const ArrayRef<uint8_t> Content,
-                                    uint64_t Offset, endianness Endianness) {
-  DecoderContext Data(Content, (Endianness == endianness::little));
+                                    uint64_t Offset, endianness Endianness,
+                                    CovMapByRefTy &CovMapByRef,
+                                    InstrProfSymtab *Symtab,
+                                    const DecoderParam &Param) {
+  DecoderContext Data(Content, (Endianness == endianness::little), Param);
   Data.seek(Offset);
 
   uint32_t DataSize;
@@ -301,9 +418,19 @@ Expected<uint64_t> CovFunTy::decode(const ArrayRef<uint8_t> Content,
   if (!Data)
     return Data.takeError();
 
+  if (Data.Detailed)
+    FuncName = Symtab->getFuncOrVarNameIfDefined(*NameRef);
+
+  if (!Data.Raw)
+    NameRef.reset();
+
   [[maybe_unused]] auto ExpectedEndOffset = Data.tell() + DataSize;
 
   // Decode body.
+  assert(CovMapByRef.contains(this->FilenamesRef));
+  auto &CovMap = *CovMapByRef[this->FilenamesRef];
+  auto &FileIDs = this->FileIDs.emplace();
+
   auto NumFilesOrErr = Data.getULEB128();
   if (!NumFilesOrErr)
     return NumFilesOrErr.takeError();
@@ -330,14 +457,29 @@ Expected<uint64_t> CovFunTy::decode(const ArrayRef<uint8_t> Content,
     if (!NumRegionsOrErr)
       return NumRegionsOrErr.takeError();
     auto &File = Files.emplace_back();
+    if (Data.Detailed) {
+      File.Index = FileIdx; // Sequential number.
+      File.Filename = (*CovMap.Filenames)[FileIDs[FileIdx]];
+    }
 
     // Decode subarray.
+    Data.LineStart = 0;
     for (unsigned I = 0; I != *NumRegionsOrErr; ++I) {
       auto &Rec = File.Recs.emplace_back();
       if (auto E = Rec.decode(Data))
         return std::move(E);
+
+      // Hide either Loc or dLoc.
+      if (!Data.Detailed || Data.dLoc)
+        Rec.Loc.reset();
+      else if (!Data.Raw)
+        Rec.dLoc.reset();
     }
   }
+
+  // Hide FileIDs.
+  if (!Data.Raw)
+    this->FileIDs.reset();
 
   assert(Data.tell() == ExpectedEndOffset);
   return Data.tell();
@@ -349,7 +491,8 @@ void CovMapTy::encode(raw_ostream &OS, endianness Endianness) const {
   uint32_t NRecords = 0;
   uint32_t FilenamesSize = FilenamesBlob.size();
   uint32_t CoverageSize = 0;
-  uint32_t Version = this->Version;
+  uint32_t Version =
+      (this->Version ? *this->Version : INSTR_PROF_COVMAP_VERSION);
   struct {
 #define COVMAP_HEADER(Type, LLVMType, Name, Initializer) Type Name;
 #include "llvm/ProfileData/InstrProfData.inc"
@@ -368,8 +511,9 @@ void CovMapTy::encode(raw_ostream &OS, endianness Endianness) const {
 }
 
 Expected<uint64_t> CovMapTy::decode(const ArrayRef<uint8_t> Content,
-                                    uint64_t Offset, endianness Endianness) {
-  DecoderContext Data(Content, (Endianness == endianness::little));
+                                    uint64_t Offset, endianness Endianness,
+                                    const DecoderParam &Param) {
+  DecoderContext Data(Content, (Endianness == endianness::little), Param);
   Data.seek(Offset);
 
 #define COVMAP_HEADER(Type, LLVMType, Name, Initializer)                       \
@@ -388,17 +532,31 @@ Expected<uint64_t> CovMapTy::decode(const ArrayRef<uint8_t> Content,
   if (!Data)
     return Data.takeError();
   this->FilenamesRef = MD5Hash(FnBlob);
+  auto &Filenames = this->Filenames.emplace();
   if (auto E = RawCoverageFilenamesReader(FnBlob, Filenames)
                    .read(static_cast<CovMapVersion>(Version)))
     return E;
+
+  if (Param.Detailed && useWD()) {
+    assert(Filenames.size() >= 1);
+    auto FilenamesI = Filenames.begin();
+    StringRef WD = *FilenamesI++;
+    if (!WD.empty())
+      this->WD = WD;
+    // Use Filenames as a storage.
+    this->Files.emplace(MutableArrayRef(&*FilenamesI, &*Filenames.end()));
+  }
 
   Offset = Data.tell();
   return Offset;
 }
 
 void CounterTy::mapping(llvm::yaml::IO &IO) {
-  IO.mapRequired("Tag", Tag);
-  IO.mapRequired("Val", Val);
+  IO.mapOptional("Tag", Tag);
+  IO.mapOptional("Val", Val);
+  IO.mapOptional("Ref", RefOpt);
+  IO.mapOptional("Sub", SubOpt);
+  IO.mapOptional("Add", AddOpt);
 }
 
 void DecisionTy::mapping(llvm::yaml::IO &IO) {
@@ -407,7 +565,8 @@ void DecisionTy::mapping(llvm::yaml::IO &IO) {
 }
 
 void RecTy::mapping(llvm::yaml::IO &IO) {
-  IO.mapRequired("dLoc", dLoc);
+  IO.mapOptional("Loc", Loc);
+  IO.mapOptional("dLoc", dLoc);
   IO.mapOptional("isGap", isGap);
   CounterTy::mapping(IO);
   IO.mapOptional("ExtTag", ExtTag);
@@ -418,22 +577,32 @@ void RecTy::mapping(llvm::yaml::IO &IO) {
 }
 
 void FileRecsTy::mapping(llvm::yaml::IO &IO) {
+  IO.mapOptional("Index", Index);
+  IO.mapOptional("Filename", Filename);
   IO.mapRequired("Regions", Recs);
 }
 
 void CovFunTy::mapping(llvm::yaml::IO &IO) {
-  IO.mapRequired("NameRef", NameRef);
+  IO.mapOptional("NameRef", NameRef);
+  IO.mapOptional("FuncName", FuncName);
   IO.mapRequired("FuncHash", FuncHash);
   IO.mapRequired("FilenamesRef", FilenamesRef);
-  IO.mapRequired("FileIDs", FileIDs);
+  IO.mapOptional("FileIDs", FileIDs);
   IO.mapRequired("Expressions", Expressions);
   IO.mapRequired("Files", Files);
 }
 
 void CovMapTy::mapping(llvm::yaml::IO &IO) {
   IO.mapRequired("FilenamesRef", FilenamesRef);
-  IO.mapRequired("Version", Version);
-  IO.mapRequired("Filenames", Filenames);
+  IO.mapOptional("Version", Version);
+
+  if (!WD && !Files)
+    // Suppress this regardless of (Detailed && Raw).
+    // Since it is obviously redundant.
+    IO.mapOptional("Filenames", Filenames);
+
+  IO.mapOptional("WD", WD);
+  IO.mapOptional("Files", Files);
 }
 
 #define ECase(N, X) IO.enumCase(Value, #X, N::X)
@@ -496,7 +665,7 @@ struct CovMapSection : ELFYAML::CovMapSectionBase {
   }
 
   Error decode(ArrayRef<uint8_t> Blob, unsigned AddressAlign,
-               endianness Endianness) {
+               endianness Endianness, const DecoderParam &Param) {
     uint64_t Offset = 0;
 
     while (true) {
@@ -505,7 +674,7 @@ struct CovMapSection : ELFYAML::CovMapSectionBase {
         break;
       }
       auto &CovMap = CovMaps.emplace_back();
-      auto Result = CovMap.decode(Blob, Offset, Endianness);
+      auto Result = CovMap.decode(Blob, Offset, Endianness, Param);
       if (!Result) {
         return Result.takeError();
       }
@@ -541,9 +710,10 @@ struct CovFunSection : ELFYAML::CovMapSectionBase {
     IO.mapOptional("CovFun", CovFuns);
   }
 
-  static Expected<std::vector<CovFunTy>> decode(ArrayRef<uint8_t> CovFunA,
-                                                unsigned AddressAlign,
-                                                endianness Endianness) {
+  static Expected<std::vector<CovFunTy>>
+  decode(ArrayRef<uint8_t> CovFunA, unsigned AddressAlign,
+         endianness Endianness, CovMapByRefTy &CovMapByRef,
+         InstrProfSymtab *Symtab, const DecoderParam &Param) {
     std::vector<CovFunTy> CovFuns;
     uint64_t Offset = 0;
 
@@ -553,7 +723,8 @@ struct CovFunSection : ELFYAML::CovMapSectionBase {
         break;
 
       auto &CovFun = CovFuns.emplace_back();
-      auto Result = CovFun.decode(CovFunA, Offset, Endianness);
+      auto Result = CovFun.decode(CovFunA, Offset, Endianness, CovMapByRef,
+                                  Symtab, Param);
       if (!Result)
         return Result.takeError();
 
@@ -574,17 +745,127 @@ struct CovFunSection : ELFYAML::CovMapSectionBase {
   }
 };
 
-class DecoderImpl : public Decoder {
-  std::unique_ptr<InstrProfSymtab> ProfileNames;
-  std::vector<CovMapTy> TempCovMaps;
+class CovMapFilenamesResolver {
+  DenseMap<uint64_t, SetVector<StringRef>> FilenamesByCovMap;
+  std::vector<CovFunTy *> UnresolvedCovFuns;
+
+protected:
+  CovMapByRefTy CovMapByRef;
+  std::vector<CovMapTy> TempCovMaps; // For Decoder
 
 public:
-  DecoderImpl(endianness Endianness, bool CovMapEnabled)
-      : Decoder(Endianness), ProfileNames(std::make_unique<InstrProfSymtab>()) {
-    enabled = CovMapEnabled;
+  void collectCovMap(std::vector<CovMapTy> &CovMaps) {
+    for (auto &CovMap : CovMaps)
+      CovMapByRef[CovMap.FilenamesRef] = &CovMap;
   }
 
-  Error acquire(unsigned AddressAlign, StringRef Name,
+  void moveAndCollectCovMap(std::vector<CovMapTy> &&CovMaps) {
+    TempCovMaps = std::move(CovMaps);
+    collectCovMap(TempCovMaps);
+  }
+
+  void collectCovFunFilenames(std::vector<CovFunTy> &CovFuns) {
+    for (auto &CovFun : CovFuns) {
+      auto &Filenames = FilenamesByCovMap[CovFun.FilenamesRef];
+      for (const auto &File : CovFun.Files) {
+        if (!File.Filename)
+          goto skip;
+        Filenames.insert(*File.Filename);
+      }
+      UnresolvedCovFuns.push_back(&CovFun);
+    skip:;
+    }
+  }
+
+  void decMaybeResetFilenames(std::vector<CovMapTy> &CovMaps) {
+    for (auto &CovMap : CovMaps) {
+      auto FilenamesI = FilenamesByCovMap.find(CovMap.FilenamesRef);
+      if (FilenamesI == FilenamesByCovMap.end())
+        continue;
+
+      // Calculate FilenamesRef with Filenames from CovFuns.
+      // If matches, hide Filenames from CovMap.
+      auto [AccFilenamesRef, _] =
+          CovMap.encodeFilenames(FilenamesI->second.getArrayRef());
+      if (CovMap.FilenamesRef == AccFilenamesRef) {
+        CovMap.Files.reset();
+        CovMap.Filenames.reset(); // FilenamesI has been invalidated.
+      }
+    }
+  }
+
+  void encFixup() {
+    for (auto &[_, CovMap] : CovMapByRef) {
+      auto FilenamesI = FilenamesByCovMap.find(CovMap->FilenamesRef);
+      if (FilenamesI != FilenamesByCovMap.end()) {
+        // Check Filenames satisfies covfuns
+        DenseSet<StringRef> FilenamesSet;
+        if (CovMap->Files) {
+          for (const auto &Filename : *CovMap->Files)
+            FilenamesSet.insert(Filename);
+        } else if (CovMap->Filenames) {
+          for (const auto &Filename : *CovMap->Filenames)
+            FilenamesSet.insert(Filename);
+        }
+
+        for (const auto &Filename : FilenamesI->second) {
+          if (!FilenamesSet.contains(Filename)) {
+            // If not, regenerate Filenames.
+            CovMap->Files.reset();
+            CovMap->Filenames.reset();
+            break;
+          }
+        }
+      }
+
+      if (!CovMap->Filenames) {
+        // Regenerate.
+        // Use Files if exists.
+        // Use CovFuns (FilenamesI) otherwise.
+        assert(CovMap->Files || FilenamesI != FilenamesByCovMap.end());
+        CovMap->regenerateFilenames(
+            CovMap->Files ? std::nullopt : FilenamesI->second.getArrayRef());
+      }
+      auto [FilenamesRef, FilenamesBlob] = CovMap->encodeFilenames();
+      assert(CovMap->FilenamesRef == FilenamesRef);
+    }
+
+    // Fill FileIDs
+    for (auto *CovFun : UnresolvedCovFuns) {
+      assert(CovMapByRef[CovFun->FilenamesRef]);
+      assert(CovMapByRef[CovFun->FilenamesRef]->Filenames);
+      const auto &CovMapFilenames =
+          *CovMapByRef[CovFun->FilenamesRef]->Filenames;
+      auto &FileIDs = CovFun->FileIDs.emplace();
+      for (const auto &File : CovFun->Files) {
+        auto I = std::find(CovMapFilenames.begin(), CovMapFilenames.end(),
+                           File.Filename);
+        assert(I != CovMapFilenames.end());
+        FileIDs.push_back(std::distance(CovMapFilenames.begin(), I));
+      }
+      assert(CovFun->Files.size() == FileIDs.size());
+    }
+  }
+};
+
+class DecoderImpl : public Decoder, CovMapFilenamesResolver {
+  DecoderParam Param;
+
+  std::unique_ptr<InstrProfSymtab> ProfileNames;
+
+  InstrProfSymtab::PrfNamesChunksTy PrfNames;
+
+  MapVector<uint64_t, std::pair<ArrayRef<uint8_t>, unsigned>> CovFunBlobs;
+  DenseMap<uint64_t, std::vector<CovFunTy>> TempCovFuns;
+
+public:
+  DecoderImpl(endianness Endianness, const DecoderParam &Param)
+      : Decoder(Endianness), Param(Param),
+        ProfileNames(std::make_unique<InstrProfSymtab>()) {
+    enabled = (Param.Detailed || Param.Raw);
+  }
+
+  Error acquire(uint64_t Offset, unsigned AddressAlign, StringRef Name,
                 ArrayRef<uint8_t> Content) override {
     // Don't register anything.
     if (!enabled)
@@ -594,44 +875,82 @@ public:
       // Decode CovMaps in advance, since only CovMap knows its Version.
       // CovMaps is restored (into CovMapSection) later.
       auto TempCovMap = std::make_unique<CovMapSection>();
-      if (auto E = TempCovMap->decode(Content, AddressAlign, Endianness))
+      if (auto E = TempCovMap->decode(Content, AddressAlign, Endianness, Param))
         return E;
-      TempCovMaps = std::move(TempCovMap->CovMaps);
+      moveAndCollectCovMap(std::move(TempCovMap->CovMaps));
+    } else if (PrfNamesSection::nameMatches(Name)) {
+      // Decode PrfNames in advance since CovFun depends on it.
+      auto PrfNamesOrErr = ProfileNames->createAndGetList(Content);
+      if (!PrfNamesOrErr)
+        return PrfNamesOrErr.takeError();
+      PrfNames = std::move(*PrfNamesOrErr);
+    } else if (CovFunSection::nameMatches(Name)) {
+      // Will be decoded after CovMap is met.
+      CovFunBlobs[Offset] = {Content, AddressAlign};
     }
 
     return Error::success();
   }
 
-  Error make(ELFYAML::CovMapSectionBase *Base,
-             ArrayRef<uint8_t> Content) override {
+  Error fixup() override {
+    // Decode CovFun(s) with predecoded PrfNames and CovMap.
+    for (const auto &[Offset, CovFunBlob] : CovFunBlobs) {
+      auto CovFunsOrErr =
+          CovFunSection::decode(CovFunBlob.first, CovFunBlob.second, Endianness,
+                                CovMapByRef, ProfileNames.get(), Param);
+      if (!CovFunsOrErr)
+        return CovFunsOrErr.takeError();
+      TempCovFuns[Offset] = std::move(*CovFunsOrErr);
+      collectCovFunFilenames(TempCovFuns[Offset]);
+    }
+    // Hide Filenames if it is reproducible from CovFuns.
+    if (Param.Detailed)
+      decMaybeResetFilenames(TempCovMaps);
+    return Error::success();
+  }
+
+  Error make(ELFYAML::CovMapSectionBase *Base, uint64_t Offset) override {
     if (auto *S = dyn_cast<CovMapSection>(Base)) {
       // Store predecoded CovMaps.
       S->CovMaps = std::move(TempCovMaps);
       return Error::success();
     } else if (auto *S = dyn_cast<PrfNamesSection>(Base)) {
-      // Decode PrfNames in advance since CovFun depends on it.
-      auto PrfNamesOrErr = ProfileNames->createAndGetList(Content);
-      if (!PrfNamesOrErr)
-        return PrfNamesOrErr.takeError();
-      S->PrfNames = std::move(*PrfNamesOrErr);
+      S->PrfNames = std::move(PrfNames);
       return Error::success();
     } else if (auto *S = dyn_cast<CovFunSection>(Base)) {
-      auto CovFunsOrErr =
-          CovFunSection::decode(Content, S->AddressAlign, Endianness);
-      if (!CovFunsOrErr)
-        return CovFunsOrErr.takeError();
-      S->CovFuns = std::move(*CovFunsOrErr);
+      assert(S->CovFuns.empty());
+      assert(TempCovFuns.contains(Offset));
+      S->CovFuns = std::move(TempCovFuns[Offset]);
       return Error::success();
     }
 
     llvm_unreachable("Unknown Section");
   }
 };
+
+class EncoderImpl : public Encoder, CovMapFilenamesResolver {
+public:
+  EncoderImpl(endianness Endianness) : Encoder(Endianness) {}
+
+  void collect(ELFYAML::Chunk *Chunk) override {
+    if (auto S = dyn_cast<CovMapSection>(Chunk)) {
+      collectCovMap(S->CovMaps);
+    } else if (auto S = dyn_cast<CovFunSection>(Chunk)) {
+      collectCovFunFilenames(S->CovFuns);
+    }
+  }
+
+  void fixup() override { encFixup(); }
+};
 } // namespace
 
 std::unique_ptr<Decoder> Decoder::get(endianness Endianness,
-                                      bool CovMapEnabled) {
-  return std::make_unique<DecoderImpl>(Endianness, CovMapEnabled);
+                                      const DecoderParam &Param) {
+  return std::make_unique<DecoderImpl>(Endianness, Param);
+}
+
+std::unique_ptr<Encoder> Encoder::get(endianness Endianness) {
+  return std::make_unique<EncoderImpl>(Endianness);
 }
 
 bool covmap::nameMatches(StringRef Name) {

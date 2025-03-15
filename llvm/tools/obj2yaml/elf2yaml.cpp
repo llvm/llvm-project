@@ -23,9 +23,15 @@
 
 using namespace llvm;
 
+static cl::opt<bool>
+    CovMapDetailed("covmap", cl::desc("Dump detailed YAML in Coverage Map."),
+                   cl::cat(Cat));
 static cl::opt<bool> CovMapRaw("covmap-raw",
                                cl::desc("Dump raw YAML in Coverage Map."),
                                cl::cat(Cat));
+static cl::opt<bool> CovMapDLoc("covmap-dloc",
+                                cl::desc("Prefer dLoc over absolute Loc."),
+                                cl::cat(Cat));
 
 namespace {
 
@@ -588,7 +594,11 @@ ELFDumper<ELFT>::dumpSections() {
     return Error::success();
   };
 
-  auto CovMapDecoder = covmap::Decoder::get(ELFT::Endianness, CovMapRaw);
+  coverage::yaml::DecoderParam Param;
+  Param.Detailed = CovMapDetailed;
+  Param.Raw = CovMapRaw;
+  Param.dLoc = CovMapDLoc;
+  auto CovMapDecoder = covmap::Decoder::get(ELFT::Endianness, Param);
   if (covmap::Decoder::enabled) {
     // Look up covmap-related sections in advance.
     for (const auto &Sec : Sections) {
@@ -606,10 +616,13 @@ ELFDumper<ELFT>::dumpSections() {
       if (!ContentOrErr)
         return ContentOrErr.takeError();
 
-      if (auto E = CovMapDecoder->acquire(Sec.sh_addralign, *NameOrErr,
-                                          *ContentOrErr))
+      if (auto E = CovMapDecoder->acquire(Sec.sh_offset, Sec.sh_addralign,
+                                          *NameOrErr, *ContentOrErr))
         return std::move(E);
     }
+
+    if (auto E = CovMapDecoder->fixup())
+      return std::move(E);
   }
 
   auto GetDumper = [this](unsigned Type)
@@ -1708,11 +1721,7 @@ ELFDumper<ELFT>::dumpCovMap(const Elf_Shdr *Shdr, StringRef Name,
   if (Error E = dumpCommonSection(Shdr, *S))
     return std::move(E);
 
-  auto ContentOrErr = Obj.getSectionContents(*Shdr);
-  if (!ContentOrErr)
-    return ContentOrErr.takeError();
-
-  if (auto E = CovMapDecoder->make(S.get(), *ContentOrErr))
+  if (auto E = CovMapDecoder->make(S.get(), Shdr->sh_offset))
     return std::move(E);
 
   return S.release();
