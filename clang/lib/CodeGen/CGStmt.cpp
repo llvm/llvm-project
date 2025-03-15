@@ -2623,7 +2623,7 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
               const llvm::ArrayRef<LValue> ResultRegDests,
               const llvm::ArrayRef<QualType> ResultRegQualTys,
               const llvm::BitVector &ResultTypeRequiresCast,
-              const llvm::BitVector &ResultRegIsFlagReg) {
+              const std::vector<unsigned> &ResultRegIsFlagReg) {
   CGBuilderTy &Builder = CGF.Builder;
   CodeGenModule &CGM = CGF.CGM;
   llvm::LLVMContext &CTX = CGF.getLLVMContext();
@@ -2643,9 +2643,18 @@ EmitAsmStores(CodeGenFunction &CGF, const AsmStmt &S,
     if ((i < ResultRegIsFlagReg.size()) && ResultRegIsFlagReg[i]) {
       // Target must guarantee the Value `Tmp` here is lowered to a boolean
       // value.
-      llvm::Constant *Two = llvm::ConstantInt::get(Tmp->getType(), 2);
+      // Lowering 'Tmp' as - 'icmp ult %Tmp , CCUpperBound'. On some targets
+      // CCUpperBound is not binary. CCUpperBound is 4 for SystemZ,
+      // interval [0, 4). With this range known, llvm.assume intrinsic guides
+      // optimizer to generate more optimized IR in most of the cases as
+      // observed for select_cc on SystemZ unit tests for flag output operands.
+      // For some cases for br_cc, generated IR was weird. e.g. switch table
+      // for simple simple comparison terms for br_cc.
+      unsigned CCUpperBound = ResultRegIsFlagReg[i];
+      llvm::Constant *CCUpperBoundConst =
+          llvm::ConstantInt::get(Tmp->getType(), CCUpperBound);
       llvm::Value *IsBooleanValue =
-          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, Two);
+          Builder.CreateCmp(llvm::CmpInst::ICMP_ULT, Tmp, CCUpperBoundConst);
       llvm::Function *FnAssume = CGM.getIntrinsic(llvm::Intrinsic::assume);
       Builder.CreateCall(FnAssume, IsBooleanValue);
     }
@@ -2772,7 +2781,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
   std::vector<llvm::Type *> ArgElemTypes;
   std::vector<llvm::Value*> Args;
   llvm::BitVector ResultTypeRequiresCast;
-  llvm::BitVector ResultRegIsFlagReg;
+  std::vector<unsigned> ResultRegIsFlagReg;
 
   // Keep track of inout constraints.
   std::string InOutConstraints;
@@ -2830,8 +2839,7 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
       ResultRegQualTys.push_back(QTy);
       ResultRegDests.push_back(Dest);
 
-      bool IsFlagReg = llvm::StringRef(OutputConstraint).starts_with("{@cc");
-      ResultRegIsFlagReg.push_back(IsFlagReg);
+      ResultRegIsFlagReg.push_back(Info.getFlagOutputCCUpperBound());
 
       llvm::Type *Ty = ConvertTypeForMem(QTy);
       const bool RequiresCast = Info.allowsRegister() &&

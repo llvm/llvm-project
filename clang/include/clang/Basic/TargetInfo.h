@@ -1122,10 +1122,12 @@ public:
 
     std::string ConstraintStr;  // constraint: "=rm"
     std::string Name;           // Operand name: [foo] with no []'s.
+    unsigned FlagOutputCCUpperBound;
+
   public:
     ConstraintInfo(StringRef ConstraintStr, StringRef Name)
         : Flags(0), TiedOperand(-1), ConstraintStr(ConstraintStr.str()),
-          Name(Name.str()) {
+          Name(Name.str()), FlagOutputCCUpperBound(0) {
       ImmRange.Min = ImmRange.Max = 0;
       ImmRange.isConstrained = false;
     }
@@ -1196,6 +1198,14 @@ public:
       TiedOperand = N;
       // Don't copy Name or constraint string.
     }
+
+    // CC range can be set by target. SystemZ sets it to 4. It is 2 by default.
+    void setFlagOutputCCUpperBound(unsigned CCBound) {
+      FlagOutputCCUpperBound = CCBound;
+    }
+    unsigned getFlagOutputCCUpperBound() const {
+      return FlagOutputCCUpperBound;
+    }
   };
 
   /// Validate register name used for global register variables.
@@ -1236,6 +1246,7 @@ public:
                              std::string &/*SuggestedModifier*/) const {
     return true;
   }
+
   virtual bool
   validateAsmConstraint(const char *&Name,
                         TargetInfo::ConstraintInfo &info) const = 0;

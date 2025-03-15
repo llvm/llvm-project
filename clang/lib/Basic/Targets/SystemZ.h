@@ -119,6 +119,10 @@ public:
                              TargetInfo::ConstraintInfo &info) const override;
 
   std::string convertConstraint(const char *&Constraint) const override {
+    if (llvm::StringRef(Constraint) == "@cc") {
+      Constraint += 2;
+      return std::string("{@cc}");
+    }
     switch (Constraint[0]) {
     case 'p': // Keep 'p' constraint.
       return std::string("p");

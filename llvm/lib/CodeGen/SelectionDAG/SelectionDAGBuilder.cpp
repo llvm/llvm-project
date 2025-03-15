@@ -2784,7 +2784,6 @@ void SelectionDAGBuilder::visitBr(const BranchInst &I) {
       Opcode = Instruction::And;
     else if (match(BOp, m_LogicalOr(m_Value(BOp0), m_Value(BOp1))))
       Opcode = Instruction::Or;
-
     if (Opcode &&
         !(match(BOp0, m_ExtractElt(m_Value(Vec), m_Value())) &&
           match(BOp1, m_ExtractElt(m_Specific(Vec), m_Value()))) &&
@@ -12065,12 +12064,13 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         SDValue CondLHS = getValue(Cond);
         EVT VT = CondLHS.getValueType();
         SDLoc DL = getCurSDLoc();
+        SDValue Cond;
 
         SDValue Or = DAG.getNode(ISD::OR, DL, VT, CondLHS,
                                  DAG.getConstant(CommonBit, DL, VT));
-        SDValue Cond = DAG.getSetCC(
-            DL, MVT::i1, Or, DAG.getConstant(BigValue | SmallValue, DL, VT),
-            ISD::SETEQ);
+        Cond = DAG.getSetCC(DL, MVT::i1, Or,
+                            DAG.getConstant(BigValue | SmallValue, DL, VT),
+                            ISD::SETEQ);
 
         // Update successor info.
         // Both Small and Big will jump to Small.BB, so we sum up the

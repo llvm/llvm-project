@@ -1584,6 +1584,7 @@ bool X86TargetInfo::validateAsmConstraint(
     if (auto Len = matchAsmCCConstraint(Name)) {
       Name += Len - 1;
       Info.setAllowsRegister();
+      Info.setFlagOutputCCUpperBound(2);
       return true;
     }
     return false;
