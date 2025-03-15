@@ -977,13 +977,13 @@ LogicalResult ExtPackedFp8OpLowering::matchAndRewrite(
     source = longVec;
   }
   Value i32Source = rewriter.create<LLVM::BitcastOp>(loc, i32, source);
-  Value wordSel = createI32Constant(rewriter, loc, op.getIndex());
+  Value wordSel = createI1Constant(rewriter, loc, op.getWordIndex());
   if (typeIsExpectedBf8ForChipset(chipset, sourceElemType)) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtF32Bf8Op>(op, f32, i32Source,
-                                                    wordSel);
+    rewriter.replaceOpWithNewOp<ROCDL::CvtPkF32Bf8Op>(op, f32, i32Source,
+                                                      wordSel);
   } else if (typeIsExpectedFp8ForChipset(chipset, sourceElemType)) {
-    rewriter.replaceOpWithNewOp<ROCDL::CvtF32Fp8Op>(op, f32, i32Source,
-                                                    wordSel);
+    rewriter.replaceOpWithNewOp<ROCDL::CvtPkF32Fp8Op>(op, f32, i32Source,
+                                                      wordSel);
   }
   return success();
 }
