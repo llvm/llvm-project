@@ -140,12 +140,13 @@ static cl::opt<bool, true>
 /// to justify the cost. To avoid unnecessary performance penalties,
 /// we disable it by default.
 bool DisableLIRP::Wcslen;
-static cl::opt<bool, true>
-    EnableLIRPWcslen("enable-loop-idiom-wcslen",
-                     cl::desc("Proceed with loop idiom recognize pass, "
-                              "enable conversion of loop(s) to wcslen."),
-                     cl::location(DisableLIRP::Wcslen), cl::init(true),
-                     cl::ReallyHidden);
+static cl::opt<bool, true> EnableLIRPWcslen(
+    "enable-loop-idiom-wcslen",
+    cl::desc("Proceed with loop idiom recognize pass, "
+             "enable conversion of loop(s) to wcslen."),
+    cl::location(DisableLIRP::Wcslen), cl::init(true),
+    cl::callback([](const bool &) { DisableLIRP::Wcslen = false; }),
+    cl::ReallyHidden);
 
 static cl::opt<bool> UseLIRCodeSizeHeurs(
     "use-lir-code-size-heurs",
@@ -1776,12 +1777,14 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
 
   Value *StrLenFunc = nullptr;
   if (Verifier.OpWidth == 8) {
+    if (DisableLIRP::Strlen)
+      return false;
     if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_strlen))
       return false;
     StrLenFunc = emitStrLen(MaterialzedBase, Builder, *DL, TLI);
   } else {
     if (DisableLIRP::Wcslen)
-        return false;
+      return false;
     if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_wcslen))
       return false;
     StrLenFunc = emitWcsLen(MaterialzedBase, Builder, *DL, TLI);
