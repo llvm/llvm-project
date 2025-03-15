@@ -45,8 +45,8 @@ public:
   StringRef getVariantKindName() const;
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override {
     Streamer.visitUsedExpr(*getSubExpr());
   }
