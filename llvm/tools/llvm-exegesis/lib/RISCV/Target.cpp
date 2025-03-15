@@ -158,31 +158,16 @@ public:
     const MCSubtargetInfo &STI = State.getSubtargetInfo();
     ELEN = STI.hasFeature(RISCV::FeatureStdExtZve64x) ? 64 : 32;
 
-    static_assert(RISCV::FeatureStdExtZvl64b == RISCV::FeatureStdExtZvl32b + 1);
-    static_assert(RISCV::FeatureStdExtZvl128b ==
-                  RISCV::FeatureStdExtZvl32b + 2);
-    static_assert(RISCV::FeatureStdExtZvl256b ==
-                  RISCV::FeatureStdExtZvl32b + 3);
-    static_assert(RISCV::FeatureStdExtZvl512b ==
-                  RISCV::FeatureStdExtZvl32b + 4);
-    static_assert(RISCV::FeatureStdExtZvl1024b ==
-                  RISCV::FeatureStdExtZvl32b + 5);
-    static_assert(RISCV::FeatureStdExtZvl2048b ==
-                  RISCV::FeatureStdExtZvl32b + 6);
-    static_assert(RISCV::FeatureStdExtZvl4096b ==
-                  RISCV::FeatureStdExtZvl32b + 7);
-    static_assert(RISCV::FeatureStdExtZvl8192b ==
-                  RISCV::FeatureStdExtZvl32b + 8);
-    static_assert(RISCV::FeatureStdExtZvl16384b ==
-                  RISCV::FeatureStdExtZvl32b + 9);
-    static_assert(RISCV::FeatureStdExtZvl32768b ==
-                  RISCV::FeatureStdExtZvl32b + 10);
-    static_assert(RISCV::FeatureStdExtZvl65536b ==
-                  RISCV::FeatureStdExtZvl32b + 11);
-    for (unsigned Feature = RISCV::FeatureStdExtZvl32b, Size = 32;
-         Size <= 65536; ++Feature, Size *= 2) {
+    const unsigned ZvlFeatures[] = {
+        RISCV::FeatureStdExtZvl32b,    RISCV::FeatureStdExtZvl64b,
+        RISCV::FeatureStdExtZvl128b,   RISCV::FeatureStdExtZvl256b,
+        RISCV::FeatureStdExtZvl512b,   RISCV::FeatureStdExtZvl1024b,
+        RISCV::FeatureStdExtZvl2048b,  RISCV::FeatureStdExtZvl4096b,
+        RISCV::FeatureStdExtZvl8192b,  RISCV::FeatureStdExtZvl16384b,
+        RISCV::FeatureStdExtZvl32768b, RISCV::FeatureStdExtZvl65536b};
+    for (auto [Idx, Feature] : enumerate(ZvlFeatures)) {
       if (STI.hasFeature(Feature))
-        ZvlVLen = std::max(ZvlVLen, Size);
+        ZvlVLen = std::max(ZvlVLen, 1u << (Idx + 5));
     }
   }
 
