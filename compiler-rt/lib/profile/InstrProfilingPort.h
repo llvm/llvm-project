@@ -23,6 +23,7 @@
 #define COMPILER_RT_FTRUNCATE(f,l) _chsize(_fileno(f),l)
 #define COMPILER_RT_ALWAYS_INLINE __forceinline
 #define COMPILER_RT_CLEANUP(x)
+#define COMPILER_RT_UNUSED
 #define COMPILER_RT_USED
 #elif __GNUC__
 #ifdef _WIN32
@@ -38,6 +39,7 @@
 #define COMPILER_RT_ALLOCA __builtin_alloca
 #define COMPILER_RT_ALWAYS_INLINE inline __attribute((always_inline))
 #define COMPILER_RT_CLEANUP(x) __attribute__((cleanup(x)))
+#define COMPILER_RT_UNUSED __attribute__((unused))
 #define COMPILER_RT_USED __attribute__((used))
 #endif
 
