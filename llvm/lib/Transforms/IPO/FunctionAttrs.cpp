@@ -319,8 +319,9 @@ static FunctionSummary *calculatePrevailingSummary(
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         IsPrevailing) {
 
-  if (CachedPrevailingSummary.count(VI))
-    return CachedPrevailingSummary[VI];
+  if (auto It = CachedPrevailingSummary.find(VI);
+      It != CachedPrevailingSummary.end())
+    return It->second;
 
   /// At this point, prevailing symbols have been resolved. The following leads
   /// to returning a conservative result:
@@ -405,15 +406,16 @@ static FunctionSummary *calculatePrevailingSummary(
     }
   }
 
+  auto &CPS = CachedPrevailingSummary[VI];
   if (Local) {
     assert(!Prevailing);
-    CachedPrevailingSummary[VI] = Local;
+    CPS = Local;
   } else if (Prevailing) {
     assert(!Local);
-    CachedPrevailingSummary[VI] = Prevailing;
+    CPS = Prevailing;
   }
 
-  return CachedPrevailingSummary[VI];
+  return CPS;
 }
 
 bool llvm::thinLTOPropagateFunctionAttrs(

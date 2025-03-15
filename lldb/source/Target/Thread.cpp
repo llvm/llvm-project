@@ -2096,10 +2096,13 @@ lldb::ValueObjectSP Thread::GetSiginfoValue() {
     return ValueObjectConstResult::Create(
         &target, Status::FromErrorString("no siginfo_t for the platform"));
 
-  std::optional<uint64_t> type_size = type.GetByteSize(nullptr);
-  assert(type_size);
+  auto type_size_or_err = type.GetByteSize(nullptr);
+  if (!type_size_or_err)
+    return ValueObjectConstResult::Create(
+        &target, Status::FromError(type_size_or_err.takeError()));
+
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>> data =
-      GetSiginfo(*type_size);
+      GetSiginfo(*type_size_or_err);
   if (!data)
     return ValueObjectConstResult::Create(&target,
                                           Status::FromError(data.takeError()));

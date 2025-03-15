@@ -86,7 +86,6 @@ static const MCSymbolRefExpr *getTLSGetOffset(MCContext &Context) {
 static const MCSymbolRefExpr *getGlobalOffsetTable(MCContext &Context) {
   StringRef Name = "_GLOBAL_OFFSET_TABLE_";
   return MCSymbolRefExpr::create(Context.getOrCreateSymbol(Name),
-                                 MCSymbolRefExpr::VK_None,
                                  Context);
 }
 

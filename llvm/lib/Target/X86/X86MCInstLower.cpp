@@ -889,8 +889,7 @@ void X86AsmPrinter::LowerFENTRY_CALL(const MachineInstr &MI,
   bool Is64Bits = Subtarget->is64Bit();
   MCContext &Ctx = OutStreamer->getContext();
   MCSymbol *fentry = Ctx.getOrCreateSymbol("__fentry__");
-  const MCSymbolRefExpr *Op =
-      MCSymbolRefExpr::create(fentry, MCSymbolRefExpr::VK_None, Ctx);
+  const MCSymbolRefExpr *Op = MCSymbolRefExpr::create(fentry, Ctx);
 
   EmitAndCountInstruction(
       MCInstBuilder(Is64Bits ? X86::CALL64pcrel32 : X86::CALLpcrel32)
@@ -959,9 +958,8 @@ void X86AsmPrinter::LowerASAN_CHECK_MEMACCESS(const MachineInstr &MI) {
   uint64_t ShadowBase;
   int MappingScale;
   bool OrShadowOffset;
-  getAddressSanitizerParams(Triple(TM.getTargetTriple()), 64,
-                            AccessInfo.CompileKernel, &ShadowBase,
-                            &MappingScale, &OrShadowOffset);
+  getAddressSanitizerParams(TM.getTargetTriple(), 64, AccessInfo.CompileKernel,
+                            &ShadowBase, &MappingScale, &OrShadowOffset);
 
   StringRef Name = AccessInfo.IsWrite ? "store" : "load";
   StringRef Op = OrShadowOffset ? "or" : "add";

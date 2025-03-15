@@ -290,8 +290,7 @@ static void findBestInsertionSet(DominatorTree &DT, BlockFrequencyInfo &BFI,
     BasicBlock *Parent = DT.getNode(Node)->getIDom()->getBlock();
     // Initially, ParentInsertPts is empty and ParentPtsFreq is 0. Every child
     // will update its parent's ParentInsertPts and ParentPtsFreq.
-    auto &ParentInsertPts = InsertPtsMap[Parent].first;
-    BlockFrequency &ParentPtsFreq = InsertPtsMap[Parent].second;
+    auto &[ParentInsertPts, ParentPtsFreq] = InsertPtsMap[Parent];
     // Choose to insert in Node or in subtree of Node.
     // Don't hoist to EHPad because we may not find a proper place to insert
     // in EHPad.

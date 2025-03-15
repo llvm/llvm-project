@@ -196,6 +196,10 @@ public:
   ComplexNumber& operator+();
 
   const Number& real() const { return realPart; }
+  const Number& complex() const;
+
+  void ref() const;
+  void deref() const;
 
 private:
   Number realPart;
@@ -238,6 +242,11 @@ private:
 class SomeType : public BaseType {
 public:
   using BaseType::BaseType;
+};
+
+struct OtherObj {
+  unsigned v { 0 };
+  OtherObj* children[4] { nullptr };
 };
 
 void __libcpp_verbose_abort(const char *__format, ...);
@@ -375,7 +384,7 @@ public:
     double y;
   };
   void trivial68() { point pt = { 1.0 }; }
-  unsigned trivial69() { return offsetof(RefCounted, children); }
+  unsigned trivial69() { return offsetof(OtherObj, children); }
   DerivedNumber* trivial70() { [[clang::suppress]] return static_cast<DerivedNumber*>(number); }
 
   static RefCounted& singleton() {
@@ -467,6 +476,8 @@ public:
   unsigned nonTrivial22() { return ComplexNumber(123, "456").real().value(); }
   unsigned nonTrivial23() { return DerivedNumber("123").value(); }
   SomeType nonTrivial24() { return SomeType("123"); }
+  virtual void nonTrivial25() { }
+  virtual ComplexNumber* operator->() { return nullptr; }
 
   static unsigned s_v;
   unsigned v { 0 };
@@ -641,6 +652,10 @@ public:
     getFieldTrivial().nonTrivial23();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
     getFieldTrivial().nonTrivial24();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial().nonTrivial25();
+    // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
+    getFieldTrivial()->complex();
     // expected-warning@-1{{Call argument for 'this' parameter is uncounted and unsafe}}
   }
 

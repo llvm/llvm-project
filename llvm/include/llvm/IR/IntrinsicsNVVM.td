@@ -5082,6 +5082,14 @@ def int_nvvm_applypriority_L2_evict_normal
     [IntrArgMemOnly, ReadOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>,
     ImmArg<ArgIndex<1>>]>;
 
+// Intrinsics for discard
+def int_nvvm_discard_global_L2 : DefaultAttrsIntrinsic<[], 
+    [llvm_global_ptr_ty, llvm_i64_ty], [NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>, IntrHasSideEffects]>;
+
+def int_nvvm_discard_L2 : DefaultAttrsIntrinsic<[], 
+    [llvm_ptr_ty, llvm_i64_ty], [NoCapture<ArgIndex<0>>,
+    ImmArg<ArgIndex<1>>, IntrHasSideEffects]>;
 
 // Intrinsics for Bulk Copy using TMA (non-tensor)
 // From Global to Shared Cluster
@@ -5260,5 +5268,19 @@ foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
       }
   }
 }
+
+//
+// Bulk store intrinsics
+//
+
+def int_nvvm_st_bulk: DefaultAttrsIntrinsic<[],
+  [llvm_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+  [IntrArgMemOnly, IntrWriteMem,
+    WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
+
+def int_nvvm_st_bulk_shared_cta : DefaultAttrsIntrinsic<[],
+  [llvm_shared_ptr_ty, llvm_i64_ty, llvm_i64_ty],
+  [IntrArgMemOnly, IntrWriteMem,
+    WriteOnly<ArgIndex<0>>, NoCapture<ArgIndex<0>>, ImmArg<ArgIndex<2>>]>;
 
 } // let TargetPrefix = "nvvm"

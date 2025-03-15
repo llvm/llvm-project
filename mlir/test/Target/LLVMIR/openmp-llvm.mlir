@@ -162,14 +162,12 @@ llvm.func @test_omp_parallel_if_1(%arg0: i32) -> () {
 // CHECK: %[[I32_IF_COND_VAR_1:.*]] = sext i1 %[[IF_COND_VAR_1]] to i32
 // CHECK: call void @__kmpc_fork_call_if(ptr @[[SI_VAR_IF_1]], i32 0, ptr @[[OMP_OUTLINED_FN_IF_1:.*]], i32 %[[I32_IF_COND_VAR_1]], ptr null)
 // CHECK: br label %[[OUTLINED_EXIT_IF_1:.*]]
-// CHECK: [[OUTLINED_EXIT_IF_1]]:
-// CHECK: br label %[[RETURN_BLOCK_IF_1:.*]]
   omp.parallel if(%1) {
     omp.barrier
     omp.terminator
   }
 
-// CHECK: [[RETURN_BLOCK_IF_1]]:
+// CHECK: [[OUTLINED_EXIT_IF_1]]:
 // CHECK: ret void
   llvm.return
 }

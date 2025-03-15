@@ -74,6 +74,15 @@ public:
         builder.getAttr<cir::IntAttr>(type, e->getValue()));
   }
 
+  mlir::Value VisitFloatingLiteral(const FloatingLiteral *e) {
+    mlir::Type type = cgf.convertType(e->getType());
+    assert(mlir::isa<cir::CIRFPTypeInterface>(type) &&
+           "expect floating-point type");
+    return builder.create<cir::ConstantOp>(
+        cgf.getLoc(e->getExprLoc()), type,
+        builder.getAttr<cir::FPAttr>(type, e->getValue()));
+  }
+
   mlir::Value VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *e) {
     mlir::Type type = cgf.convertType(e->getType());
     return builder.create<cir::ConstantOp>(
@@ -82,6 +91,8 @@ public:
   }
 
   mlir::Value VisitCastExpr(CastExpr *E);
+
+  mlir::Value VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *e);
 
   /// Emit a conversion from the specified type to the specified destination
   /// type, both of which are CIR scalar types.
@@ -98,6 +109,7 @@ public:
 
     cgf.getCIRGenModule().errorNYI(loc,
                                    "emitScalarConversion for unequal types");
+    return {};
   }
 };
 
@@ -137,4 +149,42 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
                                    "CastExpr: ", ce->getCastKindName());
   }
   return {};
+}
+
+/// Return the size or alignment of the type of argument of the sizeof
+/// expression as an integer.
+mlir::Value ScalarExprEmitter::VisitUnaryExprOrTypeTraitExpr(
+    const UnaryExprOrTypeTraitExpr *e) {
+  const QualType typeToSize = e->getTypeOfArgument();
+  const mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  if (auto kind = e->getKind();
+      kind == UETT_SizeOf || kind == UETT_DataSizeOf) {
+    if (const VariableArrayType *variableArrTy =
+            cgf.getContext().getAsVariableArrayType(typeToSize)) {
+      cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
+                                     "sizeof operator for VariableArrayType",
+                                     e->getStmtClassName());
+      return builder.getConstant(
+          loc, builder.getAttr<cir::IntAttr>(
+                   cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
+    }
+  } else if (e->getKind() == UETT_OpenMPRequiredSimdAlign) {
+    cgf.getCIRGenModule().errorNYI(
+        e->getSourceRange(), "sizeof operator for OpenMpRequiredSimdAlign",
+        e->getStmtClassName());
+    return builder.getConstant(
+        loc, builder.getAttr<cir::IntAttr>(
+                 cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
+  } else if (e->getKind() == UETT_VectorElements) {
+    cgf.getCIRGenModule().errorNYI(e->getSourceRange(),
+                                   "sizeof operator for VectorElements",
+                                   e->getStmtClassName());
+    return builder.getConstant(
+        loc, builder.getAttr<cir::IntAttr>(
+                 cgf.cgm.UInt64Ty, llvm::APSInt(llvm::APInt(64, 1), true)));
+  }
+
+  return builder.getConstant(
+      loc, builder.getAttr<cir::IntAttr>(
+               cgf.cgm.UInt64Ty, e->EvaluateKnownConstInt(cgf.getContext())));
 }

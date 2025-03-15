@@ -196,6 +196,7 @@ __except:
 
 ; CHECK-LABEL: _code_in_catchpad:
 ; CHECK: # %__except.ret
+; CHECK-NEXT:         $ehgcr_4_1:
 ; CHECK-NEXT:         movl    -24(%ebp), %esp
 ; CHECK-NEXT:         addl    $12, %ebp
 ; CHECK-NEXT:         movl    $-1, -16(%ebp)

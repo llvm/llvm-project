@@ -152,6 +152,13 @@ public:
   /// intersection with no simplification of any sort attempted.
   void append(const IntegerRelation &other);
 
+  /// Finds an equality that equates the specified variable to a constant.
+  /// Returns the position of the equality row. If 'symbolic' is set to true,
+  /// symbols are also treated like a constant, i.e., an affine function of the
+  /// symbols is also treated like a constant. Returns -1 if such an equality
+  /// could not be found.
+  int findEqualityToConstant(unsigned pos, bool symbolic = false) const;
+
   /// Return the intersection of the two relations.
   /// If there are locals, they will be merged.
   IntegerRelation intersect(IntegerRelation other) const;

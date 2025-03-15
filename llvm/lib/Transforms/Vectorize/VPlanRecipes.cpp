@@ -27,7 +27,6 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
-#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/VectorBuilder.h"
@@ -278,6 +277,12 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
   llvm_unreachable("subclasses should implement computeCost");
 }
 
+bool VPRecipeBase::isPhi() const {
+  return (getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC) ||
+         (isa<VPInstruction>(this) &&
+          cast<VPInstruction>(this)->getOpcode() == Instruction::PHI);
+}
+
 InstructionCost
 VPPartialReductionRecipe::computeCost(ElementCount VF,
                                       VPCostContext &Ctx) const {
@@ -419,6 +424,7 @@ bool VPInstruction::canGenerateScalarForFirstLane() const {
     return true;
   switch (Opcode) {
   case Instruction::ICmp:
+  case Instruction::PHI:
   case Instruction::Select:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnCount:
@@ -462,11 +468,28 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *A = State.get(getOperand(0));
     return Builder.CreateNot(A, Name);
   }
+  case Instruction::ExtractElement: {
+    assert(State.VF.isVector() && "Only extract elements from vectors");
+    Value *Vec = State.get(getOperand(0));
+    Value *Idx = State.get(getOperand(1), /*IsScalar=*/true);
+    return Builder.CreateExtractElement(Vec, Idx, Name);
+  }
   case Instruction::ICmp: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
     Value *A = State.get(getOperand(0), OnlyFirstLaneUsed);
     Value *B = State.get(getOperand(1), OnlyFirstLaneUsed);
     return Builder.CreateCmp(getPredicate(), A, B, Name);
+  }
+  case Instruction::PHI: {
+    assert(getParent() ==
+               getParent()->getPlan()->getVectorLoopRegion()->getEntry() &&
+           "VPInstructions with PHI opcodes must be used for header phis only "
+           "at the moment");
+    BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
+    Value *Start = State.get(getOperand(0), VPLane(0));
+    PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
+    Phi->addIncoming(Start, VectorPH);
+    return Phi;
   }
   case Instruction::Select: {
     bool OnlyFirstLaneUsed = vputils::onlyFirstLaneUsed(this);
@@ -706,12 +729,10 @@ Value *VPInstruction::generate(VPTransformState &State) {
     Value *A = State.get(getOperand(0));
     return Builder.CreateOrReduce(A);
   }
-  case VPInstruction::ExtractFirstActive: {
-    Value *Vec = State.get(getOperand(0));
-    Value *Mask = State.get(getOperand(1));
-    Value *Ctz = Builder.CreateCountTrailingZeroElems(
-        Builder.getInt64Ty(), Mask, true, "first.active.lane");
-    return Builder.CreateExtractElement(Vec, Ctz, "early.exit.value");
+  case VPInstruction::FirstActiveLane: {
+    Value *Mask = State.get(getOperand(0));
+    return Builder.CreateCountTrailingZeroElems(Builder.getInt64Ty(), Mask,
+                                                true, Name);
   }
   default:
     llvm_unreachable("Unsupported opcode for instruction");
@@ -738,10 +759,34 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
   }
 
   switch (getOpcode()) {
+  case Instruction::ExtractElement: {
+    // Add on the cost of extracting the element.
+    auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
+    return Ctx.TTI.getVectorInstrCost(Instruction::ExtractElement, VecTy,
+                                      Ctx.CostKind);
+  }
   case VPInstruction::AnyOf: {
     auto *VecTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
     return Ctx.TTI.getArithmeticReductionCost(
         Instruction::Or, cast<VectorType>(VecTy), std::nullopt, Ctx.CostKind);
+  }
+  case VPInstruction::FirstActiveLane: {
+    // Calculate the cost of determining the lane index.
+    auto *PredTy = toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF);
+    IntrinsicCostAttributes Attrs(Intrinsic::experimental_cttz_elts,
+                                  Type::getInt64Ty(Ctx.LLVMCtx),
+                                  {PredTy, Type::getInt1Ty(Ctx.LLVMCtx)});
+    return Ctx.TTI.getIntrinsicInstrCost(Attrs, Ctx.CostKind);
+  }
+  case VPInstruction::FirstOrderRecurrenceSplice: {
+    assert(VF.isVector() && "Scalar FirstOrderRecurrenceSplice?");
+    SmallVector<int> Mask(VF.getKnownMinValue());
+    std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
+    Type *VectorTy = toVectorTy(Ctx.Types.inferScalarType(this), VF);
+
+    return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
+                                  cast<VectorType>(VectorTy), Mask,
+                                  Ctx.CostKind, VF.getKnownMinValue() - 1);
   }
   default:
     // TODO: Compute cost other VPInstructions once the legacy cost model has
@@ -754,13 +799,15 @@ InstructionCost VPInstruction::computeCost(ElementCount VF,
 
 bool VPInstruction::isVectorToScalar() const {
   return getOpcode() == VPInstruction::ExtractFromEnd ||
-         getOpcode() == VPInstruction::ExtractFirstActive ||
+         getOpcode() == Instruction::ExtractElement ||
+         getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
 }
 
 bool VPInstruction::isSingleScalar() const {
-  return getOpcode() == VPInstruction::ResumePhi;
+  return getOpcode() == VPInstruction::ResumePhi ||
+         getOpcode() == Instruction::PHI;
 }
 
 #if !defined(NDEBUG)
@@ -813,13 +860,14 @@ bool VPInstruction::opcodeMayReadOrWriteFromMemory() const {
   if (Instruction::isBinaryOp(getOpcode()))
     return false;
   switch (getOpcode()) {
+  case Instruction::ExtractElement:
   case Instruction::ICmp:
   case Instruction::Select:
   case VPInstruction::AnyOf:
   case VPInstruction::CalculateTripCountMinusVF:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::ExtractFromEnd:
-  case VPInstruction::ExtractFirstActive:
+  case VPInstruction::FirstActiveLane:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::Not:
@@ -838,6 +886,10 @@ bool VPInstruction::onlyFirstLaneUsed(const VPValue *Op) const {
   switch (getOpcode()) {
   default:
     return false;
+  case Instruction::ExtractElement:
+    return Op == getOperand(1);
+  case Instruction::PHI:
+    return true;
   case Instruction::ICmp:
   case Instruction::Select:
   case Instruction::Or:
@@ -928,7 +980,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::Broadcast:
     O << "broadcast";
     break;
-
   case VPInstruction::ExtractFromEnd:
     O << "extract-from-end";
     break;
@@ -944,8 +995,8 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::AnyOf:
     O << "any-of";
     break;
-  case VPInstruction::ExtractFirstActive:
-    O << "extract-first-active";
+  case VPInstruction::FirstActiveLane:
+    O << "first-active-lane";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
@@ -2222,6 +2273,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "Reduction being replicated.");
   Value *PrevInChain = State.get(getChainOp(), /*IsScalar*/ true);
   RecurKind Kind = RdxDesc.getRecurrenceKind();
+  assert(!RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+         "In-loop AnyOf reductions aren't currently supported");
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
   State.Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
@@ -2232,12 +2285,8 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     VectorType *VecTy = dyn_cast<VectorType>(NewVecOp->getType());
     Type *ElementTy = VecTy ? VecTy->getElementType() : NewVecOp->getType();
 
-    Value *Start;
-    if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind))
-      Start = RdxDesc.getRecurrenceStartValue();
-    else
-      Start = llvm::getRecurrenceIdentity(Kind, ElementTy,
-                                          RdxDesc.getFastMathFlags());
+    Value *Start =
+        getRecurrenceIdentity(Kind, ElementTy, RdxDesc.getFastMathFlags());
     if (State.VF.isVector())
       Start = State.Builder.CreateVectorSplat(VecTy->getElementCount(), Start);
 
@@ -3283,11 +3332,12 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
-    auto *IVR = cast<VPHeaderPHIRecipe>(&getParent()
-                                             ->getPlan()
-                                             ->getVectorLoopRegion()
-                                             ->getEntryBasicBlock()
-                                             ->front());
+    auto *IVR = getParent()
+                    ->getPlan()
+                    ->getVectorLoopRegion()
+                    ->getEntryBasicBlock()
+                    ->front()
+                    .getVPSingleValue();
     PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, /*IsScalar*/ true));
     NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
                                     CanonicalIV->getIterator());
@@ -3463,14 +3513,7 @@ VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
   if (VF.isScalable() && VF.getKnownMinValue() == 1)
     return InstructionCost::getInvalid();
 
-  SmallVector<int> Mask(VF.getKnownMinValue());
-  std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
-  Type *VectorTy =
-      toVectorTy(Ctx.Types.inferScalarType(this->getVPSingleValue()), VF);
-
-  return Ctx.TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
-                                cast<VectorType>(VectorTy), Mask, Ctx.CostKind,
-                                VF.getKnownMinValue() - 1);
+  return 0;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3608,7 +3651,7 @@ void VPWidenPHIRecipe::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
   Value *Op0 = State.get(getOperand(0));
   Type *VecTy = Op0->getType();
-  Value *VecPhi = State.Builder.CreatePHI(VecTy, 2, "vec.phi");
+  Value *VecPhi = State.Builder.CreatePHI(VecTy, 2, Name);
   State.set(this, VecPhi);
 }
 
@@ -3616,16 +3659,6 @@ void VPWidenPHIRecipe::execute(VPTransformState &State) {
 void VPWidenPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                              VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-PHI ";
-
-  auto *OriginalPhi = cast<PHINode>(getUnderlyingValue());
-  // Unless all incoming values are modeled in VPlan  print the original PHI
-  // directly.
-  // TODO: Remove once all VPWidenPHIRecipe instances keep all relevant incoming
-  // values as VPValues.
-  if (getNumOperands() != OriginalPhi->getNumOperands()) {
-    O << VPlanIngredient(OriginalPhi);
-    return;
-  }
 
   printAsOperand(O, SlotTracker);
   O << " = phi ";
@@ -3661,25 +3694,6 @@ void VPEVLBasedIVPHIRecipe::print(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent << "EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI ";
 
-  printAsOperand(O, SlotTracker);
-  O << " = phi ";
-  printOperands(O, SlotTracker);
-}
-#endif
-
-void VPScalarPHIRecipe::execute(VPTransformState &State) {
-  BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
-  Value *Start = State.get(getStartValue(), VPLane(0));
-  PHINode *Phi = State.Builder.CreatePHI(Start->getType(), 2, Name);
-  Phi->addIncoming(Start, VectorPH);
-  Phi->setDebugLoc(getDebugLoc());
-  State.set(this, Phi, /*IsScalar=*/true);
-}
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPScalarPHIRecipe::print(raw_ostream &O, const Twine &Indent,
-                              VPSlotTracker &SlotTracker) const {
-  O << Indent << "SCALAR-PHI ";
   printAsOperand(O, SlotTracker);
   O << " = phi ";
   printOperands(O, SlotTracker);

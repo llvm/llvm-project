@@ -186,9 +186,8 @@ void TargetLoweringObjectFile::emitCGProfileMetadata(MCStreamer &Streamer,
                          ->getValue()
                          ->getUniqueInteger()
                          .getZExtValue();
-    Streamer.emitCGProfileEntry(
-        MCSymbolRefExpr::create(From, MCSymbolRefExpr::VK_None, C),
-        MCSymbolRefExpr::create(To, MCSymbolRefExpr::VK_None, C), Count);
+    Streamer.emitCGProfileEntry(MCSymbolRefExpr::create(From, C),
+                                MCSymbolRefExpr::create(To, C), Count);
   }
 }
 

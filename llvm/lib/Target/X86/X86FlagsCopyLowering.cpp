@@ -615,7 +615,7 @@ bool X86FlagsCopyLoweringPass::runOnMachineFunction(MachineFunction &MF) {
           MRI->replaceRegWith(MI.getOperand(0).getReg(),
                               CopyDefI.getOperand(0).getReg());
           MI.eraseFromParent();
-        } else if (X86::isSETCC(Opc)) {
+        } else if (X86::isSETCC(Opc) || X86::isSETZUCC(Opc)) {
           rewriteSetCC(*TestMBB, TestPos, TestLoc, MI, CondRegs);
         } else if (isArithmeticOp(Opc)) {
           rewriteArithmetic(*TestMBB, TestPos, TestLoc, MI, CondRegs);
@@ -780,6 +780,29 @@ void X86FlagsCopyLoweringPass::rewriteSetCC(MachineBasicBlock &MBB,
   unsigned &CondReg = CondRegs[Cond];
   if (!CondReg)
     CondReg = promoteCondToReg(MBB, Pos, Loc, Cond);
+
+  if (X86::isSETZUCC(MI.getOpcode())) {
+    // SETZUCC is generated for register only for now.
+    assert(!MI.mayStore() && "Cannot handle memory variants");
+    assert(MI.getOperand(0).isReg() &&
+           "Cannot have a non-register defined operand to SETZUcc!");
+    Register OldReg = MI.getOperand(0).getReg();
+    // Drop Kill flags on the old register before replacing. CondReg may have
+    // a longer live range.
+    MRI->clearKillFlags(OldReg);
+    for (auto &Use : MRI->use_instructions(OldReg)) {
+      assert(Use.getOpcode() == X86::INSERT_SUBREG &&
+             "SETZUCC should be only used by INSERT_SUBREG");
+      Use.getOperand(2).setReg(CondReg);
+      // Recover MOV32r0 before INSERT_SUBREG, which removed by SETZUCC.
+      Register ZeroReg = MRI->createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*Use.getParent(), &Use, Use.getDebugLoc(), TII->get(X86::MOV32r0),
+              ZeroReg);
+      Use.getOperand(1).setReg(ZeroReg);
+    }
+    MI.eraseFromParent();
+    return;
+  }
 
   // Rewriting a register def is trivial: we just replace the register and
   // remove the setcc.

@@ -724,12 +724,12 @@ class WorkloadImportsManager : public ModuleImportsManager {
     auto Buffer = std::move(BufferOrErr.get());
 
     PGOCtxProfileReader Reader(Buffer->getBuffer());
-    auto Ctx = Reader.loadContexts();
+    auto Ctx = Reader.loadProfiles();
     if (!Ctx) {
       report_fatal_error("Failed to parse contextual profiles");
       return;
     }
-    const auto &CtxMap = *Ctx;
+    const auto &CtxMap = Ctx->Contexts;
     SetVector<GlobalValue::GUID> ContainedGUIDs;
     for (const auto &[RootGuid, Root] : CtxMap) {
       // Avoid ContainedGUIDs to get in/out of scope. Reuse its memory for

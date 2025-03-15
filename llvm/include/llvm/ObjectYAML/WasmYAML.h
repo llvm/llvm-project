@@ -48,6 +48,7 @@ struct Limits {
   LimitFlags Flags;
   yaml::Hex32 Minimum;
   yaml::Hex32 Maximum;
+  yaml::Hex32 PageSize;
 };
 
 struct Table {

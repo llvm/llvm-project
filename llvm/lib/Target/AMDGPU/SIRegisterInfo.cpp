@@ -571,10 +571,10 @@ MCRegister SIRegisterInfo::reservedPrivateSegmentBufferReg(
 
 std::pair<unsigned, unsigned>
 SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  unsigned MaxNumVGPRs = ST.getMaxNumVGPRs(MF);
-  unsigned MaxNumAGPRs = MaxNumVGPRs;
-  unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+  const unsigned MaxVectorRegs = ST.getMaxNumVGPRs(MF);
+
+  unsigned MaxNumVGPRs = MaxVectorRegs;
+  unsigned MaxNumAGPRs = 0;
 
   // On GFX90A, the number of VGPRs and AGPRs need not be equal. Theoretically,
   // a wave may have up to 512 total vector registers combining together both
@@ -585,16 +585,44 @@ SIRegisterInfo::getMaxNumVectorRegs(const MachineFunction &MF) const {
   // TODO: it shall be possible to estimate maximum AGPR/VGPR pressure and split
   //       register file accordingly.
   if (ST.hasGFX90AInsts()) {
-    if (MFI->mayNeedAGPRs()) {
-      MaxNumVGPRs /= 2;
-      MaxNumAGPRs = MaxNumVGPRs;
+    unsigned MinNumAGPRs = 0;
+    const unsigned TotalNumAGPRs = AMDGPU::AGPR_32RegClass.getNumRegs();
+    const unsigned TotalNumVGPRs = AMDGPU::VGPR_32RegClass.getNumRegs();
+
+    const std::pair<unsigned, unsigned> DefaultNumAGPR = {~0u, ~0u};
+
+    // TODO: Move this logic into subtarget on IR function
+    //
+    // TODO: The lower bound should probably force the number of required
+    // registers up, overriding amdgpu-waves-per-eu.
+    std::tie(MinNumAGPRs, MaxNumAGPRs) = AMDGPU::getIntegerPairAttribute(
+        MF.getFunction(), "amdgpu-agpr-alloc", DefaultNumAGPR,
+        /*OnlyFirstRequired=*/true);
+
+    if (MinNumAGPRs == DefaultNumAGPR.first) {
+      // Default to splitting half the registers if AGPRs are required.
+      MinNumAGPRs = MaxNumAGPRs = MaxVectorRegs / 2;
     } else {
-      if (MaxNumVGPRs > TotalNumVGPRs) {
-        MaxNumAGPRs = MaxNumVGPRs - TotalNumVGPRs;
-        MaxNumVGPRs = TotalNumVGPRs;
-      } else
-        MaxNumAGPRs = 0;
+      // Align to accum_offset's allocation granularity.
+      MinNumAGPRs = alignTo(MinNumAGPRs, 4);
+
+      MinNumAGPRs = std::min(MinNumAGPRs, TotalNumAGPRs);
     }
+
+    // Clamp values to be inbounds of our limits, and ensure min <= max.
+
+    MaxNumAGPRs = std::min(std::max(MinNumAGPRs, MaxNumAGPRs), MaxVectorRegs);
+    MinNumAGPRs = std::min(std::min(MinNumAGPRs, TotalNumAGPRs), MaxNumAGPRs);
+
+    MaxNumVGPRs = std::min(MaxVectorRegs - MinNumAGPRs, TotalNumVGPRs);
+    MaxNumAGPRs = std::min(MaxVectorRegs - MaxNumVGPRs, MaxNumAGPRs);
+
+    assert(MaxNumVGPRs + MaxNumAGPRs <= MaxVectorRegs &&
+           MaxNumAGPRs <= TotalNumAGPRs && MaxNumVGPRs <= TotalNumVGPRs &&
+           "invalid register counts");
+  } else if (ST.hasMAIInsts()) {
+    // On gfx908 the number of AGPRs always equals the number of VGPRs.
+    MaxNumAGPRs = MaxNumVGPRs = MaxVectorRegs;
   }
 
   return std::pair(MaxNumVGPRs, MaxNumAGPRs);
@@ -2713,7 +2741,8 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 
       return true;
     }
-    case AMDGPU::S_ADD_I32: {
+    case AMDGPU::S_ADD_I32:
+    case AMDGPU::S_ADD_U32: {
       // TODO: Handle s_or_b32, s_and_b32.
       unsigned OtherOpIdx = FIOperandNum == 1 ? 2 : 1;
       MachineOperand &OtherOp = MI->getOperand(OtherOpIdx);
@@ -2773,7 +2802,7 @@ bool SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           DstReg = TmpReg;
         }
 
-        auto AddI32 = BuildMI(*MBB, *MI, DL, TII->get(AMDGPU::S_ADD_I32))
+        auto AddI32 = BuildMI(*MBB, *MI, DL, MI->getDesc())
                           .addDef(DstReg, RegState::Renamable)
                           .addReg(MaterializedReg, RegState::Kill)
                           .add(OtherOp);
@@ -3500,7 +3529,7 @@ bool SIRegisterInfo::isSGPRReg(const MachineRegisterInfo &MRI,
     RC = MRI.getRegClass(Reg);
   else
     RC = getPhysRegBaseClass(Reg);
-  return RC ? isSGPRClass(RC) : false;
+  return RC && isSGPRClass(RC);
 }
 
 const TargetRegisterClass *
@@ -3682,6 +3711,73 @@ const int *SIRegisterInfo::getRegUnitPressureSets(unsigned RegUnit) const {
     return Empty;
 
   return AMDGPUGenRegisterInfo::getRegUnitPressureSets(RegUnit);
+}
+
+bool SIRegisterInfo::getRegAllocationHints(Register VirtReg,
+                                           ArrayRef<MCPhysReg> Order,
+                                           SmallVectorImpl<MCPhysReg> &Hints,
+                                           const MachineFunction &MF,
+                                           const VirtRegMap *VRM,
+                                           const LiveRegMatrix *Matrix) const {
+
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
+  std::pair<unsigned, Register> Hint = MRI.getRegAllocationHint(VirtReg);
+
+  switch (Hint.first) {
+  case AMDGPURI::Size32: {
+    Register Paired = Hint.second;
+    assert(Paired);
+    Register PairedPhys;
+    if (Paired.isPhysical()) {
+      PairedPhys =
+          getMatchingSuperReg(Paired, AMDGPU::lo16, &AMDGPU::VGPR_32RegClass);
+    } else if (VRM && VRM->hasPhys(Paired)) {
+      PairedPhys = getMatchingSuperReg(VRM->getPhys(Paired), AMDGPU::lo16,
+                                       &AMDGPU::VGPR_32RegClass);
+    }
+
+    // Prefer the paired physreg.
+    if (PairedPhys)
+      // isLo(Paired) is implicitly true here from the API of
+      // getMatchingSuperReg.
+      Hints.push_back(PairedPhys);
+    return false;
+  }
+  case AMDGPURI::Size16: {
+    Register Paired = Hint.second;
+    assert(Paired);
+    Register PairedPhys;
+    if (Paired.isPhysical()) {
+      PairedPhys = TRI->getSubReg(Paired, AMDGPU::lo16);
+    } else if (VRM && VRM->hasPhys(Paired)) {
+      PairedPhys = TRI->getSubReg(VRM->getPhys(Paired), AMDGPU::lo16);
+    }
+
+    // First prefer the paired physreg.
+    if (PairedPhys)
+      Hints.push_back(PairedPhys);
+    else {
+      // Add all the lo16 physregs.
+      // When the Paired operand has not yet been assigned a physreg it is
+      // better to try putting VirtReg in a lo16 register, because possibly
+      // later Paired can be assigned to the overlapping register and the COPY
+      // can be eliminated.
+      for (MCPhysReg PhysReg : Order) {
+        if (PhysReg == PairedPhys || AMDGPU::isHi16Reg(PhysReg, *this))
+          continue;
+        if (AMDGPU::VGPR_16RegClass.contains(PhysReg) &&
+            !MRI.isReserved(PhysReg))
+          Hints.push_back(PhysReg);
+      }
+    }
+    return false;
+  }
+  default:
+    return TargetRegisterInfo::getRegAllocationHints(VirtReg, Order, Hints, MF,
+                                                     VRM);
+  }
 }
 
 MCRegister SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {

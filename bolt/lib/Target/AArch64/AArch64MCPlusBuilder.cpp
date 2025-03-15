@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64FixupKinds.h"
 #include "MCTargetDesc/AArch64MCExpr.h"
@@ -133,6 +134,12 @@ static InstructionListType createIncMemory(MCPhysReg RegTo, MCPhysReg RegTmp) {
 class AArch64MCPlusBuilder : public MCPlusBuilder {
 public:
   using MCPlusBuilder::MCPlusBuilder;
+
+  std::unique_ptr<MCSymbolizer>
+  createTargetSymbolizer(BinaryFunction &Function,
+                         bool CreateNewSymbols) const override {
+    return std::make_unique<AArch64MCSymbolizer>(Function, CreateNewSymbols);
+  }
 
   MCPhysReg getStackPointer() const override { return AArch64::SP; }
   MCPhysReg getFramePointer() const override { return AArch64::FP; }
@@ -274,7 +281,7 @@ public:
     return Inst.getOpcode() == AArch64::ADR;
   }
 
-  bool isAddXri(const MCInst &Inst) const {
+  bool isAddXri(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADDXri;
   }
 
@@ -311,7 +318,7 @@ public:
             Inst.getOpcode() == AArch64::CBZX);
   }
 
-  bool isMOVW(const MCInst &Inst) const {
+  bool isMOVW(const MCInst &Inst) const override {
     return (Inst.getOpcode() == AArch64::MOVKWi ||
             Inst.getOpcode() == AArch64::MOVKXi ||
             Inst.getOpcode() == AArch64::MOVNWi ||
@@ -773,7 +780,7 @@ public:
 
   const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
                                  MCContext &Ctx,
-                                 uint64_t RelType) const override {
+                                 uint32_t RelType) const override {
 
     if (isADR(Inst) || RelType == ELF::R_AARCH64_ADR_PREL_LO21 ||
         RelType == ELF::R_AARCH64_TLSDESC_ADR_PREL21) {
@@ -1878,7 +1885,7 @@ public:
 
   bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
                                int64_t Addend, MCContext *Ctx, int64_t &Value,
-                               uint64_t RelType) const override {
+                               uint32_t RelType) const override {
     unsigned ImmOpNo = -1U;
     for (unsigned Index = 0; Index < MCPlus::getNumPrimeOperands(Inst);
          ++Index) {
@@ -1906,7 +1913,7 @@ public:
         *Ctx, 0)));
   }
 
-  bool shouldRecordCodeRelocation(uint64_t RelType) const override {
+  bool shouldRecordCodeRelocation(uint32_t RelType) const override {
     switch (RelType) {
     case ELF::R_AARCH64_ABS64:
     case ELF::R_AARCH64_ABS32:
@@ -2229,7 +2236,7 @@ public:
     assert(FKI.TargetOffset == 0 && "0-bit relocation offset expected");
     const uint64_t RelOffset = Fixup.getOffset();
 
-    uint64_t RelType;
+    uint32_t RelType;
     if (Fixup.getKind() == MCFixupKind(AArch64::fixup_aarch64_pcrel_call26))
       RelType = ELF::R_AARCH64_CALL26;
     else if (Fixup.getKind() ==
