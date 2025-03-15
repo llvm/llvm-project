@@ -41,7 +41,17 @@ program acc_data_test
 
     ! Negative tests  
     ! Basic data construct in program body
-    !$acc data copy(a, b) create(d)
+    !$acc data copy(a, b) create(d) bogus()
+    !CHECK: acc-data-statement.f90:
+    !CHECK-SAME: error: expected end of OpenACC directive
+    !CHECK-NEXT: !$acc data copy(a, b) create(d) bogus()
+    !CHECK-NEXT: ^
+    !CHECK-NEXT: in the context: OpenACC construct
+    !CHECK-NEXT: !$acc data copy(a, b) create(d) bogus()
+    !CHECK-NEXT: ^
+    !CHECK-NEXT: in the context: execution part
+    !CHECK-NEXT: !$acc data copy(a, b) create(c)
+    !CHECK-NEXT: ^
     a = 1
     b = 2
     d = a + b
@@ -54,7 +64,6 @@ program acc_data_test
         a = a + 1
 !       !$acc end data
         print *, "Inside if block"
-        ! First error in the file.
         !CHECK: acc-data-statement.f90:
         !CHECK-SAME: error: expected OpenACC end block directive
         !CHECK-NEXT: end if
@@ -92,19 +101,19 @@ program acc_data_test
     s = s + 1
 !   !$acc end data
     print *, "After nested data"
-!   !$acc end data
-
-    print *, "Program finished"
+    !$acc end data  I forgot to comment this out.
     !CHECK: acc-data-statement.f90:
-    !CHECK-SAME: error: expected OpenACC end block directive
-    !CHECK-NEXT: contains
-    !CHECK-NEXT: ^ 
+    !CHECK-SAME: error: expected end of OpenACC directive
+    !CHECK-NEXT: !$acc end data  I forgot to comment this out.
+    !CHECK-NEXT: ^
     !CHECK-NEXT: in the context: OpenACC construct
     !CHECK-NEXT: !$acc data copy(s)
     !CHECK-NEXT: ^
     !CHECK-NEXT: in the context: OpenACC construct
     !CHECK-NEXT: !$acc data copyin(a)
     !CHECK-NEXT: ^
+    print *, "Program finished"
+
     !CHECK: acc-data-statement.f90:
     !CHECK-SAME: error: expected OpenACC end block directive
     !CHECK-NEXT: contains
@@ -113,14 +122,14 @@ program acc_data_test
     !CHECK-NEXT: !$acc data copyin(a)
     !CHECK-NEXT: ^
     !CHECK-NEXT: in the context: OpenACC construct
-    !CHECK-NEXT: !$acc data copy(a, b) create(d)
+    !CHECK-NEXT: !$acc data copy(a, b) create(d) bogus()
     !CHECK-NEXT: ^
     !CHECK: acc-data-statement.f90:
     !CHECK-SAME: error: expected OpenACC end block directive
     !CHECK-NEXT: contains
     !CHECK-NEXT: ^
     !CHECK-NEXT: in the context: OpenACC construct
-    !CHECK-NEXT: $acc data copy(a, b) create(d)
+    !CHECK-NEXT: $acc data copy(a, b) create(d) bogus()
     !CHECK-NEXT: ^
     !CHECK-NEXT: in the context: execution part
     !CHECK-NEXT: !$acc data copy(a, b) create(c)

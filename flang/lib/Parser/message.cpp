@@ -272,7 +272,7 @@ static llvm::raw_ostream::Colors PrefixColor(Severity severity) {
   return llvm::raw_ostream::SAVEDCOLOR;
 }
 
-// FIXME: Make these configurable, based on verbosity level.
+// TODO: Make these configurable, based on verbosity level.
 const int MAX_CONTEXTS_EMITTED = 2;
 const bool OMIT_SHARED_CONTEXTS = true;
 
@@ -282,10 +282,12 @@ void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
   const AllSources &sources{allCooked.allSources()};
   sources.EmitMessage(o, provenanceRange, ToString(), Prefix(severity()),
       PrefixColor(severity()), echoSourceLine);
+  // Always refers to if the attachment in the loop below is a context.
   bool isContext{attachmentIsContext_};
-  int contextsEmitted{isContext ? 1 : 0};
+  int contextsEmitted{0};
   // Emit attachments.
   for (const Message *attachment{attachment_.get()}; attachment;
+      isContext = attachment->attachmentIsContext_,
       attachment = attachment->attachment_.get()) {
     Severity severity = isContext ? Severity::Context : attachment->severity();
     auto emitAttachment = [&]() {
@@ -293,10 +295,10 @@ void Message::Emit(llvm::raw_ostream &o, const AllCookedSources &allCooked,
           attachment->ToString(), Prefix(severity), PrefixColor(severity),
           echoSourceLine);
     };
-    // TODO isContext is not used correctly here.
-    if (attachment->attachmentIsContext_) {
+
+    if (isContext) {
       // Truncate the number of contexts emitted.
-      if (contextsEmitted <= MAX_CONTEXTS_EMITTED) {
+      if (contextsEmitted < MAX_CONTEXTS_EMITTED) {
         emitAttachment();
         contextsEmitted += 1;
       }
