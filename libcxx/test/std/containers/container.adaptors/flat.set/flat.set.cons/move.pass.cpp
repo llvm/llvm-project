@@ -182,7 +182,7 @@ int main(int, char**) {
   test_move_noexcept();
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
   test_move_exception();
-#endif // !defined(TEST_HAS_NO_EXCEPTIONS)
+#endif
 
   return 0;
 }
