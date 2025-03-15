@@ -223,34 +223,23 @@ void GOFFOstream::finalizeRecord() {
 }
 
 namespace {
-
-class GOFFObjectWriter : public MCObjectWriter {
-  // The target specific GOFF writer instance.
-  std::unique_ptr<MCGOFFObjectTargetWriter> TargetObjectWriter;
-
-  // The stream used to write the GOFF records.
+class GOFFWriter {
   GOFFOstream OS;
+  [[maybe_unused]] MCAssembler &Asm;
 
-public:
-  GOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
-                   raw_pwrite_stream &OS)
-      : TargetObjectWriter(std::move(MOTW)), OS(OS) {}
-
-  ~GOFFObjectWriter() override {}
-
-  // Write GOFF records.
   void writeHeader();
   void writeEnd();
 
-  // Implementation of the MCObjectWriter interface.
-  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                        const MCFixup &Fixup, MCValue Target,
-                        uint64_t &FixedValue) override {}
-  uint64_t writeObject(MCAssembler &Asm) override;
+public:
+  GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm);
+  uint64_t writeObject();
 };
-} // end anonymous namespace
+} // namespace
 
-void GOFFObjectWriter::writeHeader() {
+GOFFWriter::GOFFWriter(raw_pwrite_stream &OS, MCAssembler &Asm)
+    : OS(OS), Asm(Asm) {}
+
+void GOFFWriter::writeHeader() {
   OS.newRecord(GOFF::RT_HDR);
   OS.write_zeros(1);       // Reserved
   OS.writebe<uint32_t>(0); // Target Hardware Environment
@@ -264,7 +253,7 @@ void GOFFObjectWriter::writeHeader() {
   OS.write_zeros(6);       // Reserved
 }
 
-void GOFFObjectWriter::writeEnd() {
+void GOFFWriter::writeEnd() {
   uint8_t F = GOFF::END_EPR_None;
   uint8_t AMODE = 0;
   uint32_t ESDID = 0;
@@ -282,7 +271,7 @@ void GOFFObjectWriter::writeEnd() {
   OS.writebe<uint32_t>(ESDID); // ESDID (of entry point)
 }
 
-uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm) {
+uint64_t GOFFWriter::writeObject() {
   writeHeader();
   writeEnd();
 
@@ -293,6 +282,35 @@ uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm) {
                     << " logical records.");
 
   return OS.getWrittenSize();
+}
+
+namespace {
+
+class GOFFObjectWriter : public MCObjectWriter {
+  // The target specific GOFF writer instance.
+  std::unique_ptr<MCGOFFObjectTargetWriter> TargetObjectWriter;
+
+  // The stream used to write the GOFF records.
+  raw_pwrite_stream &OS;
+
+public:
+  GOFFObjectWriter(std::unique_ptr<MCGOFFObjectTargetWriter> MOTW,
+                   raw_pwrite_stream &OS)
+      : TargetObjectWriter(std::move(MOTW)), OS(OS) {}
+
+  ~GOFFObjectWriter() override {}
+
+  // Implementation of the MCObjectWriter interface.
+  void recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
+                        const MCFixup &Fixup, MCValue Target,
+                        uint64_t &FixedValue) override {}
+  uint64_t writeObject(MCAssembler &Asm) override;
+};
+} // end anonymous namespace
+
+uint64_t GOFFObjectWriter::writeObject(MCAssembler &Asm) {
+  uint64_t Size = GOFFWriter(OS, Asm).writeObject();
+  return Size;
 }
 
 std::unique_ptr<MCObjectWriter>
