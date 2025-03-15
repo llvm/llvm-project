@@ -419,6 +419,8 @@ AST Matchers
   ``MatchASTConsumer`` receive a reference to ``MatchFinderOptions`` in the
   constructor. This allows it to skip system headers when traversing the AST.
 
+Add `matchesString` for `StringLiteral` which matches literals on given `RegExp`.
+
 clang-format
 ------------
 
