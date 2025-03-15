@@ -297,7 +297,7 @@ define i32 @extra_and_use(i32 %x, i32 %y) {
   %r = zext i32 %y to i64
   %mul64 = mul i64 %l, %r
   %overflow = icmp ugt i64 %mul64, 4294967295
-  %and = and i64 %mul64, 4294967295
+  %and = and i64 %mul64, u0xffffffff
   call void @use.i64(i64 %and)
   %retval = zext i1 %overflow to i32
   ret i32 %retval
@@ -318,7 +318,7 @@ define i32 @extra_and_use_small_mask(i32 %x, i32 %y) {
   %r = zext i32 %y to i64
   %mul64 = mul i64 %l, %r
   %overflow = icmp ugt i64 %mul64, 4294967295
-  %and = and i64 %mul64, 4294967295
+  %and = and i64 %mul64, u0xfffffff
   call void @use.i64(i64 %and)
   %retval = zext i1 %overflow to i32
   ret i32 %retval
@@ -339,7 +339,7 @@ define i32 @extra_and_use_mask_too_large(i32 %x, i32 %y) {
   %r = zext i32 %y to i64
   %mul64 = mul i64 %l, %r
   %overflow = icmp ugt i64 %mul64, 4294967295
-  %and = and i64 %mul64, 68719476735
+  %and = and i64 %mul64, u0xfffffffff
   call void @use.i64(i64 %and)
   %retval = zext i1 %overflow to i32
   ret i32 %retval
@@ -347,51 +347,9 @@ define i32 @extra_and_use_mask_too_large(i32 %x, i32 %y) {
 
 define i32 @smul(i32 %a, i32 %b) {
 ; CHECK-LABEL: @smul(
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[MUL]], -2147483648
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], -4294967296
-; CHECK-NEXT:    [[CONV3:%.*]] = zext i1 [[TMP2]] to i32
-; CHECK-NEXT:    ret i32 [[CONV3]]
-;
-  %conv = sext i32 %a to i64
-  %conv1 = sext i32 %b to i64
-  %mul = mul nsw i64 %conv1, %conv
-  %1 = add nsw i64 %mul, -2147483648
-  %2 = icmp ult i64 %1, -4294967296
-  %conv3 = zext i1 %2 to i32
-  ret i32 %conv3
-}
-
-define <2 x i32> @smul_vector_operations(<2 x i32> %a, <2 x i32> %b) {
-; CHECK-LABEL: @smul_vector_operations(
-; CHECK-NEXT:    [[CONV:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[CONV1:%.*]] = sext <2 x i32> [[B:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw <2 x i64> [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw <2 x i64> [[MUL]], splat (i64 -2147483648)
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult <2 x i64> [[TMP1]], splat (i64 -4294967296)
-; CHECK-NEXT:    [[V:%.*]] = zext <2 x i1> [[TMP2]] to <2 x i32>
-; CHECK-NEXT:    ret <2 x i32> [[V]]
-;
-  %conv = sext <2 x i32> %a to <2 x i64>
-  %conv1 = sext <2 x i32> %b to <2 x i64>
-  %mul = mul nsw <2 x i64> %conv1, %conv
-  %1 = add nsw <2 x i64> %mul, <i64 -2147483648, i64 -2147483648>
-  %2 = icmp ult <2 x i64> %1, <i64 -4294967296, i64 -4294967296>
-  %v = select <2 x i1> %2, <2 x i32> <i32 1, i32 1>, <2 x i32> <i32 0, i32 0>
-  ret <2 x i32> %v
-}
-
-
-define i32 @smul(i32 %a, i32 %b) {
-; CHECK-LABEL: @smul(
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[MUL]], -2147483648
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], -4294967296
-; CHECK-NEXT:    [[CONV3:%.*]] = zext i1 [[TMP2]] to i32
+; CHECK-NEXT:    [[SMUL:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[B:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[SMUL]], 1
+; CHECK-NEXT:    [[CONV3:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV3]]
 ;
   %conv = sext i32 %a to i64
@@ -405,11 +363,9 @@ define i32 @smul(i32 %a, i32 %b) {
 
 define i32 @smul2(i32 %a, i32 %b) {
 ; CHECK-LABEL: @smul2(
-; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[A:%.*]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[B:%.*]] to i64
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV1]], [[CONV]]
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[MUL]], 2147483647
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i64 [[TMP1]], 4294967295
+; CHECK-NEXT:    [[SMUL:%.*]] = call { i32, i1 } @llvm.smul.with.overflow.i32(i32 [[B:%.*]], i32 [[A:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i32, i1 } [[SMUL]], 1
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    [[CONV3:%.*]] = zext i1 [[TMP2]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV3]]
 ;
@@ -417,7 +373,7 @@ define i32 @smul2(i32 %a, i32 %b) {
   %conv1 = sext i32 %b to i64
   %mul = mul nsw i64 %conv1, %conv
   %cmp = icmp sle i64 %mul, 2147483647
-  %cmp2 = icmp sgt i64 %mul, -2147483648
+  %cmp2 = icmp sge i64 %mul, -2147483648
   %1 = select i1 %cmp, i1 %cmp2, i1 false
   %conv3 = zext i1 %1 to i32
   ret i32 %conv3
@@ -425,11 +381,9 @@ define i32 @smul2(i32 %a, i32 %b) {
 
 define i1 @smul_sext_add_pattern(i8 %a, i8 %b) {
 ; CHECK-LABEL: @smul_sext_add_pattern(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext i8 [[A:%.*]] to i32
-; CHECK-NEXT:    [[B_EXT:%.*]] = sext i8 [[B:%.*]] to i32
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], 128
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 256
+; CHECK-NEXT:    [[SMUL:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i8, i1 } [[SMUL]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a.ext = sext i8 %a to i32
@@ -452,7 +406,7 @@ define i1 @smul_sext_add_wrong_constants(i8 %a, i8 %b) {
   %b.ext = sext i8 %b to i32
   %mul = mul nsw i32 %a.ext, %b.ext
   %add = add i32 %mul, 42
-  %cmp = icmp slt i32 %add, 100 
+  %cmp = icmp slt i32 %add, 100
   ret i1 %cmp
 }
 
@@ -491,16 +445,14 @@ define i1 @smul_sext_add_different_widths(i4 %a, i16 %b) {
 
 define i1 @smul_sext_add_no_nsw(i8 %a, i8 %b) {
 ; CHECK-LABEL: @smul_sext_add_no_nsw(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext i8 [[A:%.*]] to i32
-; CHECK-NEXT:    [[B_EXT:%.*]] = sext i8 [[B:%.*]] to i32
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], 128
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 256
+; CHECK-NEXT:    [[SMUL:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i8, i1 } [[SMUL]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a.ext = sext i8 %a to i32
   %b.ext = sext i8 %b to i32
-  %mul = mul i32 %a.ext, %b.ext  ; No nsw flag
+  %mul = mul i32 %a.ext, %b.ext
   %add = add i32 %mul, 128
   %cmp = icmp ult i32 %add, 256
   ret i1 %cmp
@@ -572,17 +524,15 @@ define i1 @smul_sext_add_extreme_constants(i8 %a, i8 %b) {
 
 define i1 @smul_sext_add_nsw(i8 %a, i8 %b) {
 ; CHECK-LABEL: @smul_sext_add_nsw(
-; CHECK-NEXT:    [[A_EXT:%.*]] = sext i8 [[A:%.*]] to i32
-; CHECK-NEXT:    [[B_EXT:%.*]] = sext i8 [[B:%.*]] to i32
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[A_EXT]], [[B_EXT]]
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], 128
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[ADD]], 256
+; CHECK-NEXT:    [[SMUL:%.*]] = call { i8, i1 } @llvm.smul.with.overflow.i8(i8 [[A:%.*]], i8 [[B:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = extractvalue { i8, i1 } [[SMUL]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = xor i1 [[TMP1]], true
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a.ext = sext i8 %a to i32
   %b.ext = sext i8 %b to i32
   %mul = mul nsw i32 %a.ext, %b.ext
-  %add = add nsw i32 %mul, 128 
+  %add = add nsw i32 %mul, 128
   %cmp = icmp ult i32 %add, 256
   ret i1 %cmp
 }
@@ -666,7 +616,7 @@ define i32 @smul_extra_and_use_small_mask(i32 %a, i32 %b) {
   %mul = mul nsw i64 %conv1, %conv
   %1 = add nsw i64 %mul, -2147483648
   %2 = icmp ult i64 %1, -4294967296
-  %and = and i64 %mul, 4294967295
+  %and = and i64 %mul, u0xfffffff
   call void @use.i64(i64 %and)
   %retval = zext i1 %2 to i32
   ret i32 %retval
@@ -716,7 +666,7 @@ define i32 @smul_extra_and_use_mask_too_large(i32 %a, i32 %b) {
   %mul = mul nsw i64 %conv1, %conv
   %1 = add nsw i64 %mul, -2147483648
   %2 = icmp ult i64 %1, -4294967296
-  %and = and i64 %mul, 68719476735
+  %and = and i64 %mul, u0xfffffffff
   call void @use.i64(i64 %and)
   %retval = zext i1 %2 to i32
   ret i32 %retval
@@ -743,8 +693,8 @@ define i32 @smul_different_sizes(i32 %a, i8 %b) {
   ret i32 %retval
 }
 
-define i32 @smul_inverse_pattern(i32 %a, i32 %b) {
-; CHECK-LABEL: @smul_inverse_pattern(
+define i32 @smul_inverse_pattern_negative(i32 %a, i32 %b) {
+; CHECK-LABEL: @smul_inverse_pattern_negative(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext i32 [[A:%.*]] to i64
 ; CHECK-NEXT:    [[CONV1:%.*]] = sext i32 [[B:%.*]] to i64
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[CONV1]], [[CONV]]
@@ -762,6 +712,7 @@ define i32 @smul_inverse_pattern(i32 %a, i32 %b) {
   ret i32 %retval
 }
 
+; TODO: Vector support?
 define <2 x i32> @smul_vector_operations(<2 x i32> %a, <2 x i32> %b) {
 ; CHECK-LABEL: @smul_vector_operations(
 ; CHECK-NEXT:    [[CONV:%.*]] = sext <2 x i32> [[A:%.*]] to <2 x i64>
