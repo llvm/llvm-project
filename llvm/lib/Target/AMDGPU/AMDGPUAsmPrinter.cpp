@@ -643,7 +643,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   if (!IsTargetStreamerInitialized)
     initTargetStreamer(*MF.getFunction().getParent());
 
-  ResourceUsage = &getAnalysis<AMDGPUResourceUsageAnalysis>();
+  ResourceUsage = &getAnalysis<AMDGPUResourceUsageAnalysisWrapperPass>();
   CurrentProgramInfo.reset(MF);
 
   const AMDGPUMachineFunction *MFI = MF.getInfo<AMDGPUMachineFunction>();
@@ -665,7 +665,7 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     OutStreamer->switchSection(ConfigSection);
   }
 
-  const AMDGPUResourceUsageAnalysis::SIFunctionResourceInfo &Info =
+  const AMDGPUResourceUsageAnalysisImpl::SIFunctionResourceInfo &Info =
       ResourceUsage->getResourceInfo();
   RI.gatherResourceInfo(MF, Info, OutContext);
 
@@ -1657,8 +1657,8 @@ bool AMDGPUAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
 }
 
 void AMDGPUAsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<AMDGPUResourceUsageAnalysis>();
-  AU.addPreserved<AMDGPUResourceUsageAnalysis>();
+  AU.addRequired<AMDGPUResourceUsageAnalysisWrapperPass>();
+  AU.addPreserved<AMDGPUResourceUsageAnalysisWrapperPass>();
   AU.addRequired<MachineModuleInfoWrapperPass>();
   AU.addPreserved<MachineModuleInfoWrapperPass>();
   AsmPrinter::getAnalysisUsage(AU);
