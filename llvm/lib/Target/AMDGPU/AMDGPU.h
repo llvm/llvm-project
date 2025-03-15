@@ -491,6 +491,17 @@ extern char &GCNRewritePartialRegUsesID;
 void initializeAMDGPUWaitSGPRHazardsLegacyPass(PassRegistry &);
 extern char &AMDGPUWaitSGPRHazardsLegacyID;
 
+void initializeAMDGPUUniformIntrinsicCombineLegacyPass(PassRegistry &);
+extern char &AMDGPUUniformIntrinsicCombineLegacyPassID;
+FunctionPass *createAMDGPUUniformIntrinsicCombineLegacyPass();
+
+struct AMDGPUUniformIntrinsicCombinePass
+    : public PassInfoMixin<AMDGPUUniformIntrinsicCombinePass> {
+  const AMDGPUTargetMachine &TM;
+  AMDGPUUniformIntrinsicCombinePass(const AMDGPUTargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 namespace AMDGPU {
 enum TargetIndex {
   TI_CONSTDATA_START,
