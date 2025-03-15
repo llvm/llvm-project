@@ -138,6 +138,10 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
       return RBI.constrainGenericRegister(DstReg, *RC, *MRI);
     }
 
+    // Allow copy from physical register other than SCC to s1.
+    if (SrcReg.isPhysical() && MRI->getType(DstReg) == LLT::scalar(1))
+      return true;
+
     if (!isVCC(SrcReg, *MRI)) {
       // TODO: Should probably leave the copy and let copyPhysReg expand it.
       if (!RBI.constrainGenericRegister(DstReg, *TRI.getBoolRC(), *MRI))
