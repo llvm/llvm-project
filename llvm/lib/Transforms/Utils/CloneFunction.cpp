@@ -168,27 +168,6 @@ void llvm::CloneFunctionAttributesInto(Function *NewFunc,
                          OldAttrs.getRetAttrs(), NewArgAttrs));
 }
 
-DISubprogram *llvm::CollectDebugInfoForCloning(const Function &F,
-                                               CloneFunctionChangeType Changes,
-                                               DebugInfoFinder &DIFinder) {
-  // CloneModule takes care of cloning debug info for ClonedModule. Cloning into
-  // DifferentModule is taken care of separately in ClonedFunctionInto as part
-  // of llvm.dbg.cu update.
-  if (Changes >= CloneFunctionChangeType::DifferentModule)
-    return nullptr;
-
-  DISubprogram *SPClonedWithinModule = nullptr;
-  if (Changes < CloneFunctionChangeType::DifferentModule) {
-    SPClonedWithinModule = F.getSubprogram();
-  }
-  if (SPClonedWithinModule)
-    DIFinder.processSubprogram(SPClonedWithinModule);
-
-  collectDebugInfoFromInstructions(F, DIFinder);
-
-  return SPClonedWithinModule;
-}
-
 void llvm::CloneFunctionMetadataInto(Function &NewFunc, const Function &OldFunc,
                                      ValueToValueMapTy &VMap,
                                      RemapFlags RemapFlag,
