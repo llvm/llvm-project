@@ -182,9 +182,8 @@ Sparc::Fixups SparcMCExpr::getFixupKind(SparcMCExpr::VariantKind Kind) {
 }
 
 bool SparcMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAssembler *Asm,
-                                            const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+                                            const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
   Res =
       MCValue::get(Res.getSymA(), Res.getSymB(), Res.getConstant(), getKind());

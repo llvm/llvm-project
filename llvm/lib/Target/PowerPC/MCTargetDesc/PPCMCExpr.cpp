@@ -34,7 +34,7 @@ bool
 PPCMCExpr::evaluateAsConstant(int64_t &Res) const {
   MCValue Value;
 
-  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr, nullptr))
+  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr))
     return false;
 
   if (!Value.isAbsolute())
@@ -71,11 +71,11 @@ std::optional<int64_t> PPCMCExpr::evaluateAsInt64(int64_t Value) const {
   }
 }
 
-bool PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                          const MCFixup *Fixup) const {
+bool PPCMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
+                                          const MCAssembler *Asm) const {
   if (!Asm)
     return false;
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
   // The signedness of the result is dependent on the instruction operand. E.g.

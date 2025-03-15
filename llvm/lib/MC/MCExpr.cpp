@@ -286,8 +286,8 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
   }
 
   bool IsRelocatable = evaluateAsRelocatableImpl(Value, Asm, Addrs, InSet);
-  Res = Value.getConstant();
-  // Value with RefKind (e.g. %hi(0xdeadbeef) in MIPS) is not considered
+  Res = Value.getConstant(); // Value with RefKind (e.g. %hi(0xdeadbeef) in
+                             // MIPS) is not considered
   // absolute (the value is unknown at parse time), even if it might be resolved
   // by evaluateFixup.
   return IsRelocatable && Value.isAbsolute() && Value.getRefKind() == 0;
@@ -493,15 +493,12 @@ static bool evaluateSymbolicAdd(const MCAssembler *Asm,
   return true;
 }
 
-bool MCExpr::evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm,
-                                   const MCFixup *Fixup) const {
+bool MCExpr::evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm) const {
   return evaluateAsRelocatableImpl(Res, Asm, nullptr, false);
 }
-
 bool MCExpr::evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const {
   return evaluateAsRelocatableImpl(Res, &Asm, nullptr, true);
 }
-
 static bool canExpand(const MCSymbol &Sym, bool InSet) {
   if (Sym.isWeakExternal())
     return false;
@@ -524,9 +521,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
   ++stats::MCExprEvaluate;
   switch (getKind()) {
   case Target:
-    return cast<MCTargetExpr>(this)->evaluateAsRelocatableImpl(Res, Asm,
-                                                               nullptr);
-
+    return cast<MCTargetExpr>(this)->evaluateAsRelocatableImpl(Res, Asm);
   case Constant:
     Res = MCValue::get(cast<MCConstantExpr>(this)->getValue());
     return true;
@@ -589,7 +584,6 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
 
     if (!AUE->getSubExpr()->evaluateAsRelocatableImpl(Value, Asm, Addrs, InSet))
       return false;
-
     switch (AUE->getOpcode()) {
     case MCUnaryExpr::LNot:
       if (!Value.isAbsolute())
