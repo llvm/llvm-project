@@ -269,7 +269,7 @@ COMPILER_RT_VISIBILITY FILE *lprofOpenFileEx(const char *ProfileName) {
 
 // Return 1 (true) if the file descriptor Fd represents a file that is on a
 // local filesystem, otherwise return 0.
-static int is_local_filesystem(int Fd) {
+COMPILER_RT_UNUSED static int is_local_filesystem(int Fd) {
 #if defined(_AIX)
   struct statfs Vfs;
   if (fstatfs(Fd, &Vfs) != 0) {
@@ -317,7 +317,6 @@ static int is_local_filesystem(int Fd) {
 static int isMmapSafe(int Fd) {
   if (getenv("LLVM_NO_MMAP")) // For testing purposes.
     return 0;
-  (void)&is_local_filesystem; // a fake reference to satisfy -Wunused-function
 #ifdef _AIX
   return is_local_filesystem(Fd);
 #else
