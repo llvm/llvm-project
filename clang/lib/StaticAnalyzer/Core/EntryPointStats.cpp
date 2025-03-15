@@ -34,7 +34,7 @@ struct Registry {
     std::vector<bool> BoolStatValues;
     std::vector<unsigned> UnsignedStatValues;
 
-    void dumpDynamicStatsAsCSV(llvm::raw_ostream &OS) const;
+    void dumpAsCSV(llvm::raw_ostream &OS) const;
   };
 
   std::vector<Snapshot> Snapshots;
@@ -144,7 +144,7 @@ static std::vector<llvm::StringLiteral> getStatNames() {
   return Ret;
 }
 
-void Registry::Snapshot::dumpDynamicStatsAsCSV(llvm::raw_ostream &OS) const {
+void Registry::Snapshot::dumpAsCSV(llvm::raw_ostream &OS) const {
   OS << '"';
   llvm::printEscapedString(
       clang::AnalysisDeclContext::getFunctionName(EntryPoint), OS);
@@ -190,7 +190,7 @@ void EntryPointStat::dumpStatsAsCSV(llvm::raw_ostream &OS) {
   for (const auto &Snapshot : StatsRegistry->Snapshots) {
     std::string Row;
     llvm::raw_string_ostream RowOs(Row);
-    Snapshot.dumpDynamicStatsAsCSV(RowOs);
+    Snapshot.dumpAsCSV(RowOs);
     RowOs << "\n";
     Rows.push_back(RowOs.str());
   }
