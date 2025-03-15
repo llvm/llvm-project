@@ -1,8 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 %s
 
-// expected-note@temp_arg_template_p0522.cpp:* 1+{{template is declared here}}
 // expected-note@temp_arg_template_p0522.cpp:* 1+{{template parameter is declared here}}
-// expected-note@temp_arg_template_p0522.cpp:* 1+{{previous template template parameter is here}}
 
 template<template<int> typename> struct Ti; // #Ti
 template<template<int...> typename> struct TPi; // #TPi
@@ -34,14 +32,14 @@ namespace IntParam {
         Ti<iDi>,
         Ti<Pi>,
         Ti<iDt>>;
-  using err1 = Ti<ii>; // expected-error {{too few template arguments for class template 'ii'}}
-                       // expected-note@-1 {{different template parameters}}
-  using err2 = Ti<iiPi>; // expected-error {{too few template arguments for class template 'iiPi'}}
-                         // expected-note@-1 {{different template parameters}}
+  using err1 = Ti<ii>; // expected-error@#Ti {{no template parameter in this template template parameter}}
+                       // expected-note@-1 {{template template argument is incompatible}}
+  using err2 = Ti<iiPi>; // expected-error@#Ti {{no template parameter in this template template parameter}}
+                         // expected-note@-1 {{template template argument is incompatible}}
   using err3 = Ti<t0>; // expected-error@#Ti {{template argument for template type parameter must be a type}}
-                       // expected-note@-1 {{different template parameters}}
-  using err4 = Ti<it>; // expected-error {{too few template arguments for class template 'it'}}
-                       // expected-note@-1 {{different template parameters}}
+                       // expected-note@-1 {{template template argument is incompatible}}
+  using err4 = Ti<it>; // expected-error@#Ti {{no template parameter in this template template parameter}}
+                       // expected-note@-1 {{template template argument is incompatible}}
 }
 
 // These are accepted by the backwards-compatibility "parameter pack in
@@ -50,11 +48,11 @@ namespace IntPackParam {
   using ok = TPi<Pi>;
   using ok_compat = Pt<TPi<i>, TPi<iDi>, TPi<ii>, TPi<iiPi>>;
   using err1 = TPi<t0>; // expected-error@#TPi {{template argument for template type parameter must be a type}}
-                        // expected-note@-1 {{different template parameters}}
+                        // expected-note@-1 {{template template argument is incompatible}}
   using err2 = TPi<iDt>; // expected-error@#TPi {{template argument for template type parameter must be a type}}
-                         // expected-note@-1 {{different template parameters}}
+                         // expected-note@-1 {{template template argument is incompatible}}
   using err3 = TPi<it>; // expected-error@#TPi {{template argument for template type parameter must be a type}}
-                        // expected-note@-1 {{different template parameters}}
+                        // expected-note@-1 {{template template argument is incompatible}}
 }
 
 namespace IntAndPackParam {
@@ -65,19 +63,19 @@ namespace IntAndPackParam {
 
 namespace DependentType {
   using ok = Pt<tT0<int, i>, tT0<int, iDi>>;
-  using err1 = tT0<int, ii>; // expected-error {{too few template arguments for class template 'ii'}}
-                             // expected-note@-1 {{different template parameters}}
+  using err1 = tT0<int, ii>; // expected-error@#tT0 {{no template parameter in this template template parameter}}
+                             // expected-note@-1 {{template template argument is incompatible}}
   using err2 = tT0<short, i>;
   using err2a = tT0<long long, i>; // expected-error@#tT0 {{cannot be narrowed from type 'long long' to 'int'}}
-                                   // expected-note@-1 {{different template parameters}}
+                                   // expected-note@-1 {{template template argument is incompatible}}
   using err2b = tT0<void*, i>; // expected-error@#tT0 {{value of type 'void *' is not implicitly convertible to 'int'}}
-                               // expected-note@-1 {{different template parameters}}
+                               // expected-note@-1 {{template template argument is incompatible}}
   using err3 = tT0<short, t0>; // expected-error@#tT0 {{template argument for template type parameter must be a type}}
-                               // expected-note@-1 {{different template parameters}}
+                               // expected-note@-1 {{template template argument is incompatible}}
 
   using ok2 = Tt0<t0>;
   using err4 = Tt0<it>; // expected-error@#Tt0 {{template argument for non-type template parameter must be an expression}}
-                        // expected-note@-1 {{different template parameters}}
+                        // expected-note@-1 {{template template argument is incompatible}}
 }
 
 namespace Auto {
@@ -94,22 +92,22 @@ namespace Auto {
 
   TInt<Auto> ia;
   TInt<AutoPtr> iap; // expected-error@#TInt {{non-type template parameter '' with type 'auto *' has incompatible initializer of type 'int'}}
-                     // expected-note@-1 {{different template parameters}}
+                     // expected-note@-1 {{template template argument is incompatible}}
   TInt<DecltypeAuto> ida;
   TInt<Int> ii;
   TInt<IntPtr> iip; // expected-error@#TInt {{conversion from 'int' to 'int *' is not allowed in a converted constant expression}}
-                    // expected-note@-1 {{different template parameters}}
+                    // expected-note@-1 {{template template argument is incompatible}}
 
   TIntPtr<Auto> ipa;
   TIntPtr<AutoPtr> ipap;
   TIntPtr<DecltypeAuto> ipda;
   TIntPtr<Int> ipi; // expected-error@#TIntPtr {{value of type 'int *' is not implicitly convertible to 'int'}}
-                    // expected-note@-1 {{different template parameters}}
+                    // expected-note@-1 {{template template argument is incompatible}}
   TIntPtr<IntPtr> ipip;
 
   TAuto<Auto> aa;
   TAuto<AutoPtr> aap; // expected-error@#AutoPtr {{could not match 'auto *' against 'auto'}}
-                      // expected-note@-1 {{different template parameters}}
+                      // expected-note@-1 {{template template argument is incompatible}}
   TAuto<Int> ai; // FIXME: ill-formed (?)
   TAuto<IntPtr> aip; // FIXME: ill-formed (?)
 
@@ -131,7 +129,7 @@ namespace Auto {
   // parameters.
   TDecltypeAuto<Auto> daa;
   TDecltypeAuto<AutoPtr> daap; // expected-error@#AutoPtr {{could not match 'auto *' against 'decltype(auto)'}}
-                               // expected-note@-1 {{different template parameters}}
+                               // expected-note@-1 {{template template argument is incompatible}}
 
   int n;
   template<auto A, decltype(A) B = &n> struct SubstFailure;
@@ -160,11 +158,10 @@ namespace GH101394 {
   } // namespace t1
   namespace t2 {
     template<template<Y> class> struct A {}; // #A
-    template<X> struct B; // #B
+    template<X> struct B;
     template struct A<B>;
     // expected-error@#A {{no viable conversion from 'const Y' to 'X'}}
-    // expected-note@-2  {{different template parameters}}
+    // expected-note@-2  {{template template argument is incompatible}}
     // expected-note@#X 2{{not viable}}
-    // expected-note@#B  {{passing argument to parameter here}}
   } // namespace t2
 } // namespace GH101394

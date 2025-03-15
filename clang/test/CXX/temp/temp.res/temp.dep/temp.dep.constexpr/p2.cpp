@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -std=c++11 -verify=cxx11 %s
 // cxx11-no-diagnostics
 
-template<int n> struct S;
+template<int n> struct S; // cxx98-note {{template parameter is declared here}}
 
 template<int n> struct T {
   T() {
