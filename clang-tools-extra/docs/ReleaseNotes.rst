@@ -99,7 +99,6 @@ Improvements to clang-tidy
 
 New checks
 ^^^^^^^^^^
-
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
@@ -112,6 +111,11 @@ New checks
   Finds potentially erroneous calls to ``reset`` method on smart pointers when
   the pointee type also has a ``reset`` method.
 
+- New :doc:`readability-use-cpp-style-comments
+  <clang-tidy/checks/readability/use-cpp-style-comments>` check.
+
+  Replace C-style comments with C++-style comments.
+  
 New check aliases
 ^^^^^^^^^^^^^^^^^
 
