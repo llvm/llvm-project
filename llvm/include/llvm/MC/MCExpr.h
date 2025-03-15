@@ -247,15 +247,6 @@ public:
     VK_ARM_TLSLDO, // symbol(tlsldo)
     VK_ARM_TLSDESCSEQ,
 
-    VK_AVR_NONE,
-    VK_AVR_LO8,
-    VK_AVR_HI8,
-    VK_AVR_HLO8,
-    VK_AVR_DIFF8,
-    VK_AVR_DIFF16,
-    VK_AVR_DIFF32,
-    VK_AVR_PM,
-
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
 
     VK_Hexagon_LO16,

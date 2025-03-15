@@ -39,16 +39,17 @@
 #include "clang/Serialization/ASTReader.h"
 #include "clang/Serialization/GlobalModuleIndex.h"
 #include "clang/Serialization/InMemoryModuleCache.h"
+#include "clang/Serialization/ModuleCache.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/AdvisoryLock.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/LockFileManager.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -66,11 +67,10 @@ using namespace clang;
 
 CompilerInstance::CompilerInstance(
     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-    InMemoryModuleCache *SharedModuleCache)
-    : ModuleLoader(/* BuildingModule = */ SharedModuleCache),
+    ModuleCache *ModCache)
+    : ModuleLoader(/*BuildingModule=*/ModCache),
       Invocation(new CompilerInvocation()),
-      ModuleCache(SharedModuleCache ? SharedModuleCache
-                                    : new InMemoryModuleCache),
+      ModCache(ModCache ? ModCache : createCrossProcessModuleCache()),
       ThePCHContainerOperations(std::move(PCHContainerOps)) {}
 
 CompilerInstance::~CompilerInstance() {
@@ -205,7 +205,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::getASTReader() const {
   return TheASTReader;
 }
 void CompilerInstance::setASTReader(IntrusiveRefCntPtr<ASTReader> Reader) {
-  assert(ModuleCache.get() == &Reader->getModuleManager().getModuleCache() &&
+  assert(ModCache.get() == &Reader->getModuleManager().getModuleCache() &&
          "Expected ASTReader to use the same PCM cache");
   TheASTReader = std::move(Reader);
 }
@@ -625,9 +625,8 @@ void CompilerInstance::createPCHExternalASTSource(
 IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
     StringRef Path, StringRef Sysroot,
     DisableValidationForModuleKind DisableValidation,
-    bool AllowPCHWithCompilerErrors, Preprocessor &PP,
-    InMemoryModuleCache &ModuleCache, ASTContext &Context,
-    const PCHContainerReader &PCHContainerRdr,
+    bool AllowPCHWithCompilerErrors, Preprocessor &PP, ModuleCache &ModCache,
+    ASTContext &Context, const PCHContainerReader &PCHContainerRdr,
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
     void *DeserializationListener, bool OwnDeserializationListener,
@@ -635,7 +634,7 @@ IntrusiveRefCntPtr<ASTReader> CompilerInstance::createPCHExternalASTSource(
   HeaderSearchOptions &HSOpts = PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
   IntrusiveRefCntPtr<ASTReader> Reader(new ASTReader(
-      PP, ModuleCache, &Context, PCHContainerRdr, Extensions,
+      PP, ModCache, &Context, PCHContainerRdr, Extensions,
       Sysroot.empty() ? "" : Sysroot.data(), DisableValidation,
       AllowPCHWithCompilerErrors, /*AllowConfigurationMismatch*/ false,
       HSOpts.ModulesValidateSystemHeaders, HSOpts.ValidateASTInputFilesContent,
@@ -1166,7 +1165,8 @@ compileModuleImpl(CompilerInstance &ImportingInstance, SourceLocation ImportLoc,
 
   // Never compile a module that's already finalized - this would cause the
   // existing module to be freed, causing crashes if it is later referenced
-  if (ImportingInstance.getModuleCache().isPCMFinal(ModuleFileName)) {
+  if (ImportingInstance.getModuleCache().getInMemoryModuleCache().isPCMFinal(
+          ModuleFileName)) {
     ImportingInstance.getDiagnostics().Report(
         ImportLoc, diag::err_module_rebuild_finalized)
         << ModuleName;
@@ -1477,15 +1477,13 @@ static bool compileModuleAndReadASTBehindLock(
   Diags.Report(ModuleNameLoc, diag::remark_module_lock)
       << ModuleFileName << Module->Name;
 
-  // FIXME: have LockFileManager return an error_code so that we can
-  // avoid the mkdir when the directory already exists.
-  StringRef Dir = llvm::sys::path::parent_path(ModuleFileName);
-  llvm::sys::fs::create_directories(Dir);
+  auto &ModuleCache = ImportingInstance.getModuleCache();
+  ModuleCache.prepareForGetLock(ModuleFileName);
 
   while (true) {
-    llvm::LockFileManager Lock(ModuleFileName);
+    auto Lock = ModuleCache.getLock(ModuleFileName);
     bool Owned;
-    if (llvm::Error Err = Lock.tryLock().moveInto(Owned)) {
+    if (llvm::Error Err = Lock->tryLock().moveInto(Owned)) {
       // ModuleCache takes care of correctness and locks are only necessary for
       // performance. Fallback to building the module in case of any lock
       // related errors.
@@ -1502,19 +1500,19 @@ static bool compileModuleAndReadASTBehindLock(
 
     // Someone else is responsible for building the module. Wait for them to
     // finish.
-    switch (Lock.waitForUnlockFor(std::chrono::seconds(90))) {
+    switch (Lock->waitForUnlockFor(std::chrono::seconds(90))) {
     case llvm::WaitForUnlockResult::Success:
       break; // The interesting case.
     case llvm::WaitForUnlockResult::OwnerDied:
       continue; // try again to get the lock.
     case llvm::WaitForUnlockResult::Timeout:
-      // Since ModuleCache takes care of correctness, we try waiting for
-      // another process to complete the build so clang does not do it done
-      // twice. If case of timeout, build it ourselves.
+      // Since the InMemoryModuleCache takes care of correctness, we try waiting
+      // for someone else to complete the build so that it does not happen
+      // twice. In case of timeout, build it ourselves.
       Diags.Report(ModuleNameLoc, diag::remark_module_lock_timeout)
           << Module->Name;
       // Clear the lock file so that future invocations can make progress.
-      Lock.unsafeMaybeUnlock();
+      Lock->unsafeMaybeUnlock();
       continue;
     }
 

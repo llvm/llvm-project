@@ -92,10 +92,13 @@ private:
 
   GlobalValue::GUID GUID = 0;
   SmallVector<uint64_t, 16> Counters;
+  const std::optional<uint64_t> RootEntryCount;
   CallsiteMapTy Callsites;
 
-  PGOCtxProfContext(GlobalValue::GUID G, SmallVectorImpl<uint64_t> &&Counters)
-      : GUID(G), Counters(std::move(Counters)) {}
+  PGOCtxProfContext(GlobalValue::GUID G, SmallVectorImpl<uint64_t> &&Counters,
+                    std::optional<uint64_t> RootEntryCount = std::nullopt)
+      : GUID(G), Counters(std::move(Counters)), RootEntryCount(RootEntryCount) {
+  }
 
   Expected<PGOCtxProfContext &>
   getOrEmplace(uint32_t Index, GlobalValue::GUID G,
@@ -114,6 +117,9 @@ public:
   GlobalValue::GUID guid() const { return GUID; }
   const SmallVectorImpl<uint64_t> &counters() const { return Counters; }
   SmallVectorImpl<uint64_t> &counters() { return Counters; }
+
+  bool isRoot() const { return RootEntryCount.has_value(); }
+  uint64_t getTotalRootEntryCount() const { return RootEntryCount.value(); }
 
   uint64_t getEntrycount() const {
     assert(!Counters.empty() &&
