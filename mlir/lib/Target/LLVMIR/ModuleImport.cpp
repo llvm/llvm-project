@@ -517,6 +517,33 @@ void ModuleImport::addDebugIntrinsic(llvm::CallInst *intrinsic) {
   debugIntrinsics.insert(intrinsic);
 }
 
+LogicalResult ModuleImport::convertModuleFlagsMetadata() {
+  SmallVector<llvm::Module::ModuleFlagEntry> llvmModuleFlags;
+  llvmModule->getModuleFlagsMetadata(llvmModuleFlags);
+
+  SmallVector<Attribute> moduleFlags;
+  for (const auto [behavior, key, val] : llvmModuleFlags) {
+    // Currently only supports most common: int constant values.
+    auto *constInt = llvm::mdconst::dyn_extract<llvm::ConstantInt>(val);
+    if (!constInt) {
+      emitWarning(mlirModule.getLoc())
+          << "unsupported module flag value: " << diagMD(val, llvmModule.get())
+          << ", only constant integer currently supported";
+      continue;
+    }
+
+    moduleFlags.push_back(builder.getAttr<ModuleFlagAttr>(
+        convertModFlagBehaviorFromLLVM(behavior),
+        builder.getStringAttr(key->getString()), constInt->getZExtValue()));
+  }
+
+  if (!moduleFlags.empty())
+    builder.create<LLVM::ModuleFlagsOp>(mlirModule.getLoc(),
+                                        builder.getArrayAttr(moduleFlags));
+
+  return success();
+}
+
 LogicalResult ModuleImport::convertLinkerOptionsMetadata() {
   for (const llvm::NamedMDNode &named : llvmModule->named_metadata()) {
     if (named.getName() != "llvm.linker.options")
@@ -595,6 +622,8 @@ LogicalResult ModuleImport::convertMetadata() {
     }
   }
   if (failed(convertLinkerOptionsMetadata()))
+    return failure();
+  if (failed(convertModuleFlagsMetadata()))
     return failure();
   if (failed(convertIdentMetadata()))
     return failure();

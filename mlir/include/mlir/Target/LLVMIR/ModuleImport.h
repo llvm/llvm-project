@@ -218,6 +218,9 @@ public:
   /// LLVM dialect operation.
   LogicalResult convertLinkerOptionsMetadata();
 
+  /// Converts !llvm.module.flags metadata.
+  LogicalResult convertModuleFlagsMetadata();
+
   /// Converts !llvm.ident metadata to the llvm.ident LLVM ModuleOp attribute.
   LogicalResult convertIdentMetadata();
 
