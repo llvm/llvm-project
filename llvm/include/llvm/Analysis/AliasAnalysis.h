@@ -1007,6 +1007,8 @@ struct ExternalAAWrapperPass : ImmutablePass {
 
   explicit ExternalAAWrapperPass(CallbackT CB);
 
+  virtual bool runEarly() { return false; }
+
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
