@@ -2306,35 +2306,35 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
   if (StoreGroups.empty())
     return;
 
-  // Narrow operation tree rooted at store groups.
-  for (auto *StoreGroup : StoreGroups) {
-    auto *Lane0 = cast<VPWidenRecipe>(
-        StoreGroup->getStoredValues()[0]->getDefiningRecipe());
+  auto Narrow = [](VPRecipeBase *R) -> VPValue * {
+    if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
+      // Narrow interleave group to wide load, as transformed VPlan will only
+      // process one original iteration.
+      auto *L = new VPWidenLoadRecipe(
+          *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
+          LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
+          /*Reverse=*/false, LoadGroup->getDebugLoc());
+      L->insertBefore(LoadGroup);
+      return L;
+    }
 
-    unsigned LoadGroupIdx =
-        isa<VPInterleaveRecipe>(Lane0->getOperand(1)->getDefiningRecipe()) ? 1
-                                                                           : 0;
-    unsigned WideLoadIdx = 1 - LoadGroupIdx;
-    auto *LoadGroup = cast<VPInterleaveRecipe>(
-        Lane0->getOperand(LoadGroupIdx)->getDefiningRecipe());
-
-    auto *WideLoad = cast<VPWidenLoadRecipe>(
-        Lane0->getOperand(WideLoadIdx)->getDefiningRecipe());
+    auto *WideLoad = cast<VPWidenLoadRecipe>(R);
 
     // Narrow wide load to uniform scalar load, as transformed VPlan will only
     // process one original iteration.
     auto *N = new VPReplicateRecipe(&WideLoad->getIngredient(),
                                     WideLoad->operands(), /*IsUniform*/ true);
-    // Narrow interleave group to wide load, as transformed VPlan will only
-    // process one original iteration.
-    auto *L = new VPWidenLoadRecipe(
-        *cast<LoadInst>(LoadGroup->getInterleaveGroup()->getInsertPos()),
-        LoadGroup->getAddr(), LoadGroup->getMask(), /*Consecutive=*/true,
-        /*Reverse=*/false, LoadGroup->getDebugLoc());
-    L->insertBefore(LoadGroup);
-    N->insertBefore(LoadGroup);
-    Lane0->setOperand(LoadGroupIdx, L);
-    Lane0->setOperand(WideLoadIdx, N);
+    N->insertBefore(WideLoad);
+    return N;
+  };
+
+  // Narrow operation tree rooted at store groups.
+  for (auto *StoreGroup : StoreGroups) {
+    auto *Lane0 = cast<VPWidenRecipe>(
+        StoreGroup->getStoredValues()[0]->getDefiningRecipe());
+
+    Lane0->setOperand(0, Narrow(Lane0->getOperand(0)->getDefiningRecipe()));
+    Lane0->setOperand(1, Narrow(Lane0->getOperand(1)->getDefiningRecipe()));
 
     auto *S = new VPWidenStoreRecipe(
         *cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos()),
