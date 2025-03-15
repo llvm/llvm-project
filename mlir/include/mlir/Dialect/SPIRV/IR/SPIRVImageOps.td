@@ -114,8 +114,8 @@ def SPIRV_ImageDrefGatherOp : SPIRV_Op<"ImageDrefGather",
 
 
   let assemblyFormat = [{
-    $sampled_image `,` $coordinate `,` $dref custom<ImageOperands>($image_operands) ( `(` $operand_arguments^ `)` )? attr-dict 
-    `:` type($sampled_image) `,` type($coordinate) `,` type($dref) ( `(` type($operand_arguments)^ `)` )?
+    $sampled_image `,` $coordinate `,` $dref custom<ImageOperands>($image_operands) ( `,` $operand_arguments^ )? attr-dict
+    `:` type($sampled_image) `,` type($coordinate) `,` type($dref) ( `,` type($operand_arguments)^ )?
     `->` type($result) 
   }];
 
@@ -226,8 +226,8 @@ def SPIRV_ImageWriteOp : SPIRV_Op<"ImageWrite",
   let results = (outs);
 
   let assemblyFormat = [{
-    $image `,` $coordinate `,` $texel custom<ImageOperands>($image_operands) ( `(` $operand_arguments^ `)`)? attr-dict
-    `:` type($image) `,` type($coordinate) `,` type($texel) ( `(` type($operand_arguments)^ `)`)?
+    $image `,` $coordinate `,` $texel custom<ImageOperands>($image_operands) ( `,` $operand_arguments^ )? attr-dict
+    `:` type($image) `,` type($coordinate) `,` type($texel) ( `,` type($operand_arguments)^ )?
   }];
 }
 
