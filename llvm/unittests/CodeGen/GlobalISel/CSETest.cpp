@@ -230,6 +230,8 @@ TEST_F(AArch64GISelMITest, TestCSE) {
   // Check G_IMPLICIT_DEF
   auto Undef0 = CSEB.buildUndef(s32);
   auto Undef1 = CSEB.buildUndef(s32);
+  auto Poison0 = CSEB.buildUndef(s32);
+  auto Poison1 = CSEB.buildUndef(s32);
   EXPECT_EQ(&*Undef0, &*Undef1);
 
   // If the observer is installed to the MF, CSE can also
@@ -294,6 +296,8 @@ TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
 
   // Check G_IMPLICIT_DEF
   auto Undef0 = CSEB.buildUndef(s16);
+  auto Poison0 = CSEB.buildUndef(s16);
+  auto Poison1 = CSEB.buildUndef(s16);
   auto Undef1 = CSEB.buildUndef(s16);
   EXPECT_EQ(&*Undef0, &*Undef1);
 }
