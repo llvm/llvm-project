@@ -3717,6 +3717,20 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
           "'%s' has a type %s with a deferred type parameter but is neither an allocatable nor an object pointer"_err_en_US,
           symbol.name(), dyType->AsFortran());
     }
+    if (!symbol.has<ObjectEntityDetails>()) {
+      if (const DerivedTypeSpec *
+          derived{evaluate::GetDerivedTypeSpec(*dyType)}) {
+        if (IsEventTypeOrLockType(derived)) {
+          messages_.Say(
+              "Entity '%s' with EVENT_TYPE or LOCK_TYPE must be an object"_err_en_US,
+              symbol.name());
+        } else if (auto iter{FindEventOrLockPotentialComponent(*derived)}) {
+          messages_.Say(
+              "Entity '%s' with EVENT_TYPE or LOCK_TYPE potential subobject component '%s' must be an object"_err_en_US,
+              symbol.name(), iter.BuildResultDesignatorName());
+        }
+      }
+    }
   }
 }
 
