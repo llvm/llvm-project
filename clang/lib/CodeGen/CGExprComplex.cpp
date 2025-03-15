@@ -1212,19 +1212,24 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
   OpInfo.FPFeatures = E->getFPFeaturesInEffect(CGF.getLangOpts());
   CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, OpInfo.FPFeatures);
 
+  const bool IsComplexDivisor = E->getOpcode() == BO_DivAssign &&
+                                E->getRHS()->getType()->isAnyComplexType();
+
   // Load the RHS and LHS operands.
   // __block variables need to have the rhs evaluated first, plus this should
   // improve codegen a little.
   QualType PromotionTypeCR;
-  PromotionTypeCR = getPromotionType(E->getStoredFPFeaturesOrDefault(),
-                                     E->getComputationResultType());
+  PromotionTypeCR =
+      getPromotionType(E->getStoredFPFeaturesOrDefault(),
+                       E->getComputationResultType(), IsComplexDivisor);
   if (PromotionTypeCR.isNull())
     PromotionTypeCR = E->getComputationResultType();
   OpInfo.Ty = PromotionTypeCR;
   QualType ComplexElementTy =
       OpInfo.Ty->castAs<ComplexType>()->getElementType();
-  QualType PromotionTypeRHS = getPromotionType(
-      E->getStoredFPFeaturesOrDefault(), E->getRHS()->getType());
+  QualType PromotionTypeRHS =
+      getPromotionType(E->getStoredFPFeaturesOrDefault(),
+                       E->getRHS()->getType(), IsComplexDivisor);
 
   // The RHS should have been converted to the computation type.
   if (E->getRHS()->getType()->isRealFloatingType()) {
@@ -1252,8 +1257,9 @@ EmitCompoundAssignLValue(const CompoundAssignOperator *E,
 
   // Load from the l-value and convert it.
   SourceLocation Loc = E->getExprLoc();
-  QualType PromotionTypeLHS = getPromotionType(
-      E->getStoredFPFeaturesOrDefault(), E->getComputationLHSType());
+  QualType PromotionTypeLHS =
+      getPromotionType(E->getStoredFPFeaturesOrDefault(),
+                       E->getComputationLHSType(), IsComplexDivisor);
   if (LHSTy->isAnyComplexType()) {
     ComplexPairTy LHSVal = EmitLoadOfLValue(LHS, Loc);
     if (!PromotionTypeLHS.isNull())
