@@ -97,7 +97,8 @@ struct DecisionTy {
 /// {LineStart, ColumnStart, LineEnd, ColumnEnd}
 using LocTy = std::array<uint64_t, 4>;
 
-///
+/// Region record.
+/// CounterTy is enhanced if Tag is Zero and Val is not zero.
 struct RecTy : CounterTy {
   enum ExtTagTy : uint8_t {
     Skip = 2,
@@ -125,7 +126,7 @@ struct RecTy : CounterTy {
 
   Error decode(DecoderContext &Data);
 
-  void encode(uint64_t &StartLoc, raw_ostream &OS) const;
+  void encode(raw_ostream &OS) const;
 };
 
 /// {NumRecs, Recs...}

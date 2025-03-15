@@ -100,7 +100,7 @@ Error DecisionTy::decode(DecoderContext &Data) {
   return Error::success();
 }
 
-void RecTy::encode(uint64_t &StartLoc, raw_ostream &OS) const {
+void RecTy::encode(raw_ostream &OS) const {
   if (Expansion) {
     encodeULEB128(4 + (*Expansion << 3), OS);
   } else if (ExtTag && *ExtTag == Skip) {
@@ -249,9 +249,8 @@ void CovFunTy::encode(raw_ostream &OS, endianness Endianness) const {
 
   for (const auto &File : Files) {
     encodeULEB128(File.Recs.size(), SS);
-    uint64_t StartLoc = 0;
     for (const auto &Rec : File.Recs)
-      Rec.encode(StartLoc, SS);
+      Rec.encode(SS);
   }
 
   // Emit the Header
