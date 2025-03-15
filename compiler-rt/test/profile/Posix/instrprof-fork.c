@@ -35,8 +35,8 @@ int main(void) {
     }                   //             |
   }                     // ------------+------------
   int status;           //   20     10 |   1     0
-  i = 10;
-  while (i-- > 0)
-    wait(&status);      // (*)  the child inherits counter values prior to fork
-  return 0;             //      from the parent in non-continuous mode.
+  i = 10;               // (*)  the child inherits counter values prior to fork
+  while (i-- > 0)       //      from the parent in non-continuous mode.
+    wait(&status);
+  return 0;
 }
