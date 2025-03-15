@@ -18,7 +18,7 @@
 # RUN:     | FileCheck -check-prefixes=CHECK-NO-RV64 %s
 
 # TODO: more exhaustive testing of immediate encoding.
- 
+
 # CHECK-ASM-AND-OBJ: c.ldsp s0, 0(sp)
 # CHECK-ASM: encoding: [0x02,0x64]
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
@@ -39,7 +39,7 @@ c.ld a4, 0(a3)
 # CHECK-NO-EXT:  error: instruction requires the following: 'C' (Compressed Instructions) or 'Zca' (part of the C extension, excluding compressed floating point loads/stores){{$}}
 # CHECK-NO-RV64:  error: instruction requires the following: 'Zclsd' (Compressed Load/Store pair instructions){{$}}
 c.sd a2, 248(a3)
- 
+
 # CHECK-ASM-AND-OBJ: c.subw a3, a4
 # CHECK-ASM: encoding: [0x99,0x9e]
 c.subw a3, a4
