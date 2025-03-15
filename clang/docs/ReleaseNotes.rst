@@ -349,6 +349,17 @@ Improvements to Clang's diagnostics
 - Now correctly diagnose a tentative definition of an array with static
   storage duration in pedantic mode in C. (#GH50661)
 
+- ``-Whigher-precisision-for-complex-divison`` no longer incorrectly warns when the divisor is real
+  in complex division. (#GH131127)
+
+- ``-Whigher-precisision-for-complex-divison`` now correctly warns when:
+
+  - The dividend is real, but the divisor is complex.
+  - When the complex division happens in a higher precision type than the dividend due to arithmetic promotion.
+  - When using the divide and assign operator (``/=``)
+  
+  Fixes #GH131127
+
 Improvements to Clang's time-trace
 ----------------------------------
 
