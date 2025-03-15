@@ -234,6 +234,11 @@ enum NodeType : unsigned {
   // Compute carry/borrow indication for add/subtract with carry/borrow.
   VACCC, VSBCBI,
 
+  // High-word multiply-and-add.
+  VMAH, VMALH,
+  // Widen and multiply even/odd vector elements.
+  VME, VMLE, VMO, VMLO,
+
   // Compare integer vector operands 0 and 1 to produce the usual 0/-1
   // vector result.  VICMPE is for equality, VICMPH for "signed greater than"
   // and VICMPHL for "unsigned greater than".
@@ -759,6 +764,8 @@ private:
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineShiftToMulAddHigh(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINTRINSIC(SDNode *N, DAGCombinerInfo &DCI) const;
 

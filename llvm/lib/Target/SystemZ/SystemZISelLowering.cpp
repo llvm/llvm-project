@@ -454,8 +454,11 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::INSERT_VECTOR_ELT, VT, Legal);
       setOperationAction(ISD::ADD, VT, Legal);
       setOperationAction(ISD::SUB, VT, Legal);
-      if (VT != MVT::v2i64 || Subtarget.hasVectorEnhancements3())
+      if (VT != MVT::v2i64 || Subtarget.hasVectorEnhancements3()) {
         setOperationAction(ISD::MUL, VT, Legal);
+        setOperationAction(ISD::MULHS, VT, Legal);
+        setOperationAction(ISD::MULHU, VT, Legal);
+      }
       if (Subtarget.hasVectorEnhancements3() &&
           VT != MVT::v16i8 && VT != MVT::v8i16) {
         setOperationAction(ISD::SDIV, VT, Legal);
@@ -775,6 +778,9 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                        ISD::STRICT_FP_EXTEND,
                        ISD::BSWAP,
                        ISD::SETCC,
+                       ISD::SRL,
+                       ISD::SRA,
+                       ISD::MUL,
                        ISD::SDIV,
                        ISD::UDIV,
                        ISD::SREM,
@@ -5345,6 +5351,94 @@ SystemZTargetLowering::lowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::s390_vsbcbiq:
     return DAG.getNode(SystemZISD::VSBCBI, SDLoc(Op), Op.getValueType(),
                        Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+
+  case Intrinsic::s390_vmhb:
+  case Intrinsic::s390_vmhh:
+  case Intrinsic::s390_vmhf:
+  case Intrinsic::s390_vmhg:
+  case Intrinsic::s390_vmhq:
+    return DAG.getNode(ISD::MULHS, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::s390_vmlhb:
+  case Intrinsic::s390_vmlhh:
+  case Intrinsic::s390_vmlhf:
+  case Intrinsic::s390_vmlhg:
+  case Intrinsic::s390_vmlhq:
+    return DAG.getNode(ISD::MULHU, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+
+  case Intrinsic::s390_vmahb:
+  case Intrinsic::s390_vmahh:
+  case Intrinsic::s390_vmahf:
+  case Intrinsic::s390_vmahg:
+  case Intrinsic::s390_vmahq:
+    return DAG.getNode(SystemZISD::VMAH, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+  case Intrinsic::s390_vmalhb:
+  case Intrinsic::s390_vmalhh:
+  case Intrinsic::s390_vmalhf:
+  case Intrinsic::s390_vmalhg:
+  case Intrinsic::s390_vmalhq:
+    return DAG.getNode(SystemZISD::VMALH, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
+
+  case Intrinsic::s390_vmeb:
+  case Intrinsic::s390_vmeh:
+  case Intrinsic::s390_vmef:
+  case Intrinsic::s390_vmeg:
+    return DAG.getNode(SystemZISD::VME, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::s390_vmleb:
+  case Intrinsic::s390_vmleh:
+  case Intrinsic::s390_vmlef:
+  case Intrinsic::s390_vmleg:
+    return DAG.getNode(SystemZISD::VMLE, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::s390_vmob:
+  case Intrinsic::s390_vmoh:
+  case Intrinsic::s390_vmof:
+  case Intrinsic::s390_vmog:
+    return DAG.getNode(SystemZISD::VMO, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+  case Intrinsic::s390_vmlob:
+  case Intrinsic::s390_vmloh:
+  case Intrinsic::s390_vmlof:
+  case Intrinsic::s390_vmlog:
+    return DAG.getNode(SystemZISD::VMLO, SDLoc(Op), Op.getValueType(),
+                       Op.getOperand(1), Op.getOperand(2));
+
+  case Intrinsic::s390_vmaeb:
+  case Intrinsic::s390_vmaeh:
+  case Intrinsic::s390_vmaef:
+  case Intrinsic::s390_vmaeg:
+    return DAG.getNode(ISD::ADD, SDLoc(Op), Op.getValueType(),
+                       DAG.getNode(SystemZISD::VME, SDLoc(Op), Op.getValueType(),
+                                   Op.getOperand(1), Op.getOperand(2)),
+                       Op.getOperand(3));
+  case Intrinsic::s390_vmaleb:
+  case Intrinsic::s390_vmaleh:
+  case Intrinsic::s390_vmalef:
+  case Intrinsic::s390_vmaleg:
+    return DAG.getNode(ISD::ADD, SDLoc(Op), Op.getValueType(),
+                       DAG.getNode(SystemZISD::VMLE, SDLoc(Op), Op.getValueType(),
+                                   Op.getOperand(1), Op.getOperand(2)),
+                       Op.getOperand(3));
+  case Intrinsic::s390_vmaob:
+  case Intrinsic::s390_vmaoh:
+  case Intrinsic::s390_vmaof:
+  case Intrinsic::s390_vmaog:
+    return DAG.getNode(ISD::ADD, SDLoc(Op), Op.getValueType(),
+                       DAG.getNode(SystemZISD::VMO, SDLoc(Op), Op.getValueType(),
+                                   Op.getOperand(1), Op.getOperand(2)),
+                       Op.getOperand(3));
+  case Intrinsic::s390_vmalob:
+  case Intrinsic::s390_vmaloh:
+  case Intrinsic::s390_vmalof:
+  case Intrinsic::s390_vmalog:
+    return DAG.getNode(ISD::ADD, SDLoc(Op), Op.getValueType(),
+                       DAG.getNode(SystemZISD::VMLO, SDLoc(Op), Op.getValueType(),
+                                   Op.getOperand(1), Op.getOperand(2)),
+                       Op.getOperand(3));
   }
 
   return SDValue();
@@ -6912,6 +7006,12 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(VSBI);
     OPCODE(VACCC);
     OPCODE(VSBCBI);
+    OPCODE(VMAH);
+    OPCODE(VMALH);
+    OPCODE(VME);
+    OPCODE(VMLE);
+    OPCODE(VMO);
+    OPCODE(VMLO);
     OPCODE(VICMPE);
     OPCODE(VICMPH);
     OPCODE(VICMPHL);
@@ -8311,6 +8411,200 @@ SDValue SystemZTargetLowering::combineIntDIVREM(
   return SDValue();
 }
 
+
+// Transform a right shift of a multiply-and-add into a multiply-and-add-high.
+// This is closely modeled after the common-code combineShiftToMULH.
+SDValue SystemZTargetLowering::combineShiftToMulAddHigh(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc DL(N);
+
+  assert((N->getOpcode() == ISD::SRL || N->getOpcode() == ISD::SRA) &&
+         "SRL or SRA node is required here!");
+
+  if (!Subtarget.hasVector())
+    return SDValue();
+
+  // Check the shift amount. Proceed with the transformation if the shift
+  // amount is constant.
+  ConstantSDNode *ShiftAmtSrc = isConstOrConstSplat(N->getOperand(1));
+  if (!ShiftAmtSrc)
+    return SDValue();
+
+  // The operation feeding into the shift must be an add.
+  SDValue ShiftOperand = N->getOperand(0);
+  if (ShiftOperand.getOpcode() != ISD::ADD)
+    return SDValue();
+
+  // One operand of the add must be a multiply.
+  SDValue MulOp = ShiftOperand.getOperand(0);
+  SDValue AddOp = ShiftOperand.getOperand(1);
+  if (MulOp.getOpcode() != ISD::MUL) {
+    if (AddOp.getOpcode() != ISD::MUL)
+      return SDValue();
+    std::swap(MulOp, AddOp);
+  }
+
+  // All operands must be equivalent extend nodes.
+  SDValue LeftOp = MulOp.getOperand(0);
+  SDValue RightOp = MulOp.getOperand(1);
+
+  bool IsSignExt = LeftOp.getOpcode() == ISD::SIGN_EXTEND;
+  bool IsZeroExt = LeftOp.getOpcode() == ISD::ZERO_EXTEND;
+
+  if (!IsSignExt && !IsZeroExt)
+    return SDValue();
+
+  EVT NarrowVT = LeftOp.getOperand(0).getValueType();
+  unsigned NarrowVTSize = NarrowVT.getScalarSizeInBits();
+
+  SDValue MulhRightOp;
+  if (ConstantSDNode *Constant = isConstOrConstSplat(RightOp)) {
+    unsigned ActiveBits = IsSignExt
+                              ? Constant->getAPIntValue().getSignificantBits()
+                              : Constant->getAPIntValue().getActiveBits();
+    if (ActiveBits > NarrowVTSize)
+      return SDValue();
+    MulhRightOp = DAG.getConstant(
+        Constant->getAPIntValue().trunc(NarrowVT.getScalarSizeInBits()), DL,
+        NarrowVT);
+  } else {
+    if (LeftOp.getOpcode() != RightOp.getOpcode())
+      return SDValue();
+    // Check that the two extend nodes are the same type.
+    if (NarrowVT != RightOp.getOperand(0).getValueType())
+      return SDValue();
+    MulhRightOp = RightOp.getOperand(0);
+  }
+
+  SDValue MulhAddOp;
+  if (ConstantSDNode *Constant = isConstOrConstSplat(AddOp)) {
+    unsigned ActiveBits = IsSignExt
+                              ? Constant->getAPIntValue().getSignificantBits()
+                              : Constant->getAPIntValue().getActiveBits();
+    if (ActiveBits > NarrowVTSize)
+      return SDValue();
+    MulhAddOp = DAG.getConstant(
+        Constant->getAPIntValue().trunc(NarrowVT.getScalarSizeInBits()), DL,
+        NarrowVT);
+  } else {
+    if (LeftOp.getOpcode() != AddOp.getOpcode())
+      return SDValue();
+    // Check that the two extend nodes are the same type.
+    if (NarrowVT != AddOp.getOperand(0).getValueType())
+      return SDValue();
+    MulhAddOp = AddOp.getOperand(0);
+  }
+
+  EVT WideVT = LeftOp.getValueType();
+  // Proceed with the transformation if the wide types match.
+  assert((WideVT == RightOp.getValueType()) &&
+         "Cannot have a multiply node with two different operand types.");
+  assert((WideVT == AddOp.getValueType()) &&
+         "Cannot have an add node with two different operand types.");
+
+  // Proceed with the transformation if the wide type is twice as large
+  // as the narrow type.
+  if (WideVT.getScalarSizeInBits() != 2 * NarrowVTSize)
+    return SDValue();
+
+  // Check the shift amount with the narrow type size.
+  // Proceed with the transformation if the shift amount is the width
+  // of the narrow type.
+  unsigned ShiftAmt = ShiftAmtSrc->getZExtValue();
+  if (ShiftAmt != NarrowVTSize)
+    return SDValue();
+
+  // Proceed if we support the multiply-and-add-high operation.
+  if (!(NarrowVT == MVT::v16i8 || NarrowVT == MVT::v8i16 ||
+        NarrowVT == MVT::v4i32 ||
+        (Subtarget.hasVectorEnhancements3() &&
+         (NarrowVT == MVT::v2i64 || NarrowVT == MVT::i128))))
+    return SDValue();
+
+  // Emit the VMAH (signed) or VMALH (unsigned) operation.
+  SDValue Result = DAG.getNode(IsSignExt ? SystemZISD::VMAH : SystemZISD::VMALH,
+                               DL, NarrowVT, LeftOp.getOperand(0),
+                               MulhRightOp, MulhAddOp);
+  bool IsSigned = N->getOpcode() == ISD::SRA;
+  return DAG.getExtOrTrunc(IsSigned, Result, DL, WideVT);
+}
+
+// Op is an operand of a multiplication.  Check whether this can be folded
+// into an even/odd widening operation; if so, return the opcode to be used
+// and update Op to the appropriate sub-operand.  Note that the caller must
+// verify that *both* operands of the multiplication support the operation.
+static unsigned detectEvenOddMultiplyOperand(const SelectionDAG &DAG,
+                                             const SystemZSubtarget &Subtarget,
+                                             SDValue &Op) {
+  EVT VT = Op.getValueType();
+
+  // Check for (sign/zero_extend_vector_inreg (vector_shuffle)) corresponding
+  // to selecting the even or odd vector elements.
+  if (VT.isVector() && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
+      (Op.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG ||
+       Op.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG)) {
+    bool IsSigned = Op.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG;
+    unsigned NumElts = VT.getVectorNumElements();
+    Op = Op.getOperand(0);
+    if (Op.getValueType().getVectorNumElements() == 2 * NumElts &&
+        Op.getOpcode() == ISD::VECTOR_SHUFFLE) {
+      ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
+      ArrayRef<int> ShuffleMask = SVN->getMask();
+      bool CanUseEven = true, CanUseOdd = true;
+      for (unsigned Elt = 0; Elt < NumElts; Elt++) {
+        if (ShuffleMask[Elt] == -1)
+          continue;
+        if (unsigned(ShuffleMask[Elt]) != 2 * Elt)
+          CanUseEven = false;
+        if (unsigned(ShuffleMask[Elt]) != 2 * Elt + 1)
+          CanUseEven = true;
+      }
+      Op = Op.getOperand(0);
+      if (CanUseEven)
+        return IsSigned ? SystemZISD::VME : SystemZISD::VMLE;
+      if (CanUseOdd)
+        return IsSigned ? SystemZISD::VMO : SystemZISD::VMLO;
+    }
+  }
+
+  // For arch15, we can also support the v2i64->i128 case, which looks like
+  // (sign/zero_extend (extract_vector_elt X 0/1))
+  if (VT == MVT::i128 && Subtarget.hasVectorEnhancements3() &&
+      (Op.getOpcode() == ISD::SIGN_EXTEND ||
+       Op.getOpcode() == ISD::ZERO_EXTEND)) {
+    bool IsSigned = Op.getOpcode() == ISD::SIGN_EXTEND;
+    Op = Op.getOperand(0);
+    if (Op.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+        Op.getOperand(0).getValueType() == MVT::v2i64 &&
+        Op.getOperand(1).getOpcode() == ISD::Constant) {
+      unsigned Elem = Op.getConstantOperandVal(1);
+      Op = Op.getOperand(0);
+      if (Elem == 0)
+        return IsSigned ? SystemZISD::VME : SystemZISD::VMLE;
+      if (Elem == 1)
+        return IsSigned ? SystemZISD::VMO : SystemZISD::VMLO;
+    }
+  }
+
+  return 0;
+}
+
+SDValue SystemZTargetLowering::combineMUL(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+
+  // Detect even/odd widening multiplication.
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  unsigned OpcodeCand0 = detectEvenOddMultiplyOperand(DAG, Subtarget, Op0);
+  unsigned OpcodeCand1 = detectEvenOddMultiplyOperand(DAG, Subtarget, Op1);
+  if (OpcodeCand0 && OpcodeCand0 == OpcodeCand1)
+    return DAG.getNode(OpcodeCand0, SDLoc(N), N->getValueType(0), Op0, Op1);
+
+  return SDValue();
+}
+
 SDValue SystemZTargetLowering::combineINTRINSIC(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -8370,6 +8664,9 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case SystemZISD::BR_CCMASK:   return combineBR_CCMASK(N, DCI);
   case SystemZISD::SELECT_CCMASK: return combineSELECT_CCMASK(N, DCI);
   case SystemZISD::GET_CCMASK:  return combineGET_CCMASK(N, DCI);
+  case ISD::SRL:
+  case ISD::SRA:                return combineShiftToMulAddHigh(N, DCI);
+  case ISD::MUL:                return combineMUL(N, DCI);
   case ISD::SDIV:
   case ISD::UDIV:
   case ISD::SREM:

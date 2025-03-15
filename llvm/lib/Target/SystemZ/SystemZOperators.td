@@ -315,6 +315,12 @@ def z_vaccc             : SDNode<"SystemZISD::VACCC", SDT_ZTernary>;
 def z_vscbi             : SDNode<"SystemZISD::VSCBI", SDTIntBinOp>;
 def z_vsbi              : SDNode<"SystemZISD::VSBI", SDT_ZTernary>;
 def z_vsbcbi            : SDNode<"SystemZISD::VSBCBI", SDT_ZTernary>;
+def z_vmah              : SDNode<"SystemZISD::VMAH", SDT_ZTernary>;
+def z_vmalh             : SDNode<"SystemZISD::VMALH", SDT_ZTernary>;
+def z_vme               : SDNode<"SystemZISD::VME", SDT_ZBinaryConv>;
+def z_vmle              : SDNode<"SystemZISD::VMLE", SDT_ZBinaryConv>;
+def z_vmo               : SDNode<"SystemZISD::VMO", SDT_ZBinaryConv>;
+def z_vmlo              : SDNode<"SystemZISD::VMLO", SDT_ZBinaryConv>;
 
 def z_loadbswap        : SDNode<"SystemZISD::LRV", SDTLoad,
                                  [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
@@ -814,8 +820,9 @@ def or_as_revinserti8 : PatFrag<(ops node:$src1, node:$src2),
 def z_inegabs : PatFrag<(ops node:$src), (ineg (abs node:$src))>;
 
 // Integer multiply-and-add
-def z_muladd : PatFrag<(ops node:$src1, node:$src2, node:$src3),
-                       (add (mul node:$src1, node:$src2), node:$src3)>;
+class z_muladd<SDPatternOperator mulop>
+  : PatFrag<(ops node:$src1, node:$src2, node:$src3),
+            (add (mulop node:$src1, node:$src2), node:$src3)>;
 
 // Alternatives to match operations with or without an overflow CC result.
 def z_sadd : PatFrags<(ops node:$src1, node:$src2),
