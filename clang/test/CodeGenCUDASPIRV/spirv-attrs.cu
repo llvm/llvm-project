@@ -24,5 +24,5 @@ __global__ void intel_reqd_sub_group_size_64() {}
 
 // CHECK: ![[WG_SIZE]] = !{i32 128, i32 1, i32 1}
 // CHECK: ![[WG_HINT]] = !{i32 2, i32 2, i32 2}
-// CHECK: ![[VEC_HINT]] = !{i32 undef, i32 1}
+// CHECK: ![[VEC_HINT]] = !{i32 poison, i32 1}
 // CHECK: ![[SUB_GRP]] = !{i32 64}
