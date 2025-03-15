@@ -69,6 +69,8 @@ void ProfileInfoDepot::populateProfileInfoConv(T op) {
   addValue(op.getInput());
   addValue(op.getWeight());
   addValue(op.getBias());
+  addValue(op.getInputZp());
+  addValue(op.getWeightZp());
   addType(op.getAccType());
   addValue(op.getOutput());
 }
@@ -93,15 +95,17 @@ void ProfileInfoDepot::populateProfileInfo(tosa::DepthwiseConv2DOp op) {
   populateProfileInfoConv(op);
 }
 
+template <>
+void ProfileInfoDepot::populateProfileInfo(tosa::PadOp op) {
+  addValue(op.getInput1());
+  addValue(op.getPadConst());
+  addValue(op.getOutput());
+}
+
 template <typename T>
 void ProfileInfoDepot::populateProfileInfoDataLayout(T op) {
   addValue(op.getInput1());
   addValue(op.getOutput());
-}
-
-template <>
-void ProfileInfoDepot::populateProfileInfo(tosa::PadOp op) {
-  populateProfileInfoDataLayout(op);
 }
 
 template <>
@@ -425,7 +429,8 @@ template <typename T>
 SmallVector<T> TosaProfileCompliance::findMatchedProfile(
     Operation *op, SmallVector<OpComplianceInfo<T>> compInfo,
     CheckCondition &condition) {
-  assert(compInfo.size() != 0);
+  assert(compInfo.size() != 0 &&
+         "profile-based compliance information is empty");
 
   // Populate the type of profile/extension relevant operands.
   ProfileInfoDepot depot(op);
@@ -437,7 +442,10 @@ SmallVector<T> TosaProfileCompliance::findMatchedProfile(
     SmallVector<SmallVector<TypeInfo>> sets = compInfo[i].operandTypeInfoSet;
 
     for (SmallVector<TypeInfo> expected : sets) {
-      assert(present.size() == expected.size());
+      assert(present.size() == expected.size() &&
+             "the entries for profile-based compliance do not match between "
+             "the generated metadata and the type definition retrieved from "
+             " the operation");
 
       bool is_found = true;
       // Compare the type signature between the given operation and the
