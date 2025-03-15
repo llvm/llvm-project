@@ -19,11 +19,6 @@
 namespace mlir::query::matcher {
 namespace {
 
-// This is needed because these matchers are defined as overloaded functions.
-using IsConstantOp = detail::constant_op_matcher();
-using HasOpAttrName = detail::AttrOpMatcher(llvm::StringRef);
-using HasOpName = detail::NameOpMatcher(llvm::StringRef);
-
 // Enum to string for autocomplete.
 static std::string asArgString(ArgKind kind) {
   switch (kind) {
@@ -31,6 +26,8 @@ static std::string asArgString(ArgKind kind) {
     return "Matcher";
   case ArgKind::String:
     return "String";
+  case ArgKind::Signed:
+    return "signed";
   }
   llvm_unreachable("Unhandled ArgKind");
 }

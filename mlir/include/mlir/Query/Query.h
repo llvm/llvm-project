@@ -17,7 +17,31 @@
 
 namespace mlir::query {
 
-enum class QueryKind { Invalid, NoOp, Help, Match, Quit };
+///
+/// Options for configuring which parts of the IR are to be
+/// traversed by the matcher
+///
+struct QueryOptions {
+  /// When omitBlockArguments is true, the matcher omits traversing
+  /// any block arguments
+  bool omitBlockArguments = false;
+  /// When omitUsesFromAbove is true, the matcher omits
+  /// traversing values that are captured from above.
+  bool omitUsesFromAbove = true;
+  /// When inclusive is true, the matcher will include the include the
+  /// top level op in the slice. When inclusive is false, the matcher will
+  /// not include thee top level op in the slice
+  bool inclusive = true;
+};
+
+enum class QueryKind {
+  Invalid,
+  NoOp,
+  Help,
+  SetBool,
+  Match,
+  Quit,
+};
 
 class QuerySession;
 
@@ -101,6 +125,32 @@ struct MatchQuery : Query {
   static bool classof(const Query *query) {
     return query->kind == QueryKind::Match;
   }
+};
+
+template <typename T>
+struct SetQueryKind {};
+
+template <>
+struct SetQueryKind<bool> {
+  static const QueryKind value = QueryKind::SetBool;
+};
+template <typename T>
+struct SetQuery : Query {
+  SetQuery(T QuerySession::*var, T value)
+      : Query(SetQueryKind<T>::value), var(var), value(value) {}
+
+  llvm::LogicalResult run(llvm::raw_ostream &os,
+                          QuerySession &qs) const override {
+    qs.*var = value;
+    return mlir::success();
+  }
+
+  static bool classof(const Query *query) {
+    return query->kind == SetQueryKind<T>::value;
+  }
+
+  T QuerySession::*var;
+  T value;
 };
 
 } // namespace mlir::query

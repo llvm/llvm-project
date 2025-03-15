@@ -19,6 +19,9 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
+#include "mlir/Query/Matcher/MatchersInternal.h"
+#include "mlir/Query/Query.h"
+#include "llvm/ADT/SetVector.h"
 
 namespace mlir {
 
@@ -59,7 +62,7 @@ struct NameOpMatcher {
   NameOpMatcher(StringRef name) : name(name) {}
   bool match(Operation *op) { return op->getName().getStringRef() == name; }
 
-  StringRef name;
+  std::string name;
 };
 
 /// The matcher that matches operations that have the specified attribute name.
@@ -67,7 +70,7 @@ struct AttrOpMatcher {
   AttrOpMatcher(StringRef attrName) : attrName(attrName) {}
   bool match(Operation *op) { return op->hasAttr(attrName); }
 
-  StringRef attrName;
+  std::string attrName;
 };
 
 /// The matcher that matches operations that have the `ConstantLike` trait, and
@@ -363,7 +366,266 @@ struct RecursivePatternMatcher {
   std::tuple<OperandMatchers...> operandMatchers;
 };
 
+/// Fills `backwardSlice` with the computed backward slice (i.e.
+/// all the transitive defs of op)
+///
+/// The implementation traverses the def chains in postorder traversal for
+/// efficiency reasons: if an operation is already in `backwardSlice`, no
+/// need to traverse its definitions again. Since use-def chains form a DAG,
+/// this terminates.
+///
+/// Upon return to the root call, `backwardSlice` is filled with a
+/// postorder list of defs. This happens to be a topological order, from the
+/// point of view of the use-def chains.
+///
+/// Example starting from node 8
+/// ============================
+///
+///    1       2      3      4
+///    |_______|      |______|
+///    |   |             |
+///    |   5             6
+///    |___|_____________|
+///      |               |
+///      7               8
+///      |_______________|
+///              |
+///              9
+///
+/// Assuming all local orders match the numbering order:
+///    {1, 2, 5, 3, 4, 6}
+///
+
+class BackwardSliceMatcher {
+public:
+  BackwardSliceMatcher(mlir::query::matcher::DynMatcher &&innerMatcher,
+                       int64_t maxDepth)
+      : innerMatcher(std::move(innerMatcher)), maxDepth(maxDepth) {}
+
+  bool match(Operation *op, SetVector<Operation *> &backwardSlice,
+             mlir::query::QueryOptions &options) {
+
+    if (innerMatcher.match(op) &&
+        matches(op, backwardSlice, options, maxDepth)) {
+      if (!options.inclusive) {
+        // Don't insert the top level operation, we just queried on it and don't
+        // want it in the results.
+        backwardSlice.remove(op);
+      }
+      return true;
+    }
+    return false;
+  }
+
+private:
+  bool matches(Operation *op, SetVector<Operation *> &backwardSlice,
+               mlir::query::QueryOptions &options, int64_t remainingDepth) {
+
+    if (op->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+      return false;
+    }
+
+    auto processValue = [&](Value value) {
+      // We need to check the current depth level;
+      // if we have reached level 0, we stop further traversing
+      if (remainingDepth == 0) {
+        return;
+      }
+      if (auto *definingOp = value.getDefiningOp()) {
+        // We omit traversing the same operations
+        if (backwardSlice.count(definingOp) == 0)
+          matches(definingOp, backwardSlice, options, remainingDepth - 1);
+      } else if (auto blockArg = dyn_cast<BlockArgument>(value)) {
+        if (options.omitBlockArguments)
+          return;
+        Block *block = blockArg.getOwner();
+
+        Operation *parentOp = block->getParentOp();
+        // TODO: determine whether we want to recurse backward into the other
+        // blocks of parentOp, which are not technically backward unless they
+        // flow into us. For now, just bail.
+        if (parentOp && backwardSlice.count(parentOp) == 0) {
+          if (parentOp->getNumRegions() != 1 &&
+              parentOp->getRegion(0).getBlocks().size() != 1) {
+            llvm::errs()
+                << "Error: Expected parentOp to have exactly one region and "
+                << "exactly one block, but found " << parentOp->getNumRegions()
+                << " regions and "
+                << (parentOp->getRegion(0).getBlocks().size()) << " blocks.\n";
+          };
+          matches(parentOp, backwardSlice, options, remainingDepth - 1);
+        }
+      } else {
+        llvm_unreachable("No definingOp and not a block argument\n");
+        return;
+      }
+    };
+
+    if (!options.omitUsesFromAbove) {
+      llvm::for_each(op->getRegions(), [&](Region &region) {
+        // Walk this region recursively to collect the regions that descend from
+        // this op's nested regions (inclusive).
+        SmallPtrSet<Region *, 4> descendents;
+        region.walk(
+            [&](Region *childRegion) { descendents.insert(childRegion); });
+        region.walk([&](Operation *op) {
+          for (OpOperand &operand : op->getOpOperands()) {
+            if (!descendents.contains(operand.get().getParentRegion()))
+              processValue(operand.get());
+          }
+        });
+      });
+    }
+
+    llvm::for_each(op->getOperands(), processValue);
+    backwardSlice.insert(op);
+    return true;
+  }
+
+private:
+  // The outer matcher (e.g., BackwardSliceMatcher) relies on the innerMatcher
+  // to determine whether we want to traverse the DAG or not. For example, we
+  // want to explore the DAG only if the top-level operation name is
+  // "arith.addf".
+  mlir::query::matcher::DynMatcher innerMatcher;
+
+  // maxDepth specifies the maximum depth that the matcher can traverse in the
+  // DAG. For example, if maxDepth is 2, the matcher will explore the defining
+  // operations of the top-level op up to 2 levels.
+  int64_t maxDepth;
+};
+
+/// Fills `forwardSlice` with the computed forward slice (i.e. all
+/// the transitive uses of op)
+///
+///
+/// The implementation traverses the use chains in postorder traversal for
+/// efficiency reasons: if an operation is already in `forwardSlice`, no
+/// need to traverse its uses again. Since use-def chains form a DAG, this
+/// terminates.
+///
+/// Upon return to the root call, `forwardSlice` is filled with a
+/// postorder list of uses (i.e. a reverse topological order). To get a proper
+/// topological order, we just reverse the order in `forwardSlice` before
+/// returning.
+///
+/// Example starting from node 0
+/// ============================
+///
+///               0
+///    ___________|___________
+///    1       2      3      4
+///    |_______|      |______|
+///    |   |             |
+///    |   5             6
+///    |___|_____________|
+///      |               |
+///      7               8
+///      |_______________|
+///              |
+///              9
+///
+/// Assuming all local orders match the numbering order:
+/// 1. after getting back to the root getForwardSlice, `forwardSlice` may
+///    contain:
+///      {9, 7, 8, 5, 1, 2, 6, 3, 4}
+/// 2. reversing the result of 1. gives:
+///      {4, 3, 6, 2, 1, 5, 8, 7, 9}
+///
+class ForwardSliceMatcher {
+public:
+  ForwardSliceMatcher(mlir::query::matcher::DynMatcher &&innerMatcher,
+                      int64_t maxDepth)
+      : innerMatcher(std::move(innerMatcher)), maxDepth(maxDepth) {}
+
+  bool match(Operation *op, SetVector<Operation *> &forwardSlice,
+             mlir::query::QueryOptions &options) {
+    if (innerMatcher.match(op) &&
+        matches(op, forwardSlice, options, maxDepth)) {
+      if (!options.inclusive) {
+        // Don't insert the top level operation, we just queried on it and don't
+        // want it in the results.
+        forwardSlice.remove(op);
+      }
+      // Reverse to get back the actual topological order.
+      // std::reverse does not work out of the box on SetVector and I want an
+      // in-place swap based thing (the real std::reverse, not the LLVM
+      // adapter).
+      SmallVector<Operation *, 0> v(forwardSlice.takeVector());
+      forwardSlice.insert(v.rbegin(), v.rend());
+      return true;
+    }
+    return false;
+  }
+
+private:
+  bool matches(Operation *op, SetVector<Operation *> &forwardSlice,
+               mlir::query::QueryOptions &options, int64_t remainingDepth) {
+
+    // We need to check the current depth level;
+    // if we have reached level 0, we stop further traversing and insert
+    // the last user in def-use chain
+    if (remainingDepth == 0) {
+      forwardSlice.insert(op);
+      return true;
+    }
+
+    for (Region &region : op->getRegions())
+      for (Block &block : region)
+        for (Operation &blockOp : block)
+          if (forwardSlice.count(&blockOp) == 0)
+            matches(&blockOp, forwardSlice, options, remainingDepth - 1);
+    for (Value result : op->getResults()) {
+      for (Operation *userOp : result.getUsers())
+        // We omit traversing the same operations
+        if (forwardSlice.count(userOp) == 0)
+          matches(userOp, forwardSlice, options, remainingDepth - 1);
+    }
+
+    forwardSlice.insert(op);
+    return true;
+  }
+
+private:
+  // The outer matcher e.g (ForwardSliceMatcher) relies on the innerMatcher to
+  // determine whether we want to traverse the graph or not. E.g: we want to
+  // explore the DAG only if the top level operation name is "arith.addf"
+  mlir::query::matcher::DynMatcher innerMatcher;
+
+  // maxDepth specifies the maximum depth that the matcher can traverse the
+  // graph E.g: if maxDepth is 2, the matcher will explore the user
+  // operations of the top level op up to 2 levels
+  int64_t maxDepth;
+};
+
 } // namespace detail
+
+// Matches transitive defs of a top level operation up to 1 level
+inline detail::BackwardSliceMatcher
+m_DefinedBy(mlir::query::matcher::DynMatcher innerMatcher) {
+  return detail::BackwardSliceMatcher(std::move(innerMatcher), 1);
+}
+
+// Matches transitive defs of a top level operation up to N levels
+inline detail::BackwardSliceMatcher
+m_GetDefinitions(mlir::query::matcher::DynMatcher innerMatcher,
+                 int64_t maxDepth) {
+  assert(maxDepth >= 0 && "maxDepth must be non-negative");
+  return detail::BackwardSliceMatcher(std::move(innerMatcher), maxDepth);
+}
+
+// Matches uses of a top level operation up to 1 level
+inline detail::ForwardSliceMatcher
+m_UsedBy(mlir::query::matcher::DynMatcher innerMatcher) {
+  return detail::ForwardSliceMatcher(std::move(innerMatcher), 1);
+}
+
+// Matches uses of a top level operation up to N  levels
+inline detail::ForwardSliceMatcher
+m_GetUses(mlir::query::matcher::DynMatcher innerMatcher, int64_t maxDepth) {
+  assert(maxDepth >= 0 && "maxDepth must be non-negative");
+  return detail::ForwardSliceMatcher(std::move(innerMatcher), maxDepth);
+}
 
 /// Matches a constant foldable operation.
 inline detail::constant_op_matcher m_Constant() {
