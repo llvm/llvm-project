@@ -1,4 +1,11 @@
 add_entrypoint_object(
+  fxdivi
+  SRCS fxdivi.cpp
+  HDRS ../fxdivi.h
+)
+
+
+add_entrypoint_object(
   mulifx
   SRCS mulifx.cpp
   HDRS ../mulifx.h
