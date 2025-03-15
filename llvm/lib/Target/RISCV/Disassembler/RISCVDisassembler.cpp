@@ -748,23 +748,20 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
 
   uint32_t Insn = support::endian::read16le(Bytes.data());
 
-  TRY_TO_DECODE_FEATURE_ANY(XqciFeatureGroup, DecoderTableXqci16,
-                            "Qualcomm uC 16bit");
-  TRY_TO_DECODE_FEATURE(
-      RISCV::FeatureVendorXqccmp, DecoderTableXqccmp16,
-      "Xqccmp (Qualcomm 16-bit Push/Pop & Double Move Instructions)");
-  TRY_TO_DECODE_AND_ADD_SP(STI.hasFeature(RISCV::FeatureVendorXwchc),
-                           DecoderTableXwchc16, "WCH QingKe XW");
+  for (const DecoderListEntry &Entry : DecoderList16) {
+    if (!Entry.haveContainedFeatures(STI.getFeatureBits()))
+      continue;
 
-  // DecoderTableZicfiss16 must be checked before DecoderTable16.
-  TRY_TO_DECODE(true, DecoderTableZicfiss16, "RVZicfiss (Shadow Stack)");
-  TRY_TO_DECODE_AND_ADD_SP(true, DecoderTable16,
-                           "RISCV_C (16-bit Instruction)");
-  TRY_TO_DECODE_AND_ADD_SP(true, DecoderTableRISCV32Only_16,
-                           "RISCV32Only_16 (16-bit Instruction)");
-  // Zc* instructions incompatible with Zcf or Zcd.
-  TRY_TO_DECODE_AND_ADD_SP(true, DecoderTableZcOverlap16,
-                "ZcOverlap (16-bit Instructions overlapping with Zcf/Zcd)");
+    LLVM_DEBUG(dbgs() << "Trying " << Entry.Desc << "table:\n");
+    DecodeStatus Result =
+        decodeInstruction(Entry.Table, MI, Insn, Address, this, STI);
+    if (Result == MCDisassembler::Fail)
+      continue;
+
+    addSPOperands(MI);
+
+    return Result;
+  }
 
   return MCDisassembler::Fail;
 }
