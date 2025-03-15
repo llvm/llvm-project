@@ -791,9 +791,15 @@ enum AttributeKindCodes {
   ATTR_KIND_CORO_ELIDE_SAFE = 98,
   ATTR_KIND_NO_EXT = 99,
   ATTR_KIND_NO_DIVERGENCE_SOURCE = 100,
-  ATTR_KIND_SANITIZED_PADDED_GLOBAL = 101,
-  ATTR_KIND_SANITIZE_TYPE = 102,
-  ATTR_KIND_CAPTURES = 103,
+  ATTR_KIND_SANITIZE_TYPE = 101,
+  ATTR_KIND_CAPTURES = 102,
+
+  // TODO: Get rid of this.
+  // There really shouldn't be incompatible bitcode changes specific to AMD
+  // branches because that is prone to break compiler developer's workflows. In
+  // the meantime, try to reduce the blast radius by using bitcode values that
+  // are extremely unlikely to be used upstream.
+  ATTR_KIND_SANITIZED_PADDED_GLOBAL = 9999,
 };
 
 enum ComdatSelectionKindCodes {
