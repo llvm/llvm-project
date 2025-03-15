@@ -781,8 +781,6 @@ std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
     if (Path.empty())
       Path = P;
   }
-  if (getTriple().isOSAIX())
-    Path.clear();
 
   // Check the filename for the old layout if the new one does not exist.
   CRTBasename = buildCompilerRTBasename(Args, Component, Type,
