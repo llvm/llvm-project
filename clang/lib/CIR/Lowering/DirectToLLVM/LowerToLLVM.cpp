@@ -580,16 +580,6 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
   mlir::Type llvmType = getTypeConverter()->convertType(type);
   mlir::Location loc = op.getLoc();
 
-  auto createIntConstant = [&](int64_t value) -> mlir::Value {
-    return rewriter.create<mlir::LLVM::ConstantOp>(
-        loc, llvmType, mlir::IntegerAttr::get(llvmType, value));
-  };
-
-  auto createFloatConstant = [&](double value) -> mlir::Value {
-    mlir::FloatAttr attr = rewriter.getFloatAttr(llvmType, value);
-    return rewriter.create<mlir::LLVM::ConstantOp>(loc, llvmType, attr);
-  };
-
   // Integer unary operations: + - ~ ++ --
   if (mlir::isa<cir::IntType>(elementType)) {
     mlir::LLVM::IntegerOverflowFlags maybeNSW =
@@ -602,33 +592,44 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
     }
 
     switch (op.getKind()) {
-    case cir::UnaryOpKind::Inc:
+    case cir::UnaryOpKind::Inc: {
       assert(!isVector && "++ not allowed on vector types");
+      mlir::LLVM::ConstantOp one = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, llvmType, mlir::IntegerAttr::get(llvmType, 1));
       rewriter.replaceOpWithNewOp<mlir::LLVM::AddOp>(
-          op, llvmType, adaptor.getInput(), createIntConstant(1), maybeNSW);
+          op, llvmType, adaptor.getInput(), one, maybeNSW);
       return mlir::success();
-    case cir::UnaryOpKind::Dec:
+    }
+    case cir::UnaryOpKind::Dec: {
       assert(!isVector && "-- not allowed on vector types");
+      mlir::LLVM::ConstantOp one = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, llvmType, mlir::IntegerAttr::get(llvmType, 1));
       rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(
-          op, llvmType, adaptor.getInput(), createIntConstant(1), maybeNSW);
+          op, llvmType, adaptor.getInput(), one, maybeNSW);
       return mlir::success();
+    }
     case cir::UnaryOpKind::Plus:
       rewriter.replaceOp(op, adaptor.getInput());
       return mlir::success();
-    case cir::UnaryOpKind::Minus:
+    case cir::UnaryOpKind::Minus: {
       assert(!isVector &&
              "Add vector handling when vector types are supported");
+      mlir::LLVM::ConstantOp zero = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, llvmType, mlir::IntegerAttr::get(llvmType, 0));
       rewriter.replaceOpWithNewOp<mlir::LLVM::SubOp>(
-          op, llvmType, createIntConstant(0), adaptor.getInput(), maybeNSW);
+          op, llvmType, zero, adaptor.getInput(), maybeNSW);
       return mlir::success();
-
-    case cir::UnaryOpKind::Not:
+    }
+    case cir::UnaryOpKind::Not: {
       // bit-wise compliment operator, implemented as an XOR with -1.
       assert(!isVector &&
              "Add vector handling when vector types are supported");
+      mlir::LLVM::ConstantOp minusOne = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, llvmType, mlir::IntegerAttr::get(llvmType, -1));
       rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(
-          op, llvmType, adaptor.getInput(), createIntConstant(-1));
+          op, llvmType, adaptor.getInput(), minusOne);
       return mlir::success();
+    }
     }
     llvm_unreachable("Unexpected unary op for int");
   }
@@ -636,16 +637,22 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
   // Floating point unary operations: + - ++ --
   if (mlir::isa<cir::CIRFPTypeInterface>(elementType)) {
     switch (op.getKind()) {
-    case cir::UnaryOpKind::Inc:
+    case cir::UnaryOpKind::Inc: {
       assert(!isVector && "++ not allowed on vector types");
-      rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(
-          op, llvmType, createFloatConstant(1.0), adaptor.getInput());
+      mlir::LLVM::ConstantOp one = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, llvmType, rewriter.getFloatAttr(llvmType, 1.0));
+      rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(op, llvmType, one,
+                                                      adaptor.getInput());
       return mlir::success();
-    case cir::UnaryOpKind::Dec:
+    }
+    case cir::UnaryOpKind::Dec: {
       assert(!isVector && "-- not allowed on vector types");
-      rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(
-          op, llvmType, createFloatConstant(-1.0), adaptor.getInput());
+      mlir::LLVM::ConstantOp minusOne = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, llvmType, rewriter.getFloatAttr(llvmType, -1.0));
+      rewriter.replaceOpWithNewOp<mlir::LLVM::FAddOp>(op, llvmType, minusOne,
+                                                      adaptor.getInput());
       return mlir::success();
+    }
     case cir::UnaryOpKind::Plus:
       rewriter.replaceOp(op, adaptor.getInput());
       return mlir::success();
@@ -670,11 +677,14 @@ mlir::LogicalResult CIRToLLVMUnaryOpLowering::matchAndRewrite(
       // Some of these are allowed in source code, but we shouldn't get here
       // with a boolean type.
       return op.emitError() << "Unsupported unary operation on boolean type";
-    case cir::UnaryOpKind::Not:
+    case cir::UnaryOpKind::Not: {
       assert(!isVector && "NYI: op! on vector mask");
-      rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(
-          op, llvmType, adaptor.getInput(), createIntConstant(1));
+      mlir::LLVM::ConstantOp one = rewriter.create<mlir::LLVM::ConstantOp>(
+          loc, llvmType, rewriter.getIntegerAttr(llvmType, 1));
+      rewriter.replaceOpWithNewOp<mlir::LLVM::XOrOp>(op, llvmType,
+                                                     adaptor.getInput(), one);
       return mlir::success();
+    }
     }
     llvm_unreachable("Unexpected unary op for bool");
   }
