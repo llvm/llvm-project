@@ -315,6 +315,8 @@ Bug Fixes to C++ Support
 - Fixed an assertion failure affecting code that uses C++23 "deducing this". (#GH130272)
 - Clang now properly instantiates destructors for initialized members within non-delegating constructors. (#GH93251)
 - Correctly diagnoses if unresolved using declarations shadows template paramters (#GH129411)
+- Clang now emits the ``-Wunused-variable`` warning when some structured bindings are unused
+  and the ``[[maybe_unused]]`` attribute is not applied. (#GH125810)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
