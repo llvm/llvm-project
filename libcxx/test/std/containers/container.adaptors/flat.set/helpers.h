@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef SUPPORT_FLAT_SET_HELPERS_H
-#define SUPPORT_FLAT_SET_HELPERS_H
+#ifndef TEST_STD_CONTAINERS_CONTAINER_ADAPTORS_FLAT_SET_HELPERS_H
+#define TEST_STD_CONTAINERS_CONTAINER_ADAPTORS_FLAT_SET_HELPERS_H
 
 #include <algorithm>
 #include <cassert>
@@ -304,4 +304,4 @@ public:
   bool moved() const { return int_ == -1; }
 };
 
-#endif // SUPPORT_FLAT_SET_HELPERS_H
+#endif // TEST_STD_CONTAINERS_CONTAINER_ADAPTORS_FLAT_SET_HELPERS_H

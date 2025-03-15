@@ -12,7 +12,7 @@
 
 // class flat_set
 
-// pair<iterator, bool> insert( value_type&& v);
+// pair<iterator, bool> insert(value_type&& v);
 
 #include <flat_set>
 #include <cassert>
