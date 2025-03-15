@@ -3867,7 +3867,7 @@ SDValue AMDGPUDAGToDAGISel::getHi16Elt(SDValue In) const {
 }
 
 bool AMDGPUDAGToDAGISel::isVGPRImm(const SDNode * N) const {
-  assert(CurDAG->getTarget().getTargetTriple().getArch() == Triple::amdgcn);
+  assert(CurDAG->getTarget().getTargetTriple().isAMDGCN());
 
   const SIRegisterInfo *SIRI =
     static_cast<const SIRegisterInfo *>(Subtarget->getRegisterInfo());
