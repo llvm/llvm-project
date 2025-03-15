@@ -14,7 +14,9 @@
 #include "src/unistd/getuid.h"
 #include "test/UnitTest/Test.h"
 
-#include <sched.h>
+#include "hdr/sched_macros.h"
+#include "hdr/types/struct_sched_param.h"
+#include "hdr/types/struct_timespec.h"
 
 TEST(LlvmLibcSchedRRGetIntervalTest, SmokeTest) {
   LIBC_NAMESPACE::libc_errno = 0;
