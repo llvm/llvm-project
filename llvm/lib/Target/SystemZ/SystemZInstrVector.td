@@ -974,8 +974,11 @@ let Predicates = [FeatureVector] in {
             (VSLDB VR128:$x, VR128:$y, imm32zx8:$z)>;
 
   // Shift left double by bit.
-  let Predicates = [FeatureVectorEnhancements2] in
-    def VSLD : TernaryVRId<"vsld", 0xE786, int_s390_vsld, v128b, v128b, 0>;
+  let Predicates = [FeatureVectorEnhancements2] in {
+    def VSLD : TernaryVRId<"vsld", 0xE786, z_shl_double_bit, v128b, v128b, 0>;
+    def : Pat<(int_s390_vsld VR128:$x, VR128:$y, imm32zx8_timm:$z),
+              (VSLD VR128:$x, VR128:$y, imm32zx8:$z)>;
+  }
 
   // Shift right arithmetic.
   def VSRA : BinaryVRRc<"vsra", 0xE77E, int_s390_vsra, v128b, v128b>;
@@ -990,8 +993,11 @@ let Predicates = [FeatureVector] in {
   def VSRLB : BinaryVRRc<"vsrlb", 0xE77D, int_s390_vsrlb, v128b, v128b>;
 
   // Shift right double by bit.
-  let Predicates = [FeatureVectorEnhancements2] in
-    def VSRD : TernaryVRId<"vsrd", 0xE787, int_s390_vsrd, v128b, v128b, 0>;
+  let Predicates = [FeatureVectorEnhancements2] in {
+    def VSRD : TernaryVRId<"vsrd", 0xE787, z_shr_double_bit, v128b, v128b, 0>;
+    def : Pat<(int_s390_vsrd VR128:$x, VR128:$y, imm32zx8_timm:$z),
+              (VSRD VR128:$x, VR128:$y, imm32zx8:$z)>;
+  }
 
   // Subtract.
   def VS  : BinaryVRRcGeneric<"vs", 0xE7F7>;
