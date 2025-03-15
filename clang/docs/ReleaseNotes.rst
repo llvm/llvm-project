@@ -256,6 +256,9 @@ Improvements to Clang's diagnostics
 
 - Improve the diagnostics for shadows template parameter to report correct location (#GH129060).
 
+- Added ``-Wstatic-downcast`` to diagnose potentially dangerous uses of ``static_cast`` that perform a base-to-derived cast
+  on pointers and references of polymorphic types.
+
 Improvements to Clang's time-trace
 ----------------------------------
 
