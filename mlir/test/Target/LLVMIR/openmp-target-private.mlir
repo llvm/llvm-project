@@ -158,12 +158,10 @@ omp.private {type = firstprivate} @sv.firstprivate : i32 copy {
   llvm.store %0, %arg1 : i32, !llvm.ptr
   omp.yield(%arg1 : !llvm.ptr)
 }
-llvm.func @target_simple_() attributes {fir.internal_name = "_QPtarget_simple"} {
+llvm.func @target_firstprivate_() attributes {fir.internal_name = "_QPtarget_firstprivate"} {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %sv = llvm.alloca %0 x i32 {bindc_name = "sv"} : (i64) -> !llvm.ptr
   %sf = llvm.alloca %0 x f32 {bindc_name = "sf"} : (i64) -> !llvm.ptr
-  %4 = llvm.mlir.constant(1 : i64) : i64
-  %5 = llvm.mlir.constant(1 : i64) : i64
   %6 = omp.map.info var_ptr(%sv : !llvm.ptr, i32) map_clauses(to) capture(ByRef) -> !llvm.ptr
   %7 = omp.map.info var_ptr(%sf : !llvm.ptr, f32) map_clauses(to) capture(ByRef) -> !llvm.ptr
   omp.target map_entries(%6 -> %arg0, %7 -> %arg1 : !llvm.ptr, !llvm.ptr) private(@sv.firstprivate %sv -> %arg2 [map_idx=0], @sf.firstprivate %sf -> %arg3 [map_idx=1] : !llvm.ptr, !llvm.ptr) {
@@ -189,7 +187,7 @@ llvm.func @target_simple_() attributes {fir.internal_name = "_QPtarget_simple"} 
 // CHECK: call void @__omp_offloading_[[PRIVATE_MULTI_BLOCK_OFFLOADED_FUNCTION:.*]]()
 // CHECK: define void @target_boxchar_
 // CHECK: call void @__omp_offloading_[[BOXCHAR_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr {{.*}})
-// CHECK: define void @target_simple_()
+// CHECK: define void @target_firstprivate_()
 // CHECK: call void @__omp_offloading_[[SIMPLE_OFFLOADED_FUNCTION:.*]](ptr {{.*}}, ptr {{.*}})
 
 // CHECK: define internal void @__omp_offloading_[[MAP_SINGLE_PRIVATE_OFFLOADED_FUNCTION]]

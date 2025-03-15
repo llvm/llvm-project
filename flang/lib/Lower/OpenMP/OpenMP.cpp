@@ -1697,12 +1697,7 @@ static void genTargetClauses(
 
   // `target private(..)` is only supported in delayed privatization mode.
   if (!enableDelayedPrivatizationStaging)
-    cp.processTODO<clause::Private>(loc, llvm::omp::Directive::OMPD_target);
-
-  // We do not yet have MLIR to LLVMIR translation for privatization in
-  // for deferred target tasks.
-  if (clauseOps.nowait)
-    cp.processTODO<clause::Private, clause::Firstprivate>(
+    cp.processTODO<clause::Firstprivate, clause::Private>(
         loc, llvm::omp::Directive::OMPD_target);
 }
 
