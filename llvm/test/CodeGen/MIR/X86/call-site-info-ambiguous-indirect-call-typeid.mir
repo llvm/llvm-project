@@ -9,55 +9,48 @@
 # CHECK-NEXT: 1234567890 }
 
 --- |  
-  ; Function Attrs: mustprogress noinline nounwind optnone uwtable
-  define dso_local noundef i32 @_Z3addii(i32 noundef %a, i32 noundef %b) #0 !type !6 !type !6 {
+  define dso_local noundef i32 @_Z3addii(i32 noundef %a, i32 noundef %b) !type !0 !type !0 {
   entry:
     %a.addr = alloca i32, align 4
     %b.addr = alloca i32, align 4
     store i32 %a, ptr %a.addr, align 4
     store i32 %b, ptr %b.addr, align 4
-    %0 = load i32, ptr %a.addr, align 4
-    %1 = load i32, ptr %b.addr, align 4
-    %add = add nsw i32 %0, %1
+    %a_val = load i32, ptr %a.addr, align 4
+    %b_val = load i32, ptr %b.addr, align 4
+    %add = add nsw i32 %a_val, %b_val
     ret i32 %add
   }
   
-  ; Function Attrs: mustprogress noinline nounwind optnone uwtable
-  define dso_local noundef i32 @_Z8multiplyii(i32 noundef %a, i32 noundef %b) #0 !type !6 !type !6 {
+  define dso_local noundef i32 @_Z8multiplyii(i32 noundef %a, i32 noundef %b) !type !0 !type !0 {
   entry:
     %a.addr = alloca i32, align 4
     %b.addr = alloca i32, align 4
     store i32 %a, ptr %a.addr, align 4
     store i32 %b, ptr %b.addr, align 4
-    %0 = load i32, ptr %a.addr, align 4
-    %1 = load i32, ptr %b.addr, align 4
-    %mul = mul nsw i32 %0, %1
+    %a_val = load i32, ptr %a.addr, align 4
+    %b_val = load i32, ptr %b.addr, align 4
+    %mul = mul nsw i32 %a_val, %b_val
     ret i32 %mul
   }
   
-  ; Function Attrs: mustprogress noinline nounwind optnone uwtable
-  define dso_local noundef ptr @_Z13get_operationb(i1 noundef zeroext %is_addition) #0 !type !7 !type !7 {
+  define dso_local noundef ptr @_Z13get_operationb(i1 noundef zeroext %is_addition) !type !1 !type !1 {
   entry:
     %is_addition.addr = alloca i8, align 1
     %storedv = zext i1 %is_addition to i8
     store i8 %storedv, ptr %is_addition.addr, align 1
-    %0 = load i8, ptr %is_addition.addr, align 1
-    %loadedv = trunc i8 %0 to i1
-    br i1 %loadedv, label %cond.true, label %cond.false
-  
-  cond.true:                                        ; preds = %entry
-    br label %cond.end
+    %is_addition_val = load i8, ptr %is_addition.addr, align 1
+    %loadedv = trunc i8 %is_addition_val to i1
+    br i1 %loadedv, label %cond.end, label %cond.false
   
   cond.false:                                       ; preds = %entry
     br label %cond.end
   
-  cond.end:                                         ; preds = %cond.false, %cond.true
-    %cond = phi ptr [ @_Z3addii, %cond.true ], [ @_Z8multiplyii, %cond.false ]
+  cond.end:                                         ; preds = %cond.false, %entry
+    %cond = phi ptr [ @_Z8multiplyii, %cond.false ], [ @_Z3addii, %entry ]
     ret ptr %cond
   }
   
-  ; Function Attrs: mustprogress noinline norecurse optnone uwtable
-  define dso_local noundef i32 @main(i32 noundef %argc) #1 !type !8 !type !8 {
+  define dso_local noundef i32 @main(i32 noundef %argc) !type !2 !type !2 {
   entry:
     %retval = alloca i32, align 4
     %argc.addr = alloca i32, align 4
@@ -68,75 +61,33 @@
     store i32 %argc, ptr %argc.addr, align 4
     store i32 5, ptr %x, align 4
     store i32 10, ptr %y, align 4
-    %0 = load i32, ptr %argc.addr, align 4
-    %rem = srem i32 %0, 2
+    %argc_val = load i32, ptr %argc.addr, align 4
+    %rem = srem i32 %argc_val, 2
     %cmp = icmp eq i32 %rem, 0
     %call = call noundef ptr @_Z13get_operationb(i1 noundef zeroext %cmp) [ "callee_type"(metadata !"_ZTSFPvbE.generalized") ]
     store ptr %call, ptr %op, align 8
-    %1 = load ptr, ptr %op, align 8
-    %2 = load i32, ptr %x, align 4
-    %3 = load i32, ptr %y, align 4
-    %call1 = call noundef i32 %1(i32 noundef %2, i32 noundef %3) [ "callee_type"(metadata !"_ZTSFiiiE.generalized") ]
+    %op_val = load ptr, ptr %op, align 8
+    %x_val = load i32, ptr %x, align 4
+    %y_val = load i32, ptr %y, align 4
+    %call1 = call noundef i32 %op_val(i32 noundef %x_val, i32 noundef %y_val) [ "callee_type"(metadata !"_ZTSFiiiE.generalized") ]
     ret i32 %call1
   }
   
-  !6 = !{i64 0, !"_ZTSFiiiE.generalized"}
-  !7 = !{i64 0, !"_ZTSFPvbE.generalized"}
-  !8 = !{i64 0, !"_ZTSFiiE.generalized"}
+  !0 = !{i64 0, !"_ZTSFiiiE.generalized"}
+  !1 = !{i64 0, !"_ZTSFPvbE.generalized"}
+  !2 = !{i64 0, !"_ZTSFiiE.generalized"}
 
 ...
 ---
 name:            main
-liveins:
-  - { reg: '$edi', virtual-reg: '%0' }
-stack:
-  - { id: 0, name: retval, size: 4 }
-  - { id: 1, name: argc.addr, size: 4 }
-  - { id: 2, name: x, size: 4 }
-  - { id: 3, name: y, size: 4 }
-  - { id: 4, name: op, size: 8 }
 callSites:
-  - { bb: 0, offset: 18, fwdArgRegs: [] }
-  - { bb: 0, offset: 29, fwdArgRegs: [], typeId: 
+  - { bb: 0, offset: 0, fwdArgRegs: [] }
+  - { bb: 0, offset: 2, fwdArgRegs: [], typeId: 
     1234567890 }
 body:             |
   bb.0.entry:
-    liveins: $edi
-  
-    %0:gr32 = COPY $edi
-    %1:gr32 = COPY killed %0
-    MOV32mi %stack.0.retval, 1, $noreg, 0, $noreg, 0 :: (store (s32) into %ir.retval)
-    MOV32mr %stack.1.argc.addr, 1, $noreg, 0, $noreg, %1 :: (store (s32) into %ir.argc.addr)
-    MOV32mi %stack.2.x, 1, $noreg, 0, $noreg, 5 :: (store (s32) into %ir.x)
-    MOV32mi %stack.3.y, 1, $noreg, 0, $noreg, 10 :: (store (s32) into %ir.y)
-    %21:gr32 = MOV32rm %stack.1.argc.addr, 1, $noreg, 0, $noreg :: (load (s32) from %ir.argc.addr)
-    %19:gr32 = MOV32ri 2
-    $eax = COPY %21
-    CDQ implicit-def $eax, implicit-def $edx, implicit $eax
-    IDIV32r %19, implicit-def $eax, implicit-def $edx, implicit-def $eflags, implicit $eax, implicit $edx
-    %20:gr32 = COPY $edx
-    CMP32ri %20, 0, implicit-def $eflags
-    %15:gr8 = SETCCr 4, implicit $eflags
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    %12:gr32 = MOVZX32rr8 %15
-    %13:gr32 = AND32ri %12, 1, implicit-def dead $eflags
-    $edi = COPY %13
-    CALL64pcrel32 @_Z13get_operationb, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    %14:gr64 = COPY $rax
-    %10:gr64 = COPY %14
-    MOV64mr %stack.4.op, 1, $noreg, 0, $noreg, %10 :: (store (s64) into %ir.op)
-    %9:gr64 = MOV64rm %stack.4.op, 1, $noreg, 0, $noreg :: (load (s64) from %ir.op)
-    %8:gr32 = MOV32rm %stack.2.x, 1, $noreg, 0, $noreg :: (load (s32) from %ir.x)
-    %7:gr32 = MOV32rm %stack.3.y, 1, $noreg, 0, $noreg :: (load (s32) from %ir.y)
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    $edi = COPY %8
-    $esi = COPY %7
-    CALL64r %9, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    %6:gr32 = COPY $eax
-    %2:gr32 = COPY %6
-    $eax = COPY %2
-    RET64 implicit $eax
+    CALL64pcrel32 @_Z13get_operationb, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rsp, implicit-def $ssp, implicit-def $rax    
+    %7:gr64 = COPY $rax    
+    CALL64r %7, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit $esi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
 
 ...
