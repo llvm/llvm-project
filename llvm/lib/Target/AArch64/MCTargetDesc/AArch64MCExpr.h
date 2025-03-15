@@ -178,8 +178,6 @@ public:
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                  const MCFixup *Fixup) const override;
 
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
-
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
