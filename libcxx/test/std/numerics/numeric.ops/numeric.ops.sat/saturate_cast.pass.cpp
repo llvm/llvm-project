@@ -6,7 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
+// REQUIRES: std-at-least-c++26
+
+// The test uses "Placeholder variables with no name"
+// UNSUPPORTED: Apple-Clang-15, Apple-Clang-16
 
 // <numeric>
 
@@ -298,7 +301,7 @@ constexpr bool test() {
   assert(std::saturate_cast<unsigned int>(  sBigMin) == 0U);       // saturated
   assert(std::saturate_cast<unsigned int>(    sZero) == 0U);
   assert(std::saturate_cast<unsigned int>(  sBigMax) == UINT_MAX); // saturated
-  
+
   std::same_as<unsigned int> decltype(auto) _ = std::saturate_cast<unsigned int>(uBigMax);
   assert(std::saturate_cast<unsigned int>(    uZero) == 0U);
   assert(std::saturate_cast<unsigned int>(  uBigMax) == UINT_MAX);  // saturated
