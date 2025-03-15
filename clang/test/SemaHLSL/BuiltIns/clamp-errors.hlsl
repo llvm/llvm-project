@@ -72,20 +72,20 @@ float2 test_builtin_clamp_int_vect_to_float_vec_promotion(int2 p0, float p1) {
 
 float test_builtin_clamp_bool_type_promotion(bool p0) {
   return __builtin_hlsl_elementwise_clamp(p0, p0, p0);
-  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was 'bool')}}
+  // expected-error@-1 {{1st argument must be a vector, integer or floating-point type (was 'bool')}}
 }
 
 float builtin_bool_to_float_type_promotion(float p0, bool p1) {
   return __builtin_hlsl_elementwise_clamp(p0, p0, p1);
-  // expected-error@-1 {{3rd argument must be a floating point type (was 'bool')}}
+  // expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was 'bool')}}
 }
 
 float builtin_bool_to_float_type_promotion2(bool p0, float p1) {
   return __builtin_hlsl_elementwise_clamp(p1, p0, p1);
-  // expected-error@-1 {{2nd argument must be a floating point type (was 'bool')}}
+  // expected-error@-1 {{2nd argument must be a scalar or vector of floating-point types (was 'bool')}}
 }
 
 float builtin_clamp_int_to_float_promotion(float p0, int p1) {
   return __builtin_hlsl_elementwise_clamp(p0, p0, p1);
-  // expected-error@-1 {{3rd argument must be a floating point type (was 'int')}}
+  // expected-error@-1 {{3rd argument must be a scalar or vector of floating-point types (was 'int')}}
 }
