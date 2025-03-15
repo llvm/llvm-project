@@ -18,9 +18,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
-#include <iostream>
 #include <set>
-using namespace std;
 
 using AIX = clang::driver::toolchains::AIX;
 using namespace clang::driver;
