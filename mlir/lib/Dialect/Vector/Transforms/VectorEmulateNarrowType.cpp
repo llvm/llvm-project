@@ -1505,10 +1505,10 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
     return rewriter.notifyMatchFailure(op, "not a vector!");
 
   unsigned subByteBits = subByteVecTy.getElementTypeBitWidth();
-  unsigned multiByteBits = containerTy.getIntOrFloatBitWidth();
+  unsigned containerBits = containerTy.getIntOrFloatBitWidth();
 
   // Enforced by the common pre-conditions.
-  assert(multiByteBits % 8 == 0 && "Not a multi-byte scalar type!");
+  assert(containerBits % 8 == 0 && "Not a multi-byte scalar type!");
 
   // TODO: Add support other widths (when/if needed)
   if (subByteBits != 2 && subByteBits != 4)
@@ -1516,7 +1516,7 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
         op, "only 2-bit and 4-bit sub-byte type is supported at this moment");
 
   // Condition 1 ("per-element" alignment)
-  if (multiByteBits % subByteBits != 0)
+  if (containerBits % subByteBits != 0)
     return rewriter.notifyMatchFailure(op, "unalagined element types");
 
   // Condition 2 ("full" alignment)
