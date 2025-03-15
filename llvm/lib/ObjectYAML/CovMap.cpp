@@ -374,7 +374,7 @@ Expected<uint64_t> CovMapTy::decode(const ArrayRef<uint8_t> Content,
 
 #define COVMAP_HEADER(Type, LLVMType, Name, Initializer)                       \
   static_assert(sizeof(Type) == sizeof(uint32_t));                             \
-  Type Name = Data.getU32();
+  [[maybe_unused]] Type Name = Data.getU32();
 #include "llvm/ProfileData/InstrProfData.inc"
   if (!Data)
     return Data.takeError();
