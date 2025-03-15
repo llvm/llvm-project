@@ -426,6 +426,7 @@ public:
   LegalizeResult lowerMinMax(MachineInstr &MI);
   LegalizeResult lowerFCopySign(MachineInstr &MI);
   LegalizeResult lowerFMinNumMaxNum(MachineInstr &MI);
+  LegalizeResult lowerFMinimum_FMaximum(MachineInstr &MI);
   LegalizeResult lowerFMad(MachineInstr &MI);
   LegalizeResult lowerIntrinsicRound(MachineInstr &MI);
   LegalizeResult lowerFFloor(MachineInstr &MI);

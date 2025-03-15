@@ -890,6 +890,16 @@ bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
   return false;
 }
 
+bool llvm::isKnownNeverZeroFloat(Register Reg, const MachineRegisterInfo &MRI) {
+  std::optional<FPValueAndVReg> FPValReg;
+  if (mi_match(Reg, MRI, m_GFCstOrSplat(FPValReg))) {
+    if (!FPValReg->Value.isZero())
+      return true;
+  }
+
+  return false;
+}
+
 Align llvm::inferAlignFromPtrInfo(MachineFunction &MF,
                                   const MachinePointerInfo &MPO) {
   auto PSV = dyn_cast_if_present<const PseudoSourceValue *>(MPO.V);
