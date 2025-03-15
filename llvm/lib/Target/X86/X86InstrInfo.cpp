@@ -5691,7 +5691,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   // Replace non-NF with NF instructions.
   for (auto &Inst : InstsToUpdate) {
     Inst.first->setDesc(get(Inst.second));
-    Inst.first->removeOperand(Inst.first->getNumOperands() - 1);
+    Inst.first->removeOperand(
+        Inst.first->findRegisterDefOperandIdx(X86::EFLAGS, /*TRI=*/nullptr));
   }
 
   // Make sure Sub instruction defines EFLAGS and mark the def live.
