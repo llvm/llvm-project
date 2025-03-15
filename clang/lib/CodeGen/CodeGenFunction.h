@@ -1689,6 +1689,10 @@ public:
   }
   void markStmtMaybeUsed(const Stmt *S) { PGO.markStmtMaybeUsed(S); }
 
+  /// If `InnerFn` is set, this CGF generates a thunk function that does the nil
+  /// check before calling `InnerFn`. `InnerFn` has to be an objc_direct method.
+  llvm::Function *InnerFn = nullptr;
+
   /// Increment the profiler's counter for the given statement by \p StepV.
   /// If \p StepV is null, the default increment is 1.
   void incrementProfileCounter(const Stmt *S, llvm::Value *StepV = nullptr) {
@@ -2190,6 +2194,8 @@ private:
 
 public:
   CodeGenFunction(CodeGenModule &cgm, bool suppressNewContext = false);
+  CodeGenFunction(CodeGenModule &cgm, llvm::Function *inner,
+                  bool suppressNewContext = false);
   ~CodeGenFunction();
 
   CodeGenTypes &getTypes() const { return CGM.getTypes(); }
@@ -2339,6 +2345,8 @@ public:
   void generateObjCSetterBody(const ObjCImplementationDecl *classImpl,
                               const ObjCPropertyImplDecl *propImpl,
                               llvm::Constant *AtomicHelperFn);
+  void GenerateObjCDirectThunk(const ObjCMethodDecl *OMD,
+                               const ObjCContainerDecl *CD);
 
   //===--------------------------------------------------------------------===//
   //                                  Block Bits
