@@ -24,6 +24,53 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // SPIR32-LABEL: define {{[^@]+}}@device_side_enqueue
 // SPIR32-SAME: (ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META2:![0-9]+]] !kernel_arg_access_qual [[META3:![0-9]+]] !kernel_arg_type [[META4:![0-9]+]] !kernel_arg_base_type [[META4]] !kernel_arg_type_qual [[META5:![0-9]+]] {
 // SPIR32-NEXT:  entry:
+// SPIR32-NEXT:    [[A_ADDR_I:%.*]] = alloca ptr addrspace(1), align 4
+// SPIR32-NEXT:    [[B_ADDR_I:%.*]] = alloca ptr addrspace(1), align 4
+// SPIR32-NEXT:    [[I_ADDR_I:%.*]] = alloca i32, align 4
+// SPIR32-NEXT:    [[DEFAULT_QUEUE_I:%.*]] = alloca target("spirv.Queue"), align 4
+// SPIR32-NEXT:    [[FLAGS_I:%.*]] = alloca i32, align 4
+// SPIR32-NEXT:    [[NDRANGE_I:%.*]] = alloca [[STRUCT_NDRANGE_T:%.*]], align 4
+// SPIR32-NEXT:    [[TMP_I:%.*]] = alloca [[STRUCT_NDRANGE_T]], align 4
+// SPIR32-NEXT:    [[BLOCK_I:%.*]] = alloca <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, align 4
+// SPIR32-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 4
+// SPIR32-NEXT:    [[B_ADDR:%.*]] = alloca ptr addrspace(1), align 4
+// SPIR32-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// SPIR32-NEXT:    store ptr addrspace(1) [[A]], ptr [[A_ADDR]], align 4
+// SPIR32-NEXT:    store ptr addrspace(1) [[B]], ptr [[B_ADDR]], align 4
+// SPIR32-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// SPIR32-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[A_ADDR]], align 4
+// SPIR32-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[B_ADDR]], align 4
+// SPIR32-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// SPIR32-NEXT:    store ptr addrspace(1) [[TMP0]], ptr [[A_ADDR_I]], align 4
+// SPIR32-NEXT:    store ptr addrspace(1) [[TMP1]], ptr [[B_ADDR_I]], align 4
+// SPIR32-NEXT:    store i32 [[TMP2]], ptr [[I_ADDR_I]], align 4
+// SPIR32-NEXT:    store i32 0, ptr [[FLAGS_I]], align 4
+// SPIR32-NEXT:    [[TMP3:%.*]] = load target("spirv.Queue"), ptr [[DEFAULT_QUEUE_I]], align 4
+// SPIR32-NEXT:    [[TMP4:%.*]] = load i32, ptr [[FLAGS_I]], align 4
+// SPIR32-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP_I]], ptr align 4 [[NDRANGE_I]], i32 4, i1 false)
+// SPIR32-NEXT:    store i32 24, ptr [[BLOCK_I]], align 4
+// SPIR32-NEXT:    [[BLOCK_ALIGN_I:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK_I]], i32 0, i32 1
+// SPIR32-NEXT:    store i32 4, ptr [[BLOCK_ALIGN_I]], align 4
+// SPIR32-NEXT:    [[BLOCK_INVOKE_I:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK_I]], i32 0, i32 2
+// SPIR32-NEXT:    store ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke to ptr addrspace(4)), ptr [[BLOCK_INVOKE_I]], align 4
+// SPIR32-NEXT:    [[BLOCK_CAPTURED_I:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK_I]], i32 0, i32 3
+// SPIR32-NEXT:    [[TMP5:%.*]] = load ptr addrspace(1), ptr [[A_ADDR_I]], align 4
+// SPIR32-NEXT:    store ptr addrspace(1) [[TMP5]], ptr [[BLOCK_CAPTURED_I]], align 4
+// SPIR32-NEXT:    [[BLOCK_CAPTURED1_I:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK_I]], i32 0, i32 4
+// SPIR32-NEXT:    [[TMP6:%.*]] = load i32, ptr [[I_ADDR_I]], align 4
+// SPIR32-NEXT:    store i32 [[TMP6]], ptr [[BLOCK_CAPTURED1_I]], align 4
+// SPIR32-NEXT:    [[BLOCK_CAPTURED2_I:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK_I]], i32 0, i32 5
+// SPIR32-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr [[B_ADDR_I]], align 4
+// SPIR32-NEXT:    store ptr addrspace(1) [[TMP7]], ptr [[BLOCK_CAPTURED2_I]], align 4
+// SPIR32-NEXT:    [[TMP8:%.*]] = addrspacecast ptr [[BLOCK_I]] to ptr addrspace(4)
+// SPIR32-NEXT:    [[TMP9:%.*]] = call spir_func i32 @__enqueue_kernel_basic(target("spirv.Queue") [[TMP3]], i32 [[TMP4]], ptr [[TMP_I]], ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) [[TMP8]]) #[[ATTR6:[0-9]+]]
+// SPIR32-NEXT:    ret void
+//
+//
+// SPIR32: Function Attrs: alwaysinline convergent norecurse nounwind
+// SPIR32-LABEL: define {{[^@]+}}@__clang_ocl_kern_imp_device_side_enqueue
+// SPIR32-SAME: (ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR1:[0-9]+]] !kernel_arg_addr_space [[META2]] !kernel_arg_access_qual [[META3]] !kernel_arg_type [[META4]] !kernel_arg_base_type [[META4]] !kernel_arg_type_qual [[META5]] {
+// SPIR32-NEXT:  entry:
 // SPIR32-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 4
 // SPIR32-NEXT:    [[B_ADDR:%.*]] = alloca ptr addrspace(1), align 4
 // SPIR32-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
@@ -61,7 +108,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 //
 // SPIR32: Function Attrs: convergent noinline nounwind optnone
 // SPIR32-LABEL: define {{[^@]+}}@__device_side_enqueue_block_invoke
-// SPIR32-SAME: (ptr addrspace(4) [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR2:[0-9]+]] {
+// SPIR32-SAME: (ptr addrspace(4) [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR3:[0-9]+]] {
 // SPIR32-NEXT:  entry:
 // SPIR32-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr addrspace(4), align 4
 // SPIR32-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr addrspace(4), align 4
@@ -85,7 +132,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 //
 // SPIR32: Function Attrs: convergent nounwind
 // SPIR32-LABEL: define {{[^@]+}}@__device_side_enqueue_block_invoke_kernel
-// SPIR32-SAME: (ptr addrspace(4) [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] {
+// SPIR32-SAME: (ptr addrspace(4) [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] {
 // SPIR32-NEXT:  entry:
 // SPIR32-NEXT:    call spir_func void @__device_side_enqueue_block_invoke(ptr addrspace(4) [[TMP0]])
 // SPIR32-NEXT:    ret void
@@ -94,6 +141,53 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP: Function Attrs: convergent noinline norecurse nounwind optnone strictfp
 // STRICTFP-LABEL: define {{[^@]+}}@device_side_enqueue
 // STRICTFP-SAME: (ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META2:![0-9]+]] !kernel_arg_access_qual [[META3:![0-9]+]] !kernel_arg_type [[META4:![0-9]+]] !kernel_arg_base_type [[META4]] !kernel_arg_type_qual [[META5:![0-9]+]] {
+// STRICTFP-NEXT:  entry:
+// STRICTFP-NEXT:    [[A_ADDR_I:%.*]] = alloca ptr addrspace(1), align 4
+// STRICTFP-NEXT:    [[B_ADDR_I:%.*]] = alloca ptr addrspace(1), align 4
+// STRICTFP-NEXT:    [[I_ADDR_I:%.*]] = alloca i32, align 4
+// STRICTFP-NEXT:    [[DEFAULT_QUEUE_I:%.*]] = alloca target("spirv.Queue"), align 4
+// STRICTFP-NEXT:    [[FLAGS_I:%.*]] = alloca i32, align 4
+// STRICTFP-NEXT:    [[NDRANGE_I:%.*]] = alloca [[STRUCT_NDRANGE_T:%.*]], align 4
+// STRICTFP-NEXT:    [[TMP_I:%.*]] = alloca [[STRUCT_NDRANGE_T]], align 4
+// STRICTFP-NEXT:    [[BLOCK_I:%.*]] = alloca <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, align 4
+// STRICTFP-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 4
+// STRICTFP-NEXT:    [[B_ADDR:%.*]] = alloca ptr addrspace(1), align 4
+// STRICTFP-NEXT:    [[I_ADDR:%.*]] = alloca i32, align 4
+// STRICTFP-NEXT:    store ptr addrspace(1) [[A]], ptr [[A_ADDR]], align 4
+// STRICTFP-NEXT:    store ptr addrspace(1) [[B]], ptr [[B_ADDR]], align 4
+// STRICTFP-NEXT:    store i32 [[I]], ptr [[I_ADDR]], align 4
+// STRICTFP-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[A_ADDR]], align 4
+// STRICTFP-NEXT:    [[TMP1:%.*]] = load ptr addrspace(1), ptr [[B_ADDR]], align 4
+// STRICTFP-NEXT:    [[TMP2:%.*]] = load i32, ptr [[I_ADDR]], align 4
+// STRICTFP-NEXT:    store ptr addrspace(1) [[TMP0]], ptr [[A_ADDR_I]], align 4
+// STRICTFP-NEXT:    store ptr addrspace(1) [[TMP1]], ptr [[B_ADDR_I]], align 4
+// STRICTFP-NEXT:    store i32 [[TMP2]], ptr [[I_ADDR_I]], align 4
+// STRICTFP-NEXT:    store i32 0, ptr [[FLAGS_I]], align 4
+// STRICTFP-NEXT:    [[TMP3:%.*]] = load target("spirv.Queue"), ptr [[DEFAULT_QUEUE_I]], align 4
+// STRICTFP-NEXT:    [[TMP4:%.*]] = load i32, ptr [[FLAGS_I]], align 4
+// STRICTFP-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP_I]], ptr align 4 [[NDRANGE_I]], i32 4, i1 false) #[[ATTR6:[0-9]+]]
+// STRICTFP-NEXT:    store i32 24, ptr [[BLOCK_I]], align 4
+// STRICTFP-NEXT:    [[BLOCK_ALIGN_I:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK_I]], i32 0, i32 1
+// STRICTFP-NEXT:    store i32 4, ptr [[BLOCK_ALIGN_I]], align 4
+// STRICTFP-NEXT:    [[BLOCK_INVOKE_I:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK_I]], i32 0, i32 2
+// STRICTFP-NEXT:    store ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke to ptr addrspace(4)), ptr [[BLOCK_INVOKE_I]], align 4
+// STRICTFP-NEXT:    [[BLOCK_CAPTURED_I:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK_I]], i32 0, i32 3
+// STRICTFP-NEXT:    [[TMP5:%.*]] = load ptr addrspace(1), ptr [[A_ADDR_I]], align 4
+// STRICTFP-NEXT:    store ptr addrspace(1) [[TMP5]], ptr [[BLOCK_CAPTURED_I]], align 4
+// STRICTFP-NEXT:    [[BLOCK_CAPTURED1_I:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK_I]], i32 0, i32 4
+// STRICTFP-NEXT:    [[TMP6:%.*]] = load i32, ptr [[I_ADDR_I]], align 4
+// STRICTFP-NEXT:    store i32 [[TMP6]], ptr [[BLOCK_CAPTURED1_I]], align 4
+// STRICTFP-NEXT:    [[BLOCK_CAPTURED2_I:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK_I]], i32 0, i32 5
+// STRICTFP-NEXT:    [[TMP7:%.*]] = load ptr addrspace(1), ptr [[B_ADDR_I]], align 4
+// STRICTFP-NEXT:    store ptr addrspace(1) [[TMP7]], ptr [[BLOCK_CAPTURED2_I]], align 4
+// STRICTFP-NEXT:    [[TMP8:%.*]] = addrspacecast ptr [[BLOCK_I]] to ptr addrspace(4)
+// STRICTFP-NEXT:    [[TMP9:%.*]] = call spir_func i32 @__enqueue_kernel_basic(target("spirv.Queue") [[TMP3]], i32 [[TMP4]], ptr [[TMP_I]], ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) [[TMP8]]) #[[ATTR7:[0-9]+]]
+// STRICTFP-NEXT:    ret void
+//
+//
+// STRICTFP: Function Attrs: alwaysinline convergent norecurse nounwind strictfp
+// STRICTFP-LABEL: define {{[^@]+}}@__clang_ocl_kern_imp_device_side_enqueue
+// STRICTFP-SAME: (ptr addrspace(1) align 4 [[A:%.*]], ptr addrspace(1) align 4 [[B:%.*]], i32 [[I:%.*]]) #[[ATTR1:[0-9]+]] !kernel_arg_addr_space [[META2]] !kernel_arg_access_qual [[META3]] !kernel_arg_type [[META4]] !kernel_arg_base_type [[META4]] !kernel_arg_type_qual [[META5]] {
 // STRICTFP-NEXT:  entry:
 // STRICTFP-NEXT:    [[A_ADDR:%.*]] = alloca ptr addrspace(1), align 4
 // STRICTFP-NEXT:    [[B_ADDR:%.*]] = alloca ptr addrspace(1), align 4
@@ -109,7 +203,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-NEXT:    store i32 0, ptr [[FLAGS]], align 4
 // STRICTFP-NEXT:    [[TMP0:%.*]] = load target("spirv.Queue"), ptr [[DEFAULT_QUEUE]], align 4
 // STRICTFP-NEXT:    [[TMP1:%.*]] = load i32, ptr [[FLAGS]], align 4
-// STRICTFP-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP]], ptr align 4 [[NDRANGE]], i32 4, i1 false) #[[ATTR5:[0-9]+]]
+// STRICTFP-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 4 [[TMP]], ptr align 4 [[NDRANGE]], i32 4, i1 false) #[[ATTR6]]
 // STRICTFP-NEXT:    [[BLOCK_SIZE:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK]], i32 0, i32 0
 // STRICTFP-NEXT:    store i32 24, ptr [[BLOCK_SIZE]], align 4
 // STRICTFP-NEXT:    [[BLOCK_ALIGN:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr [[BLOCK]], i32 0, i32 1
@@ -126,13 +220,13 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr [[B_ADDR]], align 4
 // STRICTFP-NEXT:    store ptr addrspace(1) [[TMP4]], ptr [[BLOCK_CAPTURED2]], align 4
 // STRICTFP-NEXT:    [[TMP5:%.*]] = addrspacecast ptr [[BLOCK]] to ptr addrspace(4)
-// STRICTFP-NEXT:    [[TMP6:%.*]] = call spir_func i32 @__enqueue_kernel_basic(target("spirv.Queue") [[TMP0]], i32 [[TMP1]], ptr [[TMP]], ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) [[TMP5]]) #[[ATTR5]]
+// STRICTFP-NEXT:    [[TMP6:%.*]] = call spir_func i32 @__enqueue_kernel_basic(target("spirv.Queue") [[TMP0]], i32 [[TMP1]], ptr [[TMP]], ptr addrspace(4) addrspacecast (ptr @__device_side_enqueue_block_invoke_kernel to ptr addrspace(4)), ptr addrspace(4) [[TMP5]]) #[[ATTR6]]
 // STRICTFP-NEXT:    ret void
 //
 //
 // STRICTFP: Function Attrs: convergent noinline nounwind optnone strictfp
 // STRICTFP-LABEL: define {{[^@]+}}@__device_side_enqueue_block_invoke
-// STRICTFP-SAME: (ptr addrspace(4) [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR2:[0-9]+]] {
+// STRICTFP-SAME: (ptr addrspace(4) [[DOTBLOCK_DESCRIPTOR:%.*]]) #[[ATTR3:[0-9]+]] {
 // STRICTFP-NEXT:  entry:
 // STRICTFP-NEXT:    [[DOTBLOCK_DESCRIPTOR_ADDR:%.*]] = alloca ptr addrspace(4), align 4
 // STRICTFP-NEXT:    [[BLOCK_ADDR:%.*]] = alloca ptr addrspace(4), align 4
@@ -144,7 +238,7 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 // STRICTFP-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(4) [[BLOCK_CAPTURE_ADDR1]], align 4
 // STRICTFP-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr addrspace(1) [[TMP0]], i32 [[TMP1]]
 // STRICTFP-NEXT:    [[TMP2:%.*]] = load float, ptr addrspace(1) [[ARRAYIDX]], align 4
-// STRICTFP-NEXT:    [[TMP3:%.*]] = call float @llvm.experimental.constrained.fmuladd.f32(float 4.000000e+00, float [[TMP2]], float 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR5]]
+// STRICTFP-NEXT:    [[TMP3:%.*]] = call float @llvm.experimental.constrained.fmuladd.f32(float 4.000000e+00, float [[TMP2]], float 1.000000e+00, metadata !"round.tonearest", metadata !"fpexcept.strict") #[[ATTR6]]
 // STRICTFP-NEXT:    [[BLOCK_CAPTURE_ADDR2:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 3
 // STRICTFP-NEXT:    [[TMP4:%.*]] = load ptr addrspace(1), ptr addrspace(4) [[BLOCK_CAPTURE_ADDR2]], align 4
 // STRICTFP-NEXT:    [[BLOCK_CAPTURE_ADDR3:%.*]] = getelementptr inbounds nuw <{ i32, i32, ptr addrspace(4), ptr addrspace(1), i32, ptr addrspace(1) }>, ptr addrspace(4) [[DOTBLOCK_DESCRIPTOR]], i32 0, i32 4
@@ -156,24 +250,28 @@ kernel void device_side_enqueue(global float *a, global float *b, int i) {
 //
 // STRICTFP: Function Attrs: convergent nounwind
 // STRICTFP-LABEL: define {{[^@]+}}@__device_side_enqueue_block_invoke_kernel
-// STRICTFP-SAME: (ptr addrspace(4) [[TMP0:%.*]]) #[[ATTR4:[0-9]+]] {
+// STRICTFP-SAME: (ptr addrspace(4) [[TMP0:%.*]]) #[[ATTR5:[0-9]+]] {
 // STRICTFP-NEXT:  entry:
-// STRICTFP-NEXT:    call spir_func void @__device_side_enqueue_block_invoke(ptr addrspace(4) [[TMP0]]) #[[ATTR5]]
+// STRICTFP-NEXT:    call spir_func void @__device_side_enqueue_block_invoke(ptr addrspace(4) [[TMP0]]) #[[ATTR6]]
 // STRICTFP-NEXT:    ret void
 //
 //.
 // SPIR32: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
-// SPIR32: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-// SPIR32: attributes #[[ATTR2]] = { convergent noinline nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
-// SPIR32: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-// SPIR32: attributes #[[ATTR4]] = { convergent nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// SPIR32: attributes #[[ATTR1]] = { alwaysinline convergent norecurse nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// SPIR32: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// SPIR32: attributes #[[ATTR3]] = { convergent noinline nounwind optnone "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// SPIR32: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+// SPIR32: attributes #[[ATTR5]] = { convergent nounwind "denormal-fp-math-f32"="preserve-sign,preserve-sign" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
+// SPIR32: attributes #[[ATTR6]] = { nounwind }
 //.
 // STRICTFP: attributes #[[ATTR0]] = { convergent noinline norecurse nounwind optnone strictfp "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" }
-// STRICTFP: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-// STRICTFP: attributes #[[ATTR2]] = { convergent noinline nounwind optnone strictfp "stack-protector-buffer-size"="8" }
-// STRICTFP: attributes #[[ATTR3:[0-9]+]] = { nocallback nofree nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite) }
-// STRICTFP: attributes #[[ATTR4]] = { convergent nounwind "stack-protector-buffer-size"="8" }
-// STRICTFP: attributes #[[ATTR5]] = { strictfp }
+// STRICTFP: attributes #[[ATTR1]] = { alwaysinline convergent norecurse nounwind strictfp "stack-protector-buffer-size"="8" "uniform-work-group-size"="false" }
+// STRICTFP: attributes #[[ATTR2:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
+// STRICTFP: attributes #[[ATTR3]] = { convergent noinline nounwind optnone strictfp "stack-protector-buffer-size"="8" }
+// STRICTFP: attributes #[[ATTR4:[0-9]+]] = { nocallback nofree nosync nounwind strictfp willreturn memory(inaccessiblemem: readwrite) }
+// STRICTFP: attributes #[[ATTR5]] = { convergent nounwind "stack-protector-buffer-size"="8" }
+// STRICTFP: attributes #[[ATTR6]] = { strictfp }
+// STRICTFP: attributes #[[ATTR7]] = { nounwind strictfp }
 //.
 // SPIR32: [[META0:![0-9]+]] = !{i32 1, !"wchar_size", i32 4}
 // SPIR32: [[META1:![0-9]+]] = !{i32 2, i32 0}
