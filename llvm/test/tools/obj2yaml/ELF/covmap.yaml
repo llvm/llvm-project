@@ -60,7 +60,7 @@ Sections:
 # DETONLY: Ref: 0
               - { Loc: [ 3, 17, 14, 2 ], Ref: 0 }
 # LOC:     Loc: [ 6, 6, 11, 4 ]
-# DLOC    dLoc: [ 3, 6, 5, 4 ]
+# DLOC:   dLoc: [ 3, 6, 5, 4 ]
 # RAW:     Tag: Add, Val: 0
 # DETONLY: Add: 0
               - { Loc: [ 6, 6, 11, 4 ], Add: 0 }
