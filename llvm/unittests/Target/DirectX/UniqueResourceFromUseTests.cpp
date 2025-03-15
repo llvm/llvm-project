@@ -35,6 +35,7 @@ protected:
     PB->registerModuleAnalyses(*MAM);
     MAM->registerPass([&] { return DXILResourceTypeAnalysis(); });
     MAM->registerPass([&] { return DXILResourceBindingAnalysis(); });
+    MAM->registerPass([&] { return DXILResourceCounterDirectionAnalysis(); });
   }
 
   virtual void TearDown() {
@@ -277,6 +278,181 @@ declare target("dx.RawBuffer", float, 1, 0) @ind.func(target("dx.RawBuffer", flo
 
     EXPECT_EQ(1u, CalledResources)
         << "Expected 1 resolved call to create resource";
+  }
+}
+
+// Test that several calls to decrement on the same resource don't raise a
+// Diagnositic and resolves to a single decrement entry
+TEST_F(UniqueResourceFromUseTest, TestResourceCounterDecrement) {
+  StringRef Assembly = R"(
+define void @main() {
+entry:
+  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 1, i32 2, i32 3, i32 4, i1 false)
+  call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
+  call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
+  call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %handle, i8 -1)
+  call void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
+  ret void
+}
+
+declare target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32, i32, i32, i32, i1)
+declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i8)
+declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  ASSERT_TRUE(M) << "Bad assembly?";
+
+  const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
+  const DXILResourceCounterDirectionMap &DCDM =
+      MAM->getResult<DXILResourceCounterDirectionAnalysis>(*M);
+
+  for (const Function &F : M->functions()) {
+    if (F.getName() != "a.func") {
+      continue;
+    }
+
+    for (const User *U : F.users()) {
+      const CallInst *CI = cast<CallInst>(U);
+      const Value *Handle = CI->getArgOperand(0);
+      const auto Bindings = DBM.findByUse(Handle);
+      ASSERT_EQ(Bindings.size(), 1u);
+      ASSERT_EQ(DCDM[Bindings.front()], ResourceCounterDirection::Decrement);
+    }
+  }
+}
+
+// Test that several calls to increment on the same resource don't raise a
+// Diagnositic and resolves to a single increment entry
+TEST_F(UniqueResourceFromUseTest, TestResourceCounterIncrement) {
+  StringRef Assembly = R"(
+define void @main() {
+entry:
+  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 1, i32 2, i32 3, i32 4, i1 false)
+  call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %handle, i8 1)
+  call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %handle, i8 1)
+  call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %handle, i8 1)
+  call void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
+  ret void
+}
+
+declare target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32, i32, i32, i32, i1)
+declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i8)
+declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  ASSERT_TRUE(M) << "Bad assembly?";
+
+  const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
+  const DXILResourceCounterDirectionMap &DCDM =
+      MAM->getResult<DXILResourceCounterDirectionAnalysis>(*M);
+
+  for (const Function &F : M->functions()) {
+    if (F.getName() != "a.func") {
+      continue;
+    }
+
+    for (const User *U : F.users()) {
+      const CallInst *CI = cast<CallInst>(U);
+      const Value *Handle = CI->getArgOperand(0);
+      const auto Bindings = DBM.findByUse(Handle);
+      ASSERT_EQ(Bindings.size(), 1u);
+      ASSERT_EQ(DCDM[Bindings.front()], ResourceCounterDirection::Increment);
+    }
+  }
+}
+
+// Test that looking up a resource that doesn't have the counter updated
+// resoves to unknown
+TEST_F(UniqueResourceFromUseTest, TestResourceCounterUnknown) {
+  StringRef Assembly = R"(
+define void @main() {
+entry:
+  %handle = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 1, i32 2, i32 3, i32 4, i1 false)
+  call void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
+  ret void
+}
+
+declare target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32, i32, i32, i32, i1)
+declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i8)
+declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  ASSERT_TRUE(M) << "Bad assembly?";
+
+  const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
+  const DXILResourceCounterDirectionMap &DCDM =
+      MAM->getResult<DXILResourceCounterDirectionAnalysis>(*M);
+
+  for (const Function &F : M->functions()) {
+    if (F.getName() != "a.func") {
+      continue;
+    }
+
+    for (const User *U : F.users()) {
+      const CallInst *CI = cast<CallInst>(U);
+      const Value *Handle = CI->getArgOperand(0);
+      const auto Bindings = DBM.findByUse(Handle);
+      ASSERT_EQ(Bindings.size(), 1u);
+      ASSERT_EQ(DCDM[Bindings.front()], ResourceCounterDirection::Unknown);
+    }
+  }
+}
+
+// Test that multiple different resources with unique incs/decs don't
+// raise a Diagnostic and can be individually checked for direction
+TEST_F(UniqueResourceFromUseTest, TestResourceCounterMultiple) {
+  StringRef Assembly = R"(
+define void @main() {
+entry:
+  %handle1 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 1, i32 2, i32 3, i32 4, i1 false)
+  %handle2 = call target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32 4, i32 3, i32 2, i32 1, i1 false)
+  call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %handle1, i8 -1)
+  call i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0) %handle2, i8 1)
+  call void @a.func(target("dx.RawBuffer", float, 1, 0) %handle1)
+  call void @b.func(target("dx.RawBuffer", float, 1, 0) %handle2)
+  ret void
+}
+
+declare target("dx.RawBuffer", float, 1, 0) @llvm.dx.resource.handlefrombinding.tdx.RawBuffer_f32_1_0t(i32, i32, i32, i32, i1)
+declare i32 @llvm.dx.resource.updatecounter.tdx.RawBuffer_f32_1_0t(target("dx.RawBuffer", float, 1, 0), i8)
+declare void @a.func(target("dx.RawBuffer", float, 1, 0) %handle)
+declare void @b.func(target("dx.RawBuffer", float, 1, 0) %handle)
+  )";
+
+  LLVMContext Context;
+  SMDiagnostic Error;
+  auto M = parseAssemblyString(Assembly, Error, Context);
+  ASSERT_TRUE(M) << "Bad assembly?";
+
+  const DXILBindingMap &DBM = MAM->getResult<DXILResourceBindingAnalysis>(*M);
+  const DXILResourceCounterDirectionMap &DCDM =
+      MAM->getResult<DXILResourceCounterDirectionAnalysis>(*M);
+
+  for (const Function &F : M->functions()) {
+    StringRef FName = F.getName();
+    if (FName != "a.func" && FName != "b.func") {
+      continue;
+    }
+
+    auto Dir = FName == "a.func" ? ResourceCounterDirection::Decrement
+                                 : ResourceCounterDirection::Increment;
+
+    for (const User *U : F.users()) {
+      const CallInst *CI = cast<CallInst>(U);
+      const Value *Handle = CI->getArgOperand(0);
+      const auto Bindings = DBM.findByUse(Handle);
+      ASSERT_EQ(Bindings.size(), 1u);
+      ASSERT_EQ(DCDM[Bindings.front()], Dir);
+    }
   }
 }
 

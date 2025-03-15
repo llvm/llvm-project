@@ -9,7 +9,9 @@
 #include "llvm/Analysis/DXILResource.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Instructions.h"
@@ -19,6 +21,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/FormatVariadic.h"
+#include <algorithm>
+#include <iterator>
 
 #define DEBUG_TYPE "dxil-resource"
 
@@ -823,8 +827,153 @@ DXILBindingMap::findByUse(const Value *Key) const {
 
 //===----------------------------------------------------------------------===//
 
+static bool isUpdateCounterIntrinsic(Function &F) {
+  return F.getIntrinsicID() == Intrinsic::dx_resource_updatecounter;
+}
+
+void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
+  std::vector<std::tuple<dxil::ResourceBindingInfo, ResourceCounterDirection,
+                         const Function *, const CallInst *>>
+      DiagCounterDirs;
+
+  for (Function &F : M.functions()) {
+    if (!isUpdateCounterIntrinsic(F))
+      continue;
+
+    for (const User *U : F.users()) {
+      const CallInst *CI = dyn_cast<CallInst>(U);
+      assert(CI && "Users of dx_resource_updateCounter must be call instrs");
+
+      // Determine if the use is an increment or decrement
+      Value *CountArg = CI->getArgOperand(1);
+      ConstantInt *CountValue = dyn_cast<ConstantInt>(CountArg);
+      int64_t CountLiteral = CountValue->getSExtValue();
+
+      ResourceCounterDirection Direction = ResourceCounterDirection::Unknown;
+      if (CountLiteral > 0)
+        Direction = ResourceCounterDirection::Increment;
+      if (CountLiteral < 0)
+        Direction = ResourceCounterDirection::Decrement;
+
+      // Collect all potential creation points for the handle arg
+      Value *HandleArg = CI->getArgOperand(0);
+      SmallVector<dxil::ResourceBindingInfo> RBInfos = DBM.findByUse(HandleArg);
+      for (const dxil::ResourceBindingInfo RBInfo : RBInfos)
+        DiagCounterDirs.emplace_back(RBInfo, Direction, &F, CI);
+    }
+  }
+
+  // An entry that is not in the map is considered unknown so its wasted
+  // overhead and increased complexity to keep an entry explicitly marked
+  // unknown
+  const auto RemoveEnd = std::remove_if(
+      DiagCounterDirs.begin(), DiagCounterDirs.end(), [](const auto &Item) {
+        return std::get<ResourceCounterDirection>(Item) ==
+               ResourceCounterDirection::Unknown;
+      });
+
+  // Sort by the Binding and Direction for fast lookup
+  std::sort(DiagCounterDirs.begin(), RemoveEnd,
+            [](const auto &LHS, const auto &RHS) {
+              const auto L = std::pair{std::get<dxil::ResourceBindingInfo>(LHS),
+                                       std::get<ResourceCounterDirection>(LHS)};
+              const auto R = std::pair{std::get<dxil::ResourceBindingInfo>(RHS),
+                                       std::get<ResourceCounterDirection>(RHS)};
+              return L < R;
+            });
+
+  // Remove the duplicate entries. Since direction is considered for equality
+  // a unique resource with more than one direction will not be deduped.
+  const auto UniqueEnd = std::unique(
+      DiagCounterDirs.begin(), RemoveEnd, [](const auto &LHS, const auto &RHS) {
+        const auto L = std::pair{std::get<dxil::ResourceBindingInfo>(LHS),
+                                 std::get<ResourceCounterDirection>(LHS)};
+        const auto R = std::pair{std::get<dxil::ResourceBindingInfo>(RHS),
+                                 std::get<ResourceCounterDirection>(RHS)};
+        return L == R;
+      });
+
+  // Actually erase the items invalidated by remove_if + unique
+  DiagCounterDirs.erase(UniqueEnd, DiagCounterDirs.end());
+
+  // If any duplicate entries still exist at this point then it must be a
+  // resource that was both incremented and decremented which is not allowed.
+  // Mark all those entries as invalid.
+  {
+    auto DupFirst = DiagCounterDirs.begin();
+    auto DupNext = DupFirst + 1;
+    auto DupLast = DiagCounterDirs.end();
+    for (; DupFirst < DupLast && DupNext < DupLast; ++DupFirst, ++DupNext) {
+      if (std::get<dxil::ResourceBindingInfo>(*DupFirst) ==
+          std::get<dxil::ResourceBindingInfo>(*DupNext)) {
+        std::get<ResourceCounterDirection>(*DupFirst) =
+            ResourceCounterDirection::MyInvalid;
+        std::get<ResourceCounterDirection>(*DupNext) =
+            ResourceCounterDirection::MyInvalid;
+      }
+    }
+  }
+
+  // Raise an error for every invalid entry
+  for (const auto Entry : DiagCounterDirs) {
+    ResourceCounterDirection Dir = std::get<ResourceCounterDirection>(Entry);
+    const Function *F = std::get<const Function *>(Entry);
+    const CallInst *CI = std::get<const CallInst *>(Entry);
+
+    if (Dir != ResourceCounterDirection::MyInvalid)
+      continue;
+
+    StringRef Message = "RWStructuredBuffers may increment or decrement their "
+                        "counters, but not both.";
+    M.getContext().diagnose(
+        DiagnosticInfoGenericWithLoc(Message, *F, CI->getDebugLoc()));
+  }
+
+  // Copy the results into the final vec
+  CounterDirections.clear();
+  CounterDirections.reserve(DiagCounterDirs.size());
+  std::transform(DiagCounterDirs.begin(), DiagCounterDirs.end(),
+                 std::back_inserter(CounterDirections), [](const auto &Item) {
+                   return std::pair{std::get<dxil::ResourceBindingInfo>(Item),
+                                    std::get<ResourceCounterDirection>(Item)};
+                 });
+}
+
+void DXILResourceCounterDirectionWrapperPass::getAnalysisUsage(
+    AnalysisUsage &AU) const {
+  AU.addRequiredTransitive<DXILResourceBindingWrapperPass>();
+  AU.setPreservesAll();
+}
+
+bool DXILResourceCounterDirectionWrapperPass::runOnModule(Module &M) {
+  Map.reset(new DXILResourceCounterDirectionMap());
+
+  auto DBM = getAnalysis<DXILResourceBindingWrapperPass>().getBindingMap();
+  Map->populate(M, DBM);
+
+  return false;
+}
+
+void DXILResourceCounterDirectionWrapperPass::releaseMemory() { Map.reset(); }
+
+void DXILResourceCounterDirectionWrapperPass::print(raw_ostream &OS,
+                                                    const Module *M) const {
+  if (!Map) {
+    OS << "No resource directions have been built!\n";
+    return;
+  }
+  // Map->print(OS, *DRTM, M->getDataLayout());
+}
+
+// #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+// LLVM_DUMP_METHOD
+// void DXILResourceCounterDirectionWrapperPass::dump() const { print(dbgs(),
+// nullptr); } #endif
+//===----------------------------------------------------------------------===//
+
 AnalysisKey DXILResourceTypeAnalysis::Key;
 AnalysisKey DXILResourceBindingAnalysis::Key;
+AnalysisKey DXILResourceCounterDirectionAnalysis::Key;
 
 DXILBindingMap DXILResourceBindingAnalysis::run(Module &M,
                                                 ModuleAnalysisManager &AM) {
@@ -843,6 +992,17 @@ DXILResourceBindingPrinterPass::run(Module &M, ModuleAnalysisManager &AM) {
   return PreservedAnalyses::all();
 }
 
+INITIALIZE_PASS(DXILResourceCounterDirectionWrapperPass,
+                "dxil-resource-counter", "DXIL Resource Counter Analysis",
+                false, true)
+
+DXILResourceCounterDirectionWrapperPass::
+    DXILResourceCounterDirectionWrapperPass()
+    : ModulePass(ID) {
+  initializeDXILResourceCounterDirectionWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+}
+
 void DXILResourceTypeWrapperPass::anchor() {}
 
 DXILResourceTypeWrapperPass::DXILResourceTypeWrapperPass() : ImmutablePass(ID) {
@@ -852,9 +1012,14 @@ DXILResourceTypeWrapperPass::DXILResourceTypeWrapperPass() : ImmutablePass(ID) {
 INITIALIZE_PASS(DXILResourceTypeWrapperPass, "dxil-resource-type",
                 "DXIL Resource Type Analysis", false, true)
 char DXILResourceTypeWrapperPass::ID = 0;
+char DXILResourceCounterDirectionWrapperPass::ID = 0;
 
 ModulePass *llvm::createDXILResourceTypeWrapperPassPass() {
   return new DXILResourceTypeWrapperPass();
+}
+
+ModulePass *llvm::createDXILResourceCounterDirectionWrapperPassPass() {
+  return new DXILResourceCounterDirectionWrapperPass();
 }
 
 DXILResourceBindingWrapperPass::DXILResourceBindingWrapperPass()
