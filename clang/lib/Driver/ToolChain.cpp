@@ -822,11 +822,7 @@ void ToolChain::addFortranRuntimeLibs(const ArgList &Args,
       if (AsNeeded)
         addAsNeededOption(*this, Args, CmdArgs, /*as_needed=*/false);
     }
-    if (const char *res = getCompilerRTArgString(
-            Args, "runtime", ToolChain::FT_Static, getDriver().IsFlangMode()))
-      CmdArgs.push_back(res);
-    else
-      CmdArgs.push_back("-lflang_rt.runtime");
+    CmdArgs.push_back("-lflang_rt.runtime");
     addArchSpecificRPath(*this, Args, CmdArgs);
 
     // needs libexecinfo for backtrace functions
