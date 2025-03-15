@@ -388,8 +388,7 @@ Value CodeGen::genSingleExpr(const ast::Expr *expr) {
       .Case<const ast::CallExpr, const ast::DeclRefExpr, const ast::TupleExpr>(
           [&](auto derivedNode) {
             SmallVector<Value> results = this->genExprImpl(derivedNode);
-            assert(results.size() == 1 && "expected single expression result");
-            return results[0];
+            return llvm::getSingleElement(results);
           });
 }
 

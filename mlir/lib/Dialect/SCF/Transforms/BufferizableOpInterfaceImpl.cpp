@@ -52,7 +52,7 @@ static Value castBuffer(OpBuilder &b, Value buffer, Type type) {
 static bool doesNotAliasExternalValue(Value value, Region *region,
                                       ValueRange exceptions,
                                       const OneShotAnalysisState &state) {
-  assert(region->getBlocks().size() == 1 &&
+  assert(llvm::hasSingleElement(region->getBlocks()) &&
          "expected region with single block");
   bool result = true;
   state.applyOnAliases(value, [&](Value alias) {

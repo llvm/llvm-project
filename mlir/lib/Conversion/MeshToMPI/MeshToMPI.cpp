@@ -419,13 +419,11 @@ struct ConvertShardShapeOp : public OpConversionPattern<ShardShapeOp> {
     SmallVector<Value> dynDims, dynDevice;
     for (auto dim : adaptor.getDimsDynamic()) {
       // type conversion should be 1:1 for ints
-      assert(dim.size() == 1);
-      dynDims.emplace_back(dim[0]);
+      dynDims.emplace_back(llvm::getSingleElement(dim));
     }
     // same for device
     for (auto device : adaptor.getDeviceDynamic()) {
-      assert(device.size() == 1);
-      dynDevice.emplace_back(device[0]);
+      dynDevice.emplace_back(llvm::getSingleElement(device));
     }
 
     // To keep the code simple, convert dims/device to values when they are
@@ -771,18 +769,17 @@ struct ConvertMeshToMPIPass
     typeConverter.addConversion([](Type type) { return type; });
 
     // convert mesh::ShardingType to a tuple of RankedTensorTypes
-    typeConverter.addConversion(
-        [](ShardingType type,
-           SmallVectorImpl<Type> &results) -> std::optional<LogicalResult> {
-          auto i16 = IntegerType::get(type.getContext(), 16);
-          auto i64 = IntegerType::get(type.getContext(), 64);
-          std::array<int64_t, 2> shp = {ShapedType::kDynamic,
-                                        ShapedType::kDynamic};
-          results.emplace_back(RankedTensorType::get(shp, i16));
-          results.emplace_back(RankedTensorType::get(shp, i64)); // actually ?x2
-          results.emplace_back(RankedTensorType::get(shp, i64));
-          return success();
-        });
+    typeConverter.addConversion([](ShardingType type,
+                                   SmallVectorImpl<Type> &results)
+                                    -> std::optional<LogicalResult> {
+      auto i16 = IntegerType::get(type.getContext(), 16);
+      auto i64 = IntegerType::get(type.getContext(), 64);
+      std::array<int64_t, 2> shp = {ShapedType::kDynamic, ShapedType::kDynamic};
+      results.emplace_back(RankedTensorType::get(shp, i16));
+      results.emplace_back(RankedTensorType::get(shp, i64)); // actually ?x2
+      results.emplace_back(RankedTensorType::get(shp, i64));
+      return success();
+    });
 
     // To 'extract' components, a UnrealizedConversionCastOp is expected
     // to define the input
