@@ -140,6 +140,10 @@ private:
   /// LoadFromCommandLine available.
   std::shared_ptr<CompilerInvocation> Invocation;
 
+  /// Optional owned invocation, just used to keep the invocation alive for the
+  /// members initialized in transferASTDataFromCompilerInstance.
+  std::shared_ptr<CompilerInvocation> ModifiedInvocation;
+
   /// Fake module loader: the AST unit doesn't need to load any modules.
   TrivialModuleLoader ModuleLoader;
 
