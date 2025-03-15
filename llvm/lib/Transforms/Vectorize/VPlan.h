@@ -790,13 +790,6 @@ public:
     }
   }
 
-  /// Set fast-math flags for this recipe.
-  void setFastMathFlags(FastMathFlags FMFs) {
-    assert(OpType == OperationType::FPMathOp &&
-           "We should only set the FastMathFlags when the recipes is FPFathOP");
-    this->FMFs = FMFs;
-  }
-
   CmpInst::Predicate getPredicate() const {
     assert(OpType == OperationType::Cmp &&
            "recipe doesn't have a compare predicate");
@@ -2304,35 +2297,32 @@ class VPReductionRecipe : public VPRecipeWithIRFlags {
 
 protected:
   VPReductionRecipe(const unsigned char SC, const RecurrenceDescriptor &R,
-                    Instruction *I, ArrayRef<VPValue *> Operands,
-                    VPValue *CondOp, bool IsOrdered)
-      : VPRecipeWithIRFlags(SC, Operands, *I), RdxDesc(R),
+                    FastMathFlags FMF, Instruction *I,
+                    ArrayRef<VPValue *> Operands, VPValue *CondOp,
+                    bool IsOrdered, DebugLoc DL)
+      : VPRecipeWithIRFlags(SC, Operands, FMF, DL), RdxDesc(R),
         IsOrdered(IsOrdered) {
     if (CondOp) {
       IsConditional = true;
       addOperand(CondOp);
     }
-
-    // In-loop reductions may comprise of multiple scalar instructions, and the
-    // underlying instruction may not contain the same flags as the
-    // recurrence descriptor, so set the flags explicitly.
-    if (isa<FPMathOperator>(I))
-      setFastMathFlags(R.getFastMathFlags());
+    setUnderlyingValue(I);
   }
 
 public:
   VPReductionRecipe(const RecurrenceDescriptor &R, Instruction *I,
                     VPValue *ChainOp, VPValue *VecOp, VPValue *CondOp,
-                    bool IsOrdered)
-      : VPReductionRecipe(VPDef::VPReductionSC, R, I,
+                    bool IsOrdered, DebugLoc DL = {})
+      : VPReductionRecipe(VPDef::VPReductionSC, R, R.getFastMathFlags(), I,
                           ArrayRef<VPValue *>({ChainOp, VecOp}), CondOp,
-                          IsOrdered) {}
+                          IsOrdered, DL) {}
 
   ~VPReductionRecipe() override = default;
 
   VPReductionRecipe *clone() override {
     return new VPReductionRecipe(RdxDesc, getUnderlyingInstr(), getChainOp(),
-                                 getVecOp(), getCondOp(), IsOrdered);
+                                 getVecOp(), getCondOp(), IsOrdered,
+                                 getDebugLoc());
   }
 
   static inline bool classof(const VPRecipeBase *R) {
@@ -2382,12 +2372,14 @@ public:
 /// The Operands are {ChainOp, VecOp, EVL, [Condition]}.
 class VPReductionEVLRecipe : public VPReductionRecipe {
 public:
-  VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp)
+  VPReductionEVLRecipe(VPReductionRecipe &R, VPValue &EVL, VPValue *CondOp,
+                       DebugLoc DL = {})
       : VPReductionRecipe(
             VPDef::VPReductionEVLSC, R.getRecurrenceDescriptor(),
+            R.getFastMathFlags(),
             cast_or_null<Instruction>(R.getUnderlyingValue()),
             ArrayRef<VPValue *>({R.getChainOp(), R.getVecOp(), &EVL}), CondOp,
-            R.isOrdered()) {}
+            R.isOrdered(), DL) {}
 
   ~VPReductionEVLRecipe() override = default;
 
