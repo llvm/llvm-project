@@ -2792,17 +2792,6 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   return TryToNarrowDeduceFlags();
 }
 
-static FastMathFlags combineFastMathFlagsForFNeg(FastMathFlags FMF,
-                                                 FastMathFlags OpFMF) {
-  FastMathFlags Flag = FMF | OpFMF;
-  Flag.setNoInfs(FMF.noInfs() && OpFMF.noInfs());
-  Flag.setAllowReassoc(FMF.allowReassoc() && OpFMF.allowReassoc());
-  Flag.setApproxFunc(FMF.approxFunc() && OpFMF.approxFunc());
-  Flag.setAllowReciprocal(FMF.allowReciprocal() && OpFMF.allowReciprocal());
-  Flag.setAllowContract(FMF.allowContract() && OpFMF.allowContract());
-  return Flag;
-}
-
 /// This eliminates floating-point negation in either 'fneg(X)' or
 /// 'fsub(-0.0, X)' form by combining into a constant operand.
 static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
@@ -2820,10 +2809,12 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
   // -(X * C) --> X * (-C)
   if (match(FNegOp, m_FMul(m_Value(X), m_Constant(C))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)) {
-      return BinaryOperator::CreateFMulFMF(
-          X, NegC,
-          combineFastMathFlagsForFNeg(I.getFastMathFlags(),
-                                      FNegOp->getFastMathFlags()));
+      FastMathFlags FNegF = I.getFastMathFlags();
+      FastMathFlags OpF = FNegOp->getFastMathFlags();
+      FastMathFlags FMF = FastMathFlags::unionValue(FNegF, OpF) |
+                          FastMathFlags::intersectRewrite(FNegF, OpF);
+      FMF.setNoInfs(FNegF.noInfs() && OpF.noInfs());
+      return BinaryOperator::CreateFMulFMF(X, NegC, FMF);
     }
   // -(X / C) --> X / (-C)
   if (match(FNegOp, m_FDiv(m_Value(X), m_Constant(C))))

@@ -42,7 +42,7 @@ define float @fmul_fneg(float %x) {
 
 define float @fmul_fsub_fmf(float %x) {
 ; CHECK-LABEL: @fmul_fsub_fmf(
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], -4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fmul nsz float [[X:%.*]], -4.200000e+01
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %m = fmul float %x, 42.0
@@ -52,7 +52,7 @@ define float @fmul_fsub_fmf(float %x) {
 
 define float @fmul_fneg_fmf(float %x) {
 ; CHECK-LABEL: @fmul_fneg_fmf(
-; CHECK-NEXT:    [[R:%.*]] = fmul reassoc nsz float [[X:%.*]], -4.200000e+01
+; CHECK-NEXT:    [[R:%.*]] = fmul nsz float [[X:%.*]], -4.200000e+01
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %m = fmul float %x, 42.0
