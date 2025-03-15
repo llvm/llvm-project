@@ -4812,15 +4812,20 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
   //
   // TODO: This could use getBinopAbsorber() / getBinopIdentity() to avoid
   //       duplicating logic for binops at least.
-  auto getUndefReplacement = [&I](Type *Ty) {
-    Constant *BestValue = nullptr;
-    Constant *NullValue = Constant::getNullValue(Ty);
+  auto getUndefReplacement = [&I, &AC = this->AC, &DT = this->DT](Type *Ty) {
+    Value *BestValue = nullptr;
+    Value *NullValue = Constant::getNullValue(Ty);
     for (const auto *U : I.users()) {
-      Constant *C = NullValue;
+      Value *C = NullValue;
       if (match(U, m_Or(m_Value(), m_Value())))
         C = ConstantInt::getAllOnesValue(Ty);
       else if (match(U, m_Select(m_Specific(&I), m_Constant(), m_Value())))
         C = ConstantInt::getTrue(Ty);
+      else if (match(&I, m_Freeze(m_Poison())) &&
+               match(U, m_c_Select(m_Specific(&I), m_Value(C)))) {
+        if (!isGuaranteedNotToBeUndefOrPoison(C, &AC, &I, &DT))
+          C = NullValue;
+      }
 
       if (!BestValue)
         BestValue = C;
@@ -4840,10 +4845,26 @@ Instruction *InstCombinerImpl::visitFreeze(FreezeInst &I) {
     return replaceInstUsesWith(I, getUndefReplacement(I.getType()));
   }
 
+  auto getFreezeVectorReplacement = [](Constant *C) -> Constant * {
+    Type *Ty = C->getType();
+    auto *VTy = dyn_cast<FixedVectorType>(Ty);
+    if (!VTy)
+      return C;
+    unsigned NumElts = VTy->getNumElements();
+    Constant *BestValue = Constant::getNullValue(VTy->getScalarType());
+    for (unsigned i = 0; i != NumElts; ++i) {
+      Constant *EltC = C->getAggregateElement(i);
+      if (EltC && !match(EltC, m_Undef())) {
+        BestValue = EltC;
+        break;
+      }
+    }
+    return Constant::replaceUndefsWith(C, BestValue);
+  };
+
   Constant *C;
   if (match(Op0, m_Constant(C)) && C->containsUndefOrPoisonElement()) {
-    Constant *ReplaceC = getUndefReplacement(I.getType()->getScalarType());
-    return replaceInstUsesWith(I, Constant::replaceUndefsWith(C, ReplaceC));
+    return replaceInstUsesWith(I, getFreezeVectorReplacement(C));
   }
 
   // Replace uses of Op with freeze(Op).
