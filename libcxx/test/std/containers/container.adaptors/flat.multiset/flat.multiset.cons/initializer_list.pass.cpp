@@ -22,6 +22,7 @@
 #include <functional>
 #include <type_traits>
 #include <vector>
+#include <ranges>
 
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -77,26 +78,26 @@ void test() {
     static_assert(!std::is_constructible_v<M, std::initializer_list<const int>, std::allocator<int>>);
   }
 
-  int expected[] = {1, 2, 3, 5};
+  int expected[] = {1, 2, 2, 3, 3, 5};
   {
     // flat_multiset(initializer_list<value_type>);
     using M                       = std::flat_multiset<int>;
     std::initializer_list<int> il = {5, 2, 2, 3, 1, 3};
     M m(il);
-    assert(std::equal(m.begin(), m.end(), expected, expected + 4));
+    assert(std::ranges::equal(m, expected));
   }
   {
     // flat_multiset(initializer_list<value_type>);
     // explicit(false)
     using M = std::flat_multiset<int>;
     M m     = {5, 2, 2, 3, 1, 3};
-    assert(std::equal(m.begin(), m.end(), expected, expected + 4));
+    assert(std::ranges::equal(m, expected));
   }
   {
     // flat_multiset(initializer_list<value_type>);
     using M = std::flat_multiset<int, std::greater<int>, std::deque<int, min_allocator<int>>>;
     M m     = {5, 2, 2, 3, 1, 3};
-    assert(std::equal(m.rbegin(), m.rend(), expected, expected + 4));
+    assert(std::ranges::equal(m, expected | std::views::reverse));
   }
   {
     using A = explicit_allocator<int>;
@@ -105,7 +106,7 @@ void test() {
       // different comparator
       using M = std::flat_multiset<int, DefaultCtableComp, std::vector<int, A>>;
       M m     = {1, 2, 3};
-      assert(m.size() == 1);
+      assert(m.size() == 3);
       LIBCPP_ASSERT(*m.begin() == 1);
       assert(m.key_comp().default_constructed_);
     }
@@ -114,7 +115,7 @@ void test() {
       using M = std::flat_multiset<int, std::greater<int>, std::deque<int, A>>;
       A a;
       M m({5, 2, 2, 3, 1, 3}, a);
-      assert(std::equal(m.rbegin(), m.rend(), expected, expected + 4));
+      assert(std::ranges::equal(m, expected | std::views::reverse));
     }
   }
   {
@@ -122,7 +123,7 @@ void test() {
     using C = test_less<int>;
     using M = std::flat_multiset<int, C>;
     auto m  = M({5, 2, 2, 3, 1, 3}, C(10));
-    assert(std::equal(m.begin(), m.end(), expected, expected + 4));
+    assert(std::ranges::equal(m, expected));
     assert(m.key_comp() == C(10));
 
     // explicit(false)
@@ -134,8 +135,8 @@ void test() {
     // flat_multiset(initializer_list<value_type>, const key_compare&);
     // Sorting uses the comparator that was passed in
     using M = std::flat_multiset<int, std::function<bool(int, int)>, std::deque<int, min_allocator<int>>>;
-    auto m  = M({5, 2, 2, 1, 3, 1}, std::greater<int>());
-    assert(std::equal(m.rbegin(), m.rend(), expected, expected + 4));
+    auto m  = M({5, 2, 2, 1, 3, 3}, std::greater<int>());
+    assert(std::ranges::equal(m, expected | std::views::reverse));
     assert(m.key_comp()(2, 1) == true);
   }
   {
@@ -144,7 +145,7 @@ void test() {
     using M = std::flat_multiset<int, std::greater<int>, std::deque<int, A>>;
     A a;
     M m({5, 2, 2, 3, 1, 3}, {}, a);
-    assert(std::equal(m.rbegin(), m.rend(), expected, expected + 4));
+    assert(std::ranges::equal(m, expected | std::views::reverse));
   }
 }
 

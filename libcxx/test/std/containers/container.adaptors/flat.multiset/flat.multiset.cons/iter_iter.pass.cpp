@@ -21,6 +21,7 @@
 #include <deque>
 #include <flat_set>
 #include <functional>
+#include <ranges>
 #include <vector>
 
 #include "min_allocator.h"
@@ -55,7 +56,7 @@ void test() {
   }
 
   int ar[]       = {1, 1, 1, 2, 2, 3, 2, 3, 3};
-  int expected[] = {1, 2, 3};
+  int expected[] = {1, 1,1,2,2,2,3,3,3};
   {
     // flat_multiset(InputIterator , InputIterator)
     // cpp17_input_iterator
@@ -72,7 +73,7 @@ void test() {
     // greater
     using M = std::flat_multiset<int, std::greater<int>, std::deque<int, min_allocator<int>>>;
     auto m  = M(cpp17_input_iterator<const int*>(ar), cpp17_input_iterator<const int*>(ar + 9));
-    assert(std::ranges::equal(m, std::deque<int, min_allocator<int>>{3, 2, 1}));
+    assert(std::ranges::equal(m, expected | std::views::reverse));
   }
   {
     // flat_multiset(InputIterator , InputIterator)
