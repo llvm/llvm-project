@@ -354,6 +354,8 @@ def z_splat             : SDNode<"SystemZISD::SPLAT", SDT_ZVecBinaryInt>;
 def z_merge_high        : SDNode<"SystemZISD::MERGE_HIGH", SDT_ZVecBinary>;
 def z_merge_low         : SDNode<"SystemZISD::MERGE_LOW", SDT_ZVecBinary>;
 def z_shl_double        : SDNode<"SystemZISD::SHL_DOUBLE", SDT_ZVecTernaryInt>;
+def z_shl_double_bit    : SDNode<"SystemZISD::SHL_DOUBLE_BIT", SDT_ZVecTernaryInt>;
+def z_shr_double_bit    : SDNode<"SystemZISD::SHR_DOUBLE_BIT", SDT_ZVecTernaryInt>;
 def z_permute_dwords    : SDNode<"SystemZISD::PERMUTE_DWORDS",
                                  SDT_ZVecTernaryInt>;
 def z_permute           : SDNode<"SystemZISD::PERMUTE", SDT_ZVecTernary>;

@@ -254,6 +254,10 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ROTR,      MVT::i128, Expand);
     setOperationAction(ISD::ROTL,      MVT::i128, Expand);
 
+    // We may be able to use VSLDB/VSLD/VSRD for these.
+    setOperationAction(ISD::FSHL,      MVT::i128, Custom);
+    setOperationAction(ISD::FSHR,      MVT::i128, Custom);
+
     // No special instructions for these before arch15.
     if (!Subtarget.hasVectorEnhancements3()) {
       setOperationAction(ISD::MUL,   MVT::i128, Expand);
@@ -6644,6 +6648,66 @@ SDValue SystemZTargetLowering::lowerShift(SDValue Op, SelectionDAG &DAG,
   return Op;
 }
 
+SDValue SystemZTargetLowering::lowerFSHL(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  // i128 FSHL with a constant amount that is a multiple of 8 can be
+  // implemented via VECTOR_SHUFFLE.  If we have the vector-enhancements-2
+  // facility, FSHL with a constant amount less than 8 can be implemented
+  // via SHL_DOUBLE_BIT, and FSHL with other constant amounts by a
+  // combination of the two.
+  if (auto *ShiftAmtNode = dyn_cast<ConstantSDNode>(Op.getOperand(2))) {
+    uint64_t ShiftAmt = ShiftAmtNode->getZExtValue() & 127;
+    if ((ShiftAmt & 7) == 0 || Subtarget.hasVectorEnhancements2()) {
+      SDValue Op0 = DAG.getBitcast(MVT::v16i8, Op.getOperand(0));
+      SDValue Op1 = DAG.getBitcast(MVT::v16i8, Op.getOperand(1));
+      SmallVector<int, 16> Mask(16);
+      for (unsigned Elt = 0; Elt < 16; Elt++)
+        Mask[Elt] = (ShiftAmt >> 3) + Elt;
+      SDValue Shuf1 = DAG.getVectorShuffle(MVT::v16i8, DL, Op0, Op1, Mask);
+      if ((ShiftAmt & 7) == 0)
+        return DAG.getBitcast(MVT::i128, Shuf1);
+      SDValue Shuf2 = DAG.getVectorShuffle(MVT::v16i8, DL, Op1, Op1, Mask);
+      SDValue Val =
+          DAG.getNode(SystemZISD::SHL_DOUBLE_BIT, DL, MVT::v16i8, Shuf1, Shuf2,
+                      DAG.getTargetConstant(ShiftAmt & 7, DL, MVT::i32));
+      return DAG.getBitcast(MVT::i128, Val);
+    }
+  }
+
+  return SDValue();
+}
+
+SDValue SystemZTargetLowering::lowerFSHR(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+
+  // i128 FSHR with a constant amount that is a multiple of 8 can be
+  // implemented via VECTOR_SHUFFLE.  If we have the vector-enhancements-2
+  // facility, FSHR with a constant amount less than 8 can be implemented
+  // via SHL_DOUBLE_BIT, and FSHR with other constant amounts by a
+  // combination of the two.
+  if (auto *ShiftAmtNode = dyn_cast<ConstantSDNode>(Op.getOperand(2))) {
+    uint64_t ShiftAmt = ShiftAmtNode->getZExtValue() & 127;
+    if ((ShiftAmt & 7) == 0 || Subtarget.hasVectorEnhancements2()) {
+      SDValue Op0 = DAG.getBitcast(MVT::v16i8, Op.getOperand(0));
+      SDValue Op1 = DAG.getBitcast(MVT::v16i8, Op.getOperand(1));
+      SmallVector<int, 16> Mask(16);
+      for (unsigned Elt = 0; Elt < 16; Elt++)
+        Mask[Elt] = 16 - (ShiftAmt >> 3) + Elt;
+      SDValue Shuf1 = DAG.getVectorShuffle(MVT::v16i8, DL, Op0, Op1, Mask);
+      if ((ShiftAmt & 7) == 0)
+        return DAG.getBitcast(MVT::i128, Shuf1);
+      SDValue Shuf2 = DAG.getVectorShuffle(MVT::v16i8, DL, Op0, Op0, Mask);
+      SDValue Val =
+          DAG.getNode(SystemZISD::SHR_DOUBLE_BIT, DL, MVT::v16i8, Shuf2, Shuf1,
+                      DAG.getTargetConstant(ShiftAmt & 7, DL, MVT::i32));
+      return DAG.getBitcast(MVT::i128, Val);
+    }
+  }
+
+  return SDValue();
+}
+
 static SDValue lowerAddrSpaceCast(SDValue Op, SelectionDAG &DAG) {
   SDLoc dl(Op);
   SDValue Src = Op.getOperand(0);
@@ -6853,6 +6917,10 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerAddrSpaceCast(Op, DAG);
   case ISD::ROTL:
     return lowerShift(Op, DAG, SystemZISD::VROTL_BY_SCALAR);
+  case ISD::FSHL:
+    return lowerFSHL(Op, DAG);
+  case ISD::FSHR:
+    return lowerFSHR(Op, DAG);
   case ISD::IS_FPCLASS:
     return lowerIS_FPCLASS(Op, DAG);
   case ISD::GET_ROUNDING:
@@ -7063,6 +7131,8 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(VSRL_BY_SCALAR);
     OPCODE(VSRA_BY_SCALAR);
     OPCODE(VROTL_BY_SCALAR);
+    OPCODE(SHL_DOUBLE_BIT);
+    OPCODE(SHR_DOUBLE_BIT);
     OPCODE(VSUM);
     OPCODE(VACC);
     OPCODE(VSCBI);
