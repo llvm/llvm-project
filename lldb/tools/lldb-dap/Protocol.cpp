@@ -61,8 +61,8 @@ json::Value toJSON(const Request &R) {
       {"command", R.command},
   };
 
-  if (R.rawArguments)
-    Result.insert({"arguments", R.rawArguments});
+  if (R.arguments)
+    Result.insert({"arguments", R.arguments});
 
   return std::move(Result);
 }
@@ -92,7 +92,7 @@ bool fromJSON(json::Value const &Params, Request &R, json::Path P) {
     return false;
   }
 
-  return mapRaw(Params, "arguments", R.rawArguments, P);
+  return mapRaw(Params, "arguments", R.arguments, P);
 }
 
 json::Value toJSON(const Response &R) {
@@ -119,8 +119,8 @@ json::Value toJSON(const Response &R) {
     }
   }
 
-  if (R.rawBody)
-    Result.insert({"body", R.rawBody});
+  if (R.body)
+    Result.insert({"body", R.body});
 
   return std::move(Result);
 }
@@ -176,7 +176,7 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
   }
 
   return O.map("success", R.success) && O.mapOptional("message", R.message) &&
-         mapRaw(Params, "body", R.rawBody, P);
+         mapRaw(Params, "body", R.body, P);
 }
 
 json::Value toJSON(const ErrorMessage &EM) {
@@ -216,8 +216,8 @@ json::Value toJSON(const Event &E) {
       {"event", E.event},
   };
 
-  if (E.rawBody)
-    Result.insert({"body", E.rawBody});
+  if (E.body)
+    Result.insert({"body", E.body});
 
   return std::move(Result);
 }
@@ -247,7 +247,7 @@ bool fromJSON(json::Value const &Params, Event &E, json::Path P) {
     return false;
   }
 
-  return mapRaw(Params, "body", E.rawBody, P);
+  return mapRaw(Params, "body", E.body, P);
 }
 
 bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {

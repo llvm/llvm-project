@@ -45,7 +45,10 @@ struct Request {
   std::string command;
 
   /// Object containing arguments for the command.
-  std::optional<llvm::json::Value> rawArguments;
+  ///
+  /// Request handlers are expected to validate the arguments, which is handled
+  /// by `RequestHandler`.
+  std::optional<llvm::json::Value> arguments;
 };
 llvm::json::Value toJSON(const Request &);
 bool fromJSON(const llvm::json::Value &, Request &, llvm::json::Path);
@@ -56,7 +59,7 @@ struct Event {
   std::string event;
 
   /// Event-specific information.
-  std::optional<llvm::json::Value> rawBody;
+  std::optional<llvm::json::Value> body;
 };
 llvm::json::Value toJSON(const Event &);
 bool fromJSON(const llvm::json::Value &, Event &, llvm::json::Path);
@@ -91,7 +94,10 @@ struct Response {
 
   /// Contains request result if success is true and error details if success is
   /// false.
-  std::optional<llvm::json::Value> rawBody;
+  ///
+  /// Request handlers are expected to build an appropriate body, see
+  /// `RequestHandler`.
+  std::optional<llvm::json::Value> body;
 };
 bool fromJSON(const llvm::json::Value &, Response &, llvm::json::Path);
 llvm::json::Value toJSON(const Response &);

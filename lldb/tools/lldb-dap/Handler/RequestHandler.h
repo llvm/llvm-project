@@ -96,7 +96,7 @@ class RequestHandler : public BaseRequestHandler {
     response.request_seq = request.seq;
     response.command = request.command;
 
-    if (!is_optional_v<Args> && !request.rawArguments) {
+    if (!is_optional_v<Args> && !request.arguments) {
       DAP_LOG(dap.log,
               "({0}) malformed request {1}, expected arguments but got none",
               dap.transport.GetClientName(), request.command);
@@ -111,21 +111,20 @@ class RequestHandler : public BaseRequestHandler {
 
     Args arguments;
     llvm::json::Path::Root root;
-    if (request.rawArguments &&
-        !fromJSON(request.rawArguments, arguments, root)) {
-      std::string parseFailure;
-      llvm::raw_string_ostream OS(parseFailure);
-      root.printErrorContext(request.rawArguments, OS);
+    if (request.arguments && !fromJSON(request.arguments, arguments, root)) {
+      std::string parse_failure;
+      llvm::raw_string_ostream OS(parse_failure);
+      root.printErrorContext(request.arguments, OS);
       response.success = false;
-      response.message = parseFailure;
+      response.message = parse_failure;
       dap.Send(response);
       return;
     }
 
-    auto ResponseBody = Run(arguments);
+    auto body = Run(arguments);
     // FIXME: Add a dedicated DAPError for enhanced errors that are
     // user-visibile.
-    if (auto Err = ResponseBody.takeError()) {
+    if (auto Err = body.takeError()) {
       response.success = false;
       // FIXME: Build ErrorMessage based on error details instead of using the
       // 'message' field.
@@ -133,7 +132,7 @@ class RequestHandler : public BaseRequestHandler {
     } else {
       response.success = true;
       if constexpr (!std::is_same_v<Body, std::monostate>)
-        response.rawBody = std::move(*ResponseBody);
+        response.body = std::move(*body);
     }
 
     dap.Send(response);

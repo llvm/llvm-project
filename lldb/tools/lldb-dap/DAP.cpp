@@ -700,7 +700,7 @@ bool DAP::HandleObject(const protocol::Message &M) {
 
     // Result should be given, use null if not.
     if (resp->success) {
-      (*response_handler)(resp->rawBody);
+      (*response_handler)(resp->body);
     } else {
       std::string message = "Unknown error, response failed";
       if (resp->message) {
