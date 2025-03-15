@@ -153,8 +153,8 @@ bool AMDGPUUniformIntrinsicCombineImpl::optimizeUniformIntrinsicInst(
 
         // Case (icmp eq %ballot, 0) -->  xor %ballot_arg, 1
         if (Pred == ICmpInst::ICMP_EQ && match(OtherOp, m_Zero())) {
-          Instruction *NotOp = BinaryOperator::CreateNot(Src);
-          NotOp->insertInto(ICmp->getParent(), ICmp->getIterator());
+          Instruction *NotOp =
+              BinaryOperator::CreateNot(Src, "", ICmp->getIterator());
           LLVM_DEBUG(dbgs() << "Replacing ICMP_EQ: " << *NotOp << "\n");
           ICmp->replaceAllUsesWith(NotOp);
           Changed = true;
