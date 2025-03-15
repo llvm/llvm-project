@@ -38,6 +38,7 @@
 #include <__iterator/next.h>
 #include <__iterator/ranges_iterator_traits.h>
 #include <__iterator/reverse_iterator.h>
+#include <__iterator/prev.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/uses_allocator.h>
 #include <__memory/uses_allocator_construction.h>
@@ -359,9 +360,9 @@ public:
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> emplace(_Args&&... __args) {
     if constexpr (sizeof...(__args) == 1 && (is_same_v<remove_cvref_t<_Args>, _Key> && ...)) {
-      return __try_emplace(std::forward<_Args>(__args)...);
+      return __emplace(std::forward<_Args>(__args)...);
     } else {
-      return __try_emplace(_Key(std::forward<_Args>(__args)...));
+      return __emplace(_Key(std::forward<_Args>(__args)...));
     }
   }
 
@@ -688,7 +689,7 @@ private:
   }
 
   template <class _Kp>
-  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __try_emplace(_Kp&& __key) {
+  _LIBCPP_HIDE_FROM_ABI pair<iterator, bool> __emplace(_Kp&& __key) {
     auto __it = lower_bound(__key);
     if (__it == end() || __compare_(__key, *__it)) {
       return pair<iterator, bool>(__emplace_exact_pos(__it, std::forward<_Kp>(__key)), true);
@@ -699,7 +700,7 @@ private:
 
   template <class _Kp>
   _LIBCPP_HIDE_FROM_ABI bool __is_hint_correct(const_iterator __hint, _Kp&& __key) {
-    if (__hint != cbegin() && !__compare_(*(__hint - 1), __key)) {
+    if (__hint != cbegin() && !__compare_(*std::prev(__hint), __key)) {
       return false;
     }
     if (__hint != cend() && __compare_(*__hint, __key)) {
@@ -714,11 +715,11 @@ private:
       if (__hint == cend() || __compare_(__key, *__hint)) {
         return __emplace_exact_pos(__hint, std::forward<_Kp>(__key));
       } else {
-        // key equals
+        // we already have an equal key
         return __hint;
       }
     } else {
-      return __try_emplace(std::forward<_Kp>(__key)).first;
+      return __emplace(std::forward<_Kp>(__key)).first;
     }
   }
 
