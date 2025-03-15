@@ -545,6 +545,9 @@ set(LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING "DISABLED" CACHE STRING
   "Enhance Debugify's line number coverage tracking; enabling this is ABI-breaking. Can be DISABLED, or COVERAGE.")
 set_property(CACHE LLVM_ENABLE_DEBUGLOC_COVERAGE_TRACKING PROPERTY STRINGS DISABLED COVERAGE)
 
+option(LLVM_EXPERIMENTAL_KEY_INSTRUCTIONS
+  "Add additional fields to DILocations to support Key Instructions" OFF)
+
 set(WINDOWS_PREFER_FORWARD_SLASH_DEFAULT OFF)
 if (MINGW)
   # Cygwin doesn't identify itself as Windows, and thus gets path::Style::posix
