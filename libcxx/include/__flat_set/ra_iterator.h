@@ -16,7 +16,6 @@
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/is_constructible.h>
 #include <__utility/move.h>
-#include <iterator>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -42,7 +41,9 @@ private:
 
   friend _Container;
 
-  static_assert(std::random_access_iterator<_Iterator>, "Underlying iterator must be a random access iterator");
+  // note: checking the concept random_access_iterator does not work for incomplete types
+  static_assert(__is_same(iterator_traits<_Iterator>::iterator_category, random_access_iterator_tag),
+                "Underlying iterator must be a random access iterator");
 
 public:
   using iterator_concept  = random_access_iterator_tag; // deliberately lower contiguous_iterator
