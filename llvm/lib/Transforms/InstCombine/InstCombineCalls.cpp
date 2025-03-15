@@ -3049,8 +3049,13 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     return CallInst::Create(NewFn, CallArgs);
   }
   case Intrinsic::ptrauth_sign: {
-    // auth + sign can be replaced with resign, which prevents unsafe
-    // spills and reloads of intermediate authenticated value.
+    // Replace auth+sign with a single resign intrinsic.
+    // When auth and sign operations are performed separately, later compiler
+    // passes may spill intermediate result to memory as a raw, unprotected
+    // pointer, which makes it possible for an attacker to replace it under
+    // PAuth threat model. On the other hand, resign intrinsic is not expanded
+    // until AsmPrinter, when it is emitted as a contiguous, non-attackable
+    // sequence of instructions.
     Value *Ptr = II->getArgOperand(0);
     Value *SignKey = II->getArgOperand(1);
     Value *SignDisc = II->getArgOperand(2);
