@@ -31,6 +31,7 @@ define amdgpu_kernel void @i32_24_elements(ptr %out) #0 {
 ; MAX24-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; MAX24-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; MAX24-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; MAX24-NEXT:    [[ALLOCA:%.*]] = freeze <24 x i32> poison
 ; MAX24-NEXT:    [[TMP1:%.*]] = extractelement <24 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43, i32 0, i32 0, i32 0>, i32 [[SEL2]]
 ; MAX24-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; MAX24-NEXT:    ret void
@@ -43,6 +44,7 @@ define amdgpu_kernel void @i32_24_elements(ptr %out) #0 {
 ; MAX32-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; MAX32-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; MAX32-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; MAX32-NEXT:    [[ALLOCA:%.*]] = freeze <24 x i32> poison
 ; MAX32-NEXT:    [[TMP1:%.*]] = extractelement <24 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43, i32 0, i32 0, i32 0>, i32 [[SEL2]]
 ; MAX32-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; MAX32-NEXT:    ret void
@@ -74,6 +76,7 @@ define amdgpu_kernel void @i32_24_elements_attrib(ptr %out) #1 {
 ; BASE-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; BASE-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; BASE-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; BASE-NEXT:    [[ALLOCA:%.*]] = freeze <24 x i32> poison
 ; BASE-NEXT:    [[TMP1:%.*]] = extractelement <24 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43, i32 0, i32 0, i32 0>, i32 [[SEL2]]
 ; BASE-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; BASE-NEXT:    ret void
@@ -143,6 +146,7 @@ define amdgpu_kernel void @i32_32_elements(ptr %out) #0 {
 ; MAX32-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; MAX32-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; MAX32-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; MAX32-NEXT:    [[ALLOCA:%.*]] = freeze <32 x i32> poison
 ; MAX32-NEXT:    [[TMP1:%.*]] = extractelement <32 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43, i32 0>, i32 [[SEL2]]
 ; MAX32-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; MAX32-NEXT:    ret void
@@ -174,6 +178,7 @@ define amdgpu_kernel void @i32_32_elements_attrib(ptr %out) #2 {
 ; DEFAULT-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; DEFAULT-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; DEFAULT-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; DEFAULT-NEXT:    [[ALLOCA:%.*]] = freeze <32 x i32> poison
 ; DEFAULT-NEXT:    [[TMP1:%.*]] = extractelement <32 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43, i32 0>, i32 [[SEL2]]
 ; DEFAULT-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; DEFAULT-NEXT:    ret void
@@ -205,6 +210,7 @@ define amdgpu_kernel void @i32_32_elements_attrib(ptr %out) #2 {
 ; MAX32-NEXT:    [[C2:%.*]] = icmp uge i32 [[Y]], 3
 ; MAX32-NEXT:    [[SEL1:%.*]] = select i1 [[C1]], i32 1, i32 2
 ; MAX32-NEXT:    [[SEL2:%.*]] = select i1 [[C2]], i32 0, i32 [[SEL1]]
+; MAX32-NEXT:    [[ALLOCA:%.*]] = freeze <32 x i32> poison
 ; MAX32-NEXT:    [[TMP1:%.*]] = extractelement <32 x i32> <i32 42, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 43, i32 0>, i32 [[SEL2]]
 ; MAX32-NEXT:    store i32 [[TMP1]], ptr [[OUT]], align 4
 ; MAX32-NEXT:    ret void
