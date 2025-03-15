@@ -414,8 +414,7 @@ define void @switch_all_to_default(ptr %start) {
 ; IC1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; IC1:       [[VECTOR_BODY]]:
 ; IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; IC1-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 0
-; IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[TMP0]]
+; IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[START]], i64 [[INDEX]]
 ; IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
 ; IC1-NEXT:    store <2 x i64> splat (i64 42), ptr [[TMP2]], align 1
 ; IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
