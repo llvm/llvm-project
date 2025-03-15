@@ -1,3 +1,4 @@
+! REQUIRES: flang-supports-f128-math
 ! RUN: bbc -hlfir=false %s -o - | FileCheck %s
 
 ! CHECK-LABEL: @_QPadd_test
