@@ -175,6 +175,7 @@ void initializeLoopUnrollPass(PassRegistry &);
 void initializeLowerAtomicLegacyPassPass(PassRegistry &);
 void initializeLowerEmuTLSPass(PassRegistry &);
 void initializeLowerGlobalDtorsLegacyPassPass(PassRegistry &);
+void initializeLowerGPUIntrinsicPass(PassRegistry &);
 void initializeLowerIntrinsicsPass(PassRegistry &);
 void initializeLowerInvokeLegacyPassPass(PassRegistry &);
 void initializeLowerSwitchLegacyPassPass(PassRegistry &);
