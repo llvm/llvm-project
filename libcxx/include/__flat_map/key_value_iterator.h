@@ -10,12 +10,14 @@
 #ifndef _LIBCPP___FLAT_MAP_KEY_VALUE_ITERATOR_H
 #define _LIBCPP___FLAT_MAP_KEY_VALUE_ITERATOR_H
 
+#include <__compare/ordering.h>
 #include <__compare/three_way_comparable.h>
 #include <__concepts/convertible_to.h>
 #include <__config>
 #include <__iterator/iterator_traits.h>
 #include <__memory/addressof.h>
 #include <__type_traits/conditional.h>
+#include <__type_traits/is_same.h>
 #include <__utility/move.h>
 #include <__utility/pair.h>
 
@@ -139,9 +141,12 @@ public:
     return !(__x < __y);
   }
 
-  _LIBCPP_HIDE_FROM_ABI friend auto operator<=>(const __key_value_iterator& __x, const __key_value_iterator& __y)
-    requires three_way_comparable<__key_iterator>
-  {
+  _LIBCPP_HIDE_FROM_ABI friend strong_ordering
+  operator<=>(const __key_value_iterator& __x, const __key_value_iterator& __y) {
+    static_assert(three_way_comparable<__key_iterator>,
+                  "random accesss iterator not supporting three-way comparison is invalid for container");
+    static_assert(is_same_v<decltype(__x.__key_iter_ <=> __y.__key_iter_), strong_ordering>,
+                  "three-way comparison between random accesss container iterators must return std::strong_ordering");
     return __x.__key_iter_ <=> __y.__key_iter_;
   }
 
