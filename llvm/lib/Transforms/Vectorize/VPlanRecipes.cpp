@@ -3333,8 +3333,10 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
     IRBuilder<>::InsertPointGuard Guard(State.Builder);
-    if (State.Builder.GetInsertPoint() != State.Builder.GetInsertBlock()->getFirstNonPHIIt())
-      State.Builder.SetInsertPoint(State.Builder.GetInsertBlock()->getFirstNonPHIIt());
+    if (State.Builder.GetInsertPoint() !=
+        State.Builder.GetInsertBlock()->getFirstNonPHIIt())
+      State.Builder.SetInsertPoint(
+          State.Builder.GetInsertBlock()->getFirstNonPHIIt());
     NewPointerPhi = State.Builder.CreatePHI(ScStValueType, 2, "pointer.phi");
     NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
     NewPointerPhi->setDebugLoc(getDebugLoc());
