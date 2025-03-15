@@ -1780,8 +1780,9 @@ bool LoopIdiomRecognize::recognizeAndInsertStrLen() {
       return false;
     StrLenFunc = emitStrLen(MaterialzedBase, Builder, *DL, TLI);
   } else {
-    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_wcslen) &&
-        !DisableLIRP::Wcslen)
+    if (DisableLIRP::Wcslen)
+        return false;
+    if (!isLibFuncEmittable(Preheader->getModule(), TLI, LibFunc_wcslen))
       return false;
     StrLenFunc = emitWcsLen(MaterialzedBase, Builder, *DL, TLI);
   }
