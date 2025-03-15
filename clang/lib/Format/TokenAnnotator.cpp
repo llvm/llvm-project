@@ -1639,6 +1639,25 @@ private:
     case tok::kw_operator:
       if (Style.isProto())
         break;
+      // C++ user-defined conversion function.
+      if (IsCpp && CurrentToken &&
+          (CurrentToken->is(tok::kw_auto) ||
+           CurrentToken->isTypeName(LangOpts))) {
+        FormatToken *LParen;
+        if (CurrentToken->startsSequence(tok::kw_decltype, tok::l_paren,
+                                         tok::kw_auto, tok::r_paren)) {
+          LParen = CurrentToken->Next->Next->Next->Next;
+        } else {
+          for (LParen = CurrentToken->Next;
+               LParen && LParen->isNot(tok::l_paren); LParen = LParen->Next) {
+          }
+        }
+        if (LParen && LParen->startsSequence(tok::l_paren, tok::r_paren)) {
+          Tok->setFinalizedType(TT_FunctionDeclarationName);
+          LParen->setFinalizedType(TT_FunctionDeclarationLParen);
+          break;
+        }
+      }
       while (CurrentToken &&
              !CurrentToken->isOneOf(tok::l_paren, tok::semi, tok::r_paren)) {
         if (CurrentToken->isOneOf(tok::star, tok::amp))
@@ -3071,12 +3090,10 @@ private:
     if (InTemplateArgument && NextToken->Tok.isAnyIdentifier())
       return TT_BinaryOperator;
 
-    // "&&" followed by "(", "*", or "&" is quite unlikely to be two successive
-    // unary "&".
-    if (Tok.is(tok::ampamp) &&
-        NextToken->isOneOf(tok::l_paren, tok::star, tok::amp)) {
+    // "&&" followed by "*" or "&" is quite unlikely to be two successive unary
+    // "&".
+    if (Tok.is(tok::ampamp) && NextToken->isOneOf(tok::star, tok::amp))
       return TT_BinaryOperator;
-    }
 
     // This catches some cases where evaluation order is used as control flow:
     //   aaa && aaa->f();
