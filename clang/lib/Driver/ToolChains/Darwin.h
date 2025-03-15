@@ -229,7 +229,8 @@ public:
   // <resourcedir>/lib/darwin/macho_embedded/<...>(.dylib|.a).
   std::string
   getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                FileType Type = ToolChain::FT_Static) const override;
+                FileType Type = ToolChain::FT_Static,
+                bool IsFortran = false) const override;
 
   /// }
   /// @name ToolChain Implementation
@@ -409,7 +410,8 @@ public:
   // Those are under <resourcedir>/lib/darwin/<...>(.dylib|.a).
   std::string
   getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                FileType Type = ToolChain::FT_Static) const override;
+                FileType Type = ToolChain::FT_Static,
+                bool IsFortran = false) const override;
 
 protected:
   /// }
