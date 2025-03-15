@@ -23,9 +23,12 @@
 #include <atomic>
 #include <chrono>
 #include <ctime>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
+#include <type_traits>
+#include <utility>
 
 namespace lldb_private {
 namespace telemetry {
@@ -46,12 +49,18 @@ struct LLDBConfig : public ::llvm::telemetry::Config {
 // Specifically:
 //  - Length: 8 bits
 //  - First two bits (MSB) must be 11 - the common prefix
+//  - Last two bits (LSB) are reserved for grand-children of LLDBTelemetryInfo
 // If any of the subclass has descendents, those descendents
-// must have their LLDBEntryKind in the similar form (ie., share common prefix)
+// must have their LLDBEntryKind in the similar form (ie., share common prefix
+// and differ by the last two bits)
 struct LLDBEntryKind : public ::llvm::telemetry::EntryKind {
-  static const llvm::telemetry::KindType BaseInfo = 0b11000000;
-  static const llvm::telemetry::KindType CommandInfo = 0b11010000;
-  static const llvm::telemetry::KindType DebuggerInfo = 0b11000100;
+  // clang-format off
+  static const llvm::telemetry::KindType BaseInfo        = 0b11000000;
+  static const llvm::telemetry::KindType CommandInfo     = 0b11010000;
+  static const llvm::telemetry::KindType DebuggerInfo    = 0b11001000;
+  static const llvm::telemetry::KindType ExecModuleInfo  = 0b11000100;
+  static const llvm::telemetry::KindType ProcessExitInfo = 0b11001100;
+  // clang-format on
 };
 
 /// Defines a convenient type for timestamp of various events.
@@ -143,6 +152,59 @@ struct DebuggerInfo : public LLDBBaseTelemetryInfo {
            LLDBEntryKind::DebuggerInfo;
   }
 
+  void serialize(llvm::telemetry::Serializer &serializer) const override;
+};
+
+struct ExecModuleInfo : public LLDBBaseTelemetryInfo {
+  lldb::ModuleSP exec_mod;
+
+  /// The same as the executable-module's UUID.
+  UUID exec_uuid;
+  /// PID of the process owned by this target.
+  lldb::pid_t pid;
+  /// The triple of this executable module.
+  std::string triple;
+
+  /// If true, this entry was emitted at the beginning of an event (eg., before
+  /// the executable is set). Otherwise, it was emitted at the end of an
+  /// event (eg., after the module and any dependency were loaded.)
+  bool is_start_entry;
+
+  ExecModuleInfo() = default;
+
+  llvm::telemetry::KindType getKind() const override {
+    return LLDBEntryKind::ExecModuleInfo;
+  }
+
+  static bool classof(const TelemetryInfo *T) {
+    // Subclasses of this is also acceptable
+    return (T->getKind() & LLDBEntryKind::ExecModuleInfo) ==
+           LLDBEntryKind::ExecModuleInfo;
+  }
+  void serialize(llvm::telemetry::Serializer &serializer) const override;
+};
+
+/// Describes an exit status.
+struct ExitDescription {
+  int exit_code;
+  std::string description;
+};
+
+struct ProcessExitInfo : public LLDBBaseTelemetryInfo {
+  UUID exec_uuid;
+  lldb::pid_t pid;
+  bool is_start_entry;
+  std::optional<ExitDescription> exit_desc;
+
+  llvm::telemetry::KindType getKind() const override {
+    return LLDBEntryKind::ProcessExitInfo;
+  }
+
+  static bool classof(const TelemetryInfo *T) {
+    // Subclasses of this is also acceptable
+    return (T->getKind() & LLDBEntryKind::ProcessExitInfo) ==
+           LLDBEntryKind::ProcessExitInfo;
+  }
   void serialize(llvm::telemetry::Serializer &serializer) const override;
 };
 

@@ -22,6 +22,7 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Progress.h"
+#include "lldb/Core/Telemetry.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/DynamicCheckerFunctions.h"
 #include "lldb/Expression/UserExpression.h"
@@ -1064,6 +1065,26 @@ const char *Process::GetExitDescription() {
 bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Use a mutex to protect setting the exit status.
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
+  telemetry::ScopedDispatcher<telemetry::ProcessExitInfo> helper;
+
+  // Find the executable-module's UUID, if available.
+  Target &target = GetTarget();
+  helper.SetDebugger(&(target.GetDebugger()));
+  UUID exec_uuid;
+  if (ModuleSP exec_mod = target.GetExecutableModule())
+    exec_uuid = exec_mod->GetUUID();
+
+  helper.DispatchNow([&](telemetry::ProcessExitInfo *info) {
+    info->exec_uuid = exec_uuid;
+    info->pid = m_pid;
+    info->is_start_entry = true;
+    info->exit_desc = {status, exit_string.str()};
+  });
+
+  helper.DispatchOnExit([&](telemetry::ProcessExitInfo *info) {
+    info->exec_uuid = exec_uuid;
+    info->pid = m_pid;
+  });
 
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
   LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
