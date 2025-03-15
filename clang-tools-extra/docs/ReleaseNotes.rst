@@ -153,6 +153,11 @@ Changes in existing checks
   <clang-tidy/checks/misc/unused-using-decls>` check by fixing false positives
   on ``operator""`` with template parameters.
 
+- Improved :doc:`modernize-use-starts-ends-with
+  <clang-tidy/checks/modernize/use-starts-ends-with>` check by adding more
+  matched scenarios of ``find`` and ``rfind`` methods and fixing false
+  positives when those methods were called with 3 arguments.
+
 - Improved :doc:`misc-use-internal-linkage
   <clang-tidy/checks/misc/use-internal-linkage>` check by fix false positives
   for function or variable in header file which contains macro expansion.
