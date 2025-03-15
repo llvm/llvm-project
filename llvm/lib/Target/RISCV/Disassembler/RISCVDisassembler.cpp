@@ -763,7 +763,7 @@ DecodeStatus RISCVDisassembler::getInstruction16(MCInst &MI, uint64_t &Size,
   TRY_TO_DECODE_AND_ADD_SP(true, DecoderTableRISCV32Only_16,
                            "RISCV32Only_16 (16-bit Instruction)");
   // Zc* instructions incompatible with Zcf or Zcd.
-  TRY_TO_DECODE(true, DecoderTableZcOverlap16,
+  TRY_TO_DECODE_AND_ADD_SP(true, DecoderTableZcOverlap16,
                 "ZcOverlap (16-bit Instructions overlapping with Zcf/Zcd)");
 
   return MCDisassembler::Fail;
