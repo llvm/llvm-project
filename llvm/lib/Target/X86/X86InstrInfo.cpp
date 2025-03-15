@@ -8492,7 +8492,7 @@ static unsigned getBroadcastOpcode(const X86FoldTableEntry *I,
 }
 
 bool X86InstrInfo::unfoldMemoryOperand(
-    MachineFunction &MF, MachineInstr &MI, unsigned Reg, bool UnfoldLoad,
+    MachineFunction &MF, MachineInstr &MI, Register Reg, bool UnfoldLoad,
     bool UnfoldStore, SmallVectorImpl<MachineInstr *> &NewMIs) const {
   const X86FoldTableEntry *I = lookupUnfoldTable(MI.getOpcode());
   if (I == nullptr)
