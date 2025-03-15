@@ -10,10 +10,36 @@ struct S {
 
 // CHECK-LABEL: @_Z23get_offset_of_y_naivelyv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr inbounds nuw ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr nuw ([[STRUCT_S:%.*]], ptr null, i32 0, i32 1) to i64)
 //
 uintptr_t get_offset_of_y_naively() {
   return ((uintptr_t)(&(((S *)nullptr)->y)));
+}
+
+struct Empty {};
+
+struct T {
+  int a;
+  S s;
+  [[no_unique_address]] Empty e1;
+  int b;
+  [[no_unique_address]] Empty e2;
+};
+
+// CHECK-LABEL: @_Z30get_offset_of_y_naively_nestedv(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr nuw ([[STRUCT_S:%.*]], ptr getelementptr nuw ([[STRUCT_T:%.*]], ptr null, i32 0, i32 1), i32 0, i32 1) to i64)
+//
+uintptr_t get_offset_of_y_naively_nested() {
+  return ((uintptr_t)(&(((T *)nullptr)->s.y)));
+}
+
+// CHECK-LABEL: @_Z26get_offset_of_zero_storagev(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    ret i64 ptrtoint (ptr getelementptr (i8, ptr null, i64 16) to i64)
+//
+uintptr_t get_offset_of_zero_storage() {
+  return ((uintptr_t)(&(((T *)nullptr)->e2)));
 }
 
 // CHECK-LABEL: @_Z27get_offset_of_y_via_builtinv(
