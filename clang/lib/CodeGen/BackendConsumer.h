@@ -92,6 +92,7 @@ public:
   void HandleTagDeclRequiredDefinition(const TagDecl *D) override;
   void CompleteTentativeDefinition(VarDecl *D) override;
   void CompleteExternalDeclaration(DeclaratorDecl *D) override;
+  void CompletePragmaExport(Decl *D) override;
   void AssignInheritanceModel(CXXRecordDecl *RD) override;
   void HandleVTable(CXXRecordDecl *RD) override;
 

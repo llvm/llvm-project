@@ -4460,6 +4460,12 @@ void Parser::ParseDeclarationSpecifiers(
       isInvalid = DS.setFunctionSpecNoreturn(Loc, PrevSpec, DiagID);
       break;
 
+    case tok::kw__Export:
+      // If we find kw__Export, it is being applied to a var or function
+      // This will be handled in ParseDeclaratorInternal()
+      goto DoneWithDeclSpec;
+      break;
+
     // friend
     case tok::kw_friend:
       if (DSContext == DeclSpecContext::DSC_class) {
@@ -6185,6 +6191,7 @@ bool Parser::isDeclarationSpecifier(
   case tok::kw_virtual:
   case tok::kw_explicit:
   case tok::kw__Noreturn:
+  case tok::kw__Export:
 
     // alignment-specifier
   case tok::kw__Alignas:
@@ -6775,6 +6782,17 @@ void Parser::ParseDeclaratorInternal(Declarator &D,
   }
 
   tok::TokenKind Kind = Tok.getKind();
+
+  // If this variable or function is marked as _Export, set the bit
+  if (Kind == tok::kw__Export) {
+    SourceLocation loc = ConsumeToken();
+    D.SetExport(loc);
+    D.SetRangeEnd(loc);
+
+    if (DirectDeclParser)
+      (this->*DirectDeclParser)(D);
+    return;
+  }
 
   if (D.getDeclSpec().isTypeSpecPipe() && !isPipeDeclarator(D)) {
     DeclSpec DS(AttrFactory);
