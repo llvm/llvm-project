@@ -2,7 +2,8 @@
 // RUN: rm -f *.profraw
 // RUN: %clang_pgogen %s -o a.out
 
-// Need to run a.out twice, the second time a merge will occur which will trigger an mmap.
+// Need to run a.out twice. On the second time, a merge will occur, which will
+// trigger an mmap.
 // RUN: ./a.out
 // RUN: llvm-profdata show default_*.profraw --all-functions --counts --memop-sizes 2>&1 | FileCheck %s -check-prefix=PROFDATA
 // RUN: env LLVM_NO_MMAP=1 LLVM_PROFILE_VERBOSE=1 ./a.out 2>&1 | FileCheck %s
