@@ -3222,6 +3222,12 @@ def : Pat<(v2i16 (build_vector i16:$a, i16:$b)),
 def: Pat<(v2i16 (scalar_to_vector i16:$a)),
          (CVT_u32_u16 $a, CvtNONE)>;
 
+
+def nvptx_build_vector : SDNode<"NVPTXISD::BUILD_VECTOR", SDTypeProfile<1, 2, []>, []>;
+
+def : Pat<(i64 (nvptx_build_vector i32:$a, i32:$b)),
+          (V2I32toI64 $a, $b)>;
+
 //
 // Funnel-Shift
 //

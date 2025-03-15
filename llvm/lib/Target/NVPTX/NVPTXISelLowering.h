@@ -61,6 +61,8 @@ enum NodeType : unsigned {
   BFE,
   BFI,
   PRMT,
+  UNPACK_VECTOR,
+  BUILD_VECTOR,
   FCOPYSIGN,
   DYNAMIC_STACKALLOC,
   STACKRESTORE,
