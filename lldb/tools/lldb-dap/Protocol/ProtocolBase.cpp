@@ -285,4 +285,5 @@ bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {
 json::Value toJSON(const Message &M) {
   return std::visit([](auto &M) { return toJSON(M); }, M);
 }
+
 } // namespace lldb_dap::protocol
