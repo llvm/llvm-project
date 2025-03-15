@@ -426,7 +426,8 @@ Tool *AVRToolChain::buildLinker() const {
 
 std::string
 AVRToolChain::getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                            FileType Type = ToolChain::FT_Static) const {
+                            FileType Type = ToolChain::FT_Static,
+                            bool IsFortran) const {
   assert(Type == ToolChain::FT_Static && "AVR only supports static libraries");
   // Since AVR can never be a host environment, its compiler-rt library files
   // should always have ".a" suffix, even on windows.

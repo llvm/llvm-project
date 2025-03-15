@@ -16,8 +16,11 @@
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
+#include <iostream>
 #include <set>
+using namespace std;
 
 using AIX = clang::driver::toolchains::AIX;
 using namespace clang::driver;
@@ -358,8 +361,8 @@ void aix::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (D.IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    addFortranRuntimeLibraryPath(ToolChain, Args, CmdArgs);
-    addFortranRuntimeLibs(ToolChain, Args, CmdArgs);
+    ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+    // ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
     CmdArgs.push_back("-lm");
     CmdArgs.push_back("-lpthread");
   }
@@ -606,6 +609,26 @@ void AIX::addProfileRTLibs(const llvm::opt::ArgList &Args,
   }
 
   ToolChain::addProfileRTLibs(Args, CmdArgs);
+}
+
+std::string AIX::getCompilerRT(const ArgList &Args, StringRef Component,
+                               FileType Type, bool IsFortran) const {
+  // On AIX, build the filename for the layout as if
+  // LLVM_ENABLE_PER_TARGET_RUNTIME_DIR=OFF (e.g. lib/${os_dirname})
+  std::string CRTBasename =
+      buildCompilerRTBasename(Args, Component, Type,
+                              /*AddArch=*/!IsFortran, IsFortran);
+  SmallString<128> Path(getCompilerRTPath());
+  llvm::sys::path::append(Path, CRTBasename);
+  return std::string(Path);
+}
+
+void AIX::addFortranRuntimeLibs(const ArgList &Args,
+                                llvm::opt::ArgStringList &CmdArgs) const {
+  // Link flang_rt.runtime.a. On AIX, the static and shared library are all
+  // named .a
+  CmdArgs.push_back(getCompilerRTArgString(
+      Args, "runtime", ToolChain::FT_Static, getDriver().IsFlangMode()));
 }
 
 ToolChain::CXXStdlibType AIX::GetDefaultCXXStdlibType() const {
