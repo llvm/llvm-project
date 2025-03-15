@@ -910,6 +910,7 @@ if(LLVM_LIBC_FULL_BUILD)
 
     # sched.h entrypoints
     libc.src.sched.__sched_getcpucount
+    libc.src.sched.__sched_setcpuzero
 
     # strings.h entrypoints
     libc.src.strings.strcasecmp_l

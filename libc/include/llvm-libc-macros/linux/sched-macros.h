@@ -25,5 +25,7 @@
 
 #define CPU_COUNT_S(setsize, set) __sched_getcpucount(setsize, set)
 #define CPU_COUNT(set) CPU_COUNT_S(sizeof(cpu_set_t), set)
+#define CPU_ZERO_S(setsize, set) __sched_setcpuzero(setsize, set)
+#define CPU_ZERO(set) CPU_ZERO_S(sizeof(cpu_set_t), set)
 
 #endif // LLVM_LIBC_MACROS_LINUX_SCHED_MACROS_H
