@@ -487,6 +487,18 @@ public:
                Reg.RegNum);
   }
 
+  bool isGPRPairC() const {
+    return Kind == KindTy::Register &&
+           RISCVMCRegisterClasses[RISCV::GPRPairCRegClassID].contains(
+               Reg.RegNum);
+  }
+
+  bool isGPRPairNoX0() const {
+    return Kind == KindTy::Register &&
+           RISCVMCRegisterClasses[RISCV::GPRPairNoX0RegClassID].contains(
+               Reg.RegNum);
+  }
+
   bool isGPRF16() const {
     return Kind == KindTy::Register &&
            RISCVMCRegisterClasses[RISCV::GPRF16RegClassID].contains(Reg.RegNum);

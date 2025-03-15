@@ -780,6 +780,14 @@ Error RISCVISAInfo::checkDependency() {
       return getIncompatibleError("xwchc", "zcb");
   }
 
+  if (Exts.count("zclsd") != 0) {
+    if (XLen != 32)
+      return getError("'zclsd' is only supported for 'rv32'");
+
+    if (Exts.count("zcf") != 0)
+      return getIncompatibleError("zclsd", "zcf");
+  }
+
   for (auto Ext : XqciExts)
     if (Exts.count(Ext.str()) && (XLen != 32))
       return getError("'" + Twine(Ext) + "'" + " is only supported for 'rv32'");
