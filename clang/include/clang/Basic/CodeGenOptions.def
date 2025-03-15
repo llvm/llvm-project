@@ -476,6 +476,9 @@ CODEGENOPT(ImportCallOptimization, 1, 0)
 /// (BlocksRuntime) on Windows.
 CODEGENOPT(StaticClosure, 1, 0)
 
+/// Assume that UAVs/SRVs may alias
+CODEGENOPT(ResMayAlias, 1, 0)
+
 /// FIXME: Make DebugOptions its own top-level .def file.
 #include "DebugOptions.def"
 
