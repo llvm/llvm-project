@@ -2618,6 +2618,13 @@ void LinkerDriver::compileBitcodeFiles(bool skipLinkedOutput) {
     auto *obj = cast<ObjFile<ELFT>>(file.get());
     obj->parse(/*ignoreComdats=*/true);
 
+    for (typename ELFT::Sym elfSym : obj->template getGlobalELFSyms<ELFT>()) {
+      StringRef elfSymName = check(elfSym.getName(obj->getStringTable()));
+      if (Symbol *sym = ctx.symtab->find(elfSymName))
+        if (sym->type == STT_NOTYPE)
+          sym->type = elfSym.getType();
+    }
+
     // For defined symbols in non-relocatable output,
     // compute isExported and parse '@'.
     if (!ctx.arg.relocatable)
