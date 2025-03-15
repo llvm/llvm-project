@@ -24,6 +24,13 @@ public:
   AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
                             llvm::opt::ArgStringList &CC1Args) const override;
 
+  std::string getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
+                            FileType Type = ToolChain::FT_Static,
+                            bool IsFortran = false) const override;
+
+  void addFortranRuntimeLibs(const llvm::opt::ArgList &Args,
+                             llvm::opt::ArgStringList &CmdArgs) const override;
+
 private:
   bool SupportIEEEFloat128(const Driver &D, const llvm::Triple &Triple,
                            const llvm::opt::ArgList &Args) const;

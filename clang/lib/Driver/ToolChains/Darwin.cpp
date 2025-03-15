@@ -706,8 +706,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   // to generate executables.
   if (getToolChain().getDriver().IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-    addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
-    addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
+    getToolChain().addFortranRuntimeLibraryPath(Args, CmdArgs);
+    getToolChain().addFortranRuntimeLibs(Args, CmdArgs);
   }
 
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
@@ -1348,7 +1348,7 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
 }
 
 std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
-                                 FileType Type) const {
+                                 FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "
          "object file");
@@ -1367,7 +1367,7 @@ std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
 }
 
 std::string Darwin::getCompilerRT(const ArgList &, StringRef Component,
-                                  FileType Type) const {
+                                  FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "
          "object file");

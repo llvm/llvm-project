@@ -121,15 +121,6 @@ void addOpenMPHostOffloadingArgs(const Compilation &C, const JobAction &JA,
                                  const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs);
 
-/// Adds Fortran runtime libraries to \p CmdArgs.
-void addFortranRuntimeLibs(const ToolChain &TC, const llvm::opt::ArgList &Args,
-                           llvm::opt::ArgStringList &CmdArgs);
-
-/// Adds the path for the Fortran runtime libraries to \p CmdArgs.
-void addFortranRuntimeLibraryPath(const ToolChain &TC,
-                                  const llvm::opt::ArgList &Args,
-                                  llvm::opt::ArgStringList &CmdArgs);
-
 void addHIPRuntimeLibArgs(const ToolChain &TC, Compilation &C,
                           const llvm::opt::ArgList &Args,
                           llvm::opt::ArgStringList &CmdArgs);

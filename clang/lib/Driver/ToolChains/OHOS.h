@@ -58,7 +58,8 @@ public:
 
   std::string
   getCompilerRT(const llvm::opt::ArgList &Args, StringRef Component,
-                FileType Type = ToolChain::FT_Static) const override;
+                FileType Type = ToolChain::FT_Static,
+                bool IsFortran = false) const override;
 
   const char *getDefaultLinker() const override {
     return "ld.lld";

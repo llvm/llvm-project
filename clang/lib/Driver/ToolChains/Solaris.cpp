@@ -225,8 +225,8 @@ void solaris::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     // these dependencies need to be listed before the C runtime below.
     if (D.IsFlangMode() &&
         !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
-      addFortranRuntimeLibraryPath(getToolChain(), Args, CmdArgs);
-      addFortranRuntimeLibs(getToolChain(), Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibraryPath(Args, CmdArgs);
+      ToolChain.addFortranRuntimeLibs(Args, CmdArgs);
       CmdArgs.push_back("-lm");
     }
     if (Args.hasArg(options::OPT_fstack_protector) ||
