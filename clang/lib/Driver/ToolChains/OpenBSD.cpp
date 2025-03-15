@@ -380,9 +380,8 @@ std::string OpenBSD::getCompilerRT(const ArgList &Args, StringRef Component,
       return std::string(Path);
   }
   SmallString<128> P(getDriver().ResourceDir);
-  std::string CRTBasename =
-      buildCompilerRTBasename(Args, Component, Type, /*AddArch=*/false,
-                              IsFortran);
+  std::string CRTBasename = buildCompilerRTBasename(
+      Args, Component, Type, /*AddArch=*/false, IsFortran);
   llvm::sys::path::append(P, "lib", CRTBasename);
   // Checks if this is the base system case which uses a different location.
   if (getVFS().exists(P))
