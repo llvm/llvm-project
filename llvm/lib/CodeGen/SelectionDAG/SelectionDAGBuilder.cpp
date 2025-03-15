@@ -4905,6 +4905,11 @@ void SelectionDAGBuilder::visitMaskedScatter(const CallInst &I) {
     Scale = DAG.getTargetConstant(1, sdl, TLI.getPointerTy(DAG.getDataLayout()));
   }
 
+  if (!UniformBase) {
+    TLI.updateBaseAndIndex(Ptr, Base, Index, getCurSDLoc(), getValue(Ptr), DAG,
+                           I.getParent());
+  }
+
   EVT IdxVT = Index.getValueType();
   EVT EltTy = IdxVT.getVectorElementType();
   if (TLI.shouldExtendGSIndex(IdxVT, EltTy)) {
@@ -5022,6 +5027,11 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
     Index = getValue(Ptr);
     IndexType = ISD::SIGNED_SCALED;
     Scale = DAG.getTargetConstant(1, sdl, TLI.getPointerTy(DAG.getDataLayout()));
+  }
+
+  if (!UniformBase) {
+    TLI.updateBaseAndIndex(Ptr, Base, Index, getCurSDLoc(), getValue(Ptr), DAG,
+                           I.getParent());
   }
 
   EVT IdxVT = Index.getValueType();
