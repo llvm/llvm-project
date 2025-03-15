@@ -247,26 +247,7 @@ public:
     VK_ARM_TLSLDO, // symbol(tlsldo)
     VK_ARM_TLSDESCSEQ,
 
-    VK_AVR_NONE,
-    VK_AVR_LO8,
-    VK_AVR_HI8,
-    VK_AVR_HLO8,
-    VK_AVR_DIFF8,
-    VK_AVR_DIFF16,
-    VK_AVR_DIFF32,
-    VK_AVR_PM,
-
     VK_COFF_IMGREL32, // symbol@imgrel (image-relative)
-
-    VK_Hexagon_LO16,
-    VK_Hexagon_HI16,
-    VK_Hexagon_GPREL,
-    VK_Hexagon_GD_GOT,
-    VK_Hexagon_LD_GOT,
-    VK_Hexagon_GD_PLT,
-    VK_Hexagon_LD_PLT,
-    VK_Hexagon_IE,
-    VK_Hexagon_IE_GOT,
 
     VK_WASM_TYPEINDEX, // Reference to a symbol's type (signature)
     VK_WASM_TLSREL,    // Memory address relative to __tls_base
@@ -319,6 +300,10 @@ public:
 
   static const MCSymbolRefExpr *create(const MCSymbol *Symbol, VariantKind Kind,
                                        MCContext &Ctx, SMLoc Loc = SMLoc());
+  static const MCSymbolRefExpr *create(const MCSymbol *Symbol, uint16_t Kind,
+                                       MCContext &Ctx, SMLoc Loc = SMLoc()) {
+    return MCSymbolRefExpr::create(Symbol, VariantKind(Kind), Ctx, Loc);
+  }
 
   /// @}
   /// \name Accessors
