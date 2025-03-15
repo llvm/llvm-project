@@ -12493,19 +12493,39 @@ multiclass LDOPregister_patterns_mod<string inst, string op, string mod> {
                         (i32 (!cast<Instruction>(mod#Wrr) WZR, GPR32:$Rm))>;
 }
 
+class AtomicStoreMonotonicFrag<SDNode atomic_op> : PatFrag<
+  (ops node:$ptr, node:$value),
+  (atomic_op node:$ptr, node:$value),
+  [{ return SDValue(N, 0).use_empty() &&
+     cast<AtomicSDNode>(N)->getMergedOrdering() == AtomicOrdering::Monotonic; }]>;
+
+class AtomicStoreReleaseFrag<SDNode atomic_op> : PatFrag<
+  (ops node:$ptr, node:$value),
+  (atomic_op node:$ptr, node:$value),
+  [{ return SDValue(N, 0).use_empty() &&
+     cast<AtomicSDNode>(N)->getMergedOrdering() == AtomicOrdering::Release; }]>;
+
 let Predicates = [HasLSFE] in
 multiclass LDFPOPregister_patterns_ord_dag<string inst, string suffix, string op,
-                                         ValueType vt, dag data> {
+                                           ValueType vt, dag data> {
   def : Pat<(!cast<PatFrag>(op#"_"#vt#"_monotonic") FPR64:$Rn, data),
-            (!cast<Instruction>(inst # suffix) data, FPR64:$Rn)>;
+            (!cast<Instruction>("LD" # inst # suffix) data, FPR64:$Rn)>;
   def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acquire") FPR64:$Rn, data),
-            (!cast<Instruction>(inst # "A" # suffix) data, FPR64:$Rn)>;
+            (!cast<Instruction>("LD" # inst # "A" # suffix) data, FPR64:$Rn)>;
   def : Pat<(!cast<PatFrag>(op#"_"#vt#"_release") FPR64:$Rn, data),
-            (!cast<Instruction>(inst # "L" # suffix) data, FPR64:$Rn)>;
+            (!cast<Instruction>("LD" # inst # "L" # suffix) data, FPR64:$Rn)>;
   def : Pat<(!cast<PatFrag>(op#"_"#vt#"_acq_rel") FPR64:$Rn, data),
-            (!cast<Instruction>(inst # "AL" # suffix) data, FPR64:$Rn)>;
+            (!cast<Instruction>("LD" # inst # "AL" # suffix) data, FPR64:$Rn)>;
   def : Pat<(!cast<PatFrag>(op#"_"#vt#"_seq_cst") FPR64:$Rn, data),
-            (!cast<Instruction>(inst # "AL" # suffix) data, FPR64:$Rn)>;
+            (!cast<Instruction>("LD" # inst # "AL" # suffix) data, FPR64:$Rn)>;
+
+  let AddedComplexity = 5 in {
+    def : Pat<(AtomicStoreMonotonicFrag<!cast<SDNode>(op)> FPR64:$Rn, data),
+              (!cast<Instruction>("ST" # inst # suffix) data, FPR64:$Rn)>;
+
+    def : Pat<(AtomicStoreReleaseFrag<!cast<SDNode>(op)> FPR64:$Rn, data),
+              (!cast<Instruction>("ST" # inst # "L" # suffix) data, FPR64:$Rn)>;
+  }
 }
 
 multiclass LDFPOPregister_patterns_ord<string inst, string suffix, string op,
