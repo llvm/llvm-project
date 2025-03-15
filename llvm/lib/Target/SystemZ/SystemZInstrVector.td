@@ -1970,6 +1970,22 @@ let Predicates = [FeatureVector] in {
             (VLEG (VGBM 0), bdxaddr12only:$addr, 1)>;
 }
 
+// Zero-extensions from VR element to i128 on arch15.
+let Predicates = [FeatureVectorEnhancements3] in {
+  def : Pat<(i128 (zext (i64 (z_vector_extract (v2i64 VR128:$src), 0)))),
+            (VUPLHG VR128:$src)>;
+  def : Pat<(i128 (zext (i64 (z_vector_extract (v2i64 VR128:$src), 1)))),
+            (VUPLLG VR128:$src)>;
+  def : Pat<(i128 (zext (i32 (z_vector_extract (v4i32 VR128:$src), 0)))),
+            (VUPLHG (VUPLHF VR128:$src))>;
+  def : Pat<(i128 (zext (i32 (z_vector_extract (v4i32 VR128:$src), 1)))),
+            (VUPLHG (VUPLLF VR128:$src))>;
+  def : Pat<(i128 (zext (i32 (z_vector_extract (v4i32 VR128:$src), 2)))),
+            (VUPLLG (VUPLHF VR128:$src))>;
+  def : Pat<(i128 (zext (i32 (z_vector_extract (v4i32 VR128:$src), 3)))),
+            (VUPLLG (VUPLLF VR128:$src))>;
+}
+
 // In-register i128 sign-extensions on arch15.
 let Predicates = [FeatureVectorEnhancements3] in {
   def : Pat<(i128 (sext_inreg VR128:$x, i8)), (VUPLG (VSEGB VR128:$x))>;
@@ -2032,6 +2048,22 @@ let Predicates = [FeatureVector] in {
             (VSRAB (VLREPF bdxaddr12only:$addr), (VREPIB 96))>;
   def : Pat<(i128 (z_sextloadi64 bdxaddr12only:$addr)),
             (VSRAB (VLREPG bdxaddr12only:$addr), (VREPIB 64))>;
+}
+
+// Sign-extensions from VR element to i128 on arch15.
+let Predicates = [FeatureVectorEnhancements3] in {
+  def : Pat<(i128 (sext (i64 (z_vector_extract (v2i64 VR128:$src), 0)))),
+            (VUPHG VR128:$src)>;
+  def : Pat<(i128 (sext (i64 (z_vector_extract (v2i64 VR128:$src), 1)))),
+            (VUPLG VR128:$src)>;
+  def : Pat<(i128 (sext (i32 (z_vector_extract (v4i32 VR128:$src), 0)))),
+            (VUPHG (VUPHF VR128:$src))>;
+  def : Pat<(i128 (sext (i32 (z_vector_extract (v4i32 VR128:$src), 1)))),
+            (VUPHG (VUPLF VR128:$src))>;
+  def : Pat<(i128 (sext (i32 (z_vector_extract (v4i32 VR128:$src), 2)))),
+            (VUPLG (VUPHF VR128:$src))>;
+  def : Pat<(i128 (sext (i32 (z_vector_extract (v4i32 VR128:$src), 3)))),
+            (VUPLG (VUPLF VR128:$src))>;
 }
 
 // i128 comparison pseudo-instructions.
