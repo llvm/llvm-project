@@ -104,6 +104,8 @@ Changes to the LoongArch Backend
 Changes to the MIPS Backend
 ---------------------------
 
+* `-mcpu=i6400` and `-mcpu=i6500` were added.
+
 Changes to the PowerPC Backend
 ------------------------------
 
