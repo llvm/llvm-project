@@ -79,6 +79,8 @@ typedef struct ProfBufferIO {
   uint32_t BufferSz;
   /* Current byte offset from the start of the buffer. */
   uint32_t CurOffset;
+  /* The number of bytes already flushed. */
+  uint64_t FlushedSize;
 } ProfBufferIO;
 
 /* The creator interface used by testing.  */
@@ -168,6 +170,11 @@ void lprofMergeValueProfData(struct ValueProfData *SrcValueProfData,
                              __llvm_profile_data *DstData);
 
 VPDataReaderType *lprofGetVPDataReader(void);
+
+/* Compute size of VPData. Return -1 on error (0 is a valid return value). */
+int64_t __llvm_profile_getSizeOfValueProfData(VPDataReaderType *VPDataReader,
+                                      const __llvm_profile_data *DataBegin,
+                                      const __llvm_profile_data *DataEnd);
 
 /* Internal interface used by test to reset the max number of 
  * tracked values per value site to be \p MaxVals.
