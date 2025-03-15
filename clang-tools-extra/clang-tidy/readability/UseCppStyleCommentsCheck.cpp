@@ -184,5 +184,4 @@ void UseCppStyleCommentsCheck::registerPPCallbacks(
 
 void UseCppStyleCommentsCheck::check(const MatchFinder::MatchResult &Result) {}
 
-UseCppStyleCommentsCheck::~UseCppStyleCommentsCheck() = default;
 } // namespace clang::tidy::readability
