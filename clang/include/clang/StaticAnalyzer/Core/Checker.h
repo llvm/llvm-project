@@ -485,16 +485,60 @@ public:
 } // end eval namespace
 
 class CheckerBase : public ProgramPointTag {
-  CheckerNameRef Name;
+  /// A single checker class (i.e. a subclass of `CheckerBase`) can implement
+  /// multiple user-facing checkers that have separate names and can be enabled
+  /// separately, but are backed by the same singleton checker object.
+  SmallVector<std::optional<CheckerNameRef>, 1> RegisteredNames;
+
   friend class ::clang::ento::CheckerManager;
 
 public:
-  StringRef getTagDescription() const override;
-  CheckerNameRef getName() const;
+  CheckerNameRef getName(CheckerPartIdx Idx = DefaultPart) const {
+    assert(Idx < RegisteredNames.size() && "Checker part index is too large!");
+    std::optional<CheckerNameRef> Name = RegisteredNames[Idx];
+    assert(Name && "Requested checker part is not registered!");
+    return *Name;
+  }
 
-  /// See CheckerManager::runCheckersForPrintState.
+  bool isPartEnabled(CheckerPartIdx Idx) const {
+    return Idx < RegisteredNames.size() && RegisteredNames[Idx].has_value();
+  }
+
+  void registerCheckerPart(CheckerPartIdx Idx, CheckerNameRef Name) {
+    // Paranoia: notice if e.g. UINT_MAX is passed as a checker part index.
+    assert(Idx < 256 && "Checker part identifiers should be small integers.");
+
+    if (Idx >= RegisteredNames.size())
+      RegisteredNames.resize(Idx + 1, std::nullopt);
+
+    assert(!RegisteredNames[Idx] && "Repeated registration of checker a part!");
+    RegisteredNames[Idx] = Name;
+  }
+
+  StringRef getTagDescription() const override {
+    // This method inherited from `ProgramPointTag` has two unrelated roles:
+    // (1) The analyzer option handling logic uses this method to query the
+    //     name of a checker.
+    // (2) When the `ExplodedGraph` is dumped in DOT format for debugging,
+    //     this is called to attach a description to the nodes. (This happens
+    //     for all subclasses of `ProgramPointTag`, not just checkers.)
+    // FIXME: Application (1) should be aware of multiple parts within the same
+    // checker class instance, so it should directly use `getName` instead of
+    // this inherited interface which cannot support a `CheckerPartIdx`.
+    // FIXME: Ideally application (2) should return a string that describes the
+    // whole checker class, not just one of it parts. However, this is only for
+    // debugging, so returning the name of one part is probably good enough.
+    for (const auto &OptName : RegisteredNames)
+      if (OptName)
+        return *OptName;
+
+    return "Unregistered checker";
+  }
+
+  /// Debug state dump callback, see CheckerManager::runCheckersForPrintState.
+  /// Default implementation does nothing.
   virtual void printState(raw_ostream &Out, ProgramStateRef State,
-                          const char *NL, const char *Sep) const { }
+                          const char *NL, const char *Sep) const;
 };
 
 /// Dump checker name to stream.
