@@ -4004,22 +4004,25 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
         }
       }
     } else if (Op.getResNo() == 0) {
-      KnownBits Known0(!LD->getMemoryVT().isScalableVT()
-                           ? LD->getMemoryVT().getFixedSizeInBits()
-                           : BitWidth);
+      unsigned MemorySize = !LD->getMemoryVT().isScalableVT()
+                                ? LD->getMemoryVT().getFixedSizeInBits()
+                                : BitWidth;
+      KnownBits Known0(MemorySize);
       EVT VT = Op.getValueType();
       // Fill in any known bits from range information. There are 3 types being
       // used. The results VT (same vector elt size as BitWidth), the loaded
       // MemoryVT (which may or may not be vector) and the range VTs original
-      // type. The range matadata needs the full range (i.e
+      // type. The range metadata needs the full range (i.e
       // MemoryVT().getSizeInBits()), which is truncated to the correct elt size
       // if it is know. These are then extended to the original VT sizes below.
       if (const MDNode *MD = LD->getRanges()) {
-        computeKnownBitsFromRangeMetadata(*MD, Known0);
+        ConstantInt *Lower = mdconst::extract<ConstantInt>(MD->getOperand(0));
+
+        KnownBits KnownMetadata(Lower->getBitWidth());
+        computeKnownBitsFromRangeMetadata(*MD, KnownMetadata);
+        Known0 = KnownMetadata.anyextOrTrunc(MemorySize);
         if (VT.isVector()) {
-          // Handle truncation to the first demanded element.
-          // TODO: Figure out which demanded elements are covered
-          if (DemandedElts != 1 || !getDataLayout().isLittleEndian())
+          if (!getDataLayout().isLittleEndian())
             break;
           Known0 = Known0.trunc(BitWidth);
         }
