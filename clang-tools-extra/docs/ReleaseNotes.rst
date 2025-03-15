@@ -97,6 +97,9 @@ Improvements to clang-tidy
   Note: this may lead to false negatives; downstream users may need to adjust
   their checks to preserve existing behavior.
 
+- New :program:`clang-tidy` config property `ClangQueryChecks` that allows adding
+  custom checks based on a :program:`clang-query` syntax
+
 New checks
 ^^^^^^^^^^
 
