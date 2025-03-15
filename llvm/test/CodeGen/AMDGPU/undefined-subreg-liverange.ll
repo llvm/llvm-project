@@ -8,6 +8,7 @@
 define amdgpu_kernel void @func() #0 {
 ; CHECK-LABEL: func:
 ; CHECK:       ; %bb.0: ; %B0
+; CHECK-NEXT:    s_cmp_lg_u32 s8, 0
 ; CHECK-NEXT:    s_mov_b32 s0, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB0_2
 ; CHECK-NEXT:  ; %bb.1: ; %B30.1
@@ -18,17 +19,19 @@ define amdgpu_kernel void @func() #0 {
 ; CHECK-NEXT:    ds_write_b32 v0, v0
 ; CHECK-NEXT:    s_endpgm
 B0:
-  br i1 undef, label %B1, label %B2
+  %id = call i32 @llvm.amdgcn.workgroup.id.x()
+  %cmp = icmp eq i32 %id, 0
+  br i1 %cmp, label %B1, label %B2
 
 B1:
   br label %B2
 
 B2:
   %v0 = phi <4 x float> [ zeroinitializer, %B1 ], [ <float 0.0, float 0.0, float 0.0, float poison>, %B0 ]
-  br i1 undef, label %B30.1, label %B30.2
+  br i1 %cmp, label %B30.1, label %B30.2
 
 B30.1:
-  %sub = fsub <4 x float> %v0, undef
+  %sub = fsub <4 x float> %v0, splat (float 0x7FF8000000000000)
   br label %B30.2
 
 B30.2:
@@ -73,7 +76,7 @@ bb:
   %tmp3 = bitcast i32 %tmp1 to float
   %tmp4 = call <4 x float> @llvm.amdgcn.image.sample.2d.v4f32.f32(i32 15, float %tmp3, float %tmp3, <8 x i32> poison, <4 x i32> poison, i1 0, i32 0, i32 0)
   %tmp5 = extractelement <4 x float> %tmp4, i32 0
-  %tmp6 = fmul float %tmp5, undef
+  %tmp6 = fmul float %tmp5, 0x7FF8000000000000
   %tmp7 = fadd float %tmp6, %tmp6
   %tmp8 = insertelement <4 x i32> %tmp2, i32 %tmp, i32 1
   store <4 x i32> %tmp8, ptr addrspace(1) poison, align 16

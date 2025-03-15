@@ -1511,7 +1511,7 @@ define amdgpu_kernel void @test_preserve_condition_undef_flag(float %arg, i32 %a
 ; GFX1064-NEXT:    s_endpgm
 bb0:
   %tmp = icmp sgt i32 %arg1, 4
-  %undef = call i1 @llvm.amdgcn.class.f32(float poison, i32 undef)
+  %undef = call i1 @llvm.amdgcn.class.f32(float poison, i32 0)
   %tmp4 = select i1 %undef, float %arg, float 1.000000e+00
   %tmp5 = fcmp ogt float %arg2, 0.000000e+00
   %tmp6 = fcmp olt float %arg2, 1.000000e+00
@@ -2329,7 +2329,7 @@ for.body.lr.ph:                                   ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %for.body.lr.ph
-  br i1 undef, label %for.end, label %for.body
+  br i1 poison, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body, %entry
   ret void
