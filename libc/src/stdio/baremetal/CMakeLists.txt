@@ -56,6 +56,19 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  scanf
+  SRCS
+    scanf.cpp
+  HDRS
+    ../scanf.h
+  DEPENDS
+    libc.src.stdio.scanf_core.scanf_main
+    libc.src.stdio.scanf_core.reader
+    libc.src.__support.arg_list
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
   vprintf
   SRCS
     vprintf.cpp
@@ -64,6 +77,19 @@ add_entrypoint_object(
   DEPENDS
     libc.src.stdio.printf_core.printf_main
     libc.src.stdio.printf_core.writer
+    libc.src.__support.arg_list
+    libc.src.__support.OSUtil.osutil
+)
+
+add_entrypoint_object(
+  vscanf
+  SRCS
+    vscanf.cpp
+  HDRS
+    ../vscanf.h
+  DEPENDS
+    libc.src.stdio.scanf_core.scanf_main
+    libc.src.stdio.scanf_core.reader
     libc.src.__support.arg_list
     libc.src.__support.OSUtil.osutil
 )
