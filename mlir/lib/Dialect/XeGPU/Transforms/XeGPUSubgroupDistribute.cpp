@@ -51,7 +51,6 @@ namespace {
 struct Layout {
   SmallVector<int64_t, 3> layout;
   Layout() = default;
-  Layout(const Layout &other) = default;
   Layout(std::initializer_list<int64_t> list) : layout(list) {}
   void print(llvm::raw_ostream &os) const;
   size_t size() const { return layout.size(); }
@@ -100,7 +99,6 @@ private:
 
 public:
   SGMap() = default;
-  SGMap(const SGMap &other) = default;
   SGMap(const WiLayout &layout, const WiData &data)
       : wiLayout(layout), wiData(data) {}
 
