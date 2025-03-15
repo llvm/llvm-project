@@ -395,8 +395,8 @@ for.end:
 ; CHECK-NOT: LV: Found uniform instruction: %p = phi ptr [ %tmp3, %for.body ], [ %a, %entry ]
 ; CHECK:     LV: Found uniform instruction: %q = phi ptr [ %tmp4, %for.body ], [ %b, %entry ]
 ; CHECK:     vector.body
-; CHECK:       %pointer.phi = phi ptr [ %a, %vector.ph ], [ %ptr.ind, %vector.body ]
 ; CHECK:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK:       %pointer.phi = phi ptr [ %a, %vector.ph ], [ %ptr.ind, %vector.body ]
 ; CHECK:       %[[PTRVEC:.+]] = getelementptr i8, ptr %pointer.phi, <4 x i64> <i64 0, i64 4, i64 8, i64 12>
 ; CHECK:       [[SHL:%.+]] = shl i64 %index, 3
 ; CHECK:       %next.gep = getelementptr i8, ptr %b, i64 [[SHL]]

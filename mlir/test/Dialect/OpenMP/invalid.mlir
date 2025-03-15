@@ -2065,6 +2065,30 @@ func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
 // -----
 
 func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
+  %testi64 = "test.i64"() : () -> (i64)
+  // expected-error @below {{invalid grainsize modifier : 'strict1'}}
+  omp.taskloop grainsize(strict1, %testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      omp.yield
+    }
+  }
+  return
+}
+// -----
+
+func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
+  %testi64 = "test.i64"() : () -> (i64)
+  // expected-error @below {{invalid num_tasks modifier : 'default'}}
+  omp.taskloop num_tasks(default, %testi64: i64) {
+    omp.loop_nest (%i, %j) : i32 = (%lb, %ub) to (%ub, %lb) step (%step, %step) {
+      omp.yield
+    }
+  }
+  return
+}
+// -----
+
+func.func @taskloop(%lb: i32, %ub: i32, %step: i32) {
   // expected-error @below {{op nested in loop wrapper is not another loop wrapper or `omp.loop_nest`}}
   omp.taskloop {
     %0 = arith.constant 0 : i32
@@ -2841,4 +2865,21 @@ func.func @missing_workshare(%idx : index) {
     }
   }
   return
+}
+
+// -----
+  // expected-error @below {{op expected terminator to be a DeclareMapperInfoOp}}
+  omp.declare_mapper @missing_declareMapperInfo : !llvm.struct<"mytype", (array<1024 x i32>)> {
+  ^bb0(%arg0: !llvm.ptr):
+    omp.terminator
+  }
+
+// -----
+llvm.func @invalid_mapper(%0 : !llvm.ptr) {
+  %1 = omp.map.info var_ptr(%0 : !llvm.ptr, !llvm.struct<"my_type", (i32)>) mapper(@my_mapper) map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
+  // expected-error @below {{invalid mapper id}}
+  omp.target_data map_entries(%1 : !llvm.ptr) {
+    omp.terminator
+  }
+  llvm.return
 }

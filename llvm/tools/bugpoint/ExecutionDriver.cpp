@@ -82,11 +82,11 @@ cl::opt<std::string>
     InputFile("input", cl::init("/dev/null"),
               cl::desc("Filename to pipe in as stdin (default: /dev/null)"));
 
-cl::list<std::string>
+static cl::list<std::string>
     AdditionalSOs("additional-so", cl::desc("Additional shared objects to load "
                                             "into executing programs"));
 
-cl::list<std::string> AdditionalLinkerArgs(
+static cl::list<std::string> AdditionalLinkerArgs(
     "Xlinker", cl::desc("Additional arguments to pass to the linker"));
 
 cl::opt<std::string> CustomCompileCommand(

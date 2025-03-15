@@ -30,6 +30,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -1949,6 +1950,7 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
 
     llvm::Value *Zero = llvm::Constant::getNullValue(SrcTy);
     if (SrcEltTy->isFloatingPointTy()) {
+      CodeGenFunction::CGFPOptionsRAII FPOptions(CGF, E);
       return Builder.CreateFCmpUNE(Src, Zero, "tobool");
     } else {
       return Builder.CreateICmpNE(Src, Zero, "tobool");
@@ -1975,6 +1977,7 @@ Value *ScalarExprEmitter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
   } else {
     assert(SrcEltTy->isFloatingPointTy() && DstEltTy->isFloatingPointTy() &&
            "Unknown real conversion");
+    CodeGenFunction::CGFPOptionsRAII FPOptions(CGF, E);
     if (DstEltTy->getTypeID() < SrcEltTy->getTypeID())
       Res = Builder.CreateFPTrunc(Src, DstTy, "conv");
     else
@@ -2350,6 +2353,21 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     Value *Src = Visit(const_cast<Expr*>(E));
     llvm::Type *SrcTy = Src->getType();
     llvm::Type *DstTy = ConvertType(DestTy);
+
+    // FIXME: this is a gross but seemingly necessary workaround for an issue
+    // manifesting when a target uses a non-default AS for indirect sret args,
+    // but the source HLL is generic, wherein a valid C-cast or reinterpret_cast
+    // on the address of a local struct that gets returned by value yields an
+    // invalid bitcast from the a pointer to the IndirectAS to a pointer to the
+    // DefaultAS. We can only do this subversive thing because sret args are
+    // manufactured and them residing in the IndirectAS is a target specific
+    // detail, and doing an AS cast here still retains the semantics the user
+    // expects. It is desirable to remove this iff a better solution is found.
+    if (auto A = dyn_cast<llvm::Argument>(Src); A && A->hasStructRetAttr())
+      return CGF.CGM.getTargetCodeGenInfo().performAddrSpaceCast(
+          CGF, Src, E->getType().getAddressSpace(), DestTy.getAddressSpace(),
+          DstTy);
+
     assert(
         (!SrcTy->isPtrOrPtrVectorTy() || !DstTy->isPtrOrPtrVectorTy() ||
          SrcTy->getPointerAddressSpace() == DstTy->getPointerAddressSpace()) &&
@@ -2643,6 +2661,11 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
   }
+    // CK_HLSLAggregateSplatCast only handles splatting to vectors from a vec1
+    // Casts were inserted in Sema to Cast the Src Expr to a Scalar and
+    // To perform any necessary Scalar Cast, so this Cast can be handled
+    // by the regular Vector Splat cast code.
+  case CK_HLSLAggregateSplatCast:
   case CK_VectorSplat: {
     llvm::Type *DstTy = ConvertType(DestTy);
     Value *Elt = Visit(const_cast<Expr *>(E));
@@ -2800,7 +2823,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     SourceLocation Loc = CE->getExprLoc();
     QualType SrcTy = E->getType();
 
-    assert(RV.isAggregate() && "Not a valid HLSL Flat Cast.");
+    assert(RV.isAggregate() && "Not a valid HLSL Elementwise Cast.");
     // RHS is an aggregate
     Address SrcVal = RV.getAggregateAddress();
     return EmitHLSLElementwiseCast(CGF, SrcVal, SrcTy, DestTy, Loc);

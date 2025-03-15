@@ -51,6 +51,7 @@
 // CHECK-A: .memtag global_int
 // CHECK-A: .globl global_int
 // CHECK-A: .p2align 4, 0x0
+// CHECK-A: .zero 16
 // CHECK-A: .size global_int, 16
 int global_int;
 // CHECK-B: .memtag _ZL9local_int
@@ -66,6 +67,7 @@ static char local_buffer[16];
 // CHECK-D: .p2align 4, 0x0
 // CHECK-D: _ZL22local_buffer_local_end:
 // CHECK-D: .xword _ZL12local_buffer+16
+// CHECK-D: .zero 8
 // CHECK-D: .size _ZL22local_buffer_local_end, 16
 static char* local_buffer_local_end = &local_buffer[16];
 // CHECK-E: .memtag local_buffer_global_end
@@ -73,18 +75,21 @@ static char* local_buffer_local_end = &local_buffer[16];
 // CHECK-E  .p2align 4, 0x0
 // CHECK-E: local_buffer_global_end:
 // CHECK-E: .xword _ZL12local_buffer+16
+// CHECK-E: .zero 8
 // CHECK-E: .size local_buffer_global_end, 16
 char* local_buffer_global_end = &local_buffer[16];
 
 // CHECK-F: .memtag global_buffer
 // CHECK-F: .globl global_buffer
 // CHECK-F: .p2align 4, 0x0
+// CHECK-F: .zero 16
 // CHECK-F: .size global_buffer, 16
 char global_buffer[16];
 // CHECK-G: .memtag _ZL23global_buffer_local_end
 // CHECK-G: .p2align 4, 0x0
 // CHECK-G: _ZL23global_buffer_local_end:
 // CHECK-G: .xword global_buffer+16
+// CHECK-G: .zero 8
 // CHECK-G: .size _ZL23global_buffer_local_end, 16
 static char* global_buffer_local_end = &global_buffer[16];
 // CHECK-H: .memtag global_buffer_global_end
@@ -104,6 +109,7 @@ class MyClass {
 // CHECK-I: .memtag _ZN7MyClass12my_class_intE
 // CHECK-I: .globl _ZN7MyClass12my_class_intE
 // CHECK-I: .p2align 4, 0x0
+// CHECK-I: .zero 16
 // CHECK-I: .size _ZN7MyClass12my_class_intE, 16
 int MyClass::my_class_int;
 // CHECK-NOT: .memtag _ZN7MyClass18my_class_const_intE
@@ -112,10 +118,12 @@ const int MyClass::my_class_const_int = 1;
 // CHECK-J: .memtag global_my_class
 // CHECK-J: .globl global_my_class
 // CHECK-J: .p2align 4, 0x0
+// CHECK-J: .zero 8
 // CHECK-J: .size global_my_class, 16
 MyClass global_my_class;
 // CHECK-K: .memtag _ZL14local_my_class
 // CHECK-K: .p2align 4, 0x0
+// CHECK-K: .zero 8
 // CHECK-K: .size _ZL14local_my_class, 16
 static MyClass local_my_class;
 
@@ -123,12 +131,14 @@ static MyClass local_my_class;
 static const char local_const_string[] = "this is a local string";
 // CHECK-L: .memtag _ZL12local_string
 // CHECK-L: .p2align 4, 0x0
+// CHECK-L: .zero 9
 // CHECK-L: .size _ZL12local_string, 32
 static char local_string[] = "this is a local string";
 
 // CHECK-M: .memtag global_atomic_int
 // CHECK-M: .globl global_atomic_int
 // CHECK-M: .p2align 4, 0x0
+// CHECK-M: .zero 16
 // CHECK-M: .size global_atomic_int, 16
 _Atomic(int) global_atomic_int;
 // CHECK-N: .memtag _ZL16local_atomic_int
@@ -144,6 +154,7 @@ union MyUnion {
 // CHECK-O: .memtag global_union
 // CHECK-O: .globl global_union
 // CHECK-O: .p2align 4, 0x0
+// CHECK-O: .zero 16
 // CHECK-O: .size global_union, 16
 MyUnion global_union;
 // CHECK-P: .memtag _ZL11local_union

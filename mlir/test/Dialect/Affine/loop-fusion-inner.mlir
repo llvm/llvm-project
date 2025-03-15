@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline='builtin.module(func.func(affine-loop-fusion{mode=producer fusion-maximal}))' %s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline='builtin.module(func.func(affine-loop-fusion{mode=producer maximal}))' %s | FileCheck %s
 
 // Test fusion of affine nests inside other region-holding ops (scf.for in the
 // test case below).

@@ -98,6 +98,10 @@ void AssignmentContext::Analyze(const parser::AssignmentStmt &stmt) {
       if (!IsCUDADeviceContext(&progUnit) && deviceConstructDepth_ == 0) {
         if (Fortran::evaluate::HasCUDADeviceAttrs(lhs) &&
             Fortran::evaluate::HasCUDAImplicitTransfer(rhs)) {
+          if (GetNbOfCUDAManagedOrUnifiedSymbols(lhs) == 1 &&
+              GetNbOfCUDAManagedOrUnifiedSymbols(rhs) == 1 &&
+              GetNbOfCUDADeviceSymbols(rhs) == 1)
+            return; // This is a special case handled on the host.
           context_.Say(lhsLoc, "Unsupported CUDA data transfer"_err_en_US);
         }
       }
@@ -130,10 +134,16 @@ static std::optional<std::string> GetPointerComponentDesignatorName(
 // Checks C1594(5,6); false if check fails
 bool CheckCopyabilityInPureScope(parser::ContextualMessages &messages,
     const SomeExpr &expr, const Scope &scope) {
-  if (const Symbol * base{GetFirstSymbol(expr)}) {
-    if (const char *why{
-            WhyBaseObjectIsSuspicious(base->GetUltimate(), scope)}) {
-      if (auto pointer{GetPointerComponentDesignatorName(expr)}) {
+  if (auto pointer{GetPointerComponentDesignatorName(expr)}) {
+    if (const Symbol * base{GetFirstSymbol(expr)}) {
+      const char *why{WhyBaseObjectIsSuspicious(base->GetUltimate(), scope)};
+      if (!why) {
+        if (auto coarray{evaluate::ExtractCoarrayRef(expr)}) {
+          base = &coarray->GetLastSymbol();
+          why = "coindexed";
+        }
+      }
+      if (why) {
         evaluate::SayWithDeclaration(messages, *base,
             "A pure subprogram may not copy the value of '%s' because it is %s"
             " and has the POINTER potential subobject component '%s'"_err_en_US,

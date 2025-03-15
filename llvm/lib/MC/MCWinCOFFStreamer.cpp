@@ -82,10 +82,6 @@ public:
   MCFragment *findAssociatedFragment() const override {
     return SectionSymbol.getFragment();
   }
-
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override {
-    llvm_unreachable("Not supported for ELF");
-  }
 };
 
 /// MCExpr that represents the offset to a symbol from the beginning of its
@@ -122,10 +118,6 @@ public:
 
   MCFragment *findAssociatedFragment() const override {
     return Symbol.getFragment();
-  }
-
-  void fixELFSymbolsInTLSFixups(MCAssembler &) const override {
-    llvm_unreachable("Not supported for ELF");
   }
 };
 
@@ -206,10 +198,6 @@ void MCWinCOFFStreamer::emitAssemblerFlag(MCAssemblerFlag Flag) {
   case MCAF_SubsectionsViaSymbols:
     llvm_unreachable("COFF doesn't support .subsections_via_symbols");
   }
-}
-
-void MCWinCOFFStreamer::emitThumbFunc(MCSymbol *Func) {
-  llvm_unreachable("not implemented");
 }
 
 bool MCWinCOFFStreamer::emitSymbolAttribute(MCSymbol *S,

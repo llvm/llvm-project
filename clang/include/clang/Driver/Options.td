@@ -876,7 +876,7 @@ def Wa_COMMA : CommaJoined<["-"], "Wa,">,
   MetaVarName<"<arg>">;
 def warning_suppression_mappings_EQ : Joined<["--"],
   "warning-suppression-mappings=">, Group<Diag_Group>,
-  HelpText<"File containing diagnostic suppresion mappings. See user manual "
+  HelpText<"File containing diagnostic suppression mappings. See user manual "
   "for file format.">, Visibility<[ClangOption, CC1Option]>;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option, FlangOption]>;
@@ -932,9 +932,20 @@ def W_Joined : Joined<["-"], "W">, Group<W_Group>,
 def Xanalyzer : Separate<["-"], "Xanalyzer">,
   HelpText<"Pass <arg> to the static analyzer">, MetaVarName<"<arg>">,
   Group<StaticAnalyzer_Group>;
-def Xarch__ : JoinedAndSeparate<["-"], "Xarch_">, Flags<[NoXarchOption]>,
-  HelpText<"Pass <arg> to the compiliation if the target matches <arch>">,
-  MetaVarName<"<arch> <arg>">;
+def Xarch__
+    : JoinedAndSeparate<["-"], "Xarch_">,
+      Flags<[NoXarchOption]>,
+      HelpText<"Pass <arg> to the compilation if the target matches <arch>">,
+      DocBrief<
+          [{Specifies that the argument should only be used if the compilation
+  target matches the specified architecture. This can be used with the target
+  CPU, triple architecture, or offloading host and device. It is most useful
+  for separating behavior undesirable on one of the targets when combining many
+  compilation jobs, as is common with offloading. For example, -Xarch_x86_64,
+  -Xarch_gfx90a, and -Xarch_device are all valid selectors. -Xarch_device will
+  forward the argument to the offloading device while -Xarch_host will target
+  the host system, which can be used to suppress incompatible GPU arguments.}]>,
+      MetaVarName<"<arch> <arg>">;
 def Xarch_host : Separate<["-"], "Xarch_host">, Flags<[NoXarchOption]>,
   HelpText<"Pass <arg> to the CUDA/HIP host compilation">, MetaVarName<"<arg>">;
 def Xarch_device : Separate<["-"], "Xarch_device">, Flags<[NoXarchOption]>,
@@ -1667,7 +1678,7 @@ def fsample_profile_use_profi : Flag<["-"], "fsample-profile-use-profi">,
     HelpText<"Use profi to infer block and edge counts">,
     DocBrief<[{Infer block and edge counts. If the profiles have errors or missing
                blocks caused by sampling, profile inference (profi) can convert
-               basic block counts to branch probabilites to fix them by extended
+               basic block counts to branch probabilities to fix them by extended
                and re-engineered classic MCMF (min-cost max-flow) approach.}]>;
 def fno_profile_sample_accurate : Flag<["-"], "fno-profile-sample-accurate">, Group<f_Group>;
 def fno_auto_profile : Flag<["-"], "fno-auto-profile">, Group<f_Group>,
@@ -1795,15 +1806,18 @@ def fprofile_update_EQ : Joined<["-"], "fprofile-update=">,
     Values<"atomic,prefer-atomic,single">,
     MetaVarName<"<method>">, HelpText<"Set update method of profile counters">,
     MarshallingInfoFlag<CodeGenOpts<"AtomicProfileUpdate">>;
-defm pseudo_probe_for_profiling : BoolFOption<"pseudo-probe-for-profiling",
-  CodeGenOpts<"PseudoProbeForProfiling">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Emit">,
-  NegFlag<SetFalse, [], [ClangOption], "Do not emit">,
-  BothFlags<[], [ClangOption, CC1Option],
-          " pseudo probes for sample profiling">>;
-def forder_file_instrumentation : Flag<["-"], "forder-file-instrumentation">,
-    Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
-    HelpText<"Generate instrumented code to collect order file into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var). Deprecated, please use -ftemporal-profile">;
+def fprofile_continuous : Flag<["-"], "fprofile-continuous">,
+    Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+    HelpText<"Enable continuous instrumentation profiling mode">,
+    MarshallingInfoFlag<CodeGenOpts<"ContinuousProfileSync">>;
+
+defm pseudo_probe_for_profiling
+    : BoolFOption<"pseudo-probe-for-profiling",
+                  CodeGenOpts<"PseudoProbeForProfiling">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption], "Emit">,
+                  NegFlag<SetFalse, [], [ClangOption], "Do not emit">,
+                  BothFlags<[], [ClangOption, CC1Option],
+                            " pseudo probes for sample profiling">>;
 def fprofile_list_EQ : Joined<["-"], "fprofile-list=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
     HelpText<"Filename defining the list of functions/files to instrument. "
@@ -2261,6 +2275,24 @@ def no_cxx_static_destructors : Flag<["-"], "fno-c++-static-destructors">, Group
 def fsymbol_partition_EQ : Joined<["-"], "fsymbol-partition=">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option]>,
   MarshallingInfoString<CodeGenOpts<"SymbolPartition">>;
+
+defm atomic_remote_memory : BoolFOption<"atomic-remote-memory",
+  LangOpts<"AtomicRemoteMemory">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
+  BothFlags<[], [ClangOption], " atomic operations on remote memory">>;
+
+defm atomic_fine_grained_memory : BoolFOption<"atomic-fine-grained-memory",
+  LangOpts<"AtomicFineGrainedMemory">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "May have">,
+  NegFlag<SetFalse, [], [ClangOption], "Assume no">,
+  BothFlags<[], [ClangOption], " atomic operations on fine-grained memory">>;
+
+defm atomic_ignore_denormal_mode : BoolFOption<"atomic-ignore-denormal-mode",
+  LangOpts<"AtomicIgnoreDenormalMode">, DefaultFalse,
+  PosFlag<SetTrue, [], [ClangOption, CC1Option], "Allow">,
+  NegFlag<SetFalse, [], [ClangOption], "Disallow">,
+  BothFlags<[], [ClangOption], " atomic operations to ignore denormal mode">>;
 
 defm memory_profile : OptInCC1FFlag<"memory-profile", "Enable", "Disable", " heap memory profiling">;
 def fmemory_profile_EQ : Joined<["-"], "fmemory-profile=">,
@@ -3142,7 +3174,7 @@ def modules_reduced_bmi : Flag<["-"], "fmodules-reduced-bmi">,
   HelpText<"Generate the reduced BMI">,
   MarshallingInfoFlag<FrontendOpts<"GenReducedBMI">>;
 
-def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">, 
+def experimental_modules_reduced_bmi : Flag<["-"], "fexperimental-modules-reduced-bmi">,
   Group<f_Group>, Visibility<[ClangOption, CC1Option]>, Alias<modules_reduced_bmi>;
 
 def fmodules_embed_all_files : Joined<["-"], "fmodules-embed-all-files">,
@@ -3392,7 +3424,7 @@ def fno_objc_weak : Flag<["-"], "fno-objc-weak">, Group<f_Group>,
 def fno_omit_frame_pointer : Flag<["-"], "fno-omit-frame-pointer">, Group<f_Group>,
   Visibility<[ClangOption, FlangOption]>;
 defm operator_names : BoolFOption<"operator-names",
-  LangOpts<"CXXOperatorNames">, Default<cplusplus.KeyPath>,
+  LangOpts<"CXXOperatorNames">, Default<!strconcat(cplusplus.KeyPath, " && !",hlsl.KeyPath)>,
   NegFlag<SetFalse, [], [ClangOption, CC1Option],
           "Do not treat C++ operator name keywords as synonyms for operators">,
   PosFlag<SetTrue>>;
@@ -3416,8 +3448,6 @@ def fno_strict_aliasing : Flag<["-"], "fno-strict-aliasing">, Group<f_Group>,
 def fstruct_path_tbaa : Flag<["-"], "fstruct-path-tbaa">, Group<f_Group>;
 def fno_struct_path_tbaa : Flag<["-"], "fno-struct-path-tbaa">, Group<f_Group>;
 def fno_strict_enums : Flag<["-"], "fno-strict-enums">, Group<f_Group>;
-def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>,
-  Visibility<[ClangOption, FlangOption]>;
 defm init_global_zero : BoolOptionWithoutMarshalling<"f", "init-global-zero",
   PosFlag<SetTrue, [], [FlangOption, FC1Option],
           "Zero initialize globals without default initialization (default)">,
@@ -3435,7 +3465,7 @@ defm use_cxa_atexit : BoolFOption<"use-cxa-atexit",
   PosFlag<SetTrue>>;
 def fno_unwind_tables : Flag<["-"], "fno-unwind-tables">, Group<f_Group>;
 def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
 def fno_working_directory : Flag<["-"], "fno-working-directory">, Group<f_Group>;
 def fobjc_arc : Flag<["-"], "fobjc-arc">, Group<f_Group>,
@@ -3929,7 +3959,9 @@ defm strict_vtable_pointers : BoolFOption<"strict-vtable-pointers",
             " overwriting polymorphic C++ objects">,
   NegFlag<SetFalse>>;
 def fstrict_overflow : Flag<["-"], "fstrict-overflow">, Group<f_Group>,
-  Visibility<[ClangOption, FlangOption]>;
+  Visibility<[ClangOption, CLOption, FlangOption]>;
+def fno_strict_overflow : Flag<["-"], "fno-strict-overflow">, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, FlangOption]>;
 def fpointer_tbaa : Flag<["-"], "fpointer-tbaa">, Group<f_Group>;
 def fdriver_only : Flag<["-"], "fdriver-only">, Flags<[NoXarchOption]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
@@ -3981,11 +4013,15 @@ defm assumptions : BoolFOption<"assumptions",
           "Disable codegen and compile-time checks for C++23's [[assume]] attribute">,
   PosFlag<SetTrue>>;
 
+
+let Visibility = [ClangOption, FlangOption] in {
 def fvectorize : Flag<["-"], "fvectorize">, Group<f_Group>,
   HelpText<"Enable the loop vectorization passes">;
 def fno_vectorize : Flag<["-"], "fno-vectorize">, Group<f_Group>;
 def : Flag<["-"], "ftree-vectorize">, Alias<fvectorize>;
 def : Flag<["-"], "fno-tree-vectorize">, Alias<fno_vectorize>;
+}
+
 def fslp_vectorize : Flag<["-"], "fslp-vectorize">, Group<f_Group>,
   HelpText<"Enable the superword-level parallelism vectorization passes">;
 def fno_slp_vectorize : Flag<["-"], "fno-slp-vectorize">, Group<f_Group>;
@@ -4104,7 +4140,8 @@ defm use_init_array : BoolFOption<"use-init-array",
   PosFlag<SetTrue>>;
 def fno_var_tracking : Flag<["-"], "fno-var-tracking">, Group<clang_ignored_f_Group>;
 def fverbose_asm : Flag<["-"], "fverbose-asm">, Group<f_Group>,
-  HelpText<"Generate verbose assembly output">;
+  HelpText<"Generate verbose assembly output">,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def dA : Flag<["-"], "dA">, Alias<fverbose_asm>;
 defm visibility_from_dllstorageclass : BoolFOption<"visibility-from-dllstorageclass",
   LangOpts<"VisibilityFromDLLStorageClass">, DefaultFalse,
@@ -4687,11 +4724,11 @@ def mno_long_calls : Flag<["-"], "mno-long-calls">, Group<m_Group>,
   HelpText<"Restore the default behaviour of not generating long calls">;
 } // let Flags = [TargetSpecific]
 def mexecute_only : Flag<["-"], "mexecute-only">, Group<m_arm_Features_Group>,
-  HelpText<"Disallow generation of data access to code sections (ARM only)">;
+  HelpText<"Disallow generation of data access to code sections (AArch64/ARM only)">;
 def mno_execute_only : Flag<["-"], "mno-execute-only">, Group<m_arm_Features_Group>,
-  HelpText<"Allow generation of data access to code sections (ARM only)">;
+  HelpText<"Allow generation of data access to code sections (AArch64/ARM only)">;
 let Flags = [TargetSpecific] in {
-def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,tpidrurw,tpidruro,tpidrprw,el0,el1,el2,el3,tpidr_el0,tpidr_el1,tpidr_el2,tpidr_el3,tpidrro_el0">,
+def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,tpidrurw,tpidruro,tpidrprw,el0,el1,el2,el3,tpidr_el0,tpidr_el1,tpidr_el2,tpidr_el3,tpidrro_el0,auto">,
   HelpText<"Thread pointer access method. "
            "For AArch32: 'soft' uses a function call, or 'tpidrurw', 'tpidruro' or 'tpidrprw' use the three CP15 registers. 'cp15' is an alias for 'tpidruro'. "
            "For AArch64: 'tpidr_el0', 'tpidr_el1', 'tpidr_el2', 'tpidr_el3' or 'tpidrro_el0' use the five system registers. 'elN' is an alias for 'tpidr_elN'.">;
@@ -4708,6 +4745,7 @@ def mwatchsimulator_version_min_EQ : Joined<["-"], "mwatchsimulator-version-min=
 def march_EQ : Joined<["-"], "march=">, Group<m_Group>,
   Flags<[TargetSpecific]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"For a list of available architectures for the target use '-mcpu=help'">;
+def mzos_target_EQ : Joined<["-"], "mzos-target=">, Group<m_Group>, Visibility<[ClangOption, CC1Option]>, HelpText<"Set the z/OS release of the runtime environment">;
 def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>, Visibility<[ClangOption, FlangOption]>;
 def inline_asm_EQ : Joined<["-"], "inline-asm=">, Group<m_Group>,
   Visibility<[ClangOption, CC1Option]>,
@@ -5133,14 +5171,10 @@ defm amdgpu_precise_memory_op
     : SimpleMFlag<"amdgpu-precise-memory-op", "Enable", "Disable",
                   " precise memory mode (AMDGPU only)">;
 
-defm unsafe_fp_atomics : BoolMOption<"unsafe-fp-atomics",
-  TargetOpts<"AllowAMDGPUUnsafeFPAtomics">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption, CC1Option],
-          "Enable generation of unsafe floating point "
-          "atomic instructions. May generate more efficient code, but may not "
-          "respect rounding and denormal modes, and may give incorrect results "
-          "for certain memory destinations. (AMDGPU only)">,
-  NegFlag<SetFalse>>;
+def munsafe_fp_atomics : Flag<["-"], "munsafe-fp-atomics">,
+  Visibility<[ClangOption, CC1Option]>, Alias<fatomic_ignore_denormal_mode>;
+def mno_unsafe_fp_atomics : Flag<["-"], "mno-unsafe-fp-atomics">,
+  Visibility<[ClangOption]>, Alias<fno_atomic_ignore_denormal_mode>;
 
 def faltivec : Flag<["-"], "faltivec">, Group<f_Group>;
 def fno_altivec : Flag<["-"], "fno-altivec">, Group<f_Group>;
@@ -5613,10 +5647,18 @@ def nogpuinc : Flag<["-"], "nogpuinc">, Group<IncludePath_Group>,
 def nohipwrapperinc : Flag<["-"], "nohipwrapperinc">, Group<IncludePath_Group>,
   HelpText<"Do not include the default HIP wrapper headers and include paths">;
 def : Flag<["-"], "nocudainc">, Alias<nogpuinc>;
-def nogpulib : Flag<["-"], "nogpulib">, MarshallingInfoFlag<LangOpts<"NoGPULib">>,
-  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
-  HelpText<"Do not link device library for CUDA/HIP device compilation">;
-def : Flag<["-"], "nocudalib">, Alias<nogpulib>;
+def no_offloadlib
+    : Flag<["--"], "no-offloadlib">,
+      MarshallingInfoFlag<LangOpts<"NoGPULib">>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+      HelpText<"Do not link device library for CUDA/HIP device compilation">;
+def offloadlib : Flag<["--"], "offloadlib">,
+                 Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+                 HelpText<"Link device libraries for GPU device compilation">;
+def : Flag<["-"], "nogpulib">,
+      Alias<no_offloadlib>,
+      Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
+def : Flag<["-"], "nocudalib">, Alias<no_offloadlib>;
 def gpulibc : Flag<["-"], "gpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   HelpText<"Link the LLVM C Library for GPUs">;
 def nogpulibc : Flag<["-"], "nogpulibc">, Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
@@ -6734,8 +6776,16 @@ defm backtrace : BooleanFFlag<"backtrace">, Group<gfortran_Group>;
 defm bounds_check : BooleanFFlag<"bounds-check">, Group<gfortran_Group>;
 defm check_array_temporaries : BooleanFFlag<"check-array-temporaries">, Group<gfortran_Group>;
 defm cray_pointer : BooleanFFlag<"cray-pointer">, Group<gfortran_Group>;
-defm d_lines_as_code : BooleanFFlag<"d-lines-as-code">, Group<gfortran_Group>;
-defm d_lines_as_comments : BooleanFFlag<"d-lines-as-comments">, Group<gfortran_Group>;
+defm d_lines_as_code : BooleanFFlag<"d-lines-as-code">,
+                       HelpText<"Treat fixed form lines with 'd' or 'D' in the "
+                                "first column as blank.">,
+                       Group<f_Group>,
+                       Visibility<[FlangOption, FC1Option]>;
+defm d_lines_as_comments : BooleanFFlag<"d-lines-as-comments">,
+                           HelpText<"Treat fixed form lines with 'd' or 'D' in "
+                                    "the first column as comments.">,
+                           Group<f_Group>,
+                           Visibility<[FlangOption, FC1Option]>;
 defm dollar_ok : BooleanFFlag<"dollar-ok">, Group<gfortran_Group>;
 defm dump_fortran_optimized : BooleanFFlag<"dump-fortran-optimized">, Group<gfortran_Group>;
 defm dump_fortran_original : BooleanFFlag<"dump-fortran-original">, Group<gfortran_Group>;
@@ -7319,6 +7369,10 @@ def mlink_builtin_bitcode : Separate<["-"], "mlink-builtin-bitcode">,
 def mlink_bitcode_file
     : Separate<["-"], "mlink-bitcode-file">,
       HelpText<"Link the given bitcode file before performing optimizations.">;
+
+def vectorize_loops : Flag<["-"], "vectorize-loops">,
+  HelpText<"Run the Loop vectorization passes">,
+  MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
 } // let Visibility = [CC1Option, FC1Option]
 
 let Visibility = [CC1Option] in {
@@ -7384,7 +7438,7 @@ def fuse_register_sized_bitfield_access: Flag<["-"], "fuse-register-sized-bitfie
 def relaxed_aliasing : Flag<["-"], "relaxed-aliasing">,
   HelpText<"Turn off Type Based Alias Analysis">,
   MarshallingInfoFlag<CodeGenOpts<"RelaxedAliasing">>;
-defm pointer_tbaa: BoolOption<"", "pointer-tbaa", CodeGenOpts<"PointerTBAA">, 
+defm pointer_tbaa: BoolOption<"", "pointer-tbaa", CodeGenOpts<"PointerTBAA">,
 DefaultTrue,
   PosFlag<SetTrue, [], [ClangOption], "Enable">,
   NegFlag<SetFalse, [], [ClangOption], "Disable">,
@@ -7434,9 +7488,6 @@ defm link_builtin_bitcode_postopt: BoolMOption<"link-builtin-bitcode-postopt",
   PosFlag<SetTrue, [], [ClangOption], "Link builtin bitcodes after the "
   "optimization pipeline">,
   NegFlag<SetFalse, [], [ClangOption]>>;
-def vectorize_loops : Flag<["-"], "vectorize-loops">,
-  HelpText<"Run the Loop vectorization passes">,
-  MarshallingInfoFlag<CodeGenOpts<"VectorizeLoop">>;
 def vectorize_slp : Flag<["-"], "vectorize-slp">,
   HelpText<"Run the SLP vectorization passes">,
   MarshallingInfoFlag<CodeGenOpts<"VectorizeSLP">>;
@@ -9033,6 +9084,7 @@ def : Option<["/", "-"], "Qembed_debug", KIND_FLAG>, Group<dxc_Group>,
   HelpText<"Embed PDB in shader container (ignored)">;
 def spirv : DXCFlag<"spirv">,
   HelpText<"Generate SPIR-V code">;
+def metal : DXCFlag<"metal">, HelpText<"Generate Metal library">;
 def fspv_target_env_EQ : Joined<["-"], "fspv-target-env=">, Group<dxc_Group>,
   HelpText<"Specify the target environment">,
   Values<"vulkan1.2, vulkan1.3">;

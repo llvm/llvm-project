@@ -71,8 +71,8 @@ SampleContextTracker::moveContextSamples(ContextTrieNode &ToNodeParent,
   std::map<uint64_t, ContextTrieNode> &AllChildContext =
       ToNodeParent.getAllChildContext();
   assert(!AllChildContext.count(Hash) && "Node to remove must exist");
-  AllChildContext[Hash] = NodeToMove;
   ContextTrieNode &NewNode = AllChildContext[Hash];
+  NewNode = NodeToMove;
   NewNode.setCallSiteLoc(CallSite);
 
   // Walk through nodes in the moved the subtree, and update

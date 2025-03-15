@@ -224,8 +224,8 @@ body:             |
 # CHECK-NEXT:     selecting CortexA55UnitALU[0] available @0c
 # CHECK-NEXT: Queue BotQ.P: 
 # CHECK-NEXT: Queue BotQ.A: 2 1 0 
-# CHECK-NEXT:   Cand SU(2) ORDER                              
-# CHECK-NEXT: Pick Bot ORDER     
+# CHECK-NEXT:   Cand SU(2) FIRST                              
+# CHECK-NEXT: Pick Bot FIRST     
 # CHECK-NEXT: Scheduling SU(2) $x5 = ADDXrr $x2, $x2
 # CHECK-NEXT:   Ready @0c
 # CHECK-NEXT:   CortexA55UnitALU +1x1u
@@ -318,7 +318,7 @@ body:             |
 # CHECK-NEXT:     selecting CortexA55UnitALU[1] available @0c
 # CHECK-NEXT: Queue BotQ.P: 
 # CHECK-NEXT: Queue BotQ.A: 0 1 
-# CHECK-NEXT:   Cand SU(0) ORDER                              
+# CHECK-NEXT:   Cand SU(0) FIRST                              
 # CHECK-NEXT:   Cand SU(1) ORDER                              
 # CHECK-NEXT: Pick Bot ORDER     
 # CHECK-NEXT: Scheduling SU(1) $x4 = ADDXrr $x1, $x1

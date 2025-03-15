@@ -1,6 +1,6 @@
 // This does exist only for fp32
 #if __CLC_FPSIZE == 32
-#ifdef __CLC_VECSIZE
+#ifndef __CLC_SCALAR
 
 FUNC(__CLC_VECSIZE, __CLC_VECSIZE, __CLC_GENTYPE, __private);
 FUNC(__CLC_VECSIZE, __CLC_VECSIZE, __CLC_GENTYPE, __local);

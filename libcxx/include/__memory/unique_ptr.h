@@ -64,11 +64,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS default_delete {
   static_assert(!is_function<_Tp>::value, "default_delete cannot be instantiated for function types");
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI constexpr default_delete() _NOEXCEPT = default;
-#else
-  _LIBCPP_HIDE_FROM_ABI default_delete() {}
-#endif
+
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT = default;
+
   template <class _Up, __enable_if_t<is_convertible<_Up*, _Tp*>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 default_delete(const default_delete<_Up>&) _NOEXCEPT {}
 
@@ -81,34 +79,23 @@ struct _LIBCPP_TEMPLATE_VIS default_delete {
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS default_delete<_Tp[]> {
-private:
-  template <class _Up>
-  struct _EnableIfConvertible : enable_if<is_convertible<_Up (*)[], _Tp (*)[]>::value> {};
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR default_delete() _NOEXCEPT = default;
 
-public:
-#ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI constexpr default_delete() _NOEXCEPT = default;
-#else
-  _LIBCPP_HIDE_FROM_ABI default_delete() {}
-#endif
+  template <class _Up, __enable_if_t<is_convertible<_Up (*)[], _Tp (*)[]>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 default_delete(const default_delete<_Up[]>&) _NOEXCEPT {}
 
-  template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
-  default_delete(const default_delete<_Up[]>&, typename _EnableIfConvertible<_Up>::type* = 0) _NOEXCEPT {}
-
-  template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename _EnableIfConvertible<_Up>::type
-  operator()(_Up* __ptr) const _NOEXCEPT {
+  template <class _Up, __enable_if_t<is_convertible<_Up (*)[], _Tp (*)[]>::value, int> = 0>
+  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 void operator()(_Up* __ptr) const _NOEXCEPT {
     static_assert(sizeof(_Up) >= 0, "cannot delete an incomplete type");
     delete[] __ptr;
   }
 };
 
 template <class _Deleter>
-struct __is_default_deleter : false_type {};
+inline const bool __is_default_deleter_v = false;
 
 template <class _Tp>
-struct __is_default_deleter<default_delete<_Tp> > : true_type {};
+inline const bool __is_default_deleter_v<default_delete<_Tp> > = true;
 
 template <class _Deleter>
 struct __unique_ptr_deleter_sfinae {
@@ -355,7 +342,7 @@ struct __unique_ptr_array_bounds_stateless {
 
   template <class _Deleter,
             class _Tp,
-            __enable_if_t<__is_default_deleter<_Deleter>::value && __has_array_cookie<_Tp>::value, int> = 0>
+            __enable_if_t<__is_default_deleter_v<_Deleter> && __has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp* __ptr, size_t __index) const {
     // In constant expressions, we can't check the array cookie so we just pretend that the index
     // is in-bounds. The compiler catches invalid accesses anyway.
@@ -367,7 +354,7 @@ struct __unique_ptr_array_bounds_stateless {
 
   template <class _Deleter,
             class _Tp,
-            __enable_if_t<!__is_default_deleter<_Deleter>::value || !__has_array_cookie<_Tp>::value, int> = 0>
+            __enable_if_t<!__is_default_deleter_v<_Deleter> || !__has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp*, size_t) const {
     return true; // If we don't have an array cookie, we assume the access is in-bounds
   }
@@ -385,7 +372,7 @@ struct __unique_ptr_array_bounds_stored {
   // Use the array cookie if there's one
   template <class _Deleter,
             class _Tp,
-            __enable_if_t<__is_default_deleter<_Deleter>::value && __has_array_cookie<_Tp>::value, int> = 0>
+            __enable_if_t<__is_default_deleter_v<_Deleter> && __has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp* __ptr, size_t __index) const {
     if (__libcpp_is_constant_evaluated())
       return true;
@@ -396,7 +383,7 @@ struct __unique_ptr_array_bounds_stored {
   // Otherwise, fall back on the stored size (if any)
   template <class _Deleter,
             class _Tp,
-            __enable_if_t<!__is_default_deleter<_Deleter>::value || !__has_array_cookie<_Tp>::value, int> = 0>
+            __enable_if_t<!__is_default_deleter_v<_Deleter> || !__has_array_cookie<_Tp>::value, int> = 0>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __in_bounds(_Tp*, size_t __index) const {
     return __index < __size_;
   }

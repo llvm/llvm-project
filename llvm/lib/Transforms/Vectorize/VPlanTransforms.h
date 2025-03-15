@@ -52,6 +52,21 @@ struct VPlanTransforms {
       verifyVPlanIsValid(Plan);
   }
 
+  /// Introduce the top-level VPRegionBlock for the main loop in \p Plan. Coming
+  /// into this function, \p Plan's top-level loop is modeled using a plain CFG.
+  /// This transform wraps the plain CFG of the top-level loop within a
+  /// VPRegionBlock and creates a VPValue expression for the original trip
+  /// count. It will also introduce a dedicated VPBasicBlock for the vector
+  /// pre-header as well a VPBasicBlock as exit block of the region
+  /// (middle.block). If a check is needed to guard executing the scalar
+  /// epilogue loop, it will be added to the middle block, together with
+  /// VPBasicBlocks for the scalar preheader and exit blocks. \p InductionTy is
+  /// the type of the canonical induction and used for related values, like the
+  /// trip count expression.
+  static void introduceTopLevelVectorLoopRegion(
+      VPlan &Plan, Type *InductionTy, PredicatedScalarEvolution &PSE,
+      bool RequiresScalarEpilogueCheck, bool TailFolded, Loop *TheLoop);
+
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes.
   static void
@@ -163,12 +178,19 @@ struct VPlanTransforms {
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);
 
+  /// Perform instcombine-like simplifications on recipes in \p Plan. Use \p
+  /// CanonicalIVTy as type for all un-typed live-ins in VPTypeAnalysis.
+  static void simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy);
+
   /// If there's a single exit block, optimize its phi recipes that use exiting
   /// IV values by feeding them precomputed end values instead, possibly taken
   /// one step backwards.
   static void
   optimizeInductionExitUsers(VPlan &Plan,
                              DenseMap<VPValue *, VPValue *> &EndValues);
+
+  /// Add explicit broadcasts for live-ins and VPValues defined in \p Plan's entry block if they are used as vectors.
+  static void materializeBroadcasts(VPlan &Plan);
 };
 
 } // namespace llvm

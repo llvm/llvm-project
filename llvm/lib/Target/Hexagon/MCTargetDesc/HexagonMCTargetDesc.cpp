@@ -97,7 +97,7 @@ cl::opt<bool> MV79("mv79", cl::Hidden, cl::desc("Build for Hexagon V79"),
                    cl::init(false));
 } // namespace
 
-cl::opt<Hexagon::ArchEnum> EnableHVX(
+static cl::opt<Hexagon::ArchEnum> EnableHVX(
     "mhvx", cl::desc("Enable Hexagon Vector eXtensions"),
     cl::values(clEnumValN(Hexagon::ArchEnum::V60, "v60", "Build for HVX v60"),
                clEnumValN(Hexagon::ArchEnum::V62, "v62", "Build for HVX v62"),
@@ -614,7 +614,7 @@ MCSubtargetInfo *Hexagon_MC::createHexagonMCSubtargetInfo(const Triple &TT,
   }
 
   // Add qfloat subtarget feature by default to v68 and above
-  // unless explicitely disabled
+  // unless explicitly disabled
   if (checkFeature(X, Hexagon::ExtensionHVXV68) &&
       !ArchFS.contains("-hvx-qfloat")) {
     llvm::FeatureBitset Features = X->getFeatureBits();

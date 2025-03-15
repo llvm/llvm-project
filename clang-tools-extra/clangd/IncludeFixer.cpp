@@ -84,7 +84,6 @@ std::vector<Fix> IncludeFixer::fix(DiagnosticsEngine::Level DiagLevel,
   case diag::err_array_incomplete_or_sizeless_type:
   case diag::err_array_size_incomplete_type:
   case diag::err_asm_incomplete_type:
-  case diag::err_assoc_type_incomplete:
   case diag::err_bad_cast_incomplete:
   case diag::err_call_function_incomplete_return:
   case diag::err_call_incomplete_argument:
