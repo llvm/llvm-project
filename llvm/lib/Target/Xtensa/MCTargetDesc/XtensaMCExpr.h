@@ -47,8 +47,6 @@ public:
     return getSubExpr()->findAssociatedFragment();
   }
 
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
-
   static VariantKind getVariantKindForName(StringRef name);
   static StringRef getVariantKindName(VariantKind Kind);
 };

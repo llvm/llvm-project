@@ -43,9 +43,6 @@ public:
     return getSubExpr()->findAssociatedFragment();
   }
 
-  // There are no TLS LanaiMCExprs at the moment.
-  void fixELFSymbolsInTLSFixups(MCAssembler & /*Asm*/) const override {}
-
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }

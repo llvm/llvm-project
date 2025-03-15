@@ -73,8 +73,6 @@ public:
     return getSubExpr()->findAssociatedFragment();
   }
 
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
-
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
