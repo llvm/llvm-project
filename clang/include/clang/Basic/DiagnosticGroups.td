@@ -853,8 +853,9 @@ def NSobjectAttribute : DiagGroup<"NSObject-attribute">;
 def NSConsumedMismatch : DiagGroup<"nsconsumed-mismatch">;
 def NSReturnsMismatch : DiagGroup<"nsreturns-mismatch">;
 
+def UnknownAttributeNamespaces : DiagGroup<"unknown-attribute-namespaces">;
 def IndependentClassAttribute : DiagGroup<"IndependentClass-attribute">;
-def UnknownAttributes : DiagGroup<"unknown-attributes">;
+def UnknownAttributes : DiagGroup<"unknown-attributes", [UnknownAttributeNamespaces]>;
 def IgnoredAttributes : DiagGroup<"ignored-attributes">;
 def Attributes : DiagGroup<"attributes", [UnknownAttributes,
                                           IgnoredAttributes]>;

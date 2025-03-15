@@ -223,6 +223,9 @@ related warnings within the method body.
   particularly relevant for AMDGPU targets, where they map to corresponding IR
   metadata.
 
+- Clang now diagnoses unknown attribute namespaces. Added the ``-Wunknown-namespace-attributes=`` option to
+  specify a comma-separated list of allowed unknown attribute namespaces (#GH120875).
+
 Improvements to Clang's diagnostics
 -----------------------------------
 
