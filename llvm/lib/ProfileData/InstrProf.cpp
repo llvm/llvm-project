@@ -535,9 +535,9 @@ Error InstrProfSymtab::addVTableWithName(GlobalVariable &VTable,
 /// \c NameStrings is a string composed of one of more possibly encoded
 /// sub-strings. The substrings are separated by 0 or more zero bytes. This
 /// method decodes the string and calls `NameCallback` for each substring.
-static Error
-readAndDecodeStrings(StringRef NameStrings,
-                     std::function<Error(StringRef)> NameCallback) {
+static Error readAndDecodeStrings(
+    StringRef NameStrings, std::function<Error(StringRef)> NameCallback,
+    std::function<void(bool)> ChunkCallback = [](bool) {}) {
   const uint8_t *P = NameStrings.bytes_begin();
   const uint8_t *EndP = NameStrings.bytes_end();
   while (P < EndP) {
@@ -567,6 +567,7 @@ readAndDecodeStrings(StringRef NameStrings,
       P += UncompressedSize;
     }
     // Now parse the name strings.
+    ChunkCallback(IsCompressed);
     SmallVector<StringRef, 0> Names;
     NameStrings.split(Names, getInstrProfNameSeparator());
     for (StringRef &Name : Names)
@@ -583,6 +584,22 @@ Error InstrProfSymtab::create(StringRef NameStrings) {
   return readAndDecodeStrings(
       NameStrings,
       std::bind(&InstrProfSymtab::addFuncName, this, std::placeholders::_1));
+}
+
+Expected<InstrProfSymtab::PrfNamesChunksTy>
+InstrProfSymtab::createAndGetList(ArrayRef<uint8_t> Content) {
+  PrfNamesChunksTy Result;
+  PrfNamesTy *ArrayP = nullptr;
+  if (auto E = readAndDecodeStrings(
+          StringRef(reinterpret_cast<const char *>(Content.data()),
+                    Content.size()),
+          [&](StringRef Name) {
+            ArrayP->emplace_back(Name.str());
+            return addFuncName(Name);
+          },
+          [&](bool IsCompressed) { ArrayP = &Result.emplace_back(); }))
+    return E;
+  return Result;
 }
 
 Error InstrProfSymtab::create(StringRef FuncNameStrings,

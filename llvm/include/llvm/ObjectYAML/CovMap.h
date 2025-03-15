@@ -16,16 +16,18 @@
 //
 // - llvm::covmap
 //
-//   Provides YAML encoder for coverage map.
+//   Provides YAML encoder and decoder for coverage map.
 //
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_OBJECTYAML_COVMAP_H
 #define LLVM_OBJECTYAML_COVMAP_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <array>
 #include <cstdint>
@@ -40,6 +42,8 @@ class raw_ostream;
 } // namespace llvm
 
 namespace llvm::coverage::yaml {
+
+struct DecoderContext;
 
 /// Base Counter, corresponding to coverage::Counter.
 struct CounterTy {
@@ -56,6 +60,14 @@ struct CounterTy {
   virtual ~CounterTy() {}
 
   virtual void mapping(llvm::yaml::IO &IO);
+
+  uint64_t getExtTagVal() const { return (Tag == Zero && Val != 0 ? Val : 0); }
+
+  /// Holds Val for extensions.
+  Error decodeOrTag(DecoderContext &Data);
+
+  /// Raise Error if Val isn't empty.
+  Error decode(DecoderContext &Data);
 
   void encode(raw_ostream &OS) const;
 };
@@ -76,6 +88,8 @@ struct DecisionTy {
   uint64_t NC;   ///< NumConds
 
   void mapping(llvm::yaml::IO &IO);
+
+  Error decode(DecoderContext &Data);
 
   void encode(raw_ostream &OS) const;
 };
@@ -110,6 +124,8 @@ struct RecTy : CounterTy {
 
   void mapping(llvm::yaml::IO &IO) override;
 
+  Error decode(DecoderContext &Data);
+
   void encode(raw_ostream &OS) const;
 };
 
@@ -131,6 +147,10 @@ struct CovFunTy {
 
   void mapping(llvm::yaml::IO &IO);
 
+  /// Depends on CovMap and SymTab(IPSK_names)
+  Expected<uint64_t> decode(const ArrayRef<uint8_t> Content, uint64_t Offset,
+                            endianness Endianness);
+
   void encode(raw_ostream &OS, endianness Endianness) const;
 };
 
@@ -146,6 +166,9 @@ struct CovMapTy {
   std::vector<std::string> Filenames;
 
   void mapping(llvm::yaml::IO &IO);
+
+  Expected<uint64_t> decode(const ArrayRef<uint8_t> Content, uint64_t Offset,
+                            endianness Endianness);
 
   /// Encode Filenames. This is mostly used just to obtain FilenamesRef.
   std::pair<uint64_t, std::string> encodeFilenames(bool Compress = false) const;
@@ -200,6 +223,31 @@ LLVM_COVERAGE_YAML_ELEM_MAPPING(CovFunTy)
 LLVM_COVERAGE_YAML_ELEM_MAPPING(CovMapTy)
 
 namespace llvm::covmap {
+
+class Decoder {
+protected:
+  endianness Endianness;
+
+public:
+  Decoder(endianness Endianness) : Endianness(Endianness) {}
+  virtual ~Decoder();
+
+  /// Returns DecoderImpl.
+  static std::unique_ptr<Decoder> get(endianness Endianness,
+                                      bool CovMapEnabled);
+
+  /// Called from the Sections loop in advance of the final dump.
+  /// Decoder predecodes CovMap for Version info.
+  virtual Error acquire(unsigned AddressAlign, StringRef Name,
+                        ArrayRef<uint8_t> Content) = 0;
+
+  /// Make contents on ELFYAML object. CovMap is predecoded.
+  virtual Error make(ELFYAML::CovMapSectionBase *Base,
+                     ArrayRef<uint8_t> Content) = 0;
+
+  /// Suppress emission of CovMap unless enabled.
+  static bool enabled;
+};
 
 /// Returns whether Name is interested.
 bool nameMatches(StringRef Name);

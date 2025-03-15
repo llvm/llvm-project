@@ -1,6 +1,9 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: obj2yaml %t.o | tee %t.plain.yaml | FileCheck %s --check-prefixes=CHECK,PLAIN
+# RUN: obj2yaml --covmap-raw %t.o | tee %t.raw.yaml | FileCheck %s --check-prefixes=CHECK,COVMAP,RAWONLY,RAW,DLOC
+# RUN: sed -E '/^(#.*)?$/d' %s | diff %t.raw.yaml -
 # RUN: yaml2obj %t.plain.yaml -o - | cmp %t.o -
+# RUN: yaml2obj %t.raw.yaml -o - | cmp %t.o -
 
 --- !ELF
 FileHeader:
@@ -17,12 +20,18 @@ Sections:
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
 # PLAIN: Content:
+# COVMAP: CovFun:
     CovFun:
+# RAW:- NameRef:         0xA72DB7A33048E6A3
       - NameRef:         0xA72DB7A33048E6A3
+# COVMAP: FuncHash:      0xAFC772D567676299
         FuncHash:        0xAFC772D567676299
         FilenamesRef:    0x70DA2CAFD8CE198E
+# RAW:  FileIDs:         [ 1, 1 ]
         FileIDs:         [ 1, 1 ]
+# COVMAP: Expressions:
         Expressions:
+# RAW:    - [ { Tag: Ref, Val: 0 }, { Tag: Ref, Val: 1 } ]
           - [ { Tag: Ref, Val: 0 }, { Tag: Ref, Val: 1 } ]
           - [ { Tag: Add, Val: 0 }, { Tag: Ref, Val: 2 } ]
           - [ { Tag: Add, Val: 0 }, { Tag: Ref, Val: 2 } ]
@@ -31,31 +40,56 @@ Sections:
           - [ { Tag: Ref, Val: 0 }, { Tag: Ref, Val: 2 } ]
           - [ { Tag: Ref, Val: 0 }, { Tag: Ref, Val: 2 } ]
           - [ { Tag: Add, Val: 0 }, { Tag: Ref, Val: 5 } ]
+# COVMAP: Files:
         Files:
+# COVMAP:   Regions:
           - Regions:
+# RAWONLY-NOT: Loc: [ 3, 17, 14, 2 ]
+# DLOC:   dLoc: [ 3, 17, 11, 2 ]
+# RAW:     Tag: Ref, Val: 0
               - { dLoc: [ 3, 17, 11, 2 ], Tag: Ref, Val: 0 }
+# DLOC:   dLoc: [ 3, 6, 5, 4 ]
+# RAW:     Tag: Add, Val: 0
               - { dLoc: [ 3, 6, 5, 4 ], Tag: Add, Val: 0 }
+# RAW:    Tag: Zero, Val: 3,
+# COVMAP: Expansion: 1
               - { dLoc: [ 1, 9, 0, 13 ], Tag: Zero, Val: 3, Expansion: 1 }
+# COVMAP: isGap: true
+# RAW:      Tag: Ref, Val: 2
               - { dLoc: [ 0, 23, 1, 7 ], isGap: true, Tag: Ref, Val: 2 }
               - { dLoc: [ 1, 7, 0, 16 ], Tag: Ref, Val: 2 }
+# COVMAP: isGap: true
+# RAW:      Tag: Sub, Val: 3
               - { dLoc: [ 0, 17, 2, 5 ], isGap: true, Tag: Sub, Val: 3 }
+# RAW:    Tag: Zero, Val: 4,
+# COVMAP: ExtTag: Skip
               - { dLoc: [ 1, 1, 0, 1 ], Tag: Zero, Val: 4, ExtTag: Skip }
               - { dLoc: [ 1, 5, 1, 4 ], Tag: Sub, Val: 3 }
               - { dLoc: [ 1, 12, 0, 17 ], Tag: Sub, Val: 3 }
+# RAW:    Tag: Zero, Val: 8, ExtTag: Branch, Branch: [ { Tag: Ref, Val: 1 }, { Tag: Sub, Val: 6 } ] }
               - { dLoc: [ 0, 12, 0, 17 ], Tag: Zero, Val: 8, ExtTag: Branch, Branch: [ { Tag: Ref, Val: 1 }, { Tag: Sub, Val: 6 } ] }
               - { dLoc: [ 0, 19, 1, 3 ], isGap: true, Tag: Sub, Val: 6 }
               - { dLoc: [ 1, 3, 0, 11 ], Tag: Sub, Val: 6 }
+# DLOC:  dLoc: [ 1, 3, 0, 12 ]
+# COVMAP: Tag: Zero
+# RAW:    Val: 0
               - { dLoc: [ 0, 12, 1, 3 ], isGap: true, Tag: Zero, Val: 0 }
               - { dLoc: [ 1, 3, 0, 12 ], Tag: Zero, Val: 0 }
+# COVMAP:   Regions:
           - Regions:
               - { dLoc: [ 1, 17, 0, 41 ], Tag: Add, Val: 0 }
               - { dLoc: [ 0, 18, 0, 32 ], Tag: Add, Val: 0 }
+# RAW:    Tag: Zero, Val: 10, ExtTag: Decision
+# COVMAP: Decision: { BIdx: 5, NCond: 3 } }
               - { dLoc: [ 0, 18, 0, 40 ], Tag: Zero, Val: 10, ExtTag: Decision, Decision: { BIdx: 5, NCond: 3 } }
               - { dLoc: [ 0, 19, 0, 22 ], Tag: Add, Val: 0 }
+# RAW:    Tag: Zero, Val: 12, ExtTag: MCDCBranch, Branch: [ { Tag: Sub, Val: 7 }, { Tag: Ref, Val: 5 } ]
+# COVMAP: MCDC: [ 1, 2, 3 ]
               - { dLoc: [ 0, 19, 0, 22 ], Tag: Zero, Val: 12, ExtTag: MCDCBranch, Branch: [ { Tag: Sub, Val: 7 }, { Tag: Ref, Val: 5 } ], MCDC: [ 1, 2, 3 ] }
               - { dLoc: [ 0, 26, 0, 31 ], Tag: Ref, Val: 5 }
               - { dLoc: [ 0, 26, 0, 31 ], Tag: Zero, Val: 12, ExtTag: MCDCBranch, Branch: [ { Tag: Zero, Val: 0 }, { Tag: Ref, Val: 6 } ], MCDC: [ 3, 2, 0 ] }
               - { dLoc: [ 0, 36, 0, 40 ], Tag: Ref, Val: 3 }
+# DLOC:   dLoc: [ 0, 36, 0, 40 ]
               - { dLoc: [ 0, 36, 0, 40 ], Tag: Zero, Val: 12, ExtTag: MCDCBranch, Branch: [ { Tag: Ref, Val: 4 }, { Tag: Zero, Val: 0 } ], MCDC: [ 2, 0, 0 ] }
 # CHECK:             __llvm_covmap
   - Name:            __llvm_covmap
@@ -63,11 +97,17 @@ Sections:
     Flags:           [ SHF_GNU_RETAIN ]
     AddressAlign:    0x8
 # PLAIN: Content:
+# COVMAP: CovMap:
     CovMap:
+# COVMAP: - FilenamesRef:    0x70DA2CAFD8CE198E
       - FilenamesRef:    0x70DA2CAFD8CE198E
+# COVMAP: Version:
         Version:         6
+# RAWONLY: Filenames:
         Filenames:
+# RAWONLY:    - ''
           - ''
+# RAWONLY:    - func.cpp
           - func.cpp
 # CHECK:             __llvm_prf_names
   - Name:            __llvm_prf_names
@@ -78,7 +118,9 @@ Sections:
 # PLAIN-NOT: CovMap:
 # PLAIN-NOT: PrfNames:
 # PLAIN: Content:
+# COVMAP: PrfNames
     PrfNames:
+# COVMAP: - - _Z4funci
       - - _Z4funci
   - Type:            SectionHeaderTable
     Sections:
