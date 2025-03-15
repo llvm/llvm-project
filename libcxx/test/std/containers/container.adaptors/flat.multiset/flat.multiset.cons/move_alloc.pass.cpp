@@ -42,15 +42,15 @@ void test() {
     static_assert(!std::is_constructible_v<M2, M2&&, const A1&>);
   }
   {
-    int expected[] = {1, 2, 3};
+    int expected[] = {1, 1, 2, 2, 3};
     using C        = test_less<int>;
     using A        = test_allocator<int>;
     using M        = std::flat_multiset<int, C, std::deque<int, A>>;
-    auto mo        = M(expected, expected + 3, C(5), A(7));
+    auto mo        = M(expected, expected + 5, C(5), A(7));
     auto m         = M(std::move(mo), A(3));
 
     assert(m.key_comp() == C(5));
-    assert(m.size() == 3);
+    assert(m.size() == 5);
     auto keys = std::move(m).extract();
     assert(keys.get_allocator() == A(3));
     assert(std::ranges::equal(keys, expected));
@@ -64,10 +64,10 @@ void test() {
   {
     // moved-from object maintains invariant if one of underlying container does not clear after move
     using M = std::flat_multiset<int, std::less<>, CopyOnlyVector<int>>;
-    M m1    = M({1, 2, 3});
+    M m1    = M({1, 2, 2, 1, 3});
     M m2(std::move(m1), std::allocator<int>{});
-    assert(m2.size() == 3);
-    check_invariant(m1);
+    assert(m2.size() == 5);
+    assert(std::ranges::is_sorted(m1));
     LIBCPP_ASSERT(m1.empty());
   }
 }
