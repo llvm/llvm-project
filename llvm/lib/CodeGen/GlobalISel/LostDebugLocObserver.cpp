@@ -85,6 +85,7 @@ static bool irTranslatorNeverAddsLocations(unsigned Opcode) {
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
   case TargetOpcode::G_IMPLICIT_DEF:
+  case TargetOpcode::G_POISON:
   case TargetOpcode::G_GLOBAL_VALUE:
     return true;
   }
