@@ -2936,6 +2936,30 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i32, 1},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i64, 1},
 
+      // SVE: to nxv2f16
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i8, 3},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i16, 1},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i32, 1},
+      {ISD::SINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i8, 3},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i16, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i32, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f16, MVT::nxv2i64, 1},
+
+      // SVE: to nxv4f16
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i8, 3},
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i16, 1},
+      {ISD::SINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, 1},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i8, 3},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i16, 1},
+      {ISD::UINT_TO_FP, MVT::nxv4f16, MVT::nxv4i32, 1},
+
+      // SVE: to nxv8f16
+      {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8, 3},
+      {ISD::SINT_TO_FP, MVT::nxv8f16, MVT::nxv8i16, 1},
+      {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i8, 3},
+      {ISD::UINT_TO_FP, MVT::nxv8f16, MVT::nxv8i16, 1},
+
       // Complex: to v2f32
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i8, 3},
       {ISD::SINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
@@ -2944,11 +2968,29 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i16, 3},
       {ISD::UINT_TO_FP, MVT::v2f32, MVT::v2i64, 2},
 
+      // SVE: to nxv2f32
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i8, 5},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i16, 3},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i32, 1},
+      {ISD::SINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i8, 5},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i16, 3},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i32, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f32, MVT::nxv2i64, 1},
+
       // Complex: to v4f32
       {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i8, 4},
       {ISD::SINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i8, 3},
       {ISD::UINT_TO_FP, MVT::v4f32, MVT::v4i16, 2},
+
+      // SVE: to nxv4f32
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, 5},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, 3},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i32, 1},
+      {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i8, 5},
+      {ISD::UINT_TO_FP, MVT::nxv4f32, MVT::nxv4i16, 3},
+      {ISD::SINT_TO_FP, MVT::nxv4f32, MVT::nxv4i32, 1},
 
       // Complex: to v8f32
       {ISD::SINT_TO_FP, MVT::v8f32, MVT::v8i8, 10},
@@ -2967,6 +3009,16 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i8, 4},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i16, 4},
       {ISD::UINT_TO_FP, MVT::v2f64, MVT::v2i32, 2},
+
+      // SVE: to nxv2f64
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8, 7},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, 5},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, 3},
+      {ISD::SINT_TO_FP, MVT::nxv2f64, MVT::nxv2i64, 1},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i8, 7},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i16, 5},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i32, 3},
+      {ISD::UINT_TO_FP, MVT::nxv2f64, MVT::nxv2i64, 1},
 
       // Complex: to v4f64
       {ISD::SINT_TO_FP, MVT::v4f64, MVT::v4i32, 4},
