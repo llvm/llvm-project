@@ -187,47 +187,6 @@ void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
     OutMI.addOperand(Dest);
     OutMI.addOperand(Src);
     return;
-  } else if (const auto *Info = AMDGPU::getT16D16Helper(Opcode)) {
-    uint16_t OpName = AMDGPU::OpName::OPERAND_LAST;
-    if (TII->isDS(Opcode)) {
-      if (MI->mayLoad())
-        OpName = llvm::AMDGPU::OpName::vdst;
-      else if (MI->mayStore())
-        OpName = llvm::AMDGPU::OpName::data0;
-      else
-        llvm_unreachable("LDS load or store expected");
-    } else {
-      OpName = AMDGPU::hasNamedOperand(Opcode, llvm::AMDGPU::OpName::vdata)
-                   ? llvm::AMDGPU::OpName::vdata
-                   : llvm::AMDGPU::OpName::vdst;
-    }
-    int VDstOrVDataIdx = AMDGPU::getNamedOperandIdx(Opcode, OpName);
-    MachineOperand MIVDstOrVData = MI->getOperand(VDstOrVDataIdx);
-    bool IsHi = AMDGPU::isHi16Reg(MIVDstOrVData.getReg(), TRI);
-    Opcode = IsHi ? Info->HiOp : Info->LoOp;
-    MIVDstOrVData.clearParent(); // Avoid use list error in setReg call
-    MIVDstOrVData.setReg(TRI.get32BitRegister(MIVDstOrVData.getReg()));
-
-    int MCOpcode = TII->pseudoToMCOpcode(Opcode);
-    assert(MCOpcode != -1 &&
-           "Pseudo instruction doesn't have a target-specific version");
-    OutMI.setOpcode(MCOpcode);
-    for (int I = 0, E = MI->getNumExplicitOperands(); I < E; I++) {
-      const MachineOperand &MO = MI->getOperand(I);
-      MCOperand MCOp;
-      if (I == VDstOrVDataIdx)
-        lowerOperand(MIVDstOrVData, MCOp);
-      else
-        lowerOperand(MO, MCOp);
-      OutMI.addOperand(MCOp);
-    }
-
-    if (AMDGPU::hasNamedOperand(MCOpcode, AMDGPU::OpName::vdst_in)) {
-      MCOperand MCOp;
-      lowerOperand(MIVDstOrVData, MCOp);
-      OutMI.addOperand(MCOp);
-    }
-    return;
   } else if (Opcode == AMDGPU::SI_TCRETURN ||
              Opcode == AMDGPU::SI_TCRETURN_GFX) {
     // TODO: How to use branch immediate and avoid register+add?
