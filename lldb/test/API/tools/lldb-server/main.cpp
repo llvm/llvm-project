@@ -344,8 +344,10 @@ int main(int argc, char **argv) {
     } else if (consume_front(arg, "process:sync:")) {
       // this is only valid after fork
       const char *filenames[] = {"parent", "child"};
-      std::string my_file = arg + "." + filenames[is_child];
-      std::string other_file = arg + "." + filenames[!is_child];
+      size_t pos = arg.find_last_of("/\\");
+      std::string file_name = arg.substr(pos + 1);
+      std::string my_file = file_name + "." + filenames[is_child];
+      std::string other_file = file_name + "." + filenames[!is_child];
 
       // indicate that we're ready
       FILE *f = fopen(my_file.c_str(), "w");
