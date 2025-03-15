@@ -172,18 +172,17 @@ UseCppStyleCommentsCheck::UseCppStyleCommentsCheck(StringRef Name,
           *this, Options.get("ExcludeDoxygenStyleComments", false),
           Options.get("ExcludedComments", "^$"))) {}
 
+void UseCppStyleCommentsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "ExcludeDoxygenStyleComments",
+                Handler->isExcludeDoxygen());
+  Options.store(Opts, "ExcludedComments", Handler->getExcludedCommentsRegex());
+}
 void UseCppStyleCommentsCheck::registerPPCallbacks(
     const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
   PP->addCommentHandler(Handler.get());
 }
 
 void UseCppStyleCommentsCheck::check(const MatchFinder::MatchResult &Result) {}
-
-void UseCppStyleCommentsCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
-  Options.store(Opts, "ExcludeDoxygenStyleComments",
-                Handler->isExcludeDoxygen());
-  Options.store(Opts, "ExcludedComments", Handler->getExcludedCommentsRegex());
-}
 
 UseCppStyleCommentsCheck::~UseCppStyleCommentsCheck() = default;
 } // namespace clang::tidy::readability
