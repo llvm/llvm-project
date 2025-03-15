@@ -225,9 +225,6 @@ class RISCVRegisterClass<list<ValueType> regTypes, int align, dag regList>
   int VLMul = 1;
   int NF = 1;
 
-  let Size = !if(IsVRegClass, !mul(VLMul, NF, 64), 0);
-  let CopyCost = !if(IsVRegClass, !mul(VLMul, NF), 1);
-
   let TSFlags{0} = IsVRegClass;
   let TSFlags{2-1} = !logtwo(VLMul);
   let TSFlags{5-3} = !sub(NF, 1);
@@ -719,6 +716,9 @@ class VReg<list<ValueType> regTypes, dag regList, int Vlmul>
                          regList> {
   let IsVRegClass = 1;
   let VLMul = Vlmul;
+
+  let Size = !mul(VLMul, NF, 64);
+  let CopyCost = !mul(VLMul, NF);
 }
 
 defvar VMaskVTs = [vbool1_t, vbool2_t, vbool4_t, vbool8_t, vbool16_t,
