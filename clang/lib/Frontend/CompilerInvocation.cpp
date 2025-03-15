@@ -4356,6 +4356,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
       Opts.OpenACCMacroOverride = A->getValue();
   }
 
+  Opts.IsOffloadingTarget =
+      (Opts.OpenMPIsTargetDevice || Opts.SYCLIsDevice || Opts.CUDAIsDevice) &&
+      (T.isNVPTX() || T.isAMDGCN() || T.isSPIROrSPIRV());
+
   // FIXME: Eliminate this dependency.
   unsigned Opt = getOptimizationLevel(Args, IK, Diags),
        OptSize = getOptimizationLevelSize(Args);
