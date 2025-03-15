@@ -695,6 +695,11 @@ class CFGBlock {
     void dump() const {
       dumpToStream(llvm::errs());
     }
+
+    void Profile(llvm::FoldingSetNodeID &ID) const {
+      ID.AddPointer(Parent);
+      ID.AddInteger(Index);
+    }
   };
 
   template <bool IsReverse, bool IsConst> class ElementRefIterator {

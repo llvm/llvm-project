@@ -19,6 +19,7 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/Type.h"
+#include "clang/Analysis/CFG.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/BasicValueFactory.h"
@@ -171,19 +172,11 @@ public:
 
   // Forwarding methods to SymbolManager.
 
-  const SymbolConjured* conjureSymbol(const Stmt *stmt,
-                                      const LocationContext *LCtx,
-                                      QualType type,
-                                      unsigned visitCount,
-                                      const void *symbolTag = nullptr) {
-    return SymMgr.conjureSymbol(stmt, LCtx, type, visitCount, symbolTag);
-  }
-
-  const SymbolConjured* conjureSymbol(const Expr *expr,
-                                      const LocationContext *LCtx,
-                                      unsigned visitCount,
-                                      const void *symbolTag = nullptr) {
-    return SymMgr.conjureSymbol(expr, LCtx, visitCount, symbolTag);
+  const SymbolConjured *
+  conjureSymbol(const CFGBlock::ConstCFGElementRef ElemRef,
+                const LocationContext *LCtx, QualType type, unsigned visitCount,
+                const void *symbolTag = nullptr) {
+    return SymMgr.conjureSymbol(ElemRef, LCtx, type, visitCount, symbolTag);
   }
 
   /// Construct an SVal representing '0' for the specified type.
@@ -198,32 +191,24 @@ public:
   /// The advantage of symbols derived/built from other symbols is that we
   /// preserve the relation between related(or even equivalent) expressions, so
   /// conjured symbols should be used sparingly.
-  DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag,
-                                        const Expr *expr,
-                                        const LocationContext *LCtx,
-                                        unsigned count);
-  DefinedOrUnknownSVal conjureSymbolVal(const void *symbolTag, const Stmt *S,
-                                        const LocationContext *LCtx,
-                                        QualType type, unsigned count);
-  DefinedOrUnknownSVal conjureSymbolVal(const Stmt *stmt,
-                                        const LocationContext *LCtx,
-                                        QualType type,
-                                        unsigned visitCount);
+  DefinedOrUnknownSVal
+  conjureSymbolVal(const void *symbolTag,
+                   const CFGBlock::ConstCFGElementRef elemRef,
+                   const LocationContext *LCtx, unsigned count);
+  DefinedOrUnknownSVal
+  conjureSymbolVal(const void *symbolTag,
+                   const CFGBlock::ConstCFGElementRef elemRef,
+                   const LocationContext *LCtx, QualType type, unsigned count);
+  DefinedOrUnknownSVal
+  conjureSymbolVal(const CFGBlock::ConstCFGElementRef elemRef,
+                   const LocationContext *LCtx, QualType type,
+                   unsigned visitCount);
 
   /// Conjure a symbol representing heap allocated memory region.
-  ///
-  /// Note, the expression should represent a location.
-  DefinedSVal getConjuredHeapSymbolVal(const Expr *E,
-                                       const LocationContext *LCtx,
-                                       unsigned Count);
-
-  /// Conjure a symbol representing heap allocated memory region.
-  ///
-  /// Note, now, the expression *doesn't* need to represent a location.
-  /// But the type need to!
-  DefinedSVal getConjuredHeapSymbolVal(const Expr *E,
-                                       const LocationContext *LCtx,
-                                       QualType type, unsigned Count);
+  DefinedSVal
+  getConjuredHeapSymbolVal(const CFGBlock::ConstCFGElementRef elemRef,
+                           const LocationContext *LCtx, QualType type,
+                           unsigned Count);
 
   /// Create an SVal representing the result of an alloca()-like call, that is,
   /// an AllocaRegion on the stack.

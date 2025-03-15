@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Iterator.h"
+#include "clang/Analysis/CFG.h"
 
 namespace clang {
 namespace ento {
@@ -206,15 +207,15 @@ ProgramStateRef setIteratorPosition(ProgramStateRef State, SVal Val,
   return nullptr;
 }
 
-ProgramStateRef createIteratorPosition(ProgramStateRef State, SVal Val,
-                                       const MemRegion *Cont, const Stmt *S,
-                                       const LocationContext *LCtx,
-                                       unsigned blockCount) {
+ProgramStateRef
+createIteratorPosition(ProgramStateRef State, SVal Val, const MemRegion *Cont,
+                       const CFGBlock::ConstCFGElementRef ElemRef,
+                       const LocationContext *LCtx, unsigned blockCount) {
   auto &StateMgr = State->getStateManager();
   auto &SymMgr = StateMgr.getSymbolManager();
   auto &ACtx = StateMgr.getContext();
 
-  auto Sym = SymMgr.conjureSymbol(S, LCtx, ACtx.LongTy, blockCount);
+  auto Sym = SymMgr.conjureSymbol(ElemRef, LCtx, ACtx.LongTy, blockCount);
   State = assumeNoOverflow(State, Sym, 4);
   return setIteratorPosition(State, Val,
                              IteratorPosition::getPosition(Cont, Sym));
