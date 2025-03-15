@@ -90,17 +90,39 @@ public:
   /// this hook's interface might need to be extended in future.
   using ProfitabilityCallbackTy = std::function<bool(const ResolvedCall &)>;
 
+  /// Type of the callback that determines if the inliner can inline a function
+  /// containing multiple blocks into a region that requires a single block. By
+  /// default, it is not allowed.
+  /// If this function return true, the static member function doClone()
+  /// should perform the actual transformation with its support.
+  using canHandleMultipleBlocksCbTy = std::function<bool()>;
+
+  using CloneCallbackTy =
+      std::function<void(OpBuilder &builder, Region *src, Block *inlineBlock,
+                         Block *postInsertBlock, IRMapping &mapper,
+                         bool shouldCloneInlinedRegion)>;
+
   Inliner(Operation *op, CallGraph &cg, Pass &pass, AnalysisManager am,
           RunPipelineHelperTy runPipelineHelper, const InlinerConfig &config,
-          ProfitabilityCallbackTy isProfitableToInline)
+          ProfitabilityCallbackTy isProfitableToInline,
+          canHandleMultipleBlocksCbTy canHandleMultipleBlocks)
       : op(op), cg(cg), pass(pass), am(am),
         runPipelineHelper(std::move(runPipelineHelper)), config(config),
-        isProfitableToInline(std::move(isProfitableToInline)) {}
+        isProfitableToInline(std::move(isProfitableToInline)),
+        canHandleMultipleBlocks(std::move(canHandleMultipleBlocks)) {}
   Inliner(Inliner &) = delete;
   void operator=(const Inliner &) = delete;
 
   /// Perform inlining on a OpTrait::SymbolTable operation.
   LogicalResult doInlining();
+
+  /// This function provides a callback mechanism to clone the instructions and
+  /// other information from the callee function into the caller function.
+  static CloneCallbackTy &doClone();
+
+  /// Set the clone callback function.
+  /// The provided function "func" will be invoked by Inliner::doClone().
+  void setCloneCallback(CloneCallbackTy func) { doClone() = func; }
 
 private:
   /// An OpTrait::SymbolTable operation to run the inlining on.
@@ -119,10 +141,14 @@ private:
   /// Returns true, if it is profitable to inline the callable operation
   /// at the call site.
   ProfitabilityCallbackTy isProfitableToInline;
+  /// Return true, if functions with multiple blocks can be inlined
+  /// into a region with the SingleBlock trait.
+  canHandleMultipleBlocksCbTy canHandleMultipleBlocks;
 
   /// Forward declaration of the class providing the actual implementation.
   class Impl;
 };
+
 } // namespace mlir
 
 #endif // MLIR_TRANSFORMS_INLINER_H

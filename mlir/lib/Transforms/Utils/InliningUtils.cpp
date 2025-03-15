@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Transforms/InliningUtils.h"
+#include "mlir/Transforms/Inliner.h"
 
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/IRMapping.h"
@@ -275,16 +276,10 @@ inlineRegionImpl(InlinerInterface &interface, Region *src, Block *inlineBlock,
   if (call && callable)
     handleArgumentImpl(interface, builder, call, callable, mapper);
 
-  // Check to see if the region is being cloned, or moved inline. In either
-  // case, move the new blocks after the 'insertBlock' to improve IR
-  // readability.
+  // Clone the callee's source into the caller.
   Block *postInsertBlock = inlineBlock->splitBlock(inlinePoint);
-  if (shouldCloneInlinedRegion)
-    src->cloneInto(insertRegion, postInsertBlock->getIterator(), mapper);
-  else
-    insertRegion->getBlocks().splice(postInsertBlock->getIterator(),
-                                     src->getBlocks(), src->begin(),
-                                     src->end());
+  Inliner::doClone()(builder, src, inlineBlock, postInsertBlock, mapper,
+                     shouldCloneInlinedRegion);
 
   // Get the range of newly inserted blocks.
   auto newBlocks = llvm::make_range(std::next(inlineBlock->getIterator()),
