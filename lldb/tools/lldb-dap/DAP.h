@@ -15,7 +15,7 @@
 #include "InstructionBreakpoint.h"
 #include "OutputRedirector.h"
 #include "ProgressEvent.h"
-#include "Protocol.h"
+#include "Protocol/ProtocolBase.h"
 #include "SourceBreakpoint.h"
 #include "Transport.h"
 #include "lldb/API/SBBroadcaster.h"

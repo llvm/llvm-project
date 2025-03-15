@@ -11,7 +11,8 @@
 
 #include "DAP.h"
 #include "DAPLog.h"
-#include "Protocol.h"
+#include "Protocol/ProtocolBase.h"
+#include "Protocol/ProtocolRequests.h"
 #include "lldb/API/SBError.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"

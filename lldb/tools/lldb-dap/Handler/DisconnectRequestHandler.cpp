@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
-#include "Protocol.h"
+#include "Protocol/ProtocolRequests.h"
 #include "RequestHandler.h"
 #include "llvm/Support/Error.h"
 #include <optional>

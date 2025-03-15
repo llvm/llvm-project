@@ -1,4 +1,4 @@
-//===-- Protocol.h --------------------------------------------------------===//
+//===-- ProtocolBase.h ----------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -141,91 +141,8 @@ using Message = std::variant<Request, Response, Event>;
 bool fromJSON(const llvm::json::Value &, Message &, llvm::json::Path);
 llvm::json::Value toJSON(const Message &);
 
-// MARK: Types
-
-/// A `Source` is a descriptor for source code. It is returned from the debug
-/// adapter as part of a `StackFrame` and it is used by clients when specifying
-/// breakpoints.
-struct Source {
-  enum class PresentationHint { normal, emphasize, deemphasize };
-
-  /// The short name of the source. Every source returned from the debug adapter
-  /// has a name. When sending a source to the debug adapter this name is
-  /// optional.
-  std::optional<std::string> name;
-
-  /// The path of the source to be shown in the UI. It is only used to locate
-  /// and load the content of the source if no `sourceReference` is specified
-  /// (or its value is 0).
-  std::optional<std::string> path;
-
-  /// If the value > 0 the contents of the source must be retrieved through the
-  /// `source` request (even if a path is specified). Since a `sourceReference`
-  /// is only valid for a session, it can not be used to persist a source. The
-  /// value should be less than or equal to 2147483647 (2^31-1).
-  std::optional<int64_t> sourceReference;
-
-  /// A hint for how to present the source in the UI. A value of `deemphasize`
-  /// can be used to indicate that the source is not available or that it is
-  /// skipped on stepping.
-  std::optional<PresentationHint> presentationHint;
-
-  // unsupported keys: origin, sources, adapterData, checksums
-};
-bool fromJSON(const llvm::json::Value &, Source &, llvm::json::Path);
-
-// MARK: Requests
-
 /// This is just an acknowledgement, so no body field is required.
 using VoidResponse = std::monostate;
-
-/// Arguments for `disconnect` request.
-struct DisconnectArguments {
-  /// A value of true indicates that this `disconnect` request is part of a
-  /// restart sequence.
-  std::optional<bool> restart;
-
-  /// Indicates whether the debuggee should be terminated when the debugger is
-  /// disconnected. If unspecified, the debug adapter is free to do whatever it
-  /// thinks is best. The attribute is only honored by a debug adapter if the
-  /// corresponding capability `supportTerminateDebuggee` is true.
-  std::optional<bool> terminateDebuggee;
-
-  /// Indicates whether the debuggee should stay suspended when the debugger is
-  /// disconnected. If unspecified, the debuggee should resume execution. The
-  /// attribute is only honored by a debug adapter if the corresponding
-  /// capability `supportSuspendDebuggee` is true.
-  std::optional<bool> suspendDebuggee;
-};
-bool fromJSON(const llvm::json::Value &, DisconnectArguments &,
-              llvm::json::Path);
-
-/// Response to `disconnect` request. This is just an acknowledgement, so no
-/// body field is required.
-using DisconnectResponse = VoidResponse;
-
-/// Arguments for `source` request.
-struct SourceArguments {
-  /// Specifies the source content to load. Either `source.path` or
-  /// `source.sourceReference` must be specified.
-  std::optional<Source> source;
-
-  /// The reference to the source. This is the same as `source.sourceReference`.
-  /// This is provided for backward compatibility since old clients do not
-  /// understand the `source` attribute.
-  int64_t sourceReference;
-};
-bool fromJSON(const llvm::json::Value &, SourceArguments &, llvm::json::Path);
-
-/// Response to `source` request.
-struct SourceResponseBody {
-  /// Content of the source reference.
-  std::string content;
-
-  /// Content type (MIME type) of the source.
-  std::optional<std::string> mimeType;
-};
-llvm::json::Value toJSON(const SourceResponseBody &);
 
 } // namespace lldb_dap::protocol
 

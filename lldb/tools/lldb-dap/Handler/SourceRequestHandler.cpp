@@ -9,6 +9,8 @@
 #include "DAP.h"
 #include "Handler/RequestHandler.h"
 #include "LLDBUtils.h"
+#include "Protocol/ProtocolRequests.h"
+#include "Protocol/ProtocolTypes.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBInstructionList.h"
 #include "lldb/API/SBProcess.h"

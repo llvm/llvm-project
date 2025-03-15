@@ -1,4 +1,4 @@
-//===-- Protocol.cpp ------------------------------------------------------===//
+//===-- ProtocolBase.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Protocol.h"
+#include "Protocol/ProtocolBase.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -29,8 +29,7 @@ static bool mapRaw(const json::Value &Params, StringLiteral Prop,
   return true;
 }
 
-namespace lldb_dap {
-namespace protocol {
+namespace lldb_dap::protocol {
 
 enum class MessageType { request, response, event };
 
@@ -286,57 +285,4 @@ bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {
 json::Value toJSON(const Message &M) {
   return std::visit([](auto &M) { return toJSON(M); }, M);
 }
-
-bool fromJSON(const json::Value &Params, Source::PresentationHint &PH,
-              json::Path P) {
-  auto rawHint = Params.getAsString();
-  if (!rawHint) {
-    P.report("expected a string");
-    return false;
-  }
-  std::optional<Source::PresentationHint> hint =
-      StringSwitch<std::optional<Source::PresentationHint>>(*rawHint)
-          .Case("normal", Source::PresentationHint::normal)
-          .Case("emphasize", Source::PresentationHint::emphasize)
-          .Case("deemphasize", Source::PresentationHint::deemphasize)
-          .Default(std::nullopt);
-  if (!hint) {
-    P.report("unexpected value");
-    return false;
-  }
-  PH = *hint;
-  return true;
-}
-
-bool fromJSON(const json::Value &Params, Source &S, json::Path P) {
-  json::ObjectMapper O(Params, P);
-  return O && O.mapOptional("name", S.name) && O.mapOptional("path", S.path) &&
-         O.mapOptional("presentationHint", S.presentationHint) &&
-         O.mapOptional("sourceReference", S.sourceReference);
-}
-
-bool fromJSON(const json::Value &Params, DisconnectArguments &DA,
-              json::Path P) {
-  json::ObjectMapper O(Params, P);
-  return O && O.mapOptional("restart", DA.restart) &&
-         O.mapOptional("terminateDebuggee", DA.terminateDebuggee) &&
-         O.mapOptional("suspendDebuggee", DA.suspendDebuggee);
-}
-
-bool fromJSON(const json::Value &Params, SourceArguments &SA, json::Path P) {
-  json::ObjectMapper O(Params, P);
-  return O && O.mapOptional("source", SA.source) &&
-         O.map("sourceReference", SA.sourceReference);
-}
-
-json::Value toJSON(const SourceResponseBody &SA) {
-  json::Object Result{{"content", SA.content}};
-
-  if (SA.mimeType)
-    Result.insert({"mimeType", SA.mimeType});
-
-  return std::move(Result);
-}
-
-} // namespace protocol
-} // namespace lldb_dap
+} // namespace lldb_dap::protocol
