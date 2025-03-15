@@ -84,7 +84,10 @@ class TestProfileWriter : public ProfileWriter {
     std::cout << "Exited Context Section" << std::endl;
   }
 
-  void writeContextual(const ContextNode &RootNode) override {
+  void writeContextual(const ContextNode &RootNode,
+                       uint64_t EntryCount) override {
+    std::cout << "Entering Root " << RootNode.guid()
+              << " with total entry count " << EntryCount << std::endl;
     printProfile(RootNode, "", "");
   }
 
@@ -115,6 +118,7 @@ class TestProfileWriter : public ProfileWriter {
 // The second context is in the loop. We expect 2 entries and each of the
 // branches would be taken once, so the second counter is 1.
 // CHECK-NEXT: Entered Context Section
+// CHECK-NEXT: Entering Root 8657661246551306189 with total entry count 1
 // CHECK-NEXT: Guid: 8657661246551306189
 // CHECK-NEXT: Entries: 1
 // CHECK-NEXT: 2 counters and 3 callsites
