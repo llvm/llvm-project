@@ -48,7 +48,7 @@ Sections:
 # DLOC:   dLoc: [ 3, 17, 11, 2 ]
 # RAW:     Tag: Ref, Val: 0
               - { dLoc: [ 3, 17, 11, 2 ], Tag: Ref, Val: 0 }
-# DLOC    dLoc: [ 3, 6, 5, 4 ]
+# DLOC:   dLoc: [ 3, 6, 5, 4 ]
 # RAW:     Tag: Add, Val: 0
               - { dLoc: [ 3, 6, 5, 4 ], Tag: Add, Val: 0 }
 # RAW:    Tag: Zero, Val: 3,
