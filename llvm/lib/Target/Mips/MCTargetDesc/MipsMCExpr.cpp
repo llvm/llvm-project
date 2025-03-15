@@ -131,8 +131,6 @@ void MipsMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 
 bool MipsMCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
                                            const MCFixup *Fixup) const {
-  if (!Asm)
-    return false;
   // Look for the %hi(%neg(%gp_rel(X))) and %lo(%neg(%gp_rel(X))) special cases.
   if (isGpOff()) {
     const MCExpr *SubExpr =

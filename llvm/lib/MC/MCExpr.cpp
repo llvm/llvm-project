@@ -286,11 +286,11 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
   }
 
   bool IsRelocatable = evaluateAsRelocatableImpl(Value, Asm, Addrs, InSet);
-
-  // Record the current value.
   Res = Value.getConstant();
-
-  return IsRelocatable && Value.isAbsolute();
+  // Value with RefKind (e.g. %hi(0xdeadbeef) in MIPS) is not considered
+  // absolute (the value is unknown at parse time), even if it might be resolved
+  // by evaluateFixup.
+  return IsRelocatable && Value.isAbsolute() && Value.getRefKind() == 0;
 }
 
 /// Helper method for \see EvaluateSymbolAdd().
