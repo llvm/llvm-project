@@ -347,7 +347,7 @@ MachineBasicBlock::iterator XtensaFrameLowering::eliminateCallFramePseudoInstr(
 void XtensaFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                BitVector &SavedRegs,
                                                RegScavenger *RS) const {
-  unsigned FP = TRI->getFrameRegister(MF);
+  MCRegister FP = TRI->getFrameRegister(MF);
 
   if (STI.isWindowedABI()) {
     return;

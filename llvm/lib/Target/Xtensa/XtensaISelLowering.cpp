@@ -895,8 +895,14 @@ SDValue XtensaTargetLowering::LowerSTACKSAVE(SDValue Op,
 
 SDValue XtensaTargetLowering::LowerSTACKRESTORE(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  return DAG.getCopyToReg(Op.getOperand(0), SDLoc(Op), Xtensa::SP,
-                          Op.getOperand(1));
+  if (Subtarget.isWindowedABI()) {
+    SDValue NewSP =
+        DAG.getNode(XtensaISD::MOVSP, SDLoc(Op), MVT::i32, Op.getOperand(1));
+    return DAG.getCopyToReg(Op.getOperand(0), SDLoc(Op), Xtensa::SP, NewSP);
+  } else {
+    return DAG.getCopyToReg(Op.getOperand(0), SDLoc(Op), Xtensa::SP,
+                            Op.getOperand(1));
+  }
 }
 
 SDValue XtensaTargetLowering::LowerFRAMEADDR(SDValue Op,
@@ -915,7 +921,7 @@ SDValue XtensaTargetLowering::LowerFRAMEADDR(SDValue Op,
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
 
-  Register FrameRegister = Subtarget.getRegisterInfo()->getFrameRegister(MF);
+  MCRegister FrameRegister = Subtarget.getRegisterInfo()->getFrameRegister(MF);
   SDValue FrameAddr =
       DAG.getCopyFromReg(DAG.getEntryNode(), DL, FrameRegister, VT);
   return FrameAddr;
@@ -934,7 +940,7 @@ SDValue XtensaTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDValue SizeRoundUp = DAG.getNode(ISD::AND, DL, VT, SizeTmp,
                                     DAG.getSignedConstant(~31, DL, MVT::i32));
 
-  unsigned SPReg = Xtensa::SP;
+  MCRegister SPReg = Xtensa::SP;
   SDValue SP = DAG.getCopyFromReg(Chain, DL, SPReg, VT);
   SDValue NewSP = DAG.getNode(ISD::SUB, DL, VT, SP, SizeRoundUp); // Value
   if (Subtarget.isWindowedABI()) {
