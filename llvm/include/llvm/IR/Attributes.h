@@ -276,6 +276,10 @@ public:
   /// when unknown.
   std::optional<unsigned> getVScaleRangeMax() const;
 
+  /// Return the value for vscale based on the vscale_range attribute or 0 when
+  /// unknown.
+  unsigned getVScaleValue() const;
+
   // Returns the unwind table kind.
   UWTableKind getUWTableKind() const;
 

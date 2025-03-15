@@ -343,6 +343,7 @@ public:
       const;
   unsigned getVScaleRangeMin() const;
   std::optional<unsigned> getVScaleRangeMax() const;
+  unsigned getVScaleValue() const;
   UWTableKind getUWTableKind() const;
   AllocFnKind getAllocKind() const;
   MemoryEffects getMemoryEffects() const;
