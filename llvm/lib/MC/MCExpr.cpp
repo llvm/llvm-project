@@ -285,8 +285,7 @@ bool MCExpr::evaluateAsAbsolute(int64_t &Res, const MCAssembler *Asm,
     return true;
   }
 
-  bool IsRelocatable =
-      evaluateAsRelocatableImpl(Value, Asm, nullptr, Addrs, InSet);
+  bool IsRelocatable = evaluateAsRelocatableImpl(Value, Asm, Addrs, InSet);
 
   // Record the current value.
   Res = Value.getConstant();
@@ -496,11 +495,11 @@ static bool evaluateSymbolicAdd(const MCAssembler *Asm,
 
 bool MCExpr::evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm,
                                    const MCFixup *Fixup) const {
-  return evaluateAsRelocatableImpl(Res, Asm, Fixup, nullptr, false);
+  return evaluateAsRelocatableImpl(Res, Asm, nullptr, false);
 }
 
 bool MCExpr::evaluateAsValue(MCValue &Res, const MCAssembler &Asm) const {
-  return evaluateAsRelocatableImpl(Res, &Asm, nullptr, nullptr, true);
+  return evaluateAsRelocatableImpl(Res, &Asm, nullptr, true);
 }
 
 static bool canExpand(const MCSymbol &Sym, bool InSet) {
@@ -520,13 +519,13 @@ static bool canExpand(const MCSymbol &Sym, bool InSet) {
 }
 
 bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                       const MCFixup *Fixup,
                                        const SectionAddrMap *Addrs,
                                        bool InSet) const {
   ++stats::MCExprEvaluate;
   switch (getKind()) {
   case Target:
-    return cast<MCTargetExpr>(this)->evaluateAsRelocatableImpl(Res, Asm, Fixup);
+    return cast<MCTargetExpr>(this)->evaluateAsRelocatableImpl(Res, Asm,
+                                                               nullptr);
 
   case Constant:
     Res = MCValue::get(cast<MCConstantExpr>(this)->getValue());
@@ -542,8 +541,8 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     if (Sym.isVariable() && (Kind == MCSymbolRefExpr::VK_None || Layout) &&
         canExpand(Sym, InSet)) {
       bool IsMachO = SRE->hasSubsectionsViaSymbols();
-      if (Sym.getVariableValue()->evaluateAsRelocatableImpl(
-              Res, Asm, Fixup, Addrs, InSet || IsMachO)) {
+      if (Sym.getVariableValue()->evaluateAsRelocatableImpl(Res, Asm, Addrs,
+                                                            InSet || IsMachO)) {
         if (Kind != MCSymbolRefExpr::VK_None) {
           if (Res.isAbsolute()) {
             Res = MCValue::get(SRE, nullptr, 0);
@@ -588,8 +587,7 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     const MCUnaryExpr *AUE = cast<MCUnaryExpr>(this);
     MCValue Value;
 
-    if (!AUE->getSubExpr()->evaluateAsRelocatableImpl(Value, Asm, Fixup, Addrs,
-                                                      InSet))
+    if (!AUE->getSubExpr()->evaluateAsRelocatableImpl(Value, Asm, Addrs, InSet))
       return false;
 
     switch (AUE->getOpcode()) {
@@ -624,9 +622,9 @@ bool MCExpr::evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
     const MCBinaryExpr *ABE = cast<MCBinaryExpr>(this);
     MCValue LHSValue, RHSValue;
 
-    if (!ABE->getLHS()->evaluateAsRelocatableImpl(LHSValue, Asm, Fixup, Addrs,
+    if (!ABE->getLHS()->evaluateAsRelocatableImpl(LHSValue, Asm, Addrs,
                                                   InSet) ||
-        !ABE->getRHS()->evaluateAsRelocatableImpl(RHSValue, Asm, Fixup, Addrs,
+        !ABE->getRHS()->evaluateAsRelocatableImpl(RHSValue, Asm, Addrs,
                                                   InSet)) {
       // Check if both are Target Expressions, see if we can compare them.
       if (const MCTargetExpr *L = dyn_cast<MCTargetExpr>(ABE->getLHS())) {
