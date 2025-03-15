@@ -286,8 +286,7 @@ public:
   ComplexPairTy EmitComplexBinOpLibCall(StringRef LibCallName,
                                         const BinOpInfo &Op);
 
-  QualType HigherPrecisionTypeForComplexArithmetic(QualType ElementType,
-                                                   bool IsDivOpCode) {
+  QualType HigherPrecisionTypeForComplexArithmetic(QualType ElementType) {
     ASTContext &Ctx = CGF.getContext();
     const QualType HigherElementType =
         Ctx.GetHigherPrecisionFPType(ElementType);
@@ -314,7 +313,7 @@ public:
   }
 
   QualType getPromotionType(FPOptionsOverride Features, QualType Ty,
-                            bool IsDivOpCode = false) {
+                            bool IsComplexDivisor = false) {
     if (auto *CT = Ty->getAs<ComplexType>()) {
       QualType ElementType = CT->getElementType();
       bool IsFloatingType = ElementType->isFloatingType();
@@ -325,10 +324,9 @@ public:
                                      Features.getComplexRangeOverride() ==
                                          CGF.getLangOpts().getComplexRange();
 
-      if (IsDivOpCode && IsFloatingType && IsComplexRangePromoted &&
+      if (IsComplexDivisor && IsFloatingType && IsComplexRangePromoted &&
           (HasNoComplexRangeOverride || HasMatchingComplexRange))
-        return HigherPrecisionTypeForComplexArithmetic(ElementType,
-                                                       IsDivOpCode);
+        return HigherPrecisionTypeForComplexArithmetic(ElementType);
       if (ElementType.UseExcessPrecision(CGF.getContext()))
         return CGF.getContext().getComplexType(CGF.getContext().FloatTy);
     }
@@ -339,9 +337,10 @@ public:
 
 #define HANDLEBINOP(OP)                                                        \
   ComplexPairTy VisitBin##OP(const BinaryOperator *E) {                        \
-    QualType promotionTy = getPromotionType(                                   \
-        E->getStoredFPFeaturesOrDefault(), E->getType(),                       \
-        (E->getOpcode() == BinaryOperatorKind::BO_Div) ? true : false);        \
+    QualType promotionTy =                                                     \
+        getPromotionType(E->getStoredFPFeaturesOrDefault(), E->getType(),      \
+                         (E->getOpcode() == BinaryOperatorKind::BO_Div &&      \
+                          E->getRHS()->getType()->isAnyComplexType()));        \
     ComplexPairTy result = EmitBin##OP(EmitBinOps(E, promotionTy));            \
     if (!promotionTy.isNull())                                                 \
       result = CGF.EmitUnPromotedValue(result, E->getType());                  \
