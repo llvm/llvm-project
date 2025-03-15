@@ -460,23 +460,19 @@ Error RawCoverageMappingReader::read() {
   SmallVector<FileNode> FileIDExpansionRegionMapping(VirtualFileMapping.size());
 
   // Construct the tree.
-  auto PrevFileID = std::numeric_limits<unsigned>::max(); // Invalid value
-  for (auto &R : MappingRegions) {
-    if (R.Kind == CounterMappingRegion::ExpansionRegion) {
-      // The File that contains Expansion may be a node.
-      assert(!FileIDExpansionRegionMapping[R.ExpandedFileID].ExpanderR);
-      FileIDExpansionRegionMapping[R.ExpandedFileID].ExpanderR = &R;
+  // Reverse loop finally sets FirstR as the top for each FileID.
+  for (auto &R : reverse(MappingRegions)) {
+    FileIDExpansionRegionMapping[R.FileID].FirstR = &R;
 
-      // It will be the node if (isExpansion and ExpansionPending).
-      FileIDExpansionRegionMapping[R.ExpandedFileID].ExpansionPending = true;
-    }
+    if (R.Kind != CounterMappingRegion::ExpansionRegion)
+      continue;
 
-    if (PrevFileID != R.FileID) {
-      // Record 1st Record for each File.
-      assert(!FileIDExpansionRegionMapping[R.FileID].FirstR);
-      FileIDExpansionRegionMapping[R.FileID].FirstR = &R;
-      PrevFileID = R.FileID;
-    }
+    // The File that contains Expansion may be a node.
+    auto &ExpandedRegion = FileIDExpansionRegionMapping[R.ExpandedFileID];
+    assert(!ExpandedRegion.ExpanderR);
+    ExpandedRegion.ExpanderR = &R;
+    // It will be the node if (isExpansion and ExpansionPending).
+    ExpandedRegion.ExpansionPending = true;
   }
 
   auto Propagate = [&](FileNode &X) {
