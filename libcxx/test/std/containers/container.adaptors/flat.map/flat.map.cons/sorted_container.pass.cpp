@@ -66,11 +66,17 @@ int main(int, char**) {
     auto vs2             = vs;
 
     auto m = M(std::sorted_unique, ks, vs);
-    assert((m == M{{1, 4}, {2, 3}, {4, 2}, {10, 1}}));
+    assert((m == M{{1, static_cast<char>(4)},
+                   {2, static_cast<char>(3)},
+                   {4, static_cast<char>(2)},
+                   {10, static_cast<char>(1)}}));
     m = M(std::sorted_unique, std::move(ks), std::move(vs));
     assert(ks.empty()); // it was moved-from
     assert(vs.empty()); // it was moved-from
-    assert((m == M{{1, 4}, {2, 3}, {4, 2}, {10, 1}}));
+    assert((m == M{{1, static_cast<char>(4)},
+                   {2, static_cast<char>(3)},
+                   {4, static_cast<char>(2)},
+                   {10, static_cast<char>(1)}}));
 
     // explicit(false)
     M m2 = {std::sorted_unique, std::move(ks2), std::move(vs2)};
@@ -85,11 +91,17 @@ int main(int, char**) {
     Ks ks    = {10, 4, 2, 1};
     Vs vs    = {1, 2, 3, 4};
     auto m   = M(std::sorted_unique, ks, vs);
-    assert((m == M{{1, 4}, {2, 3}, {4, 2}, {10, 1}}));
+    assert((m == M{{1, static_cast<char>(4)},
+                   {2, static_cast<char>(3)},
+                   {4, static_cast<char>(2)},
+                   {10, static_cast<char>(1)}}));
     m = M(std::sorted_unique, std::move(ks), std::move(vs));
     assert(ks.empty()); // it was moved-from
     assert(vs.empty()); // it was moved-from
-    assert((m == M{{1, 4}, {2, 3}, {4, 2}, {10, 1}}));
+    assert((m == M{{1, static_cast<char>(4)},
+                   {2, static_cast<char>(3)},
+                   {4, static_cast<char>(2)},
+                   {10, static_cast<char>(1)}}));
   }
   {
     // flat_map(sorted_unique_t, key_container_type , mapped_container_type)
@@ -113,7 +125,10 @@ int main(int, char**) {
     std::vector<char> vs = {4, 3, 2, 1};
 
     auto m = M(std::sorted_unique, ks, vs, C(4));
-    assert((m == M{{1, 4}, {2, 3}, {4, 2}, {10, 1}}));
+    assert((m == M{{1, static_cast<char>(4)},
+                   {2, static_cast<char>(3)},
+                   {4, static_cast<char>(2)},
+                   {10, static_cast<char>(1)}}));
     assert(m.key_comp() == C(4));
 
     // explicit(false)

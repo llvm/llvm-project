@@ -166,9 +166,18 @@ int main(int, char**) {
   }
   {
     // flat_map(InputIterator first, InputIterator last, const Allocator& a);
-    using P      = std::pair<int, short>;
-    P ar[]       = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
-    P expected[] = {{1, 1}, {2, 4}, {3, 6}};
+    using P = std::pair<int, short>;
+    P ar[]  = {
+        {1, static_cast<short>(1)},
+        {1, static_cast<short>(2)},
+        {1, static_cast<short>(3)},
+        {2, static_cast<short>(4)},
+        {2, static_cast<short>(5)},
+        {3, static_cast<short>(6)},
+        {2, static_cast<short>(7)},
+        {3, static_cast<short>(8)},
+        {3, static_cast<short>(9)}};
+    P expected[] = {{1, static_cast<short>(1)}, {2, static_cast<short>(4)}, {3, static_cast<short>(6)}};
     {
       //  cpp17 iterator
       using M = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;
@@ -242,9 +251,18 @@ int main(int, char**) {
   }
   {
     //  flat_map(from_range_t, R&&, const Alloc&);
-    using P      = std::pair<int, short>;
-    P ar[]       = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
-    P expected[] = {{1, 1}, {2, 4}, {3, 6}};
+    using P = std::pair<int, short>;
+    P ar[]  = {
+        {1, static_cast<short>(1)},
+        {1, static_cast<short>(2)},
+        {1, static_cast<short>(3)},
+        {2, static_cast<short>(4)},
+        {2, static_cast<short>(5)},
+        {3, static_cast<short>(6)},
+        {2, static_cast<short>(7)},
+        {3, static_cast<short>(8)},
+        {3, static_cast<short>(9)}};
+    P expected[] = {{1, static_cast<short>(1)}, {2, static_cast<short>(4)}, {3, static_cast<short>(6)}};
     {
       // input_range
       using M    = std::flat_map<int, short, std::less<int>, std::pmr::vector<int>, std::pmr::vector<short>>;

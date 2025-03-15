@@ -57,9 +57,18 @@ int main(int, char**) {
     static_assert(!std::is_constructible_v<M3, Iter3, Iter3, const C&, const A2&>);
   }
 
-  using P      = std::pair<int, short>;
-  P ar[]       = {{1, 1}, {1, 2}, {1, 3}, {2, 4}, {2, 5}, {3, 6}, {2, 7}, {3, 8}, {3, 9}};
-  P expected[] = {{1, 1}, {2, 4}, {3, 6}};
+  using P = std::pair<int, short>;
+  P ar[]  = {
+      {1, static_cast<short>(1)},
+      {1, static_cast<short>(2)},
+      {1, static_cast<short>(3)},
+      {2, static_cast<short>(4)},
+      {2, static_cast<short>(5)},
+      {3, static_cast<short>(6)},
+      {2, static_cast<short>(7)},
+      {3, static_cast<short>(8)},
+      {3, static_cast<short>(9)}};
+  P expected[] = {{1, static_cast<short>(1)}, {2, static_cast<short>(4)}, {3, static_cast<short>(6)}};
   {
     // flat_map(InputIterator , InputIterator)
     // cpp17_input_iterator
