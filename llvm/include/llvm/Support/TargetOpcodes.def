@@ -295,8 +295,11 @@ HANDLE_TARGET_OPCODE(G_ABDS)
 /// Generic absolute difference unsigned instruction.
 HANDLE_TARGET_OPCODE(G_ABDU)
 
-
+// Generic implicit definition.
 HANDLE_TARGET_OPCODE(G_IMPLICIT_DEF)
+
+// Generic poison value.
+HANDLE_TARGET_OPCODE(G_POISON)
 
 /// Generic PHI instruction with types.
 HANDLE_TARGET_OPCODE(G_PHI)

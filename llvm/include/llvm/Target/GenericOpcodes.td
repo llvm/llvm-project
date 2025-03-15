@@ -92,6 +92,12 @@ def G_IMPLICIT_DEF : GenericInstruction {
   let hasSideEffects = false;
 }
 
+def G_POISON : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins);
+  let hasSideEffects = false;
+}
+
 def G_PHI : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins variable_ops);
