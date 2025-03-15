@@ -1440,11 +1440,13 @@ public:
   static bool NeedsScope(const parser::OpenMPBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
-    AddOmpSourceRange(x.source);
+  bool Pre(const parser::OmpMetadirectiveDirective &) {
+    ++metaLevel_;
     return true;
   }
-  bool Pre(const parser::OmpSimpleStandaloneDirective &x) {
+  void Post(const parser::OmpMetadirectiveDirective &) { --metaLevel_; }
+
+  bool Pre(const parser::OpenMPRequiresConstruct &x) {
     AddOmpSourceRange(x.source);
     return true;
   }
@@ -1656,6 +1658,7 @@ private:
       const parser::OmpClauseList &clauses);
   void ProcessReductionSpecifier(const parser::OmpReductionSpecifier &spec,
       const std::optional<parser::OmpClauseList> &clauses);
+  int metaLevel_{0};
 };
 
 bool OmpVisitor::NeedsScope(const parser::OpenMPBlockConstruct &x) {
@@ -1801,12 +1804,16 @@ void OmpVisitor::ProcessReductionSpecifier(
 }
 
 bool OmpVisitor::Pre(const parser::OmpDirectiveSpecification &x) {
-  // OmpDirectiveSpecification is only used in METADIRECTIVE at the moment.
-  // Since it contains directives and clauses, some semantic checks may
-  // not be applicable.
-  // Disable the semantic analysis for it for now to allow the compiler to
-  // parse METADIRECTIVE without flagging errors.
   AddOmpSourceRange(x.source);
+  if (metaLevel_ == 0) {
+    // Not in METADIRECTIVE.
+    return true;
+  }
+
+  // If OmpDirectiveSpecification (which contains clauses) is a part of
+  // METADIRECTIVE, some semantic checks may not be applicable.
+  // Disable the semantic analysis for it in such cases to allow the compiler
+  // to parse METADIRECTIVE without flagging errors.
   auto &maybeArgs{std::get<std::optional<std::list<parser::OmpArgument>>>(x.t)};
   auto &maybeClauses{std::get<std::optional<parser::OmpClauseList>>(x.t)};
 
