@@ -12933,6 +12933,10 @@ NamedDecl *Sema::BuildUsingDeclaration(
                                                   SS, NameInfo, IdentLoc))
       return nullptr;
 
+    if (Previous.isSingleResult() &&
+        Previous.getFoundDecl()->isTemplateParameter())
+      DiagnoseTemplateParameterShadow(IdentLoc, Previous.getFoundDecl());
+
     if (HasTypenameKeyword) {
       // FIXME: not all declaration name kinds are legal here
       D = UnresolvedUsingTypenameDecl::Create(Context, CurContext,
