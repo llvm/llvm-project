@@ -3678,9 +3678,9 @@ public:
 /// an implicit access if a qualifier is provided.
 class CXXDependentScopeMemberExpr final
     : public Expr,
-      private llvm::TrailingObjects<CXXDependentScopeMemberExpr,
-                                    ASTTemplateKWAndArgsInfo,
-                                    TemplateArgumentLoc, NamedDecl *> {
+      private llvm::TrailingObjects<
+          CXXDependentScopeMemberExpr, NestedNameSpecifierLoc, DeclAccessPair,
+          ASTTemplateKWAndArgsInfo, TemplateArgumentLoc> {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend TrailingObjects;
@@ -3693,16 +3693,14 @@ class CXXDependentScopeMemberExpr final
   /// implicit accesses.
   QualType BaseType;
 
-  /// The nested-name-specifier that precedes the member name, if any.
-  /// FIXME: This could be in principle store as a trailing object.
-  /// However the performance impact of doing so should be investigated first.
-  NestedNameSpecifierLoc QualifierLoc;
-
   /// The member to which this member expression refers, which
   /// can be name, overloaded operator, or destructor.
   ///
   /// FIXME: could also be a template-id
   DeclarationNameInfo MemberNameInfo;
+
+  /// The location of the '->' or '.' operator.
+  SourceLocation OperatorLoc;
 
   // CXXDependentScopeMemberExpr is followed by several trailing objects,
   // some of which optional. They are in order:
@@ -3723,8 +3721,16 @@ class CXXDependentScopeMemberExpr final
     return CXXDependentScopeMemberExprBits.HasTemplateKWAndArgsInfo;
   }
 
-  bool hasFirstQualifierFoundInScope() const {
-    return CXXDependentScopeMemberExprBits.HasFirstQualifierFoundInScope;
+  unsigned getNumUnqualifiedLookups() const {
+    return CXXDependentScopeMemberExprBits.NumUnqualifiedLookups;
+  }
+
+  unsigned numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
+    return hasQualifier();
+  }
+
+  unsigned numTrailingObjects(OverloadToken<DeclAccessPair>) const {
+    return getNumUnqualifiedLookups();
   }
 
   unsigned numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
@@ -3735,33 +3741,32 @@ class CXXDependentScopeMemberExpr final
     return getNumTemplateArgs();
   }
 
-  unsigned numTrailingObjects(OverloadToken<NamedDecl *>) const {
-    return hasFirstQualifierFoundInScope();
-  }
-
   CXXDependentScopeMemberExpr(const ASTContext &Ctx, Expr *Base,
                               QualType BaseType, bool IsArrow,
                               SourceLocation OperatorLoc,
                               NestedNameSpecifierLoc QualifierLoc,
                               SourceLocation TemplateKWLoc,
-                              NamedDecl *FirstQualifierFoundInScope,
+                              ArrayRef<DeclAccessPair> UnqualifiedLookups,
                               DeclarationNameInfo MemberNameInfo,
                               const TemplateArgumentListInfo *TemplateArgs);
 
-  CXXDependentScopeMemberExpr(EmptyShell Empty, bool HasTemplateKWAndArgsInfo,
-                              bool HasFirstQualifierFoundInScope);
+  CXXDependentScopeMemberExpr(EmptyShell Empty, bool HasQualifier,
+                              unsigned NumUnqualifiedLookups,
+                              bool HasTemplateKWAndArgsInfo);
 
 public:
   static CXXDependentScopeMemberExpr *
   Create(const ASTContext &Ctx, Expr *Base, QualType BaseType, bool IsArrow,
          SourceLocation OperatorLoc, NestedNameSpecifierLoc QualifierLoc,
-         SourceLocation TemplateKWLoc, NamedDecl *FirstQualifierFoundInScope,
+         SourceLocation TemplateKWLoc,
+         ArrayRef<DeclAccessPair> UnqualifiedLookups,
          DeclarationNameInfo MemberNameInfo,
          const TemplateArgumentListInfo *TemplateArgs);
 
   static CXXDependentScopeMemberExpr *
-  CreateEmpty(const ASTContext &Ctx, bool HasTemplateKWAndArgsInfo,
-              unsigned NumTemplateArgs, bool HasFirstQualifierFoundInScope);
+  CreateEmpty(const ASTContext &Ctx, bool HasQualifier,
+              unsigned NumUnqualifiedLookups, bool HasTemplateKWAndArgsInfo,
+              unsigned NumTemplateArgs);
 
   /// True if this is an implicit access, i.e. one in which the
   /// member being accessed was not written in the source.  The source
@@ -3786,34 +3791,35 @@ public:
   bool isArrow() const { return CXXDependentScopeMemberExprBits.IsArrow; }
 
   /// Retrieve the location of the '->' or '.' operator.
-  SourceLocation getOperatorLoc() const {
-    return CXXDependentScopeMemberExprBits.OperatorLoc;
+  SourceLocation getOperatorLoc() const { return OperatorLoc; }
+
+  /// Determines whether this member expression had a nested-name-specifier
+  /// prior to the name of the member, e.g., x->Base::foo.
+  bool hasQualifier() const {
+    return CXXDependentScopeMemberExprBits.HasQualifier;
   }
 
-  /// Retrieve the nested-name-specifier that qualifies the member name.
+  /// If the member name was qualified, retrieves the nested-name-specifier
+  /// that precedes the member name, with source-location information.
+  NestedNameSpecifierLoc getQualifierLoc() const {
+    if (!hasQualifier())
+      return NestedNameSpecifierLoc();
+    return *getTrailingObjects<NestedNameSpecifierLoc>();
+  }
+
+  /// If the member name was qualified, retrieves the
+  /// nested-name-specifier that precedes the member name. Otherwise, returns
+  /// NULL.
   NestedNameSpecifier *getQualifier() const {
-    return QualifierLoc.getNestedNameSpecifier();
+    return getQualifierLoc().getNestedNameSpecifier();
   }
 
-  /// Retrieve the nested-name-specifier that qualifies the member
-  /// name, with source location information.
-  NestedNameSpecifierLoc getQualifierLoc() const { return QualifierLoc; }
-
-  /// Retrieve the first part of the nested-name-specifier that was
-  /// found in the scope of the member access expression when the member access
-  /// was initially parsed.
-  ///
-  /// This function only returns a useful result when member access expression
-  /// uses a qualified member name, e.g., "x.Base::f". Here, the declaration
-  /// returned by this function describes what was found by unqualified name
-  /// lookup for the identifier "Base" within the scope of the member access
-  /// expression itself. At template instantiation time, this information is
-  /// combined with the results of name lookup into the type of the object
-  /// expression itself (the class type of x).
-  NamedDecl *getFirstQualifierFoundInScope() const {
-    if (!hasFirstQualifierFoundInScope())
-      return nullptr;
-    return *getTrailingObjects<NamedDecl *>();
+  /// Retrieve the declarations found by unqualified lookup for the first
+  /// component name of the nested-name-specifier, if any.
+  ArrayRef<DeclAccessPair> unqualified_lookups() const {
+    if (!getNumUnqualifiedLookups())
+      return std::nullopt;
+    return {getTrailingObjects<DeclAccessPair>(), getNumUnqualifiedLookups()};
   }
 
   /// Retrieve the name of the member that this expression refers to.

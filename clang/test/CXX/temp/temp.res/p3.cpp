@@ -28,6 +28,6 @@ template<typename T> int A<T>::template C<int>::*f5() {}
 template<typename T> template<typename U> struct A<T>::B {
   friend A<T>::C<T> f6(); // ok, same as 'friend T f6();'
 
-  friend A<U>::C<T> f7(); // expected-error {{use 'template' keyword to treat 'C' as a dependent template name}} expected-warning {{missing 'typename'}}
+  friend A<U>::C<T> f7(); // expected-warning {{use 'template' keyword to treat 'C' as a dependent template name}} expected-warning {{missing 'typename'}}
   friend A<U>::template C<T> f8(); // expected-warning {{missing 'typename'}}
 };

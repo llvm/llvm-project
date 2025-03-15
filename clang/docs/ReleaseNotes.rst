@@ -104,6 +104,9 @@ Resolutions to C++ Defect Reports
 - Bumped the ``__cpp_constexpr`` feature-test macro to ``202002L`` in C++20 mode as indicated in
   `P2493R0 <https://wg21.link/P2493R0>`_.
 
+- Clang now correctly implements lookup for the terminal name of a member-qualified nested-name-specifier.
+  (`CWG1835: Dependent member lookup before < <https://cplusplus.github.io/CWG/issues/1835.html>`_).
+
 C Language Changes
 ------------------
 
