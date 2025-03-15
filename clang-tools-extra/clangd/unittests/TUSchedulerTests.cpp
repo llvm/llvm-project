@@ -1216,9 +1216,10 @@ TEST_F(TUSchedulerTests, PublishWithStalePreamble) {
     void onPreambleAST(
         PathRef Path, llvm::StringRef Version, CapturedASTCtx,
         std::shared_ptr<const include_cleaner::PragmaIncludes>) override {
-      if (BuildBefore)
+      if (BuildBefore) {
         ASSERT_TRUE(UnblockPreamble.wait(timeoutSeconds(60)))
             << "Expected notification";
+      }
       BuildBefore = true;
     }
 
