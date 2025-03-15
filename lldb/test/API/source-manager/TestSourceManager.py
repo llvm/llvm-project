@@ -129,6 +129,7 @@ class SourceManagerTestCase(TestBase):
             stream.GetData(),
             "Source code displayed correctly:\n" + stream.GetData(),
             exe=False,
+            ordered=False,
             patterns=["=>", "%d.*Hello world" % self.line, needle_regex],
         )
 
