@@ -63,7 +63,6 @@ protected:
   }
 
   bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup,
                                  const SectionAddrMap *Addrs, bool InSet) const;
 
   unsigned getSubclassData() const { return SubclassData; }
