@@ -17,6 +17,7 @@ _LIBCPP_PUSH_MACROS
 #include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
+_LIBCPP_BEGIN_ABI_SENSITIVE
 
 // ~condition_variable is defined elsewhere.
 
@@ -66,6 +67,7 @@ void notify_all_at_thread_exit(condition_variable& cond, unique_lock<mutex> lk) 
   __thread_local_data()->notify_all_at_thread_exit(&cond, lk.release());
 }
 
+_LIBCPP_END_ABI_SENSITIVE
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS

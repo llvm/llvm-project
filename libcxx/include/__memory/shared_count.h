@@ -68,6 +68,7 @@ inline _LIBCPP_HIDE_FROM_ABI _Tp __libcpp_atomic_refcount_decrement(_Tp& __t) _N
 #endif
 }
 
+_LIBCPP_BEGIN_ABI_SENSITIVE
 class _LIBCPP_EXPORTED_FROM_ABI __shared_count {
   __shared_count(const __shared_count&);
   __shared_count& operator=(const __shared_count&);
@@ -131,6 +132,7 @@ public:
 private:
   virtual void __on_zero_shared_weak() _NOEXCEPT = 0;
 };
+_LIBCPP_END_ABI_SENSITIVE
 
 _LIBCPP_END_NAMESPACE_STD
 
