@@ -6714,7 +6714,8 @@ void InitializationSequence::InitializeFrom(Sema &S,
         OverloadCandidateSet::iterator Best;
         OverloadingResult OR = getFailedCandidateSet().BestViableFunction(
             S, Kind.getLocation(), Best);
-        if (OR != OverloadingResult::OR_Deleted) {
+        if (OR != OverloadingResult::OR_Deleted &&
+            Kind.getKind() == InitializationKind::IK_Direct) {
           // C++20 [dcl.init] 17.6.2.2:
           //   - Otherwise, if no constructor is viable, the destination type is
           //   an
