@@ -400,7 +400,22 @@ Lowering of the new operations (after all the optimizations) might be done in a 
 
 ### Runtime
 
-[TBD] define the runtime APIs.
+The array copies required for `pack/unpack` actions are done using `ShallowCopyDirect` API of flang-rt.
+
+```C++
+void RTDECL(ShallowCopyDirect)(
+    const Descriptor &result,
+    const Descriptor &source,
+    const char *sourceFile = nullptr,
+    int line = 0);
+```
+
+It copies values from `source` array into the pre-allocated `result` array. The semantics is different from the `Assign` runtime for derived types, because it does not perform the recursive assign actions for the components of derived types.
+
+The arrays must be conforming, i.e. they must have:
+  * Same rank.
+  * Same extents.
+  * Same size and type of elements (including the type parameters).
 
 ### Optimization passes
 
