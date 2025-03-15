@@ -133,7 +133,7 @@ public:
   AMDGPUPromoteAllocaImpl(TargetMachine &TM, LoopInfo &LI) : TM(TM), LI(LI) {
 
     const Triple &TT = TM.getTargetTriple();
-    IsAMDGCN = TT.getArch() == Triple::amdgcn;
+    IsAMDGCN = TT.isAMDGCN();
     IsAMDHSA = TT.getOS() == Triple::AMDHSA;
   }
 
