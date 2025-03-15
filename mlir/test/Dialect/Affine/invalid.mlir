@@ -5,7 +5,7 @@
 func.func @affine_apply_operand_non_index(%arg0 : i32) {
   // Custom parser automatically assigns all arguments the `index` so we must
   // use the generic syntax here to exercise the verifier.
-  // expected-error@+1 {{op operand #0 must be variadic of index, but got 'i32'}}
+  // expected-error@+1 {{op operand #0 must be variadic of index-like, but got 'i32'}}
   %0 = "affine.apply"(%arg0) {map = affine_map<(d0) -> (d0)>} : (i32) -> (index)
   return
 }
@@ -15,8 +15,18 @@ func.func @affine_apply_operand_non_index(%arg0 : i32) {
 func.func @affine_apply_resul_non_index(%arg0 : index) {
   // Custom parser automatically assigns `index` as the result type so we must
   // use the generic syntax here to exercise the verifier.
-  // expected-error@+1 {{op result #0 must be index, but got 'i32'}}
+  // expected-error@+1 {{op result #0 must be index-like, but got 'i32'}}
   %0 = "affine.apply"(%arg0) {map = affine_map<(d0) -> (d0)>} : (index) -> (i32)
+  return
+}
+
+// -----
+
+func.func @affine_apply_types_match(%arg0 : index) {
+  // We are now supporting vectors of index, but all operands and result types
+  // must match.
+  // expected-error@+1 {{op requires the same type for all operands and results}}
+  %0 = "affine.apply"(%arg0) {map = affine_map<(d0) -> (d0)>} : (index) -> (vector<4xindex>)
   return
 }
 
