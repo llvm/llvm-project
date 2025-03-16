@@ -34,6 +34,7 @@ if (CMAKE_BUILD_TYPE STREQUAL "Debug")
   add_definitions("-D_DEBUG")
 endif()
 
+
 # Default to C++17
 set(CMAKE_CXX_STANDARD 17)
 

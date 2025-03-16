@@ -1811,15 +1811,13 @@ def fprofile_continuous : Flag<["-"], "fprofile-continuous">,
     HelpText<"Enable continuous instrumentation profiling mode">,
     MarshallingInfoFlag<CodeGenOpts<"ContinuousProfileSync">>;
 
-defm pseudo_probe_for_profiling : BoolFOption<"pseudo-probe-for-profiling",
-  CodeGenOpts<"PseudoProbeForProfiling">, DefaultFalse,
-  PosFlag<SetTrue, [], [ClangOption], "Emit">,
-  NegFlag<SetFalse, [], [ClangOption], "Do not emit">,
-  BothFlags<[], [ClangOption, CC1Option],
-          " pseudo probes for sample profiling">>;
-def forder_file_instrumentation : Flag<["-"], "forder-file-instrumentation">,
-    Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
-    HelpText<"Generate instrumented code to collect order file into default.profraw file (overridden by '=' form of option or LLVM_PROFILE_FILE env var). Deprecated, please use -ftemporal-profile">;
+defm pseudo_probe_for_profiling
+    : BoolFOption<"pseudo-probe-for-profiling",
+                  CodeGenOpts<"PseudoProbeForProfiling">, DefaultFalse,
+                  PosFlag<SetTrue, [], [ClangOption], "Emit">,
+                  NegFlag<SetFalse, [], [ClangOption], "Do not emit">,
+                  BothFlags<[], [ClangOption, CC1Option],
+                            " pseudo probes for sample profiling">>;
 def fprofile_list_EQ : Joined<["-"], "fprofile-list=">,
     Group<f_Group>, Visibility<[ClangOption, CC1Option, CLOption]>,
     HelpText<"Filename defining the list of functions/files to instrument. "
@@ -3467,7 +3465,7 @@ defm use_cxa_atexit : BoolFOption<"use-cxa-atexit",
   PosFlag<SetTrue>>;
 def fno_unwind_tables : Flag<["-"], "fno-unwind-tables">, Group<f_Group>;
 def fno_verbose_asm : Flag<["-"], "fno-verbose-asm">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
   MarshallingInfoNegativeFlag<CodeGenOpts<"AsmVerbose">>;
 def fno_working_directory : Flag<["-"], "fno-working-directory">, Group<f_Group>;
 def fobjc_arc : Flag<["-"], "fobjc-arc">, Group<f_Group>,
@@ -4142,7 +4140,8 @@ defm use_init_array : BoolFOption<"use-init-array",
   PosFlag<SetTrue>>;
 def fno_var_tracking : Flag<["-"], "fno-var-tracking">, Group<clang_ignored_f_Group>;
 def fverbose_asm : Flag<["-"], "fverbose-asm">, Group<f_Group>,
-  HelpText<"Generate verbose assembly output">;
+  HelpText<"Generate verbose assembly output">,
+  Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>;
 def dA : Flag<["-"], "dA">, Alias<fverbose_asm>;
 defm visibility_from_dllstorageclass : BoolFOption<"visibility-from-dllstorageclass",
   LangOpts<"VisibilityFromDLLStorageClass">, DefaultFalse,
@@ -4725,9 +4724,9 @@ def mno_long_calls : Flag<["-"], "mno-long-calls">, Group<m_Group>,
   HelpText<"Restore the default behaviour of not generating long calls">;
 } // let Flags = [TargetSpecific]
 def mexecute_only : Flag<["-"], "mexecute-only">, Group<m_arm_Features_Group>,
-  HelpText<"Disallow generation of data access to code sections (ARM only)">;
+  HelpText<"Disallow generation of data access to code sections (AArch64/ARM only)">;
 def mno_execute_only : Flag<["-"], "mno-execute-only">, Group<m_arm_Features_Group>,
-  HelpText<"Allow generation of data access to code sections (ARM only)">;
+  HelpText<"Allow generation of data access to code sections (AArch64/ARM only)">;
 let Flags = [TargetSpecific] in {
 def mtp_mode_EQ : Joined<["-"], "mtp=">, Group<m_arm_Features_Group>, Values<"soft,cp15,tpidrurw,tpidruro,tpidrprw,el0,el1,el2,el3,tpidr_el0,tpidr_el1,tpidr_el2,tpidr_el3,tpidrro_el0,auto">,
   HelpText<"Thread pointer access method. "

@@ -3476,6 +3476,24 @@ Limitations:
 alpha.WebKit
 ^^^^^^^^^^^^
 
+alpha.webkit.ForwardDeclChecker
+"""""""""""""""""""""""""""""""
+Check for local variables, member variables, and function arguments that are forward declared.
+
+.. code-block:: cpp
+
+ struct Obj;
+ Obj* provide();
+
+ struct Foo {
+   Obj* ptr; // warn
+ };
+
+  void foo() {
+    Obj* obj = provide(); // warn
+    consume(obj); // warn
+  }
+
 .. _alpha-webkit-NoUncheckedPtrMemberChecker:
 
 alpha.webkit.MemoryUnsafeCastChecker
@@ -3642,6 +3660,12 @@ The goal of this rule is to make sure that lifetime of any dynamically allocated
 
 The rules of when to use and not to use CheckedPtr / CheckedRef are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
 
+alpha.webkit.UnretainedCallArgsChecker
+""""""""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure that lifetime of any dynamically allocated NS or CF objects passed as a call argument keeps its memory region past the end of the call. This applies to call to any function, method, lambda, function pointer or functor. NS or CF objects aren't supposed to be allocated on stack so we check arguments for parameters of raw pointers and references to unretained types.
+
+The rules of when to use and not to use RetainPtr are same as alpha.webkit.UncountedCallArgsChecker for ref-counted objects.
+
 alpha.webkit.UncountedLocalVarsChecker
 """"""""""""""""""""""""""""""""""""""
 The goal of this rule is to make sure that any uncounted local variable is backed by a ref-counted object with lifetime that is strictly larger than the scope of the uncounted local variable. To be on the safe side we require the scope of an uncounted variable to be embedded in the scope of ref-counted object that backs it.
@@ -3772,6 +3796,26 @@ Here are some examples of situations that we warn about as they *might* be poten
       // The scope of unretained is not EMBEDDED in the scope of retained.
       NSObject* unretained = retained.get(); // warn
     }
+
+webkit.RetainPtrCtorAdoptChecker
+""""""""""""""""""""""""""""""""
+The goal of this rule is to make sure the constructor of RetainPtr as well as adoptNS and adoptCF are used correctly.
+When creating a RetainPtr with +1 semantics, adoptNS or adoptCF should be used, and in +0 semantics, RetainPtr constructor should be used.
+Warn otherwise.
+
+These are examples of cases that we consider correct:
+
+  .. code-block:: cpp
+
+    RetainPtr ptr = adoptNS([[NSObject alloc] init]); // ok
+    RetainPtr ptr = CGImageGetColorSpace(image); // ok
+
+Here are some examples of cases that we consider incorrect use of RetainPtr constructor and adoptCF
+
+  .. code-block:: cpp
+
+    RetainPtr ptr = [[NSObject alloc] init]; // warn
+    auto ptr = adoptCF(CGImageGetColorSpace(image)); // warn
 
 Debug Checkers
 ---------------

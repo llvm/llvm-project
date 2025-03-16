@@ -1717,6 +1717,7 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::BITCAST, VT, Custom);
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::FABS, VT, Legal);
+      setOperationAction(ISD::FCOPYSIGN, VT, Custom);
       setOperationAction(ISD::FNEG, VT, Legal);
       setOperationAction(ISD::FP_EXTEND, VT, Custom);
       setOperationAction(ISD::FP_ROUND, VT, Custom);
@@ -8229,7 +8230,7 @@ SDValue AArch64TargetLowering::LowerFormalArguments(
   }
 
   // varargs
-  if (isVarArg && DAG.getMachineFunction().getFrameInfo().hasVAStart()) {
+  if (isVarArg) {
     if (!Subtarget->isTargetDarwin() || IsWin64) {
       // The AAPCS variadic function ABI is identical to the non-variadic
       // one. As a result there may be more arguments in registers and we should
@@ -10706,7 +10707,7 @@ SDValue AArch64TargetLowering::LowerFCOPYSIGN(SDValue Op,
   // a SVE FCOPYSIGN.
   if (!VT.isVector() && !Subtarget->isNeonAvailable() &&
       Subtarget->isSVEorStreamingSVEAvailable()) {
-    if (VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64)
+    if (VT != MVT::f16 && VT != MVT::f32 && VT != MVT::f64 && VT != MVT::bf16)
       return SDValue();
     EVT SVT = getPackedSVEVectorVT(VT);
 
@@ -17504,7 +17505,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
 
       if (UseScalable)
         Shuffle = Builder.CreateInsertVector(
-            STVTy, UndefValue::get(STVTy), Shuffle,
+            STVTy, PoisonValue::get(STVTy), Shuffle,
             ConstantInt::get(Type::getInt64Ty(STVTy->getContext()), 0));
 
       Ops.push_back(Shuffle);

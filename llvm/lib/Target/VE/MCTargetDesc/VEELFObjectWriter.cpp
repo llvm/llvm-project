@@ -40,7 +40,7 @@ unsigned VEELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
                                          const MCFixup &Fixup,
                                          bool IsPCRel) const {
   if (const VEMCExpr *SExpr = dyn_cast<VEMCExpr>(Fixup.getValue())) {
-    if (SExpr->getKind() == VEMCExpr::VK_VE_PC_LO32)
+    if (SExpr->getKind() == VEMCExpr::VK_PC_LO32)
       return ELF::R_VE_PC_LO32;
   }
 
