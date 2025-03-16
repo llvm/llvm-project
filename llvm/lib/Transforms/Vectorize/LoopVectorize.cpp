@@ -7697,6 +7697,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
                            OrigLoop->getHeader()->getContext());
   VPlanTransforms::materializeBroadcasts(BestVPlan);
   VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
+
+  VPlanTransforms::narrowInterleaveGroups(
+      BestVPlan, BestVF,
+      TTI.getRegisterBitWidth(TargetTransformInfo::RGK_FixedWidthVector));
   VPlanTransforms::simplifyRecipes(BestVPlan, *Legal->getWidestInductionType());
   VPlanTransforms::removeDeadRecipes(BestVPlan);
   VPlanTransforms::convertToConcreteRecipes(BestVPlan);
