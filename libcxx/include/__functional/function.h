@@ -86,7 +86,7 @@ _LIBCPP_DIAGNOSTIC_POP
 }
 
 template <class _Fp>
-class _LIBCPP_TEMPLATE_VIS function; // undefined
+class function; // undefined
 
 namespace __function {
 
