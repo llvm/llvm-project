@@ -2662,20 +2662,17 @@ bool PPCFrameLowering::restoreCalleeSavedRegisters(
         if (Restored[Dst])
           continue;
 
-        if (VSRContainingGPRs[Dst].second != 0) {
+        const auto &VSR = VSRContainingGPRs[Dst];
+        if (VSR.second != 0) {
           assert(Subtarget.hasP9Vector());
           NumPEReloadVSR += 2;
-          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRLD),
-                  VSRContainingGPRs[Dst].second)
-              .addReg(Dst);
-          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRD),
-                  VSRContainingGPRs[Dst].first)
+          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRLD), VSR.second).addReg(Dst);
+          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRD), VSR.first)
               .addReg(TRI->getSubReg(Dst, PPC::sub_64), getKillRegState(true));
-        } else if (VSRContainingGPRs[Dst].second == 0) {
+        } else if (VSR.second == 0) {
           assert(Subtarget.hasP8Vector());
           ++NumPEReloadVSR;
-          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRD),
-                  VSRContainingGPRs[Dst].first)
+          BuildMI(MBB, I, DL, TII.get(PPC::MFVSRD), VSR.first)
               .addReg(TRI->getSubReg(Dst, PPC::sub_64), getKillRegState(true));
         } else {
           llvm_unreachable("More than two GPRs spilled to a VSR!");
