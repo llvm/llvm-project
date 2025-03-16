@@ -21,22 +21,30 @@
 template <typename T>
 struct TestDeduction {
   void operator()() const {
-    do_test<T>();
-    do_test<T const>();
-    if constexpr (std::atomic_ref<T>::is_always_lock_free) {
-      do_test<T volatile>();
-      do_test<T const volatile>();
-    }
-  }
-  template <class U>
-  void do_test() const {
-    U x(U(0));
+    using Unqualified = std::remove_cv_t<T>;
+
+    T x(Unqualified(0));
     std::atomic_ref a(x);
-    ASSERT_SAME_TYPE(decltype(a), std::atomic_ref<U>);
+    ASSERT_SAME_TYPE(decltype(a), std::atomic_ref<T>);
   }
 };
 
+template <template <class...> class F>
+struct CallWithCVQualifiers {
+  template <class T>
+  struct apply {
+    void operator()() const {
+      F<T>()();
+      F<T const>()();
+      if constexpr (std::atomic_ref<T>::is_always_lock_free) {
+        F<T volatile>()();
+        F<T const volatile>()();
+      }
+    }
+  };
+};
+
 int main(int, char**) {
-  TestEachAtomicType<TestDeduction>()();
+  TestEachAtomicType<CallWithCVQualifiers<TestDeduction>::apply>()();
   return 0;
 }
