@@ -53,8 +53,8 @@ public:
     OS << X86ATTInstPrinter::getRegisterName(Reg);
   }
 
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override {
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override {
     return false;
   }
   // Register values should be inlined as they are not valid .set expressions.
