@@ -1041,6 +1041,7 @@ TEST(STLExtrasTest, getSingleElement) {
   S.data = V2;
   EXPECT_EQ(getSingleElement(S), 8);
 
+#if defined(GTEST_HAS_DEATH_TEST) && !defined(NDEBUG)
   // Make sure that we crash on empty or too many elements.
   SmallVector<int> V4;
   EXPECT_DEATH(getSingleElement(V4), "expected container with single element");
@@ -1048,6 +1049,7 @@ TEST(STLExtrasTest, getSingleElement) {
   EXPECT_DEATH(getSingleElement(V5), "expected container with single element");
   std::list<int> L2;
   EXPECT_DEATH(getSingleElement(L2), "expected container with single element");
+#endif
 }
 
 TEST(STLExtrasTest, hasNItems) {
