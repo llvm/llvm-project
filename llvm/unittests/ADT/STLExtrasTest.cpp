@@ -1017,9 +1017,6 @@ TEST(STLExtrasTest, hasSingleElement) {
 }
 
 TEST(STLExtrasTest, getSingleElement) {
-  // Note: Asserting behavior of getSingleElement cannot be tested because the
-  // program would crash.
-
   // Test const and non-const containers.
   const std::vector<int> V1 = {7};
   EXPECT_EQ(getSingleElement(V1), 7);
@@ -1043,6 +1040,14 @@ TEST(STLExtrasTest, getSingleElement) {
   some_namespace::some_struct S;
   S.data = V2;
   EXPECT_EQ(getSingleElement(S), 8);
+
+  // Make sure that we crash on empty or too many elements.
+  SmallVector<int> V4;
+  EXPECT_DEATH(getSingleElement(V4), "expected container with single element");
+  SmallVector<int> V5{12, 13, 14};
+  EXPECT_DEATH(getSingleElement(V5), "expected container with single element");
+  std::list<int> L2;
+  EXPECT_DEATH(getSingleElement(L2), "expected container with single element");
 }
 
 TEST(STLExtrasTest, hasNItems) {
