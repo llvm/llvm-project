@@ -1493,4 +1493,17 @@ def ConvertVectorToXeGPU : Pass<"convert-vector-to-xegpu"> {
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// ConvertArithToSMT
+//===----------------------------------------------------------------------===//
+
+def ConvertArithToSMT : Pass<"convert-arith-to-smt"> {
+  let summary = "Convert arith ops and constants to SMT ops";
+  let dependentDialects = [
+    "smt::SMTDialect",
+    "arith::ArithDialect",
+    "mlir::func::FuncDialect"
+  ];
+}
+
 #endif // MLIR_CONVERSION_PASSES
