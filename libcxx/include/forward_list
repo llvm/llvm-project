@@ -819,7 +819,6 @@ public:
 
   template <class _InputIterator, class _Sentinel>
   _LIBCPP_HIDE_FROM_ABI iterator __insert_after_with_sentinel(const_iterator __p, _InputIterator __f, _Sentinel __l);
-  _LIBCPP_HIDE_FROM_ABI iterator __default_insert_after(const_iterator __p, size_type __n);
 
   _LIBCPP_HIDE_FROM_ABI iterator erase_after(const_iterator __p);
   _LIBCPP_HIDE_FROM_ABI iterator erase_after(const_iterator __f, const_iterator __l);
@@ -1131,36 +1130,6 @@ forward_list<_Tp, _Alloc>::insert_after(const_iterator __p, const value_type& __
 
 template <class _Tp, class _Alloc>
 typename forward_list<_Tp, _Alloc>::iterator
-forward_list<_Tp, _Alloc>::__default_insert_after(const_iterator __p, size_type __n) {
-  __begin_node_pointer __r = __p.__get_begin();
-  if (__n > 0) {
-    __node_pointer __first = this->__create_node(/* next = */ nullptr);
-    __node_pointer __last  = __first;
-#  if _LIBCPP_HAS_EXCEPTIONS
-    try {
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-      for (--__n; __n != 0; --__n, __last = __last->__next_) {
-        __last->__next_ = this->__create_node(/* next = */ nullptr);
-      }
-#  if _LIBCPP_HAS_EXCEPTIONS
-    } catch (...) {
-      while (__first != nullptr) {
-        __node_pointer __next = __first->__next_;
-        this->__delete_node(__first);
-        __first = __next;
-      }
-      throw;
-    }
-#  endif // _LIBCPP_HAS_EXCEPTIONS
-    __last->__next_ = __r->__next_;
-    __r->__next_    = __first;
-    __r             = static_cast<__begin_node_pointer>(__last);
-  }
-  return iterator(__r);
-}
-
-template <class _Tp, class _Alloc>
-typename forward_list<_Tp, _Alloc>::iterator
 forward_list<_Tp, _Alloc>::insert_after(const_iterator __p, size_type __n, const value_type& __v) {
   __begin_node_pointer __r = __p.__get_begin();
   if (__n > 0) {
@@ -1271,7 +1240,31 @@ void forward_list<_Tp, _Alloc>::resize(size_type __n) {
   if (__i != __e)
     erase_after(__p, __e);
   else {
-    __default_insert_after(__p, __n - __sz);
+    __n -= __sz;
+    __begin_node_pointer __r = __p.__get_begin();
+    if (__n > 0) {
+      __node_pointer __first = this->__create_node(/* next = */ nullptr);
+      __node_pointer __last  = __first;
+#  if _LIBCPP_HAS_EXCEPTIONS
+      try {
+#  endif // _LIBCPP_HAS_EXCEPTIONS
+        for (--__n; __n != 0; --__n, __last = __last->__next_) {
+          __last->__next_ = this->__create_node(/* next = */ nullptr);
+        }
+#  if _LIBCPP_HAS_EXCEPTIONS
+      } catch (...) {
+        while (__first != nullptr) {
+          __node_pointer __next = __first->__next_;
+          this->__delete_node(__first);
+          __first = __next;
+        }
+        throw;
+      }
+#  endif // _LIBCPP_HAS_EXCEPTIONS
+      __last->__next_ = __r->__next_;
+      __r->__next_    = __first;
+      __r             = static_cast<__begin_node_pointer>(__last);
+    }
   }
 }
 
