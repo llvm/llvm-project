@@ -2039,8 +2039,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const Module *M = MF.getFunction().getParent();
 
   // If the indirect call target has the nocf_check attribute, the call needs
-  // the NOTRACK prefix. For simplicity just disable tail calls as there there
-  // are too many variants
+  // the NOTRACK prefix. For simplicity just disable tail calls as there are
+  // so many variants.
   bool IsNoTrackIndirectCall = IsIndirectCall && CB->doesNoCfCheck() &&
                                M->getModuleFlag("cf-protection-branch");
   if (IsNoTrackIndirectCall)
