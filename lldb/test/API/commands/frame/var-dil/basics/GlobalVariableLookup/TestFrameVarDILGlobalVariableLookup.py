@@ -26,10 +26,10 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
         self.expect("settings set target.experimental.use-DIL true", substrs=[""])
         self.expect_var_path("globalVar", type="int", value="-559038737")  # 0xDEADBEEF
         self.expect_var_path("globalPtr", type="int *")
-        self.expect_var_path("globalRef", value="-559038737")
+        self.expect_var_path("globalRef", type="int &")
         self.expect_var_path("::globalVar", value="-559038737")
         self.expect_var_path("::globalPtr", type="int *")
-        self.expect_var_path("::globalRef", value="-559038737")
+        self.expect_var_path("::globalRef", type="int &")
 
         self.expect(
             "frame variable 'externGlobalVar'",
@@ -44,6 +44,7 @@ class TestFrameVarDILGlobalVariableLookup(TestBase):
 
         self.expect_var_path("ns::globalVar", value="13")
         self.expect_var_path("ns::globalPtr", type="int *")
-        self.expect_var_path("ns::globalRef", value="13")
+        self.expect_var_path("ns::globalRef", type="int &")
         self.expect_var_path("::ns::globalVar", value="13")
         self.expect_var_path("::ns::globalPtr", type="int *")
+        self.expect_var_path("::ns::globalRef", type="int &")

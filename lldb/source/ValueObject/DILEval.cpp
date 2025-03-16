@@ -87,7 +87,7 @@ static lldb::VariableSP DILFindVariable(ConstString name,
   return nullptr;
 }
 
-std::unique_ptr<IdentifierInfo> LookupGlobalIdentifier(
+lldb::ValueObjectSP LookupGlobalIdentifier(
     llvm::StringRef name_ref, std::shared_ptr<StackFrame> stack_frame,
     lldb::TargetSP target_sp, lldb::DynamicValueType use_dynamic,
     CompilerType *scope_ptr) {
@@ -105,7 +105,7 @@ std::unique_ptr<IdentifierInfo> LookupGlobalIdentifier(
   }
 
   if (value_sp)
-    return IdentifierInfo::FromValue(*value_sp);
+    return value_sp;
 
   // Also check for static global vars.
   if (variable_list) {
@@ -122,7 +122,7 @@ std::unique_ptr<IdentifierInfo> LookupGlobalIdentifier(
   }
 
   if (value_sp)
-    return IdentifierInfo::FromValue(*value_sp);
+    return value_sp;
 
   // Check for match in modules global variables.
   VariableList modules_var_list;
@@ -142,15 +142,15 @@ std::unique_ptr<IdentifierInfo> LookupGlobalIdentifier(
   }
 
   if (value_sp)
-    return IdentifierInfo::FromValue(*value_sp);
+    return value_sp;
 
   return nullptr;
 }
 
-std::unique_ptr<IdentifierInfo>
-LookupIdentifier(llvm::StringRef name_ref,
-                 std::shared_ptr<StackFrame> stack_frame,
-                 lldb::DynamicValueType use_dynamic, CompilerType *scope_ptr) {
+lldb::ValueObjectSP LookupIdentifier(llvm::StringRef name_ref,
+                                     std::shared_ptr<StackFrame> stack_frame,
+                                     lldb::DynamicValueType use_dynamic,
+                                     CompilerType *scope_ptr) {
   // Support $rax as a special syntax for accessing registers.
   // Will return an invalid value in case the requested register doesn't exist.
   if (name_ref.consume_front("$")) {
@@ -165,7 +165,7 @@ LookupIdentifier(llvm::StringRef name_ref,
           ValueObjectRegister::Create(stack_frame.get(), reg_ctx, reg_info);
 
     if (value_sp)
-      return IdentifierInfo::FromValue(*value_sp);
+      return value_sp;
 
     return nullptr;
   }
@@ -189,7 +189,7 @@ LookupIdentifier(llvm::StringRef name_ref,
         value_sp = stack_frame->FindVariable(ConstString(name_ref));
 
       if (value_sp)
-        return IdentifierInfo::FromValue(*value_sp);
+        return value_sp;
 
       // Try looking for an instance variable (class member).
       SymbolContext sc = stack_frame->GetSymbolContext(
@@ -200,7 +200,7 @@ LookupIdentifier(llvm::StringRef name_ref,
         value_sp = value_sp->GetChildMemberWithName(name_ref);
 
       if (value_sp)
-        return IdentifierInfo::FromValue(*(value_sp));
+        return value_sp;
     }
   }
   return nullptr;
@@ -226,7 +226,7 @@ llvm::Expected<lldb::ValueObjectSP>
 Interpreter::Visit(const IdentifierNode *node) {
   lldb::DynamicValueType use_dynamic = node->GetUseDynamic();
 
-  std::unique_ptr<IdentifierInfo> identifier =
+  lldb::ValueObjectSP identifier =
       LookupIdentifier(node->GetName(), m_exe_ctx_scope, use_dynamic);
 
   if (!identifier)
@@ -235,28 +235,14 @@ Interpreter::Visit(const IdentifierNode *node) {
   if (!identifier) {
     std::string errMsg =
         llvm::formatv("use of undeclared identifier '{0}'", node->GetName());
-    Status error = Status(
-        (uint32_t)ErrorCode::kUndeclaredIdentifier, lldb::eErrorTypeGeneric,
-        NewFormatDiagnostics(m_expr, errMsg, node->GetLocation(),
-                             node->GetName().size()));
+    Status error = Status((uint32_t)ErrorCode::kUndeclaredIdentifier,
+                          lldb::eErrorTypeGeneric,
+                          FormatDiagnostics(m_expr, errMsg, node->GetLocation(),
+                                            node->GetName().size()));
     return error.ToError();
   }
-  lldb::ValueObjectSP val;
-  lldb::TargetSP target_sp;
 
-  assert(identifier->GetKind() == IdentifierInfo::Kind::eValue &&
-         "Unrecognized identifier kind");
-
-  val = identifier->GetValue();
-
-  if (val->GetCompilerType().IsReferenceType()) {
-    Status error;
-    val = val->Dereference(error);
-    if (error.Fail())
-      return error.ToError();
-  }
-
-  return val;
+  return identifier;
 }
 
 } // namespace lldb_private::dil
