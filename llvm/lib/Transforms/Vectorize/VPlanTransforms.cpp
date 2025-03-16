@@ -2234,10 +2234,13 @@ void VPlanTransforms::materializeBroadcasts(VPlan &Plan) {
 }
 
 static bool supportedLoad(VPWidenRecipe *R0, VPValue *V, unsigned Idx) {
-  if (auto *W = dyn_cast_or_null<VPWidenLoadRecipe>(V->getDefiningRecipe()))
-    return !W->getMask() && (R0->getOperand(0) == V || R0->getOperand(1) == V);
+  auto *DefR = V->getDefiningRecipe();
+  if (!DefR)
+    return false;
+  if (auto *W = dyn_cast<VPWidenLoadRecipe>(DefR))
+    return !W->getMask() && is_contained(R0->operands(), V);
 
-  if (auto *IR = dyn_cast_or_null<VPInterleaveRecipe>(V->getDefiningRecipe()))
+  if (auto *IR = dyn_cast<VPInterleaveRecipe>(DefR))
     return IR->getInterleaveGroup()->getFactor() ==
                IR->getInterleaveGroup()->getNumMembers() &&
            IR->getVPValue(Idx) == V;
@@ -2246,13 +2249,12 @@ static bool supportedLoad(VPWidenRecipe *R0, VPValue *V, unsigned Idx) {
 
 /// Returns true if \p IR is a full interleave group with factor and number of
 /// members both equal to \p VF.
-static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *IR,
-                                         ElementCount VF) {
-  if (!IR)
+static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
+                                         unsigned VF) {
+  if (!InterleaveR)
     return false;
-  auto IG = IR->getInterleaveGroup();
-  return IG->getFactor() == IG->getNumMembers() &&
-         IG->getNumMembers() == VF.getFixedValue();
+  auto IG = InterleaveR->getInterleaveGroup();
+  return IG->getFactor() == VF && IG->getNumMembers() == VF;
 }
 
 void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
@@ -2261,6 +2263,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
   if (VF.isScalable() || !VectorLoop)
     return;
 
+  unsigned FixedVF = VF.getFixedValue();
   SmallVector<VPInterleaveRecipe *> StoreGroups;
   for (auto &R : *VectorLoop->getEntryBasicBlock()) {
     if (isa<VPCanonicalIVPHIRecipe>(&R) ||
@@ -2274,25 +2277,42 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
     if (R.isPhi())
       return;
 
-    auto *IR = dyn_cast<VPInterleaveRecipe>(&R);
-    if (R.mayWriteToMemory() && !IR)
+    auto *InterleaveR = dyn_cast<VPInterleaveRecipe>(&R);
+    if (R.mayWriteToMemory() && !InterleaveR)
       return;
 
-    if (!IR)
+    if (!InterleaveR)
       continue;
 
-    if (!isConsecutiveInterleaveGroup(IR, VF))
+    // Bail out on non-consecutive interleave groups.
+    if (!isConsecutiveInterleaveGroup(InterleaveR, FixedVF))
       return;
-    if (IR->getStoredValues().empty())
+
+    // Skip read interleave groups.
+    if (InterleaveR->getStoredValues().empty())
       continue;
+
+    if (all_of(enumerate(InterleaveR->getStoredValues()), [](auto Op) {
+          VPRecipeBase *DefR = Op.value()->getDefiningRecipe();
+          if (!DefR)
+            return false;
+          auto *IR = dyn_cast<VPInterleaveRecipe>(DefR);
+          return IR &&
+                 IR->getInterleaveGroup()->getFactor() ==
+                     IR->getInterleaveGroup()->getNumMembers() &&
+                 IR->getVPValue(Op.index()) == Op.value();
+        })) {
+      StoreGroups.push_back(InterleaveR);
+      continue;
+    }
 
     auto *Lane0 = dyn_cast_or_null<VPWidenRecipe>(
-        IR->getStoredValues()[0]->getDefiningRecipe());
+        InterleaveR->getStoredValues()[0]->getDefiningRecipe());
     if (!Lane0)
       return;
-    for (const auto &[I, V] : enumerate(IR->getStoredValues())) {
+    for (const auto &[I, V] : enumerate(InterleaveR->getStoredValues())) {
       auto *R = dyn_cast<VPWidenRecipe>(V->getDefiningRecipe());
-      if (!R || R->getOpcode() != Lane0->getOpcode())
+      if (!R || R->getOpcode() != Lane0->getOpcode() || R->getNumOperands() > 2)
         return;
       if (any_of(R->operands(), [Lane0, Idx = I](VPValue *V) {
             return !supportedLoad(Lane0, V, Idx);
@@ -2300,7 +2320,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
         return;
     }
 
-    StoreGroups.push_back(IR);
+    StoreGroups.push_back(InterleaveR);
   }
 
   if (StoreGroups.empty())
@@ -2330,15 +2350,20 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
 
   // Narrow operation tree rooted at store groups.
   for (auto *StoreGroup : StoreGroups) {
-    auto *Lane0 = cast<VPWidenRecipe>(
-        StoreGroup->getStoredValues()[0]->getDefiningRecipe());
-
-    Lane0->setOperand(0, Narrow(Lane0->getOperand(0)->getDefiningRecipe()));
-    Lane0->setOperand(1, Narrow(Lane0->getOperand(1)->getDefiningRecipe()));
+    VPValue *Res = nullptr;
+    if (auto *Lane0 = dyn_cast<VPWidenRecipe>(
+            StoreGroup->getStoredValues()[0]->getDefiningRecipe())) {
+      for (unsigned Idx = 0, E = Lane0->getNumOperands(); Idx != E; ++Idx)
+        Lane0->setOperand(Idx,
+                          Narrow(Lane0->getOperand(Idx)->getDefiningRecipe()));
+      Res = Lane0;
+    } else {
+      Res = Narrow(StoreGroup->getStoredValues()[0]->getDefiningRecipe());
+    }
 
     auto *S = new VPWidenStoreRecipe(
         *cast<StoreInst>(StoreGroup->getInterleaveGroup()->getInsertPos()),
-        StoreGroup->getAddr(), Lane0, nullptr, /*Consecutive=*/true,
+        StoreGroup->getAddr(), Res, nullptr, /*Consecutive=*/true,
         /*Reverse=*/false, StoreGroup->getDebugLoc());
     S->insertBefore(StoreGroup);
     StoreGroup->eraseFromParent();
