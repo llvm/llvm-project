@@ -328,13 +328,10 @@ def main():
             pass
 
         # Check if we have any unstaged or uncommitted changes in the tree.
-        try:
-            if len(git('diff-index', 'HEAD')):
-                log.error('Looks like you have unstaged or uncommitted changes.')
-                log.error('Please make sure everything has been added to the commit.')
-                return 1
-        except GitError:
-            pass
+        if len(git('diff-index', 'HEAD')):
+            log.error('Looks like you have unstaged or uncommitted changes.')
+            log.error('Please make sure everything has been added to the commit.')
+            return 1
 
         # Save the commit sha so that we can include it in the output message.
         merge_commit = git('rev-parse', 'HEAD')
