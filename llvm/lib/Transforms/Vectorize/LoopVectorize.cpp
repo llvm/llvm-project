@@ -6541,6 +6541,11 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       // TODO: Consider vscale_range info.
       if (VF.isScalable() && VF.getKnownMinValue() == 1)
         return InstructionCost::getInvalid();
+      // If a FOR has no users inside the loop we won't generate a splice.
+      if (none_of(Phi->users(), [this](User *U) {
+            return TheLoop->contains(cast<Instruction>(U));
+          }))
+        return 0;
       SmallVector<int> Mask(VF.getKnownMinValue());
       std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
       return TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
