@@ -3084,6 +3084,10 @@ private:
 
   /// \returns the graph entry for the \p Idx operand of the \p E entry.
   const TreeEntry *getOperandEntry(const TreeEntry *E, unsigned Idx) const;
+  TreeEntry *getOperandEntry(TreeEntry *E, unsigned Idx) {
+    return const_cast<TreeEntry *>(
+        getOperandEntry(const_cast<const TreeEntry *>(E), Idx));
+  }
 
   /// Gets the root instruction for the given node. If the node is a strided
   /// load/store node with the reverse order, the root instruction is the last
@@ -3726,38 +3730,37 @@ private:
                   return VL[Idx];
                 });
       InstructionsState S = getSameOpcode(Last->Scalars, *TLI);
-      if (S) {
+      if (S)
         Last->setOperations(S);
-      } else if (EntryState == TreeEntry::SplitVectorize) {
-        auto *MainOp =
-            cast<Instruction>(*find_if(Last->Scalars, IsaPred<Instruction>));
-        auto *AltOp = cast<Instruction>(*find_if(Last->Scalars, [=](Value *V) {
-          auto *I = dyn_cast<Instruction>(V);
-          return I && I->getOpcode() != MainOp->getOpcode();
-        }));
-        Last->setOperations(InstructionsState(MainOp, AltOp));
-      }
-      if (EntryState == TreeEntry::SplitVectorize) {
-        SmallPtrSet<Value *, 4> Processed;
-        for (Value *V : VL) {
-          auto *I = dyn_cast<Instruction>(V);
-          if (!I)
-            continue;
-          auto It = ScalarsInSplitNodes.find(V);
-          if (It == ScalarsInSplitNodes.end()) {
-            ScalarsInSplitNodes.try_emplace(V).first->getSecond().push_back(
-                Last);
-            (void)Processed.insert(V);
-          } else if (Processed.insert(V).second) {
-            assert(!is_contained(It->getSecond(), Last) &&
-                   "Value already associated with the node.");
-            It->getSecond().push_back(Last);
-          }
-        }
-      }
       Last->ReorderIndices.append(ReorderIndices.begin(), ReorderIndices.end());
     }
-    if (!Last->isGather() && Last->State != TreeEntry::SplitVectorize) {
+    if (EntryState == TreeEntry::SplitVectorize) {
+      auto *MainOp =
+          cast<Instruction>(*find_if(Last->Scalars, IsaPred<Instruction>));
+      auto *AltOp = cast<Instruction>(*find_if(Last->Scalars, [=](Value *V) {
+        auto *I = dyn_cast<Instruction>(V);
+        if (!I)
+          return false;
+        InstructionsState LocalS = getSameOpcode({I, MainOp}, *TLI);
+        return !LocalS || LocalS.isAltShuffle();
+      }));
+      Last->setOperations(InstructionsState(MainOp, AltOp));
+      SmallPtrSet<Value *, 4> Processed;
+      for (Value *V : VL) {
+        auto *I = dyn_cast<Instruction>(V);
+        if (!I)
+          continue;
+        auto It = ScalarsInSplitNodes.find(V);
+        if (It == ScalarsInSplitNodes.end()) {
+          ScalarsInSplitNodes.try_emplace(V).first->getSecond().push_back(Last);
+          (void)Processed.insert(V);
+        } else if (Processed.insert(V).second) {
+          assert(!is_contained(It->getSecond(), Last) &&
+                 "Value already associated with the node.");
+          It->getSecond().push_back(Last);
+        }
+      }
+    } else if (!Last->isGather()) {
       SmallPtrSet<Value *, 4> Processed;
       for (Value *V : VL) {
         if (isa<PoisonValue>(V))
@@ -3794,7 +3797,7 @@ private:
         }
       }
       assert(!BundleMember && "Bundle and VL out of sync");
-    } else if (Last->isGather()) {
+    } else {
       // Build a map for gathered scalars to the nodes where they are used.
       bool AllConstsOrCasts = true;
       for (Value *V : VL)
@@ -6503,10 +6506,9 @@ void BoUpSLP::reorderTopToBottom() {
         inversePermutation(CurrentOrder, NewReuses);
         addMask(NewReuses, TE->ReuseShuffleIndices);
         TE->ReuseShuffleIndices.swap(NewReuses);
-      }
-      // Update orders in user split vectorize nodes.
-      if (TE->UserTreeIndex &&
-          TE->UserTreeIndex.UserTE->State == TreeEntry::SplitVectorize)
+      } else if (TE->UserTreeIndex &&
+                 TE->UserTreeIndex.UserTE->State == TreeEntry::SplitVectorize)
+        // Update orders in user split vectorize nodes.
         TE->UserTreeIndex.UserTE->reorderSplitNode(TE->UserTreeIndex.EdgeIdx,
                                                    Mask, MaskOrder);
     }
@@ -6663,6 +6665,8 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           // Clear ordering of the operand.
           if (!OpTE.ReorderIndices.empty()) {
             OpTE.ReorderIndices.clear();
+          } else if (!OpTE.ReuseShuffleIndices.empty()) {
+            reorderReuses(OpTE.ReuseShuffleIndices, Mask);
           } else {
             assert(OpTE.isGather() && "Expected only gather/buildvector node.");
             reorderScalars(OpTE.Scalars, Mask);
@@ -10761,7 +10765,7 @@ void BoUpSLP::transformNodes() {
         break;
       // This node is a minmax node.
       E.CombinedOp = TreeEntry::MinMax;
-      TreeEntry *CondEntry = const_cast<TreeEntry *>(getOperandEntry(&E, 0));
+      TreeEntry *CondEntry = getOperandEntry(&E, 0);
       if (SelectOnly && CondEntry->UserTreeIndex &&
           CondEntry->State == TreeEntry::Vectorize) {
         // The condition node is part of the combined minmax node.
@@ -14013,7 +14017,8 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
   const BasicBlock *TEInsertBlock = nullptr;
   // Main node of PHI entries keeps the correct order of operands/incoming
   // blocks.
-  if (auto *PHI = dyn_cast<PHINode>(TEUseEI.UserTE->getMainOp())) {
+  if (auto *PHI = dyn_cast<PHINode>(TEUseEI.UserTE->getMainOp());
+      PHI && TEUseEI.UserTE->State != TreeEntry::SplitVectorize) {
     TEInsertBlock = PHI->getIncomingBlock(TEUseEI.EdgeIdx);
     TEInsertPt = TEInsertBlock->getTerminator();
   } else {
@@ -14078,6 +14083,17 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
     }
     return true;
   };
+  auto CheckParentNodes = [&](const TreeEntry *User1, const TreeEntry *User2,
+                              unsigned EdgeIdx) {
+    const TreeEntry *Ptr1 = User1;
+    while (Ptr1) {
+      unsigned Idx = Ptr1->UserTreeIndex.EdgeIdx;
+      Ptr1 = Ptr1->UserTreeIndex.UserTE;
+      if (Ptr1 == User2)
+        return Idx < EdgeIdx;
+    }
+    return false;
+  };
   for (Value *V : VL) {
     if (isConstant(V) || !VisitedValue.insert(V).second)
       continue;
@@ -14093,7 +14109,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
              "Expected only single user of a gather node.");
       const EdgeInfo &UseEI = TEPtr->UserTreeIndex;
 
-      PHINode *UserPHI = dyn_cast<PHINode>(UseEI.UserTE->getMainOp());
+      PHINode *UserPHI = UseEI.UserTE->State != TreeEntry::SplitVectorize
+                             ? dyn_cast<PHINode>(UseEI.UserTE->getMainOp())
+                             : nullptr;
       const Instruction *InsertPt =
           UserPHI ? UserPHI->getIncomingBlock(UseEI.EdgeIdx)->getTerminator()
                   : &getLastInstructionInBundle(UseEI.UserTE);
@@ -14103,9 +14121,7 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
             TEUseEI.UserTE->getOpcode() == Instruction::PHI &&
             UseEI.UserTE->State == TreeEntry::Vectorize &&
             UseEI.UserTE->getOpcode() == Instruction::PHI &&
-            TEUseEI.UserTE != UseEI.UserTE &&
-            TEUseEI.UserTE->getMainOp()->getParent() ==
-                UseEI.UserTE->getMainOp()->getParent())
+            TEUseEI.UserTE != UseEI.UserTE)
           continue;
         // If 2 gathers are operands of the same entry (regardless of whether
         // user is PHI or else), compare operands indices, use the earlier one
@@ -14117,6 +14133,9 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
         if (TEUseEI.UserTE != UseEI.UserTE &&
             (TEUseEI.UserTE->Idx < UseEI.UserTE->Idx ||
              HasGatherUser(TEUseEI.UserTE)))
+          continue;
+        // If the user node is the operand of the other user node - skip.
+        if (CheckParentNodes(TEUseEI.UserTE, UseEI.UserTE, UseEI.EdgeIdx))
           continue;
       }
 
@@ -14132,17 +14151,21 @@ BoUpSLP::isGatherShuffledSingleRegisterEntry(
       VToTEs.insert(TEPtr);
     }
     if (ArrayRef<TreeEntry *> VTEs = getSplitTreeEntries(V); !VTEs.empty()) {
-      const TreeEntry *VTE = VTEs.front();
-      if (none_of(TE->CombinedEntriesWithIndices,
-                  [&](const auto &P) { return P.first == VTE->Idx; })) {
-        Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
-        if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
-          continue;
+      const auto *It = find_if(
+          VTEs, [&](const TreeEntry *MTE) { return MTE != TEUseEI.UserTE; });
+      if (It != VTEs.end()) {
+        const TreeEntry *VTE = *It;
+        if (none_of(TE->CombinedEntriesWithIndices,
+                    [&](const auto &P) { return P.first == VTE->Idx; })) {
+          Instruction &LastBundleInst = getLastInstructionInBundle(VTE);
+          if (&LastBundleInst == TEInsertPt || !CheckOrdering(&LastBundleInst))
+            continue;
+        }
+        // The node is reused - exit.
+        if (CheckAndUseSameNode(VTE))
+          break;
+        VToTEs.insert(VTE);
       }
-      // The node is reused - exit.
-      if (CheckAndUseSameNode(VTE))
-        break;
-      VToTEs.insert(VTE);
     }
     if (ArrayRef<TreeEntry *> VTEs = getTreeEntries(V); !VTEs.empty()) {
       const TreeEntry *VTE = VTEs.front();
@@ -14871,7 +14894,9 @@ void BoUpSLP::setInsertPointAfterBundle(const TreeEntry *E) {
   bool IsPHI = isa<PHINode>(LastInst);
   if (IsPHI)
     LastInstIt = LastInst->getParent()->getFirstNonPHIIt();
-  if (IsPHI || (!E->isGather() && doesNotNeedToSchedule(E->Scalars)) ||
+  if (IsPHI ||
+      (!E->isGather() && E->State != TreeEntry::SplitVectorize &&
+       doesNotNeedToSchedule(E->Scalars)) ||
       (GatheredLoadsEntriesFirst.has_value() &&
        E->Idx >= *GatheredLoadsEntriesFirst && !E->isGather() &&
        E->getOpcode() == Instruction::Load)) {
@@ -16371,7 +16396,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       // visit every block once.
       SmallPtrSet<BasicBlock *, 4> VisitedBBs;
 
-      for (unsigned I : seq<unsigned>(0, PH->getNumIncomingValues())) {
+      for (unsigned I : seq<unsigned>(PH->getNumIncomingValues())) {
         ValueList Operands;
         BasicBlock *IBB = PH->getIncomingBlock(I);
 
@@ -16382,7 +16407,10 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         }
 
         if (!VisitedBBs.insert(IBB).second) {
-          NewPhi->addIncoming(NewPhi->getIncomingValueForBlock(IBB), IBB);
+          Value *VecOp = NewPhi->getIncomingValueForBlock(IBB);
+          NewPhi->addIncoming(VecOp, IBB);
+          TreeEntry *OpTE = getOperandEntry(E, I);
+          OpTE->VectorizedValue = VecOp;
           continue;
         }
 
@@ -18960,7 +18988,7 @@ bool BoUpSLP::collectValuesToDemote(
     const unsigned NumOps = E.getNumOperands();
     SmallVector<const TreeEntry *> Ops(NumOps);
     transform(seq<unsigned>(0, NumOps), Ops.begin(),
-              std::bind(&BoUpSLP::getOperandEntry, this, &E, _1));
+              [&](unsigned Idx) { return getOperandEntry(&E, Idx); });
 
     return TryProcessInstruction(BitWidth, Ops);
   }

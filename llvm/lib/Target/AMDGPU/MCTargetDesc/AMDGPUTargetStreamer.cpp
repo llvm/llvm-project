@@ -712,7 +712,7 @@ unsigned AMDGPUTargetELFStreamer::getEFlagsR600() {
 }
 
 unsigned AMDGPUTargetELFStreamer::getEFlagsAMDGCN() {
-  assert(STI.getTargetTriple().getArch() == Triple::amdgcn);
+  assert(STI.getTargetTriple().isAMDGCN());
 
   switch (STI.getTargetTriple().getOS()) {
   default:

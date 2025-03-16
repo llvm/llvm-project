@@ -7732,3 +7732,17 @@ foreach shape = ["16x64b", "16x128b", "16x256b", "32x32b", "16x32bx2"] in {
 }
 
 } // isConvergent
+
+// Bulk store instructions
+                            
+def INT_NVVM_ST_BULK_GENERIC :
+  NVPTXInst<(outs), (ins ADDR:$dest_addr, Int64Regs:$size),
+            "st.bulk [$dest_addr], $size, 0;",
+            [(int_nvvm_st_bulk addr:$dest_addr, i64:$size, (i64 0))]>,
+            Requires<[hasSM<100>, hasPTX<86>]>;
+
+def INT_NVVM_ST_BULK_SHARED_CTA:
+  NVPTXInst<(outs), (ins ADDR:$dest_addr, Int64Regs:$size),
+            "st.bulk.shared::cta [$dest_addr], $size, 0;",
+            [(int_nvvm_st_bulk_shared_cta addr:$dest_addr, i64:$size, (i64 0))]>,
+            Requires<[hasSM<100>, hasPTX<86>]>;

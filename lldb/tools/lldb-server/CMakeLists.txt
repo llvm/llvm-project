@@ -9,7 +9,7 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux|Android")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "AIX")
-  list(APPEND LLDB_PLUGINS lldbPluginProcessAIX)
+    list(APPEND LLDB_PLUGINS lldbPluginProcessAIX)
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")

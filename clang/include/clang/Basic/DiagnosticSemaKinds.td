@@ -529,8 +529,12 @@ def warn_cxx14_compat_decomp_decl : Warning<
 def ext_decomp_decl : ExtWarn<
   "decomposition declarations are a C++17 extension">, InGroup<CXX17>;
 def ext_decomp_decl_cond : ExtWarn<
-  "ISO C++17 does not permit structured binding declaration in a condition">,
-  InGroup<DiagGroup<"binding-in-condition">>;
+  "structured binding declaration in a condition is a C++2c extenstion">,
+  InGroup<CXX26>;
+def warn_cxx26_decomp_decl_cond : Warning<
+  "structured binding declaration in a condition is incompatible with "
+  "C++ standards before C++2c">,
+  InGroup<CXXPre26Compat>, DefaultIgnore;
 def err_decomp_decl_spec : Error<
   "decomposition declaration cannot be declared "
   "%plural{1:'%1'|:with '%1' specifiers}0">;
@@ -10609,11 +10613,14 @@ def err_va_start_used_in_wrong_abi_function : Error<
   "'va_start' used in %select{System V|Win64}0 ABI function">;
 def err_ms_va_start_used_in_sysv_function : Error<
   "'__builtin_ms_va_start' used in System V ABI function">;
-def warn_second_arg_of_va_start_not_last_named_param : Warning<
-  "second argument to 'va_start' is not the last named parameter">,
+def warn_second_arg_of_va_start_not_last_non_variadic_param : Warning<
+  "second argument to 'va_start' is not the last non-variadic parameter">,
   InGroup<Varargs>;
 def warn_c17_compat_ellipsis_only_parameter : Warning<
   "'...' as the only parameter of a function is incompatible with C standards "
+  "before C23">, DefaultIgnore, InGroup<CPre23Compat>;
+def warn_c17_compat_va_start_one_arg : Warning<
+  "passing only one argument to 'va_start' is incompatible with C standards "
   "before C23">, DefaultIgnore, InGroup<CPre23Compat>;
 def warn_va_start_type_is_undefined : Warning<
   "passing %select{an object that undergoes default argument promotion|"

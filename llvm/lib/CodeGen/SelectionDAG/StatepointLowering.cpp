@@ -889,7 +889,8 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     }
 
     // Handle multiple gc.relocates of the same input efficiently.
-    if (VirtRegs.count(SD))
+    auto [VRegIt, Inserted] = VirtRegs.try_emplace(SD);
+    if (!Inserted)
       continue;
 
     auto *RetTy = Relocate->getType();
@@ -900,7 +901,7 @@ SDValue SelectionDAGBuilder::LowerAsSTATEPOINT(
     RFV.getCopyToRegs(Relocated, DAG, getCurSDLoc(), Chain, nullptr);
     PendingExports.push_back(Chain);
 
-    VirtRegs[SD] = Reg;
+    VRegIt->second = Reg;
   }
 
   // Record for later use how each relocation was lowered.  This is needed to

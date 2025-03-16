@@ -506,6 +506,9 @@ def OMPC_UnifiedAddress : Clause<"unified_address"> {
 def OMPC_UnifiedSharedMemory : Clause<"unified_shared_memory"> {
   let clangClass = "OMPUnifiedSharedMemoryClause";
 }
+def OMPC_SelfMaps : Clause<"self_maps"> {
+  let clangClass = "OMPSelfMapsClause";
+}
 def OMPC_Uniform : Clause<"uniform"> {
   let flangClass = "Name";
   let isValueList = true;
@@ -940,7 +943,7 @@ def OMP_Requires : Directive<"requires"> {
     // TODO: Correct this supprted version number whenever complete
     // implementation of reverse_offload is available.
     VersionedClause<OMPC_AtomicDefaultMemOrder>,
-    VersionedClause<OMPC_DynamicAllocators>,
+    VersionedClause<OMPC_DynamicAllocators>, VersionedClause<OMPC_SelfMaps>,
     VersionedClause<OMPC_ReverseOffload, 99>,
   ];
   let association = AS_None;
