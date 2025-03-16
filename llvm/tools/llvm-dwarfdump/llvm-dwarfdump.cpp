@@ -287,8 +287,12 @@ static cl::opt<bool>
 static opt<bool> Verify("verify", desc("Verify the DWARF debug info."),
                         cat(DwarfDumpCategory));
 static opt<unsigned> VerifyNumThreads(
-    "verify-num-threads", init(hardware_concurrency().compute_thread_count()),
-    desc("Number of threads to use for --verify."), cat(DwarfDumpCategory));
+    "verify-num-threads", init(1),
+    desc("Number of threads to use for --verify. Single threaded verification "
+         "is the default unless this option is specified. This can cause the "
+         "output to be non determinisitic, but can speed up verification and "
+         "is useful when running with the summary only or JSON summary modes."),
+    cat(DwarfDumpCategory));
 static opt<ErrorDetailLevel> ErrorDetails(
     "error-display", init(Unspecified),
     desc("Set the level of detail and summary to display when verifying "

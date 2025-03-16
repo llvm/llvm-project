@@ -5,7 +5,7 @@
 # RUN: yaml2obj %p/Inputs/verify_split_dwarf_debug_names_exe.yaml > %t1/a.out
 # RUN: yaml2obj %p/Inputs/verify_split_dwarf_debug_names_main_dwo.yaml > %t1/main.dwo
 # RUN: cd %t1
-# RUN: llvm-dwarfdump --verify --verify-num-threads 1 %t1/a.out | FileCheck %s
+# RUN: llvm-dwarfdump --verify %t1/a.out | FileCheck %s
 
 # CHECK: Verifying unit: 1 / 1
 # CHECK: Verifying dwo Units...
@@ -17,7 +17,7 @@
 # Now verify if we remove the "main.dwo" file that we get an error letting us
 # know that the .dwo file was not able to be found.
 # RUN: rm %t1/main.dwo
-# RUN: not llvm-dwarfdump --verify --verify-num-threads 1 %t1/a.out | FileCheck --check-prefix=NODWO %s
+# RUN: not llvm-dwarfdump --verify %t1/a.out | FileCheck --check-prefix=NODWO %s
 
 # NODWO: Verifying unit: 1 / 1
 # NODWO: Verifying dwo Units...
