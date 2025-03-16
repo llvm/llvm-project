@@ -31,6 +31,7 @@
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/HostGetOpt.h"
+#include "lldb/Host/HostInfo.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Host/Socket.h"
@@ -256,8 +257,9 @@ static void client_handle(GDBRemoteCommunicationServerPlatform &platform,
   printf("Disconnected.\n");
 }
 
-static Status spawn_process(const char *progname, const Socket *conn_socket,
-                            uint16_t gdb_port, const lldb_private::Args &args,
+static Status spawn_process(const char *progname, const FileSpec &prog,
+                            const Socket *conn_socket, uint16_t gdb_port,
+                            const lldb_private::Args &args,
                             const std::string &log_file,
                             const StringRef log_channels, MainLoop &main_loop) {
   Status error;
@@ -267,9 +269,10 @@ static Status spawn_process(const char *progname, const Socket *conn_socket,
 
   ProcessLaunchInfo launch_info;
 
-  FileSpec self_spec(progname, FileSpec::Style::native);
-  launch_info.SetExecutableFile(self_spec, true);
+  launch_info.SetExecutableFile(prog, false);
+  launch_info.SetArg0(progname);
   Args &self_args = launch_info.GetArguments();
+  self_args.AppendArgument(progname);
   self_args.AppendArgument(llvm::StringRef("platform"));
   self_args.AppendArgument(llvm::StringRef("--child-platform-fd"));
   self_args.AppendArgument(llvm::to_string(shared_socket.GetSendableFD()));
@@ -551,9 +554,10 @@ int main_platform(int argc, char *argv[]) {
                         log_channels, &main_loop,
                         &platform_handles](std::unique_ptr<Socket> sock_up) {
               printf("Connection established.\n");
-              Status error = spawn_process(progname, sock_up.get(),
-                                           gdbserver_port, inferior_arguments,
-                                           log_file, log_channels, main_loop);
+              Status error = spawn_process(
+                  progname, HostInfo::GetProgramFileSpec(), sock_up.get(),
+                  gdbserver_port, inferior_arguments, log_file, log_channels,
+                  main_loop);
               if (error.Fail()) {
                 Log *log = GetLog(LLDBLog::Platform);
                 LLDB_LOGF(log, "spawn_process failed: %s", error.AsCString());
