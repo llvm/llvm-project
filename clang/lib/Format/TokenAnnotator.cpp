@@ -1639,23 +1639,29 @@ private:
     case tok::kw_operator:
       if (Style.isProto())
         break;
-      // C++ user-defined conversion function.
-      if (IsCpp && CurrentToken &&
-          (CurrentToken->is(tok::kw_auto) ||
-           CurrentToken->isTypeName(LangOpts))) {
-        FormatToken *LParen;
-        if (CurrentToken->startsSequence(tok::kw_decltype, tok::l_paren,
-                                         tok::kw_auto, tok::r_paren)) {
-          LParen = CurrentToken->Next->Next->Next->Next;
-        } else {
-          for (LParen = CurrentToken->Next;
-               LParen && LParen->isNot(tok::l_paren); LParen = LParen->Next) {
+      // Handle C++ user-defined conversion function.
+      if (IsCpp && CurrentToken) {
+        const auto *Info = CurrentToken->Tok.getIdentifierInfo();
+        // What follows Tok is an identifier or a non-operator keyword.
+        if (Info && !(Info->isCPlusPlusOperatorKeyword() ||
+                      CurrentToken->isPlacementOperator() ||
+                      CurrentToken->is(tok::kw_co_await))) {
+          FormatToken *LParen;
+          if (CurrentToken->startsSequence(tok::kw_decltype, tok::l_paren,
+                                           tok::kw_auto, tok::r_paren)) {
+            // Skip `decltype(auto)`.
+            LParen = CurrentToken->Next->Next->Next->Next;
+          } else {
+            // Skip to l_paren.
+            for (LParen = CurrentToken->Next;
+                 LParen && LParen->isNot(tok::l_paren); LParen = LParen->Next) {
+            }
           }
-        }
-        if (LParen && LParen->startsSequence(tok::l_paren, tok::r_paren)) {
-          Tok->setFinalizedType(TT_FunctionDeclarationName);
-          LParen->setFinalizedType(TT_FunctionDeclarationLParen);
-          break;
+          if (LParen && LParen->is(tok::l_paren)) {
+            Tok->setFinalizedType(TT_FunctionDeclarationName);
+            LParen->setFinalizedType(TT_FunctionDeclarationLParen);
+            break;
+          }
         }
       }
       while (CurrentToken &&
@@ -3018,7 +3024,7 @@ private:
       return TT_UnaryOperator;
     if (PrevToken->is(TT_TypeName))
       return TT_PointerOrReference;
-    if (PrevToken->isOneOf(tok::kw_new, tok::kw_delete) && Tok.is(tok::ampamp))
+    if (PrevToken->isPlacementOperator() && Tok.is(tok::ampamp))
       return TT_BinaryOperator;
 
     const FormatToken *NextToken = Tok.getNextNonComment();
@@ -3808,7 +3814,7 @@ static bool isFunctionDeclarationName(const LangOptions &LangOpts,
         return Next;
       if (Next->is(TT_OverloadedOperator))
         continue;
-      if (Next->isOneOf(tok::kw_new, tok::kw_delete, tok::kw_co_await)) {
+      if (Next->isPlacementOperator() || Next->is(tok::kw_co_await)) {
         // For 'new[]' and 'delete[]'.
         if (Next->Next &&
             Next->Next->startsSequence(tok::l_square, tok::r_square)) {
@@ -4819,7 +4825,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
              spaceRequiredBeforeParens(Right);
     }
     if (Style.SpaceBeforeParens == FormatStyle::SBPO_Custom &&
-        Left.isOneOf(tok::kw_new, tok::kw_delete) &&
+        Left.isPlacementOperator() &&
         Right.isNot(TT_OverloadedOperatorLParen) &&
         !(Line.MightBeFunctionDecl && Left.is(TT_FunctionDeclarationName))) {
       const auto *RParen = Right.MatchingParen;
@@ -4862,7 +4868,7 @@ bool TokenAnnotator::spaceRequiredBetween(const AnnotatedLine &Line,
         return Style.SpaceBeforeParensOptions.AfterControlStatements ||
                spaceRequiredBeforeParens(Right);
       }
-      if (Left.isOneOf(tok::kw_new, tok::kw_delete) ||
+      if (Left.isPlacementOperator() ||
           (Left.is(tok::r_square) && Left.MatchingParen &&
            Left.MatchingParen->Previous &&
            Left.MatchingParen->Previous->is(tok::kw_delete))) {

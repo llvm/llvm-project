@@ -3857,8 +3857,8 @@ TEST_F(TokenAnnotatorTest, AfterPPDirective) {
 }
 
 TEST_F(TokenAnnotatorTest, UserDefinedConversionFunction) {
-  auto Tokens = annotate("operator int();");
-  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  auto Tokens = annotate("operator int(void);");
+  ASSERT_EQ(Tokens.size(), 7u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_FunctionDeclarationLParen);
 
@@ -3889,21 +3889,18 @@ TEST_F(TokenAnnotatorTest, UserDefinedConversionFunction) {
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_FunctionDeclarationLParen);
   EXPECT_TOKEN(Tokens[7], tok::kw_const, TT_TrailingAnnotation);
 
-  auto Style = getLLVMStyle();
-  Style.TypeNames.push_back("Foo");
-
-  Tokens = annotate("virtual operator Foo() = 0;", Style);
+  Tokens = annotate("virtual operator Foo() = 0;");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[1], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[3], tok::l_paren, TT_FunctionDeclarationLParen);
 
-  Tokens = annotate("operator Foo() override { return Foo(); }", Style);
+  Tokens = annotate("operator Foo() override { return Foo(); }");
   ASSERT_EQ(Tokens.size(), 13u) << Tokens;
   EXPECT_TOKEN(Tokens[0], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[2], tok::l_paren, TT_FunctionDeclarationLParen);
   EXPECT_TOKEN(Tokens[5], tok::l_brace, TT_FunctionLBrace);
 
-  Tokens = annotate("friend Bar::operator Foo();", Style);
+  Tokens = annotate("friend Bar::operator Foo();");
   ASSERT_EQ(Tokens.size(), 9u) << Tokens;
   EXPECT_TOKEN(Tokens[3], tok::kw_operator, TT_FunctionDeclarationName);
   EXPECT_TOKEN(Tokens[5], tok::l_paren, TT_FunctionDeclarationLParen);
