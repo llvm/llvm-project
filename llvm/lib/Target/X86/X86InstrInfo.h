@@ -514,7 +514,7 @@ public:
   /// the global base register value. Output instructions required to
   /// initialize the register in the function entry block, if necessary.
   ///
-  unsigned getGlobalBaseReg(MachineFunction *MF) const;
+  Register getGlobalBaseReg(MachineFunction *MF) const;
 
   std::pair<uint16_t, uint16_t>
   getExecutionDomain(const MachineInstr &MI) const override;
