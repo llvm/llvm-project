@@ -1629,7 +1629,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       std::make_pair("gcs-report", &ctx.arg.zGcsReport),
       std::make_pair("gcs-report-dynamic", &ctx.arg.zGcsReportDynamic),
       std::make_pair("pauth-report", &ctx.arg.zPauthReport)};
-  bool zGcsReportDynamicDefined = false;
+  bool hasGcsReportDynamic = false;
   for (opt::Arg *arg : args.filtered(OPT_z)) {
     std::pair<StringRef, StringRef> option =
         StringRef(arg->getValue()).split('=');
@@ -1639,29 +1639,23 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
       arg->claim();
       if (option.second == "none")
         *reportArg.second = ReportPolicy::None;
-      else if (option.second == "warning") {
+      else if (option.second == "warning")
         *reportArg.second = ReportPolicy::Warning;
-        // To be able to match the GNU ld inheritance rules for -zgcs-report
-        // and -zgcs-report-dynamic, we need to know if -zgcs-report-dynamic
-        // has been defined by the user.
-        if (option.first == "gcs-report-dynamic")
-          zGcsReportDynamicDefined = true;
-      } else if (option.second == "error") {
+      else if (option.second == "error")
         *reportArg.second = ReportPolicy::Error;
-        if (option.first == "gcs-report-dynamic")
-          zGcsReportDynamicDefined = true;
-      } else {
+      else {
         ErrAlways(ctx) << "unknown -z " << reportArg.first
                        << "= value: " << option.second;
         continue;
       }
+      hasGcsReportDynamic |= option.first == "gcs-report-dynamic";
     }
   }
 
-  if (!zGcsReportDynamicDefined && ctx.arg.zGcsReport != ReportPolicy::None &&
-      ctx.arg.zGcsReportDynamic == ReportPolicy::None)
-    // When inheriting the -zgcs-report option, it is capped at a `warning` to
-    // avoid needing to rebuild the shared library with GCS enabled.
+  // When -zgcs-report-dynamic is unspecified, it inherits -zgcs-report
+  // but is capped at warning to avoid needing to rebuild the shared library
+  // with GCS enabled.
+  if (!hasGcsReportDynamic && ctx.arg.zGcsReport != ReportPolicy::None)
     ctx.arg.zGcsReportDynamic = ReportPolicy::Warning;
 
   for (opt::Arg *arg : args.filtered(OPT_compress_sections)) {

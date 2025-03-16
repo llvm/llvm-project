@@ -365,8 +365,7 @@ private:
   std::vector<uint32_t> parseVerneed(const llvm::object::ELFFile<ELFT> &obj,
                                      const typename ELFT::Shdr *sec);
   template <typename ELFT>
-  void parseGnuAndFeatures(const uint8_t *base,
-                           const typename ELFT::PhdrRange headers);
+  void parseGnuAndFeatures(const llvm::object::ELFFile<ELFT> &obj);
 };
 
 class BinaryFile : public InputFile {

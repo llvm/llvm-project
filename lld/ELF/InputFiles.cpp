@@ -1434,30 +1434,23 @@ std::vector<uint32_t> SharedFile::parseVerneed(const ELFFile<ELFT> &obj,
   return verneeds;
 }
 
-// To determine if a shared file can support any of the GNU Attributes,
-// the .note.gnu.properties section need to be read. The appropriate
-// location in memory is located then the GnuPropertyNote can be parsed.
-// This is the same process as is used for readGnuProperty, however we
-// do not pass the data variable as, without an InputSection, its value
-// is unknown in a SharedFile. This is ok as the information that would
-// be collected from this is irrelevant for a dynamic object.
+// Parse PT_GNU_PROPERTY segments in DSO. The process is similar to
+// readGnuProperty, but we don't have the InputSection information.
 template <typename ELFT>
-void SharedFile::parseGnuAndFeatures(const uint8_t *base,
-                                     const typename ELFT::PhdrRange headers) {
-  if (headers.size() == 0 || ctx.arg.emachine != EM_AARCH64)
+void SharedFile::parseGnuAndFeatures(const ELFFile<ELFT> &obj) {
+  if (ctx.arg.emachine != EM_AARCH64)
     return;
-
-  for (unsigned i = 0; i < headers.size(); i++) {
-    if (headers[i].p_type != PT_GNU_PROPERTY)
+  const uint8_t *base = obj.base();
+  auto phdrs = CHECK2(obj.program_headers(), this);
+  for (auto phdr : phdrs) {
+    if (phdr.p_type != PT_GNU_PROPERTY)
       continue;
-    const typename ELFT::Note note(
-        *reinterpret_cast<const typename ELFT::Nhdr *>(base +
-                                                       headers[i].p_offset));
+    typename ELFT::Note note(
+        *reinterpret_cast<const typename ELFT::Nhdr *>(base + phdr.p_offset));
     if (note.getType() != NT_GNU_PROPERTY_TYPE_0 || note.getName() != "GNU")
       continue;
 
-    // Read a body of a NOTE record, which consists of type-length-value fields.
-    ArrayRef<uint8_t> desc = note.getDesc(headers[i].p_align);
+    ArrayRef<uint8_t> desc = note.getDesc(phdr.p_align);
     parseGnuPropertyNote<ELFT>(ctx, *this, GNU_PROPERTY_AARCH64_FEATURE_1_AND,
                                desc, base);
   }
@@ -1499,12 +1492,10 @@ template <class ELFT> void SharedFile::parse() {
   using Elf_Sym = typename ELFT::Sym;
   using Elf_Verdef = typename ELFT::Verdef;
   using Elf_Versym = typename ELFT::Versym;
-  using Elf_Phdr = typename ELFT::Phdr;
 
   ArrayRef<Elf_Dyn> dynamicTags;
   const ELFFile<ELFT> obj = this->getObj<ELFT>();
   ArrayRef<Elf_Shdr> sections = getELFShdrs<ELFT>();
-  ArrayRef<Elf_Phdr> pHeaders = CHECK2(obj.program_headers(), this);
 
   const Elf_Shdr *versymSec = nullptr;
   const Elf_Shdr *verdefSec = nullptr;
@@ -1575,7 +1566,7 @@ template <class ELFT> void SharedFile::parse() {
 
   verdefs = parseVerdefs<ELFT>(obj.base(), verdefSec);
   std::vector<uint32_t> verneeds = parseVerneed<ELFT>(obj, verneedSec);
-  parseGnuAndFeatures<ELFT>(obj.base(), pHeaders);
+  parseGnuAndFeatures<ELFT>(obj);
 
   // Parse ".gnu.version" section which is a parallel array for the symbol
   // table. If a given file doesn't have a ".gnu.version" section, we use
