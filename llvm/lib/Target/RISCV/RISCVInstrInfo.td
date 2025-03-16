@@ -518,6 +518,8 @@ def LeadingOnesWMask : ImmLeaf<XLenVT, [{
 //===----------------------------------------------------------------------===//
 
 include "RISCVInstrFormats.td"
+include "RISCVInstrFormatsC.td"
+include "RISCVInstrFormatsV.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -2135,10 +2137,8 @@ include "RISCVInstrInfoZk.td"
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
 
-// Compressed
-include "RISCVInstrInfoC.td"
-include "RISCVInstrInfoZc.td"
-include "RISCVInstrInfoZcmop.td"
+// Packed SIMD
+include "RISCVInstrInfoP.td"
 
 // Integer
 include "RISCVInstrInfoZimop.td"
@@ -2146,8 +2146,11 @@ include "RISCVInstrInfoZicbo.td"
 include "RISCVInstrInfoZicond.td"
 include "RISCVInstrInfoZicfiss.td"
 
-// Packed SIMD
-include "RISCVInstrInfoP.td"
+// Compressed
+include "RISCVInstrInfoC.td"
+include "RISCVInstrInfoZc.td"
+include "RISCVInstrInfoZcmop.td"
+
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
