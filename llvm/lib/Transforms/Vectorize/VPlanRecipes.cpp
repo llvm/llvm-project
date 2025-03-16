@@ -3332,15 +3332,12 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
-    auto *IVR = getParent()
-                    ->getPlan()
-                    ->getVectorLoopRegion()
-                    ->getEntryBasicBlock()
-                    ->front()
-                    .getVPSingleValue();
-    PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, /*IsScalar*/ true));
-    NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
-                                    CanonicalIV->getIterator());
+    IRBuilder<>::InsertPointGuard Guard(State.Builder);
+    if (State.Builder.GetInsertPoint() !=
+        State.Builder.GetInsertBlock()->getFirstNonPHIIt())
+      State.Builder.SetInsertPoint(
+          State.Builder.GetInsertBlock()->getFirstNonPHIIt());
+    NewPointerPhi = State.Builder.CreatePHI(ScStValueType, 2, "pointer.phi");
     NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
     NewPointerPhi->setDebugLoc(getDebugLoc());
   } else {
@@ -3369,8 +3366,10 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
 
     Value *InductionGEP = GetElementPtrInst::Create(
         State.Builder.getInt8Ty(), NewPointerPhi,
-        State.Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
-        InductionLoc);
+        State.Builder.CreateMul(
+            ScalarStepValue,
+            State.Builder.CreateTrunc(NumUnrolledElems, PhiType)),
+        "ptr.ind", InductionLoc);
 
     NewPointerPhi->addIncoming(InductionGEP, VectorPH);
   }
