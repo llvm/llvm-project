@@ -241,3 +241,32 @@ loop:
 exit:
   ret void
 }
+
+declare i1 @cond()
+
+; Test case for https://github.com/llvm/llvm-project/issues/131281.
+; %add2 is known to not wrap via BTC.
+define void @no_signed_wrap_iv_via_btc(ptr %dst, i32 %N) mustprogress {
+entry:
+  %sub = add i32 %N, -100
+  %sub4 = add i32 %N, -99
+  br label %outer
+
+outer:
+  %c = call i1 @cond()
+  br i1 %c, label %loop, label %exit
+
+loop:
+  %iv = phi i32 [ 0, %outer ], [ %inc, %loop ]
+  %add2 = add i32 %sub4, %iv
+  %add.ext = sext i32 %add2 to i64
+  %gep.dst = getelementptr i32, ptr %dst, i64 %add.ext
+  store i32 0, ptr %gep.dst, align 4
+  %inc = add i32 %iv, 1
+  %add = add i32 %sub, %inc
+  %ec = icmp sgt i32 %add, %N
+  br i1 %ec, label %outer, label %loop
+
+exit:
+  ret void
+}
