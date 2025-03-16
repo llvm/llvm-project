@@ -103,24 +103,6 @@ bool PPCLinuxToolChain::SupportIEEEFloat128(
          !(D.CCCIsCXX() && HasUnsupportedCXXLib);
 }
 
-std::string PPCLinuxToolChain::getCompilerRT(const ArgList &Args,
-                                             StringRef Component, FileType Type,
-                                             bool IsFortran) const {
-  // Check for runtime files in the new layout without the architecture first.
-  std::string CRTBasename = buildCompilerRTBasename(
-      Args, Component, Type, /*AddArch=*/false, IsFortran);
-  SmallString<128> Path;
-  for (const auto &LibPath : getLibraryPaths()) {
-    SmallString<128> P(LibPath);
-    llvm::sys::path::append(P, CRTBasename);
-    if (getVFS().exists(P))
-      return std::string(P);
-    if (Path.empty())
-      Path = P;
-  }
-  return std::string(Path);
-}
-
 void PPCLinuxToolChain::addFortranRuntimeLibs(
     const ArgList &Args, llvm::opt::ArgStringList &CmdArgs) const {
   // Link static flang_rt.runtime.a or shared flang_rt.runtime.so
