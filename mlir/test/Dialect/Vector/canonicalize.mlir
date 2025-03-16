@@ -244,48 +244,6 @@ func.func @extract_from_non_constant_create_mask(%dim0: index) -> vector<[2]xi1>
 
 // -----
 
-// CHECK-LABEL: @extract_elementwise
-//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: vector<4xf32>)
-func.func @extract_elementwise(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> f32 {
-// CHECK:   %[[EXT0:.*]] = vector.extract %[[ARG0]][1] : f32 from vector<4xf32>
-// CHECK:   %[[EXT1:.*]] = vector.extract %[[ARG1]][1] : f32 from vector<4xf32>
-// CHECK:   %[[RES:.*]] = arith.addf %[[EXT0]], %[[EXT1]] : f32
-// CHECK:   return %[[RES]] : f32
-  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
-  %1 = vector.extract %0[1] : f32 from vector<4xf32>
-  return %1 : f32
-}
-
-// -----
-
-// CHECK-LABEL: @extract_vec_elementwise
-//  CHECK-SAME:   (%[[ARG0:.*]]: vector<2x4xf32>, %[[ARG1:.*]]: vector<2x4xf32>)
-func.func @extract_vec_elementwise(%arg0: vector<2x4xf32>, %arg1: vector<2x4xf32>) -> vector<4xf32> {
-// CHECK:   %[[EXT0:.*]] = vector.extract %[[ARG0]][1] : vector<4xf32> from vector<2x4xf32>
-// CHECK:   %[[EXT1:.*]] = vector.extract %[[ARG1]][1] : vector<4xf32> from vector<2x4xf32>
-// CHECK:   %[[RES:.*]] = arith.addf %[[EXT0]], %[[EXT1]] : vector<4xf32>
-// CHECK:   return %[[RES]] : vector<4xf32>
-  %0 = arith.addf %arg0, %arg1 : vector<2x4xf32>
-  %1 = vector.extract %0[1] : vector<4xf32> from vector<2x4xf32>
-  return %1 : vector<4xf32>
-}
-
-// -----
-
-// CHECK-LABEL: @extract_elementwise_use
-//  CHECK-SAME:   (%[[ARG0:.*]]: vector<4xf32>, %[[ARG1:.*]]: vector<4xf32>)
-func.func @extract_elementwise_use(%arg0: vector<4xf32>, %arg1: vector<4xf32>) -> (f32, vector<4xf32>) {
-// Dop not propagate extract, as elementwise has other uses
-// CHECK:   %[[ELT:.*]] = arith.addf %[[ARG0]], %[[ARG1]] : vector<4xf32>
-// CHECK:   %[[EXT:.*]] = vector.extract %[[ELT]][1] : f32 from vector<4xf32>
-// CHECK:   return %[[EXT]], %[[ELT]] : f32, vector<4xf32>
-  %0 = arith.addf %arg0, %arg1 : vector<4xf32>
-  %1 = vector.extract %0[1] : f32 from vector<4xf32>
-  return %1, %0 : f32, vector<4xf32>
-}
-
-// -----
-
 // CHECK-LABEL: constant_mask_transpose_to_transposed_constant_mask
 func.func @constant_mask_transpose_to_transposed_constant_mask() -> (vector<2x3x4xi1>, vector<4x2x3xi1>) {
   //     CHECK: vector.constant_mask [1, 2, 3] : vector<2x3x4xi1>

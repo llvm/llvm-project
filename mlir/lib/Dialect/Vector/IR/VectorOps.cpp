@@ -2237,47 +2237,6 @@ public:
   }
 };
 
-/// Pattern to rewrite a ExtractOp(Elementwise) -> Elementwise(ExtractOp).
-class ExtractOpFromElemetwise final : public OpRewritePattern<ExtractOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExtractOp op,
-                                PatternRewriter &rewriter) const override {
-    Operation *eltwise = op.getVector().getDefiningOp();
-
-    // Elementwise op with single result and `extract` is single user.
-    if (!eltwise || !OpTrait::hasElementwiseMappableTraits(eltwise) ||
-        eltwise->getNumResults() != 1 || !eltwise->hasOneUse())
-      return failure();
-
-    // Arguments and result types must match.
-    if (!llvm::all_equal(llvm::concat<Type>(eltwise->getOperandTypes(),
-                                            eltwise->getResultTypes())))
-      return failure();
-
-    Type dstType = op.getType();
-
-    OpBuilder::InsertionGuard g(rewriter);
-    rewriter.setInsertionPoint(eltwise);
-
-    IRMapping mapping;
-    Location loc = eltwise->getLoc();
-    for (auto &&[i, arg] : llvm::enumerate(eltwise->getOperands())) {
-      Value newArg =
-          rewriter.create<ExtractOp>(loc, arg, op.getMixedPosition());
-      mapping.map(arg, newArg);
-    }
-
-    Operation *newEltwise = rewriter.clone(*eltwise, mapping);
-    newEltwise->getResult(0).setType(dstType);
-
-    rewriter.replaceOp(op, newEltwise);
-    rewriter.eraseOp(eltwise);
-    return success();
-  }
-};
-
 // Folds extract(shape_cast(..)) into shape_cast when the total element count
 // does not change.
 LogicalResult foldExtractFromShapeCastToShapeCast(ExtractOp extractOp,
@@ -2350,8 +2309,7 @@ LogicalResult foldExtractFromFromElements(ExtractOp extractOp,
 
 void ExtractOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<ExtractOpFromBroadcast, ExtractOpFromCreateMask,
-              ExtractOpFromElemetwise>(context);
+  results.add<ExtractOpFromBroadcast, ExtractOpFromCreateMask>(context);
   results.add(foldExtractFromShapeCastToShapeCast);
   results.add(foldExtractFromFromElements);
 }
