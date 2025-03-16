@@ -23,6 +23,8 @@
 #define SCHED_IDLE 5
 #define SCHED_DEADLINE 6
 
+#define CPU_SETSIZE __CPU_SETSIZE
+#define NCPUBITS __NCPUBITS
 #define CPU_COUNT_S(setsize, set) __sched_getcpucount(setsize, set)
 #define CPU_COUNT(set) CPU_COUNT_S(sizeof(cpu_set_t), set)
 #define CPU_ZERO_S(setsize, set) __sched_setcpuzero(setsize, set)
