@@ -172,3 +172,17 @@ def H_TestExtraClassAttr : TestAttr<"TestExtraClass"> {
 // DEF-LABEL: int TestExtraClassAttr::getFoo(int i) {
 // DEF: return i+1;
 // DEF-NEXT: }
+
+def I_TestGenMnemonicAliasAttr : TestAttr<"TestGenMnemonicAlias"> {
+  let mnemonic = "test_gen_mnemonic_alias";
+  let genMnemonicAlias = 1;
+}
+
+// DECL-LABEL: class TestGenMnemonicAliasAttr : public ::mlir::Attribute
+// DECL-SAME: ::mlir::OpAsmAttrInterface::Trait
+// DECL: ::mlir::OpAsmAliasResult getAlias(::llvm::raw_ostream &os) const;
+
+// DEF-LABEL: ::mlir::OpAsmAliasResult TestGenMnemonicAliasAttr::getAlias(::llvm::raw_ostream &os) const {
+// DEF-NEXT: os << "test_gen_mnemonic_alias";
+// DEF-NEXT: return ::mlir::OpAsmAliasResult::OverridableAlias;
+// DEF-NEXT: }
