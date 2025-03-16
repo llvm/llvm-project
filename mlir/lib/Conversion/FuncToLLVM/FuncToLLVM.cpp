@@ -140,18 +140,23 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
   for (auto [index, argType] : llvm::enumerate(type.getInputs())) {
     Value arg = wrapperFuncOp.getArgument(index + argOffset);
     if (auto memrefType = dyn_cast<MemRefType>(argType)) {
-      // TODO: Need to load !llvm.struct here and then unpack it.
-      //Value loaded = rewriter.create<LLVM::LoadOp>(
-      //    loc, typeConverter.convertType(memrefType), arg);
-      //MemRefDescriptor::unpack(rewriter, loc, loaded, memrefType, args);
-      llvm_unreachable("TODO: implement");
+      SmallVector<Type> convertedType;
+      LogicalResult status = typeConverter.convertMemRefType(memrefType, convertedType, /*packed=*/true);
+      (void)status;
+      assert(succeeded(status) && "failed to convert memref type");
+      Value loaded = rewriter.create<LLVM::LoadOp>(
+          loc, llvm::getSingleElement(convertedType), arg);
+      llvm::append_range(args, MemRefDescriptor::fromPackedStruct(rewriter, loc, loaded).getElements());
       continue;
     }
-    if (isa<UnrankedMemRefType>(argType)) {
-      //Value loaded = rewriter.create<LLVM::LoadOp>(
-      //    loc, typeConverter.convertType(argType), arg);
-      //UnrankedMemRefDescriptor::unpack(rewriter, loc, loaded, args);
-      llvm_unreachable("TODO: implement");
+    if (auto unrankedMemrefType = dyn_cast<UnrankedMemRefType>(argType)) {
+      SmallVector<Type> convertedType;
+      LogicalResult status = typeConverter.convertUnrankedMemRefType(unrankedMemrefType, convertedType, /*packed=*/true);
+      (void)status;
+      assert(succeeded(status) && "failed to convert memref type");
+      Value loaded = rewriter.create<LLVM::LoadOp>(
+          loc, llvm::getSingleElement(convertedType), arg);
+      llvm::append_range(args, UnrankedMemRefDescriptor::fromPackedStruct(rewriter, loc, loaded).getElements());
       continue;
     }
 
@@ -234,17 +239,12 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
       numToDrop = memRefType
                       ? MemRefDescriptor::getNumUnpackedValues(memRefType)
                       : UnrankedMemRefDescriptor::getNumUnpackedValues();
-      llvm_unreachable("TODO: implemement");
-      /**
-      Value packed =
-          memRefType
-              ? MemRefDescriptor::pack(builder, loc, typeConverter, memRefType,
-                                       wrapperArgsRange.take_front(numToDrop))
-              : UnrankedMemRefDescriptor::pack(
-                    builder, loc, typeConverter, unrankedMemRefType,
-                    wrapperArgsRange.take_front(numToDrop));
-      */
-     Value packed;
+      Value packed;
+      if (memRefType) {
+        packed = MemRefDescriptor(wrapperArgsRange.take_front(numToDrop)).packStruct(builder, loc);
+      } else {
+        packed = UnrankedMemRefDescriptor(wrapperArgsRange.take_front(numToDrop)).packStruct(builder, loc);
+      }
       auto ptrTy = LLVM::LLVMPointerType::get(builder.getContext());
       Value one = builder.create<LLVM::ConstantOp>(
           loc, typeConverter.convertType(builder.getIndexType()),
@@ -521,9 +521,10 @@ struct CallOpInterfaceLowering : public ConvertOpToLLVMPattern<CallOpType> {
   using ConvertOpToLLVMPattern<CallOpType>::ConvertOpToLLVMPattern;
   using Super = CallOpInterfaceLowering<CallOpType>;
   using Base = ConvertOpToLLVMPattern<CallOpType>;
+  using Adaptor = typename ConvertOpToLLVMPattern<CallOpType>::OneToNOpAdaptor;
 
   LogicalResult matchAndRewriteImpl(CallOpType callOp,
-                                    typename CallOpType::Adaptor adaptor,
+                                    Adaptor adaptor,
                                     ConversionPatternRewriter &rewriter,
                                     bool useBarePtrCallConv = false) const {
     // Pack the result types into a struct.
@@ -599,7 +600,7 @@ public:
         symbolTable(symbolTable) {}
 
   LogicalResult
-  matchAndRewrite(func::CallOp callOp, OpAdaptor adaptor,
+  matchAndRewrite(func::CallOp callOp, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     bool useBarePtrCallConv = false;
     if (getTypeConverter()->getOptions().useBarePtrCallConv) {
@@ -629,7 +630,7 @@ struct CallIndirectOpLowering
   using Super::Super;
 
   LogicalResult
-  matchAndRewrite(func::CallIndirectOp callIndirectOp, OpAdaptor adaptor,
+  matchAndRewrite(func::CallIndirectOp callIndirectOp, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     return matchAndRewriteImpl(callIndirectOp, adaptor, rewriter);
   }

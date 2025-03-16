@@ -365,8 +365,10 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) const {
   Type resultType = type.getNumResults() == 0
                         ? LLVM::LLVMVoidType::get(&getContext())
                         : packFunctionResults(type.getResults());
-  if (!resultType)
+  if (!resultType) {
+    llvm_unreachable("no result type!");
     return {};
+  }
 
   auto ptrType = LLVM::LLVMPointerType::get(type.getContext());
   auto structType = dyn_cast<LLVM::LLVMStructType>(resultType);
@@ -378,9 +380,11 @@ LLVMTypeConverter::convertFunctionTypeCWrapper(FunctionType type) const {
   }
 
   for (Type t : type.getInputs()) {
-    auto converted = convertType(t);
-    if (!converted || !LLVM::isCompatibleType(converted))
+    auto converted = convertCallingConventionType(t);
+    if (!converted || !LLVM::isCompatibleType(converted)) {
+      llvm_unreachable("could not convert input!");
       return {};
+    }
     if (isa<MemRefType, UnrankedMemRefType>(t))
       converted = ptrType;
     inputs.push_back(converted);
@@ -609,6 +613,20 @@ Type LLVMTypeConverter::convertCallingConventionType(
     if (auto memrefTy = dyn_cast<BaseMemRefType>(type))
       return convertMemRefToBarePtr(memrefTy);
 
+  if (auto memrefTy = dyn_cast<MemRefType>(type)) {
+    SmallVector<Type> convertedType;
+    LogicalResult status = convertMemRefType(memrefTy, convertedType, true);
+    if (failed(status)) return Type();
+    return llvm::getSingleElement(convertedType);
+  }
+
+  if (auto unrankedMemrefTy = dyn_cast<UnrankedMemRefType>(type)) {
+    SmallVector<Type> convertedType;
+    LogicalResult status = convertUnrankedMemRefType(unrankedMemrefTy, convertedType, true);
+    if (failed(status)) return Type();
+    return llvm::getSingleElement(convertedType);
+  }
+
   return convertType(type);
 }
 
@@ -690,41 +708,27 @@ Value LLVMTypeConverter::promoteOneMemRefDescriptor(Location loc, Value operand,
 
 SmallVector<Value, 4>
 LLVMTypeConverter::promoteOperands(Location loc, ValueRange opOperands,
-                                   ValueRange operands, OpBuilder &builder,
+                                   ArrayRef<ValueRange> operands, OpBuilder &builder,
                                    bool useBarePtrCallConv) const {
-  // TODO: This function should take a SmallVector<ValueRange> operands
   SmallVector<Value, 4> promotedOperands;
   promotedOperands.reserve(operands.size());
   useBarePtrCallConv |= options.useBarePtrCallConv;
   for (auto it : llvm::zip(opOperands, operands)) {
     auto operand = std::get<0>(it);
-    auto llvmOperand = std::get<1>(it);
+    auto llvmOperands = std::get<1>(it);
 
     if (useBarePtrCallConv) {
       // For the bare-ptr calling convention, we only have to extract the
       // aligned pointer of a memref.
       if (dyn_cast<MemRefType>(operand.getType())) {
-        MemRefDescriptor desc(llvmOperand);
-        llvmOperand = desc.alignedPtr(builder, loc);
+        MemRefDescriptor desc(llvmOperands);
+        promotedOperands.push_back(desc.alignedPtr(builder, loc));
+        continue;
       } else if (isa<UnrankedMemRefType>(operand.getType())) {
         llvm_unreachable("Unranked memrefs are not supported");
       }
-    } else {
-      if (isa<UnrankedMemRefType>(operand.getType())) {
-        // UnrankedMemRefDescriptor::unpack(builder, loc, llvmOperand,
-        //                                  promotedOperands);
-        llvm_unreachable("TODO: implement");
-        continue;
-      }
-      if (auto memrefType = dyn_cast<MemRefType>(operand.getType())) {
-        // MemRefDescriptor::unpack(builder, loc, llvmOperand, memrefType,
-        //                          promotedOperands);
-        llvm_unreachable("TODO: implement");
-        continue;
-      }
     }
-
-    promotedOperands.push_back(llvmOperand);
+    llvm::append_range(promotedOperands, llvmOperands);
   }
   return promotedOperands;
 }

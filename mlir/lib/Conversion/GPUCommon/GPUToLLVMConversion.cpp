@@ -723,8 +723,10 @@ LogicalResult ConvertHostRegisterOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto elementType = cast<UnrankedMemRefType>(memRefType).getElementType();
   auto elementSize = getSizeInBytes(loc, elementType, rewriter);
 
-  auto arguments = getTypeConverter()->promoteOperands(
-      loc, op->getOperands(), adaptor.getOperands(), rewriter);
+  llvm_unreachable("TODO");
+  SmallVector<Value> arguments;
+  //auto arguments = getTypeConverter()->promoteOperands(
+  //    loc, op->getOperands(), adaptor.getOperands(), rewriter);
   arguments.push_back(elementSize);
   hostRegisterCallBuilder.create(loc, rewriter, arguments);
 
@@ -745,8 +747,10 @@ LogicalResult ConvertHostUnregisterOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto elementType = cast<UnrankedMemRefType>(memRefType).getElementType();
   auto elementSize = getSizeInBytes(loc, elementType, rewriter);
 
-  auto arguments = getTypeConverter()->promoteOperands(
-      loc, op->getOperands(), adaptor.getOperands(), rewriter);
+  llvm_unreachable("TODO");
+  SmallVector<Value> arguments;
+  //auto arguments = getTypeConverter()->promoteOperands(
+  //    loc, op->getOperands(), adaptor.getOperands(), rewriter);
   arguments.push_back(elementSize);
   hostUnregisterCallBuilder.create(loc, rewriter, arguments);
 
@@ -977,9 +981,11 @@ LogicalResult LegalizeLaunchFuncOpPattern::matchAndRewrite(
   // Note: If `useBarePtrCallConv` is set in the type converter's options,
   // the value of `kernelBarePtrCallConv` will be ignored.
   OperandRange origArguments = launchOp.getKernelOperands();
-  SmallVector<Value, 8> llvmArguments = getTypeConverter()->promoteOperands(
-      loc, origArguments, adaptor.getKernelOperands(), rewriter,
-      /*useBarePtrCallConv=*/kernelBarePtrCallConv);
+  llvm_unreachable("TODO");
+  SmallVector<Value,8> llvmArguments;
+  //SmallVector<Value, 8> llvmArguments = getTypeConverter()->promoteOperands(
+  //    loc, origArguments, adaptor.getKernelOperands(), rewriter,
+  //    /*useBarePtrCallConv=*/kernelBarePtrCallConv);
   SmallVector<Value, 8> llvmArgumentsWithSizes;
 
   // Intersperse size information if requested.
