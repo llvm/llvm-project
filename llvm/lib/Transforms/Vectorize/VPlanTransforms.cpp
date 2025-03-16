@@ -2248,20 +2248,48 @@ static bool supportedLoad(VPWidenRecipe *R0, VPValue *V, unsigned Idx) {
 }
 
 /// Returns true if \p IR is a full interleave group with factor and number of
-/// members both equal to \p VF.
+/// members both equal to \p VF. The interleave group must also access the full
+/// vector width \p VectorRegWidth.
 static bool isConsecutiveInterleaveGroup(VPInterleaveRecipe *InterleaveR,
-                                         unsigned VF) {
+                                         unsigned VF, VPTypeAnalysis &TypeInfo,
+                                         unsigned VectorRegWidth) {
   if (!InterleaveR)
     return false;
+  Type *GroupElementTy = nullptr;
+  if (InterleaveR->getStoredValues().empty()) {
+    GroupElementTy = TypeInfo.inferScalarType(InterleaveR->getVPValue(0));
+    if (!all_of(InterleaveR->definedValues(),
+                [&TypeInfo, GroupElementTy](VPValue *Op) {
+                  return TypeInfo.inferScalarType(Op) == GroupElementTy;
+                }))
+      return false;
+  } else {
+    GroupElementTy =
+        TypeInfo.inferScalarType(InterleaveR->getStoredValues()[0]);
+    if (!all_of(InterleaveR->getStoredValues(),
+                [&TypeInfo, GroupElementTy](VPValue *Op) {
+                  return TypeInfo.inferScalarType(Op) == GroupElementTy;
+                }))
+      return false;
+  }
+
+  unsigned GroupSize = GroupElementTy->getScalarSizeInBits() * VF;
+
   auto IG = InterleaveR->getInterleaveGroup();
-  return IG->getFactor() == VF && IG->getNumMembers() == VF;
+  return IG->getFactor() == VF && IG->getNumMembers() == VF &&
+         GroupSize == VectorRegWidth;
 }
 
-void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
+void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF,
+                                             unsigned VectorRegWidth) {
   using namespace llvm::VPlanPatternMatch;
   VPRegionBlock *VectorLoop = Plan.getVectorLoopRegion();
   if (VF.isScalable() || !VectorLoop)
     return;
+
+  VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
+  Type *CanonicalIVType = CanonicalIV->getScalarType();
+  VPTypeAnalysis TypeInfo(CanonicalIVType);
 
   unsigned FixedVF = VF.getFixedValue();
   SmallVector<VPInterleaveRecipe *> StoreGroups;
@@ -2285,7 +2313,8 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
       continue;
 
     // Bail out on non-consecutive interleave groups.
-    if (!isConsecutiveInterleaveGroup(InterleaveR, FixedVF))
+    if (!isConsecutiveInterleaveGroup(InterleaveR, FixedVF, TypeInfo,
+                                      VectorRegWidth))
       return;
 
     // Skip read interleave groups.
@@ -2326,6 +2355,7 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
   if (StoreGroups.empty())
     return;
 
+  // Convert InterleaveGroup \p R to a single VPWidenLoadRecipe.
   auto Narrow = [](VPRecipeBase *R) -> VPValue * {
     if (auto *LoadGroup = dyn_cast<VPInterleaveRecipe>(R)) {
       // Narrow interleave group to wide load, as transformed VPlan will only
@@ -2376,5 +2406,4 @@ void VPlanTransforms::narrowInterleaveGroups(VPlan &Plan, ElementCount VF) {
   Inc->setOperand(
       1, Plan.getOrAddLiveIn(ConstantInt::get(CanIV->getScalarType(), 1)));
   removeDeadRecipes(Plan);
-  LLVM_DEBUG(dbgs() << "Narrowed interleave\n");
 }
