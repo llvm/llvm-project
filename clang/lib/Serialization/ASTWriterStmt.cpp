@@ -1009,6 +1009,7 @@ void ASTStmtWriter::VisitMemberExpr(MemberExpr *E) {
   CurrentPackingBits.addBit(HasQualifier);
   CurrentPackingBits.addBit(HasFoundDecl);
   CurrentPackingBits.addBit(HasTemplateInfo);
+  CurrentPackingBits.addBit(E->HasResugaredDeclType());
   Record.push_back(NumTemplateArgs);
 
   Record.AddStmt(E->getBase());
@@ -1037,6 +1038,9 @@ void ASTStmtWriter::VisitMemberExpr(MemberExpr *E) {
   if (HasTemplateInfo)
     AddTemplateKWAndArgsInfo(*E->getTrailingObjects<ASTTemplateKWAndArgsInfo>(),
                              E->getTrailingObjects<TemplateArgumentLoc>());
+
+  if (E->HasResugaredDeclType())
+    Record.writeQualType(E->getDeclType());
 
   Code = serialization::EXPR_MEMBER;
 }

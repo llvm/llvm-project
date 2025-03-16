@@ -1761,6 +1761,11 @@ UnaryExprOrTypeTraitExpr::UnaryExprOrTypeTraitExpr(
   setDependence(computeDependence(this));
 }
 
+bool MemberExpr::needsDeclTypeStorage(ValueDecl *VD, QualType DeclType) {
+  return !DeclType.isNull() &&
+         (DeclType != VD->getType() || VD->getType()->isUndeducedType());
+}
+
 MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
                        NestedNameSpecifierLoc QualifierLoc,
                        SourceLocation TemplateKWLoc, ValueDecl *MemberDecl,
@@ -1768,7 +1773,7 @@ MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
                        const DeclarationNameInfo &NameInfo,
                        const TemplateArgumentListInfo *TemplateArgs,
                        const TemplateArgumentList *Deduced, QualType T,
-                       ExprValueKind VK, ExprObjectKind OK,
+                       ExprValueKind VK, QualType DeclType, ExprObjectKind OK,
                        NonOdrUseReason NOUR)
     : Expr(MemberExprClass, T, VK, OK), Base(Base), MemberDecl(MemberDecl),
       Deduced(Deduced), MemberDNLoc(NameInfo.getInfo()),
@@ -1784,6 +1789,8 @@ MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
       TemplateArgs || TemplateKWLoc.isValid();
   MemberExprBits.HadMultipleCandidates = false;
   MemberExprBits.NonOdrUseReason = NOUR;
+  MemberExprBits.HasResugaredDeclType =
+      needsDeclTypeStorage(MemberDecl, DeclType);
   MemberExprBits.OperatorLoc = OperatorLoc;
 
   if (hasQualifier())
@@ -1800,6 +1807,12 @@ MemberExpr::MemberExpr(Expr *Base, bool IsArrow, SourceLocation OperatorLoc,
     getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
   }
+  if (HasResugaredDeclType()) {
+    assert(DeclType.getCanonicalType() ==
+           MemberDecl->getType().getCanonicalType());
+    *getTrailingObjects<QualType>() =
+        DeclType.isNull() ? MemberDecl->getType() : DeclType;
+  }
   setDependence(computeDependence(this));
 }
 
@@ -1809,43 +1822,58 @@ MemberExpr *MemberExpr::Create(
     ValueDecl *MemberDecl, DeclAccessPair FoundDecl,
     DeclarationNameInfo NameInfo, const TemplateArgumentListInfo *TemplateArgs,
     const TemplateArgumentList *Deduced, QualType T, ExprValueKind VK,
-    ExprObjectKind OK, NonOdrUseReason NOUR) {
+    QualType DeclType, ExprObjectKind OK, NonOdrUseReason NOUR) {
   bool HasQualifier = QualifierLoc.hasQualifier();
   bool HasFoundDecl = FoundDecl.getDecl() != MemberDecl ||
                       FoundDecl.getAccess() != MemberDecl->getAccess();
   bool HasTemplateKWAndArgsInfo = TemplateArgs || TemplateKWLoc.isValid();
   std::size_t Size =
       totalSizeToAlloc<NestedNameSpecifierLoc, DeclAccessPair,
-                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
+                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc, QualType>(
           HasQualifier, HasFoundDecl, HasTemplateKWAndArgsInfo,
-          TemplateArgs ? TemplateArgs->size() : 0);
+          TemplateArgs ? TemplateArgs->size() : 0,
+          needsDeclTypeStorage(MemberDecl, DeclType) ? 1 : 0);
 
   void *Mem = C.Allocate(Size, alignof(MemberExpr));
   return new (Mem) MemberExpr(Base, IsArrow, OperatorLoc, QualifierLoc,
                               TemplateKWLoc, MemberDecl, FoundDecl, NameInfo,
-                              TemplateArgs, Deduced, T, VK, OK, NOUR);
+                              TemplateArgs, Deduced, T, VK, DeclType, OK, NOUR);
 }
 
 MemberExpr *MemberExpr::CreateEmpty(const ASTContext &Context,
                                     bool HasQualifier, bool HasFoundDecl,
                                     bool HasTemplateKWAndArgsInfo,
-                                    unsigned NumTemplateArgs) {
+                                    unsigned NumTemplateArgs,
+                                    bool HasResugaredDeclType) {
   assert((!NumTemplateArgs || HasTemplateKWAndArgsInfo) &&
          "template args but no template arg info?");
   std::size_t Size =
       totalSizeToAlloc<NestedNameSpecifierLoc, DeclAccessPair,
-                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc>(
-          HasQualifier, HasFoundDecl, HasTemplateKWAndArgsInfo,
-          NumTemplateArgs);
+                       ASTTemplateKWAndArgsInfo, TemplateArgumentLoc, QualType>(
+          HasQualifier, HasFoundDecl, HasTemplateKWAndArgsInfo, NumTemplateArgs,
+          HasResugaredDeclType);
   void *Mem = Context.Allocate(Size, alignof(MemberExpr));
   return new (Mem) MemberExpr(EmptyShell());
 }
 
 void MemberExpr::setMemberDecl(ValueDecl *NewD) {
+  assert(MemberDecl != NewD);
+  assert(declaresSameEntity(MemberDecl, NewD));
+  assert(!HasResugaredDeclType() ||
+         MemberDecl->getASTContext().hasSameType(
+             NewD->getType(), *getTrailingObjects<QualType>()));
   MemberDecl = NewD;
-  if (getType()->isUndeducedType())
-    setType(NewD->getType());
+  recomputeDependency();
+}
+
+void MemberExpr::recomputeDependency() {
   setDependence(computeDependence(this));
+}
+
+void MemberExpr::setDeclType(QualType T) {
+  assert(!T.isNull());
+  if (HasResugaredDeclType())
+    *getTrailingObjects<QualType>() = T;
 }
 
 SourceLocation MemberExpr::getBeginLoc() const {
