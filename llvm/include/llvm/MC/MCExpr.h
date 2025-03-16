@@ -113,10 +113,8 @@ public:
   ///
   /// \param Res - The relocatable value, if evaluation succeeds.
   /// \param Asm - The assembler object to use for evaluating values.
-  /// \param Fixup - The Fixup object if available.
   /// \return - True on success.
-  bool evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm,
-                             const MCFixup *Fixup) const;
+  bool evaluateAsRelocatable(MCValue &Res, const MCAssembler *Asm) const;
 
   /// Try to evaluate the expression to the form (a - b + constant) where
   /// neither a nor b are variables.
@@ -557,8 +555,8 @@ protected:
 
 public:
   virtual void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const = 0;
-  virtual bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                         const MCFixup *Fixup) const = 0;
+  virtual bool evaluateAsRelocatableImpl(MCValue &Res,
+                                         const MCAssembler *Asm) const = 0;
   // allow Target Expressions to be checked for equality
   virtual bool isEqualTo(const MCExpr *x) const { return false; }
   virtual bool isSymbolUsedInExpression(const MCSymbol *Sym) const {
