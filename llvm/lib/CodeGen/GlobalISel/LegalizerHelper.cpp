@@ -6139,6 +6139,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:
   case TargetOpcode::G_ABS:
+  case TargetOpcode::G_CTLZ:
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);
