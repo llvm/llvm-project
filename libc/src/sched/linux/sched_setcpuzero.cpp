@@ -9,7 +9,7 @@
 #include "src/sched/sched_setcpuzero.h"
 
 #include "src/__support/common.h"        // LLVM_LIBC_FUNCTION
-#include "src/__support/macros/config.h" // LLVM_LIBC_FUNCTION
+#include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
 
 #include "hdr/types/cpu_set_t.h"
 #include "hdr/types/size_t.h"
