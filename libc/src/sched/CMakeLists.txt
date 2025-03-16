@@ -85,3 +85,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.__sched_setcpuzero
 )
+
+add_entrypoint_object(
+  __sched_setcpuset
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.__sched_setcpuset
+)

@@ -146,3 +146,14 @@ add_entrypoint_object(
     libc.hdr.types.cpu_set_t
     libc.hdr.types.size_t
 )
+
+add_entrypoint_object(
+  __sched_setcpuset
+  SRCS
+    sched_setcpuset.cpp
+  HDRS
+    ../sched_setcpuset.h
+  DEPENDS
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
+)
