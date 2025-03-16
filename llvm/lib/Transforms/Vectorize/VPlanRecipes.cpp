@@ -3366,8 +3366,10 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
 
     Value *InductionGEP = GetElementPtrInst::Create(
         State.Builder.getInt8Ty(), NewPointerPhi,
-        State.Builder.CreateMul(ScalarStepValue, NumUnrolledElems), "ptr.ind",
-        InductionLoc);
+        State.Builder.CreateMul(
+            ScalarStepValue,
+            State.Builder.CreateTrunc(NumUnrolledElems, PhiType)),
+        "ptr.ind", InductionLoc);
 
     NewPointerPhi->addIncoming(InductionGEP, VectorPH);
   }
