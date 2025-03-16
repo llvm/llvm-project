@@ -417,7 +417,8 @@ public:
   }
 
   /// Returns the type to be used for the index operand vector operations. By
-  /// default we assume it will have the same size as an address space 0 pointer.
+  /// default we assume it will have the same size as an address space 0
+  /// pointer.
   virtual unsigned getVectorIdxWidth(const DataLayout &DL) const {
     return DL.getPointerSizeInBits(0);
   }
