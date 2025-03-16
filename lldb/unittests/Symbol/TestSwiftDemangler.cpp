@@ -90,6 +90,7 @@ TEST(TestSwiftDemangleAsyncNames, BasicAsync) {
 // swiftc -g -Onone test.swift -o - -emit-ir -module-name a \
 // | grep "define.*sayHello"
 // func work() async {}
+// func async_int() async -> Int { return 42; }
 // func sayHello() async {
 //   let closure: (Any) async -> () = { _ in
 //     print("hello")
@@ -112,7 +113,11 @@ TEST(TestSwiftDemangleAsyncNames, BasicAsync) {
 //
 //     await inner_closure2(10)
 //     print("hello")
+//     async let x = await async_int();
+//     print(await x);
 //   }
+//   async let x = await async_int();
+//   print(await x);
 //   await closure(10)
 // }
 TEST(TestSwiftDemangleAsyncNames, ClosureAsync) {
@@ -145,11 +150,24 @@ TEST(TestSwiftDemangleAsyncNames, ClosureAsync) {
       "$s1a18myNonAsyncFunctionyyFyyYacfU_SiypYacfU_SSypYacfU0_TQ1_",
       "$s1a18myNonAsyncFunctionyyFyyYacfU_SiypYacfU_SSypYacfU0_TY2_"};
 
+  SmallVector<StringRef> implicit_closure_inside_function = {
+      "$s1a8sayHelloyyYaFSiyYaYbcfu_",
+      "$s1a8sayHelloyyYaFSiyYaYbcfu_TQ0_",
+      "$s1a8sayHelloyyYaFSiyYaYbcfu_TY1_",
+  };
+  SmallVector<StringRef> implicit_closure_inside_explicit_closure = {
+      "$s1a8sayHelloyyYaFyypYacfU_SiyYaYbcfu_",
+      "$s1a8sayHelloyyYaFyypYacfU_SiyYaYbcfu_TQ0_",
+      "$s1a8sayHelloyyYaFyypYacfU_SiyYaYbcfu_TY1_",
+  };
+
   SmallVector<ArrayRef<StringRef>, 0> funclet_groups = {
       nested1_funclets,
       nested2_funclets1,
       nested2_funclets2,
       nested2_funclets_top_not_async,
+      implicit_closure_inside_function,
+      implicit_closure_inside_explicit_closure,
   };
 
   for (ArrayRef<StringRef> funclet_group : funclet_groups)

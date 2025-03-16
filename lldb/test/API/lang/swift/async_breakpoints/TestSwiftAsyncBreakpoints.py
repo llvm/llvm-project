@@ -23,9 +23,7 @@ class TestSwiftAsyncBreakpoints(lldbtest.TestBase):
         self.assertEquals(breakpoint1.GetNumLocations(), 1)
         self.assertEquals(breakpoint2.GetNumLocations(), 1)
         self.assertEquals(breakpoint3.GetNumLocations(), 1)
-        # FIXME: there should be two breakpoints here, but the "entry" funclet of the
-        # implicit closure is mangled slightly differently. rdar://147035260
-        self.assertEquals(breakpoint4.GetNumLocations(), 3)
+        self.assertEquals(breakpoint4.GetNumLocations(), 2)
         self.assertEquals(breakpoint5.GetNumLocations(), 1)
 
         location11 = breakpoint1.GetLocationAtIndex(0)

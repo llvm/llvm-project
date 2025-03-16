@@ -87,12 +87,14 @@ static bool IsSwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node) {
   if (node->getFirstChild()->getKind() == Node::Kind::Static)
     node = node->getFirstChild();
 
-  // Get the ExplicitClosure or Function node.
+  // Get the {Implicit, Explicit} Closure or Function node.
   // For nested closures in Swift, the demangle tree is inverted: the
-  // inner-most closure is the top-most ExplicitClosure node.
+  // inner-most closure is the top-most closure node.
   NodePointer func_node = [&] {
     if (NodePointer func = childAtPath(node, Node::Kind::Function))
       return func;
+    if (NodePointer implicit = childAtPath(node, Node::Kind::ImplicitClosure))
+      return implicit;
     return childAtPath(node, Node::Kind::ExplicitClosure);
   }();
 
@@ -206,14 +208,17 @@ SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(
   }
 
   // If there are closures involved, do the closure-specific comparison.
-  NodePointer closure1 = childAtPath(node1, Node::Kind::ExplicitClosure);
-  NodePointer closure2 = childAtPath(node2, Node::Kind::ExplicitClosure);
-  if (closure1 || closure2) {
-    if (!closure1 || !closure2)
-      return FuncletComparisonResult::DifferentAsyncFunctions;
-    return AreFuncletsOfSameAsyncClosure(closure1, closure2)
-               ? FuncletComparisonResult::SameAsyncFunction
-               : FuncletComparisonResult::DifferentAsyncFunctions;
+  for (auto closure_kind :
+       {Node::Kind::ImplicitClosure, Node::Kind::ExplicitClosure}) {
+    NodePointer closure1 = childAtPath(node1, closure_kind);
+    NodePointer closure2 = childAtPath(node2, closure_kind);
+    if (closure1 || closure2) {
+      if (!closure1 || !closure2)
+        return FuncletComparisonResult::DifferentAsyncFunctions;
+      return AreFuncletsOfSameAsyncClosure(closure1, closure2)
+                 ? FuncletComparisonResult::SameAsyncFunction
+                 : FuncletComparisonResult::DifferentAsyncFunctions;
+    }
   }
 
   // Otherwise, find the corresponding function and compare the two.
