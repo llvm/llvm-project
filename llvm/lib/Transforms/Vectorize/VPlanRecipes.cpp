@@ -3332,15 +3332,12 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH = State.CFG.getPreheaderBBFor(this);
   PHINode *NewPointerPhi = nullptr;
   if (CurrentPart == 0) {
-    auto *IVR = getParent()
-                    ->getPlan()
-                    ->getVectorLoopRegion()
-                    ->getEntryBasicBlock()
-                    ->front()
-                    .getVPSingleValue();
-    PHINode *CanonicalIV = cast<PHINode>(State.get(IVR, /*IsScalar*/ true));
-    NewPointerPhi = PHINode::Create(ScStValueType, 2, "pointer.phi",
-                                    CanonicalIV->getIterator());
+    IRBuilder<>::InsertPointGuard Guard(State.Builder);
+    if (State.Builder.GetInsertPoint() !=
+        State.Builder.GetInsertBlock()->getFirstNonPHIIt())
+      State.Builder.SetInsertPoint(
+          State.Builder.GetInsertBlock()->getFirstNonPHIIt());
+    NewPointerPhi = State.Builder.CreatePHI(ScStValueType, 2, "pointer.phi");
     NewPointerPhi->addIncoming(ScalarStartValue, VectorPH);
     NewPointerPhi->setDebugLoc(getDebugLoc());
   } else {
@@ -3364,9 +3361,8 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
   if (CurrentPart == 0) {
     // The recipe represents the first part of the pointer induction. Create the
     // GEP to increment the phi across all unrolled parts.
-    unsigned UF = CurrentPart == 0 ? getParent()->getPlan()->getUF() : 1;
     Value *NumUnrolledElems =
-        State.Builder.CreateMul(RuntimeVF, ConstantInt::get(PhiType, UF));
+        State.get(&getParent()->getPlan()->getVFxUF(), true);
 
     Value *InductionGEP = GetElementPtrInst::Create(
         State.Builder.getInt8Ty(), NewPointerPhi,
