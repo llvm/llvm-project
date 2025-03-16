@@ -11699,6 +11699,9 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       DiagnoseAlwaysNonNullPointer(E, Expr::NPCK_NotNull, /*IsEqual*/ false,
                                    SourceRange(CC));
     }
+    if (Source->isPointerType()) {
+      Diag(E->getExprLoc(), diag::warn_impcast_pointer_to_bool_strict);
+    }
   }
 
   // If the we're converting a constant to an ObjC BOOL on a platform where BOOL

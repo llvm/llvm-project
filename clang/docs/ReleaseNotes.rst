@@ -136,6 +136,8 @@ New Compiler Flags
   The feature has `existed <https://clang.llvm.org/docs/SourceBasedCodeCoverage.html#running-the-instrumented-program>`_)
   for a while and this is just a user facing option.
 
+- New Option ``-Wpointer-bool-conversion-strict`` has been added to warn about all implicit pointer-to-bool conversions (#GH9500). This option is ignored by default.
+
 Deprecated Compiler Flags
 -------------------------
 
