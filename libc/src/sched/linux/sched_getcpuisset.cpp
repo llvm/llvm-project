@@ -1,4 +1,4 @@
-//===-- Implementation of sched_setcpuset ---------------------------------===//
+//===-- Implementation of sched_getcpuisset -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/sched/sched_setcpuset.h"
+#include "src/sched/sched_getcpuisset.h"
 
 #include "src/__support/common.h"        // LLVM_LIBC_FUNCTION
 #include "src/__support/macros/config.h" // LIBC_NAMESPACE_DECL
@@ -17,15 +17,17 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(void, __sched_setcpuset,
+LLVM_LIBC_FUNCTION(int, __sched_getcpuisset,
                    (int cpu, const size_t cpuset_size, cpu_set_t *set)) {
   if (static_cast<size_t>(cpu) / 8 < cpuset_size) {
     const size_t element_index = static_cast<size_t>(cpu) / NCPUBITS;
     const size_t bit_position = static_cast<size_t>(cpu) % NCPUBITS;
 
     const unsigned long mask = 1UL << bit_position;
-    set->__mask[element_index] |= mask;
+    return set->__mask[element_index] & mask;
   }
+
+  return 0;
 }
 
 } // namespace LIBC_NAMESPACE_DECL

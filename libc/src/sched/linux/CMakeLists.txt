@@ -154,6 +154,19 @@ add_entrypoint_object(
   HDRS
     ../sched_setcpuset.h
   DEPENDS
+    libc.hdr.sched_macros
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
+)
+
+add_entrypoint_object(
+  __sched_getcpuisset
+  SRCS
+    sched_getcpuisset.cpp
+  HDRS
+    ../sched_getcpuisset.h
+  DEPENDS
+    libc.hdr.sched_macros
     libc.hdr.types.cpu_set_t
     libc.hdr.types.size_t
 )
