@@ -127,7 +127,8 @@ bool applyDebugifyMetadataToMachineFunction(MachineModuleInfo &MMI,
       if (It == Line2Var.end()) {
         Line = EarliestDVI ? EarliestDVI->getDebugLoc().getLine()
                            : EarliestDVR->getDebugLoc().getLine();
-        It = Line2Var.try_emplace(Line).first;
+        It = Line2Var.find(Line);
+        assert(It != Line2Var.end());
       }
       DILocalVariable *LocalVar = It->second;
       assert(LocalVar && "No variable for current line?");
