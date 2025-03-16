@@ -1005,6 +1005,33 @@ void VPlanTransforms::simplifyRecipes(VPlan &Plan, Type &CanonicalIVTy) {
   }
 }
 
+/// Return true if \p Cond is known to be true for given \p BestVF and \p
+/// BestUF.
+static bool isConditionKnown(VPValue *Cond, VPlan &Plan, ElementCount BestVF,
+                             unsigned BestUF, ScalarEvolution &SE) {
+  using namespace llvm::VPlanPatternMatch;
+  if (match(Cond, m_Binary<Instruction::Or>(m_VPValue(), m_VPValue())))
+    return any_of(Cond->getDefiningRecipe()->operands(),
+                  [&Plan, BestVF, BestUF, &SE](VPValue *C) {
+                    return isConditionKnown(C, Plan, BestVF, BestUF, SE);
+                  });
+
+  VPValue *TripCount = Plan.getTripCount();
+  auto *CanIV = Plan.getCanonicalIV();
+  if (!match(Cond, m_Binary<Instruction::ICmp>(m_Specific(CanIV),
+                                               m_VPValue(TripCount))) ||
+      cast<VPRecipeWithIRFlags>(Cond->getDefiningRecipe())->getPredicate() !=
+          CmpInst::ICMP_EQ)
+    return false;
+
+  const SCEV *TripCountSCEV = vputils::getSCEVExprForVPValue(TripCount, SE);
+  assert(!isa<SCEVCouldNotCompute>(TripCountSCEV) &&
+         "Trip count SCEV must be computable");
+  ElementCount NumElements = BestVF.multiplyCoefficientBy(BestUF);
+  const SCEV *C = SE.getElementCount(TripCountSCEV->getType(), NumElements);
+  return SE.isKnownPredicate(CmpInst::ICMP_EQ, TripCountSCEV, C);
+}
+
 void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
                                          unsigned BestUF,
                                          PredicatedScalarEvolution &PSE) {
@@ -1019,9 +1046,12 @@ void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
   //  1. BranchOnCount, or
   //  2. BranchOnCond where the input is Not(ActiveLaneMask).
   using namespace llvm::VPlanPatternMatch;
+  VPValue *Cond;
   if (!match(Term, m_BranchOnCount(m_VPValue(), m_VPValue())) &&
-      !match(Term,
-             m_BranchOnCond(m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue())))))
+      !match(Term, m_BranchOnCond(
+                       m_Not(m_ActiveLaneMask(m_VPValue(), m_VPValue())))) &&
+      (!match(Term, m_BranchOnCond(m_VPValue(Cond))) ||
+       isConditionKnown(Cond, Plan, BestVF, BestUF, *PSE.getSE())))
     return;
 
   ScalarEvolution &SE = *PSE.getSE();
