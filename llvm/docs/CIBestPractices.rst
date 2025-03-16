@@ -107,4 +107,4 @@ permissions:
 If specific jobs within the workflow need additional permissions, those
 permissions should be added within the specific job. This practice locks down
 all permissions by default and only enables them when needed, better enforcing
-the principal of least privilege.
+the principle of least privilege.
