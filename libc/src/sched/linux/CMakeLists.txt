@@ -30,7 +30,7 @@ add_entrypoint_object(
     ../sched_getcpucount.h
   DEPENDS
     libc.include.sched
-  )
+)
 
 add_entrypoint_object(
   sched_yield
@@ -134,4 +134,15 @@ add_entrypoint_object(
     libc.include.sched
     libc.src.__support.OSUtil.osutil
     libc.src.errno.errno
+)
+
+add_entrypoint_object(
+  __sched_setcpuzero
+  SRCS
+    sched_setcpuzero.cpp
+  HDRS
+    ../sched_setcpuzero.h
+  DEPENDS
+    libc.hdr.types.cpu_set_t
+    libc.hdr.types.size_t
 )
