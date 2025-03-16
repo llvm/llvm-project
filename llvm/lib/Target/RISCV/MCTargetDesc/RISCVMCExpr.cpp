@@ -46,7 +46,7 @@ void RISCVMCExpr::printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const {
 
 const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
   MCValue AUIPCLoc;
-  if (!getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr, nullptr))
+  if (!getSubExpr()->evaluateAsRelocatable(AUIPCLoc, nullptr))
     return nullptr;
 
   const MCSymbolRefExpr *AUIPCSRE = AUIPCLoc.getSymA();
@@ -89,9 +89,8 @@ const MCFixup *RISCVMCExpr::getPCRelHiFixup(const MCFragment **DFOut) const {
 }
 
 bool RISCVMCExpr::evaluateAsRelocatableImpl(MCValue &Res,
-                                            const MCAssembler *Asm,
-                                            const MCFixup *Fixup) const {
-  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm, Fixup))
+                                            const MCAssembler *Asm) const {
+  if (!getSubExpr()->evaluateAsRelocatable(Res, Asm))
     return false;
 
   Res =
@@ -171,7 +170,7 @@ bool RISCVMCExpr::evaluateAsConstant(int64_t &Res) const {
   if (Kind != VK_RISCV_LO && Kind != VK_RISCV_HI)
     return false;
 
-  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr, nullptr))
+  if (!getSubExpr()->evaluateAsRelocatable(Value, nullptr))
     return false;
 
   if (!Value.isAbsolute())

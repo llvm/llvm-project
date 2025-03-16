@@ -64,9 +64,8 @@ public:
   void setNegated(bool negated = true) { Negated = negated; }
 
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
-
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
   void visitUsedExpr(MCStreamer &streamer) const override;
 
   MCFragment *findAssociatedFragment() const override {
