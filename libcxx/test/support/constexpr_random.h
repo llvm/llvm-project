@@ -62,13 +62,6 @@ struct is_valid_urng<
                             std::is_same<decltype(std::declval<Gen&>()()), typename Gen::result_type>::value>::type>
     : std::true_type {};
 
-template <class Sseq, class Engine>
-struct is_seed_sequence {
-  static TEST_CONSTEXPR const bool value =
-      !std::is_convertible<Sseq, typename Engine::result_type>::value &&
-      !std::is_same<typename std::remove_cv<Sseq>::type, Engine>::value;
-};
-
 template <class UIntType, UIntType N, std::size_t R>
 struct meta_log2_imp;
 
@@ -167,199 +160,6 @@ TEST_CONSTEXPR int countl_zero(T n) TEST_NOEXCEPT {
          (std::numeric_limits<unsigned int>::digits - std::numeric_limits<T>::digits);
 }
 
-enum lce_alg_type {
-  LCE_Full,
-  LCE_Part,
-  LCE_Schrage,
-  LCE_Promote,
-};
-
-template <unsigned long long a,
-          unsigned long long c,
-          unsigned long long m,
-          unsigned long long Mp,
-          bool HasOverflow = (a != 0ull && (m & (m - 1ull)) != 0ull),    // a != 0, m != 0, m != 2^n
-          bool Full        = (!HasOverflow || m - 1ull <= (Mp - c) / a), // (a * x + c) % m works
-          bool Part        = (!HasOverflow || m - 1ull <= Mp / a),       // (a * x) % m works
-          bool Schrage     = (HasOverflow && m % a <= m / a)>                // r <= q
-struct lce_alg_picker {
-  static TEST_CONSTEXPR const lce_alg_type mode =
-      Full      ? LCE_Full
-      : Part    ? LCE_Part
-      : Schrage ? LCE_Schrage
-                : LCE_Promote;
-
-#ifndef TEST_HAS_NO_INT128
-  static_assert(Mp != static_cast<unsigned long long>(-1) || Full || Part || Schrage,
-                "The current values for a, c, and m are not currently supported on platforms without __int128");
-#endif // TEST_HAS_NO_INT128
-};
-
-template <unsigned long long a,
-          unsigned long long c,
-          unsigned long long m,
-          unsigned long long Mp,
-          lce_alg_type Mode = lce_alg_picker<a, c, m, Mp>::mode>
-struct lce_traits;
-
-// 64
-
-#ifndef TEST_HAS_NO_INT128
-template <unsigned long long Ap, unsigned long long Cp, unsigned long long Mp>
-struct lce_traits<Ap, Cp, Mp, static_cast<unsigned long long>(-1), LCE_Promote> {
-  typedef unsigned long long result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type xp) {
-    __extension__ using calc_type = unsigned __int128;
-    const calc_type a             = static_cast<calc_type>(Ap);
-    const calc_type c             = static_cast<calc_type>(Cp);
-    const calc_type m             = static_cast<calc_type>(Mp);
-    const calc_type x             = static_cast<calc_type>(xp);
-    return static_cast<result_type>((a * x + c) % m);
-  }
-};
-#endif // TEST_HAS_NO_INT128
-
-template <unsigned long long a, unsigned long long c, unsigned long long m>
-struct lce_traits<a, c, m, static_cast<unsigned long long>(-1), LCE_Schrage> {
-  typedef unsigned long long result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) {
-    // Schrage's algorithm
-    const result_type q  = m / a;
-    const result_type r  = m % a;
-    const result_type t0 = a * (x % q);
-    const result_type t1 = r * (x / q);
-    x                    = t0 + (t0 < t1) * m - t1;
-    x += c - (x >= m - c) * m;
-    return x;
-  }
-};
-
-template <unsigned long long a, unsigned long long m>
-struct lce_traits<a, 0ull, m, static_cast<unsigned long long>(-1), LCE_Schrage> {
-  typedef unsigned long long result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) {
-    // Schrage's algorithm
-    const result_type q  = m / a;
-    const result_type r  = m % a;
-    const result_type t0 = a * (x % q);
-    const result_type t1 = r * (x / q);
-    x                    = t0 + (t0 < t1) * m - t1;
-    return x;
-  }
-};
-
-template <unsigned long long a, unsigned long long c, unsigned long long m>
-struct lce_traits<a, c, m, static_cast<unsigned long long>(-1), LCE_Part> {
-  typedef unsigned long long result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) {
-    // Use (((a*x) % m) + c) % m
-    x = (a * x) % m;
-    x += c - (x >= m - c) * m;
-    return x;
-  }
-};
-
-template <unsigned long long a, unsigned long long c, unsigned long long m>
-struct lce_traits<a, c, m, static_cast<unsigned long long>(-1), LCE_Full> {
-  typedef unsigned long long result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) { return (a * x + c) % m; }
-};
-
-template <unsigned long long a, unsigned long long c>
-struct lce_traits<a, c, 0ull, static_cast<unsigned long long>(-1), LCE_Full> {
-  typedef unsigned long long result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) { return a * x + c; }
-};
-
-// 32
-
-template <unsigned long long a, unsigned long long c, unsigned long long m>
-struct lce_traits<a, c, m, static_cast<unsigned>(-1), LCE_Promote> {
-  typedef unsigned result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) {
-    return static_cast<result_type>(lce_traits<a, c, m, static_cast<unsigned long long>(-1)>::next(x));
-  }
-};
-
-template <unsigned long long Ap, unsigned long long Cp, unsigned long long Mp>
-struct lce_traits<Ap, Cp, Mp, static_cast<unsigned>(-1), LCE_Schrage> {
-  typedef unsigned result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) {
-    const result_type a = static_cast<result_type>(Ap);
-    const result_type c = static_cast<result_type>(Cp);
-    const result_type m = static_cast<result_type>(Mp);
-    // Schrage's algorithm
-    const result_type q  = m / a;
-    const result_type r  = m % a;
-    const result_type t0 = a * (x % q);
-    const result_type t1 = r * (x / q);
-    x                    = t0 + (t0 < t1) * m - t1;
-    x += c - (x >= m - c) * m;
-    return x;
-  }
-};
-
-template <unsigned long long Ap, unsigned long long Mp>
-struct lce_traits<Ap, 0ull, Mp, static_cast<unsigned>(-1), LCE_Schrage> {
-  typedef unsigned result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) {
-    const result_type a = static_cast<result_type>(Ap);
-    const result_type m = static_cast<result_type>(Mp);
-    // Schrage's algorithm
-    const result_type q  = m / a;
-    const result_type r  = m % a;
-    const result_type t0 = a * (x % q);
-    const result_type t1 = r * (x / q);
-    x                    = t0 + (t0 < t1) * m - t1;
-    return x;
-  }
-};
-
-template <unsigned long long Ap, unsigned long long Cp, unsigned long long Mp>
-struct lce_traits<Ap, Cp, Mp, static_cast<unsigned>(-1), LCE_Part> {
-  typedef unsigned result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) {
-    const result_type a = static_cast<result_type>(Ap);
-    const result_type c = static_cast<result_type>(Cp);
-    const result_type m = static_cast<result_type>(Mp);
-    // Use (((a*x) % m) + c) % m
-    x = (a * x) % m;
-    x += c - (x >= m - c) * m;
-    return x;
-  }
-};
-
-template <unsigned long long Ap, unsigned long long Cp, unsigned long long Mp>
-struct lce_traits<Ap, Cp, Mp, static_cast<unsigned>(-1), LCE_Full> {
-  typedef unsigned result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) {
-    const result_type a = static_cast<result_type>(Ap);
-    const result_type c = static_cast<result_type>(Cp);
-    const result_type m = static_cast<result_type>(Mp);
-    return (a * x + c) % m;
-  }
-};
-
-template <unsigned long long Ap, unsigned long long Cp>
-struct lce_traits<Ap, Cp, 0ull, static_cast<unsigned>(-1), LCE_Full> {
-  typedef unsigned result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) {
-    const result_type a = static_cast<result_type>(Ap);
-    const result_type c = static_cast<result_type>(Cp);
-    return a * x + c;
-  }
-};
-
-// 16
-
-template <unsigned long long a, unsigned long long c, unsigned long long m, lce_alg_type mode>
-struct lce_traits<a, c, m, static_cast<unsigned short>(-1), mode> {
-  typedef unsigned short result_type;
-  static TEST_CONSTEXPR_CXX14 result_type next(result_type x) {
-    return static_cast<result_type>(lce_traits<a, c, m, static_cast<unsigned short>(-1)>::next(x));
-  }
-};
-
 template <class Engine, class UIntType>
 class independent_bits_engine {
 public:
@@ -404,12 +204,14 @@ public:
         mask1_() {
     round_count_all_ = width_ / rp_log2 + (width_ % rp_log2 != 0);
     wid0_            = width_ / round_count_all_;
-    if (rp == 0)
+    if TEST_CONSTEXPR_CXX17 (rp == 0) {
       y0_ = rp;
-    else if (wid0_ < w_digits)
-      y0_ = (rp >> wid0_) << wid0_;
-    else
-      y0_ = 0;
+    } else {
+      if (wid0_ < w_digits)
+        y0_ = (rp >> wid0_) << wid0_;
+      else
+        y0_ = 0;
+    }
     if (rp - y0_ > y0_ / round_count_all_) {
       ++round_count_all_;
       wid0_ = width_ / round_count_all_;
@@ -423,8 +225,10 @@ public:
       y1_ = (rp >> (wid0_ + 1)) << (wid0_ + 1);
     else
       y1_ = 0;
-    mask0_ = wid0_ > 0 ? engine_result_type(~0) >> (e_digits - wid0_) : engine_result_type(0);
-    mask1_ = wid0_ < e_digits - 1 ? engine_result_type(~0) >> (e_digits - (wid0_ + 1)) : engine_result_type(~0);
+    mask0_ = wid0_ > 0 ? static_cast<engine_result_type>(engine_result_type(~0) >> (e_digits - wid0_))
+                       : engine_result_type(0);
+    mask1_ = wid0_ < e_digits - 1 ? static_cast<engine_result_type>(engine_result_type(~0) >> (e_digits - (wid0_ + 1)))
+                                  : engine_result_type(~0);
   }
 
   // generating functions
@@ -439,7 +243,7 @@ private:
     for (std::size_t k = 0; k < round_count_regular_; ++k) {
       engine_result_type eng_result = 0;
       do {
-        eng_result = eng_() - Engine::min();
+        eng_result = static_cast<engine_result_type>(eng_() - Engine::min());
       } while (eng_result >= y0_);
       if (wid0_ < r_digits)
         result <<= wid0_;
@@ -450,7 +254,7 @@ private:
     for (std::size_t k = round_count_regular_; k < round_count_all_; ++k) {
       engine_result_type eng_result = 0;
       do {
-        eng_result = eng_() - Engine::min();
+        eng_result = static_cast<engine_result_type>(eng_() - Engine::min());
       } while (eng_result >= y1_);
       if (wid0_ < r_digits - 1)
         result <<= wid0_ + 1;
@@ -463,105 +267,6 @@ private:
 };
 
 } // namespace detail
-
-template <class UIntType, UIntType a, UIntType c, UIntType m>
-class linear_congruential_engine {
-public:
-  // types
-  typedef UIntType result_type;
-
-private:
-  result_type result_;
-
-  static TEST_CONSTEXPR const result_type Mp = result_type(-1);
-
-  static_assert(m == 0 || a < m, "linear_congruential_engine invalid parameters");
-  static_assert(m == 0 || c < m, "linear_congruential_engine invalid parameters");
-  static_assert(std::is_unsigned<UIntType>::value, "UIntType must be unsigned type");
-
-public:
-  static TEST_CONSTEXPR const result_type min_value = c == 0u ? 1u : 0u;
-  static TEST_CONSTEXPR const result_type max_value = m - UIntType(1u);
-  static_assert(min_value < max_value, "linear_congruential_engine invalid parameters");
-
-  // engine characteristics
-  static TEST_CONSTEXPR const result_type multiplier = a;
-  static TEST_CONSTEXPR const result_type increment  = c;
-  static TEST_CONSTEXPR const result_type modulus    = m;
-  static TEST_CONSTEXPR result_type min() { return min_value; }
-  static TEST_CONSTEXPR result_type max() { return max_value; }
-  static TEST_CONSTEXPR const result_type default_seed = 1u;
-
-  // constructors and seeding functions
-#if TEST_STD_VER >= 11
-  TEST_CONSTEXPR_CXX14 linear_congruential_engine() : linear_congruential_engine(default_seed) {}
-#else
-  linear_congruential_engine() { seed(default_seed); }
-#endif
-  TEST_CONSTEXPR_CXX14 explicit linear_congruential_engine(result_type s) { seed(s); }
-  template < class Sseq,
-             typename std::enable_if<detail::is_seed_sequence<Sseq, linear_congruential_engine>::value, int>::type = 0>
-  TEST_CONSTEXPR_CXX14 explicit linear_congruential_engine(Sseq& q) {
-    seed(q);
-  }
-  TEST_CONSTEXPR_CXX14 void seed(result_type s = default_seed) {
-    seed(std::integral_constant< bool, m == 0 >(), std::integral_constant< bool, c == 0 >(), s);
-  }
-  template < class Sseq,
-             typename std::enable_if<detail::is_seed_sequence<Sseq, linear_congruential_engine>::value, int>::type = 0>
-  TEST_CONSTEXPR_CXX14 void seed(Sseq& q) {
-    seed_impl(
-        q,
-        std::integral_constant< unsigned,
-                                1 + (m == 0 ? (sizeof(result_type) * CHAR_BIT - 1) / 32 : (m > 0x100000000ull))>());
-  }
-
-  // generating functions
-  TEST_CONSTEXPR_CXX14 result_type operator()() {
-    return result_ = static_cast<result_type>(detail::lce_traits<a, c, m, Mp>::next(result_));
-  }
-  TEST_CONSTEXPR_CXX14 void discard(unsigned long long z) {
-    for (; z; --z)
-      operator()();
-  }
-
-#if TEST_STD_VER >= 20
-  friend bool operator==(const linear_congruential_engine&, const linear_congruential_engine&) = default;
-#else
-  friend bool operator==(const linear_congruential_engine& lhs, const linear_congruential_engine& rhs) {
-    return lhs.result_ == rhs.result_;
-  }
-  friend bool operator!=(const linear_congruential_engine& lhs, const linear_congruential_engine& rhs) {
-    return !(lhs == rhs);
-  }
-#endif
-
-private:
-  TEST_CONSTEXPR_CXX14 void seed(std::true_type, std::true_type, result_type s) { result_ = s == 0 ? 1 : s; }
-  TEST_CONSTEXPR_CXX14 void seed(std::true_type, std::false_type, result_type s) { result_ = s; }
-  TEST_CONSTEXPR_CXX14 void seed(std::false_type, std::true_type, result_type s) { result_ = s % m == 0 ? 1 : s % m; }
-  TEST_CONSTEXPR_CXX14 void seed(std::false_type, std::false_type, result_type s) { result_ = s % m; }
-
-  template <class Sseq>
-  TEST_CONSTEXPR_CXX14 void seed_impl(Sseq& q, std::integral_constant<unsigned, 1>) {
-    const unsigned k         = 1;
-    std::uint32_t arr[k + 3] = {};
-    q.generate(arr, arr + k + 3);
-    result_type s = static_cast<result_type>(arr[3] % m);
-    result_       = c == 0 && s == 0 ? result_type(1) : s;
-  }
-  template <class Sseq>
-  TEST_CONSTEXPR_CXX14 void seed_impl(Sseq& q, std::integral_constant<unsigned, 2>) {
-    const unsigned k         = 2;
-    std::uint32_t arr[k + 3] = {};
-    q.generate(arr, arr + k + 3);
-    result_type s = static_cast<result_type>((arr[3] + (static_cast<std::uint64_t>(arr[4]) << 32)) % m);
-    result_       = c == 0 && s == 0 ? result_type(1) : s;
-  }
-};
-
-typedef linear_congruential_engine<std::uint_fast32_t, 16807, 0, 2147483647> minstd_rand0;
-typedef linear_congruential_engine<std::uint_fast32_t, 48271, 0, 2147483647> minstd_rand;
 
 template <class IntType = int>
 class uniform_int_distribution {
@@ -672,6 +377,35 @@ public:
     return !(lhs == rhs);
   }
 #endif
+};
+
+class simple_random_generator {
+private:
+  std::uint32_t status_;
+
+public:
+  typedef std::uint16_t result_type;
+
+#if TEST_STD_VER >= 11
+  static constexpr result_type min() noexcept { return 0; }
+  static constexpr result_type max() noexcept { return static_cast<result_type>(-1); }
+#else
+  static const result_type min_value = 0;
+  static const result_type max_value = static_cast<result_type>(-1);
+#endif
+  static TEST_CONSTEXPR const result_type default_seed = 19937;
+
+#if TEST_STD_VER >= 11
+  constexpr simple_random_generator() noexcept : simple_random_generator(default_seed) {}
+#else
+  simple_random_generator() throw() : status_(default_seed) {}
+#endif
+  TEST_CONSTEXPR explicit simple_random_generator(std::uint16_t s) TEST_NOEXCEPT : status_(s) {}
+
+  TEST_CONSTEXPR_CXX14 result_type operator()() TEST_NOEXCEPT {
+    status_ = status_ * 214013u + 2531011u;
+    return static_cast<result_type>(status_ >> 16);
+  }
 };
 
 template <class RandomAccessIterator, class UniformRandomNumberGenerator>

@@ -96,20 +96,14 @@ TEST_CONSTEXPR_CXX26 void test(RandSrc& randomness) {
   test_one<Iter>(3, 2, randomness);
   test_one<Iter>(3, 3, randomness);
   test<Iter>(4, randomness);
-  test<Iter>(50, randomness);
-#if defined(_LIBCPP_HARDENING_MODE)
-  if (!TEST_IS_CONSTANT_EVALUATED) // avoid blowing past constant evaluation limit
-#endif
-  {
-    test<Iter>(100, randomness);
-  }
-  if (!TEST_IS_CONSTANT_EVALUATED) { // avoid blowing past constant evaluation limit
+  test<Iter>(100, randomness);
+  if (!TEST_IS_CONSTANT_EVALUATED) { // avoid exceeding the constant evaluation step limit
     test<Iter>(1000, randomness);
   }
 }
 
 TEST_CONSTEXPR_CXX26 bool test() {
-  support::minstd_rand randomness;
+  support::simple_random_generator randomness;
 
   test<bidirectional_iterator<int*> >(randomness);
   test<random_access_iterator<int*> >(randomness);
