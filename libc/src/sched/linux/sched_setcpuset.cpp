@@ -16,7 +16,7 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, __sched_setcpuset,
+LLVM_LIBC_FUNCTION(void, __sched_setcpuset,
                    (int cpu, const size_t cpuset_size, cpu_set_t *set)) {
   if (cpu / 8 < cpuset_size) {
     const size_t element_index = cpu / NCPUBITS;
