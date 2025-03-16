@@ -1643,9 +1643,9 @@ private:
       if (IsCpp && CurrentToken) {
         const auto *Info = CurrentToken->Tok.getIdentifierInfo();
         // What follows Tok is an identifier or a non-operator keyword.
-        if (Info && !(Info->isCPlusPlusOperatorKeyword() ||
-                      CurrentToken->isPlacementOperator() ||
-                      CurrentToken->is(tok::kw_co_await))) {
+        if (Info && !(CurrentToken->isPlacementOperator() ||
+                      CurrentToken->is(tok::kw_co_await) ||
+                      Info->isCPlusPlusOperatorKeyword())) {
           FormatToken *LParen;
           if (CurrentToken->startsSequence(tok::kw_decltype, tok::l_paren,
                                            tok::kw_auto, tok::r_paren)) {
