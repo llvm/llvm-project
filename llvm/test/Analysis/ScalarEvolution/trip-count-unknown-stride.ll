@@ -493,6 +493,27 @@ for.end:                                          ; preds = %for.body, %entry
   ret void
 }
 
+define i32 @pr131465(i1 %x) mustprogress {
+; CHECK-LABEL: 'pr131465'
+; CHECK-NEXT:  Determining loop execution counts for: @pr131465
+; CHECK-NEXT:  Loop %for.body: backedge-taken count is ((-1 * (zext i1 %x to i32))<nuw><nsw> /u (zext i1 %x to i32))
+; CHECK-NEXT:  Loop %for.body: constant max backedge-taken count is i32 -1
+; CHECK-NEXT:  Loop %for.body: symbolic max backedge-taken count is ((-1 * (zext i1 %x to i32))<nuw><nsw> /u (zext i1 %x to i32))
+; CHECK-NEXT:  Loop %for.body: Trip multiple is 1
+;
+entry:
+  %inc = zext i1 %x to i32
+  br label %for.body
+
+for.body:
+  %indvar = phi i32 [ 2, %entry ], [ %next, %for.body ]
+  %next = add nsw i32 %indvar, %inc
+  %exitcond = icmp eq i32 %next, 2
+  br i1 %exitcond, label %for.end, label %for.body
+
+for.end:
+  ret i32 0
+}
 
 declare void @llvm.assume(i1)
 
