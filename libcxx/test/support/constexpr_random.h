@@ -386,10 +386,9 @@ private:
 public:
   typedef std::uint16_t result_type;
 
-#if TEST_STD_VER >= 11
-  static constexpr result_type min() noexcept { return 0; }
-  static constexpr result_type max() noexcept { return static_cast<result_type>(-1); }
-#else
+  static TEST_CONSTEXPR result_type min() TEST_NOEXCEPT { return 0; }
+  static TEST_CONSTEXPR result_type max() TEST_NOEXCEPT { return static_cast<result_type>(-1); }
+#if TEST_STD_VER < 11
   static const result_type min_value = 0;
   static const result_type max_value = static_cast<result_type>(-1);
 #endif
