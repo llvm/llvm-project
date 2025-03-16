@@ -430,10 +430,10 @@ public:
   MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
     return MVT::i32;
   }
-  MVT getVectorIdxTy(const DataLayout &DL) const override {
+  unsigned getVectorIdxWidth(const DataLayout &DL) const override {
     // Only the lower 12 bits of an element index are used, so we don't
     // want to clobber the upper 32 bits of a GPR unnecessarily.
-    return MVT::i32;
+    return 32;
   }
   TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(MVT VT)
     const override {

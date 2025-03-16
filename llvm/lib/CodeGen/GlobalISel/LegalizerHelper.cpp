@@ -4229,7 +4229,7 @@ LegalizerHelper::scalarizeVectorBooleanStore(GStore &StoreMI) {
     unsigned NumBits = MemTy.getSizeInBits();
     LLT IntTy = LLT::scalar(NumBits);
     auto CurrVal = MIRBuilder.buildConstant(IntTy, 0);
-    LLT IdxTy = getLLTForMVT(TLI.getVectorIdxTy(MF.getDataLayout()));
+    LLT IdxTy = TLI.getVectorIdxLLT(MF.getDataLayout());
 
     for (unsigned I = 0, E = MemTy.getNumElements(); I < E; ++I) {
       auto Elt = MIRBuilder.buildExtractVectorElement(
@@ -6277,7 +6277,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     auto NeutralElement = getNeutralElementForVecReduce(
         MI.getOpcode(), MIRBuilder, MoreTy.getElementType());
 
-    LLT IdxTy(TLI.getVectorIdxTy(MIRBuilder.getDataLayout()));
+    LLT IdxTy(TLI.getVectorIdxLLT(MIRBuilder.getDataLayout()));
     for (size_t i = OrigTy.getNumElements(), e = MoreTy.getNumElements();
          i != e; i++) {
       auto Idx = MIRBuilder.buildConstant(IdxTy, i);

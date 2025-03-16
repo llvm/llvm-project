@@ -1993,8 +1993,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     auto TLI = MF->getSubtarget().getTargetLowering();
-    if (IdxTy.getSizeInBits() !=
-        TLI->getVectorIdxTy(MF->getDataLayout()).getFixedSizeInBits()) {
+    if (IdxTy.getSizeInBits() != TLI->getVectorIdxWidth(MF->getDataLayout())) {
       report("Index type must match VectorIdxTy", MI);
       break;
     }
@@ -2023,8 +2022,7 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     }
 
     auto TLI = MF->getSubtarget().getTargetLowering();
-    if (IdxTy.getSizeInBits() !=
-        TLI->getVectorIdxTy(MF->getDataLayout()).getFixedSizeInBits()) {
+    if (IdxTy.getSizeInBits() != TLI->getVectorIdxWidth(MF->getDataLayout())) {
       report("Index type must match VectorIdxTy", MI);
       break;
     }
