@@ -84,11 +84,16 @@ public:
     VentanaVeyron,
     MIPSP8700,
   };
+  enum RISCVVRGatherCostModelEnum : uint8_t {
+    Quadratic,
+    NLog2N,
+  };
   // clang-format on
 private:
   virtual void anchor();
 
   RISCVProcFamilyEnum RISCVProcFamily = Others;
+  RISCVVRGatherCostModelEnum RISCVVRGatherCostModel = Quadratic;
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool ATTRIBUTE = DEFAULT;
@@ -154,6 +159,8 @@ public:
   /// and preferably modeled with SubtargetFeatures or properties in
   /// initializeProperties().
   RISCVProcFamilyEnum getProcFamily() const { return RISCVProcFamily; }
+
+  RISCVVRGatherCostModelEnum getVRGatherCostModel() const { return RISCVVRGatherCostModel; }
 
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER) \
   bool GETTER() const { return ATTRIBUTE; }
@@ -237,8 +244,8 @@ public:
            TargetABI == RISCVABI::ABI_ILP32E;
   }
   bool isRegisterReservedByUser(Register i) const override {
-    assert(i < RISCV::NUM_TARGET_REGS && "Register out of range");
-    return UserReservedRegister[i];
+    assert(i.id() < RISCV::NUM_TARGET_REGS && "Register out of range");
+    return UserReservedRegister[i.id()];
   }
 
   // XRay support - require D and C extensions.
@@ -347,6 +354,7 @@ public:
   unsigned getMaxPrefetchIterationsAhead() const override {
     return TuneInfo->MaxPrefetchIterationsAhead;
   };
+  bool enableWritePrefetching() const override { return true; }
 
   unsigned getMinimumJumpTableEntries() const;
 

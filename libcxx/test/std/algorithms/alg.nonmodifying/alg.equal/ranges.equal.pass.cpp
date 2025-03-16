@@ -28,13 +28,17 @@
 #include <concepts>
 #include <functional>
 #include <ranges>
+#include <vector>
 
 #include "almost_satisfies_types.h"
 #include "test_iterators.h"
+#include "test_macros.h"
 
-template <class Iter1, class Sent1 = sentinel_wrapper<Iter1>,
-          class Iter2 = Iter1, class Sent2 = sentinel_wrapper<Iter2>>
-concept HasEqualIt = requires (Iter1 first1, Sent1 last1, Iter2 first2, Sent2 last2) {
+template <class Iter1,
+          class Sent1 = sentinel_wrapper<Iter1>,
+          class Iter2 = Iter1,
+          class Sent2 = sentinel_wrapper<Iter2>>
+concept HasEqualIt = requires(Iter1 first1, Sent1 last1, Iter2 first2, Sent2 last2) {
   std::ranges::equal(first1, last1, first2, last2);
 };
 
@@ -52,9 +56,7 @@ static_assert(!HasEqualIt<int*, int*, int*, SentinelForNotWeaklyEqualityComparab
 static_assert(!HasEqualIt<int*, int*, int**>);
 
 template <class Range1, class Range2>
-concept HasEqualR = requires (Range1 range1, Range2 range2) {
-  std::ranges::equal(range1, range2);
-};
+concept HasEqualR = requires(Range1 range1, Range2 range2) { std::ranges::equal(range1, range2); };
 
 static_assert(HasEqualR<UncheckedRange<int*>, UncheckedRange<int*>>);
 static_assert(!HasEqualR<InputRangeNotDerivedFrom, UncheckedRange<int*>>);
@@ -75,15 +77,15 @@ constexpr void test_iterators() {
     {
       int a[] = {1, 2, 3, 4};
       int b[] = {1, 2, 3, 4};
-      std::same_as<bool> decltype(auto) ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 4)),
-                                                                 Iter2(b), Sent2(Iter2(b + 4)));
+      std::same_as<bool> decltype(auto) ret =
+          std::ranges::equal(Iter1(a), Sent1(Iter1(a + 4)), Iter2(b), Sent2(Iter2(b + 4)));
       assert(ret);
     }
     {
-      int a[] = {1, 2, 3, 4};
-      int b[] = {1, 2, 3, 4};
-      auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 4)));
-      auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 4)));
+      int a[]                               = {1, 2, 3, 4};
+      int b[]                               = {1, 2, 3, 4};
+      auto range1                           = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 4)));
+      auto range2                           = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 4)));
       std::same_as<bool> decltype(auto) ret = std::ranges::equal(range1, range2);
       assert(ret);
     }
@@ -92,12 +94,12 @@ constexpr void test_iterators() {
   { // check that false is returned for non-equal ranges
     {
       int a[] = {1, 2, 3, 4};
-      int b[]  = {1, 2, 4, 4};
+      int b[] = {1, 2, 4, 4};
       assert(!std::ranges::equal(Iter1(a), Sent1(Iter1(a + 4)), Iter2(b), Sent2(Iter2(b + 4))));
     }
     {
-      int a[] = {1, 2, 3, 4};
-      int b[] = {1, 2, 4, 4};
+      int a[]     = {1, 2, 3, 4};
+      int b[]     = {1, 2, 4, 4};
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 4)));
       auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 4)));
       assert(!std::ranges::equal(range1, range2));
@@ -106,95 +108,96 @@ constexpr void test_iterators() {
 
   { // check that the predicate is used (return true)
     {
-      int a[] = {1, 2, 3, 4};
-      int b[] = {2, 3, 4, 5};
-      auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 4)), Iter2(b), Sent2(Iter2(b + 4)),
-                                    [](int l, int r) { return l != r; });
+      int a[]  = {1, 2, 3, 4};
+      int b[]  = {2, 3, 4, 5};
+      auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 4)), Iter2(b), Sent2(Iter2(b + 4)), [](int l, int r) {
+        return l != r;
+      });
       assert(ret);
     }
     {
-      int a[] = {1, 2, 3, 4};
-      int b[] = {2, 3, 4, 5};
+      int a[]     = {1, 2, 3, 4};
+      int b[]     = {2, 3, 4, 5};
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 4)));
       auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 4)));
-      auto ret = std::ranges::equal(range1, range2, [](int l, int r) { return l != r; });
+      auto ret    = std::ranges::equal(range1, range2, [](int l, int r) { return l != r; });
       assert(ret);
     }
   }
 
   { // check that the predicate is used (return false)
     {
-      int a[] = {1, 2, 3, 4};
-      int b[] = {2, 3, 3, 5};
-      auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 4)), Iter2(b), Sent2(Iter2(b + 4)),
-                                    [](int l, int r) { return l != r; });
+      int a[]  = {1, 2, 3, 4};
+      int b[]  = {2, 3, 3, 5};
+      auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 4)), Iter2(b), Sent2(Iter2(b + 4)), [](int l, int r) {
+        return l != r;
+      });
       assert(!ret);
     }
     {
-      int a[] = {1, 2, 3, 4};
-      int b[] = {2, 3, 3, 5};
+      int a[]     = {1, 2, 3, 4};
+      int b[]     = {2, 3, 3, 5};
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 4)));
       auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 4)));
-      auto ret = std::ranges::equal(range1, range2, [](int l, int r) { return l != r; });
+      auto ret    = std::ranges::equal(range1, range2, [](int l, int r) { return l != r; });
       assert(!ret);
     }
   }
 
   { // check that the projections are used
     {
-      int a[] = {1, 2, 3, 4, 5};
-      int b[] = {6, 10, 14, 18, 22};
-      auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 5)),
-                                    Iter2(b), Sent2(Iter2(b + 5)),
-                                    {},
-                                    [](int i) { return i * 4; },
-                                    [](int i) { return i - 2; });
+      int a[]  = {1, 2, 3, 4, 5};
+      int b[]  = {6, 10, 14, 18, 22};
+      auto ret = std::ranges::equal(
+          Iter1(a),
+          Sent1(Iter1(a + 5)),
+          Iter2(b),
+          Sent2(Iter2(b + 5)),
+          {},
+          [](int i) { return i * 4; },
+          [](int i) { return i - 2; });
       assert(ret);
     }
     {
-      int a[] = {1, 2, 3, 4, 5};
-      int b[] = {6, 10, 14, 18, 22};
+      int a[]     = {1, 2, 3, 4, 5};
+      int b[]     = {6, 10, 14, 18, 22};
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 5)));
       auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 5)));
-      auto ret = std::ranges::equal(range1,
-                                    range2,
-                                    {},
-                                    [](int i) { return i * 4; },
-                                    [](int i) { return i - 2; });
+      auto ret    = std::ranges::equal(range1, range2, {}, [](int i) { return i * 4; }, [](int i) { return i - 2; });
       assert(ret);
     }
   }
 
   { // check that different sized ranges work
     {
-      int a[] = {4, 3, 2, 1};
-      int b[] = {4, 3, 2, 1, 5, 6, 7};
+      int a[]  = {4, 3, 2, 1};
+      int b[]  = {4, 3, 2, 1, 5, 6, 7};
       auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 4)), Iter2(b), Sent2(Iter2(b + 7)));
       assert(!ret);
     }
     {
-      int a[] = {4, 3, 2, 1};
-      int b[] = {4, 3, 2, 1, 5, 6, 7};
+      int a[]     = {4, 3, 2, 1};
+      int b[]     = {4, 3, 2, 1, 5, 6, 7};
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 4)));
       auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 7)));
-      auto ret = std::ranges::equal(range1, range2);
+      auto ret    = std::ranges::equal(range1, range2);
       assert(!ret);
     }
   }
 
   { // check that two ranges with the same size but different values are different
     {
-      int a[] = {4, 6, 34, 76, 5};
-      int b[] = {4, 6, 34, 67, 5};
+      int a[]  = {4, 6, 34, 76, 5};
+      int b[]  = {4, 6, 34, 67, 5};
       auto ret = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 5)), Iter2(b), Sent2(Iter2(b + 5)));
       assert(!ret);
     }
     {
-      int a[] = {4, 6, 34, 76, 5};
-      int b[] = {4, 6, 34, 67, 5};
+      int a[]     = {4, 6, 34, 76, 5};
+      int b[]     = {4, 6, 34, 67, 5};
       auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 5)));
       auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 5)));
-      auto ret = std::ranges::equal(range1, range2);
+      auto ret    = std::ranges::equal(range1, range2);
       assert(!ret);
     }
   }
@@ -211,7 +214,7 @@ constexpr void test_iterators() {
       std::array<int, 0> b = {};
       auto range1          = std::ranges::subrange(Iter1(a.data()), Sent1(Iter1(a.data())));
       auto range2          = std::ranges::subrange(Iter2(b.data()), Sent2(Iter2(b.data())));
-      auto ret = std::ranges::equal(range1, range2);
+      auto ret             = std::ranges::equal(range1, range2);
       assert(ret);
     }
   }
@@ -219,39 +222,39 @@ constexpr void test_iterators() {
   { // check that it works with the first range empty
     {
       std::array<int, 0> a = {};
-      int b[] = {1, 2};
+      int b[]              = {1, 2};
       auto ret             = std::ranges::equal(Iter1(a.data()), Sent1(Iter1(a.data())), Iter2(b), Sent2(Iter2(b + 2)));
       assert(!ret);
     }
     {
       std::array<int, 0> a = {};
-      int b[] = {1, 2};
+      int b[]              = {1, 2};
       auto range1          = std::ranges::subrange(Iter1(a.data()), Sent1(Iter1(a.data())));
-      auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 2)));
-      auto ret = std::ranges::equal(range1, range2);
+      auto range2          = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 2)));
+      auto ret             = std::ranges::equal(range1, range2);
       assert(!ret);
     }
   }
 
   { // check that it works with the second range empty
     {
-      int a[] = {1, 2};
+      int a[]              = {1, 2};
       std::array<int, 0> b = {};
       auto ret             = std::ranges::equal(Iter1(a), Sent1(Iter1(a + 2)), Iter2(b.data()), Sent2(Iter2(b.data())));
       assert(!ret);
     }
     {
-      int a[] = {1, 2};
+      int a[]              = {1, 2};
       std::array<int, 0> b = {};
-      auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 2)));
+      auto range1          = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 2)));
       auto range2          = std::ranges::subrange(Iter2(b.data()), Sent2(Iter2(b.data())));
-      auto ret = std::ranges::equal(range1, range2);
+      auto ret             = std::ranges::equal(range1, range2);
       assert(!ret);
     }
   }
 }
 
-template<class Iter1, class Sent1 = Iter1>
+template <class Iter1, class Sent1 = Iter1>
 constexpr void test_iterators2() {
   test_iterators<Iter1, Sent1, cpp17_input_iterator<int*>, sentinel_wrapper<cpp17_input_iterator<int*>>>();
   test_iterators<Iter1, Sent1, cpp20_input_iterator<int*>, sentinel_wrapper<cpp20_input_iterator<int*>>>();
@@ -261,6 +264,22 @@ constexpr void test_iterators2() {
   test_iterators<Iter1, Sent1, contiguous_iterator<int*>>();
   test_iterators<Iter1, Sent1, int*>();
   test_iterators<Iter1, Sent1, const int*>();
+}
+
+template <std::size_t N>
+constexpr void test_vector_bool() {
+  std::vector<bool> in(N, false);
+  for (std::size_t i = 0; i < N; i += 2)
+    in[i] = true;
+  { // Test equal() with aligned bytes
+    std::vector<bool> out = in;
+    assert(std::ranges::equal(in, out));
+  }
+  { // Test equal() with unaligned bytes
+    std::vector<bool> out(N + 8);
+    std::copy(in.begin(), in.end(), out.begin() + 4);
+    assert(std::ranges::equal(in.begin(), in.end(), out.begin() + 4, out.end() - 4));
+  }
 }
 
 constexpr bool test() {
@@ -281,40 +300,52 @@ constexpr bool test() {
       int i;
     };
     {
-      S a[] = {7, 8, 9};
-      S b[] = {7, 8, 9};
+      S a[]    = {7, 8, 9};
+      S b[]    = {7, 8, 9};
       auto ret = std::ranges::equal(a, a + 3, b, b + 3, &S::equal, &S::identity, &S::i);
       assert(ret);
     }
     {
-      S a[] = {7, 8, 9};
-      S b[] = {7, 8, 9};
+      S a[]    = {7, 8, 9};
+      S b[]    = {7, 8, 9};
       auto ret = std::ranges::equal(a, b, &S::equal, &S::identity, &S::i);
       assert(ret);
     }
   }
 
-  { // check that the complexity requirements are met
+  {   // check that the complexity requirements are met
     { // different size
       {
-        int a[] = {1, 2, 3};
-        int b[] = {1, 2, 3, 4};
+        int a[]       = {1, 2, 3};
+        int b[]       = {1, 2, 3, 4};
         int predCount = 0;
         int projCount = 0;
-        auto pred = [&](int l, int r) { ++predCount; return l == r; };
-        auto proj = [&](int i) { ++projCount; return i; };
+        auto pred     = [&](int l, int r) {
+          ++predCount;
+          return l == r;
+        };
+        auto proj = [&](int i) {
+          ++projCount;
+          return i;
+        };
         auto ret = std::ranges::equal(a, a + 3, b, b + 4, pred, proj, proj);
         assert(!ret);
         assert(predCount == 0);
         assert(projCount == 0);
       }
       {
-        int a[] = {1, 2, 3};
-        int b[] = {1, 2, 3, 4};
+        int a[]       = {1, 2, 3};
+        int b[]       = {1, 2, 3, 4};
         int predCount = 0;
         int projCount = 0;
-        auto pred = [&](int l, int r) { ++predCount; return l == r; };
-        auto proj = [&](int i) { ++projCount; return i; };
+        auto pred     = [&](int l, int r) {
+          ++predCount;
+          return l == r;
+        };
+        auto proj = [&](int i) {
+          ++projCount;
+          return i;
+        };
         auto ret = std::ranges::equal(a, b, pred, proj, proj);
         assert(!ret);
         assert(predCount == 0);
@@ -324,27 +355,39 @@ constexpr bool test() {
 
     { // not a sized sentinel
       {
-        int a[] = {1, 2, 3};
-        int b[] = {1, 2, 3, 4};
+        int a[]       = {1, 2, 3};
+        int b[]       = {1, 2, 3, 4};
         int predCount = 0;
         int projCount = 0;
-        auto pred = [&](int l, int r) { ++predCount; return l == r; };
-        auto proj = [&](int i) { ++projCount; return i; };
+        auto pred     = [&](int l, int r) {
+          ++predCount;
+          return l == r;
+        };
+        auto proj = [&](int i) {
+          ++projCount;
+          return i;
+        };
         auto ret = std::ranges::equal(a, sentinel_wrapper(a + 3), b, sentinel_wrapper(b + 4), pred, proj, proj);
         assert(!ret);
         assert(predCount <= 4);
         assert(projCount <= 7);
       }
       {
-        int a[] = {1, 2, 3};
-        int b[] = {1, 2, 3, 4};
+        int a[]       = {1, 2, 3};
+        int b[]       = {1, 2, 3, 4};
         int predCount = 0;
         int projCount = 0;
-        auto pred = [&](int l, int r) { ++predCount; return l == r; };
-        auto proj = [&](int i) { ++projCount; return i; };
+        auto pred     = [&](int l, int r) {
+          ++predCount;
+          return l == r;
+        };
+        auto proj = [&](int i) {
+          ++projCount;
+          return i;
+        };
         auto range1 = std::ranges::subrange(a, sentinel_wrapper(a + 3));
         auto range2 = std::ranges::subrange(b, sentinel_wrapper(b + 4));
-        auto ret = std::ranges::equal(range1, range2, pred, proj, proj);
+        auto ret    = std::ranges::equal(range1, range2, pred, proj, proj);
         assert(!ret);
         assert(predCount <= 4);
         assert(projCount <= 7);
@@ -353,29 +396,51 @@ constexpr bool test() {
 
     { // same size
       {
-        int a[] = {1, 2, 3};
-        int b[] = {1, 2, 3};
+        int a[]       = {1, 2, 3};
+        int b[]       = {1, 2, 3};
         int predCount = 0;
         int projCount = 0;
-        auto pred = [&](int l, int r) { ++predCount; return l == r; };
-        auto proj = [&](int i) { ++projCount; return i; };
+        auto pred     = [&](int l, int r) {
+          ++predCount;
+          return l == r;
+        };
+        auto proj = [&](int i) {
+          ++projCount;
+          return i;
+        };
         auto ret = std::ranges::equal(a, a + 3, b, b + 3, pred, proj, proj);
         assert(ret);
         assert(predCount == 3);
         assert(projCount == 6);
       }
       {
-        int a[] = {1, 2, 3};
-        int b[] = {1, 2, 3};
+        int a[]       = {1, 2, 3};
+        int b[]       = {1, 2, 3};
         int predCount = 0;
         int projCount = 0;
-        auto pred = [&](int l, int r) { ++predCount; return l == r; };
-        auto proj = [&](int i) { ++projCount; return i; };
+        auto pred     = [&](int l, int r) {
+          ++predCount;
+          return l == r;
+        };
+        auto proj = [&](int i) {
+          ++projCount;
+          return i;
+        };
         auto ret = std::ranges::equal(a, b, pred, proj, proj);
         assert(ret);
         assert(predCount == 3);
         assert(projCount == 6);
       }
+    }
+
+    { // Test vector<bool>::iterator optimization
+      test_vector_bool<8>();
+      test_vector_bool<19>();
+      test_vector_bool<32>();
+      test_vector_bool<49>();
+      test_vector_bool<64>();
+      test_vector_bool<199>();
+      test_vector_bool<256>();
     }
   }
 

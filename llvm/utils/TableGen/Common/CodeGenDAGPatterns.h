@@ -393,6 +393,9 @@ struct SDTypeConstraint {
                         const SDTypeConstraint &RHS);
 };
 
+bool operator==(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS);
+bool operator<(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS);
+
 /// ScopedName - A name of a node associated with a "scope" that indicates
 /// the context (e.g. instance of Pattern or PatFrag) in which the name was
 /// used. This enables substitution of pattern fragments while keeping track

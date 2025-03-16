@@ -1656,6 +1656,49 @@ public:
   }
 };
 
+/// This represents 'self_maps' clause in the '#pragma omp requires'
+/// directive.
+///
+/// \code
+/// #pragma omp requires self_maps
+/// \endcode
+/// In this example directive '#pragma omp requires' has 'self_maps'
+/// clause.
+class OMPSelfMapsClause final : public OMPClause {
+public:
+  friend class OMPClauseReader;
+  /// Build 'self_maps' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPSelfMapsClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPClause(llvm::omp::OMPC_self_maps, StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPSelfMapsClause()
+      : OMPClause(llvm::omp::OMPC_self_maps, SourceLocation(),
+                  SourceLocation()) {}
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  const_child_range children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  child_range used_children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+  const_child_range used_children() const {
+    return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == llvm::omp::OMPC_self_maps;
+  }
+};
+
 /// This represents 'at' clause in the '#pragma omp error' directive
 ///
 /// \code
@@ -2421,6 +2464,28 @@ public:
 
   /// Build an empty clause.
   OMPNoOpenMPRoutinesClause() : OMPNoChildClause() {}
+};
+
+/// This represents the 'no_openmp_constructs' clause in the
+//// '#pragma omp assume' directive.
+///
+/// \code
+/// #pragma omp assume no_openmp_constructs
+/// \endcode
+/// In this example directive '#pragma omp assume' has a 'no_openmp_constructs'
+/// clause.
+class OMPNoOpenMPConstructsClause final
+    : public OMPNoChildClause<llvm::omp::OMPC_no_openmp_constructs> {
+public:
+  /// Build 'no_openmp_constructs' clause.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param EndLoc Ending location of the clause.
+  OMPNoOpenMPConstructsClause(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPNoChildClause(StartLoc, EndLoc) {}
+
+  /// Build an empty clause.
+  OMPNoOpenMPConstructsClause() : OMPNoChildClause() {}
 };
 
 /// This represents the 'no_parallelism' clause in the '#pragma omp assume'
@@ -6327,7 +6392,8 @@ private:
   OpenMPMapModifierKind MapTypeModifiers[NumberOfOMPMapClauseModifiers] = {
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
       OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
-      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown};
+      OMPC_MAP_MODIFIER_unknown, OMPC_MAP_MODIFIER_unknown,
+      OMPC_MAP_MODIFIER_unknown};
 
   /// Location of map-type-modifiers for the 'map' clause.
   SourceLocation MapTypeModifiersLoc[NumberOfOMPMapClauseModifiers];
@@ -9451,7 +9517,8 @@ struct TargetOMPContext final : public llvm::omp::OMPContext {
   TargetOMPContext(ASTContext &ASTCtx,
                    std::function<void(StringRef)> &&DiagUnknownTrait,
                    const FunctionDecl *CurrentFunctionDecl,
-                   ArrayRef<llvm::omp::TraitProperty> ConstructTraits);
+                   ArrayRef<llvm::omp::TraitProperty> ConstructTraits,
+                   int DeviceNum);
 
   virtual ~TargetOMPContext() = default;
 

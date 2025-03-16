@@ -1341,7 +1341,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
                                 rewriter.getUnknownLoc());
   for (unsigned i = 0; i < origArgCount; ++i) {
     auto inputMap = signatureConversion.getInputMapping(i);
-    if (!inputMap || inputMap->replacementValue)
+    if (!inputMap || inputMap->replacedWithValues())
       continue;
     Location origLoc = block->getArgument(i).getLoc();
     for (unsigned j = 0; j < inputMap->size; ++j)
@@ -1390,12 +1390,12 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
       continue;
     }
 
-    if (Value repl = inputMap->replacementValue) {
-      // This block argument was dropped and a replacement value was provided.
+    if (inputMap->replacedWithValues()) {
+      // This block argument was dropped and replacement values were provided.
       assert(inputMap->size == 0 &&
              "invalid to provide a replacement value when the argument isn't "
              "dropped");
-      mapping.map(origArg, repl);
+      mapping.map(origArg, inputMap->replacementValues);
       appendRewrite<ReplaceBlockArgRewrite>(block, origArg, converter);
       continue;
     }
@@ -1708,10 +1708,13 @@ FailureOr<Block *> ConversionPatternRewriter::convertRegionTypes(
 void ConversionPatternRewriter::replaceUsesOfBlockArgument(BlockArgument from,
                                                            Value to) {
   LLVM_DEBUG({
-    Operation *parentOp = from.getOwner()->getParentOp();
-    impl->logger.startLine() << "** Replace Argument : '" << from
-                             << "'(in region of '" << parentOp->getName()
-                             << "'(" << from.getOwner()->getParentOp() << ")\n";
+    impl->logger.startLine() << "** Replace Argument : '" << from << "'";
+    if (Operation *parentOp = from.getOwner()->getParentOp()) {
+      impl->logger.getOStream() << " (in region of '" << parentOp->getName()
+                                << "' (" << parentOp << ")\n";
+    } else {
+      impl->logger.getOStream() << " (unlinked block)\n";
+    }
   });
   impl->appendRewrite<ReplaceBlockArgRewrite>(from.getOwner(), from,
                                               impl->currentTypeConverter);
@@ -2804,14 +2807,15 @@ void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
   assert(!remappedInputs[origInputNo] && "input has already been remapped");
   assert(newInputCount != 0 && "expected valid input count");
   remappedInputs[origInputNo] =
-      InputMapping{newInputNo, newInputCount, /*replacementValue=*/nullptr};
+      InputMapping{newInputNo, newInputCount, /*replacementValues=*/{}};
 }
 
-void TypeConverter::SignatureConversion::remapInput(unsigned origInputNo,
-                                                    Value replacementValue) {
+void TypeConverter::SignatureConversion::remapInput(
+    unsigned origInputNo, ArrayRef<Value> replacements) {
   assert(!remappedInputs[origInputNo] && "input has already been remapped");
-  remappedInputs[origInputNo] =
-      InputMapping{origInputNo, /*size=*/0, replacementValue};
+  remappedInputs[origInputNo] = InputMapping{
+      origInputNo, /*size=*/0,
+      SmallVector<Value, 1>(replacements.begin(), replacements.end())};
 }
 
 LogicalResult TypeConverter::convertType(Type t,

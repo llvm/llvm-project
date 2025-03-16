@@ -117,24 +117,38 @@ llvm.func @convert_float_to_tf32_rna_relu(%src : f32) -> i32 {
 
 // -----
 
-llvm.func @convert_float_to_tf32_rn_sf(%src : f32) -> i32 {
-  // expected-error @below {{Saturation mode not supported with rn/rz rounding modes.}}
-  %res = nvvm.cvt.float.to.tf32 %src {rnd = #nvvm.fp_rnd_mode<rn>, sat = #nvvm.sat_mode<satfinite>}
-  llvm.return %res : i32
-}
-
-// -----
-
-llvm.func @convert_float_to_tf32_rz_sf(%src : f32) -> i32 {
-  // expected-error @below {{Saturation mode not supported with rn/rz rounding modes.}}
-  %res = nvvm.cvt.float.to.tf32 %src {rnd = #nvvm.fp_rnd_mode<rz>, sat = #nvvm.sat_mode<satfinite>}
-  llvm.return %res : i32
-}
-
-// -----
-
 llvm.func @convert_float_to_tf32_no_rnd_mode(%src : f32) -> i32 {
   // expected-error @below {{Only {rn,rz,rna} rounding modes supported for CvtFloatToTF32Op.}}
   %res = nvvm.cvt.float.to.tf32 %src
   llvm.return %res : i32
+}
+
+// -----
+
+llvm.func @nvvm_tcgen05_cp_128x256b_mc(%taddr : !llvm.ptr<6>, %smem_desc : i64) {
+  // expected-error @below {{Invalid multicast type for tcgen05.cp Op}}
+  nvvm.tcgen05.cp %taddr, %smem_desc {shape = #nvvm.tcgen05_cp_shape<shape_128x256b>, multicast = #nvvm.tcgen05_cp_multicast<warpx2_02_13>}
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_tcgen05_cp_32x128b_wx2(%taddr : !llvm.ptr<6>, %smem_desc : i64) {
+  // expected-error @below {{Shape 32x128b requires multicast warpx4 for tcgen05.cp Op}}
+  nvvm.tcgen05.cp %taddr, %smem_desc {
+    shape = #nvvm.tcgen05_cp_shape<shape_32x128b>,
+    multicast = #nvvm.tcgen05_cp_multicast<warpx2_01_23>
+  }
+  llvm.return
+}
+
+// -----
+
+llvm.func @nvvm_tcgen05_cp_64x128b(%taddr : !llvm.ptr<6>, %smem_desc : i64) {
+  // expected-error @below {{Shape 64x128b requires multicast warpx2_01_23 or warpx2_02_13 for tcgen05.cp Op}}
+  nvvm.tcgen05.cp %taddr, %smem_desc {
+    shape = #nvvm.tcgen05_cp_shape<shape_64x128b>,
+    multicast = #nvvm.tcgen05_cp_multicast<warpx4>
+  }
+  llvm.return
 }

@@ -145,8 +145,7 @@ define void @cmpxchg(ptr %ptr) {
   ; CHECK-NEXT:   [[FLAT_ATOMIC_CMPSWAP_RTN:%[0-9]+]]:vgpr_32 = FLAT_ATOMIC_CMPSWAP_RTN [[COPY4]], killed [[COPY6]], 0, 1, implicit $exec, implicit $flat_scr, mmra !1 :: (load store acquire acquire (s32) on %ir.AlignedAddr)
   ; CHECK-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_64 = V_CMP_NE_U32_e64 [[FLAT_ATOMIC_CMPSWAP_RTN]], [[PHI2]], implicit $exec
   ; CHECK-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
-  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[DEF7]]
+  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   [[S_OR_B64_:%[0-9]+]]:sreg_64 = S_OR_B64 [[PHI]], $exec, implicit-def $scc
   ; CHECK-NEXT:   [[SI_IF:%[0-9]+]]:sreg_64 = SI_IF killed [[V_CMP_NE_U32_e64_]], %bb.3, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.2
@@ -164,10 +163,10 @@ define void @cmpxchg(ptr %ptr) {
   ; CHECK-NEXT:   successors: %bb.4(0x04000000), %bb.1(0x7c000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:sreg_64 = PHI [[S_OR_B64_]], %bb.1, [[S_OR_B64_1]], %bb.2
-  ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:vgpr_32 = PHI [[COPY7]], %bb.1, [[V_AND_B32_e64_3]], %bb.2
+  ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:vgpr_32 = PHI [[DEF7]], %bb.1, [[V_AND_B32_e64_3]], %bb.2
   ; CHECK-NEXT:   SI_END_CF [[SI_IF]], implicit-def dead $exec, implicit-def dead $scc, implicit $exec
-  ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sreg_64 = COPY [[PHI3]]
-  ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK [[COPY8]], [[PHI1]], implicit-def dead $scc
+  ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:sreg_64 = COPY [[PHI3]]
+  ; CHECK-NEXT:   [[SI_IF_BREAK:%[0-9]+]]:sreg_64 = SI_IF_BREAK [[COPY7]], [[PHI1]], implicit-def dead $scc
   ; CHECK-NEXT:   SI_LOOP [[SI_IF_BREAK]], %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.4
   ; CHECK-NEXT: {{  $}}

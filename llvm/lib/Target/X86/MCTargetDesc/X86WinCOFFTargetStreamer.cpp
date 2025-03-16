@@ -80,8 +80,6 @@ class X86WinCOFFTargetStreamer : public X86TargetStreamer {
 
   MCSymbol *emitFPOLabel();
 
-  MCContext &getContext() { return getStreamer().getContext(); }
-
 public:
   X86WinCOFFTargetStreamer(MCStreamer &S) : X86TargetStreamer(S) {}
 
@@ -100,7 +98,7 @@ public:
 bool X86WinCOFFAsmTargetStreamer::emitFPOProc(const MCSymbol *ProcSym,
                                               unsigned ParamsSize, SMLoc L) {
   OS << "\t.cv_fpo_proc\t";
-  ProcSym->print(OS, getStreamer().getContext().getAsmInfo());
+  ProcSym->print(OS, getContext().getAsmInfo());
   OS << ' ' << ParamsSize << '\n';
   return false;
 }

@@ -20,7 +20,7 @@ namespace cwg400 { // cwg400: 2.7
   struct A { int a; struct a {}; }; // #cwg400-A
   struct B { int a; struct a {}; }; // #cwg400-B
   struct C : A, B { using A::a; struct a b; };
-  struct D : A, B { 
+  struct D : A, B {
     using A::a;
     // FIXME: we should issue a single diagnostic
     using B::a; // #cwg400-using-B-a
@@ -257,7 +257,7 @@ namespace cwg409 { // cwg409: 2.7
     A::B b2;
     A<T>::B b3;
     A<T*>::B b4;
-    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name A<T *>::B; implicit 'typename' is a C++20 extension}}
+    // cxx98-17-error@-1 {{missing 'typename' prior to dependent type name 'A<T *>::B'; implicit 'typename' is a C++20 extension}}
   };
 } // namespace cwg409
 
@@ -1386,6 +1386,7 @@ namespace cwg488 { // cwg488: 2.9 c++11
     enum E { e };
     f(e);
     // cxx98-error@-1 {{template argument uses local type 'E'}}
+    //   cxx98-note@-2 {{while substituting deduced template arguments}}
   }
 } // namespace cwg488
 

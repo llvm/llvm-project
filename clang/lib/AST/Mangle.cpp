@@ -74,7 +74,7 @@ static CCMangling getCallingConvMangling(const ASTContext &Context,
       if (FD->isMain() && FD->getNumParams() == 2)
         return CCM_WasmMainArgcArgv;
 
-  if (!Triple.isOSWindows() || !Triple.isX86())
+  if (!TI.shouldUseMicrosoftCCforMangling())
     return CCM_Other;
 
   if (Context.getLangOpts().CPlusPlus && !isExternC(ND) &&
@@ -240,7 +240,8 @@ void MangleContext::mangleName(GlobalDecl GD, raw_ostream &Out) {
   Out << ((DefaultPtrWidth / 8) * ArgWords);
 }
 
-void MangleContext::mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream &Out) {
+void MangleContext::mangleMSGuidDecl(const MSGuidDecl *GD,
+                                     raw_ostream &Out) const {
   // For now, follow the MSVC naming convention for GUID objects on all
   // targets.
   MSGuidDecl::Parts P = GD->getParts();
@@ -327,7 +328,7 @@ void MangleContext::mangleBlock(const DeclContext *DC, const BlockDecl *BD,
 void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
                                          raw_ostream &OS,
                                          bool includePrefixByte,
-                                         bool includeCategoryNamespace) {
+                                         bool includeCategoryNamespace) const {
   if (getASTContext().getLangOpts().ObjCRuntime.isGNUFamily()) {
     // This is the mangling we've always used on the GNU runtimes, but it
     // has obvious collisions in the face of underscores within class
@@ -382,7 +383,7 @@ void MangleContext::mangleObjCMethodName(const ObjCMethodDecl *MD,
 }
 
 void MangleContext::mangleObjCMethodNameAsSourceName(const ObjCMethodDecl *MD,
-                                                     raw_ostream &Out) {
+                                                     raw_ostream &Out) const {
   SmallString<64> Name;
   llvm::raw_svector_ostream OS(Name);
 

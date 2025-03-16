@@ -212,7 +212,7 @@ entry:
   br label %loop
 loop:
   %phi = phi ptr [%ret, %entry], [%phi, %loop]
-  br i1 undef, label %loop, label %exit
+  br i1 poison, label %loop, label %exit
 exit:
   ret ptr %phi
 }

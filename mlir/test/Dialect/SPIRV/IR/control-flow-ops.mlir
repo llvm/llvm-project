@@ -789,3 +789,15 @@ func.func @unreachable() {
   // expected-error @+1 {{cannot be used in reachable block}}
   spirv.Unreachable
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// spirv.Kill
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: func @kill
+func.func @kill() {
+  // CHECK: spirv.Kill
+  spirv.Kill
+}

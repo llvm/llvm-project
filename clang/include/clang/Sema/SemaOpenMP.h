@@ -440,6 +440,9 @@ public:
   StmtResult ActOnOpenMPTileDirective(ArrayRef<OMPClause *> Clauses,
                                       Stmt *AStmt, SourceLocation StartLoc,
                                       SourceLocation EndLoc);
+  StmtResult ActOnOpenMPStripeDirective(ArrayRef<OMPClause *> Clauses,
+                                        Stmt *AStmt, SourceLocation StartLoc,
+                                        SourceLocation EndLoc);
   /// Called on well-formed '#pragma omp unroll' after parsing of its clauses
   /// and the associated statement.
   StmtResult ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
@@ -849,6 +852,9 @@ public:
       ArrayRef<OMPInteropInfo> AppendArgs, SourceLocation AdjustArgsLoc,
       SourceLocation AppendArgsLoc, SourceRange SR);
 
+  /// Called on device_num selector in context selectors.
+  void ActOnOpenMPDeviceNum(Expr *DeviceNumExpr);
+
   OMPClause *ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,
                                          SourceLocation StartLoc,
                                          SourceLocation LParenLoc,
@@ -1105,6 +1111,10 @@ public:
   OMPClause *ActOnOpenMPAtomicDefaultMemOrderClause(
       OpenMPAtomicDefaultMemOrderClauseKind Kind, SourceLocation KindLoc,
       SourceLocation StartLoc, SourceLocation LParenLoc, SourceLocation EndLoc);
+
+  /// Called on well-formed 'self_maps' clause.
+  OMPClause *ActOnOpenMPSelfMapsClause(SourceLocation StartLoc,
+                                       SourceLocation EndLoc);
 
   /// Called on well-formed 'at' clause.
   OMPClause *ActOnOpenMPAtClause(OpenMPAtClauseKind Kind,
@@ -1410,6 +1420,13 @@ public:
 
   void handleOMPAssumeAttr(Decl *D, const ParsedAttr &AL);
 
+  /// Setter and getter functions for device_num.
+  void setOpenMPDeviceNum(int Num);
+
+  int getOpenMPDeviceNum() const;
+
+  void setOpenMPDeviceNumID(StringRef ID);
+
 private:
   void *VarDataSharingAttributesStack;
 
@@ -1480,6 +1497,12 @@ private:
 
   /// All `omp assumes` we encountered so far.
   SmallVector<OMPAssumeAttr *, 4> OMPAssumeGlobal;
+
+  /// Device number specified by the context selector.
+  int DeviceNum = -1;
+
+  /// Device number identifier specified by the context selector.
+  StringRef DeviceNumID;
 };
 
 } // namespace clang

@@ -339,7 +339,7 @@ define i1 @test12(i32 %x) {
 ; CHECK-NEXT:    [[ZEXT:%.*]] = zext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nuw nsw i64 [[ZEXT]], 7
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i64 [[MUL]], 32
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i64 [[SHR]] to i32
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw nsw i64 [[SHR]] to i32
 ; CHECK-NEXT:    ret i1 true
 ;
   %zext = zext i32 %x to i64
@@ -1515,10 +1515,8 @@ define void @test_trunc_bittest(i8 %a) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i8 [[A:%.*]] to i1
 ; CHECK-NEXT:    br i1 [[TRUNC]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[A]], 0
-; CHECK-NEXT:    call void @check1(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i8 [[A]], 1
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i8 [[A]], 1
@@ -1559,10 +1557,8 @@ define void @test_trunc_not_bittest(i8 %a) {
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
 ; CHECK-NEXT:    br i1 [[NOT]], label [[IF_FALSE:%.*]], label [[IF_TRUE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[A]], -1
-; CHECK-NEXT:    call void @check1(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[A]], -1
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i8 [[A]], 0
 ; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i8 [[A]], 0
@@ -1603,14 +1599,10 @@ define void @test_trunc_nuw_bittest(i8 %a) {
 ; CHECK-NEXT:    [[TRUNC:%.*]] = trunc nuw i8 [[A:%.*]] to i1
 ; CHECK-NEXT:    br i1 [[TRUNC]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[A]], 0
-; CHECK-NEXT:    call void @check1(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i8 [[A]], 1
-; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i8 [[A]], 1
-; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    call void @check1(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret void
@@ -1639,14 +1631,10 @@ define void @test_trunc_nuw_not_bittest(i8 %a) {
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[TRUNC]], true
 ; CHECK-NEXT:    br i1 [[NOT]], label [[IF_TRUE:%.*]], label [[IF_FALSE:%.*]]
 ; CHECK:       if.true:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i8 [[A]], 0
-; CHECK-NEXT:    call void @check1(i1 [[CMP1]])
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp eq i8 [[A]], 0
-; CHECK-NEXT:    call void @check1(i1 [[CMP2]])
-; CHECK-NEXT:    [[CMP3:%.*]] = icmp ne i8 [[A]], 1
-; CHECK-NEXT:    call void @check1(i1 [[CMP3]])
-; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i8 [[A]], 1
-; CHECK-NEXT:    call void @check1(i1 [[CMP4]])
+; CHECK-NEXT:    call void @check1(i1 false)
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 true)
+; CHECK-NEXT:    call void @check1(i1 false)
 ; CHECK-NEXT:    ret void
 ; CHECK:       if.false:
 ; CHECK-NEXT:    ret void

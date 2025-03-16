@@ -53,6 +53,7 @@ public:
   /// Invokes the destructors for a scope.
   void destroy(unsigned Idx);
   void initScope(unsigned Idx);
+  void destroyScopes();
 
   /// Describes the frame with arguments for diagnostic purposes.
   void describe(llvm::raw_ostream &OS) const override;

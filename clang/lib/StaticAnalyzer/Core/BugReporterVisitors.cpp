@@ -1192,8 +1192,9 @@ static bool isInitializationOfVar(const ExplodedNode *N, const VarRegion *VR) {
   if (DS->getSingleDecl() != VR->getDecl())
     return false;
 
-  const MemSpaceRegion *VarSpace = VR->getMemorySpace();
-  const auto *FrameSpace = dyn_cast<StackSpaceRegion>(VarSpace);
+  const auto *FrameSpace =
+      VR->getMemorySpaceAs<StackSpaceRegion>(N->getState());
+
   if (!FrameSpace) {
     // If we ever directly evaluate global DeclStmts, this assertion will be
     // invalid, but this still seems preferable to silently accepting an

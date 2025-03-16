@@ -13,9 +13,12 @@
 
 void func(int *restrict a, int *restrict b) {
 // CHECK-LABEL: func
-// CHECK256-COUNT-8: st1w
-// CHECK512-COUNT-4: st1w
-// CHECK1024-COUNT-2: st1w
+// CHECK256-COUNT-1: str
+// CHECK256-COUNT-7: st1w
+// CHECK512-COUNT-1: str
+// CHECK512-COUNT-3: st1w
+// CHECK1024-COUNT-1: str
+// CHECK1024-COUNT-1: st1w
 // CHECK2048-COUNT-1: st1w
 #pragma clang loop vectorize(enable)
   for (int i = 0; i < 64; ++i)
