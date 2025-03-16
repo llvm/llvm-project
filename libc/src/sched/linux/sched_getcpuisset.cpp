@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(int, __sched_getcpuisset,
     const size_t bit_position = static_cast<size_t>(cpu) % NCPUBITS;
 
     const unsigned long mask = 1UL << bit_position;
-    return set->__mask[element_index] & mask;
+    return (set->__mask[element_index] & mask) != 0;
   }
 
   return 0;
