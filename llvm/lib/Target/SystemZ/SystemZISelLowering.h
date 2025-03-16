@@ -222,6 +222,11 @@ enum NodeType : unsigned {
   VSRA_BY_SCALAR,
   VROTL_BY_SCALAR,
 
+  // Concatenate the vectors in the first two operands, shift them left/right
+  // bitwise by the third operand, and take the first/last half of the result.
+  SHL_DOUBLE_BIT,
+  SHR_DOUBLE_BIT,
+
   // For each element of the output type, sum across all sub-elements of
   // operand 0 belonging to the corresponding element, and add in the
   // rightmost sub-element of the corresponding element of operand 1.
@@ -233,6 +238,11 @@ enum NodeType : unsigned {
   VAC, VSBI,
   // Compute carry/borrow indication for add/subtract with carry/borrow.
   VACCC, VSBCBI,
+
+  // High-word multiply-and-add.
+  VMAH, VMALH,
+  // Widen and multiply even/odd vector elements.
+  VME, VMLE, VMO, VMLO,
 
   // Compare integer vector operands 0 and 1 to produce the usual 0/-1
   // vector result.  VICMPE is for equality, VICMPH for "signed greater than"
@@ -731,6 +741,8 @@ private:
   SDValue lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
+  SDValue lowerFSHL(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFSHR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
@@ -755,9 +767,12 @@ private:
   SDValue combineFP_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINT_TO_FP(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineSETCC(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineBR_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSELECT_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineGET_CCMASK(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineShiftToMulAddHigh(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineMUL(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineIntDIVREM(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineINTRINSIC(SDNode *N, DAGCombinerInfo &DCI) const;
 

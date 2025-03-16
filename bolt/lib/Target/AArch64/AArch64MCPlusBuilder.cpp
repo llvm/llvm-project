@@ -281,7 +281,7 @@ public:
     return Inst.getOpcode() == AArch64::ADR;
   }
 
-  bool isAddXri(const MCInst &Inst) const {
+  bool isAddXri(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADDXri;
   }
 
@@ -318,7 +318,7 @@ public:
             Inst.getOpcode() == AArch64::CBZX);
   }
 
-  bool isMOVW(const MCInst &Inst) const {
+  bool isMOVW(const MCInst &Inst) const override {
     return (Inst.getOpcode() == AArch64::MOVKWi ||
             Inst.getOpcode() == AArch64::MOVKXi ||
             Inst.getOpcode() == AArch64::MOVNWi ||

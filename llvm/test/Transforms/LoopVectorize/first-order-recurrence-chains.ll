@@ -555,9 +555,9 @@ define ptr @test_first_order_recurrences_and_pointer_induction1(ptr %ptr) {
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 4000
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PTR]], %vector.ph ], [ [[PTR_IND:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x ptr> [ <ptr poison, ptr poison, ptr poison, ptr null>, %vector.ph ], [ [[TMP0:%.*]], %vector.body ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PTR]], %vector.ph ], [ [[PTR_IND:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[TMP0]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds ptr, ptr [[PTR]], i64 [[TMP1]]
@@ -598,8 +598,8 @@ define ptr @test_first_order_recurrences_and_pointer_induction2(ptr %ptr) {
 ; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 4000
 ; CHECK-NEXT:    br label %vector.body
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PTR]], %vector.ph ], [ [[PTR_IND:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX_NEXT:%.*]], %vector.body ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PTR]], %vector.ph ], [ [[PTR_IND:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <4 x ptr> [ <ptr poison, ptr poison, ptr poison, ptr null>, %vector.ph ], [ [[TMP0:%.*]], %vector.body ]
 ; CHECK-NEXT:    [[TMP0]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i64> <i64 0, i64 4, i64 8, i64 12>
 ; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 0

@@ -1363,23 +1363,6 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
   dumpEdges(Region);
 }
 
-void VPlanIngredient::print(raw_ostream &O) const {
-  if (auto *Inst = dyn_cast<Instruction>(V)) {
-    if (!Inst->getType()->isVoidTy()) {
-      Inst->printAsOperand(O, false);
-      O << " = ";
-    }
-    O << Inst->getOpcodeName() << " ";
-    unsigned E = Inst->getNumOperands();
-    if (E > 0) {
-      Inst->getOperand(0)->printAsOperand(O, false);
-      for (unsigned I = 1; I < E; ++I)
-        Inst->getOperand(I)->printAsOperand(O << ", ", false);
-    }
-  } else // !Inst
-    V->printAsOperand(O, false);
-}
-
 #endif
 
 /// Returns true if there is a vector loop region and \p VPV is defined in a
