@@ -2677,6 +2677,9 @@ class AllocaSliceRewriter : public InstVisitor<AllocaSliceRewriter, bool> {
   SmallSetVector<PHINode *, 8> &PHIUsers;
   SmallSetVector<SelectInst *, 8> &SelectUsers;
 
+  // Track invariant intrinsic for rewriting its memory intrinsics users.
+  std::optional<Value *> InvariantIntr;
+
   // Utility IR builder, whose name prefix is setup for each visited use, and
   // the insertion point is set to point to the user.
   IRBuilderTy IRB;
@@ -2808,6 +2811,28 @@ private:
                           Twine()
 #endif
     );
+  }
+
+  // Return getNewAllocaSlicePtr, unless the new alloca ptr has passed through
+  // invariant group intrinsic, in which case ensure to return such a pointer.
+  Value *getInvariantGroupPtrOrNewAllocaSlicePtr(IRBuilderTy &IRB,
+                                                 Instruction *I) {
+    // Get the newly-rewritten invariant or the current one, if it has been
+    // rewritten in previous iterations or alloca was not split further.
+    if (isa<IntrinsicInst>(I) &&
+        cast<IntrinsicInst>(I)->isLaunderOrStripInvariantGroup())
+      return InvariantIntr ? *InvariantIntr : I;
+    return getNewAllocaSlicePtr(IRB, I->getType());
+  }
+
+  // Return getPtrToNewAI, unless the new alloca ptr has passed through
+  // invariant group intrinsic, in which case ensure to return such a pointer.
+  Value *getInvariantGroupPtrOrPtrToNewAI(Instruction *I, unsigned AddrSpace,
+                                          bool IsVolatile) {
+    if (isa<IntrinsicInst>(I) &&
+        cast<IntrinsicInst>(I)->isLaunderOrStripInvariantGroup())
+      return InvariantIntr ? *InvariantIntr : I;
+    return getPtrToNewAI(AddrSpace, IsVolatile);
   }
 
   /// Compute suitable alignment to access this slice of the *new*
@@ -3167,7 +3192,7 @@ private:
     if (!isa<ConstantInt>(II.getLength())) {
       assert(!IsSplit);
       assert(NewBeginOffset == BeginOffset);
-      II.setDest(getNewAllocaSlicePtr(IRB, OldPtr->getType()));
+      II.setDest(getInvariantGroupPtrOrNewAllocaSlicePtr(IRB, OldPtr));
       II.setDestAlignment(getSliceAlign());
       // In theory we should call migrateDebugInfo here. However, we do not
       // emit dbg.assign intrinsics for mem intrinsics storing through non-
@@ -3208,8 +3233,8 @@ private:
       unsigned Sz = NewEndOffset - NewBeginOffset;
       Constant *Size = ConstantInt::get(SizeTy, Sz);
       MemIntrinsic *New = cast<MemIntrinsic>(IRB.CreateMemSet(
-          getNewAllocaSlicePtr(IRB, OldPtr->getType()), II.getValue(), Size,
-          MaybeAlign(getSliceAlign()), II.isVolatile()));
+          getInvariantGroupPtrOrNewAllocaSlicePtr(IRB, OldPtr), II.getValue(),
+          Size, MaybeAlign(getSliceAlign()), II.isVolatile()));
       if (AATags)
         New->setAAMetadata(
             AATags.adjustForAccess(NewBeginOffset - BeginOffset, Sz));
@@ -3282,7 +3307,8 @@ private:
       V = convertValue(DL, IRB, V, AllocaTy);
     }
 
-    Value *NewPtr = getPtrToNewAI(II.getDestAddressSpace(), II.isVolatile());
+    Value *NewPtr = getInvariantGroupPtrOrPtrToNewAI(
+        OldPtr, II.getDestAddressSpace(), II.isVolatile());
     StoreInst *New =
         IRB.CreateAlignedStore(V, NewPtr, NewAI.getAlign(), II.isVolatile());
     New->copyMetadata(II, {LLVMContext::MD_mem_parallel_loop_access,
@@ -3393,13 +3419,13 @@ private:
     OtherAlign =
         commonAlignment(OtherAlign, OtherOffset.zextOrTrunc(64).getZExtValue());
 
-    if (EmitMemCpy) {
-      // Compute the other pointer, folding as much as possible to produce
-      // a single, simple GEP in most cases.
-      OtherPtr = getAdjustedPtr(IRB, DL, OtherPtr, OtherOffset, OtherPtrTy,
-                                OtherPtr->getName() + ".");
+    // Compute the other pointer, folding as much as possible to produce
+    // a single, simple GEP in most cases.
+    OtherPtr = getAdjustedPtr(IRB, DL, OtherPtr, OtherOffset, OtherPtrTy,
+                              OtherPtr->getName() + ".");
 
-      Value *OurPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
+    if (EmitMemCpy) {
+      Value *OutPtr = getInvariantGroupPtrOrNewAllocaSlicePtr(IRB, OldPtr);
       Type *SizeTy = II.getLength()->getType();
       Constant *Size = ConstantInt::get(SizeTy, NewEndOffset - NewBeginOffset);
 
@@ -3407,14 +3433,14 @@ private:
       MaybeAlign DestAlign, SrcAlign;
       // Note: IsDest is true iff we're copying into the new alloca slice
       if (IsDest) {
-        DestPtr = OurPtr;
+        DestPtr = OutPtr;
         DestAlign = SliceAlign;
         SrcPtr = OtherPtr;
         SrcAlign = OtherAlign;
       } else {
         DestPtr = OtherPtr;
         DestAlign = OtherAlign;
-        SrcPtr = OurPtr;
+        SrcPtr = OutPtr;
         SrcAlign = SliceAlign;
       }
       CallInst *New = IRB.CreateMemCpy(DestPtr, DestAlign, SrcPtr, SrcAlign,
@@ -3459,8 +3485,6 @@ private:
       OtherTy = NewAllocaTy;
     }
 
-    Value *AdjPtr = getAdjustedPtr(IRB, DL, OtherPtr, OtherOffset, OtherPtrTy,
-                                   OtherPtr->getName() + ".");
     MaybeAlign SrcAlign = OtherAlign;
     MaybeAlign DstAlign = SliceAlign;
     if (!IsDest)
@@ -3470,11 +3494,13 @@ private:
     Value *DstPtr;
 
     if (IsDest) {
-      DstPtr = getPtrToNewAI(II.getDestAddressSpace(), II.isVolatile());
-      SrcPtr = AdjPtr;
+      DstPtr = getInvariantGroupPtrOrPtrToNewAI(
+          OldPtr, II.getDestAddressSpace(), II.isVolatile());
+      SrcPtr = OtherPtr;
     } else {
-      DstPtr = AdjPtr;
-      SrcPtr = getPtrToNewAI(II.getSourceAddressSpace(), II.isVolatile());
+      DstPtr = OtherPtr;
+      SrcPtr = getInvariantGroupPtrOrPtrToNewAI(
+          OldPtr, II.getSourceAddressSpace(), II.isVolatile());
     }
 
     Value *Src;
@@ -3552,8 +3578,33 @@ private:
       return true;
     }
 
-    if (II.isLaunderOrStripInvariantGroup())
+    if (II.isLaunderOrStripInvariantGroup()) {
+      Value *AdjustedPtr = getNewAllocaSlicePtr(IRB, OldPtr->getType());
+      Value *New = nullptr;
+      if (II.getIntrinsicID() == Intrinsic::launder_invariant_group)
+        New = IRB.CreateLaunderInvariantGroup(AdjustedPtr);
+      else if (II.getIntrinsicID() == Intrinsic::strip_invariant_group)
+        New = IRB.CreateStripInvariantGroup(AdjustedPtr);
+
+      if (&OldAI == &NewAI) {
+        New->takeName(&II);
+        II.replaceAllUsesWith(New);
+      } else {
+        // If the alloca can be split further, memory intrinsics using the
+        // invariant group may also need to be rewritten. Record the invariant
+        // for when the memory intrinsic is later visited.
+        for (Use &U : II.uses())
+          if (isa<MemIntrinsic>(U.getUser())) {
+            if (!InvariantIntr)
+              InvariantIntr = New;
+            continue;
+          } else {
+            U.set(New);
+          }
+      }
+      LLVM_DEBUG(dbgs() << "          to: " << *New << "\n");
       return true;
+    }
 
     assert(II.getArgOperand(1) == OldPtr);
     // Lifetime intrinsics are only promotable if they cover the whole alloca.
