@@ -410,7 +410,7 @@ linalg::lowerUnPack(RewriterBase &rewriter, linalg::UnPackOp unPackOp,
     collapsedType = tensor::CollapseShapeOp::inferCollapsedType(
         cast<RankedTensorType>(stripMinedType), packingMetadata.reassociations);
   } else if (stripMinedType.isa<MemRefType>()) {
-    collapsedType = memref::CollapseShapeOp::inferCollapsedType(
+    collapsedType = memref::CollapseShapeOp::computeCollapsedType(
         cast<MemRefType>(stripMinedType), packingMetadata.reassociations);
   }
 

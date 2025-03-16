@@ -10,7 +10,6 @@
 #define LINALG_IR_RELAYOUTOPINTERFACE
 
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
-include "mlir/Dialect/Linalg/IR/LinalgInterfaces.td"
 include "mlir/IR/OpBase.td"
 
 def LinalgRelayoutOpInterface : OpInterface<"RelayoutOpInterface"> {

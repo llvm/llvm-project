@@ -5001,12 +5001,8 @@ static bool isLikePadUnPad(PackOrUnpackOp packOp, ShapedType packedTensorType) {
 }
 
 bool PackOp::isLikePad() {
-  if (auto packedTensorType =
-          llvm::dyn_cast<RankedTensorType>((*this)->getResultTypes().front()))
-    return isLikePadUnPad(*this, packedTensorType);
-  if (auto packedTensorType =
-          llvm::dyn_cast<MemRefType>((*this)->getResultTypes().front()))
-    return isLikePadUnPad(*this, packedTensorType);
+  auto packedTensorType = llvm::dyn_cast<ShapedType>((*this)->getResultTypes().front());
+  return isLikePadUnPad(*this, packedTensorType);
 }
 
 OpFoldResult PackOp::fold(FoldAdaptor adaptor) {
@@ -5040,6 +5036,9 @@ struct FoldTensorCastPackOp : public OpRewritePattern<PackOp> {
   LogicalResult matchAndRewrite(PackOp op,
                                 PatternRewriter &rewriter) const override {
     if (!tensor::hasFoldableTensorCastOperand(op))
+      return failure();
+
+    if (!op.hasPureTensorSemantics())
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());
@@ -5308,6 +5307,9 @@ struct FoldTensorCastUnPackOp : public OpRewritePattern<UnPackOp> {
   LogicalResult matchAndRewrite(UnPackOp op,
                                 PatternRewriter &rewriter) const override {
     if (!tensor::hasFoldableTensorCastOperand(op))
+      return failure();
+
+    if (!op.hasPureTensorSemantics())
       return failure();
 
     SmallVector<Type> newResultTypes(op->getResultTypes());

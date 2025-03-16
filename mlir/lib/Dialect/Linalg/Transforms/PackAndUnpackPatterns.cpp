@@ -171,25 +171,27 @@ struct SimplifyUnPackToCollapseShape : public OpRewritePattern<UnPackOp> {
     return success();
   }
 
-  LogicalResult matchAndRewrite(UnPackOp unpackOp,
+  LogicalResult matchAndRewrite(UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
-    ShapedType destType = unpackOp.getDestType();
-    if (failed(isUnpackOnInnerMostDim(rewriter, unpackOp)) &&
-        failed(isPackOn1D(rewriter, unpackOp, destType.getShape(),
-                          unpackOp.getStaticTiles())) &&
-        !unpackOp.isLikeUnPad()) {
+    if (!unPackOp.hasPureTensorSemantics())
+      return failure();
+    ShapedType destType = unPackOp.getDestType();
+    if (failed(isUnpackOnInnerMostDim(rewriter, unPackOp)) &&
+        failed(isPackOn1D(rewriter, unPackOp, destType.getShape(),
+                          unPackOp.getStaticTiles())) &&
+        !unPackOp.isLikeUnPad()) {
       return failure();
     }
 
-    ShapedType sourceType = unpackOp.getSourceType();
+    ShapedType sourceType = unPackOp.getSourceType();
     auto reassociation =
         getReassociationIndicesForReshape(sourceType, destType);
     if (!reassociation)
       return failure();
     Value collapsed = insertCollapse(
-        rewriter, unpackOp.getLoc(), unpackOp.getSource(), destType,
+        rewriter, unPackOp.getLoc(), unPackOp.getSource(), destType,
         getReassociationIndicesAttribute(rewriter, *reassociation));
-    rewriter.replaceOp(unpackOp, collapsed);
+    rewriter.replaceOp(unPackOp, collapsed);
     return success();
   }
 };
@@ -426,6 +428,8 @@ struct FoldConsumerUnPackWithProducerLinalgTransposeOp
 
   LogicalResult matchAndRewrite(UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
+    if (!unPackOp.hasPureTensorSemantics())
+      return failure();
     auto linalgOp = unPackOp.getSource().getDefiningOp<linalg::LinalgOp>();
     if (!linalgOp)
       return failure();
@@ -507,6 +511,8 @@ struct FoldEmptyTensorWithUnPackOp : public OpRewritePattern<UnPackOp> {
 
   LogicalResult matchAndRewrite(UnPackOp unPackOp,
                                 PatternRewriter &rewriter) const override {
+    if (!unPackOp.hasPureTensorSemantics())
+      return failure();
     // Check for tensor.empty source.
     auto emptyOp = unPackOp.getSource().getDefiningOp<tensor::EmptyOp>();
     if (!emptyOp)

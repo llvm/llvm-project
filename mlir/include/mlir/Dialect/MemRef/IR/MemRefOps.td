@@ -1782,11 +1782,6 @@ def MemRef_CollapseShapeOp : MemRef_ReassociativeReshapeOp<"collapse_shape", [
 
     static MemRefType computeCollapsedType(
         MemRefType srcType, ArrayRef<ReassociationIndices> reassociation);
-    static MemRefType
-        inferCollapsedType(MemRefType type, ArrayRef<AffineMap> reassociation);
-    static MemRefType
-        inferCollapsedType(MemRefType type,
-                           SmallVector<ReassociationIndices> reassociation);
   }];
 
   let hasVerifier = 1;
@@ -1806,7 +1801,7 @@ def MemRef_StoreOp : MemRef_Op<"store",
   let summary = "store operation";
   let description = [{
     The `store` op stores an element into a memref at the specified indices.
-    
+
     The number of indices must match the rank of the memref. The indices must
     be in-bounds: `0 <= idx < dim_size`
 
