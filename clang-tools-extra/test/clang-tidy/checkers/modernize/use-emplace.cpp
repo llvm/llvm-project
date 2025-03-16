@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-use-emplace %t -- \
+// RUN: %check_clang_tidy %s -std=c++17 modernize-use-emplace %t -- \
 // RUN:   -config="{CheckOptions: \
 // RUN:             {modernize-use-emplace.ContainersWithPushBack: \
 // RUN:                '::std::vector; ::std::list; ::std::deque; llvm::LikeASmallVector', \
