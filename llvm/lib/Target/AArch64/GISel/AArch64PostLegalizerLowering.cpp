@@ -1205,7 +1205,6 @@ void applyMulv2s64(MachineInstr &MI, MachineRegisterInfo &MRI,
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
   assert(DstTy == LLT::fixed_vector(2, 64) && "Expected v2s64 Mul");
   LegalizerHelper Helper(*MI.getMF(), Observer, B);
-  B.setInstrAndDebugLoc(MI);
   Helper.fewerElementsVector(
       MI, 0,
       DstTy.changeElementCount(DstTy.getElementCount().divideCoefficientBy(2)));

@@ -549,7 +549,6 @@ void applyExtMulToMULL(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (Src2Ty.getScalarSizeInBits() * 2 != DstTy.getScalarSizeInBits())
     Src2Reg = B.buildExtOrTrunc(ExtOpc, {HalfDstTy}, {Src2Reg}).getReg(0);
 
-  B.setInstrAndDebugLoc(MI);
   B.buildInstr(IsZExt ? AArch64::G_UMULL : AArch64::G_SMULL,
                {MI.getOperand(0).getReg()}, {Src1Reg, Src2Reg});
   MI.eraseFromParent();
