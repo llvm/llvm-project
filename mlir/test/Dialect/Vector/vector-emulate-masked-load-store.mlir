@@ -50,7 +50,7 @@ func.func @vector_maskedload(%arg0 : memref<4x5xf32>) -> vector<4xf32> {
   %mask = vector.create_mask %idx_1 : vector<4xi1>
   %s = arith.constant 0.0 : f32
   %pass_thru = vector.splat %s : vector<4xf32>
-  %0 = vector.maskedload %arg0[%idx_0, %idx_4], %mask, %pass_thru : memref<4x5xf32>, vector<4xi1>, vector<4xf32> into vector<4xf32>
+  %0 = vector.maskedload %arg0[%idx_0, %idx_4], %mask, %pass_thru : memref<4x5xf32>, vector<4xf32>
   return %0: vector<4xf32>
 }
 
@@ -90,6 +90,6 @@ func.func @vector_maskedstore(%arg0 : memref<4x5xf32>, %arg1 : vector<4xf32>) {
   %idx_1 = arith.constant 1 : index
   %idx_4 = arith.constant 4 : index
   %mask = vector.create_mask %idx_1 : vector<4xi1>
-  vector.maskedstore %arg0[%idx_0, %idx_4], %mask, %arg1 : memref<4x5xf32>, vector<4xi1>, vector<4xf32>
+  vector.maskedstore %arg0[%idx_0, %idx_4], %mask, %arg1 : memref<4x5xf32>, vector<4xf32>
   return
 }

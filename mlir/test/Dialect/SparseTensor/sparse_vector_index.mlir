@@ -35,8 +35,8 @@
 // CHECK:           scf.for %[[VAL_14:.*]] = %[[VAL_12]] to %[[VAL_13]] step %[[VAL_1]] {
 // CHECK:             %[[VAL_15:.*]] = affine.min #map(%[[VAL_13]], %[[VAL_14]]){{\[}}%[[VAL_1]]]
 // CHECK:             %[[VAL_16:.*]] = vector.create_mask %[[VAL_15]] : vector<8xi1>
-// CHECK:             %[[VAL_17:.*]] = vector.maskedload %[[VAL_9]]{{\[}}%[[VAL_14]]], %[[VAL_16]], %[[VAL_3]] : memref<?xindex>, vector<8xi1>, vector<8xindex> into vector<8xindex>
-// CHECK:             %[[VAL_18:.*]] = vector.maskedload %[[VAL_10]]{{\[}}%[[VAL_14]]], %[[VAL_16]], %[[VAL_2]] : memref<?xi64>, vector<8xi1>, vector<8xi64> into vector<8xi64>
+// CHECK:             %[[VAL_17:.*]] = vector.maskedload %[[VAL_9]]{{\[}}%[[VAL_14]]], %[[VAL_16]], %[[VAL_3]] : memref<?xindex>, vector<8xindex>
+// CHECK:             %[[VAL_18:.*]] = vector.maskedload %[[VAL_10]]{{\[}}%[[VAL_14]]], %[[VAL_16]], %[[VAL_2]] : memref<?xi64>, vector<8xi64>
 // CHECK:             %[[VAL_19:.*]] = arith.index_cast %[[VAL_17]] : vector<8xindex> to vector<8xi64>
 // CHECK:             %[[VAL_20:.*]] = arith.muli %[[VAL_18]], %[[VAL_19]] : vector<8xi64>
 // CHECK:             vector.scatter %[[VAL_11]]{{\[}}%[[VAL_5]]] {{\[}}%[[VAL_17]]], %[[VAL_16]], %[[VAL_20]] : memref<8xi64>, vector<8xindex>, vector<8xi1>, vector<8xi64>
@@ -104,7 +104,7 @@ func.func @sparse_index_1d_conj(%arga: tensor<8xi64, #SparseVector>) -> tensor<8
 // CHECK:             %[[VAL_33:.*]] = vector.broadcast %[[VAL_29]] : index to vector<8xindex>
 // CHECK:             %[[VAL_34:.*]] = arith.addi %[[VAL_33]], %[[VAL_2]] : vector<8xindex>
 // CHECK:             %[[VAL_35:.*]] = arith.index_cast %[[VAL_34]] : vector<8xindex> to vector<8xi64>
-// CHECK:             vector.maskedstore %[[VAL_11]]{{\[}}%[[VAL_29]]], %[[VAL_32]], %[[VAL_35]] : memref<8xi64>, vector<8xi1>, vector<8xi64>
+// CHECK:             vector.maskedstore %[[VAL_11]]{{\[}}%[[VAL_29]]], %[[VAL_32]], %[[VAL_35]] : memref<8xi64>, vector<8xi64>
 // CHECK:           } {"Emitted from" = "linalg.generic"}
 // CHECK:           %[[VAL_36:.*]] = bufferization.to_tensor %[[VAL_11]] : memref<8xi64>
 // CHECK:           return %[[VAL_36]] : tensor<8xi64>

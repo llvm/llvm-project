@@ -10,7 +10,7 @@ func.func @maskedload0(%base: memref<?xf32>, %pass_thru: vector<16xf32>) -> vect
   %c0 = arith.constant 0 : index
   %mask = vector.constant_mask [16] : vector<16xi1>
   %ld = vector.maskedload %base[%c0], %mask, %pass_thru
-    : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    : memref<?xf32>, vector<16xf32>
   return %ld : vector<16xf32>
 }
 
@@ -24,7 +24,7 @@ func.func @maskedload1(%base: memref<16xf32>, %pass_thru: vector<16xf32>) -> vec
   %c0 = arith.constant 0 : index
   %mask = vector.constant_mask [16] : vector<16xi1>
   %ld = vector.maskedload %base[%c0], %mask, %pass_thru
-    : memref<16xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    : memref<16xf32>, vector<16xf32>
   return %ld : vector<16xf32>
 }
 
@@ -36,7 +36,7 @@ func.func @maskedload2(%base: memref<16xf32>, %pass_thru: vector<16xf32>) -> vec
   %c0 = arith.constant 0 : index
   %mask = vector.constant_mask [0] : vector<16xi1>
   %ld = vector.maskedload %base[%c0], %mask, %pass_thru
-    : memref<16xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    : memref<16xf32>, vector<16xf32>
   return %ld : vector<16xf32>
 }
 
@@ -50,7 +50,7 @@ func.func @maskedload3(%base: memref<?xf32>, %pass_thru: vector<16xf32>) -> vect
   %c8 = arith.constant 8 : index
   %mask = vector.constant_mask [16] : vector<16xi1>
   %ld = vector.maskedload %base[%c8], %mask, %pass_thru
-    : memref<?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+    : memref<?xf32>, vector<16xf32>
   return %ld : vector<16xf32>
 }
 
@@ -63,7 +63,7 @@ func.func @maskedload3(%base: memref<?xf32>, %pass_thru: vector<16xf32>) -> vect
 func.func @maskedstore1(%base: memref<16xf32>, %value: vector<16xf32>) {
   %c0 = arith.constant 0 : index
   %mask = vector.constant_mask [16] : vector<16xi1>
-  vector.maskedstore %base[%c0], %mask, %value : memref<16xf32>, vector<16xi1>, vector<16xf32>
+  vector.maskedstore %base[%c0], %mask, %value : memref<16xf32>, vector<16xf32>
   return
 }
 
@@ -74,7 +74,7 @@ func.func @maskedstore1(%base: memref<16xf32>, %value: vector<16xf32>) {
 func.func @maskedstore2(%base: memref<16xf32>, %value: vector<16xf32>)  {
   %c0 = arith.constant 0 : index
   %mask = vector.constant_mask [0] : vector<16xi1>
-  vector.maskedstore %base[%c0], %mask, %value : memref<16xf32>, vector<16xi1>, vector<16xf32>
+  vector.maskedstore %base[%c0], %mask, %value : memref<16xf32>, vector<16xf32>
   return
 }
 

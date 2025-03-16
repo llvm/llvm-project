@@ -1840,7 +1840,16 @@ def Vector_StoreOp : Vector_Op<"store"> {
 }
 
 def Vector_MaskedLoadOp :
-  Vector_Op<"maskedload">,
+    Vector_Op<"maskedload", [
+      AllTypesMatch<["result", "pass_thru"]>,
+      TypesMatchWith<"mask shape should match result shape",
+        "result",
+        "mask",
+        "VectorType::get(::llvm::cast<VectorType>($_self).getShape(),"
+          "IntegerType::get($_ctxt, 1),"
+          "::llvm::cast<VectorType>($_self).getScalableDims())">,
+      AllElementTypesMatch<["result", "base"]>
+    ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemRead]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
@@ -1875,10 +1884,10 @@ def Vector_MaskedLoadOp :
 
     ```mlir
     %0 = vector.maskedload %base[%i], %mask, %pass_thru
-       : memref<?xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+       : memref<?xf32>, vector<8xf32>
 
     %1 = vector.maskedload %base[%i, %j], %mask, %pass_thru
-       : memref<?x?xf32>, vector<16xi1>, vector<16xf32> into vector<16xf32>
+       : memref<?x?xf32>, vector<16xf32>
     ```
   }];
   let extraClassDeclaration = [{
@@ -1896,14 +1905,22 @@ def Vector_MaskedLoadOp :
     }
   }];
   let assemblyFormat = "$base `[` $indices `]` `,` $mask `,` $pass_thru attr-dict `:` "
-    "type($base) `,` type($mask) `,` type($pass_thru) `into` type($result)";
+    "type($base) `,` type($result)";
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;
 }
 
 def Vector_MaskedStoreOp :
-  Vector_Op<"maskedstore">,
+    Vector_Op<"maskedstore", [
+      TypesMatchWith<"mask shape should match result shape",
+        "valueToStore",
+        "mask",
+        "VectorType::get(::llvm::cast<VectorType>($_self).getShape(),"
+          "IntegerType::get($_ctxt, 1),"
+          "::llvm::cast<VectorType>($_self).getScalableDims())">,
+      AllElementTypesMatch<["valueToStore", "base"]>
+    ]>,
     Arguments<(ins Arg<AnyMemRef, "", [MemWrite]>:$base,
                Variadic<Index>:$indices,
                VectorOfNonZeroRankOf<[I1]>:$mask,
@@ -1937,10 +1954,10 @@ def Vector_MaskedStoreOp :
 
     ```mlir
     vector.maskedstore %base[%i], %mask, %value
-      : memref<?xf32>, vector<8xi1>, vector<8xf32>
+      : memref<?xf32>, vector<8xf32>
 
     vector.maskedstore %base[%i, %j], %mask, %value
-      : memref<?x?xf32>, vector<16xi1>, vector<16xf32>
+      : memref<?x?xf32>, vector<16xf32>
     ```
   }];
   let extraClassDeclaration = [{
@@ -1956,7 +1973,7 @@ def Vector_MaskedStoreOp :
   }];
   let assemblyFormat =
       "$base `[` $indices `]` `,` $mask `,` $valueToStore "
-      "attr-dict `:` type($base) `,` type($mask) `,` type($valueToStore)";
+      "attr-dict `:` type($base) `,` type($valueToStore)";
   let hasCanonicalizer = 1;
   let hasFolder = 1;
   let hasVerifier = 1;

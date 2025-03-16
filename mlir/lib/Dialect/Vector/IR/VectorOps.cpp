@@ -5127,19 +5127,9 @@ LogicalResult StoreOp::fold(FoldAdaptor adaptor,
 //===----------------------------------------------------------------------===//
 
 LogicalResult MaskedLoadOp::verify() {
-  VectorType maskVType = getMaskVectorType();
-  VectorType passVType = getPassThruVectorType();
-  VectorType resVType = getVectorType();
-  MemRefType memType = getMemRefType();
-
-  if (resVType.getElementType() != memType.getElementType())
-    return emitOpError("base and result element type should match");
-  if (llvm::size(getIndices()) != memType.getRank())
-    return emitOpError("requires ") << memType.getRank() << " indices";
-  if (resVType.getShape() != maskVType.getShape())
-    return emitOpError("expected result shape to match mask shape");
-  if (resVType != passVType)
-    return emitOpError("expected pass_thru of same type as result type");
+  int64_t memRank = getMemRefType().getRank();
+  if (llvm::size(getIndices()) != memRank)
+    return emitOpError("requires ") << memRank << " indices";
   return success();
 }
 
@@ -5181,16 +5171,9 @@ OpFoldResult MaskedLoadOp::fold(FoldAdaptor) {
 //===----------------------------------------------------------------------===//
 
 LogicalResult MaskedStoreOp::verify() {
-  VectorType maskVType = getMaskVectorType();
-  VectorType valueVType = getVectorType();
-  MemRefType memType = getMemRefType();
-
-  if (valueVType.getElementType() != memType.getElementType())
-    return emitOpError("base and valueToStore element type should match");
-  if (llvm::size(getIndices()) != memType.getRank())
-    return emitOpError("requires ") << memType.getRank() << " indices";
-  if (valueVType.getShape() != maskVType.getShape())
-    return emitOpError("expected valueToStore shape to match mask shape");
+  int64_t memRank = getMemRefType().getRank();
+  if (llvm::size(getIndices()) != memRank)
+    return emitOpError("requires ") << memRank << " indices";
   return success();
 }
 

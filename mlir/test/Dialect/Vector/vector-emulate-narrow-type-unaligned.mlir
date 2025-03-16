@@ -48,7 +48,7 @@ func.func @vector_constant_mask_maskedload_i2(%passthru: vector<5xi2>) -> vector
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %1 = vector.maskedload %0[%c2, %c0], %mask, %passthru :
-    memref<3x5xi2>, vector<5xi1>, vector<5xi2> into vector<5xi2>
+    memref<3x5xi2>, vector<5xi2>
   return %1 : vector<5xi2>
 }
 // CHECK-LABEL: func @vector_constant_mask_maskedload_i2(
@@ -62,7 +62,7 @@ func.func @vector_constant_mask_maskedload_i2(%passthru: vector<5xi2>) -> vector
 // CHECK: %[[BITCAST1:.+]] = vector.bitcast %[[INSERT1]] : vector<8xi2> to vector<2xi8>
 // CHECK: %[[C2:.+]] = arith.constant 2 : index
 // CHECK: %[[MASKEDLOAD:.+]] = vector.maskedload %alloc[%[[C2]]], %[[NEWMASK:.+]], %[[BITCAST1]]
-// CHECK-SAME: : memref<4xi8>, vector<2xi1>, vector<2xi8> into vector<2xi8>
+// CHECK-SAME: : memref<4xi8>, vector<2xi8>
 // CHECK: %[[BITCAST2:.+]] = vector.bitcast %[[MASKEDLOAD]] : vector<2xi8> to vector<8xi2>
 // CHECK: %[[CST2:.+]] = arith.constant dense<false> : vector<8xi1>
 // CHECK: %[[INSERT2:.+]] = vector.insert_strided_slice %[[ORIGINMASK]], %[[CST2]]
@@ -82,7 +82,7 @@ func.func @unaligned_create_mask_dynamic_i2(%m : index, %passthru: vector<5xi2>)
     %c1 = arith.constant 1 : index
     %mask = vector.create_mask %m : vector<5xi1>
     %1 = vector.maskedload %0[%c1, %c0], %mask, %passthru :
-      memref<3x5xi2>, vector<5xi1>, vector<5xi2> into vector<5xi2>
+      memref<3x5xi2>, vector<5xi2>
     return %1 : vector<5xi2>
 }
 
@@ -107,7 +107,7 @@ func.func @check_unaligned_create_mask_static_i2(%passthru: vector<7xi2>) -> vec
     %c3 = arith.constant 3 : index
     %mask = vector.create_mask %c3 : vector<7xi1>
     %1 = vector.maskedload %0[%c1, %c0], %mask, %passthru :
-      memref<3x7xi2>, vector<7xi1>, vector<7xi2> into vector<7xi2>
+      memref<3x7xi2>, vector<7xi2>
     return %1 : vector<7xi2>
 }
 
@@ -129,7 +129,7 @@ func.func @vector_constant_mask_maskedload_i2_multidim(%passthru: vector<5xi2>) 
   %c0 = arith.constant 0 : index
   %c2 = arith.constant 2 : index
   %1 = vector.maskedload %0[%c2, %c0, %c0], %ext_mask, %passthru :
-    memref<4x3x5xi2>, vector<5xi1>, vector<5xi2> into vector<5xi2>
+    memref<4x3x5xi2>, vector<5xi2>
   return %1 : vector<5xi2>
 }
 
@@ -261,7 +261,7 @@ func.func @vector_maskedload_i2_dynamic_indexing_mixed(%passthru: vector<3xi2>, 
   %c2 = arith.constant 2 : index
   %mask = vector.constant_mask [3] : vector<3xi1>
   %1 = vector.maskedload %0[%idx, %c2], %mask, %passthru :
-    memref<3x3xi2>, vector<3xi1>, vector<3xi2> into vector<3xi2>
+    memref<3x3xi2>, vector<3xi2>
   return %1 : vector<3xi2>
 }
 
@@ -293,7 +293,7 @@ func.func @vector_maskedload_i2_dynamic_indexing_mixed(%passthru: vector<3xi2>, 
 
 // Use the emulated i8 vector for masked load from the source memory
 // CHECK: %[[SOURCE:.+]] = vector.maskedload %[[ALLOC]][%[[LINEAR1]]], %[[ONE]], %[[BCAST_PASSTHRU]]
-// CHECK-SAME: memref<3xi8>, vector<2xi1>, vector<2xi8> into vector<2xi8>
+// CHECK-SAME: memref<3xi8>, vector<2xi8>
 
 // Bitcast back to i2 vector
 // CHECK: %[[BCAST_MASKLOAD:.+]] = vector.bitcast %[[SOURCE]] : vector<2xi8> to vector<8xi2>
@@ -328,7 +328,7 @@ func.func @vector_maskedload_i2_constant_mask_unaligned(%passthru: vector<5xi2>)
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
   %1 = vector.maskedload %0[%c1, %c0], %mask, %passthru :
-    memref<3x5xi2>, vector<5xi1>, vector<5xi2> into vector<5xi2>
+    memref<3x5xi2>, vector<5xi2>
   return %1 : vector<5xi2>
 }
 
