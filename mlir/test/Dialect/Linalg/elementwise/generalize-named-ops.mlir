@@ -163,3 +163,27 @@ func.func @ternary(%A : tensor<32x16xi1>, %B: tensor<8x16x32xf32>, %C : tensor<8
       outs(%D: tensor<8x16x32xf32>) -> tensor<8x16x32xf32>
   return %r : tensor<8x16x32xf32>
 }
+
+// -----
+
+// CHECK: #[[MAP:.+]] = affine_map<(d0, d1) -> (d0, d1)>
+//
+// CHECK: @cast_f16_to_f32(%[[A:.+]]: tensor<16x8xf16>, %[[B:.+]]: tensor<16x8xf32>, %[[C:.+]]: tensor<16x8xf32>)
+// CHECK: linalg.generic
+// CHECK-SAME: indexing_maps = [#[[MAP]], #[[MAP]], #[[MAP]]]
+// CHECK-SAME: iterator_types = ["parallel", "parallel"]
+// CHECK-SAME:  ins(%[[A]], %[[B]]
+// CHECK-SAME: outs(%[[C]]
+//
+// CHECK: ^{{.*}}(%[[A_ARG:.+]]: f16, %[[B_ARG:.+]]: f32, %[[C_ARG:.+]]: f32)
+// CHECK:   %[[CAST:.+]] = arith.extf %[[A_ARG]] : f16 to f32
+// CHECK:   %[[MUL:.+]] = arith.mulf %[[CAST]], %[[B_ARG]] : f32
+// CHECK:   linalg.yield %[[MUL]] : f32
+//
+func.func @cast_f16_to_f32(%A : tensor<16x8xf16>, %B: tensor<16x8xf32>, %C: tensor<16x8xf32>) ->  tensor<16x8xf32> {
+  %r = linalg.elementwise
+      kind=#linalg.elementwise_kind<mul>
+      ins(%A, %B: tensor<16x8xf16>, tensor<16x8xf32>)
+      outs(%C: tensor<16x8xf32>) -> tensor<16x8xf32>
+  return %r : tensor<16x8xf32>
+}

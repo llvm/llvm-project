@@ -88,3 +88,41 @@ func.func @redundant_maps(%A: tensor<1x2x3x4x5xi32>, %B: tensor<1x2x3x4x5xi32>,
       outs(%C: tensor<1x2x3x4x5xi32>) -> tensor<1x2x3x4x5xi32>
   return %r : tensor<1x2x3x4x5xi32>
 }
+
+// -----
+
+// CHECK: @convert_f16_to_f32(%[[A:.+]]: tensor<16x8xf16>, %[[B:.+]]: tensor<16x8xf32>,
+// CHECK-SAME:                    %[[C:.+]]: tensor<16x8xf32>) ->  tensor<16x8xf32> {
+// CHECK: {{.*}} = linalg.elementwise
+// CHECK-SAME:       kind=#linalg.elementwise_kind<div>
+// CHECK-SAME:       ins(%[[A]], %[[B]] : tensor<16x8xf16>, tensor<16x8xf32>)
+// CHECK-SAME:       outs(%[[C]] : tensor<16x8xf32>) -> tensor<16x8xf32>
+//
+func.func @convert_f16_to_f32(%A: tensor<16x8xf16>, %B: tensor<16x8xf32>,
+                      %C: tensor<16x8xf32>) ->  tensor<16x8xf32> {
+  %r = linalg.elementwise
+      kind=#linalg.elementwise_kind<div>
+      ins(%A, %B: tensor<16x8xf16>, tensor<16x8xf32>)
+      outs(%C: tensor<16x8xf32>) -> tensor<16x8xf32>
+  return %r : tensor<16x8xf32>
+}
+
+
+// -----
+
+// CHECK: @explicit_cast(%[[A:.+]]: tensor<16x8xi16>, %[[B:.+]]: tensor<16x8xi32>,
+// CHECK-SAME:           %[[C:.+]]: tensor<16x8xi32>) -> tensor<16x8xi32> {
+// CHECK:  {{.*}} = linalg.elementwise
+// CHECK-SAME:          kind=#linalg.elementwise_kind<add>
+// CHECK-SAME:          {cast = #linalg.type_fn<cast_signed>}
+// CHECK-SAME:          ins(%[[A]], %[[B]] : tensor<16x8xi16>, tensor<16x8xi32>)
+// CHECK-SAME:          outs(%[[C]] : tensor<16x8xi32>) -> tensor<16x8xi32>
+//
+func.func @explicit_cast(%A: tensor<16x8xi16>, %B: tensor<16x8xi32>, %C: tensor<16x8xi32>) -> tensor<16x8xi32> {
+    %0 = linalg.elementwise
+            kind=#linalg.elementwise_kind<add>
+            {cast = #linalg.type_fn<cast_signed>}
+            ins(%A, %B : tensor<16x8xi16>, tensor<16x8xi32>)
+            outs(%C : tensor<16x8xi32>) -> tensor<16x8xi32>
+    return %0 : tensor<16x8xi32>
+}
