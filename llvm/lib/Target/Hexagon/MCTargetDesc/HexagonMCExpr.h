@@ -39,8 +39,8 @@ public:
 
   static HexagonMCExpr *create(MCExpr const *Expr, MCContext &Ctx);
   void printImpl(raw_ostream &OS, const MCAsmInfo *MAI) const override;
-  bool evaluateAsRelocatableImpl(MCValue &Res, const MCAssembler *Asm,
-                                 const MCFixup *Fixup) const override;
+  bool evaluateAsRelocatableImpl(MCValue &Res,
+                                 const MCAssembler *Asm) const override;
   void visitUsedExpr(MCStreamer &Streamer) const override;
   MCFragment *findAssociatedFragment() const override;
   void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override;
