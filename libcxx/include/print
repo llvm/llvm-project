@@ -241,7 +241,7 @@ _LIBCPP_HIDE_FROM_ABI inline void __funlockfile(FILE* __stream) {
 _LIBCPP_HIDE_FROM_ABI inline int __fflush_unlocked(FILE* __stream) {
 #    if defined(_LIBCPP_WIN32API)
   return ::_fflush_nolock(__stream);
-#    elif defined(__PICOLIBC__) || defined(_AIX) || defined(__ANDROID__)
+#    elif defined(__PICOLIBC__) || defined(_AIX) || defined(__ANDROID__) || defined(__APPLE__)
   // There is no fflush_unlocked on these systems.
   // This funcion is not part of POSIX.
   return ::fflush(__stream);
@@ -257,7 +257,7 @@ _LIBCPP_HIDE_FROM_ABI inline size_t
 __fwrite_unlocked(const void* __buffer, [[maybe_unused]] size_t __size, size_t __n, FILE* __stream) {
 #    if defined(_LIBCPP_WIN32API)
   return ::_fwrite_nolock(__buffer, __size, __n, __stream);
-#    elif defined(__PICOLIBC__) || defined(_AIX) || defined(__ANDROID__)
+#    elif defined(__PICOLIBC__) || defined(_AIX) || defined(__ANDROID__) || defined(__APPLE__)
   // The function fwrite_unlocked is not part of POSIX and not available on
   // these systems.
   auto __b = static_cast<const char*>(__buffer);
@@ -291,7 +291,7 @@ _LIBCPP_HIDE_FROM_ABI int __fflush(FILE* __stream) {
     return std::fflush(__stream);
   else
 #    if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
-    sizeof(__lock_policy) == 0
+    static_assert(sizeof(__lock_policy) == 0, "Unsupported policy");
 #    else
     static_assert(false, "Unsupported policy");
 #    endif
@@ -316,7 +316,7 @@ public:
       __print::__flockfile(__stream_);
     else if constexpr (__policy != __lock_policy::__stdio)
 #    if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
-      sizeof(__lock_policy) == 0
+      static_assert(sizeof(__lock_policy) == 0, "Unsupported policy");
 #    else
       static_assert(false, "Unsupported policy");
 #    endif
@@ -327,7 +327,7 @@ public:
       __print::__funlockfile(__stream_);
     else if constexpr (__policy != __lock_policy::__stdio)
 #    if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
-      sizeof(__lock_policy) == 0
+      static_assert(sizeof(__lock_policy) == 0, "Unsupported policy");
 #    else
       static_assert(false, "Unsupported policy");
 #    endif
@@ -359,7 +359,7 @@ private:
         return std::fwrite(__small_buffer_, 1, __n, __stream_);
       else
 #    if defined(_LIBCPP_APPLE_CLANG_VER) && _LIBCPP_APPLE_CLANG_VER < 1600
-        sizeof(__lock_policy) == 0
+        static_assert(sizeof(__lock_policy) == 0, "Unsupported policy");
 #    else
         static_assert(false, "Unsupported policy");
 #    endif
@@ -505,20 +505,19 @@ __vprint_unicode([[maybe_unused]] FILE* __stream,
 
 template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI void print(FILE* __stream, format_string<_Args...> __fmt, _Args&&... __args) {
-#    if _LIBCPP_HAS_UNICODE
-  constexpr bool __use_unicode = __print::__use_unicode_execution_charset;
-#    else  // _LIBCPP_HAS_UNICODE
-  constexpr bool __use_unicode = false;
-#    endif // _LIBCPP_HAS_UNICODE
   constexpr bool __locksafe = (enable_nonlocking_formatter_optimization<remove_cvref_t<_Args>> && ...);
 
   using enum __print::__lock_policy;
-  if constexpr (__use_unicode)
+#    if _LIBCPP_HAS_UNICODE
+  if constexpr (__print::__use_unicode_execution_charset)
     __print::__vprint_unicode<__locksafe ? __manual : __stdio>(
         __stream, __fmt.get(), std::make_format_args(__args...), false);
   else
+#    endif // _LIBCPP_HAS_UNICODE
+  {
     __print::__vprint_nonunicode<__locksafe ? __manual : __stdio>(
         __stream, __fmt.get(), std::make_format_args(__args...), false);
+  }
 }
 
 template <class... _Args>
@@ -528,23 +527,22 @@ _LIBCPP_HIDE_FROM_ABI void print(format_string<_Args...> __fmt, _Args&&... __arg
 
 template <class... _Args>
 _LIBCPP_HIDE_FROM_ABI void println(FILE* __stream, format_string<_Args...> __fmt, _Args&&... __args) {
-#    if _LIBCPP_HAS_UNICODE
-  constexpr bool __use_unicode = __print::__use_unicode_execution_charset;
-#    else  // _LIBCPP_HAS_UNICODE
-  constexpr bool __use_unicode = false;
-#    endif // _LIBCPP_HAS_UNICODE
   constexpr bool __locksafe = (enable_nonlocking_formatter_optimization<remove_cvref_t<_Args>> && ...);
 
   // Note the wording in the Standard is inefficient. The output of
   // std::format is a std::string which is then copied. This solution
   // just appends a newline at the end of the output.
   using enum __print::__lock_policy;
-  if constexpr (__use_unicode)
+#    if _LIBCPP_HAS_UNICODE
+  if constexpr (__print::__use_unicode_execution_charset)
     __print::__vprint_unicode<__locksafe ? __manual : __stdio>(
         __stream, __fmt.get(), std::make_format_args(__args...), true);
   else
+#    endif // _LIBCPP_HAS_UNICODE
+  {
     __print::__vprint_nonunicode<__locksafe ? __manual : __stdio>(
         __stream, __fmt.get(), std::make_format_args(__args...), true);
+  }
 }
 
 template <class = void> // TODO PRINT template or availability markup fires too eagerly (http://llvm.org/PR61563).
