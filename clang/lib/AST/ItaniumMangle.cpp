@@ -5389,6 +5389,15 @@ recurse:
       Diags.Report(DiagID);
       return;
     }
+    case UETT_StructuredBindingSize:
+      Out << "u11__builtin_structured_binding_size";
+      if (SAE->isArgumentType())
+        mangleType(SAE->getArgumentType());
+      else
+        mangleTemplateArgExpr(SAE->getArgumentExpr());
+      Out << 'E';
+      break;
+      return;
     }
     break;
   }

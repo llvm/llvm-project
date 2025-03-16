@@ -14878,6 +14878,11 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     }
     return Success(Sizeof, E);
   }
+  case UETT_StructuredBindingSize:
+    // This can only be computed from Sema and has been cached.
+    // We can still get there from code that strips the outer ConstantExpr.
+    return false;
+
   case UETT_OpenMPRequiredSimdAlign:
     assert(E->isArgumentType());
     return Success(

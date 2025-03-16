@@ -4160,6 +4160,54 @@ static bool CheckVecStepTraitOperandType(Sema &S, QualType T,
   return false;
 }
 
+static ExprResult BuildStructuredBindingSizeTraitImpl(Sema &S, QualType T,
+                                                      Expr *E,
+                                                      TypeSourceInfo *TInfo,
+                                                      SourceLocation Loc,
+                                                      SourceRange ArgRange) {
+  assert(!!E != !!TInfo);
+  assert(!T->isDependentType());
+  std::optional<unsigned> Size =
+      S.GetDecompositionElementCount(T, ArgRange.getBegin());
+  if (!Size) {
+    return S.Diag(Loc, diag::err_arg_is_not_destructurable) << T << ArgRange;
+    return ExprError();
+  }
+  Expr *Inner;
+  if (E)
+    Inner = new (S.getASTContext()) UnaryExprOrTypeTraitExpr(
+        UnaryExprOrTypeTrait::UETT_StructuredBindingSize, E,
+        S.getASTContext().getSizeType(), Loc, E->getEndLoc());
+
+  else
+    Inner = new (S.getASTContext()) UnaryExprOrTypeTraitExpr(
+        UnaryExprOrTypeTrait::UETT_StructuredBindingSize, TInfo,
+        S.getASTContext().getSizeType(), Loc, ArgRange.getEnd());
+
+  // Computing the number of bindings requires Sema and is non-trivial,
+  // so we cache the result now.
+  llvm::APSInt V =
+      S.getASTContext().MakeIntValue(*Size, S.getASTContext().getSizeType());
+  return ConstantExpr::Create(S.getASTContext(), Inner, APValue{V});
+}
+
+static ExprResult BuildStructuredBindingSizeTrait(Sema &S,
+                                                  TypeSourceInfo *TInfo,
+                                                  SourceLocation Loc,
+                                                  SourceRange ArgRange) {
+  return BuildStructuredBindingSizeTraitImpl(S, TInfo->getType(),
+                                             /*Expr=*/nullptr, TInfo, Loc,
+                                             ArgRange);
+}
+
+static ExprResult BuildStructuredBindingSizeTrait(Sema &S, SourceLocation OpLoc,
+                                                  Expr *E) {
+
+  return BuildStructuredBindingSizeTraitImpl(S, E->getType(), E,
+                                             /*TInfo=*/nullptr, OpLoc,
+                                             E->getSourceRange());
+}
+
 static bool CheckVectorElementsTraitOperandType(Sema &S, QualType T,
                                                 SourceLocation Loc,
                                                 SourceRange ArgRange) {
@@ -4650,10 +4698,14 @@ ExprResult Sema::CreateUnaryExprOrTypeTraitExpr(TypeSourceInfo *TInfo,
 
   QualType T = TInfo->getType();
 
-  if (!T->isDependentType() &&
-      CheckUnaryExprOrTypeTraitOperand(T, OpLoc, R, ExprKind,
-                                       getTraitSpelling(ExprKind)))
-    return ExprError();
+  if (!T->isDependentType()) {
+    if (ExprKind == UETT_StructuredBindingSize)
+      return BuildStructuredBindingSizeTrait(*this, TInfo, OpLoc, R);
+
+    if (CheckUnaryExprOrTypeTraitOperand(T, OpLoc, R, ExprKind,
+                                         getTraitSpelling(ExprKind)))
+      return ExprError();
+  }
 
   // Adds overload of TransformToPotentiallyEvaluated for TypeSourceInfo to
   // properly deal with VLAs in nested calls of sizeof and typeof.
@@ -4680,14 +4732,17 @@ Sema::CreateUnaryExprOrTypeTraitExpr(Expr *E, SourceLocation OpLoc,
   bool isInvalid = false;
   if (E->isTypeDependent()) {
     // Delay type-checking for type-dependent expressions.
+  } else if (ExprKind == UETT_StructuredBindingSize) {
+    // Custom logic
+    return BuildStructuredBindingSizeTrait(*this, OpLoc, E);
   } else if (ExprKind == UETT_AlignOf || ExprKind == UETT_PreferredAlignOf) {
     isInvalid = CheckAlignOfExpr(*this, E, ExprKind);
   } else if (ExprKind == UETT_VecStep) {
     isInvalid = CheckVecStepExpr(E);
   } else if (ExprKind == UETT_OpenMPRequiredSimdAlign) {
-      Diag(E->getExprLoc(), diag::err_openmp_default_simd_align_expr);
-      isInvalid = true;
-  } else if (E->refersToBitField()) {  // C99 6.5.3.4p1.
+    Diag(E->getExprLoc(), diag::err_openmp_default_simd_align_expr);
+    isInvalid = true;
+  } else if (E->refersToBitField()) { // C99 6.5.3.4p1.
     Diag(E->getExprLoc(), diag::err_sizeof_alignof_typeof_bitfield) << 0;
     isInvalid = true;
   } else if (ExprKind == UETT_VectorElements) {

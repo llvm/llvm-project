@@ -2154,6 +2154,8 @@ bool Compiler<Emitter>::VisitUnaryExprOrTypeTraitExpr(
             E->getArgumentType()),
         E);
   }
+  assert(Kind != UETT_StructuredBindingSize &&
+         "should have been evaluated in Sema");
 
   return false;
 }

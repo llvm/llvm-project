@@ -1544,6 +1544,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   // unary-expression: '__builtin_omp_required_simd_align' '(' type-name ')'
   case tok::kw___builtin_omp_required_simd_align:
   case tok::kw___builtin_vectorelements:
+  case tok::kw___builtin_structured_binding_size:
     if (NotPrimaryExpression)
       *NotPrimaryExpression = true;
     AllowSuffix = false;
@@ -2463,7 +2464,8 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
                        tok::kw___datasizeof, tok::kw___alignof, tok::kw_alignof,
                        tok::kw__Alignof, tok::kw_vec_step,
                        tok::kw___builtin_omp_required_simd_align,
-                       tok::kw___builtin_vectorelements) &&
+                       tok::kw___builtin_vectorelements,
+                       tok::kw___builtin_structured_binding_size) &&
          "Not a typeof/sizeof/alignof/vec_step expression!");
 
   ExprResult Operand;
@@ -2473,7 +2475,8 @@ Parser::ParseExprAfterUnaryExprOrTypeTrait(const Token &OpTok,
     // If construct allows a form without parenthesis, user may forget to put
     // pathenthesis around type name.
     if (OpTok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
-                      tok::kw_alignof, tok::kw__Alignof)) {
+                      tok::kw_alignof, tok::kw__Alignof,
+                      tok::kw___builtin_structured_binding_size)) {
       if (isTypeIdUnambiguously()) {
         DeclSpec DS(AttrFactory);
         ParseSpecifierQualifierList(DS);
@@ -2599,7 +2602,8 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
   assert(Tok.isOneOf(tok::kw_sizeof, tok::kw___datasizeof, tok::kw___alignof,
                      tok::kw_alignof, tok::kw__Alignof, tok::kw_vec_step,
                      tok::kw___builtin_omp_required_simd_align,
-                     tok::kw___builtin_vectorelements) &&
+                     tok::kw___builtin_vectorelements,
+                     tok::kw___builtin_structured_binding_size) &&
          "Not a sizeof/alignof/vec_step expression!");
   Token OpTok = Tok;
   ConsumeToken();
@@ -2686,6 +2690,9 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
     break;
   case tok::kw___datasizeof:
     ExprKind = UETT_DataSizeOf;
+    break;
+  case tok::kw___builtin_structured_binding_size:
+    ExprKind = UETT_StructuredBindingSize;
     break;
   case tok::kw___builtin_vectorelements:
     ExprKind = UETT_VectorElements;
