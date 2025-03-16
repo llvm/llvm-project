@@ -4,34 +4,18 @@
 define i32 @pr131465(i1 %x) mustprogress {
 ; CHECK-LABEL: define i32 @pr131465(
 ; CHECK-SAME: i1 [[X:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[INC:%.*]] = zext i1 [[X]] to i32
-; CHECK-NEXT:    [[TMP0:%.*]] = sub i32 0, [[INC]]
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i32 [[TMP0]], [[INC]]
-; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[TMP1]], 1
-; CHECK-NEXT:    [[XTRAITER:%.*]] = and i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp ult i32 [[TMP1]], 1
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[FOR_END_UNR_LCSSA:.*]], label %[[ENTRY_NEW:.*]]
-; CHECK:       [[ENTRY_NEW]]:
-; CHECK-NEXT:    [[UNROLL_ITER:%.*]] = sub i32 [[TMP2]], [[XTRAITER]]
 ; CHECK-NEXT:    br label %[[FOR_BODY:.*]]
 ; CHECK:       [[FOR_BODY]]:
-; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 2, %[[ENTRY_NEW]] ], [ [[NEXT_1:%.*]], %[[FOR_BODY]] ]
-; CHECK-NEXT:    [[NITER:%.*]] = phi i32 [ 0, %[[ENTRY_NEW]] ], [ [[NITER_NEXT_1:%.*]], %[[FOR_BODY]] ]
+; CHECK-NEXT:    [[INDVAR:%.*]] = phi i32 [ 2, %[[ENTRY]] ], [ [[NEXT_1:%.*]], %[[FOR_BODY_1:.*]] ]
 ; CHECK-NEXT:    [[NEXT:%.*]] = add nsw i32 [[INDVAR]], [[INC]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[NEXT]], 2
+; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[FOR_END:.*]], label %[[FOR_BODY_1]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK:       [[FOR_BODY_1]]:
 ; CHECK-NEXT:    [[NEXT_1]] = add nsw i32 [[NEXT]], [[INC]]
-; CHECK-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER]], 2
-; CHECK-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; CHECK-NEXT:    br i1 [[NITER_NCMP_1]], label %[[FOR_END_UNR_LCSSA_LOOPEXIT:.*]], label %[[FOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; CHECK:       [[FOR_END_UNR_LCSSA_LOOPEXIT]]:
-; CHECK-NEXT:    br label %[[FOR_END_UNR_LCSSA]]
-; CHECK:       [[FOR_END_UNR_LCSSA]]:
-; CHECK-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
-; CHECK-NEXT:    br i1 [[LCMP_MOD]], label %[[FOR_BODY_EPIL_PREHEADER:.*]], label %[[FOR_END:.*]]
-; CHECK:       [[FOR_BODY_EPIL_PREHEADER]]:
-; CHECK-NEXT:    br label %[[FOR_BODY_EPIL:.*]]
-; CHECK:       [[FOR_BODY_EPIL]]:
-; CHECK-NEXT:    br label %[[FOR_END]]
+; CHECK-NEXT:    [[EXITCOND_1:%.*]] = icmp eq i32 [[NEXT_1]], 2
+; CHECK-NEXT:    br i1 [[EXITCOND_1]], label %[[FOR_END]], label %[[FOR_BODY]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -53,5 +37,7 @@ for.end:
 !0 = !{!0, !{!"llvm.loop.unroll.count", i32 2}}
 ;.
 ; CHECK: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]]}
-; CHECK: [[META1]] = !{!"llvm.loop.unroll.disable"}
+; CHECK: [[META1]] = !{!"llvm.loop.unroll.count", i32 2}
+; CHECK: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}
+; CHECK: [[META3]] = !{!"llvm.loop.unroll.disable"}
 ;.
