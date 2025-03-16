@@ -83,9 +83,9 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             [
                 "IntsUnorderedSet",
                 "size=5 {",
-                "\[\d\] = 5",
-                "\[\d\] = 3",
-                "\[\d\] = 2",
+                r"\[\d\] = 5",
+                r"\[\d\] = 3",
+                r"\[\d\] = 2",
             ],
         )
 
@@ -94,9 +94,9 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             [
                 "StringsUnorderedSet",
                 "size=5 {",
-                '\[\d\] = "is"',
-                '\[\d\] = "world"',
-                '\[\d\] = "hello"',
+                r'\[\d\] = "is"',
+                r'\[\d\] = "world"',
+                r'\[\d\] = "hello"',
             ],
         )
 
@@ -105,9 +105,9 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             [
                 "IntsUnorderedMultiSet",
                 "size=6 {",
-                "(\[\d\] = 3(\\n|.)+){3}",
-                "\[\d\] = 2",
-                "\[\d\] = 1",
+                "(\\[\\d\\] = 3(\\n|.)+){3}",
+                r"\[\d\] = 2",
+                r"\[\d\] = 1",
             ],
         )
 
@@ -116,8 +116,8 @@ class GenericUnorderedDataFormatterTestCase(TestBase):
             [
                 "StringsUnorderedMultiSet",
                 "size=5 {",
-                '(\[\d\] = "is"(\\n|.)+){2}',
-                '(\[\d\] = "world"(\\n|.)+){2}',
+                '(\\[\\d\\] = "is"(\\n|.)+){2}',
+                '(\\[\\d\\] = "world"(\\n|.)+){2}',
             ],
         )
 

@@ -810,6 +810,11 @@ RISCVRegisterInfo::getRegisterCostTableIndex(const MachineFunction &MF) const {
              : 0;
 }
 
+float RISCVRegisterInfo::getSpillWeightScaleFactor(
+    const TargetRegisterClass *RC) const {
+  return getRegClassWeight(RC).RegWeight;
+}
+
 // Add two address hints to improve chances of being able to use a compressed
 // instruction.
 bool RISCVRegisterInfo::getRegAllocationHints(

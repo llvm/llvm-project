@@ -585,7 +585,7 @@ static void updateLiveness(MachineFunction &MF) {
       for (MachineBasicBlock &MBB : MF) {
         if (Visited.count(&MBB))
           continue;
-        MCPhysReg DstReg = I.getDstReg();
+        MCRegister DstReg = I.getDstReg();
         if (!MBB.isLiveIn(DstReg))
           MBB.addLiveIn(DstReg);
       }

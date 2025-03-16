@@ -1138,7 +1138,7 @@ void ARMTargetELFStreamer::finish() {
   // section from making the whole .text section non-execute-only, we
   // mark it execute-only if it is empty and there is at least one
   // execute-only section in the object.
-  MCContext &Ctx = getStreamer().getContext();
+  MCContext &Ctx = getContext();
   auto &Asm = getStreamer().getAssembler();
   if (any_of(Asm, [](const MCSection &Sec) {
         return cast<MCSectionELF>(Sec).getFlags() & ELF::SHF_ARM_PURECODE;

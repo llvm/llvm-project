@@ -558,6 +558,11 @@ namespace DeleteThis {
   }
   static_assert(super_secret_double_delete()); // both-error {{not an integral constant expression}} \
                                                // both-note {{in call to 'super_secret_double_delete()'}}
+
+  struct B {
+    constexpr void reset() { delete this; }
+  };
+  static_assert(((new B)->reset(), true));
 }
 
 namespace CastedDelete {

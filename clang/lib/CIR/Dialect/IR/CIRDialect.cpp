@@ -18,6 +18,7 @@
 #include "mlir/Support/LogicalResult.h"
 
 #include "clang/CIR/Dialect/IR/CIROpsDialect.cpp.inc"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.cpp.inc"
 
 using namespace mlir;
 using namespace cir;
@@ -115,6 +116,24 @@ static void printOmittedTerminatorRegion(mlir::OpAsmPrinter &printer,
   printer.printRegion(region,
                       /*printEntryBlockArgs=*/false,
                       /*printBlockTerminators=*/!omitRegionTerm(region));
+}
+
+//===----------------------------------------------------------------------===//
+// AllocaOp
+//===----------------------------------------------------------------------===//
+
+void cir::AllocaOp::build(mlir::OpBuilder &odsBuilder,
+                          mlir::OperationState &odsState, mlir::Type addr,
+                          mlir::Type allocaType, llvm::StringRef name,
+                          mlir::IntegerAttr alignment) {
+  odsState.addAttribute(getAllocaTypeAttrName(odsState.name),
+                        mlir::TypeAttr::get(allocaType));
+  odsState.addAttribute(getNameAttrName(odsState.name),
+                        odsBuilder.getStringAttr(name));
+  if (alignment) {
+    odsState.addAttribute(getAlignmentAttrName(odsState.name), alignment);
+  }
+  odsState.addTypes(addr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -250,6 +269,19 @@ LogicalResult cir::ScopeOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// BrOp
+//===----------------------------------------------------------------------===//
+
+mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
+  assert(index == 0 && "invalid successor index");
+  return mlir::SuccessorOperands(getDestOperandsMutable());
+}
+
+Block *cir::BrOp::getSuccessorForOperands(ArrayRef<Attribute>) {
+  return getDest();
+}
+
+//===----------------------------------------------------------------------===//
 // GlobalOp
 //===----------------------------------------------------------------------===//
 
@@ -279,11 +311,16 @@ mlir::LogicalResult cir::GlobalOp::verify() {
 }
 
 void cir::GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                          llvm::StringRef sym_name, mlir::Type sym_type) {
+                          llvm::StringRef sym_name, mlir::Type sym_type,
+                          cir::GlobalLinkageKind linkage) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
                         mlir::TypeAttr::get(sym_type));
+
+  cir::GlobalLinkageKindAttr linkageAttr =
+      cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
+  odsState.addAttribute(getLinkageAttrName(odsState.name), linkageAttr);
 }
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, cir::GlobalOp op,

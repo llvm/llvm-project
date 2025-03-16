@@ -20,7 +20,7 @@ define amdgpu_ps void @main(i32 %0, float %1) {
 ; ISA:       ; %bb.0: ; %start
 ; ISA-NEXT:    v_readfirstlane_b32 s0, v0
 ; ISA-NEXT:    s_mov_b32 m0, s0
-; ISA-NEXT:    s_mov_b32 s8, 0
+; ISA-NEXT:    s_mov_b32 s10, 0
 ; ISA-NEXT:    v_interp_p1_f32_e32 v0, v1, attr0.x
 ; ISA-NEXT:    v_cmp_nlt_f32_e32 vcc, 0, v0
 ; ISA-NEXT:    s_mov_b64 s[0:1], 0
@@ -29,32 +29,33 @@ define amdgpu_ps void @main(i32 %0, float %1) {
 ; ISA-NEXT:    s_branch .LBB0_3
 ; ISA-NEXT:  .LBB0_1: ; %Flow1
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; ISA-NEXT:    s_or_b64 exec, exec, s[6:7]
-; ISA-NEXT:    s_mov_b64 s[6:7], 0
+; ISA-NEXT:    s_or_b64 exec, exec, s[4:5]
+; ISA-NEXT:    s_mov_b64 s[8:9], 0
+; ISA-NEXT:    s_mov_b64 s[4:5], s[6:7]
 ; ISA-NEXT:  .LBB0_2: ; %Flow
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; ISA-NEXT:    s_and_b64 s[10:11], exec, s[4:5]
-; ISA-NEXT:    s_or_b64 s[0:1], s[10:11], s[0:1]
+; ISA-NEXT:    s_and_b64 s[6:7], exec, s[4:5]
+; ISA-NEXT:    s_or_b64 s[0:1], s[6:7], s[0:1]
 ; ISA-NEXT:    s_andn2_b64 s[2:3], s[2:3], exec
-; ISA-NEXT:    s_and_b64 s[6:7], s[6:7], exec
+; ISA-NEXT:    s_and_b64 s[6:7], s[8:9], exec
 ; ISA-NEXT:    s_or_b64 s[2:3], s[2:3], s[6:7]
 ; ISA-NEXT:    s_andn2_b64 exec, exec, s[0:1]
 ; ISA-NEXT:    s_cbranch_execz .LBB0_6
 ; ISA-NEXT:  .LBB0_3: ; %loop
 ; ISA-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; ISA-NEXT:    s_or_b64 s[4:5], s[4:5], exec
-; ISA-NEXT:    s_cmp_lt_u32 s8, 32
 ; ISA-NEXT:    s_mov_b64 s[6:7], -1
+; ISA-NEXT:    s_cmp_lt_u32 s10, 32
+; ISA-NEXT:    s_mov_b64 s[8:9], -1
 ; ISA-NEXT:    s_cbranch_scc0 .LBB0_2
 ; ISA-NEXT:  ; %bb.4: ; %endif1
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; ISA-NEXT:    s_mov_b64 s[4:5], -1
-; ISA-NEXT:    s_and_saveexec_b64 s[6:7], vcc
+; ISA-NEXT:    s_and_saveexec_b64 s[4:5], vcc
 ; ISA-NEXT:    s_cbranch_execz .LBB0_1
 ; ISA-NEXT:  ; %bb.5: ; %endif2
 ; ISA-NEXT:    ; in Loop: Header=BB0_3 Depth=1
-; ISA-NEXT:    s_add_i32 s8, s8, 1
-; ISA-NEXT:    s_xor_b64 s[4:5], exec, -1
+; ISA-NEXT:    s_add_i32 s10, s10, 1
+; ISA-NEXT:    s_xor_b64 s[6:7], exec, -1
 ; ISA-NEXT:    s_branch .LBB0_1
 ; ISA-NEXT:  .LBB0_6: ; %Flow2
 ; ISA-NEXT:    s_or_b64 exec, exec, s[0:1]
@@ -77,7 +78,7 @@ loop:                                             ; preds = %Flow, %start
   br i1 %2, label %endif1, label %Flow
 
 Flow1:                                            ; preds = %endif2, %endif1
-  %3 = phi i32 [ %v5, %endif2 ], [ undef, %endif1 ]
+  %3 = phi i32 [ %v5, %endif2 ], [ poison, %endif1 ]
   %4 = phi i1 [ false, %endif2 ], [ true, %endif1 ]
   br label %Flow
 
@@ -106,7 +107,7 @@ endif1:                                           ; preds = %loop
   br i1 %5, label %endif2, label %Flow1
 
 Flow:                                             ; preds = %Flow1, %loop
-  %6 = phi i32 [ %3, %Flow1 ], [ undef, %loop ]
+  %6 = phi i32 [ %3, %Flow1 ], [ poison, %loop ]
   %7 = phi i1 [ %4, %Flow1 ], [ true, %loop ]
   %8 = phi i1 [ false, %Flow1 ], [ true, %loop ]
   br i1 %7, label %Flow2, label %loop
