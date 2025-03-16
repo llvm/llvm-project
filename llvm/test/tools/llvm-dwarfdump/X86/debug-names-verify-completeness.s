@@ -1,4 +1,4 @@
-# RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj -o - | not llvm-dwarfdump -verify --verify-num-threads 1  - | FileCheck %s
+# RUN: llvm-mc -triple x86_64-pc-linux %s -filetype=obj -o - | not llvm-dwarfdump -verify - | FileCheck %s
 
 # CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_namespace) with name namesp missing.
 # CHECK: error: Name Index @ 0x0: Entry for DIE @ {{.*}} (DW_TAG_variable) with name var_block_addr missing.
