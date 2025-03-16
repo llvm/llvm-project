@@ -99,6 +99,7 @@ Improvements to clang-tidy
 
 New checks
 ^^^^^^^^^^
+
 - New :doc:`bugprone-unintended-char-ostream-output
   <clang-tidy/checks/bugprone/unintended-char-ostream-output>` check.
 
