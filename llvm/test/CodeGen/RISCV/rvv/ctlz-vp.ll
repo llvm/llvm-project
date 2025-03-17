@@ -2585,8 +2585,7 @@ define <vscale x 1 x i9> @vp_ctlz_nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i1
 ; CHECK-NEXT:    vrsub.vx v8, v8, a0, v0.t
 ; CHECK-NEXT:    li a0, 16
 ; CHECK-NEXT:    vminu.vx v8, v8, a0, v0.t
-; CHECK-NEXT:    li a0, 7
-; CHECK-NEXT:    vsub.vx v8, v8, a0, v0.t
+; CHECK-NEXT:    vadd.vi v8, v8, -7, v0.t
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlz_nxv1i9:
@@ -2595,8 +2594,7 @@ define <vscale x 1 x i9> @vp_ctlz_nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i1
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
 ; CHECK-ZVBB-NEXT:    vand.vx v8, v8, a1, v0.t
 ; CHECK-ZVBB-NEXT:    vclz.v v8, v8, v0.t
-; CHECK-ZVBB-NEXT:    li a0, 7
-; CHECK-ZVBB-NEXT:    vsub.vx v8, v8, a0, v0.t
+; CHECK-ZVBB-NEXT:    vadd.vi v8, v8, -7, v0.t
 ; CHECK-ZVBB-NEXT:    ret
   %v = call <vscale x 1 x i9> @llvm.vp.ctlz.nxv1i9(<vscale x 1 x i9> %va, i1 false, <vscale x 1 x i1> %m, i32 %evl)
   ret <vscale x 1 x i9> %v
@@ -2744,13 +2742,12 @@ define <vscale x 1 x i9> @vp_ctlo_zero_nxv1i9_unpredicated_ctlz_with_vp_xor(<vsc
 ; CHECK-NEXT:    li a0, 142
 ; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
 ; CHECK-NEXT:    vand.vx v8, v8, a1
-; CHECK-NEXT:    li a1, 16
 ; CHECK-NEXT:    vfwcvt.f.xu.v v9, v8
 ; CHECK-NEXT:    vnsrl.wi v8, v9, 23
 ; CHECK-NEXT:    vrsub.vx v8, v8, a0
-; CHECK-NEXT:    vminu.vx v8, v8, a1
-; CHECK-NEXT:    li a0, 7
-; CHECK-NEXT:    vsub.vx v8, v8, a0
+; CHECK-NEXT:    li a0, 16
+; CHECK-NEXT:    vminu.vx v8, v8, a0
+; CHECK-NEXT:    vadd.vi v8, v8, -7
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-ZVBB-LABEL: vp_ctlo_zero_nxv1i9_unpredicated_ctlz_with_vp_xor:
@@ -2761,8 +2758,7 @@ define <vscale x 1 x i9> @vp_ctlo_zero_nxv1i9_unpredicated_ctlz_with_vp_xor(<vsc
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
 ; CHECK-ZVBB-NEXT:    vand.vx v8, v8, a1
 ; CHECK-ZVBB-NEXT:    vclz.v v8, v8
-; CHECK-ZVBB-NEXT:    li a0, 7
-; CHECK-ZVBB-NEXT:    vsub.vx v8, v8, a0
+; CHECK-ZVBB-NEXT:    vadd.vi v8, v8, -7
 ; CHECK-ZVBB-NEXT:    ret
   %va.not = call <vscale x 1 x i9> @llvm.vp.xor.nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i9> splat (i9 -1), <vscale x 1 x i1> %m, i32 %evl)
   %v = call <vscale x 1 x i9> @llvm.ctlz(<vscale x 1 x i9> %va.not, i1 false)

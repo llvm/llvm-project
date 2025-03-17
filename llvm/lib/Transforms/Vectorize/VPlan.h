@@ -441,9 +441,7 @@ public:
   bool mayHaveSideEffects() const;
 
   /// Returns true for PHI-like recipes.
-  bool isPhi() const {
-    return getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC;
-  }
+  bool isPhi() const;
 
   /// Returns true if the recipe may read from memory.
   bool mayReadFromMemory() const;
@@ -879,9 +877,8 @@ public:
     // Returns a scalar boolean value, which is true if any lane of its (only
     // boolean) vector operand is true.
     AnyOf,
-    // Extracts the first active lane of a vector, where the first operand is
-    // the predicate, and the second operand is the vector to extract.
-    ExtractFirstActive,
+    // Calculates the first active lane index of the vector predicate operand.
+    FirstActiveLane,
   };
 
 private:
@@ -1641,10 +1638,8 @@ public:
 class VPHeaderPHIRecipe : public VPSingleDefRecipe {
 protected:
   VPHeaderPHIRecipe(unsigned char VPDefID, Instruction *UnderlyingInstr,
-                    VPValue *Start = nullptr, DebugLoc DL = {})
-      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>(), UnderlyingInstr, DL) {
-    if (Start)
-      addOperand(Start);
+                    VPValue *Start, DebugLoc DL = {})
+      : VPSingleDefRecipe(VPDefID, ArrayRef<VPValue *>({Start}), UnderlyingInstr, DL) {
   }
 
 public:
@@ -1872,45 +1867,6 @@ public:
   /// take place.
   VPValue *getFirstUnrolledPartOperand() {
     return getUnrollPart(*this) == 0 ? this : getOperand(2);
-  }
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the recipe.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-#endif
-};
-
-/// Recipe to generate a scalar PHI. Used to generate code for recipes that
-/// produce scalar header phis, including VPCanonicalIVPHIRecipe and
-/// VPEVLBasedIVPHIRecipe.
-class VPScalarPHIRecipe : public VPHeaderPHIRecipe {
-  std::string Name;
-
-public:
-  VPScalarPHIRecipe(VPValue *Start, VPValue *BackedgeValue, DebugLoc DL,
-                    StringRef Name)
-      : VPHeaderPHIRecipe(VPDef::VPScalarPHISC, nullptr, Start, DL),
-        Name(Name.str()) {
-    addOperand(BackedgeValue);
-  }
-
-  ~VPScalarPHIRecipe() override = default;
-
-  VPScalarPHIRecipe *clone() override {
-    llvm_unreachable("cloning not implemented yet");
-  }
-
-  VP_CLASSOF_IMPL(VPDef::VPScalarPHISC)
-
-  /// Generate the phi/select nodes.
-  void execute(VPTransformState &State) override;
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    return true;
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -3750,19 +3706,6 @@ public:
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-struct VPlanIngredient {
-  const Value *V;
-
-  VPlanIngredient(const Value *V) : V(V) {}
-
-  void print(raw_ostream &O) const;
-};
-
-inline raw_ostream &operator<<(raw_ostream &OS, const VPlanIngredient &I) {
-  I.print(OS);
-  return OS;
-}
-
 inline raw_ostream &operator<<(raw_ostream &OS, const VPlan &Plan) {
   Plan.print(OS);
   return OS;

@@ -41,6 +41,7 @@ exit:
 ;--- profile_ok.yaml
 Contexts:
   - Guid: 1234 
+    TotalRootEntryCount: 2
     Counters: [2, 2, 1, 2]
 
 ;--- message_pump.ll
@@ -64,6 +65,7 @@ exit:
 ;--- profile_pump.yaml
 Contexts:
   - Guid: 1234
+    TotalRootEntryCount: 2
     Counters: [2, 10, 0]
 
 ;--- unreachable.ll
@@ -88,4 +90,5 @@ exit:
 ;--- profile_unreachable.yaml
 Contexts:
   - Guid: 1234
+    TotalRootEntryCount: 2
     Counters: [2, 1, 1, 2]

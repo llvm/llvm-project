@@ -4047,6 +4047,12 @@ struct OmpBindClause {
   WRAPPER_CLASS_BOILERPLATE(OmpBindClause, Binding);
 };
 
+// Artificial clause to represent a cancellable construct.
+struct OmpCancellationConstructTypeClause {
+  TUPLE_CLASS_BOILERPLATE(OmpCancellationConstructTypeClause);
+  std::tuple<OmpDirectiveName, std::optional<ScalarLogicalExpr>> t;
+};
+
 // Ref: [5.2:214]
 //
 // contains-clause ->
@@ -4263,12 +4269,10 @@ struct OmpInitializerProc {
   TUPLE_CLASS_BOILERPLATE(OmpInitializerProc);
   std::tuple<ProcedureDesignator, std::list<ActualArgSpec>> t;
 };
-WRAPPER_CLASS(OmpInitializerExpr, Expr);
-
 // Initialization for declare reduction construct
 struct OmpInitializerClause {
   UNION_CLASS_BOILERPLATE(OmpInitializerClause);
-  std::variant<OmpInitializerProc, OmpInitializerExpr> u;
+  std::variant<OmpInitializerProc, AssignmentStmt> u;
 };
 
 // Ref: [4.5:199-201], [5.0:288-290], [5.1:321-322], [5.2:115-117]
@@ -4859,26 +4863,18 @@ struct OmpLoopDirective {
   CharBlock source;
 };
 
-// 2.14.1 construct-type-clause -> PARALLEL | SECTIONS | DO | TASKGROUP
-struct OmpCancelType {
-  ENUM_CLASS(Type, Parallel, Sections, Do, Taskgroup)
-  WRAPPER_CLASS_BOILERPLATE(OmpCancelType, Type);
-  CharBlock source;
-};
-
 // 2.14.2 cancellation-point -> CANCELLATION POINT construct-type-clause
 struct OpenMPCancellationPointConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPCancellationPointConstruct);
   CharBlock source;
-  std::tuple<Verbatim, OmpCancelType> t;
+  std::tuple<Verbatim, OmpClauseList> t;
 };
 
 // 2.14.1 cancel -> CANCEL construct-type-clause [ [,] if-clause]
 struct OpenMPCancelConstruct {
   TUPLE_CLASS_BOILERPLATE(OpenMPCancelConstruct);
-  WRAPPER_CLASS(If, ScalarLogicalExpr);
   CharBlock source;
-  std::tuple<Verbatim, OmpCancelType, std::optional<If>> t;
+  std::tuple<Verbatim, OmpClauseList> t;
 };
 
 // Ref: [5.0:254-255], [5.1:287-288], [5.2:322-323]

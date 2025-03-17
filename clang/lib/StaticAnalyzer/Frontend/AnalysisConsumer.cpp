@@ -32,10 +32,10 @@
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
+#include "clang/StaticAnalyzer/Core/PathSensitive/EntryPointStats.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
@@ -51,17 +51,18 @@ using namespace ento;
 
 #define DEBUG_TYPE "AnalysisConsumer"
 
-STATISTIC(NumFunctionTopLevel, "The # of functions at top level.");
-STATISTIC(NumFunctionsAnalyzed,
-                      "The # of functions and blocks analyzed (as top level "
-                      "with inlining turned on).");
-STATISTIC(NumBlocksInAnalyzedFunctions,
-                      "The # of basic blocks in the analyzed functions.");
-STATISTIC(NumVisitedBlocksInAnalyzedFunctions,
-          "The # of visited basic blocks in the analyzed functions.");
-STATISTIC(PercentReachableBlocks, "The % of reachable basic blocks.");
-STATISTIC(MaxCFGSize, "The maximum number of basic blocks in a function.");
-
+STAT_COUNTER(NumFunctionTopLevel, "The # of functions at top level.");
+ALWAYS_ENABLED_STATISTIC(NumFunctionsAnalyzed,
+                         "The # of functions and blocks analyzed (as top level "
+                         "with inlining turned on).");
+ALWAYS_ENABLED_STATISTIC(NumBlocksInAnalyzedFunctions,
+                         "The # of basic blocks in the analyzed functions.");
+ALWAYS_ENABLED_STATISTIC(
+    NumVisitedBlocksInAnalyzedFunctions,
+    "The # of visited basic blocks in the analyzed functions.");
+ALWAYS_ENABLED_STATISTIC(PercentReachableBlocks,
+                         "The % of reachable basic blocks.");
+STAT_MAX(MaxCFGSize, "The maximum number of basic blocks in a function.");
 //===----------------------------------------------------------------------===//
 // AnalysisConsumer declaration.
 //===----------------------------------------------------------------------===//
@@ -128,7 +129,9 @@ public:
         PP(CI.getPreprocessor()), OutDir(outdir), Opts(opts), Plugins(plugins),
         Injector(std::move(injector)), CTU(CI),
         MacroExpansions(CI.getLangOpts()) {
+    EntryPointStat::lockRegistry();
     DigestAnalyzerOptions();
+
     if (Opts.AnalyzerDisplayProgress || Opts.PrintStats ||
         Opts.ShouldSerializeStats) {
       AnalyzerTimers = std::make_unique<llvm::TimerGroup>(
@@ -653,6 +656,10 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
     PercentReachableBlocks =
         (FunctionSummaries.getTotalNumVisitedBasicBlocks() * 100) /
         NumBlocksInAnalyzedFunctions;
+
+  if (!Opts.DumpEntryPointStatsToCSV.empty()) {
+    EntryPointStat::dumpStatsAsCSV(Opts.DumpEntryPointStatsToCSV);
+  }
 }
 
 AnalysisConsumer::AnalysisMode
@@ -687,6 +694,8 @@ AnalysisConsumer::getModeForDecl(Decl *D, AnalysisMode Mode) {
 
   return Mode;
 }
+
+static UnsignedEPStat PathRunningTime("PathRunningTime");
 
 void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
                                   ExprEngine::InliningModes IMode,
@@ -732,6 +741,7 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
 
   if ((Mode & AM_Path) && checkerMgr->hasPathSensitiveCheckers()) {
     RunPathSensitiveChecks(D, IMode, VisitedCallees);
+    EntryPointStat::takeSnapshot(D);
     if (IMode != ExprEngine::Inline_Minimal)
       NumFunctionsAnalyzed++;
   }

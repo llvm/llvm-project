@@ -119,7 +119,7 @@ bool MCAssembler::isThumbFunc(const MCSymbol *Symbol) const {
   const MCExpr *Expr = Symbol->getVariableValue();
 
   MCValue V;
-  if (!Expr->evaluateAsRelocatable(V, nullptr, nullptr))
+  if (!Expr->evaluateAsRelocatable(V, nullptr))
     return false;
 
   if (V.getSymB() || V.getRefKind() != MCSymbolRefExpr::VK_None)
@@ -155,7 +155,7 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
   MCContext &Ctx = getContext();
   Value = 0;
   WasForced = false;
-  if (!Expr->evaluateAsRelocatable(Target, this, &Fixup)) {
+  if (!Expr->evaluateAsRelocatable(Target, this)) {
     Ctx.reportError(Fixup.getLoc(), "expected relocatable expression");
     return true;
   }
@@ -220,11 +220,18 @@ bool MCAssembler::evaluateFixup(const MCFixup &Fixup, const MCFragment *DF,
     Value -= Offset;
   }
 
-  // Let the backend force a relocation if needed.
-  if (IsResolved &&
-      getBackend().shouldForceRelocation(*this, Fixup, Target, Value, STI)) {
-    IsResolved = false;
-    WasForced = true;
+  // .reloc directive and the backend might force the relocation.
+  // Backends that customize shouldForceRelocation generally just need the fixup
+  // kind. AVR needs the fixup value to bypass the assembly time overflow with a
+  // relocation.
+  if (IsResolved) {
+    auto TargetVal = MCValue::get(Target.getSymA(), Target.getSymB(), Value,
+                                  Target.getRefKind());
+    if (Fixup.getKind() >= FirstLiteralRelocationKind ||
+        getBackend().shouldForceRelocation(*this, Fixup, TargetVal, STI)) {
+      IsResolved = false;
+      WasForced = true;
+    }
   }
 
   // A linker relaxation target may emit ADD/SUB relocations for A-B+C. Let
