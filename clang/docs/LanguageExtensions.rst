@@ -1964,8 +1964,13 @@ Constexpr strings in GNU ASM statememts
 
 In C++11 mode (and greater), Clang supports specifying the template,
 constraints, and clobber strings with a parenthesized constant expression
-producing an object with ``data`` and ``size`` member functions,
-such as ``std::string``.
+producing an object with the following member functions
+
+.. code-block:: c++
+  constexpr const char* data() const;
+  constexpr size_t size() const;
+
+such as ``std::string``, ``std::string_view``, ``std::vector<char>``.
 
 Query for this feature with ``__has_extension(gnu_asm_constexpr_strings)``.
 

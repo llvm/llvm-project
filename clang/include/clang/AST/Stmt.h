@@ -3327,7 +3327,7 @@ public:
 
   const Expr *getAsmStringExpr() const { return AsmStr; }
   Expr *getAsmStringExpr() { return AsmStr; }
-  void setAsmString(Expr *E) { AsmStr = E; }
+  void setAsmStringExpr(Expr *E) { AsmStr = E; }
 
   std::string getAsmString() const;
 
