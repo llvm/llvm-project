@@ -2274,9 +2274,10 @@ static unsigned getPaddingDiagFromTagKind(TagTypeKind Tag) {
   }
 }
 
-void ItaniumRecordLayoutBuilder::CheckFieldPadding(
-    uint64_t Offset, uint64_t UnpaddedOffset, uint64_t UnpackedOffset,
-    unsigned UnpackedAlign, bool isPacked, const FieldDecl *D) {
+// Function based on ItaniumRecordLayoutBuilder::CheckFieldPadding.
+static void CheckFieldPadding(const ASTContext &Context, bool IsUnion,
+                              uint64_t Offset, uint64_t UnpaddedOffset,
+                              const FieldDecl *D) {
   // We let objc ivars without warning, objc interfaces generally are not used
   // for padding tricks.
   if (isa<ObjCIvarDecl>(D))
@@ -2300,7 +2301,8 @@ void ItaniumRecordLayoutBuilder::CheckFieldPadding(
     if (D->getIdentifier()) {
       auto Diagnostic = D->isBitField() ? diag::warn_padded_struct_bitfield
                                         : diag::warn_padded_struct_field;
-      Diag(D->getLocation(), Diagnostic)
+      Context.getDiagnostics().Report(D->getLocation(),
+                                      Diagnostic)
           << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
           << Context.getTypeDeclType(D->getParent()) << PadSize
           << (InBits ? 1 : 0) // (byte|bit)
@@ -2308,15 +2310,22 @@ void ItaniumRecordLayoutBuilder::CheckFieldPadding(
     } else {
       auto Diagnostic = D->isBitField() ? diag::warn_padded_struct_anon_bitfield
                                         : diag::warn_padded_struct_anon_field;
-      Diag(D->getLocation(), Diagnostic)
+      Context.getDiagnostics().Report(D->getLocation(),
+                                      Diagnostic)
           << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
           << Context.getTypeDeclType(D->getParent()) << PadSize
           << (InBits ? 1 : 0); // (byte|bit)
     }
- }
- if (isPacked && Offset != UnpackedOffset) {
-   HasPackedField = true;
- }
+  }
+}
+
+void ItaniumRecordLayoutBuilder::CheckFieldPadding(
+    uint64_t Offset, uint64_t UnpaddedOffset, uint64_t UnpackedOffset,
+    unsigned UnpackedAlign, bool isPacked, const FieldDecl *D) {
+  ::CheckFieldPadding(Context, IsUnion, Offset, UnpaddedOffset, D);
+  if (isPacked && Offset != UnpackedOffset) {
+    HasPackedField = true;
+  }
 }
 
 static const CXXMethodDecl *computeKeyFunction(ASTContext &Context,
@@ -2605,8 +2614,6 @@ public:
   void computeVtorDispSet(
       llvm::SmallPtrSetImpl<const CXXRecordDecl *> &HasVtorDispSet,
       const CXXRecordDecl *RD) const;
-  void CheckFieldPadding(uint64_t Offset, uint64_t UnpaddedOffset,
-                         const FieldDecl *D);
   const ASTContext &Context;
   EmptySubobjectMap *EmptySubobjects;
 
@@ -3008,8 +3015,8 @@ void MicrosoftRecordLayoutBuilder::layoutField(const FieldDecl *FD) {
   uint64_t UnpaddedFielddOffsetInBits =
       Context.toBits(DataSize) - RemainingBitsInField;
 
-  CheckFieldPadding(Context.toBits(FieldOffset), UnpaddedFielddOffsetInBits,
-                    FD);
+  ::CheckFieldPadding(Context, IsUnion, Context.toBits(FieldOffset),
+                      UnpaddedFielddOffsetInBits, FD);
 
   RemainingBitsInField = 0;
 
@@ -3064,8 +3071,8 @@ void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
     Size = FieldOffset + Info.Size;
     Alignment = std::max(Alignment, Info.Alignment);
     RemainingBitsInField = Context.toBits(Info.Size) - Width;
-    CheckFieldPadding(Context.toBits(FieldOffset), UnpaddedFieldOffsetInBits,
-                      FD);
+    ::CheckFieldPadding(Context, IsUnion, Context.toBits(FieldOffset),
+                      UnpaddedFieldOffsetInBits, FD);
   }
   DataSize = Size;
 }
@@ -3095,8 +3102,8 @@ MicrosoftRecordLayoutBuilder::layoutZeroWidthBitField(const FieldDecl *FD) {
     RemainingBitsInField = 0;
     Size = FieldOffset;
     Alignment = std::max(Alignment, Info.Alignment);
-    CheckFieldPadding(Context.toBits(FieldOffset), UnpaddedFieldOffsetInBits,
-                      FD);
+    ::CheckFieldPadding(Context, IsUnion, Context.toBits(FieldOffset),
+                      UnpaddedFieldOffsetInBits, FD);
   }
   DataSize = Size;
 }
@@ -3217,51 +3224,6 @@ void MicrosoftRecordLayoutBuilder::layoutVirtualBases(const CXXRecordDecl *RD) {
         ASTRecordLayout::VBaseInfo(BaseOffset, HasVtordisp)));
     Size = BaseOffset + BaseLayout.getNonVirtualSize();
     PreviousBaseLayout = &BaseLayout;
-  }
-}
-// Function based on ItaniumRecordLayoutBuilder::CheckFieldPadding.
-void MicrosoftRecordLayoutBuilder::CheckFieldPadding(uint64_t Offset,
-                                                     uint64_t UnpaddedOffset,
-                                                     const FieldDecl *D) {
-
-  // We let objc ivars without warning, objc interfaces generally are not used
-  // for padding tricks.
-  if (isa<ObjCIvarDecl>(D))
-    return;
-
-  // Don't warn about structs created without a SourceLocation.  This can
-  // be done by clients of the AST, such as codegen.
-  if (D->getLocation().isInvalid())
-    return;
-
-  unsigned CharBitNum = Context.getTargetInfo().getCharWidth();
-
-  // Warn if padding was introduced to the struct/class.
-  if (!IsUnion && Offset > UnpaddedOffset) {
-    unsigned PadSize = Offset - UnpaddedOffset;
-    bool InBits = true;
-    if (PadSize % CharBitNum == 0) {
-      PadSize = PadSize / CharBitNum;
-      InBits = false;
-    }
-    if (D->getIdentifier()) {
-      auto Diagnostic = D->isBitField() ? diag::warn_padded_struct_bitfield
-                                        : diag::warn_padded_struct_field;
-      Context.getDiagnostics().Report(D->getLocation(),
-                                      Diagnostic)
-          << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
-          << Context.getTypeDeclType(D->getParent()) << PadSize
-          << (InBits ? 1 : 0) // (byte|bit)
-          << D->getIdentifier();
-    } else {
-      auto Diagnostic = D->isBitField() ? diag::warn_padded_struct_anon_bitfield
-                                        : diag::warn_padded_struct_anon_field;
-      Context.getDiagnostics().Report(D->getLocation(),
-                                      Diagnostic)
-          << getPaddingDiagFromTagKind(D->getParent()->getTagKind())
-          << Context.getTypeDeclType(D->getParent()) << PadSize
-          << (InBits ? 1 : 0); // (byte|bit)
-    }
   }
 }
 
