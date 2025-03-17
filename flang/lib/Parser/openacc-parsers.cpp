@@ -236,7 +236,7 @@ TYPE_PARSER(construct<OpenACCBlockConstruct>(
     Parser<AccBeginBlockDirective>{} / endAccLine, block,
     // TODO: This still allows mismatched directives.
     recovery(withMessage("expected OpenACC end block directive"_err_en_US,
-                 Parser<AccEndBlockDirective>{} / endAccLine),
+                 attempt(Parser<AccEndBlockDirective>{} / endAccLine)),
         // TODO: Is there a simpler way to build this?
         sourced(construct<AccEndBlockDirective>(
             sourced(construct<AccBlockDirective>(
