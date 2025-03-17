@@ -64,6 +64,7 @@ add_math_entrypoint_object(atan2l)
 
 add_math_entrypoint_object(atanh)
 add_math_entrypoint_object(atanhf)
+add_math_entrypoint_object(atanhf16)
 
 add_math_entrypoint_object(canonicalize)
 add_math_entrypoint_object(canonicalizef)
