@@ -207,8 +207,8 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
   // through them while we iterate lines.
   llvm::stable_sort(ExpansionSubViews);
   llvm::stable_sort(InstantiationSubViews);
-  llvm::stable_sort(BranchSubViews);
-  llvm::stable_sort(MCDCSubViews);
+  // BranchSubViews is sorted.
+  // MCDCSubViews is sorted.
   auto NextESV = ExpansionSubViews.begin();
   auto EndESV = ExpansionSubViews.end();
   auto NextISV = InstantiationSubViews.begin();
