@@ -163,4 +163,13 @@ GetEnvironmentFromArguments(const llvm::json::Object &arguments) {
   return envs;
 }
 
+llvm::Error ToError(const lldb::SBError &error) {
+  if (error.Success())
+    return llvm::Error::success();
+
+  return llvm::createStringError(
+      std::error_code(error.GetError(), std::generic_category()),
+      error.GetCString());
+}
+
 } // namespace lldb_dap

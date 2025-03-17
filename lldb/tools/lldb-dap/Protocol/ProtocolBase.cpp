@@ -1,4 +1,4 @@
-//===-- Protocol.cpp ------------------------------------------------------===//
+//===-- ProtocolBase.cpp --------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "Protocol.h"
+#include "Protocol/ProtocolBase.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -29,8 +29,7 @@ static bool mapRaw(const json::Value &Params, StringLiteral Prop,
   return true;
 }
 
-namespace lldb_dap {
-namespace protocol {
+namespace lldb_dap::protocol {
 
 enum class MessageType { request, response, event };
 
@@ -61,8 +60,8 @@ json::Value toJSON(const Request &R) {
       {"command", R.command},
   };
 
-  if (R.rawArguments)
-    Result.insert({"arguments", R.rawArguments});
+  if (R.arguments)
+    Result.insert({"arguments", R.arguments});
 
   return std::move(Result);
 }
@@ -92,7 +91,7 @@ bool fromJSON(json::Value const &Params, Request &R, json::Path P) {
     return false;
   }
 
-  return mapRaw(Params, "arguments", R.rawArguments, P);
+  return mapRaw(Params, "arguments", R.arguments, P);
 }
 
 json::Value toJSON(const Response &R) {
@@ -119,8 +118,8 @@ json::Value toJSON(const Response &R) {
     }
   }
 
-  if (R.rawBody)
-    Result.insert({"body", R.rawBody});
+  if (R.body)
+    Result.insert({"body", R.body});
 
   return std::move(Result);
 }
@@ -176,7 +175,7 @@ bool fromJSON(json::Value const &Params, Response &R, json::Path P) {
   }
 
   return O.map("success", R.success) && O.mapOptional("message", R.message) &&
-         mapRaw(Params, "body", R.rawBody, P);
+         mapRaw(Params, "body", R.body, P);
 }
 
 json::Value toJSON(const ErrorMessage &EM) {
@@ -216,8 +215,8 @@ json::Value toJSON(const Event &E) {
       {"event", E.event},
   };
 
-  if (E.rawBody)
-    Result.insert({"body", E.rawBody});
+  if (E.body)
+    Result.insert({"body", E.body});
 
   return std::move(Result);
 }
@@ -247,7 +246,7 @@ bool fromJSON(json::Value const &Params, Event &E, json::Path P) {
     return false;
   }
 
-  return mapRaw(Params, "body", E.rawBody, P);
+  return mapRaw(Params, "body", E.body, P);
 }
 
 bool fromJSON(const json::Value &Params, Message &PM, json::Path P) {
@@ -287,5 +286,4 @@ json::Value toJSON(const Message &M) {
   return std::visit([](auto &M) { return toJSON(M); }, M);
 }
 
-} // namespace protocol
-} // namespace lldb_dap
+} // namespace lldb_dap::protocol
