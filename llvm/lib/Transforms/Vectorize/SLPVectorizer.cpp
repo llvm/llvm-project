@@ -795,7 +795,7 @@ isFixedVectorShuffle(ArrayRef<Value *> VL, SmallVectorImpl<int> &Mask,
 }
 
 /// \returns True if Extract{Value,Element} instruction extracts element Idx.
-static std::optional<unsigned> getExtractIndex(Instruction *E) {
+static std::optional<unsigned> getExtractIndex(const Instruction *E) {
   unsigned Opcode = E->getOpcode();
   assert((Opcode == Instruction::ExtractElement ||
           Opcode == Instruction::ExtractValue) &&
@@ -22691,37 +22691,36 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
             return NodeI1->getDFSNumIn() < NodeI2->getDFSNumIn();
           InstructionsState S = getSameOpcode({I1, I2}, *TLI);
           if (S && !S.isAltShuffle()) {
-            if (!isa<ExtractElementInst>(I1) || !isa<ExtractElementInst>(I2))
+            const auto *E1 = dyn_cast<ExtractElementInst>(I1);
+            const auto *E2 = dyn_cast<ExtractElementInst>(I2);
+            if (!E1 || !E2)
               continue;
 
-            auto E1 = cast<ExtractElementInst>(I1);
-            auto E2 = cast<ExtractElementInst>(I2);
             // Sort on ExtractElementInsts primarily by vector operands. Prefer
-            // program order of the vector operands
+            // program order of the vector operands.
             if (E1->getVectorOperand() != E2->getVectorOperand()) {
-              Instruction *V1 = dyn_cast<Instruction>(E1->getVectorOperand());
-              Instruction *V2 = dyn_cast<Instruction>(E2->getVectorOperand());
+              const Instruction *V1 =
+                  dyn_cast<Instruction>(E1->getVectorOperand());
+              const Instruction *V2 =
+                  dyn_cast<Instruction>(E2->getVectorOperand());
               if (!V1 || !V2)
                 continue;
               if (V1->getParent() != V2->getParent())
                 continue;
               return V1->comesBefore(V2);
             }
-            // If we have the same vector operand, try to sort by constant index
-            auto Id1 = E1->getIndexOperand();
-            auto Id2 = E2->getIndexOperand();
+            // If we have the same vector operand, try to sort by constant
+            // index.
+            std::optional<unsigned> Id1 = getExtractIndex(E1);
+            std::optional<unsigned> Id2 = getExtractIndex(E2);
             // Bring constants to the top
-            if (isa<ConstantInt>(Id1) && !isa<ConstantInt>(Id2))
+            if (Id1 && !Id2)
               return true;
-            if (!isa<ConstantInt>(Id1) && isa<ConstantInt>(Id2))
+            if (!Id1 && Id2)
               return false;
-            if (isa<ConstantInt>(Id1) && isa<ConstantInt>(Id2)) {
-              auto C1 = cast<ConstantInt>(Id1);
-              auto C2 = cast<ConstantInt>(Id2);
-              // First elements first
-              return C1->getValue().getZExtValue() <
-                     C2->getValue().getZExtValue();
-            }
+            // First elements come first.
+            if (Id1 && Id2)
+              return *Id1 < *Id2;
 
             continue;
           }
