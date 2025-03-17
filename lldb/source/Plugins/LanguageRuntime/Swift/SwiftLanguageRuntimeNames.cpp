@@ -130,11 +130,16 @@ AreFuncletsOfSameAsyncClosure(swift::Demangle::NodePointer closure1,
 
   // Because the tree is inverted, a parent closure (in swift code) is a child
   // *node* (in the demangle tree). Check that any such parents are identical.
-  NodePointer closure1_parent =
+  NodePointer explicit_closure1_parent =
       childAtPath(closure1, Node::Kind::ExplicitClosure);
-  NodePointer closure2_parent =
+  NodePointer explicit_closure2_parent =
       childAtPath(closure2, Node::Kind::ExplicitClosure);
-  if (!Node::deepEquals(closure1_parent, closure2_parent))
+  NodePointer implicit_closure1_parent =
+      childAtPath(closure1, Node::Kind::ImplicitClosure);
+  NodePointer implicit_closure2_parent =
+      childAtPath(closure2, Node::Kind::ImplicitClosure);
+  if (!Node::deepEquals(explicit_closure1_parent, explicit_closure2_parent) ||
+      !Node::deepEquals(implicit_closure1_parent, implicit_closure2_parent))
     return false;
 
   // If there are no ExplicitClosure as parents, there may still be a
