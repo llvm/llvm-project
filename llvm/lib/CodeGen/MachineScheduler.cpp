@@ -2032,10 +2032,11 @@ void BaseMemOpClusterMutation::clusterNeighboringMemOps(
     unsigned ClusterLength = 2;
     unsigned CurrentClusterBytes = MemOpa.Width.getValue().getKnownMinValue() +
                                    MemOpb.Width.getValue().getKnownMinValue();
-    if (SUnit2ClusterInfo.count(MemOpa.SU->NodeNum)) {
-      ClusterLength = SUnit2ClusterInfo[MemOpa.SU->NodeNum].first + 1;
-      CurrentClusterBytes = SUnit2ClusterInfo[MemOpa.SU->NodeNum].second +
-                            MemOpb.Width.getValue().getKnownMinValue();
+    auto It = SUnit2ClusterInfo.find(MemOpa.SU->NodeNum);
+    if (It != SUnit2ClusterInfo.end()) {
+      const auto &[Len, Bytes] = It->second;
+      ClusterLength = Len + 1;
+      CurrentClusterBytes = Bytes + MemOpb.Width.getValue().getKnownMinValue();
     }
 
     if (!TII->shouldClusterMemOps(MemOpa.BaseOps, MemOpa.Offset,
@@ -3968,8 +3969,7 @@ void GenericScheduler::reschedulePhysReg(SUnit *SU, bool isTop) {
   // Find already scheduled copies with a single physreg dependence and move
   // them just above the scheduled instruction.
   for (SDep &Dep : Deps) {
-    if (Dep.getKind() != SDep::Data ||
-        !Register::isPhysicalRegister(Dep.getReg()))
+    if (Dep.getKind() != SDep::Data || !Dep.getReg().isPhysical())
       continue;
     SUnit *DepSU = Dep.getSUnit();
     if (isTop ? DepSU->Succs.size() > 1 : DepSU->Preds.size() > 1)

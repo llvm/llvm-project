@@ -100,7 +100,6 @@ public:
   VEAsmBackend(const Target &T)
       : MCAsmBackend(llvm::endianness::little), TheTarget(T) {}
 
-  unsigned getNumFixupKinds() const override { return VE::NumTargetFixupKinds; }
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[VE::NumTargetFixupKinds] = {
@@ -126,13 +125,13 @@ public:
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) < VE::NumTargetFixupKinds &&
            "Invalid kind!");
     return Infos[Kind - FirstTargetFixupKind];
   }
 
   bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, const uint64_t,
+                             const MCValue &Target,
                              const MCSubtargetInfo *STI) override {
     switch ((VE::Fixups)Fixup.getKind()) {
     default:

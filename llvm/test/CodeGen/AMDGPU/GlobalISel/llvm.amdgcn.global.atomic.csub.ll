@@ -167,7 +167,7 @@ define amdgpu_kernel void @global_atomic_csub_sgpr_base_offset(ptr addrspace(1) 
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 1024
   %ret = call i32 @llvm.amdgcn.global.atomic.csub.p1(ptr addrspace(1) %gep, i32 %data)
-  store i32 %ret, ptr addrspace(1) undef
+  store i32 %ret, ptr addrspace(1) poison
   ret void
 }
 

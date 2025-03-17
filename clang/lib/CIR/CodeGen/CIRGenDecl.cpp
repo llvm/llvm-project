@@ -10,23 +10,29 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
+#include "mlir/IR/Location.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/CIR/MissingFeatures.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
-void CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
+CIRGenFunction::AutoVarEmission
+CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
   QualType ty = d.getType();
   if (ty.getAddressSpace() != LangAS::Default)
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarAlloca: address space");
 
-  auto loc = getLoc(d.getSourceRange());
+  mlir::Location loc = getLoc(d.getSourceRange());
 
-  if (d.isEscapingByref())
+  CIRGenFunction::AutoVarEmission emission(d);
+  emission.IsEscapingByRef = d.isEscapingByref();
+  if (emission.IsEscapingByRef)
     cgm.errorNYI(d.getSourceRange(),
                  "emitAutoVarDecl: decl escaping by reference");
 
@@ -46,21 +52,130 @@ void CIRGenFunction::emitAutoVarAlloca(const VarDecl &d) {
   address = createTempAlloca(allocaTy, alignment, loc, d.getName());
   declare(address.getPointer(), &d, ty, getLoc(d.getSourceRange()), alignment);
 
+  emission.Addr = address;
   setAddrOfLocalVar(&d, address);
+
+  return emission;
 }
 
-void CIRGenFunction::emitAutoVarInit(const clang::VarDecl &d) {
+/// Determine whether the given initializer is trivial in the sense
+/// that it requires no code to be generated.
+bool CIRGenFunction::isTrivialInitializer(const Expr *init) {
+  if (!init)
+    return true;
+
+  if (const CXXConstructExpr *construct = dyn_cast<CXXConstructExpr>(init))
+    if (CXXConstructorDecl *constructor = construct->getConstructor())
+      if (constructor->isTrivial() && constructor->isDefaultConstructor() &&
+          !construct->requiresZeroInitialization())
+        return true;
+
+  return false;
+}
+
+void CIRGenFunction::emitAutoVarInit(
+    const CIRGenFunction::AutoVarEmission &emission) {
+  assert(emission.Variable && "emission was not valid!");
+
+  // If this was emitted as a global constant, we're done.
+  if (emission.wasEmittedAsGlobal())
+    return;
+
+  const VarDecl &d = *emission.Variable;
+
   QualType type = d.getType();
 
   // If this local has an initializer, emit it now.
   const Expr *init = d.getInit();
 
-  if (init || !type.isPODType(getContext())) {
-    cgm.errorNYI(d.getSourceRange(), "emitAutoVarInit");
+  if (!type.isPODType(getContext())) {
+    cgm.errorNYI(d.getSourceRange(), "emitAutoVarInit: non-POD type");
+    return;
+  }
+
+  const Address addr = emission.Addr;
+
+  // Check whether this is a byref variable that's potentially
+  // captured and moved by its own initializer.  If so, we'll need to
+  // emit the initializer first, then copy into the variable.
+  assert(!cir::MissingFeatures::opAllocaCaptureByInit());
+
+  // Note: constexpr already initializes everything correctly.
+  LangOptions::TrivialAutoVarInitKind trivialAutoVarInit =
+      (d.isConstexpr()
+           ? LangOptions::TrivialAutoVarInitKind::Uninitialized
+           : (d.getAttr<UninitializedAttr>()
+                  ? LangOptions::TrivialAutoVarInitKind::Uninitialized
+                  : getContext().getLangOpts().getTrivialAutoVarInit()));
+
+  auto initializeWhatIsTechnicallyUninitialized = [&](Address addr) {
+    if (trivialAutoVarInit ==
+        LangOptions::TrivialAutoVarInitKind::Uninitialized)
+      return;
+
+    cgm.errorNYI(d.getSourceRange(), "emitAutoVarInit: trivial initialization");
+  };
+
+  if (isTrivialInitializer(init)) {
+    initializeWhatIsTechnicallyUninitialized(addr);
+    return;
+  }
+
+  mlir::Attribute constant;
+  if (emission.IsConstantAggregate ||
+      d.mightBeUsableInConstantExpressions(getContext())) {
+    // FIXME: Differently from LLVM we try not to emit / lower too much
+    // here for CIR since we are interested in seeing the ctor in some
+    // analysis later on. So CIR's implementation of ConstantEmitter will
+    // frequently return an empty Attribute, to signal we want to codegen
+    // some trivial ctor calls and whatnots.
+    constant = ConstantEmitter(*this).tryEmitAbstractForInitializer(d);
+    if (constant && !mlir::isa<cir::ZeroAttr>(constant) &&
+        (trivialAutoVarInit !=
+         LangOptions::TrivialAutoVarInitKind::Uninitialized)) {
+      cgm.errorNYI(d.getSourceRange(), "emitAutoVarInit: constant aggregate");
+      return;
+    }
+  }
+
+  // NOTE(cir): In case we have a constant initializer, we can just emit a
+  // store. But, in CIR, we wish to retain any ctor calls, so if it is a
+  // CXX temporary object creation, we ensure the ctor call is used deferring
+  // its removal/optimization to the CIR lowering.
+  if (!constant || isa<CXXTemporaryObjectExpr>(init)) {
+    initializeWhatIsTechnicallyUninitialized(addr);
+    LValue lv = LValue::makeAddr(addr, type);
+    emitExprAsInit(init, &d, lv);
+    // In case lv has uses it means we indeed initialized something
+    // out of it while trying to build the expression, mark it as such.
+    mlir::Value val = lv.getAddress().getPointer();
+    assert(val && "Should have an address");
+    auto allocaOp = dyn_cast_or_null<cir::AllocaOp>(val.getDefiningOp());
+    assert(allocaOp && "Address should come straight out of the alloca");
+
+    if (!allocaOp.use_empty())
+      allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
+    return;
+  }
+
+  // FIXME(cir): migrate most of this file to use mlir::TypedAttr directly.
+  auto typedConstant = mlir::dyn_cast<mlir::TypedAttr>(constant);
+  assert(typedConstant && "expected typed attribute");
+  if (!emission.IsConstantAggregate) {
+    // For simple scalar/complex initialization, store the value directly.
+    LValue lv = LValue::makeAddr(addr, type);
+    assert(init && "expected initializer");
+    mlir::Location initLoc = getLoc(init->getSourceRange());
+    // lv.setNonGC(true);
+    return emitStoreThroughLValue(
+        RValue::get(builder.getConstant(initLoc, typedConstant)), lv);
   }
 }
 
-void CIRGenFunction::emitAutoVarCleanups(const clang::VarDecl &d) {
+void CIRGenFunction::emitAutoVarCleanups(
+    const CIRGenFunction::AutoVarEmission &emission) {
+  const VarDecl &d = *emission.Variable;
+
   // Check the type for a cleanup.
   if (d.needsDestruction(getContext()))
     cgm.errorNYI(d.getSourceRange(), "emitAutoVarCleanups: type cleanup");
@@ -76,9 +191,9 @@ void CIRGenFunction::emitAutoVarCleanups(const clang::VarDecl &d) {
 /// register, or no storage class specifier. These turn into simple stack
 /// objects, globals depending on target.
 void CIRGenFunction::emitAutoVarDecl(const VarDecl &d) {
-  emitAutoVarAlloca(d);
-  emitAutoVarInit(d);
-  emitAutoVarCleanups(d);
+  CIRGenFunction::AutoVarEmission emission = emitAutoVarAlloca(d);
+  emitAutoVarInit(emission);
+  emitAutoVarCleanups(emission);
 }
 
 void CIRGenFunction::emitVarDecl(const VarDecl &d) {
@@ -94,8 +209,52 @@ void CIRGenFunction::emitVarDecl(const VarDecl &d) {
 
   assert(d.hasLocalStorage());
 
-  assert(!cir::MissingFeatures::opAllocaVarDeclContext());
+  CIRGenFunction::VarDeclContext varDeclCtx{*this, &d};
   return emitAutoVarDecl(d);
+}
+
+void CIRGenFunction::emitScalarInit(const Expr *init, mlir::Location loc,
+                                    LValue lvalue, bool capturedByInit) {
+  assert(!cir::MissingFeatures::objCLifetime());
+
+  SourceLocRAIIObject locRAII{*this, loc};
+  mlir::Value value = emitScalarExpr(init);
+  if (capturedByInit) {
+    cgm.errorNYI(init->getSourceRange(), "emitScalarInit: captured by init");
+    return;
+  }
+  assert(!cir::MissingFeatures::emitNullabilityCheck());
+  emitStoreThroughLValue(RValue::get(value), lvalue, true);
+  return;
+}
+
+void CIRGenFunction::emitExprAsInit(const Expr *init, const ValueDecl *d,
+                                    LValue lvalue, bool capturedByInit) {
+  SourceLocRAIIObject loc{*this, getLoc(init->getSourceRange())};
+  if (capturedByInit) {
+    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: captured by init");
+    return;
+  }
+
+  QualType type = d->getType();
+
+  if (type->isReferenceType()) {
+    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: reference type");
+    return;
+  }
+  switch (CIRGenFunction::getEvaluationKind(type)) {
+  case cir::TEK_Scalar:
+    emitScalarInit(init, getLoc(d->getSourceRange()), lvalue);
+    return;
+  case cir::TEK_Complex: {
+    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: complex type");
+    return;
+  }
+  case cir::TEK_Aggregate:
+    cgm.errorNYI(init->getSourceRange(), "emitExprAsInit: aggregate type");
+    return;
+  }
+  llvm_unreachable("bad evaluation kind");
 }
 
 void CIRGenFunction::emitDecl(const Decl &d) {

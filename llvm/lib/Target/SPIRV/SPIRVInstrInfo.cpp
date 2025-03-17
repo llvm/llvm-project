@@ -97,6 +97,17 @@ bool SPIRVInstrInfo::isDecorationInstr(const MachineInstr &MI) const {
   }
 }
 
+bool SPIRVInstrInfo::isAliasingInstr(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
+  case SPIRV::OpAliasDomainDeclINTEL:
+  case SPIRV::OpAliasScopeDeclINTEL:
+  case SPIRV::OpAliasScopeListDeclINTEL:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SPIRVInstrInfo::isHeaderInstr(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   case SPIRV::OpCapability:
@@ -115,7 +126,8 @@ bool SPIRVInstrInfo::isHeaderInstr(const MachineInstr &MI) const {
   case SPIRV::OpModuleProcessed:
     return true;
   default:
-    return isTypeDeclInstr(MI) || isConstantInstr(MI) || isDecorationInstr(MI);
+    return isTypeDeclInstr(MI) || isConstantInstr(MI) ||
+           isDecorationInstr(MI) || isAliasingInstr(MI);
   }
 }
 

@@ -582,7 +582,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
     setOperationAction({ISD::FP_TO_SINT, ISD::FP_TO_UINT}, MVT::i16, Custom);
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
-    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i16, Custom);
+    setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i1, Custom);
 
     setOperationAction({ISD::SINT_TO_FP, ISD::UINT_TO_FP}, MVT::i32, Custom);
 
@@ -855,7 +855,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMad64_32())
     setOperationAction({ISD::SMUL_LOHI, ISD::UMUL_LOHI}, MVT::i32, Custom);
 
-  if (Subtarget->hasPrefetch())
+  if (Subtarget->hasPrefetch() && Subtarget->hasSafeSmemPrefetch())
     setOperationAction(ISD::PREFETCH, MVT::Other, Custom);
 
   if (Subtarget->hasIEEEMinMax()) {
@@ -1180,19 +1180,20 @@ static EVT memVTFromLoadIntrReturn(const SITargetLowering &TLI,
   return memVTFromLoadIntrData(TLI, DL, ST->getContainedType(0), MaxNumLanes);
 }
 
-/// Map address space 7 to MVT::v5i32 because that's its in-memory
-/// representation. This return value is vector-typed because there is no
-/// MVT::i160 and it is not clear if one can be added. While this could
-/// cause issues during codegen, these address space 7 pointers will be
-/// rewritten away by then. Therefore, we can return MVT::v5i32 in order
-/// to allow pre-codegen passes that query TargetTransformInfo, often for cost
-/// modeling, to work.
+/// Map address space 7 to MVT::amdgpuBufferFatPointer because that's its
+/// in-memory representation. This return value is a custom type because there
+/// is no MVT::i160 and adding one breaks integer promotion logic. While this
+/// could cause issues during codegen, these address space 7 pointers will be
+/// rewritten away by then. Therefore, we can return MVT::amdgpuBufferFatPointer
+/// in order to allow pre-codegen passes that query TargetTransformInfo, often
+/// for cost modeling, to work. (This also sets us up decently for doing the
+/// buffer lowering in GlobalISel if SelectionDAG ever goes away.)
 MVT SITargetLowering::getPointerTy(const DataLayout &DL, unsigned AS) const {
   if (AMDGPUAS::BUFFER_FAT_POINTER == AS && DL.getPointerSizeInBits(AS) == 160)
-    return MVT::v5i32;
+    return MVT::amdgpuBufferFatPointer;
   if (AMDGPUAS::BUFFER_STRIDED_POINTER == AS &&
       DL.getPointerSizeInBits(AS) == 192)
-    return MVT::v6i32;
+    return MVT::amdgpuBufferStridedPointer;
   return AMDGPUTargetLowering::getPointerTy(DL, AS);
 }
 /// Similarly, the in-memory representation of a p7 is {p8, i32}, aka
@@ -1456,7 +1457,10 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.flags |= MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
     return true;
   }
-  case Intrinsic::amdgcn_ds_bvh_stack_rtn: {
+  case Intrinsic::amdgcn_ds_bvh_stack_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push4_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop1_rtn:
+  case Intrinsic::amdgcn_ds_bvh_stack_push8_pop2_rtn: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
 
     const GCNTargetMachine &TM =
@@ -1880,6 +1884,20 @@ bool SITargetLowering::allowsMisalignedMemoryAccessesImpl(
 
     return Alignment >= Align(4) ||
            Subtarget->hasUnalignedBufferAccessEnabled();
+  }
+
+  // Ensure robust out-of-bounds guarantees for buffer accesses are met if
+  // RelaxedBufferOOBMode is disabled. Normally hardware will ensure proper
+  // out-of-bounds behavior, but in the edge case where an access starts
+  // out-of-bounds and then enter in-bounds, the entire access would be treated
+  // as out-of-bounds. Prevent misaligned memory accesses by requiring the
+  // natural alignment of buffer accesses.
+  if (AddrSpace == AMDGPUAS::BUFFER_FAT_POINTER ||
+      AddrSpace == AMDGPUAS::BUFFER_RESOURCE ||
+      AddrSpace == AMDGPUAS::BUFFER_STRIDED_POINTER) {
+    if (!Subtarget->hasRelaxedBufferOOBMode() &&
+        Alignment < Align(PowerOf2Ceil(divideCeil(Size, 8))))
+      return false;
   }
 
   // Smaller than dword value must be aligned.

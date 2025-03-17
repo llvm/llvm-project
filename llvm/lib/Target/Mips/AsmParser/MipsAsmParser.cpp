@@ -523,9 +523,9 @@ public:
 
   MipsAsmParser(const MCSubtargetInfo &sti, MCAsmParser &parser,
                 const MCInstrInfo &MII, const MCTargetOptions &Options)
-    : MCTargetAsmParser(Options, sti, MII),
-        ABI(MipsABIInfo::computeTargetABI(Triple(sti.getTargetTriple()),
-                                          sti.getCPU(), Options)) {
+      : MCTargetAsmParser(Options, sti, MII),
+        ABI(MipsABIInfo::computeTargetABI(sti.getTargetTriple(), sti.getCPU(),
+                                          Options)) {
     MCAsmParserExtension::Initialize(parser);
 
     parser.addAliasForDirective(".asciiz", ".asciz");
@@ -583,7 +583,7 @@ public:
     if (!EmitJalrReloc)
       return false;
     MCValue Res;
-    if (!JalExpr->evaluateAsRelocatable(Res, nullptr, nullptr))
+    if (!JalExpr->evaluateAsRelocatable(Res, nullptr))
       return false;
     if (Res.getSymB() != nullptr)
       return false;
@@ -1310,7 +1310,7 @@ public:
          isShiftedInt<Bits, ShiftAmount>(getConstantMemOff())))
       return true;
     MCValue Res;
-    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr, nullptr);
+    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr);
     return IsReloc && isShiftedInt<Bits, ShiftAmount>(Res.getConstant());
   }
 
@@ -1324,7 +1324,7 @@ public:
         (isConstantMemOff() && isIntN(PtrBits, getConstantMemOff())))
       return true;
     MCValue Res;
-    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr, nullptr);
+    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr);
     return IsReloc && isIntN(PtrBits, Res.getConstant());
   }
 
@@ -1365,7 +1365,7 @@ public:
     if (Kind != k_Immediate)
       return false;
     MCValue Res;
-    bool Success = getImm()->evaluateAsRelocatable(Res, nullptr, nullptr);
+    bool Success = getImm()->evaluateAsRelocatable(Res, nullptr);
     return Success && isShiftedInt<Bits, ShiftLeftAmount>(Res.getConstant());
   }
 
@@ -2095,8 +2095,7 @@ bool MipsAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
       MCSymbol *TmpLabel = getContext().createTempSymbol();
       const MCExpr *TmpExpr = MCSymbolRefExpr::create(TmpLabel, getContext());
       const MCExpr *RelocJalrExpr =
-          MCSymbolRefExpr::create(JalSym, MCSymbolRefExpr::VK_None,
-                                  getContext(), IDLoc);
+          MCSymbolRefExpr::create(JalSym, getContext(), IDLoc);
 
       TOut.getStreamer().emitRelocDirective(
           *TmpExpr, inMicroMipsMode() ? "R_MICROMIPS_JALR" : "R_MIPS_JALR",
@@ -2935,7 +2934,7 @@ bool MipsAsmParser::loadAndAddSymbolAddress(const MCExpr *SymExpr,
 
   if (inPicMode()) {
     MCValue Res;
-    if (!SymExpr->evaluateAsRelocatable(Res, nullptr, nullptr)) {
+    if (!SymExpr->evaluateAsRelocatable(Res, nullptr)) {
       Error(IDLoc, "expected relocatable expression");
       return true;
     }
@@ -3313,8 +3312,7 @@ bool MipsAsmParser::emitPartialAddress(MipsTargetStreamer &TOut, SMLoc IDLoc,
     return true;
 
   if(IsPicEnabled) {
-    const MCExpr *GotSym =
-        MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    const MCExpr *GotSym = MCSymbolRefExpr::create(Sym, getContext());
     const MipsMCExpr *GotExpr =
         MipsMCExpr::create(MipsMCExpr::MEK_GOT, GotSym, getContext());
 
@@ -3326,8 +3324,7 @@ bool MipsAsmParser::emitPartialAddress(MipsTargetStreamer &TOut, SMLoc IDLoc,
                    IDLoc, STI);
     }
   } else { //!IsPicEnabled
-    const MCExpr *HiSym =
-        MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    const MCExpr *HiSym = MCSymbolRefExpr::create(Sym, getContext());
     const MipsMCExpr *HiExpr =
         MipsMCExpr::create(MipsMCExpr::MEK_HI, HiSym, getContext());
 
@@ -3340,12 +3337,10 @@ bool MipsAsmParser::emitPartialAddress(MipsTargetStreamer &TOut, SMLoc IDLoc,
     if(isABI_O32() || isABI_N32()) {
       TOut.emitRX(Mips::LUi, ATReg, MCOperand::createExpr(HiExpr), IDLoc, STI);
     } else { //isABI_N64()
-      const MCExpr *HighestSym =
-          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+      const MCExpr *HighestSym = MCSymbolRefExpr::create(Sym, getContext());
       const MipsMCExpr *HighestExpr =
           MipsMCExpr::create(MipsMCExpr::MEK_HIGHEST, HighestSym, getContext());
-      const MCExpr *HigherSym =
-          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+      const MCExpr *HigherSym = MCSymbolRefExpr::create(Sym, getContext());
       const MipsMCExpr *HigherExpr =
           MipsMCExpr::create(MipsMCExpr::MEK_HIGHER, HigherSym, getContext());
 
@@ -3433,8 +3428,7 @@ bool MipsAsmParser::expandLoadSingleImmToFPR(MCInst &Inst, SMLoc IDLoc,
       getContext().getELFSection(".rodata", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
 
   MCSymbol *Sym = getContext().createTempSymbol();
-  const MCExpr *LoSym =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+  const MCExpr *LoSym = MCSymbolRefExpr::create(Sym, getContext());
   const MipsMCExpr *LoExpr =
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
@@ -3485,8 +3479,7 @@ bool MipsAsmParser::expandLoadDoubleImmToGPR(MCInst &Inst, SMLoc IDLoc,
       getContext().getELFSection(".rodata", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
 
   MCSymbol *Sym = getContext().createTempSymbol();
-  const MCExpr *LoSym =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+  const MCExpr *LoSym = MCSymbolRefExpr::create(Sym, getContext());
   const MipsMCExpr *LoExpr =
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
@@ -3567,8 +3560,7 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
       getContext().getELFSection(".rodata", ELF::SHT_PROGBITS, ELF::SHF_ALLOC);
 
   MCSymbol *Sym = getContext().createTempSymbol();
-  const MCExpr *LoSym =
-      MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+  const MCExpr *LoSym = MCSymbolRefExpr::create(Sym, getContext());
   const MipsMCExpr *LoExpr =
       MipsMCExpr::create(MipsMCExpr::MEK_LO, LoSym, getContext());
 
@@ -3772,7 +3764,7 @@ void MipsAsmParser::expandMem16Inst(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
       //    of R_MIPS_GOT_DISP in appropriate cases to reduce number
       //    of GOT entries.
       MCValue Res;
-      if (!OffsetOp.getExpr()->evaluateAsRelocatable(Res, nullptr, nullptr)) {
+      if (!OffsetOp.getExpr()->evaluateAsRelocatable(Res, nullptr)) {
         Error(IDLoc, "expected relocatable expression");
         return;
       }
@@ -6457,8 +6449,7 @@ bool MipsAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
     SMLoc E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
     MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
     // Otherwise create a symbol reference.
-    const MCExpr *SymRef =
-        MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_None, getContext());
+    const MCExpr *SymRef = MCSymbolRefExpr::create(Sym, getContext());
 
     Operands.push_back(MipsOperand::CreateImm(SymRef, S, E, *this));
     return false;

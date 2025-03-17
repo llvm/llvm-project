@@ -28,6 +28,7 @@ struct SyncAllStmt;
 struct SyncImagesStmt;
 struct SyncMemoryStmt;
 struct SyncTeamStmt;
+struct LockStmt;
 struct UnlockStmt;
 } // namespace Fortran::parser
 
@@ -45,6 +46,7 @@ public:
   void Leave(const parser::NotifyWaitStmt &);
   void Leave(const parser::EventPostStmt &);
   void Leave(const parser::EventWaitStmt &);
+  void Leave(const parser::LockStmt &);
   void Leave(const parser::UnlockStmt &);
   void Leave(const parser::CriticalStmt &);
   void Leave(const parser::ImageSelector &);
