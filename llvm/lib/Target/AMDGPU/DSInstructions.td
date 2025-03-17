@@ -259,12 +259,12 @@ multiclass DS_1A2D_Off8_RET_mc<string opName,
 }
 
 class DS_BVH_STACK<string opName,
-                   RegisterClass rc,
-                   RegisterClass src>
+                   RegisterClass vdst_rc,
+                   RegisterClass data1_rc>
 : DS_Pseudo<opName,
-  (outs getLdStRegisterOperand<rc>.ret:$vdst, VGPR_32:$addr),
+  (outs getLdStRegisterOperand<vdst_rc>.ret:$vdst, VGPR_32:$addr),
   (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0,
-   src:$data1, Offset:$offset),
+   data1_rc:$data1, Offset:$offset),
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
   let DisableEncoding = "$addr_in";

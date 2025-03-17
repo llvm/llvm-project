@@ -532,8 +532,8 @@ getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
-          "Invalid kind!");
+  assert(unsigned(Kind - FirstTargetFixupKind) < Mips::NumTargetFixupKinds &&
+         "Invalid kind!");
 
   if (Endian == llvm::endianness::little)
     return LittleEndianInfos[Kind - FirstTargetFixupKind];
@@ -561,7 +561,6 @@ bool MipsAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
 bool MipsAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                            const MCFixup &Fixup,
                                            const MCValue &Target,
-                                           const uint64_t,
                                            const MCSubtargetInfo *STI) {
   const unsigned FixupKind = Fixup.getKind();
   switch (FixupKind) {
