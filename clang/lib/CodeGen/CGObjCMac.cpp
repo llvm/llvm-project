@@ -1068,12 +1068,13 @@ public:
   ConstantAddress GenerateConstantString(const StringLiteral *SL) override;
   ConstantAddress GenerateConstantNSString(const StringLiteral *SL);
 
-  llvm::Function *
-  GenerateMethod(const ObjCMethodDecl *OMD,
-                 const ObjCContainerDecl *CD = nullptr) override;
+  llvm::Function *GenerateMethod(const ObjCMethodDecl *OMD,
+                                 const ObjCContainerDecl *CD = nullptr,
+                                 bool isThunk = true) override;
 
   llvm::Function *GenerateDirectMethod(const ObjCMethodDecl *OMD,
-                                       const ObjCContainerDecl *CD);
+                                       const ObjCContainerDecl *CD,
+                                       bool isThunk);
 
   void GenerateDirectMethodPrologue(CodeGenFunction &CGF, llvm::Function *Fn,
                                     const ObjCMethodDecl *OMD,
@@ -2097,7 +2098,8 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
   llvm::FunctionCallee Fn = nullptr;
   if (Method && Method->isDirectMethod()) {
     assert(!IsSuper);
-    Fn = GenerateDirectMethod(Method, Method->getClassInterface());
+    Fn = GenerateDirectMethod(Method, Method->getClassInterface(),
+                              /*isThunk=*/true);
     // Direct methods will synthesize the proper `_cmd` internally,
     // so just don't bother with setting the `_cmd` argument.
     RequiresSelValue = false;
@@ -2121,10 +2123,6 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
                         : ObjCTypes.getSendFn(IsSuper);
   }
 
-  // Cast function to proper signature
-  llvm::Constant *BitcastFn = cast<llvm::Constant>(
-      CGF.Builder.CreateBitCast(Fn.getCallee(), MSI.MessengerType));
-
   // We don't need to emit a null check to zero out an indirect result if the
   // result is ignored.
   if (Return.isUnused())
@@ -2134,6 +2132,16 @@ CodeGen::RValue CGObjCCommonMac::EmitMessageSend(
   if (!RequiresNullCheck && Method && Method->hasParamDestroyedInCallee())
     RequiresNullCheck = true;
 
+  // `RequiresNullCheck` will do the null check at the caller site.
+  // In that case, a direct instance method can skip the null check and call the
+  // inner function instead.
+  if (CGM.shouldHaveNilCheckThunk(Method))
+    if (RequiresNullCheck || !ReceiverCanBeNull)
+      Fn = GenerateDirectMethod(Method, Method->getClassInterface(),
+                                /*isThunk=*/false);
+  // Cast function to proper signature
+  llvm::Constant *BitcastFn = cast<llvm::Constant>(
+      CGF.Builder.CreateBitCast(Fn.getCallee(), MSI.MessengerType));
   NullReturnState nullReturn;
   if (RequiresNullCheck) {
     nullReturn.init(CGF, Arg0);
@@ -3860,11 +3868,12 @@ CGObjCMac::emitMethodList(Twine name, MethodListType MLT,
 }
 
 llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
-                                                const ObjCContainerDecl *CD) {
+                                                const ObjCContainerDecl *CD,
+                                                bool isThunk) {
   llvm::Function *Method;
 
   if (OMD->isDirectMethod()) {
-    Method = GenerateDirectMethod(OMD, CD);
+    Method = GenerateDirectMethod(OMD, CD, isThunk);
   } else {
     auto Name = getSymbolNameForMethod(OMD);
 
@@ -3880,14 +3889,13 @@ llvm::Function *CGObjCCommonMac::GenerateMethod(const ObjCMethodDecl *OMD,
   return Method;
 }
 
-llvm::Function *
-CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
-                                      const ObjCContainerDecl *CD) {
+llvm::Function *CGObjCCommonMac::GenerateDirectMethod(
+    const ObjCMethodDecl *OMD, const ObjCContainerDecl *CD, bool isThunk) {
   auto *COMD = OMD->getCanonicalDecl();
   auto I = DirectMethodDefinitions.find(COMD);
   llvm::Function *OldFn = nullptr, *Fn = nullptr;
 
-  if (I != DirectMethodDefinitions.end()) {
+  if (isThunk && I != DirectMethodDefinitions.end()) {
     // Objective-C allows for the declaration and implementation types
     // to differ slightly.
     //
@@ -3916,11 +3924,16 @@ CGObjCCommonMac::GenerateDirectMethod(const ObjCMethodDecl *OMD,
     // Replace the cached function in the map.
     I->second = Fn;
   } else {
-    auto Name = getSymbolNameForMethod(OMD, /*include category*/ false);
-
-    Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
-                                Name, &CGM.getModule());
-    DirectMethodDefinitions.insert(std::make_pair(COMD, Fn));
+    auto Name =
+        getSymbolNameForMethod(OMD, /*include category*/ false, isThunk);
+    // Non-thunk functions are not cached and may be repeatedly created.
+    // Therefore, we try to find it before we create one.
+    Fn = CGM.getModule().getFunction(Name);
+    if (!Fn)
+      Fn = llvm::Function::Create(MethodTy, llvm::GlobalValue::ExternalLinkage,
+                                  Name, &CGM.getModule());
+    if (isThunk)
+      DirectMethodDefinitions.insert(std::make_pair(COMD, Fn));
   }
 
   return Fn;
@@ -3933,6 +3946,8 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
   bool ReceiverCanBeNull = true;
   auto selfAddr = CGF.GetAddrOfLocalVar(OMD->getSelfDecl());
   auto selfValue = Builder.CreateLoad(selfAddr);
+  bool shouldHaveNilCheckThunk = CGF.CGM.shouldHaveNilCheckThunk(OMD);
+  bool isNilCheckThunk = shouldHaveNilCheckThunk && CGF.InnerFn;
 
   // Generate:
   //
@@ -3974,7 +3989,9 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     ReceiverCanBeNull = isWeakLinkedClass(OID);
   }
 
-  if (ReceiverCanBeNull) {
+  // Only emit nil check if this is a nil check thunk or the method
+  // decides that its receiver can be null
+  if (isNilCheckThunk || (!shouldHaveNilCheckThunk && ReceiverCanBeNull)) {
     llvm::BasicBlock *SelfIsNilBlock =
         CGF.createBasicBlock("objc_direct_method.self_is_nil");
     llvm::BasicBlock *ContBlock =
@@ -4004,14 +4021,19 @@ void CGObjCCommonMac::GenerateDirectMethodPrologue(
     Builder.SetInsertPoint(ContBlock);
   }
 
-  // only synthesize _cmd if it's referenced
-  if (OMD->getCmdDecl()->isUsed()) {
+  // Only synthesize _cmd if it's referenced
+  // However, a nil check thunk doesn't need _cmd even if it's referenced
+  if (!isNilCheckThunk && OMD->getCmdDecl()->isUsed()) {
     // `_cmd` is not a parameter to direct methods, so storage must be
     // explicitly declared for it.
     CGF.EmitVarDecl(*OMD->getCmdDecl());
     Builder.CreateStore(GetSelector(CGF, OMD),
                         CGF.GetAddrOfLocalVar(OMD->getCmdDecl()));
   }
+
+  // It's possible that selfValue is never used.
+  if (selfValue->use_empty())
+    selfValue->eraseFromParent();
 }
 
 llvm::GlobalVariable *
