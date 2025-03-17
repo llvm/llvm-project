@@ -267,10 +267,10 @@ COMPILER_RT_VISIBILITY FILE *lprofOpenFileEx(const char *ProfileName) {
   return f;
 }
 
+#if defined(_AIX)
 // Return 1 (true) if the file descriptor Fd represents a file that is on a
 // local filesystem, otherwise return 0.
-COMPILER_RT_UNUSED static int is_local_filesystem(int Fd) {
-#if defined(_AIX)
+static int isLocalFilesystem(int Fd) {
   struct statfs Vfs;
   if (fstatfs(Fd, &Vfs) != 0) {
     PROF_ERR("%s: fstatfs(%d) failed: %s\n", __func__, Fd, strerror(errno));
@@ -310,15 +310,15 @@ COMPILER_RT_UNUSED static int is_local_filesystem(int Fd) {
   free(Buf);
   // There was an error in mntctl or vmount entry not found; "remote" is the
   // conservative answer.
-#endif
   return 0;
 }
+#endif
 
 static int isMmapSafe(int Fd) {
-  if (getenv("LLVM_NO_MMAP")) // For testing purposes.
+  if (getenv("LLVM_PROFILE_NO_MMAP")) // For testing purposes.
     return 0;
 #ifdef _AIX
-  return is_local_filesystem(Fd);
+  return isLocalFilesystem(Fd);
 #else
   return 1;
 #endif

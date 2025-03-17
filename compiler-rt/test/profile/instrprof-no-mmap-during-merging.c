@@ -6,7 +6,7 @@
 // trigger an mmap.
 // RUN: ./a.out
 // RUN: llvm-profdata show default_*.profraw --all-functions --counts --memop-sizes 2>&1 | FileCheck %s -check-prefix=PROFDATA
-// RUN: env LLVM_NO_MMAP=1 LLVM_PROFILE_VERBOSE=1 ./a.out 2>&1 | FileCheck %s
+// RUN: env LLVM_PROFILE_NO_MMAP=1 LLVM_PROFILE_VERBOSE=1 ./a.out 2>&1 | FileCheck %s
 // RUN: llvm-profdata show default_*.profraw --all-functions --counts --memop-sizes 2>&1 | FileCheck %s -check-prefix=PROFDATA2
 
 // CHECK: Could not use mmap; using fread instead.

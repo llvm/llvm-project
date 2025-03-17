@@ -4,7 +4,7 @@
 // RUN: %run %t
 // RUN: llvm-profdata show --all-functions --counts %t.profdir/default_*.profraw  | FileCheck %s
 // RUN: rm -fr %t.profdir
-// RUN: env LLVM_NO_MMAP=1 %run %t
+// RUN: env LLVM_PROFILE_NO_MMAP=1 %run %t
 // RUN: llvm-profdata show --all-functions --counts %t.profdir/default_*.profraw  | FileCheck %s
 
 //
