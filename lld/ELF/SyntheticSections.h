@@ -138,6 +138,9 @@ protected:
     bool isSymbolFunc;
   };
   SmallVector<AuthEntryInfo, 0> authEntries;
+
+  // To track GOT entries for symbols that may have been ICFed
+  llvm::DenseMap<std::pair<SectionBase*, uint64_t>, uint32_t> gotEntries;
 };
 
 // .note.GNU-stack section.

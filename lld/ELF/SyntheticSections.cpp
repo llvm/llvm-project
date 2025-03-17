@@ -667,6 +667,19 @@ GotSection::GotSection(Ctx &ctx)
 void GotSection::addConstant(const Relocation &r) { relocations.push_back(r); }
 void GotSection::addEntry(const Symbol &sym) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
+  if (auto *d = dyn_cast<Defined>(&sym)) {
+    // There may be symbols that have been ICFed in which case d->section
+    // points to their canonical section and d->value is offset in to that section.
+    // We add only a single GOT entry for all such symbols.
+    auto [it, inserted] = gotEntries.insert(
+      std::make_pair(std::make_pair(d->section, d->value),
+      numEntries));
+    if (!inserted) {
+      ctx.symAux.back().gotIdx = it->getSecond();
+      return;
+    }
+  }
+
   ctx.symAux.back().gotIdx = numEntries++;
 }
 
