@@ -108,6 +108,12 @@ public:
     return true;
   }
 
+  bool TraverseConstructorInitializer(CXXCtorInitializer *Init) {
+    ++Info.Statements;
+    Base::TraverseConstructorInitializer(Init);
+    return true;
+  }
+
   struct FunctionInfo {
     unsigned Lines = 0;
     unsigned Statements = 0;
