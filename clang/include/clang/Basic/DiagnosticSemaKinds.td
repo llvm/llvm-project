@@ -2706,6 +2706,9 @@ def warn_final_dtor_non_final_class : Warning<
   InGroup<FinalDtorNonFinalClass>;
 def note_final_dtor_non_final_class_silence : Note<
   "mark %0 as '%select{final|sealed}1' to silence this warning">;
+def warn_unnecessary_virtual_specifier : Warning<
+  "virtual method %0 is inside a 'final' class and can never be overridden">,
+  InGroup<WarnUnnecessaryVirtualSpecifier>, DefaultIgnore;
 
 // C++11 attributes
 def err_repeat_attribute : Error<"%0 attribute cannot be repeated">;
@@ -6214,7 +6217,7 @@ def warn_possible_object_duplication_mutable : Warning<
   "it is mutable, has hidden visibility, and external linkage">,
   InGroup<UniqueObjectDuplication>, DefaultIgnore;
 def warn_possible_object_duplication_init : Warning<
-  "initializeation of %0 may run twice when built into a shared library: "
+  "initialization of %0 may run twice when built into a shared library: "
   "it has hidden visibility and external linkage">,
   InGroup<UniqueObjectDuplication>, DefaultIgnore;
 

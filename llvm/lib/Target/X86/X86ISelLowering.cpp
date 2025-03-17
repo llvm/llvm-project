@@ -55694,7 +55694,12 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
   // Do not convert the passthru input of scalar intrinsics.
   // FIXME: We could allow negations of the lower element only.
   bool NegA = invertIfNegative(A);
+  // Create a dummy use for A so that in the process of negating B or C
+  // recursively, it is not deleted.
+  HandleSDNode NegAHandle(A);
   bool NegB = invertIfNegative(B);
+  // Similar to A, get a handle on B.
+  HandleSDNode NegBHandle(B);
   bool NegC = invertIfNegative(C);
 
   if (!NegA && !NegB && !NegC)
