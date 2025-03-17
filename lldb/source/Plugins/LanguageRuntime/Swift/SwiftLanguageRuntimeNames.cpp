@@ -82,10 +82,15 @@ static bool IsSwiftAsyncFunctionSymbol(swift::Demangle::NodePointer node) {
     return false;
   if (hasChild(node, Node::Kind::AsyncSuspendResumePartialFunction))
     return false;
-  // Peel off a Static node. If it exists, there will be a single instance and a
-  // top level node.
-  if (node->getFirstChild()->getKind() == Node::Kind::Static)
-    node = node->getFirstChild();
+
+  // Peel off a ProtocolWitness node. If it exists, there will be a single
+  // instance, before Static nodes.
+  if (NodePointer witness = childAtPath(node, Node::Kind::ProtocolWitness))
+    node = witness;
+
+  // Peel off a Static node. If it exists, there will be a single instance.
+  if (NodePointer static_node = childAtPath(node, Node::Kind::Static))
+    node = static_node;
 
   // Get the {Implicit, Explicit} Closure or Function node.
   // For nested closures in Swift, the demangle tree is inverted: the
@@ -203,14 +208,16 @@ SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(
       !IsAnySwiftAsyncFunctionSymbol(node2))
     return FuncletComparisonResult::NotBothFunclets;
 
-  // Peel off Static nodes.
-  NodePointer static_wrapper1 = childAtPath(node1, Node::Kind::Static);
-  NodePointer static_wrapper2 = childAtPath(node2, Node::Kind::Static);
-  if (static_wrapper1 || static_wrapper2) {
-    if (!static_wrapper1 | !static_wrapper2)
-      return FuncletComparisonResult::DifferentAsyncFunctions;
-    node1 = static_wrapper1;
-    node2 = static_wrapper2;
+  // Peel off ProtocolWitnes/Static nodes, in this order.
+  for (auto wrapper : {Node::Kind::ProtocolWitness, Node::Kind::Static}) {
+    NodePointer wrapper1 = childAtPath(node1, wrapper);
+    NodePointer wrapper2 = childAtPath(node2, wrapper);
+    if (wrapper1 || wrapper2) {
+      if (!wrapper1 | !wrapper2)
+        return FuncletComparisonResult::DifferentAsyncFunctions;
+      node1 = wrapper1;
+      node2 = wrapper2;
+    }
   }
 
   // If there are closures involved, do the closure-specific comparison.
@@ -230,6 +237,11 @@ SwiftLanguageRuntime::AreFuncletsOfSameAsyncFunction(
   // Otherwise, find the corresponding function and compare the two.
   NodePointer function1 = childAtPath(node1, Node::Kind::Function);
   NodePointer function2 = childAtPath(node2, Node::Kind::Function);
+
+  // If we fail to find a function node, conservatively fail.
+  if (!function1 || !function2)
+    return FuncletComparisonResult::NotBothFunclets;
+
   return Node::deepEquals(function1, function2)
              ? FuncletComparisonResult::SameAsyncFunction
              : FuncletComparisonResult::DifferentAsyncFunctions;
