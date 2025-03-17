@@ -6290,7 +6290,7 @@ def warn_possible_object_duplication_mutable : Warning<
   "it is mutable, has hidden visibility, and external linkage">,
   InGroup<UniqueObjectDuplication>, DefaultIgnore;
 def warn_possible_object_duplication_init : Warning<
-  "initializeation of %0 may run twice when built into a shared library: "
+  "initialization of %0 may run twice when built into a shared library: "
   "it has hidden visibility and external linkage">,
   InGroup<UniqueObjectDuplication>, DefaultIgnore;
 
