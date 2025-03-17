@@ -2764,11 +2764,11 @@ static SDValue lowerCTLZCTPOP(SDValue Op, SelectionDAG &DAG) {
   return DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i64, CT, SDNodeFlags::NonNeg);
 }
 
-static SDValue expandFSH64(SDValue A, SDValue B, SDValue AmtVal, SDLoc DL,
+static SDValue expandFSH64(SDValue A, SDValue B, SDValue ShiftAmount, SDLoc DL,
                            unsigned Opcode, SelectionDAG &DAG) {
   assert(A.getValueType() == MVT::i64 && B.getValueType() == MVT::i64);
 
-  const auto *AmtConst = dyn_cast<ConstantSDNode>(AmtVal);
+  const auto *AmtConst = dyn_cast<ConstantSDNode>(ShiftAmount);
   if (!AmtConst)
     return SDValue();
   const auto Amt = AmtConst->getZExtValue() & 63;
