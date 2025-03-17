@@ -55,4 +55,8 @@ end
 ! CHECK: %[[X_DECL:.*]]:2 = hlfir.declare %[[X]] {uniq_name = "_QFatomic_read_with_castEx"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
 ! CHECK: %[[Y:.*]] = fir.alloca i64 {bindc_name = "y", uniq_name = "_QFatomic_read_with_castEy"}
 ! CHECK: %[[Y_DECL:.*]]:2 = hlfir.declare %[[Y]] {uniq_name = "_QFatomic_read_with_castEy"} : (!fir.ref<i64>) -> (!fir.ref<i64>, !fir.ref<i64>)
-! CHECK: acc.atomic.read %[[Y_DECL]]#1 = %[[X_DECL]]#1 : !fir.ref<i64>, !fir.ref<i32>, i32
+! CHECK: %[[ALLOCA:.*]] = fir.alloca i64
+! CHECK: %[[LOAD:.*]] = fir.load %[[X_DECL]]#1 : !fir.ref<i32>
+! CHECK: %[[CVT:.*]] = fir.convert %[[LOAD]] : (i32) -> i64
+! CHECK: fir.store %[[CVT]] to %[[ALLOCA]] : !fir.ref<i64>
+! CHECK: acc.atomic.read %[[Y_DECL]]#1 = %[[ALLOCA]] : !fir.ref<i64>, !fir.ref<i64>, i64

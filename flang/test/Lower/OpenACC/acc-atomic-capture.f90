@@ -142,11 +142,14 @@ end subroutine capture_with_convert_i32_to_f64
 ! CHECK: hlfir.assign %[[CST]] to %[[X_DECL]]#0 : f64, !fir.ref<f64>
 ! CHECK: %c0_i32 = arith.constant 0 : i32
 ! CHECK: hlfir.assign %c0_i32 to %[[V_DECL]]#0 : i32, !fir.ref<i32>
-! CHECK: %[[LOAD:.*]] = fir.load %[[V_DECL]]#0 : !fir.ref<i32>
-! CHECK: %[[CONV:.*]] = fir.convert %[[LOAD]] : (i32) -> f64
+! CHECK: %[[ALLOCA:.*]] = fir.alloca i32
+! CHECK: %[[LOAD:.*]] = fir.load %[[X_DECL]]#1 : !fir.ref<f64>
+! CHECK: %[[CVT:.*]] = fir.convert %[[LOAD]] : (f64) -> i32
+! CHECK: fir.store %[[CVT]] to %[[ALLOCA]] : !fir.ref<i32>
+! CHECK: %[[EXPR_CVT:.*]] = fir.convert {{.*}} : (f64) -> i32
 ! CHECK: acc.atomic.capture {
-! CHECK:   acc.atomic.read %[[V_DECL]]#1 = %[[X_DECL]]#1 : !fir.ref<i32>, !fir.ref<f64>, f64
-! CHECK:   acc.atomic.write %[[X_DECL]]#1 = %[[CONV]] : !fir.ref<f64>, f64
+! CHECK:   acc.atomic.read %[[V_DECL]]#1 = %[[ALLOCA]] : !fir.ref<i32>, !fir.ref<i32>, i32
+! CHECK:   acc.atomic.write %[[ALLOCA]] = %[[EXPR_CVT]] : !fir.ref<i32>, i32 
 ! CHECK: }
 
 subroutine capture_with_convert_f64_to_i32()

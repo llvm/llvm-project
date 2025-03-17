@@ -29,6 +29,7 @@
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
+#include "flang/Optimizer/Builder/Complex.h"
 #include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
@@ -101,6 +102,61 @@ static void processOmpAtomicTODO(mlir::Type elementType,
     assert(fir::isa_trivial(fir::unwrapRefType(elementType)) &&
            "is supported type for omp atomic");
   }
+}
+
+/// Emits an implicit cast for atomic statements
+static void emitImplicitCast(Fortran::lower::AbstractConverter &converter,
+                             mlir::Location loc, mlir::Value &fromAddress,
+                             mlir::Value &toAddress, mlir::Type &elementType) {
+  if (fromAddress.getType() == toAddress.getType())
+    return;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  mlir::Value alloca = builder.create<fir::AllocaOp>(
+      loc, fir::unwrapRefType(toAddress.getType()));
+  mlir::Value loadedVal = builder.create<fir::LoadOp>(loc, fromAddress);
+  mlir::Type toType = fir::unwrapRefType(toAddress.getType());
+  mlir::Type fromType = fir::unwrapRefType(fromAddress.getType());
+  if (!fir::isa_complex(toType) && !fir::isa_complex(fromType)) {
+    loadedVal = builder.create<fir::ConvertOp>(
+        loc, fir::unwrapRefType(toAddress.getType()), loadedVal);
+    builder.create<fir::StoreOp>(loc, loadedVal, alloca);
+  } else if (!fir::isa_complex(toType) && fir::isa_complex(fromType)) {
+    loadedVal = builder.create<fir::ExtractValueOp>(
+        loc, mlir::cast<mlir::ComplexType>(fromType).getElementType(),
+        loadedVal,
+        builder.getArrayAttr(
+            builder.getIntegerAttr(builder.getIndexType(), 0)));
+    loadedVal = builder.create<fir::ConvertOp>(loc, toType, loadedVal);
+    builder.create<fir::StoreOp>(loc, loadedVal, alloca);
+  } else if (fir::isa_complex(toType) && fir::isa_complex(fromType)) {
+    mlir::Value firstComp = builder.create<fir::ExtractValueOp>(
+        loc, mlir::cast<mlir::ComplexType>(fromType).getElementType(),
+        loadedVal,
+        builder.getArrayAttr(
+            builder.getIntegerAttr(builder.getIndexType(), 0)));
+    mlir::Value secondComp = builder.create<fir::ExtractValueOp>(
+        loc, mlir::cast<mlir::ComplexType>(fromType).getElementType(),
+        loadedVal,
+        builder.getArrayAttr(
+            builder.getIntegerAttr(builder.getIndexType(), 1)));
+    firstComp = builder.create<fir::ConvertOp>(
+        loc, mlir::cast<mlir::ComplexType>(toType).getElementType(), firstComp);
+    secondComp = builder.create<fir::ConvertOp>(
+        loc, mlir::cast<mlir::ComplexType>(toType).getElementType(),
+        secondComp);
+    auto undef = builder.create<fir::UndefOp>(loc, toType);
+    mlir::Value pair1 = builder.create<fir::InsertValueOp>(
+        loc, toType, undef, firstComp,
+        builder.getArrayAttr(
+            builder.getIntegerAttr(builder.getIndexType(), 0)));
+    mlir::Value pair = builder.create<fir::InsertValueOp>(
+        loc, toType, pair1, secondComp,
+        builder.getArrayAttr(
+            builder.getIntegerAttr(builder.getIndexType(), 1)));
+    builder.create<fir::StoreOp>(loc, pair, alloca);
+  }
+  fromAddress = alloca;
+  elementType = fir::unwrapRefType(toAddress.getType());
 }
 
 /// Used to generate atomic.read operation which is created in existing
@@ -386,6 +442,7 @@ void genOmpAccAtomicRead(Fortran::lower::AbstractConverter &converter,
       fir::getBase(converter.genExprAddr(fromExpr, stmtCtx));
   mlir::Value toAddress = fir::getBase(converter.genExprAddr(
       *Fortran::semantics::GetExpr(assignmentStmtVariable), stmtCtx));
+  emitImplicitCast(converter, loc, fromAddress, toAddress, elementType);
   genOmpAccAtomicCaptureStatement(converter, fromAddress, toAddress,
                                   leftHandClauseList, rightHandClauseList,
                                   elementType, loc);
@@ -481,6 +538,30 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
   mlir::Type stmt2VarType =
       fir::getBase(converter.genExprValue(assign2.lhs, stmtCtx)).getType();
 
+  // Checks helpful in constructing the `atomic.capture` region
+  bool hasSingleVariable =
+      Fortran::semantics::checkForSingleVariableOnRHS(stmt1);
+  bool hasSymMatch = Fortran::semantics::checkForSymbolMatch(stmt2);
+
+  // Implicit casts
+  mlir::Type captureStmtElemTy;
+  if (hasSingleVariable) {
+    if (hasSymMatch) {
+      // Atomic capture construct is of the form [capture-stmt, update-stmt]
+      // FIXME: Emit an implicit cast if there is a type mismatch
+    } else {
+      // Atomic capture construct is of the form [capture-stmt, write-stmt]
+      const Fortran::semantics::SomeExpr &fromExpr =
+          *Fortran::semantics::GetExpr(stmt1Expr);
+      captureStmtElemTy = converter.genType(fromExpr);
+      emitImplicitCast(converter, loc, stmt2LHSArg, stmt1LHSArg,
+                       captureStmtElemTy);
+    }
+  } else {
+    // Atomic capture construct is of the form [update-stmt, capture-stmt]
+    // FIXME: Emit an implicit cast if there is a type mismatch
+  }
+
   mlir::Operation *atomicCaptureOp = nullptr;
   if constexpr (std::is_same<AtomicListT,
                              Fortran::parser::OmpAtomicClauseList>()) {
@@ -501,8 +582,8 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.createBlock(&(atomicCaptureOp->getRegion(0)));
   mlir::Block &block = atomicCaptureOp->getRegion(0).back();
   firOpBuilder.setInsertionPointToStart(&block);
-  if (Fortran::semantics::checkForSingleVariableOnRHS(stmt1)) {
-    if (Fortran::semantics::checkForSymbolMatch(stmt2)) {
+  if (hasSingleVariable) {
+    if (hasSymMatch) {
       // Atomic capture construct is of the form [capture-stmt, update-stmt]
       const Fortran::semantics::SomeExpr &fromExpr =
           *Fortran::semantics::GetExpr(stmt1Expr);
@@ -521,13 +602,10 @@ void genOmpAccAtomicCapture(Fortran::lower::AbstractConverter &converter,
       mlir::Value stmt2RHSArg =
           fir::getBase(converter.genExprValue(assign2.rhs, stmtCtx));
       firOpBuilder.setInsertionPointToStart(&block);
-      const Fortran::semantics::SomeExpr &fromExpr =
-          *Fortran::semantics::GetExpr(stmt1Expr);
-      mlir::Type elementType = converter.genType(fromExpr);
       genOmpAccAtomicCaptureStatement<AtomicListT>(
           converter, stmt2LHSArg, stmt1LHSArg,
           /*leftHandClauseList=*/nullptr,
-          /*rightHandClauseList=*/nullptr, elementType, loc);
+          /*rightHandClauseList=*/nullptr, captureStmtElemTy, loc);
       genOmpAccAtomicWriteStatement<AtomicListT>(
           converter, stmt2LHSArg, stmt2RHSArg,
           /*leftHandClauseList=*/nullptr,
