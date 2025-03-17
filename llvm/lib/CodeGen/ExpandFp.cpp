@@ -17,6 +17,9 @@
 #include "llvm/CodeGen/ExpandFp.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/SimplifyQuery.h"
+#include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -24,9 +27,12 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
@@ -89,7 +95,7 @@ public:
   /// must match the type for which the class instance has been
   /// created. The code will be generated at the insertion point of \p
   /// B and the insertion point will be reset at exit.
-  Value *buildFRem(Value *X, Value *Y) const;
+  Value *buildFRem(Value *X, Value *Y, SimplifyQuery &SQ) const;
 
 private:
   FRemExpander(IRBuilder<> &B, Type *FremTy, short Bits, unsigned long Signbit,
@@ -97,11 +103,6 @@ private:
       : B(B), FremTy(FremTy), ComputeFpTy(ComputeFpTy), IntTy(IntTy),
         ExTy(B.getInt32Ty()), Bits(ConstantInt::get(ExTy, Bits)),
         One(ConstantInt::get(ExTy, 1)), Signbit(Signbit) {};
-
-  Value *createLdexp(Value *Base, Value *Exp, const Twine &Name) const {
-    return B.CreateIntrinsic(Intrinsic::ldexp, {ComputeFpTy, B.getInt32Ty()},
-                             {Base, Exp}, {}, Name);
-  }
 
   Value *createRcp(Value *V, const Twine &Name) const {
     return B.CreateFDiv(ConstantFP::get(ComputeFpTy, 1.0), V, Name);
@@ -118,8 +119,7 @@ private:
     //   ax = clt ? axp : ax;
     Value *Q = B.CreateUnaryIntrinsic(Intrinsic::rint, B.CreateFMul(Ax, Ayinv),
                                       {}, "q");
-    Value *AxUpdate = B.CreateIntrinsic(Intrinsic::fma, {ComputeFpTy},
-                                        {B.CreateFNeg(Q), Ay, Ax}, {}, "ax");
+    Value *AxUpdate = B.CreateFMA(B.CreateFNeg(Q), Ay, Ax, {}, "ax");
     Value *Clt = B.CreateFCmp(CmpInst::FCMP_OLT, AxUpdate,
                               ConstantFP::get(ComputeFpTy, 0.0), "clt");
     Value *Axp = B.CreateFAdd(AxUpdate, Ay, "axp");
@@ -145,7 +145,7 @@ private:
     Value *Exp = B.CreateExtractValue(Frexp, {1});
 
     Exp = B.CreateSub(Exp, One, ExName);
-    Value *Pow = createLdexp(Mant, NewExp, PowName);
+    Value *Pow = B.CreateLdexp(Mant, NewExp, {}, PowName);
 
     return {Pow, Exp};
   }
@@ -194,7 +194,7 @@ private:
     AxPhi->addIncoming(Ax, PreheaderBB);
 
     Value *AxPhiUpdate = buildUpdateAx(AxPhi, Ay, Ayinv);
-    AxPhiUpdate = createLdexp(AxPhiUpdate, Bits, "ax_update");
+    AxPhiUpdate = B.CreateLdexp(AxPhiUpdate, Bits, {}, "ax_update");
     AxPhi->addIncoming(AxPhiUpdate, LoopBB);
     NbIv->addIncoming(B.CreateSub(NbIv, Bits, "nb_update"), LoopBB);
 
@@ -212,14 +212,14 @@ private:
     NbExitPhi->addIncoming(NbIv, LoopBB);
     NbExitPhi->addIncoming(Nb, PreheaderBB);
 
-    Value *AxFinal = createLdexp(
-        AxPhiExit, B.CreateAdd(B.CreateSub(NbExitPhi, Bits), One), "ax");
+    Value *AxFinal = B.CreateLdexp(
+        AxPhiExit, B.CreateAdd(B.CreateSub(NbExitPhi, Bits), One), {}, "ax");
     AxFinal = buildUpdateAx(AxFinal, Ay, Ayinv);
 
     // Build:
     //    ax = BUILTIN_FLDEXP_ComputeFpTy(ax, ey);
     //    ret = AS_FLOAT((AS_INT(x) & SIGNBIT_SP32) ^ AS_INT(ax));
-    AxFinal = createLdexp(AxFinal, Ey, "ax");
+    AxFinal = B.CreateLdexp(AxFinal, Ey, {}, "ax");
 
     Value *XAsInt = B.CreateBitCast(X, IntTy, "x_as_int");
     if (ComputeFpTy != X->getType())
@@ -249,28 +249,32 @@ private:
     RetPhi->addIncoming(Ret, B.GetInsertBlock());
   }
 
-  /// Adjust the result of the main computation from the FRem expansion
-  /// if NaNs or infinite values are possible.
-  Value *buildNanAndInfHandling(Value *Ret, Value *X, Value *Y) const {
+  /// Return a value that is NaN if one of the corner cases concerning
+  /// the inputs \p X and \p Y is detected, and \p Ret otherwise.
+  Value *handleInputCornerCases(Value *Ret, Value *X,
+                                Value *Y, SimplifyQuery &SQ) const {
     // Build:
     //   ret = y == 0.0f ? QNAN_ComputeFpTy : ret;
     //   bool c = !BUILTIN_ISNAN_ComputeFpTy(y) &&
     //   BUILTIN_ISFINITE_ComputeFpTy(x);
     //   ret = c ? ret : QNAN_ComputeFpTy;
-    // TODO Handle NaN and infinity fast math flags separately here?
     Value *Nan = ConstantFP::getQNaN(FremTy);
-
-    Ret = B.CreateSelect(B.createIsFPClass(Y, FPClassTest::fcZero), Nan, Ret);
-    Value *C = B.CreateLogicalAnd(
-        B.CreateNot(B.createIsFPClass(Y, FPClassTest::fcNan)),
-        B.createIsFPClass(X, FPClassTest::fcFinite));
+    Ret = B.CreateSelect(B.CreateFCmpOEQ(Y, ConstantFP::get(FremTy, 0.0)), Nan,
+                         Ret);
+    FPClassTest NotNan = FPClassTest::fcInf | FPClassTest::fcFinite;
+    Value *YNotNan =
+        isKnownNeverNaN(Y, 0, SQ) ? B.getTrue() : B.createIsFPClass(Y, NotNan);
+    Value *XFinite = isKnownNeverInfinity(X, 0, SQ)
+                         ? B.getTrue()
+                         : B.createIsFPClass(X, FPClassTest::fcFinite);
+    Value *C = B.CreateLogicalAnd(YNotNan, XFinite);
     Ret = B.CreateSelect(C, Ret, Nan);
 
     return Ret;
   }
 };
 
-Value *FRemExpander::buildFRem(Value *X, Value *Y) const {
+  Value *FRemExpander::buildFRem(Value *X, Value *Y, SimplifyQuery &SQ) const {
   assert(X->getType() == FremTy && Y->getType() == FremTy);
 
   FastMathFlags FMF = B.getFastMathFlags();
@@ -293,8 +297,10 @@ Value *FRemExpander::buildFRem(Value *X, Value *Y) const {
   PHINode *RetPhi = B.CreatePHI(FremTy, 2, "ret");
   Value *Ret = RetPhi;
 
-  if (!FMF.noNaNs() || !FMF.noInfs())
-    Ret = buildNanAndInfHandling(Ret, X, Y);
+  // We would return NaN in all corner cases handled here.
+  // Hence, if NaNs are excluded, keep the result as it is.
+  if (!FMF.noNaNs())
+    Ret = handleInputCornerCases(Ret, X, Y, SQ);
 
   Function *Fun = B.GetInsertBlock()->getParent();
   auto *ThenBB = BasicBlock::Create(B.getContext(), "frem.compute", Fun);
@@ -352,7 +358,7 @@ static bool shouldSkipExpandFRem(BinaryOperator &I) {
          isConstOrConstSelectOp(I.getOperand(1));
 }
 
-static bool expandFRem(BinaryOperator &I) {
+static bool expandFRem(BinaryOperator &I, SimplifyQuery &SQ) {
   LLVM_DEBUG(dbgs() << "Expanding instruction: " << I << '\n');
   if (shouldSkipExpandFRem(I)) {
     LLVM_DEBUG(
@@ -384,7 +390,7 @@ static bool expandFRem(BinaryOperator &I) {
 
   Value *Ret;
   if (ReturnTy->isFloatingPointTy())
-    Ret = Expander->buildFRem(I.getOperand(0), I.getOperand(1));
+    Ret = Expander->buildFRem(I.getOperand(0), I.getOperand(1), SQ);
   else {
     auto *VecTy = cast<FixedVectorType>(ReturnTy);
 
@@ -398,7 +404,7 @@ static bool expandFRem(BinaryOperator &I) {
     for (int I = 0, E = VecTy->getNumElements(); I != E; ++I) {
       Value *Num = B.CreateExtractElement(Nums, I);
       Value *Denum = B.CreateExtractElement(Denums, I);
-      Value *Rem = Expander->buildFRem(Num, Denum);
+      Value *Rem = Expander->buildFRem(Num, Denum, SQ);
       Ret = B.CreateInsertElement(Ret, Rem, I);
     }
   }
@@ -963,6 +969,36 @@ static void scalarize(Instruction *I, SmallVectorImpl<Instruction *> &Replace) {
   I->eraseFromParent();
 }
 
+// This covers all floating point types; more than we need here.
+// TODO Move somewhere else for general use?
+/// Return the Libcall for a frem instruction of
+/// type \p Ty.
+static RTLIB::Libcall fremToLibcall(Type *Ty) {
+  assert(Ty->isFloatingPointTy());
+  if (Ty->isFloatTy() || Ty->is16bitFPTy())
+    return RTLIB::REM_F32;
+  if (Ty->isDoubleTy())
+    return RTLIB::REM_F64;
+  if (Ty->isFP128Ty())
+    return RTLIB::REM_F128;
+  if (Ty->isX86_FP80Ty())
+    return RTLIB::REM_F80;
+  if (Ty->isPPC_FP128Ty())
+    return RTLIB::REM_PPCF128;
+
+  llvm_unreachable("Unknown floating point type");
+}
+
+/* Return true if, according to \p LibInfo, the target either directly
+   supports the frem instruction for the \p Ty, has a custom lowering,
+   or uses a libcall. */
+static bool targetSupportsFrem(const TargetLowering &TLI, Type *Ty) {
+  if (!TLI.isOperationExpand(ISD::FREM, EVT::getEVT(Ty)))
+    return true;
+
+  return TLI.getLibcallName(fremToLibcall(Ty->getScalarType()));
+}
+
 static bool runImpl(Function &F, const TargetLowering &TLI) {
   SmallVector<Instruction *, 4> Replace;
   SmallVector<Instruction *, 4> ReplaceVector;
@@ -979,7 +1015,7 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
   for (auto &I : instructions(F)) {
     switch (I.getOpcode()) {
     case Instruction::FRem:
-      if (TLI.shouldExpandFRemInIR()) {
+      if (!targetSupportsFrem(TLI, I.getType())) {
         Replace.push_back(&I);
         Modified = true;
       }
@@ -1034,10 +1070,11 @@ static bool runImpl(Function &F, const TargetLowering &TLI) {
 
   while (!Replace.empty()) {
     Instruction *I = Replace.pop_back_val();
-    if (I->getOpcode() == Instruction::FRem)
-      expandFRem(cast<BinaryOperator>(*I));
-    else if (I->getOpcode() == Instruction::FPToUI ||
-             I->getOpcode() == Instruction::FPToSI) {
+    if (I->getOpcode() == Instruction::FRem) {
+      auto SQ = SimplifyQuery{I->getModule()->getDataLayout(), I};
+      expandFRem(cast<BinaryOperator>(*I), SQ);
+    } else if (I->getOpcode() == Instruction::FPToUI ||
+               I->getOpcode() == Instruction::FPToSI) {
       expandFPToI(I);
     } else {
       expandIToFP(I);
