@@ -222,6 +222,11 @@ enum NodeType : unsigned {
   VSRA_BY_SCALAR,
   VROTL_BY_SCALAR,
 
+  // Concatenate the vectors in the first two operands, shift them left/right
+  // bitwise by the third operand, and take the first/last half of the result.
+  SHL_DOUBLE_BIT,
+  SHR_DOUBLE_BIT,
+
   // For each element of the output type, sum across all sub-elements of
   // operand 0 belonging to the corresponding element, and add in the
   // rightmost sub-element of the corresponding element of operand 1.
@@ -736,6 +741,8 @@ private:
   SDValue lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerZERO_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerShift(SDValue Op, SelectionDAG &DAG, unsigned ByScalar) const;
+  SDValue lowerFSHL(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFSHR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerIS_FPCLASS(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
