@@ -821,7 +821,7 @@ public:
         return llvm::Triple("nvptx-nvidia-cuda");
       if (TT.getArch() == llvm::Triple::nvptx64)
         return llvm::Triple("nvptx64-nvidia-cuda");
-      if (TT.getArch() == llvm::Triple::amdgcn)
+      if (TT.isAMDGCN())
         return llvm::Triple("amdgcn-amd-amdhsa");
     }
     return TT;

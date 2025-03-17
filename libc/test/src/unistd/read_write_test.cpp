@@ -27,7 +27,7 @@ TEST(LlvmLibcUniStd, WriteAndReadBackTest) {
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
   constexpr const char HELLO[] = "hello";
-  constexpr int HELLO_SIZE = sizeof(HELLO);
+  constexpr ssize_t HELLO_SIZE = sizeof(HELLO);
   ASSERT_THAT(LIBC_NAMESPACE::write(write_fd, HELLO, HELLO_SIZE),
               Succeeds(HELLO_SIZE));
   ASSERT_THAT(LIBC_NAMESPACE::fsync(write_fd), Succeeds(0));
@@ -48,15 +48,15 @@ TEST(LlvmLibcUniStd, WriteAndReadBackTest) {
 TEST(LlvmLibcUniStd, WriteFails) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 
-  EXPECT_THAT(LIBC_NAMESPACE::write(-1, "", 1), Fails(EBADF));
+  EXPECT_THAT(LIBC_NAMESPACE::write(-1, "", 1), Fails<ssize_t>(EBADF));
   EXPECT_THAT(LIBC_NAMESPACE::write(1, reinterpret_cast<const void *>(-1), 1),
-              Fails(EFAULT));
+              Fails<ssize_t>(EFAULT));
 }
 
 TEST(LlvmLibcUniStd, ReadFails) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
 
-  EXPECT_THAT(LIBC_NAMESPACE::read(-1, nullptr, 1), Fails(EBADF));
+  EXPECT_THAT(LIBC_NAMESPACE::read(-1, nullptr, 1), Fails<ssize_t>(EBADF));
   EXPECT_THAT(LIBC_NAMESPACE::read(0, reinterpret_cast<void *>(-1), 1),
-              Fails(EFAULT));
+              Fails<ssize_t>(EFAULT));
 }

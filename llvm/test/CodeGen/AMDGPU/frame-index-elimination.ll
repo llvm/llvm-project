@@ -255,7 +255,7 @@ define void @undefined_stack_store_reg(float %arg, i32 %arg1) #0 {
 bb:
   %tmp = alloca <4 x float>, align 16, addrspace(5)
   %tmp2 = insertelement <4 x float> poison, float %arg, i32 0
-  store <4 x float> %tmp2, ptr addrspace(5) undef
+  store <4 x float> %tmp2, ptr addrspace(5) poison
   %tmp3 = icmp eq i32 %arg1, 0
   br i1 %tmp3, label %bb4, label %bb5
 
