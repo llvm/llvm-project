@@ -434,36 +434,6 @@ __datasizeof
 ``__datasizeof`` behaves like ``sizeof``, except that it returns the size of the
 type ignoring tail padding.
 
-.. _builtin_structured_binding_size-doc:
-
-__builtin_structured_binding_size (C++)
----------------------------------------
-``__builtin_structured_binding_size`` returns the *structured binding size*
-([dcl.struct.bind]) of the type ``T`` (or unevaluated expression ``arg``)
-passed as argument.
-
-This is equivalent to the size of the pack ``p`` in ``auto&& [...p] = arg;``.
-If the argument is not destructurable (ie not a builtin array, builtin SIMD vector,
-builtin complex, *tuple-like* type or destructurable class type),
-``__builtin_structured_binding_size(T)`` is not a valid expression
-(``__builtin_structured_binding_size`` is SFINEA-friendly).
-
-A type is considered a valid *tuple-like* if ``std::tuple_size_v<T>`` is a valid expression,
-even if there is no valid ``std::tuple_element`` specialization or suitable
-``get`` function for that type.
-
-.. code-block:: c++
-
-  template<std::size_t Idx, typename T>
-  requires (Idx < __builtin_structured_binding_size(T))
-  decltype(auto) constexpr get_binding(T&& obj) {
-      auto && [...p] = std::forward<T>(obj);
-      return p...[Idx];
-  }
-  struct S { int a = 0, b = 42; };
-  static_assert(__builtin_structured_binding_size(S) == 2);
-  static_assert(get_binding<1>(S{}) == 42);
-
 
 _BitInt, _ExtInt
 ----------------
@@ -1941,6 +1911,38 @@ A simplistic usage example as might be seen in standard C++ headers follows:
   #else
   // Emulate type trait for compatibility with other compilers.
   #endif
+
+
+.. _builtin_structured_binding_size-doc:
+
+__builtin_structured_binding_size (C++)
+---------------------------------------
+
+The ``__builtin_structured_binding_size(T)`` type trait returns
+the *structured binding size* ([dcl.struct.bind]) of type ``T``
+
+This is equivalent to the size of the pack ``p`` in ``auto&& [...p] = declval<T&>();``.
+If the argument is not destructurable (ie not a builtin array, builtin SIMD vector,
+builtin complex, *tuple-like* type or destructurable class type),
+``__builtin_structured_binding_size(T)`` is not a valid expression
+(``__builtin_structured_binding_size`` is SFINAE-friendly).
+
+A type is considered a valid *tuple-like* if ``std::tuple_size_v<T>`` is a valid expression,
+even if there is no valid ``std::tuple_element`` specialization or suitable
+``get`` function for that type.
+
+.. code-block:: c++
+
+  template<std::size_t Idx, typename T>
+  requires (Idx < __builtin_structured_binding_size(T))
+  decltype(auto) constexpr get_binding(T&& obj) {
+      auto && [...p] = std::forward<T>(obj);
+      return p...[Idx];
+  }
+  struct S { int a = 0, b = 42; };
+  static_assert(__builtin_structured_binding_size(S) == 2);
+  static_assert(get_binding<1>(S{}) == 42);
+
 
 Blocks
 ======

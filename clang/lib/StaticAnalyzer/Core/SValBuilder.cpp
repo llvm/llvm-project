@@ -368,7 +368,11 @@ std::optional<SVal> SValBuilder::getConstantVal(const Expr *E) {
 
   case Stmt::TypeTraitExprClass: {
     const auto *TE = cast<TypeTraitExpr>(E);
-    return makeTruthVal(TE->getValue(), TE->getType());
+    if (TE->isStoredAsBoolean())
+      return makeTruthVal(TE->getBoolValue(), TE->getType());
+    if (TE->getType()->isIntegralOrEnumerationType())
+      return makeIntVal(TE->getAPValue().getInt());
+    return std::nullopt;
   }
 
   case Stmt::IntegerLiteralClass:

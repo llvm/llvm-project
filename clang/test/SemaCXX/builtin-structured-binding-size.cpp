@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -verify
+// RUN: %clang_cc1 %s -std=c++2c -fsyntax-only -verify -fexperimental-new-constant-interpreter
+
 
 struct S0 {};
 struct S1 {int a;};
@@ -28,7 +30,8 @@ static_assert(__builtin_structured_binding_size(S1) == 1);
 static_assert(__builtin_structured_binding_size(SD) == 1);
 static_assert(__builtin_structured_binding_size(SE1) == 1);
 // expected-error@-1 {{cannot decompose class type 'SE1': both it and its base class 'S1' have non-static data members}} \
-// expected-error@-1 {{type 'SE1' is not destructurable}}
+// expected-error@-1 {{type 'SE1' is not destructurable}} \
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
 
 
 static_assert(__builtin_structured_binding_size(int[0]) == 0);
@@ -39,7 +42,6 @@ using vec2 = int __attribute__((__vector_size__(2 * sizeof(int))));
 using vec3 = int __attribute__((__vector_size__(3 * sizeof(int))));
 static_assert(__builtin_structured_binding_size(vec2) == 2);
 static_assert(__builtin_structured_binding_size(vec3) == 3);
-static_assert(__builtin_structured_binding_size(__builtin_complex(0., 0.)) == 2);
 static_assert(__builtin_structured_binding_size(decltype(__builtin_complex(0., 0.))) == 2);
 
 
@@ -47,15 +49,18 @@ int VLASize; // expected-note {{declared here}}
 static_assert(__builtin_structured_binding_size(int[VLASize]) == 42);
 // expected-error@-1 {{type 'int[VLASize]' is not destructurable}} \
 // expected-warning@-1 {{variable length arrays in C++ are a Clang extension}} \
-// expected-note@-1 {{read of non-const variable 'VLASize' is not allowed in a constant expression}}
+// expected-note@-1 {{read of non-const variable 'VLASize' is not allowed in a constant expression}} \
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
 
 
 struct Incomplete; // expected-note {{forward declaration of 'Incomplete'}}
 static_assert(__builtin_structured_binding_size(Incomplete) == 1);
 // expected-error@-1 {{incomplete type 'Incomplete' where a complete type is required}} \
-// expected-error@-1 {{type 'Incomplete' is not destructurable}}
+// expected-error@-1 {{type 'Incomplete' is not destructurable}} \
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
 static_assert(__builtin_structured_binding_size(Incomplete[]) == 1);
-// expected-error@-1 {{type 'Incomplete[]' is not destructurable}}
+// expected-error@-1 {{type 'Incomplete[]' is not destructurable}} \
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
 static_assert(__builtin_structured_binding_size(Incomplete[0]) == 0);
 static_assert(__builtin_structured_binding_size(Incomplete[1]) == 1);
 static_assert(__builtin_structured_binding_size(Incomplete[42]) == 42);
@@ -120,20 +125,9 @@ static_assert(__builtin_structured_binding_size(T1) == 1);
 static_assert(__builtin_structured_binding_size(T42) == 42);
 static_assert(__builtin_structured_binding_size(TSizeError) == 42);
 // expected-error@-1 {{cannot decompose this type; 'std::tuple_size<TSizeError>::value' is not a valid integral constant expression}} \
-// expected-error@-1 {{type 'TSizeError' is not destructurable}}
+// expected-error@-1 {{type 'TSizeError' is not destructurable}} \
+// expected-error@-1 {{static assertion expression is not an integral constant expression}}
 static_assert(!is_destructurable<TSizeError>);
-}
-
-
-void test_expr(S1 & s1, S2 && s2, T0 & t0, int i, const S1 & s1c, int arr[2]) {
-    static_assert(__builtin_structured_binding_size(s1) == 1);
-    static_assert(__builtin_structured_binding_size(s1c) == 1);
-    static_assert(__builtin_structured_binding_size(s2) == 2);
-    static_assert(__builtin_structured_binding_size(t0) == 0);
-    static_assert(__builtin_structured_binding_size(i));
-    // expected-error@-1 {{type 'int' is not destructurable}}
-    static_assert(__builtin_structured_binding_size(arr) == 1);
-    // expected-error@-1 {{type 'int *' is not destructurable}}
 }
 
 

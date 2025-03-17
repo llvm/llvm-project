@@ -12102,7 +12102,12 @@ public:
   }
 
   bool VisitTypeTraitExpr(const TypeTraitExpr *E) {
-    return Success(E->getValue(), E);
+    if (E->isStoredAsBoolean())
+      return Success(E->getBoolValue(), E);
+    if (E->getAPValue().isAbsent())
+      return false;
+    assert(E->getAPValue().isInt() && "APValue type not supported");
+    return Success(E->getAPValue().getInt(), E);
   }
 
   bool VisitArrayTypeTraitExpr(const ArrayTypeTraitExpr *E) {
@@ -14878,11 +14883,6 @@ bool IntExprEvaluator::VisitUnaryExprOrTypeTraitExpr(
     }
     return Success(Sizeof, E);
   }
-  case UETT_StructuredBindingSize:
-    // This can only be computed from Sema and has been cached.
-    // We can still get there from code that strips the outer ConstantExpr.
-    return false;
-
   case UETT_OpenMPRequiredSimdAlign:
     assert(E->isArgumentType());
     return Success(

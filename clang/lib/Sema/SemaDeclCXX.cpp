@@ -17320,21 +17320,13 @@ void Sema::DiagnoseStaticAssertDetails(const Expr *E) {
     if (!UsefulToPrintExpr(LHS) && !UsefulToPrintExpr(RHS))
       return;
 
-    auto UseCachedValue = [](const Expr *Outer, const Expr *Inner) {
-      if (const ConstantExpr *E = dyn_cast<ConstantExpr>(Outer);
-          E && !E->getAPValueResult().isAbsent())
-        return Outer;
-      return Inner;
-    };
-
     struct {
       const clang::Expr *Cond;
       Expr::EvalResult Result;
       SmallString<12> ValueString;
       bool Print;
-    } DiagSide[2] = {
-        {UseCachedValue(Op->getLHS(), LHS), Expr::EvalResult(), {}, false},
-        {UseCachedValue(Op->getRHS(), RHS), Expr::EvalResult(), {}, false}};
+    } DiagSide[2] = {{LHS, Expr::EvalResult(), {}, false},
+                     {RHS, Expr::EvalResult(), {}, false}};
     for (unsigned I = 0; I < 2; I++) {
       const Expr *Side = DiagSide[I].Cond;
 

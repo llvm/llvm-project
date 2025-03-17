@@ -5358,10 +5358,6 @@ recurse:
       MangleAlignofSizeofArg();
       break;
 
-    case UETT_StructuredBindingSize:
-      MangleExtensionBuiltin(SAE);
-      break;
-
     case UETT_VectorElements:
     case UETT_OpenMPRequiredSimdAlign:
     case UETT_VecStep:

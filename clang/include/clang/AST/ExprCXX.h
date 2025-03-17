@@ -2765,7 +2765,7 @@ public:
 /// \endcode
 class TypeTraitExpr final
     : public Expr,
-      private llvm::TrailingObjects<TypeTraitExpr, TypeSourceInfo *> {
+      private llvm::TrailingObjects<TypeTraitExpr, APValue, TypeSourceInfo *> {
   /// The location of the type trait keyword.
   SourceLocation Loc;
 
@@ -2779,6 +2779,10 @@ class TypeTraitExpr final
                 ArrayRef<TypeSourceInfo *> Args,
                 SourceLocation RParenLoc,
                 bool Value);
+
+  TypeTraitExpr(QualType T, SourceLocation Loc, TypeTrait Kind,
+                ArrayRef<TypeSourceInfo *> Args, SourceLocation RParenLoc,
+                APValue Value);
 
   TypeTraitExpr(EmptyShell Empty) : Expr(TypeTraitExprClass, Empty) {}
 
@@ -2798,7 +2802,13 @@ public:
                                SourceLocation RParenLoc,
                                bool Value);
 
+  static TypeTraitExpr *Create(const ASTContext &C, QualType T,
+                               SourceLocation Loc, TypeTrait Kind,
+                               ArrayRef<TypeSourceInfo *> Args,
+                               SourceLocation RParenLoc, APValue Value);
+
   static TypeTraitExpr *CreateDeserialized(const ASTContext &C,
+                                           bool IsStoredAsBool,
                                            unsigned NumArgs);
 
   /// Determine which type trait this expression uses.
@@ -2806,9 +2816,18 @@ public:
     return static_cast<TypeTrait>(TypeTraitExprBits.Kind);
   }
 
-  bool getValue() const {
-    assert(!isValueDependent());
+  bool isStoredAsBoolean() const {
+    return TypeTraitExprBits.IsBooleanTypeTrait;
+  }
+
+  bool getBoolValue() const {
+    assert(!isValueDependent() && TypeTraitExprBits.IsBooleanTypeTrait);
     return TypeTraitExprBits.Value;
+  }
+
+  const APValue &getAPValue() const {
+    assert(!isValueDependent() && !TypeTraitExprBits.IsBooleanTypeTrait);
+    return *getTrailingObjects<APValue>();
   }
 
   /// Determine the number of arguments to this type trait.
@@ -2839,6 +2858,10 @@ public:
 
   const_child_range children() const {
     return const_child_range(const_child_iterator(), const_child_iterator());
+  }
+
+  unsigned numTrailingObjects(OverloadToken<APValue>) const {
+    return TypeTraitExprBits.IsBooleanTypeTrait ? 0 : 1;
   }
 };
 
