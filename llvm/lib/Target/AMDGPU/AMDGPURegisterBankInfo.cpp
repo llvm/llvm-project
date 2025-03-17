@@ -2433,8 +2433,6 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
       return;
     }
 
-    // 16-bit operations are VALU only, but can be promoted to 32-bit SALU.
-    // Packed 16-bit operations need to be scalarized and promoted.
     if (DstTy.getSizeInBits() == 16 && DstBank == &AMDGPU::SGPRRegBank) {
       const LLT S32 = LLT::scalar(32);
       MachineBasicBlock *MBB = MI.getParent();
