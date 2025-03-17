@@ -21,7 +21,6 @@
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
-#include "llvm/Support/Threading.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/TargetParser/Host.h"
 #include <optional>
@@ -714,11 +713,9 @@ void amdgpu::getAMDGPUTargetFeatures(const Driver &D,
 
 static unsigned getFullLTOPartitions(const Driver &D, const ArgList &Args) {
   const Arg *A = Args.getLastArg(options::OPT_flto_partitions_EQ);
-  // In the absence of an option, use the number of available threads with a cap
-  // at 16 partitions. More than 16 partitions rarely benefits code splitting
-  // and can lead to more empty/small modules each with their own overhead.
+  // In the absence of an option, use 8 as the default.
   if (!A)
-    return std::min(16u, llvm::hardware_concurrency().compute_thread_count());
+    return 8;
   int Value = 0;
   if (StringRef(A->getValue()).getAsInteger(10, Value) || (Value < 1)) {
     D.Diag(diag::err_drv_invalid_int_value)
