@@ -16,6 +16,7 @@
 #include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
 
 TEST(LlvmLibcSocketPairTest, LocalSocket) {
+  LIBC_NAMESPACE::libc_errno = 0;
   int sockpair[2] = {-1, -1};
   int result = LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_DGRAM, 0, sockpair);
   ASSERT_EQ(result, 0);
@@ -24,12 +25,14 @@ TEST(LlvmLibcSocketPairTest, LocalSocket) {
   ASSERT_GE(sockpair[0], 0);
   ASSERT_GE(sockpair[1], 0);
 
+  LIBC_NAMESPACE::libc_errno = 0;
   LIBC_NAMESPACE::close(sockpair[0]);
   LIBC_NAMESPACE::close(sockpair[1]);
   ASSERT_ERRNO_SUCCESS();
 }
 
 TEST(LlvmLibcSocketPairTest, SocketFails) {
+  LIBC_NAMESPACE::libc_errno = 0;
   int sockpair[2] = {-1, -1};
   int result = LIBC_NAMESPACE::socketpair(-1, -1, -1, sockpair);
   ASSERT_EQ(result, -1);

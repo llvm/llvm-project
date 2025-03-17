@@ -23,6 +23,7 @@ TEST(LlvmLibcSendMsgRecvMsgTest, SucceedsWithSocketPair) {
 
   int sockpair[2] = {0, 0};
 
+  LIBC_NAMESPACE::libc_errno = 0;
   int result = LIBC_NAMESPACE::socketpair(AF_UNIX, SOCK_STREAM, 0, sockpair);
   ASSERT_EQ(result, 0);
   ASSERT_ERRNO_SUCCESS();
@@ -41,6 +42,7 @@ TEST(LlvmLibcSendMsgRecvMsgTest, SucceedsWithSocketPair) {
   send_message.msg_controllen = 0;
   send_message.msg_flags = 0;
 
+  LIBC_NAMESPACE::libc_errno = 0;
   ssize_t send_result = LIBC_NAMESPACE::sendmsg(sockpair[0], &send_message, 0);
   EXPECT_EQ(send_result, static_cast<ssize_t>(MESSAGE_LEN));
   ASSERT_ERRNO_SUCCESS();
@@ -60,6 +62,7 @@ TEST(LlvmLibcSendMsgRecvMsgTest, SucceedsWithSocketPair) {
   recv_message.msg_controllen = 0;
   recv_message.msg_flags = 0;
 
+  LIBC_NAMESPACE::libc_errno = 0;
   ssize_t recv_result = LIBC_NAMESPACE::recvmsg(sockpair[1], &recv_message, 0);
   ASSERT_EQ(recv_result, static_cast<ssize_t>(MESSAGE_LEN));
   ASSERT_ERRNO_SUCCESS();
@@ -67,10 +70,12 @@ TEST(LlvmLibcSendMsgRecvMsgTest, SucceedsWithSocketPair) {
   ASSERT_STREQ(buffer, TEST_MESSAGE);
 
   // close both ends of the socket
+  LIBC_NAMESPACE::libc_errno = 0;
   result = LIBC_NAMESPACE::close(sockpair[0]);
   ASSERT_EQ(result, 0);
   ASSERT_ERRNO_SUCCESS();
 
+  LIBC_NAMESPACE::libc_errno = 0;
   result = LIBC_NAMESPACE::close(sockpair[1]);
   ASSERT_EQ(result, 0);
   ASSERT_ERRNO_SUCCESS();
@@ -94,11 +99,10 @@ TEST(LlvmLibcSendMsgRecvMsgTest, SendFails) {
   send_message.msg_controllen = 0;
   send_message.msg_flags = 0;
 
+  LIBC_NAMESPACE::libc_errno = 0;
   ssize_t send_result = LIBC_NAMESPACE::sendmsg(-1, &send_message, 0);
   EXPECT_EQ(send_result, ssize_t(-1));
   ASSERT_ERRNO_FAILURE();
-
-  LIBC_NAMESPACE::libc_errno = 0; // reset errno to avoid test ordering issues.
 }
 
 TEST(LlvmLibcSendMsgRecvMsgTest, RecvFails) {
@@ -117,9 +121,8 @@ TEST(LlvmLibcSendMsgRecvMsgTest, RecvFails) {
   recv_message.msg_controllen = 0;
   recv_message.msg_flags = 0;
 
+  LIBC_NAMESPACE::libc_errno = 0;
   ssize_t recv_result = LIBC_NAMESPACE::recvmsg(-1, &recv_message, 0);
   ASSERT_EQ(recv_result, ssize_t(-1));
   ASSERT_ERRNO_FAILURE();
-
-  LIBC_NAMESPACE::libc_errno = 0; // reset errno to avoid test ordering issues.
 }

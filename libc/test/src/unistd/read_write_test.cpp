@@ -23,6 +23,7 @@ TEST(LlvmLibcUniStd, WriteAndReadBackTest) {
   constexpr const char *FILENAME = "__unistd_read_write.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
 
+  LIBC_NAMESPACE::libc_errno = 0;
   int write_fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(write_fd, 0);
@@ -33,6 +34,7 @@ TEST(LlvmLibcUniStd, WriteAndReadBackTest) {
   ASSERT_THAT(LIBC_NAMESPACE::fsync(write_fd), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(write_fd), Succeeds(0));
 
+  LIBC_NAMESPACE::libc_errno = 0;
   int read_fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(read_fd, 0);

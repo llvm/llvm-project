@@ -20,6 +20,7 @@
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 TEST(LlvmLibcEpollPwaitTest, Basic) {
+  LIBC_NAMESPACE::libc_errno = 0;
   int epfd = LIBC_NAMESPACE::epoll_create1(0);
   ASSERT_GT(epfd, 0);
   ASSERT_ERRNO_SUCCESS();

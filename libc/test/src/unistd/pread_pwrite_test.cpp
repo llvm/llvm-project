@@ -34,6 +34,7 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
 
   constexpr const char *FILENAME = "pread_pwrite.test";
   auto TEST_FILE = libc_make_test_file_path(FILENAME);
+  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY | O_CREAT, S_IRWXU);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
@@ -42,6 +43,7 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
   ASSERT_THAT(LIBC_NAMESPACE::fsync(fd), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
+  LIBC_NAMESPACE::libc_errno = 0;
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_WRONLY);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);
@@ -50,6 +52,7 @@ TEST(LlvmLibcUniStd, PWriteAndPReadBackTest) {
   ASSERT_THAT(LIBC_NAMESPACE::fsync(fd), Succeeds(0));
   ASSERT_THAT(LIBC_NAMESPACE::close(fd), Succeeds(0));
 
+  LIBC_NAMESPACE::libc_errno = 0;
   fd = LIBC_NAMESPACE::open(TEST_FILE, O_RDONLY);
   ASSERT_ERRNO_SUCCESS();
   ASSERT_GT(fd, 0);

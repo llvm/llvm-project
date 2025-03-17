@@ -16,6 +16,7 @@
 #include <sys/socket.h> // For AF_UNIX and SOCK_DGRAM
 
 TEST(LlvmLibcSocketTest, LocalSocket) {
+  LIBC_NAMESPACE::libc_errno = 0;
   int sock = LIBC_NAMESPACE::socket(AF_UNIX, SOCK_DGRAM, 0);
   ASSERT_GE(sock, 0);
   ASSERT_ERRNO_SUCCESS();

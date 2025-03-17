@@ -15,6 +15,7 @@
 using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
 
 TEST(LlvmLibcEpollCreate1Test, Basic) {
+  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::epoll_create1(0);
   ASSERT_GT(fd, 0);
   ASSERT_ERRNO_SUCCESS();
@@ -23,6 +24,7 @@ TEST(LlvmLibcEpollCreate1Test, Basic) {
 }
 
 TEST(LlvmLibcEpollCreate1Test, CloseOnExecute) {
+  LIBC_NAMESPACE::libc_errno = 0;
   int fd = LIBC_NAMESPACE::epoll_create1(EPOLL_CLOEXEC);
   ASSERT_GT(fd, 0);
   ASSERT_ERRNO_SUCCESS();
