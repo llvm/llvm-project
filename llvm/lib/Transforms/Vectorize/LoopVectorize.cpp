@@ -6541,11 +6541,6 @@ LoopVectorizationCostModel::getInstructionCost(Instruction *I,
       // TODO: Consider vscale_range info.
       if (VF.isScalable() && VF.getKnownMinValue() == 1)
         return InstructionCost::getInvalid();
-      // If a FOR has no users inside the loop we won't generate a splice.
-      if (none_of(Phi->users(), [this](User *U) {
-            return TheLoop->contains(cast<Instruction>(U));
-          }))
-        return 0;
       SmallVector<int> Mask(VF.getKnownMinValue());
       std::iota(Mask.begin(), Mask.end(), VF.getKnownMinValue() - 1);
       return TTI.getShuffleCost(TargetTransformInfo::SK_Splice,
@@ -7471,6 +7466,16 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
             SeenInstrs.insert(M);
         }
         continue;
+      }
+      // If a FOR's splice wasn't used it will have been removed, so the VPlan
+      // model won't cost it whilst the legacy will.
+      if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
+        if (none_of(FOR->users(), [](VPUser *U) {
+              auto *VPI = dyn_cast<VPInstruction>(U);
+              return VPI && VPI->getOpcode() ==
+                                VPInstruction::FirstOrderRecurrenceSplice;
+            }))
+          return true;
       }
       // The VPlan-based cost model is more accurate for partial reduction and
       // comparing against the legacy cost isn't desirable.
