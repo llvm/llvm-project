@@ -396,9 +396,20 @@ public:
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     // Most of the non-ARM calling conventions are i386 conventions.
     switch (CC) {
+    case CC_X86ThisCall:
+    case CC_X86FastCall:
+    case CC_X86StdCall:
+    case CC_X86VectorCall:
+    case CC_X86RegCall:
     case CC_C:
-    case CC_Win64:
+    case CC_PreserveMost:
+    case CC_Swift:
+    case CC_X86Pascal:
+    case CC_IntelOclBicc:
+    case CC_OpenCLKernel:
       return CCCR_OK;
+    case CC_SwiftAsync:
+      return CCCR_Error;
     default:
       return CCCR_Warning;
     }
@@ -842,21 +853,7 @@ public:
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
     switch (CC) {
-    case CC_X86StdCall:
-    case CC_X86ThisCall:
-    case CC_X86FastCall:
-      return CCCR_Ignore;
     case CC_C:
-    case CC_X86VectorCall:
-    case CC_IntelOclBicc:
-    case CC_PreserveMost:
-    case CC_PreserveAll:
-    case CC_PreserveNone:
-    case CC_X86_64SysV:
-    case CC_Swift:
-    case CC_SwiftAsync:
-    case CC_X86RegCall:
-    case CC_OpenCLKernel:
     case CC_Win64:
       return CCCR_OK;
     default:
