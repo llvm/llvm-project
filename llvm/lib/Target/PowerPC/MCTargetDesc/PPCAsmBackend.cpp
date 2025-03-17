@@ -90,10 +90,6 @@ public:
                                          : llvm::endianness::big),
         TT(TT) {}
 
-  unsigned getNumFixupKinds() const override {
-    return PPC::NumTargetFixupKinds;
-  }
-
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo InfosBE[PPC::NumTargetFixupKinds] = {
       // name                    offset  bits  flags
@@ -130,7 +126,7 @@ public:
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(Kind - FirstTargetFixupKind < PPC::NumTargetFixupKinds &&
            "Invalid kind!");
     return (Endian == llvm::endianness::little
                 ? InfosLE

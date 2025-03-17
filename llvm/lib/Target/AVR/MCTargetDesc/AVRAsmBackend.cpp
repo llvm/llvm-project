@@ -481,7 +481,7 @@ MCFixupKindInfo const &AVRAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < AVR::NumTargetFixupKinds &&
          "Invalid kind!");
 
   return Infos[Kind - FirstTargetFixupKind];

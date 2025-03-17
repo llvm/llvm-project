@@ -82,9 +82,6 @@ public:
     return Result;
   }
 
-  unsigned getNumFixupKinds() const override {
-    return Hexagon::NumTargetFixupKinds;
-  }
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override {
     const static MCFixupKindInfo Infos[Hexagon::NumTargetFixupKinds] = {
@@ -195,7 +192,8 @@ public:
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
 
-    assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+    assert(unsigned(Kind - FirstTargetFixupKind) <
+               Hexagon::NumTargetFixupKinds &&
            "Invalid kind!");
     return Infos[Kind - FirstTargetFixupKind];
   }
