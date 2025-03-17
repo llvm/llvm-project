@@ -2792,7 +2792,7 @@ SwiftASTContext::CreateInstance(const SymbolContext &sc,
     swift_ast_sp->m_module = module_sp.get();
     auto &lang_opts = swift_ast_sp->GetLanguageOptions();
     lang_opts.EnableAccessControl = false;
-    lang_opts.EnableCXXInterop = module_sp->IsSwiftCxxInteropEnabled();
+    lang_opts.EnableCXXInterop = ShouldEnableCXXInterop(cu);
     if (module_sp->IsEmbeddedSwift())
       lang_opts.enableFeature(swift::Feature::Embedded);
   }
