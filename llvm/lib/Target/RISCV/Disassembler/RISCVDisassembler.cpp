@@ -691,7 +691,7 @@ static constexpr DecoderListEntry DecoderList32[]{
     {DecoderTableXqci32, XqciFeatureGroup, "Qualcomm uC Extensions"},
     {DecoderTableXRivos32, XRivosFeatureGroup, "Rivos"},
     {DecoderTable32, {}, "standard 32-bit instructions"},
-    {DecoderTableRV32Only32, {}, "RV32-only standard instructions"},
+    {DecoderTableRV32Only32, {}, "RV32-only standard 32-bit instructions"},
     {DecoderTableZfinx32, {}, "Zfinx (Float in Integer)"},
     {DecoderTableZdinxRV32Only32, {}, "RV32-only Zdinx (Double in Integer)"},
 };
@@ -734,8 +734,8 @@ static constexpr DecoderListEntry DecoderList16[]{
     // Standard Extensions
     // DecoderTableZicfiss16 must be checked before DecoderTable16.
     {DecoderTableZicfiss16, {}, "Zicfiss (Shadow Stack 16-bit)"},
-    {DecoderTable16, {}, "standard 16-bit Instructions"},
-    {DecoderTableRV32Only16, {}, "RV32-only 16-bit Instructions"},
+    {DecoderTable16, {}, "standard 16-bit instructions"},
+    {DecoderTableRV32Only16, {}, "RV32-only 16-bit instructions"},
     // Zc* instructions incompatible with Zcf or Zcd
     {DecoderTableZcOverlap16,
      {},
