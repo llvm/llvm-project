@@ -53,7 +53,7 @@ void test_dist(int nteams, int nthreads, int par_if) {
   int index_sum_expected = ub * (ub + 1) / 2;
   int index_sum = 0;
 #pragma omp teams distribute parallel for num_teams(nteams)                    \
-    num_threads(nthreads) if(par_if)
+    num_threads(nthreads) if (par_if)
   for (int i = 1; i <= ub; i++)
 #pragma omp atomic update
     index_sum += i;
