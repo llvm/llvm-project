@@ -5800,7 +5800,8 @@ static SDValue getGeneralPermuteNode(SelectionDAG &DAG, const SDLoc &DL,
 namespace {
 // Describes a general N-operand vector shuffle.
 struct GeneralShuffle {
-  GeneralShuffle(EVT vt) : VT(vt), UnpackFromEltSize(UINT_MAX) {}
+  GeneralShuffle(EVT vt)
+      : VT(vt), UnpackFromEltSize(UINT_MAX), UnpackLow(false) {}
   void addUndef();
   bool add(SDValue, unsigned);
   SDValue getNode(SelectionDAG &, const SDLoc &);
@@ -5821,8 +5822,10 @@ struct GeneralShuffle {
 
   // Holds a value of 1, 2 or 4 if a final unpack has been prepared for.
   unsigned UnpackFromEltSize;
+  // True if the final unpack uses the low half.
+  bool UnpackLow;
 };
-}
+} // namespace
 
 // Add an extra undefined element to the shuffle.
 void GeneralShuffle::addUndef() {
@@ -6027,11 +6030,21 @@ void GeneralShuffle::tryPrepareForUnpack() {
     if (MatchUnpack) {
       if (Ops.size() == 2) {
         // Don't use unpack if a single source operand needs rearrangement.
-        for (unsigned i = 0; i < SystemZ::VectorBytes / 2; i++)
-          if (SrcBytes[i] != -1 && SrcBytes[i] % 16 != int(i)) {
+        bool CanUseUnpackLow = true, CanUseUnpackHigh = true;
+        for (unsigned i = 0; i < SystemZ::VectorBytes / 2; i++) {
+          if (SrcBytes[i] == -1)
+            continue;
+          if (SrcBytes[i] % 16 != int(i))
+            CanUseUnpackHigh = false;
+          if (SrcBytes[i] % 16 != int(i + SystemZ::VectorBytes / 2))
+            CanUseUnpackLow = false;
+          if (!CanUseUnpackLow && !CanUseUnpackHigh) {
             UnpackFromEltSize = UINT_MAX;
             return;
           }
+        }
+        if (!CanUseUnpackHigh)
+          UnpackLow = true;
       }
       break;
     }
@@ -6046,13 +6059,19 @@ void GeneralShuffle::tryPrepareForUnpack() {
 
   // Apply the unpack in reverse to the Bytes array.
   unsigned B = 0;
+  if (UnpackLow) {
+    while (B < SystemZ::VectorBytes / 2)
+      Bytes[B++] = -1;
+  }
   for (unsigned Elt = 0; Elt < SystemZ::VectorBytes;) {
     Elt += UnpackFromEltSize;
     for (unsigned i = 0; i < UnpackFromEltSize; i++, Elt++, B++)
       Bytes[B] = Bytes[Elt];
   }
-  while (B < SystemZ::VectorBytes)
-    Bytes[B++] = -1;
+  if (!UnpackLow) {
+    while (B < SystemZ::VectorBytes)
+      Bytes[B++] = -1;
+  }
 
   // Remove the zero vector from Ops
   Ops.erase(&Ops[ZeroVecOpNo]);
@@ -6079,7 +6098,9 @@ SDValue GeneralShuffle::insertUnpackIfPrepared(SelectionDAG &DAG,
   unsigned OutBits = InBits * 2;
   EVT OutVT = MVT::getVectorVT(MVT::getIntegerVT(OutBits),
                                SystemZ::VectorBits / OutBits);
-  return DAG.getNode(SystemZISD::UNPACKL_HIGH, DL, OutVT, PackedOp);
+  return DAG.getNode(UnpackLow ? SystemZISD::UNPACKL_LOW
+                               : SystemZISD::UNPACKL_HIGH,
+                     DL, OutVT, PackedOp);
 }
 
 // Return true if the given BUILD_VECTOR is a scalar-to-vector conversion.
@@ -6486,12 +6507,55 @@ lowerSIGN_EXTEND_VECTOR_INREG(SDValue Op, SelectionDAG &DAG) const {
   EVT InVT = PackedOp.getValueType();
   unsigned ToBits = OutVT.getScalarSizeInBits();
   unsigned FromBits = InVT.getScalarSizeInBits();
+  unsigned StartOffset = 0;
+
+  // If the input is a VECTOR_SHUFFLE, there are a number of important
+  // cases where we can directly implement the sign-extension of the
+  // original input lanes of the shuffle.
+  if (PackedOp.getOpcode() == ISD::VECTOR_SHUFFLE) {
+    ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(PackedOp.getNode());
+    ArrayRef<int> ShuffleMask = SVN->getMask();
+    int OutNumElts = OutVT.getVectorNumElements();
+
+    // Recognize the special case where the sign-extension can be done
+    // by the VSEG instruction.  Handled via the default expander.
+    if (ToBits == 64 && OutNumElts == 2) {
+      int NumElem = ToBits / FromBits;
+      if (ShuffleMask[0] == NumElem - 1 && ShuffleMask[1] == 2 * NumElem - 1)
+        return SDValue();
+    }
+
+    // Recognize the special case where we can fold the shuffle by
+    // replacing some of the UNPACK_HIGH with UNPACK_LOW.
+    int StartOffsetCandidate = -1;
+    for (int Elt = 0; Elt < OutNumElts; Elt++) {
+      if (ShuffleMask[Elt] == -1)
+        continue;
+      if (ShuffleMask[Elt] % OutNumElts == Elt) {
+        if (StartOffsetCandidate == -1)
+          StartOffsetCandidate = ShuffleMask[Elt] - Elt;
+        if (StartOffsetCandidate == ShuffleMask[Elt] - Elt)
+          continue;
+      }
+      StartOffsetCandidate = -1;
+      break;
+    }
+    if (StartOffsetCandidate != -1) {
+      StartOffset = StartOffsetCandidate;
+      PackedOp = PackedOp.getOperand(0);
+    }
+  }
+
   do {
     FromBits *= 2;
-    EVT OutVT = MVT::getVectorVT(MVT::getIntegerVT(FromBits),
-                                 SystemZ::VectorBits / FromBits);
-    PackedOp =
-      DAG.getNode(SystemZISD::UNPACK_HIGH, SDLoc(PackedOp), OutVT, PackedOp);
+    unsigned OutNumElts = SystemZ::VectorBits / FromBits;
+    EVT OutVT = MVT::getVectorVT(MVT::getIntegerVT(FromBits), OutNumElts);
+    unsigned Opcode = SystemZISD::UNPACK_HIGH;
+    if (StartOffset >= OutNumElts) {
+      Opcode = SystemZISD::UNPACK_LOW;
+      StartOffset -= OutNumElts;
+    }
+    PackedOp = DAG.getNode(Opcode, SDLoc(PackedOp), OutVT, PackedOp);
   } while (FromBits != ToBits);
   return PackedOp;
 }
