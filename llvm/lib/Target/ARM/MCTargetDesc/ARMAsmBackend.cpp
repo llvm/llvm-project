@@ -960,8 +960,6 @@ bool ARMAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   const MCSymbolRefExpr *A = Target.getSymA();
   const MCSymbol *Sym = A ? &A->getSymbol() : nullptr;
   const unsigned FixupKind = Fixup.getKind();
-  if (FixupKind >= FirstLiteralRelocationKind)
-    return true;
   if (FixupKind == ARM::fixup_arm_thumb_bl) {
     assert(Sym && "How did we resolve this?");
 

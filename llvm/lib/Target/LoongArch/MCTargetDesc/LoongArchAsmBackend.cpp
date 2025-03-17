@@ -253,8 +253,6 @@ bool LoongArchAsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                                 const MCValue &Target,
                                                 const uint64_t,
                                                 const MCSubtargetInfo *STI) {
-  if (Fixup.getKind() >= FirstLiteralRelocationKind)
-    return true;
   switch (Fixup.getTargetKind()) {
   default:
     return STI->hasFeature(LoongArch::FeatureRelax);
