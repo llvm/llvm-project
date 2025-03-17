@@ -7343,6 +7343,37 @@ SDValue SystemZTargetLowering::combineZERO_EXTEND(
       }
     }
   }
+  // Recognize patterns for VECTOR SUBTRACT COMPUTE BORROW INDICATION
+  // and VECTOR ADD COMPUTE CARRY for i128:
+  //   (zext (setcc_uge X Y)) --> (VSCBI X Y)
+  //   (zext (setcc_ule Y X)) --> (VSCBI X Y)
+  //   (zext (setcc_ult (add X Y) X/Y) -> (VACC X Y)
+  //   (zext (setcc_ugt X/Y (add X Y)) -> (VACC X Y)
+  // For vector types, these patterns are recognized in the .td file.
+  if (N0.getOpcode() == ISD::SETCC && isTypeLegal(VT) && VT == MVT::i128 &&
+      N0.getOperand(0).getValueType() == VT) {
+    SDValue Op0 = N0.getOperand(0);
+    SDValue Op1 = N0.getOperand(1);
+    const ISD::CondCode CC = cast<CondCodeSDNode>(N0.getOperand(2))->get();
+    switch (CC) {
+    case ISD::SETULE:
+      std::swap(Op0, Op1);
+      [[fallthrough]];
+    case ISD::SETUGE:
+      return DAG.getNode(SystemZISD::VSCBI, SDLoc(N0), VT, Op0, Op1);
+    case ISD::SETUGT:
+      std::swap(Op0, Op1);
+      [[fallthrough]];
+    case ISD::SETULT:
+      if (Op0->hasOneUse() && Op0->getOpcode() == ISD::ADD &&
+          (Op0->getOperand(0) == Op1 || Op0->getOperand(1) == Op1))
+        return DAG.getNode(SystemZISD::VACC, SDLoc(N0), VT, Op0->getOperand(0),
+                           Op0->getOperand(1));
+      break;
+    default:
+      break;
+    }
+  }
 
   return SDValue();
 }

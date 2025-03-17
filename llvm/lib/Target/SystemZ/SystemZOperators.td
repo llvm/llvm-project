@@ -1058,6 +1058,13 @@ def z_vneg : PatFrag<(ops node:$x), (sub immAllZerosV, node:$x)>;
 // Bitwise negation on vectors.
 def z_vnot : PatFrag<(ops node:$x), (xor node:$x, immAllOnesV)>;
 
+// In-register element-wise zero extension from i1 on vectors.
+def vsplat_imm_eq_1 : PatFrag<(ops), (build_vector), [{
+  APInt Imm;
+  return ISD::isConstantSplatVector(N, Imm) && Imm == 1;
+}]>;
+def z_vzext1 : PatFrag<(ops node:$x), (and node:$x, vsplat_imm_eq_1)>;
+
 // Signed "integer greater than zero" on vectors.
 def z_vicmph_zero : PatFrag<(ops node:$x), (z_vicmph node:$x, immAllZerosV)>;
 
