@@ -2224,8 +2224,7 @@ void VPReductionRecipe::execute(VPTransformState &State) {
   RecurKind Kind = RdxDesc.getRecurrenceKind();
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
-  if (hasFastMathFlags())
-    State.Builder.setFastMathFlags(getFastMathFlags());
+  State.Builder.setFastMathFlags(getFastMathFlags());
   State.setDebugLocFrom(getDebugLoc());
   Value *NewVecOp = State.get(getVecOp());
   if (VPValue *Cond = getCondOp()) {
@@ -2276,8 +2275,7 @@ void VPReductionEVLRecipe::execute(VPTransformState &State) {
   // Propagate the fast-math flags carried by the underlying instruction.
   IRBuilderBase::FastMathFlagGuard FMFGuard(Builder);
   const RecurrenceDescriptor &RdxDesc = getRecurrenceDescriptor();
-  if (hasFastMathFlags())
-    Builder.setFastMathFlags(getFastMathFlags());
+  Builder.setFastMathFlags(getFastMathFlags());
 
   RecurKind Kind = RdxDesc.getRecurrenceKind();
   Value *Prev = State.get(getChainOp(), /*IsScalar*/ true);
@@ -2314,8 +2312,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
   Type *ElementTy = Ctx.Types.inferScalarType(this);
   auto *VectorTy = cast<VectorType>(toVectorTy(ElementTy, VF));
   unsigned Opcode = RdxDesc.getOpcode();
-  FastMathFlags FMFs =
-      hasFastMathFlags() ? getFastMathFlags() : FastMathFlags();
+  FastMathFlags FMFs = getFastMathFlags();
 
   // TODO: Support any-of and in-loop reductions.
   assert(
@@ -2351,7 +2348,8 @@ void VPReductionRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " +";
-  printFlags(O);
+  if (isa<FPMathOperator>(getUnderlyingInstr()))
+    printFlags(O);
   O << " reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   if (isConditional()) {
@@ -2372,7 +2370,8 @@ void VPReductionEVLRecipe::print(raw_ostream &O, const Twine &Indent,
   O << " = ";
   getChainOp()->printAsOperand(O, SlotTracker);
   O << " +";
-  printFlags(O);
+  if (isa<FPMathOperator>(getUnderlyingInstr()))
+    printFlags(O);
   O << " vp.reduce." << Instruction::getOpcodeName(RdxDesc.getOpcode()) << " (";
   getVecOp()->printAsOperand(O, SlotTracker);
   O << ", ";
