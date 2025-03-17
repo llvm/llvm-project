@@ -562,7 +562,7 @@ checkHoistValue(Value *V, Instruction *InsertPoint, DominatorTree &DT,
       if (AllOpsHoisted) {
         CHR_DEBUG(dbgs() << "checkHoistValue " << *I << "\n");
         if (HoistStops)
-          HoistStops->insert(OpsHoistStops.begin(), OpsHoistStops.end());
+          HoistStops->insert_range(OpsHoistStops);
         Visited[I] = true;
         return true;
       }
@@ -1176,8 +1176,7 @@ SmallVector<CHRScope *, 8> CHR::splitScope(
           // point. Union the bases.
           PrevSplitFromOuter = false;
           PrevConditionValues = *OuterConditionValues;
-          PrevConditionValues.insert(ConditionValues.begin(),
-                                     ConditionValues.end());
+          PrevConditionValues.insert_range(ConditionValues);
           PrevInsertPoint = OuterInsertPoint;
         }
       } else {
@@ -1209,7 +1208,7 @@ SmallVector<CHRScope *, 8> CHR::splitScope(
         });
       } else {
         // Not splitting. Union the bases. Keep the hoist point.
-        PrevConditionValues.insert(ConditionValues.begin(), ConditionValues.end());
+        PrevConditionValues.insert_range(ConditionValues);
       }
     }
   }
