@@ -72,12 +72,6 @@ max(U p0, vector<T, N> p1) {
   return max((vector<T, N>)p0, p1);
 }
 
-template <typename T, typename R, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
-max(vector<T, N> p0, vector<R, N> p1) {
-  return max(p0, (vector<T, N>)p1);
-}
-
 template <typename U, typename V>
 constexpr __detail::enable_if_t<
     __detail::is_arithmetic<U>::Value && __detail::is_arithmetic<V>::Value, U>
@@ -101,12 +95,6 @@ constexpr __detail::enable_if_t<
     __detail::is_arithmetic<U>::Value && (N > 1 && N <= 4), vector<T, N>>
 min(U p0, vector<T, N> p1) {
   return min((vector<T, N>)p0, p1);
-}
-
-template <typename T, typename R, uint N>
-constexpr __detail::enable_if_t<(N > 1 && N <= 4), vector<T, N>>
-min(vector<T, N> p0, vector<R, N> p1) {
-  return min(p0, (vector<T, N>)p1);
 }
 
 template <typename U, typename V>
