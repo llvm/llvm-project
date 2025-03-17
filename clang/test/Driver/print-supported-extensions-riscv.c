@@ -51,7 +51,7 @@
 // CHECK-NEXT:     zcd                  1.0       'Zcd' (Compressed Double-Precision Floating-Point Instructions)
 // CHECK-NEXT:     zce                  1.0       'Zce' (Compressed extensions for microcontrollers)
 // CHECK-NEXT:     zcf                  1.0       'Zcf' (Compressed Single-Precision Floating-Point Instructions)
-// CHECK-NEXT:     zclsd                1.0       'zclsd' (Compressed Load/Store Pair Instructions)
+// CHECK-NEXT:     zclsd                1.0       'Zclsd' (Compressed Load/Store Pair Instructions)
 // CHECK-NEXT:     zcmop                1.0       'Zcmop' (Compressed May-Be-Operations)
 // CHECK-NEXT:     zcmp                 1.0       'Zcmp' (sequenced instructions for code-size reduction)
 // CHECK-NEXT:     zcmt                 1.0       'Zcmt' (table jump instructions for code-size reduction)
