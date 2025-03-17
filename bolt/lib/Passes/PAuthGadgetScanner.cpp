@@ -353,7 +353,7 @@ protected:
 public:
   std::vector<MCInstReference>
   getLastClobberingInsts(const MCInst Ret, BinaryFunction &BF,
-                         const BitVector &UsedDirtyRegs) const {
+                         const ArrayRef<MCPhysReg> UsedDirtyRegs) const {
     if (RegsToTrackInstsFor.empty())
       return {};
     auto MaybeState = getStateAt(Ret);
@@ -362,7 +362,7 @@ public:
     const State &S = *MaybeState;
     // Due to aliasing registers, multiple registers may have been tracked.
     std::set<const MCInst *> LastWritingInsts;
-    for (MCPhysReg TrackedReg : UsedDirtyRegs.set_bits()) {
+    for (MCPhysReg TrackedReg : UsedDirtyRegs) {
       for (const MCInst *Inst : lastWritingInsts(S, TrackedReg))
         LastWritingInsts.insert(Inst);
     }
@@ -376,57 +376,81 @@ public:
   }
 };
 
+static std::shared_ptr<Report> tryCheckReturn(const BinaryContext &BC,
+                                              const MCInstReference &Inst,
+                                              const State &S) {
+  static const GadgetKind RetKind("non-protected ret found");
+  if (!BC.MIB->isReturn(Inst))
+    return nullptr;
+
+  ErrorOr<MCPhysReg> MaybeRetReg = BC.MIB->getRegUsedAsRetDest(Inst);
+  if (MaybeRetReg.getError()) {
+    return std::make_shared<GenericReport>(
+        Inst, "Warning: pac-ret analysis could not analyze this return "
+              "instruction");
+  }
+  MCPhysReg RetReg = *MaybeRetReg;
+  LLVM_DEBUG({
+    traceInst(BC, "Found RET inst", Inst);
+    traceReg(BC, "RetReg", RetReg);
+    traceReg(BC, "Authenticated reg", BC.MIB->getAuthenticatedReg(Inst));
+  });
+  if (BC.MIB->isAuthenticationOfReg(Inst, RetReg))
+    return nullptr;
+  BitVector UsedDirtyRegs = S.NonAutClobRegs;
+  LLVM_DEBUG({ traceRegMask(BC, "NonAutClobRegs at Ret", UsedDirtyRegs); });
+  UsedDirtyRegs &= BC.MIB->getAliases(RetReg, /*OnlySmaller=*/true);
+  LLVM_DEBUG({ traceRegMask(BC, "Intersection with RetReg", UsedDirtyRegs); });
+  if (!UsedDirtyRegs.any())
+    return nullptr;
+
+  return std::make_shared<GadgetReport>(RetKind, Inst, UsedDirtyRegs);
+}
+
 FunctionAnalysisResult
-Analysis::computeDfState(PacRetAnalysis &PRA, BinaryFunction &BF,
+Analysis::computeDfState(BinaryFunction &BF,
                          MCPlusBuilder::AllocatorIdTy AllocatorId) {
+  FunctionAnalysisResult Result;
+
+  PacRetAnalysis PRA(BF, AllocatorId, {});
   PRA.run();
   LLVM_DEBUG({
     dbgs() << " After PacRetAnalysis:\n";
     BF.dump();
   });
 
-  FunctionAnalysisResult Result;
-  // Now scan the CFG for non-authenticating return instructions that use an
-  // overwritten, non-authenticated register as return address.
   BinaryContext &BC = BF.getBinaryContext();
   for (BinaryBasicBlock &BB : BF) {
-    for (int64_t I = BB.size() - 1; I >= 0; --I) {
-      MCInst &Inst = BB.getInstructionAtIndex(I);
-      if (BC.MIB->isReturn(Inst)) {
-        ErrorOr<MCPhysReg> MaybeRetReg = BC.MIB->getRegUsedAsRetDest(Inst);
-        if (MaybeRetReg.getError()) {
-          Result.Diagnostics.push_back(std::make_shared<GenericReport>(
-              MCInstInBBReference(&BB, I),
-              "Warning: pac-ret analysis could not analyze this return "
-              "instruction"));
-          continue;
-        }
-        MCPhysReg RetReg = *MaybeRetReg;
-        LLVM_DEBUG({
-          traceInst(BC, "Found RET inst", Inst);
-          traceReg(BC, "RetReg", RetReg);
-          traceReg(BC, "Authenticated reg", BC.MIB->getAuthenticatedReg(Inst));
-        });
-        if (BC.MIB->isAuthenticationOfReg(Inst, RetReg))
-          break;
-        BitVector UsedDirtyRegs = PRA.getStateAt(Inst)->NonAutClobRegs;
-        LLVM_DEBUG(
-            { traceRegMask(BC, "NonAutClobRegs at Ret", UsedDirtyRegs); });
-        UsedDirtyRegs &= BC.MIB->getAliases(RetReg, /*OnlySmaller=*/true);
-        LLVM_DEBUG(
-            { traceRegMask(BC, "Intersection with RetReg", UsedDirtyRegs); });
-        if (UsedDirtyRegs.any()) {
-          static const GadgetKind RetKind("non-protected ret found");
-          // This return instruction needs to be reported
-          Result.Diagnostics.push_back(std::make_shared<GadgetReport>(
-              RetKind, MCInstInBBReference(&BB, I),
-              PRA.getLastClobberingInsts(Inst, BF, UsedDirtyRegs)));
-          for (MCPhysReg RetRegWithGadget : UsedDirtyRegs.set_bits())
-            Result.RegistersAffected.insert(RetRegWithGadget);
-        }
-      }
+    for (int64_t I = 0, E = BB.size(); I < E; ++I) {
+      MCInstReference Inst(&BB, I);
+      const State &S = *PRA.getStateAt(Inst);
+
+      if (auto Report = tryCheckReturn(BC, Inst, S))
+        Result.Diagnostics.push_back(Report);
     }
   }
+
+  if (Result.Diagnostics.empty())
+    return Result;
+
+  // Redo the analysis, but now also track which instructions last wrote
+  // to any of the registers in RetRegsWithGadgets, so that better
+  // diagnostics can be produced.
+
+  SmallSet<MCPhysReg, 4> RegsToTrack;
+  for (auto Report : Result.Diagnostics)
+    for (MCPhysReg Reg : Report->getAffectedRegisters())
+      RegsToTrack.insert(Reg);
+
+  std::vector<MCPhysReg> RegsToTrackVec(RegsToTrack.begin(), RegsToTrack.end());
+
+  PacRetAnalysis PRWIA(BF, AllocatorId, RegsToTrackVec);
+  PRWIA.run();
+  for (auto Report : Result.Diagnostics) {
+    Report->setOverwritingInstrs(PRWIA.getLastClobberingInsts(
+        Report->Location, BF, Report->getAffectedRegisters()));
+  }
+
   return Result;
 }
 
@@ -438,27 +462,19 @@ void Analysis::runOnFunction(BinaryFunction &BF,
     BF.dump();
   });
 
-  if (BF.hasCFG()) {
-    PacRetAnalysis PRA(BF, AllocatorId, {});
-    FunctionAnalysisResult FAR = computeDfState(PRA, BF, AllocatorId);
-    if (!FAR.RegistersAffected.empty()) {
-      // Redo the analysis, but now also track which instructions last wrote
-      // to any of the registers in RetRegsWithGadgets, so that better
-      // diagnostics can be produced.
-      std::vector<MCPhysReg> RegsToTrack;
-      for (MCPhysReg R : FAR.RegistersAffected)
-        RegsToTrack.push_back(R);
-      PacRetAnalysis PRWIA(BF, AllocatorId, RegsToTrack);
-      FAR = computeDfState(PRWIA, BF, AllocatorId);
-    }
+  if (!BF.hasCFG())
+    return;
 
-    // `runOnFunction` is typically getting called from multiple threads in
-    // parallel. Therefore, use a lock to avoid data races when storing the
-    // result of the analysis in the `AnalysisResults` map.
-    {
-      std::lock_guard<std::mutex> Lock(AnalysisResultsMutex);
-      AnalysisResults[&BF] = FAR;
-    }
+  FunctionAnalysisResult FAR = computeDfState(BF, AllocatorId);
+  if (FAR.Diagnostics.empty())
+    return;
+
+  // `runOnFunction` is typically getting called from multiple threads in
+  // parallel. Therefore, use a lock to avoid data races when storing the
+  // result of the analysis in the `AnalysisResults` map.
+  {
+    std::lock_guard<std::mutex> Lock(AnalysisResultsMutex);
+    AnalysisResults[&BF] = FAR;
   }
 }
 

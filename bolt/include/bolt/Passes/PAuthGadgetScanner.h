@@ -199,19 +199,34 @@ struct Report {
   virtual void generateReport(raw_ostream &OS,
                               const BinaryContext &BC) const = 0;
 
+  virtual const ArrayRef<MCPhysReg> getAffectedRegisters() const { return {}; }
+  virtual void
+  setOverwritingInstrs(const std::vector<MCInstReference> &Instrs) {}
+
   void printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
                       StringRef IssueKind) const;
 };
 
 struct GadgetReport : public Report {
   const GadgetKind &Kind;
+  SmallVector<MCPhysReg> AffectedRegisters;
   std::vector<MCInstReference> OverwritingInstrs;
 
   GadgetReport(const GadgetKind &Kind, MCInstReference Location,
-               std::vector<MCInstReference> OverwritingInstrs)
-      : Report(Location), Kind(Kind), OverwritingInstrs(OverwritingInstrs) {}
+               const BitVector &AffectedRegisters)
+      : Report(Location), Kind(Kind),
+        AffectedRegisters(AffectedRegisters.set_bits()) {}
 
   void generateReport(raw_ostream &OS, const BinaryContext &BC) const override;
+
+  const ArrayRef<MCPhysReg> getAffectedRegisters() const override {
+    return AffectedRegisters;
+  }
+
+  void
+  setOverwritingInstrs(const std::vector<MCInstReference> &Instrs) override {
+    OverwritingInstrs = Instrs;
+  }
 };
 
 /// Report with a free-form message attached.
@@ -224,7 +239,6 @@ struct GenericReport : public Report {
 };
 
 struct FunctionAnalysisResult {
-  SmallSet<MCPhysReg, 1> RegistersAffected;
   std::vector<std::shared_ptr<Report>> Diagnostics;
 };
 
@@ -232,8 +246,7 @@ class Analysis : public BinaryFunctionPass {
   void runOnFunction(BinaryFunction &Function,
                      MCPlusBuilder::AllocatorIdTy AllocatorId);
   FunctionAnalysisResult
-  computeDfState(PacRetAnalysis &PRA, BinaryFunction &BF,
-                 MCPlusBuilder::AllocatorIdTy AllocatorId);
+  computeDfState(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocatorId);
 
   std::map<const BinaryFunction *, FunctionAnalysisResult> AnalysisResults;
   std::mutex AnalysisResultsMutex;
