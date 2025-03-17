@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -emit-llvm -disable-llvm-passes -o - -hlsl-entry main %s | FileCheck %s --check-prefixes=CHECK,CHECK-DXIL -DTARGET=dx
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan-compute -x hlsl -emit-llvm -disable-llvm-passes -o - -hlsl-entry main %s | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV -DTARGET=spv
 
-[numthreads(1, 1, 1)] void main(unsigned GI : SV_GroupIndex)
-{
+[numthreads(1, 1, 1)]
+void main(unsigned GI : SV_GroupIndex) {
   main(GI - 1);
 }
 
