@@ -65,7 +65,10 @@ inline bool isKernelFunction(const Function &F) {
 
 bool isParamGridConstant(const Value &);
 
-MaybeAlign getAlign(const Function &, unsigned);
+inline MaybeAlign getAlign(const Function &F, unsigned Index) {
+  return F.getAttributes().getAttributes(Index).getStackAlignment();
+}
+
 MaybeAlign getAlign(const CallInst &, unsigned);
 Function *getMaybeBitcastedCallee(const CallBase *CB);
 
