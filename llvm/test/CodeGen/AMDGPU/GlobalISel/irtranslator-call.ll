@@ -3322,7 +3322,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<8 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v8i32
@@ -3368,7 +3368,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i32() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v8i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <8 x i32>, ptr addrspace(1) %ptr
   call void @external_void_func_v8i32(<8 x i32> %val)
   ret void
@@ -3462,7 +3462,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<16 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v16i32
@@ -3516,7 +3516,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i32() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v16i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i32>, ptr addrspace(1) %ptr
   call void @external_void_func_v16i32(<16 x i32> %val)
   ret void
@@ -3538,7 +3538,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<32 x s32>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v32i32
@@ -3611,7 +3611,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v32i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 4, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <32 x i32>, ptr addrspace(1) %ptr
   call void @external_void_func_v32i32(<32 x i32> %val)
   ret void
@@ -3635,7 +3635,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(p4) = G_INTRINSIC intrinsic(@llvm.amdgcn.kernarg.segment.ptr)
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<32 x s32>) from %ir.ptr0, addrspace 1)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s32) = G_LOAD [[DEF1]](p1) :: ("amdgpu-noclobber" load (s32) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
@@ -3712,7 +3712,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32) #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v32i32_i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 8, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
   %val0 = load <32 x i32>, ptr addrspace(1) %ptr0
   %val1 = load i32, ptr addrspace(1) poison
   call void @external_void_func_v32i32_i32(<32 x i32> %val0, i32 %val1)
@@ -3736,7 +3736,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<32 x s32>) from %ir.ptr0, addrspace 1)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(s8) = G_LOAD [[DEF1]](p1) :: ("amdgpu-noclobber" load (s8) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(s16) = G_LOAD [[DEF1]](p1) :: ("amdgpu-noclobber" load (s16) from `ptr addrspace(1) poison`, addrspace 1)
@@ -3822,7 +3822,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i8_i8_i16() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v32i32_i8_i8_i16, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 16, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
   %val0 = load <32 x i32>, ptr addrspace(1) %ptr0
   %val1 = load i8, ptr addrspace(1) poison
   %val2 = load i8, ptr addrspace(1) poison
@@ -3848,7 +3848,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
   ; CHECK-NEXT:   [[DEF1:%[0-9]+]]:_(p1) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<32 x s32>) from %ir.ptr0, addrspace 1)
   ; CHECK-NEXT:   [[LOAD2:%[0-9]+]]:_(p3) = G_LOAD [[DEF1]](p1) :: ("amdgpu-noclobber" load (p3) from `ptr addrspace(1) poison`, addrspace 1)
   ; CHECK-NEXT:   [[LOAD3:%[0-9]+]]:_(p5) = G_LOAD [[DEF1]](p1) :: ("amdgpu-noclobber" load (p5) from `ptr addrspace(1) poison`, addrspace 1)
@@ -3929,7 +3929,7 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_p3_p5() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v32i32_p3_p5, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $vgpr16, implicit $vgpr17, implicit $vgpr18, implicit $vgpr19, implicit $vgpr20, implicit $vgpr21, implicit $vgpr22, implicit $vgpr23, implicit $vgpr24, implicit $vgpr25, implicit $vgpr26, implicit $vgpr27, implicit $vgpr28, implicit $vgpr29, implicit $vgpr30, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 12, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
   %val0 = load <32 x i32>, ptr addrspace(1) %ptr0
   %val1 = load ptr addrspace(3), ptr addrspace(1) poison
   %val2 = load ptr addrspace(5), ptr addrspace(1) poison
@@ -3953,7 +3953,7 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (s8) from %ir.ptr0, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[LOAD]], [[C]](s64)
@@ -3997,7 +3997,7 @@ define amdgpu_kernel void @test_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_struct_i8_i32, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load { i8, i32 }, ptr addrspace(1) %ptr0
   call void @external_void_func_struct_i8_i32({ i8, i32 } %val)
   ret void
@@ -4007,7 +4007,7 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK-LABEL: name: test_gfx_call_external_void_func_struct_i8_i32
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: (load (s8) from %ir.ptr0, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[LOAD]], [[C]](s64)
@@ -4023,7 +4023,7 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_struct_i8_i32, csr_amdgpu_si_gfx, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   SI_RETURN
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load { i8, i32 }, ptr addrspace(1) %ptr0
   call amdgpu_gfx void @external_gfx_void_func_struct_i8_i32({ i8, i32 } %val)
   ret void
@@ -4033,7 +4033,7 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32_inreg() #
   ; CHECK-LABEL: name: test_gfx_call_external_void_func_struct_i8_i32_inreg
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[LOAD]](p1) :: (load (s8) from %ir.ptr0, align 4, addrspace 1)
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 4
   ; CHECK-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p1) = G_PTR_ADD [[LOAD]], [[C]](s64)
@@ -4051,7 +4051,7 @@ define amdgpu_gfx void @test_gfx_call_external_void_func_struct_i8_i32_inreg() #
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_gfx_void_func_struct_i8_i32_inreg, csr_amdgpu_si_gfx, implicit $sgpr4, implicit $sgpr5, implicit $sgpr0_sgpr1_sgpr2_sgpr3
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   SI_RETURN
-  %ptr0 = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr0 = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load { i8, i32 }, ptr addrspace(1) %ptr0
   call amdgpu_gfx void @external_gfx_void_func_struct_i8_i32_inreg({ i8, i32 } inreg %val)
   ret void
@@ -4255,7 +4255,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i8() #0 {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<2 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v2i8
@@ -4299,7 +4299,7 @@ define amdgpu_kernel void @test_call_external_void_func_v2i8() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v2i8, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <2 x i8>, ptr addrspace(1) %ptr
   call void @external_void_func_v2i8(<2 x i8> %val)
   ret void
@@ -4321,7 +4321,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i8() #0 {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<3 x s8>) from %ir.ptr, align 4, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v3i8
@@ -4368,7 +4368,7 @@ define amdgpu_kernel void @test_call_external_void_func_v3i8() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v3i8, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <3 x i8>, ptr addrspace(1) %ptr
   call void @external_void_func_v3i8(<3 x i8> %val)
   ret void
@@ -4390,7 +4390,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i8() #0 {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<4 x s8>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<4 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v4i8
@@ -4440,7 +4440,7 @@ define amdgpu_kernel void @test_call_external_void_func_v4i8() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v4i8, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <4 x i8>, ptr addrspace(1) %ptr
   call void @external_void_func_v4i8(<4 x i8> %val)
   ret void
@@ -4462,7 +4462,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i8() #0 {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<8 x s8>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<8 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v8i8
@@ -4524,7 +4524,7 @@ define amdgpu_kernel void @test_call_external_void_func_v8i8() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v8i8, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <8 x i8>, ptr addrspace(1) %ptr
   call void @external_void_func_v8i8(<8 x i8> %val)
   ret void
@@ -4546,7 +4546,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
   ; CHECK-NEXT:   [[COPY8:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
   ; CHECK-NEXT:   [[COPY9:%[0-9]+]]:_(p4) = COPY $sgpr8_sgpr9
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p4) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) undef`, addrspace 4)
+  ; CHECK-NEXT:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[DEF]](p4) :: (invariant load (p1) from `ptr addrspace(4) poison`, addrspace 4)
   ; CHECK-NEXT:   [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[LOAD]](p1) :: ("amdgpu-noclobber" load (<16 x s8>) from %ir.ptr, addrspace 1)
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $scc
   ; CHECK-NEXT:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @external_void_func_v16i8
@@ -4632,7 +4632,7 @@ define amdgpu_kernel void @test_call_external_void_func_v16i8() #0 {
   ; CHECK-NEXT:   $sgpr30_sgpr31 = noconvergent G_SI_CALL [[GV]](p0), @external_void_func_v16i8, csr_amdgpu, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3, implicit $vgpr4, implicit $vgpr5, implicit $vgpr6, implicit $vgpr7, implicit $vgpr8, implicit $vgpr9, implicit $vgpr10, implicit $vgpr11, implicit $vgpr12, implicit $vgpr13, implicit $vgpr14, implicit $vgpr15, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr4_sgpr5, implicit $sgpr6_sgpr7, implicit $sgpr8_sgpr9, implicit $sgpr10_sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15, implicit $vgpr31
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $scc
   ; CHECK-NEXT:   S_ENDPGM 0
-  %ptr = load ptr addrspace(1), ptr addrspace(4) undef
+  %ptr = load ptr addrspace(1), ptr addrspace(4) poison
   %val = load <16 x i8>, ptr addrspace(1) %ptr
   call void @external_void_func_v16i8(<16 x i8> %val)
   ret void

@@ -20,7 +20,7 @@ define amdgpu_vs void @test(ptr addrspace(8) inreg %arg1, ptr addrspace(3) %arg2
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
 ; CHECK-NEXT:    tbuffer_store_format_xyzw v[0:3], v4, s[0:3], 0 format:[BUF_DATA_FORMAT_32_32_32_32,BUF_NUM_FORMAT_FLOAT] idxen
 ; CHECK-NEXT:    s_endpgm
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float undef, float undef, float undef, float undef, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float poison, float poison, float poison, float poison, i1 false, i1 false)
   %var1 = load <6 x float>, ptr addrspace(3) %arg2, align 4
   %var2 = shufflevector <6 x float> %var1, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   call void @llvm.amdgcn.struct.ptr.tbuffer.store.v4f32(<4 x float> %var2, ptr addrspace(8) %arg1, i32 0, i32 0, i32 0, i32 126, i32 0)
@@ -107,7 +107,7 @@ define amdgpu_vs void @test_3(i32 inreg %arg1, i32 inreg %arg2, ptr addrspace(8)
   %vec12 = shufflevector <6 x float> %load1, <6 x float> poison, <2 x i32> <i32 4, i32 5>
   call void @llvm.amdgcn.struct.ptr.tbuffer.store.v2f32(<2 x float> %vec12, ptr addrspace(8) %arg3, i32 %arg1, i32 280, i32 %arg2, i32 64, i32 3)
 
-  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float undef, float undef, float undef, float undef, i1 false, i1 false)
+  call void @llvm.amdgcn.exp.f32(i32 0, i32 0, float poison, float poison, float poison, float poison, i1 false, i1 false)
 
   %load2 = load <6 x float>, ptr addrspace(3) %arg6, align 4
   %vec21 = shufflevector <6 x float> %load2, <6 x float> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>

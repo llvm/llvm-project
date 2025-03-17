@@ -230,39 +230,6 @@ void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
                                const char *NameSuffix = "",
                                ClonedCodeInfo *CodeInfo = nullptr);
 
-/// Collect debug information such as types, compile units, and other
-/// subprograms that are reachable from \p F and can be considered global for
-/// the purposes of cloning (and hence not needing to be cloned).
-///
-/// What debug information should be processed depends on \p Changes: when
-/// cloning into the same module we process \p F's subprogram and instructions;
-/// when into a cloned module, neither of those.
-///
-/// Returns DISubprogram of the cloned function when cloning into the same
-/// module or nullptr otherwise.
-DISubprogram *CollectDebugInfoForCloning(const Function &F,
-                                         CloneFunctionChangeType Changes,
-                                         DebugInfoFinder &DIFinder);
-
-/// Based on \p Changes and \p DIFinder return debug info that needs to be
-/// identity mapped during Metadata cloning.
-///
-/// NOTE: Such \a MetadataSetTy can be used by \a CloneFunction* to directly
-/// specify metadata that should be identity mapped (and hence not cloned). The
-/// metadata will be identity mapped in \a ValueToValueMapTy on first use. There
-/// are several reasons for doing it this way rather than eagerly identity
-/// mapping metadata nodes in a \a ValueMap:
-/// 1. Mapping metadata is not cheap, particularly because of tracking.
-/// 2. When cloning a Function we identity map lots of global module-level
-///    metadata to avoid cloning it, while only a fraction of it is actually
-///    used by the function. Mapping on first use is a lot faster for modules
-///    with meaningful amount of debug info.
-/// 3. Eagerly identity mapping metadata makes it harder to cache module-level
-///    data (e.g. a set of metadata nodes in a \a DICompileUnit).
-MetadataSetTy FindDebugInfoToIdentityMap(CloneFunctionChangeType Changes,
-                                         DebugInfoFinder &DIFinder,
-                                         DISubprogram *SPClonedWithinModule);
-
 /// This class captures the data input to the InlineFunction call, and records
 /// the auxiliary results produced by it.
 class InlineFunctionInfo {

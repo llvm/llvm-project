@@ -10938,8 +10938,7 @@ void Sema::CheckConstructor(CXXConstructorDecl *Constructor) {
   //   parameters have default arguments.
   if (!Constructor->isInvalidDecl() &&
       Constructor->hasOneParamOrDefaultArgs() &&
-      !Constructor->isFunctionTemplateSpecialization()
-          ) {
+      !Constructor->isFunctionTemplateSpecialization()) {
     QualType ParamType = Constructor->getParamDecl(0)->getType();
     QualType ClassTy = Context.getTagDeclType(ClassDecl);
     if (Context.getCanonicalType(ParamType).getUnqualifiedType() == ClassTy) {
@@ -12895,6 +12894,10 @@ NamedDecl *Sema::BuildUsingDeclaration(
     if (!LookupContext && CheckUsingDeclQualifier(UsingLoc, HasTypenameKeyword,
                                                   SS, NameInfo, IdentLoc))
       return nullptr;
+
+    if (Previous.isSingleResult() &&
+        Previous.getFoundDecl()->isTemplateParameter())
+      DiagnoseTemplateParameterShadow(IdentLoc, Previous.getFoundDecl());
 
     if (HasTypenameKeyword) {
       // FIXME: not all declaration name kinds are legal here

@@ -2923,10 +2923,16 @@ static void handleWorkGroupSize(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (!S.checkUInt32Argument(AL, E, WGSize[i], i,
                                /*StrictlyUnsigned=*/true))
       return;
-    if (WGSize[i] == 0) {
-      S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
-          << AL << E->getSourceRange();
-      return;
+  }
+
+  if (!llvm::all_of(WGSize, [](uint32_t Size) { return Size == 0; })) {
+    for (unsigned i = 0; i < 3; ++i) {
+      const Expr *E = AL.getArgAsExpr(i);
+      if (WGSize[i] == 0) {
+        S.Diag(AL.getLoc(), diag::err_attribute_argument_is_zero)
+            << AL << E->getSourceRange();
+        return;
+      }
     }
   }
 

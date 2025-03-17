@@ -131,6 +131,20 @@ func.func @transpose_conv2d_strided_quantized(%arg0: tensor<2x17x15x3xi8>, %arg1
 
 // -----
 
+// CHECK-LABEL: @transpose_conv2d_strided_quantized_quant_input
+func.func @transpose_conv2d_strided_quantized_quant_input(%arg0: tensor<2x17x15x3x!quant.uniform<i8:f32, 0.015684274956583977:-1>>, %arg1: tensor<5x3x5x3x!quant.uniform<i8:f32, 0.015684274956583977:-1>>, %arg2: tensor<5xi32>) -> (tensor<2x35x47x5xi32>) {
+  // Checks a regression. A typo in `createPadConstTensor` caused the conversion to crash
+  // CHECK-DAG: %[[PAD_SHAPE:.+]] = tosa.const_shape {values = dense<[0, 0, 1, 1, 1, 1, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>
+  // CHECK-DAG: %[[PAD_CONST:.+]] = "tosa.const"() <{values = dense<-22> : tensor<1xi8>}> : () -> tensor<1x!quant.uniform<i8:f32, 0.015684274956583977:-1>>
+  // CHECK: %[[PAD:.+]] = tosa.pad %arg0, %[[PAD_SHAPE]], %[[PAD_CONST]] : (tensor<2x17x15x3x!quant.uniform<i8:f32, 0.015684274956583977:-1>>, !tosa.shape<8>, tensor<1x!quant.uniform<i8:f32, 0.015684274956583977:-1>>)
+  %input_zp = "tosa.const"() <{values = dense<-22> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %weight_zp = "tosa.const"() <{values = dense<42> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.transpose_conv2d %arg0, %arg1, %arg2, %input_zp, %weight_zp {acc_type = i32, out_pad = array<i64: 0, 0, 0, 0>, stride = array<i64: 2, 3>} : (tensor<2x17x15x3x!quant.uniform<i8:f32, 0.015684274956583977:-1>>, tensor<5x3x5x3x!quant.uniform<i8:f32, 0.015684274956583977:-1>>, tensor<5xi32>, tensor<1xi8>, tensor<1xi8>) -> tensor<2x35x47x5xi32>
+  return %0 : tensor<2x35x47x5xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @transpose_conv2d_strided_overpad
 func.func @transpose_conv2d_strided_overpad(%arg0 : tensor<1x16x1x1xi8>, %arg1 : tensor<1x2x1x1xi8>, %arg2 : tensor<1xi32>) -> (tensor<1x19x2x1xi32>) {
   // CHECK-DAG: %[[WEIGHT_PAD:.+]] = tosa.const_shape {values = dense<[0, 0, 0, 0, 0, 1, 0, 0]> : tensor<8xindex>} : () -> !tosa.shape<8>

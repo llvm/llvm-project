@@ -2772,14 +2772,15 @@ void InstrRefBasedLDV::buildMLocValueMap(
       // visited this pass, if they're not going to be already.
       for (auto *s : MBB->successors()) {
         // Does branching to this successor represent a back-edge?
-        if (BBToOrder[s] > BBToOrder[MBB]) {
+        unsigned Order = BBToOrder[s];
+        if (Order > BBToOrder[MBB]) {
           // No: visit it during this dataflow iteration.
           if (OnWorklist.insert(s).second)
-            Worklist.push(BBToOrder[s]);
+            Worklist.push(Order);
         } else {
           // Yes: visit it on the next iteration.
           if (OnPending.insert(s).second)
-            Pending.push(BBToOrder[s]);
+            Pending.push(Order);
         }
       }
     }
@@ -3349,11 +3350,12 @@ void InstrRefBasedLDV::buildVLocValueMap(
           if (!LiveInIdx.contains(s))
             continue;
 
-          if (BBToOrder[s] > BBToOrder[MBB]) {
+          unsigned Order = BBToOrder[s];
+          if (Order > BBToOrder[MBB]) {
             if (OnWorklist.insert(s).second)
-              Worklist.push(BBToOrder[s]);
+              Worklist.push(Order);
           } else if (OnPending.insert(s).second && (FirstTrip || OLChanged)) {
-            Pending.push(BBToOrder[s]);
+            Pending.push(Order);
           }
         }
       }

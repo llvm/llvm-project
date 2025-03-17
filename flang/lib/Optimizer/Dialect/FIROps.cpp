@@ -4672,6 +4672,83 @@ void fir::UnpackArrayOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// IsContiguousBoxOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct SimplifyIsContiguousBoxOp
+    : public mlir::OpRewritePattern<fir::IsContiguousBoxOp> {
+  using mlir::OpRewritePattern<fir::IsContiguousBoxOp>::OpRewritePattern;
+  mlir::LogicalResult
+  matchAndRewrite(fir::IsContiguousBoxOp op,
+                  mlir::PatternRewriter &rewriter) const override;
+};
+} // namespace
+
+mlir::LogicalResult SimplifyIsContiguousBoxOp::matchAndRewrite(
+    fir::IsContiguousBoxOp op, mlir::PatternRewriter &rewriter) const {
+  auto boxType = mlir::cast<fir::BaseBoxType>(op.getBox().getType());
+  // Nothing to do for assumed-rank arrays and !fir.box<none>.
+  if (boxType.isAssumedRank() || fir::isBoxNone(boxType))
+    return mlir::failure();
+
+  if (fir::getBoxRank(boxType) == 0) {
+    // Scalars are always contiguous.
+    mlir::Type i1Type = rewriter.getI1Type();
+    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+        op, i1Type, rewriter.getIntegerAttr(i1Type, 1));
+    return mlir::success();
+  }
+
+  // TODO: support more patterns, e.g. a result of fir.embox without
+  // the slice is contiguous. We can add fir::isSimplyContiguous(box)
+  // that walks def-use to figure it out.
+  return mlir::failure();
+}
+
+void fir::IsContiguousBoxOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<SimplifyIsContiguousBoxOp>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// BoxTotalElementsOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+struct SimplifyBoxTotalElementsOp
+    : public mlir::OpRewritePattern<fir::BoxTotalElementsOp> {
+  using mlir::OpRewritePattern<fir::BoxTotalElementsOp>::OpRewritePattern;
+  mlir::LogicalResult
+  matchAndRewrite(fir::BoxTotalElementsOp op,
+                  mlir::PatternRewriter &rewriter) const override;
+};
+} // namespace
+
+mlir::LogicalResult SimplifyBoxTotalElementsOp::matchAndRewrite(
+    fir::BoxTotalElementsOp op, mlir::PatternRewriter &rewriter) const {
+  auto boxType = mlir::cast<fir::BaseBoxType>(op.getBox().getType());
+  // Nothing to do for assumed-rank arrays and !fir.box<none>.
+  if (boxType.isAssumedRank() || fir::isBoxNone(boxType))
+    return mlir::failure();
+
+  if (fir::getBoxRank(boxType) == 0) {
+    // Scalar: 1 element.
+    rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
+        op, op.getType(), rewriter.getIntegerAttr(op.getType(), 1));
+    return mlir::success();
+  }
+
+  // TODO: support more cases, e.g. !fir.box<!fir.array<10xi32>>.
+  return mlir::failure();
+}
+
+void fir::BoxTotalElementsOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &patterns, mlir::MLIRContext *context) {
+  patterns.add<SimplifyBoxTotalElementsOp>(context);
+}
+
+//===----------------------------------------------------------------------===//
 // FIROpsDialect
 //===----------------------------------------------------------------------===//
 

@@ -888,9 +888,7 @@ public:
   /// Tests whether the target is AMDGCN
   bool isAMDGCN() const { return getArch() == Triple::amdgcn; }
 
-  bool isAMDGPU() const {
-    return getArch() == Triple::r600 || getArch() == Triple::amdgcn;
-  }
+  bool isAMDGPU() const { return getArch() == Triple::r600 || isAMDGCN(); }
 
   /// Tests whether the target is Thumb (little and big endian).
   bool isThumb() const {

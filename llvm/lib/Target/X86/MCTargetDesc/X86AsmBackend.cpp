@@ -163,17 +163,10 @@ public:
                             const MCSubtargetInfo &STI);
   void emitInstructionEnd(MCObjectStreamer &OS, const MCInst &Inst);
 
-  unsigned getNumFixupKinds() const override {
-    return X86::NumTargetFixupKinds;
-  }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, const uint64_t Value,
-                             const MCSubtargetInfo *STI) override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,
@@ -650,17 +643,10 @@ const MCFixupKindInfo &X86AsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
   if (Kind < FirstTargetFixupKind)
     return MCAsmBackend::getFixupKindInfo(Kind);
 
-  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+  assert(unsigned(Kind - FirstTargetFixupKind) < X86::NumTargetFixupKinds &&
          "Invalid kind!");
   assert(Infos[Kind - FirstTargetFixupKind].Name && "Empty fixup name!");
   return Infos[Kind - FirstTargetFixupKind];
-}
-
-bool X86AsmBackend::shouldForceRelocation(const MCAssembler &,
-                                          const MCFixup &Fixup, const MCValue &,
-                                          const uint64_t,
-                                          const MCSubtargetInfo *STI) {
-  return Fixup.getKind() >= FirstLiteralRelocationKind;
 }
 
 static unsigned getFixupKindSize(unsigned Kind) {

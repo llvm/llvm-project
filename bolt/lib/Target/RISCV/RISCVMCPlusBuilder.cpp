@@ -56,7 +56,7 @@ public:
     Regs |= getAliases(RISCV::X27);
   }
 
-  bool shouldRecordCodeRelocation(uint64_t RelType) const override {
+  bool shouldRecordCodeRelocation(uint32_t RelType) const override {
     switch (RelType) {
     case ELF::R_RISCV_JAL:
     case ELF::R_RISCV_CALL:
@@ -405,7 +405,7 @@ public:
 
   bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
                                int64_t Addend, MCContext *Ctx, int64_t &Value,
-                               uint64_t RelType) const override {
+                               uint32_t RelType) const override {
     unsigned ImmOpNo = -1U;
 
     for (unsigned Index = 0; Index < MCPlus::getNumPrimeOperands(Inst);
@@ -426,7 +426,7 @@ public:
 
   const MCExpr *getTargetExprFor(MCInst &Inst, const MCExpr *Expr,
                                  MCContext &Ctx,
-                                 uint64_t RelType) const override {
+                                 uint32_t RelType) const override {
     switch (RelType) {
     default:
       return Expr;

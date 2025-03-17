@@ -2319,18 +2319,22 @@ define amdgpu_kernel void @test_udiv_3_mulhu(i32 %p) {
 define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readonly %arg) {
 ; SI-LABEL: fdiv_test_denormals:
 ; SI:       ; %bb.0: ; %bb
-; SI-NEXT:    s_mov_b64 s[0:1], 0
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
 ; SI-NEXT:    s_mov_b32 s3, 0xf000
 ; SI-NEXT:    s_mov_b32 s2, -1
+; SI-NEXT:    s_mov_b64 s[4:5], 0
+; SI-NEXT:    s_mov_b32 s6, s2
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
-; SI-NEXT:    buffer_load_sbyte v1, off, s[0:3], 0
+; SI-NEXT:    s_mov_b32 s7, s3
+; SI-NEXT:    buffer_load_sbyte v1, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(1)
 ; SI-NEXT:    v_cvt_f32_i32_e32 v2, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    v_cvt_f32_i32_e32 v3, v1
 ; SI-NEXT:    v_xor_b32_e32 v0, v1, v0
-; SI-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; SI-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; SI-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; SI-NEXT:    v_or_b32_e32 v0, 1, v0
 ; SI-NEXT:    v_mul_f32_e32 v1, v3, v4
 ; SI-NEXT:    v_trunc_f32_e32 v1, v1
@@ -2339,23 +2343,27 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; SI-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, |v2|
 ; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; SI-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
-; SI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; SI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: fdiv_test_denormals:
 ; VI:       ; %bb.0: ; %bb
-; VI-NEXT:    s_mov_b64 s[0:1], 0
+; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
+; VI-NEXT:    s_mov_b64 s[4:5], 0
+; VI-NEXT:    s_mov_b32 s6, s2
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
 ; VI-NEXT:    buffer_load_sbyte v0, off, s[0:3], 0
-; VI-NEXT:    buffer_load_sbyte v1, off, s[0:3], 0
+; VI-NEXT:    s_mov_b32 s7, s3
+; VI-NEXT:    buffer_load_sbyte v1, off, s[4:7], 0
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    v_cvt_f32_i32_e32 v2, v0
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_cvt_f32_i32_e32 v3, v1
 ; VI-NEXT:    v_xor_b32_e32 v0, v1, v0
-; VI-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; VI-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; VI-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; VI-NEXT:    v_or_b32_e32 v0, 1, v0
 ; VI-NEXT:    v_mul_f32_e32 v1, v3, v4
 ; VI-NEXT:    v_trunc_f32_e32 v1, v1
@@ -2364,11 +2372,15 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ; VI-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, |v2|
 ; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
-; VI-NEXT:    buffer_store_byte v0, off, s[0:3], 0
+; VI-NEXT:    buffer_store_byte v0, off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
 ;
 ; GCN-LABEL: fdiv_test_denormals:
 ; GCN:       ; %bb.0: ; %bb
+; GCN-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v0, s0
+; GCN-NEXT:    v_mov_b32_e32 v1, s1
 ; GCN-NEXT:    flat_load_sbyte v2, v[0:1]
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
@@ -2393,7 +2405,10 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ;
 ; GFX1030-LABEL: fdiv_test_denormals:
 ; GFX1030:       ; %bb.0: ; %bb
-; GFX1030-NEXT:    global_load_sbyte v2, v[0:1], off
+; GFX1030-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
+; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
+; GFX1030-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX1030-NEXT:    global_load_sbyte v2, v0, s[0:1]
 ; GFX1030-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX1030-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1030-NEXT:    global_load_sbyte v3, v[0:1], off
@@ -2417,19 +2432,23 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 ;
 ; EG-LABEL: fdiv_test_denormals:
 ; EG:       ; %bb.0: ; %bb
-; EG-NEXT:    TEX 0 @6
-; EG-NEXT:    ALU 0, @10, KC0[], KC1[]
+; EG-NEXT:    ALU 0, @12, KC0[CB0:0-32], KC1[]
 ; EG-NEXT:    TEX 0 @8
-; EG-NEXT:    ALU 25, @11, KC0[], KC1[]
+; EG-NEXT:    ALU 0, @13, KC0[], KC1[]
+; EG-NEXT:    TEX 0 @10
+; EG-NEXT:    ALU 25, @14, KC0[], KC1[]
 ; EG-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
 ; EG-NEXT:    CF_END
-; EG-NEXT:    Fetch clause starting at 6:
-; EG-NEXT:     VTX_READ_8 T0.X, T0.X, 0, #1
+; EG-NEXT:    PAD
 ; EG-NEXT:    Fetch clause starting at 8:
+; EG-NEXT:     VTX_READ_8 T0.X, T0.X, 0, #1
+; EG-NEXT:    Fetch clause starting at 10:
 ; EG-NEXT:     VTX_READ_8 T1.X, T1.X, 0, #1
-; EG-NEXT:    ALU clause starting at 10:
+; EG-NEXT:    ALU clause starting at 12:
+; EG-NEXT:     MOV * T0.X, KC0[2].Y,
+; EG-NEXT:    ALU clause starting at 13:
 ; EG-NEXT:     MOV * T1.X, 0.0,
-; EG-NEXT:    ALU clause starting at 11:
+; EG-NEXT:    ALU clause starting at 14:
 ; EG-NEXT:     BFE_INT * T0.W, T0.X, 0.0, literal.x,
 ; EG-NEXT:    8(1.121039e-44), 0(0.000000e+00)
 ; EG-NEXT:     INT_TO_FLT * T0.X, PV.W,
@@ -2459,7 +2478,7 @@ define amdgpu_kernel void @fdiv_test_denormals(ptr addrspace(1) nocapture readon
 bb:
   %tmp = load i8, ptr addrspace(1) null, align 1
   %tmp1 = sext i8 %tmp to i32
-  %tmp2 = getelementptr inbounds i8, ptr addrspace(1) %arg, i64 undef
+  %tmp2 = getelementptr inbounds i8, ptr addrspace(1) %arg, i64 0
   %tmp3 = load i8, ptr addrspace(1) %tmp2, align 1
   %tmp4 = sext i8 %tmp3 to i32
   %tmp5 = sdiv i32 %tmp1, %tmp4

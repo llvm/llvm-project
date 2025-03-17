@@ -1562,10 +1562,10 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
 ; CHECK-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT4:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1023, i64 1022, i64 1021, i64 1020>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[INDEX1:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT4:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 1023, i64 1022, i64 1021, i64 1020>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 1023, [[INDEX1]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[TMP0]]
@@ -1585,7 +1585,7 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT4]], 1020
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], splat (i64 -4)
 ; CHECK-NEXT:    [[TMP11:%.*]] = or i1 [[TMP9]], [[TMP10]]
-; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_SPLIT:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP38:![0-9]+]]
+; CHECK-NEXT:    br i1 [[TMP11]], label [[MIDDLE_SPLIT:%.*]], label [[LOOP]], !llvm.loop [[LOOP38:![0-9]+]]
 ; CHECK:       middle.split:
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[VECTOR_EARLY_EXIT:%.*]], label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
@@ -1596,7 +1596,7 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 3, [[MIDDLE_BLOCK]] ], [ 1023, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK-NEXT:    br label [[LOOP1:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i8, ptr [[P1]], i64 [[INDEX]]
@@ -1608,9 +1608,9 @@ define i64 @same_exit_block_pre_inc_use1_reverse() {
 ; CHECK:       loop.inc:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], -1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_END]], label [[LOOP]], !llvm.loop [[LOOP39:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_END]], label [[LOOP1]], !llvm.loop [[LOOP39:![0-9]+]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 1024, [[LOOP_INC]] ], [ 1024, [[MIDDLE_BLOCK]] ], [ [[EARLY_EXIT_VALUE]], [[VECTOR_EARLY_EXIT]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP1]] ], [ 1024, [[LOOP_INC]] ], [ 1024, [[MIDDLE_BLOCK]] ], [ [[EARLY_EXIT_VALUE]], [[VECTOR_EARLY_EXIT]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -1639,6 +1639,56 @@ loop.end:
   ret i64 %retval
 }
 
+; Accesses may be out of bounds.
+define i64 @same_exit_block_pre_inc_use1_reverse_step2() {
+; CHECK-LABEL: define i64 @same_exit_block_pre_inc_use1_reverse_step2() {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P1:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    [[P2:%.*]] = alloca [1024 x i8], align 1
+; CHECK-NEXT:    call void @init_mem(ptr [[P1]], i64 1024)
+; CHECK-NEXT:    call void @init_mem(ptr [[P2]], i64 1024)
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ [[INDEX_NEXT:%.*]], [[LOOP_INC:%.*]] ], [ 1023, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i16, ptr [[P1]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD1:%.*]] = load i16, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[ARRAYIDX1:%.*]] = getelementptr inbounds i16, ptr [[P2]], i64 [[INDEX]]
+; CHECK-NEXT:    [[LD2:%.*]] = load i16, ptr [[ARRAYIDX1]], align 1
+; CHECK-NEXT:    [[CMP3:%.*]] = icmp eq i16 [[LD1]], [[LD2]]
+; CHECK-NEXT:    br i1 [[CMP3]], label [[LOOP_INC]], label [[LOOP_END:%.*]]
+; CHECK:       loop.inc:
+; CHECK-NEXT:    [[INDEX_NEXT]] = add i64 [[INDEX]], -1
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[INDEX_NEXT]], 0
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP_END]], label [[LOOP]]
+; CHECK:       loop.end:
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[INDEX]], [[LOOP]] ], [ 1024, [[LOOP_INC]] ]
+; CHECK-NEXT:    ret i64 [[RETVAL]]
+;
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %loop
+
+loop:
+  %index = phi i64 [ %index.next, %loop.inc ], [ 1023, %entry ]
+  %arrayidx = getelementptr inbounds i16, ptr %p1, i64 %index
+  %ld1 = load i16, ptr %arrayidx, align 1
+  %arrayidx1 = getelementptr inbounds i16, ptr %p2, i64 %index
+  %ld2 = load i16, ptr %arrayidx1, align 1
+  %cmp3 = icmp eq i16 %ld1, %ld2
+  br i1 %cmp3, label %loop.inc, label %loop.end
+
+loop.inc:
+  %index.next = add i64 %index, -1
+  %exitcond = icmp eq i64 %index.next, 0
+  br i1 %exitcond, label %loop.end, label %loop
+
+loop.end:
+  %retval = phi i64 [ %index, %loop ], [ 1024, %loop.inc ]
+  ret i64 %retval
+}
 
 define i64 @same_exit_block_pre_inc_use1_deref_ptrs(ptr dereferenceable(1024) %p1, ptr dereferenceable(1024) %p2) {
 ; CHECK-LABEL: define i64 @same_exit_block_pre_inc_use1_deref_ptrs(
@@ -1714,7 +1764,6 @@ loop.end:
   %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
   ret i64 %retval
 }
-
 
 declare i32 @foo(i32) readonly
 declare <vscale x 4 x i32> @foo_vec(<vscale x 4 x i32>)

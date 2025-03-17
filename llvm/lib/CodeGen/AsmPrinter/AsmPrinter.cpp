@@ -3862,7 +3862,7 @@ static void handleIndirectSymViaGOTPCRel(AsmPrinter &AP, const MCExpr **ME,
   //  cstexpr := <gotequiv> - <foo> + gotpcrelcst, where
   //    gotpcrelcst := <offset from @foo base> + <cst>
   MCValue MV;
-  if (!(*ME)->evaluateAsRelocatable(MV, nullptr, nullptr) || MV.isAbsolute())
+  if (!(*ME)->evaluateAsRelocatable(MV, nullptr) || MV.isAbsolute())
     return;
   const MCSymbolRefExpr *SymA = MV.getSymA();
   if (!SymA)

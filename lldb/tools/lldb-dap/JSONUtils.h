@@ -62,17 +62,14 @@ llvm::StringRef GetAsString(const llvm::json::Value &value);
 /// \param[in] key
 ///     The key to use when extracting the value
 ///
-/// \param[in] defaultValue
-///     The default value to return if the key is not present
-///
 /// \return
 ///     A llvm::StringRef that contains the string value for the
-///     specified \a key, or the default value if there is no key that
+///     specified \a key, or \a std::nullopt if there is no key that
 ///     matches or if the value is not a string.
-llvm::StringRef GetString(const llvm::json::Object &obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue = {});
-llvm::StringRef GetString(const llvm::json::Object *obj, llvm::StringRef key,
-                          llvm::StringRef defaultValue = {});
+std::optional<llvm::StringRef> GetString(const llvm::json::Object &obj,
+                                         llvm::StringRef key);
+std::optional<llvm::StringRef> GetString(const llvm::json::Object *obj,
+                                         llvm::StringRef key);
 
 /// Extract the integer value for the specified key from the specified object
 /// and return it as the specified integer type T.

@@ -19,6 +19,10 @@ bool RTDEF(IsContiguous)(const Descriptor &descriptor) {
   return descriptor.IsContiguous();
 }
 
+bool RTDEF(IsContiguousUpTo)(const Descriptor &descriptor, int dim) {
+  return descriptor.IsContiguous(dim);
+}
+
 bool RTDEF(IsAssumedSize)(const Descriptor &descriptor) {
   return ISO::IsAssumedSize(&descriptor.raw());
 }

@@ -3924,10 +3924,18 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
     // to get the integer value from an overly-wide APInt is *extremely*
     // expensive, so the naive approach of assuming
     // llvm::IntegerType::MAX_INT_BITS is a big performance hit.
-    unsigned BitsNeeded =
-        Literal.isBitInt ? llvm::APInt::getSufficientBitsNeeded(
-                               Literal.getLiteralDigits(), Literal.getRadix())
-                         : Context.getTargetInfo().getIntMaxTWidth();
+    unsigned BitsNeeded = Context.getTargetInfo().getIntMaxTWidth();
+    if (Literal.isBitInt)
+      BitsNeeded = llvm::APInt::getSufficientBitsNeeded(
+          Literal.getLiteralDigits(), Literal.getRadix());
+    if (Literal.MicrosoftInteger) {
+      if (Literal.MicrosoftInteger == 128 &&
+          !Context.getTargetInfo().hasInt128Type())
+        PP.Diag(Tok.getLocation(), diag::err_integer_literal_too_large)
+            << Literal.isUnsigned;
+      BitsNeeded = Literal.MicrosoftInteger;
+    }
+
     llvm::APInt ResultVal(BitsNeeded, 0);
 
     if (Literal.GetIntegerValue(ResultVal)) {

@@ -1473,10 +1473,19 @@ Error BinaryFunction::disassemble() {
           }
         }
 
+        uint64_t Addend = Relocation.Addend;
+
+        // For GOT relocations, create a reference against GOT entry ignoring
+        // the relocation symbol.
+        if (Relocation::isGOT(Relocation.Type)) {
+          assert(Relocation::isPCRelative(Relocation.Type) &&
+                 "GOT relocation must be PC-relative on RISC-V");
+          Symbol = BC.registerNameAtAddress("__BOLT_got_zero", 0, 0, 0);
+          Addend = Relocation.Value + Relocation.Offset + getAddress();
+        }
         int64_t Value = Relocation.Value;
         const bool Result = BC.MIB->replaceImmWithSymbolRef(
-            Instruction, Symbol, Relocation.Addend, Ctx.get(), Value,
-            Relocation.Type);
+            Instruction, Symbol, Addend, Ctx.get(), Value, Relocation.Type);
         (void)Result;
         assert(Result && "cannot replace immediate with relocation");
       }
@@ -4614,7 +4623,7 @@ bool BinaryFunction::isAArch64Veneer() const {
 }
 
 void BinaryFunction::addRelocation(uint64_t Address, MCSymbol *Symbol,
-                                   uint64_t RelType, uint64_t Addend,
+                                   uint32_t RelType, uint64_t Addend,
                                    uint64_t Value) {
   assert(Address >= getAddress() && Address < getAddress() + getMaxSize() &&
          "address is outside of the function");

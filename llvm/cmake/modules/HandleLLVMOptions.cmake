@@ -688,7 +688,7 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   append("-Werror=unguarded-availability-new" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 endif()
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND LLVM_ENABLE_LTO)
   # LLVM data structures like llvm::User and llvm::MDNode rely on
   # the value of object storage persisting beyond the lifetime of the
   # object (#24952).  This is not standard compliant and causes a runtime

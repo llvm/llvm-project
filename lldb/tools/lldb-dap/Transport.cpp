@@ -103,7 +103,7 @@ Expected<std::optional<Message>> Transport::Read() {
   if (raw_json->length() != length)
     return createStringError("unexpected EOF parse DAP message body");
 
-  DAP_LOG(m_log, "<-- ({0}) {1}", m_client_name, *raw_json);
+  DAP_LOG(m_log, "--> ({0}) {1}", m_client_name, *raw_json);
 
   return json::parse<Message>(*raw_json);
 }
@@ -114,7 +114,7 @@ Error Transport::Write(const Message &message) {
 
   std::string json = formatv("{0}", toJSON(message)).str();
 
-  DAP_LOG(m_log, "--> ({0}) {1}", m_client_name, json);
+  DAP_LOG(m_log, "<-- ({0}) {1}", m_client_name, json);
 
   std::string Output;
   raw_string_ostream OS(Output);

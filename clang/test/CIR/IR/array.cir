@@ -1,0 +1,51 @@
+// RUN: cir-opt %s | FileCheck %s
+
+module  {
+
+cir.global external @a : !cir.array<!cir.int<s, 32> x 10>
+// CHECK: cir.global external @a : !cir.array<!cir.int<s, 32> x 10>
+
+cir.global external @aa : !cir.array<!cir.array<!cir.int<s, 32> x 10> x 10>
+// CHECK: cir.global external @aa : !cir.array<!cir.array<!cir.int<s, 32> x 10> x 10>
+
+cir.global external @b : !cir.array<!cir.int<s, 32> x 10>
+// CHECK: cir.global external @b : !cir.array<!cir.int<s, 32> x 10>
+
+cir.global external @bb : !cir.array<!cir.array<!cir.int<s, 32> x 10> x 10>
+// CHECK: cir.global external @bb : !cir.array<!cir.array<!cir.int<s, 32> x 10> x 10>
+
+cir.func @f() {
+  %0 = cir.alloca !cir.array<!cir.int<s, 32> x 10>, !cir.ptr<!cir.array<!cir.int<s, 32> x 10>>, ["l"] {alignment = 4 : i64}
+  cir.return
+}
+
+// CHECK: cir.func @f() {
+// CHECK:   %0 = cir.alloca !cir.array<!cir.int<s, 32> x 10>, !cir.ptr<!cir.array<!cir.int<s, 32> x 10>>, ["l"] {alignment = 4 : i64}
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @f2(%arg0: !cir.ptr<!cir.int<s, 32>>) {
+  %0 = cir.alloca !cir.ptr<!cir.int<s, 32>>, !cir.ptr<!cir.ptr<!cir.int<s, 32>>>, ["p", init] {alignment = 8 : i64}
+  cir.store %arg0, %0 : !cir.ptr<!cir.int<s, 32>>, !cir.ptr<!cir.ptr<!cir.int<s, 32>>>
+  cir.return
+}
+
+// CHECK: cir.func @f2(%arg0: !cir.ptr<!cir.int<s, 32>>) {
+// CHECK:   %0 = cir.alloca !cir.ptr<!cir.int<s, 32>>, !cir.ptr<!cir.ptr<!cir.int<s, 32>>>, ["p", init] {alignment = 8 : i64}
+// CHECK:   cir.store %arg0, %0 : !cir.ptr<!cir.int<s, 32>>, !cir.ptr<!cir.ptr<!cir.int<s, 32>>>
+// CHECK:   cir.return
+// CHECK: }
+
+cir.func @f3(%arg0: !cir.ptr<!cir.array<!cir.int<s, 32> x 10>>) {
+  %0 = cir.alloca !cir.ptr<!cir.array<!cir.int<s, 32> x 10>>, !cir.ptr<!cir.ptr<!cir.array<!cir.int<s, 32> x 10>>>, ["pp", init] {alignment = 8 : i64}
+  cir.store %arg0, %0 : !cir.ptr<!cir.array<!cir.int<s, 32> x 10>>, !cir.ptr<!cir.ptr<!cir.array<!cir.int<s, 32> x 10>>>
+  cir.return
+}
+
+// CHECK: cir.func @f3(%arg0: !cir.ptr<!cir.array<!cir.int<s, 32> x 10>>) {
+// CHECK:   %0 = cir.alloca !cir.ptr<!cir.array<!cir.int<s, 32> x 10>>, !cir.ptr<!cir.ptr<!cir.array<!cir.int<s, 32> x 10>>>, ["pp", init] {alignment = 8 : i64}
+// CHECK:   cir.store %arg0, %0 : !cir.ptr<!cir.array<!cir.int<s, 32> x 10>>, !cir.ptr<!cir.ptr<!cir.array<!cir.int<s, 32> x 10>>>
+// CHECK:   cir.return
+// CHECK: }
+
+}

@@ -56,6 +56,8 @@ def uimm11 : RISCVUImmLeafOp<11>;
 
 def simm11 : RISCVSImmLeafOp<11>;
 
+def simm20 : RISCVSImmLeafOp<20>;
+
 def simm26 : RISCVSImmLeafOp<26>;
 
 // 32-bit Immediate, used by RV32 Instructions in 32-bit operations, so no
@@ -590,6 +592,19 @@ let Predicates = [HasVendorXqcilo, IsRV32] in {
   def QC_E_SH    : QCIRVInstESStore<0b110, 0b10, "qc.e.sh">;
   def QC_E_SW    : QCIRVInstESStore<0b110, 0b11, "qc.e.sw">;
 } // Predicates = [HasVendorXqcilo, IsRV32]
+
+let Predicates = [HasVendorXqcili, IsRV32] in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
+  def QC_LI : RVInstU<OPC_OP_IMM_32, (outs GPRNoX0:$rd), (ins simm20:$imm20),
+                      "qc.li", "$rd, $imm20"> {
+    let Inst{31} = imm20{19};
+    let Inst{30-16} = imm20{14-0};
+    let Inst{15-12} = imm20{18-15};
+  }
+
+  def QC_E_LI : QCIRVInstEAI<0b000, 0b0, "qc.e.li">;
+} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+} // Predicates = [HasVendorXqcili, IsRV32]
 
 let Predicates = [HasVendorXqcilia, IsRV32] in {
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {

@@ -48,6 +48,7 @@ attributes #1 = { noinline }
 ;--- profile.yaml
 Contexts:
   - Guid: 4000
+    TotalRootEntryCount: 10
     Counters: [10]
     Callsites:  -
                   - Guid: 3000

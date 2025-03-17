@@ -482,7 +482,7 @@ public:
         if (!Extracts[I])
           Extracts[I] = IRB.CreateExtractValue(Op, I);
 
-      Value *Vec = UndefValue::get(OldTy);
+      Value *Vec = PoisonValue::get(OldTy);
       for (int I = 0, E = N; I != E; ++I)
         Vec = IRB.CreateInsertElement(Vec, Extracts[I], I);
       OldResult->replaceAllUsesWith(Vec);

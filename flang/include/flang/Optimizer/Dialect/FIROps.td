@@ -3416,4 +3416,34 @@ def fir_UnpackArrayOp
   let hasVerifier = 1;
 }
 
+def fir_IsContiguousBoxOp : fir_Op<"is_contiguous_box", [NoMemoryEffect]> {
+  let summary = "Returns true if the boxed entity is contiguous";
+  let description = [{
+    Returns true iff the boxed entity is contiguous:
+      * in the leading dimension (if `innermost` attribute is set),
+      * in all dimensions (if `innermost` attribute is not set).
+
+    The input box cannot be absent.
+  }];
+  let arguments = (ins AnyBoxLike:$box, UnitAttr:$innermost);
+  let results = (outs I1);
+
+  let assemblyFormat = [{
+    $box (`innermost` $innermost^):(`whole`)? attr-dict `:` functional-type(operands, results)
+  }];
+  let hasCanonicalizer = 1;
+}
+
+def fir_BoxTotalElementsOp
+    : fir_SimpleOneResultOp<"box_total_elements", [NoMemoryEffect]> {
+  let summary = "Returns the boxed entity's total size in elements";
+  let description = [{
+    Returns the boxed entity's total size in elements.
+    The input box cannot be absent.
+  }];
+  let arguments = (ins AnyBoxLike:$box);
+  let results = (outs AnyIntegerLike);
+  let hasCanonicalizer = 1;
+}
+
 #endif
