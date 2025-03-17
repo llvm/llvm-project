@@ -9494,6 +9494,10 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
+  for (ElementCount VF : Range)
+    Plan->addVF(VF);
+  Plan->setName("Initial VPlan");
+
   // Update wide induction increments to use the same step as the corresponding
   // wide induction. This enables detecting induction increments directly in
   // VPlan and removes redundant splats.
@@ -9535,10 +9539,6 @@ LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(VFRange &Range) {
   VPlanTransforms::runPass(VPlanTransforms::createInterleaveGroups, *Plan,
                            InterleaveGroups, RecipeBuilder,
                            CM.isScalarEpilogueAllowed());
-
-  for (ElementCount VF : Range)
-    Plan->addVF(VF);
-  Plan->setName("Initial VPlan");
 
   // Replace VPValues for known constant strides guaranteed by predicate scalar
   // evolution.
