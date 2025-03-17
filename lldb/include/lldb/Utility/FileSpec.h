@@ -215,7 +215,6 @@ public:
   ///     The stream to which to dump the object description.
   void Dump(llvm::raw_ostream &s) const;
 
-  ///
   /// Convert the filespec object to a json value.
   ///
   /// Convert the filespec object to a json value. If the object contains a
