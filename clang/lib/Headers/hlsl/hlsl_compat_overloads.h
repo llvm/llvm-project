@@ -1,5 +1,4 @@
-//===--- hlsl_compat_overloads.h - Additional HLSL overload definitions for
-// intrinsics --===//
+//===--- hlsl_compat_overloads.h - Extra HLSL overloads for intrinsics --===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
