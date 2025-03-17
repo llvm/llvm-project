@@ -1,6 +1,7 @@
 // RUN: %clang_cl -Wpadded -Wno-msvc-not-found -fsyntax-only -- %s 2>&1 | FileCheck -check-prefix=WARN %s
+// RUN: %clang -Wpadded -fsyntax-only -- %s 2>&1 | FileCheck -check-prefix=WARN %s
 
-struct Foo {
+struct __attribute__((ms_struct)) Foo {
   int b : 1;
   char a;
 };
