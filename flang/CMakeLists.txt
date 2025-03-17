@@ -242,8 +242,10 @@ else()
   include_directories(SYSTEM ${MLIR_TABLEGEN_OUTPUT_DIR})
 endif()
 
-if (NOT "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
-  message(STATUS "Not building Flang-RT. For a usable Fortran toolchain, either add LLVM_ENABLE_RUNTIMES=flang-rt, or compile a standalone Flang-RT.")
+if (FLANG_STANDALONE_BUILD)
+  message(STATUS "Not building Flang-RT. For a usable Fortran toolchain, compile a standalone Flang-RT.")
+elseif (NOT "flang-rt" IN_LIST LLVM_ENABLE_RUNTIMES)
+  message(STATUS "Not building Flang-RT. For a usable Fortran toolchain, either set FLANG_ENABLE_FLANG_RT=ON, add LLVM_ENABLE_RUNTIMES=flang-rt, or compile a standalone Flang-RT.")
 endif ()
 
 set(FLANG_TOOLS_INSTALL_DIR "${CMAKE_INSTALL_BINDIR}" CACHE PATH
