@@ -11,6 +11,7 @@ set(CLANG_BOOTSTRAP_TARGETS
   check-clang
   check-lld
   check-llvm
+  check-polly
   clang
   clang-test-depends
   toolchain-distribution

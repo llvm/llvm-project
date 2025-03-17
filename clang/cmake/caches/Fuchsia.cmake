@@ -186,9 +186,10 @@ if(FUCHSIA_ENABLE_PGO)
     stage2-install-toolchain-distribution-stripped
     stage2-install-toolchain-distribution-toolchain
     stage2-check-all
+    stage2-check-clang
     stage2-check-lld
     stage2-check-llvm
-    stage2-check-clang
+    stage2-check-polly
     stage2-test-suite)
   if(FUCHSIA_ENABLE_LLDB)
     list(APPEND _FUCHSIA_ENABLE_PROJECTS lldb)
@@ -205,6 +206,7 @@ else()
    check-clang
    check-lld
    check-llvm
+   check-polly
    llvm-config
    clang
    clang-test-depends
