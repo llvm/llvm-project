@@ -22698,9 +22698,9 @@ bool SLPVectorizerPass::vectorizeChainsInBlock(BasicBlock *BB, BoUpSLP &R) {
 
             // Sort on ExtractElementInsts primarily by vector operands. Prefer
             // program order of the vector operands.
-            if (E1->getVectorOperand() != E2->getVectorOperand()) {
-              const auto *V1 = dyn_cast<Instruction>(E1->getVectorOperand());
-              const auto *V2 = dyn_cast<Instruction>(E2->getVectorOperand());
+            const auto *V1 = dyn_cast<Instruction>(E1->getVectorOperand());
+            const auto *V2 = dyn_cast<Instruction>(E2->getVectorOperand());
+            if (V1 != V2) {
               if (!V1 || !V2)
                 continue;
               if (V1->getParent() != V2->getParent())
