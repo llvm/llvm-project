@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
     });
   };
 
-  // Benchmark {std,ranges}::search where the needle is never found
+  // Benchmark {std,ranges}::search where the needle is never found (worst case).
   {
     auto bm = []<class Container>(std::string name, auto search) {
       benchmark::RegisterBenchmark(
@@ -80,7 +80,7 @@ int main(int argc, char** argv) {
     bm.operator()<std::list<int>>("rng::search(list<int>, pred) (no match)", ranges_search_pred);
   }
 
-  // Benchmark {std,ranges}::search where we intersperse "near matches" inside the haystack
+  // Benchmark {std,ranges}::search where we intersperse "near matches" inside the haystack.
   {
     auto bm = []<class Container>(std::string name, auto search) {
       benchmark::RegisterBenchmark(
@@ -130,6 +130,87 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("rng::search(vector<int>, pred) (near matches)", ranges_search_pred);
     bm.operator()<std::deque<int>>("rng::search(deque<int>, pred) (near matches)", ranges_search_pred);
     bm.operator()<std::list<int>>("rng::search(list<int>, pred) (near matches)", ranges_search_pred);
+  }
+
+  // Special case: the two ranges are the same length (and they are equal, which is the worst case).
+  {
+    auto bm = []<class Container>(std::string name, auto search) {
+      benchmark::RegisterBenchmark(
+          name,
+          [search](auto& st) {
+            std::size_t const size = st.range(0);
+            using ValueType        = typename Container::value_type;
+            ValueType x            = Generate<ValueType>::random();
+            Container haystack(size, x);
+            Container needle(size, x);
+
+            for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(haystack);
+              benchmark::DoNotOptimize(needle);
+              auto result = search(haystack.begin(), haystack.end(), needle.begin(), needle.end());
+              benchmark::DoNotOptimize(result);
+            }
+          })
+          ->Arg(1000) // non power-of-two
+          ->Arg(1024)
+          ->Arg(8192);
+    };
+    // {std,ranges}::search
+    bm.operator()<std::vector<int>>("std::search(vector<int>) (same length)", std_search);
+    bm.operator()<std::deque<int>>("std::search(deque<int>) (same length)", std_search);
+    bm.operator()<std::list<int>>("std::search(list<int>) (same length)", std_search);
+    bm.operator()<std::vector<int>>("rng::search(vector<int>) (same length)", std::ranges::search);
+    bm.operator()<std::deque<int>>("rng::search(deque<int>) (same length)", std::ranges::search);
+    bm.operator()<std::list<int>>("rng::search(list<int>) (same length)", std::ranges::search);
+
+    // {std,ranges}::search(pred)
+    bm.operator()<std::vector<int>>("std::search(vector<int>, pred) (same length)", std_search_pred);
+    bm.operator()<std::deque<int>>("std::search(deque<int>, pred) (same length)", std_search_pred);
+    bm.operator()<std::list<int>>("std::search(list<int>, pred) (same length)", std_search_pred);
+    bm.operator()<std::vector<int>>("rng::search(vector<int>, pred) (same length)", ranges_search_pred);
+    bm.operator()<std::deque<int>>("rng::search(deque<int>, pred) (same length)", ranges_search_pred);
+    bm.operator()<std::list<int>>("rng::search(list<int>, pred) (same length)", ranges_search_pred);
+  }
+
+  // Special case: the needle contains a single element (which we never find, i.e. the worst case).
+  {
+    auto bm = []<class Container>(std::string name, auto search) {
+      benchmark::RegisterBenchmark(
+          name,
+          [search](auto& st) {
+            std::size_t const size = st.range(0);
+            using ValueType        = typename Container::value_type;
+            ValueType x            = Generate<ValueType>::random();
+            ValueType y            = random_different_from({x});
+            Container haystack(size, x);
+            Container needle(1, y);
+
+            for ([[maybe_unused]] auto _ : st) {
+              benchmark::DoNotOptimize(haystack);
+              benchmark::DoNotOptimize(needle);
+              auto result = search(haystack.begin(), haystack.end(), needle.begin(), needle.end());
+              benchmark::DoNotOptimize(result);
+            }
+          })
+          ->Arg(1000) // non power-of-two
+          ->Arg(1024)
+          ->Arg(8192);
+    };
+    // {std,ranges}::search
+    bm.operator()<std::vector<int>>("std::search(vector<int>) (single element)", std_search);
+    bm.operator()<std::deque<int>>("std::search(deque<int>) (single element)", std_search);
+    bm.operator()<std::list<int>>("std::search(list<int>) (single element)", std_search);
+    bm.operator()<std::vector<int>>("rng::search(vector<int>) (single element)", std::ranges::search);
+    bm.operator()<std::deque<int>>("rng::search(deque<int>) (single element)", std::ranges::search);
+    bm.operator()<std::list<int>>("rng::search(list<int>) (single element)", std::ranges::search);
+
+    // {std,ranges}::search(pred)
+    bm.operator()<std::vector<int>>("std::search(vector<int>, pred) (single element)", std_search_pred);
+    bm.operator()<std::deque<int>>("std::search(deque<int>, pred) (single element)", std_search_pred);
+    bm.operator()<std::list<int>>("std::search(list<int>, pred) (single element)", std_search_pred);
+    bm.operator()<std::vector<int>>("rng::search(vector<int>, pred) (single element)", ranges_search_pred);
+    bm.operator()<std::deque<int>>("rng::search(deque<int>, pred) (single element)", ranges_search_pred);
+    bm.operator()<std::list<int>>("rng::search(list<int>, pred) (single element)", ranges_search_pred);
   }
 
   benchmark::Initialize(&argc, argv);
