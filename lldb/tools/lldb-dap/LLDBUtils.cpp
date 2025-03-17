@@ -162,7 +162,7 @@ GetEnvironmentFromArguments(const llvm::json::Object &arguments) {
   return envs;
 }
 
-llvm::Error takeError(const lldb::SBError &error) {
+llvm::Error ToError(const lldb::SBError &error) {
   if (error.Success())
     return llvm::Error::success();
 

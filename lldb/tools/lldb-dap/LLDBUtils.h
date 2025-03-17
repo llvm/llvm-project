@@ -157,7 +157,7 @@ lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
 
 /// Take ownership of the stored error.
-llvm::Error takeError(const lldb::SBError &error);
+llvm::Error ToError(const lldb::SBError &error);
 
 } // namespace lldb_dap
 

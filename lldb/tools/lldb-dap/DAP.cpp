@@ -702,22 +702,23 @@ bool DAP::HandleObject(const protocol::Message &M) {
     if (resp->success) {
       (*response_handler)(resp->body);
     } else {
-      std::string message = "Unknown error, response failed";
+      llvm::StringRef message = "Unknown error, response failed";
       if (resp->message) {
-        message = std::visit(
-            llvm::makeVisitor(
-                [](const std::string &message) -> std::string {
-                  return message;
-                },
-                [](const protocol::Response::Message &message) -> std::string {
-                  switch (message) {
-                  case protocol::Response::Message::cancelled:
-                    return "cancelled";
-                  case protocol::Response::Message::notStopped:
-                    return "notStopped";
-                  }
-                }),
-            *resp->message);
+        message =
+            std::visit(llvm::makeVisitor(
+                           [](const std::string &message) -> llvm::StringRef {
+                             return message;
+                           },
+                           [](const protocol::Response::Message &message)
+                               -> llvm::StringRef {
+                             switch (message) {
+                             case protocol::Response::Message::cancelled:
+                               return "cancelled";
+                             case protocol::Response::Message::notStopped:
+                               return "notStopped";
+                             }
+                           }),
+                       *resp->message);
       }
 
       (*response_handler)(llvm::createStringError(
@@ -772,7 +773,7 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
 
   disconnecting = true;
 
-  return takeError(error);
+  return ToError(error);
 }
 
 llvm::Error DAP::Loop() {
