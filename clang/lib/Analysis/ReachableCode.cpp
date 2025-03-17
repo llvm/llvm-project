@@ -308,6 +308,13 @@ static bool shouldTreatSuccessorsAsReachable(const CFGBlock *B,
     if (const auto *IS = dyn_cast<IfStmt>(Term);
         IS != nullptr && IS->isConstexpr())
       return true;
+
+    // Do not treat successors of `if (@available(domain:))` as unreachable.
+    if (const auto *IS = dyn_cast<IfStmt>(Term))
+      if (const auto *AC = dyn_cast<ObjCAvailabilityCheckExpr>(
+              IS->getCond()->IgnoreParenImpCasts());
+          AC && AC->hasDomainName())
+        return true;
   }
 
   const Stmt *Cond = B->getTerminatorCondition(/* stripParens */ false);

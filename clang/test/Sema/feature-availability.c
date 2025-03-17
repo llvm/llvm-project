@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -triple arm64-apple-macosx15 -fblocks -ffeature-availability=feature1:1 -ffeature-availability=feature2:0 -ffeature-availability=feature3:on -fsyntax-only -verify %s
-// RUN: %clang_cc1 -triple arm64-apple-macosx15 -fblocks -fsyntax-only -verify -DUSE_DOMAIN %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx15 -fblocks -ffeature-availability=feature1:1 -ffeature-availability=feature2:0 -ffeature-availability=feature3:on -fsyntax-only -Wunreachable-code -verify %s
+// RUN: %clang_cc1 -triple arm64-apple-macosx15 -fblocks -fsyntax-only -Wunreachable-code -verify -DUSE_DOMAIN %s
 
 #include <feature-availability.h>
 
@@ -32,6 +32,14 @@ __attribute__((availability(domain:feature4, UNAVAIL))) void func11(void);
 __attribute__((availability(domain:feature4, AVAIL))) int g4;
 __attribute__((availability(domain:feature4, UNAVAIL))) int g5;
 #endif
+
+void test_unreachable_code(void) {
+  if (__builtin_available(domain:feature1)) {
+  } else {
+    // Warning -Wunreachable-code isn't emitted.
+    (void)2;
+  }
+}
 
 __attribute__((availability(domain:2, AVAIL))) void func5(void); // expected-error {{expected a domain name}}
 __attribute__((availability(domain, AVAIL))) void func4(void); // expected-error {{expected ':'}}
