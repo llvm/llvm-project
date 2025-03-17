@@ -935,7 +935,8 @@ public:
             getEnvironment() == Triple::GNUEABIHF ||
             getEnvironment() == Triple::GNUEABIHFT64 ||
             getEnvironment() == Triple::OpenHOS ||
-            getEnvironment() == Triple::MuslEABIHF || isAndroid()) &&
+            getEnvironment() == Triple::MuslEABIHF ||
+            isAndroid() || isOSFuchsia()) &&
            isOSBinFormatELF() && !isOSNetBSD();
   }
 
