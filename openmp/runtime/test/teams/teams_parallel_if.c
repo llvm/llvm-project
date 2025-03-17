@@ -25,13 +25,13 @@ void test_api(int nteams, int nthreads, int par_if) {
   }
 
 #pragma omp teams num_teams(nteams)
-#pragma omp parallel num_threads(nthreads) if(par_if)
+#pragma omp parallel num_threads(nthreads) if (par_if)
   {
     omp_id_t id = {omp_get_team_num(), omp_get_thread_num()};
     if (omp_get_num_teams() == expected_nteams &&
-        omp_get_num_threads() == expected_nthreads &&
-        id.team_num >= 0 && id.team_num < expected_nteams &&
-        id.thread_num >= 0 && id.thread_num < expected_nthreads) {
+        omp_get_num_threads() == expected_nthreads && id.team_num >= 0 &&
+        id.team_num < expected_nteams && id.thread_num >= 0 &&
+        id.thread_num < expected_nthreads) {
       int flat_id = id.thread_num + id.team_num * expected_nthreads;
       observed[flat_id] = id;
     }
@@ -40,8 +40,8 @@ void test_api(int nteams, int nthreads, int par_if) {
   for (int i = 0; i < expected_size; i++) {
     if (expected[i].team_num != observed[i].team_num ||
         expected[i].thread_num != observed[i].thread_num) {
-      printf("failed at nteams=%d, nthreads=%d, par_if=%d\n",
-             nteams, nthreads, par_if);
+      printf("failed at nteams=%d, nthreads=%d, par_if=%d\n", nteams, nthreads,
+             par_if);
       exit(EXIT_FAILURE);
     }
   }
@@ -53,7 +53,7 @@ void test_dist(int nteams, int nthreads, int par_if) {
   int index_sum_expected = ub * (ub + 1) / 2;
   int index_sum = 0;
 #pragma omp teams distribute parallel for num_teams(nteams)                    \
-                                          num_threads(nthreads) if(par_if)
+    num_threads(nthreads) if(par_if)
   for (int i = 1; i <= ub; i++)
 #pragma omp atomic update
     index_sum += i;
