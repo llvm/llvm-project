@@ -14,6 +14,7 @@
 #include "MCTargetDesc/X86FixupKinds.h"
 #include "MCTargetDesc/X86MCTargetDesc.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -542,7 +543,8 @@ void X86MCCodeEmitter::emitImmediate(const MCOperand &DispOp, SMLoc Loc,
       assert(ImmOffset == 0);
 
       if (Size == 8) {
-        FixupKind = MCFixupKind(X86::reloc_global_offset_table8);
+        FixupKind =
+            MCFixupKind(FirstLiteralRelocationKind + ELF::R_X86_64_GOTPC64);
       } else {
         assert(Size == 4);
         FixupKind = MCFixupKind(X86::reloc_global_offset_table);

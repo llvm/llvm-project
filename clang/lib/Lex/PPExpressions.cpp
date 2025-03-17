@@ -257,12 +257,14 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
         // preprocessor keywords and it wasn't macro expanded, it turns
         // into a simple 0
         if (ValueLive) {
-          PP.Diag(PeekTok, diag::warn_pp_undef_identifier) << II;
+          unsigned DiagID = II->getName() == "true"
+                                ? diag::warn_pp_undef_true_identifier
+                                : diag::warn_pp_undef_identifier;
+          PP.Diag(PeekTok, DiagID) << II;
 
           const DiagnosticsEngine &DiagEngine = PP.getDiagnostics();
           // If 'Wundef' is enabled, do not emit 'undef-prefix' diagnostics.
-          if (DiagEngine.isIgnored(diag::warn_pp_undef_identifier,
-                                   PeekTok.getLocation())) {
+          if (DiagEngine.isIgnored(DiagID, PeekTok.getLocation())) {
             const std::vector<std::string> UndefPrefixes =
                 DiagEngine.getDiagnosticOptions().UndefPrefixes;
             const StringRef IdentifierName = II->getName();

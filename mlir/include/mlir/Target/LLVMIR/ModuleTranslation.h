@@ -161,6 +161,11 @@ public:
   /// Sets LLVM TBAA metadata for memory operations that have TBAA attributes.
   void setTBAAMetadata(AliasAnalysisOpInterface op, llvm::Instruction *inst);
 
+  /// Sets LLVM dereferenceable metadata for operations that have
+  /// dereferenceable attributes.
+  void setDereferenceableMetadata(DereferenceableOpInterface op,
+                                  llvm::Instruction *inst);
+
   /// Sets LLVM profiling metadata for operations that have branch weights.
   void setBranchWeightsMetadata(BranchWeightOpInterface op);
 
@@ -237,7 +242,7 @@ public:
 
   /// Translates parameter attributes of a call and adds them to the returned
   /// AttrBuilder. Returns failure if any of the translations failed.
-  FailureOr<llvm::AttrBuilder> convertParameterAttrs(CallOpInterface callOp,
+  FailureOr<llvm::AttrBuilder> convertParameterAttrs(mlir::Location loc,
                                                      DictionaryAttr paramAttrs);
 
   /// Gets the named metadata in the LLVM IR module being constructed, creating
@@ -290,13 +295,12 @@ public:
   /// Calls `callback` for every ModuleTranslation stack frame of type `T`
   /// starting from the top of the stack.
   template <typename T>
-  WalkResult
-  stackWalk(llvm::function_ref<WalkResult(const T &)> callback) const {
+  WalkResult stackWalk(llvm::function_ref<WalkResult(T &)> callback) {
     static_assert(std::is_base_of<StackFrame, T>::value,
                   "expected T derived from StackFrame");
     if (!callback)
       return WalkResult::skip();
-    for (const std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
+    for (std::unique_ptr<StackFrame> &frame : llvm::reverse(stack)) {
       if (T *ptr = dyn_cast_or_null<T>(frame.get())) {
         WalkResult result = callback(*ptr);
         if (result.wasInterrupted())

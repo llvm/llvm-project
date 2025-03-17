@@ -23,7 +23,7 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace mlir {
-#define GEN_PASS_DEF_TOSATOSCF
+#define GEN_PASS_DEF_TOSATOSCFPASS
 #include "mlir/Conversion/Passes.h.inc"
 } // namespace mlir
 
@@ -31,7 +31,7 @@ using namespace mlir;
 using namespace tosa;
 
 namespace {
-struct TosaToSCF : public impl::TosaToSCFBase<TosaToSCF> {
+struct TosaToSCF : public impl::TosaToSCFPassBase<TosaToSCF> {
 public:
   void runOnOperation() override {
     RewritePatternSet patterns(&getContext());
@@ -48,10 +48,6 @@ public:
 };
 } // namespace
 
-std::unique_ptr<Pass> mlir::tosa::createTosaToSCF() {
-  return std::make_unique<TosaToSCF>();
-}
-
 void mlir::tosa::addTosaToSCFPasses(OpPassManager &pm) {
-  pm.addNestedPass<func::FuncOp>(createTosaToSCF());
+  pm.addNestedPass<func::FuncOp>(createTosaToSCFPass());
 }

@@ -75,8 +75,11 @@ DenseMap<const InputSectionBase *, int> elf::runBalancedPartitioning(
     auto *d = dyn_cast<Defined>(&sym);
     if (!d)
       return;
-    auto *sec = dyn_cast_or_null<InputSectionBase>(d->section);
-    if (!sec || sec->size == 0 || !orderer.secToSym.try_emplace(sec, d).second)
+    auto *sec = dyn_cast_or_null<InputSection>(d->section);
+    // Skip empty, discarded, ICF folded sections. Skipping ICF folded sections
+    // reduces duplicate detection work in BPSectionOrderer.
+    if (!sec || sec->size == 0 || !sec->isLive() || sec->repl != sec ||
+        !orderer.secToSym.try_emplace(sec, d).second)
       return;
     rootSymbolToSectionIdxs[CachedHashStringRef(getRootSymbol(sym.getName()))]
         .insert(sections.size());

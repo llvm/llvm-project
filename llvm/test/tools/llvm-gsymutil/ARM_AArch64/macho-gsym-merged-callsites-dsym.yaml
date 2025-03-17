@@ -15,7 +15,7 @@
 # CHECK-MERGED-CALLSITES:      FunctionInfo @ 0x[[#%x,FUNC4_1:]]: [0x[[#%x,FUNC4_1_START:]] - 0x[[#%x,FUNC4_1_END:]]) "function4_copy1"
 # CHECK-MERGED-CALLSITES:      ++ Merged FunctionInfos[0]:
 # CHECK-MERGED-CALLSITES-NEXT:     [0x[[#%x,FUNC4_2_START:]] - 0x[[#%x,FUNC4_2_END:]]) "function4_copy2"
- 
+
 # CHECK-MERGED-CALLSITES:      FunctionInfo @ 0x[[#%x,FUNC3_1:]]: [0x[[#%x,FUNC3_1_START:]] - 0x[[#%x,FUNC3_1_END:]]) "function3_copy1"
 # CHECK-MERGED-CALLSITES:      CallSites (by relative return offset):
 # CHECK-MERGED-CALLSITES-NEXT:   0x[[#%.4x,]] Flags[None] MatchRegex[function4_copy1]
@@ -23,7 +23,7 @@
 # CHECK-MERGED-CALLSITES-NEXT:     [0x[[#%x,FUNC3_2_START:]] - 0x[[#%x,FUNC3_2_END:]]) "function3_copy2"
 # CHECK-MERGED-CALLSITES:          CallSites (by relative return offset):
 # CHECK-MERGED-CALLSITES-NEXT:       0x[[#%.4x,]] Flags[None] MatchRegex[function4_copy2]
- 
+
 # CHECK-MERGED-CALLSITES:      FunctionInfo @ 0x[[#%x,FUNC2_1:]]: [0x[[#%x,FUNC2_1_START:]] - 0x[[#%x,FUNC2_1_END:]]) "function2_copy1"
 # CHECK-MERGED-CALLSITES:      CallSites (by relative return offset):
 # CHECK-MERGED-CALLSITES-NEXT:   0x[[#%.4x,]] Flags[None] MatchRegex[function3_copy1]
@@ -31,11 +31,11 @@
 # CHECK-MERGED-CALLSITES-NEXT:     [0x[[#%x,FUNC2_2_START:]] - 0x[[#%x,FUNC2_2_END:]]) "function2_copy2"
 # CHECK-MERGED-CALLSITES:          CallSites (by relative return offset):
 # CHECK-MERGED-CALLSITES-NEXT:       0x[[#%.4x,]] Flags[None] MatchRegex[function3_copy1]
- 
+
 # CHECK-MERGED-CALLSITES:      FunctionInfo @ 0x[[#%x,FUNC1:]]: [0x[[#%x,FUNC1_START:]] - 0x[[#%x,FUNC1_END:]]) "function1"
 # CHECK-MERGED-CALLSITES:      CallSites (by relative return offset):
 # CHECK-MERGED-CALLSITES-NEXT:   0x[[#%.4x,]] Flags[None] MatchRegex[function2_copy1]
- 
+
 # CHECK-MERGED-CALLSITES:      FunctionInfo @ 0x[[#%x,MAIN:]]: [0x[[#%x,MAIN_START:]] - 0x[[#%x,MAIN_END:]]) "main"
 # CHECK-MERGED-CALLSITES:      CallSites (by relative return offset):
 # CHECK-MERGED-CALLSITES-NEXT:   0x[[#%.4x,]] Flags[None] MatchRegex[function1]
@@ -53,39 +53,39 @@
 ###     0x00000001000003e8  =========================>  0x000000010000035c  =>  0x0000000100000340
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --merged-functions --address=0x00000001000003d0 | FileCheck --check-prefix=CHECK-C1 %s
-# CHECK-C1:       0x00000001000003d0: main + 32 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:63
+# CHECK-C1:       0x00000001000003d0: main + 32 @ ./merged_funcs_test.cpp:63
 # CHECK-C1-NEXT:      CallSites: function2_copy2
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --merged-functions --address=0x000000010000037c --merged-functions-filter="function2_copy2" | FileCheck --check-prefix=CHECK-C2 %s
-# CHECK-C2:       0x000000010000037c: function_inlined + 8 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:35 [inlined]
-# CHECK-C2-NEXT:                   function2_copy2 + 16 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:48
+# CHECK-C2:       0x000000010000037c: function_inlined + 8 @ ./merged_funcs_test.cpp:35 [inlined]
+# CHECK-C2-NEXT:                   function2_copy2 + 16 @ ./merged_funcs_test.cpp:48
 # CHECK-C2-NEXT:     CallSites: function3_copy1
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --merged-functions --address=0x000000010000035c --merged-functions-filter="function3_copy1" | FileCheck --check-prefix=CHECK-C3 %s
 # CHECK-C3:       Found 1 function at address 0x000000010000035c:
-# CHECK-C3-NEXT:     0x000000010000035c: function3_copy1 + 16 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:{{.}}
+# CHECK-C3-NEXT:     0x000000010000035c: function3_copy1 + 16 @ ./merged_funcs_test.cpp:21
 # CHECK-C3-NEXT:        CallSites: function4_copy1
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --merged-functions --address=0x0000000100000340 --merged-functions-filter="function4_copy1" | FileCheck --check-prefix=CHECK-C4 %s
 # CHECK-C4:       Found 1 function at address 0x0000000100000340:
-# CHECK-C4-NEXT:     0x0000000100000340: function4_copy1 + 8 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:{{.}}
+# CHECK-C4-NEXT:     0x0000000100000340: function4_copy1 + 8 @ ./merged_funcs_test.cpp:7
 
 ### ----------------------------------------------------------------------------------------------------------------------------------
 ### Resolve the 2nd call stack - the 2nd and 3rd addresses are the same but they resolve to a different function because of the filter
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --address=0x00000001000003e8 --merged-functions | FileCheck --check-prefix=CHECK-C5 %s
 # CHECK-C5:       Found 1 function at address 0x00000001000003e8:
-# CHECK-C5-NEXT:     0x00000001000003e8: main + 56 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:64
+# CHECK-C5-NEXT:     0x00000001000003e8: main + 56 @ ./merged_funcs_test.cpp:64
 # CHECK-C5-NEXT:        CallSites: function3_copy2
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --merged-functions --address=0x000000010000035c --merged-functions-filter="function3_copy2" | FileCheck --check-prefix=CHECK-C6 %s
 # CHECK-C6:       Found 1 function at address 0x000000010000035c:
-# CHECK-C6-NEXT:     0x000000010000035c: function3_copy2 + 16 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:{{.}}
+# CHECK-C6-NEXT:     0x000000010000035c: function3_copy2 + 16 @ ./merged_funcs_test.cpp:28
 # CHECK-C6-NEXT:        CallSites: function4_copy2
 
 # RUN: llvm-gsymutil %t/dwarf_call_sites_dSYM.gsym --merged-functions --merged-functions-filter="function4_copy2" --address=0x0000000100000340 | FileCheck --check-prefix=CHECK-C7 %s
 # CHECK-C7:       Found 1 function at address 0x0000000100000340:
-# CHECK-C7-NEXT:     0x0000000100000340: function4_copy2 + 8 @ /tmp/tst{{[/\\]}}out/merged_funcs_test.cpp:{{.}}
+# CHECK-C7-NEXT:     0x0000000100000340: function4_copy2 + 8 @ ./merged_funcs_test.cpp:14
 
 
 #--- merged_funcs_test.cpp
@@ -197,6 +197,7 @@ functions:
 # Compile merged_funcs_test.cpp to merged_funcs_test.o with flags -g -O3 for MachO / arm64
 clang --target=arm64-apple-macos11 -c  -g -gdwarf-4 -fno-unwind-tables \
     -mllvm -emit-func-debug-line-table-offsets -fno-exceptions -mno-outline \
+    -fdebug-compilation-dir=. \
     -O3 "merged_funcs_test.cpp" -o "merged_funcs_test.o"
 
 # Link using ld64.lld directly with flags "--icf=all --keep-icf-stabs"
@@ -228,7 +229,7 @@ FileHeader:
 LoadCommands:
   - cmd:             LC_UUID
     cmdsize:         24
-    uuid:            4C4C442F-5555-3144-A1E4-99C5508F990D
+    uuid:            4C4C441A-5555-3144-A124-E395C0E7AA96
   - cmd:             LC_BUILD_VERSION
     cmdsize:         24
     platform:        1
@@ -276,7 +277,7 @@ LoadCommands:
         reserved1:       0x0
         reserved2:       0x0
         reserved3:       0x0
-        content:         CFFAEDFE0C000001000000000A00000008000000C005000000000000000000001B000000180000004C4C442F55553144A1E499C5508F990D32000000180000000100000000000B0000000B00000000000200000018000000001000000A000000A01000009C00000019000000480000005F5F504147455A45524F00000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000019000000980000005F5F54455854000000000000000000000000000001000000
+        content:         CFFAEDFE0C000001000000000A00000008000000C005000000000000000000001B000000180000004C4C441A55553144A124E395C0E7AA9632000000180000000100000000000B0000000B00000000000200000018000000001000000A000000A01000009C00000019000000480000005F5F504147455A45524F00000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000000000019000000980000005F5F54455854000000000000000000000000000001000000
   - cmd:             LC_SEGMENT_64
     cmdsize:         152
     segname:         __DATA
@@ -318,7 +319,7 @@ LoadCommands:
     vmaddr:          4295004160
     vmsize:          4096
     fileoff:         8192
-    filesize:        3640
+    filesize:        3507
     maxprot:         7
     initprot:        3
     nsects:          11
@@ -327,7 +328,7 @@ LoadCommands:
       - sectname:        __debug_line
         segname:         __DWARF
         addr:            0x100009000
-        size:            327
+        size:            323
         offset:          0x2000
         align:           0
         reloff:          0x0
@@ -338,9 +339,9 @@ LoadCommands:
         reserved3:       0x0
       - sectname:        __debug_aranges
         segname:         __DWARF
-        addr:            0x100009147
+        addr:            0x100009143
         size:            48
-        offset:          0x2147
+        offset:          0x2143
         align:           0
         reloff:          0x0
         nreloc:          0
@@ -350,9 +351,9 @@ LoadCommands:
         reserved3:       0x0
       - sectname:        __debug_loc
         segname:         __DWARF
-        addr:            0x100009177
+        addr:            0x100009173
         size:            1026
-        offset:          0x2177
+        offset:          0x2173
         align:           0
         reloff:          0x0
         nreloc:          0
@@ -363,9 +364,9 @@ LoadCommands:
         content:         00000000000000000800000000000000010050080000000000000014000000000000000400A301509F0000000000000000000000000000000004000000000000000C0000000000000001005800000000000000000000000000000000080000000000000014000000000000000100500000000000000000000000000000000000000000000000000800000000000000010050080000000000000014000000000000000400A301509F0000000000000000000000000000000004000000000000000C0000000000000001005800000000000000000000000000000000080000000000000014000000000000000100500000000000000000000000000000000014000000000000002000000000000000010050200000000000000034000000000000000400A301509F00000000000000000000000000000000240000000000000034000000000000000100500000000000000000000000000000000014000000000000002000000000000000010050200000000000000034000000000000000400A301509F00000000000000000000000000000000240000000000000034000000000000000100500000000000000000000000000000000034000000000000004000000000000000010050400000000000000058000000000000000400A301509F000000000000000000000000000000003C0000000000000040000000000000000300707E9F000000000000000000000000000000004400000000000000580000000000000001005000000000000000000000000000000000340000000000000040000000000000000300707E9F00000000000000000000000000000000440000000000000058000000000000000100500000000000000000000000000000000034000000000000004000000000000000010050400000000000000058000000000000000400A301509F000000000000000000000000000000003C0000000000000040000000000000000300707E9F000000000000000000000000000000004400000000000000580000000000000001005000000000000000000000000000000000340000000000000040000000000000000300707E9F00000000000000000000000000000000440000000000000058000000000000000100500000000000000000000000000000000058000000000000006400000000000000010050640000000000000078000000000000000400A301509F00000000000000000000000000000000680000000000000078000000000000000100500000000000000000000000000000000084000000000000009000000000000000030011009F90000000000000009C000000000000000100639C00000000000000A800000000000000010064B800000000000000C00000000000000001006300000000000000000000000000000000
       - sectname:        __debug_info
         segname:         __DWARF
-        addr:            0x100009579
+        addr:            0x100009575
         size:            923
-        offset:          0x2579
+        offset:          0x2575
         align:           0
         reloff:          0x0
         nreloc:          0
@@ -375,9 +376,9 @@ LoadCommands:
         reserved3:       0x0
       - sectname:        __debug_frame
         segname:         __DWARF
-        addr:            0x100009914
+        addr:            0x100009910
         size:            272
-        offset:          0x2914
+        offset:          0x2910
         align:           0
         reloff:          0x0
         nreloc:          0
@@ -388,9 +389,9 @@ LoadCommands:
         content:         14000000FFFFFFFF0400080001781E0C1F000000000000001400000000000000380300000100000014000000000000001400000000000000380300000100000014000000000000001C000000000000004C030000010000002000000000000000480C1D109E019D021C000000000000004C030000010000002000000000000000480C1D109E019D021C000000000000006C030000010000002400000000000000480C1D109E019D021C000000000000006C030000010000002400000000000000480C1D109E019D021C0000000000000090030000010000002000000000000000480C1D109E019D022400000000000000B00300000100000058000000000000004C0C1D109E019D029303940400000000
       - sectname:        __debug_abbrev
         segname:         __DWARF
-        addr:            0x100009A24
+        addr:            0x100009A20
         size:            260
-        offset:          0x2A24
+        offset:          0x2A20
         align:           0
         reloff:          0x0
         nreloc:          0
@@ -400,9 +401,9 @@ LoadCommands:
         reserved3:       0x0
       - sectname:        __debug_str
         segname:         __DWARF
-        addr:            0x100009B28
-        size:            317
-        offset:          0x2B28
+        addr:            0x100009B24
+        size:            188
+        offset:          0x2B24
         align:           0
         reloff:          0x0
         nreloc:          0
@@ -412,9 +413,9 @@ LoadCommands:
         reserved3:       0x0
       - sectname:        __apple_namespac
         segname:         __DWARF
-        addr:            0x100009C65
+        addr:            0x100009BE0
         size:            36
-        offset:          0x2C65
+        offset:          0x2BE0
         align:           0
         reloff:          0x0
         nreloc:          0
@@ -425,9 +426,9 @@ LoadCommands:
         content:         485341480100000001000000000000000C000000000000000100000001000600FFFFFFFF
       - sectname:        __apple_names
         segname:         __DWARF
-        addr:            0x100009C89
+        addr:            0x100009C04
         size:            316
-        offset:          0x2C89
+        offset:          0x2C04
         align:           0
         reloff:          0x0
         nreloc:          0
@@ -435,12 +436,12 @@ LoadCommands:
         reserved1:       0x0
         reserved2:       0x0
         reserved3:       0x0
-        content:         48534148010000000A0000000A0000000C0000000000000001000000010006000000000002000000030000000400000006000000FFFFFFFF0800000009000000FFFFFFFFFFFFFFFF88CB36CFF4B03BD389CB36CF0A452B694908311C0B452B694A08311CDC41AB586A7F9A7CAD7ED75898000000A8000000B8000000C8000000D8000000E8000000F80000000801000018010000280100000A01000001000000BB010000000000009C000000010000002E000000000000001A010000010000003A02000000000000AE000000010000004F00000000000000D900000001000000E500000000000000C9000000010000009A00000000000000E90000000100000039010000000000002A01000001000000B90200000000000034010000010000000D03000000000000F900000002000000050200008402000000000000
+        content:         48534148010000000A0000000A0000000C0000000000000001000000010006000000000002000000030000000400000006000000FFFFFFFF0800000009000000FFFFFFFFFFFFFFFF88CB36CFF4B03BD389CB36CF0A452B694908311C0B452B694A08311CDC41AB586A7F9A7CAD7ED75898000000A8000000B8000000C8000000D8000000E8000000F80000000801000018010000280100008900000001000000BB010000000000001B000000010000002E0000000000000099000000010000003A020000000000002D000000010000004F000000000000005800000001000000E50000000000000048000000010000009A0000000000000068000000010000003901000000000000A900000001000000B902000000000000B3000000010000000D030000000000007800000002000000050200008402000000000000
       - sectname:        __apple_types
         segname:         __DWARF
-        addr:            0x100009DC5
+        addr:            0x100009D40
         size:            79
-        offset:          0x2DC5
+        offset:          0x2D40
         align:           0
         reloff:          0x0
         nreloc:          0
@@ -448,12 +449,12 @@ LoadCommands:
         reserved1:       0x0
         reserved2:       0x0
         reserved3:       0x0
-        content:         48534148010000000100000001000000180000000000000004000000010006000300050005000B0006000600000000003080880B38000000AA0000000100000048000000240000A4283A0C00000000
+        content:         48534148010000000100000001000000180000000000000004000000010006000300050005000B0006000600000000003080880B38000000290000000100000048000000240000A4283A0C00000000
       - sectname:        __apple_objc
         segname:         __DWARF
-        addr:            0x100009E14
+        addr:            0x100009D8F
         size:            36
-        offset:          0x2E14
+        offset:          0x2D8F
         align:           0
         reloff:          0x0
         nreloc:          0
@@ -530,10 +531,9 @@ LinkEditData:
 DWARF:
   debug_str:
     - ''
-    - 'clang version 20.0.0git (https://github.com/alx32/llvm-project.git 92a15dd7482ff4e1fae7a07f888564e5b1d53eee)'
-    - '/tmp/tst/out/merged_funcs_test.cpp'
+    - merged_funcs_test.cpp
     - '/'
-    - '/tmp/tst'
+    - .
     - global_result
     - int
     - function4_copy1
@@ -803,18 +803,18 @@ DWARF:
       Entries:
         - AbbrCode:        0x1
           Values:
-            - Value:           0x1
-            - Value:           0x21
-            - Value:           0x6E
-            - Value:           0x91
             - Value:           0x0
-            - Value:           0x93
+            - Value:           0x21
+            - Value:           0x1
+            - Value:           0x17
+            - Value:           0x0
+            - Value:           0x19
             - Value:           0x1
             - Value:           0x100000338
             - Value:           0xD0
         - AbbrCode:        0x2
           Values:
-            - Value:           0x9C
+            - Value:           0x1B
             - Value:           0x43
             - Value:           0x1
             - Value:           0x1
@@ -827,7 +827,7 @@ DWARF:
             - Value:           0x48
         - AbbrCode:        0x4
           Values:
-            - Value:           0xAA
+            - Value:           0x29
             - Value:           0x5
             - Value:           0x4
         - AbbrCode:        0x5
@@ -835,11 +835,11 @@ DWARF:
             - Value:           0x100000338
             - Value:           0x14
             - Value:           0x1
-            - Value:           0x3B
+            - Value:           0x54
             - Value:           0x1
               BlockData:       [ 0x6F ]
             - Value:           0x1
-            - Value:           0xAE
+            - Value:           0x2D
             - Value:           0x1
             - Value:           0x4
             - Value:           0x48
@@ -848,21 +848,21 @@ DWARF:
         - AbbrCode:        0x6
           Values:
             - Value:           0x0
-            - Value:           0xBE
+            - Value:           0x3D
             - Value:           0x1
             - Value:           0x4
             - Value:           0x48
         - AbbrCode:        0x7
           Values:
             - Value:           0x39
-            - Value:           0xC0
+            - Value:           0x3F
             - Value:           0x1
             - Value:           0x5
             - Value:           0x48
         - AbbrCode:        0x7
           Values:
             - Value:           0x5C
-            - Value:           0xC2
+            - Value:           0x41
             - Value:           0x1
             - Value:           0x6
             - Value:           0x48
@@ -872,11 +872,11 @@ DWARF:
             - Value:           0x100000338
             - Value:           0x14
             - Value:           0x1
-            - Value:           0x56
+            - Value:           0x37
             - Value:           0x1
               BlockData:       [ 0x6F ]
             - Value:           0x1
-            - Value:           0xC9
+            - Value:           0x48
             - Value:           0x1
             - Value:           0xB
             - Value:           0x48
@@ -885,21 +885,21 @@ DWARF:
         - AbbrCode:        0x6
           Values:
             - Value:           0x7F
-            - Value:           0xBE
+            - Value:           0x3D
             - Value:           0x1
             - Value:           0xB
             - Value:           0x48
         - AbbrCode:        0x7
           Values:
             - Value:           0xB8
-            - Value:           0xC0
+            - Value:           0x3F
             - Value:           0x1
             - Value:           0xC
             - Value:           0x48
         - AbbrCode:        0x7
           Values:
             - Value:           0xDB
-            - Value:           0xC2
+            - Value:           0x41
             - Value:           0x1
             - Value:           0xD
             - Value:           0x48
@@ -908,11 +908,11 @@ DWARF:
           Values:
             - Value:           0x10000034C
             - Value:           0x20
-            - Value:           0x73
+            - Value:           0x8E
             - Value:           0x1
               BlockData:       [ 0x6D ]
             - Value:           0x1
-            - Value:           0xD9
+            - Value:           0x58
             - Value:           0x1
             - Value:           0x12
             - Value:           0x48
@@ -921,20 +921,20 @@ DWARF:
         - AbbrCode:        0x6
           Values:
             - Value:           0xFE
-            - Value:           0xBE
+            - Value:           0x3D
             - Value:           0x1
             - Value:           0x12
             - Value:           0x48
         - AbbrCode:        0x7
           Values:
             - Value:           0x137
-            - Value:           0xC2
+            - Value:           0x41
             - Value:           0x1
             - Value:           0x14
             - Value:           0x48
         - AbbrCode:        0x9
           Values:
-            - Value:           0xC0
+            - Value:           0x3F
             - Value:           0x1
             - Value:           0x13
             - Value:           0x48
@@ -947,11 +947,11 @@ DWARF:
           Values:
             - Value:           0x10000034C
             - Value:           0x20
-            - Value:           0x92
+            - Value:           0x6F
             - Value:           0x1
               BlockData:       [ 0x6D ]
             - Value:           0x1
-            - Value:           0xE9
+            - Value:           0x68
             - Value:           0x1
             - Value:           0x19
             - Value:           0x48
@@ -960,20 +960,20 @@ DWARF:
         - AbbrCode:        0x6
           Values:
             - Value:           0x15A
-            - Value:           0xBE
+            - Value:           0x3D
             - Value:           0x1
             - Value:           0x19
             - Value:           0x48
         - AbbrCode:        0x7
           Values:
             - Value:           0x193
-            - Value:           0xC2
+            - Value:           0x41
             - Value:           0x1
             - Value:           0x1B
             - Value:           0x48
         - AbbrCode:        0x9
           Values:
-            - Value:           0xC0
+            - Value:           0x3F
             - Value:           0x1
             - Value:           0x1A
             - Value:           0x48
@@ -984,7 +984,7 @@ DWARF:
         - AbbrCode:        0x0
         - AbbrCode:        0xB
           Values:
-            - Value:           0xF9
+            - Value:           0x78
             - Value:           0x1
             - Value:           0x20
             - Value:           0x48
@@ -993,19 +993,19 @@ DWARF:
             - Value:           0x1
         - AbbrCode:        0xC
           Values:
-            - Value:           0xBE
+            - Value:           0x3D
             - Value:           0x1
             - Value:           0x20
             - Value:           0x48
         - AbbrCode:        0x9
           Values:
-            - Value:           0xC2
+            - Value:           0x41
             - Value:           0x1
             - Value:           0x22
             - Value:           0x48
         - AbbrCode:        0x9
           Values:
-            - Value:           0xC0
+            - Value:           0x3F
             - Value:           0x1
             - Value:           0x21
             - Value:           0x48
@@ -1014,11 +1014,11 @@ DWARF:
           Values:
             - Value:           0x10000036C
             - Value:           0x24
-            - Value:           0xB1
+            - Value:           0xD1
             - Value:           0x1
               BlockData:       [ 0x6D ]
             - Value:           0x1
-            - Value:           0x10A
+            - Value:           0x89
             - Value:           0x1
             - Value:           0x27
             - Value:           0x48
@@ -1027,21 +1027,21 @@ DWARF:
         - AbbrCode:        0x6
           Values:
             - Value:           0x1B6
-            - Value:           0xBE
+            - Value:           0x3D
             - Value:           0x1
             - Value:           0x27
             - Value:           0x48
         - AbbrCode:        0x7
           Values:
             - Value:           0x1EF
-            - Value:           0xC0
+            - Value:           0x3F
             - Value:           0x1
             - Value:           0x28
             - Value:           0x48
         - AbbrCode:        0x7
           Values:
             - Value:           0x214
-            - Value:           0xC2
+            - Value:           0x41
             - Value:           0x1
             - Value:           0x29
             - Value:           0x48
@@ -1071,11 +1071,11 @@ DWARF:
           Values:
             - Value:           0x10000036C
             - Value:           0x24
-            - Value:           0xD3
+            - Value:           0xAD
             - Value:           0x1
               BlockData:       [ 0x6D ]
             - Value:           0x1
-            - Value:           0x11A
+            - Value:           0x99
             - Value:           0x1
             - Value:           0x2E
             - Value:           0x48
@@ -1084,21 +1084,21 @@ DWARF:
         - AbbrCode:        0x6
           Values:
             - Value:           0x27F
-            - Value:           0xBE
+            - Value:           0x3D
             - Value:           0x1
             - Value:           0x2E
             - Value:           0x48
         - AbbrCode:        0x7
           Values:
             - Value:           0x2B8
-            - Value:           0xC0
+            - Value:           0x3F
             - Value:           0x1
             - Value:           0x2F
             - Value:           0x48
         - AbbrCode:        0x7
           Values:
             - Value:           0x2DD
-            - Value:           0xC2
+            - Value:           0x41
             - Value:           0x1
             - Value:           0x30
             - Value:           0x48
@@ -1128,11 +1128,11 @@ DWARF:
           Values:
             - Value:           0x100000390
             - Value:           0x20
-            - Value:           0xF7
+            - Value:           0xF3
             - Value:           0x1
               BlockData:       [ 0x6D ]
             - Value:           0x1
-            - Value:           0x12A
+            - Value:           0xA9
             - Value:           0x1
             - Value:           0x35
             - Value:           0x48
@@ -1141,20 +1141,20 @@ DWARF:
         - AbbrCode:        0x6
           Values:
             - Value:           0x348
-            - Value:           0xBE
+            - Value:           0x3D
             - Value:           0x1
             - Value:           0x35
             - Value:           0x48
         - AbbrCode:        0x7
           Values:
             - Value:           0x381
-            - Value:           0xC2
+            - Value:           0x41
             - Value:           0x1
             - Value:           0x37
             - Value:           0x48
         - AbbrCode:        0x9
           Values:
-            - Value:           0xC0
+            - Value:           0x3F
             - Value:           0x1
             - Value:           0x36
             - Value:           0x48
@@ -1167,11 +1167,11 @@ DWARF:
           Values:
             - Value:           0x1000003B0
             - Value:           0x58
-            - Value:           0x116
+            - Value:           0x112
             - Value:           0x1
               BlockData:       [ 0x6D ]
             - Value:           0x1
-            - Value:           0x134
+            - Value:           0xB3
             - Value:           0x1
             - Value:           0x3C
             - Value:           0x48
@@ -1180,7 +1180,7 @@ DWARF:
         - AbbrCode:        0x7
           Values:
             - Value:           0x3A4
-            - Value:           0x139
+            - Value:           0xB8
             - Value:           0x1
             - Value:           0x3D
             - Value:           0x48
@@ -1242,9 +1242,9 @@ DWARF:
         - AbbrCode:        0x0
         - AbbrCode:        0x0
   debug_line:
-    - Length:          323
+    - Length:          319
       Version:         4
-      PrologueLength:  49
+      PrologueLength:  45
       MinInstLength:   1
       MaxOpsPerInst:   1
       DefaultIsStmt:   1
@@ -1252,11 +1252,9 @@ DWARF:
       LineRange:       14
       OpcodeBase:      13
       StandardOpcodeLengths: [ 0, 1, 1, 1, 1, 0, 0, 0, 1, 0, 0, 1 ]
-      IncludeDirs:
-        - out
       Files:
         - Name:            merged_funcs_test.cpp
-          DirIdx:          1
+          DirIdx:          0
           ModTime:         0
           Length:          0
       Opcodes:

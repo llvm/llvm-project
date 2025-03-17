@@ -65,9 +65,6 @@ void initializeDXILTranslateMetadataLegacyPass(PassRegistry &);
 /// Pass to emit metadata for DXIL.
 ModulePass *createDXILTranslateMetadataLegacyPass();
 
-/// Initializer for DXILTranslateMetadata.
-void initializeDXILResourceMDWrapperPass(PassRegistry &);
-
 /// Pass to pretty print DXIL metadata.
 ModulePass *createDXILPrettyPrinterLegacyPass(raw_ostream &OS);
 
@@ -76,6 +73,9 @@ void initializeDXILPrettyPrinterLegacyPass(PassRegistry &);
 
 /// Initializer for dxil::ShaderFlagsAnalysisWrapper pass.
 void initializeShaderFlagsAnalysisWrapperPass(PassRegistry &);
+
+/// Initializer for dxil::RootSignatureAnalysisWrapper pass.
+void initializeRootSignatureAnalysisWrapperPass(PassRegistry &);
 
 /// Initializer for DXContainerGlobals pass.
 void initializeDXContainerGlobalsPass(PassRegistry &);

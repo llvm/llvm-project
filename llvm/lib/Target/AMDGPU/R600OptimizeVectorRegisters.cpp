@@ -270,9 +270,10 @@ bool R600VectorRegMerger::tryMergeUsingCommonSlot(RegSeqInfo &RSI,
       MOE = RSI.Instr->operands_end(); MOp != MOE; ++MOp) {
     if (!MOp->isReg())
       continue;
-    if (PreviousRegSeqByReg[MOp->getReg()].empty())
+    auto &Insts = PreviousRegSeqByReg[MOp->getReg()];
+    if (Insts.empty())
       continue;
-    for (MachineInstr *MI : PreviousRegSeqByReg[MOp->getReg()]) {
+    for (MachineInstr *MI : Insts) {
       CompatibleRSI = PreviousRegSeq[MI];
       if (RSI == CompatibleRSI)
         continue;

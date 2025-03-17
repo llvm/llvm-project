@@ -395,13 +395,15 @@ llvm::UnrollAndJamLoop(Loop *L, unsigned Count, unsigned TripCount,
       }
 
       // Update our running maps of newest clones
-      PrevItValueMap[New] = (It == 1 ? *BB : LastValueMap[*BB]);
-      LastValueMap[*BB] = New;
+      auto &Last = LastValueMap[*BB];
+      PrevItValueMap[New] = (It == 1 ? *BB : Last);
+      Last = New;
       for (ValueToValueMapTy::iterator VI = VMap.begin(), VE = VMap.end();
            VI != VE; ++VI) {
+        auto &LVM = LastValueMap[VI->first];
         PrevItValueMap[VI->second] =
-            const_cast<Value *>(It == 1 ? VI->first : LastValueMap[VI->first]);
-        LastValueMap[VI->first] = VI->second;
+            const_cast<Value *>(It == 1 ? VI->first : LVM);
+        LVM = VI->second;
       }
 
       NewBlocks.push_back(New);
