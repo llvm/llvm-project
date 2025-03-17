@@ -354,10 +354,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
            diag::err_expected)
           << tok::r_brace;
     else if (!HadError) {
-      Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-           Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
-                                : diag::ext_delimited_escape_sequence)
-          << /*delimited*/ 0 << (Features.CPlusPlus ? 1 : 0);
+      Lexer::DiagnoseDelimitedOrNamedEscapeSequence(Loc, false, Features,
+                                                    *Diags);
     }
   }
 
@@ -710,11 +708,8 @@ static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
          diag::warn_ucn_not_valid_in_c89_literal);
 
   if ((IsDelimitedEscapeSequence || IsNamedEscapeSequence) && Diags)
-    Diag(Diags, Features, Loc, ThisTokBegin, UcnBegin, ThisTokBuf,
-         Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
-                              : diag::ext_delimited_escape_sequence)
-        << (IsNamedEscapeSequence ? 1 : 0) << (Features.CPlusPlus ? 1 : 0);
-
+    Lexer::DiagnoseDelimitedOrNamedEscapeSequence(Loc, IsNamedEscapeSequence,
+                                                  Features, *Diags);
   return true;
 }
 

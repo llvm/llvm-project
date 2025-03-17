@@ -148,14 +148,14 @@ def ext_mathematical_notation : ExtWarn<
   InGroup<DiagGroup<"mathematical-notation-identifier-extension">>;
 
 def ext_delimited_escape_sequence : Extension<
-  "%select{delimited|named}0 escape sequences are a "
-  "%select{Clang|C++23}1 extension">,
-  InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
-
+  "%select{delimited|named}0 escape sequences are a %select{C++23|C2y}1 "
+  "extension">, InGroup<DiagGroup<"delimited-escape-sequence-extension">>;
 def warn_cxx23_delimited_escape_sequence : Warning<
-  "%select{delimited|named}0 escape sequences are "
-  "incompatible with C++ standards before C++23">,
-  InGroup<CXXPre23Compat>, DefaultIgnore;
+  "%select{delimited|named}0 escape sequences are incompatible with C++ "
+  "standards before C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
+def warn_c2y_delimited_escape_sequence : Warning<
+  "delimited escape sequences are incompatible with C standards before C2y">,
+  InGroup<CPre2yCompat>, DefaultIgnore;
 
 def err_delimited_escape_empty : Error<
   "delimited escape sequence cannot be empty">;

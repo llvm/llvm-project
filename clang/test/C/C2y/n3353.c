@@ -92,6 +92,13 @@ int r = M;  /* compat-warning {{octal integer literals are incompatible with sta
                cpp-warning {{octal integer literals are a Clang extension}}
              */
 
+// Also, test delimited escape sequences. Note, this paper added a delimited
+// escape sequence for octal *and* hex.
+auto a = "\x{12}\o{12}";   /* compat-warning 2 {{delimited escape sequences are incompatible with C standards before C2y}}
+                              ext-warning 2 {{delimited escape sequences are a C2y extension}}
+                              cpp-warning 2 {{delimited escape sequences are a C++23 extension}}
+                            */
+
 #ifdef __cplusplus
 template <unsigned N>
 struct S {
