@@ -491,6 +491,19 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
                 lldb_private::formatters::swift::TaskPriority_SummaryProvider,
                 "Swift TaskPriority summary provider", "Swift.TaskPriority",
                 summary_flags);
+  {
+    auto task_summary_flags = summary_flags;
+    task_summary_flags.SetDontShowChildren(false);
+    AddCXXSummary(swift_category_sp,
+                  lldb_private::formatters::swift::Task_SummaryProvider,
+                  "Swift Task summary provider", "^Swift\\.Task<.+,.+>",
+                  task_summary_flags, true);
+    AddCXXSummary(swift_category_sp,
+                  lldb_private::formatters::swift::Task_SummaryProvider,
+                  "Swift UnsafeCurrentTask summary provider",
+                  "Swift.UnsafeCurrentTask", task_summary_flags);
+  }
+
   summary_flags.SetSkipPointers(false);
   // this is an ObjC dynamic type - as such it comes in pointer form
   // NSContiguousString* - do not skip pointers here

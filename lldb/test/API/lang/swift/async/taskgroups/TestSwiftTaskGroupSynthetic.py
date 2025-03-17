@@ -1,3 +1,4 @@
+import textwrap
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -27,19 +28,31 @@ class TestCase(TestBase):
     def do_test_print(self):
         self.expect(
             "v group",
-            substrs=[
-                "[0] = {",
-                "address = 0x",
-                "id = ",
-                "isGroupChildTask = true",
-                "[1] = {",
-                "address = 0x",
-                "id = ",
-                "isGroupChildTask = true",
-                "[2] = {",
-                "address = 0x",
-                "id = ",
-                "isGroupChildTask = true",
+            patterns=[
+                textwrap.dedent(
+                    r"""
+                    \((?:Throwing)?TaskGroup<\(\)\??(?:, Error)?>\) group = \{
+                      \[0\] = id:(\d+) flags:(?:running\|)?(?:enqueued\|)?groupChildTask\|childTask\|future \{
+                        address = 0x[0-9a-f]+
+                        id = \1
+                        enqueuePriority = \.medium
+                        children = \{\}
+                      \}
+                      \[1\] = id:(\d+) flags:(?:running\|)?(?:enqueued\|)?groupChildTask\|childTask\|future \{
+                        address = 0x[0-9a-f]+
+                        id = \2
+                        enqueuePriority = \.medium
+                        children = \{\}
+                      \}
+                      \[2\] = id:(\d+) flags:(?:running\|)?(?:enqueued\|)?groupChildTask\|childTask\|future \{
+                        address = 0x[0-9a-f]+
+                        id = \3
+                        enqueuePriority = \.medium
+                        children = \{\}
+                      \}
+                    \}
+                    """
+                ).strip()
             ],
         )
 
@@ -53,7 +66,7 @@ class TestCase(TestBase):
         self.do_test_api(process)
 
     @swiftTest
-    def test_api_task_group(self):
+    def test_api_throwing_task_group(self):
         """Verify a ThrowingTaskGroup contains its expected children."""
         self.build()
         _, process, _, _ = lldbutil.run_to_source_breakpoint(

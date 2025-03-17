@@ -1,3 +1,4 @@
+import textwrap
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -15,12 +16,19 @@ class TestCase(TestBase):
         )
         self.expect(
             "v cont",
-            substrs=[
-                "(UnsafeContinuation<Void, Never>) cont = {",
-                "task = {",
-                "address = 0x",
-                "id = ",
-                "isFuture = true",
+            patterns=[
+                textwrap.dedent(
+                    r"""
+                    \(UnsafeContinuation<Void, Never>\) cont = \{
+                      task = id:(\d+) flags:(?:running\|)?future \{
+                        address = 0x[0-9a-f]+
+                        id = \1
+                        enqueuePriority = 0
+                        children = \{\}
+                      \}
+                    \}
+                    """
+                ).strip()
             ],
         )
 
@@ -33,11 +41,18 @@ class TestCase(TestBase):
         )
         self.expect(
             "v cont",
-            substrs=[
-                "(CheckedContinuation<Int, Never>) cont = {",
-                "task = {",
-                "address = 0x",
-                "id = ",
-                "isFuture = true",
+            patterns=[
+                textwrap.dedent(
+                    r"""
+                    \(CheckedContinuation<Int, Never>\) cont = \{
+                      task = id:(\d+) flags:(?:running\|)?future \{
+                        address = 0x[0-9a-f]+
+                        id = \1
+                        enqueuePriority = 0
+                        children = \{\}
+                      \}
+                    \}
+                    """
+                ).strip()
             ],
         )

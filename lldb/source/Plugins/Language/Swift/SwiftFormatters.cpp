@@ -36,6 +36,7 @@
 #include "swift/Demangling/ManglingMacros.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/raw_ostream.h"
@@ -778,10 +779,13 @@ public:
   }
 
   constexpr static StringLiteral TaskChildren[] = {
+      // clang-format off
       "address",
       "id",
-      "kind",
-      "enqueuPriority",
+      "enqueuePriority",
+      "children",
+
+      // Children below this point are hidden.
       "isChildTask",
       "isFuture",
       "isGroupChildTask",
@@ -790,13 +794,13 @@ public:
       "isStatusRecordLocked",
       "isEscalated",
       "isEnqueued",
-      "children",
       "isRunning",
+      // clang-format on
   };
 
   llvm::Expected<uint32_t> CalculateNumChildren() override {
-    auto count = ArrayRef(TaskChildren).size();
-    return m_task_info.hasIsRunning ? count : count - 1;
+    // Show only the first four children address/id/enqueuePriority/children.
+    return 4;
   }
 
   lldb::ValueObjectSP GetChildAtIndex(uint32_t idx) override {
@@ -805,15 +809,6 @@ public:
     // TypeMangling for "Swift.Bool"
     CompilerType bool_type =
         m_ts->GetTypeFromMangledTypename(ConstString("$sSbD"));
-    // TypeMangling for "Swift.UInt32"
-    CompilerType uint32_type =
-        m_ts->GetTypeFromMangledTypename(ConstString("$ss6UInt32VD"));
-    // TypeMangling for "Swift.UInt64"
-    CompilerType uint64_type =
-        m_ts->GetTypeFromMangledTypename(ConstString("$ss6UInt64VD"));
-    // TypeMangling for "Swift.TaskPriority"
-    CompilerType priority_type =
-        m_ts->GetTypeFromMangledTypename(ConstString("$sScPD"));
 
 #define RETURN_CHILD(FIELD, NAME, TYPE)                                        \
   if (!FIELD) {                                                                \
@@ -841,12 +836,34 @@ public:
             raw_pointer_type);
       }
       return m_address_sp;
-    case 1:
+    case 1: {
+      // TypeMangling for "Swift.UInt64"
+      CompilerType uint64_type =
+          m_ts->GetTypeFromMangledTypename(ConstString("$ss6UInt64VD"));
       RETURN_CHILD(m_id_sp, id, uint64_type);
-    case 2:
-      RETURN_CHILD(m_kind_sp, kind, uint32_type);
-    case 3:
+    }
+    case 2: {
+      // TypeMangling for "Swift.TaskPriority"
+      CompilerType priority_type =
+          m_ts->GetTypeFromMangledTypename(ConstString("$sScPD"));
       RETURN_CHILD(m_enqueue_priority_sp, enqueuePriority, priority_type);
+    }
+    case 3: {
+      if (!m_child_tasks_sp) {
+        using task_type = decltype(m_task_info.childTasks)::value_type;
+        const std::vector<task_type> &tasks = m_task_info.childTasks;
+        std::string mangled_typename =
+            mangledTypenameForTasksTuple(tasks.size());
+        CompilerType tasks_tuple_type =
+            m_ts->GetTypeFromMangledTypename(ConstString(mangled_typename));
+        DataExtractor data{tasks.data(), tasks.size() * sizeof(task_type),
+                           endian::InlHostByteOrder(), sizeof(void *)};
+        m_child_tasks_sp = ValueObject::CreateValueObjectFromData(
+            "children", data, m_backend.GetExecutionContextRef(),
+            tasks_tuple_type);
+      }
+      return m_child_tasks_sp;
+    }
     case 4:
       RETURN_CHILD(m_is_child_task_sp, isChildTask, bool_type);
     case 5:
@@ -865,22 +882,10 @@ public:
     case 11:
       RETURN_CHILD(m_is_enqueued_sp, isEnqueued, bool_type);
     case 12: {
-      if (!m_child_tasks_sp) {
-        const auto &tasks = m_task_info.childTasks;
-        std::string mangled_typename =
-            mangledTypenameForTasksTuple(tasks.size());
-        CompilerType tasks_tuple_type =
-            m_ts->GetTypeFromMangledTypename(ConstString(mangled_typename));
-        DataExtractor data{tasks.data(), tasks.size() * sizeof(tasks[0]),
-                           endian::InlHostByteOrder(), sizeof(void *)};
-        m_child_tasks_sp = ValueObject::CreateValueObjectFromData(
-            "children", data, m_backend.GetExecutionContextRef(),
-            tasks_tuple_type);
-      }
-      return m_child_tasks_sp;
+      if (m_task_info.hasIsRunning)
+        RETURN_CHILD(m_is_running_sp, isRunning, bool_type);
+      return {};
     }
-    case 13:
-      RETURN_CHILD(m_is_running_sp, isRunning, bool_type);
     default:
       return {};
     }
@@ -1638,6 +1643,42 @@ bool lldb_private::formatters::swift::TaskPriority_SummaryProvider(
     stream.Format("{0}", raw_value);
     break;
   }
+  return true;
+}
+
+static const std::pair<StringRef, StringRef> TASK_FLAGS[] = {
+    {"isRunning", "running"},
+    {"isCancelled", "cancelled"},
+    {"isEscalated", "escalated"},
+    {"isEnqueued", "enqueued"},
+    {"isGroupChildTask", "groupChildTask"},
+    {"isAsyncLetTask", "asyncLetTask"},
+    {"isChildTask", "childTask"},
+    {"isFuture", "future"},
+    {"isStatusRecordLocked", "statusRecordLocked"},
+};
+
+bool lldb_private::formatters::swift::Task_SummaryProvider(
+    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
+  auto get_member = [&valobj](StringRef name) -> uint64_t {
+    if (auto member_sp = valobj.GetChildMemberWithName(name))
+      if (auto synthetic_sp = member_sp->GetSyntheticValue())
+        return synthetic_sp->GetValueAsUnsigned(0);
+    return 0;
+  };
+
+  stream.Format("id:{0}", get_member("id"));
+
+  std::vector<StringRef> flags;
+  for (auto [member, flag] : TASK_FLAGS)
+    if (get_member(member))
+      flags.push_back(flag);
+
+  if (!flags.empty())
+    // Append the flags in an `|` separated list. This matches the format used
+    // by swift-inspect dump-concurrency.
+    stream.Format(" flags:{0:$[|]}", iterator_range(flags));
+
   return true;
 }
 

@@ -1,3 +1,4 @@
+import textwrap
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -17,19 +18,17 @@ class TestCase(TestBase):
         # the test checks only that it has a value, not what the value is.
         self.expect(
             "frame var task",
-            substrs=[
-                "(Task<(), Error>) task = {",
-                "address = 0x",
-                "id = 2",
-                "kind = 0",
-                "enqueuePriority = .medium",
-                "isChildTask = false",
-                "isFuture = true",
-                "isGroupChildTask = false",
-                "isAsyncLetTask = false",
-                "isCancelled = false",
-                "isEnqueued = ",
-                "children = {}",
+            patterns=[
+                textwrap.dedent(
+                    r"""
+                    \(Task<\(\), Error>\) task = id:(\d+) flags:(?:running\|)?enqueued\|future \{
+                      address = 0x[0-9a-f]+
+                      id = \1
+                      enqueuePriority = \.medium
+                      children = \{\}
+                    }
+                    """
+                ).strip()
             ],
         )
 
@@ -43,16 +42,16 @@ class TestCase(TestBase):
         )
         self.expect(
             "frame var currentTask",
-            substrs=[
-                "(UnsafeCurrentTask) currentTask = {",
-                "address = 0x",
-                "id = ",
-                "isChildTask = true",
-                "isFuture = true",
-                "isGroupChildTask = false",
-                "isAsyncLetTask = true",
-                "isCancelled = false",
-                "isEnqueued = false",
-                "children = {}",
+            patterns=[
+                textwrap.dedent(
+                    r"""
+                    \(UnsafeCurrentTask\) currentTask = id:(\d+) flags:(?:running\|)?asyncLetTask|childTask|future \{
+                      address = 0x[0-9a-f]+
+                      id = \1
+                      enqueuePriority = \.medium
+                      children = \{\}
+                    \}
+                    """
+                ).strip()
             ],
         )

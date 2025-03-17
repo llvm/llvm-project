@@ -1,3 +1,4 @@
+import textwrap
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -16,18 +17,23 @@ class TestCase(TestBase):
         )
         self.expect(
             "language swift task info",
-            substrs=[
-                "(UnsafeCurrentTask) current_task = {",
-                "address = 0x",
-                "id = 1",
-                "isChildTask = false",
-                "isAsyncLetTask = false",
-                "children = {",
-                "0 = {",
-                "address = 0x",
-                "id = 2",
-                "isChildTask = true",
-                "isAsyncLetTask = true",
-                "children = {}",
+            patterns=[
+                textwrap.dedent(
+                    r"""
+                    \(UnsafeCurrentTask\) current_task = id:1 flags:(?:running\|)?future \{
+                      address = 0x[0-9a-f]+
+                      id = 1
+                      enqueuePriority = 0
+                      children = \{
+                        0 = id:2 flags:(?:running\|)?asyncLetTask\|childTask\|future {
+                          address = 0x[0-9a-f]+
+                          id = 2
+                          enqueuePriority = \.medium
+                          children = \{\}
+                        \}
+                      \}
+                    \}
+                    """
+                ).strip()
             ],
         )
