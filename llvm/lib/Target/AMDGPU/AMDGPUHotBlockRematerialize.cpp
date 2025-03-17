@@ -17,7 +17,6 @@
 #include "AMDGPUOccupancyAndLatencyHelper.h"
 #include "AMDGPUSubExpDag.h"
 #include "AMDGPUSubtarget.h"
-#include "AMDGPUVMemDegreeDAG.h"
 #include "GCNRegPressure.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"

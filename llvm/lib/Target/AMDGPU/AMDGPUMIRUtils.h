@@ -90,19 +90,7 @@ MachineReg createVirtualRegForOperand(MachineOpcode Opcode, unsigned Operand,
 MachineReg createVirtualDstReg(MachineOpcode Opcode, llvm::MachineFunction &MF);
 
 bool isExecCopy(const llvm::MachineInstr &MI, MachineReg Exec,
-                MachineReg *pDst);
-struct MachineRegWithSubReg {
-  MachineReg Reg = /*NoRegister*/ 0;
-  unsigned SubReg = /*NoSubRegister*/ 0;
-};
-MachineRegWithSubReg getWqmEntryActiveMask(llvm::MachineFunction &MF);
-llvm::MachineInstr *getWqmEntryActiveMaskInst(llvm::MachineFunction &MF);
-
-// Return true if this machine instruction represents a call to the fetch
-// shader. We curently have two mechanisims for calling fetch shader:
-// 1. The AMDGPU_CALL_FETCH_SHADER pseudo-instruction
-// 2. A CALL instruction with the `FetchShaderCall` flag set to true.
-bool isFetchShaderCall(const llvm::MachineInstr *MI);
+                MachineReg *OutDst);
 
 bool isSccLiveAt(llvm::MachineBasicBlock *MBB,
                  llvm::MachineBasicBlock::iterator MI);

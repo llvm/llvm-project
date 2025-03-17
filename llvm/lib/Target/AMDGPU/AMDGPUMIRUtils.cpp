@@ -60,10 +60,10 @@ public:
 };
 
 void CFGWithPhi::dump() {
-#ifdef DBG
+#ifndef NDEBUG
   for (MachineBasicBlock &BB : F) {
     dbgs() << BB.getName() << "\n";
-    auto &PhiInsts = blockToPhiInstsMap[&BB];
+    auto &PhiInsts = BlockToPhiInstsMap[&BB];
     for (MachineInstr *I : PhiInsts) {
       if (!I->isPHI())
         continue;
@@ -644,31 +644,31 @@ bool getNonDebugMBBEnd(MachineBasicBlock::reverse_iterator &BBEnd,
 }
 } // namespace llvm
 
-// Helper functions to write jason.
+// Helper functions to Write jason.
 namespace {
-void json_name(StringRef Val, raw_ostream &os) { os << "\"" << Val << "\":"; }
+void json_name(StringRef Val, raw_ostream &OS) { OS << "\"" << Val << "\":"; }
 
 template <typename write_fn>
-void json_pair(StringRef Val, write_fn &fn, raw_ostream &os) {
-  json_name(Val, os);
-  os << "\"";
-  fn();
-  os << "\"";
+void json_pair(StringRef Val, write_fn &Fn, raw_ostream &OS) {
+  json_name(Val, OS);
+  OS << "\"";
+  Fn();
+  OS << "\"";
 }
 
 template <typename write_fn>
-void json_obj_pair(StringRef Val, write_fn &fn, raw_ostream &os) {
-  json_name(Val, os);
+void json_obj_pair(StringRef Val, write_fn &Fn, raw_ostream &OS) {
+  json_name(Val, OS);
 
-  fn();
+  Fn();
 }
 
 template <typename write_fn>
-void json_array(StringRef Val, write_fn &fn, raw_ostream &os) {
-  json_name(Val, os);
-  os << "[";
-  fn();
-  os << "]";
+void json_array(StringRef Val, write_fn &Fn, raw_ostream &OS) {
+  json_name(Val, OS);
+  OS << "[";
+  Fn();
+  OS << "]";
 }
 } // namespace
 
@@ -676,71 +676,71 @@ namespace llvm {
 namespace pressure {
 
 void write_inst(MachineInstr &MI, const SlotIndexes *SlotIndexes,
-                const SIInstrInfo *SIII, raw_ostream &os) {
-  os << "{";
+                const SIInstrInfo *SIII, raw_ostream &OS) {
+  OS << "{";
   SlotIndex Slot = SlotIndexes->getInstructionIndex(MI);
-  auto writeSlot = [&Slot, &os]() { Slot.print(os); };
+  auto WriteSlot = [&Slot, &OS]() { Slot.print(OS); };
 
-  json_pair("slot_index", writeSlot, os);
+  json_pair("slot_index", WriteSlot, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeOpcode = [&MI, &SIII, &os]() {
-    os << SIII->getName(MI.getOpcode());
+  auto WriteOpcode = [&MI, &SIII, &OS]() {
+    OS << SIII->getName(MI.getOpcode());
   };
 
-  json_pair("opcode", writeOpcode, os);
+  json_pair("opcode", WriteOpcode, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeAsm = [&MI, &SIII, &os]() {
-    MI.print(os, /*IsStandalone*/ true, /*SkipOpers*/ false,
+  auto WriteAsm = [&MI, &SIII, &OS]() {
+    MI.print(OS, /*IsStandalone*/ true, /*SkipOpers*/ false,
              /*SkipDebugLoc*/ true, /*AddNewLine*/ false, SIII);
   };
-  json_pair("asm", writeAsm, os);
+  json_pair("asm", WriteAsm, OS);
 
-  os << "}";
+  OS << "}";
 }
 
 void print_reg(Register Reg, const MachineRegisterInfo &MRI,
-               const SIRegisterInfo *SIRI, raw_ostream &os) {
+               const SIRegisterInfo *SIRI, raw_ostream &OS) {
   if (Reg.isVirtual()) {
     StringRef Name = MRI.getVRegName(Reg);
     if (Name != "") {
-      os << '%' << Name;
+      OS << '%' << Name;
     } else {
-      os << '%' << Register::virtReg2Index(Reg);
+      OS << '%' << Register::virtReg2Index(Reg);
     }
   } else if (Reg < SIRI->getNumRegs()) {
-    os << '$';
-    printLowerCase(SIRI->getName(Reg), os);
+    OS << '$';
+    printLowerCase(SIRI->getName(Reg), OS);
   } else {
     llvm_unreachable("invalid reg");
   }
 }
 
 void write_reg(unsigned Reg, unsigned SubReg, const MachineRegisterInfo &MRI,
-               const SIRegisterInfo *SIRI, raw_ostream &os) {
-  os << "{";
+               const SIRegisterInfo *SIRI, raw_ostream &OS) {
+  OS << "{";
 
-  auto writeReg = [&MRI, &SIRI, &Reg, &os]() { print_reg(Reg, MRI, SIRI, os); };
-  json_pair("reg", writeReg, os);
+  auto WriteReg = [&MRI, &SIRI, &Reg, &OS]() { print_reg(Reg, MRI, SIRI, OS); };
+  json_pair("reg", WriteReg, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeSubReg = [&SubReg, &os]() { os << SubReg; };
+  auto WriteSubReg = [&SubReg, &OS]() { OS << SubReg; };
 
-  json_pair("sub_reg", writeSubReg, os);
+  json_pair("sub_reg", WriteSubReg, OS);
 
-  os << ",";
-  auto writeIsSgpr = [&Reg, &MRI, &SIRI, &os]() {
+  OS << ",";
+  auto WriteIsSgpr = [&Reg, &MRI, &SIRI, &OS]() {
     if (SIRI->isSGPRReg(MRI, Reg))
-      os << "true";
+      OS << "true";
     else
-      os << "false";
+      OS << "false";
   };
-  json_obj_pair("is_sgpr", writeIsSgpr, os);
-  os << "}";
+  json_obj_pair("is_sgpr", WriteIsSgpr, OS);
+  OS << "}";
 }
 
 unsigned get_reg_size(unsigned Reg, const MachineRegisterInfo &MRI,
@@ -749,7 +749,7 @@ unsigned get_reg_size(unsigned Reg, const MachineRegisterInfo &MRI,
 }
 
 void write_live(unsigned Reg, LaneBitmask Mask, const MachineRegisterInfo &MRI,
-                const SIRegisterInfo *SIRI, raw_ostream &os) {
+                const SIRegisterInfo *SIRI, raw_ostream &OS) {
   if (Mask.none()) {
     unsigned size = get_reg_size(Reg, MRI, SIRI);
     Mask = LaneBitmask((1 << size) - 1);
@@ -757,199 +757,199 @@ void write_live(unsigned Reg, LaneBitmask Mask, const MachineRegisterInfo &MRI,
   unsigned mask = Mask.getAsInteger();
   for (unsigned i = 0; i <= Mask.getHighestLane(); i++) {
     if (mask & (1 << i)) {
-      write_reg(Reg, i, MRI, SIRI, os);
-      os << ",\n";
+      write_reg(Reg, i, MRI, SIRI, OS);
+      OS << ",\n";
     }
   }
 }
 
 void write_dag_input_node(unsigned ID, unsigned reg, unsigned mask,
                           const MachineRegisterInfo &MRI,
-                          const SIRegisterInfo *SIRI, raw_ostream &os) {
-  os << "{";
-  auto writeID = [&ID, &os]() { os << ID; };
+                          const SIRegisterInfo *SIRI, raw_ostream &OS) {
+  OS << "{";
+  auto WriteID = [&ID, &OS]() { OS << ID; };
 
-  json_pair("ID", writeID, os);
+  json_pair("ID", WriteID, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeReg = [&reg, &MRI, &SIRI, &os]() { print_reg(reg, MRI, SIRI, os); };
+  auto WriteReg = [&reg, &MRI, &SIRI, &OS]() { print_reg(reg, MRI, SIRI, OS); };
 
-  json_pair("reg", writeReg, os);
+  json_pair("reg", WriteReg, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeMask = [&mask, &os]() { os << mask; };
+  auto WriteMask = [&mask, &OS]() { OS << mask; };
 
-  json_pair("mask", writeMask, os);
+  json_pair("mask", WriteMask, OS);
 
-  os << "},\n";
+  OS << "},\n";
 }
 
 void write_dag_inst_node(unsigned ID, SlotIndex Slot,
                          GCNRPTracker::LiveRegSet LiveReg,
                          const MachineRegisterInfo &MRI,
                          const SIRegisterInfo *SIRI, SUnit *SU,
-                         raw_ostream &os) {
-  os << "{";
-  auto writeID = [&ID, &os]() { os << ID; };
+                         raw_ostream &OS) {
+  OS << "{";
+  auto WriteID = [&ID, &OS]() { OS << ID; };
 
-  json_pair("ID", writeID, os);
+  json_pair("ID", WriteID, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeSlot = [&Slot, &os]() { Slot.print(os); };
+  auto WriteSlot = [&Slot, &OS]() { Slot.print(OS); };
 
-  json_pair("slot_index", writeSlot, os);
+  json_pair("slot_index", WriteSlot, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeRegs = [&LiveReg, &MRI, &SIRI, &os]() {
-    for (auto it : LiveReg) {
-      unsigned Reg = it.first;
-      LaneBitmask Mask = it.second;
-      write_live(Reg, Mask, MRI, SIRI, os);
+  auto WriteRegs = [&LiveReg, &MRI, &SIRI, &OS]() {
+    for (auto It : LiveReg) {
+      unsigned Reg = It.first;
+      LaneBitmask Mask = It.second;
+      write_live(Reg, Mask, MRI, SIRI, OS);
     }
   };
-  json_array("regs", writeRegs, os);
+  json_array("regs", WriteRegs, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writePreds = [&SU, &os]() {
+  auto WritePreds = [&SU, &OS]() {
     for (auto &Pred : SU->Preds) {
 
-      os << Pred.getSUnit()->NodeNum << ",";
+      OS << Pred.getSUnit()->NodeNum << ",";
     }
   };
 
-  json_array("preds", writePreds, os);
+  json_array("preds", WritePreds, OS);
 
-  os << "},\n";
+  OS << "},\n";
 }
 
 void write_block(MachineBasicBlock &Blk, LiveIntervals *LIS,
                  const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-                 const SIInstrInfo *SIII, raw_ostream &os) {
-  os << "{\n";
-  auto writeName = [&Blk, &os]() { os << Blk.getName(); };
-  json_pair("name", writeName, os);
+                 const SIInstrInfo *SIII, raw_ostream &OS) {
+  OS << "{\n";
+  auto WriteName = [&Blk, &OS]() { OS << Blk.getName(); };
+  json_pair("name", WriteName, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeIndex = [&Blk, &os]() { os << Blk.getNumber(); };
-  json_pair("id", writeIndex, os);
+  auto WriteIndex = [&Blk, &OS]() { OS << Blk.getNumber(); };
+  json_pair("id", WriteIndex, OS);
 
-  os << ",";
+  OS << ",";
 
   const SlotIndexes *SlotIndexes = LIS->getSlotIndexes();
 
   SlotIndex BeginSlot = SlotIndexes->getMBBStartIdx(&Blk);
-  auto writeSlot = [&BeginSlot, &os]() { BeginSlot.print(os); };
-  json_pair("begin_slot", writeSlot, os);
+  auto WriteSlot = [&BeginSlot, &OS]() { BeginSlot.print(OS); };
+  json_pair("begin_slot", WriteSlot, OS);
 
-  os << ",";
+  OS << ",";
 
   SlotIndex EndSlot = SlotIndexes->getMBBEndIdx(&Blk);
-  auto writeEndSlot = [&EndSlot, &os]() { EndSlot.print(os); };
-  json_pair("end_slot", writeEndSlot, os);
+  auto WriteEndSlot = [&EndSlot, &OS]() { EndSlot.print(OS); };
+  json_pair("end_slot", WriteEndSlot, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeInsts = [&Blk, &SlotIndexes, &SIII, &os]() {
+  auto WriteInsts = [&Blk, &SlotIndexes, &SIII, &OS]() {
     for (MachineInstr &MI : Blk) {
       if (MI.isDebugInstr())
         continue;
-      write_inst(MI, SlotIndexes, SIII, os);
-      os << ",\n";
+      write_inst(MI, SlotIndexes, SIII, OS);
+      OS << ",\n";
     }
   };
 
-  json_array("instructions", writeInsts, os);
+  json_array("instructions", WriteInsts, OS);
 
-  os << ",";
+  OS << ",";
 
-  BlockExpDag dag(&Blk, LIS, MRI, SIRI, SIII);
-  dag.buildWithPressure();
+  BlockExpDag Dag(&Blk, LIS, MRI, SIRI, SIII);
+  Dag.buildWithPressure();
 
-  const auto StartLiveReg = llvm::getLiveRegs(BeginSlot, *dag.LIS, dag.MRI);
-  auto writeInputs = [&StartLiveReg, &dag, &os]() {
-    for (auto it : StartLiveReg) {
-      unsigned Reg = it.first;
-      LaneBitmask mask = it.second;
-      SUnit *SU = dag.InputSUnitMap[Reg];
+  const auto StartLiveReg = llvm::getLiveRegs(BeginSlot, *Dag.LIS, Dag.MRI);
+  auto WriteInputs = [&StartLiveReg, &Dag, &OS]() {
+    for (auto It : StartLiveReg) {
+      unsigned Reg = It.first;
+      LaneBitmask Mask = It.second;
+      SUnit *SU = Dag.InputSUnitMap[Reg];
       // Write Reg and mask to the nodes.
-      write_dag_input_node(SU->NodeNum, Reg, mask.getAsInteger(), dag.MRI,
-                           dag.SIRI, os);
+      write_dag_input_node(SU->NodeNum, Reg, Mask.getAsInteger(), Dag.MRI,
+                           Dag.SIRI, OS);
     }
   };
 
-  json_array("input_nodes", writeInputs, os);
+  json_array("input_nodes", WriteInputs, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeNodes = [&SlotIndexes, &dag, &os]() {
-    for (auto it : dag.MISUnitMap) {
-      MachineInstr *MI = it.first;
-      SUnit *SU = it.second;
+  auto WriteNodes = [&SlotIndexes, &Dag, &OS]() {
+    for (auto It : Dag.MISUnitMap) {
+      MachineInstr *MI = It.first;
+      SUnit *SU = It.second;
       // Use SlotIndex of MI.
       SlotIndex SlotIndex;
       if (!MI->isDebugInstr())
         SlotIndex = SlotIndexes->getInstructionIndex(*MI);
-      GCNRPTracker::LiveRegSet LiveReg = dag.DagPressureMap[SU];
+      GCNRPTracker::LiveRegSet LiveReg = Dag.DagPressureMap[SU];
       // Write slot, live to the nodes.
-      write_dag_inst_node(SU->NodeNum, SlotIndex, LiveReg, dag.MRI, dag.SIRI,
-                          SU, os);
+      write_dag_inst_node(SU->NodeNum, SlotIndex, LiveReg, Dag.MRI, Dag.SIRI,
+                          SU, OS);
     }
   };
 
-  json_array("inst_nodes", writeNodes, os);
+  json_array("inst_nodes", WriteNodes, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writePreds = [&Blk, &os]() {
+  auto WritePreds = [&Blk, &OS]() {
     for (MachineBasicBlock *Pred : Blk.predecessors()) {
-      os << Pred->getNumber() << ",";
+      OS << Pred->getNumber() << ",";
     }
   };
 
-  json_array("preds", writePreds, os);
+  json_array("preds", WritePreds, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeSuccs = [&Blk, &os]() {
+  auto WriteSuccs = [&Blk, &OS]() {
     for (MachineBasicBlock *Succ : Blk.successors()) {
-      os << Succ->getNumber() << ",";
+      OS << Succ->getNumber() << ",";
     }
   };
 
-  json_array("succs", writeSuccs, os);
+  json_array("succs", WriteSuccs, OS);
 
-  os << "}";
+  OS << "}";
 }
 
 void write_define(SlotIndex &Slot, unsigned Reg, unsigned SubReg,
                   const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-                  raw_ostream &os) {
-  os << "{";
-  auto writeSlot = [&Slot, &os]() { Slot.print(os); };
+                  raw_ostream &OS) {
+  OS << "{";
+  auto WriteSlot = [&Slot, &OS]() { Slot.print(OS); };
 
-  json_pair("slot_index", writeSlot, os);
+  json_pair("slot_index", WriteSlot, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeReg = [&MRI, &SIRI, &Reg, &SubReg, &os]() {
-    write_reg(Reg, SubReg, MRI, SIRI, os);
+  auto WriteReg = [&MRI, &SIRI, &Reg, &SubReg, &OS]() {
+    write_reg(Reg, SubReg, MRI, SIRI, OS);
   };
-  json_obj_pair("reg", writeReg, os);
+  json_obj_pair("reg", WriteReg, OS);
 
-  os << "}\n";
+  OS << "}\n";
 
-  os << ",";
+  OS << ",";
 }
 
 void write_define(MachineOperand &MO, const SlotIndexes *SlotIndexes,
                   const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-                  raw_ostream &os) {
+                  raw_ostream &OS) {
   // Split subReg?  MO.getSubReg();
   Register Reg = MO.getReg();
   unsigned SubReg = MO.getSubReg();
@@ -958,104 +958,104 @@ void write_define(MachineOperand &MO, const SlotIndexes *SlotIndexes,
   if (SubReg == 0) {
     unsigned Size = get_reg_size(Reg, MRI, SIRI);
     for (unsigned i = 0; i < Size; i++) {
-      write_define(Slot, Reg, i, MRI, SIRI, os);
+      write_define(Slot, Reg, i, MRI, SIRI, OS);
     }
   } else {
     switch (SubReg) {
     default:
       assert(0 && "SubReg not supported yet.");
-      write_define(Slot, Reg, SubReg, MRI, SIRI, os);
+      write_define(Slot, Reg, SubReg, MRI, SIRI, OS);
       break;
     case AMDGPU::sub0:
-      write_define(Slot, Reg, 0, MRI, SIRI, os);
+      write_define(Slot, Reg, 0, MRI, SIRI, OS);
       break;
     case AMDGPU::sub1:
-      write_define(Slot, Reg, 1, MRI, SIRI, os);
+      write_define(Slot, Reg, 1, MRI, SIRI, OS);
       break;
     case AMDGPU::sub2:
-      write_define(Slot, Reg, 2, MRI, SIRI, os);
+      write_define(Slot, Reg, 2, MRI, SIRI, OS);
       break;
     case AMDGPU::sub3:
-      write_define(Slot, Reg, 3, MRI, SIRI, os);
+      write_define(Slot, Reg, 3, MRI, SIRI, OS);
       break;
     case AMDGPU::sub4:
-      write_define(Slot, Reg, 4, MRI, SIRI, os);
+      write_define(Slot, Reg, 4, MRI, SIRI, OS);
       break;
     case AMDGPU::sub5:
-      write_define(Slot, Reg, 5, MRI, SIRI, os);
+      write_define(Slot, Reg, 5, MRI, SIRI, OS);
       break;
     case AMDGPU::sub6:
-      write_define(Slot, Reg, 6, MRI, SIRI, os);
+      write_define(Slot, Reg, 6, MRI, SIRI, OS);
       break;
     case AMDGPU::sub7:
-      write_define(Slot, Reg, 7, MRI, SIRI, os);
+      write_define(Slot, Reg, 7, MRI, SIRI, OS);
       break;
     case AMDGPU::sub8:
-      write_define(Slot, Reg, 8, MRI, SIRI, os);
+      write_define(Slot, Reg, 8, MRI, SIRI, OS);
       break;
     case AMDGPU::sub9:
-      write_define(Slot, Reg, 9, MRI, SIRI, os);
+      write_define(Slot, Reg, 9, MRI, SIRI, OS);
       break;
     case AMDGPU::sub10:
-      write_define(Slot, Reg, 10, MRI, SIRI, os);
+      write_define(Slot, Reg, 10, MRI, SIRI, OS);
       break;
     case AMDGPU::sub11:
-      write_define(Slot, Reg, 11, MRI, SIRI, os);
+      write_define(Slot, Reg, 11, MRI, SIRI, OS);
       break;
     case AMDGPU::sub12:
-      write_define(Slot, Reg, 12, MRI, SIRI, os);
+      write_define(Slot, Reg, 12, MRI, SIRI, OS);
       break;
     case AMDGPU::sub13:
-      write_define(Slot, Reg, 13, MRI, SIRI, os);
+      write_define(Slot, Reg, 13, MRI, SIRI, OS);
       break;
     case AMDGPU::sub14:
-      write_define(Slot, Reg, 14, MRI, SIRI, os);
+      write_define(Slot, Reg, 14, MRI, SIRI, OS);
       break;
     case AMDGPU::sub15:
-      write_define(Slot, Reg, 15, MRI, SIRI, os);
+      write_define(Slot, Reg, 15, MRI, SIRI, OS);
       break;
     case AMDGPU::sub0_sub1:
-      write_define(Slot, Reg, 0, MRI, SIRI, os);
-      write_define(Slot, Reg, 1, MRI, SIRI, os);
+      write_define(Slot, Reg, 0, MRI, SIRI, OS);
+      write_define(Slot, Reg, 1, MRI, SIRI, OS);
       break;
     case AMDGPU::sub2_sub3:
-      write_define(Slot, Reg, 2, MRI, SIRI, os);
-      write_define(Slot, Reg, 3, MRI, SIRI, os);
+      write_define(Slot, Reg, 2, MRI, SIRI, OS);
+      write_define(Slot, Reg, 3, MRI, SIRI, OS);
       break;
     case AMDGPU::sub4_sub5:
-      write_define(Slot, Reg, 4, MRI, SIRI, os);
-      write_define(Slot, Reg, 5, MRI, SIRI, os);
+      write_define(Slot, Reg, 4, MRI, SIRI, OS);
+      write_define(Slot, Reg, 5, MRI, SIRI, OS);
       break;
     case AMDGPU::sub1_sub2:
-      write_define(Slot, Reg, 1, MRI, SIRI, os);
-      write_define(Slot, Reg, 2, MRI, SIRI, os);
+      write_define(Slot, Reg, 1, MRI, SIRI, OS);
+      write_define(Slot, Reg, 2, MRI, SIRI, OS);
       break;
     case AMDGPU::sub0_sub1_sub2:
-      write_define(Slot, Reg, 0, MRI, SIRI, os);
-      write_define(Slot, Reg, 1, MRI, SIRI, os);
-      write_define(Slot, Reg, 2, MRI, SIRI, os);
+      write_define(Slot, Reg, 0, MRI, SIRI, OS);
+      write_define(Slot, Reg, 1, MRI, SIRI, OS);
+      write_define(Slot, Reg, 2, MRI, SIRI, OS);
       break;
     case AMDGPU::sub0_sub1_sub2_sub3:
-      write_define(Slot, Reg, 0, MRI, SIRI, os);
-      write_define(Slot, Reg, 1, MRI, SIRI, os);
-      write_define(Slot, Reg, 2, MRI, SIRI, os);
-      write_define(Slot, Reg, 3, MRI, SIRI, os);
+      write_define(Slot, Reg, 0, MRI, SIRI, OS);
+      write_define(Slot, Reg, 1, MRI, SIRI, OS);
+      write_define(Slot, Reg, 2, MRI, SIRI, OS);
+      write_define(Slot, Reg, 3, MRI, SIRI, OS);
       break;
     case AMDGPU::sub2_sub3_sub4_sub5:
-      write_define(Slot, Reg, 2, MRI, SIRI, os);
-      write_define(Slot, Reg, 3, MRI, SIRI, os);
-      write_define(Slot, Reg, 4, MRI, SIRI, os);
-      write_define(Slot, Reg, 5, MRI, SIRI, os);
+      write_define(Slot, Reg, 2, MRI, SIRI, OS);
+      write_define(Slot, Reg, 3, MRI, SIRI, OS);
+      write_define(Slot, Reg, 4, MRI, SIRI, OS);
+      write_define(Slot, Reg, 5, MRI, SIRI, OS);
       break;
     case AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7:
-      write_define(Slot, Reg, 0, MRI, SIRI, os);
-      write_define(Slot, Reg, 1, MRI, SIRI, os);
-      write_define(Slot, Reg, 2, MRI, SIRI, os);
-      write_define(Slot, Reg, 3, MRI, SIRI, os);
-      write_define(Slot, Reg, 4, MRI, SIRI, os);
-      write_define(Slot, Reg, 5, MRI, SIRI, os);
-      write_define(Slot, Reg, 6, MRI, SIRI, os);
-      write_define(Slot, Reg, 7, MRI, SIRI, os);
+      write_define(Slot, Reg, 0, MRI, SIRI, OS);
+      write_define(Slot, Reg, 1, MRI, SIRI, OS);
+      write_define(Slot, Reg, 2, MRI, SIRI, OS);
+      write_define(Slot, Reg, 3, MRI, SIRI, OS);
+      write_define(Slot, Reg, 4, MRI, SIRI, OS);
+      write_define(Slot, Reg, 5, MRI, SIRI, OS);
+      write_define(Slot, Reg, 6, MRI, SIRI, OS);
+      write_define(Slot, Reg, 7, MRI, SIRI, OS);
       break;
     }
   }
@@ -1063,13 +1063,13 @@ void write_define(MachineOperand &MO, const SlotIndexes *SlotIndexes,
 
 void write_defines(MachineFunction &MF, const SlotIndexes *SlotIndexes,
                    const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-                   raw_ostream &os) {
+                   raw_ostream &OS) {
 
   for (unsigned i = 0; i < MRI.getNumVirtRegs(); i++) {
     auto Reg = Register::index2VirtReg(i);
 
     for (MachineOperand &MO : MRI.def_operands(Reg)) {
-      write_define(MO, SlotIndexes, MRI, SIRI, os);
+      write_define(MO, SlotIndexes, MRI, SIRI, OS);
     }
   }
 }
@@ -1077,288 +1077,288 @@ void write_defines(MachineFunction &MF, const SlotIndexes *SlotIndexes,
 void write_uses(MachineFunction &MF, const SlotIndexes *SlotIndexes,
 
                 const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-                raw_ostream &os) {
+                raw_ostream &OS) {
 
   for (unsigned i = 0; i < MRI.getNumVirtRegs(); i++) {
     auto Reg = Register::index2VirtReg(i);
 
     for (MachineOperand &MO : MRI.use_nodbg_operands(Reg)) {
       // TODO: create write_use if use has more info.
-      write_define(MO, SlotIndexes, MRI, SIRI, os);
+      write_define(MO, SlotIndexes, MRI, SIRI, OS);
     }
   }
 }
 
 void write_liveness(SlotIndex Slot, GCNRPTracker::LiveRegSet &LiveSet,
                     const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-                    raw_ostream &os) {
-  os << "{";
-  auto writeSlot = [&Slot, &os]() { Slot.print(os); };
+                    raw_ostream &OS) {
+  OS << "{";
+  auto WriteSlot = [&Slot, &OS]() { Slot.print(OS); };
 
-  json_pair("slot_index", writeSlot, os);
+  json_pair("slot_index", WriteSlot, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeRegs = [&LiveSet, &MRI, &SIRI, &os]() {
+  auto WriteRegs = [&LiveSet, &MRI, &SIRI, &OS]() {
     for (auto it : LiveSet) {
       unsigned Reg = it.first;
       LaneBitmask Mask = it.second;
-      write_live(Reg, Mask, MRI, SIRI, os);
+      write_live(Reg, Mask, MRI, SIRI, OS);
     }
   };
-  json_array("regs", writeRegs, os);
-  os << "\n},\n";
+  json_array("regs", WriteRegs, OS);
+  OS << "\n},\n";
 }
 
-void write_segment(const LiveInterval::Segment &S, raw_ostream &os) {
-  os << "{";
-  auto writeBegin = [&S, &os]() { S.start.print(os); };
+void write_segment(const LiveInterval::Segment &S, raw_ostream &OS) {
+  OS << "{";
+  auto WriteBegin = [&S, &OS]() { S.start.print(OS); };
 
-  json_pair("begin", writeBegin, os);
+  json_pair("begin", WriteBegin, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeEnd = [&S, &os]() { S.end.print(os); };
+  auto WriteEnd = [&S, &OS]() { S.end.print(OS); };
 
-  json_pair("end", writeEnd, os);
+  json_pair("end", WriteEnd, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeValNum = [&S, &os]() {
+  auto WriteValNum = [&S, &OS]() {
     if (S.valno)
-      os << S.valno->id;
+      OS << S.valno->id;
     else
-      os << 0xFFFFFFFF;
+      OS << 0xFFFFFFFF;
   };
 
-  json_pair("val_num", writeValNum, os);
+  json_pair("val_num", WriteValNum, OS);
 
-  os << "},\n";
+  OS << "},\n";
 }
 
-void write_subrange(const LiveInterval::SubRange &SR, raw_ostream &os) {
-  os << "{\n";
-  auto writeMask = [&SR, &os]() { os << SR.LaneMask.getAsInteger(); };
+void write_subrange(const LiveInterval::SubRange &SR, raw_ostream &OS) {
+  OS << "{\n";
+  auto WriteMask = [&SR, &OS]() { OS << SR.LaneMask.getAsInteger(); };
 
-  json_pair("mask", writeMask, os);
+  json_pair("mask", WriteMask, OS);
 
-  os << ",";
+  OS << ",";
 
   // Segments.
-  auto writeSegments = [&SR, &os]() {
+  auto WriteSegments = [&SR, &OS]() {
     for (auto &S : SR.segments) {
-      write_segment(S, os);
+      write_segment(S, OS);
     }
   };
 
-  json_array("segments", writeSegments, os);
+  json_array("segments", WriteSegments, OS);
 
-  os << "\n},\n";
+  OS << "\n},\n";
 }
 
 void write_live_interval(LiveInterval &LI, const MachineRegisterInfo &MRI,
-                         const SIRegisterInfo *SIRI, raw_ostream &os) {
-  os << "{\n";
+                         const SIRegisterInfo *SIRI, raw_ostream &OS) {
+  OS << "{\n";
 
-  auto writeReg = [&LI, &MRI, &SIRI, &os]() {
-    write_reg(LI.reg(), 0, MRI, SIRI, os);
+  auto WriteReg = [&LI, &MRI, &SIRI, &OS]() {
+    write_reg(LI.reg(), 0, MRI, SIRI, OS);
   };
 
-  json_obj_pair("reg", writeReg, os);
+  json_obj_pair("reg", WriteReg, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeSegments = [&LI, &os]() {
+  auto WriteSegments = [&LI, &OS]() {
     for (auto &S : LI.segments) {
-      write_segment(S, os);
+      write_segment(S, OS);
     }
   };
 
-  json_array("segments", writeSegments, os);
+  json_array("segments", WriteSegments, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeSubRanges = [&LI, &os]() {
+  auto WriteSubRanges = [&LI, &OS]() {
     for (auto &SR : LI.subranges()) {
-      write_subrange(SR, os);
+      write_subrange(SR, OS);
     }
   };
 
-  json_array("subranges", writeSubRanges, os);
+  json_array("subranges", WriteSubRanges, OS);
 
-  os << "},\n";
+  OS << "},\n";
 }
 
 std::string get_legal_str(const MDString *MDStr) {
-  std::string str;
-  raw_string_ostream Stream(str);
+  std::string Str;
+  raw_string_ostream Stream(Str);
   MDStr->print(Stream);
   Stream.flush();
   // Remove !.
-  str = str.substr(1);
+  Str = Str.substr(1);
   // Remove ""
-  str = str.substr(1);
-  str.pop_back();
-  std::replace(str.begin(), str.end(), '\\', '#');
-  return str;
+  Str = Str.substr(1);
+  Str.pop_back();
+  std::replace(Str.begin(), Str.end(), '\\', '#');
+  return Str;
 }
 
-void write_file(const MDNode *FileNode, raw_ostream &os) {
+void write_file(const MDNode *FileNode, raw_ostream &OS) {
   const MDString *FileName = cast<MDString>(FileNode->getOperand(0).get());
-  StringRef fileNameStr = FileName->getString();
-  if (fileNameStr.find("__AMDGPU_GPUMAP_") == 0)
+  StringRef FileNameStr = FileName->getString();
+  if (FileNameStr.find("__AMDGPU_GPUMAP_") == 0)
     return;
-  if (fileNameStr.find("__AMDGPU_DWARF_") == 0)
+  if (FileNameStr.find("__AMDGPU_DWARF_") == 0)
     return;
 
-  os << "{";
+  OS << "{";
 
-  std::string str0 = get_legal_str(FileName);
-  auto writeName = [&str0, &os]() { os << str0; };
-  json_pair("filename", writeName, os);
+  std::string Str0 = get_legal_str(FileName);
+  auto WriteName = [&Str0, &OS]() { OS << Str0; };
+  json_pair("filename", WriteName, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
   const MDString *Content = cast<MDString>(FileNode->getOperand(1).get());
   std::string str = get_legal_str(Content);
-  auto writeContent = [&str, &os]() { os << str; };
-  json_pair("content", writeContent, os);
-  os << "\n},\n";
+  auto WriteContent = [&str, &OS]() { OS << str; };
+  json_pair("content", WriteContent, OS);
+  OS << "\n},\n";
 }
 
-void write_DIFile(const DIFile *File, raw_ostream &os) {
+void write_DIFile(const DIFile *File, raw_ostream &OS) {
   if (File) {
-    std::string name = get_legal_str(File->getRawFilename());
-    std::string dir = "";
+    std::string Name = get_legal_str(File->getRawFilename());
+    std::string Dir = "";
     if (MDString *MDDir = File->getRawDirectory())
-      dir = get_legal_str(MDDir);
-    os << dir << name;
+      Dir = get_legal_str(MDDir);
+    OS << Dir << Name;
   } else {
-    os << "ArtificialFile";
+    OS << "ArtificialFile";
   }
 }
 
-void write_line_mapping(SlotIndex Slot, DebugLoc DL, raw_ostream &os) {
-  os << "{";
+void write_line_mapping(SlotIndex Slot, DebugLoc DL, raw_ostream &OS) {
+  OS << "{";
 
-  auto writeSlot = [&Slot, &os]() { Slot.print(os); };
+  auto WriteSlot = [&Slot, &OS]() { Slot.print(OS); };
 
-  json_pair("slot_index", writeSlot, os);
+  json_pair("slot_index", WriteSlot, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
   MDNode *Scope = DL.getScope();
-  unsigned line = DL.getLine();
-  unsigned col = DL.getCol();
+  unsigned Line = DL.getLine();
+  unsigned Col = DL.getCol();
 
-  auto writeLine = [&line, &os]() { os << line; };
-  json_pair("line", writeLine, os);
+  auto WriteLine = [&Line, &OS]() { OS << Line; };
+  json_pair("line", WriteLine, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writeCol = [&col, &os]() { os << col; };
-  json_pair("col", writeCol, os);
+  auto WriteCol = [&Col, &OS]() { OS << Col; };
+  json_pair("col", WriteCol, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writeFile = [&Scope, &os]() {
+  auto WriteFile = [&Scope, &OS]() {
     const DIFile *File = cast<DIScope>(Scope)->getFile();
-    write_DIFile(File, os);
+    write_DIFile(File, OS);
   };
-  json_pair("file", writeFile, os);
+  json_pair("file", WriteFile, OS);
 
-  if (DILocation *inlineDL = DL.getInlinedAt()) {
-    os << ",\n";
-    unsigned inlineLine = inlineDL->getLine();
-    auto writeLine = [&inlineLine, &os]() { os << inlineLine; };
-    json_pair("inline_line", writeLine, os);
+  if (DILocation *InlineDL = DL.getInlinedAt()) {
+    OS << ",\n";
+    unsigned InlineLine = InlineDL->getLine();
+    auto WriteLine = [&InlineLine, &OS]() { OS << InlineLine; };
+    json_pair("inline_line", WriteLine, OS);
 
-    os << ",\n";
+    OS << ",\n";
 
-    unsigned inlineCol = inlineDL->getColumn();
-    auto writeCol = [&inlineCol, &os]() { os << inlineCol; };
-    json_pair("inline_col", writeCol, os);
+    unsigned InlineCol = InlineDL->getColumn();
+    auto WriteCol = [&InlineCol, &OS]() { OS << InlineCol; };
+    json_pair("inline_col", WriteCol, OS);
 
-    os << ",\n";
+    OS << ",\n";
 
     const MDNode *InlineScope = DL.getInlinedAtScope();
-    auto writeFile = [&InlineScope, &os]() {
+    auto WriteFile = [&InlineScope, &OS]() {
       const DIFile *File = cast<DIScope>(InlineScope)->getFile();
-      write_DIFile(File, os);
+      write_DIFile(File, OS);
     };
-    json_pair("inline_file", writeFile, os);
+    json_pair("inline_file", WriteFile, OS);
   }
 
-  os << "\n},\n";
+  OS << "\n},\n";
 }
 
 void write_dbg_val(unsigned Reg, const DIVariable *V, const DIExpression *Exp,
                    const MachineRegisterInfo &MRI, const SIRegisterInfo *SIRI,
-                   raw_ostream &os) {
-  os << "{";
+                   raw_ostream &OS) {
+  OS << "{";
 
-  auto writeReg = [&MRI, &SIRI, &Reg, &os]() {
+  auto WriteReg = [&MRI, &SIRI, &Reg, &OS]() {
     const unsigned SubReg = 0;
-    write_reg(Reg, SubReg, MRI, SIRI, os);
+    write_reg(Reg, SubReg, MRI, SIRI, OS);
   };
-  json_obj_pair("reg", writeReg, os);
+  json_obj_pair("reg", WriteReg, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
   if (V) {
-    auto writeName = [&V, &os]() { os << V->getName(); };
-    json_pair("debug_val_name", writeName, os);
-    os << ",\n";
+    auto WriteName = [&V, &OS]() { OS << V->getName(); };
+    json_pair("debug_val_name", WriteName, OS);
+    OS << ",\n";
 
-    auto writeFile = [&V, &os]() {
+    auto WriteFile = [&V, &OS]() {
       const DIFile *File = V->getFile();
-      write_DIFile(File, os);
+      write_DIFile(File, OS);
     };
-    json_pair("debug_val_file", writeFile, os);
-    os << ",\n";
+    json_pair("debug_val_file", WriteFile, OS);
+    OS << ",\n";
 
-    auto writeLine = [&V, &os]() { os << V->getLine(); };
-    json_pair("debug_val_line", writeLine, os);
+    auto WriteLine = [&V, &OS]() { OS << V->getLine(); };
+    json_pair("debug_val_line", WriteLine, OS);
   }
 
   if (Exp->isValid() && Exp->getNumElements()) {
-    os << ",\n";
-    auto writeV = [&Exp, &os]() {
-      os << '[';
+    OS << ",\n";
+    auto WriteV = [&Exp, &OS]() {
+      OS << '[';
       bool NeedSep = false;
       for (auto Op : Exp->expr_ops()) {
         if (NeedSep)
-          os << ", ";
+          OS << ", ";
         else
           NeedSep = true;
-        os << dwarf::OperationEncodingString(Op.getOp());
+        OS << dwarf::OperationEncodingString(Op.getOp());
         for (unsigned I = 0; I < Op.getNumArgs(); ++I)
-          os << ' ' << Op.getArg(I);
+          OS << ' ' << Op.getArg(I);
       }
-      os << "] ";
+      OS << "] ";
     };
-    json_pair("debug_exp", writeV, os);
+    json_pair("debug_exp", WriteV, OS);
   }
-  os << "\n},\n";
+  OS << "\n},\n";
 }
 
 void write_dbg_info(MachineFunction &MF, LiveIntervals *LIS,
                     const MachineRegisterInfo &MRI, const SIInstrInfo *SIII,
                     const SIRegisterInfo *SIRI, const SlotIndexes *SlotIndexes,
-                    const NamedMDNode *SourceMD, raw_ostream &os) {
-  os << ",\n";
+                    const NamedMDNode *SourceMD, raw_ostream &OS) {
+  OS << ",\n";
 
-  auto writeFiles = [&SourceMD, &os]() {
+  auto WriteFiles = [&SourceMD, &OS]() {
     for (const MDNode *FileNode : SourceMD->operands()) {
-      write_file(FileNode, os);
+      write_file(FileNode, OS);
     }
   };
 
-  json_array("files", writeFiles, os);
+  json_array("files", WriteFiles, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writeLineMapping = [&MF, &SlotIndexes, &os]() {
+  auto WriteLineMapping = [&MF, &SlotIndexes, &OS]() {
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : MBB) {
         if (MI.isDebugInstr()) {
@@ -1368,16 +1368,16 @@ void write_dbg_info(MachineFunction &MF, LiveIntervals *LIS,
         if (!DL)
           continue;
         SlotIndex Slot = SlotIndexes->getInstructionIndex(MI);
-        write_line_mapping(Slot, DL, os);
+        write_line_mapping(Slot, DL, OS);
       }
     }
   };
 
-  json_array("line_mapping", writeLineMapping, os);
+  json_array("line_mapping", WriteLineMapping, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writeDebugVals = [&MF, &MRI, &SIRI, &os]() {
+  auto WriteDebugVals = [&MF, &MRI, &SIRI, &OS]() {
     for (MachineBasicBlock &MBB : MF) {
       for (MachineInstr &MI : MBB) {
         if (!MI.isDebugValue())
@@ -1392,91 +1392,89 @@ void write_dbg_info(MachineFunction &MF, LiveIntervals *LIS,
 
         const DIVariable *V = MI.getDebugVariable();
         const DIExpression *Exp = MI.getDebugExpression();
-        write_dbg_val(Reg.getReg(), V, Exp, MRI, SIRI, os);
+        write_dbg_val(Reg.getReg(), V, Exp, MRI, SIRI, OS);
       }
     }
   };
 
-  json_array("debug_vals", writeDebugVals, os);
+  json_array("debug_vals", WriteDebugVals, OS);
 }
 
 void write_function(MachineFunction &MF, LiveIntervals *LIS,
                     const MachineRegisterInfo &MRI, const SIInstrInfo *SIII,
-                    const SIRegisterInfo *SIRI, raw_ostream &os) {
+                    const SIRegisterInfo *SIRI, raw_ostream &OS) {
   const SlotIndexes *SlotIndexes = LIS->getSlotIndexes();
 
-  os << "{\n";
-  auto writeName = [&MF, &os]() { os << MF.getName(); };
-  json_pair("name", writeName, os);
+  OS << "{\n";
+  auto WriteName = [&MF, &OS]() { OS << MF.getName(); };
+  json_pair("name", WriteName, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writeBlocks = [&MF, &SlotIndexes, &LIS, &MRI, &SIRI, &SIII, &os]() {
+  auto WriteBlocks = [&MF, &LIS, &MRI, &SIRI, &SIII, &OS]() {
     for (MachineBasicBlock &MBB : MF) {
-      write_block(MBB, LIS, MRI, SIRI, SIII, os);
-      os << ",\n";
+      write_block(MBB, LIS, MRI, SIRI, SIII, OS);
+      OS << ",\n";
     }
   };
 
-  json_array("blocks", writeBlocks, os);
+  json_array("blocks", WriteBlocks, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writeDefines = [&MF, &SlotIndexes, &MRI, &SIRI, &os]() {
-    write_defines(MF, SlotIndexes, MRI, SIRI, os);
+  auto WriteDefines = [&MF, &SlotIndexes, &MRI, &SIRI, &OS]() {
+    write_defines(MF, SlotIndexes, MRI, SIRI, OS);
   };
 
-  json_array("defines", writeDefines, os);
+  json_array("defines", WriteDefines, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writeUses = [&MF, &SlotIndexes, &MRI, &SIRI, &os]() {
-    write_uses(MF, SlotIndexes, MRI, SIRI, os);
+  auto WriteUses = [&MF, &SlotIndexes, &MRI, &SIRI, &OS]() {
+    write_uses(MF, SlotIndexes, MRI, SIRI, OS);
   };
 
-  json_array("uses", writeUses, os);
+  json_array("uses", WriteUses, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writeLiveness = [&MF, &LIS, &MRI, &SIRI, &os]() {
+  auto WriteLiveness = [&MF, &LIS, &MRI, &SIRI, &OS]() {
     for (MachineBasicBlock &MBB : MF)
       for (MachineInstr &MI : MBB) {
         if (MI.isDebugInstr())
           continue;
         const SlotIndex &SI = LIS->getInstructionIndex(MI).getBaseIndex();
         GCNRPTracker::LiveRegSet LISLR = llvm::getLiveRegs(SI, *LIS, MRI);
-        write_liveness(SI, LISLR, MRI, SIRI, os);
+        write_liveness(SI, LISLR, MRI, SIRI, OS);
       }
   };
 
-  json_array("liveness", writeLiveness, os);
+  json_array("liveness", WriteLiveness, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writeLiveIntervals = [&MRI, &SIRI, &LIS, &os]() {
+  auto WriteLiveIntervals = [&MRI, &SIRI, &LIS, &OS]() {
     for (unsigned i = 0; i < MRI.getNumVirtRegs(); i++) {
       auto Reg = Register::index2VirtReg(i);
       if (!LIS->hasInterval(Reg))
         continue;
       auto &LI = LIS->getInterval(Reg);
-      write_live_interval(LI, MRI, SIRI, os);
+      write_live_interval(LI, MRI, SIRI, OS);
     }
   };
 
-  json_array("live_intervals", writeLiveIntervals, os);
+  json_array("live_intervals", WriteLiveIntervals, OS);
 
-#if 0 // TODO: Do we need this?
   // Check debug info.
   const Function &F = MF.getFunction();
   const Module *M = F.getParent();
   const NamedMDNode *SourceMD =
-      M->getNamedMetadata(hlsl::DxilMDHelper::kDxilSourceContentsMDName);
+      M->getNamedMetadata("dx.source.contents");
   if (SourceMD) {
-    write_dbg_info(MF, LIS, MRI, SIII, SIRI, SlotIndexes, SourceMD, os);
+    write_dbg_info(MF, LIS, MRI, SIII, SIRI, SlotIndexes, SourceMD, OS);
   }
-#endif
 
-  os << "\n}";
+  OS << "\n}";
 }
 
 void write_pressure(MachineFunction &MF, LiveIntervals *LIS,
@@ -1500,13 +1498,13 @@ void write_pressure(MachineFunction &MF, LiveIntervals *LIS,
   O.close();
 }
 
-void write_pressure(MachineFunction &MF, LiveIntervals *LIS, raw_ostream &os) {
+void write_pressure(MachineFunction &MF, LiveIntervals *LIS, raw_ostream &OS) {
   const GCNSubtarget *ST = &MF.getSubtarget<GCNSubtarget>();
   const auto *SIII = ST->getInstrInfo();
   const auto *SIRI = ST->getRegisterInfo();
   auto &MRI = MF.getRegInfo();
-  write_function(MF, LIS, MRI, SIII, SIRI, os);
-  os.flush();
+  write_function(MF, LIS, MRI, SIII, SIRI, OS);
+  OS.flush();
 }
 
 } // namespace pressure
@@ -1524,16 +1522,15 @@ public:
   DenseMap<MachineInstr *, DenseSet<MachineInstr *>> MIContributorMap;
   // Set of inst which been contributed by the key MachineInstr.
   DenseMap<MachineInstr *, DenseSet<MachineInstr *>> MIContributedToMap;
-  void writeInst(MachineInstr &MI, const SIInstrInfo *SIII, raw_ostream &os);
+  void writeInst(MachineInstr &MI, const SIInstrInfo *SIII, raw_ostream &OS);
   void writeBlock(MachineBasicBlock &MBB, const SIInstrInfo *SIII,
-                  raw_ostream &os);
-  void write(raw_ostream &os);
+                  raw_ostream &OS);
+  void write(raw_ostream &OS);
 };
 
 void buildMIContribution(MachineInstr &MI,
                          DenseSet<MachineInstr *> &ContributorSet,
-                         DenseSet<MachineInstr *> &ContributedSet,
-                         const SIRegisterInfo &SIRI, MachineRegisterInfo &MRI) {
+                         DenseSet<MachineInstr *> &ContributedSet, MachineRegisterInfo &MRI) {
   for (MachineOperand &UseMO : MI.uses()) {
     if (!UseMO.isReg())
       continue;
@@ -1565,134 +1562,132 @@ void buildMIContribution(MachineInstr &MI,
 }
 
 bool ContributionList::propagateContribution() {
-  bool bUpdated = false;
+  bool IsUpdated = false;
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
   for (auto *MBB : RPOT) {
     for (auto &MI : *MBB) {
-      auto &contributors = MIContributorMap[&MI];
-      unsigned size = contributors.size();
-      DenseSet<MachineInstr *> parentContributors;
-      for (auto *CMI : contributors) {
-        auto &pContributors = MIContributorMap[CMI];
-        parentContributors.insert(pContributors.begin(), pContributors.end());
+      auto &Contributors = MIContributorMap[&MI];
+      unsigned Size = Contributors.size();
+      DenseSet<MachineInstr *> ParentContributors;
+      for (auto *CMI : Contributors) {
+        auto &Contributors = MIContributorMap[CMI];
+        ParentContributors.insert(Contributors.begin(), Contributors.end());
       }
-      contributors.insert(parentContributors.begin(), parentContributors.end());
-      bUpdated |= size < contributors.size();
+      Contributors.insert(ParentContributors.begin(), ParentContributors.end());
+      IsUpdated |= Size < Contributors.size();
     }
   }
-  return bUpdated;
+  return IsUpdated;
 }
 
 void ContributionList::build() {
   // Build contribution.
   auto &MRI = MF.getRegInfo();
-  const GCNSubtarget *ST = &MF.getSubtarget<GCNSubtarget>();
-  const auto *SIRI = ST->getRegisterInfo();
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      auto &contributors = MIContributorMap[&MI];
-      auto &contributed = MIContributedToMap[&MI];
-      buildMIContribution(MI, contributors, contributed, *SIRI, MRI);
+      auto &Contributors = MIContributorMap[&MI];
+      auto &Contributed = MIContributedToMap[&MI];
+      buildMIContribution(MI, Contributors, Contributed, MRI);
     }
   }
   // propagate contribution.
-  bool bUpdated = true;
-  while (bUpdated) {
-    bUpdated = propagateContribution();
+  bool IsUpdated = true;
+  while (IsUpdated) {
+    IsUpdated = propagateContribution();
   }
 }
 
 void ContributionList::writeInst(MachineInstr &MI, const SIInstrInfo *SIII,
-                                 raw_ostream &os) {
-  os << "\n{\n";
+                                 raw_ostream &OS) {
+  OS << "\n{\n";
   unsigned ID = MIIndexMap[&MI];
-  auto writeSlot = [&ID, &os]() { os << ID; };
+  auto WriteSlot = [&ID, &OS]() { OS << ID; };
 
-  json_pair("ID", writeSlot, os);
+  json_pair("ID", WriteSlot, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeAsm = [&MI, &SIII, &os]() {
-    MI.print(os, /*IsStandalone*/ true, /*SkipOpers*/ false,
+  auto WriteAsm = [&MI, &SIII, &OS]() {
+    MI.print(OS, /*IsStandalone*/ true, /*SkipOpers*/ false,
              /*SkipDebugLoc*/ true, /*AddNewLine*/ false, SIII);
   };
-  json_pair("asm", writeAsm, os);
+  json_pair("asm", WriteAsm, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto &contributors = MIContributorMap[&MI];
-  auto writeContributor = [&contributors, this, &os]() {
-    for (auto *MI : contributors) {
+  auto &Contributors = MIContributorMap[&MI];
+  auto WriteContributor = [&Contributors, this, &OS]() {
+    for (auto *MI : Contributors) {
       unsigned ID = MIIndexMap[MI];
-      os << ID << ",";
+      OS << ID << ",";
     }
   };
 
-  json_array("contributors", writeContributor, os);
-  os << ",\n";
+  json_array("contributors", WriteContributor, OS);
+  OS << ",\n";
 
-  auto &contributeds = MIContributedToMap[&MI];
-  auto writeContributed = [&contributeds, this, &os]() {
-    for (auto *MI : contributeds) {
+  auto &Contributeds = MIContributedToMap[&MI];
+  auto WriteContributed = [&Contributeds, this, &OS]() {
+    for (auto *MI : Contributeds) {
       unsigned ID = MIIndexMap[MI];
-      os << ID << ",";
+      OS << ID << ",";
     }
   };
 
-  json_array("contributed", writeContributed, os);
-  os << "\n}\n";
+  json_array("contributed", WriteContributed, OS);
+  OS << "\n}\n";
 }
 
 void ContributionList::writeBlock(MachineBasicBlock &MBB,
-                                  const SIInstrInfo *SIII, raw_ostream &os) {
-  os << "{\n";
-  auto writeName = [&MBB, &os]() { os << MBB.getName(); };
-  json_pair("name", writeName, os);
+                                  const SIInstrInfo *SIII, raw_ostream &OS) {
+  OS << "{\n";
+  auto WriteName = [&MBB, &OS]() { OS << MBB.getName(); };
+  json_pair("name", WriteName, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeIndex = [&MBB, &os]() { os << MBB.getNumber(); };
-  json_pair("id", writeIndex, os);
+  auto WriteIndex = [&MBB, &OS]() { OS << MBB.getNumber(); };
+  json_pair("id", WriteIndex, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writeInsts = [this, &MBB, &SIII, &os]() {
+  auto WriteInsts = [this, &MBB, &SIII, &OS]() {
     for (MachineInstr &MI : MBB) {
       if (MI.isDebugInstr())
         continue;
-      writeInst(MI, SIII, os);
-      os << ",\n";
+      writeInst(MI, SIII, OS);
+      OS << ",\n";
     }
   };
 
-  json_array("instructions", writeInsts, os);
+  json_array("instructions", WriteInsts, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writePreds = [&MBB, &os]() {
+  auto WritePreds = [&MBB, &OS]() {
     for (MachineBasicBlock *Pred : MBB.predecessors()) {
-      os << Pred->getNumber() << ",";
+      OS << Pred->getNumber() << ",";
     }
   };
 
-  json_array("preds", writePreds, os);
+  json_array("preds", WritePreds, OS);
 
-  os << ",";
+  OS << ",";
 
-  auto writeSuccs = [&MBB, &os]() {
+  auto WriteSuccs = [&MBB, &OS]() {
     for (MachineBasicBlock *Succ : MBB.successors()) {
-      os << Succ->getNumber() << ",";
+      OS << Succ->getNumber() << ",";
     }
   };
 
-  json_array("succs", writeSuccs, os);
+  json_array("succs", WriteSuccs, OS);
 
-  os << "}";
+  OS << "}";
 }
 
-void ContributionList::write(raw_ostream &os) {
+void ContributionList::write(raw_ostream &OS) {
   unsigned ID = 0;
-  // Build ID for write.
+  // Build ID for Write.
   ReversePostOrderTraversal<MachineFunction *> RPOT(&MF);
   for (auto *MBB : RPOT) {
     for (auto &MI : *MBB) {
@@ -1703,22 +1698,22 @@ void ContributionList::write(raw_ostream &os) {
   const GCNSubtarget *ST = &MF.getSubtarget<GCNSubtarget>();
   const auto *SIII = ST->getInstrInfo();
 
-  os << "{\n";
-  auto writeName = [this, &os]() { os << MF.getName(); };
-  json_pair("name", writeName, os);
+  OS << "{\n";
+  auto WriteName = [this, &OS]() { OS << MF.getName(); };
+  json_pair("name", WriteName, OS);
 
-  os << ",\n";
+  OS << ",\n";
 
-  auto writeBlocks = [this, &SIII, &RPOT, &os]() {
+  auto WriteBlocks = [this, &SIII, &RPOT, &OS]() {
     for (auto *MBB : RPOT) {
-      writeBlock(*MBB, SIII, os);
-      os << ",\n";
+      writeBlock(*MBB, SIII, OS);
+      OS << ",\n";
     }
   };
 
-  json_array("blocks", writeBlocks, os);
+  json_array("blocks", WriteBlocks, OS);
 
-  os << "\n}";
+  OS << "\n}";
 }
 } // namespace
 
@@ -1788,8 +1783,8 @@ void llvm::updatePhysRegLiveInForBlock(MachineBasicBlock *NewBB,
 void llvm::buildPhysRegLiveInForBlock(MachineBasicBlock *NewBB,
                                       SmallDenseSet<unsigned, 8> &LiveOutSet,
                                       const MachineRegisterInfo *MRI) {
-  for (auto rit = NewBB->rbegin(); rit != NewBB->rend(); rit++) {
-    auto &MI = *rit;
+  for (auto RIt = NewBB->rbegin(); RIt != NewBB->rend(); RIt++) {
+    auto &MI = *RIt;
     // Add all physical register defs (exlicit+implicit) to the def register
     // set.
     for (MachineOperand &Def : MI.operands()) {
@@ -1805,7 +1800,7 @@ void llvm::buildPhysRegLiveInForBlock(MachineBasicBlock *NewBB,
         continue;
 
       // Reserved regs do not need to be tracked through live-in sets.
-      unsigned Reg = Use.getReg();
+      Register Reg = Use.getReg();
       if (Use.isImplicit() && MRI && MRI->isReserved(Reg))
         continue;
 
@@ -1843,7 +1838,7 @@ MachineReg llvm::createVirtualDstReg(MachineOpcode Opcode,
 // Return true if the MI is a copy of exec.
 // If true then sets pDst to the destination register.
 bool llvm::isExecCopy(const MachineInstr &MI, MachineReg Exec,
-                      MachineReg *pDst) {
+                      MachineReg *OutDst) {
   enum { DST = 0, SRC = 1 };
   bool FoundCopy = false;
   if (MI.getOpcode() == AMDGPU::COPY || MI.getOpcode() == AMDGPU::S_MOV_B32 ||
@@ -1853,58 +1848,11 @@ bool llvm::isExecCopy(const MachineInstr &MI, MachineReg Exec,
       FoundCopy = true;
     }
   }
-#if 0 // TODO: Delete this.
-    else if (MI.getOpcode() == AMDGPU::AMDGPU_GET_ENTRY_ACTIVE_MASK_PSEUDO ||
-             MI.getOpcode() == AMDGPU::AMDGPU_GET_ENTRY_ACTIVE_MASK_PSEUDO_32)
-    {
-        FoundCopy = true;
-    }
-#endif
-
   if (FoundCopy) {
-    *pDst = MI.getOperand(DST).getReg();
+    *OutDst = MI.getOperand(DST).getReg();
   }
 
   return FoundCopy;
-}
-
-llvm::MachineRegWithSubReg llvm::getWqmEntryActiveMask(MachineFunction &MF) {
-  llvm::MachineRegWithSubReg LiveLaneMask = {AMDGPU::NoRegister,
-                                             AMDGPU::NoSubRegister};
-  if (MachineInstr *MI = getWqmEntryActiveMaskInst(MF)) {
-    LiveLaneMask.Reg = MI->getOperand(0).getReg();
-    LiveLaneMask.SubReg = MI->getOperand(0).getSubReg();
-  }
-
-  return LiveLaneMask;
-}
-
-MachineInstr *llvm::getWqmEntryActiveMaskInst(MachineFunction &MF) {
-#if 0 // TODO: Get rid of this
-    // Look forward in the entry block for the SET_LIVE_LANE_MASK instruction.
-    // This instruction is added by the SIWholeQuadMode pass.
-    MachineBasicBlock &MBB = MF.front();
-    for (MachineInstr &MI : MBB)
-    {
-        if (MI.getOpcode() == AMDGPU::AMDGPU_SET_LIVE_LANE_MASK ||
-            MI.getOpcode() == AMDGPU::AMDGPU_SET_LIVE_LANE_MASK_32)
-        {
-            return &MI;
-        }
-    }
-#endif
-
-  return nullptr;
-}
-
-bool llvm::isFetchShaderCall(const MachineInstr *MI) {
-#if 0 // TODO: Get rid of this.
-    return 
-        MI->getOpcode() == AMDGPU::AMDGPU_CALL_FETCH_SHADER ||
-        MI->getAMDGPUFlag(MachineInstr::AMDGPUMIFlag::FetchShaderCall);
-#else
-  return false;
-#endif
 }
 
 bool llvm::isSccLiveAt(llvm::MachineBasicBlock *MBB,
@@ -1967,7 +1915,7 @@ MachineBasicBlock::iterator llvm::findOrCreateInsertionPointForSccDef(
     // If the instruction modifies exec then we cannot use it as
     // an insertion point (if that is a constraint from the caller).
     // The check for EXEC works for both wave64 and wave32 because
-    // it will also catch writes to the subregisters (e.g. exec_lo).
+    // it will also catch Writes to the subregisters (e.g. exec_lo).
     if (CheckForExecWrite && It->modifiesRegister(AMDGPU::EXEC, TRI)) {
       break;
     }
@@ -1979,8 +1927,8 @@ MachineBasicBlock::iterator llvm::findOrCreateInsertionPointForSccDef(
   }
 
   // If no safe location can be found in the block we can save and restore
-  // SCC around MI. There is no way to directly read or write SCC so we use
-  // s_cselect to read the current value of SCC and s_cmp to write the saved
+  // SCC around MI. There is no way to directly read or Write SCC so we use
+  // s_cselect to read the current value of SCC and s_cmp to Write the saved
   // value back to SCC.
   //
   // The generated code will look like this;

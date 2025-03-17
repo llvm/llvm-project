@@ -716,7 +716,7 @@ struct DOTGraphTraits<llvm::ExpDag *> : public DefaultDOTGraphTraits {
 
   static bool renderGraphFromBottomUp() { return true; }
 
-  static bool isNodeHidden(const SUnit *Node) {
+  static bool isNodeHidden(const SUnit *Node, const llvm::ExpDag *) {
     if (ViewNodes.empty())
       return false;
 
@@ -919,28 +919,6 @@ unsigned getSGPRSize(const TargetRegisterClass *RC,
   if (!SIRI->isSGPRClass(RC))
     return 0;
   return RC->getLaneMask().getNumLanes();
-}
-
-void collectSameHeightBackNodes(SUnit *SU, SmallDenseSet<SUnit *, 2> &BackNodes,
-                                unsigned NodeNum,
-                                SmallDenseSet<SUnit *, 4> &VisitedNodes) {
-  if (VisitedNodes.count(SU))
-    return;
-  VisitedNodes.insert(SU);
-
-  for (SDep &Dep : SU->Succs) {
-    if (Dep.isWeak())
-      continue;
-    if (Dep.getLatency() > 0)
-      continue;
-
-    SUnit *Succ = Dep.getSUnit(); /*
-     if (Succ->NodeNum >= NodeNum)
-       continue;*/
-
-    BackNodes.insert(Succ);
-    collectSameHeightBackNodes(Succ, BackNodes, NodeNum, VisitedNodes);
-  }
 }
 
 } // namespace
