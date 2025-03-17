@@ -905,7 +905,7 @@ static Register buildScratchExecCopy(LiveRegUnits &LiveUnits,
     // we can use.
     assert(IsProlog && "Epilog should look at return, not setup");
     ScratchExecCopy =
-        TII->getWholeWaveFunctionSetup(MBB)->getOperand(0).getReg();
+        TII->getWholeWaveFunctionSetup(MF)->getOperand(0).getReg();
     assert(ScratchExecCopy && "Couldn't find copy of EXEC");
   } else {
     ScratchExecCopy = findScratchNonCalleeSaveRegister(
@@ -984,7 +984,7 @@ void SIFrameLowering::emitCSRSpillStores(
     // -1 here.
     if (WWMCalleeSavedRegs.empty())
       EnableAllLanes();
-    TII->getWholeWaveFunctionSetup(MBB)->eraseFromParent();
+    TII->getWholeWaveFunctionSetup(MF)->eraseFromParent();
   } else if (ScratchExecCopy) {
     // FIXME: Split block and make terminator.
     unsigned ExecMov = ST.isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
