@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify=expected,c2y -pedantic -std=c2y %s
 // RUN: %clang_cc1 -verify=expected,c2y,compat -Wpre-c2y-compat -std=c2y %s
 // RUN: %clang_cc1 -verify=expected,ext -pedantic -std=c23 %s
-// RUN: %clang_cc1 -verify=expected,ext -pedantic -x c++ -Wno-c11-extensions %s
+// RUN: %clang_cc1 -verify=expected,cpp -pedantic -x c++ -Wno-c11-extensions %s
 
 
 /* WG14 N3353: Clang 21
@@ -10,6 +10,7 @@
 
 constexpr int i = 0234;  // c2y-warning {{octal literals without a '0o' prefix are deprecated}}
 constexpr int j = 0o234; /* ext-warning {{octal integer literals are a C2y extension}}
+                            cpp-warning {{octal integer literals are a Clang extension}}
                             compat-warning {{octal integer literals are incompatible with standards before C2y}}
                           */
 
@@ -18,11 +19,13 @@ static_assert(j == 156);
 
 // Show that 0O is the same as Oo (tested above)
 static_assert(0O1234 == 0o1234);  /* ext-warning 2 {{octal integer literals are a C2y extension}}
+                                     cpp-warning 2 {{octal integer literals are a Clang extension}}
                                      compat-warning 2 {{octal integer literals are incompatible with standards before C2y}}
                                    */
 
 // Demonstrate that it works fine in the preprocessor.
 #if 0o123 != 0x53   /* ext-warning {{octal integer literals are a C2y extension}}
+                       cpp-warning {{octal integer literals are a Clang extension}}
                        compat-warning {{octal integer literals are incompatible with standards before C2y}}
                      */
 #error "oh no, math stopped working!"
@@ -34,6 +37,7 @@ int k = 0;
 // Make sure there are no surprises with auto and type deduction. Promotion
 // turns this into an 'int', and 'constexpr' implies 'const'.
 constexpr auto l = 0o1234567; /* ext-warning {{octal integer literals are a C2y extension}}
+                                 cpp-warning {{octal integer literals are a Clang extension}}
                                  compat-warning {{octal integer literals are incompatible with standards before C2y}}
                               */
 static_assert(l == 0x53977);
@@ -50,6 +54,7 @@ int m = 0o; /* expected-error {{invalid suffix 'o' on integer constant}}
 
 // Ensure negation works as expected.
 static_assert(-0o1234 == -668); /* ext-warning {{octal integer literals are a C2y extension}}
+                                   cpp-warning {{octal integer literals are a Clang extension}}
                                    compat-warning {{octal integer literals are incompatible with standards before C2y}}
                                  */
 
@@ -59,6 +64,7 @@ static_assert(-0o1234 == -668); /* ext-warning {{octal integer literals are a C2
 int n = 0o18; /* expected-error {{invalid digit '8' in octal constant}}
                  compat-warning {{octal integer literals are incompatible with standards before C2y}}
                  ext-warning {{octal integer literals are a C2y extension}}
+                 cpp-warning {{octal integer literals are a Clang extension}}
                */
 int o1 = 0o8; /* expected-error {{invalid suffix 'o8' on integer constant}}
                  c2y-warning {{octal literals without a '0o' prefix are deprecated}}
@@ -73,22 +79,31 @@ int o2 = 0xG; /* expected-error {{invalid suffix 'xG' on integer constant}}
 // Ensure digit separators work as expected.
 constexpr int p = 0o0'1'2'3'4'5'6'7; /* compat-warning {{octal integer literals are incompatible with standards before C2y}}
                                         ext-warning {{octal integer literals are a C2y extension}}
+                                        cpp-warning {{octal integer literals are a Clang extension}}
                                       */
 static_assert(p == 01234567); // c2y-warning {{octal literals without a '0o' prefix are deprecated}}
 int q = 0o'0'1; /* expected-error {{invalid suffix 'o'0'1' on integer constant}}
                    c2y-warning {{octal literals without a '0o' prefix are deprecated}}
                  */
 
+#define M 0o123
+int r = M;  /* compat-warning {{octal integer literals are incompatible with standards before C2y}}
+               ext-warning {{octal integer literals are a C2y extension}}
+               cpp-warning {{octal integer literals are a Clang extension}}
+             */
+
 #ifdef __cplusplus
 template <unsigned N>
 struct S {
   static_assert(N == 0o567); /* ext-warning {{octal integer literals are a C2y extension}}
+                                cpp-warning {{octal integer literals are a Clang extension}}
                                 compat-warning {{octal integer literals are incompatible with standards before C2y}}
                               */
 };
 
 void foo() {
   S<0o567> s; /* ext-warning {{octal integer literals are a C2y extension}}
+                 cpp-warning {{octal integer literals are a Clang extension}}
                  compat-warning {{octal integer literals are incompatible with standards before C2y}}
                */
 }

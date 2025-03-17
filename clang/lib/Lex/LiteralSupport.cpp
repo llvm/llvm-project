@@ -1430,6 +1430,8 @@ void NumericLiteralParser::ParseNumberStartingWithZero(SourceLocation TokLoc) {
     unsigned DiagId;
     if (LangOpts.C2y)
       DiagId = diag::warn_c2y_compat_octal_literal;
+    else if (LangOpts.CPlusPlus)
+      DiagId = diag::ext_cpp_octal_literal;
     else
       DiagId = diag::ext_octal_literal;
     Diags.Report(TokLoc, DiagId);

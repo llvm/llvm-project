@@ -258,6 +258,9 @@ def warn_cxx17_hex_literal : Warning<
   InGroup<CXXPre17CompatPedantic>, DefaultIgnore;
 def ext_octal_literal : Extension<
   "octal integer literals are a C2y extension">, InGroup<C2y>;
+def ext_cpp_octal_literal : Extension<
+  "octal integer literals are a Clang extension">,
+  InGroup<DiagGroup<"octal-prefix-extension">>;
 def warn_c2y_compat_octal_literal : Warning<
   "octal integer literals are incompatible with standards before C2y">,
   InGroup<CPre2yCompat>, DefaultIgnore;
