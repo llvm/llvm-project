@@ -7193,10 +7193,18 @@ void Sema::CheckCompletedCXXClass(Scope *S, CXXRecordDecl *Record) {
         // class without overriding any.
         if (!M->isStatic())
           DiagnoseHiddenVirtualMethods(M);
-        if (M->hasAttr<OverrideAttr>())
+
+        if (M->hasAttr<OverrideAttr>()) {
           HasMethodWithOverrideControl = true;
-        else if (M->size_overridden_methods() > 0)
+        } else if (M->size_overridden_methods() > 0) {
           HasOverridingMethodWithoutOverrideControl = true;
+        } else {
+          // Warn on newly-declared virtual methods in `final` classes
+          if (M->isVirtualAsWritten() && Record->isEffectivelyFinal()) {
+            Diag(M->getLocation(), diag::warn_unnecessary_virtual_specifier)
+                << M;
+          }
+        }
       }
 
       if (!isa<CXXDestructorDecl>(M))
