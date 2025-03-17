@@ -83,7 +83,6 @@ OffloadTargetInfo::OffloadTargetInfo(const StringRef Target,
                                      const OffloadBundlerConfig &BC)
     : BundlerConfig(BC) {
 
-  // TODO: Add error checking from ClangOffloadBundler.cpp
   // <kind>-<triple>[-<target id>[:target features]]
   // <triple> := <arch>-<vendor>-<os>-<env>
   SmallVector<StringRef, 6> Components;
@@ -1514,6 +1513,9 @@ Error OffloadBundler::UnbundleFiles() {
   StringMap<StringRef> Worklist;
   auto Output = BundlerConfig.OutputFileNames.begin();
   for (auto &Triple : BundlerConfig.TargetNames) {
+    if (!checkOffloadBundleID(Triple))
+      return createStringError(errc::invalid_argument,
+                               "invalid bundle id from bundle config");
     Worklist[Triple] = *Output;
     ++Output;
   }
@@ -1533,6 +1535,9 @@ Error OffloadBundler::UnbundleFiles() {
 
     StringRef CurTriple = **CurTripleOrErr;
     assert(!CurTriple.empty());
+    if (!checkOffloadBundleID(CurTriple))
+      return createStringError(errc::invalid_argument,
+                               "invalid bundle id read from the bundle");
 
     auto Output = Worklist.begin();
     for (auto E = Worklist.end(); Output != E; Output++) {
@@ -1591,6 +1596,8 @@ Error OffloadBundler::UnbundleFiles() {
         return createFileError(E.second, EC);
 
       // If this entry has a host kind, copy the input file to the output file.
+      // We don't need to check E.getKey() here through checkOffloadBundleID
+      // because the entire WorkList has been checked above.
       auto OffloadInfo = OffloadTargetInfo(E.getKey(), BundlerConfig);
       if (OffloadInfo.hasHostKind())
         OutputFile.write(Input.getBufferStart(), Input.getBufferSize());
@@ -1820,6 +1827,10 @@ Error OffloadBundler::UnbundleArchive() {
     // archive.
     while (!CodeObject.empty()) {
       SmallVector<StringRef> CompatibleTargets;
+      if (!checkOffloadBundleID(CodeObject)) {
+        return createStringError(errc::invalid_argument,
+                                 "Invalid bundle id read from code object");
+      }
       auto CodeObjectInfo = OffloadTargetInfo(CodeObject, BundlerConfig);
       if (getCompatibleOffloadTargets(CodeObjectInfo, CompatibleTargets,
                                       BundlerConfig)) {
@@ -1900,4 +1911,12 @@ Error OffloadBundler::UnbundleArchive() {
   }
 
   return Error::success();
+}
+
+bool clang::checkOffloadBundleID(const llvm::StringRef Str) {
+  // <kind>-<triple>[-<target id>[:target features]]
+  // <triple> := <arch>-<vendor>-<os>-<env>
+  SmallVector<StringRef, 6> Components;
+  Str.split(Components, '-', /*MaxSplit=*/5);
+  return Components.size() == 5 || Components.size() == 6;
 }

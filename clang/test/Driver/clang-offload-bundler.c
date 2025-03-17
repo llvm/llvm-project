@@ -557,6 +557,12 @@
 // RUN: llvm-ar t %T/hip-openmp_906.a | FileCheck -check-prefix=OPENMPHIPCOMPAT %s
 // OPENMPHIPCOMPAT: hip_bundle1-hip-amdgcn-amd-amdhsa--gfx906
 
+// Check if a malformat bundle id can be detected and an error can be emitted.
+// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa -output=%T/hip-openmp_906.a -input=%T/hip_archive.a -hip-openmp-compatible 2>&1 | FileCheck %s -check-prefix=ERROR
+// ERROR: error: Targets need to follow the format '<offload kind>-<target triple>', where '<target triple>' follows the format '<kind>-<arch>-<vendor>-<os>-<env>[-<target id>[:target features]]'.
+// RUN: not clang-offload-bundler -unbundle -type=a -targets=openmp-amdgcn-amd-amdhsa-gfx906 -output=%T/hip-openmp_906.a -input=%T/hip_archive.a -hip-openmp-compatible 2>&1 | FileCheck %s -check-prefix=ERROR
+// ERROR: error: no compatible code object found for the target 'openmp-amdgcn-amd-amdhsa--'
+
 // Some code so that we can create a binary out of this file.
 int A = 0;
 void test_func(void) {
