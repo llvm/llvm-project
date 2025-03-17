@@ -118,24 +118,6 @@ void ModuleShaderFlags::updateFunctionFlags(ComputedShaderFlags &CSF,
   if (!CSF.Int64Ops) {
     for (const Value *Op : I.operands()) {
       if (Op->getType()->isIntegerTy(64)) {
-
-        // Special-case handling for ConstantInt indices of ExtractElement and
-        // InsertElement instructions (likely inserted by the Scalarization
-        // pass). As long as the constant indices fit within 32 bits, we do not
-        // consider them to count as 64-bit integer usage.
-        switch (I.getOpcode()) {
-        case Instruction::ExtractElement:
-        case Instruction::InsertElement:
-          if (Op == I.getOperand(I.getNumOperands() - 1)) { // Index operand
-            if (isa<ConstantInt>(Op)) {
-              const ConstantInt *CI = cast<ConstantInt>(Op);
-              // The constant index must fit within 32 bits
-              if (CI->getZExtValue() <= UINT32_MAX)
-                continue;
-            }
-          }
-        }
-
         CSF.Int64Ops = true;
         break;
       }
