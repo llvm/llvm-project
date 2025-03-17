@@ -514,7 +514,8 @@ static std::unique_ptr<TagNode> writeFileDefinition(
   Node->Children.emplace_back(std::make_unique<TextNode>("Defined at line "));
   auto LocNumberNode =
       std::make_unique<TagNode>(HTMLTag::TAG_A, std::to_string(L.LineNumber));
-
+  // The links to a specific line in the source code use the github /
+  // googlesource notation so it won't work for all hosting pages.
   std::string LineAnchor = "#";
 
   if (RepositoryLinePrefix)
