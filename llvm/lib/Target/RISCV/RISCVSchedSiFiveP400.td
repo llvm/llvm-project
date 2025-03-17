@@ -47,6 +47,18 @@ class SiFiveP400GetVLMAX<string mx, int sew> {
   );
 }
 
+class SiFiveP400StridedLdStLatency<string mx, int sew> {
+  defvar VL = SiFiveP400GetVLMAX<mx, sew>.val;
+  int val = !cond(
+    !eq(VL, 2):  13,
+    !eq(VL, 4):  18,
+    !eq(VL, 8):  22,
+    !eq(VL, 16): 30,
+    // VL=32,64,128
+    true: !sub(VL, 2)
+  );
+}
+
 // Latency for segmented loads and stores are calculated as vl * nf.
 class SiFiveP400SegmentedLdStCycles<string mx, int sew, int nf> {
   int c = !mul(SiFiveP400GetVLMAX<mx, sew>.val, nf);
@@ -391,7 +403,8 @@ foreach mx = SchedMxList in {
     }
   }
   foreach eew = [8, 16, 32, 64] in {
-    let Latency = 13, ReleaseAtCycles = [SiFiveP400GetVLMAX<mx, eew>.val] in {
+    let Latency = SiFiveP400StridedLdStLatency<mx, eew>.val,
+        ReleaseAtCycles = [SiFiveP400GetVLMAX<mx, eew>.val] in {
       defm "" : LMULWriteResMX<"WriteVLDS"  # eew, [SiFiveP400VLD], mx, IsWorstCase>;
       defm "" : LMULWriteResMX<"WriteVLDUX" # eew, [SiFiveP400VLD], mx, IsWorstCase>;
       defm "" : LMULWriteResMX<"WriteVLDOX" # eew, [SiFiveP400VLD], mx, IsWorstCase>;

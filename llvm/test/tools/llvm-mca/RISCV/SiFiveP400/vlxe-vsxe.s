@@ -195,7 +195,7 @@ vsoxei64.v   v8, (a0), v0
 
 # CHECK:      Iterations:        1
 # CHECK-NEXT: Instructions:      176
-# CHECK-NEXT: Total Cycles:      1881
+# CHECK-NEXT: Total Cycles:      1898
 # CHECK-NEXT: Total uOps:        176
 
 # CHECK:      Dispatch Width:    3
@@ -213,181 +213,181 @@ vsoxei64.v   v8, (a0), v0
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf2, ta, ma
-# CHECK-NEXT:  1      13    8.00    *                   vluxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00    *                   vluxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf4, ta, ma
-# CHECK-NEXT:  1      13    4.00    *                   vluxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00    *                   vluxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf8, ta, ma
 # CHECK-NEXT:  1      13    2.00    *                   vluxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, ta, ma
-# CHECK-NEXT:  1      13    16.00   *                   vluxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00   *                   vluxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m2, ta, ma
-# CHECK-NEXT:  1      13    32.00   *                   vluxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00   *                   vluxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m4, ta, ma
-# CHECK-NEXT:  1      13    64.00   *                   vluxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      62    64.00   *                   vluxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m8, ta, ma
-# CHECK-NEXT:  1      13    128.00  *                   vluxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      126   128.00  *                   vluxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, ta, ma
-# CHECK-NEXT:  1      13    4.00    *                   vluxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00    *                   vluxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, ta, ma
 # CHECK-NEXT:  1      13    2.00    *                   vluxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, ta, ma
-# CHECK-NEXT:  1      13    8.00    *                   vluxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00    *                   vluxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m2, ta, ma
-# CHECK-NEXT:  1      13    16.00   *                   vluxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00   *                   vluxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m4, ta, ma
-# CHECK-NEXT:  1      13    32.00   *                   vluxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00   *                   vluxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m8, ta, ma
-# CHECK-NEXT:  1      13    64.00   *                   vluxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      62    64.00   *                   vluxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, ta, ma
 # CHECK-NEXT:  1      13    2.00    *                   vluxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, ta, ma
-# CHECK-NEXT:  1      13    4.00    *                   vluxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00    *                   vluxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, ta, ma
-# CHECK-NEXT:  1      13    8.00    *                   vluxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00    *                   vluxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, ta, ma
-# CHECK-NEXT:  1      13    16.00   *                   vluxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00   *                   vluxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, ta, ma
-# CHECK-NEXT:  1      13    32.00   *                   vluxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00   *                   vluxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, ta, ma
 # CHECK-NEXT:  1      13    2.00    *                   vluxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, ta, ma
-# CHECK-NEXT:  1      13    4.00    *                   vluxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00    *                   vluxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m4, ta, ma
-# CHECK-NEXT:  1      13    8.00    *                   vluxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00    *                   vluxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m8, ta, ma
-# CHECK-NEXT:  1      13    16.00   *                   vluxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00   *                   vluxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf2, ta, ma
-# CHECK-NEXT:  1      13    8.00    *                   vloxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00    *                   vloxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf4, ta, ma
-# CHECK-NEXT:  1      13    4.00    *                   vloxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00    *                   vloxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf8, ta, ma
 # CHECK-NEXT:  1      13    2.00    *                   vloxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, ta, ma
-# CHECK-NEXT:  1      13    16.00   *                   vloxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00   *                   vloxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m2, ta, ma
-# CHECK-NEXT:  1      13    32.00   *                   vloxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00   *                   vloxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m4, ta, ma
-# CHECK-NEXT:  1      13    64.00   *                   vloxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      62    64.00   *                   vloxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m8, ta, ma
-# CHECK-NEXT:  1      13    128.00  *                   vloxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      126   128.00  *                   vloxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, ta, ma
-# CHECK-NEXT:  1      13    4.00    *                   vloxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00    *                   vloxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, ta, ma
 # CHECK-NEXT:  1      13    2.00    *                   vloxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, ta, ma
-# CHECK-NEXT:  1      13    8.00    *                   vloxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00    *                   vloxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m2, ta, ma
-# CHECK-NEXT:  1      13    16.00   *                   vloxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00   *                   vloxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m4, ta, ma
-# CHECK-NEXT:  1      13    32.00   *                   vloxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00   *                   vloxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m8, ta, ma
-# CHECK-NEXT:  1      13    64.00   *                   vloxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      62    64.00   *                   vloxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, ta, ma
 # CHECK-NEXT:  1      13    2.00    *                   vloxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, ta, ma
-# CHECK-NEXT:  1      13    4.00    *                   vloxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00    *                   vloxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, ta, ma
-# CHECK-NEXT:  1      13    8.00    *                   vloxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00    *                   vloxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, ta, ma
-# CHECK-NEXT:  1      13    16.00   *                   vloxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00   *                   vloxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, ta, ma
-# CHECK-NEXT:  1      13    32.00   *                   vloxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00   *                   vloxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, ta, ma
 # CHECK-NEXT:  1      13    2.00    *                   vloxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, ta, ma
-# CHECK-NEXT:  1      13    4.00    *                   vloxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00    *                   vloxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m4, ta, ma
-# CHECK-NEXT:  1      13    8.00    *                   vloxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00    *                   vloxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m8, ta, ma
-# CHECK-NEXT:  1      13    16.00   *                   vloxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00   *                   vloxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf2, ta, ma
-# CHECK-NEXT:  1      13    8.00           *            vsuxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00           *            vsuxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf4, ta, ma
-# CHECK-NEXT:  1      13    4.00           *            vsuxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00           *            vsuxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf8, ta, ma
 # CHECK-NEXT:  1      13    2.00           *            vsuxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, ta, ma
-# CHECK-NEXT:  1      13    16.00          *            vsuxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00          *            vsuxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m2, ta, ma
-# CHECK-NEXT:  1      13    32.00          *            vsuxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00          *            vsuxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m4, ta, ma
-# CHECK-NEXT:  1      13    64.00          *            vsuxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      62    64.00          *            vsuxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m8, ta, ma
-# CHECK-NEXT:  1      13    128.00         *            vsuxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      126   128.00         *            vsuxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, ta, ma
-# CHECK-NEXT:  1      13    4.00           *            vsuxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00           *            vsuxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, ta, ma
 # CHECK-NEXT:  1      13    2.00           *            vsuxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, ta, ma
-# CHECK-NEXT:  1      13    8.00           *            vsuxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00           *            vsuxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m2, ta, ma
-# CHECK-NEXT:  1      13    16.00          *            vsuxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00          *            vsuxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m4, ta, ma
-# CHECK-NEXT:  1      13    32.00          *            vsuxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00          *            vsuxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m8, ta, ma
-# CHECK-NEXT:  1      13    64.00          *            vsuxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      62    64.00          *            vsuxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, ta, ma
 # CHECK-NEXT:  1      13    2.00           *            vsuxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, ta, ma
-# CHECK-NEXT:  1      13    4.00           *            vsuxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00           *            vsuxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, ta, ma
-# CHECK-NEXT:  1      13    8.00           *            vsuxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00           *            vsuxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, ta, ma
-# CHECK-NEXT:  1      13    16.00          *            vsuxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00          *            vsuxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, ta, ma
-# CHECK-NEXT:  1      13    32.00          *            vsuxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00          *            vsuxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, ta, ma
 # CHECK-NEXT:  1      13    2.00           *            vsuxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, ta, ma
-# CHECK-NEXT:  1      13    4.00           *            vsuxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00           *            vsuxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m4, ta, ma
-# CHECK-NEXT:  1      13    8.00           *            vsuxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00           *            vsuxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m8, ta, ma
-# CHECK-NEXT:  1      13    16.00          *            vsuxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00          *            vsuxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf2, ta, ma
-# CHECK-NEXT:  1      13    8.00           *            vsoxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00           *            vsoxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf4, ta, ma
-# CHECK-NEXT:  1      13    4.00           *            vsoxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00           *            vsoxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, mf8, ta, ma
 # CHECK-NEXT:  1      13    2.00           *            vsoxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m1, ta, ma
-# CHECK-NEXT:  1      13    16.00          *            vsoxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00          *            vsoxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m2, ta, ma
-# CHECK-NEXT:  1      13    32.00          *            vsoxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00          *            vsoxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m4, ta, ma
-# CHECK-NEXT:  1      13    64.00          *            vsoxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      62    64.00          *            vsoxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e8, m8, ta, ma
-# CHECK-NEXT:  1      13    128.00         *            vsoxei8.v	v8, (a0), v0
+# CHECK-NEXT:  1      126   128.00         *            vsoxei8.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf2, ta, ma
-# CHECK-NEXT:  1      13    4.00           *            vsoxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00           *            vsoxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, mf4, ta, ma
 # CHECK-NEXT:  1      13    2.00           *            vsoxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m1, ta, ma
-# CHECK-NEXT:  1      13    8.00           *            vsoxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00           *            vsoxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m2, ta, ma
-# CHECK-NEXT:  1      13    16.00          *            vsoxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00          *            vsoxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m4, ta, ma
-# CHECK-NEXT:  1      13    32.00          *            vsoxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00          *            vsoxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e16, m8, ta, ma
-# CHECK-NEXT:  1      13    64.00          *            vsoxei16.v	v8, (a0), v0
+# CHECK-NEXT:  1      62    64.00          *            vsoxei16.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, mf2, ta, ma
 # CHECK-NEXT:  1      13    2.00           *            vsoxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m1, ta, ma
-# CHECK-NEXT:  1      13    4.00           *            vsoxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00           *            vsoxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m2, ta, ma
-# CHECK-NEXT:  1      13    8.00           *            vsoxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00           *            vsoxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m4, ta, ma
-# CHECK-NEXT:  1      13    16.00          *            vsoxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00          *            vsoxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e32, m8, ta, ma
-# CHECK-NEXT:  1      13    32.00          *            vsoxei32.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    32.00          *            vsoxei32.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m1, ta, ma
 # CHECK-NEXT:  1      13    2.00           *            vsoxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m2, ta, ma
-# CHECK-NEXT:  1      13    4.00           *            vsoxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      18    4.00           *            vsoxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m4, ta, ma
-# CHECK-NEXT:  1      13    8.00           *            vsoxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      22    8.00           *            vsoxei64.v	v8, (a0), v0
 # CHECK-NEXT:  1      1     1.00                  U     vsetvli	zero, zero, e64, m8, ta, ma
-# CHECK-NEXT:  1      13    16.00          *            vsoxei64.v	v8, (a0), v0
+# CHECK-NEXT:  1      30    16.00          *            vsoxei64.v	v8, (a0), v0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0]   - SiFiveP400Div
