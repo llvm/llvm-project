@@ -137,7 +137,6 @@ jobs:
           'generic-hardening-mode-fast',
           'generic-hardening-mode-fast-with-abi-breaks',
           'generic-merged',
-          'generic-modules-lsv',
           'generic-no-exceptions',
           'generic-no-experimental',
           'generic-no-filesystem',

@@ -207,24 +207,23 @@ DEFAULT_PARAMETERS = [
     ),
     Parameter(
         name="enable_modules",
-        choices=["none", "clang", "clang-lsv"],
+        choices=["none", "clang"],
         type=str,
-        help="Whether to build the test suite with modules enabled. "
-             "Select `clang` for Clang modules, and 'clang-lsv' for Clang modules with Local Submodule Visibility.",
+        help="Whether to build the test suite with Clang modules enabled. Select `clang` for Clang modules, and "
+             "'none' for a non-modular build. Note that recent versions of Clang enable Local Submodule Visibility "
+             "by default in C++20 and later.",
         default="none",
         actions=lambda modules: filter(None, [
-            AddFeature("clang-modules-build")           if modules in ("clang", "clang-lsv") else None,
+            AddFeature("clang-modules-build")           if modules == "clang" else None,
 
             # Note: AppleClang disregards -fmodules entirely when compiling C++, so we also pass -fcxx-modules
             #       to enable modules for C++.
-            AddCompileFlag("-fmodules -fcxx-modules")   if modules in ("clang", "clang-lsv") else None,
+            AddCompileFlag("-fmodules -fcxx-modules")   if modules == "clang") else None,
 
             # Note: We use a custom modules cache path to make sure that we don't reuse
             #       the default one, which can be shared across CI builds with different
             #       configurations.
-            AddCompileFlag(lambda cfg: f"-fmodules-cache-path={cfg.test_exec_root}/ModuleCache") if modules in ("clang", "clang-lsv") else None,
-
-            AddCompileFlag("-Xclang -fmodules-local-submodule-visibility") if modules == "clang-lsv" else None,
+            AddCompileFlag(lambda cfg: f"-fmodules-cache-path={cfg.test_exec_root}/ModuleCache") if modules == "clang" else None,
         ])
     ),
     Parameter(
