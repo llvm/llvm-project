@@ -577,11 +577,11 @@ public:
 
 ModulePass *createDXILResourceBindingWrapperPassPass();
 
-enum ResourceCounterDirection {
+enum class ResourceCounterDirection {
   Increment,
   Decrement,
   Unknown,
-  MyInvalid,
+  Invalid,
 };
 
 class DXILResourceCounterDirectionMap {

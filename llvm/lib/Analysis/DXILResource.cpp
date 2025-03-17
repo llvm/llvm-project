@@ -907,9 +907,9 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
       if (std::get<dxil::ResourceBindingInfo>(*DupFirst) ==
           std::get<dxil::ResourceBindingInfo>(*DupNext)) {
         std::get<ResourceCounterDirection>(*DupFirst) =
-            ResourceCounterDirection::MyInvalid;
+            ResourceCounterDirection::Invalid;
         std::get<ResourceCounterDirection>(*DupNext) =
-            ResourceCounterDirection::MyInvalid;
+            ResourceCounterDirection::Invalid;
       }
     }
   }
@@ -920,7 +920,7 @@ void DXILResourceCounterDirectionMap::populate(Module &M, DXILBindingMap &DBM) {
     const Function *F = std::get<const Function *>(Entry);
     const CallInst *CI = std::get<const CallInst *>(Entry);
 
-    if (Dir != ResourceCounterDirection::MyInvalid)
+    if (Dir != ResourceCounterDirection::Invalid)
       continue;
 
     StringRef Message = "RWStructuredBuffers may increment or decrement their "
