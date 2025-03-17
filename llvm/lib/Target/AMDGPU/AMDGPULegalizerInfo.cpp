@@ -282,75 +282,75 @@ static LegalityPredicate elementTypeIsLegal(unsigned TypeIdx) {
   };
 }
 
-static const LLT S1 = LLT::scalar(1);
-static const LLT S8 = LLT::scalar(8);
-static const LLT S16 = LLT::scalar(16);
-static const LLT S32 = LLT::scalar(32);
-static const LLT F32 = LLT::float32();
-static const LLT S64 = LLT::scalar(64);
-static const LLT F64 = LLT::float64();
-static const LLT S96 = LLT::scalar(96);
-static const LLT S128 = LLT::scalar(128);
-static const LLT S160 = LLT::scalar(160);
-static const LLT S192 = LLT::scalar(192);
-static const LLT S224 = LLT::scalar(224);
-static const LLT S256 = LLT::scalar(256);
-static const LLT S512 = LLT::scalar(512);
-static const LLT S1024 = LLT::scalar(1024);
-static const LLT MaxScalar = LLT::scalar(MaxRegisterSize);
+constexpr LLT S1 = LLT::scalar(1);
+constexpr LLT S8 = LLT::scalar(8);
+constexpr LLT S16 = LLT::scalar(16);
+constexpr LLT S32 = LLT::scalar(32);
+constexpr LLT F32 = LLT::float32();
+constexpr LLT S64 = LLT::scalar(64);
+constexpr LLT F64 = LLT::float64();
+constexpr LLT S96 = LLT::scalar(96);
+constexpr LLT S128 = LLT::scalar(128);
+constexpr LLT S160 = LLT::scalar(160);
+constexpr LLT S192 = LLT::scalar(192);
+constexpr LLT S224 = LLT::scalar(224);
+constexpr LLT S256 = LLT::scalar(256);
+constexpr LLT S512 = LLT::scalar(512);
+constexpr LLT S1024 = LLT::scalar(1024);
+constexpr LLT MaxScalar = LLT::scalar(MaxRegisterSize);
 
-static const LLT V2S8 = LLT::fixed_vector(2, 8);
-static const LLT V2S16 = LLT::fixed_vector(2, 16);
-static const LLT V4S16 = LLT::fixed_vector(4, 16);
-static const LLT V6S16 = LLT::fixed_vector(6, 16);
-static const LLT V8S16 = LLT::fixed_vector(8, 16);
-static const LLT V10S16 = LLT::fixed_vector(10, 16);
-static const LLT V12S16 = LLT::fixed_vector(12, 16);
-static const LLT V16S16 = LLT::fixed_vector(16, 16);
+constexpr LLT V2S8 = LLT::fixed_vector(2, 8);
+constexpr LLT V2S16 = LLT::fixed_vector(2, 16);
+constexpr LLT V4S16 = LLT::fixed_vector(4, 16);
+constexpr LLT V6S16 = LLT::fixed_vector(6, 16);
+constexpr LLT V8S16 = LLT::fixed_vector(8, 16);
+constexpr LLT V10S16 = LLT::fixed_vector(10, 16);
+constexpr LLT V12S16 = LLT::fixed_vector(12, 16);
+constexpr LLT V16S16 = LLT::fixed_vector(16, 16);
 
-static const LLT V2F16 = LLT::fixed_vector(2, LLT::float16());
-static const LLT V2BF16 = V2F16; // FIXME
+constexpr LLT V2F16 = LLT::fixed_vector(2, LLT::float16());
+constexpr LLT V2BF16 = V2F16; // FIXME
 
-static const LLT V2S32 = LLT::fixed_vector(2, 32);
-static const LLT V3S32 = LLT::fixed_vector(3, 32);
-static const LLT V4S32 = LLT::fixed_vector(4, 32);
-static const LLT V5S32 = LLT::fixed_vector(5, 32);
-static const LLT V6S32 = LLT::fixed_vector(6, 32);
-static const LLT V7S32 = LLT::fixed_vector(7, 32);
-static const LLT V8S32 = LLT::fixed_vector(8, 32);
-static const LLT V9S32 = LLT::fixed_vector(9, 32);
-static const LLT V10S32 = LLT::fixed_vector(10, 32);
-static const LLT V11S32 = LLT::fixed_vector(11, 32);
-static const LLT V12S32 = LLT::fixed_vector(12, 32);
-static const LLT V16S32 = LLT::fixed_vector(16, 32);
-static const LLT V32S32 = LLT::fixed_vector(32, 32);
+constexpr LLT V2S32 = LLT::fixed_vector(2, 32);
+constexpr LLT V3S32 = LLT::fixed_vector(3, 32);
+constexpr LLT V4S32 = LLT::fixed_vector(4, 32);
+constexpr LLT V5S32 = LLT::fixed_vector(5, 32);
+constexpr LLT V6S32 = LLT::fixed_vector(6, 32);
+constexpr LLT V7S32 = LLT::fixed_vector(7, 32);
+constexpr LLT V8S32 = LLT::fixed_vector(8, 32);
+constexpr LLT V9S32 = LLT::fixed_vector(9, 32);
+constexpr LLT V10S32 = LLT::fixed_vector(10, 32);
+constexpr LLT V11S32 = LLT::fixed_vector(11, 32);
+constexpr LLT V12S32 = LLT::fixed_vector(12, 32);
+constexpr LLT V16S32 = LLT::fixed_vector(16, 32);
+constexpr LLT V32S32 = LLT::fixed_vector(32, 32);
 
-static const LLT V2S64 = LLT::fixed_vector(2, 64);
-static const LLT V3S64 = LLT::fixed_vector(3, 64);
-static const LLT V4S64 = LLT::fixed_vector(4, 64);
-static const LLT V5S64 = LLT::fixed_vector(5, 64);
-static const LLT V6S64 = LLT::fixed_vector(6, 64);
-static const LLT V7S64 = LLT::fixed_vector(7, 64);
-static const LLT V8S64 = LLT::fixed_vector(8, 64);
-static const LLT V16S64 = LLT::fixed_vector(16, 64);
+constexpr LLT V2S64 = LLT::fixed_vector(2, 64);
+constexpr LLT V3S64 = LLT::fixed_vector(3, 64);
+constexpr LLT V4S64 = LLT::fixed_vector(4, 64);
+constexpr LLT V5S64 = LLT::fixed_vector(5, 64);
+constexpr LLT V6S64 = LLT::fixed_vector(6, 64);
+constexpr LLT V7S64 = LLT::fixed_vector(7, 64);
+constexpr LLT V8S64 = LLT::fixed_vector(8, 64);
+constexpr LLT V16S64 = LLT::fixed_vector(16, 64);
 
-static const LLT V2S128 = LLT::fixed_vector(2, 128);
-static const LLT V4S128 = LLT::fixed_vector(4, 128);
+constexpr LLT V2S128 = LLT::fixed_vector(2, 128);
+constexpr LLT V4S128 = LLT::fixed_vector(4, 128);
 
-static std::initializer_list<LLT> AllScalarTypes = {
+constexpr std::initializer_list<LLT> AllScalarTypes = {
     S32, S64, S96, S128, S160, S192, S224, S256, S512, S1024};
 
-static std::initializer_list<LLT> AllS16Vectors{
+constexpr std::initializer_list<LLT> AllS16Vectors{
     V2S16, V4S16, V6S16, V8S16, V10S16, V12S16, V16S16, V2S128, V4S128};
 
-static std::initializer_list<LLT> AllS32Vectors = {
+constexpr std::initializer_list<LLT> AllS32Vectors = {
     V2S32, V3S32,  V4S32,  V5S32,  V6S32,  V7S32, V8S32,
     V9S32, V10S32, V11S32, V12S32, V16S32, V32S32};
 
-static std::initializer_list<LLT> AllS64Vectors = {V2S64, V3S64, V4S64, V5S64,
-                                                   V6S64, V7S64, V8S64, V16S64};
+constexpr std::initializer_list<LLT> AllS64Vectors = {
+    V2S64, V3S64, V4S64, V5S64, V6S64, V7S64, V8S64, V16S64};
 
-static std::initializer_list<LLT> AllVectors{
+constexpr std::initializer_list<LLT> AllVectors{
     V2S16,  V4S16,  V6S16,  V8S16,  V10S16, V12S16, V16S16, V2S128,
     V4S128, V2S32,  V3S32,  V4S32,  V5S32,  V6S32,  V7S32,  V8S32,
     V9S32,  V10S32, V11S32, V12S32, V16S32, V32S32, V2S64,  V3S64,
