@@ -60,7 +60,9 @@ ModuleFile *ModuleManager::lookupByModuleName(StringRef Name) const {
 }
 
 ModuleFile *ModuleManager::lookup(FileEntryRef File) const {
-  return Modules.lookup(File.getName());
+  llvm::SmallString<128> NormalizedFileName = File.getName();
+  llvm::sys::path::make_preferred(NormalizedFileName);
+  return Modules.lookup(NormalizedFileName);
 }
 
 std::unique_ptr<llvm::MemoryBuffer>
@@ -108,7 +110,9 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
   Module = nullptr;
 
   // Check whether we already loaded this module, before
-  if (ModuleFile *ModuleEntry = Modules.lookup(FileName)) {
+  llvm::SmallString<128> NormalizedFileName = FileName;
+  llvm::sys::path::make_preferred(NormalizedFileName);
+  if (ModuleFile *ModuleEntry = Modules.lookup(NormalizedFileName)) {
     // Check the stored signature.
     if (checkSignature(ModuleEntry->Signature, ExpectedSignature, ErrorStr))
       return OutOfDate;
@@ -203,7 +207,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     return OutOfDate;
 
   // We're keeping this module.  Store it everywhere.
-  Module = Modules[FileName] = NewModule.get();
+  Module = Modules[NormalizedFileName] = NewModule.get();
 
   updateModuleImports(*NewModule, ImportedBy, ImportLoc);
 
