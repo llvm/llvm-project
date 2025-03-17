@@ -522,10 +522,6 @@ bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
                                               const MCValue &Target,
                                               const uint64_t,
                                               const MCSubtargetInfo *STI) {
-  unsigned Kind = Fixup.getKind();
-  if (Kind >= FirstLiteralRelocationKind)
-    return true;
-
   // The ADRP instruction adds some multiple of 0x1000 to the current PC &
   // ~0xfff. This means that the required offset to reach a symbol can vary by
   // up to one step depending on where the ADRP is in memory. For example:
@@ -538,10 +534,7 @@ bool AArch64AsmBackend::shouldForceRelocation(const MCAssembler &Asm,
   // same page as the ADRP and the instruction should encode 0x0. Assuming the
   // section isn't 0x1000-aligned, we therefore need to delegate this decision
   // to the linker -- a relocation!
-  if (Kind == AArch64::fixup_aarch64_pcrel_adrp_imm21)
-    return true;
-
-  return false;
+  return Fixup.getTargetKind() == AArch64::fixup_aarch64_pcrel_adrp_imm21;
 }
 
 namespace {
