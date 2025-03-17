@@ -365,6 +365,7 @@ COMPILER_RT_VISIBILITY void lprofGetFileContentBuffer(FILE *F, uint64_t Length,
   Buf->Status = MM_MALLOC;
 }
 
+COMPILER_RT_VISIBILITY
 void lprofReleaseBuffer(ManagedMemory *Buf, size_t Length) {
   switch (Buf->Status) {
   case MM_MALLOC:
