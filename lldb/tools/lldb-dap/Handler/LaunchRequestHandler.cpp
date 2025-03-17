@@ -60,17 +60,19 @@ void LaunchRequestHandler::operator()(const llvm::json::Object &request) const {
   dap.exit_commands = GetStrings(arguments, "exitCommands");
   dap.terminate_commands = GetStrings(arguments, "terminateCommands");
   dap.post_run_commands = GetStrings(arguments, "postRunCommands");
-  dap.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
-  const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
+  dap.stop_at_entry = GetBoolean(arguments, "stopOnEntry").value_or(false);
+  const llvm::StringRef debuggerRoot =
+      GetString(arguments, "debuggerRoot").value_or("");
   dap.enable_auto_variable_summaries =
-      GetBoolean(arguments, "enableAutoVariableSummaries", false);
+      GetBoolean(arguments, "enableAutoVariableSummaries").value_or(false);
   dap.enable_synthetic_child_debugging =
-      GetBoolean(arguments, "enableSyntheticChildDebugging", false);
+      GetBoolean(arguments, "enableSyntheticChildDebugging").value_or(false);
   dap.display_extended_backtrace =
-      GetBoolean(arguments, "displayExtendedBacktrace", false);
-  dap.command_escape_prefix = GetString(arguments, "commandEscapePrefix", "`");
-  dap.SetFrameFormat(GetString(arguments, "customFrameFormat"));
-  dap.SetThreadFormat(GetString(arguments, "customThreadFormat"));
+      GetBoolean(arguments, "displayExtendedBacktrace").value_or(false);
+  dap.command_escape_prefix =
+      GetString(arguments, "commandEscapePrefix").value_or("`");
+  dap.SetFrameFormat(GetString(arguments, "customFrameFormat").value_or(""));
+  dap.SetThreadFormat(GetString(arguments, "customThreadFormat").value_or(""));
 
   PrintWelcomeMessage();
 

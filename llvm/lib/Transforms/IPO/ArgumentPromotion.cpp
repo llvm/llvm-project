@@ -134,7 +134,8 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
   unsigned ArgNo = 0, NewArgNo = 0;
   for (Function::arg_iterator I = F->arg_begin(), E = F->arg_end(); I != E;
        ++I, ++ArgNo) {
-    if (!ArgsToPromote.count(&*I)) {
+    auto It = ArgsToPromote.find(&*I);
+    if (It == ArgsToPromote.end()) {
       // Unchanged argument
       Params.push_back(I->getType());
       ArgAttrVec.push_back(PAL.getParamAttrs(ArgNo));
@@ -150,7 +151,7 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
 
       NewArgIndices.push_back((unsigned)-1);
     } else {
-      const auto &ArgParts = ArgsToPromote.find(&*I)->second;
+      const auto &ArgParts = It->second;
       for (const auto &Pair : ArgParts) {
         Params.push_back(Pair.second.Ty);
         ArgAttrVec.push_back(AttributeSet());

@@ -9,14 +9,14 @@
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb3.json.in > %t/cdb3.json
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb4.json.in > %t/cdb4.json
 // RUN: sed -e "s|DIR|%/t|g" %t/cdb5.json.in > %t/cdb5.json
-// RUN: clang-scan-deps -compilation-database %t/cdb0.json -format experimental-full > %t/result0.json
-// RUN: clang-scan-deps -compilation-database %t/cdb1.json -format experimental-full > %t/result1.json
+// RUN: clang-scan-deps -compilation-database %t/cdb0.json -format experimental-full -optimize-args=all > %t/result0.json
+// RUN: clang-scan-deps -compilation-database %t/cdb1.json -format experimental-full -optimize-args=all > %t/result1.json
 // It is not a typo to use cdb1.json for result2. We intend to use the same
 // compilation database, but different clang-scan-deps optimize-args options.
 // RUN: clang-scan-deps -compilation-database %t/cdb1.json -format experimental-full -optimize-args=header-search,system-warnings,vfs,canonicalize-macros > %t/result2.json
-// RUN: clang-scan-deps -compilation-database %t/cdb3.json -format experimental-full > %t/result3.json
-// RUN: clang-scan-deps -compilation-database %t/cdb4.json -format experimental-full > %t/result4.json
-// RUN: clang-scan-deps -compilation-database %t/cdb5.json -format experimental-full > %t/result5.json
+// RUN: clang-scan-deps -compilation-database %t/cdb3.json -format experimental-full -optimize-args=all > %t/result3.json
+// RUN: clang-scan-deps -compilation-database %t/cdb4.json -format experimental-full -optimize-args=all > %t/result4.json
+// RUN: clang-scan-deps -compilation-database %t/cdb5.json -format experimental-full -optimize-args=all > %t/result5.json
 // RUN: cat %t/result0.json %t/result1.json | FileCheck %s
 // RUN: cat %t/result0.json %t/result2.json | FileCheck %s -check-prefix=SKIPOPT
 // RUN: cat %t/result3.json %t/result4.json | FileCheck %s -check-prefix=RELPATH

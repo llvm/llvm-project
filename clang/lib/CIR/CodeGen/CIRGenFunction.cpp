@@ -13,6 +13,7 @@
 #include "CIRGenFunction.h"
 
 #include "CIRGenCall.h"
+#include "CIRGenValue.h"
 #include "mlir/IR/Location.h"
 #include "clang/AST/GlobalDecl.h"
 #include "clang/CIR/MissingFeatures.h"
@@ -134,10 +135,9 @@ mlir::Location CIRGenFunction::getLoc(mlir::Location lhs, mlir::Location rhs) {
   return mlir::FusedLoc::get(locs, metadata, &getMLIRContext());
 }
 
-mlir::LogicalResult CIRGenFunction::declare(mlir::Value addrVal,
-                                            const Decl *var, QualType ty,
-                                            mlir::Location loc,
-                                            CharUnits alignment, bool isParam) {
+void CIRGenFunction::declare(mlir::Value addrVal, const Decl *var, QualType ty,
+                             mlir::Location loc, CharUnits alignment,
+                             bool isParam) {
   const auto *namedVar = dyn_cast_or_null<NamedDecl>(var);
   assert(namedVar && "Needs a named decl");
   assert(!cir::MissingFeatures::cgfSymbolTable());
@@ -147,8 +147,6 @@ mlir::LogicalResult CIRGenFunction::declare(mlir::Value addrVal,
     allocaOp.setInitAttr(mlir::UnitAttr::get(&getMLIRContext()));
   if (ty->isReferenceType() || ty.isConstQualified())
     allocaOp.setConstantAttr(mlir::UnitAttr::get(&getMLIRContext()));
-
-  return mlir::success();
 }
 
 void CIRGenFunction::startFunction(GlobalDecl gd, QualType returnType,
@@ -306,7 +304,7 @@ LValue CIRGenFunction::emitLValue(const Expr *e) {
     getCIRGenModule().errorNYI(e->getSourceRange(),
                                std::string("l-value not implemented for '") +
                                    e->getStmtClassName() + "'");
-    break;
+    return LValue();
   case Expr::DeclRefExprClass:
     return emitDeclRefLValue(cast<DeclRefExpr>(e));
   }

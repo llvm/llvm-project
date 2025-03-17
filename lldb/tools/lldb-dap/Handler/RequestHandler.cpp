@@ -31,7 +31,19 @@ MakeArgv(const llvm::ArrayRef<std::string> &strs) {
   return argv;
 }
 
-// Both attach and launch take a either a sourcePath or sourceMap
+static uint32_t SetLaunchFlag(uint32_t flags, const llvm::json::Object *obj,
+                              llvm::StringRef key, lldb::LaunchFlags mask) {
+  if (const auto opt_value = GetBoolean(obj, key)) {
+    if (*opt_value)
+      flags |= mask;
+    else
+      flags &= ~mask;
+  }
+
+  return flags;
+}
+
+// Both attach and launch take either a sourcePath or a sourceMap
 // argument (or neither), from which we need to set the target.source-map.
 void RequestHandler::SetSourceMapFromArguments(
     const llvm::json::Object &arguments) const {
@@ -42,7 +54,7 @@ void RequestHandler::SetSourceMapFromArguments(
   std::string sourceMapCommand;
   llvm::raw_string_ostream strm(sourceMapCommand);
   strm << "settings set target.source-map ";
-  const auto sourcePath = GetString(arguments, "sourcePath");
+  const auto sourcePath = GetString(arguments, "sourcePath").value_or("");
 
   // sourceMap is the new, more general form of sourcePath and overrides it.
   constexpr llvm::StringRef sourceMapKey = "sourceMap";
@@ -157,7 +169,7 @@ RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
 
   // Grab the current working directory if there is one and set it in the
   // launch info.
-  const auto cwd = GetString(arguments, "cwd");
+  const auto cwd = GetString(arguments, "cwd").value_or("");
   if (!cwd.empty())
     launch_info.SetWorkingDirectory(cwd.data());
 
@@ -173,19 +185,22 @@ RequestHandler::LaunchProcess(const llvm::json::Object &request) const {
 
   auto flags = launch_info.GetLaunchFlags();
 
-  if (GetBoolean(arguments, "disableASLR", true))
-    flags |= lldb::eLaunchFlagDisableASLR;
-  if (GetBoolean(arguments, "disableSTDIO", false))
-    flags |= lldb::eLaunchFlagDisableSTDIO;
-  if (GetBoolean(arguments, "shellExpandArguments", false))
-    flags |= lldb::eLaunchFlagShellExpandArguments;
-  const bool detachOnError = GetBoolean(arguments, "detachOnError", false);
+  flags = SetLaunchFlag(flags, arguments, "disableASLR",
+                        lldb::eLaunchFlagDisableASLR);
+  flags = SetLaunchFlag(flags, arguments, "disableSTDIO",
+                        lldb::eLaunchFlagDisableSTDIO);
+  flags = SetLaunchFlag(flags, arguments, "shellExpandArguments",
+                        lldb::eLaunchFlagShellExpandArguments);
+
+  const bool detachOnError =
+      GetBoolean(arguments, "detachOnError").value_or(false);
   launch_info.SetDetachOnError(detachOnError);
   launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
                              lldb::eLaunchFlagStopAtEntry);
-  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
+  const auto timeout_seconds =
+      GetInteger<uint64_t>(arguments, "timeout").value_or(30);
 
-  if (GetBoolean(arguments, "runInTerminal", false)) {
+  if (GetBoolean(arguments, "runInTerminal").value_or(false)) {
     if (llvm::Error err = RunInTerminal(dap, request, timeout_seconds))
       error.SetErrorString(llvm::toString(std::move(err)).c_str());
   } else if (launchCommands.empty()) {
