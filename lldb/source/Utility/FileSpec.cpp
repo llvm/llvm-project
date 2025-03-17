@@ -330,6 +330,13 @@ void FileSpec::Dump(llvm::raw_ostream &s) const {
     s << path_separator;
 }
 
+llvm::json::Value FileSpec::ToJSON() const {
+  std::string file_spec{};
+  llvm::raw_string_ostream stream(file_spec);
+  this->Dump(stream);
+  return llvm::json::Value(std::move(file_spec));
+}
+
 FileSpec::Style FileSpec::GetPathStyle() const { return m_style; }
 
 void FileSpec::SetDirectory(ConstString directory) {

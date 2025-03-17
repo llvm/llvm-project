@@ -41,6 +41,16 @@ void OptionValueFileSpecList::DumpValue(const ExecutionContext *exe_ctx,
   }
 }
 
+llvm::json::Value
+OptionValueFileSpecList::ToJSON(const ExecutionContext *exe_ctx) {
+  std::lock_guard<std::recursive_mutex> lock(m_mutex);
+  llvm::json::Array spec_list;
+  for (const auto &file_spec : m_current_value) {
+    spec_list.emplace_back(file_spec.ToJSON());
+  }
+  return spec_list;
+}
+
 Status OptionValueFileSpecList::SetValueFromString(llvm::StringRef value,
                                                    VarSetOperationType op) {
   std::lock_guard<std::recursive_mutex> lock(m_mutex);
