@@ -58,11 +58,13 @@ struct CUFComputeSharedMemoryOffsetsAndSize
     auto gpuMod = cuf::getOrCreateGPUModule(mod, symTab);
     mlir::Type i8Ty = builder.getI8Type();
     mlir::Type i32Ty = builder.getI32Type();
+    mlir::Type idxTy = builder.getIndexType();
     for (auto funcOp : gpuMod.getOps<mlir::gpu::GPUFuncOp>()) {
       unsigned nbDynamicSharedVariables = 0;
       unsigned nbStaticSharedVariables = 0;
       uint64_t sharedMemSize = 0;
       unsigned short alignment = 0;
+      mlir::Value crtDynOffset;
 
       // Go over each shared memory operation and compute their start offset and
       // the size and alignment of the global to be generated if all variables
@@ -73,16 +75,30 @@ struct CUFComputeSharedMemoryOffsetsAndSize
         builder.setInsertionPoint(sharedOp);
         if (fir::hasDynamicSize(sharedOp.getInType())) {
           mlir::Type ty = sharedOp.getInType();
-          // getTypeSizeAndAlignmentOrCrash will crash trying to compute the
-          // size of an array with dynamic size. Just get the alignment to
-          // create the global.
           if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
             ty = seqTy.getEleTy();
           unsigned short align = dl->getTypeABIAlignment(ty);
-          ++nbDynamicSharedVariables;
-          mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
-          sharedOp.getOffsetMutable().assign(zero);
           alignment = std::max(alignment, align);
+          uint64_t tySize = dl->getTypeSize(ty);
+          ++nbDynamicSharedVariables;
+          if (crtDynOffset) {
+            sharedOp.getOffsetMutable().assign(
+                builder.createConvert(loc, i32Ty, crtDynOffset));
+          } else {
+            mlir::Value zero = builder.createIntegerConstant(loc, i32Ty, 0);
+            sharedOp.getOffsetMutable().assign(zero);
+          }
+
+          mlir::Value dynSize =
+              builder.createIntegerConstant(loc, idxTy, tySize);
+          for (auto extent : sharedOp.getShape())
+            dynSize = builder.create<mlir::arith::MulIOp>(loc, dynSize, extent);
+          if (crtDynOffset)
+            crtDynOffset =
+                builder.create<mlir::arith::AddIOp>(loc, crtDynOffset, dynSize);
+          else
+            crtDynOffset = dynSize;
+
           continue;
         }
         auto [size, align] = fir::getTypeSizeAndAlignmentOrCrash(
