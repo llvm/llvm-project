@@ -225,10 +225,51 @@ static cl::opt<unsigned> StoreQueueSize("squeue",
                                         cl::desc("Size of the store queue"),
                                         cl::cat(ToolOptions), cl::init(0));
 
-static cl::opt<bool>
-    PrintInstructionTables("instruction-tables",
-                           cl::desc("Print instruction tables"),
-                           cl::cat(ToolOptions), cl::init(false));
+enum class InstructionTablesType { NONE, NORMAL, FULL };
+
+class InstructionTablesOptionParser :
+  public cl::parser<enum InstructionTablesType> {
+public:
+  explicit InstructionTablesOptionParser(cl::Option &O)
+      : cl::parser<enum InstructionTablesType>(O) {}
+
+  bool parse(cl::Option &O, StringRef ArgName, StringRef Arg,
+	     enum InstructionTablesType &Value) {
+    if (Arg.empty()) {
+      Value = InstructionTablesType::NORMAL;
+      return false;
+    }
+    return cl::parser<enum InstructionTablesType>::parse(O, ArgName, Arg, Value);
+  }
+};
+
+static cl::opt<enum InstructionTablesType, false, InstructionTablesOptionParser>
+    InstructionTablesOption("instruction-tables",
+           cl::desc("Print instruction tables"),
+  	   cl::values(
+	      clEnumValN(InstructionTablesType::NONE, "none",
+			 "Do not print instruction tables"),
+	      clEnumValN(InstructionTablesType::NORMAL, "normal",
+			 "Print instruction tables"),
+	      clEnumValN(InstructionTablesType::FULL, "full",
+			 "Print instruction tables with additional"
+			 " information: bypass latency, LLVM opcode,"
+		         " used resources")),
+           cl::cat(ToolOptions), cl::init(InstructionTablesType::NONE));
+
+bool PrintInstructionTables() {
+  if (InstructionTablesOption == InstructionTablesType::NONE)
+    return false;
+
+  return true;
+}
+
+bool PrintInstructionTables(enum InstructionTablesType ITType) {
+  if (InstructionTablesOption == ITType)
+    return true;
+
+  return false;
+}
 
 static cl::opt<bool> PrintInstructionInfoView(
     "instruction-info",
@@ -258,12 +299,6 @@ static cl::opt<bool> ShowBarriers(
     "show-barriers",
     cl::desc("Print memory barrier information in the instruction info view"),
     cl::cat(ViewOptions), cl::init(false));
-
-static cl::opt<bool>
-    ShowSchedulingInfo("scheduling-info",
-                       cl::desc("Print the instruction scheduling information "
-                                "in the instruction info view"),
-                       cl::cat(ViewOptions), cl::init(false));
 
 static cl::opt<bool> DisableCustomBehaviour(
     "disable-cb",
@@ -369,6 +404,8 @@ int main(int argc, char **argv) {
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::HideUnrelatedOptions({&ToolOptions, &ViewOptions});
+
+  InstructionTablesOption.setValueExpectedFlag(cl::ValueOptional);
 
   // Parse flags and initialize target options.
   cl::ParseCommandLineOptions(argc, argv,
@@ -668,9 +705,9 @@ int main(int argc, char **argv) {
     NonEmptyRegions++;
 
     mca::CircularSourceMgr S(LoweredSequence,
-                             PrintInstructionTables ? 1 : Iterations);
+                             PrintInstructionTables() ? 1 : Iterations);
 
-    if (PrintInstructionTables) {
+    if (PrintInstructionTables()) {
       //  Create a pipeline, stages, and a printer.
       auto P = std::make_unique<mca::Pipeline>();
       P->appendStage(std::make_unique<mca::EntryStage>(S));
@@ -686,7 +723,8 @@ int main(int argc, char **argv) {
       if (PrintInstructionInfoView) {
         Printer.addView(std::make_unique<mca::InstructionInfoView>(
             *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-            ShowBarriers, ShowSchedulingInfo, *IM, InstToInstruments));
+            ShowBarriers, PrintInstructionTables(InstructionTablesType::FULL),
+	    *IM, InstToInstruments));
       }
 
       Printer.addView(
@@ -764,7 +802,7 @@ int main(int argc, char **argv) {
     if (PrintInstructionInfoView)
       Printer.addView(std::make_unique<mca::InstructionInfoView>(
           *STI, *MCII, CE, ShowEncoding, Insts, *IP, LoweredSequence,
-          ShowBarriers, ShowSchedulingInfo, *IM, InstToInstruments));
+          ShowBarriers, false, *IM, InstToInstruments));
 
     // Fetch custom Views that are to be placed after the InstructionInfoView.
     // Refer to the comment paired with the CB->getStartViews(*IP, Insts); line

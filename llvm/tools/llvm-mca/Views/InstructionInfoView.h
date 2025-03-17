@@ -56,7 +56,7 @@ class InstructionInfoView : public InstructionView {
   CodeEmitter &CE;
   bool PrintEncodings;
   bool PrintBarriers;
-  bool PrintSchedulingInfo;
+  bool PrintFullInfo;
   using UniqueInst = std::unique_ptr<Instruction>;
   ArrayRef<UniqueInst> LoweredInsts;
   const InstrumentManager &IM;
@@ -94,13 +94,13 @@ public:
                       bool ShouldPrintEncodings, llvm::ArrayRef<llvm::MCInst> S,
                       llvm::MCInstPrinter &IP,
                       ArrayRef<UniqueInst> LoweredInsts,
-                      bool ShouldPrintBarriers, bool ShouldPrintSchedulingInfo,
+                      bool ShouldPrintBarriers, bool ShouldPrintFullInfo,
                       const InstrumentManager &IM,
                       const InstToInstrumentsT &InstToInstruments)
       : InstructionView(ST, IP, S), MCII(II), CE(C),
         PrintEncodings(ShouldPrintEncodings),
         PrintBarriers(ShouldPrintBarriers),
-        PrintSchedulingInfo(ShouldPrintSchedulingInfo),
+        PrintFullInfo(ShouldPrintFullInfo),
         LoweredInsts(LoweredInsts), IM(IM),
         InstToInstruments(InstToInstruments) {}
 

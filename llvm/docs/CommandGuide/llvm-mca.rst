@@ -170,20 +170,6 @@ option specifies "``-``", then the output will also be sent to standard output.
   Enable extra scheduler statistics. This view collects and analyzes instruction
   issue events. This view is disabled by default.
 
-.. option:: -scheduling-info
-
-  Enable scheduling info view. This view reports scheduling information defined
-  in LLVM target description in the form:
-  ``<uOps> <Latency> <Bypass Latency> <Throughput> <LLVM Opcode Name> <Resources
-  units> <instruction and comment (// or /* */) if defined>``
-  It allows to compare scheduling info with architecture documents and fix them
-  in target description by fixing InstrRW for the reported LLVM opcode.
-  Scheduling information can be defined in the same order in each instruction
-  comments to check easily reported and reference scheduling information.
-  Suggested information in comment:
-  ``// <architecture instruction form> \\ <scheduling documentation title> \\
-  <uOps>, <Latency>, <Bypass Latency>, <Throughput>, <Resources units>``
-
 .. option:: -retire-stats
 
   Enable extra retire control unit statistics. This view is disabled by default.
@@ -211,13 +197,24 @@ option specifies "``-``", then the output will also be sent to standard output.
 
   Enable all the view.
 
-.. option:: -instruction-tables
+.. option:: -instruction-tables=<level>
 
   Prints resource pressure information based on the static information
   available from the processor model. This differs from the resource pressure
   view because it doesn't require that the code is simulated. It instead prints
   the theoretical uniform distribution of resource pressure for every
   instruction in sequence.
+
+  The choice of `<level>` controls number of printed information.
+  `<level>` may be `none` (default), `normal`, `full`.
+  Note: If the option is used without `<label>`, default is `normal` (legacy).
+
+  When `<level>` is `full`, additional information are:
+  - `<Bypass Latency>`: Latency when a bypass is implemented between operands
+  in pipelines (see SchedReadAdvance).
+  - `<LLVM Opcode Name>`: mnemonic plus operands identifier.
+  - `<Resources units>`: Used resources associated with LLVM Opcode.
+  - `<instruction comment>`: reports comment if any from source assembly.
 
 .. option:: -bottleneck-analysis
 

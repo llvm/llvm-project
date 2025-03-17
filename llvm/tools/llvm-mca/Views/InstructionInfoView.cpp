@@ -132,6 +132,7 @@ void InstructionInfoView::printSchedulingInfoView(raw_ostream &OS) const {
 void InstructionInfoView::printView(raw_ostream &OS) const {
   std::string Buffer;
   raw_string_ostream TempStream(Buffer);
+  formatted_raw_ostream FOS(TempStream);
 
   ArrayRef<llvm::MCInst> Source = getSource();
   if (!Source.size())
@@ -140,7 +141,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
   IIVDVec IIVD(Source.size());
   collectData(IIVD);
 
-  if (PrintSchedulingInfo) {
+  if (PrintFullInfo) {
     if (PrintEncodings)
       WithColor::warning()
           << "No encodings printed when -scheduling-info option enabled.\n";
@@ -152,82 +153,94 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     return;
   }
 
-  TempStream << "\n\nInstruction Info:\n";
-  TempStream << "[1]: #uOps\n[2]: Latency\n[3]: RThroughput\n"
-             << "[4]: MayLoad\n[5]: MayStore\n[6]: HasSideEffects (U)\n";
+  std::vector<unsigned> paddings = {0, 7, 14, 21, 28, 35};
+  std::vector<std::string>   fields   = {"#uOps", "Latency", "RThroughput",
+    "MayLoad", "MayStore", "HasSideEffects (U)"};
+  std::vector<std::string>   end_fields;
+  unsigned last_padding = 35;
   if (PrintBarriers) {
-    TempStream << "[7]: LoadBarrier\n[8]: StoreBarrier\n";
+    paddings.push_back(last_padding + 7);
+    paddings.push_back(last_padding + 14);
+    last_padding += 14;
+    fields.push_back("LoadBarrier"); fields.push_back("StoreBarrier");
   }
   if (PrintEncodings) {
-    if (PrintBarriers) {
-      TempStream << "[9]: Encoding Size\n";
-      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    "
-                 << "[9]    Encodings:                    Instructions:\n";
-    } else {
-      TempStream << "[7]: Encoding Size\n";
-      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    "
-                 << "Encodings:                    Instructions:\n";
-    }
-  } else {
-    if (PrintBarriers) {
-      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    "
-                 << "Instructions:\n";
-    } else {
-      TempStream << "\n[1]    [2]    [3]    [4]    [5]    [6]    "
-                 << "Instructions:\n";
-    }
+    paddings.push_back(last_padding + 7);
+    paddings.push_back(last_padding + 14);
+    paddings.push_back(last_padding + 44);
+    last_padding += 44;
+    fields.push_back("Encoding Size");
+    end_fields.push_back("Encodings:");
+    end_fields.push_back("Instructions:");
+  }
+  else {
+    paddings.push_back(last_padding + 7);
+    last_padding += 7;
+    end_fields.push_back("Instructions:");
   }
 
-  for (const auto &[Index, IIVDEntry, Inst] : enumerate(IIVD, Source)) {
-    TempStream << ' ' << IIVDEntry.NumMicroOpcodes << "    ";
-    if (IIVDEntry.NumMicroOpcodes < 10)
-      TempStream << "  ";
-    else if (IIVDEntry.NumMicroOpcodes < 100)
-      TempStream << ' ';
-    TempStream << IIVDEntry.Latency << "   ";
-    if (IIVDEntry.Latency < 10)
-      TempStream << "  ";
-    else if (IIVDEntry.Latency < 100)
-      TempStream << ' ';
+  FOS << "\n\nInstruction Info:\n";
+  for (unsigned i = 0; i < fields.size(); i++) {
+    FOS << "[" << i + 1 << "]: " << fields[i] << "\n";
+  }
+  FOS << "\n";
 
+  for (unsigned i = 0; i < paddings.size(); i++) {
+    if (paddings[i] != 0)
+      FOS.PadToColumn(paddings[i]);
+    if (i < fields.size()) {
+      FOS << "[" << i + 1 << "]";
+    }
+    else {
+      FOS << end_fields[i - fields.size()];
+    }
+  }
+  FOS << "\n";
+
+  for (const auto &[Index, IIVDEntry, Inst] : enumerate(IIVD, Source)) {
+    FOS.PadToColumn(paddings[0]+1);
+    FOS << IIVDEntry.NumMicroOpcodes;
+    FOS.PadToColumn(paddings[1]+1);
+    FOS << IIVDEntry.Latency;
+
+    FOS.PadToColumn(paddings[2]);
     if (IIVDEntry.RThroughput) {
       double RT = *IIVDEntry.RThroughput;
-      TempStream << format("%.2f", RT) << ' ';
-      if (RT < 10.0)
-        TempStream << "  ";
-      else if (RT < 100.0)
-        TempStream << ' ';
+      FOS << format("%.2f", RT);
     } else {
-      TempStream << " -     ";
+      FOS << " -";
     }
-    TempStream << (IIVDEntry.mayLoad ? " *     " : "       ");
-    TempStream << (IIVDEntry.mayStore ? " *     " : "       ");
-    TempStream << (IIVDEntry.hasUnmodeledSideEffects ? " U     " : "       ");
+    FOS.PadToColumn(paddings[3]+1);
+    FOS << (IIVDEntry.mayLoad ? "*" : " ");
+    FOS.PadToColumn(paddings[4]+1);
+    FOS << (IIVDEntry.mayStore ? "*" : " ");
+    FOS.PadToColumn(paddings[5]+1);
+    FOS << (IIVDEntry.hasUnmodeledSideEffects ? "U" : " ");
+    unsigned last_padding_idx = 5;
 
     if (PrintBarriers) {
-      TempStream << (LoweredInsts[Index]->isALoadBarrier() ? " *     "
-                                                           : "       ");
-      TempStream << (LoweredInsts[Index]->isAStoreBarrier() ? " *     "
-                                                            : "       ");
+      FOS.PadToColumn(paddings[last_padding_idx + 1]+1);
+      FOS << (LoweredInsts[Index]->isALoadBarrier() ? "*" : " ");
+      FOS.PadToColumn(paddings[last_padding_idx + 2]+1);
+      FOS << (LoweredInsts[Index]->isAStoreBarrier() ? "*" : " ");
+      last_padding_idx += 2;
     }
 
     if (PrintEncodings) {
       StringRef Encoding(CE.getEncoding(Index));
       unsigned EncodingSize = Encoding.size();
-      TempStream << " " << EncodingSize
-                 << (EncodingSize < 10 ? "     " : "    ");
-      TempStream.flush();
-      formatted_raw_ostream FOS(TempStream);
+      FOS.PadToColumn(paddings[last_padding_idx + 1]+1);
+      FOS << EncodingSize;
+      FOS.PadToColumn(paddings[last_padding_idx + 2]);
       for (unsigned i = 0, e = Encoding.size(); i != e; ++i)
         FOS << format("%02x ", (uint8_t)Encoding[i]);
-      FOS.PadToColumn(30);
-      FOS.flush();
+      last_padding_idx += 2;
     }
-
-    TempStream << printInstructionString(Inst) << '\n';
+    FOS.PadToColumn(paddings[last_padding_idx + 1]);
+    FOS << printInstructionString(Inst) << '\n';
   }
 
-  TempStream.flush();
+  FOS.flush();
   OS << Buffer;
 }
 
@@ -265,7 +278,7 @@ void InstructionInfoView::collectData(
     IIVDEntry.mayStore = MCDesc.mayStore();
     IIVDEntry.hasUnmodeledSideEffects = MCDesc.hasUnmodeledSideEffects();
 
-    if (PrintSchedulingInfo) {
+    if (PrintFullInfo) {
       // Get latency with bypass
       IIVDEntry.Bypass =
           IIVDEntry.Latency - MCSchedModel::getBypassDelayCycles(STI, SCDesc);
@@ -283,7 +296,6 @@ void InstructionInfoView::collectData(
           // Output ReleaseAtCycle between [] if not 1 (default)
           // This is to be able to evaluate throughput.
           // See getReciprocalThroughput in MCSchedule.cpp
-          // TODO: report AcquireAtCycle to check this scheduling info.
           TempStream << sep
                      << format("%s[%d]", MCProc->Name, Index->ReleaseAtCycle);
         } else {
