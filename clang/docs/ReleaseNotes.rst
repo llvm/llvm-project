@@ -515,6 +515,8 @@ clang-format
   top of the file.
 - Add ``EnumTrailingComma`` option for inserting/removing commas at the end of
   ``enum`` enumerator lists.
+- Allow to apply parameters bin-packing options to function-like macros that
+  use keywords to delimit parameters (e.g. Q_PROPERTY).
 
 libclang
 --------
