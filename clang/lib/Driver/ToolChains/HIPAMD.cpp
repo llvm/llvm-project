@@ -296,7 +296,7 @@ HIPAMDToolChain::TranslateArgs(const llvm::opt::DerivedArgList &Args,
 }
 
 Tool *HIPAMDToolChain::buildLinker() const {
-  assert(getTriple().getArch() == llvm::Triple::amdgcn ||
+  assert(getTriple().isAMDGCN() ||
          getTriple().getArch() == llvm::Triple::spirv64);
   return new tools::AMDGCN::Linker(*this);
 }

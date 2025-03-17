@@ -591,9 +591,6 @@ SlotIndex SplitEditor::buildCopy(Register FromReg, Register ToReg,
 bool SplitEditor::rematWillIncreaseRestriction(const MachineInstr *DefMI,
                                                MachineBasicBlock &MBB,
                                                SlotIndex UseIdx) const {
-  if (!DefMI)
-    return false;
-
   const MachineInstr *UseMI = LIS.getInstructionFromIndex(UseIdx);
   if (!UseMI)
     return false;
@@ -640,7 +637,8 @@ VNInfo *SplitEditor::defFromParent(unsigned RegIdx, const VNInfo *ParentVNI,
   if (OrigVNI) {
     LiveRangeEdit::Remat RM(ParentVNI);
     RM.OrigMI = LIS.getInstructionFromIndex(OrigVNI->def);
-    if (Edit->canRematerializeAt(RM, OrigVNI, UseIdx, true)) {
+    if (RM.OrigMI && TII.isAsCheapAsAMove(*RM.OrigMI) &&
+        Edit->canRematerializeAt(RM, OrigVNI, UseIdx)) {
       if (!rematWillIncreaseRestriction(RM.OrigMI, MBB, UseIdx)) {
         SlotIndex Def = Edit->rematerializeAt(MBB, I, Reg, RM, TRI, Late);
         ++NumRemats;

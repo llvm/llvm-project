@@ -388,7 +388,7 @@ define <4 x float> @insertelement_to_sgpr() nounwind {
 ; GCN-NEXT:    image_gather4_lz v[0:3], v[0:1], s[4:11], s[4:7] dmask:0x1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = load <4 x i32>, ptr addrspace(4) undef
+  %tmp = load <4 x i32>, ptr addrspace(4) poison
   %tmp1 = insertelement <4 x i32> %tmp, i32 0, i32 0
   %tmp2 = call <4 x float> @llvm.amdgcn.image.gather4.lz.2d.v4f32.f32(i32 1, float poison, float poison, <8 x i32> poison, <4 x i32> %tmp1, i1 0, i32 0, i32 0)
   ret <4 x float> %tmp2
@@ -412,7 +412,7 @@ define <9 x float> @insertelement_to_v9f32_undef() nounwind {
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mov_b32_e32 v8, s4
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = load <9 x float>, ptr addrspace(4) undef
+  %tmp = load <9 x float>, ptr addrspace(4) poison
   %tmp1 = insertelement <9 x float> %tmp, float 5.000, i32 0
   %tmp2 = insertelement <9 x float> %tmp1, float -5.000, i32 2
   %tmp3 = insertelement <9 x float> %tmp2, float 17.000, i32 7
@@ -438,7 +438,7 @@ define <10 x float> @insertelement_to_v10f32_undef() nounwind {
 ; GCN-NEXT:    v_mov_b32_e32 v8, s12
 ; GCN-NEXT:    v_mov_b32_e32 v9, s13
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = load <10 x float>, ptr addrspace(4) undef
+  %tmp = load <10 x float>, ptr addrspace(4) poison
   %tmp1 = insertelement <10 x float> %tmp, float 2.0, i32 0
   ret <10 x float> %tmp1
 }
@@ -463,7 +463,7 @@ define <11 x float> @insertelement_to_v11f32_undef() nounwind {
 ; GCN-NEXT:    v_mov_b32_e32 v9, s13
 ; GCN-NEXT:    v_mov_b32_e32 v10, s14
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = load <11 x float>, ptr addrspace(4) undef
+  %tmp = load <11 x float>, ptr addrspace(4) poison
   %tmp1 = insertelement <11 x float> %tmp, float 1.000, i32 0
   ret <11 x float> %tmp1
 }
@@ -489,7 +489,7 @@ define <12 x float> @insertelement_to_v12f32_undef() nounwind {
 ; GCN-NEXT:    v_mov_b32_e32 v10, s14
 ; GCN-NEXT:    v_mov_b32_e32 v11, s15
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %tmp = load <12 x float>, ptr addrspace(4) undef
+  %tmp = load <12 x float>, ptr addrspace(4) poison
   %tmp1 = insertelement <12 x float> %tmp, float 4.0, i32 0
   ret <12 x float> %tmp1
 }

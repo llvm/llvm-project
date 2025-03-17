@@ -19,7 +19,14 @@
 #include "llvm/ProfileData/CtxInstrContextNode.h"
 
 namespace llvm {
-enum PGOCtxProfileRecords { Invalid = 0, Version, Guid, CalleeIndex, Counters };
+enum PGOCtxProfileRecords {
+  Invalid = 0,
+  Version,
+  Guid,
+  CallsiteIndex,
+  Counters,
+  TotalRootEntryCount
+};
 
 enum PGOCtxProfileBlockIDs {
   FIRST_VALID = bitc::FIRST_APPLICATION_BLOCKID,
@@ -73,9 +80,11 @@ class PGOCtxProfileWriter final : public ctx_profile::ProfileWriter {
   const bool IncludeEmpty;
 
   void writeGuid(ctx_profile::GUID Guid);
+  void writeCallsiteIndex(uint32_t Index);
+  void writeRootEntryCount(uint64_t EntryCount);
   void writeCounters(ArrayRef<uint64_t> Counters);
-  void writeImpl(std::optional<uint32_t> CallerIndex,
-                 const ctx_profile::ContextNode &Node);
+  void writeNode(uint32_t CallerIndex, const ctx_profile::ContextNode &Node);
+  void writeSubcontexts(const ctx_profile::ContextNode &Node);
 
 public:
   PGOCtxProfileWriter(raw_ostream &Out,
@@ -84,7 +93,8 @@ public:
   ~PGOCtxProfileWriter() { Writer.ExitBlock(); }
 
   void startContextSection() override;
-  void writeContextual(const ctx_profile::ContextNode &RootNode) override;
+  void writeContextual(const ctx_profile::ContextNode &RootNode,
+                       uint64_t TotalRootEntryCount) override;
   void endContextSection() override;
 
   void startFlatSection() override;
@@ -94,7 +104,7 @@ public:
 
   // constants used in writing which a reader may find useful.
   static constexpr unsigned CodeLen = 2;
-  static constexpr uint32_t CurrentVersion = 2;
+  static constexpr uint32_t CurrentVersion = 3;
   static constexpr unsigned VBREncodingBits = 6;
   static constexpr StringRef ContainerMagic = "CTXP";
 };

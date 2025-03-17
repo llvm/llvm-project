@@ -340,6 +340,9 @@ ContextNode *__llvm_ctx_profile_start_context(
     ContextRoot *Root, GUID Guid, uint32_t Counters,
     uint32_t Callsites) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {
   IsUnderContext = true;
+  __sanitizer::atomic_fetch_add(&Root->TotalEntries, 1,
+                                __sanitizer::memory_order_relaxed);
+
   if (!Root->FirstMemBlock) {
     setupContext(Root, Guid, Counters, Callsites);
   }
@@ -374,6 +377,7 @@ void __llvm_ctx_profile_start_collection() {
       ++NumMemUnits;
 
     resetContextNode(*Root->FirstNode);
+    __sanitizer::atomic_store_relaxed(&Root->TotalEntries, 0);
   }
   __sanitizer::atomic_store_relaxed(&ProfilingStarted, true);
   __sanitizer::Printf("[ctxprof] Initial NumMemUnits: %zu \n", NumMemUnits);
@@ -393,7 +397,8 @@ bool __llvm_ctx_profile_fetch(ProfileWriter &Writer) {
       __sanitizer::Printf("[ctxprof] Contextual Profile is %s\n", "invalid");
       return false;
     }
-    Writer.writeContextual(*Root->FirstNode);
+    Writer.writeContextual(*Root->FirstNode, __sanitizer::atomic_load_relaxed(
+                                                 &Root->TotalEntries));
   }
   Writer.endContextSection();
   Writer.startFlatSection();

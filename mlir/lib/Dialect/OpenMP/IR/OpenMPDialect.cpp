@@ -1905,7 +1905,8 @@ LogicalResult TargetOp::verifyRegions() {
     return emitError("target containing multiple 'omp.teams' nested ops");
 
   // Check that host_eval values are only used in legal ways.
-  llvm::omp::OMPTgtExecModeFlags execFlags = getKernelExecFlags();
+  llvm::omp::OMPTgtExecModeFlags execFlags =
+      getKernelExecFlags(getInnermostCapturedOmpOp());
   for (Value hostEvalArg :
        cast<BlockArgOpenMPOpInterface>(getOperation()).getHostEvalBlockArgs()) {
     for (Operation *user : hostEvalArg.getUsers()) {
@@ -2025,12 +2026,20 @@ Operation *TargetOp::getInnermostCapturedOmpOp() {
   return capturedOp;
 }
 
-llvm::omp::OMPTgtExecModeFlags TargetOp::getKernelExecFlags() {
+llvm::omp::OMPTgtExecModeFlags
+TargetOp::getKernelExecFlags(Operation *capturedOp) {
   using namespace llvm::omp;
+
+  // A non-null captured op is only valid if it resides inside of a TargetOp
+  // and is the result of calling getInnermostCapturedOmpOp() on it.
+  TargetOp targetOp =
+      capturedOp ? capturedOp->getParentOfType<TargetOp>() : nullptr;
+  assert((!capturedOp ||
+          (targetOp && targetOp.getInnermostCapturedOmpOp() == capturedOp)) &&
+         "unexpected captured op");
 
   // Make sure this region is capturing a loop. Otherwise, it's a generic
   // kernel.
-  Operation *capturedOp = getInnermostCapturedOmpOp();
   if (!isa_and_present<LoopNestOp>(capturedOp))
     return OMP_TGT_EXEC_MODE_GENERIC;
 
@@ -2054,7 +2063,7 @@ llvm::omp::OMPTgtExecModeFlags TargetOp::getKernelExecFlags() {
     if (!isa_and_present<TeamsOp>(teamsOp))
       return OMP_TGT_EXEC_MODE_GENERIC;
 
-    if (teamsOp->getParentOp() == *this)
+    if (teamsOp->getParentOp() == targetOp.getOperation())
       return OMP_TGT_EXEC_MODE_GENERIC_SPMD;
   }
 
@@ -2075,7 +2084,7 @@ llvm::omp::OMPTgtExecModeFlags TargetOp::getKernelExecFlags() {
     if (!isa_and_present<TeamsOp>(teamsOp))
       return OMP_TGT_EXEC_MODE_GENERIC;
 
-    if (teamsOp->getParentOp() == *this)
+    if (teamsOp->getParentOp() == targetOp.getOperation())
       return OMP_TGT_EXEC_MODE_SPMD;
   }
 

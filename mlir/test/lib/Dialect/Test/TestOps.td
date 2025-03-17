@@ -1940,9 +1940,17 @@ def LegalOpC : TEST_Op<"legal_op_c">,
   Arguments<(ins I32)>, Results<(outs I32)>;
 def LegalOpD : TEST_Op<"legal_op_d">, Arguments<(ins AnyType)>;
 
-def DuplicateBlockArgsOp : TEST_Op<"duplicate_block_args", [SingleBlock]> {
-  let arguments = (ins UnitAttr:$is_legal);
+def ConvertBlockArgsOp : TEST_Op<"convert_block_args", [SingleBlock]> {
+  let arguments = (ins UnitAttr:$is_legal, UnitAttr:$replace_with_operand,
+                       UnitAttr:$duplicate, Optional<AnyType>:$val);
   let regions = (region SizedRegion<1>:$body);
+  let assemblyFormat = [{
+    $val
+    (`is_legal` $is_legal^)?
+    (`duplicate` $duplicate^)?
+    (`replace_with_operand` $replace_with_operand^)?
+    $body attr-dict `:` functional-type(operands, results)
+  }];
 }
 
 // Check that the conversion infrastructure can properly undo the creation of

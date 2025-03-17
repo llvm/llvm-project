@@ -826,7 +826,7 @@ define amdgpu_kernel void @introduced_copy_to_sgpr(i64 %arg, i32 %arg1, i32 %arg
 ; GFX90A-NEXT:  .LBB3_12: ; %DummyReturnBlock
 ; GFX90A-NEXT:    s_endpgm
 bb:
-  %i = load volatile i16, ptr addrspace(4) undef, align 2
+  %i = load volatile i16, ptr addrspace(4) poison, align 2
   %i6 = zext i16 %i to i64
   %i7 = udiv i32 %arg1, %arg2
   %i8 = zext i32 %i7 to i64

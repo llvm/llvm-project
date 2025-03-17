@@ -2148,8 +2148,8 @@ public:
     return MaxDivRemBitWidthSupported;
   }
 
-  /// Returns the size in bits of the maximum larget fp convert the backend
-  /// supports. Larger operations will be expanded by ExpandLargeFPConvert.
+  /// Returns the size in bits of the maximum fp to/from int conversion the
+  /// backend supports. Larger operations will be expanded by ExpandFp.
   unsigned getMaxLargeFPConvertBitWidthSupported() const {
     return MaxLargeFPConvertBitWidthSupported;
   }
@@ -2782,8 +2782,8 @@ protected:
     MaxDivRemBitWidthSupported = SizeInBits;
   }
 
-  /// Set the size in bits of the maximum fp convert the backend supports.
-  /// Larger operations will be expanded by ExpandLargeFPConvert.
+  /// Set the size in bits of the maximum fp to/from int conversion the backend
+  /// supports. Larger operations will be expanded by ExpandFp.
   void setMaxLargeFPConvertBitWidthSupported(unsigned SizeInBits) {
     MaxLargeFPConvertBitWidthSupported = SizeInBits;
   }
@@ -3580,8 +3580,9 @@ private:
   /// Larger operations will be expanded by ExpandLargeDivRem.
   unsigned MaxDivRemBitWidthSupported;
 
-  /// Size in bits of the maximum larget fp convert size the backend
-  /// supports. Larger operations will be expanded by ExpandLargeFPConvert.
+  /// Size in bits of the maximum fp to/from int conversion size the
+  /// backend supports. Larger operations will be expanded by
+  /// ExpandFp.
   unsigned MaxLargeFPConvertBitWidthSupported;
 
   /// Size in bits of the minimum cmpxchg or ll/sc operation the

@@ -1,4 +1,4 @@
-//===- ExpandLargeFpConvert.h -----------------------------------*- C++ -*-===//
+//===- ExpandFp.h -----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CODEGEN_EXPANDLARGEFPCONVERT_H
-#define LLVM_CODEGEN_EXPANDLARGEFPCONVERT_H
+#ifndef LLVM_CODEGEN_EXPANDFP_H
+#define LLVM_CODEGEN_EXPANDFP_H
 
 #include "llvm/IR/PassManager.h"
 
@@ -15,17 +15,16 @@ namespace llvm {
 
 class TargetMachine;
 
-class ExpandLargeFpConvertPass
-    : public PassInfoMixin<ExpandLargeFpConvertPass> {
+class ExpandFpPass : public PassInfoMixin<ExpandFpPass> {
 private:
   const TargetMachine *TM;
 
 public:
-  explicit ExpandLargeFpConvertPass(const TargetMachine *TM_) : TM(TM_) {}
+  explicit ExpandFpPass(const TargetMachine *TM_) : TM(TM_) {}
 
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };
 
 } // end namespace llvm
 
-#endif // LLVM_CODEGEN_EXPANDLARGEFPCONVERT_H
+#endif // LLVM_CODEGEN_EXPANDFP_H

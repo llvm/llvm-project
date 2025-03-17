@@ -59,8 +59,14 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
     SmallVector<unsigned, 3> Ints = {/*IsWriteable*/ ResAttrs.ResourceClass ==
                                          llvm::dxil::ResourceClass::UAV,
                                      /*IsROV*/ ResAttrs.IsROV};
-    if (!ResAttrs.RawBuffer)
-      Ints.push_back(/*IsSigned*/ ContainedTy->isSignedIntegerType());
+    if (!ResAttrs.RawBuffer) {
+      const clang::Type *ElemType = ContainedTy->getUnqualifiedDesugaredType();
+      if (ElemType->isVectorType())
+        ElemType = cast<clang::VectorType>(ElemType)
+                       ->getElementType()
+                       ->getUnqualifiedDesugaredType();
+      Ints.push_back(/*IsSigned*/ ElemType->isSignedIntegerType());
+    }
 
     return llvm::TargetExtType::get(Ctx, TypeName, {ElemType}, Ints);
   }

@@ -1681,7 +1681,7 @@ define amdgpu_kernel void @test_div_scale_f64_val_undef_val(ptr addrspace(1) %ou
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
 ; GFX11-NEXT:    s_endpgm
-  %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double 8.0, double undef, i1 false)
+  %result = call { double, i1 } @llvm.amdgcn.div.scale.f64(double 8.0, double poison, i1 false)
   %result0 = extractvalue { double, i1 } %result, 0
   store double %result0, ptr addrspace(1) %out, align 8
   ret void

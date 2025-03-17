@@ -708,7 +708,7 @@ bool LoongArchAsmParser::classifySymbolRef(const MCExpr *Expr,
   }
 
   MCValue Res;
-  if (Expr->evaluateAsRelocatable(Res, nullptr, nullptr))
+  if (Expr->evaluateAsRelocatable(Res, nullptr))
     return Res.getRefKind() == LoongArchMCExpr::VK_LoongArch_None;
   return false;
 }

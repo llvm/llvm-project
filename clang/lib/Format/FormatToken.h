@@ -746,6 +746,10 @@ public:
     return isOneOf(tok::star, tok::amp, tok::ampamp);
   }
 
+  bool isPlacementOperator() const {
+    return isOneOf(tok::kw_new, tok::kw_delete);
+  }
+
   bool isUnaryOperator() const {
     switch (Tok.getKind()) {
     case tok::plus:

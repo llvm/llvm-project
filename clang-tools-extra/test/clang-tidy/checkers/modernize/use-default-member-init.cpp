@@ -536,4 +536,40 @@ namespace PR122480 {
     // CHECK-FIXES: int b{STATIC_VAL};
   };
 
+class CStyleCastInit {
+  CStyleCastInit() : a{(int)1.23}, b{(float)42}, c{(double)'C'} {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:50: warning: member initializer for 'c' is redundant [modernize-use-default-member-init]
+  // CHECK-FIXES: CStyleCastInit()  {}
+
+  int a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'a' [modernize-use-default-member-init]
+  // CHECK-FIXES: int a{(int)1.23};
+  float b;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: use default member initializer for 'b' [modernize-use-default-member-init]
+  // CHECK-FIXES: float b{(float)42};
+  double c{(double)'C'};
+};
+
+class StaticCastInit {
+  StaticCastInit() : m(static_cast<int>(9.99)), n(static_cast<char>(65)) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:49: warning: member initializer for 'n' is redundant [modernize-use-default-member-init]
+  // CHECK-FIXES: StaticCastInit()  {}
+  int m;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'm' [modernize-use-default-member-init]
+  // CHECK-FIXES: int m{static_cast<int>(9.99)};
+  char n{static_cast<char>(65)};
+};
+
+class FunctionalCastInit {
+  FunctionalCastInit() : a(int(5.67)), b(float(2)), c(double('C')) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:40: warning: member initializer for 'b' is redundant [modernize-use-default-member-init]
+  int a;
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: use default member initializer for 'a' [modernize-use-default-member-init]
+  // CHECK-FIXES: int a{int(5.67)};
+  float b{float(2)};
+  double c;
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: use default member initializer for 'c' [modernize-use-default-member-init]
+  // CHECK-FIXES: double c{double('C')};
+};
+
 } //namespace PR122480

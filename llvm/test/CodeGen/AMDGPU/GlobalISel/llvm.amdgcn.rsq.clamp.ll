@@ -215,7 +215,7 @@ define double @v_rsq_clamp_undef_f64() #0 {
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX12-NEXT:    v_max_num_f64_e32 v[0:1], v[0:1], v[2:3]
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
-  %rsq_clamp = call double @llvm.amdgcn.rsq.clamp.f64(double undef)
+  %rsq_clamp = call double @llvm.amdgcn.rsq.clamp.f64(double poison)
   ret double %rsq_clamp
 }
 

@@ -1925,6 +1925,22 @@ void ModuleTranslation::setTBAAMetadata(AliasAnalysisOpInterface op,
   inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
 }
 
+void ModuleTranslation::setDereferenceableMetadata(
+    DereferenceableOpInterface op, llvm::Instruction *inst) {
+  DereferenceableAttr derefAttr = op.getDereferenceableOrNull();
+  if (!derefAttr)
+    return;
+
+  llvm::MDNode *derefSizeNode = llvm::MDNode::get(
+      getLLVMContext(),
+      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+          llvm::IntegerType::get(getLLVMContext(), 64), derefAttr.getBytes())));
+  unsigned kindId = derefAttr.getMayBeNull()
+                        ? llvm::LLVMContext::MD_dereferenceable_or_null
+                        : llvm::LLVMContext::MD_dereferenceable;
+  inst->setMetadata(kindId, derefSizeNode);
+}
+
 void ModuleTranslation::setBranchWeightsMetadata(BranchWeightOpInterface op) {
   DenseI32ArrayAttr weightsAttr = op.getBranchWeightsOrNull();
   if (!weightsAttr)

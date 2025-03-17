@@ -54,7 +54,7 @@ define hidden fastcc void @bar(i32 %arg, ptr %arg1, ptr %arg2, ptr %arg3, ptr %a
 ; CHECK-NEXT:  .LBB0_5: ; %bb9
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
 bb:
-  switch i32 undef, label %bb9 [
+  switch i32 poison, label %bb9 [
     i32 3, label %bb8
     i32 1, label %bb7
   ]

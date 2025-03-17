@@ -130,7 +130,7 @@ void SetBreakpointsRequestHandler::operator()(
   FillResponse(request, response);
   const auto *arguments = request.getObject("arguments");
   const auto *source = arguments->getObject("source");
-  const auto path = GetString(source, "path");
+  const auto path = GetString(source, "path").value_or("");
   const auto *breakpoints = arguments->getArray("breakpoints");
   llvm::json::Array response_breakpoints;
 

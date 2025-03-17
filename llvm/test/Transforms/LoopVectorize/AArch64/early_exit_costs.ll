@@ -11,8 +11,10 @@ define i64 @same_exit_block_pre_inc_use1_sve() #1 {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_sve'
 ; CHECK: LV: Selecting VF: vscale x 16
 ; CHECK: Calculating cost of work in exit block vector.early.exit
-; CHECK-NEXT: Cost of 6 for VF vscale x 16: EMIT vp<{{.*}}> = extract-first-active
-; CHECK-NEXT: Cost of 6 for VF vscale x 16: EMIT vp<{{.*}}> = extract-first-active
+; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}> = first-active-lane vp<{{.*}}>
+; CHECK-NEXT: Cost of 2 for VF vscale x 16: EMIT vp<{{.*}}> = extractelement ir<{{.*}}>, vp<{{.*}}>
+; CHECK-NEXT: Cost of 4 for VF vscale x 16: EMIT vp<{{.*}}>.1 = first-active-lane vp<{{.*}}>
+; CHECK-NEXT: Cost of 2 for VF vscale x 16: EMIT vp<{{.*}}>.1 = extractelement ir<{{.*}}>, vp<{{.*}}>.1
 ; CHECK: LV: Minimum required TC for runtime checks to be profitable:32
 entry:
   %p1 = alloca [1024 x i8]
@@ -48,8 +50,10 @@ define i64 @same_exit_block_pre_inc_use1_nosve() {
 ; CHECK-LABEL: LV: Checking a loop in 'same_exit_block_pre_inc_use1_nosve'
 ; CHECK: LV: Selecting VF: 16
 ; CHECK: Calculating cost of work in exit block vector.early.exit
-; CHECK-NEXT: Cost of 50 for VF 16: EMIT vp<{{.*}}> = extract-first-active
-; CHECK-NEXT: Cost of 50 for VF 16: EMIT vp<{{.*}}> = extract-first-active
+; CHECK-NEXT: Cost of 48 for VF 16: EMIT vp<{{.*}}> = first-active-lane vp<{{.*}}>
+; CHECK-NEXT: Cost of 2 for VF 16: EMIT vp<{{.*}}> = extractelement ir<{{.*}}>, vp<{{.*}}>
+; CHECK-NEXT: Cost of 48 for VF 16: EMIT vp<{{.*}}>.1 = first-active-lane vp<{{.*}}>
+; CHECK-NEXT: Cost of 2 for VF 16: EMIT vp<{{.*}}>.1 = extractelement ir<{{.*}}>, vp<{{.*}}>.1
 ; CHECK: LV: Minimum required TC for runtime checks to be profitable:176
 ; CHECK-NEXT: LV: Vectorization is not beneficial: expected trip count < minimum profitable VF (64 < 176)
 ; CHECK-NEXT: LV: Too many memory checks needed.

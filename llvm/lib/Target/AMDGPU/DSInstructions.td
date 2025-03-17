@@ -258,10 +258,13 @@ multiclass DS_1A2D_Off8_RET_mc<string opName,
   }
 }
 
-class DS_BVH_STACK<string opName>
+class DS_BVH_STACK<string opName,
+                   RegisterClass vdst_rc,
+                   RegisterClass data1_rc>
 : DS_Pseudo<opName,
-  (outs getLdStRegisterOperand<VGPR_32>.ret:$vdst, VGPR_32:$addr),
-  (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0, VReg_128:$data1, Offset:$offset),
+  (outs getLdStRegisterOperand<vdst_rc>.ret:$vdst, VGPR_32:$addr),
+  (ins VGPR_32:$addr_in, getLdStRegisterOperand<VGPR_32>.ret:$data0,
+   data1_rc:$data1, Offset:$offset),
   " $vdst, $addr, $data0, $data1$offset"> {
   let Constraints = "$addr = $addr_in";
   let DisableEncoding = "$addr_in";
@@ -722,7 +725,8 @@ def DS_SUB_GS_REG_RTN : DS_0A1D_RET_GDS<"ds_sub_gs_reg_rtn", VReg_64, VGPR_32>;
 let SubtargetPredicate = isGFX11Plus in {
 
 let OtherPredicates = [HasImageInsts] in
-def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
+def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32",
+                                        VGPR_32, VReg_128> ;
 
 } // let SubtargetPredicate = isGFX11Plus
 
@@ -731,6 +735,13 @@ def DS_BVH_STACK_RTN_B32 : DS_BVH_STACK<"ds_bvh_stack_rtn_b32">;
 //===----------------------------------------------------------------------===//
 
 let SubtargetPredicate = isGFX12Plus in {
+
+let OtherPredicates = [HasImageInsts] in {
+def DS_BVH_STACK_PUSH8_POP1_RTN_B32 : DS_BVH_STACK<
+  "ds_bvh_stack_push8_pop1_rtn_b32", VGPR_32, VReg_256>;
+def DS_BVH_STACK_PUSH8_POP2_RTN_B64 : DS_BVH_STACK<
+  "ds_bvh_stack_push8_pop2_rtn_b64", VReg_64, VReg_256>;
+} // End OtherPredicates = [HasImageInsts].
 
 defm DS_COND_SUB_U32      : DS_1A1D_NORET_mc<"ds_cond_sub_u32">;
 defm DS_COND_SUB_RTN_U32  : DS_1A1D_RET_mc<"ds_cond_sub_rtn_u32", VGPR_32>;
@@ -1267,6 +1278,11 @@ defm DS_PK_ADD_RTN_F16    : DS_Real_gfx12<0x0aa>;
 defm DS_PK_ADD_BF16       : DS_Real_gfx12<0x09b>;
 defm DS_PK_ADD_RTN_BF16   : DS_Real_gfx12<0x0ab>;
 defm DS_BPERMUTE_FI_B32   : DS_Real_gfx12<0x0cd>;
+
+defm DS_BVH_STACK_RTN_B32             : DS_Real_gfx12<0x0e0,
+  "ds_bvh_stack_push4_pop1_rtn_b32", true>;
+defm DS_BVH_STACK_PUSH8_POP1_RTN_B32  : DS_Real_gfx12<0x0e1>;
+defm DS_BVH_STACK_PUSH8_POP2_RTN_B64  : DS_Real_gfx12<0x0e2>;
 
 // New aliases added in GFX12 without renaming the instructions.
 let AssemblerPredicate = isGFX12Plus in {

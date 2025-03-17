@@ -250,6 +250,11 @@ function(runtime_default_target)
       list(APPEND extra_targets install-${component} install-${component}-stripped)
     endif()
   endforeach()
+  if ("openmp" IN_LIST LLVM_ENABLE_RUNTIMES)
+    # The target libomp-mod is a dependee of check-flang needed to run its
+    # OpenMP tests
+    list(APPEND extra_targets "libomp-mod")
+  endif ()
 
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES "@${LLVM_BINARY_DIR}/runtimes/runtimes-bins/lit.tests")

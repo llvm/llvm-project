@@ -50,6 +50,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
     return SetResultTyFromOp();
 
   switch (Opcode) {
+  case Instruction::ExtractElement:
+    return inferScalarType(R->getOperand(0));
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
     VPValue *OtherV = R->getOperand(2);
@@ -82,7 +84,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::AnyOf:
     return SetResultTyFromOp();
-  case VPInstruction::ExtractFirstActive:
+  case VPInstruction::FirstActiveLane:
+    return Type::getIntNTy(Ctx, 64);
   case VPInstruction::ExtractFromEnd: {
     Type *BaseTy = inferScalarType(R->getOperand(0));
     if (auto *VecTy = dyn_cast<VectorType>(BaseTy))

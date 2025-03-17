@@ -238,7 +238,9 @@ TEST_F(ContextTest, Dump) {
     TestProfileWriter(ContextRoot *Root, size_t Entries)
         : Root(Root), Entries(Entries) {}
 
-    void writeContextual(const ContextNode &Node) override {
+    void writeContextual(const ContextNode &Node,
+                         uint64_t TotalRootEntryCount) override {
+      EXPECT_EQ(TotalRootEntryCount, Entries);
       EXPECT_EQ(EnteredSectionCount, 1);
       EXPECT_EQ(ExitedSectionCount, 0);
       EXPECT_FALSE(Root->Taken.TryLock());

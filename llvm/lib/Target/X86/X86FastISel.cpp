@@ -2684,7 +2684,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     MFI.setFrameAddressIsTaken(true);
 
     const X86RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
-    unsigned FrameReg = RegInfo->getPtrSizedFrameRegister(*MF);
+    Register FrameReg = RegInfo->getPtrSizedFrameRegister(*MF);
     assert(((FrameReg == X86::RBP && VT == MVT::i64) ||
             (FrameReg == X86::EBP && VT == MVT::i32)) &&
            "Invalid Frame Register!");
@@ -3478,7 +3478,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   // ELF / PIC requires GOT in the EBX register before function calls via PLT
   // GOT pointer.
   if (Subtarget->isPICStyleGOT()) {
-    unsigned Base = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
+    Register Base = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
             TII.get(TargetOpcode::COPY), X86::EBX).addReg(Base);
   }
@@ -3510,11 +3510,11 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   if (!X86SelectCallAddress(Callee, CalleeAM))
     return false;
 
-  unsigned CalleeOp = 0;
+  Register CalleeOp;
   const GlobalValue *GV = nullptr;
   if (CalleeAM.GV != nullptr) {
     GV = CalleeAM.GV;
-  } else if (CalleeAM.Base.Reg != 0) {
+  } else if (CalleeAM.Base.Reg) {
     CalleeOp = CalleeAM.Base.Reg;
   } else
     return false;
@@ -3816,7 +3816,7 @@ Register X86FastISel::X86MaterializeFP(const ConstantFP *CFP, MVT VT) {
   Align Alignment = DL.getPrefTypeAlign(CFP->getType());
 
   // x86-32 PIC requires a PIC base register for constant pools.
-  unsigned PICBase = 0;
+  Register PICBase;
   unsigned char OpFlag = Subtarget->classifyLocalReference(nullptr);
   if (OpFlag == X86II::MO_PIC_BASE_OFFSET)
     PICBase = getInstrInfo()->getGlobalBaseReg(FuncInfo.MF);
