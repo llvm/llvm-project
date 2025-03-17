@@ -1663,23 +1663,30 @@ def err_static_assert_requirement_failed : Error<
   "static assertion failed due to requirement '%0'%select{: %2|}1">;
 def note_expr_evaluates_to : Note<
   "expression evaluates to '%0 %1 %2'">;
-def err_static_assert_invalid_message : Error<
-  "the message in a static assertion must be a string literal or an "
+
+
+def subst_user_defined_msg : TextSubstitution<
+  "%select{the message|the expression}0 in "
+  "%select{a static assertion|this asm operand}0">;
+
+def err_user_defined_msg_invalid : Error<
+  "%sub{subst_user_defined_msg}0 must be a string literal or an "
   "object with 'data()' and 'size()' member functions">;
-def err_static_assert_missing_member_function : Error<
-  "the message object in this static assertion is missing %select{"
+def err_user_defined_msg_missing_member_function : Error<
+  "the %select{message|string}0 object in "
+  "%select{this static assertion|this asm operand}0 is missing %select{"
   "a 'size()' member function|"
   "a 'data()' member function|"
-  "'data()' and 'size()' member functions}0">;
-def err_static_assert_invalid_mem_fn_ret_ty : Error<
-  "the message in a static assertion must have a '%select{size|data}0()' member "
-  "function returning an object convertible to '%select{std::size_t|const char *}0'">;
-def warn_static_assert_message_constexpr : Warning<
-  "the message in this static assertion is not a "
-  "constant expression">,
+  "'data()' and 'size()' member functions}1">;
+def err_user_defined_msg_invalid_mem_fn_ret_ty : Error<
+  "%sub{subst_user_defined_msg}0 must have a '%select{size|data}1()' member "
+  "function returning an object convertible to '%select{std::size_t|const char *}1'">;
+def warn_user_defined_msg_constexpr : Warning<
+  "%select{the message|the expression}0 in "
+  "%select{this static assertion|this asm operand}0 is not a constant expression">,
   DefaultError, InGroup<DiagGroup<"invalid-static-assert-message">>;
-def err_static_assert_message_constexpr : Error<
-  "the message in a static assertion must be produced by a "
+def err_user_defined_msg_constexpr : Error<
+  "%sub{subst_user_defined_msg}0 must be produced by a "
   "constant expression">;
 
 def warn_consteval_if_always_true : Warning<
@@ -9517,6 +9524,9 @@ def warn_redefine_extname_not_applied : Warning<
 
 // inline asm.
 let CategoryName = "Inline Assembly Issue" in {
+  def err_asm_operand_empty_string : Error<
+     "cannot use an empty string literal in 'asm'">;
+
   def err_asm_pmf_through_constraint_not_permitted
     : Error<"cannot pass a pointer-to-member through register-constrained "
             "inline assembly parameter">;
