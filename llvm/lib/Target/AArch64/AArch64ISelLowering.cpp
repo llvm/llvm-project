@@ -23938,7 +23938,7 @@ static SDValue combineI8TruncStore(StoreSDNode *ST, SelectionDAG &DAG,
   return Chain;
 }
 
-static int getFPSubregForVT(EVT VT) {
+static unsigned getFPSubregForVT(EVT VT) {
   assert(VT.isSimple() && "Expected simple VT");
   switch (VT.getSimpleVT().SimpleTy) {
   case MVT::f16:
@@ -24025,17 +24025,30 @@ static SDValue performSTORECombine(SDNode *N,
   // store. We may be able to replace this with a store of an FP subregister.
   if (DCI.isAfterLegalizeDAG() && ST->isUnindexed() &&
       Value.getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+
     SDValue Vector = Value.getOperand(0);
     SDValue ExtIdx = Value.getOperand(1);
     EVT VectorVT = Vector.getValueType();
     EVT ElemVT = VectorVT.getVectorElementType();
-    // TODO: Consider allowing Neon (a lot of churn, not necessarily better).
-    if (!VectorVT.isScalableVector())
-      return SDValue();
     if (!ValueVT.isInteger() || ElemVT == MVT::i8 || MemVT == MVT::i8)
       return SDValue();
     if (ValueVT != MemVT && !ST->isTruncatingStore())
       return SDValue();
+
+    // Heuristic: If there are other users of integer scalars extracted from
+    // this vector that won't fold into the store -- abandon folding. This may
+    // extend the vector lifetime and disrupt paired stores.
+    for (auto Use = Vector->use_begin(), End = Vector->use_end(); Use != End;
+         ++Use) {
+      if (Use->getResNo() != Vector.getResNo())
+        continue;
+      SDNode *User = Use->getUser();
+      if (User->getOpcode() == ISD::EXTRACT_VECTOR_ELT) {
+        if (!User->hasOneUse() ||
+            (*User->user_begin())->getOpcode() != ISD::STORE)
+          return SDValue();
+      }
+    }
 
     EVT FPElemVT = EVT::getFloatingPointVT(ElemVT.getSizeInBits());
     EVT FPVectorVT = VectorVT.changeVectorElementType(FPElemVT);

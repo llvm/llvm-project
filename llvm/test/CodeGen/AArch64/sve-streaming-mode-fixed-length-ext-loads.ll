@@ -269,27 +269,23 @@ define <4 x i256> @load_sext_v4i32i256(ptr %ap) {
 ; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    sunpklo z0.d, z0.s
 ; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    mov z2.d, z1.d[1]
-; CHECK-NEXT:    str d1, [x8]
-; CHECK-NEXT:    fmov x10, d0
-; CHECK-NEXT:    asr x9, x9, #63
-; CHECK-NEXT:    mov z1.d, z0.d[1]
-; CHECK-NEXT:    str d0, [x8, #64]
-; CHECK-NEXT:    stp x9, x9, [x8, #16]
-; CHECK-NEXT:    str x9, [x8, #8]
-; CHECK-NEXT:    asr x9, x10, #63
-; CHECK-NEXT:    fmov x10, d2
-; CHECK-NEXT:    str d2, [x8, #32]
-; CHECK-NEXT:    stp x9, x9, [x8, #80]
-; CHECK-NEXT:    str x9, [x8, #72]
+; CHECK-NEXT:    mov z1.d, z1.d[1]
+; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    mov z0.d, z0.d[1]
+; CHECK-NEXT:    asr x10, x9, #63
+; CHECK-NEXT:    stp x9, x10, [x8]
 ; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    asr x10, x10, #63
-; CHECK-NEXT:    str d1, [x8, #96]
+; CHECK-NEXT:    asr x12, x11, #63
+; CHECK-NEXT:    stp x10, x10, [x8, #16]
+; CHECK-NEXT:    stp x11, x12, [x8, #64]
+; CHECK-NEXT:    fmov x11, d0
+; CHECK-NEXT:    asr x10, x9, #63
+; CHECK-NEXT:    stp x12, x12, [x8, #80]
 ; CHECK-NEXT:    stp x10, x10, [x8, #48]
-; CHECK-NEXT:    asr x9, x9, #63
-; CHECK-NEXT:    str x10, [x8, #40]
-; CHECK-NEXT:    stp x9, x9, [x8, #112]
-; CHECK-NEXT:    str x9, [x8, #104]
+; CHECK-NEXT:    asr x12, x11, #63
+; CHECK-NEXT:    stp x9, x10, [x8, #32]
+; CHECK-NEXT:    stp x12, x12, [x8, #112]
+; CHECK-NEXT:    stp x11, x12, [x8, #96]
 ; CHECK-NEXT:    ret
 ;
 ; NONEON-NOSVE-LABEL: load_sext_v4i32i256:
