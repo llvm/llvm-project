@@ -2334,8 +2334,6 @@ bool SIFoldOperandsImpl::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
 }
 
 bool SIFoldOperandsImpl::run(MachineFunction &MF) {
-  MFPropsModifier _(*this, MF);
-
   MRI = &MF.getRegInfo();
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
@@ -2399,6 +2397,8 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
 
 PreservedAnalyses SIFoldOperandsPass::run(MachineFunction &MF,
                                           MachineFunctionAnalysisManager &) {
+  MFPropsModifier _(*this, MF);
+
   bool Changed = SIFoldOperandsImpl().run(MF);
   if (!Changed) {
     return PreservedAnalyses::all();
