@@ -52,9 +52,6 @@ public:
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
-  bool shouldForceRelocation(const MCAssembler &Asm, const MCFixup &Fixup,
-                             const MCValue &Target, uint64_t Value,
-                             const MCSubtargetInfo *STI) override;
 };
 
 } //End anonymous namespace
@@ -192,13 +189,6 @@ const MCFixupKindInfo &AMDGPUAsmBackend::getFixupKindInfo(
   assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
          "Invalid kind!");
   return Infos[Kind - FirstTargetFixupKind];
-}
-
-bool AMDGPUAsmBackend::shouldForceRelocation(const MCAssembler &,
-                                             const MCFixup &Fixup,
-                                             const MCValue &, const uint64_t,
-                                             const MCSubtargetInfo *STI) {
-  return Fixup.getKind() >= FirstLiteralRelocationKind;
 }
 
 unsigned AMDGPUAsmBackend::getMinimumNopSize() const {
