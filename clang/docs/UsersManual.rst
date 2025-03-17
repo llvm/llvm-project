@@ -3195,7 +3195,6 @@ be collected.
    the profile file to ``Name``.
  * ``void __llvm_profile_reset_counters(void)``: resets all counters to zero.
  * ``int __llvm_profile_dump(void)``: write the profile data to disk.
- * ``int __llvm_orderfile_dump(void)``: write the order file to disk.
 
 For example, the following pattern can be used to skip profiling program
 initialization, profile two specific hot regions, and skip profiling program
@@ -4681,25 +4680,7 @@ Clang supports generation of SPIR-V conformant to `the OpenCL Environment
 Specification
 <https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Env.html>`_.
 
-To generate SPIR-V binaries, Clang uses the external ``llvm-spirv`` tool from the
-`SPIRV-LLVM-Translator repo
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator>`_.
-
-Prior to the generation of SPIR-V binary with Clang, ``llvm-spirv``
-should be built or installed. Please refer to `the following instructions
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator#build-instructions>`_
-for more details. Clang will look for ``llvm-spirv-<LLVM-major-version>`` and
-``llvm-spirv`` executables, in this order, in the ``PATH`` environment variable.
-Clang uses ``llvm-spirv`` with `the widely adopted assembly syntax package
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator/#build-with-spirv-tools>`_.
-
-`The versioning
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator/releases>`_ of
-``llvm-spirv`` is aligned with Clang major releases. The same applies to the
-main development branch. It is therefore important to ensure the ``llvm-spirv``
-version is in alignment with the Clang version. For troubleshooting purposes
-``llvm-spirv`` can be `tested in isolation
-<https://github.com/KhronosGroup/SPIRV-LLVM-Translator#test-instructions>`_.
+To generate SPIR-V binaries, Clang uses the in-tree LLVM SPIR-V backend.
 
 Example usage for OpenCL kernel compilation:
 
@@ -4716,18 +4697,6 @@ further by offline SPIR-V consumer tools.
 Converting to SPIR-V produced with the optimization levels other than `-O0` is
 currently available as an experimental feature and it is not guaranteed to work
 in all cases.
-
-Clang also supports integrated generation of SPIR-V without use of ``llvm-spirv``
-tool as an experimental feature when ``-fintegrated-objemitter`` flag is passed in
-the command line.
-
-   .. code-block:: console
-
-     $ clang --target=spirv32 -fintegrated-objemitter -c test.cl
-
-Note that only very basic functionality is supported at this point and therefore
-it is not suitable for arbitrary use cases. This feature is only enabled when clang
-build is configured with ``-DLLVM_EXPERIMENTAL_TARGETS_TO_BUILD=SPIRV`` option.
 
 Linking is done using ``spirv-link`` from `the SPIRV-Tools project
 <https://github.com/KhronosGroup/SPIRV-Tools#linker>`_. Similar to other external

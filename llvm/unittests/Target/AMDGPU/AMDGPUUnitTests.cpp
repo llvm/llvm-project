@@ -32,15 +32,16 @@ std::unique_ptr<const GCNTargetMachine>
 llvm::createAMDGPUTargetMachine(std::string TStr, StringRef CPU, StringRef FS) {
   InitializeAMDGPUTarget();
 
+  Triple TT(TStr);
   std::string Error;
-  const Target *T = TargetRegistry::lookupTarget(TStr, Error);
+  const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T)
     return nullptr;
 
   TargetOptions Options;
   return std::unique_ptr<GCNTargetMachine>(
       static_cast<GCNTargetMachine *>(T->createTargetMachine(
-          TStr, CPU, FS, Options, std::nullopt, std::nullopt)));
+          TT, CPU, FS, Options, std::nullopt, std::nullopt)));
 }
 
 static cl::opt<bool> PrintCpuRegLimits(

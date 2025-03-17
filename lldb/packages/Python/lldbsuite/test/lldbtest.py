@@ -1344,6 +1344,13 @@ class Base(unittest.TestCase):
         arch = self.getArchitecture().lower()
         return arch in ["aarch64", "arm64", "arm64e"]
 
+    def isARM(self):
+        """Returns true if the architecture is ARM, meaning 32-bit ARM. Which could
+        be M profile, A profile Armv7-a, or the AArch32 mode of Armv8-a."""
+        return not self.isAArch64() and (
+            self.getArchitecture().lower().startswith("arm")
+        )
+
     def isAArch64SVE(self):
         return self.isAArch64() and "sve" in self.getCPUInfo()
 

@@ -41,19 +41,19 @@ public:
         Checker(nullptr), SuppressOnSink(SuppressOnSink) {}
   BugType(const CheckerBase *Checker, StringRef Desc,
           StringRef Cat = categories::LogicError, bool SuppressOnSink = false)
-      : CheckerName(Checker->getCheckerName()), Description(Desc),
-        Category(Cat), Checker(Checker), SuppressOnSink(SuppressOnSink) {}
+      : CheckerName(), Description(Desc), Category(Cat), Checker(Checker),
+        SuppressOnSink(SuppressOnSink) {}
   virtual ~BugType() = default;
 
   StringRef getDescription() const { return Description; }
   StringRef getCategory() const { return Category; }
   StringRef getCheckerName() const {
-    // FIXME: This is a workaround to ensure that the correct checerk name is
+    // FIXME: This is a workaround to ensure that the correct checker name is
     // used. The checker names are set after the constructors are run.
     // In case the BugType object is initialized in the checker's ctor
     // the CheckerName field will be empty. To circumvent this problem we use
     // CheckerBase whenever it is possible.
-    StringRef Ret = Checker ? Checker->getCheckerName() : CheckerName;
+    StringRef Ret = Checker ? Checker->getName() : CheckerName;
     assert(!Ret.empty() && "Checker name is not set properly.");
     return Ret;
   }

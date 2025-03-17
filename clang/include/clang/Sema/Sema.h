@@ -2499,9 +2499,9 @@ private:
 
   void checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD, CallExpr *TheCall);
 
-  /// Check the arguments to '__builtin_va_start' or '__builtin_ms_va_start'
-  /// for validity.  Emit an error and return true on failure; return false
-  /// on success.
+  /// Check the arguments to '__builtin_va_start', '__builtin_ms_va_start',
+  /// or '__builtin_c23_va_start' for validity. Emit an error and return true
+  /// on failure; return false on success.
   bool BuiltinVAStart(unsigned BuiltinID, CallExpr *TheCall);
   bool BuiltinVAStartARMMicrosoft(CallExpr *Call);
 
@@ -5462,7 +5462,8 @@ public:
   /// destructor is referenced.
   void MarkVirtualBaseDestructorsReferenced(
       SourceLocation Location, CXXRecordDecl *ClassDecl,
-      llvm::SmallPtrSetImpl<const RecordType *> *DirectVirtualBases = nullptr);
+      llvm::SmallPtrSetImpl<const CXXRecordDecl *> *DirectVirtualBases =
+          nullptr);
 
   /// Do semantic checks to allow the complete destructor variant to be emitted
   /// when the destructor is defined in another translation unit. In the Itanium
@@ -10766,11 +10767,6 @@ public:
                            SourceLocation EndLoc);
   void ActOnForEachDeclStmt(DeclGroupPtrTy Decl);
 
-  /// DiagnoseDiscardedExprMarkedNodiscard - Given an expression that is
-  /// semantically a discarded-value expression, diagnose if any [[nodiscard]]
-  /// value has been discarded.
-  void DiagnoseDiscardedExprMarkedNodiscard(const Expr *E);
-
   /// DiagnoseUnusedExprResult - If the statement passed in is an expression
   /// whose result is unused, warn.
   void DiagnoseUnusedExprResult(const Stmt *S, unsigned DiagID);
@@ -11375,14 +11371,16 @@ public:
 
   /// The context in which we are checking a template parameter list.
   enum TemplateParamListContext {
-    TPC_ClassTemplate,
-    TPC_VarTemplate,
+    // For this context, Class, Variable, TypeAlias, and non-pack Template
+    // Template Parameters are treated uniformly.
+    TPC_Other,
+
     TPC_FunctionTemplate,
     TPC_ClassTemplateMember,
     TPC_FriendClassTemplate,
     TPC_FriendFunctionTemplate,
     TPC_FriendFunctionTemplateDefinition,
-    TPC_TypeAliasTemplate
+    TPC_TemplateTemplateParameterPack,
   };
 
   /// Checks the validity of a template parameter list, possibly
@@ -11845,7 +11843,7 @@ public:
                                  bool *ConstraintsNotSatisfied = nullptr);
 
   bool CheckTemplateTypeArgument(
-      TemplateArgumentLoc &Arg,
+      TemplateTypeParmDecl *Param, TemplateArgumentLoc &Arg,
       SmallVectorImpl<TemplateArgument> &SugaredConverted,
       SmallVectorImpl<TemplateArgument> &CanonicalConverted);
 
@@ -11881,13 +11879,9 @@ public:
                                      bool PartialOrdering,
                                      bool *StrictPackMatch);
 
-  /// Print the given named declaration to a string,
-  /// using the current PrintingPolicy, except that
-  /// TerseOutput will always be set.
-  SmallString<128> toTerseString(const NamedDecl &D) const;
-
   void NoteTemplateLocation(const NamedDecl &Decl,
                             std::optional<SourceRange> ParamRange = {});
+  void NoteTemplateParameterLocation(const NamedDecl &Decl);
 
   /// Given a non-type template argument that refers to a
   /// declaration and the type of its corresponding non-type template
@@ -12002,13 +11996,15 @@ public:
   bool TemplateParameterListsAreEqual(
       const TemplateCompareNewDeclInfo &NewInstFrom, TemplateParameterList *New,
       const NamedDecl *OldInstFrom, TemplateParameterList *Old, bool Complain,
-      TemplateParameterListEqualKind Kind);
+      TemplateParameterListEqualKind Kind,
+      SourceLocation TemplateArgLoc = SourceLocation());
 
-  bool TemplateParameterListsAreEqual(TemplateParameterList *New,
-                                      TemplateParameterList *Old, bool Complain,
-                                      TemplateParameterListEqualKind Kind) {
+  bool TemplateParameterListsAreEqual(
+      TemplateParameterList *New, TemplateParameterList *Old, bool Complain,
+      TemplateParameterListEqualKind Kind,
+      SourceLocation TemplateArgLoc = SourceLocation()) {
     return TemplateParameterListsAreEqual(nullptr, New, nullptr, Old, Complain,
-                                          Kind);
+                                          Kind, TemplateArgLoc);
   }
 
   /// Check whether a template can be declared within this scope.
@@ -12888,11 +12884,6 @@ public:
 
       /// We are performing partial ordering for template template parameters.
       PartialOrderingTTP,
-
-      /// We are Checking a Template Parameter, so for any diagnostics which
-      /// occur in this scope, we will add a context note which points to this
-      /// template parameter.
-      CheckTemplateParameter,
     } Kind;
 
     /// Was the enclosing context a non-instantiation SFINAE context?
@@ -13120,11 +13111,6 @@ public:
                           PartialOrderingTTP, TemplateDecl *PArg,
                           SourceRange InstantiationRange = SourceRange());
 
-    struct CheckTemplateParameter {};
-    /// \brief Note that we are checking a template parameter.
-    InstantiatingTemplate(Sema &SemaRef, CheckTemplateParameter,
-                          NamedDecl *Param);
-
     /// Note that we have finished instantiating this template.
     void Clear();
 
@@ -13156,13 +13142,6 @@ public:
     InstantiatingTemplate(const InstantiatingTemplate &) = delete;
 
     InstantiatingTemplate &operator=(const InstantiatingTemplate &) = delete;
-  };
-
-  /// For any diagnostics which occur within its scope, adds a context note
-  /// pointing to the declaration of the template parameter.
-  struct CheckTemplateParameterRAII : InstantiatingTemplate {
-    CheckTemplateParameterRAII(Sema &S, NamedDecl *Param)
-        : InstantiatingTemplate(S, CheckTemplateParameter(), Param) {}
   };
 
   bool SubstTemplateArgument(const TemplateArgumentLoc &Input,

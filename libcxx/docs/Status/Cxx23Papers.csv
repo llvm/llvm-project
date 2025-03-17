@@ -82,7 +82,6 @@
 "`P2499R0 <https://wg21.link/P2499R0>`__","``string_view`` range constructor should be ``explicit``","2022-07 (Virtual)","|Complete|","16",""
 "`P2502R2 <https://wg21.link/P2502R2>`__","``std::generator``: Synchronous Coroutine Generator for Ranges","2022-07 (Virtual)","","",""
 "`P2508R1 <https://wg21.link/P2508R1>`__","Exposing ``std::basic-format-string``","2022-07 (Virtual)","|Complete|","15",""
-"`P2513R4 <https://wg21.link/P2513R4>`__","``char8_t`` Compatibility and Portability Fixes","2022-07 (Virtual)","","",""
 "`P2517R1 <https://wg21.link/P2517R1>`__","Add a conditional ``noexcept`` specification to ``std::apply``","2022-07 (Virtual)","|Complete|","3.9",""
 "`P2520R0 <https://wg21.link/P2520R0>`__","``move_iterator`` should be a random access iterator","2022-07 (Virtual)","|Complete|","17","Implemented as a DR in C++20"
 "`P2540R1 <https://wg21.link/P2540R1>`__","Empty Product for certain Views","2022-07 (Virtual)","","",""

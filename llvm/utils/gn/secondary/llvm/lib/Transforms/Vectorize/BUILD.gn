@@ -30,6 +30,7 @@ static_library("Vectorize") {
     "SandboxVectorizer/VecUtils.cpp",
     "VPlan.cpp",
     "VPlanAnalysis.cpp",
+    "VPlanConstruction.cpp",
     "VPlanHCFGBuilder.cpp",
     "VPlanRecipes.cpp",
     "VPlanSLP.cpp",
