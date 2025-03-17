@@ -5349,7 +5349,7 @@ recurse:
       // have acted differently since Clang 8, but were previously mangled the
       // same.)
       if (!isCompatibleWith(LangOptions::ClangABI::Ver11)) {
-        MangleExtensionBuiltin(SAE, "__alignof");
+        MangleExtensionBuiltin(SAE, "__alignof__");
         break;
       }
       [[fallthrough]];
